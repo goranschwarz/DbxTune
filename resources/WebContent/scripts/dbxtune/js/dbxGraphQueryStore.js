@@ -778,7 +778,7 @@ function queryStoreRenderDatabases(r)
 		+ '<button class="btn btn-sm btn-outline-secondary" style="font-size:0.82em;padding:2px 10px;" onclick="qsDbSelectNone();"'
 		+ ' title="Clear all database checkboxes">None</button>'
 		+ '<span style="font-size:0.82em;margin-left:4px;">Period:</span>'
-		+ '<select id="qs-db-period" class="form-control form-control-sm d-inline-block" style="width:auto;font-size:0.82em;padding:1px 4px;height:auto;" onchange="qsDbUpdateQueryBtn();"'
+		+ '<select id="qs-db-period" class="form-select form-select-sm d-inline-block" style="width:auto;font-size:0.82em;padding:1px 1.5rem 1px 4px;background-position:right 4px center;height:auto;" onchange="qsDbUpdateQueryBtn();"'
 		+ ' title="Number of recording days to include — fetches one day at a time and merges the results">' + periodOptions + '</select>'
 		+ '<label style="margin:0;font-size:0.82em;font-weight:normal;cursor:pointer;"'
 		+ ' title="ON: combine all fetched days into one row per query (weighted averages).&#010;OFF: show a separate row per database per day.">'
@@ -797,7 +797,7 @@ function queryStoreRenderDatabases(r)
 
 	var html = toolbarHtml;
 	html += '<table id="qs-db-table" class="table table-sm table-bordered table-hover" style="font-size:0.82em;white-space:nowrap;cursor:pointer;width:auto;">';
-	html += '<thead class="thead-light"><tr>';
+	html += '<thead class="table-light"><tr>';
 	cols.forEach(function(col, idx) {
 		if (col === '_chk') {
 			html += '<th style="width:28px;text-align:center;" title="Select/deselect all">'
@@ -1441,7 +1441,7 @@ function queryStoreTopQueriesLoad()
 	// Dispose any lingering Bootstrap tooltips from previous render — otherwise they
 	// stay "hanging" and orphaned because their trigger elements are about to be removed.
 	try {
-		$('#query-store-content [data-toggle="tooltip"]').tooltip('dispose');
+		$('#query-store-content [data-bs-toggle="tooltip"]').tooltip('dispose');
 		$('.tooltip.show, .tooltip.fade').remove();
 	} catch (ex) {}
 
@@ -1707,7 +1707,7 @@ function queryStoreRenderTopQueries(r)
 	else if (rankBy === 'aborted')         { rankColSet['totalAbortedException'] = true; }
 
 	var html = '<table id="qs-tq-table" class="table table-sm table-bordered table-hover" style="font-size:0.82em;white-space:nowrap;cursor:pointer;width:auto;">';
-	html += '<thead class="thead-light"><tr>';
+	html += '<thead class="table-light"><tr>';
 	cols.forEach(function(col, idx) {
 		var hlClass = rankColSet[col] ? ' qs-rank-hl' : '';
 		var tip = tips[col] ? ' title="' + escHtml(tips[col]) + '"' : '';
@@ -3239,7 +3239,7 @@ function queryStoreRenderDetail(r)
 			var color = eff >= 70 ? '#1a7a1a' : (eff >= 30 ? '#a05000' : '#cc0000');
 			return '<td style="text-align:right;font-weight:700;color:' + color + ';">' + eff.toFixed(1) + '%</td>';
 		};
-		html += '<thead class="thead-light"><tr>';
+		html += '<thead class="table-light"><tr>';
 		if (plans[0] && plans[0].queryPlan !== undefined) html += _th('Plans', 'Show Plan: estimated plan stored in Query Store.\nGet Last Actual: fetches the last-known actual plan via dm_exec_query_plan_stats — requires SQL Server 2019+ (or TF 2451) and LAST_QUERY_PLAN_STATS=ON on the database.');
 		html += _th('Plan ID',          'Query Store plan_id — unique identifier for this execution plan')
 		      + _th('Forced',           'Whether this plan has been forced via sp_query_store_force_plan')
@@ -3411,7 +3411,7 @@ function queryStoreRenderDetail(r)
 	if (waits.length > 0) {
 		html += '<div style="font-size:0.8em;font-weight:600;color:#555;margin-bottom:3px;">Top Wait Types</div>';
 		html += '<div style="overflow-x:auto;margin-bottom:8px;"><table class="table table-sm table-bordered" style="font-size:0.8em;white-space:nowrap;width:auto;">';
-		html += '<thead class="thead-light"><tr>'
+		html += '<thead class="table-light"><tr>'
 		      + _th('Wait category',    'SQL Server wait type category (e.g. CPU, Lock, I/O, Network)')
 		      + _th('📈 Wait Time Chart', 'Timeline: total wait (ms) per Query Store interval — shows WHEN this wait type was occurring')
 		      + _th('Total wait (ms)',  'Sum of wait time in milliseconds across all executions in this period')
@@ -3451,7 +3451,7 @@ function queryStoreRenderDetail(r)
 	if (timeline.length > 0) {
 		html += '<div style="font-size:0.8em;font-weight:600;color:#555;margin-bottom:3px;">Execution Timeline</div>';
 		html += '<div style="overflow-x:auto;margin-bottom:8px;"><table class="table table-sm table-bordered" style="font-size:0.8em;white-space:nowrap;width:auto;">';
-		html += '<thead class="thead-light"><tr>'
+		html += '<thead class="table-light"><tr>'
 		      + _th('Interval start', 'Start of the Query Store collection interval')
 		      + _th('Interval end',   'End of the Query Store collection interval')
 		      + _th('Executions',     'Number of executions in this interval')
@@ -3497,7 +3497,7 @@ function queryStoreRenderDetail(r)
 	if (recs.length > 0) {
 		html += '<div style="font-size:0.8em;font-weight:600;color:#0d6efd;margin-bottom:3px;">Tuning Recommendations (' + recs.length + ')</div>';
 		html += '<div style="overflow-x:auto;margin-bottom:8px;"><table class="table table-sm table-bordered table-info" style="font-size:0.8em;white-space:nowrap;width:auto;">';
-		html += '<thead class="thead-light"><tr>'
+		html += '<thead class="table-light"><tr>'
 		      + _th('Name',   'Recommendation name from sys.dm_db_tuning_recommendations')
 		      + _th('Type',   'Recommendation type (e.g. FORCE_LAST_GOOD_PLAN, CREATE_INDEX)')
 		      + _th('Reason', 'Reason the recommendation was generated')

@@ -672,9 +672,9 @@ function dbxInitNavbarSubmenus()
 			var menu = submenu.querySelector('.dropdown-menu');
 			if (menu && !wasOpen)
 			{
-				menu.classList.remove('dropdown-menu-left');
+				menu.classList.remove('dropdown-menu-start');
 				if (menu.getBoundingClientRect().right > window.innerWidth)
-					menu.classList.add('dropdown-menu-left');
+					menu.classList.add('dropdown-menu-start');
 			}
 			return;
 		}

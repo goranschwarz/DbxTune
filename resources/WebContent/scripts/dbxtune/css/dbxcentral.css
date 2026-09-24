@@ -88,5 +88,13 @@ html {
     color: rgb(238, 238, 238);
     z-index: 1000;
     background: rgba(0, 0, 0, 0.8);
-}    
+}
 /* END: Extention class for show 'Working...' */
+
+/* Bootstrap 4 'thead-light' (removed in BS5, now 'table-light'). Alarm 'alarmOptions' HTML stored in the
+   Central DB before the BS5 migration still uses it (AlarmEvent.createAlarmOptionsMessage) - keep it styled. */
+.table .thead-light th {
+    color: #495057;
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+}

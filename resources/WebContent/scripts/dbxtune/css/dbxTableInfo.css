@@ -91,8 +91,8 @@
   background: #fdf5ec;
 }
 
-/* ── tooltip-div trigger links (data-toggle="modal" data-target="#dbx-view-sqltext-dialog") ── */
-:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) [data-toggle="modal"][data-target="#dbx-view-sqltext-dialog"] {
+/* ── tooltip-div trigger links (data-bs-toggle="modal" data-bs-target="#dbx-view-sqltext-dialog") ── */
+:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) [data-bs-toggle="modal"][data-bs-target="#dbx-view-sqltext-dialog"] {
   cursor: pointer;
   color: #1a56a0;
   text-decoration: underline;
@@ -101,7 +101,7 @@
   border-radius: 3px;
   padding: 0 2px;
 }
-:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) [data-toggle="modal"][data-target="#dbx-view-sqltext-dialog"]:hover {
+:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) [data-bs-toggle="modal"][data-bs-target="#dbx-view-sqltext-dialog"]:hover {
   background: #e8f0fb;
   color: #0a3a7a;
 }

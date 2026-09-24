@@ -228,7 +228,7 @@
 			"		<div class='modal-content' style='height: 80vh;'>",
 			"			<div class='modal-header'>",
 			"				<h5 class='modal-title'><b>Postgres Execution Plan:</b> <span id='dbx-view-pgShowplan-objectName'></span></h5>",
-			"				<button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button>",
+			"				<button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'></button>",
 			"			</div>",
 			"			<div class='modal-body' style='overflow-x: auto;'>",
 			"				<div class='scroll-tree'>",
@@ -249,7 +249,7 @@
 			"				<button type='button' class='btn btn-outline-secondary' onclick='pgShowplanSaveToFile();'>Save Plan File</button>",
 			"				<button type='button' class='btn btn-outline-secondary' onclick='pgShowplanOpenExternal();'>Open Plan in External Window</button>",
 			"				&emsp;&emsp;&emsp;&emsp;&emsp;",
-			"				<button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>",
+			"				<button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>",
 			"			</div>",
 			"		</div>",
 			"	</div>",
@@ -266,8 +266,8 @@
 			"					<div id='dbx-view-ssShowplan-timestamps' style='font-size:0.75em;color:#888;'></div>",
 			"				</div>",
 			"				<div style='display:flex;align-items:center;flex-shrink:0;'>",
-			"					<button type='button' class='close' style='margin-left:8px;' title='Expand/restore dialog size' aria-label='Expand/restore dialog size' onclick='ssShowplanToggleExpand();'><span aria-hidden='true'>&#9974;</span></button>",
-			"					<button type='button' class='close' style='margin-left:8px;' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button>",
+			"					<button type='button' class='btn border-0 p-0 lh-1 opacity-50' style='margin-left:8px;font-size:1.3rem;' title='Expand/restore dialog size' aria-label='Expand/restore dialog size' onclick='ssShowplanToggleExpand();'><span aria-hidden='true'>&#9974;</span></button>",
+			"					<button type='button' class='btn-close' style='margin-left:8px;' data-bs-dismiss='modal' aria-label='Close'></button>",
 			"				</div>",
 			"			</div>",
 			"			<div class='modal-body' style='overflow-x:auto;padding:8px 12px;'>",
@@ -465,7 +465,7 @@
 			"				<button type='button' class='btn btn-outline-secondary' onclick='ssShowplanSaveXmlToFile();'>Save XML File</button>",
 			"				<button type='button' class='btn btn-outline-secondary' onclick='ssShowplanOpenExternal();'>Open in External Window</button>",
 			"				&emsp;&emsp;&emsp;&emsp;&emsp;",
-			"				<button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>",
+			"				<button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>",
 			"			</div>",
 			"		</div>",
 			"	</div>",
@@ -479,8 +479,8 @@
 			"				<span style='color:#999;margin-right:6px;font-size:1.1em;' title='Drag to move'>&#x2630;</span>",
 			"				<h5 class='modal-title' style='flex:1;min-width:0;'><b>ASE Showplan</b>: <span id='dbx-view-aseShowplan-objectName'></span></h5>",
 			"				<div style='display:flex;align-items:center;flex-shrink:0;'>",
-			"					<button type='button' class='close' style='margin-left:8px;' title='Expand/restore dialog size' aria-label='Expand/restore dialog size' onclick='aseShowplanToggleExpand();'><span aria-hidden='true'>&#9974;</span></button>",
-			"					<button type='button' class='close' style='margin-left:8px;' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button>",
+			"					<button type='button' class='btn border-0 p-0 lh-1 opacity-50' style='margin-left:8px;font-size:1.3rem;' title='Expand/restore dialog size' aria-label='Expand/restore dialog size' onclick='aseShowplanToggleExpand();'><span aria-hidden='true'>&#9974;</span></button>",
+			"					<button type='button' class='btn-close' style='margin-left:8px;' data-bs-dismiss='modal' aria-label='Close'></button>",
 			"				</div>",
 			"			</div>",
 			"			<div class='modal-body' style='overflow-x:auto;padding:8px 12px;'>",
@@ -622,7 +622,7 @@
 			"				<button type='button' class='btn btn-outline-secondary' onclick='aseShowplanCopyPlan();'>Copy Plan</button>",
 			"				<button type='button' class='btn btn-outline-secondary' onclick='aseShowplanOpenExternal();'>Open in External Window</button>",
 			"				&emsp;&emsp;&emsp;&emsp;&emsp;",
-			"				<button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>",
+			"				<button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>",
 			"			</div>",
 			"		</div>",
 			"	</div>",
@@ -637,7 +637,7 @@
 			+ "      <div class='modal-header' style='cursor:move;flex-shrink:0;'>"
 			+ "        <span style='color:#999;margin-right:6px;font-size:1.1em;' title='Drag to move'>&#x2630;</span>"
 			+ "        <h5 class='modal-title' id='dbx-spv-title'>&#128221; Showplan Loader</h5>"
-			+ "        <button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button>"
+			+ "        <button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'></button>"
 			+ "      </div>"
 			+ "      <div class='modal-body' style='padding:10px 14px;display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;'>"
 			+ "        <div style='flex-shrink:0;margin-bottom:6px;'><small class='text-muted'>Paste a SQL Server Showplan XML, or load it from a <code>.xml</code> / <code>.sqlplan</code> file.</small></div>"
@@ -652,15 +652,15 @@
 			+ "          style='font-family:monospace;font-size:0.8em;resize:none;flex:1;min-height:0;width:100%;box-sizing:border-box;'></textarea>"
 			+ "      </div>"
 			+ "      <div class='modal-footer' style='flex-shrink:0;'>"
-			+ "        <span id='dbx-spv-error' class='text-danger mr-auto small'></span>"
-			+ "        <button type='button' class='btn btn-secondary' data-dismiss='modal'>Cancel</button>"
+			+ "        <span id='dbx-spv-error' class='text-danger me-auto small'></span>"
+			+ "        <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Cancel</button>"
 			+ "        <button type='button' class='btn btn-primary' onclick='spvViewPlan();'>&#128202; View Plan</button>"
 			+ "      </div>"
 			+ "    </div>"
 			+ "  </div>"
 			+ "</div>");
 
-		// ── Text viewer dialog (used by DSR tooltip-divs: data-target="#dbx-view-sqltext-dialog") ──
+		// ── Text viewer dialog (used by DSR tooltip-divs: data-bs-target="#dbx-view-sqltext-dialog") ──
 		if (!document.getElementById('dbx-view-sqltext-dialog')) {
 			document.body.insertAdjacentHTML('beforeend',
 				  "<div class='modal fade' id='dbx-view-sqltext-dialog' tabindex='-1' role='dialog' aria-hidden='true' style='z-index:1100;'>"
@@ -668,13 +668,13 @@
 				+ "    <div class='modal-content'>"
 				+ "      <div class='modal-header'>"
 				+ "        <h5 class='modal-title' id='dbx-sqltext-dlg-title'></h5>"
-				+ "        <button type='button' class='close' data-dismiss='modal'><span>&times;</span></button>"
+				+ "        <button type='button' class='btn-close' data-bs-dismiss='modal'></button>"
 				+ "      </div>"
 				+ "      <div class='modal-body' style='padding:8px;'>"
 				+ "        <pre id='dbx-sqltext-dlg-content' style='font-size:0.8em;max-height:70vh;overflow:auto;margin:0;white-space:pre-wrap;word-break:break-word;'></pre>"
 				+ "      </div>"
 				+ "      <div class='modal-footer'>"
-				+ "        <button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>"
+				+ "        <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>"
 				+ "      </div>"
 				+ "    </div>"
 				+ "  </div>"
@@ -1684,12 +1684,11 @@
  *     1. Showplan operator detail panels   (fixed overlays above the dialog, not .modal)
  *     2. LLM Advice panel                  (hand-rolled fixed div, z-index 10001, not .modal)
  *     3. topmost open .modal
- *     4. the toggled overlay panels        (Counter Details, DBMS Config, Query Store, Alarms)
+ *     4. the toggled overlay panels        (Counter Details, DBMS Config, Query Store, Alarms, Active Statements)
  *
  * Deliberate exceptions:
  *   - #dbx-login-dialog opts out via {backdrop:'static', keyboard:false} (dbxLoginModal.js) - it is
  *     meant to be answered, not dismissed. Escape stays inert there.
- *   - #active-statements is not a pop-up; it is the permanent companion to History View Mode.
  *
  * Two collaborators rely on running BEFORE this handler:
  *   - dbxGraphPicker.js:418 calls stopImmediatePropagation() so Escape dismisses its inline popups
@@ -1710,7 +1709,8 @@ function _initGlobalEscClose() {
 		{ sel: '#cm-detail-panel',   close: function () { cmDetailClose();     } },
 		{ sel: '#dbms-config-panel', close: function () { dbmsConfigToggle();  } },
 		{ sel: '#query-store-panel', close: function () { queryStoreToggle();  } },
-		{ sel: '#alarm-panel',       close: function () { alarmPanelToggle();  } }
+		{ sel: '#alarm-panel',       close: function () { alarmPanelToggle();  } },
+		{ sel: '#active-statements', close: function () { $('#active-statements').hide(); } }   // same as its [X] button
 	];
 
 	function zIndexOf(el) {
@@ -1748,6 +1748,12 @@ function _initGlobalEscClose() {
 		}
 
 		// -- 3. Topmost open Bootstrap modal -------------------------------------------------
+		// Escape inside a modal is Bootstrap's own job. BS4 called preventDefault() (caught above);
+		// BS5 does not, and has already removed .show - without this we would close a SECOND layer.
+		// This also leaves keyboard:false modals (e.g. the login dialog) inert, as intended.
+		if (e.target && e.target.closest && e.target.closest('.modal'))
+			return;
+
 		var open = Array.prototype.slice.call(document.querySelectorAll('.modal.show'));
 		if (open.length) {
 			// Topmost by stacking order, falling back to DOM order when z-index is auto/equal.
@@ -1925,7 +1931,7 @@ function _initGlobalEscClose() {
 			}
 
 			// Reset LLM Optimization Advice section — lazy-loaded on next expand, same as Table Information.
-			// (This data-toggle="modal" path is separate from showSqlServerShowplanDialog() below, which
+			// (This data-bs-toggle="modal" path is separate from showSqlServerShowplanDialog() below, which
 			// has its own identical reset - both need it since either can be how this dialog gets shown.)
 			var llmSect = document.getElementById('dbx-ssp-sect-llm');
 			var llmBody = document.getElementById('dbx-ssp-llm-body');
@@ -2064,7 +2070,7 @@ function _initGlobalEscClose() {
 			$dlg.removeData('expanded');
 			ssShowplanToggleExpand();
 
-			// ── Draw plan (data-toggle path only) ────────────────────────────
+			// ── Draw plan (data-bs-toggle path only) ────────────────────────────
 			if (!e.relatedTarget) return;
 			var data = $(e.relatedTarget).data();
 			if (typeof Prism !== 'undefined') Prism.highlightAll();
@@ -2081,7 +2087,7 @@ function _initGlobalEscClose() {
 			if (graphEl) $(graphEl).empty();
 		});
 
-		// ASE: set fields before modal becomes visible (data-toggle="modal" path)
+		// ASE: set fields before modal becomes visible (data-bs-toggle="modal" path)
 		$('#dbx-view-aseShowplan-dialog').on('show.bs.modal', function (e) {
 			// Before the relatedTarget check below, so the programmatic open path gets it too.
 			_updateLlmSummaryInfo('dbx-asp-sect-llm');
@@ -2337,7 +2343,7 @@ function _initGlobalEscClose() {
 		}
 
 		// Text viewer dialog — populate from the clicked trigger's data-tooltip attribute
-		// (DSR generates: data-toggle="modal" data-target="#dbx-view-sqltext-dialog" data-tooltip="...")
+		// (DSR generates: data-bs-toggle="modal" data-bs-target="#dbx-view-sqltext-dialog" data-tooltip="...")
 		$(document).on('show.bs.modal', '#dbx-view-sqltext-dialog', function(e) {
 			var $trigger = $(e.relatedTarget);
 			var title    = $trigger.attr('title') || 'Text';
@@ -2579,7 +2585,7 @@ function _initGlobalEscClose() {
 	// -------------------------------------------------------------------------
 	/**
 	 * Open the SQL Server execution plan dialog programmatically.
-	 * Unlike the data-toggle="modal" path (which reads from e.relatedTarget),
+	 * Unlike the data-bs-toggle="modal" path (which reads from e.relatedTarget),
 	 * this sets the dialog content directly and then shows the modal.
 	 *
 	 * @param {string} xmlText      — raw XML showplan string

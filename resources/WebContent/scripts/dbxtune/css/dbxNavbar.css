@@ -1,13 +1,17 @@
 /* -- dbxNavbar.css --------------------------------------------------------
    DbxCentral top navbar: dropdown menus + the "Tools" fly-out submenu.
-   Kept separate from dbxcentral.css because config.html is on Bootstrap 5
-   and has dbxcentral.css (Bootstrap 4 era) deliberately commented out.
+   Kept separate from dbxcentral.css because config.html deliberately does not
+   load dbxcentral.css. (All pages are Bootstrap 5.3 since 2026-09-24.)
    Include this in your page <head>.
 -------------------------------------------------------------------------- */
 
 /* NOTE: The navbar markup is duplicated in 6 places (HtmlStatic.java + 5 static
          html pages). These rules live here - the one stylesheet ALL of them
          load - so the markup can stay identical everywhere.                */
+
+/* Same navbar font size on every page: pages may shrink their own content (config.html has
+   body { font-size: 0.88rem }), and the nav links would otherwise inherit that.            */
+nav.navbar                                        { font-size:1rem; }
 
 /* Top navbar dropdown menus - always dark, to match the 'bg-dark' navbar */
 .navbar-dark .dropdown-menu                       { background-color:#343a40; border-color:#555; }
@@ -34,7 +38,7 @@
 }
 
 /* Flip submenu to the left if near the right edge (class set by dbxInitNavbarSubmenus) */
-.dbx-dropdown-submenu .dropdown-menu.dropdown-menu-left {
+.dbx-dropdown-submenu .dropdown-menu.dropdown-menu-start {
 	left: auto;
 	right: 100%;
 }

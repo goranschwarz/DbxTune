@@ -225,7 +225,7 @@ function dbxGpRender(searchTerm) {
 			+       '<span>' + cmName + '</span>'
 			+       '<button type="button" class="dbx-gp-cm-selectall btn btn-sm btn-outline-secondary" data-cm="' + cmName + '" title="Select all graphs in this group">Select All</button>'
 			+       '<button type="button" class="dbx-gp-cm-deselectall btn btn-sm btn-outline-secondary" data-cm="' + cmName + '" title="Deselect all graphs in this group">None</button>'
-			+       '<small class="text-muted ml-auto">'
+			+       '<small class="text-muted ms-auto">'
 			+         '<span class="dbx-gp-cm-selected-count" data-cm="' + cmName + '">0</span>'
 			+         ' / ' + entries.length + ' selected'
 			+       '</small>'
@@ -238,7 +238,7 @@ function dbxGpRender(searchTerm) {
 			const orderNum = dbxGraphPickerSelected.has(g.tableName) ? (dbxGraphPickerOrder[g.tableName] || '') : '';
 			const badgeVis = checked ? '' : 'visibility:hidden';
 			const startup  = g.visibleAtStartup ? 'dbx-gp-startup' : '';
-			const badge    = '<span class="badge badge-secondary dbx-gp-category-badge">' + g.graphCategory + '</span>';
+			const badge    = '<span class="badge text-bg-secondary dbx-gp-category-badge">' + g.graphCategory + '</span>';
 			html += '<div class="dbx-gp-item ' + startup + '" data-cm="' + cmName + '">'
 				+    '<label>'
 				+      '<input type="checkbox" id="dbxGpCk-' + g.graphName + '" value="' + g.tableName + '" data-cm="' + cmName + '" ' + checked + '> '
@@ -331,26 +331,24 @@ function dbxInitGraphPickerModal() {
 			'    <div class="modal-content">',
 			'      <div class="modal-header">',
 			'        <h5 class="modal-title">Select Graphs &mdash; <span id="dbxGraphPickerServerName"></span></h5>',
-			'        <button type="button" class="close" data-dismiss="modal">&times;</button>',
+			'        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>',
 			'      </div>',
 			'      <div class="modal-body">',
 			'        <div class="input-group mb-3">',
 			'          <input type="text" id="dbxGraphPickerSearch" class="form-control" placeholder="Search by collector, graph name or category...">',
-			'          <div class="input-group-append">',
-			'            <button class="btn btn-outline-secondary" type="button" id="dbxGraphPickerClearSearch">Clear</button>',
-			'          </div>',
+			'          <button class="btn btn-outline-secondary" type="button" id="dbxGraphPickerClearSearch">Clear</button>',
 			'        </div>',
 			'        <div class="mb-2">',
 			'          <button class="btn btn-sm btn-outline-primary"   id="dbxGraphPickerSelectAll">Select All Visible</button>',
 			'          <button class="btn btn-sm btn-outline-secondary" id="dbxGraphPickerClearAll">Clear All</button>',
 			'          <button class="btn btn-sm btn-outline-secondary" id="dbxGraphPickerExpandAll">Expand all Groups</button>',
 			'          <button class="btn btn-sm btn-outline-secondary" id="dbxGraphPickerCollapseAll">Close all Groups</button>',
-			'          <span class="ml-3 small" id="dbxGraphPickerSelectedCountWrap">',
+			'          <span class="ms-3 small" id="dbxGraphPickerSelectedCountWrap">',
 			'            <span id="dbxGraphPickerSelectedCount">0</span> selected',
 			'          </span>',
-			'          <span class="ml-3">',
+			'          <span class="ms-3">',
 			'            <label class="text-muted small mb-0" for="dbxGraphPickerGcols">Columns:</label>',
-			'            <input type="number" id="dbxGraphPickerGcols" class="form-control form-control-sm d-inline-block ml-1"',
+			'            <input type="number" id="dbxGraphPickerGcols" class="form-control form-control-sm d-inline-block ms-1"',
 			'              min="1" max="10" placeholder="default" style="width:80px;">',
 			'          </span>',
 			'        </div>',
@@ -359,10 +357,10 @@ function dbxInitGraphPickerModal() {
 			'        </div>',
 			'      </div>',
 			'      <div class="modal-footer">',
-			'        <small class="text-muted mr-auto">&#x1F7E1; highlighted = visible at startup by default</small>',
-			'        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>',
+			'        <small class="text-muted me-auto">&#x1F7E1; highlighted = visible at startup by default</small>',
+			'        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>',
 			'        <button type="button" class="btn btn-primary" id="dbxGraphPickerOk"',
-			'          data-toggle="tooltip" data-placement="top"',
+			'          data-bs-toggle="tooltip" data-bs-placement="top"',
 			'          title="Opens graphs in a new tab — Tip: Press Ctrl+D in that tab to bookmark your selection">',
 			'          Open Selected Graphs',
 			'        </button>',

@@ -2194,7 +2194,7 @@ function dbxTuneGraphSubscribe()
 			if (_debug > 1)
 				console.log("createActiveStatementToolTipDiv():: sqlDialect=|" + sqlDialect + "|");
 
-		//const TT_PREFIX  = "<div title='Click for Detailes' data-toggle='modal' data-target='#dbx-view-sqltext-dialog' data-objectname='' data-tooltip='";
+		//const TT_PREFIX  = "<div title='Click for Detailes' data-bs-toggle='modal' data-bs-target='#dbx-view-sqltext-dialog' data-objectname='' data-tooltip='";
 		//const TT_POSTFIX = "'>&nbsp;</div>";
 		
 		//const ttData = stripHtml(rowData.DbccSqlText);
@@ -2215,8 +2215,8 @@ function dbxTuneGraphSubscribe()
 		const div = document.createElement("div");
 		div.innerHTML = "&nbsp;";
 		div.setAttribute("title"           , "Click to Open Text Dialog... \n-------------------------------\n" + dataVal);
-		div.setAttribute("data-toggle"     , 'modal');
-		div.setAttribute("data-target"     , '#dbx-view-sqltext-dialog');
+		div.setAttribute("data-bs-toggle"     , 'modal');
+		div.setAttribute("data-bs-target"     , '#dbx-view-sqltext-dialog');
 		div.setAttribute("data-objectname" , '');
 		div.setAttribute("data-tooltip"    , dataVal);
 		div.setAttribute("data-sqldialect" , sqlDialect);
@@ -2231,8 +2231,8 @@ function dbxTuneGraphSubscribe()
 		const div = document.createElement("div");
 		div.innerHTML = "&nbsp;";
 		div.setAttribute("title"           , "Click to Open Text Dialog... \n-------------------------------\n" + htmlTableToAscii(dataVal));
-		div.setAttribute("data-toggle"     , 'modal');
-		div.setAttribute("data-target"     , '#dbx-view-lockTable-dialog');
+		div.setAttribute("data-bs-toggle"     , 'modal');
+		div.setAttribute("data-bs-target"     , '#dbx-view-lockTable-dialog');
 		div.setAttribute("data-objectname" , labelVal);
 		div.setAttribute("data-tooltip"    , dataVal);
 	
@@ -2251,8 +2251,8 @@ function dbxTuneGraphSubscribe()
 		const div = document.createElement("div");
 		div.innerHTML = "&nbsp;";
 		div.setAttribute("title"           , "Click to Open Text Dialog... \n-------------------------------\n" + dataVal);
-		div.setAttribute("data-toggle"     , 'modal');
-		div.setAttribute("data-target"     , '#dbx-view-ssShowplan-dialog');
+		div.setAttribute("data-bs-toggle"     , 'modal');
+		div.setAttribute("data-bs-target"     , '#dbx-view-ssShowplan-dialog');
 		div.setAttribute("data-objectname" , '');
 		div.setAttribute("data-tooltip"    , dataVal);
 		div.setAttribute("data-sqltext"    , lastKnownSql);
@@ -2265,7 +2265,7 @@ function dbxTuneGraphSubscribe()
 	function createAseQueryPlanToolTipDiv(data, rowData, srvName, isXml)
 	{
 		// creates a div that will open the rich ASE Showplan dialog (dbxShowplan.js, #dbx-view-aseShowplan-dialog) -
-		// same trigger pattern as createSqlServerQueryPlanToolTipDiv() above (data-toggle="modal", read by
+		// same trigger pattern as createSqlServerQueryPlanToolTipDiv() above (data-bs-toggle="modal", read by
 		// dbxShowplan.js's show.bs.modal handler via $(e.relatedTarget).data()).
 
 		const dataVal = data;
@@ -2276,8 +2276,8 @@ function dbxTuneGraphSubscribe()
 		const div = document.createElement("div");
 		div.innerHTML = "&nbsp;";
 		div.setAttribute("title"           , "Click to Open Text Dialog... \n-------------------------------\n" + dataVal);
-		div.setAttribute("data-toggle"     , 'modal');
-		div.setAttribute("data-target"     , '#dbx-view-aseShowplan-dialog');
+		div.setAttribute("data-bs-toggle"     , 'modal');
+		div.setAttribute("data-bs-target"     , '#dbx-view-aseShowplan-dialog');
 		div.setAttribute("data-objectname" , '');
 		div.setAttribute("data-plan"       , dataVal);
 		div.setAttribute("data-planisxml"  , isXml ? 'true' : 'false');
@@ -2296,8 +2296,8 @@ function dbxTuneGraphSubscribe()
 		const div = document.createElement("div");
 		div.innerHTML = "&nbsp;";
 		div.setAttribute("title"           , "Click to Open Text Dialog... \n-------------------------------\n" + dataVal);
-		div.setAttribute("data-toggle"     , 'modal');
-		div.setAttribute("data-target"     , '#dbx-view-pgShowplan-dialog');
+		div.setAttribute("data-bs-toggle"     , 'modal');
+		div.setAttribute("data-bs-target"     , '#dbx-view-pgShowplan-dialog');
 		div.setAttribute("data-objectname" , '');
 		div.setAttribute("data-tooltip"    , dataVal);
 //		div.setAttribute("data-planContent"     , 'DummyValue'); --> will become object member 'plancontent'
@@ -2361,7 +2361,7 @@ function dbxTuneGraphSubscribe()
 			metaDataArr.forEach(function(m) { if (m && m.columnName) metaMap[m.columnName] = m; });
 
 		var html = '<table class="table table-sm table-bordered" style="font-size:0.85em;word-break:break-word;">';
-		html += '<thead class="thead-light"><tr><th style="white-space:nowrap">Field</th><th>Value</th></tr></thead><tbody>';
+		html += '<thead class="table-light"><tr><th style="white-space:nowrap">Field</th><th>Value</th></tr></thead><tbody>';
 
 		Object.keys(row).forEach(function(key) {
 			var val = row[key];
@@ -2750,7 +2750,7 @@ function dbxTuneGraphSubscribe()
 			tr.title = 'Click to view full row details';
 			var rowSnap = row;
 			tr.addEventListener('click', function(e) {
-				if ($(e.target).closest('[data-toggle="modal"]').length > 0) return;
+				if ($(e.target).closest('[data-bs-toggle="modal"]').length > 0) return;
 				activeStmtDetailShowModal(rowSnap, _metaDataArrRef, false, appName, srvName);
 			});
 		};
