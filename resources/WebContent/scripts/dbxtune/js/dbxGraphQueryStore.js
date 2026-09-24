@@ -1864,7 +1864,7 @@ function queryStoreRenderTopQueries(r)
 	// Chart container goes above the table — inject placeholder then populate after DOM insertion
 	// The brush widget sits ABOVE the bar chart, lets the user drag two handles to filter the time range.
 	var brushHtml = '<div id="qs-tq-brush-wrap" style="display:flex;flex-direction:column;min-height:0;overflow:hidden;"></div>';
-	var chartHtml = '<div id="qs-tq-chart-container" style="min-height:0;overflow:hidden;"></div>';
+	var chartHtml = '<div id="qs-tq-chart-container" style="position:relative;min-height:0;overflow:hidden;"></div>';
 	var tableHtml = '<div id="qs-tq-table-wrap" style="overflow:auto;min-height:0;padding:2px 0;">' + filterBanner + html + '</div>';
 	$('#query-store-content').html(brushHtml + chartHtml + tableHtml);
 	// Set up flex column layout for vertical Split.js
@@ -2002,20 +2002,22 @@ function _qsRenderTimeBrush(timeline, rankBy)
 				borderWidth: 1.2,
 				pointRadius: 0,
 				fill: true,
-				lineTension: 0.15
+				tension: 0.15
 			}]
 		},
 		options: {
-			responsive: true, maintainAspectRatio: false, animation: { duration: 0 },
+			responsive: true, maintainAspectRatio: false, animation: false,
+			interaction: { mode: 'index', intersect: false },
+			plugins: {
 			legend: { display: false }, title: { display: false },
-			tooltips: {
-				mode: 'index', intersect: false, displayColors: false,
+			tooltip: {
+				displayColors: false,
 				backgroundColor: ttBg, borderColor: ttBdr, borderWidth: 1,
-				titleFontColor: ttTitle, bodyFontColor: ttBody,
+				titleColor: ttTitle, bodyColor: ttBody,
 				callbacks: {
-					title: function(items) { return items[0] && labels[items[0].index] ? labels[items[0].index] : ''; },
+					title: function(items) { return items[0] && labels[items[0].dataIndex] ? labels[items[0].dataIndex] : ''; },
 					label: function(item) {
-						var v = (item.yLabel != null && !isNaN(item.yLabel)) ? Number(item.yLabel) : null;
+						var v = (item.parsed.y != null && !isNaN(item.parsed.y)) ? Number(item.parsed.y) : null;
 						if (v == null) return null;
 						var n = Math.round(v);
 						var s = _qsFmtNum(n) || String(n);
@@ -2026,9 +2028,10 @@ function _qsRenderTimeBrush(timeline, rankBy)
 					}
 				}
 			},
+			}, // end: plugins
 			scales: {
-				xAxes: [{ display: false, gridLines: { display: false } }],
-				yAxes: [{ display: false, gridLines: { display: false }, ticks: { beginAtZero: true } }]
+				x: { display: false, grid: { display: false } },
+				y: { display: false, grid: { display: false }, beginAtZero: true }
 			},
 			layout: { padding: 0 }
 		}
@@ -2078,17 +2081,6 @@ function _qsRenderTimeBrush(timeline, rankBy)
  * Render a stacked-bar Chart.js sparkline of wait time per interval, broken down by wait category.
  * One bar per interval, segments coloured by category. Uses a fixed palette cycled by category index.
  */
-// Custom tooltip positioner: tooltip appears at the top of the chart area, at the cursor X.
-// Registered once; referenced by name in any chart's tooltips.position option.
-if (typeof Chart !== 'undefined' && Chart.Tooltip && !Chart.Tooltip.positioners.top) {
-	Chart.Tooltip.positioners.top = function(elements, eventPosition) {
-		var chartArea = this._chart && this._chart.chartArea;
-		return {
-			x: eventPosition.x,
-			y: chartArea ? chartArea.top : 0
-		};
-	};
-}
 
 var _qsTqWaitChart = null;
 function _qsRenderWaitStackedBar(timeline)
@@ -2163,18 +2155,20 @@ function _qsRenderWaitStackedBar(timeline)
 		type: 'bar',
 		data: { labels: labels, datasets: datasets },
 		options: {
-			responsive: true, maintainAspectRatio: false, animation: { duration: 0 },
+			responsive: true, maintainAspectRatio: false, animation: false,
+			interaction: { mode: 'index', intersect: false },
+			plugins: {
 			legend: { display: false },
 			title:  { display: false },
-			tooltips: {
+			tooltip: {
 				enabled: false,
-				mode: 'index', intersect: false,
-				custom: function(tooltipModel) {
+				external: function(context) {
+					var tooltipModel = context.tooltip;
 					if (tooltipModel.opacity === 0) { _qsHideWaitPopup(); return; }
 					if (!tooltipModel.dataPoints || !tooltipModel.dataPoints.length) return;
-					var chart  = this._chart;
+					var chart  = context.chart;
 					var data   = chart.data;
-					var idx    = tooltipModel.dataPoints[0].index;
+					var idx    = tooltipModel.dataPoints[0].dataIndex;
 					var rows   = [];
 					data.datasets.forEach(function(ds) {
 						var v = Number(ds.data[idx]) || 0;
@@ -2188,9 +2182,10 @@ function _qsRenderWaitStackedBar(timeline)
 					_qsShowWaitPopup(fakeEvent, data.labels[idx], rows, total);
 				}
 			},
+			}, // end: plugins
 			scales: {
-				xAxes: [{ stacked: true, display: false, gridLines: { display: false } }],
-				yAxes: [{ stacked: true, display: false, gridLines: { display: false }, ticks: { beginAtZero: true } }]
+				x: { stacked: true, display: false, grid: { display: false } },
+				y: { stacked: true, display: false, grid: { display: false }, beginAtZero: true }
 			},
 			layout: { padding: 0 }
 		}
@@ -2549,7 +2544,7 @@ function _qsRenderChart(queries, rankBy)
 	var ctx = document.getElementById('qs-tq-chart').getContext('2d');
 
 	_qsTqChart = new Chart(ctx, {
-		type: 'horizontalBar',
+		type: 'bar',
 		data: {
 			labels: barLabels,
 			datasets: [{
@@ -2561,17 +2556,11 @@ function _qsRenderChart(queries, rankBy)
 			}]
 		},
 		options: {
+			indexAxis: 'y',
 			responsive: true,
 			maintainAspectRatio: false,
-			legend: { display: false },
-			title: {
-				display: true,
-				text: metricLabel + '  —  Top ' + chartData.length + ' queries (click bar to view detail)',
-				fontSize: 12,
-				fontColor: '#555'
-			},
 			scales: {
-				xAxes: [{ ticks: { beginAtZero: true, fontSize: 10,
+				x: { beginAtZero: true, ticks: { font: { size: 10 },
 					callback: function(v) {
 						if (metricLabel.indexOf('(ms)') !== -1)
 							return (_qsFmtNum(v) || _qsFmt1Dec(v) || String(v)) + '\u00a0ms  (' + _qsFmtMsDur(v) + ')';
@@ -2581,20 +2570,28 @@ function _qsRenderChart(queries, rankBy)
 						}
 						return _qsFmtNum(v) || _qsFmt1Dec(v) || String(v);
 					}
-				} }],
-				yAxes: [{ ticks: { fontSize: 10 } }]
+				} },
+				y: { ticks: { font: { size: 10 } } }
 			},
 			onClick: function(evt, elements) {
 				if (elements && elements.length > 0) {
-					var idx = elements[0]._index;
+					var idx = elements[0].index;
 					var q = chartData[idx];
 					if (q) queryStoreSelectQuery(String(q.queryId));
 				}
 			},
-			tooltips: {
+			plugins: {
+			legend: { display: false },
+			title: {
+				display: true,
+				text: metricLabel + '  —  Top ' + chartData.length + ' queries (click bar to view detail)',
+				font: { size: 12 },
+				color: '#555'
+			},
+			tooltip: {
 				callbacks: {
 					label: function(item) {
-						var v = item.xLabel;
+						var v = item.parsed.x;
 						var fmt;
 						if (metricLabel.indexOf('(ms)') !== -1) {
 							fmt = (_qsFmtNum(v) || _qsFmt1Dec(v) || String(v)) + '\u00a0ms  (' + _qsFmtMsDur(v) + ')';
@@ -2610,6 +2607,7 @@ function _qsRenderChart(queries, rankBy)
 					}
 				}
 			}
+			} // end: plugins
 		}
 	});
 }

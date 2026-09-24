@@ -2662,15 +2662,17 @@ function cmChartRender(r, filteredRows) {
 
 		if (hasToolbar) $wrap.append($toolbar);
 
-		// Canvas
-		var $canvas = $('<canvas id="' + chartId + '" style="max-height:280px;"></canvas>');
-		$wrap.append($canvas);
+		// Canvas -- in a dedicated wrapper with explicit height (Chart.js responsive sizing takes the size from the parent)
+		var $canvasWrap = $('<div style="position:relative;height:280px;"></div>');
+		var $canvas = $('<canvas id="' + chartId + '"></canvas>');
+		$canvasWrap.append($canvas);
+		$wrap.append($canvasWrap);
 		$container.append($wrap);
 
 		// Extract data from filtered rows
 		var data = _cmChartExtractData(desc, colIdx, filteredRows);
 		if (!data || data.labels.length === 0) {
-			$canvas.replaceWith('<div style="color:#999;font-size:0.8em;text-align:center;padding:20px;">No data</div>');
+			$canvasWrap.replaceWith('<div style="color:#999;font-size:0.8em;text-align:center;padding:20px;">No data</div>');
 			return;
 		}
 
@@ -2879,22 +2881,24 @@ function _cmChartCreatePie(ctx, desc, data) {
 		options: {
 			responsive: true,
 			maintainAspectRatio: false,
-			legend: {
-				position: 'right',
-				labels: { fontSize: 10, boxWidth: 12 }
-			},
-			tooltips: {
-				callbacks: {
-					title: function(tooltipItems, chartData) {
-						// Show the slice/item name as the tooltip title
-						return chartData.labels[tooltipItems[0].index] || '';
-					},
-					label: function(tooltipItem, chartData) {
-						var dsLabel = chartData.datasets[tooltipItem.datasetIndex].label || '';
-						var val     = chartData.datasets[tooltipItem.datasetIndex].data[tooltipItem.index];
-						var total   = chartData.datasets[tooltipItem.datasetIndex].data.reduce(function(s, v) { return s + v; }, 0);
-						var pct     = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
-						return dsLabel + ': ' + _cmChartFormatNumber(val) + ' (' + pct + '%)';
+			plugins: {
+				legend: {
+					position: 'right',
+					labels: { font: { size: 10 }, boxWidth: 12 }
+				},
+				tooltip: {
+					callbacks: {
+						title: function(tooltipItems) {
+							// Show the slice/item name as the tooltip title
+							return tooltipItems.length > 0 ? (tooltipItems[0].label || '') : '';
+						},
+						label: function(tooltipItem) {
+							var dsLabel = tooltipItem.dataset.label || '';
+							var val     = tooltipItem.raw;
+							var total   = tooltipItem.dataset.data.reduce(function(s, v) { return s + v; }, 0);
+							var pct     = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
+							return dsLabel + ': ' + _cmChartFormatNumber(val) + ' (' + pct + '%)';
+						}
 					}
 				}
 			}
@@ -2934,33 +2938,28 @@ function _cmChartCreateBar(ctx, desc, data, stacked, orientOverride) {
 	});
 
 	// The "value axis" is the one that shows numbers (Y for vertical, X for horizontal)
-	var valueTicks = {
+	var valueScale = {
 		beginAtZero: true,
-		fontSize: 10,
-		callback: function(value) { return _cmChartFormatNumber(value); }
+		stacked: stacked,
+		ticks: {
+			font: { size: 10 },
+			callback: function(value) { return _cmChartFormatNumber(value); }
+		}
 	};
 	if (desc.isPercent) {
-		valueTicks.max = 100;
-		valueTicks.min = 0;
+		valueScale.max = 100;
+		valueScale.min = 0;
 	}
 
 	// The "category axis" shows labels (X for vertical, Y for horizontal)
-	var categoryTicks = { fontSize: 9 };
+	var categoryScale = { stacked: stacked, ticks: { font: { size: 9 } } };
 	if (!horizontal) {
-		categoryTicks.autoSkip = true;
-		categoryTicks.maxRotation = 45;
+		categoryScale.ticks.autoSkip = true;
+		categoryScale.ticks.maxRotation = 45;
 	}
 
-	var xAxes, yAxes;
-	if (horizontal) {
-		// Horizontal: labels on Y-axis, values on X-axis
-		xAxes = [{ ticks: valueTicks, stacked: stacked }];
-		yAxes = [{ ticks: categoryTicks, stacked: stacked }];
-	} else {
-		// Vertical: labels on X-axis, values on Y-axis
-		xAxes = [{ ticks: categoryTicks, stacked: stacked }];
-		yAxes = [{ ticks: valueTicks, stacked: stacked }];
-	}
+	// Horizontal: labels on Y-axis, values on X-axis -- Vertical: labels on X-axis, values on Y-axis
+	var scales = horizontal ? { x: valueScale, y: categoryScale } : { x: categoryScale, y: valueScale };
 
 	// Bar label text on bars (e.g. "FREE MB: 3 144")
 	var barLabelVals  = data.barLabelValues; // array parallel to data.labels, or null
@@ -2968,75 +2967,81 @@ function _cmChartCreateBar(ctx, desc, data, stacked, orientOverride) {
 	var hasBarLabels  = barLabelVals && barLabelVals.length > 0;
 
 	// Build tooltip callback — include FREE MB in tooltip when available
-	var tooltipCb = function(tooltipItem, chartData) {
-		var ds  = chartData.datasets[tooltipItem.datasetIndex];
-		var val = ds.data[tooltipItem.index];
+	var tooltipCb = function(tooltipItem) {
+		var ds  = tooltipItem.dataset;
+		var val = tooltipItem.raw;
 		var suffix = desc.isPercent ? '%' : '';
 		var line = ds.label + ': ' + _cmChartFormatNumber(val) + suffix;
 		if (hasBarLabels) {
-			var freeMb = barLabelVals[tooltipItem.index];
+			var freeMb = barLabelVals[tooltipItem.dataIndex];
 			line += '  (' + barLabelPfx + _cmChartFormatNumber(freeMb) + ')';
 		}
 		return line;
 	};
 
-	// Animation onComplete: draw "FREE MB: xxx" text inside/beside each bar
-	var animOnComplete = hasBarLabels ? function(animation) {
-		var chart = animation.chart || this;
-		var ctx2  = chart.ctx;
-		ctx2.save();
-		ctx2.font      = '10px sans-serif';
-		ctx2.fillStyle = '#333';
-		ctx2.textBaseline = 'middle';
+	// Plugin (afterDatasetsDraw, so it survives every redraw): draw "FREE MB: xxx" text inside/beside each bar
+	var barLabelPlugin = {
+		id: 'dbxBarLabels',
+		afterDatasetsDraw: function(chart) {
+			if (!hasBarLabels) return;
+			var ctx2  = chart.ctx;
+			ctx2.save();
+			ctx2.font      = '10px sans-serif';
+			ctx2.fillStyle = '#333';
+			ctx2.textBaseline = 'middle';
 
-		var meta = chart.getDatasetMeta(0);
-		if (!meta || !meta.data) { ctx2.restore(); return; }
+			var meta = chart.getDatasetMeta(0);
+			if (!meta || !meta.data) { ctx2.restore(); return; }
 
-		meta.data.forEach(function(bar, idx) {
-			var freeMb = barLabelVals[idx];
-			if (freeMb === undefined || freeMb === null) return;
-			var txt = barLabelPfx + _cmChartFormatNumber(freeMb);
+			meta.data.forEach(function(bar, idx) {
+				var freeMb = barLabelVals[idx];
+				if (freeMb === undefined || freeMb === null) return;
+				var txt = barLabelPfx + _cmChartFormatNumber(freeMb);
 
-			if (horizontal) {
-				// Horizontal bar: text inside bar, vertically centred
-				var barWidth = bar._model.x - bar._model.base;
-				var textW    = ctx2.measureText(txt).width;
-				if (barWidth > textW + 8) {
-					// Fits inside bar
-					ctx2.textAlign = 'left';
-					ctx2.fillText(txt, bar._model.base + 4, bar._model.y);
+				if (horizontal) {
+					// Horizontal bar: text inside bar, vertically centred
+					var barWidth = bar.x - bar.base;
+					var textW    = ctx2.measureText(txt).width;
+					if (barWidth > textW + 8) {
+						// Fits inside bar
+						ctx2.textAlign = 'left';
+						ctx2.fillText(txt, bar.base + 4, bar.y);
+					} else {
+						// Draw right of bar
+						ctx2.textAlign = 'left';
+						ctx2.fillText(txt, bar.x + 3, bar.y);
+					}
 				} else {
-					// Draw right of bar
-					ctx2.textAlign = 'left';
-					ctx2.fillText(txt, bar._model.x + 3, bar._model.y);
+					// Vertical bar: text inside bar, horizontally centred
+					var barHeight = bar.base - bar.y;
+					if (barHeight > 16) {
+						ctx2.textAlign = 'center';
+						ctx2.fillText(txt, bar.x, bar.y + barHeight / 2);
+					}
+					// If bar too short, skip (tooltip still shows it)
 				}
-			} else {
-				// Vertical bar: text inside bar, horizontally centred
-				var barHeight = bar._model.base - bar._model.y;
-				if (barHeight > 16) {
-					ctx2.textAlign = 'center';
-					ctx2.fillText(txt, bar._model.x, bar._model.y + barHeight / 2);
-				}
-				// If bar too short, skip (tooltip still shows it)
-			}
-		});
-		ctx2.restore();
-	} : undefined;
+			});
+			ctx2.restore();
+		}
+	};
 
 	return new Chart(ctx, {
-		type: horizontal ? 'horizontalBar' : 'bar',
+		type: 'bar',
 		data: { labels: data.labels, datasets: datasets },
+		plugins: [ barLabelPlugin ],
 		options: {
+			indexAxis: horizontal ? 'y' : 'x',
 			responsive: true,
 			maintainAspectRatio: false,
-			animation: hasBarLabels ? { onComplete: animOnComplete } : {},
-			legend: {
-				display: data.datasets.length > 1,
-				labels: { fontSize: 10, boxWidth: 12 }
-			},
-			scales: { xAxes: xAxes, yAxes: yAxes },
-			tooltips: {
-				callbacks: { label: tooltipCb }
+			scales: scales,
+			plugins: {
+				legend: {
+					display: data.datasets.length > 1,
+					labels: { font: { size: 10 }, boxWidth: 12 }
+				},
+				tooltip: {
+					callbacks: { label: tooltipCb }
+				}
 			}
 		}
 	});

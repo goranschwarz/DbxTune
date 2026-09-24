@@ -846,7 +846,7 @@ public abstract class ReportChartAbstract implements IReportChart
 		writer.append("                position: 'bottom', \n");
 		writer.append("                labels: { \n");
 		writer.append("                    boxWidth: 10, \n");
-		writer.append("                    fontSize: 10, \n");
+		writer.append("                    font: { size: 10 }, \n");
 		writer.append("                } \n");
 		writer.append("            }, \n");
 		writer.append("            chartAreaBackgroundPlugin: { \n");
@@ -874,12 +874,8 @@ public abstract class ReportChartAbstract implements IReportChart
 		writer.append("                        hour:   'HH:mm', \n");
 		writer.append("                    } \n");
 		writer.append("                }, \n");
-		writer.append("                ticks: { \n");
-		writer.append("                    beginAtZero: true \n");
-		writer.append("                }, \n");
-		writer.append("                gridLines: { \n");
+		writer.append("                grid: { \n");
 		writer.append("                    color: 'rgba(0, 0, 0, 0.1)', \n");
-		writer.append("                    zeroLineColor: 'rgba(0, 0, 0, 0.25)', \n");
 		writer.append("                }, \n");
 		writer.append("            }, \n"); // end: x
 		writer.append("            y: { \n");
@@ -892,12 +888,9 @@ public abstract class ReportChartAbstract implements IReportChart
     		writer.append("                suggestedMax: " + _maxValue + ", \n");
     		writer.append("                suggestedMin: 0, \n");
 		}
-		writer.append("                ticks: { \n");
-		writer.append("                    beginAtZero: true, \n");
-		writer.append("                }, \n");
-		writer.append("                gridLines: { \n");
-		writer.append("                    color: 'rgba(0, 0, 0, 0.1)', \n");
-		writer.append("                    zeroLineColor: 'rgba(0, 0, 0, 0.25)', \n");
+		writer.append("                beginAtZero: true, \n");
+		writer.append("                grid: { \n");
+		writer.append("                    color: function(context) { return (context.tick && context.tick.value === 0) ? 'rgba(0, 0, 0, 0.25)' : 'rgba(0, 0, 0, 0.1)'; }, \n");
 		writer.append("                }, \n");
 		writer.append("            }, \n"); // end: y
 		writer.append("        }, \n"); // end: scales

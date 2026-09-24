@@ -567,9 +567,20 @@
 
 
 				console.log("_graphMap.length=" + _graphMap.length);
+
+				// No graph has any timestamps (a period without data): nothing to navigate, leave the slider empty
+				if ( ! _graphMap.some(g => g.getTsArraySize() > 0) )
+				{
+					console.log("HISTORY: no timestamps in any graph, skipping the timeline slider setup.");
+					$("#dbx-history-slider-left-text")  .html("");
+					$("#dbx-history-slider-center-text").html("");
+					$("#dbx-history-slider-right-text") .html("");
+					_lastHistoryMomentsArray = [];
+					return;
+				}
+
 				if (_graphMap.length > 0)
 				{
-					let dbxGraph = _graphMap[0];
 //					console.log("dbxGraph=" + dbxGraph);
 //					console.log("dbxGraph=" + dbxGraph, dbxGraph);
 
@@ -596,10 +607,6 @@
 							if (globalNewest === null || ms > globalNewest.valueOf()) globalNewest = gTsArr[t];
 						}
 					}
-					// Fall back to first graph bounds if nothing was collected
-					if (globalOldest === null) globalOldest = dbxGraph.getOldestTs();
-					if (globalNewest === null) globalNewest = dbxGraph.getNewestTs();
-
 					$("#dbx-history-slider-left-text") .html( globalOldest.format('YYYY-MM-DD HH:mm:ss') );
 					$("#dbx-history-slider-right-text").html( globalNewest.format('YYYY-MM-DD HH:mm:ss') );
 

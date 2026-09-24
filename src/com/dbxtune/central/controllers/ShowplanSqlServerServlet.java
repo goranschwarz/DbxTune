@@ -100,7 +100,7 @@ extends HttpServlet
 				// page both load this; this page never did, so those buttons threw "Panzoom is not defined".
 				HtmlUtils.createJsScriptTag("/scripts/panzoom/4.5.1/panzoom.min.js") +
 				HtmlUtils.createCssLinkTag("/scripts/showplan/sqlserver/css/qp.css", "https://www.dbxtune.com/sqlserver_showplan/css/qp.css") +
-				HtmlUtils.createJsScriptTag("/scripts/chartjs/2.7.3/Chart.bundle.js") +
+				HtmlUtils.createJsScriptTag("/scripts/chartjs/4.5.1/dist/chart.umd.min.js") +
 				// srv/dbname (if any) only live in the URL fragment, never known server-side here - so
 				// unlike createShowplanOutput()'s conditional include, always load these.
 				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxSqlTableNames.js") +
@@ -420,7 +420,7 @@ extends HttpServlet
 				// Chart.js - only used by the dialog's "Plan Analysis" wait-time bar (guarded with
 				// typeof Chart !== 'undefined', so this is optional/degrades gracefully), included for
 				// full parity with graph.html.
-				HtmlUtils.createJsScriptTag("/scripts/chartjs/2.7.3/Chart.bundle.js") +
+				HtmlUtils.createJsScriptTag("/scripts/chartjs/4.5.1/dist/chart.umd.min.js") +
 
 				// Needed for the dialog's Table Information section - same shared module dbxShowplan.js
 				// itself already uses on graph.html.

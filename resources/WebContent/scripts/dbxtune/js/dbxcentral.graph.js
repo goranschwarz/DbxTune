@@ -3167,17 +3167,25 @@ class DbxGraph
 				datasets: []
 			},        
 			plugins: [{
-				afterDraw: function() {
+				id: 'dbxNoDataMessage',
+				afterDraw: function(chart) {
 					//console.log("afterDraw(): cmName='"+cmName+"', graphName='"+graphName+"'.");
-					thisDbxChart.checkForNoDataInChart();
+					thisDbxChart.checkForNoDataInChart(chart); // first draw happens inside 'new Chart()', before '_chartObject' is assigned
 				}
 			}],
 			options: {
 				responsive: true,
 				maintainAspectRatio: false,
+				animation: false,   // many graphs on one page + frequent subscribe updates: skip the animation work
+				normalized: true,   // data is always added in time order (labels are pushed at the end)
+				interaction: {
+					mode: 'dbxTooltip', // 'all lines at hovered time' or 'closest line', from the user's Graph Settings (see dbxGraphSettings.js)
+					intersect: false,
+				},
+				plugins: {
 				title: {
 					display: true,
-					fontSize: 16,
+					font: { size: 16 },
 //					text: this._graphLabel
 //					text: this._cmName + ":" + this._graphName + " ##### " + this._graphLabel
 //					text: this._graphLabel + " ::: [" + this._serverName + "] " + this._cmName + ":" + this._graphName
@@ -3189,7 +3197,7 @@ class DbxGraph
 					//fullWidth: false, // Marks that this box should take the full width of the canvas (pushing down other boxes). This is unlikely to need to be changed in day-to-day use. DEFAULT=true
 					labels: {
 						boxWidth: 10, // width of coloured box
-						fontSize: 10, // font size of text, default=12
+						font: { size: 10 }, // font size of text, default=12
 						// fontColor: 'rgb(255, 99, 132)'
 						// generateLabels: function(chart) // the below is 
 						// {
@@ -3222,7 +3230,7 @@ class DbxGraph
 					},
 					onClick: function(e, legendItem) 
 					{
-						if ( ! e.ctrlKey )
+						if ( ! (e.native && e.native.ctrlKey) )
 						{
 							// ORIGINAL CODE -- Toggle Current 
 							var index = legendItem.datasetIndex;
@@ -3266,13 +3274,38 @@ class DbxGraph
 						}
 					},
 				}, // end: legend
+				annotation: {
+					// drawTime: 'afterDatasetsDraw',
+					drawTime: 'afterDraw',
+					annotations: this._annotations, // Array of annotations with an 'id' (timelineMarker, markedStartEndTime)
+				},
+				zoom: {
+					zoom: {
+						mode: 'x',
+						drag: {
+							enabled: true,
+							threshold: 10,   // pixels: a plain click (no drag) must still set the timeline-marker
+							backgroundColor: 'rgba(128, 128, 128, 0.3)',
+						},
+					},
+				},
+				tooltip: {
+					filter:   DbxGraphSettings.tooltipFilter,   // skips empty values, and 0 values if "hide zero" is set
+					itemSort: DbxGraphSettings.tooltipItemSort, // highest value first, if "sort by value" is set
+					callbacks: {
+						label: function (tooltipItem) {
+							// print numbers localized (typically 1234567.8 -> 1,234,567.8)
+							return tooltipItem.dataset.label + ': ' + tooltipItem.parsed.y.toLocaleString();
+						}
+						,title: DbxGraphSettings.tooltipTitle       // timestamp in the user's chosen format
+					}
+				},
+				}, // end: plugins
 				scales: {
-					xAxes: [{
-						id: 'x-axis-0', // Assign an ID to the X-axis
+					x: {
 						type: 'time',
-						distribution: 'linear',
-						tooltipFormat: 'YYYY-MM-DD (dddd) HH:mm:ss', // This didn't work
 						time: {
+							tooltipFormat: 'YYYY-MM-DD (dddd) HH:mm:ss',
 							displayFormats: {
 								second: 'HH:mm:ss',
 								minute: 'HH:mm:ss',
@@ -3280,18 +3313,17 @@ class DbxGraph
 							}
 						},
 						ticks: {
-							beginAtZero: true,  // if true, scale will include 0 if it is not already included.
+							maxRotation: 0,       // no slanted labels: skip labels instead (as in Chart.js 2)
+							autoSkipPadding: 15,
 						},
-						gridLines: {
-							color: 'rgba(0, 0, 0, 0.1)',
-							zeroLineColor: 'rgba(0, 0, 0, 0.25)'
+						grid: {
+							color: thisDbxChart.getGridColorFunction(),
 						},
-					}],
-					yAxes: [{
-						id: 'y-axis-0', // Assign an ID to the Y-axis
+					},
+					y: {
+						beginAtZero: true,  // if true, scale will include 0 if it is not already included.
 						ticks: {
-							beginAtZero: true,  // if true, scale will include 0 if it is not already included.
-							callback: function(value, index, values) 
+							callback: function(value, index, ticks) 
 							{
 								// If Percent Graph append a ' %' at the end.
 								if ( thisDbxChart._isPercentGraph ) 
@@ -3328,69 +3360,23 @@ class DbxGraph
 
 								// return formatted original number
 								// Use ChartJS default method for this, otherwise 1.0 till be 1 etc...
-								var defaultFormatStr = Chart.Ticks.formatters.linear(value, index, values);
+								var defaultFormatStr = Chart.Ticks.formatters.numeric.call(this, value, index, ticks);
 
 								return defaultFormatStr + units[0];
 
 								//return value.toFixed(1);
 								//return value.toFixed(1).replace(/\.0$/, '');
-								//return Chart.Ticks.formatters.linear(value, index, values);
+								//return Chart.Ticks.formatters.numeric.call(this, value, index, ticks);
 								//return this.toLocaleString();
 								//return value.toString();
 								//return value.toLocaleString();
 							}
 						},
-						gridLines: {
-							color: 'rgba(0, 0, 0, 0.1)',
-							zeroLineColor: 'rgba(0, 0, 0, 0.25)'
+						grid: {
+							color: thisDbxChart.getGridColorFunction(),
 						},
-					}],
+					},
 				}, // end: scales
-				// pan: { // Container for pan options
-				// 	enabled: true, // Boolean to enable panning
-				// 	mode: 'x', // Panning directions. Remove the appropriate direction to disable, Eg. 'y' would only allow panning in the y direction
-				// 	drag: true,
-				// },
-//				zoom: {  // Container for zoom options
-//					enabled: true,  // Boolean to enable zooming
-//					mode: 'x', // Zooming directions. Remove the appropriate direction to disable, Eg. 'y' would only allow zooming in the y direction
-//					drag: true,
-//				},
-				annotation: {
-					// drawTime: 'afterDatasetsDraw',
-					drawTime: 'afterDraw',
-					// events: ['click'],
-					annotations: this._annotations,
-//					annotations: {}, // in v3/v4 i think this is an object and not an array
-				},
-				tooltips: {
-					callbacks: {
-						label: function (tooltipItems, data) {
-							// print numbers localized (typically 1234567.8 -> 1,234,567.8)
-							return data.datasets[tooltipItems.datasetIndex].label + ': ' + tooltipItems.yLabel.toLocaleString();
-						}
-						,title: function (tooltipItems) {
-							//console.log('Tooltip.title: ', tooltipItems);
-							const date = new Date(tooltipItems[0].xLabel);
-							return date.toLocaleString();
-						}
-					}
-				},
-			},
-			tooltips: {
-//				mode: 'dataset',
-				mode: 'index',
-				intersect: false,
-//				mode: 'index',
-//				mode: 'point',
-//				mode: 'dataset',
-//				intersect: true
-//					mode: 'nearest',
-//					intersect: true
-			},
-			hover: {
-				mode: 'nearest',
-				intersect: true
 			},
 		};
 
@@ -3452,32 +3438,17 @@ class DbxGraph
 			if (this._debug > 0)
 				console.log("This is a PERCENT Graph: GraphName="+this._fullName);
 
-			this._chartConfig.options.scales.yAxes[0].ticks.suggestedMax = 100; // Adjustment used when calculating the maximum  data value
-			this._chartConfig.options.scales.yAxes[0].ticks.suggestedMin = 0;   // Adjustment used when calculating the minimum data value
-	//v3		this._chartConfig.options.scales.y.ticks.suggestedMax = 100; // Adjustment used when calculating the maximum  data value
-	//v3		this._chartConfig.options.scales.y.ticks.suggestedMin = 0;   // Adjustment used when calculating the minimum data value
+			this._chartConfig.options.scales.y.suggestedMax = 100; // Adjustment used when calculating the maximum  data value
+			this._chartConfig.options.scales.y.suggestedMin = 0;   // Adjustment used when calculating the minimum data value
 		}
-		
+
 		if (_colorSchema === "dark")
 		{
-//			var chartJsColorScheme = 'brewer.RdYlBu11';
-//			this._chartConfig.options.plugins.colorschemes.scheme = chartJsColorScheme;
-			
-			Chart.defaults.global.defaultFontColor = '#ccc';
+			Chart.defaults.color = '#ccc';
 
-			this._chartConfig.options.tooltips.backgroundColor = 'rgba(255, 255, 255, 0.8)';
-			this._chartConfig.options.tooltips.titleFontColor  = '#000';
-			this._chartConfig.options.tooltips.bodyFontColor   = '#000';
-			this._chartConfig.options.scales.xAxes[0].gridLines.color         = 'rgba(255, 255, 255, 0.2)';
-			this._chartConfig.options.scales.xAxes[0].gridLines.zeroLineColor = 'rgba(255, 255, 255, 0.5)';
-			this._chartConfig.options.scales.yAxes[0].gridLines.color         = 'rgba(255, 255, 255, 0.2)';
-			this._chartConfig.options.scales.yAxes[0].gridLines.zeroLineColor = 'rgba(255, 255, 255, 0.5)';
-	//v3		this._chartConfig.options.scales.x.grid.color         = 'rgba(255, 255, 255, 0.2)';
-	//v3		this._chartConfig.options.scales.x.grid.zeroLineColor = 'rgba(255, 255, 255, 0.5)';
-	//v3		this._chartConfig.options.scales.y.grid.color         = 'rgba(255, 255, 255, 0.2)';
-	//v3		this._chartConfig.options.scales.y.grid.zeroLineColor = 'rgba(255, 255, 255, 0.5)';
-
-//			Chart.defaults.global.defaultColor = 'rgba(255, 255, 255, 0.2)';
+			this._chartConfig.options.plugins.tooltip.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+			this._chartConfig.options.plugins.tooltip.titleColor      = '#000';
+			this._chartConfig.options.plugins.tooltip.bodyColor       = '#000';
 		}
 
 		// Get the outer DIV (where we will insert the graph)
@@ -3511,11 +3482,18 @@ class DbxGraph
 		// newDiv.appendChild(document.createElement("hr"));
 
 		// Create a canvas for every graph in above div
+		// Chart.js (responsive + maintainAspectRatio=false) takes its size from the parent, so the canvas gets
+		// a DEDICATED wrapper with position:relative and an explicit height (grown later if the legend needs more rows)
+		const canvasWrapper = document.createElement("div");
+		canvasWrapper.style.position = "relative";
+		canvasWrapper.style.height   = this._graphHeight + "px";
+		newDiv.appendChild(canvasWrapper);
+		this._canvasWrapper = canvasWrapper;
+
 		const newCanvas = document.createElement("canvas");
 		newCanvas.setAttribute("id", "canvas_" + this._fullName);
 		newCanvas.style.display = "block";
-		// newCanvas.height = this._graphHeight;
-		newDiv.appendChild(newCanvas);
+		canvasWrapper.appendChild(newCanvas);
 		this._canvas = newCanvas;
 
 		// Create a "feedback area" for every graph in above div
@@ -3528,7 +3506,6 @@ class DbxGraph
 
 		// Create the Chart (for now using Chart.js)
 		const ctx = newCanvas.getContext("2d");
-		ctx.canvas.height = this._graphHeight;
 		this._chartObject = new Chart(ctx, this._chartConfig);
 		this._canvasCtx = ctx;
 
@@ -3560,6 +3537,10 @@ class DbxGraph
 								endTime:     endTime
 							});
 						}
+					},
+					graphSettings: {
+						name: "Graph Settings…",
+						callback: function(key, opt) { DbxGraphSettings.openDialog(); }
 					},
 					sep_selectGraphs: '---',
 					resetZoomThis: {
@@ -3907,18 +3888,20 @@ class DbxGraph
 		// on "click": get the timestamp in the timeline, and draw a timeline-marker in ALL graphs on the same timestamp
 		//             if you didn't click on a "point" then all timeline-markers are removed
 		//---------------------------------------------------------------------------------------------------------
-		newCanvas.addEventListener("click", function(event) 
+		// Chart.js "onClick" (not a DOM listener on the canvas): the zoom plugin then swallows the click that ends a drag-zoom
+		this._chartObject.options.onClick = function(chartEvent)
 		{
+			const event = chartEvent.native;
 			// For CTRL + Click --- Hide the current line
 			if (event.ctrlKey)
 			{
-				var clickedOnPoints = thisClass._chartObject.getElementsAtEventForMode(event, 'nearest', {intersect:true}, true);
+				var clickedOnPoints = thisClass._chartObject.getElementsAtEventForMode(chartEvent, 'nearest', {intersect:true}, true);
 				if (clickedOnPoints[0])
 				{
 					const item = clickedOnPoints[0];
 					var ci = thisClass._chartObject;
 					
-					const dataSetIndex = item._datasetIndex;
+					const dataSetIndex = item.datasetIndex;
 					const meta = ci.getDatasetMeta(dataSetIndex);
 					meta.hidden = meta.hidden === null ? !ci.data.datasets[dataSetIndex].hidden : null;
 					ci.update();
@@ -3929,7 +3912,7 @@ class DbxGraph
 			// ------------------------------------------------------------
 			// If we clicked on a "label" (below the chart) -- Then do "nothing" -- Let chartJs do it's work
 			// ------------------------------------------------------------
-			var clickedOnPoints = thisClass._chartObject.getElementsAtEventForMode(event, 'nearest', {intersect:true}, true);
+			var clickedOnPoints = thisClass._chartObject.getElementsAtEventForMode(chartEvent, 'nearest', {intersect:true}, true);
 			if (clickedOnPoints.length === 0)
 			{
 				console.log("Skipping click on 'canvas/chart', since we did NOT click any 'line'... chartJs will do the work needed...");
@@ -3940,11 +3923,10 @@ class DbxGraph
 				// ------------------------------------------------------------
 				// Below is "normal" click --- Mark the time in ALL charts
 				// ------------------------------------------------------------
-				var activePoints = thisClass._chartObject.getElementsAtEvent(event); // getPointsAtEvent(event)
-				var firstPoint = activePoints[0];
+				var firstPoint = clickedOnPoints[0];
 				var clickTs = undefined;
 				if(firstPoint !== undefined) 
-					clickTs = thisClass._chartObject.data.labels[firstPoint._index];
+					clickTs = thisClass._chartObject.data.labels[firstPoint.index];
 
 				// Set-or-reset the timeline-markers in ALL graphs
 				for(var i=0; i<_graphMap.length; i++)
@@ -3964,7 +3946,7 @@ class DbxGraph
 				if ($('#dbms-config-panel').is(':visible'))
 					dbmsConfigLoad(thisClass.getServerName(), clickTs);
 			}
-		});
+		};
 	} // END: Constructor
 
 //	findClosestTimestamp(inputDate) 
@@ -4022,7 +4004,7 @@ class DbxGraph
 //		if (this._chartObject.options.plugins.annotation.annotations.hasOwnProperty('markedStartEndTime'))
 //			delete this._chartObject.options.plugins.annotation.annotations.markedStartEndTime;
 //
-//		this._chartObject.update(0);
+//		this._chartObject.update('none');
 //
 //		if (startTime === undefined || endTime === undefined)
 //			return;
@@ -4043,7 +4025,7 @@ class DbxGraph
 //		};
 //
 //		this._chartObject.options.plugins.annotation.annotations['markedStartEndTime'] = markedStartEndTime;
-//		this._chartObject.update(0);
+//		this._chartObject.update('none');
 //	}
 	/**
 	 * Set a marker (area of interest) start/end 
@@ -4059,10 +4041,10 @@ class DbxGraph
 		if (arrayPos !== -1)
 		{
 			this._annotations.splice(arrayPos, 1); // Remove 1 entry in the array
-			this._chartObject.options.annotation.annotations = this._annotations; // Only in annotations v:0.5.7
+			this._chartObject.options.plugins.annotation.annotations = this._annotations;
 		}
 
-		this._chartObject.update(0);
+		this._chartObject.update('none');
 
 		if ( startTime !== undefined && endTime !== undefined && startTime !== '' && endTime !== '')
 		{
@@ -4075,8 +4057,8 @@ class DbxGraph
 			const markedStartEndTime = {
 				id:   'markedStartEndTime',
 				type: 'box',
-				xScaleID: 'x-axis-0',
-				yScaleID: 'y-axis-0',
+				xScaleID: 'x',
+				yScaleID: 'y',
 				xMin: this._markStartTime,
 				xMax: this._markEndTime,
 				backgroundColor: 'rgba(128, 128, 128, 0.2)', // Light gray transparent background
@@ -4085,9 +4067,9 @@ class DbxGraph
 			};
 
 			this._annotations.push(markedStartEndTime);
-			this._chartObject.options.annotation.annotations = this._annotations; // Only in annotations v:0.5.7
+			this._chartObject.options.plugins.annotation.annotations = this._annotations;
 
-			this._chartObject.update(0);
+			this._chartObject.update('none');
 		}
 	}
 
@@ -4110,14 +4092,14 @@ class DbxGraph
 		if (arrayPos !== -1)
 		{
 			this._annotations.splice(arrayPos, 1); // Remove 1 entry in the array
-			this._chartObject.options.annotation.annotations = this._annotations; // Only in annotations v:0.5.7
+			this._chartObject.options.plugins.annotation.annotations = this._annotations;
 		}
 //console.log("------ arrayPos=" + arrayPos + ", this._annotations.length=" + this._annotations.length + " -- setTimelineMarker(ts=|" + ts + "|): srv='" + this._serverName + "', graphName='" + this._fullName + "'.");
 		
 //		this._chartObject.options.annotation.annotations = [];
 //v3		if (this._chartObject.options.plugins.annotation.annotations.hasOwnProperty('timelineMarker'))
 //v3			delete this._chartObject.plugins.options.annotation.annotations.timelineMarker;
-		this._chartObject.update(0);
+		this._chartObject.update('none');
 		
 		// If no 'ts' input... get out of here (with just reseting the timeline-marker
 		if (ts === undefined)
@@ -4135,26 +4117,25 @@ class DbxGraph
 		const annotation = {
 			id: 'timelineMarker',
 			type: 'line',
-			mode: 'vertical',
-			scaleID: 'x-axis-0',
+			scaleID: 'x',
 			value: ts,
 			borderColor: 'gray',
 			borderWidth: 2,
 			borderDash: [2, 2],
 			label: {
-				enabled: true,
+				display: true,
 				content: labelTsStr,
-				fontSize: 10,
+				font: { size: 10 },
 				backgroundColor: 'gray',
-				position: 'top'
+				position: 'start'
 			}
 		};
 		this._annotations.push(annotation);
-		this._chartObject.options.annotation.annotations = this._annotations; // Only in annotations v:0.5.7
+		this._chartObject.options.plugins.annotation.annotations = this._annotations;
 //		this._annotations['timelineMarker'] = annotation;
 //		this._chartObject.options.annotation.annotations[0] = annotation;
 //v3		this._chartObject.options.plugins.annotation.annotations['timelineMarker'] = annotation;
-		this._chartObject.update(0);
+		this._chartObject.update('none');
 //const arrayPos1 = this._annotations.findIndex(item => item['id'] === 'timelineMarker')
 //console.log("<<<<<< arrayPos1=" + arrayPos1 + ", this._annotations.length=" + this._annotations.length + " -- setTimelineMarker(ts=|" + ts + "|): srv='" + this._serverName + "', graphName='" + this._fullName + "'.");
 	} // end: method
@@ -4214,15 +4195,10 @@ class DbxGraph
 	getInitSampleValue() { return this._initSampleValue; }
 	isMultiDayChart()    { return this._isMultiDayChart; }
 
-	// Below is for chart.js 3
-//	getMaxValue()        { return this._chartConfig.options.scales.y.max; }
-//	getMinValue()        { return this._chartConfig.options.scales.y.min; }
-//	setMaxValue(val)     { return this._chartConfig.options.scales.y.max = val; }
-//	setMinValue(val)     { return this._chartConfig.options.scales.y.min = val; }
-	getMaxValue()        { return this._chartConfig.options.scales.yAxes[0].ticks.max === undefined ? "" : this._chartConfig.options.scales.yAxes[0].ticks.max; }
-	getMinValue()        { return this._chartConfig.options.scales.yAxes[0].ticks.min === undefined ? "" : this._chartConfig.options.scales.yAxes[0].ticks.min; }
-	setMaxValue(val)     { this._chartConfig.options.scales.yAxes[0].ticks.max = (val !== "" && val !== null) ? parseFloat(val) : undefined; this._chartObject.update(); }
-	setMinValue(val)     { this._chartConfig.options.scales.yAxes[0].ticks.min = (val !== "" && val !== null) ? parseFloat(val) : undefined; this._chartObject.update(); }
+	getMaxValue()        { return this._chartObject.options.scales.y.max === undefined ? "" : this._chartObject.options.scales.y.max; }
+	getMinValue()        { return this._chartObject.options.scales.y.min === undefined ? "" : this._chartObject.options.scales.y.min; }
+	setMaxValue(val)     { this._chartObject.options.scales.y.max = (val !== "" && val !== null) ? parseFloat(val) : undefined; this._chartObject.update(); }
+	setMinValue(val)     { this._chartObject.options.scales.y.min = (val !== "" && val !== null) ? parseFloat(val) : undefined; this._chartObject.update(); }
 
 	// Run AFTER load has been completed, so we can make any "adjustments"
 	onLoadCompetion()
@@ -4235,14 +4211,29 @@ class DbxGraph
 		}
 	}
 
-	checkForNoDataInChart()
-	{ 
+	/**
+	 * Grid line color for the x/y scales (scriptable option): the "zero line" is a bit stronger than the other grid lines.
+	 * (Chart.js 2 had 'gridLines.zeroLineColor', which was removed in Chart.js 3)
+	 */
+	getGridColorFunction()
+	{
+		const isDark    = (_colorSchema === "dark");
+		const lineColor = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)';
+		const zeroColor = isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.25)';
+
+		return function(context) {
+			return (context.tick && context.tick.value === 0) ? zeroColor : lineColor;
+		};
+	}
+
+	checkForNoDataInChart(chart = this._chartObject)
+	{
 		// No data is present (write in chart object)
-		if (this._chartObject.data.datasets.length === 0) 
+		if (chart.data.datasets.length === 0)
 		{
-			var ctx      = this._chartObject.chart.ctx;
-			var width    = this._chartObject.chart.width;
-			var height   = this._chartObject.chart.height
+			var ctx      = chart.ctx;
+			var width    = chart.width;
+			var height   = chart.height
 			var labelTxt = 'No data was found. startTime='+this._initStartTime+', endTime='+this._initEndTime;
 			//this._chartObject.clear();
 			
@@ -4420,7 +4411,7 @@ class DbxGraph
 							if (this._debug > 0)
 								console.log("Clearing timeline-marker for graph '"+this._fullName+"' due to time-expire. annotationTs='"+this._annotations[arrayPos].value+"', graphpOldestTs='"+oldestTs+"'.");
 							this._annotations.splice(arrayPos, 1); // Remove 1 entry in the array
-							this._chartObject.options.annotation.annotations = this._annotations; // Only in annotations v:0.5.7
+							this._chartObject.options.plugins.annotation.annotations = this._annotations;
 						}
 					}
 					
@@ -4551,14 +4542,14 @@ class DbxGraph
 			legendLabelPixWidthSum += dataset.label.length * 5; // lets asume that every char is approx 5 pixel wide (for simplicity)
 		}
 		legendLabelPixWidthSum += this._chartObject.data.datasets.length * 17; // add 17 pixels for each Legend (10 for the squre, and 7 for some spacing)
-		const guessedLegendRows = Math.ceil(legendLabelPixWidthSum / this._canvas.width);
+		const guessedLegendRows = Math.ceil(legendLabelPixWidthSum / this._chartObject.width);
 		// console.log("cmName="+this._cmName+", graphName="+this._graphName+", this._chartObject.data.datasets.length="+this._chartObject.data.datasets.length+", legendLabelPixWidthSum="+legendLabelPixWidthSum);
 		// console.log("cmName="+this._cmName+", graphName="+this._graphName+", canvas.height="+this._canvas.height+", canvas.width="+this._canvas.width+".");
 		// console.log("cmName="+this._cmName+", graphName="+this._graphName+", canvasCtx.canvas.height="+this._canvasCtx.canvas.height+", canvasCtx.canvas.width="+this._canvasCtx.canvas.width+".");
 		// console.log("cmName="+this._cmName+", graphName="+this._graphName+", guessedLegendRows="+guessedLegendRows+".");
 		if (guessedLegendRows > 1)
 		{
-			var curHeight = parseInt(this._canvas.style.height);
+			var curHeight = parseInt(this._canvasWrapper.style.height);
 
 			// If less or equal the original height, then grow the canvas a bit
 			if (curHeight <= this._graphHeight)
@@ -4566,13 +4557,12 @@ class DbxGraph
 				var newHeight = curHeight + (guessedLegendRows * 17); // Asume every Legend row takes approx 17px
 
 				if (this._debug > 0)
-					console.log("---------------------------- cur-Height: "+this._canvas.style.height+", newHeight="+newHeight+", guessedLegendRows="+guessedLegendRows+", cmName="+this._cmName+", graphName="+this._graphName+".");
+					console.log("---------------------------- cur-Height: "+this._canvasWrapper.style.height+", newHeight="+newHeight+", guessedLegendRows="+guessedLegendRows+", cmName="+this._cmName+", graphName="+this._graphName+".");
 
-				//this._canvas.style.height = newHeight+"px";
-				this._chartObject.canvas.parentNode.style.height = newHeight+"px";
+				this._canvasWrapper.style.height = newHeight+"px"; // Chart.js resizes the canvas to its wrapper
 
 				if (this._debug > 1)
-					console.log("++++++++++++++++++++++++++ check-Height: "+this._canvas.style.height);
+					console.log("++++++++++++++++++++++++++ check-Height: "+this._canvasWrapper.style.height);
 	
 				// Simulate a windows resize to redraw the "whole thing"
 				// Changed to: do this-at-the-end in function: graphLoadIsComplete()

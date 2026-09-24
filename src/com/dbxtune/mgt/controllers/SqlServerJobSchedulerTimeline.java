@@ -179,8 +179,8 @@ extends DbxCentralPageTemplate
 //		list.add("/scripts/chartjs/2.7.3/plugins/chartjs-plugin-annotation.js");
 //		list.add("https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"); 
 //		list.add("https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/2.2.1/chartjs-plugin-annotation.min.js"); 
-		list.add("/scripts/chartjs/3.7.0/dist/chart.min.js"); 
-		list.add("/scripts/chartjs-plugin-annotation/2.2.1/chartjs-plugin-annotation.min.js"); 
+		list.add("/scripts/chartjs/4.5.1/dist/chart.umd.min.js"); 
+		list.add("/scripts/chartjs-plugin-annotation/3.1.0/chartjs-plugin-annotation.min.js"); 
 		
 		// Prism -- to get TEXT field(s) to look better
 //		list.add("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js");
