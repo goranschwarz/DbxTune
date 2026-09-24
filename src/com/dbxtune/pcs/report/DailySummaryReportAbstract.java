@@ -1300,8 +1300,7 @@ implements IDailySummaryReport
 		sb.append("      <div class='modal-content'>																												\n");
 		sb.append("        <div class='modal-header'>																												\n");
 		sb.append("          <h5 class='modal-title' id='dbx-view-sqltext-dialog-title'><b>SQL Text:</b> <span id='dbx-view-sqltext-objectName'></span></h5>	\n");
-		sb.append("          <button type='button' class='close' data-dismiss='modal' aria-label='Close'>															\n");
-		sb.append("            <span aria-hidden='true'>&times;</span>																								\n");
+		sb.append("          <button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'>															\n");
 		sb.append("          </button>																																\n");
 		sb.append("        </div>																																	\n");
 		sb.append("        <div class='modal-body' style='overflow-x: auto;'>																						\n");
@@ -1310,7 +1309,7 @@ implements IDailySummaryReport
 		sb.append("          </div>																																	\n");
 		sb.append("        </div>																																	\n");
 		sb.append("        <div class='modal-footer'>																												\n");
-		sb.append("          <button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>													\n");
+		sb.append("          <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>													\n");
 		sb.append("        </div>																																	\n");
 		sb.append("      </div>																																		\n");
 		sb.append("    </div>																																		\n");

@@ -420,7 +420,8 @@ at pc:
 		#dbms-config-panel.dc-dark #dbms-config-header strong { color:#e0e0e0; }
 		#dbms-config-panel.dc-dark #dbms-config-header span   { color:#aaa !important; }
 		#dbms-config-panel.dc-dark #dbms-config-header label  { color:#ccc !important; }
-		#dbms-config-panel.dc-dark #dbms-config-header button { background:#3d3d3d; color:#ddd; border-color:#555; }
+		#dbms-config-panel.dc-dark #dbms-config-header button:not(.btn-close) { background:#3d3d3d; color:#ddd; border-color:#555; }
+		#dbms-config-panel.dc-dark #dbms-config-header .btn-close { filter:invert(1) grayscale(100%) brightness(200%); }
 		#dbms-config-panel.dc-dark ul.nav-tabs                { background:#252525 !important; border-bottom-color:#444; }
 		#dbms-config-panel.dc-dark .nav-link                  { color:#999 !important; }
 		#dbms-config-panel.dc-dark .nav-link.active           { background:#3a3a3a !important; border-color:#555 #555 #3a3a3a !important; color:#ddd !important; box-shadow: inset 0 -3px 0 #5bc8ff !important; }
@@ -428,6 +429,8 @@ at pc:
 		#dbms-config-panel.dc-dark #dbms-config-filter-input  { background:#333; color:#e0e0e0; border-color:#555; }
 		#dbms-config-panel.dc-dark #dbms-config-body          { background:#1e1e1e; color:#e0e0e0; }
 		#dbms-config-panel.dc-dark .table                     { color:#e0e0e0; }
+		#dbms-config-panel.dc-dark .table,
+		#dbms-config-panel.dc-dark .table > :not(caption)     { --bs-table-border-color:#444; } /* BS5.3 draws .table-bordered row lines on <tr> */
 		#dbms-config-panel.dc-dark .table th                  { background:#2d2d2d !important; color:#ddd; border-color:#444; }
 		#dbms-config-panel.dc-dark .table td                  { border-color:#3a3a3a; color:#e0e0e0; background-color:#1e1e1e; }
 		#dbms-config-panel.dc-dark .table-hover tbody tr:hover td { background:#2a2a2a; color:#fff; }
@@ -523,7 +526,8 @@ at pc:
 		#query-store-panel.qs-dark #query-store-header strong  { color:#e0e0e0; }
 		#query-store-panel.qs-dark #query-store-header span    { color:#aaa !important; }
 		#query-store-panel.qs-dark #query-store-header label   { color:#ccc !important; }
-		#query-store-panel.qs-dark #query-store-header button  { background:#3d3d3d; color:#ddd; border-color:#555; }
+		#query-store-panel.qs-dark #query-store-header button:not(.btn-close) { background:#3d3d3d; color:#ddd; border-color:#555; }
+		#query-store-panel.qs-dark #query-store-header .btn-close { filter:invert(1) grayscale(100%) brightness(200%); }
 		#query-store-panel.qs-dark ul.nav-tabs                 { background:#252525 !important; border-bottom-color:#444; }
 		#query-store-panel.qs-dark .nav-link                   { color:#999 !important; }
 		#query-store-panel.qs-dark .nav-link.active            { background:#3a3a3a !important; border-color:#555 #555 #3a3a3a !important; color:#ddd !important; }
@@ -535,6 +539,8 @@ at pc:
 		#query-store-panel.qs-dark #query-store-detail-bar a   { color:#5bc8ff; }
 		#query-store-panel.qs-dark #query-store-body           { background:#1e1e1e; color:#e0e0e0; }
 		#query-store-panel.qs-dark .table                      { color:#e0e0e0; }
+		#query-store-panel.qs-dark .table,
+		#query-store-panel.qs-dark .table > :not(caption)      { --bs-table-border-color:#444; } /* BS5.3 draws .table-bordered row lines on <tr> */
 		#query-store-panel.qs-dark .table th                   { background:#2d2d2d !important; color:#ddd; border-color:#444; }
 		#query-store-panel.qs-dark .table td                   { border-color:#3a3a3a; color:#e0e0e0; background-color:#1e1e1e; }
 		#query-store-panel.qs-dark .table-hover tbody tr:hover td { background:#2a2a2a; color:#fff; }
@@ -553,7 +559,7 @@ at pc:
 		#dbx-showplan-viewer-input-dialog.spv-dark .modal-content            { background:#1e1e1e; color:#e0e0e0; border-color:#555; }
 		#dbx-showplan-viewer-input-dialog.spv-dark .modal-header             { background:#2d2d2d; border-bottom-color:#444; }
 		#dbx-showplan-viewer-input-dialog.spv-dark .modal-header h5          { color:#e0e0e0; }
-		#dbx-showplan-viewer-input-dialog.spv-dark .modal-header .close      { color:#aaa; text-shadow:none; }
+		#dbx-showplan-viewer-input-dialog.spv-dark .modal-header .btn-close  { filter:invert(1) grayscale(100%) brightness(200%); }
 		#dbx-showplan-viewer-input-dialog.spv-dark .modal-footer             { background:#2d2d2d; border-top-color:#444; }
 		#dbx-showplan-viewer-input-dialog.spv-dark textarea                  { background:#2a2a2a !important; color:#e0e0e0 !important; border-color:#555 !important; }
 		#dbx-showplan-viewer-input-dialog.spv-dark small.text-muted          { color:#999 !important; }
@@ -628,8 +634,8 @@ at pc:
 			gap: 6px;
 			cursor: move;
 		}
-		#alarm-panel-header label,
-		#alarm-panel-header .close { color: #fff !important; }
+		#alarm-panel-header label      { color: #fff !important; }
+		#alarm-panel-header .btn-close { filter:invert(1) grayscale(100%) brightness(200%); }
 		#alarm-panel-body {
 			flex: 1;
 			overflow: auto;
@@ -748,7 +754,8 @@ at pc:
 	#cm-detail-panel.cm-dark #cm-detail-header strong    { color:#e0e0e0; }
 	#cm-detail-panel.cm-dark #cm-detail-header span      { color:#aaa !important; }
 	#cm-detail-panel.cm-dark #cm-detail-header select,
-	#cm-detail-panel.cm-dark #cm-detail-header button    { background:#3d3d3d; color:#ddd; border-color:#555; }
+	#cm-detail-panel.cm-dark #cm-detail-header button:not(.btn-close) { background:#3d3d3d; color:#ddd; border-color:#555; }
+	#cm-detail-panel.cm-dark #cm-detail-header .btn-close { filter:invert(1) grayscale(100%) brightness(200%); }
 	#cm-detail-panel.cm-dark #cm-detail-header label,
 	#cm-detail-panel.cm-dark #cm-detail-header font,
 	#cm-detail-panel.cm-dark #cm-detail-header span      { color:#ccc !important; }
@@ -771,6 +778,8 @@ at pc:
 	#cm-detail-panel.cm-dark .cm-gutter                  { background-color:#3a3a3a; }
 	#cm-detail-panel.cm-dark .cm-gutter:hover            { background-color:#555; }
 	#cm-detail-panel.cm-dark .table                      { color:#e0e0e0; }
+	#cm-detail-panel.cm-dark .table,
+	#cm-detail-panel.cm-dark .table > :not(caption)      { --bs-table-border-color:#444; } /* BS5.3 draws .table-bordered row lines on <tr> */
 	#cm-detail-panel.cm-dark .table th                   { background:#2d2d2d !important; color:#ddd; border-color:#444; }
 	#cm-detail-panel.cm-dark .table td                   { border-color:#3a3a3a; color:#e0e0e0; background-color:#1e1e1e; }
 	#cm-detail-panel.cm-dark .table-hover tbody tr:hover td { background:#2a2a2a; color:#fff; }
@@ -1086,17 +1095,17 @@ at pc:
 	<!-- JS: Bootstrap --> 
 <!-- <script type="text/javascript" src='/scripts/popper/1.12.9/popper.min.js'></script> --> 
 <!--<script type="text/javascript" src='/scripts/bootstrap/4.0.0/js/bootstrap.min.js'></script> --> 
-	<script type="text/javascript" src='/scripts/bootstrap/4.6.2/js/bootstrap.bundle.min.js'></script>  <!-- Bundle also includes popper -->
+	<script type="text/javascript" src='/scripts/bootstrap/5.3.8/js/bootstrap.bundle.min.js'></script>  <!-- Bundle also includes popper -->
 
 	<!-- JS: DateRangePicker -->
 	<script type="text/javascript" src="/scripts/bootstrap-daterangepicker/3.1/daterangepicker.js"></script>
 
 	<!-- JS: Bootstrap - TABLE -->
-	<script type="text/javascript" src="/scripts/bootstrap-table/1.12.1/bootstrap-table.js"></script>
+	<script type="text/javascript" src="/scripts/bootstrap-table/1.27.3/bootstrap-table.min.js"></script>
 	<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/extensions/editable/bootstrap-table-editable.js"></script> -->
 	<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/extensions/export/bootstrap-table-export.js"></script> -->
 	<!-- <script src="https://rawgit.com/hhurz/tableExport.jquery.plugin/master/tableExport.js"></script> -->
-	<script type="text/javascript" src="/scripts/bootstrap-table/1.12.1/extensions/filter-control/bootstrap-table-filter-control.js"></script>
+	<script type="text/javascript" src="/scripts/bootstrap-table/1.27.3/extensions/filter-control/bootstrap-table-filter-control.min.js"></script>
 
 	<!-- JS: jquery - contextMenu -->
 	<script type="text/javascript" src="/scripts/jquery-contextmenu/2.9.2/jquery.contextMenu.min.js"></script>
@@ -1158,10 +1167,7 @@ at pc:
 	<link rel="stylesheet" href="/scripts/dbxtune/css/iota.css" type="text/css">
 
 	<!-- CSS: Bootstrap -->
-<!-- 	<link rel="stylesheet" href="https://unpkg.com/bootstrap@5.3.2/dist/css/bootstrap.min.css"> --> <!--  <<<< NOTE: This needs to go **BEFORE** bootstrap 4 css >>> -->
-	<link rel="stylesheet" href="/scripts/bootstrap/5.3.8/css/bootstrap.min.css">  <!--  <<<< NOTE: This needs to go **BEFORE** bootstrap 4 css >>> -->
-<!--<link rel="stylesheet" href="/scripts/bootstrap/4.0.0/css/bootstrap.min.css">-->
-	<link rel='stylesheet' href='/scripts/bootstrap/4.6.2/css/bootstrap.min.css'> 
+	<link rel="stylesheet" href="/scripts/bootstrap/5.3.8/css/bootstrap.min.css">
 
 	<!-- CSS: DateRangePicker -->
 	<link rel="stylesheet" href="/scripts/bootstrap-daterangepicker/3.1/daterangepicker.css">
@@ -1174,7 +1180,8 @@ at pc:
 	<!-- <script src="/scripts/w2ui/w2ui-1.5.rc1.js" type="text/javascript"></script> -->
 
 	<!-- JS: Bootstrap - TABLE -->
-	<link rel="stylesheet" href="/scripts/bootstrap-table/1.12.1/bootstrap-table.min.css">
+	<link rel="stylesheet" href="/scripts/bootstrap-table/1.27.3/bootstrap-table.min.css">
+	<link rel="stylesheet" href="/scripts/bootstrap-table/1.27.3/extensions/filter-control/bootstrap-table-filter-control.min.css">
 	<!-- <link rel="stylesheet" href="https://rawgit.com/vitalets/x-editable/master/dist/bootstrap3-editable/css/bootstrap-editable.css"> -->
 
 	<!-- JS: jquery - contextMenu -->
@@ -1196,13 +1203,13 @@ at pc:
 
 <body>
 	<!-- <div id="toolbar" style="padding: 4px; border: 1px solid #dfdfdf; border-radius: 3px"></div> -->
-	<nav class="navbar navbar-expand-md navbar-dark sticky-top bg-dark mb-0">
+	<nav class="navbar navbar-expand-md navbar-dark sticky-top bg-dark mb-0 px-3">
 		<a class="navbar-brand" href="/">DbxCentral</a>
-		<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+		<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
 			<span class="navbar-toggler-icon"></span>
 		</button>
 		<div class="collapse navbar-collapse" id="navbarCollapse">
-			<ul class="navbar-nav mr-auto">
+			<ul class="navbar-nav me-auto">
 				<li class="nav-item">
 					<a class="nav-link" href="/overview">Servers</a>
 				</li>
@@ -1210,7 +1217,7 @@ at pc:
 					<a class="nav-link" href="/admin/admin.html">Admin</a>
 				</li>
 				<li class="nav-item dropdown">
-					<a class="nav-link dropdown-toggle" href="#" id="dbx-tools-menu" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Tools</a>
+					<a class="nav-link dropdown-toggle" href="#" id="dbx-tools-menu" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Tools</a>
 					<div class="dropdown-menu" aria-labelledby="dbx-tools-menu">
 						<div class="dbx-dropdown-submenu">
 							<a class="dropdown-item" href="#">&#128202; Showplan</a>
@@ -1228,29 +1235,29 @@ at pc:
 
 			<div    id="subscribe-feedback-msg"  class="dbx-nav-text"></div>
 			<div    id="subscribe-feedback-srv"  class="dbx-nav-text"></div>
-			<div    id="subscribe-feedback-time" class="dbx-nav-text mr-1"></div>
+			<div    id="subscribe-feedback-time" class="dbx-nav-text me-1"></div>
 
 			<button id="dbx-refresh" class="fa fa-refresh btn btn-outline-light mx-2 my-0 my-sm-0" type="button" onclick="collectorRequestRefresh();" title="Send a 'Refresh Request' to the Collector(s)"></button>
 
-			<div id="dbx-report-range" class="dbx-nav-text btn btn-outline-light mr-2">
+			<div id="dbx-report-range" class="dbx-nav-text btn btn-outline-light me-2">
 				<i class="glyphicon glyphicon-calendar fa fa-calendar"></i>&nbsp;
 				<span>Time Span</span> <b class="caret"></b>
 			</div>
 
 <!--
 			<div id="dbx-report-range"
-				<input type="text" class="form-control dbx-nav-text mr-2">
+				<input type="text" class="form-control dbx-nav-text me-2">
 				<i class="glyphicon glyphicon-calendar fa fa-calendar"></i>
 				<span>Time Span</span> <b class="caret"></b>
 			</div>
  -->
 			<!-- <div    id="dbx-start-time"          class="dbx-nav-text">2018-??-?? ??:??</div> -->
 			<div class="btn px-0 btn-outline-light">
-				<button id="dbx-prev-day"            title="Previous DAY, same time span"    alt="Previous DAY, samt time span"    class="dbx-nav-button p-0 ml-1" type="button"><i class="glyphicon fa fa-backward"></i></button>          <!-- fa-backward fa-fast-backward          -->
+				<button id="dbx-prev-day"            title="Previous DAY, same time span"    alt="Previous DAY, samt time span"    class="dbx-nav-button p-0 ms-1" type="button"><i class="glyphicon fa fa-backward"></i></button>          <!-- fa-backward fa-fast-backward          -->
 				<button id="dbx-prev-time"           title="Previous # Hours"                alt="Previous # Hours"                class="dbx-nav-button p-0"      type="button"><i class="glyphicon fa fa-arrow-circle-left"></i></button> <!-- fa-step-backward fa-arrow-circle-left -->
 				<span   id="dbx-sample-time"         title="Hours in the selected Time Span" alt="Hours in the selected Time Span" class="">?h</span>
 				<button id="dbx-next-time"           title="Next # Hours"                    alt="Next # Hours"                    class="dbx-nav-button p-0"      type="button"><i class="glyphicon fa fa-arrow-circle-right"></i></button> <!-- fa-step-forward fa-arrow-circle-right -->
-				<button id="dbx-next-day"            title="Next DAY, same time span"        alt="Next DAY, samt time span"        class="dbx-nav-button p-0 mr-1" type="button"><i class="glyphicon fa fa-forward"></i></button>            <!-- fa-forward fa-fast-forward            -->
+				<button id="dbx-next-day"            title="Next DAY, same time span"        alt="Next DAY, samt time span"        class="dbx-nav-button p-0 me-1" type="button"><i class="glyphicon fa fa-forward"></i></button>            <!-- fa-forward fa-fast-forward            -->
 			</div>
 			<button id="dbx-history-on"          class="fa fa-history    btn btn-outline-light mx-2 my-0 my-sm-0" type="button" title="Switch to 'History View' mode. (view older active SQL Statements)... This can also be done by clicking on any line at a Chart/Graph."> </button>
 			<button id="dbx-history-off"         class="fa fa-line-chart btn btn-outline-light mx-2 my-0 my-sm-0" type="button" title="Switch to 'Normal View' mode... (Get out of History View mode)" style="display: none;"></button>
@@ -1288,9 +1295,9 @@ at pc:
 			<div id="dbx-history-container-div" class="dbx-history-container-class" style="display: none;">
 <!--
 				<div style="width: 100%; display:flex; flex-flow:row wrap;">
-					<p style="width: 1%; text-align: left;">     <button id="dbx-history-prev-entry"  title="Previous Active Statement"    alt="Previous Active Statement"    class="dbx-nav-button p-0 ml-1" type="button"><i class="glyphicon fa fa-backward"></i></button> </p>
+					<p style="width: 1%; text-align: left;">     <button id="dbx-history-prev-entry"  title="Previous Active Statement"    alt="Previous Active Statement"    class="dbx-nav-button p-0 ms-1" type="button"><i class="glyphicon fa fa-backward"></i></button> </p>
 					<p style="width: 98%; text-align: center;">   <input type="range" id="dbx-history-timeline-slider" min="0" max="100" step="1" value="50" class="dbx-history-timeline-slider-class"> </p>
-					<p style="width: 1%; text-align: right;">    <button id="dbx-history-next-entry"  title="Next Active Statement"        alt="Next Active Statement"        class="dbx-nav-button p-0 mr-1" type="button"><i class="glyphicon fa fa-forward"></i></button> </p>
+					<p style="width: 1%; text-align: right;">    <button id="dbx-history-next-entry"  title="Next Active Statement"        alt="Next Active Statement"        class="dbx-nav-button p-0 me-1" type="button"><i class="glyphicon fa fa-forward"></i></button> </p>
 				</div>
 -->
 				<input type="range" id="dbx-history-timeline-slider" min="0" max="100" step="1" value="50" class="dbx-history-timeline-slider-class">
@@ -1301,8 +1308,8 @@ at pc:
 					<p id="dbx-history-slider-right-text"  style="font-size: 12px; color: #d3d3d3; width: 33%; text-align: right;" >most-right-entry</p>
 				</div>
 <!--
-				<button id="dbx-history-prev-entry"  title="Previous Active Statement"    alt="Previous Active Statement"    class="dbx-nav-button p-0 ml-1" type="button" onclick="dbxHistoryPrevActiveStatement()">  <i class="glyphicon fa fa-backward"></i>  </button>
-				<button id="dbx-history-next-entry"  title="Next Active Statement"        alt="Next Active Statement"        class="dbx-nav-button p-0 mr-1" type="button" onclick="dbxHistoryNextActiveStatement()">  <i class="glyphicon fa fa-forward"></i>   </button>
+				<button id="dbx-history-prev-entry"  title="Previous Active Statement"    alt="Previous Active Statement"    class="dbx-nav-button p-0 ms-1" type="button" onclick="dbxHistoryPrevActiveStatement()">  <i class="glyphicon fa fa-backward"></i>  </button>
+				<button id="dbx-history-next-entry"  title="Next Active Statement"        alt="Next Active Statement"        class="dbx-nav-button p-0 me-1" type="button" onclick="dbxHistoryNextActiveStatement()">  <i class="glyphicon fa fa-forward"></i>   </button>
 -->
 			</div>
 
@@ -1335,14 +1342,14 @@ at pc:
 
 
 	<!-- Show Active SQL Statements -->
-	<button id="active-statements-btn" class="active-statements-btn-class" onclick="openActiveStatementsWindow();" title="Active Statements"><i class="fa fa-bolt"></i><span id="active-stmt-count" class="badge badge-pill badge-danger" style="display:none;"></span></button>
+	<button id="active-statements-btn" class="active-statements-btn-class" onclick="openActiveStatementsWindow();" title="Active Statements"><i class="fa fa-bolt"></i><span id="active-stmt-count" class="badge rounded-pill text-bg-danger" style="display:none;"></span></button>
 
 	<!-- Toggle CM Detail Panel -->
 	<button id="cm-detail-btn" onclick="cmDetailToggle();" title="Counter Details"><i class="fa fa-table"></i></button>
 
 	<!-- Toggle Alarm Panel -->
 	<button id="alarm-panel-btn" onclick="alarmPanelToggle();" title="Alarms">
-		<i id="alarm-btn-icon" class="fa fa-bell-slash"></i><span style="display:inline-flex;flex-direction:column;align-items:stretch;gap:1px;line-height:1;vertical-align:middle;font-size:0.6em;"><span id="alarm-btn-count" class="badge badge-pill badge-danger" style="display:none;"></span><span id="alarm-btn-muted" class="badge badge-pill badge-secondary" style="display:none;cursor:pointer;" title="Click to reveal muted alarms" onclick="alarmPanelRevealMuted(event);"></span></span>
+		<i id="alarm-btn-icon" class="fa fa-bell-slash"></i><span style="display:inline-flex;flex-direction:column;align-items:stretch;gap:1px;line-height:1;vertical-align:middle;font-size:0.6em;"><span id="alarm-btn-count" class="badge rounded-pill text-bg-danger" style="display:none;"></span><span id="alarm-btn-muted" class="badge rounded-pill text-bg-secondary" style="display:none;cursor:pointer;" title="Click to reveal muted alarms" onclick="alarmPanelRevealMuted(event);"></span></span>
 	</button>
 
 	<!-- Toggle DBMS Config Panel -->
@@ -1381,7 +1388,7 @@ at pc:
 			<span style="margin-left:auto;"></span>
 			<button type="button" class="btn btn-sm btn-outline-secondary" style="font-size:0.8em;padding:1px 6px;margin-right:12px;white-space:nowrap;" onclick="cmAlarmOverviewOpen();"
 				title="List/Search all alarms in all Counters"><i class="fa fa-bell"></i> Alarms...</button>
-			<button type="button" class="close" style="font-size:1.2em;" onclick="cmDetailClose();">&times;</button>
+			<button type="button" class="btn-close" aria-label="Close" onclick="cmDetailClose();"></button>
 		</div>
 		<ul class="nav nav-tabs" id="cm-group-tabs" style="flex-shrink:0;padding:4px 8px 0;background:#e9ecef;"></ul>
 		<ul class="nav nav-tabs" id="cm-name-tabs"  style="flex-shrink:0;padding:2px 8px 0;background:#f8f9fa;font-size:0.9em;"></ul>
@@ -1473,7 +1480,7 @@ at pc:
 				<div class="modal-header" style="padding:8px 16px;">
 					<h6 class="modal-title"><i class="fa fa-bell"></i> All Alarms &mdash; <span id="cm-alarm-overview-srv"></span>
 						<select id="cm-alarm-overview-srv-select" style="display:none;font-size:0.9em;" title="Server"></select></h6>
-					<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 				</div>
 				<div style="padding:6px 16px;display:flex;align-items:center;flex-wrap:wrap;gap:14px;font-size:0.85em;border-bottom:1px solid #dee2e6;">
 					<input type="search" id="cm-alarm-overview-search" class="form-control form-control-sm" style="width:300px;" placeholder="Search: counter, alarm, description, parameter...">
@@ -1487,7 +1494,7 @@ at pc:
 				</div>
 				<div class="modal-footer" style="padding:6px 16px;">
 					<button type="button" class="btn btn-sm btn-outline-secondary" onclick="cmAlarmOverviewOpen(true);" title="Re-read the configuration from the collector"><i class="fa fa-refresh"></i> Refresh</button>
-					<button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Close</button>
+					<button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
 				</div>
 			</div>
 		</div>
@@ -1499,15 +1506,15 @@ at pc:
 			<div class="modal-content" style="max-height:85vh;display:flex;flex-direction:column;">
 				<div class="modal-header" style="padding:8px 16px;">
 					<h6 class="modal-title" id="cm-props-title"><i class="fa fa-info-circle"></i> CM Properties</h6>
-					<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 				</div>
 				<div class="modal-body" style="padding:8px 16px;overflow-y:auto;flex:1;">
 					<!-- Tabs: Info / Options / Local Settings / Alarms -->
 					<ul class="nav nav-tabs" id="cm-props-tabs" role="tablist" style="font-size:0.88em;">
-						<li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#cm-props-info"     role="tab"><b>Info</b></a></li>
-						<li class="nav-item"><a class="nav-link"        data-toggle="tab" href="#cm-props-options"  role="tab"><b>Options</b></a></li>
-						<li class="nav-item"><a class="nav-link"        data-toggle="tab" href="#cm-props-settings" role="tab"><b>Local Settings</b></a></li>
-						<li class="nav-item"><a class="nav-link"        data-toggle="tab" href="#cm-props-alarms"   role="tab"><b>Alarms</b></a></li>
+						<li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#cm-props-info"     role="tab"><b>Info</b></a></li>
+						<li class="nav-item"><a class="nav-link"        data-bs-toggle="tab" href="#cm-props-options"  role="tab"><b>Options</b></a></li>
+						<li class="nav-item"><a class="nav-link"        data-bs-toggle="tab" href="#cm-props-settings" role="tab"><b>Local Settings</b></a></li>
+						<li class="nav-item"><a class="nav-link"        data-bs-toggle="tab" href="#cm-props-alarms"   role="tab"><b>Alarms</b></a></li>
 					</ul>
 					<div class="tab-content" style="font-size:0.85em;">
 						<!-- INFO -->
@@ -1533,7 +1540,7 @@ at pc:
 					</div>
 				</div>
 				<div class="modal-footer" style="padding:6px 16px;">
-					<button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Close</button>
+					<button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
 				</div>
 			</div>
 		</div>
@@ -1554,7 +1561,7 @@ at pc:
 			</span>
 
 			<span style="margin-left:auto;"></span>
-			<button type="button" class="close" style="font-size:1.2em;" onclick="dbmsConfigClose();">&times;</button>
+			<button type="button" class="btn-close" aria-label="Close" onclick="dbmsConfigClose();"></button>
 		</div>
 
 		<!-- Main tabs: Parameters | Other Config | Issues -->
@@ -1618,7 +1625,7 @@ at pc:
 			</span>
 
 			<span style="margin-left:auto;"></span>
-			<button type="button" class="close" style="font-size:1.2em;" onclick="queryStoreClose();">&times;</button>
+			<button type="button" class="btn-close" aria-label="Close" onclick="queryStoreClose();"></button>
 		</div>
 
 		<!-- Main tabs: Databases | Top Queries | Query Detail -->
@@ -1693,7 +1700,7 @@ at pc:
 		</div>
 	</div>
 
-<!--	<button id="active-statements-btn" class="active-statements-btn-class" onclick="openActiveStatementsWindow()">&lt;<span id="active-statements-btn-cnt" class="badge badge-pill badge-warning">/</span>&gt;</button>-->
+<!--	<button id="active-statements-btn" class="active-statements-btn-class" onclick="openActiveStatementsWindow()">&lt;<span id="active-statements-btn-cnt" class="badge rounded-pill text-bg-warning">/</span>&gt;</button>-->
 
 	<div id="active-statements-top" style="display: none;">
 	Active SQL Statements (not used for the moment)
@@ -1703,7 +1710,7 @@ at pc:
 		<div id="active-statements-ctl" class="active-statements-ctl-class">
 			<strong><i class="fa fa-bolt"></i> Active Statements</strong>
 			&nbsp;<span id="active-statements-count" style="color:#555;font-size:0.85em;font-weight:normal;"></span>
-			<button type="button" class="close" aria-label="Close" onclick="$('#active-statements').hide();" title="Close" style="position:absolute;top:4px;right:8px;font-size:1.4rem;line-height:1;background:transparent;border:none;cursor:pointer;z-index:5;">&times;</button>
+			<button type="button" class="btn-close" aria-label="Close" onclick="$('#active-statements').hide();" title="Close" style="position:absolute;top:8px;right:8px;z-index:5;"></button>
 
 			<span id="active-statements-win-size">
 				Window Max Size:
@@ -1776,7 +1783,7 @@ at pc:
 				&nbsp;Dark mode
 			</label>
 			&nbsp;
-			<button type="button" class="close" style="font-size:1.2em;" onclick="alarmPanelToggle();">&times;</button>
+			<button type="button" class="btn-close" aria-label="Close" onclick="alarmPanelToggle();"></button>
 		</div>
 		<div id="alarm-history-range" style="display:none;padding:2px 8px;background:rgba(255,148,20,0.55);font-size:0.8em;color:#fff;flex-shrink:0;">
 			Window: &minus;<input type="number" id="alarm-panel-before" min="1" max="1440" value="30"
@@ -1816,8 +1823,7 @@ at pc:
 		<div class="modal-content">
 			<div class="modal-header">
 			<h5 class="modal-title" id="dbx-filter-dialog-title">Locate or Set Visibility for specific Graph(s)</h5>
-			<button type="button" class="close" data-dismiss="modal" aria-label="Close">
-				<span aria-hidden="true">&times;</span>
+			<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
 			</button>
 			</div>
 			<div class="modal-body">
@@ -1859,8 +1865,8 @@ at pc:
 				</table>
 			</div>
 			<div class="modal-footer">
-			<button type="button" class="btn btn-primary" data-dismiss="modal" id="dbx-filter-dialog-ok">Set Visibility</button>
-			<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+			<button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="dbx-filter-dialog-ok">Set Visibility</button>
+			<button type="button" class="btn btn-default" data-bs-dismiss="modal">Close</button>
 			</div>
 		</div>
 		</div>

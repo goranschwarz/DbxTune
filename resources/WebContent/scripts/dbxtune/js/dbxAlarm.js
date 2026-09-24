@@ -25,8 +25,7 @@ $(function()
 			"          <b><span id='dbx-view-extDescTable-label'></span></b>",
 			"          <span id='dbx-view-extDescTable-objectName'></span>",
 			"        </h5>",
-			"        <button type='button' class='close' data-dismiss='modal' aria-label='Close'>",
-			"          <span aria-hidden='true'>&times;</span>",
+			"        <button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'>",
 			"        </button>",
 			"      </div>",
 			"      <div class='modal-body' style='overflow-x:auto;'>",
@@ -35,7 +34,7 @@ $(function()
 			"        </div>",
 			"      </div>",
 			"      <div class='modal-footer'>",
-			"        <button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>",
+			"        <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>",
 			"      </div>",
 			"    </div>",
 			"  </div>",
@@ -55,8 +54,7 @@ $(function()
 			"          <b><span id='dbx-view-alarmView-label'></span></b>",
 			"          <span id='dbx-view-alarmView-objectName'></span>",
 			"        </h5>",
-			"        <button type='button' class='close' data-dismiss='modal' aria-label='Close'>",
-			"          <span aria-hidden='true'>&times;</span>",
+			"        <button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'>",
 			"        </button>",
 			"      </div>",
 			"      <div class='modal-body' style='overflow-x:auto;overflow-y:auto;max-height:55vh;'>",
@@ -65,7 +63,7 @@ $(function()
 			"        </div>",
 			"      </div>",
 			"      <div class='modal-footer'>",
-			"        <button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>",
+			"        <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>",
 			"      </div>",
 			"    </div>",
 			"  </div>",
@@ -84,8 +82,7 @@ $(function()
 			"        <h5 class='modal-title' id='alarm-mute-dialog-title' style='font-size:0.95rem;'>",
 			"          <i class='fa fa-bell-slash' style='color:#f0ad4e;margin-right:6px;'></i> Mute Alarm",
 			"        </h5>",
-			"        <button type='button' class='close' data-dismiss='modal'",
-			"                style='color:#e8edf2;opacity:0.8;'>&times;</button>",
+			"        <button type='button' class='btn-close btn-close-white' data-bs-dismiss='modal' aria-label='Close'></button>",
 			"      </div>",
 			"      <div class='modal-body' style='font-size:0.85rem;padding:16px 20px;'>",
 			"        <div id='alarm-mute-info'",
@@ -127,7 +124,7 @@ $(function()
 			"        </div>",
 			"      </div>",
 			"      <div class='modal-footer' style='padding:10px 16px;'>",
-			"        <button type='button' class='btn btn-secondary btn-sm' data-dismiss='modal'>Cancel</button>",
+			"        <button type='button' class='btn btn-secondary btn-sm' data-bs-dismiss='modal'>Cancel</button>",
 			"        <button type='button' class='btn btn-success btn-sm' id='alarm-unmute-btn'",
 			"                style='display:none;' onclick='alarmMuteSubmit(\"unmute\")'>",
 			"          <i class='fa fa-bell'></i> Unmute Alarm",
@@ -179,8 +176,8 @@ function createExtDescTableToolTipDiv(data, label)
 	var div = document.createElement('div');
 	div.innerHTML = '&nbsp;';
 	div.setAttribute('title',       'Click to Open Dialog...');
-	div.setAttribute('data-toggle', 'modal');
-	div.setAttribute('data-target', '#dbx-view-extDescTable-dialog');
+	div.setAttribute('data-bs-toggle', 'modal');
+	div.setAttribute('data-bs-target', '#dbx-view-extDescTable-dialog');
 	div.setAttribute('data-objectname', '');
 	div.setAttribute('data-tooltip', data);
 	div.setAttribute('data-label',   label);
@@ -192,8 +189,8 @@ function createAlarmInfoToolTipDiv(data, label)
 	var div = document.createElement('div');
 	div.innerHTML = '&nbsp;';
 	div.setAttribute('title',       'Click to Open Dialog...');
-	div.setAttribute('data-toggle', 'modal');
-	div.setAttribute('data-target', '#dbx-view-alarmView-dialog');
+	div.setAttribute('data-bs-toggle', 'modal');
+	div.setAttribute('data-bs-target', '#dbx-view-alarmView-dialog');
 	div.setAttribute('data-objectname', '');
 	div.setAttribute('data-tooltip', data);
 	div.setAttribute('data-label',   label);
@@ -266,14 +263,14 @@ var alarmTrCallback = function(tr, row)
 
 	if (row.isMuted) {
 		tr.style.opacity    = '0.45';
-		tr.style.background = '#f8f9fa';
+		tr.style.setProperty('--bs-table-bg-type', '#f8f9fa');  // BS5.3 .table cells hide a <tr> background
 	}
 
 	tr.style.cursor = 'pointer';
 	tr.title = 'Click to view full alarm details';
 	var rowJson = JSON.stringify(row);
 	tr.addEventListener('click', function(e) {
-		if ($(e.target).closest('[data-toggle="modal"]').length > 0) return;
+		if ($(e.target).closest('[data-bs-toggle="modal"]').length > 0) return;
 		alarmDetailShowModal(rowJson);
 	});
 };
@@ -293,7 +290,7 @@ var alarmTdCallback = function(td, metaData, cellContent, rowData)
 		btn.innerHTML = muteLabel;
 		btn.title     = rowData.isMuted ? 'Unmute alarm' : 'Mute alarm';
 		btn.style.cssText = 'font-size:0.68rem;padding:1px 5px;border-radius:3px;border:1px solid #adb5bd;cursor:pointer;margin-right:5px;' + muteStyle;
-		btn.setAttribute('data-toggle', 'modal');
+		btn.setAttribute('data-bs-toggle', 'modal');
 		(function(row) {
 			btn.addEventListener('click', function(e) {
 				e.stopPropagation();
@@ -331,14 +328,14 @@ var alarmTdCallback = function(td, metaData, cellContent, rowData)
 	if (metaData.columnName === 'severity') {
 		var sev = String(cellContent || '').toUpperCase();
 		var cls = (sev === 'ERROR' || sev === 'CRITICAL') ? 'danger' : sev === 'WARNING' ? 'warning' : 'info';
-		td.innerHTML = '<span class="badge badge-' + cls + '">' + escHtml(String(cellContent)) + '</span>';
+		td.innerHTML = '<span class="badge text-bg-' + cls + '">' + escHtml(String(cellContent)) + '</span>';
 	}
 
 	// Action → Bootstrap badge
 	if (metaData.columnName === 'action') {
 		var act    = String(cellContent || '').toUpperCase();
 		var actCls = act === 'CANCEL' ? 'success' : 'danger';
-		td.innerHTML = '<span class="badge badge-' + actCls + '">' + escHtml(String(cellContent)) + '</span>';
+		td.innerHTML = '<span class="badge text-bg-' + actCls + '">' + escHtml(String(cellContent)) + '</span>';
 	}
 
 	// Timestamp columns → YYYY-MM-DD HH:mm:ss
@@ -462,7 +459,8 @@ $(function() {
 			"  background: rgba(255,148,20,0.85); color: #fff;",
 			"  border-bottom: 2px solid rgba(200,110,0,0.9); flex-shrink: 0; gap: 6px;",
 			"}",
-			"#alarm-panel-header label, #alarm-panel-header .close { color: #fff !important; }",
+			"#alarm-panel-header label { color: #fff !important; }",
+			"#alarm-panel-header .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }",
 			"#alarm-panel-body { flex: 1; overflow: auto; padding: 4px 8px; font-size: 0.82em; }",
 			"#alarm-panel.alarm-dark { background:#1e1e1e; border-top-color:rgba(200,110,0,0.9); }",
 			"#alarm-panel.alarm-dark #alarm-history-range { background:rgba(180,90,0,0.6) !important; color:#fff; }",
@@ -507,7 +505,7 @@ $(function() {
 			"      &nbsp;Dark mode",
 			"    </label>",
 			"    &nbsp;",
-			"    <button type='button' class='close' style='font-size:1.2em;' onclick='alarmPanelToggle();'>&times;</button>",
+			"    <button type='button' class='btn-close' aria-label='Close' onclick='alarmPanelToggle();'></button>",
 			"  </div>",
 			"  <div id='alarm-history-range' style='display:none;padding:2px 8px;background:rgba(255,148,20,0.55);font-size:0.8em;color:#fff;flex-shrink:0;'>",
 			"    Window: &minus;<input type='number' id='alarm-panel-before' min='1' max='1440' value='30'",

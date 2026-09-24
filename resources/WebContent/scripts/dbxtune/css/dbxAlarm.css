@@ -17,7 +17,7 @@ tr.alarm-row-info    td:first-child { border-left: 3px solid #17a2b8; }
 /* ── Dark modal theme (applied via JS _dbxModalApplyDark) ───────────────── */
 .dbx-modal-dark                      { background-color: #1e1e1e !important; color: #e0e0e0 !important; }
 .dbx-modal-dark .modal-header        { background-color: #2d2d2d !important; color: #e0e0e0 !important; border-bottom-color: #444; }
-.dbx-modal-dark .modal-header .close { color: #e0e0e0 !important; }
+.dbx-modal-dark .modal-header .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
 .dbx-modal-dark .modal-footer        { background-color: #2d2d2d !important; border-top-color: #444; }
 .dbx-modal-dark .table               { color: #e0e0e0 !important; }
 .dbx-modal-dark .table th            { background-color: #2d2d2d !important; color: #ddd !important; border-color: #444 !important; }

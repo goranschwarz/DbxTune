@@ -214,17 +214,17 @@ extends DbxCentralPageTemplate
 		StringWriter out    = new StringWriter();
 		PrintWriter  writer = new PrintWriter(out);
 
-		writer.println("    <div id='dbx-report-range' class='dbx-nav-text btn btn-outline-light mr-2'>  ");
+		writer.println("    <div id='dbx-report-range' class='dbx-nav-text btn btn-outline-light me-2'>  ");
 		writer.println("        <i class='glyphicon glyphicon-calendar fa fa-calendar'></i>&nbsp;  ");
 		writer.println("        <span>Time Span</span> <b class='caret'></b>  ");
 		writer.println("    </div>  ");
 		writer.println();
 		writer.println("    <div class='btn px-0 btn-outline-light'>  ");
-		writer.println("        <button id='dbx-prev-day'            title='Previous DAY, same time span'    alt='Previous DAY, samt time span'    class='dbx-nav-button p-0 ml-1' type='button'><i class='glyphicon fa fa-backward'></i></button>          <!-- fa-backward fa-fast-backward          -->  ");
+		writer.println("        <button id='dbx-prev-day'            title='Previous DAY, same time span'    alt='Previous DAY, samt time span'    class='dbx-nav-button p-0 ms-1' type='button'><i class='glyphicon fa fa-backward'></i></button>          <!-- fa-backward fa-fast-backward          -->  ");
 		writer.println("        <button id='dbx-prev-time'           title='Previous # Hours'                alt='Previous # Hours'                class='dbx-nav-button p-0'      type='button'><i class='glyphicon fa fa-arrow-circle-left'></i></button> <!-- fa-step-backward fa-arrow-circle-left -->  ");
 		writer.println("        <span   id='dbx-sample-time'         title='Hours in the selected Time Span' alt='Hours in the selected Time Span' class=''>?h</span>  ");
 		writer.println("        <button id='dbx-next-time'           title='Next # Hours'                    alt='Next # Hours'                    class='dbx-nav-button p-0'      type='button'><i class='glyphicon fa fa-arrow-circle-right'></i></button> <!-- fa-step-forward fa-arrow-circle-right -->  ");
-		writer.println("        <button id='dbx-next-day'            title='Next DAY, same time span'        alt='Next DAY, samt time span'        class='dbx-nav-button p-0 mr-1' type='button'><i class='glyphicon fa fa-forward'></i></button>            <!-- fa-forward fa-fast-forward            -->  ");
+		writer.println("        <button id='dbx-next-day'            title='Next DAY, same time span'        alt='Next DAY, samt time span'        class='dbx-nav-button p-0 me-1' type='button'><i class='glyphicon fa fa-forward'></i></button>            <!-- fa-forward fa-fast-forward            -->  ");
 		writer.println("    </div>  ");
 		writer.println();
 
@@ -693,7 +693,7 @@ extends DbxCentralPageTemplate
 		writer.println("                <!-- Modal Header --> ");
 		writer.println("                <div class='modal-header'> ");
 		writer.println("                    <h5 class='modal-title' id='dbx-view-jobIdDetails-title'>Job Details</h5> ");
-		writer.println("                    <button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button> ");
+		writer.println("                    <button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'></button> ");
 		writer.println("                </div> ");
 		writer.println();
 		writer.println("                <!-- Modal body --> ");
@@ -703,7 +703,7 @@ extends DbxCentralPageTemplate
 		writer.println();
 		writer.println("                <!-- Modal footer --> ");
 		writer.println("                <div class='modal-footer'> ");
-		writer.println("                  <button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button> ");
+		writer.println("                  <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button> ");
 		writer.println("                </div> ");
 		writer.println();
 		writer.println("            </div> ");

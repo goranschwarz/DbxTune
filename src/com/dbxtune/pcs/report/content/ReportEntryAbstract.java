@@ -1888,8 +1888,8 @@ implements IReportEntry
 		
 		// Put the "Actual Executed SQL Text" as a "tooltip"
 		return "<div title='" + labelText + "' "
-				+ "data-toggle='modal' "
-				+ "data-target='#dbx-view-sqltext-dialog' "
+				+ "data-bs-toggle='modal' "
+				+ "data-bs-target='#dbx-view-sqltext-dialog' "
 //				+ "data-objectname='" + Hashkey + "' "
 				+ "data-tooltip=\""   + displayText     + "\" "
 				+ ">&#x1F4AC; " + labelText + "</div>"; // &#x1F4AC; ==>> symbol popup with "..."
@@ -1914,8 +1914,8 @@ implements IReportEntry
 		
 		// Put the "Actual Executed SQL Text" as a "tooltip"
 		return "<div title='" + labelText + "' "
-				+ "data-toggle='modal' "
-				+ "data-target='#dbx-view-sqltext-dialog' "
+				+ "data-bs-toggle='modal' "
+				+ "data-bs-target='#dbx-view-sqltext-dialog' "
 //				+ "data-objectname='" + Hashkey + "' "
 				+ "data-tooltip=\""   + displayText     + "\" "
 				+ ">&#x1F4AC; " + labelText + "</div>"; // &#x1F4AC; ==>> symbol popup with "..."

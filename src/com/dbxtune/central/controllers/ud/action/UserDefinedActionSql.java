@@ -114,8 +114,8 @@ extends UserDefinedActionAbstract
 	{
 		List<String> list = new ArrayList<>();
 		
-		list.add("/scripts/bootstrap-table/1.12.1/bootstrap-table.js");
-		list.add("/scripts/bootstrap-table/1.12.1/extensions/filter-control/bootstrap-table-filter-control.js");
+		list.add("/scripts/bootstrap-table/1.27.3/bootstrap-table.min.js");
+		list.add("/scripts/bootstrap-table/1.27.3/extensions/filter-control/bootstrap-table-filter-control.min.js");
 
 		return list;
 	}
@@ -125,7 +125,8 @@ extends UserDefinedActionAbstract
 	{
 		List<String> list = new ArrayList<>();
 		
-		list.add("/scripts/bootstrap-table/1.12.1/bootstrap-table.min.css");
+		list.add("/scripts/bootstrap-table/1.27.3/bootstrap-table.min.css");
+		list.add("/scripts/bootstrap-table/1.27.3/extensions/filter-control/bootstrap-table-filter-control.min.css");
 
 		return list;
 	}
@@ -453,7 +454,7 @@ extends UserDefinedActionAbstract
 		pageOut.println("<!-- ########################################################################## -->");
 		pageOut.println("<!-- Bootstrap MODAL - While we are executing SQL Statement(s) -->");
 		pageOut.println("<!-- ########################################################################## -->");
-		pageOut.println("<div class='modal' id='dbx-uda-executionModal' data-backdrop='static' data-keyboard='false' tabindex='-1' role='dialog'>");
+		pageOut.println("<div class='modal' id='dbx-uda-executionModal' data-bs-backdrop='static' data-bs-keyboard='false' tabindex='-1' role='dialog'>");
 		pageOut.println("  <div class='modal-dialog modal-dialog-centered dbx-uda-modal-dialog'>");
 		pageOut.println("    <div class='modal-content'>");
 //		pageOut.println("      <div class='modal-header bg-primary text-white'>");
@@ -466,7 +467,7 @@ extends UserDefinedActionAbstract
 		pageOut.println("      <div class='modal-body'>");
 		pageOut.println("        <div class='text-center mb-3'>");
 		pageOut.println("          <div class='spinner-border text-primary' role='status'>");
-		pageOut.println("            <span class='sr-only'>Loading...</span>");
+		pageOut.println("            <span class='visually-hidden'>Loading...</span>");
 		pageOut.println("          </div>");
 		pageOut.println("        </div>");
 		pageOut.println("        <div class='mb-3'>");

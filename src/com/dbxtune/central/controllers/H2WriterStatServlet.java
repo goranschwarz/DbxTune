@@ -97,14 +97,14 @@ extends HttpServlet
 //		out.println("	<!-- <link href='/scripts/bootstrap/4.0.0/css/bootstrap.min.css' rel='stylesheet'> --> ");
 //		out.println("	<script type='text/javascript' src='/scripts/popper/1.12.9/popper.min.js'></script> ");
 //		out.println("	<script type='text/javascript' src='/scripts/bootstrap/4.0.0/js/bootstrap.min.js'></script> ");
-		out.println("   <script type='text/javascript' src='/scripts/bootstrap/4.6.2/js/bootstrap.bundle.min.js'></script>"); // Bundle also includes popper
+		out.println("   <script type='text/javascript' src='/scripts/bootstrap/5.3.8/js/bootstrap.bundle.min.js'></script>"); // Bundle also includes popper
 		out.println(" ");
 		out.println("	<!-- JS: DateRangePicker --> ");
 		out.println("	<script type='text/javascript' src='/scripts/bootstrap-daterangepicker/3.1/daterangepicker.js'></script> ");
 		out.println(" ");
 		out.println("	<!-- JS: Bootstrap - TABLE --> ");
-		out.println("	<script type='text/javascript' src='/scripts/bootstrap-table/1.12.1/bootstrap-table.js'></script> ");
-		out.println("	<script type='text/javascript' src='/scripts/bootstrap-table/1.12.1/extensions/filter-control/bootstrap-table-filter-control.js'></script> ");
+		out.println("	<script type='text/javascript' src='/scripts/bootstrap-table/1.27.3/bootstrap-table.min.js'></script> ");
+		out.println("	<script type='text/javascript' src='/scripts/bootstrap-table/1.27.3/extensions/filter-control/bootstrap-table-filter-control.min.js'></script> ");
 		out.println(" ");
 		out.println("	<!-- JS: jquery - contextMenu --> ");
 		out.println("	<script type='text/javascript' src='/scripts/jquery-contextmenu/2.9.2/jquery.contextMenu.min.js'></script> ");
@@ -124,7 +124,7 @@ extends HttpServlet
 		out.println("	<link rel='stylesheet' href='/scripts/dbxtune/css/iota.css' type='text/css'> ");
 		out.println(" ");
 		out.println("	<!-- CSS: Bootstrap --> ");
-		out.println("	<link rel='stylesheet' href='/scripts/bootstrap/css/bootstrap.min.css'> ");
+		out.println("	<link rel='stylesheet' href='/scripts/bootstrap/5.3.8/css/bootstrap.min.css'> ");
 		out.println(" ");
 		out.println("	<!-- CSS: DateRangePicker --> ");
 		out.println("	<link rel='stylesheet' href='/scripts/bootstrap-daterangepicker/3.1/daterangepicker.css'> ");
@@ -137,7 +137,8 @@ extends HttpServlet
 		out.println("	<!-- <script src='/scripts/w2ui/w2ui-1.5.rc1.js' type='text/javascript'></script> --> ");
 		out.println(" ");
 		out.println("	<!-- JS: Bootstrap - TABLE --> ");
-		out.println("	<link rel='stylesheet' href='/scripts/bootstrap-table/1.12.1/bootstrap-table.min.css'> ");
+		out.println("	<link rel='stylesheet' href='/scripts/bootstrap-table/1.27.3/bootstrap-table.min.css'> ");
+		out.println("	<link rel='stylesheet' href='/scripts/bootstrap-table/1.27.3/extensions/filter-control/bootstrap-table-filter-control.min.css'> ");
 		out.println("	<!-- <link rel='stylesheet' href='https://rawgit.com/vitalets/x-editable/master/dist/bootstrap3-editable/css/bootstrap-editable.css'> --> ");
 		out.println(" ");
 		out.println("	<!-- JS: jquery - contextMenu --> ");

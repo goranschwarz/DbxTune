@@ -53,8 +53,7 @@ public class HtmlBootstrap4ModalDialog
 		writer.println("            <div class='modal-content'> ");
 		writer.println("                <div class='modal-header'> ");
 		writer.println("                    <h5 class='modal-title' id='dbx-" + getId() + "-dialog-title'><b>Text Type:</b> <span id='dbx-" + getId() + "-objectName'></span> <span id='dbx-" + getId() + "-sqlDialect'></span></h5> ");
-		writer.println("                    <button type='button' class='close' data-dismiss='modal' aria-label='Close'> ");
-		writer.println("                        <span aria-hidden='true'>&times;</span> ");
+		writer.println("                    <button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'> ");
 		writer.println("                    </button> ");
 		writer.println("                </div> ");
 		writer.println("                <div class='modal-body' style='overflow-x: auto;'> ");
@@ -73,7 +72,7 @@ public class HtmlBootstrap4ModalDialog
 			writer.println("                    <button type='button' class='btn btn-outline-" + entry._buttonType + "' onclick='" + entry._functionNameOnClick +"();'>" + entry._name+ "</button> ");
 		}
 		writer.println("                    &emsp;&emsp;&emsp;&emsp;&emsp; ");
-		writer.println("                    <button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button> ");
+		writer.println("                    <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button> ");
 		writer.println("                </div> ");
 		writer.println("            </div> ");
 		writer.println("        </div> ");

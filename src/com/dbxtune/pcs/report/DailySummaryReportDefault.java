@@ -733,12 +733,15 @@ extends DailySummaryReportAbstract
 //				bootstrapCss = com.dbxtune.utils.FileUtils.readFile(ReportContent.class, "bootstrap_453.css");
 
 				// Reads scripts/bootstrap/4.6.2/css/bootstrap.css -- Which is copied into bootstrap_462.css at com.dbxtune.pcs.report.content.bootstrap_462.css
-				bootstrapCss = com.dbxtune.utils.FileUtils.readFile(ReportContent.class, "bootstrap_462.css");
+//				bootstrapCss = com.dbxtune.utils.FileUtils.readFile(ReportContent.class, "bootstrap_462.css");
+
+				// Reads scripts/bootstrap/5.3.8/css/bootstrap.min.css -- Which is copied into bootstrap_538.css at com.dbxtune.pcs.report.content.bootstrap_538.css
+				bootstrapCss = com.dbxtune.utils.FileUtils.readFile(ReportContent.class, "bootstrap_538.css");
 			}
 			catch (Exception ex)
 			{
-				_logger.error("Problems reading file 'bootstrap_453.css'. Caught: " + ex, ex);
-				bootstrapCss = "/* Problems reading file 'bootstrap_453.css'. Caught: " + ex + " */";
+				_logger.error("Problems reading file 'bootstrap_538.css'. Caught: " + ex, ex);
+				bootstrapCss = "/* Problems reading file 'bootstrap_538.css'. Caught: " + ex + " */";
 			}
 
 			// Write bootstrap CSS -- but invisible for Outlook
@@ -799,7 +802,7 @@ extends DailySummaryReportAbstract
 //			w.append("    <script src='https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js'      integrity='sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN' crossorigin='anonymous'></script> \n");
 //			w.append("    <script src='https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js'     integrity='sha384-w1Q4orYjBQndcko6MimVbzY0tgp4pWB4lZ7lr30WKz0vr/aWKhXdBNmNb5D92v7s' crossorigin='anonymous'></script> \n");
 //			addJavaScriptFile(w, "/scripts/bootstrap/4.5.3/js/bootstrap.bundle.min.js", "https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js");
-			addJavaScriptFile(w, "/scripts/bootstrap/4.6.2/js/bootstrap.bundle.min.js", "https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js");
+			addJavaScriptFile(w, "/scripts/bootstrap/5.3.8/js/bootstrap.bundle.min.js", "https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js");
 		}
 
 		// In local the 'prism.min.js' and 'components/prism-sql.min.js', 'plugins/line-numbers/prism-line-numbers.min.js'.
@@ -1214,8 +1217,8 @@ extends DailySummaryReportAbstract
 				writer.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
 				writer.append("<div class='card border-dark mb-3' id='toc'> \n");
 				writer.append("<h5 class='card-header' role='tab' id='heading_toc'> \n");
-				writer.append("  <a data-toggle='collapse' data-parent='#accordion' href='#collapse_toc' aria-expanded='true' aria-controls='collapse_toc' class='d-block'> \n");
-				writer.append("    <i class='fa fa-chevron-down float-right'></i> \n");
+				writer.append("  <a data-bs-toggle='collapse' data-bs-parent='#accordion' href='#collapse_toc' aria-expanded='true' aria-controls='collapse_toc' class='d-block'> \n");
+				writer.append("    <i class='fa fa-chevron-down float-end'></i> \n");
 				writer.append("    <b>").append(getReportName() + " for Servername: ").append(getServerName()).append("</b> \n");
 				writer.append("  </a> \n");
 				writer.append("</h5> \n");
@@ -1317,8 +1320,8 @@ extends DailySummaryReportAbstract
 				writer.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
 				writer.append("<div class='card border-dark mb-3' id='").append(tocDiv).append("'> \n");
 				writer.append("<h5 class='card-header' role='tab' id='heading_").append(tocDiv).append("'> \n");
-				writer.append("  <a data-toggle='collapse' data-parent='#accordion' href='#collapse_").append(tocDiv).append("' aria-expanded='true' aria-controls='collapse_").append(tocDiv).append("' class='d-block'> \n");
-				writer.append("    <i class='fa fa-chevron-down float-right'></i> \n");
+				writer.append("  <a data-bs-toggle='collapse' data-bs-parent='#accordion' href='#collapse_").append(tocDiv).append("' aria-expanded='true' aria-controls='collapse_").append(tocDiv).append("' class='d-block'> \n");
+				writer.append("    <i class='fa fa-chevron-down float-end'></i> \n");
 				writer.append("    <b>").append(entry.getSubject()).append("</b> \n");
 				writer.append("  </a> \n");
 				writer.append("</h5> \n");
@@ -1970,8 +1973,8 @@ extends DailySummaryReportAbstract
 				w.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
 				w.append("<div class='card border-dark mb-3' id='").append(tocDiv).append("'> \n");
 				w.append("<h5 class='card-header' role='tab' id='heading_").append(tocDiv).append("'> \n");
-				w.append("  <a data-toggle='collapse' data-parent='#accordion' href='#collapse_").append(tocDiv).append("' aria-expanded='true' aria-controls='collapse_").append(tocDiv).append("' class='d-block'> \n");
-				w.append("    <i class='fa fa-chevron-down float-right'></i> \n");
+				w.append("  <a data-bs-toggle='collapse' data-bs-parent='#accordion' href='#collapse_").append(tocDiv).append("' aria-expanded='true' aria-controls='collapse_").append(tocDiv).append("' class='d-block'> \n");
+				w.append("    <i class='fa fa-chevron-down float-end'></i> \n");
 				w.append("    <b>").append(headingName).append("</b> \n");
 				w.append("  </a> \n");
 				w.append("</h5> \n");

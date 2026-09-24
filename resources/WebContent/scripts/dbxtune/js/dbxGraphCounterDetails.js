@@ -59,6 +59,13 @@ function _cmDbg() {
 // next one restores from now-corrupted "0"), which is exactly the "snaps back to the first column"
 // symptom. This reuses the same _cmRestoringScroll flag the real data-restore already guards itself
 // with, just for this earlier "clear to loading" moment instead of the later "restore real data" one.
+// Column-header tooltips live in #cm-detail-panel, OUTSIDE the table. Replacing the table's content while
+// one is shown (e.g. the "clear to loading" at every refresh) removes its trigger <th>, and nothing can
+// hide it any more - it stays on screen for good. So EVERY replacement of #cm-detail-table must call this first.
+function _cmDisposeTableTooltips() {
+	$('#cm-detail-table th[data-bs-toggle="tooltip"]').tooltip('dispose');
+}
+
 function _cmClearTableForLoading() {
 	_cmSetTableHtmlGuarded('');
 }
@@ -69,6 +76,7 @@ function _cmClearTableForLoading() {
 // apart from a genuine user scroll. Guard every such replacement, not just the "loading" case.
 function _cmSetTableHtmlGuarded(html) {
 	_cmRestoringScroll = true;
+	_cmDisposeTableTooltips();
 	$('#cm-detail-table').html(html);
 	_cmDbg('_cmSetTableHtmlGuarded: set table html, guarding scroll for 60ms');
 	setTimeout(function() { _cmRestoringScroll = false; }, 60);
@@ -326,7 +334,6 @@ function _cmApplyPrefsForCm(cmName)
  */
 var _cmTabTooltipOpts = {
 	container:   'body',
-	boundary:    'window',
 	html:        true,
 	placement:   'bottom',
 	trigger:     'hover',
@@ -393,9 +400,8 @@ function _cmSetTabTooltip(cmName, desc, hls)
 	if (!$a.length) return;
 	var html = _cmBuildTooltipHtml(desc, hls);
 	$a.data('cmTabTooltip', html);
-	// Re-init if not already initialised (e.g. description was empty on list load)
-	if (!$a.data('bs.tooltip'))
-		$a.tooltip(_cmTabTooltipOpts);
+	// Init if not already initialised (e.g. description was empty on list load); a no-op when it exists
+	bootstrap.Tooltip.getOrCreateInstance($a[0], _cmTabTooltipOpts);
 }
 
 function cmDetailRenderCms(cms)
@@ -678,7 +684,7 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 			return;
 		}
 
-		var retryBtn = '<button type="button" class="btn btn-sm btn-outline-secondary ml-2"'
+		var retryBtn = '<button type="button" class="btn btn-sm btn-outline-secondary ms-2"'
 			+ ' onclick="cmDetailReloadListThenData('
 			+ "'" + srvName.replace(/'/g,'') + "','"
 			+ cmName.replace(/'/g,'') + "','"
@@ -1125,7 +1131,7 @@ function cmDetailRenderFiltered(r, filter)
 		+ sampleInfo
 		+ '&nbsp; Rows: <b>' + r.rowCount + '</b></p></div>'
 		+ '<table class="table table-sm table-bordered table-hover" style="font-size:0.78em;white-space:nowrap;width:auto;">'
-		+ '<thead class="thead-light"><tr>'
+		+ '<thead class="table-light"><tr>'
 		+ r.columns.map(function(c, i) {
 			var indicator = (_cmSort.col === i) ? (_cmSort.stage === 1 ? ' &#9660;' : ' &#9650;') : '';
 			var tt = (r.tooltips && r.tooltips[i]) ? r.tooltips[i] : '';
@@ -1135,7 +1141,7 @@ function cmDetailRenderFiltered(r, filter)
 				// inner HTML (tables, bold, line-breaks etc.) renders correctly in the tooltip.
 				var ttHtml = tt.replace(/^\s*<html>\s*/i, '').replace(/\s*<\/html>\s*$/i, '').trim();
 				// Bootstrap tooltip with html:true renders markup instead of raw text.
-				ttAttr = ' data-toggle="tooltip" data-html="true" data-placement="bottom" title="'
+				ttAttr = ' data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="bottom" title="'
 					+ ttHtml.replace(/"/g, '&quot;') + '"';
 			}
 			var thStyle = 'cursor:pointer;user-select:none;';
@@ -1291,7 +1297,7 @@ function cmDetailRenderFiltered(r, filter)
 	_cmDbg('cmDetailRenderFiltered: read saved scroll', 'r.cmName=' + r.cmName, 'scrollKey=' + scrollKey, 'savedTop=' + savedTop, 'savedLeft=' + savedLeft);
 
 	// Destroy existing tooltip instances before replacing the DOM (prevents orphaned tooltip divs)
-	$('#cm-detail-table th[data-toggle="tooltip"]').tooltip('dispose');
+	_cmDisposeTableTooltips();
 	$('#cm-detail-table').html(h);
 
 	// Postpone watermark: prepend a subtle banner when postpone is active.
@@ -1362,7 +1368,7 @@ function cmDetailRenderFiltered(r, filter)
 				+ ' style="font-size:0.85em;background-color:#fff3cd;border:1px solid #ffc107;border-radius:4px;color:#856404;">'
 				+ '&#9201; <strong>Postpone enabled</strong> (interval: ' + escHtml(_durStr) + ') &mdash; next sample in approx '
 				+ '<strong id="cm-postpone-countdown"></strong>'
-				+ '<span id="cm-postpone-force" class="ml-2">'
+				+ '<span id="cm-postpone-force" class="ms-2">'
 				+ ' <button type="button" data-refresh-now="false" class="btn btn-sm btn-outline-warning py-0"'
 				+ ' style="font-size:0.95em;color:#856404;"'
 				+ ' title="Include this CM in the collector&#39;s next regular sample (ignoring postpone, just once)">'
@@ -1386,7 +1392,7 @@ function cmDetailRenderFiltered(r, filter)
 	if (_tblEl) _tblEl.style.setProperty('--cm-sticky-h', ($('#cm-detail-sticky-top').outerHeight() || 0) + 'px');
 
 	// Activate Bootstrap tooltips on the freshly rendered column headers
-	$('#cm-detail-table th[data-toggle="tooltip"]').tooltip({ container: '#cm-detail-panel', boundary: 'window' });
+	$('#cm-detail-table th[data-bs-toggle="tooltip"]').tooltip({ container: '#cm-detail-panel' });
 
 	// Row click → detail modal (delegated so it survives re-renders)
 	$('#cm-detail-table tbody').off('click', 'tr').on('click', 'tr', function() {
@@ -1857,7 +1863,7 @@ function cmDetailRowShowModal(columns, row, tooltips)
 
 	var hasTooltips = tooltips && tooltips.some(function(t) { return t && t.length > 0; });
 	var html = '<table class="table table-sm table-bordered" style="font-size:0.85em;word-break:break-word;">'
-		+ '<thead class="thead-light"><tr><th style="white-space:nowrap">Column</th><th>Value</th>'
+		+ '<thead class="table-light"><tr><th style="white-space:nowrap">Column</th><th>Value</th>'
 		+ (hasTooltips ? '<th>Description</th>' : '') + '</tr></thead><tbody>';
 
 	columns.forEach(function(col, i) {
@@ -2185,7 +2191,7 @@ function cmDetailSliderRefresh(startTime)
 function cmDetailSortCol(colIdx)
 {
 	// Force-hide any stuck Bootstrap tooltip before re-rendering the table
-	$('[data-toggle="tooltip"]').tooltip('hide');
+	$('[data-bs-toggle="tooltip"]').tooltip('hide');
 
 	if (_cmSort.col === colIdx) {
 		_cmSort.stage = (_cmSort.stage === 1) ? 2 : (_cmSort.stage === 2) ? 0 : 1;
@@ -2225,12 +2231,14 @@ function cmDetailClose()
 	_cmChartInstances.forEach(function(c) { try { c.destroy(); } catch(e) {} });
 	_cmChartInstances = [];
 	$('#cm-detail-charts').empty().hide();
+	$('#cm-name-tabs .nav-link').tooltip('dispose');   // tab tooltips live on <body>: dispose before removing their triggers
 	$('#cm-group-tabs,#cm-name-tabs').empty();
 	$('#cm-detail-type-bar').hide();
 	$('#cm-detail-filter-bar').hide();
 	$('#cm-detail-filter-input').val('');
 	$('#cm-detail-filter-count').text('');
 	$('#cm-detail-row-count').text('');
+	_cmDisposeTableTooltips();
 	$('#cm-detail-table').html('');
 }
 

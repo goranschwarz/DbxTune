@@ -51,7 +51,7 @@ $(function()
 		"    <span style='font-weight:700;font-size:0.95em;white-space:nowrap;'>",
 		"      <i class='fa fa-history'></i>&nbsp; Historical Alarms",
 		"    </span>",
-		"    <select id='hist-alarm-srv-sel' class='form-control form-control-sm'",
+		"    <select id='hist-alarm-srv-sel' class='form-select form-select-sm'",
 		"            style='width:auto;max-width:280px;'",
 		"            onchange='histAlarmSrvChange();'>",
 		"      <option value=''>-- All Servers --</option>",
@@ -77,7 +77,7 @@ $(function()
 		// Search bar
 		"    <div style='display:flex;flex-wrap:wrap;gap:6px;align-items:center;flex-shrink:0;'>",
 		"      <label style='margin:0;font-size:0.9em;font-weight:600;'>Period:</label>",
-		"      <select id='hist-alarm-preset' class='form-control form-control-sm' style='width:auto;' onchange='histAlarmSearch();'>",
+		"      <select id='hist-alarm-preset' class='form-select form-select-sm' style='width:auto;' onchange='histAlarmSearch();'>",
 		"        <option value='today' selected>Today</option>",
 		"        <option value='1d'>Last 24 Hours</option>",
 		"        <option value='3d'>3 days</option>",
@@ -171,16 +171,18 @@ $(function()
 		"#hist-alarm-panel.ha-dark { background:#1e1e1e !important; color:#ddd; border-color:#555; }",
 		"#hist-alarm-panel.ha-dark #hist-alarm-hdr { background:#2d2d2d !important; border-bottom-color:#444; }",
 		"#hist-alarm-panel.ha-dark .form-control,",
-		"#hist-alarm-panel.ha-dark select { background:#2d2d2d; color:#ddd; border-color:#555; }",
-		"#hist-alarm-panel.ha-dark table  { color:#ddd; }",
-		"#hist-alarm-panel.ha-dark thead  { background:#2d2d2d !important; color:#ccc; }",
-		"#hist-alarm-panel.ha-dark tbody tr:hover { background:#2a2a2a !important; }",
+		"#hist-alarm-panel.ha-dark select { background-color:#2d2d2d; color:#ddd; border-color:#555; }",  // NOT 'background:' - it erases the .form-select arrow image
+		"/* Bootstrap 5.3 .table cells paint their own background/colour from --bs-table-* (a table/tr colour is hidden) */",
+		"#hist-alarm-panel.ha-dark .table,",
+		"#hist-alarm-detail-panel.ha-dark .table { --bs-table-bg:transparent; --bs-table-color:#ddd; --bs-table-hover-bg:#2a2a2a; --bs-table-hover-color:#fff; --bs-table-border-color:#444; }",
+		"#hist-alarm-panel.ha-dark .table > thead { --bs-table-bg:#2d2d2d; --bs-table-color:#ccc; --bs-table-border-color:#444; }",
+		"#hist-alarm-panel.ha-dark .form-control::placeholder { color:rgba(222,226,230,0.75); }",  // BS5 default is near-black
+		"#hist-alarm-panel.ha-dark .form-select { --bs-form-select-bg-img: url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23dee2e6' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e\"); }",
 		"#hist-alarm-panel.ha-dark td,",
 		"#hist-alarm-panel.ha-dark th    { border-color:#444 !important; }",
 		"/* Dark mode — detail panel */",
 		"#hist-alarm-detail-panel.ha-dark { background:#1e1e1e !important; color:#ddd; border-color:#555; }",
 		"#hist-alarm-detail-panel.ha-dark #hist-alarm-detail-hdr { background:#2d2d2d !important; border-bottom-color:#444; }",
-		"#hist-alarm-detail-panel.ha-dark table { color:#ddd; }",
 		"#hist-alarm-detail-panel.ha-dark td { border-color:#444 !important; }",
 		"</style>"
 	].join('\n'));
@@ -210,6 +212,14 @@ function histAlarmOpen(srvName)
 	_histAlarmDetailIdx = -1;
 	_histAlarmSortCol   = 'eventTime';
 	_histAlarmSortDir   = 'asc';
+
+	// Hide any open Bootstrap tooltip (e.g. on the link that opened us) - it would stay on top of the panel,
+	// since the click also focuses the link and BS5 keeps a tooltip open while its 'focus' trigger is active.
+	// BS5 sets aria-describedby="tooltipNNN" on a trigger only while its tooltip is shown.
+	document.querySelectorAll('[aria-describedby^="tooltip"]').forEach(function(el) {
+		var tt = bootstrap.Tooltip.getInstance(el);
+		if (tt) tt.hide();
+	});
 
 	$('#hist-alarm-table-wrap').html(
 		'<span style="color:#888;font-size:0.9em;"><i class="fa fa-spinner fa-spin"></i> Loading\u2026</span>');
@@ -474,7 +484,7 @@ function histAlarmRender(data)
 
 	var html = '<table class="table table-sm table-hover table-bordered mb-0"'
 	         + ' style="font-size:0.82em;white-space:nowrap;width:auto;">';
-	html += '<thead class="thead-light"><tr>';
+	html += '<thead class="table-light"><tr>';
 	html += '<th style="width:36px;"></th>';  // button column first
 	cols.forEach(function(c) {
 		var arrow = '';
@@ -493,9 +503,10 @@ function histAlarmRender(data)
 	{
 		var durationHtml = _histAlarmDurationCell(row);
 		var sev = (row.severity || '').toUpperCase();
+		// Bootstrap 5.3 paints each .table cell itself, which hides a <tr> background; the cells DO draw --bs-table-bg-type
 		var rowBg = '';
-		if      (sev === 'ERROR'   || sev === 'CRITICAL') rowBg = 'background:rgba(220,50,50,0.08);';
-		else if (sev === 'WARNING')                        rowBg = 'background:rgba(255,180,0,0.10);';
+		if      (sev === 'ERROR'   || sev === 'CRITICAL') rowBg = '--bs-table-bg-type:rgba(220,50,50,0.08);';
+		else if (sev === 'WARNING')                        rowBg = '--bs-table-bg-type:rgba(255,180,0,0.10);';
 
 		html += '<tr style="cursor:pointer;' + rowBg + '" onclick="histAlarmShowDetail(' + idx + ');">';
 
@@ -822,7 +833,7 @@ function _histAlarmActionBadge(action)
 	var cls = a === 'RAISE'  ? 'danger'
 	        : a === 'CANCEL' ? 'success'
 	        :                  'secondary';
-	return '<span class="badge badge-' + cls + '">' + escHtml(action) + '</span>';
+	return '<span class="badge text-bg-' + cls + '">' + escHtml(action) + '</span>';
 }
 
 function _histAlarmStateBadge(state)
@@ -833,7 +844,7 @@ function _histAlarmStateBadge(state)
 	        : s === 'AFFECTED' ? 'warning'
 	        : s === 'DOWN'     ? 'danger'
 	        :                    'secondary';  // UNKNOWN
-	return '<span class="badge badge-' + cls + '">' + escHtml(state) + '</span>';
+	return '<span class="badge text-bg-' + cls + '">' + escHtml(state) + '</span>';
 }
 
 function _histAlarmSeverityBadge(sev)
@@ -846,5 +857,5 @@ function _histAlarmSeverityBadge(sev)
 	else if (s === 'WARNING')  cls = 'warning';
 	else if (s === 'INFO')     cls = 'info';
 	else if (s === 'NOTICE')   cls = 'primary';
-	return '<span class="badge badge-' + cls + '">' + escHtml(sev) + '</span>';
+	return '<span class="badge text-bg-' + cls + '">' + escHtml(sev) + '</span>';
 }

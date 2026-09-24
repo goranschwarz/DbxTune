@@ -208,7 +208,7 @@ extends HttpServlet
 				// modal Showplan dialog gets; left blank, this page behaves exactly as it always has -
 				// showSqlServerShowplanDialog() itself no-ops the srv/dbname-gated sections when
 				// meta.srv/meta.dbname are empty.
-				"            <div class='form-row'> \n" +
+				"            <div class='row g-2'> \n" +
 				"              <div class='col-md-4 mb-2'> \n" +
 				"                <label for='srv' class='mb-1' style='font-size:0.85em;color:#555;'>At Server Name (optional)</label> \n" +
 				"                <input type='text' class='form-control form-control-sm' id='srv' name='srv' list='ss-showplan-srv-datalist' placeholder='e.g. PROD_SQL_01' autocomplete='off'> \n" +

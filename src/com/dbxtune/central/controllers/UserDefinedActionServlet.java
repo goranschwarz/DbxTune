@@ -269,14 +269,14 @@ extends HttpServlet
 		if (refresh > 0)
 			out.println("        <input type='hidden' name='refresh' value='" + refresh + "'>");
 
-		out.println("        <div class='form-group'>");
+		out.println("        <div class='mb-3'>");
 		out.println("          <label for='uda-reason'><strong>Reason for Execution:</strong></label>");
 		out.println("          <textarea class='form-control mt-1' id='uda-reason' name='reason'");
 		out.println("                    rows='4' required autofocus");
 		out.println("                    placeholder='Enter your reason for executing this action...'></textarea>");
 		out.println("        </div>");
 		out.println("        <button type='submit' class='btn btn-warning'>Execute Action</button>");
-		out.println("        <a href='javascript:history.back()' class='btn btn-secondary ml-2'>Cancel</a>");
+		out.println("        <a href='javascript:history.back()' class='btn btn-secondary ms-2'>Cancel</a>");
 		out.println("      </form>");
 
 		out.println("    </div>"); // card-body
@@ -321,7 +321,7 @@ extends HttpServlet
 
 		out.println("      <p>You must be logged in to execute this action.</p>");
 		out.println("      <button class='btn btn-primary' onclick='dbxOpenLogin();'>Login</button>");
-		out.println("      <a href='javascript:history.back()' class='btn btn-secondary ml-2'>Cancel</a>");
+		out.println("      <a href='javascript:history.back()' class='btn btn-secondary ms-2'>Cancel</a>");
 
 		out.println("    </div>"); // card-body
 		out.println("  </div>"); // card
@@ -395,7 +395,7 @@ extends HttpServlet
 		}
 
 		out.println("      <button class='btn btn-warning' onclick='dbxOpenLogin();'>Login as Different User</button>");
-		out.println("      <a href='javascript:history.back()' class='btn btn-secondary ml-2'>Cancel</a>");
+		out.println("      <a href='javascript:history.back()' class='btn btn-secondary ms-2'>Cancel</a>");
 
 		out.println("    </div>"); // card-body
 		out.println("  </div>"); // card

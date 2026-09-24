@@ -40,12 +40,12 @@
             '<div id="dbx-nb-isLoggedIn-div" style="display:none;">' +
             '  <li class="nav-item dropdown">' +
             '    <a class="nav-link dropdown-toggle" href="#"' +
-            '       id="dbx-nb-userDropdown" data-toggle="dropdown"' +
+            '       id="dbx-nb-userDropdown" data-bs-toggle="dropdown"' +
             '       aria-haspopup="true" aria-expanded="false">' +
             '      <i class="fa fa-user"></i>' +
             '      <span id="dbx-nb-isLoggedInUser-div"></span>' +
             '    </a>' +
-            '    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dbx-nb-userDropdown">' +
+            '    <div class="dropdown-menu dropdown-menu-end" aria-labelledby="dbx-nb-userDropdown">' +
             '      <a class="dropdown-item" href="#" onclick="dbxOpenSettings(); return false;">' +
             '        <i class="fa fa-cog"></i> Settings</a>' +
             '      <a class="dropdown-item" href="/logout">' +
@@ -58,7 +58,7 @@
             '  <a class="nav-link" href="#"' +
             '     onclick="dbxOpenLogin(); return false;">' +
             '    <i class="fa fa-sign-in"></i>' +
-            '    <span data-toggle="tooltip" title="Log in as a specific user.">Login</span>' +
+            '    <span data-bs-toggle="tooltip" title="Log in as a specific user.">Login</span>' +
             '  </a>' +
             '</div>';
 
@@ -78,17 +78,17 @@
         // For now inject just the skeleton + login tab; the second tab is
         // injected by applyLoginConfig() called from fetchAndInjectOAuthButtons.
         var html =
-            '<div id="dbx-login-dialog" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">\n' +
+            '<div id="dbx-login-dialog" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">\n' +
             '  <div class="modal-dialog modal-dialog-centered" style="max-width:460px;">\n' +
             '    <div class="modal-content">\n' +
             '      <div class="modal-header">\n' +
             '        <h3>DbxCentral - Login</h3>\n' +
-            '        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>\n' +
+            '        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-hidden="true"></button>\n' +
             '      </div>\n' +
             '      <div class="modal-body p-0" style="overflow-y:auto;max-height:85vh;">\n' +
             '        <ul class="nav nav-tabs px-3 pt-2" id="dbx-login-tabs" role="tablist">\n' +
             '          <li class="nav-item">\n' +
-            '            <a class="nav-link active" id="dbx-tab-login" data-toggle="tab" href="#dbx-pane-login" role="tab">Login</a>\n' +
+            '            <a class="nav-link active" id="dbx-tab-login" data-bs-toggle="tab" href="#dbx-pane-login" role="tab">Login</a>\n' +
             '          </li>\n' +
             '          <!-- second tab injected by applyLoginConfig() -->\n' +
             '        </ul>\n' +
@@ -98,40 +98,38 @@
             '          <div class="tab-pane fade show active" id="dbx-pane-login" role="tabpanel">\n' +
             '            <form class="form" role="form" autocomplete="off" id="dbx-login-form"\n' +
             '                  novalidate method="POST" action="j_security_check">\n' +
-            '              <div class="form-group">\n' +
+            '              <div class="mb-3">\n' +
             '                <label for="dbx-login-user-txt">Email or username</label>\n' +
             '                <span class="fa fa-question-circle"\n' +
-            '                      data-toggle="tooltip" data-placement="bottom" data-html="true"\n' +
+            '                      data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-html="true"\n' +
             '                      title="The default &lt;code&gt;admin&lt;/code&gt; password is the IP address of the DbxCentral host.">&nbsp;</span>\n' +
             '                <input type="text" class="form-control" name="j_username"\n' +
             '                       id="dbx-login-user-txt" required>\n' +
             '                <div class="invalid-feedback">Oops, you missed this one.</div>\n' +
             '              </div>\n' +
-            '              <div class="form-group">\n' +
+            '              <div class="mb-3">\n' +
             '                <label for="dbx-login-passwd-txt">Password</label>\n' +
             '                <input type="password" class="form-control" name="j_password"\n' +
             '                       id="dbx-login-passwd-txt" required autocomplete="new-password">\n' +
             '                <div class="invalid-feedback">Enter your password too!</div>\n' +
             '              </div>\n' +
-            '              <div id="dbx-loginFailed-div" class="custom-control mb-2" style="display:none;">\n' +
+            '              <div id="dbx-loginFailed-div" class="mb-2" style="display:none;">\n' +
             '                <b><font color="red">Login failed!</font></b>\n' +
             '              </div>\n' +
-            '              <div class="form-group">\n' +
+            '              <div class="mb-3">\n' +
             '                <a href="" class="small" onclick="dbxToggleForgotPassword(); return false;">Forgot password?</a>\n' +
             '                <div id="dbx-forgotpw-div" style="display:none;" class="mt-2 p-2 border rounded bg-light">\n' +
             '                  <p class="mb-1 small">Enter your email address and we will send you a temporary password.</p>\n' +
             '                  <div class="input-group input-group-sm">\n' +
             '                    <input type="email" class="form-control" id="dbx-forgot-email-txt" placeholder="Email address">\n' +
-            '                    <div class="input-group-append">\n' +
-            '                      <button class="btn btn-success" type="button" onclick="dbxSendForgotPassword()">Send</button>\n' +
-            '                    </div>\n' +
+            '                    <button class="btn btn-success" type="button" onclick="dbxSendForgotPassword()">Send</button>\n' +
             '                  </div>\n' +
             '                  <div id="dbx-forgot-msg" class="mt-1 small"></div>\n' +
             '                </div>\n' +
             '              </div>\n' +
             '              <div class="modal-footer px-0">\n' +
-            '                <button class="btn btn-outline-secondary" data-dismiss="modal" aria-hidden="true">Cancel</button>\n' +
-            '                <button type="submit" class="btn btn-success float-right" id="dbx-login-btn">Login</button>\n' +
+            '                <button class="btn btn-outline-secondary" data-bs-dismiss="modal" aria-hidden="true">Cancel</button>\n' +
+            '                <button type="submit" class="btn btn-success float-end" id="dbx-login-btn">Login</button>\n' +
             '              </div>\n' +
             '            </form>\n' +
             '          </div>\n' +
@@ -177,30 +175,30 @@
         {
             // OAuth path — no password field; login is via the OAuth button
             tabHtml = '<li class="nav-item">' +
-                      '  <a class="nav-link" id="dbx-tab-request" data-toggle="tab" href="#dbx-pane-request" role="tab">' + tabLabel + '</a>' +
+                      '  <a class="nav-link" id="dbx-tab-request" data-bs-toggle="tab" href="#dbx-pane-request" role="tab">' + tabLabel + '</a>' +
                       '</li>';
 
             paneHtml =
                 '<div class="tab-pane fade" id="dbx-pane-request" role="tabpanel">\n' +
                 approvalBanner +
-                '  <div class="form-group">\n' +
+                '  <div class="mb-3">\n' +
                 '    <label for="dbx-req-email-txt">Email <span class="text-danger">*</span></label>\n' +
                 '    <input type="email" class="form-control" id="dbx-req-email-txt" placeholder="your@email.com">\n' +
                 '  </div>\n' +
-                '  <div class="form-group">\n' +
+                '  <div class="mb-3">\n' +
                 '    <label for="dbx-req-name-txt">Full Name</label>\n' +
                 '    <input type="text" class="form-control" id="dbx-req-name-txt" placeholder="Your name (optional)">\n' +
                 '  </div>\n' +
                 (needsApproval
-                    ? '  <div class="form-group">\n' +
+                    ? '  <div class="mb-3">\n' +
                       '    <label for="dbx-req-reason-txt">Reason for Access</label>\n' +
                       '    <textarea class="form-control" id="dbx-req-reason-txt" rows="2" placeholder="Why do you need access? (optional)"></textarea>\n' +
                       '  </div>\n'
                     : '') +
                 '  <div id="dbx-req-msg" class="mb-2"></div>\n' +
                 '  <div class="modal-footer px-0">\n' +
-                '    <button class="btn btn-outline-secondary" data-dismiss="modal" aria-hidden="true">Cancel</button>\n' +
-                '    <button type="button" class="btn btn-primary float-right" onclick="dbxRequestAccess()">' + btnLabel + '</button>\n' +
+                '    <button class="btn btn-outline-secondary" data-bs-dismiss="modal" aria-hidden="true">Cancel</button>\n' +
+                '    <button type="button" class="btn btn-primary float-end" onclick="dbxRequestAccess()">' + btnLabel + '</button>\n' +
                 '  </div>\n' +
                 '</div>\n';
         }
@@ -208,17 +206,17 @@
         {
             // Password-based path
             tabHtml = '<li class="nav-item">' +
-                      '  <a class="nav-link" id="dbx-tab-register" data-toggle="tab" href="#dbx-pane-register" role="tab">' + tabLabel + '</a>' +
+                      '  <a class="nav-link" id="dbx-tab-register" data-bs-toggle="tab" href="#dbx-pane-register" role="tab">' + tabLabel + '</a>' +
                       '</li>';
 
             paneHtml =
                 '<div class="tab-pane fade" id="dbx-pane-register" role="tabpanel">\n' +
                 approvalBanner +
-                '  <div class="form-group mb-2">\n' +
+                '  <div class="mb-3 mb-2">\n' +
                 '    <label class="mb-1" for="dbx-reg-email-txt">Email <span class="text-muted small">(used as your login)</span></label>\n' +
                 '    <input type="email" class="form-control form-control-sm" id="dbx-reg-email-txt" placeholder="your@email.com">\n' +
                 '  </div>\n' +
-                '  <div class="form-group mb-2">\n' +
+                '  <div class="mb-3 mb-2">\n' +
                 '    <label class="mb-1" for="dbx-reg-password-txt">Password</label>\n' +
                 '    <input type="password" class="form-control form-control-sm" id="dbx-reg-password-txt" placeholder="At least 8 characters">\n' +
                 '    <div class="progress mt-1" style="height:4px;">\n' +
@@ -226,24 +224,24 @@
                 '    </div>\n' +
                 '    <small id="dbx-reg-pw-strength-lbl" class="form-text text-muted"></small>\n' +
                 '  </div>\n' +
-                '  <div class="form-group mb-2">\n' +
+                '  <div class="mb-3 mb-2">\n' +
                 '    <label class="mb-1" for="dbx-reg-confirm-txt">Confirm Password</label>\n' +
                 '    <input type="password" class="form-control form-control-sm" id="dbx-reg-confirm-txt" placeholder="Repeat password">\n' +
                 '  </div>\n' +
                 (needsApproval
-                    ? '  <div class="form-group mb-2">\n' +
+                    ? '  <div class="mb-3 mb-2">\n' +
                       '    <label class="mb-1" for="dbx-reg-name-txt">Full Name</label>\n' +
                       '    <input type="text" class="form-control form-control-sm" id="dbx-reg-name-txt" placeholder="Your name (optional)">\n' +
                       '  </div>\n' +
-                      '  <div class="form-group mb-2">\n' +
+                      '  <div class="mb-3 mb-2">\n' +
                       '    <label class="mb-1" for="dbx-reg-reason-txt">Reason for Access</label>\n' +
                       '    <textarea class="form-control form-control-sm" id="dbx-reg-reason-txt" rows="2" placeholder="Why do you need access? (optional)"></textarea>\n' +
                       '  </div>\n'
                     : '') +
                 '  <div id="dbx-reg-msg" class="mb-2"></div>\n' +
                 '  <div class="modal-footer px-0">\n' +
-                '    <button class="btn btn-outline-secondary" data-dismiss="modal" aria-hidden="true">Cancel</button>\n' +
-                '    <button type="button" class="btn btn-primary float-right" onclick="dbxRegisterUser()">' + btnLabel + '</button>\n' +
+                '    <button class="btn btn-outline-secondary" data-bs-dismiss="modal" aria-hidden="true">Cancel</button>\n' +
+                '    <button type="button" class="btn btn-primary float-end" onclick="dbxRegisterUser()">' + btnLabel + '</button>\n' +
                 '  </div>\n' +
                 '</div>\n';
         }
@@ -450,7 +448,7 @@
                     $.each(providers, function (i, p)
                     {
                         html +=
-                            '<a href="' + p.startUrl + '" class="btn btn-outline-secondary btn-block mb-1" style="text-align:left;">' +
+                            '<a href="' + p.startUrl + '" class="btn btn-outline-secondary d-block w-100 mb-1" style="text-align:left;">' +
                             p.iconHtml +
                             'Sign in with ' + $('<span>').text(p.displayName).html() +
                             '</a>';
@@ -461,7 +459,7 @@
                     // Wrap username/password fields in a <details> so they collapse natively.
                     // wrapAll() with nested HTML doesn't work reliably — build the element manually.
                     var $form    = $(document).find('#dbx-login-form');
-                    var $fields  = $form.children('.form-group, .custom-control, .modal-footer');
+                    var $fields  = $form.children('.mb-3, #dbx-loginFailed-div, .modal-footer');
                     var $details = $('<details id="dbx-admin-login-fields" class="mt-2"></details>');
                     var $summary = $('<summary class="small text-muted mb-2" style="cursor:pointer;">Login Options</summary>');
                     $details.append($summary);
@@ -648,47 +646,47 @@
             '    <div class="modal-content">' +
             '      <div class="modal-header">' +
             '        <h5 class="modal-title" id="dbx-settings-title"><i class="fa fa-cog"></i> Account Settings</h5>' +
-            '        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>' +
+            '        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
             '      </div>' +
             '      <div class="modal-body">' +
-            '        <div class="form-group">' +
-            '          <label class="small font-weight-bold">Username</label>' +
+            '        <div class="mb-3">' +
+            '          <label class="small fw-bold">Username</label>' +
             '          <input type="text" class="form-control form-control-sm" id="dbx-settings-username" readonly>' +
             '        </div>' +
             '        <hr>' +
             '        <h6>Change Email</h6>' +
-            '        <div class="form-group mt-2">' +
+            '        <div class="mb-3 mt-2">' +
             '          <input type="email" class="form-control form-control-sm" id="dbx-settings-email" placeholder="Email address">' +
             '        </div>' +
             '        <button class="btn btn-sm btn-primary" type="button" onclick="dbxSaveEmail()">Update Email</button>' +
             '        <div id="dbx-settings-email-msg" class="mt-1 small"></div>' +
             '        <hr>' +
             '        <h6>Change Full Name</h6>' +
-            '        <div class="form-group mt-2">' +
+            '        <div class="mb-3 mt-2">' +
             '          <input type="text" class="form-control form-control-sm" id="dbx-settings-fullname" placeholder="Display name (optional)">' +
             '        </div>' +
             '        <button class="btn btn-sm btn-primary" type="button" onclick="dbxSaveFullName()">Update Full Name</button>' +
             '        <div id="dbx-settings-fullname-msg" class="mt-1 small"></div>' +
             '        <hr>' +
             '        <h6>Change Password</h6>' +
-            '        <div class="form-group mt-2">' +
+            '        <div class="mb-3 mt-2">' +
             '          <input type="password" class="form-control form-control-sm" id="dbx-settings-current-pw" placeholder="Current password" autocomplete="current-password">' +
             '        </div>' +
-            '        <div class="form-group">' +
+            '        <div class="mb-3">' +
             '          <input type="password" class="form-control form-control-sm" id="dbx-settings-new-pw" placeholder="New password (min 8 characters)" autocomplete="new-password">' +
             '          <div class="progress mt-1" style="height:4px;">' +
             '            <div id="dbx-settings-pw-strength-bar" class="progress-bar" role="progressbar" style="width:0%;transition:width 0.2s,background-color 0.2s;"></div>' +
             '          </div>' +
             '          <small id="dbx-settings-pw-strength-lbl" class="form-text text-muted"></small>' +
             '        </div>' +
-            '        <div class="form-group">' +
+            '        <div class="mb-3">' +
             '          <input type="password" class="form-control form-control-sm" id="dbx-settings-confirm-pw" placeholder="Confirm new password" autocomplete="new-password">' +
             '        </div>' +
             '        <button class="btn btn-sm btn-primary" id="dbx-settings-pw-btn" type="button" onclick="dbxSavePassword()">Change Password</button>' +
             '        <div id="dbx-settings-pw-msg" class="mt-1 small"></div>' +
             '      </div>' +
             '      <div class="modal-footer">' +
-            '        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>' +
+            '        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>' +
             '      </div>' +
             '    </div>' +
             '  </div>' +

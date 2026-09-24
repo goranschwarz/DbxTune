@@ -78,7 +78,7 @@ public class HtmlStatic
 		writer.println("  <!-- JS: Bootstrap --> ");
 //		writer.println("  <script type='text/javascript' src='/scripts/popper/1.12.9/popper.min.js'></script> ");
 //		writer.println("  <script type='text/javascript' src='/scripts/bootstrap/4.0.0/js/bootstrap.min.js'></script> ");
-		writer.println("  <script type='text/javascript' src='/scripts/bootstrap/4.6.2/js/bootstrap.bundle.min.js'></script>"); // Bundle also includes popper
+		writer.println("  <script type='text/javascript' src='/scripts/bootstrap/5.3.8/js/bootstrap.bundle.min.js'></script>"); // Bundle also includes popper
 		writer.println();
 		writer.println("  <!-- JS: DbxCentral --> ");
 		writer.println("  <script type='text/javascript' src='/scripts/dbxtune/js/dbxcentral.utils.js'></script> ");
@@ -95,7 +95,7 @@ public class HtmlStatic
 		writer.println();
 		writer.println("  <!-- CSS: Bootstrap --> ");
 //		writer.println("  <link rel='stylesheet' href='/scripts/bootstrap/4.0.0/css/bootstrap.min.css'> ");
-		writer.println("  <link rel='stylesheet' href='/scripts/bootstrap/4.6.2/css/bootstrap.min.css'> ");
+		writer.println("  <link rel='stylesheet' href='/scripts/bootstrap/5.3.8/css/bootstrap.min.css'> ");
 		writer.println();
 		writer.println("  <!-- CSS: Font Awsome --> ");
 		writer.println("  <link rel='stylesheet' href='/scripts/font-awesome/4.4.0/css/font-awesome.min.css'> ");
@@ -135,19 +135,19 @@ public class HtmlStatic
 		if (PageSection.Server.equals(pageSection))
 		{
 			overviewActive    = " active";
-			overviewExtraSpan = "<span class='sr-only'>(current)</span>";
+			overviewExtraSpan = "<span class='visually-hidden'>(current)</span>";
 		}
 
 		if (PageSection.Admin.equals(pageSection))
 		{
 			adminActive    = " active";
-			adminExtraSpan = "<span class='sr-only'>(current)</span>";
+			adminExtraSpan = "<span class='visually-hidden'>(current)</span>";
 		}
 
 		if (PageSection.Tools.equals(pageSection))
 		{
 			toolsActive    = " active";
-			toolsExtraSpan = "<span class='sr-only'>(current)</span>";
+			toolsExtraSpan = "<span class='visually-hidden'>(current)</span>";
 		}
 
 		if (PageSection.DesktopApp.equals(pageSection))
@@ -155,7 +155,7 @@ public class HtmlStatic
 			// 'Desktop App' now lives *inside* the 'Tools' dropdown, so light up both
 			toolsActive         = " active";
 			desktopAppActive    = " active";
-			desktopAppExtraSpan = "<span class='sr-only'>(current)</span>";
+			desktopAppExtraSpan = "<span class='visually-hidden'>(current)</span>";
 		}
 
 		boolean addRightHandSide = addIsLoggedIn || StringUtil.hasValue(rightTopHtml);
@@ -164,13 +164,13 @@ public class HtmlStatic
 		PrintWriter  writer = new PrintWriter(out);
 
 		writer.println();
-		writer.println("  <nav class='navbar navbar-expand-md navbar-dark sticky-top bg-dark mb-0'> ");
+		writer.println("  <nav class='navbar navbar-expand-md navbar-dark sticky-top bg-dark mb-0 px-3'> ");
 		writer.println("    <a class='navbar-brand' href='/'>DbxCentral</a> ");
-		writer.println("    <button class='navbar-toggler' type='button' data-toggle='collapse' data-target='#navbarCollapse' aria-controls='navbarCollapse' aria-expanded='false' aria-label='Toggle navigation'> ");
+		writer.println("    <button class='navbar-toggler' type='button' data-bs-toggle='collapse' data-bs-target='#navbarCollapse' aria-controls='navbarCollapse' aria-expanded='false' aria-label='Toggle navigation'> ");
 		writer.println("        <span class='navbar-toggler-icon'></span> ");
 		writer.println("    </button> ");
 		writer.println("    <div class='collapse navbar-collapse' id='navbarCollapse'> ");
-		writer.println("      <ul class='navbar-nav mr-auto'> ");
+		writer.println("      <ul class='navbar-nav me-auto'> ");
 		writer.println("        <li class='nav-item" + overviewActive + "'> ");
 		writer.println("          <a class='nav-link' href='/overview'>Servers" + overviewExtraSpan + "</a> ");
 		writer.println("        </li> ");
@@ -178,7 +178,7 @@ public class HtmlStatic
 		writer.println("          <a class='nav-link' href='/admin/admin.html'>Admin" + adminExtraSpan + "</a> ");
 		writer.println("        </li> ");
 		writer.println("        <li class='nav-item dropdown" + toolsActive + "'> ");
-		writer.println("          <a class='nav-link dropdown-toggle' href='#' id='dbx-tools-menu' role='button' data-toggle='dropdown' aria-haspopup='true' aria-expanded='false'>Tools" + toolsExtraSpan + "</a> ");
+		writer.println("          <a class='nav-link dropdown-toggle' href='#' id='dbx-tools-menu' role='button' data-bs-toggle='dropdown' aria-haspopup='true' aria-expanded='false'>Tools" + toolsExtraSpan + "</a> ");
 		writer.println("          <div class='dropdown-menu' aria-labelledby='dbx-tools-menu'> ");
 		writer.println("            <div class='dbx-dropdown-submenu'> ");
 		writer.println("              <a class='dropdown-item' href='#'>&#128202; Showplan</a> ");
@@ -208,10 +208,10 @@ public class HtmlStatic
 				writer.println("        <!-- IS LOGGED IN --> ");
 				writer.println("        <div id='dbx-nb-isLoggedIn-div' style='display: none;'> ");
 				writer.println("          <li class='nav-item dropdown'> ");
-				writer.println("            <a class='nav-link dropdown-toggle' href='http://example.com' id='navbarDropdownMenuLink' data-toggle='dropdown' aria-haspopup='true' aria-expanded='false'> ");
+				writer.println("            <a class='nav-link dropdown-toggle' href='http://example.com' id='navbarDropdownMenuLink' data-bs-toggle='dropdown' aria-haspopup='true' aria-expanded='false'> ");
 				writer.println("              <i class='fa fa-user'></i> <span id='dbx-nb-isLoggedInUser-div'></span> <!-- current username will be in here --> ");
 				writer.println("            </a> ");
-				writer.println("            <div class='dropdown-menu dropdown-menu-right' aria-labelledby='navbarDropdownMenuLink'> ");
+				writer.println("            <div class='dropdown-menu dropdown-menu-end' aria-labelledby='navbarDropdownMenuLink'> ");
 				writer.println("            <a class='dropdown-item' href='#' onclick='dbxOpenSettings(); return false;'> <i class='fa fa-cog'></i> Settings</a> ");
 				writer.println("            <a class='dropdown-item' href='/logout'> <i class='fa fa-sign-out'></i> Logout</a> ");
 				writer.println("            </div> ");
@@ -219,7 +219,7 @@ public class HtmlStatic
 				writer.println("        </div> ");
 				writer.println("        <!-- IS LOGGED OUT --> ");
 				writer.println("        <div id='dbx-nb-isLoggedOut-div'> ");
-				writer.println("          <a class='nav-link' href='#'> <i class='fa fa-sign-in'></i> <span data-toggle='tooltip' title='Log in as a specific user.'>Login</span></a> ");
+				writer.println("          <a class='nav-link' href='#'> <i class='fa fa-sign-in'></i> <span data-bs-toggle='tooltip' title='Log in as a specific user.'>Login</span></a> ");
 				writer.println("        </div> ");
 			}
 			writer.println("      </ul> <!-- end right hand side --> ");
@@ -314,36 +314,36 @@ public class HtmlStatic
 		sb.append("        <div class='modal-content'>\n");
 		sb.append("            <div class='modal-header'>\n");
 		sb.append("                <h5 class='modal-title' id='dbx-settings-title'><i class='fa fa-cog'></i> Account Settings</h5>\n");
-		sb.append("                <button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button>\n");
+		sb.append("                <button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'></button>\n");
 		sb.append("            </div>\n");
 		sb.append("            <div class='modal-body'>\n");
-		sb.append("                <div class='form-group'>\n");
-		sb.append("                    <label class='small font-weight-bold'>Username</label>\n");
+		sb.append("                <div class='mb-3'>\n");
+		sb.append("                    <label class='small fw-bold'>Username</label>\n");
 		sb.append("                    <input type='text' class='form-control form-control-sm' id='dbx-settings-username' readonly>\n");
 		sb.append("                </div>\n");
 		sb.append("                <hr>\n");
 		sb.append("                <h6>Change Email</h6>\n");
-		sb.append("                <div class='form-group mt-2'>\n");
+		sb.append("                <div class='mb-3 mt-2'>\n");
 		sb.append("                    <input type='email' class='form-control form-control-sm' id='dbx-settings-email' placeholder='Email address'>\n");
 		sb.append("                </div>\n");
 		sb.append("                <button class='btn btn-sm btn-primary' type='button' onclick='dbxSaveEmail()'>Update Email</button>\n");
 		sb.append("                <div id='dbx-settings-email-msg' class='mt-1 small'></div>\n");
 		sb.append("                <hr>\n");
 		sb.append("                <h6>Change Password</h6>\n");
-		sb.append("                <div class='form-group mt-2'>\n");
+		sb.append("                <div class='mb-3 mt-2'>\n");
 		sb.append("                    <input type='password' class='form-control form-control-sm' id='dbx-settings-current-pw' placeholder='Current password' autocomplete='current-password'>\n");
 		sb.append("                </div>\n");
-		sb.append("                <div class='form-group'>\n");
+		sb.append("                <div class='mb-3'>\n");
 		sb.append("                    <input type='password' class='form-control form-control-sm' id='dbx-settings-new-pw' placeholder='New password (min 6 characters)' autocomplete='new-password'>\n");
 		sb.append("                </div>\n");
-		sb.append("                <div class='form-group'>\n");
+		sb.append("                <div class='mb-3'>\n");
 		sb.append("                    <input type='password' class='form-control form-control-sm' id='dbx-settings-confirm-pw' placeholder='Confirm new password' autocomplete='new-password'>\n");
 		sb.append("                </div>\n");
 		sb.append("                <button class='btn btn-sm btn-primary' type='button' onclick='dbxSavePassword()'>Change Password</button>\n");
 		sb.append("                <div id='dbx-settings-pw-msg' class='mt-1 small'></div>\n");
 		sb.append("            </div>\n");
 		sb.append("            <div class='modal-footer'>\n");
-		sb.append("                <button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>\n");
+		sb.append("                <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>\n");
 		sb.append("            </div>\n");
 		sb.append("        </div>\n");
 		sb.append("    </div>\n");

@@ -524,7 +524,7 @@ public class OverviewServlet extends HttpServlet
 
 				// NOTE: If the below text is CHANGED, ALSO Change in method: doGet(...) --> 'CM Refresh Time'
 				String link   = "/graph.html?subscribe=true&cs=dark&startTime=2h&sessionName=" + srvName + "&graphList=CmSummary_CmRefreshTime&gcols=1";
-				String button = "<a href='" + link + "' target='_blank' class='btn btn-sm btn-primary dbx-button-image " + dbxType + " mb-2 mr-2' role='button'>" + srvName + "</a>";
+				String button = "<a href='" + link + "' target='_blank' class='btn btn-sm btn-primary dbx-button-image " + dbxType + " mb-2 me-2' role='button'>" + srvName + "</a>";
 				
 				out.println(button);
 			}
@@ -839,8 +839,8 @@ public class OverviewServlet extends HttpServlet
 			// Bootstrap "card" - BEGIN
 			out.println("<div class='card border-dark mb-3' id='" + divId + "'> ");
 			out.println("<h5 class='card-header' role='tab' id='heading_" + divId + "'> ");
-			out.println("  <a data-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
-			out.println("    <i class='fa fa-chevron-down float-right'></i> ");
+			out.println("  <a data-bs-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
+			out.println("    <i class='fa fa-chevron-down float-end'></i> ");
 			out.println("    <b>" + sectionName + "</b> ");
 			out.println("  </a> ");
 			out.println("</h5> ");
@@ -982,8 +982,8 @@ public class OverviewServlet extends HttpServlet
 			// Bootstrap "card" - BEGIN
 			out.println("<div class='card border-dark mb-3' id='" + divId + "'> ");
 			out.println("<h5 class='card-header' role='tab' id='heading_" + divId + "'> ");
-			out.println("  <a data-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
-			out.println("    <i class='fa fa-chevron-down float-right'></i> ");
+			out.println("  <a data-bs-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
+			out.println("    <i class='fa fa-chevron-down float-end'></i> ");
 			out.println("    <b>" + sectionName + "</b> ");
 			out.println("  </a> ");
 			out.println("</h5> ");
@@ -1090,7 +1090,7 @@ public class OverviewServlet extends HttpServlet
 					String style = udAction.isValid() ? "" : "style='color:red'";
 					String typeTt = "";
 					String cmd = udAction.getCommand();
-//					actionType = "<div data-toggle='modal' data-target='#FIXME' data-objectname='" + name + "' data-tooltip=\"" + StringEscapeUtils.escapeHtml4(sql) + "\">&#x1F4AC; " + actionType + "</div>";
+//					actionType = "<div data-bs-toggle='modal' data-bs-target='#FIXME' data-objectname='" + name + "' data-tooltip=\"" + StringEscapeUtils.escapeHtml4(sql) + "\">&#x1F4AC; " + actionType + "</div>";
 					actionType = "<div data-tooltip=\"" + StringEscapeUtils.escapeHtml4(cmd) + "\">&#x1F4AC; " + actionType + "</div>";
 
 					out.println("  <tr>");
@@ -1150,8 +1150,8 @@ public class OverviewServlet extends HttpServlet
 			// Bootstrap "card" - BEGIN
 			out.println("<div class='card border-dark mb-3' id='" + divId + "'> ");
 			out.println("<h5 class='card-header' role='tab' id='heading_" + divId + "'> ");
-			out.println("  <a data-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
-			out.println("    <i class='fa fa-chevron-down float-right'></i> ");
+			out.println("  <a data-bs-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
+			out.println("    <i class='fa fa-chevron-down float-end'></i> ");
 			out.println("    <b>" + sectionName + "</b> ");
 			out.println("  </a> ");
 			out.println("</h5> ");
@@ -1193,7 +1193,7 @@ public class OverviewServlet extends HttpServlet
 
 				// NOTE: If the below text is CHANGED, ALSO Change in method: printServerLayout_CmRefreshButtons(...)
 				String link   = "/graph.html?subscribe=true&cs=dark&startTime=2h&sessionName=" + StringUtil.toCommaStr(allSrvList, ",") + "&graphList=CmSummary_CmRefreshTime&gcols=1";
-				String button = "<a href='" + link + "' target='_blank' class='btn btn-sm btn-primary mb-2 mr-2' role='button'>ALL Servers</a>";
+				String button = "<a href='" + link + "' target='_blank' class='btn btn-sm btn-primary mb-2 me-2' role='button'>ALL Servers</a>";
 
 				out.println(button);
 				out.println("<br>");
@@ -1223,7 +1223,7 @@ public class OverviewServlet extends HttpServlet
 	
 					// NOTE: If the below text is CHANGED, ALSO Change in method: printServerLayout_CmRefreshButtons(...)
 					String link   = "/graph.html?subscribe=true&cs=dark&startTime=2h&sessionName=" + srvName + "&graphList=CmSummary_CmRefreshTime&gcols=1";
-					String button = "<a href='" + link + "' target='_blank' class='btn btn-sm btn-primary dbx-button-image " + dbxType + " mb-2 mr-2' role='button'>" + srvName + "</a>";
+					String button = "<a href='" + link + "' target='_blank' class='btn btn-sm btn-primary dbx-button-image " + dbxType + " mb-2 me-2' role='button'>" + srvName + "</a>";
 	
 					out.println(button);
 				}
@@ -1253,8 +1253,8 @@ public class OverviewServlet extends HttpServlet
 			// Bootstrap "card" - BEGIN
 			out.println("<div class='card border-dark mb-3' id='" + divId + "'> ");
 			out.println("<h5 class='card-header' role='tab' id='heading_" + divId + "'> ");
-			out.println("  <a data-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
-			out.println("    <i class='fa fa-chevron-down float-right'></i> ");
+			out.println("  <a data-bs-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
+			out.println("    <i class='fa fa-chevron-down float-end'></i> ");
 			out.println("    <b>" + sectionName + "</b> ");
 			out.println("  </a> ");
 			out.println("</h5> ");
@@ -1429,8 +1429,8 @@ public class OverviewServlet extends HttpServlet
 			// Bootstrap "card" - BEGIN
 			out.println("<div class='card border-dark mb-3' id='" + divId + "'> ");
 			out.println("<h5 class='card-header' role='tab' id='heading_" + divId + "'> ");
-			out.println("  <a data-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
-			out.println("    <i class='fa fa-chevron-down float-right'></i> ");
+			out.println("  <a data-bs-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
+			out.println("    <i class='fa fa-chevron-down float-end'></i> ");
 			out.println("    <b>" + sectionName + "</b> ");
 			out.println("  </a> ");
 			out.println("</h5> ");
@@ -1667,8 +1667,8 @@ public class OverviewServlet extends HttpServlet
 			// Bootstrap "card" - BEGIN
 			out.println("<div class='card border-dark mb-3' id='" + divId + "'> ");
 			out.println("<h5 class='card-header' role='tab' id='heading_" + divId + "'> ");
-			out.println("  <a data-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
-			out.println("    <i class='fa fa-chevron-down float-right'></i> ");
+			out.println("  <a data-bs-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
+			out.println("    <i class='fa fa-chevron-down float-end'></i> ");
 			out.println("    <b>" + sectionName + "</b> ");
 			out.println("  </a> ");
 			out.println("</h5> ");
@@ -1919,8 +1919,8 @@ public class OverviewServlet extends HttpServlet
 			// Bootstrap "card" - BEGIN
 			out.println("<div class='card border-dark mb-3' id='" + divId + "'> ");
 			out.println("<h5 class='card-header' role='tab' id='heading_" + divId + "'> ");
-			out.println("  <a data-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
-			out.println("    <i class='fa fa-chevron-down float-right'></i> ");
+			out.println("  <a data-bs-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
+			out.println("    <i class='fa fa-chevron-down float-end'></i> ");
 			out.println("    <b>" + sectionName + "</b> ");
 			out.println("  </a> ");
 			out.println("</h5> ");
@@ -1990,8 +1990,8 @@ public class OverviewServlet extends HttpServlet
 			// Bootstrap "card" - BEGIN
 			out.println("<div class='card border-dark mb-3' id='" + divId + "'> ");
 			out.println("<h5 class='card-header' role='tab' id='heading_" + divId + "'> ");
-			out.println("  <a data-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
-			out.println("    <i class='fa fa-chevron-down float-right'></i> ");
+			out.println("  <a data-bs-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
+			out.println("    <i class='fa fa-chevron-down float-end'></i> ");
 			out.println("    <b>" + sectionName + "</b> ");
 			out.println("  </a> ");
 			out.println("</h5> ");
@@ -2149,8 +2149,8 @@ public class OverviewServlet extends HttpServlet
 			// Bootstrap "card" - BEGIN
 			out.println("<div class='card border-dark mb-3' id='" + divId + "'> ");
 			out.println("<h5 class='card-header' role='tab' id='heading_" + divId + "'> ");
-			out.println("  <a data-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
-			out.println("    <i class='fa fa-chevron-down float-right'></i> ");
+			out.println("  <a data-bs-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
+			out.println("    <i class='fa fa-chevron-down float-end'></i> ");
 			out.println("    <b>" + sectionName + "</b> ");
 			out.println("  </a> ");
 			out.println("</h5> ");
@@ -2404,8 +2404,8 @@ public class OverviewServlet extends HttpServlet
 			// Bootstrap "card" - BEGIN
 			out.println("<div class='card border-dark mb-3' id='" + divId + "'> ");
 			out.println("<h5 class='card-header' role='tab' id='heading_" + divId + "'> ");
-			out.println("  <a data-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
-			out.println("    <i class='fa fa-chevron-down float-right'></i> ");
+			out.println("  <a data-bs-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
+			out.println("    <i class='fa fa-chevron-down float-end'></i> ");
 			out.println("    <b>" + sectionName + "</b> ");
 			out.println("  </a> ");
 			out.println("</h5> ");
@@ -2622,8 +2622,8 @@ public class OverviewServlet extends HttpServlet
 			// Bootstrap "card" - BEGIN
 			out.println("<div class='card border-dark mb-3' id='" + divId + "'> ");
 			out.println("<h5 class='card-header' role='tab' id='heading_" + divId + "'> ");
-			out.println("  <a data-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
-			out.println("    <i class='fa fa-chevron-down float-right'></i> ");
+			out.println("  <a data-bs-toggle='collapse' href='#collapse_" + divId + "' aria-expanded='true' aria-controls='collapse_" + divId + "' class='d-block'> ");
+			out.println("    <i class='fa fa-chevron-down float-end'></i> ");
 			out.println("    <b>" + sectionName + "</b> ");
 			out.println("  </a> ");
 			out.println("</h5> ");
@@ -2726,8 +2726,7 @@ public class OverviewServlet extends HttpServlet
 		sb.append("		<div class='modal-content'>																									\n");
 		sb.append("			<div class='modal-header'>																								\n");
 		sb.append("			<h5 class='modal-title' id='dbx-dsr-dialog-title'>Create a Daily Summary Report - (With Time Bounderies)</h5>			\n");
-		sb.append("			<button type='button' class='close' data-dismiss='modal' aria-label='Close'>											\n");
-		sb.append("				<span aria-hidden='true'>&times;</span>																				\n");
+		sb.append("			<button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'>											\n");
 		sb.append("			</button>																												\n");
 		sb.append("			</div>																													\n");
 		sb.append("			<div class='modal-body'>																								\n");
@@ -2736,11 +2735,11 @@ public class OverviewServlet extends HttpServlet
 //		sb.append("					<li>Action: Describe me 2</li>																					\n");
 //		sb.append("				</ul>																												\n");
 		sb.append("				<form>																													\n");
-		sb.append("					<div class='form-row'>																								\n");
+		sb.append("					<div class='row g-2'>																								\n");
 		sb.append("						<label for='dbx-dsr-dbname'>Recording DB Name (full URL or H2 DB name))</label>									\n");
 		sb.append("						<input  id='dbx-dsr-dbname' type='text' class='form-control is-valid' placeholder='dbname' required>			\n");
 		sb.append("					</div>																												\n");
-		sb.append("					<div class='form-row'>																								\n");
+		sb.append("					<div class='row g-2'>																								\n");
 		sb.append("						<div class='col-md-4 mb-3'>																						\n");
 //		sb.append("						<div class='col-auto'>																							\n");
 		sb.append("							<label for='dbx-dsr-username-txt'>DB User Name</label>														\n");
@@ -2752,7 +2751,7 @@ public class OverviewServlet extends HttpServlet
 		sb.append("							<input  id='dbx-dsr-password-txt' type='password' class='form-control is-valid' placeholder='Password, blank is default' />	\n");
 		sb.append("						</div>																											\n");
 		sb.append("					</div>																											\n");
-		sb.append("					<div class='form-row'>																								\n");
+		sb.append("					<div class='row g-2'>																								\n");
 		sb.append("						<div class='col-md-4 mb-3'>																						\n");
 //		sb.append("						<div class='col-auto'>																							\n");
 		sb.append("							<label for='dbx-dsr-begin-time'>Report Begin Time</label>													\n");
@@ -2811,18 +2810,18 @@ public class OverviewServlet extends HttpServlet
 //		sb.append("\n");
 //		sb.append("					<!-- Right justified... everything after 'me-auto' -->															\n");
 //		sb.append("					<button type='button' class='btn btn-primary ms-2' id='dbx-dsr-dialog-ok'>Create</button>						\n");
-//		sb.append("					<button type='button' class='btn btn-default ms-2' data-dismiss='modal'>Close</button>							\n");
+//		sb.append("					<button type='button' class='btn btn-default ms-2' data-bs-dismiss='modal'>Close</button>							\n");
 //		sb.append("				</div>																												\n");
-		sb.append("				<!-- Left justified... everything before 'mr-auto' -->																\n");
+		sb.append("				<!-- Left justified... everything before 'me-auto' -->																\n");
 		sb.append("				<div>\n");
 		sb.append("					<button type='button' class='btn btn-primary' id='dbx-dsr-dialog-open'>Open Report in New Tab</button> 			\n");
 		sb.append("					<button type='button' class='btn btn-primary' id='dbx-dsr-dialog-save'>Save Report to Local File...</button>	\n");
 		sb.append("				</div> 																												\n");
 		sb.append("\n");
 		sb.append("				<!-- spacer pushes following buttons to the right --> \n");
-		sb.append("				<div class='mr-auto'></div>																							\n");
+		sb.append("				<div class='me-auto'></div>																							\n");
 		sb.append("\n");
-		sb.append("				<!-- Right justified... everything after 'mr-auto' -->																\n");
+		sb.append("				<!-- Right justified... everything after 'me-auto' -->																\n");
 		sb.append("				<div>																												\n");
 		sb.append("					<button type='button' class='btn btn-primary' id='dbx-dsr-dialog-ok'>Create</button> 							\n");
 		sb.append("					<button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button> 							\n");

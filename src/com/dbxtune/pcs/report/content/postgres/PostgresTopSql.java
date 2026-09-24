@@ -131,8 +131,8 @@ extends PostgresAbstract
 							
 							// Put the "Actual Executed SQL Text" as a "tooltip"
 							return "<div title='Click for Detailes' "
-									+ "data-toggle='modal' "
-									+ "data-target='#dbx-view-sqltext-dialog' "
+									+ "data-bs-toggle='modal' "
+									+ "data-bs-target='#dbx-view-sqltext-dialog' "
 									+ "data-objectname='" + queryid + "' "
 									+ "data-tooltip=\""   + getTooltipForSqlText(rstm, row) + "\" "
 									+ ">&#x1F4AC;</div>"; // symbol popup with "..."

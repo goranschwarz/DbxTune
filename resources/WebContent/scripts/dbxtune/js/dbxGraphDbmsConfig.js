@@ -323,7 +323,7 @@ function dbmsConfigRenderIssues(issues)
 function dbmsConfigBuildTable(tableId, columns, rows)
 {
 	var html = '<table id="' + tableId + '" class="table table-sm table-bordered table-hover" style="font-size:0.82em;white-space:nowrap;">';
-	html += '<thead class="thead-light"><tr>';
+	html += '<thead class="table-light"><tr>';
 	columns.forEach(function(col, idx) {
 		html += '<th style="cursor:pointer;user-select:none;" onclick="dbmsConfigSortTable(\'' + tableId + '\',' + idx + ');">'
 			+ escHtml(col) + ' <span class="sort-icon" style="font-size:0.75em;color:#999;"></span></th>';
@@ -579,7 +579,7 @@ function renderAsciiTable(seg, tableId)
 	// Store headers as JSON on the table so dbmsAsciiFilter can resolve column names for "where" expressions
 	var headersJson = JSON.stringify(seg.headers).replace(/"/g, '&quot;');
 	html += '<table id="' + tableId + '" data-headers="' + headersJson + '" class="table table-sm table-bordered table-hover" style="font-size:0.8em;white-space:nowrap;width:auto;">';
-	html += '<thead class="thead-light"><tr>';
+	html += '<thead class="table-light"><tr>';
 	seg.headers.forEach(function(h, idx) {
 		html += '<th style="cursor:pointer;user-select:none;" onclick="dbmsAsciiSort(this,\'' + tableId + '\',' + idx + ');">'
 			+ escHtml(h) + ' <span class="sort-icon" style="font-size:0.75em;color:#999;"></span></th>';
