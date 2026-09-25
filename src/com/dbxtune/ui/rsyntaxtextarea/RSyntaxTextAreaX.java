@@ -41,13 +41,13 @@ import javax.swing.text.StyleContext;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKit;
-import org.fife.ui.rsyntaxtextarea.RSyntaxUtilities;
 import org.fife.ui.rtextarea.FontUtil;
 import org.fife.ui.rtextarea.RTextAreaEditorKit;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.SearchContext;
 import org.fife.ui.rtextarea.SearchEngine;
 import org.fife.ui.rtextarea.SearchResult;
+import org.fife.ui.rtextarea.TextMode;
 import org.fife.ui.rtextarea.ToolTipSupplier;
 
 import com.dbxtune.gui.focusabletip.FocusableTip;
@@ -62,6 +62,7 @@ import com.dbxtune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.SelectWordAction
 import com.dbxtune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.ToLowerCaseAction;
 import com.dbxtune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.ToUpperCaseAction;
 import com.dbxtune.utils.Configuration;
+import com.dbxtune.utils.PlatformUtils;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.SwingUtils;
 
@@ -166,10 +167,10 @@ extends RSyntaxTextArea
 	/**
 	 * Creates a new <code>RSyntaxTextArea</code>.
 	 *
-	 * @param textMode Either <code>INSERT_MODE</code> or
-	 *        <code>OVERWRITE_MODE</code>.
+	 * @param textMode Either <code>TextMode.INSERT</code> or
+	 *        <code>TextMode.OVERWRITE</code>.
 	 */
-	public RSyntaxTextAreaX(int textMode) 
+	public RSyntaxTextAreaX(TextMode textMode)
 	{
 		super(textMode);
 		localInit(this);
@@ -185,12 +186,8 @@ extends RSyntaxTextArea
 		Font font = FontUtil.getDefaultMonospacedFont();
 //System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXX.getDefaultFont(): font=" + font);
 
-		int os = RSyntaxUtilities.getOS();
-
-		if (os == RSyntaxUtilities.OS_MAC_OSX) 
-		{
-		}
-		else if (os == RSyntaxUtilities.OS_WINDOWS) 
+		// RSTA 4.x removed RSyntaxUtilities.getOS()/OS_*; only Windows needs special handling here
+		if (PlatformUtils.isWindows())
 		{
 			// FROM: org.fife.ui.rtextarea.getDefaultMonospaceFontWindows
 			//
@@ -205,9 +202,6 @@ extends RSyntaxTextArea
 				if (font == null)
 					font = FontUtil.getDefaultMonospacedFont();
 			}
-		}
-		else if (os == RSyntaxUtilities.OS_LINUX) 
-		{
 		}
 
 		return font;

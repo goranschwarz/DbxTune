@@ -24,6 +24,7 @@ import java.lang.invoke.MethodHandles;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.fife.ui.autocomplete.DbxAutoCompleteDescWindow;
 import org.fife.ui.autocomplete.AutoCompletion;
 import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
@@ -44,7 +45,7 @@ public class TtpEntryCompletionProvider
 		AutoCompletion ac = new AutoCompletion(provider);
 		ac.install(textPane);
 		
-		ac.setShowDescWindow(true); // enable the "extra" descriptive window to the right of completion.
+		DbxAutoCompleteDescWindow.install(ac); // enable the "extra" descriptive window to the right of completion.
 		ac.setDescriptionWindowSize(600, 600);
 		
 		return provider;

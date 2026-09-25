@@ -58,7 +58,7 @@ import org.codehaus.janino.JavaSourceClassLoader;
 //import org.codehaus.janino.util.resource.MultiResourceFinder;
 //import org.codehaus.janino.util.resource.PathResourceFinder;
 //import org.codehaus.janino.util.resource.ResourceFinder;
-import org.fife.rsta.ac.LanguageSupportFactory;
+//import org.fife.rsta.ac.LanguageSupportFactory; // languagesupport-3.4.1.jar is NOT compatible with RSTA 4.x -- re-enable when RSTALanguageSupport 4.x exists
 import org.fife.ui.rsyntaxtextarea.ErrorStrip;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
@@ -112,7 +112,9 @@ extends JPanel
 
 		setLayout(new MigLayout("insets 0 0 0 0", "", ""));
 
-		LanguageSupportFactory.get().register(_javaEditor_txt);
+		// Java Code Completion (Ctrl+Space) via 'languagesupport' is disabled since it is NOT compatible with RSTA 4.x
+		// Re-enable (and add languagesupport-4.x.jar to the classpath) when RSTALanguageSupport 4.x exists. Java syntax highlighting still works.
+//		LanguageSupportFactory.get().register(_javaEditor_txt);
 		RTextScrollPane scroll     = new RTextScrollPane(_javaEditor_txt, true);
 		ErrorStrip      errorStrip = new ErrorStrip(     _javaEditor_txt);
 

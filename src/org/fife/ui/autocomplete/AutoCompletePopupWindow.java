@@ -1,32 +1,19 @@
 /*
- * 12/21/2008
- *
- * AutoCompletePopupWindow.java - A window containing a list of auto-complete
- * choices.
- *
  * This library is distributed under a modified BSD license.  See the included
- * AutoComplete.License.txt file for details.
+ * LICENSE.md file for details.
  */
 package org.fife.ui.autocomplete;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.ComponentOrientation;
-import java.awt.Dimension;
-import java.awt.Point;
-import java.awt.Rectangle;
-import java.awt.Toolkit;
-import java.awt.Window;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.List;
-
 import javax.swing.AbstractAction;
+import javax.swing.BorderFactory;
 import javax.swing.Action;
 import javax.swing.ActionMap;
-import javax.swing.BorderFactory;
 import javax.swing.InputMap;
 import javax.swing.JList;
 import javax.swing.JPanel;
@@ -47,8 +34,10 @@ import javax.swing.text.JTextComponent;
 
 import org.fife.ui.rsyntaxtextarea.PopupWindowDecorator;
 
+// BEGIN: added by gorans
 import com.jidesoft.swing.Resizable;
 import com.jidesoft.swing.ResizablePanel;
+// END: added by gorans
 
 
 /**
@@ -61,8 +50,8 @@ import com.jidesoft.swing.ResizablePanel;
  * @author Robert Futrell
  * @version 1.0
  */
+@SuppressWarnings("checkstyle:MultipleVariableDeclarations")
 class AutoCompletePopupWindow extends JWindow implements CaretListener,
-//class AutoCompletePopupWindow extends ResizableWindow implements CaretListener,
 									ListSelectionListener, MouseListener {
 
 	/**
@@ -91,7 +80,15 @@ class AutoCompletePopupWindow extends JWindow implements CaretListener,
 	 * Optional popup window containing a description of the currently
 	 * selected completion.
 	 */
-	private AutoCompleteDescWindow descWindow;
+	private AbstractDescWindow descWindow;
+
+	/**
+	 * Whether the description window is currently toggled "on" when
+	 * {@link AutoCompletion#getDescWindowVisibility()} is
+	 * {@link DescWindowVisibility#ON_DEMAND}. Ignored for other visibility
+	 * settings.
+	 */
+	private boolean descWindowVisibleOnDemand;
 
 	/**
 	 * The preferred size of the optional description window.  This field
@@ -165,7 +162,7 @@ class AutoCompletePopupWindow extends JWindow implements CaretListener,
 		list.addListSelectionListener(this);
 		list.addMouseListener(this);
 
-//		JPanel cp = new JPanel(new BorderLayout());
+		// BEGIN: added by gorans -- Resizable (all edges) and movable (drag the bottom bar) popup window
 		final ResizablePanel cp = new ResizablePanel(new BorderLayout())
 		{
 			private static final long serialVersionUID = 1L;
@@ -173,7 +170,7 @@ class AutoCompletePopupWindow extends JWindow implements CaretListener,
 			@Override
 			protected Resizable createResizable()
 			{
-				return new Resizable(this) 
+				return new Resizable(this)
 				{
 					@Override
 					public boolean isTopLevel()
@@ -181,83 +178,76 @@ class AutoCompletePopupWindow extends JWindow implements CaretListener,
 						// This is a TOP window, so X Y coordinates should be on screen instead of inside the component
 						return true;
 					}
-					
+
 					@Override
-					public void resizing(int resizeCorner, int newX, int newY, int newW, int newH) 
+					public void resizing(int resizeCorner, int newX, int newY, int newW, int newH)
 					{
-//						System.out.println("AutoCompletePopupWindow: resizing(resizeCorner="+resizeCorner+", newX="+newX+", newY="+newY+", newW="+newW+", newH="+newH+").");
 						AutoCompletePopupWindow.this.setBounds(newX, newY, newW, newH);
 					}
 				};
 			}
 		};
-		
-//		JScrollPane sp = new JScrollPane(list,
-//							JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
-//							JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
 
 		cp.setBorder(BorderFactory.createCompoundBorder(
-				BorderFactory.createEtchedBorder(Color.BLACK, Color.GRAY), 
+				BorderFactory.createEtchedBorder(Color.BLACK, Color.GRAY),
 				BorderFactory.createLineBorder(cp.getBackground(), 1))); // EXTREME LIGHT GRAY
-//				BorderFactory.createLineBorder(new Color(237, 237, 237), 2))); // EXTREME LIGHT GRAY
 
 		JScrollPane sp = new JScrollPane(list);
 		cp.add(sp);
 
 		JPanel bottomPanel = new JPanel(new BorderLayout());
-		JToolBar descWindowNavBar = new JToolBar();
-		descWindowNavBar.setFloatable(false);
-		
-		SizeGrip rp = new SizeGrip();
-		bottomPanel.add(descWindowNavBar, BorderLayout.LINE_START);
-		bottomPanel.add(rp, BorderLayout.LINE_END);
+		JToolBar bottomToolBar = new JToolBar();
+		bottomToolBar.setFloatable(false);
+
+		bottomPanel.add(bottomToolBar,  BorderLayout.LINE_START);
+		bottomPanel.add(new SizeGrip(), BorderLayout.LINE_END);
 		cp.add(bottomPanel, BorderLayout.SOUTH);
 		setContentPane(cp);
-		
-		MouseInputAdapter moveTopWindow = new MouseInputAdapter() 
+
+		MouseInputAdapter moveTopWindow = new MouseInputAdapter()
 		{
 			private Point lastPoint;
+
 			@Override
-			public void mouseDragged(MouseEvent e) 
+			public void mousePressed(MouseEvent e)
 			{
-				Point p = e.getPoint();
-				SwingUtilities.convertPointToScreen(p, bottomPanel);
-				if (lastPoint==null) 
-				{
-					lastPoint = p;
-				}
-				else 
-				{
-					int dx = p.x - lastPoint.x;
-					int dy = p.y - lastPoint.y;
-					setLocation(getX()+dx, getY()+dy);
-					lastPoint = p;
-				}
+				lastPoint = e.getLocationOnScreen();
 			}
+
 			@Override
-			public void mousePressed(MouseEvent e) 
+			public void mouseDragged(MouseEvent e)
 			{
-				lastPoint = e.getPoint();
-				SwingUtilities.convertPointToScreen(lastPoint, bottomPanel);
+				Point p = e.getLocationOnScreen();
+				if (lastPoint != null)
+					setLocation(getX() + p.x - lastPoint.x, getY() + p.y - lastPoint.y);
+				lastPoint = p;
 			}
 		};
-		bottomPanel.addMouseListener(moveTopWindow);
-		bottomPanel.addMouseMotionListener(moveTopWindow);
-		
+		bottomPanel  .addMouseListener      (moveTopWindow);
+		bottomPanel  .addMouseMotionListener(moveTopWindow);
+		bottomToolBar.addMouseListener      (moveTopWindow);
+		bottomToolBar.addMouseMotionListener(moveTopWindow);
 
-		//		// In 1.4, JScrollPane.setCorner() has a bug where it won't accept
+		// Upstream code (replaced by the above)
+//		JPanel contentPane = new JPanel(new BorderLayout());
+//		JScrollPane sp = new JScrollPane(list,
+//							JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+//							JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+
+//		// In 1.4, JScrollPane.setCorner() has a bug where it won't accept
 //		// JScrollPane.LOWER_TRAILING_CORNER, even though that constant is
 //		// defined.  So we have to put the logic added in 1.5 to handle it
 //		// here.
 //		JPanel corner = new SizeGrip();
 //		//sp.setCorner(JScrollPane.LOWER_TRAILING_CORNER, corner);
 //		boolean isLeftToRight = o.isLeftToRight();
-//		String str = isLeftToRight ? JScrollPane.LOWER_RIGHT_CORNER :
+//	    String str = isLeftToRight ? JScrollPane.LOWER_RIGHT_CORNER :
 //	    								JScrollPane.LOWER_LEFT_CORNER;
-//		sp.setCorner(str, corner);
-//
+//	    sp.setCorner(str, corner);
+
 //		contentPane.add(sp);
 //		setContentPane(contentPane);
+		// END: added by gorans
 		applyComponentOrientation(o);
 
 		// Give apps a chance to decorate us with drop shadows, etc.
@@ -300,23 +290,29 @@ class AutoCompletePopupWindow extends JWindow implements CaretListener,
 	 *
 	 * @return The description window.
 	 */
-	private AutoCompleteDescWindow createDescriptionWindow() {
+	private AbstractDescWindow createDescriptionWindow() {
+		AbstractDescWindow dw;
 
-		AutoCompleteDescWindow dw = new AutoCompleteDescWindow(this, ac);
+		// Instantiate either a custom description window via factory or the default implementation
+		if (ac.getDescWindowFactory() == null) {
+			dw = new AutoCompleteDescWindow(this, ac);
+		} else {
+			dw = ac.getDescWindowFactory().apply(this);
+		}
+
 		dw.applyComponentOrientation(ac.getTextComponentOrientation());
 
 		Dimension size = preferredDescWindowSize;
-		if (size==null) {
+		if (size == null) {
 			size = getSize();
 		}
 		dw.setSize(size);
 
-		if (descWindowColor  != null) {
-		    dw.setBackground(descWindowColor);
-        }
-        else {
-            descWindowColor = dw.getBackground();
-        }
+		if (descWindowColor != null) {
+			dw.setBackground(descWindowColor);
+		} else {
+			descWindowColor = dw.getBackground();
+		}
 
 		return dw;
 	}
@@ -366,6 +362,115 @@ class AutoCompletePopupWindow extends JWindow implements CaretListener,
 
 
 	/**
+	 * Returns whether the description window should currently be displayed,
+	 * per {@link AutoCompletion#getDescWindowVisibility()}.
+	 *
+	 * @return Whether the description window should currently be displayed.
+	 * @see #toggleDescriptionWindow()
+	 */
+	private boolean shouldShowDescWindow() {
+		switch (ac.getDescWindowVisibility()) {
+			case ALWAYS:
+				return true;
+			case ON_DEMAND:
+				return descWindowVisibleOnDemand;
+			case NEVER:
+			default:
+				return false;
+		}
+	}
+
+
+	/**
+	 * Toggles whether the description window is displayed, when
+	 * {@link AutoCompletion#getDescWindowVisibility()} is
+	 * {@link DescWindowVisibility#ON_DEMAND}. Does nothing otherwise, or if
+	 * this popup window is not currently visible.
+	 */
+	void toggleDescriptionWindow() {
+
+		if (ac.getDescWindowVisibility() != DescWindowVisibility.ON_DEMAND || !isVisible()) {
+			return;
+		}
+
+		descWindowVisibleOnDemand = !descWindowVisibleOnDemand;
+
+		if (descWindowVisibleOnDemand) {
+			if (descWindow == null) {
+				descWindow = createDescriptionWindow();
+			}
+			Completion c = list.getSelectedValue();
+			if (c != null) {
+				descWindow.setDescriptionFor(c);
+			}
+			positionDescWindow();
+			descWindow.setVisible(true);
+		}
+		else if (descWindow != null) {
+			descWindow.setVisible(false);
+		}
+
+	}
+
+
+	/**
+	 * The key used in the input map for the description window toggle action.
+	 */
+	private static final String DESC_WINDOW_TOGGLE_KEY = "AutoCompletion.ToggleDescWindow";
+
+
+	/**
+	 * Installs a "description window toggle key" action onto a text component.
+	 *
+	 * @param ac The auto-completion instance the text component is installed on.
+	 * @param tc The text component.
+	 * @param ks The keystroke that should toggle the description window's visibility.
+	 * @see #uninstallDescWindowToggleKey(JTextComponent, KeyStroke)
+	 */
+	static void installDescWindowToggleKey(AutoCompletion ac, JTextComponent tc, KeyStroke ks) {
+		InputMap im = tc.getInputMap();
+		im.put(ks, DESC_WINDOW_TOGGLE_KEY);
+		ActionMap am = tc.getActionMap();
+		am.put(DESC_WINDOW_TOGGLE_KEY, new ToggleDescWindowAction(ac));
+	}
+
+
+	/**
+	 * Removes a previously-installed "description window toggle key" action from a text component.
+	 *
+	 * @param tc The text component.
+	 * @param ks The keystroke previously passed to {@link #installDescWindowToggleKey}.
+	 */
+	static void uninstallDescWindowToggleKey(JTextComponent tc, KeyStroke ks) {
+		tc.getInputMap().remove(ks);
+		tc.getActionMap().remove(DESC_WINDOW_TOGGLE_KEY);
+	}
+
+
+	/**
+	 * Toggles the description window's visibility when triggered while {@link DescWindowVisibility#ON_DEMAND}
+	 * is active; a no-op otherwise.
+	 */
+	private static final class ToggleDescWindowAction extends AbstractAction {
+
+		private final AutoCompletion ac;
+
+		ToggleDescWindowAction(AutoCompletion ac) {
+			this.ac = ac;
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			AutoCompletePopupWindow popupWindow = ac.getPopupWindow();
+			if (popupWindow != null) {
+				popupWindow.toggleDescriptionWindow();
+			}
+		}
+
+	}
+
+
+	/**
 	 * Returns the copy keystroke to use for this platform.
 	 *
 	 * @return The copy keystroke.
@@ -391,13 +496,43 @@ class AutoCompletePopupWindow extends JWindow implements CaretListener,
 
 
 	/**
+	 * Returns the description window, if it has been created.
+	 *
+	 * @return The description window, or {@code null} if it has not been
+	 *         created yet.
+	 */
+	AbstractDescWindow getDescWindow() {
+		return descWindow;
+	}
+
+
+	/**
+	 * Disposes of the description window, if it has been created, and
+	 * discards our reference to it so it is lazily recreated the next time
+	 * it's needed. Simply hiding the description window is not enough here;
+	 * on some Linux/X11 window managers, quickly toggling a {@code JWindow}
+	 * visible and then invisible can leave a blank "ghost" window on screen
+	 * that never gets un-mapped or repainted. Disposing of the native peer
+	 * avoids that.
+	 *
+	 * @see AutoCompletion#setDescWindowVisibility(DescWindowVisibility)
+	 */
+	void disposeDescWindow() {
+		if (descWindow != null) {
+			descWindow.dispose();
+			descWindow = null;
+		}
+	}
+
+
+	/**
 	 * Returns the default list cell renderer used when a completion provider
 	 * does not supply its own.
 	 *
 	 * @return The default list cell renderer.
 	 * @see #setListCellRenderer(ListCellRenderer)
 	 */
-	public ListCellRenderer getListCellRenderer() {
+	public ListCellRenderer<Object> getListCellRenderer() {
 		DelegatingCellRenderer dcr = (DelegatingCellRenderer)list.
 															getCellRenderer();
 		return dcr.getFallbackCellRenderer();
@@ -410,7 +545,7 @@ class AutoCompletePopupWindow extends JWindow implements CaretListener,
 	 * @return The selected value.
 	 */
 	public Completion getSelection() {
-		return isShowing() ? (Completion)list.getSelectedValue():lastSelection;
+		return isShowing() ? list.getSelectedValue() : lastSelection;
 	}
 
 
@@ -516,12 +651,12 @@ class AutoCompletePopupWindow extends JWindow implements CaretListener,
 	 */
 	private void positionDescWindow() {
 
-		boolean showDescWindow = descWindow!=null && ac.getShowDescWindow();
+		boolean showDescWindow = descWindow!=null && shouldShowDescWindow();
 		if (!showDescWindow) {
 			return;
 		}
-		// BEGIN: added by gorans
-		if (descWindow != null && descWindow.isPinned())
+		// BEGIN: added by gorans -- do not move a "pinned" description window
+		if (descWindow instanceof DbxAutoCompleteDescWindow && ((DbxAutoCompleteDescWindow) descWindow).isPinned())
 			return;
 		// END: added by gorans
 
@@ -771,7 +906,7 @@ class AutoCompletePopupWindow extends JWindow implements CaretListener,
 		Rectangle screenBounds = Util.getScreenBoundsForPoint(r.x, r.y);
 		//Dimension screenSize = getToolkit().getScreenSize();
 
-		boolean showDescWindow = descWindow!=null && ac.getShowDescWindow();
+		boolean showDescWindow = descWindow!=null && shouldShowDescWindow();
 		int totalH = getHeight();
 		if (showDescWindow) {
 			totalH = Math.max(totalH, descWindow.getHeight());
@@ -823,7 +958,9 @@ class AutoCompletePopupWindow extends JWindow implements CaretListener,
 				installKeyBindings();
 				lastLine = ac.getLineOfCaret();
 				selectFirstItem();
-				if (descWindow==null && ac.getShowDescWindow()) {
+				// ON_DEMAND starts back off each time the popup is (re)shown.
+				descWindowVisibleOnDemand = false;
+				if (descWindow==null && shouldShowDescWindow()) {
 					descWindow = createDescriptionWindow();
 					positionDescWindow();
 				}
@@ -831,7 +968,7 @@ class AutoCompletePopupWindow extends JWindow implements CaretListener,
 				// Also, the newly-selected item in the choices list is
 				// probably different from the previous one anyway.
 				if (descWindow!=null) {
-					Completion c = (Completion)list.getSelectedValue();
+					Completion c = list.getSelectedValue();
 					if (c!=null) {
 						descWindow.setDescriptionFor(c);
 					}
@@ -839,12 +976,25 @@ class AutoCompletePopupWindow extends JWindow implements CaretListener,
 			}
 			else {
 				uninstallKeyBindings();
+				// Explicitly hide the desc window *before* hiding ourselves.
+				// java.awt.Window#hide() cascades to any owned window that is
+				// still visible at that moment, hiding it too and flagging it
+				// to be automatically re-shown (via Window#show()'s internal
+				// "showWithParent" bookkeeping) the next time we're shown
+				// again - even if that desc window gets disposed in the
+				// meantime. Hiding it first ensures it's already invisible
+				// when our own super.setVisible(false) cascades below, so the
+				// JDK never sets that flag and can't resurrect a disposed
+				// desc window behind our back.
+				if (descWindow != null) {
+					descWindow.setVisible(false);
+				}
 			}
 
 			super.setVisible(visible);
 
 			// Some languages, such as Java, can use quite a lot of memory
-			// when displaying hundreds of completion choices.  We pro-actively
+			// when displaying hundreds of completion choices.  We proactively
 			// clear our list model here to make them available for GC.
 			// Otherwise, they stick around, and consider the following:  a
 			// user starts code-completion for Java 5 SDK classes, then hides
@@ -854,15 +1004,18 @@ class AutoCompletePopupWindow extends JWindow implements CaretListener,
 			// you're getting roughly 2x the necessary Completions in memory
 			// until the Completions are actually passed to this window.
 			if (!visible) { // Do after super.setVisible(false)
-				lastSelection = (Completion)list.getSelectedValue();
+				lastSelection = list.getSelectedValue();
 				model.clear();
+			}
+			else {
+				list.repaint(); // https://github.com/bobbylight/AutoComplete/issues/70
 			}
 
 			// Must set descWindow's visibility one way or the other each time,
 			// because of the way child JWindows' visibility is handled - in
 			// some ways it's dependent on the parent, in other ways it's not.
 			if (descWindow!=null) {
-				descWindow.setVisible(visible && ac.getShowDescWindow());
+				descWindow.setVisible(visible && shouldShowDescWindow());
 			}
 
 		}
@@ -913,7 +1066,7 @@ class AutoCompletePopupWindow extends JWindow implements CaretListener,
 
 
 	/**
-	 * Updates the <tt>LookAndFeel</tt> of this window and the description
+	 * Updates the {@code LookAndFeel} of this window and the description
 	 * window.
 	 */
 	public void updateUI() {
@@ -932,9 +1085,9 @@ class AutoCompletePopupWindow extends JWindow implements CaretListener,
 	@Override
 	public void valueChanged(ListSelectionEvent e) {
 		if (!e.getValueIsAdjusting()) {
-			Object value = list.getSelectedValue();
+			Completion value = list.getSelectedValue();
 			if (value!=null && descWindow!=null) {
-				descWindow.setDescriptionFor((Completion)value);
+				descWindow.setDescriptionFor(value);
 				positionDescWindow();
 			}
 		}

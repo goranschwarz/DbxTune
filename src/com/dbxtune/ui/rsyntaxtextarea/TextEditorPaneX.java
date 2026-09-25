@@ -30,6 +30,7 @@ import javax.swing.event.HyperlinkListener;
 import org.fife.ui.rsyntaxtextarea.FileLocation;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.TextEditorPane;
+import org.fife.ui.rtextarea.TextMode;
 import org.fife.ui.rtextarea.ToolTipSupplier;
 
 import com.dbxtune.gui.focusabletip.FocusableTip;
@@ -47,22 +48,22 @@ public class TextEditorPaneX extends TextEditorPane
 		super(); 
 		localInit(this);
 	}
-	public TextEditorPaneX(int textMode) 
+	public TextEditorPaneX(TextMode textMode) 
 	{ 
 		super(textMode); 
 		localInit(this);
 	}
-	public TextEditorPaneX(int textMode, boolean wordWrapEnabled) 
+	public TextEditorPaneX(TextMode textMode, boolean wordWrapEnabled) 
 	{ 
 		super(textMode, wordWrapEnabled); 
 		localInit(this);
 	}
-	public TextEditorPaneX(int textMode, boolean wordWrapEnabled, FileLocation loc) throws IOException 
+	public TextEditorPaneX(TextMode textMode, boolean wordWrapEnabled, FileLocation loc) throws IOException 
 	{ 
 		super(textMode, wordWrapEnabled, loc); 
 		localInit(this);
 	}
-	public TextEditorPaneX(int textMode, boolean wordWrapEnabled, FileLocation loc, String defaultEnc) throws IOException 
+	public TextEditorPaneX(TextMode textMode, boolean wordWrapEnabled, FileLocation loc, String defaultEnc) throws IOException 
 	{ 
 		super(textMode, wordWrapEnabled, loc, defaultEnc); 
 		localInit(this);
