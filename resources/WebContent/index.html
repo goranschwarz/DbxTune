@@ -12,12 +12,12 @@
   -->
   <!-- JS: JQuery -->
   <script type="text/javascript" src="/scripts/jquery/jquery-3.7.1.min.js"></script>
-  <script type="text/javascript" src="/scripts/jquery/ui/1.14.1/jquery-ui.min.js"></script>
-  <script type="text/javascript" src="/scripts/jquery/ui/1.14.1/jquery.ui.touch-punch.min.js"></script>
+  <script type="text/javascript" src="/scripts/jquery/ui/1.14.2/jquery-ui.min.js"></script>
+  <script type="text/javascript" src="/scripts/jquery/ui/1.14.2/jquery.ui.touch-punch.min.js"></script>
 
   <!-- JS: Moment; used by: ChartJs, DateRangePicker -->
-  <script type="text/javascript" src="/scripts/moment/moment.js"></script>
-  <script type="text/javascript" src="/scripts/moment/moment-duration-format.js"></script>
+  <script type="text/javascript" src="/scripts/moment/2.31.0/moment.min.js"></script>
+  <script type="text/javascript" src="/scripts/moment-duration-format/2.3.2/moment-duration-format.min.js"></script>
 
   <!-- JS: Bootstrap -->
 <!--<script type="text/javascript" src='/scripts/popper/1.12.9/popper.min.js'></script> --> 
@@ -25,7 +25,7 @@
   <script type="text/javascript" src='/scripts/bootstrap/5.3.8/js/bootstrap.bundle.min.js'></script>  <!-- Bundle also includes popper -->
 
   <!-- JS: Selectize -->
-  <script type="text/javascript" src="/scripts/selectize/js/standalone/selectize.js"></script>
+  <script type="text/javascript" src="/scripts/selectize/0.15.2/js/selectize.min.js"></script>
 
   <!-- JS: DbxCentral -->
   <script type="text/javascript" src="/scripts/dbxtune/js/dbxcentral.utils.js"></script>
@@ -39,7 +39,7 @@
     =======================================================================
   -->
   <!-- CSS: jqueri-ui -->
-  <link rel="stylesheet" href="/scripts/jquery/ui/1.14.1/themes/smoothness/jquery-ui.css">
+  <link rel="stylesheet" href="/scripts/jquery/ui/1.14.2/themes/smoothness/jquery-ui.css">
 
   <!-- CSS: DbxCentral -->
   <link rel="stylesheet" href="/scripts/dbxtune/css/dbxcentral.css">
@@ -52,13 +52,14 @@
   <link rel='stylesheet' href='/scripts/bootstrap/5.3.8/css/bootstrap.min.css'> 
 
   <!-- CSS: Font Awsome -->
-  <link rel="stylesheet" href="/scripts/font-awesome/4.4.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="/scripts/font-awesome/7.3.1/css/all.min.css">
+  <link rel="stylesheet" href="/scripts/font-awesome/7.3.1/css/v4-shims.min.css">
 
   <!-- CSS: Selectize -->
-  <!-- <link rel="stylesheet" href="/scripts/selectize/css/selectize.css"> -->
-  <!-- <link rel="stylesheet" href="/scripts/selectize/css/selectize.default.css"> -->
-  <!-- <link rel="stylesheet" href="/scripts/selectize/css/selectize.bootstrap3.css"> -->
-  <link rel="stylesheet" href="/scripts/selectize/css/selectize.default.css">
+  <!-- <link rel="stylesheet" href="/scripts/selectize/0.15.2/css/selectize.css"> -->
+  <!-- <link rel="stylesheet" href="/scripts/selectize/0.15.2/css/selectize.default.css"> -->
+  <!-- <link rel="stylesheet" href="/scripts/selectize/0.15.2/css/selectize.bootstrap3.css"> -->
+  <link rel="stylesheet" href="/scripts/selectize/0.15.2/css/selectize.default.css">
 
   <!-- Local CSS -->
   <style type='text/css'>
@@ -1796,7 +1797,7 @@ List of stuff that can be done
 
 		// Number.isInteger(gColsTxt) --- did NOT work... so falling back to jQuery
 		var gcols = "";
-		if ( (gColsTxt != "") && $.isNumeric(gColsTxt) )
+		if ( (gColsTxt != "") && !isNaN(gColsTxt - parseFloat(gColsTxt)) ) // same test as $.isNumeric(), which is removed in jQuery 4
 			gcols = "&gcols="+gColsTxt;
 
 		// Construct the URL to use

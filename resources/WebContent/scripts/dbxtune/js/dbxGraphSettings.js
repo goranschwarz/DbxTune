@@ -238,7 +238,7 @@ var DbxGraphSettings = (function () {
 	{
 		var fmt = $('#dbx-gs-tsfmt').val();
 		if (fmt === 'custom')
-			fmt = $.trim($('#dbx-gs-tsfmt-custom').val()) || DEFAULTS.tsFormat;
+			fmt = ($('#dbx-gs-tsfmt-custom').val() || '').trim() || DEFAULTS.tsFormat;
 
 		return {
 			mode:     $('input[name="dbx-gs-mode"]:checked').val(),
@@ -252,7 +252,7 @@ var DbxGraphSettings = (function () {
 	{
 		var fmt = $('#dbx-gs-tsfmt').val();
 		if (fmt === 'custom')
-			fmt = $.trim($('#dbx-gs-tsfmt-custom').val()) || DEFAULTS.tsFormat;
+			fmt = ($('#dbx-gs-tsfmt-custom').val() || '').trim() || DEFAULTS.tsFormat;
 		$('#dbx-gs-tsfmt-preview').text(formatTs(Date.now(), fmt));
 	}
 

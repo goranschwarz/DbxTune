@@ -231,11 +231,11 @@ public class DbxTuneConfServlet extends HttpServlet
 		out.println("<title>" + inputName + "</title>");
 		out.println(HtmlStatic.getUserDefinedContentHead());
 		out.println("<!-- Tablesorter theme -->");
-		out.println("<link rel='stylesheet' href='/scripts/tablesorter/css/theme.metro-dark.min.css'>");
+		out.println("<link rel='stylesheet' href='/scripts/tablesorter/2.32.0/css/theme.metro-dark.min.css'>");
 		out.println("<link rel='stylesheet' href='/scripts/dbxtune/css/dbxcentral_tablesorter.css'>");
 		out.println("<!-- Tablesorter scripts -->");
-		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/jquery.tablesorter.js'></script>");
-		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/jquery.tablesorter.widgets.js'></script>");
+		out.println("<script type='text/javascript' src='/scripts/tablesorter/2.32.0/js/jquery.tablesorter.js'></script>");
+		out.println("<script type='text/javascript' src='/scripts/tablesorter/2.32.0/js/jquery.tablesorter.widgets.js'></script>");
 		out.println("</head>");
 
 		out.println("<body>");

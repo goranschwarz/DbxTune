@@ -83,9 +83,9 @@ extends HttpServlet
 				"    <meta http-equiv='Expires' content='0' /> \n" +
 				" \n" +
 				HtmlStatic.getUserDefinedContentHead() +
-				HtmlUtils.createCssLinkTag("/scripts/jquery/ui/1.14.1/themes/smoothness/jquery-ui.css") +
-				HtmlUtils.createJsScriptTag("/scripts/jquery/ui/1.14.1/jquery-ui.min.js") +
-				HtmlUtils.createJsScriptTag("/scripts/jquery/ui/1.14.1/jquery.ui.touch-punch.min.js") +
+				HtmlUtils.createCssLinkTag("/scripts/jquery/ui/1.14.2/themes/smoothness/jquery-ui.css") +
+				HtmlUtils.createJsScriptTag("/scripts/jquery/ui/1.14.2/jquery-ui.min.js") +
+				HtmlUtils.createJsScriptTag("/scripts/jquery/ui/1.14.2/jquery.ui.touch-punch.min.js") +
 				HtmlUtils.createJsScriptTag("/scripts/showplan/sqlserver/dist/qp.js", "https://www.dbxtune.com/sqlserver_showplan/dist/qp.js") +
 				// The Plan Analysis section is driven by this - without it dbxShowplan.js hides that
 				// section entirely. graph.html has always loaded it; this standalone page never did, so
@@ -98,15 +98,15 @@ extends HttpServlet
 				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxShowplanSqlServer.js") +
 				// Backs the toolbar's "Enable Zoom"/"Zoom to Fit" buttons. graph.html and the ASE standalone
 				// page both load this; this page never did, so those buttons threw "Panzoom is not defined".
-				HtmlUtils.createJsScriptTag("/scripts/panzoom/4.5.1/panzoom.min.js") +
+				HtmlUtils.createJsScriptTag("/scripts/panzoom/4.6.2/panzoom.min.js") +
 				HtmlUtils.createCssLinkTag("/scripts/showplan/sqlserver/css/qp.css", "https://www.dbxtune.com/sqlserver_showplan/css/qp.css") +
 				HtmlUtils.createJsScriptTag("/scripts/chartjs/4.5.1/dist/chart.umd.min.js") +
 				// srv/dbname (if any) only live in the URL fragment, never known server-side here - so
 				// unlike createShowplanOutput()'s conditional include, always load these.
 				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxSqlTableNames.js") +
 				HtmlUtils.createCssLinkTag("/scripts/dbxtune/css/dbxTableInfo.css") +
-				"    <script src='/scripts/marked/18.0.5/marked.min.js'></script> \n" +
-				"    <script src='/scripts/dompurify/3.4.11/purify.min.js'></script> \n" +
+				"    <script src='/scripts/marked/18.0.14/marked.min.js'></script> \n" +
+				"    <script src='/scripts/dompurify/3.4.16/purify.min.js'></script> \n" +
 				"    <script src='/scripts/dbxtune/js/dbxLlmAdvice.js'></script> \n" +
 				HtmlUtils.createCssLinkTag("/scripts/prism/prism-1.30.0.css") +
 				HtmlUtils.createJsScriptTag("/scripts/prism/prism-1.30.0.js") +
@@ -397,9 +397,9 @@ extends HttpServlet
 				// the dialog's drag/resize chrome. Optional per dbxShowplan.js's own
 				// $.fn.draggable/$.fn.resizable guards (the dialog still opens/functions without it,
 				// just isn't draggable/resizable), included here for full parity with graph.html.
-				HtmlUtils.createCssLinkTag("/scripts/jquery/ui/1.14.1/themes/smoothness/jquery-ui.css") +
-				HtmlUtils.createJsScriptTag("/scripts/jquery/ui/1.14.1/jquery-ui.min.js") +
-				HtmlUtils.createJsScriptTag("/scripts/jquery/ui/1.14.1/jquery.ui.touch-punch.min.js") +
+				HtmlUtils.createCssLinkTag("/scripts/jquery/ui/1.14.2/themes/smoothness/jquery-ui.css") +
+				HtmlUtils.createJsScriptTag("/scripts/jquery/ui/1.14.2/jquery-ui.min.js") +
+				HtmlUtils.createJsScriptTag("/scripts/jquery/ui/1.14.2/jquery.ui.touch-punch.min.js") +
 
 				// The dialog's SQL Server tree view still renders via html-query-plan (QP) internally
 				// (QP.showPlan()/QP.drawLines()) - same vendored copy graph.html already uses.
@@ -415,7 +415,7 @@ extends HttpServlet
 				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxShowplanSqlServer.js") +
 				// Backs the toolbar's "Enable Zoom"/"Zoom to Fit" buttons. graph.html and the ASE standalone
 				// page both load this; this page never did, so those buttons threw "Panzoom is not defined".
-				HtmlUtils.createJsScriptTag("/scripts/panzoom/4.5.1/panzoom.min.js") +
+				HtmlUtils.createJsScriptTag("/scripts/panzoom/4.6.2/panzoom.min.js") +
 				HtmlUtils.createCssLinkTag("/scripts/showplan/sqlserver/css/qp.css", "https://www.dbxtune.com/sqlserver_showplan/css/qp.css") +
 
 				// Chart.js - only used by the dialog's "Plan Analysis" wait-time bar (guarded with
@@ -438,8 +438,8 @@ extends HttpServlet
 				// SQL Text field at all, and the dialog can usually still derive SQL text (or at least a
 				// useful placeholder) straight from the plan itself via ssShowplanGetSql() - so a missing
 				// 'sql' param here does not mean the dialog will have nothing to show.
-				"    <script src='/scripts/marked/18.0.5/marked.min.js'></script> \n"
-				+ "    <script src='/scripts/dompurify/3.4.11/purify.min.js'></script> \n"
+				"    <script src='/scripts/marked/18.0.14/marked.min.js'></script> \n"
+				+ "    <script src='/scripts/dompurify/3.4.16/purify.min.js'></script> \n"
 				+ "    <script src='/scripts/dbxtune/js/dbxLlmAdvice.js'></script> \n"
 				+ HtmlUtils.createCssLinkTag("/scripts/prism/prism-1.30.0.css")
 				+ HtmlUtils.createJsScriptTag("/scripts/prism/prism-1.30.0.js")

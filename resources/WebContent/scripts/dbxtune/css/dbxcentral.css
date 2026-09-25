@@ -1,5 +1,10 @@
 /* Dbx Central CSS */
 
+/* Font Awesome 7: every .fa icon gets a fixed width (1.25em) by default, FA 4/6 used the natural glyph width.
+ * This squeezed elements that carry the 'fa' class themselves, like <button class="fa fa-refresh btn ...">.
+ * Restore the FA 4/6 behaviour (opt-in fixed width via .fa-fw still works, it sets its own --fa-width) */
+:root { --fa-width: auto; }
+
 
 
 html {

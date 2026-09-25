@@ -827,12 +827,13 @@ extends DailySummaryReportAbstract
 		// moment.js
 //		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js'                             integrity='sha512-qTXRIMyZIFb8iQcfjXWCO8+M5Tbc38Qi5WzdPOYZHIlZpzBHG3L3by84BBBOiRGiEb7KKtAOAs5qYdUiZiQNNQ==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");
 //		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-moment/1.0.0/chartjs-adapter-moment.min.js' integrity='sha512-oh5t+CdSBsaVVAvxcZKy3XJdP7ZbYUBSRCXDTVn0ODewMDDNnELsrG9eDm8rVZAQg7RsDD/8K3MjPAFB13o6eA==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");
-		addJavaScriptFile(w, "/scripts/moment/2.29.1/dist/moment.min.js"                          , "https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js");
+		addJavaScriptFile(w, "/scripts/moment/2.31.0/moment.min.js"                              , "https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.31.0/moment.min.js");
 		addJavaScriptFile(w, "/scripts/chartjs-adapter-moment/1.0.1/chartjs-adapter-moment.min.js", "https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-moment/1.0.1/chartjs-adapter-moment.min.js");
 
 		// font awesome
 //		w.append("    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css' integrity='sha512-xh6O/CkQoPOWDdYTDqeRdPCVd1SpvCA9XXcUnZS2FmJNp1coAFzvtCN9BmamE+4aHK8yyUHUSCcJHgXloTyT2A==' crossorigin='anonymous' referrerpolicy='no-referrer' /> \n");
-		addCssFile(w, "/scripts/font-awesome/6.2.0/css/all.min.css", "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css");
+		addCssFile(w, "/scripts/font-awesome/7.3.1/css/all.min.css", "https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css");
+		w.append("<style type='text/css'> :root { --fa-width: auto; } </style> \n"); // Font Awesome 7: no fixed icon width (as in FA 6)
 
 		w.append("\n");
 		w.append("    <script type='text/javascript'>  \n");

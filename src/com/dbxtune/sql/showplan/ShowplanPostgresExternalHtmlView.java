@@ -80,21 +80,21 @@ extends ShowplanHtmlView
 			out.write("    <META http-equiv='Content-Type' content='text/html; charset=UTF-8'>   \n");
 			out.write("    <title>Postgres Execution plan</title>                                \n");
 
-//			out.write("    <script src='https://unpkg.com/vue@3.2.45/dist/vue.global.prod.js'></script>                   \n");
-//			out.write("    <script src='https://unpkg.com/pev2/dist/pev2.umd.js'></script>                                \n");
+//			out.write("    <script src='https://unpkg.com/vue@3.5.43/dist/vue.global.prod.js'></script>                   \n");
+//			out.write("    <script src='https://unpkg.com/pev2@1.24.0/dist/pev2.umd.js'></script>                                \n");
 //			out.write("    <link rel='stylesheet' href='https://unpkg.com/bootstrap@5.3.2/dist/css/bootstrap.min.css' />  \n");
-//			out.write("    <link rel='stylesheet' href='https://unpkg.com/pev2/dist/style.css' />                         \n");
+//			out.write("    <link rel='stylesheet' href='https://unpkg.com/pev2@1.24.0/dist/pev2.css' />                         \n");
 
-//			out.write("    <script src='/scripts/vue/3.2.45/vue.global.prod.js'></script>                 \n");
-//			out.write("    <script src='/scripts/pev2/1.19.0/pev2.umd.js'></script>                       \n");
+//			out.write("    <script src='/scripts/vue/3.5.43/vue.global.prod.js'></script>                 \n");
+//			out.write("    <script src='/scripts/pev2/1.24.0/pev2.umd.js'></script>                       \n");
 //			out.write("    <link rel='stylesheet' href='/scripts/bootstrap/5.3.8/css/bootstrap.min.css'/> \n");
-//			out.write("    <link rel='stylesheet' href='/scripts/pev2/1.19.0/pev2.css' />                 \n");
+//			out.write("    <link rel='stylesheet' href='/scripts/pev2/1.24.0/pev2.css' />                 \n");
 
-			HtmlUtils.createJsScriptTag(out, "/scripts/vue/3.2.45/vue.global.prod.js"       , "https://unpkg.com/vue@3.2.45/dist/vue.global.prod.js");
-			HtmlUtils.createJsScriptTag(out, "/scripts/pev2/1.19.0/pev2.umd.js"             , "https://unpkg.com/pev2/dist/pev2.umd.js");
+			HtmlUtils.createJsScriptTag(out, "/scripts/vue/3.5.43/vue.global.prod.js"       , "https://unpkg.com/vue@3.5.43/dist/vue.global.prod.js");
+			HtmlUtils.createJsScriptTag(out, "/scripts/pev2/1.24.0/pev2.umd.js"             , "https://unpkg.com/pev2@1.24.0/dist/pev2.umd.js");
 
 			HtmlUtils.createCssLinkTag(out, "/scripts/bootstrap/5.3.8/css/bootstrap.min.css", "https://unpkg.com/bootstrap@5.3.2/dist/css/bootstrap.min.css");
-			HtmlUtils.createCssLinkTag(out, "/scripts/pev2/1.19.0/pev2.css"                 , "https://unpkg.com/pev2/dist/style.css");
+			HtmlUtils.createCssLinkTag(out, "/scripts/pev2/1.24.0/pev2.css"                 , "https://unpkg.com/pev2@1.24.0/dist/pev2.css");
 			
 			
 //			out.write("    <script src='lib/qp.js' type='text/javascript'></script>              \n");

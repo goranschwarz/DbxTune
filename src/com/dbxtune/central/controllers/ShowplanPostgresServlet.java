@@ -136,25 +136,25 @@ extends HttpServlet
 				"    <meta http-equiv='Pragma' content='no-cache' /> \n" +
 				"    <meta http-equiv='Expires' content='0' /> \n" +
 				"     \n" +
-//				"    <script src='https://unpkg.com/vue@3.2.45/dist/vue.global.prod.js'></script>                 \n" +
-//				"    <script src='https://unpkg.com/pev2/dist/pev2.umd.js'></script>                              \n" +
+//				"    <script src='https://unpkg.com/vue@3.5.43/dist/vue.global.prod.js'></script>                 \n" +
+//				"    <script src='https://unpkg.com/pev2@1.24.0/dist/pev2.umd.js'></script>                              \n" +
 //				"    <link rel='stylesheet' href='https://unpkg.com/bootstrap@5.3.2/dist/css/bootstrap.min.css'/> \n" +
-//				"    <link rel='stylesheet' href='https://unpkg.com/pev2/dist/style.css' />                       \n" +
+//				"    <link rel='stylesheet' href='https://unpkg.com/pev2@1.24.0/dist/pev2.css' />                       \n" +
 
-//				"    <script src='/scripts/vue/3.2.45/vue.global.prod.js'></script>                 \n" +
-//				"    <script src='/scripts/pev2/1.19.0/pev2.umd.js'></script>                       \n" +
+//				"    <script src='/scripts/vue/3.5.43/vue.global.prod.js'></script>                 \n" +
+//				"    <script src='/scripts/pev2/1.24.0/pev2.umd.js'></script>                       \n" +
 //				"    <link rel='stylesheet' href='/scripts/bootstrap/5.3.8/css/bootstrap.min.css'/> \n" +
-//				"    <link rel='stylesheet' href='/scripts/pev2/1.19.0/pev2.css' />                 \n" +
+//				"    <link rel='stylesheet' href='/scripts/pev2/1.24.0/pev2.css' />                 \n" +
 
-				HtmlUtils.createJsScriptTag("/scripts/vue/3.2.45/vue.global.prod.js"       , "https://unpkg.com/vue@3.2.45/dist/vue.global.prod.js") +
-				HtmlUtils.createJsScriptTag("/scripts/pev2/1.19.0/pev2.umd.js"             , "https://unpkg.com/pev2/dist/pev2.umd.js") +
+				HtmlUtils.createJsScriptTag("/scripts/vue/3.5.43/vue.global.prod.js"       , "https://unpkg.com/vue@3.5.43/dist/vue.global.prod.js") +
+				HtmlUtils.createJsScriptTag("/scripts/pev2/1.24.0/pev2.umd.js"             , "https://unpkg.com/pev2@1.24.0/dist/pev2.umd.js") +
 
 				HtmlUtils.createCssLinkTag("/scripts/bootstrap/5.3.8/css/bootstrap.min.css", "https://unpkg.com/bootstrap@5.3.2/dist/css/bootstrap.min.css") +
-				HtmlUtils.createCssLinkTag("/scripts/pev2/1.19.0/pev2.css"                 , "https://unpkg.com/pev2/dist/style.css") +
+				HtmlUtils.createCssLinkTag("/scripts/pev2/1.24.0/pev2.css"                 , "https://unpkg.com/pev2@1.24.0/dist/pev2.css") +
 
 				(hasSql
-					? "    <script src='/scripts/marked/18.0.5/marked.min.js'></script> \n"
-					+ "    <script src='/scripts/dompurify/3.4.11/purify.min.js'></script> \n"
+					? "    <script src='/scripts/marked/18.0.14/marked.min.js'></script> \n"
+					+ "    <script src='/scripts/dompurify/3.4.16/purify.min.js'></script> \n"
 					+ "    <script src='/scripts/dbxtune/js/dbxLlmAdvice.js'></script> \n"
 					: "") +
 

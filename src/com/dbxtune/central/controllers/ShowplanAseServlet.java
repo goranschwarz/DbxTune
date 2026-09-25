@@ -82,19 +82,19 @@ extends HttpServlet
 				"    <meta http-equiv='Expires' content='0' /> \n" +
 				" \n" +
 				HtmlStatic.getUserDefinedContentHead() +
-				HtmlUtils.createCssLinkTag("/scripts/jquery/ui/1.14.1/themes/smoothness/jquery-ui.css") +
-				HtmlUtils.createJsScriptTag("/scripts/jquery/ui/1.14.1/jquery-ui.min.js") +
-				HtmlUtils.createJsScriptTag("/scripts/jquery/ui/1.14.1/jquery.ui.touch-punch.min.js") +
+				HtmlUtils.createCssLinkTag("/scripts/jquery/ui/1.14.2/themes/smoothness/jquery-ui.css") +
+				HtmlUtils.createJsScriptTag("/scripts/jquery/ui/1.14.2/jquery-ui.min.js") +
+				HtmlUtils.createJsScriptTag("/scripts/jquery/ui/1.14.2/jquery.ui.touch-punch.min.js") +
 				// Shared layout plumbing - must load BEFORE dbxShowplanAse.js, which calls into it.
 				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxShowplanGraph.js") +
 				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxShowplanAse.js") +
-				HtmlUtils.createJsScriptTag("/scripts/panzoom/4.5.1/panzoom.min.js") +
+				HtmlUtils.createJsScriptTag("/scripts/panzoom/4.6.2/panzoom.min.js") +
 				// srv/dbname (if any) only live in the URL fragment, never known server-side here - so
 				// unlike createShowplanOutput()'s conditional include, always load these.
 				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxSqlTableNames.js") +
 				HtmlUtils.createCssLinkTag("/scripts/dbxtune/css/dbxTableInfo.css") +
-				"    <script src='/scripts/marked/18.0.5/marked.min.js'></script> \n" +
-				"    <script src='/scripts/dompurify/3.4.11/purify.min.js'></script> \n" +
+				"    <script src='/scripts/marked/18.0.14/marked.min.js'></script> \n" +
+				"    <script src='/scripts/dompurify/3.4.16/purify.min.js'></script> \n" +
 				"    <script src='/scripts/dbxtune/js/dbxLlmAdvice.js'></script> \n" +
 				HtmlUtils.createCssLinkTag("/scripts/prism/prism-1.30.0.css") +
 				HtmlUtils.createJsScriptTag("/scripts/prism/prism-1.30.0.js") +
@@ -405,16 +405,16 @@ extends HttpServlet
 				// the dialog's drag/resize chrome. Optional per dbxShowplan.js's own
 				// $.fn.draggable/$.fn.resizable guards (the dialog still opens/functions without it,
 				// just isn't draggable/resizable), included here for full parity with graph.html.
-				HtmlUtils.createCssLinkTag("/scripts/jquery/ui/1.14.1/themes/smoothness/jquery-ui.css") +
-				HtmlUtils.createJsScriptTag("/scripts/jquery/ui/1.14.1/jquery-ui.min.js") +
-				HtmlUtils.createJsScriptTag("/scripts/jquery/ui/1.14.1/jquery.ui.touch-punch.min.js") +
+				HtmlUtils.createCssLinkTag("/scripts/jquery/ui/1.14.2/themes/smoothness/jquery-ui.css") +
+				HtmlUtils.createJsScriptTag("/scripts/jquery/ui/1.14.2/jquery-ui.min.js") +
+				HtmlUtils.createJsScriptTag("/scripts/jquery/ui/1.14.2/jquery.ui.touch-punch.min.js") +
 
 				// dbxShowplanAse.js is a first-party file (no CDN mirror) and injects its own <style>
 				// at runtime, so no separate CSS link is needed here. dbxShowplanGraph.js holds the
 				// layout plumbing it shares with the SQL Server renderer, so it must come first.
 				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxShowplanGraph.js") +
 				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxShowplanAse.js") +
-				HtmlUtils.createJsScriptTag("/scripts/panzoom/4.5.1/panzoom.min.js") +
+				HtmlUtils.createJsScriptTag("/scripts/panzoom/4.6.2/panzoom.min.js") +
 
 				// dbxSqlTableNames.js is needed for two independent things: the Table Information
 				// section (only useful once hasSrvDbname) AND the Graphical Plan's Reformatting finding
@@ -438,8 +438,8 @@ extends HttpServlet
 				// empty for plans with no embedded SQL - dbxLlmAdvice.js should still be present so the
 				// dialog can show its "No SQL text is available for this plan." message instead of
 				// looking like the feature itself failed to load.
-				"    <script src='/scripts/marked/18.0.5/marked.min.js'></script> \n"
-				+ "    <script src='/scripts/dompurify/3.4.11/purify.min.js'></script> \n"
+				"    <script src='/scripts/marked/18.0.14/marked.min.js'></script> \n"
+				+ "    <script src='/scripts/dompurify/3.4.16/purify.min.js'></script> \n"
 				+ "    <script src='/scripts/dbxtune/js/dbxLlmAdvice.js'></script> \n"
 				+ HtmlUtils.createCssLinkTag("/scripts/prism/prism-1.30.0.css")
 				+ HtmlUtils.createJsScriptTag("/scripts/prism/prism-1.30.0.js")
