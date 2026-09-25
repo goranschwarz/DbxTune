@@ -800,22 +800,31 @@ public class DbxTuneCentral
 
 	private static void close()
 	{
+		// Log how long each step takes, so we can see what is slowing down a shutdown/restart
+		long closeStartTime = System.currentTimeMillis();
+		long stepStartTime;
 		try
 		{
-			stopLocalPcsDirectoryReceiver(); 
-			stopWebServer();
-			stopReceiverAlarmChecker();     // Do not send any "missing data from xxxTune collector"
-			stopAlarmHandler();             // No more Alarms will be sent
-			stopScheduler();                // No more "cron" jobs
-			stopLocalMetricsMonitor();
-			stopCentralPcs();               // if it's a H2 DB, it might take time to stop (if defrag/compress is requested)
+			stepStartTime = System.currentTimeMillis(); stopLocalPcsDirectoryReceiver(); logCloseStepTime("stopLocalPcsDirectoryReceiver", stepStartTime);
+			stepStartTime = System.currentTimeMillis(); stopWebServer();                 logCloseStepTime("stopWebServer",                 stepStartTime);
+			stepStartTime = System.currentTimeMillis(); stopReceiverAlarmChecker();      logCloseStepTime("stopReceiverAlarmChecker",      stepStartTime); // Do not send any "missing data from xxxTune collector"
+			stepStartTime = System.currentTimeMillis(); stopAlarmHandler();              logCloseStepTime("stopAlarmHandler",              stepStartTime); // No more Alarms will be sent
+			stepStartTime = System.currentTimeMillis(); stopScheduler();                 logCloseStepTime("stopScheduler",                 stepStartTime); // No more "cron" jobs
+			stepStartTime = System.currentTimeMillis(); stopLocalMetricsMonitor();       logCloseStepTime("stopLocalMetricsMonitor",       stepStartTime);
+			stepStartTime = System.currentTimeMillis(); stopCentralPcs();                logCloseStepTime("stopCentralPcs",                stepStartTime); // if it's a H2 DB, it might take time to stop (if defrag/compress is requested)
 
-			sendCounterUsageInfo();
+			stepStartTime = System.currentTimeMillis(); sendCounterUsageInfo();          logCloseStepTime("sendCounterUsageInfo",          stepStartTime);
 		}
 		catch(Exception ex)
 		{
 			_logger.warn("Problems when closing the system down.", ex);
 		}
+		_logger.info("close(): Total time for closing the system: " + TimeUtils.msDiffNow(closeStartTime) + " ms.");
+	}
+
+	private static void logCloseStepTime(String stepName, long stepStartTime)
+	{
+		_logger.info("close(): Step '" + stepName + "' took " + TimeUtils.msDiffNow(stepStartTime) + " ms.");
 	}
 
 	/** where is application started */

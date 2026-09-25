@@ -458,6 +458,11 @@ public abstract class CheckForUpdates
 	protected InputStream sendHttpParams(String urlStr, QueryString urlParams, int timeoutInMs)
 	throws IOException
 	{
+		return sendHttpParams(urlStr, urlParams, timeoutInMs, DEFAULT_http_maxRetries);
+	}
+	protected InputStream sendHttpParams(String urlStr, QueryString urlParams, int timeoutInMs, int maxRetries)
+	throws IOException
+	{
 		if (_logger.isDebugEnabled())
 		{
 			_logger.debug("sendHttpParams() BASE URL: " + urlStr);
@@ -468,7 +473,6 @@ public abstract class CheckForUpdates
 		String fullUrl = urlStr + "?" + urlParams.toString();
 
 		int backoffMs           = 1000;
-		int maxRetries          = DEFAULT_http_maxRetries;
 		int maxBackoffSleepTime = DEFAULT_http_maxBackoffSleepTime;
 
 		int lastStatusCode = 0;
@@ -593,6 +597,11 @@ public abstract class CheckForUpdates
 	protected InputStream sendHttpPost(String urlStr, QueryString urlParams, int timeoutInMs)
 	throws IOException
 	{
+		return sendHttpPost(urlStr, urlParams, timeoutInMs, DEFAULT_http_maxRetries);
+	}
+	protected InputStream sendHttpPost(String urlStr, QueryString urlParams, int timeoutInMs, int maxRetries)
+	throws IOException
+	{
 		if (_logger.isDebugEnabled())
 		{
 			_logger.debug("sendHttpPost() BASE URL: " + urlStr);
@@ -602,7 +611,6 @@ public abstract class CheckForUpdates
 		byte[] postData = urlParams.toString().getBytes(StandardCharsets.UTF_8);
 
 		int backoffMs           = 1000;
-		int maxRetries          = DEFAULT_http_maxRetries;
 		int maxBackoffSleepTime = DEFAULT_http_maxBackoffSleepTime;
 
 		int lastStatusCode = 0;
@@ -1609,18 +1617,23 @@ public abstract class CheckForUpdates
 		{
 			try
 			{
-				// If NOT in the "known" thread name, then it's a synchronous call, then lower the timeout value. 
-				int timeout = DEFAULT_TIMEOUT;
-				String threadName = Thread.currentThread().getName(); 
+				// If NOT in the "known" thread name, then it's a synchronous call (for example at shutdown)
+				// then lower the timeout value and do NOT retry, so we don't block the caller for minutes.
+				int timeout    = DEFAULT_TIMEOUT;
+				int maxRetries = DEFAULT_http_maxRetries;
+				String threadName = Thread.currentThread().getName();
 				if ( ! "sendCounterUsageInfo".equals(threadName) )
-					timeout = 5000;
+				{
+					timeout    = 5000;
+					maxRetries = 1;
+				}
 
 				// SEND OFF THE REQUEST
 				InputStream in;
 				if (_useHttpPost)
-					in = sendHttpPost(urlEntry.getUrl(), urlEntry, timeout);
+					in = sendHttpPost(urlEntry.getUrl(), urlEntry, timeout, maxRetries);
 				else
-					in = sendHttpParams(urlEntry.getUrl(), urlEntry, timeout);
+					in = sendHttpParams(urlEntry.getUrl(), urlEntry, timeout, maxRetries);
 
 				LineNumberReader lr = new LineNumberReader(new InputStreamReader(in));
 				String line;
