@@ -89,7 +89,7 @@ extends HttpServlet
 		out.println(" ");
 		out.println("	<!-- JS: DbxCentral --> ");
 		out.println("	<script type='text/javascript' src='/scripts/dbxtune/js/dbxcentral.utils.js'></script> ");
-		out.println("	<script type='text/javascript' src='/scripts/dbxtune/js/dbxcentral.graph.js'></script> ");
+		// NOTE: Do NOT include 'dbxcentral.graph.js' - nothing here uses it, and its page-load code is for graph.html only (it needs dbxAlarm.js etc)
 		out.println(" ");
 		out.println("	<!-- JS: Bootstrap --> ");
 //		out.println("	<!-- <link href='/scripts/bootstrap/4.0.0/css/bootstrap.min.css' rel='stylesheet'> --> ");

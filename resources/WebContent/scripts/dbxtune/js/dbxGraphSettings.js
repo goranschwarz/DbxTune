@@ -23,7 +23,7 @@ var DbxGraphSettings = (function () {
 
 	var TS_FORMATS = {
 		iso:    { label: 'ISO',            fmt: 'YYYY-MM-DD HH:mm:ss'       },
-		isoday: { label: 'ISO + weekday',  fmt: 'YYYY-MM-DD (ddd) HH:mm:ss' },
+		isoday: { label: 'ISO + weekday',  fmt: 'YYYY-MM-DD (dddd) HH:mm:ss'},
 		time:   { label: 'Time only',      fmt: 'HH:mm:ss'                  },
 		locale: { label: 'Browser locale', fmt: null                        }
 	};
@@ -32,7 +32,7 @@ var DbxGraphSettings = (function () {
 		mode:     'closest',  // 'closest' or 'all'
 		sort:     true,
 		hideZero: false,
-		tsFormat: 'iso'       // a key in TS_FORMATS, or a custom moment.js format string
+		tsFormat: 'isoday'    // a key in TS_FORMATS, or a custom moment.js format string
 	};
 
 	var _saved     = load();     // what the user saved (or defaults)
