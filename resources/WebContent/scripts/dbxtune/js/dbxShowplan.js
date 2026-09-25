@@ -3743,7 +3743,7 @@ function _initGlobalEscClose() {
 					return 'rgba(100,116,139,0.75)';
 				});
 				_sspWaitChart = new Chart(cvs.getContext('2d'), {
-					type: 'horizontalBar',
+					type: 'bar',
 					data: {
 						labels: waitData.map(function(w) { return w.type; }),
 						datasets: [{
@@ -3753,28 +3753,31 @@ function _initGlobalEscClose() {
 						}]
 					},
 					options: {
+						indexAxis: 'y',
 						responsive: true,
 						maintainAspectRatio: false,
-						legend: { display: false },
-						tooltips: {
-							callbacks: {
-								label: function(item) { return ' ' + fmtHMS(item.xLabel); }
+						plugins: {
+							legend: { display: false },
+							tooltip: {
+								callbacks: {
+									label: function(item) { return ' ' + fmtHMS(item.parsed.x); }
+								}
 							}
 						},
 						scales: {
-							xAxes: [{
+							x: {
+								beginAtZero: true,
 								ticks: {
-									beginAtZero: true,
-									fontColor: textClr,
-									fontSize: 10,
+									color: textClr,
+									font: { size: 10 },
 									callback: function(v) { return fmtHMS(v); }
 								},
-								gridLines: { color: gridClr }
-							}],
-							yAxes: [{
-								ticks: { fontColor: textClr, fontSize: 10 },
-								gridLines: { display: false }
-							}]
+								grid: { color: gridClr }
+							},
+							y: {
+								ticks: { color: textClr, font: { size: 10 } },
+								grid: { display: false }
+							}
 						}
 					}
 				});

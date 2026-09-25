@@ -2989,8 +2989,8 @@ extends SqlServerAbstract
 		writer.println("                    borderWidth: 2, ");
 		writer.println("                    label: { ");
 		writer.println("                        content: 'Start Time for this Job', ");
-		writer.println("                        enabled: true, ");
-		writer.println("                        position: 'top' ");
+		writer.println("                        display: true, ");
+		writer.println("                        position: 'start' ");
 		writer.println("                    } ");
 //		writer.println("                    // The below is only to get some tooltip on the marker line... alot of code for 'little value', which I'm not even sure it will work... ");
 //		writer.println("                    // It did not work... possibly because 'yPos' wasn't found ");

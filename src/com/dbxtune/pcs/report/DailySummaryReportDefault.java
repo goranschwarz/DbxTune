@@ -816,19 +816,19 @@ extends DailySummaryReportAbstract
 
 		// chart.js
 //		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js'   integrity='sha512-TW5s0IT/IppJtu76UbysrBH9Hy/5X41OTAbQuffZFU6lQ1rdcLHzpU5BzVvr/YFykoiMYZVWlr/PX1mDcfM9Qg==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");
-		addJavaScriptFile(w, "/scripts/chartjs/3.7.0/dist/chart.min.js", "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js");
+		addJavaScriptFile(w, "/scripts/chartjs/4.5.1/dist/chart.umd.min.js", "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.umd.min.js");
 
 		// chart.js plugins
 //		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/2.2.1/chartjs-plugin-annotation.min.js' integrity='sha512-qF3T5CaMgSRNrxzu69V3ZrYGnrbRMIqrkE+OrE01DDsYDNo8R1VrtYL8pk+fqhKxUBXQ2z+yV/irk+AbbHtBAg==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");
 //		addJavaScriptFile(w, "/scripts/chartjs/chartjs-plugin-annotation-2.2.1/package/dist/chartjs-plugin-annotation.min.js", "https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/2.2.1/chartjs-plugin-annotation.min.js");
-		addJavaScriptFile(w, "/scripts/chartjs-plugin-annotation/2.2.1/chartjs-plugin-annotation.min.js", "https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/2.2.1/chartjs-plugin-annotation.min.js");
+		addJavaScriptFile(w, "/scripts/chartjs-plugin-annotation/3.1.0/chartjs-plugin-annotation.min.js", "https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.1.0/chartjs-plugin-annotation.min.js");
 
 
 		// moment.js
 //		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js'                             integrity='sha512-qTXRIMyZIFb8iQcfjXWCO8+M5Tbc38Qi5WzdPOYZHIlZpzBHG3L3by84BBBOiRGiEb7KKtAOAs5qYdUiZiQNNQ==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");
 //		w.append("    <script src='https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-moment/1.0.0/chartjs-adapter-moment.min.js' integrity='sha512-oh5t+CdSBsaVVAvxcZKy3XJdP7ZbYUBSRCXDTVn0ODewMDDNnELsrG9eDm8rVZAQg7RsDD/8K3MjPAFB13o6eA==' crossorigin='anonymous' referrerpolicy='no-referrer'></script> \n");
 		addJavaScriptFile(w, "/scripts/moment/2.29.1/dist/moment.min.js"                          , "https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js");
-		addJavaScriptFile(w, "/scripts/chartjs-adapter-moment/1.0.0/chartjs-adapter-moment.min.js", "https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-moment/1.0.0/chartjs-adapter-moment.min.js");
+		addJavaScriptFile(w, "/scripts/chartjs-adapter-moment/1.0.1/chartjs-adapter-moment.min.js", "https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-moment/1.0.1/chartjs-adapter-moment.min.js");
 
 		// font awesome
 //		w.append("    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css' integrity='sha512-xh6O/CkQoPOWDdYTDqeRdPCVd1SpvCA9XXcUnZS2FmJNp1coAFzvtCN9BmamE+4aHK8yyUHUSCcJHgXloTyT2A==' crossorigin='anonymous' referrerpolicy='no-referrer' /> \n");

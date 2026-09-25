@@ -1047,13 +1047,11 @@ at pc:
 	<!-- JS: Moment; used by: ChartJs, DateRangePicker -->
 	<script type="text/javascript" src="/scripts/moment/moment.js"></script>
 
-	<!-- JS: Chart JS -->
-	<script type="text/javascript" src="/scripts/chartjs/2.7.3/Chart.bundle.js"></script>
-	<script type="text/javascript" src="/scripts/chartjs/2.7.3/samples/utils.js"></script>
-	<script type="text/javascript" src="/scripts/chartjs/2.7.3/plugins/chartjs-plugin-zoom.js"></script>
-	<script type="text/javascript" src="/scripts/chartjs/2.7.3/plugins/chartjs-plugin-annotation.js"></script>
-<!--<script type="text/javascript" src="/scripts/chartjs/2.7.3/plugins/chartjs-plugin-datalabels.js"></script>-->
-<!--<script type="text/javascript" src="/scripts/chartjs/2.7.3/plugins/chartjs-plugin-colorschemes.js"></script>-->
+	<!-- JS: Chart JS (+ moment adapter, since Chart.js 3+ no longer bundles moment) -->
+	<script type="text/javascript" src="/scripts/chartjs/4.5.1/dist/chart.umd.min.js"></script>
+	<script type="text/javascript" src="/scripts/chartjs-adapter-moment/1.0.1/chartjs-adapter-moment.min.js"></script>
+	<script type="text/javascript" src="/scripts/chartjs-plugin-zoom/2.2.0/chartjs-plugin-zoom.min.js"></script>
+	<script type="text/javascript" src="/scripts/chartjs-plugin-annotation/3.1.0/chartjs-plugin-annotation.min.js"></script>
 
 <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.min.js" integrity="sha512-L0Shl7nXXzIlBSUUPpxrokqq4ojqgZFQczTYlGjzONGTDAcLremjwaWv5A+EDLnxhQzY5xUZPWLOLqYRkY0Cbw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>-->
 <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/helpers.js"   integrity="sha512-08S2icXl5dFWPl8stSVyzg3W14tTISlNtJekjsQplv326QtsmbEVqL4TFBrRXTdEj8QI5izJFoVaf5KgNDDOMA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>-->
@@ -1081,6 +1079,7 @@ at pc:
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphCounterDetails.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphDbmsConfig.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphQueryStore.js"></script>
+	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphSettings.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxcentral.graph.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphPicker.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxSqlText.js"></script>
@@ -1219,6 +1218,8 @@ at pc:
 				<li class="nav-item dropdown">
 					<a class="nav-link dropdown-toggle" href="#" id="dbx-tools-menu" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Tools</a>
 					<div class="dropdown-menu" aria-labelledby="dbx-tools-menu">
+						<a class="dropdown-item" href="#" onclick="DbxGraphSettings.openDialog(); return false;">&#9881; Graph Settings&hellip;</a>
+						<div class="dropdown-divider"></div>
 						<div class="dbx-dropdown-submenu">
 							<a class="dropdown-item" href="#">&#128202; Showplan</a>
 							<div class="dropdown-menu">
