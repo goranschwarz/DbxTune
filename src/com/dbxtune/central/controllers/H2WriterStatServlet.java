@@ -76,10 +76,10 @@ extends HttpServlet
 //		out.println("	<!-- <link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css' integrity='sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm' crossorigin='anonymous'> --> ");
 		out.println("	<!-- Custom styles for this template --> ");
 		out.println("	<script type='text/javascript' src='/scripts/jquery/jquery-3.7.1.min.js'></script> ");
-		out.println("	<script type='text/javascript' src='/scripts/jquery/ui/1.14.1/jquery-ui.min.js'></script> ");
+		out.println("	<script type='text/javascript' src='/scripts/jquery/ui/1.14.2/jquery-ui.min.js'></script> ");
 		out.println("	 ");
 		out.println("	<!-- JS: Moment; used by: ChartJs, DateRangePicker --> ");
-		out.println("	<script type='text/javascript' src='/scripts/moment/moment.js'></script> ");
+		out.println("	<script type='text/javascript' src='/scripts/moment/2.31.0/moment.min.js'></script> ");
 		out.println(" ");
 		out.println("	<!-- JS: Chart JS --> ");
 		out.println("	<script type='text/javascript' src='/scripts/chartjs/4.5.1/dist/chart.umd.min.js'></script> ");
@@ -105,7 +105,7 @@ extends HttpServlet
 		out.println("	<script type='text/javascript' src='/scripts/bootstrap-table/1.27.3/extensions/filter-control/bootstrap-table-filter-control.min.js'></script> ");
 		out.println(" ");
 		out.println("	<!-- JS: jquery - contextMenu --> ");
-		out.println("	<script type='text/javascript' src='/scripts/jquery-contextmenu/2.9.2/jquery.contextMenu.min.js'></script> ");
+		out.println("	<script type='text/javascript' src='/scripts/jquery-contextmenu/2.10.2/jquery.contextMenu.min.js'></script> ");
 		out.println(" ");
 		out.println("	<!--  ");
 		out.println("	  ======================================================================= ");
@@ -113,7 +113,7 @@ extends HttpServlet
 		out.println("	  ======================================================================= ");
 		out.println("	--> ");
 		out.println("	<!-- CSS: jqueri-ui --> ");
-		out.println("	<link rel='stylesheet' href='/scripts/jquery/ui/1.14.1/themes/smoothness/jquery-ui.css'> ");
+		out.println("	<link rel='stylesheet' href='/scripts/jquery/ui/1.14.2/themes/smoothness/jquery-ui.css'> ");
 		out.println(" ");
 		out.println("	<!-- CSS: DbxCentral --> ");
 		out.println("	<link rel='stylesheet' href='/scripts/dbxtune/css/dbxcentral.css'> ");
@@ -128,7 +128,8 @@ extends HttpServlet
 		out.println("	<link rel='stylesheet' href='/scripts/bootstrap-daterangepicker/3.1/daterangepicker.css'> ");
 		out.println(" ");
 		out.println("	<!-- CSS: Font Awsome --> ");
-		out.println("	<link rel='stylesheet' href='/scripts/font-awesome/4.4.0/css/font-awesome.min.css'> ");
+		out.println("	<link rel='stylesheet' href='/scripts/font-awesome/7.3.1/css/all.min.css'> ");
+		out.println("	<link rel='stylesheet' href='/scripts/font-awesome/7.3.1/css/v4-shims.min.css'> ");
 		out.println(" ");
 		out.println("	<!-- CSS: W2UI --> ");
 		out.println("	<!-- <link rel='stylesheet' href='/scripts/w2ui/w2ui-1.5.rc1.css' type='text/css'> --> ");
@@ -140,7 +141,7 @@ extends HttpServlet
 		out.println("	<!-- <link rel='stylesheet' href='https://rawgit.com/vitalets/x-editable/master/dist/bootstrap3-editable/css/bootstrap-editable.css'> --> ");
 		out.println(" ");
 		out.println("	<!-- JS: jquery - contextMenu --> ");
-		out.println("	<link rel='stylesheet' href='/scripts/jquery-contextmenu/2.9.2/jquery.contextMenu.min.css'> ");
+		out.println("	<link rel='stylesheet' href='/scripts/jquery-contextmenu/2.10.2/jquery.contextMenu.min.css'> ");
 		out.println(" ");
 
 //		out.println("<style type='text/css'>");

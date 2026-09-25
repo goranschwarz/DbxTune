@@ -51,6 +51,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.velocity.exception.MethodInvocationException;
 import org.apache.velocity.exception.ParseErrorException;
+import org.fife.ui.autocomplete.DbxAutoCompleteDescWindow;
 import org.fife.ui.autocomplete.AutoCompletion;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
@@ -336,7 +337,7 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 		AutoCompletion ac = new AutoCompletion( WriterUtils.createCompletionProvider() );
 		ac.install(_editor_txt);
 
-		ac.setShowDescWindow(true); // enable the "extra" descriptive window to the right of completion.
+		DbxAutoCompleteDescWindow.install(ac); // enable the "extra" descriptive window to the right of completion.
 		ac.setChoicesWindowSize(
 				Configuration.getCombinedConfiguration().getIntProperty("TemplateEditor.setChoicesWindowSize.width", 200), 
 				Configuration.getCombinedConfiguration().getIntProperty("TemplateEditor.setChoicesWindowSize.height", 600));

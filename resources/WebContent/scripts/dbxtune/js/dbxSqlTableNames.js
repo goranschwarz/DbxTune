@@ -91,7 +91,7 @@ window.DbxSqlTableNames = (function () {
 		if (_nspState === 'loading') return;
 		_nspState = 'loading';
 		var s = document.createElement('script');
-		s.src = '/scripts/node-sql-parser/4.18.0/transactsql.umd.js';
+		s.src = '/scripts/node-sql-parser/5.4.0/transactsql.umd.js';
 		s.onload = function() {
 			_nspState = 'ready';
 			_nspWaiters.forEach(function(fn) { fn(true);  }); _nspWaiters = [];
@@ -134,6 +134,7 @@ window.DbxSqlTableNames = (function () {
 				list.forEach(function(entry) {
 					var name = entry.split('::')[2];
 					if (!name || name === 'null') return;
+					if (name.charAt(0) === '#' || name.charAt(0) === '@') return;   // temp tables / table variables: same rule as sqlExtractTables()
 					if (cteNames[name.toLowerCase()])  return;   // skip CTE alias
 					if (seen[name.toLowerCase()])      return;   // dedup
 					seen[name.toLowerCase()] = true;

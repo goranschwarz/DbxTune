@@ -1,15 +1,14 @@
 /*
- * ------------------------------------------------------------------------------------------------
- * NOTE: DELETE this file when the issue with: "to big window" is fixed in RSyntaxTextArea 
- *       This jar (dbxtune.jar) must be loaded before rsyntaxtextarea.jar in order to work
- * ------------------------------------------------------------------------------------------------
- * 
- * 07/29/2009
- *
- * TipWindow.java - The actual window component representing the tool tip.
- * 
  * This library is distributed under a modified BSD license.  See the included
- * RSyntaxTextArea.License.txt file for details.
+ * LICENSE file for details.
+ */
+/*
+ * DbxTune: This is a copy of RSyntaxTextArea 4.0.1 'TipWindow.java' with DbxTune changes, search for 'added by gorans'.
+ *         It is loaded BEFORE rsyntaxtextarea.jar (dbxtune.jar is first in the classpath) and overrides the upstream class.
+ *         Reason: upstream caps the tooltip at 600x400 when FocusableTip.getMaxSize() is null, and RSyntaxTextArea creates its
+ *                 FocusableTip internally (no way to set a max size), so long tooltips got cut off. We cap at the screen size instead.
+ *         When upgrading RSyntaxTextArea: re-apply the 'added by gorans' blocks on the new upstream source (or delete this file
+ *         if upstream makes the max size configurable).
  */
 package org.fife.ui.rsyntaxtextarea.focusabletip;
 
@@ -19,18 +18,18 @@ import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.GraphicsEnvironment;
 import java.awt.Point;
+import java.awt.GraphicsEnvironment;
 import java.awt.Rectangle;
 import java.awt.Window;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 import javax.swing.BorderFactory;
 import javax.swing.JEditorPane;
@@ -50,30 +49,25 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.html.HTMLDocument;
 
 import org.fife.ui.rsyntaxtextarea.HtmlUtil;
+import org.fife.util.SwingUtils;
 
 
 /**
  * The actual tool tip component.
- * 
- * NOTE: This is a "duplication" of TipWindow, but loaded previous to rsyntaxtextarea.jar in the classpath...
- * And it fixed so that the window wont grow to big...
- *
- * NOTE2: Delete this when the problem is fixed in RSyntaxTextArea
  *
  * @author Robert Futrell
  * @version 1.0
  */
-class TipWindow extends JWindow implements ActionListener {
-
-	private static final long serialVersionUID = 1L;
+class TipWindow extends JWindow {
 
 	private FocusableTip ft;
 	private JEditorPane textArea;
-	private String text;
-	private TipListener tipListener;
-	private HyperlinkListener userHyperlinkListener;
+	private transient TipListener tipListener;
+	private transient HyperlinkListener userHyperlinkListener;
 
 	private static TipWindow visibleInstance;
+
+	private static final String FLAT_LAF_BORDER_PREFIX = "com.formdev.flatlaf.ui.Flat";
 
 
 	/**
@@ -82,34 +76,29 @@ class TipWindow extends JWindow implements ActionListener {
 	 * @param owner The parent window.
 	 * @param msg The text of the tool tip.  This can be HTML.
 	 */
-	public TipWindow(Window owner, FocusableTip ft, String msg) {
+	TipWindow(Window owner, FocusableTip ft, String msg) {
 
 		super(owner);
 		this.ft = ft;
 		// Render plain text tool tips correctly.
 		if (msg!=null && msg.length()>=6 &&
-				!msg.substring(0,6).toLowerCase().equals("<html>")) {
-//			msg = "<html>" + RSyntaxUtilities.escapeForHtml(msg, "<br>", false);
+				!msg.substring(0,6).equalsIgnoreCase("<html>")) {
 			msg = "<html>" + HtmlUtil.escapeForHtml(msg, "<br>", false);
 		}
-		this.text = msg;
 		tipListener = new TipListener();
 
 		JPanel cp = new JPanel(new BorderLayout());
-		cp.setBorder(TipUtil.getToolTipBorder());
+		cp.setBorder(getToolTipBorder());
 		cp.setBackground(TipUtil.getToolTipBackground());
-		textArea = new JEditorPane("text/html", text);
+		textArea = new JEditorPane("text/html", msg);
 		TipUtil.tweakTipEditorPane(textArea);
 		if (ft.getImageBase()!=null) { // Base URL for images
 			((HTMLDocument)textArea.getDocument()).setBase(ft.getImageBase());
 		}
 		textArea.addMouseListener(tipListener);
-		textArea.addHyperlinkListener(new HyperlinkListener() {
-			@Override
-			public void hyperlinkUpdate(HyperlinkEvent e) {
-				if (e.getEventType()==HyperlinkEvent.EventType.ACTIVATED) {
-					TipWindow.this.ft.possiblyDisposeOfTipWindow();
-				}
+		textArea.addHyperlinkListener(e -> {
+			if (e.getEventType()==HyperlinkEvent.EventType.ACTIVATED) {
+				TipWindow.this.ft.possiblyDisposeOfTipWindow();
 			}
 		});
 		cp.add(textArea);
@@ -145,9 +134,7 @@ class TipWindow extends JWindow implements ActionListener {
 	}
 
 
-	@Override
-	public void actionPerformed(ActionEvent e) {
-
+	public void actionPerformed() {
 		if (!getFocusableWindowState()) {
 			setFocusableWindowState(true);
 			setBottomPanel();
@@ -160,11 +147,8 @@ class TipWindow extends JWindow implements ActionListener {
 				}
 			});
 			ft.removeListeners();
-			if (e==null) { // Didn't get here via our mouseover timer
-				requestFocus();
-			}
+			requestFocus();
 		}
-
 	}
 
 
@@ -184,98 +168,114 @@ class TipWindow extends JWindow implements ActionListener {
 	}
 
 
-//	/**
-//	 * Workaround for JEditorPane not returning its proper preferred size
-//	 * when rendering HTML until after layout already done.  See
-//	 * http://forums.sun.com/thread.jspa?forumID=57&threadID=574810 for a
-//	 * discussion.
-//	 */
-//	void fixSize() {
-//
-//		Dimension d = textArea.getPreferredSize();
-//		Rectangle r = null;
-//		try {
-//
-//			// modelToView call is required for this hack, never remove!
-//			r = textArea.modelToView(textArea.getDocument().getLength()-1);
-//
-//			// Ensure the text area doesn't start out too tall or wide.
-//			d = textArea.getPreferredSize();
-//			d.width += 25; // Just a little extra space
-//			final int MAX_WINDOW_W = ft.getMaxSize() != null ?
-//					ft.getMaxSize().width : 600;
-//			final int MAX_WINDOW_H = ft.getMaxSize() != null ?
-//					ft.getMaxSize().height : 400;
-//			d.width = Math.min(d.width, MAX_WINDOW_W);
-//			d.height = Math.min(d.height, MAX_WINDOW_H);
-//
-//			// Both needed for modelToView() calculation below...
-//			textArea.setPreferredSize(d);
-//			textArea.setSize(d);
-//
-//			// if the new textArea width causes our text to wrap, we must
-//			// compute a new preferred size to get all our physical lines.
-//			r = textArea.modelToView(textArea.getDocument().getLength()-1);
-//			if (r.y+r.height>d.height) {
-//				d.height = r.y + r.height + 5;
-//				if(ft.getMaxSize() != null) {
-//					d.height = Math.min(d.height, MAX_WINDOW_H);
-//				}
-//				textArea.setPreferredSize(d);
-//			}
-//
-//		} catch (BadLocationException ble) { // Never happens
-//			ble.printStackTrace();
-//		}
-//
-//		pack(); // Must re-pack to calculate proper size.
-//
-//	}
 	/**
 	 * Workaround for JEditorPane not returning its proper preferred size
-	 * when rendering HTML until after layout already done.  See
-	 * http://forums.sun.com/thread.jspa?forumID=57&threadID=574810 for a
-	 * discussion.
-	 * 
-	 * Fixed so that the window wont grow to big...
+	 * when rendering HTML until after layout already done.
 	 */
-	void fixSize() 
-	{
-		Dimension d = textArea.getPreferredSize();
-		Rectangle r = null;
-		try 
-		{
-			int docLength = textArea.getDocument().getLength()-1;
-			if (docLength < 0)
-				docLength = 0;
-			r = textArea.modelToView(docLength);
-			d.height = r.y + r.height;
+	void fixSize() {
+
+		Dimension d;
+		Rectangle r;
+		try {
+
+			// modelToView call is required for this hack, never remove!
+			r = SwingUtils.getBounds(textArea, Math.max(0, textArea.getDocument().getLength()-1)) /* added by gorans: guard for empty doc */;
 
 			// Ensure the text area doesn't start out too tall or wide.
 			d = textArea.getPreferredSize();
-//			d.width = Math.min(d.width+25, 320);
-//			d.height = Math.min(d.height, 150);
-
-//			Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+			d.width += 25; // Just a little extra space
+			// BEGIN: added by gorans -- when no max size is set: cap at the screen size (not 600x400)
 			Rectangle screenSize = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
+			final int maxWindowW = ft.getMaxSize() != null ?
+					ft.getMaxSize().width : screenSize.width - 100;
+			final int maxWindowH = ft.getMaxSize() != null ?
+					ft.getMaxSize().height : screenSize.height - 80;
+			// END: added by gorans
+			d.width = Math.min(d.width, maxWindowW);
+			d.height = Math.min(d.height, maxWindowH);
 
-			if (d.height > (screenSize.height - 80))
-				d.height = screenSize.height - 80;
-			if (d.width > screenSize.width - 100)
-				d.width = screenSize.width - 100;
-
+			// Both needed for modelToView() calculation below...
 			textArea.setPreferredSize(d);
+			textArea.setSize(d);
+
+			// if the new textArea width causes our text to wrap, we must
+			// compute a new preferred size to get all our physical lines.
+			r = SwingUtils.getBounds(textArea, Math.max(0, textArea.getDocument().getLength()-1)) /* added by gorans: guard for empty doc */;
+			if (r.y+r.height>d.height) {
+				d.height = r.y + r.height + 5;
+				if (ft.getMaxSize() != null) {
+					d.height = Math.min(d.height, maxWindowH);
+				}
+				textArea.setPreferredSize(d);
+			}
 
 		} catch (BadLocationException ble) { // Never happens
 			ble.printStackTrace();
 		}
 
 		pack(); // Must re-pack to calculate proper size.
+
 	}
 
 
-	public String getText() {
-		return text;
+	/**
+	 * FlatLaf adds insets to tool tips, and for some themes (usually light ones)
+	 * also uses a line border, whereas for other themes (usually dark ones)
+	 * there is no line border.  We need to ensure our border has no insets
+	 * so our draggable bottom component looks good, but we'd like to preserve
+	 * the color of the line border, if any.  This method allows us to do so
+	 * without a compile-time dependency on flatlaf.
+	 *
+	 * @param border The default tool tip border for the current Look and Feel.
+	 * @return The border to use for this window.
+	 */
+	private static Border getReplacementForFlatLafBorder(Border border) {
+
+		Class<?> clazz = border.getClass();
+
+		// If it's a FlatLineBorder, get its color.
+		// If it's a FlatEmptyBorder, just return a 0-sized regular EmptyBorder.
+		Color color = null;
+		Method[] methods = clazz.getDeclaredMethods();
+		for (Method method : methods) {
+			if ("getLineColor".equals(method.getName())) {
+				try {
+					color = (Color)method.invoke(border);
+				} catch (IllegalAccessException | InvocationTargetException e) {
+					e.printStackTrace(); // Never happens
+				}
+			}
+		}
+
+		if (color != null) {
+			return BorderFactory.createLineBorder(color);
+		}
+		return BorderFactory.createEmptyBorder();
+	}
+
+
+	protected String getText() {
+		return textArea.getText();
+	}
+
+
+	private static Border getToolTipBorder() {
+
+		Border border = TipUtil.getToolTipBorder();
+
+
+		// Special case for FlatDarkLaf and FlatLightLaf, since they add an
+		// empty border to tool tips that messes up our floating-window appearance
+		if (isFlatLafBorder(border)) {
+			border = getReplacementForFlatLafBorder(border);
+		}
+
+		return border;
+	}
+
+
+	private static boolean isFlatLafBorder(Border border) {
+		return border != null && border.getClass().getName().startsWith(FLAT_LAF_BORDER_PREFIX);
 	}
 
 
@@ -295,15 +295,12 @@ class TipWindow extends JWindow implements ActionListener {
 				public void mouseDragged(MouseEvent e) {
 					Point p = e.getPoint();
 					SwingUtilities.convertPointToScreen(p, panel);
-					if (lastPoint==null) {
-						lastPoint = p;
-					}
-					else {
+					if (lastPoint != null) {
 						int dx = p.x - lastPoint.x;
 						int dy = p.y - lastPoint.y;
-						setLocation(getX()+dx, getY()+dy);
-						lastPoint = p;
+						setLocation(getX() + dx, getY() + dy);
 					}
+					lastPoint = p;
 				}
 				@Override
 				public void mousePressed(MouseEvent e) {
@@ -378,20 +375,20 @@ class TipWindow extends JWindow implements ActionListener {
 	/**
 	 * Listens for events in this window.
 	 */
-	private class TipListener extends MouseAdapter {
+	private final class TipListener extends MouseAdapter {
 
-		public TipListener() {
+		private TipListener() {
 		}
 
 		@Override
 		public void mousePressed(MouseEvent e) {
-			actionPerformed(null); // Manually create "real" window
+			actionPerformed(); // Manually create "real" window
 		}
 
 		@Override
 		public void mouseExited(MouseEvent e) {
 			// Since we registered this listener on the child components of
-			// the JWindow, not the JWindow iteself, we have to be careful.
+			// the JWindow, not the JWindow itself, we have to be careful.
 			Component source = (Component)e.getSource();
 			Point p = e.getPoint();
 			SwingUtilities.convertPointToScreen(p, source);

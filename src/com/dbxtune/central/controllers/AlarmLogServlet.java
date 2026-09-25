@@ -390,13 +390,13 @@ public class AlarmLogServlet extends HttpServlet
 		out.println("<script type='text/javascript' src='/scripts/jquery/jquery-3.7.1.js'></script>");
 		
 		out.println("<!-- Tablesorter theme, note in the init section use: $('.tablesorter').tablesorter({ theme: 'metro-dark' }) --> ");
-		out.println("<link rel='stylesheet' href='/scripts/tablesorter/css/theme.metro-dark.min.css'> ");
+		out.println("<link rel='stylesheet' href='/scripts/tablesorter/2.32.0/css/theme.metro-dark.min.css'> ");
 		out.println("<link rel='stylesheet' href='/scripts/dbxtune/css/dbxcentral_tablesorter.css'> ");
 		
 		out.println("<!-- Tablesorter script: required --> ");
-		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/jquery.tablesorter.js'></script> ");
-		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/jquery.tablesorter.widgets.js'></script> ");
-//		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/widgets/widget-scroller.js'></script> ");
+		out.println("<script type='text/javascript' src='/scripts/tablesorter/2.32.0/js/jquery.tablesorter.js'></script> ");
+		out.println("<script type='text/javascript' src='/scripts/tablesorter/2.32.0/js/jquery.tablesorter.widgets.js'></script> ");
+//		out.println("<script type='text/javascript' src='/scripts/tablesorter/2.32.0/js/widgets/widget-scroller.js'></script> ");
 
 		
 		out.println("<body>");
@@ -586,13 +586,13 @@ public class AlarmLogServlet extends HttpServlet
 		out.println("<script type='text/javascript' src='/scripts/jquery/jquery-3.7.1.js'></script>");
 		
 		out.println("<!-- Tablesorter theme, note in the init section use: $('.tablesorter').tablesorter({ theme: 'metro-dark' }) --> ");
-		out.println("<link rel='stylesheet' href='/scripts/tablesorter/css/theme.metro-dark.min.css'> ");
+		out.println("<link rel='stylesheet' href='/scripts/tablesorter/2.32.0/css/theme.metro-dark.min.css'> ");
 		out.println("<link rel='stylesheet' href='/scripts/dbxtune/css/dbxcentral_tablesorter.css'> ");
 		
 		out.println("<!-- Tablesorter script: required --> ");
-		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/jquery.tablesorter.js'></script> ");
-		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/jquery.tablesorter.widgets.js'></script> ");
-//		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/widgets/widget-scroller.js'></script> ");
+		out.println("<script type='text/javascript' src='/scripts/tablesorter/2.32.0/js/jquery.tablesorter.js'></script> ");
+		out.println("<script type='text/javascript' src='/scripts/tablesorter/2.32.0/js/jquery.tablesorter.widgets.js'></script> ");
+//		out.println("<script type='text/javascript' src='/scripts/tablesorter/2.32.0/js/widgets/widget-scroller.js'></script> ");
 
 //		out.println("");
 //		out.println("<style>");

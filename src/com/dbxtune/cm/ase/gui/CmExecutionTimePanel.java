@@ -50,6 +50,7 @@ import org.jfree.chart.plot.PiePlot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.renderer.category.StackedBarRenderer;
 import org.jfree.chart.title.LegendTitle;
+import org.jfree.chart.title.Title;
 import org.jfree.chart.title.TextTitle;
 import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.chart.ui.RectangleInsets;
@@ -229,10 +230,11 @@ extends TabularCntrPanel
 			chart.setTitle(new TextTitle(chartTitle, TextTitle.DEFAULT_FONT));
 
 			// Set FONT SIZE for legend (button what are part of the graph)
-			@SuppressWarnings("unchecked")
-			List<LegendTitle> legendList = chart.getSubtitles();
-			for (LegendTitle lt : legendList)
+			for (Title title : chart.getSubtitles())
 			{
+				if ( ! (title instanceof LegendTitle) )
+					continue;
+				LegendTitle lt = (LegendTitle) title;
 				lt.setItemFont(defaultLegendItemFont);
 				lt.setItemLabelPadding(defaultLegendItemInsets);
 			}
@@ -280,10 +282,11 @@ extends TabularCntrPanel
 			chart.setTitle(new TextTitle(chartTitle, TextTitle.DEFAULT_FONT));
 
 			// Set FONT SIZE for legend (button what are part of the graph)
-			@SuppressWarnings("unchecked")
-			List<LegendTitle> legendList = chart.getSubtitles();
-			for (LegendTitle lt : legendList)
+			for (Title title : chart.getSubtitles())
 			{
+				if ( ! (title instanceof LegendTitle) )
+					continue;
+				LegendTitle lt = (LegendTitle) title;
 				lt.setItemFont(defaultLegendItemFont);
 				lt.setItemLabelPadding(defaultLegendItemInsets);
 			}

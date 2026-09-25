@@ -72,8 +72,8 @@ public class HtmlStatic
 		writer.println("  <script type='text/javascript' src='/scripts/jquery/jquery-3.7.1.min.js'></script> ");
 		writer.println();
 		writer.println("  <!-- JS: Moment; used by: ChartJs, DateRangePicker --> ");
-		writer.println("  <script type='text/javascript' src='/scripts/moment/moment.js'></script> ");
-		writer.println("  <script type='text/javascript' src='/scripts/moment/moment-duration-format.js'></script> ");
+		writer.println("  <script type='text/javascript' src='/scripts/moment/2.31.0/moment.min.js'></script> ");
+		writer.println("  <script type='text/javascript' src='/scripts/moment-duration-format/2.3.2/moment-duration-format.min.js'></script> ");
 		writer.println();
 		writer.println("  <!-- JS: Bootstrap --> ");
 //		writer.println("  <script type='text/javascript' src='/scripts/popper/1.12.9/popper.min.js'></script> ");
@@ -98,7 +98,8 @@ public class HtmlStatic
 		writer.println("  <link rel='stylesheet' href='/scripts/bootstrap/5.3.8/css/bootstrap.min.css'> ");
 		writer.println();
 		writer.println("  <!-- CSS: Font Awsome --> ");
-		writer.println("  <link rel='stylesheet' href='/scripts/font-awesome/4.4.0/css/font-awesome.min.css'> ");
+		writer.println("  <link rel='stylesheet' href='/scripts/font-awesome/7.3.1/css/all.min.css'> ");
+		writer.println("  <link rel='stylesheet' href='/scripts/font-awesome/7.3.1/css/v4-shims.min.css'> ");
 		writer.println();
 		
 		return out.toString();

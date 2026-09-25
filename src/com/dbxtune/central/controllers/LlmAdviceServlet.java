@@ -168,8 +168,8 @@ extends HttpServlet
 		out.println("<script src='/scripts/sql-formatter/15.9.0/sql-formatter.min.js'></script>");
 		out.println("<script src='/scripts/dbxtune/js/dbxSqlFormat.js'></script>");
 		out.println("<script src='/scripts/prism/prism-1.30.0.js'></script>");
-		out.println("<script src='/scripts/marked/18.0.5/marked.min.js'></script>");
-		out.println("<script src='/scripts/dompurify/3.4.11/purify.min.js'></script>");
+		out.println("<script src='/scripts/marked/18.0.14/marked.min.js'></script>");
+		out.println("<script src='/scripts/dompurify/3.4.16/purify.min.js'></script>");
 		// srv/dbname (if any) only live in the URL fragment, never known server-side here - so, unlike
 		// dbxShowplan.js's conditional include, always load these; dbxLlmAdvice.js's srv-based DDL-context
 		// lookup (fetchDdlContextBySrv) needs DbxSqlTableNames.extractTablesAsync() to parse 'sql' for tables.

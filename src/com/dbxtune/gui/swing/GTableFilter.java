@@ -104,6 +104,10 @@ import net.sf.jsqlparser.expression.NullValue;
 import net.sf.jsqlparser.expression.NumericBind;
 import net.sf.jsqlparser.expression.OracleHierarchicalExpression;
 import net.sf.jsqlparser.expression.OracleHint;
+import net.sf.jsqlparser.expression.KeyExpression;
+import net.sf.jsqlparser.expression.PostgresNamedFunctionParameter;
+import net.sf.jsqlparser.expression.TernaryExpression;
+import net.sf.jsqlparser.expression.operators.relational.Intersects;
 import net.sf.jsqlparser.expression.OracleNamedFunctionParameter;
 import net.sf.jsqlparser.expression.OverlapsCondition;
 import net.sf.jsqlparser.expression.RangeExpression;
@@ -1544,6 +1548,12 @@ extends JPanel
 
 		// Going from version 5.3 to 5.4-SNAPSHOT we needed the below methods
 		@Override public Object visit(DateUnitExpression           expr, Object context) { throw new FilterParserException("Operation 'DateUnitExpression' not yet implemeted."); }
+
+		// Going from version 5.4-SNAPSHOT to 5.4 we needed the below methods
+		@Override public Object visit(PostgresNamedFunctionParameter expr, Object context) { throw new FilterParserException("Operation 'PostgresNamedFunctionParameter' not yet implemeted."); }
+		@Override public Object visit(KeyExpression                expr, Object context) { throw new FilterParserException("Operation 'KeyExpression' not yet implemeted."); }
+		@Override public Object visit(TernaryExpression            expr, Object context) { throw new FilterParserException("Operation 'TernaryExpression' not yet implemeted."); }
+		@Override public Object visit(Intersects                   expr, Object context) { throw new FilterParserException("Operation 'Intersects' not yet implemeted."); }
 	};
 	
 	

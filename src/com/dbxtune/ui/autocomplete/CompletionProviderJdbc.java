@@ -26,6 +26,7 @@ import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.fife.ui.autocomplete.DbxAutoCompleteDescWindow;
 import org.fife.ui.autocomplete.RoundRobinAutoCompletion;
 import org.fife.ui.rsyntaxtextarea.ErrorStrip;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
@@ -52,7 +53,7 @@ extends CompletionProviderAbstractSql
 		ac.setListCellRenderer(acProvider.createDefaultCompletionCellRenderer());
 		ac.addCompletionProvider(acProvider.createTemplateProvider());
 		ac.install(textPane);
-		ac.setShowDescWindow(true); // enable the "extra" descriptive window to the right of completion.
+		DbxAutoCompleteDescWindow.install(ac); // enable the "extra" descriptive window to the right of completion.
 		ac.setChoicesWindowSize(
 				Configuration.getCombinedConfiguration().getIntProperty("completionProvider.setChoicesWindowSize.width", 600), 
 				Configuration.getCombinedConfiguration().getIntProperty("completionProvider.setChoicesWindowSize.height", 600));
