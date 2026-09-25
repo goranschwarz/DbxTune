@@ -3160,9 +3160,11 @@ function queryStoreRenderDetail(r)
 		      + 'SQL Text'
 		      + '&nbsp;<button type="button" class="btn btn-outline-secondary btn-sm"'
 		      + ' style="font-size:0.78em;padding:0px 7px;vertical-align:baseline;"'
-		      + ' title="Re-format the SQL text using T-SQL formatting rules (keywords uppercased, indented)"'
+		      + ' title="Re-format the SQL text using T-SQL formatting rules (change how with the &#9881; SQL Format options)"'
 		      + ' onclick="qsDetailFormatSql();">Format SQL</button>'
+		      + (window.dbxSqlFormat ? '&nbsp;' + window.dbxSqlFormat.settingsButtonHtml('qs-detail-sqlFmtPanel', 'qsDetailFormatSql', 'font-size:0.78em;padding:0px 7px;vertical-align:baseline;') : '')
 		      + '</div>'
+		      + '<div id="qs-detail-sqlFmtPanel" style="font-weight:normal;"></div>'
 		      + '<pre style="max-height:200px;overflow:auto;border:1px solid #ddd;border-radius:3px;padding:6px;font-size:0.79em;white-space:pre-wrap;"><code id="qs-detail-sql-content" class="language-sql">'
 		      + escHtml(r.queryText) + '</code></pre>'
 		      + '</div>';
@@ -3522,6 +3524,10 @@ function queryStoreRenderDetail(r)
 	// Render sparklines in detail view + plan table
 	_qsRenderSparklineSet('#query-store-content .qs-sparkline');
 
+	// Auto-format (a SQL Format option, default off) - before the highlighting below
+	if (window.dbxSqlFormat && window.dbxSqlFormat.isAutoFormat())
+		qsDetailFormatSql(true);
+
 	// Highlight SQL syntax with Prism if loaded
 	if (typeof Prism !== 'undefined')
 		Prism.highlightAllUnder(document.getElementById('query-store-content'));
@@ -3846,16 +3852,22 @@ function queryStoreSliderRefresh(ts)
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function qsDetailFormatSql()
+// silent=true is the auto-format path (a SQL Format option): no alert() if the text cannot be parsed
+function qsDetailFormatSql(silent)
 {
 	var el = document.getElementById('qs-detail-sql-content');
 	if (!el) return;
-	if (typeof sqlFormatter === 'undefined') { alert('SQL formatter library not loaded.'); return; }
+	if (typeof sqlFormatter === 'undefined') { if (silent !== true) alert('SQL formatter library not loaded.'); return; }
 	try {
-		var formatted = sqlFormatter.format(el.textContent, { language: 'tsql', tabWidth: 4, keywordCase: 'upper', tabulateAlias: true });
+		var formatted = window.dbxSqlFormat
+			? window.dbxSqlFormat.format(el.textContent, 'tsql')
+			: sqlFormatter.format(el.textContent, { language: 'tsql', tabWidth: 4, keywordCase: 'upper', functionCase: 'upper', dataTypeCase: 'upper' });
 		el.textContent = formatted;
 		if (typeof Prism !== 'undefined') Prism.highlightAll();
-	} catch (err) { alert('Format error: ' + err); }
+	} catch (err) {
+		if (silent === true) console.warn('Auto-format of the Query Store SQL Text failed, showing it as-is: ' + err);
+		else                 alert('Format error: ' + err);
+	}
 }
 
 function queryStoreShowMsg(msg)

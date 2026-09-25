@@ -261,7 +261,12 @@ var dbxLlmAdvice = (function () {
 		var formatted = sql;
 		if (typeof window.sqlFormatter !== 'undefined' && typeof window.sqlFormatter.format === 'function')
 		{
-			try { formatted = window.sqlFormatter.format(sql, { language: sqlFormatterDialect(dbVendor), keywordCase: 'upper' }); }
+			try {
+				// Same user SQL Format options as the Format SQL buttons, when dbxSqlFormat.js is on the page
+				formatted = window.dbxSqlFormat
+					? window.dbxSqlFormat.format(sql, sqlFormatterDialect(dbVendor))
+					: window.sqlFormatter.format(sql, { language: sqlFormatterDialect(dbVendor), keywordCase: 'upper', functionCase: 'upper', dataTypeCase: 'upper' });
+			}
 			catch (e) { console.warn('dbxLlmAdvice: sqlFormatter.format() failed, showing SQL as-is: ' + e.message); }
 		}
 

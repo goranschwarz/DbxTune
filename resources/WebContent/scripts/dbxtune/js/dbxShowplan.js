@@ -6,7 +6,7 @@
  *
  * Dependencies (loaded before this file):
  *   jQuery, Bootstrap 4, Vue 3 + pev2, QP (html-query-plan), Panzoom,
- *   sqlFormatter, Prism
+ *   sqlFormatter, dbxSqlFormat (shared Format SQL options), Prism
  *
  * Global functions exposed:
  *   pgShowplanGetSql(), pgShowplanFormatSql(), pgShowplanCopySql(),
@@ -32,6 +32,39 @@
 	function escapeHtml(s) {
 		if (s == null) return '';
 		return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+	}
+
+	// The ⚙ "SQL Format options" button next to each Format SQL button (see dbxSqlFormat.js). Empty if
+	// dbxSqlFormat.js is not loaded on the page, rather than breaking the whole dialog injection.
+	function _sqlFmtBtn(hostId, applyFnName, style) {
+		return window.dbxSqlFormat ? window.dbxSqlFormat.settingsButtonHtml(hostId, applyFnName, style) : '';
+	}
+
+	// Formats the SQL in one of the dialogs' SQL Text blocks. silent=true is the auto-format-on-open
+	// path: SQL text that sql-formatter cannot parse is then left as-is (console warning) instead of an
+	// alert() popping up every time the dialog opens.
+	function _formatSqlBlock(elemId, language, silent, preFn) {
+		var $el     = $('#' + elemId);
+		var sqlText = $el.text();
+		if (preFn) sqlText = preFn(sqlText);
+		// paramTypes.positional tells sql-formatter that a bare "?" is a valid positional parameter
+		// placeholder (JDBC-style) rather than a syntax error - without it, any captured SQL text
+		// containing "?" throws a parse error here instead of formatting.
+		var opts = { paramTypes: { positional: true } };
+		try {
+			$el.text(window.dbxSqlFormat
+				? window.dbxSqlFormat.format(sqlText, language, opts)
+				: sqlFormatter.format(sqlText, $.extend({ language: language, tabWidth: 4, keywordCase: 'upper', functionCase: 'upper', dataTypeCase: 'upper' }, opts)));
+			if (typeof Prism !== 'undefined') Prism.highlightAll();
+		} catch (err) {
+			if (silent) console.warn('Auto-format of the SQL Text failed, showing it as-is: ' + err);
+			else        alert(err);
+		}
+	}
+
+	// Auto-format (a SQL Format option, default off) right after a dialog has been given new SQL text.
+	function _autoFormatSql(formatFn) {
+		if (window.dbxSqlFormat && window.dbxSqlFormat.isAutoFormat()) formatFn(true);
 	}
 
 	// The Panzoom target (#dbx-view-ssShowplan-content / #dbx-view-aseShowplan-graphContent) is a
@@ -238,6 +271,8 @@
 			"					<br>",
 			"					<button type='button' class='btn btn-outline-secondary btn-sm' onclick='$(\"#dbx-view-pgShowplan-sqlContent\").toggle();'>Hide/Show Below SQL Text</button>",
 			"					<button type='button' class='btn btn-outline-secondary btn-sm' onclick='pgShowplanFormatSql();'>Format Below SQL Text</button>",
+			_sqlFmtBtn('dbx-view-pgShowplan-sqlFmtPanel', 'pgShowplanFormatSql', ''),
+			"					<div id='dbx-view-pgShowplan-sqlFmtPanel'></div>",
 			"					<pre><code id='dbx-view-pgShowplan-sqlContent' class='language-sql line-numbers dbx-view-sqltext-content'></code></pre>",
 			"					<button type='button' class='btn btn-outline-secondary btn-sm' onclick='$(\"#dbx-view-pgShowplan-planContent\").toggle();'>Hide/Show Below Plan Text</button>",
 			"					<pre><code id='dbx-view-pgShowplan-planContent' class='language-json line-numbers dbx-view-sqltext-content'></code></pre>",
@@ -355,6 +390,8 @@
 			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128196; SQL Text</summary>",
 			"					<div style='padding:4px 8px 8px 8px;'>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='ssShowplanFormatSql();'>Format SQL</button>",
+			_sqlFmtBtn('dbx-view-ssShowplan-sqlFmtPanel', 'ssShowplanFormatSql', 'margin-bottom:4px;'),
+			"						<div id='dbx-view-ssShowplan-sqlFmtPanel'></div>",
 			"						<div style='position:relative;'>",
 			"							<button onclick='dbxCopyCodeBlock(\"dbx-view-ssShowplan-sqlContent\");' style='position:absolute;right:6px;top:6px;z-index:10;font-size:0.75em;padding:1px 8px;cursor:pointer;background:#f0f0f0;border:1px solid #bbb;border-radius:3px;opacity:0.85;'>Copy</button>",
 			"							<pre><code id='dbx-view-ssShowplan-sqlContent' class='language-sql line-numbers dbx-view-sqltext-content'></code></pre>",
@@ -364,7 +401,7 @@
 
 			"				<!-- ▶ Parameters -->",
 			"				<details id='dbx-ssp-sect-params' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
-			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#9881;&#65039; Parameters</summary>",
+			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#9881;&#65039; Parameters<span id='dbx-ssp-params-summary-info' style='font-weight:normal;color:#888;'></span></summary>",
 			"					<div style='padding:4px 8px 8px 8px;'>",
 			"						<div id='dbx-ssp-no-params' style='display:none;color:#888;font-size:0.85em;'>No parameters in this plan.</div>",
 			"						<div id='dbx-ssp-compile-block'>",
@@ -554,7 +591,9 @@
 			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128196; SQL Text</summary>",
 			"					<div style='padding:4px 8px 8px 8px;'>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='aseShowplanFormatSql();'>Format SQL</button>",
+			_sqlFmtBtn('dbx-view-aseShowplan-sqlFmtPanel', 'aseShowplanFormatSql', 'margin-bottom:4px;'),
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='dbxCopyCodeBlock(\"dbx-view-aseShowplan-sqlContent\");'>Copy SQL</button>",
+			"						<div id='dbx-view-aseShowplan-sqlFmtPanel'></div>",
 			"						<pre><code id='dbx-view-aseShowplan-sqlContent' class='language-sql line-numbers dbx-view-sqltext-content'></code></pre>",
 			"					</div>",
 			"				</details>",
@@ -809,16 +848,8 @@
 		return sqlText;
 	};
 
-	window.pgShowplanFormatSql = function () {
-		// paramTypes.positional tells sql-formatter that a bare "?" is a valid positional parameter
-		// placeholder (JDBC-style) rather than a syntax error - without it, any captured SQL text
-		// containing "?" throws a parse error here instead of formatting.
-		var formatOptions = { language: 'postgresql', tabWidth: 4, keywordCase: 'upper', tabulateAlias: true, paramTypes: { positional: true } };
-		var sqlText = $('#dbx-view-pgShowplan-sqlContent').text();
-		try {
-			$('#dbx-view-pgShowplan-sqlContent').text(sqlFormatter.format(sqlText, formatOptions));
-			Prism.highlightAll();
-		} catch (err) { alert(err); }
+	window.pgShowplanFormatSql = function (silent) {
+		_formatSqlBlock('dbx-view-pgShowplan-sqlContent', 'postgresql', silent === true);
 	};
 
 	window.pgShowplanOpenExternal = function () {
@@ -919,15 +950,8 @@
 			document.getElementById('dbx-view-ssShowplan-content'), true /* align top-left */);
 	};
 
-	window.ssShowplanFormatSql = function () {
-		// See the matching comment on pgShowplanFormatSql() - without paramTypes.positional, a bare
-		// "?" in the captured SQL throws a parse error here instead of formatting.
-		var formatOptions = { language: 'tsql', tabWidth: 4, keywordCase: 'upper', tabulateAlias: true, paramTypes: { positional: true } };
-		var sqlText = $('#dbx-view-ssShowplan-sqlContent').text();
-		try {
-			$('#dbx-view-ssShowplan-sqlContent').text(sqlFormatter.format(sqlText, formatOptions));
-			Prism.highlightAll();
-		} catch (err) { alert(err); }
+	window.ssShowplanFormatSql = function (silent) {
+		_formatSqlBlock('dbx-view-ssShowplan-sqlContent', 'tsql', silent === true);
 	};
 
 	window.ssShowplanOpenExternal = function () {
@@ -1348,15 +1372,8 @@
 		}
 	}
 
-	window.aseShowplanFormatSql = function () {
-		// See the matching comment on pgShowplanFormatSql() - without paramTypes.positional, a bare
-		// "?" in the captured SQL throws a parse error here instead of formatting.
-		var formatOptions = { language: 'tsql', tabWidth: 4, keywordCase: 'upper', tabulateAlias: true, paramTypes: { positional: true } };
-		var sqlText = _aseStripDynamicSqlWrapper($('#dbx-view-aseShowplan-sqlContent').text());
-		try {
-			$('#dbx-view-aseShowplan-sqlContent').text(sqlFormatter.format(sqlText, formatOptions));
-			Prism.highlightAll();
-		} catch (err) { alert(err); }
+	window.aseShowplanFormatSql = function (silent) {
+		_formatSqlBlock('dbx-view-aseShowplan-sqlContent', 'tsql', silent === true, _aseStripDynamicSqlWrapper);
 	};
 
 	window.aseShowplanCopySql = function () {
@@ -1539,6 +1556,7 @@
 		$planEl.text(isXml ? formatXml(planText) : _aseStripHtmlWrapper(planText));
 		$planEl.attr('class', isXml ? 'language-xml line-numbers dbx-view-sqltext-content' : 'line-numbers dbx-view-sqltext-content');
 		$('#dbx-view-aseShowplan-sqlContent', $dlg).text(_aseStripHtmlWrapper(sqlText) || '');
+		_autoFormatSql(aseShowplanFormatSql);
 		_aseShowplanSelectedPlanIndex = 0; // new plan loaded - default back to the worst-total-time one
 		// NOT rendered here if the dialog isn't already open - see the matching, more detailed
 		// comment on the show.bs.modal handler above: measuring box positions/sizes against a still-
@@ -1643,6 +1661,12 @@
 			$noParams.show();
 		}
 
+		// Say it in the (collapsed) header too, so nobody has to expand the section to find it empty
+		var info = [];
+		if (compileArr.length > 0) info.push(compileArr.length + ' compile');
+		if (runtimeArr.length > 0) info.push(runtimeArr.length + ' runtime');
+		$('#dbx-ssp-params-summary-info').text(hasAny ? ' (' + info.join(', ') + ')' : ' (none)');
+
 		// Always show the Parameters section; collapse it so the user opens on demand
 		$paramSect.show();
 		$paramSect[0].open = false;
@@ -1654,12 +1678,16 @@
 		$(xmlDoc).find('ParameterList').find('ColumnReference').each(function (i, e) {
 			var paramName  = e.getAttribute('Column');
 			var paramValue = '-unknown-';
+			if (!paramName) return;
 			if (paramType === 'compile' && e.hasAttribute('ParameterCompiledValue')) paramValue = e.getAttribute('ParameterCompiledValue');
 			if (paramType === 'runtime' && e.hasAttribute('ParameterRuntimeValue'))  paramValue = e.getAttribute('ParameterRuntimeValue');
+			// Whole names only - a plain replaceAll('@P1', ...) also hit the start of @P10, @P11, ...
+			// Replacer function, so a '$' in the value is not taken as a replacement pattern ($&, $1).
+			var nameRe  = new RegExp(paramName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![\\w@#$])', 'g');
 			var sqlText = $('#dbx-view-ssShowplan-sqlContent').text();
-			$('#dbx-view-ssShowplan-sqlContent').text(sqlText.replaceAll(paramName, paramValue));
-			Prism.highlightAll();
+			$('#dbx-view-ssShowplan-sqlContent').text(sqlText.replace(nameRe, function () { return paramValue; }));
 		});
+		Prism.highlightAll();
 	};
 
 	// -------------------------------------------------------------------------
@@ -1834,6 +1862,7 @@ function _initGlobalEscClose() {
 			$('#dbx-view-pgShowplan-objectName',  this).text(data.objectname);
 			$('#dbx-view-pgShowplan-planContent', this).text(data.tooltip);
 			pgShowplanGetSql(data.tooltip, true);
+			_autoFormatSql(pgShowplanFormatSql);
 		});
 
 		// Postgres: mount PEV2 Vue component after modal is visible
@@ -1901,6 +1930,7 @@ function _initGlobalEscClose() {
 			$('#dbx-view-ssShowplan-analysis',   this).hide();
 			$('#dbx-view-ssShowplan-xmlContent', this).text(formatXml(data.tooltip));
 			$('#dbx-view-ssShowplan-sqlContent', this).text(ssShowplanGetSql(data.sqltext));
+			_autoFormatSql(ssShowplanFormatSql);
 			ssShowplanSetPlanType(data.tooltip);
 			ssShowplanGetParameters();
 			_ssShowplanDisableZoom();
@@ -2104,6 +2134,7 @@ function _initGlobalEscClose() {
 			$planEl.text(isXml ? formatXml(data.plan) : _aseStripHtmlWrapper(data.plan));
 			$planEl.attr('class', isXml ? 'language-xml line-numbers dbx-view-sqltext-content' : 'line-numbers dbx-view-sqltext-content');
 			$('#dbx-view-aseShowplan-sqlContent', this).text(_aseStripHtmlWrapper(data.sqltext) || '');
+			_autoFormatSql(aseShowplanFormatSql);
 			// NOT rendered here - show.bs.modal fires before the modal is actually visible (still
 			// display:none / mid-transition), so #dbx-view-aseShowplan-graphContent measures as
 			// zero-size at this point: tucking positions everything from bogus offsets (overlapping
@@ -2623,6 +2654,7 @@ function _initGlobalEscClose() {
 		$('#dbx-view-ssShowplan-analysis',   $dlg).hide();
 		$('#dbx-view-ssShowplan-xmlContent', $dlg).text(formatXml(xmlText));
 		$('#dbx-view-ssShowplan-sqlContent', $dlg).text(ssShowplanGetSql(sqlText || ''));
+		_autoFormatSql(ssShowplanFormatSql);
 		ssShowplanSetPlanType(xmlText);
 		ssShowplanGetParameters();
 		_ssShowplanDisableZoom();

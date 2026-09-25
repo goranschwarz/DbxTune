@@ -98,7 +98,8 @@ extends HttpServlet
 				"    <script src='/scripts/dbxtune/js/dbxLlmAdvice.js'></script> \n" +
 				HtmlUtils.createCssLinkTag("/scripts/prism/prism-1.30.0.css") +
 				HtmlUtils.createJsScriptTag("/scripts/prism/prism-1.30.0.js") +
-				HtmlUtils.createJsScriptTag("/scripts/sql-formatter/12.1.3/sql-formatter.min.js") +
+				HtmlUtils.createJsScriptTag("/scripts/sql-formatter/15.9.0/sql-formatter.min.js") +
+				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxSqlFormat.js") +
 				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxShowplan.js") +
 				"</head> \n" +
 				" \n" +
@@ -442,7 +443,8 @@ extends HttpServlet
 				+ "    <script src='/scripts/dbxtune/js/dbxLlmAdvice.js'></script> \n"
 				+ HtmlUtils.createCssLinkTag("/scripts/prism/prism-1.30.0.css")
 				+ HtmlUtils.createJsScriptTag("/scripts/prism/prism-1.30.0.js")
-				+ HtmlUtils.createJsScriptTag("/scripts/sql-formatter/12.1.3/sql-formatter.min.js") +
+				+ HtmlUtils.createJsScriptTag("/scripts/sql-formatter/15.9.0/sql-formatter.min.js")
+				+ HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxSqlFormat.js") +
 
 				// The real dialog - everything this page used to hand-build (toolbar, zoom/pan, Table
 				// Information, LLM Advice/Preview, and the tooltip-clipping fight) lives here now; see
