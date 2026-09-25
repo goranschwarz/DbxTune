@@ -27,12 +27,14 @@
 			"				<button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'></button>",
 			"			</div>",
 			"			<div class='modal-body' style='overflow-x: auto;'>",
+			"				<div id='dbx-view-sqltext-sqlFmtPanel'></div>",
 			"				<div class='scroll-tree' style='width: 3000px;'>",
 			"					<pre><code id='dbx-view-sqltext-content' class='language-sql line-numbers dbx-view-sqltext-content'></code></pre>",
 			"				</div>",
 			"			</div>",
 			"			<div class='modal-footer'>",
 			"				<button type='button' class='btn btn-outline-secondary' onclick='sqlTextDialogFormatSQL();'>Format SQL Text</button>",
+			(window.dbxSqlFormat ? window.dbxSqlFormat.settingsButtonHtml('dbx-view-sqltext-sqlFmtPanel', 'sqlTextDialogFormatSQL', '', 'btn btn-outline-secondary') : ''),
 			"				<button type='button' class='btn btn-outline-secondary' onclick='sqlTextDialogCopySql();'>Copy SQL Text</button>",
 			"				&emsp;&emsp;&emsp;&emsp;&emsp;",
 			"				<button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>",
@@ -84,16 +86,14 @@
 		if (!ok) alert('Unable to copy to the clipboard - select the text and press Ctrl+C instead.');
 	};
 
-	window.sqlTextDialogFormatSQL = function () {
+	// silent=true is the auto-format-on-open path (a SQL Format option): a text sql-formatter cannot
+	// parse is then left as-is (console warning) instead of an alert() on every open.
+	window.sqlTextDialogFormatSQL = function (silent) {
 		var sqlDialect = $('#dbx-view-sqltext-sqlDialect').text();
 		if (sqlDialect === '') sqlDialect = 'tsql';
 
-		var formatOptions = {
-			language:      sqlDialect,
-			tabWidth:      4,
-			keywordCase:   'upper',
-			tabulateAlias: true
-		};
+		var language   = sqlDialect;
+		var extraOpts  = undefined;
 
 		var sqlText = $('#dbx-view-sqltext-content').text();
 
@@ -115,18 +115,15 @@
 			if (sp >= 0 && ep >= 0) {
 				isSybaseShowplan = true;
 				sqlText = sqlText.substring(sp + 1, ep);
-				formatOptions = {
-					language:      'tsql',
-					tabWidth:      4,
-					keywordCase:   'upper',
-					tabulateAlias: true,
-					paramTypes: { positional: true, numbered: [], named: ['@'] }
-				};
+				language  = 'tsql';
+				extraOpts = { paramTypes: { positional: true, numbered: [], named: ['@'] } };
 			}
 		}
 
 		try {
-			var formattedSqlText = sqlFormatter.format(sqlText, formatOptions);
+			var formattedSqlText = window.dbxSqlFormat
+				? window.dbxSqlFormat.format(sqlText, language, extraOpts)
+				: sqlFormatter.format(sqlText, $.extend({ language: language, tabWidth: 4, keywordCase: 'upper', functionCase: 'upper', dataTypeCase: 'upper' }, extraOpts));
 			if (isSybaseShowplan) {
 				var originTxt = $('#dbx-view-sqltext-content').text();
 				var newTxt    = originTxt.replace(sqlText, formattedSqlText);
@@ -136,7 +133,8 @@
 			}
 			Prism.highlightAll();
 		} catch (error) {
-			alert(error);
+			if (silent === true) console.warn('Auto-format of the SQL Text failed, showing it as-is: ' + error);
+			else                 alert(error);
 		}
 	};
 
@@ -149,6 +147,7 @@
 			$('#dbx-view-sqltext-objectName', this).text(data.objectname);
 			$('#dbx-view-sqltext-sqlDialect', this).text(data.sqldialect);
 			$('#dbx-view-sqltext-content',    this).text(data.tooltip);
+			if (window.dbxSqlFormat && window.dbxSqlFormat.isAutoFormat()) sqlTextDialogFormatSQL(true);
 			Prism.highlightAll();
 			$('#dbx-view-sqltext-dialog').animate({ scrollTop: 0 }, 'slow');
 		});

@@ -165,7 +165,8 @@ extends HttpServlet
 		}
 		out.println("</div>");
 		out.println();
-		out.println("<script src='/scripts/sql-formatter/12.1.3/sql-formatter.min.js'></script>");
+		out.println("<script src='/scripts/sql-formatter/15.9.0/sql-formatter.min.js'></script>");
+		out.println("<script src='/scripts/dbxtune/js/dbxSqlFormat.js'></script>");
 		out.println("<script src='/scripts/prism/prism-1.30.0.js'></script>");
 		out.println("<script src='/scripts/marked/18.0.5/marked.min.js'></script>");
 		out.println("<script src='/scripts/dompurify/3.4.11/purify.min.js'></script>");
