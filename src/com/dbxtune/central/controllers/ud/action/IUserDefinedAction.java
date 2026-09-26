@@ -161,7 +161,7 @@ public interface IUserDefinedAction
 
 	/**
 	 * Get a list of JavaScript libraries this module needs to load<br>
-	 * Example: list.add("https://www.gstatic.com/charts/loader.js");
+	 * Example: list.add("/scripts/dbxtune/js/dbxTimeline.js");
 	 * @return
 	 */
 	List<String> getJavaScriptList();

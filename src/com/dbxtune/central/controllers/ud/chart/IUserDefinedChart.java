@@ -118,8 +118,8 @@ public interface IUserDefinedChart
 	boolean isValid();
 
 	/**
-	 * Get a list of JavaScript libraries this module needs to load<br>
-	 * Example: list.add("https://www.gstatic.com/charts/loader.js");
+	 * Get a list of JavaScript libraries this module needs to load (a file ending with <code>.css</code> is added as a stylesheet)<br>
+	 * Example: list.add("/scripts/dbxtune/js/dbxTimeline.js");
 	 * @return
 	 */
 	List<String> getJavaScriptList();

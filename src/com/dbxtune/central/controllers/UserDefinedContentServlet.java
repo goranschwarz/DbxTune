@@ -197,7 +197,10 @@ extends HttpServlet
 		
 		for (String scriptLocation : udc.getJavaScriptList())
 		{
-			out.println("<script type='text/javascript' src='" + scriptLocation + "'></script>");
+			if (scriptLocation.endsWith(".css"))
+				out.println("<link rel='stylesheet' href='" + scriptLocation + "'>");
+			else
+				out.println("<script type='text/javascript' src='" + scriptLocation + "'></script>");
 		}
 
 		out.println("<div class='container-fluid'>");

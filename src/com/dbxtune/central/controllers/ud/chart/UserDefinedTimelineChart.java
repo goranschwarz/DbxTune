@@ -42,6 +42,7 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.dbxtune.central.controllers.DbxTimelineRows;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
@@ -154,6 +155,8 @@ extends UserDefinedChartAbstract
 
 		map.put("onlyLevelZero",        "Only show Level Zero, this to get a high level overview of the executed work.<br>"
 		                                    + "<br>"
+		                                    + "If the SQL has a <code>parentKey</code> column, all rows are fetched and the nested rows start collapsed (click a row to expand it).<br>"
+		                                    + "Otherwise only rows where 'BarText' starts with <code>[0] </code> are shown.<br>"
 		                                    + "<b>Default</b>: <code>false</code>");
 
 		return map;
@@ -203,7 +206,9 @@ extends UserDefinedChartAbstract
 	{
 		List<String> list = new ArrayList<>();
 		
-		list.add("https://www.gstatic.com/charts/loader.js");
+		// Timeline chart: vis-timeline + dbxTimeline.js (replaced the Google Charts Timeline, which needs internet access)
+		list.addAll(DbxTimelineRows.JAVASCRIPT_LIST);
+		list.addAll(DbxTimelineRows.CSS_LIST);
 
 		return list;
 	}
@@ -339,6 +344,12 @@ extends UserDefinedChartAbstract
 		sb.append("Parameter Description:<br> \n");
 		sb.append(getParameterDescriptionHtmlTable());
 		sb.append("<br> \n");
+		sb.append("</div> \n");
+		sb.append("\n");
+
+		sb.append("<div id='resultset-description'> \n");
+		sb.append("ResultSet columns: 1=labelKey, 2=barText, 3=barColor, 4=startTime, 5=endTime, all other columns are shown in the tooltip.<br> \n");
+		sb.append("Optional column <code>parentKey</code>: the labelKey of the row this row is nested under (expand/collapse by clicking the parent row). \n");
 		sb.append("</div> \n");
 		sb.append("\n");
 
@@ -493,34 +504,22 @@ extends UserDefinedChartAbstract
 //				sb.append("        } \n");
 //				sb.append("</style> \n");
 
-				sb.append("<div id='timeline' style='height: 90%;'> \n");
+				sb.append("<div id='timeline' style='height: 85vh;'> \n");
 				sb.append("</div> \n");
 				sb.append("\n");
 
-				sb.append("<script> \n");
-				sb.append("    google.charts.load('current', {'packages':['timeline']});								\n");
-				sb.append("    google.charts.setOnLoadCallback(drawChart);												\n");
-				sb.append("    function drawChart()																		\n");
-				sb.append("    {																						\n");
-				sb.append("        var container = document.getElementById('timeline');									\n");
-				sb.append("        var chart = new google.visualization.Timeline(container);							\n");
-				sb.append("        var dataTable = new google.visualization.DataTable();								\n");
-				sb.append("																								\n");
-				sb.append("        dataTable.addColumn({ type: 'string', id: 'TextLabel' });							\n");
-				sb.append("        dataTable.addColumn({ type: 'string', id: 'BarText'   });							\n");
-				sb.append("        dataTable.addColumn({ type: 'string', role: 'style'   });	// bar color			\n");
-				if ( ! useDefaultTooltip )
+				// Optional column 'parentKey': nest this row under the row with that key
+				int parentKeyCol = -1;
+				for (int col = 6; col <= colCount; col++)
 				{
-					sb.append("        dataTable.addColumn({ type: 'string', role: 'tooltip' });							\n"); // This is if we want to produce our own tooltip
+					if ("parentKey".equalsIgnoreCase(rsmd.getColumnLabel(col)))
+						parentKeyCol = col;
 				}
-				sb.append("        dataTable.addColumn({ type: 'date', id: 'Start' });									\n");
-				sb.append("        dataTable.addColumn({ type: 'date', id: 'End' });									\n");
-				sb.append("        dataTable.addRows([																	\n");
 
-				String udTooltip = "";
+				// All rows (bars) for DbxTimeline, see DbxTimelineRows and /scripts/dbxtune/js/dbxTimeline.js
+				List<Map<String, Object>> rows = new ArrayList<>();
 
 				Timestamp maxTs          = null;
-				String    prefix         = " ";
 				Timestamp prevRowStartTs = null;
 				Timestamp prevRowEndTs   = null;
 
@@ -535,13 +534,16 @@ extends UserDefinedChartAbstract
 					Timestamp startTs = rs.getTimestamp(4);
 					Timestamp endTs   = rs.getTimestamp(5);
 
-					// Columns above FIVE will be added as tooltip values
+					// Columns above FIVE will be added as tooltip values (except 'parentKey')
 					Map<String, String> extraColumns = null;
 					if (colCount > 5)
 					{
 						extraColumns = new LinkedHashMap<>();
 						for (int col = 6; col <= colCount; col++)
 						{
+							if (col == parentKeyCol)
+								continue;
+
 							String colName = rsmd.getColumnLabel(col);
 							String colVal  = rs.getString(col);
 
@@ -549,6 +551,7 @@ extends UserDefinedChartAbstract
 								extraColumns.put(colName, colVal);
 						}
 					}
+					String parentKey = parentKeyCol > 0 ? rs.getString(parentKeyCol) : null;
 					
 					if (startTs == null)
 						startTs = prevRowEndTs;
@@ -587,7 +590,8 @@ extends UserDefinedChartAbstract
 					prevRowEndTs   = endTs;
 
 					// If the "onlyLevelZero", the "barText" must start with "[0] "
-					if (onlyLevelZero)
+					// But with a 'parentKey' column, all rows are sent (and the nested rows start collapsed)
+					if (onlyLevelZero && parentKeyCol < 0)
 					{
 						if ( ! barText.startsWith("[0] ") )
 							continue;
@@ -623,17 +627,18 @@ extends UserDefinedChartAbstract
 
 					// Change/transform the 'key' so we possibly can group "collapse" several rows (sub-tasks) on 1 row
 					if (StringUtil.hasValue(keyTransformFrom))
+					{
 						labelKey = labelKey.replaceAll(keyTransformFrom, keyTransformTo);
-					
-					udTooltip = createUserDefinedTooltip(useDefaultTooltip, labelKey, barText, startTs, endTs, extraColumns);
-					labelKey  = escapeJsQuote(labelKey);
-					barText   = escapeJsQuote(barText);
-					
-					// TODO: is there some way we can set background color.. If it's a "FULL JOB" it would be nice to a have a different BG color
+						if (parentKey != null)
+							parentKey = parentKey.replaceAll(keyTransformFrom, keyTransformTo);
+					}
 
-//					sb.append("                          [ 'label', 'barText', 'green', new Date(2020,10,20, 14,1,1), new Date(2020,10,20, 14,1,2) ] \n");
-					sb.append("            " + prefix + "[ '" + labelKey + "', '" + barText + "', '" + barColor + "', " + udTooltip + " new Date('" + sdf.format(startTs) + "'), new Date('" + sdf.format(endTs) + "') ] \n");
-					prefix = ",";
+					String tooltip = createUserDefinedTooltip(useDefaultTooltip, labelKey, barText, startTs, endTs, extraColumns);
+
+					Map<String, Object> row = DbxTimelineRows.createRow(labelKey, barText, barColor, tooltip, startTs, endTs);
+					if (StringUtil.hasValue(parentKey))
+						row.put("parentKey", parentKey);
+					rows.add(row);
 
 					// Remember MAX TS, used if we need to "fillEnd"
 					if (maxTs == null)
@@ -650,27 +655,24 @@ extends UserDefinedChartAbstract
 				{
 					if (maxTs == null)
 					{
-						Timestamp startTs = _startTime;
-						Timestamp endTs   = _endTime;
-						udTooltip = createUserDefinedTooltip(useDefaultTooltip, noActivityLabel, noActivityLabel, startTs, endTs, null);
 						// NO Activity -- FULL Period
-						sb.append("            " + prefix + "[ '" + noActivityLabel + "', '" + noActivityLabel + "', '" + noActivityColor + "', " + udTooltip + " new Date('" + sdf.format(startTs) + "'), new Date('" + sdf.format(endTs) + "') ] \n");
+						String tooltip = createUserDefinedTooltip(useDefaultTooltip, noActivityLabel, noActivityLabel, _startTime, _endTime, null);
+						rows.add(DbxTimelineRows.createRow(noActivityLabel, noActivityLabel, noActivityColor, tooltip, _startTime, _endTime));
 					}
 					else
 					{
 						Timestamp startTs = maxTs;
 						Timestamp endTs   = new Timestamp(System.currentTimeMillis());
-						udTooltip = createUserDefinedTooltip(useDefaultTooltip, noActivityLabel, noActivityLabel, startTs, endTs, null);
 
 						// Only write "end-filler" if it's more than 10 seconds
 						long tsDiffMs = endTs.getTime() - startTs.getTime();
 						if (tsDiffMs > 10_000)
 						{
 							// NO Activity -- AT THE END
-							sb.append("            " + prefix + "[ '" + noActivityLabel + "', '" + noActivityLabel + "', '" + noActivityColor + "', " + udTooltip + " new Date('" + sdf.format(startTs) + "'), new Date('" + sdf.format(endTs) + "') ] \n");
+							String tooltip = createUserDefinedTooltip(useDefaultTooltip, noActivityLabel, noActivityLabel, startTs, endTs, null);
+							rows.add(DbxTimelineRows.createRow(noActivityLabel, noActivityLabel, noActivityColor, tooltip, startTs, endTs));
 						}
 					}
-					prefix = ",";
 				}
 
 				if (generateDummyRows > 0)
@@ -681,8 +683,6 @@ extends UserDefinedChartAbstract
 
 					Timestamp startTs = null;
 					Timestamp endTs   = null;
-
-					udTooltip = useDefaultTooltip ? "" : "'dummy tooltip', ";
 
 					for (int r = 1; r <= generateDummyRows; r++)
 					{
@@ -698,131 +698,37 @@ extends UserDefinedChartAbstract
 							endTs   = new Timestamp(startTs.getTime() + dummyTime);
 						}
 
-						udTooltip = createUserDefinedTooltip(useDefaultTooltip, dummyLabel, dummyLabel, startTs, endTs, null);
-
-						sb.append("            " + prefix + "[ '" + tmpDummyLabel + "', '" + tmpDummyLabel + "', '" + dummyColor + "', " + udTooltip + " new Date('" + sdf.format(startTs) + "'), new Date('" + sdf.format(endTs) + "') ] \n");
-						
-						prefix = ",";
+						String tooltip = createUserDefinedTooltip(useDefaultTooltip, dummyLabel, dummyLabel, startTs, endTs, null);
+						rows.add(DbxTimelineRows.createRow(tmpDummyLabel, tmpDummyLabel, dummyColor, tooltip, startTs, endTs));
 					}
-					
 				}
 
-				// END_OF: dataTable.addRows([
-				sb.append("        ]);																					\n");
-
-				
-				sb.append("																								\n");
-				sb.append("        google.visualization.events.addListener(chart, 'ready', function() {					\n");
-				sb.append("            console.log('DONE: Loading chart-timeline, now scrolling to bottom...');			\n");
-				sb.append("            scrollToBottom('timeline');														\n");
-				sb.append("        });																					\n");
-				sb.append("																								\n");
-				sb.append("        // https://almende.github.io/chap-links-library/js/timeline/doc/						\n");
-				sb.append("        var options = 																		\n");
-				sb.append("        {																					\n");
-				sb.append("            timeline: { 																		\n");
-				sb.append("                showRowLabels: " + showKeys + "												\n");
-				sb.append("            } 																				\n");
-//				sb.append("            timeline: { singleColor: '#8d8' },												\n");
-//				sb.append("            width: '100%',																	\n");
-//				sb.append("            height: '100%'																	\n");
-				sb.append("        };																					\n");
-				sb.append("																								\n");
-				sb.append("        chart.draw(dataTable, options);														\n");
-				sb.append("    }																						\n");
-				sb.append("																								\n");
-				sb.append("    function changeAutoscroll() {															\n");
-				sb.append("       var div = document.getElementById('autoscroll-to-bottom');							\n");
-				sb.append("       var storedData = getStorage('dbxtune_checkboxes_');									\n");
-				sb.append("       storedData.set('autoscroll-to-bottom', div.checked);									\n");
-				sb.append("																								\n");
-				sb.append("       console.log('changeAutoscroll: ' + div.checked);										\n");
-				sb.append("    }																						\n");
-				sb.append("																								\n");
-				sb.append("																								\n");
-				sb.append("    function recursiveScrollToTopOrBottom(element, to, level, maxLevel)						\n");
-				sb.append("    {                                                                                        \n");
-				sb.append("        level = level + 1;                                                                   \n");
-				sb.append("        if (level > maxLevel)                                                                \n");
-				sb.append("            return;                                                                          \n");
-				sb.append("        var childArr = element.children;                                                     \n");
-				sb.append("        if (childArr.length > 0)                                                             \n");
-				sb.append("        {                                                                                    \n");
-				sb.append("            for (var child of childArr)                                                      \n");
-				sb.append("            {                                                                                \n");
-//				sb.append("//              if (child.css('overflow-y') == 'scroll' || child.css('overflow-y') == 'auto')                        \n");
-//				sb.append("//              if ( (child.scrollHeight > child.clientHeight) && ('hidden' !== getComputedStyle(child).overflowY) )	\n");
-				sb.append("                if ( (child.scrollHeight > child.clientHeight) )                                                     \n");
-				sb.append("                {                                                                                                    \n");
-				sb.append("                    console.log('Scroll to ' + to + ': level[' + level + '], child='+child, child);                  \n");
-				sb.append("                    if (to === 'top')                                                        \n");
-				sb.append("                        child.scrollTop = 0;                                                 \n");
-				sb.append("                    else                                                                     \n");
-				sb.append("                        child.scrollTop = child.scrollHeight - child.clientHeight;           \n");
-//				sb.append("					                                                                            \n");
-//				sb.append("//                  break;                                                                   \n");
-				sb.append("                }                                                                            \n");
-				sb.append("				                                                                                \n");
-				sb.append("                recursiveScrollToTopOrBottom(child, to, level, maxLevel);                    \n");
-				sb.append("            }                                                                                \n");
-				sb.append("        }                                                                                    \n");
-				sb.append("    }                                                                                        \n");
-				sb.append("                                                                                             \n");
-				sb.append("																								\n");
-//				sb.append("    function scrollToBottom (id) {															\n");
-//				sb.append("       var div = document.getElementById(id);												\n");
-////				sb.append("       div.scrollIntoView({behavior: 'smooth', block: 'end', inline: 'nearest'});			\n");
-//				sb.append("       div.scrollTop = div.scrollHeight - div.clientHeight;									\n");
-//				sb.append("       console.log('Scroll to BOTTOM: ' + id);												\n");
-//				sb.append("    }																						\n");
-//				sb.append("    																							\n");
-//				sb.append("    function scrollToTop (id) {																\n");
-//				sb.append("       var div = document.getElementById(id);												\n");
-////				sb.append("       div.scrollIntoView({behavior: 'smooth', block: 'start', inline: 'nearest'});			\n");
-//				sb.append("       div.scrollTop = 0;													 				\n");
-//				sb.append("       console.log('Scroll to TOP: ' + id);													\n");
-//				sb.append("    }																						\n");
-				sb.append("    																							\n");
-				sb.append("    function scrollToBottom (id) {															\n");
-				sb.append("       var elem = document.getElementById(id);												\n");
-				sb.append("       recursiveScrollToTopOrBottom(elem, 'bottom', -1, 3);									\n");
-				sb.append("    }																						\n");
-				sb.append("    																							\n");
-				sb.append("    function scrollToTop (id) {																\n");
-				sb.append("       var elem = document.getElementById(id);												\n");
-				sb.append("       recursiveScrollToTopOrBottom(elem, 'top', -1, 3);										\n");
-				sb.append("    }																						\n");
-				sb.append("    																							\n");
-				sb.append("    function copyExecutedSql() {																\n");
-				sb.append("       var sqlText = document.getElementById('executed_sql').textContent;					\n");
-				sb.append("																								\n");
-				sb.append("       const textArea = document.createElement('textarea');									\n");
-				sb.append("       textArea.value = sqlText;																\n");
-				sb.append("       document.body.appendChild(textArea);													\n");
-				sb.append("       textArea.select();																	\n");
-				sb.append("       try {																					\n");
-				sb.append("       	document.execCommand('copy');														\n");
-				sb.append("       } catch (err) {																		\n");
-				sb.append("       	alert('Unable to copy to clipboard' + err);											\n");
-				sb.append("       }																						\n");
-				sb.append("       document.body.removeChild(textArea);													\n");
-				sb.append("																								\n");
-				sb.append("       console.log('copyExecutedSql: ' + sqlText);											\n");
-				sb.append("    }																						\n");
-				sb.append("																								\n");
-				sb.append("    // do-deferred: Scroll to bottom of 'timeline'											\n");
-				sb.append("																								\n");
-				sb.append("    setTimeout(function() {																	\n");
-				sb.append("        var savedVal_autoscrollToBottom = getStorage('dbxtune_checkboxes_').get('autoscroll-to-bottom');		\n");
-				sb.append("        document.getElementById('autoscroll-to-bottom').checked = savedVal_autoscrollToBottom;				\n");
-				sb.append("        if (savedVal_autoscrollToBottom) {													\n");
-				sb.append("            scrollToBottom('timeline');														\n");
-				sb.append("        }																					\n");
-				sb.append("    }, 200);																					\n");
-				sb.append("																								\n");
-//				sb.append("    if (document.getElementById('autoscroll-to-bottom').checked)	{							\n");
-//				sb.append("        setTimeout(function() { scrollToBottom('timeline') }, 100);							\n");
-//				sb.append("    }																						\n");
+				sb.append("<script> \n");
+				sb.append("    // All rows, see /scripts/dbxtune/js/dbxTimeline.js \n");
+				sb.append("    const _dbxTimelineRows = " + DbxTimelineRows.toScriptJson(rows) + "; \n");
+				sb.append("\n");
+				sb.append("    const _dbxTimeline = DbxTimeline.create('timeline', _dbxTimelineRows, { \n");
+				sb.append("        start:          " + DbxTimelineRows.toJsTs(_startTime) + ", \n");
+				sb.append("        end:            " + DbxTimelineRows.toJsTs(_endTime)   + ", \n");
+				sb.append("        startExpanded:  " + (!onlyLevelZero) + ", \n");
+				sb.append("        showKeys:       " + showKeys + ", \n");
+				sb.append("        scrollToBottom: true \n");
+				sb.append("    }); \n");
+				sb.append("\n");
+				sb.append("    function scrollToBottom(id) { _dbxTimeline.scrollToBottom(); } \n");
+				sb.append("    function scrollToTop(id)    { _dbxTimeline.scrollToTop();    } \n");
+				sb.append("\n");
+				sb.append("    function changeAutoscroll() { \n");
+				sb.append("       var div = document.getElementById('autoscroll-to-bottom'); \n");
+				sb.append("       getStorage('dbxtune_checkboxes_').set('autoscroll-to-bottom', div.checked); \n");
+				sb.append("    } \n");
+				sb.append("\n");
+				sb.append("    function copyExecutedSql() { \n");
+				sb.append("       DbxTimeline.copyToClipboard(document.getElementById('executed_sql').textContent); \n");
+				sb.append("    } \n");
+				sb.append("\n");
+				sb.append("    // Restore the 'autoscroll-to-bottom' checkbox (the chart is always scrolled to the bottom when loaded) \n");
+				sb.append("    document.getElementById('autoscroll-to-bottom').checked = getStorage('dbxtune_checkboxes_').get('autoscroll-to-bottom'); \n");
 				sb.append("</script> \n");
 			}
 		}
@@ -839,7 +745,7 @@ extends UserDefinedChartAbstract
 	private String createUserDefinedTooltip(boolean useDefaultTooltip, String label, String barText, Timestamp startTs, Timestamp endTs, Map<String, String> extraColumns)
 	{
 		if (useDefaultTooltip)
-			return "";
+			return null;
 		
 		SimpleDateFormat ymd       = new SimpleDateFormat("yyyy-MM-dd");
 		SimpleDateFormat hms       = new SimpleDateFormat("HH:mm:ss");
@@ -932,7 +838,7 @@ extends UserDefinedChartAbstract
 				+ "<br>"
 				+ "</div>";
 		
-		return "'" + escapeJsQuote(tooltip) + "', ";
+		return tooltip;
 	}
 
 	/**
