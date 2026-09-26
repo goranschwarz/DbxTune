@@ -1675,7 +1675,7 @@ extends DbxCentralPageTemplate
 					{
 						// NO Activity -- FULL Period
 						String tooltip = createUserDefinedTooltip(useDefaultTooltip, noActivityLabel, noActivityLabel, startTime, endTime, null);
-						rows.add(DbxTimelineRows.createRow(noActivityLabel, noActivityLabel, noActivityColor, tooltip, startTime, endTime));
+						rows.add(DbxTimelineRows.sortLast(DbxTimelineRows.createRow(noActivityLabel, noActivityLabel, noActivityColor, tooltip, startTime, endTime)));
 					}
 					else
 					{
@@ -1688,7 +1688,7 @@ extends DbxCentralPageTemplate
 						{
 							// NO Activity -- AT THE END
 							String tooltip = createUserDefinedTooltip(useDefaultTooltip, noActivityLabel, noActivityLabel, startTs, endTs, null);
-							rows.add(DbxTimelineRows.createRow(noActivityLabel, noActivityLabel, noActivityColor, tooltip, startTs, endTs));
+							rows.add(DbxTimelineRows.sortLast(DbxTimelineRows.createRow(noActivityLabel, noActivityLabel, noActivityColor, tooltip, startTs, endTs)));
 						}
 					}
 				}
@@ -1760,6 +1760,7 @@ extends DbxCentralPageTemplate
 				write(writer, "            { color: '#d1e7dd',    text: 'diff: faster than avg (>= " + _diffColorPct + "%)' },");
 				write(writer, "            { color: '#ffe5b4',    text: 'diff: slower than avg (>= " + _diffColorPct + "%)' }");
 				write(writer, "        ],");
+				write(writer, "        labelHeader:    { lane: 'Job / Step', exec: 'Start time, Job / Step' },");
 				write(writer, "        expandText:     'Show job steps',");
 				write(writer, "        collapseText:   'Hide job steps',");
 				write(writer, "        menuItems:      jobTimelineMenuItems");

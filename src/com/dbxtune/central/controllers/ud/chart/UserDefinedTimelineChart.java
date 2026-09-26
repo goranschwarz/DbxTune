@@ -598,7 +598,7 @@ extends UserDefinedChartAbstract
 					{
 						// NO Activity -- FULL Period
 						String tooltip = createUserDefinedTooltip(useDefaultTooltip, noActivityLabel, noActivityLabel, _startTime, _endTime, null);
-						rows.add(DbxTimelineRows.createRow(noActivityLabel, noActivityLabel, noActivityColor, tooltip, _startTime, _endTime));
+						rows.add(DbxTimelineRows.sortLast(DbxTimelineRows.createRow(noActivityLabel, noActivityLabel, noActivityColor, tooltip, _startTime, _endTime)));
 					}
 					else
 					{
@@ -611,7 +611,7 @@ extends UserDefinedChartAbstract
 						{
 							// NO Activity -- AT THE END
 							String tooltip = createUserDefinedTooltip(useDefaultTooltip, noActivityLabel, noActivityLabel, startTs, endTs, null);
-							rows.add(DbxTimelineRows.createRow(noActivityLabel, noActivityLabel, noActivityColor, tooltip, startTs, endTs));
+							rows.add(DbxTimelineRows.sortLast(DbxTimelineRows.createRow(noActivityLabel, noActivityLabel, noActivityColor, tooltip, startTs, endTs)));
 						}
 					}
 				}
