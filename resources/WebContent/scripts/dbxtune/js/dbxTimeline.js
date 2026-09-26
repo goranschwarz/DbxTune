@@ -21,6 +21,7 @@
  *                 exist the row is a top-level row.
  *     laneKey,    Optional. When ALL nested rows have these, a "Per job" view is offered: one row per
  *     laneSubKey  laneKey (all its top-level bars), expanded into one row per laneSubKey (all nested bars).
+ *                 "Per job" is then the default view (until the user picks another, see saveViewPref).
  *     laneSubOrder Optional number to sort the laneSubKey rows (for example the step id)
  *     failed      Optional boolean; counted in a red badge on the "Per job" rows
  *     Any other fields (jobId, stepId, ...) are passed back to the click callbacks.
@@ -33,9 +34,12 @@
  *     scrollToBottom    Scroll to the last row at start (default false)
  *     nowMarker         Show a vertical 'now' line (default true)
  *     smallFontRows     Use a smaller font when there are more rows than this (default 22)
- *     stateKey          Key for sessionStorage, to keep view + expanded rows over reloads/auto-refresh
- *                       (default: location.pathname + location.search)
+ *     stateKey          Key for sessionStorage, to keep the expanded rows over reloads/auto-refresh
+ *                       (default: location.pathname + location.search). The view (Per execution / Per job) is a
+ *                       browser wide preference in localStorage ('dbxtune_timeline_view').
  *     legend            Array of { color, text } shown as a color legend below the chart (default: none)
+ *     filter            Initial text for the toolbar's filter box (case insensitive "contains" on row/job/step names
+ *                       and bar texts; a matching nested row keeps its parent). Default: what was typed earlier in this tab.
  *     showClickDetails  Show the tooltip of the last clicked bar in a panel below the chart (default true)
  *
  * Clicking a bar or a row label opens a menu: expand/collapse (rows with nested rows), the page's own items, and
@@ -404,6 +408,26 @@ var DbxTimeline = (function () {
 		}
 	}
 
+	// The view ('exec' = Per execution, 'lane' = Per job) is a browser wide preference (localStorage),
+	// so it is the same in all tabs, dates and servers. The expanded rows are per tab + URL (sessionStorage).
+	var VIEW_PREF_KEY = 'dbxtune_timeline_view';
+	function loadViewPref()
+	{
+		try {
+			return window.localStorage.getItem(VIEW_PREF_KEY);
+		} catch (e) {
+			return null;
+		}
+	}
+	function saveViewPref(view)
+	{
+		try {
+			window.localStorage.setItem(VIEW_PREF_KEY, view);
+		} catch (e) {
+			// ignore (private mode, quota...)
+		}
+	}
+
 	//---------------------------------------------------------------------------------------------
 	// create
 	//---------------------------------------------------------------------------------------------
@@ -419,6 +443,7 @@ var DbxTimeline = (function () {
 			smallFontRows:  22,
 			stateKey:       null,
 			legend:         null,
+			filter:         null,
 			showClickDetails: true,
 			expandText:     'Show child rows',
 			collapseText:   'Hide child rows',
@@ -473,7 +498,10 @@ var DbxTimeline = (function () {
 			html += '<button type="button" class="btn btn-sm btn-outline-secondary" data-dbx-tl="expand-all">Expand all</button>'
 			     +  '<button type="button" class="btn btn-sm btn-outline-secondary" data-dbx-tl="collapse-all">Collapse all</button>';
 		}
-		html += '<button type="button" class="btn btn-sm btn-outline-secondary" data-dbx-tl="fit"  title="Show the whole period">Whole period</button>'
+		html += '<input type="search" class="form-control form-control-sm" data-dbx-tl-filter placeholder="Filter by name..." '
+		     +  '       title="Show only rows (jobs) whose name contains this text (case insensitive). Matching steps keep their job." style="width:200px; display:inline-block;">'
+		     +  '<span class="dbx-tl-filter-count text-muted" style="font-size:12px;"></span>'
+		     +  '<button type="button" class="btn btn-sm btn-outline-secondary" data-dbx-tl="fit"  title="Show the whole period">Whole period</button>'
 		     +  '<button type="button" class="btn btn-sm btn-outline-secondary" data-dbx-tl="last" title="Zoom in on the last 3 hours of the period">Last 3h</button>'
 		     +  '<span class="text-muted" style="font-size:12px;">Wheel: scroll rows, Ctrl+wheel: zoom, Shift+wheel or drag: move in time, click: menu, double click: show/hide nested rows</span>';
 		toolbar.innerHTML = html;
@@ -563,6 +591,22 @@ var DbxTimeline = (function () {
 			// Top-level order = order of first appearance, children right after their parent
 			var ordered = [];
 			var tops = list.filter(function (g) { return g.parentId == null; });
+
+			// Filter (search box): keep top rows where the row, one of its bars, or one of its nested rows matches
+			var allTopCount = tops.length;
+			if (filterText)
+			{
+				var f = filterText.toLowerCase();
+				var rowMatches = function (r) {
+					return [r.label, r.text, r.laneKey, r.laneSubKey].some(function (s) { return s != null && String(s).toLowerCase().indexOf(f) !== -1; });
+				};
+				var groupMatches = function (g) {
+					return String(g.label).toLowerCase().indexOf(f) !== -1 || g.rows.some(rowMatches);
+				};
+				tops = tops.filter(function (g) {
+					return groupMatches(g) || g.childIds.some(function (cid) { return groupMatches(groups[cid]); });
+				});
+			}
 			if (view === 'lane')
 			{
 				tops.forEach(function (g) {
@@ -578,7 +622,7 @@ var DbxTimeline = (function () {
 			});
 			ordered.forEach(function (g, i) { g.order = i; });
 
-			return { groups: groups, ordered: ordered, tops: tops };
+			return { groups: groups, ordered: ordered, tops: tops, allTopCount: allTopCount };
 		}
 
 		//-------------------------------------------------
@@ -586,7 +630,11 @@ var DbxTimeline = (function () {
 		var visGroups = new vis.DataSet();
 		var visItems  = new vis.DataSet();
 		var model     = null;
-		var view      = (hasLanes && state.view === 'lane') ? 'lane' : 'exec';
+		var view      = (hasLanes && loadViewPref() !== 'exec') ? 'lane' : 'exec'; // default: 'Per job' (when available)
+
+		// Filter text from the search box: the URL ('filter' option) wins over what was typed earlier in this tab
+		var filterText = (opts.filter != null && String(opts.filter).trim() !== '') ? String(opts.filter).trim() : (state.filter || '');
+		$(toolbar).find('[data-dbx-tl-filter]').val(filterText);
 		var expanded  = {};  // groupId -> true
 		var itemSeq   = 0;
 		var itemRow   = {};  // visItemId -> row
@@ -663,6 +711,12 @@ var DbxTimeline = (function () {
 
 			var visibleRows = groupsToAdd.length;
 			container.classList.toggle('dbx-tl-small', opts.smallFontRows > 0 && visibleRows > opts.smallFontRows);
+
+			// Filter: "N of M" (and highlight the box while a filter is active)
+			var countEl = toolbar.querySelector('.dbx-tl-filter-count');
+			if (countEl)
+				countEl.textContent = filterText ? (model.tops.length + ' of ' + model.allTopCount + (view === 'lane' ? ' jobs' : ' rows')) : '';
+			$(toolbar).find('[data-dbx-tl-filter]').toggleClass('border-primary', !!filterText);
 
 			// Toolbar: active view
 			$(toolbar).find('[data-dbx-tl=view-exec]').toggleClass('active', view === 'exec');
@@ -741,7 +795,7 @@ var DbxTimeline = (function () {
 
 		function persist()
 		{
-			var s = { view: view, expanded: {} };
+			var s = { expanded: {}, filter: filterText }; // expanded rows per view (the view itself is in localStorage, see saveViewPref)
 			s.expanded[view] = Object.keys(expanded);
 			var old = loadState(stateKey) || {};
 			if (old.expanded)
@@ -758,9 +812,10 @@ var DbxTimeline = (function () {
 			{
 				saved.forEach(function (id) { if (m.groups[id] && m.groups[id].childIds.length > 0) expanded[id] = true; });
 			}
-			else if (opts.startExpanded && view === 'exec')
+			else if (opts.startExpanded)
 			{
-				m.tops.forEach(function (g) { if (g.childIds.length > 0) expanded[g.id] = true; });
+				// all top rows (also the ones hidden by the filter, so clearing the filter shows them expanded)
+				Object.keys(m.groups).forEach(function (id) { var g = m.groups[id]; if (g.parentId == null && g.childIds.length > 0) expanded[id] = true; });
 			}
 		}
 
@@ -979,11 +1034,25 @@ var DbxTimeline = (function () {
 			persist();
 		});
 
+		// Search box: filter while typing (and 'search' fires when the (x) clear button is clicked)
+		var filterTimer = null;
+		$(toolbar).on('input search', '[data-dbx-tl-filter]', function () {
+			var val = this.value.trim();
+			clearTimeout(filterTimer);
+			filterTimer = setTimeout(function () {
+				if (val === filterText)
+					return;
+				filterText = val;
+				render();
+				persist();
+			}, 200);
+		});
+
 		$(toolbar).on('click', '[data-dbx-tl]', function () {
 			switch ($(this).attr('data-dbx-tl'))
 			{
-				case 'view-exec':    if (view !== 'exec') { view = 'exec'; state = loadState(stateKey) || {}; initExpanded(); render(); persist(); } break;
-				case 'view-lane':    if (view !== 'lane') { view = 'lane'; state = loadState(stateKey) || {}; initExpanded(); render(); persist(); } break;
+				case 'view-exec':    if (view !== 'exec') { view = 'exec'; saveViewPref(view); state = loadState(stateKey) || {}; initExpanded(); render(); persist(); } break;
+				case 'view-lane':    if (view !== 'lane') { view = 'lane'; saveViewPref(view); state = loadState(stateKey) || {}; initExpanded(); render(); persist(); } break;
 				case 'expand-all':   setAll(true);  persist(); break;
 				case 'collapse-all': setAll(false); persist(); break;
 				case 'fit':          showPeriod(winStart); break;

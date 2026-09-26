@@ -37,7 +37,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.time.DateUtils;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -47,6 +46,7 @@ import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
+import com.dbxtune.utils.TimeUtils;
 
 public class UserDefinedTimelineChart
 extends UserDefinedChartAbstract
@@ -79,7 +79,7 @@ extends UserDefinedChartAbstract
 	@Override
 	public String[] getKnownParameters()
 	{
-		return new String[] {"startTime", "endTime", "showKeys", "keyTransform", "minDurationInSeconds", "keepNames", "skipNames", "fillEnd", "generateDummyRows", "useDefaultTooltip", "onlyLevelZero"};
+		return new String[] {"startTime", "endTime", "showKeys", "keyTransform", "minDurationInSeconds", "keepNames", "skipNames", "fillEnd", "generateDummyRows", "useDefaultTooltip", "onlyLevelZero", "filter"};
 	}
 
 	@Override
@@ -96,15 +96,21 @@ extends UserDefinedChartAbstract
 		map.put("startTime",            "What is the 'startTime' we want to get data for. <br>"
 		                                    + "<br>"
 		                                    + "Example: <code>TODAY           </code> (set StartTime to this day at 00:00:00) <br>"
+		                                    + "Example: <code>WEEK            </code> (set StartTime to this week, Monday at 00:00:00) <br>"
 		                                    + "Example: <code>-4h             </code> (set StartTime to 'now' -4 hours) <br>"
 		                                    + "Example: <code>-2d             </code> (set StartTime to 'now' -2 days) <br>"
+		                                    + "Example: <code>-1w             </code> (set StartTime to 'now' -1 week) <br>"
+		                                    + "Example: <code>-3m             </code> (set StartTime to 'now' -3 months) <br>"
 		                                    + "Example: <code>2024-03-08 18:00</code> (set startTime to a absolute timestamp) <br>"
+		                                    + "Format: <code>[-]#{h|d|w|m}</code> where '-' is optional, # is a number, h=Hours, d=Days, w=Weeks, m=Months <br>"
 		                                    + "<b>Default</b>: <code>-2       </code> (last 2 hours)");
 
 		map.put("endTime",              "What is the end time <br>"
 		                                    + "<br>"
 		                                    + "Example: <code>2024-03-08 22:00</code> (set endTime to a absolute timestamp) <br>"
 		                                    + "Example: <code>4h              </code> (set endTime to 4 hours after the 'startTime') <br>"
+		                                    + "Example: <code>1d              </code> (set endTime to 1 day after the 'startTime', also: <code>w</code>=Weeks, <code>m</code>=Months) <br>"
+		                                    + "Example: <code>NOW             </code> (set endTime to current time) <br>"
 		                                    + "<b>Default</b>: <i>now</i><br>");
 
 		map.put("showKeys",             "Show the chart 'keys' at the left side of the chart<br>"
@@ -152,6 +158,10 @@ extends UserDefinedChartAbstract
 		map.put("useDefaultTooltip",    "Fallback to use the components default tooltip instead of the 'enhanced' one.<br>"
 		                                    + "<br>"
 		                                    + "<b>Default</b>: <code>false</code>");
+
+		map.put("filter",               "Initial text for the <i>Filter by name</i> box in the chart toolbar: only show rows where the label (or a nested row / bar text)<br>"
+		                                    + "contains this text (case insensitive). The box can be changed on the page.<br>"
+		                                    + "<b>Default</b>: <i>none</i>");
 
 		map.put("onlyLevelZero",        "Only show Level Zero, this to get a high level overview of the executed work.<br>"
 		                                    + "<br>"
@@ -216,85 +226,16 @@ extends UserDefinedChartAbstract
 	@Override
 	public void checkUrlParameters(Map<String, String> parameterMap) throws Exception
 	{
-		String[] allowedDateFormats = new String[] {"yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd HH:mm", "yyyy-MM-dd HH", "yyyy-MM-dd"};
-		
 		String startTime = parameterMap.get("startTime");
 		if (StringUtil.isNullOrBlank(startTime))
 			startTime = _defaultStartTime;
 
 		String endTime   = parameterMap.get("endTime");
-		
-		Timestamp startTs = null;
-		Timestamp endTs   = null;
 
-		// Is the 'startTime' in hours or days
-		int startTimeHourAdjust = 1;
-		if ( StringUtil.hasValue(startTime) )
-		{
-			if (startTime.equalsIgnoreCase("TODAY"))
-			{
-				// Get TODAY as 'yyyy-MM-dd'
-				SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-				startTime = sdf.format(new Timestamp(System.currentTimeMillis()));
-			}
-			else if (startTime.toUpperCase().endsWith("H"))
-			{
-				startTime = startTime.substring(0, startTime.length()-1);
-				startTimeHourAdjust = 1;
-			}
-			else if (startTime.endsWith("D"))
-			{
-				startTime = startTime.substring(0, startTime.length()-1);
-				startTimeHourAdjust = 24;
-			}
-		}
-
-		// Is the 'endTime' in hours or days
-		int endTimeHourAdjust = 1;
-		if ( StringUtil.hasValue(endTime) )
-		{
-			if (endTime.toUpperCase().endsWith("H"))
-			{
-				endTime = endTime.substring(0, endTime.length()-1);
-				endTimeHourAdjust = 1;
-			}
-			else if (endTime.endsWith("D"))
-			{
-				endTime = endTime.substring(0, endTime.length()-1);
-				endTimeHourAdjust = 24;
-			}
-		}
-
-		//----------------------------------------
-		// startTime: If integer -> set the time
-		if ( StringUtil.isInteger(startTime) )
-		{
-			int intPeriod = Math.abs(StringUtil.parseInt(startTime, 2));
-
-			startTs = new Timestamp(System.currentTimeMillis() - (intPeriod * startTimeHourAdjust * 3600 * 1000));
-		}
-		else
-		{
-			// parse a ISO date with optional time parameter -- lets use Apache Commons
-			startTs = new Timestamp(DateUtils.parseDate(startTime, allowedDateFormats).getTime());
-		}
-
-		//----------------------------------------
-		// endTime
-		if ( StringUtil.hasValue(endTime) && startTs != null)
-		{
-			if ( StringUtil.isInteger(endTime) )
-			{
-				int intPeriod = Math.abs(StringUtil.parseInt(endTime, 2));
-
-				endTs = new Timestamp(startTs.getTime() + (intPeriod * endTimeHourAdjust * 3600 * 1000));
-			}
-			else
-			{
-				// parse a ISO date with optional time parameter -- lets use Apache Commons
-				endTs = new Timestamp(DateUtils.parseDate(endTime, allowedDateFormats).getTime());
-			}
-		}
+		// startTime: TODAY, WEEK, [-]#{h|d|w|m} (back from now), # (hours) or a date with optional time
+		// endTime:   NOW, #{h|d|w|m} (after the startTime), # (hours) or a date with optional time
+		Timestamp startTs = TimeUtils.parseStartTime(startTime);
+		Timestamp endTs   = startTs != null ? TimeUtils.parseEndTime(endTime, startTs) : null;
 
 
 		//----------------------
@@ -711,6 +652,7 @@ extends UserDefinedChartAbstract
 				sb.append("        start:          " + DbxTimelineRows.toJsTs(_startTime) + ", \n");
 				sb.append("        end:            " + DbxTimelineRows.toJsTs(_endTime)   + ", \n");
 				sb.append("        startExpanded:  " + (!onlyLevelZero) + ", \n");
+				sb.append("        filter:         " + DbxTimelineRows.toScriptJson(StringUtil.nullToValue(urlParams.get("filter"), "")) + ", \n");
 				sb.append("        showKeys:       " + showKeys + ", \n");
 				sb.append("        scrollToBottom: true \n");
 				sb.append("    }); \n");
