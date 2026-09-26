@@ -597,11 +597,6 @@ extends DbxCentralPageTemplate
 		else
 			writer.println("To 'auto-refresh' use '&refresh=##'. " );
 
-		if (getUrlParameterBoolean("onlyLevelZero", false))
-			writer.println("Show <a href='#' onClick=\"reloadCurrentUrlWithParam('onlyLevelZero', 'false')\">all job steps</a>");
-		else
-			writer.println("Show <a href='#' onClick=\"reloadCurrentUrlWithParam('onlyLevelZero', 'true')\">only FULL jobs</a>");
-
 		writer.println("    </summary>");
 		
 		// Describe used colors in the timeline
@@ -650,19 +645,6 @@ extends DbxCentralPageTemplate
 		writer.println("<!-- END: container-fluid -->");
 		writer.println("</div>");
 
-		writer.println();
-		writer.println("<!-- Some java script --> ");
-		writer.println("<script> ");
-		writer.println("    function reloadCurrentUrlWithParam(key, value) ");
-		writer.println("    { ");
-		writer.println("        // Modify the URL ");
-		writer.println("        const url = new URL(window.location.href); ");
-		writer.println("        url.searchParams.set(key, value); ");
-		writer.println();
-		writer.println("        // Reload URL ");
-		writer.println("        window.location.href = url.toString(); ");
-		writer.println("    } ");
-		writer.println("</script> ");
 		try
 		{
 			// Everything happens here...
@@ -730,10 +712,14 @@ extends DbxCentralPageTemplate
 				"What is the 'startTime' we want to get data for. <br>"
 						+ "<br>"
 						+ "Example: <code>TODAY           </code> (set StartTime to this day at 00:00:00) <br>"
+						+ "Example: <code>WEEK            </code> (set StartTime to this week, Monday at 00:00:00) <br>"
 						+ "Example: <code>-4h             </code> (set StartTime to 'now' -4 hours) <br>"
 						+ "Example: <code>-2d             </code> (set StartTime to 'now' -2 days) <br>"
+						+ "Example: <code>-1w             </code> (set StartTime to 'now' -1 week) <br>"
+						+ "Example: <code>-3m             </code> (set StartTime to 'now' -3 months) <br>"
 						+ "Example: <code>2024-03-08 18:00</code> (set startTime to a absolute timestamp) <br>"
-						+ "<b>Default</b>: <code>-2h      </code> (last 2 hours)", 
+						+ "Format: <code>[-]#{h|d|w|m}</code> where '-' is optional, # is a number, h=Hours, d=Days, w=Weeks, m=Months <br>"
+						+ "<b>Default</b>: <code>-2h      </code> (last 2 hours)",
 				Configuration.getCombinedConfiguration().getProperty(PROPKEY_startTime, DEFAULT_startTime), // "-2h"
 				Timestamp.class));
 
@@ -743,8 +729,9 @@ extends DbxCentralPageTemplate
 						+ "<br>"
 						+ "Example: <code>2024-03-08 22:00</code> (set endTime to a absolute timestamp) <br>"
 						+ "Example: <code>4h              </code> (set endTime to 4 hours after the 'startTime') <br>"
+						+ "Example: <code>1d              </code> (set endTime to 1 day after the 'startTime', also: <code>w</code>=Weeks, <code>m</code>=Months) <br>"
 						+ "Example: <code>NOW             </code> (set endTime to current time) <br>"
-						+ "<b>Default</b>: <i>none</i><br>", 
+						+ "<b>Default</b>: <i>none</i><br>",
                 null, 
                 Timestamp.class));
 
@@ -760,11 +747,22 @@ extends DbxCentralPageTemplate
 
 		set.add(new UrlParameterDescription(
 				"onlyLevelZero",
-				"Only show Level Zero, this to get a high level overview of the executed work.<br>"
+				"Start with only Level Zero (the FULL JOB rows) visible, this to get a high level overview of the executed work.<br>"
+						+ "The job steps can be shown on the page (Expand all, or click/double click a row).<br>"
 						+ "<br>"
 						+ "<b>Default</b>: <code>false</code>",
                 false,
-                Boolean.class));		
+                Boolean.class));
+
+		set.add(new UrlParameterDescription(
+				"filter",
+				"Initial text for the <i>Filter by name</i> box in the chart toolbar: only show jobs where the job name, a step name<br>"
+						+ "or a bar text contains this text (case insensitive). The box can be changed on the page.<br>"
+						+ "<br>"
+						+ "Example: <code>backup</code> (only jobs with 'backup' in the name, or with a step named '...backup...') <br>"
+						+ "<b>Default</b>: <i>none</i>",
+                null,
+                String.class));
 
 		set.add(new UrlParameterDescription(
 				"showTimeInBars",
@@ -891,81 +889,10 @@ extends DbxCentralPageTemplate
 		String startTimeStr = getUrlParameter_defaultFromDesc("startTime");
 		String endTimeStr   = getUrlParameter_defaultFromDesc("endTime");
 		
-		Timestamp startTs = null;
-		Timestamp endTs   = null;
-
-		// Is the 'startTime' in hours or days
-		int startTimeHourAdjust = 1;
-		if ( StringUtil.hasValue(startTimeStr) )
-		{
-			if (startTimeStr.equalsIgnoreCase("TODAY"))
-			{
-				// Get TODAY as 'yyyy-MM-dd'
-				startTimeStr = TimeUtils.toStringYmd(System.currentTimeMillis()); // add ONE minute
-			}
-			else if (startTimeStr.toUpperCase().endsWith("H"))
-			{
-				startTimeStr = startTimeStr.substring(0, startTimeStr.length()-1);
-				startTimeHourAdjust = 1;
-			}
-			else if (startTimeStr.endsWith("D"))
-			{
-				startTimeStr = startTimeStr.substring(0, startTimeStr.length()-1);
-				startTimeHourAdjust = 24;
-			}
-		}
-
-		// Is the 'endTime' in hours or days
-		int endTimeHourAdjust = 1;
-		if ( StringUtil.hasValue(endTimeStr) )
-		{
-			if (endTimeStr.equalsIgnoreCase("NOW"))
-			{
-				// Get TODAY as 'yyyy-MM-dd HH:MM' 
-				endTimeStr = TimeUtils.toStringYmdHm(System.currentTimeMillis() + 60*1000); // add ONE minute
-			}
-			else if (endTimeStr.toUpperCase().endsWith("H"))
-			{
-				endTimeStr = endTimeStr.substring(0, endTimeStr.length()-1);
-				endTimeHourAdjust = 1;
-			}
-			else if (endTimeStr.endsWith("D"))
-			{
-				endTimeStr = endTimeStr.substring(0, endTimeStr.length()-1);
-				endTimeHourAdjust = 24;
-			}
-		}
-
-		//----------------------------------------
-		// startTime: If integer -> set the time
-		if ( StringUtil.isInteger(startTimeStr) )
-		{
-			int intPeriod = Math.abs(StringUtil.parseInt(startTimeStr, 2));
-
-			startTs = new Timestamp(System.currentTimeMillis() - (intPeriod * startTimeHourAdjust * 3600 * 1000));
-		}
-		else
-		{
-			// parse a ISO date with optional time parameter
-			startTs = TimeUtils.parseToTimestampX(startTimeStr);
-		}
-
-		//----------------------------------------
-		// endTime
-		if ( StringUtil.hasValue(endTimeStr) && startTs != null)
-		{
-			if ( StringUtil.isInteger(endTimeStr) )
-			{
-				int intPeriod = Math.abs(StringUtil.parseInt(endTimeStr, 2));
-
-				endTs = new Timestamp(startTs.getTime() + (intPeriod * endTimeHourAdjust * 3600 * 1000));
-			}
-			else
-			{
-				// parse a ISO date with optional time parameter
-				endTs = TimeUtils.parseToTimestampX(endTimeStr);
-			}
-		}
+		// startTime: TODAY, WEEK, [-]#{h|d|w|m} (back from now), # (hours) or a date with optional time
+		// endTime:   NOW, #{h|d|w|m} (after the startTime), # (hours) or a date with optional time
+		Timestamp startTs = StringUtil.hasValue(startTimeStr) ? TimeUtils.parseStartTime(startTimeStr)        : null;
+		Timestamp endTs   = startTs != null                   ? TimeUtils.parseEndTime(endTimeStr, startTs) : null;
 
 		//----------------------------------------
 		// debug
@@ -1816,6 +1743,7 @@ extends DbxCentralPageTemplate
 				write(writer, "        start:          " + DbxTimelineRows.toJsTs(startTime) + ",");
 				write(writer, "        end:            " + DbxTimelineRows.toJsTs(endTime)   + ",");
 				write(writer, "        startExpanded:  " + (!onlyLevelZero) + ",");
+				write(writer, "        filter:         " + DbxTimelineRows.toScriptJson(StringUtil.nullToValue(getUrlParameter("filter"), "")) + ",");
 				write(writer, "        showKeys:       " + showKeys + ",");
 				write(writer, "        scrollToBottom: " + fillEnd + ",");
 				write(writer, "        smallFontRows:  " + recordThresholdForSmallerFont + ",");

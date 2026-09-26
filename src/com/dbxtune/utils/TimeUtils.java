@@ -27,13 +27,19 @@ package com.dbxtune.utils;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.DayOfWeek;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @author qschgor
@@ -609,6 +615,109 @@ public class TimeUtils
 		    }
 		}
 		throw new ParseException("No known Date format found for '" + str + "', tested following patterns " + knownPatterns + ".", 0);
+	}
+
+	/** A relative period: <code>[-]#{h|d|w|m}</code> (case insensitive), for example <code>2h, -3d, 1w, -6m</code> */
+	private static final Pattern RELATIVE_PERIOD = Pattern.compile("^-?(\\d+)([hdwm])$", Pattern.CASE_INSENSITIVE);
+
+	/**
+	 * Parse a relative period <code>[-]#{h|d|w|m}</code> (Hours, Days, Weeks, Months, case insensitive, the '-' is optional)
+	 * and move the base time that much backwards or forwards. Months are calendar months.
+	 *
+	 * @param str       for example <code>2h, -3d, 1w, 6m</code>
+	 * @param baseTime  the time to start from (ms)
+	 * @param backwards true: subtract the period, false: add it
+	 * @return the new time, or null if 'str' is not a relative period
+	 */
+	public static Timestamp parseRelativePeriod(String str, long baseTime, boolean backwards)
+	{
+		if (str == null)
+			return null;
+
+		Matcher m = RELATIVE_PERIOD.matcher(str.trim());
+		if ( ! m.matches() )
+			return null;
+
+		int amount = Integer.parseInt(m.group(1));
+		if (backwards)
+			amount = -amount;
+
+		Calendar cal = Calendar.getInstance();
+		cal.setTimeInMillis(baseTime);
+		switch (Character.toLowerCase(m.group(2).charAt(0)))
+		{
+			case 'h': cal.add(Calendar.HOUR_OF_DAY,  amount); break;
+			case 'd': cal.add(Calendar.DAY_OF_MONTH, amount); break;
+			case 'w': cal.add(Calendar.WEEK_OF_YEAR, amount); break;
+			case 'm': cal.add(Calendar.MONTH,        amount); break;
+		}
+		return new Timestamp(cal.getTimeInMillis());
+	}
+
+	/**
+	 * Parse a 'startTime' URL parameter, one of:
+	 * <ul>
+	 *     <li><code>TODAY</code> - today at 00:00</li>
+	 *     <li><code>WEEK</code> - this week, Monday at 00:00</li>
+	 *     <li><code>[-]#{h|d|w|m}</code> - that many Hours, Days, Weeks or Months back from now (the '-' is optional)</li>
+	 *     <li><code>#</code> - that many hours back from now</li>
+	 *     <li>A date with optional time, see {@link #parseToTimestampX(String)}</li>
+	 * </ul>
+	 * @throws ParseException if the string cannot be parsed.
+	 */
+	public static Timestamp parseStartTime(String str)
+	throws ParseException
+	{
+		String s   = str == null ? "" : str.trim();
+		long   now = System.currentTimeMillis();
+
+		if (s.equalsIgnoreCase("TODAY"))
+			return Timestamp.valueOf(LocalDate.now().atStartOfDay());
+
+		if (s.equalsIgnoreCase("WEEK"))
+			return Timestamp.valueOf(LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).atStartOfDay());
+
+		Timestamp ts = parseRelativePeriod(s, now, true);
+		if (ts != null)
+			return ts;
+
+		if (s.matches("^-?\\d+$"))
+			return parseRelativePeriod(s + "h", now, true);
+
+		return parseToTimestampX(s);
+	}
+
+	/**
+	 * Parse an 'endTime' URL parameter, one of:
+	 * <ul>
+	 *     <li><code>NOW</code> - now (plus one minute)</li>
+	 *     <li><code>[-]#{h|d|w|m}</code> - that many Hours, Days, Weeks or Months <b>after the startTime</b> (the '-' is optional)</li>
+	 *     <li><code>#</code> - that many hours after the startTime</li>
+	 *     <li>A date with optional time, see {@link #parseToTimestampX(String)}</li>
+	 * </ul>
+	 * @return null if 'str' is empty
+	 * @throws ParseException if the string cannot be parsed.
+	 */
+	public static Timestamp parseEndTime(String str, Timestamp startTs)
+	throws ParseException
+	{
+		String s = str == null ? "" : str.trim();
+		if (s.isEmpty())
+			return null;
+
+		if (s.equalsIgnoreCase("NOW"))
+			return new Timestamp(System.currentTimeMillis() + 60 * 1000);
+
+		long base = startTs != null ? startTs.getTime() : System.currentTimeMillis();
+
+		Timestamp ts = parseRelativePeriod(s, base, false);
+		if (ts != null)
+			return ts;
+
+		if (s.matches("^-?\\d+$"))
+			return parseRelativePeriod(s + "h", base, false);
+
+		return parseToTimestampX(s);
 	}
 
 	/**
