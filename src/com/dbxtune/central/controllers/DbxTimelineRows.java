@@ -76,6 +76,16 @@ public class DbxTimelineRows
 	}
 
 	/**
+	 * Mark a row to always stay last when the user sorts the rows (for example a 'NO Activity' filler row)
+	 * @return the same row
+	 */
+	public static Map<String, Object> sortLast(Map<String, Object> row)
+	{
+		row.put("sortLast", true);
+		return row;
+	}
+
+	/**
 	 * Timestamp as <code>yyyy-MM-ddTHH:mm:ss</code> without time zone, which JavaScript <code>new Date(str)</code> parses as local time.
 	 * <br>
 	 * So the browser shows the same wall clock time as the server (like the Google Timeline did)

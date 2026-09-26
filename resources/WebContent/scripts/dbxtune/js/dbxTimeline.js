@@ -24,6 +24,7 @@
  *                 "Per job" is then the default view (until the user picks another, see saveViewPref).
  *     laneSubOrder Optional number to sort the laneSubKey rows (for example the step id)
  *     failed      Optional boolean; counted in a red badge on the "Per job" rows
+ *     sortLast    Optional boolean; the row always stays last when sorting (for example a 'NO Activity' filler)
  *     Any other fields (jobId, stepId, ...) are passed back to the click callbacks.
  *
  * Options:
@@ -38,6 +39,8 @@
  *                       (default: location.pathname + location.search). The view (Per execution / Per job) is a
  *                       browser wide preference in localStorage ('dbxtune_timeline_view').
  *     legend            Array of { color, text } shown as a color legend below the chart (default: none)
+ *     labelHeader       Header text above the row labels (default 'Name'), or { lane: '...', exec: '...' } per view.
+ *                       Clicking it sorts by name: A-Z, then Z-A, then back to the original (start time) order.
  *     filter            Initial text for the toolbar's filter box (case insensitive "contains" on row/job/step names
  *                       and bar texts; a matching nested row keeps its parent). Default: what was typed earlier in this tab.
  *     showClickDetails  Show the tooltip of the last clicked bar in a panel below the chart (default true)
@@ -117,6 +120,12 @@ var DbxTimeline = (function () {
 		+ '.dbx-tl .vis-item .dbx-tl-warn { background:#ffe5b4; color:#663c00; border:1px solid #ffc36b; }\n'
 		+ '.dbx-tl .vis-item .dbx-tl-bad  { background:#f8d7da; color:#842029; border:1px solid #f1aeb5; }\n'
 		+ '.dbx-tl-badge { font-size:10px; background:#6c757d; color:#fff; border-radius:8px; padding:0 6px; margin-left:4px; }\n'
+		// Header for the label column, in the empty top-left corner (vis has no header there)
+		+ '.dbx-tl .dbx-tl-corner { position:absolute; top:0; left:0; z-index:5; box-sizing:border-box; display:flex; align-items:flex-end;'
+		+ '    padding:0 6px 3px 6px; font-size:12px; font-weight:600; color:#495057; background:#f8f9fa; border-right:1px solid #bfbfbf;'
+		+ '    border-bottom:1px solid #bfbfbf; cursor:pointer; user-select:none; white-space:nowrap; overflow:hidden; }\n'
+		+ '.dbx-tl .dbx-tl-corner:hover { background:#e7f1ff; }\n'
+		+ '.dbx-tl.dbx-tl-nokeys .dbx-tl-corner { display:none; }\n'
 		+ '.dbx-tl-badge.dbx-tl-fail { background:#dc3545; }\n'
 		;
 
@@ -428,6 +437,27 @@ var DbxTimeline = (function () {
 		}
 	}
 
+	// Sort order of the top rows, also a browser wide preference (localStorage). Nested rows stay under their parent.
+	var SORT_PREF_KEY = 'dbxtune_timeline_sort';
+	var SORT_OPTIONS  = [
+		{ value: 'start',    text: 'Start time'       },
+		{ value: 'name',     text: 'Name (A-Z)'       },
+		{ value: 'name-d',   text: 'Name (Z-A)'       },
+		{ value: 'duration', text: 'Longest duration' },
+		{ value: 'runs',     text: 'Most runs'        },
+		{ value: 'failed',   text: 'Failed first'     }
+	];
+	function loadSortPref()
+	{
+		var v = null;
+		try { v = window.localStorage.getItem(SORT_PREF_KEY); } catch (e) { /* ignore */ }
+		return SORT_OPTIONS.some(function (o) { return o.value === v; }) ? v : 'start';
+	}
+	function saveSortPref(sort)
+	{
+		try { window.localStorage.setItem(SORT_PREF_KEY, sort); } catch (e) { /* ignore */ }
+	}
+
 	//---------------------------------------------------------------------------------------------
 	// create
 	//---------------------------------------------------------------------------------------------
@@ -444,6 +474,7 @@ var DbxTimeline = (function () {
 			stateKey:       null,
 			legend:         null,
 			filter:         null,
+			labelHeader:    'Name',
 			showClickDetails: true,
 			expandText:     'Show child rows',
 			collapseText:   'Hide child rows',
@@ -489,21 +520,28 @@ var DbxTimeline = (function () {
 		if (hasLanes)
 		{
 			html += '<div class="btn-group btn-group-sm" role="group">'
-			     +  '<button type="button" class="btn btn-outline-secondary" data-dbx-tl="view-exec" title="One row per execution; expand to see its steps">Per execution</button>'
 			     +  '<button type="button" class="btn btn-outline-secondary" data-dbx-tl="view-lane" title="One row per job with all executions; expand to see one row per step">Per job</button>'
+			     +  '<button type="button" class="btn btn-outline-secondary" data-dbx-tl="view-exec" title="One row per execution; expand to see its steps">Per execution</button>'
 			     +  '</div>';
 		}
 		if (hasNesting)
 		{
-			html += '<button type="button" class="btn btn-sm btn-outline-secondary" data-dbx-tl="expand-all">Expand all</button>'
-			     +  '<button type="button" class="btn btn-sm btn-outline-secondary" data-dbx-tl="collapse-all">Collapse all</button>';
+			html += '<button type="button" class="btn btn-sm btn-outline-secondary" data-dbx-tl="expand-all"><i class="fa-solid fa-angles-down me-1" aria-hidden="true"></i>Expand all</button>'
+			     +  '<button type="button" class="btn btn-sm btn-outline-secondary" data-dbx-tl="collapse-all"><i class="fa-solid fa-angles-up me-1" aria-hidden="true"></i>Collapse all</button>';
 		}
+		html += '<select class="form-select form-select-sm" data-dbx-tl-sort title="Sort the rows (nested rows stay under their parent)" style="width:auto; display:inline-block;">'
+		     +  SORT_OPTIONS.map(function (o) { return '<option value="' + o.value + '">Sort: ' + o.text + '</option>'; }).join('')
+		     +  '</select>';
 		html += '<input type="search" class="form-control form-control-sm" data-dbx-tl-filter placeholder="Filter by name..." '
 		     +  '       title="Show only rows (jobs) whose name contains this text (case insensitive). Matching steps keep their job." style="width:200px; display:inline-block;">'
 		     +  '<span class="dbx-tl-filter-count text-muted" style="font-size:12px;"></span>'
+		     // time window buttons: pushed to the right edge
+		     +  '<span style="margin-left:auto; display:inline-flex; gap:6px;">'
 		     +  '<button type="button" class="btn btn-sm btn-outline-secondary" data-dbx-tl="fit"  title="Show the whole period">Whole period</button>'
 		     +  '<button type="button" class="btn btn-sm btn-outline-secondary" data-dbx-tl="last" title="Zoom in on the last 3 hours of the period">Last 3h</button>'
-		     +  '<span class="text-muted" style="font-size:12px;">Wheel: scroll rows, Ctrl+wheel: zoom, Shift+wheel or drag: move in time, click: menu, double click: show/hide nested rows</span>';
+		     +  '</span>'
+		     // usage hint: on a line of its own
+		     +  '<span class="text-muted" style="flex-basis:100%; font-size:12px;">Wheel: scroll rows, Ctrl+wheel: zoom, Shift+wheel or drag: move in time, click: menu, double click: show/hide nested rows</span>';
 		toolbar.innerHTML = html;
 		container.appendChild(toolbar);
 
@@ -616,6 +654,7 @@ var DbxTimeline = (function () {
 					g.childIds.sort(function (a, b) { return (groups[a].rows[0].laneSubOrder || 0) - (groups[b].rows[0].laneSubOrder || 0) || (a < b ? -1 : 1); });
 				});
 			}
+			tops = sortTops(tops, groups);
 			tops.forEach(function (g) {
 				ordered.push(g);
 				g.childIds.forEach(function (cid) { ordered.push(groups[cid]); });
@@ -623,6 +662,45 @@ var DbxTimeline = (function () {
 			ordered.forEach(function (g, i) { g.order = i; });
 
 			return { groups: groups, ordered: ordered, tops: tops, allTopCount: allTopCount };
+		}
+
+		// Sort the top rows by 'sortOrder' ('start' keeps the order of first appearance, which is the start time order)
+		function sortTops(tops, groups)
+		{
+			if (sortOrder === 'start')
+				return tops;
+
+			var stat = function (g) {
+				var own  = g.rows;
+				var all  = own.slice();
+				g.childIds.forEach(function (cid) { Array.prototype.push.apply(all, groups[cid].rows); });
+				var durRows = own.length > 0 ? own : all;
+				var first = all.length > 0 ? all[0] : {};
+				return {
+					last:     all.some(function (r) { return r.sortLast === true; }),
+					// 'Per execution' labels start with the time, so sort on the job (laneKey) there; ties keep the time order
+					name:     String(first.laneKey != null ? first.laneKey : g.label).toLowerCase(),
+					duration: durRows.reduce(function (sum, r) { return sum + (r._end - r._start); }, 0),
+					runs:     own.length,
+					failed:   all.filter(function (r) { return r.failed === true || String(r.color).toLowerCase() === 'red'; }).length
+				};
+			};
+			var list = tops.map(function (g, i) { return { g: g, i: i, s: stat(g) }; });
+			list.sort(function (a, b) {
+				if (a.s.last !== b.s.last) // rows flagged 'sortLast' (like the 'NO Activity' filler) always go last
+					return a.s.last ? 1 : -1;
+				var c = 0;
+				switch (sortOrder)
+				{
+					case 'name':     c = a.s.name.localeCompare(b.s.name); break;
+					case 'name-d':   c = b.s.name.localeCompare(a.s.name); break;
+					case 'duration': c = b.s.duration - a.s.duration;      break;
+					case 'runs':     c = b.s.runs     - a.s.runs;          break;
+					case 'failed':   c = b.s.failed   - a.s.failed;        break;
+				}
+				return c !== 0 ? c : a.i - b.i; // ties: keep the start time order
+			});
+			return list.map(function (x) { return x.g; });
 		}
 
 		//-------------------------------------------------
@@ -635,6 +713,10 @@ var DbxTimeline = (function () {
 		// Filter text from the search box: the URL ('filter' option) wins over what was typed earlier in this tab
 		var filterText = (opts.filter != null && String(opts.filter).trim() !== '') ? String(opts.filter).trim() : (state.filter || '');
 		$(toolbar).find('[data-dbx-tl-filter]').val(filterText);
+
+		// Sort order of the top rows (browser wide preference)
+		var sortOrder = loadSortPref();
+		$(toolbar).find('[data-dbx-tl-sort]').val(sortOrder);
 		var expanded  = {};  // groupId -> true
 		var itemSeq   = 0;
 		var itemRow   = {};  // visItemId -> row
@@ -920,6 +1002,36 @@ var DbxTimeline = (function () {
 
 		//-------------------------------------------------
 		// Events
+		// Header for the label column: sized to the label panel (width) and the time axis (height) after each redraw
+		var corner = document.createElement('div');
+		corner.className = 'dbx-tl-corner';
+		corner.title = 'Click to sort by name';
+		function updateCorner()
+		{
+			var root = chartDiv.querySelector('.vis-timeline');
+			var left = root ? root.querySelector('.vis-panel.vis-left') : null;
+			var top  = root ? root.querySelector('.vis-panel.vis-top')  : null;
+			if (!root || !left || !top)
+				return;
+			if (corner.parentNode !== root)
+				root.appendChild(corner);
+			var h = opts.labelHeader;
+			var text = (h && typeof h === 'object') ? (h[view] || '') : (h || '');
+			var mark = sortOrder === 'name' ? ' ▲' : sortOrder === 'name-d' ? ' ▼' : '';
+			corner.textContent = text + mark;
+			corner.style.width  = left.offsetWidth + 'px';
+			corner.style.height = top.offsetHeight + 'px';
+		}
+		timeline.on('changed', updateCorner);
+		corner.addEventListener('click', function () {
+			// 3 states: A-Z -> Z-A -> original (start time) order -> A-Z ...
+			sortOrder = (sortOrder === 'name') ? 'name-d' : (sortOrder === 'name-d') ? 'start' : 'name';
+			$(toolbar).find('[data-dbx-tl-sort]').val(sortOrder);
+			saveSortPref(sortOrder);
+			render();
+			updateCorner();
+		});
+
 		timeline.on('itemover', function (props) {
 			var row = itemRow[props.item];
 			if (row && props.event)
@@ -1036,6 +1148,13 @@ var DbxTimeline = (function () {
 
 		// Search box: filter while typing (and 'search' fires when the (x) clear button is clicked)
 		var filterTimer = null;
+		$(toolbar).on('change', '[data-dbx-tl-sort]', function () {
+			sortOrder = this.value;
+			saveSortPref(sortOrder);
+			render();
+			updateCorner();
+		});
+
 		$(toolbar).on('input search', '[data-dbx-tl-filter]', function () {
 			var val = this.value.trim();
 			clearTimeout(filterTimer);
