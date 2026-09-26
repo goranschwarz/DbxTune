@@ -34,12 +34,14 @@ refresh = 300
 ##      3 String    color     (any valid HTML color that the bar will have)
 ##      4 Timestamp beginTime (Start time for this entry)
 ##      5 Timestamp endTime   (End time for this entry)
+##      All extra columns will be put in the "tool tip" section, except:
+##        String    parentKey (optional: the 'label' of the row this row is nested under.
+##                             Nested rows are shown when the parent row is expanded, by clicking it)
 ##
 ## ${startTime} and ${endTime} is variables that will be replaced with ISO date time 'yyyy-MM-dd HH:mm:ss.SSS'
 ##
-## HINT: To get a sense of what you can do (how to order the rows in the SQL Statement)
-##       read https://developers.google.com/chart/interactive/docs/gallery/timeline
-##       which is the component used to visualize the SQL data.
+## HINT: Rows with the same 'label' are drawn on the same row, in the order they first appear in the ResultSet.
+##       The chart is drawn with vis-timeline (https://visjs.github.io/vis-timeline/) via /scripts/dbxtune/js/dbxTimeline.js
 ##
 ## Note: New Lines will have to be escaped by '\' at the end of the row
 ##       And if you REALLY want a newline in the text you need to end it as: '\n\'

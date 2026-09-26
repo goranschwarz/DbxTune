@@ -32,6 +32,7 @@ import java.sql.Timestamp;
 import java.sql.Types;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -50,6 +51,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.CounterController;
 import com.dbxtune.Version;
 import com.dbxtune.central.controllers.DbxCentralPageTemplate;
+import com.dbxtune.central.controllers.DbxTimelineRows;
 import com.dbxtune.central.controllers.HtmlStatic.PageSection;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.content.sqlserver.SqlServerJobScheduler;
@@ -81,6 +83,7 @@ extends DbxCentralPageTemplate
 	
 	private boolean _debugMode    = false;
 	private double  _deviationPct = 50.0;
+	private double  _diffColorPct = 10.0;
 
 
 	@Override
@@ -166,10 +169,8 @@ extends DbxCentralPageTemplate
 	{
 		List<String> list = new ArrayList<>();
 
-		// Google's charting tools
-		// NOTE: This will probably be HARD to download, since it a bootstraper that loads "everything we need" on the fly... 
-		// SOLUTION: Use another component... which is a MAJOR work
-		list.add("https://www.gstatic.com/charts/loader.js");
+		// Timeline chart: vis-timeline + dbxTimeline.js (replaced the Google Charts Timeline, which needs internet access)
+		list.addAll(DbxTimelineRows.JAVASCRIPT_LIST);
 
 		// Date Range Picker
 		list.add("/scripts/bootstrap-daterangepicker/3.1/daterangepicker.js");
@@ -199,6 +200,9 @@ extends DbxCentralPageTemplate
 
 		// Date Range Picker
 		list.add("/scripts/bootstrap-daterangepicker/3.1/daterangepicker.css");
+
+		// Timeline chart
+		list.addAll(DbxTimelineRows.CSS_LIST);
 
 		// Prism -- to get TEXT field(s) to look better
 //		list.add("https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css");
@@ -557,7 +561,7 @@ extends DbxCentralPageTemplate
 		writer.println("    <tr> <th>Color</th> <th>Description</th> </tr>");
 		writer.println("</thead>");
 		writer.println("<tbody>");
-		writer.println("    <tr> <td>Light Blue</td>    <td>Top level (step_id=0) of any job... To expand/collapse, click 'link at the top'</td> </tr>");
+		writer.println("    <tr> <td>Light Blue</td>    <td>Top level (step_id=0) of any job... Click the bar or the row label to expand/collapse its steps</td> </tr>");
 		writer.println("    <tr> <td>Blue</td>          <td>Normal Job Step (step_id>0) </td> </tr>");
 		writer.println("    <tr> <td>Red</td>           <td>JobStep Failed</td> </tr>");
 		writer.println("    <tr> <td>Orange</td>        <td>JobStep has some issues/warnings</td> </tr>");
@@ -681,42 +685,6 @@ extends DbxCentralPageTemplate
 			writer.println("</script>");
 			writer.println("");
 		}
-
-		writer.println();
-		writer.println("    <!-- ######################################################## --> ");
-		writer.println("    <!-- ## MODAL: 'dbx-view-jobIdDetails-dialog' --> ");
-		writer.println("    <!-- ######################################################## --> ");
-		writer.println("    <div class='modal fade' id='dbx-view-jobIdDetails-dialog'> ");
-		writer.println("        <div class='modal-dialog' style='max-width: 80%;'> ");
-		writer.println("            <div class='modal-content'> ");
-		writer.println();
-		writer.println("                <!-- Modal Header --> ");
-		writer.println("                <div class='modal-header'> ");
-		writer.println("                    <h5 class='modal-title' id='dbx-view-jobIdDetails-title'>Job Details</h5> ");
-		writer.println("                    <button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'></button> ");
-		writer.println("                </div> ");
-		writer.println();
-		writer.println("                <!-- Modal body --> ");
-		writer.println("                <div class='modal-body' style='height: 80vh;'> ");
-		writer.println("                    <div id='timeline-modal' style='height: 100%;'></div> ");
-		writer.println("                </div> ");
-		writer.println();
-		writer.println("                <!-- Modal footer --> ");
-		writer.println("                <div class='modal-footer'> ");
-		writer.println("                  <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button> ");
-		writer.println("                </div> ");
-		writer.println();
-		writer.println("            </div> ");
-		writer.println("        </div> ");
-		writer.println("    </div> ");
-		writer.println();
-		writer.println("<script> ");
-		writer.println("    // Do stuff AFTER the modal has been opened ");
-		writer.println("    $(document).on('shown.bs.modal', '#dbx-view-jobIdDetails-dialog', function () { ");
-		writer.println("        console.log('OPEN MODAL[SHOW-N]: dbx-view-jobIdDetails-dialog'); ");
-		writer.println("        drawChartModal();  // Redraw the chart AFTRE Opened modal, to ensure correct size...");
-		writer.println("    });");
-		writer.println("</script> ");
 	}
 
 	//-----------------------------------------------------------------------
@@ -816,6 +784,15 @@ extends DbxCentralPageTemplate
 						+ "<br>"
 						+ "<b>Default</b>: <code>50.0</code>", 
                 50.0d,
+                Double.class));
+
+		set.add(new UrlParameterDescription(
+				"diffColorPct",
+				"Mark the <i>diff</i> from the average execution time in the bar text: green if faster, orange if slower<br>"
+						+ "when it differs at least this many percent. (Executions shorter than 10 seconds are not marked.)<br>"
+						+ "<br>"
+						+ "<b>Default</b>: <code>10.0</code>",
+                10.0d,
                 Double.class));
 
 		set.add(new UrlParameterDescription(
@@ -997,6 +974,10 @@ extends DbxCentralPageTemplate
 		//----------------------------------------
 		// deviationPct
 		_deviationPct = getUrlParameterDouble("deviationPct", 50.0);
+
+		//----------------------------------------
+		// diffColorPct
+		_diffColorPct = getUrlParameterDouble("diffColorPct", 10.0);
 
 		//----------------------
 		// SET: "startTime"
@@ -1505,8 +1486,6 @@ extends DbxCentralPageTemplate
 		// >>> useDefaultTooltip
 		boolean useDefaultTooltip = getUrlParameterBoolean_defaultFromDesc("useDefaultTooltip");
 
-		// Use in Exceptions (what to write)
-		boolean inReadingSqlResults = false;
 		
 		// Connect to DBMS - with AutoClose
 		try ( DbxConnection conn = getConnection() ) 
@@ -1543,41 +1522,17 @@ extends DbxCentralPageTemplate
 				if (col4_datatype != Types.TIMESTAMP) throw new Exception("The ResultSet for column 4 has to be of type TIMESTAMP, it was " + ResultSetTableModel.getColumnJavaSqlTypeName(col4_datatype) + ". Expected ResultSet: 1=[labelKey:String], 2=[barText:String], 3=[barColor:String], 4=[startDate:Timestamp], 5=[endDate:Timestamp]");
 				if (col5_datatype != Types.TIMESTAMP) throw new Exception("The ResultSet for column 5 has to be of type TIMESTAMP, it was " + ResultSetTableModel.getColumnJavaSqlTypeName(col5_datatype) + ". Expected ResultSet: 1=[labelKey:String], 2=[barText:String], 3=[barColor:String], 4=[startDate:Timestamp], 5=[endDate:Timestamp]");
 
-				write(writer, "<script> \n");
-				write(writer, "    google.charts.load('current', {'packages':['timeline']});								");
-				write(writer, "    google.charts.setOnLoadCallback(drawChart);												");
-				write(writer, "    function drawChart()																		");
-				write(writer, "    {																						");
-				write(writer, "        var container = document.getElementById('timeline');									");
-				write(writer, "        var chart = new google.visualization.Timeline(container);							");
-				write(writer, "        var dataTable = new google.visualization.DataTable();								");
-				write(writer, "																								");
-				write(writer, "        dataTable.addColumn({ type: 'string', id: 'TextLabel' });							");
-				write(writer, "        dataTable.addColumn({ type: 'string', id: 'BarText'   });							");
-				write(writer, "        dataTable.addColumn({ type: 'string', role: 'style'   });	// bar color			");
-				if ( ! useDefaultTooltip )
-				{
-					write(writer, "        dataTable.addColumn({ type: 'string', role: 'tooltip' });						"); // This is if we want to produce our own tooltip
-				}
-				write(writer, "        dataTable.addColumn({ type: 'date', id: 'Start' });									");
-				write(writer, "        dataTable.addColumn({ type: 'date', id: 'End' });									");
-				write(writer, "        dataTable.addRows([																	");
+				// All rows (bars) for DbxTimeline, see DbxTimelineRows and /scripts/dbxtune/js/dbxTimeline.js
+				List<Map<String, Object>> rows = new ArrayList<>();
 
-				String udTooltip = "";
+				// Key of the "FULL JOB" row (step_id=0) for each job execution (jobId____mainJobStartTime). The steps are nested under it.
+				Map<String, String> jobInstanceParentKey = new HashMap<>();
 
 				Timestamp maxTs          = null;
-				String    prefix         = " ";
 				Timestamp prevRowStartTs = null;
 				Timestamp prevRowEndTs   = null;
 
 				int addRecordCount = 0;
-				
-				// Add all jobs to a Map, so we can write it as JavaScript Objects...
-				// This will be used when 'onlyLevelZero=true' and we click on *details* for a "main" job, to open a pop-up with details for the mail job.
-				// jobInstanceMap: <JobId:StartTime, ListOfRecords>
-				LinkedHashMap<String, List<String>> jobInstanceMap = new LinkedHashMap<>(); 
-
-				inReadingSqlResults = true;
 
 				// Loop all rows in ResultSet
 				while(rs.next())
@@ -1647,15 +1602,6 @@ extends DbxCentralPageTemplate
 					prevRowStartTs = startTs;
 					prevRowEndTs   = endTs;
 
-					boolean addToTimeLine = true;
-
-					// If the "onlyLevelZero", the "barText" must start with "[0] "
-					if (onlyLevelZero)
-					{
-						if ( ! barText.startsWith("[0] ") )
-							addToTimeLine = false;
-					}
-
 					// If the "duration" is not long enough, skip this record!
 					if (minDurationInSeconds != -1 && startTs != null && endTs != null)
 					{
@@ -1704,18 +1650,25 @@ extends DbxCentralPageTemplate
 						endTs = new Timestamp(System.currentTimeMillis());
 
 					// Change/transform the 'key' so we possibly can group "collapse" several rows (sub-tasks) on 1 row
+					String origLabelKey = labelKey;
 					if (StringUtil.hasValue(keyTransformFrom))
 						labelKey = labelKey.replaceAll(keyTransformFrom, keyTransformTo);
-					
-					udTooltip = createUserDefinedTooltip(useDefaultTooltip, labelKey, barText, startTs, endTs, extraColumns);
-					labelKey  = escapeJsQuote(labelKey);
-					barText   = escapeJsQuote(barText);
-					
+
+					String tooltip = createUserDefinedTooltip(useDefaultTooltip, labelKey, barText, startTs, endTs, extraColumns);
+
+					// Job and Step name (the SQL for active jobs has no '-' after the "[#]" step number)
+					String jobName  = StringUtils.substringBeforeLast(StringUtils.substringAfter(origLabelKey, " -- "), " - step: [");
+					String stepName = barText.replaceFirst("^\\[\\d+\\]\\s*-?\\s*", "");
+
+					// Bar text as HTML, where the "diff" from the average execution time is marked green/orange (see 'diffColorPct')
+					String barTextHtml = null;
+
 					// Add '[HH:MM:SS]' to the barText (at least for "main" jobs)
 					if (showTimeInBars)
 					{
-						String dhms    = "unknown";
-						String statStr = "";
+						String dhms      = "unknown";
+						String statStr   = "";
+						String diffClass = null;
 						if (startTs != null)
 						{
 							long execTimeInMs  = endTs.getTime() - startTs.getTime();
@@ -1736,34 +1689,53 @@ extends DbxCentralPageTemplate
 							// Set some color if it deviates 
 							if ( statStr.contains("SLOWER") ) barColor = "#FFC0CB"; // pink
 							if ( statStr.contains("FASTER") ) barColor = "#DAF7A6"; // light green
+
+							diffClass = getAvgDiffCssClass(jobId, stepId, (execTimeInMs/1000));
 						}
-						
+
+						// statStr looks like ", diff: +00:38 [13.3%]..."
+						if (diffClass != null && statStr.startsWith(", "))
+						{
+							barTextHtml = StringEscapeUtils.escapeHtml4(barText + " -- <" + dhms) + ", "
+									+ "<span class='" + diffClass + "'>" + StringEscapeUtils.escapeHtml4(statStr.substring(2)) + "</span>"
+									+ StringEscapeUtils.escapeHtml4(">");
+						}
 						barText += " -- <" + dhms + statStr + ">";
 					}
 
-					// Add "everything" to a Map (so we can view "skipped" records later)
+					Map<String, Object> row = DbxTimelineRows.createRow(labelKey, barText, barColor, tooltip, startTs, endTs);
+					if (barTextHtml != null)
+						row.put("textHtml", barTextHtml);
+					row.put("jobId"  , jobId);
+					row.put("stepId" , stepId);
+					row.put("startTs", TimeUtils.toStringYmdHms(startTs)); // used as "start time" marker in the execution history dialog
+					row.put("laneKey", jobName);
+					if ("red".equals(barColor))
+						row.put("failed", true);
+
+					// Nest the steps under the "FULL JOB" (step_id=0) row of the same job execution
 					String jobIdInstance = jobId + "____" + jobStartTime;
-					List<String> jobIdInstanceList = jobInstanceMap.get(jobIdInstance);
-					if (jobIdInstanceList == null)
+					if (stepId == 0)
 					{
-						jobIdInstanceList = new ArrayList<>();
-						jobInstanceMap.put(jobIdInstance, jobIdInstanceList);
+						jobInstanceParentKey.put(jobIdInstance, labelKey);
+						row.put("label", (jobStartTime != null && jobStartTime.length() >= 19 ? jobStartTime.substring(11, 19) + " " : "") + jobName);
 					}
-					// Add ALL (Level0 and all-step-ids) Records... Later we will print this out to a JavaScript object.
-					jobIdInstanceList.add("[ '" + labelKey + "', '" + barText + "', '" + barColor + "', " + udTooltip + " new Date('" + TimeUtils.toStringYmdHms(startTs) + "'), new Date('" + TimeUtils.toStringYmdHms(endTs) + "') ] ");
-
-					if (addToTimeLine)
+					else
 					{
-						addRecordCount++;
-						write(writer, "            " + prefix + "[ '" + labelKey + "', '" + barText + "', '" + barColor + "', " + udTooltip + " new Date('" + TimeUtils.toStringYmdHms(startTs) + "'), new Date('" + TimeUtils.toStringYmdHms(endTs) + "') ] ");
-						prefix = ",";
-
-						// Remember MAX TS, used if we need to "fillEnd"
-						if (maxTs == null)
-							maxTs = endTs;
-						else
-							maxTs = endTs.getTime() > maxTs.getTime() ? endTs : maxTs;  // MAX value
+						String stepLabel = "[" + stepId + "] - " + stepName;
+						row.put("label"       , stepLabel);
+						row.put("parentKey"   , jobInstanceParentKey.get(jobIdInstance));
+						row.put("laneSubKey"  , stepLabel);
+						row.put("laneSubOrder", stepId);
 					}
+					rows.add(row);
+					addRecordCount++;
+
+					// Remember MAX TS, used if we need to "fillEnd"
+					if (maxTs == null)
+						maxTs = endTs;
+					else
+						maxTs = endTs.getTime() > maxTs.getTime() ? endTs : maxTs;  // MAX value
 
 				} // end: loop ResultSet
 
@@ -1774,27 +1746,24 @@ extends DbxCentralPageTemplate
 				{
 					if (maxTs == null)
 					{
-						Timestamp startTs = startTime;
-						Timestamp endTs   = endTime;
-						udTooltip = createUserDefinedTooltip(useDefaultTooltip, noActivityLabel, noActivityLabel, startTs, endTs, null);
 						// NO Activity -- FULL Period
-						write(writer, "            " + prefix + "[ '" + noActivityLabel + "', '" + noActivityLabel + "', '" + noActivityColor + "', " + udTooltip + " new Date('" + TimeUtils.toStringYmdHms(startTs) + "'), new Date('" + TimeUtils.toStringYmdHms(endTs) + "') ] ");
+						String tooltip = createUserDefinedTooltip(useDefaultTooltip, noActivityLabel, noActivityLabel, startTime, endTime, null);
+						rows.add(DbxTimelineRows.createRow(noActivityLabel, noActivityLabel, noActivityColor, tooltip, startTime, endTime));
 					}
 					else
 					{
 						Timestamp startTs = maxTs;
 						Timestamp endTs   = new Timestamp(System.currentTimeMillis());
-						udTooltip = createUserDefinedTooltip(useDefaultTooltip, noActivityLabel, noActivityLabel, startTs, endTs, null);
 
 						// Only write "end-filler" if it's more than 10 seconds
 						long tsDiffMs = endTs.getTime() - startTs.getTime();
 						if (tsDiffMs > 10_000)
 						{
 							// NO Activity -- AT THE END
-							write(writer, "            " + prefix + "[ '" + noActivityLabel + "', '" + noActivityLabel + "', '" + noActivityColor + "', " + udTooltip + " new Date('" + TimeUtils.toStringYmdHms(startTs) + "'), new Date('" + TimeUtils.toStringYmdHms(endTs) + "') ] ");
+							String tooltip = createUserDefinedTooltip(useDefaultTooltip, noActivityLabel, noActivityLabel, startTs, endTs, null);
+							rows.add(DbxTimelineRows.createRow(noActivityLabel, noActivityLabel, noActivityColor, tooltip, startTs, endTs));
 						}
 					}
-					prefix = ",";
 				}
 
 				if (generateDummyRows > 0)
@@ -1805,8 +1774,6 @@ extends DbxCentralPageTemplate
 
 					Timestamp startTs = null;
 					Timestamp endTs   = null;
-
-					udTooltip = useDefaultTooltip ? "" : "'dummy tooltip', ";
 
 					for (int r = 1; r <= generateDummyRows; r++)
 					{
@@ -1822,305 +1789,70 @@ extends DbxCentralPageTemplate
 							endTs   = new Timestamp(startTs.getTime() + dummyTime);
 						}
 
-						udTooltip = createUserDefinedTooltip(useDefaultTooltip, dummyLabel, dummyLabel, startTs, endTs, null);
-
-						write(writer, "            " + prefix + "[ '" + tmpDummyLabel + "', '" + tmpDummyLabel + "', '" + dummyColor + "', " + udTooltip + " new Date('" + TimeUtils.toStringYmdHms(startTs) + "'), new Date('" + TimeUtils.toStringYmdHms(endTs) + "') ] ");
-						
-						prefix = ",";
+						String tooltip = createUserDefinedTooltip(useDefaultTooltip, dummyLabel, dummyLabel, startTs, endTs, null);
+						rows.add(DbxTimelineRows.createRow(tmpDummyLabel, tmpDummyLabel, dummyColor, tooltip, startTs, endTs));
 					}
-					
 				}
 
-				// END_OF: dataTable.addRows([
-				write(writer, "        ]);																				");
-
-				// TODO: Add properties for the below
-				int timelineFontSize = 10;
+				// Use a smaller font when there are more rows than this
 				int recordThresholdForSmallerFont = 22;
-				
-				write(writer, "        // When we click on a item copy tooltip content to the clipboard                 ");
-				write(writer, "        google.visualization.events.addListener(chart, 'select', function()              ");
-				write(writer, "        {                                                                                ");
-				write(writer, "            var selectedItem = chart.getSelection()[0];                                  ");
-				write(writer, "            if (selectedItem)                                                            ");
-				write(writer, "            {                                                                            ");
-				write(writer, "                // Get the toolip section, and format it into plain text                 ");
-				write(writer, "                let tooltipPlainText = htmlToolTipToPlainText(dataTable.getValue(selectedItem.row, 3)); ");
-				write(writer, "                                                                                         ");
-				write(writer, "                // Write content to copy/paste buffer                                    ");
-				write(writer, "                copyToClipboard(tooltipPlainText);                                            ");
-				write(writer, "                                                                                         ");
-				write(writer, "                // Open modal -- Level_0 -> 'all steps'; else -> 'All Executions Chart'  ");
-				write(writer, "                if (true)                                                                ");
-				write(writer, "                {                                                                        ");
-				write(writer, "                    const start_time = tooltipPlainText.match(  /Start:\\s+(.*)/)?.[1].trim(); ");
-				write(writer, "                    const job_id     = tooltipPlainText.match( /job_id:\\s+(.*)/)?.[1].trim(); ");
-				write(writer, "                    const step_id    = tooltipPlainText.match(/step_id:\\s+(.*)/)?.[1].trim(); ");
-				write(writer, "                                                                                         ");
-//				write(writer, "                    // Open the dialog                                                   ");
-				write(writer, "                    //----------------------------------------                           ");
-				write(writer, "                    // LEVEL: 0 -- open 'all steps'                                      ");
-				write(writer, "                    if (step_id === '0') // yes it's a STRING...                         ");
-				write(writer, "                    {                                                                    ");
-				write(writer, "                        console.log('### 1 ### Selected: LEVEL-0: : OpenModal -- open-all-steps: job_id=|' + job_id + '|'); ");
-				write(writer, "                                                                                         ");
-				write(writer, "                        // get 'main' JobName and Time                                   ");
-				write(writer, "                        let jobTimeAndName = dataTable.getValue(selectedItem.row, 0);    ");
-				write(writer, "                                                                                         ");
-				write(writer, "                        // Open modal                                                    ");
-				write(writer, "                        openModalForJobId(job_id, start_time, jobTimeAndName);           ");
-				write(writer, "                    }                                                                    ");
-				write(writer, "                    else // Open 'All Execution Chart'                                   ");
-				write(writer, "                    {                                                                    ");
-				write(writer, "                        console.log('### 1 ### Selected: LEVEL-ABOVE-0: OpenChart: step_id=|' + step_id + '|, job_id=|' + job_id + '|'); ");
-				write(writer, "                                                                                         ");
-				write(writer, "                        // Open the dialog                                               ");
-				write(writer, "                        openTimeLineChartDialog_byIds(job_id, step_id, start_time);      ");
-				write(writer, "                    }                                                                    ");
-				write(writer, "                                                                                         ");
-				write(writer, "                    // Close the tooltip in some way                                     ");
-				write(writer, "                    document.querySelectorAll('.google-visualization-tooltip').forEach(el => el.style.display = 'none'); ");
-				write(writer, "                }                                                                        ");
-				write(writer, "            }                                                                            ");
-				write(writer, "        });                                                                              ");
-				write(writer, "                                                                                         ");
-				write(writer, "        google.visualization.events.addListener(chart, 'ready', function() {				");
-				write(writer, "            console.log('DONE: Loading chart-timeline, now scrolling to bottom...');		");
-				if (fillEnd)
-					write(writer, "            scrollToBottom('timeline');												");
-				else
-					write(writer, "            //scrollToBottom('timeline'); // fillEnd was FALSE 						");
-				write(writer, "        });																				");
-				write(writer, "																							");
-				write(writer, "        var options = 																	");
-				write(writer, "        {																				");
-				write(writer, "             hAxis: { format: '< HH:mm - dd MMM >' }										");
-				write(writer, "            ,timeline: { 																");
-				write(writer, "                showRowLabels: " + showKeys + "											");
-				if (addRecordCount >= recordThresholdForSmallerFont && timelineFontSize > 0)
-				{
-					write(writer, "                ,rowLabelStyle: { fontSize: " + timelineFontSize + " }				");
-					write(writer, "                ,barLabelStyle: { fontSize: " + timelineFontSize + " }				");
-				}
-				write(writer, "            } 																			");
-				write(writer, "        };																				");
-				write(writer, "																							");
-				write(writer, "        chart.draw(dataTable, options);													");
+
+				write(writer, "<script>");
+				write(writer, "    // All rows: FULL JOB rows (step_id=0) and their steps (nested with 'parentKey'), see /scripts/dbxtune/js/dbxTimeline.js");
+				write(writer, "    const _dbxTimelineRows = " + DbxTimelineRows.toScriptJson(rows) + ";");
+				write(writer, "");
+				write(writer, "    // Extra items in the click menu: the dialog with all executions of the job (step_id=0) or step (from SqlServerJobScheduler)");
+				write(writer, "    function jobTimelineMenuItems(row, ctx)");
+				write(writer, "    {");
+				write(writer, "        if ( ! row.jobId )");
+				write(writer, "            return [];");
+				write(writer, "        return [{");
+				write(writer, "            text:   'Show historical executions graph' + (row.stepId > 0 ? ' (step ' + row.stepId + ')' : ' (full job)'),");
+				write(writer, "            action: function() { openTimeLineChartDialog_byIds(row.jobId, row.stepId, row.startTs); }");
+				write(writer, "        }];");
+				write(writer, "    }");
+				write(writer, "");
+				write(writer, "    DbxTimeline.create('timeline', _dbxTimelineRows, {");
+				write(writer, "        start:          " + DbxTimelineRows.toJsTs(startTime) + ",");
+				write(writer, "        end:            " + DbxTimelineRows.toJsTs(endTime)   + ",");
+				write(writer, "        startExpanded:  " + (!onlyLevelZero) + ",");
+				write(writer, "        showKeys:       " + showKeys + ",");
+				write(writer, "        scrollToBottom: " + fillEnd + ",");
+				write(writer, "        smallFontRows:  " + recordThresholdForSmallerFont + ",");
+				write(writer, "        legend: [ // same colors as in getSql(), createJsTimeline() and createColorDescriptions()");
+				write(writer, "            { color: 'lightblue',  text: 'FULL JOB (step_id=0)' },");
+				write(writer, "            { color: 'blue',       text: 'Normal step' },");
+				write(writer, "            { color: 'red',        text: 'Failed / Canceled' },");
+				write(writer, "            { color: 'orange',     text: 'Retry / Warnings' },");
+				write(writer, "            { color: '#FFC0CB',    text: 'Slower than normal' },");
+				write(writer, "            { color: '#DAF7A6',    text: 'Faster than normal' },");
+				write(writer, "            { color: 'lightgreen', text: 'Executing (job)' },");
+				write(writer, "            { color: 'green',      text: 'Executing (step)' },");
+				write(writer, "            { color: 'gray',       text: 'No Activity' },");
+				write(writer, "            { color: '#d1e7dd',    text: 'diff: faster than avg (>= " + _diffColorPct + "%)' },");
+				write(writer, "            { color: '#ffe5b4',    text: 'diff: slower than avg (>= " + _diffColorPct + "%)' }");
+				write(writer, "        ],");
+				write(writer, "        expandText:     'Show job steps',");
+				write(writer, "        collapseText:   'Hide job steps',");
+				write(writer, "        menuItems:      jobTimelineMenuItems");
+				write(writer, "    });");
 				if (addRecordCount <= 0)
 				{
 					write(writer, "");
-					write(writer, "        // No records was added... show some info abount that ");
-					write(writer, "        console.log('No data was added. StartTime=|" + startTime + "|, endTime=|" + endTime + "|, addRecordCount=" + addRecordCount + "'); ");
-					write(writer, "        document.getElementById('dbx-job-scheduler-no-data').style.display = 'block'; ");
-					write(writer, "        let tmpText  = 'No data was found for period: '; ");
-					write(writer, "            tmpText += '<ul> '; ");
-					write(writer, "            tmpText += '  <li>startTime: " + startTime + "</li> '; ");
-					write(writer, "            tmpText += '  <li>endTime:   " + endTime   + "</li> '; ");
-					write(writer, "            tmpText += '</ul> '; ");
-					write(writer, "        document.getElementById('dbx-job-scheduler-no-data').innerHTML = tmpText; ");
+					write(writer, "    // No records was added... show some info abount that ");
+					write(writer, "    console.log('No data was added. StartTime=|" + startTime + "|, endTime=|" + endTime + "|, addRecordCount=" + addRecordCount + "'); ");
+					write(writer, "    document.getElementById('dbx-job-scheduler-no-data').style.display = 'block'; ");
+					write(writer, "    let tmpText  = 'No data was found for period: '; ");
+					write(writer, "        tmpText += '<ul> '; ");
+					write(writer, "        tmpText += '  <li>startTime: " + startTime + "</li> '; ");
+					write(writer, "        tmpText += '  <li>endTime:   " + endTime   + "</li> '; ");
+					write(writer, "        tmpText += '</ul> '; ");
+					write(writer, "    document.getElementById('dbx-job-scheduler-no-data').innerHTML = tmpText; ");
 				}
-				write(writer, "																							");
-				write(writer, "        // set the start/end time in the 'navigation bar time-lable'						");
-				write(writer, "        setDateRangePickerLabel('" + startTime+ "', '" + endTime + "');					");
-				write(writer, "    }																					");
-				write(writer, "																							");
-//				write(writer, "    function changeAutoscroll() {														");
-//				write(writer, "       var div = document.getElementById('autoscroll-to-bottom');						");
-//				write(writer, "       var storedData = getStorage('dbxtune_checkboxes_');								");
-//				write(writer, "       storedData.set('autoscroll-to-bottom', div.checked);								");
-//				write(writer, "																							");
-//				write(writer, "       console.log('changeAutoscroll: ' + div.checked);									");
-//				write(writer, "    }																					");
-				write(writer, "																							");
-				write(writer, "    // Get the toolip section, and format it into plain text                             ");
-				write(writer, "    function htmlToolTipToPlainText(htmlTooltip) 										");
-				write(writer, "    {                                                                                    ");
-				write(writer, "        htmlTooltip = htmlTooltip.replace(/<BR>/g, '\\n');                               ");
-				write(writer, "        htmlTooltip = htmlTooltip.replace(/<br>/g, '\\n');                               ");
-				write(writer, "        htmlTooltip = htmlTooltip.replace(/<hr>/g, '\\n-------------------------------------------------------\\n');");
-				write(writer, "        htmlTooltip = htmlTooltip.replace(/<\\/tr>/g, '\\n');                            ");
-				write(writer, "        htmlTooltip = htmlTooltip.replace(/&nbsp;/g, ' ');                               ");
-				write(writer, "        htmlTooltip = htmlTooltip.replace(/&emsp;/g, '\\t');                             ");
-				write(writer, "        htmlTooltip = htmlTooltip.replace(/&#92;/g,  '\\\\');                            "); // is JavaScript this will be \\ (two backslashes)
-				write(writer, "        htmlTooltip = htmlTooltip.replace(/<[^>]+>/g, '');                               ");
-				write(writer, "																							");
-				write(writer, "        return htmlTooltip;																");
-				write(writer, "    }																					");
-				write(writer, "																							");
-				write(writer, "    // When we click on a 'Level0' element, this array will be set						");
-				write(writer, "    var _global_latestSelected__jobId_startTime__instanceArr = [];						");
-				write(writer, "																							");
-				write(writer, "    // Open a new modal, with ALL steps in that job										");
-				write(writer, "    function openModalForJobId(job_id, main_job_start_ts, jobTimeAndName)				");
-				write(writer, "    {                                                                                    ");
-				write(writer, "        // Refereence the variablename and show data i a modal dialog 					");
-				write(writer, "        let jobId_startTime_instance = lookup__jobId_startTime__to__instance(job_id, main_job_start_ts); ");
-				write(writer, "        _global_latestSelected__jobId_startTime__instanceArr = jobId_startTime_instance; ");
-				write(writer, "                                                                                         ");
-				write(writer, "        console.log('Selected jobId_startTime_instance: for job_id=|' + job_id + '|, main_job_start_ts=|' + main_job_start_ts + '|.', jobId_startTime_instance); ");
-				write(writer, "                                                                                         ");
-				write(writer, "        // Set various info in the modal dialog                                          ");
-				write(writer, "        document.getElementById('dbx-view-jobIdDetails-title').innerHTML = 'Job Details for: ' + jobTimeAndName; ");
-				write(writer, "                                                                                         ");
-				write(writer, "        // Open the modal... drawChartModal() will be done when to modal IS OPEN         ");
-				write(writer, "        $('#dbx-view-jobIdDetails-dialog').modal('show');                                ");
-				write(writer, "    }                                                                                    ");
-				write(writer, "																							");
-				write(writer, "    function drawChartModal()															");
-				write(writer, "    {																					");
-				write(writer, "        let container = document.getElementById('timeline-modal');						");
-				write(writer, "        let chart = new google.visualization.Timeline(container);						");
-				write(writer, "        let dataTable = new google.visualization.DataTable();							");
-				write(writer, "	   																						");
-				write(writer, "        dataTable.addColumn({ type: 'string', id: 'TextLabel' });						");
-				write(writer, "        dataTable.addColumn({ type: 'string', id: 'BarText'   });						");
-				write(writer, "        dataTable.addColumn({ type: 'string', role: 'style'   });						");
-				write(writer, "        dataTable.addColumn({ type: 'string', role: 'tooltip' });						");
-				write(writer, "        dataTable.addColumn({ type: 'date', id: 'Start' });								");
-				write(writer, "        dataTable.addColumn({ type: 'date', id: 'End' });								");
-				write(writer, "        dataTable.addRows(_global_latestSelected__jobId_startTime__instanceArr);			");
-				write(writer, "																							");
-				write(writer, "        let options = 																	");
-				write(writer, "        {																				");
-				write(writer, "             hAxis: { format: '< HH:mm - dd MMM >' }										");
-				write(writer, "            ,timeline: { 																");
-				write(writer, "                showRowLabels: false														");
-//				write(writer, "                ,rowLabelStyle: { fontSize: 10 }											");
-//				write(writer, "                ,barLabelStyle: { fontSize: 10 }											");
-				write(writer, "            } 																			");
-				write(writer, "        };																				");
-				write(writer, "        if (_global_latestSelected__jobId_startTime__instanceArr.length >= " + recordThresholdForSmallerFont + ") ");
-				write(writer, "        {																				");
-				write(writer, "            options.timeline.rowLabelStyle = { fontSize: " + timelineFontSize + " };		");
-				write(writer, "            options.timeline.barLabelStyle = { fontSize: " + timelineFontSize + " };		");
-				write(writer, "        }																				");
-				write(writer, "	   																						");
-				write(writer, "        // When we click on a item copy tooltip content to the clipboard                 ");
-				write(writer, "        google.visualization.events.addListener(chart, 'select', function()              ");
-				write(writer, "        {                                                                                ");
-				write(writer, "            var selectedItem = chart.getSelection()[0];                                  ");
-				write(writer, "            if (selectedItem)                                                            ");
-				write(writer, "            {                                                                            ");
-				write(writer, "                // Get the toolip section, and format it into plain text                 ");
-				write(writer, "                let tooltipPlainText = htmlToolTipToPlainText(dataTable.getValue(selectedItem.row, 3)); ");
-				write(writer, "                                                                                         ");
-				write(writer, "                // Write content to copy/paste buffer                                    ");
-				write(writer, "                copyToClipboard(tooltipPlainText);                                            ");
-				write(writer, "                                                                                         ");
-				write(writer, "                // Open modal -- All Executions Chart                                    ");
-				write(writer, "                if (true)                                                                ");
-				write(writer, "                {                                                                        ");
-				write(writer, "                    const start_time = tooltipPlainText.match(  /Start:\\s+(.*)/)?.[1].trim(); ");
-				write(writer, "                    const job_id     = tooltipPlainText.match( /job_id:\\s+(.*)/)?.[1].trim(); ");
-				write(writer, "                    const step_id    = tooltipPlainText.match(/step_id:\\s+(.*)/)?.[1].trim(); ");
-				write(writer, "                                                                                         ");
-				write(writer, "                    console.log('### 2 ### Selected: OpenChart: step_id=|' + step_id + '|, job_id=|' + job_id + '|, start_time=|' + start_time + '|.'); ");
-				write(writer, "                                                                                         ");
-				write(writer, "                    // Open the dialog                                                   ");
-				write(writer, "                    openTimeLineChartDialog_byIds(job_id, step_id, start_time);          ");
-				write(writer, "                }                                                                        ");
-				write(writer, "            }                                                                            ");
-				write(writer, "        });                                                                              ");
-				write(writer, "                                                                                         ");
-				write(writer, "        // Then draw the chart															");
-				write(writer, "        chart.draw(dataTable, options);													");
-				write(writer, "    }																					");
-				write(writer, "																							");
-				write(writer, "    function recursiveScrollToTopOrBottom(element, to, level, maxLevel)					");
-				write(writer, "    {                                                                                    ");
-				write(writer, "        level = level + 1;                                                               ");
-				write(writer, "        if (level > maxLevel)                                                            ");
-				write(writer, "            return;                                                                      ");
-				write(writer, "        var childArr = element.children;                                                 ");
-				write(writer, "        if (childArr.length > 0)                                                         ");
-				write(writer, "        {                                                                                ");
-				write(writer, "            for (var child of childArr)                                                  ");
-				write(writer, "            {                                                                            ");
-				write(writer, "                if ( (child.scrollHeight > child.clientHeight) )                                                     ");
-				write(writer, "                {                                                                                                    ");
-				write(writer, "                    console.log('Scroll to ' + to + ': level[' + level + '], child='+child, child);                  ");
-				write(writer, "                    if (to === 'top')                                                    ");
-				write(writer, "                        child.scrollTop = 0;                                             ");
-				write(writer, "                    else                                                                 ");
-				write(writer, "                        child.scrollTop = child.scrollHeight - child.clientHeight;       ");
-				write(writer, "                }                                                                        ");
-				write(writer, "				                                                                            ");
-				write(writer, "                recursiveScrollToTopOrBottom(child, to, level, maxLevel);                ");
-				write(writer, "            }                                                                            ");
-				write(writer, "        }                                                                                ");
-				write(writer, "    }                                                                                    ");
-				write(writer, "                                                                                         ");
-				write(writer, "    function scrollToBottom (id) 														");
-				write(writer, "    {                                                                                    ");
-				write(writer, "       var elem = document.getElementById(id);											");
-				write(writer, "       recursiveScrollToTopOrBottom(elem, 'bottom', -1, 3);								");
-				write(writer, "    }																					");
-				write(writer, "    																						");
-				write(writer, "    function scrollToTop (id) 															");
-				write(writer, "    {                                                                                    ");
-				write(writer, "       var elem = document.getElementById(id);											");
-				write(writer, "       recursiveScrollToTopOrBottom(elem, 'top', -1, 3);									");
-				write(writer, "    }																					");
-				write(writer, "    																						");
-				write(writer, "    function copyToClipboard(str) 														");
-				write(writer, "    {                                                                                    ");
-				write(writer, "       const textArea = document.createElement('textarea');								");
-				write(writer, "       textArea.value = str;																");
-				write(writer, "       document.body.appendChild(textArea);												");
-				write(writer, "       textArea.select();																");
-				write(writer, "       try {																				");
-				write(writer, "       	document.execCommand('copy');													");
-				write(writer, "       } catch (err) {																	");
-				write(writer, "       	alert('Unable to copy to clipboard' + err);										");
-				write(writer, "       }																					");
-				write(writer, "       document.body.removeChild(textArea);												");
-				write(writer, "																							");
-				write(writer, "       //console.log('copyToClipboard: ' + str);											");
-				write(writer, "    }																					");
-				write(writer, "																							");
-				write(writer, "    function copyExecutedSql() 															");
-				write(writer, "    {                                                                                    ");
-				write(writer, "       var sqlText = document.getElementById('executed_sql').textContent;				");
-				write(writer, "																							");
-				write(writer, "       copyToClipboard(sqlText);															");
-				write(writer, "    }																					");
-				write(writer, "																							");
-				write(writer, "																							");
-				write(writer, "    //------------------------------------------------------								");
-				write(writer, "    // Create a Java Object that will hold ALL job instances								");
-				write(writer, "    let _globalLookup__jobId_startTine__to__instance = {}								");
-				write(writer, "																							");
-				write(writer, "    // Now ADD entries to the above object. First initialize, then push					");
-				for (Entry<String, List<String>> entry : jobInstanceMap.entrySet())
-				{
-					String       key = entry.getKey();
-					List<String> val = entry.getValue();
-
-					write(writer, "                          															");
-					write(writer, "    // --------																		");
-					write(writer, "    _globalLookup__jobId_startTine__to__instance['" + key + "'] = [];				");
-					for (String row : val)
-					{
-						write(writer, "    _globalLookup__jobId_startTine__to__instance['" + key + "'].push(" + row + "); ");
-					}
-				}
-				write(writer, "																							");
-				write(writer, "    // LOOKUP Function																	");
-				write(writer, "    function lookup__jobId_startTime__to__instance(jobId, startTime) 					");
-				write(writer, "    {																					");
-				write(writer, "        let key = jobId + '____' + startTime;                                    ");
-				write(writer, "        let jobIdInstance = _globalLookup__jobId_startTine__to__instance[key];           ");
-				write(writer, "																							");
-				write(writer, "        if (jobIdInstance === undefined)													");
-				write(writer, "        {																				");
-				write(writer, "            console.log('lookup__jobId__to__XXX(): NOT FOUND. key=|' + key + '|. jobId=|' + jobId + '|, startTime=|' + startTime + '|');	");
-				write(writer, "            return 'jobId=|' + jobId + '|, startTime=|' + startTime + '|';				");
-				write(writer, "        }																				");
-				write(writer, "																							");
-				write(writer, "        return jobIdInstance; 															");
-				write(writer, "    }																					");
-				write(writer, "																							");
-				write(writer, "</script> \n");
+				write(writer, "");
+				write(writer, "    // set the start/end time in the 'navigation bar time-lable'");
+				write(writer, "    setDateRangePickerLabel('" + startTime + "', '" + endTime + "');");
+				write(writer, "</script>");
 			}
 		}
 		catch (Exception ex)
@@ -2132,14 +1864,6 @@ extends DbxCentralPageTemplate
 				msg = "In '" + this.getClass().getSimpleName() + "'. Problems executing SQL Statement. ErrorCode=" + sqlex.getErrorCode() + ", SQLState=" + sqlex.getSQLState() + ", Message=|" + sqlex.getMessage() + "|, SQL=|" + sql + "|.";
 			}
 
-			// CLOSE the above JavaScript code creations...
-			// Otherwise we will get JavaScript errors (possibly we get it anyway...
-			if (inReadingSqlResults)
-			{
-				writer.println("] // in Java Exception... closing the array: dataTable.addRows([ "); 
-				writer.println("} // in Java Exception... closing the function drawChart() { ");
-				writer.println("</script> <!-- in Java Exception... closing the 'script' tag --> ");
-			}
 			writer.println();
 			writer.println("<!-- BEGIN: ERROR MESSAGE in Servlet ");
 			writer.println(msg);
@@ -2164,6 +1888,28 @@ extends DbxCentralPageTemplate
 	 * 
 	 * @return "" if no deviation, otherwise a string the can be used to present the deviation
 	 */
+	/**
+	 * CSS class (from dbxTimeline.js) for the "diff" part of the bar text, when the execution time differs at least
+	 * 'diffColorPct' percent from the average: 'dbx-tl-good' (faster) or 'dbx-tl-warn' (slower). Otherwise null.
+	 * <br>
+	 * Same rules as getStatExecutionDeviation() for short executions and missing averages.
+	 */
+	private String getAvgDiffCssClass(String jobId, int stepId, long execTimeInSec)
+	{
+		if (execTimeInSec < 10 || _jobIdStepIdExecSummaryMap == null)
+			return null;
+
+		StatObject statObj = _jobIdStepIdExecSummaryMap.get(jobId + "____" + stepId);
+		if (statObj == null || statObj.getAvg() <= 0)
+			return null;
+
+		double diffPct = ((execTimeInSec - statObj.getAvg()) * 100.0) / statObj.getAvg();
+		if (Math.abs(diffPct) < _diffColorPct)
+			return null;
+
+		return diffPct < 0 ? "dbx-tl-good" : "dbx-tl-warn";
+	}
+
 	private String getStatExecutionDeviation(String jobId, int stepId, long execTimeInSec, double basePctThresh)
 	{
 		if (execTimeInSec < 10)
@@ -2286,7 +2032,7 @@ extends DbxCentralPageTemplate
 	private String createUserDefinedTooltip(boolean useDefaultTooltip, String label, String barText, Timestamp startTs, Timestamp endTs, Map<String, String> extraColumns)
 	{
 		if (useDefaultTooltip)
-			return "";
+			return null;
 		
 		SimpleDateFormat ymd       = new SimpleDateFormat("yyyy-MM-dd");
 		SimpleDateFormat hms       = new SimpleDateFormat("HH:mm:ss");
@@ -2457,7 +2203,7 @@ extends DbxCentralPageTemplate
 				+ "<br>"
 				+ "</div>";
 		
-		return "'" + escapeJsQuote(tooltip) + "', ";
+		return tooltip;
 	}
 
 //	/**
