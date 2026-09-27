@@ -100,6 +100,8 @@ import com.dbxtune.utils.AseUrlHelper;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.ConnectionProvider;
 import com.dbxtune.utils.DbUtils;
+import com.dbxtune.utils.H2FileFormat;
+import com.dbxtune.utils.H2FileFormat.OldFormatAction;
 import com.dbxtune.utils.H2UrlHelper;
 import com.dbxtune.utils.NetUtils;
 import com.dbxtune.utils.ShutdownHandler;
@@ -136,6 +138,8 @@ public class PersistWriterJdbc
 
 	public static final String PROPKEY_jdbcKeepConnOpen          = "PersistWriterJdbc.jdbcKeepConnOpen";
 	public static final String PROPKEY_h2NewDbOnDateChange       = "PersistWriterJdbc.h2NewDbOnDateChange";
+	public static final String PROPKEY_h2OldFormatAction         = "PersistWriterJdbc.h2.oldFormat.action";
+	public static final OldFormatAction DEFAULT_h2OldFormatAction = OldFormatAction.ERROR;
 	public static final String PROPKEY_h2DateParseFormat         = "PersistWriterJdbc.h2DateParseFormat";
 
 	public static final String PROPKEY_h2_queueSizeWarning_createNewDbThreshold = "PersistWriterJdbc.h2.queueSizeWarning.createNewDbThreshold";
@@ -1871,6 +1875,10 @@ public class PersistWriterJdbc
 				}
 			}
 
+			// If the H2 database file is written by an older H2 version: take action (before we try to open it)
+			if ( _jdbcUrl.startsWith("jdbc:h2:") && ! h2OldFormatCheck(localJdbcUrl) )
+				return null;
+
 //			Connection conn = DriverManager.getConnection(localJdbcUrl, _jdbcUser, _jdbcPasswd);
 //			_mainConn = DbxConnection.createDbxConnection(conn);
 			// The below connection properties will be used if/when doing reConnect()
@@ -1886,6 +1894,10 @@ public class PersistWriterJdbc
 			long connectStartTime = System.currentTimeMillis();
 			_mainConn = DbxConnection.connect(null, connProp);
 			String connectTimeStr = TimeUtils.msDiffNowToTimeStr(connectStartTime);
+
+			// H2: log what H2 build created the database, and WARN if it's newer than the running H2 (a downgrade)
+			if (_jdbcUrl.startsWith("jdbc:h2:"))
+				H2FileFormat.logCreateBuildInfo(_mainConn, localJdbcUrl);
 
 			// Remember the last used URL (in case of H2 spill over database), the _mainConn is null at that time, so we cant use _mainConn.getConnProp().getUrl()
 			_lastUsedUrl = localJdbcUrl;
@@ -2097,23 +2109,11 @@ public class PersistWriterJdbc
 				// SQLState:  90048
 				// ErrorCode: 90048
 				// Trying to open an earlier DB File of H2 Version
+				// Note: normally this is caught earlier by h2OldFormatCheck(), before we try to connect
 				if (originException.getErrorCode() == 90048 || originException.getMessage().contains("Unsupported database file version"))
 				{
-					_logger.error("============================================================================");
-					_logger.error("== The H2 Database file is probably created with an earlier version of H2 ==");
-					_logger.error("============================================================================");
-					_logger.error("== For the moment there is NO upgrade path for Collectors; Just delete *todays* recording(s) and start the collector(s) again.");
-					_logger.error("== ACTION: Delete *todays* recording and start the collector again.");
-					_logger.error("============================================================================");
-					_logger.info ("Requesting a 'shutdown' since we can't continue with the old H2 database version...");
-
-					// Stop the collector...
-					Configuration shutdownConfig = new Configuration();
-					shutdownConfig.setProperty("h2.shutdown.type", H2ShutdownType.DEFAULT.toString());  // NORMAL, IMMEDIATELY, COMPACT, DEFRAG
-	
-					String reason = "Shutdown Requested from H2_UNSUPPORTED_DB_FEIL_VERSION(90048), url='" + _jdbcUrl + "', errors='" + originException.getMessage() + "'.";
-					boolean doRestart = false;
-					ShutdownHandler.shutdown(reason, doRestart, shutdownConfig);
+					File dbFile = new H2UrlHelper(_lastUsedUrl != null ? _lastUsedUrl : _jdbcUrl).getDbFile();
+					h2OldFormatShutdown(dbFile, "Shutdown Requested from H2_UNSUPPORTED_DB_FEIL_VERSION(90048), url='" + _jdbcUrl + "', errors='" + originException.getMessage() + "'.");
 				}
 			}
 		}
@@ -2130,6 +2130,79 @@ public class PersistWriterJdbc
 		}
 		
 		return _mainConn;
+	}
+
+	/** Set when a shutdown has been requested due to an old H2 file format (so we only request it once) */
+	private boolean _h2OldFormatShutdownRequested = false;
+
+	/**
+	 * Check if the H2 database file is written by an older H2 version (that the current H2 can't read), <b>before</b> we try to open it.
+	 * <p>
+	 * What to do is decided by property 'PersistWriterJdbc.h2.oldFormat.action' (default ERROR).
+	 * For the moment only ERROR is implemented for collectors: log and shutdown.
+	 *
+	 * @return true if it's OK to continue and open the database, false if we should NOT open it
+	 */
+	private boolean h2OldFormatCheck(String localJdbcUrl)
+	{
+		H2UrlHelper urlHelper = new H2UrlHelper(localJdbcUrl);
+		if ( ! urlHelper.isUrlTypeFile() )
+			return true;
+
+		File dbFile = urlHelper.getDbFile(); // null if it do not exist (a new database will be created)
+		if (dbFile == null || ! H2FileFormat.needsUpgrade(dbFile))
+			return true;
+
+		_logger.warn(H2FileFormat.describe(dbFile));
+
+		OldFormatAction action = H2FileFormat.parseAction(Configuration.getCombinedConfiguration().getProperty(PROPKEY_h2OldFormatAction), DEFAULT_h2OldFormatAction);
+		switch (action)
+		{
+		case ERROR:
+			break;
+
+		// Future: implement upgrade strategies for collectors here (new db file, copy upgrade, H2 native upgrade...)
+		default:
+			_logger.error("The H2 old format action '" + action + "' (property '" + PROPKEY_h2OldFormatAction + "') is NOT yet implemented for collectors. Falling back to '" + OldFormatAction.ERROR + "'.");
+			break;
+		}
+
+		h2OldFormatShutdown(dbFile, "Shutdown Requested: H2 database file '" + dbFile + "' has format " + H2FileFormat.readFormat(dbFile) + ", which can't be read by H2 " + H2FileFormat.getCurrentH2Version() + ".");
+		return false;
+	}
+
+	/**
+	 * Log what to do, and request a shutdown of the collector (only once)
+	 */
+	private void h2OldFormatShutdown(File dbFile, String reason)
+	{
+		String fileStr = dbFile == null ? "-unknown-" : dbFile.getAbsolutePath();
+
+		_logger.error("============================================================================");
+		_logger.error("== The H2 Database file is created with an earlier version of H2 ==");
+		_logger.error("============================================================================");
+		_logger.error("== File:            " + fileStr);
+		if (dbFile != null)
+			_logger.error("== File format:     " + H2FileFormat.readFormat(dbFile) + ", current H2 " + H2FileFormat.getCurrentH2Version() + " reads format " + H2FileFormat.getCurrentFormatReadMin() + "-" + H2FileFormat.getCurrentFormatReadMax());
+		_logger.error("== Property:        " + PROPKEY_h2OldFormatAction + "=" + OldFormatAction.ERROR + " (the only action implemented for collectors)");
+		_logger.error("== For the moment there is NO upgrade path for Collectors.");
+		_logger.error("== ACTION: Delete or move *todays* recording, and start the collector again.");
+		if (dbFile != null)
+			_logger.error("==         mv '" + fileStr + "' '" + fileStr + ".h2fmt" + H2FileFormat.readFormat(dbFile) + ".bak'");
+		_logger.error("============================================================================");
+
+		if (_h2OldFormatShutdownRequested)
+			return;
+		_h2OldFormatShutdownRequested = true;
+
+		_logger.info ("Requesting a 'shutdown' since we can't continue with the old H2 database version...");
+
+		// Stop the collector...
+		Configuration shutdownConfig = new Configuration();
+		shutdownConfig.setProperty("h2.shutdown.type", H2ShutdownType.DEFAULT.toString());  // NORMAL, IMMEDIATELY, COMPACT, DEFRAG
+
+		boolean doRestart = false;
+		ShutdownHandler.shutdown(reason, doRestart, shutdownConfig);
 	}
 
 	private DbxConnection closeConn(DbxConnection conn)

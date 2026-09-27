@@ -97,6 +97,7 @@ import com.dbxtune.central.pcs.CentralPcsDirectoryReceiver;
 import com.dbxtune.central.pcs.CentralPcsWriterHandler;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.central.pcs.CentralPersistWriterJdbc;
+import com.dbxtune.central.pcs.H2CentralDbAutoUpgrade;
 import com.dbxtune.central.pcs.DbxCentralRealm;
 import com.dbxtune.central.pcs.H2WriterStatCronTask;
 import com.dbxtune.check.CheckForUpdates;
@@ -1154,6 +1155,11 @@ public class DbxTuneCentral
 		if ( ! conf.hasProperty(CentralPersistWriterJdbc.PROPKEY_JDBC_URL     ) ) conf.setProperty(CentralPersistWriterJdbc.PROPKEY_JDBC_URL     , "jdbc:h2:file:${DBXTUNE_SAVE_DIR}/DBXTUNE_CENTRAL_DB");
 		if ( ! conf.hasProperty(CentralPersistWriterJdbc.PROPKEY_JDBC_USERNAME) ) conf.setProperty(CentralPersistWriterJdbc.PROPKEY_JDBC_USERNAME, "sa");
 		if ( ! conf.hasProperty(CentralPersistWriterJdbc.PROPKEY_JDBC_PASSWORD) ) conf.setProperty(CentralPersistWriterJdbc.PROPKEY_JDBC_PASSWORD, "");
+
+		//---------------------------
+		// If the H2 database file is written by an older H2 version: upgrade it (before anyone opens it)
+		//---------------------------
+		H2CentralDbAutoUpgrade.checkAndUpgrade(conf);
 
 		
 		//---------------------------

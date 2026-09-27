@@ -75,6 +75,7 @@ import com.dbxtune.utils.AseConnectionUtils;
 import com.dbxtune.utils.AseUrlHelper;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.DbUtils;
+import com.dbxtune.utils.H2FileFormat;
 import com.dbxtune.utils.H2UrlHelper;
 import com.dbxtune.utils.ShutdownHandler;
 import com.dbxtune.utils.StringUtil;
@@ -524,6 +525,10 @@ extends CentralPersistWriterBase
 			_lastUsedUrl = localJdbcUrl;
 			
 			_logger.info("A Database connection has been opened. connectTime='" + connectTimeStr + "', to URL '" + localJdbcUrl + "', using driver '" + _jdbcDriver + "'.");
+
+			// H2: log what H2 build created the database, and WARN if it's newer than the running H2 (a downgrade)
+			if (_jdbcUrl.startsWith("jdbc:h2:"))
+				H2FileFormat.logCreateBuildInfo(_mainConn, localJdbcUrl);
 			_logger.debug("The connection has property auto-commit set to '" + _mainConn.getAutoCommit() + "'.");
 
 			// Write info about what JDBC driver we connects via.
