@@ -120,6 +120,13 @@ rem	set JAVA_START_CLASS=com.dbxtune.central.pcs.H2CentralDbCopy2
 	set DBXTUNE_JVM_MEMORY_PARAMS=-Xmx4096m -Xms64m
 	set useDbxCentralEnv=1
 
+) ELSE IF "%APP_NAME%" == "h2upgrade" (
+	set JAVA_START_CLASS=com.dbxtune.central.pcs.H2DbFileUpgradeTool
+	set JAVA_START_PARAMS=
+	set SPLASH=
+	set DBXTUNE_JVM_MEMORY_PARAMS=-Xmx4096m -Xms64m
+	set useDbxCentralEnv=1
+
 ) ELSE IF /I "%APP_NAME%" == "dbxPassword" (
 	set JAVA_START_CLASS=com.dbxtune.utils.DbxPassword
 	set JAVA_START_PARAMS=
@@ -189,6 +196,7 @@ rem	set JAVA_START_CLASS=com.dbxtune.central.pcs.H2CentralDbCopy2
 	echo " central     - A Component for multiple instances"
 	echo "               If you want some central Web based view"
 	echo " dbxcdbcopy  - Copy a DBX Cental db to a new destination (used to migrate to a new DBMS)"
+	echo " h2upgrade   - Upgrade H2 database files (recordings/Central DB) written by an older H2 version"
 	echo " dbxPassword - Manage Encrypted Passwords"
 	echo " dbxPasswordUpgrade - Upgrade the encrypted password file from v1 to v2"
 	echo ""

@@ -138,7 +138,32 @@ implements AutoCloseable
 	DbxConnection _sourceConn;
 	Catalog       _sourceCatalog;
 
-	int    _sourceDbxCentralDbVersion = -1; 
+	int    _sourceDbxCentralDbVersion = -1;
+	DbType _sourceDbType = null; // set in preCheck()
+
+	/** What kind of DbxTune database we are copying */
+	public enum DbType
+	{
+		/** The DbxCentral database (DBXTUNE_CENTRAL_DB), has table PUBLIC.DbxCentralVersionInfo */
+		DBXCENTRAL,
+
+		/** A DbxTune collector recording (SERVERNAME_yyyy-MM-dd), has table PUBLIC.MonVersionInfo */
+		DBXTUNE_RECORDING
+	};
+
+	/** Result from {@link H2CentralDbCopy3#upgradeFromOldH2(File, File, File, String, String, DbType)} */
+	public static class CopyResult
+	{
+		public boolean ok;
+		public DbType  dbType;
+		public int     tables;
+		public long    sourceRows;
+		public long    targetRows;
+		public long    durationMs;
+
+		@Override
+		public String toString() { return "ok=" + ok + ", dbType=" + dbType + ", tables=" + tables + ", sourceRows=" + sourceRows + ", targetRows=" + targetRows + ", time=" + TimeUtils.msToTimeStrDHMS(durationMs); }
+	} 
 
 	
 	String _targetUser;
@@ -681,7 +706,8 @@ implements AutoCloseable
 		boolean hasErrors = printErrorReport();
 		
 		//
-		if (hasErrors || _dmlUseMerge)
+		// Only for DbxCentral databases (not for DbxTune collector recordings)
+		if ((hasErrors || _dmlUseMerge) && ! DbType.DBXTUNE_RECORDING.equals(_sourceDbType))
 			fixDbxCentralMetaDataTablesAtTarget();
 
 		// Shutdown H2 and 
@@ -739,7 +765,7 @@ implements AutoCloseable
 	}
 
 	/**
-	 * Upgrade/Migrate a DbxCentral H2 database written by an older H2 version, into a new database file.
+	 * Upgrade/Migrate a DbxCentral or DbxTune recording H2 database written by an older H2 version, into a new database file.
 	 * <p>
 	 * A separate JVM (with the old H2 JAR) will host the source database as a TCP Server,
 	 * and all DDL and Data will be copied (table-by-table) into the target database (using the current H2 version).
@@ -751,12 +777,14 @@ implements AutoCloseable
 	 * @param targetDbFile   The new H2 database file (*.mv.db), should NOT exist
 	 * @param user           Username for both source and target
 	 * @param passwd         Password for both source and target
-	 * @return true if the copy was successful (no errors)
-	 * @throws Exception if the source is not a DbxCentral database, or we had problems starting the old H2 server or connecting
+	 * @param expectedDbType What type of database we expect, null = any known type (DbxCentral or DbxTune recording)
+	 * @return A result, where 'ok' is true if the copy was successful (no errors)
+	 * @throws Exception if the source is not of the expected type, or we had problems starting the old H2 server or connecting
 	 */
-	public static boolean upgradeFromOldH2(File sourceDbFile, File oldH2Jar, File targetDbFile, String user, String passwd)
+	public static CopyResult upgradeFromOldH2(File sourceDbFile, File oldH2Jar, File targetDbFile, String user, String passwd, DbType expectedDbType)
 	throws Exception
 	{
+		long startTime = System.currentTimeMillis();
 		try( H2CentralDbCopy3 dbCopy = new H2CentralDbCopy3() )
 		{
 			dbCopy._calledFromCode = true;
@@ -784,11 +812,24 @@ implements AutoCloseable
 			dbCopy.connect();
 
 			dbCopy.preCheck();
-			if (dbCopy._sourceDbxCentralDbVersion <= 0)
-				throw new Exception("The SOURCE database does not look like a DbxCentral database. file='" + sourceDbFile + "'.");
+			if (dbCopy._sourceDbType == null)
+				throw new Exception("The SOURCE database does not look like a DbxCentral or a DbxTune recording database. file='" + sourceDbFile + "'.");
+			if (expectedDbType != null && ! expectedDbType.equals(dbCopy._sourceDbType))
+				throw new Exception("The SOURCE database type is " + dbCopy._sourceDbType + ", expected " + expectedDbType + ". file='" + sourceDbFile + "'.");
 
 			boolean hasErrors = dbCopy.doWork();
-			return ! hasErrors;
+
+			CopyResult res = new CopyResult();
+			res.ok     = ! hasErrors;
+			res.dbType = dbCopy._sourceDbType;
+			res.tables = dbCopy._tableList.size();
+			for (DbTable dbt : dbCopy._tableList)
+			{
+				res.sourceRows += dbt.sourceReadCount;
+				res.targetRows += Math.max(0, dbt.targetPostRowCount);
+			}
+			res.durationMs = System.currentTimeMillis() - startTime;
+			return res;
 		}
 	}
 
@@ -998,9 +1039,30 @@ implements AutoCloseable
 		}
 		catch(SQLException ex)
 		{
-			_logger.warn("Problems getting SOURCE DbxCentral DbVersion using sql='" + sql + "'. caught: " + ex);
+			_logger.info("Could not get SOURCE DbxCentral DbVersion (probably not a DbxCentral database) using sql='" + sql + "'. caught: " + ex);
 		}
 		_logger.info("SOURCE DbxCentral DbVersion = " + _sourceDbxCentralDbVersion);
+
+		// What type of database is the SOURCE
+		_sourceDbType = null;
+		if (_sourceDbxCentralDbVersion > 0)
+		{
+			_sourceDbType = DbType.DBXCENTRAL;
+		}
+		else
+		{
+			// A DbxTune Collector recording has the table 'MonVersionInfo'
+			sql = _sourceConn.quotifySqlString("select count(*) from [PUBLIC].[MonVersionInfo]");
+			try (Statement stmnt = _sourceConn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				_sourceDbType = DbType.DBXTUNE_RECORDING;
+			}
+			catch(SQLException ex)
+			{
+				_logger.info("Could not find table 'MonVersionInfo' in SOURCE (probably not a DbxTune recording database). caught: " + ex);
+			}
+		}
+		_logger.info("SOURCE database type = " + _sourceDbType);
 
 		// Get TARGET DbxCentral DB Version
 		_targetDbxCentralDbVersion = -1;

@@ -100,6 +100,8 @@ import com.dbxtune.utils.AseUrlHelper;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.ConnectionProvider;
 import com.dbxtune.utils.DbUtils;
+import com.dbxtune.central.pcs.H2CentralDbCopy3.DbType;
+import com.dbxtune.central.pcs.H2DbFileUpgrader;
 import com.dbxtune.utils.H2FileFormat;
 import com.dbxtune.utils.H2FileFormat.OldFormatAction;
 import com.dbxtune.utils.H2UrlHelper;
@@ -138,8 +140,11 @@ public class PersistWriterJdbc
 
 	public static final String PROPKEY_jdbcKeepConnOpen          = "PersistWriterJdbc.jdbcKeepConnOpen";
 	public static final String PROPKEY_h2NewDbOnDateChange       = "PersistWriterJdbc.h2NewDbOnDateChange";
-	public static final String PROPKEY_h2OldFormatAction         = "PersistWriterJdbc.h2.oldFormat.action";
-	public static final OldFormatAction DEFAULT_h2OldFormatAction = OldFormatAction.ERROR;
+	/** Prefix for: action, keepBackup, spaceFactor, spaceMarginMb, jar.format.N */
+	public static final String PROPKEY_h2OldFormatPrefix         = "PersistWriterJdbc.h2.oldFormat.";
+	public static final String PROPKEY_h2OldFormatAction         = PROPKEY_h2OldFormatPrefix + "action";
+	public static final OldFormatAction DEFAULT_h2OldFormatAction = OldFormatAction.COPY_UPGRADE;
+	public static final boolean DEFAULT_h2OldFormatKeepBackup     = false;
 	public static final String PROPKEY_h2DateParseFormat         = "PersistWriterJdbc.h2DateParseFormat";
 
 	public static final String PROPKEY_h2_queueSizeWarning_createNewDbThreshold = "PersistWriterJdbc.h2.queueSizeWarning.createNewDbThreshold";
@@ -2138,8 +2143,13 @@ public class PersistWriterJdbc
 	/**
 	 * Check if the H2 database file is written by an older H2 version (that the current H2 can't read), <b>before</b> we try to open it.
 	 * <p>
-	 * What to do is decided by property 'PersistWriterJdbc.h2.oldFormat.action' (default ERROR).
-	 * For the moment only ERROR is implemented for collectors: log and shutdown.
+	 * What to do is decided by property 'PersistWriterJdbc.h2.oldFormat.action' (default COPY_UPGRADE).
+	 * <ul>
+	 *   <li>COPY_UPGRADE: copy the database into a new file (see {@link H2DbFileUpgrader}), if that fails: same as ERROR</li>
+	 *   <li>ERROR: log and shutdown</li>
+	 * </ul>
+	 * Other properties: PersistWriterJdbc.h2.oldFormat.keepBackup (default false = delete the original after a successful verify),
+	 * spaceFactor, spaceMarginMb, jar.format.N
 	 *
 	 * @return true if it's OK to continue and open the database, false if we should NOT open it
 	 */
@@ -2155,19 +2165,33 @@ public class PersistWriterJdbc
 
 		_logger.warn(H2FileFormat.describe(dbFile));
 
-		OldFormatAction action = H2FileFormat.parseAction(Configuration.getCombinedConfiguration().getProperty(PROPKEY_h2OldFormatAction), DEFAULT_h2OldFormatAction);
+		Configuration conf = Configuration.getCombinedConfiguration();
+		OldFormatAction action = H2FileFormat.parseAction(conf.getProperty(PROPKEY_h2OldFormatAction), DEFAULT_h2OldFormatAction);
+		String reason = "H2 database file '" + dbFile + "' has format " + H2FileFormat.readFormat(dbFile) + ", which can't be read by H2 " + H2FileFormat.getCurrentH2Version() + ".";
 		switch (action)
 		{
-		case ERROR:
-			break;
+		case COPY_UPGRADE:
+		{
+			_logger.info("Upgrading the H2 recording '" + dbFile + "' (size " + StringUtil.bytesToHuman(dbFile.length()) + ") by copying it into a new file. The collector start is delayed while copying.");
 
-		// Future: implement upgrade strategies for collectors here (new db file, copy upgrade, H2 native upgrade...)
-		default:
-			_logger.error("The H2 old format action '" + action + "' (property '" + PROPKEY_h2OldFormatAction + "') is NOT yet implemented for collectors. Falling back to '" + OldFormatAction.ERROR + "'.");
+			H2DbFileUpgrader.Options opt = H2DbFileUpgrader.Options.fromConfig(conf, PROPKEY_h2OldFormatPrefix, DEFAULT_h2OldFormatKeepBackup);
+			opt.user   = _jdbcUser;
+			opt.passwd = _jdbcPasswd;
+
+			H2DbFileUpgrader.Result res = H2DbFileUpgrader.upgrade(dbFile, DbType.DBXTUNE_RECORDING, opt);
+			if (res.isOk())
+				return true;
+
+			reason += " The upgrade FAILED (" + res.status + "): " + res.message;
 			break;
 		}
 
-		h2OldFormatShutdown(dbFile, "Shutdown Requested: H2 database file '" + dbFile + "' has format " + H2FileFormat.readFormat(dbFile) + ", which can't be read by H2 " + H2FileFormat.getCurrentH2Version() + ".");
+		case ERROR:
+		default:
+			break;
+		}
+
+		h2OldFormatShutdown(dbFile, "Shutdown Requested: " + reason);
 		return false;
 	}
 
@@ -2184,9 +2208,11 @@ public class PersistWriterJdbc
 		_logger.error("== File:            " + fileStr);
 		if (dbFile != null)
 			_logger.error("== File format:     " + H2FileFormat.readFormat(dbFile) + ", current H2 " + H2FileFormat.getCurrentH2Version() + " reads format " + H2FileFormat.getCurrentFormatReadMin() + "-" + H2FileFormat.getCurrentFormatReadMax());
-		_logger.error("== Property:        " + PROPKEY_h2OldFormatAction + "=" + OldFormatAction.ERROR + " (the only action implemented for collectors)");
-		_logger.error("== For the moment there is NO upgrade path for Collectors.");
-		_logger.error("== ACTION: Delete or move *todays* recording, and start the collector again.");
+		_logger.error("== Reason:          " + reason);
+		_logger.error("== Property:        " + PROPKEY_h2OldFormatAction + " (" + OldFormatAction.COPY_UPGRADE + " = upgrade automatically at start, " + OldFormatAction.ERROR + " = stop)");
+		_logger.error("== ACTION: Upgrade the recording manually, and start the collector again:");
+		_logger.error("==         dbxtune.sh h2upgrade -f '" + fileStr + "' -e");
+		_logger.error("==     Or: Move *todays* recording away (a new recording will be started):");
 		if (dbFile != null)
 			_logger.error("==         mv '" + fileStr + "' '" + fileStr + ".h2fmt" + H2FileFormat.readFormat(dbFile) + ".bak'");
 		_logger.error("============================================================================");
