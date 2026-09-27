@@ -13,17 +13,18 @@ export DBXTUNE_SAVE_DIR=${DBXTUNE_SAVE_DIR:-$DBXTUNE_HOME/data}
 
 ##
 ## Get H2 JAR file
-## If we find several files versions, just grab the first one, and print a warning
+## If we find several files versions, use the NEWEST version, and print a warning
+## (older h2 jars are kept in lib, to upgrade old database files, see: dbxtune.sh h2upgrade)
 ##
-h2JarFiles=( $(find ${DBXTUNE_HOME}/lib -maxdepth 1 -name "h2*.jar") )
-h2JarFile="${h2JarFiles[0]}"
+h2JarFiles=( $(find ${DBXTUNE_HOME}/lib -maxdepth 1 -name "h2-*.jar" | sort -V) )
+h2JarFile="${h2JarFiles[${#h2JarFiles[@]}-1]}"
 if [ ${#h2JarFiles[@]} -gt 1 ]
 then
 	echo ""
 	echo "Warning: Found several h2 jar files at ${DBXTUNE_HOME}/lib"
-	echo "         I will use the jar file '${h2JarFile}'"
+	echo "         I will use the newest jar file '${h2JarFile}'"
 	echo ""
-fi 
+fi
 
 ##
 ## Assign some local variables based on input parameters

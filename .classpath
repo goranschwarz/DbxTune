@@ -45,7 +45,7 @@
 	</classpathentry>
 	<classpathentry kind="lib" path="lib/jetty/jetty-all-9.4.58.v20250814-uber.jar"/>
 	<classpathentry kind="lib" path="lib/jsqlparser-5.4.jar"/>
-	<classpathentry kind="lib" path="lib/h2-2.4.240.jar"/>
+	<classpathentry kind="lib" path="lib/h2-2.5.252.jar"/>
 	<classpathentry kind="lib" path="lib/commons-math3-3.6.1.jar" sourcepath="3pp/commons-math3-3.6.1-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jdbc_drivers/mssql-jdbc-13.6.0.jre11.jar"/>
 	<classpathentry kind="lib" path="lib/freemarker-2.3.35.jar"/>
