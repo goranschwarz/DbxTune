@@ -20,12 +20,16 @@
  ******************************************************************************/
 package com.dbxtune.mgt.controllers;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.lang.invoke.MethodHandles;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.Properties;
 import java.util.stream.Collectors;
 
 import javax.servlet.ServletException;
@@ -55,6 +59,91 @@ extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+
+	/** Configuration instances in NO-GUI search order: { instance, role (used by the Web UI), description } */
+	private static final String[][] CONFIG_INSTANCES = {
+			{ Configuration.NOGUI_SAVE , "server" , "Server specific: values saved from the Web UI, overrides the shared file" },
+			{ Configuration.USER_TEMP  , "temp"   , "Temporary user settings" },
+			{ Configuration.PCS        , "shared" , "Shared: passed to the collector at start, can be used by several servers" },
+			{ Configuration.USER_CONF  , "user"   , "User configuration" },
+			{ Configuration.SYSTEM_CONF, "system" , "System defaults" },
+	};
+
+	private static String roleOf(String instance)
+	{
+		for (String[] ci : CONFIG_INSTANCES)
+			if (ci[0].equals(instance))
+				return ci[1];
+		return instance.toLowerCase();
+	}
+
+	/**
+	 * Where does a property value come from? Same rule as Configuration.getCombinedConfiguration(): the first
+	 * configuration in the search order that has the key, otherwise the default in the code.
+	 * <p>
+	 * Also detects values that only exist in memory: an "in-memory only" save from the Web UI changes the server
+	 * specific configuration (NOGUI_SAVE) without writing its file, so the change is lost at restart.
+	 * <p>
+	 * Created per request (the servlet is shared between threads).
+	 */
+	private static class ValueSource
+	{
+		private final String[]   _searchOrder = Configuration.getSearchOrder();
+		private final Properties _serverFile; // NOGUI_SAVE as it is on disk, null if there is no such file
+
+		ValueSource()
+		{
+			Properties props = null;
+			Configuration srv = Configuration.hasInstance(Configuration.NOGUI_SAVE) ? Configuration.getInstance(Configuration.NOGUI_SAVE) : null;
+			if (srv != null && StringUtil.hasValue(srv.getFilename()) && new File(srv.getFilename()).isFile())
+			{
+				// load it the same way as Configuration does
+				try (FileInputStream in = new FileInputStream(srv.getFilename()))
+				{
+					props = new Properties();
+					props.load(in);
+				}
+				catch (IOException ex)
+				{
+					_logger.warn("Could not read '" + srv.getFilename() + "' to check for in-memory only values. Caught: " + ex);
+					props = null;
+				}
+			}
+			_serverFile = props;
+		}
+
+		/** Writes 'source' (server|temp|shared|user|system|default) and, when true, 'sourceInMemoryOnly' */
+		void write(JsonGenerator gen, String propKey)
+		throws IOException
+		{
+			if (StringUtil.isNullOrBlank(propKey))
+				return;
+
+			String source = "default";
+			for (String inst : _searchOrder)
+			{
+				Configuration conf = Configuration.getInstance(inst);
+				if (conf != null && conf.containsKey(propKey))
+				{
+					// 'USE_DEFAULT:...' means "use the default from the code" (see Configuration.setProperty)
+					Object raw = conf.get(propKey);
+					if ( ! (raw instanceof String && ((String) raw).startsWith(Configuration.USE_DEFAULT_PREFIX)) )
+						source = roleOf(inst);
+					break;
+				}
+			}
+			gen.writeStringField("source", source);
+
+			if (_serverFile != null)
+			{
+				Configuration srv = Configuration.getInstance(Configuration.NOGUI_SAVE);
+				Object inMemory = srv == null ? null : srv.get(propKey);
+				Object onDisk   = _serverFile.get(propKey);
+				if ( ! Objects.equals(inMemory, onDisk) )
+					gen.writeBooleanField("sourceInMemoryOnly", true);
+			}
+		}
+	}
 
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
@@ -135,6 +224,27 @@ if (auth != null)
 //		gen.writeStringField("srvTimeCmd"     , CounterController.getInstance().getServerTimeCmd());
 		//NOTE: Should we add more server info here...
 
+		// ARRAY: configFiles -- the configuration files in NO-GUI search order (first one wins), only those with a file behind them
+		// NOGUI_SAVE = server specific file (changes from the Web UI are saved here), PCS = the shared file passed to the collector (-c)
+		gen.writeFieldName("configFiles");
+		gen.writeStartArray();
+		for (String[] ci : CONFIG_INSTANCES)
+		{
+			Configuration conf = Configuration.hasInstance(ci[0]) ? Configuration.getInstance(ci[0]) : null;
+			if (conf == null || StringUtil.isNullOrBlank(conf.getFilename()))
+				continue;
+			gen.writeStartObject();
+			gen.writeStringField("instance"   , ci[0]);
+			gen.writeStringField("role"       , ci[1]);
+			gen.writeStringField("filename"   , conf.getFilename());
+			gen.writeStringField("description", ci[2]);
+			gen.writeEndObject();
+		}
+		gen.writeEndArray();
+
+		// Every value below gets a 'source': which config file it comes from (see ValueSource)
+		ValueSource src = new ValueSource();
+
 		gen.writeFieldName("cmList");
 		gen.writeStartArray();
 		
@@ -206,6 +316,7 @@ if (auth != null)
 					gen.writeBooleanField("isDefaultValue", settings.isDefaultValue());
 					gen.writeStringField ("description"   , StringUtil.stripHtmlStartEnd(settings.getDescription()));
 					gen.writeStringField ("validatorName" , settings.getInputValidatorClassName());
+					src.write(gen, settings.getPropName());
 					gen.writeEndObject();
 				}
 				gen.writeEndArray();
@@ -235,6 +346,7 @@ if (auth != null)
 					gen.writeBooleanField("isDefaultValue", settings.isDefaultValue());
 					gen.writeStringField ("description"   , StringUtil.stripHtmlStartEnd(settings.getDescription()));
 					gen.writeStringField ("validatorName" , settings.getInputValidatorClassName());
+					src.write(gen, settings.getPropName());
 					gen.writeEndObject();
 				}
 				gen.writeEndArray();
@@ -276,6 +388,7 @@ if (auth != null)
 						gen.writeBooleanField("isDefaultValue", entry.isDefaultValue());
 						gen.writeStringField ("description"   , StringUtil.stripHtmlStartEnd(entry.getDescription()));
 						gen.writeStringField ("validatorName" , entry.getInputValidatorClassName());
+		src.write(gen, entry.getPropName());
 						gen.writeEndObject();
 					}
 					
@@ -319,7 +432,7 @@ if (auth != null)
 						insertExtraAlarmSettings(cm, colname, settingsList);
 						
 						// ARRAY: parameters
-						getAlarmParametersFor(gen, entry, settingsList);
+						getAlarmParametersFor(gen, entry, settingsList, src);
 
 						gen.writeEndObject();
 					}
@@ -512,6 +625,7 @@ if (auth != null)
 					gen.writeBooleanField("isDefaultValue", entry.isDefaultValue());
 					gen.writeStringField ("description"   , StringUtil.stripHtmlStartEnd(entry.getDescription()));
 					gen.writeStringField ("validatorName" , entry.getInputValidatorClassName());
+		src.write(gen, entry.getPropName());
 					gen.writeEndObject(); // END: object under settings[]
 				}
 				gen.writeEndArray(); // END: array: settings[]
@@ -541,6 +655,7 @@ if (auth != null)
 					gen.writeBooleanField("isDefaultValue", entry.isDefaultValue());
 					gen.writeStringField ("description"   , StringUtil.stripHtmlStartEnd(entry.getDescription()));
 					gen.writeStringField ("validatorName" , entry.getInputValidatorClassName());
+		src.write(gen, entry.getPropName());
 					gen.writeEndObject(); // END: object under filters[]
 				}
 				gen.writeEndArray(); // END: array: filters[]
@@ -586,18 +701,18 @@ if (auth != null)
 		alarmSettingsList.add(1, CmSettingsHelper.create_timeRangeCron(cm, colname));
 	}
 
-	private void getAlarmParametersFor(JsonGenerator gen, CmSettingsHelper alarmSwitch, List<CmSettingsHelper> settingsList)
+	private void getAlarmParametersFor(JsonGenerator gen, CmSettingsHelper alarmSwitch, List<CmSettingsHelper> settingsList, ValueSource src)
 	throws IOException
 	{
 		String colname = alarmSwitch.getName();
 		String searchFor = colname + " ";
-		
+
 		// Write parameters
 		gen.writeFieldName("parameters");
 		gen.writeStartArray();
 
 		// Write the "main" parameter, which is "attached" to this alarm
-		getAlarmParametersFor(gen, alarmSwitch);
+		getAlarmParametersFor(gen, alarmSwitch, src);
 
 		// Then write every "extra parameters", which might be used for "filtering/refine" the alarm
 		for (CmSettingsHelper settings : settingsList)
@@ -606,12 +721,12 @@ if (auth != null)
 
 			if (keyname.startsWith(searchFor) && !settings.isAlarmSwitch())
 			{
-				getAlarmParametersFor(gen, settings);
+				getAlarmParametersFor(gen, settings, src);
 			}
 		}
 		gen.writeEndArray();
 	}
-	private void getAlarmParametersFor(JsonGenerator gen, CmSettingsHelper entry)
+	private void getAlarmParametersFor(JsonGenerator gen, CmSettingsHelper entry, ValueSource src)
 	throws IOException
 	{
 		String name = entry.getName();
@@ -631,6 +746,7 @@ if (auth != null)
 		gen.writeBooleanField("isDefaultValue", entry.isDefaultValue());
 		gen.writeStringField ("description"   , StringUtil.stripHtmlStartEnd(entry.getDescription()));
 		gen.writeStringField ("validatorName" , entry.getInputValidatorClassName());
+		src.write(gen, entry.getPropName());
 		gen.writeEndObject();
 	}
 }

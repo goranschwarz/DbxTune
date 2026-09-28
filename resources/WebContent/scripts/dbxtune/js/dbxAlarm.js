@@ -203,7 +203,7 @@ function _dbxModalApplyDark($modal)
 {
 	var isDark = $('body').hasClass('cs-dark') || $('body').hasClass('dark')
 		|| document.documentElement.getAttribute('data-theme') === 'dark'
-		|| (window.location && window.location.search.indexOf('cs=dark') >= 0);
+		|| window._colorSchema === 'dark';
 	$modal.find('.modal-content').toggleClass('dbx-modal-dark', isDark);
 }
 
@@ -450,7 +450,7 @@ $(function() {
 			"<style id='alarm-panel-injected-css'>",
 			"#alarm-panel {",
 			"  position: fixed; bottom: 0; left: 0; width: 100%; height: 20%; min-height: 120px;",
-			"  background: #fff; border-top: 2px solid rgba(200,110,0,0.6);",
+			"  background: var(--bs-body-bg, #fff); color: var(--bs-body-color, #212529); border-top: 2px solid rgba(200,110,0,0.6);", // follows the page light/dark theme (dbxTheme.js)
 			"  box-shadow: 0 -4px 12px rgba(0,0,0,0.15); z-index: 910;",
 			"  display: flex; flex-direction: column; overflow: hidden;",
 			"}",
@@ -498,12 +498,7 @@ $(function() {
 			"             onclick='alarmAutoOpenChkClick(this);' value='auto-open' checked>",
 			"      &nbsp;Auto Open",
 			"    </label>",
-			"    <label style='font-size:0.8em;font-weight:normal;margin:0;cursor:pointer;'",
-			"           title='Toggle dark background for the alarm panel'>",
-			"      <input type='checkbox' id='alarm-dark-chk' name='alarm-dark-chk'",
-			"             onclick='alarmDarkToggle(this.checked);'>",
-			"      &nbsp;Dark mode",
-			"    </label>",
+			"    <span id='alarm-theme' style='font-size:0.8em;'></span>",   // Auto/Light/Dark: _alarmThemeCtrl()
 			"    &nbsp;",
 			"    <button type='button' class='btn-close' aria-label='Close' onclick='alarmPanelToggle();'></button>",
 			"  </div>",
@@ -563,10 +558,20 @@ function _alarmPageKey(key)
 	return page + '_' + key;
 }
 
-function alarmDarkToggle(on)
+/**
+ * Colours of the alarm panel: [Auto | Light | Dark] in its header (Auto = same as the page), remembered per browser
+ * and page (graph/index). Created on first use: the panel markup is injected on some pages.
+ */
+var _alarmTheme = null;
+function _alarmThemeCtrl()
 {
-	if (on) $('#alarm-panel').addClass('alarm-dark'); else $('#alarm-panel').removeClass('alarm-dark');
-	try { localStorage.setItem(_alarmPageKey('alarmPanelDark'), on ? '1' : '0'); } catch(e) {}
+	if (!_alarmTheme)
+		_alarmTheme = DbxTheme.panelMode({
+			key   : _alarmPageKey('alarmPanel'),
+			mount : '#alarm-theme',
+			apply : function(dark) { $('#alarm-panel').toggleClass('alarm-dark', dark); }
+		});
+	return _alarmTheme;
 }
 
 function alarmAutoOpenChkClick(checkbox)
@@ -589,11 +594,7 @@ function alarmPanelToggle()
 			$p.css({ bottom: '', top: (window.innerHeight - h) + 'px', left: '0px' });
 			$p.data('positioned', true);
 		}
-		var savedDark = null;
-		try { savedDark = localStorage.getItem(_alarmPageKey('alarmPanelDark')); } catch(e) {}
-		var dark = savedDark !== null ? (savedDark === '1') : false;
-		$('#alarm-dark-chk').prop('checked', dark);
-		alarmDarkToggle(dark);
+		_alarmThemeCtrl().refresh(); // colours: Auto/Light/Dark choice
 		$p.show();
 		alarmPanelLoadActive();
 	} else {

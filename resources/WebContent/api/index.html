@@ -5,6 +5,8 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
+	<!-- Light/dark theme - FIRST (follows the OS, or the choice made in the DbxCentral navbar; this page has no navbar) -->
+	<script type='text/javascript' src='/scripts/dbxtune/js/dbxTheme.js'></script>
 	<script type='text/javascript' src='/scripts/jquery/jquery-3.7.1.min.js'></script>
 	<script type="text/javascript" src='/scripts/bootstrap/5.3.8/js/bootstrap.bundle.min.js'></script>
 	<link rel='stylesheet' href='/scripts/bootstrap/5.3.8/css/bootstrap.min.css'>
@@ -22,15 +24,16 @@
 		.card-header .badge-method { font-size: 0.7rem; vertical-align: middle; margin-right: 6px; }
 		table       { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
 		th          { border: 1px solid #adb5bd; text-align: left; padding: 4px 6px; background-color: #6c757d; color: #fff; }
-		td          { border: 1px solid #dee2e6; text-align: left; padding: 4px 6px; }
-		tr:nth-child(even) { background-color: #f8f9fa; }
+		/* light/dark (dbxTheme.js): the colours below use Bootstrap 5.3 variables, which follow data-bs-theme */
+		td          { border: 1px solid var(--bs-border-color); text-align: left; padding: 4px 6px; }
+		tr:nth-child(even) { background-color: var(--bs-tertiary-bg); }
 		td:first-child { font-family: monospace; white-space: nowrap; }
-		td.mandatory{ color: #dc3545; font-weight: bold; }
-		pre         { background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; border-radius: 4px; font-size: 0.8rem; }
-		.toc        { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 1rem 1.5rem; margin-bottom: 2rem; }
+		td.mandatory{ color: var(--bs-danger); font-weight: bold; }
+		pre         { background-color: var(--bs-tertiary-bg); color: var(--bs-body-color); border: 1px solid var(--bs-border-color); padding: 10px; border-radius: 4px; font-size: 0.8rem; }
+		.toc        { background-color: var(--bs-tertiary-bg); border: 1px solid var(--bs-border-color); border-radius: 4px; padding: 1rem 1.5rem; margin-bottom: 2rem; }
 		.toc ul     { margin-bottom: 0; }
-		.toc a      { color: #495057; }
-		.note       { font-style: italic; color: #6c757d; font-size: 0.85rem; }
+		.toc a      { color: var(--bs-secondary-color); }
+		.note       { font-style: italic; color: var(--bs-secondary-color); font-size: 0.85rem; }
 		.badge-get  { background-color: #28a745; }
 		.badge-post { background-color: #007bff; }
 		.badge-ws   { background-color: #6f42c1; }

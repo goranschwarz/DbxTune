@@ -1145,8 +1145,8 @@ function cmDetailRenderFiltered(r, filter)
 					+ ttHtml.replace(/"/g, '&quot;') + '"';
 			}
 			var thStyle = 'cursor:pointer;user-select:none;';
-			if (isPct[i])                              thStyle += 'color:#cc0000;';
-			else if (isDiff[i] && effectiveType !== 'abs') thStyle += 'color:#0066cc;';
+			if (isPct[i])                              thStyle += 'color:var(--cm-pct-fg,#cc0000);';
+			else if (isDiff[i] && effectiveType !== 'abs') thStyle += 'color:var(--cm-diff-fg,#0066cc);';
 			return '<th style="' + thStyle + '" onclick="cmDetailSortCol(' + i + ');"' + ttAttr + '>'
 				+ escHtml(c) + indicator + '</th>';
 		}).join('')
@@ -1183,7 +1183,7 @@ function cmDetailRenderFiltered(r, filter)
 				// PCT columns: red, bold when non-zero, with percent bar — shown even in ABS mode
 				// (mirrors Java GUI: HighlighterPctData + discardPctHighlighterOnAbsTable() == false)
 				if (isPct[i]) {
-					style += 'color:#cc0000;';
+					style += 'color:var(--cm-pct-fg,#cc0000);';
 					var _pctVal = parseFloat(v);
 					if (isNumeric[i] && !isNaN(_pctVal) && _pctVal !== 0) style += 'font-weight:bold;';
 					// Background percent bar (0-100%), subtle fill like the Swing PctPainter
@@ -1192,20 +1192,22 @@ function cmDetailRenderFiltered(r, filter)
 						style += 'background:linear-gradient(to right,rgba(220,53,69,0.12) ' + pctW + '%,transparent ' + pctW + '%);';
 					}
 				} else if (isDiff[i] && effectiveType !== 'abs') {
-					style += 'color:#0066cc;';
+					style += 'color:var(--cm-diff-fg,#0066cc);';
 					// Bold when non-zero numeric (mirrors Active Statements colouring)
 					var _numVal = parseFloat(v);
 					if (isNumeric[i] && !isNaN(_numVal) && _numVal !== 0) style += 'font-weight:bold;';
 				}
 				// Apply row-level highlight to each td (beats Bootstrap's td striping/hover)
-				if (hlResult.rowBg && !isPct[i]) style += 'background-color:' + hlResult.rowBg + ';';
-				else if (firstDiffSet.has(row) && !isPct[i]) style += 'background-color:rgb(102,205,170);';
-				if (hlResult.rowFg) style += 'color:' + hlResult.rowFg + ';';
+				// The colour is also put in --hl-bg / --hl-fg: in dark mode (graph.html CSS, #cm-detail-panel.cm-dark)
+				// it is mixed into a dark tint, so the light highlight colours stay readable with light text
+				if (hlResult.rowBg && !isPct[i]) style += _cmHlBgStyle(hlResult.rowBg);
+				else if (firstDiffSet.has(row) && !isPct[i]) style += _cmHlBgStyle('rgb(102,205,170)');
+				if (hlResult.rowFg) style += _cmHlFgStyle(hlResult.rowFg);
 				// Cell-level highlighter overrides (win over row-level)
 				var cellHl = hlResult.cells[i];
 				if (cellHl) {
-					if (cellHl.bg) style += 'background-color:' + cellHl.bg + ';';
-					if (cellHl.fg) style += 'color:' + cellHl.fg + ';';
+					if (cellHl.bg) style += _cmHlBgStyle(cellHl.bg);
+					if (cellHl.fg) style += _cmHlFgStyle(cellHl.fg);
 				}
 				style += '"';
 				var cell;
@@ -1252,7 +1254,7 @@ function cmDetailRenderFiltered(r, filter)
 					            : agg === 'MIN' ? 'Aggregated MIN (minimum)'
 					            : agg === 'MAX' ? 'Aggregated MAX (maximum)'
 					            : '';
-					var style = 'style="background-color:rgb(222,246,250);';
+					var style = 'style="background-color:var(--cm-sum-bg,rgb(222,246,250));' // summary (Total) row;
 					if (isNumeric[i]) style += 'text-align:right;';
 					style += '"';
 					if (colName && /bytes/i.test(colName)) {
@@ -1576,6 +1578,10 @@ function _cmHighlighterEval(rules, row)
 
 	return result;
 }
+
+/** Inline style for a highlight background / text colour, also as --hl-bg / --hl-fg (dark mode tints them, see graph.html) */
+function _cmHlBgStyle(c) { return '--hl-bg:' + c + ';background-color:' + c + ';'; }
+function _cmHlFgStyle(c) { return '--hl-fg:' + c + ';color:' + c + ';'; }
 
 /** Parse value as number, return null if not numeric. */
 function _hlNum(v)
@@ -1973,12 +1979,8 @@ function cmDetailToggle()
 		cmDetailClose();
 		return;
 	}
-	// Restore dark-mode preference from localStorage; default to page colour scheme on first visit
-	var savedDarkCm = null;
-	try { savedDarkCm = localStorage.getItem('cmDetailDark'); } catch(e) {}
-	var dark = (savedDarkCm !== null) ? (savedDarkCm === '1') : (_colorSchema === 'dark');
-	$('#cm-detail-dark').prop('checked', dark);
-	if (dark) $panel.addClass('cm-dark'); else $panel.removeClass('cm-dark');
+	// Colours: the panel's Auto/Light/Dark choice (Auto = same as the page)
+	_cmDetailTheme.refresh();
 
 	// Restore number-format radio from localStorage
 	cmDetailNumFmtInit();
@@ -2064,13 +2066,12 @@ function cmDetailToggle()
 	}
 }
 
-// Toggle dark mode on the CM detail panel and persist the preference
-function cmDetailDarkToggle(on)
-{
-	var $panel = $('#cm-detail-panel');
-	if (on) $panel.addClass('cm-dark'); else $panel.removeClass('cm-dark');
-	try { localStorage.setItem('cmDetailDark', on ? '1' : '0'); } catch(e) {}
-}
+// Colours of the CM detail panel: [Auto | Light | Dark] in its header (Auto = same as the page), remembered per browser
+var _cmDetailTheme = DbxTheme.panelMode({
+	key   : 'counterDetails',
+	mount : '#cm-detail-theme',
+	apply : function(dark) { $('#cm-detail-panel').toggleClass('cm-dark', dark); _cmChartsRecolor(); }
+});
 
 // Called from addData() on every live sample — refresh current CM if panel is open and not paused
 function cmDetailLiveRefresh(srvName)
@@ -2884,7 +2885,7 @@ function _cmChartCreatePie(ctx, desc, data) {
 			plugins: {
 				legend: {
 					position: 'right',
-					labels: { font: { size: 10 }, boxWidth: 12 }
+					labels: { font: { size: 10 }, boxWidth: 12, color: _cmChartTextColor }
 				},
 				tooltip: {
 					callbacks: {
@@ -2941,8 +2942,10 @@ function _cmChartCreateBar(ctx, desc, data, stacked, orientOverride) {
 	var valueScale = {
 		beginAtZero: true,
 		stacked: stacked,
+		grid:  { color: _cmChartGridColor },
 		ticks: {
 			font: { size: 10 },
+			color: _cmChartTextColor,
 			callback: function(value) { return _cmChartFormatNumber(value); }
 		}
 	};
@@ -2952,7 +2955,7 @@ function _cmChartCreateBar(ctx, desc, data, stacked, orientOverride) {
 	}
 
 	// The "category axis" shows labels (X for vertical, Y for horizontal)
-	var categoryScale = { stacked: stacked, ticks: { font: { size: 9 } } };
+	var categoryScale = { stacked: stacked, grid: { color: _cmChartGridColor }, ticks: { font: { size: 9 }, color: _cmChartTextColor } };
 	if (!horizontal) {
 		categoryScale.ticks.autoSkip = true;
 		categoryScale.ticks.maxRotation = 45;
@@ -2987,8 +2990,9 @@ function _cmChartCreateBar(ctx, desc, data, stacked, orientOverride) {
 			var ctx2  = chart.ctx;
 			ctx2.save();
 			ctx2.font      = '10px sans-serif';
-			ctx2.fillStyle = '#333';
+			ctx2.fillStyle = '#333';            // inside a bar (the bar colours are the same in light and dark)
 			ctx2.textBaseline = 'middle';
+			var outsideClr = _cmChartDark() ? '#ddd' : '#333'; // beside/above a short bar: on the chart background
 
 			var meta = chart.getDatasetMeta(0);
 			if (!meta || !meta.data) { ctx2.restore(); return; }
@@ -3009,7 +3013,9 @@ function _cmChartCreateBar(ctx, desc, data, stacked, orientOverride) {
 					} else {
 						// Draw right of bar
 						ctx2.textAlign = 'left';
+						ctx2.fillStyle = outsideClr;
 						ctx2.fillText(txt, bar.x + 3, bar.y);
+						ctx2.fillStyle = '#333';
 					}
 				} else {
 					// Vertical bar: text inside bar, horizontally centred
@@ -3037,7 +3043,7 @@ function _cmChartCreateBar(ctx, desc, data, stacked, orientOverride) {
 			plugins: {
 				legend: {
 					display: data.datasets.length > 1,
-					labels: { font: { size: 10 }, boxWidth: 12 }
+					labels: { font: { size: 10 }, boxWidth: 12, color: _cmChartTextColor }
 				},
 				tooltip: {
 					callbacks: { label: tooltipCb }
@@ -3045,6 +3051,17 @@ function _cmChartCreateBar(ctx, desc, data, stacked, orientOverride) {
 			}
 		}
 	});
+}
+
+/** Counter Details charts follow the panel's Theme (not Chart.defaults.color: graph.html sets that for its always-dark charts) */
+function _cmChartDark()       { return $('#cm-detail-panel').hasClass('cm-dark'); }
+function _cmChartTextColor()  { return _cmChartDark() ? '#ccc' : '#666'; }
+function _cmChartGridColor()  { return _cmChartDark() ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'; }
+/** Redraw the panel's charts after a Theme change (the colours above are read when a chart updates) */
+function _cmChartsRecolor()
+{
+	if (typeof Chart === 'undefined' || !Chart.getChart) return;
+	$('#cm-detail-panel canvas').each(function() { var c = Chart.getChart(this); if (c) c.update('none'); });
 }
 
 /**
@@ -3361,12 +3378,12 @@ function _cmPropsRender(cmName, configData, initialTab) {
 	var html = '<table class="table table-sm table-borderless" style="font-size:0.92em;">';
 	infoFields.forEach(function(f) {
 		if (f === 'divider') {
-			html += '<tr><td colspan="2" style="border-bottom:1px solid #dee2e6;padding:2px 0;"></td></tr>';
+			html += '<tr><td colspan="2" style="border-bottom:1px solid var(--cmp-sep);padding:2px 0;"></td></tr>';
 			return;
 		}
 		var val = f.value || '(none)';
 		var valHtml = f.isHtml ? val : escHtml(val);
-		html += '<tr><td style="width:180px;font-weight:600;white-space:nowrap;color:#555;">' + f.label + '</td>'
+		html += '<tr><td style="width:180px;font-weight:600;white-space:nowrap;color:var(--cmp-label);">' + f.label + '</td>'
 		      + '<td style="word-break:break-all;">' + valHtml + '</td></tr>';
 	});
 	html += '</table>';
@@ -3431,15 +3448,15 @@ function _cmPropsSettingsTable(arr, title) {
 
 	arr.forEach(function(s) {
 		var changed = s.isDefaultValue === false;
-		var changedIcon = changed ? '<span style="color:#dc3545;" title="Non-default value">●</span>' : '<span style="color:#ccc;">–</span>';
-		var valStyle = changed ? 'font-weight:600;color:#0d6efd;' : '';
+		var changedIcon = changed ? '<span style="color:#dc3545;" title="Non-default value">●</span>' : '<span style="color:var(--cmp-dash);">–</span>';
+		var valStyle = changed ? 'font-weight:600;color:var(--cmp-changed);' : '';
 		html += '<tr>'
 			+ '<td style="white-space:nowrap;">' + escHtml(s.name || '') + '</td>'
 			+ '<td style="' + valStyle + '">' + renderCell(s.value) + '</td>'
-			+ '<td style="color:#888;">' + renderCell(s.defaultValue) + '</td>'
+			+ '<td style="color:var(--cmp-muted);">' + renderCell(s.defaultValue) + '</td>'
 			+ '<td style="text-align:center;">' + changedIcon + '</td>'
-			+ '<td style="color:#999;font-size:0.88em;font-family:monospace;word-break:break-all;">' + escHtml(s.property || '') + '</td>'
-			+ '<td style="color:#666;font-size:0.92em;">' + escHtml(s.description || '') + '</td>'
+			+ '<td style="color:var(--cmp-faint);font-size:0.88em;font-family:monospace;word-break:break-all;">' + escHtml(s.property || '') + '</td>'
+			+ '<td style="color:var(--cmp-desc);font-size:0.92em;">' + escHtml(s.description || '') + '</td>'
 			+ '</tr>';
 	});
 
@@ -3455,7 +3472,7 @@ function _cmPropsAlarmsHtml(alarmSettings) {
 
 	// Pre-checks
 	if (alarmSettings.preChecks && alarmSettings.preChecks.length) {
-		html += '<b>Pre Checks</b> <span style="color:#888;font-size:0.88em;">(checked before applying alarm thresholds)</span>';
+		html += '<b>Pre Checks</b> <span style="color:var(--cmp-muted);font-size:0.88em;">(checked before applying alarm thresholds)</span>';
 		html += _cmPropsSettingsTable(alarmSettings.preChecks, 'Pre Checks');
 	}
 
@@ -3466,7 +3483,7 @@ function _cmPropsAlarmsHtml(alarmSettings) {
 		return html;
 	}
 
-	html += '<b>Alarms</b> <span style="color:#888;font-size:0.88em;">(click an alarm to see its parameters)</span>';
+	html += '<b>Alarms</b> <span style="color:var(--cmp-muted);font-size:0.88em;">(click an alarm to see its parameters)</span>';
 	html += '<div class="list-group mt-1" style="font-size:0.88em;">';
 
 	alarms.forEach(function(alarm, idx) {
@@ -3478,30 +3495,30 @@ function _cmPropsAlarmsHtml(alarmSettings) {
 			+ '<span style="white-space:nowrap;">'
 			+ '<button type="button" class="btn btn-sm btn-outline-secondary" style="font-size:0.85em;padding:0 8px;margin-right:10px;" title="Change this alarm"'
 			+ ' data-alarm="' + escHtml(alarm.name || '') + '" onclick="event.stopPropagation(); cmPropsAlarmEdit(this.getAttribute(\'data-alarm\'));">Edit...</button>'
-			+ '<i class="fa fa-chevron-down" style="color:#aaa;font-size:0.8em;"></i>'
+			+ '<i class="fa fa-chevron-down" style="color:var(--cmp-faint);font-size:0.8em;"></i>'
 			+ '</span>'
 			+ '</div>';
 		if (alarm.description) {
-			html += '<div style="color:#666;font-size:0.9em;margin-top:2px;">' + escHtml(alarm.description) + '</div>';
+			html += '<div style="color:var(--cmp-desc);font-size:0.9em;margin-top:2px;">' + escHtml(alarm.description) + '</div>';
 		}
 		html += '</div>';
 
 		// Expandable parameters section
-		html += '<div id="' + alarmId + '" style="display:none;padding:4px 12px 8px;border:1px solid #eee;border-top:none;background:#fafafa;">';
+		html += '<div id="' + alarmId + '" style="display:none;padding:4px 12px 8px;border:1px solid var(--cmp-box-border);border-top:none;background:var(--cmp-box-bg);">';
 		if (alarm.parameters && alarm.parameters.length) {
 			html += '<table class="table table-sm table-striped mb-0" style="font-size:0.88em;">'
 				+ '<thead><tr><th>Name</th><th>Value</th><th>Default</th><th style="width:50px;text-align:center;">Changed</th><th>Property</th><th>Description</th></tr></thead><tbody>';
 			alarm.parameters.forEach(function(p) {
 				var changed = p.isDefaultValue === false;
-				var changedIcon = changed ? '<span style="color:#dc3545;">●</span>' : '<span style="color:#ccc;">–</span>';
-				var valStyle = changed ? 'font-weight:600;color:#0d6efd;' : '';
+				var changedIcon = changed ? '<span style="color:#dc3545;">●</span>' : '<span style="color:var(--cmp-dash);">–</span>';
+				var valStyle = changed ? 'font-weight:600;color:var(--cmp-changed);' : '';
 				html += '<tr>'
 					+ '<td style="white-space:nowrap;">' + escHtml(p.name || '') + '</td>'
 					+ '<td style="' + valStyle + '">' + renderCell(p.value) + '</td>'
-					+ '<td style="color:#888;">' + renderCell(p.defaultValue) + '</td>'
+					+ '<td style="color:var(--cmp-muted);">' + renderCell(p.defaultValue) + '</td>'
 					+ '<td style="text-align:center;">' + changedIcon + '</td>'
-					+ '<td style="color:#999;font-size:0.88em;font-family:monospace;word-break:break-all;">' + escHtml(p.property || '') + '</td>'
-					+ '<td style="color:#666;font-size:0.92em;">' + escHtml(p.description || '') + '</td>'
+					+ '<td style="color:var(--cmp-faint);font-size:0.88em;font-family:monospace;word-break:break-all;">' + escHtml(p.property || '') + '</td>'
+					+ '<td style="color:var(--cmp-desc);font-size:0.92em;">' + escHtml(p.description || '') + '</td>'
 					+ '</tr>';
 			});
 			html += '</tbody></table>';
@@ -3563,6 +3580,8 @@ function cmAlarmOverviewOpen(forceRefresh, srvName) {
 
 	$('#cm-alarm-overview-content').html('<div class="text-center text-muted py-3"><i class="fa fa-spinner fa-spin"></i> Loading...</div>');
 	$('#cm-alarm-overview-count').text('');
+	// Follow the page colour scheme (graph.html: dbxTheme.js -> _colorSchema); Bootstrap 5.3 does the modal, table and inputs
+	$('#cm-alarm-overview-modal').attr('data-bs-theme', (typeof _colorSchema !== 'undefined' && _colorSchema === 'dark') ? 'dark' : 'light');
 	$('#cm-alarm-overview-modal').modal('show');
 
 	_cmConfigFetch(srvName,
@@ -3574,6 +3593,57 @@ function cmAlarmOverviewOpen(forceRefresh, srvName) {
 			$('#cm-alarm-overview-content').html('<div class="text-danger">Failed to load configuration: ' + escHtml(xhr.statusText || 'Unknown error') + '</div>');
 		}
 	);
+}
+
+/** Hover text for the "mod" badge: each parameter that differs from its default, and where the value comes from */
+function _cmAlarmOverviewModTitle(r) {
+	var srcLabel = { server: 'Server config', shared: 'Shared config', temp: 'Temporary', user: 'User config', system: 'System config', 'default': 'Default' };
+	var lines = (r.parameters || []).filter(function(p) { return p.isDefaultValue === false; }).map(function(p) {
+		var n = String(p.name || '');
+		if (n.indexOf(r.name + ' ') === 0) n = n.substring(r.name.length + 1);
+		var v = (p.value === '' || p.value === null || p.value === undefined) ? '(empty)' : p.value;
+		var d = (p.defaultValue === '' || p.defaultValue === null || p.defaultValue === undefined) ? '(empty)' : p.defaultValue;
+		// 'source' is sent by collectors from 2026-09-28 (NoGuiConfigGetServlet), older ones do not
+		var src = p.source ? '  [' + (srcLabel[p.source] || p.source) + (p.sourceInMemoryOnly ? ', in memory only' : '') + ']' : '';
+		return '• ' + n + ' = ' + v + '  (default: ' + d + ')' + src;
+	});
+	return 'Differs from the default:\n' + lines.join('\n');
+}
+
+/** Styles for the All Alarms table (injected once; same "modified" look as the Collector Configuration page) */
+function _cmAlarmOverviewInjectCss() {
+	if (document.getElementById('cm-ao-css')) return;
+	var css = [
+		'.cm-ao-table { font-size:0.88em; width:100%; }',
+		'.cm-ao-table thead { position:sticky; top:0; z-index:1; }',
+		'.cm-ao-table thead th { background:var(--bs-body-bg); white-space:nowrap; }',
+		'.cm-ao-table td { white-space:nowrap; vertical-align:middle; }',
+		/* the one flexible column: max-width:0 + width:100% makes it take the rest of the width, then cut with "..." */
+		'.cm-ao-table td.cm-ao-desc { max-width:0; width:100%; overflow:hidden; text-overflow:ellipsis; color:#666; font-size:0.92em; }',
+		/* capped columns (long alarm names / regex values): "..." + full text on hover, so Description keeps some room */
+		'.cm-ao-table td.cm-ao-val  { max-width:170px; overflow:hidden; text-overflow:ellipsis; }',
+		'.cm-ao-table td.cm-ao-name { max-width:270px; overflow:hidden; text-overflow:ellipsis; }',
+		'.cm-ao-table td.cm-ao-cm   { max-width:170px; overflow:hidden; text-overflow:ellipsis; }',
+		'.cm-ao-table td.cm-ao-val-mod { font-weight:600; color:#3b5bdb; }',
+		'.cm-ao-table .cm-ao-edit { width:1%; }',
+		/* modified alarm: tinted row + left edge (Bootstrap 5.3 cells paint their own background -> set it on the cells) */
+		'.cm-ao-table tr.cm-ao-mod > td { background-color:#f3f6ff; }',
+		'.cm-ao-table tr.cm-ao-mod > td:first-child { box-shadow:inset 3px 0 0 #748ffc; }',
+		'.cm-ao-table tr.cm-ao-mod:hover > td { background-color:#e9eefe; }',
+		'.cm-ao-mod-bdg { font-size:0.8em; font-weight:400; background:#edf2ff; color:#3b5bdb; border-radius:9px; padding:0 7px; margin-right:6px; cursor:help; }',
+		/* dark (modal has data-bs-theme="dark", see cmAlarmOverviewOpen) */
+		'[data-bs-theme="dark"] .cm-ao-table td.cm-ao-desc { color:#adb5bd; }',
+		'[data-bs-theme="dark"] .cm-ao-table td.cm-ao-val-mod { color:#91a7ff; }',
+		'[data-bs-theme="dark"] .cm-ao-table tr.cm-ao-mod > td { background-color:#1f2940; }',
+		'[data-bs-theme="dark"] .cm-ao-table tr.cm-ao-mod:hover > td { background-color:#27345a; }',
+		'[data-bs-theme="dark"] .cm-ao-mod-bdg { background:#2b3a67; color:#bac8ff; }',
+		'[data-bs-theme="dark"] .cm-ao-yes { color:#4cd07d !important; }',
+		'[data-bs-theme="dark"] .cm-ao-no  { color:#ff6b6b !important; }'
+	].join('\n');
+	var st = document.createElement('style');
+	st.id = 'cm-ao-css';
+	st.textContent = css;
+	document.head.appendChild(st);
 }
 
 /** (Re)render the table, applying the search box and checkboxes */
@@ -3591,48 +3661,48 @@ function cmAlarmOverviewRender() {
 		return;
 	}
 
-	var html = '<table class="table table-sm table-striped table-hover" style="font-size:0.88em;">'
-		+ '<thead style="position:sticky;top:0;background:#fff;z-index:1;white-space:nowrap;"><tr>'
-		+ '<th>Group</th>'
+	_cmAlarmOverviewInjectCss();
+
+	// Layout: every column is one line (nowrap); Description takes whatever width is left and is cut with "..."
+	// (full text on hover) - so the edit icons (first column) are always visible and a row stays one line high
+	var html = '<table class="table table-sm table-hover cm-ao-table">'
+		+ '<thead><tr>'
+		+ '<th class="cm-ao-edit"></th>'
 		+ '<th>Counter</th>'
 		+ '<th>Alarm</th>'
 		+ '<th style="text-align:center;" title="Counter enabled, its System Alarms enabled, and the Alarm enabled">Effective</th>'
 		+ '<th>Value</th>'
 		+ '<th>Default</th>'
-		+ '<th style="width:50px;text-align:center;">Changed</th>'
 		+ '<th>Time Range</th>'
-		+ '<th>Description</th>'
-		+ '<th style="width:30px;"></th>'
+		+ '<th class="cm-ao-desc">Description</th>'
 		+ '</tr></thead><tbody>';
 
 	rows.forEach(function(r) {
 		var effective = r.isEffective
-			? '<span style="color:#28a745;font-weight:600;">Yes</span>'
-			: '<span style="color:#dc3545;" title="Not evaluated:'
+			? '<span class="cm-ao-yes" style="color:#28a745;font-weight:600;">Yes</span>'
+			: '<span class="cm-ao-no" style="color:#dc3545;" title="Not evaluated:'
 				+ (r.isCmEnabled           ? '' : ' Counter is disabled.')
 				+ (r.isSystemAlarmsEnabled ? '' : ' Counter System Alarms are disabled.')
 				+ (r.isAlarmEnabled        ? '' : ' Alarm is disabled.')
 				+ '">No</span>';
-		var changedIcon = r.isModified
-			? '<span style="color:#dc3545;" title="Non-default: ' + escHtml(r.modifiedParamNames.join(', ')) + '">●</span>'
-			: '<span style="color:#ccc;">–</span>';
-		var valStyle = r.isModified ? 'font-weight:600;color:#0d6efd;' : '';
 		var editUrl  = '/config.html?srvName=' + encodeURIComponent(_cmAlarmOverviewSrv) + '&cm=' + encodeURIComponent(r.cmName) + '&alarm=' + encodeURIComponent(r.name);
+		// before the name (not after): a long name is cut with "...", the badge must stay visible
+		var modBadge = r.isModified
+			? '<span class="cm-ao-mod-bdg" title="' + escHtml(_cmAlarmOverviewModTitle(r)) + '">mod ' + r.modifiedParamNames.length + '</span>'
+			: '';
 
-		html += '<tr>'
-			+ '<td style="white-space:nowrap;color:#666;">' + escHtml(r.groupName) + '</td>'
-			+ '<td style="white-space:nowrap;"><a href="#" class="cm-alarm-overview-cm" data-cm="' + escHtml(r.cmName) + '" title="' + escHtml(r.cmName) + ' — show Properties">' + escHtml(r.displayName) + '</a></td>'
-			+ '<td style="white-space:nowrap;"><b>' + escHtml(r.name) + '</b></td>'
-			+ '<td style="text-align:center;">' + effective + '</td>'
-			+ '<td style="' + valStyle + '">' + renderCell(r.mainParamValue) + '</td>'
-			+ '<td style="color:#888;">' + renderCell(r.mainParamDefault) + '</td>'
-			+ '<td style="text-align:center;">' + changedIcon + '</td>'
-			+ '<td style="white-space:nowrap;" title="' + escHtml(r.timeRangeDescription) + '">' + escHtml(r.timeRangeCron) + '</td>'
-			+ '<td style="color:#666;font-size:0.92em;">' + escHtml(r.description) + '</td>'
-			+ '<td style="white-space:nowrap;">'
+		html += '<tr' + (r.isModified ? ' class="cm-ao-mod"' : '') + '>'
+			+ '<td class="cm-ao-edit">'
 			+ '<a href="#" class="cm-alarm-overview-edit" data-cm="' + escHtml(r.cmName) + '" data-alarm="' + escHtml(r.name) + '" title="Change this alarm"><i class="fa fa-pencil"></i></a>'
 			+ '&nbsp;&nbsp;<a href="' + editUrl + '" target="_blank" rel="noopener" title="Show in Collector Configuration (new tab)" style="color:#aaa;"><i class="fa fa-external-link"></i></a>'
 			+ '</td>'
+			+ '<td class="cm-ao-cm"><a href="#" class="cm-alarm-overview-cm" data-cm="' + escHtml(r.cmName) + '" title="' + escHtml(r.cmName) + (r.groupName ? ' (group: ' + escHtml(r.groupName) + ')' : '') + ' — show Properties">' + escHtml(r.displayName) + '</a></td>'
+			+ '<td class="cm-ao-name" title="' + escHtml(r.name) + '">' + modBadge + '<b>' + escHtml(r.name) + '</b></td>'
+			+ '<td style="text-align:center;">' + effective + '</td>'
+			+ '<td class="cm-ao-val' + (r.isModified ? ' cm-ao-val-mod' : '') + '" title="' + escHtml(r.mainParamValue) + '">' + renderCell(r.mainParamValue) + '</td>'
+			+ '<td class="cm-ao-val" style="color:#888;" title="' + escHtml(r.mainParamDefault) + '">' + renderCell(r.mainParamDefault) + '</td>'
+			+ '<td title="' + escHtml(r.timeRangeDescription) + '">' + escHtml(r.timeRangeCron) + '</td>'
+			+ '<td class="cm-ao-desc" title="' + escHtml(r.description) + '">' + escHtml(r.description) + '</td>'
 			+ '</tr>';
 	});
 
@@ -3640,8 +3710,27 @@ function cmAlarmOverviewRender() {
 	$('#cm-alarm-overview-content').html(html);
 }
 
+/** CM Properties modal: follow the page colour scheme (graph.html: dbxTheme.js -> _colorSchema).
+ *  Bootstrap 5.3 does the modal/tabs/tables (data-bs-theme); the own inline colours use these --cmp-* variables. */
+function _cmPropsInjectCss() {
+	if (document.getElementById('cm-props-css')) return;
+	var st = document.createElement('style');
+	st.id = 'cm-props-css';
+	st.textContent = [
+		'#cm-props-modal { --cmp-label:#555; --cmp-muted:#888; --cmp-faint:#999; --cmp-desc:#666; --cmp-dash:#ccc; --cmp-sep:#dee2e6;'
+		+ ' --cmp-changed:#0d6efd; --cmp-box-bg:#fafafa; --cmp-box-border:#eee; }',
+		'#cm-props-modal[data-bs-theme="dark"] { --cmp-label:#adb5bd; --cmp-muted:#8f969d; --cmp-faint:#7f878f; --cmp-desc:#a3abb3; --cmp-dash:#495057; --cmp-sep:#495057;'
+		+ ' --cmp-changed:#6ea8fe; --cmp-box-bg:#1c2025; --cmp-box-border:#343a40; }'
+	].join(' ');
+	document.head.appendChild(st);
+}
+
 $(function() {
 	$('#cm-alarm-overview-search').on('input', cmAlarmOverviewRender);
+	$('#cm-props-modal').on('show.bs.modal', function() {
+		_cmPropsInjectCss();
+		$(this).attr('data-bs-theme', (typeof _colorSchema !== 'undefined' && _colorSchema === 'dark') ? 'dark' : 'light');
+	});
 	$('#cm-alarm-overview-only-effective, #cm-alarm-overview-only-modified').on('change', cmAlarmOverviewRender);
 
 	// Counter name: close this modal, then open the CM Properties modal on its Alarms tab (no stacked modals)

@@ -40,13 +40,13 @@ $(function()
 		// ── Floating panel ─────────────────────────────────────────────────
 		"<div id='hist-alarm-panel'",
 		"     style='display:none;position:fixed;top:65px;left:5%;width:88%;height:72vh;",
-		"            z-index:1050;background:#fff;border:1px solid #aaa;border-radius:4px;",
+		"            z-index:1050;background:var(--bs-body-bg,#fff);color:var(--bs-body-color,#212529);border:1px solid #aaa;border-radius:4px;", // follows the page light/dark theme (dbxTheme.js)
 		"            flex-direction:column;box-shadow:0 4px 20px rgba(0,0,0,0.3);'>",
 
 		// Header (drag handle)
 		"  <div id='hist-alarm-hdr'",
 		"       style='display:flex;align-items:center;gap:8px;flex-shrink:0;",
-		"              padding:5px 10px;background:#f8f9fa;border-bottom:1px solid #dee2e6;",
+		"              padding:5px 10px;background:var(--bs-tertiary-bg,#f8f9fa);border-bottom:1px solid var(--bs-border-color,#dee2e6);",
 		"              border-radius:4px 4px 0 0;cursor:move;user-select:none;'>",
 		"    <span style='font-weight:700;font-size:0.95em;white-space:nowrap;'>",
 		"      <i class='fa fa-history'></i>&nbsp; Historical Alarms",
@@ -59,10 +59,7 @@ $(function()
 		"    <span style='font-size:0.82em;border:1px solid gray;border-radius:5px;",
 		"                 margin-left:6px;padding:1px 6px;'>",
 		"      Options: &nbsp;",
-		"      <label style='margin:0;font-weight:normal;cursor:pointer;'>",
-		"        <input type='checkbox' id='hist-alarm-dark-chk'",
-		"               onchange='histAlarmDarkToggle(this.checked);'>&nbsp;Dark mode",
-		"      </label>",
+		"      <span id='hist-alarm-theme'></span>",   // Auto/Light/Dark: DbxTheme.panelMode() below
 		"    </span>",
 		"    <span style='margin-left:auto;'>",
 		"      <button type='button' style='background:none;border:none;font-size:1.3em;",
@@ -141,11 +138,11 @@ $(function()
 		// ── Detail floating panel ──────────────────────────────────────────
 		"<div id='hist-alarm-detail-panel'",
 		"     style='display:none;position:fixed;top:80px;left:20%;width:55%;height:65vh;",
-		"            z-index:1060;background:#fff;border:1px solid #aaa;border-radius:4px;",
+		"            z-index:1060;background:var(--bs-body-bg,#fff);color:var(--bs-body-color,#212529);border:1px solid #aaa;border-radius:4px;",
 		"            flex-direction:column;box-shadow:0 4px 20px rgba(0,0,0,0.35);'>",
 		"  <div id='hist-alarm-detail-hdr'",
 		"       style='display:flex;align-items:center;gap:8px;flex-shrink:0;",
-		"              padding:5px 10px;background:#f8f9fa;border-bottom:1px solid #dee2e6;",
+		"              padding:5px 10px;background:var(--bs-tertiary-bg,#f8f9fa);border-bottom:1px solid var(--bs-border-color,#dee2e6);",
 		"              border-radius:4px 4px 0 0;cursor:move;user-select:none;'>",
 		"    <span style='font-weight:700;font-size:0.95em;'>",
 		"      <i class='fa fa-info-circle'></i>&nbsp; Alarm Detail",
@@ -186,6 +183,13 @@ $(function()
 		"#hist-alarm-detail-panel.ha-dark td { border-color:#444 !important; }",
 		"</style>"
 	].join('\n'));
+
+	// Colours: [Auto | Light | Dark] in the panel header (Auto = same as the page), remembered per browser
+	DbxTheme.panelMode({
+		key   : 'histAlarms',
+		mount : '#hist-alarm-theme',
+		apply : histAlarmDarkToggle
+	});
 
 	// Show/hide custom date inputs
 	$('#hist-alarm-preset').on('change', function() {
@@ -286,7 +290,7 @@ function histAlarmClose()
 	$('#hist-alarm-panel').hide();
 }
 
-// ── Dark mode ─────────────────────────────────────────────────────────────────
+// ── Dark mode (called by the panel's Auto/Light/Dark control) ────────────────
 
 function histAlarmDarkToggle(on)
 {

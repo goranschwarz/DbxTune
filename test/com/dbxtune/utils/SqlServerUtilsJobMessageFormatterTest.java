@@ -157,6 +157,37 @@ public class SqlServerUtilsJobMessageFormatterTest
 		assertEquals("line1\nline2\nline3\nline4\nline5\nline6\nline7", result);
 	}
 
+	@Test
+	public void testBackslashNInAccountsAndPathsIsKept()
+	{
+		System.out.println("---testBackslashNInAccountsAndPathsIsKept---");
+		SqlServerUtils._jobMessageProfiles = java.util.Collections.emptyList();
+
+		// Seen on gorans.org 2026-09-28: "\N" in "NT AUTHORITY\NETWORK SERVICE" became a newline
+		assertEquals("Executed as user: NT AUTHORITY\\NETWORK SERVICE.\nWAITFOR DELAY '00:00:50'",
+				SqlServerUtils.jobMessageFormatter("Executed as user: NT AUTHORITY\\NETWORK SERVICE. WAITFOR DELAY '00:00:50'", null));
+
+		// lowercase "\n" in the user name of the prefix
+		assertEquals("Executed as user: MAXM\\nils.\nhello",
+				SqlServerUtils.jobMessageFormatter("Executed as user: MAXM\\nils. hello", null));
+
+		// "\n" that starts a path segment
+		String path = "Running C:\\Program Files\\nodejs\\node.exe now";
+		assertEquals(path, SqlServerUtils.jobMessageFormatter(path, "CMDEXEC"));
+
+		// UNC path with "\n" segments
+		String unc = "python \\\\srv-1\\nas\\new_dir\\JobHandler.py --job_name x";
+		assertEquals(unc, SqlServerUtils.jobMessageFormatter(unc, "CMDEXEC"));
+
+		// ... but a literal "\n" in the text is still a newline, also right after a path
+		assertEquals("Executed as user: MAXM\\nils.\nline1\nline2",
+				SqlServerUtils.jobMessageFormatter("Executed as user: MAXM\\nils. line1\\nline2", null));
+		assertEquals("ran C:\\Program Files\\nodejs\\node.exe exit: 0\nnext",
+				SqlServerUtils.jobMessageFormatter("ran C:\\Program Files\\nodejs\\node.exe exit: 0\\nnext", "CMDEXEC"));
+		assertEquals("C:\\x\\y.exe \nnext",
+				SqlServerUtils.jobMessageFormatter("C:\\x\\y.exe \\nnext", "CMDEXEC")); // space, then "\n": not a path segment
+	}
+
 	// -----------------------------------------------------------------------
 	// jobMessageFormatter() - TSQL: [SQLSTATE 01xxx] (Message n) stripping
 	// -----------------------------------------------------------------------

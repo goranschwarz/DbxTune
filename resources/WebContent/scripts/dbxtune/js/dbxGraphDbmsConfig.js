@@ -58,13 +58,8 @@ function dbmsConfigToggle()
 	$panel.css({ display: 'flex', 'z-index': ++window._dbxTopZ });
 	try { localStorage.setItem('dbmsConfig-panelOpen', '1'); } catch(e) {}
 
-	// Restore dark mode
-	var saved = getStorage('dbxtune_checkboxes_').get('dbms-config-dark-chk');
-	var dark  = (saved === 'checked') ? true
-	          : (saved === 'not')     ? false
-	          : (_colorSchema === 'dark');
-	$('#dbms-config-dark').prop('checked', dark);
-	if (dark) $panel.addClass('dc-dark'); else $panel.removeClass('dc-dark');
+	// Colours: the panel's Auto/Light/Dark choice (Auto = same as the page)
+	_dbmsConfigTheme.refresh();
 
 	// Auto-load on every open
 	dbmsConfigRefresh();
@@ -106,13 +101,12 @@ function dbmsConfigClose()
 	$('#dbms-config-tabs-main .nav-link').first().addClass('active');
 }
 
-/** Toggle dark mode for the DBMS Config panel */
-function dbmsConfigDarkToggle(on)
-{
-	if (on) $('#dbms-config-panel').addClass('dc-dark');
-	else    $('#dbms-config-panel').removeClass('dc-dark');
-	getStorage('dbxtune_checkboxes_').set('dbms-config-dark-chk', on ? 'checked' : 'not');
-}
+/** Colours of the DBMS Config panel: [Auto | Light | Dark] in its header (Auto = same as the page), remembered per browser */
+var _dbmsConfigTheme = DbxTheme.panelMode({
+	key   : 'dbmsConfig',
+	mount : '#dbms-config-theme',
+	apply : function(dark) { $('#dbms-config-panel').toggleClass('dc-dark', dark); }
+});
 
 /** Load DBMS config data from the API for the given server+timestamp */
 function dbmsConfigLoad(srvName, timestamp)

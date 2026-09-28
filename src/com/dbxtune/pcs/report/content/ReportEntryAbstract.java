@@ -1208,7 +1208,6 @@ implements IReportEntry
 		
 		String dbxCentralLink = dbxcLink + "/graph.html"
 				+ "?subscribe=false"
-				+ "&cs=dark"
 				+ "&gcols=1"
 				+ "&sessionName=" + srvName 
 				+ "&startTime="   + startTime 

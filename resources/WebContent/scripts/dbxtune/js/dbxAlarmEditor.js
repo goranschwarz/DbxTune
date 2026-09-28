@@ -42,6 +42,14 @@ var DbxAlarmEditor = (function()
 
 	function el(id) { return document.getElementById(id); }
 
+	/** Dark: graph.html -> its colour schema (window._colorSchema), other pages -> dbxTheme.js (<html data-theme>) */
+	function isDark()
+	{
+		if (typeof window._colorSchema === 'string')
+			return window._colorSchema === 'dark';
+		return document.documentElement.getAttribute('data-theme') === 'dark';
+	}
+
 	function injectCss()
 	{
 		if (el('dbx-ae-css')) return;
@@ -90,7 +98,36 @@ var DbxAlarmEditor = (function()
 			'.dbx-ae-item:hover{background:#f1f3f5;}',
 			'.dbx-ae-item:disabled{opacity:.55;cursor:default;}',
 			'.dbx-ae-item:disabled:hover{background:none;}',
-			'.dbx-ae-item-sub{display:block;font-size:11px;color:#868e96;margin-top:2px;}'
+			'.dbx-ae-item-sub{display:block;font-size:11px;color:#868e96;margin-top:2px;}',
+			// Dark (root gets .dbx-ae-dark, see isDark())
+			'.dbx-ae-dark .dbx-ae-dialog{background:#212529;color:#dee2e6;box-shadow:0 8px 30px rgba(0,0,0,.7);}',
+			'.dbx-ae-dark .dbx-ae-head,.dbx-ae-dark .dbx-ae-foot{border-color:#495057;}',
+			'.dbx-ae-dark .dbx-ae-row{border-top-color:#343a40;}',
+			'.dbx-ae-dark .dbx-ae-sub,.dbx-ae-dark .dbx-ae-help,.dbx-ae-dark .dbx-ae-x{color:#adb5bd;}',
+			'.dbx-ae-dark .dbx-ae-lbl{color:#ced4da;}',
+			'.dbx-ae-dark .dbx-ae-lbl b{color:#f8f9fa;}',
+			'.dbx-ae-dark .dbx-ae-def,.dbx-ae-dark .dbx-ae-menu-hdr,.dbx-ae-dark .dbx-ae-item-sub{color:#939ba2;}',
+			'.dbx-ae-dark .dbx-ae-err{color:#ff8787;}',
+			'.dbx-ae-dark .dbx-ae-warn{color:#ffd43b;}',
+			'.dbx-ae-dark .dbx-ae-in{background:#1a1d20;color:#e9ecef;border-color:#495057;}',
+			'.dbx-ae-dark .dbx-ae-in:disabled{background:#2b3035;color:#adb5bd;}',
+			'.dbx-ae-dark .dbx-ae-in.dbx-ae-bad{border-color:#ff8787;background:#3b1a1a;}',
+			'.dbx-ae-dark .dbx-ae-in.dbx-ae-pending,.dbx-ae-dark .dbx-ae-chk-pending{box-shadow:0 0 0 2px #b08900;}',
+			'.dbx-ae-dark .dbx-ae-btn{background:#2b3035;color:#dee2e6;border-color:#6c757d;}',
+			'.dbx-ae-dark .dbx-ae-btn:hover{background:#343a40;}',
+			'.dbx-ae-dark .dbx-ae-btn-primary{background:#0d6efd;border-color:#0d6efd;color:#fff;}',
+			'.dbx-ae-dark .dbx-ae-btn-primary:hover{background:#0b5ed7;}',
+			'.dbx-ae-dark .dbx-ae-chip-ok,.dbx-ae-dark .dbx-ae-banner-ok{background:#12372a;color:#69db7c;}',
+			'.dbx-ae-dark .dbx-ae-chip-bad,.dbx-ae-dark .dbx-ae-banner-err{background:#3b1a1a;color:#ff8787;}',
+			'.dbx-ae-dark .dbx-ae-preset{background:#2b3035;color:#dee2e6;border-color:#6c757d;}',
+			'.dbx-ae-dark .dbx-ae-preset.dbx-ae-on{background:#1a2b40;border-color:#3d8bfd;color:#9ec5fe;}',
+			'.dbx-ae-dark .dbx-ae-changed,.dbx-ae-dark .dbx-ae-banner-warn{background:#3a2e0c;color:#ffd43b;}',
+			'.dbx-ae-dark .dbx-ae-banner-info{background:#0d2a45;color:#9ec5fe;}',
+			'.dbx-ae-dark .dbx-ae-banner a{color:#9ec5fe;}',
+			'.dbx-ae-dark .dbx-ae-menu{background:#2b3035;border-color:#495057;box-shadow:0 4px 16px rgba(0,0,0,.6);}',
+			'.dbx-ae-dark .dbx-ae-item{color:#dee2e6;}',
+			'.dbx-ae-dark .dbx-ae-item:hover{background:#343a40;}',
+			'.dbx-ae-dark .dbx-ae-item:disabled:hover{background:none;}'
 		].join('\n');
 		var style = document.createElement('style');
 		style.id = 'dbx-ae-css';
@@ -619,7 +656,8 @@ var DbxAlarmEditor = (function()
 		var host = document.querySelector('.modal.show') || document.body;
 
 		var root = document.createElement('div');
-		root.className = 'dbx-ae-overlay';
+		root.className = 'dbx-ae-overlay' + (isDark() ? ' dbx-ae-dark' : '');
+		root.setAttribute('data-bs-theme', isDark() ? 'dark' : 'light'); // Bootstrap parts inside (code, checkboxes)
 		root.innerHTML = '<div class="dbx-ae-dialog" role="dialog" aria-modal="true" tabindex="-1" style="outline:none;">'
 			+ '<div class="dbx-ae-head"><div class="dbx-ae-title">' + esc(opts.alarmName) + '</div></div>'
 			+ '<div class="dbx-ae-body"><div class="dbx-ae-help" style="padding:20px 0;">Loading...</div></div>'
@@ -679,5 +717,12 @@ var DbxAlarmEditor = (function()
 		_s = null;
 	}
 
-	return { open: open, close: close, _parseMap: parseMap, _fieldKind: fieldKind };
+	return {
+		open  : open,
+		close : close,
+		// The field model, shared with pages that edit alarms inline (config.html), so kinds/order/validation stay identical
+		model : { buildFields: buildFields, validate: validate, parseMap: parseMap, fieldKind: fieldKind, CRON_PRESETS: CRON_PRESETS },
+		_parseMap  : parseMap,
+		_fieldKind : fieldKind
+	};
 })();

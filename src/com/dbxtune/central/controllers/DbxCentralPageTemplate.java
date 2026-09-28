@@ -456,6 +456,8 @@ ex.printStackTrace();
 
 		writer.println("<title>" + getHeadTitle() + "</title> ");
 		writer.println("<meta charset='utf-8'> ");
+		writer.println("<!-- JS: Light/dark theme - FIRST, so the page is never drawn in the wrong theme (follows the OS, user override in the navbar) -->");
+		writer.println("<script type='text/javascript' src='/scripts/dbxtune/js/dbxTheme.js'></script>");
 		
 		int refreshTime = getHeadRefreshTime();
 		if (refreshTime > 0)

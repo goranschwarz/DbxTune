@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -1473,8 +1474,41 @@ public class SqlServerUtils
 	 * Explicit line breaks embedded in the message text: HTML &lt;br&gt; (any case, with
 	 * optional slash, e.g. &lt;BR&gt;, &lt;br/&gt;, &lt;br /&gt;) or a literal backslash-n
 	 * (the two characters '\' and 'n', not a real newline).
+	 * <p>
+	 * The literal backslash-n is case sensitive (so "NT AUTHORITY\NETWORK SERVICE" is kept).
+	 * Windows paths and the "Executed as user: DOMAIN\name." prefix are never passed to this pattern
+	 * (see replaceExplicitNewlines() and jobMessageFormatter()).
 	 */
-	private static final Pattern EXPLICIT_NEWLINE = Pattern.compile("(?i)<br\\s*/?>|\\\\n");
+	private static final Pattern EXPLICIT_NEWLINE = Pattern.compile("(?i:<br\\s*/?>)|\\\\n");
+
+	/**
+	 * A Windows path: "C:\dir\file" or "\\server\share\file". Directory names may contain spaces
+	 * ("C:\Program Files\x"), the last part may not (it ends at the first whitespace).
+	 * Used so a "\n" inside a path (like "C:\Program Files\nodejs\node.exe") is not seen as a newline.
+	 * A path stops at characters that are not allowed in Windows file names (&lt;&gt;:"/|?*).
+	 * Known limit: "C:\x\y.exe word\nnext" is seen as a path up to "next" (because "y.exe word" could be a
+	 * directory name with a space), so that "\n" is kept.
+	 */
+	private static final Pattern WINDOWS_PATH = Pattern.compile(
+			"(?:[A-Za-z]:|\\\\\\\\[\\w.$-]+)"                                   // "C:" or "\\server"
+			+ "(?:\\\\[^\\\\\\s\"'<>|*?:/]+(?: [^\\\\\\s\"'<>|*?:/]+)*(?=\\\\))*"  // "\dir" or "\dir with spaces" (followed by '\')
+			+ "\\\\[^\\\\\\s\"'<>|*?:/]*");                                          // "\last"
+
+	/** Applies EXPLICIT_NEWLINE to everything in the string except Windows paths. */
+	private static String replaceExplicitNewlines(String s)
+	{
+		StringBuilder sb = new StringBuilder();
+		Matcher path = WINDOWS_PATH.matcher(s);
+		int pos = 0;
+		while (path.find())
+		{
+			sb.append(EXPLICIT_NEWLINE.matcher(s.substring(pos, path.start())).replaceAll("\n"));
+			sb.append(path.group());
+			pos = path.end();
+		}
+		sb.append(EXPLICIT_NEWLINE.matcher(s.substring(pos)).replaceAll("\n"));
+		return sb.toString();
+	}
 
 	/**
 	 * Sentence boundary: period + 2+ spaces + uppercase letter, [ or <.
@@ -1874,11 +1908,18 @@ public class SqlServerUtils
 //		String s = unescapeHtml(message.trim());
 		String s = StringEscapeUtils.unescapeHtml4(message.trim());
 
-		// Step 0b: explicit line breaks (<br>, <BR>, <br/>, literal "\n") become real newlines
-		s = EXPLICIT_NEWLINE.matcher(s).replaceAll("\n");
-
 		// Step 1: always peel off the "Executed as user" prefix onto its own line
-		s = EXECUTED_AS.matcher(s).replaceFirst("$1\n");
+		//         Done before step 1b, so a user name like "DOMAIN\nils" is not split at the "\n"
+		String executedAs = "";
+		Matcher execAsMatcher = EXECUTED_AS.matcher(s);
+		if (execAsMatcher.find())
+		{
+			executedAs = execAsMatcher.group(1) + "\n";
+			s = s.substring(execAsMatcher.end());
+		}
+
+		// Step 1b: explicit line breaks (<br>, <BR>, <br/>, literal "\n") become real newlines
+		s = executedAs + replaceExplicitNewlines(s);
 
 		// Step 2: branch by subsystem
 		String sub = (subsystem != null) ? subsystem.trim().toUpperCase() : "";

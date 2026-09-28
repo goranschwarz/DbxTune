@@ -127,6 +127,10 @@ var DbxTimeline = (function () {
 		+ '.dbx-tl .dbx-tl-corner:hover { background:#e7f1ff; }\n'
 		+ '.dbx-tl.dbx-tl-nokeys .dbx-tl-corner { display:none; }\n'
 		+ '.dbx-tl-badge.dbx-tl-fail { background:#dc3545; }\n'
+		// Whole row (label + chart area) highlight: on hover, and for the last clicked row (after the other label rules, so it wins)
+		+ '.dbx-tl .vis-label.dbx-tl-row-hover, .dbx-tl .vis-background .vis-group.dbx-tl-row-hover { background:#e7f1ff; }\n'
+		+ '.dbx-tl .vis-label.dbx-tl-row-sel,   .dbx-tl .vis-background .vis-group.dbx-tl-row-sel   { background:#cfe2ff; }\n'
+		+ '.dbx-tl .vis-label.dbx-tl-row-sel { box-shadow:inset 3px 0 0 #0d6efd; }\n'
 		;
 
 	function injectCss()
@@ -1062,6 +1066,38 @@ var DbxTimeline = (function () {
 		chartDiv.addEventListener('mouseleave', hideTooltip);
 		chartDiv.addEventListener('wheel',      hideTooltip, { passive: true });
 
+		//-------------------------------------------------
+		// Whole row highlight (label + chart area): hover, and the last clicked row ('sel').
+		// vis has no option for this, and no public way to style one row, so we use the row's DOM elements
+		// from vis' internal 'itemSet.groups[id].dom'. If that is missing (other vis version) nothing is marked.
+		var rowMark = { hover: null, sel: null }; // group id per kind
+		function rowDomList(groupId)
+		{
+			var grp = groupId != null && timeline.itemSet && timeline.itemSet.groups ? timeline.itemSet.groups[groupId] : null;
+			return grp && grp.dom ? [grp.dom.label, grp.dom.background].filter(Boolean) : [];
+		}
+		function setRowClass(cls, groupId, kind)
+		{
+			if (rowMark[kind] === groupId)
+				return;
+			rowDomList(rowMark[kind]).forEach(function (el) { el.classList.remove(cls); });
+			rowMark[kind] = groupId;
+			rowDomList(groupId).forEach(function (el) { el.classList.add(cls); });
+		}
+		// vis may re-create the row elements when rows change (expand/collapse, filter, sort): mark them again
+		timeline.on('changed', function () {
+			rowDomList(rowMark.hover).forEach(function (el) { el.classList.add('dbx-tl-row-hover'); });
+			rowDomList(rowMark.sel  ).forEach(function (el) { el.classList.add('dbx-tl-row-sel');   });
+		});
+		timeline.on('mouseMove', function (props) {
+			// Over a label: use the label's own group id (vis takes it from the Y position in the chart area, see resolveClick)
+			var labelEl = props.event && props.event.target && props.event.target.closest ? props.event.target.closest('.vis-label') : null;
+			var gidEl   = labelEl ? labelEl.querySelector('[data-dbx-gid]') : null;
+			var gid     = gidEl ? gidEl.getAttribute('data-dbx-gid') : (props.what === 'axis' ? null : props.group);
+			setRowClass('dbx-tl-row-hover', gid != null ? gid : null, 'hover');
+		});
+		chartDiv.addEventListener('mouseleave', function () { setRowClass('dbx-tl-row-hover', null, 'hover'); });
+
 		// Click a bar or a row label: a small menu with what to do with that row
 		function openRowMenu(g, row, clientX, clientY)
 		{
@@ -1129,6 +1165,12 @@ var DbxTimeline = (function () {
 		timeline.on('click', function (props) {
 			hideTooltip();
 			var c = resolveClick(props);
+
+			// Mark the clicked row (a bar, a label or the empty part of a row). Below the last row: unmark.
+			var selId = c ? c.g.id : (props.what === 'background' && props.group != null) ? props.group : null;
+			if (selId != null || props.what == null || props.what === 'background')
+				setRowClass('dbx-tl-row-sel', selId, 'sel');
+
 			if (!c)
 				return;
 			if (c.isItem)

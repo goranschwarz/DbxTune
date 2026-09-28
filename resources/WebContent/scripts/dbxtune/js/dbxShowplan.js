@@ -242,7 +242,18 @@
 			   the modal always painted over it. Push it above both the showplan modal and the sqltext sub-dialog. */
 			'.qp-tt {',
 			'  z-index: 1200 !important;',
+			'  color: var(--sp-text);', // set explicitly: the clone lives on <body> and would inherit the page's text colour
 			'}',
+			/* html-query-plan (vendored qp.css, not edited) in DARK mode - light mode keeps qp.css as it is.
+			   Based on github.com/JustinPealing/html-query-plan/issues/117 ; html. prefix beats qp.css's div.xx rules */
+			'html.dbx-sp-dark div.qp-node { background-color: var(--sp-bg); border-color: var(--sp-node-border); color: var(--sp-text); }',
+			'html.dbx-sp-dark div.qp-node-label-cardinality, html.dbx-sp-dark div.qp-node-id { color: var(--sp-text-5); }',
+			'html.dbx-sp-dark .qp-statement-header { border-color: var(--sp-border); color: var(--sp-text); }',
+			'html.dbx-sp-dark .qp-tt { background-color: var(--sp-tt-bg); border-color: var(--sp-tt-border); }',
+			'html.dbx-sp-dark .qp-tt th { border-bottom-color: var(--sp-tt-sep); }',
+			'html.dbx-sp-dark .missing-index { color: #6fcf87; }',
+			/* connector arrows: SVG polygons drawn by qp.js with fill #E3E3E3 + black outline */
+			'html.dbx-sp-dark .qp-root svg polygon, html.dbx-sp-dark .qp-root svg polyline, html.dbx-sp-dark .qp-root svg path { fill: var(--sp-bg-3); stroke: var(--sp-edge); }',
 			/* Prism's own CSS sets code/pre blocks (SQL Text, Parameters, XML Plan, ASE Raw Plan Text -
 			   all share the .dbx-view-sqltext-content class, see _injectHtml() markup below) to a flat
 			   font-size:1em, which reads noticeably bigger than the rest of this dialog's UI text (mostly
@@ -256,6 +267,7 @@
 
 		document.body.insertAdjacentHTML('beforeend', [
 			// ---- Postgres Execution Plan dialog ----
+			// light/dark: data-bs-theme is set when a dialog opens (DbxShowplanTheme.apply, see the show.bs.modal hook below)
 			"<div class='modal fade' id='dbx-view-pgShowplan-dialog' tabindex='-1' role='dialog' aria-labelledby='dbx-view-pgShowplan-dialog' aria-hidden='true'>",
 			"	<div class='modal-dialog modal-dialog-centered mw-100 w-75' role='document'>",
 			"		<div class='modal-content' style='height: 80vh;'>",
@@ -295,10 +307,10 @@
 			"	<div class='modal-dialog modal-dialog-centered mw-100' role='document'>",
 			"		<div class='modal-content'>",
 			"			<div class='modal-header' style='cursor:move;'>",
-			"				<span style='color:#999;margin-right:6px;font-size:1.1em;' title='Drag to move'>&#x2630;</span>",
+			"				<span style='color:var(--sp-text-6);margin-right:6px;font-size:1.1em;' title='Drag to move'>&#x2630;</span>",
 			"				<div style='flex:1;min-width:0;'>",
 			"					<h5 class='modal-title' style='margin-bottom:1px;'><b>SQL Server Showplan</b> <span id='dbx-view-ssShowplan-plantype' style='font-size:0.78em;font-weight:normal;margin-left:6px;'></span><b>:</b> <span id='dbx-view-ssShowplan-objectName'></span></h5>",
-			"					<div id='dbx-view-ssShowplan-timestamps' style='font-size:0.75em;color:#888;'></div>",
+			"					<div id='dbx-view-ssShowplan-timestamps' style='font-size:0.75em;color:var(--sp-text-5);'></div>",
 			"				</div>",
 			"				<div style='display:flex;align-items:center;flex-shrink:0;'>",
 			"					<button type='button' class='btn border-0 p-0 lh-1 opacity-50' style='margin-left:8px;font-size:1.3rem;' title='Expand/restore dialog size' aria-label='Expand/restore dialog size' onclick='ssShowplanToggleExpand();'><span aria-hidden='true'>&#9974;</span></button>",
@@ -323,7 +335,7 @@
 			"					<div id='dbx-ssp-sections' style='flex:1 1 auto;min-width:0;'>",
 
 			"				<!-- ▶ Execution Plan -->",
-			"				<details open id='dbx-ssp-sect-plan' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
+			"				<details open id='dbx-ssp-sect-plan' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
 			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128202; Execution Plan</summary>",
 			"					<div style='padding:4px 8px 10px 8px;'>",
 			// display:flex so the renderer toggle (moved to the end, below) can be pushed to the right
@@ -380,43 +392,43 @@
 			"				</details>",
 
 			"				<!-- ▶ Plan Analysis (managed by ssShowplanRunAnalysis) -->",
-			"				<details id='dbx-view-ssShowplan-analysis' style='display:none;border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
+			"				<details id='dbx-view-ssShowplan-analysis' style='display:none;border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
 			"					<summary id='dbx-view-ssShowplan-analysis-summary' style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128270; Plan Analysis</summary>",
 			"					<div id='dbx-view-ssShowplan-analysis-body' style='padding:4px 12px 8px 12px;'></div>",
 			"				</details>",
 
 			"				<!-- ▶ SQL Text -->",
-			"				<details open id='dbx-ssp-sect-sql' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
+			"				<details open id='dbx-ssp-sect-sql' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
 			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128196; SQL Text</summary>",
 			"					<div style='padding:4px 8px 8px 8px;'>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='ssShowplanFormatSql();'>Format SQL</button>",
 			_sqlFmtBtn('dbx-view-ssShowplan-sqlFmtPanel', 'ssShowplanFormatSql', 'margin-bottom:4px;'),
 			"						<div id='dbx-view-ssShowplan-sqlFmtPanel'></div>",
 			"						<div style='position:relative;'>",
-			"							<button onclick='dbxCopyCodeBlock(\"dbx-view-ssShowplan-sqlContent\");' style='position:absolute;right:6px;top:6px;z-index:10;font-size:0.75em;padding:1px 8px;cursor:pointer;background:#f0f0f0;border:1px solid #bbb;border-radius:3px;opacity:0.85;'>Copy</button>",
+			"							<button onclick='dbxCopyCodeBlock(\"dbx-view-ssShowplan-sqlContent\");' style='position:absolute;right:6px;top:6px;z-index:10;font-size:0.75em;padding:1px 8px;cursor:pointer;background:var(--sp-bg-btn);border:1px solid var(--sp-border-btn);border-radius:3px;opacity:0.85;'>Copy</button>",
 			"							<pre><code id='dbx-view-ssShowplan-sqlContent' class='language-sql line-numbers dbx-view-sqltext-content'></code></pre>",
 			"						</div>",
 			"					</div>",
 			"				</details>",
 
 			"				<!-- ▶ Parameters -->",
-			"				<details id='dbx-ssp-sect-params' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
-			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#9881;&#65039; Parameters<span id='dbx-ssp-params-summary-info' style='font-weight:normal;color:#888;'></span></summary>",
+			"				<details id='dbx-ssp-sect-params' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
+			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#9881;&#65039; Parameters<span id='dbx-ssp-params-summary-info' style='font-weight:normal;color:var(--sp-text-5);'></span></summary>",
 			"					<div style='padding:4px 8px 8px 8px;'>",
-			"						<div id='dbx-ssp-no-params' style='display:none;color:#888;font-size:0.85em;'>No parameters in this plan.</div>",
+			"						<div id='dbx-ssp-no-params' style='display:none;color:var(--sp-text-5);font-size:0.85em;'>No parameters in this plan.</div>",
 			"						<div id='dbx-ssp-compile-block'>",
-			"							<div style='font-size:0.8em;font-weight:600;color:#555;margin:4px 0 2px 0;'>Compile-time values</div>",
+			"							<div style='font-size:0.8em;font-weight:600;color:var(--sp-text-2);margin:4px 0 2px 0;'>Compile-time values</div>",
 			"							<button type='button' id='dbx-view-ssShowplan-compileParameterValuesButton' class='btn btn-outline-secondary btn-sm' style='margin-bottom:3px;' onclick=\"ssShowplanSetParametersInSql('compile');\">Apply to SQL Text</button>",
 			"							<div style='position:relative;'>",
-			"								<button onclick='dbxCopyCodeBlock(\"dbx-view-ssShowplan-compileParameterValues\");' style='position:absolute;right:6px;top:6px;z-index:10;font-size:0.75em;padding:1px 8px;cursor:pointer;background:#f0f0f0;border:1px solid #bbb;border-radius:3px;opacity:0.85;'>Copy</button>",
+			"								<button onclick='dbxCopyCodeBlock(\"dbx-view-ssShowplan-compileParameterValues\");' style='position:absolute;right:6px;top:6px;z-index:10;font-size:0.75em;padding:1px 8px;cursor:pointer;background:var(--sp-bg-btn);border:1px solid var(--sp-border-btn);border-radius:3px;opacity:0.85;'>Copy</button>",
 			"								<pre><code id='dbx-view-ssShowplan-compileParameterValues' class='language-sql line-numbers dbx-view-sqltext-content'></code></pre>",
 			"							</div>",
 			"						</div>",
 			"						<div id='dbx-ssp-runtime-block'>",
-			"							<div style='font-size:0.8em;font-weight:600;color:#555;margin:6px 0 2px 0;'>Runtime values</div>",
+			"							<div style='font-size:0.8em;font-weight:600;color:var(--sp-text-2);margin:6px 0 2px 0;'>Runtime values</div>",
 			"							<button type='button' id='dbx-view-ssShowplan-runtimeParameterValuesButton' class='btn btn-outline-secondary btn-sm' style='margin-bottom:3px;' onclick=\"ssShowplanSetParametersInSql('runtime');\">Apply to SQL Text</button>",
 			"							<div style='position:relative;'>",
-			"								<button onclick='dbxCopyCodeBlock(\"dbx-view-ssShowplan-runtimeParameterValues\");' style='position:absolute;right:6px;top:6px;z-index:10;font-size:0.75em;padding:1px 8px;cursor:pointer;background:#f0f0f0;border:1px solid #bbb;border-radius:3px;opacity:0.85;'>Copy</button>",
+			"								<button onclick='dbxCopyCodeBlock(\"dbx-view-ssShowplan-runtimeParameterValues\");' style='position:absolute;right:6px;top:6px;z-index:10;font-size:0.75em;padding:1px 8px;cursor:pointer;background:var(--sp-bg-btn);border:1px solid var(--sp-border-btn);border-radius:3px;opacity:0.85;'>Copy</button>",
 			"								<pre><code id='dbx-view-ssShowplan-runtimeParameterValues' class='language-sql line-numbers dbx-view-sqltext-content'></code></pre>",
 			"							</div>",
 			"						</div>",
@@ -424,23 +436,23 @@
 			"				</details>",
 
 			"				<!-- ▶ Table Information (lazy-loaded on first expand) -->",
-			"				<details id='dbx-ssp-sect-tableinfo' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
+			"				<details id='dbx-ssp-sect-tableinfo' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
 			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128220; Table Information</summary>",
 			"					<div id='dbx-ssp-tableinfo-body' style='padding:4px 8px 8px 8px;overflow-x:auto;'>",
-			"						<span style='color:#888;font-size:0.85em;'>&#9203; Loading table information…</span>",
+			"						<span style='color:var(--sp-text-5);font-size:0.85em;'>&#9203; Loading table information…</span>",
 			"					</div>",
 			"				</details>",
 
 			"				<!-- ▶ LLM Optimization Advice (lazy-loaded on first expand) -->",
-			"				<details id='dbx-ssp-sect-llm' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
-			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#129302; LLM Optimization Advice<span class='dbx-llm-summary-info' style='font-weight:normal;color:#888;'></span></summary>",
+			"				<details id='dbx-ssp-sect-llm' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
+			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#129302; LLM Optimization Advice<span class='dbx-llm-summary-info' style='font-weight:normal;color:var(--sp-text-5);'></span></summary>",
 			"					<div style='padding:4px 8px 8px 8px;'>",
 			// This button lives OUTSIDE #dbx-ssp-llm-body on purpose: dbxLlmAdvice.js's target-mode
 			// rendering replaces the whole innerHTML of its target element, so anything inside
 			// dbx-ssp-llm-body itself would be wiped out on every (re)load.
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='ssShowplanRefreshLlmAdvice();'>&#8635; Refresh Advice</button>",
 			"						<div id='dbx-ssp-llm-body'>",
-			"							<span style='color:#888;font-size:0.85em;'>Expand to ask an LLM for optimization advice.</span>",
+			"							<span style='color:var(--sp-text-5);font-size:0.85em;'>Expand to ask an LLM for optimization advice.</span>",
 			"						</div>",
 			"					</div>",
 			"				</details>",
@@ -453,31 +465,31 @@
 			// (id='dbx-ssp-llmpreview-note') between those two framings. Mirrors the ASE dialog's
 			// dbx-asp-sect-llmpreview.
 			"				<!-- ▶ LLM Prompt Preview (always available alongside LLM Optimization Advice above) -->",
-			"				<details id='dbx-ssp-sect-llmpreview' style='display:none;border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
-			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128203; LLM Prompt Preview<span style='font-weight:normal;color:#888;'> - Ask your favourite LLM</span></summary>",
+			"				<details id='dbx-ssp-sect-llmpreview' style='display:none;border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
+			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128203; LLM Prompt Preview<span style='font-weight:normal;color:var(--sp-text-5);'> - Ask your favourite LLM</span></summary>",
 			"					<div style='padding:4px 8px 8px 8px;'>",
 			"						<p class='text-muted' id='dbx-ssp-llmpreview-note' style='font-size:0.8em;'>This DbxCentral instance doesn't have LLM Optimization Advice turned on, so nothing gets sent anywhere - but here's the exact prompt it would send. Copy it into any LLM chat (claude.ai, chatgpt.com, ...) yourself for a quick manual shortcut into the same advice.</p>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='ssShowplanRefreshLlmPreview();'>&#8635; Build Prompt</button>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='ssShowplanCopyLlmPreview();'>&#128203; Copy Prompt</button>",
 			"						<div id='dbx-ssp-llmpreview-body'>",
-			"							<span style='color:#888;font-size:0.85em;'>Expand to build the prompt.</span>",
+			"							<span style='color:var(--sp-text-5);font-size:0.85em;'>Expand to build the prompt.</span>",
 			"						</div>",
 			"					</div>",
 			"				</details>",
 
 			"				<!-- ▶ XML Plan (collapsed by default) -->",
-			"				<details id='dbx-ssp-sect-xml' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
+			"				<details id='dbx-ssp-sect-xml' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
 			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128196; XML Plan</summary>",
 			"					<div style='padding:4px 8px 8px 8px;'>",
 			"						<div style='position:relative;'>",
-			"							<button onclick='dbxCopyCodeBlock(\"dbx-view-ssShowplan-xmlContent\");' style='position:absolute;right:6px;top:6px;z-index:10;font-size:0.75em;padding:1px 8px;cursor:pointer;background:#f0f0f0;border:1px solid #bbb;border-radius:3px;opacity:0.85;'>Copy</button>",
+			"							<button onclick='dbxCopyCodeBlock(\"dbx-view-ssShowplan-xmlContent\");' style='position:absolute;right:6px;top:6px;z-index:10;font-size:0.75em;padding:1px 8px;cursor:pointer;background:var(--sp-bg-btn);border:1px solid var(--sp-border-btn);border-radius:3px;opacity:0.85;'>Copy</button>",
 			"							<pre><code id='dbx-view-ssShowplan-xmlContent' class='language-xml line-numbers dbx-view-sqltext-content'></code></pre>",
 			"						</div>",
 			"					</div>",
 			"				</details>",
 
 			"					</div>",
-			"					<div id='dbx-view-ssShowplan-propsSplit' title='Drag to resize' style='flex:0 0 6px;align-self:stretch;cursor:col-resize;background:#e4e4e4;border-radius:3px;margin:0 4px;'></div>",
+			"					<div id='dbx-view-ssShowplan-propsSplit' title='Drag to resize' style='flex:0 0 6px;align-self:stretch;cursor:col-resize;background:var(--sp-bg-3);border-radius:3px;margin:0 4px;'></div>",
 			// position:sticky pins the pane's top edge while .modal-body scrolls. Two conditions make
 			// it work, both verified: .modal-body is the scrolling ancestor and every element between
 			// it and the pane is overflow:visible (any clipping ancestor cancels sticky), and
@@ -485,12 +497,12 @@
 			// a stretched sticky element exactly fills its containing block and so has nowhere to move.
 			// max-height is set from the dialog's visible body height by _ssShowplanFitPropsPane(); the
 			// calc() here is only a sane starting value for the moment before that first runs.
-			"					<div id='dbx-view-ssShowplan-propsPane' class='ss-plan-props-scroll' style='flex:0 0 320px;align-self:flex-start;position:sticky;top:4px;overflow:auto;background:#fff;max-height:calc(100vh - 260px);border:1px solid #d8d8d8;border-radius:3px;padding:6px 10px 8px 10px;'>",
+			"					<div id='dbx-view-ssShowplan-propsPane' class='ss-plan-props-scroll' style='flex:0 0 320px;align-self:flex-start;position:sticky;top:4px;overflow:auto;background:var(--sp-bg);max-height:calc(100vh - 260px);border:1px solid var(--sp-border);border-radius:3px;padding:6px 10px 8px 10px;'>",
 			// Header stays outside #dbx-view-ssShowplan-propsBody: renderPropertiesInto() empties its
 			// target on every selection, which would take the close button with it.
-			"						<div style='display:flex;align-items:center;justify-content:space-between;gap:6px;border-bottom:1px solid #e6e6e6;margin-bottom:6px;padding-bottom:3px;'>",
-			"							<span style='font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:#8a8a8a;'>Properties</span>",
-			"							<button type='button' title='Hide the Properties pane' aria-label='Hide the Properties pane' onclick='ssShowplanToggleProps();' style='border:0;background:none;cursor:pointer;color:#999;font-size:15px;line-height:1;padding:0 2px;'>&times;</button>",
+			"						<div style='display:flex;align-items:center;justify-content:space-between;gap:6px;border-bottom:1px solid var(--sp-border-2);margin-bottom:6px;padding-bottom:3px;'>",
+			"							<span style='font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--sp-text-5);'>Properties</span>",
+			"							<button type='button' title='Hide the Properties pane' aria-label='Hide the Properties pane' onclick='ssShowplanToggleProps();' style='border:0;background:none;cursor:pointer;color:var(--sp-text-6);font-size:15px;line-height:1;padding:0 2px;'>&times;</button>",
 			"						</div>",
 			"						<div id='dbx-view-ssShowplan-propsBody'></div>",
 			"					</div>",
@@ -513,7 +525,7 @@
 			"	<div class='modal-dialog modal-dialog-centered mw-100' role='document'>",
 			"		<div class='modal-content'>",
 			"			<div class='modal-header' style='cursor:move;'>",
-			"				<span style='color:#999;margin-right:6px;font-size:1.1em;' title='Drag to move'>&#x2630;</span>",
+			"				<span style='color:var(--sp-text-6);margin-right:6px;font-size:1.1em;' title='Drag to move'>&#x2630;</span>",
 			"				<h5 class='modal-title' style='flex:1;min-width:0;'><b>ASE Showplan</b>: <span id='dbx-view-aseShowplan-objectName'></span></h5>",
 			"				<div style='display:flex;align-items:center;flex-shrink:0;'>",
 			"					<button type='button' class='btn border-0 p-0 lh-1 opacity-50' style='margin-left:8px;font-size:1.3rem;' title='Expand/restore dialog size' aria-label='Expand/restore dialog size' onclick='aseShowplanToggleExpand();'><span aria-hidden='true'>&#9974;</span></button>",
@@ -531,7 +543,7 @@
 			"					<div id='dbx-asp-sections' style='flex:1 1 auto;min-width:0;'>",
 
 			"				<!-- ▶ Graphical Plan -->",
-			"				<details open id='dbx-asp-sect-graph' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
+			"				<details open id='dbx-asp-sect-graph' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
 			"					<summary id='dbx-view-aseShowplan-plan-summary' style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128202; Graphical Plan</summary>",
 			"					<div style='padding:4px 8px 10px 8px;'>",
 			// Same toolbar structure as the SQL Server dialog: one flex row, actions on the left, and
@@ -542,7 +554,7 @@
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='aseShowplanRedraw();'>&#8635; Redraw</button>",
 			"						<button type='button' id='dbx-view-aseShowplan-zoomBtn' class='btn btn-outline-secondary btn-sm' onclick='aseShowplanToggleZoom();'>&#128269; Enable Zoom</button>",
 			"						<button type='button' id='dbx-view-aseShowplan-zoomFitBtn' class='btn btn-outline-secondary btn-sm' style='display:none;' onclick='aseShowplanZoomToFit();'>&#8862; Zoom to Fit</button>",
-			"						<span style='font-size:0.8em;color:#888;margin-left:6px;'>Execution order is by VA# (starting at 0)</span>",
+			"						<span style='font-size:0.8em;color:var(--sp-text-5);margin-left:6px;'>Execution order is by VA# (starting at 0)</span>",
 			"						<span style='font-size:0.8em;margin-left:14px;'>",
 			"							Options: <span title='A Table Scan, Clustered Index Scan, or (non-By-Key) Index Scan that reads more than this much data is flagged in the diagram with a red border and a &quot;Large table/index&quot; warning - a By Key seek only touches the rows it needs, so it is never flagged. Default 100 MB - lower it to catch smaller tables/indexes too, or raise it if 100 MB is normal-sized in this environment. Requires Table Information context (srv/dbname), same as the Table Information section below - has no effect otherwise.'>Big table &gt; <input type='number' id='dbx-view-aseShowplan-warnMb' style='width:60px;padding:1px 4px;font-size:0.85em;' min='0' step='1' onchange='aseShowplanSetTableSizeWarnMb(this.value);'> MB</span>",
 			"						</span>",
@@ -572,13 +584,13 @@
 			"				</details>",
 
 			"				<!-- ▶ Plan Analysis (managed by AseShowplan.render()'s opts.onFindingsChanged callback) -->",
-			"				<details id='dbx-asp-sect-analysis' style='display:none;border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
+			"				<details id='dbx-asp-sect-analysis' style='display:none;border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
 			"					<summary id='dbx-view-aseShowplan-analysis-summary' style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128270; Plan Analysis</summary>",
 			"					<div id='dbx-view-aseShowplan-analysis-body' style='padding:4px 12px 8px 12px;'></div>",
 			"				</details>",
 
 			"				<!-- ▶ Raw Plan Text -->",
-			"				<details id='dbx-asp-sect-plan' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
+			"				<details id='dbx-asp-sect-plan' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
 			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128196; Raw Plan Text</summary>",
 			"					<div style='padding:4px 8px 8px 8px;'>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='dbxCopyCodeBlock(\"dbx-view-aseShowplan-planContent\");'>Copy Plan Text</button>",
@@ -587,7 +599,7 @@
 			"				</details>",
 
 			"				<!-- ▶ SQL Text -->",
-			"				<details open id='dbx-asp-sect-sql' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
+			"				<details open id='dbx-asp-sect-sql' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
 			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128196; SQL Text</summary>",
 			"					<div style='padding:4px 8px 8px 8px;'>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='aseShowplanFormatSql();'>Format SQL</button>",
@@ -599,23 +611,23 @@
 			"				</details>",
 
 			"				<!-- ▶ Table Information (lazy-loaded on first expand) -->",
-			"				<details id='dbx-asp-sect-tableinfo' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
+			"				<details id='dbx-asp-sect-tableinfo' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
 			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128220; Table Information</summary>",
 			"					<div id='dbx-asp-tableinfo-body' style='padding:4px 8px 8px 8px;'>",
-			"						<span style='color:#888;font-size:0.85em;'>&#9203; Loading table information…</span>",
+			"						<span style='color:var(--sp-text-5);font-size:0.85em;'>&#9203; Loading table information…</span>",
 			"					</div>",
 			"				</details>",
 
 			"				<!-- ▶ LLM Optimization Advice (lazy-loaded on first expand) -->",
-			"				<details id='dbx-asp-sect-llm' style='border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
-			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#129302; LLM Optimization Advice<span class='dbx-llm-summary-info' style='font-weight:normal;color:#888;'></span></summary>",
+			"				<details id='dbx-asp-sect-llm' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
+			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#129302; LLM Optimization Advice<span class='dbx-llm-summary-info' style='font-weight:normal;color:var(--sp-text-5);'></span></summary>",
 			"					<div style='padding:4px 8px 8px 8px;'>",
 			// This button lives OUTSIDE #dbx-asp-llm-body on purpose: dbxLlmAdvice.js's target-mode
 			// rendering replaces the whole innerHTML of its target element, so anything inside
 			// dbx-asp-llm-body itself would be wiped out on every (re)load.
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='aseShowplanRefreshLlmAdvice();'>&#8635; Refresh Advice</button>",
 			"						<div id='dbx-asp-llm-body'>",
-			"							<span style='color:#888;font-size:0.85em;'>Expand to ask an LLM for optimization advice.</span>",
+			"							<span style='color:var(--sp-text-5);font-size:0.85em;'>Expand to ask an LLM for optimization advice.</span>",
 			"						</div>",
 			"					</div>",
 			"				</details>",
@@ -627,30 +639,30 @@
 			// dbxLlmAdvice.isEnabled() toggle in _initHandlers() below just swaps the note text
 			// (id='dbx-asp-llmpreview-note') between those two framings.
 			"				<!-- ▶ LLM Prompt Preview (always available alongside LLM Optimization Advice above) -->",
-			"				<details id='dbx-asp-sect-llmpreview' style='display:none;border:1px solid #d0d0d0;border-radius:3px;background:#fafafa;margin-bottom:4px;'>",
-			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128203; LLM Prompt Preview<span style='font-weight:normal;color:#888;'> - Ask your favourite LLM</span></summary>",
+			"				<details id='dbx-asp-sect-llmpreview' style='display:none;border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
+			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128203; LLM Prompt Preview<span style='font-weight:normal;color:var(--sp-text-5);'> - Ask your favourite LLM</span></summary>",
 			"					<div style='padding:4px 8px 8px 8px;'>",
 			"						<p class='text-muted' id='dbx-asp-llmpreview-note' style='font-size:0.8em;'>This DbxCentral instance doesn't have LLM Optimization Advice turned on, so nothing gets sent anywhere - but here's the exact prompt it would send. Copy it into any LLM chat (claude.ai, chatgpt.com, ...) yourself for a quick manual shortcut into the same advice.</p>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='aseShowplanRefreshLlmPreview();'>&#8635; Build Prompt</button>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='aseShowplanCopyLlmPreview();'>&#128203; Copy Prompt</button>",
 			"						<div id='dbx-asp-llmpreview-body'>",
-			"							<span style='color:#888;font-size:0.85em;'>Expand to build the prompt.</span>",
+			"							<span style='color:var(--sp-text-5);font-size:0.85em;'>Expand to build the prompt.</span>",
 			"						</div>",
 			"					</div>",
 			"				</details>",
 
 			"					</div>",
-			"					<div id='dbx-view-aseShowplan-propsSplit' title='Drag to resize' style='flex:0 0 6px;align-self:stretch;cursor:col-resize;background:#e4e4e4;border-radius:3px;margin:0 4px;'></div>",
+			"					<div id='dbx-view-aseShowplan-propsSplit' title='Drag to resize' style='flex:0 0 6px;align-self:stretch;cursor:col-resize;background:var(--sp-bg-3);border-radius:3px;margin:0 4px;'></div>",
 			// Mirrors the SQL Server pane exactly - see the comment on its markup for why
 			// position:sticky + align-self:flex-start are both required. max-height is set from the
 			// dialog's visible body height by the shared _showplanFitPropsPane(); the calc() is only a
 			// sane value for the moment before that first runs.
-			"					<div id='dbx-view-aseShowplan-propsPane' class='ase-plan-props-scroll' style='flex:0 0 320px;align-self:flex-start;position:sticky;top:4px;overflow:auto;background:#fff;max-height:calc(100vh - 260px);border:1px solid #d8d8d8;border-radius:3px;padding:6px 10px 8px 10px;'>",
+			"					<div id='dbx-view-aseShowplan-propsPane' class='ase-plan-props-scroll' style='flex:0 0 320px;align-self:flex-start;position:sticky;top:4px;overflow:auto;background:var(--sp-bg);max-height:calc(100vh - 260px);border:1px solid var(--sp-border);border-radius:3px;padding:6px 10px 8px 10px;'>",
 			// Header lives outside the -propsBody div: renderPropertiesInto() empties its target on
 			// every selection, which would otherwise take the close button with it.
-			"						<div style='display:flex;align-items:center;justify-content:space-between;gap:6px;border-bottom:1px solid #e6e6e6;margin-bottom:6px;padding-bottom:3px;'>",
-			"							<span style='font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:#8a8a8a;'>Properties</span>",
-			"							<button type='button' title='Hide the Properties pane' aria-label='Hide the Properties pane' onclick='aseShowplanToggleProps();' style='border:0;background:none;cursor:pointer;color:#999;font-size:15px;line-height:1;padding:0 2px;'>&times;</button>",
+			"						<div style='display:flex;align-items:center;justify-content:space-between;gap:6px;border-bottom:1px solid var(--sp-border-2);margin-bottom:6px;padding-bottom:3px;'>",
+			"							<span style='font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--sp-text-5);'>Properties</span>",
+			"							<button type='button' title='Hide the Properties pane' aria-label='Hide the Properties pane' onclick='aseShowplanToggleProps();' style='border:0;background:none;cursor:pointer;color:var(--sp-text-6);font-size:15px;line-height:1;padding:0 2px;'>&times;</button>",
 			"						</div>",
 			"						<div id='dbx-view-aseShowplan-propsBody'></div>",
 			"					</div>",
@@ -668,13 +680,18 @@
 			"</div>"
 		].join('\n'));
 
+		// Light/dark (dbxShowplanGraph.js DbxShowplanTheme) for every way a plan dialog is opened - the ss/ase
+		// functions also call apply() before drawing, the pg dialog is opened by Bootstrap data-bs-target only
+		$('#dbx-view-pgShowplan-dialog, #dbx-view-ssShowplan-dialog, #dbx-view-aseShowplan-dialog')
+			.on('show.bs.modal', function () { DbxShowplanTheme.apply(this); });
+
 		// ── Showplan Loader input dialog ──────────────────────────────────────────
 		document.body.insertAdjacentHTML('beforeend',
 			  "<div class='modal fade' id='dbx-showplan-viewer-input-dialog' tabindex='-1' role='dialog' aria-labelledby='dbx-spv-title' aria-hidden='true'>"
 			+ "  <div id='dbx-spv-dialog' class='modal-dialog modal-dialog-centered' style='max-width:none;width:720px;min-width:400px;height:560px;min-height:300px;'>"
 			+ "    <div id='dbx-spv-content' class='modal-content' style='display:flex;flex-direction:column;height:100%;'>"
 			+ "      <div class='modal-header' style='cursor:move;flex-shrink:0;'>"
-			+ "        <span style='color:#999;margin-right:6px;font-size:1.1em;' title='Drag to move'>&#x2630;</span>"
+			+ "        <span style='color:var(--sp-text-6);margin-right:6px;font-size:1.1em;' title='Drag to move'>&#x2630;</span>"
 			+ "        <h5 class='modal-title' id='dbx-spv-title'>&#128221; Showplan Loader</h5>"
 			+ "        <button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'></button>"
 			+ "      </div>"
@@ -1365,7 +1382,7 @@
 			var baseMsg = 'Could not parse this plan into a diagram &mdash; see "Raw Plan Text" below.';
 			if (parseError) {
 				var errMsg = (parseError && parseError.message) ? parseError.message : String(parseError);
-				fallbackEl.innerHTML = baseMsg + '<div style="margin-top:4px;font-family:monospace;font-size:0.9em;color:#a33;">' + escapeHtml(errMsg) + '</div>';
+				fallbackEl.innerHTML = baseMsg + '<div style="margin-top:4px;font-family:monospace;font-size:0.9em;color:var(--sp-err-3);">' + escapeHtml(errMsg) + '</div>';
 			} else {
 				fallbackEl.innerHTML = baseMsg;
 			}
@@ -1415,7 +1432,7 @@
 		body.setAttribute('data-loaded', 'true');
 
 		if (typeof dbxLlmAdvice === 'undefined') {
-			body.innerHTML = '<em style="color:#888;">dbxLlmAdvice.js is not loaded on this page.</em>';
+			body.innerHTML = '<em style="color:var(--sp-text-5);">dbxLlmAdvice.js is not loaded on this page.</em>';
 			return;
 		}
 
@@ -1429,7 +1446,7 @@
 		var planText = $('#dbx-view-aseShowplan-planContent').text();
 
 		if (!sqlText) {
-			body.innerHTML = '<em style="color:#888;">No SQL text is available for this plan.</em>';
+			body.innerHTML = '<em style="color:var(--sp-text-5);">No SQL text is available for this plan.</em>';
 			return;
 		}
 
@@ -1464,12 +1481,12 @@
 		var planText = $('#dbx-view-aseShowplan-planContent').text();
 
 		if (!sqlText) {
-			body.innerHTML = '<em style="color:#888;">No SQL text is available for this plan.</em>';
+			body.innerHTML = '<em style="color:var(--sp-text-5);">No SQL text is available for this plan.</em>';
 			return;
 		}
 
 		function buildPreview(ddlContext) {
-			body.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Building prompt…</span>';
+			body.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Building prompt…</span>';
 			// Same workload profile open() would send, so the PREVIEW matches what actually gets sent.
 			var wlRaw = tiBody ? (tiBody.getAttribute('data-workloaddata') || '') : '';
 			var wlProfile = (wlRaw && window.dbxLlmAdvice && dbxLlmAdvice.buildWorkloadProfile)
@@ -1490,7 +1507,7 @@
 							var esc = function(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
 							body.innerHTML = '<pre id="dbx-asp-llmpreview-text" class="mb-0" style="white-space:pre-wrap;max-height:400px;overflow:auto;">' + esc(r.promptSent) + '</pre>';
 						} else {
-							body.innerHTML = '<em style="color:#888;">Could not build a prompt preview.</em>';
+							body.innerHTML = '<em style="color:var(--sp-text-5);">Could not build a prompt preview.</em>';
 						}
 					},
 					error: function(xhr) { body.innerHTML = '<span class="text-danger">Failed to build prompt: HTTP ' + xhr.status + '</span>'; }
@@ -1503,10 +1520,10 @@
 			return;
 		}
 
-		body.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Parsing SQL…</span>';
+		body.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Parsing SQL…</span>';
 		DbxSqlTableNames.extractTablesAsync(sqlText, function(tables) {
 			if (!tables.length) { buildPreview(''); return; }
-			body.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Looking up table DDL/index/stats…</span>';
+			body.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Looking up table DDL/index/stats…</span>';
 			$.ajax({
 				url:      '/api/cc/mgt/table-info',
 				data:     { srv: srv, dbVendor: 'Adaptive Server Enterprise', format: 'text', dbname: dbname, tables: tables.join(',') },
@@ -1581,7 +1598,7 @@
 			// empty, dbxLlmAdvice.fetchDbmsVersion() resolves it live from data-srv instead.
 			tiBody.setAttribute('data-dbmsversion', (meta && meta.dbmsVersion) ? meta.dbmsVersion : '');
 			tiBody.setAttribute('data-loaded',  'false');
-			tiBody.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Loading table information…</span>';
+			tiBody.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Loading table information…</span>';
 			tiSect.style.display = (tiSrv && tiDb) ? '' : 'none';
 			tiSect.removeAttribute('open');
 		}
@@ -1591,7 +1608,7 @@
 		var llmBody = document.getElementById('dbx-asp-llm-body');
 		if (llmSect && llmBody) {
 			llmBody.setAttribute('data-loaded', 'false');
-			llmBody.innerHTML = '<span style="color:#888;font-size:0.85em;">Expand to ask an LLM for optimization advice.</span>';
+			llmBody.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">Expand to ask an LLM for optimization advice.</span>';
 			llmSect.removeAttribute('open');
 		}
 
@@ -1600,7 +1617,7 @@
 		var llmPreviewBody = document.getElementById('dbx-asp-llmpreview-body');
 		if (llmPreviewSect && llmPreviewBody) {
 			llmPreviewBody.setAttribute('data-loaded', 'false');
-			llmPreviewBody.innerHTML = '<span style="color:#888;font-size:0.85em;">Expand to build the prompt.</span>';
+			llmPreviewBody.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">Expand to build the prompt.</span>';
 			llmPreviewSect.removeAttribute('open');
 		}
 
@@ -1609,6 +1626,7 @@
 			if (typeof Prism !== 'undefined') Prism.highlightAll();
 		}
 
+		DbxShowplanTheme.apply($dlg);   // light/dark BEFORE drawing (dbxShowplanGraph.js)
 		if ($dlg.hasClass('show')) {
 			_drawAndHighlight();
 		} else {
@@ -1834,7 +1852,7 @@ function _initGlobalEscClose() {
 	function _openLlmAdviceIfConfigured(body, opts) {
 		dbxLlmAdvice.getConfig().then(function(cfg) {
 			if (cfg && cfg.configured === false) {
-				body.innerHTML = '<em style="color:#888;">LLM Optimization Advice is not configured on this DbxCentral'
+				body.innerHTML = '<em style="color:var(--sp-text-5);">LLM Optimization Advice is not configured on this DbxCentral'
 					+ ' (<code>DbxCentral.llm.enabled=true</code> plus a provider API key/URL in DBX_CENTRAL.conf).'
 					+ '<br>You can still use <b>LLM Prompt Preview</b> below and paste the prompt into your favourite LLM.</em>';
 				return;
@@ -1951,7 +1969,7 @@ function _initGlobalEscClose() {
 				tiBody.setAttribute('data-workloaddata', '');
 				tiBody.setAttribute('data-dbmsversion',  '');
 				tiBody.setAttribute('data-loaded',  'false');
-				tiBody.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Loading table information…</span>';
+				tiBody.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Loading table information…</span>';
 				if (tiSrv && tiDb) {
 					tiSect.style.display = '';
 				} else {
@@ -1967,7 +1985,7 @@ function _initGlobalEscClose() {
 			var llmBody = document.getElementById('dbx-ssp-llm-body');
 			if (llmSect && llmBody) {
 				llmBody.setAttribute('data-loaded', 'false');
-				llmBody.innerHTML = '<span style="color:#888;font-size:0.85em;">Expand to ask an LLM for optimization advice.</span>';
+				llmBody.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">Expand to ask an LLM for optimization advice.</span>';
 				llmSect.removeAttribute('open');
 			}
 
@@ -1975,7 +1993,7 @@ function _initGlobalEscClose() {
 			var llmPreviewBody = document.getElementById('dbx-ssp-llmpreview-body');
 			if (llmPreviewSect && llmPreviewBody) {
 				llmPreviewBody.setAttribute('data-loaded', 'false');
-				llmPreviewBody.innerHTML = '<span style="color:#888;font-size:0.85em;">Expand to build the prompt.</span>';
+				llmPreviewBody.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">Expand to build the prompt.</span>';
 				llmPreviewSect.removeAttribute('open');
 			}
 		});
@@ -2161,7 +2179,7 @@ function _initGlobalEscClose() {
 				tiBody.setAttribute('data-workloaddata', '');
 				tiBody.setAttribute('data-dbmsversion',  '');
 				tiBody.setAttribute('data-loaded',  'false');
-				tiBody.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Loading table information…</span>';
+				tiBody.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Loading table information…</span>';
 				tiSect.style.display = (tiSrv && tiDb) ? '' : 'none';
 				tiSect.removeAttribute('open');
 			}
@@ -2170,7 +2188,7 @@ function _initGlobalEscClose() {
 			var llmBody = document.getElementById('dbx-asp-llm-body');
 			if (llmSect && llmBody) {
 				llmBody.setAttribute('data-loaded', 'false');
-				llmBody.innerHTML = '<span style="color:#888;font-size:0.85em;">Expand to ask an LLM for optimization advice.</span>';
+				llmBody.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">Expand to ask an LLM for optimization advice.</span>';
 				llmSect.removeAttribute('open');
 			}
 
@@ -2178,7 +2196,7 @@ function _initGlobalEscClose() {
 			var llmPreviewBody = document.getElementById('dbx-asp-llmpreview-body');
 			if (llmPreviewSect && llmPreviewBody) {
 				llmPreviewBody.setAttribute('data-loaded', 'false');
-				llmPreviewBody.innerHTML = '<span style="color:#888;font-size:0.85em;">Expand to build the prompt.</span>';
+				llmPreviewBody.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">Expand to build the prompt.</span>';
 				llmPreviewSect.removeAttribute('open');
 			}
 		});
@@ -2293,21 +2311,21 @@ function _initGlobalEscClose() {
 			var sqlText = body.getAttribute('data-sqltext') || '';
 
 			if (!srv || !dbname) {
-				body.innerHTML = '<em style="color:#888;">Table information is not available — no server context.</em>';
+				body.innerHTML = '<em style="color:var(--sp-text-5);">Table information is not available — no server context.</em>';
 				body.setAttribute('data-loaded', 'true');
 				return;
 			}
 
-			body.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Parsing SQL…</span>';
+			body.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Parsing SQL…</span>';
 
 			DbxSqlTableNames.extractTablesAsync(sqlText, function(tables) {
 				if (!tables.length) {
 					body.setAttribute('data-loaded', 'true');
-					body.innerHTML = '<em style="color:#888;">No tables could be parsed from the SQL text.</em>';
+					body.innerHTML = '<em style="color:var(--sp-text-5);">No tables could be parsed from the SQL text.</em>';
 					return;
 				}
 
-				body.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Loading table information…</span>';
+				body.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Loading table information…</span>';
 
 				$.ajax({
 					url:      '/api/cc/mgt/table-info',
@@ -2316,12 +2334,12 @@ function _initGlobalEscClose() {
 					success:  function(r) {
 						body.setAttribute('data-loaded', 'true');
 						if (r && r.html) {
-							var parsedMsg = '<div style="font-size:0.8em;color:#555;margin-bottom:6px;">Tables: '
+							var parsedMsg = '<div style="font-size:0.8em;color:var(--sp-text-2);margin-bottom:6px;">Tables: '
 								+ tables.map(function(t) { return '<code>' + escapeHtml(t) + '</code>'; }).join(', ')
 								+ '</div>';
 							body.innerHTML = parsedMsg + r.html;
 						} else {
-							body.innerHTML = '<em style="color:#888;">No table information found in DDL Storage.</em>';
+							body.innerHTML = '<em style="color:var(--sp-text-5);">No table information found in DDL Storage.</em>';
 						}
 					},
 					error:    function(xhr) {
@@ -2395,22 +2413,22 @@ function _initGlobalEscClose() {
 			var sqlText = body.getAttribute('data-sqltext')  || '';
 
 			if (!srv || !dbname) {
-				body.innerHTML = '<em style="color:#888;">Table information is not available — no server context.</em>';
+				body.innerHTML = '<em style="color:var(--sp-text-5);">Table information is not available — no server context.</em>';
 				body.setAttribute('data-loaded', 'true');
 				return;
 			}
 
 			// Parse table names client-side (node-sql-parser w/ T-SQL AST; falls back to tokenizer)
-			body.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Parsing SQL…</span>';
+			body.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Parsing SQL…</span>';
 
 			DbxSqlTableNames.extractTablesAsync(sqlText, function(tables) {
 				if (!tables.length) {
 					body.setAttribute('data-loaded', 'true');
-					body.innerHTML = '<em style="color:#888;">No tables could be parsed from the SQL text.</em>';
+					body.innerHTML = '<em style="color:var(--sp-text-5);">No tables could be parsed from the SQL text.</em>';
 					return;
 				}
 
-				body.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Loading table information…</span>';
+				body.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Loading table information…</span>';
 
 				// Vendor-generic /api/cc/mgt/table-info rather than QueryStoreServlet's SQL-Server-only
 				// action=tableInfo: same DDL Storage, same rendered HTML, but the endpoint the ASE dialog
@@ -2423,12 +2441,12 @@ function _initGlobalEscClose() {
 					success:  function(r) {
 						body.setAttribute('data-loaded', 'true');
 						if (r && r.html) {
-							var parsedMsg = '<div style="font-size:0.8em;color:#555;margin-bottom:6px;">Tables: '
+							var parsedMsg = '<div style="font-size:0.8em;color:var(--sp-text-2);margin-bottom:6px;">Tables: '
 								+ tables.map(function(t) { return '<code>' + escapeHtml(t) + '</code>'; }).join(', ')
 								+ '</div>';
 							body.innerHTML = parsedMsg + r.html;
 						} else {
-							body.innerHTML = '<em style="color:#888;">No table information found in DDL Storage.</em>';
+							body.innerHTML = '<em style="color:var(--sp-text-5);">No table information found in DDL Storage.</em>';
 						}
 					},
 					error:    function(xhr) {
@@ -2494,7 +2512,7 @@ function _initGlobalEscClose() {
 		body.setAttribute('data-loaded', 'true');
 
 		if (typeof dbxLlmAdvice === 'undefined') {
-			body.innerHTML = '<em style="color:#888;">dbxLlmAdvice.js is not loaded on this page.</em>';
+			body.innerHTML = '<em style="color:var(--sp-text-5);">dbxLlmAdvice.js is not loaded on this page.</em>';
 			return;
 		}
 
@@ -2509,7 +2527,7 @@ function _initGlobalEscClose() {
 		var xmlText = $('#dbx-view-ssShowplan-xmlContent').text();
 
 		if (!sqlText) {
-			body.innerHTML = '<em style="color:#888;">No SQL text is available for this plan.</em>';
+			body.innerHTML = '<em style="color:var(--sp-text-5);">No SQL text is available for this plan.</em>';
 			return;
 		}
 
@@ -2546,12 +2564,12 @@ function _initGlobalEscClose() {
 		var xmlText = $('#dbx-view-ssShowplan-xmlContent').text();
 
 		if (!sqlText) {
-			body.innerHTML = '<em style="color:#888;">No SQL text is available for this plan.</em>';
+			body.innerHTML = '<em style="color:var(--sp-text-5);">No SQL text is available for this plan.</em>';
 			return;
 		}
 
 		function buildPreview(ddlContext) {
-			body.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Building prompt…</span>';
+			body.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Building prompt…</span>';
 			// Same workload profile open() would send, so the PREVIEW matches what actually gets sent.
 			var wlRaw = tiBody ? (tiBody.getAttribute('data-workloaddata') || '') : '';
 			var wlProfile = (wlRaw && window.dbxLlmAdvice && dbxLlmAdvice.buildWorkloadProfile)
@@ -2572,7 +2590,7 @@ function _initGlobalEscClose() {
 							var esc = function(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
 							body.innerHTML = '<pre id="dbx-ssp-llmpreview-text" class="mb-0" style="white-space:pre-wrap;max-height:400px;overflow:auto;">' + esc(r.promptSent) + '</pre>';
 						} else {
-							body.innerHTML = '<em style="color:#888;">Could not build a prompt preview.</em>';
+							body.innerHTML = '<em style="color:var(--sp-text-5);">Could not build a prompt preview.</em>';
 						}
 					},
 					error: function(xhr) { body.innerHTML = '<span class="text-danger">Failed to build prompt: HTTP ' + xhr.status + '</span>'; }
@@ -2585,10 +2603,10 @@ function _initGlobalEscClose() {
 			return;
 		}
 
-		body.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Parsing SQL…</span>';
+		body.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Parsing SQL…</span>';
 		DbxSqlTableNames.extractTablesAsync(sqlText, function(tables) {
 			if (!tables.length) { buildPreview(''); return; }
-			body.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Looking up table DDL/index/stats…</span>';
+			body.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Looking up table DDL/index/stats…</span>';
 			$.ajax({
 				url:      '/api/cc/mgt/table-info',
 				data:     { srv: srv, dbVendor: 'Microsoft SQL Server', format: 'text', dbname: dbname, tables: tables.join(','), ts: ts },
@@ -2679,7 +2697,7 @@ function _initGlobalEscClose() {
 			// empty, dbxLlmAdvice.fetchDbmsVersion() resolves it live from data-srv instead.
 			tiBody.setAttribute('data-dbmsversion', (meta && meta.dbmsVersion) ? meta.dbmsVersion : '');
 			tiBody.setAttribute('data-loaded',  'false');
-			tiBody.innerHTML = '<span style="color:#888;font-size:0.85em;">&#9203; Loading table information…</span>';
+			tiBody.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Loading table information…</span>';
 			// Show or hide the section depending on whether we have a server context
 			if (tiSrv && tiDb) {
 				tiSect.style.display = '';
@@ -2695,7 +2713,7 @@ function _initGlobalEscClose() {
 		var llmBody = document.getElementById('dbx-ssp-llm-body');
 		if (llmSect && llmBody) {
 			llmBody.setAttribute('data-loaded', 'false');
-			llmBody.innerHTML = '<span style="color:#888;font-size:0.85em;">Expand to ask an LLM for optimization advice.</span>';
+			llmBody.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">Expand to ask an LLM for optimization advice.</span>';
 			llmSect.removeAttribute('open');
 		}
 
@@ -2704,7 +2722,7 @@ function _initGlobalEscClose() {
 		var llmPreviewBody = document.getElementById('dbx-ssp-llmpreview-body');
 		if (llmPreviewSect && llmPreviewBody) {
 			llmPreviewBody.setAttribute('data-loaded', 'false');
-			llmPreviewBody.innerHTML = '<span style="color:#888;font-size:0.85em;">Expand to build the prompt.</span>';
+			llmPreviewBody.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">Expand to build the prompt.</span>';
 			llmPreviewSect.removeAttribute('open');
 		}
 
@@ -2718,6 +2736,7 @@ function _initGlobalEscClose() {
 			ssShowplanRunAnalysis(xmlText);
 		}
 
+		DbxShowplanTheme.apply($dlg);   // light/dark BEFORE drawing (dbxShowplanGraph.js)
 		if ($dlg.hasClass('show')) {
 			_drawAndAnalyze();   // already visible — update in-place
 		} else {
@@ -2780,13 +2799,13 @@ function _initGlobalEscClose() {
 		if (!el) return;
 		var t = _ssPlanType(xmlText);
 		if (t === 'actual') {
-			el.innerHTML = '<span style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;border-radius:3px;padding:1px 6px;font-size:0.82em;" title="Completed actual execution plan">&#10003; Actual</span>';
+			el.innerHTML = '<span style="background:var(--sp-ok-chip-bg);color:var(--sp-ok-chip-text);border:1px solid var(--sp-ok-chip-border);border-radius:3px;padding:1px 6px;font-size:0.82em;" title="Completed actual execution plan">&#10003; Actual</span>';
 		} else if (t === 'live') {
-			el.innerHTML = '<span style="background:#fff3cd;color:#7c4a00;border:1px solid #ffc107;border-radius:3px;padding:1px 6px;font-size:0.82em;"'
+			el.innerHTML = '<span style="background:var(--sp-warn-chip-bg);color:var(--sp-warn-chip-text);border:1px solid var(--sp-warn-chip-border);border-radius:3px;padding:1px 6px;font-size:0.82em;"'
 			             + ' title="Live plan from dm_exec_query_statistics_xml \u2014 query is still executing, row counts and timing are incomplete">&#9201; Live</span>'
-			             + ' <span style="font-size:0.78em;color:#b45309;font-style:italic;">counters incomplete</span>';
+			             + ' <span style="font-size:0.78em;color:var(--sp-warn-text-2);font-style:italic;">counters incomplete</span>';
 		} else if (t === 'estimated') {
-			el.innerHTML = '<span style="background:#fef9c3;color:#713f12;border:1px solid #fde047;border-radius:3px;padding:1px 6px;font-size:0.82em;" title="Estimated (no actual runtime data)">Estimated</span>';
+			el.innerHTML = '<span style="background:var(--sp-est-chip-bg);color:var(--sp-est-chip-text);border:1px solid var(--sp-est-chip-border);border-radius:3px;padding:1px 6px;font-size:0.82em;" title="Estimated (no actual runtime data)">Estimated</span>';
 		} else {
 			el.innerHTML = '';
 		}
@@ -2802,40 +2821,37 @@ function _initGlobalEscClose() {
 	function renderFindingsListHtml(findings, isDark, jumpFn) {
 		if (!findings || !findings.length) return '';
 
-		var hdrColor = isDark ? '#999' : '#888';
-		var sepColor = isDark ? '#333' : '#e0e0e0';
+		// Colours are CSS variables (DbxShowplanTheme in dbxShowplanGraph.js): light/dark without branching here
+		var hdrColor = 'var(--sp-text-5)';
+		var sepColor = 'var(--sp-sep)';
 
 		var sevIcon  = { 'error': '&#10060;', 'warning': '&#9888;', 'info': 'ℹ&#65039;' };
-		var sevColor = { 'error': '#b71c1c',  'warning': '#b45309',  'info': '#1565c0' };
-		var sevBg    = { 'error': '#fff0f0',  'warning': '#fffbeb',  'info': '#eff6ff' };
-		var sevBorder= { 'error': '#f87171',  'warning': '#fbbf24',  'info': '#93c5fd' };
-		if (isDark) {
-			sevBg     = { 'error': '#3b1111', 'warning': '#2e2000', 'info': '#0d1f3c' };
-			sevBorder = { 'error': '#c62828', 'warning': '#b45309', 'info': '#1565c0' };
-		}
-		var detailColor = isDark ? '#bbb' : '#555';
+		var sevColor = { 'error': 'var(--sp-err-2)',          'warning': 'var(--sp-warn-text-2)',     'info': 'var(--sp-info)' };
+		var sevBg    = { 'error': 'var(--sp-sev-err-bg)',     'warning': 'var(--sp-sev-warn-bg)',     'info': 'var(--sp-sev-info-bg)' };
+		var sevBorder= { 'error': 'var(--sp-sev-err-border)', 'warning': 'var(--sp-sev-warn-border)', 'info': 'var(--sp-sev-info-border)' };
+		var detailColor = 'var(--sp-text-2)';
 
 		function severityRank(s) { return s === 'error' ? 2 : (s === 'warning' ? 1 : 0); }
 
 		function renderOneFinding(f) {
 			var icon   = sevIcon[f.severity]   || 'ℹ';
-			var color  = sevColor[f.severity]  || '#333';
-			var bg     = sevBg[f.severity]     || '#f8f8f8';
-			var border = sevBorder[f.severity] || '#ccc';
+			var color  = sevColor[f.severity]  || 'var(--sp-text)';
+			var bg     = sevBg[f.severity]     || 'var(--sp-bg-4)';
+			var border = sevBorder[f.severity] || 'var(--sp-border-3)';
 			// Clickable only when the caller passes a jump function name - window.aseShowplanJumpToNode
 			// for ASE, window.ssShowplanJumpToNode for SQL Server's native renderer. The vendored
 			// QP.js renderer still gets none: it offers no way to find a given node's element, so SQL
 			// Server findings fall back to plain, unclickable text while it is selected.
 			var nodeTag = f.nodeId != null
 				? (jumpFn
-					? ' <span style="color:#3a7bc8;font-weight:400;font-size:0.9em;cursor:pointer;text-decoration:underline;" onclick="' + jumpFn + '(\'' + escapeHtml(String(f.nodeId)) + '\')" title="Jump to this operator in the diagram">[Node ' + escapeHtml(String(f.nodeId)) + ']</span>'
-					: ' <span style="color:#888;font-weight:400;font-size:0.9em;">[Node ' + escapeHtml(String(f.nodeId)) + ']</span>')
+					? ' <span style="color:var(--sp-link);font-weight:400;font-size:0.9em;cursor:pointer;text-decoration:underline;" onclick="' + jumpFn + '(\'' + escapeHtml(String(f.nodeId)) + '\')" title="Jump to this operator in the diagram">[Node ' + escapeHtml(String(f.nodeId)) + ']</span>'
+					: ' <span style="color:var(--sp-text-5);font-weight:400;font-size:0.9em;">[Node ' + escapeHtml(String(f.nodeId)) + ']</span>')
 				: '';
 			var detailHtml = f.detail ? '<div style="color:' + detailColor + ';margin-top:2px;white-space:pre-wrap;">' + escapeHtml(f.detail) + '</div>' : '';
 			// A suggested fix (currently only the Reformatting finding's CREATE INDEX guess, see
 			// dbxShowplanAse.js's enhanceReformatFindings()) - kept out of detail's prose and shown as
 			// its own monospace line so it reads as code, not sentence text.
-			var ddlHtml = f.suggestedDdl ? '<pre style="margin:4px 0 0 0;padding:4px 6px;background:' + (isDark ? '#1c1c1c' : '#f4f4f4') + ';border-radius:3px;font-family:\'Courier New\',monospace;font-size:0.85em;white-space:pre-wrap;color:' + (isDark ? '#ddd' : '#333') + ';">' + escapeHtml(f.suggestedDdl) + '</pre>' : '';
+			var ddlHtml = f.suggestedDdl ? '<pre style="margin:4px 0 0 0;padding:4px 6px;background:var(--sp-bg-code);border-radius:3px;font-family:\'Courier New\',monospace;font-size:0.85em;white-space:pre-wrap;color:var(--sp-text);">' + escapeHtml(f.suggestedDdl) + '</pre>' : '';
 			return '<div style="background:' + bg + ';border-left:4px solid ' + border + ';padding:3px 8px;border-radius:2px;">'
 			     + '<span style="color:' + color + ';font-weight:700;">' + icon + ' [' + escapeHtml(f.category) + '] ' + escapeHtml(f.title) + '</span>'
 			     + nodeTag + detailHtml + ddlHtml + '</div>';
@@ -2855,7 +2871,7 @@ function _initGlobalEscClose() {
 		categoryOrder.sort(function (a, b) { return byCategory[b].length - byCategory[a].length; });
 
 		var fSumStyle = 'cursor:pointer;font-size:0.75em;font-weight:700;color:' + hdrColor + ';text-transform:uppercase;letter-spacing:0.05em;user-select:none;padding:1px 0;';
-		var fCountLabel = ' <span style="font-weight:400;font-size:0.95em;color:' + (isDark ? '#aaa' : '#666') + ';text-transform:none;letter-spacing:normal;">'
+		var fCountLabel = ' <span style="font-weight:400;font-size:0.95em;color:var(--sp-text-3);text-transform:none;letter-spacing:normal;">'
 		                + '(' + findings.length + ')</span>';
 		var fHtml = '<details open style="margin-bottom:4px;">'
 		          + '<summary style="' + fSumStyle + '">Findings' + fCountLabel + '</summary>'
@@ -2924,9 +2940,9 @@ function _initGlobalEscClose() {
 		(si.optimizerNotes || []).forEach(function (n) { rows.push(['Optimizer', n.replace(/^Optimized using\s*/i, '')]); });
 		if (!rows.length) return '';
 
-		var hdrColor = isDark ? '#9ecbff' : '#555';
-		var sepColor = isDark ? '#3a3a3a' : '#ddd';
-		var lblColor = isDark ? '#9a9a9a' : '#777';
+		var hdrColor = 'var(--sp-hdr-blue)';   // light/dark: DbxShowplanTheme (dbxShowplanGraph.js)
+		var sepColor = 'var(--sp-border)';
+		var lblColor = 'var(--sp-text-4)';
 		var sumStyle = 'cursor:pointer;font-size:0.75em;font-weight:700;color:' + hdrColor
 		             + ';text-transform:uppercase;letter-spacing:0.05em;user-select:none;padding:1px 0;';
 		var html = '<details open style="margin-bottom:6px;">'
@@ -2959,7 +2975,7 @@ function _initGlobalEscClose() {
 		var runtimeHtml = _aseShowplanRuntimeHtml(isDark);
 
 		if (findings.length === 0) {
-			summary.innerHTML = '&#10003; <b>Plan Analysis</b> <span style="font-weight:normal;color:#555;">&mdash; no issues detected</span>';
+			summary.innerHTML = '&#10003; <b>Plan Analysis</b> <span style="font-weight:normal;color:var(--sp-text-2);">&mdash; no issues detected</span>';
 			// Runtime numbers are worth showing even when there is nothing wrong with the plan.
 			bodyEl.innerHTML = runtimeHtml;
 			details.style.display = '';
@@ -2971,8 +2987,8 @@ function _initGlobalEscClose() {
 		var nErr  = findings.filter(function(f){return f.severity==='error';}).length;
 		var nWarn = findings.filter(function(f){return f.severity==='warning';}).length;
 		var parts = [];
-		if (nErr)  parts.push('<span style="color:#b71c1c;">' + nErr  + ' error'   + (nErr  > 1 ? 's' : '') + '</span>');
-		if (nWarn) parts.push('<span style="color:#b45309;">' + nWarn + ' warning' + (nWarn > 1 ? 's' : '') + '</span>');
+		if (nErr)  parts.push('<span style="color:var(--sp-err-2);">' + nErr  + ' error'   + (nErr  > 1 ? 's' : '') + '</span>');
+		if (nWarn) parts.push('<span style="color:var(--sp-warn-text-2);">' + nWarn + ' warning' + (nWarn > 1 ? 's' : '') + '</span>');
 		var infoRest = findings.length - nErr - nWarn;
 		if (infoRest > 0) parts.push(infoRest + ' info');
 		summary.innerHTML = '&#9888; <b>Plan Analysis &mdash; ' + findings.length
@@ -2988,7 +3004,7 @@ function _initGlobalEscClose() {
 		// pointer at the top.
 		if (linkEl) {
 			linkEl.style.display = '';
-			linkEl.style.color = nErr ? '#b71c1c' : (nWarn ? '#b45309' : '#1565c0');
+			linkEl.style.color = nErr ? 'var(--sp-err-2)' : (nWarn ? 'var(--sp-warn-text-2)' : 'var(--sp-info)');
 			linkEl.innerHTML = '&#9888; ' + findings.length + ' finding' + (findings.length !== 1 ? 's' : '') + ' &mdash; see Plan Analysis &#8595;';
 		}
 	}
@@ -3193,7 +3209,7 @@ function _initGlobalEscClose() {
 			// Falls back with an explanation rather than an empty diagram - a plan carrying statements
 			// but no <QueryPlan> (a USE/DECLARE/control-flow-only batch) is a legitimate input, not a bug.
 			var why = window.SqlServerShowplan.getLastParseError() || 'unrecognized plan format';
-			el.innerHTML = '<div style="color:#888;font-style:italic;padding:8px 0;">'
+			el.innerHTML = '<div style="color:var(--sp-text-5);font-style:italic;padding:8px 0;">'
 				+ 'No graphical plan to show &mdash; ' + $('<div></div>').text(why).html()
 				+ '<br>The full plan XML is available in the &quot;XML Plan&quot; section below.'
 				// html-query-plan's own XSLT sometimes draws SOMETHING for a shape the native parser
@@ -3504,7 +3520,7 @@ function _initGlobalEscClose() {
 		var nErr  = findings.filter(function (f) { return f.severity === 'error';   }).length;
 		var nWarn = findings.filter(function (f) { return f.severity === 'warning'; }).length;
 		el.style.display = '';
-		el.style.color = nErr ? '#b71c1c' : (nWarn ? '#b45309' : '#1565c0');
+		el.style.color = nErr ? 'var(--sp-err-2)' : (nWarn ? 'var(--sp-warn-text-2)' : 'var(--sp-info)');
 		el.innerHTML = '&#9888; ' + count + ' finding' + (count !== 1 ? 's' : '') + ' — see Plan Analysis ↓';
 	}
 
@@ -3540,10 +3556,10 @@ function _initGlobalEscClose() {
 		if (_sspWaitChart) { try { _sspWaitChart.destroy(); } catch(e){} _sspWaitChart = null; }
 
 		var isDark    = window._colorSchema === 'dark';
-		var lblColor  = isDark ? '#aaa'  : '#666';
-		var valColor  = isDark ? '#e0e0e0' : '#222';
-		var hdrColor  = isDark ? '#999'  : '#888';
-		var sepColor  = isDark ? '#333'  : '#e0e0e0';
+		var lblColor  = 'var(--sp-text-3)';   // light/dark: DbxShowplanTheme (dbxShowplanGraph.js)
+		var valColor  = 'var(--sp-text)';
+		var hdrColor  = 'var(--sp-text-5)';
+		var sepColor  = 'var(--sp-sep)';
 
 		// ── Time formatter: "Xh Xm Xs Xms" ──────────────────────────────────
 		function fmtHMS(ms) {
@@ -3641,7 +3657,7 @@ function _initGlobalEscClose() {
 			if (rows.length > 0) {
 				var sumStyle = 'cursor:pointer;font-size:0.75em;font-weight:700;color:' + hdrColor + ';text-transform:uppercase;letter-spacing:0.05em;user-select:none;padding:1px 0;';
 				var liveNotice = planType === 'live'
-					? ' <span style="font-size:0.9em;font-weight:400;color:#b45309;text-transform:none;letter-spacing:normal;"'
+					? ' <span style="font-size:0.9em;font-weight:400;color:var(--sp-warn-text-2);text-transform:none;letter-spacing:normal;"'
 					+ ' title="Plan collected from dm_exec_query_statistics_xml \u2014 query is still executing, counters are partial">&#9201; live, partial</span>'
 					: '';
 				statsHtml = '<details open style="margin-bottom:6px;">'
@@ -3701,7 +3717,7 @@ function _initGlobalEscClose() {
 			}
 		} catch(ex) {
 			summary.innerHTML = '&#9888; <b>Plan Analysis &mdash; error</b>';
-			bodyEl.innerHTML = statsHtml + '<div style="color:#b71c1c;font-size:0.85em;white-space:pre-wrap;">' + escapeHtml(String(ex)) + '</div>';
+			bodyEl.innerHTML = statsHtml + '<div style="color:var(--sp-err-2);font-size:0.85em;white-space:pre-wrap;">' + escapeHtml(String(ex)) + '</div>';
 			details.style.display = '';
 			details.open = true;
 			return;
@@ -3721,7 +3737,7 @@ function _initGlobalEscClose() {
 		// Summary line
 		if (findings.length === 0 && !statsHtml) {
 			_ssShowplanSetFindingsButton([]);
-			summary.innerHTML = '&#10003; <b>Plan Analysis</b> <span style="font-weight:normal;color:#555;">&mdash; no issues detected</span>';
+			summary.innerHTML = '&#10003; <b>Plan Analysis</b> <span style="font-weight:normal;color:var(--sp-text-2);">&mdash; no issues detected</span>';
 			bodyEl.innerHTML = '';
 			details.style.display = '';
 			details.open = false;
@@ -3731,8 +3747,8 @@ function _initGlobalEscClose() {
 		var nErr  = findings.filter(function(f){return f.severity==='error';}).length;
 		var nWarn = findings.filter(function(f){return f.severity==='warning';}).length;
 		var parts = [];
-		if (nErr)  parts.push('<span style="color:#b71c1c;">' + nErr  + ' error'   + (nErr  > 1 ? 's' : '') + '</span>');
-		if (nWarn) parts.push('<span style="color:#b45309;">' + nWarn + ' warning' + (nWarn > 1 ? 's' : '') + '</span>');
+		if (nErr)  parts.push('<span style="color:var(--sp-err-2);">' + nErr  + ' error'   + (nErr  > 1 ? 's' : '') + '</span>');
+		if (nWarn) parts.push('<span style="color:var(--sp-warn-text-2);">' + nWarn + ' warning' + (nWarn > 1 ? 's' : '') + '</span>');
 		var infoRest = findings.length - nErr - nWarn;
 		if (infoRest > 0) parts.push(infoRest + ' info');
 
@@ -3743,7 +3759,7 @@ function _initGlobalEscClose() {
 			                   + ' finding' + (findings.length !== 1 ? 's' : '') + '</b>'
 			                   + (parts.length ? ' (' + parts.join(', ') + ')' : '');
 		} else {
-			summary.innerHTML = '&#10003; <b>Plan Analysis</b> <span style="font-weight:normal;color:#555;">&mdash; no issues detected</span>';
+			summary.innerHTML = '&#10003; <b>Plan Analysis</b> <span style="font-weight:normal;color:var(--sp-text-2);">&mdash; no issues detected</span>';
 		}
 
 		// Findings HTML - shared with the ASE dialog's Plan Analysis section, see renderFindingsListHtml().
@@ -3760,8 +3776,9 @@ function _initGlobalEscClose() {
 		if (waitData.length > 0 && typeof Chart !== 'undefined') {
 			var cvs = document.getElementById('dbx-ssp-wait-chart');
 			if (cvs) {
-				var textClr = isDark ? '#ccc' : '#555';
-				var gridClr = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+				// Chart.js draws on a canvas: it needs real colour values, not var() -> read the palette now
+				var textClr = DbxShowplanTheme.color('text-2');
+				var gridClr = DbxShowplanTheme.color('grid');
 				// Colour bars by wait category
 				var barColors = waitData.map(function(w) {
 					var t = w.type;
@@ -3831,9 +3848,9 @@ function _initGlobalEscClose() {
 			return;
 		}
 		document.getElementById('dbx-spv-error').textContent = '';
-		// Mirror the page colour scheme (cs=dark / cs=white)
-		if (window._colorSchema === 'dark') $dlg.addClass('spv-dark');
-		else                                $dlg.removeClass('spv-dark');
+		// Mirror the page colour scheme (graph.html: window._colorSchema)
+		if (DbxShowplanTheme.apply($dlg)) $dlg.addClass('spv-dark');
+		else                              $dlg.removeClass('spv-dark');
 		$dlg.modal('show');
 	};
 

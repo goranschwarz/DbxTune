@@ -19,6 +19,10 @@ nav.navbar                                        { font-size:1rem; }
 .navbar-dark .dropdown-menu .dropdown-item:hover,
 .navbar-dark .dropdown-menu .dropdown-item:focus  { background-color:#495057; color:#fff; }
 .navbar-dark .dropdown-menu .dropdown-divider     { border-top-color:#555; }
+/* Headers and secondary text in them: Bootstrap's defaults are dark grey on a light page (unreadable on this dark menu) */
+.navbar-dark .dropdown-menu .dropdown-header      { color:#adb5bd; }
+.navbar-dark .dropdown-menu .dbx-theme-sub        { color:#adb5bd; }
+.navbar-dark .dropdown-menu .dropdown-item.active .dbx-theme-sub { color:#e7f1ff; }
 
 /* Dropdown Submenu (fly-out) - Bootstrap has no built-in submenu support */
 .dbx-dropdown-submenu {

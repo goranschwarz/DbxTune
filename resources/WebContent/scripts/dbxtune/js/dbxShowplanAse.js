@@ -675,8 +675,8 @@ window.AseShowplan = (function () {
 	// per-node connector positions from a flexbox row directly.
 	var CSS = ''
 		+ '.ase-plan-wrap { font-family: -apple-system, Segoe UI, Roboto, sans-serif; font-size: 0.8em; padding: 8px 0; }'
-		+ '.ase-plan-stmt-hdr { font-weight: 600; font-size: 0.9em; color: #444; margin: 6px 0 2px 0; }'
-		+ '.ase-plan-step-hdr { font-size: 0.8em; color: #888; margin-bottom: 6px; }'
+		+ '.ase-plan-stmt-hdr { font-weight: 600; font-size: 0.9em; color: var(--sp-text-1); margin: 6px 0 2px 0; }'
+		+ '.ase-plan-step-hdr { font-size: 0.8em; color: var(--sp-text-5); margin-bottom: 6px; }'
 		// width:max-content keeps this box sized to its own content rather than stretching to fill
 		// the dialog's ancestor .scroll-tree (fixed width:3000px, shared by every section of the ASE
 		// modal, not graph-specific) - otherwise the flex-centered tree ends up positioned deep
@@ -686,14 +686,14 @@ window.AseShowplan = (function () {
 		+ '.ase-plan-tree ul, .ase-plan-tree ul ul { display: flex; justify-content: center; padding-top: 20px; position: relative; }'
 		+ '.ase-plan-tree ul { list-style: none; margin: 0; padding-left: 0; }'
 		+ '.ase-plan-tree li { list-style: none; position: relative; padding: 20px 8px 0 8px; display: flex; flex-direction: column; align-items: center; }'
-		+ '.ase-plan-tree li::before, .ase-plan-tree li::after { content: ""; position: absolute; top: 0; right: 50%; border-top: 1px solid #b0b0b0; width: 50%; height: 20px; }'
-		+ '.ase-plan-tree li::after { right: auto; left: 50%; border-left: 1px solid #b0b0b0; }'
+		+ '.ase-plan-tree li::before, .ase-plan-tree li::after { content: ""; position: absolute; top: 0; right: 50%; border-top: 1px solid var(--sp-edge-2); width: 50%; height: 20px; }'
+		+ '.ase-plan-tree li::after { right: auto; left: 50%; border-left: 1px solid var(--sp-edge-2); }'
 		+ '.ase-plan-tree li:only-child { padding-top: 0; }'
 		+ '.ase-plan-tree li:only-child::before, .ase-plan-tree li:only-child::after { display: none; }'
 		+ '.ase-plan-tree li:first-child::before, .ase-plan-tree li:last-child::after { border: 0 none; }'
-		+ '.ase-plan-tree li:last-child::before { border-right: 1px solid #b0b0b0; border-radius: 0 5px 0 0; }'
+		+ '.ase-plan-tree li:last-child::before { border-right: 1px solid var(--sp-edge-2); border-radius: 0 5px 0 0; }'
 		+ '.ase-plan-tree li:first-child::after { border-radius: 5px 0 0 0; }'
-		+ '.ase-plan-tree ul ul::before { content: ""; position: absolute; top: 0; left: 50%; border-left: 1px solid #b0b0b0; width: 0; height: 20px; }'
+		+ '.ase-plan-tree ul ul::before { content: ""; position: absolute; top: 0; left: 50%; border-left: 1px solid var(--sp-edge-2); width: 0; height: 20px; }'
 		+ '.ase-plan-tree > ul > li { padding-top: 0; }'
 		+ '.ase-plan-tree > ul > li::before, .ase-plan-tree > ul > li::after { display: none; }'
 		// Left-to-right variant: same technique, axes swapped (top<->left, bottom<->right,
@@ -702,8 +702,8 @@ window.AseShowplan = (function () {
 		// rules above, so toggling it is enough to flip orientation without touching the DOM.
 		+ '.ase-plan-tree.ase-plan-horizontal ul, .ase-plan-tree.ase-plan-horizontal ul ul { flex-direction: column; justify-content: center; padding-top: 0; padding-left: 24px; }'
 		+ '.ase-plan-tree.ase-plan-horizontal li { padding: 8px 0 8px 24px; flex-direction: row; align-items: center; }'
-		+ '.ase-plan-tree.ase-plan-horizontal li::before, .ase-plan-tree.ase-plan-horizontal li::after { top: auto; left: 0; right: auto; bottom: 50%; border-top: 0 none; border-left: 1px solid #b0b0b0; width: 24px; height: 50%; }'
-		+ '.ase-plan-tree.ase-plan-horizontal li::after { bottom: auto; top: 50%; border-top: 1px solid #b0b0b0; }'
+		+ '.ase-plan-tree.ase-plan-horizontal li::before, .ase-plan-tree.ase-plan-horizontal li::after { top: auto; left: 0; right: auto; bottom: 50%; border-top: 0 none; border-left: 1px solid var(--sp-edge-2); width: 24px; height: 50%; }'
+		+ '.ase-plan-tree.ase-plan-horizontal li::after { bottom: auto; top: 50%; border-top: 1px solid var(--sp-edge-2); }'
 		+ '.ase-plan-tree.ase-plan-horizontal li:only-child { padding-left: 0; }'
 		// These two clear the "no sibling on this side" edge exactly like the plain-mode
 		// `li:first-child::before, li:last-child::after { border: 0 none; }` rule does - but that
@@ -714,9 +714,9 @@ window.AseShowplan = (function () {
 		// exactly the "hook" artifact reported against the real dialog.
 		+ '.ase-plan-tree.ase-plan-horizontal li:first-child::before { border: 0 none; }'
 		+ '.ase-plan-tree.ase-plan-horizontal li:last-child::after { border: 0 none; }'
-		+ '.ase-plan-tree.ase-plan-horizontal li:last-child::before { border-right: 0 none; border-bottom: 1px solid #b0b0b0; border-radius: 0; }'
+		+ '.ase-plan-tree.ase-plan-horizontal li:last-child::before { border-right: 0 none; border-bottom: 1px solid var(--sp-edge-2); border-radius: 0; }'
 		+ '.ase-plan-tree.ase-plan-horizontal li:first-child::after { border-radius: 0; }'
-		+ '.ase-plan-tree.ase-plan-horizontal ul ul::before { top: 50%; left: 0; border-left: 0 none; border-top: 1px solid #b0b0b0; width: 24px; height: 0; }'
+		+ '.ase-plan-tree.ase-plan-horizontal ul ul::before { top: 50%; left: 0; border-left: 0 none; border-top: 1px solid var(--sp-edge-2); width: 24px; height: 0; }'
 		+ '.ase-plan-tree.ase-plan-horizontal > ul > li { padding-left: 0; }'
 		// Experimental alternate connector style modeled on html-query-plan (the SQL Server plan
 		// viewer already vendored in this app, src/com/dbxtune/sql/showplan/sqlserver/dist/qp.js):
@@ -779,15 +779,15 @@ window.AseShowplan = (function () {
 		+ '.ase-plan-tree.ase-plan-compact-v li > ul > li:first-child { padding-left: 0; }'
 		+ '.ase-plan-tree.ase-plan-compact-v li > ul > li:last-child { padding-right: 0; }'
 		+ '.ase-plan-tree.ase-plan-compact-h li:only-child, .ase-plan-tree.ase-plan-compact-v li:only-child { padding: 0; }'
-		+ '.ase-plan-box { position: relative; border: 1px solid #999; border-radius: 5px; background: #fff; padding: 5px 9px; cursor: pointer; min-width: 120px; max-width: 220px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }'
-		+ '.ase-plan-box:hover { border-color: #4a90d9; }'
-		+ '.ase-plan-box.ase-plan-warn { border-color: #d9a24a; background: #fff8ec; }'
-		+ '.ase-plan-box.ase-plan-big-table { border-color: #c0392b; border-width: 2px; background: #fdf1f0; }'
-		+ '.ase-plan-metric.ase-plan-tablesize-warn { color: #c0392b; font-weight: 600; }'
-		+ '.ase-plan-box.ase-plan-reformat { border-color: #c0392b; border-width: 2px; background: #fdf1f0; }'
-		+ '.ase-plan-box.ase-plan-reformat-info { border-color: #4a90d9; border-width: 2px; background: #eef5fc; }'
-		+ '.ase-plan-metric.ase-plan-reformat-info-metric { color: #2a6ebb; font-weight: 600; }'
-		+ '.ase-plan-va { position: absolute; top: 2px; right: 4px; font-size: 0.72em; color: #aaa; line-height: 1; }'
+		+ '.ase-plan-box { position: relative; border: 1px solid var(--sp-node-border); border-radius: 5px; background: var(--sp-bg); padding: 5px 9px; cursor: pointer; min-width: 120px; max-width: 220px; text-align: center; box-shadow: 0 1px 2px var(--sp-shadow); }'
+		+ '.ase-plan-box:hover { border-color: var(--sp-sel); }'
+		+ '.ase-plan-box.ase-plan-warn { border-color: var(--sp-warn-border); background: var(--sp-warn-bg); }'
+		+ '.ase-plan-box.ase-plan-big-table { border-color: var(--sp-err); border-width: 2px; background: var(--sp-err-bg); }'
+		+ '.ase-plan-metric.ase-plan-tablesize-warn { color: var(--sp-err); font-weight: 600; }'
+		+ '.ase-plan-box.ase-plan-reformat { border-color: var(--sp-err); border-width: 2px; background: var(--sp-err-bg); }'
+		+ '.ase-plan-box.ase-plan-reformat-info { border-color: var(--sp-sel); border-width: 2px; background: var(--sp-sel-bg); }'
+		+ '.ase-plan-metric.ase-plan-reformat-info-metric { color: var(--sp-blue); font-weight: 600; }'
+		+ '.ase-plan-va { position: absolute; top: 2px; right: 4px; font-size: 0.72em; color: var(--sp-text-7); line-height: 1; }'
 		+ '.ase-plan-icon { width: 32px; height: 32px; margin: 0 auto; background-repeat: no-repeat; }'
 		// position:relative anchors the DDL-info icon to the row's right edge (below).
 		+ '.ase-plan-icon-row { position: relative; display: flex; align-items: center; justify-content: center; gap: 2px; }'
@@ -795,17 +795,17 @@ window.AseShowplan = (function () {
 		// for "not found" (one asset, no second pre-composited image).
 		+ '.ase-plan-icon-badge { width: 16px; height: 16px; background-repeat: no-repeat; flex: none; }'
 		+ '.ase-plan-ddlinfo-icon { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); background-image: url(/images/ddlinfo.png); background-size: 16px 16px; }'
-		+ '.ase-plan-ddlinfo-icon.ase-plan-ddlinfo-missing::after { content: \'\'; position: absolute; right: -3px; bottom: -3px; width: 9px; height: 9px; border-radius: 50%; background: #c0392b; box-shadow: 0 0 0 1.5px #fff; }'
+		+ '.ase-plan-ddlinfo-icon.ase-plan-ddlinfo-missing::after { content: \'\'; position: absolute; right: -3px; bottom: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--sp-err); box-shadow: 0 0 0 1.5px var(--sp-bg); }'
 		+ '.ase-plan-ddlinfo-icon.ase-plan-ddlinfo-missing::before { content: \'\\2715\'; position: absolute; right: -3px; bottom: -4px; width: 9px; height: 9px; font-size: 7px; line-height: 9px; color: #fff; text-align: center; z-index: 1; }'
 		+ '.ase-plan-icon-row .ase-plan-icon { margin: 0; }'
 		+ '.ase-plan-jointype-icon { width: 32px; height: 32px; background-repeat: no-repeat; background-size: 32px 32px; flex: none; }'
 		+ '.ase-plan-label { font-weight: 600; white-space: nowrap; }'
-		+ '.ase-plan-subtitle { font-size: 0.85em; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; margin: 0 auto; }'
-		+ '.ase-plan-metric { font-size: 0.85em; color: #666; white-space: nowrap; }'
-		+ '.ase-plan-metric.ase-plan-warn-text { color: #a3690a; font-weight: 600; }'
-		+ '.ase-plan-metric-pct-warn { color: #c0392b; font-weight: 700; }'
-		+ '.ase-plan-detail-pct-warn { color: #c0392b; font-weight: 700; }'
-		+ '.ase-plan-metric-filter { color: #2a6f97; font-size: 0.85em; white-space: nowrap; }'
+		+ '.ase-plan-subtitle { font-size: 0.85em; color: var(--sp-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; margin: 0 auto; }'
+		+ '.ase-plan-metric { font-size: 0.85em; color: var(--sp-text-3); white-space: nowrap; }'
+		+ '.ase-plan-metric.ase-plan-warn-text { color: var(--sp-warn-text-3); font-weight: 600; }'
+		+ '.ase-plan-metric-pct-warn { color: var(--sp-err); font-weight: 700; }'
+		+ '.ase-plan-detail-pct-warn { color: var(--sp-err); font-weight: 700; }'
+		+ '.ase-plan-metric-filter { color: var(--sp-blue-2); font-size: 0.85em; white-space: nowrap; }'
 		// position:fixed and attached to <body> (see the shared panel system in dbxShowplanGraph.js)
 		// so the panel is never clipped by the diagram's own overflow:auto viewport - JS supplies
 		// left/top. z-index clears Bootstrap's modal (1050) and its backdrop, since this also renders
@@ -814,31 +814,31 @@ window.AseShowplan = (function () {
 		// font-size in PIXELS, not em: an em here inherits the dialog's font size, which made this
 		// panel noticeably larger than the SQL Server one for the same content. Fixed px keeps the two
 		// identical regardless of what the surrounding page does.
-		+ '.ase-plan-detail { position: fixed; z-index: 2000; background: #fffef5; border: 1px solid #c9b98a; border-radius: 4px; padding: 6px 10px; min-width: 220px; max-width: 560px; text-align: left; box-shadow: 0 2px 10px rgba(0,0,0,0.28); font-size: 11px; line-height: 1.35; }'
+		+ '.ase-plan-detail { position: fixed; z-index: 2000; background: var(--sp-tt-bg); border: 1px solid var(--sp-tt-border); border-radius: 4px; padding: 6px 10px; min-width: 220px; max-width: 560px; text-align: left; box-shadow: 0 2px 10px var(--sp-shadow-2); font-size: 11px; line-height: 1.35; }'
 		+ '.ase-plan-detail { max-height: 80vh; overflow-y: auto; overscroll-behavior: contain; }'
 		+ '.ase-plan-detail table { border-collapse: collapse; }'
-		+ '.ase-plan-detail-desc { white-space: normal; font-style: italic; color: #6b5f3d; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid #e6dcb8; line-height: 1.35; }'
+		+ '.ase-plan-detail-desc { white-space: normal; font-style: italic; color: var(--sp-tt-text); margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--sp-tt-sep); line-height: 1.35; }'
 		+ '.ase-plan-detail-grid { display: flex; align-items: flex-start; gap: 0 14px; }'
-		+ '.ase-plan-detail-right { border-left: 1px solid #e6dcb8; padding-left: 14px; }'
-		+ '.ase-plan-detail-idx-hdr { font-size: 10px; color: #6b5f3d; margin-top: 4px; }'
+		+ '.ase-plan-detail-right { border-left: 1px solid var(--sp-tt-sep); padding-left: 14px; }'
+		+ '.ase-plan-detail-idx-hdr { font-size: 10px; color: var(--sp-tt-text); margin-top: 4px; }'
 		// Full-width wrapping block for values too long to sit in a nowrap "detail td" without forcing
 		// the whole panel wider than the screen - index key lists especially. Same rule and same job
 		// as the SQL Server panel's.
 		+ '.ase-plan-detail-wrap { white-space: normal; word-break: break-word; }'
-		+ '.ase-plan-detail-hint { margin-top: 5px; padding-top: 4px; border-top: 1px solid #e6dcb8; color: #9a8f6d; font-size: 10px; white-space: normal; }'
+		+ '.ase-plan-detail-hint { margin-top: 5px; padding-top: 4px; border-top: 1px solid var(--sp-tt-sep); color: var(--sp-tt-muted); font-size: 10px; white-space: normal; }'
 		// pointer-events:stroke makes the transparent stroke itself hoverable (the arrows are only
 		// 1.5px wide, so the visible path is nearly impossible to hit deliberately).
 		+ '.ase-plan-connector-hit { pointer-events: stroke; cursor: help; }'
 		+ '.ase-plan-idx-tbl td { white-space: normal; }'
 		+ '.ase-plan-detail td { padding: 1px 6px 1px 0; vertical-align: top; white-space: nowrap; }'
-		+ '.ase-plan-detail td.ase-plan-detail-key { color: #777; }'
-		+ '.ase-plan-detail .ase-plan-raw-line { font-family: monospace; white-space: pre-wrap; color: #555; }'
+		+ '.ase-plan-detail td.ase-plan-detail-key { color: var(--sp-text-4); }'
+		+ '.ase-plan-detail .ase-plan-raw-line { font-family: monospace; white-space: pre-wrap; color: var(--sp-text-2); }'
 		+ '.ase-plan-detail.ase-plan-tooltip { pointer-events: none; cursor: default; }'
-		+ '.ase-plan-fallback { color: #888; font-size: 0.85em; font-style: italic; padding: 6px 0; }'
+		+ '.ase-plan-fallback { color: var(--sp-text-5); font-size: 0.85em; font-style: italic; padding: 6px 0; }'
 		// Triggered by window.aseShowplanJumpToNode() (dbxShowplan.js) when a Plan Analysis finding's
 		// "[Node N]" tag is clicked - draws attention to the box scrollIntoView() just centered on
 		// without permanently changing its styling (the class is removed again once the animation ends).
-		+ '@keyframes ase-plan-flash { 0%, 100% { box-shadow: 0 1px 2px rgba(0,0,0,0.08); } 20%, 60% { box-shadow: 0 0 0 5px rgba(74,144,217,0.85); } 40%, 80% { box-shadow: 0 1px 2px rgba(0,0,0,0.08); } }'
+		+ '@keyframes ase-plan-flash { 0%, 100% { box-shadow: 0 1px 2px var(--sp-shadow); } 20%, 60% { box-shadow: 0 0 0 5px rgba(74,144,217,0.85); } 40%, 80% { box-shadow: 0 1px 2px var(--sp-shadow); } }'
 		// 5 discrete pulses (not a time-based cutoff) - aseShowplanJumpToNode (dbxShowplan.js) listens
 		// for this animation's 'animationend' event (which only fires once, after the last iteration)
 		// to remove the class, so the two stay in sync automatically if this iteration count or
@@ -850,11 +850,11 @@ window.AseShowplan = (function () {
 		+ DbxShowplanGraph.propsCss('ase-plan')
 		// The clicked operator stays visibly marked while the pane describes it - otherwise there is
 		// no way to tell which box the pane is showing once the pointer has moved away.
-		+ '.ase-plan-box.ase-plan-selected { border-color: #2a6ebb; border-width: 2px; box-shadow: 0 0 0 3px rgba(42,110,187,0.18); }'
+		+ '.ase-plan-box.ase-plan-selected { border-color: var(--sp-blue); border-width: 2px; box-shadow: 0 0 0 3px rgba(42,110,187,0.18); }'
 		// Captured plan source (and unparsed detail lines): monospace and pre-wrap, because ASE's text
 		// output is column-aligned - collapsing its whitespace would destroy the alignment that makes
 		// it readable in the first place.
-		+ '.ase-plan-prop-raw { font-family: monospace; white-space: pre-wrap; font-size: 10px; color: #555; line-height: 1.35; }';
+		+ '.ase-plan-prop-raw { font-family: monospace; white-space: pre-wrap; font-size: 10px; color: var(--sp-text-2); line-height: 1.35; }';
 
 	function injectStyle() {
 		if (STYLE_INJECTED) return;
@@ -1785,7 +1785,7 @@ window.AseShowplan = (function () {
 		marker.setAttribute('orient', 'auto');
 		var arrowHead = document.createElementNS(svgNS, 'path');
 		arrowHead.setAttribute('d', 'M0,0 L6,3 L0,6 Z');
-		arrowHead.setAttribute('fill', '#8a8a8a');
+		arrowHead.style.fill = 'var(--sp-edge)';   // style (not the attribute): SVG attributes cannot use var()
 		marker.appendChild(arrowHead);
 		defs.appendChild(marker);
 		svg.appendChild(defs);
@@ -1909,7 +1909,7 @@ window.AseShowplan = (function () {
 			var path = document.createElementNS(svgNS, 'path');
 			path.setAttribute('d', d);
 			path.setAttribute('fill', 'none');
-			path.setAttribute('stroke', '#8a8a8a');
+			path.style.stroke = 'var(--sp-edge)';
 			path.setAttribute('stroke-width', '1.5');
 			path.setAttribute('marker-end', 'url(#' + markerId + ')');
 			svg.appendChild(path);

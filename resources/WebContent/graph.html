@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-dbx-theme-own>
 <!--
 at gorans:
 	chmod 666 /home/sybase/dbxtune/0/resources/WebContent/graph.html /home/sybase/dbxtune/0/resources/WebContent/scripts/dbxtune/js/dbxcentral.graph.js
@@ -10,6 +10,9 @@ at pc:
 <head>
 	<meta charset="UTF-8">
 	<title>Graph/Chart Subscribe 2</title>
+
+	<!-- Light/dark choice (navbar switch). Own dark design here (data-dbx-theme-own on <html>): see dbxcentral.graph.js dbxGraphColorSchema() -->
+	<script type="text/javascript" src="/scripts/dbxtune/js/dbxTheme.js"></script>
 
 	<!-- HARD Refresh every 24 hour, so that "long running" stuff like "Dashboards" etc gets new javascript code every now and then  -->
 	<meta http-equiv="refresh" content="86400">
@@ -520,6 +523,21 @@ at pc:
 			padding: 6px;
 		}
 
+		/* Query Store "Databases" tab: status table + "enable it" cards (dbxGraphQueryStore.js uses these, light = old colours) */
+		#query-store-panel         { --qss-card-bg:#fafafa; --qss-card-border:#d0d0d0; --qss-summary:#333;    --qss-muted:#555; --qss-muted-2:#777;
+		                             --qss-th-bg:#f0f0f0;   --qss-th-border:#ccc;       --qss-td-border:#ddd;  --qss-dash:#aaa;
+		                             --qss-ok:#155724;      --qss-bad:#721c24;          --qss-row-ok:#f0fff0;  --qss-row-bad:#fff0f0; }
+		#query-store-panel.qs-dark { --qss-card-bg:#252525; --qss-card-border:#444;    --qss-summary:#e0e0e0; --qss-muted:#b0b0b0; --qss-muted-2:#999;
+		                             --qss-th-bg:#2d2d2d;   --qss-th-border:#444;       --qss-td-border:#3a3a3a; --qss-dash:#777;
+		                             --qss-ok:#6fcf87;      --qss-bad:#ff8a80;          --qss-row-ok:#15291c;  --qss-row-bad:#331a1a; }
+		/* ── Dark — graph right-click menu (jQuery contextMenu, class dbx-ctx-dark set on open when the page Theme is dark) ── */
+		.context-menu-list.dbx-ctx-dark,
+		.dbx-ctx-dark .context-menu-list                         { background:#2b3035; border-color:#495057; box-shadow:0 2px 10px rgba(0,0,0,.6); }
+		.dbx-ctx-dark .context-menu-item                         { background-color:#2b3035; color:#dee2e6; }
+		.dbx-ctx-dark .context-menu-item.context-menu-hover      { background-color:#0d6efd; color:#fff; }
+		.dbx-ctx-dark .context-menu-item.context-menu-disabled   { background-color:#2b3035; color:#6c757d; }
+		.dbx-ctx-dark .context-menu-separator                    { border-bottom-color:#495057; }
+		.dbx-ctx-dark .context-menu-submenu:after                { border-color:transparent transparent transparent #adb5bd; }
 		/* ── Dark mode — Query Store panel ── */
 		#query-store-panel.qs-dark                              { background-color:#1e1e1e; border-color:#555; }
 		#query-store-panel.qs-dark #query-store-header         { background:#2d2d2d; border-bottom-color:#444; color:#e0e0e0; }
@@ -768,6 +786,10 @@ at pc:
 	#cm-detail-panel.cm-dark .cm-tab-postponed > a.nav-link.active { color:#7fa6c9 !important; box-shadow: inset 0 -3px 0 #7fa6c9 !important; }
 	#cm-detail-panel.cm-dark .nav-tabs .nav-link.active           { box-shadow: inset 0 -3px 0 #5bc8ff !important; }
 	#cm-detail-panel.cm-dark #cm-detail-type-bar          { background:#2a2a2a !important; border-bottom-color:#444 !important; color:#ccc; }
+	#cm-detail-panel.cm-dark #cm-detail-type-bar font[color="blue"] { color:#5bc8ff; } /* "Delta", "Rate/s" labels (same blue as the delta/rate columns) */
+	#cm-detail-panel.cm-dark #cm-detail-type-bar font[color="red"]  { color:#ff6b6b; } /* "Percent" label */
+	#cm-detail-panel.cm-dark .btn-outline-secondary       { color:#ccc; border-color:#6c757d; } /* Trend Graphs, << time >> ... */
+	#cm-detail-panel.cm-dark .btn-outline-secondary:hover:not(:disabled) { color:#fff; background:#3a3a3a; }
 	#cm-detail-panel.cm-dark #cm-detail-filter-bar       { background:#2a2a2a !important; border-bottom-color:#444 !important; color:#ccc; }
 	#cm-detail-panel.cm-dark #cm-detail-filter-input     { background:#333; color:#e0e0e0; border-color:#555; }
 	#cm-detail-panel.cm-dark #cm-trend-popup             { background:#2a2a2a; border-color:#555; color:#ccc; }
@@ -783,6 +805,12 @@ at pc:
 	#cm-detail-panel.cm-dark .table th                   { background:#2d2d2d !important; color:#ddd; border-color:#444; }
 	#cm-detail-panel.cm-dark .table td                   { border-color:#3a3a3a; color:#e0e0e0; background-color:#1e1e1e; }
 	#cm-detail-panel.cm-dark .table-hover tbody tr:hover td { background:#2a2a2a; color:#fff; }
+	/* Highlighted rows/cells (collector highlight rules, e.g. yellow system sessions): the light colour mixed into a dark tint,
+	   text stays light; explicit text colours are lightened (dbxGraphCounterDetails.js puts them in --hl-bg / --hl-fg) */
+	#cm-detail-panel.cm-dark .table td[style*="--hl-bg"]  { background-color:color-mix(in srgb, var(--hl-bg) 35%, #1e1e1e) !important; }
+	#cm-detail-panel.cm-dark .table-hover tbody tr:hover td[style*="--hl-bg"] { background-color:color-mix(in srgb, var(--hl-bg) 45%, #2a2a2a) !important; }
+	#cm-detail-panel.cm-dark .table td[style*="--hl-fg"]  { color:color-mix(in srgb, var(--hl-fg) 55%, #ffffff) !important; }
+	#cm-detail-panel.cm-dark                              { --cm-diff-fg:#5bc8ff; --cm-pct-fg:#ff6b6b; --cm-sum-bg:#1d3a40; } /* delta/rate + percent columns, summary (Total) row; light: #0066cc, #cc0000, rgb(222,246,250) */
 	#cm-detail-panel.cm-dark #cm-detail-charts           { border-left-color:#444 !important; }
 	#cm-detail-panel.cm-dark #cm-detail-charts > div     { background:#2a2a2a !important; border-color:#444 !important; color:#ddd; }
 
@@ -1371,7 +1399,7 @@ at pc:
 			<span id="cm-detail-options" style="font-size:0.85em;">
 				Options: &nbsp;
 				<label style="margin:0;font-weight:normal;cursor:pointer;"><input type="checkbox" id="cm-detail-paused"> Pause</label> &nbsp;&nbsp;
-				<label style="margin:0;font-weight:normal;cursor:pointer;"><input type="checkbox" id="cm-detail-dark" onchange="cmDetailDarkToggle(this.checked);"> Dark mode</label>
+				<span id="cm-detail-theme"></span> <!-- Auto/Light/Dark: DbxTheme.panelMode() in dbxGraphCounterDetails.js -->
 			</span>
 			<span id="cm-detail-numfmt" style="font-size:0.85em;white-space:nowrap;">
 				Number&nbsp;Format:&nbsp;
@@ -1485,7 +1513,7 @@ at pc:
 						<select id="cm-alarm-overview-srv-select" style="display:none;font-size:0.9em;" title="Server"></select></h6>
 					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 				</div>
-				<div style="padding:6px 16px;display:flex;align-items:center;flex-wrap:wrap;gap:14px;font-size:0.85em;border-bottom:1px solid #dee2e6;">
+				<div style="padding:6px 16px;display:flex;align-items:center;flex-wrap:wrap;gap:14px;font-size:0.85em;border-bottom:1px solid var(--bs-border-color);">
 					<input type="search" id="cm-alarm-overview-search" class="form-control form-control-sm" style="width:300px;" placeholder="Search: counter, alarm, description, parameter...">
 					<label style="margin:0;cursor:pointer;"><input type="checkbox" id="cm-alarm-overview-only-effective"> Only effective</label>
 					<label style="margin:0;cursor:pointer;"><input type="checkbox" id="cm-alarm-overview-only-modified"> Only modified</label>
@@ -1525,7 +1553,7 @@ at pc:
 							<div id="cm-props-info-fields"></div>
 							<div id="cm-props-info-sql" style="margin-top:10px;">
 								<label><b>Get Counter SQL:</b></label>
-								<pre style="max-height:300px;overflow:auto;border:1px solid #ddd;border-radius:4px;padding:8px;font-size:0.88em;"><code id="cm-props-sql" class="language-sql"></code></pre>
+								<pre style="max-height:300px;overflow:auto;border:1px solid var(--bs-border-color);border-radius:4px;padding:8px;font-size:0.88em;"><code id="cm-props-sql" class="language-sql"></code></pre>
 							</div>
 						</div>
 						<!-- OPTIONS -->
@@ -1560,7 +1588,7 @@ at pc:
 
 			<span id="dbms-config-options" style="font-size:0.85em;">
 				Options: &nbsp;
-				<label style="margin:0;font-weight:normal;cursor:pointer;"><input type="checkbox" id="dbms-config-dark" onchange="dbmsConfigDarkToggle(this.checked);"> Dark mode</label>
+				<span id="dbms-config-theme"></span> <!-- Auto/Light/Dark: DbxTheme.panelMode() in dbxGraphDbmsConfig.js -->
 			</span>
 
 			<span style="margin-left:auto;"></span>
@@ -1610,7 +1638,7 @@ at pc:
 
 			<span id="query-store-options" style="font-size:0.85em;">
 				Options: &nbsp;
-				<label style="margin:0;font-weight:normal;cursor:pointer;"><input type="checkbox" id="query-store-dark" onchange="queryStoreDarkToggle(this.checked);"> Dark mode</label>
+				<span id="query-store-theme"></span> <!-- Auto/Light/Dark: DbxTheme.panelMode() in dbxGraphQueryStore.js -->
 			</span>
 			<span id="qs-numfmt" style="font-size:0.85em;white-space:nowrap;">
 				Number&nbsp;Format:&nbsp;
@@ -1740,7 +1768,7 @@ at pc:
 				<input type="checkbox" name="active-statements-auto-open-chk"   id="active-statements-auto-open-chk"   onclick="activeStatementsAutoOpenChkClick(this);" title="Auto: Open=Has Active Statements, Close=NO Active Statement"                   value="auto-open"   checked> Auto Open &nbsp;&nbsp;
 				<input type="checkbox" name="active-statements-solid-chk"       id="active-statements-solid-chk"       onclick="activeStatementsSolidChkClick(this);"    title="Use Solid background color"                                                    value="solid"       checked> Solid Background &nbsp;&nbsp;
 	
-				<input type="checkbox" name="active-statements-dark-chk" id="active-statements-dark-chk" onclick="activeStatementsDarkToggle(this.checked);" title="Toggle dark background for the Active Statements panel"> Dark mode
+				<span id="active-statements-theme"></span> <!-- Auto/Light/Dark: DbxTheme.panelMode() in dbxcentral.graph.js -->
 			</span>
 		</div>
 		<div id="active-statements-watermark"></div>
@@ -1780,11 +1808,7 @@ at pc:
 					onclick="alarmAutoOpenChkClick(this);" value="auto-open" checked>
 				&nbsp;Auto Open
 			</label>
-			<label style="font-size:0.8em;font-weight:normal;margin:0;cursor:pointer;" title="Toggle dark background for the alarm panel">
-				<input type="checkbox" id="alarm-dark-chk" name="alarm-dark-chk"
-					onclick="alarmDarkToggle(this.checked);">
-				&nbsp;Dark mode
-			</label>
+			<span id="alarm-theme" style="font-size:0.8em;"></span> <!-- Auto/Light/Dark: _alarmThemeCtrl() in dbxAlarm.js -->
 			&nbsp;
 			<button type="button" class="btn-close" aria-label="Close" onclick="alarmPanelToggle();"></button>
 		</div>

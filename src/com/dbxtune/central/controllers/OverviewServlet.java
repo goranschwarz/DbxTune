@@ -523,7 +523,7 @@ public class OverviewServlet extends HttpServlet
 				String dbxType   = "dbx-button-" + srvEntry.getProductString().toLowerCase(); // dbx-button-asetune
 
 				// NOTE: If the below text is CHANGED, ALSO Change in method: doGet(...) --> 'CM Refresh Time'
-				String link   = "/graph.html?subscribe=true&cs=dark&startTime=2h&sessionName=" + srvName + "&graphList=CmSummary_CmRefreshTime&gcols=1";
+				String link   = "/graph.html?subscribe=true&startTime=2h&sessionName=" + srvName + "&graphList=CmSummary_CmRefreshTime&gcols=1";
 				String button = "<a href='" + link + "' target='_blank' class='btn btn-sm btn-primary dbx-button-image " + dbxType + " mb-2 me-2' role='button'>" + srvName + "</a>";
 				
 				out.println(button);
@@ -639,8 +639,8 @@ public class OverviewServlet extends HttpServlet
 		out.println("</p>");
 
 		out.println("<p>");
-		out.println("<a href='graph.html?subscribe=false&cs=dark&startTime=4h&sessionName=DbxCentral'                     target='_blank'>Show Local DbxCentral (OS) Metrics <b>pre selected</b>, for last 4 hours, in new tab.</a><br>");
-		out.println("<a href='graph.html?subscribe=false&cs=dark&startTime=4h&sessionName=DbxcLocalMetrics&graphList=all' target='_blank'>Show Local DbxCentral (OS) Metrics <b>all graphs</b>, for last 4 hours, in new tab.</a><br>");
+		out.println("<a href='graph.html?subscribe=false&startTime=4h&sessionName=DbxCentral'                     target='_blank'>Show Local DbxCentral (OS) Metrics <b>pre selected</b>, for last 4 hours, in new tab.</a><br>");
+		out.println("<a href='graph.html?subscribe=false&startTime=4h&sessionName=DbxcLocalMetrics&graphList=all' target='_blank'>Show Local DbxCentral (OS) Metrics <b>all graphs</b>, for last 4 hours, in new tab.</a><br>");
 		out.println("</p>");
 
 		out.println("<p>Sections");
@@ -1192,7 +1192,7 @@ public class OverviewServlet extends HttpServlet
 				}
 
 				// NOTE: If the below text is CHANGED, ALSO Change in method: printServerLayout_CmRefreshButtons(...)
-				String link   = "/graph.html?subscribe=true&cs=dark&startTime=2h&sessionName=" + StringUtil.toCommaStr(allSrvList, ",") + "&graphList=CmSummary_CmRefreshTime&gcols=1";
+				String link   = "/graph.html?subscribe=true&startTime=2h&sessionName=" + StringUtil.toCommaStr(allSrvList, ",") + "&graphList=CmSummary_CmRefreshTime&gcols=1";
 				String button = "<a href='" + link + "' target='_blank' class='btn btn-sm btn-primary mb-2 me-2' role='button'>ALL Servers</a>";
 
 				out.println(button);
@@ -1222,7 +1222,7 @@ public class OverviewServlet extends HttpServlet
 					String dbxType   = "dbx-button-" + session.getProductString().toLowerCase(); // dbx-button-asetune
 	
 					// NOTE: If the below text is CHANGED, ALSO Change in method: printServerLayout_CmRefreshButtons(...)
-					String link   = "/graph.html?subscribe=true&cs=dark&startTime=2h&sessionName=" + srvName + "&graphList=CmSummary_CmRefreshTime&gcols=1";
+					String link   = "/graph.html?subscribe=true&startTime=2h&sessionName=" + srvName + "&graphList=CmSummary_CmRefreshTime&gcols=1";
 					String button = "<a href='" + link + "' target='_blank' class='btn btn-sm btn-primary dbx-button-image " + dbxType + " mb-2 me-2' role='button'>" + srvName + "</a>";
 	
 					out.println(button);
@@ -2105,7 +2105,7 @@ public class OverviewServlet extends HttpServlet
 				if (prevSrvName != null && ! prevSrvName.equals(srvName))
 				{
 					out.println("  <tr>");
-					out.println("    <td nowrap colspan='6' style='background-color:rgb(209, 224, 224);'>&nbsp;</td>");
+					out.println("    <td nowrap colspan='7' style='background-color:rgb(209, 224, 224);'>&nbsp;</td>");
 					out.println("  </tr>");
 					out.println(tableHead.replace("SRVNAME", srvName)); // Also add new "headers" so we don't have to scroll that much
 				}
@@ -2264,8 +2264,8 @@ public class OverviewServlet extends HttpServlet
 //			out.println("<p><br></p>");
 
 			out.println("<br>");
-			out.println("<a href='graph.html?subscribe=false&cs=dark&startTime=4h&sessionName=DbxcLocalMetrics&graphList=default' target='_blank'>Show Local DbxCentral (OS) Metrics <b>pre selected</b>, for last 4 hours, in new tab.</a><br>");
-			out.println("<a href='graph.html?subscribe=false&cs=dark&startTime=4h&sessionName=DbxcLocalMetrics&graphList=all'     target='_blank'>Show Local DbxCentral (OS) Metrics <b>all graphs</b>, for last 4 hours, in new tab.</a><br>");
+			out.println("<a href='graph.html?subscribe=false&startTime=4h&sessionName=DbxcLocalMetrics&graphList=default' target='_blank'>Show Local DbxCentral (OS) Metrics <b>pre selected</b>, for last 4 hours, in new tab.</a><br>");
+			out.println("<a href='graph.html?subscribe=false&startTime=4h&sessionName=DbxcLocalMetrics&graphList=all'     target='_blank'>Show Local DbxCentral (OS) Metrics <b>all graphs</b>, for last 4 hours, in new tab.</a><br>");
 			out.println("<br>");
 			
 			
