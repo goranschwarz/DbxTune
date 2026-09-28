@@ -572,7 +572,20 @@ var DbxTimeline = (function () {
 			detailsDiv.querySelector('span').textContent = row.label || row.key;
 			detailsDiv.querySelector('pre').textContent = plainText;
 			detailsDiv.style.display = 'block';
+			fitClickDetails();
 		}
+
+		// Let the details <pre> fill the space down to the bottom of the window (so the 'message' part is visible
+		// without scrolling). The CSS max-height (40vh) is the minimum, used when there is less space below it.
+		function fitClickDetails()
+		{
+			var pre = detailsDiv.querySelector('pre');
+			if (!pre || detailsDiv.style.display !== 'block')
+				return;
+			var spaceBelow = window.innerHeight - pre.getBoundingClientRect().top - 20; // 20: details padding+border+margin
+			pre.style.maxHeight = Math.max(spaceBelow, window.innerHeight * 0.4) + 'px';
+		}
+		window.addEventListener('resize', fitClickDetails);
 
 		//-------------------------------------------------
 		// Build the model for a view:
@@ -1023,6 +1036,7 @@ var DbxTimeline = (function () {
 			corner.style.height = top.offsetHeight + 'px';
 		}
 		timeline.on('changed', updateCorner);
+		timeline.on('changed', fitClickDetails); // the chart height changes on expand/collapse, which moves the details panel
 		corner.addEventListener('click', function () {
 			// 3 states: A-Z -> Z-A -> original (start time) order -> A-Z ...
 			sortOrder = (sortOrder === 'name') ? 'name-d' : (sortOrder === 'name-d') ? 'start' : 'name';
