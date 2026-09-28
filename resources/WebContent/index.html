@@ -10,6 +10,8 @@
     == JS imports - JAVA SCRIPTS GOES HERE
     =======================================================================
   -->
+  <!-- JS: Light/dark theme - FIRST, so the page is never drawn in the wrong theme (follows the OS, user override in the navbar) -->
+  <script type="text/javascript" src="/scripts/dbxtune/js/dbxTheme.js"></script>
   <!-- JS: JQuery -->
   <script type="text/javascript" src="/scripts/jquery/jquery-3.7.1.min.js"></script>
   <script type="text/javascript" src="/scripts/jquery/ui/1.14.2/jquery-ui.min.js"></script>
@@ -301,7 +303,6 @@
       <p></p>
       <p>
         <input type="checkbox" name="dbx-openInNewTab-chk" id="dbx-openInNewTab-chk" checked> Open Below Graphs in a new Tab &nbsp;&nbsp;&nbsp;
-        <input type="checkbox" name="dbx-graphCsDark-chk"  id="dbx-graphCsDark-chk"  checked> In Dark Theme &nbsp;&nbsp;&nbsp;
         <input type="checkbox" name="dbx-showDbxImage-chk" id="dbx-showDbxImage-chk" checked> <i>Show Above Chart Image</i><br>
         <input type="checkbox" name="dbx-subscribe-chk"    id="dbx-subscribe-chk"    checked> Automatically Update Graphs when new data arrives from Collectors<br>
 		 Display Last <input type="text" name="dbx-hours-txt" id="dbx-hours-txt" style="height:20px;width:30px" size="3" value="2"> Hours when Opening Graphs. &nbsp;&nbsp;&nbsp;
@@ -1788,12 +1789,7 @@ List of stuff that can be done
 		const startTime       = $('#dbx-hours-txt')       .val() + "h";
 		const subscribe       = $('#dbx-subscribe-chk')   .is(":checked");
 		const openInNewTab    = $('#dbx-openInNewTab-chk').is(":checked");
-		const colorSchemaDark = $('#dbx-graphCsDark-chk') .is(":checked");
 		const gColsTxt        = $('#dbx-gcols-txt')       .val();
-
-		var colorSchema = "&cs=white";
-		if (colorSchemaDark)
-			colorSchema = "&cs=dark";
 
 		// Number.isInteger(gColsTxt) --- did NOT work... so falling back to jQuery
 		var gcols = "";
@@ -1803,15 +1799,15 @@ List of stuff that can be done
 		// Construct the URL to use
 		if (type === "server-ssp")
 		{
-			url = "/graph.html?subscribe="+subscribe+colorSchema+gcols+"&startTime="+startTime+"&sessionName="+name+"&graphList=default"+urlOptions;
+			url = "/graph.html?subscribe="+subscribe+gcols+"&startTime="+startTime+"&sessionName="+name+"&graphList=default"+urlOptions;
 		}
 		else if (type === "server-all")
 		{
-			url = "/graph.html?subscribe="+subscribe+colorSchema+gcols+"&startTime="+startTime+"&sessionName="+name+"&graphList=all"+urlOptions;
+			url = "/graph.html?subscribe="+subscribe+gcols+"&startTime="+startTime+"&sessionName="+name+"&graphList=all"+urlOptions;
 		}
 		else if (type === "profile")
 		{
-			url = "/graph.html?subscribe="+subscribe+colorSchema+gcols+"&startTime="+startTime+"&sessionName="+name+urlOptions;
+			url = "/graph.html?subscribe="+subscribe+gcols+"&startTime="+startTime+"&sessionName="+name+urlOptions;
 		}
 		else
 		{

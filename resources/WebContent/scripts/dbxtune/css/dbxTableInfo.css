@@ -128,3 +128,29 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.4);
   pointer-events: none;
 }
+
+/* ── Dark theme (DbxShowplanTheme sets <html class="dbx-sp-dark">, see dbxShowplanGraph.js) ──
+   Header rows keep their colours (white text on blue/brown reads fine on dark), only the light
+   borders, zebra rows and links are changed. */
+html.dbx-sp-dark :is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) table.qs-tableinfo > tbody > tr > td,
+html.dbx-sp-dark :is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) table.dsr-sub-table-other-info td,
+html.dbx-sp-dark :is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) table.dsr-missing-index-table > tbody > tr > td {
+  border-color: #3a414b;
+}
+html.dbx-sp-dark :is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) table.qs-tableinfo table.qs-tableinfo > tbody > tr:nth-child(even) > td {
+  background: #1f2a38;
+}
+html.dbx-sp-dark :is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) table.dsr-missing-index-table > tbody > tr:nth-child(even) > td {
+  background: #2e2416;
+}
+html.dbx-sp-dark :is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) [data-bs-toggle="modal"][data-bs-target="#dbx-view-sqltext-dialog"] {
+  color: #74b3ff;
+}
+html.dbx-sp-dark :is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) [data-bs-toggle="modal"][data-bs-target="#dbx-view-sqltext-dialog"]:hover {
+  background: #1a2b40;
+  color: #9ecbff;
+}
+html.dbx-sp-dark :is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) [data-tooltip]:hover::before {
+  background: #343a40;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.7);
+}

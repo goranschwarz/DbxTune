@@ -634,7 +634,8 @@ implements Memory.MemoryListener
 				String extraDescription = "";
 				if (cm != null)
 				{
-					boolean persistCm = _storeProps.getBooleanProperty(persistCountersKey, false);
+					// Default = the CM's own default ('USE_DEFAULT:...' in the file also means that), true for the Summary CM (CmSummaryAbstract)
+					boolean persistCm = _storeProps.getBooleanProperty(persistCountersKey, cm.getDefaultIsPersistCountersEnabled());
 					
 					// if the CM does NOT exists in the NO-GUI PCS File (it might be a NEW CM that was introduced AFTER the NO-GUI file was created)
 					//  - Then use any "template level"... and if the CM is above the "template level", add it anyway!

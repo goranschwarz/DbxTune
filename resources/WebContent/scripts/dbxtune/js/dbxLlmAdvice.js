@@ -137,7 +137,20 @@ var dbxLlmAdvice = (function () {
 			'  border:1px solid #ced4da; border-radius:3px; background:#fff; color:#495057; }' +
 			'.dbx-llm-copy-btn:hover { background:#e9ecef; }' +
 			'.dbx-llm-pre-compact { font-size:0.78rem !important; max-height:220px; overflow:auto; }' +
-			'.dbx-llm-version { font-family:Arial, Helvetica, sans-serif; font-size:0.85rem; color:#495057; margin-top:8px; word-break:break-word; }';
+			'.dbx-llm-version { font-family:Arial, Helvetica, sans-serif; font-size:0.85rem; color:#495057; margin-top:8px; word-break:break-word; }' +
+			// Dark theme: Showplan dialogs (DbxShowplanTheme: <html class="dbx-sp-dark">) or dark DbxCentral pages (dbxTheme.js)
+			'html.dbx-sp-dark .dbx-llm-dialog, html[data-theme="dark"] .dbx-llm-dialog { background:#22272e; color:#e9ecef; box-shadow:0 4px 24px rgba(0,0,0,0.7); }' +
+			'html.dbx-sp-dark .dbx-llm-header, html[data-theme="dark"] .dbx-llm-header { background:#343a40; }' +
+			'html.dbx-sp-dark .dbx-llm-status, html[data-theme="dark"] .dbx-llm-status, html.dbx-sp-dark .dbx-llm-sent-details summary, html[data-theme="dark"] .dbx-llm-sent-details summary, html.dbx-sp-dark .dbx-llm-sent-field-label, html[data-theme="dark"] .dbx-llm-sent-field-label, html.dbx-sp-dark .dbx-llm-version, html[data-theme="dark"] .dbx-llm-version { color:#adb5bd; }' +
+			'html.dbx-sp-dark .dbx-llm-spinner, html[data-theme="dark"] .dbx-llm-spinner { border-color:#555c63; border-top-color:#dee2e6; }' +
+			'html.dbx-sp-dark .dbx-llm-pre, html[data-theme="dark"] .dbx-llm-pre { background:#1a1d21; color:#e9ecef; border-left-color:#3d8bfd; }' +
+			'html.dbx-sp-dark .dbx-llm-prose, html[data-theme="dark"] .dbx-llm-prose { background:#1c2025; color:#e9ecef; border-left-color:#6c757d; }' +
+			'html.dbx-sp-dark .dbx-llm-prose code, html[data-theme="dark"] .dbx-llm-prose code { background:#343a40; color:#e9ecef; }' +
+			'html.dbx-sp-dark .dbx-llm-error, html[data-theme="dark"] .dbx-llm-error { color:#ea868f; background:#2c0b0e; border-color:#842029; }' +
+			'html.dbx-sp-dark .dbx-llm-sql-changed, html[data-theme="dark"] .dbx-llm-sql-changed { color:#ffda6a; background:#332701; border-color:#997404; }' +
+			'html.dbx-sp-dark .dbx-llm-sql-unchanged, html[data-theme="dark"] .dbx-llm-sql-unchanged { color:#75b798; background:#051b11; border-color:#0f5132; }' +
+			'html.dbx-sp-dark .dbx-llm-copy-btn, html[data-theme="dark"] .dbx-llm-copy-btn { border-color:#555c63; background:#2b3035; color:#dee2e6; }' +
+			'html.dbx-sp-dark .dbx-llm-copy-btn:hover, html[data-theme="dark"] .dbx-llm-copy-btn:hover { background:#343a40; }';
 		document.head.appendChild(style);
 	}
 

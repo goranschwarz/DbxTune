@@ -68,6 +68,8 @@ public class HtmlStatic
 		writer.println("    == JS imports - JAVA SCRIPTS GOES HERE ");
 		writer.println("    ======================================================================= ");
 		writer.println("  --> ");
+		writer.println("  <!-- JS: Light/dark theme - FIRST, so the page is never drawn in the wrong theme (follows the OS, user override in the navbar) --> ");
+		writer.println("  <script type='text/javascript' src='/scripts/dbxtune/js/dbxTheme.js'></script> ");
 		writer.println("  <!-- JS: JQuery --> ");
 		writer.println("  <script type='text/javascript' src='/scripts/jquery/jquery-3.7.1.min.js'></script> ");
 		writer.println();

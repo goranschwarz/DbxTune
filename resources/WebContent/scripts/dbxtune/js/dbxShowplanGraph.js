@@ -22,6 +22,151 @@
  * prefix, so the (many) existing call sites inside those files stay untouched.
  */
 
+/**
+ * DbxShowplanTheme — light/dark colours for ALL Showplan UI (plan dialogs, both renderers, node panels,
+ * Properties pane, findings, LLM advice, table info). Lives here because this file is loaded FIRST on every
+ * page that shows plans (graph.html, ShowplanSqlServerServlet, ShowplanAseServlet).
+ *
+ * All colours are CSS variables (--sp-*): the light values below are exactly the colours the code used before
+ * (so light mode looks unchanged), the dark values apply when <html> has the class 'dbx-sp-dark'. Setting the class
+ * on <html> (not on the dialog) means panels/tooltips appended to <body> (node panels, qp.js tooltip clones) follow too.
+ *
+ * Dark is:  graph.html -> its own colour scheme (window._colorSchema, from dbxTheme.js)
+ *           other pages -> dbxTheme.js (<html data-theme="dark">)
+ */
+window.DbxShowplanTheme = (function () {
+
+	var PALETTE = [
+		// name               light        dark
+		['text',             '#212529',   '#e9ecef'],
+		['text-1',           '#444',      '#dee2e6'],
+		['text-2',           '#555',      '#ced4da'],
+		['text-3',           '#666',      '#b8bfc6'],
+		['text-4',           '#777',      '#a3abb3'],
+		['text-5',           '#888',      '#939ba3'],
+		['text-6',           '#999',      '#7d868f'],
+		['text-7',           '#aaa',      '#6c757d'],
+		['bg',               '#fff',      '#22272e'],   // node boxes, cards
+		['bg-2',             '#fafafa',   '#1c2025'],   // sections, statement box
+		['bg-btn',           '#f0f0f0',   '#2b3035'],
+		['bg-3',             '#e4e4e4',   '#343a40'],
+		['bg-track',         '#eee',      '#343a40'],
+		['bg-code',          '#f4f4f4',   '#1a1d21'],
+		['border',           '#d0d0d0',   '#3a414b'],
+		['border-2',         '#e2e2e2',   '#30363d'],
+		['border-btn',       '#bbb',      '#555c63'],
+		['node-border',      '#999',      '#6c757d'],
+		['stmt-border',      '#7a7a7a',   '#adb5bd'],
+		['edge',             '#8a8a8a',   '#7d868f'],   // connector lines/arrows
+		['edge-2',           '#b0b0b0',   '#5c636a'],   // tree lines between boxes
+		['edge-ns',          '#c3d0de',   '#3d5570'],   // connector into a "not started yet" branch
+		['edge-dead',        '#cfcfcf',   '#4a5058'],   // connector into a never executed branch
+		['dash',             '#c6c6c6',   '#555c63'],
+		['hatch',            'rgba(130,130,130,0.16)', 'rgba(160,160,160,0.14)'],
+		['err',              '#c0392b',   '#ff6b5e'],
+		['err-bg',           '#fdf1f0',   '#3a1c1a'],
+		['err-2',            '#b71c1c',   '#ff8a80'],
+		['warn-border',      '#d9a24a',   '#d9a24a'],
+		['warn-bg',          '#fff8ec',   '#33291a'],
+		['warn-text',        '#a8500f',   '#f0a35e'],
+		['warn-text-2',      '#b45309',   '#f5b35c'],
+		['warn-text-3',      '#a3690a',   '#e0b050'],
+		['sel',              '#4a90d9',   '#5aa2ef'],
+		['sel-bg',           '#eef5fc',   '#1a2b40'],
+		['blue',             '#2a6ebb',   '#74b3ff'],
+		['blue-2',           '#2a6f97',   '#7cc0e8'],
+		['info',             '#1565c0',   '#74b3ff'],
+		['tt-bg',            '#fffef5',   '#2b2a22'],   // node hover/pinned panel
+		['tt-border',        '#c9b98a',   '#6b6040'],
+		['tt-sep',           '#e6dcb8',   '#4d4630'],
+		['tt-text',          '#6b5f3d',   '#cfc6a6'],
+		['tt-muted',         '#9a8f6d',   '#a39a7c'],
+		['ns-bg',            '#fbfcfe',   '#1c2530'],   // "not started yet" nodes (live plans)
+		['ns-border',        '#9fb4cc',   '#4a6b8a'],
+		['ns-text',          '#6b7a8c',   '#9fb4cc'],
+		['ns-note',          '#4a6b8a',   '#9fb4cc'],
+		['chip',             '#707070',   '#5c636a'],
+		['bg-4',             '#f8f8f8',   '#22272e'],
+		['border-3',         '#ccc',      '#555c63'],
+		['sep',              '#e0e0e0',   '#333'],
+		['grid',             'rgba(0,0,0,0.08)', 'rgba(255,255,255,0.08)'],   // chart grid lines
+		['err-3',            '#a33',      '#ff8a80'],
+		['link',             '#3a7bc8',   '#74b3ff'],
+		['hdr-blue',         '#555',      '#9ecbff'],   // ASE runtime section headers
+		// findings: severity colours (dark values = the ones dbxShowplan.js used for graph.html dark before)
+		['sev-err-bg',       '#fff0f0',   '#3b1111'],
+		['sev-warn-bg',      '#fffbeb',   '#2e2000'],
+		['sev-info-bg',      '#eff6ff',   '#0d1f3c'],
+		['sev-err-border',   '#f87171',   '#c62828'],
+		['sev-warn-border',  '#fbbf24',   '#b45309'],
+		['sev-info-border',  '#93c5fd',   '#1565c0'],
+		// plan-type chips (Actual / Estimated / Live)
+		['ok-chip-bg',       '#d1fae5',   '#12372a'],
+		['ok-chip-text',     '#065f46',   '#6ee7b7'],
+		['ok-chip-border',   '#6ee7b7',   '#1f6b4f'],
+		['warn-chip-bg',     '#fff3cd',   '#3a2e0c'],
+		['warn-chip-text',   '#7c4a00',   '#ffd766'],
+		['warn-chip-border', '#ffc107',   '#8a6d00'],
+		['est-chip-bg',      '#fef9c3',   '#3a360c'],
+		['est-chip-text',    '#713f12',   '#fde047'],
+		['est-chip-border',  '#fde047',   '#7a6a10'],
+		['shadow',           'rgba(0,0,0,0.08)', 'rgba(0,0,0,0.5)'],
+		['shadow-2',         'rgba(0,0,0,0.3)',  'rgba(0,0,0,0.6)']
+	];
+
+	function injectCss() {
+		if (document.getElementById('dbx-sp-theme-css')) return;
+		var light = PALETTE.map(function (p) { return '  --sp-' + p[0] + ': ' + p[1] + ';'; }).join('\n');
+		var dark  = PALETTE.map(function (p) { return '  --sp-' + p[0] + ': ' + p[2] + ';'; }).join('\n');
+		var style = document.createElement('style');
+		style.id = 'dbx-sp-theme-css';
+		style.textContent = ':root {\n' + light + '\n}\n:root.dbx-sp-dark {\n' + dark + '\n}\n';
+		document.head.appendChild(style);
+	}
+
+	/** Should the Showplan UI be dark right now? */
+	function isDark() {
+		if (typeof window._colorSchema === 'string')   // graph.html
+			return window._colorSchema === 'dark';
+		return document.documentElement.getAttribute('data-theme') === 'dark';   // dbxTheme.js pages
+	}
+
+	/**
+	 * Call when a plan dialog / panel is shown: sets the palette (class on <html>) and Bootstrap's own theme on
+	 * the given element (modal chrome, buttons, form controls inside it).
+	 * @param el  DOM element or jQuery object (optional)
+	 */
+	function apply(el) {
+		injectCss();
+		var dark = isDark();
+		document.documentElement.classList.toggle('dbx-sp-dark', dark);
+		var node = el && el.jquery ? el[0] : el;
+		if (node && node.setAttribute) {
+			node.setAttribute('data-bs-theme', dark ? 'dark' : 'light');
+			node.setAttribute('data-dbx-sp-themed', '');   // found again if the theme changes while it is open
+		}
+		return dark;
+	}
+
+	/** Colour value of a palette variable right now (for canvas drawing, e.g. Chart.js, which cannot use var()) */
+	function color(name) {
+		injectCss();
+		return getComputedStyle(document.documentElement).getPropertyValue('--sp-' + name).trim();
+	}
+
+	injectCss();
+
+	// Theme switched while a plan dialog is open (dbxTheme.js navbar switch / OS change): re-apply to the open ones
+	if (window.DbxTheme && DbxTheme.onChange) {
+		DbxTheme.onChange(function () {
+			apply();
+			document.querySelectorAll('[data-dbx-sp-themed]').forEach(function (e) { apply(e); });
+		});
+	}
+
+	return { isDark: isDark, apply: apply, color: color };
+})();
+
 window.DbxShowplanGraph = (function () {
 
 	// Walks the parsed-plan node tree (the {op, props, metrics, children} model built by
@@ -389,6 +534,8 @@ window.DbxShowplanGraph = (function () {
 			bindListeners();
 			var $panel = buildPanel(node);
 			if (!pinned) $panel.addClass(prefix + '-tooltip');
+			// Lives on <body> (outside the plan dialog): give it the same light/dark theme as the dialog
+			DbxShowplanTheme.apply($panel);
 			$('body').append($panel);
 			position($panel, boxEl);
 			var entry = { $panel: $panel, boxEl: boxEl, pinned: !!pinned };
@@ -508,25 +655,25 @@ window.DbxShowplanGraph = (function () {
 			// and so cover the fixed (`scroll`) shadow gradients exactly when the pane is at that end.
 			+ P + 'props-scroll {'
 			+   'background:'
-			+     'linear-gradient(#fff 30%, rgba(255,255,255,0)) top / 100% 14px no-repeat local,'
-			+     'linear-gradient(rgba(255,255,255,0), #fff 70%) bottom / 100% 14px no-repeat local,'
+			+     'linear-gradient(var(--sp-bg) 30%, transparent) top / 100% 14px no-repeat local,'
+			+     'linear-gradient(transparent, var(--sp-bg) 70%) bottom / 100% 14px no-repeat local,'
 			+     'radial-gradient(farthest-side at 50% 0, rgba(0,0,0,0.14), rgba(0,0,0,0)) top / 100% 7px no-repeat scroll,'
 			+     'radial-gradient(farthest-side at 50% 100%, rgba(0,0,0,0.14), rgba(0,0,0,0)) bottom / 100% 7px no-repeat scroll;'
 			+ '}'
 			+ P + 'prop-title { font-weight: 700; font-size: 12px; margin-bottom: 1px; }'
-			+ P + 'prop-subtitle { color: #777; font-size: 10px; margin-bottom: 5px; }'
-			+ P + 'prop-desc { font-style: italic; color: #5c5c5c; font-size: 10px; line-height: 1.35; margin-bottom: 8px; }'
-			+ P + 'prop-empty { color: #999; font-style: italic; font-size: 11px; }'
+			+ P + 'prop-subtitle { color: var(--sp-text-4); font-size: 10px; margin-bottom: 5px; }'
+			+ P + 'prop-desc { font-style: italic; color: var(--sp-text-2); font-size: 10px; line-height: 1.35; margin-bottom: 8px; }'
+			+ P + 'prop-empty { color: var(--sp-text-6); font-style: italic; font-size: 11px; }'
 			+ P + 'prop-sect { margin-bottom: 8px; }'
-			+ P + 'prop-sect-hdr { font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; color: #6a6a6a; border-bottom: 1px solid #ddd; padding-bottom: 2px; margin-bottom: 3px; }'
+			+ P + 'prop-sect-hdr { font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--sp-text-3); border-bottom: 1px solid var(--sp-border); padding-bottom: 2px; margin-bottom: 3px; }'
 			+ P + 'prop-row { display: flex; gap: 8px; font-size: 11px; padding: 1px 0; align-items: baseline; }'
-			+ P + 'prop-key { flex: 0 0 42%; color: #777; word-break: break-word; }'
+			+ P + 'prop-key { flex: 0 0 42%; color: var(--sp-text-4); word-break: break-word; }'
 			// break-word (not nowrap+ellipsis): a Predicate/ScalarString value is often very long, and in a
 			// narrow pane truncating it would hide exactly the part being investigated.
 			+ P + 'prop-val { flex: 1 1 auto; word-break: break-word; }'
-			+ P + 'prop-warn { color: #a8500f; font-size: 11px; line-height: 1.35; margin-bottom: 3px; }'
-			+ P + 'prop-xml > summary { cursor: pointer; font-size: 10px; color: #555; padding: 1px 0; user-select: none; }'
-			+ P + 'prop-xml-body { padding-left: 10px; border-left: 1px solid #e2e2e2; margin-left: 3px; }';
+			+ P + 'prop-warn { color: var(--sp-warn-text); font-size: 11px; line-height: 1.35; margin-bottom: 3px; }'
+			+ P + 'prop-xml > summary { cursor: pointer; font-size: 10px; color: var(--sp-text-2); padding: 1px 0; user-select: none; }'
+			+ P + 'prop-xml-body { padding-left: 10px; border-left: 1px solid var(--sp-border-2); margin-left: 3px; }';
 	}
 
 	/**
@@ -620,21 +767,21 @@ window.DbxShowplanGraph = (function () {
 			+ P + 'box.' + prefix + '-never-exec {'
 			+   ' background-image: repeating-linear-gradient(135deg,'
 			+     ' rgba(0,0,0,0) 0, rgba(0,0,0,0) 5px,'
-			+     ' rgba(130,130,130,0.16) 5px, rgba(130,130,130,0.16) 10px);'
+			+     ' var(--sp-hatch) 5px, var(--sp-hatch) 10px);'
 			// Explicit neutral fill so no other box state (big-table's red wash, eager-spool's) can tint a
 			// dead branch - background-image alone would sit on top of whatever colour they set.
-			+   ' background-color: #fafafa;'
-			+   ' border-color: #c6c6c6; border-style: dashed; }'
+			+   ' background-color: var(--sp-bg-2);'
+			+   ' border-color: var(--sp-dash); border-style: dashed; }'
 			// Compound selectors (two classes deep) so these beat the plain .xx-plan-label /
 			// .xx-plan-cost colours without needing !important.
 			+ P + 'box.' + prefix + '-never-exec ' + P + 'label,'
 			+ P + 'box.' + prefix + '-never-exec ' + P + 'logicalop,'
 			+ P + 'box.' + prefix + '-never-exec ' + P + 'subtitle,'
 			+ P + 'box.' + prefix + '-never-exec ' + P + 'metric,'
-			+ P + 'box.' + prefix + '-never-exec ' + P + 'cost { color: #909090; }'
+			+ P + 'box.' + prefix + '-never-exec ' + P + 'cost { color: var(--sp-text-5); }'
 			+ P + 'box.' + prefix + '-never-exec ' + P + 'icon { filter: grayscale(1); opacity: 0.45; }'
 			// The "never executed" caption itself - the only part of the box kept legible.
-			+ P + 'never-exec-note { font-size: 10px; font-style: italic; color: #7a7a7a;'
+			+ P + 'never-exec-note { font-size: 10px; font-style: italic; color: var(--sp-text-4);'
 			+   ' letter-spacing: 0.02em; }'
 
 			// ...and the "not started yet" variant, for a plan captured while the query was still
@@ -646,17 +793,17 @@ window.DbxShowplanGraph = (function () {
 			// Three classes deep so every rule beats its two-class counterpart above without !important,
 			// and placed after them so an equal-specificity tie would still fall this way.
 			+ P + 'box.' + prefix + '-never-exec.' + prefix + '-not-started {'
-			+   ' background-image: none; background-color: #fbfcfe;'
-			+   ' border-color: #9fb4cc; border-style: dashed; }'
+			+   ' background-image: none; background-color: var(--sp-ns-bg);'
+			+   ' border-color: var(--sp-ns-border); border-style: dashed; }'
 			+ P + 'box.' + prefix + '-never-exec.' + prefix + '-not-started ' + P + 'label,'
 			+ P + 'box.' + prefix + '-never-exec.' + prefix + '-not-started ' + P + 'logicalop,'
 			+ P + 'box.' + prefix + '-never-exec.' + prefix + '-not-started ' + P + 'subtitle,'
 			+ P + 'box.' + prefix + '-never-exec.' + prefix + '-not-started ' + P + 'metric,'
-			+ P + 'box.' + prefix + '-never-exec.' + prefix + '-not-started ' + P + 'cost { color: #6b7a8c; }'
+			+ P + 'box.' + prefix + '-never-exec.' + prefix + '-not-started ' + P + 'cost { color: var(--sp-ns-text); }'
 			+ P + 'box.' + prefix + '-never-exec.' + prefix + '-not-started ' + P + 'icon {'
 			+   ' filter: grayscale(0.5); opacity: 0.72; }'
 			// Two classes, so it beats the one-class caption rule above.
-			+ P + 'never-exec-note.' + prefix + '-not-started-note { color: #4a6b8a; }';
+			+ P + 'never-exec-note.' + prefix + '-not-started-note { color: var(--sp-ns-note); }';
 	}
 
 	return {

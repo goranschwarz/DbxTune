@@ -55,6 +55,26 @@ extends CountersModel
 	}
 
 	/**
+	 * The Summary CM is ALWAYS saved to the recording database (PCS).
+	 * <p>
+	 * In NO-GUI mode it already was (it is always refreshed, and every refreshed CM is added to the PersistContainer),
+	 * but this reported false, so the web UI showed "Not saved" when the NoGui config file has
+	 * 'CmSummary.persistCounters=USE_DEFAULT:false' (the default was false for all CM's). In GUI mode
+	 * (CounterCollectorThreadGui) this decides if the Summary is recorded, so there the Summary is now always recorded.
+	 */
+	@Override
+	public boolean isPersistCountersEnabled()
+	{
+		return true;
+	}
+
+	@Override
+	public boolean getDefaultIsPersistCountersEnabled()
+	{
+		return true;
+	}
+
+	/**
 	 * @param name                        Name of the Counter Model
 	 * @param groupName                   Name of the Group this counter belongs to, can be null
 	 * @param sql                         SQL Used to grab a sample from the counter data

@@ -209,8 +209,11 @@ var DbxGraphSettings = (function () {
 			});
 		}
 
-		// Follow the page color schema (Bootstrap 5.3 color modes)
-		$dlg.attr('data-bs-theme', (typeof _colorSchema !== 'undefined' && _colorSchema === 'dark') ? 'dark' : 'light');
+		// Same colour schema as the charts it configures (graph.html: dbxGraphChartSchema(), charts are always dark
+		// while _graphsAlwaysDark is set), else the page colour schema (Bootstrap 5.3 color modes)
+		var dark = (typeof dbxGraphChartSchema === 'function') ? (dbxGraphChartSchema() === 'dark')
+		         : (typeof _colorSchema !== 'undefined' && _colorSchema === 'dark');
+		$dlg.attr('data-bs-theme', dark ? 'dark' : 'light');
 
 		// Tell the user when URL parameters override the saved settings
 		var urlKeys = Object.keys(_overrides);

@@ -388,6 +388,54 @@ function dbxMaxDt(dt1, dt2)
 
 
 
+/**
+ * The page colour schema: "dark" or "white"
+ * - the DbxCentral light/dark choice (dbxTheme.js: Auto = follow the OS, or the navbar switch's Light/Dark)
+ * - else (dbxTheme.js not loaded) "dark", the old default
+ * The old URL parameter 'cs=dark|white' is ignored (still present in old bookmarks/links).
+ */
+function dbxGraphColorSchema()
+{
+	if (typeof DbxTheme !== "undefined")
+		return DbxTheme.effective() === "dark" ? "dark" : "white";
+	return "dark";
+}
+
+/**
+ * Charts (page background, chart boxes, axis/grid/tooltip colours) are ALWAYS dark, whatever the light/dark choice.
+ * Dialogs and panels (All Alarms, CM Properties, Showplan, ...) still follow the choice (_colorSchema).
+ * Set to false to let the charts follow the choice too (the light chart colours are still in the code).
+ */
+var _graphsAlwaysDark = true;
+
+/** Colour schema for the CHARTS: "dark" or "white" (see _graphsAlwaysDark) */
+function dbxGraphChartSchema()
+{
+	return _graphsAlwaysDark ? "dark" : _colorSchema;
+}
+
+/**
+ * Follow a light/dark change (navbar switch, OS switch in 'Auto', other tab).
+ * Dialogs/panels read _colorSchema when they open, so updating it is enough - unless the charts follow the
+ * choice too: they take their colours when they are created, so then the page is reloaded.
+ */
+if (typeof DbxTheme !== "undefined")
+{
+	DbxTheme.onChange(function(effective)
+	{
+		var wanted = (effective === "dark") ? "dark" : "white";
+		if (wanted === _colorSchema)
+			return;
+		if (_graphsAlwaysDark)
+		{
+			_colorSchema = wanted;
+			document.documentElement.classList.toggle('dbx-ui-dark', wanted === 'dark');
+		}
+		else
+			window.location.reload();
+	});
+}
+
 /* **********************************************************************
 ** ** GLOBAL VARIABLES
 ** **********************************************************************/
@@ -395,8 +443,9 @@ var _serverList   = [];      // What servers does the URL reflect
 var _graphMap     = [];      // Graphs that are displaied / instantiated
 var _debug        = 0;       // Debug level: 0=off, 1=more, 2=evenMore, 3...
 var _subscribe    = false;   // If we should subscribe to Graph data from the server
-//var _colorSchema  = "white"; // Color schema, can be: "white" or "dark"
-var _colorSchema  = "dark"; // Color schema, can be: "white" or "dark"
+var _colorSchema  = dbxGraphColorSchema(); // Color schema, can be: "white" or "dark"
+// Page UI dark marker for shared CSS (e.g. the date range picker in dbxcentral.css): graph.html keeps its own <html> attributes
+document.documentElement.classList.toggle('dbx-ui-dark', _colorSchema === 'dark');
 var _showSrvTimer = null;
 var _lastHistoryMomentsArray = null;
 var _hasActiveHistoryStatementArr = null;
@@ -1163,15 +1212,6 @@ setTimeout(function()
 		if (sb !== null) _alarmHistoryBefore = parseInt(sb, 10) || 30;
 		if (sa !== null) _alarmHistoryAfter  = parseInt(sa, 10) || 5;
 	} catch(e) {}
-
-	// Restore Active Statements dark mode — use same getStorage mechanism as all other checkboxes
-	var savedAsD = getStorage('dbxtune_checkboxes_').get('active-statements-dark-chk');
-	var asDark = (savedAsD === 'checked') ? true
-	           : (savedAsD === 'not')     ? false
-	           : (_colorSchema === 'dark');   // first visit: follow page colour scheme
-	$('#active-statements-dark-chk').prop('checked', asDark);
-	if (asDark) $('#active-statements').addClass('as-dark');
-	else        $('#active-statements').removeClass('as-dark');
 }, 10);
 
 
@@ -1202,11 +1242,12 @@ var _alarmHistoryCache    = null; // cached raw event array for the full history
 var _alarmHistoryCacheKey = null; // fetchStart string used as the cache key
 // Note: _alarmPanelOpen and _alarmPanelAllData are defined in dbxAlarm.js (shared)
 
-function activeStatementsDarkToggle(on)
-{
-	if (on) $('#active-statements').addClass('as-dark'); else $('#active-statements').removeClass('as-dark');
-	getStorage('dbxtune_checkboxes_').set('active-statements-dark-chk', on ? 'checked' : 'not');
-}
+// Colours of the Active Statements panel: [Auto | Light | Dark] in its header (Auto = same as the page), remembered per browser
+var _activeStatementsTheme = DbxTheme.panelMode({
+	key   : 'activeStatements',
+	mount : '#active-statements-theme',
+	apply : function(dark) { $('#active-statements').toggleClass('as-dark', dark); }
+});
 
 // graph.html override of alarmPanelToggle — adds history-tab + _colorSchema support
 function alarmPanelToggle()
@@ -1220,12 +1261,8 @@ function alarmPanelToggle()
 			$p.css({ bottom: '', top: (window.innerHeight - h) + 'px', left: '0px' });
 			$p.data('positioned', true);
 		}
-		// Restore dark mode preference (default to page colour scheme)
-		var savedDark = null;
-		try { savedDark = localStorage.getItem('alarmPanelDark'); } catch(e) {}
-		var dark = (savedDark !== null) ? (savedDark === '1') : (_colorSchema === 'dark');
-		$('#alarm-dark-chk').prop('checked', dark);
-		alarmDarkToggle(dark);
+		// Colours: the panel's Auto/Light/Dark choice (Auto = same as the page), see dbxAlarm.js
+		_alarmThemeCtrl().refresh();
 		$p.show();
 		if (_alarmHistoryTs) {
 			alarmPanelShowTab('history');
@@ -2966,11 +3003,8 @@ function dbxTuneGraphSubscribe()
 			$as.css({ 'max-height': maxH + 'px', 'overflow-y': 'auto' });
 		})();
 
-		// Re-apply dark mode after every render — check checkbox state OR saved preference
-		var _asDarkChk = document.getElementById('active-statements-dark-chk');
-		var _asDarkOn  = (_asDarkChk && _asDarkChk.checked)
-		              || (getStorage('dbxtune_checkboxes_').get('active-statements-dark-chk') === 'checked');
-		if (_asDarkOn) $('#active-statements').addClass('as-dark');
+		// Re-apply the panel colours after every render (Auto/Light/Dark choice)
+		$('#active-statements').toggleClass('as-dark', _activeStatementsTheme.isDark());
 
 		// Set count at the top of the poupup window
 		$("#active-statements-count").html(totalActiveStatementsCount);
@@ -3394,7 +3428,7 @@ class DbxGraph
 			this._chartConfig.options.scales.y.suggestedMin = 0;   // Adjustment used when calculating the minimum data value
 		}
 
-		if (_colorSchema === "dark")
+		if (dbxGraphChartSchema() === "dark")
 		{
 			Chart.defaults.color = '#ccc';
 
@@ -3418,12 +3452,18 @@ class DbxGraph
 		newDiv.setAttribute("id", this._fullName);
 		newDiv.setAttribute("graph-line-props", this.buildHtmlAttrGraphLineProps());
 		newDiv.style.border = "1px dotted gray";
-		if (_colorSchema === "dark")
+		if (dbxGraphChartSchema() === "dark")
 		{
 			newDiv.style.background = "#343a40";  // same as color as bootstrap "dark"
 			document.body.style.background = "#343a40";  // same as color as bootstrap "dark"
 			
 			$("#api-feedback").css('color', '#ccc');
+		}
+		else
+		{
+			// Light: not plain white (too bright for a page full of charts) - light grey page, slightly lighter chart boxes
+			newDiv.style.background = "#e9ecef";
+			document.body.style.background = "#dee2e6";
 		}
 		newDiv.style.border = "1px dotted gray";
 		newDiv.classList.add("dbx-graph-context-menu"); // add right click menu to the graph, using jQuery contextMenu plugin
@@ -3470,6 +3510,8 @@ class DbxGraph
 		try {
 			$.contextMenu({
 				selector: '.dbx-graph-context-menu',
+				// Colours follow the page Theme (_colorSchema), set on every open so a theme switch needs no reload (graph.html CSS)
+				events: { show: function(opt) { opt.$menu.toggleClass('dbx-ctx-dark', _colorSchema === 'dark'); } },
 				items: {
 					selectGraphs: {
 						name: "Select Graphs\u2026",
@@ -4126,7 +4168,7 @@ class DbxGraph
 	 */
 	getGridColorFunction()
 	{
-		const isDark    = (_colorSchema === "dark");
+		const isDark    = (dbxGraphChartSchema() === "dark");
 		const lineColor = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)';
 		const zeroColor = isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.25)';
 
@@ -4478,7 +4520,7 @@ function dbxChartPrintApiHelp()
 {
 	// alert("Specify 'sessionName=NAME' as a parameter in the URL.");
 	// return;
-	var _isDark = (getParameter("cs", "dark") === "dark");
+	var _isDark = (_colorSchema === "dark");
 	var _css = _isDark ? (
 		'  .param-help-wrap { color: #ccc; font-size: 0.95em; margin-top: 6px; }' +
 		'  .param-help-table th { background: #1e1e1e; color: #eee; border-bottom: 2px solid #555; }' +
@@ -4666,8 +4708,7 @@ function dbxChartPrintApiHelp()
 		'</tr>' +
 		'<tr>' + 
 			'<td>cs</td>' + 
-			'<td>Color Schema... If you want a <i>dark</i> theme... use: <code>cs=dark</code><br>' + 
-			'<b>default:</b> white<br>' + 
+			'<td>Color Schema: <b>no longer used</b> (ignored). Light/dark is chosen in the navbar (Auto = follow the operating system)<br>' + 
 			'</td>' +
 		'</tr>' +
 		'<tr>' + 
@@ -4881,7 +4922,7 @@ function dbxTuneLoadCharts(destinationDivId)
 	const gwidth         = getParameter("gwidth",        650);
 	const sampleType     = getParameter("sampleType",    "");
 	const sampleValue    = getParameter("sampleValue",   "");
-	const colorSchema    = getParameter("cs",            "dark");
+	const colorSchema    = dbxGraphColorSchema();
 	const openSpvParam   = getParameter("openShowplanViewer", "");
 	const openQsParam    = getParameter("openQueryStore",     "");
 	const openCdParam    = getParameter("openCounterDetails", "") || getParameter("cd", "");

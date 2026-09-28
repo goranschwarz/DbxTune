@@ -266,16 +266,8 @@ function queryStoreToggle()
 	$panel.css({ display: 'flex', 'z-index': ++window._dbxTopZ });
 	try { localStorage.setItem('queryStore-panelOpen', '1'); } catch(e) {}
 
-	// Restore dark mode preference
-	var dark = _colorSchema === 'dark';
-	try {
-		var saved = typeof getStorage === 'function'
-			? getStorage('dbxtune_checkboxes_').get('query-store-dark-chk') : null;
-		if (saved === 'checked') dark = true;
-		else if (saved === 'not') dark = false;
-	} catch(e) {}
-	$('#query-store-dark').prop('checked', dark);
-	if (dark) $panel.addClass('qs-dark'); else $panel.removeClass('qs-dark');
+	// Colours: the panel's Auto/Light/Dark choice (Auto = same as the page)
+	_qsTheme.refresh();
 
 	// Restore number format preference
 	qsNumFmtInit();
@@ -313,14 +305,19 @@ function queryStoreClose()
 	$('#query-store-ts').hide();
 }
 
-function queryStoreDarkToggle(on)
+/** Colours of the Query Store panel: [Auto | Light | Dark] in its header (Auto = same as the page), remembered per browser */
+var _qsTheme = DbxTheme.panelMode({
+	key   : 'queryStore',
+	mount : '#query-store-theme',
+	apply : function(dark) { _qsApplyDark(dark); }
+});
+
+function _qsApplyDark(on)
 {
-	if (on) $('#query-store-panel').addClass('qs-dark');
-	else    $('#query-store-panel').removeClass('qs-dark');
-	try {
-		if (typeof getStorage === 'function')
-			getStorage('dbxtune_checkboxes_').set('query-store-dark-chk', on ? 'checked' : 'not');
-	} catch(e) {}
+	var changed = (_qsIsDark() !== on);
+	$('#query-store-panel').toggleClass('qs-dark', on);
+	if (!changed)
+		return;
 	// Re-render the brush + wait charts so Chart.js canvas colors update immediately
 	if (_qsMultiDbTimelines || _qsTqLastResult) {
 		var tl = _qsMultiDbTimelines || (_qsTqLastResult && _qsTqLastResult.timeline) || [];
@@ -702,12 +699,12 @@ function queryStoreRenderDatabases(r)
 		var detailsHtml = '';
 		if (showDetails) {
 			detailsHtml =
-				  '<details style="margin-top:18px;border:1px solid #d0d0d0;border-radius:4px;background:#fafafa;">'
-				+ '<summary style="padding:6px 10px;cursor:pointer;font-weight:600;color:#333;">'
+				  '<details style="margin-top:18px;border:1px solid var(--qss-card-border);border-radius:4px;background:var(--qss-card-bg);">'
+				+ '<summary style="padding:6px 10px;cursor:pointer;font-weight:600;color:var(--qss-summary);">'
 				+ detailsSummary
 				+ '</summary>'
 				+ '<div style="padding:8px 12px;">'
-				+ '<p style="font-size:0.85em;color:#555;margin-bottom:6px;">'
+				+ '<p style="font-size:0.85em;color:var(--qss-muted);margin-bottom:6px;">'
 				+ 'Run the snippet below in SSMS or <code>sqlcmd</code> against the target instance to enable Query Store:'
 				+ '</p>'
 				+ '<div style="position:relative;">'
@@ -718,7 +715,7 @@ function queryStoreRenderDatabases(r)
 				+ escHtml(enableSql)
 				+ '</pre>'
 				+ '</div>'
-				+ '<p style="font-size:0.78em;color:#777;margin-top:8px;margin-bottom:0;">'
+				+ '<p style="font-size:0.78em;color:var(--qss-muted-2);margin-top:8px;margin-bottom:0;">'
 				+ 'After enabling, wait at least one <code>INTERVAL_LENGTH_MINUTES</code> for runtime stats to accumulate, then click <b>Extract now</b> above.'
 				+ '</p>'
 				+ '</div>'
@@ -864,16 +861,16 @@ function _qsBuildStatusSection(qsAllDbs, extractedDbNames)
 	var enabledCount  = qsAllDbs.filter(function(d) { return d.QsIsEnabled; }).length;
 	var disabledCount = qsAllDbs.length - enabledCount;
 	var summary = qsAllDbs.length + ' databases &mdash; '
-		+ '<span style="color:#155724;">' + enabledCount + ' enabled</span>'
-		+ (disabledCount > 0 ? ', <span style="color:#721c24;">' + disabledCount + ' disabled</span>' : '');
+		+ '<span style="color:var(--qss-ok);">' + enabledCount + ' enabled</span>'
+		+ (disabledCount > 0 ? ', <span style="color:var(--qss-bad);">' + disabledCount + ' disabled</span>' : '');
 
 	var th = function(label, title) {
-		return '<th style="white-space:nowrap;font-size:0.8em;padding:3px 6px;background:#f0f0f0;border:1px solid #ccc;cursor:default;"'
+		return '<th style="white-space:nowrap;font-size:0.8em;padding:3px 6px;background:var(--qss-th-bg);border:1px solid var(--qss-th-border);cursor:default;"'
 			+ (title ? ' title="' + escHtml(title) + '"' : '') + '>' + label + '</th>';
 	};
 	var td = function(val, style) {
-		return '<td style="font-size:0.8em;padding:2px 6px;border:1px solid #ddd;white-space:nowrap;' + (style || '') + '">'
-			+ (val !== null && val !== undefined && val !== '' ? escHtml(String(val)) : '<span style="color:#aaa;">—</span>') + '</td>';
+		return '<td style="font-size:0.8em;padding:2px 6px;border:1px solid var(--qss-td-border);white-space:nowrap;' + (style || '') + '">'
+			+ (val !== null && val !== undefined && val !== '' ? escHtml(String(val)) : '<span style="color:var(--qss-dash);">—</span>') + '</td>';
 	};
 
 	var _enableSqlForDb = function(dbName) {
@@ -987,19 +984,19 @@ function _qsBuildStatusSection(qsAllDbs, extractedDbNames)
 		var isOk     = db.QsIsOk;
 		var hasData  = !!extractedSet[dbName.toLowerCase()];
 
-		var rowBg    = enabled ? '#f0fff0' : '#fff0f0';
+		var rowBg    = enabled ? 'var(--qss-row-ok)' : 'var(--qss-row-bad)';
 		var enLabel  = enabled
-			? '<span style="color:#155724;font-weight:600;">&#10003; Yes</span>'
-			: '<span style="color:#721c24;font-weight:600;">&#10007; No</span>';
-		var okLabel  = isOk === null || isOk === undefined ? '<span style="color:#aaa;">—</span>'
+			? '<span style="color:var(--qss-ok);font-weight:600;">&#10003; Yes</span>'
+			: '<span style="color:var(--qss-bad);font-weight:600;">&#10007; No</span>';
+		var okLabel  = isOk === null || isOk === undefined ? '<span style="color:var(--qss-dash);">—</span>'
 			: (String(isOk).toUpperCase() === 'TRUE' || isOk === true)
-				? '<span style="color:#155724;">&#10003;</span>'
-				: '<span style="color:#721c24;">&#10007;</span>';
+				? '<span style="color:var(--qss-ok);">&#10003;</span>'
+				: '<span style="color:var(--qss-bad);">&#10007;</span>';
 		var dataLabel = hasData
-			? '<span style="color:#155724;">&#10003;</span>'
-			: '<span style="color:#aaa;">—</span>';
+			? '<span style="color:var(--qss-ok);">&#10003;</span>'
+			: '<span style="color:var(--qss-dash);">—</span>';
 
-		var copyCell = '<td style="font-size:0.8em;padding:2px 6px;border:1px solid #ddd;text-align:center;">';
+		var copyCell = '<td style="font-size:0.8em;padding:2px 6px;border:1px solid var(--qss-td-border);text-align:center;">';
 		if (!enabled) {
 			var sqlText = _enableSqlForDb(dbName);
 			copyCell += '<button class="btn btn-sm btn-outline-secondary" '
@@ -1019,8 +1016,8 @@ function _qsBuildStatusSection(qsAllDbs, extractedDbNames)
 		tableHtml += '<tr style="background:' + rowBg + ';">'
 			+ td(dbName, 'font-weight:600;')
 			+ copyCell
-			+ '<td style="font-size:0.8em;padding:2px 6px;border:1px solid #ddd;text-align:center;">' + enLabel + '</td>'
-			+ '<td style="font-size:0.8em;padding:2px 6px;border:1px solid #ddd;text-align:center;">' + okLabel + '</td>'
+			+ '<td style="font-size:0.8em;padding:2px 6px;border:1px solid var(--qss-td-border);text-align:center;">' + enLabel + '</td>'
+			+ '<td style="font-size:0.8em;padding:2px 6px;border:1px solid var(--qss-td-border);text-align:center;">' + okLabel + '</td>'
 			+ td(db.QsDesiredState)
 			+ td(db.QsActualState)
 			+ td(db.QsMaxSizeInMb)
@@ -1028,13 +1025,13 @@ function _qsBuildStatusSection(qsAllDbs, extractedDbNames)
 			+ td(db.QsFreeSpaceInMb)
 			+ td(db.QsUsedPct !== null && db.QsUsedPct !== undefined ? db.QsUsedPct + '%' : null)
 			+ td(db.QsReadOnlyReason)
-			+ '<td style="font-size:0.8em;padding:2px 6px;border:1px solid #ddd;text-align:center;">' + dataLabel + '</td>'
+			+ '<td style="font-size:0.8em;padding:2px 6px;border:1px solid var(--qss-td-border);text-align:center;">' + dataLabel + '</td>'
 			+ '</tr>';
 	});
 	tableHtml += '</tbody></table>';
 
-	return '<details style="margin-top:14px;border:1px solid #d0d0d0;border-radius:4px;background:#fafafa;">'
-		+ '<summary style="padding:6px 10px;cursor:pointer;font-weight:600;color:#333;font-size:0.9em;">'
+	return '<details style="margin-top:14px;border:1px solid var(--qss-card-border);border-radius:4px;background:var(--qss-card-bg);">'
+		+ '<summary style="padding:6px 10px;cursor:pointer;font-weight:600;color:var(--qss-summary);font-size:0.9em;">'
 		+ '&#128200; Query Store Status &mdash; All Databases (' + summary + ')'
 		+ '</summary>'
 		+ '<div style="padding:6px 10px 10px 10px;overflow-x:auto;">'

@@ -704,8 +704,8 @@ window.SqlServerShowplan = (function () {
 	// per-node connector positions from a flexbox row directly.
 	var CSS = ''
 		+ '.ss-plan-wrap { font-family: -apple-system, Segoe UI, Roboto, sans-serif; font-size: 0.8em; padding: 8px 0; }'
-		+ '.ss-plan-stmt-hdr { font-weight: 600; font-size: 0.9em; color: #444; margin: 6px 0 2px 0; }'
-		+ '.ss-plan-step-hdr { font-size: 0.8em; color: #888; margin-bottom: 6px; }'
+		+ '.ss-plan-stmt-hdr { font-weight: 600; font-size: 0.9em; color: var(--sp-text-1); margin: 6px 0 2px 0; }'
+		+ '.ss-plan-step-hdr { font-size: 0.8em; color: var(--sp-text-5); margin-bottom: 6px; }'
 		// width:max-content keeps this box sized to its own content rather than stretching to fill
 		// the dialog's ancestor .scroll-tree (fixed width:3000px, shared by every section of the SQL
 		// Server Showplan modal, not graph-specific) - otherwise the flex-centered tree ends up positioned deep
@@ -715,14 +715,14 @@ window.SqlServerShowplan = (function () {
 		+ '.ss-plan-tree ul, .ss-plan-tree ul ul { display: flex; justify-content: center; padding-top: 20px; position: relative; }'
 		+ '.ss-plan-tree ul { list-style: none; margin: 0; padding-left: 0; }'
 		+ '.ss-plan-tree li { list-style: none; position: relative; padding: 20px 8px 0 8px; display: flex; flex-direction: column; align-items: center; }'
-		+ '.ss-plan-tree li::before, .ss-plan-tree li::after { content: ""; position: absolute; top: 0; right: 50%; border-top: 1px solid #b0b0b0; width: 50%; height: 20px; }'
-		+ '.ss-plan-tree li::after { right: auto; left: 50%; border-left: 1px solid #b0b0b0; }'
+		+ '.ss-plan-tree li::before, .ss-plan-tree li::after { content: ""; position: absolute; top: 0; right: 50%; border-top: 1px solid var(--sp-edge-2); width: 50%; height: 20px; }'
+		+ '.ss-plan-tree li::after { right: auto; left: 50%; border-left: 1px solid var(--sp-edge-2); }'
 		+ '.ss-plan-tree li:only-child { padding-top: 0; }'
 		+ '.ss-plan-tree li:only-child::before, .ss-plan-tree li:only-child::after { display: none; }'
 		+ '.ss-plan-tree li:first-child::before, .ss-plan-tree li:last-child::after { border: 0 none; }'
-		+ '.ss-plan-tree li:last-child::before { border-right: 1px solid #b0b0b0; border-radius: 0 5px 0 0; }'
+		+ '.ss-plan-tree li:last-child::before { border-right: 1px solid var(--sp-edge-2); border-radius: 0 5px 0 0; }'
 		+ '.ss-plan-tree li:first-child::after { border-radius: 5px 0 0 0; }'
-		+ '.ss-plan-tree ul ul::before { content: ""; position: absolute; top: 0; left: 50%; border-left: 1px solid #b0b0b0; width: 0; height: 20px; }'
+		+ '.ss-plan-tree ul ul::before { content: ""; position: absolute; top: 0; left: 50%; border-left: 1px solid var(--sp-edge-2); width: 0; height: 20px; }'
 		+ '.ss-plan-tree > ul > li { padding-top: 0; }'
 		+ '.ss-plan-tree > ul > li::before, .ss-plan-tree > ul > li::after { display: none; }'
 		// Left-to-right variant: same technique, axes swapped (top<->left, bottom<->right,
@@ -731,8 +731,8 @@ window.SqlServerShowplan = (function () {
 		// rules above, so toggling it is enough to flip orientation without touching the DOM.
 		+ '.ss-plan-tree.ss-plan-horizontal ul, .ss-plan-tree.ss-plan-horizontal ul ul { flex-direction: column; justify-content: center; padding-top: 0; padding-left: 24px; }'
 		+ '.ss-plan-tree.ss-plan-horizontal li { padding: 8px 0 8px 24px; flex-direction: row; align-items: center; }'
-		+ '.ss-plan-tree.ss-plan-horizontal li::before, .ss-plan-tree.ss-plan-horizontal li::after { top: auto; left: 0; right: auto; bottom: 50%; border-top: 0 none; border-left: 1px solid #b0b0b0; width: 24px; height: 50%; }'
-		+ '.ss-plan-tree.ss-plan-horizontal li::after { bottom: auto; top: 50%; border-top: 1px solid #b0b0b0; }'
+		+ '.ss-plan-tree.ss-plan-horizontal li::before, .ss-plan-tree.ss-plan-horizontal li::after { top: auto; left: 0; right: auto; bottom: 50%; border-top: 0 none; border-left: 1px solid var(--sp-edge-2); width: 24px; height: 50%; }'
+		+ '.ss-plan-tree.ss-plan-horizontal li::after { bottom: auto; top: 50%; border-top: 1px solid var(--sp-edge-2); }'
 		+ '.ss-plan-tree.ss-plan-horizontal li:only-child { padding-left: 0; }'
 		// These two clear the "no sibling on this side" edge exactly like the plain-mode
 		// `li:first-child::before, li:last-child::after { border: 0 none; }` rule does - but that
@@ -743,9 +743,9 @@ window.SqlServerShowplan = (function () {
 		// exactly the "hook" artifact reported against the real dialog.
 		+ '.ss-plan-tree.ss-plan-horizontal li:first-child::before { border: 0 none; }'
 		+ '.ss-plan-tree.ss-plan-horizontal li:last-child::after { border: 0 none; }'
-		+ '.ss-plan-tree.ss-plan-horizontal li:last-child::before { border-right: 0 none; border-bottom: 1px solid #b0b0b0; border-radius: 0; }'
+		+ '.ss-plan-tree.ss-plan-horizontal li:last-child::before { border-right: 0 none; border-bottom: 1px solid var(--sp-edge-2); border-radius: 0; }'
 		+ '.ss-plan-tree.ss-plan-horizontal li:first-child::after { border-radius: 0; }'
-		+ '.ss-plan-tree.ss-plan-horizontal ul ul::before { top: 50%; left: 0; border-left: 0 none; border-top: 1px solid #b0b0b0; width: 24px; height: 0; }'
+		+ '.ss-plan-tree.ss-plan-horizontal ul ul::before { top: 50%; left: 0; border-left: 0 none; border-top: 1px solid var(--sp-edge-2); width: 24px; height: 0; }'
 		+ '.ss-plan-tree.ss-plan-horizontal > ul > li { padding-left: 0; }'
 		// Experimental alternate connector style modeled on html-query-plan (the SQL Server plan
 		// viewer already vendored in this app, src/com/dbxtune/sql/showplan/sqlserver/dist/qp.js):
@@ -831,16 +831,16 @@ window.SqlServerShowplan = (function () {
 		// orientation had almost no visible gap/arrow room between consecutive boxes wherever the
 		// chain does not branch - i.e. everywhere except right at a join/spool.
 		+ '.ss-plan-tree.ss-plan-compact-h li:only-child { padding: 0; }'
-		+ '.ss-plan-box { position: relative; border: 1px solid #999; border-radius: 5px; background: #fff; padding: 5px 9px; cursor: pointer; min-width: 120px; max-width: 220px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }'
-		+ '.ss-plan-box:hover { border-color: #4a90d9; }'
-		+ '.ss-plan-box.ss-plan-warn { border-color: #d9a24a; background: #fff8ec; }'
-		+ '.ss-plan-box.ss-plan-big-table { border-color: #c0392b; border-width: 2px; background: #fdf1f0; }'
-		+ '.ss-plan-box.ss-plan-eager-spool { border-color: #c0392b; border-width: 2px; background: #fdf1f0; }'
-		+ '.ss-plan-metric.ss-plan-tablesize-warn { color: #c0392b; font-weight: 600; }'
-		+ '.ss-plan-box.ss-plan-reformat { border-color: #c0392b; border-width: 2px; background: #fdf1f0; }'
-		+ '.ss-plan-box.ss-plan-reformat-info { border-color: #4a90d9; border-width: 2px; background: #eef5fc; }'
-		+ '.ss-plan-metric.ss-plan-reformat-info-metric { color: #2a6ebb; font-weight: 600; }'
-		+ '.ss-plan-nodeid { position: absolute; top: 2px; right: 4px; font-size: 0.72em; color: #aaa; line-height: 1; }'
+		+ '.ss-plan-box { position: relative; border: 1px solid var(--sp-node-border); border-radius: 5px; background: var(--sp-bg); padding: 5px 9px; cursor: pointer; min-width: 120px; max-width: 220px; text-align: center; box-shadow: 0 1px 2px var(--sp-shadow); }'
+		+ '.ss-plan-box:hover { border-color: var(--sp-sel); }'
+		+ '.ss-plan-box.ss-plan-warn { border-color: var(--sp-warn-border); background: var(--sp-warn-bg); }'
+		+ '.ss-plan-box.ss-plan-big-table { border-color: var(--sp-err); border-width: 2px; background: var(--sp-err-bg); }'
+		+ '.ss-plan-box.ss-plan-eager-spool { border-color: var(--sp-err); border-width: 2px; background: var(--sp-err-bg); }'
+		+ '.ss-plan-metric.ss-plan-tablesize-warn { color: var(--sp-err); font-weight: 600; }'
+		+ '.ss-plan-box.ss-plan-reformat { border-color: var(--sp-err); border-width: 2px; background: var(--sp-err-bg); }'
+		+ '.ss-plan-box.ss-plan-reformat-info { border-color: var(--sp-sel); border-width: 2px; background: var(--sp-sel-bg); }'
+		+ '.ss-plan-metric.ss-plan-reformat-info-metric { color: var(--sp-blue); font-weight: 600; }'
+		+ '.ss-plan-nodeid { position: absolute; top: 2px; right: 4px; font-size: 0.72em; color: var(--sp-text-7); line-height: 1; }'
 		+ '.ss-plan-icon { width: 32px; height: 32px; margin: 0 auto; background-repeat: no-repeat; }'
 		// position:relative so the DDL-info icon (below) can be pulled out of the centered flex flow
 		// and pinned to the row's own right edge without disturbing how the remaining icons center.
@@ -855,42 +855,42 @@ window.SqlServerShowplan = (function () {
 		+ '.ss-plan-ddlinfo-icon { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); background-image: url(/images/ddlinfo.png); background-size: 16px 16px; }'
 		// "Missing" reuses the same base icon and draws a small red X badge over its bottom-right
 		// corner in pure CSS, rather than a second hand-composited image.
-		+ '.ss-plan-ddlinfo-icon.ss-plan-ddlinfo-missing::after { content: \'\'; position: absolute; right: -3px; bottom: -3px; width: 9px; height: 9px; border-radius: 50%; background: #c0392b; box-shadow: 0 0 0 1.5px #fff; }'
+		+ '.ss-plan-ddlinfo-icon.ss-plan-ddlinfo-missing::after { content: \'\'; position: absolute; right: -3px; bottom: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--sp-err); box-shadow: 0 0 0 1.5px var(--sp-bg); }'
 		+ '.ss-plan-ddlinfo-icon.ss-plan-ddlinfo-missing::before { content: \'\\2715\'; position: absolute; right: -3px; bottom: -4px; width: 9px; height: 9px; font-size: 7px; line-height: 9px; color: #fff; text-align: center; z-index: 1; }'
 		+ '.ss-plan-label { font-weight: 600; white-space: nowrap; }'
-		+ '.ss-plan-logicalop { font-size: 0.85em; color: #6a6a6a; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; margin: 0 auto; }'
-		+ '.ss-plan-subtitle { font-size: 0.85em; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; margin: 0 auto; }'
-		+ '.ss-plan-metric { font-size: 0.85em; color: #666; white-space: nowrap; }'
-		+ '.ss-plan-metric.ss-plan-warn-text { color: #a3690a; font-weight: 600; }'
-		+ '.ss-plan-metric-pct-warn { color: #c0392b; font-weight: 700; }'
-		+ '.ss-plan-detail-pct-warn { color: #c0392b; font-weight: 700; }'
-		+ '.ss-plan-metric-filter { color: #2a6f97; font-size: 0.85em; white-space: nowrap; }'
+		+ '.ss-plan-logicalop { font-size: 0.85em; color: var(--sp-text-3); font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; margin: 0 auto; }'
+		+ '.ss-plan-subtitle { font-size: 0.85em; color: var(--sp-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; margin: 0 auto; }'
+		+ '.ss-plan-metric { font-size: 0.85em; color: var(--sp-text-3); white-space: nowrap; }'
+		+ '.ss-plan-metric.ss-plan-warn-text { color: var(--sp-warn-text-3); font-weight: 600; }'
+		+ '.ss-plan-metric-pct-warn { color: var(--sp-err); font-weight: 700; }'
+		+ '.ss-plan-detail-pct-warn { color: var(--sp-err); font-weight: 700; }'
+		+ '.ss-plan-metric-filter { color: var(--sp-blue-2); font-size: 0.85em; white-space: nowrap; }'
 		// position:fixed and attached to <body> (see openDetailPanel) so the panel is never clipped by
 		// the diagram's own overflow:auto viewport - JS supplies left/top. z-index clears Bootstrap's
 		// modal (1050) and its backdrop, since this renders inside the Showplan dialog.
-		+ '.ss-plan-detail { position: fixed; z-index: 2000; background: #fffef5; border: 1px solid #c9b98a; border-radius: 4px; padding: 6px 10px; min-width: 220px; max-width: 560px; text-align: left; box-shadow: 0 2px 10px rgba(0,0,0,0.28); font-size: 11px; line-height: 1.35; }'
+		+ '.ss-plan-detail { position: fixed; z-index: 2000; background: var(--sp-tt-bg); border: 1px solid var(--sp-tt-border); border-radius: 4px; padding: 6px 10px; min-width: 220px; max-width: 560px; text-align: left; box-shadow: 0 2px 10px var(--sp-shadow-2); font-size: 11px; line-height: 1.35; }'
 		// A panel for an operator with a long predicate can be taller than the screen; cap it and let
 		// it scroll rather than letting it run off the bottom.
 		+ '.ss-plan-detail { max-height: 80vh; overflow-y: auto; overscroll-behavior: contain; }'
 		+ '.ss-plan-detail table { border-collapse: collapse; }'
-		+ '.ss-plan-detail-desc { white-space: normal; font-style: italic; color: #6b5f3d; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid #e6dcb8; line-height: 1.35; }'
+		+ '.ss-plan-detail-desc { white-space: normal; font-style: italic; color: var(--sp-tt-text); margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--sp-tt-sep); line-height: 1.35; }'
 		+ '.ss-plan-detail-grid { display: flex; align-items: flex-start; gap: 0 14px; }'
-		+ '.ss-plan-detail-right { border-left: 1px solid #e6dcb8; padding-left: 14px; }'
-		+ '.ss-plan-detail-idx-hdr { font-size: 10px; color: #6b5f3d; margin-top: 4px; }'
+		+ '.ss-plan-detail-right { border-left: 1px solid var(--sp-tt-sep); padding-left: 14px; }'
+		+ '.ss-plan-detail-idx-hdr { font-size: 10px; color: var(--sp-tt-text); margin-top: 4px; }'
 		// Full-width wrapping text, for values too long to sit safely in a ".ss-plan-detail td"
 		// (nowrap) cell without forcing the two-column grid wider than the panel - see the Predicate/
 		// Output List block in buildDetailPanel().
 		+ '.ss-plan-detail-wrap { white-space: normal; word-break: break-word; }'
 		+ '.ss-plan-idx-tbl td { white-space: normal; }'
 		+ '.ss-plan-detail td { padding: 1px 6px 1px 0; vertical-align: top; white-space: nowrap; }'
-		+ '.ss-plan-detail td.ss-plan-detail-key { color: #777; }'
-		+ '.ss-plan-detail .ss-plan-raw-line { font-family: monospace; white-space: pre-wrap; color: #555; }'
+		+ '.ss-plan-detail td.ss-plan-detail-key { color: var(--sp-text-4); }'
+		+ '.ss-plan-detail .ss-plan-raw-line { font-family: monospace; white-space: pre-wrap; color: var(--sp-text-2); }'
 		+ '.ss-plan-detail.ss-plan-tooltip { pointer-events: none; cursor: default; }'
-		+ '.ss-plan-fallback { color: #888; font-size: 0.85em; font-style: italic; padding: 6px 0; }'
+		+ '.ss-plan-fallback { color: var(--sp-text-5); font-size: 0.85em; font-style: italic; padding: 6px 0; }'
 		// Triggered by window.ssShowplanJumpToNode() (dbxShowplan.js) when a Plan Analysis finding's
 		// "[Node N]" tag is clicked - draws attention to the box scrollIntoView() just centered on
 		// without permanently changing its styling (the class is removed again once the animation ends).
-		+ '@keyframes ss-plan-flash { 0%, 100% { box-shadow: 0 1px 2px rgba(0,0,0,0.08); } 20%, 60% { box-shadow: 0 0 0 5px rgba(74,144,217,0.85); } 40%, 80% { box-shadow: 0 1px 2px rgba(0,0,0,0.08); } }'
+		+ '@keyframes ss-plan-flash { 0%, 100% { box-shadow: 0 1px 2px var(--sp-shadow); } 20%, 60% { box-shadow: 0 0 0 5px rgba(74,144,217,0.85); } 40%, 80% { box-shadow: 0 1px 2px var(--sp-shadow); } }'
 		// 5 discrete pulses (not a time-based cutoff) - ssShowplanJumpToNode (dbxShowplan.js) listens
 		// for this animation's 'animationend' event (which only fires once, after the last iteration)
 		// to remove the class, so the two stay in sync automatically if this iteration count or
@@ -898,17 +898,17 @@ window.SqlServerShowplan = (function () {
 		+ '.ss-plan-box.ss-plan-flash { animation: ss-plan-flash 0.8s ease-in-out 5; }'
 		// --- SQL Server specific additions on top of the ported ASE styling ---
 		// Node ID badge (the ASE renderer's VA badge, renamed - SQL Server numbers operators by @NodeId).
-		+ '.ss-plan-nodeid { position: absolute; top: 2px; right: 4px; font-size: 0.72em; color: #aaa; line-height: 1; }'
+		+ '.ss-plan-nodeid { position: absolute; top: 2px; right: 4px; font-size: 0.72em; color: var(--sp-text-7); line-height: 1; }'
 		// The clicked operator stays visibly marked while the Properties pane shows it - without this
 		// there is no way to tell which box the pane is describing once the pointer has moved away.
-		+ '.ss-plan-box.ss-plan-selected { border-color: #2a6ebb; border-width: 2px; box-shadow: 0 0 0 3px rgba(42,110,187,0.18); }'
-		+ '.ss-plan-box.ss-plan-has-warning { border-color: #d9a24a; }'
+		+ '.ss-plan-box.ss-plan-selected { border-color: var(--sp-blue); border-width: 2px; box-shadow: 0 0 0 3px rgba(42,110,187,0.18); }'
+		+ '.ss-plan-box.ss-plan-has-warning { border-color: var(--sp-warn-border); }'
 		// Top-left corner badge, overlapping the border like .ss-plan-parallel-chip does at
 		// bottom-right - pulled out of the icon row so a warning reads as an alert on the box, not
 		// just another small glyph among the row's neutral operator-property icons.
 		// flex centering rather than line-height/text-align - the ⚠ glyph's uneven left/right bearing
 		// otherwise reads visually off-center inside the small circle.
-		+ '.ss-plan-corner-warn { position: absolute; top: -8px; left: -8px; width: 17px; height: 17px; border-radius: 50%; background: #d9822b; border: 1.5px solid #fff; color: #fff; font-size: 12px; font-weight: 700; line-height: 1; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }'
+		+ '.ss-plan-corner-warn { position: absolute; top: -8px; left: -8px; width: 17px; height: 17px; border-radius: 50%; background: #d9822b; border: 1.5px solid var(--sp-bg); color: #fff; font-size: 12px; font-weight: 700; line-height: 1; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px var(--sp-shadow-2); }'
 		// EXPERIMENTAL - see the m.parWorkers block in renderNode() for the reasoning. Went through a
 		// full outline() (too heavy), then corner accents at one and then two corners (still read as
 		// an abstract mark, not an obvious meaning), landed on the "duplicate/copies" icon metaphor:
@@ -930,20 +930,20 @@ window.SqlServerShowplan = (function () {
 		// chip stays purple - it is the one part meant to stand out (the actual count), same as
 		// before.
 		+ '.ss-plan-parallel-overlay { position: absolute; top: 0; left: 0; pointer-events: none; }'
-		+ '.ss-plan-parallel-sheet { position: absolute; border: 1px solid #999; border-radius: 5px; background: #fff; }'
+		+ '.ss-plan-parallel-sheet { position: absolute; border: 1px solid var(--sp-node-border); border-radius: 5px; background: var(--sp-bg); }'
 		// Sits past the outermost sheet's own corner (the sheet drawn at +6px), not the main box's -
 		// otherwise it reads as part of the stack rather than a count attached to the whole group.
-		+ '.ss-plan-parallel-chip { position: absolute; right: -9px; bottom: -9px; min-width: 15px; height: 15px; padding: 0 2px; border-radius: 8px; background: #707070; color: #fff; font-size: 10px; font-weight: 600; line-height: 15px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.3); }'
-		+ '.ss-plan-cost { font-weight: 600; color: #444; }'
-		+ '.ss-plan-cost.ss-plan-cost-high { color: #c0392b; }'
-		+ '.ss-plan-time { color: #2a6ebb; }'
+		+ '.ss-plan-parallel-chip { position: absolute; right: -9px; bottom: -9px; min-width: 15px; height: 15px; padding: 0 2px; border-radius: 8px; background: var(--sp-chip); color: #fff; font-size: 10px; font-weight: 600; line-height: 15px; text-align: center; box-shadow: 0 1px 2px var(--sp-shadow-2); }'
+		+ '.ss-plan-cost { font-weight: 600; color: var(--sp-text-1); }'
+		+ '.ss-plan-cost.ss-plan-cost-high { color: var(--sp-err); }'
+		+ '.ss-plan-time { color: var(--sp-blue); }'
 		// The statement node heads the plan - given a slightly heavier frame so the eye lands on the
 		// "SELECT" first and reads the flow back from there, the way it does in SSMS.
-		+ '.ss-plan-box.ss-plan-statement { border-color: #7a7a7a; border-width: 2px; background: #fbfbfb; }'
-		+ '.ss-plan-stmt-cost { font-weight: normal; color: #888; font-size: 0.9em; }'
+		+ '.ss-plan-box.ss-plan-statement { border-color: var(--sp-stmt-border); border-width: 2px; background: var(--sp-bg-2); }'
+		+ '.ss-plan-stmt-cost { font-weight: normal; color: var(--sp-text-5); font-size: 0.9em; }'
 		+ '.ss-plan-detail-warnings { margin-bottom: 5px; }'
-		+ '.ss-plan-detail-warn-line { color: #a8500f; white-space: normal; max-width: 520px; line-height: 1.3; }'
-		+ '.ss-plan-detail-hint { margin-top: 5px; padding-top: 4px; border-top: 1px solid #e6dcb8; color: #9a8f6d; font-size: 10px; white-space: normal; }'
+		+ '.ss-plan-detail-warn-line { color: var(--sp-warn-text); white-space: normal; max-width: 520px; line-height: 1.3; }'
+		+ '.ss-plan-detail-hint { margin-top: 5px; padding-top: 4px; border-top: 1px solid var(--sp-tt-sep); color: var(--sp-tt-muted); font-size: 10px; white-space: normal; }'
 		// --- Properties pane (the SSMS-like "everything" view, rendered into opts.propsTarget) ---
 		// The generic half lives in dbxShowplanGraph.js so the ASE pane looks identical and a styling
 		// fix lands once; the per-thread bars below stay here, since only SQL Server has that data.
@@ -953,8 +953,8 @@ window.SqlServerShowplan = (function () {
 		// next to each thread's row count, since "how is it distributed" is far easier to read as bar
 		// LENGTHS than as a column of numbers alone.
 		+ '.ss-plan-prop-thread-row { display: flex; align-items: center; gap: 6px; font-size: 11px; padding: 1px 0; }'
-		+ '.ss-plan-prop-thread-label { flex: 0 0 52px; color: #777; }'
-		+ '.ss-plan-prop-thread-track { flex: 1 1 auto; height: 9px; background: #eee; border-radius: 2px; overflow: hidden; }'
+		+ '.ss-plan-prop-thread-label { flex: 0 0 52px; color: var(--sp-text-4); }'
+		+ '.ss-plan-prop-thread-track { flex: 1 1 auto; height: 9px; background: var(--sp-bg-track); border-radius: 2px; overflow: hidden; }'
 		// display:block is required, not decorative: this is a <span>, which defaults to
 		// display:inline, and an inline element ignores explicit width/height entirely per the CSS
 		// spec - the fill's inline width:N% style was being SET correctly but had zero visual
@@ -963,13 +963,13 @@ window.SqlServerShowplan = (function () {
 		// The track span next to it looked fine only because it happens to be a DIRECT child of a
 		// flex container, which CSS auto-blockifies - this fill span, nested one level deeper
 		// inside the track, gets no such free pass.
-		+ '.ss-plan-prop-thread-fill { display: block; height: 100%; background: #4a90d9; }'
+		+ '.ss-plan-prop-thread-fill { display: block; height: 100%; background: var(--sp-sel); }'
 		// Same busiest-thread-is-suspicious highlight the Skewed Parallelism Plan Analysis finding
 		// (dbxShowplanAnalyzer.js) uses its threshold for - see isThreadSkewed() below, which mirrors
 		// that finding's exact math so this highlight lines up with when that finding actually fires.
-		+ '.ss-plan-prop-thread-fill.ss-plan-prop-thread-skewed { background: #c0392b; }'
-		+ '.ss-plan-prop-thread-value { flex: 0 0 auto; min-width: 70px; text-align: right; color: #444; }'
-		+ '.ss-plan-prop-thread-note { font-size: 10px; color: #999; margin-top: 3px; font-style: italic; }';
+		+ '.ss-plan-prop-thread-fill.ss-plan-prop-thread-skewed { background: var(--sp-err); }'
+		+ '.ss-plan-prop-thread-value { flex: 0 0 auto; min-width: 70px; text-align: right; color: var(--sp-text-1); }'
+		+ '.ss-plan-prop-thread-note { font-size: 10px; color: var(--sp-text-6); margin-top: 3px; font-style: italic; }';
 
 	function injectStyle() {
 		if (STYLE_INJECTED) return;
@@ -1059,7 +1059,7 @@ window.SqlServerShowplan = (function () {
 			marker.setAttribute('orient', 'auto');
 			var arrowHead = document.createElementNS(svgNS, 'path');
 			arrowHead.setAttribute('d', 'M0,0 L' + w + ',' + (h / 2) + ' L0,' + h + ' Z');
-			arrowHead.setAttribute('fill', '#8a8a8a');
+			arrowHead.style.fill = 'var(--sp-edge)';   // style (not the attribute): SVG attributes cannot use var()
 			marker.appendChild(arrowHead);
 			defs.appendChild(marker);
 			markersByThickness[thickness] = id;
@@ -1200,7 +1200,7 @@ window.SqlServerShowplan = (function () {
 			var path = document.createElementNS(svgNS, 'path');
 			path.setAttribute('d', d);
 			path.setAttribute('fill', 'none');
-			path.setAttribute('stroke', notStarted ? '#c3d0de' : deadEnd ? '#cfcfcf' : '#8a8a8a');
+			path.style.stroke = notStarted ? 'var(--sp-edge-ns)' : deadEnd ? 'var(--sp-edge-dead)' : 'var(--sp-edge)';
 			path.setAttribute('stroke-width', String(thickness));
 			// Rounded joins stop the elbow corners looking notched once the line gets heavy.
 			path.setAttribute('stroke-linejoin', 'round');

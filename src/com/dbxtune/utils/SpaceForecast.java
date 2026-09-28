@@ -1885,7 +1885,7 @@ public class SpaceForecast
 				String srvName          = getSrvName();
 
 				String graphList   = getDbxCentalGraphListCsv(cmName, graphName);
-				String baseGraph   = "<a href='/graph.html?subscribe=false&cs=dark&startTime=" + days + "d&sessionName=" + srvName + "<START>&graphList=" + graphList + "&gcols=1&sampleType=AUTO' target='_blank' title='Open a set of Graphs in DbxCentral'>DbxGraphs</a>";
+				String baseGraph   = "<a href='/graph.html?subscribe=false&startTime=" + days + "d&sessionName=" + srvName + "<START>&graphList=" + graphList + "&gcols=1&sampleType=AUTO' target='_blank' title='Open a set of Graphs in DbxCentral'>DbxGraphs</a>";
 				String tpmUsagedDbxtuneGraphLinks = baseGraph.replace("<START>", getDbxGraphMarkTimeForTmp    (results)); //"&markTime=" + getDbxGraphMarkTimeForTmp    (results));
 				String totSizeDbxtuneGraphLinks   = baseGraph.replace("<START>", getDbxGraphMarkTimeForTotSize(results)); //"&markTime=" + getDbxGraphMarkTimeForTotSize(results));
 				String trendDbxtuneGraphLinks     = baseGraph.replace("<START>", "");
