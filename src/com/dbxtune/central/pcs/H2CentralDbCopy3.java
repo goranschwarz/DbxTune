@@ -26,6 +26,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.lang.invoke.MethodHandles;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -42,7 +44,6 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -53,7 +54,6 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -126,6 +126,8 @@ implements AutoCloseable
 //	List<String> _schemaList = new ArrayList<>();
 
 	Process _migrationH2Srv;
+	int    _migrationH2SrvPort = -1;
+	boolean _calledFromCode = false; // true when called from upgradeFromOldH2(), then do not print "manual next steps"
 	String _sourceH2Jar;
 	File   _sourceH2JarFile;
 
@@ -136,7 +138,32 @@ implements AutoCloseable
 	DbxConnection _sourceConn;
 	Catalog       _sourceCatalog;
 
-	int    _sourceDbxCentralDbVersion = -1; 
+	int    _sourceDbxCentralDbVersion = -1;
+	DbType _sourceDbType = null; // set in preCheck()
+
+	/** What kind of DbxTune database we are copying */
+	public enum DbType
+	{
+		/** The DbxCentral database (DBXTUNE_CENTRAL_DB), has table PUBLIC.DbxCentralVersionInfo */
+		DBXCENTRAL,
+
+		/** A DbxTune collector recording (SERVERNAME_yyyy-MM-dd), has table PUBLIC.MonVersionInfo */
+		DBXTUNE_RECORDING
+	};
+
+	/** Result from {@link H2CentralDbCopy3#upgradeFromOldH2(File, File, File, String, String, DbType)} */
+	public static class CopyResult
+	{
+		public boolean ok;
+		public DbType  dbType;
+		public int     tables;
+		public long    sourceRows;
+		public long    targetRows;
+		public long    durationMs;
+
+		@Override
+		public String toString() { return "ok=" + ok + ", dbType=" + dbType + ", tables=" + tables + ", sourceRows=" + sourceRows + ", targetRows=" + targetRows + ", time=" + TimeUtils.msToTimeStrDHMS(durationMs); }
+	} 
 
 	
 	String _targetUser;
@@ -152,7 +179,7 @@ implements AutoCloseable
 	public void setDefaults()
 	{
 		String DBXTUNE_SAVE_DIR = System.getProperty("DBXTUNE_SAVE_DIR");
-		if (DBXTUNE_SAVE_DIR == null)
+		if (DBXTUNE_SAVE_DIR == null && StringUtil.isNullOrBlank(_sourceUrl))
 			throw new RuntimeException("System property 'DBXTUNE_SAVE_DIR' is NOT set.");
 		
 		String sourceDbName = DBXTUNE_SAVE_DIR + File.separatorChar + "DBXTUNE_CENTRAL_DB";
@@ -161,6 +188,12 @@ implements AutoCloseable
 		String sourceH2UrlOp = ";DATABASE_TO_UPPER=false;MAX_COMPACT_TIME=60000;COMPRESS=TRUE;WRITE_DELAY=30000;IFEXISTS=TRUE";
 		String targetH2UrlOp = ";CASE_INSENSITIVE_IDENTIFIERS=true;COMPRESS=TRUE;WRITE_DELAY=30000;REUSE_SPACE=FALSE";
 		
+		// Pick a free port for the "old H2" TCP Server (the default 9092 might be in use)
+		// But if the user passed a full JDBC URL, it probably points to the default port (so use that)
+		if (StringUtil.hasValue(_sourceH2Jar) && _migrationH2SrvPort <= 0)
+			_migrationH2SrvPort = (_sourceUrl != null && _sourceUrl.startsWith("jdbc:")) ? 9092 : getFreeTcpPort();
+		String oldH2TcpUrlPrefix = "jdbc:h2:tcp://localhost:" + _migrationH2SrvPort + "/";
+
 		// SOURCE
 		if (StringUtil.isNullOrBlank(_sourceUser  )) _sourceUser   = "sa";
 		if (StringUtil.isNullOrBlank(_sourcePasswd)) _sourcePasswd = "";
@@ -171,7 +204,7 @@ implements AutoCloseable
 			
 			if (StringUtil.hasValue(_sourceH2Jar))
 			{
-				_sourceUrl = "jdbc:h2:tcp://localhost/" + sourceDbName + sourceH2UrlOp;
+				_sourceUrl = oldH2TcpUrlPrefix + sourceDbName + sourceH2UrlOp;
 			}
 		}
 		else
@@ -189,7 +222,7 @@ implements AutoCloseable
 
 				if (StringUtil.hasValue(_sourceH2Jar))
 				{
-					_sourceUrl = "jdbc:h2:tcp://localhost/" + dbname + sourceH2UrlOp;
+					_sourceUrl = oldH2TcpUrlPrefix + dbname + sourceH2UrlOp;
 				}
 			}
 		}
@@ -403,59 +436,18 @@ implements AutoCloseable
 	private void startOldH2TcpServer() 
 	throws IOException
 	{
-		String systemClassPath = System.getProperty("java.class.path");
-		systemClassPath = systemClassPath.replace(File.pathSeparatorChar, ',');
+		// The "old H2" JVM only needs the old H2 JAR on the classpath
+		// Use the same java as we are running with (not whatever 'java' is in the PATH)
+		String javaExe = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
 
-		List<String> systemClassPathList = StringUtil.parseCommaStrToList(systemClassPath, true);
-		List<String> newSystemClassPathList = new ArrayList<>();
-		for (String entry : systemClassPathList)
-		{
-			String tmpFilename = FilenameUtils.getName(entry);
-			if (tmpFilename.startsWith("h2-") && tmpFilename.endsWith(".jar"))
-			{
-				newSystemClassPathList.add(_sourceH2Jar);
-				_logger.info("Replacing migration CLASSPATH entry from '" + entry + "' to '" + _sourceH2Jar + "'.");
-			}
-			else
-			{
-				newSystemClassPathList.add(entry);
-			}
-		}
-		
-//		Map<String, String> systemEnvMap = System.getenv(); 
-		
-		// java org.h2.tools.Server -tcp -tcpAllowOthers -ifExists
-//		List<String> cmd = Arrays.asList(new String[]{"java", "org.h2.tools.Server", "-tcp", "-tcpAllowOthers", "-ifExists"});
-		
-//		final ProcessBuilder pb = new ProcessBuilder("java", "org.h2.tools.Server", "-tcp", "-tcpAllowOthers", "-ifExists");
-		final ProcessBuilder pb = new ProcessBuilder("java", "org.h2.tools.Server", "-tcp", "-ifExists");
-//		pb.inheritIO();
+		// java -cp h2-old.jar org.h2.tools.Server -tcp -tcpPort ### -ifExists
+		final ProcessBuilder pb = new ProcessBuilder(javaExe, "-cp", _sourceH2Jar, "org.h2.tools.Server", "-tcp", "-tcpPort", Integer.toString(_migrationH2SrvPort), "-ifExists");
 		pb.redirectErrorStream(true);
 
-		Map<String, String> pbEnv = pb.environment();
-		pbEnv.put("CLASSPATH", StringUtil.toCommaStr(newSystemClassPathList, File.pathSeparatorChar + ""));
-
-		
-		_logger.info("About to start, H2 Migration Server (JVM). Using the following comand: " + pb.command());
-		_logger.info("  *** Command:     " + pb.command());
-		_logger.info("  *** CWD:         " + pb.directory());
-//		_logger.info("  *** CLASSPATH:   " + newSystemClassPathList);
-		_logger.info("  *** Environment: ");
-		for (Entry<String, String> e : pb.environment().entrySet())
-		{
-			_logger.info("      * " + StringUtil.left(e.getKey(), 30) + " = " + e.getValue());
-			
-		}
-		_logger.info("  *** CLASSPATH:");
-		List<String> tmpClasspathList = StringUtil.parseCommaStrToList(pb.environment().get("CLASSPATH").replace(File.pathSeparatorChar, ','), true);
-		for (String e : tmpClasspathList)
-		{
-			_logger.info("      * " + e);
-		}
-
 		_logger.info("Starting H2 Migration Server (JVM). Using the following comand: " + pb.command());
-		_migrationH2Srv = pb.start();
-		
+		final Process migrationH2Srv = pb.start();
+		_migrationH2Srv = migrationH2Srv;
+
 		// If we want to read output of the OS Command, and print it to the errorlog...
 		//pb.inheritIO(); <<<---- Comment out the above
 		// If we don't read the stream(s) from Process, it may simply not "start" or start slowly
@@ -464,7 +456,7 @@ implements AutoCloseable
 			@Override
 			public void run()
 			{
-				BufferedReader bReader = new BufferedReader(new InputStreamReader(_migrationH2Srv.getInputStream()));
+				BufferedReader bReader = new BufferedReader(new InputStreamReader(migrationH2Srv.getInputStream()));
 				String line;
 				try
 				{
@@ -483,6 +475,42 @@ implements AutoCloseable
 		osOutputReaderThread.setDaemon(true);
 		osOutputReaderThread.setName("OS-H2 Migration Server (JVM)");
 		osOutputReaderThread.start();
+
+		// Wait for the server to accept connections
+		long waitStartTime = System.currentTimeMillis();
+		long maxWaitMs = 60_000;
+		while (true)
+		{
+			try (Socket socket = new Socket("localhost", _migrationH2SrvPort))
+			{
+				_logger.info("H2 Migration Server (JVM) is accepting connections on port " + _migrationH2SrvPort + ", after " + TimeUtils.msDiffNowToTimeStr(waitStartTime) + ".");
+				break;
+			}
+			catch (IOException ex)
+			{
+				if ( ! migrationH2Srv.isAlive() )
+					throw new IOException("H2 Migration Server (JVM) terminated with exit code " + migrationH2Srv.exitValue() + ", before it accepted connections. See the log for the process OUTPUT.");
+
+				if (TimeUtils.msDiffNow(waitStartTime) > maxWaitMs)
+					throw new IOException("H2 Migration Server (JVM) did not accept connections on port " + _migrationH2SrvPort + " within " + maxWaitMs + " ms.");
+
+				try { Thread.sleep(250); }
+				catch (InterruptedException ie) { Thread.currentThread().interrupt(); throw new IOException("Interrupted while waiting for H2 Migration Server (JVM) to start.", ie); }
+			}
+		}
+	}
+
+	private static int getFreeTcpPort()
+	{
+		try (ServerSocket ss = new ServerSocket(0))
+		{
+			return ss.getLocalPort();
+		}
+		catch (IOException ex)
+		{
+			_logger.warn("Problems finding a free TCP port, using H2 default port 9092. Caught: " + ex);
+			return 9092;
+		}
 	}
 
 	private void stopOldH2TcpServer()
@@ -612,7 +640,11 @@ implements AutoCloseable
 		}
 	}
 	
-	public void doWork()
+	/**
+	 * Transfer DDL and Data
+	 * @return true if there was errors
+	 */
+	public boolean doWork()
 	throws Exception
 	{
 		long startTime = System.currentTimeMillis();
@@ -674,7 +706,8 @@ implements AutoCloseable
 		boolean hasErrors = printErrorReport();
 		
 		//
-		if (hasErrors || _dmlUseMerge)
+		// Only for DbxCentral databases (not for DbxTune collector recordings)
+		if ((hasErrors || _dmlUseMerge) && ! DbType.DBXTUNE_RECORDING.equals(_sourceDbType))
 			fixDbxCentralMetaDataTablesAtTarget();
 
 		// Shutdown H2 and 
@@ -697,7 +730,7 @@ implements AutoCloseable
 		_logger.info("==============================================================");
 		_logger.info("");
 
-		if ( ! hasErrors)
+		if ( ! hasErrors && ! _calledFromCode )
 		{
 			SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd");
 			String yyyy_mm_dd = sdf.format( new Date() );
@@ -727,8 +760,79 @@ implements AutoCloseable
 			_logger.info("==============================================================");
 			_logger.info("");
 		}
+
+		return hasErrors;
 	}
-	
+
+	/**
+	 * Upgrade/Migrate a DbxCentral or DbxTune recording H2 database written by an older H2 version, into a new database file.
+	 * <p>
+	 * A separate JVM (with the old H2 JAR) will host the source database as a TCP Server,
+	 * and all DDL and Data will be copied (table-by-table) into the target database (using the current H2 version).
+	 * <p>
+	 * Logging and Configuration is expected to already be initialized by the caller.
+	 *
+	 * @param sourceDbFile   The old H2 database file (*.mv.db)
+	 * @param oldH2Jar       H2 JAR file that can read the source database
+	 * @param targetDbFile   The new H2 database file (*.mv.db), should NOT exist
+	 * @param user           Username for both source and target
+	 * @param passwd         Password for both source and target
+	 * @param expectedDbType What type of database we expect, null = any known type (DbxCentral or DbxTune recording)
+	 * @return A result, where 'ok' is true if the copy was successful (no errors)
+	 * @throws Exception if the source is not of the expected type, or we had problems starting the old H2 server or connecting
+	 */
+	public static CopyResult upgradeFromOldH2(File sourceDbFile, File oldH2Jar, File targetDbFile, String user, String passwd, DbType expectedDbType)
+	throws Exception
+	{
+		long startTime = System.currentTimeMillis();
+		try( H2CentralDbCopy3 dbCopy = new H2CentralDbCopy3() )
+		{
+			dbCopy._calledFromCode = true;
+			dbCopy._sourceH2Jar  = oldH2Jar.getAbsolutePath();
+			dbCopy._sourceUrl    = sourceDbFile.getAbsolutePath(); // "plain file" is resolved into a URL in setDefaults()
+			dbCopy._targetUrl    = targetDbFile.getAbsolutePath(); // "plain file" is resolved into a URL in setDefaults()
+			dbCopy._sourceUser   = user;
+			dbCopy._sourcePasswd = passwd;
+			dbCopy._targetUser   = user;
+			dbCopy._targetPasswd = passwd;
+
+			dbCopy.setDefaults();
+
+			// Open the source in READ ONLY mode, so it's kept as-is (no compaction etc), it will be used as a backup
+			H2UrlHelper srcUrlHelper = new H2UrlHelper(dbCopy._sourceUrl);
+			Map<String, String> srcUrlOptions = srcUrlHelper.getUrlOptionsMap();
+			srcUrlOptions.remove("MAX_COMPACT_TIME");
+			srcUrlOptions.remove("WRITE_DELAY");
+			srcUrlOptions.remove("COMPRESS");
+			srcUrlOptions.put("ACCESS_MODE_DATA", "r");
+			srcUrlHelper.setUrlOptionsMap(srcUrlOptions);
+			dbCopy._sourceUrl = srcUrlHelper.getUrl();
+
+			dbCopy.startOldH2TcpServer();
+			dbCopy.connect();
+
+			dbCopy.preCheck();
+			if (dbCopy._sourceDbType == null)
+				throw new Exception("The SOURCE database does not look like a DbxCentral or a DbxTune recording database. file='" + sourceDbFile + "'.");
+			if (expectedDbType != null && ! expectedDbType.equals(dbCopy._sourceDbType))
+				throw new Exception("The SOURCE database type is " + dbCopy._sourceDbType + ", expected " + expectedDbType + ". file='" + sourceDbFile + "'.");
+
+			boolean hasErrors = dbCopy.doWork();
+
+			CopyResult res = new CopyResult();
+			res.ok     = ! hasErrors;
+			res.dbType = dbCopy._sourceDbType;
+			res.tables = dbCopy._tableList.size();
+			for (DbTable dbt : dbCopy._tableList)
+			{
+				res.sourceRows += dbt.sourceReadCount;
+				res.targetRows += Math.max(0, dbt.targetPostRowCount);
+			}
+			res.durationMs = System.currentTimeMillis() - startTime;
+			return res;
+		}
+	}
+
 	private void printExecutionReport()
 	{
 		System.out.println("");
@@ -935,9 +1039,30 @@ implements AutoCloseable
 		}
 		catch(SQLException ex)
 		{
-			_logger.warn("Problems getting SOURCE DbxCentral DbVersion using sql='" + sql + "'. caught: " + ex);
+			_logger.info("Could not get SOURCE DbxCentral DbVersion (probably not a DbxCentral database) using sql='" + sql + "'. caught: " + ex);
 		}
 		_logger.info("SOURCE DbxCentral DbVersion = " + _sourceDbxCentralDbVersion);
+
+		// What type of database is the SOURCE
+		_sourceDbType = null;
+		if (_sourceDbxCentralDbVersion > 0)
+		{
+			_sourceDbType = DbType.DBXCENTRAL;
+		}
+		else
+		{
+			// A DbxTune Collector recording has the table 'MonVersionInfo'
+			sql = _sourceConn.quotifySqlString("select count(*) from [PUBLIC].[MonVersionInfo]");
+			try (Statement stmnt = _sourceConn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				_sourceDbType = DbType.DBXTUNE_RECORDING;
+			}
+			catch(SQLException ex)
+			{
+				_logger.info("Could not find table 'MonVersionInfo' in SOURCE (probably not a DbxTune recording database). caught: " + ex);
+			}
+		}
+		_logger.info("SOURCE database type = " + _sourceDbType);
 
 		// Get TARGET DbxCentral DB Version
 		_targetDbxCentralDbVersion = -1;

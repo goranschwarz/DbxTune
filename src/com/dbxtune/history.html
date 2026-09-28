@@ -67,7 +67,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
         <LI>AlarmWriterToMail  - Added "summary" section (talk to DbxCentral and get active alarms, so we can see what other alarms are currently active)</LI>
         <LI>AlarmWriterToTeams  - Added "summary" section (talk to DbxCentral and get active alarms, so we can see what other alarms are currently active)</LI>
         <LI>AlarmWriterToSlack  - Added "summary" section (talk to DbxCentral and get active alarms, so we can see what other alarms are currently active)</LI>
-        <LI></LI>
+        <LI>Automatic upgrade of old H2 databases at startup (DbxCentral DB and today's collector recording)</LI>
+        <LI>Added 'h2upgrade' command (dbxtune.sh / dbxtune.bat) to upgrade all old H2 databases in a directory (collector recordings and the DbxCentral DB). Without '-e' it only lists what would be done.</LI>
         <LI></LI>
 
 		<LI><b>Alarms Handling:</b>
@@ -116,6 +117,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	 			<li>To version 9.4.0            Component: MySQL JDBC Driver</li>
 	 			<li>To version 42.7.8           Component: Postgres JDBC Driver</li>
  -->
+	  			<li>To version 2.5.252          Component: H2 Database</li>
 	 			<li>To version 2.28.7           Component: Jsch</li>
 	 			<li>To version 5.4              Component: JSqlParser</li>
 	 			<li>To version 2.26.1           Component: Log4j2</li>
