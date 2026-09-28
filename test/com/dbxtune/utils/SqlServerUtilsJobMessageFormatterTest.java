@@ -111,7 +111,7 @@ public class SqlServerUtilsJobMessageFormatterTest
 		List<SqlServerUtils.JobMessageProfile> profiles = installProfile("p",
 				"rules",    "goodRule,badRule",
 				"rule.goodRule", "STEP=\nSTEP",
-				"rule.badRule",  "[bad=replacement");
+				"rule.badRule",  "*bad=replacement");  // dangling meta char -> invalid regex
 		assertEquals("Profile itself should load (bad rule is just skipped)", 1, profiles.size());
 		assertEquals("Only the valid rule should be compiled", 1, profiles.get(0).rulePatterns.size());
 	}
@@ -158,6 +158,97 @@ public class SqlServerUtilsJobMessageFormatterTest
 	}
 
 	// -----------------------------------------------------------------------
+	// jobMessageFormatter() - TSQL: [SQLSTATE 01xxx] (Message n) stripping
+	// -----------------------------------------------------------------------
+
+	@Test
+	public void testTsqlSqlState01MarkersAreRemoved()
+	{
+		System.out.println("---testTsqlSqlState01MarkersAreRemoved---");
+		SqlServerUtils._jobMessageProfiles = java.util.Collections.emptyList();
+
+		String raw = "Executed as user: NT SERVICE\\SQLSERVERAGENT. "
+				+ "Starting load [SQLSTATE 01000] (Message 50000)  "
+				+ "Rows loaded: 42 [SQLSTATE 01000] (Message 0).  "
+				+ "Invalid object name 'foo'. [SQLSTATE 42S02] (Error 208).  The step failed.";
+		String result = SqlServerUtils.jobMessageFormatter(raw, "TSQL");
+
+		System.out.println("result=\n" + result);
+		assertEquals(""
+				+ "Executed as user: NT SERVICE\\SQLSERVERAGENT.\n"
+				+ "Starting load\n"
+				+ "Rows loaded: 42\n"
+				+ "Invalid object name 'foo'.\n"
+				+ "  [SQLSTATE 42S02] (Error 208).\n"
+				+ "The step failed.", result);
+	}
+
+	@Test
+	public void testTsqlOnlySqlState01Markers_noEmptyOrDotLines()
+	{
+		System.out.println("---testTsqlOnlySqlState01Markers_noEmptyOrDotLines---");
+		SqlServerUtils._jobMessageProfiles = java.util.Collections.emptyList();
+
+		String raw = "Executed as user: DOM\\usr. msg one [SQLSTATE 01000] (Message 50000) [SQLSTATE 01000] (Message 50000).  The step succeeded.";
+		String result = SqlServerUtils.jobMessageFormatter(raw, "TSQL");
+
+		System.out.println("result=\n" + result);
+		assertEquals("Executed as user: DOM\\usr.\nmsg one\nThe step succeeded.", result);
+	}
+
+	@Test
+	public void testSqlState01MarkersKeptForNonTsql()
+	{
+		System.out.println("---testSqlState01MarkersKeptForNonTsql---");
+		SqlServerUtils._jobMessageProfiles = java.util.Collections.emptyList();
+
+		String raw = "msg one [SQLSTATE 01000] (Message 50000)";
+		assertEquals(raw, SqlServerUtils.jobMessageFormatter(raw, "CMDEXEC"));
+	}
+
+	// -----------------------------------------------------------------------
+	// jobMessageFormatterHtml()
+	// -----------------------------------------------------------------------
+
+	@Test
+	public void testHtml_nullAndBlank()
+	{
+		System.out.println("---testHtml_nullAndBlank---");
+		SqlServerUtils._jobMessageProfiles = java.util.Collections.emptyList();
+
+		assertEquals(null, SqlServerUtils.jobMessageFormatterHtml(null, "TSQL"));
+		assertEquals("",   SqlServerUtils.jobMessageFormatterHtml("",   "TSQL"));
+	}
+
+	@Test
+	public void testHtml_escapesAndNewlinesAndIndent()
+	{
+		System.out.println("---testHtml_escapesAndNewlinesAndIndent---");
+		SqlServerUtils._jobMessageProfiles = java.util.Collections.emptyList();
+
+		String raw = "Executed as user: DOM\\usr. select * from t where a < 1 & b > \"x\". [SQLSTATE 42000] (Error 102).  The step failed.";
+		String result = SqlServerUtils.jobMessageFormatterHtml(raw, "TSQL");
+
+		System.out.println("result=\n" + result);
+		assertEquals(""
+				+ "Executed as user: DOM\\usr.<br>"
+				+ "select * from t where a &lt; 1 &amp; b &gt; &quot;x&quot;.<br>"
+				+ "&nbsp;&nbsp;[SQLSTATE 42000] (Error 102).<br>"
+				+ "The step failed.", result);
+	}
+
+	@Test
+	public void testHtml_explicitLineBreaksBecomeBr()
+	{
+		System.out.println("---testHtml_explicitLineBreaksBecomeBr---");
+		SqlServerUtils._jobMessageProfiles = java.util.Collections.emptyList();
+
+		String raw = "line1<br>line2<BR/>line3\\nline4&lt;br&gt;line5\r\nline6";
+		String result = SqlServerUtils.jobMessageFormatterHtml(raw, null);
+		assertEquals("line1<br>line2<br>line3<br>line4<br>line5<br>line6", result);
+	}
+
+	// -----------------------------------------------------------------------
 	// jobMessageFormatter() — user profile augments built-in (skipBuiltIn=false)
 	// -----------------------------------------------------------------------
 
@@ -167,16 +258,19 @@ public class SqlServerUtilsJobMessageFormatterTest
 		System.out.println("---testAugmentProfile_addsNewlineBeforeCustomMarker---");
 
 		// Rule: insert newline before "RESULT:" (using \s = regex whitespace, doubled for Java string)
-		installProfile("myapp",
+		List<SqlServerUtils.JobMessageProfile> profiles = installProfile("myapp",
 				"subsystems", "CMDEXEC",
 				"rules",      "result",
 				"rule.result", "\\s{2,}(?=RESULT:)=\n");
+		assertEquals("The lookahead rule must compile (not be skipped)", 1, profiles.get(0).rulePatterns.size());
+		assertEquals("\\s{2,}(?=RESULT:)", profiles.get(0).rulePatterns.get(0).pattern());
 
-		String raw = "Process started.  RESULT: OK.  The step succeeded.";
+		// No period before "RESULT:" -> the built-in sentence split can NOT produce this newline, only our rule can
+		String raw = "Process started  RESULT: OK.  The step succeeded.";
 		String result = SqlServerUtils.jobMessageFormatter(raw, "CMDEXEC");
 
 		System.out.println("result=\n" + result);
-		assertTrue("Should have newline before RESULT:", result.contains("\nRESULT:"));
+		assertEquals("Process started\nRESULT: OK.\nThe step succeeded.", result);
 	}
 
 	@Test
@@ -216,6 +310,8 @@ public class SqlServerUtilsJobMessageFormatterTest
 
 		System.out.println("result=\n" + result);
 		assertTrue("Profile matched — STEP lines should be split", result.contains("\nSTEP"));
+		// The rule value must not be trimmed: "  STEP" (with spaces) must not become "STEP" (which gave empty lines)
+		assertTrue("No empty lines expected", !result.contains("\n\n"));
 	}
 
 	@Test
@@ -223,19 +319,73 @@ public class SqlServerUtilsJobMessageFormatterTest
 	{
 		System.out.println("---testAugmentProfile_subsystemFilterExcludesOtherSubsystems---");
 
-		installProfile("myapp",
+		List<SqlServerUtils.JobMessageProfile> profiles = installProfile("myapp",
 				"subsystems", "CMDEXEC",
 				"rules",      "result",
 				"rule.result", "\\s{2,}(?=RESULT:)=\n");
+		assertEquals("The lookahead rule must compile (not be skipped)", 1, profiles.get(0).rulePatterns.size());
 
-		// TSQL step — profile must not fire
-		String raw = "Process started.  RESULT: OK.  The step succeeded.";
+		// No period before "RESULT:" -> only our rule could split there
+		String raw = "Process started  RESULT: OK.  The step succeeded.";
+
+		// CMDEXEC step - profile fires
+		String resultCmd = SqlServerUtils.jobMessageFormatter(raw, "CMDEXEC");
+		System.out.println("resultCmd=\n" + resultCmd);
+		assertTrue("CMDEXEC: rule should have split RESULT:", resultCmd.contains("\nRESULT:"));
+
+		// TSQL step - profile must not fire, but the built-in sentence split still runs
 		String resultTsql = SqlServerUtils.jobMessageFormatter(raw, "TSQL");
-
 		System.out.println("resultTsql=\n" + resultTsql);
-		// Built-in TSQL runs (sentence split fires), but our rule should not add \nRESULT:
-		// The sentence splitter fires on ". " so we check built-in sentences were split
-		assertTrue("Built-in TSQL sentence split should still run", resultTsql.contains("\n"));
+		assertEquals("Process started  RESULT: OK.\nThe step succeeded.", resultTsql);
+	}
+
+	// -----------------------------------------------------------------------
+	// Rule separator: regex=replacement split
+	// -----------------------------------------------------------------------
+
+	@Test
+	public void testFindRuleSeparator()
+	{
+		System.out.println("---testFindRuleSeparator---");
+		// Old form (no '=' in the regex) -> first '=' as before
+		assertEquals(4,  SqlServerUtils.findRuleSeparator("STEP=\nSTEP"));
+		assertEquals(4,  SqlServerUtils.findRuleSeparator("STEP=a=b"));             // replacement may contain '='
+
+		// '=' inside groups (lookahead / negative lookahead / lookbehind) is part of the regex
+		assertEquals(17, SqlServerUtils.findRuleSeparator("\\s{2,}(?=RESULT:)=\n"));
+		assertEquals(6,  SqlServerUtils.findRuleSeparator("(?!=)x=y"));
+		assertEquals(7,  SqlServerUtils.findRuleSeparator("(?<=:)x=y"));
+		assertEquals(11, SqlServerUtils.findRuleSeparator("(?<=(a|b))x=y"));       // nested groups
+
+		// '=' inside a character class, and escaped '=' (also '(' / ')' in a class or escaped do not count)
+		assertEquals(3,  SqlServerUtils.findRuleSeparator("[=]=y"));
+		assertEquals(5,  SqlServerUtils.findRuleSeparator("\\={3}=y"));
+		assertEquals(3,  SqlServerUtils.findRuleSeparator("[(]=y"));
+		assertEquals(2,  SqlServerUtils.findRuleSeparator("\\(=y"));
+
+		// No separator
+		assertEquals(-1, SqlServerUtils.findRuleSeparator("abc"));
+		assertEquals(-1, SqlServerUtils.findRuleSeparator("(?=abc)"));
+	}
+
+	@Test
+	public void testLookbehindAndEscapedEqualsRules()
+	{
+		System.out.println("---testLookbehindAndEscapedEqualsRules---");
+
+		// lookbehind: newline + indent after "Rows:" ; escaped '=': each "===" divider on its own line
+		List<SqlServerUtils.JobMessageProfile> profiles = installProfile("p",
+				"subsystems",   "CMDEXEC",
+				"rules",        "rows,section",
+				"rule.rows",    "(?<=Rows:)\\s+=\n  ",
+				"rule.section", "\\s*\\={3,}\\s*=\n===\n");
+		assertEquals("Both rules must compile", 2, profiles.get(0).rulePatterns.size());
+
+		String raw = "Load done Rows: 42 === Next part";
+		String result = SqlServerUtils.jobMessageFormatter(raw, "CMDEXEC");
+
+		System.out.println("result=\n" + result);
+		assertEquals("Load done Rows:\n  42\n===\nNext part", result);
 	}
 
 	// -----------------------------------------------------------------------

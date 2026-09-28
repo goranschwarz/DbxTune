@@ -56,6 +56,7 @@ import com.dbxtune.pcs.report.content.SparklineJfreeChart;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.DbUtils;
+import com.dbxtune.utils.SqlServerUtils;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.TimeUtils;
 
@@ -1037,71 +1038,6 @@ extends SqlServerAbstract
 //		});
 	}
 
-	/**
-	 * Try to make messages a bit more readable<br>
-	 *  - If it's to long try to add NEWLINE somewhere
-	 *  - NewLine on some special words
-	 *  - If it looks like a "console log line" add newlines
-	 * @param msg            The input
-	 * @param newline        What is the String for newline
-	 * @param subsystem      
-	 * @param msgNumber 
-	 * @param msgSeverity    
-	 * @return
-	 */
-	private static String formatMessageString(String msg, String newline, String subsystem, int msgNumber, int msgSeverity)
-	{
-		if (msg == null)
-			return null;
-		
-		if (msg.length() < 64)
-			return msg;
-		
-		// "Executed as user: MAXM\\goran.schwarz. " -->> "Executed as user: MAXM\\goran.schwarz. <BR>"
-		msg = msg.replaceFirst("Executed as user: \\S* ", "$0" + newline);
-		
-		// Console messages
-		msg = msg.replace("DEBUG   - ",          newline + "DEBUG   - ");
-		msg = msg.replace("INFO    - ",          newline + "INFO    - ");
-		msg = msg.replace("WARNING - ",          newline + "WARNING - ");
-		msg = msg.replace("ERROR   - ",          newline + "ERROR   - ");
-
-		// Some Error messages
-		msg = msg.replace("ERROR-MSG: ",         newline + "ERROR-MSG: ");
-		
-//		msg = msg.replace("[SQLSTATE ",          newline + "[SQLSTATE ");
-//		msg = msg.replace("Warning! ",           newline + "Warning! ");
-//		msg = msg.replace("Warning! ",           newline + "Warning! ");
-//		msg = msg.replace("Caution: ",           newline + "Caution: ");
-		// Make a newline *after* '[SQLSTATE #####] (Message ####)'
-		msg = msg.replaceAll("\\[SQLSTATE \\d+\\] \\(Message \\d+\\)", "$0" + newline); 
-
-		msg = msg.replace("Process Exit Code ",  newline + "Process Exit Code ");
-		
-		msg = msg.replace("The step failed."   , newline + "The step failed."); 
-		msg = msg.replace("The step succeeded.", newline + "The step succeeded.");
-		
-		// Remove any "double newlines" (that only contains a period '.' char) 
-		msg = msg.replace(newline + ".  " + newline, newline);
-		
-		// Remove any "double newlines"
-		msg = msg.replace(newline + newline, newline);
-		
-		// If it's a T-SQL subsystem, lets remove some "stuff"
-		if ("TSQL".equals(subsystem))
-		{
-			// SQLSTATE description: https://en.wikipedia.org/wiki/SQLSTATE
-			
-			// Simplify message: "[SQLSTATE 01000] (Message 50000)" -> "" (empty string)
-//			msg = msg.replace("[SQLSTATE 01000] (Message " + msgNumber + ")", "");
-//			msg = msg.replaceAll("\\[SQLSTATE 01\\d+\\] \\(Message " + msgNumber + "\\)", "");  // Remove any of the "warning" SQL STATES (which HAS the msgNumber)
-			msg = msg.replaceAll("\\[SQLSTATE 01\\d+\\] \\(Message \\d+\\)", ""); // Remove any of the "warning" SQL STATES
-		}
-		
-		
-		return msg;
-	}
-	
 	private String getDescriptionForJobName(String jobName)
 	{
 		if (_sysjobs == null)
@@ -2037,11 +1973,8 @@ extends SqlServerAbstract
 
 				if ("message".equals(colName))
 				{
-					String subsystem   = rstm.getValueAsString (row, "subsystem",      true, "");
-					int    msgNumber   = rstm.getValueAsInteger(row, "sql_message_id", true, -1);
-					int    msgSeverity = rstm.getValueAsInteger(row, "sql_severity",   true, -1);
-
-					return formatMessageString(strVal, "<BR>", subsystem, msgNumber, msgSeverity);
+					String subsystem = rstm.getValueAsString(row, "subsystem", true, "");
+					return SqlServerUtils.jobMessageFormatterHtml(strVal, subsystem);
 				}
 			}
 

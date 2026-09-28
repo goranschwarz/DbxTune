@@ -398,6 +398,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Query Store Extractor: first try execute '${dbname}.dbo.dbxtune_flush_query_store', if it do not exists fallback on '${dbname}.dbo.sp_query_store_flush_db'</LI>
 		<LI>DbmsConfigIssue -- Fix SQL Server on Linux memory detection (SQLPAL only reports 80% of physical memory)</LI>
 		<LI>Job Scheduler Extractor -- Add user-defined job message formatter profiles via properties file</LI>
+		<LI>SQL Agent job messages -- One formatter for Alarms, the job-scheduler-timeline, the Daily Summary Report and the DbxCentral User Defined Timeline chart (earlier 3 different implementations). Info messages '[SQLSTATE 01xxx] (Message n)' are removed for T-SQL steps. Messages are now HTML escaped in Alarms and the Daily Summary Report.</LI>
 
 
 		<!-- ~~~ CM Changes ~~~ -->
