@@ -62,6 +62,7 @@ import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.DbUtils;
 import com.dbxtune.utils.MathUtils;
+import com.dbxtune.utils.SqlServerUtils;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.TimeUtils;
 
@@ -2090,30 +2091,25 @@ extends DbxCentralPageTemplate
 					ttVal  = StringUtils.substringAfter(ttVal, "</tooltip-td-attribute>").trim();
 				}
 				
-				// Fixes: 
-				//  - Strange characters into HTML characters
-				//  - Newlines 
-				ttVal = StringEscapeUtils.escapeHtml4(ttVal);
-//				ttVal = ttVal.replace("\r", "\\r");
-//				ttVal = ttVal.replace("\n", "\\n");
-				ttVal = ttVal.replace("\r", "");
-				ttVal = ttVal.replace("\n", "<br>");
+				// If key is "message", then format the RAW message (adds NEWLINES in some places, and does HTML escaping)
+				if (ttKey.equalsIgnoreCase("message"))
+				{
+					ttVal = SqlServerUtils.jobMessageFormatterHtml(ttVal, extraColumns.get("subsystem"));
+				}
+				else
+				{
+					// Fixes:
+					//  - Strange characters into HTML characters
+					//  - Newlines
+					ttVal = StringEscapeUtils.escapeHtml4(ttVal);
+					ttVal = ttVal.replace("\r", "");
+					ttVal = ttVal.replace("\n", "<br>");
+				}
 				ttVal = ttVal.replace("\\", "&#92;");
-				
+
 				// If key is "command", then add <code></code> (hard coded because: I was lazy)
 				if (ttKey.equalsIgnoreCase("command"))
 					ttVal = "<code>" + ttVal + "</code>";
-
-				// If key is "message", then try to parse the message a bit and add NEWLINES in some places (hard coded because: I was lazy)
-				if (ttKey.equalsIgnoreCase("message"))
-				{
-					String subsystem   =  "" + extraColumns.get("subsystem");
-					int    msgNumber   = StringUtil.parseInt(extraColumns.get("sql_message_id"), -1);
-					int    msgSeverity = StringUtil.parseInt(extraColumns.get("sql_severity"  ), -1);
-
-//					ttVal = tooltipForMessage(ttVal);
-					ttVal = formatMessageString(ttVal, "<BR>", subsystem, msgNumber, msgSeverity);
-				}
 
 				// Hack to get a separator in before column 'main_job_start_ts'
 				if (ttKey.equals("main_job_start_ts"))
@@ -2135,105 +2131,6 @@ extends DbxCentralPageTemplate
 		return tooltip;
 	}
 
-//	/**
-//	 * Try to make messages a bit more readable<br>
-//	 *  - If it's to long try to add NEWLINE somewhere
-//	 *  - NewLine on some special words
-//	 *  - If it looks like a "console log line" add newlines
-//	 * @param ttVal
-//	 * @return
-//	 */
-//	private static String tooltipForMessage(String ttVal)
-//	{
-//		if (ttVal == null)
-//			return null;
-//		
-//		if (ttVal.length() < 64)
-//			return ttVal;
-//		
-//		// "Executed as user: MAXM\\goran.schwarz. " -->> "Executed as user: MAXM\\goran.schwarz. <BR>"
-//		ttVal = ttVal.replaceFirst("Executed as user: \\S* ", "$0<BR>");
-//		
-//		// Console messages
-//		ttVal = ttVal.replace("DEBUG   - ", "<BR>DEBUG   - ");
-//		ttVal = ttVal.replace("INFO    - ", "<BR>INFO    - ");
-//		ttVal = ttVal.replace("WARNING - ", "<BR>WARNING - ");
-//		ttVal = ttVal.replace("ERROR   - ", "<BR>ERROR   - ");
-//
-//		// Some Error messages
-//		ttVal = ttVal.replace("ERROR-MSG: ", "<BR>ERROR-MSG: ");
-//		
-//		ttVal = ttVal.replace("Warning! ", "<BR>Warning! ");
-//		ttVal = ttVal.replace("Warning: ", "<BR>Warning: ");
-//
-//		ttVal = ttVal.replace("Process Exit Code ", "<BR>Process Exit Code ");
-//		
-//		ttVal = ttVal.replace("The step failed."   , "<BR>The step failed."); 
-//		ttVal = ttVal.replace("The step succeeded.", "<BR>The step succeeded.");
-//		
-//		// Remove any "double newlines"
-//		ttVal = ttVal.replace("<BR><BR>", "<BR>");
-//		
-//		return ttVal;
-//	}
-	/**
-	 * Try to make messages a bit more readable<br>
-	 *  - If it's to long try to add NEWLINE somewhere
-	 *  - NewLine on some special words
-	 *  - If it looks like a "console log line" add newlines
-	 * @param msg            The input
-	 * @param newline        What is the String for newline
-	 * @param subsystem      
-	 * @param msgNumber 
-	 * @param msgSeverity    
-	 * @return
-	 */
-	private static String formatMessageString(String msg, String newline, String subsystem, int msgNumber, int msgSeverity)
-	{
-		if (msg == null)
-			return null;
-		
-		if (msg.length() < 64)
-			return msg;
-		
-		// "Executed as user: MAXM\\goran.schwarz. " -->> "Executed as user: MAXM\\goran.schwarz. <BR>"
-		msg = msg.replaceFirst("Executed as user: \\S* ", "$0" + newline);
-		
-		// Console messages
-		msg = msg.replace("DEBUG   - ",          newline + "DEBUG   - ");
-		msg = msg.replace("INFO    - ",          newline + "INFO    - ");
-		msg = msg.replace("WARNING - ",          newline + "WARNING - ");
-		msg = msg.replace("ERROR   - ",          newline + "ERROR   - ");
-
-		// Some Error messages
-		msg = msg.replace("ERROR-MSG: ",         newline + "ERROR-MSG: ");
-		
-		// Make a newline *after* '[SQLSTATE #####] (Message ####)'
-		msg = msg.replaceAll("\\[SQLSTATE \\d+\\] \\(Message \\d+\\)", "$0" + newline); 
-
-		msg = msg.replace("Process Exit Code ",  newline + "Process Exit Code ");
-		
-		msg = msg.replace("The step failed."   , newline + "The step failed."); 
-		msg = msg.replace("The step succeeded.", newline + "The step succeeded.");
-		
-		// Remove any "double newlines" (that only contains a period '.' char) 
-		msg = msg.replace(newline + ".  " + newline, newline);
-		
-		// Remove any "double newlines"
-		msg = msg.replace(newline + newline, newline);
-		
-		// If it's a T-SQL subsystem, lets remove some "stuff"
-		if ("TSQL".equals(subsystem))
-		{
-			// SQLSTATE description: https://en.wikipedia.org/wiki/SQLSTATE
-			
-			// Simplify message: "[SQLSTATE 01000] (Message 50000)" -> "" (empty string)
-			msg = msg.replaceAll("\\[SQLSTATE 01\\d+\\] \\(Message \\d+\\)", ""); // Remove any of the "warning" SQL STATES
-		}
-		
-		return msg;
-	}
-	
 	private String calculateDuration(Timestamp startTs, Timestamp endTs)
 	{
 		if (startTs == null || endTs == null)

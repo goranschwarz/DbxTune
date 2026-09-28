@@ -34,6 +34,7 @@ import java.util.Map;
 
 import javax.naming.NameNotFoundException;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -806,7 +807,7 @@ extends CountersModel
 						{
 							String subsystem = rstm.getValueAsString(row, "subsystem", true, "-unknonwn-");
 							String message   = SqlServerUtils.jobMessageFormatter(strVal, subsystem);
-							return "<pre><code>" + message + "</code></pre>";
+							return "<pre><code>" + StringEscapeUtils.escapeHtml4(message) + "</code></pre>";
 						}
 						
 						// Format numbers to a more readable format

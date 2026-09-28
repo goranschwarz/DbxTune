@@ -1480,14 +1480,23 @@ public class SqlServerUtils
 	 * Sentence boundary: period + 2+ spaces + uppercase letter, [ or <.
 	 * We require 2+ spaces here to avoid splitting mid-sentence constructs
 	 * like "(Error 208). The" which only have a single space.
+	 * NOTE: Only spaces/tabs (not \s), so it does not match across a newline + indent that an earlier step added
+	 *       (e.g. "'foo'.\n  [SQLSTATE 42S02]" would otherwise lose its indent).
 	 */
-	private static final Pattern SENTENCE_SEP = Pattern.compile("\\.\\s{2,}(?=[A-Z\\[<])");
+	private static final Pattern SENTENCE_SEP = Pattern.compile("\\.[ \\t]{2,}(?=[A-Z\\[<])");
 
 	/**
 	 * [SQLSTATE ...] blocks — can appear after single or double space,
 	 * so use \s+ (one or more). Indented to visually tie to parent message.
 	 */
 	private static final Pattern SQLSTATE_SEP = Pattern.compile("\\s+(?=\\[SQLSTATE)");
+
+	/**
+	 * [SQLSTATE 01xxx] (Message n) - class 01 is "warning/info" (PRINT, RAISERROR with low severity).
+	 * The marker ends each such message, so it is replaced with a newline (not kept) to get one message per line.
+	 * Consumes surrounding whitespace and a trailing period, so no empty or '.'-only lines are left behind.
+	 */
+	private static final Pattern SQLSTATE_01_MARKER = Pattern.compile("(?:\\s*\\[SQLSTATE 01[0-9A-Z]{3}\\] \\(Message \\d+\\)\\.?)+\\s*");
 
 	/**
 	 * SSIS / dtexec internal tokens — split onto indented lines.
@@ -1600,9 +1609,11 @@ public class SqlServerUtils
 	 *   # Ordered list of rule names to apply
 	 *   SqlServer.jobMessageFormatter.profile.myapp.rules=stepHeader,resultLine
 	 *
-	 *   # Rule format: regex=replacement  (split on first '='; $0/$1 for back-references)
+	 *   # Rule format: regex=replacement  (split on the first '=' outside (...) and [...]; $0/$1 for back-references)
 	 *   # \n in replacement = real newline (properties loader converts it)
 	 *   # \\s in regex      = regex \s     (properties loader converts \\ to \)
+	 *   # \\= in regex      = literal '='  (only needed for a '=' outside (...) and [...])
+	 *   # Leading spaces of a value are removed by the properties loader: start the regex with \\s or '\ ' instead
 	 *   SqlServer.jobMessageFormatter.profile.myapp.rule.stepHeader=STEP\\s+\\d+=\n$0
 	 *   SqlServer.jobMessageFormatter.profile.myapp.rule.resultLine=\\s{2,}(?=RESULT:)=\n
 	 *
@@ -1618,12 +1629,15 @@ public class SqlServerUtils
 	 *   # Put each timestamp on its own line (keep the timestamp itself via $0)
 	 *   SqlServer.jobMessageFormatter.profile.salesreport.rule.timestamp=\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}=\n$0
 	 *
-	 *   # Put each === section divider on its own line
-	 *   SqlServer.jobMessageFormatter.profile.salesreport.rule.section=={3,}=\n$0
+	 *   # Put each === section divider on its own line (the literal '=' in the regex is escaped: \\=)
+	 *   SqlServer.jobMessageFormatter.profile.salesreport.rule.section=\\={3,}=\n$0
 	 * </pre>
 	 *
-	 * Rule format is <code>regex=replacement</code> — split on the FIRST '=' only,
-	 * so replacements may themselves contain '='. Java replaceAll back-references
+	 * Rule format is <code>regex=replacement</code>. The separator is the first '=' that is
+	 * not escaped (<code>\=</code>), not inside parentheses and not inside a character class
+	 * (see {@link #findRuleSeparator(String)}). So lookaheads/lookbehinds like <code>(?=RESULT:)</code>
+	 * work, a literal '=' in the regex is written <code>\=</code> (<code>\\=</code> in the file),
+	 * and replacements may themselves contain '='. Java replaceAll back-references
 	 * ($0, $1, etc.) are supported in the replacement.
 	 *
 	 * If <code>skipBuiltIn=true</code> the built-in subsystem switch is bypassed
@@ -1765,15 +1779,16 @@ public class SqlServerUtils
 					if (ruleName.isEmpty())
 						continue;
 
-					String ruleVal = conf.getProperty(prefix + "rule." + ruleName, "").trim();
-					if (ruleVal.isEmpty())
+					// NOT trimmed (getPropertyRawVal): a replacement often ends with a newline "=\n", and a regex may start/end with spaces
+					String ruleVal = conf.getPropertyRawVal(prefix + "rule." + ruleName, "");
+					if (ruleVal.trim().isEmpty())
 					{
 						_logger.warn("jobMessageFormatter: profile '{}' rule '{}' has no value — rule skipped.", profileName, ruleName);
 						continue;
 					}
 
-					// Split on first '=' only so replacements may contain '='
-					int eqIdx = ruleVal.indexOf('=');
+					// Split on the first '=' that is NOT part of the regex, so lookaheads '(?=...)' work and replacements may contain '='
+					int eqIdx = findRuleSeparator(ruleVal);
 					if (eqIdx < 0)
 					{
 						_logger.warn("jobMessageFormatter: profile '{}' rule '{}' value '{}' has no '=' separator — rule skipped.", profileName, ruleName, ruleVal);
@@ -1801,6 +1816,38 @@ public class SqlServerUtils
 
 		_logger.info("jobMessageFormatter: loaded {} user-defined profile(s) from '{}'", result.size(), PROPKEY_JMF_PROFILES);
 		return result;
+	}
+
+	/**
+	 * Finds the '=' that separates <code>regex=replacement</code> in a rule value.
+	 * <p>
+	 * It is the first '=' that is: not escaped with a backslash, not inside parentheses (lookahead/lookbehind
+	 * <code>(?=...)</code>, <code>(?&lt;=...)</code> etc) and not inside a character class <code>[...]</code>.
+	 * A literal '=' at the top level of the regex is written as <code>\=</code>.
+	 * <p>
+	 * Backward compatible with the old "first '='" split: a regex that had no '=' gives the same position.
+	 * Package-private for unit tests.
+	 *
+	 * @return index of the separator, or -1 if none was found
+	 */
+	static int findRuleSeparator(String ruleVal)
+	{
+		int     depth   = 0;
+		boolean inClass = false;
+
+		for (int i = 0; i < ruleVal.length(); i++)
+		{
+			char c = ruleVal.charAt(i);
+
+			if (c == '\\')                    { i++; continue; } // skip the escaped char
+			if (inClass)                      { if (c == ']') inClass = false; continue; }
+
+			if      (c == '[')                inClass = true;
+			else if (c == '(')                depth++;
+			else if (c == ')' && depth > 0)   depth--;
+			else if (c == '=' && depth == 0)  return i;
+		}
+		return -1;
 	}
 
 	// -----------------------------------------------------------------------
@@ -1854,7 +1901,10 @@ public class SqlServerUtils
 			switch (sub)
 			{
 				case "TSQL":
-					// [SQLSTATE] blocks get indented under their message
+					// Remove the "warning/info" [SQLSTATE 01xxx] (Message n) markers (they end a message -> newline)
+					s = SQLSTATE_01_MARKER.matcher(s).replaceAll("\n");
+
+					// Remaining [SQLSTATE] blocks (errors) get indented under their message
 					s = SQLSTATE_SEP.matcher(s).replaceAll("\n  ");
 
 					// Remaining sentence boundaries
@@ -1913,5 +1963,38 @@ public class SqlServerUtils
 		}
 
 		return s.trim();
+	}
+
+	/**
+	 * Same as {@link #jobMessageFormatter(String, String)}, but returns HTML: the text is HTML escaped,
+	 * newlines become &lt;br&gt; and leading spaces (the indents) become &amp;nbsp; so they are visible outside a &lt;pre&gt;.
+	 *
+	 * @param message   Raw (NOT html escaped) message column value from sysjobhistory.
+	 * @param subsystem Step subsystem, or null (see jobMessageFormatter)
+	 * @return          HTML string (null if message is null)
+	 */
+	public static String jobMessageFormatterHtml(String message, String subsystem)
+	{
+		String s = jobMessageFormatter(message, subsystem);
+		if (s == null)
+			return null;
+
+		s = StringEscapeUtils.escapeHtml4(s).replace("\r", "");
+
+		StringBuilder sb = new StringBuilder();
+		for (String line : s.split("\n", -1))
+		{
+			if (sb.length() > 0)
+				sb.append("<br>");
+
+			int i = 0;
+			while (i < line.length() && line.charAt(i) == ' ')
+			{
+				sb.append("&nbsp;");
+				i++;
+			}
+			sb.append(line, i, line.length());
+		}
+		return sb.toString();
 	}
 }
