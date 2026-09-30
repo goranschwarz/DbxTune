@@ -31,7 +31,8 @@
  * (so light mode looks unchanged), the dark values apply when <html> has the class 'dbx-sp-dark'. Setting the class
  * on <html> (not on the dialog) means panels/tooltips appended to <body> (node panels, qp.js tooltip clones) follow too.
  *
- * Dark is:  graph.html -> its own colour scheme (window._colorSchema, from dbxTheme.js)
+ * Dark is:  the Showplan's own Theme choice in the plan dialog header (Light / Dark), else (Auto) the page:
+ *           graph.html -> its own colour scheme (window._colorSchema, from dbxTheme.js)
  *           other pages -> dbxTheme.js (<html data-theme="dark">)
  */
 window.DbxShowplanTheme = (function () {
@@ -125,10 +126,25 @@ window.DbxShowplanTheme = (function () {
 	}
 
 	/** Should the Showplan UI be dark right now? */
-	function isDark() {
+	/** The page's scheme */
+	function pageDark() {
 		if (typeof window._colorSchema === 'string')   // graph.html
 			return window._colorSchema === 'dark';
 		return document.documentElement.getAttribute('data-theme') === 'dark';   // dbxTheme.js pages
+	}
+
+	/** The Showplan's own Theme choice (dialog header dropdown, see mountSwitch()): 'light' | 'dark' | null (= Auto) */
+	var PM_KEY = 'showplan';
+	function override() {
+		var v = null;
+		try { v = window.localStorage.getItem('dbxtune.panelTheme.' + PM_KEY); } catch (e) {}
+		return (v === 'light' || v === 'dark') ? v : null;
+	}
+
+	/** Dark right now: the Showplan's own choice, else the page's scheme */
+	function isDark() {
+		var o = override();
+		return o ? o === 'dark' : pageDark();
 	}
 
 	/**
@@ -154,17 +170,35 @@ window.DbxShowplanTheme = (function () {
 		return getComputedStyle(document.documentElement).getPropertyValue('--sp-' + name).trim();
 	}
 
+	/** Re-apply to everything that is themed (open dialogs, node panels) */
+	function applyAll() {
+		apply();
+		document.querySelectorAll('[data-dbx-sp-themed]').forEach(function (e) { apply(e); });
+	}
+
+	/**
+	 * Put the Showplan's own [Theme ▾] dropdown (Auto / Light / Dark, DbxTheme.panelMode) in a dialog header,
+	 * so only the Showplan can be switched. One shared choice for all Showplan UI; Auto = same as the page.
+	 * @param el  mount element or selector (nothing happens on pages without dbxTheme.js)
+	 */
+	var switches = [];
+	function mountSwitch(el) {
+		if (!(window.DbxTheme && DbxTheme.panelMode)) return;
+		switches.push(DbxTheme.panelMode({ key: PM_KEY, mount: el, apply: function () { applyAll(); } }));
+	}
+	/** Update the dropdown icons (the choice may have been changed in another plan dialog) */
+	function refreshSwitches() {
+		switches.forEach(function (sw) { sw.refresh(); });
+	}
+
 	injectCss();
 
 	// Theme switched while a plan dialog is open (dbxTheme.js navbar switch / OS change): re-apply to the open ones
 	if (window.DbxTheme && DbxTheme.onChange) {
-		DbxTheme.onChange(function () {
-			apply();
-			document.querySelectorAll('[data-dbx-sp-themed]').forEach(function (e) { apply(e); });
-		});
+		DbxTheme.onChange(function () { applyAll(); });
 	}
 
-	return { isDark: isDark, apply: apply, color: color };
+	return { isDark: isDark, apply: apply, color: color, mountSwitch: mountSwitch, refreshSwitches: refreshSwitches };
 })();
 
 window.DbxShowplanGraph = (function () {

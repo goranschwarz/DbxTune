@@ -449,14 +449,25 @@
 		return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
 	}
 
+	/** Dark colours for the options panel wherever Bootstrap is dark (a data-bs-theme="dark" dialog/page) - same as its selects/inputs */
+	function _injectCss() {
+		if (document.getElementById('dbx-sqlfmt-css')) return;
+		var st = document.createElement('style');
+		st.id = 'dbx-sqlfmt-css';
+		st.textContent = '[data-bs-theme="dark"] .dbx-sqlfmt-panel { --sqlfmt-bg:#2b3035; --sqlfmt-border:#495057; --sqlfmt-fg:#dee2e6; --sqlfmt-muted:#adb5bd; }';
+		document.head.appendChild(st);
+	}
+
 	function _panelHtml(hostId, applyFnName) {
+		_injectCss();
 		var args = "'" + hostId + "','" + (applyFnName || '') + "'";
 		var lbl  = "style='font-size:0.85em;margin:0 4px 0 0;white-space:nowrap;'";
 		var cell = "style='display:inline-flex;align-items:center;margin:2px 14px 2px 0;'";
 		var h = [];
-		h.push("<div class='dbx-sqlfmt-panel' style='border:1px solid #d0d0d0;border-radius:3px;background:#f4f6f8;color:#212529;padding:6px 10px;margin:4px 0;font-size:0.9em;max-width:760px;'>");
+		// Colours via --sqlfmt-* variables (light fallbacks = the original colours); dark where Bootstrap is dark, see _injectCss()
+		h.push("<div class='dbx-sqlfmt-panel' style='border:1px solid var(--sqlfmt-border,#d0d0d0);border-radius:3px;background:var(--sqlfmt-bg,#f4f6f8);color:var(--sqlfmt-fg,#212529);padding:6px 10px;margin:4px 0;font-size:0.9em;max-width:760px;'>");
 		h.push("<div style='font-weight:600;font-size:0.85em;margin-bottom:4px;'>&#9881; SQL Format options"
-			+ " <span style='font-weight:normal;color:#888;'>(saved in this browser, used by every Format SQL button)</span></div>");
+			+ " <span style='font-weight:normal;color:var(--sqlfmt-muted,#888);'>(saved in this browser, used by every Format SQL button)</span></div>");
 		h.push("<div>");
 		SELECTS.forEach(function (s) {
 			h.push("<span " + cell + " title='" + _esc(s[3]) + "'><label " + lbl + ">" + s[1] + ":</label>"

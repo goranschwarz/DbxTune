@@ -125,27 +125,29 @@ html {
 [data-theme="dark"] font[color="blue"]:not([data-bs-theme="light"] font)  { color: #6ea8fe; }
 
 /* "Light islands" on a dark page: parts that have no dark design and stay light on purpose (anything marked
-   data-bs-theme="light"; timeline tooltips) - undo the generic table rules above inside them */
+   data-bs-theme="light") - undo the generic table rules above inside them */
 /* data-bs-theme only re-defines Bootstrap's variables: an element that sets no colour itself still INHERITS the dark
    body's (light) text colour -> give light islands their light-theme text colour (zero specificity: own colours win) */
 :where([data-theme="dark"] [data-bs-theme="light"]) { color: var(--bs-body-color); }
-[data-theme="dark"] [data-bs-theme="light"] tr:nth-child(even),
-[data-theme="dark"] .dbx-tl-tooltip tr:nth-child(even),
-[data-theme="dark"] .vis-tooltip tr:nth-child(even)   { background-color: transparent; }
+[data-theme="dark"] [data-bs-theme="light"] tr:nth-child(even) { background-color: transparent; }
 /* Showplan UI has its own light/dark design (DbxShowplanTheme, dbxShowplanGraph.js): no generic zebra rows in it
    (dialogs + node panels are marked data-dbx-sp-themed; .qp-tt = qp.js tooltip clones on <body>) */
 [data-theme="dark"] [data-dbx-sp-themed] tr:nth-child(even),
 [data-theme="dark"] .qp-tt tr:nth-child(even)        { background-color: transparent; }
 [data-theme="dark"] [data-bs-theme="light"] td,
-[data-theme="dark"] [data-bs-theme="light"] th,
-[data-theme="dark"] .dbx-tl-tooltip td,
-[data-theme="dark"] .dbx-tl-tooltip th,
-[data-theme="dark"] .vis-tooltip td,
-[data-theme="dark"] .vis-tooltip th                  { border-color: #dee2e6; }
+[data-theme="dark"] [data-bs-theme="light"] th       { border-color: #dee2e6; }
 
 /* Timeline charts (vis-timeline + dbxTimeline.js, e.g. User Defined Timeline Chart).
-   'html' prefix: dbxTimeline.js injects its CSS at runtime (after this file), so these must be more specific.
-   Tooltips stay light on purpose: their content is HTML (with its own light colours) produced by the SQL. */
+   'html' prefix: dbxTimeline.js injects its CSS at runtime (after this file), so these must be more specific. */
+/* Bar tooltips (our own .dbx-tl-tooltip, and vis-timeline's .vis-tooltip): dark box; the few colours the tooltip HTML
+   brings itself (red/green/blue text, e.g. job "slower/faster than avg") in lighter shades that read on dark */
+html[data-theme="dark"] :is(.dbx-tl-tooltip, .vis-tooltip)  { background: #2b3035 !important; color: #dee2e6 !important; border-color: #495057 !important; box-shadow: 0 2px 8px rgba(0,0,0,.6); }
+html[data-theme="dark"] :is(.dbx-tl-tooltip, .vis-tooltip) tr:nth-child(even) { background-color: transparent; }
+html[data-theme="dark"] :is(.dbx-tl-tooltip, .vis-tooltip) :is(td, th) { border-color: #495057; }
+html[data-theme="dark"] :is(.dbx-tl-tooltip, .vis-tooltip) hr { border-color: #6c757d; opacity: .6; }
+html[data-theme="dark"] :is(.dbx-tl-tooltip, .vis-tooltip) :is([style*="color:green"], [style*="color: green"], font[color="green"]) { color: #6fcf87 !important; }
+html[data-theme="dark"] :is(.dbx-tl-tooltip, .vis-tooltip) :is([style*="color:red"],   [style*="color: red"],   font[color="red"])   { color: #ff6b6b !important; }
+html[data-theme="dark"] :is(.dbx-tl-tooltip, .vis-tooltip) :is([style*="color:blue"],  [style*="color: blue"],  font[color="blue"])  { color: #6ea8fe !important; }
 html[data-theme="dark"] .vis-timeline                    { border-color: #495057; }
 html[data-theme="dark"] .vis-labelset .vis-label,
 html[data-theme="dark"] .vis-time-axis .vis-text         { color: #ced4da; }
@@ -212,3 +214,10 @@ html[data-theme="dark"] .dbx-tl-legend i                  { border-color: rgba(2
 :is(html[data-theme="dark"], html.dbx-ui-dark) .daterangepicker .ranges li.active        { background-color: #0d6efd; color: #fff; }
 :is(html[data-theme="dark"], html.dbx-ui-dark) .daterangepicker .drp-buttons .btn-default,
 :is(html[data-theme="dark"], html.dbx-ui-dark) .daterangepicker .drp-buttons .cancelBtn  { color: #dee2e6; }
+
+/* SQL Text / Lock Table dialogs (dbxSqlText.js) when dark: the collector-built HTML tables (dbx-table-basic, black borders
+   from graph.html) -> grey borders, dark header cells; light highlighted cells keep their colour with dark text */
+#dbx-view-lockTable-dialog[data-bs-theme="dark"] :is(table, th, td)          { border-color: #6c757d !important; }
+#dbx-view-lockTable-dialog[data-bs-theme="dark"] th                          { background-color: #2d2d2d; color: #dee2e6; }
+#dbx-view-lockTable-dialog[data-bs-theme="dark"] :is(td, tr)[style*="background"],
+#dbx-view-lockTable-dialog[data-bs-theme="dark"] :is(td, tr)[bgcolor]        { color: #212529; }
