@@ -436,7 +436,7 @@ at pc:
 		#dbms-config-panel.dc-dark .table > :not(caption)     { --bs-table-border-color:#444; } /* BS5.3 draws .table-bordered row lines on <tr> */
 		#dbms-config-panel.dc-dark .table th                  { background:#2d2d2d !important; color:#ddd; border-color:#444; }
 		#dbms-config-panel.dc-dark .table td                  { border-color:#3a3a3a; color:#e0e0e0; background-color:#1e1e1e; }
-		#dbms-config-panel.dc-dark .table-hover tbody tr:hover td { background:#2a2a2a; color:#fff; }
+		#dbms-config-panel.dc-dark .table-hover tbody tr:hover td { background-color:#2a2a2a; color:#fff; }
 		#dbms-config-panel.dc-dark pre                        { color:#e0e0e0 !important; background:#1a1a1a !important; border-color:#444 !important; }
 
 		/* ── Query Store button (SQL Server only — shown by JS) ── */
@@ -561,7 +561,7 @@ at pc:
 		#query-store-panel.qs-dark .table > :not(caption)      { --bs-table-border-color:#444; } /* BS5.3 draws .table-bordered row lines on <tr> */
 		#query-store-panel.qs-dark .table th                   { background:#2d2d2d !important; color:#ddd; border-color:#444; }
 		#query-store-panel.qs-dark .table td                   { border-color:#3a3a3a; color:#e0e0e0; background-color:#1e1e1e; }
-		#query-store-panel.qs-dark .table-hover tbody tr:hover td { background:#2a2a2a; color:#fff; }
+		#query-store-panel.qs-dark .table-hover tbody tr:hover td { background-color:#2a2a2a; color:#fff; }
 		#query-store-panel.qs-dark pre                         { color:#e0e0e0 !important; background:#1a1a1a !important; border-color:#444 !important; }
 		#query-store-panel.qs-dark #qs-date-select             { background:#333 !important; color:#e0e0e0 !important; border-color:#555 !important; }
 		.qs-rank-hl                                            { background:#d0e8ff !important; }
@@ -668,7 +668,7 @@ at pc:
 		#alarm-panel.alarm-dark #alarm-panel-body .table         { color:#e0e0e0; }
 		#alarm-panel.alarm-dark #alarm-panel-body .table th      { background:#2d2d2d !important; color:#ddd; border-color:#444; }
 		#alarm-panel.alarm-dark #alarm-panel-body .table td      { border-color:#3a3a3a; color:#e0e0e0; background-color:#1e1e1e; }
-		#alarm-panel.alarm-dark #alarm-panel-body .table-hover tbody tr:hover td { background:#2a2a2a; color:#fff; }
+		#alarm-panel.alarm-dark #alarm-panel-body .table-hover tbody tr:hover td { background-color:#2a2a2a; color:#fff; }
 		/* alarm-row-* dark colours → dbxAlarm.css */
 
 		#cm-detail-panel {
@@ -758,7 +758,7 @@ at pc:
 	#active-statements.as-dark table th             { background:#2d2d2d !important; color:#ddd !important; border-color:#555 !important; }
 	#active-statements.as-dark table td             { color:#e0e0e0 !important; background-color:#1e1e1e !important; border-color:#444 !important; }
 	#active-statements.as-dark table tr:nth-of-type(odd) td { background-color:#252525 !important; }
-	#active-statements.as-dark table tr:hover td    { background:#2a2a2a !important; color:#fff !important; }
+	#active-statements.as-dark table tr:hover td    { background-color:#2a2a2a !important; color:#fff !important; } /* background-color, NOT the 'background' shorthand: that also resets background-image = the checkbox icons (.image-checked/.image-unchecked) */
 	/* Preserve row highlight colors in dark mode — these must override the td rule above */
 	#active-statements.as-dark table tr.active-statement-row-multi-sampled           td { background-color: rgba(220,130,0,0.9)  !important; color:#fff !important; }
 	#active-statements.as-dark table tr.active-statement-row-holding-locks-while-idle td { background-color: rgba(180,150,0,0.9)  !important; color:#fff !important; }
@@ -804,7 +804,7 @@ at pc:
 	#cm-detail-panel.cm-dark .table > :not(caption)      { --bs-table-border-color:#444; } /* BS5.3 draws .table-bordered row lines on <tr> */
 	#cm-detail-panel.cm-dark .table th                   { background:#2d2d2d !important; color:#ddd; border-color:#444; }
 	#cm-detail-panel.cm-dark .table td                   { border-color:#3a3a3a; color:#e0e0e0; background-color:#1e1e1e; }
-	#cm-detail-panel.cm-dark .table-hover tbody tr:hover td { background:#2a2a2a; color:#fff; }
+	#cm-detail-panel.cm-dark .table-hover tbody tr:hover td { background-color:#2a2a2a; color:#fff; }
 	/* Highlighted rows/cells (collector highlight rules, e.g. yellow system sessions): the light colour mixed into a dark tint,
 	   text stays light; explicit text colours are lightened (dbxGraphCounterDetails.js puts them in --hl-bg / --hl-fg) */
 	#cm-detail-panel.cm-dark .table td[style*="--hl-bg"]  { background-color:color-mix(in srgb, var(--hl-bg) 35%, #1e1e1e) !important; }

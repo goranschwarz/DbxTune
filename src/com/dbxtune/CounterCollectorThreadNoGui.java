@@ -50,6 +50,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmEvent;
+import com.dbxtune.alarm.events.AlarmEventHostMonitorConnectionDown;
 import com.dbxtune.alarm.events.ase.AlarmEventAseLicensExpiration;
 import com.dbxtune.alarm.writers.AlarmWriterToPcsJdbc;
 import com.dbxtune.alarm.writers.AlarmWriterToPcsJdbc.AlarmEventWrapper;
@@ -118,6 +119,10 @@ implements Memory.MemoryListener
 //	public static final String    DEFAULT_noGui_hostmon_windows_onConnect_executeCommand = "taskkill /f /t /im typeperf.exe";
 	public static final String    DEFAULT_noGui_hostmon_windows_onConnect_executeCommand = "taskkill /f /fi \"USERNAME eq %USERNAME%\" /im typeperf.exe";
 
+	/** Send alarm 'AlarmEventHostMonitorConnectionDown' when the SSH Host Monitoring connection has failed for more than ## seconds. (a negative value disables the alarm) */
+	public static final String    PROPKEY_noGui_hostmon_connect_alarm_thresholdInSec = "no.gui.hostmon.connect.alarm.thresholdInSec";
+	public static final int       DEFAULT_noGui_hostmon_connect_alarm_thresholdInSec = 300;
+
 
 	public CounterCollectorThreadNoGui(CounterControllerAbstract counterController)
 	{
@@ -162,6 +167,9 @@ implements Memory.MemoryListener
 	private int        _sshPort         = 22;
 	private boolean    _localHostMon    = false;
 	private String     _localHostMonWrapperCmd = null;
+
+	private long       _hostMonConnFailStartTime    = 0;    // When did the SSH Host Monitoring connection start to fail (0 = not failing)
+	private Exception  _hostMonLastConnectException = null;
 	
 	private Configuration _storeProps   = null;
 	
@@ -1451,10 +1459,14 @@ implements Memory.MemoryListener
 							}
 
 							getCounterController().setHostMonConnection(hostMonConn);
+
 						}
 						catch (Exception e)
 						{
 							_logger.error("Host Monitoring: Failed to connect to SSH hostname='"+_sshHostname+"', user='"+_sshUsername+"'.", e);
+
+							// Remember the error (used by: checkSendAlarmHostMonConnectionDown)
+							_hostMonLastConnectException = e;
 						}
 					}
 				}
@@ -1764,6 +1776,9 @@ implements Memory.MemoryListener
 					// Generate a DummyAlarm if the file '/tmp/${SRVNAME}.dummyAlarm.deleteme exists' exists.
 					ah.checkSendDummyAlarm(pc.getServerNameOrAlias());
 
+					// Send alarm if Host Monitoring (SSH) has not been able to connect for a while
+					checkSendAlarmHostMonConnectionDown(pc.getServerNameOrAlias());
+
 					ah.endOfScan();           // This is synchronous operation (if we want to stuff Alarms in the PersistContainer before it's called/sent)
 //					ah.addEndOfScanToQueue(); // This is async operation
 
@@ -2060,6 +2075,64 @@ implements Memory.MemoryListener
 //		_logger.info("DUMMY WHICH SHOULD BE REMOVED... ONLY FOR TESTING PURPOSES OF ShutdownHook TIMEOUT... sleeping for 99 sec...");
 //		try { Thread.sleep(99 * 1000); }
 //		catch(InterruptedException ex) { ex.printStackTrace(); }
+	}
+
+	/**
+	 * Send alarm 'AlarmEventHostMonitorConnectionDown' if the SSH Host Monitoring connection has failed for more than
+	 * <code>no.gui.hostmon.connect.alarm.thresholdInSec</code> seconds.
+	 * <p>
+	 * The alarm is "always cancelable", so it will be cancelled at the first endOfScan() where it's not re-raised (when we are connected again)
+	 *
+	 * @param srvName  Name of the monitored server
+	 */
+	private void checkSendAlarmHostMonConnectionDown(String srvName)
+	{
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		// Only for SSH Host Monitoring (local OS Commands has no "connect" step)
+		if (_localHostMon || _sshHostname == null || _sshUsername == null || (_sshPassword == null && _sshKeyFile == null))
+			return;
+
+		// Check the connection STATE (not the "cached" isHostMonConnected()), since the connection can be lost/re-connected from several places:
+		//  - The top of the collector loop (initial connect, or when it sees that the connection is closed)
+		//  - CounterModelHostMonitor.refresh() -> SshConnection.execCommand() -> checkConnectionAndPossiblyReconnect() -> reconnect()
+		//  - Streaming HostMonitor threads -> HostMonitorConnectionSsh.handleException() -> reconnect()
+		HostMonitorConnection hostMonConn = getCounterController().getHostMonConnection();
+		boolean isConnected = hostMonConn != null && ! hostMonConn.isConnectionClosed();
+		if (isConnected)
+		{
+			_hostMonConnFailStartTime    = 0;
+			_hostMonLastConnectException = null;
+			return;
+		}
+
+		// Not connected: start the "fail timer" (if not already started)
+		if (_hostMonConnFailStartTime == 0)
+			_hostMonConnFailStartTime = System.currentTimeMillis();
+
+		// If the connect error was seen in a Host Monitor CM (and not in the collector loop), use that as the "last error"
+		for (CountersModel cm : getCounterController().getCmList())
+		{
+			if (cm instanceof CounterModelHostMonitor && cm.getSampleException() != null)
+			{
+				_hostMonLastConnectException = cm.getSampleException();
+				break;
+			}
+		}
+
+		int thresholdInSec = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_noGui_hostmon_connect_alarm_thresholdInSec, DEFAULT_noGui_hostmon_connect_alarm_thresholdInSec);
+		if (thresholdInSec < 0)
+			return;
+
+		long secSinceFailStart = (System.currentTimeMillis() - _hostMonConnFailStartTime) / 1000;
+		if (secSinceFailStart >= thresholdInSec)
+		{
+			_logger.info("Host Monitoring: SSH connection to host '" + _sshHostname + "' has failed for " + secSinceFailStart + " seconds (thresholdInSec=" + thresholdInSec + "). Sending AlarmEventHostMonitorConnectionDown to the AlarmHandler.");
+
+			AlarmEvent alarmEvent = new AlarmEventHostMonitorConnectionDown(srvName, _sshHostname, _sshPort, _sshUsername, secSinceFailStart, thresholdInSec, _hostMonLastConnectException);
+			AlarmHandler.getInstance().addAlarm(alarmEvent);
+		}
 	}
 
 	/**

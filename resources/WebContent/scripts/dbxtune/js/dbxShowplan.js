@@ -127,6 +127,18 @@
 		var container = viewportEl || (elem ? elem.closest('.modal-body') : null);
 		if (!panzoom || !elem || !container) return;
 
+		// First put the plan where it is read from: scroll the dialog so the plan section starts at the top
+		// (its sticky header + toolbar at the top edge) and all the way to the left - the root operator is
+		// then at the top-left, and the fit below uses what is actually VISIBLE from there.
+		var scroller = container.closest('.modal-body');
+		var section  = container.closest('details');
+		if (scroller) {
+			if (section) scroller.scrollTop += section.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+			scroller.scrollLeft = 0;
+		}
+		container.scrollTop = 0;
+		container.scrollLeft = 0;
+
 		var savedTransform = elem.style.transform;
 		elem.style.transform = 'none';
 
@@ -134,6 +146,23 @@
 		var contentRect = _panzoomContentRect(elem);
 		var margin = 20;
 		var contRect = container.getBoundingClientRect();
+
+		// The visible part of the container: it can be much taller (SQL Server: as tall as the section) or
+		// wider than what the scrolling .modal-body shows, and the section's sticky header/toolbar cover its
+		// top - fitting against the container's full size made the height effectively never count.
+		var visRect = { left: contRect.left, top: contRect.top, right: contRect.left + container.clientWidth, bottom: contRect.top + container.clientHeight };
+		if (scroller) {
+			var sr = scroller.getBoundingClientRect();
+			visRect.left   = Math.max(visRect.left,   sr.left);
+			visRect.top    = Math.max(visRect.top,    sr.top);
+			visRect.right  = Math.min(visRect.right,  sr.left + scroller.clientWidth);
+			visRect.bottom = Math.min(visRect.bottom, sr.top  + scroller.clientHeight);
+		}
+		if (section) {
+			section.querySelectorAll('summary, div').forEach(function (el) {
+				if (getComputedStyle(el).position === 'sticky') visRect.top = Math.max(visRect.top, el.getBoundingClientRect().bottom);
+			});
+		}
 
 		// The toolbar buttons (Redraw/Enable Zoom/Zoom to Fit/...) sit in normal flow *above* elem,
 		// inside this same .modal-body - a CSS transform on elem doesn't move them, only elem's own
@@ -143,9 +172,9 @@
 		// at elem's own natural (pre-transform) top - never higher than that - keeps the fit inside
 		// the space actually below the toolbar. No equivalent issue on the other three edges: nothing
 		// else in modal-body sits beside elem horizontally, and nothing sits below it.
-		var topBound = Math.max(contRect.top, elemRect.top);
-		var availW = container.clientWidth - margin;
-		var availH = (contRect.top + container.clientHeight) - topBound - margin;
+		var topBound = Math.max(visRect.top, elemRect.top);
+		var availW = (visRect.right  - visRect.left) - margin;
+		var availH = (visRect.bottom - topBound)     - margin;
 		var scale = Math.min(availW / contentRect.width, availH / contentRect.height, 1);
 		scale = Math.max(scale, 0.01);
 
@@ -153,7 +182,7 @@
 		var oy = elemRect.top  + elemRect.height / 2;
 		// margin/2 inset on each side, so leftover margin space is split symmetrically rather than
 		// all landing on the right/bottom edge (availW/availH already had the full margin subtracted).
-		var targetLeft = contRect.left + margin / 2;
+		var targetLeft = visRect.left + margin / 2;
 		var targetTop  = topBound      + margin / 2;
 		if (!alignTopLeft) {
 			targetLeft += (availW - scale * contentRect.width)  / 2;
@@ -313,6 +342,7 @@
 			"					<div id='dbx-view-ssShowplan-timestamps' style='font-size:0.75em;color:var(--sp-text-5);'></div>",
 			"				</div>",
 			"				<div style='display:flex;align-items:center;flex-shrink:0;'>",
+			"					<span id='dbx-ssp-theme' style='font-size:0.8rem;' title='Colours for the Showplan only (Auto = same as the page)'></span>",
 			"					<button type='button' class='btn border-0 p-0 lh-1 opacity-50' style='margin-left:8px;font-size:1.3rem;' title='Expand/restore dialog size' aria-label='Expand/restore dialog size' onclick='ssShowplanToggleExpand();'><span aria-hidden='true'>&#9974;</span></button>",
 			"					<button type='button' class='btn-close' style='margin-left:8px;' data-bs-dismiss='modal' aria-label='Close'></button>",
 			"				</div>",
@@ -336,7 +366,7 @@
 
 			"				<!-- ▶ Execution Plan -->",
 			"				<details open id='dbx-ssp-sect-plan' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
-			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128202; Execution Plan</summary>",
+			"					<summary style='position:sticky;top:0;z-index:3;background:var(--sp-bg-2);cursor:pointer;padding:5px 10px;line-height:20px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128202; Execution Plan</summary>",
 			"					<div style='padding:4px 8px 10px 8px;'>",
 			// display:flex so the renderer toggle (moved to the end, below) can be pushed to the right
 			// edge of this row with margin-left:auto while everything before it keeps its normal
@@ -345,7 +375,10 @@
 			// to give for free before this became a flex row - flex ignores that whitespace entirely,
 			// which is why the buttons read as fused together with no fix (reported live, screenshot
 			// showed "Hide Properties"/"Top-to-Bottom"/"Use html-query-plan" touching).
-			"						<div style='position:relative;z-index:2;display:flex;align-items:center;flex-wrap:wrap;row-gap:4px;column-gap:6px;'>",
+			// Sticky: the toolbar stays at the top of the dialog (right below the sticky 30px section header) while scrolling through a big plan (the .modal-body
+			// scrolls); it only sticks inside the plan section, so it scrolls away with it. Background + thin shadow
+			// so the plan scrolls underneath it cleanly.
+			"						<div style='position:sticky;top:30px;z-index:2;background:var(--sp-bg-2);padding:4px 0;box-shadow:0 3px 4px -3px var(--sp-shadow-2);display:flex;align-items:center;flex-wrap:wrap;row-gap:4px;column-gap:6px;'>",
 			"						<button type='button' id='dbx-view-ssShowplan-redrawBtn' class='btn btn-outline-secondary btn-sm' onclick='ssShowplanRedraw();'>&#8635; Redraw</button>",
 			"						<button type='button' id='dbx-view-ssShowplan-zoomBtn' class='btn btn-outline-secondary btn-sm' onclick='ssShowplanToggleZoom();'>&#128269; Enable Zoom</button>",
 			"						<button type='button' id='dbx-view-ssShowplan-zoomFitBtn' class='btn btn-outline-secondary btn-sm' style='display:none;' onclick='ssShowplanZoomToFit();'>&#8862; Zoom to Fit</button>",
@@ -528,6 +561,7 @@
 			"				<span style='color:var(--sp-text-6);margin-right:6px;font-size:1.1em;' title='Drag to move'>&#x2630;</span>",
 			"				<h5 class='modal-title' style='flex:1;min-width:0;'><b>ASE Showplan</b>: <span id='dbx-view-aseShowplan-objectName'></span></h5>",
 			"				<div style='display:flex;align-items:center;flex-shrink:0;'>",
+			"					<span id='dbx-asp-theme' style='font-size:0.8rem;' title='Colours for the Showplan only (Auto = same as the page)'></span>",
 			"					<button type='button' class='btn border-0 p-0 lh-1 opacity-50' style='margin-left:8px;font-size:1.3rem;' title='Expand/restore dialog size' aria-label='Expand/restore dialog size' onclick='aseShowplanToggleExpand();'><span aria-hidden='true'>&#9974;</span></button>",
 			"					<button type='button' class='btn-close' style='margin-left:8px;' data-bs-dismiss='modal' aria-label='Close'></button>",
 			"				</div>",
@@ -544,13 +578,16 @@
 
 			"				<!-- ▶ Graphical Plan -->",
 			"				<details open id='dbx-asp-sect-graph' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
-			"					<summary id='dbx-view-aseShowplan-plan-summary' style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128202; Graphical Plan</summary>",
+			"					<summary id='dbx-view-aseShowplan-plan-summary' style='position:sticky;top:0;z-index:3;background:var(--sp-bg-2);cursor:pointer;padding:5px 10px;line-height:20px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128202; Graphical Plan</summary>",
 			"					<div style='padding:4px 8px 10px 8px;'>",
 			// Same toolbar structure as the SQL Server dialog: one flex row, actions on the left, and
 			// Properties/Orientation in their OWN wrapper carrying a single margin-left:auto so the
 			// group is pushed right and wraps as one block. See the long comment on the SQL Server
 			// toolbar for why the auto-margin belongs on the wrapper and not on each button.
-			"						<div style='position:relative;z-index:2;display:flex;align-items:center;flex-wrap:wrap;row-gap:4px;column-gap:6px;'>",
+			// Sticky: the toolbar stays at the top of the dialog (right below the sticky 30px section header) while scrolling through a big plan (the .modal-body
+			// scrolls); it only sticks inside the plan section, so it scrolls away with it. Background + thin shadow
+			// so the plan scrolls underneath it cleanly.
+			"						<div style='position:sticky;top:30px;z-index:2;background:var(--sp-bg-2);padding:4px 0;box-shadow:0 3px 4px -3px var(--sp-shadow-2);display:flex;align-items:center;flex-wrap:wrap;row-gap:4px;column-gap:6px;'>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='aseShowplanRedraw();'>&#8635; Redraw</button>",
 			"						<button type='button' id='dbx-view-aseShowplan-zoomBtn' class='btn btn-outline-secondary btn-sm' onclick='aseShowplanToggleZoom();'>&#128269; Enable Zoom</button>",
 			"						<button type='button' id='dbx-view-aseShowplan-zoomFitBtn' class='btn btn-outline-secondary btn-sm' style='display:none;' onclick='aseShowplanZoomToFit();'>&#8862; Zoom to Fit</button>",
@@ -683,7 +720,10 @@
 		// Light/dark (dbxShowplanGraph.js DbxShowplanTheme) for every way a plan dialog is opened - the ss/ase
 		// functions also call apply() before drawing, the pg dialog is opened by Bootstrap data-bs-target only
 		$('#dbx-view-pgShowplan-dialog, #dbx-view-ssShowplan-dialog, #dbx-view-aseShowplan-dialog')
-			.on('show.bs.modal', function () { DbxShowplanTheme.apply(this); });
+			.on('show.bs.modal', function () { DbxShowplanTheme.refreshSwitches(); DbxShowplanTheme.apply(this); });
+		// The Showplan's own Theme dropdown (Auto / Light / Dark) in the SQL Server and ASE dialog headers, left of the expand button
+		DbxShowplanTheme.mountSwitch('#dbx-ssp-theme');
+		DbxShowplanTheme.mountSwitch('#dbx-asp-theme');
 
 		// ── Showplan Loader input dialog ──────────────────────────────────────────
 		document.body.insertAdjacentHTML('beforeend',

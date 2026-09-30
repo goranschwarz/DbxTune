@@ -145,8 +145,8 @@ public class SqlServerQueryStoreExtractor
 				    + "     CASE WHEN (desired_state = actual_state) THEN 'YES' ELSE 'NO' END AS stateIsOk \n"
 				    + "    ,CAST(((current_storage_size_mb*1.0)/(max_storage_size_mb*1.0))*100.0 as numeric(10,1)) AS storageUsedPct \n"
 				    + "    ,(select datediff(day, min(start_time), max(start_time)) from [" + _monDbName + "].sys.query_store_runtime_stats_interval) AS daysInStorage \n"
-				    + "    ,current_storage_size_mb / (select datediff(day, min(start_time), max(start_time)) from [" + _monDbName + "].sys.query_store_runtime_stats_interval) * stale_query_threshold_days AS expectedMaxStorageSizeMb \n"
-				    + "    ,CASE WHEN current_storage_size_mb / (select datediff(day, min(start_time), max(start_time)) from [" + _monDbName + "].sys.query_store_runtime_stats_interval) * stale_query_threshold_days > max_storage_size_mb \n"
+				    + "    ,current_storage_size_mb / nullif((select datediff(day, min(start_time), max(start_time)) from [" + _monDbName + "].sys.query_store_runtime_stats_interval),0) * stale_query_threshold_days AS expectedMaxStorageSizeMb \n"
+				    + "    ,CASE WHEN current_storage_size_mb / nullif((select datediff(day, min(start_time), max(start_time)) from [" + _monDbName + "].sys.query_store_runtime_stats_interval),0) * stale_query_threshold_days > max_storage_size_mb \n"
 				    + "          THEN 'YES' \n"
 				    + "          ELSE 'NO' \n"
 				    + "     END AS willExceedMaxStorageSizeMb \n"
@@ -395,27 +395,30 @@ public class SqlServerQueryStoreExtractor
 			// Create any temporary tables
 			createTempTables();
 
+			// do NOT abort when we have errors extracting data, just continue with the next one (and hope for the best)
+			boolean onProblemsDoThrow = false;
+
 			// Transfer tables
-			transferTable(QsTables.database_query_store_options);
+			transferTable(QsTables.database_query_store_options       , onProblemsDoThrow);
 
-			transferTable(QsTables.query_store_runtime_stats_interval);
-			transferTable(QsTables.query_store_runtime_stats);
-			transferTable(QsTables.query_store_wait_stats); // This is only available from 2017... which is checked enforced in: transferTable()
+			transferTable(QsTables.query_store_runtime_stats_interval , onProblemsDoThrow);
+			transferTable(QsTables.query_store_runtime_stats          , onProblemsDoThrow);
+			transferTable(QsTables.query_store_wait_stats             , onProblemsDoThrow); // This is only available from 2017... which is checked enforced in: transferTable()
 
-			transferTable(QsTables.query_store_plan);
-			transferTable(QsTables.query_store_query);
-			transferTable(QsTables.query_store_query_text);
-			transferTable(QsTables.query_context_settings);
+			transferTable(QsTables.query_store_plan                   , onProblemsDoThrow);
+			transferTable(QsTables.query_store_query                  , onProblemsDoThrow);
+			transferTable(QsTables.query_store_query_text             , onProblemsDoThrow);
+			transferTable(QsTables.query_context_settings             , onProblemsDoThrow);
 
-			transferTable(QsTables.database_automatic_tuning_options);
-			transferTable(QsTables.dm_db_tuning_recommendations);
+			transferTable(QsTables.database_automatic_tuning_options  , onProblemsDoThrow);
+			transferTable(QsTables.dm_db_tuning_recommendations       , onProblemsDoThrow);
 			
-//			transferTable(QsTables.database_query_store_internal_state);
-			transferTable(QsTables.query_store_plan_feedback);
-//			transferTable(QsTables.query_store_plan_forcing_locations);
-			transferTable(QsTables.query_store_query_hints);
-			transferTable(QsTables.query_store_query_variant);
-			transferTable(QsTables.query_store_replicas);
+//			transferTable(QsTables.database_query_store_internal_state, onProblemsDoThrow);
+			transferTable(QsTables.query_store_plan_feedback          , onProblemsDoThrow);
+//			transferTable(QsTables.query_store_plan_forcing_locations , onProblemsDoThrow);
+			transferTable(QsTables.query_store_query_hints            , onProblemsDoThrow);
+			transferTable(QsTables.query_store_query_variant          , onProblemsDoThrow);
+			transferTable(QsTables.query_store_replicas               , onProblemsDoThrow);
 			
 			// From the transferred tables... 
 			//   * Get "top" SQL Statements
@@ -769,6 +772,24 @@ public class SqlServerQueryStoreExtractor
 	    return time.atZone(ZoneId.systemDefault()).withZoneSameInstant(ZoneOffset.UTC).toLocalDateTime();
 	}
 
+	public int transferTable(QsTables tabName, boolean onProblemsDoThrow)
+	throws SQLException
+	{
+		try
+		{
+			int rowCount = transferTable(tabName);
+			return rowCount;
+		}
+		catch (SQLException ex)
+		{
+			if (onProblemsDoThrow)
+			{
+				throw ex;
+			}
+
+			return -1;
+		}
+	}
 	public int transferTable(QsTables tabName)
 	throws SQLException
 	{

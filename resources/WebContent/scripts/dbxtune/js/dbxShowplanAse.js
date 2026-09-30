@@ -814,7 +814,7 @@ window.AseShowplan = (function () {
 		// font-size in PIXELS, not em: an em here inherits the dialog's font size, which made this
 		// panel noticeably larger than the SQL Server one for the same content. Fixed px keeps the two
 		// identical regardless of what the surrounding page does.
-		+ '.ase-plan-detail { position: fixed; z-index: 2000; background: var(--sp-tt-bg); border: 1px solid var(--sp-tt-border); border-radius: 4px; padding: 6px 10px; min-width: 220px; max-width: 560px; text-align: left; box-shadow: 0 2px 10px var(--sp-shadow-2); font-size: 11px; line-height: 1.35; }'
+		+ '.ase-plan-detail { position: fixed; z-index: 2000; color: var(--sp-text); background: var(--sp-tt-bg); border: 1px solid var(--sp-tt-border); border-radius: 4px; padding: 6px 10px; min-width: 220px; max-width: 560px; text-align: left; box-shadow: 0 2px 10px var(--sp-shadow-2); font-size: 11px; line-height: 1.35; }'
 		+ '.ase-plan-detail { max-height: 80vh; overflow-y: auto; overscroll-behavior: contain; }'
 		+ '.ase-plan-detail table { border-collapse: collapse; }'
 		+ '.ase-plan-detail-desc { white-space: normal; font-style: italic; color: var(--sp-tt-text); margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--sp-tt-sep); line-height: 1.35; }'

@@ -76,6 +76,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>New alarm: AlarmEventSpaceFullPrediction -- When we predict that we will fall "short" on space usage</LI>
 				<LI>Changed:   SrvDown -- Only the "base" url will be passed</LI>
 				<LI>Changed:   DbmsVersionString -- Changed from INFO to WARNING</LI>
+				<LI>New alarm: AlarmEventHostMonitorConnectionDown -- (WARNING) When Host Monitoring (SSH) can't connect to the monitored host for more than 300 seconds. Cancelled when the connection works again. Threshold can be changed with <code>no.gui.hostmon.connect.alarm.thresholdInSec = ###</code> (-1 = disable)</LI>
 			</UL>
 		</LI>
 

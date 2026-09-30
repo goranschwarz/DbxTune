@@ -141,7 +141,36 @@
 	// -------------------------------------------------------------------------
 	// Event handlers
 	// -------------------------------------------------------------------------
+	// Theme of the dialog = the theme of what opened it: these dialogs are shared (Active Statements, Counter
+	// Details, Query Store, table info, ...). Opened from a panel -> that panel's own Theme (its Auto/Light/Dark
+	// choice sets a dark class on it); from inside a dialog/area with data-bs-theme -> that; else the page.
+	var PANEL_DARK_CLASS = [
+		['#active-statements',       'as-dark'],
+		['#cm-detail-panel',         'cm-dark'],
+		['#query-store-panel',       'qs-dark'],
+		['#dbms-config-panel',       'dc-dark'],
+		['#alarm-panel',             'alarm-dark'],
+		['#hist-alarm-panel',        'ha-dark'],
+		['#hist-alarm-detail-panel', 'ha-dark']
+	];
+	function _openerIsDark(opener) {
+		if (opener && opener.closest) {
+			for (var i = 0; i < PANEL_DARK_CLASS.length; i++) {
+				var panel = opener.closest(PANEL_DARK_CLASS[i][0]);
+				if (panel) return panel.classList.contains(PANEL_DARK_CLASS[i][1]);
+			}
+			var themed = opener.closest('[data-bs-theme]');
+			if (themed && themed !== document.documentElement) return themed.getAttribute('data-bs-theme') === 'dark';
+		}
+		if (typeof window._colorSchema === 'string') return window._colorSchema === 'dark';   // graph.html
+		return document.documentElement.getAttribute('data-theme') === 'dark';               // dbxTheme.js pages
+	}
+
 	function _initHandlers() {
+		$('#dbx-view-sqltext-dialog, #dbx-view-lockTable-dialog').on('show.bs.modal', function (e) {
+			this.setAttribute('data-bs-theme', _openerIsDark(e.relatedTarget) ? 'dark' : 'light');
+		});
+
 		$('#dbx-view-sqltext-dialog').on('shown.bs.modal', function (e) {
 			var data = $(e.relatedTarget).data();
 			$('#dbx-view-sqltext-objectName', this).text(data.objectname);
