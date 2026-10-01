@@ -672,7 +672,17 @@ extends CountersModel
 		// We CAN NOT Continue if we had a null result (or should we throw some kind of Exception to make it more "obvious") 
 		if (tmpNewSample == null)
 			return 0;
-		
+
+		// The MetaData is not yet ready (for example: the OS Command was just (re)started, and the "dynamic" MetaData
+		// is still waiting for its first row, like the 'typeperf' CSV header), so there are no columns to work with.
+		// Skip this sample, otherwise the post processing (localCalculation, updateGraphData, alarms...) will look for columns that do not exist.
+		HostMonitorMetaData tmpMetaData = tmpNewSample.getMetaData();
+		if (tmpMetaData == null || tmpNewSample.getColumnCount() == 0 || (tmpMetaData.isInitializeUsingFirstRowEnabled() && ! tmpMetaData.isFirstRowInitDone()))
+		{
+			_logger.info("Skipping sample for '" + getName() + "', the Host Monitor module '" + _hostMonitor.getModuleName() + "' has not yet received/initialized its MetaData (probably just (re)started).");
+			return 0;
+		}
+
 		if (_logger.isDebugEnabled())
 			_logger.debug("OUTPUT Table from '"+_hostMonitor.getModuleName()+"':\n" + tmpNewSample.toTableString());
 

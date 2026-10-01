@@ -54,8 +54,16 @@ public class OsTableSampleHolder
 	 * If the MetaData was unknown/null when creating the object, then we have a chance to set it here. 
 	 * @param metaData
 	 */
-	public void setMetaData(HostMonitorMetaData metaData)
+	synchronized public void setMetaData(HostMonitorMetaData metaData)
 	{
+		// New MetaData (for example when the HostMonitor is restarted with "dynamic" MetaData),
+		// then any samples/PK's we hold belongs to the OLD MetaData layout... so discard them
+		if (_metaData != metaData)
+		{
+			_samples.clear();
+			_pkMap.clear();
+		}
+
 		_metaData = metaData;
 	}
 
