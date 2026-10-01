@@ -106,18 +106,22 @@
   color: #0a3a7a;
 }
 
-/* ── DSR-style hover tooltip (shows full text on hover, same as Daily Summary Report) ── */
-:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) [data-tooltip] {
-  position: relative;
+/* ── DSR-style hover tooltip (shows full text on hover, same as Daily Summary Report) ──
+   A single <div> on <body>, positioned by _initTableInfoHoverTip() in dbxShowplan.js. It used to be
+   a :hover::before on the cell, which was clipped by the panel's scroll box (overflow:auto). */
+/* graph.html (and some servlet pages) have a global [data-tooltip]:hover::before hint - keep it off here */
+:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body) [data-tooltip]:hover::before {
+  content: none;
 }
-:is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) [data-tooltip]:hover::before {
-  content: attr(data-tooltip);
-  position: absolute;
-  z-index: 1200;
-  top: 20px;
-  left: 30px;
-  width: 800px;
-  max-width: 90vw;
+.dbx-tableinfo-tip {
+  display: none;
+  box-sizing: border-box;
+  position: fixed;
+  z-index: 2100;              /* above the modal (1050) and the plan's node panels (2000) */
+  width: calc(800px + 30ch);  /* 30 more monospace characters per line than the old 800px */
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  overflow: hidden;
   padding: 10px;
   background: #454545;
   color: #fff;
@@ -150,7 +154,7 @@ html.dbx-sp-dark :is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-show
   background: #1a2b40;
   color: #9ecbff;
 }
-html.dbx-sp-dark :is(#dbx-ssp-tableinfo-body, #dbx-asp-tableinfo-body, #ase-showplan-tableinfo-body) [data-tooltip]:hover::before {
+html.dbx-sp-dark .dbx-tableinfo-tip {
   background: #343a40;
   box-shadow: 0 2px 8px rgba(0,0,0,0.7);
 }

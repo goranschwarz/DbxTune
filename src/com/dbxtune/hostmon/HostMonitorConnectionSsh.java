@@ -30,6 +30,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ssh.SshConnection;
 import com.dbxtune.ssh.SshConnection.LinuxUtilType;
+import com.dbxtune.utils.StringUtil;
 import com.jcraft.jsch.ChannelExec;
 
 public class HostMonitorConnectionSsh 
@@ -297,7 +298,20 @@ extends HostMonitorConnection
 			_sleepCount = 0;
 			_name = cmd;
 
-			_sshChannel = _sshConn.execCommand(cmd, isStreamingCommand);
+			// On Windows: Request a PTY for streaming commands (like 'typeperf'), otherwise the Win32-OpenSSH SSHD
+			// leaves the command running (orphaned) when the channel/session is closed.
+			// see: https://github.com/PowerShell/Win32-OpenSSH/issues/1751
+			// On Linux/Unix: no PTY (SSHD kills the remote processes when the session ends)
+			//
+			// ALTERNATIVE (if the PTY approach does NOT work): A PowerShell wrapper that kills the command when STDIN is closed (EOF)
+			//   - When the SSH channel is closed, SSHD closes the child's STDIN, so the wrapper gets EOF and kills 'typeperf' (from within the same logon session)
+			//   - The command would be something like:
+			//       powershell -NoProfile -Command "$p = Start-Process typeperf -ArgumentList '-si 10 \"\PhysicalDisk(*)\*\"' -NoNewWindow -PassThru; [void][Console]::In.ReadToEnd(); Stop-Process -Id $p.Id -Force"
+			//   - And in close(): call '_sshChannel.getOutputStream().close()' (sends EOF) before '_sshChannel.disconnect()'
+			//   - Note: A cleanup from a NEW SSH session (like 'taskkill' on connect) fails with 'Access denied', since the orphans belong to another logon session
+			boolean requestPty = isStreamingCommand && StringUtil.hasValue(_sshConn.getOsName()) && _sshConn.getOsName().startsWith("Windows-");
+
+			_sshChannel = _sshConn.execCommand(cmd, requestPty);
 		}
 
 //		@Override
