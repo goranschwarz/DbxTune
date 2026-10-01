@@ -33,6 +33,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import javax.swing.Timer;
 
@@ -76,6 +77,24 @@ implements Runnable
 			stopAfterXSamples = " -sc " + (stopAfterXHours * 3600 / sleepTime);
 
 		return stopAfterXSamples;
+	}
+
+	/** Terminal Escape Sequences: CSI (ESC [ ... final-char), OSC (ESC ] ... BEL or ESC \), and other 2 char sequences (ESC + char) */
+	private static final Pattern TERMINAL_ESCAPE_SEQUENCES = Pattern.compile("\u001B\\[[0-?]*[ -/]*[@-~]|\u001B\\][^\u0007\u001B]*(\u0007|\u001B\\\\)|\u001B[@-_]");
+
+	/**
+	 * When a PTY is requested (on Windows the command then runs under a ConPTY) the output may contain Terminal Escape Sequences<br>
+	 * like: cursor hide/show, clear screen, set window title, etc... Remove those so they do not end up in the parsed data.
+	 *
+	 * @param str  input string (can be null)
+	 * @return The input string without any escape sequences (or as-is if it doesn't contain any ESC chars)
+	 */
+	public static String removeTerminalEscapeSequences(String str)
+	{
+		if (str == null || str.indexOf('\u001B') == -1)
+			return str;
+
+		return TERMINAL_ESCAPE_SEQUENCES.matcher(str).replaceAll("");
 	}
 
 	/**The Operating System command that will be used to get valid information*/
@@ -1295,7 +1314,7 @@ implements Runnable
 					}
 					
 					// NOW READ input
-					String row = stdoutReader.readLine();
+					String row = removeTerminalEscapeSequences(stdoutReader.readLine()); // When a PTY is used (Windows ConPTY), Escape Sequences may be injected
 
 					if (_logger.isDebugEnabled())
 						_logger.debug("SSH-STDOUT[" + getModuleName() + "][ms=" + (System.currentTimeMillis()-startTs) + ", available=" + stdout.available() + "]: row=|" + row + "|.");
@@ -1318,7 +1337,7 @@ implements Runnable
 					}
 					
 					// NOW READ input
-					String row = stderrReader.readLine();
+					String row = removeTerminalEscapeSequences(stderrReader.readLine()); // When a PTY is used (Windows ConPTY), Escape Sequences may be injected
 
 					if (_logger.isDebugEnabled())
 						_logger.debug("SSH-STDERR[" + getModuleName() + "][ms=" + (System.currentTimeMillis()-startTs) + ", available=" + stdout.available() + "]: row=|" + row + "|.");

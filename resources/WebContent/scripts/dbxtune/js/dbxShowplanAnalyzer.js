@@ -91,29 +91,96 @@ window.DbxShowplanAnalyzer = (function () {
 		return waits;
 	}
 
-	function getSerialPlanReason(reasonCode) {
-		var reasons = {
-			"MaxDOPSetToOne":                                                  "MAXDOP 1 is configured (server/DB/Resource Governor level)",
-			"QueryHintNoParallelSet":                                          "OPTION (MAXDOP 1) hint forces serial execution",
-			"EstimatedDOPIsOne":                                               "Optimizer estimated DOP = 1 (serial plan expected to be optimal)",
-			"TSQLUserDefinedFunctionsNotParallelizable":                        "T-SQL scalar UDF prevents parallelism",
-			"CouldNotGenerateValidParallelPlan":                               "Optimizer could not generate a valid parallel plan (check for UDFs or table variable modifications)",
-			"ParallelismDisabledByTraceFlag":                                  "Parallelism disabled by trace flag",
-			"NoParallelPlansInDesktopOrExpressEdition":                        "Express/Desktop edition does not support parallelism",
-			"TableVariableTransactionsDoNotSupportParallelNestedTransaction":  "Table variable modification prevents parallelism",
-			"DMLQueryReturnsOutputToClient":                                   "DML with OUTPUT clause returning results to client prevents parallelism",
-			"NoParallelForMemoryOptimizedTables":                              "Memory-optimized tables do not support parallel plans",
-			"NoParallelWithRemoteQuery":                                       "Remote queries cannot use parallelism",
-			"CLRUserDefinedFunctionRequiresDataAccess":                        "CLR UDF with data access prevents parallelism",
-			"NonParallelizableIntrinsicFunction":                              "Non-parallelizable intrinsic function prevents parallelism",
-			"UpdatingWritebackVariable":                                       "Writing to a local variable forces serial execution",
-			"NoParallelCursorFetchByBookmark":                                 "Cursor fetch by bookmark prevents parallelism",
-			"NoParallelDynamicCursor":                                         "Dynamic cursor prevents parallelism",
-			"NoParallelForNativelyCompiledModule":                             "Natively compiled module prevents parallelism",
-			"NoParallelCreateIndexInNonEnterpriseEdition":                     "Non-Enterprise edition: parallel index build not available",
-			"MixedSerialAndParallelOnlineIndexBuildNotSupported":              "Mixed serial/parallel online index build not supported"
+	// NonParallelPlanReason codes: [ kind, reason, advice ].
+	// kind=true    : names a concrete cause in the query/code (a UDF, a table variable, a hint, ...) that
+	//                whoever owns the SQL can change -> always a WARNING (see classifySerialPlan()).
+	// kind='vague' : something in the SQL, but not saying what -> warning only on a costly statement.
+	// kind=false   : environment/configuration facts (edition, trace flag, MAXDOP config) or the
+	//                optimizer's own costing decision -> info only.
+	var SERIAL_PLAN_REASONS = {
+		"MaxDOPSetToOne":                                                 [false, "MAXDOP 1 is configured (server/DB/Resource Governor level)",
+			"Check 'max degree of parallelism' at server level, the database scoped configuration MAXDOP, and the Resource Governor workload group."],
+		"QueryHintNoParallelSet":                                         [true,  "OPTION (MAXDOP 1) hint forces serial execution",
+			"Remove the MAXDOP 1 hint (query text or plan guide / Query Store hint) if the query is expensive enough to benefit from parallelism."],
+		"EstimatedDOPIsOne":                                              [false, "Optimizer estimated DOP = 1 (serial plan expected to be optimal)", ""],
+		"TSQLUserDefinedFunctionsNotParallelizable":                      [true,  "T-SQL scalar UDF prevents parallelism",
+			"A T-SQL scalar function anywhere in the statement (including computed columns and check constraints) forces the WHOLE plan serial. "
+			+ "Rewrite it as an inline table-valued function (CROSS APPLY), inline the expression, or make it inlineable (SQL Server 2019+ scalar UDF inlining, see sys.sql_modules.is_inlineable)."],
+		"CouldNotGenerateValidParallelPlan":                              ['vague', "Optimizer could not generate a valid parallel plan",
+			"Something in the statement is not parallel-safe. Common causes: scalar UDFs, system table/DMV access, some intrinsic functions, "
+			+ "modifications of table variables, recursive CTEs and OUTPUT to the client. Check the statement text for these."],
+		"ParallelismDisabledByTraceFlag":                                 [false, "Parallelism disabled by trace flag", "Check trace flag 8649/8687 and QUERYTRACEON hints."],
+		"NoParallelPlansInDesktopOrExpressEdition":                       [false, "Express/Desktop edition does not support parallelism", ""],
+		"TableVariableTransactionsDoNotSupportParallelNestedTransaction": [true,  "Table variable modification prevents parallelism",
+			"Statements that modify a table variable always run serially. Use a #temp table instead."],
+		"DMLQueryReturnsOutputToClient":                                  [true,  "DML with OUTPUT clause returning results to client prevents parallelism",
+			"Use OUTPUT ... INTO a #temp table (and SELECT from it afterwards) instead of returning the rows directly."],
+		"NoParallelForMemoryOptimizedTables":                             [false, "Memory-optimized tables do not support parallel plans", ""],
+		"NoParallelForDmlOnMemoryOptimizedTable":                         [false, "DML on a memory-optimized table does not support parallel plans", ""],
+		"NoParallelWithRemoteQuery":                                      [true,  "Remote queries cannot use parallelism",
+			"Consider pulling the remote data into a local #temp table first, or use OPENQUERY so the remote server does the heavy work."],
+		"CLRUserDefinedFunctionRequiresDataAccess":                       [true,  "CLR UDF with data access prevents parallelism",
+			"A CLR function marked DataAccessKind.Read forces a serial plan. Remove the data access from the function if possible."],
+		"NonParallelizableIntrinsicFunction":                             [true,  "Non-parallelizable intrinsic function prevents parallelism",
+			"A built-in function that is not parallel-safe is used (for example OBJECT_ID/OBJECT_NAME, CONTEXT_INFO, SESSION_CONTEXT, "
+			+ "@@TRANCOUNT, ERROR_xxx() or ENCRYPTBYxxx). Evaluate it once into a variable before the statement."],
+		"UpdatingWritebackVariable":                                      [true,  "Writing to a local variable forces serial execution",
+			"SELECT @var = ... over a large input runs serially. Consider a set-based alternative, or assign the variable from a narrower query."],
+		"NoParallelCursorFetchByBookmark":                                [false, "Cursor fetch by bookmark prevents parallelism", ""],
+		"NoParallelDynamicCursor":                                        [false, "Dynamic cursor prevents parallelism", "A STATIC or FAST_FORWARD cursor may allow a parallel plan."],
+		"NoParallelFastForwardCursor":                                    [false, "Fast forward cursor prevents parallelism", "A STATIC cursor may allow a parallel plan."],
+		"NoParallelForNativelyCompiledModule":                            [false, "Natively compiled module prevents parallelism", ""],
+		"NoParallelCreateIndexInNonEnterpriseEdition":                    [false, "Non-Enterprise edition: parallel index build not available", ""],
+		"MixedSerialAndParallelOnlineIndexBuildNotSupported":             [false, "Mixed serial/parallel online index build not supported", ""],
+		"NoRangesResumableCreate":                                        [false, "Resumable index create cannot use parallelism here", ""],
+		"NoParallelForPDWCompilation":                                    [false, "PDW compilation does not support parallelism", ""],
+		"NoParallelForCloudDBReplication":                                [false, "Cloud DB replication does not support parallelism", ""]
+	};
+
+	// For 'vague'/environment codes only. SQL Server does not consider a parallel plan until the serial
+	// cost exceeds 'cost threshold for parallelism' (default 5, often set higher), so below that a
+	// blocked parallel plan cannot have cost anything.
+	var SERIAL_PLAN_WARN_COST = 5.0;
+	// Below this cost, not reported at all (NonParallelPlanReason is written on cheap statements too).
+	var SERIAL_PLAN_MIN_COST  = 1.0;
+
+	/**
+	 * Classify one statement's NonParallelPlanReason. Shared by the Plan Analyzer (a finding per
+	 * statement) and dbxShowplanSqlServer.js (the warning badge on the statement box), so both say the
+	 * same thing about the same statement.
+	 *
+	 * @returns null when not worth reporting, else { severity:'warning'|'info', code, reason, advice, cost }
+	 */
+	function classifySerialPlan(code, stmtText, stmtCost, optLevel) {
+		if (!code) return null;
+		stmtCost = stmtCost || 0;
+
+		var r    = SERIAL_PLAN_REASONS[code];
+		var kind = r ? r[0] : false;               // unknown (future) code: treated like an environment fact
+		// MAXDOP 1 from config is not the query's fault, but the same code is written for a
+		// MAXDOP 1 hint in the query text - which is.
+		if (code === 'MaxDOPSetToOne' && stmtText && /\bMAXDOP\s*=?\s*1\b/i.test(stmtText)) kind = true;
+
+		var severity;
+		if (kind === true) {
+			// Names a concrete cause in the SQL (scalar UDF, table variable DML, ...). Always a warning,
+			// whatever the cost: the cause is usually a problem in its own right (a scalar UDF runs once
+			// per row and its cost is hidden from the plan), and it caps every future, bigger execution.
+			severity = 'warning';
+		} else {
+			// Vague code or an environment/optimizer fact: only worth mentioning on a costly statement
+			// (these codes are written on cheap and TRIVIAL statements too).
+			if (optLevel === 'TRIVIAL' || stmtCost < SERIAL_PLAN_MIN_COST) return null;
+			severity = (kind === 'vague' && stmtCost >= SERIAL_PLAN_WARN_COST) ? 'warning' : 'info';
+		}
+
+		return {
+			severity: severity,
+			code:     code,
+			reason:   r ? r[1] : code,
+			advice:   r ? r[2] : '',
+			cost:     stmtCost
 		};
-		return reasons[reasonCode] || reasonCode;
 	}
 
 	function isRowstoreScan(op) {
@@ -266,10 +333,7 @@ window.DbxShowplanAnalyzer = (function () {
 		var stmtCost    = stmtSimple ? numAttr(stmtSimple, 'StatementSubTreeCost') : 0;
 		var optLevel    = stmtSimple ? attr(stmtSimple, 'StatementOptmLevel') : '';
 		var abortReason = stmtSimple ? attr(stmtSimple, 'StatementOptmEarlyAbortReason') : '';
-		// NonParallelPlanReason lives on QueryPlan in modern plans, StmtSimple in older ones
 		var queryPlan     = firstByTag(doc, 'QueryPlan');
-		var serialCode    = (queryPlan  ? attr(queryPlan,  'NonParallelPlanReason') : '')
-		                 || (stmtSimple ? attr(stmtSimple, 'NonParallelPlanReason') : '');
 
 		var compileTime   = queryPlan ? numAttr(queryPlan, 'CompileTime') : 0;
 		var compileCPU    = queryPlan ? numAttr(queryPlan, 'CompileCPU') : 0;
@@ -285,27 +349,33 @@ window.DbxShowplanAnalyzer = (function () {
 		// S.0 Wait Stats are rendered as a bar chart in the Plan Analysis header — no finding needed.
 
 		// ── S.1 Serial Plan Reasons (Rule 3) ─────────────────────────────────
-		if (serialCode && stmtCost >= 1.0 && optLevel !== 'TRIVIAL' && (actualElapsed === null || actualElapsed > 0)) {
-			var reason = getSerialPlanReason(serialCode);
-			var serialSev;
-			if (serialCode === 'EstimatedDOPIsOne') {
-				serialSev = 'info';   // Optimizer chose serial — not actionable
-			} else if (serialCode === 'MaxDOPSetToOne') {
-				// If MAXDOP 1 appears explicitly in the query text it is a user hint → warning.
-				// If it comes from server/DB/Resource Governor config → info only (not actionable here).
-				serialSev = (stmtText && /\bMAXDOP\s+1\b/i.test(stmtText)) ? 'warning' : 'info';
-			} else if (["QueryHintNoParallelSet",
-			            "TSQLUserDefinedFunctionsNotParallelizable",
-			            "CouldNotGenerateValidParallelPlan",
-			            "CLRUserDefinedFunctionRequiresDataAccess"].indexOf(serialCode) !== -1) {
-				serialSev = 'warning';
-			} else {
-				serialSev = 'info';
-			}
-			findings.push(finding(serialSev, 'Serial Plan',
-				'Query running serially: ' + reason,
-				'Cost: ' + stmtCost.toFixed(2) + '. The query might benefit from parallelism but was forced to run on a single thread.'));
-		}
+		// NonParallelPlanReason lives on QueryPlan in modern plans, on the Stmt element in older ones.
+		// One finding per statement: a batch/procedure plan has a <QueryPlan> per statement, and the
+		// statement that is blocked from going parallel is rarely the first one. This is a compile-time
+		// property, so it applies to estimated plans too (no <QueryTimeStats> needed).
+		var allQueryPlans = descendantsByTag(doc, 'QueryPlan');
+		allQueryPlans.forEach(function(qpEl, qpIdx) {
+			var stEl = qpEl.parentNode;
+			while (stEl && stEl.nodeType === 1 && !/^Stmt/.test(stEl.localName || stEl.nodeName)) stEl = stEl.parentNode;
+			if (stEl && stEl.nodeType !== 1) stEl = null;
+			var code = attr(qpEl, 'NonParallelPlanReason') || (stEl ? attr(stEl, 'NonParallelPlanReason') : '');
+			var sp = classifySerialPlan(code,
+			                            stEl ? attr(stEl, 'StatementText') : null,
+			                            stEl ? numAttr(stEl, 'StatementSubTreeCost') : 0,
+			                            stEl ? attr(stEl, 'StatementOptmLevel') : '');
+			if (!sp) return;
+			var where = allQueryPlans.length > 1 ? ' (statement ' + (qpIdx + 1) + ')' : '';
+			findings.push(finding(sp.severity, 'Serial Plan',
+				'Serial plan' + where + ': ' + sp.reason,
+				'NonParallelPlanReason=' + sp.code + ', statement cost ' + sp.cost.toFixed(2) + '. '
+				+ (sp.code === 'EstimatedDOPIsOne'
+					? 'The optimizer considered a parallel plan and decided it was not worth it.'
+					: 'The statement could not use a parallel plan, whatever its cost.')
+				+ (sp.cost < SERIAL_PLAN_WARN_COST && sp.code !== 'EstimatedDOPIsOne'
+					? ' At this cost it would run serially anyway (default cost threshold for parallelism is 5), but the cause'
+					  + ' still limits every bigger execution of the same code.' : '')
+				+ (sp.advice ? '\n' + sp.advice : '')));
+		});
 
 		// ── S.2 Compilation Issues (Rule 18, 19) ─────────────────────────────
 		if (abortReason === 'MemoryLimitExceeded') {
@@ -1236,7 +1306,8 @@ window.DbxShowplanAnalyzer = (function () {
 	// ── Public API ────────────────────────────────────────────────────────────
 
 	return {
-		analyze: analyze
+		analyze:            analyze,
+		classifySerialPlan: classifySerialPlan
 	};
 
 }());

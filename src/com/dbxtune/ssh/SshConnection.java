@@ -87,6 +87,9 @@ public class SshConnection
 	private JSch _jsch;
 	private Session _conn;
 
+	/** Number of columns used when a PTY is requested. Windows Console/ConPTY max width is 32767 */
+	public static final int PTY_COLUMNS = 32000;
+
 	/** output from 'uname -a', which was made while the connection was created. */
 	private String _uname = null;
 
@@ -1028,16 +1031,23 @@ public class SshConnection
 			
 			// Setup the command for execution on remote machine.
 			channel.setCommand(command);
-			
-			// Now run the command on the remote server
-//			channel.connect(60000);
-			channel.connect();
-			
+
+			// NOTE: The PTY must be requested BEFORE channel.connect(), JSch sends the 'pty-req' as part of connect()
+			//       (setting it after connect() is silently ignored)
+			// SSHD On Windows do not close "long running" commands on the server side on disconnect
+			// see: https://github.com/PowerShell/Win32-OpenSSH/issues/1751
+			// The workaround is to request a Terminal ("ssh -t user@ip"), then the command runs under a ConPTY,
+			// which is closed (and its attached console processes terminated) when the session/channel ends.
 			if (requestPty)
 			{
 				channel.setPty(true);
-				channel.setPtyType("dump"); // Minimizes Control Chars
+				channel.setPtyType("dumb"); // Minimizes Control Chars
+				channel.setPtySize(PTY_COLUMNS, 50, 0, 0); // Wide terminal: output lines (for example 'typeperf' CSV rows) should NOT be wrapped at 80 chars
 			}
+
+			// Now run the command on the remote server
+//			channel.connect(60000);
+			channel.connect();
 
 			//TODO: Handle Exceptions for reconnect (as below code does)
 			return channel;

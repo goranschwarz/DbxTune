@@ -26,7 +26,7 @@
  *     label:    'Clustered Index Scan',  // display label
  *     metrics:  { estRows, actRows, estIO, estCpu, subtreeCost, nodeCost, relativeCostPct, ... },
  *     props:    { nodeId, logicalOp, objName, indexName, predicate, ... },  // printed verbatim
- *     warnings: [ { type, attrs } ],
+ *     warnings: [ { type, attrs, text? } ],     // text: optional pre-built message (warningTitle)
  *     children: [ node, ... ],
  *     _xmlEl:   <RelOp> element   // kept so the Properties pane can show EVERYTHING, generically
  *   }
@@ -525,6 +525,24 @@ window.SqlServerShowplan = (function () {
 			node.metrics.compileTimeMs        = num(queryPlanEl, 'CompileTime');
 			node.metrics.compileCpuMs         = num(queryPlanEl, 'CompileCPU');
 			node.metrics.compileMemoryKb      = num(queryPlanEl, 'CompileMemory');
+		}
+		// NonParallelPlanReason as a warning on the statement box - SSMS only lists it in the
+		// properties, so a scalar UDF silently forcing an expensive query serial went unnoticed.
+		// Only for the reasons dbxShowplanAnalyzer.js rates 'warning' (a concrete cause in the SQL at
+		// any cost, or a vague one on a costly statement), so both views agree; the Analyzer owns
+		// the Plan Analysis finding (see collectTreeFindings(), which skips this type).
+		var serialCode = node.props.nonParallelPlanReason || (stmtEl ? attr(stmtEl, 'NonParallelPlanReason') : undefined);
+		if (serialCode) {
+			node.props.nonParallelPlanReason = serialCode;
+			var sp = window.DbxShowplanAnalyzer && window.DbxShowplanAnalyzer.classifySerialPlan
+				? window.DbxShowplanAnalyzer.classifySerialPlan(serialCode, node.props.StatementText,
+					node.metrics.subtreeCost, node.props.StatementOptmLevel)
+				: null;
+			if (sp && sp.severity === 'warning') {
+				node.warnings.push({ type: 'NonParallelPlanReason', attrs: {},
+					text: 'Serial plan: ' + sp.reason + ' (NonParallelPlanReason=' + serialCode + ').'
+					      + (sp.advice ? ' ' + sp.advice : '') });
+			}
 		}
 		// <ThreadStat> - the query's REAL total thread usage, as opposed to DegreeOfParallelism which
 		// is only the per-branch worker count. A plan can have several independent parallel branches
@@ -1664,6 +1682,7 @@ window.SqlServerShowplan = (function () {
 	}
 
 	function warningTitle(w) {
+		if (w.text) return w.text;   // pre-built by the producer (e.g. NonParallelPlanReason)
 		var base = WARNING_TEXT[w.type] || w.type;
 		if ((w.type === 'SortSpillDetails' || w.type === 'HashSpillDetails') && w.attrs) {
 			var spillText = fmtSpillPages(w.attrs);
@@ -2909,6 +2928,8 @@ window.SqlServerShowplan = (function () {
 
 				// Per-operator warnings the plan itself raised.
 				(n.warnings || []).forEach(function (w) {
+					// Already a 'Serial Plan' finding from dbxShowplanAnalyzer.js - don't list it twice.
+					if (w.type === 'NonParallelPlanReason') return;
 					findings.push({
 						severity: /Spill|NoJoinPredicate/i.test(w.type) ? 'error' : 'warning',
 						category: 'Plan Warning',
