@@ -2455,7 +2455,7 @@ function dbxTuneGraphSubscribe()
 				{
 					adviceBtn.onclick = function() {
 						// 'srv' lets dbxLlmAdvice resolve the DBMS version from the Collector (no 'dbname', so no DDL lookup)
-						dbxLlmAdvice.open({ sql: llmSql, plan: llmPlan, dbVendor: ACTIVE_STMT_DB_VENDOR[appName], srv: srvName });
+						dbxLlmAdvice.open({ sql: llmSql, plan: llmPlan, dbVendor: ACTIVE_STMT_DB_VENDOR[appName], srv: srvName, origin: 'Active Statements' });
 					};
 				}
 			});

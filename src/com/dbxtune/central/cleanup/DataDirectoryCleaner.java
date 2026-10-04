@@ -44,6 +44,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 
 import com.dbxtune.central.DbxTuneCentral;
+import com.dbxtune.central.llm.LlmAdviceLog;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.FileUtils;
 import com.dbxtune.utils.NumberUtils;
@@ -430,7 +431,16 @@ extends Task
 		_logger.info(               "Begin task: Data Directory Cleanup");
 		appendToLastExecShortReport("Begin task: Data Directory Cleanup");
 		
-		check(_dryRun);
+		try
+		{
+			check(_dryRun);
+		}
+		finally
+		{
+			// Saved "LLM Optimization Advice" requests live in a sub directory of the data dir: remove old ones (independent of the above)
+			try { LlmAdviceLog.removeOldFiles(_dryRun); }
+			catch (Exception ex) { _logger.error(_prefix + "Problems removing old saved LLM Advice requests.", ex); }
+		}
 		_lastExec = System.currentTimeMillis();
 		
 		//----------------------------------------------------------------

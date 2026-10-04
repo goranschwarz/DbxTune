@@ -66,6 +66,21 @@ extends HttpServlet
 	private static final String[] PARAM_NAMES = { "sql", "ddlContext", "plan", "dbVendor", "dbmsVersion", "jdbcUrl",
 			"jdbcUser", "srv", "ts", "dbname", "workloadData", "provider" };
 
+	/**
+	 * The libraries 'dbxLlmAdvice.js' uses to render an answer (SQL formatting/highlighting, Markdown) plus
+	 * dbxLlmAdvice.js itself. Kept in ONE place, since it is also used for the saved requests on the Admin
+	 * page (LlmAdviceLogServlet). The Prism CSS ('/scripts/prism/prism-1.30.0.css') goes in the page head.
+	 */
+	public static String getAdviceRendererIncludes()
+	{
+		return "<script src='/scripts/sql-formatter/15.9.0/sql-formatter.min.js'></script>\n"
+		     + "<script src='/scripts/dbxtune/js/dbxSqlFormat.js'></script>\n"
+		     + "<script src='/scripts/prism/prism-1.30.0.js'></script>\n"
+		     + "<script src='/scripts/marked/18.0.14/marked.min.js'></script>\n"
+		     + "<script src='/scripts/dompurify/3.4.16/purify.min.js'></script>\n"
+		     + "<script src='/scripts/dbxtune/js/dbxLlmAdvice.js'></script>";
+	}
+
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp)
 	throws ServletException, IOException
@@ -165,17 +180,12 @@ extends HttpServlet
 		}
 		out.println("</div>");
 		out.println();
-		out.println("<script src='/scripts/sql-formatter/15.9.0/sql-formatter.min.js'></script>");
-		out.println("<script src='/scripts/dbxtune/js/dbxSqlFormat.js'></script>");
-		out.println("<script src='/scripts/prism/prism-1.30.0.js'></script>");
-		out.println("<script src='/scripts/marked/18.0.14/marked.min.js'></script>");
-		out.println("<script src='/scripts/dompurify/3.4.16/purify.min.js'></script>");
+		out.println(getAdviceRendererIncludes());
 		// srv/dbname (if any) only live in the URL fragment, never known server-side here - so, unlike
 		// dbxShowplan.js's conditional include, always load these; dbxLlmAdvice.js's srv-based DDL-context
 		// lookup (fetchDdlContextBySrv) needs DbxSqlTableNames.extractTablesAsync() to parse 'sql' for tables.
 		out.println("<script src='/scripts/dbxtune/js/dbxSqlTableNames.js'></script>");
 		out.println("<link rel='stylesheet' href='/scripts/dbxtune/css/dbxTableInfo.css'>");
-		out.println("<script src='/scripts/dbxtune/js/dbxLlmAdvice.js'></script>");
 		out.println("<script>");
 		out.println("(function () {");
 		out.println("    // Params are read from the URL FRAGMENT (#...), not the query string (?...) -");
@@ -212,7 +222,8 @@ extends HttpServlet
 		// Raw execution statistics harvested from the Daily Summary Report's sparkline sub-table at click
 		// time (see SparklineHelper.getWorkloadHarvesterJs()). dbxLlmAdvice.js turns this into the
 		// 'workloadProfile' text that is sent to the LLM.
-		out.println("        workloadData: P('workloadData')");
+		out.println("        workloadData: P('workloadData'),");
+		out.println("        origin:     'Daily Summary Report'"); // recorded by LlmAdviceLog
 		out.println("    };");
 		out.println();
 		if (enabled)

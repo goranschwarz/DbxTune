@@ -57,6 +57,19 @@ public class LlmOptimizeRequest
 	 */
 	private String dbmsVersion;
 
+	/**
+	 * Name of the monitored server the statement came from (the Web UI's 'srv'), or null when unknown.
+	 * Not part of the prompt - only recorded by {@link LlmAdviceLog}.
+	 */
+	private String srvName;
+
+	/**
+	 * Where in DbxCentral the request was made, for example 'Active Statements', 'Showplan',
+	 * 'Daily Summary Report' (falls back to the page path in 'dbxLlmAdvice.js').
+	 * Not part of the prompt - only recorded by {@link LlmAdviceLog}.
+	 */
+	private String origin;
+
 	// Defaults false, so the real POST /api/llm/optimize-sql flow (whose caller parses the reply as
 	// the {origin_sql, optimized_sql, explanation} JSON object - see LlmClientAbstract.buildPrompt())
 	// is unaffected unless a caller explicitly opts in. Only GET /api/llm/optimize-sql's "no exec"
@@ -83,6 +96,8 @@ public class LlmOptimizeRequest
 	public String  getProvider()        { return provider; }
 	public String  getWorkloadProfile() { return workloadProfile; }
 	public String  getDbmsVersion()     { return dbmsVersion; }
+	public String  getSrvName()         { return srvName; }
+	public String  getOrigin()          { return origin; }
 	public boolean isPreview()          { return preview; }
 
 	public void setSql            (String sql)             { this.sql             = sql; }
@@ -92,5 +107,7 @@ public class LlmOptimizeRequest
 	public void setProvider       (String provider)        { this.provider        = provider; }
 	public void setWorkloadProfile(String workloadProfile) { this.workloadProfile = workloadProfile; }
 	public void setDbmsVersion    (String dbmsVersion)     { this.dbmsVersion     = dbmsVersion; }
+	public void setSrvName        (String srvName)         { this.srvName         = srvName; }
+	public void setOrigin         (String origin)          { this.origin          = origin; }
 	public void setPreview        (boolean preview)        { this.preview         = preview; }
 }

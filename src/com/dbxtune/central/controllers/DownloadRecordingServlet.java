@@ -110,6 +110,15 @@ extends HttpServlet
 		//	response.flushBuffer(); // marks response as committed -- if we don't do this the request will go through normally!			
 		}
 
+		// Only plain file names in the data directory itself - no sub directories (for example the
+		// admin-only 'llm-advice-log' directory, see LlmAdviceLog) and no '..'
+		if (fileName.contains("/") || fileName.contains("\\") || fileName.contains("..") || Helper.getFileInsideDir(recordingsDir, fileName) == null)
+		{
+			_logger.warn("Rejected download of '" + fileName + "', only file names in the recordings directory are allowed. " + from);
+			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Sorry: Only file names in the recordings directory are allowed.");
+			return;
+		}
+
 		// Check if file exists
 		File downloadFile = new File(recordingsDir, fileName);
 		if ( ! downloadFile.exists() )

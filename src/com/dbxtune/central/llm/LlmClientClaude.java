@@ -102,6 +102,9 @@ extends LlmClientAbstract
 
 		String answerText = contentArr.get(0).path("text").asText("");
 
-		return parseModelAnswer(answerText, rawResponse, prompt);
+		LlmOptimizeResponse response = parseModelAnswer(answerText, rawResponse, prompt);
+		response.setInputTokens (intOrNull(root.path("usage").path("input_tokens")));
+		response.setOutputTokens(intOrNull(root.path("usage").path("output_tokens")));
+		return response;
 	}
 }

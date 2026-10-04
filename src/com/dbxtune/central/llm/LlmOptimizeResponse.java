@@ -30,6 +30,9 @@ public class LlmOptimizeResponse
 	private String providerId;
 	private String promptSent;
 	private String model;
+	private Integer inputTokens;
+	private Integer outputTokens;
+	private Integer savedForDays;
 
 	public LlmOptimizeResponse()
 	{
@@ -54,6 +57,12 @@ public class LlmOptimizeResponse
 	public String getPromptSent()   { return promptSent; }
 	/** The specific model name used (e.g. "claude-sonnet-4-5") - shown alongside providerId. */
 	public String getModel()        { return model; }
+	/** Prompt tokens, as reported by the provider (null if it did not report it). */
+	public Integer getInputTokens()  { return inputTokens; }
+	/** Answer tokens, as reported by the provider (null if it did not report it). */
+	public Integer getOutputTokens() { return outputTokens; }
+	/** Set when users should be told that requests are saved (see {@link LlmAdviceLog#getSavedForDays()}): the number of days they are kept. */
+	public Integer getSavedForDays() { return savedForDays; }
 
 	public void setOriginSql   (String originSql)    { this.originSql    = originSql; }
 	public void setOptimizedSql(String optimizedSql) { this.optimizedSql = optimizedSql; }
@@ -62,4 +71,7 @@ public class LlmOptimizeResponse
 	public void setProviderId  (String providerId)   { this.providerId   = providerId; }
 	public void setPromptSent  (String promptSent)   { this.promptSent   = promptSent; }
 	public void setModel       (String model)        { this.model        = model; }
+	public void setInputTokens (Integer inputTokens) { this.inputTokens  = inputTokens; }
+	public void setOutputTokens(Integer outputTokens){ this.outputTokens = outputTokens; }
+	public void setSavedForDays(Integer days)        { this.savedForDays = days; }
 }

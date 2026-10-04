@@ -231,6 +231,7 @@ public class WebServerInitializerJetty
 		webapp.addServlet(DownloadRecordingServlet.class,             "/download-recording");               // Download a specific H2 database file (needs login)
 		webapp.addServlet(ShutdownServlet.class,                      "/admin/shutdown");
 		webapp.addServlet(UsersAdminServlet.class,                    "/admin/users");                      // Goto the "admin" -- "users" section (needs login)
+		webapp.addServlet(LlmAdviceLogServlet.class,                  "/admin/llm-log");                    // Saved "LLM Optimization Advice" requests (admin only)
 		webapp.addServlet(H2WriterStatServlet.class,                  "/h2ws");
 
 		// NavBar: Desktop App

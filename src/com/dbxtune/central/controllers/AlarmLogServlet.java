@@ -26,8 +26,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.invoke.MethodHandles;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.util.List;
 
@@ -60,6 +58,13 @@ public class AlarmLogServlet extends HttpServlet
 	
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
+	{
+		// One object PER REQUEST: this class keeps the response/writer in instance fields (out, _resp), and the
+		// servlet instance itself is shared by all concurrent requests (they would write into each other's responses).
+		new AlarmLogServlet().handleRequest(req, resp);
+	}
+
+	private void handleRequest(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
 	{
 		_resp = resp;
 		out = resp.getOutputStream();
@@ -94,13 +99,11 @@ public class AlarmLogServlet extends HttpServlet
 		}
 		else
 		{
-			// CHECK: that the input file really INSIDE the LOG_DIR and not outside (for example /etc/passwd or /var/log/message)
-			Path logDirPath   = Paths.get(LOG_DIR);
-			Path inputPath    = Paths.get(LOG_DIR + "/" + inputName);
-			Path relativePath = logDirPath.relativize(inputPath);
-			if (relativePath.startsWith(".."))
+			// CHECK: that the input file really is INSIDE the LOG_DIR and not outside (for example /etc/passwd or "sub/../../x")
+			if (Helper.getFileInsideDir(LOG_DIR, inputName) == null)
 			{
-				resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Sorry the file '" + inputPath + "' must be located in the LOG dir '" + logDirPath + "'.");
+				_logger.warn("Rejected access to file '" + inputName + "', it is not located in the LOG dir '" + LOG_DIR + "'. From '" + req.getRemoteAddr() + "'.");
+				resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Sorry the file must be located in the LOG dir.");
 				return;
 			}
 		

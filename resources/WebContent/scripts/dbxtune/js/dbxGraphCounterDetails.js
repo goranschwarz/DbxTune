@@ -1929,7 +1929,8 @@ function cmDetailRowShowModal(columns, row, tooltips)
 						plan: planColIdx >= 0 ? row[planColIdx] : null,
 						// Lets dbxLlmAdvice read the DBMS version out of CmSummary for this very sample
 						srv:        _cmSrvName,
-						sampleTime: _cmCurrentData ? _cmCurrentData.resolvedTime : null
+						sampleTime: _cmCurrentData ? _cmCurrentData.resolvedTime : null,
+						origin:     'Counter Details: ' + _cmName
 					});
 				};
 			}

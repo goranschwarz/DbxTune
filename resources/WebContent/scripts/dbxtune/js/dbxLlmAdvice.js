@@ -42,6 +42,8 @@
  *
  *       dbname:     'mydb',                        // current database name - required for the srv-based lookup above
  *       provider:   'claude',                      // optional - defaults to the server-configured default provider
+ *       origin:     'Active Statements',           // optional - where the request was made; only recorded in the
+ *                                                   // saved request log (LlmAdviceLog.java). Default: the page path.
  *       preview:    false,                          // optional - if true, build and show the exact prompt that
  *                                                   // would be sent (via /api/llm/optimize-sql's preview mode)
  *                                                   // instead of actually calling the LLM provider. Works even
@@ -126,7 +128,8 @@ var dbxLlmAdvice = (function () {
 			'.dbx-llm-error { color:#842029; background:#f8d7da; border:1px solid #f5c2c7; border-radius:4px; padding:10px;' +
 			'  font-family:Arial, Helvetica, sans-serif; }' +
 			'.dbx-llm-sent-details { margin-top:18px; font-family:Arial, Helvetica, sans-serif; font-size:0.9rem; }' +
-			'.dbx-llm-sent-details summary { cursor:pointer; color:#495057; }' +
+			// Same look as the other section titles (bold, normal size/colour), only the fields inside stay smaller
+			'.dbx-llm-sent-details > summary { cursor:pointer; font-weight:bold; font-size:1rem; }' +
 			'.dbx-llm-sent-field { margin-top:8px; }' +
 			'.dbx-llm-sent-field-label { font-weight:bold; font-size:0.85rem; color:#495057; }' +
 			'.dbx-llm-sql-changed { color:#664d03; background:#fff3cd; border:1px solid #ffecb5; border-radius:4px;' +
@@ -138,10 +141,21 @@ var dbxLlmAdvice = (function () {
 			'.dbx-llm-copy-btn:hover { background:#e9ecef; }' +
 			'.dbx-llm-pre-compact { font-size:0.78rem !important; max-height:220px; overflow:auto; }' +
 			'.dbx-llm-version { font-family:Arial, Helvetica, sans-serif; font-size:0.85rem; color:#495057; margin-top:8px; word-break:break-word; }' +
+			'.dbx-llm-saved-note { font-family:Arial, Helvetica, sans-serif; font-size:0.8rem; color:#6c757d; margin-top:10px; font-style:italic; }' +
+			'.dbx-llm-login { font-family:Arial, Helvetica, sans-serif; margin:8px 0; }' +
+			'.dbx-llm-login-btn { background:#0d6efd; color:#fff; border:1px solid #0d6efd; border-radius:4px; padding:3px 12px; cursor:pointer; margin-right:6px; }' +
+			// "Continue to login / Skip" popup (askForLogin) - above an open Bootstrap dialog and our own floating dialog (10000/10001)
+			'.dbx-llm-asklogin-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:10040; display:flex; align-items:center; justify-content:center; }' +
+			'.dbx-llm-asklogin-box { background:#fff; color:#212529; border-radius:6px; box-shadow:0 4px 24px rgba(0,0,0,0.35); padding:16px 20px; max-width:420px; font-family:Arial, Helvetica, sans-serif; }' +
+			'.dbx-llm-asklogin-title { font-weight:bold; font-size:1.05rem; margin-bottom:8px; }' +
+			'.dbx-llm-asklogin-buttons { margin-top:14px; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }' +
+			'.dbx-llm-asklogin-skip { background:#fff; color:#495057; border:1px solid #adb5bd; border-radius:4px; padding:3px 12px; cursor:pointer; }' +
+			'html.dbx-sp-dark .dbx-llm-asklogin-box, html[data-theme="dark"] .dbx-llm-asklogin-box { background:#2b3035; color:#e9ecef; }' +
+			'html.dbx-sp-dark .dbx-llm-asklogin-skip, html[data-theme="dark"] .dbx-llm-asklogin-skip { background:#343a40; color:#dee2e6; border-color:#6c757d; }' +
 			// Dark theme: Showplan dialogs (DbxShowplanTheme: <html class="dbx-sp-dark">) or dark DbxCentral pages (dbxTheme.js)
 			'html.dbx-sp-dark .dbx-llm-dialog, html[data-theme="dark"] .dbx-llm-dialog { background:#22272e; color:#e9ecef; box-shadow:0 4px 24px rgba(0,0,0,0.7); }' +
 			'html.dbx-sp-dark .dbx-llm-header, html[data-theme="dark"] .dbx-llm-header { background:#343a40; }' +
-			'html.dbx-sp-dark .dbx-llm-status, html[data-theme="dark"] .dbx-llm-status, html.dbx-sp-dark .dbx-llm-sent-details summary, html[data-theme="dark"] .dbx-llm-sent-details summary, html.dbx-sp-dark .dbx-llm-sent-field-label, html[data-theme="dark"] .dbx-llm-sent-field-label, html.dbx-sp-dark .dbx-llm-version, html[data-theme="dark"] .dbx-llm-version { color:#adb5bd; }' +
+			'html.dbx-sp-dark .dbx-llm-status, html[data-theme="dark"] .dbx-llm-status, html.dbx-sp-dark .dbx-llm-sent-field-label, html[data-theme="dark"] .dbx-llm-sent-field-label, html.dbx-sp-dark .dbx-llm-version, html[data-theme="dark"] .dbx-llm-version { color:#adb5bd; }' +
 			'html.dbx-sp-dark .dbx-llm-spinner, html[data-theme="dark"] .dbx-llm-spinner { border-color:#555c63; border-top-color:#dee2e6; }' +
 			'html.dbx-sp-dark .dbx-llm-pre, html[data-theme="dark"] .dbx-llm-pre { background:#1a1d21; color:#e9ecef; border-left-color:#3d8bfd; }' +
 			'html.dbx-sp-dark .dbx-llm-prose, html[data-theme="dark"] .dbx-llm-prose { background:#1c2025; color:#e9ecef; border-left-color:#6c757d; }' +
@@ -249,6 +263,7 @@ var dbxLlmAdvice = (function () {
 		html += opts ? renderInputContext(opts) : '';
 		if (opts)
 			html += renderSentDetails(opts, ddlContext, serverData && serverData.promptSent, serverData && serverData.providerId);
+		html += renderSavedNote(serverData && serverData.savedForDays);
 		container.innerHTML = html;
 		highlightAllSqlBlocks(container);
 	}
@@ -744,8 +759,8 @@ var dbxLlmAdvice = (function () {
 	 * to open "Show what was sent to the LLM" and pick it out of the full prompt text. Kept
 	 * noticeably smaller than the "Suggested SQL" block below it (see renderSqlBlock's compact
 	 * flag / .dbx-llm-pre-compact) since this is reference material, not the answer. Each is its
-	 * own <details> (open by default, same as before) rather than a plain block, so it can be
-	 * collapsed out of the way once read - both can get long (a full showplan especially).
+	 * own <details>, CLOSED by default (only the Explanation is open), so the answer is what the
+	 * reader sees first - these can get long (a full showplan especially).
 	 */
 	function renderInputContext(opts)
 	{
@@ -760,19 +775,19 @@ var dbxLlmAdvice = (function () {
 		if (opts.sql)
 		{
 			var sqlTextBlock = renderSqlBlock(opts.sql, opts.dbVendor, /*compact*/ true);
-			html += '<details class="dbx-llm-section-details" open>'
+			html += '<details class="dbx-llm-section-details">'
 				+ '<summary class="dbx-llm-section-title">SQL Text</summary>' + sqlTextBlock.html + '</details>';
 		}
 		if (opts.plan)
 		{
-			html += '<details class="dbx-llm-section-details" open>'
+			html += '<details class="dbx-llm-section-details">'
 				+ '<summary class="dbx-llm-section-title">Execution Plan</summary>'
 				+ '<pre class="dbx-llm-pre dbx-llm-pre-compact">' + escapeHtml(opts.plan) + '</pre></details>';
 		}
 		if (opts.workloadProfile)
 		{
 			// Plain text (see buildWorkloadProfile), so NOT renderSqlBlock()
-			html += '<details class="dbx-llm-section-details" open>'
+			html += '<details class="dbx-llm-section-details">'
 				+ '<summary class="dbx-llm-section-title">Workload Profile</summary>'
 				+ '<pre class="dbx-llm-pre dbx-llm-pre-compact">' + escapeHtml(opts.workloadProfile) + '</pre></details>';
 		}
@@ -789,6 +804,16 @@ var dbxLlmAdvice = (function () {
 			window.Prism.highlightElement(codeEls[i]);
 	}
 
+	/**
+	 * One line telling the user that requests are saved - only when the server says so
+	 * (DbxCentral.llm.log.notifyUsers, see LlmAdviceLog.getSavedForDays()).
+	 */
+	function renderSavedNote(savedForDays)
+	{
+		if (!savedForDays) return '';
+		return '<div class="dbx-llm-saved-note">Requests are saved for DbxCentral administrators (kept ' + escapeHtml(savedForDays) + ' days).</div>';
+	}
+
 	function renderResult(container, result, opts, ddlContext)
 	{
 		var html = renderInputContext(opts);
@@ -803,7 +828,7 @@ var dbxLlmAdvice = (function () {
 			var baselineSql = result.originSql || opts.sql;
 			var sqlChanged  = normalizeSqlForCompare(result.optimizedSql) !== normalizeSqlForCompare(baselineSql);
 			var sqlBlock    = renderSqlBlock(result.optimizedSql, opts.dbVendor);
-			html += '<details class="dbx-llm-section-details" open><summary class="dbx-llm-section-title">Suggested SQL</summary>';
+			html += '<details class="dbx-llm-section-details"><summary class="dbx-llm-section-title">Suggested SQL</summary>';
 			html += sqlChanged
 				? '<div class="dbx-llm-sql-changed">SQL was changed by the LLM.</div>'
 				: '<div class="dbx-llm-sql-unchanged">SQL was <b>not</b> changed - the LLM returned the same statement.</div>';
@@ -813,7 +838,7 @@ var dbxLlmAdvice = (function () {
 		{
 			// The model is asked to leave 'optimized_sql' empty (not echo the original back) when
 			// it has no rewrite to suggest - a real, expected outcome, not a missing answer.
-			html += '<details class="dbx-llm-section-details" open><summary class="dbx-llm-section-title">Suggested SQL</summary>';
+			html += '<details class="dbx-llm-section-details"><summary class="dbx-llm-section-title">Suggested SQL</summary>';
 			html += '<div class="dbx-llm-sql-unchanged">No SQL changes suggested - the LLM found the statement fine as-is.</div></details>';
 		}
 
@@ -829,6 +854,7 @@ var dbxLlmAdvice = (function () {
 
 		// "What was sent" - so the user can see exactly what context/prompt/model was used.
 		html += renderSentDetails(opts, ddlContext, result.promptSent, result.providerId, result.model);
+		html += renderSavedNote(result.savedForDays);
 
 		container.innerHTML = html;
 		highlightAllSqlBlocks(container);
@@ -861,6 +887,7 @@ var dbxLlmAdvice = (function () {
 					var msg = (data && (data.message || data.error)) || ('HTTP ' + resp.status);
 					var httpErr = new Error(msg);
 					httpErr.responseData = data; // may carry 'promptSent' - see LlmSqlOptimizeServlet
+				httpErr.status       = resp.status;
 					throw httpErr;
 				}
 				return data;
@@ -1073,7 +1100,10 @@ var dbxLlmAdvice = (function () {
 			dbVendor:        opts.dbVendor,
 			dbmsVersion:     opts.dbmsVersion,
 			provider:        opts.provider,
-			preview:         !!opts.preview
+			preview:         !!opts.preview,
+			// Not part of the prompt - only recorded in the saved request log (LlmAdviceLog.java)
+			srvName:         opts.srv,
+			origin:          opts.origin || window.location.pathname
 		};
 
 		fetchJson('/api/llm/optimize-sql', {
@@ -1088,9 +1118,132 @@ var dbxLlmAdvice = (function () {
 		})
 		.catch(function (err)
 		{
-			if (opts.preview) container.innerHTML = '<div class="dbx-llm-error">Failed to build prompt preview: ' + escapeHtml(err.message) + '</div>';
-			else              renderError(container, 'Failed to get LLM advice: ' + err.message, opts, ddlContext, err.responseData);
+			if (opts.preview)
+			{
+				container.innerHTML = '<div class="dbx-llm-error">Failed to build prompt preview: ' + escapeHtml(err.message) + '</div>';
+				return;
+			}
+			renderError(container, 'Failed to get LLM advice: ' + err.message, opts, ddlContext, err.responseData);
+
+			// Login is required, but we are not logged in (LlmSqlOptimizeServlet 'not-logged-in', or the
+			// MandatoryLoginFilter's 401): offer a Log in button, and ask if the user wants to log in now.
+			if (err.status === 401)
+			{
+				var retry    = function () { open(opts); };
+				var loginDiv = document.createElement('div');
+				loginDiv.className = 'dbx-llm-login';
+				loginDiv.innerHTML = '<button type="button" class="dbx-llm-login-btn">Log in</button> and then ask for the advice again.';
+				loginDiv.querySelector('button').addEventListener('click', function () { requestLogin(retry); });
+				container.insertBefore(loginDiv, container.firstChild ? container.firstChild.nextSibling : null);
+				askForLogin(retry);
+			}
 		});
+	}
+
+	/**
+	 * "Not logged in" message + a Log in button, and ask if the user wants to log in now.
+	 * @param retry  called after a successful login (on pages where we can log in without leaving the page)
+	 */
+	function renderLoginRequired(container, msg, retry)
+	{
+		container.innerHTML = '<div class="dbx-llm-error">' + escapeHtml(msg) + '</div>'
+			+ '<div class="dbx-llm-login"><button type="button" class="dbx-llm-login-btn">Log in</button> and then ask for the advice again.</div>';
+		container.querySelector('.dbx-llm-login-btn').addEventListener('click', function () { requestLogin(retry); });
+		askForLogin(retry);
+	}
+
+	/**
+	 * Small popup: "Continue to login" or "Skip and do NOT login". On skip the "not logged in" message
+	 * (with its Log in button) simply stays. Not a Bootstrap modal: it must work on pages without
+	 * Bootstrap too, and stack above an open Bootstrap dialog and our own floating dialog.
+	 */
+	function askForLogin(retry)
+	{
+		var old = document.getElementById('dbx-llm-askLogin');
+		if (old) old.parentNode.removeChild(old);
+
+		var div = document.createElement('div');
+		div.id = 'dbx-llm-askLogin';
+		div.className = 'dbx-llm-asklogin-backdrop';
+		div.innerHTML = '<div class="dbx-llm-asklogin-box" role="dialog" aria-modal="true">'
+			+ '<div class="dbx-llm-asklogin-title">Login required</div>'
+			+ '<div>You need to log in to ask for LLM Optimization Advice.</div>'
+			+ '<div class="dbx-llm-asklogin-buttons">'
+			+ '<button type="button" class="dbx-llm-login-btn" data-act="login">Continue to login</button>'
+			+ '<button type="button" class="dbx-llm-asklogin-skip" data-act="skip">Skip and do NOT login</button>'
+			+ '</div></div>';
+		document.body.appendChild(div);
+
+		div.addEventListener('click', function (e)
+		{
+			var act = e.target && e.target.getAttribute && e.target.getAttribute('data-act');
+			if (!act) return;
+			div.parentNode.removeChild(div);
+			if (act === 'login')
+				requestLogin(retry);
+		});
+		div.querySelector('[data-act="login"]').focus();
+	}
+
+	/**
+	 * Take the user to the login. Pages with the DbxCentral login dialog (dbxLoginModal.js: graph.html,
+	 * index.html, the server rendered pages like /llm-advice and the Showplan pages) log in WITHOUT leaving
+	 * the page: the login dialog is shown on top of everything (also the Showplan dialog), and 'retry' asks
+	 * for the advice again when logged in. Other pages go to the start page's login, which returns here
+	 * ('returnUrl').
+	 * @param retry  called after a successful "stay on this page" login (may be null)
+	 */
+	function requestLogin(retry)
+	{
+		if (typeof window.dbxOpenLogin === 'function' && document.getElementById('dbx-login-dialog'))
+		{
+			window.dbxOpenLogin({ stayOnPage: true, onSuccess: retry });
+			return;
+		}
+		window.location.href = '/index.html?login=open&returnUrl=' + encodeURIComponent(window.location.pathname + window.location.search + window.location.hash);
+	}
+
+	/**
+	 * Re-render a saved request (a page written by LlmAdviceLog.java and served by /admin/llm-log?op=view)
+	 * with the same renderer as the live dialog. The saved page is plain - no scripts - and holds the values
+	 * as text in fixed element ids, plus the metadata as JSON in 'dbx-llm-log-meta'.
+	 * @param target  element, or CSS selector, to render into (it replaces the plain content)
+	 */
+	function renderSavedRequest(target)
+	{
+		function text(id) { var el = document.getElementById(id); return el ? el.textContent : null; }
+
+		var meta = {};
+		try { meta = JSON.parse(text('dbx-llm-log-meta') || '{}'); }
+		catch (err) { console.warn('dbxLlmAdvice.renderSavedRequest(): could not parse the metadata: ' + err.message); }
+
+		// No dbmsVersion here: the saved page's header table already shows it
+		var opts = {
+			sql:             text('dbx-llm-sql'),
+			plan:            text('dbx-llm-plan'),
+			workloadProfile: text('dbx-llm-workload'),
+			dbVendor:        meta.dbVendor,
+			provider:        meta.providerId,
+			target:          target
+		};
+
+		injectStyle();
+		var container = resolveContainer(opts);
+		if (meta.status === 'OK')
+		{
+			renderResult(container, {
+				optimizedSql: text('dbx-llm-optimized-sql'),
+				explanation:  text('dbx-llm-explanation'),
+				promptSent:   text('dbx-llm-prompt'),
+				providerId:   meta.providerId,
+				model:        meta.model
+			}, opts, '');
+		}
+		else
+		{
+			renderError(container, 'The LLM call failed: ' + (text('dbx-llm-error') || meta.errorMessage || 'unknown error'), opts, '',
+				{ promptSent: text('dbx-llm-prompt'), providerId: meta.providerId });
+		}
 	}
 
 	//--------------------------------------------------------------------------
@@ -1115,15 +1268,28 @@ var dbxLlmAdvice = (function () {
 		var container = resolveContainer(opts);
 		renderStatus(container, 'Preparing request...');
 
-		if (!opts.ddlContext)
-			renderStatus(container, 'Looking up table DDL/index/stats...');
-
-		// Both lookups resolve (never reject) to '' on failure, so the advice is still asked for without them
-		var ddlPromise = opts.ddlContext ? Promise.resolve(opts.ddlContext) : fetchDdlContext(opts);
-		Promise.all([ddlPromise, fetchDbmsVersion(opts)]).then(function (res)
+		// A login is required but we are not logged in: say so (and go to the login) BEFORE the DDL/index/stats
+		// lookup below, which can take a long time with many tables - the answer would be "not logged in" anyway.
+		// The prompt preview needs no login. A failing config call (null) just continues as before.
+		var loginCheck = opts.preview ? Promise.resolve(null) : getConfig();
+		loginCheck.then(function (cfg)
 		{
-			opts.dbmsVersion = res[1] || '';
-			callOptimize(container, opts, res[0]);
+			if (cfg && cfg.loginRequired && !cfg.loggedIn)
+			{
+				renderLoginRequired(container, 'Not logged in! A login is required to ask for LLM advice.', function () { open(opts); });
+				return;
+			}
+
+			if (!opts.ddlContext)
+				renderStatus(container, 'Looking up table DDL/index/stats...');
+
+			// Both lookups resolve (never reject) to '' on failure, so the advice is still asked for without them
+			var ddlPromise = opts.ddlContext ? Promise.resolve(opts.ddlContext) : fetchDdlContext(opts);
+			Promise.all([ddlPromise, fetchDbmsVersion(opts)]).then(function (res)
+			{
+				opts.dbmsVersion = res[1] || '';
+				callOptimize(container, opts, res[0]);
+			});
 		});
 	}
 
@@ -1190,6 +1356,8 @@ var dbxLlmAdvice = (function () {
 		// is the same one open() would actually SEND.
 		buildWorkloadProfile: buildWorkloadProfile,
 		// Same reason: previews resolve the DBMS version exactly the way open() does.
-		fetchDbmsVersion: fetchDbmsVersion
+		fetchDbmsVersion: fetchDbmsVersion,
+		// Admin page: show a saved request (see LlmAdviceLog.java / LlmAdviceLogServlet.java)
+		renderSavedRequest: renderSavedRequest
 	};
 })();

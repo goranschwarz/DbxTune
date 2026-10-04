@@ -553,6 +553,9 @@ at pc:
 		#query-store-panel.qs-dark #query-store-tq-bar select,
 		#query-store-panel.qs-dark #query-store-tq-bar input   { background:#333; color:#e0e0e0; border-color:#555; }
 		#query-store-panel.qs-dark #qs-tq-filter-count         { color:#aaa; }
+		#query-store-panel.qs-dark #qs-waitcat-menu            { background:#2a2a2a !important; border-color:#555 !important; color:#e0e0e0; }
+		#query-store-panel.qs-dark #qs-waitcat-menu label:hover{ background:#3a3a3a !important; }
+		#query-store-panel.qs-dark #qs-waitcat-menu a          { color:#5bc8ff; }
 		#query-store-panel.qs-dark #query-store-detail-bar     { background:#2a2a2a !important; border-bottom-color:#444 !important; color:#ccc; }
 		#query-store-panel.qs-dark #query-store-detail-bar a   { color:#5bc8ff; }
 		#query-store-panel.qs-dark #query-store-body           { background:#1e1e1e; color:#e0e0e0; }
@@ -1707,6 +1710,11 @@ at pc:
 					oninput="qsTqFilterChanged(this.value);"
 					onkeydown="qsFilterKeydown(event);">
 				<span id="qs-tq-filter-count" style="color:#6c757d;font-size:0.8em;white-space:nowrap;"></span>
+			</span>
+			<span id="qs-waitcat-wrap" style="display:none;position:relative;white-space:nowrap;align-items:center;gap:6px;margin-left:auto;">
+				<button type="button" id="qs-waitcat-btn" style="font-size:0.8em;height:20px;padding:0 6px;" onclick="qsWaitCatToggleMenu(event);"
+					title="Choose which wait categories are shown in the 'Wait time by category' chart&#10;(for example: uncheck 'Parallelism')&#10;The selection is saved in the browser">Wait types: All &#9662;</button>
+				<div id="qs-waitcat-menu" style="display:none;position:absolute;top:22px;right:0;z-index:1050;min-width:200px;max-height:360px;overflow-y:auto;background:#fff;border:1px solid #ccc;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,0.25);padding:4px 0;font-size:0.95em;"></div>
 			</span>
 		</div>
 

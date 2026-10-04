@@ -20,9 +20,14 @@
  ******************************************************************************/
 package com.dbxtune.central.controllers;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.LinkedHashMap;
@@ -126,8 +131,47 @@ public class Helper
 		return value;
 	}
 
-	public static void sendError(HttpServletResponse resp, String msg) 
-	throws IOException 
+	/**
+	 * Check that a file name sent by a client resolves to a file INSIDE 'baseDir' (sub directories are allowed).
+	 * <p>
+	 * Use this before serving/deleting any file whose name comes from a request parameter. The path is
+	 * normalized, and both the base dir and the file are resolved to their REAL paths (when they exist), so
+	 * neither '..' segments (for example 'sub/../../etc/passwd') nor symbolic links can escape the directory.
+	 * A purely lexical {@code baseDir.relativize(path).startsWith("..")} check is NOT enough: the input is
+	 * not normalized, so 'sub/../../x' relativizes to 'sub/../../x' and passes.
+	 *
+	 * @param baseDir   the directory the file must be in
+	 * @param fileName  the (relative) name from the request
+	 * @return the resolved file, or null if the name is blank, invalid or outside 'baseDir'
+	 */
+	public static File getFileInsideDir(String baseDir, String fileName)
+	{
+		if (StringUtil.isNullOrBlank(baseDir) || StringUtil.isNullOrBlank(fileName) || fileName.indexOf('\0') >= 0)
+			return null;
+
+		try
+		{
+			Path base = Paths.get(baseDir).toAbsolutePath().normalize();
+			if (Files.exists(base))
+				base = base.toRealPath();
+
+			Path file = base.resolve(fileName).normalize();
+			if (Files.exists(file))
+				file = file.toRealPath();
+
+			if ( ! file.startsWith(base) || file.equals(base) )
+				return null;
+
+			return file.toFile();
+		}
+		catch (InvalidPathException | IOException ex)
+		{
+			return null;
+		}
+	}
+
+	public static void sendError(HttpServletResponse resp, String msg)
+	throws IOException
 	{
 		resp.sendError(HttpServletResponse.SC_BAD_REQUEST, msg);
 	}
