@@ -21,7 +21,6 @@
  ******************************************************************************/
 package com.dbxtune.hostmon;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.lang.invoke.MethodHandles;
 
@@ -29,6 +28,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ssh.SshConnection;
+import com.dbxtune.ssh.SshConnection.ExecChannel;
 import com.dbxtune.ssh.SshConnection.LinuxUtilType;
 import com.dbxtune.utils.Configuration;
 import com.jcraft.jsch.ChannelExec;
@@ -265,6 +265,7 @@ extends HostMonitorConnection
 	{
 		private SshConnection _sshConn;
 		
+		private ExecChannel _execChannel;
 		private ChannelExec _sshChannel;
 
 		// Below is used in waitForData(): algorithm: _sleepCount++; _sleepCount*_sleepTimeMultiplier; but maxSleepTime is respected
@@ -317,7 +318,8 @@ extends HostMonitorConnection
 			//   - Note: A cleanup from a NEW SSH session (like 'taskkill' on connect) fails with 'Access denied', since the orphans belong to another logon session
 			boolean requestPty = isStreamingCommand && _sshConn.isWindows() && isWindowsPtyEnabled(cmd);
 
-			_sshChannel = _sshConn.execCommand(cmd, requestPty);
+			_execChannel = _sshConn.execCommand(cmd, requestPty);
+			_sshChannel  = _execChannel.getChannel();
 		}
 
 		/**
@@ -375,21 +377,14 @@ extends HostMonitorConnection
 		@Override
 		public InputStream getStdout()
 		{
-			try {
-				return _sshChannel.getInputStream();
-			} catch (IOException ex) {
-				throw new RuntimeException("Problems getting STDOUT Stream from SSH Command");
-			}
+			// NOTE: Do NOT use _sshChannel.getInputStream() here, it creates a new pipe, and the output received before that is lost
+			return _execChannel.getStdout();
 		}
 
 		@Override
 		public InputStream getStderr()
 		{
-			try {
-				return _sshChannel.getErrStream();
-			} catch (IOException ex) {
-				throw new RuntimeException("Problems getting STDERR Stream from SSH Command");
-			}
+			return _execChannel.getStderr();
 		}
 
 		@Override

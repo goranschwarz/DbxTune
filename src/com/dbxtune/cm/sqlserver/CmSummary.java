@@ -39,6 +39,7 @@ import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.Version;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProvider;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventBlockingLockAlarm;
 import com.dbxtune.alarm.events.AlarmEventDeadlock;
@@ -482,6 +483,13 @@ extends CmSummaryAbstract
 		return pkCols;
 	}
 
+
+	/** sys.dm_os_sys_info.sqlserver_start_time: when SQL Server was started (for example used when the alarm 'SrvDown' is cancelled: was it restarted?) */
+	@Override
+	protected String getDbmsStartTimeColumnName()
+	{
+		return "StartDate";
+	}
 
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
@@ -1642,131 +1650,24 @@ extends CmSummaryAbstract
 
 				if (LockWaits.intValue() > threshold)
 				{
-					String rootBlockerSpids                    = cm.getAbsString(0, "RootBlockerSpids");
-
-					String oldestOpenTranBeginTime             = cm.getAbsString(0, "oldestOpenTranBeginTime");
-					String oldestOpenTranId                    = cm.getAbsString(0, "oldestOpenTranId");
-					String oldestOpenTranSpid                  = cm.getAbsString(0, "oldestOpenTranSpid");
-					String oldestOpenTranDbname                = cm.getAbsString(0, "oldestOpenTranDbname");
-					String oldestOpenTranName                  = cm.getAbsString(0, "oldestOpenTranName");
-					String oldestOpenTranWaitType              = cm.getAbsString(0, "oldestOpenTranWaitType");
-					String oldestOpenTranCmd                   = cm.getAbsString(0, "oldestOpenTranCmd");
-					String oldestOpenTranLoginName             = cm.getAbsString(0, "oldestOpenTranLoginName");
-					String oldestOpenTranTempdbUsageMbAll      = cm.getAbsString(0, "oldestOpenTranTempdbUsageMbAll");
-					String oldestOpenTranTempdbUsageMbUser     = cm.getAbsString(0, "oldestOpenTranTempdbUsageMbUser");
-					String oldestOpenTranTempdbUsageMbInternal = cm.getAbsString(0, "oldestOpenTranTempdbUsageMbInternal");
-					String oldestOpenTranInSec                 = cm.getAbsString(0, "oldestOpenTranInSec");
-//					String oldestOpenTranInSecThreshold        = cm.getAbsString(0, "oldestOpenTranInSecThreshold");
-
-					// Possibly get more information about that SPID (rootBlockerSpids)
-					// - get info from CmProcesses about the SPID's
-					String rootBlockerSpids_Sessions_htmlTable = "";
-					if (StringUtil.hasValue(rootBlockerSpids))
-					{
-						List<String> rootBlockerSpidsList = StringUtil.parseCommaStrToList(rootBlockerSpids);
-						CountersModel cmSessions = getCounterController().getCmByName(CmSessions.CM_NAME);
-
-						for (String rootBlockerSpid : rootBlockerSpidsList)
-						{
-							int rootBlockerSpid_int = StringUtil.parseInt(rootBlockerSpid, -1);
-							if (rootBlockerSpid_int != -1 && cmSessions != null)
-							{
-								Map<String, Object> whereMap = new HashMap<>();
-								whereMap.put("session_id", rootBlockerSpid_int);
-								List<Integer> rowIdList = cmSessions.getRateRowIdsWhere(whereMap);
-								for (Integer pkRowId : rowIdList)
-								{
-									rootBlockerSpids_Sessions_htmlTable += cmSessions.toHtmlTableString(CountersModel.DATA_RATE, pkRowId, true, false, false);
-								}
-							}
-						}
-					}
-
-					// Possibly get more information about that SPID (oldestOpenTranSpid)
-					// - print "open" trans info
-					// - get info from CmProcesses about the oldest open tran
-					String oldestOpenTranSpid_Sessions_htmlTable = "";
-					if (StringUtil.hasValue(oldestOpenTranSpid))
-					{
-						CountersModel cmSessions = getCounterController().getCmByName(CmSessions.CM_NAME);
-						int oldestOpenTranSpid_int = StringUtil.parseInt(oldestOpenTranSpid, -1);
-						if (oldestOpenTranSpid_int != -1 && cmSessions != null)
-						{
-							Map<String, Object> whereMap = new HashMap<>();
-							whereMap.put("session_id", oldestOpenTranSpid_int);
-							List<Integer> rowIdList = cmSessions.getRateRowIdsWhere(whereMap);
-							for (Integer pkRowId : rowIdList)
-							{
-								oldestOpenTranSpid_Sessions_htmlTable += cmSessions.toHtmlTableString(CountersModel.DATA_RATE, pkRowId, true, false, false);
-							}
-						}
-					}
-					
-					String extendedDescText = "" 
-							+   "NumberOfWaitingLocks"                + "="  + LockWaits                           + ""
-							+ ", RootBlockerSpids"                    + "='" + rootBlockerSpids                    + "'"
-							+ ", OldestOpenTranBeginTime"             + "='" + oldestOpenTranBeginTime             + "'"
-							+ ", OldestOpenTranId"                    + "="  + oldestOpenTranId                    + ""
-							+ ", OldestOpenTranSpid"                  + "="  + oldestOpenTranSpid                  + ""
-							+ ", OldestOpenTranDbname"                + "='" + oldestOpenTranDbname                + "'"
-							+ ", OldestOpenTranName"                  + "='" + oldestOpenTranName                  + "'"
-							+ ", OldestOpenTranWaitType"              + "='" + oldestOpenTranWaitType              + "'"
-							+ ", OldestOpenTranCmd"                   + "='" + oldestOpenTranCmd                   + "'"
-							+ ", OldestOpenTranLoginName"             + "='" + oldestOpenTranLoginName             + "'"
-							+ ", OldestOpenTranTempdbUsageMbAll"      + "="  + oldestOpenTranTempdbUsageMbAll      + ""
-							+ ", OldestOpenTranTempdbUsageMbUser"     + "="  + oldestOpenTranTempdbUsageMbUser     + ""
-							+ ", OldestOpenTranTempdbUsageMbInternal" + "="  + oldestOpenTranTempdbUsageMbInternal + ""
-							+ ", OldestOpenTranInSec"                 + "="  + oldestOpenTranInSec                 + ""
-//							+ ", OldestOpenTranInSecThreshold"        + "="  + oldestOpenTranInSecThreshold        + ""
-							;
-					String extendedDescHtml = "" // NO-OuterHtml, NO-Borders 
-							+ "<table class='dbx-table-basic'> \n"
-							+ "    <tr> <td><b>Number of Waiting Locks               </b></td> <td>" + LockWaits                            + "</td> </tr> \n"
-							+ "    <tr> <td><b>Root Blocker Spids (CSV)              </b></td> <td>" + rootBlockerSpids                     + "</td> </tr> \n"
-							+ "    <tr> <td><b>Oldest Open Tran BeginTime            </b></td> <td>" + oldestOpenTranBeginTime              + "</td> </tr> \n"
-							+ "    <tr> <td><b>Oldest Open Tran Id                   </b></td> <td>" + oldestOpenTranId                     + "</td> </tr> \n"
-							+ "    <tr> <td><b>Oldest Open Tran Spid                 </b></td> <td>" + oldestOpenTranSpid                   + "</td> </tr> \n"
-							+ "    <tr> <td><b>Oldest Open Tran Dbname               </b></td> <td>" + oldestOpenTranDbname                 + "</td> </tr> \n"
-							+ "    <tr> <td><b>Oldest Open Tran Name                 </b></td> <td>" + oldestOpenTranName                   + "</td> </tr> \n"
-							+ "    <tr> <td><b>Oldest Open Tran WaitType             </b></td> <td>" + oldestOpenTranWaitType               + "</td> </tr> \n"
-							+ "    <tr> <td><b>Oldest Open Tran Cmd                  </b></td> <td>" + oldestOpenTranCmd                    + "</td> </tr> \n"
-							+ "    <tr> <td><b>Oldest Open Tran LoginName            </b></td> <td>" + oldestOpenTranLoginName              + "</td> </tr> \n"
-							+ "    <tr> <td><b>Oldest Open Tran TempdbUsageMbAll     </b></td> <td>" + oldestOpenTranTempdbUsageMbAll       + "</td> </tr> \n"
-							+ "    <tr> <td><b>Oldest Open Tran TempdbUsageMbUser    </b></td> <td>" + oldestOpenTranTempdbUsageMbUser      + "</td> </tr> \n"
-							+ "    <tr> <td><b>Oldest Open Tran TempdbUsageMbInternal</b></td> <td>" + oldestOpenTranTempdbUsageMbInternal  + "</td> </tr> \n"
-							+ "    <tr> <td><b>Oldest Open Tran InSec                </b></td> <td>" + oldestOpenTranInSec                  + "</td> </tr> \n"
-//							+ "    <tr> <td><b>Oldest Open Tran InSecThreshold       </b></td> <td>" + oldestOpenTranInSecThreshold         + "</td> </tr> \n"
-							+ "</table> \n"
-							;
-
-					if (StringUtil.hasValue(rootBlockerSpids_Sessions_htmlTable))
-					{
-						extendedDescHtml += ""
-								+ "<br>"
-								+ "Sessions information for 'Root Blocker SPID's: " + rootBlockerSpids + "'"
-								+ rootBlockerSpids_Sessions_htmlTable
-								;
-					}
-					
-					if (StringUtil.hasValue(oldestOpenTranSpid_Sessions_htmlTable))
-					{
-						extendedDescHtml += ""
-								+ "<br>"
-								+ "Sessions information for 'Oldest Open Tran Spid: " + oldestOpenTranSpid + "'"
-								+ oldestOpenTranSpid_Sessions_htmlTable
-								;
-					}
-					
-					CountersModel cmWaitStats = getCounterController().getCmByName(CmWaitStats.CM_NAME);
-					if (cmWaitStats != null)
-					{
-						extendedDescHtml += "<br><br>" + cmWaitStats.getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_LOCK_TIME);
-						extendedDescHtml += "<br><br>" + cmWaitStats.getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_LOCK_COUNT);
-						extendedDescHtml += "<br><br>" + cmWaitStats.getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_LOCK_TPW);
-					}
-					
 					AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, LockWaits);
-					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+					ae.setAlarmDescriptionProvider(cm, new AlarmDescriptionProvider()
+					{
+						// Called on RAISE/RE-RAISE/CANCEL, so the description is from the CURRENT data
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, Phase phase)
+						{
+							if (Phase.CANCEL.equals(phase))
+							{
+								Double lockWaitsNow = cm.getAbsValueAsDouble(0, "LockWaits");
+								alarmEvent.setCancelDescription("Number of Waiting Locks is now " + (lockWaitsNow == null ? "unknown" : lockWaitsNow.intValue()) + " (threshold " + threshold + ")");
+								alarmEvent.setExtendedDescription("", getBlockingLockGraphs(cm)); // the lock graphs, now up to the end of the blocking
+								return;
+							}
+
+							setBlockingLockDescription(cm, alarmEvent);
+						}
+					});
 					
 					// Information about how to disable this alarm
 					ae.createAlarmOptionsMessage(this, "LockWaits");
@@ -1829,69 +1730,28 @@ extends CmSummaryAbstract
 					// NO match in the SKIP regEx
 					if (doAlarm)
 					{
-						// Possibly get more information about that SPID (oldestOpenTranSpid)
-						// - print "open" trans info
-						// - get info from CmProcesses about the oldest open tran
-						String oldestOpenTranSpid_Sessions_htmlTable = "";
-						if (oldestOpenTranSpid != -1)
-						{
-							CountersModel cmSessions = getCounterController().getCmByName(CmSessions.CM_NAME);
-							if (cmSessions != null)
-							{
-								Map<String, Object> whereMap = new HashMap<>();
-								whereMap.put("session_id", oldestOpenTranSpid);
-								List<Integer> rowIdList = cmSessions.getRateRowIdsWhere(whereMap);
-								for (Integer pkRowId : rowIdList)
-								{
-									oldestOpenTranSpid_Sessions_htmlTable += cmSessions.toHtmlTableString(CountersModel.DATA_RATE, pkRowId, true, false, false);
-								}
-							}
-						}
-						
-						String extendedDescText = "" 
-								+   "OldestOpenTranBeginTime"             + "='" + oldestOpenTranBeginTime             + "'"
-								+ ", OldestOpenTranId"                    + "="  + oldestOpenTranId                    + ""
-								+ ", OldestOpenTranSpid"                  + "="  + oldestOpenTranSpid                  + ""
-								+ ", OldestOpenTranDbname"                + "='" + oldestOpenTranDbname                + "'"
-								+ ", OldestOpenTranName"                  + "='" + oldestOpenTranName                  + "'"
-								+ ", OldestOpenTranWaitType"              + "='" + oldestOpenTranWaitType              + "'"
-								+ ", OldestOpenTranCmd"                   + "='" + oldestOpenTranCmd                   + "'"
-								+ ", OldestOpenTranLoginName"             + "='" + oldestOpenTranLoginName             + "'"
-								+ ", OldestOpenTranTempdbUsageMbAll"      + "="  + oldestOpenTranTempdbUsageMbAll      + ""
-								+ ", OldestOpenTranTempdbUsageMbUser"     + "="  + oldestOpenTranTempdbUsageMbUser     + ""
-								+ ", OldestOpenTranTempdbUsageMbInternal" + "="  + oldestOpenTranTempdbUsageMbInternal + ""
-								+ ", OldestOpenTranInSec"                 + "="  + oldestOpenTranInSec                 + ""
-//								+ ", OldestOpenTranInSecThreshold"        + "="  + oldestOpenTranInSecThreshold        + ""
-								;
-						String extendedDescHtml = "" // NO-OuterHtml, NO-Borders 
-								+ "<table class='dbx-table-basic'> \n"
-								+ "    <tr> <td><b>Oldest Open Tran BeginTime            </b></td> <td>" + oldestOpenTranBeginTime              + "</td> </tr> \n"
-								+ "    <tr> <td><b>Oldest Open Tran Id                   </b></td> <td>" + oldestOpenTranId                     + "</td> </tr> \n"
-								+ "    <tr> <td><b>Oldest Open Tran Spid                 </b></td> <td>" + oldestOpenTranSpid                   + "</td> </tr> \n"
-								+ "    <tr> <td><b>Oldest Open Tran Dbname               </b></td> <td>" + oldestOpenTranDbname                 + "</td> </tr> \n"
-								+ "    <tr> <td><b>Oldest Open Tran Name                 </b></td> <td>" + oldestOpenTranName                   + "</td> </tr> \n"
-								+ "    <tr> <td><b>Oldest Open Tran WaitType             </b></td> <td>" + oldestOpenTranWaitType               + "</td> </tr> \n"
-								+ "    <tr> <td><b>Oldest Open Tran Cmd                  </b></td> <td>" + oldestOpenTranCmd                    + "</td> </tr> \n"
-								+ "    <tr> <td><b>Oldest Open Tran LoginName            </b></td> <td>" + oldestOpenTranLoginName              + "</td> </tr> \n"
-								+ "    <tr> <td><b>Oldest Open Tran TempdbUsageMbAll     </b></td> <td>" + oldestOpenTranTempdbUsageMbAll       + "</td> </tr> \n"
-								+ "    <tr> <td><b>Oldest Open Tran TempdbUsageMbUser    </b></td> <td>" + oldestOpenTranTempdbUsageMbUser      + "</td> </tr> \n"
-								+ "    <tr> <td><b>Oldest Open Tran TempdbUsageMbInternal</b></td> <td>" + oldestOpenTranTempdbUsageMbInternal  + "</td> </tr> \n"
-								+ "    <tr> <td><b>Oldest Open Tran InSec                </b></td> <td>" + oldestOpenTranInSec                  + "</td> </tr> \n"
-//								+ "    <tr> <td><b>Oldest Open Tran InSecThreshold       </b></td> <td>" + oldestOpenTranInSecThreshold         + "</td> </tr> \n"
-								+ "</table> \n"
-								;
-
-						if (StringUtil.hasValue(oldestOpenTranSpid_Sessions_htmlTable))
-						{
-							extendedDescHtml += ""
-									+ "<br>"
-									+ "Sessions information for 'Oldest Open Tran Spid: " + oldestOpenTranSpid + "'"
-									+ oldestOpenTranSpid_Sessions_htmlTable
-									;
-						}
-
 						AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, oldestOpenTranInSec, oldestOpenTranSpid.intValue(), oldestOpenTranDbname, oldestOpenTranName, oldestOpenTranCmd, oldestOpenTranWaitType, oldestOpenTranLoginName, oldestOpenTranTempdbUsageMbAll);
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						ae.setAlarmDescriptionProvider(cm, new AlarmDescriptionProvider()
+						{
+							// Called on RAISE/RE-RAISE/CANCEL, so the description is from the CURRENT data
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, Phase phase)
+							{
+								if (Phase.CANCEL.equals(phase))
+								{
+									// Keep the description of the transaction (it has ended), just say how it looks now
+									int oldestOpenTranInSecNow = cm.getAbsValueAsInteger(0, "oldestOpenTranInSec", -1);
+									int oldestOpenTranSpidNow  = cm.getAbsValueAsInteger(0, "oldestOpenTranSpid" , -1);
+									if (oldestOpenTranInSecNow == -1 || oldestOpenTranSpidNow == -1)
+										alarmEvent.setCancelDescription("There is no open (user) transaction now (threshold " + threshold + " seconds)");
+									else
+										alarmEvent.setCancelDescription("The oldest open transaction is now " + oldestOpenTranInSecNow + " seconds old, spid " + oldestOpenTranSpidNow + " (threshold " + threshold + " seconds)");
+									return;
+								}
+
+								setLongRunningTransactionDescription(cm, alarmEvent);
+							}
+						});
 						
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "oldestOpenTranInSec");
@@ -1940,12 +1800,26 @@ extends CmSummaryAbstract
 				{
 //					String extendedDescText = FIXME; get table from suspect_pages Table // cm.toTextTableString(DATA_RATE, r);
 //					String extendedDescHtml = FIXME; get table from suspect_pages Table // cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-					String extendedDescText = (_lastSuspectPage_rstm == null) ? "" : _lastSuspectPage_rstm.toAsciiTableString();
-					String extendedDescHtml = (_lastSuspectPage_rstm == null) ? "" : _lastSuspectPage_rstm.toHtmlTableString("sortable");
-
 					AlarmEvent ae = new AlarmEventSuspectPages(cm, threshold, suspectPageCount, suspectPageErrors);
+					ae.setAlarmDescriptionProvider(cm, new AlarmDescriptionProvider()
+					{
+						// Called on RAISE/RE-RAISE/CANCEL
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, Phase phase)
+						{
+							if (Phase.CANCEL.equals(phase))
+							{
+								// Keep the list of suspect pages, just say how it looks now
+								alarmEvent.setCancelDescription("Suspect Page Count is now " + cm.getAbsValueAsInteger(0, "suspectPageCount", false, -1) + " (threshold " + threshold + ")");
+								return;
+							}
 
-					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+							String extendedDescText = (_lastSuspectPage_rstm == null) ? "" : _lastSuspectPage_rstm.toAsciiTableString();
+							String extendedDescHtml = (_lastSuspectPage_rstm == null) ? "" : _lastSuspectPage_rstm.toHtmlTableString("sortable");
+
+							alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+						}
+					});
 						
 					// Information about how to disable this alarm
 					ae.createAlarmOptionsMessage(this, "suspectPageCount");
@@ -1971,21 +1845,35 @@ extends CmSummaryAbstract
 
 			if (requestsWaitingForWorkers > threshold && availableWorkers <= availableWorkersThreshold)
 			{
-				String extendedDescText = "";
-				String extendedDescHtml =        getGraphDataHistoryAsHtmlImage(GRAPH_NAME_WORKER_THREAD_USAGE);
-				extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TASKS_WAITING_FOR_WORKERS);
-				extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AA_CPU);
-				
-				CountersModel cmWaitStats = getCounterController().getCmByName(CmWaitStats.CM_NAME);
-				if (cmWaitStats != null)
-				{
-					extendedDescHtml += "<br><br>" + cmWaitStats.getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_TOXIC_TIME);
-					extendedDescHtml += "<br><br>" + cmWaitStats.getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_TOXIC_COUNT);
-					extendedDescHtml += "<br><br>" + cmWaitStats.getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_TOXIC_TPW);
-				}
-
 				AlarmEvent ae = new AlarmEventOutOfWorkerThreads(cm, threshold, requestsWaitingForWorkers);
-				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+				ae.setAlarmDescriptionProvider(cm, new AlarmDescriptionProvider()
+				{
+					// Called on RAISE/RE-RAISE/CANCEL, so the graphs (and on CANCEL the counters) are from the CURRENT data
+					@Override
+					public void setValues(CountersModel cm, AlarmEvent alarmEvent, Phase phase)
+					{
+						if (Phase.CANCEL.equals(phase))
+						{
+							alarmEvent.setCancelDescription("Requests Waiting For Workers is now " + cm.getAbsValueAsInteger(0, "requestsWaitingForWorkers", false, -1) + " (threshold " + threshold + ")"
+									+ ", Available Workers is now " + cm.getAbsValueAsInteger(0, "availableWorkers", false, -1) + " (threshold " + availableWorkersThreshold + ")");
+						}
+
+						String extendedDescText = "";
+						String extendedDescHtml =        cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_WORKER_THREAD_USAGE);
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TASKS_WAITING_FOR_WORKERS);
+						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AA_CPU);
+
+						CountersModel cmWaitStats = cm.getCounterController().getCmByName(CmWaitStats.CM_NAME);
+						if (cmWaitStats != null)
+						{
+							extendedDescHtml += "<br><br>" + cmWaitStats.getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_TOXIC_TIME);
+							extendedDescHtml += "<br><br>" + cmWaitStats.getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_TOXIC_COUNT);
+							extendedDescHtml += "<br><br>" + cmWaitStats.getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_TOXIC_TPW);
+						}
+
+						alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+					}
+				});
 				
 				// Information about how to disable this alarm
 				ae.createAlarmOptionsMessage(this, "requestsWaitingForWorkers");
@@ -2011,12 +1899,25 @@ extends CmSummaryAbstract
 			{
 				int allocatedWorkers = cm.getAbsValueAsInteger(0, "allocatedWorkers", false, -1);
 
-				String extendedDescText = "";
-				String extendedDescHtml = getGraphDataHistoryAsHtmlImage(GRAPH_NAME_WORKER_THREAD_USAGE);
-
 				AlarmEvent ae = new AlarmEventLowOnWorkerThreads(cm, threshold, availableWorkers, maxWorkers, allocatedWorkers);
-				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-				
+				ae.setAlarmDescriptionProvider(cm, new AlarmDescriptionProvider()
+				{
+					// Called on RAISE/RE-RAISE/CANCEL, so the graph (and on CANCEL the worker count) is from the CURRENT data
+					@Override
+					public void setValues(CountersModel cm, AlarmEvent alarmEvent, Phase phase)
+					{
+						if (Phase.CANCEL.equals(phase))
+						{
+							alarmEvent.setCancelDescription("Available Workers is now " + cm.getAbsValueAsInteger(0, "availableWorkers", false, -1) + " of " + cm.getAbsValueAsInteger(0, "maxWorkers", false, -1) + " (threshold " + threshold + ")");
+						}
+
+						String extendedDescText = "";
+						String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_WORKER_THREAD_USAGE);
+
+						alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+					}
+				});
+
 				// Information about how to disable this alarm
 				ae.createAlarmOptionsMessage(this, "availableWorkers");
 
@@ -2050,17 +1951,34 @@ extends CmSummaryAbstract
 
 			if (dataVal > threshold)
 			{
-				String extendedDescText = "";
-				String extendedDescHtml = getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DEADLOCK_COUNT_SUM);
-
-				CountersModel cmPerfCounters = getCounterController().getCmByName(CmPerfCounters.CM_NAME);
-				if (cmPerfCounters != null)
-				{
-					extendedDescHtml = "<br><br>" + cmPerfCounters.getGraphDataHistoryAsHtmlImage(CmPerfCounters.GRAPH_NAME_DEADLOCK_DETAILS);
-				}
-				
 				AlarmEvent ae = new AlarmEventDeadlock(cm, threshold, movingAverageInMinutes, deadlockCount, movingAvgDeadlockCount);
-				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+				ae.setAlarmDescriptionProvider(cm, new AlarmDescriptionProvider()
+				{
+					// Called on RAISE/RE-RAISE/CANCEL, so the graphs (and on CANCEL the counters) are from the CURRENT data
+					@Override
+					public void setValues(CountersModel cm, AlarmEvent alarmEvent, Phase phase)
+					{
+						if (Phase.CANCEL.equals(phase))
+						{
+							// Do NOT add() to the moving average here (that is done once per sample, above), just read it
+							String movingAvgStr = "";
+							if (movingAverageInMinutes > 0)
+								movingAvgStr = ", moving average over " + movingAverageInMinutes + " minutes is " + NumberUtils.round(MovingAverageCounterManager.getInstance(CM_NAME, "deadlockCount", movingAverageInMinutes).getAvg(-1, true), 3);
+							alarmEvent.setCancelDescription("Deadlock Count in the last sample is " + cm.getDiffValueAsInteger(0, "deadlockCount", false, -1) + movingAvgStr + " (threshold " + threshold + ")");
+						}
+
+						String extendedDescText = "";
+						String extendedDescHtml = StringUtil.toStr(cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DEADLOCK_COUNT_SUM)); // null if no graph history
+
+						CountersModel cmPerfCounters = cm.getCounterController().getCmByName(CmPerfCounters.CM_NAME);
+						if (cmPerfCounters != null)
+						{
+							extendedDescHtml += "<br><br>" + cmPerfCounters.getGraphDataHistoryAsHtmlImage(CmPerfCounters.GRAPH_NAME_DEADLOCK_DETAILS); // NOTE: was '=', which threw away the graph above
+						}
+
+						alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+					}
+				});
 				
 				// Information about how to disable this alarm
 				ae.createAlarmOptionsMessage(this, "DeadlockCount");
@@ -2093,6 +2011,16 @@ extends CmSummaryAbstract
 			if (doAlarm)
 			{
 				AlarmEvent ae = new AlarmEventSqlAgentStatus(cm, sqlAgentStatus, statusExpectedRegEx);
+				ae.setAlarmDescriptionProvider(cm, new AlarmDescriptionProvider()
+				{
+					// Only on CANCEL: the status now (this alarm has no extended description)
+					@Override
+					public void setValues(CountersModel cm, AlarmEvent alarmEvent, Phase phase)
+					{
+						if (Phase.CANCEL.equals(phase))
+							alarmEvent.setCancelDescription("SQL Agent Status is now '" + cm.getAbsString(0, "sql_agent_status", true, "") + "' (expected: " + statusExpectedRegEx + ")");
+					}
+				});
 				
 				// Information about how to disable this alarm
 				ae.createAlarmOptionsMessage(this, "SqlAgentStatus");
@@ -2100,6 +2028,228 @@ extends CmSummaryAbstract
 				alarmHandler.addAlarm( ae );
 			}
 		}
+	}
+
+	/** AlarmEventBlockingLockAlarm: set the extended description from the CURRENT data in the CM */
+	private void setBlockingLockDescription(CountersModel cm, AlarmEvent alarmEvent)
+	{
+		Double LockWaits = cm.getAbsValueAsDouble (0, "LockWaits");
+
+		String rootBlockerSpids                    = cm.getAbsString(0, "RootBlockerSpids");
+
+		String oldestOpenTranBeginTime             = cm.getAbsString(0, "oldestOpenTranBeginTime");
+		String oldestOpenTranId                    = cm.getAbsString(0, "oldestOpenTranId");
+		String oldestOpenTranSpid                  = cm.getAbsString(0, "oldestOpenTranSpid");
+		String oldestOpenTranDbname                = cm.getAbsString(0, "oldestOpenTranDbname");
+		String oldestOpenTranName                  = cm.getAbsString(0, "oldestOpenTranName");
+		String oldestOpenTranWaitType              = cm.getAbsString(0, "oldestOpenTranWaitType");
+		String oldestOpenTranCmd                   = cm.getAbsString(0, "oldestOpenTranCmd");
+		String oldestOpenTranLoginName             = cm.getAbsString(0, "oldestOpenTranLoginName");
+		String oldestOpenTranTempdbUsageMbAll      = cm.getAbsString(0, "oldestOpenTranTempdbUsageMbAll");
+		String oldestOpenTranTempdbUsageMbUser     = cm.getAbsString(0, "oldestOpenTranTempdbUsageMbUser");
+		String oldestOpenTranTempdbUsageMbInternal = cm.getAbsString(0, "oldestOpenTranTempdbUsageMbInternal");
+		String oldestOpenTranInSec                 = cm.getAbsString(0, "oldestOpenTranInSec");
+//		String oldestOpenTranInSecThreshold        = cm.getAbsString(0, "oldestOpenTranInSecThreshold");
+
+		// Possibly get more information about that SPID (rootBlockerSpids)
+		// - get info from CmProcesses about the SPID's
+		String rootBlockerSpids_Sessions_htmlTable = "";
+		if (StringUtil.hasValue(rootBlockerSpids))
+		{
+			List<String> rootBlockerSpidsList = StringUtil.parseCommaStrToList(rootBlockerSpids);
+			CountersModel cmSessions = cm.getCounterController().getCmByName(CmSessions.CM_NAME);
+
+			for (String rootBlockerSpid : rootBlockerSpidsList)
+			{
+				int rootBlockerSpid_int = StringUtil.parseInt(rootBlockerSpid, -1);
+				if (rootBlockerSpid_int != -1 && cmSessions != null)
+				{
+					Map<String, Object> whereMap = new HashMap<>();
+					whereMap.put("session_id", rootBlockerSpid_int);
+					List<Integer> rowIdList = cmSessions.getRateRowIdsWhere(whereMap);
+					for (Integer pkRowId : rowIdList)
+					{
+						rootBlockerSpids_Sessions_htmlTable += cmSessions.toHtmlTableString(CountersModel.DATA_RATE, pkRowId, true, false, false);
+					}
+				}
+			}
+		}
+
+		// Possibly get more information about that SPID (oldestOpenTranSpid)
+		// - print "open" trans info
+		// - get info from CmProcesses about the oldest open tran
+		String oldestOpenTranSpid_Sessions_htmlTable = "";
+		if (StringUtil.hasValue(oldestOpenTranSpid))
+		{
+			CountersModel cmSessions = cm.getCounterController().getCmByName(CmSessions.CM_NAME);
+			int oldestOpenTranSpid_int = StringUtil.parseInt(oldestOpenTranSpid, -1);
+			if (oldestOpenTranSpid_int != -1 && cmSessions != null)
+			{
+				Map<String, Object> whereMap = new HashMap<>();
+				whereMap.put("session_id", oldestOpenTranSpid_int);
+				List<Integer> rowIdList = cmSessions.getRateRowIdsWhere(whereMap);
+				for (Integer pkRowId : rowIdList)
+				{
+					oldestOpenTranSpid_Sessions_htmlTable += cmSessions.toHtmlTableString(CountersModel.DATA_RATE, pkRowId, true, false, false);
+				}
+			}
+		}
+
+		String extendedDescText = "" 
+				+   "NumberOfWaitingLocks"                + "="  + LockWaits                           + ""
+				+ ", RootBlockerSpids"                    + "='" + rootBlockerSpids                    + "'"
+				+ ", OldestOpenTranBeginTime"             + "='" + oldestOpenTranBeginTime             + "'"
+				+ ", OldestOpenTranId"                    + "="  + oldestOpenTranId                    + ""
+				+ ", OldestOpenTranSpid"                  + "="  + oldestOpenTranSpid                  + ""
+				+ ", OldestOpenTranDbname"                + "='" + oldestOpenTranDbname                + "'"
+				+ ", OldestOpenTranName"                  + "='" + oldestOpenTranName                  + "'"
+				+ ", OldestOpenTranWaitType"              + "='" + oldestOpenTranWaitType              + "'"
+				+ ", OldestOpenTranCmd"                   + "='" + oldestOpenTranCmd                   + "'"
+				+ ", OldestOpenTranLoginName"             + "='" + oldestOpenTranLoginName             + "'"
+				+ ", OldestOpenTranTempdbUsageMbAll"      + "="  + oldestOpenTranTempdbUsageMbAll      + ""
+				+ ", OldestOpenTranTempdbUsageMbUser"     + "="  + oldestOpenTranTempdbUsageMbUser     + ""
+				+ ", OldestOpenTranTempdbUsageMbInternal" + "="  + oldestOpenTranTempdbUsageMbInternal + ""
+				+ ", OldestOpenTranInSec"                 + "="  + oldestOpenTranInSec                 + ""
+//				+ ", OldestOpenTranInSecThreshold"        + "="  + oldestOpenTranInSecThreshold        + ""
+				;
+		String extendedDescHtml = "" // NO-OuterHtml, NO-Borders 
+				+ "<table class='dbx-table-basic'> \n"
+				+ "    <tr> <td><b>Number of Waiting Locks               </b></td> <td>" + LockWaits                            + "</td> </tr> \n"
+				+ "    <tr> <td><b>Root Blocker Spids (CSV)              </b></td> <td>" + rootBlockerSpids                     + "</td> </tr> \n"
+				+ "    <tr> <td><b>Oldest Open Tran BeginTime            </b></td> <td>" + oldestOpenTranBeginTime              + "</td> </tr> \n"
+				+ "    <tr> <td><b>Oldest Open Tran Id                   </b></td> <td>" + oldestOpenTranId                     + "</td> </tr> \n"
+				+ "    <tr> <td><b>Oldest Open Tran Spid                 </b></td> <td>" + oldestOpenTranSpid                   + "</td> </tr> \n"
+				+ "    <tr> <td><b>Oldest Open Tran Dbname               </b></td> <td>" + oldestOpenTranDbname                 + "</td> </tr> \n"
+				+ "    <tr> <td><b>Oldest Open Tran Name                 </b></td> <td>" + oldestOpenTranName                   + "</td> </tr> \n"
+				+ "    <tr> <td><b>Oldest Open Tran WaitType             </b></td> <td>" + oldestOpenTranWaitType               + "</td> </tr> \n"
+				+ "    <tr> <td><b>Oldest Open Tran Cmd                  </b></td> <td>" + oldestOpenTranCmd                    + "</td> </tr> \n"
+				+ "    <tr> <td><b>Oldest Open Tran LoginName            </b></td> <td>" + oldestOpenTranLoginName              + "</td> </tr> \n"
+				+ "    <tr> <td><b>Oldest Open Tran TempdbUsageMbAll     </b></td> <td>" + oldestOpenTranTempdbUsageMbAll       + "</td> </tr> \n"
+				+ "    <tr> <td><b>Oldest Open Tran TempdbUsageMbUser    </b></td> <td>" + oldestOpenTranTempdbUsageMbUser      + "</td> </tr> \n"
+				+ "    <tr> <td><b>Oldest Open Tran TempdbUsageMbInternal</b></td> <td>" + oldestOpenTranTempdbUsageMbInternal  + "</td> </tr> \n"
+				+ "    <tr> <td><b>Oldest Open Tran InSec                </b></td> <td>" + oldestOpenTranInSec                  + "</td> </tr> \n"
+//				+ "    <tr> <td><b>Oldest Open Tran InSecThreshold       </b></td> <td>" + oldestOpenTranInSecThreshold         + "</td> </tr> \n"
+				+ "</table> \n"
+				;
+
+		if (StringUtil.hasValue(rootBlockerSpids_Sessions_htmlTable))
+		{
+			extendedDescHtml += ""
+					+ "<br>"
+					+ "Sessions information for 'Root Blocker SPID's: " + rootBlockerSpids + "'"
+					+ rootBlockerSpids_Sessions_htmlTable
+					;
+		}
+
+		if (StringUtil.hasValue(oldestOpenTranSpid_Sessions_htmlTable))
+		{
+			extendedDescHtml += ""
+					+ "<br>"
+					+ "Sessions information for 'Oldest Open Tran Spid: " + oldestOpenTranSpid + "'"
+					+ oldestOpenTranSpid_Sessions_htmlTable
+					;
+		}
+
+		extendedDescHtml += getBlockingLockGraphs(cm);
+
+		alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+	}
+
+	/** AlarmEventBlockingLockAlarm: graphs of lock waits (from CmWaitStats) */
+	private String getBlockingLockGraphs(CountersModel cm)
+	{
+		String extendedDescHtml = "";
+		CountersModel cmWaitStats = cm.getCounterController().getCmByName(CmWaitStats.CM_NAME);
+		if (cmWaitStats != null)
+		{
+			extendedDescHtml += "<br><br>" + cmWaitStats.getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_LOCK_TIME);
+			extendedDescHtml += "<br><br>" + cmWaitStats.getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_LOCK_COUNT);
+			extendedDescHtml += "<br><br>" + cmWaitStats.getGraphDataHistoryAsHtmlImage(CmWaitStats.GRAPH_NAME_LOCK_TPW);
+		}
+		return extendedDescHtml;
+	}
+
+	/** AlarmEventLongRunningTransaction: set the extended description from the CURRENT data in the CM */
+	private void setLongRunningTransactionDescription(CountersModel cm, AlarmEvent alarmEvent)
+	{
+		Integer oldestOpenTranInSec = cm.getAbsValueAsInteger(0, "oldestOpenTranInSec", -1);
+		Integer oldestOpenTranSpid  = cm.getAbsValueAsInteger(0, "oldestOpenTranSpid" , -1);
+
+		String oldestOpenTranBeginTime             = cm.getAbsString       (0, "oldestOpenTranBeginTime");
+		String oldestOpenTranId                    = cm.getAbsString       (0, "oldestOpenTranId");
+//		String oldestOpenTranSpid                  = cm.getAbsString       (0, "oldestOpenTranSpid");
+		String oldestOpenTranDbname                = cm.getAbsString       (0, "oldestOpenTranDbname");
+		String oldestOpenTranName                  = cm.getAbsString       (0, "oldestOpenTranName");
+		String oldestOpenTranWaitType              = cm.getAbsString       (0, "oldestOpenTranWaitType");
+		String oldestOpenTranCmd                   = cm.getAbsString       (0, "oldestOpenTranCmd");
+		String oldestOpenTranLoginName             = cm.getAbsString       (0, "oldestOpenTranLoginName");
+		Double oldestOpenTranTempdbUsageMbAll      = cm.getAbsValueAsDouble(0, "oldestOpenTranTempdbUsageMbAll");
+		String oldestOpenTranTempdbUsageMbUser     = cm.getAbsString       (0, "oldestOpenTranTempdbUsageMbUser");
+		String oldestOpenTranTempdbUsageMbInternal = cm.getAbsString       (0, "oldestOpenTranTempdbUsageMbInternal");
+//		String oldestOpenTranInSec                 = cm.getAbsString       (0, "oldestOpenTranInSec");
+
+		// Possibly get more information about that SPID (oldestOpenTranSpid)
+		// - print "open" trans info
+		// - get info from CmProcesses about the oldest open tran
+		String oldestOpenTranSpid_Sessions_htmlTable = "";
+		if (oldestOpenTranSpid != -1)
+		{
+			CountersModel cmSessions = cm.getCounterController().getCmByName(CmSessions.CM_NAME);
+			if (cmSessions != null)
+			{
+				Map<String, Object> whereMap = new HashMap<>();
+				whereMap.put("session_id", oldestOpenTranSpid);
+				List<Integer> rowIdList = cmSessions.getRateRowIdsWhere(whereMap);
+				for (Integer pkRowId : rowIdList)
+				{
+					oldestOpenTranSpid_Sessions_htmlTable += cmSessions.toHtmlTableString(CountersModel.DATA_RATE, pkRowId, true, false, false);
+				}
+			}
+		}
+
+		String extendedDescText = "" 
+				+   "OldestOpenTranBeginTime"             + "='" + oldestOpenTranBeginTime             + "'"
+				+ ", OldestOpenTranId"                    + "="  + oldestOpenTranId                    + ""
+				+ ", OldestOpenTranSpid"                  + "="  + oldestOpenTranSpid                  + ""
+				+ ", OldestOpenTranDbname"                + "='" + oldestOpenTranDbname                + "'"
+				+ ", OldestOpenTranName"                  + "='" + oldestOpenTranName                  + "'"
+				+ ", OldestOpenTranWaitType"              + "='" + oldestOpenTranWaitType              + "'"
+				+ ", OldestOpenTranCmd"                   + "='" + oldestOpenTranCmd                   + "'"
+				+ ", OldestOpenTranLoginName"             + "='" + oldestOpenTranLoginName             + "'"
+				+ ", OldestOpenTranTempdbUsageMbAll"      + "="  + oldestOpenTranTempdbUsageMbAll      + ""
+				+ ", OldestOpenTranTempdbUsageMbUser"     + "="  + oldestOpenTranTempdbUsageMbUser     + ""
+				+ ", OldestOpenTranTempdbUsageMbInternal" + "="  + oldestOpenTranTempdbUsageMbInternal + ""
+				+ ", OldestOpenTranInSec"                 + "="  + oldestOpenTranInSec                 + ""
+//				+ ", OldestOpenTranInSecThreshold"        + "="  + oldestOpenTranInSecThreshold        + ""
+				;
+		String extendedDescHtml = "" // NO-OuterHtml, NO-Borders 
+				+ "<table class='dbx-table-basic'> \n"
+				+ "    <tr> <td><b>Oldest Open Tran BeginTime            </b></td> <td>" + oldestOpenTranBeginTime              + "</td> </tr> \n"
+				+ "    <tr> <td><b>Oldest Open Tran Id                   </b></td> <td>" + oldestOpenTranId                     + "</td> </tr> \n"
+				+ "    <tr> <td><b>Oldest Open Tran Spid                 </b></td> <td>" + oldestOpenTranSpid                   + "</td> </tr> \n"
+				+ "    <tr> <td><b>Oldest Open Tran Dbname               </b></td> <td>" + oldestOpenTranDbname                 + "</td> </tr> \n"
+				+ "    <tr> <td><b>Oldest Open Tran Name                 </b></td> <td>" + oldestOpenTranName                   + "</td> </tr> \n"
+				+ "    <tr> <td><b>Oldest Open Tran WaitType             </b></td> <td>" + oldestOpenTranWaitType               + "</td> </tr> \n"
+				+ "    <tr> <td><b>Oldest Open Tran Cmd                  </b></td> <td>" + oldestOpenTranCmd                    + "</td> </tr> \n"
+				+ "    <tr> <td><b>Oldest Open Tran LoginName            </b></td> <td>" + oldestOpenTranLoginName              + "</td> </tr> \n"
+				+ "    <tr> <td><b>Oldest Open Tran TempdbUsageMbAll     </b></td> <td>" + oldestOpenTranTempdbUsageMbAll       + "</td> </tr> \n"
+				+ "    <tr> <td><b>Oldest Open Tran TempdbUsageMbUser    </b></td> <td>" + oldestOpenTranTempdbUsageMbUser      + "</td> </tr> \n"
+				+ "    <tr> <td><b>Oldest Open Tran TempdbUsageMbInternal</b></td> <td>" + oldestOpenTranTempdbUsageMbInternal  + "</td> </tr> \n"
+				+ "    <tr> <td><b>Oldest Open Tran InSec                </b></td> <td>" + oldestOpenTranInSec                  + "</td> </tr> \n"
+//				+ "    <tr> <td><b>Oldest Open Tran InSecThreshold       </b></td> <td>" + oldestOpenTranInSecThreshold         + "</td> </tr> \n"
+				+ "</table> \n"
+				;
+
+		if (StringUtil.hasValue(oldestOpenTranSpid_Sessions_htmlTable))
+		{
+			extendedDescHtml += ""
+					+ "<br>"
+					+ "Sessions information for 'Oldest Open Tran Spid: " + oldestOpenTranSpid + "'"
+					+ oldestOpenTranSpid_Sessions_htmlTable
+					;
+		}
+
+		alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
 	}
 
 	public static final String  PROPKEY_alarm_LockWaits                         = CM_NAME + ".alarm.system.if.LockWaits.gt";

@@ -278,6 +278,13 @@ extends CmSummaryAbstract
 		return _blockingLockCount;
 	}
 	
+	/** pg_postmaster_start_time(): when Postgres was started (for example used when the alarm 'SrvDown' is cancelled: was it restarted?) */
+	@Override
+	protected String getDbmsStartTimeColumnName()
+	{
+		return "start_time";
+	}
+
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{

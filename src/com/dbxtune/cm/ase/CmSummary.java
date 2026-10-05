@@ -455,6 +455,13 @@ extends CmSummaryAbstract
 		return pkCols;
 	}
 
+	/** monState.StartDate: when ASE was started (for example used when the alarm 'SrvDown' is cancelled: was it restarted?) */
+	@Override
+	protected String getDbmsStartTimeColumnName()
+	{
+		return "StartDate";
+	}
+
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{

@@ -21,6 +21,7 @@
  ******************************************************************************/
 package com.dbxtune.cm;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -197,9 +198,39 @@ extends CountersModel
 	
 
 	//-------------------------------------------------------------------------
+	//-- DBMS start time
+	//-------------------------------------------------------------------------
+
+	/**
+	 * Name of the column that holds the time the DBMS was started, null if this Summary does not have one.<br>
+	 * Override this in the DBMS specific CmSummary.
+	 */
+	protected String getDbmsStartTimeColumnName()
+	{
+		return null;
+	}
+
+	/**
+	 * When the DBMS was started, from the last sample of this CM.
+	 * <p>
+	 * Used for example when the alarm 'SrvDown' is cancelled, to tell if the DBMS was restarted or not.
+	 *
+	 * @return null if not known (this DBMS has no such column, or there is no data)
+	 */
+	public Timestamp getDbmsStartTime()
+	{
+		String colName = getDbmsStartTimeColumnName();
+		if (colName == null || ! hasAbsData())
+			return null;
+
+		return getAbsValueAsTimestamp(0, colName, (Timestamp) null);
+	}
+
+
+	//-------------------------------------------------------------------------
 	//-- Below is stuff for: sendAlarmRequest()
 	//-------------------------------------------------------------------------
-	
+
 	/** simple member to save the DBMS version string, so we can check for changes... NOTE: this should be cleared from: reset() */
 	private String _lastVersionString = ""; 
 	

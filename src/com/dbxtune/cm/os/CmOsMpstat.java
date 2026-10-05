@@ -32,6 +32,7 @@ import com.dbxtune.CounterController;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProvider;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventHighCpuUtilization;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -48,6 +49,7 @@ import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.gui.TrendGraph;
 import com.dbxtune.hostmon.HostMonitor.OsVendor;
 import com.dbxtune.utils.Configuration;
+import com.dbxtune.utils.NumberUtils;
 import com.dbxtune.utils.StringUtil;
 
 public class CmOsMpstat
@@ -698,17 +700,8 @@ extends CounterModelHostMonitor
 				double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_cpuUsageInfo, DEFAULT_alarm_cpuUsageInfo);
 				if (cpuPctUsage > threshold)
 				{
-					String extendedDescText = "";
-					String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MpSum);
-					       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MpCpu);
-
-					// Possibly getting info from CmOsPs
-					// This will help us to determine if OTHER processes than the DBMS is loading the server
-					extendedDescHtml += CmOsPs.getCmOsPs_getGraphDataHistoryAsHtmlImage(getCounterController(), CmOsPs.GRAPH_NAME_WIN_PS);
-					extendedDescHtml += CmOsPs.getCmOsPs_asHtmlTable(getCounterController(), 15);
-
 					AlarmEvent ae = new AlarmEventHighCpuUtilization(cm, threshold, cpuPctUsage, AlarmEvent.Severity.INFO);
-					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+					ae.setAlarmDescriptionProvider(cm, createCpuAlarmDescriptionProvider(threshold));
 					
 					int raiseDelayMinutes = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_cpuUsageInfo_delay_minutes, DEFAULT_alarm_cpuUsageInfo_delay_minutes);
 					ae.setRaiseDelayInMinutes(raiseDelayMinutes);
@@ -737,17 +730,8 @@ extends CounterModelHostMonitor
 				double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_cpuUsageWarning, DEFAULT_alarm_cpuUsageWarning);
 				if (cpuPctUsage > threshold)
 				{
-					String extendedDescText = "";
-					String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MpSum);
-					       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MpCpu);
-
-					// Possibly getting info from CmOsPs
-					// This will help us to determine if OTHER processes than the DBMS is loading the server
-					extendedDescHtml += CmOsPs.getCmOsPs_getGraphDataHistoryAsHtmlImage(getCounterController(), CmOsPs.GRAPH_NAME_WIN_PS);
-					extendedDescHtml += CmOsPs.getCmOsPs_asHtmlTable(getCounterController(), 15);
-
 					AlarmEvent ae = new AlarmEventHighCpuUtilization(cm, threshold, cpuPctUsage, AlarmEvent.Severity.WARNING);
-					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+					ae.setAlarmDescriptionProvider(cm, createCpuAlarmDescriptionProvider(threshold));
 					
 					int raiseDelayMinutes = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_cpuUsageWarning_delay_minutes, DEFAULT_alarm_cpuUsageWarning_delay_minutes);
 					ae.setRaiseDelayInMinutes(raiseDelayMinutes);
@@ -776,17 +760,8 @@ extends CounterModelHostMonitor
 				double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_cpuUsageError, DEFAULT_alarm_cpuUsageError);
 				if (cpuPctUsage > threshold)
 				{
-					String extendedDescText = "";
-					String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MpSum);
-					       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MpCpu);
-
-					// Possibly getting info from CmOsPs
-					// This will help us to determine if OTHER processes than the DBMS is loading the server
-					extendedDescHtml += CmOsPs.getCmOsPs_getGraphDataHistoryAsHtmlImage(getCounterController(), CmOsPs.GRAPH_NAME_WIN_PS);
-					extendedDescHtml += CmOsPs.getCmOsPs_asHtmlTable(getCounterController(), 15);
-
 					AlarmEvent ae = new AlarmEventHighCpuUtilization(cm, threshold, cpuPctUsage, AlarmEvent.Severity.ERROR);
-					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+					ae.setAlarmDescriptionProvider(cm, createCpuAlarmDescriptionProvider(threshold));
 
 					int raiseDelayMinutes = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_cpuUsageError_delay_minutes, DEFAULT_alarm_cpuUsageError_delay_minutes);
 					ae.setRaiseDelayInMinutes(raiseDelayMinutes);
@@ -799,6 +774,42 @@ extends CounterModelHostMonitor
 			}
 		}
 	} // end: method
+
+	/**
+	 * Sets the extended description of the CPU alarms (INFO, WARNING and ERROR) from the CURRENT data
+	 * <ul>
+	 *   <li>RAISE/RE-RAISE: Graphs of the CPU Usage (and the processes, from CmOsPs)</li>
+	 *   <li>CANCEL:         The CPU Usage now, and the same graphs, which then show the period until the CPU Usage went down</li>
+	 * </ul>
+	 */
+	private AlarmDescriptionProvider createCpuAlarmDescriptionProvider(double threshold)
+	{
+		return new AlarmDescriptionProvider()
+		{
+			@Override
+			public void setValues(CountersModel cm, AlarmEvent alarmEvent, Phase phase)
+			{
+				if (Phase.CANCEL.equals(phase))
+				{
+					Double cpuPctUsage = getCpuUsage();
+					alarmEvent.setCancelDescription("CPU Usage is now " + (cpuPctUsage == null ? "unknown" : NumberUtils.round(cpuPctUsage, 1) + "%") + " (threshold " + threshold + "%)");
+				}
+
+				String extendedDescText = "";
+				String extendedDescHtml = "";
+
+				extendedDescHtml +=              cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MpSum);
+				extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MpCpu);
+
+				// Possibly getting info from CmOsPs
+				// This will help us to determine if OTHER processes than the DBMS is loading the server
+				extendedDescHtml += CmOsPs.getCmOsPs_getGraphDataHistoryAsHtmlImage(getCounterController(), CmOsPs.GRAPH_NAME_WIN_PS);
+				extendedDescHtml += CmOsPs.getCmOsPs_asHtmlTable(getCounterController(), 15);
+
+				alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+			}
+		};
+	}
 
 	/**
 	 * @return Get a HTML Image of the CPU Usage
@@ -855,10 +866,9 @@ extends CounterModelHostMonitor
 	
 	public static final String  PROPKEY_alarm_cpuUsageError                      = CM_NAME + ".alarm.system.if.cpu.usage.error.gt";
 	public static final double  DEFAULT_alarm_cpuUsageError                      = 99.0d;
-	public static final String  PROPKEY_alarm_cpuUsageError_delay_minutes        = CM_NAME + ".alarm.system.if.CpuUsageWarning.raise.delay.minutes";
+	public static final String  PROPKEY_alarm_cpuUsageError_delay_minutes        = CM_NAME + ".alarm.system.if.CpuUsageError.raise.delay.minutes";
 	public static final int     DEFAULT_alarm_cpuUsageError_delay_minutes        = 30; // 30 minutes
-	
-	
+
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
@@ -868,13 +878,13 @@ extends CounterModelHostMonitor
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 
 		list.add(new CmSettingsHelper("CpuUsageInfo", isAlarmSwitch,    PROPKEY_alarm_cpuUsageInfo,                  Double.class,  conf.getDoubleProperty(PROPKEY_alarm_cpuUsageInfo                 , DEFAULT_alarm_cpuUsageInfo                 ), DEFAULT_alarm_cpuUsageInfo                 , "If 'CpuUsage' is GREATER than ##.#, send 'AlarmEventHighCpuUtilization(INFO)'."));
-		list.add(new CmSettingsHelper("CpuUsageInfo RaiseDelay",        PROPKEY_alarm_cpuUsageInfo_delay_minutes,    Integer.class, conf.getIntProperty(   PROPKEY_alarm_cpuUsageInfo_delay_minutes   , DEFAULT_alarm_cpuUsageInfo_delay_minutes   ), DEFAULT_alarm_cpuUsageInfo_delay_minutes   , "If 'CpuUsageWarning' is true and has been so for 45 minutes then proceed with the Alarm Raise." ));
+		list.add(new CmSettingsHelper("CpuUsageInfo RaiseDelay",        PROPKEY_alarm_cpuUsageInfo_delay_minutes,    Integer.class, conf.getIntProperty   (PROPKEY_alarm_cpuUsageInfo_delay_minutes   , DEFAULT_alarm_cpuUsageInfo_delay_minutes   ), DEFAULT_alarm_cpuUsageInfo_delay_minutes   , "If 'CpuUsageInfo' is true and has been so for ## minutes then proceed with the Alarm Raise." ));
 
 		list.add(new CmSettingsHelper("CpuUsageWarning", isAlarmSwitch, PROPKEY_alarm_cpuUsageWarning,               Double.class,  conf.getDoubleProperty(PROPKEY_alarm_cpuUsageWarning              , DEFAULT_alarm_cpuUsageWarning              ), DEFAULT_alarm_cpuUsageWarning              , "If 'CpuUsage' is GREATER than ##.#, send 'AlarmEventHighCpuUtilization(WARNING)'."));
-		list.add(new CmSettingsHelper("CpuUsageWarning RaiseDelay",     PROPKEY_alarm_cpuUsageWarning_delay_minutes, Integer.class, conf.getIntProperty(   PROPKEY_alarm_cpuUsageWarning_delay_minutes, DEFAULT_alarm_cpuUsageWarning_delay_minutes), DEFAULT_alarm_cpuUsageWarning_delay_minutes, "If 'CpuUsageWarning' is true and has been so for 15 minutes then proceed with the Alarm Raise." ));
+		list.add(new CmSettingsHelper("CpuUsageWarning RaiseDelay",     PROPKEY_alarm_cpuUsageWarning_delay_minutes, Integer.class, conf.getIntProperty   (PROPKEY_alarm_cpuUsageWarning_delay_minutes, DEFAULT_alarm_cpuUsageWarning_delay_minutes), DEFAULT_alarm_cpuUsageWarning_delay_minutes, "If 'CpuUsageWarning' is true and has been so for ## minutes then proceed with the Alarm Raise." ));
 
 		list.add(new CmSettingsHelper("CpuUsageError"  , isAlarmSwitch, PROPKEY_alarm_cpuUsageError,                 Double.class,  conf.getDoubleProperty(PROPKEY_alarm_cpuUsageError                , DEFAULT_alarm_cpuUsageError                ), DEFAULT_alarm_cpuUsageError                , "If 'CpuUsage' is GREATER than ##.# ,send 'AlarmEventHighCpuUtilization(ERROR)'."));
-		list.add(new CmSettingsHelper("CpuUsageError RaiseDelay",       PROPKEY_alarm_cpuUsageError_delay_minutes,   Integer.class, conf.getIntProperty(   PROPKEY_alarm_cpuUsageError_delay_minutes  , DEFAULT_alarm_cpuUsageError_delay_minutes  ), DEFAULT_alarm_cpuUsageError_delay_minutes  , "If 'CpuUsageError' is true and has been so for 15 minutes then proceed with the Alarm Raise." ));
+		list.add(new CmSettingsHelper("CpuUsageError RaiseDelay",       PROPKEY_alarm_cpuUsageError_delay_minutes,   Integer.class, conf.getIntProperty   (PROPKEY_alarm_cpuUsageError_delay_minutes  , DEFAULT_alarm_cpuUsageError_delay_minutes  ), DEFAULT_alarm_cpuUsageError_delay_minutes  , "If 'CpuUsageError' is true and has been so for ## minutes then proceed with the Alarm Raise." ));
 
 		return list;
 	}

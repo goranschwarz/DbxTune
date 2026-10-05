@@ -185,6 +185,9 @@ extends Thread
 
 				alarmEventSrvDown = new AlarmEventSrvDown(serverName, jdbcUrl, connectException, connectInfoMsg);
 
+				// On CANCEL: tell if the DBMS was restarted (DBMS start time from the Summary CM)
+				alarmEventSrvDown.setDbmsStartTimeOnCancel(getCounterController().getSummaryCm());
+
 				// Information about how to disable this alarm
 				//alarmEvent.createAlarmOptionsMessage(this, "???");
 
@@ -204,6 +207,9 @@ extends Thread
 				jdbcUrl    = "unknown-url";
 
 				alarmEventSrvDown = new AlarmEventSrvDown(serverName, jdbcUrl, connectException, connectInfoMsg);
+
+				// On CANCEL: tell if the DBMS was restarted (DBMS start time from the Summary CM)
+				alarmEventSrvDown.setDbmsStartTimeOnCancel(getCounterController().getSummaryCm());
 
 				// Information about how to disable this alarm
 				//alarmEvent.createAlarmOptionsMessage(this, "???");

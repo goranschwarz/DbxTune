@@ -1788,6 +1788,16 @@ extends CentralPersistWriterBase
 		close();
 	}
 
+	/**
+	 * SQLStates for "the column already exists", so an upgrade step that adds a column can be run again (if a previous upgrade stopped half way).
+	 * <ul>
+	 *   <li>H2:       42S21 (NOTE: 42121 is H2's error CODE, not the SQLState, kept here just in case)</li>
+	 *   <li>Postgres: 42701</li>
+	 *   <li>S0021:    the old ODBC/X-Open state for "column already exists"</li>
+	 * </ul>
+	 */
+	private static final String[] IGNORE_SQLSTATE_DUPLICATE_COLUMN = new String[]{ "42S21", "42121", "42701", "S0021" };
+
 	private int internalDbUpgrade(DbxConnection conn, int fromDbVersion, int toDbVersion)
 	throws SQLException
 	{
@@ -2161,8 +2171,7 @@ extends CentralPersistWriterBase
 			step = 19;
 			String usersTabName = getTableName(conn, null, Table.CENTRAL_USERS, null, false);
 
-			// H2 duplicate-column SQLState is "42121"; other DBs use "42701" — allow both
-			String[] ignoreDupCol = new String[]{ "42121", "42701", "S0021" };
+			String[] ignoreDupCol = IGNORE_SQLSTATE_DUPLICATE_COLUMN;
 
 			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"Status"       +rq + " integer    not null default " + DbxCentralUser.UserStatus.ACTIVE.getBit();
 			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
@@ -2205,7 +2214,7 @@ extends CentralPersistWriterBase
 			// Add LoginFailCount to DbxCentralUsers (DB version 18)
 			step = 20;
 			String usersTabName = getTableName(conn, null, Table.CENTRAL_USERS, null, false);
-			String[] ignoreDupCol = new String[]{ "42121", "42701", "S0021" };
+			String[] ignoreDupCol = IGNORE_SQLSTATE_DUPLICATE_COLUMN;
 
 			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"LoginFailCount"+rq + " integer not null default 0";
 			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
@@ -2216,10 +2225,45 @@ extends CentralPersistWriterBase
 			// Add LoginCount to DbxCentralUsers (DB version 19)
 			step = 21;
 			String usersTabName = getTableName(conn, null, Table.CENTRAL_USERS, null, false);
-			String[] ignoreDupCol = new String[]{ "42121", "42701", "S0021" };
+			String[] ignoreDupCol = IGNORE_SQLSTATE_DUPLICATE_COLUMN;
 
 			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"LoginCount"+rq + " integer not null default 0";
 			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
+		}
+
+		if (fromDbVersion <= 19)
+		{
+			// Add column 'cancelDescription' to tables ALARM_ACTIVE, ALARM_HISTORY in all schemas (DB version 20)
+			step = 22;
+			String[] ignoreDupCol = IGNORE_SQLSTATE_DUPLICATE_COLUMN;
+
+			// Get schemas
+			Set<String> schemaSet = DbUtils.getSchemaNames(conn);
+
+			// get table name WITHOUT schema specification and NOT quoted
+			String alarmActiveTabName  = getTableName(conn, null, Table.ALARM_ACTIVE , null, false);
+			String alarmHistoryTabName = getTableName(conn, null, Table.ALARM_HISTORY, null, false);
+
+			// Loop schemas: if table exists in schema, make the alter
+			//               in some schemas, the table simply do not exists (H2 INFORMATION for example)
+			for (String schemaName : schemaSet)
+			{
+				if (DbUtils.checkIfTableExists(conn, null, schemaName, alarmActiveTabName))
+				{
+					sql = "alter table " + lq+schemaName+rq + "." + lq+alarmActiveTabName+rq + " "
+							+ " add ( " + lq+"cancelDescription"+rq + " CLOB null ) ";
+
+					internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
+				}
+
+				if (DbUtils.checkIfTableExists(conn, null, schemaName, alarmHistoryTabName))
+				{
+					sql = "alter table " + lq+schemaName+rq + "." + lq+alarmHistoryTabName+rq + " "
+							+ " add ( " + lq+"cancelDescription"+rq + " CLOB null ) ";
+
+					internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
+				}
+			}
 		}
 
 		_logger.info("End - Internal Upgrade of Dbx Central database tables from version '" + fromDbVersion + "' to version '" + toDbVersion + "'.");
@@ -3041,6 +3085,7 @@ extends CentralPersistWriterBase
 					sbSql.append(", ").append(safeStr( ae.getExtendedDescription()        )); // "extendedDescription"         // 23 /*HTML or Normal???*/
 					sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription() )); // "lastExtendedDescription"     // 24 /*HTML or Normal???*/
 					sbSql.append(", ").append(safeStr( ae.getAlarmOptions()               )); // "alarmOptions"                // 25
+					sbSql.append(", ").append(safeStr( ae.getCancelDescription()          )); // "cancelDescription"           // 26
 					sbSql.append(")");
 
 					sql = sbSql.toString();
@@ -3163,6 +3208,7 @@ extends CentralPersistWriterBase
 						sbSql.append(", ").append(safeStr( ae.getExtendedDescription()        ));  // "extendedDescription"         // 27 /*HTML or Normal???*/
 						sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription() ));  // "lastExtendedDescription"     // 28 /*HTML or Normal???*/
 						sbSql.append(", ").append(safeStr( ae.getAlarmOptions()               ));  // "alarmOptions"                // 29
+						sbSql.append(", ").append(safeStr( ae.getCancelDescription()          ));  // "cancelDescription"           // 30
 						sbSql.append(")");
 
 						sql = sbSql.toString();

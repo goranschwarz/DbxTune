@@ -1006,11 +1006,11 @@ public class SshConnection
 	 * lost the connection and make a reconnect attempt, it's likely to fail with 'is already in connected state!' or 'IllegalStateException: Cannot open session, you need to establish a connection first.'  or similar errors.
 	 * 
 	 * @param command The OS Command to be executed
-	 * @return a Session object, which you can read stdout and stderr on
+	 * @return a ExecChannel object, which you can read stdout and stderr on
 	 * @throws IOException 
-	 * @see Session
+	 * @see ExecChannel
 	 */
-	synchronized public ChannelExec execCommand(String command) 
+	synchronized public ExecChannel execCommand(String command) 
 	throws Exception
 	{
 		return execCommand(command, false);
@@ -1026,11 +1026,11 @@ public class SshConnection
 	 * 
 	 * @param command       The OS Command to be executed
 	 * @param requestPty    Request a "teminal" from where the command is executed on
-	 * @return a Session object, which you can read stdout and stderr on
+	 * @return a ExecChannel object, which you can read stdout and stderr on
 	 * @throws IOException 
-	 * @see Session
+	 * @see ExecChannel
 	 */
-	synchronized public ChannelExec execCommand(String command, boolean requestPty) 
+	synchronized public ExecChannel execCommand(String command, boolean requestPty) 
 	throws Exception
 	{
 		// Check if connection is OK.. if NOT yet connected an Exception will be thrown
@@ -1113,10 +1113,34 @@ public class SshConnection
 	}
 
 	/**
+	 * A connected "exec" channel, and its STDOUT/STDERR streams (which are created BEFORE the channel is connected)
+	 * <p>
+	 * Always read the output from {@link #getStdout()} and {@link #getStderr()}, NOT from <code>getChannel().getInputStream()</code><br>
+	 * JSch creates a new pipe on every <code>getInputStream()</code> call, and output that arrived before that is lost.
+	 */
+	public static class ExecChannel
+	{
+		private final ChannelExec _channel;
+		private final InputStream _stdout;
+		private final InputStream _stderr;
+
+		private ExecChannel(ChannelExec channel, InputStream stdout, InputStream stderr)
+		{
+			_channel = channel;
+			_stdout  = stdout;
+			_stderr  = stderr;
+		}
+
+		public ChannelExec getChannel() { return _channel; }
+		public InputStream getStdout()  { return _stdout; }
+		public InputStream getStderr()  { return _stderr; }
+	}
+
+	/**
 	 * Open and connect a "exec" channel (with a timeout)
 	 */
-	private ChannelExec openExecChannel(String command, boolean requestPty)
-	throws JSchException
+	private ExecChannel openExecChannel(String command, boolean requestPty)
+	throws JSchException, IOException
 	{
 		ChannelExec channel = (ChannelExec) _conn.openChannel("exec");
 
@@ -1137,6 +1161,12 @@ public class SshConnection
 			channel.setPtySize(PTY_COLUMNS, 50, 0, 0); // Wide terminal: output lines (for example 'typeperf' CSV rows) should NOT be wrapped at 80 chars
 		}
 
+		// NOTE: The streams must be created BEFORE channel.connect(), JSch discards any data that arrives before that
+		//       With a connect timeout, JSch also waits for the SSH Server to confirm the 'exec' request (want-reply),
+		//       and a fast command (like 'cat /proc/meminfo') has then already written all its output (which would be lost)
+		InputStream stdout = channel.getInputStream();
+		InputStream stderr = channel.getErrStream();
+
 		// Now run the command on the remote server
 		try
 		{
@@ -1147,7 +1177,7 @@ public class SshConnection
 			channel.disconnect();
 			throw ex;
 		}
-		return channel;
+		return new ExecChannel(channel, stdout, stderr);
 	}
 
 	/**
@@ -1241,16 +1271,17 @@ public class SshConnection
 		// Setup the command for execution on remote machine.
 		channel.setCommand(command);
 
+		// Get the input streams from the SSH channel
+		// NOTE: BEFORE channel.connect(), otherwise output that arrives before the streams are created is lost
+		InputStream stdout = channel.getInputStream();
+		InputStream stderr = channel.getErrStream();
+
 		// Now run the command on the remote server
 		channel.connect(getChannelConnectTimeoutMs());
 
 		// Get the CharSet of the OS
 		Charset osCharset = Charset.forName(getOsCharset());
 
-		// Get the input streams from the SSH channel
-		InputStream stdout = channel.getInputStream();
-		InputStream stderr = channel.getErrStream();
-		
 		// Read the streams row-by-row 
 		BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(stdout, osCharset));
 		BufferedReader stderrReader = new BufferedReader(new InputStreamReader(stderr, osCharset));

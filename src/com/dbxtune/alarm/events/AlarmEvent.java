@@ -165,12 +165,18 @@ extends Throwable
 	
 	protected String       _description             = "";
 	protected String       _reRaiseDesc             = "";
+	protected String       _cancelDesc              = ""; // Only filled in at CANCEL (by an AlarmDescriptionProvider): how things look when the alarm went away
 	protected String       _extendedDesc            = "";
 	protected String       _extendedDescHtml        = "";
 	protected String       _reRaiseExtendedDesc     = "";
 	protected String       _reRaiseExtendedDescHtml = "";
 	protected Object       _data                    = null;
 	protected Object       _reRaiseData             = null;
+
+	// Sets the values (extended description etc) from the CURRENT data in the CM, at RAISE/RE-RAISE/CANCEL (see setAlarmDescriptionProvider())
+	// NOTE: transient, since the active alarms are serialized to disk (AlarmHandler.saveAlarms), and we do not want CM's in there
+	private transient AlarmDescriptionProvider _descProvider   = null;
+	private transient CountersModel            _descProviderCm = null;
 
 	// This will be created at "RAISE" (on "RE-RAISE" or "CANCEL" it will keep it's original UUID)
 	protected UUID         _alarmUuid               = null;
@@ -369,6 +375,8 @@ extends Throwable
                                                             
 	public String       getDescription()                    { return !hasRaiseDelay() ? _description : _description + " [raiseDelay=" + getRaiseDelayInSec() + "]"; }
 	public String       getReRaiseDescription()             { return _reRaiseDesc; }
+	/** Short text about how things look when the alarm was CANCELLED (set by an AlarmDescriptionProvider). "" if not set (null in alarm files written by older versions) */
+	public String       getCancelDescription()              { return _cancelDesc == null ? "" : _cancelDesc; }
 	public String       getExtendedDescription()            { return _extendedDesc; }
 //	public String       getExtendedDescriptionHtml()        { return StringUtil.hasValue(_extendedDescHtml) ? _extendedDescHtml : StringUtil.toHtmlString(_extendedDesc); }
 	public String       getExtendedDescriptionHtml()        { return StringUtil.hasValue(_extendedDescHtml) ? _extendedDescHtml : "<pre>" + _extendedDesc + "</pre>"; }
@@ -383,10 +391,51 @@ extends Throwable
 
 	public void         setDescription(String desc)                             { _description         = desc; }
 	public void         setReRaiseDescription(String desc)                      { _reRaiseDesc         = desc; }
+	public void         setCancelDescription(String desc)                       { _cancelDesc          = desc; }
 	public void         setExtendedDescription(String desc, String html)        { _extendedDesc        = desc; _extendedDescHtml        = html; }
 	public void         setReRaiseExtendedDescription(String desc, String html) { _reRaiseExtendedDesc = desc; _reRaiseExtendedDescHtml = html; }
 	public void         setData(Object data)                                    { _data                = data; }
 	public void         setReRaiseData(Object data)                             { _reRaiseData         = data; }
+
+	/**
+	 * Set a provider that sets the values of this alarm (extended description etc) from the <b>current</b> data in the CM.
+	 * <p>
+	 * The AlarmHandler calls it at RAISE, RE-RAISE and CANCEL. At CANCEL the CM holds the data from the sample where the alarm went away.
+	 * See {@link AlarmDescriptionProvider} for details.
+	 *
+	 * @param cm        The CM that is passed to the provider (can be null)
+	 * @param provider  The provider (null = no provider)
+	 */
+	public void setAlarmDescriptionProvider(CountersModel cm, AlarmDescriptionProvider provider)
+	{
+		_descProviderCm = cm;
+		_descProvider   = provider;
+	}
+
+	/** @return The provider, null if none. Always null for an alarm restored from disk, until it is re-raised (it is not serialized). */
+	public AlarmDescriptionProvider getAlarmDescriptionProvider()   { return _descProvider; }
+
+	/** @return The CM passed to setAlarmDescriptionProvider() */
+	public CountersModel            getAlarmDescriptionProviderCm() { return _descProviderCm; }
+
+	/**
+	 * Called by the AlarmHandler: if this alarm has a provider, let it set the values for this phase.<br>
+	 * Never throws: a problem in the provider must never stop the alarm from being sent.
+	 */
+	public void callAlarmDescriptionProvider(AlarmDescriptionProvider.Phase phase)
+	{
+		if (_descProvider == null)
+			return;
+
+		try
+		{
+			_descProvider.setValues(_descProviderCm, this, phase);
+		}
+		catch (Throwable t)
+		{
+			_logger.warn("Problems in the AlarmDescriptionProvider at " + phase + " for Alarm '" + getAlarmClassAbriviated() + "'. The alarm will still be sent. " + getMessage() + ". Caught: " + t, t);
+		}
+	}
 
 	
 

@@ -49,6 +49,7 @@ import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.hostmon.HostMonitor.OsVendor;
 import com.dbxtune.hostmon.OsTable;
+import com.dbxtune.hostmon.OsTableRow;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.MovingAverageChart;
 import com.dbxtune.utils.MovingAverageCounterManager;
@@ -372,16 +373,19 @@ extends CounterModelHostMonitor
 				String thisPk = (String) thisOsSampleTable.getValueAt(r, pos_memoryType);
 				try
 				{
-					// if prev sample is smaller than current row... get next row...
-					if (prevOsSampleTable.getRowCount() < r)
+					// Lookup the previous row by THIS row's PK (not by row position: the previous sample may have fewer/other rows, or be empty)
+					OsTableRow prevRow = prevOsSampleTable.getRowByPk(thisPk);
+					if (prevRow == null)
+					{
+						// Not in previous sample: same as "first sample"
+						thisOsSampleTable.setValueAt(Long.valueOf(0),   r, pos_usedDiff);
+						thisOsSampleTable.setValueAt(new BigDecimal(0), r, pos_usedRate);
 						continue;
-						
-					// sometimes we get 'IndexOutOfBoundsException: Index: 46, Size: 46', on the below 'prevPk' get, which is *strange*... That's why the try/catch(RuntimeException) and logging some extra information.
-					// the above '(prevOsSampleTable.getRowCount() < r)' should check for issues, so I don't know exactly what's wrong here...
-					String prevPk   = (String) prevOsSampleTable.getValueAt(r, pos_memoryType);  
+					}
+
 					Long   thisUsed = (Long)   thisOsSampleTable.getValueAt(r, pos_used);
-					Long   prevUsed = (Long)   prevOsSampleTable.getRowByPk(prevPk).getValue(pos_used+1); // The model starts at pos 1
-					String description = getFieldDescription(prevPk);
+					Long   prevUsed = (Long)   prevRow.getValue(pos_used+1); // The model starts at pos 1
+					String description = getFieldDescription(thisPk);
 					
 //					OsTableRow ostr = prevOsSampleTable.getRowByPk(pk);
 //					System.out.println("ostr.pk='"+ostr.getPk()+"', val="+ostr.getValue(pos_used+1)); // The model starts at pos 1
