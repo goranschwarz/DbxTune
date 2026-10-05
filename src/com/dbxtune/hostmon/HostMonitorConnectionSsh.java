@@ -30,7 +30,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ssh.SshConnection;
 import com.dbxtune.ssh.SshConnection.LinuxUtilType;
-import com.dbxtune.utils.StringUtil;
+import com.dbxtune.utils.Configuration;
 import com.jcraft.jsch.ChannelExec;
 
 public class HostMonitorConnectionSsh 
@@ -303,15 +303,54 @@ extends HostMonitorConnection
 			// see: https://github.com/PowerShell/Win32-OpenSSH/issues/1751
 			// On Linux/Unix: no PTY (SSHD kills the remote processes when the session ends)
 			//
+			// BUT: Only where Win32-OpenSSH uses a real ConPTY (Windows build >= 17763, Server 2019), which honors the requested width.
+			//      On older Windows (like Server 2016, build 14393) it uses 'ssh-shellhost.exe', a console "screen scraper", which
+			//      wraps at 128 columns and repaints the screen with cursor positioning (overlapping text), so the typeperf CSV is garbled.
+			//      There we skip the PTY and live with orphans (they end by themselves due to typeperf '-sc', see HostMonitor.PROPKEY_windows_typeperf_stopAfterXHours)
+			//      This can be overridden with: HostMonitor.windows.ssh.requestPty = auto | true | false
+			//
 			// ALTERNATIVE (if the PTY approach does NOT work): A PowerShell wrapper that kills the command when STDIN is closed (EOF)
 			//   - When the SSH channel is closed, SSHD closes the child's STDIN, so the wrapper gets EOF and kills 'typeperf' (from within the same logon session)
 			//   - The command would be something like:
 			//       powershell -NoProfile -Command "$p = Start-Process typeperf -ArgumentList '-si 10 \"\PhysicalDisk(*)\*\"' -NoNewWindow -PassThru; [void][Console]::In.ReadToEnd(); Stop-Process -Id $p.Id -Force"
 			//   - And in close(): call '_sshChannel.getOutputStream().close()' (sends EOF) before '_sshChannel.disconnect()'
 			//   - Note: A cleanup from a NEW SSH session (like 'taskkill' on connect) fails with 'Access denied', since the orphans belong to another logon session
-			boolean requestPty = isStreamingCommand && StringUtil.hasValue(_sshConn.getOsName()) && _sshConn.getOsName().startsWith("Windows-");
+			boolean requestPty = isStreamingCommand && _sshConn.isWindows() && isWindowsPtyEnabled(cmd);
 
 			_sshChannel = _sshConn.execCommand(cmd, requestPty);
+		}
+
+		/**
+		 * Decide if a PTY should be requested for a Windows streaming command (see HostMonitor.PROPKEY_windows_ssh_requestPty)
+		 */
+		private boolean isWindowsPtyEnabled(String cmd)
+		{
+			String cfg   = Configuration.getCombinedConfiguration().getProperty(HostMonitor.PROPKEY_windows_ssh_requestPty, HostMonitor.DEFAULT_windows_ssh_requestPty);
+			int    build = _sshConn.getWindowsBuild();
+
+			boolean requestPty;
+			String  reason;
+			if ("true".equalsIgnoreCase(cfg))
+			{
+				requestPty = true;
+				reason     = "forced by config";
+			}
+			else if ("false".equalsIgnoreCase(cfg))
+			{
+				requestPty = false;
+				reason     = "disabled by config";
+			}
+			else // auto (or unknown value)
+			{
+				// Unknown build (-1) = no PTY: a garbled CSV breaks all modules, orphans ends by themselves
+				requestPty = build >= HostMonitor.WINDOWS_BUILD_FIRST_WITH_CONPTY;
+				reason     = requestPty
+						? "build >= " + HostMonitor.WINDOWS_BUILD_FIRST_WITH_CONPTY + ", ConPTY is available"
+						: (build == -1 ? "unknown build" : "build < " + HostMonitor.WINDOWS_BUILD_FIRST_WITH_CONPTY + ", no ConPTY");
+			}
+
+			_logger.info("Windows build " + build + " (" + reason + "): " + (requestPty ? "Requesting" : "NOT requesting") + " a PTY for command '" + cmd + "'. (" + HostMonitor.PROPKEY_windows_ssh_requestPty + "=" + cfg + ")");
+			return requestPty;
 		}
 
 //		@Override

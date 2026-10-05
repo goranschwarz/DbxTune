@@ -36,6 +36,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.invoke.MethodHandles;
 import java.nio.charset.Charset;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -99,6 +101,9 @@ public class SshConnection
 	/** outpu from the 'nproc' command. Which tells us how many scheduling/processing units are available on this os */
 	private int _nproc = -1;
 
+	/** Windows build number from 'cmd /c ver' (for example 14393 = Server 2016, 17763 = Server 2019), -1 = unknown or not Windows */
+	private int _windowsBuild = -1;
+
 	/** Used to create Strings from the remote host, so that client character set convention can be done. 
 	 * NOTE: For the moment this is hard coded based on the OsName 
 	 * (Linux=UTF-8, SunOs=ISO-8859-1, AIX=ISO-8859-1, HP-UX=ISO-8859-1, else=null)*/
@@ -143,6 +148,10 @@ public class SshConnection
 
 	public static final String  PROPKEY_CONNECT_TIMEOUT_SEC = "SshConnection.connection.timout.seconds";
 	public static final int     DEFAULT_CONNECT_TIMEOUT_SEC = 10;
+
+	/** How long to wait for the SSH Server to confirm a new channel (each command opens one). On a dead session channel.connect() could otherwise wait forever. 0 = wait forever */
+	public static final String  PROPKEY_CHANNEL_CONNECT_TIMEOUT_SEC = "SshConnection.channel.connect.timeout.seconds";
+	public static final int     DEFAULT_CHANNEL_CONNECT_TIMEOUT_SEC = 30;
 
 	public static final String  PROPKEY_NOGUI_trust_DbxUserInfo_object = "SshConnection.trust.DbxUserInfo.object";
 //	public static final boolean DEFAULT_NOGUI_trust_DbxUserInfo_object = true;
@@ -419,7 +428,10 @@ public class SshConnection
 			// Try to get number of procs (scheduble units on this os)
 			getNproc();
 
-			_logger.info("Just Connected to SSH host '" + _hostname + "' which has '" + getOsName() + "' as it's Operating System (nproc=" + _nproc + "). My guess is that it's using character set '" + getOsCharset() + "'.");
+			// On Windows: get the build number (decides if a PTY can be used, see HostMonitor.PROPKEY_windows_ssh_requestPty)
+			getWindowsBuild();
+
+			_logger.info("Just Connected to SSH host '" + _hostname + "' which has '" + getOsName() + "' as it's Operating System (nproc=" + _nproc + (isWindows() ? ", windowsBuild=" + _windowsBuild : "") + "). My guess is that it's using character set '" + getOsCharset() + "'.");
 
 			return true;
 		}
@@ -862,8 +874,7 @@ public class SshConnection
 		BufferedReader stdin = new BufferedReader(new InputStreamReader(channel.getInputStream()));
 
 		// Now run the command on the remote server
-//		channel.connect(60000);
-		channel.connect();
+		channel.connect(getChannelConnectTimeoutMs());
 
 		ExecOutput output = new ExecOutput(command);
 		
@@ -1027,35 +1038,20 @@ public class SshConnection
 
 		try
 		{
-			ChannelExec channel = (ChannelExec) _conn.openChannel("exec");
-			
-			// Setup the command for execution on remote machine.
-			channel.setCommand(command);
-
-			// NOTE: The PTY must be requested BEFORE channel.connect(), JSch sends the 'pty-req' as part of connect()
-			//       (setting it after connect() is silently ignored)
-			// SSHD On Windows do not close "long running" commands on the server side on disconnect
-			// see: https://github.com/PowerShell/Win32-OpenSSH/issues/1751
-			// The workaround is to request a Terminal ("ssh -t user@ip"), then the command runs under a ConPTY,
-			// which is closed (and its attached console processes terminated) when the session/channel ends.
-			if (requestPty)
-			{
-				channel.setPty(true);
-				channel.setPtyType("dumb"); // Minimizes Control Chars
-				channel.setPtySize(PTY_COLUMNS, 50, 0, 0); // Wide terminal: output lines (for example 'typeperf' CSV rows) should NOT be wrapped at 80 chars
-			}
-
-			// Now run the command on the remote server
-//			channel.connect(60000);
-			channel.connect();
-
-			//TODO: Handle Exceptions for reconnect (as below code does)
-			return channel;
+			return openExecChannel(command, requestPty);
 		}
-		catch (Exception ex)
+		catch (JSchException ex)
 		{
-//ex.printStackTrace();
-			throw ex;
+			// The SSH Server did not confirm the channel (within the timeout)
+			// A "half open" TCP connection (dead session) is NOT detected by checkConnectionAndPossiblyReconnect(): isConnected() is still true and the keepalive only writes to the socket buffer
+			// So: reconnect and try once more
+			if ( ! _isAuthenticated )
+				throw ex;
+
+			_logger.warn("Problems opening a SSH channel to host '" + _hostname + "' for command '" + command + "'. The SSH session is probably dead, lets reconnect and try again. Caught: " + ex);
+			reconnect();
+
+			return openExecChannel(command, requestPty);
 		}
 		
 //		try
@@ -1114,6 +1110,53 @@ public class SshConnection
 //			// if we can't handle the Exception, throw it
 //			throw e;
 //		}
+	}
+
+	/**
+	 * Open and connect a "exec" channel (with a timeout)
+	 */
+	private ChannelExec openExecChannel(String command, boolean requestPty)
+	throws JSchException
+	{
+		ChannelExec channel = (ChannelExec) _conn.openChannel("exec");
+
+		// Setup the command for execution on remote machine.
+		channel.setCommand(command);
+
+		// NOTE: The PTY must be requested BEFORE channel.connect(), JSch sends the 'pty-req' as part of connect()
+		//       (setting it after connect() is silently ignored)
+		// SSHD On Windows do not close "long running" commands on the server side on disconnect
+		// see: https://github.com/PowerShell/Win32-OpenSSH/issues/1751
+		// The workaround is to request a Terminal ("ssh -t user@ip"), then the command runs under a ConPTY,
+		// which is closed (and its attached console processes terminated) when the session/channel ends.
+		// The caller decides if a PTY should be used (see HostMonitor.PROPKEY_windows_ssh_requestPty)
+		if (requestPty)
+		{
+			channel.setPty(true);
+			channel.setPtyType("dumb"); // Minimizes Control Chars
+			channel.setPtySize(PTY_COLUMNS, 50, 0, 0); // Wide terminal: output lines (for example 'typeperf' CSV rows) should NOT be wrapped at 80 chars
+		}
+
+		// Now run the command on the remote server
+		try
+		{
+			channel.connect(getChannelConnectTimeoutMs());
+		}
+		catch (JSchException ex)
+		{
+			channel.disconnect();
+			throw ex;
+		}
+		return channel;
+	}
+
+	/**
+	 * @return milliseconds to wait for the SSH Server to confirm a new channel (0 = wait forever)
+	 */
+	private static int getChannelConnectTimeoutMs()
+	{
+		int timeoutSec = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_CHANNEL_CONNECT_TIMEOUT_SEC, DEFAULT_CHANNEL_CONNECT_TIMEOUT_SEC);
+		return Math.max(0, timeoutSec) * 1000;
 	}
 
 	/**
@@ -1199,7 +1242,7 @@ public class SshConnection
 		channel.setCommand(command);
 
 		// Now run the command on the remote server
-		channel.connect();
+		channel.connect(getChannelConnectTimeoutMs());
 
 		// Get the CharSet of the OS
 		Charset osCharset = Charset.forName(getOsCharset());
@@ -1395,6 +1438,64 @@ public class SshConnection
 		}
 		return _nproc;
 	}
+
+	/**
+	 * @return true if the remote host is Windows (the login shell is CMD or PowerShell)
+	 */
+	public boolean isWindows()
+	{
+		return _osName != null && _osName.startsWith("Windows-");
+	}
+
+	/**
+	 * Execute 'cmd /c ver' on Windows and return the build number (cached)<br>
+	 * 'cmd /c ver' works from both a CMD and a PowerShell login shell.
+	 *
+	 * @return The build number, for example 14393 (Server 2016), 17763 (Server 2019), 20348 (Server 2022). -1 if not Windows or unknown
+	 */
+	public int getWindowsBuild()
+	{
+		if (_windowsBuild != -1 || !isWindows())
+			return _windowsBuild;
+
+		String cmd = "cmd /c ver";
+		String str = "-empty-";
+		try
+		{
+			if (_conn == null)
+			{
+				throw new IOException("The SSH connection to the host '" + _hostname + "' was null. The connection has not been initialized OR someone has closed the connection.");
+			}
+
+			// EXECUTE
+			str = execCommandOutputAsStr(cmd);
+			_windowsBuild = parseWindowsBuild(str);
+
+			if (_windowsBuild == -1)
+				_logger.info("Could not find the Windows build number in the output from command '" + cmd + "'. retStr='" + str + "'.");
+		}
+		catch (Exception e)
+		{
+			_logger.info("Problems executing command '" + cmd + "'. retStr='" + str + "', Caught: " + e);
+		}
+		return _windowsBuild;
+	}
+
+	/**
+	 * Parse the output from the Windows 'ver' command
+	 *
+	 * @param verOutput  for example 'Microsoft Windows [Version 10.0.14393]'
+	 * @return the build number (14393), or -1 if it could not be found
+	 */
+	public static int parseWindowsBuild(String verOutput)
+	{
+		if (verOutput == null)
+			return -1;
+
+		Matcher m = WINDOWS_VER_PATTERN.matcher(verOutput);
+		return m.find() ? StringUtil.parseInt(m.group(1), -1) : -1;
+	}
+	private static final Pattern WINDOWS_VER_PATTERN = Pattern.compile("\\[[^\\]\\d]*\\d+\\.\\d+\\.(\\d+)"); // the word 'Version' is localized, so match: '[' + any-non-digits + 'major.minor.BUILD'
 
 	/**
 	 * simply does 'uname -a' and return the string.
