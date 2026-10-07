@@ -113,7 +113,7 @@ public class UserRegistrationServlet extends HttpServlet
 			_logger.info("UserRegistrationServlet: New user registered: '{}', requireApproval={}", username, requireApproval);
 
 			if (requireApproval)
-				NewAccountNotifier.sendAdminNotification(username, fullName, email, "local", reason);
+				NewAccountNotifier.sendAdminNotification(username, fullName, email, "local", reason, true);
 
 			String msg = requireApproval
 					? "Request submitted. An admin will review your request."

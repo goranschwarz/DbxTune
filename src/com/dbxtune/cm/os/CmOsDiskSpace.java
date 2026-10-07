@@ -37,6 +37,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventLowOsDiskFreeSpace;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -475,14 +476,50 @@ extends CounterModelHostMonitor
 				{
 					if (freeMb.intValue() < threshold.intValue())
 					{
-						String extendedDescText = cm.toTextTableString(DATA_ABS, r);
-						String extendedDescHtml = cm.toHtmlTableString(DATA_ABS, r, true, false, false);
-
-						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AVAILABLE_MB);
-						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_USED_PCT);
-
 						AlarmEvent ae = new AlarmEventLowOsDiskFreeSpace(cm, mountPoint, freeMb.intValue(), usedPct, threshold.intValue());
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(cm.getPk(), cm.getAbsPkValue(r), threshold)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised, the graphs are from the CURRENT data
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								String rowPk = getRowPk();
+								int    rowId = cm.getAbsRowIdForPkValue(rowPk);
+
+								String lmountPoint = (rowId == -1) ? mountPoint : cm.getAbsString(rowId, "MountedOn");
+								String label       = "Mount point '" + lmountPoint + "'";
+
+								if (rowId != -1)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+									String extendedDescText = cm.toTextTableString(DATA_ABS, rowId);
+									String extendedDescHtml = cm.toHtmlTableString(DATA_ABS, rowId, true, false, false);
+
+									extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AVAILABLE_MB);
+									extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_USED_PCT);
+									alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										Double AvailableMb = cm.getAbsValueAsDouble(rowId, "Available-MB");
+										Double UsedPct     = cm.getAbsValueAsDouble(rowId, "UsedPct");
+
+										String cancelMsg = getAlarmCancelText(label + ": free space", toAlarmCancelValue(AvailableMb) + " MB, " + toAlarmCancelValue(UsedPct) + "% used", " MB");
+										alarmEvent.setCancelDescription(cancelMsg);
+									}
+								}
+								else
+								{
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+									}
+								}
+							}
+						});
 
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "Available-MB");
@@ -508,14 +545,50 @@ extends CounterModelHostMonitor
 				{
 					if (usedPct > threshold.doubleValue())
 					{
-						String extendedDescText = cm.toTextTableString(DATA_ABS, r);
-						String extendedDescHtml = cm.toHtmlTableString(DATA_ABS, r, true, false, false);
-						       
-						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AVAILABLE_MB);
-						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_USED_PCT);
-
 						AlarmEvent ae = new AlarmEventLowOsDiskFreeSpace(cm, mountPoint, freeMb.intValue(), usedPct, threshold.doubleValue());
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(cm.getPk(), cm.getAbsPkValue(r), threshold)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised, the graphs are from the CURRENT data
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								String rowPk = getRowPk();
+								int    rowId = cm.getAbsRowIdForPkValue(rowPk);
+
+								String lmountPoint = (rowId == -1) ? mountPoint : cm.getAbsString(rowId, "MountedOn");
+								String label       = "Mount point '" + lmountPoint + "'";
+
+								if (rowId != -1)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+									String extendedDescText = cm.toTextTableString(DATA_ABS, rowId);
+									String extendedDescHtml = cm.toHtmlTableString(DATA_ABS, rowId, true, false, false);
+
+									extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AVAILABLE_MB);
+									extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_USED_PCT);
+									alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										Double AvailableMb = cm.getAbsValueAsDouble(rowId, "Available-MB");
+										Double UsedPct     = cm.getAbsValueAsDouble(rowId, "UsedPct");
+
+										String cancelMsg = getAlarmCancelText(label + ": free space", toAlarmCancelValue(AvailableMb) + " MB, " + toAlarmCancelValue(UsedPct) + "% used", "%");
+										alarmEvent.setCancelDescription(cancelMsg);
+									}
+								}
+								else
+								{
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+									}
+								}
+							}
+						});
 
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "UsedPct");

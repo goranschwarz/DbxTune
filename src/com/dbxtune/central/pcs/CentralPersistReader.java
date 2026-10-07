@@ -523,6 +523,7 @@ public class CentralPersistReader
 					+ " ," + lq + "extendedDescription"         + rq
 					+ " ," + lq + "lastExtendedDescription"     + rq
 					+ " ," + lq + "alarmOptions"                + rq
+					+ " ," + lq + "cancelDescription"           + rq
 				+" from " + tabName
 				+" order by " + lq+"createTime"+rq + ", " +lq+"cancelTime"+rq;
 
@@ -566,7 +567,8 @@ public class CentralPersistReader
 						rs.getString   (23), // "lastDescription"        
 						rs.getString   (24), // "extendedDescription"    
 						rs.getString   (25), // "lastExtendedDescription"
-						rs.getString   (26)  // "alarmOptions"
+						rs.getString   (26), // "alarmOptions"
+						rs.getString   (27)  // "cancelDescription"
 						);
 					list.add(a);
 				}
@@ -765,6 +767,7 @@ public class CentralPersistReader
 					+ " ," + lq + "extendedDescription"         + rq
 					+ " ," + lq + "lastExtendedDescription"     + rq
 					+ " ," + lq + "alarmOptions"                + rq
+					+ " ," + lq + "cancelDescription"           + rq
 				+" from " + tabName
 				+whereStr
 			//	+" order by " + lq+"createTime"+rq + ", " +lq+"cancelTime"+rq;
@@ -813,7 +816,8 @@ public class CentralPersistReader
 						rs.getString   (27), // lastDescription                     
 						rs.getString   (28), // extendedDescription                 
 						rs.getString   (29), // lastExtendedDescription             
-						rs.getString   (30)  // "alarmOptions"
+						rs.getString   (30), // "alarmOptions"
+						rs.getString   (31)  // "cancelDescription"
 						);
 					list.add(a);
 				}

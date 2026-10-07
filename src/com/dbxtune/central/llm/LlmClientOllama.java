@@ -89,6 +89,9 @@ extends LlmClientAbstract
 		JsonNode root = om.readTree(rawResponse);
 		String answerText = root.path("response").asText("");
 
-		return parseModelAnswer(answerText, rawResponse, prompt);
+		LlmOptimizeResponse response = parseModelAnswer(answerText, rawResponse, prompt);
+		response.setInputTokens (intOrNull(root.path("prompt_eval_count")));
+		response.setOutputTokens(intOrNull(root.path("eval_count")));
+		return response;
 	}
 }

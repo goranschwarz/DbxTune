@@ -33,6 +33,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.rs.AlarmEventRsDbQueueSize;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -473,6 +474,7 @@ extends CountersModel
 	//--------------------------------------------------------------
 	// Alarm handling
 	//--------------------------------------------------------------
+
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -507,11 +509,44 @@ extends CountersModel
 
 					if (size.intValue() > threshold)
 					{
-						String extendedDescText = "";
-						String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_QUEUE_SIZE);
-
 						AlarmEvent ae = new AlarmEventRsDbQueueSize(cm, threshold, name, type, size.intValue());
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(cm.getPk(), cm.getAbsPkValue(r), threshold)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised, the graphs are from the CURRENT data
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								String rowPk = getRowPk();
+								int    rowId = cm.getAbsRowIdForPkValue(rowPk);
+
+								String label = (rowId == -1) ? (type + " queue '" + name + "'") : (cm.getAbsString(rowId, "q_type_str") + " queue '" + cm.getAbsString(rowId, "name") + "'");
+
+								if (rowId != -1)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+									String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_QUEUE_SIZE);
+									alarmEvent.setExtendedDescription("", extendedDescHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										Double size = cm.getAbsValueAsDouble(rowId, "size");
+
+										String cancelMsg = getAlarmCancelText(label + ": size", toAlarmCancelValue(size) + " MB", " MB");
+										alarmEvent.setCancelDescription(cancelMsg);
+									}
+								}
+								else
+								{
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+									}
+								}
+							}
+						});
 
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "size");

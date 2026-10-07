@@ -34,6 +34,7 @@ import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.Version;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventBlockingLockAlarm;
 import com.dbxtune.alarm.events.AlarmEventLongRunningTransaction;
@@ -278,6 +279,13 @@ extends CmSummaryAbstract
 		return _blockingLockCount;
 	}
 	
+	/** pg_postmaster_start_time(): when Postgres was started (for example used when the alarm 'SrvDown' is cancelled: was it restarted?) */
+	@Override
+	protected String getDbmsStartTimeColumnName()
+	{
+		return "start_time";
+	}
+
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
@@ -589,6 +597,7 @@ extends CmSummaryAbstract
 	//----------------------------------------------------------------
 	// ALARMS
 	//----------------------------------------------------------------
+
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -633,6 +642,25 @@ extends CmSummaryAbstract
 				{
 					AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, waitThreshold, blocking_lock_count, blocking_lock_wait_in_sec);
 
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, waitThreshold)
+					{
+						// Called on RAISE/RE-RAISE/CANCEL
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+						{
+							// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+							if (AlarmPhase.CANCEL.equals(phase))
+							{
+								Integer blocking_lock_count       = cm.getAbsValueAsInteger(0, "blocking_lock_count");
+								Double  blocking_lock_wait_in_sec = cm.getAbsValueAsDouble (0, "blocking_lock_wait_in_sec");
+
+								String cancelMsg = getAlarmCancelText("Blocking locks", blocking_lock_count + ", max wait " + toAlarmCancelValue(blocking_lock_wait_in_sec) + " seconds", " seconds wait");
+								alarmEvent.setCancelDescription(cancelMsg);
+							}
+						}
+					});
+
 					// Information about how to disable this alarm
 					ae.createAlarmOptionsMessage(this, "BlockingLockCount");
 
@@ -658,6 +686,24 @@ extends CmSummaryAbstract
 				{
 					AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, "-unknown-", oldest_xact_start_in_sec, "-unknown-");
 
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+					{
+						// Called on RAISE/RE-RAISE/CANCEL
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+						{
+							// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+							if (AlarmPhase.CANCEL.equals(phase))
+							{
+								Integer oldest_xact_start_in_sec = cm.getAbsValueAsInteger(0, "oldest_xact_start_in_sec");
+
+								String cancelMsg = getAlarmCancelText("The oldest open transaction", oldest_xact_start_in_sec + " seconds", " seconds");
+								alarmEvent.setCancelDescription(cancelMsg);
+							}
+						}
+					});
+
 					// Information about how to disable this alarm
 					ae.createAlarmOptionsMessage(this, "oldestOpenTranInSec");
 
@@ -682,6 +728,24 @@ extends CmSummaryAbstract
 				if (oldest_stmnt_start_in_sec > threshold)
 				{
 					AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, "-unknown-", oldest_stmnt_start_in_sec, "-unknown-");
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+					{
+						// Called on RAISE/RE-RAISE/CANCEL
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+						{
+							// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+							if (AlarmPhase.CANCEL.equals(phase))
+							{
+								Integer oldest_stmnt_start_in_sec = cm.getAbsValueAsInteger(0, "oldest_stmnt_start_in_sec");
+
+								String cancelMsg = getAlarmCancelText("The oldest statement", oldest_stmnt_start_in_sec + " seconds", " seconds");
+								alarmEvent.setCancelDescription(cancelMsg);
+							}
+						}
+					});
 
 					// Information about how to disable this alarm
 					ae.createAlarmOptionsMessage(this, "oldestStatementInSec");

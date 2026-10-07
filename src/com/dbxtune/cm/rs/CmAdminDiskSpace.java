@@ -35,6 +35,8 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProvider;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.rs.AlarmEventRsSdUsage;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -306,6 +308,47 @@ extends CountersModel
 	//--------------------------------------------------------------
 	// Alarm handling
 	//--------------------------------------------------------------
+
+	/**
+	 * The provider for the 'Space*' alarms: the queue graphs from the CURRENT data,
+	 * and at CANCEL: the Stable Device usage now (sum of all partitions).
+	 * <p>
+	 * Called from AlarmHandler on: Raise, RE-RAISE &amp; CANCEL
+	 *
+	 * @param thresholdUnit  " MB" or "%"
+	 * @param threshold      The threshold
+	 */
+	private AlarmDescriptionProvider createStableDeviceDescriptionProvider(String thresholdUnit, Number threshold)
+	{
+		return new AlarmDescriptionProviderBase(null, null, threshold)
+		{
+			// Called on RAISE/RE-RAISE/CANCEL: the graphs are from the CURRENT data
+			@Override
+			public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+			{
+				// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+				String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_QUEUE_SIZE);
+				       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_QUEUE_USAGE_PCT);
+				alarmEvent.setExtendedDescription("", extendedDescHtml);
+
+				// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+				if (AlarmPhase.CANCEL.equals(phase))
+				{
+					// The sum of all partitions
+					Double totalSegs = cm.getAbsValueSum("Total Segs");
+					Double usedSegs  = cm.getAbsValueSum("Used Segs");
+
+					if (totalSegs != null && usedSegs != null && totalSegs > 0)
+					{
+						String now = usedSegs.intValue() + " MB used, " + (totalSegs.intValue() - usedSegs.intValue()) + " MB free, " + toAlarmCancelValue(100.0 * usedSegs / totalSegs) + "% used";
+
+						String cancelMsg = getAlarmCancelText("Stable Device usage", now, thresholdUnit);
+						alarmEvent.setCancelDescription(cancelMsg);
+					}
+				}
+			}
+		};
+	}
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -341,12 +384,10 @@ extends CountersModel
 
 				if (usedSpaceInMb > threshold)
 				{
-					String extendedDescText = "";
-					String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_QUEUE_SIZE);
-					       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_QUEUE_USAGE_PCT);
-
 					AlarmEvent ae = new AlarmEventRsSdUsage(cm, threshold, "USED_SEGS", usedSpaceInMb, freeSpaceInMb, usedPct.doubleValue());
-					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					ae.setAlarmDescriptionProvider(this, createStableDeviceDescriptionProvider(" MB", threshold));
 
 					// Information about how to disable this alarm
 					ae.createAlarmOptionsMessage(this, "SpaceUsedSegs");
@@ -377,12 +418,10 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_SpaceFreeSegs, DEFAULT_alarm_SpaceFreeSegs);
 				if (freeSpaceInMb < threshold)
 				{
-					String extendedDescText = "";
-					String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_QUEUE_SIZE);
-					       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_QUEUE_USAGE_PCT);
-
 					AlarmEvent ae = new AlarmEventRsSdUsage(cm, threshold, "FREE_SEGS", usedSpaceInMb, freeSpaceInMb, usedPct.doubleValue());
-					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					ae.setAlarmDescriptionProvider(this, createStableDeviceDescriptionProvider(" MB", threshold));
 
 					// Information about how to disable this alarm
 					ae.createAlarmOptionsMessage(this, "SpaceFreeSegs");
@@ -413,12 +452,10 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_SpaceUsedPct, DEFAULT_alarm_SpaceUsedPct);
 				if (usedPct.intValue() > threshold)
 				{
-					String extendedDescText = "";
-					String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_QUEUE_SIZE);
-					       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_QUEUE_USAGE_PCT);
-
 					AlarmEvent ae = new AlarmEventRsSdUsage(cm, threshold, "USED_PCT", usedSpaceInMb, freeSpaceInMb, usedPct.doubleValue());
-					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					ae.setAlarmDescriptionProvider(this, createStableDeviceDescriptionProvider("%", threshold));
 
 					// Information about how to disable this alarm
 					ae.createAlarmOptionsMessage(this, "SpaceUsedPct");

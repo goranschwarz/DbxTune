@@ -91,7 +91,12 @@ extends HttpServlet
 		try
 		{
 			File acmeChallangeFile = new File(acmeChallangeFileName);
-			if (acmeChallangeFile.exists())
+			if (Helper.getFileInsideDir(acmeChallangeDir, lastPart) == null) // never read outside the challenge dir (for example a '..' or '\..' token)
+			{
+				_logger.warn("LetsEncrypt Acme Challenge: Rejected token '" + lastPart + "' from ip='" + clientIp + "'.");
+				resp.sendError(HttpServletResponse.SC_NOT_FOUND, "LetsEncrypt Acme Challenge: invalid token.");
+			}
+			else if (acmeChallangeFile.exists())
 			{
 				payload = Files.readString(acmeChallangeFile.toPath());
 				payload = payload.trim();

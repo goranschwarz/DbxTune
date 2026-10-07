@@ -308,7 +308,27 @@
                 event.preventDefault();
                 event.stopPropagation();
             }
+            else if (_stayOnPage)
+            {
+                // "Stay on this page" login (see dbxOpenLogin(opts)): no form post / page reload
+                event.preventDefault();
+                stayOnPageLogin(form[0]);
+            }
             form.addClass('was-validated');
+        });
+
+        // A "stay on this page" login that uses an OAuth provider has to leave the page: come back here after it
+        $(document).on('click', '#dbx-oauth-section a', function ()
+        {
+            if (_stayOnPage)
+                sessionStorage.setItem('dbxReturnAfterLogin', window.location.href);
+        });
+
+        // Back to normal when the dialog is closed (logged in, Cancel or X)
+        $(document).on('hidden.bs.modal', '#dbx-login-dialog', function ()
+        {
+            _stayOnPage = null;
+            $(this).css('z-index', '');
         });
 
         // Enter key in username or password field submits the login form
@@ -481,11 +501,73 @@
     // 5. Global API
     //--------------------------------------------------------------------------
 
-    /** Open the login modal from anywhere (e.g. navbar Login link). */
-    window.dbxOpenLogin = function ()
+    /**
+     * Set while a "stay on this page" login is open: { stayOnPage:true, onSuccess:function }.
+     * See dbxOpenLogin(opts) and stayOnPageLogin().
+     */
+    var _stayOnPage = null;
+
+    /**
+     * "Stay on this page" login: POST the form to j_security_check in the background (Jetty sets the
+     * session cookie on that response, no page reload), then ask /login-check if it worked.
+     * The absolute '/j_security_check' is used on purpose: it is what MandatoryLoginFilter whitelists
+     * (the form's relative action would resolve to for example /showplan/j_security_check).
+     */
+    function stayOnPageLogin(form)
     {
-        // Remember where to return after login
-        sessionStorage.setItem('dbxReturnAfterLogin', window.location.href);
+        var cb = _stayOnPage;
+        $('#dbx-login-btn').prop('disabled', true);
+        $('#dbx-loginFailed-div').css('display', 'none');
+
+        fetch('/j_security_check', {
+            method:      'POST',
+            headers:     { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body:        new URLSearchParams(new FormData(form)).toString(),
+            credentials: 'same-origin',
+            redirect:    'follow'
+        })
+        .catch(function () { return null; }) // decided by /login-check below
+        .then(function () { return fetch('/login-check', { credentials: 'same-origin', cache: 'no-store' }); })
+        .then(function (resp) { return resp.text(); })
+        .then(function (text) { return JSON.parse(text); })
+        .catch(function () { return { isLoggedIn: false }; })
+        .then(function (data)
+        {
+            $('#dbx-login-btn').prop('disabled', false);
+            if (!data || !data.isLoggedIn)
+            {
+                $('#dbx-loginFailed-div').css('display', 'block');
+                return;
+            }
+            $('#dbx-login-passwd-txt').val('');
+            $('#dbx-login-dialog').modal('hide');
+            isLoggedIn(function () {}); // update the navbar (Login link -> user name)
+
+            // Let the page refresh things that depend on the login (for example "Needs Login" texts)
+            document.dispatchEvent(new CustomEvent('dbx-login-changed', { detail: { isLoggedIn: true } }));
+            if (cb && typeof cb.onSuccess === 'function')
+                cb.onSuccess();
+        });
+    }
+
+    /**
+     * Open the login modal from anywhere (e.g. navbar Login link).
+     *
+     * @param opts  optional. { stayOnPage: true, onSuccess: function } logs in WITHOUT leaving the page:
+     *              the dialog is shown above everything (also above an open Bootstrap dialog, for example
+     *              the Showplan dialog), the user/password is sent in the background, and onSuccess() is
+     *              called when logged in. OAuth buttons still have to leave the page (and come back here).
+     *              Without opts: the normal login, the page is reloaded after the login.
+     */
+    window.dbxOpenLogin = function (opts)
+    {
+        _stayOnPage = (opts && opts.stayOnPage) ? opts : null;
+
+        // Remember where to return after login (not needed when we stay on the page)
+        if (_stayOnPage)
+            sessionStorage.removeItem('dbxReturnAfterLogin');
+        else
+            sessionStorage.setItem('dbxReturnAfterLogin', window.location.href);
 
         // Reset modal state
         $('#dbx-loginFailed-div').css('display', 'none');
@@ -497,6 +579,15 @@
             $('#dbx-tab-login').tab('show');
 
         $('#dbx-login-dialog').modal({ backdrop: 'static', keyboard: false });
+        // Above everything when opened on top of something else: an open Bootstrap dialog has the same
+        // z-index (and comes later in the DOM, so it would be painted over the login dialog), and the
+        // floating LLM Advice dialog uses 10000/10001.
+        if (_stayOnPage)
+        {
+            $('#dbx-login-dialog').css('z-index', 10060)
+                .one('shown.bs.modal', function () { $('.modal-backdrop').last().css('z-index', 10050); });
+        }
+
         $('#dbx-login-dialog').modal('show');
     };
 

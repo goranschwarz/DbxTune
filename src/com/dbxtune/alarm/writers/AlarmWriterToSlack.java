@@ -425,6 +425,13 @@ extends AlarmWriterAbstract
 			+ "*Alarm description*\n"
 			+ ">${description}\n"
 			+ "\n"
+
+			// Only on CANCEL -- how things look when the alarm went away (if the alarm sets it)
+			+ "#if ( ${type} == 'CANCEL' && ${cancelDescription} != '' )\n"
+			+ "*At cancel*\n"
+			+ ">${cancelDescription}\n"
+			+ "\n"
+			+ "#end\n"
 			+ "#if ( ${extendedDescription} != '' )\n"
 			+ "*Extended description*\n"
 			+ "```\n"

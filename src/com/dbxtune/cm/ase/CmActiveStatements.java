@@ -38,6 +38,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventBlockingLockAlarm;
 import com.dbxtune.alarm.events.AlarmEventLongRunningStatement;
@@ -1589,7 +1590,39 @@ extends CountersModel
 							
 							// Finally create the alarm
 							AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, spid, BlockingOthersMaxTimeInSec, BlockingOtherSpidsStr, blockCount);
-							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+							// The extended description is from when the alarm was (re)raised: the SPID, its Process Activity, the blocked SPID and its SQL at that time
+							final String raiseText = extendedDescText;
+							final String raiseHtml = extendedDescHtml;
+
+							// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+							ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+							{
+								// Called on RAISE/RE-RAISE/CANCEL: the extended description is from when it was (re)raised
+								@Override
+								public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description (from when it was (re)raised)
+									alarmEvent.setExtendedDescription(raiseText, raiseHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										int    rowId = cm.getRowIdWhere(DATA_RATE, "SPID", spid);   // the PK also has 'monSource' (which may change), so find the SPID by 'SPID'
+										String label = "SPID " + spid;
+
+										if (rowId == -1)
+											alarmEvent.setCancelDescription(label + " has no active statement now");
+										else
+										{
+											Object BlockingOthersMaxTimeInSec = cm.getRateValue(rowId, "BlockingOthersMaxTimeInSec");
+
+											String cancelMsg = getAlarmCancelText(label + ": max time it blocks others", BlockingOthersMaxTimeInSec + " seconds", " seconds");
+											alarmEvent.setCancelDescription(cancelMsg);
+										}
+									}
+								}
+							});
 							
 							// Information about how to disable this alarm
 							ae.createAlarmOptionsMessage(cm, "BlockingOthersMaxTimeInSec");
@@ -1656,7 +1689,41 @@ extends CountersModel
 							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
 							
 							AlarmEvent ae = new AlarmEventLongRunningStatement(cm, threshold, ExecTimeInInSec, StatementStartTime, currentDbname, currentUserName, currentCommand, currentTranName);
-							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+							final Object alarmSpid = cm.getRateValue(r, "SPID");
+
+							// The extended description is from when the alarm was (re)raised: the statement at that time
+							final String raiseText = extendedDescText;
+							final String raiseHtml = extendedDescHtml;
+
+							// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+							ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+							{
+								// Called on RAISE/RE-RAISE/CANCEL: the extended description is from when it was (re)raised
+								@Override
+								public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description (from when it was (re)raised)
+									alarmEvent.setExtendedDescription(raiseText, raiseHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										int    rowId = cm.getRowIdWhere(DATA_RATE, "SPID", alarmSpid);   // the PK also has 'monSource' (which may change), so find the SPID by 'SPID'
+										String label = "SPID " + alarmSpid;
+
+										if (rowId == -1)
+											alarmEvent.setCancelDescription(label + " has no active statement now");
+										else
+										{
+											Double ExecTimeInMs = cm.getRateValueAsDouble(rowId, "ExecTimeInMs");
+											Object monSource    = cm.getRateValue        (rowId, "monSource");
+
+											String cancelMsg = getAlarmCancelText(label + ": statement exec time", (ExecTimeInMs == null ? "unknown" : (ExecTimeInMs.intValue() / 1000) + "") + " seconds (" + monSource + ")", " seconds");
+											alarmEvent.setCancelDescription(cancelMsg);
+										}
+									}
+								}
+							});
 							
 							// Information about how to disable this alarm
 							ae.createAlarmOptionsMessage(cm, "StatementExecInSec");

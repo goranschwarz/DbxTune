@@ -49,6 +49,7 @@ import com.dbxtune.gui.swing.WaitForExecDialog;
 import com.dbxtune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.dbxtune.ssh.RemoteFileSystemView;
 import com.dbxtune.ssh.SshConnection;
+import com.dbxtune.ssh.SshConnection.ExecChannel;
 import com.dbxtune.ssh.SshConnection.ExecOutput;
 import com.dbxtune.ssh.SshConnection.ExecutionFeedback;
 import com.dbxtune.utils.SwingUtils;
@@ -485,7 +486,8 @@ public class JschGuiTest
 
 			try
 			{
-				final ChannelExec channel = _conn.execCommand(command);
+				final ExecChannel execChannel = _conn.execCommand(command);
+				final ChannelExec channel     = execChannel.getChannel();
 				
 //				ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();
 //				ByteArrayOutputStream errorBuffer = new ByteArrayOutputStream();
@@ -502,8 +504,8 @@ public class JschGuiTest
 
 						try
 						{
-							InputStream in = channel.getInputStream();
-							InputStream err = channel.getExtInputStream();
+							InputStream in  = execChannel.getStdout();
+							InputStream err = execChannel.getStderr();
 
 							int maxBufLen = 1024;
 							byte[] tmpBuffer = new byte[maxBufLen];

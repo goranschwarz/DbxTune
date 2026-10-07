@@ -37,6 +37,7 @@ import com.dbxtune.CounterController;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventMemoryClerkWarning;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -490,6 +491,7 @@ extends CountersModel
 	//-- Alarm Handling
 	//--------------------------------------------------------------------------------------
 	//--------------------------------------------------------------------------------------
+
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -519,18 +521,52 @@ extends CountersModel
 
 			if (sizeMb > threshold)
 			{
-				String extendedDescText = "Possibly resolved by executing: DBCC FREESYSTEMCACHE('TokenAndPermUserStore'), also you may look at Startup traceflag: 4610, 4618";
-				String extendedDescHtml = extendedDescText;
-
-				// Possibly: Create a dedicated graph for 'USERSTORE_TOKENPERM' (if 'USERSTORE_TOKENPERM' is NOT part of the top clerks)
-				extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MEMORY_CLERKS_TOP, "USERSTORE_TOKENPERM");
-				extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MEMORY_TTM_VS_ALL_CLERKS);
-
 				// Create the alarm
 				AlarmEvent ae = new AlarmEventMemoryClerkWarning(cm, threshold, sizeMb, "USERSTORE_TOKENPERM");
 
-				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-				
+				// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+				ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(cm.getPk(), "USERSTORE_TOKENPERM", threshold)
+				{
+					// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised, the graphs are from the CURRENT data
+					@Override
+					public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+					{
+						String rowPk = getRowPk();
+						int    rowId = cm.getAbsRowIdForPkValue(rowPk);
+
+						String label = "Memory clerk 'USERSTORE_TOKENPERM'";
+
+						if (rowId != -1)
+						{
+							// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+							String extendedDescText = "Possibly resolved by executing: DBCC FREESYSTEMCACHE('TokenAndPermUserStore'), also you may look at Startup traceflag: 4610, 4618";
+							String extendedDescHtml = extendedDescText;
+
+//							Possibly: Create a dedicated graph for 'USERSTORE_TOKENPERM' (if 'USERSTORE_TOKENPERM' is NOT part of the top clerks)
+							extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MEMORY_CLERKS_TOP, "USERSTORE_TOKENPERM");
+							extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MEMORY_TTM_VS_ALL_CLERKS);
+
+							alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+							// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+							if (AlarmPhase.CANCEL.equals(phase))
+							{
+								Integer SizeMb = cm.getAbsValueAsInteger(rowId, "SizeMb");
+
+								String cancelMsg = getAlarmCancelText(label, SizeMb + " MB", " MB");
+								alarmEvent.setCancelDescription(cancelMsg);
+							}
+						}
+						else
+						{
+							if (AlarmPhase.CANCEL.equals(phase))
+							{
+								alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+							}
+						}
+					}
+				});
+
 				// Information about how to disable this alarm
 				ae.createAlarmOptionsMessage(this, "USERSTORE_TOKENPERM");
 

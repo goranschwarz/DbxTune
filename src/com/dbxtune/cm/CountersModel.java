@@ -9192,6 +9192,35 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 	public List<Integer> getRateRowIdsWhere(Map<String, Object> nameValue)                        { return getRowIdsWhere(DATA_RATE, nameValue, true); }
 
 	/**
+	 * Find THE row where a column has a value, for example when an alarm is CANCELLED: to find "the same" row again
+	 * (a database, a session...), its position in the sample may have changed, or it may be gone.
+	 *
+	 * @param whatData  DATA_ABS, DATA_DIFF or DATA_RATE
+	 * @param colName   Column name (case sensitive)
+	 * @param value     Value to look for
+	 * @return The (first) rowId, -1 if not found (or no data, or no such column)
+	 */
+	public int getRowIdWhere(int whatData, String colName, Object value)
+	{
+		try
+		{
+			Map<String, Object> where = new HashMap<>();
+			where.put(colName, value);
+			List<Integer> rows = getRowIdsWhere(whatData, where, true);
+			return rows.isEmpty() ? -1 : rows.get(0);
+		}
+		catch (RuntimeException ex) // getRowIdsWhere() throws if the column do not exist
+		{
+			return -1;
+		}
+	}
+	/** Same as getRowIdWhere(DATA_ABS, ...) */
+	public int getAbsRowIdWhere(String colName, Object value) 
+	{
+		return getRowIdWhere(DATA_ABS, colName, value);
+	}
+
+	/**
 	 * Get all values that matches
 	 * 
 	 * @param nameValue   a map of column names/values that we are searching for

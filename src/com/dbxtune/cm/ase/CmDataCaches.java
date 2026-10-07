@@ -35,6 +35,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventConfigResourceIsLow;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -638,6 +639,39 @@ extends CountersModel
 						String msg = "The 'default data cache' is configured at the factory setting... 8 MB or similar... This is WAY TO LOW. fix this using: exec sp_cacheconfig 'default data cache', '#G'";
 
 						AlarmEvent ae = new AlarmEventConfigResourceIsLow(cm, "default data cache", cacheSize, msg, threshold, AlarmEvent.DEFAULT_raiseDelay);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(cm.getPk(), cm.getAbsPkValue(rqRows[0]), threshold)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								String rowPk = getRowPk();
+								int    rowId = cm.getAbsRowIdForPkValue(rowPk);
+
+								String label = "'default data cache'";
+
+								if (rowId != -1)
+								{
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										Double CacheSize = cm.getAbsValueAsDouble(rowId, "CacheSize");
+
+										String cancelMsg = getAlarmCancelText("The size of " + label, (CacheSize == null ? "unknown" : toAlarmCancelValue(CacheSize / 1024.0)) + " MB", " MB");
+										alarmEvent.setCancelDescription(cancelMsg);
+									}
+								}
+								else
+								{
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+									}
+								}
+							}
+						});
 
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(cm, "DefaultDataCacheSizeInMb");

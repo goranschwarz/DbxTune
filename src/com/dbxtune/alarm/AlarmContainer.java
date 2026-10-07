@@ -93,6 +93,11 @@ implements Serializable
 			existing.setReRaiseDescription        (repeatedAlarmEvent.getDescription());
 			existing.setReRaiseExtendedDescription(repeatedAlarmEvent.getExtendedDescription(), repeatedAlarmEvent.getExtendedDescriptionHtml());
 			existing.setReRaiseData               (repeatedAlarmEvent.getData());
+
+			// The ACTIVE alarm is the one that gets cancelled, so give it the newest description provider (it's called at CANCEL)
+			// This also gives an alarm restored from disk a provider back (the provider is not serialized)
+			if (repeatedAlarmEvent.getAlarmDescriptionProvider() != null)
+				existing.setAlarmDescriptionProvider(repeatedAlarmEvent.getAlarmDescriptionProviderCm(), repeatedAlarmEvent.getAlarmDescriptionProvider());
 		}
 	}
 	

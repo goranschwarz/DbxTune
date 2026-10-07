@@ -69,6 +69,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
         <LI>AlarmWriterToSlack  - Added "summary" section (talk to DbxCentral and get active alarms, so we can see what other alarms are currently active)</LI>
         <LI>Automatic upgrade of old H2 databases at startup (DbxCentral DB and today's collector recording)</LI>
         <LI>Added 'h2upgrade' command (dbxtune.sh / dbxtune.bat) to upgrade all old H2 databases in a directory (collector recordings and the DbxCentral DB). Without '-e' it only lists what would be done.</LI>
+        <LI>Host Monitoring on Windows: a PTY (used so 'typeperf' is terminated when the SSH session ends) is now only requested on Windows build 17763 (Server 2019) or later.
+            Older Windows (like Server 2016) has no ConPTY, its 'ssh-shellhost' wraps the output at 128 columns, which garbled the 'typeperf' CSV header ("should be of length 5").
+            Can be changed with <code>HostMonitor.windows.ssh.requestPty = auto|true|false</code> (default auto)</LI>
+        <LI>Host Monitoring: Non streaming OS Commands (like CmOsPs) now have a timeout of 60 seconds, before the collector could "hang" forever if the command never ended or the SSH session was dead.
+            Can be changed with <code>HostMonitor.executeAndParse.timeout.seconds = ###</code> (0 = wait forever).
+            Opening a SSH channel now has a timeout <code>SshConnection.channel.connect.timeout.seconds = 30</code>, and on failure the SSH session is reconnected and the command is retried once.</LI>
         <LI></LI>
 
 		<LI><b>Alarms Handling:</b>
@@ -77,6 +83,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>Changed:   SrvDown -- Only the "base" url will be passed</LI>
 				<LI>Changed:   DbmsVersionString -- Changed from INFO to WARNING</LI>
 				<LI>New alarm: AlarmEventHostMonitorConnectionDown -- (WARNING) When Host Monitoring (SSH) can't connect to the monitored host for more than 300 seconds. Cancelled when the connection works again. Threshold can be changed with <code>no.gui.hostmon.connect.alarm.thresholdInSec = ###</code> (-1 = disable)</LI>
+				<LI>New:       Alarms can now set their values (extended description etc) from the CURRENT data at RAISE, RE-RAISE and CANCEL (<code>AlarmEvent.setAlarmDescriptionProvider(cm, provider)</code>).
+				               On CANCEL a short text about how things look when the alarm went away is shown (new template variable <code>${cancelDescription}</code>, in the default Mail, Slack and Teams templates).
+				               It is also stored (new column 'cancelDescription' in the alarm tables of the recording and of DbxCentral: DbxCentral DB version 20), sent to DbxCentral, and shown in DbxCentral Alarm History: as a second line under the Description (also on the RAISE row, from its CANCEL), and in the details (click on a row).<br>
+				               SrvDown: the DBMS start time, and if the DBMS was restarted or not (network/connect problem). HighCpuUtilization (CmOsMpstat): the CPU Usage now (+ graphs up to the drop). SQL Server CmSummary (BlockingLock, LongRunningTransaction, SuspectPages, OutOfWorkerThreads, LowOnWorkerThreads, Deadlock, SqlAgentStatus): the values now (+ graphs)<br>
+				               All other "value" alarms (SQL Server, ASE, Postgres, RepServer, Host Monitoring) also get a cancel description: the value now and the threshold, or that the database/session/disk... is no longer present. Event alarms (error log entries, config changes, ...) are not changed.<br>
+				               Alarms where the extended description is only graphs (CPU, run queue, load average, swapping, memory, queues, WAL, replication lag, ...) now rebuild the graphs at CANCEL, so the CANCEL message shows the graphs up to when the problem went away.
+				               Alarms with a table about the database/session/statement plus graphs (free space, OS disk, AlwaysOn, toxic waits, tempdb usage, long running statements, client errors) keep the table from when the alarm was raised and rebuild the graphs.<br>
+				               The CM alarms set these values with an in-line <code>AlarmDescriptionProviderBase</code> where the alarm is created (new class, holds the threshold, the row PK and helpers for the cancel text).</LI>
 			</UL>
 		</LI>
 

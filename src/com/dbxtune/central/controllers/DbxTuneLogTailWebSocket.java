@@ -70,6 +70,14 @@ public class DbxTuneLogTailWebSocket
 
 //		System.out.println("xxx: filename='"+filename+"', remoteHost='"+remoteHost+"'.");
 		
+		// Only files INSIDE the log directory (no '..' or absolute paths)
+		if (Helper.getFileInsideDir(DbxTuneCentral.getAppLogDir(), filename) == null)
+		{
+			_logger.warn("log-tail: Rejected file '" + filename + "', it is not located in the LOG dir '" + DbxTuneCentral.getAppLogDir() + "'. remoteHost='" + remoteHost + "'.");
+			session.close(1008, "File must be located in the LOG dir."); // 1008 = Policy Violation
+			return;
+		}
+
 		String fullFilename = DbxTuneCentral.getAppLogDir() + File.separatorChar + filename;
 		File f = new File(fullFilename);
 		if ( ! f.exists() )

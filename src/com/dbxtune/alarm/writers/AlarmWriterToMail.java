@@ -556,6 +556,16 @@ extends AlarmWriterAbstract
 			+ "==================================================================\n"
 			+ "${description}\n"
 			+ "------------------------------------------------------------------\n"
+
+			// Only on CANCEL -- how things look when the alarm went away (if the alarm sets it)
+			+ "#if ( ${type} == 'CANCEL' && ${cancelDescription} != '' )\n"
+			+ "\n"
+			+ "At cancel:\n"
+			+ "==================================================================\n"
+			+ "${cancelDescription}\n"
+			+ "------------------------------------------------------------------\n"
+			+ "#end\n"
+
 			+ "#if ( ${extendedDescription} != '' )\n"
 			+ "\n"
 			+ "\n"
@@ -632,7 +642,16 @@ extends AlarmWriterAbstract
 			+ "<b>Alarm description:</b>\n"
 			+ "<hr>\n"
 			+ "${description}\n"
-			
+
+			// Only on CANCEL -- how things look when the alarm went away (if the alarm sets it)
+			+ "#if ( ${type} == 'CANCEL' && ${cancelDescription} != '' )\n"
+			+ "<br>\n"
+			+ "<br>\n"
+			+ "<b>At Cancel:</b>\n"
+			+ "<hr>\n"
+			+ "${cancelDescription}\n"
+			+ "#end\n"
+
 			// Only if we have a extended description
 			+ "#if ( ${extendedDescription} != '' )\n"
 			+ "<br>\n"

@@ -32,6 +32,9 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProvider;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
+import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventOsLoadAverage;
 import com.dbxtune.alarm.events.AlarmEventOsLoadAverage.RangeType;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -310,6 +313,43 @@ extends CounterModelHostMonitor
 		super.reset();
 	}
 
+	/**
+	 * The provider for the 'adjLoadAverage_*' alarms: the load average chart from the CURRENT data,
+	 * and at CANCEL: the adjusted load average now.
+	 * <p>
+	 * Called from AlarmHandler on: Raise, RE-RAISE &amp; CANCEL
+	 *
+	 * @param loadAvgColumn  "adjLoadAverage_1Min", "adjLoadAverage_5Min" or "adjLoadAverage_15Min"
+	 * @param range          "1 minute", "5 minute" or "15 minute"
+	 * @param groupName      The MovingAverageCounterManager group (this CM's name)
+	 * @param threshold      The threshold
+	 */
+	private AlarmDescriptionProvider createLoadAverageDescriptionProvider(String loadAvgColumn, String range, String groupName, Number threshold)
+	{
+		return new AlarmDescriptionProviderBase(null, null, threshold)
+		{
+			// Called on RAISE/RE-RAISE/CANCEL: the graphs are from the CURRENT data
+			@Override
+			public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+			{
+				// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+				String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("Adjusted Load Average (1 hour)", // Note make the chart on 1 hour to see more info
+						MovingAverageCounterManager.getInstance(groupName, "1Min",  60),
+						MovingAverageCounterManager.getInstance(groupName, "5Min",  60),
+						MovingAverageCounterManager.getInstance(groupName, "15Min", 60));
+				alarmEvent.setExtendedDescription(null, htmlChartImage);
+
+				// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+				if (AlarmPhase.CANCEL.equals(phase))
+				{
+					Double loadAverage = cm.getAbsValueAsDouble(0, loadAvgColumn);
+
+					String cancelMsg = getAlarmCancelText("Adjusted load average (" + range + ")", loadAverage);
+					alarmEvent.setCancelDescription(cancelMsg);
+				}
+			}
+		};
+	}
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -359,14 +399,10 @@ extends CounterModelHostMonitor
 
 				if (adjLoadAverage_1Min > threshold)
 				{
-					String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("Adjusted Load Average (1 hour)", // Note make the chart on 1 hour to see more info
-							MovingAverageCounterManager.getInstance(groupName, "1Min",  60),
-							MovingAverageCounterManager.getInstance(groupName, "5Min",  60),
-							MovingAverageCounterManager.getInstance(groupName, "15Min", 60));
-					
 					AlarmEventOsLoadAverage alarm = new AlarmEventOsLoadAverage(cm, threshold, hostname, RangeType.RANGE_1_MINUTE, adjLoadAverage_1Min, adjLoadAverage_5Min, adjLoadAverage_15Min);
 
-					alarm.setExtendedDescription(null, htmlChartImage);
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createLoadAverageDescriptionProvider("adjLoadAverage_1Min", "1 minute", groupName, threshold));
 
 					AlarmHandler.getInstance().addAlarm( alarm );
 				}
@@ -384,14 +420,10 @@ extends CounterModelHostMonitor
 
 				if (adjLoadAverage_5Min > threshold)
 				{
-					String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("Adjusted Load Average (1 hour)", // Note make the chart on 1 hour to see more info
-							MovingAverageCounterManager.getInstance(groupName, "1Min",  60),
-							MovingAverageCounterManager.getInstance(groupName, "5Min",  60),
-							MovingAverageCounterManager.getInstance(groupName, "15Min", 60));
-					
 					AlarmEventOsLoadAverage alarm = new AlarmEventOsLoadAverage(cm, threshold, hostname, RangeType.RANGE_5_MINUTE, adjLoadAverage_1Min, adjLoadAverage_5Min, adjLoadAverage_15Min);			
 
-					alarm.setExtendedDescription(null, htmlChartImage);
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createLoadAverageDescriptionProvider("adjLoadAverage_5Min", "5 minute", groupName, threshold));
 
 					AlarmHandler.getInstance().addAlarm( alarm );
 				}
@@ -409,14 +441,10 @@ extends CounterModelHostMonitor
 
 				if (adjLoadAverage_15Min > threshold)
 				{
-					String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("Adjusted Load Average (1 hour)", // Note make the chart on 1 hour to see more info
-							MovingAverageCounterManager.getInstance(groupName, "1Min",  60),
-							MovingAverageCounterManager.getInstance(groupName, "5Min",  60),
-							MovingAverageCounterManager.getInstance(groupName, "15Min", 60));
-					
 					AlarmEventOsLoadAverage alarm = new AlarmEventOsLoadAverage(cm, threshold, hostname, RangeType.RANGE_15_MINUTE, adjLoadAverage_1Min, adjLoadAverage_5Min, adjLoadAverage_15Min);
 
-					alarm.setExtendedDescription(null, htmlChartImage);
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createLoadAverageDescriptionProvider("adjLoadAverage_15Min", "15 minute", groupName, threshold));
 
 					AlarmHandler.getInstance().addAlarm( alarm );
 				}

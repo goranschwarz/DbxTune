@@ -162,7 +162,7 @@ extends HttpServlet
 				" \n" +
 				"<body> \n" +
 				(hasSql
-					? "    <button type='button' onclick='dbxLlmAdvice.open({sql: dbxLlmSql, plan: dbxLlmPlan, dbVendor: dbxLlmDbVendor});'>Get LLM Optimization Advice</button> \n"
+					? "    <button type='button' onclick='dbxLlmAdvice.open({sql: dbxLlmSql, plan: dbxLlmPlan, dbVendor: dbxLlmDbVendor, origin: \"Showplan\"});'>Get LLM Optimization Advice</button> \n"
 					: "") +
 				"    <div id='app'>                                     \n" +
 				"      <pev2 style='min-height: 100vh;' :plan-source='plan' plan-query='' /> \n" +

@@ -33,6 +33,8 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProvider;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventRunQueueLength;
 import com.dbxtune.alarm.events.AlarmEventRunQueueLength.RangeType;
@@ -520,6 +522,42 @@ extends CountersModel
 		} // end: GRAPH_NAME_ENGINE_1M_OUTSTAND_IO
 	}
 
+	/**
+	 * The provider for the 'RunQueueLengthAvg*' alarms: the run queue graph from the CURRENT data,
+	 * and at CANCEL: the run queue length now (average over all engines).
+	 * <p>
+	 * Called from AlarmHandler on: Raise, RE-RAISE &amp; CANCEL
+	 *
+	 * @param range          "1min", "5min" or "15min"
+	 * @param avgColumn      "Avg_1min", "Avg_5min" or "Avg_15min"
+	 * @param threshold      The threshold
+	 */
+	private AlarmDescriptionProvider createRunQueueLengthDescriptionProvider(String range, String avgColumn, Number threshold)
+	{
+		return new AlarmDescriptionProviderBase(null, null, threshold)
+		{
+			// Called on RAISE/RE-RAISE/CANCEL: the graphs are from the CURRENT data
+			@Override
+			public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+			{
+				// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+				String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AVG_RUN_QUEUE_LENTH);
+				alarmEvent.setExtendedDescription("", extendedDescHtml);
+
+				// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+				if (AlarmPhase.CANCEL.equals(phase))
+				{
+					// The average over all engines
+					int[] rqRows = cm.getAbsRowIdsWhere("Statistic", "run queue length");
+					if (rqRows != null)
+					{
+						String cancelMsg = getAlarmCancelText("Run queue length (average " + range + ")", NumberUtils.round(cm.getAbsValueAvg(rqRows, avgColumn), 3));
+						alarmEvent.setCancelDescription(cancelMsg);
+					}
+				}
+			}
+		};
+	}
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -569,11 +607,10 @@ extends CountersModel
 
 						if (Avg_1min > threshold)
 						{
-							String extendedDescText = "";
-							String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AVG_RUN_QUEUE_LENTH);
-
 							AlarmEvent ae = new AlarmEventRunQueueLength(cm, threshold, RangeType.RANGE_1_MINUTE, Avg_1min, Avg_5min, Avg_15min);
-							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+							// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+							ae.setAlarmDescriptionProvider(this, createRunQueueLengthDescriptionProvider("1min", "Avg_1min", threshold));
 
 							// Information about how to disable this alarm
 							ae.createAlarmOptionsMessage(this, "RunQueueLengthAvg1min");
@@ -594,11 +631,10 @@ extends CountersModel
 
 						if (Avg_5min > threshold)
 						{
-							String extendedDescText = "";
-							String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AVG_RUN_QUEUE_LENTH);
-
 							AlarmEvent ae = new AlarmEventRunQueueLength(cm, threshold, RangeType.RANGE_5_MINUTE, Avg_1min, Avg_5min, Avg_15min);
-							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+							// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+							ae.setAlarmDescriptionProvider(this, createRunQueueLengthDescriptionProvider("5min", "Avg_5min", threshold));
 
 							// Information about how to disable this alarm
 							ae.createAlarmOptionsMessage(this, "RunQueueLengthAvg5min");
@@ -619,11 +655,10 @@ extends CountersModel
 
 						if (Avg_15min > threshold)
 						{
-							String extendedDescText = "";
-							String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AVG_RUN_QUEUE_LENTH);
-
 							AlarmEvent ae = new AlarmEventRunQueueLength(cm, threshold, RangeType.RANGE_15_MINUTE, Avg_1min, Avg_5min, Avg_15min);
-							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+							// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+							ae.setAlarmDescriptionProvider(this, createRunQueueLengthDescriptionProvider("15min", "Avg_15min", threshold));
 
 							// Information about how to disable this alarm
 							ae.createAlarmOptionsMessage(this, "RunQueueLengthAvg15min");

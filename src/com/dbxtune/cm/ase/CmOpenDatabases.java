@@ -47,6 +47,8 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProvider;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventDatabaseOption;
 import com.dbxtune.alarm.events.AlarmEventFullTranLog;
@@ -1931,6 +1933,117 @@ extends CountersModel
 //		return "<html><pre>" + str + "</pre></html>";
 //	}
 
+	/**
+	 * The provider for the 'LowDbFreeSpaceInMb' and 'LowDbFreeSpaceInPct' alarms: the database row and the data size graphs from the CURRENT data,
+	 * and at CANCEL: the free data space now.
+	 * <p>
+	 * Called from AlarmHandler on: Raise, RE-RAISE &amp; CANCEL
+	 *
+	 * @param r              The row the alarm is about (only used to get its PK)
+	 * @param thresholdUnit  " MB" or "%"
+	 * @param dbname         The database name (used when the row is gone)
+	 * @param threshold      The threshold
+	 */
+	private AlarmDescriptionProvider createDataFreeSpaceDescriptionProvider(int r, String thresholdUnit, String dbname, Number threshold)
+	{
+		return new AlarmDescriptionProviderBase(getPk(), getAbsPkValue(r), threshold)
+		{
+			// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised, the graphs are from the CURRENT data
+			@Override
+			public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+			{
+				String rowPk = getRowPk();
+				int    rowId = cm.getAbsRowIdForPkValue(rowPk);
+
+				String ldbname = (rowId == -1) ? dbname : cm.getAbsString(rowId, "DBName");
+				String label   = "Database '" + ldbname + "'";
+
+				if (rowId != -1)
+				{
+					// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+					String extendedDescText = cm.toTextTableString(DATA_RATE, rowId);
+					String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, rowId, true, false, false);
+
+					extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DATASIZE_LEFT_MB, ldbname);
+					extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DATASIZE_USED_PCT, ldbname);
+					alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+					if (AlarmPhase.CANCEL.equals(phase))
+					{
+						Double DataSizeFreeInMb = cm.getAbsValueAsDouble(rowId, "DataSizeFreeInMb");
+						Double DataSizeUsedPct  = cm.getAbsValueAsDouble(rowId, "DataSizeUsedPct");
+
+						String cancelMsg = getAlarmCancelText(label + ": free data space", toAlarmCancelValue(DataSizeFreeInMb) + " MB, " + toAlarmCancelValue(DataSizeUsedPct) + "% used", thresholdUnit);
+						alarmEvent.setCancelDescription(cancelMsg);
+					}
+				}
+				else
+				{
+					if (AlarmPhase.CANCEL.equals(phase))
+					{
+						alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+					}
+				}
+			}
+		};
+	}
+
+	/**
+	 * The provider for the 'LowLogFreeSpaceInMb' and 'LowLogFreeSpaceInPct' alarms: the database row and the log size graphs from the CURRENT data,
+	 * and at CANCEL: the free log space now.
+	 * <p>
+	 * Called from AlarmHandler on: Raise, RE-RAISE &amp; CANCEL
+	 *
+	 * @param r              The row the alarm is about (only used to get its PK)
+	 * @param thresholdUnit  " MB" or "%"
+	 * @param dbname         The database name (used when the row is gone)
+	 * @param threshold      The threshold
+	 */
+	private AlarmDescriptionProvider createLogFreeSpaceDescriptionProvider(int r, String thresholdUnit, String dbname, Number threshold)
+	{
+		return new AlarmDescriptionProviderBase(getPk(), getAbsPkValue(r), threshold)
+		{
+			// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised, the graphs are from the CURRENT data
+			@Override
+			public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+			{
+				String rowPk = getRowPk();
+				int    rowId = cm.getAbsRowIdForPkValue(rowPk);
+
+				String ldbname = (rowId == -1) ? dbname : cm.getAbsString(rowId, "DBName");
+				String label   = "Database '" + ldbname + "'";
+
+				if (rowId != -1)
+				{
+					// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+					String extendedDescText = cm.toTextTableString(DATA_RATE, rowId);
+					String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, rowId, true, false, false);
+
+					extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOGSIZE_LEFT_MB, ldbname);
+					extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOGSIZE_USED_PCT, ldbname);
+					alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+					if (AlarmPhase.CANCEL.equals(phase))
+					{
+						Double LogSizeFreeInMb = cm.getAbsValueAsDouble(rowId, "LogSizeFreeInMb");
+						Double LogSizeUsedPct  = cm.getAbsValueAsDouble(rowId, "LogSizeUsedPct");
+
+						String cancelMsg = getAlarmCancelText(label + ": free log space", toAlarmCancelValue(LogSizeFreeInMb) + " MB, " + toAlarmCancelValue(LogSizeUsedPct) + "% used", thresholdUnit);
+						alarmEvent.setCancelDescription(cancelMsg);
+					}
+				}
+				else
+				{
+					if (AlarmPhase.CANCEL.equals(phase))
+					{
+						alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+					}
+				}
+			}
+		};
+	}
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -2031,7 +2144,42 @@ extends CountersModel
 							}
 							
 							AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, dbname, OldestTranInSeconds, OldestTranName);
-							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+							// The extended description is from when the alarm was (re)raised: the database row and the SQL text of the oldest open transaction at that time
+							final String raiseText = extendedDescText;
+							final String raiseHtml = extendedDescHtml;
+
+							// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+							ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(cm.getPk(), cm.getAbsPkValue(r), threshold)
+							{
+								// Called on RAISE/RE-RAISE/CANCEL: the extended description is from when it was (re)raised
+								@Override
+								public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description (from when it was (re)raised)
+									alarmEvent.setExtendedDescription(raiseText, raiseHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										int    rowId = cm.getAbsRowIdForPkValue(getRowPk());
+										String label = "Database '" + dbname + "'";
+
+										if (rowId == -1)
+											alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+										else
+										{
+											Double OldestTranInSeconds = cm.getAbsValueAsDouble(rowId, "OldestTranInSeconds");
+											String OldestTranName      = cm.getAbsString       (rowId, "OldestTranName");
+
+											if (OldestTranInSeconds == null || OldestTranInSeconds <= 0)
+												alarmEvent.setCancelDescription(label + ": there is no open transaction now");
+											else
+												alarmEvent.setCancelDescription(getAlarmCancelText(label + ": the oldest open transaction", OldestTranInSeconds.intValue() + " seconds (" + OldestTranName + ")", " seconds"));
+										}
+									}
+								}
+							});
 							
 							// Information about how to disable this alarm
 							ae.createAlarmOptionsMessage(this, "OldestTranInSeconds");
@@ -2058,13 +2206,50 @@ extends CountersModel
 
 					if (TransactionLogFull.intValue() > threshold)
 					{
-						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOGSIZE_LEFT_MB, dbname);
-						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOGSIZE_USED_PCT, dbname);
-
 						AlarmEvent ae = new AlarmEventFullTranLog(cm, threshold, dbname, null);
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(cm.getPk(), cm.getAbsPkValue(r), threshold)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised, the graphs are from the CURRENT data
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								String rowPk = getRowPk();
+								int    rowId = cm.getAbsRowIdForPkValue(rowPk);
+
+								String ldbname = (rowId == -1) ? dbname : cm.getAbsString(rowId, "DBName");
+								String label   = "Database '" + ldbname + "'";
+
+								if (rowId != -1)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+									String extendedDescText = cm.toTextTableString(DATA_RATE, rowId);
+									String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, rowId, true, false, false);
+
+									extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOGSIZE_LEFT_MB, ldbname);
+									extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOGSIZE_USED_PCT, ldbname);
+									alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										Double TransactionLogFull = cm.getAbsValueAsDouble(rowId, "TransactionLogFull");
+										Double LogSizeUsedPct     = cm.getAbsValueAsDouble(rowId, "LogSizeUsedPct");
+
+										String cancelMsg = label + ": the transaction log is " + (TransactionLogFull != null && TransactionLogFull > 0 ? "still FULL" : "no longer full") + " (log " + toAlarmCancelValue(LogSizeUsedPct) + "% used)";
+										alarmEvent.setCancelDescription(cancelMsg);
+									}
+								}
+								else
+								{
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+									}
+								}
+							}
+						});
 						
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "TransactionLogFull");
@@ -2274,11 +2459,47 @@ extends CountersModel
 							lastBackupDate = lastBackuEndDate;
 						
 	
-						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-
 						AlarmEvent ae = new AlarmEventOldBackup(cm, threshold, dbname, lastBackupDate, val.intValue());
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(cm.getPk(), cm.getAbsPkValue(r), threshold)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								String rowPk = getRowPk();
+								int    rowId = cm.getAbsRowIdForPkValue(rowPk);
+
+								String ldbname = (rowId == -1) ? dbname : cm.getAbsString(rowId, "DBName");
+								String label   = "Database '" + ldbname + "'";
+
+								if (rowId != -1)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description
+									String extendedDescText = cm.toTextTableString(DATA_RATE, rowId);
+									String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, rowId, true, false, false);
+									alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										Double LastDbBackupAgeInHours = cm.getAbsValueAsDouble(rowId, "LastDbBackupAgeInHours");
+										Object BackupStartTime        = cm.getAbsValue        (rowId, "BackupStartTime");
+
+										String cancelMsg = getAlarmCancelText(label + ": the last database backup", toAlarmCancelValue(LastDbBackupAgeInHours) + " hours old (" + toAlarmCancelValue(BackupStartTime) + ")", " hours");
+										alarmEvent.setCancelDescription(cancelMsg);
+									}
+								}
+								else
+								{
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+									}
+								}
+							}
+						});
 						
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "LastDbBackupAgeInHours");
@@ -2361,11 +2582,47 @@ extends CountersModel
 					{
 						String lastBackupDate = cm.getAbsValue(r, "LastTranLogDumpTime") + "";
 
-						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-						
 						AlarmEvent ae = new AlarmEventOldTranLogBackup(cm, threshold, dbname, lastBackupDate, val.intValue());
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(cm.getPk(), cm.getAbsPkValue(r), threshold)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								String rowPk = getRowPk();
+								int    rowId = cm.getAbsRowIdForPkValue(rowPk);
+
+								String ldbname = (rowId == -1) ? dbname : cm.getAbsString(rowId, "DBName");
+								String label   = "Database '" + ldbname + "'";
+
+								if (rowId != -1)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description
+									String extendedDescText = cm.toTextTableString(DATA_RATE, rowId);
+									String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, rowId, true, false, false);
+									alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										Double LastLogBackupAgeInHours = cm.getAbsValueAsDouble(rowId, "LastLogBackupAgeInHours");
+										Object LastTranLogDumpTime     = cm.getAbsValue        (rowId, "LastTranLogDumpTime");
+
+										String cancelMsg = getAlarmCancelText(label + ": the last log backup", toAlarmCancelValue(LastLogBackupAgeInHours) + " hours old (" + toAlarmCancelValue(LastTranLogDumpTime) + ")", " hours");
+										alarmEvent.setCancelDescription(cancelMsg);
+									}
+								}
+								else
+								{
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+									}
+								}
+							}
+						});
 						
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "LastLogBackupAgeInHours");
@@ -2391,13 +2648,10 @@ extends CountersModel
 				{
 					if (freeMb.intValue() < threshold.intValue())
 					{
-						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DATASIZE_LEFT_MB, dbname);
-						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DATASIZE_USED_PCT, dbname);
-
 						AlarmEvent ae = new AlarmEventLowDbFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.intValue());
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, createDataFreeSpaceDescriptionProvider(r, " MB", dbname, threshold));
 						
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "LowDbFreeSpaceInMb");
@@ -2424,13 +2678,10 @@ extends CountersModel
 				{
 					if (freeMb.intValue() < threshold.intValue())
 					{
-						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOGSIZE_LEFT_MB, dbname);
-						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOGSIZE_USED_PCT, dbname);
-
 						AlarmEvent ae = new AlarmEventLowLogFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.intValue());
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, createLogFreeSpaceDescriptionProvider(r, " MB", dbname, threshold));
 						
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "LowLogFreeSpaceInMb");
@@ -2457,13 +2708,10 @@ extends CountersModel
 				{
 					if (usedPct > threshold.doubleValue())
 					{
-						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DATASIZE_LEFT_MB, dbname);
-						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DATASIZE_USED_PCT, dbname);
-
 						AlarmEvent ae = new AlarmEventLowDbFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.doubleValue());
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, createDataFreeSpaceDescriptionProvider(r, "%", dbname, threshold));
 						
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "LowDbFreeSpaceInPct");
@@ -2490,13 +2738,10 @@ extends CountersModel
 				{
 					if (usedPct > threshold.doubleValue())
 					{
-						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOGSIZE_LEFT_MB, dbname);
-						extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOGSIZE_USED_PCT, dbname);
-
 						AlarmEvent ae = new AlarmEventLowLogFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.doubleValue());
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, createLogFreeSpaceDescriptionProvider(r, "%", dbname, threshold));
 						
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "LowLogFreeSpaceInPct");

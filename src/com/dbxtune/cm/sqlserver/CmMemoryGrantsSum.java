@@ -36,6 +36,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventMemoryGrantWait;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -444,6 +445,7 @@ extends CountersModel
 	//-- Alarm Handling
 	//--------------------------------------------------------------------------------------
 	//--------------------------------------------------------------------------------------
+
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -500,7 +502,31 @@ extends CountersModel
 				// Create the alarm
 				AlarmEvent ae = new AlarmEventMemoryGrantWait(cm, threshold, waiter_count);
 
-				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+				// The extended description is from when the alarm was (re)raised: the memory grants at that time
+				final String raiseText = extendedDescText;
+				final String raiseHtml = extendedDescHtml;
+
+				// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+				ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+				{
+					// Called on RAISE/RE-RAISE/CANCEL: the extended description is from when it was (re)raised
+					@Override
+					public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+					{
+						// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description (from when it was (re)raised)
+						alarmEvent.setExtendedDescription(raiseText, raiseHtml);
+
+						// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+						if (AlarmPhase.CANCEL.equals(phase))
+						{
+							int aggRowId     = cm.getAggregatedRowId();
+							int waiter_count = (aggRowId < 0) ? -1 : cm.getAbsValueAsInteger(aggRowId, "waiter_count", -1);
+
+							String cancelMsg = getAlarmCancelText("Requests waiting for a memory grant", (waiter_count < 0) ? null : waiter_count);
+							alarmEvent.setCancelDescription(cancelMsg);
+						}
+					}
+				});
 				
 				// Information about how to disable this alarm
 				ae.createAlarmOptionsMessage(this, "SumWaiterCount");

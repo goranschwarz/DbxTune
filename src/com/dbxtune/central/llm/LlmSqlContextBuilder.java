@@ -133,26 +133,17 @@ public class LlmSqlContextBuilder
 	 * @param dbmsVersion       DBMS version string recorded for the report ({@code getReportingInstance().getDbmsVersionStr()}), may be blank.
 	 *                          Carried IN the link, since this link must work without JavaScript (the report's
 	 *                          'dsr-dbms-info' element is only read by the JavaScript links).
+	 * @param srvName           name of the server the report is for ({@code getReportingInstance().getServerName()}), may be blank.
+	 *                          Only used to record which server a request was about (see {@link LlmAdviceLog}).
 	 */
-	public static String buildAdviceLinkHtml(String dbxCentralBaseUrl, String sql, String ddlContext, String dbVendor, String dbmsVersion)
+	public static String buildAdviceLinkHtml(String dbxCentralBaseUrl, String sql, String ddlContext, String dbVendor, String dbmsVersion, String srvName)
 	{
-		return buildAdviceLinkHtml(dbxCentralBaseUrl, sql, ddlContext, null, dbVendor, dbmsVersion);
+		return buildAdviceLinkHtml(dbxCentralBaseUrl, sql, ddlContext, null, dbVendor, dbmsVersion, srvName, "Get LLM Optimization Advice", true);
 	}
 
 	/**
-	 * Same as {@link #buildAdviceLinkHtml(String, String, String, String, String)}, but also includes the
-	 * execution plan when the caller already has one in hand (e.g. a cached XML plan already
-	 * resolved for this row), so it doesn't have to be re-fetched from {@code /llm-advice}.
-	 *
-	 * @param plan execution plan text/XML, or null/blank if not available
-	 */
-	public static String buildAdviceLinkHtml(String dbxCentralBaseUrl, String sql, String ddlContext, String plan, String dbVendor, String dbmsVersion)
-	{
-		return buildAdviceLinkHtml(dbxCentralBaseUrl, sql, ddlContext, plan, dbVendor, dbmsVersion, "Get LLM Optimization Advice", true);
-	}
-
-	/**
-	 * Same as {@link #buildAdviceLinkHtml(String, String, String, String, String, String)}, but with control over
+	 * Same as {@link #buildAdviceLinkHtml(String, String, String, String, String, String)}, but also with the
+	 * execution plan (when the caller already has one in hand), and with control over
 	 * the link text and the leading icon.
 	 * <p>
 	 * This is for callers that renders a LIST of advice links for the same SQL Statement (for example
@@ -160,10 +151,11 @@ public class LlmSqlContextBuilder
 	 * Cache entries, each with its own plan). Such a caller wants to write the icon and the
 	 * "Get LLM Optimization Advice:" label ONCE, followed by short, per-entry anchors.
 	 *
+	 * @param plan         execution plan text/XML, or null/blank if not available
 	 * @param linkText     text of the anchor, for example "SQL only"
 	 * @param includeIcon  if a leading "open in new tab" icon should be part of the returned HTML
 	 */
-	public static String buildAdviceLinkHtml(String dbxCentralBaseUrl, String sql, String ddlContext, String plan, String dbVendor, String dbmsVersion, String linkText, boolean includeIcon)
+	public static String buildAdviceLinkHtml(String dbxCentralBaseUrl, String sql, String ddlContext, String plan, String dbVendor, String dbmsVersion, String srvName, String linkText, boolean includeIcon)
 	{
 		if ( ! LlmClientRegistry.isFeatureEnabledViaDbxCentral() )
 			return "";
@@ -178,6 +170,8 @@ public class LlmSqlContextBuilder
 		qs.add("dbVendor", dbVendor);
 		if (StringUtil.hasValue(dbmsVersion))
 			qs.add("dbmsVersion", dbmsVersion);
+		if (StringUtil.hasValue(srvName))
+			qs.add("srv", srvName);
 		if (StringUtil.hasValue(ddlContext))
 			qs.add("ddlContext", ddlContext);
 		if (StringUtil.hasValue(plan))

@@ -251,7 +251,8 @@ extends HttpServlet
 		// Placeholder password with "oauth:" prefix — form-based login is blocked in DbxCentralRealm
 		String placeholderPwd = "oauth:" + providerId + ":" + UUID.randomUUID();
 
-		int status = DbxTuneCentral.isNewAccountRequireApproval()
+		boolean requireApproval = DbxTuneCentral.isNewAccountRequireApproval();
+		int status = requireApproval
 				? DbxCentralUser.UserStatus.PENDING_APPROVAL.getBit()
 				: DbxCentralUser.UserStatus.ACTIVE.getBit();
 
@@ -266,7 +267,7 @@ extends HttpServlet
 		_logger.info("resolveOrCreateUser: auto-provisioned new user '{}' (email='{}', fullName='{}', provider='{}', status={})",
 				username, email, fullName, providerId, DbxCentralUser.UserStatus.toLabel(status));
 
-		NewAccountNotifier.sendAdminNotification(username, fullName, email, providerId, null);
+		NewAccountNotifier.sendAdminNotification(username, fullName, email, providerId, null, requireApproval);
 
 		return username;
 	}

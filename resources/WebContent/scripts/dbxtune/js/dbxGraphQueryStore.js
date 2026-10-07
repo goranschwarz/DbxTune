@@ -1543,6 +1543,7 @@ function queryStoreRenderTopQueries(r)
 			'No queries found for database <b>' + escHtml(_qsDbname) + '</b>.<br>'
 			+ '<small style="color:#6c757d;">Try <b>Extract now</b> to pull Query Store data from the live SQL Server.</small>');
 		$('#qs-tq-filter-count').text('');
+		_qsWaitCatUpdateToolbar(null);
 		return;
 	}
 
@@ -2048,8 +2049,13 @@ function _qsRenderTimeBrush(timeline, rankBy)
 			}
 			if (wiR < wiL) wiR = wiL;
 		}
-		_qsRenderWaitStackedBar(wiL === 0 && wiR === n - 1 ? timeline : timeline.slice(wiL, wiR + 1));
+		_qsTqWaitTimeline = (wiL === 0 && wiR === n - 1 ? timeline : timeline.slice(wiL, wiR + 1));
+		_qsRenderWaitStackedBar(_qsTqWaitTimeline);
 	}
+	else {
+		_qsTqWaitTimeline = null;
+	}
+	_qsWaitCatUpdateToolbar(hasWaitData ? timeline : null);
 
 	// Set up draggable handles
 	_qsWireBrushHandles(timeline, startTimes, endTimes);
@@ -2079,7 +2085,130 @@ function _qsRenderTimeBrush(timeline, rankBy)
  * One bar per interval, segments coloured by category. Uses a fixed palette cycled by category index.
  */
 
-var _qsTqWaitChart = null;
+var _qsTqWaitChart    = null;
+var _qsTqWaitTimeline = null;   // timeline slice last rendered in the wait chart (re-rendered when the wait-type filter changes)
+
+// SQL Server "wait_category_desc" → fixed colours (matches Microsoft's QS GUI palette where reasonable)
+var _qsWaitCatPalette = {
+	'CPU':              '#5b9bd5',
+	'Worker Thread':    '#9bc2e6',
+	'Lock':             '#c00000',
+	'Latch':            '#ed7d31',
+	'Buffer Latch':     '#f4b183',
+	'Buffer IO':        '#ffc000',
+	'Compilation':      '#a5a5a5',
+	'SQL CLR':          '#7030a0',
+	'Mirroring':        '#264478',
+	'Transaction':      '#9e480e',
+	'Idle':             '#bfbfbf',
+	'Preemptive':       '#70ad47',
+	'Service Broker':   '#a9d18e',
+	'Tran Log IO':      '#c00000',
+	'Network IO':       '#ffd966',
+	'Parallelism':      '#5b9bd5',
+	'Memory':           '#7030a0',
+	'User Wait':        '#bf9000',
+	'Tracing':          '#a5a5a5',
+	'Full Text Search': '#cc99ff',
+	'Other Disk IO':    '#ffc000',
+	'Replication':      '#264478',
+	'Log Rate Governor':'#990000',
+	'Unknown':          '#7f7f7f'
+};
+var _qsWaitCatFallback = ['#4472c4','#ed7d31','#a5a5a5','#ffc000','#5b9bd5','#70ad47','#9e480e','#7030a0','#264478','#c00000'];
+function _qsWaitCatColor(cat, idx) { return _qsWaitCatPalette[cat] || _qsWaitCatFallback[idx % _qsWaitCatFallback.length]; }
+
+/** All wait categories present in any interval of the timeline (first-seen order). */
+function _qsWaitCategories(timeline)
+{
+	var seen = {}, categories = [];
+	(timeline || []).forEach(function(t) {
+		if (!t.waitByCategory) return;
+		Object.keys(t.waitByCategory).forEach(function(cat) {
+			if (!seen[cat]) { seen[cat] = true; categories.push(cat); }
+		});
+	});
+	return categories;
+}
+
+// ── Wait-type filter (which categories are shown in the wait chart) ─────────
+// Stored as the set of HIDDEN categories, so categories not seen before are shown by default.
+function _qsWaitCatHiddenGet()
+{
+	try {
+		var arr = JSON.parse(localStorage.getItem('queryStore-waitCatHidden'));
+		if (Array.isArray(arr)) { var h = {}; arr.forEach(function(c) { h[c] = true; }); return h; }
+	} catch(e) {}
+	return {};
+}
+function _qsWaitCatHiddenSave(hidden)
+{
+	try { localStorage.setItem('queryStore-waitCatHidden', JSON.stringify(Object.keys(hidden).filter(function(c) { return hidden[c]; }))); } catch(e) {}
+}
+
+function _qsWaitCatUpdateBtnLabel()
+{
+	var total   = $('.qs-waitcat-chk').length;
+	var nHidden = $('.qs-waitcat-chk:not(:checked)').length;
+	$('#qs-waitcat-btn')
+		.html('Wait types: ' + (nHidden === 0 ? 'All' : (total - nHidden) + ' / ' + total) + ' &#9662;')
+		.css('font-weight', nHidden ? '600' : '');
+}
+
+/** Show/hide the "Wait types" toolbar button and (re)build its checkbox menu from the timeline's categories. */
+function _qsWaitCatUpdateToolbar(timeline)
+{
+	var categories = _qsWaitCategories(timeline);
+	if (!categories.length) { $('#qs-waitcat-wrap').hide(); $('#qs-waitcat-menu').hide(); return; }
+	$('#qs-waitcat-wrap').css('display', 'inline-flex');
+
+	var hidden = _qsWaitCatHiddenGet();
+	var html = '<div style="padding:2px 10px 4px 10px;border-bottom:1px solid rgba(128,128,128,0.3);margin-bottom:2px;white-space:nowrap;">'
+		+ '<a href="#" onclick="qsWaitCatSetAll(true);return false;">All</a>'
+		+ ' &nbsp;|&nbsp; <a href="#" onclick="qsWaitCatSetAll(false);return false;">None</a>'
+		+ '</div>';
+	categories.slice().sort().forEach(function(cat) {
+		html += '<label style="display:flex;align-items:center;gap:6px;margin:0;padding:1px 10px;cursor:pointer;white-space:nowrap;">'
+			+ '<input type="checkbox" class="qs-waitcat-chk" data-cat="' + escHtml(cat) + '"' + (hidden[cat] ? '' : ' checked')
+			+ ' onchange="qsWaitCatChanged();">'
+			+ '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + _qsWaitCatColor(cat, categories.indexOf(cat)) + ';"></span>'
+			+ escHtml(cat)
+			+ '</label>';
+	});
+	$('#qs-waitcat-menu').html(html);
+	_qsWaitCatUpdateBtnLabel();
+}
+
+function qsWaitCatToggleMenu(evt)
+{
+	if (evt) evt.stopPropagation();
+	var $menu = $('#qs-waitcat-menu');
+	if ($menu.is(':visible')) { $menu.hide(); $(document).off('mousedown.qsWaitCat'); return; }
+	$menu.show();
+	// Close when clicking anywhere outside the button/menu
+	$(document).off('mousedown.qsWaitCat').on('mousedown.qsWaitCat', function(e) {
+		if (!$(e.target).closest('#qs-waitcat-wrap').length) {
+			$menu.hide();
+			$(document).off('mousedown.qsWaitCat');
+		}
+	});
+}
+
+function qsWaitCatSetAll(on)
+{
+	$('.qs-waitcat-chk').prop('checked', on);
+	qsWaitCatChanged();
+}
+
+function qsWaitCatChanged()
+{
+	var hidden = _qsWaitCatHiddenGet();   // keeps the state of categories not present in the current data
+	$('.qs-waitcat-chk').each(function() { hidden[this.dataset.cat] = !this.checked; });
+	_qsWaitCatHiddenSave(hidden);
+	_qsWaitCatUpdateBtnLabel();
+	if (_qsTqWaitTimeline) _qsRenderWaitStackedBar(_qsTqWaitTimeline);
+}
+
 function _qsRenderWaitStackedBar(timeline)
 {
 	if (typeof Chart === 'undefined') return;
@@ -2088,45 +2217,17 @@ function _qsRenderWaitStackedBar(timeline)
 
 	if (_qsTqWaitChart) { try { _qsTqWaitChart.destroy(); } catch(e){} _qsTqWaitChart = null; }
 
-	// Discover the global category order from the first row that has any
-	var categories = [];
-	for (var i = 0; i < timeline.length; i++) {
-		if (timeline[i].waitByCategory) { categories = Object.keys(timeline[i].waitByCategory); break; }
-	}
-	if (!categories.length) return;
+	// All categories in the data (the index picks the fallback colour, so colours stay stable when filtering)
+	var allCategories = _qsWaitCategories(timeline);
+	if (!allCategories.length) return;
 
-	// SQL Server "wait_category_desc" → fixed colours (matches Microsoft's QS GUI palette where reasonable)
-	var palette = {
-		'CPU':              '#5b9bd5',
-		'Worker Thread':    '#9bc2e6',
-		'Lock':             '#c00000',
-		'Latch':            '#ed7d31',
-		'Buffer Latch':     '#f4b183',
-		'Buffer IO':        '#ffc000',
-		'Compilation':      '#a5a5a5',
-		'SQL CLR':          '#7030a0',
-		'Mirroring':        '#264478',
-		'Transaction':      '#9e480e',
-		'Idle':             '#bfbfbf',
-		'Preemptive':       '#70ad47',
-		'Service Broker':   '#a9d18e',
-		'Tran Log IO':      '#c00000',
-		'Network IO':       '#ffd966',
-		'Parallelism':      '#5b9bd5',
-		'Memory':           '#7030a0',
-		'User Wait':        '#bf9000',
-		'Tracing':          '#a5a5a5',
-		'Full Text Search': '#cc99ff',
-		'Other Disk IO':    '#ffc000',
-		'Replication':      '#264478',
-		'Log Rate Governor':'#990000',
-		'Unknown':          '#7f7f7f'
-	};
-	var fallback = ['#4472c4','#ed7d31','#a5a5a5','#ffc000','#5b9bd5','#70ad47','#9e480e','#7030a0','#264478','#c00000'];
+	// Skip categories unchecked in the "Wait types" filter
+	var hidden = _qsWaitCatHiddenGet();
+	var categories = allCategories.filter(function(c) { return !hidden[c]; });
 
 	var labels = timeline.map(function(t) { return t.label || ''; });
-	var datasets = categories.map(function(cat, idx) {
-		var color = palette[cat] || fallback[idx % fallback.length];
+	var datasets = categories.map(function(cat) {
+		var color = _qsWaitCatColor(cat, allCategories.indexOf(cat));
 		return {
 			label: cat,
 			data:  timeline.map(function(t) {
@@ -2136,7 +2237,7 @@ function _qsRenderWaitStackedBar(timeline)
 			borderColor:     color,
 			borderWidth: 0,
 			barPercentage: 1.0,
-			categoryPercentage: 1.0
+			categoryPercentage: 0.88   // small gap between the interval bars
 		};
 	});
 

@@ -46,6 +46,7 @@ import com.dbxtune.ICounterController;
 import com.dbxtune.ICounterController.DbmsOption;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventBlockingLockAlarm;
 import com.dbxtune.alarm.events.AlarmEventExtensiveUsage;
@@ -2452,8 +2453,39 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 
 								AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, spid, ImBlockingOthersMaxTimeInSec, BlockingOtherSpidsStr, blockCount);
 
-								ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-								
+								// The extended description is from when the alarm was (re)raised: the statement at that time
+								final String raiseText = extendedDescText;
+								final String raiseHtml = extendedDescHtml;
+
+								// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+								ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+								{
+									// Called on RAISE/RE-RAISE/CANCEL: the extended description is from when it was (re)raised
+									@Override
+									public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+									{
+										// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description (from when it was (re)raised)
+										alarmEvent.setExtendedDescription(raiseText, raiseHtml);
+
+										// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+										if (AlarmPhase.CANCEL.equals(phase))
+										{
+											int    rowId = cm.getRowIdWhere(DATA_RATE, "session_id", spid);   // the PK also has 'monSource' (which may change), so find the session by 'session_id'
+											String label = "Session " + spid;
+
+											if (rowId == -1)
+												alarmEvent.setCancelDescription(label + " has no active statement now");
+											else
+											{
+												Object ImBlockingOthersMaxTimeInSec = cm.getRateValue(rowId, "ImBlockingOthersMaxTimeInSec");
+
+												String cancelMsg = getAlarmCancelText(label + ": max time it blocks others", ImBlockingOthersMaxTimeInSec + " seconds", " seconds");
+												alarmEvent.setCancelDescription(cancelMsg);
+											}
+										}
+									}
+								});
+
 								// Information about how to disable this alarm
 								ae.createAlarmOptionsMessage(this, "ImBlockingOthersMaxTimeInSec");
 
@@ -2526,9 +2558,41 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 								String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
 
 								AlarmEvent ae = new AlarmEventHoldingLocksWhileWaitForClientInput(cm, threshold, spid, ExecTimeInSec, startTime, hasExlusiveLocks);
-								
-								ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-								
+
+								// The extended description is from when the alarm was (re)raised: the statement at that time
+								final String raiseText = extendedDescText;
+								final String raiseHtml = extendedDescHtml;
+
+								// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+								ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+								{
+									// Called on RAISE/RE-RAISE/CANCEL: the extended description is from when it was (re)raised
+									@Override
+									public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+									{
+										// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description (from when it was (re)raised)
+										alarmEvent.setExtendedDescription(raiseText, raiseHtml);
+
+										// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+										if (AlarmPhase.CANCEL.equals(phase))
+										{
+											int    rowId = cm.getRowIdWhere(DATA_RATE, "session_id", spid);   // the PK also has 'monSource' (which may change), so find the session by 'session_id'
+											String label = "Session " + spid;
+
+											if (rowId == -1)
+												alarmEvent.setCancelDescription(label + " has no active statement now");
+											else
+											{
+												Double ExecTimeInMs = cm.getRateValueAsDouble(rowId, "ExecTimeInMs");
+												Object monSource    = cm.getRateValue        (rowId, "monSource");
+
+												String cancelMsg = getAlarmCancelText(label + ": statement exec time", (ExecTimeInMs == null ? "unknown" : (ExecTimeInMs.intValue() / 1000) + "") + " seconds (" + monSource + ")", " seconds");
+												alarmEvent.setCancelDescription(cancelMsg);
+											}
+										}
+									}
+								});
+
 								// Information about how to disable this alarm
 								ae.createAlarmOptionsMessage(this, "HoldingLocksWhileWaitForClientInputInSec");
 
@@ -2569,9 +2633,41 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
 
 							AlarmEvent ae = new AlarmEventExtensiveUsage(cm, threshold, AlarmEventExtensiveUsage.Resource.TEMPDB, "TempdbUsageMb", TempdbUsageMb);
+							final Object alarmSessionId = cm.getRateValue(r, "session_id");
 
-							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-							
+							// The extended description is from when the alarm was (re)raised: the statement at that time
+							final String raiseText = extendedDescText;
+							final String raiseHtml = extendedDescHtml;
+
+							// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+							ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+							{
+								// Called on RAISE/RE-RAISE/CANCEL: the extended description is from when it was (re)raised
+								@Override
+								public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description (from when it was (re)raised)
+									alarmEvent.setExtendedDescription(raiseText, raiseHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										int    rowId = cm.getRowIdWhere(DATA_RATE, "session_id", alarmSessionId);   // the PK also has 'monSource' (which may change), so find the session by 'session_id'
+										String label = "Session " + alarmSessionId;
+
+										if (rowId == -1)
+											alarmEvent.setCancelDescription(label + " has no active statement now");
+										else
+										{
+											Object TempdbUsageMb = cm.getRateValue(rowId, "TempdbUsageMb");
+
+											String cancelMsg = getAlarmCancelText(label + ": tempdb usage", toAlarmCancelValue(TempdbUsageMb) + " MB", " MB");
+											alarmEvent.setCancelDescription(cancelMsg);
+										}
+									}
+								}
+							});
+
 							// Information about how to disable this alarm
 							ae.createAlarmOptionsMessage(this, "TempdbUsageMb");
 

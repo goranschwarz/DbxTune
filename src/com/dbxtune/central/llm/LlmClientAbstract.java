@@ -288,6 +288,12 @@ implements LlmClient
 		return response;
 	}
 
+	/** A numeric JSON value as Integer, or null when missing/not a number (for example token counts a provider did not report). */
+	protected static Integer intOrNull(JsonNode node)
+	{
+		return (node != null && node.isNumber()) ? node.asInt() : null;
+	}
+
 	private static String firstText(JsonNode root, String... fieldNames)
 	{
 		for (String name : fieldNames)

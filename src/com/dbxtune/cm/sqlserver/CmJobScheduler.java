@@ -41,6 +41,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventJobSchedulerLastRunFailed;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventJobSchedulerLongRunning;
@@ -883,6 +884,7 @@ extends CountersModel
 	//-- Alarm Handling
 	//--------------------------------------------------------------------------------------
 	//--------------------------------------------------------------------------------------
+
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -935,12 +937,45 @@ extends CountersModel
 						String start_execution_date = toYmdHm(cm.getAbsValueAsTimestamp(r, "start_execution_date"));
 						String current_runtime_hms  = cm.getAbsString                  (r, "current_runtime_hms");
 						
-						String extendedDescText = cm.toTextTableString(DATA_ABS, r);
-						String extendedDescHtml = cm.toHtmlTableString(DATA_ABS, r, true, false, false);
-
-						// Create the alarm
 						AlarmEvent ae = new AlarmEventJobSchedulerLongRunning(cm, job_name, current_step_name, start_execution_date, current_runtime_hms);
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, null)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								int    rowId = cm.getAbsRowIdWhere("job_name", job_name);   // this CM has no PK: find the row by the job name
+								String label = "Job '" + job_name + "'";
+
+								if (rowId != -1)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description
+									String extendedDescText = cm.toTextTableString(DATA_ABS, rowId);
+									String extendedDescHtml = cm.toHtmlTableString(DATA_ABS, rowId, true, false, false);
+									alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										String    status            = cm.getAbsString         (rowId, "status");
+										Timestamp last_run_datetime = cm.getAbsValueAsTimestamp(rowId, "last_run_datetime");
+										Timestamp next_run_datetime = cm.getAbsValueAsTimestamp(rowId, "next_run_datetime");
+
+										String cancelMsg = getAlarmCancelText(label + ": status", "'" + status + "' (last run " + toAlarmCancelValue(last_run_datetime) + ", next run " + toAlarmCancelValue(next_run_datetime) + ")");
+										alarmEvent.setCancelDescription(cancelMsg);
+									}
+								}
+								else
+								{
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+									}
+								}
+							}
+						});
 
 						// Set info how we could enable/disable this alarm
 //						ae.setDisableAlarmDescription(getDisableAlarmMessage(status, job_name, dbmsSrvName));
@@ -983,12 +1018,45 @@ extends CountersModel
 					{
 						String next_run_datetime = toYmdHm(cm.getAbsValueAsTimestamp(r, "next_run_datetime"));
 
-						String extendedDescText = cm.toTextTableString(DATA_ABS, r);
-						String extendedDescHtml = cm.toHtmlTableString(DATA_ABS, r, true, false, false);
-
-						// Create the alarm
 						AlarmEvent ae = new AlarmEventJobSchedulerMissed(cm, job_name, next_run_datetime);
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, null)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								int    rowId = cm.getAbsRowIdWhere("job_name", job_name);   // this CM has no PK: find the row by the job name
+								String label = "Job '" + job_name + "'";
+
+								if (rowId != -1)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description
+									String extendedDescText = cm.toTextTableString(DATA_ABS, rowId);
+									String extendedDescHtml = cm.toHtmlTableString(DATA_ABS, rowId, true, false, false);
+									alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										String    status            = cm.getAbsString         (rowId, "status");
+										Timestamp last_run_datetime = cm.getAbsValueAsTimestamp(rowId, "last_run_datetime");
+										Timestamp next_run_datetime = cm.getAbsValueAsTimestamp(rowId, "next_run_datetime");
+
+										String cancelMsg = getAlarmCancelText(label + ": status", "'" + status + "' (last run " + toAlarmCancelValue(last_run_datetime) + ", next run " + toAlarmCancelValue(next_run_datetime) + ")");
+										alarmEvent.setCancelDescription(cancelMsg);
+									}
+								}
+								else
+								{
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+									}
+								}
+							}
+						});
 
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "MISSED");
@@ -1028,12 +1096,45 @@ extends CountersModel
 					{
 						String last_run_datetime = toYmdHm(cm.getAbsValueAsTimestamp(r, "last_run_datetime"));
 
-						String extendedDescText = cm.toTextTableString(DATA_ABS, r);
-						String extendedDescHtml = cm.toHtmlTableString(DATA_ABS, r, true, false, false);
-
-						// Create the alarm
 						AlarmEvent ae = new AlarmEventJobSchedulerLastRunFailed(cm, job_name, last_run_datetime);
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, null)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								int    rowId = cm.getAbsRowIdWhere("job_name", job_name);   // this CM has no PK: find the row by the job name
+								String label = "Job '" + job_name + "'";
+
+								if (rowId != -1)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description
+									String extendedDescText = cm.toTextTableString(DATA_ABS, rowId);
+									String extendedDescHtml = cm.toHtmlTableString(DATA_ABS, rowId, true, false, false);
+									alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										String    status            = cm.getAbsString         (rowId, "status");
+										Timestamp last_run_datetime = cm.getAbsValueAsTimestamp(rowId, "last_run_datetime");
+										Timestamp next_run_datetime = cm.getAbsValueAsTimestamp(rowId, "next_run_datetime");
+
+										String cancelMsg = getAlarmCancelText(label + ": status", "'" + status + "' (last run " + toAlarmCancelValue(last_run_datetime) + ", next run " + toAlarmCancelValue(next_run_datetime) + ")");
+										alarmEvent.setCancelDescription(cancelMsg);
+									}
+								}
+								else
+								{
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+									}
+								}
+							}
+						});
 						
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "FAILED_LAST_RUN");

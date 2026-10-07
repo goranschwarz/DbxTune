@@ -412,6 +412,7 @@ extends AlarmWriterAbstract
 		extra.put("hasExtendedDescription"    , StringUtil.hasValue(alarmEvent.getExtendedDescription()));
 		extra.put("extendedDescriptionLength" , alarmEvent.getExtendedDescription() == null ? 0 : alarmEvent.getExtendedDescription().length());
 		extra.put("hasExtraInfo"              , StringUtil.hasValue(alarmEvent.getExtraInfo()));
+		extra.put("hasCancelDescription"      , StringUtil.hasValue(alarmEvent.getCancelDescription()));
 		extra.put("hasDbxCentralUrl"          , StringUtil.hasValue(alarmEvent.getDbxCentralUrl()));
 
 		// The summary as body elements: with a leading comma (to follow another body element), and without one
@@ -715,7 +716,7 @@ extends AlarmWriterAbstract
 				+ "<code>${cardStyle}</code> (good/attention/warning/accent), "
 				+ "<code>${statusIcon}</code>, <code>${statusText}</code> and <code>${statusColor}</code> (an emoji, eg 'ERROR - NEW ALARM' / 'STILL ACTIVE - WARNING' / 'RESOLVED', and a TextBlock colour), "
 				+ "<code>${crTimeShort}</code>, <code>${reRaiseTimeShort}</code> and <code>${cancelTimeShort}</code> (just 'HH:mm' when it happened today, else 'yyyy-MM-dd HH:mm', empty when not set; the full times are still in <code>${crTimeStr}</code> etc), "
-				+ "<code>$hasCardDescription</code>, <code>$hasExtendedDescription</code>, <code>$hasExtraInfo</code>, <code>$hasDbxCentralUrl</code> (booleans for <code>#if</code>), "
+				+ "<code>$hasCardDescription</code>, <code>$hasExtendedDescription</code>, <code>$hasExtraInfo</code>, <code>$hasDbxCentralUrl</code>, <code>$hasCancelDescription</code> (booleans for <code>#if</code>), "
 				+ "<code>$extendedDescriptionLength</code> (the length of the extended description BEFORE escaping; when it is 1024 characters or more the built-in card shows a short 'left out' line instead), "
 				+ "<code>${activeAlarmsSummaryTeams}</code> (the Active Alarms Summary as ready made body elements, WITH a leading comma), "
 				+ "<code>${activeAlarmsSummaryTeamsItems}</code> (the same WITHOUT the leading comma, for the items of a Container), "
@@ -1022,6 +1023,9 @@ extends AlarmWriterAbstract
 			+ "#end\n"
 			+ "#if( $type == 'CANCEL' )\n"
 			+ "         ,{ \"type\": \"TextBlock\", \"text\": \"Was ${severity} \\u00b7 lasted ${fullDuration} \\u00b7 resolved ${cancelTimeShort}\", \"isSubtle\": true, \"size\": \"Small\", \"wrap\": true, \"spacing\": \"Small\" }\n"
+			+ "#if( $hasCancelDescription )\n"
+			+ "         ,{ \"type\": \"TextBlock\", \"text\": \"${cancelDescription}\", \"wrap\": true, \"spacing\": \"Small\" }\n"
+			+ "#end\n"
 			+ "#elseif( $type == 'RE-RAISE' )\n"
 			+ "         ,{ \"type\": \"TextBlock\", \"text\": \"Active for ${fullDuration} \\u00b7 re-raised ${reRaiseCount} times \\u00b7 first raised ${crTimeShort}\", \"isSubtle\": true, \"size\": \"Small\", \"wrap\": true, \"spacing\": \"Small\" }\n"
 			+ "#else\n"

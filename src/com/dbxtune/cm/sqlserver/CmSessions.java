@@ -45,6 +45,7 @@ import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.AlarmHelper;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventLongRunningStatement;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventDacInUse;
@@ -883,7 +884,42 @@ extends CountersModel
 							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
 													
 							AlarmEvent ae = new AlarmEventLongRunningStatement(cm, threshold, StatementExecInSec, StatementStartTime, DBName, Login, Command, tran_name);
-							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+							final Object alarmSessionId = cm.getAbsValue(r, "session_id");
+
+							// The extended description is from when the alarm was (re)raised: the statement at that time
+							final String raiseText = extendedDescText;
+							final String raiseHtml = extendedDescHtml;
+
+							// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+							ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+							{
+								// Called on RAISE/RE-RAISE/CANCEL: the extended description is from when it was (re)raised
+								@Override
+								public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description (from when it was (re)raised)
+									alarmEvent.setExtendedDescription(raiseText, raiseHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										int    rowId = cm.getAbsRowIdWhere("session_id", alarmSessionId);
+										String label = "Session " + alarmSessionId;
+
+										if (rowId == -1)
+											alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+										else
+										{
+											Double ExecTimeInMs = cm.getAbsValueAsDouble(rowId, "ExecTimeInMs");
+
+											if (ExecTimeInMs == null || ExecTimeInMs <= 0)
+												alarmEvent.setCancelDescription(label + " has no running statement now");
+											else
+												alarmEvent.setCancelDescription(getAlarmCancelText(label + ": statement exec time", (ExecTimeInMs.intValue() / 1000) + " seconds", " seconds"));
+										}
+									}
+								}
+							});
 						
 							// Information about how to disable this alarm
 							ae.createAlarmOptionsMessage(this, "StatementExecInSec");
@@ -923,7 +959,34 @@ extends CountersModel
 						String inDBName  = "" + cm.getAbsValue(r, "DBName");
 
 						AlarmEvent ae = new AlarmEventDacInUse(cm, spid, fromIp, fromHost, asLogin, loginTime, inDBName);
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The extended description is from when the alarm was (re)raised: the session at that time
+						final String raiseText = extendedDescText;
+						final String raiseHtml = extendedDescHtml;
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, null)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL: the extended description is from when it was (re)raised
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description (from when it was (re)raised)
+								alarmEvent.setExtendedDescription(raiseText, raiseHtml);
+
+								// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+								if (AlarmPhase.CANCEL.equals(phase))
+								{
+									int    rowId = cm.getAbsRowIdWhere("session_id", StringUtil.parseInt(spid + "", -1));   // 'spid' is a String here
+									String label = "Session " + spid;
+
+									if (rowId == -1)
+										alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+									else
+										alarmEvent.setCancelDescription(label + " is still connected (the DAC alarm was cancelled)");
+								}
+							}
+						});
 					
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "DacInUse");

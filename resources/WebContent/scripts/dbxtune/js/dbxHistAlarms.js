@@ -397,7 +397,7 @@ function histAlarmApplyFilter()
 			data = data.filter(function(e) {
 				return Object.values(e).some(function(v) {
 					return re.test(v == null ? '' : String(v));
-				});
+				}) || re.test(_histAlarmCancelDesc(e)); // RAISE rows: the cancel description is on the matching CANCEL row
 			});
 		} catch(ex) { /* invalid regex — show all */ }
 	}
@@ -539,7 +539,12 @@ function histAlarmRender(data)
 				html += '<td>' + escHtml(ts) + '</td>';
 			} else if (c.key === 'description') {
 				var val = (row[c.key] == null) ? '' : String(row[c.key]).replace(/<[^>]*>/g, '');
-				html += '<td>' + escHtml(val) + '</td>';
+				// How things looked when the alarm went away: a second line (on RAISE rows: from the matching CANCEL)
+				var cancelDesc = _histAlarmCancelDesc(row);
+				var cancelHtml = cancelDesc
+					? '<div style="opacity:0.7;" title="Cancel Description: how things looked when the alarm was cancelled">&#8627; ' + escHtml(cancelDesc) + '</div>'
+					: '';
+				html += '<td>' + escHtml(val) + cancelHtml + '</td>';
 			} else {
 				var val = (row[c.key] == null) ? '' : String(row[c.key]);
 				html += '<td>' + escHtml(val) + '</td>';
@@ -574,12 +579,15 @@ function histAlarmShowDetail(idx)
 		}
 	}
 
+	// RAISE rows have no cancelTime of their own: use the matching CANCEL (if any)
+	var cancelTime = row.cancelTime || (row._matchedCancel ? row._matchedCancel.eventTime : null);
+
 	var fields = [
 		['Server',               row.srvName,              false],
 		['Time',                 row.eventTime  ? moment(row.eventTime ).format('YYYY-MM-DD HH:mm:ss') : '', false],
 		['Action',               row.action,               false],
 		['Severity',             null,                     false],  // badge
-		['Cancel Time',          row.cancelTime ? moment(row.cancelTime).format('YYYY-MM-DD HH:mm:ss') : '', false],
+		['Cancel Time',          cancelTime ? moment(cancelTime).format('YYYY-MM-DD HH:mm:ss') : '', false],
 		['Duration',             duration,                 false, durationOrange],
 		['Category',             row.category,             false],
 		['State',                row.state,                false],
@@ -599,6 +607,7 @@ function histAlarmShowDetail(idx)
 		['Session Start',        row.SessionStartTime ? moment(row.SessionStartTime).format('YYYY-MM-DD HH:mm:ss') : '', false],
 		['Session Sample',       row.SessionSampleTime ? moment(row.SessionSampleTime).format('YYYY-MM-DD HH:mm:ss') : '', false],
 		['Description',          row.description,          true ],
+		['Cancel Description',   _histAlarmCancelDesc(row), false],  // plain text: how things looked when the alarm went away (on RAISE rows: from the matching CANCEL)
 		['Last Description',     row.lastDescription,      true ],
 		['Extended Description', row.extendedDescription,  true ],
 		['Last Ext. Description',row.lastExtendedDescription, true ],
@@ -784,6 +793,20 @@ function _histAlarmMatchEvents(allData, activeAlarms)
 		if (bestCancel && !bestCancel._matchedRaise)
 			bestCancel._matchedRaise = row;
 	});
+}
+
+/**
+ * The "cancel description" (how things looked when the alarm went away) for a row:
+ * a CANCEL row has its own, a RAISE row gets it from its matching CANCEL (see _histAlarmMatchEvents). '' if none.
+ */
+function _histAlarmCancelDesc(row)
+{
+	var action = (row.action || '').toUpperCase();
+	if (action === 'CANCEL')
+		return row.cancelDescription || '';
+	if (action === 'RAISE' && row._matchedCancel)
+		return row._matchedCancel.cancelDescription || '';
+	return '';
 }
 
 function _histAlarmEventKey(row)

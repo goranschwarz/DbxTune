@@ -32,6 +32,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventLongRunningDetachedTransaction;
 import com.dbxtune.cm.CmSettingsHelper;
@@ -253,6 +254,47 @@ extends CountersModel
 						if (ageInSec.intValue() > threshold)
 						{
 							AlarmEvent ae = new AlarmEventLongRunningDetachedTransaction(cm, threshold, dbname, ageInSec, xactname);
+
+							// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+							ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+							{
+								// Called on RAISE/RE-RAISE/CANCEL
+								@Override
+								public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+								{
+									// This CM has no PK: find the transaction by database and transaction name
+									int rowId = -1;
+									for (int row = 0; row < cm.getAbsRowCount(); row++)
+									{
+										if (dbname.equals(cm.getAbsString(row, "dbname")) && xactname.equals(cm.getAbsString(row, "xactname")))
+										{
+											rowId = row;
+											break;
+										}
+									}
+									String label = "Transaction '" + xactname + "' in database '" + dbname + "'";
+
+									if (rowId != -1)
+									{
+										// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+										if (AlarmPhase.CANCEL.equals(phase))
+										{
+											String state    = cm.getAbsString      (rowId, "state");
+											Double ageInSec = cm.getAbsValueAsDouble(rowId, "ageInSec");
+
+											String cancelMsg = getAlarmCancelText(label + ": state", "'" + state + "', age " + toAlarmCancelValue(ageInSec) + " seconds", " seconds");
+											alarmEvent.setCancelDescription(cancelMsg);
+										}
+									}
+									else
+									{
+										if (AlarmPhase.CANCEL.equals(phase))
+										{
+											alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+										}
+									}
+								}
+							});
 
 							// Information about how to disable this alarm
 							ae.createAlarmOptionsMessage(this, "state[Detached]");

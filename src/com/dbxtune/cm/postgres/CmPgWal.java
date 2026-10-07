@@ -32,6 +32,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.postgres.AlarmEventPgWalSizeHigh;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -402,11 +403,29 @@ extends CountersModel
 
 				if (pg_waldir_total_size_mb.intValue() >= threshold)
 				{
-					String extendedDescText = "";
-					String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_WAL_SIZE_MB);
-
 					AlarmEvent ae = new AlarmEventPgWalSizeHigh(cm, pg_waldir_total_size_mb, threshold);
-					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+					{
+						// Called on RAISE/RE-RAISE/CANCEL: the graphs are from the CURRENT data
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+						{
+							// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+							String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_WAL_SIZE_MB);
+							alarmEvent.setExtendedDescription("", extendedDescHtml);
+
+							// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+							if (AlarmPhase.CANCEL.equals(phase))
+							{
+								Double pg_waldir_total_size_mb = cm.getAbsValueSum("pg_waldir_total_size_mb");
+
+								String cancelMsg = getAlarmCancelText("WAL directory size", toAlarmCancelValue(pg_waldir_total_size_mb) + " MB", " MB");
+								alarmEvent.setCancelDescription(cancelMsg);
+							}
+						}
+					});
 
 					// Information about how to disable this alarm
 					ae.createAlarmOptionsMessage(this, "pg_waldir_total_size_mb");

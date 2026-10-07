@@ -33,6 +33,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventTempdbSpidUsage;
 import com.dbxtune.cm.CmSettingsHelper;
@@ -584,6 +585,7 @@ extends CountersModel
 		
 		return sql;
 	}
+
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -657,17 +659,17 @@ extends CountersModel
 						{
 //							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 //							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-							String extendedDescText = cm.toTextTableString(DATA_ABS, r);
-							String extendedDescHtml = cm.toHtmlTableString(DATA_ABS, r, true, false, false);
+							// The session as it was when the alarm was raised (the row index 'r' is only valid in this sample)
+							final String rowText = cm.toTextTableString(DATA_ABS, r);
+							final String rowHtml = cm.toHtmlTableString(DATA_ABS, r, true, false, false);
 
-							// Get a small graph (from CmSummary) about the usage for the last hour
-							CountersModel cmSummary = getCounterController().getCmByName(CmSummary.CM_NAME);
-							extendedDescHtml += "<br><br>" + cmSummary.getGraphDataHistoryAsHtmlImage(CmSummary.GRAPH_NAME_TEMPDB_SPID_USAGE);
+							// Who used tempdb when the alarm was raised
+							String usageHtml = "";
 
 							// Get a small html table, with SPID's above 10% usage from the threshold used to fire the alarm
 							// This will show us if there are MORE than 1 SPID that is *eating* tempdb space!
 							double reportSpaceThresholdInMb = threshold * 0.1;
-							extendedDescHtml += "<br><br>" + TempdbUsagePerSpid.getInstance().toHtmlTableString(reportSpaceThresholdInMb);
+							usageHtml += "<br><br>" + TempdbUsagePerSpid.getInstance().toHtmlTableString(reportSpaceThresholdInMb);
 
 							// get ACTIVE Statement for 'session_id'
 							CountersModel cmActiveStatements = getCounterController().getCmByName(CmActiveStatements.CM_NAME);
@@ -677,22 +679,59 @@ extends CountersModel
 								int[] activeStmntRowsArr = cmActiveStatements.getAbsRowIdsWhere("session_id", session_id);
 								if (activeStmntRowsArr != null && activeStmntRowsArr.length > 0)
 								{
-									extendedDescHtml += "<br><br>" + activeStmntRowsArr.length + " Active Statement(s) was found for session_id=" + session_id;
+									usageHtml += "<br><br>" + activeStmntRowsArr.length + " Active Statement(s) was found for session_id=" + session_id;
 									for (int asr=0; asr<activeStmntRowsArr.length; asr++)
 									{
 										int asrRowId = activeStmntRowsArr[asr];
-										extendedDescHtml += "<br><br>" + cmActiveStatements.toHtmlTableString(DATA_ABS, asrRowId, true, false, false);
+										usageHtml += "<br><br>" + cmActiveStatements.toHtmlTableString(DATA_ABS, asrRowId, true, false, false);
 									}
 								}
 								else
 								{
-									extendedDescHtml += "<br><br>No Active Statement was found for session_id=" + session_id;
+									usageHtml += "<br><br>No Active Statement was found for session_id=" + session_id;
 								}
 							}
+							final String usageAtRaiseHtml = usageHtml;
 
 							// Send the Alarm
 							AlarmEvent ae = new AlarmEventTempdbSpidUsage(cm, threshold, session_id, TotalUsageMb_abs, last_request_start_time, last_request_in_sec, login_name, program_name);
-							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+							// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+							ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+							{
+								// Called on RAISE/RE-RAISE/CANCEL: the session and the usage tables are from when it was (re)raised, the graph is from the CURRENT data
+								@Override
+								public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description
+									String extendedDescHtml = rowHtml;
+
+//									Get a small graph (from CmSummary) about the usage for the last hour
+									CountersModel cmSummary = getCounterController().getCmByName(CmSummary.CM_NAME);
+									extendedDescHtml += "<br><br>" + cmSummary.getGraphDataHistoryAsHtmlImage(CmSummary.GRAPH_NAME_TEMPDB_SPID_USAGE);
+
+									extendedDescHtml += usageAtRaiseHtml;
+
+									alarmEvent.setExtendedDescription(rowText, extendedDescHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										int    rowId = cm.getAbsRowIdWhere("session_id", session_id);
+										String label = "Session " + session_id;
+
+										if (rowId == -1)
+											alarmEvent.setCancelDescription(label + " uses no tempdb now (or is gone)");
+										else
+										{
+											int TotalUsageMb_abs = cm.getAbsValueAsInteger(rowId, "TotalUsageMb_abs", -1);
+
+											String cancelMsg = getAlarmCancelText(label + ": tempdb usage", TotalUsageMb_abs + " MB", " MB");
+											alarmEvent.setCancelDescription(cancelMsg);
+										}
+									}
+								}
+							});
 						
 							// Information about how to disable this alarm
 							ae.createAlarmOptionsMessage(this, "TotalUsageMb_abs");

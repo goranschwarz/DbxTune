@@ -37,6 +37,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventConfigResourceIsLow;
 import com.dbxtune.alarm.events.postgres.AlarmEventPgChecksumFailure;
@@ -997,12 +998,34 @@ extends CountersModel
 
 				if (numFree < threshold)
 				{
-					String extendedDescText = "";
-					String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_CONNECTIONS_SUM);
-					       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_CONNECTIONS);
-
 					AlarmEvent ae = new AlarmEventConfigResourceIsLow(cm, "max_connections", numFree, sumNumbackends, pctUsed, threshold);
-					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+					{
+						// Called on RAISE/RE-RAISE/CANCEL: the graphs are from the CURRENT data
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+						{
+							// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+							String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_CONNECTIONS_SUM);
+							       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_CONNECTIONS);
+							alarmEvent.setExtendedDescription("", extendedDescHtml);
+
+							// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+							if (AlarmPhase.CANCEL.equals(phase))
+							{
+								Double srv_cfg_max_connections = cm.getAbsValueMax("srv_cfg_max_connections");
+								Double numbackends             = cm.getAbsValueSum("numbackends");
+
+								if (srv_cfg_max_connections != null && numbackends != null)
+								{
+									String cancelMsg = getAlarmCancelText("Free connections", (srv_cfg_max_connections.intValue() - numbackends.intValue()) + " (" + numbackends.intValue() + " used of max_connections " + srv_cfg_max_connections.intValue() + ")");
+									alarmEvent.setCancelDescription(cancelMsg);
+								}
+							}
+						}
+					});
 
 					// Information about how to disable this alarm
 					ae.createAlarmOptionsMessage(this, "free_connections");

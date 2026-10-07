@@ -34,6 +34,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.dbxtune.central.llm.LlmAdviceLog;
 import com.dbxtune.central.llm.LlmClient;
 import com.dbxtune.central.llm.LlmClientRegistry;
 import com.dbxtune.central.llm.LlmOptimizeRequest;
@@ -154,13 +155,18 @@ extends HttpServlet
 			return;
 		}
 
+		// Every real provider call (success or failure) is recorded by LlmAdviceLog - after the answer
+		// has been written, so the user does not wait for it, and in a 'finally' so it is recorded even
+		// when the browser has gone away (the provider call has already been made, and paid for).
+		long startTime = System.currentTimeMillis();
+		LlmOptimizeResponse llmResponse;
 		try
 		{
-			LlmOptimizeResponse llmResponse = client.optimize(llmRequest);
-			om.writeValue(out, llmResponse);
+			llmResponse = client.optimize(llmRequest);
 		}
 		catch (Exception ex)
 		{
+			long durationMs = System.currentTimeMillis() - startTime;
 			_logger.warn("LlmSqlOptimizeServlet: problem calling LLM provider '" + client.getProviderId() + "'.", ex);
 
 			// Best-effort: the prompt is a pure function of the request, so it can still be shown as
@@ -173,13 +179,33 @@ extends HttpServlet
 			extra.put("providerId", client.getProviderId());
 			if (promptSent != null)
 				extra.put("promptSent", promptSent);
+			Integer savedForDays = LlmAdviceLog.getSavedForDays();
+			if (savedForDays != null)
+				extra.put("savedForDays", savedForDays.toString());
 
-			writeError(om, out, response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "llm-call-failed", ex.getMessage(), extra);
+			try
+			{
+				writeError(om, out, response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "llm-call-failed", ex.getMessage(), extra);
+			}
+			finally
+			{
+				LlmAdviceLog.save(request, llmRequest, client, null, ex, promptSent, durationMs);
+			}
 			return;
 		}
+		long durationMs = System.currentTimeMillis() - startTime;
 
-		out.flush();
-		out.close();
+		try
+		{
+			llmResponse.setSavedForDays(LlmAdviceLog.getSavedForDays());
+			om.writeValue(out, llmResponse);
+			out.flush();
+			out.close();
+		}
+		finally
+		{
+			LlmAdviceLog.save(request, llmRequest, client, llmResponse, null, llmResponse.getPromptSent(), durationMs);
+		}
 	}
 
 	private void writeError(ObjectMapper om, PrintWriter out, HttpServletResponse response, int statusCode, String error, String message)

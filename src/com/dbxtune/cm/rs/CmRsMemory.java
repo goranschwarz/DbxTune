@@ -38,6 +38,8 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProvider;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.rs.AlarmEventRsInMemoryControl;
 import com.dbxtune.alarm.events.rs.AlarmEventRsMemoryUsage;
@@ -423,6 +425,49 @@ extends CountersModel
 	//--------------------------------------------------------------
 	// Alarm handling
 	//--------------------------------------------------------------
+
+	/**
+	 * The provider for the 'MemoryUsedPct' alarms (4 levels): the memory graphs from the CURRENT data,
+	 * and at CANCEL: the memory usage now (the 'Total' row).
+	 * <p>
+	 * Called from AlarmHandler on: Raise, RE-RAISE &amp; CANCEL
+	 *
+	 * @param threshold      The threshold
+	 */
+	private AlarmDescriptionProvider createMemoryUsageDescriptionProvider(Number threshold)
+	{
+		return new AlarmDescriptionProviderBase(null, null, threshold)
+		{
+			// Called on RAISE/RE-RAISE/CANCEL: the graphs are from the CURRENT data
+			@Override
+			public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+			{
+				// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+				String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MEMORY_PCT);
+				       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MODULE_USAGE);
+				alarmEvent.setExtendedDescription("", extendedDescHtml);
+
+				// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+				if (AlarmPhase.CANCEL.equals(phase))
+				{
+					// The 'Total' row is named by its state: 'Total', 'Total(Norm)' or 'Total(Ctrl)' (RepServer 16)
+					Double totalMemUsed = cm.getAbsValueAsDouble("Total", "Memory_Consumed_Mb");
+					if (totalMemUsed == null)
+						totalMemUsed = cm.getAbsValueAsDouble("Total(Norm)", "Memory_Consumed_Mb");
+					if (totalMemUsed == null)
+						totalMemUsed = cm.getAbsValueAsDouble("Total(Ctrl)", "Memory_Consumed_Mb");
+
+					if (totalMemUsed != null && _memoryLimitSizeMb > 0)
+					{
+						String now = toAlarmCancelValue(totalMemUsed / _memoryLimitSizeMb * 100.0) + "% (" + totalMemUsed.intValue() + " MB used of 'memory_limit' " + _memoryLimitSizeMb + " MB)";
+
+						String cancelMsg = getAlarmCancelText("Memory usage", now, "%");
+						alarmEvent.setCancelDescription(cancelMsg);
+					}
+				}
+			}
+		};
+	}
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -456,12 +501,55 @@ extends CountersModel
 					// If the module is in Memory Control... Alarm, since that module is "Paused" !!!
 					if (objectState != null && objectState.contains("(Ctrl)"))
 					{
-						String extendedDescText = "";
-						String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MEMORY_PCT);
-						       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MODULE_USAGE);
-
 						AlarmEvent alarm = new AlarmEventRsInMemoryControl(cm, objectState, _memoryLimitSizeMb);
-						alarm.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						alarm.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, null)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL: the graphs are from the CURRENT data
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								// The PK 'Object(State)' changes with the state (for example 'DSI EXEC(Ctrl)' -> 'DSI EXEC(Norm)'), so find the row by the object name
+								String object = objectState.replace("(Ctrl)", "");
+								int    rowId  = -1;
+								int    pos    = cm.findColumn("Object(State)");
+								if (pos == -1)
+									pos = cm.findColumn("Object/State");
+								for (int row = 0; pos != -1 && row < cm.getAbsRowCount(); row++)
+								{
+									String rowObjectState = cm.getAbsString(row, pos);
+									if (rowObjectState != null && rowObjectState.startsWith(object))
+									{
+										rowId = row;
+										break;
+									}
+								}
+								String label = "Object '" + object + "'";
+
+								if (rowId != -1)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+									String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MEMORY_PCT);
+									       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MODULE_USAGE);
+									alarmEvent.setExtendedDescription("", extendedDescHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										String cancelMsg = getAlarmCancelText("Object(State) for '" + object + "'", "'" + cm.getAbsString(rowId, pos) + "'");
+										alarmEvent.setCancelDescription(cancelMsg);
+									}
+								}
+								else
+								{
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+									}
+								}
+							}
+						});
 
 						AlarmHandler.getInstance().addAlarm( alarm );
 					}
@@ -495,12 +583,10 @@ extends CountersModel
 
 				if (usedPct.intValue() > threshold)
 				{
-					String extendedDescText = "";
-					String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MEMORY_PCT);
-					       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MODULE_USAGE);
-
 					AlarmEvent alarm = new AlarmEventRsMemoryUsage(cm, threshold, 1, usedMemInMb, freeMemInMb, usedPct.doubleValue(), _memoryLimitSizeMb);
-					alarm.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createMemoryUsageDescriptionProvider(threshold));
 					
 					AlarmHandler.getInstance().addAlarm( alarm );
 				}
@@ -514,12 +600,10 @@ extends CountersModel
 
 				if (usedPct.intValue() > threshold)
 				{
-					String extendedDescText = "";
-					String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MEMORY_PCT);
-					       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MODULE_USAGE);
-
 					AlarmEvent alarm = new AlarmEventRsMemoryUsage(cm, threshold, 2, usedMemInMb, freeMemInMb, usedPct.doubleValue(), _memoryLimitSizeMb);
-					alarm.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createMemoryUsageDescriptionProvider(threshold));
 
 					AlarmHandler.getInstance().addAlarm( alarm );
 				}
@@ -533,12 +617,10 @@ extends CountersModel
 
 				if (usedPct.intValue() > threshold)
 				{
-					String extendedDescText = "";
-					String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MEMORY_PCT);
-					       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MODULE_USAGE);
-
 					AlarmEvent alarm = new AlarmEventRsMemoryUsage(cm, threshold, 3, usedMemInMb, freeMemInMb, usedPct.doubleValue(), _memoryLimitSizeMb);
-					alarm.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createMemoryUsageDescriptionProvider(threshold));
 
 					AlarmHandler.getInstance().addAlarm( alarm );
 				}
@@ -552,12 +634,10 @@ extends CountersModel
 
 				if (usedPct.intValue() > threshold)
 				{
-					String extendedDescText = "";
-					String extendedDescHtml =               cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MEMORY_PCT);
-					       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MODULE_USAGE);
-
 					AlarmEvent alarm = new AlarmEventRsMemoryUsage(cm, threshold, 4, usedMemInMb, freeMemInMb, usedPct.doubleValue(), _memoryLimitSizeMb);
-					alarm.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createMemoryUsageDescriptionProvider(threshold));
 
 					AlarmHandler.getInstance().addAlarm( alarm );
 				}

@@ -59,7 +59,20 @@ implements Runnable
 	
 	public static final String PROPERTY_NAME = "HostMonitor";
 	
-//	public static final String  PROPKEY_forcePty = "HostMonitor.ssh.requestPty.force";
+	/**
+	 * Request a PTY for Windows streaming commands (typeperf): auto | true | false<br>
+	 * auto = only on Windows build >= {@link #WINDOWS_BUILD_FIRST_WITH_CONPTY} (where Win32-OpenSSH uses a real ConPTY, which honors the requested width)<br>
+	 * On older Windows (like Server 2016) Win32-OpenSSH uses 'ssh-shellhost.exe', which wraps at 128 columns and repaints the "screen" (garbles the CSV)
+	 */
+	public static final String  PROPKEY_windows_ssh_requestPty = "HostMonitor.windows.ssh.requestPty";
+	public static final String  DEFAULT_windows_ssh_requestPty = "auto";
+
+	/** ConPTY was introduced in Windows 10 1809 / Server 2019 (build 17763) */
+	public static final int     WINDOWS_BUILD_FIRST_WITH_CONPTY = 17763;
+
+	/** Max time (in seconds) a non-streaming OS Command may run in executeAndParse(), after that the sample is abandoned. 0 = wait forever */
+	public static final String  PROPKEY_executeAndParse_timeoutSec = "HostMonitor.executeAndParse.timeout.seconds";
+	public static final int     DEFAULT_executeAndParse_timeoutSec = 60;
 
 	public static final String  PROPKEY_windows_typeperf_cmd_path = "HostMonitor.windows.typeperf.cmd.path";
 	public static final String  DEFAULT_windows_typeperf_cmd_path = "";
@@ -1459,6 +1472,12 @@ implements Runnable
 		BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(stdout, osCharset));
 		BufferedReader stderrReader = new BufferedReader(new InputStreamReader(stderr, osCharset));
 
+		// Without a timeout we wait forever if the command never ends, or if the SSH session is dead (the channel is then never closed)
+		// And since all CM's are refreshed by the same thread, the whole collector would "stop"
+		int     timeoutSec = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_executeAndParse_timeoutSec, DEFAULT_executeAndParse_timeoutSec);
+		long    startTime  = System.currentTimeMillis();
+		boolean timedOut   = false;
+
 		boolean running = true;
 		while(running)
 		{
@@ -1474,11 +1493,23 @@ implements Runnable
 					{
 						running = false;
 					}
-					
+
 					if ( execWrapper.isClosed() )
 					{
 						if (stdout.available() > 0 || stderr.available() > 0)
 							continue;
+						break;
+					}
+
+					long execTimeSec = (System.currentTimeMillis() - startTime) / 1000;
+					if (timeoutSec > 0 && execTimeSec > timeoutSec)
+					{
+						String msg = "Timeout: The OS Command '" + getCommand() + "' for module '" + getModuleName() + "' has not finished after " + execTimeSec + " seconds. "
+								+ "Abandoning this sample. Either the command hangs on the remote host, or the SSH connection is dead (it will be reconnected on next execution if so). "
+								+ "The timeout can be changed with '" + PROPKEY_executeAndParse_timeoutSec + " = ####' (0 = wait forever).";
+						_logger.error(msg);
+						addException(new Exception(msg));
+						timedOut = true;
 						break;
 					}
 				}
@@ -1552,8 +1583,15 @@ implements Runnable
 			}
 		}
 
+		// On timeout: just close (disconnect) the channel, there is no return code yet, and the sample is incomplete
+		if (timedOut)
+		{
+			execWrapper.close();
+			return null;
+		}
+
 		// Sometimes I have seen exception here... so map that away
-		try 
+		try
 		{
 			int osRetCode = execWrapper.getExitStatus();
 			if (osRetCode != 0)

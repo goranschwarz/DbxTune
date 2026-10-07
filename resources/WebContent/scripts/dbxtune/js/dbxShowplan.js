@@ -1883,11 +1883,22 @@ function _initGlobalEscClose() {
 		});
 	}
 
+	// After a login that did not leave the page (dbxLoginModal.js 'stay on this page' login, used by
+	// dbxLlmAdvice.js), the "Needs Login" text after the open dialog's Advice heading is out of date.
+	document.addEventListener('dbx-login-changed', function () {
+		if (typeof dbxLlmAdvice === 'undefined' || !dbxLlmAdvice.getConfig) return;
+		dbxLlmAdvice.getConfig().then(function(cfg) {
+			var txt = dbxLlmAdvice.getStatusText(cfg);
+			document.querySelectorAll('.dbx-llm-summary-info').forEach(function(span) {
+				span.textContent = txt ? ' - ' + txt : '';
+			});
+		});
+	});
+
 	/**
 	 * The Advice sections are shown even when the feature isn't configured (see _updateLlmSummaryInfo()),
 	 * so check first rather than doing the DDL lookup only for the server to refuse the request.
-	 * "Needs Login" is left to the server on purpose: its not-logged-in answer still carries the
-	 * prompt, which dbxLlmAdvice.js renders.
+	 * "Needs Login" is handled by dbxLlmAdvice.open(): it asks the user to log in BEFORE its DDL lookup.
 	 */
 	function _openLlmAdviceIfConfigured(body, opts) {
 		dbxLlmAdvice.getConfig().then(function(cfg) {
@@ -1897,7 +1908,7 @@ function _initGlobalEscClose() {
 					+ '<br>You can still use <b>LLM Prompt Preview</b> below and paste the prompt into your favourite LLM.</em>';
 				return;
 			}
-			dbxLlmAdvice.open(opts);
+			dbxLlmAdvice.open(Object.assign({ origin: 'Showplan' }, opts));
 		});
 	}
 

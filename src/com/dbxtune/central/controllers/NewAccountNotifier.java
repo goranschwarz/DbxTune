@@ -42,8 +42,11 @@ public class NewAccountNotifier
 {
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
-	/** Send notification about a new account request. Never throws — all errors are logged. */
-	public static void sendAdminNotification(String username, String fullName, String email, String source, String reason)
+	/**
+	 * Send notification about a new account. Never throws — all errors are logged.
+	 * @param requireApproval true = account is PENDING_APPROVAL ("request"), false = account was created as ACTIVE
+	 */
+	public static void sendAdminNotification(String username, String fullName, String email, String source, String reason, boolean requireApproval)
 	{
 		List<String> recipients = resolveRecipients();
 
@@ -56,10 +59,14 @@ public class NewAccountNotifier
 		try
 		{
 			String displayName = StringUtil.hasValue(fullName) ? fullName + " (" + email + ")" : email;
-			String subject = "DbxCentral: New account request - " + username;
+			String subject = requireApproval
+					? "DbxCentral: New account request - " + username
+					: "DbxCentral: New account created - " + username;
 
 			StringBuilder body = new StringBuilder();
-			body.append("<p>A new account has requested access to DbxCentral.</p>");
+			body.append(requireApproval
+					? "<p>A new account has requested access to DbxCentral.</p>"
+					: "<p>A new account has been created in DbxCentral (no approval required).</p>");
 			body.append("<table>");
 			body.append("<tr><td><b>Username:</b></td><td>").append(escHtml(username)    ).append("</td></tr>");
 			body.append("<tr><td><b>Name:</b></td><td>"    ).append(escHtml(displayName) ).append("</td></tr>");
@@ -68,7 +75,9 @@ public class NewAccountNotifier
 				body.append("<tr><td><b>Reason:</b></td><td>").append(escHtml(reason)).append("</td></tr>");
 			body.append("</table>");
 			String adminUrl = AlarmWriterAbstract.static_getDbxCentralUrl() + "/admin/admin.html#dbxc-user";
-			body.append("<p>Log in to DbxCentral as admin and go to <b>Admin &rarr; User Administration</b> to approve or reject:</p>");
+			body.append(requireApproval
+					? "<p>Log in to DbxCentral as admin and go to <b>Admin &rarr; User Administration</b> to approve or reject:</p>"
+					: "<p>Log in to DbxCentral as admin and go to <b>Admin &rarr; User Administration</b> to review or lock the account:</p>");
 			body.append("<p><a href='").append(adminUrl).append("'>").append(adminUrl).append("</a></p>");
 
 			MailUtil.MailBuilder mail = MailUtil.createHtmlEmail();
@@ -126,7 +135,7 @@ public class NewAccountNotifier
 	{
 		_logger.warn("##########################################################################");
 		_logger.warn("##########################################################################");
-		_logger.warn("## IMPORTANT: New account request received but NO admin email found!   ##");
+		_logger.warn("## IMPORTANT: New account received but NO admin email found!           ##");
 		_logger.warn("## User '{}' ({}) requested access via {}.", username, email, source);
 		_logger.warn("## Set DbxTuneCentral.login.newAccount.notifyEmail in DBX_CENTRAL.conf ##");
 		_logger.warn("## or add an Email to an admin user in DbxCentralUsers.                ##");

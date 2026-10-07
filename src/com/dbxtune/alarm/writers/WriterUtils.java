@@ -458,6 +458,7 @@ public class WriterUtils
 			context.put("reRaiseDescription"         , StringUtil.toStr( alarmEvent.getReRaiseDescription()         ,trMap ));
 			context.put("reRaiseExtendedDescription" , StringUtil.toStr( isHtmlTemplate ? alarmEvent.getReRaiseExtendedDescriptionHtml() : alarmEvent.getReRaiseExtendedDescription() ,trMap ));
 			context.put("reRaiseData"                , StringUtil.toStr( alarmEvent.getReRaiseData()                ,trMap ));
+			context.put("cancelDescription"          , StringUtil.toStr( alarmEvent.getCancelDescription()          ,trMap ));
 			context.put("cancelTimeStr"              , StringUtil.toStr( alarmEvent.getCancelTimeStr()              ,trMap ));
 			context.put("crAgeInMs"                  , StringUtil.toStr( alarmEvent.getCrAgeInMs()                  ,trMap ));
 			context.put("isActive"                   , StringUtil.toStr( alarmEvent.isActive()                      ,trMap ));
@@ -496,6 +497,7 @@ public class WriterUtils
 			context.put("reRaiseDescription"         , StringUtil.toStr( pcsAlarmEntry.getReRaiseDescription()         ,trMap ));
 			context.put("reRaiseExtendedDescription" , StringUtil.toStr( pcsAlarmEntry.getReRaiseExtendedDescription() ,trMap ));
 			context.put("reRaiseData"                , StringUtil.toStr( pcsAlarmEntry.getReRaiseData()                ,trMap ));
+			context.put("cancelDescription"          , StringUtil.toStr( pcsAlarmEntry.getCancelDescription()          ,trMap ));
 			context.put("cancelTimeStr"              , StringUtil.toStr( pcsAlarmEntry.getCancelTime()                 ,trMap ));
 			context.put("crAgeInMs"                  , StringUtil.toStr( pcsAlarmEntry.getCreationAgeInMs()            ,trMap ));
 			context.put("isActive"                   , StringUtil.toStr( pcsAlarmEntry.isActive()                      ,trMap ));
@@ -673,6 +675,7 @@ public class WriterUtils
 		desc.put("reRaiseDescription"         , "<html> <h2>reRaiseDescription         </h2> Same as the <code>description</code>, but this would be the latest description when the Alarm was re-raised.   </html>");
 		desc.put("reRaiseExtendedDescription" , "<html> <h2>reRaiseExtendedDescription </h2> Same as the <code>extendedDescription</code>, but this would be the latest extendedDescription when the Alarm was re-raised.   </html>");
 		desc.put("reRaiseData"                , "<html> <h2>reRaiseData                </h2> Same as the <code>data</code>, but this would be the latest extendedDescription when the Alarm was re-raised.   </html>");
+		desc.put("cancelDescription"          , "<html> <h2>cancelDescription          </h2> Only on <b>CANCEL</b>: a short text about how things look when the Alarm went away. For example the CPU Usage now, or for SrvDown if the DBMS was restarted or not.<br>Empty if the Alarm does not set one.  </html>");
 		desc.put("cancelTimeStr"              , "<html> <h2>cancelTimeStr              </h2> What time the Alarm was cancelled, this would only be availabe when <code>type</code> is CANCEL.                                                     <br><br>Example: <code>2017-09-30 00:55:12.345</code>      </html>");
 		desc.put("crAgeInMs"                  , "<html> <h2>crAgeInMs                  </h2> How many milleseconds has pased since the Alarm was Created.  </html>");
 		desc.put("isActive"                   , "<html> <h2>isActive                   </h2> Boolean status flag if the Alarm is still Active, which would be true when <code>type</code> is RAISE and RE-RAISE.                                  <br><br>Example: <code>true</code> or <code>false</code>      </html>");
@@ -708,6 +711,7 @@ public class WriterUtils
 		provider.addCompletion(new ShorthandCompletionX(provider, "reRaiseDescription"         , "${reRaiseDescription}"         ,  null, desc.get("reRaiseDescription"        )));
 		provider.addCompletion(new ShorthandCompletionX(provider, "reRaiseExtendedDescription" , "${reRaiseExtendedDescription}" ,  null, desc.get("reRaiseExtendedDescription")));
 		provider.addCompletion(new ShorthandCompletionX(provider, "reRaiseData"                , "${reRaiseData}"                ,  null, desc.get("reRaiseData"               )));
+		provider.addCompletion(new ShorthandCompletionX(provider, "cancelDescription"          , "${cancelDescription}"          ,  null, desc.get("cancelDescription"         )));
 		provider.addCompletion(new ShorthandCompletionX(provider, "cancelTimeStr"              , "${cancelTimeStr}"              ,  null, desc.get("cancelTimeStr"             )));
 		provider.addCompletion(new ShorthandCompletionX(provider, "crAgeInMs"                  , "${crAgeInMs}"                  ,  null, desc.get("crAgeInMs"                 )));
 		provider.addCompletion(new ShorthandCompletionX(provider, "isActive"                   , "${isActive}"                   ,  null, desc.get("isActive"                  )));

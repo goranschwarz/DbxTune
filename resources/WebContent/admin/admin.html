@@ -359,6 +359,52 @@
         </div>  <!-- end: card-body -->
       </div>  <!-- end: card -->
 
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <!-- LLM Optimization Advice - Saved Requests -->
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <div id='dbx-llm-log' class='card border-dark mb-3'>
+        <h5 class='card-header'>LLM Optimization Advice - Saved Requests</h5>
+        <div class='card-body'>
+
+          <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+            <select id="dbx-llm-log-days" class="form-select form-select-sm" style="width:auto;" onchange="dbxLoadLlmLog()">
+              <option value="1">Last 24 hours</option>
+              <option value="7" selected>Last 7 days</option>
+              <option value="30">Last 30 days</option>
+              <option value="0">All saved</option>
+            </select>
+            <button type="button" class="btn btn-sm btn-primary" onclick="dbxLoadLlmLog()">
+              <i class="fa fa-refresh"></i> Refresh
+            </button>
+            <input type="text" id="dbx-llm-log-filter" class="form-control form-control-sm" style="width:320px;"
+                   placeholder="Filter: regex, or 'where user = x and status = FAILED'" oninput="dbxRenderLlmLog()">
+            <span id="dbx-llm-log-filter-err" class="text-danger small"></span>
+          </div>
+          <div id="dbx-llm-log-info" class="small text-muted mb-1"></div>
+          <div id="dbx-llm-log-summary" class="mb-2"></div>
+          <div style="width:100%; overflow-x:auto;">
+          <table class="table table-sm table-bordered table-hover" id="dbx-llm-log-table" style="display:none; width:100%; white-space:nowrap;">
+            <thead class="table-light">
+              <tr>
+                <th>Time</th>
+                <th>User</th>
+                <th>Server</th>
+                <th>Origin</th>
+                <th>Provider / Model</th>
+                <th>Status</th>
+                <th>Duration</th>
+                <th>Tokens in / out</th>
+                <th>SQL</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="dbx-llm-log-tbody"></tbody>
+          </table>
+          </div>
+
+        </div>  <!-- end: card-body -->
+      </div>  <!-- end: card -->
+
     </div>
   </main>
 
@@ -2266,6 +2312,88 @@
 		$('#dbx-adduser-msg').html('');
 		dbxLoadRoles(function() { dbxBuildRoleCheckboxes('dbx-adduser-roles-div', 'user'); });
 	});
+
+	//-----------------------------------------------------------
+	// LLM Optimization Advice - Saved Requests (/admin/llm-log, see LlmAdviceLog.java)
+	//-----------------------------------------------------------
+	var _dbxLlmLogEntries = [];
+	var DBX_LLM_LOG_COLS  = ['time', 'user', 'server', 'origin', 'provider', 'model', 'status', 'durationMs', 'inputTokens', 'outputTokens', 'sql'];
+
+	function dbxLlmLogEsc(v)
+	{
+		return $('<span>').text(v === null || v === undefined ? '' : String(v)).html();
+	}
+
+	function dbxLoadLlmLog()
+	{
+		$.ajax({
+			url:      '/admin/llm-log',
+			data:     { op: 'list', days: $('#dbx-llm-log-days').val() },
+			dataType: 'json',
+			success: function(data)
+			{
+				_dbxLlmLogEntries = data.entries || [];
+				$('#dbx-llm-log-info').text(
+					(data.saveEnabled ? 'Saving is ON' : 'Saving is OFF (DbxCentral.llm.log.save=false)')
+					+ ', kept ' + (data.keepDays > 0 ? data.keepDays + ' days' : 'forever') + ' (DbxCentral.llm.log.keep.days)'
+					+ ', users are ' + (data.notifyUsers ? '' : 'NOT ') + 'told (DbxCentral.llm.log.notifyUsers)'
+					+ '. Folder: ' + data.dir);
+				dbxRenderLlmLog();
+			},
+			error: function(xhr)
+			{
+				var msg = (xhr.responseJSON && xhr.responseJSON.message) || ('HTTP ' + xhr.status);
+				dbxShowMsg('dbx-llm-log-summary', 'Could not load the saved LLM requests: ' + dbxLlmLogEsc(msg), true);
+			}
+		});
+	}
+
+	function dbxRenderLlmLog()
+	{
+		// rows as arrays, in DBX_LLM_LOG_COLS order, so the shared applyRowFilter() can be used (regex or 'where ...')
+		var rows = _dbxLlmLogEntries.map(function(e) {
+			var row = [e.time, e.user, e.srvName, e.origin, e.providerId, e.model, e.status, e.durationMs, e.inputTokens, e.outputTokens, e.sqlPreview];
+			row.entry = e; // not an array element, so the filter does not search it
+			return row;
+		});
+		var res = applyRowFilter(rows, DBX_LLM_LOG_COLS, $('#dbx-llm-log-filter').val());
+		$('#dbx-llm-log-filter-err').text(res.filterError);
+
+		var users = {}, failed = 0, tokIn = 0, tokOut = 0;
+		var html = '';
+		res.filteredRows.forEach(function(r)
+		{
+			var e    = r.entry;
+			var view = '/admin/llm-log?op=view&name=' + encodeURIComponent(e.name);
+			users[e.user] = true;
+			if (e.status !== 'OK') failed++;
+			tokIn  += e.inputTokens  || 0;
+			tokOut += e.outputTokens || 0;
+
+			html += '<tr' + (e.status !== 'OK' ? ' class="table-danger"' : '') + ' style="cursor:pointer;" onclick="window.open(\'' + view + '\', \'_blank\')"'
+				+ ' title="' + dbxLlmLogEsc(e.status !== 'OK' && e.errorMessage ? e.errorMessage : 'Click to open') + '">'
+				+ '<td>' + dbxLlmLogEsc(e.time) + '</td>'
+				+ '<td>' + dbxLlmLogEsc(e.user) + '</td>'
+				+ '<td>' + dbxLlmLogEsc(e.srvName) + '</td>'
+				+ '<td>' + dbxLlmLogEsc(e.origin) + '</td>'
+				+ '<td>' + dbxLlmLogEsc(e.providerId) + ' / ' + dbxLlmLogEsc(e.model) + '</td>'
+				+ '<td>' + dbxLlmLogEsc(e.status) + '</td>'
+				+ '<td class="text-end">' + (e.durationMs != null ? (e.durationMs / 1000).toFixed(1) + 's' : '') + '</td>'
+				+ '<td class="text-end">' + dbxLlmLogEsc(e.inputTokens != null ? e.inputTokens.toLocaleString() : '') + ' / ' + dbxLlmLogEsc(e.outputTokens != null ? e.outputTokens.toLocaleString() : '') + '</td>'
+				+ '<td style="max-width:420px; overflow:hidden; text-overflow:ellipsis;">' + dbxLlmLogEsc(e.sqlPreview ? e.sqlPreview.substring(0, 100) : '') + '</td>'
+				+ '<td><a href="' + view + '&raw=true" onclick="event.stopPropagation();" title="Download the saved file (plain, self-contained)"><i class="fa fa-download"></i></a></td>'
+				+ '</tr>';
+		});
+		$('#dbx-llm-log-tbody').html(html);
+		$('#dbx-llm-log-table').toggle(res.filteredRows.length > 0);
+		$('#dbx-llm-log-summary').html(
+			'<b>' + res.filteredRows.length + '</b> requests'
+			+ (res.filteredRows.length !== _dbxLlmLogEntries.length ? ' (of ' + _dbxLlmLogEntries.length + ')' : '')
+			+ ', <b>' + failed + '</b> failed, by <b>' + Object.keys(users).length + '</b> users'
+			+ ', tokens in / out: <b>' + tokIn.toLocaleString() + '</b> / <b>' + tokOut.toLocaleString() + '</b>');
+	}
+
+	dbxLoadLlmLog();
 
 	//-----------------------------------------------------------
 	// Check for login and set props
