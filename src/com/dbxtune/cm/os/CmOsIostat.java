@@ -35,6 +35,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventOsDiskUtilPct;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -1674,7 +1675,7 @@ extends CounterModelHostMonitor
 		//-------------------------------------------------------
 		for (int r=0; r<cm.getAbsRowCount(); r++)
 		{
-			String device = this.getAbsString(0, "device");
+			String device = this.getAbsString(r, "device");
 
 			// Skip records where the device name is blank (this should NOT happen)
 			if (StringUtil.isNullOrBlank(device))
@@ -1685,7 +1686,7 @@ extends CounterModelHostMonitor
 			//-------------------------------------------------------
 			if (isSystemAlarmsForColumnEnabledAndInTimeRange("utilPct"))
 			{
-				Double utilPct  = this.getAbsValueAsDouble(0, "utilPct");
+				Double utilPct  = this.getAbsValueAsDouble(r, "utilPct");
 				if (utilPct == null)
 					utilPct = -1.0;
 				
@@ -1714,12 +1715,48 @@ extends CounterModelHostMonitor
 						// Note: the "raiseDelay" is handled by the AlarmHandler
 						int raiseDelay = conf.getIntProperty(PROPKEY_alarm_utilPctRaiseDelay, DEFAULT_alarm_utilPctRaiseDelay);
 
-						String extendedDescText = cm.toTextTableString(DATA_ABS, r);
-						String extendedDescHtml = cm.toHtmlTableString(DATA_ABS, r, true, false, false);
-						       extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_BusyPct);
-
 						AlarmEvent ae = new AlarmEventOsDiskUtilPct(cm, threshold, hostname, device, utilPct, raiseDelay);
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(cm.getPk(), cm.getAbsPkValue(r), threshold)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised, the graphs are from the CURRENT data
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								String rowPk = getRowPk();
+								int    rowId = cm.getAbsRowIdForPkValue(rowPk);
+
+								String ldevice = (rowId == -1) ? device : cm.getAbsString(rowId, "device");
+								String label   = "Device '" + ldevice + "'";
+
+								if (rowId != -1)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+									String extendedDescText = cm.toTextTableString(DATA_ABS, rowId);
+									String extendedDescHtml = cm.toHtmlTableString(DATA_ABS, rowId, true, false, false);
+
+									extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_BusyPct);
+									alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										Double utilPct = cm.getAbsValueAsDouble(rowId, "utilPct");
+
+										String cancelMsg = getAlarmCancelText(label + ": utilization", toAlarmCancelValue(utilPct) + "%", "%");
+										alarmEvent.setCancelDescription(cancelMsg);
+									}
+								}
+								else
+								{
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+									}
+								}
+							}
+						});
 
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "utilPct");

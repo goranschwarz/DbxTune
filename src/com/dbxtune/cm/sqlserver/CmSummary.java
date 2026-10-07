@@ -1655,9 +1655,9 @@ extends CmSummaryAbstract
 					{
 						// Called on RAISE/RE-RAISE/CANCEL, so the description is from the CURRENT data
 						@Override
-						public void setValues(CountersModel cm, AlarmEvent alarmEvent, Phase phase)
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
 						{
-							if (Phase.CANCEL.equals(phase))
+							if (AlarmPhase.CANCEL.equals(phase))
 							{
 								Double lockWaitsNow = cm.getAbsValueAsDouble(0, "LockWaits");
 								alarmEvent.setCancelDescription("Number of Waiting Locks is now " + (lockWaitsNow == null ? "unknown" : lockWaitsNow.intValue()) + " (threshold " + threshold + ")");
@@ -1735,9 +1735,9 @@ extends CmSummaryAbstract
 						{
 							// Called on RAISE/RE-RAISE/CANCEL, so the description is from the CURRENT data
 							@Override
-							public void setValues(CountersModel cm, AlarmEvent alarmEvent, Phase phase)
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
 							{
-								if (Phase.CANCEL.equals(phase))
+								if (AlarmPhase.CANCEL.equals(phase))
 								{
 									// Keep the description of the transaction (it has ended), just say how it looks now
 									int oldestOpenTranInSecNow = cm.getAbsValueAsInteger(0, "oldestOpenTranInSec", -1);
@@ -1805,9 +1805,9 @@ extends CmSummaryAbstract
 					{
 						// Called on RAISE/RE-RAISE/CANCEL
 						@Override
-						public void setValues(CountersModel cm, AlarmEvent alarmEvent, Phase phase)
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
 						{
-							if (Phase.CANCEL.equals(phase))
+							if (AlarmPhase.CANCEL.equals(phase))
 							{
 								// Keep the list of suspect pages, just say how it looks now
 								alarmEvent.setCancelDescription("Suspect Page Count is now " + cm.getAbsValueAsInteger(0, "suspectPageCount", false, -1) + " (threshold " + threshold + ")");
@@ -1850,9 +1850,9 @@ extends CmSummaryAbstract
 				{
 					// Called on RAISE/RE-RAISE/CANCEL, so the graphs (and on CANCEL the counters) are from the CURRENT data
 					@Override
-					public void setValues(CountersModel cm, AlarmEvent alarmEvent, Phase phase)
+					public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
 					{
-						if (Phase.CANCEL.equals(phase))
+						if (AlarmPhase.CANCEL.equals(phase))
 						{
 							alarmEvent.setCancelDescription("Requests Waiting For Workers is now " + cm.getAbsValueAsInteger(0, "requestsWaitingForWorkers", false, -1) + " (threshold " + threshold + ")"
 									+ ", Available Workers is now " + cm.getAbsValueAsInteger(0, "availableWorkers", false, -1) + " (threshold " + availableWorkersThreshold + ")");
@@ -1904,9 +1904,9 @@ extends CmSummaryAbstract
 				{
 					// Called on RAISE/RE-RAISE/CANCEL, so the graph (and on CANCEL the worker count) is from the CURRENT data
 					@Override
-					public void setValues(CountersModel cm, AlarmEvent alarmEvent, Phase phase)
+					public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
 					{
-						if (Phase.CANCEL.equals(phase))
+						if (AlarmPhase.CANCEL.equals(phase))
 						{
 							alarmEvent.setCancelDescription("Available Workers is now " + cm.getAbsValueAsInteger(0, "availableWorkers", false, -1) + " of " + cm.getAbsValueAsInteger(0, "maxWorkers", false, -1) + " (threshold " + threshold + ")");
 						}
@@ -1956,9 +1956,9 @@ extends CmSummaryAbstract
 				{
 					// Called on RAISE/RE-RAISE/CANCEL, so the graphs (and on CANCEL the counters) are from the CURRENT data
 					@Override
-					public void setValues(CountersModel cm, AlarmEvent alarmEvent, Phase phase)
+					public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
 					{
-						if (Phase.CANCEL.equals(phase))
+						if (AlarmPhase.CANCEL.equals(phase))
 						{
 							// Do NOT add() to the moving average here (that is done once per sample, above), just read it
 							String movingAvgStr = "";
@@ -2015,9 +2015,9 @@ extends CmSummaryAbstract
 				{
 					// Only on CANCEL: the status now (this alarm has no extended description)
 					@Override
-					public void setValues(CountersModel cm, AlarmEvent alarmEvent, Phase phase)
+					public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
 					{
-						if (Phase.CANCEL.equals(phase))
+						if (AlarmPhase.CANCEL.equals(phase))
 							alarmEvent.setCancelDescription("SQL Agent Status is now '" + cm.getAbsString(0, "sql_agent_status", true, "") + "' (expected: " + statusExpectedRegEx + ")");
 					}
 				});

@@ -50,6 +50,7 @@ import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.Version;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventAgLogSendQueueSize;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventAgRoleChange;
@@ -2625,11 +2626,46 @@ extends CountersModel
 				{
 					stateStr = StringUtil.removeLastComma(stateStr);
 					
-					String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-					String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-					
 					AlarmEvent ae = new AlarmEventAgUnexpectedState(cm, ag_name, server_name, dbname, stateStr);
-					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(cm.getPk(), cm.getAbsPkValue(r), null)
+					{
+						// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+						{
+							String rowPk = getRowPk();
+							int    rowId = cm.getAbsRowIdForPkValue(rowPk);
+
+							String label = (rowId == -1) ? ("AG '" + ag_name + "', server '" + server_name + "', database '" + dbname + "'") : ("AG '" + cm.getAbsString(rowId, "ag_name") + "', server '" + cm.getAbsString(rowId, "server_name") + "', database '" + cm.getAbsString(rowId, "database_name") + "'");
+
+							if (rowId != -1)
+							{
+								// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description
+								String extendedDescText = cm.toTextTableString(DATA_RATE, rowId);
+								String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, rowId, true, false, false);
+								alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+								// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+								if (AlarmPhase.CANCEL.equals(phase))
+								{
+									String synchronization_health_desc = cm.getAbsString(rowId, "synchronization_health_desc");
+									String operational_state_desc      = cm.getAbsString(rowId, "operational_state_desc");
+
+									String cancelMsg = getAlarmCancelText(label + ": synchronization health", "'" + synchronization_health_desc + "', operational state '" + operational_state_desc + "'");
+									alarmEvent.setCancelDescription(cancelMsg);
+								}
+							}
+							else
+							{
+								if (AlarmPhase.CANCEL.equals(phase))
+								{
+									alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+								}
+							}
+						}
+					});
 					
 					// Information about how to disable this alarm
 					ae.createAlarmOptionsMessage(this, "UnExpectedState");
@@ -2660,13 +2696,47 @@ extends CountersModel
 
 						if (LogSendQueueSizeMb > threshold)
 						{
-							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-							
-							extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOG_SEND_QUEUE_SIZE_IN_KB);
-
 							AlarmEvent ae = new AlarmEventAgLogSendQueueSize(cm, ag_name, server_name, dbname, LogSendQueueSizeMb, threshold);
-							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+							// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+							ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(cm.getPk(), cm.getAbsPkValue(r), threshold)
+							{
+								// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised, the graphs are from the CURRENT data
+								@Override
+								public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+								{
+									String rowPk = getRowPk();
+									int    rowId = cm.getAbsRowIdForPkValue(rowPk);
+
+									String label = (rowId == -1) ? ("AG '" + ag_name + "', server '" + server_name + "', database '" + dbname + "'") : ("AG '" + cm.getAbsString(rowId, "ag_name") + "', server '" + cm.getAbsString(rowId, "server_name") + "', database '" + cm.getAbsString(rowId, "database_name") + "'");
+
+									if (rowId != -1)
+									{
+										// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+										String extendedDescText = cm.toTextTableString(DATA_RATE, rowId);
+										String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, rowId, true, false, false);
+
+										extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LOG_SEND_QUEUE_SIZE_IN_KB);
+										alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+										// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+										if (AlarmPhase.CANCEL.equals(phase))
+										{
+											Double LogSendQueueSizeKb = cm.getAbsValueAsDouble(rowId, "LogSendQueueSizeKb");
+
+											String cancelMsg = getAlarmCancelText(label + ": log send queue", (LogSendQueueSizeKb == null ? "unknown" : toAlarmCancelValue(LogSendQueueSizeKb / 1024.0)) + " MB", " MB");
+											alarmEvent.setCancelDescription(cancelMsg);
+										}
+									}
+									else
+									{
+										if (AlarmPhase.CANCEL.equals(phase))
+										{
+											alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+										}
+									}
+								}
+							});
 
 							// Information about how to disable this alarm
 							ae.createAlarmOptionsMessage(this, "LogSendQueueSizeInMb");
@@ -2707,13 +2777,47 @@ extends CountersModel
 								
 								if (secondaryCommitTimeLagSec > threshold)
 								{
-									String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-									String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-
-									extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_SECONDARY_COMMIT_LAG_TIME);
-
 									AlarmEvent ae = new AlarmEventAgSecondaryCommitTimeLag(cm, ag_name, server_name, dbname, SecondaryCommitTimeLag, threshold);
-									ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+									// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+									ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(cm.getPk(), cm.getAbsPkValue(r), threshold)
+									{
+										// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised, the graphs are from the CURRENT data
+										@Override
+										public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+										{
+											String rowPk = getRowPk();
+											int    rowId = cm.getAbsRowIdForPkValue(rowPk);
+
+											String label = (rowId == -1) ? ("AG '" + ag_name + "', server '" + server_name + "', database '" + dbname + "'") : ("AG '" + cm.getAbsString(rowId, "ag_name") + "', server '" + cm.getAbsString(rowId, "server_name") + "', database '" + cm.getAbsString(rowId, "database_name") + "'");
+
+											if (rowId != -1)
+											{
+												// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+												String extendedDescText = cm.toTextTableString(DATA_RATE, rowId);
+												String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, rowId, true, false, false);
+
+												extendedDescHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_SECONDARY_COMMIT_LAG_TIME);
+												alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+												// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+												if (AlarmPhase.CANCEL.equals(phase))
+												{
+													String SecondaryCommitTimeLag = cm.getAbsString(rowId, "SecondaryCommitTimeLag");
+
+													String cancelMsg = getAlarmCancelText(label + ": secondary commit time lag", SecondaryCommitTimeLag);
+													alarmEvent.setCancelDescription(cancelMsg);
+												}
+											}
+											else
+											{
+												if (AlarmPhase.CANCEL.equals(phase))
+												{
+													alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+												}
+											}
+										}
+									});
 
 									// Information about how to disable this alarm
 									ae.createAlarmOptionsMessage(this, "SecondaryCommitTimeLag");
@@ -2765,13 +2869,46 @@ extends CountersModel
 					}
 					
 					// Create and send the alarm
-					String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-					String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-					
 					AlarmEvent ae = new AlarmEventAgSplitBrain(cm, ag_name, server_name, dbname, remoteLiveDataServername);
 
-					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-					
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(cm.getPk(), cm.getAbsPkValue(r), null)
+					{
+						// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+						{
+							String rowPk = getRowPk();
+							int    rowId = cm.getAbsRowIdForPkValue(rowPk);
+
+							String label = (rowId == -1) ? ("AG '" + ag_name + "', server '" + server_name + "', database '" + dbname + "'") : ("AG '" + cm.getAbsString(rowId, "ag_name") + "', server '" + cm.getAbsString(rowId, "server_name") + "', database '" + cm.getAbsString(rowId, "database_name") + "'");
+
+							if (rowId != -1)
+							{
+								// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description
+								String extendedDescText = cm.toTextTableString(DATA_RATE, rowId);
+								String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, rowId, true, false, false);
+								alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+								// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+								if (AlarmPhase.CANCEL.equals(phase))
+								{
+									String Validated = cm.getAbsString(rowId, "Validated");
+
+									String cancelMsg = getAlarmCancelText(label + ": validated", "'" + Validated + "'");
+									alarmEvent.setCancelDescription(cancelMsg);
+								}
+							}
+							else
+							{
+								if (AlarmPhase.CANCEL.equals(phase))
+								{
+									alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+								}
+							}
+						}
+					});
+
 					// Information about how to disable this alarm
 					ae.createAlarmOptionsMessage(this, "SplitBrain");
 
@@ -2797,11 +2934,45 @@ extends CountersModel
 						String agNamePrefix      = getAgNamePrefix(ag_name);
 						String BagPercentDetails = cm.getAbsString(r, "BagPercentDetails");
 						
-						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-						
 						AlarmEvent ae = new AlarmEventBagRolePercentSkewed(cm, locality, agNamePrefix, bagPct, BagPercentDetails);
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(cm.getPk(), cm.getAbsPkValue(r), null)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								String rowPk = getRowPk();
+								int    rowId = cm.getAbsRowIdForPkValue(rowPk);
+
+								String label = "AG '" + ((rowId == -1) ? ag_name : cm.getAbsString(rowId, "ag_name")) + "'";
+
+								if (rowId != -1)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description
+									String extendedDescText = cm.toTextTableString(DATA_RATE, rowId);
+									String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, rowId, true, false, false);
+									alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										Double BagPct = cm.getAbsValueAsDouble(rowId, "BagPct");
+
+										String cancelMsg = getAlarmCancelText(label + ": Basic AG role percent", toAlarmCancelValue(BagPct) + "%");
+										alarmEvent.setCancelDescription(cancelMsg);
+									}
+								}
+								else
+								{
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+									}
+								}
+							}
+						});
 						
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "BagRolePercentSkewed");

@@ -34,6 +34,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventStatementCacheAboveConfig;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -439,11 +440,35 @@ extends CountersModel
 
 		if (stmntCachePctUsed.intValue() > threshold)
 		{
-			String extendedDescText = "";
-			String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MODULE_USAGE_MB);
-
 			AlarmEvent ae = new AlarmEventStatementCacheAboveConfig(cm, _statementCacheConfigSizeMb, activeMb.intValue(), stmntCachePctUsed, procCachePctUsed, threshold);
-			ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+			// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+			ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+			{
+				// Called on RAISE/RE-RAISE/CANCEL: the graphs are from the CURRENT data
+				@Override
+				public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+				{
+					// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+					String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_MODULE_USAGE_MB);
+					alarmEvent.setExtendedDescription("", extendedDescHtml);
+
+					// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+					if (AlarmPhase.CANCEL.equals(phase))
+					{
+						int    rowId    = cm.getAbsRowIdWhere("ModuleName", "Statement Cache");
+						Double ActiveMb = (rowId < 0) ? null : cm.getAbsValueAsDouble(rowId, "ActiveMb");
+
+						if (ActiveMb != null)
+						{
+							String pct = (_statementCacheConfigSizeMb > 0) ? ", " + toAlarmCancelValue(ActiveMb / _statementCacheConfigSizeMb * 100.0) + "% of 'statement cache size'" : "";
+
+							String cancelMsg = getAlarmCancelText("Statement Cache usage", toAlarmCancelValue(ActiveMb) + " MB" + pct, "%");
+							alarmEvent.setCancelDescription(cancelMsg);
+						}
+					}
+				}
+			});
 
 			// Information about how to disable this alarm
 			ae.createAlarmOptionsMessage(this, alarmSource);

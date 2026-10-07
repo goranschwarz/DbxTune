@@ -41,6 +41,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventToxicWait;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -1207,6 +1208,7 @@ extends CountersModel
 	//-- Alarm Handling
 	//--------------------------------------------------------------------------------------
 	//--------------------------------------------------------------------------------------
+
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -1244,52 +1246,78 @@ extends CountersModel
 				// Round to 1 decimal point
 				waitTimePerCount = MathUtils.round(waitTimePerCount, 1);
 
-				String extendedDescText = "DIFF Counters: \n"          + cm.toTextTableString(DATA_DIFF, rowId) + "\n\n"
-				                        + "ABS Counters: \n"           + cm.toTextTableString(DATA_ABS , rowId);
-				String extendedDescHtml = "<b>DIFF Counters: </b><br>" + cm.toHtmlTableString(DATA_DIFF, rowId, true, false, false) + "<br><br>"
-				                        + "<b>ABS Counters:  </b><br>" + cm.toHtmlTableString(DATA_ABS , rowId, true, false, false);
+				// The wait counters as they were when the alarm was raised (the row index 'rowId' is only valid in this sample)
+				final String rowText = "DIFF Counters: \n"          + cm.toTextTableString(DATA_DIFF, rowId) + "\n\n"
+				                     + "ABS Counters: \n"           + cm.toTextTableString(DATA_ABS , rowId);
+				final String rowHtml = "<b>DIFF Counters: </b><br>" + cm.toHtmlTableString(DATA_DIFF, rowId, true, false, false) + "<br><br>"
+				                     + "<b>ABS Counters:  </b><br>" + cm.toHtmlTableString(DATA_ABS , rowId, true, false, false);
 
-				// Get a small graph about the usage for the last hour
-				extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOXIC_TIME);
-				extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOXIC_COUNT);
-				extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOXIC_TPW);
-
-				// And CPU and Memory Usage (from CmSummary)
-				CountersModel cmSummary = getCounterController().getCmByName(CmSummary.CM_NAME);
-				extendedDescHtml += "<br><br>" + cmSummary.getGraphDataHistoryAsHtmlImage(CmSummary.GRAPH_NAME_AA_CPU);
-//				extendedDescHtml += "<br><br>" + cmSummary.getGraphDataHistoryAsHtmlImage(CmSummary.GRAPH_NAME_TARGET_AND_TOTAL_MEM_MB);
-
-				// and some info from CmMemoryGrantsSum
-				CountersModel cmMemoryGrantsSum = getCounterController().getCmByName(CmMemoryGrantsSum.CM_NAME);
-				extendedDescHtml += "<br><br>" + cmMemoryGrantsSum.getGraphDataHistoryAsHtmlImage(CmMemoryGrantsSum.GRAPH_NAME_GRANTED_MEMORY_SUM);
-				extendedDescHtml += "<br><br>" + cmMemoryGrantsSum.getGraphDataHistoryAsHtmlImage(CmMemoryGrantsSum.GRAPH_NAME_GRANTEE_WAITER_COUNT);
-				extendedDescHtml += "<br><br>" + cmMemoryGrantsSum.getGraphDataHistoryAsHtmlImage(CmMemoryGrantsSum.GRAPH_NAME_GRANTED_MEMORY_PCT);
-
-				// Possibly getting info from CmMemoryGrants
-				// This can help to show what SQL Statement(s) are involved 
+				// Possibly getting info from CmMemoryGrants (when the alarm was raised)
+				// This can help to show what SQL Statement(s) are involved
+				String memoryGrantsHtml = "";
 				CountersModel cmMemoryGrants = getCounterController().getCmByName(CmMemoryGrants.CM_NAME);
 				if (cmMemoryGrants.hasAbsData())
 				{
 					int rowc = cmMemoryGrants.getAbsRowCount();
-					extendedDescHtml += "<br><br><b>Current Memory Grants: (" + rowc + " records, one table for each record)</b><br>";
+					memoryGrantsHtml += "<br><br><b>Current Memory Grants: (" + rowc + " records, one table for each record)</b><br>";
 					for (int r=0; r<rowc; r++)
 					{
-						extendedDescHtml += "<span style='background-color: yellow'>Row " + (r+1) + " of " + rowc + "</span> <br>" 
+						memoryGrantsHtml += "<span style='background-color: yellow'>Row " + (r+1) + " of " + rowc + "</span> <br>"
 						                 + cmMemoryGrants.toHtmlTableString(DATA_ABS , r, true, false, false) + "<br>";
 					}
 				}
 				else
 				{
 					if (cmMemoryGrants.isActive())
-						extendedDescHtml += "<br><br><b>Current Memory Grants: (CmMemoryGrants does NOT contain any data)</b><br>";
+						memoryGrantsHtml += "<br><br><b>Current Memory Grants: (CmMemoryGrants does NOT contain any data)</b><br>";
 					else
-						extendedDescHtml += "<br><br><b>Current Memory Grants: (CmMemoryGrants is NOT enabled)</b><br>";
+						memoryGrantsHtml += "<br><br><b>Current Memory Grants: (CmMemoryGrants is NOT enabled)</b><br>";
 				}
+				final String memoryGrantsAtRaiseHtml = memoryGrantsHtml;
 
 				// Create the alarm
 				AlarmEvent ae = new AlarmEventToxicWait(cm, threshold, AlarmEvent.Severity.WARNING, AlarmEvent.ServiceState.UP, wait_type, waiting_tasks_count, wait_time_ms, waitTimePerCount);
 
-				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+				// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+				ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+				{
+					// Called on RAISE/RE-RAISE/CANCEL: the counters and memory grants are from when it was (re)raised, the graphs are from the CURRENT data
+					@Override
+					public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+					{
+						// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description
+						String extendedDescHtml = rowHtml;
+
+//						Get a small graph about the usage for the last hour
+						extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOXIC_TIME);
+						extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOXIC_COUNT);
+						extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOXIC_TPW);
+
+//						And CPU and Memory Usage (from CmSummary)
+						CountersModel cmSummary = getCounterController().getCmByName(CmSummary.CM_NAME);
+						extendedDescHtml += "<br><br>" + cmSummary.getGraphDataHistoryAsHtmlImage(CmSummary.GRAPH_NAME_AA_CPU);
+//						extendedDescHtml += "<br><br>" + cmSummary.getGraphDataHistoryAsHtmlImage(CmSummary.GRAPH_NAME_TARGET_AND_TOTAL_MEM_MB);
+
+//						and some info from CmMemoryGrantsSum
+						CountersModel cmMemoryGrantsSum = getCounterController().getCmByName(CmMemoryGrantsSum.CM_NAME);
+						extendedDescHtml += "<br><br>" + cmMemoryGrantsSum.getGraphDataHistoryAsHtmlImage(CmMemoryGrantsSum.GRAPH_NAME_GRANTED_MEMORY_SUM);
+						extendedDescHtml += "<br><br>" + cmMemoryGrantsSum.getGraphDataHistoryAsHtmlImage(CmMemoryGrantsSum.GRAPH_NAME_GRANTEE_WAITER_COUNT);
+						extendedDescHtml += "<br><br>" + cmMemoryGrantsSum.getGraphDataHistoryAsHtmlImage(CmMemoryGrantsSum.GRAPH_NAME_GRANTED_MEMORY_PCT);
+
+						extendedDescHtml += memoryGrantsAtRaiseHtml;
+
+						alarmEvent.setExtendedDescription(rowText, extendedDescHtml);
+
+						// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+						if (AlarmPhase.CANCEL.equals(phase))
+						{
+							int wait_time_ms = cm.getDiffValueAsInteger(wait_type, "wait_time_ms", -1);   // the PK is 'wait_type'
+
+							String cancelMsg = getAlarmCancelText("Wait time for '" + wait_type + "' (last sample)", (wait_time_ms < 0 ? "unknown" : wait_time_ms + "") + " ms", " ms");
+							alarmEvent.setCancelDescription(cancelMsg);
+						}
+					}
+				});
 				
 				// Information about how to disable this alarm
 				ae.createAlarmOptionsMessage(this, "WaitTime_RESOURCE_SEMAPHORE");
@@ -1319,28 +1347,50 @@ extends CountersModel
 				// Round to 1 decimal point
 				waitTimePerCount = MathUtils.round(waitTimePerCount, 1);
 
-				String extendedDescText = "DIFF Counters: \n"          + cm.toTextTableString(DATA_DIFF, rowId) + "\n\n"
-				                        + "ABS Counters: \n"           + cm.toTextTableString(DATA_ABS , rowId);
-				String extendedDescHtml = "<b>DIFF Counters: </b><br>" + cm.toHtmlTableString(DATA_DIFF, rowId, true, false, false) + "<br><br>"
-				                        + "<b>ABS Counters:  </b><br>" + cm.toHtmlTableString(DATA_ABS , rowId, true, false, false);
-
-				// Get a small graph about the usage for the last hour
-				extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOXIC_TIME);
-				extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOXIC_COUNT);
-				extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOXIC_TPW);
-
-				// And CPU and WorkerThreadsUsage (from CmSummary)
-				CountersModel cmSummary = getCounterController().getCmByName(CmSummary.CM_NAME);
-				if (cmSummary != null)
-				{
-					extendedDescHtml += "<br><br>" + cmSummary.getGraphDataHistoryAsHtmlImage(CmSummary.GRAPH_NAME_AA_CPU);
-					extendedDescHtml += "<br><br>" + cmSummary.getGraphDataHistoryAsHtmlImage(CmSummary.GRAPH_NAME_WORKER_THREAD_USAGE);
-				}
+				// The wait counters as they were when the alarm was raised (the row index 'rowId' is only valid in this sample)
+				final String rowText = "DIFF Counters: \n"          + cm.toTextTableString(DATA_DIFF, rowId) + "\n\n"
+				                     + "ABS Counters: \n"           + cm.toTextTableString(DATA_ABS , rowId);
+				final String rowHtml = "<b>DIFF Counters: </b><br>" + cm.toHtmlTableString(DATA_DIFF, rowId, true, false, false) + "<br><br>"
+				                     + "<b>ABS Counters:  </b><br>" + cm.toHtmlTableString(DATA_ABS , rowId, true, false, false);
 
 				// Create the alarm
 				AlarmEvent ae = new AlarmEventToxicWait(cm, threshold, AlarmEvent.Severity.WARNING, AlarmEvent.ServiceState.AFFECTED, wait_type, waiting_tasks_count, wait_time_ms, waitTimePerCount);
 
-				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+				// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+				ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+				{
+					// Called on RAISE/RE-RAISE/CANCEL: the counters are from when it was (re)raised, the graphs are from the CURRENT data
+					@Override
+					public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+					{
+						// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description
+						String extendedDescHtml = rowHtml;
+
+//						Get a small graph about the usage for the last hour
+						extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOXIC_TIME);
+						extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOXIC_COUNT);
+						extendedDescHtml += "<br><br>" + getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOXIC_TPW);
+
+//						And CPU and WorkerThreadsUsage (from CmSummary)
+						CountersModel cmSummary = getCounterController().getCmByName(CmSummary.CM_NAME);
+						if (cmSummary != null)
+						{
+							extendedDescHtml += "<br><br>" + cmSummary.getGraphDataHistoryAsHtmlImage(CmSummary.GRAPH_NAME_AA_CPU);
+							extendedDescHtml += "<br><br>" + cmSummary.getGraphDataHistoryAsHtmlImage(CmSummary.GRAPH_NAME_WORKER_THREAD_USAGE);
+						}
+
+						alarmEvent.setExtendedDescription(rowText, extendedDescHtml);
+
+						// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+						if (AlarmPhase.CANCEL.equals(phase))
+						{
+							int wait_time_ms = cm.getDiffValueAsInteger(wait_type, "wait_time_ms", -1);   // the PK is 'wait_type'
+
+							String cancelMsg = getAlarmCancelText("Wait time for '" + wait_type + "' (last sample)", (wait_time_ms < 0 ? "unknown" : wait_time_ms + "") + " ms", " ms");
+							alarmEvent.setCancelDescription(cancelMsg);
+						}
+					}
+				});
 
 				// Information about how to disable this alarm
 				ae.createAlarmOptionsMessage(this, "WaitTime_THREADPOOL");

@@ -34,6 +34,8 @@ import com.dbxtune.CounterController;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
+import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventOsSwapThrashing;
 import com.dbxtune.alarm.events.AlarmEventOsSwapping;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -590,26 +592,46 @@ extends CounterModelHostMonitor
 				Timestamp swapOut_peakTs     = MovingAverageCounterManager.getInstance(groupName, "swapOut", MOVING_AVG_TIME_IN_MINUTES).getPeakTimestamp();
 				double    swapOut_peakNumber = MovingAverageCounterManager.getInstance(groupName, "swapOut", MOVING_AVG_TIME_IN_MINUTES).getPeakNumber();
 
-				// Create a small chart, that can be used in emails etc.
-				String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("OS Swapping (1 hour)", 
-						MovingAverageCounterManager.getInstance(groupName, "swapIn",  60),  // Note make the chart on 60 minutes to see more info
-						MovingAverageCounterManager.getInstance(groupName, "swapOut", 60)); // Note make the chart on 60 minutes to see more info
-
-				// Get CPU Summary Usage chart
-				htmlChartImage += CmOsMpstat.getGraphDataHistoryAsHtmlImage(CmOsMpstat.GRAPH_NAME_MpSum, getCounterController());
-				
-				// Get Available Memory
-				htmlChartImage += CmOsMeminfo.getGraphDataHistoryAsHtmlImage(CmOsMeminfo.GRAPH_NAME_MEM_AVAILABLE, getCounterController());
-				
-				// Possibly getting info from CmOsPs... This will help us to determine if OTHER processes than the DBMS is loading the server
-				htmlChartImage += CmOsPs.getCmOsPs_getGraphDataHistoryAsHtmlImage(getCounterController(), CmOsPs.GRAPH_NAME_WIN_PS);
-				htmlChartImage += CmOsPs.getCmOsPs_asHtmlTable(getCounterController(), 15);
-				
 				AlarmEventOsSwapping alarm = new AlarmEventOsSwapping(cm, threshold, maxCap, hostname, "over " + MOVING_AVG_TIME_IN_MINUTES + " minute moving average", 
 						swapIn_xmAvg,  swapIn_peakTs,  swapIn_peakNumber,
 						swapOut_xmAvg, swapOut_peakTs, swapOut_peakNumber);
-				
-				alarm.setExtendedDescription(null, htmlChartImage);
+
+				// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+				alarm.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+				{
+					// Called on RAISE/RE-RAISE/CANCEL: the graphs are from the CURRENT data
+					@Override
+					public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+					{
+						// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+//						Create a small chart, that can be used in emails etc.
+						String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("OS Swapping (1 hour)", 
+								MovingAverageCounterManager.getInstance(groupName, "swapIn",  60),  // Note make the chart on 60 minutes to see more info
+								MovingAverageCounterManager.getInstance(groupName, "swapOut", 60)); // Note make the chart on 60 minutes to see more info
+
+//						Get CPU Summary Usage chart
+						htmlChartImage += CmOsMpstat.getGraphDataHistoryAsHtmlImage(CmOsMpstat.GRAPH_NAME_MpSum, getCounterController());
+
+//						Get Available Memory
+						htmlChartImage += CmOsMeminfo.getGraphDataHistoryAsHtmlImage(CmOsMeminfo.GRAPH_NAME_MEM_AVAILABLE, getCounterController());
+
+//						Possibly getting info from CmOsPs... This will help us to determine if OTHER processes than the DBMS is loading the server
+						htmlChartImage += CmOsPs.getCmOsPs_getGraphDataHistoryAsHtmlImage(getCounterController(), CmOsPs.GRAPH_NAME_WIN_PS);
+						htmlChartImage += CmOsPs.getCmOsPs_asHtmlTable(getCounterController(), 15);
+						alarmEvent.setExtendedDescription(null, htmlChartImage);
+
+						// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+						if (AlarmPhase.CANCEL.equals(phase))
+						{
+							// NOTE: do NOT add() here, that is done once per sample in sendAlarmRequest(), just read the average
+							double swapInAvg  = MovingAverageCounterManager.getInstance(cm.getName(), "swapIn",  MOVING_AVG_TIME_IN_MINUTES).getAvg(0, false);
+							double swapOutAvg = MovingAverageCounterManager.getInstance(cm.getName(), "swapOut", MOVING_AVG_TIME_IN_MINUTES).getAvg(0, false);
+
+							String cancelMsg = getAlarmCancelText("Swap in / out (" + MOVING_AVG_TIME_IN_MINUTES + " minute average)", toAlarmCancelValue(swapInAvg) + " / " + toAlarmCancelValue(swapOutAvg) + " per second");
+							alarmEvent.setCancelDescription(cancelMsg);
+						}
+					}
+				});
 
 				// Information about how to disable this alarm
 				alarm.createAlarmOptionsMessage(this, "swapping");
@@ -652,26 +674,46 @@ extends CounterModelHostMonitor
 				Timestamp swapOut_peakTs     = MovingAverageCounterManager.getInstance(groupName, "swapOut", MOVING_AVG_TIME_IN_MINUTES).getPeakTimestamp();
 				double    swapOut_peakNumber = MovingAverageCounterManager.getInstance(groupName, "swapOut", MOVING_AVG_TIME_IN_MINUTES).getPeakNumber();
 
-				// Create a small chart, that can be used in emails etc.
-				String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("OS Swapping (1 hour)", 
-						MovingAverageCounterManager.getInstance(groupName, "swapIn",  60),  // Note make the chart on 60 minutes to see more info
-						MovingAverageCounterManager.getInstance(groupName, "swapOut", 60)); // Note make the chart on 60 minutes to see more info
-
-				// Get CPU Summary Usage chart
-				htmlChartImage += "<br>" + CmOsMpstat.getGraphDataHistoryAsHtmlImage(CmOsMpstat.GRAPH_NAME_MpSum, getCounterController());
-				
-				// Get Available Memory
-				htmlChartImage += "<br>" + CmOsMeminfo.getGraphDataHistoryAsHtmlImage(CmOsMeminfo.GRAPH_NAME_MEM_AVAILABLE, getCounterController());
-				
-				// Possibly getting info from CmOsPs... This will help us to determine if OTHER processes than the DBMS is loading the server
-				htmlChartImage += "<br>" + CmOsPs.getCmOsPs_getGraphDataHistoryAsHtmlImage(getCounterController(), CmOsPs.GRAPH_NAME_WIN_PS);
-				htmlChartImage += "<br>" + CmOsPs.getCmOsPs_asHtmlTable(getCounterController(), 15);
-				
 				AlarmEventOsSwapThrashing alarm = new AlarmEventOsSwapThrashing(cm, threshold, maxCap, hostname, "over " + MOVING_AVG_TIME_IN_MINUTES + " minute moving average", 
 						swapIn_xmAvg,  swapIn_peakTs,  swapIn_peakNumber,
 						swapOut_xmAvg, swapOut_peakTs, swapOut_peakNumber);
-				
-				alarm.setExtendedDescription(null, htmlChartImage);
+
+				// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+				alarm.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+				{
+					// Called on RAISE/RE-RAISE/CANCEL: the graphs are from the CURRENT data
+					@Override
+					public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+					{
+						// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+//						Create a small chart, that can be used in emails etc.
+						String htmlChartImage = MovingAverageChart.getChartAsHtmlImage("OS Swapping (1 hour)", 
+								MovingAverageCounterManager.getInstance(groupName, "swapIn",  60),  // Note make the chart on 60 minutes to see more info
+								MovingAverageCounterManager.getInstance(groupName, "swapOut", 60)); // Note make the chart on 60 minutes to see more info
+
+//						Get CPU Summary Usage chart
+						htmlChartImage += "<br>" + CmOsMpstat.getGraphDataHistoryAsHtmlImage(CmOsMpstat.GRAPH_NAME_MpSum, getCounterController());
+
+//						Get Available Memory
+						htmlChartImage += "<br>" + CmOsMeminfo.getGraphDataHistoryAsHtmlImage(CmOsMeminfo.GRAPH_NAME_MEM_AVAILABLE, getCounterController());
+
+//						Possibly getting info from CmOsPs... This will help us to determine if OTHER processes than the DBMS is loading the server
+						htmlChartImage += "<br>" + CmOsPs.getCmOsPs_getGraphDataHistoryAsHtmlImage(getCounterController(), CmOsPs.GRAPH_NAME_WIN_PS);
+						htmlChartImage += "<br>" + CmOsPs.getCmOsPs_asHtmlTable(getCounterController(), 15);
+						alarmEvent.setExtendedDescription(null, htmlChartImage);
+
+						// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+						if (AlarmPhase.CANCEL.equals(phase))
+						{
+							// NOTE: do NOT add() here, that is done once per sample in sendAlarmRequest(), just read the average
+							double swapInAvg  = MovingAverageCounterManager.getInstance(cm.getName(), "swapIn",  MOVING_AVG_TIME_IN_MINUTES).getAvg(0, false);
+							double swapOutAvg = MovingAverageCounterManager.getInstance(cm.getName(), "swapOut", MOVING_AVG_TIME_IN_MINUTES).getAvg(0, false);
+
+							String cancelMsg = getAlarmCancelText("Swap in / out (" + MOVING_AVG_TIME_IN_MINUTES + " minute average)", toAlarmCancelValue(swapInAvg) + " / " + toAlarmCancelValue(swapOutAvg) + " per second");
+							alarmEvent.setCancelDescription(cancelMsg);
+						}
+					}
+				});
 
 				// Information about how to disable this alarm
 				alarm.createAlarmOptionsMessage(this, "SwapThrashing");

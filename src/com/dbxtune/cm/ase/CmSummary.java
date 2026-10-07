@@ -41,6 +41,8 @@ import com.dbxtune.DbxTune;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProvider;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventBlockingLockAlarm;
 import com.dbxtune.alarm.events.AlarmEventFullTranLog;
@@ -1393,6 +1395,45 @@ extends CmSummaryAbstract
 		}
 	}
 	
+	/**
+	 * The provider for the CPU alarms ('TotalCPUTime', 'UserCPUTime', 'IoCPUTime'): the CPU graph from the CURRENT data,
+	 * and at CANCEL: the CPU usage now.
+	 * <p>
+	 * Called from AlarmHandler on: Raise, RE-RAISE &amp; CANCEL
+	 *
+	 * @param threshold      The threshold
+	 */
+	private AlarmDescriptionProvider createCpuUsageDescriptionProvider(Number threshold)
+	{
+		return new AlarmDescriptionProviderBase(null, null, threshold)
+		{
+			// Called on RAISE/RE-RAISE/CANCEL: the graphs are from the CURRENT data
+			@Override
+			public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+			{
+				// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+				String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AA_CPU);
+				alarmEvent.setExtendedDescription("", extendedDescHtml);
+
+				// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+				if (AlarmPhase.CANCEL.equals(phase))
+				{
+					Double cpu_busy = cm.getDiffValueAsDouble(0, "cpu_busy");
+					Double cpu_io   = cm.getDiffValueAsDouble(0, "cpu_io");
+					Double cpu_idle = cm.getDiffValueAsDouble(0, "cpu_idle");
+
+					if (cpu_busy != null && cpu_io != null && cpu_idle != null && (cpu_busy + cpu_io + cpu_idle) > 0)
+					{
+						double total = cpu_busy + cpu_io + cpu_idle;
+						String now   = toAlarmCancelValue((cpu_busy + cpu_io) / total * 100.0) + "% (user " + toAlarmCancelValue(cpu_busy / total * 100.0) + "%, io " + toAlarmCancelValue(cpu_io / total * 100.0) + "%)";
+
+						String cancelMsg = getAlarmCancelText("CPU usage", now, "%");
+						alarmEvent.setCancelDescription(cancelMsg);
+					}
+				}
+			}
+		};
+	}
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -1448,11 +1489,10 @@ extends CmSummaryAbstract
 
 					if (pctCPUTime.doubleValue() > threshold)
 					{
-						String extendedDescText = "";
-						String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AA_CPU);
-
 						AlarmEvent ae = new AlarmEventHighCpuUtilization(cm, threshold, CpuType.TOTAL_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime);
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, createCpuUsageDescriptionProvider(threshold));
 
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "TotalCPUTime");
@@ -1470,11 +1510,10 @@ extends CmSummaryAbstract
 
 					if (pctUserCPUTime.doubleValue() > threshold)
 					{
-						String extendedDescText = "";
-						String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AA_CPU);
-
 						AlarmEvent ae = new AlarmEventHighCpuUtilization(cm, threshold, CpuType.USER_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime);
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, createCpuUsageDescriptionProvider(threshold));
 
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "UserCPUTime");
@@ -1492,11 +1531,10 @@ extends CmSummaryAbstract
 
 					if (pctSystemCPUTime.doubleValue() > threshold)
 					{
-						String extendedDescText = "";
-						String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_AA_CPU);
-
 						AlarmEvent ae = new AlarmEventHighCpuUtilization(cm, threshold, CpuType.IO_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime);
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, createCpuUsageDescriptionProvider(threshold));
 
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "IoCPUTime");
@@ -1602,7 +1640,31 @@ extends CmSummaryAbstract
 					}
 					
 					AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, LockWaits);
-					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					// The extended description is from when the alarm was (re)raised: the oldest open transaction (SPID, SQL...)
+					final String raiseText = extendedDescText;
+					final String raiseHtml = extendedDescHtml;
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+					{
+						// Called on RAISE/RE-RAISE/CANCEL: the extended description is from when it was (re)raised
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+						{
+							// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description (from when it was (re)raised)
+							alarmEvent.setExtendedDescription(raiseText, raiseHtml);
+
+							// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+							if (AlarmPhase.CANCEL.equals(phase))
+							{
+								Integer LockWaits = cm.getAbsValueAsInteger(0, "LockWaits");
+
+								String cancelMsg = getAlarmCancelText("Lock waits", LockWaits);
+								alarmEvent.setCancelDescription(cancelMsg);
+							}
+						}
+					});
 					
 					// Information about how to disable this alarm
 					ae.createAlarmOptionsMessage(this, "LockWaits");
@@ -1715,7 +1777,33 @@ extends CmSummaryAbstract
 						}
 						
 						AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, oldestOpenTranDbName, oldestOpenTranInSec, oldestOpenTranName);
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The extended description is from when the alarm was (re)raised: the oldest open transaction (SPID, SQL...)
+						final String raiseText = extendedDescText;
+						final String raiseHtml = extendedDescHtml;
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL: the extended description is from when it was (re)raised
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description (from when it was (re)raised)
+								alarmEvent.setExtendedDescription(raiseText, raiseHtml);
+
+								// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+								if (AlarmPhase.CANCEL.equals(phase))
+								{
+									Double oldestOpenTranInSec = cm.getAbsValueAsDouble(0, "oldestOpenTranInSec");
+
+									if (oldestOpenTranInSec == null || oldestOpenTranInSec <= 0)
+										alarmEvent.setCancelDescription("There is no open transaction now");
+									else
+										alarmEvent.setCancelDescription(getAlarmCancelText("The oldest open transaction", oldestOpenTranInSec.intValue() + " seconds (database '" + cm.getAbsString(0, "oldestOpenTranDbName") + "')", " seconds"));
+								}
+							}
+						});
 						
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "oldestOpenTranInSec");
@@ -1743,6 +1831,24 @@ extends CmSummaryAbstract
 				if (fullTranslogCount.intValue() > threshold)
 				{
 					AlarmEvent ae = new AlarmEventFullTranLog(cm, threshold, fullTranslogCount);
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+					{
+						// Called on RAISE/RE-RAISE/CANCEL
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+						{
+							// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+							if (AlarmPhase.CANCEL.equals(phase))
+							{
+								Integer fullTranslogCount = cm.getAbsValueAsInteger(0, "fullTranslogCount");
+
+								String cancelMsg = getAlarmCancelText("Number of databases with a full transaction log", fullTranslogCount);
+								alarmEvent.setCancelDescription(cancelMsg);
+							}
+						}
+					});
 
 					// Information about how to disable this alarm
 					ae.createAlarmOptionsMessage(this, "fullTranslogCount");

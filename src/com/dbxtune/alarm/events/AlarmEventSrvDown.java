@@ -23,7 +23,6 @@ package com.dbxtune.alarm.events;
 import java.sql.Timestamp;
 
 import com.dbxtune.Version;
-import com.dbxtune.alarm.events.AlarmDescriptionProvider.Phase;
 import com.dbxtune.cm.CmSummaryAbstract;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.utils.StringUtil;
@@ -107,10 +106,10 @@ extends AlarmEvent
 		setAlarmDescriptionProvider(cmSummary, new AlarmDescriptionProvider()
 		{
 			@Override
-			public void setValues(CountersModel cm, AlarmEvent alarmEvent, Phase phase)
+			public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
 			{
 				// RAISE and RE-RAISE: keep the connect info (set in the constructor)
-				if (AlarmDescriptionProvider.Phase.CANCEL.equals(phase))
+				if (AlarmDescriptionProvider.AlarmPhase.CANCEL.equals(phase))
 				{
 					setCancelValues((CmSummaryAbstract) cm, alarmEvent, startTimeBeforeOutage);
 				}

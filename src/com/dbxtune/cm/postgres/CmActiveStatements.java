@@ -44,6 +44,7 @@ import com.dbxtune.IGuiController;
 import com.dbxtune.Version;
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.AlarmHelper;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventBlockingLockAlarm;
 import com.dbxtune.alarm.events.AlarmEventHoldingLocksWhileWaitForClientInput;
@@ -1167,8 +1168,39 @@ extends CountersModel
 
 						AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, pid, ImBlockingOthersMaxTimeInSec, BlockingOtherPidsStr, blockCount);
 
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-						
+						// The extended description is from when the alarm was (re)raised: the statement at that time
+						final String raiseText = extendedDescText;
+						final String raiseHtml = extendedDescHtml;
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL: the extended description is from when it was (re)raised
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description (from when it was (re)raised)
+								alarmEvent.setExtendedDescription(raiseText, raiseHtml);
+
+								// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+								if (AlarmPhase.CANCEL.equals(phase))
+								{
+									int    rowId = cm.getRowIdWhere(DATA_RATE, "pid", pid);
+									String label = "Pid " + pid;
+
+									if (rowId == -1)
+										alarmEvent.setCancelDescription(label + " has no active statement now");
+									else
+									{
+										Object im_blocking_others_max_time_in_sec = cm.getRateValue(rowId, "im_blocking_others_max_time_in_sec");
+
+										String cancelMsg = getAlarmCancelText(label + ": max time it blocks others", im_blocking_others_max_time_in_sec + " seconds", " seconds");
+										alarmEvent.setCancelDescription(cancelMsg);
+									}
+								}
+							}
+						});
+
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "ImBlockingOthersMaxTimeInSec");
 
@@ -1203,9 +1235,41 @@ extends CountersModel
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
 
 						AlarmEvent ae = new AlarmEventHoldingLocksWhileWaitForClientInput(cm, threshold, pid, stmnt_start_sec, query_start, true);
-						
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-						
+
+						// The extended description is from when the alarm was (re)raised: the statement at that time
+						final String raiseText = extendedDescText;
+						final String raiseHtml = extendedDescHtml;
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL: the extended description is from when it was (re)raised
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description (from when it was (re)raised)
+								alarmEvent.setExtendedDescription(raiseText, raiseHtml);
+
+								// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+								if (AlarmPhase.CANCEL.equals(phase))
+								{
+									int    rowId = cm.getRowIdWhere(DATA_RATE, "pid", pid);
+									String label = "Pid " + pid;
+
+									if (rowId == -1)
+										alarmEvent.setCancelDescription(label + " has no active statement now");
+									else
+									{
+										Object state           = cm.getRateValue(rowId, "state");
+										Object stmnt_start_sec = cm.getRateValue(rowId, "stmnt_start_sec");
+
+										String cancelMsg = getAlarmCancelText(label + ": state", "'" + state + "', statement started " + stmnt_start_sec + " seconds ago", " seconds");
+										alarmEvent.setCancelDescription(cancelMsg);
+									}
+								}
+							}
+						});
+
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "HoldingXLocksWhileWaitForClientInputInSec");
 
@@ -1239,9 +1303,41 @@ extends CountersModel
 						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
 
 						AlarmEvent ae = new AlarmEventHoldingLocksWhileWaitForClientInput(cm, threshold, pid, stmnt_start_sec, query_start, true);
-						
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-						
+
+						// The extended description is from when the alarm was (re)raised: the statement at that time
+						final String raiseText = extendedDescText;
+						final String raiseHtml = extendedDescHtml;
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL: the extended description is from when it was (re)raised
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description (from when it was (re)raised)
+								alarmEvent.setExtendedDescription(raiseText, raiseHtml);
+
+								// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+								if (AlarmPhase.CANCEL.equals(phase))
+								{
+									int    rowId = cm.getRowIdWhere(DATA_RATE, "pid", pid);
+									String label = "Pid " + pid;
+
+									if (rowId == -1)
+										alarmEvent.setCancelDescription(label + " has no active statement now");
+									else
+									{
+										Object state           = cm.getRateValue(rowId, "state");
+										Object stmnt_start_sec = cm.getRateValue(rowId, "stmnt_start_sec");
+
+										String cancelMsg = getAlarmCancelText(label + ": state", "'" + state + "', statement started " + stmnt_start_sec + " seconds ago", " seconds");
+										alarmEvent.setCancelDescription(cancelMsg);
+									}
+								}
+							}
+						});
+
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "HoldingAdvisoryLocksWhileWaitForClientInputInSec");
 
@@ -1312,16 +1408,49 @@ extends CountersModel
 						// NO match in the SKIP regEx
 						if (doAlarm)
 						{
-							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-													
-							// Get a small graph (from CmSummary) about the usage for the last hour
-							CountersModel cmSummary = getCounterController().getCmByName(CmSummary.CM_NAME);
-							extendedDescHtml += "<br><br>" + cmSummary.getGraphDataHistoryAsHtmlImage(CmSummary.GRAPH_NAME_OLDEST_COMBO_IN_SEC);
+							// The statement as it was when the alarm was raised (the row index 'r' is only valid in this sample)
+							final String rowText = cm.toTextTableString(DATA_RATE, r);
+							final String rowHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
 
 							// create the alarm
 							AlarmEvent ae = new AlarmEventLongRunningStatement(cm, threshold, StatementExecInSec, StatementStartTime, DBName, Login, Command, backend_type);
-							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+							final Object alarmPid = cm.getDiffValue(r, "pid");
+
+							// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+							ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+							{
+								// Called on RAISE/RE-RAISE/CANCEL: the statement is from when it was (re)raised, the graph is from the CURRENT data
+								@Override
+								public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description
+									String extendedDescHtml = rowHtml;
+
+//									Get a small graph (from CmSummary) about the usage for the last hour
+									CountersModel cmSummary = getCounterController().getCmByName(CmSummary.CM_NAME);
+									extendedDescHtml += "<br><br>" + cmSummary.getGraphDataHistoryAsHtmlImage(CmSummary.GRAPH_NAME_OLDEST_COMBO_IN_SEC);
+
+									alarmEvent.setExtendedDescription(rowText, extendedDescHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										int    rowId = cm.getRowIdWhere(DATA_RATE, "pid", alarmPid);
+										String label = "Pid " + alarmPid;
+
+										if (rowId == -1)
+											alarmEvent.setCancelDescription(label + " has no active statement now");
+										else
+										{
+											Double execTimeInMs = cm.getRateValueAsDouble(rowId, "execTimeInMs");
+											Object state        = cm.getRateValue        (rowId, "state");
+
+											String cancelMsg = getAlarmCancelText(label + ": statement exec time", (execTimeInMs == null ? "unknown" : (execTimeInMs.longValue() / 1000) + "") + " seconds (state '" + state + "')", " seconds");
+											alarmEvent.setCancelDescription(cancelMsg);
+										}
+									}
+								}
+							});
 						
 							// Information about how to disable this alarm
 							ae.createAlarmOptionsMessage(this, "StatementExecInSec");
@@ -1383,16 +1512,49 @@ extends CountersModel
 						// NO match in the SKIP regEx
 						if (doAlarm)
 						{
-							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
-							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
-
-							// Get a small graph (from CmSummary) about the usage for the last hour
-							CountersModel cmSummary = getCounterController().getCmByName(CmSummary.CM_NAME);
-							extendedDescHtml += "<br><br>" + cmSummary.getGraphDataHistoryAsHtmlImage(CmSummary.GRAPH_NAME_OLDEST_COMBO_IN_SEC);
+							// The statement as it was when the alarm was raised (the row index 'r' is only valid in this sample)
+							final String rowText = cm.toTextTableString(DATA_RATE, r);
+							final String rowHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
 
 							// create the alarm
 							AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, DBName, xactTimeInSec, backend_type);
-							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+							final Object alarmPid = cm.getDiffValue(r, "pid");
+
+							// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+							ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+							{
+								// Called on RAISE/RE-RAISE/CANCEL: the statement is from when it was (re)raised, the graph is from the CURRENT data
+								@Override
+								public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description
+									String extendedDescHtml = rowHtml;
+
+//									Get a small graph (from CmSummary) about the usage for the last hour
+									CountersModel cmSummary = getCounterController().getCmByName(CmSummary.CM_NAME);
+									extendedDescHtml += "<br><br>" + cmSummary.getGraphDataHistoryAsHtmlImage(CmSummary.GRAPH_NAME_OLDEST_COMBO_IN_SEC);
+
+									alarmEvent.setExtendedDescription(rowText, extendedDescHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										int    rowId = cm.getRowIdWhere(DATA_RATE, "pid", alarmPid);
+										String label = "Pid " + alarmPid;
+
+										if (rowId == -1)
+											alarmEvent.setCancelDescription(label + " has no active statement now");
+										else
+										{
+											Object xact_start_sec = cm.getRateValue(rowId, "xact_start_sec");
+											Object state          = cm.getRateValue(rowId, "state");
+
+											String cancelMsg = getAlarmCancelText(label + ": transaction time", xact_start_sec + " seconds (state '" + state + "')", " seconds");
+											alarmEvent.setCancelDescription(cancelMsg);
+										}
+									}
+								}
+							});
 						
 							// Information about how to disable this alarm
 							ae.createAlarmOptionsMessage(this, "OpenXactInSec");

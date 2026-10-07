@@ -36,6 +36,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.postgres.AlarmEventPgReplicationAge;
 import com.dbxtune.alarm.events.postgres.AlarmEventPgReplicationLag;
@@ -627,6 +628,7 @@ extends CountersModel
 	 * ALARM Handling
 	 *----------------------------------------------------------------------------------------------
 	 */
+
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -659,11 +661,45 @@ extends CountersModel
 
 					if (total_lag_kb.intValue() > threshold)
 					{
-						String extendedDescText = "";
-						String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOTAL_LAG);
-
 						AlarmEvent ae = new AlarmEventPgReplicationLag(cm, client_addr, total_lag_kb.intValue(), threshold); 
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(cm.getPk(), cm.getAbsPkValue(r), threshold)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised, the graphs are from the CURRENT data
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								String rowPk = getRowPk();
+								int    rowId = cm.getAbsRowIdForPkValue(rowPk);
+
+								String lclient_addr = (rowId == -1) ? client_addr : cm.getAbsString(rowId, "client_addr");
+								String label        = "Replica '" + lclient_addr + "'";
+
+								if (rowId != -1)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+									String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_TOTAL_LAG);
+									alarmEvent.setExtendedDescription("", extendedDescHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										Double total_lag_kb = cm.getAbsValueAsDouble(rowId, "total_lag_kb");
+
+										String cancelMsg = getAlarmCancelText(label + ": total lag", toAlarmCancelValue(total_lag_kb) + " KB", " KB");
+										alarmEvent.setCancelDescription(cancelMsg);
+									}
+								}
+								else
+								{
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+									}
+								}
+							}
+						});
 
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "total_lag_kb");
@@ -693,11 +729,45 @@ extends CountersModel
 
 					if (reply_time_seconds.intValue() > threshold)
 					{
-						String extendedDescText = "";
-						String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_REP_AGE_SECONDS);
-
 						AlarmEvent ae = new AlarmEventPgReplicationAge(cm, client_addr, reply_time_seconds.intValue(), threshold); 
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(cm.getPk(), cm.getAbsPkValue(r), threshold)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised, the graphs are from the CURRENT data
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								String rowPk = getRowPk();
+								int    rowId = cm.getAbsRowIdForPkValue(rowPk);
+
+								String lclient_addr = (rowId == -1) ? client_addr : cm.getAbsString(rowId, "client_addr");
+								String label        = "Replica '" + lclient_addr + "'";
+
+								if (rowId != -1)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+									String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_REP_AGE_SECONDS);
+									alarmEvent.setExtendedDescription("", extendedDescHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										Double reply_time_seconds = cm.getAbsValueAsDouble(rowId, "reply_time_seconds");
+
+										String cancelMsg = getAlarmCancelText(label + ": last reply", toAlarmCancelValue(reply_time_seconds) + " seconds ago", " seconds");
+										alarmEvent.setCancelDescription(cancelMsg);
+									}
+								}
+								else
+								{
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+									}
+								}
+							}
+						});
 
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "reply_time_seconds");

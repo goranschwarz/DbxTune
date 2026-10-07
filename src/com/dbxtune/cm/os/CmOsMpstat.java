@@ -787,9 +787,9 @@ extends CounterModelHostMonitor
 		return new AlarmDescriptionProvider()
 		{
 			@Override
-			public void setValues(CountersModel cm, AlarmEvent alarmEvent, Phase phase)
+			public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
 			{
-				if (Phase.CANCEL.equals(phase))
+				if (AlarmPhase.CANCEL.equals(phase))
 				{
 					Double cpuPctUsage = getCpuUsage();
 					alarmEvent.setCancelDescription("CPU Usage is now " + (cpuPctUsage == null ? "unknown" : NumberUtils.round(cpuPctUsage, 1) + "%") + " (threshold " + threshold + "%)");

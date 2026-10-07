@@ -41,6 +41,7 @@ import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.Version;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEvent.Severity;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventPerfCounter;
@@ -3021,6 +3022,39 @@ extends CountersModel
 				{
 //					AlarmEvent ae = new AlarmEventPerfCounterWarning(cm, "Free list stalls/sec", freeListStalls, "Buffer Cache is probably to small... 'Free list stalls/sec'=" + freeListStalls + ". Waiting for memory to become available before a page can be added into the buffer pool.", threshold);
 					AlarmEvent ae = new AlarmEventPerfCounter(cm, Severity.INFO, "Free list stalls/sec", freeListStalls, "Buffer Cache is probably to small... 'Free list stalls/sec'=" + freeListStalls + ". Waiting for memory to become available before a page can be added into the buffer pool.", threshold);
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(cm.getPk(), pk, threshold)
+					{
+						// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+						{
+							String rowPk = getRowPk();
+							int    rowId = cm.getAbsRowIdForPkValue(rowPk);
+
+							String label = "'Free list stalls/sec'";
+
+							if (rowId != -1)
+							{
+								// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+								if (AlarmPhase.CANCEL.equals(phase))
+								{
+									Double calculated_value = cm.getAbsValueAsDouble(rowId, "calculated_value");
+
+									String cancelMsg = getAlarmCancelText(label, calculated_value);
+									alarmEvent.setCancelDescription(cancelMsg);
+								}
+							}
+							else
+							{
+								if (AlarmPhase.CANCEL.equals(phase))
+								{
+									alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+								}
+							}
+						}
+					});
 					
 					int raiseDelay = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_FreeListStalls_delay, DEFAULT_alarm_FreeListStalls_delay);
 					ae.setRaiseDelayInSec(raiseDelay);
@@ -3053,6 +3087,39 @@ extends CountersModel
 				{
 //					AlarmEvent ae = new AlarmEventPerfCounterWarning(cm, "Lazy writes/sec", lazyWrites, "Buffer Cache is probably to small... 'Lazy writes/sec'=" + lazyWrites + ". Lazy Writer process moves 'dirty' pages from cache/buffer-pool to disk. This is an indication of 'memory pressure' or 'to little memory'.", threshold);
 					AlarmEvent ae = new AlarmEventPerfCounter(cm, Severity.INFO, "Lazy writes/sec", lazyWrites, "Buffer Cache is probably to small... 'Lazy writes/sec'=" + lazyWrites + ". Lazy Writer process moves 'dirty' pages from cache/buffer-pool to disk. This is an indication of 'memory pressure' or 'to little memory'.", threshold);
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(cm.getPk(), pk, threshold)
+					{
+						// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+						{
+							String rowPk = getRowPk();
+							int    rowId = cm.getAbsRowIdForPkValue(rowPk);
+
+							String label = "'Lazy writes/sec'";
+
+							if (rowId != -1)
+							{
+								// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+								if (AlarmPhase.CANCEL.equals(phase))
+								{
+									Double calculated_value = cm.getAbsValueAsDouble(rowId, "calculated_value");
+
+									String cancelMsg = getAlarmCancelText(label, calculated_value);
+									alarmEvent.setCancelDescription(cancelMsg);
+								}
+							}
+							else
+							{
+								if (AlarmPhase.CANCEL.equals(phase))
+								{
+									alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+								}
+							}
+						}
+					});
 
 					int raiseDelay = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LazyWrites_delay, DEFAULT_alarm_LazyWrites_delay);
 					ae.setRaiseDelayInSec(raiseDelay);

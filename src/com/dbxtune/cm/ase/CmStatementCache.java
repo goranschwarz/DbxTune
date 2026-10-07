@@ -35,6 +35,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventConfigResourceIsLow;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -530,6 +531,7 @@ extends CountersModel
 	//--------------------------------------------------------------------
 	// Alarm Handling
 	//--------------------------------------------------------------------
+
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -576,12 +578,31 @@ extends CountersModel
 					String fixMsg  = "Fix this using: sp_configure 'statement cache size', 0, '###M'... or free unused memory with 'dbcc traceon(3604) dbcc proc_cache(free_unused)'.";
 					String msg     = warnMsg + fixMsg;
 
-					String extendedDescText = "";
-					String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_HIT_RATE_PCT);
-
-					// 300 = Wait for 5 minutes before the alarm is *fired* (this can be overridden by property 'AlarmEventConfigResourceIsLow.raise.delay=seconds'
 					AlarmEvent ae = new AlarmEventConfigResourceIsLow(cm, "statement cache size", TotalSizeMB, msg, threshold, 300); 
-					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+					{
+						// Called on RAISE/RE-RAISE/CANCEL: the graphs are from the CURRENT data
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+						{
+							// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+							String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_HIT_RATE_PCT);
+
+//							300 = Wait for 5 minutes before the alarm is *fired* (this can be overridden by property 'AlarmEventConfigResourceIsLow.raise.delay=seconds'
+							alarmEvent.setExtendedDescription("", extendedDescHtml);
+
+							// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+							if (AlarmPhase.CANCEL.equals(phase))
+							{
+								Double CacheHitPct = cm.getRateValueAsDouble(0, "CacheHitPct");
+
+								String cancelMsg = getAlarmCancelText("Statement Cache hit rate", toAlarmCancelValue(CacheHitPct) + "%", "%");
+								alarmEvent.setCancelDescription(cancelMsg);
+							}
+						}
+					});
 
 					// Information about how to disable this alarm
 					ae.createAlarmOptionsMessage(this, "CacheHitPct");

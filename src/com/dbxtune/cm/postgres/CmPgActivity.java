@@ -37,6 +37,7 @@ import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.AlarmHelper;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventLongRunningStatement;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -796,7 +797,45 @@ extends CountersModel
 							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
 													
 							AlarmEvent ae = new AlarmEventLongRunningStatement(cm, threshold, StatementExecInSec, StatementStartTime, DBName, Login, Command, backend_type);
-							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+							final Object alarmPid = cm.getDiffValue(r, "pid");
+
+							// The extended description is from when the alarm was (re)raised: the statement at that time
+							final String raiseText = extendedDescText;
+							final String raiseHtml = extendedDescHtml;
+
+							// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+							ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+							{
+								// Called on RAISE/RE-RAISE/CANCEL: the extended description is from when it was (re)raised
+								@Override
+								public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description (from when it was (re)raised)
+									alarmEvent.setExtendedDescription(raiseText, raiseHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										int    rowId = cm.getRowIdWhere(DATA_DIFF, "pid", alarmPid);
+										String label = "Pid " + alarmPid;
+
+										if (rowId == -1)
+											alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+										else
+										{
+											String state = cm.getDiffValue(rowId, "state") + "";
+
+											if ( ! "active".equals(state) )
+												alarmEvent.setCancelDescription(label + " has no running statement now (state '" + state + "')");
+											else
+											{
+												Double execTimeInMs = cm.getDiffValueAsDouble(rowId, "execTimeInMs");
+												alarmEvent.setCancelDescription(getAlarmCancelText(label + ": statement exec time", (execTimeInMs == null ? "unknown" : (execTimeInMs.longValue() / 1000) + "") + " seconds", " seconds"));
+											}
+										}
+									}
+								}
+							});
 						
 							// Information about how to disable this alarm
 							ae.createAlarmOptionsMessage(this, "StatementExecInSec");

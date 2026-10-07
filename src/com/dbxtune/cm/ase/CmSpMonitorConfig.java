@@ -33,6 +33,8 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProvider;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventConfigResourceIsLow;
 import com.dbxtune.alarm.events.AlarmEventConfigResourceIsReused;
@@ -489,6 +491,109 @@ extends CountersModel
 	/** How long we should hold entries in the MovingAverageCounterManager cache */
 	private final static int KEEP_TIME = 60;
 
+	/**
+	 * The provider for the "usage" alarms ('...Pct' and 'ConfigResourceIsUsedUp'): the "Active Count History" chart from the CURRENT data,
+	 * and at CANCEL: how much of the configuration is used now.
+	 * <p>
+	 * Called from AlarmHandler on: Raise, RE-RAISE &amp; CANCEL
+	 *
+	 * @param r              The row the alarm is about (only used to get its PK)
+	 * @param cfgName        The configuration name (column 'Name', the PK)
+	 * @param chartLabel     The chart label
+	 * @param groupName      The MovingAverageCounterManager group (this CM's name)
+	 * @param threshold      The threshold
+	 * @param thresholdUnit  "%" (the '...Pct' alarms) or " free" ('ConfigResourceIsUsedUp')
+	 */
+	private AlarmDescriptionProvider createUsageDescriptionProvider(int r, String cfgName, String chartLabel, String groupName, Number threshold, String thresholdUnit)
+	{
+		return new AlarmDescriptionProviderBase(getPk(), getAbsPkValue(r), threshold)
+		{
+			// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised, the graphs are from the CURRENT data
+			@Override
+			public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+			{
+				String rowPk = getRowPk();
+				int    rowId = cm.getAbsRowIdForPkValue(rowPk);
+
+				String lcfgName = (rowId == -1) ? cfgName : cm.getAbsString(rowId, "Name");
+				String label    = "Configuration '" + lcfgName + "'";
+
+				if (rowId != -1)
+				{
+					// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+					alarmEvent.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, lcfgName, KEEP_TIME)));
+
+					// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+					if (AlarmPhase.CANCEL.equals(phase))
+					{
+						Double  Pct_act    = cm.getAbsValueAsDouble (rowId, "Pct_act");
+						Double  Num_free   = cm.getAbsValueAsDouble (rowId, "Num_free");
+						Integer Num_active = cm.getAbsValueAsInteger(rowId, "Num_active");
+
+						String now = toAlarmCancelValue(Pct_act) + "% used, " + (Num_free == null ? "unknown" : Num_free.intValue()) + " free, " + Num_active + " active";
+						if ("procedure cache size".equals(lcfgName) && Num_free != null)
+							now += " (" + toAlarmCancelValue(Num_free / 512.0) + " MB free)";
+
+						String cancelMsg = getAlarmCancelText(label, now, thresholdUnit);
+						alarmEvent.setCancelDescription(cancelMsg);
+					}
+				}
+				else
+				{
+					if (AlarmPhase.CANCEL.equals(phase))
+					{
+						alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+					}
+				}
+			}
+		};
+	}
+
+	/**
+	 * The provider for the 'Reuse_cnt' alarms ('...ReuseDiff'): no extended description, at CANCEL: the reuse count now.
+	 * <p>
+	 * Called from AlarmHandler on: Raise, RE-RAISE &amp; CANCEL
+	 *
+	 * @param r              The row the alarm is about (only used to get its PK)
+	 * @param cfgName        The configuration name (column 'Name', the PK)
+	 * @param threshold      The threshold
+	 */
+	private AlarmDescriptionProvider createReuseDescriptionProvider(int r, String cfgName, Number threshold)
+	{
+		return new AlarmDescriptionProviderBase(getPk(), getAbsPkValue(r), threshold)
+		{
+			// Called on RAISE/RE-RAISE/CANCEL
+			@Override
+			public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+			{
+				String rowPk = getRowPk();
+				int    rowId = cm.getAbsRowIdForPkValue(rowPk);
+
+				String lcfgName = (rowId == -1) ? cfgName : cm.getAbsString(rowId, "Name");
+				String label    = "Configuration '" + lcfgName + "'";
+
+				if (rowId != -1)
+				{
+					// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+					if (AlarmPhase.CANCEL.equals(phase))
+					{
+						Integer Reuse_cnt = cm.getDiffValueAsInteger(rowId, "Reuse_cnt");
+
+						String cancelMsg = getAlarmCancelText(label + ": reuse count (last sample)", Reuse_cnt);
+						alarmEvent.setCancelDescription(cancelMsg);
+					}
+				}
+				else
+				{
+					if (AlarmPhase.CANCEL.equals(phase))
+					{
+						alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+					}
+				}
+			}
+		};
+	}
+
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -572,8 +677,9 @@ extends CountersModel
 					Double numFreeMb = numFree / 512.0;
 
 					AlarmEvent alarm = new AlarmEventProcedureCacheLowOnMemory(cm, numFreeMb, pctAct, threshold);
-					
-					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createUsageDescriptionProvider(r, cfgName, chartLabel, groupName, threshold, "%"));
 
 					// Information about how to disable this alarm
 					alarm.createAlarmOptionsMessage(this, "ProcedureCacheUsage");
@@ -595,7 +701,8 @@ extends CountersModel
 				{
 					AlarmEvent alarm = new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold);
 
-					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createUsageDescriptionProvider(r, cfgName, chartLabel, groupName, threshold, "%"));
 
 					// Information about how to disable this alarm
 					alarm.createAlarmOptionsMessage(this, "NumberOfOpenObjectsPct");
@@ -617,7 +724,8 @@ extends CountersModel
 				{
 					AlarmEvent alarm = new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold);
 
-					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createUsageDescriptionProvider(r, cfgName, chartLabel, groupName, threshold, "%"));
 
 					// Information about how to disable this alarm
 					alarm.createAlarmOptionsMessage(this, "NumberOfOpenPartitionsPct");
@@ -639,7 +747,8 @@ extends CountersModel
 				{
 					AlarmEvent alarm = new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold);
 
-					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createUsageDescriptionProvider(r, cfgName, chartLabel, groupName, threshold, "%"));
 
 					// Information about how to disable this alarm
 					alarm.createAlarmOptionsMessage(this, "NumberOfOpenIndexesPct");
@@ -661,7 +770,8 @@ extends CountersModel
 				{
 					AlarmEvent alarm = new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold);
 
-					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createUsageDescriptionProvider(r, cfgName, chartLabel, groupName, threshold, "%"));
 
 					// Information about how to disable this alarm
 					alarm.createAlarmOptionsMessage(this, "NumberOfOpenDatabasesPct");
@@ -684,7 +794,8 @@ extends CountersModel
 				{
 					AlarmEvent alarm = new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold);
 
-					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createUsageDescriptionProvider(r, cfgName, chartLabel, groupName, threshold, "%"));
 
 					// Information about how to disable this alarm
 					alarm.createAlarmOptionsMessage(this, "NumberOfLocksPct");
@@ -706,7 +817,8 @@ extends CountersModel
 				{
 					AlarmEvent alarm = new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold);
 
-					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createUsageDescriptionProvider(r, cfgName, chartLabel, groupName, threshold, "%"));
 
 					// Information about how to disable this alarm
 					alarm.createAlarmOptionsMessage(this, "NumberOfUserConnectionsPct");
@@ -728,7 +840,8 @@ extends CountersModel
 					// EMULATE: Error=701, Severity=17, Text=There is not enough procedure cache to run this procedure, trigger, or SQL batch. Retry later, or ask your SA to reconfigure ASE with more procedure cache.
 					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 701, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). There is not enough procedure cache to run this procedure, trigger, or SQL batch. Retry later, or ask your SA to reconfigure ASE with more procedure cache.", null);
 
-					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createUsageDescriptionProvider(r, cfgName, chartLabel, groupName, outOfThreshold, " free"));
 
 					// Information about how to disable this alarm
 					alarm.createAlarmOptionsMessage(this, "ProcedureCacheUsage-OutOf"); // Note: not really enforced
@@ -740,7 +853,8 @@ extends CountersModel
 				{
 					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.", null);
 
-					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createUsageDescriptionProvider(r, cfgName, chartLabel, groupName, outOfThreshold, " free"));
 
 					// Information about how to disable this alarm
 					alarm.createAlarmOptionsMessage(this, "NumberOfOpenObjects-OutOf"); // Note: not really enforced
@@ -752,7 +866,8 @@ extends CountersModel
 				{
 					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.", null);
 
-					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createUsageDescriptionProvider(r, cfgName, chartLabel, groupName, outOfThreshold, " free"));
 
 					// Information about how to disable this alarm
 					alarm.createAlarmOptionsMessage(this, "NumberOfOpenPartitions-OutOf"); // Note: not really enforced
@@ -764,7 +879,8 @@ extends CountersModel
 				{
 					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.", null);
 
-					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createUsageDescriptionProvider(r, cfgName, chartLabel, groupName, outOfThreshold, " free"));
 
 					// Information about how to disable this alarm
 					alarm.createAlarmOptionsMessage(this, "NumberOfOpenIndexes-OutOf"); // Note: not really enforced
@@ -776,7 +892,8 @@ extends CountersModel
 				{
 					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.", null);
 
-					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createUsageDescriptionProvider(r, cfgName, chartLabel, groupName, outOfThreshold, " free"));
 
 					// Information about how to disable this alarm
 					alarm.createAlarmOptionsMessage(this, "NumberOfOpenDatabases-OutOf"); // Note: not really enforced
@@ -789,7 +906,8 @@ extends CountersModel
 					// EMULATE: Error=1204, Severity=17, Text=ASE has run out of LOCKS. Re-run your command when there are fewer active users, or contact a user with System Administrator (SA) role to reconfigure ASE with more LOCKS.
 					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 1204, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). ASE has run out of LOCKS. Re-run your command when there are fewer active users, or contact a user with System Administrator (SA) role to reconfigure ASE with more LOCKS.", null);
 
-					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createUsageDescriptionProvider(r, cfgName, chartLabel, groupName, outOfThreshold, " free"));
 
 					// Information about how to disable this alarm
 					alarm.createAlarmOptionsMessage(this, "NumberOfLocks-OutOf"); // Note: not really enforced
@@ -802,7 +920,8 @@ extends CountersModel
 					// EMULATE: Error=1601, Severity=21, Text=There are not enough 'user connections' available to start a new process. Retry when there are fewer active users, or ask your System Administrator to reconfigure ASE with more user connections.
 					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 1601, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). There are not enough 'user connections' available to start a new process. Retry when there are fewer active users, or ask your System Administrator to reconfigure ASE with more user connections.", null);
 
-					alarm.setExtendedDescription(null, MovingAverageChart.getChartAsHtmlImage(chartLabel, MovingAverageCounterManager.getInstance(groupName, cfgName, KEEP_TIME)));
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createUsageDescriptionProvider(r, cfgName, chartLabel, groupName, outOfThreshold, " free"));
 
 					// Information about how to disable this alarm
 					alarm.createAlarmOptionsMessage(this, "NumberOfUserConnections-OutOf"); // Note: not really enforced
@@ -844,6 +963,9 @@ extends CountersModel
 				{
 					AlarmEvent alarm = new AlarmEventConfigResourceIsReused(cm, cfgName, reuse_cnt, threshold);
 
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createReuseDescriptionProvider(r, cfgName, threshold));
+
 					// Information about how to disable this alarm
 					alarm.createAlarmOptionsMessage(this, "NumberOfOpenObjectsReuseDiff");
 					
@@ -865,6 +987,9 @@ extends CountersModel
 				{
 					AlarmEvent alarm = new AlarmEventConfigResourceIsReused(cm, cfgName, reuse_cnt, threshold);
 
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createReuseDescriptionProvider(r, cfgName, threshold));
+
 					// Information about how to disable this alarm
 					alarm.createAlarmOptionsMessage(this, "NumberOfOpenPartitionsReuseDiff");
 					
@@ -885,6 +1010,9 @@ extends CountersModel
 				if (reuse_cnt.intValue() > threshold)
 				{
 					AlarmEvent alarm = new AlarmEventConfigResourceIsReused(cm, cfgName, reuse_cnt, threshold);
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, createReuseDescriptionProvider(r, cfgName, threshold));
 
 					// Information about how to disable this alarm
 					alarm.createAlarmOptionsMessage(this, "NumberOfOpenIndexesReuseDiff");

@@ -114,7 +114,7 @@ public class RequestAccessServlet extends HttpServlet
 			_logger.info("RequestAccessServlet: new self-registration request from email='{}', username='{}', requireApproval={}", email, username, requireApproval);
 
 			if (requireApproval)
-				NewAccountNotifier.sendAdminNotification(username, fullName, email, "self-registration", reason);
+				NewAccountNotifier.sendAdminNotification(username, fullName, email, "self-registration", reason, true);
 
 			String msg = requireApproval
 					? "Request submitted. An admin will review your request."

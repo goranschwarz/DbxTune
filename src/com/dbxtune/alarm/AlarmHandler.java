@@ -856,7 +856,7 @@ implements Runnable
 			_logger.debug("The AlarmEvent has already been raised: " + alarmEvent);
 
 			// Let any AlarmDescriptionProvider set the values (BEFORE they are copied to the active alarm as "reRaise" values)
-			alarmEvent.callAlarmDescriptionProvider(AlarmDescriptionProvider.Phase.RE_RAISE);
+			alarmEvent.callAlarmDescriptionProvider(AlarmDescriptionProvider.AlarmPhase.RE_RAISE);
 
 			// Increment the repeat counter in the ACTIVE container
 			_alarmContActive.handleReRaise(alarmEvent);
@@ -890,7 +890,7 @@ implements Runnable
 		}
 
 		// Let any AlarmDescriptionProvider set the values
-		alarmEvent.callAlarmDescriptionProvider(AlarmDescriptionProvider.Phase.RAISE);
+		alarmEvent.callAlarmDescriptionProvider(AlarmDescriptionProvider.AlarmPhase.RAISE);
 
 		// put it in the "Active alarms" Container
 		_alarmContActive.add(alarmEvent);
@@ -1117,7 +1117,7 @@ implements Runnable
 
 			// Let any AlarmDescriptionProvider set the values from the CURRENT data (the CM's are refreshed in this sample)
 			// so the CANCEL message tells how things look when the alarm went away
-			alarmEvent.callAlarmDescriptionProvider(AlarmDescriptionProvider.Phase.CANCEL);
+			alarmEvent.callAlarmDescriptionProvider(AlarmDescriptionProvider.AlarmPhase.CANCEL);
 
 			// set the Active Alarm Count
 			alarmEvent.setActiveAlarmCount(_alarmContActive.size() - cancelList.size());

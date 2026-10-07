@@ -44,6 +44,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventClientErrorMsg;
 import com.dbxtune.alarm.events.AlarmEventClientErrorMsgRate;
@@ -1517,6 +1518,7 @@ extends CountersModel
 	//--------------------------------------------------------------------
 	// Alarm Handling
 	//--------------------------------------------------------------------
+
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -1718,10 +1720,12 @@ extends CountersModel
 //						System.out.println("XXXXXXXXXXXXXXXXXX: errorMsgInfoTxt ="+errorMsgInfoTxt);
 //						System.out.println("XXXXXXXXXXXXXXXXXX: errorMsgInfoHtml="+errorMsgInfoHtml);
 
-						errorMsgInfoHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_SQL_STATEMENT_ERROR_COUNT);
-						errorMsgInfoHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_SQL_STATEMENT_SEC);
+						// The errors as they were when the alarm was raised (the graphs are added by the AlarmDescriptionProvider below)
+						final String errorsAtRaiseText = errorMsgInfoTxt;
+						final String errorsAtRaiseHtml = errorMsgInfoHtml;
 
 						// Add last ## SQL Statements with errors, so we can have a clue about what SQL is sent in the alarm
+						String lastSqlHtml = "";
 						boolean addLastSqlText = true;
 						if ( addLastSqlText && PersistentCounterHandler.hasInstance() ) // The hasInstance() is overkill, but why not...
 						{
@@ -1730,15 +1734,40 @@ extends CountersModel
 							{
 								SqlCaptureBrokerAse aseSqlCapBroker = (SqlCaptureBrokerAse)sqlCapBroker;
 
-								errorMsgInfoHtml += "<br>Last Captured SQL Statements with Errors:<br>" + aseSqlCapBroker.getAseErrorStatementsAsHtml();
+								lastSqlHtml += "<br>Last Captured SQL Statements with Errors:<br>" + aseSqlCapBroker.getAseErrorStatementsAsHtml();
 							}
 						}
+						final String lastSqlAtRaiseHtml = lastSqlHtml;
 
 						// Create Alarm
 						AlarmEvent alarm = new AlarmEventClientErrorMsgRate(cm, round1(errorCountPerSec), errorMsgInfoJson, threshold);
 
-						// Set the Error Info
-						alarm.setExtendedDescription(errorMsgInfoTxt, errorMsgInfoHtml);
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						alarm.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL: the errors and SQL are from when it was (re)raised, the graphs are from the CURRENT data
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description
+								String errorMsgInfoHtml = errorsAtRaiseHtml;
+								errorMsgInfoHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_SQL_STATEMENT_ERROR_COUNT);
+								errorMsgInfoHtml += "<br><br>" + cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_SQL_STATEMENT_SEC);
+								errorMsgInfoHtml += lastSqlAtRaiseHtml;
+
+								alarmEvent.setExtendedDescription(errorsAtRaiseText, errorMsgInfoHtml);
+
+								// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+								if (AlarmPhase.CANCEL.equals(phase))
+								{
+									// NOTE: all errors (the alarm skips some error numbers, see 'skipMsgNumberCsv')
+									Double errorCount = cm.getRateValueSum("errorCount");
+
+									String cancelMsg = getAlarmCancelText("Client error messages per second (all error numbers)", toAlarmCancelValue(errorCount));
+									alarmEvent.setCancelDescription(cancelMsg);
+								}
+							}
+						});
 
 						// Information about how to disable this alarm
 						alarm.createAlarmOptionsMessage(this, "errorCount");
@@ -1921,6 +1950,27 @@ extends CountersModel
 				if (ageInSec > thresholdInSec)
 				{
 					AlarmEvent alarm = new AlarmEventSqlCaptureOldData(cm, ageInSec, thresholdInSec);
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, thresholdInSec)
+					{
+						// Called on RAISE/RE-RAISE/CANCEL
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+						{
+							// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+							if (AlarmPhase.CANCEL.equals(phase))
+							{
+								if (_sqlCaptureLastUpdateTime > 0)
+								{
+									long ageInSec = (System.currentTimeMillis() - _sqlCaptureLastUpdateTime) / 1000;
+
+									String cancelMsg = getAlarmCancelText("The age of the SQL Capture data", ageInSec + " seconds", " seconds");
+									alarmEvent.setCancelDescription(cancelMsg);
+								}
+							}
+						}
+					});
 
 					// Information about how to disable this alarm
 					alarm.createAlarmOptionsMessage(this, "SqlCaptureAge");

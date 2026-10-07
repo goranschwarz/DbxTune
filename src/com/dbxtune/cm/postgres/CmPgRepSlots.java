@@ -36,6 +36,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.postgres.AlarmEventPgReplicationLag;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -352,11 +353,45 @@ extends CountersModel
 
 					if (lag_kb.intValue() > threshold)
 					{
-						String extendedDescText = "";
-						String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LAG_KB);
-
 						AlarmEvent ae = new AlarmEventPgReplicationLag(cm, slot_name, lag_kb.intValue(), threshold); 
-						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(cm.getPk(), cm.getAbsPkValue(r), threshold)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL: the row is from when it was (re)raised, the graphs are from the CURRENT data
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								String rowPk = getRowPk();
+								int    rowId = cm.getAbsRowIdForPkValue(rowPk);
+
+								String lslot_name = (rowId == -1) ? slot_name : cm.getAbsString(rowId, "slot_name");
+								String label      = "Replication slot '" + lslot_name + "'";
+
+								if (rowId != -1)
+								{
+									// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+									String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_LAG_KB);
+									alarmEvent.setExtendedDescription("", extendedDescHtml);
+
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										Double lag_kb = cm.getAbsValueAsDouble(rowId, "lag_kb");
+
+										String cancelMsg = getAlarmCancelText(label + ": lag", toAlarmCancelValue(lag_kb) + " KB", " KB");
+										alarmEvent.setCancelDescription(cancelMsg);
+									}
+								}
+								else
+								{
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+									}
+								}
+							}
+						});
 
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "total_lag_kb");

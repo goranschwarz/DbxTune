@@ -31,6 +31,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.postgres.AlarmEventPgArchiveError;
 import com.dbxtune.alarm.events.postgres.AlarmEventPgArchiveRate;
@@ -241,6 +242,7 @@ extends CountersModel
 	//----------------------------------------------------------------
 	// ALARMS
 	//----------------------------------------------------------------
+
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -274,11 +276,31 @@ extends CountersModel
 
 				if (failed_count_diff > threshold)
 				{
-					String extendedDescText = cm.toTextTableString(DATA_RATE, row);
-					String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, row, true, false, false);
-											
 					AlarmEvent ae = new AlarmEventPgArchiveError(cm, threshold, failed_count_diff, failed_count_abs);
-					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+					{
+						// Called on RAISE/RE-RAISE/CANCEL: the row is from the CURRENT data
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+						{
+							// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description
+							String extendedDescText = cm.toTextTableString(DATA_RATE, row);
+							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, row, true, false, false);
+							alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+							// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+							if (AlarmPhase.CANCEL.equals(phase))
+							{
+								Integer failed_count_diff = cm.getDiffValueAsInteger(0, "failed_count");
+								Integer failed_count_abs  = cm.getAbsValueAsInteger (0, "failed_count");
+
+								String cancelMsg = getAlarmCancelText("Failed archive attempts (last sample)", failed_count_diff + ", total " + failed_count_abs);
+								alarmEvent.setCancelDescription(cancelMsg);
+							}
+						}
+					});
 				
 					// Information about how to disable this alarm
 					ae.createAlarmOptionsMessage(this, "failed_count");
@@ -307,11 +329,31 @@ extends CountersModel
 				{
 					String last_archived_time = cm.getAbsString(row, "last_archived_time");
 
-					String extendedDescText = cm.toTextTableString(DATA_RATE, row);
-					String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, row, true, false, false);
-											
 					AlarmEvent ae = new AlarmEventPgArchiveError(cm, threshold, last_archived_in_seconds, last_archived_time);
-					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+					{
+						// Called on RAISE/RE-RAISE/CANCEL: the row is from the CURRENT data
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+						{
+							// Always: (RAISE, RE-RAISE, CANCEL) - Set the extended description
+							String extendedDescText = cm.toTextTableString(DATA_RATE, row);
+							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, row, true, false, false);
+							alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+							// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+							if (AlarmPhase.CANCEL.equals(phase))
+							{
+								Integer last_archived_in_seconds = cm.getDiffValueAsInteger(0, "last_archived_in_seconds");
+								String  last_archived_time       = cm.getAbsString        (0, "last_archived_time");
+
+								String cancelMsg = getAlarmCancelText("The last archived WAL", last_archived_in_seconds + " seconds old (" + last_archived_time + ")", " seconds");
+								alarmEvent.setCancelDescription(cancelMsg);
+							}
+						}
+					});
 				
 					// Information about how to disable this alarm
 					ae.createAlarmOptionsMessage(this, "last_archived_in_seconds");
@@ -346,57 +388,83 @@ extends CountersModel
 
 			if (archivedMbInLastHour > thresholdMb)
 			{
-				String extendedDescText = "";
-				String extendedDescHtml = "";
-
-				String configArchiveMode    = "-unknown-";
-				String configArchiveCommand = "-unknown-";
-				if (DbmsConfigManager.hasInstance())
-				{
-					IDbmsConfig dbmsConfig = DbmsConfigManager.getInstance();
-					
-					// archive_mode
-					IDbmsConfigEntry entry = dbmsConfig.getDbmsConfigEntry("archive_mode");
-					configArchiveMode = entry == null ? "-null-" : entry.getConfigValue();
-
-					// archive_command
-					entry = dbmsConfig.getDbmsConfigEntry("archive_command");
-					configArchiveCommand = entry == null ? "-null-" : entry.getConfigValue();
-				}
-
-				// Print Postgres Configuration: "archive_mode" and "archive_command"
-				extendedDescHtml += "Postgres Config 'archive_mode':    <code>" + configArchiveMode    + "</code><br>";
-				extendedDescHtml += "Postgres Config 'archive_command': <code>" + configArchiveCommand + "</code><br>";
-
-				// Graph: Archive Count
-				extendedDescHtml += "<br>"
-						+ "<b>Note:</b> Multiply 'archived_count' with " + ARCHIVE_CHUNK_IN_MB + " to get MB Archived.<br>"
-						+ getGraphDataHistoryAsHtmlImage(GRAPH_NAME_ARCHIVED_COUNT);
-				
-				// Info from: CmOsDiskSpace
-				CountersModel cmOsDiskSpace = getCounterController().getCmByName(CmOsDiskSpace.CM_NAME);
-				if (cmOsDiskSpace != null)
-				{
-					// Everything in CmOsDiskSpace ABS Counters to a HTML Table
-					if (cmOsDiskSpace.getCounterDataAbs() != null)
-						extendedDescHtml += "<br><br>" + SwingUtils.tableToHtmlString(cmOsDiskSpace.getCounterDataAbs());
-
-					// And a graph 'Available' (for last hour)
-					extendedDescHtml += "<br><br>" + cmOsDiskSpace.getGraphDataHistoryAsHtmlImage(CmOsDiskSpace.GRAPH_NAME_AVAILABLE_MB);
-
-					// And a graph 'Percent Used' (for last hour)
-					extendedDescHtml += "<br><br>" + cmOsDiskSpace.getGraphDataHistoryAsHtmlImage(CmOsDiskSpace.GRAPH_NAME_USED_PCT);
-				}
-				
 				AlarmEvent ae = new AlarmEventPgArchiveRate(cm, thresholdMb, archivedMbInLastHour, archivedCountInLastHour);
-				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-				
+
+				// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+				ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, thresholdMb)
+				{
+					// Called on RAISE/RE-RAISE/CANCEL: the graphs are from the CURRENT data
+					@Override
+					public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+					{
+						// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+						alarmEvent.setExtendedDescription("", getArchiveRateDescriptionHtml());
+
+						// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+						if (AlarmPhase.CANCEL.equals(phase))
+						{
+							// NOTE: do NOT add() here, that is done in sendAlarmRequest(). getSum() also removes entries older than 60 minutes
+							double archived_mb_last_hour = MovingAverageCounterManager.getInstance(CM_NAME, "archived_mb", 60).getSum(0, false);
+
+							String cancelMsg = getAlarmCancelText("Archived WAL in the last hour", toAlarmCancelValue(archived_mb_last_hour) + " MB", " MB");
+							alarmEvent.setCancelDescription(cancelMsg);
+						}
+					}
+				});
+
 				// Information about how to disable this alarm
 				ae.createAlarmOptionsMessage(this, "archived_mb_last_hour");
 
 				alarmHandler.addAlarm( ae );
 			}
 		} // end: archived_mb_last_hour
+	}
+
+	/** The extended description for the alarm 'archived_mb_last_hour': the archive config, the archive graph and the OS disk space (all from the CURRENT data) */
+	private String getArchiveRateDescriptionHtml()
+	{
+		String extendedDescHtml = "";
+
+		String configArchiveMode    = "-unknown-";
+		String configArchiveCommand = "-unknown-";
+		if (DbmsConfigManager.hasInstance())
+		{
+			IDbmsConfig dbmsConfig = DbmsConfigManager.getInstance();
+			
+			// archive_mode
+			IDbmsConfigEntry entry = dbmsConfig.getDbmsConfigEntry("archive_mode");
+			configArchiveMode = entry == null ? "-null-" : entry.getConfigValue();
+
+			// archive_command
+			entry = dbmsConfig.getDbmsConfigEntry("archive_command");
+			configArchiveCommand = entry == null ? "-null-" : entry.getConfigValue();
+		}
+
+		// Print Postgres Configuration: "archive_mode" and "archive_command"
+		extendedDescHtml += "Postgres Config 'archive_mode':    <code>" + configArchiveMode    + "</code><br>";
+		extendedDescHtml += "Postgres Config 'archive_command': <code>" + configArchiveCommand + "</code><br>";
+
+		// Graph: Archive Count
+		extendedDescHtml += "<br>"
+				+ "<b>Note:</b> Multiply 'archived_count' with " + ARCHIVE_CHUNK_IN_MB + " to get MB Archived.<br>"
+				+ getGraphDataHistoryAsHtmlImage(GRAPH_NAME_ARCHIVED_COUNT);
+		
+		// Info from: CmOsDiskSpace
+		CountersModel cmOsDiskSpace = getCounterController().getCmByName(CmOsDiskSpace.CM_NAME);
+		if (cmOsDiskSpace != null)
+		{
+			// Everything in CmOsDiskSpace ABS Counters to a HTML Table
+			if (cmOsDiskSpace.getCounterDataAbs() != null)
+				extendedDescHtml += "<br><br>" + SwingUtils.tableToHtmlString(cmOsDiskSpace.getCounterDataAbs());
+
+			// And a graph 'Available' (for last hour)
+			extendedDescHtml += "<br><br>" + cmOsDiskSpace.getGraphDataHistoryAsHtmlImage(CmOsDiskSpace.GRAPH_NAME_AVAILABLE_MB);
+
+			// And a graph 'Percent Used' (for last hour)
+			extendedDescHtml += "<br><br>" + cmOsDiskSpace.getGraphDataHistoryAsHtmlImage(CmOsDiskSpace.GRAPH_NAME_USED_PCT);
+		}
+
+		return extendedDescHtml;
 	}
 
 

@@ -35,6 +35,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventHighCpuUtilization;
 import com.dbxtune.alarm.events.AlarmEventHighCpuUtilization.CpuType;
@@ -742,11 +743,32 @@ extends CountersModel
 
 				if (NonIdleCPUTimePct.intValue() > threshold)
 				{
-					String extendedDescText = "";
-					String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_CPU_SUM);
-
 					AlarmEvent ae = new AlarmEventHighCpuUtilization(cm, threshold, CpuType.TOTAL_CPU, NonIdleCPUTimePct, UserCPUTimePct, SystemCPUTimePct, IdleCPUTimePct);
-					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+					{
+						// Called on RAISE/RE-RAISE/CANCEL: the graphs are from the CURRENT data
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+						{
+							// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+							String extendedDescHtml = cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_CPU_SUM);
+							alarmEvent.setExtendedDescription("", extendedDescHtml);
+
+							// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+							if (AlarmPhase.CANCEL.equals(phase))
+							{
+								// The average over all engines
+								Double NonIdleCPUTimePct = cm.getRateValueAvg("NonIdleCPUTimePct");
+								Double UserCPUTimePct    = cm.getRateValueAvg("UserCPUTimePct");
+								Double SystemCPUTimePct  = cm.getRateValueAvg("SystemCPUTimePct");
+
+								String cancelMsg = getAlarmCancelText("CPU usage", toAlarmCancelValue(NonIdleCPUTimePct) + "% (user " + toAlarmCancelValue(UserCPUTimePct) + "%, system " + toAlarmCancelValue(SystemCPUTimePct) + "%)", "%");
+								alarmEvent.setCancelDescription(cancelMsg);
+							}
+						}
+					});
 
 					// Information about how to disable this alarm
 					ae.createAlarmOptionsMessage(cm, "CPUTime");

@@ -37,6 +37,7 @@ import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.RsTune;
 import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.rs.AlarmEventRsMissingLogicalConnection;
 import com.dbxtune.alarm.events.rs.AlarmEventRsReplicationAge;
@@ -356,6 +357,7 @@ extends CountersModel
 	//--------------------------------------------------------------
 	// Alarm handling
 	//--------------------------------------------------------------
+
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -438,6 +440,37 @@ if (debugPrint || _logger.isDebugEnabled())
 				{
 					AlarmEvent alarm = new AlarmEventRsMissingLogicalConnection(cm, mandatoryLogicalName, thisSampleLogicalConnections, mandatoryLogicalConnections, configMandatoryLogicalConnections);
 
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, null)
+					{
+						// Called on RAISE/RE-RAISE/CANCEL: at RAISE the row is missing (that is the alarm)
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+						{
+							int    rowId = cm.getAbsRowIdWhere("LogicalName", mandatoryLogicalName);   // this CM has no PK: find the row by the logical connection name
+							String label = "Logical connection '" + mandatoryLogicalName + "'";
+
+							if (rowId != -1)
+							{
+								// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+								if (AlarmPhase.CANCEL.equals(phase))
+								{
+									String ActiveState  = cm.getAbsString(rowId, "ActiveState");
+									String StandbyState = cm.getAbsString(rowId, "StandbyState");
+
+									alarmEvent.setCancelDescription(label + " is present again (ActiveState '" + ActiveState + "', StandbyState '" + StandbyState + "')");
+								}
+							}
+							else
+							{
+								if (AlarmPhase.CANCEL.equals(phase))
+								{
+									alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+								}
+							}
+						}
+					});
+
 					// Information about how to disable this alarm
 					alarm.createAlarmOptionsMessage(this, "MandatoryLogicalConnections");
 
@@ -472,6 +505,37 @@ if (debugPrint || _logger.isDebugEnabled())
 					{
 						AlarmEvent ae = new AlarmEventRsWsState(cm, lName, "ActiveState", state, "", regexp);
 
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, null)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								int    rowId = cm.getAbsRowIdWhere("LogicalName", lName);   // this CM has no PK: find the row by the logical connection name
+								String label = "Logical connection '" + lName + "'";
+
+								if (rowId != -1)
+								{
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										String ActiveState = cm.getAbsString(rowId, "ActiveState");
+
+										String cancelMsg = getAlarmCancelText(label + ": ActiveState", "'" + ActiveState + "'");
+										alarmEvent.setCancelDescription(cancelMsg);
+									}
+								}
+								else
+								{
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+									}
+								}
+							}
+						});
+
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "ActiveState");
 
@@ -495,6 +559,37 @@ if (debugPrint || _logger.isDebugEnabled())
 					if ( (! state.matches(regexp)) || StringUtil.hasValue(standbyMsg)) // default is 'Active/'
 					{
 						AlarmEvent ae = new AlarmEventRsWsState(cm, lName, "StandbyState", state, standbyMsg, regexp);
+
+						// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+						ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, null)
+						{
+							// Called on RAISE/RE-RAISE/CANCEL
+							@Override
+							public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+							{
+								int    rowId = cm.getAbsRowIdWhere("LogicalName", lName);   // this CM has no PK: find the row by the logical connection name
+								String label = "Logical connection '" + lName + "'";
+
+								if (rowId != -1)
+								{
+									// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										String StandbyState = cm.getAbsString(rowId, "StandbyState");
+
+										String cancelMsg = getAlarmCancelText(label + ": StandbyState", "'" + StandbyState + "'");
+										alarmEvent.setCancelDescription(cancelMsg);
+									}
+								}
+								else
+								{
+									if (AlarmPhase.CANCEL.equals(phase))
+									{
+										alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+									}
+								}
+							}
+						});
 
 						// Information about how to disable this alarm
 						ae.createAlarmOptionsMessage(this, "StandbyState");
@@ -536,11 +631,42 @@ if (debugPrint || _logger.isDebugEnabled())
 							// Get a graph on RSSD Queue Size
 							CountersModel cmDbQueueSizeInRssd = getCounterController().getCmByName(CmDbQueueSizeInRssd.CM_NAME);
 
-							String extendedDescText = "";
-							String extendedDescHtml = cmDbQueueSizeInRssd == null ? "" : cmDbQueueSizeInRssd.getGraphDataHistoryAsHtmlImage(CmDbQueueSizeInRssd.GRAPH_NAME_QUEUE_SIZE);
-
 							AlarmEvent ae = new AlarmEventRsReplicationAge(cm, threshold, lName, "ApplyAgeInMinutes", ApplyAgeInMinutes.intValue());
-							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+							// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+							ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+							{
+								// Called on RAISE/RE-RAISE/CANCEL: the graphs are from the CURRENT data
+								@Override
+								public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+								{
+									int    rowId = cm.getAbsRowIdWhere("LogicalName", lName);   // this CM has no PK: find the row by the logical connection name
+									String label = "Logical connection '" + lName + "'";
+
+									if (rowId != -1)
+									{
+										// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+										String extendedDescHtml = cmDbQueueSizeInRssd == null ? "" : cmDbQueueSizeInRssd.getGraphDataHistoryAsHtmlImage(CmDbQueueSizeInRssd.GRAPH_NAME_QUEUE_SIZE);
+										alarmEvent.setExtendedDescription("", extendedDescHtml);
+
+										// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+										if (AlarmPhase.CANCEL.equals(phase))
+										{
+											Double ApplyAgeInMinutes = cm.getAbsValueAsDouble(rowId, "ApplyAgeInMinutes");
+
+											String cancelMsg = getAlarmCancelText(label + ": ApplyAgeInMinutes", toAlarmCancelValue(ApplyAgeInMinutes) + " minutes", " minutes");
+											alarmEvent.setCancelDescription(cancelMsg);
+										}
+									}
+									else
+									{
+										if (AlarmPhase.CANCEL.equals(phase))
+										{
+											alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+										}
+									}
+								}
+							});
 							
 							// Information about how to disable this alarm
 							ae.createAlarmOptionsMessage(this, "ApplyAgeInMinutes");
@@ -582,11 +708,42 @@ if (debugPrint || _logger.isDebugEnabled())
 							// Get a graph on RSSD Queue Size
 							CountersModel cmDbQueueSizeInRssd = getCounterController().getCmByName(CmDbQueueSizeInRssd.CM_NAME);
 
-							String extendedDescText = "";
-							String extendedDescHtml = cmDbQueueSizeInRssd == null ? "" : cmDbQueueSizeInRssd.getGraphDataHistoryAsHtmlImage(CmDbQueueSizeInRssd.GRAPH_NAME_QUEUE_SIZE);
-
 							AlarmEvent ae = new AlarmEventRsReplicationAge(cm, threshold, lName, "DataAgeInMinutes", DataAgeInMinutes.intValue());
-							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+							// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+							ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+							{
+								// Called on RAISE/RE-RAISE/CANCEL: the graphs are from the CURRENT data
+								@Override
+								public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+								{
+									int    rowId = cm.getAbsRowIdWhere("LogicalName", lName);   // this CM has no PK: find the row by the logical connection name
+									String label = "Logical connection '" + lName + "'";
+
+									if (rowId != -1)
+									{
+										// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+										String extendedDescHtml = cmDbQueueSizeInRssd == null ? "" : cmDbQueueSizeInRssd.getGraphDataHistoryAsHtmlImage(CmDbQueueSizeInRssd.GRAPH_NAME_QUEUE_SIZE);
+										alarmEvent.setExtendedDescription("", extendedDescHtml);
+
+										// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+										if (AlarmPhase.CANCEL.equals(phase))
+										{
+											Double DataAgeInMinutes = cm.getAbsValueAsDouble(rowId, "DataAgeInMinutes");
+
+											String cancelMsg = getAlarmCancelText(label + ": DataAgeInMinutes", toAlarmCancelValue(DataAgeInMinutes) + " minutes", " minutes");
+											alarmEvent.setCancelDescription(cancelMsg);
+										}
+									}
+									else
+									{
+										if (AlarmPhase.CANCEL.equals(phase))
+										{
+											alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+										}
+									}
+								}
+							});
 							
 							// Information about how to disable this alarm
 							ae.createAlarmOptionsMessage(this, "DataAgeInMinutes");

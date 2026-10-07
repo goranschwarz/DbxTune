@@ -422,7 +422,7 @@ extends Throwable
 	 * Called by the AlarmHandler: if this alarm has a provider, let it set the values for this phase.<br>
 	 * Never throws: a problem in the provider must never stop the alarm from being sent.
 	 */
-	public void callAlarmDescriptionProvider(AlarmDescriptionProvider.Phase phase)
+	public void callAlarmDescriptionProvider(AlarmDescriptionProvider.AlarmPhase phase)
 	{
 		if (_descProvider == null)
 			return;
