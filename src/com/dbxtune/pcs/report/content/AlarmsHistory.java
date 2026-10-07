@@ -25,6 +25,8 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.Map;
 
+import org.apache.commons.text.StringEscapeUtils;
+
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.PersistWriterBase;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
@@ -38,6 +40,7 @@ extends ReportEntryAbstract
 	
 	private ResultSetTableModel _shortRstm;
 	private ResultSetTableModel _fullRstm;
+	private boolean             _hasCancelDescription = false; // column 'cancelDescription' does not exist in older recordings
 //	private Exception           _problem = null;
 	
 
@@ -144,6 +147,12 @@ extends ReportEntryAbstract
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
+		// just to get Column names
+		String schemaName = getReportingInstance().getDbmsSchemaName();
+		String dummySql = "select * from " + PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.ALARM_HISTORY, null, true) + " where 1 = 2";
+		ResultSetTableModel dummyRstm = executeQuery(conn, dummySql, true, "metadata");
+		_hasCancelDescription = dummyRstm.hasColumnNoCase("cancelDescription");
+
 		getAlarmsHistoryShort(conn);
 		getAlarmsHistoryFull(conn);
 	}
@@ -181,12 +190,14 @@ extends ReportEntryAbstract
 		
 		// Get Alarms
 		sql = "select [action], [duration], [eventTime], [alarmClass], [serviceInfo], [extraInfo], [severity], [state], [description] \n" +
+		      (_hasCancelDescription ? "    ,[cancelDescription] \n" : "") +
 		      "from " + PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.ALARM_HISTORY, null, true) + " \n" +
 		      "where [action] not in('END-OF-SCAN', 'RE-RAISE') \n" +
 		      getReportPeriodSqlWhere("eventTime") +
 		      "order by [eventTime]";
 		
 		_shortRstm = executeQuery(conn, sql, true, "Alarm History Short");
+		appendCancelDescription(_shortRstm);
 		
 		// Describe the table
 		setSectionDescription(_shortRstm);
@@ -223,6 +234,7 @@ extends ReportEntryAbstract
 		      "     [extendedDescription],    \n" +
 		      "     [lastExtendedDescription],\n" +
 		      "     [alarmOptions]            \n" +
+		      (_hasCancelDescription ? "    ,[cancelDescription]       \n" : "") +
 		      "from " + PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.ALARM_HISTORY, null, true) + " \n" +
 		      "where [action] not in('END-OF-SCAN', 'RE-RAISE') \n" +
 		      getReportPeriodSqlWhere("eventTime") +
@@ -232,8 +244,32 @@ extends ReportEntryAbstract
 		boolean truncateLongCells = true;
 
 		_fullRstm = executeQuery(conn, sql, true, "Alarm History Full", truncateLongCells);
+		appendCancelDescription(_fullRstm);
 
 		// Highlight sort column
 		_shortRstm.setHighlightSortColumns("eventTime");
+	}
+
+	/**
+	 * On CANCEL rows: add the 'cancelDescription' (how things looked when the alarm went away) at the end of 'description',
+	 * then remove the 'cancelDescription' column (it's shown in 'description' now)
+	 */
+	private void appendCancelDescription(ResultSetTableModel rstm)
+	{
+		if (rstm == null || !rstm.hasColumnNoCase("cancelDescription"))
+			return;
+
+		for (int r = 0; r < rstm.getRowCount(); r++)
+		{
+			String action     = rstm.getValueAsString(r, "action",            false, "");
+			String cancelDesc = rstm.getValueAsString(r, "cancelDescription", false, "");
+
+			if ("CANCEL".equalsIgnoreCase(action) && !cancelDesc.isBlank())
+			{
+				String desc = rstm.getValueAsString(r, "description", false, "");
+				rstm.setValueAtWithOverride(desc + "<br><b>Cancel Description:</b> " + StringEscapeUtils.escapeHtml4(cancelDesc), r, "description");
+			}
+		}
+		rstm.removeColumnNoCase("cancelDescription");
 	}
 }
