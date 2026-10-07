@@ -36,6 +36,7 @@ import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
+import com.dbxtune.alarm.events.AlarmEventOsCommitChargeHigh;
 import com.dbxtune.alarm.events.AlarmEventOsSwapThrashing;
 import com.dbxtune.alarm.events.AlarmEventOsSwapping;
 import com.dbxtune.central.pcs.CentralPersistReader;
@@ -166,6 +167,8 @@ extends CounterModelHostMonitor
 
 	public static final String GRAPH_NAME_WIN_PAGING      = "WinPaging";
 	public static final String GRAPH_NAME_WIN_PAGING_FILE = "WinPagingFile";
+	public static final String GRAPH_NAME_WIN_COMMIT_PCT  = "WinCommitPct";
+	public static final String GRAPH_NAME_WIN_COMMIT_MB   = "WinCommitMb";
 
 	private void addTrendGraphs()
 	{
@@ -217,6 +220,32 @@ extends CounterModelHostMonitor
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
 			true,  // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_WIN_COMMIT_PCT,
+			"meminfo: Windows Committed Memory in Percent", 	                                // Menu CheckBox text
+			"meminfo: Windows Committed Memory in Percent, of Commit Limit ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			new String[] { "% Committed Bytes In Use" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.MEMORY,
+			true,  // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_WIN_COMMIT_MB,
+			"meminfo: Windows Committed Memory vs Commit Limit", 	                                // Menu CheckBox text
+			"meminfo: Windows Committed Memory vs Commit Limit, in MB ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			new String[] { "Committed MB", "Commit Limit MB", "Commit Headroom MB" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.MEMORY,
+			false, // is Percent Graph
 			false, // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
@@ -307,6 +336,43 @@ extends CounterModelHostMonitor
 
 				arr[0] = this.getAbsValueAsDouble(0, "Paging File(_Total) - % Usage");
 				arr[1] = this.getAbsValueAsDouble(0, "Paging File(_Total) - % Usage Peak");
+
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+			else
+			{
+				// none
+			}
+		}
+
+		if (GRAPH_NAME_WIN_COMMIT_PCT.equals(tgdp.getName()))
+		{
+			if (isConnectedToVendor(OsVendor.Windows))
+			{
+				Double[] arr = new Double[1];
+
+				arr[0] = this.getAbsValueAsDouble(0, "% Committed Bytes In Use");
+
+				tgdp.setDataPoint(this.getTimestamp(), arr);
+			}
+			else
+			{
+				// none
+			}
+		}
+
+		if (GRAPH_NAME_WIN_COMMIT_MB.equals(tgdp.getName()))
+		{
+			if (isConnectedToVendor(OsVendor.Windows))
+			{
+				Double[] arr = new Double[3];
+
+				Double committed   = this.getAbsValueAsDouble(0, "Committed Bytes");
+				Double commitLimit = this.getAbsValueAsDouble(0, "Commit Limit");
+
+				arr[0] = (committed   == null)                        ? null : committed   / 1024 / 1024;
+				arr[1] = (commitLimit == null)                        ? null : commitLimit / 1024 / 1024;
+				arr[2] = (committed   == null || commitLimit == null) ? null : (commitLimit - committed) / 1024 / 1024;
 
 				tgdp.setDataPoint(this.getTimestamp(), arr);
 			}
@@ -514,6 +580,7 @@ extends CounterModelHostMonitor
 	{
 		// ENABLED for the following graphs
 		if (GRAPH_NAME_MEM_AVAILABLE.equals(name)) return true;
+		if (GRAPH_NAME_WIN_COMMIT_MB.equals(name)) return true;
 
 		// default: DISABLED
 		return false;
@@ -535,7 +602,11 @@ extends CounterModelHostMonitor
 		// Reset X minute average counters
 		MovingAverageCounterManager.getInstance(this.getName(), "swapIn",  MOVING_AVG_TIME_IN_MINUTES).reset();
 		MovingAverageCounterManager.getInstance(this.getName(), "swapOut", MOVING_AVG_TIME_IN_MINUTES).reset();
-		
+
+		int commitAvgMinutes = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_commitCharge_avgMinutes, DEFAULT_alarm_commitCharge_avgMinutes);
+		MovingAverageCounterManager.getInstance(this.getName(), "commitPct",        commitAvgMinutes).reset();
+		MovingAverageCounterManager.getInstance(this.getName(), "commitHeadroomMb", commitAvgMinutes).reset();
+
 		super.reset();
 	}
 
@@ -721,7 +792,89 @@ extends CounterModelHostMonitor
 				alarmHandler.addAlarm( alarm );
 			}
 		}
+
+		//-------------------------------------------------------
+		// CommitCharge -- Windows Only
+		// When 'Committed Bytes' reaches 'Commit Limit' (RAM + Page Files), memory allocations FAIL.
+		// NOTE: 'Paging File % Usage' is NOT a good indicator, it can be at 100% long before we are in trouble.
+		//-------------------------------------------------------
+		if (isConnectedToVendor(OsVendor.Windows) && isSystemAlarmsForColumnEnabledAndInTimeRange(ALARM_NAME_CommitCharge))
+		{
+			int thresholdPct        = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_commitCharge_pct,        DEFAULT_alarm_commitCharge_pct);
+			int thresholdHeadroomMb = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_commitCharge_headroomMb, DEFAULT_alarm_commitCharge_headroomMb);
+			int avgMinutes          = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_commitCharge_avgMinutes, DEFAULT_alarm_commitCharge_avgMinutes);
+
+			// Get data
+			Double commitPct   = this.getAbsValueAsDouble(0, "% Committed Bytes In Use");
+			Double committed   = this.getAbsValueAsDouble(0, "Committed Bytes");
+			Double commitLimit = this.getAbsValueAsDouble(0, "Commit Limit");
+
+			if (commitPct != null && committed != null && commitLimit != null)
+			{
+				double committedMb   = committed   / 1024 / 1024;
+				double commitLimitMb = commitLimit / 1024 / 1024;
+				double headroomMb    = commitLimitMb - committedMb;
+
+				// -1 is returned until we have 'avgMinutes' of data, so we do not alarm on the first sample(s)
+				double commitPct_xmAvg  = MovingAverageCounterManager.getInstance(groupName, "commitPct",        avgMinutes).add(commitPct) .getAvg(-1, true);
+				double headroomMb_xmAvg = MovingAverageCounterManager.getInstance(groupName, "commitHeadroomMb", avgMinutes).add(headroomMb).getAvg(-1, true);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): CommitCharge: pct=" + commitPct + ", headroomMb=" + headroomMb + ". commitPct_xmAvg=" + commitPct_xmAvg + ", headroomMb_xmAvg=" + headroomMb_xmAvg);
+
+				boolean isPctAlarm      = thresholdPct        > 0 && commitPct_xmAvg  >= 0 && commitPct_xmAvg  > thresholdPct;
+				boolean isHeadroomAlarm = thresholdHeadroomMb > 0 && headroomMb_xmAvg >= 0 && headroomMb_xmAvg < thresholdHeadroomMb;
+
+				if (isPctAlarm || isHeadroomAlarm)
+				{
+					AlarmEventOsCommitChargeHigh alarm = new AlarmEventOsCommitChargeHigh(cm, thresholdPct, thresholdHeadroomMb, hostname, "over " + avgMinutes + " minute moving average",
+							commitPct_xmAvg, headroomMb_xmAvg, committedMb, commitLimitMb);
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					alarm.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, thresholdPct)
+					{
+						// Called on RAISE/RE-RAISE/CANCEL: the graphs are from the CURRENT data
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+						{
+							// Always: (RAISE, RE-RAISE, CANCEL) - Set graph values
+//							Committed Memory vs Commit Limit
+							String htmlChartImage = CmOsMeminfo.getGraphDataHistoryAsHtmlImage(CmOsMeminfo.GRAPH_NAME_WIN_COMMIT_MB, getCounterController());
+
+//							Get Available Memory
+							htmlChartImage += "<br>" + CmOsMeminfo.getGraphDataHistoryAsHtmlImage(CmOsMeminfo.GRAPH_NAME_MEM_AVAILABLE, getCounterController());
+
+//							Possibly getting info from CmOsPs... This will help us to determine WHICH process is using the memory
+							htmlChartImage += "<br>" + CmOsPs.getCmOsPs_getGraphDataHistoryAsHtmlImage(getCounterController(), CmOsPs.GRAPH_NAME_WIN_PS);
+							htmlChartImage += "<br>" + CmOsPs.getCmOsPs_asHtmlTable(getCounterController(), 15);
+							alarmEvent.setExtendedDescription(null, htmlChartImage);
+
+							// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+							if (AlarmPhase.CANCEL.equals(phase))
+							{
+								// NOTE: do NOT add() here, that is done once per sample in sendAlarmRequest(), just read the average
+								double commitPctAvg  = MovingAverageCounterManager.getInstance(cm.getName(), "commitPct",        avgMinutes).getAvg(0, false);
+								double headroomMbAvg = MovingAverageCounterManager.getInstance(cm.getName(), "commitHeadroomMb", avgMinutes).getAvg(0, false);
+
+								String cancelMsg = getAlarmCancelText("% Committed Bytes In Use / Commit Headroom (" + avgMinutes + " minute average)", toAlarmCancelValue(commitPctAvg) + " % / " + toAlarmCancelValue(headroomMbAvg) + " MB");
+								alarmEvent.setCancelDescription(cancelMsg);
+							}
+						}
+					});
+
+					// Information about how to disable this alarm
+					alarm.createAlarmOptionsMessage(this, ALARM_NAME_CommitCharge);
+
+					alarmHandler.addAlarm( alarm );
+				}
+			}
+		}
 	}
+
+	// The names are used "elsewhere", this makes it less buggy if we change the name
+	public static final String  ALARM_NAME_Swapping                            = "Swapping";
+	public static final String  ALARM_NAME_SwapThrashing                       = "SwapThrashing";
+	public static final String  ALARM_NAME_CommitCharge                        = "CommitCharge";
 
 	public static final String  PROPKEY_alarm_swap                             = CM_NAME + ".alarm.system.if.swap.gt"; // Pages in OR out
 	public static final int     DEFAULT_alarm_swap                             = 1000;
@@ -735,9 +888,14 @@ extends CounterModelHostMonitor
 	public static final String  PROPKEY_alarm_swap_thrashing_maxCap_multiplier = CM_NAME + ".alarm.system.swap.thrashing.maxCap.multiplier";
 	public static final double  DEFAULT_alarm_swap_thrashing_maxCap_multiplier = 2.0d;
 
-	// The names are used "elsewhere", this makes it less buggy if we change the name
-	public static final String  ALARM_NAME_Swapping                            = "Swapping";
-	public static final String  ALARM_NAME_SwapThrashing                       = "SwapThrashing";
+	public static final String  PROPKEY_alarm_commitCharge_pct                 = CM_NAME + ".alarm.system.if.commitCharge.pct.gt"; // '% Committed Bytes In Use'
+	public static final int     DEFAULT_alarm_commitCharge_pct                 = 90;
+
+	public static final String  PROPKEY_alarm_commitCharge_headroomMb          = CM_NAME + ".alarm.system.if.commitCharge.headroomMb.lt"; // 'Commit Limit' - 'Committed Bytes' in MB
+	public static final int     DEFAULT_alarm_commitCharge_headroomMb          = 0; // 0 = disabled
+
+	public static final String  PROPKEY_alarm_commitCharge_avgMinutes          = CM_NAME + ".alarm.system.commitCharge.avgMinutes";
+	public static final int     DEFAULT_alarm_commitCharge_avgMinutes          = 10;
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -752,6 +910,10 @@ extends CounterModelHostMonitor
 
 		list.add(new CmSettingsHelper("SwapThrashing", isAlarmSwitch  , PROPKEY_alarm_swap_thrashing                   , Integer.class, conf.getIntProperty   (PROPKEY_alarm_swap_thrashing                   , DEFAULT_alarm_swap_thrashing)                  , DEFAULT_alarm_swap_thrashing                  , "If 'Pages Input/sec' AND 'Pages Output/sec' is greater than ## (" + MOVING_AVG_TIME_IN_MINUTES + " minute average), then send 'AlarmEventOsSwapThrashing'. NOTE: This Alarm is only on Windows. (for Unix/Linux see 'CmOsVmstat')" ));
 		list.add(new CmSettingsHelper("SwapThrashing MaxCapMultiplier", PROPKEY_alarm_swap_thrashing_maxCap_multiplier , Double .class, conf.getDoubleProperty(PROPKEY_alarm_swap_thrashing_maxCap_multiplier , DEFAULT_alarm_swap_thrashing_maxCap_multiplier), DEFAULT_alarm_swap_thrashing_maxCap_multiplier, "Parameter to 'SwapThrashing', which sets a top limit (max cap), values above this does only count as the 'maxCap' value. so if the 'theshold' is set to 150 and 'MaxCap Multiplier' is '2.0' The MaxCap will be 300..." ));
+
+		list.add(new CmSettingsHelper("CommitCharge" , isAlarmSwitch  , PROPKEY_alarm_commitCharge_pct                 , Integer.class, conf.getIntProperty   (PROPKEY_alarm_commitCharge_pct                 , DEFAULT_alarm_commitCharge_pct                ), DEFAULT_alarm_commitCharge_pct                , "If '% Committed Bytes In Use' is greater than ## ('CommitCharge AvgMinutes' minute average), then send 'AlarmEventOsCommitChargeHigh'. When 'Committed Bytes' reaches 'Commit Limit' (RAM + Page Files) memory allocations FAIL. 0 = disable this check (use only 'CommitCharge HeadroomMb'). NOTE: This Alarm is only on Windows." ));
+		list.add(new CmSettingsHelper("CommitCharge HeadroomMb"       , PROPKEY_alarm_commitCharge_headroomMb          , Integer.class, conf.getIntProperty   (PROPKEY_alarm_commitCharge_headroomMb          , DEFAULT_alarm_commitCharge_headroomMb         ), DEFAULT_alarm_commitCharge_headroomMb         , "Parameter to 'CommitCharge': Also send 'AlarmEventOsCommitChargeHigh' if 'Commit Limit' - 'Committed Bytes' is less than ## MB ('CommitCharge AvgMinutes' minute average). Useful on large machines where 10% is still many GB. 0 = disabled." ));
+		list.add(new CmSettingsHelper("CommitCharge AvgMinutes"       , PROPKEY_alarm_commitCharge_avgMinutes          , Integer.class, conf.getIntProperty   (PROPKEY_alarm_commitCharge_avgMinutes          , DEFAULT_alarm_commitCharge_avgMinutes         ), DEFAULT_alarm_commitCharge_avgMinutes         , "Parameter to 'CommitCharge': Number of minutes the moving average is calculated over (the value must be above/below the threshold for about this long)." ));
 
 		return list;
 	}

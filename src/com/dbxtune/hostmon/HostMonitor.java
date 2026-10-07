@@ -78,7 +78,7 @@ implements Runnable
 	public static final String  DEFAULT_windows_typeperf_cmd_path = "";
 	
 	public static final String  PROPKEY_windows_typeperf_stopAfterXHours = "HostMonitor.windows.typeperf.stop.after.x.hours";
-	public static final int     DEFAULT_windows_typeperf_stopAfterXHours = 36;
+	public static final int     DEFAULT_windows_typeperf_stopAfterXHours = 8;
 
 	/** returns '-cs ####' or '' depending on configuration of PROPKEY_windows_typeperf_stopAfterXHours and DEFAULT_windows_typeperf_stopAfterXHours */
 	public static String getWindowsTypeperfStopAfterXHours(int sleepTime)
