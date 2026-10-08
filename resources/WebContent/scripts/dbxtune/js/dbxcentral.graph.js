@@ -3528,7 +3528,9 @@ class DbxGraph
 							dbxOpenGraphPickerModal(apiSrv, startTime, {
 								target:      '_self',
 								preSelected: preSel,
-								endTime:     endTime
+								endTime:     endTime,
+								sessionName: srv,
+								gorder:      getParameter('gorder', '')
 							});
 						}
 					},
@@ -4704,6 +4706,19 @@ function dbxChartPrintApiHelp()
 			'<td>gcols</td>' + 
 			'<td>Number of graph columns. This is an automatic way to set gwidth. It just takes current browser width, divides it with <code>gcols</code>, then sets <code>gwidth</code> to that value.<br>' + 
 			'<b>default:</b> not specified, meaning: it depends on your current browser size, but normally from 1 to 3<br>' + 
+			'<b>Note:</b> if <code>gorder=srv</code> and <code>gcols</code> is not specified, then <code>gcols</code> is set to the number of graphs (one row per server)<br>' + 
+			'</td>' +
+		'</tr>' +
+		'<tr>' + 
+			'<td>gorder</td>' + 
+			'<td>In what order the graphs are laid out when you have several servers in <code>sessionName</code><br>' + 
+			'<ul>' + 
+			'  <li><code>graph</code> - Grouped by graph: <code>graph1:SRV1, graph1:SRV2, graph2:SRV1, graph2:SRV2</code></li>' + 
+			'  <li><code>srv</code> - Grouped by server: <code>SRV1:graph1, SRV1:graph2, SRV2:graph1, SRV2:graph2</code></li>' + 
+			'</ul>' + 
+			'Servers are ordered as in <code>sessionName</code> and graphs as in <code>graphList</code><br>' + 
+			'Example: <code>graph.html?sessionName=SRV1,SRV2&graphList=CmSummary_aaCpuGraph,CmSummary_aaReadWriteGraph&gorder=srv</code><br>' + 
+			'<b>default:</b> not specified, meaning: graphs from <code>graphList</code> are grouped by graph, otherwise as the server delivers them<br>' + 
 			'</td>' +
 		'</tr>' +
 		'<tr>' + 
@@ -4920,6 +4935,7 @@ function dbxTuneLoadCharts(destinationDivId)
 	const debug          = getParameter("debug",         0);
 	const gheight        = getParameter("gheight",       200);
 	const gwidth         = getParameter("gwidth",        650);
+	const gorder         = getParameter("gorder",        "");               // Graph layout order: srv = SRV:graph, graph = graph:SRV
 	const sampleType     = getParameter("sampleType",    "");
 	const sampleValue    = getParameter("sampleValue",   "");
 	const colorSchema    = dbxGraphColorSchema();
@@ -4941,6 +4957,7 @@ function dbxTuneLoadCharts(destinationDivId)
 	console.log("Passed mdcp="                 + mdcPivot);      // Multi Day Chart - Pivot
 	console.log("Passed mdcwd="                + mdcWeekDays);   // Multi Day Chart - WeekDays
 	console.log("Passed colorSchema="          + colorSchema);
+	console.log("Passed gorder="               + gorder);
 	console.log("Passed openShowplanViewer="     + openSpvParam);
 	console.log("Passed openQueryStore="         + openQsParam);
 	console.log("Passed openCounterDetails/cd="  + openCdParam);
@@ -5368,6 +5385,37 @@ function dbxTuneLoadCharts(destinationDivId)
 
 			// In what order should the graphs be created/loaded
 			let createOrder = createGraphLoadOrder(graphProfile, jsonResp, loadAllGraphs);
+
+			// gorder: srv   = SRV1:g1, SRV1:g2, SRV2:g1, SRV2:g2 ...
+			//         graph = g1:SRV1, g1:SRV2, g2:SRV1, g2:SRV2 ...
+			// Servers are ordered as in 'sessionName', graphs as in 'graphList' (sort is stable)
+			if (gorder === "srv" || gorder === "graph")
+			{
+				const graphOrder = [...new Set(createOrder.map(e => e.tableName))];
+				const srvCmp     = (a, b) => _serverList.indexOf(a.serverName) - _serverList.indexOf(b.serverName);
+				const graphCmp   = (a, b) => graphOrder.indexOf(a.tableName)   - graphOrder.indexOf(b.tableName);
+				createOrder.sort((a, b) => gorder === "srv" ? (srvCmp(a, b) || graphCmp(a, b)) : (graphCmp(a, b) || srvCmp(a, b)));
+
+				// gorder=srv without 'gcols': one row per server (gcols = number of graphs per server)
+				if (gorder === "srv" && getParameter("gcols") === undefined)
+				{
+					const graphsPerSrv = {};
+					createOrder.forEach(e => graphsPerSrv[e.serverName] = (graphsPerSrv[e.serverName] || 0) + 1);
+
+					let gcols = Math.max(...Object.values(graphsPerSrv));
+					if ( mdcPivot === false )
+						gcols = gcols * startTimeArr.length; // Normal mdc layout: each graph is repeated for every day
+
+					const autoGwidth = $(window).width() / gcols -10;
+					console.log("Graph layout: gorder=srv and no 'gcols', setting gcols="+gcols+", gwidth="+autoGwidth);
+					$('#'+destinationDivId).css({
+						"--cols-size-sm": "minmax("+autoGwidth+"px, 1fr)",
+						"--cols-size-md": "minmax("+autoGwidth+"px, 1fr)",
+						"--cols-size-lg": "minmax("+autoGwidth+"px, 1fr)",
+						"--cols-size-xl": "minmax("+autoGwidth+"px, 1fr)"
+					});
+				}
+			}
 
 			if ( mdcPivot === false)
 			{

@@ -9,6 +9,9 @@
      preSelected  — array of tableName strings to pre-check (e.g. from _graphMap)
      target       — '_blank' (default, open new tab) | '_self' (reload same tab)
      endTime      — end-time string to include in built URL
+     sessionName  — servers currently shown (comma separated), pre-checked in the "Servers" dropdown (default: serverName)
+                    the dropdown lists all servers of the same type (productString) as serverName
+     gorder       — initial value for the "Order" dropdown: '' | 'graph' | 'srv'
      onOpen(url)  — custom callback instead of window.open / location.href
 
    Example (index.html server dropdown):
@@ -26,6 +29,7 @@ var dbxGraphPickerServer    = '';
 var dbxGraphPickerStartTime = '';
 var dbxGraphPickerSelected  = new Set();
 var dbxGraphPickerOrder     = {};   // { tableName: 1-based load order }
+var dbxGraphPickerSrvType   = '';   // productString of serverName, e.g. "AseTune" (the "Servers" dropdown lists only this type)
 var _dbxGpOptions           = {};   // options passed to dbxOpenGraphPickerModal
 var _dbxGpPopupTable        = null; // tableName the position popup is open for
 
@@ -124,6 +128,15 @@ function dbxGpRefreshBadges() {
 
 // ── Popup helpers ─────────────────────────────────────────────────
 
+// Selected servers in the "Servers" dropdown (list order), and refresh the button text + dialog title
+function dbxGpSrvUpdate() {
+	var srvs = $('#dbxGraphPickerSrvMenu input:checked').map(function() { return this.value; }).get();
+	var all  = $('#dbxGraphPickerSrvMenu input').length;
+	$('#dbxGraphPickerSrvBtn').text(srvs.length === 1 ? srvs[0] : srvs.length + ' of ' + all + ' servers');
+	$('#dbxGraphPickerServerName').text(srvs.length ? srvs.join(', ') : '(no server selected)');
+	return srvs;
+}
+
 function dbxGpCloseAllPopups() {
 	$('#dbx-gp-pos-popup, #dbx-gp-ctx-popup').hide();
 	$('.dbx-gp-order-badge').removeClass('active');
@@ -174,7 +187,7 @@ function dbxGpOpenCtxMenu(badge, tableName, x, y) {
 	if (current < total)
 		$menu.append(ctxBtn('⇓  Move to bottom', function() { dbxGpMoveToPosition(tableName, total); dbxGpRefreshBadges(); dbxGpUpdateCount(); }));
 	if (current > 1 || current < total)
-		$menu.append($('<div>').css({ borderTop: '1px solid #e9ecef', margin: '3px 0' }));
+		$menu.append($('<div>').css({ borderTop: '1px solid var(--bs-border-color)', margin: '3px 0' }));
 	$menu.append(ctxBtn('↺  Reset all to list order', function() { dbxGpResetToListOrder(); dbxGpRefreshBadges(); dbxGpUpdateCount(); }));
 
 	$menu.css({ top: y, left: x }).show();
@@ -274,7 +287,7 @@ function dbxOpenGraphPickerModal(serverName, startTime, options) {
 	// Pre-populate selection from caller (e.g. currently shown graphs)
 	if (_dbxGpOptions.preSelected && Array.isArray(_dbxGpOptions.preSelected)) {
 		_dbxGpOptions.preSelected.forEach(function(t, i) {
-			if (t) {
+			if (t && !dbxGraphPickerSelected.has(t)) { // multi-server pages have the same graph once per server
 				dbxGraphPickerSelected.add(t);
 				dbxGraphPickerOrder[t] = i + 1;
 			}
@@ -298,8 +311,49 @@ function dbxOpenGraphPickerModal(serverName, startTime, options) {
 		}
 	});
 
-	$('#dbxGraphPickerServerName').text(serverName);
+	// "Servers" dropdown: all servers of the same type as 'serverName' (graph names differ between types)
+	// Listed by name (ignore case), which is also the 'sessionName' order. Servers currently shown are checked
+	var shownSrvs = (_dbxGpOptions.sessionName || serverName).split(',').map(function(s) { return s.trim(); });
+	var sessions  = [];
+	$.ajax({
+		url:      '/api/sessions',
+		async:    false,
+		dataType: 'json',
+		success:  function(data) { sessions = Array.isArray(data) ? data : []; },
+		error:    function() { console.error('dbxGraphPicker: failed to load /api/sessions'); }
+	});
+	var thisSrv = sessions.find(function(e) { return e.serverName === serverName; });
+	dbxGraphPickerSrvType = thisSrv ? thisSrv.productString : '';
+	var srvList = sessions.filter(function(e) { return thisSrv && e.productString === thisSrv.productString; });
+	shownSrvs.forEach(function(name) { // servers in the URL that /api/sessions does not know about: keep them
+		if (!srvList.some(function(e) { return e.serverName === name; }))
+			srvList.push({ serverName: name, status: 0 });
+	});
+	srvList.sort(function(a, b) { return a.serverName.localeCompare(b.serverName, undefined, { sensitivity: 'base' }); });
+
+	var $menu = $('#dbxGraphPickerSrvMenu').empty()
+		.append($('<h6 class="dropdown-header">').text((dbxGraphPickerSrvType || 'Same type') + ' servers'))
+		.append('<div class="px-3 pb-1 small"><a href="#" id="dbxGraphPickerSrvAll">All</a> &middot; <a href="#" id="dbxGraphPickerSrvNone">None</a></div>')
+		.append('<div class="dropdown-divider"></div>');
+	srvList.forEach(function(e) {
+		var disabled = (parseInt(e.status) & 1) === 1; // 1=DISABLED (no new data), still selectable for history
+		$('<label class="dropdown-item dbx-gp-srv-item">')
+			.append($('<input type="checkbox" class="form-check-input me-2">').val(e.serverName).prop('checked', shownSrvs.indexOf(e.serverName) !== -1))
+			.append(document.createTextNode(e.serverName))
+			.append(disabled ? ' <span class="text-muted small">(disabled)</span>' : '')
+			.attr('title', disabled ? 'Collector is disabled, only old data is available' : '')
+			.toggleClass('text-muted', disabled)
+			.appendTo($menu);
+	});
+	dbxGpSrvUpdate();
+
+	$('#dbxGraphPickerGorder').val(_dbxGpOptions.gorder || '');
+
+	// Light/dark: follow the DbxCentral theme (Bootstrap 5.3 colour modes + own overrides in dbxGraphPicker.css)
+	var dark = (typeof DbxTheme !== 'undefined') && DbxTheme.effective() === 'dark';
+	$('#dbxGraphPickerModal, #dbx-gp-pos-popup, #dbx-gp-ctx-popup').attr('data-bs-theme', dark ? 'dark' : 'light');
 	$('#dbxGraphPickerSearch').val('');
+	$('#dbxGraphPickerList').empty(); // dbxGpRender() keeps checked boxes from the DOM: start from the 'preSelected' graphs only, not the previous dialog's ticks
 	dbxGpRender('');
 
 	// Update OK button tooltip to reflect target behaviour
@@ -335,6 +389,15 @@ function dbxInitGraphPickerModal() {
 			'      </div>',
 			'      <div class="modal-body">',
 			'        <div class="input-group mb-3">',
+			'          <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="dbxGraphPickerSrvBtn"',
+			'            data-bs-toggle="dropdown" data-bs-auto-close="outside" title="' + [
+				'Servers to show graphs for (URL parameter: sessionName=SRV1,SRV2,SRV3)',
+				'Only servers of the same type (ASE, SQL Server, Postgres...) are listed,',
+				'since the graphs differ between server types.',
+				'',
+				'With several servers, use Order to choose how the graphs are laid out.'
+			].join('&#10;') + '">Servers</button>',
+			'          <div class="dropdown-menu dbx-gp-srv-menu" id="dbxGraphPickerSrvMenu"></div>',
 			'          <input type="text" id="dbxGraphPickerSearch" class="form-control" placeholder="Search by collector, graph name or category...">',
 			'          <button class="btn btn-outline-secondary" type="button" id="dbxGraphPickerClearSearch">Clear</button>',
 			'        </div>',
@@ -346,10 +409,45 @@ function dbxInitGraphPickerModal() {
 			'          <span class="ms-3 small" id="dbxGraphPickerSelectedCountWrap">',
 			'            <span id="dbxGraphPickerSelectedCount">0</span> selected',
 			'          </span>',
-			'          <span class="ms-3">',
+			'          <span class="ms-3" title="' + [
+				'Number of graph columns (URL parameter: gcols)',
+				'The browser width is divided by this number to get the width of each graph.',
+				'',
+				'Empty (default)  - Depends on the browser width, normally 1 to 3 columns',
+				'                   (graph minimum width is 650 pixels, URL parameter: gwidth)',
+				'',
+				'With Order = Server:Graph and Columns empty, Columns is set to the',
+				'number of selected graphs, so each row holds all graphs for one server.'
+			].join('&#10;') + '">',
 			'            <label class="text-muted small mb-0" for="dbxGraphPickerGcols">Columns:</label>',
 			'            <input type="number" id="dbxGraphPickerGcols" class="form-control form-control-sm d-inline-block ms-1"',
 			'              min="1" max="10" placeholder="default" style="width:80px;">',
+			'          </span>',
+			'          <span class="ms-3" id="dbxGraphPickerGorderWrap" title="' + [
+				'In what order the graphs are laid out (URL parameter: gorder)',
+				'Only useful when watching graphs for several servers on one page,',
+				'which you get by: graph.html?sessionName=SRV1,SRV2,SRV3&graphList=...',
+				'(the exception: Server:Graph with a single server puts all graphs on one row)',
+				'',
+				'default  - No reordering (selected graphs are normally grouped by graph)',
+				'',
+				'Graph:Server  - Grouped by graph, servers next to each other:',
+				'    cpu:SRV1, cpu:SRV2, io:SRV1, io:SRV2',
+				'    Compare the same graph across servers.',
+				'',
+				'Server:Graph  - Grouped by server, one server per row:',
+				'    SRV1:cpu, SRV1:io, SRV2:cpu, SRV2:io',
+				'    If Columns is empty, it is set to the number of selected graphs,',
+				'    so each row holds all graphs for one server.',
+				'',
+				'Servers are ordered as in sessionName, graphs in the selected order.'
+			].join('&#10;') + '">',
+			'            <label class="text-muted small mb-0" for="dbxGraphPickerGorder">Order:</label>',
+			'            <select id="dbxGraphPickerGorder" class="form-select form-select-sm d-inline-block ms-1" style="width:auto;">',
+			'              <option value="">default</option>',
+			'              <option value="graph">Graph:Server</option>',
+			'              <option value="srv">Server:Graph</option>',
+			'            </select>',
 			'          </span>',
 			'        </div>',
 			'        <div id="dbxGraphPickerList">',
@@ -423,6 +521,14 @@ function dbxInitGraphPickerModal() {
 	// Search input
 	$(document).on('input', '#dbxGraphPickerSearch', function() {
 		dbxGpRender($(this).val());
+	});
+
+	// "Servers" dropdown: checkbox, All, None
+	$(document).on('change', '#dbxGraphPickerSrvMenu input', function() { dbxGpSrvUpdate(); });
+	$(document).on('click', '#dbxGraphPickerSrvAll, #dbxGraphPickerSrvNone', function(e) {
+		e.preventDefault();
+		$('#dbxGraphPickerSrvMenu input').prop('checked', this.id === 'dbxGraphPickerSrvAll');
+		dbxGpSrvUpdate();
 	});
 
 	// Clear search button
@@ -564,6 +670,11 @@ function dbxInitGraphPickerModal() {
 			alert('Please select at least one graph.');
 			return;
 		}
+		const srvs = dbxGpSrvUpdate();
+		if (srvs.length === 0) {
+			alert('Please select at least one server.');
+			return;
+		}
 
 		dbxGpCloseAllPopups();
 		dbxGpRenormalize();
@@ -571,15 +682,19 @@ function dbxInitGraphPickerModal() {
 		const graphList = Object.keys(dbxGraphPickerOrder)
 			.sort(function(a, b) { return dbxGraphPickerOrder[a] - dbxGraphPickerOrder[b]; })
 			.join(',');
-		const gcols = $('#dbxGraphPickerGcols').val().trim();
+		const gcols  = $('#dbxGraphPickerGcols').val().trim();
+		const gorder = $('#dbxGraphPickerGorder').val();
 
 		let url = '/graph.html?subscribe=true'
 			+ '&startTime='   + encodeURIComponent(dbxGraphPickerStartTime)
-			+ '&sessionName=' + encodeURIComponent(dbxGraphPickerServer)
+			+ '&sessionName=' + encodeURIComponent(srvs.join(','))
 			+ '&graphList='   + graphList;
 
 		if (gcols !== '') {
 			url += '&gcols=' + gcols;
+		}
+		if (gorder !== '') {
+			url += '&gorder=' + gorder;
 		}
 		if (_dbxGpOptions.endTime) {
 			url += '&endTime=' + encodeURIComponent(_dbxGpOptions.endTime);

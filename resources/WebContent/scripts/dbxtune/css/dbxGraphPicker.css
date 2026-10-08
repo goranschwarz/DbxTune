@@ -37,6 +37,16 @@
 	cursor: move;
 }
 
+/* ── "Servers" dropdown (left of the search field) ─────────────── */
+.dbx-gp-srv-menu {
+	max-height: 50vh;
+	overflow-y: auto;
+}
+
+.dbx-gp-srv-item {
+	cursor: pointer;
+}
+
 /* ── Graph Picker List Items ────────────────────────────────────── */
 .dbx-gp-cm-group {
 	margin-bottom: 0.5rem;
@@ -170,6 +180,7 @@
 	cursor: pointer;
 	border: none;
 	background: none;
+	color: var(--bs-body-color);
 }
 
 .dbx-gp-pos-btn:hover {
@@ -202,6 +213,7 @@
 	cursor: pointer;
 	border: none;
 	background: none;
+	color: var(--bs-body-color);
 	white-space: nowrap;
 }
 
@@ -224,3 +236,20 @@
 	color: #000;
 	font-weight: bold;
 }
+
+/* ── Dark: data-bs-theme="dark" is set on the modal and popups when opened (dbxOpenGraphPickerModal) ── */
+[data-bs-theme="dark"] .dbx-gp-cm-group                  { border-color: #495057; }
+[data-bs-theme="dark"] .dbx-gp-cm-header                 { background: #2b3035; }
+[data-bs-theme="dark"] .dbx-gp-cm-header:hover,
+[data-bs-theme="dark"] .dbx-gp-item:hover,
+[data-bs-theme="dark"] .dbx-gp-pos-btn:hover,
+[data-bs-theme="dark"] .dbx-gp-ctx-item:hover            { background: #343a40; }
+[data-bs-theme="dark"] .dbx-gp-item.dbx-gp-startup       { background: #332701; }
+[data-bs-theme="dark"] .dbx-gp-item.dbx-gp-startup:hover { background: #4d3a02; }
+[data-bs-theme="dark"] .dbx-gp-order-badge               { background: #495057; color: #dee2e6; }
+[data-bs-theme="dark"] .dbx-gp-order-badge:hover         { background: #6c757d; color: #fff; }
+[data-bs-theme="dark"] .dbx-gp-order-badge.active        { background: #031633; border-color: #6ea8fe; color: #9ec5fe; }
+[data-bs-theme="dark"].dbx-gp-popup                      { background: #212529; border-color: #495057; box-shadow: 0 4px 16px rgba(0,0,0,.6); }
+[data-bs-theme="dark"].dbx-gp-popup .popup-title         { color: #adb5bd; border-bottom-color: #495057; }
+[data-bs-theme="dark"] #dbxGraphPickerSelectedCountWrap  { color: #adb5bd; }
+[data-bs-theme="dark"] #dbxGraphPickerSelectedCountWrap.dbx-has-selection { color: #fff; }

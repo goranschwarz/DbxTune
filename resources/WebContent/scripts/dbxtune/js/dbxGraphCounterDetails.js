@@ -3201,7 +3201,9 @@ function cmTrendGraphClick(tableName, isLoaded)
 		dbxOpenGraphPickerModal(srv, startTime, {
 			target:      '_self',
 			preSelected: preSel,
-			endTime:     endTime
+			endTime:     endTime,
+			sessionName: getParameter('sessionName', '') || srv,
+			gorder:      getParameter('gorder', '')
 		});
 
 		// Pre-fill search with CM name and highlight the clicked graph
