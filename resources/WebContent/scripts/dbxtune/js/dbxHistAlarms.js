@@ -123,6 +123,11 @@ $(function()
 		"      <button class='btn btn-sm btn-outline-secondary' title='Clear filter'",
 		"              onclick=\"document.getElementById('hist-alarm-filter').value='';",
 		"                       histAlarmApplyFilter();\">&#x2715;</button>",
+		"      <label style='margin:0 0 0 6px;font-size:0.85em;cursor:pointer;white-space:nowrap;'",
+		"             title='Show the Cancel Description (how things looked when the alarm was cancelled) under the Description. When hidden, it is shown as a tooltip on the row.'>",
+		"        <input type='checkbox' id='hist-alarm-show-cancel-desc' checked",
+		"               onchange='histAlarmShowCancelDescChange();'>&nbsp;Show Cancel Description",
+		"      </label>",
 		"      <span id='hist-alarm-count' style='font-size:0.85em;color:#888;'></span>",
 		"    </div>",
 
@@ -165,7 +170,7 @@ $(function()
 		// ── Styles ─────────────────────────────────────────────────────────
 		"<style>",
 		"/* Dark mode — main panel */",
-		"#hist-alarm-panel.ha-dark { background:#1e1e1e !important; color:#ddd; border-color:#555; }",
+		"#hist-alarm-panel.ha-dark { background:#1e1e1e !important; color:#ddd !important; border-color:#555 !important; }",  // !important: the panel's inline style sets them too
 		"#hist-alarm-panel.ha-dark #hist-alarm-hdr { background:#2d2d2d !important; border-bottom-color:#444; }",
 		"#hist-alarm-panel.ha-dark .form-control,",
 		"#hist-alarm-panel.ha-dark select { background-color:#2d2d2d; color:#ddd; border-color:#555; }",  // NOT 'background:' - it erases the .form-select arrow image
@@ -178,7 +183,7 @@ $(function()
 		"#hist-alarm-panel.ha-dark td,",
 		"#hist-alarm-panel.ha-dark th    { border-color:#444 !important; }",
 		"/* Dark mode — detail panel */",
-		"#hist-alarm-detail-panel.ha-dark { background:#1e1e1e !important; color:#ddd; border-color:#555; }",
+		"#hist-alarm-detail-panel.ha-dark { background:#1e1e1e !important; color:#ddd !important; border-color:#555 !important; }",
 		"#hist-alarm-detail-panel.ha-dark #hist-alarm-detail-hdr { background:#2d2d2d !important; border-bottom-color:#444; }",
 		"#hist-alarm-detail-panel.ha-dark td { border-color:#444 !important; }",
 		"</style>"
@@ -190,6 +195,9 @@ $(function()
 		mount : '#hist-alarm-theme',
 		apply : histAlarmDarkToggle
 	});
+
+	// "Show Cancel Description": remembered per browser (default: checked)
+	try { if (window.localStorage.getItem('dbxtune.histAlarms.showCancelDesc') === 'false') $('#hist-alarm-show-cancel-desc').prop('checked', false); } catch(e) {}
 
 	// Show/hide custom date inputs
 	$('#hist-alarm-preset').on('change', function() {
@@ -297,6 +305,13 @@ function histAlarmDarkToggle(on)
 	_histAlarmDark = on;
 	$('#hist-alarm-panel').toggleClass('ha-dark', on);
 	$('#hist-alarm-detail-panel').toggleClass('ha-dark', on);
+}
+
+function histAlarmShowCancelDescChange()
+{
+	var on = $('#hist-alarm-show-cancel-desc').is(':checked');
+	try { window.localStorage.setItem('dbxtune.histAlarms.showCancelDesc', String(on)); } catch(e) {}
+	histAlarmRender(_histAlarmFiltered);
 }
 
 function histAlarmDetailClose()
@@ -503,16 +518,23 @@ function histAlarmRender(data)
 	data = sortedData;
 	_histAlarmFiltered = sortedData;
 
+	var showCancelDesc = $('#hist-alarm-show-cancel-desc').is(':checked');
+
 	data.forEach(function(row, idx)
 	{
 		var durationHtml = _histAlarmDurationCell(row);
+		// How things looked when the alarm went away (on RAISE rows: from the matching CANCEL)
+		var cancelDesc   = _histAlarmCancelDesc(row);
 		var sev = (row.severity || '').toUpperCase();
 		// Bootstrap 5.3 paints each .table cell itself, which hides a <tr> background; the cells DO draw --bs-table-bg-type
 		var rowBg = '';
 		if      (sev === 'ERROR'   || sev === 'CRITICAL') rowBg = '--bs-table-bg-type:rgba(220,50,50,0.08);';
 		else if (sev === 'WARNING')                        rowBg = '--bs-table-bg-type:rgba(255,180,0,0.10);';
 
-		html += '<tr style="cursor:pointer;' + rowBg + '" onclick="histAlarmShowDetail(' + idx + ');">';
+		// Cancel Description not shown in the Description column: show it as a tooltip on the row instead
+		var rowTitle = (!showCancelDesc && cancelDesc) ? ' title="Cancel Description: ' + escHtml(cancelDesc) + '"' : '';
+
+		html += '<tr style="cursor:pointer;' + rowBg + '"' + rowTitle + ' onclick="histAlarmShowDetail(' + idx + ');">';
 
 		// Open-in-graph button — leftmost
 		html += '<td style="text-align:center;padding:2px 4px;">'
@@ -539,9 +561,8 @@ function histAlarmRender(data)
 				html += '<td>' + escHtml(ts) + '</td>';
 			} else if (c.key === 'description') {
 				var val = (row[c.key] == null) ? '' : String(row[c.key]).replace(/<[^>]*>/g, '');
-				// How things looked when the alarm went away: a second line (on RAISE rows: from the matching CANCEL)
-				var cancelDesc = _histAlarmCancelDesc(row);
-				var cancelHtml = cancelDesc
+				// The Cancel Description as a second line (if the checkbox is set)
+				var cancelHtml = (showCancelDesc && cancelDesc)
 					? '<div style="opacity:0.7;" title="Cancel Description: how things looked when the alarm was cancelled">&#8627; ' + escHtml(cancelDesc) + '</div>'
 					: '';
 				html += '<td>' + escHtml(val) + cancelHtml + '</td>';

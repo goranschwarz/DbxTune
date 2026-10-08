@@ -101,7 +101,7 @@ public class SshConnection
 	/** outpu from the 'nproc' command. Which tells us how many scheduling/processing units are available on this os */
 	private int _nproc = -1;
 
-	/** Windows build number from 'cmd /c ver' (for example 14393 = Server 2016, 17763 = Server 2019), -1 = unknown or not Windows */
+	/** Windows build number from 'ver' (for example 14393 = Server 2016, 17763 = Server 2019), -1 = unknown or not Windows */
 	private int _windowsBuild = -1;
 
 	/** Used to create Strings from the remote host, so that client character set convention can be done. 
@@ -1479,8 +1479,9 @@ public class SshConnection
 	}
 
 	/**
-	 * Execute 'cmd /c ver' on Windows and return the build number (cached)<br>
-	 * 'cmd /c ver' works from both a CMD and a PowerShell login shell.
+	 * Execute 'ver' on Windows and return the build number (cached)<br>
+	 * CMD login shell: 'ver' (a nested 'cmd /c ver' fails, sshd's 'cmd /c "..."' quoting leaves a trailing quote: 'ver"' is not recognized)<br>
+	 * PowerShell login shell: 'cmd /c ver' ('ver' is a CMD built-in, not available in PowerShell)
 	 *
 	 * @return The build number, for example 14393 (Server 2016), 17763 (Server 2019), 20348 (Server 2022). -1 if not Windows or unknown
 	 */
@@ -1489,7 +1490,7 @@ public class SshConnection
 		if (_windowsBuild != -1 || !isWindows())
 			return _windowsBuild;
 
-		String cmd = "cmd /c ver";
+		String cmd = "Windows-CMD".equals(_uname) ? "ver" : "cmd /c ver";
 		String str = "-empty-";
 		try
 		{
