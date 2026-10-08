@@ -800,7 +800,7 @@ extends CounterModelHostMonitor
 		//-------------------------------------------------------
 		if (isConnectedToVendor(OsVendor.Windows) && isSystemAlarmsForColumnEnabledAndInTimeRange(ALARM_NAME_CommitCharge))
 		{
-			int thresholdPct        = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_commitCharge_pct,        DEFAULT_alarm_commitCharge_pct);
+			double thresholdPct     = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_commitCharge_pct,     DEFAULT_alarm_commitCharge_pct);
 			int thresholdHeadroomMb = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_commitCharge_headroomMb, DEFAULT_alarm_commitCharge_headroomMb);
 			int avgMinutes          = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_commitCharge_avgMinutes, DEFAULT_alarm_commitCharge_avgMinutes);
 
@@ -889,13 +889,13 @@ extends CounterModelHostMonitor
 	public static final double  DEFAULT_alarm_swap_thrashing_maxCap_multiplier = 2.0d;
 
 	public static final String  PROPKEY_alarm_commitCharge_pct                 = CM_NAME + ".alarm.system.if.commitCharge.pct.gt"; // '% Committed Bytes In Use'
-	public static final int     DEFAULT_alarm_commitCharge_pct                 = 95;
+	public static final double  DEFAULT_alarm_commitCharge_pct                 = 98.0;
 
 	public static final String  PROPKEY_alarm_commitCharge_headroomMb          = CM_NAME + ".alarm.system.if.commitCharge.headroomMb.lt"; // 'Commit Limit' - 'Committed Bytes' in MB
-	public static final int     DEFAULT_alarm_commitCharge_headroomMb          = 2048; // 0 = disabled. OR:ed with the pct check, so the alarm fires at the larger of 5% (pct=95) or 2 GB headroom
+	public static final int     DEFAULT_alarm_commitCharge_headroomMb          = 1024; // 0 = disabled. OR:ed with the pct check, so the alarm fires at the larger of 2% (pct=98) or 1 GB headroom
 
 	public static final String  PROPKEY_alarm_commitCharge_avgMinutes          = CM_NAME + ".alarm.system.commitCharge.avgMinutes";
-	public static final int     DEFAULT_alarm_commitCharge_avgMinutes          = 10;
+	public static final int     DEFAULT_alarm_commitCharge_avgMinutes          = 30;
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -911,8 +911,8 @@ extends CounterModelHostMonitor
 		list.add(new CmSettingsHelper("SwapThrashing", isAlarmSwitch  , PROPKEY_alarm_swap_thrashing                   , Integer.class, conf.getIntProperty   (PROPKEY_alarm_swap_thrashing                   , DEFAULT_alarm_swap_thrashing)                  , DEFAULT_alarm_swap_thrashing                  , "If 'Pages Input/sec' AND 'Pages Output/sec' is greater than ## (" + MOVING_AVG_TIME_IN_MINUTES + " minute average), then send 'AlarmEventOsSwapThrashing'. NOTE: This Alarm is only on Windows. (for Unix/Linux see 'CmOsVmstat')" ));
 		list.add(new CmSettingsHelper("SwapThrashing MaxCapMultiplier", PROPKEY_alarm_swap_thrashing_maxCap_multiplier , Double .class, conf.getDoubleProperty(PROPKEY_alarm_swap_thrashing_maxCap_multiplier , DEFAULT_alarm_swap_thrashing_maxCap_multiplier), DEFAULT_alarm_swap_thrashing_maxCap_multiplier, "Parameter to 'SwapThrashing', which sets a top limit (max cap), values above this does only count as the 'maxCap' value. so if the 'theshold' is set to 150 and 'MaxCap Multiplier' is '2.0' The MaxCap will be 300..." ));
 
-		list.add(new CmSettingsHelper("CommitCharge" , isAlarmSwitch  , PROPKEY_alarm_commitCharge_pct                 , Integer.class, conf.getIntProperty   (PROPKEY_alarm_commitCharge_pct                 , DEFAULT_alarm_commitCharge_pct                ), DEFAULT_alarm_commitCharge_pct                , "If '% Committed Bytes In Use' is greater than ## ('CommitCharge AvgMinutes' minute average), then send 'AlarmEventOsCommitChargeHigh'. When 'Committed Bytes' reaches 'Commit Limit' (RAM + Page Files) memory allocations FAIL. This check is OR:ed with 'CommitCharge HeadroomMb'. 0 = disable this check (use only 'CommitCharge HeadroomMb'). NOTE: This Alarm is only on Windows." ));
-		list.add(new CmSettingsHelper("CommitCharge HeadroomMb"       , PROPKEY_alarm_commitCharge_headroomMb          , Integer.class, conf.getIntProperty   (PROPKEY_alarm_commitCharge_headroomMb          , DEFAULT_alarm_commitCharge_headroomMb         ), DEFAULT_alarm_commitCharge_headroomMb         , "Parameter to 'CommitCharge': Also send 'AlarmEventOsCommitChargeHigh' if 'Commit Limit' - 'Committed Bytes' is less than ## MB ('CommitCharge AvgMinutes' minute average). Both checks are OR:ed, the first one reached raises the alarm, so this check can only make the alarm fire EARLIER. Mostly useful on smaller machines, where the 'CommitCharge' percent leaves very little headroom (95% of 20 GB = 1 GB). To alarm on headroom only (for example on very large machines), set 'CommitCharge' to 0. 0 = disabled." ));
+		list.add(new CmSettingsHelper("CommitCharge" , isAlarmSwitch  , PROPKEY_alarm_commitCharge_pct                 , Double .class, conf.getDoubleProperty(PROPKEY_alarm_commitCharge_pct                 , DEFAULT_alarm_commitCharge_pct                ), DEFAULT_alarm_commitCharge_pct                , "If '% Committed Bytes In Use' is greater than ## ('CommitCharge AvgMinutes' minute average), then send 'AlarmEventOsCommitChargeHigh'. When 'Committed Bytes' reaches 'Commit Limit' (RAM + Page Files) memory allocations FAIL. This check is OR:ed with 'CommitCharge HeadroomMb'. 0 = disable this check (use only 'CommitCharge HeadroomMb'). NOTE: This Alarm is only on Windows." ));
+		list.add(new CmSettingsHelper("CommitCharge HeadroomMb"       , PROPKEY_alarm_commitCharge_headroomMb          , Integer.class, conf.getIntProperty   (PROPKEY_alarm_commitCharge_headroomMb          , DEFAULT_alarm_commitCharge_headroomMb         ), DEFAULT_alarm_commitCharge_headroomMb         , "Parameter to 'CommitCharge': Also send 'AlarmEventOsCommitChargeHigh' if 'Commit Limit' - 'Committed Bytes' is less than ## MB ('CommitCharge AvgMinutes' minute average). Both checks are OR:ed, the first one reached raises the alarm, so this check can only make the alarm fire EARLIER. Mostly useful on smaller machines, where the 'CommitCharge' percent leaves very little headroom (98% of 20 GB = 0.4 GB). To alarm on headroom only (for example on very large machines), set 'CommitCharge' to 0. 0 = disabled." ));
 		list.add(new CmSettingsHelper("CommitCharge AvgMinutes"       , PROPKEY_alarm_commitCharge_avgMinutes          , Integer.class, conf.getIntProperty   (PROPKEY_alarm_commitCharge_avgMinutes          , DEFAULT_alarm_commitCharge_avgMinutes         ), DEFAULT_alarm_commitCharge_avgMinutes         , "Parameter to 'CommitCharge': Number of minutes the moving average is calculated over (the value must be above/below the threshold for about this long)." ));
 
 		return list;
