@@ -24,17 +24,11 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.net.ConnectException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
@@ -45,7 +39,6 @@ import com.dbxtune.cm.CmSettingsHelper.InputValidator;
 import com.dbxtune.cm.CmSettingsHelper.Type;
 import com.dbxtune.cm.CmSettingsHelper.ValidationException;
 import com.dbxtune.utils.Configuration;
-import com.dbxtune.utils.HttpUtils;
 import com.dbxtune.utils.StringUtil;
 
 public class PersistWriterToDbxCentral 
@@ -161,92 +154,14 @@ extends PersistWriterToHttpJson
 		}
 	}
 
-	//------------------------------------------------------------
-	// Live "refresh status" (what is the collector doing right now), see: RefreshStatusNoGui
-	//------------------------------------------------------------
-	private final HttpClient    _refreshStatusHttpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();
-	private final AtomicBoolean _refreshStatusInFlight   = new AtomicBoolean(false);
-	private volatile boolean    _refreshStatusHasFailed  = false;
-
 	/**
-	 * Send a small "what is the collector doing right now" JSON message to DbxCentral (asynchronous, fire and forget).<br>
-	 * DbxCentral forwards it to the web browsers that show graphs for this server.
-	 * <p>
-	 * Only for writer type 'http'. The URL is the configured one, where '/api/pcs/receiver' is replaced with '/api/pcs/refresh-status'
-	 *
-	 * @param json The message (created by RefreshStatusNoGui)
-	 * @return false if nothing was sent (writer type is not 'http', or the previous message is still being sent)
+	 * Live "refresh status" (what is the collector doing right now), see: RefreshStatusNoGui<br>
+	 * Sent to the URL of writer type 'http' (nothing is sent for writer type 'file')
 	 */
+	@Override
 	public boolean sendRefreshStatus(String json)
 	{
-		if (_httpConfSlot == null)
-			return false;
-
-		// Do not queue up messages if DbxCentral is slow
-		if ( ! _refreshStatusInFlight.compareAndSet(false, true) )
-			return false;
-
-		String url = _httpConfSlot._url;
-		try
-		{
-			if (url.endsWith("/api/pcs/receiver"))
-			{
-				url = url.substring(0, url.length() - "/api/pcs/receiver".length()) + "/api/pcs/refresh-status";
-			}
-			else
-			{
-				URI uri = URI.create(url);
-				url = uri.getScheme() + "://" + uri.getRawAuthority() + "/api/pcs/refresh-status";
-			}
-
-			HttpRequest.Builder builder = HttpRequest.newBuilder()
-					.uri(URI.create(url))
-					.timeout(Duration.ofSeconds(3))
-					.POST(HttpRequest.BodyPublishers.ofString(json));
-
-			// Same headers as when sending the counters (Content-Type, any Authorization etc)
-			addHeader(builder, _httpConfSlot._header_1);
-			addHeader(builder, _httpConfSlot._header_2);
-			addHeader(builder, _httpConfSlot._header_3);
-			addHeader(builder, _httpConfSlot._header_4);
-			addHeader(builder, _httpConfSlot._header_5);
-			addHeader(builder, _httpConfSlot._header_6);
-			addHeader(builder, _httpConfSlot._header_7);
-			addHeader(builder, _httpConfSlot._header_8);
-			addHeader(builder, _httpConfSlot._header_9);
-
-			final String toUrl = url;
-			_refreshStatusHttpClient.sendAsync(builder.build(), HttpResponse.BodyHandlers.discarding())
-				.whenComplete((response, ex) ->
-				{
-					_refreshStatusInFlight.set(false);
-
-					String problem = null;
-					if (ex != null)
-						problem = "Caught: " + ex;
-					else if (response.statusCode() >= 300)
-						problem = "HTTP status code " + response.statusCode() + " (" + HttpUtils.httpResponceCodeToText(response.statusCode()) + ")";
-
-					// Log the first problem at INFO, then DEBUG until it works again (DbxCentral may be down, or an older version without this endpoint)
-					if (problem == null)
-						_refreshStatusHasFailed = false;
-					else if ( ! _refreshStatusHasFailed )
-					{
-						_refreshStatusHasFailed = true;
-						_logger.info("Problems sending 'refresh status' to DbxCentral at '" + toUrl + "'. More problems will be logged at DEBUG level. " + problem);
-					}
-					else
-						_logger.debug("Problems sending 'refresh status' to DbxCentral at '" + toUrl + "'. " + problem);
-				});
-
-			return true;
-		}
-		catch (Exception ex)
-		{
-			_refreshStatusInFlight.set(false);
-			_logger.debug("Problems sending 'refresh status' to DbxCentral at '" + url + "'. Caught: " + ex);
-			return false;
-		}
+		return sendRefreshStatus(json, _httpConfSlot);
 	}
 
 	@Override

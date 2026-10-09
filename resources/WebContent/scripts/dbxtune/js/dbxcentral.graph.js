@@ -826,19 +826,21 @@ function _asParseCollectorProblemFromCmList(bodyText)
  * Live-check every server in '_serverList' for a CmActiveStatements collector problem,
  * via the same '/api/cc/mgt/cm/list' proxy endpoint "Counter Details" uses. Updates
  * '_asCollectorProblems' and calls 'doneCallback(changed)' once all servers responded.
+ * @param onlySrvName  (optional) check only this server (used on live data: only the server that just sent a sample)
  */
-function _asRefreshCollectorProblems(timeStr, doneCallback)
+function _asRefreshCollectorProblems(timeStr, doneCallback, onlySrvName)
 {
-	if ( ! _serverList || _serverList.length === 0)
+	var srvList = (_serverList || []).filter(function(srv) { return ! onlySrvName || srv === onlySrvName; });
+	if (srvList.length === 0)
 	{
 		if (typeof doneCallback === "function") doneCallback(false);
 		return;
 	}
 
-	var pending = _serverList.length;
+	var pending = srvList.length;
 	var changed = false;
 
-	_serverList.forEach(function(srvName)
+	srvList.forEach(function(srvName)
 	{
 		$.ajax({
 			url: "/api/cc/mgt/cm/list",
@@ -904,9 +906,13 @@ function _asBuildCollectorProblemBanner(srvName, problem)
  */
 // Remember last active statements (if no changes, then we can skip the update)
 var _lastActiveStatementData = "";
-function dbxTuneCheckActiveStatements()
+/**
+ * @param onlySrvName (optional) on live data: only check the collector problem for the server that just sent a sample
+ *                    (otherwise every sample from ANY server would check ALL servers: N*N calls per sample interval)
+ */
+function dbxTuneCheckActiveStatements(onlySrvName)
 {
-	console.log("dbxTuneCheckActiveStatements()");
+	console.log("dbxTuneCheckActiveStatements(onlySrvName=" + onlySrvName + ")");
 
 	if ( ! _subscribe )
 	{
@@ -929,7 +935,7 @@ function dbxTuneCheckActiveStatements()
 	{
 		if (changed && _asLastAllEntries)
 			setActiveStatement(_asLastAllEntries);
-	});
+	}, onlySrvName);
 
 	$.ajax(
 	{

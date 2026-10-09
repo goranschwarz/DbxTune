@@ -81,6 +81,28 @@ public class PersistContainer
 	protected String              _onHostname       = null;
 	protected String              _serverNameAlias  = null;
 	protected String              _serverDisplayName= null;
+	/** Wall clock time of the whole sample (all CMs + post refresh + alarm handling...), set when the sample is handed to the persist handler. -1 = unknown */
+	protected long                _sampleDurationMs = -1;
+
+	/** How long cm.refresh() took for every CM that was refreshed in this sample (also the ones that failed). Sent to DbxCentral as 'cmRefreshTimes' */
+	protected List<CmRefreshTime>        _cmRefreshTimes          = new ArrayList<>();
+
+	/** One entry in 'cmRefreshTimes' */
+	public static class CmRefreshTime
+	{
+		public final String cmName;
+		public final long   ms;
+		public final String status; // ok | timeout | error
+		public final String msg;    // only when status is not 'ok'
+
+		public CmRefreshTime(String cmName, long ms, String status, String msg)
+		{
+			this.cmName = cmName;
+			this.ms     = ms;
+			this.status = status;
+			this.msg    = msg;
+		}
+	}
 	private   List<CountersModel> _counterObjects   = null;
 
 	protected boolean             _startNewSample   = false;
@@ -217,7 +239,31 @@ public class PersistContainer
 	public void setOnHostname       (String onHostname)        { _onHostname        = onHostname; }
 	public void setServerNameAlias  (String alias)             { _serverNameAlias   = alias; }
 	public void setServerDisplayName(String displayName)       { _serverDisplayName = displayName; }
-	
+	/** Wall clock time of the whole sample (not only the sum of all CM refresh times). -1 = unknown */
+	public void setSampleDurationMs (long ms)                  { _sampleDurationMs  = ms; }
+
+	/**
+	 * Remember how long cm.refresh() took (measured by the collector loop), and if it failed (from the CM's sample exception).<br>
+	 * Called for every CM that was refreshed, also the ones that failed or are not added to this container.
+	 */
+	public void addCmRefreshTime(CountersModel cm, long ms)
+	{
+		Exception ex     = cm.getSampleException();
+		String    status = "ok";
+		String    msg    = null;
+		if (ex != null)
+		{
+			// Decide from the exception itself (the CM's "sequential timeout count" is only reset on success)
+			String  exText    = String.valueOf(ex).toLowerCase();
+			boolean isTimeout = ex instanceof java.sql.SQLTimeoutException || exText.contains("timed out") || exText.contains("timeout");
+
+			status = isTimeout ? "timeout" : "error";
+			msg    = StringUtil.truncate(ex.toString(), 200, true, null);
+		}
+		_cmRefreshTimes.add(new CmRefreshTime(cm.getName(), ms, status, msg));
+	}
+	public List<CmRefreshTime> getCmRefreshTimes() { return _cmRefreshTimes; }
+
 	/** This can be used to "force" a new sample, for example if you want to 
 	 * start a new session on reconnects to the monitored ASE server */
 	public void setStartNewSample(boolean startNew) { _startNewSample = startNew; }
@@ -232,6 +278,7 @@ public class PersistContainer
 	public String    getServerNameAlias()   { return _serverNameAlias; }
 	public String    getServerDisplayName() { return _serverDisplayName; }
 	public boolean   getStartNewSample()    { return _startNewSample; }
+	public long      getSampleDurationMs()  { return _sampleDurationMs; }
 
 	/**
 	 * Get Server Name
@@ -544,6 +591,22 @@ public class PersistContainer
 			gen.writeStringField("onHostname"             , cont.getOnHostname());
 			gen.writeStringField("serverNameAlias"        , cont.getServerNameAlias());
 			gen.writeStringField("serverDisplayName"      , cont.getServerDisplayName());
+			gen.writeNumberField("sampleDurationMs"       , cont.getSampleDurationMs()); // wall clock time of the whole sample, -1 = unknown
+
+			// How long every CM took in this sample (DbxCentral forwards it to the browser, which decides what to show)
+			gen.writeFieldName("cmRefreshTimes");
+			gen.writeStartArray();
+			for (CmRefreshTime ct : cont.getCmRefreshTimes())
+			{
+				gen.writeStartObject();
+				gen.writeStringField("cm"    , ct.cmName);
+				gen.writeNumberField("ms"    , ct.ms);
+				gen.writeStringField("status", ct.status);
+				if (ct.msg != null)
+					gen.writeStringField("msg", ct.msg);
+				gen.writeEndObject();
+			}
+			gen.writeEndArray();
 
 // Make better names...: enabledCmList, enabledCmSendCountersList, enabledCmSendGraphsList
 //			gen.writeObjectField("cmListEnabled"          , cmListEnabled);

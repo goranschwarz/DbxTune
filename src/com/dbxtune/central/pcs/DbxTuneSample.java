@@ -57,6 +57,8 @@ public class DbxTuneSample
 	String _appBuildString;
 	String _collectorHostname;
 	int    _collectorSampleInterval;
+	int    _sampleDurationMs = -1; // wall clock time of the whole sample at the collector (-1 = older collector, not sent)
+	JsonNode _cmRefreshTimesNode    = null; // how long every CM took at the collector: [{cm, ms, status, msg}] (null = older collector, not sent)
 	String _collectorCurrentUrl;
 	String _collectorInfoFile;
 //	String _collectorMgtHostname;
@@ -1355,6 +1357,10 @@ public class DbxTuneSample
 			if (_logger.isDebugEnabled())
 				_logger.debug("sessionStartTime='"+sessionStartTime+"', sessionSampleTime='"+sessionSampleTime+"', serverName='"+serverName+"', serverNameAlias='"+serverNameAlias+"', serverDisplayName='"+serverDisplayName+"', onHostname='"+onHostname+"'.");
 
+			// Wall clock time of the whole sample (sent by newer collectors only)
+			sample._sampleDurationMs = getInt(headNode, "sampleDurationMs", -1);
+			sample._cmRefreshTimesNode      = headNode.get("cmRefreshTimes"); // forwarded to the browser as is
+
 			// ACTIVE ALARMS
 			JsonNode activeAlarmsNode = root.get("activeAlarms");
 			if (activeAlarmsNode != null)
@@ -1742,25 +1748,38 @@ public class DbxTuneSample
 			gen.writeStringField("onHostname"       , getOnHostname());
 			gen.writeNumberField("collectorSampleInterval", getCollectorSampleInterval()); // used by the browser to detect when data is late
 
-			// What was sampled: number of CM's, total refresh time (sql + local calc) and the slowest CM's
-			// (same as the collector log line 'RefreshTime: Total=..., Max=[...]') -- shown when hovering the navbar clock in graph.html
-			List<CmEntry> slowestCms = new ArrayList<>(_collectors);
-			slowestCms.sort((a, b) -> Integer.compare(b.getSqlRefreshTime() + b.getLcRefreshTime(), a.getSqlRefreshTime() + a.getLcRefreshTime()));
-			int totalRefreshMs = 0;
-			for (CmEntry cme : _collectors)
-				totalRefreshMs += cme.getSqlRefreshTime() + cme.getLcRefreshTime();
-
-			gen.writeNumberField("cmCount"       , _collectors.size());
-			gen.writeNumberField("totalRefreshMs", totalRefreshMs);
-			gen.writeFieldName("slowestCms");
+			// What was sampled -- shown in graph.html "Samples per server" (the browser decides what to show)
+			//  - sampleDurationMs: wall clock time of the whole sample (-1 = unknown, older collector)
+			//  - cmRefreshTimes:          how long every CM took [{cm, ms, status=ok|timeout|error, msg}], as sent by the collector
+			//                      Older collectors do not send it: then use the CM's own sql+lc refresh times, from the counters we got
+			gen.writeNumberField("sampleDurationMs", _sampleDurationMs);
+			gen.writeFieldName("cmRefreshTimes");
 			gen.writeStartArray();
-			for (int i=0; i<Math.min(3, slowestCms.size()); i++)
+			if (_cmRefreshTimesNode != null && _cmRefreshTimesNode.isArray())
 			{
-				CmEntry cme = slowestCms.get(i);
-				gen.writeStartObject();
-				gen.writeStringField("cmName", cme.getName());
-				gen.writeNumberField("ms"    , cme.getSqlRefreshTime() + cme.getLcRefreshTime());
-				gen.writeEndObject();
+				for (JsonNode ct : _cmRefreshTimesNode)
+				{
+					gen.writeStartObject();
+					gen.writeStringField("cm"    , ct.path("cm").asText());
+					gen.writeNumberField("ms"    , ct.path("ms").asLong());
+					gen.writeStringField("status", ct.path("status").asText("ok"));
+					if (ct.hasNonNull("msg"))
+						gen.writeStringField("msg", ct.path("msg").asText());
+					gen.writeEndObject();
+				}
+			}
+			else
+			{
+				for (CmEntry cme : _collectors)
+				{
+					gen.writeStartObject();
+					gen.writeStringField("cm"    , cme.getName());
+					gen.writeNumberField("ms"    , cme.getSqlRefreshTime() + cme.getLcRefreshTime());
+					gen.writeStringField("status", StringUtil.hasValue(cme.getSampleExceptionMsg()) ? "error" : "ok");
+					if (StringUtil.hasValue(cme.getSampleExceptionMsg()))
+						gen.writeStringField("msg", cme.getSampleExceptionMsg());
+					gen.writeEndObject();
+				}
 			}
 			gen.writeEndArray();
 //			w.writeStringField("serverNameAlias"  , getServerNameAlias());

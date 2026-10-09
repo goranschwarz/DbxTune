@@ -674,6 +674,7 @@ extends CounterCollectorThreadAbstract
 							cm.setCounterClearTime(headerInfo.getCounterClearTime());
 						}
 
+						long thisCmStartTime = System.currentTimeMillis();
 						try
 						{
 //System.out.println("############################## main: do-refresh: "+cm.getDisplayName());
@@ -734,7 +735,13 @@ extends CounterCollectorThreadAbstract
 							cm.setSampleException(ex);
 
 							// move this into cm.refresh()
-							//cm.setValidSampleData(false); 
+							//cm.setValidSampleData(false);
+						}
+						finally
+						{
+							// How long this CM took (also if it failed, or was not added to the container), sent to DbxCentral as 'cmRefreshTimes'
+							if (pc != null)
+								pc.addCmRefreshTime(cm, System.currentTimeMillis() - thisCmStartTime);
 						}
 					}
 //					else
@@ -868,6 +875,7 @@ extends CounterCollectorThreadAbstract
 				// POST the container to the Persistent Counter Handler
 				// That thread will store the information in any Storage.
 				//-----------------
+				pc.setSampleDurationMs(System.currentTimeMillis() - getCounterController().getRefreshStartTime()); // wall clock time of the whole sample (sent to DbxCentral)
 				if (pcs != null)
 					pcs.add(pc);
 

@@ -32,12 +32,14 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.comparator.NameFileComparator;
@@ -327,6 +329,105 @@ extends PersistWriterBase
 
 		return serverSideQueueSize;
 	}
+	//------------------------------------------------------------
+	// Live "refresh status" (what is the collector doing right now), see: RefreshStatusNoGui
+	//------------------------------------------------------------
+	private final HttpClient    _refreshStatusHttpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();
+	private final AtomicBoolean _refreshStatusInFlight   = new AtomicBoolean(false);
+	private volatile boolean    _refreshStatusHasFailed  = false;
+
+	/**
+	 * Send a small "what is the collector doing right now" JSON message to DbxCentral (asynchronous, fire and forget).<br>
+	 * DbxCentral forwards it to the web browsers that show graphs for this server.
+	 * <p>
+	 * Sent to the main URL, but only if it is a DbxCentral receiver (ends with '/api/pcs/receiver'),
+	 * where '/api/pcs/receiver' is replaced with '/api/pcs/refresh-status'.
+	 *
+	 * @param json The message (created by RefreshStatusNoGui)
+	 * @return false if nothing was sent (not sending to DbxCentral, or the previous message is still being sent)
+	 */
+	public boolean sendRefreshStatus(String json)
+	{
+		boolean isDbxCentral = _confSlot0 != null && _confSlot0._url != null && _confSlot0._url.endsWith("/api/pcs/receiver");
+		return sendRefreshStatus(json, isDbxCentral ? _confSlot0 : null);
+	}
+
+	/**
+	 * Send the "refresh status" to the DbxCentral that 'slot' sends counters to, using the same headers.
+	 * @return false if nothing was sent ('slot' is null, or the previous message is still being sent)
+	 */
+	protected boolean sendRefreshStatus(String json, HttpConfigSlot slot)
+	{
+		if (slot == null || StringUtil.isNullOrBlank(slot._url))
+			return false;
+
+		// Do not queue up messages if DbxCentral is slow
+		if ( ! _refreshStatusInFlight.compareAndSet(false, true) )
+			return false;
+
+		String url = slot._url;
+		try
+		{
+			if (url.endsWith("/api/pcs/receiver"))
+			{
+				url = url.substring(0, url.length() - "/api/pcs/receiver".length()) + "/api/pcs/refresh-status";
+			}
+			else
+			{
+				URI uri = URI.create(url);
+				url = uri.getScheme() + "://" + uri.getRawAuthority() + "/api/pcs/refresh-status";
+			}
+
+			HttpRequest.Builder builder = HttpRequest.newBuilder()
+					.uri(URI.create(url))
+					.timeout(Duration.ofSeconds(3))
+					.POST(HttpRequest.BodyPublishers.ofString(json));
+
+			// Same headers as when sending the counters (Content-Type, any Authorization etc)
+			addHeader(builder, slot._header_1);
+			addHeader(builder, slot._header_2);
+			addHeader(builder, slot._header_3);
+			addHeader(builder, slot._header_4);
+			addHeader(builder, slot._header_5);
+			addHeader(builder, slot._header_6);
+			addHeader(builder, slot._header_7);
+			addHeader(builder, slot._header_8);
+			addHeader(builder, slot._header_9);
+
+			final String toUrl = url;
+			_refreshStatusHttpClient.sendAsync(builder.build(), HttpResponse.BodyHandlers.discarding())
+				.whenComplete((response, ex) ->
+				{
+					_refreshStatusInFlight.set(false);
+
+					String problem = null;
+					if (ex != null)
+						problem = "Caught: " + ex;
+					else if (response.statusCode() >= 300)
+						problem = "HTTP status code " + response.statusCode() + " (" + HttpUtils.httpResponceCodeToText(response.statusCode()) + ")";
+
+					// Log the first problem at INFO, then DEBUG until it works again (DbxCentral may be down, or an older version without this endpoint)
+					if (problem == null)
+						_refreshStatusHasFailed = false;
+					else if ( ! _refreshStatusHasFailed )
+					{
+						_refreshStatusHasFailed = true;
+						_logger.info("Problems sending 'refresh status' to DbxCentral at '" + toUrl + "'. More problems will be logged at DEBUG level. " + problem);
+					}
+					else
+						_logger.debug("Problems sending 'refresh status' to DbxCentral at '" + toUrl + "'. " + problem);
+				});
+
+			return true;
+		}
+		catch (Exception ex)
+		{
+			_refreshStatusInFlight.set(false);
+			_logger.debug("Problems sending 'refresh status' to DbxCentral at '" + url + "'. Caught: " + ex);
+			return false;
+		}
+	}
+
 	/**
 	 * take the keyVal <code>"Accept: application/json"</code><br> and parse into <code>key="Accept", val="application/json"</code>
 	 * @throws exception if it can't find any ':' char in the keyVal string

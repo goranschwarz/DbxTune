@@ -30,14 +30,11 @@ import java.util.Map;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.security.Principal;
-import java.util.Collections;
 import java.util.Enumeration;
 
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -45,7 +42,6 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.central.controllers.Helper;
 import com.dbxtune.central.controllers.OverviewServlet;
 import com.dbxtune.central.lmetrics.LocalMetricsPersistWriterJdbc;
-import com.dbxtune.central.pcs.DbxCentralRealm;
 import com.dbxtune.central.pcs.DbxTuneSample;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
@@ -115,36 +111,8 @@ extends HttpServlet
 			return; // skip info-file lookup — no collector
 		}
 
-		System.out.println("PROXY.getSrvInfo() >>>>>>>>>>>> getServletPath = |" + req.getServletPath() + "|.");
-		
-		boolean xxx = false;
-		if (xxx)
-		{
-			HttpSession session = req.getSession(false);
-			System.out.println(">>>>>>>>>>>> session = |" + session + "|.");
-			if (session != null)
-			{
-				System.out.println("          session.getAttributeNames(): " + Collections.list(session.getAttributeNames()));
-			}
-			
-			String currentUsername = "-no-principal-";
-
-			Principal principal = req.getUserPrincipal();
-			if (principal != null)
-				currentUsername = principal.getName();
-
-			System.out.println(">>>>>>>>>>>> currentUsername = |" + currentUsername + "|.");
-			String from = "from getRemoteHost='" + req.getRemoteHost() + "', currentUsername='" + currentUsername + "', by user '" + req.getRemoteUser() + "', req.getUserPrincipal()=" + req.getUserPrincipal() + ".";
-
-			System.out.println(">>>>>>>>>>>> from: " + from);
-
-			Principal userPrincipal = req.getUserPrincipal();
-			if (userPrincipal != null)
-			{
-				System.out.println(">>>>>>>>>>>> userPrincipal.getName() = |" + userPrincipal.getName() + "|.");
-				System.out.println(">>>>>>>>>>>> req.isUserInRole(DbxCentralRealm.ROLE_ADMIN) = |" + req.isUserInRole(DbxCentralRealm.ROLE_ADMIN) + "|."); 
-			}
-		}
+		if (_logger.isDebugEnabled())
+			_logger.debug("getSrvInfo(): srvName='" + _srvName + "', servletPath='" + req.getServletPath() + "'.");
 
 		// Possibly: Get info from Central PCS Reader
 		// Here we can get

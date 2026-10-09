@@ -855,6 +855,8 @@ at pc:
 		#dbx-sample-info-dialog .dbx-sid-header.dbx-sid-warn  { background-color:#8a6d00; color:#fff; }
 		#dbx-sample-info-dialog .dbx-sid-header.dbx-sid-alert { background-color:#842029; color:#fff; }
 		#dbx-sample-info-dialog .dbx-sid-header:is(.dbx-sid-warn, .dbx-sid-alert) .dbx-sid-auto { color:#f1f1f1; }
+		#dbx-sid-refreshtime-link              { color:#8ab4f8; }
+		.dbx-sid-help                          { cursor:help; border-bottom:1px dotted #adb5bd; } /* has a tooltip with the longer description */
 		.dbx-sample-info-box .dbx-rs-table tr.dbx-rs-row-amber td { background-color:rgba(255,193,7,0.15); }
 		.dbx-sample-info-box .dbx-rs-table tr.dbx-rs-row-red   td { background-color:rgba(220,53,69,0.22); }
 		#dbx-sample-info-dialog .dbx-sid-header-right { display:flex; align-items:center; gap:12px; }
@@ -1323,7 +1325,7 @@ at pc:
 			<!-- Clock above: last sample + next sample per server (dbxRefreshStatus.js). Hover = quick view, Click = movable dialog -->
 			<div id="dbx-sample-info" class="dbx-sample-info-box" style="display: none;">
 				<table class="dbx-rs-table"><thead></thead><tbody></tbody></table>
-				<div class="dbx-rs-note">Took = sum of SQL + local calculation time of all CMs in the sample (as the collector's 'RefreshTime' log line). Click the clock to open this as a movable dialog.</div>
+				<div class="dbx-rs-note"><span class="dbx-sid-help" title="Took = time of the whole last sample at the collector (all CMs + post refresh, alarm handling, etc).&#10;Hover a 'Took' value to see the time spent in CMs and the rest.&#10;Slowest CMs = the 3 CMs that took the longest time in that sample.">Took = whole sample time</span> &middot; Click the count-clock (#s) to open this as a movable dialog</div>
 			</div>
 			<div id="dbx-sample-info-dialog" class="dbx-sample-info-box" style="display: none;">
 				<div class="dbx-sid-header">
@@ -1335,7 +1337,7 @@ at pc:
 					</span>
 				</div>
 				<table class="dbx-rs-table"><thead></thead><tbody></tbody></table>
-				<div class="dbx-rs-note">Took = sum of SQL + local calculation time of all CMs in the sample (as the collector's 'RefreshTime' log line). Drag the title bar to move.</div>
+				<div class="dbx-rs-note"><span class="dbx-sid-help" title="Took = time of the whole last sample at the collector (all CMs + post refresh, alarm handling, etc).&#10;Hover a 'Took' value to see the time spent in CMs and the rest.&#10;Slowest CMs = the 3 CMs that took the longest time in that sample.">Took = whole sample time</span> &middot; Drag the title to move &middot; <a id="dbx-sid-refreshtime-link" href="#" target="_blank" rel="noopener" title="Opens the 'Collector Refresh Time' graph (CmSummary_CmRefreshTime) for these servers, in a new tab.&#10;It shows the refresh time of each CM over time (last 2 hours, use the time span to look further back),&#10;so you can see which CM makes the samples slow, and since when.">View CM refresh time history (last 2h)</a></div>
 			</div>
 
 			<button id="dbx-refresh" class="fa fa-refresh btn btn-outline-light mx-2 my-0 my-sm-0" type="button" onclick="collectorRequestRefresh();" title="Send a 'Refresh Request' to the Collector(s)"></button>

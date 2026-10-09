@@ -1662,6 +1662,7 @@ implements Memory.MemoryListener
 						cm.setCounterClearTime(headerInfo.getCounterClearTime());
 
 						refreshStatus.setStatus("Refreshing... "+cm.getDisplayName());
+						long cmRefreshStartTime = System.currentTimeMillis();
 						try
 						{
 							cm.setSampleException(null);
@@ -1719,9 +1720,14 @@ implements Memory.MemoryListener
 							cm.setSampleException(ex);
 
 							// move this into cm.refresh()
-//							cm.setValidSampleData(false); 
+//							cm.setValidSampleData(false);
 						}
-						
+						finally
+						{
+							// How long this CM took (also if it failed, or was not added to the container), sent to DbxCentral as 'cmRefreshTimes'
+							pc.addCmRefreshTime(cm, System.currentTimeMillis() - cmRefreshStartTime);
+						}
+
 						cm.endOfRefresh();
 
 					} // END: isRefreshable
@@ -1813,6 +1819,7 @@ implements Memory.MemoryListener
 				// POST the container to the Persistent Counter Handler
 				// That thread will store the information in any Storage.
 				//-----------------
+				pc.setSampleDurationMs(System.currentTimeMillis() - getCounterController().getRefreshStartTime()); // wall clock time of the whole sample (sent to DbxCentral)
 				pch.add(pc);
 
 			}
