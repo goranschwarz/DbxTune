@@ -450,6 +450,7 @@ var _showSrvTimer = null;
 var _lastHistoryMomentsArray = null;
 var _hasActiveHistoryStatementArr = null;
 var _lastLiveSampleTs             = '';  // Last live sample timestamp (yyyy-MM-dd HH:mm:ss) — used for showplan table info context
+var _historySampleTs              = '';  // History View: time of the shown history sample (yyyy-MM-dd HH:mm:ss) — used for showplan table info context
 
 // Alarm badge refresh throttle for history mode
 var _lastAlarmRefreshMs = 0;
@@ -969,6 +970,9 @@ function dbxTuneCheckActiveStatements()
 function dbxTuneGetHistoryStatements(startTime, endTime)
 {
 	console.log("dbxTuneGetHistoryStatements(startTime=|" + startTime + "|, endTime=|" + endTime + "|.");
+
+	// The statements shown are from this time (showplan "Table Information" should describe the tables as they were then)
+	_historySampleTs = startTime || '';
 
 //	if ( ! _subscribe )
 //	{
@@ -1977,8 +1981,25 @@ function dbxTuneGraphSubscribe()
  
 		webSocket.onmessage = function(e) 
 		{
+			let json;
+			try {
+				json = JSON.parse(e.data);
+			} catch(ex) {
+				console.log("Problems parsing message: "+e.data);
+				return;
+			}
+
+			// "What is the collector doing right now" (a long running sample), handled by dbxRefreshStatus.js
+			// This is NOT data, so do not touch 'dbxLastSubscribeTime' (the navbar clock shows seconds since last DATA)
+			if (json.type === 'refreshStatus')
+			{
+				if (typeof GraphBus !== 'undefined')
+					GraphBus.emit('ws-refresh-status', json);
+				return;
+			}
+
 			dbxLastSubscribeTime = moment();
-			addData(e.data);
+			addData(json);
 			addSubscribeFeedback('data', e.data);
 		};
  
@@ -2040,21 +2061,14 @@ function dbxTuneGraphSubscribe()
 	/**
 	 * 
 	 */
-	function addData(message) 
+	function addData(graphJson)
 	{
 		if (isHistoryViewActive())
 		{
 			console.log("addData(): SKIPPING this since we are in 'HISTORY' mode.");
 			return;
 		}
-		
-		let graphJson;
-		try {
-			graphJson = JSON.parse(message);
-		} catch(ex) {
-			console.log("Problems parsing message: "+message);
-			return;
-		}
+
 		if (_debug > 0)
 			console.log("/api/chart/broadcast: add(): graphJson=", graphJson);
 
@@ -2067,7 +2081,7 @@ function dbxTuneGraphSubscribe()
 
 		// Dispatch live data to all module panels via GraphBus
 		if (typeof GraphBus !== 'undefined')
-			GraphBus.emit('ws-data', { srvName: graphServerName, appName: appName });
+			GraphBus.emit('ws-data', { srvName: graphServerName, appName: appName, sampleInterval: graphHead.collectorSampleInterval, head: graphHead });
 
 		// TODO:
 		// to let the Browser update it's GUI it would have been nice with a yield() method
@@ -2160,8 +2174,9 @@ function dbxTuneGraphSubscribe()
 
 
 		// Track last live sample timestamp — used for showplan table info context
-		if (graphHead.sampleTime) {
-			_lastLiveSampleTs = graphHead.sampleTime.replace('T', ' ').replace(/\.\d+$/, '').substring(0, 19);
+		// sessionSampleTime is a java Timestamp.toString(): "yyyy-MM-dd HH:mm:ss.SSS" (the replace('T') also handles ISO-8601)
+		if (graphHead.sessionSampleTime) {
+			_lastLiveSampleTs = graphHead.sessionSampleTime.replace('T', ' ').replace(/\.\d+$/, '').substring(0, 19);
 		}
 
 		// Update fisrt/last timestamp in the navbar
@@ -2182,30 +2197,8 @@ function dbxTuneGraphSubscribe()
 			_showSrvTimer = null;
 		}, 4000); // hide after 4s
 
-		// Live refresh CM detail panel if open and not paused
-		if (_cmSrvName === graphServerName && _cmName
-				&& $('#cm-detail-panel').is(':visible')
-				&& !$('#cm-detail-paused').prop('checked'))
-		{
-			var liveTs = graphHead.sampleTime;
-			if (liveTs)
-			{
-				// Normalize to "yyyy-MM-dd HH:mm:ss" (strip milliseconds if present)
-				liveTs = liveTs.replace('T', ' ').replace(/\.\d+$/, '').substring(0, 19);
-				_cmTimestamp = liveTs;
-				$('#cm-detail-ts').text('@ ' + liveTs + ' (live)');
-				cmDetailLoadData(_cmSrvName, _cmName, liveTs, _cmType);
-			}
-		}
-	// Live refresh DBMS Config panel if open
-	if ($('#dbms-config-panel').is(':visible') && _dcSrvName === graphServerName)
-	{
-		var dcLiveTs = graphHead.sampleTime;
-		if (dcLiveTs) {
-			dcLiveTs = dcLiveTs.replace('T', ' ').replace(/\.\d+$/, '').substring(0, 19);
-			dbmsConfigSliderRefresh(dcLiveTs);
-		}
-	}
+		// NOTE: Counter Details live refresh is done via GraphBus 'ws-data' -> cmDetailLiveRefresh() (dbxGraphBus.js)
+		//       DBMS Config has no live data reload (see dbxGraphBus.js)
 	} // end: addData()
 } // end: function
 
@@ -2295,7 +2288,7 @@ function dbxTuneGraphSubscribe()
 		div.setAttribute("data-sqltext"    , lastKnownSql);
 		div.setAttribute("data-srv"        , srv);
 		div.setAttribute("data-dbname"     , dbname);
-		div.setAttribute("data-ts"         , _lastLiveSampleTs || '');
+		div.setAttribute("data-ts"         , (isHistoryViewActive() ? _historySampleTs : _lastLiveSampleTs) || '');
 
 		return div;
 	}

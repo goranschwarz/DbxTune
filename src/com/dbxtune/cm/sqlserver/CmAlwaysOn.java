@@ -914,8 +914,8 @@ extends CountersModel
 		if (_cpm.hasMapping(srvName))
 		{
 			// Set status
-			if (cm != null && cm.getGuiController() != null)
-				cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "get conn to srv '"+srvName+"'");
+			if (cm != null && cm.hasCounterController())
+				cm.getCounterController().getRefreshStatus().setSubStatus("get conn to srv '"+srvName+"'");
 			
 			return _cpm.getPool(srvName).getConnection(guiOwner);
 		}
@@ -1011,8 +1011,8 @@ extends CountersModel
 		DbxConnectionPool cp = new DbxConnectionPool(this.getClass().getSimpleName(), connProp, 5); // Max size = 5
 
 		// Set status in GUI if available
-		if (cm != null && cm.getGuiController() != null)
-			cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "Connecting to srv '"+srvName+"'");
+		if (cm != null && cm.hasCounterController())
+			cm.getCounterController().getRefreshStatus().setSubStatus("Connecting to srv '"+srvName+"'");
 
 		// grab a new connection.
 		DbxConnection dbConn = cp.getConnection(guiOwner);
@@ -1105,8 +1105,8 @@ extends CountersModel
 				if (_logger.isDebugEnabled())
 					_logger.debug("Setting database context to 'master'.");
 
-				if (getGuiController() != null)
-						getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "for srv '"+srvName+"'");
+				if (hasCounterController())
+					getCounterController().getRefreshStatus().setSubStatus("for srv '"+srvName+"'");
 
 				Statement stmnt = dbConn.createStatement();
 
@@ -1338,8 +1338,8 @@ extends CountersModel
 				long sleepTime = 1000;
 				if (sleepTime > 0)
 				{
-					if (getGuiController() != null)
-						getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "Wait a short while (" + sleepTime + " ms) for data to be replicated.");
+					if (hasCounterController())
+						getCounterController().getRefreshStatus().setSubStatus("Wait a short while (" + sleepTime + " ms) for data to be replicated.");
 
 					try { Thread.sleep(sleepTime); }
 					catch (InterruptedException ignore) {}

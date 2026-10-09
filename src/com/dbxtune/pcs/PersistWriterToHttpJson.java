@@ -331,7 +331,7 @@ extends PersistWriterBase
 	 * take the keyVal <code>"Accept: application/json"</code><br> and parse into <code>key="Accept", val="application/json"</code>
 	 * @throws exception if it can't find any ':' char in the keyVal string
 	 */
-	private void addHeader(HttpRequest.Builder builder, String keyVal)
+	protected void addHeader(HttpRequest.Builder builder, String keyVal)
 	throws Exception
 	{
 		if (StringUtil.isNullOrBlank(keyVal))

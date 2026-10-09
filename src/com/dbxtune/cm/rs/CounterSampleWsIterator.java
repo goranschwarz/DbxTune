@@ -271,8 +271,8 @@ extends CounterSample
 		}
 
 		// Set status in GUI if available
-		if (cm != null && cm.getGuiController() != null)
-			cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "get conn to WS '"+name+"'");
+		if (cm != null && cm.hasCounterController())
+			cm.getCounterController().getRefreshStatus().setSubStatus("get conn to WS '"+name+"'");
 			
 		// Get a connection from the connection pool (it could be new; or reused, so we need to check if it's in a RS-GateWay-Connection or not)
 		DbxConnection dbConn = cp.getConnection(guiOwner);
@@ -567,8 +567,8 @@ extends CounterSample
 						// Grab a connection (from the connection pool)
 						dbConn = getConnection(cm, srvConn, name);
 						
-						if (cm.getGuiController() != null)
-							cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "update active '"+name+"'");
+						if (cm.hasCounterController())
+							cm.getCounterController().getRefreshStatus().setSubStatus("update active '"+name+"'");
 
 						String updateTable = 
 								"-- Create the dummy table if it do not exist \n" +
@@ -617,8 +617,8 @@ extends CounterSample
 				// wait "a while" for the records to be replicated...
 				while (TimeUtils.msDiffNow(startTime) < maxWaitTimeMs)
 				{
-					if (cm != null && cm.getGuiController() != null)
-						cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "Wait a short while for data to be replicated.");
+					if (cm != null && cm.hasCounterController())
+						cm.getCounterController().getRefreshStatus().setSubStatus("Wait a short while for data to be replicated.");
 
 					try { Thread.sleep(50); }
 					catch (InterruptedException ignore) {}
@@ -723,8 +723,8 @@ extends CounterSample
 					//       Also possible to add a column "StandbyConnectionMessage" -- If we have connection errors etc, we can put the message in here...
 					//       Maybe update a "simulated" ApplyAge etc... based on last "date" + sampleTime or similar "stuff"
 
-					if (cm.getGuiController() != null)
-							cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "check standby '"+name+"'");
+					if (cm.hasCounterController())
+						cm.getCounterController().getRefreshStatus().setSubStatus("check standby '"+name+"'");
 
 					Statement stmnt = dbConn.createStatement();
 					ResultSet rs;
@@ -968,8 +968,8 @@ extends CounterSample
 //				catch (SQLException ex) { _logger.warn("Problems restoring the current catalog/dbname to '"+originCatalog+"'. Caught: "+ex); }
 //			}
 			
-			if (cm.getGuiController() != null)
-				cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "");
+			if (cm.hasCounterController())
+				cm.getCounterController().getRefreshStatus().setSubStatus("");
 		}
 	}
 }

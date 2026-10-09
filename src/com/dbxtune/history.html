@@ -75,6 +75,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
         <LI>Host Monitoring: Non streaming OS Commands (like CmOsPs) now have a timeout of 60 seconds, before the collector could "hang" forever if the command never ended or the SSH session was dead.
             Can be changed with <code>HostMonitor.executeAndParse.timeout.seconds = ###</code> (0 = wait forever).
             Opening a SSH channel now has a timeout <code>SshConnection.channel.connect.timeout.seconds = 30</code>, and on failure the SSH session is reconnected and the command is retried once.</LI>
+        <LI>NO-GUI Collectors: When a sample takes long time, the collector now tells DbxCentral what it is refreshing right now (like the status bar in the Native GUI: "Refreshing... CmXxx", "for db 'xxx'").
+            Sent when a sample has been running for more than <code>RefreshStatusNoGui.push.thresholdSec = 5</code> seconds (then on every change and every 5 seconds), disable with <code>RefreshStatusNoGui.push.enabled = false</code>.
+            Only for <code>PersistWriterToDbxCentral</code> with writer type 'http'.</LI>
         <LI></LI>
 
 		<LI><b>Alarms Handling:</b>
@@ -290,6 +293,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
         <li>Added Dialog to view all alarms using button "Alarms..." from "Counter Details" and "Active Alarms"</li>
         <li>SQL Formatter - Added options how to format</li>
         <li>Changed sqlserver-job-scheduler-timeline to use another component for visualization. (much better now and it can be used with no internet access)</li>
+        <li>graph.html -- Live "what is the collector refreshing right now"
+            <BR> - A chip in the navbar (only shown when a sample is late): server, current CM, sub-status and time. Amber = late, Red = very late, no updates or no data. Dropdown with all servers.
+            <BR> - Hover over the clock ("12s"), the refresh button or the server name: per server, Next sample, Now, Last sample, Took (sum of CM refresh times), Slowest CMs
+            <BR> - Click on the clock: same info in a movable dialog (remembers its position). Auto opens when a sample runs longer than # seconds (default 5, can be changed in the dialog)
+            <BR> - New endpoint <code>/api/pcs/refresh-status</code> (collector -&gt; DbxCentral), forwarded to the browsers on the existing WebSocket
+            </li>
+        <li>graph.html -- Bugfix: Showplan "Table Information" now uses the live sample time (or the history time when in History View), previously it always used "now"</li>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

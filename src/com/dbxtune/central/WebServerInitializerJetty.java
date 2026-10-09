@@ -264,6 +264,7 @@ public class WebServerInitializerJetty
 		webapp.addServlet(LlmContextServlet.class,                    "/api/llm/context");                  // Build DDL/index/stats context (from DDL Storage) for a SQL statement
 		webapp.addServlet(LlmAdviceServlet.class,                     "/llm-advice");                       // Standalone LLM advice page (with normal navbar/login), used by the DSR's mail-safe link
 		webapp.addServlet(CentralPcsReceiverController.class,         "/api/pcs/receiver");                 // endpoint used by Collectors to SEND data to DbxCentral
+		webapp.addServlet(CentralRefreshStatusController.class,       "/api/pcs/refresh-status");           // endpoint used by Collectors to SEND "what am I doing right now" (long running sample), forwarded to browsers on: /api/chart/broadcast-ws
 		webapp.addServlet(PcsQueueInfoController.class,               "/api/pcs/queueInfo");                // if the PCS "bussy" at DbxCental -- {"queueSize":#,"lastPersistedSampleTime":"YYYY-MM-DD hh:mm:ss.ms"}
 		webapp.addServlet(ServerLayoutController.class,               "/api/server-layout");                // How the Server "layout" should be presented at the Landing Page
 		webapp.addServlet(SessionsController.class,                   "/api/sessions");

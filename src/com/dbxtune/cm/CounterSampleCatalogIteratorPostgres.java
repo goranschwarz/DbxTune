@@ -158,8 +158,8 @@ extends CounterSampleCatalogIterator
 		if (cpm.hasMapping(dbname))
 		{
 			// Set status
-			if (cm != null && cm.getGuiController() != null)
-				cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "get conn to db '"+dbname+"'");
+			if (cm != null && cm.hasCounterController())
+				cm.getCounterController().getRefreshStatus().setSubStatus("get conn to db '"+dbname+"'");
 			
 //			return _cpm.getPool(dbname).getConnection(guiOwner);
 			return cpm.getPool(dbname).getConnection(guiOwner);
@@ -194,8 +194,8 @@ extends CounterSampleCatalogIterator
 		DbxConnectionPool cp = new DbxConnectionPool(CounterSampleCatalogIteratorPostgres.class.getSimpleName(), connProp, 5); // Max size = 5
 
 		// Set status in GUI if available
-		if (cm != null && cm.getGuiController() != null)
-			cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "Connecting to db '"+dbname+"'");
+		if (cm != null && cm.hasCounterController())
+			cm.getCounterController().getRefreshStatus().setSubStatus("Connecting to db '"+dbname+"'");
 
 		try
 		{
@@ -339,8 +339,8 @@ extends CounterSampleCatalogIterator
 					if (_logger.isDebugEnabled())
 						_logger.debug("Setting database context to '"+catname+"'.");
 
-					if (cm.getGuiController() != null)
-							cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "for db '"+catname+"'");
+					if (cm.hasCounterController())
+						cm.getCounterController().getRefreshStatus().setSubStatus("for db '"+catname+"'");
 
 					Statement stmnt = dbConn.createStatement();
 					ResultSet rs;
@@ -489,8 +489,8 @@ extends CounterSampleCatalogIterator
 //				catch (SQLException ex) { _logger.warn("Problems restoring the current catalog/dbname to '"+originCatalog+"'. Caught: "+ex); }
 //			}
 			
-			if (cm.getGuiController() != null)
-				cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "");
+			if (cm.hasCounterController())
+				cm.getCounterController().getRefreshStatus().setSubStatus("");
 		}
 	}
 }

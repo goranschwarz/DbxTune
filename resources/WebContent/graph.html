@@ -838,6 +838,35 @@ at pc:
 		.dbx-nav-text {
 			color: white
 		}
+
+		/* Navbar chip: what the collector(s) are refreshing right now (dbxRefreshStatus.js) */
+		#dbx-refresh-status-chip               { white-space:nowrap; border:none; }
+		#dbx-refresh-status-chip.dbx-rs-amber  { background-color:#ffc107; color:#212529; }
+		#dbx-refresh-status-chip.dbx-rs-red    { background-color:#dc3545; color:#fff; }
+		#dbx-refresh-status-text               { display:inline-block; max-width:32vw; overflow:hidden; text-overflow:ellipsis; vertical-align:bottom; }
+		#dbx-refresh-status-menu               { min-width:640px; max-width:90vw; max-height:70vh; overflow:auto; padding:6px 8px; color:#ddd; font-size:0.85rem; }
+		/* Hover popup of the navbar clock - same look as the dropdown above */
+		.dbx-sample-info-box                   { position:fixed; z-index:2000; max-width:95vw; max-height:70vh; overflow:auto; padding:6px 8px; color:#ddd; font-size:0.85rem;
+		                                         background-color:#343a40; border:1px solid #555; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.4); }
+		#dbx-sample-info-dialog .dbx-sid-header { display:flex; justify-content:space-between; align-items:center; gap:12px; cursor:move;
+		                                         margin:-6px -8px 6px -8px; padding:4px 8px; background-color:#23272b; border-bottom:1px solid #555; font-weight:600; }
+		#dbx-sample-info-dialog .dbx-sid-header .btn-close { font-size:0.7rem; cursor:pointer; }
+		/* While any server is late: warning colour on the title bar, and a background tint on the late rows */
+		#dbx-sample-info-dialog .dbx-sid-header.dbx-sid-warn  { background-color:#8a6d00; color:#fff; }
+		#dbx-sample-info-dialog .dbx-sid-header.dbx-sid-alert { background-color:#842029; color:#fff; }
+		#dbx-sample-info-dialog .dbx-sid-header:is(.dbx-sid-warn, .dbx-sid-alert) .dbx-sid-auto { color:#f1f1f1; }
+		.dbx-sample-info-box .dbx-rs-table tr.dbx-rs-row-amber td { background-color:rgba(255,193,7,0.15); }
+		.dbx-sample-info-box .dbx-rs-table tr.dbx-rs-row-red   td { background-color:rgba(220,53,69,0.22); }
+		#dbx-sample-info-dialog .dbx-sid-header-right { display:flex; align-items:center; gap:12px; }
+		#dbx-sample-info-dialog .dbx-sid-auto { font-weight:normal; font-size:0.8rem; color:#adb5bd; cursor:pointer; margin:0; }
+		:is(#dbx-refresh-status-menu, .dbx-sample-info-box) .dbx-rs-table { width:100%; border-collapse:collapse; }
+		:is(#dbx-refresh-status-menu, .dbx-sample-info-box) .dbx-rs-table th,
+		:is(#dbx-refresh-status-menu, .dbx-sample-info-box) .dbx-rs-table td { padding:2px 8px; border-bottom:1px solid #555; white-space:nowrap; }
+		:is(#dbx-refresh-status-menu, .dbx-sample-info-box) .dbx-rs-table th { color:#adb5bd; font-weight:600; }
+		:is(#dbx-refresh-status-menu, .dbx-sample-info-box) .dbx-rs-row-amber td { color:#ffc107; }
+		:is(#dbx-refresh-status-menu, .dbx-sample-info-box) .dbx-rs-row-red   td { color:#ff6b6b; }
+		:is(#dbx-refresh-status-menu, .dbx-sample-info-box) .dbx-rs-note  { margin-top:6px; color:#adb5bd; font-size:0.75rem; white-space:normal; }
+		#dbx-refresh-status-menu .dbx-rs-note code { color:#e0e0e0; }
 		/*
 		.dbx-nav-text:hover {
 			background-color:white;
@@ -1103,6 +1132,7 @@ at pc:
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxLoginModal.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxAlarm.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphBus.js"></script>
+	<script type="text/javascript" src="/scripts/dbxtune/js/dbxRefreshStatus.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxLlmAdvice.js"></script>
 	<script type="text/javascript" src="/scripts/splitjs/split.min.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxAlarmOverview.js"></script>
@@ -1267,9 +1297,46 @@ at pc:
 				</li>
 			</ul>
 
+			<!-- What the collector(s) are refreshing right now, only visible when a sample takes long time (dbxRefreshStatus.js) -->
+			<div id="dbx-refresh-status" class="dropdown me-2" style="display: none;">
+				<button id="dbx-refresh-status-chip" class="btn btn-sm dropdown-toggle dbx-rs-amber" type="button" data-bs-toggle="dropdown" data-bs-display="static" data-bs-auto-close="outside" aria-expanded="false">
+					<i class="fa fa-refresh fa-spin"></i>
+					<span id="dbx-refresh-status-text"></span>
+					<span id="dbx-refresh-status-more" class="badge rounded-pill text-bg-dark" style="display: none;"></span>
+				</button>
+				<div class="dropdown-menu dropdown-menu-end" id="dbx-refresh-status-menu">
+					<table class="dbx-rs-table">
+						<thead><tr><th>Server</th><th>Doing</th><th class="text-end">Step</th><th class="text-end">Sample</th><th class="text-end">Last data</th></tr></thead>
+						<tbody id="dbx-refresh-status-rows"></tbody>
+					</table>
+					<div class="dbx-rs-note">
+						A collector reports here when a sample runs longer than <code>RefreshStatusNoGui.push.thresholdSec</code> (default 5 seconds).<br>
+						Step = time in the current step, Sample = time since the sample started.
+					</div>
+				</div>
+			</div>
+
 			<div    id="subscribe-feedback-msg"  class="dbx-nav-text"></div>
 			<div    id="subscribe-feedback-srv"  class="dbx-nav-text"></div>
 			<div    id="subscribe-feedback-time" class="dbx-nav-text me-1"></div>
+
+			<!-- Clock above: last sample + next sample per server (dbxRefreshStatus.js). Hover = quick view, Click = movable dialog -->
+			<div id="dbx-sample-info" class="dbx-sample-info-box" style="display: none;">
+				<table class="dbx-rs-table"><thead></thead><tbody></tbody></table>
+				<div class="dbx-rs-note">Took = sum of SQL + local calculation time of all CMs in the sample (as the collector's 'RefreshTime' log line). Click the clock to open this as a movable dialog.</div>
+			</div>
+			<div id="dbx-sample-info-dialog" class="dbx-sample-info-box" style="display: none;">
+				<div class="dbx-sid-header">
+					<span class="dbx-sid-title">Samples per server</span>
+					<span class="dbx-sid-header-right">
+						<label class="dbx-sid-auto" title="Open this dialog automatically when a server's sample takes long time (or no data arrives)"><input type="checkbox" id="dbx-sid-autoopen"> Auto open when a sample runs longer than</label>
+						<span class="dbx-sid-auto"><input type="number" id="dbx-sid-autoopen-sec" min="0" step="5" style="width:4.5em;"> s</span>
+						<button type="button" class="btn-close btn-close-white" aria-label="Close"></button>
+					</span>
+				</div>
+				<table class="dbx-rs-table"><thead></thead><tbody></tbody></table>
+				<div class="dbx-rs-note">Took = sum of SQL + local calculation time of all CMs in the sample (as the collector's 'RefreshTime' log line). Drag the title bar to move.</div>
+			</div>
 
 			<button id="dbx-refresh" class="fa fa-refresh btn btn-outline-light mx-2 my-0 my-sm-0" type="button" onclick="collectorRequestRefresh();" title="Send a 'Refresh Request' to the Collector(s)"></button>
 

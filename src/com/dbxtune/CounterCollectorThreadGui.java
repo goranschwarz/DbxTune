@@ -228,6 +228,10 @@ extends CounterCollectorThreadAbstract
 
 		_logger.info("Thread '"+Thread.currentThread().getName()+"' starting...");
 
+		// What the collector is doing right now: shown in the MainFrame status bar
+		IRefreshStatus refreshStatus = new RefreshStatusGui();
+		getCounterController().setRefreshStatus(refreshStatus);
+
 		//---------------------------
 		// NOW LOOP
 		//---------------------------
@@ -240,7 +244,7 @@ extends CounterCollectorThreadAbstract
 			if ( MainFrame.isOfflineConnected() )
 			{
 				MainFrame.getInstance().setStatus(MainFrame.ST_OFFLINE_CONNECT);
-				MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Offline read mode, use the offline window to navigate.");
+				refreshStatus.setStatus("Offline read mode, use the offline window to navigate.");
 
 				getCounterController().sleep(500);
 //				try { Thread.sleep(500); }
@@ -259,7 +263,7 @@ extends CounterCollectorThreadAbstract
 					startNewPcsSession = true;
 
 				MainFrame.getInstance().setStatus(MainFrame.ST_DISCONNECT);
-				MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Not connected to any server. Please connect now!");
+				refreshStatus.setStatus("Not connected to any server. Please connect now!");
 
 				getCounterController().sleep(500);
 
@@ -274,7 +278,7 @@ extends CounterCollectorThreadAbstract
 						// Give up after X number of reconnects
 						if (reconnectProblemsSleeptSeconds < 3600*1000) // Try for 1 hour
 						{
-							MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Trying to Re-connect to the monitored server.");
+							refreshStatus.setStatus("Trying to Re-connect to the monitored server.");
 
 							// NOTE: we might have to do:
 							//   mf.action_connect(new ActionEvent(this, 1, ConnectionDialog.PROPKEY_CONNECT_ON_STARTUP));
@@ -305,7 +309,7 @@ extends CounterCollectorThreadAbstract
 							{
 								_logger.warn("Problem when re-connecting to monitored server. Caught: "+e);
 								_logger.debug("Problem when re-connecting to monitored server. Caught: "+e, e);
-								MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Re-connect FAILED, I will soon try again.");
+								refreshStatus.setStatus("Re-connect FAILED, I will soon try again.");
 
 								// Send ALARM
 								sendAlarmServerIsDown(null, e, "Problem when re-connecting to monitored server. Caught: "+e);
@@ -406,7 +410,7 @@ extends CounterCollectorThreadAbstract
 						if (doJavaGc)
 						{
 							getCounterController().setWaitEvent("Doing Java Garbage Collection.");
-							MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Doing Java Garbage Collection.");
+							refreshStatus.setStatus("Doing Java Garbage Collection.");
 							
 							if (doJavaGcAfterRefreshShowGui)
 							{
@@ -441,11 +445,11 @@ extends CounterCollectorThreadAbstract
 							}
 
 							getCounterController().setWaitEvent("next sample period...");
-							MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Sleeping for "+i+" seconds, waiting for "+getCounterController().getWaitEvent());
+							refreshStatus.setStatus("Sleeping for "+i+" seconds, waiting for "+getCounterController().getWaitEvent());
 						}
 
 						if (MainFrame.getStatus(MainFrame.ST_STATUS_FIELD).startsWith("Sleeping for "))
-							MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Sleeping for "+i+" seconds, waiting for "+getCounterController().getWaitEvent());
+							refreshStatus.setStatus("Sleeping for "+i+" seconds, waiting for "+getCounterController().getWaitEvent());
 
 						// Update Watermarks on all the CM tabs
 //						for (CountersModel cm : _CMList)
@@ -486,7 +490,7 @@ extends CounterCollectorThreadAbstract
 				// Are we PAUSED, just sleep here
 				while (MainFrame.isSamplingPaused() && MainFrame.isForcedRefresh()==false)
 				{
-					MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "PAUSED the data sampling. Press |> to continue... (or F5 / 'refresh' button to the left)");
+					refreshStatus.setStatus("PAUSED the data sampling. Press |> to continue... (or F5 / 'refresh' button to the left)");
 					MainFrame.getInstance().setStatus(MainFrame.ST_MEMORY);
 					getCounterController().sleep(1000); // changed to 1000 so that memory usage is updated more often
 //					sleep(10000);
@@ -509,7 +513,7 @@ extends CounterCollectorThreadAbstract
 				// know we are connected to
 				if ( ! getCounterController().isInitialized() )
 				{
-					MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Initializing all counters...");
+					refreshStatus.setStatus("Initializing all counters...");
 
 					MonTablesDictionaryManager.getInstance().initialize(getCounterController().getMonConnection(), true);
 
@@ -568,7 +572,7 @@ extends CounterCollectorThreadAbstract
 				getCounterController().setDefaultSleepTimeInSec(MainFrame.getRefreshInterval());
 
 				//Component comp = MainFrame.getActiveTab();
-				MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Refreshing...");
+				refreshStatus.setStatus("Refreshing...");
 
 				// Set the CM's to be in normal refresh state
 				for (CountersModel cm : getCounterController().getCmList())
@@ -673,7 +677,7 @@ extends CounterCollectorThreadAbstract
 						try
 						{
 //System.out.println("############################## main: do-refresh: "+cm.getDisplayName());
-							MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Refreshing... "+cm.getDisplayName());
+							refreshStatus.setStatus("Refreshing... "+cm.getDisplayName());
 							cm.setSampleException(null);
 							cm.refresh();
 							
@@ -752,7 +756,7 @@ extends CounterCollectorThreadAbstract
 				//---------------------------------------------------
 				// POSTPROCESSING -  Refresh handling
 				//---------------------------------------------------
-				MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Post Refreshing...");
+				refreshStatus.setStatus("Post Refreshing...");
 
 				_logger.debug("---- Do POST Refreshing...");
 				for (CountersModel cm : getCounterController().getCmList())
@@ -760,7 +764,7 @@ extends CounterCollectorThreadAbstract
 					if ( cm == null )
 						continue;
 
-					MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Post Refreshing... "+cm.getDisplayName());
+					refreshStatus.setStatus("Post Refreshing... "+cm.getDisplayName());
 
 					cm.doPostRefresh(refreshedCms);
 				}
@@ -772,7 +776,7 @@ extends CounterCollectorThreadAbstract
 				_logger.debug("---- Do Alarm handling...");
 				for (CountersModel cm : refreshedCms.values())
 				{
-					MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Alarm Handling... "+cm.getDisplayName());
+					refreshStatus.setStatus("Alarm Handling... "+cm.getDisplayName());
 
 					cm.wrapperFor_sendAlarmRequest();
 				}
@@ -803,7 +807,7 @@ extends CounterCollectorThreadAbstract
 				//-----------------
 				// Update SUMMARY GRAPHS
 				//-----------------
-				MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Refreshing... Graphs...");
+				refreshStatus.setStatus("Refreshing... Graphs...");
 
 				_logger.debug("---- Refreshing... Graphs... ----");
 				for (CountersModel cm : getCounterController().getCmList())
@@ -898,7 +902,7 @@ extends CounterCollectorThreadAbstract
 				}
 
 				getCounterController().setWaitEvent("next sample period...");
-				MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Sleeping for "+MainFrame.getRefreshInterval()+" seconds.");
+				refreshStatus.setStatus("Sleeping for "+MainFrame.getRefreshInterval()+" seconds.");
 			}
 			catch (Exception e)
 			{

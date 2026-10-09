@@ -103,11 +103,14 @@ implements ICounterController
 	/** if we should do refreshing of the counters, or is refreshing paused */
 	private boolean _refreshIsEnabled   = false;
 
-	/** if any monitoring thread is currently getting information from the monitored server */
-	private boolean _isRefreshing = false;
+	/** if any monitoring thread is currently getting information from the monitored server (volatile: read by RefreshStatusNoGui push thread) */
+	private volatile boolean _isRefreshing = false;
 
 	/** When did we start last refresh. setInRefresh(true) */
-	private long _startRefreshTime = 0;
+	private volatile long _startRefreshTime = 0;
+
+	/** What is the collector doing right now. Set by the collector thread (GUI or NO-GUI implementation) */
+	private IRefreshStatus _refreshStatus = IRefreshStatus.NO_OP;
 
 	/** How many milliseconds did we spend in last refresh. diff between setInRefresh(true) -> setInRefresh(false) */
 	private long _refreshTimeInMs = 0;
@@ -1616,15 +1619,13 @@ implements ICounterController
 	@Override
 	public void setInRefresh(boolean s)
 	{
-		_isRefreshing = s;
-		if (_isRefreshing)
-		{
+		// Set start time BEFORE _isRefreshing, so other threads that see 'isRefreshing() == true' also see the new start time
+		if (s)
 			_startRefreshTime = System.currentTimeMillis();
-		}
 		else
-		{
 			_refreshTimeInMs = System.currentTimeMillis() - _startRefreshTime;
-		}
+
+		_isRefreshing = s;
 	}
 
 	/** How many milliseconds did we spend in last refresh. diff between setInRefresh(true) -> setInRefresh(false) */
@@ -1633,7 +1634,25 @@ implements ICounterController
 	{
 		return _refreshTimeInMs;
 	}
-	
+
+	@Override
+	public long getRefreshStartTime()
+	{
+		return _startRefreshTime;
+	}
+
+	@Override
+	public IRefreshStatus getRefreshStatus()
+	{
+		return _refreshStatus;
+	}
+
+	@Override
+	public void setRefreshStatus(IRefreshStatus refreshStatus)
+	{
+		_refreshStatus = (refreshStatus == null) ? IRefreshStatus.NO_OP : refreshStatus;
+	}
+
 //	public void clearComponents()
 //	{
 //		if ( ! _isInitialized )

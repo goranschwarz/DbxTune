@@ -95,6 +95,36 @@ extends HttpServlet
 		return sb.toString();
 	}
 
+	/**
+	 * Check if the remote host is allowed to send data (property 'CentralPcsReceiver.hosts.allowed', a comma separated list of regex)<br>
+	 * If not allowed, a HTTP 401 is sent to the caller.<br>
+	 * Used by: /api/pcs/receiver and /api/pcs/refresh-status
+	 *
+	 * @return true if allowed
+	 */
+	public static boolean checkRemoteHostAllowed(HttpServletRequest req, HttpServletResponse resp) throws IOException
+	{
+		String allowedHosts = Configuration.getCombinedConfiguration().getProperty(PROPKEY_HOSTS_ALLOWED, DEFAULT_HOSTS_ALLOWED);
+		if (StringUtil.isNullOrBlank(allowedHosts))
+			return true;
+
+		String remoteHost = req.getRemoteHost();
+		String remoteAddr = req.getRemoteAddr();
+		List<String> allowedHostList = StringUtil.commaStrToList(allowedHosts);
+
+		// Check all entries in the allowedHostList using regex
+		for (String regex : allowedHostList)
+		{
+			if (remoteAddr.matches(regex))
+				return true;
+		}
+
+		// If no match, then do NOT allow the hosts to enter data
+		_logger.warn("The hostname '"+remoteHost+"' is NOT allowed to send Performance Counter Data. allowedHostList="+allowedHostList);
+		resp.sendError(HttpServletResponse.SC_UNAUTHORIZED, "The hostname '"+remoteHost+"' is NOT allowed to send Performance Counter Data.");
+		return false;
+	}
+
 	// curl -X POST -d @/mnt/c/tmp/PersistWriterToHttpJson.tmp.json http://localhost:8080/api/pcs/receiver
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
@@ -108,27 +138,8 @@ extends HttpServlet
 			_logger.debug("/api/pcs/receiver: received request from: remoteHost='"+remoteHost+"', remoteAddr='"+remoteAddr+"', remotePort='"+remotePort+"', remoteUser='"+remoteUser+"'");
 
 		// Check if the remote host is allowed to send data.
-		String allowedHosts = Configuration.getCombinedConfiguration().getProperty(PROPKEY_HOSTS_ALLOWED, DEFAULT_HOSTS_ALLOWED);
-		if (StringUtil.hasValue(allowedHosts))
-		{
-			List<String> allowedHostList = StringUtil.commaStrToList(allowedHosts);
-
-			// Check all entries in the allowedHostList using regex 
-			boolean isAllowed = false;
-			for (String regex : allowedHostList)
-			{
-				if (remoteAddr.matches(regex))
-					isAllowed = true;
-			}
-			// If no match, then do NOT allow the hosts to enter data
-			if ( ! isAllowed )
-			{
-				_logger.warn("The hostname '"+remoteHost+"' is NOT allowed to send Performance Counter Data. allowedHostList="+allowedHostList);
-				resp.sendError(HttpServletResponse.SC_UNAUTHORIZED, "The hostname '"+remoteHost+"' is NOT allowed to send Performance Counter Data.");
-				return;
-				//throw new ServletException("The hostname '"+remoteHost+"' is NOT allowed to send Performance Counter Data.");
-			}
-		}
+		if ( ! checkRemoteHostAllowed(req, resp) )
+			return;
 
 		// Get the JSON String
 		String payload = getBody(req);
