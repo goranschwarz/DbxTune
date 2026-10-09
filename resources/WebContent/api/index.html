@@ -389,6 +389,7 @@
 	</h5>
 	<div class="card-body">
 		WebSocket subscription for live graph data push.
+		Also carries <code>"type":"refreshStatus"</code> messages (see <a href="#/api/pcs/refresh-status">/api/pcs/refresh-status</a>).
 		<table>
 			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
 			<tr><td>serverList</td><td class="mandatory">mandatory</td><td>Comma-separated server names</td></tr>
@@ -564,6 +565,21 @@
 	<div class="card-body">
 		Inbound data receiver — this is where DbxTune collectors push monitoring data to DbxCentral.
 		Not intended for direct external use.
+	</div>
+	</div>
+
+	<div id="/api/pcs/refresh-status" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-post badge-method">POST</span>
+		/api/pcs/refresh-status
+	</h5>
+	<div class="card-body">
+		Inbound "what is the collector refreshing right now" — sent by a collector when a sample runs longer than
+		<code>RefreshStatusNoGui.push.thresholdSec</code> (default 5 seconds), and <code>"refreshing":false</code> when it ends.
+		The message is forwarded as is to the browsers subscribing to that server on <a href="#/api/chart/broadcast-ws">/api/chart/broadcast-ws</a>
+		(shown as a chip in the graph page navbar). Same host check as <code>/api/pcs/receiver</code>. Not intended for direct external use.
+		<pre>{"type":"refreshStatus","serverName":"PROD_A","refreshing":true,"status":"Refreshing... CmIndexUsage","statusMs":42000,
+ "subStatus":"for db 'sales'","subStatusMs":3000,"sampleMs":65000,"sampleIntervalSec":60}</pre>
 	</div>
 	</div>
 

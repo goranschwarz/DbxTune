@@ -1254,6 +1254,11 @@ implements Memory.MemoryListener
 
 		_logger.info("Thread '"+Thread.currentThread().getName()+"' starting...");
 
+		// What the collector is doing right now: kept in memory, and pushed to DbxCentral if a sample takes long time
+		RefreshStatusNoGui refreshStatus = new RefreshStatusNoGui(_sleepTime);
+		refreshStatus.startPushThread();
+		getCounterController().setRefreshStatus(refreshStatus);
+
 		//---------------------------
 		// NOW LOOP
 		//---------------------------
@@ -1270,6 +1275,7 @@ implements Memory.MemoryListener
 				_logger.info("-----------------------------------------------------------------------------------------");
 				_logger.debug("Connecting to DBMS server using. user='"+_dbmsUsername+"', passwd='"+_dbmsPassword+"', hostPortStr='"+_dbmsHostPortStr+"'. dbmsServer='"+_dbmsServer+"'");
 				_logger.info( "Connecting to DBMS server using. user='"+_dbmsUsername+"', passwd='"+ "*hidden*" +"', hostPortStr='"+_dbmsHostPortStr+"'. dbmsServer='"+_dbmsServer+"'");
+				refreshStatus.setStatus("Connecting to the monitored server.");
 
 
 				// get a connection
@@ -1374,6 +1380,7 @@ implements Memory.MemoryListener
 					sendAlarmServerIsDown(fallbackSrvName, connectException, connectInfoMsg);
 
 					// Sleep a short while
+					refreshStatus.setStatus("Connect FAILED, I will try again in "+_sleepOnFailedConnectTime+" seconds.");
 					getCounterController().sleep(_sleepOnFailedConnectTime * 1000);
 					
 					// START AT THE TOP AGAIN
@@ -1542,11 +1549,13 @@ implements Memory.MemoryListener
 			try
 			{
 				getCounterController().setInRefresh(true);
+				refreshStatus.setStatus("Refreshing...");
 
 				// Initialize the counters, now when we know what 
 				// release we are connected to
 				if ( ! getCounterController().isInitialized() )
 				{
+					refreshStatus.setStatus("Initializing all counters...");
 					DbxConnection xconn = getCounterController().getMonConnection();
 					
 					getCounterController().initCounters( 
@@ -1652,6 +1661,7 @@ implements Memory.MemoryListener
 						cm.setSampleTimeHead(  headerInfo.getMainSampleTime());
 						cm.setCounterClearTime(headerInfo.getCounterClearTime());
 
+						refreshStatus.setStatus("Refreshing... "+cm.getDisplayName());
 						try
 						{
 							cm.setSampleException(null);
@@ -1728,6 +1738,7 @@ implements Memory.MemoryListener
 					if ( cm == null )
 						continue;
 
+					refreshStatus.setStatus("Post Refreshing... "+cm.getDisplayName());
 					cm.doPostRefresh(refreshedCms);
 				}
 
@@ -1739,12 +1750,14 @@ implements Memory.MemoryListener
 				_logger.debug("---- Do Alarm handling...");
 				for (CountersModel cm : refreshedCms.values())
 				{
+					refreshStatus.setStatus("Alarm Handling... "+cm.getDisplayName());
 					cm.wrapperFor_sendAlarmRequest();
 				}
 
 				
 				// Update some graphs that needs to be done AFTER ALL CM's are refreshed
 				// Typically CmSummary -- CmRefreshTime
+				refreshStatus.setStatus("Refreshing... Graphs...");
 				postRefreshUpdateGraphData(refreshedCms);
 				
 
@@ -1770,6 +1783,8 @@ implements Memory.MemoryListener
 				//-----------------
 				if (AlarmHandler.hasInstance())
 				{
+					refreshStatus.setStatus("Alarm Handling... end-of-scan");
+
 					// Get the Alarm Handler
 					AlarmHandler ah = AlarmHandler.getInstance();
 					
@@ -1875,6 +1890,7 @@ implements Memory.MemoryListener
 			if (noGuiDoJavaGcAfterRefresh || doJavaGcAfterRefresh)
 			{
 				getCounterController().setWaitEvent("Doing Java Garbage Collection.");
+				refreshStatus.setStatus("Doing Java Garbage Collection.");
 				System.gc();
 			}
 
@@ -1961,6 +1977,7 @@ implements Memory.MemoryListener
 			HeartbeatMonitor.doHeartbeat();
 
 			// Sleep / wait for next sample
+			refreshStatus.setStatus("Sleeping for "+sleepTime+" seconds.");
 			if (_scriptWaitForNextSample != null)
 				scriptWaitForNextSample();
 			else
@@ -1968,6 +1985,8 @@ implements Memory.MemoryListener
 
 
 		} // END: while(_running)
+
+		refreshStatus.stopPushThread();
 
 		//--------------------------
 		// Close all cm's (or should we "just" close CounterModelHostMonitor ???)

@@ -6,8 +6,12 @@
  * DBMS Config).
  *
  * Online mode:  WebSocket data arrives
- *               → GraphBus.emit('ws-data', { srvName })
+ *               → GraphBus.emit('ws-data', { srvName, appName, sampleInterval })
  *               → each module's listener decides what to do
+ *
+ *               WebSocket "refresh status" arrives (a collector sample is taking long time)
+ *               → GraphBus.emit('ws-refresh-status', { serverName, refreshing, status, subStatus, ... })
+ *               → dbxRefreshStatus.js (navbar chip)
  *
  * History mode: slider moves / user clicks graph timestamp
  *               → GraphBus.emit('slider-change', { ts, startTime, endTime, value, historyStart })
@@ -108,6 +112,18 @@ $(document).ready(function () {
 				try { if (localStorage.getItem('queryStore-panelOpen') === '1') queryStoreToggle(); } catch(e) {}
 			}
 		}
+	});
+
+	// Refresh Status (navbar chip): remember when data arrived from each server (the sample is done)
+	GraphBus.on('ws-data', function (d) {
+		if (typeof DbxRefreshStatus !== 'undefined')
+			DbxRefreshStatus.onData(d);
+	});
+
+	// Refresh Status (navbar chip): what the collector is refreshing right now (only sent when a sample takes long time)
+	GraphBus.on('ws-refresh-status', function (d) {
+		if (typeof DbxRefreshStatus !== 'undefined')
+			DbxRefreshStatus.onStatus(d);
 	});
 
 	// Query Store: respond to history slider changes

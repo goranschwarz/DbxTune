@@ -68,6 +68,7 @@ public class MandatoryLoginFilter implements Filter
 			"/api/login/",
 			"/api/healthcheck",
 			"/api/pcs/receiver",
+			"/api/pcs/refresh-status",  // Collectors send "what am I doing right now" (long running sample)
 			"/api/user/request-access",
 			"/lpp/",
 			"/.well-known/",

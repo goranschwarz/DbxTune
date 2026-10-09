@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -194,7 +195,7 @@ extends CounterSample
 //				// Skipping messages
 //				// 15539 - Gateway connection to 'SRV.db' is created.
 //				// 15540 - Gateway connection to 'SRV.db' is dropped.
-//				_logger.info(ex.getMessage());
+//				_logger.info(stripLastNl(ex.getMessage()));
 //			}
 //			else
 //			{
@@ -208,6 +209,18 @@ extends CounterSample
 //		return dbConn;
 //	}
 
+	private static String stripLastNl(String str)
+	{
+		if (StringUtil.isNullOrBlank(str))
+			return str;
+
+		str = str.trim();
+
+		if (str.endsWith("\n"))
+			return str.substring(0, str.length() - 1);
+
+		return str;
+	}
 	/**
 	 * Get a connection 
 	 * 
@@ -258,8 +271,8 @@ extends CounterSample
 		}
 
 		// Set status in GUI if available
-		if (cm != null && cm.getGuiController() != null)
-			cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "get conn to WS '"+name+"'");
+		if (cm != null && cm.hasCounterController())
+			cm.getCounterController().getRefreshStatus().setSubStatus("get conn to WS '"+name+"'");
 			
 		// Get a connection from the connection pool (it could be new; or reused, so we need to check if it's in a RS-GateWay-Connection or not)
 		DbxConnection dbConn = cp.getConnection(guiOwner);
@@ -297,7 +310,7 @@ extends CounterSample
 				// Skipping messages
 				// 15539 - Gateway connection to 'SRV.db' is created.
 				// 15540 - Gateway connection to 'SRV.db' is dropped.
-				_logger.info(ex.getMessage());
+				_logger.info(stripLastNl(ex.getMessage()));
 			}
 			else
 			{
@@ -554,8 +567,8 @@ extends CounterSample
 						// Grab a connection (from the connection pool)
 						dbConn = getConnection(cm, srvConn, name);
 						
-						if (cm.getGuiController() != null)
-							cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "update active '"+name+"'");
+						if (cm.hasCounterController())
+							cm.getCounterController().getRefreshStatus().setSubStatus("update active '"+name+"'");
 
 						String updateTable = 
 								"-- Create the dummy table if it do not exist \n" +
@@ -572,7 +585,7 @@ extends CounterSample
 						}
 						catch (SQLException ex)
 						{
-							_logger.warn("Problems updating dummy table 'rsTune_ws_dummy_update' at '"+name+"'. But continuing with next step. Caught: Error="+ex.getErrorCode()+", Msg='"+ex.getMessage().trim()+"', SQL="+updateTable);
+							_logger.warn("Problems updating dummy table 'rsTune_ws_dummy_update' at '"+name+"'. But continuing with next step. Caught: Error="+ex.getErrorCode()+", Msg='"+stripLastNl(ex.getMessage())+"', SQL="+updateTable);
 						}
 
 						try ( Statement stmnt = dbConn.createStatement(); ResultSet rs = stmnt.executeQuery("select getdate()") )
@@ -582,14 +595,14 @@ extends CounterSample
 						}
 						catch (SQLException ex)
 						{
-							_logger.warn("Problems executing 'select getdate()' at '"+name+"'. But continuing with next step. Caught: Error="+ex.getErrorCode()+", Msg='"+ex.getMessage().trim()+"'. ACTION: Closing the connection");
+							_logger.warn("Problems executing 'select getdate()' at '"+name+"'. But continuing with next step. Caught: Error="+ex.getErrorCode()+", Msg='"+stripLastNl(ex.getMessage())+"'. ACTION: Closing the connection");
 							// Closing the connection... for example if the Gateway connection has failed and we are still in RepServer...
 							dbConn.closeNoThrow();
 						}
 					}
 					catch (SQLException sqlEx)
 					{
-						_logger.warn("CounterSample("+getName()+").getCnt : ACTIVE='"+name+"', ErrorCode=" + sqlEx.getErrorCode() + ", Message=|" + sqlEx.getMessage() + "|. Inner-ACTION: Closing the connection.");
+						_logger.warn("CounterSample("+getName()+").getCnt : ACTIVE='"+name+"', ErrorCode=" + sqlEx.getErrorCode() + ", Message=|" + stripLastNl(sqlEx.getMessage()) + "|. Inner-ACTION: Closing the connection.");
 						if (dbConn != null)
 							dbConn.closeNoThrow();
 
@@ -604,8 +617,8 @@ extends CounterSample
 				// wait "a while" for the records to be replicated...
 				while (TimeUtils.msDiffNow(startTime) < maxWaitTimeMs)
 				{
-					if (cm != null && cm.getGuiController() != null)
-						cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "Wait a short while for data to be replicated.");
+					if (cm != null && cm.hasCounterController())
+						cm.getCounterController().getRefreshStatus().setSubStatus("Wait a short while for data to be replicated.");
 
 					try { Thread.sleep(50); }
 					catch (InterruptedException ignore) {}
@@ -710,8 +723,8 @@ extends CounterSample
 					//       Also possible to add a column "StandbyConnectionMessage" -- If we have connection errors etc, we can put the message in here...
 					//       Maybe update a "simulated" ApplyAge etc... based on last "date" + sampleTime or similar "stuff"
 
-					if (cm.getGuiController() != null)
-							cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "check standby '"+name+"'");
+					if (cm.hasCounterController())
+						cm.getCounterController().getRefreshStatus().setSubStatus("check standby '"+name+"'");
 
 					Statement stmnt = dbConn.createStatement();
 					ResultSet rs;
@@ -847,14 +860,14 @@ extends CounterSample
 				}
 				catch (SQLException sqlEx)
 				{
-					String standbyMsg = "STANDBY='"+name+"', ErrorCode=" + sqlEx.getErrorCode() + ", Message=" + sqlEx.getMessage();
+					String standbyMsg = "STANDBY='"+name+"', ErrorCode=" + sqlEx.getErrorCode() + ", Message=" + stripLastNl(sqlEx.getMessage());
 
 					// Add a row (with most "Standby" fields empty/null), but the "StandbyMsg" filled in with the ERROR message 
 					_rows.add(createSkipRow(wsEntry, standbyMsg));
 //					addRow(cm, createSkipRow(wsEntry, standbyMsg)); // this wont work here
 
 					// Closing the connection... for example if the Gateway connection has failed and we are still in RepServer...
-					_logger.warn("CounterSample("+getName()+").getCnt : STANDBY='"+name+"', ErrorCode=" + sqlEx.getErrorCode() + ", Message=|" + sqlEx.getMessage() + "|. Inner-ACTION: Closing the connection.");
+					_logger.warn("CounterSample("+getName()+").getCnt : STANDBY='"+name+"', ErrorCode=" + sqlEx.getErrorCode() + ", Message=|" + stripLastNl(sqlEx.getMessage()) + "|. Inner-ACTION: Closing the connection.");
 					if (dbConn != null)
 						dbConn.closeNoThrow();
 					
@@ -913,7 +926,7 @@ extends CounterSample
 		{
 			if (sqlExList.size() == 0)
 			{
-				_logger.warn("CounterSample("+getName()+").getCnt : ErrorCode=" + sqlEx.getErrorCode() + ", Message=|" + sqlEx.getMessage() + "|. SQL: "+sql, sqlEx);
+				_logger.warn("CounterSample("+getName()+").getCnt : ErrorCode=" + sqlEx.getErrorCode() + ", Message=|" + stripLastNl(sqlEx.getMessage()) + "|. SQL: "+sql, sqlEx);
 				if (sqlEx.toString().indexOf("SocketTimeoutException") > 0)
 				{
 					_logger.info("QueryTimeout in '"+getName()+"', with query timeout '"+queryTimeout+"'. This can be changed with the config option '"+getName()+".queryTimeout=seconds' in the config file.");
@@ -955,8 +968,8 @@ extends CounterSample
 //				catch (SQLException ex) { _logger.warn("Problems restoring the current catalog/dbname to '"+originCatalog+"'. Caught: "+ex); }
 //			}
 			
-			if (cm.getGuiController() != null)
-				cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "");
+			if (cm.hasCounterController())
+				cm.getCounterController().getRefreshStatus().setSubStatus("");
 		}
 	}
 }

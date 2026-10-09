@@ -247,7 +247,16 @@ public interface ICounterController
 
 	/** How many milliseconds did we spend in last refresh. diff between setInRefresh(true) -> setInRefresh(false) */
 	public long getLastRefreshTimeInMs();
-	
+
+	/** When did the current (or last) refresh start. Set by setInRefresh(true) */
+	public long getRefreshStartTime();
+
+	/** What is the collector doing right now (status bar in GUI, pushed to DbxCentral in NO-GUI). Never null */
+	public IRefreshStatus getRefreshStatus();
+
+	/** Set by the collector thread: GUI or NO-GUI implementation */
+	public void setRefreshStatus(IRefreshStatus refreshStatus);
+
 	/** Descide if the Connection wachdog should be started or not for GUI mode monitoring */
 	public boolean shouldWeStart_connectionWatchDog();
 

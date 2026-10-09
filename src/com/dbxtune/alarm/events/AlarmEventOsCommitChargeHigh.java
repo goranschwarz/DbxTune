@@ -32,7 +32,7 @@ extends AlarmEvent
 {
 	private static final long serialVersionUID = 1L;
 
-	public AlarmEventOsCommitChargeHigh(CountersModel cm, int thresholdPct, int thresholdHeadroomMb, String hostname, String note, double commitPctAvg, double headroomMbAvg, double committedMb, double commitLimitMb)
+	public AlarmEventOsCommitChargeHigh(CountersModel cm, double thresholdPct, int thresholdHeadroomMb, String hostname, String note, double commitPctAvg, double headroomMbAvg, double committedMb, double commitLimitMb)
 	{
 		super(
 				Version.getAppName(), // serviceType

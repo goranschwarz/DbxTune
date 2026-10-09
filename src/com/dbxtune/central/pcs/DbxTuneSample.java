@@ -1740,6 +1740,29 @@ public class DbxTuneSample
 			gen.writeStringField("sessionSampleTime", getSessionSampleTime() +"");
 			gen.writeStringField("serverName"       , getServerName());
 			gen.writeStringField("onHostname"       , getOnHostname());
+			gen.writeNumberField("collectorSampleInterval", getCollectorSampleInterval()); // used by the browser to detect when data is late
+
+			// What was sampled: number of CM's, total refresh time (sql + local calc) and the slowest CM's
+			// (same as the collector log line 'RefreshTime: Total=..., Max=[...]') -- shown when hovering the navbar clock in graph.html
+			List<CmEntry> slowestCms = new ArrayList<>(_collectors);
+			slowestCms.sort((a, b) -> Integer.compare(b.getSqlRefreshTime() + b.getLcRefreshTime(), a.getSqlRefreshTime() + a.getLcRefreshTime()));
+			int totalRefreshMs = 0;
+			for (CmEntry cme : _collectors)
+				totalRefreshMs += cme.getSqlRefreshTime() + cme.getLcRefreshTime();
+
+			gen.writeNumberField("cmCount"       , _collectors.size());
+			gen.writeNumberField("totalRefreshMs", totalRefreshMs);
+			gen.writeFieldName("slowestCms");
+			gen.writeStartArray();
+			for (int i=0; i<Math.min(3, slowestCms.size()); i++)
+			{
+				CmEntry cme = slowestCms.get(i);
+				gen.writeStartObject();
+				gen.writeStringField("cmName", cme.getName());
+				gen.writeNumberField("ms"    , cme.getSqlRefreshTime() + cme.getLcRefreshTime());
+				gen.writeEndObject();
+			}
+			gen.writeEndArray();
 //			w.writeStringField("serverNameAlias"  , getServerNameAlias());
 
 //			gen.writeObjectField("cmListEnabled"        , getCmListEnabled());

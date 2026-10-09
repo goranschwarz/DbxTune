@@ -59,6 +59,20 @@ public class ChartBroadcastWebSocket
 //	private static final Map<String, Emitter> sseMap = new ConcurrentHashMap<>();
 	private static final Map<Session, ClientSubscription> _subsMap = new ConcurrentHashMap<>();
 
+	/** Last "refresh status" (a long running sample) per server, so a browser that connects (or reloads the page) during that sample gets it at once */
+	private static final Map<String, LastRefreshStatus> _lastRefreshStatus = new ConcurrentHashMap<>();
+
+	/** Only replay a "refresh status" that is younger than this (the collector re-sends it every 5 seconds while the sample is running) */
+	private static final long REFRESH_STATUS_REPLAY_MAX_AGE_MS = 60_000;
+
+	private static class LastRefreshStatus
+	{
+		final String _json;
+		final long   _receivedTime = System.currentTimeMillis();
+
+		LastRefreshStatus(String json) { _json = json; }
+	}
+
 	/**
 	 * Object to hold some extra information for a session
 	 */
@@ -129,6 +143,22 @@ public class ChartBroadcastWebSocket
 //			_timer.scheduleAtFixedRate(run, 0, 1, TimeUnit.SECONDS);
 //		}
 		_logger.info("Adding a Web Subscriber. remoteHost='"+remoteHost+"', serverList='"+serverList+"', graphList='"+graphList+"', session='"+session+"'.");
+
+		// If any of the subscribed servers is in a long running sample, send the last "refresh status" (so the browser shows it at once)
+		for (String srvName : cs._serverNameList)
+		{
+			LastRefreshStatus lrs = _lastRefreshStatus.get(srvName);
+			if (lrs == null)
+				continue;
+
+			long ageMs = System.currentTimeMillis() - lrs._receivedTime;
+			if (ageMs > REFRESH_STATUS_REPLAY_MAX_AGE_MS)
+				continue;
+
+			// Tell the browser how old the message is, so it can calculate the correct "running for" time
+			String json = "{\"replayAgeMs\":" + ageMs + "," + lrs._json.trim().substring(1);
+			sendRefreshStatus(session, srvName, json);
+		}
 	}
 
 	@OnWebSocketClose
@@ -168,6 +198,9 @@ public class ChartBroadcastWebSocket
 	 */
 	public static void fireGraphData(DbxTuneSample sample)
 	{
+		// Data from a sample has arrived: that sample is done, so do not replay any "refresh status" for it
+		_lastRefreshStatus.remove(sample.getServerName());
+
 		if (_subsMap.isEmpty())
 		{
 			return;
@@ -255,5 +288,59 @@ public class ChartBroadcastWebSocket
 //		if ( subsSentList.size() > 0 )
 //			_logger.info("Sent subscription data for server '" + sample.getServerName() + "' to " + subsSentList.size() + " Web Subscribers " + subsSentList + ". subsMap.size=" + _subsMap.size());
 
+	}
+
+	/**
+	 * Send "what is the collector doing right now" (a long running sample) to any web "subscribers" of that server.<br>
+	 * Received from the collector by: CentralRefreshStatusController
+	 *
+	 * @param srvName     Name of the server
+	 * @param refreshing  true while the sample is running, false when the sample has ended
+	 * @param json        The message from the collector (forwarded as is)
+	 */
+	public static void fireRefreshStatus(String srvName, boolean refreshing, String json)
+	{
+		if (refreshing)
+			_lastRefreshStatus.put(srvName, new LastRefreshStatus(json));
+		else
+			_lastRefreshStatus.remove(srvName);
+
+		for (Session session : _subsMap.keySet())
+		{
+			ClientSubscription cs = _subsMap.get(session);
+			if (cs == null || ! cs._serverNameList.contains(srvName))
+				continue;
+
+			sendRefreshStatus(session, srvName, json);
+		}
+	}
+
+	/** Asynchronous send ("fire and forget"), same way as fireGraphData() */
+	private static void sendRefreshStatus(Session session, String srvName, String json)
+	{
+		try
+		{
+			session.getRemote().sendString(json, new WriteCallback()
+			{
+				@Override
+				public void writeSuccess()
+				{
+					if (_logger.isDebugEnabled())
+						_logger.debug("Sent 'refresh status' for server '" + srvName + "' to session '" + session + "'.");
+				}
+
+				@Override
+				public void writeFailed(Throwable ex)
+				{
+					_logger.error("Problems sending 'refresh status' to subscriber '" + session + "'.", ex);
+					_subsMap.remove(session);
+				}
+			});
+		}
+		catch (Exception ex)
+		{
+			_logger.error("Problems sending 'refresh status' to subscriber '" + session + "'.", ex);
+			_subsMap.remove(session);
+		}
 	}
 }

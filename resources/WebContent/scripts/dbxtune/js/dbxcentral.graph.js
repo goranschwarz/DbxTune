@@ -450,6 +450,7 @@ var _showSrvTimer = null;
 var _lastHistoryMomentsArray = null;
 var _hasActiveHistoryStatementArr = null;
 var _lastLiveSampleTs             = '';  // Last live sample timestamp (yyyy-MM-dd HH:mm:ss) — used for showplan table info context
+var _historySampleTs              = '';  // History View: time of the shown history sample (yyyy-MM-dd HH:mm:ss) — used for showplan table info context
 
 // Alarm badge refresh throttle for history mode
 var _lastAlarmRefreshMs = 0;
@@ -969,6 +970,9 @@ function dbxTuneCheckActiveStatements()
 function dbxTuneGetHistoryStatements(startTime, endTime)
 {
 	console.log("dbxTuneGetHistoryStatements(startTime=|" + startTime + "|, endTime=|" + endTime + "|.");
+
+	// The statements shown are from this time (showplan "Table Information" should describe the tables as they were then)
+	_historySampleTs = startTime || '';
 
 //	if ( ! _subscribe )
 //	{
@@ -1977,8 +1981,25 @@ function dbxTuneGraphSubscribe()
  
 		webSocket.onmessage = function(e) 
 		{
+			let json;
+			try {
+				json = JSON.parse(e.data);
+			} catch(ex) {
+				console.log("Problems parsing message: "+e.data);
+				return;
+			}
+
+			// "What is the collector doing right now" (a long running sample), handled by dbxRefreshStatus.js
+			// This is NOT data, so do not touch 'dbxLastSubscribeTime' (the navbar clock shows seconds since last DATA)
+			if (json.type === 'refreshStatus')
+			{
+				if (typeof GraphBus !== 'undefined')
+					GraphBus.emit('ws-refresh-status', json);
+				return;
+			}
+
 			dbxLastSubscribeTime = moment();
-			addData(e.data);
+			addData(json);
 			addSubscribeFeedback('data', e.data);
 		};
  
@@ -2040,21 +2061,14 @@ function dbxTuneGraphSubscribe()
 	/**
 	 * 
 	 */
-	function addData(message) 
+	function addData(graphJson)
 	{
 		if (isHistoryViewActive())
 		{
 			console.log("addData(): SKIPPING this since we are in 'HISTORY' mode.");
 			return;
 		}
-		
-		let graphJson;
-		try {
-			graphJson = JSON.parse(message);
-		} catch(ex) {
-			console.log("Problems parsing message: "+message);
-			return;
-		}
+
 		if (_debug > 0)
 			console.log("/api/chart/broadcast: add(): graphJson=", graphJson);
 
@@ -2067,7 +2081,7 @@ function dbxTuneGraphSubscribe()
 
 		// Dispatch live data to all module panels via GraphBus
 		if (typeof GraphBus !== 'undefined')
-			GraphBus.emit('ws-data', { srvName: graphServerName, appName: appName });
+			GraphBus.emit('ws-data', { srvName: graphServerName, appName: appName, sampleInterval: graphHead.collectorSampleInterval, head: graphHead });
 
 		// TODO:
 		// to let the Browser update it's GUI it would have been nice with a yield() method
@@ -2160,8 +2174,9 @@ function dbxTuneGraphSubscribe()
 
 
 		// Track last live sample timestamp — used for showplan table info context
-		if (graphHead.sampleTime) {
-			_lastLiveSampleTs = graphHead.sampleTime.replace('T', ' ').replace(/\.\d+$/, '').substring(0, 19);
+		// sessionSampleTime is a java Timestamp.toString(): "yyyy-MM-dd HH:mm:ss.SSS" (the replace('T') also handles ISO-8601)
+		if (graphHead.sessionSampleTime) {
+			_lastLiveSampleTs = graphHead.sessionSampleTime.replace('T', ' ').replace(/\.\d+$/, '').substring(0, 19);
 		}
 
 		// Update fisrt/last timestamp in the navbar
@@ -2182,30 +2197,8 @@ function dbxTuneGraphSubscribe()
 			_showSrvTimer = null;
 		}, 4000); // hide after 4s
 
-		// Live refresh CM detail panel if open and not paused
-		if (_cmSrvName === graphServerName && _cmName
-				&& $('#cm-detail-panel').is(':visible')
-				&& !$('#cm-detail-paused').prop('checked'))
-		{
-			var liveTs = graphHead.sampleTime;
-			if (liveTs)
-			{
-				// Normalize to "yyyy-MM-dd HH:mm:ss" (strip milliseconds if present)
-				liveTs = liveTs.replace('T', ' ').replace(/\.\d+$/, '').substring(0, 19);
-				_cmTimestamp = liveTs;
-				$('#cm-detail-ts').text('@ ' + liveTs + ' (live)');
-				cmDetailLoadData(_cmSrvName, _cmName, liveTs, _cmType);
-			}
-		}
-	// Live refresh DBMS Config panel if open
-	if ($('#dbms-config-panel').is(':visible') && _dcSrvName === graphServerName)
-	{
-		var dcLiveTs = graphHead.sampleTime;
-		if (dcLiveTs) {
-			dcLiveTs = dcLiveTs.replace('T', ' ').replace(/\.\d+$/, '').substring(0, 19);
-			dbmsConfigSliderRefresh(dcLiveTs);
-		}
-	}
+		// NOTE: Counter Details live refresh is done via GraphBus 'ws-data' -> cmDetailLiveRefresh() (dbxGraphBus.js)
+		//       DBMS Config has no live data reload (see dbxGraphBus.js)
 	} // end: addData()
 } // end: function
 
@@ -2295,7 +2288,7 @@ function dbxTuneGraphSubscribe()
 		div.setAttribute("data-sqltext"    , lastKnownSql);
 		div.setAttribute("data-srv"        , srv);
 		div.setAttribute("data-dbname"     , dbname);
-		div.setAttribute("data-ts"         , _lastLiveSampleTs || '');
+		div.setAttribute("data-ts"         , (isHistoryViewActive() ? _historySampleTs : _lastLiveSampleTs) || '');
 
 		return div;
 	}
@@ -3528,7 +3521,9 @@ class DbxGraph
 							dbxOpenGraphPickerModal(apiSrv, startTime, {
 								target:      '_self',
 								preSelected: preSel,
-								endTime:     endTime
+								endTime:     endTime,
+								sessionName: srv,
+								gorder:      getParameter('gorder', '')
 							});
 						}
 					},
@@ -4704,6 +4699,19 @@ function dbxChartPrintApiHelp()
 			'<td>gcols</td>' + 
 			'<td>Number of graph columns. This is an automatic way to set gwidth. It just takes current browser width, divides it with <code>gcols</code>, then sets <code>gwidth</code> to that value.<br>' + 
 			'<b>default:</b> not specified, meaning: it depends on your current browser size, but normally from 1 to 3<br>' + 
+			'<b>Note:</b> if <code>gorder=srv</code> and <code>gcols</code> is not specified, then <code>gcols</code> is set to the number of graphs (one row per server)<br>' + 
+			'</td>' +
+		'</tr>' +
+		'<tr>' + 
+			'<td>gorder</td>' + 
+			'<td>In what order the graphs are laid out when you have several servers in <code>sessionName</code><br>' + 
+			'<ul>' + 
+			'  <li><code>graph</code> - Grouped by graph: <code>graph1:SRV1, graph1:SRV2, graph2:SRV1, graph2:SRV2</code></li>' + 
+			'  <li><code>srv</code> - Grouped by server: <code>SRV1:graph1, SRV1:graph2, SRV2:graph1, SRV2:graph2</code></li>' + 
+			'</ul>' + 
+			'Servers are ordered as in <code>sessionName</code> and graphs as in <code>graphList</code><br>' + 
+			'Example: <code>graph.html?sessionName=SRV1,SRV2&graphList=CmSummary_aaCpuGraph,CmSummary_aaReadWriteGraph&gorder=srv</code><br>' + 
+			'<b>default:</b> not specified, meaning: graphs from <code>graphList</code> are grouped by graph, otherwise as the server delivers them<br>' + 
 			'</td>' +
 		'</tr>' +
 		'<tr>' + 
@@ -4920,6 +4928,7 @@ function dbxTuneLoadCharts(destinationDivId)
 	const debug          = getParameter("debug",         0);
 	const gheight        = getParameter("gheight",       200);
 	const gwidth         = getParameter("gwidth",        650);
+	const gorder         = getParameter("gorder",        "");               // Graph layout order: srv = SRV:graph, graph = graph:SRV
 	const sampleType     = getParameter("sampleType",    "");
 	const sampleValue    = getParameter("sampleValue",   "");
 	const colorSchema    = dbxGraphColorSchema();
@@ -4941,6 +4950,7 @@ function dbxTuneLoadCharts(destinationDivId)
 	console.log("Passed mdcp="                 + mdcPivot);      // Multi Day Chart - Pivot
 	console.log("Passed mdcwd="                + mdcWeekDays);   // Multi Day Chart - WeekDays
 	console.log("Passed colorSchema="          + colorSchema);
+	console.log("Passed gorder="               + gorder);
 	console.log("Passed openShowplanViewer="     + openSpvParam);
 	console.log("Passed openQueryStore="         + openQsParam);
 	console.log("Passed openCounterDetails/cd="  + openCdParam);
@@ -5368,6 +5378,37 @@ function dbxTuneLoadCharts(destinationDivId)
 
 			// In what order should the graphs be created/loaded
 			let createOrder = createGraphLoadOrder(graphProfile, jsonResp, loadAllGraphs);
+
+			// gorder: srv   = SRV1:g1, SRV1:g2, SRV2:g1, SRV2:g2 ...
+			//         graph = g1:SRV1, g1:SRV2, g2:SRV1, g2:SRV2 ...
+			// Servers are ordered as in 'sessionName', graphs as in 'graphList' (sort is stable)
+			if (gorder === "srv" || gorder === "graph")
+			{
+				const graphOrder = [...new Set(createOrder.map(e => e.tableName))];
+				const srvCmp     = (a, b) => _serverList.indexOf(a.serverName) - _serverList.indexOf(b.serverName);
+				const graphCmp   = (a, b) => graphOrder.indexOf(a.tableName)   - graphOrder.indexOf(b.tableName);
+				createOrder.sort((a, b) => gorder === "srv" ? (srvCmp(a, b) || graphCmp(a, b)) : (graphCmp(a, b) || srvCmp(a, b)));
+
+				// gorder=srv without 'gcols': one row per server (gcols = number of graphs per server)
+				if (gorder === "srv" && getParameter("gcols") === undefined)
+				{
+					const graphsPerSrv = {};
+					createOrder.forEach(e => graphsPerSrv[e.serverName] = (graphsPerSrv[e.serverName] || 0) + 1);
+
+					let gcols = Math.max(...Object.values(graphsPerSrv));
+					if ( mdcPivot === false )
+						gcols = gcols * startTimeArr.length; // Normal mdc layout: each graph is repeated for every day
+
+					const autoGwidth = $(window).width() / gcols -10;
+					console.log("Graph layout: gorder=srv and no 'gcols', setting gcols="+gcols+", gwidth="+autoGwidth);
+					$('#'+destinationDivId).css({
+						"--cols-size-sm": "minmax("+autoGwidth+"px, 1fr)",
+						"--cols-size-md": "minmax("+autoGwidth+"px, 1fr)",
+						"--cols-size-lg": "minmax("+autoGwidth+"px, 1fr)",
+						"--cols-size-xl": "minmax("+autoGwidth+"px, 1fr)"
+					});
+				}
+			}
 
 			if ( mdcPivot === false)
 			{

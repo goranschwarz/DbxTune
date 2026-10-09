@@ -35,7 +35,6 @@ import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.dbxtune.gui.MainFrame;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.AseSqlScript;
 import com.dbxtune.utils.StringUtil;
@@ -128,8 +127,8 @@ extends CounterSample
 				if (_logger.isDebugEnabled())
 					_logger.debug("Setting database context to '"+catname+"'.");
 
-				if (cm.getGuiController() != null)
-						cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "for db '"+catname+"'");
+				if (cm.hasCounterController())
+					cm.getCounterController().getRefreshStatus().setSubStatus("for db '"+catname+"'");
 
 				Statement stmnt = conn.createStatement();
 				ResultSet rs;
@@ -263,14 +262,14 @@ extends CounterSample
 			// Restore database context
 			if ( StringUtil.hasValue(originCatalog) )
 			{
-				if (cm.getGuiController() != null)
-					cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "restoring DB Context to '"+originCatalog+"'");
+				if (cm.hasCounterController())
+					cm.getCounterController().getRefreshStatus().setSubStatus("restoring DB Context to '"+originCatalog+"'");
 
 				try { conn.setCatalog(originCatalog); }
 				catch (SQLException ex) { _logger.warn("Problems restoring the current catalog/dbname to '"+originCatalog+"'. Caught: "+ex); }
 
-				if (cm.getGuiController() != null)
-					cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "");
+				if (cm.hasCounterController())
+					cm.getCounterController().getRefreshStatus().setSubStatus("");
 			}
 		}
 	}
