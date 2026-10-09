@@ -72,7 +72,7 @@ $(document).ready(function () {
 	//  and the "Auto Open" option is enabled)
 	GraphBus.on('ws-data', function (d) {
 		if (typeof dbxTuneCheckActiveStatements === 'function')
-			dbxTuneCheckActiveStatements();
+			dbxTuneCheckActiveStatements(d.srvName); // only check the collector problem for the server that sent this sample
 	});
 
 	// Counter Details: reload current CM when new data arrives

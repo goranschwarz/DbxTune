@@ -32,7 +32,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.pcs.IPersistWriter;
 import com.dbxtune.pcs.PersistContainer.HeaderInfo;
-import com.dbxtune.pcs.PersistWriterToDbxCentral;
+import com.dbxtune.pcs.PersistWriterToHttpJson;
 import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
@@ -50,7 +50,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  *       push the status when it changes, and every {@link #HEARTBEAT_MS} ms if it has not changed (so the browser knows we are alive).</li>
  *   <li>When that sample ends: push a "refreshing=false" message, so the browser can remove the status.</li>
  * </ul>
- * The message is sent with {@link PersistWriterToDbxCentral#sendRefreshStatus(String)}, so if that writer is not used, nothing is pushed.
+ * The message is sent with {@link PersistWriterToHttpJson#sendRefreshStatus(String)} (also PersistWriterToDbxCentral), the writer that sends the counters to DbxCentral.
+ * If no such writer is used, nothing is pushed.
  */
 public class RefreshStatusNoGui
 implements IRefreshStatus
@@ -81,7 +82,8 @@ implements IRefreshStatus
 	private String _lastPushedStatus      = null;
 	private String _lastPushedSubStatus   = null;
 	private long   _lastPushTime          = 0;
-	private long   _pushedSampleStartTime = 0; // 0 = nothing has been pushed for the current sample
+	private long    _pushedSampleStartTime = 0; // 0 = nothing has been pushed for the current sample
+	private boolean _noWriterLogged        = false;
 
 	/**
 	 * @param sampleIntervalSec Configured sleep time between samples (only passed on to the browser)
@@ -210,16 +212,7 @@ implements IRefreshStatus
 		if (headerInfo == null || StringUtil.isNullOrBlank(headerInfo.getServerNameOrAlias()))
 			return false;
 
-		PersistWriterToDbxCentral writer = null;
-		if (PersistentCounterHandler.hasInstance())
-		{
-			for (IPersistWriter pw : PersistentCounterHandler.getInstance().getWriters())
-			{
-				if (pw instanceof PersistWriterToDbxCentral)
-					writer = (PersistWriterToDbxCentral) pw;
-			}
-		}
-		if (writer == null)
+		if ( ! PersistentCounterHandler.hasInstance() )
 			return false;
 
 		Map<String, Object> msg = new LinkedHashMap<>();
@@ -233,6 +226,27 @@ implements IRefreshStatus
 		msg.put("sampleMs"         , sampleMs);
 		msg.put("sampleIntervalSec", _sampleIntervalSec);
 
-		return writer.sendRefreshStatus(_mapper.writeValueAsString(msg));
+		String json = _mapper.writeValueAsString(msg);
+
+		// Send it with the writer that sends the counters to DbxCentral:
+		// PersistWriterToDbxCentral (type 'http') or PersistWriterToHttpJson (URL '.../api/pcs/receiver'), first one that accepts it
+		int httpWriters = 0;
+		for (IPersistWriter pw : PersistentCounterHandler.getInstance().getWriters())
+		{
+			if (pw instanceof PersistWriterToHttpJson)
+			{
+				httpWriters++;
+				if (((PersistWriterToHttpJson) pw).sendRefreshStatus(json))
+					return true;
+			}
+		}
+
+		// Tell once (otherwise it's hard to know why nothing shows up in the browser)
+		if (httpWriters == 0 && ! _noWriterLogged)
+		{
+			_noWriterLogged = true;
+			_logger.info("No 'PersistWriterToDbxCentral' or 'PersistWriterToHttpJson' writer is used, so 'refresh status' for long running samples can NOT be sent to DbxCentral.");
+		}
+		return false;
 	}
 }

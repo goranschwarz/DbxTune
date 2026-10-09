@@ -8,19 +8,23 @@
  *
  * Navbar: a chip, hidden when all servers are on time, with a dropdown that has one row per server.
  *   - amber: a sample is running longer than the threshold
+ *            (or, if the collector does not report: the sample is more than 5 seconds overdue)
  *   - red:   the current step has run longer than the sample interval,
  *            no status update for 15 seconds (collector died, or can't reach DbxCentral),
  *            or no data for max(3 x sample interval, 3 minutes)
  */
 var DbxRefreshStatus = (function () {
 
-	var STALE_MS       = 15 * 1000;     // While refreshing, the collector sends every 5 seconds
-	var NO_DATA_MIN_MS = 3 * 60 * 1000;
+	var STALE_MS          = 15 * 1000;     // While refreshing, the collector sends every 5 seconds
+	var NO_DATA_MIN_MS    = 3 * 60 * 1000;
+	var LATE_NO_STATUS_MS = 5 * 1000;      // No report from the collector, but the sample is this much overdue: show it as late anyway
+	var SLOWEST_CM_COUNT  = 3;             // How many CMs to show in "Slowest CMs" (all of them are in the tooltip)
 
 	var _srv         = {};              // srvName -> { lastDataTs, interval, status, statusRecvTs, head }
 	var _pageStartTs = Date.now();
 	var _timer       = null;
 	var _wasLate     = {};              // srvName -> was it late at the previous render (to auto open the dialog on a NEW late server)
+	var _lastOverLimit = null;          // { srvName, time, limitSec }: last time a sample passed the "auto open" limit (shown in the dialog title)
 
 	var AUTO_OPEN_KEY = 'dbxSampleInfo-autoOpen'; // localStorage: '0' = do not auto open the "sample info" dialog (default: open)
 
@@ -29,11 +33,11 @@ var DbxRefreshStatus = (function () {
 		try { return localStorage.getItem(AUTO_OPEN_KEY) !== '0'; } catch (e) { return true; }
 	}
 
-	var AUTO_OPEN_SEC_KEY = 'dbxSampleInfo-autoOpenSec'; // localStorage: auto open when a sample runs longer than # seconds (default 5 = the collector's 'RefreshStatusNoGui.push.thresholdSec', so it opens as soon as a slow sample is reported)
+	var AUTO_OPEN_SEC_KEY = 'dbxSampleInfo-autoOpenSec'; // localStorage: auto open when a sample runs longer than # seconds (default 30; slow samples are shown in the dialog/chip from 5 s, 'RefreshStatusNoGui.push.thresholdSec', but the dialog only pops up for really slow ones)
 
 	function getAutoOpenSec()
 	{
-		var v = 5;
+		var v = 30;
 		try { var s = localStorage.getItem(AUTO_OPEN_SEC_KEY); if (s !== null && s !== '' && ! isNaN(s)) v = Number(s); } catch (e) {}
 		return Math.max(0, v);
 	}
@@ -50,7 +54,7 @@ var DbxRefreshStatus = (function () {
 	{
 		var s = getSrv(d.srvName);
 		s.lastDataTs = Date.now();
-		s.head       = d.head || null; // sessionSampleTime, cmCount, totalRefreshMs, slowestCms (shown when hovering the navbar clock)
+		s.head       = d.head || null; // sessionSampleTime, sampleDurationMs, cmRefreshTimes (shown in the "Samples per server" table)
 		if (d.sampleInterval > 0)
 			s.interval = d.sampleInterval;
 
@@ -121,6 +125,7 @@ var DbxRefreshStatus = (function () {
 		{
 			var sinceRecv = now - s.statusRecvTs;
 			r.late     = true;
+			r.kind     = 'status';   // the collector reports what it is doing
 			r.doing    = s.status.status + (s.status.subStatus ? ' (' + s.status.subStatus + ')' : '');
 			r.stepMs   = s.status.statusMs + sinceRecv;
 			r.sampleMs = s.status.sampleMs + sinceRecv;
@@ -145,6 +150,7 @@ var DbxRefreshStatus = (function () {
 			if (silentMs > Math.max(3 * intervalMs, NO_DATA_MIN_MS))
 			{
 				r.late   = true;
+				r.kind   = 'nodata';
 				r.red    = true;
 				r.doing  = 'No data for ' + fmt(silentMs) + ' (collector stopped, or it can not reach DbxCentral?)';
 				r.chipMs = silentMs;
@@ -154,6 +160,19 @@ var DbxRefreshStatus = (function () {
 			{
 				var nextInMs = s.lastDataTs + intervalMs - now;
 				r.doing = (nextInMs > 0) ? 'Waiting for next sample (in about ' + fmt(nextInMs) + ')' : 'Sampling...';
+
+				// Fallback when the collector does not report (older collector, or no writer to DbxCentral):
+				// the sample is overdue (sampling for a while) -> late, and red if longer than the sample interval
+				var overdueMs = -nextInMs;
+				if (overdueMs > LATE_NO_STATUS_MS)
+				{
+					r.late   = true;
+					r.kind   = 'overdue';  // no report from the collector
+					r.red    = overdueMs > intervalMs;
+					r.doing  = 'Sampling for ' + fmt(overdueMs) + ' (no details from the collector)';
+					r.chipMs = overdueMs;
+					r.lateMs = overdueMs;
+				}
 			}
 			else
 			{
@@ -193,7 +212,10 @@ var DbxRefreshStatus = (function () {
 		rows.forEach(function (r) {
 			var over = r.late && (r.lateMs || 0) >= limitMs;
 			if (over && ! _wasLate[r.srvName])
+			{
 				newlyLate = true;
+				_lastOverLimit = { srvName: r.srvName, time: new Date(), limitSec: getAutoOpenSec() }; // shown in the dialog title
+			}
 			_wasLate[r.srvName] = over;
 		});
 		if (newlyLate && isAutoOpen() && ! $('#dbx-sample-info-dialog').is(':visible'))
@@ -257,7 +279,10 @@ var DbxRefreshStatus = (function () {
 		{ title: 'Now',                          minWidthOf: 'Sampling...' },
 		{ title: 'Last sample'                                            },
 		{ title: 'Took'                                                   },
-		{ title: 'Slowest CMs'                                            }
+		{ title: 'Slowest CMs / Sample Details',
+		  tip:   'When the sample is on time: the 3 slowest CMs of the last sample.\n'
+		       + 'When the sample is late: what the collector is doing right now (current CM, sub status and time on that step),\n'
+		       + 'or why we have no details (the collector does not report, or no data arrives).' }
 	];
 
 	/**
@@ -278,7 +303,12 @@ var DbxRefreshStatus = (function () {
 		if ($table.find('thead th').length === 0)
 		{
 			var $hr = $('<tr>');
-			SAMPLE_INFO_COLUMNS.forEach(function (c) { $hr.append($('<th>').addClass(c.cls || '').text(c.title)); });
+			SAMPLE_INFO_COLUMNS.forEach(function (c) {
+				var $th = $('<th>').addClass(c.cls || '').text(c.title);
+				if (c.tip)
+					$th.attr('title', c.tip).addClass('dbx-sid-help');
+				$hr.append($th);
+			});
 			$table.find('thead').append($hr);
 
 			// Min width = rendered width of 'minWidthOf' (in the same font as the values) + the cell's left/right padding
@@ -309,9 +339,39 @@ var DbxRefreshStatus = (function () {
 			if (s.lastDataTs)
 				lastSample = String(head.sessionSampleTime || '').substring(11, 19) + ' (' + fmt(now - s.lastDataTs) + ' ago)';
 
-			var took = (head.totalRefreshMs !== undefined) ? fmtMs(head.totalRefreshMs) + ', ' + head.cmCount + ' CMs' : '-';
+			// How long every CM took in the last sample: [{cm, ms, status=ok|timeout|error, msg}] (sent by the collector, slowest first)
+			var cmRefreshTimes = (head.cmRefreshTimes || []).slice().sort(function (a, b) { return b.ms - a.ms; });
+			var cmSumMs = cmRefreshTimes.reduce(function (sum, c) { return sum + c.ms; }, 0);
+			var cmText  = function (c) { return c.cm + ' ' + fmtMs(c.ms) + (c.status && c.status !== 'ok' ? ' (' + c.status + ')' : ''); };
 
-			var slowest = (head.slowestCms || []).map(function (c) { return c.cmName + ' ' + fmtMs(c.ms); }).join(', ') || '-';
+			// Took: the whole sample time (newer collectors, otherwise the sum of all CMs), the details in a tooltip
+			var took = '-';
+			if (head.sampleDurationMs >= 0 && cmRefreshTimes.length)
+			{
+				took = {
+					text:  fmtMs(head.sampleDurationMs) + ', ' + cmRefreshTimes.length + ' CMs',
+					title: 'Whole sample: ' + fmtMs(head.sampleDurationMs) + '\n'
+					     + 'CMs (' + cmRefreshTimes.length + '): ' + fmtMs(cmSumMs) + '\n'
+					     + 'Other (post refresh, alarm handling, etc): ' + fmtMs(Math.max(0, head.sampleDurationMs - cmSumMs))
+				};
+			}
+			else if (cmRefreshTimes.length)
+			{
+				took = { text: fmtMs(cmSumMs) + ', ' + cmRefreshTimes.length + ' CMs', title: 'Sum of all CMs (this collector does not send the whole sample time)' };
+			}
+
+			// Slowest CMs: the top SLOWEST_CM_COUNT (+ a note if other CMs failed), all CMs (and errors) in the tooltip
+			var slowest = '-';
+			if (cmRefreshTimes.length)
+			{
+				var top        = cmRefreshTimes.slice(0, SLOWEST_CM_COUNT);
+				var failedRest = cmRefreshTimes.slice(SLOWEST_CM_COUNT).filter(function (c) { return c.status && c.status !== 'ok'; }).length;
+				slowest = {
+					text:  top.map(cmText).join(', ') + (failedRest > 0 ? ' \u00b7 +' + failedRest + ' failed' : ''),
+					title: 'All CMs in the last sample (slowest first):\n'
+					     + cmRefreshTimes.map(function (c) { return cmText(c) + (c.msg ? ' -- ' + c.msg : ''); }).join('\n')
+				};
+			}
 
 			// Next sample: the collector sleeps 'interval' seconds after a sample, and the data arrives right after the sample
 			var next  = '-';
@@ -326,6 +386,19 @@ var DbxRefreshStatus = (function () {
 					doing = (nextInMs >= 0) ? 'Waiting' : 'Sampling...';
 			}
 
+			// Late: "Now" is just the short state, and the details go into the (wider) "Slowest CMs" column
+			//   status  = what the collector is doing right now (+ time on the current step), with a spinning icon
+			//   overdue = "Sampling for m:ss (no details from the collector)"
+			//   nodata  = "No data for m:ss (...)"
+			if (r.late)
+			{
+				doing = (r.kind === 'nodata') ? 'No data' : 'Sampling...';
+				if (r.kind === 'status')
+					slowest = { icon: 'fa fa-refresh fa-spin', text: r.doing + ' \u00b7 ' + fmt(r.stepMs) };
+				else
+					slowest = r.doing;
+			}
+
 			// Same order as SAMPLE_INFO_COLUMNS
 			var cells = [srv, next, doing, lastSample, took, slowest];
 			var $tr = $('<tr>').toggleClass('dbx-rs-row-red', r.red).toggleClass('dbx-rs-row-amber', r.late && ! r.red);
@@ -333,6 +406,8 @@ var DbxRefreshStatus = (function () {
 				var $td = $('<td>').addClass(SAMPLE_INFO_COLUMNS[i].cls || '');
 				if (val && val.icon)
 					$td.append($('<i>').addClass(val.icon).attr('title', 'Sampling (or sending the data)'), ' ', document.createTextNode(val.text));
+				else if (val && val.title)
+					$td.text(val.text).attr('title', val.title).addClass('dbx-sid-help');
 				else
 					$td.text(val);
 				$tr.append($td);
@@ -344,7 +419,19 @@ var DbxRefreshStatus = (function () {
 		var $header = $table.closest('.dbx-sample-info-box').find('.dbx-sid-header');
 		$header.toggleClass('dbx-sid-alert', anyRed);
 		$header.toggleClass('dbx-sid-warn',  lateCnt > 0 && ! anyRed);
-		$header.find('.dbx-sid-title').text('Samples per server' + (lateCnt > 0 ? ': ' + lateCnt + ' late' : ''));
+		// ... and when (and on what server) a sample last ran longer than the "auto open" limit
+		var lastOver = '';
+		if (_lastOverLimit)
+		{
+			var t = _lastOverLimit.time;
+			var hms = (typeof moment === 'function') ? moment(t).format('HH:mm:ss') : t.toTimeString().substring(0, 8);
+			lastOver = ' \u00b7 last > ' + _lastOverLimit.limitSec + ' s: ' + _lastOverLimit.srvName + ' @ ' + hms;
+		}
+		$header.find('.dbx-sid-title').text('Samples per server' + (lateCnt > 0 ? ': ' + lateCnt + ' late' : '') + lastOver);
+
+		// Link to the "Collector Refresh Time" graphs for the servers on this page (same as: Servers page -> Collector Refresh Time)
+		$table.closest('.dbx-sample-info-box').find('#dbx-sid-refreshtime-link').attr('href',
+			'/graph.html?subscribe=true&startTime=2h&sessionName=' + getSrvList().map(encodeURIComponent).join(',') + '&graphList=CmSummary_CmRefreshTime&gcols=1');
 	}
 
 	/** Show a box below the navbar clock, kept inside the window (the table can be wide) */

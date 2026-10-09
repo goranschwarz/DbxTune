@@ -658,10 +658,20 @@ extends CountersModel
 		_hostMonitor.clearExceptions();
 
 		// GET THE DATA FROM THE HOST MONITOR
-		if (_hostMonitor.isOsCommandStreaming())
-			tmpNewSample = _hostMonitor.getSummaryTable();
-		else
-			tmpNewSample = _hostMonitor.executeAndParse();
+		// Timed as the CM's "SQL" refresh time (for OS CMs this is the time to execute the OS Command, for example 'ps' over SSH),
+		// otherwise the time is missing from: CmSummary 'CmRefreshTime' graph, the 'RefreshTime: Total=...' log line and DbxCentral "Slowest CMs"
+		beginSqlRefresh();
+		try
+		{
+			if (_hostMonitor.isOsCommandStreaming())
+				tmpNewSample = _hostMonitor.getSummaryTable();
+			else
+				tmpNewSample = _hostMonitor.executeAndParse();
+		}
+		finally
+		{
+			endSqlRefresh();
+		}
 
 		// If the HostMonitor has problems, relay them to the GUI
 		Exception exception = _hostMonitor.getException();
