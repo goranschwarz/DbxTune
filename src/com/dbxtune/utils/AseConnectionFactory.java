@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -122,8 +122,8 @@ public class AseConnectionFactory
 		if (_driver      == null) _driver      = jdbcDriver;
 		if (_urlTemplate == null) _urlTemplate = jdbcUrlTemplate;
 
-		_logger.info("Using JDBC Driver '"+_driver+"'. This can be changed using property 'jdbcDriver=driver'. In the config file or system properties");
-		_logger.info("Using URL Template '"+_urlTemplate+"'. This can be changed using property 'jdbcUrlTemplate=template'. In the config file or system properties");
+		_logger.info("Using JDBC Driver '" + _driver + "'. This can be changed using property 'jdbcDriver=driver'. In the config file or system properties");
+		_logger.info("Using URL Template '" + _urlTemplate + "'. This can be changed using property 'jdbcUrlTemplate=template'. In the config file or system properties");
 		
 		// Get SYBASE ENV and check if the interfaces file exist
 //		String envSybase = System.getProperty("SYBASE");
@@ -147,7 +147,7 @@ public class AseConnectionFactory
 			File ifile = new File(interfacesFile);
 			interfacesFileExist = ifile.exists();
 			if ( ! interfacesFileExist )
-				_logger.info("The SYBASE environment variable was found, but the interfaces file '"+interfacesFile+"' didn't exists.");
+				_logger.info("The SYBASE environment variable was found, but the interfaces file '" + interfacesFile + "' didn't exists.");
 		}
 
 		// Create a local/dummy interfaces if the SYBASE can't be found.
@@ -173,15 +173,15 @@ public class AseConnectionFactory
 		}
 		catch(Exception ex)
 		{
-			_logger.warn("Problems reading SYBASE Name/Directory Service file '"+interfacesFile+"'.");
-			_logger.warn("SyInterfacesDriver Problem: "+ex);
+			_logger.warn("Problems reading SYBASE Name/Directory Service file '" + interfacesFile + "'.");
+			_logger.warn("SyInterfacesDriver Problem: " + ex);
 
 			// Problems open the interfaces file
 			// FALLBACK to create/use the private interfaces file.
 			String privateInterfacesFile = getPrivateInterfacesFile(true);
 			try
 			{
-				_logger.info("Trying to open the local "+Version.getAppName()+" Name/Directory Service file '"+privateInterfacesFile+"'.");
+				_logger.info("Trying to open the local " + Version.getAppName() + " Name/Directory Service file '" + privateInterfacesFile + "'.");
 				createPrivateInterfacesFile(privateInterfacesFile);
 
 				System.setProperty("interfaces.file", privateInterfacesFile);
@@ -190,21 +190,21 @@ public class AseConnectionFactory
 			}
 			catch(Exception ex2)
 			{
-				_logger.warn("Even Problems reading LOCAL "+Version.getAppName()+" Name/Directory Service file '"+privateInterfacesFile+"'.");
-				_logger.warn("LOCAL FILE SyInterfacesDriver Problem: "+ex2);
+				_logger.warn("Even Problems reading LOCAL " + Version.getAppName() + " Name/Directory Service file '" + privateInterfacesFile + "'.");
+				_logger.warn("LOCAL FILE SyInterfacesDriver Problem: " + ex2);
 			}
 		}
 
 		if (_interfacesDriver == null)
 		{
-			_logger.warn("SYBASE or Local "+Version.getAppName()+" Name/Directory Service could NOT be initialized, creating an EMPTY place holder.");
+			_logger.warn("SYBASE or Local " + Version.getAppName() + " Name/Directory Service could NOT be initialized, creating an EMPTY place holder.");
 
 			// Set a NON initialized SyDriver just to avoid NullPointerExceptions.
 			_interfacesDriver = new SyInterfacesDriver();
 		}
 		else
 		{
-			_logger.info("Using '"+_interfacesDriver.getBundle()+"' file for ASE server name lookup.");
+			_logger.info("Using '" + _interfacesDriver.getBundle() + "' file for ASE server name lookup.");
 		}
 	}
 
@@ -224,7 +224,7 @@ public class AseConnectionFactory
     		// Note: this might get printed several times
     		if (System.getenv("SYBASE") == null)
     		{
-    			_logger.info("SYBASE environment variable was not set, setting System Property 'sybase.home' to '"+tmpSybaseEnvLocation+"'.");
+    			_logger.info("SYBASE environment variable was not set, setting System Property 'sybase.home' to '" + tmpSybaseEnvLocation + "'.");
     			System.setProperty("sybase.home", tmpSybaseEnvLocation);
     		}
 		}
@@ -239,7 +239,7 @@ public class AseConnectionFactory
 		if (file == null)
 		{
 			file = getPrivateInterfacesFile(true);
-			_logger.info("I will try to use the interfaces file '"+file+"'.");
+			_logger.info("I will try to use the interfaces file '" + file + "'.");
 		}
 		
 		// Check if the interfaces file exists.
@@ -247,12 +247,12 @@ public class AseConnectionFactory
 		boolean fileExists = ifile.exists();
 		if ( fileExists )
 		{
-			_logger.info("The interfaces file '"+file+"' already exists, lets try to use it.");
+			_logger.info("The interfaces file '" + file + "' already exists, lets try to use it.");
 			return file;
 		}
 
 
-		_logger.info("Creating a dummy interfaces file named '"+file+"'.");
+		_logger.info("Creating a dummy interfaces file named '" + file + "'.");
 		try
 		{
 			BufferedWriter out = new BufferedWriter(new FileWriter(file));
@@ -261,7 +261,7 @@ public class AseConnectionFactory
 				String nl = System.getProperty("line.separator");
 				out.write(";; ----------------------------------------------- " + nl);
 				out.write(";; Server - DUMMY_ASE " + nl);
-				out.write(";; This entry was added by '"+Version.getAppName()+"' " + nl);
+				out.write(";; This entry was added by '" + Version.getAppName() + "' " + nl);
 				out.write(";; ----------------------------------------------- " + nl);
 				out.write("[DUMMY_ASE]" + nl);
 				out.write("query=TCP, localhost, 5000" + nl);
@@ -272,7 +272,7 @@ public class AseConnectionFactory
 				String nl = System.getProperty("line.separator");
 				out.write("# ----------------------------------------------- " + nl);
 				out.write("# Server - DUMMY_ASE " + nl);
-				out.write("# This entry was added by '"+Version.getAppName()+"' " + nl);
+				out.write("# This entry was added by '" + Version.getAppName() + "' " + nl);
 				out.write("# ----------------------------------------------- " + nl);
 				out.write("DUMMY_ASE" + nl);
 				out.write("\tquery tcp ether localhost 5000" + nl);
@@ -282,7 +282,7 @@ public class AseConnectionFactory
 		}
 		catch (IOException e)
 		{
-			_logger.error("Problems when creating the interfaces file named '"+file+"', continuing anyway. Caught: "+e);
+			_logger.error("Problems when creating the interfaces file named '" + file + "', continuing anyway. Caught: " + e);
 			file = null;
 		}
 		return file;
@@ -482,7 +482,7 @@ public class AseConnectionFactory
 		}
 		catch (NumberFormatException e) 
 		{
-			_logger.debug("getFirstPort Caught: "+e);
+			_logger.debug("getFirstPort Caught: " + e);
 			return -1; 
 		}
 	}
@@ -570,7 +570,7 @@ public class AseConnectionFactory
 			if ( newDriver != null )
 			{
 				_interfacesDriver = newDriver;
-				_logger.info("Just opened the interfaces file '"+ _interfacesDriver.getBundle() +"'.");
+				_logger.info("Just opened the interfaces file '" + _interfacesDriver.getBundle() + "'.");
 				return true;
 			}
 			return false;
@@ -700,7 +700,7 @@ public class AseConnectionFactory
 
 		if (ie == null)
 		{
-			_logger.warn("getIHostPortStr(): Can not find an entry for server '"+server+"', from the interfaces driver '"+_interfacesDriver.getBundle()+"'. null will be returned.");
+			_logger.warn("getIHostPortStr(): Can not find an entry for server '" + server + "', from the interfaces driver '" + _interfacesDriver.getBundle() + "'. null will be returned.");
 			return null;
 		}
 
@@ -758,7 +758,7 @@ public class AseConnectionFactory
 		{
 			if ( iniFile != null && ! iniFile.trim().equals("") )
 			{
-				_logger.debug("Trying to open SyInterfacesDriver with file '"+iniFile+"'.");
+				_logger.debug("Trying to open SyInterfacesDriver with file '" + iniFile + "'.");
 				iniDriver = new SyInterfacesDriver(iniFile);
 			}
 			else
@@ -771,7 +771,7 @@ public class AseConnectionFactory
 			{
 				iniDriver.open();
 
-				_logger.debug("Just opened the interfaces file '"+ iniDriver.getBundle() +"'.");
+				_logger.debug("Just opened the interfaces file '" + iniDriver.getBundle() + "'.");
 	
 				SyInterfacesEntry interfaceEntry = iniDriver.getEntry(serverName);
 				
@@ -788,7 +788,7 @@ public class AseConnectionFactory
 				_logger.error("Problems reading '%SYBASE%\\ini\\sql.ini' file.");
 			else
 				_logger.error("Problems reading '$SYBASE/interfaces' file.");
-			_logger.error("SyInterfacesDriver error: "+ex.getMessage());
+			_logger.error("SyInterfacesDriver error: " + ex.getMessage());
 		}
 		
 		return ret;
@@ -824,7 +824,7 @@ public class AseConnectionFactory
 		if ( host == null || (host != null && host.trim().equals("")) )
 			throw new IllegalArgumentException("Host can't be null or empty.");
 		if (port <= 0)
-			throw new IllegalArgumentException("Port number must be larger than zero, port is now "+port);
+			throw new IllegalArgumentException("Port number must be larger than zero, port is now " + port);
 
 		if (_interfacesDriver == null)
 			return null;
@@ -842,7 +842,7 @@ public class AseConnectionFactory
 			{
 				Service service = it.next();
 
-				_logger.debug(serverName + " - Service: "+service.toString());
+				_logger.debug(serverName + " - Service: " + service.toString());
 				if ( Service.QUERY.equalsIgnoreCase(service.getType()) )
 				{
 					String eHost = service.getHost();
@@ -852,7 +852,7 @@ public class AseConnectionFactory
 					{
 						if (eHost.equalsIgnoreCase(host) && ePort.equals(Integer.toString(port)))
 						{
-							_logger.debug("Found Sybase Server Interface Entry '"+ie.getName()+"' for host '"+eHost+"', port '"+ePort+"'.");
+							_logger.debug("Found Sybase Server Interface Entry '" + ie.getName() + "' for host '" + eHost + "', port '" + ePort + "'.");
 							return ie.getName();
 						}
 					}
@@ -893,7 +893,7 @@ public class AseConnectionFactory
 			SyInterfacesEntry ie = (SyInterfacesEntry) en.nextElement();
 			String serverName = ie.getName();
 
-			_logger.trace("Searching in server '"+serverName+"'.");
+			_logger.trace("Searching in server '" + serverName + "'.");
 			int matchCounter = 0;
 
 			// LOOP hostPortMap
@@ -920,7 +920,7 @@ public class AseConnectionFactory
 				
 				if (matchCounter == expectedMatch)
 				{
-					_logger.debug("Found the server entry '"+serverName+"' that matched all entries in the hostPortMap '"+hostPortMap+"'.");
+					_logger.debug("Found the server entry '" + serverName + "' that matched all entries in the hostPortMap '" + hostPortMap + "'.");
 					return serverName;
 				}
 
@@ -939,7 +939,7 @@ public class AseConnectionFactory
 			// se Service Entry
 			Service se = it.next();
 
-			_logger.trace("      -> '"+se+"'.");
+			_logger.trace("      -> '" + se + "'.");
 			if ( Service.QUERY.equalsIgnoreCase(se.getType()) )
 			{
 				String seHost = se.getHost();
@@ -949,7 +949,7 @@ public class AseConnectionFactory
 				{
 					if (hpeHost.equalsIgnoreCase(seHost) && hpePort.equals(sePort))
 					{
-						_logger.debug("Found Sybase Server Interface Entry '"+serverName+"' for host '"+seHost+"', port '"+sePort+"'.");
+						_logger.debug("Found Sybase Server Interface Entry '" + serverName + "' for host '" + seHost + "', port '" + sePort + "'.");
 						return 1;
 //						matchCounter++;
 //						_logger.trace("      =========> FOUND ENTRY: matchCount="+matchCounter+", '"+se+"'.");
@@ -1058,7 +1058,7 @@ public class AseConnectionFactory
 		catch (IOException e) 
 		{
 			SwingUtils.showErrorMessage(null, "Problems writing to sql.ini or interfaces", 
-					"<html>Problems writing server entry to file '"+filename+"'.<br><br><b>"+e+"</b><html>", e);
+					"<html>Problems writing server entry to file '" + filename + "'.<br><br><b>" + e + "</b><html>", e);
 		}
 		finally
 		{
@@ -1149,10 +1149,10 @@ public class AseConnectionFactory
 		Map<String,List<String>> hostPortMap = StringUtil.parseCommaStrToMultiMap(hostPortStr, ":", ",");
 
 		if (hostPortMap == null)
-			return "HostPortMap is null. input string was '"+hostPortStr+"'.";
+			return "HostPortMap is null. input string was '" + hostPortStr + "'.";
 
 		if (hostPortMap.isEmpty())
-			return "HostPortMap has zero entries. input string was '"+hostPortStr+"'.";
+			return "HostPortMap has zero entries. input string was '" + hostPortStr + "'.";
 
 		// Loop the entries in the Map, which was parsed above
 		for (Iterator it = hostPortMap.keySet().iterator(); it.hasNext();)
@@ -1161,7 +1161,7 @@ public class AseConnectionFactory
 			Object port = hostPortMap.get(host);
 
 			if (host.trim().equals(""))
-				return "Hostname can't be empty. (host='"+host+"', port='"+port+"').";
+				return "Hostname can't be empty. (host='" + host + "', port='" + port + "').";
 
 			if (port instanceof List)
 			{
@@ -1170,19 +1170,19 @@ public class AseConnectionFactory
 				{
 					port = listIt.next();
 
-					try	{ Integer.parseInt(port+""); }
+					try	{ Integer.parseInt(port + ""); }
 					catch (NumberFormatException ignore)
 					{
-						return "The port number '"+port+"' is not a number. (host='"+host+"', port='"+port+"'.)";
+						return "The port number '" + port + "' is not a number. (host='" + host + "', port='" + port + "'.)";
 					}
 				}
 			}
 			else
 			{
-				try	{ Integer.parseInt(port+""); }
+				try	{ Integer.parseInt(port + ""); }
 				catch (NumberFormatException ignore)
 				{
-					return "The port number '"+port+"' is not a number. (host='"+host+"', port='"+port+"'.)";
+					return "The port number '" + port + "' is not a number. (host='" + host + "', port='" + port + "'.)";
 				}
 			}
 		}
@@ -1285,12 +1285,12 @@ public class AseConnectionFactory
 					}
 					if (StringUtil.isNullOrBlank(hostPortStr))
 					{
-						throw new SQLException("Can't get a proper 'host:port' String when parsing ASE Url '"+connProp.getUrl()+"'.");
+						throw new SQLException("Can't get a proper 'host:port' String when parsing ASE Url '" + connProp.getUrl() + "'.");
 					}
 				}
 				catch(ParseException ex)
 				{
-					throw new SQLException("Problems parsing ASE Url '"+connProp.getUrl()+"'.", ex);
+					throw new SQLException("Problems parsing ASE Url '" + connProp.getUrl() + "'.", ex);
 				}
 			}
 		}
@@ -1306,14 +1306,14 @@ public class AseConnectionFactory
 	public static Connection getConnection(String host, int port, String dbname, String username, String password, String appname, String appVersion, String hostname) 
 	throws ClassNotFoundException, SQLException
 	{
-		return getConnection(host+":"+port, dbname, username, password, appname, appVersion, hostname, (Properties)null, (ConnectionProgressCallback)null);
+		return getConnection(host + ":" + port, dbname, username, password, appname, appVersion, hostname, (Properties)null, (ConnectionProgressCallback)null);
 	}
 
 	/** get a connection using the static settings priviously made, but override the input parameters for this method */
 	public static Connection getConnection(String host, int port, String dbname, String username, String password, String appname, String appVersion, String hostname, Properties connProps) 
 	throws ClassNotFoundException, SQLException
 	{
-		return getConnection(host+":"+port, dbname, username, password, appname, appVersion, hostname, connProps, (ConnectionProgressCallback)null);
+		return getConnection(host + ":" + port, dbname, username, password, appname, appVersion, hostname, connProps, (ConnectionProgressCallback)null);
 	}
 
 	/** get a connection using the static settings priviously made, but override the input parameters for this method */
@@ -1342,8 +1342,8 @@ public class AseConnectionFactory
 	{
 		String url = getUrlTemplate();
 
-		if (url         == null) throw new SQLException("No proper URL was passed. url='"+url+"'.");
-		if (hostPortStr == null) throw new SQLException("No proper hostPortStr was passed. hostPortStr='"+hostPortStr+"'.");
+		if (url         == null) throw new SQLException("No proper URL was passed. url='" + url + "'.");
+		if (hostPortStr == null) throw new SQLException("No proper hostPortStr was passed. hostPortStr='" + hostPortStr + "'.");
 
 		//		url = url.replaceAll("HOST", host);
 //		url = url.replaceAll("PORT", Integer.toString(port));
@@ -1493,14 +1493,14 @@ public class AseConnectionFactory
 		}
 		catch (Throwable ex)
 		{
-			_logger.warn( "Can't locate JDBC driver '"+driverClassName+"' for URL='"+url+"' using 'DriverManager.getDriver(url)' Lets continue, but first try to load the class '"+driverClassName+"' using 'Class.forName(driver).newInstance()' then connect to it using: DriverManager.getConnection(url, props); Caught="+ex);
-			_logger.debug("Can't locate JDBC driver '"+driverClassName+"' for URL='"+url+"' using 'DriverManager.getDriver(url)' Lets continue, but first try to load the class '"+driverClassName+"' using 'Class.forName(driver).newInstance()' then connect to it using: DriverManager.getConnection(url, props); Caught="+ex, ex);
+			_logger.warn( "Can't locate JDBC driver '" + driverClassName + "' for URL='" + url + "' using 'DriverManager.getDriver(url)' Lets continue, but first try to load the class '" + driverClassName + "' using 'Class.forName(driver).newInstance()' then connect to it using: DriverManager.getConnection(url, props); Caught=" + ex);
+			_logger.debug("Can't locate JDBC driver '" + driverClassName + "' for URL='" + url + "' using 'DriverManager.getDriver(url)' Lets continue, but first try to load the class '" + driverClassName + "' using 'Class.forName(driver).newInstance()' then connect to it using: DriverManager.getConnection(url, props); Caught=" + ex, ex);
 
 			try { Class.forName(driverClassName).newInstance(); }
 			catch( Throwable ex2 )
 //			catch( ClassNotFoundException | InstantiationException | IllegalAccessException ex2 )
 			{
-				_logger.warn("DriverManager.getDriver(url), threw Exception '"+ex+"', so we did 'Class.forName(driverClass).newInstance()', and that caused: "+ex2);
+				_logger.warn("DriverManager.getDriver(url), threw Exception '" + ex + "', so we did 'Class.forName(driverClass).newInstance()', and that caused: " + ex2);
 			}
 		}
 
@@ -1517,7 +1517,7 @@ public class AseConnectionFactory
 		else
 		{
 			emulateMultipleQueryRowSupport = System.getProperty("AseConnectionFactory.emulateMultipleQueryRowSupport", "true").trim().equalsIgnoreCase("true");
-			try { loginTimeout = Integer.parseInt(System.getProperty(PROPKEY_LOGINTIMEOUT, loginTimeout+"")); }
+			try { loginTimeout = Integer.parseInt(System.getProperty(PROPKEY_LOGINTIMEOUT, loginTimeout + "")); }
 			catch (NumberFormatException ignore) {}
 		}
 		
@@ -1526,7 +1526,7 @@ public class AseConnectionFactory
 		try { urlHelper = AseUrlHelper.parseUrl(url); }
 		catch (ParseException ignore) 
 		{
-			_logger.debug("Caught Exception when parsing the URL string '"+url+"'. Cause: "+ignore, ignore);
+			_logger.debug("Caught Exception when parsing the URL string '" + url + "'. Cause: " + ignore, ignore);
 		}
 
 		// if option REQUEST_HA_SESSION is set to TRUE, then DO NOT emulate "Multiple Query Row" 
@@ -1556,7 +1556,7 @@ public class AseConnectionFactory
 		if ( emulateMultipleQueryRowSupport == false || urlHelper == null)
 		{
 			if (_logger.isDebugEnabled())
-				_logger.debug("getConnection(simple url): driverClassName='"+driverClassName+"', url='"+url+"', props='"+debugProps+"'");
+				_logger.debug("getConnection(simple url): driverClassName='" + driverClassName + "', url='" + url + "', props='" + debugProps + "'");
 
 			//-----------------------------------------------------
 			// Now use that driver to connect to the database
@@ -1575,7 +1575,7 @@ public class AseConnectionFactory
 				try
 				{
 					if (_logger.isDebugEnabled())
-						_logger.debug("getConnection(MULTY_QUERY_ROWS): driverClassName='"+driverClassName+"', url='"+urlEntry+"', props='"+debugProps+"'");
+						_logger.debug("getConnection(MULTY_QUERY_ROWS): driverClassName='" + driverClassName + "', url='" + urlEntry + "', props='" + debugProps + "'");
 
 					// UPDATE PROGRESS
 					if (cpd != null)
@@ -1589,7 +1589,7 @@ public class AseConnectionFactory
 					conn = DriverManager.getConnection(urlEntry, props);
 
 					if (_logger.isDebugEnabled())
-						_logger.debug("getConnection(MULTY_QUERY_ROWS): ---- SUCCEEDED ---- url='"+urlEntry+"', props='"+debugProps+"'.");
+						_logger.debug("getConnection(MULTY_QUERY_ROWS): ---- SUCCEEDED ---- url='" + urlEntry + "', props='" + debugProps + "'.");
 
 					// UPDATE PROGRESS
 					if (cpd != null)
@@ -1635,7 +1635,7 @@ public class AseConnectionFactory
 					}
 					else
 					{
-						_logger.warn("Connecting to '"+urlEntry+"', had problems, but more host/port will be tried. Caught: " + e);
+						_logger.warn("Connecting to '" + urlEntry + "', had problems, but more host/port will be tried. Caught: " + e);
 					}
 				}
 			}
@@ -1690,7 +1690,7 @@ public class AseConnectionFactory
 			}
 			catch(SQLException ex) 
 			{
-				_logger.info("Problems getting/setting AutoCommit. Caught: "+ex);
+				_logger.info("Problems getting/setting AutoCommit. Caught: " + ex);
 			}
 				
 			// Only for Sybase ASE
@@ -1726,7 +1726,7 @@ public class AseConnectionFactory
 						errStr += sqle.getMessage() + " ";
 						sqle = sqle.getNextException();
 					}
-					_logger.warn("Failed to execute 'set quoted_identifier off' when connecting. Problem: "+errStr);
+					_logger.warn("Failed to execute 'set quoted_identifier off' when connecting. Problem: " + errStr);
 				}
 			} // end: SYBASE_ASE
 		} // end: hasValue(productName)

@@ -3378,6 +3378,12 @@ function _cmPropsRender(cmName, configData, initialTab) {
 		{ label: 'Init SQL',             value: cmObj.sqlInit || '(none)' },
 		{ label: 'Close SQL',            value: cmObj.sqlClose || '(none)' }
 	];
+	// Host Monitor CM's: where and how the OS Command is executed (the command itself is shown below, instead of the SQL)
+	if (cmObj.osCommand) {
+		infoFields.push('divider');
+		infoFields.push({ label: 'OS Host',         value: cmObj.osHost });
+		infoFields.push({ label: 'OS Command Mode', value: cmObj.osCommandExecMode });
+	}
 	var html = '<table class="table table-sm table-borderless" style="font-size:0.92em;">';
 	infoFields.forEach(function(f) {
 		if (f === 'divider') {
@@ -3392,12 +3398,17 @@ function _cmPropsRender(cmName, configData, initialTab) {
 	html += '</table>';
 	$('#cm-props-info-fields').html(html);
 
-	// SQL
+	// SQL (or for Host Monitor CM's: the OS Command)
 	var sql = cmObj.sqlRefresh || '';
 	if (sql) {
-		$('#cm-props-sql').text(sql);
+		$('#cm-props-sql-label').text('Get Counter SQL:');
+		$('#cm-props-sql').attr('class', 'language-sql').css('white-space', '').text(sql);
 		$('#cm-props-info-sql').show();
 		if (typeof Prism !== 'undefined') Prism.highlightElement($('#cm-props-sql')[0]);
+	} else if (cmObj.osCommand) {
+		$('#cm-props-sql-label').text('OS Command:');
+		$('#cm-props-sql').attr('class', 'language-none').css('white-space', 'pre-wrap').text(cmObj.osCommand);
+		$('#cm-props-info-sql').show();
 	} else {
 		$('#cm-props-info-sql').hide();
 	}

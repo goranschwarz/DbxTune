@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -41,7 +41,7 @@ extends AlarmEvent
 				"Found Long running transaction in '" + cm.getServerName() + "', that are HOLDING-LOCKS " 
 						+ (hasExlusiveLocks ? "(Exlusive Locks) " : "") 
 						+ "in DBMS while waiting for Client to send command. Last client command was issued " 
-						+ inSeconds + " seconds ago, at '" + startTime + "'. (thresholdInSec="+thresholdInSec+")",
+						+ inSeconds + " seconds ago, at '" + startTime + "'. (thresholdInSec=" + thresholdInSec + ")",
 						thresholdInSec);
 
 		// Adjust the Alarm Full Duration with X seconds

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -98,9 +98,9 @@ public class DbmsConfigDiffEngine
 		catch (ClassNotFoundException | NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex)
 		{
 			if (_owner != null)
-				SwingUtils.showErrorMessage(_owner, "Create IDbmsConfig object", "Problems creating the 'remote' IDbmsConfig of type '"+newClassName+"'.", ex);
+				SwingUtils.showErrorMessage(_owner, "Create IDbmsConfig object", "Problems creating the 'remote' IDbmsConfig of type '" + newClassName + "'.", ex);
 
-			_logger.error("Problems creating the 'remote' IDbmsConfig of type '"+newClassName+"'.");
+			_logger.error("Problems creating the 'remote' IDbmsConfig of type '" + newClassName + "'.");
 			return false;
 		}
 
@@ -124,7 +124,7 @@ public class DbmsConfigDiffEngine
 				String htmlMsg = "<html>"
 						+ "Problems initializing the <b>remote</b> IDbmsConfig of type <code>" + newClassName + "</code><br>"
 						+ "Reading from server name: <code>" + srvName + "</code><br>"
-						+ "using url: <code>"+url+"</code><br>"
+						+ "using url: <code>" + url + "</code><br>"
 						+ "<br>"
 						+ ex.getMessage();
 
@@ -153,7 +153,7 @@ public class DbmsConfigDiffEngine
 		{
 			if (createdRemoteConnection && _remoteConn != null)
 			{
-				_logger.info("Config-Diff-Engine: Closing Temporary Connection to Remote DBMS." + (_remoteDbmsConfigObj == null ? "" : " DatabaseServerName='"+_remoteDbmsConfigObj.getDbmsServerName()+"', DatabaseProductVersion='"+_remoteDbmsConfigObj.getDbmsVersionStr()+"'.") );
+				_logger.info("Config-Diff-Engine: Closing Temporary Connection to Remote DBMS." + (_remoteDbmsConfigObj == null ? "" : " DatabaseServerName='" + _remoteDbmsConfigObj.getDbmsServerName() + "', DatabaseProductVersion='" + _remoteDbmsConfigObj.getDbmsVersionStr() + "'.") );
 				_remoteConn.closeNoThrow();
 			}
 		}
@@ -285,14 +285,14 @@ public class DbmsConfigDiffEngine
 			String connectedAsUser           = connDialog.getUsername();
 			String connectedWithUrl          = connDialog.getUrl();
 
-			_logger.info("Config-Diff-Engine: Connected to DatabaseProductName='"+connectedToProductName+"', DatabaseProductVersion='"+connectedToProductVersion+"', DatabaseServerName='"+connectedToServerName+"' with Username='"+connectedAsUser+"', toURL='"+connectedWithUrl+"'.");
+			_logger.info("Config-Diff-Engine: Connected to DatabaseProductName='" + connectedToProductName + "', DatabaseProductVersion='" + connectedToProductVersion + "', DatabaseServerName='" + connectedToServerName + "' with Username='" + connectedAsUser + "', toURL='" + connectedWithUrl + "'.");
 		} 
 		catch (Throwable ex) 
 		{
 			if (_logger.isDebugEnabled())
-				_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: "+ex, ex);
+				_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: " + ex, ex);
 			else
-				_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: "+ex);
+				_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: " + ex);
 		}
 
 		return connDialog.getConnection();

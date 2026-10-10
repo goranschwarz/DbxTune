@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -280,7 +280,7 @@ extends JFrame
 				try
 				{
 					UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-					System.out.println("Using Look And Feel named '"+UIManager.getLookAndFeel().getName()+"', classname='"+UIManager.getLookAndFeel().getClass().getName()+"', toString='"+UIManager.getLookAndFeel()+"'.");
+					System.out.println("Using Look And Feel named '" + UIManager.getLookAndFeel().getName() + "', classname='" + UIManager.getLookAndFeel().getClass().getName() + "', toString='" + UIManager.getLookAndFeel() + "'.");
 				}
 				catch (Exception e)
 				{

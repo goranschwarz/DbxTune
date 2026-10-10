@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -74,7 +74,7 @@ public abstract class DdlGen
 			if (useJdbcMetaDataIfNoImplementation)
 				return new DdlGenJdbcMetaData(conn);
 			else
-				throw new Exception("DBMS Type '"+databaseProductName+"' is not yet supported.");
+				throw new Exception("DBMS Type '" + databaseProductName + "' is not yet supported.");
 		}
 	}
 

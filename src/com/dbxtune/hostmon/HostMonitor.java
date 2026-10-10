@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -74,6 +74,14 @@ implements Runnable
 	public static final String  PROPKEY_executeAndParse_timeoutSec = "HostMonitor.executeAndParse.timeout.seconds";
 	public static final int     DEFAULT_executeAndParse_timeoutSec = 60;
 
+	/** Windows: Execute non-streaming PowerShell scripts in a long lived PowerShell session (started once per connection), instead of starting a new 'powershell' for every execution. See {@link PowershellSession} */
+	public static final String  PROPKEY_windows_powershell_session_enabled = "HostMonitor.windows.powershell.session.enabled";
+	public static final boolean DEFAULT_windows_powershell_session_enabled = true;
+
+	/** Max time (in seconds) to wait for the PowerShell session to start (load PowerShell/.NET and answer on the first command) */
+	public static final String  PROPKEY_windows_powershell_session_startTimeoutSec = "HostMonitor.windows.powershell.session.start.timeout.seconds";
+	public static final int     DEFAULT_windows_powershell_session_startTimeoutSec = 20;
+
 	public static final String  PROPKEY_windows_typeperf_cmd_path = "HostMonitor.windows.typeperf.cmd.path";
 	public static final String  DEFAULT_windows_typeperf_cmd_path = "";
 	
@@ -112,6 +120,10 @@ implements Runnable
 
 	/**The Operating System command that will be used to get valid information*/
 //	private String _command = null;
+
+	/** What was last executed: the OS Command, or the PowerShell script if it was executed in the connections PowerShell session */
+	private String  _lastExecCommand             = null;
+	private boolean _lastExecInPowershellSession = false;
 
 	/** The thread used to execute this Host Monitor */
 	private Thread _thread  = null;
@@ -248,7 +260,7 @@ implements Runnable
 	public void setUtilExtraInfoStr(String utilExtraInfoStr)
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("setUtilExtraInfoStr(): utilExtraInfoStr=|"+utilExtraInfoStr+"|.");
+			_logger.debug("setUtilExtraInfoStr(): utilExtraInfoStr=|" + utilExtraInfoStr + "|.");
 
 		if (StringUtil.isNullOrBlank(utilExtraInfoStr))
 			return;
@@ -266,7 +278,7 @@ implements Runnable
 		}
 		catch (IOException ex) 
 		{
-			_logger.info("Problems converting the 'utilExtraInfoStr' String to a property. utilExtraInfoStr=|"+utilExtraInfoStr+"|. Continuing... Configuration object will just be empty." );
+			_logger.info("Problems converting the 'utilExtraInfoStr' String to a property. utilExtraInfoStr=|" + utilExtraInfoStr + "|. Continuing... Configuration object will just be empty." );
 		}
 	}
 	public void setUtilExtraInfoConf(Configuration utilExtraInfo)
@@ -506,14 +518,14 @@ implements Runnable
 		if (rows > 0)
 		{
 			_firstTimeSample = false;
-			_logger.trace("Closing current sample, that has '"+rows+"' rows.");
+			_logger.trace("Closing current sample, that has '" + rows + "' rows.");
 
 			_sampleHolder.add(_currentSample);
 			_currentSample = new OsTable(getMetaData());
 		}
 		else
 		{
-			_logger.debug("SKIPPING: Closing current sample, it had '"+rows+"' rows.");
+			_logger.debug("SKIPPING: Closing current sample, it had '" + rows + "' rows.");
 		}
 	}
 
@@ -779,7 +791,7 @@ implements Runnable
 					if ( strArr != null )
 					{
 						if (_logger.isDebugEnabled())
-							_logger.debug("++ALLOW++: this row has '"+strArr.length+"' entries parseCount='"+md.getParseColumnCount()+"'. Row '"+row+"'. The Input/PreParsed String Array, size("+isa.length+")=["+StringUtil.toCommaStr(isa)+"], The parseRow() returned String Array, size("+strArr.length+")=["+StringUtil.toCommaStr(strArr)+"].");
+							_logger.debug("++ALLOW++: this row has '" + strArr.length + "' entries parseCount='" + md.getParseColumnCount() + "'. Row '" + row + "'. The Input/PreParsed String Array, size(" + isa.length + ")=[" + StringUtil.toCommaStr(isa) + "], The parseRow() returned String Array, size(" + strArr.length + ")=[" + StringUtil.toCommaStr(strArr) + "].");
 
 						// Make a OsTableRow object of the input.
 						// and ADD it to the "sample" table
@@ -799,13 +811,13 @@ implements Runnable
 						catch (OsRecordParseException e)
 						{
 							addException(e);
-							_logger.error("Problems when applying the parsed String Array ["+StringUtil.toCommaStr(strArr)+"].", e);
+							_logger.error("Problems when applying the parsed String Array [" + StringUtil.toCommaStr(strArr) + "].", e);
 						}
 					}
 					else
 					{
 						//_logger.trace("-DISCARD-: The String Array ["+StringUtil.toCommaStr(isa)+"].");
-						_logger.debug("-DISCARD-: This row has '"+isa.length+"' entries. MetaDataExpected parseCount='"+md.getParseColumnCount()+"'. Row '"+row+"'. The Input/PreParsed String Array, size("+isa.length+")=["+StringUtil.toCommaStr(isa)+"].");
+						_logger.debug("-DISCARD-: This row has '" + isa.length + "' entries. MetaDataExpected parseCount='" + md.getParseColumnCount() + "'. Row '" + row + "'. The Input/PreParsed String Array, size(" + isa.length + ")=[" + StringUtil.toCommaStr(isa) + "].");
 					}
 				}
 			}
@@ -818,7 +830,7 @@ implements Runnable
 			if ( strArr != null )
 			{
 				if (_logger.isDebugEnabled())
-					_logger.debug("++ALLOW++: this row has '"+strArr.length+"' entries parseCount='"+md.getParseColumnCount()+"'. Row '"+row+"'. The Input/PreParsed String Array, size("+isa.length+")=["+StringUtil.toCommaStr(isa)+"], The parseRow() returned String Array, size("+strArr.length+")=["+StringUtil.toCommaStr(strArr)+"].");
+					_logger.debug("++ALLOW++: this row has '" + strArr.length + "' entries parseCount='" + md.getParseColumnCount() + "'. Row '" + row + "'. The Input/PreParsed String Array, size(" + isa.length + ")=[" + StringUtil.toCommaStr(isa) + "], The parseRow() returned String Array, size(" + strArr.length + ")=[" + StringUtil.toCommaStr(strArr) + "].");
 
 				// Make a OsTableRow object of the input.
 				// and ADD it to the "sample" table
@@ -845,13 +857,13 @@ implements Runnable
 				catch (OsRecordParseException e)
 				{
 					addException(e);
-					_logger.error("Problems when applying the parsed String Array ["+StringUtil.toCommaStr(strArr)+"].", e);
+					_logger.error("Problems when applying the parsed String Array [" + StringUtil.toCommaStr(strArr) + "].", e);
 				}
 			}
 			else
 			{
 				//_logger.trace("-DISCARD-: The String Array ["+StringUtil.toCommaStr(isa)+"].");
-				_logger.debug("-DISCARD-: This row has '"+isa.length+"' entries. MetaDataExpected parseCount='"+md.getParseColumnCount()+"'. Row '"+row+"'. The Input/PreParsed String Array, size("+isa.length+")=["+StringUtil.toCommaStr(isa)+"].");
+				_logger.debug("-DISCARD-: This row has '" + isa.length + "' entries. MetaDataExpected parseCount='" + md.getParseColumnCount() + "'. Row '" + row + "'. The Input/PreParsed String Array, size(" + isa.length + ")=[" + StringUtil.toCommaStr(isa) + "].");
 			}
 		}
 	}
@@ -917,7 +929,7 @@ implements Runnable
 //		Configuration conf = Configuration.getInstance(Configuration.CONF);
 		Configuration conf = Configuration.getCombinedConfiguration();
 		if (conf != null)
-			sleepTime = conf.getIntProperty("hostmon."+getModuleName()+".sleep", sleepTime);
+			sleepTime = conf.getIntProperty("hostmon." + getModuleName() + ".sleep", sleepTime);
 		return sleepTime;
 	}
 
@@ -933,14 +945,47 @@ implements Runnable
 //		Configuration conf = Configuration.getInstance(Configuration.CONF);
 		Configuration conf = Configuration.getCombinedConfiguration();
 		if (conf != null)
-			oscmd = conf.getProperty("hostmon."+getModuleName()+".cmd");
+			oscmd = conf.getProperty("hostmon." + getModuleName() + ".cmd");
 		
 		if (oscmd != null)
-			_logger.debug(getModuleName()+" found OS Command '"+oscmd+"' in the configuration file.");
+			_logger.debug(getModuleName() + " found OS Command '" + oscmd + "' in the configuration file.");
 
 		return oscmd;
 	}
-	
+
+	/**
+	 * Windows only: A PowerShell script (single line) that produces the same output as {@link #getCommand()}
+	 * <p>
+	 * If the connection has a PowerShell session, the script is executed in that session, so we don't have to start a new 'powershell' for every execution
+	 * @return null if this module can't be executed that way (then {@link #getCommand()} is used)
+	 */
+	public String getPowershellScript()
+	{
+		return null;
+	}
+
+	/**
+	 * @return What was last executed (the OS Command, or the PowerShell script). If nothing has been executed yet, the OS Command
+	 */
+	public String getExecutedCommand()
+	{
+		return _lastExecCommand != null ? _lastExecCommand : getCommand();
+	}
+
+	/**
+	 * @return A description of how the command is executed (to be displayed in various "properties" dialogs)
+	 */
+	public String getExecModeDescription()
+	{
+		if (isOsCommandStreaming())
+			return "Streaming command (started once)";
+
+		if (_lastExecInPowershellSession)
+			return "PowerShell session (started once per connection, with: " + PowershellSession.START_COMMAND + ")";
+
+		return "New process for every sample";
+	}
+
 
 	/**
 	 * Override this to set what thread name that should be used
@@ -962,7 +1007,7 @@ implements Runnable
 	 */
 	protected void printStartMessage()
 	{
-		_logger.info("Starting the Host Monitoring module '"+getModuleName()+"'.");
+		_logger.info("Starting the Host Monitoring module '" + getModuleName() + "'.");
 	}
 
 	/**
@@ -970,7 +1015,7 @@ implements Runnable
 	 */
 	protected void printStopMessage()
 	{
-		_logger.info("Stopped the Host Monitoring module '"+getModuleName()+"'.");
+		_logger.info("Stopped the Host Monitoring module '" + getModuleName() + "'.");
 	}
 
 	/**
@@ -982,13 +1027,13 @@ implements Runnable
 	{
 		if ( ! isOsCommandStreaming() )
 		{
-			_logger.warn(getModuleName()+" the command '"+getCommand()+"' is not marked as a streaming command, therefore you should not a background thread for this, instead use the method executeAndParse() to get a sample. Optionally use method getCurrentSample() to get the last sample results.");
+			_logger.warn(getModuleName() + " the command '" + getCommand() + "' is not marked as a streaming command, therefore you should not a background thread for this, instead use the method executeAndParse() to get a sample. Optionally use method getCurrentSample() to get the last sample results.");
 			return;
 		}
 
 		if (isPaused())
 		{
-			_logger.warn(getModuleName()+" has been paused, to be able to start the Host Monitor '"+getModuleName()+"' you need to invoke the method setPaused(false).");
+			_logger.warn(getModuleName() + " has been paused, to be able to start the Host Monitor '" + getModuleName() + "' you need to invoke the method setPaused(false).");
 			return;
 		}
 
@@ -1015,7 +1060,7 @@ implements Runnable
 		_running = false;
 		if (_thread != null)
 		{
-			_logger.info(getModuleName()+" Was asked to to a shutdown.");
+			_logger.info(getModuleName() + " Was asked to to a shutdown.");
 			_thread.interrupt();
 		}
 	}
@@ -1243,7 +1288,8 @@ implements Runnable
 		ExecutionWrapper execWrapper = null;
 		try
 		{
-			_logger.info("Executing command '"+getCommand()+"', for the module '"+getModuleName()+"'.");
+			_lastExecCommand = getCommand();
+			_logger.info("Executing command '" + getCommand() + "', for the module '" + getModuleName() + "'.");
 			execWrapper = _hostMonConn.executeCommand(getCommand(), true); // true = Streaming OS Command
 		}
 		catch (Exception e)
@@ -1260,7 +1306,7 @@ implements Runnable
 //			}
 
 			if (notHandled)
-				_logger.error("Problems when executing OS Command '"+getCommand()+"', Caught: "+e.getMessage(), e);
+				_logger.error("Problems when executing OS Command '" + getCommand() + "', Caught: " + e.getMessage(), e);
 
 			_running = false;
 			
@@ -1269,7 +1315,7 @@ implements Runnable
 
 		if (_closeSampleTimeoutDelay > 0)
 		{
-			_logger.debug("Creating 'Close-Sample-Timeout' with the timeout value of '"+_closeSampleTimeoutDelay+"' ms.");
+			_logger.debug("Creating 'Close-Sample-Timeout' with the timeout value of '" + _closeSampleTimeoutDelay + "' ms.");
 			_closeSampleTimeout = new Timer(_closeSampleTimeoutDelay, new ActionListener()
 			{
 				@Override
@@ -1361,10 +1407,10 @@ implements Runnable
 
 					if (row != null && row.toLowerCase().indexOf("command not found") >= 0 || row.toLowerCase().indexOf("access denied") >= 0)
 					{
-						_logger.error(getModuleName()+". The command '"+getCommand()+"' in current $PATH, got following message on STDERR: "+row);
-						addException(new Exception("The command '"+getCommand()+"'\n"
+						_logger.error(getModuleName() + ". The command '" + getCommand() + "' in current $PATH, got following message on STDERR: " + row);
+						addException(new Exception("The command '" + getCommand() + "'\n"
 								+ "in current $PATH\n"
-								+ "got following message on STDERR: "+row));
+								+ "got following message on STDERR: " + row));
 					}
 					
 //					System.err.println(row);
@@ -1374,13 +1420,13 @@ implements Runnable
 			catch (InterruptedIOException ex)
 			{
 				if (_running)
-					_logger.warn("If this was during 'shutdown/stop' sequence, it's OK, if not it will be restarted. This happened when reading output from the OS Command '"+getCommand()+"', Caught: "+ex.getMessage());
+					_logger.warn("If this was during 'shutdown/stop' sequence, it's OK, if not it will be restarted. This happened when reading output from the OS Command '" + getCommand() + "', Caught: " + ex.getMessage());
 				_running = false;
 			}
 			catch (Exception e)
 			{
 				addException(e);
-				_logger.error("Problems when reading output from the OS Command '"+getCommand()+"', Caught: "+e.getMessage(), e);
+				_logger.error("Problems when reading output from the OS Command '" + getCommand() + "', Caught: " + e.getMessage(), e);
 				_running = false;
 			}
 		}
@@ -1434,7 +1480,7 @@ implements Runnable
 	{
 		if (isOsCommandStreaming())
 		{
-			_logger.warn(getModuleName()+" the command '"+getCommand()+"' is marked as a streaming command, therefore you should start() a background thread for this. Then use the method getSummaryTable() to get results.");
+			_logger.warn(getModuleName() + " the command '" + getCommand() + "' is marked as a streaming command, therefore you should start() a background thread for this. Then use the method getSummaryTable() to get results.");
 
 			// FIXME: Should the deliver null or an empty OsTable on errors or Exception
 			return null; 
@@ -1443,8 +1489,19 @@ implements Runnable
 		ExecutionWrapper execWrapper = null;
 		try
 		{
-			_logger.debug("Executing command '"+getCommand()+"' for the module '"+getModuleName()+"'.");
-			execWrapper = _hostMonConn.executeCommand(getCommand());
+			// Windows: Execute the PowerShell script in the connections PowerShell session, so we don't have to start a new 'powershell' for every execution
+			String psScript = getPowershellScript();
+			if (psScript != null)
+				execWrapper = _hostMonConn.executeInPowershellSession(psScript); // null = the connection has no session, use the normal command below
+
+			_lastExecInPowershellSession = (execWrapper != null);
+			_lastExecCommand             = (execWrapper != null) ? psScript : getCommand();
+
+			if (execWrapper == null)
+			{
+				_logger.debug("Executing command '" + getCommand() + "' for the module '" + getModuleName() + "'.");
+				execWrapper = _hostMonConn.executeCommand(getCommand());
+			}
 		}
 		catch (Exception e)
 		{
@@ -1454,7 +1511,7 @@ implements Runnable
 			boolean notHandled = _hostMonConn.handleException(e);
 
 			if (notHandled)
-				_logger.error("Problems when executing OS Command '"+getCommand()+"', Caught: "+e.getMessage(), e);
+				_logger.error("Problems when executing OS Command '" + getCommand() + "', Caught: " + e.getMessage(), e);
 
 			// FIXME: Should the deliver null or an empty OsTable on errors or Exception
 			return null; 
@@ -1504,7 +1561,7 @@ implements Runnable
 					long execTimeSec = (System.currentTimeMillis() - startTime) / 1000;
 					if (timeoutSec > 0 && execTimeSec > timeoutSec)
 					{
-						String msg = "Timeout: The OS Command '" + getCommand() + "' for module '" + getModuleName() + "' has not finished after " + execTimeSec + " seconds. "
+						String msg = "Timeout: The OS Command '" + _lastExecCommand + "' for module '" + getModuleName() + "' has not finished after " + execTimeSec + " seconds. "
 								+ "Abandoning this sample. Either the command hangs on the remote host, or the SSH connection is dead (it will be reconnected on next execution if so). "
 								+ "The timeout can be changed with '" + PROPKEY_executeAndParse_timeoutSec + " = ####' (0 = wait forever).";
 						_logger.error(msg);
@@ -1537,7 +1594,7 @@ implements Runnable
 							continue;
 
 						if (_logger.isDebugEnabled())
-							_logger.debug("Received on STDOUT: "+row);
+							_logger.debug("Received on STDOUT: " + row);
 
 						parseAndApply(getMetaData(), row, SshConnection.STDOUT_DATA);
 					}
@@ -1560,14 +1617,14 @@ implements Runnable
 						if (StringUtil.isNullOrBlank(row))
 							continue;
 						
-						_logger.error("Received on STDERR: "+row);
+						_logger.error("Received on STDERR: " + row);
 						
 						if (row != null && row.toLowerCase().indexOf("command not found") >= 0 || row.toLowerCase().indexOf("access denied") >= 0)
 						{
-							_logger.error(getModuleName()+". The command '"+getCommand()+"' in current $PATH, got following message on STDERR: "+row);
-							addException(new Exception("The command '"+getCommand()+"'\n"
+							_logger.error(getModuleName() + ". The command '" + _lastExecCommand + "' in current $PATH, got following message on STDERR: " + row);
+							addException(new Exception("The command '" + _lastExecCommand + "'\n"
 									+ "in current $PATH\n"
-									+ "got following message on STDERR: "+row));
+									+ "got following message on STDERR: " + row));
 						}
 						else
 						{
@@ -1579,7 +1636,7 @@ implements Runnable
 			catch (Exception e)
 			{
 				addException(e);
-				_logger.error("Problems when reading output from the OS Command '"+getCommand()+"', Caught: "+e.getMessage(), e);
+				_logger.error("Problems when reading output from the OS Command '" + _lastExecCommand + "', Caught: " + e.getMessage(), e);
 			}
 		}
 
@@ -1595,7 +1652,7 @@ implements Runnable
 		{
 			int osRetCode = execWrapper.getExitStatus();
 			if (osRetCode != 0)
-				_logger.error("OS Return Code " + osRetCode + ". Expected return code is 0 for command: " + getCommand());
+				_logger.error("OS Return Code " + osRetCode + ". Expected return code is 0 for command: " + _lastExecCommand);
 		}
 		catch (Exception ignore) { /* ignore */ }
 

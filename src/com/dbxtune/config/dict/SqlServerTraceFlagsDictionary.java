@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -59,14 +59,14 @@ public class SqlServerTraceFlagsDictionary
 		{
 			if (_descriptionList.size() == 1)
 			{
-				return StringUtil.left(_id+"", 5) + " - " + _description;
+				return StringUtil.left(_id + "", 5) + " - " + _description;
 			}
 			else
 			{
 				StringBuilder sb = new StringBuilder();
 				
 				String prefix = "       ";
-				sb.append(StringUtil.left(_id+"", prefix.length())).append(_descriptionList.get(0)).append("\n");
+				sb.append(StringUtil.left(_id + "", prefix.length())).append(_descriptionList.get(0)).append("\n");
 				for (int r=1; r<_descriptionList.size(); r++)
 				{
 					sb.append(prefix).append(_descriptionList.get(r)).append("\n");
@@ -98,7 +98,7 @@ public class SqlServerTraceFlagsDictionary
 			return rec.toString();
 
 		// Compose an empty one
-		return "Trace flag '"+traceflag+"' not found in dictionary.\n"
+		return "Trace flag '" + traceflag + "' not found in dictionary.\n"
 				+ "Note, it may be described in below sites: \n"
 				+ "   https://www.sqlservercentral.com/articles/sql-server-trace-flags-complete-list-3 \n"
 				+ "   http://www.sqlservice.se/updated-microsoft-sql-server-trace-flag-list \n";
@@ -108,7 +108,7 @@ public class SqlServerTraceFlagsDictionary
 	private void set(TraceFlagRecord rec)
 	{
 		if ( _traceflags.containsKey(rec._id))
-			System.out.println("Trace flag '"+rec._id+"' already exists. It will be overwritten.");
+			System.out.println("Trace flag '" + rec._id + "' already exists. It will be overwritten.");
 
 		_traceflags.put(rec._id, rec);
 	}

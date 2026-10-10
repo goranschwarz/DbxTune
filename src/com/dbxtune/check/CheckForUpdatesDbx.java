@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -130,7 +130,7 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 		}
 
 		urlParams.add("screenResolution",   SwingUtils.getScreenResulutionAsString());
-		urlParams.add("hiDpiScale",         SwingUtils.getHiDpiScale()+"");
+		urlParams.add("hiDpiScale",         SwingUtils.getHiDpiScale() + "");
 
 		urlParams.add("user_name",          System.getProperty("user.name"));
 		urlParams.add("user_home",          System.getProperty("user.home"));
@@ -140,7 +140,7 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 		urlParams.add("user_timezone",      System.getProperty("user.timezone"));
 		urlParams.add("propfile",           Configuration.getInstance(Configuration.SYSTEM_CONF).getFilename());
 		urlParams.add("userpropfile",       Configuration.getInstance(Configuration.USER_TEMP).getFilename());
-		urlParams.add("gui",                DbxTune.hasGui()+"");
+		urlParams.add("gui",                DbxTune.hasGui() + "");
 
 		urlParams.add("java_version",       System.getProperty("java.version"));
 		urlParams.add("java_vm_version",    System.getProperty("java.vm.version"));
@@ -513,7 +513,7 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 		urlParams.add("clientAppName",       Version.getAppName());
 		urlParams.add("userName",            System.getProperty("user.name"));
 
-		urlParams.add("connectId",           getConnectCount()+"");
+		urlParams.add("connectId",           getConnectCount() + "");
 		urlParams.add("srvVersion",          srvVersion);
 		urlParams.add("isClusterEnabled",    isClusterEnabled);
 
@@ -575,7 +575,7 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 			if      (_connType == ConnectionDialog.TDS_CONN)     _connTypeStr = "TDS";
 			else if (_connType == ConnectionDialog.OFFLINE_CONN) _connTypeStr = "OFFLINE";
 			else if (_connType == ConnectionDialog.JDBC_CONN)    _connTypeStr = "JDBC";
-			else                                                 _connTypeStr = "UNKNOWN("+connType+")";
+			else                                                 _connTypeStr = "UNKNOWN(" + connType + ")";
 		}
 
 		public DbxConnectInfo(DbxConnection xconn, boolean online)
@@ -602,7 +602,7 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 				}
 				catch (SQLException ex)
 				{
-					_logger.warn("Problems initializing DbxConnectInfo object. ConnectionProp was null, so accessing DatabaseMetaData. Caught: "+ex);
+					_logger.warn("Problems initializing DbxConnectInfo object. ConnectionProp was null, so accessing DatabaseMetaData. Caught: " + ex);
 				}
 			}
 			
@@ -610,20 +610,20 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 			if (url == null)
 				url = "unknown";
 
-			try { setProdName          (xconn.getDatabaseProductName());           } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDatabaseProductName(). Caught: "+ex); }
-			try { setProdVersionStr    (xconn.getDatabaseProductVersion());        } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDatabaseProductVersion(). Caught: "+ex); }
-			try { setJdbcDriverName    (ConnectionDialog.getDriverName(xconn));    } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling ConnectionDialog.getDriverName(conn). Caught: "+ex); }
-			try { setJdbcDriverVersion (ConnectionDialog.getDriverVersion(xconn)); } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling xxx. Caught: "+ex); }
+			try { setProdName          (xconn.getDatabaseProductName());           } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDatabaseProductName(). Caught: " + ex); }
+			try { setProdVersionStr    (xconn.getDatabaseProductVersion());        } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDatabaseProductVersion(). Caught: " + ex); }
+			try { setJdbcDriverName    (ConnectionDialog.getDriverName(xconn));    } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling ConnectionDialog.getDriverName(conn). Caught: " + ex); }
+			try { setJdbcDriverVersion (ConnectionDialog.getDriverVersion(xconn)); } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling xxx. Caught: " + ex); }
 			      setJdbcUrl           (url);
 			      setJdbcHostPort      (JdbcUrlParser.parse(url).getHostPortStr());
 			      setDbmsVersionInt    (xconn.getDbmsVersionNumber());
-			try { setDbmsVersionStr    (xconn.getDbmsVersionStr());                } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsVersionStr().    Caught: "+ex); }
-			try { setDbmsServerName    (xconn.getDbmsServerName());                } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsServerName().    Caught: "+ex); }
-			try { setDbmsPageSizeInKb  (xconn.getDbmsPageSizeInKb());              } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsPageSizeInKb().  Caught: "+ex); }
-			try { setDbmsCharsetName   (xconn.getDbmsCharsetName());               } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsCharsetName().   Caught: "+ex); }
-			try { setDbmsCharsetId     (xconn.getDbmsCharsetId());                 } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsCharsetId().     Caught: "+ex); }
-			try { setDbmsSortorderName (xconn.getDbmsSortOrderName());             } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsSortOrderName(). Caught: "+ex); }
-			try { setDbmsSortorderId   (xconn.getDbmsSortOrderId());               } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsSortOrderId().   Caught: "+ex); }
+			try { setDbmsVersionStr    (xconn.getDbmsVersionStr());                } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsVersionStr().    Caught: " + ex); }
+			try { setDbmsServerName    (xconn.getDbmsServerName());                } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsServerName().    Caught: " + ex); }
+			try { setDbmsPageSizeInKb  (xconn.getDbmsPageSizeInKb());              } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsPageSizeInKb().  Caught: " + ex); }
+			try { setDbmsCharsetName   (xconn.getDbmsCharsetName());               } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsCharsetName().   Caught: " + ex); }
+			try { setDbmsCharsetId     (xconn.getDbmsCharsetId());                 } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsCharsetId().     Caught: " + ex); }
+			try { setDbmsSortorderName (xconn.getDbmsSortOrderName());             } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsSortOrderName(). Caught: " + ex); }
+			try { setDbmsSortorderId   (xconn.getDbmsSortOrderId());               } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsSortOrderId().   Caught: " + ex); }
 			      setDbmsClusterEnabled(xconn.isDbmsClusterEnabled());
 			
 
@@ -1037,7 +1037,7 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 			urlParams.add("debug",    "true");
 
 		urlParams.add("checkId",             checkId);
-		urlParams.add("connectId",           getConnectCount()+"");
+		urlParams.add("connectId",           getConnectCount() + "");
 //		urlParams.add("clientTime",          clientTime);
 		urlParams.add("sessionType",         "online");
 		urlParams.add("sessionStartTime",    sampleStartTime);
@@ -1105,9 +1105,9 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 						urlParams.add("debug",    "true");
 
 					urlParams.add("checkId",             checkId);
-					urlParams.add("connectId",           getConnectCount()+"");
+					urlParams.add("connectId",           getConnectCount() + "");
 //					urlParams.add("clientTime",          sessionTime);
-					urlParams.add("sessionType",         "offline-"+loopCnt);
+					urlParams.add("sessionType",         "offline-" + loopCnt);
 					urlParams.add("sessionStartTime",    sessionStartTime);
 					urlParams.add("sessionEndTime",      sessionEndTime);
 					urlParams.add("clientAppName",       Version.getAppName());
@@ -1214,7 +1214,7 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 			urlParams.add("debug",    "true");
 
 		urlParams.add("checkId",       checkId);
-		urlParams.add("sendCounter",   sendLogInfoCount +"");
+		urlParams.add("sendCounter",   sendLogInfoCount + "");
 		urlParams.add("clientTime",    clientTime);
 		urlParams.add("clientAppName", Version.getAppName());
 		urlParams.add("userName",      System.getProperty("user.name"));

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -102,7 +102,7 @@ public class TabularCntrPanelTester extends JFrame
         _tabs6 = new XXTabbedPane();
         _tabs7 = new XXTabbedPane();
 //		_tabs.setUI(new TestPlaf(_tabs.getUI()));
-        System.out.println("XXXXXXXX: UIClassID="+_tabs.getUIClassID()+", UI="+_tabs.getUI());
+        System.out.println("XXXXXXXX: UIClassID=" + _tabs.getUIClassID() + ", UI=" + _tabs.getUI());
 //		_tabs.add(  "0-Summary",     new TabularCntrPanel("0-Summary") );
 //		_tabs.add(  "1-Object",      new TabularCntrPanel("1-Object") );
 //		_tabs.add(  "2-Processes",   new TabularCntrPanel("2-Processes") );
@@ -257,7 +257,7 @@ public class TabularCntrPanelTester extends JFrame
 		    	getComponentAt(t);
 			    Rectangle r = getUI().getTabBounds(this, t);
 			    Graphics g = this.getGraphics().create(r.x, r.y, r.width, r.height);
-			    System.out.println("getTabBounds(xxx,"+t+"): Rectangle="+r+", g="+g);
+			    System.out.println("getTabBounds(xxx," + t + "): Rectangle=" + r + ", g=" + g);
 			    
 			    doDummyPaint((Graphics2D)g);
 		    }
@@ -266,7 +266,7 @@ public class TabularCntrPanelTester extends JFrame
 		private void doDummyPaint(Graphics2D g) 
 		{
 			Rectangle r = g.getClipBounds();
-		    System.out.println("doDummyPaint(Rectangle="+r);
+		    System.out.println("doDummyPaint(Rectangle=" + r);
 			g.setColor(Color.GREEN);
 //			g.drawLine(0, 0, 10, 10);
 			int pX = r.width - 4;
@@ -279,7 +279,7 @@ public class TabularCntrPanelTester extends JFrame
 //			int pH = r.height;
 //		    g.drawRect(pX, pY, pW, pH);
 		    g.fillRect(pX, pY, pW, pH);
-		    System.out.println("pX="+pX+", pY="+pY+", pW="+pW+", pH="+pH+"");
+		    System.out.println("pX=" + pX + ", pY=" + pY + ", pW=" + pW + ", pH=" + pH + "");
 		}
 //		Rectangle r = getDecorationBounds();
 //		Graphics2D g = (Graphics2D)graphics;
@@ -466,7 +466,7 @@ public class TabularCntrPanelTester extends JFrame
 				AseConnectionFactory.setHostPort("goransxp", "5000");
 				AseConnectionFactory.setUser("sa");
 				AseConnectionFactory.setPassword("");
-				AseConnectionFactory.setAppName(Version.getAppName()+"-TabularCntrlPanelTester");
+				AseConnectionFactory.setAppName(Version.getAppName() + "-TabularCntrlPanelTester");
 
 
 				TabularCntrPanelTester frame = new TabularCntrPanelTester("MigLayout Samples");

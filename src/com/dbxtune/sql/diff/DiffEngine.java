@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -182,7 +182,7 @@ public class DiffEngine
 			if (l_row != null && r_row != null)
 			{
 				if (_context.isTraceEnabled())
-					_context.addTraceMessage("  ROW POSITIONS: l_rowPos="+l_dt.getRowCount()+", r_rowPos="+r_dt.getRowCount());
+					_context.addTraceMessage("  ROW POSITIONS: l_rowPos=" + l_dt.getRowCount() + ", r_rowPos=" + r_dt.getRowCount());
 
 				int compRes = pkComp.compare(l_row, r_row);
 //if (compRes != 0)
@@ -234,7 +234,7 @@ public class DiffEngine
 		}
 
 		if (_context.isDebugEnabled())
-			_context.addDebugMessage("l_rc="+l_dt.getRowCount()+", r_rc="+r_dt.getRowCount());
+			_context.addDebugMessage("l_rc=" + l_dt.getRowCount() + ", r_rc=" + r_dt.getRowCount());
 
 		
 		// Did we abort the DIFF
@@ -259,7 +259,7 @@ public class DiffEngine
 	throws DiffException
 	{
 		if (l_row.length != r_row.length)
-			throw new DiffException("Column length for right/left are different expecting same column count. l_row.length="+l_row.length+", r_row.length="+r_row.length);
+			throw new DiffException("Column length for right/left are different expecting same column count. l_row.length=" + l_row.length + ", r_row.length=" + r_row.length);
 
 		List<Integer> colIds = null;
 		Object[] pk = null;
@@ -271,7 +271,7 @@ public class DiffEngine
 			if (onlyOnColumnsArray != null && onlyOnColumnsArray[c] == false)
 			{
 				if (_context.isTraceEnabled())
-					_context.addTraceMessage("      Skipping diff for: c="+c+", pk="+StringUtil.toCommaStr(pk)+", left=|"+l+"|, right=|"+r+"|.");
+					_context.addTraceMessage("      Skipping diff for: c=" + c + ", pk=" + StringUtil.toCommaStr(pk) + ", left=|" + l + "|, right=|" + r + "|.");
 
 				continue;
 			}
@@ -289,7 +289,7 @@ public class DiffEngine
 						colIds = new ArrayList<>();
 					
 					if (_context.isTraceEnabled())
-						_context.addTraceMessage("      <<--[" + retval + "]-->> COL DIFF: c="+c+", pk="+StringUtil.toCommaStr(pk)+", left=|"+l+"|, right=|"+r+"|.");
+						_context.addTraceMessage("      <<--[" + retval + "]-->> COL DIFF: c=" + c + ", pk=" + StringUtil.toCommaStr(pk) + ", left=|" + l + "|, right=|" + r + "|.");
 
 //System.out.println("      <<--[" + retval + "]-->> COL DIFF: c="+c+", pk="+StringUtil.toCommaStr(pk)+", left=|"+l+"|, right=|"+r+"|.");
 					colIds.add(c);
@@ -318,7 +318,7 @@ public class DiffEngine
 						colIds = new ArrayList<>();
 					
 					if (_context.isTraceEnabled())
-						_context.addTraceMessage("      <<--[NoInstanceOfComparable]-->> COL DIFF: c="+c+", pk="+StringUtil.toCommaStr(pk)+", left=|"+l+"|, right=|"+r+"|.");
+						_context.addTraceMessage("      <<--[NoInstanceOfComparable]-->> COL DIFF: c=" + c + ", pk=" + StringUtil.toCommaStr(pk) + ", left=|" + l + "|, right=|" + r + "|.");
 
 //System.out.println("      <<--[NoInstanceOfComparable]-->> COL DIFF: c="+c+", pk="+StringUtil.toCommaStr(pk)+", left=|"+l+"|, right=|"+r+"|. (l=|"+l.getClass().getCanonicalName()+"|, r=|"+r.getClass().getCanonicalName()+"|)");
 					colIds.add(c);

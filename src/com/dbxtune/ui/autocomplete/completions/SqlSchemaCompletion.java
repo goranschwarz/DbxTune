@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -61,7 +61,7 @@ extends SqlCompletion
 		_schemaInfo = si;
 
 		String shortDesc = 
-			"<font color='blue'>"+si._name+"</font>" +
+			"<font color='blue'>" + si._name + "</font>" +
 			" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(si._remark) ? "" : stripMultiLineHtml(si._remark)) + "</font></i>";
 		setShortDescription(shortDesc);
 //		setSummary(_schemaInfo.toHtmlString());
@@ -69,10 +69,10 @@ extends SqlCompletion
 
 	public SqlSchemaCompletion(CompletionProviderAbstractSql provider, String schemaName)
 	{
-		super(provider, schemaName, provider.fixStrangeNames(schemaName)+".");
+		super(provider, schemaName, provider.fixStrangeNames(schemaName) + ".");
 
 		String shortDesc = 
-			"<font color='blue'>"+schemaName+"</font>" +
+			"<font color='blue'>" + schemaName + "</font>" +
 			" -- <i><font color='green'>SCHEMA</font></i>";
 		setShortDescription(shortDesc);
 	}

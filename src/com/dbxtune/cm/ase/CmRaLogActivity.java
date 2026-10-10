@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -52,7 +52,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_REP_AGENT;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 //	public static final long     NEED_SRV_VERSION = 15700;
 //	public static final long     NEED_SRV_VERSION = 1570000;
@@ -91,7 +91,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmRaLogActivity(counterController, guiController);
 	}
@@ -132,7 +132,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_SUM_LOG_SCAN,
 			"RA LogScan Records Sum", 	          // Menu CheckBox text
-			"RA LogScan Records Sum, per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"RA LogScan Records Sum, per second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "LogRecordsScanned", "LogRecordsProcessed" }, 
 			LabelType.Static,
@@ -145,7 +145,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_SUM_LOG_TRAN,
 			"RA Log Transaction Records Sum", 	          // Menu CheckBox text
-			"RA Log Transaction Records Sum, per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"RA Log Transaction Records Sum, per second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "BeginTran", "CommitTran", "AbortedTran", "PreparedTran", "DelayedCommit", "MaintUserTran" }, 
 			LabelType.Static,
@@ -158,7 +158,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_SUM_LOG_OP_CRUD,
 			"RA Log CRUD Operations Sum", 	          // Menu CheckBox text
-			"RA Log CRUD Operations Sum, per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"RA Log CRUD Operations Sum, per second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Updates", "Inserts", "Deletes" }, 
 			LabelType.Static,
@@ -171,7 +171,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_SUM_LOG_OP_OTHER,
 			"RA Log Other Operations Sum", 	          // Menu CheckBox text
-			"RA Log Other Operations Sum, per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"RA Log Other Operations Sum, per second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "StoredProcedures", "SQLStatements", "DDL", "Writetxt", "LobColumns", "CLRs" }, 
 			LabelType.Static,
@@ -184,7 +184,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_DB_CRUD_OP,
 			"RA CRUD Operations per DB", 	          // Menu CheckBox text
-			"RA CRUD Operations per DB, per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"RA CRUD Operations per DB, per second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -104,7 +104,7 @@ implements ActionListener, TableModelListener
 	*/
 	private JdbcOptionsDialog(Dialog owner, String driverClassName, String urlTemplate, Map<String,String> inValues)
 	{
-		super(owner, DIALOG_TITLE + " '"+driverClassName+"'", true);
+		super(owner, DIALOG_TITLE + " '" + driverClassName + "'", true);
 		_driverClassName = driverClassName;
 		_urlTemplate     = urlTemplate;
 		_inValues        = inValues;
@@ -321,7 +321,7 @@ implements ActionListener, TableModelListener
 				//System.out.println("KEY='"+key+"', VALUE='"+val+"'.");
 				Object oldVal = _outValues.put(key, val);
 				if (oldVal != null)
-					_logger.warn("Found an already existing value for the key '"+key+"'. The existing value '"+oldVal+"' is replaced with the new value '"+val+"'.");
+					_logger.warn("Found an already existing value for the key '" + key + "'. The existing value '" + oldVal + "' is replaced with the new value '" + val + "'.");
 			}
 		}
 
@@ -696,7 +696,7 @@ implements ActionListener, TableModelListener
 						extraInfo +
 						"</html>",
 						e);
-				_logger.warn("Problems getting Connection Properties for driver='"+_driverClassName+"', URL='"+_urlTemplate+"'.", e);
+				_logger.warn("Problems getting Connection Properties for driver='" + _driverClassName + "', URL='" + _urlTemplate + "'.", e);
 //				e.printStackTrace();
 				return;
 			}
@@ -722,7 +722,7 @@ implements ActionListener, TableModelListener
 				{
 					choises = "";
 					for (int j = 0; j < choicesArr.length; j++)
-						choises += "<"+ choicesArr[j] + ">, ";
+						choises += "<" + choicesArr[j] + ">, ";
 					if (choises.endsWith(", "))
 						choises = choises.substring(0, choises.length()-2);
 				}

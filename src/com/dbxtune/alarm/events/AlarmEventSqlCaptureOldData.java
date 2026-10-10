@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -41,7 +41,7 @@ extends AlarmEvent
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
 				// Note: max length for the below message is 512
-				"The internal DbxTune Subsystem 'SqlCapture' has not been updated for " + ageInSec + " seconds in server '" + cm.getServerName() + "' please investigate or simply restart the DbxTune Collector. ThresholdInSec='"+thresholdInSec+"')",
+				"The internal DbxTune Subsystem 'SqlCapture' has not been updated for " + ageInSec + " seconds in server '" + cm.getServerName() + "' please investigate or simply restart the DbxTune Collector. ThresholdInSec='" + thresholdInSec + "')",
 				thresholdInSec // crossedThreshold... well this one do not have a number.
 				);
 

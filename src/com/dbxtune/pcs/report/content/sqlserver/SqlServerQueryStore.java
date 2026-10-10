@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -388,7 +388,7 @@ extends SqlServerAbstract
 				{
 					//_problem = ex;
 
-					_logger.warn("Problems getting SQL Statement name = '"+planId+"': " + ex);
+					_logger.warn("Problems getting SQL Statement name = '" + planId + "': " + ex);
 					throw ex;
 				} 
 			}
@@ -2085,7 +2085,7 @@ extends SqlServerAbstract
 
 			if (entry.waitTimeSum == null && entry.waitTimeDetails == null && entry.rootCauseInfo == null)
 			{
-				return "Entry for '"+ whereColValMap +"' was found. But NO INFORMATION has been assigned to it.";
+				return "Entry for '" + whereColValMap + "' was found. But NO INFORMATION has been assigned to it.";
 			}
 			
 			StringBuilder sb = new StringBuilder();

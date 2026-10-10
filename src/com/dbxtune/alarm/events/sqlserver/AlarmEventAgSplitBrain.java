@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -47,7 +47,7 @@ extends AlarmEvent
 				AlarmEvent.Category.HADR,
 				AlarmEvent.Severity.ERROR, 
 				AlarmEvent.ServiceState.AFFECTED, 
-				"SPLIT-BRAIN At server '" + cm.getServerName() + "', found role 'PRIMARY' at both the LOCAL server '" + serverName + "' and the REMOTE-LIVE-DATA server '"+remoteLiveDataServername+"' for the Availability group '" + agName + "'.",
+				"SPLIT-BRAIN At server '" + cm.getServerName() + "', found role 'PRIMARY' at both the LOCAL server '" + serverName + "' and the REMOTE-LIVE-DATA server '" + remoteLiveDataServername + "' for the Availability group '" + agName + "'.",
 				null
 				);
 

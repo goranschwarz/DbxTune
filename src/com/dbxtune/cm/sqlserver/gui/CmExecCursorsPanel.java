@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -52,7 +52,7 @@ extends TabularCntrPanel
 		String colorStr = null;
 
 		// ORANGE = GLOBAL Cursor
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.global");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.global");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override

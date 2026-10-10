@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -112,7 +112,7 @@ implements Runnable
 		int hist = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_HISTORY_SIZE_IN_SECONDS, -1);
 		if (hist == -1)
 		{
-			_logger.info("Can't find property '"+PROPKEY_HISTORY_SIZE_IN_SECONDS+"', using default '"+DEFAULT_HISTORY_SIZE_IN_SECONDS+"'.");
+			_logger.info("Can't find property '" + PROPKEY_HISTORY_SIZE_IN_SECONDS + "', using default '" + DEFAULT_HISTORY_SIZE_IN_SECONDS + "'.");
 			hist = DEFAULT_HISTORY_SIZE_IN_SECONDS;
 		}
 		else
@@ -120,7 +120,7 @@ implements Runnable
 			setHistoryLengthInSeconds(hist);
 		}
 
-		_logger.info("In memory history will be '"+_saveTimeInSec+"' seconds, (Minutes:Seconds = "+TimeUtils.msToTimeStr("%MM:%SS", _saveTimeInSec*1000)+").");
+		_logger.info("In memory history will be '" + _saveTimeInSec + "' seconds, (Minutes:Seconds = " + TimeUtils.msToTimeStr("%MM:%SS", _saveTimeInSec*1000) + ").");
 
 		_initialized = true;
 	}
@@ -190,7 +190,7 @@ implements Runnable
 		conf.setProperty(PROPKEY_HISTORY_SIZE_IN_SECONDS, seconds);
 		conf.save();
 		
-		_logger.info("Setting new save time for in memory history to '"+seconds+"' seconds, (Minutes:Seconds = "+TimeUtils.msToTimeStr("%MM:%SS", seconds*1000)+").");
+		_logger.info("Setting new save time for in memory history to '" + seconds + "' seconds, (Minutes:Seconds = " + TimeUtils.msToTimeStr("%MM:%SS", seconds*1000) + ").");
 	}
 	public void setHistoryLengthInMinutes(int minutes)
 	{
@@ -209,7 +209,7 @@ implements Runnable
 		int qsize = _containerQueue.size();
 		if (qsize > _warnQueueSizeThresh)
 		{
-			_logger.warn("The 'in box' queue to In Memory Counter Handler has "+qsize+" entries. The handler might not keep in pace.");
+			_logger.warn("The 'in box' queue to In Memory Counter Handler has " + qsize + " entries. The handler might not keep in pace.");
 		}
 
 		_containerQueue.add(cont);
@@ -320,7 +320,7 @@ implements Runnable
 
 			if (_logger.isDebugEnabled())
 			{
-				_logger.debug("The in-memory history list has "+_list.size()+" entries.");
+				_logger.debug("The in-memory history list has " + _list.size() + " entries.");
 			}
 			
 			// notify listeners...
@@ -349,10 +349,10 @@ implements Runnable
 
 				PersistContainer oldest = _list.getFirst();
 				if (_logger.isTraceEnabled())
-					_logger.trace("_saveTimeInSec="+_saveTimeInSec+", oldest.ts='"+oldest.getMainSampleTime()+"', exireTs='"+expireTs+"'. last.getSampleTime().before(expireTs)="+oldest.getMainSampleTime().before(expireTs));
+					_logger.trace("_saveTimeInSec=" + _saveTimeInSec + ", oldest.ts='" + oldest.getMainSampleTime() + "', exireTs='" + expireTs + "'. last.getSampleTime().before(expireTs)=" + oldest.getMainSampleTime().before(expireTs));
 				if (oldest.getMainSampleTime().before( expireTs ) )
 				{
-					_logger.debug("Removing oldest entry: "+oldest.getMainSampleTime());
+					_logger.debug("Removing oldest entry: " + oldest.getMainSampleTime());
 					_list.removeFirst();
 				}
 				else
@@ -361,7 +361,7 @@ implements Runnable
 			
 			if (_logger.isDebugEnabled())
 			{
-				_logger.debug("The in-memory history list has "+_list.size()+" entries.");
+				_logger.debug("The in-memory history list has " + _list.size() + " entries.");
 			}
 
 			// notify listeners...
@@ -376,7 +376,7 @@ implements Runnable
 	@Override
 	public void run()
 	{
-		_logger.info("Starting a thread for the module '"+_thread.getName()+"'.");
+		_logger.info("Starting a thread for the module '" + _thread.getName() + "'.");
 
 		isInitialized();
 
@@ -390,7 +390,7 @@ implements Runnable
 			//catch (InterruptedException ignore) {}
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("Thread '"+_thread.getName()+"', waiting on queue...");
+				_logger.debug("Thread '" + _thread.getName() + "', waiting on queue...");
 
 			try 
 			{
@@ -406,7 +406,7 @@ implements Runnable
 				long stopTime = System.currentTimeMillis();
 
 				prevConsumeTimeMs = stopTime-startTime;
-				_logger.debug("It took "+prevConsumeTimeMs+" ms to persist the above information.");
+				_logger.debug("It took " + prevConsumeTimeMs + " ms to persist the above information.");
 				
 			} 
 			catch (InterruptedException ex) 
@@ -415,7 +415,7 @@ implements Runnable
 			}
 		}
 
-		_logger.info("Thread '"+_thread.getName()+"' was stopped.");
+		_logger.info("Thread '" + _thread.getName() + "' was stopped.");
 	}
 
 	public boolean isRunning()

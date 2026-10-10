@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -285,7 +285,7 @@ implements ActionListener, TableModelListener
 				}
 				catch (NumberFormatException ignore) 
 				{
-					return "option '"+option+"', must be a number. Now it's '"+optionStrVal+"'.";
+					return "option '" + option + "', must be a number. Now it's '" + optionStrVal + "'.";
 				}
 			}
 			if (optionType.equals("Boolean"))
@@ -300,7 +300,7 @@ implements ActionListener, TableModelListener
 				else ok = false;
 				
 				if (!ok)
-					return "option '"+option+"', must be 'true' or 'false'. Now it's '"+optionStrVal+"'.";
+					return "option '" + option + "', must be 'true' or 'false'. Now it's '" + optionStrVal + "'.";
 			}
 
 			// Now write the info...

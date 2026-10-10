@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -243,7 +243,7 @@ public class ParameterDialog
 				String key = entry.getKey();
 				String val = entry.getValue();
 
-				System.out.println("key='"+key+"', val='"+val+"'.");
+				System.out.println("key='" + key + "', val='" + val + "'.");
 			}
 		}
 	}

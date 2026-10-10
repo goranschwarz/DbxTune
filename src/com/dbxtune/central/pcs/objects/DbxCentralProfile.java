@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -131,6 +131,6 @@ public class DbxCentralProfile
 	@Override
 	public String toString()
 	{
-		return super.toString() + " productString='"+_productString+"', userName='"+_userName+"', profileType='"+_profileType+"', profileName='"+_profileName+"', profileDescription='"+_profileDescription+"', profileValue='"+_profileValue+"'.";
+		return super.toString() + " productString='" + _productString + "', userName='" + _userName + "', profileType='" + _profileType + "', profileName='" + _profileName + "', profileDescription='" + _profileDescription + "', profileValue='" + _profileValue + "'.";
 	}
 }

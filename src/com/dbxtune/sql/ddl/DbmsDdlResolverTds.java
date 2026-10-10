@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -523,16 +523,16 @@ extends DbmsDdlResolverAbstract
 		case java.sql.Types.FLOAT:                   return "float";
 		case java.sql.Types.REAL:                    return "real";
 		case java.sql.Types.DOUBLE:                  return "double precision";
-		case java.sql.Types.NUMERIC:                 return "numeric("+length+","+scale+")";
-		case java.sql.Types.DECIMAL:                 return "decimal("+length+","+scale+")";
-		case java.sql.Types.CHAR:                    return "char("+length+")";
-		case java.sql.Types.VARCHAR:                 return "varchar("+length+")";
+		case java.sql.Types.NUMERIC:                 return "numeric(" + length + "," + scale + ")";
+		case java.sql.Types.DECIMAL:                 return "decimal(" + length + "," + scale + ")";
+		case java.sql.Types.CHAR:                    return "char(" + length + ")";
+		case java.sql.Types.VARCHAR:                 return "varchar(" + length + ")";
 		case java.sql.Types.LONGVARCHAR:             return "text";
 		case java.sql.Types.DATE:                    return "date";
 		case java.sql.Types.TIME:                    return "time";
 		case java.sql.Types.TIMESTAMP:               return "datetime";
-		case java.sql.Types.BINARY:                  return "binary("+length+")";
-		case java.sql.Types.VARBINARY:               return "varbinary("+length+")";
+		case java.sql.Types.BINARY:                  return "binary(" + length + ")";
+		case java.sql.Types.VARBINARY:               return "varbinary(" + length + ")";
 		case java.sql.Types.LONGVARBINARY:           return "image";
 		case java.sql.Types.NULL:                    return "image";                      // Not really supported just use 'image'
 		case java.sql.Types.OTHER:                   return "image";                      // Not really supported just use 'image'
@@ -548,8 +548,8 @@ extends DbmsDdlResolverAbstract
 
 		//------------------------- JDBC 4.0 (java 1.6) -----------------------------------
 		case java.sql.Types.ROWID:                   return "varchar(20)";                 // Just guessing here... from https://docs.oracle.com/cd/B28359_01/server.111/b28318/datatype.htm#CNCPT1846
-		case java.sql.Types.NCHAR:                   return "unichar("+length+")";
-		case java.sql.Types.NVARCHAR:                return "univarchar("+length+")";
+		case java.sql.Types.NCHAR:                   return "unichar(" + length + ")";
+		case java.sql.Types.NVARCHAR:                return "univarchar(" + length + ")";
 		case java.sql.Types.LONGNVARCHAR:            return "unitext";
 		case java.sql.Types.NCLOB:                   return "unitext";
 		case java.sql.Types.SQLXML:                  return "unitext";                     // NOTE: if Charset UTF-8 is used then 'text' otherwise use 'unitext'

@@ -1,5 +1,5 @@
 /*******************************************************************************
-DbmsDdlResolverDb2 * Copyright (C) 2010-2025 Goran Schwarz
+DbmsDdlResolverDb2 * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -71,16 +71,16 @@ extends DbmsDdlResolverAbstract
 		case java.sql.Types.FLOAT:                   return "float";
 		case java.sql.Types.REAL:                    return "real";
 		case java.sql.Types.DOUBLE:                  return "double";
-		case java.sql.Types.NUMERIC:                 return "numeric("+length+","+scale+")";
-		case java.sql.Types.DECIMAL:                 return "decimal("+length+","+scale+")";
-		case java.sql.Types.CHAR:                    return "char("+length+")";
-		case java.sql.Types.VARCHAR:                 return "varchar("+length+")";
+		case java.sql.Types.NUMERIC:                 return "numeric(" + length + "," + scale + ")";
+		case java.sql.Types.DECIMAL:                 return "decimal(" + length + "," + scale + ")";
+		case java.sql.Types.CHAR:                    return "char(" + length + ")";
+		case java.sql.Types.VARCHAR:                 return "varchar(" + length + ")";
 		case java.sql.Types.LONGVARCHAR:             return "clob";
 		case java.sql.Types.DATE:                    return "date";
 		case java.sql.Types.TIME:                    return "time";
 		case java.sql.Types.TIMESTAMP:               return "timestamp";
-		case java.sql.Types.BINARY:                  return "blob("+length+")";
-		case java.sql.Types.VARBINARY:               return "blob("+length+")";
+		case java.sql.Types.BINARY:                  return "blob(" + length + ")";
+		case java.sql.Types.VARBINARY:               return "blob(" + length + ")";
 		case java.sql.Types.LONGVARBINARY:           return "blob";
 		case java.sql.Types.NULL:                    return "long varchar for bit data"; // https://db.apache.org/ddlutils/databases/db2.html
 		case java.sql.Types.OTHER:                   return "blob";                      // https://db.apache.org/ddlutils/databases/db2.html
@@ -96,8 +96,8 @@ extends DbmsDdlResolverAbstract
 
 		//------------------------- JDBC 4.0 (java 1.6) -----------------------------------
 		case java.sql.Types.ROWID:                   return "varchar(20)";                 // Just guessing here... from https://docs.oracle.com/cd/B28359_01/server.111/b28318/datatype.htm#CNCPT1846
-		case java.sql.Types.NCHAR:                   return "nchar("+length+")";
-		case java.sql.Types.NVARCHAR:                return "nvarchar("+length+")";
+		case java.sql.Types.NCHAR:                   return "nchar(" + length + ")";
+		case java.sql.Types.NVARCHAR:                return "nvarchar(" + length + ")";
 		case java.sql.Types.LONGNVARCHAR:            return "nclob";
 		case java.sql.Types.NCLOB:                   return "nclob";
 		case java.sql.Types.SQLXML:                  return "xml";

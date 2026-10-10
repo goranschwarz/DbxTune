@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -128,8 +128,8 @@ public class AboutBox
 		if (HyperlinkEvent.EventType.ACTIVATED.equals(hle.getEventType()))
 		{
 			URL    url    = hle.getURL();
-			String urlStr = ""+hle.getURL();
-			_logger.info("You clicked on '"+urlStr+"'. On Windows systems a mail client or http browser will be opened.");
+			String urlStr = "" + hle.getURL();
+			_logger.info("You clicked on '" + urlStr + "'. On Windows systems a mail client or http browser will be opened.");
 
 			//Desktop.getDesktop().mail(someURI);
 //			if ( System.getProperty("os.name").startsWith("Windows"))
@@ -138,7 +138,7 @@ public class AboutBox
 				if (urlStr.startsWith("file:/"))
 					urlStr = urlStr.substring("file:/".length());
 
-				String oscmd = "cmd.exe /c start "+urlStr;
+				String oscmd = "cmd.exe /c start " + urlStr;
 				try
 				{
 					Runtime rt = Runtime.getRuntime();
@@ -146,7 +146,7 @@ public class AboutBox
 				}
 				catch (Exception e)
 				{
-					SwingUtils.showErrorMessage("Problems executing command", "Problems when executing a Windows command to start '"+oscmd+"'.", e);
+					SwingUtils.showErrorMessage("Problems executing command", "Problems when executing a Windows command to start '" + oscmd + "'.", e);
 				}
 			}
 		}
@@ -227,8 +227,8 @@ public class AboutBox
 			"</style> " +
 			"</HEAD> " +
 
-			"Version: "+Version.getVersionStr()+"<br>" +
-			"Build: "+Version.getBuildStr()+"<br>";
+			"Version: " + Version.getVersionStr() + "<br>" +
+			"Build: " + Version.getBuildStr() + "<br>";
 
 //		if (Version.getVersionStr().endsWith(".dev"))
 		if (Version.IS_DEVELOPMENT_VERSION)
@@ -254,8 +254,8 @@ public class AboutBox
 
 		str +=
 			"<br>" +
-			"Source Code Revision: "+Version.getSourceRev()+"<br>" +
-			"Source Code Date: "+Version.getSourceDate()+"<br>" +
+			"Source Code Revision: " + Version.getSourceRev() + "<br>" +
+			"Source Code Date: " + Version.getSourceDate() + "<br>" +
 			"<br>" +
 			"Send comments and suggestions to: <br>" +
 			"<A HREF=\"mailto:goran_schwarz@hotmail.com\">goran_schwarz@hotmail.com</A><br>" +

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -58,7 +58,7 @@ public class CreateHtmlImagePreviewPage
 		for (File file : listOfFiles)
 		{
 			if ( file.isFile() )
-				System.out.println("<IMG SRC=\""+file.getName()+"\" ALT=\""+file.getName()+"\" TITLE=\""+file.getName()+"\" BORDER=0>");
+				System.out.println("<IMG SRC=\"" + file.getName() + "\" ALT=\"" + file.getName() + "\" TITLE=\"" + file.getName() + "\" BORDER=0>");
 		}
 
 		System.out.println("</BODY>");

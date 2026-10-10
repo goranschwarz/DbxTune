@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -438,9 +438,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 				String lcRefreshTime  = (cm == null) ? "Unavailable" : cm.getLcRefreshTime() + " ms.";
 
 				return "<html>" +
-						"SQL Refresh time: "+sqlRefreshTime+"<br>" +
-						"GUI Refresh Time: "+guiRefreshTime+"<br>" +
-						"Local Calculation Time: "+lcRefreshTime+"<br>" +
+						"SQL Refresh time: " + sqlRefreshTime + "<br>" +
+						"GUI Refresh Time: " + guiRefreshTime + "<br>" +
+						"Local Calculation Time: " + lcRefreshTime + "<br>" +
 						"</html>";
 			}
 		};
@@ -454,7 +454,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 		String tooltip = "";
 
-		tooltip = "The name we used when "+Version.getAppName()+" connected to the server, meaning name in sql.ini or interfaces ";
+		tooltip = "The name we used when " + Version.getAppName() + " connected to the server, meaning name in sql.ini or interfaces ";
 //		_localServerName_lbl  .setText("Local server name");
 		_localServerName_lbl  .setText("Connection Info");
 		_localServerName_lbl  .setToolTipText(tooltip);
@@ -1438,7 +1438,7 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 				_cpuSystem_txt        .setText("");
 				_cpuIdle_txt          .setText("");
 				
-				_logger.warn("Problems calculating CPU usage timings in cm '"+cm.getName()+"'. CPUTime="+CPUTime+", CPUUser="+CPUUser+", CPUSystem="+cpuSystem+", CPUIdle="+cpuIdle+". Setting fields to blank. Caught: "+e);
+				_logger.warn("Problems calculating CPU usage timings in cm '" + cm.getName() + "'. CPUTime=" + CPUTime + ", CPUUser=" + CPUUser + ", CPUSystem=" + cpuSystem + ", CPUIdle=" + cpuIdle + ". Setting fields to blank. Caught: " + e);
 			}
 		}
 		
@@ -1503,7 +1503,7 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 		//----------------------------------------------
 		int lockWaits          = StringUtil.parseInt(_lockWaits_txt.getText(), 0);
 //		int lockWaitsThreshold = StringUtil.parseInt(_lockWaitThreshold_txt.getText(), 0);
-		_logger.debug("LOCK-WAITS="+lockWaits+", TEXT='"+_lockWaits_txt.getText()+"'.");
+		_logger.debug("LOCK-WAITS=" + lockWaits + ", TEXT='" + _lockWaits_txt.getText() + "'.");
 		if (lockWaits > 0)
 		{
 			_lockWaits_txt       .setBackground(Color.RED);
@@ -1536,7 +1536,7 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 		// Check DEADLOCK and, do notification
 		//----------------------------------------------
 		int deadlockCount = StringUtil.parseInt(_deadlockCountDiff_txt.getText(), 0);
-		_logger.debug("DEADLOCK-COUNT-DIFF="+deadlockCount+", TEXT='"+_deadlockCountDiff_txt.getText()+"'.");
+		_logger.debug("DEADLOCK-COUNT-DIFF=" + deadlockCount + ", TEXT='" + _deadlockCountDiff_txt.getText() + "'.");
 		if (deadlockCount > 0)
 		{
 			_deadlockCount_txt       .setBackground(Color.RED);
@@ -1569,7 +1569,7 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 		int fullLogs = 0;
 		try { fullLogs = Integer.parseInt(_fullTranslog_txt.getText()); }
 		catch (NumberFormatException ignore) {}
-		_logger.debug("FULL-LOG="+fullLogs+", TEXT='"+_fullTranslog_txt.getText()+"'.");
+		_logger.debug("FULL-LOG=" + fullLogs + ", TEXT='" + _fullTranslog_txt.getText() + "'.");
 		if (fullLogs > 0)
 		{
 			_fullTranslog_txt.setBackground(Color.RED);
@@ -1597,7 +1597,7 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 		//----------------------------------------------
 		int oldestOpenTranInSec          = StringUtil.parseInt(_oldestOpenTranSec_txt.getText(), 0);
 		int oldestOpenTranInSecThreshold = StringUtil.parseInt(_oldestOpenTranThreshold_txt.getText(), 0);
-		_logger.debug("OLDEST-OPEN-TRANSACTION="+oldestOpenTranInSec+", TEXT='"+_oldestOpenTranSec_txt.getText()+"'.");
+		_logger.debug("OLDEST-OPEN-TRANSACTION=" + oldestOpenTranInSec + ", TEXT='" + _oldestOpenTranSec_txt.getText() + "'.");
 		if (oldestOpenTranInSec > oldestOpenTranInSecThreshold)
 		{
 			_oldestOpenTranSec_txt.setBackground(Color.RED);
@@ -1790,7 +1790,7 @@ if (StringUtil.hasValue(_oldestOpenTranId_txt.getText()) && "goran".equals(Syste
 		else if ( CounterController.hasInstance() && CounterController.getInstance().getMonDisConnectTime() != null )
 		{
 			String dateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(CounterController.getInstance().getMonDisConnectTime());
-			setWatermarkText("Disconnect at: \n"+dateStr);
+			setWatermarkText("Disconnect at: \n" + dateStr);
 		}
 		else
 		{

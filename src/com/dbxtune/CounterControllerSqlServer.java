@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -350,7 +350,7 @@ extends CounterControllerAbstract
 		// Get active SQL Server Roles/Permissions
 		List<String> activeServerPermissionList = conn.getActiveServerRolesOrPermissions();
 
-		_logger.info("Initializing all CM objects, using MS SQL-Server version number "+srvVersion+" ("+Ver.versionNumToStr(srvVersion)+").");
+		_logger.info("Initializing all CM objects, using MS SQL-Server version number " + srvVersion + " (" + Ver.versionNumToStr(srvVersion) + ").");
 
 		// get SQL-Server Specific properties and store them in setDbmsProperties() 
 		initializeDbmsProperties(conn, srvVersion, hasGui);
@@ -360,7 +360,7 @@ extends CounterControllerAbstract
 		// initialize all the CM's
 		for (CountersModel cm : getCmList())
 		{
-			_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using MS SQL-Server version number "+srvVersion+".");
+			_logger.debug("Initializing CM named '" + cm.getName() + "', display name '" + cm.getDisplayName() + "', using MS SQL-Server version number " + srvVersion + ".");
 
 			// set the version
 			cm.setServerVersion(monTablesVersion);
@@ -408,7 +408,7 @@ extends CounterControllerAbstract
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems getting SQL-Server 'Edition', using sql='"+sql+"'. Caught: "+ex);
+			_logger.warn("Problems getting SQL-Server 'Edition', using sql='" + sql + "'. Caught: " + ex);
 		}
 
 		//------------------------------------------------
@@ -423,7 +423,7 @@ extends CounterControllerAbstract
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems geting SQL-Server 'EngineEdition', using sql='"+sql+"'. Caught: "+ex);
+			_logger.warn("Problems geting SQL-Server 'EngineEdition', using sql='" + sql + "'. Caught: " + ex);
 		}
 
 		//------------------------------------------------
@@ -438,7 +438,7 @@ extends CounterControllerAbstract
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems getting @@version, using sql='"+sql+"'. Caught: "+ex);
+			_logger.warn("Problems getting @@version, using sql='" + sql + "'. Caught: " + ex);
 		}
 
 		//------------------------------------------------
@@ -734,7 +734,7 @@ extends CounterControllerAbstract
 				}
 				catch(SQLException ex)
 				{
-					_logger.error("FAILED setting SQL Server traceflag for '" + sloganName + "'. In NO-GUI mode the property '" + propKey + "' was true. The following SQL Command was issued '" + sql + "', but we had problems. Continuing anyway. DBMS Error=" + ex.getErrorCode() + ", SQLState=" + ex.getSQLState()+ ", Caught: " + ex);
+					_logger.error("FAILED setting SQL Server traceflag for '" + sloganName + "'. In NO-GUI mode the property '" + propKey + "' was true. The following SQL Command was issued '" + sql + "', but we had problems. Continuing anyway. DBMS Error=" + ex.getErrorCode() + ", SQLState=" + ex.getSQLState() + ", Caught: " + ex);
 				}
 				
 			}
@@ -884,7 +884,7 @@ extends CounterControllerAbstract
 				}
 			}
 			
-			_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '"+sql+"', Caught: " + sqlex.toString() );
+			_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '" + sql + "', Caught: " + sqlex.toString() );
 			mainSampleTime   = new Timestamp(System.currentTimeMillis());
 			sqlServerName    = "unknown";
 			sqlHostname      = "unknown";
@@ -1000,7 +1000,7 @@ extends CounterControllerAbstract
 				}
 				catch(SQLException e)
 				{
-					_logger.error("Problem when CHECKING the SQL-Server 'isolation level' before entering refresh mode. SQL="+sql);
+					_logger.error("Problem when CHECKING the SQL-Server 'isolation level' before entering refresh mode. SQL=" + sql);
 				}
 				
 				//------- SET DirtyReads
@@ -1009,12 +1009,12 @@ extends CounterControllerAbstract
 					sql = setSql;
 					try(Statement stmnt = dbxConn.createStatement())
 					{
-						_logger.info("SETTING 'isolation level' to 'dirty reads' before entering refresh mode. executing SQL="+sql);
+						_logger.info("SETTING 'isolation level' to 'dirty reads' before entering refresh mode. executing SQL=" + sql);
 						stmnt.executeUpdate(sql);
 					}
 					catch(SQLException e)
 					{
-						_logger.error("Problem when SETTING the SQL-Server isolation level before entering refresh mode. SQL="+sql);
+						_logger.error("Problem when SETTING the SQL-Server isolation level before entering refresh mode. SQL=" + sql);
 					}
 				}
 			}
@@ -1048,7 +1048,7 @@ extends CounterControllerAbstract
 				}
 				catch(SQLException e)
 				{
-					_logger.error("Problem when CHECKING the SQL-Server 'lock timeout' before entering refresh mode. SQL="+sql);
+					_logger.error("Problem when CHECKING the SQL-Server 'lock timeout' before entering refresh mode. SQL=" + sql);
 				}
 				
 				//------- SET LOCK_TIMEOUT
@@ -1057,12 +1057,12 @@ extends CounterControllerAbstract
 					sql = setSql;
 					try(Statement stmnt = dbxConn.createStatement())
 					{
-						_logger.info("SETTING 'lock timeout' from " + currentLockTimeout + " to " + onRefreshSetLockTimeoutMs + " before entering refresh mode. executing SQL="+sql);
+						_logger.info("SETTING 'lock timeout' from " + currentLockTimeout + " to " + onRefreshSetLockTimeoutMs + " before entering refresh mode. executing SQL=" + sql);
 						stmnt.executeUpdate(sql);
 					}
 					catch(SQLException e)
 					{
-						_logger.error("Problem when SETTING the SQL-Server 'lock timeout' before entering refresh mode. SQL="+sql);
+						_logger.error("Problem when SETTING the SQL-Server 'lock timeout' before entering refresh mode. SQL=" + sql);
 					}
 				}
 			}
@@ -1420,7 +1420,7 @@ extends CounterControllerAbstract
 		}
 		else
 		{
-			_logger.info("On PCS Database Rollover: Extracting 'Query Store' On server '" + srvName+ "' for the following " + enabledDatabases.size() + " database(s): " + enabledDatabases);
+			_logger.info("On PCS Database Rollover: Extracting 'Query Store' On server '" + srvName + "' for the following " + enabledDatabases.size() + " database(s): " + enabledDatabases);
 
 			// loop and extract each of the databases
 			for (String dbname : enabledDatabases)
@@ -1735,7 +1735,7 @@ extends CounterControllerAbstract
 
 		
 		// EXTRACT
-		_logger.info("On PCS Database Rollover: Extracting 'Job Scheduler' information On server '" + srvName+ "'.");
+		_logger.info("On PCS Database Rollover: Extracting 'Job Scheduler' information On server '" + srvName + "'.");
 		try
 		{
 			SqlServerJobSchedulerExtractor jse = new SqlServerJobSchedulerExtractor(daysToCopy, conn, pcsConn);
@@ -1845,7 +1845,7 @@ extends CounterControllerAbstract
 
 		
 		// EXTRACT
-		_logger.info("On PCS Database Rollover: Extracting 'Backup History' information On server '" + srvName+ "'.");
+		_logger.info("On PCS Database Rollover: Extracting 'Backup History' information On server '" + srvName + "'.");
 		try
 		{
 			SqlServerBackupHistoryExtractor jse = new SqlServerBackupHistoryExtractor(daysToCopy, conn, pcsConn);
@@ -1920,7 +1920,7 @@ extends CounterControllerAbstract
 				} 
 				catch(Exception e) 
 				{
-					_logger.error("Problems getting a new connection. Caught: "+e, e);
+					_logger.error("Problems getting a new connection. Caught: " + e, e);
 					return null;
 				}
 			}

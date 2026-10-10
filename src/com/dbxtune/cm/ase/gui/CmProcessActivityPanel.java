@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -52,7 +52,7 @@ extends TabularCntrPanel
 //	private static final String  PROP_PREFIX           = CmProcessActivity.CM_NAME;
 
 	public static final String  TOOLTIP_sample_systemThreads        = "<html>Sample System SPID's that executes in the ASE Server.<br><b>Note</b>: This is not a filter, you will have to wait for next sample time for this option to take effect.</html>";
-	public static final String  TOOLTIP_summaryGraph_discardDbxTune = "<html>Do <b>not</b> include values where Application name starts with '"+Version.getAppName()+"' in the Summary Graphs.</html>";
+	public static final String  TOOLTIP_summaryGraph_discardDbxTune = "<html>Do <b>not</b> include values where Application name starts with '" + Version.getAppName() + "' in the Summary Graphs.</html>";
 	public static final String  TOOLTIP_sample_sqlText              = "<html>Get SQL Text for SPID's that are active<br>Using ASE Function query_text(spid) but only if WaitEventID != 250 <i>'waiting for input from the network'</i>.<br><b>Note</b>: This functionality is only available in ASE 16 and above.</html>";
 	public static final String  TOOLTIP_sample_lastKnownSqlText     = "<html>Try to get Last Known SQL Text, <b>NOTE: Recording Must be enabled</b></html>";
 	public static final String  TOOLTIP_sample_lastKnownSqlText_all = "<html>if 'get Last Known SQL Text' is enabled, we can choose to get <b>more</b> than just the last SQL Text... </html>";
@@ -82,7 +82,7 @@ extends TabularCntrPanel
 		String colorStr = null;
 
 		// DARK BEIGE = PARENT of WORKER processes
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.worker.parent");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.worker.parent");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -97,7 +97,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, WORKER_PARENT), null));
 
 		// BEIGE = WORKER process
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.worker");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.worker");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -111,7 +111,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, WORKER_PROCESSES), null));
 
 		// YELLOW = SYSTEM process
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.system");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.system");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -125,7 +125,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.YELLOW), null));
 
 		// EXTREME_LIGHT_GREEN = Has Statement that is currently executing
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.runningStatement");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.runningStatement");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -140,7 +140,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, new Color(212, 255, 163)), null)); // Extreme light green
 
 		// GREEN = RUNNING or RUNNABLE process
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.running");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.running");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -154,7 +154,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.GREEN), null));
 
 		// VERY_LIGHT_GREEN = SEND SLEEP
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.sendSleep");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.sendSleep");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -168,7 +168,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, ColorUtils.VERY_LIGHT_GREEN), null));
 
 		// PINK = spid is BLOCKED by some other user
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocked");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.blocked");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -182,7 +182,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.PINK), null));
 
 		// RED = spid is BLOCKING other spids from running
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocking");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.blocking");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -237,7 +237,7 @@ extends TabularCntrPanel
 //		JCheckBox discardAppnameDbxTune_chk = new JCheckBox("<html>Discard '"+Version.getAppName()+"' Activity from the <b>Summary</b> Graphs</html>", conf == null ? CmProcessActivity.DEFAULT_summaryGraph_discardDbxTune : conf.getBooleanProperty(CmProcessActivity.PROPKEY_summaryGraph_discardDbxTune, CmProcessActivity.DEFAULT_summaryGraph_discardDbxTune));
 //		JCheckBox sampleSqlText_chk         = new JCheckBox("<html>Get SQL Text for active SPID's</html>",                                             conf == null ? CmProcessActivity.DEFAULT_sample_sqlText              : conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_sqlText,              CmProcessActivity.DEFAULT_sample_sqlText));
 		l_sampleSystemThreads_chk       = new JCheckBox("Show system processes",                                                                   conf == null ? CmProcessActivity.DEFAULT_sample_systemThreads        : conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_systemThreads,        CmProcessActivity.DEFAULT_sample_systemThreads));
-		l_discardAppnameDbxTune_chk     = new JCheckBox("<html>Discard '"+Version.getAppName()+"' Activity from the <b>Summary</b> Graphs</html>", conf == null ? CmProcessActivity.DEFAULT_summaryGraph_discardDbxTune : conf.getBooleanProperty(CmProcessActivity.PROPKEY_summaryGraph_discardDbxTune, CmProcessActivity.DEFAULT_summaryGraph_discardDbxTune));
+		l_discardAppnameDbxTune_chk     = new JCheckBox("<html>Discard '" + Version.getAppName() + "' Activity from the <b>Summary</b> Graphs</html>", conf == null ? CmProcessActivity.DEFAULT_summaryGraph_discardDbxTune : conf.getBooleanProperty(CmProcessActivity.PROPKEY_summaryGraph_discardDbxTune, CmProcessActivity.DEFAULT_summaryGraph_discardDbxTune));
 		l_sampleSqlText_chk             = new JCheckBox("<html>Get SQL Text for active SPID's</html>",                                             conf == null ? CmProcessActivity.DEFAULT_sample_sqlText              : conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_sqlText,              CmProcessActivity.DEFAULT_sample_sqlText));
 		l_sampleLastKnownSqlText_chk    = new JCheckBox("<html>Get Last Active SQL Text for SPID's</html>",                                        conf == null ? CmProcessActivity.DEFAULT_sample_lastKnownSqlText     : conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_lastKnownSqlText,     CmProcessActivity.DEFAULT_sample_lastKnownSqlText));
 		l_sampleLastKnownSqlTextAll_chk = new JCheckBox("<html>All Available</html>",                                                              conf == null ? CmProcessActivity.DEFAULT_sample_lastKnownSqlText     : conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_lastKnownSqlText_all, CmProcessActivity.DEFAULT_sample_lastKnownSqlText_all));

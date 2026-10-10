@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -51,7 +51,7 @@ public class DbConnTest
 			Connection conn = AseConnectionFactory.getConnection("gorans-xp", 5000, null, "sa", "", "DbConnTest", null, null);
 
 			String sql = "exec master..sp_help 'dbo.monLocks' ";
-			System.out.println("DO SQL: "+sql);
+			System.out.println("DO SQL: " + sql);
 
 			AseSqlScript ss = new AseSqlScript(conn, 10);
 			try	{ 

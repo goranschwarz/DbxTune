@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -109,7 +109,7 @@ public class WizardUserDefinedCm
 			e.printStackTrace();
 		}
 		
-		AseConnectionFactory.setAppName ( Version.getAppName()+"-Wizard-UDC" );
+		AseConnectionFactory.setAppName ( Version.getAppName() + "-Wizard-UDC" );
 		AseConnectionFactory.setUser    ( "sa" );
 		AseConnectionFactory.setPassword( "" );
 		AseConnectionFactory.setHostPort( "goransxp", "5000" );

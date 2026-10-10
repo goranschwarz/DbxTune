@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -98,7 +98,7 @@ public class CheckForUpdatesSqlw extends CheckForUpdates
 		}
 
 		urlParams.add("screenResolution",   SwingUtils.getScreenResulutionAsString());
-		urlParams.add("hiDpiScale",         SwingUtils.getHiDpiScale()+"");
+		urlParams.add("hiDpiScale",         SwingUtils.getHiDpiScale() + "");
 
 		urlParams.add("user_name",          System.getProperty("user.name"));
 		urlParams.add("user_home",          System.getProperty("user.home"));
@@ -164,7 +164,7 @@ public class CheckForUpdatesSqlw extends CheckForUpdates
 		urlParams.add("clientTime",          clientTime);
 		urlParams.add("userName",            System.getProperty("user.name"));
 
-		urlParams.add("connectId",           getConnectCount()+"");
+		urlParams.add("connectId",           getConnectCount() + "");
 		urlParams.add("connectType",         sqlwConnInfo.getConnTypeStr());
 
 		urlParams.add("prodName",            sqlwConnInfo.getProdName());
@@ -175,8 +175,8 @@ public class CheckForUpdatesSqlw extends CheckForUpdates
 		urlParams.add("jdbcDriver",          sqlwConnInfo.getJdbcDriver());
 		urlParams.add("jdbcUrl",             sqlwConnInfo.getJdbcUrl());
 
-		urlParams.add("srvVersionInt",       sqlwConnInfo.getSrvVersionNum()+"");
-		urlParams.add("srvVersionNum",       sqlwConnInfo.getSrvVersionNum()+"");
+		urlParams.add("srvVersionInt",       sqlwConnInfo.getSrvVersionNum() + "");
+		urlParams.add("srvVersionNum",       sqlwConnInfo.getSrvVersionNum() + "");
 		urlParams.add("srvName",             sqlwConnInfo.getSrvName());
 		urlParams.add("srvUser",             sqlwConnInfo.getSrvUser());
 		urlParams.add("srvPageSizeInKb",     sqlwConnInfo.getSrvPageSIzeInKb());
@@ -325,7 +325,7 @@ public class CheckForUpdatesSqlw extends CheckForUpdates
 			if      (_connType == ConnectionDialog.TDS_CONN)     _connTypeStr = "TDS";
 			else if (_connType == ConnectionDialog.OFFLINE_CONN) _connTypeStr = "OFFLINE";
 			else if (_connType == ConnectionDialog.JDBC_CONN)    _connTypeStr = "JDBC";
-			else                                                 _connTypeStr = "UNKNOWN("+connType+")";
+			else                                                 _connTypeStr = "UNKNOWN(" + connType + ")";
 		}
 		public int           getConnTypeInt      () { return _connType; }
 		public String        getConnTypeStr      () { return _connTypeStr       == null ? "UNKNOWN" : _connTypeStr; }
@@ -426,7 +426,7 @@ public class CheckForUpdatesSqlw extends CheckForUpdates
 			if      (_connType == ConnectionDialog.TDS_CONN)     return "TDS";
 			else if (_connType == ConnectionDialog.OFFLINE_CONN) return "OFFLINE";
 			else if (_connType == ConnectionDialog.JDBC_CONN)    return "JDBC";
-			else                                                 return "UNKNOWN("+_connType+")";
+			else                                                 return "UNKNOWN(" + _connType + ")";
 		}
 	}
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -64,10 +64,10 @@ extends AlarmEvent
 		setTimeToLive( ttlSec * 1000 );
 
 		// Set data
-		setData("Num="+errorNumber+", Severity="+errorSeverity+", Text=" + errorMessage.trim());
+		setData("Num=" + errorNumber + ", Severity=" + errorSeverity + ", Text=" + errorMessage.trim());
 
 		// Set the description 
-		setDescription("ErrorlogTs='" + errorlogTs + "', Num="+errorNumber+", Severity="+errorSeverity+", Text=" + errorMessage.trim()+ ", ExtraInfo=[AlarmEventSeverity="+alarmSeverity+", "+PROPKEY_alarm_timeToLiveInSeconds+"="+ttlSec+", severityThreshold="+severityThreshold+"]");
+		setDescription("ErrorlogTs='" + errorlogTs + "', Num=" + errorNumber + ", Severity=" + errorSeverity + ", Text=" + errorMessage.trim() + ", ExtraInfo=[AlarmEventSeverity=" + alarmSeverity + ", " + PROPKEY_alarm_timeToLiveInSeconds + "=" + ttlSec + ", severityThreshold=" + severityThreshold + "]");
 	}
 
 	/**

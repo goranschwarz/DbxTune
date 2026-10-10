@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -84,7 +84,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -112,7 +112,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmSysWaits(counterController, guiController);
 	}
@@ -318,7 +318,7 @@ extends CountersModel
 
 		if (pos_WaitEventID < 0 || pos_WaitEventDesc < 0 || pos_WaitClassDesc < 0)
 		{
-			_logger.debug("Can't find the position for columns ('WaitEventID'="+pos_WaitEventID+", 'WaitEventDesc'="+pos_WaitEventDesc+", 'WaitClassDesc'="+pos_WaitClassDesc+")");
+			_logger.debug("Can't find the position for columns ('WaitEventID'=" + pos_WaitEventID + ", 'WaitEventDesc'=" + pos_WaitEventDesc + ", 'WaitClassDesc'=" + pos_WaitClassDesc + ")");
 			return;
 		}
 		
@@ -423,7 +423,7 @@ extends CountersModel
 		//----------------------------------
 		addTrendGraph(GRAPH_NAME_EVENT_WAITS,
 			"Server Wait, group by EventID, Waits Average", 	                   // Menu CheckBox text
-			"Server Wait, group by EventID, Waits Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Server Wait, group by EventID, Waits Average (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
@@ -435,7 +435,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_EVENT_WTIME,
 			"Server Wait, group by EventID, WaitTime Average", 	                   // Menu CheckBox text
-			"Server Wait, group by EventID, WaitTime Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Server Wait, group by EventID, WaitTime Average (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
@@ -447,7 +447,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_EVENT_WTPW,
 			"Server Wait, group by EventID, WaitTimePerWait Average", 	                   // Menu CheckBox text
-			"Server Wait, group by EventID, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Server Wait, group by EventID, WaitTimePerWait Average (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
@@ -462,7 +462,7 @@ extends CountersModel
 		//----------------------------------
 		addTrendGraph(GRAPH_NAME_CLASS_WAITS,
 			"Server Wait, group by ClassName, Waits Average", 	                     // Menu CheckBox text
-			"Server Wait, group by ClassName, Waits Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Server Wait, group by ClassName, Waits Average (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
@@ -474,7 +474,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_CLASS_WTIME,
 			"Server Wait, group by ClassName, WaitTime Average", 	                     // Menu CheckBox text
-			"Server Wait, group by ClassName, WaitTime Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Server Wait, group by ClassName, WaitTime Average (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
@@ -486,7 +486,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_CLASS_WTPW,
 			"Server Wait, group by ClassName, WaitTimePerWait Average", 	                     // Menu CheckBox text
-			"Server Wait, group by ClassName, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Server Wait, group by ClassName, WaitTimePerWait Average (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
@@ -501,7 +501,7 @@ extends CountersModel
 		//----------------------------------
 		addTrendGraph(GRAPH_NAME_WAIT_LOCK_TIME,
 			"Server Waiting to Take Locks, by 'WaitTime' in Seconds", 	                   // Menu CheckBox text
-			"Server Waiting to Take Locks, by 'WaitTime' in Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Server Waiting to Take Locks, by 'WaitTime' in Seconds (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
@@ -513,7 +513,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_WAIT_LOCK_COUNT,
 			"Server Waiting to Take Locks, by 'Wait Count'", 	                   // Menu CheckBox text
-			"Server Waiting to Take Locks, by 'Wait Count' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Server Waiting to Take Locks, by 'Wait Count' (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
@@ -525,7 +525,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_WAIT_LOCK_TPW,
 			"Server Waiting to Take Locks, by 'WaitTimePerWait'", 	                   // Menu CheckBox text
-			"Server Waiting to Take Locks, by 'WaitTimePerWait' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Server Waiting to Take Locks, by 'WaitTimePerWait' (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
@@ -674,7 +674,7 @@ extends CountersModel
 		for (String str : StringUtil.commaStrToSet(skipEventIdListStr))
 		{
 			try { skipEventIdList.add(Integer.parseInt(str)); }
-			catch (NumberFormatException nfe) {_logger.info("CmName='"+getName()+"' updateGraphData(): when reading property '"+PROPKEY_trendGraph_skipWaitIdList+"' found a non number('"+str+"') in the list of WaitEventID's to skip. This specific 'ID' will not be added to the list. The full input-list, which has problems looks like '"+skipEventIdListStr+"'.");}
+			catch (NumberFormatException nfe) {_logger.info("CmName='" + getName() + "' updateGraphData(): when reading property '" + PROPKEY_trendGraph_skipWaitIdList + "' found a non number('" + str + "') in the list of WaitEventID's to skip. This specific 'ID' will not be added to the list. The full input-list, which has problems looks like '" + skipEventIdListStr + "'.");}
 		}
 		
 		// GET CONFIG: skipEventClassList
@@ -685,7 +685,7 @@ extends CountersModel
 		WaitCounterSummary.Type type = WaitCounterSummary.Type.WaitTimePerWait; 
 		String dataSourceStr = conf.getProperty(PROPKEY_trendGraph_dataSource, DEFAULT_trendGraph_dataSource);
 		try {type = WaitCounterSummary.Type.valueOf(dataSourceStr);}
-		catch (Throwable t) {_logger.warn("CM='"+getName()+"', Problems converting '"+dataSourceStr+"' to WaitCounterSummary.Type. Using '"+type+"' instead.");}
+		catch (Throwable t) {_logger.warn("CM='" + getName() + "', Problems converting '" + dataSourceStr + "' to WaitCounterSummary.Type. Using '" + type + "' instead.");}
 
 		// Create the Summary object
 		WaitCounterSummary wcs = WaitCounterSummary.create(this, skipEventIdList, skipEventClassList, null, false);

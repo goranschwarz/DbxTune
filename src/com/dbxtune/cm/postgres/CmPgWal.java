@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -68,7 +68,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = Ver.ver(14);
 	public static final long     NEED_CE_VERSION  = 0;
@@ -117,7 +117,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmPgWal(counterController, guiController);
 	}
@@ -165,7 +165,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_RECORDS,
 				"WAL Records per Second", 	                // Menu CheckBox text
-				"WAL Records per Second ("+SHORT_NAME+")", // Graph Label 
+				"WAL Records per Second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"wal_records"}, 
 				LabelType.Static, 
@@ -177,7 +177,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_WRITE_COUNT,
 				"WAL Writes per Second", 	                // Menu CheckBox text
-				"WAL Writes per Second ("+SHORT_NAME+")", // Graph Label 
+				"WAL Writes per Second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"wal_write", "wal_sync"}, 
 				LabelType.Static, 
@@ -189,7 +189,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_WRITE_TIME,
 				"WAL Write Time in ms", 	                // Menu CheckBox text
-				"WAL Write Time in ms ("+SHORT_NAME+")", // Graph Label 
+				"WAL Write Time in ms (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"wal_write_time", "wal_sync_time"}, 
 				LabelType.Static, 
@@ -201,7 +201,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_WAL_KB,
 				"WAL KB Written per Second", 	                // Menu CheckBox text
-				"WAL KB Written per Second ("+SHORT_NAME+")", // Graph Label 
+				"WAL KB Written per Second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"wal_kb"}, 
 				LabelType.Static, 
@@ -213,7 +213,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_FULL_COUNT,
 				"WAL Buffer was Full Writes per Second", 	                // Menu CheckBox text
-				"WAL Buffer was Full Writes per Second ("+SHORT_NAME+")", // Graph Label 
+				"WAL Buffer was Full Writes per Second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"wal_buffers_full"}, 
 				LabelType.Static, 
@@ -225,7 +225,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_WAL_SIZE_MB,
 				"pg_wal dir Size in MB", 	                // Menu CheckBox text
-				"pg_wal dir Size in MB ("+SHORT_NAME+")", // Graph Label 
+				"pg_wal dir Size in MB (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"pg_waldir_total_size_mb"}, 
 				LabelType.Static, 
@@ -399,7 +399,7 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_pgWaldirTotalSizeMb, DEFAULT_alarm_pgWaldirTotalSizeMb);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): pg_waldir_total_size_mb: threshold="+threshold+", pg_waldir_total_size_mb='"+pg_waldir_total_size_mb+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): pg_waldir_total_size_mb: threshold=" + threshold + ", pg_waldir_total_size_mb='" + pg_waldir_total_size_mb + "'.");
 
 				if (pg_waldir_total_size_mb.intValue() >= threshold)
 				{

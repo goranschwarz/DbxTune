@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -50,7 +50,7 @@ implements DbxConnectionStateInfo
 			case Connection.TRANSACTION_NONE:             return "NONE";
 
 			default:
-				return "TRANSACTION_ISOLATION_UNKNOWN_STATE("+isolation+")";
+				return "TRANSACTION_ISOLATION_UNKNOWN_STATE(" + isolation + ")";
 		}
 	}
 
@@ -120,7 +120,7 @@ implements DbxConnectionStateInfo
 		if ( ! getAutoCommit() )
 			autocommit = "AutoCommit=<b><font color='red'>" + autocommitBool + "</font></b>";
 
-		String text = "ac="+autocommitBool;
+		String text = "ac=" + autocommitBool;
 		
 		if ( ! autocommitBool )
 		{

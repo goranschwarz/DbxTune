@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -108,7 +108,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -147,7 +147,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmAlwaysOn(counterController, guiController);
 	}
@@ -232,7 +232,7 @@ extends CountersModel
 		DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
 		if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
 		{
-			_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '"+getDisplayName() + "', connected to Azure SQL Database or Analytics, which do NOT support this.");
+			_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '" + getDisplayName() + "', connected to Azure SQL Database or Analytics, which do NOT support this.");
 
 			// DISABLE
 			setActive(false, "This info is NOT available in Azure SQL Database or Azure Synapse/Analytics.");
@@ -287,7 +287,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_WRITE_TRANS,
 				"AlwaysOn Write Transactions Per Sec",        // Menu CheckBox text
-				"AlwaysOn Write Transactions Per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"AlwaysOn Write Transactions Per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -299,7 +299,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_BYTES_TO_REPLICA,
 				"AlwaysOn Bytes Sent to Replica Per Sec",        // Menu CheckBox text
-				"AlwaysOn Bytes Sent to Replica Per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"AlwaysOn Bytes Sent to Replica Per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_BYTES, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -311,7 +311,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_RECOVERY_QUEUE,
 				"AlwaysOn Recovery Queue, # Log Records",        // Menu CheckBox text
-				"AlwaysOn Recovery Queue, # Log Records ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"AlwaysOn Recovery Queue, # Log Records (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -323,7 +323,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_LOG_SEND_QUEUE_SIZE_IN_KB,
 				"AlwaysOn Log Send Queue Size In KB",        // Menu CheckBox text
-				"AlwaysOn Log Send Queue Size In KB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"AlwaysOn Log Send Queue Size In KB (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -335,7 +335,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_SECONDARY_COMMIT_LAG_TIME,
 				"AlwaysOn Secondary Commit Lag Time, in Seconds",        // Menu CheckBox text
-				"AlwaysOn Secondary Commit Lag Time, in Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"AlwaysOn Secondary Commit Lag Time, in Seconds (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -347,7 +347,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_PRIMARY_AVG_TRAN_DELAY,
 				"AlwaysOn Average Transaction/Commit Delay, in Milliseconds",        // Menu CheckBox text
-				"AlwaysOn Average Transaction/Commit Delay, in Milliseconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"AlwaysOn Average Transaction/Commit Delay, in Milliseconds (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -635,12 +635,12 @@ extends CountersModel
 			mtd.addColumn("CmAlwaysOn", "locality                             ".trim(),  "<html>Is this entry a 'LOCAL' or a 'REMOTE' entry. <br><b>Formula</b>: CASE WHEN ars.is_local = 1 THEN 'LOCAL' ELSE 'REMOTE' END </html>");
 			mtd.addColumn("CmAlwaysOn", "server_name                          ".trim(),  "<html>What server name does this entry hold information for.</html>");
 			mtd.addColumn("CmAlwaysOn", "ag_name                              ".trim(),  "<html>Availability Group Name</html>");
-			mtd.addColumn("CmAlwaysOn", "Validated                            ".trim(),  "<html>If 'Sample Live Remote Data' is enabled. Then we can validate the 'role_desc' with the '"+COLVAL_LOCALITY_REMOTE_LIVE_DATA+"' records."
+			mtd.addColumn("CmAlwaysOn", "Validated                            ".trim(),  "<html>If 'Sample Live Remote Data' is enabled. Then we can validate the 'role_desc' with the '" + COLVAL_LOCALITY_REMOTE_LIVE_DATA + "' records."
 			                                                                               + "The statuses mey be:<table>"
-			                                                                               + "  <tr> <td>&bull;</td> <td> <b>YES        </b> </td> <td> 'LOCAL' and '"+COLVAL_LOCALITY_REMOTE_LIVE_DATA+"' doesn't have the same 'role_desc'      </td></tr>"
+			                                                                               + "  <tr> <td>&bull;</td> <td> <b>YES        </b> </td> <td> 'LOCAL' and '" + COLVAL_LOCALITY_REMOTE_LIVE_DATA + "' doesn't have the same 'role_desc'      </td></tr>"
 			                                                                               + "  <tr> <td>&bull;</td> <td> <b>-          </b> </td> <td> 'REMOTE' records doesn't need to be validated...                                     </td></tr>"
-			                                                                               + "  <tr> <td>&bull;</td> <td> <b>INVALID    </b> </td> <td> 'LOCAL' and '"+COLVAL_LOCALITY_REMOTE_LIVE_DATA+"'  have the <b>same</b> 'role_desc'      </td></tr>"
-			                                                                               + "  <tr> <td>&bull;</td> <td> <b>SPLIT-BRAIN</b> </td> <td> 'LOCAL' and '"+COLVAL_LOCALITY_REMOTE_LIVE_DATA+"' have <b>PRIMARY</b> at the 'role_desc' </td></tr>"
+			                                                                               + "  <tr> <td>&bull;</td> <td> <b>INVALID    </b> </td> <td> 'LOCAL' and '" + COLVAL_LOCALITY_REMOTE_LIVE_DATA + "'  have the <b>same</b> 'role_desc'      </td></tr>"
+			                                                                               + "  <tr> <td>&bull;</td> <td> <b>SPLIT-BRAIN</b> </td> <td> 'LOCAL' and '" + COLVAL_LOCALITY_REMOTE_LIVE_DATA + "' have <b>PRIMARY</b> at the 'role_desc' </td></tr>"
 			                                                                               + "  <tr> <td>&bull;</td> <td> <b>NULL       </b> </td> <td> Not even validated ('Sample Live Remote Data' is <b>disabled</b>.                    </td></tr>"
 			                                                                               + "</table></html>");
 			mtd.addColumn("CmAlwaysOn", "BagPct                               ".trim(),  "<html>Percent of the Logical BAG (Basic Availability Group) which has the same 'role_desc'. The logical group is prefix of a group name (prefix is chars before first '_' or '-' character. <br>"
@@ -867,30 +867,30 @@ extends CountersModel
 			
 			if (passwd != null)
 			{
-				_logger.info("Grabbed DBMS password '******', for user '"+userName+"', DBMS Server '"+srvName+"' was from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+				_logger.info("Grabbed DBMS password '******', for user '" + userName + "', DBMS Server '" + srvName + "' was from the file '" + OpenSslAesUtil.getPasswordFilename() + "'.");
 
 				if (_logger.isDebugEnabled())
-					_logger.info("No DBMS password was specified. But the password '"+passwd+"', for user '"+userName+"', DBMS Server '"+srvName+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+					_logger.info("No DBMS password was specified. But the password '" + passwd + "', for user '" + userName + "', DBMS Server '" + srvName + "' was grabbed from the file '" + OpenSslAesUtil.getPasswordFilename() + "'.");
 
 				if (System.getProperty("nogui.password.print", "false").equalsIgnoreCase("true"))
-					System.out.println("#### DEBUG ####: No DBMS password was specified. But the password '"+passwd+"', for user '"+userName+"', DBMS Server '"+srvName+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+					System.out.println("#### DEBUG ####: No DBMS password was specified. But the password '" + passwd + "', for user '" + userName + "', DBMS Server '" + srvName + "' was grabbed from the file '" + OpenSslAesUtil.getPasswordFilename() + "'.");
 
 				return passwd;
 			}
 			else
-				_logger.info("No DBMS password was specified. and NO entry, for user '"+userName+"', DBMS Server '"+srvName+"' was found in the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+				_logger.info("No DBMS password was specified. and NO entry, for user '" + userName + "', DBMS Server '" + srvName + "' was found in the file '" + OpenSslAesUtil.getPasswordFilename() + "'.");
 		}
 		catch(DecryptionException ex)
 		{
-			_logger.info("Problems decrypting the password for user '"+userName+"', DBMS Server '"+srvName+"'. Probably a bad passphrase for the encrypted passwd. Caught: "+ex);
+			_logger.info("Problems decrypting the password for user '" + userName + "', DBMS Server '" + srvName + "'. Probably a bad passphrase for the encrypted passwd. Caught: " + ex);
 		}
 		catch(FileNotFoundException ex)
 		{
-			_logger.info("The password file '"+OpenSslAesUtil.getPasswordFilename()+"' didn't exists.");
+			_logger.info("The password file '" + OpenSslAesUtil.getPasswordFilename() + "' didn't exists.");
 		}
 		catch(IOException ex)
 		{
-			_logger.error("Problems reading the password file "+OpenSslAesUtil.getPasswordFilename()+"'. Caught: "+ex);
+			_logger.error("Problems reading the password file " + OpenSslAesUtil.getPasswordFilename() + "'. Caught: " + ex);
 		}
 		return null;
 	}
@@ -915,7 +915,7 @@ extends CountersModel
 		{
 			// Set status
 			if (cm != null && cm.hasCounterController())
-				cm.getCounterController().getRefreshStatus().setSubStatus("get conn to srv '"+srvName+"'");
+				cm.getCounterController().getRefreshStatus().setSubStatus("get conn to srv '" + srvName + "'");
 			
 			return _cpm.getPool(srvName).getConnection(guiOwner);
 		}
@@ -940,7 +940,7 @@ extends CountersModel
 			if (guiOwner != null)
 			{
 				// Ask for password to the remote server...
-				String promptPasswd = PromptForPassword.show(guiOwner, "Please specify Password for User '"+connProp.getUsername()+"' to DBMS '"+srvName+"'.", srvName, connProp.getUsername(), SaveType.TO_HOME_DOT_PASSWD_ENC, "mssql");
+				String promptPasswd = PromptForPassword.show(guiOwner, "Please specify Password for User '" + connProp.getUsername() + "' to DBMS '" + srvName + "'.", srvName, connProp.getUsername(), SaveType.TO_HOME_DOT_PASSWD_ENC, "mssql");
 				if (promptPasswd != null)
 				{
 					connProp.setPassword(promptPasswd);
@@ -955,7 +955,7 @@ extends CountersModel
 				}
 				
 			}
-			_logger.info("Trying to connect (to remote server '"+srvName+"' ) with the same password as we used to server '"+connProp.getUrl()+"', if this FAILS, please add password to the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+			_logger.info("Trying to connect (to remote server '" + srvName + "' ) with the same password as we used to server '" + connProp.getUrl() + "', if this FAILS, please add password to the file '" + OpenSslAesUtil.getPasswordFilename() + "'.");
 		}
 		
 		// Set the new server name
@@ -1012,12 +1012,12 @@ extends CountersModel
 
 		// Set status in GUI if available
 		if (cm != null && cm.hasCounterController())
-			cm.getCounterController().getRefreshStatus().setSubStatus("Connecting to srv '"+srvName+"'");
+			cm.getCounterController().getRefreshStatus().setSubStatus("Connecting to srv '" + srvName + "'");
 
 		// grab a new connection.
 		DbxConnection dbConn = cp.getConnection(guiOwner);
 
-		_logger.info("Created a new Connection for db '"+srvName+"', which will be cached in a connection pool. with maxSize=5, url='"+url+"', connProp="+connProp);
+		_logger.info("Created a new Connection for db '" + srvName + "', which will be cached in a connection pool. with maxSize=5, url='" + url + "', connProp=" + connProp);
 		
 		// when first connection is successfull, add the connection pool to the MAP
 		_cpm.setPool(srvName, cp);
@@ -1047,7 +1047,7 @@ extends CountersModel
 		else
 		{
 			// The connection pool did not exists, close this connection.
-			_logger.info("When trying to 'give back' a connection to the connection pool with key '"+srvName+"'. The key could not be found, so CLOSING the connection instead.");
+			_logger.info("When trying to 'give back' a connection to the connection pool with key '" + srvName + "'. The key could not be found, so CLOSING the connection instead.");
 			
 			// Close the connection...
 			dbConn.closeNoThrow();
@@ -1084,7 +1084,7 @@ extends CountersModel
 		//
 		int queryTimeout = getQueryTimeout();
 		if (_logger.isDebugEnabled())
-			_logger.debug(getName()+": queryTimeout="+queryTimeout);
+			_logger.debug(getName() + ": queryTimeout=" + queryTimeout);
 		
 		// Should we use the same SQL statement as we executed locally
 		String sql = getSql();
@@ -1106,18 +1106,18 @@ extends CountersModel
 					_logger.debug("Setting database context to 'master'.");
 
 				if (hasCounterController())
-					getCounterController().getRefreshStatus().setSubStatus("for srv '"+srvName+"'");
+					getCounterController().getRefreshStatus().setSubStatus("for srv '" + srvName + "'");
 
 				Statement stmnt = dbConn.createStatement();
 
 				stmnt.setQueryTimeout(queryTimeout); // XX seconds query timeout
 				if (_logger.isDebugEnabled())
-					_logger.debug("QUERY_TIMEOUT="+queryTimeout+", for Cm='"+getName()+"' and remoteServerName = '"+srvName+"'.");
+					_logger.debug("QUERY_TIMEOUT=" + queryTimeout + ", for Cm='" + getName() + "' and remoteServerName = '" + srvName + "'.");
 
 				atStep = "executeQuery(sql=|" + sql + "|)";
 				ResultSet rs = stmnt.executeQuery(sql);
 
-				ResultSetTableModel rstm = new ResultSetTableModel(rs, getName()+"-remote-"+srvName);
+				ResultSetTableModel rstm = new ResultSetTableModel(rs, getName() + "-remote-" + srvName);
 				map.put(srvName, rstm);
 
 				rs.close();
@@ -1183,7 +1183,7 @@ extends CountersModel
 						if (_logger.isDebugEnabled())
 						{
 							_logger.debug("");
-							_logger.debug("SrvName="+srvName);
+							_logger.debug("SrvName=" + srvName);
 							_logger.debug(StringUtil.toTableString(perfCounters.getColNames(CountersModel.DATA_ABS), perfCounters.getDataCollection(CountersModel.DATA_ABS)));
 						}
 						
@@ -1253,7 +1253,7 @@ extends CountersModel
 			}
 			catch (SQLException ex)
 			{
-				_logger.warn("Problems getting PRIMARY databases in Available Groups. Continuing anyway. Caught: Error="+ex.getErrorCode()+", Msg='"+ex.getMessage().trim()+"', SQL="+sql);
+				_logger.warn("Problems getting PRIMARY databases in Available Groups. Continuing anyway. Caught: Error=" + ex.getErrorCode() + ", Msg='" + ex.getMessage().trim() + "', SQL=" + sql);
 			}
 
 
@@ -1326,7 +1326,7 @@ extends CountersModel
 						try { conn.setCatalog(cwdbBefore); } 
 						catch(SQLException ex) 
 						{
-							_logger.warn("Problems setting Current Working database to '" + cwdbBefore + "'. Last known Current Working database '" + cwdbAfter + "'. Caught: Error="+ex.getErrorCode()+", Msg='"+ex.getMessage().trim()+"'.");
+							_logger.warn("Problems setting Current Working database to '" + cwdbBefore + "'. Last known Current Working database '" + cwdbAfter + "'. Caught: Error=" + ex.getErrorCode() + ", Msg='" + ex.getMessage().trim() + "'.");
 						}
 					}
 				}
@@ -2692,7 +2692,7 @@ extends CountersModel
 						int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LogSendQueueSizeInMb, DEFAULT_alarm_LogSendQueueSizeInMb);
 
 						if (debugPrint || _logger.isDebugEnabled())
-							System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", ag_name='"+ag_name+"', server_name='"+server_name+"', dbname='"+dbname+"', LogSendQueueSizeMb='"+LogSendQueueSizeMb+"'.");
+							System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", ag_name='" + ag_name + "', server_name='" + server_name + "', dbname='" + dbname + "', LogSendQueueSizeMb='" + LogSendQueueSizeMb + "'.");
 
 						if (LogSendQueueSizeMb > threshold)
 						{
@@ -2761,7 +2761,7 @@ extends CountersModel
 						int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_SecondaryCommitTimeLagInSeconds, DEFAULT_alarm_SecondaryCommitTimeLagInSeconds);
 
 						if (debugPrint || _logger.isDebugEnabled())
-							System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", ag_name='"+ag_name+"', server_name='"+server_name+"', dbname='"+dbname+"', SecondaryCommitTimeLag='"+SecondaryCommitTimeLag+"'.");
+							System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", ag_name='" + ag_name + "', server_name='" + server_name + "', dbname='" + dbname + "', SecondaryCommitTimeLag='" + SecondaryCommitTimeLag + "'.");
 
 					//	String toSrvName = StringUtils.substringBefore(SecondaryCommitTimeLag, "=");
 						String timeVal   = StringUtils.substringAfter (SecondaryCommitTimeLag, "=");
@@ -2927,7 +2927,7 @@ extends CountersModel
 					int bagPct = BagPct.intValue();
 					
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): ag_name='"+ag_name+"', bagPct='"+bagPct+"'.");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): ag_name='" + ag_name + "', bagPct='" + bagPct + "'.");
 
 					if (bagPct < 100 && bagPct != -1)
 					{

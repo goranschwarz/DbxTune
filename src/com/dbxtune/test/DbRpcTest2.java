@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -46,9 +46,9 @@ public class DbRpcTest2
 		System.out.println("-----------------------------------------");
 		System.out.println("Usage: url user passwd");
 		System.out.println("-----------------------------------------");
-		System.out.println("URL:    "+url);
-		System.out.println("USER:   "+user);
-		System.out.println("PASSWD: "+passwd);
+		System.out.println("URL:    " + url);
+		System.out.println("USER:   " + user);
+		System.out.println("PASSWD: " + passwd);
 		System.out.println("-----------------------------------------");
 
 		// DO THE THING
@@ -71,11 +71,11 @@ public class DbRpcTest2
 				Statement stmt = conn.createStatement();
 
 				sql = "use tempdb";
-				System.out.println("EXECUTE: "+sql);
+				System.out.println("EXECUTE: " + sql);
 				stmt.executeUpdate(sql);
 
 				sql = "if ((select object_id('get_xxx')) is not null ) drop PROCEDURE get_xxx";
-				System.out.println("EXECUTE: "+sql);
+				System.out.println("EXECUTE: " + sql);
 				stmt.executeUpdate(sql);
 
 				System.out.println("EXECUTE: create the proc...");
@@ -103,7 +103,7 @@ public class DbRpcTest2
 				sql = "{?=call get_xxx('use_package_variables', ?, ?)}";
 				System.out.println("");
 				System.out.println("############################################################################");
-				System.out.println("EXECUTE: "+sql);
+				System.out.println("EXECUTE: " + sql);
 				try
 				{
 					// Now prepare and execute the call
@@ -118,24 +118,24 @@ public class DbRpcTest2
 					while(rs.next())
 					{
 						row++;
-						System.out.println("reading result set, row "+row);
+						System.out.println("reading result set, row " + row);
 					}
 					rs.close();
 //					cstmt.executeUpdate();
 
 					int returnStat = cstmt.getInt(1);
-					System.out.println("PROC RC="+returnStat);
+					System.out.println("PROC RC=" + returnStat);
 
 					int p_int_value = cstmt.getInt(2);
-					System.out.println("OUT: p_int_value="+p_int_value);
+					System.out.println("OUT: p_int_value=" + p_int_value);
 
 					String p_str_value = cstmt.getString(3);
-					System.out.println("OUT: p_str_value="+p_str_value);
+					System.out.println("OUT: p_str_value=" + p_str_value);
 				}
 				catch (SQLException e)
 				{
 					System.out.println("=============================================");
-					System.out.println("FAILED EXECUTE: "+sql);
+					System.out.println("FAILED EXECUTE: " + sql);
 					System.out.println("---------------------------------------------");
 					e.printStackTrace();
 
@@ -147,7 +147,7 @@ public class DbRpcTest2
 				sql = "{?=call get_xxx(?, ?, ?)}";
 				System.out.println();
 				System.out.println("############################################################################");
-				System.out.println("EXECUTE: "+sql);
+				System.out.println("EXECUTE: " + sql);
 				try
 				{
 					// Now prepare and execute the call
@@ -163,24 +163,24 @@ public class DbRpcTest2
 					while(rs.next())
 					{
 						row++;
-						System.out.println("reading result set, row "+row);
+						System.out.println("reading result set, row " + row);
 					}
 					rs.close();
 //					cstmt.executeUpdate();
 
 					int returnStat = cstmt.getInt(1);
-					System.out.println("PROC RC="+returnStat);
+					System.out.println("PROC RC=" + returnStat);
 
 					int p_int_value = cstmt.getInt(3);
-					System.out.println("OUT: p_int_value="+p_int_value);
+					System.out.println("OUT: p_int_value=" + p_int_value);
 
 					String p_str_value = cstmt.getString(4);
-					System.out.println("OUT: p_str_value="+p_str_value);
+					System.out.println("OUT: p_str_value=" + p_str_value);
 				}
 				catch (SQLException e)
 				{
 					System.out.println("=============================================");
-					System.out.println("FAILED EXECUTE: "+sql);
+					System.out.println("FAILED EXECUTE: " + sql);
 					System.out.println("---------------------------------------------");
 					e.printStackTrace();
 				}

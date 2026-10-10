@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -161,7 +161,7 @@ public class HeartbeatMonitor
 			@Override
 			public void run()
 			{
-				_logger.info("Starting Heartbeat Monitor checker thread (sleepTimeInSec="+_sleepTimeInSec+", alarmAfterSec="+_alarmAfterSec+", reAlarmAfterSec="+_reAlarmAfterSec+").");
+				_logger.info("Starting Heartbeat Monitor checker thread (sleepTimeInSec=" + _sleepTimeInSec + ", alarmAfterSec=" + _alarmAfterSec + ", reAlarmAfterSec=" + _reAlarmAfterSec + ").");
 
 				// Just set a start-beat
 				_lastHeartbeat = System.currentTimeMillis();
@@ -178,7 +178,7 @@ public class HeartbeatMonitor
 							if (_lastWarnStackDumpTime < 0 || msSinceLastStackDump > _reAlarmAfterSec*1000)
 							{
 								String stackDump = JavaUtils.getStackDump(true);
-								_logger.warn("No heartbeat has been issued for "+(msSinceLastBeat/1000)+" seconds. Below is a stacktrace of all threads.\n" + stackDump);
+								_logger.warn("No heartbeat has been issued for " + (msSinceLastBeat/1000) + " seconds. Below is a stacktrace of all threads.\n" + stackDump);
 
 							//	_lastWarnStackDump     = stackDump;
 								_lastWarnStackDumpTime = System.currentTimeMillis();
@@ -190,8 +190,8 @@ public class HeartbeatMonitor
 						{
     						if (msSinceLastBeat > _restartAfterSec*1000)
     						{
-								_logger.warn("No heartbeat has been issued for "+(msSinceLastBeat/1000)+" seconds. Restart After "+_reAlarmAfterSec+" Seconds is enabled and has been reached.");
-								_logger.warn("RESTARTING SYSTEM. Exit code will be "+ShutdownHandler.RESTART_EXIT_CODE+". And the outer shellscript that started the system has to start it up again.");
+								_logger.warn("No heartbeat has been issued for " + (msSinceLastBeat/1000) + " seconds. Restart After " + _reAlarmAfterSec + " Seconds is enabled and has been reached.");
+								_logger.warn("RESTARTING SYSTEM. Exit code will be " + ShutdownHandler.RESTART_EXIT_CODE + ". And the outer shellscript that started the system has to start it up again.");
     							
     							System.exit(ShutdownHandler.RESTART_EXIT_CODE);
     						}
@@ -199,7 +199,7 @@ public class HeartbeatMonitor
 
 						if (_logger.isDebugEnabled())
 						{
-							_logger.debug("Heartbeat check. SecondsSinceLastBeat="+(msSinceLastBeat/1000)+", _alarmAfterSec="+_alarmAfterSec+", _reAlarmAfterSec="+_reAlarmAfterSec+", _lastWarnStackDumpTime="+_lastWarnStackDumpTime);
+							_logger.debug("Heartbeat check. SecondsSinceLastBeat=" + (msSinceLastBeat/1000) + ", _alarmAfterSec=" + _alarmAfterSec + ", _reAlarmAfterSec=" + _reAlarmAfterSec + ", _lastWarnStackDumpTime=" + _lastWarnStackDumpTime);
 						}
 
 						// Sleep
@@ -211,7 +211,7 @@ public class HeartbeatMonitor
 					}
 					catch (Throwable t)
 					{
-						_logger.warn("Heartbeat monitor had issues, but it will continue... Caught: "+t);
+						_logger.warn("Heartbeat monitor had issues, but it will continue... Caught: " + t);
 					}
 				} // end: while(_running)
 

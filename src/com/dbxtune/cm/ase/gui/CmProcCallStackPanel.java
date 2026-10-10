@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -57,7 +57,7 @@ extends TabularCntrPanel
 		String colorStr = null;
 
 		// Mark the row as GREEN if it's the EXECUTING procedure
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.executing");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.executing");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override

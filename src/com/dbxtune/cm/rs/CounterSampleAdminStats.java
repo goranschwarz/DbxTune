@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -148,7 +148,7 @@ extends CounterSample
 
 		int queryTimeout = cm.getQueryTimeout();
 		if (_logger.isDebugEnabled())
-			_logger.debug(_name+": queryTimeout="+queryTimeout);
+			_logger.debug(_name + ": queryTimeout=" + queryTimeout);
 
 		try
 		{
@@ -163,7 +163,7 @@ extends CounterSample
 
 			stmnt.setQueryTimeout(queryTimeout); // XX seconds query timeout
 			if (_logger.isDebugEnabled())
-				_logger.debug("QUERY_TIMEOUT="+queryTimeout+", for SampleCnt='"+_name+"'.");
+				_logger.debug("QUERY_TIMEOUT=" + queryTimeout + ", for SampleCnt='" + _name + "'.");
 
 			_rows   = new ArrayList<List<Object>>(getColumnCount());
 
@@ -195,9 +195,9 @@ extends CounterSample
 
 				if (_logger.isDebugEnabled())
 				{
-					_logger.debug("##### BEGIN (send sql), batchCounter="+batchCounter+" ############################### "+ getName());
+					_logger.debug("##### BEGIN (send sql), batchCounter=" + batchCounter + " ############################### " + getName());
 					_logger.debug(sendSql);
-					_logger.debug("##### END   (send sql), batchCounter="+batchCounter+" ############################### "+ getName());
+					_logger.debug("##### END   (send sql), batchCounter=" + batchCounter + " ############################### " + getName());
 					_logger.debug("");
 				}
 
@@ -253,7 +253,7 @@ extends CounterSample
 
 						if (rowsAffected >= 0)
 						{
-							_logger.debug("DDL or DML rowcount = "+rowsAffected);
+							_logger.debug("DDL or DML rowcount = " + rowsAffected);
 						}
 						else
 						{
@@ -264,7 +264,7 @@ extends CounterSample
 					// Check if we have more result sets
 					hasRs = stmnt.getMoreResults();
 	
-					_logger.trace( "--hasRs="+hasRs+", rsNum="+rsNum+", rowsAffected="+rowsAffected );
+					_logger.trace( "--hasRs=" + hasRs + ", rsNum=" + rsNum + ", rowsAffected=" + rowsAffected );
 				}
 				while (hasRs || rowsAffected != -1);
 	
@@ -397,10 +397,10 @@ extends CounterSample
 		}
 		catch (SQLException sqlEx)
 		{
-			_logger.warn("CounterSample("+_name+").getCnt : ErrorCode=" + sqlEx.getErrorCode() + ", Message=|" + sqlEx.getMessage() + "|. SQL: "+sql, sqlEx);
+			_logger.warn("CounterSample(" + _name + ").getCnt : ErrorCode=" + sqlEx.getErrorCode() + ", Message=|" + sqlEx.getMessage() + "|. SQL: " + sql, sqlEx);
 			if (sqlEx.toString().indexOf("SocketTimeoutException") > 0)
 			{
-				_logger.info("QueryTimeout in '"+_name+"', with query timeout '"+queryTimeout+"'. This can be changed with the config option '"+_name+".queryTimeout=seconds' in the config file.");
+				_logger.info("QueryTimeout in '" + _name + "', with query timeout '" + queryTimeout + "'. This can be changed with the config option '" + _name + ".queryTimeout=seconds' in the config file.");
 			}
 
 			//return false;
@@ -408,8 +408,8 @@ extends CounterSample
 		}
 		catch (IOException ex)
 		{
-			_logger.error("While reading the input SQL 'go' String, caught: "+ex, ex);
-			throw new SQLException("While reading the input SQL 'go' String, caught: "+ex, ex);
+			_logger.error("While reading the input SQL 'go' String, caught: " + ex, ex);
+			throw new SQLException("While reading the input SQL 'go' String, caught: " + ex, ex);
 		}
 	}
 
@@ -510,7 +510,7 @@ extends CounterSample
 
 		else
 		{
-			_logger.warn("Unknown first column name '"+firstColName+"' in the ResultSet");
+			_logger.warn("Unknown first column name '" + firstColName + "' in the ResultSet");
 		}
 
         return false;

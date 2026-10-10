@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -148,7 +148,7 @@ extends DbxConnection
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problem getting DB2 DBMS Server Name, setting this to 'unknownHostName'. SQL='"+sql+"', caught: "+ex);
+			_logger.warn("Problem getting DB2 DBMS Server Name, setting this to 'unknownHostName'. SQL='" + sql + "', caught: " + ex);
 			db2HostName = "unknownHostName";
 		}
 
@@ -167,7 +167,7 @@ extends DbxConnection
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problem getting DB2 DBMS Server Name, setting this to 'unknown'. SQL='"+sql+"', caught: "+ex);
+			_logger.warn("Problem getting DB2 DBMS Server Name, setting this to 'unknown'. SQL='" + sql + "', caught: " + ex);
 			serverName = "unknown";
 		}
 

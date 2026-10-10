@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -133,7 +133,7 @@ implements IDbmsConfigText
 		String sql = 
 			"select [configText] \n" +
 			"from " + tabName + " \n" +
-			"where [configName]       = '"+getConfigType().toString()+"' \n" +
+			"where [configName]       = '" + getConfigType().toString() + "' \n" +
 			"  and [SessionStartTime] = ";
 
 		if (ts == null)
@@ -258,7 +258,7 @@ implements IDbmsConfigText
 	@Override
 	public boolean isEnabled()
 	{
-		String propName = "dbms.config.text."+getName()+".enabled";
+		String propName = "dbms.config.text." + getName() + ".enabled";
 		boolean isEnabled = Configuration.getCombinedConfiguration().getBooleanProperty(propName, true);
 		
 		if (_logger.isDebugEnabled())
@@ -341,7 +341,7 @@ implements IDbmsConfigText
 
 			if ( ! haveRole )
 			{
-				return "This info is only available if you have been granted any of the following role(s) '"+needRole+"'.";
+				return "This info is only available if you have been granted any of the following role(s) '" + needRole + "'.";
 			}
 		}
 
@@ -360,7 +360,7 @@ implements IDbmsConfigText
 			if (missingConfigs.size() > 0)
 			{
 				String configStr;
-				configStr  = "This info is only available if the following configuration(s) has been enabled '"+needConfig+"'.\n";
+				configStr  = "This info is only available if the following configuration(s) has been enabled '" + needConfig + "'.\n";
 				configStr += "\n";
 				configStr += "The following configuration(s) is missing:\n";
 				for (String str : missingConfigs)
@@ -404,14 +404,14 @@ implements IDbmsConfigText
 			if ( ! isEnabled() )
 			{
 				setConfig("This configuration check is disabled. \n"
-						+ "To enable it: change the property 'dbms.config.text."+getName()+".enabled=false', to true. Or simply remove it.\n"
+						+ "To enable it: change the property 'dbms.config.text." + getName() + ".enabled=false', to true. Or simply remove it.\n"
 						+ "\n"
 						+ "The different properties files you can change it in is:\n"
 						+ "  - USER_TEMP:   " + Configuration.getInstance(Configuration.USER_TEMP).getFilename() + "\n"
 						+ "  - USER_CONF:   " + Configuration.getInstance(Configuration.USER_CONF).getFilename() + "\n"
 						+ "  - SYSTEM_CONF: " + Configuration.getInstance(Configuration.SYSTEM_CONF).getFilename() + "\n"
 						+ Version.getAppName() + " reads the config files in the above order. So USER_TEMP overrides the other files, etc...\n"
-						+ "Preferable change it in *USER_CONF* or USER_TEMP. SYSTEM_CONF is overwritten when a new version of "+Version.getAppName()+" is installed.\n"
+						+ "Preferable change it in *USER_CONF* or USER_TEMP. SYSTEM_CONF is overwritten when a new version of " + Version.getAppName() + " is installed.\n"
 						+ "If USER_CONF, do not exist: simply create it.");
 				return;
 			}
@@ -441,7 +441,7 @@ implements IDbmsConfigText
 		else 
 		{
 			String sql = getSqlOffline(conn, ts);
-			setConfig("The saved value for '"+getConfigType().toString()+"' wasn't available in the offline database, sorry.");
+			setConfig("The saved value for '" + getConfigType().toString() + "' wasn't available in the offline database, sorry.");
 			
 			try
 			{
@@ -459,12 +459,12 @@ implements IDbmsConfigText
 			{
 				if (_offline && ex.getMessage().contains("not found"))
 				{
-					_logger.warn("The saved value for '"+getConfigType().toString()+"' wasn't available in the offline database, sorry.");
+					_logger.warn("The saved value for '" + getConfigType().toString() + "' wasn't available in the offline database, sorry.");
 					return;
 				}
-				_logger.error("DbmsConfigText:initialize:sql='"+sql+"'", ex);
+				_logger.error("DbmsConfigText:initialize:sql='" + sql + "'", ex);
 				if (_hasGui)
-					SwingUtils.showErrorMessage("DbmsConfigText - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
+					SwingUtils.showErrorMessage("DbmsConfigText - Initialize", "SQL Exception: " + ex.getMessage() + "\n\nThis was found when executing SQL statement:\n\n" + sql, ex);
 				setConfig(null);
 
 				// JZ0C0: Connection is already closed.
@@ -642,11 +642,11 @@ implements IDbmsConfigText
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("DbmsConfigText:initialize:sql='"+sql+"'", ex);
+			_logger.error("DbmsConfigText:initialize:sql='" + sql + "'", ex);
 			if (_hasGui)
-				SwingUtils.showErrorMessage("DbmsConfigText - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
+				SwingUtils.showErrorMessage("DbmsConfigText - Initialize", "SQL Exception: " + ex.getMessage() + "\n\nThis was found when executing SQL statement:\n\n" + sql, ex);
 //			setConfig(null);
-			String errorMsg = "SQL Exception: "+ex.getMessage();
+			String errorMsg = "SQL Exception: " + ex.getMessage();
 
 			// JZ0C0: Connection is already closed.
 			// JZ006: Caught IOException: com.sybase.jdbc4.jdbc.SybConnectionDeadException: JZ0C0: Connection is already closed.
@@ -660,7 +660,7 @@ implements IDbmsConfigText
 				}
 				catch(Exception reconnectEx)
 				{
-					_logger.warn("DbmsConfigText:initialize(): reconnect failed due to: "+reconnectEx);
+					_logger.warn("DbmsConfigText:initialize(): reconnect failed due to: " + reconnectEx);
 //					throw ex; // Note throw the original exception and not reconnectEx
 					return ex + "";
 				}

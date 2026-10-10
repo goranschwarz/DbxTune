@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -382,8 +382,8 @@ implements ActionListener, TableModelListener
 				row.set(TAB_POS_STORE_DIFF, Boolean.valueOf(true));
 				row.set(TAB_POS_STORE_RATE, Boolean.valueOf(true));
 				row.set(TAB_POS_ICON,       SwingUtils.readImageIcon(Version.class, "images/ud_counter_activity.png"));
-				row.set(TAB_POS_TAB_NAME,   "Dummy Tab "+i);
-				row.set(TAB_POS_CM_NAME,    "cmDummy"+i);
+				row.set(TAB_POS_TAB_NAME,   "Dummy Tab " + i);
+				row.set(TAB_POS_CM_NAME,    "cmDummy" + i);
 				row.set(TAB_POS_LONG_DESC,  UUID.randomUUID().toString() + " : " + UUID.randomUUID().toString());
 				tab.add(row);
 			}			
@@ -458,13 +458,13 @@ implements ActionListener, TableModelListener
 //			wizardDataMap.put( cmName+"."+CountersModel.PROPKEY_persistCounters_diff, storeDiff +"");
 //			wizardDataMap.put( cmName+"."+CountersModel.PROPKEY_persistCounters_rate, storeRate +"");
 
-			wizDataMap.put( cmName+"."+CountersModel.PROPKEY_queryTimeout,         p_timeout);
-			wizDataMap.put( cmName+"."+CountersModel.PROPKEY_postponeTime,         p_postpone);
+			wizDataMap.put( cmName + "." + CountersModel.PROPKEY_queryTimeout,         p_timeout);
+			wizDataMap.put( cmName + "." + CountersModel.PROPKEY_postponeTime,         p_postpone);
 
-			wizDataMap.put( cmName+"."+CountersModel.PROPKEY_persistCounters,      p_storePcs );
-			wizDataMap.put( cmName+"."+CountersModel.PROPKEY_persistCounters_abs,  p_storeAbs );
-			wizDataMap.put( cmName+"."+CountersModel.PROPKEY_persistCounters_diff, p_storeDiff);
-			wizDataMap.put( cmName+"."+CountersModel.PROPKEY_persistCounters_rate, p_storeRate);
+			wizDataMap.put( cmName + "." + CountersModel.PROPKEY_persistCounters,      p_storePcs );
+			wizDataMap.put( cmName + "." + CountersModel.PROPKEY_persistCounters_abs,  p_storeAbs );
+			wizDataMap.put( cmName + "." + CountersModel.PROPKEY_persistCounters_diff, p_storeDiff);
+			wizDataMap.put( cmName + "." + CountersModel.PROPKEY_persistCounters_rate, p_storeRate);
 			
 			if (cm != null)
 			{

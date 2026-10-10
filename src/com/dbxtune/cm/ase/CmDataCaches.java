@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -72,7 +72,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_CACHE;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -103,7 +103,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmDataCaches(counterController, guiController);
 	}
@@ -144,7 +144,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_CACHE_ACTIVITY,
 			"Data Caches Activity", 	               // Menu CheckBox text
-			"Activity for All Data Caches per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Activity for All Data Caches per Second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Logical Reads", "Real Physical Reads", "Writes" }, 
 			LabelType.Static,
@@ -157,7 +157,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_CACHE_LOGICAL_READS,
 			"Data Caches LogicalReads", 	               // Menu CheckBox text
-			"Data Caches LogicalReads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Data Caches LogicalReads per Second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -170,7 +170,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_CACHE_PHYSICAL_READS,
 			"Data Caches PhysicalReads", 	               // Menu CheckBox text
-			"Data Caches PhysicalReads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Data Caches PhysicalReads per Second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -183,7 +183,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_CACHE_APF_READS,
 			"Data Caches ApfReads", 	               // Menu CheckBox text
-			"Data Caches ApfReads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Data Caches ApfReads per Second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -196,7 +196,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_CACHE_WRITES,
 			"Data Caches Writes", 	               // Menu CheckBox text
-			"Data Caches Writes per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Data Caches Writes per Second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -349,12 +349,12 @@ extends CountersModel
 		cols1 += "CacheName, CacheID, " +
 		         Status + Type + CacheSize + ReplacementStrategy + "\n" +
 		         "RelaxedReplacement, CachePartitions, BufferPools, \n" +
-		         "CacheSearches, "+RealPhysicalReads+" PhysicalReads, LogicalReads, PhysicalWrites, Stalls, \n" +
+		         "CacheSearches, " + RealPhysicalReads + " PhysicalReads, LogicalReads, PhysicalWrites, Stalls, \n" +
 		         APFReads + Overhead +
 		         CASGrabs + CASSpins + CASWaits + nl_160_sp2 +
 		         CASContention + nl_160_sp2 +
 		         CASSpinsPerWait + nl_160_sp2 +
-		         "CacheHitRate = convert(numeric(10,1), 100 - ("+calcPhysicalReads+"*1.0/(CacheSearches+1)) * 100.0)" +
+		         "CacheHitRate = convert(numeric(10,1), 100 - (" + calcPhysicalReads + "*1.0/(CacheSearches+1)) * 100.0)" +
 //		         ", HitRate    = convert(numeric(10,1), (CacheSearches * 1.0 / LogicalReads) * 100)" +
 //		         ", Misses     = convert(numeric(10,1), (CacheSearches * 1.0 / PhysicalReads) * 1)" +
 //		         ", Volatility = convert(numeric(10,1), PhysicalWrites * 1.0 / (PhysicalReads + LogicalReads)* 1)"
@@ -378,7 +378,7 @@ extends CountersModel
 			arr[0] = this.getRateValueSum("LogicalReads");
 			arr[1] = this.getRateValueSum("RealPhysicalReads");
 			arr[2] = this.getRateValueSum("PhysicalWrites");
-			_logger.debug("updateGraphData(CacheGraph): LogicalReads='"+arr[0]+"', RealPhysicalReads='"+arr[1]+"', PhysicalWrites='"+arr[2]+"'.");
+			_logger.debug("updateGraphData(CacheGraph): LogicalReads='" + arr[0] + "', RealPhysicalReads='" + arr[1] + "', PhysicalWrites='" + arr[2] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -494,7 +494,7 @@ extends CountersModel
 //			if (_logger.isDebugEnabled())
 //				_logger.debug("----CacheSearches = "+CacheSearches+", LogicalReads = "+LogicalReads+", PhysicalReads = "+PhysicalReads+", PhysicalWrites = "+PhysicalWrites);
 			if (_logger.isDebugEnabled())
-				_logger.debug("----CacheSearches = "+CacheSearches+", PhysicalReads = "+PhysicalReads+", RealPhysicalReads = "+RealPhysicalReads);
+				_logger.debug("----CacheSearches = " + CacheSearches + ", PhysicalReads = " + PhysicalReads + ", RealPhysicalReads = " + RealPhysicalReads);
 
 			// Handle divided by 0... (this happens if a engine goes offline
 			BigDecimal calcCacheHitRate = null;
@@ -526,7 +526,7 @@ extends CountersModel
 //				_logger.debug("++++CacheHitRate = "+calcCacheHitRate+", Misses = "+calcMisses+", Volatility = "+calcVolatility);
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("++++CacheHitRate = "+calcCacheHitRate);
+				_logger.debug("++++CacheHitRate = " + calcCacheHitRate);
 	
 			diffData.setValueAt(calcCacheHitRate, rowId, CacheHitRateId );
 //			diffData.setValueAt(calcMisses,       rowId, MissesId       );
@@ -615,7 +615,7 @@ extends CountersModel
 		// Get a array of rowId's where the column 'Name' has the value 'procedure cache size'
 		int[] rqRows = this.getAbsRowIdsWhere("CacheName", "default data cache");
 		if (rqRows == null)
-			_logger.warn("When checking for alarms in '"+getName()+"', getAbsRowIdsWhere('CacheName', 'default data cache'), returned null, so I can't do more here.");
+			_logger.warn("When checking for alarms in '" + getName() + "', getAbsRowIdsWhere('CacheName', 'default data cache'), returned null, so I can't do more here.");
 		else
 		{
 			//-------------------------------------------------------
@@ -632,7 +632,7 @@ extends CountersModel
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_DefaultDataCacheSizeInMb, DEFAULT_alarm_DefaultDataCacheSizeInMb);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", CacheName='default data cache', cacheSize="+cacheSize+".");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", CacheName='default data cache', cacheSize=" + cacheSize + ".");
 
 					if (cacheSize.intValue() < threshold)
 					{

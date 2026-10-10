@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -71,7 +71,7 @@ extends CounterModelHostMonitor
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_HOST_MONITOR;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -88,7 +88,7 @@ extends CounterModelHostMonitor
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmOsUptime(counterController, guiController);
 	}
@@ -131,7 +131,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_LOAD_AVERAGE,
 			"uptime: Load Average", 	                                    // Menu CheckBox text
-			"uptime: Load Average ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"uptime: Load Average (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "loadAverage_1Min",    "loadAverage_5Min",    "loadAverage_15Min" }, 
 			LabelType.Static,
@@ -144,7 +144,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_ADJ_LOAD_AVERAGE,
 			"uptime: Adjusted Load Average", 	                                    // Menu CheckBox text
-			"uptime: Adjusted Load Average ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"uptime: Adjusted Load Average (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "adjLoadAverage_1Min", "adjLoadAverage_5Min", "adjLoadAverage_15Min" }, 
 			LabelType.Static,
@@ -157,7 +157,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_WIN_LOAD_AVERAGE,
 			"uptime: Windows Processor Queue Length", 	                                    // Menu CheckBox text
-			"uptime: Windows Processor Queue Length ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"uptime: Windows Processor Queue Length (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Processor Queue Length" }, 
 			LabelType.Static,
@@ -241,7 +241,7 @@ extends CounterModelHostMonitor
 		// Check rowcount
 		if (osSampleTable.getRowCount() != 1)
 		{
-			_logger.warn(getName() + ".localCalculation(OsTable) expected number of rows was 1, the table contains "+osSampleTable.getRowCount()+" rows.");
+			_logger.warn(getName() + ".localCalculation(OsTable) expected number of rows was 1, the table contains " + osSampleTable.getRowCount() + " rows.");
 			return;
 		}
 		
@@ -395,7 +395,7 @@ extends CounterModelHostMonitor
 				double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_adjLoadAverage_1Min, DEFAULT_alarm_adjLoadAverage_1Min);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): adjLoadAverage_1Min: threshold="+threshold+", 1min=" + adjLoadAverage_1Min + ", 5min=" + adjLoadAverage_5Min + ", 15min=" + adjLoadAverage_15Min + ".");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): adjLoadAverage_1Min: threshold=" + threshold + ", 1min=" + adjLoadAverage_1Min + ", 5min=" + adjLoadAverage_5Min + ", 15min=" + adjLoadAverage_15Min + ".");
 
 				if (adjLoadAverage_1Min > threshold)
 				{
@@ -416,7 +416,7 @@ extends CounterModelHostMonitor
 				double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_adjLoadAverage_5Min, DEFAULT_alarm_adjLoadAverage_5Min);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): adjLoadAverage_5Min: threshold="+threshold+", 1min=" + adjLoadAverage_1Min + ", 5min=" + adjLoadAverage_5Min + ", 15min=" + adjLoadAverage_15Min + ".");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): adjLoadAverage_5Min: threshold=" + threshold + ", 1min=" + adjLoadAverage_1Min + ", 5min=" + adjLoadAverage_5Min + ", 15min=" + adjLoadAverage_15Min + ".");
 
 				if (adjLoadAverage_5Min > threshold)
 				{
@@ -437,7 +437,7 @@ extends CounterModelHostMonitor
 				double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_adjLoadAverage_15Min, DEFAULT_alarm_adjLoadAverage_15Min);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): adjLoadAverage_15Min: threshold="+threshold+", 1min=" + adjLoadAverage_1Min + ", 5min=" + adjLoadAverage_5Min + ", 15min=" + adjLoadAverage_15Min + ".");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): adjLoadAverage_15Min: threshold=" + threshold + ", 1min=" + adjLoadAverage_1Min + ", 5min=" + adjLoadAverage_5Min + ", 15min=" + adjLoadAverage_15Min + ".");
 
 				if (adjLoadAverage_15Min > threshold)
 				{

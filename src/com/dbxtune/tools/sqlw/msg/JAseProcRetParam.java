@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -44,7 +44,7 @@ extends JAseMessage
 	}
 	public JAseProcRetParam(final int pos, final Object val, final int type, String originSql)
 	{
-		super("RPC Return parameter: pos="+pos+", value="+toValue(val), originSql);
+		super("RPC Return parameter: pos=" + pos + ", value=" + toValue(val), originSql);
 		_pos     = pos;
 		_val     = val;
 		_sqlType = type;

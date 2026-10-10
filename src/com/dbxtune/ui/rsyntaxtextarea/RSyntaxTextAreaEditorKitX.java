@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -288,7 +288,7 @@ public class RSyntaxTextAreaEditorKitX
 					catch (Exception ex)
 					{
 						UIManager.getLookAndFeel().provideErrorFeedback(textArea);
-System.out.println("Problems pretty print SQL. Caught: "+ex);
+System.out.println("Problems pretty print SQL. Caught: " + ex);
 ex.printStackTrace();
 						return;
 					}

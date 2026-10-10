@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -45,10 +45,10 @@ public class DdlGenJdbcMetaData extends DdlGen
 		else if (type.equals(Type.VIEW))       { return getDdlForView     (name); } 
 		else if (type.equals(Type.PROCEDURE))  { return getDdlForProcedure(name); }
 		else if (type.equals(Type.FUNCTION))   { return getDdlForFunction (name); }
-		else if (type.equals(Type.RAW_PARAMS)) { throw new Exception("Type '"+type+"' is not supported for DdlGenJdbcMetaData."); }
+		else if (type.equals(Type.RAW_PARAMS)) { throw new Exception("Type '" + type + "' is not supported for DdlGenJdbcMetaData."); }
 		else 
 		{
-			throw new Exception("Unknown type '"+type+"'.");
+			throw new Exception("Unknown type '" + type + "'.");
 		}
 	}
 

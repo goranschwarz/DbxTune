@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -34,7 +34,7 @@ public class HtmlParserTest
 		}
 			
 		System.out.println("Usage: progname url");
-		System.out.println("URL: "+urlStr);
+		System.out.println("URL: " + urlStr);
 
 System.out.println("DOESN'T WORK, NEED TO UNCOMMENT");
 

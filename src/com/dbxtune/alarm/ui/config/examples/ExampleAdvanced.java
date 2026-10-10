@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -79,7 +79,7 @@ implements IUserDefinedAlarmInterrogator
 		String[] desiredCols = {"DBName", "LogSizeFreeInMb", "LogSizeUsedPct", "DataSizeFreeInMb", "DataSizeUsedPct"};
 		if ( ! cm.hasColumns(desiredCols) )
 		{
-			_logger.warn("Not all desired column names was available in cm '"+cm.getName()+"'. Missing columns: " + cm.getMissingColumns(desiredCols));
+			_logger.warn("Not all desired column names was available in cm '" + cm.getName() + "'. Missing columns: " + cm.getMissingColumns(desiredCols));
 			return;
 		}
 		
@@ -188,7 +188,7 @@ implements IUserDefinedAlarmInterrogator
 					AlarmEvent.Category.SPACE, 
 					AlarmEvent.Severity.WARNING, 
 					AlarmEvent.ServiceState.UP, 
-					"Found That LOG Space usage is low in '" + cm.getServerName() + "', dbname='" + dbname +"'. freeInMb=" + freeInMb + ", usedPct='"+usedPct+"'. (threshold="+threshold+")",
+					"Found That LOG Space usage is low in '" + cm.getServerName() + "', dbname='" + dbname + "'. freeInMb=" + freeInMb + ", usedPct='" + usedPct + "'. (threshold=" + threshold + ")",
 					threshold);
 
 			// Set: Time To Live if postpone is enabled
@@ -214,7 +214,7 @@ implements IUserDefinedAlarmInterrogator
 					AlarmEvent.Category.SPACE, 
 					AlarmEvent.Severity.WARNING, 
 					AlarmEvent.ServiceState.UP, 
-					"Found That DATA Space usage is low in '" + cm.getServerName() + "', dbname='" + dbname +"'. freeInMb=" + freeInMb + ", usedPct='"+usedPct+"'. (threshold="+threshold+")",
+					"Found That DATA Space usage is low in '" + cm.getServerName() + "', dbname='" + dbname + "'. freeInMb=" + freeInMb + ", usedPct='" + usedPct + "'. (threshold=" + threshold + ")",
 					threshold);
 
 			// Set: Time To Live if postpone is enabled

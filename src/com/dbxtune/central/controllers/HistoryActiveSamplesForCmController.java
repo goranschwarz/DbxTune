@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -190,8 +190,8 @@ extends HttpServlet
 		catch (Exception e)
 		{
 //			_logger.error("Problems writing Counter JSON data for srvName='" + input_srv + "', CounterModel='" + input_cmName + "'.", ex);
-			_logger.info("Problem accessing DBMS or writing JSON, Caught: "+e, e);
-			throw new ServletException("Problem accessing db or writing JSON, Caught: "+e, e);
+			_logger.info("Problem accessing DBMS or writing JSON, Caught: " + e, e);
+			throw new ServletException("Problem accessing db or writing JSON, Caught: " + e, e);
 		}
 		
 		out.println(payload);
@@ -264,7 +264,7 @@ extends HttpServlet
 			{
 				Timestamp ts = srvEntry.getKey();
 				Map<String,Set<String>> srvEntryMap = srvEntry.getValue();
-System.out.println("TS=|"+ts+"|, srvEntryMap=|"+srvEntryMap+"|.");
+System.out.println("TS=|" + ts + "|, srvEntryMap=|" + srvEntryMap + "|.");
 
 				gen.writeStartObject(); // ------------- START OBJECT 'sample' -------------
 
@@ -277,7 +277,7 @@ System.out.println("TS=|"+ts+"|, srvEntryMap=|"+srvEntryMap+"|.");
 				{
 					String srvName = srvCmEntry.getKey();
 					Set<String> cmSet = srvCmEntry.getValue();
-System.out.println("    srvName=|"+srvName+"|, cmSet=|"+cmSet+"|.");
+System.out.println("    srvName=|" + srvName + "|, cmSet=|" + cmSet + "|.");
 
 					String appName = "DummyAppName";
 

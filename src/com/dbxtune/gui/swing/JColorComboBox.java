@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -395,7 +395,7 @@ public final class JColorComboBox
 	@Override
 	public void setSelectedItem(Object color)
 	{
-		System.out.println("JColorComboBox.setSelectedItem(Object): color.getClass='"+color.getClass().getName()+"', color.toString='"+color+"'.");
+		System.out.println("JColorComboBox.setSelectedItem(Object): color.getClass='" + color.getClass().getName() + "', color.toString='" + color + "'.");
 		if (color instanceof Pair)
 		{
 			super.setSelectedItem(color);

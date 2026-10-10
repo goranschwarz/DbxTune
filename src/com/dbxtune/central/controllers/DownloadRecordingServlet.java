@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -59,7 +59,7 @@ extends HttpServlet
 		if (principal != null)
 			currentUsername = principal.getName();
 
-		String from = "from getRemoteHost='" + request.getRemoteHost() + "', currentUsername='"+currentUsername+"', by user '" + request.getRemoteUser() + "', UserAgent='" + request.getHeader("User-Agent") + "'.";
+		String from = "from getRemoteHost='" + request.getRemoteHost() + "', currentUsername='" + currentUsername + "', by user '" + request.getRemoteUser() + "', UserAgent='" + request.getHeader("User-Agent") + "'.";
 
 		String recordingsDir = DbxTuneCentral.getAppDataDir();
 		

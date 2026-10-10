@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -65,7 +65,7 @@ public class DbxStatement implements Statement
 	public ResultSet executeQuery(String sql) throws SQLException
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("DbxStatement.executeQuery(String): sql='"+sql+"'.");
+			_logger.debug("DbxStatement.executeQuery(String): sql='" + sql + "'.");
 		
 		return _stmnt.executeQuery(sql);
 	}
@@ -80,7 +80,7 @@ public class DbxStatement implements Statement
 	public int executeUpdate(String sql) throws SQLException
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("DbxStatement.executeUpdate(String): sql='"+sql+"'.");
+			_logger.debug("DbxStatement.executeUpdate(String): sql='" + sql + "'.");
 		
 		return _stmnt.executeUpdate(sql);
 	}
@@ -167,7 +167,7 @@ public class DbxStatement implements Statement
 	public boolean execute(String sql) throws SQLException
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("DbxStatement.execute(String): sql='"+sql+"'.");
+			_logger.debug("DbxStatement.execute(String): sql='" + sql + "'.");
 		
 		return _stmnt.execute(sql);
 	}

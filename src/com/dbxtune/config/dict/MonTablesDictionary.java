@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -269,7 +269,7 @@ public abstract class MonTablesDictionary
 		public String toString()
 		{
 			StringBuilder sb = new StringBuilder();
-			sb.append(super.toString()).append(" _tableID="+_tableID+", _columns='"+_columns+"', _parameters='"+_parameters+"', _indicators='"+_indicators+"', _size='"+_size+"', _tableName='"+_tableName+"', _description='"+_description+"'.").append("\n");
+			sb.append(super.toString()).append(" _tableID=" + _tableID + ", _columns='" + _columns + "', _parameters='" + _parameters + "', _indicators='" + _indicators + "', _size='" + _size + "', _tableName='" + _tableName + "', _description='" + _description + "'.").append("\n");
 			for (MonTableColumnsEntry ce : _monTableColumns.values())
 				sb.append("    ").append(ce.toString()).append("\n");
 			return sb.toString();
@@ -298,7 +298,7 @@ public abstract class MonTablesDictionary
 		@Override
 		public String toString()
 		{
-			return super.toString()+" _tableID="+_tableID+", _columnID='"+_columnID+"', _typeID='"+_typeID+"', _precision='"+_precision+"', _scale='"+_scale+"', _length='"+_length+"', _indicators='"+_indicators+"', _tableName='"+_tableName+"', _columnName='"+_columnName+"', _typeName='"+_typeName+"', _description='"+_description+"'.";
+			return super.toString() + " _tableID=" + _tableID + ", _columnID='" + _columnID + "', _typeID='" + _typeID + "', _precision='" + _precision + "', _scale='" + _scale + "', _length='" + _length + "', _indicators='" + _indicators + "', _tableName='" + _tableName + "', _columnName='" + _columnName + "', _typeName='" + _typeName + "', _description='" + _description + "'.";
 		}
 	}
 
@@ -310,7 +310,7 @@ public abstract class MonTablesDictionary
 		@Override
 		public String toString()
 		{
-			return "MonWaitClassInfoEntry _waitClassId="+_waitClassId+", _description='"+_description+"'.";
+			return "MonWaitClassInfoEntry _waitClassId=" + _waitClassId + ", _description='" + _description + "'.";
 		}
 	}
 	public static class MonWaitEventInfoEntry
@@ -322,7 +322,7 @@ public abstract class MonTablesDictionary
 		@Override
 		public String toString()
 		{
-			return "MonWaitEventInfoEntry _waitEventId="+_waitEventId+", _waitClassId="+_waitClassId+", _description='"+_description+"'.";
+			return "MonWaitEventInfoEntry _waitEventId=" + _waitEventId + ", _waitClassId=" + _waitClassId + ", _description='" + _description + "'.";
 		}
 	}
 
@@ -1130,7 +1130,7 @@ public abstract class MonTablesDictionary
 		
 		if (monTableEntry == null)
 		{
-			throw new NameNotFoundException("The table '"+tabName+"' was not found in the MonTables dictionary.");
+			throw new NameNotFoundException("The table '" + tabName + "' was not found in the MonTables dictionary.");
 		}
 
 		if (monTableEntry._monTableColumns == null)
@@ -1184,7 +1184,7 @@ public abstract class MonTablesDictionary
 		
 		if (monTableEntry == null)
 		{
-			throw new NameNotFoundException("The table '"+tabName+"' was not found in the MonTables dictionary.");
+			throw new NameNotFoundException("The table '" + tabName + "' was not found in the MonTables dictionary.");
 		}
 
 		if (monTableEntry._monTableColumns == null)
@@ -1382,7 +1382,7 @@ public abstract class MonTablesDictionary
 
 		if (desc == null)
 		{
-			desc = "-unknown-waitEventId-"+waitEventId;
+			desc = "-unknown-waitEventId-" + waitEventId;
 		}
 
 		return desc;
@@ -1433,7 +1433,7 @@ public abstract class MonTablesDictionary
 					desc = _monWaitClassInfo[waitClassId]._description;
 
 				if (desc == null)
-					desc = "-unknown-waitClassId-"+waitClassId+"-for-known-waitEventId-"+waitEventId;
+					desc = "-unknown-waitClassId-" + waitClassId + "-for-known-waitEventId-" + waitEventId;
 			}
 		}
 		catch (ArrayIndexOutOfBoundsException e)
@@ -1441,7 +1441,7 @@ public abstract class MonTablesDictionary
 		}
 
 		if (desc == null)
-			desc = "-unknown-waitEventId-"+waitEventId;
+			desc = "-unknown-waitEventId-" + waitEventId;
 
 		return desc;
 	}
@@ -1469,7 +1469,7 @@ public abstract class MonTablesDictionary
 
 		if (desc == null)
 		{
-			desc = "-unknown-waitClassId-"+waitClassId;
+			desc = "-unknown-waitClassId-" + waitClassId;
 		}
 
 		return desc;

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -300,7 +300,7 @@ implements AutoCloseable
 		
 		if (StringUtil.isNullOrBlank(_targetUrl))
 		{
-			_targetUrl = "jdbc:h2:file:"+targetDbName+targetH2UrlOp;
+			_targetUrl = "jdbc:h2:file:" + targetDbName+targetH2UrlOp;
 		}
 		else
 		{
@@ -310,7 +310,7 @@ implements AutoCloseable
 				String dbname = _targetUrl; 
 				if (dbname.endsWith(".mv.db")) 
 					dbname = dbname.substring(0, dbname.length()-".mv.db".length()); 
-				_targetUrl = "jdbc:h2:file:"+dbname+targetH2UrlOp;
+				_targetUrl = "jdbc:h2:file:" + dbname+targetH2UrlOp;
 			}
 		}
 
@@ -320,7 +320,7 @@ implements AutoCloseable
 			_targetH2File = new H2UrlHelper(_targetUrl).getDbFile(true);
 			if (_targetH2File.exists())
 			{
-				_logger.info("The TARGET H2 database file already EXISTS, Enabling 'dmlUseMerge=true' for the transfer. Target H2 Database File='"+_targetH2File+"'.");
+				_logger.info("The TARGET H2 database file already EXISTS, Enabling 'dmlUseMerge=true' for the transfer. Target H2 Database File='" + _targetH2File + "'.");
 				_dmlUseMerge = true;
 			}
 		}
@@ -370,7 +370,7 @@ implements AutoCloseable
 
 				boolean debug = true;
 				if (debug)
-					System.out.println("   SETTING SYSTEM PROPERTY: key=|"+key+"|, val=|"+val+"|.");
+					System.out.println("   SETTING SYSTEM PROPERTY: key=|" + key + "|, val=|" + val + "|.");
 			}
 		}
 		
@@ -396,7 +396,7 @@ implements AutoCloseable
 //			logFilename = getAppLogDir() + File.separatorChar + "log" + File.separatorChar + Version.getAppName()+".log";
 			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HHmmss");
 			String ts = sdf.format(new Date());
-			logFilename = logPath + Version.getAppName()+"." + ts + ".log";
+			logFilename = logPath + Version.getAppName() + "." + ts + ".log";
 		}
 
 		
@@ -434,45 +434,45 @@ implements AutoCloseable
 		
 		// Print out the memory configuration
 		// And the JVM info
-		_logger.info("Starting "+Version.getAppName()+", version "+Version.getVersionStr()+", build "+Version.getBuildStr());
-		_logger.info("Debug Options enabled: "+Debug.getDebugsString());
+		_logger.info("Starting " + Version.getAppName() + ", version " + Version.getVersionStr() + ", build " + Version.getBuildStr());
+		_logger.info("Debug Options enabled: " + Debug.getDebugsString());
 
-		_logger.info("Using Java Runtime Environment Version: "+System.getProperty("java.version"));
-		_logger.info("Using Java VM Implementation  Version: "+System.getProperty("java.vm.version"));
-		_logger.info("Using Java VM Implementation  Vendor:  "+System.getProperty("java.vm.vendor"));
-		_logger.info("Using Java VM Implementation  Name:    "+System.getProperty("java.vm.name"));
-		_logger.info("Using Java VM Home:    "+System.getProperty("java.home"));
-		_logger.info("Java class format version number: " +System.getProperty("java.class.version"));
-		_logger.info("Java class path: " +System.getProperty("java.class.path"));
-		_logger.info("List of paths to search when loading libraries: " +System.getProperty("java.library.path"));
-		_logger.info("Name of JIT compiler to use: " +System.getProperty("java.compiler"));
-		_logger.info("Path of extension directory or directories: " +System.getProperty("java.ext.dirs"));
+		_logger.info("Using Java Runtime Environment Version: " + System.getProperty("java.version"));
+		_logger.info("Using Java VM Implementation  Version: " + System.getProperty("java.vm.version"));
+		_logger.info("Using Java VM Implementation  Vendor:  " + System.getProperty("java.vm.vendor"));
+		_logger.info("Using Java VM Implementation  Name:    " + System.getProperty("java.vm.name"));
+		_logger.info("Using Java VM Home:    " + System.getProperty("java.home"));
+		_logger.info("Java class format version number: " + System.getProperty("java.class.version"));
+		_logger.info("Java class path: " + System.getProperty("java.class.path"));
+		_logger.info("List of paths to search when loading libraries: " + System.getProperty("java.library.path"));
+		_logger.info("Name of JIT compiler to use: " + System.getProperty("java.compiler"));
+		_logger.info("Path of extension directory or directories: " + System.getProperty("java.ext.dirs"));
 
-		_logger.info("Maximum memory is set to:  "+Runtime.getRuntime().maxMemory() / 1024 / 1024 + " MB. this could be changed with  -Xmx###m (where ### is number of MB)"); // jdk 1.4 or higher
-		_logger.info("Total Physical Memory on this machine:  "+ Memory.getTotalPhysicalMemorySizeInMB() + " MB.");
-		_logger.info("Free Physical Memory on this machine:  "+ Memory.getFreePhysicalMemorySizeInMB() + " MB.");
-		_logger.info("Running on Operating System Name:  "+System.getProperty("os.name"));
-		_logger.info("Running on Operating System Version:  "+System.getProperty("os.version"));
-		_logger.info("Running on Operating System Architecture:  "+System.getProperty("os.arch"));
-		_logger.info("The application was started by the username:  "+System.getProperty("user.name"));
-		_logger.info("The application was started in the directory:   "+System.getProperty("user.dir"));
-		_logger.info("The user '"+System.getProperty("user.name")+"' home directory:   "+System.getProperty("user.home"));
+		_logger.info("Maximum memory is set to:  " + Runtime.getRuntime().maxMemory() / 1024 / 1024 + " MB. this could be changed with  -Xmx###m (where ### is number of MB)"); // jdk 1.4 or higher
+		_logger.info("Total Physical Memory on this machine:  " + Memory.getTotalPhysicalMemorySizeInMB() + " MB.");
+		_logger.info("Free Physical Memory on this machine:  " + Memory.getFreePhysicalMemorySizeInMB() + " MB.");
+		_logger.info("Running on Operating System Name:  " + System.getProperty("os.name"));
+		_logger.info("Running on Operating System Version:  " + System.getProperty("os.version"));
+		_logger.info("Running on Operating System Architecture:  " + System.getProperty("os.arch"));
+		_logger.info("The application was started by the username:  " + System.getProperty("user.name"));
+		_logger.info("The application was started in the directory:   " + System.getProperty("user.dir"));
+		_logger.info("The user '" + System.getProperty("user.name") + "' home directory:   " + System.getProperty("user.home"));
 
-		_logger.info("System configuration file is '"+propFile+"'.");
+		_logger.info("System configuration file is '" + propFile + "'.");
 //		_logger.info("User configuration file is '"+userPropFile+"'.");
 //		_logger.info("Storing temporary configurations in file '"+tmpPropFile+"'.");
-		_logger.info("Combined Configuration Search Order '"+StringUtil.toCommaStr(Configuration.getSearchOrder())+"'.");
+		_logger.info("Combined Configuration Search Order '" + StringUtil.toCommaStr(Configuration.getSearchOrder()) + "'.");
 
 		// If the config file exists, read it, if not create empty
 		if ( (new File(propFile)).exists() )
 		{
-			_logger.info("Using configuration file '"+propFile+"'.");
+			_logger.info("Using configuration file '" + propFile + "'.");
 			Configuration appProps = new Configuration(propFile);
 			Configuration.setInstance(Configuration.SYSTEM_CONF, appProps);
 		}
 		else
 		{
-			_logger.info("The configuration file '"+propFile+"', did not exists, starting with an empty configuration.");
+			_logger.info("The configuration file '" + propFile + "', did not exists, starting with an empty configuration.");
 			Configuration appProps = new Configuration();
 			Configuration.setInstance(Configuration.SYSTEM_CONF, appProps);
 		}
@@ -663,23 +663,23 @@ implements AutoCloseable
 				}
 			}
 		}
-		System.out.println("  Source User   : '"+_sourceUser   + "'");
-		System.out.println("  Source Passwd : '"+_sourcePasswd + "'");
-		System.out.println("  Source URL    : '"+_sourceUrl    + "'");
+		System.out.println("  Source User   : '" + _sourceUser   + "'");
+		System.out.println("  Source Passwd : '" + _sourcePasswd + "'");
+		System.out.println("  Source URL    : '" + _sourceUrl    + "'");
 		if (_sourceUrl.startsWith("jdbc:h2:file:"))
-			System.out.println("  H2 File Exists: " + (_sourceH2File == null ? false : _sourceH2File.exists()) + ", name='"+_sourceH2File+"'");
+			System.out.println("  H2 File Exists: " + (_sourceH2File == null ? false : _sourceH2File.exists()) + ", name='" + _sourceH2File + "'");
 		System.out.println("");
-		System.out.println("  Target User   : '"+_targetUser   + "'");
-		System.out.println("  Target Passwd : '"+_targetPasswd + "'");
-		System.out.println("  Target URL    : '"+_targetUrl    + "'");   
+		System.out.println("  Target User   : '" + _targetUser   + "'");
+		System.out.println("  Target Passwd : '" + _targetPasswd + "'");
+		System.out.println("  Target URL    : '" + _targetUrl    + "'");   
 		if (_targetUrl.startsWith("jdbc:h2:file:"))
-			System.out.println("  H2 File Exists: " + (_targetH2File == null ? false : _targetH2File.exists()) + ", name='"+_targetH2File+"'");
+			System.out.println("  H2 File Exists: " + (_targetH2File == null ? false : _targetH2File.exists()) + ", name='" + _targetH2File + "'");
 		System.out.println("");
 		System.out.println("  Options:");
-		System.out.println("    ddlPrintExec  : "+_ddlPrintExec );
-		System.out.println("    ddlSkipErrors : "+_ddlSkipErrors);
-		System.out.println("    dmlBatchSize  : "+_dmlBatchSize );
-		System.out.println("    dmlUseMerge   : "+_dmlUseMerge  );
+		System.out.println("    ddlPrintExec  : " + _ddlPrintExec );
+		System.out.println("    ddlSkipErrors : " + _ddlSkipErrors);
+		System.out.println("    dmlBatchSize  : " + _dmlBatchSize );
+		System.out.println("    dmlUseMerge   : " + _dmlUseMerge  );
 		System.out.println("-------------------------------------------------------------");
 		System.out.println("NOTE: For the moment this only works for H2 database");
 		System.out.println(" - to execute specify '-e' or '--exec' switch.");
@@ -764,7 +764,7 @@ implements AutoCloseable
 		cp.setUsername(user);
 		cp.setPassword(passwd);
 		cp.setUrl(url);
-		cp.setAppName(H2CentralDbCopy.class.getSimpleName() + ": "+type);
+		cp.setAppName(H2CentralDbCopy.class.getSimpleName() + ": " + type);
 		
 		_logger.info("Connecting to '" + type + "', with user '" + user + "', using url '" + url + "'.");
 //		return DbxConnection.createDbxConnection( DriverManager.getConnection(url, user, passwd) );
@@ -807,7 +807,7 @@ implements AutoCloseable
 		
 		// Get SOURCE DbxCentral DB Version
 		_sourceDbxCentralDbVersion = -1;
-		sql = "select "+q+"DbVersion"+q+" from " +q+"PUBLIC"+q+ "." +q+"DbxCentralVersionInfo"+q+" where "+q+"ProductString"+q+" = 'DbxTuneCentral'";
+		sql = "select " + q + "DbVersion" + q + " from " + q + "PUBLIC" + q + "." + q + "DbxCentralVersionInfo" + q + " where " + q + "ProductString" + q + " = 'DbxTuneCentral'";
 		try (Statement stmnt = _sourceConn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 		{
 			while(rs.next())
@@ -815,13 +815,13 @@ implements AutoCloseable
 		}
 		catch(SQLException ex)
 		{
-			_logger.warn("Problems getting SOURCE DbxCentral DbVersion using sql='"+sql+"'. caught: "+ex);
+			_logger.warn("Problems getting SOURCE DbxCentral DbVersion using sql='" + sql + "'. caught: " + ex);
 		}
-		_logger.info("SOURCE DbxCentral DbVersion = "+_sourceDbxCentralDbVersion);
+		_logger.info("SOURCE DbxCentral DbVersion = " + _sourceDbxCentralDbVersion);
 
 		// Get TARGET DbxCentral DB Version
 		_targetDbxCentralDbVersion = -1;
-		sql = "select "+q+"DbVersion"+q+" from " +q+"PUBLIC"+q+ "." +q+"DbxCentralVersionInfo"+q+" where "+q+"ProductString"+q+" = 'DbxTuneCentral'";
+		sql = "select " + q + "DbVersion" + q + " from " + q + "PUBLIC" + q + "." + q + "DbxCentralVersionInfo" + q + " where " + q + "ProductString" + q + " = 'DbxTuneCentral'";
 		try (Statement stmnt = _sourceConn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 		{
 			while(rs.next())
@@ -833,7 +833,7 @@ implements AutoCloseable
 		}
 		if (_targetDbxCentralDbVersion >= 0)
 		{
-			_logger.info("TARGET DbxCentral DbVersion = "+_targetDbxCentralDbVersion);
+			_logger.info("TARGET DbxCentral DbVersion = " + _targetDbxCentralDbVersion);
 		
 			if (_sourceDbxCentralDbVersion != _targetDbxCentralDbVersion)
 			{
@@ -847,9 +847,9 @@ implements AutoCloseable
 	throws Exception
 	{
 		if ( ! _sourceConn.isDatabaseProduct(DbUtils.DB_PROD_NAME_H2) )
-			throw new Exception("Sorry for the moment the SOURCE database must be '"+DbUtils.DB_PROD_NAME_H2+"'. you are connected to '"+_sourceConn.getDatabaseProductName()+"'.");
+			throw new Exception("Sorry for the moment the SOURCE database must be '" + DbUtils.DB_PROD_NAME_H2 + "'. you are connected to '" + _sourceConn.getDatabaseProductName() + "'.");
 		
-		_logger.info("Extracting DDL information from SOURCE: "+_sourceConn.getDbmsServerName());
+		_logger.info("Extracting DDL information from SOURCE: " + _sourceConn.getDbmsServerName());
 		File tmpFile = File.createTempFile("h2.sourcedb.ddl.", ".sql");
 		Script.process(_sourceConn, tmpFile.toString(), "nodata nopasswords nosettings", "");
 		
@@ -872,7 +872,7 @@ implements AutoCloseable
 		FileUtils.write(tmpFile, ddlContent, Charset.defaultCharset());
 
 		
-		_logger.info("Applying DDL information to TARGET: "+_targetConn.getDbmsServerName());
+		_logger.info("Applying DDL information to TARGET: " + _targetConn.getDbmsServerName());
 		FileReader reader = new FileReader(tmpFile);
 		
 		executeH2Script(_targetConn, reader, _ddlSkipErrors, _ddlPrintExec);
@@ -932,7 +932,7 @@ implements AutoCloseable
 					Matcher matcher = pattern.matcher(msg);
 
 					if ( ! matcher.find() )
-						_logger.info("SKIPPING ERROR '"+ex+"': when executing sql: "+sql);
+						_logger.info("SKIPPING ERROR '" + ex + "': when executing sql: " + sql);
 				}
 				else
 				{
@@ -948,7 +948,7 @@ implements AutoCloseable
 	private void transferData()
 	throws Exception
 	{
-		_logger.info("Copy DATA table by table from SOURCE: "+_sourceConn.getDbmsServerName() + " TO: "+_targetConn.getDbmsServerName());
+		_logger.info("Copy DATA table by table from SOURCE: " + _sourceConn.getDbmsServerName() + " TO: " + _targetConn.getDbmsServerName());
 		
 		// Stats: how much are we about todo
 		long totalSourceTableCount       = 0;
@@ -1003,7 +1003,7 @@ implements AutoCloseable
 				{
 					ok = false;
 					String status = "SUSPECT WRITE-COUNT";
-					String stMsg  = "sourceReadCount["+dbt.sourceReadCount+"] != targetWriteCount["+dbt.targetWriteCount+"], ";
+					String stMsg  = "sourceReadCount[" + dbt.sourceReadCount + "] != targetWriteCount[" + dbt.targetWriteCount + "], ";
 					
 					//                   format("Transfer: ...",
 					String msg2 = String.format("          %s - %s", status, stMsg);
@@ -1021,13 +1021,13 @@ implements AutoCloseable
 				{
 					ok = false;
 					String status = "SUSPECT: ROW-COUNT";
-					String stMsg  = "sourceReadCount["+dbt.sourceReadCount+"] != targetRowCount["+targetRowCount+"] (targetPreRowCount="+dbt.targetPreRowCount+", targetPostRowCount="+dbt.targetPostRowCount+"), ";
+					String stMsg  = "sourceReadCount[" + dbt.sourceReadCount + "] != targetRowCount[" + targetRowCount + "] (targetPreRowCount=" + dbt.targetPreRowCount + ", targetPostRowCount=" + dbt.targetPostRowCount + "), ";
 
 					String guessedMergeCountStr = "";
 					if (_dmlUseMerge)
 					{
 						long guessedMergeCount = dbt.sourceReadCount - targetRowCount;
-						guessedMergeCountStr = "Guessing we MERGED "+guessedMergeCount+" rows from source into target (using PK=FIXME), which means that "+guessedMergeCount+" rows in the target was overwritten with data from the source, based on: guessedMergeCount = sourceReadCount - (targetPostRowCount - targetPreRowCount)";
+						guessedMergeCountStr = "Guessing we MERGED " + guessedMergeCount + " rows from source into target (using PK=FIXME), which means that " + guessedMergeCount + " rows in the target was overwritten with data from the source, based on: guessedMergeCount = sourceReadCount - (targetPostRowCount - targetPreRowCount)";
 					}
 					
 					//                   format("Transfer: ...",
@@ -1063,8 +1063,8 @@ implements AutoCloseable
 				dbt.errorType = ErrorType.HAS_EXCEPTION;
 				dbt.exception = ex;
 				
-				_logger.error("SOURCE Problems when transfer: schema='"+dbt.schema+"', name='"+dbt.name+". ex="+ex, ex);
-				_logger.error("SOURCE Problems when transfer: schema='"+dbt.schema+"', name='"+dbt.name+". When it FAILED: sourceEstRows="+dbt.sourceRowCountEstimate+", targetWriteCount="+dbt.targetWriteCount+", targetRowCount="+dbt.targetPostRowCount);
+				_logger.error("SOURCE Problems when transfer: schema='" + dbt.schema + "', name='" + dbt.name + ". ex=" + ex, ex);
+				_logger.error("SOURCE Problems when transfer: schema='" + dbt.schema + "', name='" + dbt.name + ". When it FAILED: sourceEstRows=" + dbt.sourceRowCountEstimate + ", targetWriteCount=" + dbt.targetWriteCount + ", targetRowCount=" + dbt.targetPostRowCount);
 				
 				// check if connection is alive
 				// - maybe reconnect
@@ -1072,7 +1072,7 @@ implements AutoCloseable
 				{
 					_logger.info("SOURCE: Connection is not valid anymore, trying to re-connect.");
 					_sourceConn.reConnect(null);
-					_logger.info("SOURCE: re-connect succeeded... SKIPPING transfer of this table (schema='"+dbt.schema+"', name='"+dbt.name+") and continuing with next table.");
+					_logger.info("SOURCE: re-connect succeeded... SKIPPING transfer of this table (schema='" + dbt.schema + "', name='" + dbt.name + ") and continuing with next table.");
 				}
 			}
 			catch (TargetException ex)
@@ -1080,16 +1080,16 @@ implements AutoCloseable
 				dbt.errorType = ErrorType.HAS_EXCEPTION;
 				dbt.exception = ex;
 				
-				_logger.error("TARGET Problems when transfer: schema='"+dbt.schema+"', name='"+dbt.name+". (SKIPPING and continuing with next table) ex="+ex, ex);
-				_logger.error("TARGET Problems when transfer: schema='"+dbt.schema+"', name='"+dbt.name+". When it FAILED: sourceEstRows="+dbt.sourceRowCountEstimate+", targetWriteCount="+dbt.targetWriteCount+", targetRowCount="+dbt.targetPostRowCount);
+				_logger.error("TARGET Problems when transfer: schema='" + dbt.schema + "', name='" + dbt.name + ". (SKIPPING and continuing with next table) ex=" + ex, ex);
+				_logger.error("TARGET Problems when transfer: schema='" + dbt.schema + "', name='" + dbt.name + ". When it FAILED: sourceEstRows=" + dbt.sourceRowCountEstimate + ", targetWriteCount=" + dbt.targetWriteCount + ", targetRowCount=" + dbt.targetPostRowCount);
 			}
 			catch (Exception ex)
 			{
 				dbt.errorType = ErrorType.HAS_EXCEPTION;
 				dbt.exception = ex;
 				
-				_logger.error("Unhandled Problems when transfer: schema='"+dbt.schema+"', name='"+dbt.name+". (SKIPPING and continuing with next table) ex="+ex, ex);
-				_logger.error("Unhandled Problems when transfer: schema='"+dbt.schema+"', name='"+dbt.name+". When it FAILED: sourceEstRows="+dbt.sourceRowCountEstimate+", targetWriteCount="+dbt.targetWriteCount+", targetRowCount="+dbt.targetPostRowCount);
+				_logger.error("Unhandled Problems when transfer: schema='" + dbt.schema + "', name='" + dbt.name + ". (SKIPPING and continuing with next table) ex=" + ex, ex);
+				_logger.error("Unhandled Problems when transfer: schema='" + dbt.schema + "', name='" + dbt.name + ". When it FAILED: sourceEstRows=" + dbt.sourceRowCountEstimate + ", targetWriteCount=" + dbt.targetWriteCount + ", targetRowCount=" + dbt.targetPostRowCount);
 			}
 		}
 		
@@ -1128,8 +1128,8 @@ implements AutoCloseable
 
 		try
 		{
-			String sourceSql = "select * from " +q+dbt.schema+q+ "." +q+dbt.name+q;
-			String targetSql = "select * from " +q+dbt.schema+q+ "." +q+dbt.name+q + " where 1=2";
+			String sourceSql = "select * from " + q+dbt.schema+q + "." + q+dbt.name+q;
+			String targetSql = "select * from " + q+dbt.schema+q + "." + q+dbt.name+q + " where 1=2";
 
 			atType = Type.Source;
 			try (Statement stmnt = _sourceConn.createStatement(); ResultSet sourceRs = stmnt.executeQuery(sourceSql))
@@ -1162,7 +1162,7 @@ implements AutoCloseable
 						count++;
 					rs.close();
 
-					System.out.println("Result from: RSMD.getTables(); count="+count);
+					System.out.println("Result from: RSMD.getTables(); count=" + count);
 					if (count == 0)
 					{
 						// Create a SQL statement like: create table XXX (yyy datatype null/not_null)
@@ -1215,7 +1215,7 @@ implements AutoCloseable
 							for (String col : missingCols)
 							{
 								String sql = "alter table " + q+dbt.schema+q + "." + q+dbt.name+q + " add column " + q+col+q + " number(16,2) null"; // NOTE: 'not null' is not supported at alter
-								_logger.info("FIXING TARGET Table '"+dbt.schema+"."+dbt.name+"' is missing the column '"+col+"'. Adding it using sql: "+sql);
+								_logger.info("FIXING TARGET Table '" + dbt.schema + "." + dbt.name + "' is missing the column '" + col + "'. Adding it using sql: " + sql);
 
 								executeDdl(_targetConn, sql);
 							}
@@ -1247,7 +1247,7 @@ implements AutoCloseable
 					if (sourceNumCols != targetNumCols)
 					{
 						// TODO: should we close the sourceRs or not????
-						throw new Exception("Source ResultSet and Target Table does not have the same column count (source="+sourceNumCols+", target="+targetNumCols+").");
+						throw new Exception("Source ResultSet and Target Table does not have the same column count (source=" + sourceNumCols + ", target=" + targetNumCols + ").");
 					}
 				}
 				
@@ -1269,7 +1269,7 @@ implements AutoCloseable
 						String sourceColName = sourceColNames.get(c);
 						String targetColName = targetColNames.get(c);
 
-						String warning = "Metadata missmatch: Possible column datatype missmatch for column "+(c+1)+". Source column name '"+sourceColName+"', jdbcType '"+sourceJdbcTypeStr+"'. Target column name '"+targetColName+"', jdbcType '"+targetJdbcTypeStr+"'. I will still try to do the transfer, hopefully the target server can/will convert the datatype, so it will work... lets try!"; 
+						String warning = "Metadata missmatch: Possible column datatype missmatch for column " + (c+1) + ". Source column name '" + sourceColName + "', jdbcType '" + sourceJdbcTypeStr + "'. Target column name '" + targetColName + "', jdbcType '" + targetJdbcTypeStr + "'. I will still try to do the transfer, hopefully the target server can/will convert the datatype, so it will work... lets try!"; 
 						_logger.warn(warning);
 					}
 				}
@@ -1301,9 +1301,9 @@ implements AutoCloseable
 					String mergeKeys = "";
 					// looks Like Graph Table
 					if (isGraphCounterTable(dbt.name, targetColNames))
-						mergeKeys = " KEY("+q+"SessionStartTime"+q+", "+q+"SessionSampleTime"+q+", "+q+"CmSampleTime"+q+") ";
+						mergeKeys = " KEY(" + q + "SessionStartTime" + q + ", " + q + "SessionSampleTime" + q + ", " + q + "CmSampleTime" + q + ") ";
 
-					targetDml = "merge into " +q+dbt.schema+q+ "." +q+dbt.name+q + columnStr + mergeKeys + valuesStr;
+					targetDml = "merge into " + q+dbt.schema+q + "." + q+dbt.name+q + columnStr + mergeKeys + valuesStr;
 
 					// If it's a DbxCentral DICTIONARY Table... then write a special MERGE Statement for some tables (that is "summary" tables, pk=SessionStartTime) 
 					boolean doDbxTables = false;
@@ -1473,9 +1473,9 @@ implements AutoCloseable
 				}
 				else
 				{
-					targetDml = "insert into " +q+dbt.schema+q+ "." +q+dbt.name+q + columnStr + valuesStr;
+					targetDml = "insert into " + q+dbt.schema+q + "." + q+dbt.name+q + columnStr + valuesStr;
 				}
-				_logger.debug("TARGET SQL Statement: "+targetDml);
+				_logger.debug("TARGET SQL Statement: " + targetDml);
 
 
 				// Create the Prepared Statement
@@ -1514,7 +1514,7 @@ implements AutoCloseable
 						}
 						catch (SQLException sqle)
 						{
-							_logger.warn("ROW: "+totalCount+" - Problems setting column c="+c+", sourceName='"+sourceColNames.get(c-1)+"', targetName='"+targetColNames.get(c-1)+"'. Caught: "+sqle);
+							_logger.warn("ROW: " + totalCount + " - Problems setting column c=" + c + ", sourceName='" + sourceColNames.get(c-1) + "', targetName='" + targetColNames.get(c-1) + "'. Caught: " + sqle);
 							throw sqle;
 						}
 					}
@@ -1538,7 +1538,7 @@ implements AutoCloseable
 					{
 						int pctDone = (int) ( ((dbt.targetWriteCount*1.0) / (dbt.sourceRowCountEstimate*1.0)) * 100.0 );
 						//    format("Transfer: schema=%s, name=%-40.40s, estRows=%8d, dmlBatchSize=%d, dmlUseMerge=%b",
-						_logger.info("          Done "+pctDone+"%, sourceRowCountEstimate="+dbt.sourceRowCountEstimate+", targetWriteCount="+dbt.targetWriteCount);
+						_logger.info("          Done " + pctDone + "%, sourceRowCountEstimate=" + dbt.sourceRowCountEstimate + ", targetWriteCount=" + dbt.targetWriteCount);
 					}
 				}
 	//System.out.println("END OF TRANSFER: Executing batch: batchSize="+batchSize+", batchCount="+batchCount+", totalCount="+totalCount);
@@ -1578,7 +1578,7 @@ implements AutoCloseable
 	private long getTargetTableRowCount(DbTable dbt)
 	{
 		long count = -1;
-		String sqlRowCount = "select count(*) from " +q+dbt.schema+q+ "." +q+dbt.name+q;
+		String sqlRowCount = "select count(*) from " + q+dbt.schema+q + "." + q+dbt.name+q;
 		try (Statement stmnt = _targetConn.createStatement(); ResultSet rs = stmnt.executeQuery(sqlRowCount))
 		{
 			while(rs.next())
@@ -1589,7 +1589,7 @@ implements AutoCloseable
 		}
 		catch(SQLException ex)
 		{
-			_logger.warn("Problems getting TARGET ROW-COUNT using sql='"+sqlRowCount+"'. caught: "+ex);
+			_logger.warn("Problems getting TARGET ROW-COUNT using sql='" + sqlRowCount + "'. caught: " + ex);
 		}
 		return count;
 	}
@@ -1717,7 +1717,7 @@ implements AutoCloseable
 			String sql = "select   #SessionStartTime# \n"
 			           + "       , count(#SessionStartTime#)  as #NumOfSamples# \n"
 			           + "       , max(#SessionSampleTime#) as #LastSampleTime# \n"
-			           + "from #"+schema+"#.#DbxSessionSamples# \n"
+			           + "from #" + schema + "#.#DbxSessionSamples# \n"
 			           + "group by #SessionStartTime#";
 			sql = sql.replace('#', q); // replace # with the DBMS Quoted Identifier Char
 
@@ -1737,7 +1737,7 @@ implements AutoCloseable
 			}
 			catch(SQLException ex)
 			{
-				_logger.error("Problems getting 'NumOfSamples' and 'LastSampleTime' from schema='"+schema+"', table='DbxSessionSamples'. caught: "+ex);
+				_logger.error("Problems getting 'NumOfSamples' and 'LastSampleTime' from schema='" + schema + "', table='DbxSessionSamples'. caught: " + ex);
 			}
 			
 			// Update 'NumOfSamples' and 'LastSampleTime'
@@ -1754,15 +1754,15 @@ implements AutoCloseable
 					stmnt.setString   (4, schema);
 					
 //					_logger.info("  - Updating PUBLIC.DbxCentralSessions: NumOfSamples="+e.NumOfSamples+", LastSampleTime='"+e.LastSampleTime+"' for ServerName='"+schema+"' and SessionStartTime='"+e.SessionStartTime+"'.");
-					_logger.info("  - Updating PUBLIC.DbxCentralSessions: for ServerName="+StringUtil.left(schema,30)+" and SessionStartTime="+StringUtil.left(e.SessionStartTime+"",23)+"  with NumOfSamples="+StringUtil.left(e.NumOfSamples+"",6)+", LastSampleTime="+e.LastSampleTime+"'.");
+					_logger.info("  - Updating PUBLIC.DbxCentralSessions: for ServerName=" + StringUtil.left(schema,30) + " and SessionStartTime=" + StringUtil.left(e.SessionStartTime + "",23) + "  with NumOfSamples=" + StringUtil.left(e.NumOfSamples + "",6) + ", LastSampleTime=" + e.LastSampleTime + "'.");
 					int updCount = stmnt.executeUpdate();
 					
 					if (updCount != 1)
-						_logger.error("Rowcount when updating PUBLIC.DbxCentralSessions was not 1. serverName='"+schema+"', SessionStartTime='"+e.SessionStartTime+"'. rowcount="+updCount);
+						_logger.error("Rowcount when updating PUBLIC.DbxCentralSessions was not 1. serverName='" + schema + "', SessionStartTime='" + e.SessionStartTime + "'. rowcount=" + updCount);
 				}
 				catch(SQLException ex)
 				{
-					_logger.error("Problems updating 'NumOfSamples' and 'LastSampleTime' for PUBLIC.DbxCentralSessions, serverName='"+schema+"', SessionStartTime='"+e.SessionStartTime+"'. caught: "+ex);
+					_logger.error("Problems updating 'NumOfSamples' and 'LastSampleTime' for PUBLIC.DbxCentralSessions, serverName='" + schema + "', SessionStartTime='" + e.SessionStartTime + "'. caught: " + ex);
 				}
 			}
 		}
@@ -1832,9 +1832,9 @@ implements AutoCloseable
 			
 			_logger.info("");
 			_logger.info("");
-			_logger.info("fixDbxCentralMetaDataTablesAtTarget ------------------ SCHEMA='"+schema+"'.");
+			_logger.info("fixDbxCentralMetaDataTablesAtTarget ------------------ SCHEMA='" + schema + "'.");
 			_logger.info("");
-			_logger.info("fixDbxCentralMetaDataTablesAtTarget - schema='"+schema+"', table='DbxGraphProperties'.");
+			_logger.info("fixDbxCentralMetaDataTablesAtTarget - schema='" + schema + "', table='DbxGraphProperties'.");
 			_logger.info("                                      SourceRowCount=" + getDbtFor(schema, "DbxGraphProperties").sourceReadCount);
 			_logger.info("                                      TargetRowCount=" + getDbtFor(schema, "DbxGraphProperties").targetPostRowCount);
 			if (getDbtFor(schema, "DbxGraphProperties").sourceReadCount <= 0)
@@ -1842,7 +1842,7 @@ implements AutoCloseable
 			_logger.info("                                      NOT-FIX-NEEDED-OR-IMPLEMETED");
 
 			_logger.info("");
-			_logger.info("fixDbxCentralMetaDataTablesAtTarget - schema='"+schema+"', table='DbxSessionSampleDetailes'.");
+			_logger.info("fixDbxCentralMetaDataTablesAtTarget - schema='" + schema + "', table='DbxSessionSampleDetailes'.");
 			_logger.info("                                      SourceRowCount=" + getDbtFor(schema, "DbxSessionSampleDetailes").sourceReadCount);
 			_logger.info("                                      TargetRowCount=" + getDbtFor(schema, "DbxSessionSampleDetailes").targetPostRowCount);
 			if (getDbtFor(schema, "DbxGraphProperties").sourceReadCount <= 0)
@@ -1850,7 +1850,7 @@ implements AutoCloseable
 			_logger.info("                                      NOT-FIX-NEEDED-OR-IMPLEMETED");
 
 			_logger.info("");
-			_logger.info("fixDbxCentralMetaDataTablesAtTarget - schema='"+schema+"', table='DbxSessionSamples'.");
+			_logger.info("fixDbxCentralMetaDataTablesAtTarget - schema='" + schema + "', table='DbxSessionSamples'.");
 			_logger.info("                                      SourceRowCount=" + getDbtFor(schema, "DbxSessionSamples").sourceReadCount);
 			_logger.info("                                      TargetRowCount=" + getDbtFor(schema, "DbxSessionSamples").targetPostRowCount);
 			if (getDbtFor(schema, "DbxGraphProperties").sourceReadCount <= 0)
@@ -1858,7 +1858,7 @@ implements AutoCloseable
 			_logger.info("                                      NOT-FIX-NEEDED-OR-IMPLEMETED");
 
 			_logger.info("");
-			_logger.info("fixDbxCentralMetaDataTablesAtTarget - schema='"+schema+"', table='DbxSessionSampleSum'.");
+			_logger.info("fixDbxCentralMetaDataTablesAtTarget - schema='" + schema + "', table='DbxSessionSampleSum'.");
 			_logger.info("                                      SourceRowCount=" + getDbtFor(schema, "DbxSessionSampleSum").sourceReadCount);
 			_logger.info("                                      TargetRowCount=" + getDbtFor(schema, "DbxSessionSampleSum").targetPostRowCount);
 			if (getDbtFor(schema, "DbxGraphProperties").sourceReadCount <= 0)
@@ -1880,7 +1880,7 @@ implements AutoCloseable
 			if (dbt.schema.equals(schema) && dbt.name.equals(name))
 				return dbt;
 		}
-		String msg = "Can't find schema='"+schema+"' and table='"+name+"' in the DbTable List.";
+		String msg = "Can't find schema='" + schema + "' and table='" + name + "' in the DbTable List.";
 		_logger.error(msg, new RuntimeException(msg)); // the Exception to get a stacktrace so we know where it happened
 		return new DbTable();
 	}
@@ -1890,14 +1890,14 @@ implements AutoCloseable
 	{
 		if (_sourceConn != null)
 		{
-			_logger.info("Closing Connection to '"+Type.Source+"'.");
+			_logger.info("Closing Connection to '" + Type.Source + "'.");
 			_sourceConn.closeNoThrow();
 			_sourceConn = null;
 		}
 		
 		if (_targetConn != null)
 		{
-			_logger.info("Closing Connection to '"+Type.Target+"'.");
+			_logger.info("Closing Connection to '" + Type.Target + "'.");
 			_targetConn.closeNoThrow();
 			_targetConn = null;
 		}
@@ -1965,7 +1965,7 @@ implements AutoCloseable
 			pw.println();
 		}
 
-		pw.println("usage: "+Version.getAppName()+" [-h] [-v] [-x] [-e]");
+		pw.println("usage: " + Version.getAppName() + " [-h] [-v] [-x] [-e]");
 		pw.println("              [-U <srcUser>]  [-P <srcPasswd>]  [-S <srcUrl>]");
 		pw.println("              [-u <destUser>] [-p <destPasswd>] [-s <destUrl>]");
 		pw.println("              [-C <cfgfile>] [-L <logfile>] [-H <dirname>] [-R <dirname>] [-D <key=val>]");
@@ -1973,7 +1973,7 @@ implements AutoCloseable
 		pw.println("  ");
 		pw.println("options:");
 		pw.println("  -h,--help                   Usage information.");
-		pw.println("  -v,--version                Display "+Version.getAppName()+" and JVM Version.");
+		pw.println("  -v,--version                Display " + Version.getAppName() + " and JVM Version.");
 		pw.println("  -x,--debug <dbg1,dbg2>      Debug options: a comma separated string");
 		pw.println("                              To get available option, do -x list");
 		pw.println("  ");
@@ -2058,7 +2058,7 @@ implements AutoCloseable
 			for (Iterator<Option> it=cmd.iterator(); it.hasNext();)
 			{
 				Option opt = it.next();
-				_logger.debug("parseCommandLine: swith='"+opt.getOpt()+"', value='"+opt.getValue()+"'.");
+				_logger.debug("parseCommandLine: swith='" + opt.getOpt() + "', value='" + opt.getValue() + "'.");
 			}
 		}
 
@@ -2090,7 +2090,7 @@ implements AutoCloseable
 			else if ( cmd.hasOption("version") )
 			{
 				System.out.println();
-				System.out.println(Version.getAppName()+" Version: " + Version.getVersionStr() + " JVM: " + System.getProperty("java.version"));
+				System.out.println(Version.getAppName() + " Version: " + Version.getVersionStr() + " JVM: " + System.getProperty("java.version"));
 				System.out.println();
 			}
 			//-------------------------------
@@ -2126,7 +2126,7 @@ implements AutoCloseable
 					{
 						if (dbCopy._sourceDbxCentralDbVersion != dbCopy._targetDbxCentralDbVersion)
 						{
-							throw new Exception("The SOURCE and TARGET DbxCentral database versions are not the same, this is not supported... sourceDbVersion="+dbCopy._sourceDbxCentralDbVersion+", targetDbVersion="+dbCopy._targetDbxCentralDbVersion);
+							throw new Exception("The SOURCE and TARGET DbxCentral database versions are not the same, this is not supported... sourceDbVersion=" + dbCopy._sourceDbxCentralDbVersion + ", targetDbVersion=" + dbCopy._targetDbxCentralDbVersion);
 						}
 					}
 	

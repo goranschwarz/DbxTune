@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -207,7 +207,7 @@ extends TabularCntrPanel
 		// HIGHLIGHTER that changes color when a new SPID number is on next row...
 
 		if (conf != null) 
-			colorStr = conf.getProperty(getName()+".color.group");
+			colorStr = conf.getProperty(getName() + ".color.group");
 
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
@@ -387,7 +387,7 @@ extends TabularCntrPanel
 						continue;
 
 					if (_logger.isDebugEnabled())
-						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": ClassName("+ClassName_pos+")='"+ClassName+"', EventName("+EventName_pos+")='"+EventName+"', WaitTime("+WaitTime_pos+")='"+WaitTime+"', Waits("+Waits_pos+")='"+Waits+"', WaitTimePerWait("+WaitTimePerWait_pos+")='"+WaitTimePerWait+"'.");
+						_logger.debug("createDataset():GRAPH-DATA: " + getName() + ": ClassName(" + ClassName_pos + ")='" + ClassName + "', EventName(" + EventName_pos + ")='" + EventName + "', WaitTime(" + WaitTime_pos + ")='" + WaitTime + "', Waits(" + Waits_pos + ")='" + Waits + "', WaitTimePerWait(" + WaitTimePerWait_pos + ")='" + WaitTimePerWait + "'.");
 
 					// save: EventName -> ID
 					if ( ! waitEventNameToIdMap.containsKey(EventName) )
@@ -432,7 +432,7 @@ extends TabularCntrPanel
 						{
 							String key = entry.getKey();
 							Double val = entry.getValue();
-							dataset.addValue(val, "["+waitEventNameToIdMap.get(key)+"] " + key, "EventID - WaitTime");
+							dataset.addValue(val, "[" + waitEventNameToIdMap.get(key) + "] " + key, "EventID - WaitTime");
 						}
 					}
 					
@@ -442,7 +442,7 @@ extends TabularCntrPanel
 						{
 							String key = entry.getKey();
 							Double val = entry.getValue();
-							dataset.addValue(val, "["+waitEventNameToIdMap.get(key)+"] " + key, "EventID - Waits");
+							dataset.addValue(val, "[" + waitEventNameToIdMap.get(key) + "] " + key, "EventID - Waits");
 						}
 					}
 
@@ -452,7 +452,7 @@ extends TabularCntrPanel
 						{
 							String key = entry.getKey();
 							Double val = entry.getValue();
-							dataset.addValue(val, "["+waitEventNameToIdMap.get(key)+"] " + key, "EventID - WaitTimePerWait");
+							dataset.addValue(val, "[" + waitEventNameToIdMap.get(key) + "] " + key, "EventID - WaitTimePerWait");
 						}
 					}
 				} //end: generateEventWaitTime
@@ -465,7 +465,7 @@ extends TabularCntrPanel
 						{
 							String key = entry.getKey();
 							Double val = entry.getValue();
-							dataset.addValue(val, "(class) "+key, "Class - WaitTime");
+							dataset.addValue(val, "(class) " + key, "Class - WaitTime");
 						}
 					}
 					
@@ -475,7 +475,7 @@ extends TabularCntrPanel
 						{
 							String key = entry.getKey();
 							Double val = entry.getValue();
-							dataset.addValue(val, "(class) "+key, "Class - Waits");
+							dataset.addValue(val, "(class) " + key, "Class - Waits");
 						}
 					}
 
@@ -485,7 +485,7 @@ extends TabularCntrPanel
 						{
 							String key = entry.getKey();
 							Double val = entry.getValue();
-							dataset.addValue(val, "(class) "+key, "Class - WaitTimePerWait");
+							dataset.addValue(val, "(class) " + key, "Class - WaitTimePerWait");
 						}
 					}
 				} //end: generateClass
@@ -1088,7 +1088,7 @@ extends TabularCntrPanel
 		in.put(key1, Configuration.getCombinedConfiguration().getProperty( CmSpidWait.PROPKEY_trendGraph_skipWaitIdList,    CmSpidWait.DEFAULT_trendGraph_skipWaitIdList));
 		in.put(key2, Configuration.getCombinedConfiguration().getProperty( CmSpidWait.PROPKEY_trendGraph_skipWaitClassList, CmSpidWait.DEFAULT_trendGraph_skipWaitClassList));
 		in.put(key3, Configuration.getCombinedConfiguration().getProperty( CmSpidWait.PROPKEY_trendGraph_skipUserNameList,  CmSpidWait.DEFAULT_trendGraph_skipUserNameList));
-		in.put(key4, Configuration.getCombinedConfiguration().getProperty( CmSpidWait.PROPKEY_trendGraph_skipSystemThreads, CmSpidWait.DEFAULT_trendGraph_skipSystemThreads+""));
+		in.put(key4, Configuration.getCombinedConfiguration().getProperty( CmSpidWait.PROPKEY_trendGraph_skipSystemThreads, CmSpidWait.DEFAULT_trendGraph_skipSystemThreads + ""));
 
 		Map<String,String> results = ParameterDialog.showParameterDialog(MainFrame.getInstance(), "SPID WaitEvent's to skip", in, false);
 

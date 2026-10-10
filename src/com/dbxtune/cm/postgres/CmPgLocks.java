@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -61,7 +61,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 //	public static final long     NEED_SRV_VERSION = Ver.ver(14);
 	public static final long     NEED_SRV_VERSION = 0;
@@ -90,7 +90,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmPgLocks(counterController, guiController);
 	}
@@ -185,7 +185,7 @@ extends CountersModel
 		// No need to continue if we havn't got the columns we need
 		if (database_pos == -1 || relation_pos == -1 || dbname_pos == -1 || schema_name_pos == -1 || relation_name_pos == -1 || relation_type_pos == -1)
 		{
-			_logger.info("localCalculation(): Desired columns not available (database_pos="+database_pos+", relation_pos="+relation_pos+", dbname_pos="+dbname_pos+", schema_name_pos="+schema_name_pos+", relation_name_pos="+relation_name_pos+", relation_type_pos="+relation_type_pos+"), can't resolv 'database:id' and 'relation:id' into real names.");
+			_logger.info("localCalculation(): Desired columns not available (database_pos=" + database_pos + ", relation_pos=" + relation_pos + ", dbname_pos=" + dbname_pos + ", schema_name_pos=" + schema_name_pos + ", relation_name_pos=" + relation_name_pos + ", relation_type_pos=" + relation_type_pos + "), can't resolv 'database:id' and 'relation:id' into real names.");
 			return;
 		}
 

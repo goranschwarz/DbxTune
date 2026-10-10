@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -43,7 +43,7 @@ implements Serializable
 	@Override
 	public String toString()
 	{
-		return super.toString() + ": name='"+_dbName+"', size='"+_dbSize+"', id='"+_dbId+"', owner='"+_dbOwner+"', crdate='"+_dbCrDate+"', type='"+_dbType+"', remark='"+_dbRemark+"'";
+		return super.toString() + ": name='" + _dbName + "', size='" + _dbSize + "', id='" + _dbId + "', owner='" + _dbOwner + "', crdate='" + _dbCrDate + "', type='" + _dbType + "', remark='" + _dbRemark + "'";
 	}
 
 	public String toHtmlString()

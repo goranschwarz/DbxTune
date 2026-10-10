@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -398,7 +398,7 @@ public class JdbcDriverHelper
 //			renderer.setText("<html>" + value + " <b> &#8212; " + driver + "</b> </html>");
 //			renderer.setText("<html> <code>" + value + "</code> &#8212; <b>" + driver + "</b> </html>");
 //			renderer.setText("<html><b>" + driver + "</b> &#8212; " + value + "</html>");
-			renderer.setText("<html><table align='left' border=0 cellspacing=0 cellpadding=0> <tr>  <td nowrap width="+maxWitdth+"><b>" + driver + "</b></td>  <td nowrap> &rarr;&nbsp;&nbsp; " + value + "</td>  </tr></table></html>");
+			renderer.setText("<html><table align='left' border=0 cellspacing=0 cellpadding=0> <tr>  <td nowrap width=" + maxWitdth + "><b>" + driver + "</b></td>  <td nowrap> &rarr;&nbsp;&nbsp; " + value + "</td>  </tr></table></html>");
 			
 			return renderer;
 		}
@@ -424,7 +424,7 @@ public class JdbcDriverHelper
 			// FIXME: the URLClassLoader first searched the Parent ClassLoader, so if any JARS are part
 			//        of the CLASSPATH it will still pick it up from there...
 			//        So maybe create our own class loader, which FIRTS checks the JAR file, then the CLASSPATH
-			URL url = new URL("jar:file:"+jarFile+"!/");
+			URL url = new URL("jar:file:" + jarFile + "!/");
 //			URLClassLoader cl = new URLClassLoader(new URL[] { url });
 
 			ArrayList<URL> urlList = new ArrayList<URL>();
@@ -473,7 +473,7 @@ public class JdbcDriverHelper
 					}
 					catch (SQLException ex)
 					{
-						_logger.warn("Problems de-register driver='"+dmDriver+"'. Caught: "+ex);
+						_logger.warn("Problems de-register driver='" + dmDriver + "'. Caught: " + ex);
 					}
 				}
 			}
@@ -751,7 +751,7 @@ public class JdbcDriverHelper
 			if ( ! driversDir.exists() )
 			{
 				if (driversDir.mkdir())
-					_logger.info("Creating directory '"+driversDir+"' to hold JDBC Driver files for "+Version.getAppName());
+					_logger.info("Creating directory '" + driversDir + "' to hold JDBC Driver files for " + Version.getAppName());
 			}
 
 			return driversDir.toString();
@@ -761,7 +761,7 @@ public class JdbcDriverHelper
 			String driversDir = getDriversPath();
 			_xmlFile      .setToolTipText("This is where JDBC Drivers not included in the classpath will be described.");
 			_reload_but   .setToolTipText("Reload JDBC Drivers from the above XML file");
-			_download_but .setToolTipText("<html>Download various JDBC drivers<br>"+Version.getAppName()+" can't distribute a lot of JDBC Drivers, so you need to download them yourself.<br><br>This will just open a web page that has a collection of various JDBC Drivers that can be downloaded.<br>Put them in the directory <code>"+driversDir+"</code> and restart "+Version.getAppName()+".</html>");
+			_download_but .setToolTipText("<html>Download various JDBC drivers<br>" + Version.getAppName() + " can't distribute a lot of JDBC Drivers, so you need to download them yourself.<br><br>This will just open a web page that has a collection of various JDBC Drivers that can be downloaded.<br>Put them in the directory <code>" + driversDir + "</code> and restart " + Version.getAppName() + ".</html>");
 			_addDriver_but.setToolTipText("Open a Dialog to add a JDBC Driver");
 			_delDriver_but.setToolTipText("Delete the selected Driver in the list");
 
@@ -819,15 +819,15 @@ public class JdbcDriverHelper
 						Desktop desktop = Desktop.getDesktop();
 						if ( desktop.isSupported(Desktop.Action.BROWSE) )
 						{
-							_logger.info("You clicked on Download Drivers '"+JDBC_DRIVER_DOWNLOAD_URL+"'. Browser will be opened.");
+							_logger.info("You clicked on Download Drivers '" + JDBC_DRIVER_DOWNLOAD_URL + "'. Browser will be opened.");
 
 							try
 							{
-								desktop.browse(new URI(JDBC_DRIVER_DOWNLOAD_URL+"?toLocation="+URLEncoder.encode(getDriversPath(), "UTF-8")));
+								desktop.browse(new URI(JDBC_DRIVER_DOWNLOAD_URL + "?toLocation=" + URLEncoder.encode(getDriversPath(), "UTF-8")));
 							}
 							catch (Exception ex)
 							{
-								_logger.error("Problems when open the URL '"+JDBC_DRIVER_DOWNLOAD_URL+"'. Caught: "+ex);
+								_logger.error("Problems when open the URL '" + JDBC_DRIVER_DOWNLOAD_URL + "'. Caught: " + ex);
 							}
 						}
 					}
@@ -1262,16 +1262,16 @@ public class JdbcDriverHelper
 				File checkFile = new File(getFileName());
 				if ( ! checkFile.exists() )
 				{
-					_logger.info("User Defined JDBC Drivers file '"+getFileName()+"', doesn't exist, try to create an empty.");
+					_logger.info("User Defined JDBC Drivers file '" + getFileName() + "', doesn't exist, try to create an empty.");
 					ArrayList<DriverInfoEntry> empty = new ArrayList<DriverInfoEntry>();
 					try { saveFile(getFileName(), empty); }
-					catch (IOException ex) { _logger.warn("Problems creating: User Defined JDBC Drivers file '"+getFileName()+"'. Disregarding this. Caught: "+ex); }
+					catch (IOException ex) { _logger.warn("Problems creating: User Defined JDBC Drivers file '" + getFileName() + "'. Disregarding this. Caught: " + ex); }
 				}
 
 				JdbcDriverFileXmlParser parser = new JdbcDriverFileXmlParser();
 				ArrayList<DriverInfoEntry> parsedEntries = parser.parseFile(getFileName());
 
-				_logger.info("Get User Defined JDBC Drivers by parsing the file '"+getFileName()+"', which contained "+parsedEntries.size()+" entries.");
+				_logger.info("Get User Defined JDBC Drivers by parsing the file '" + getFileName() + "', which contained " + parsedEntries.size() + " entries.");
 
 				//-------------------------------------------------------
 				// First install all entries from the XML file
@@ -1290,7 +1290,7 @@ public class JdbcDriverHelper
 					}
 					catch (Exception ex)
 					{
-						_logger.warn("Problems installing JDBC Driver='"+entry.getClassName()+"', JarFile='"+entry.getJarFile()+"'. This one will simply not be available. Caught: "+ex);
+						_logger.warn("Problems installing JDBC Driver='" + entry.getClassName() + "', JarFile='" + entry.getJarFile() + "'. This one will simply not be available. Caught: " + ex);
 					}
 				}
 			}
@@ -1309,7 +1309,7 @@ public class JdbcDriverHelper
 				String version         = "";
 				List<String> templates = new ArrayList<String>();
 
-				_logger.debug("DriverManager-Entry: classname='"+className+"', driver='"+driver+"'.");
+				_logger.debug("DriverManager-Entry: classname='" + className + "', driver='" + driver + "'.");
 
 				if (driver instanceof JdbcDriverHelper.DriverWrapper)
 				{
@@ -1326,7 +1326,7 @@ public class JdbcDriverHelper
 
 					driver    = w.getDriver();
 
-					_logger.debug("DRIVER IS A WRAPPER. classname='"+className+"', jarFile='"+jarFile+"'.");
+					_logger.debug("DRIVER IS A WRAPPER. classname='" + className + "', jarFile='" + jarFile + "'.");
 				}
 				else
 				{
@@ -1350,7 +1350,7 @@ public class JdbcDriverHelper
 						URL jar = src.getLocation();
 						jarFile = jar + "";
 
-						_logger.debug("DriverManager-Entry: classname='"+className+"', driver='"+driver+"' can be located in JAR File '"+jarFile+"'.");
+						_logger.debug("DriverManager-Entry: classname='" + className + "', driver='" + driver + "' can be located in JAR File '" + jarFile + "'.");
 					}
 				}
 
@@ -1727,7 +1727,7 @@ public class JdbcDriverHelper
 		catch (IOException ex)
 		{
 			if (showGuiOnError)
-				SwingUtils.showErrorMessage("writing to JDBC Driver File", "Problems writing to JDBC Driver File '"+getFileName()+"'.", ex);
+				SwingUtils.showErrorMessage("writing to JDBC Driver File", "Problems writing to JDBC Driver File '" + getFileName() + "'.", ex);
 		}
 	}
 
@@ -1843,7 +1843,7 @@ public class JdbcDriverHelper
 		}
 		catch (IOException e)
 		{
-			_logger.warn("Problems writing to JDBC Driver File '"+fileName+"'. Caught: "+e);
+			_logger.warn("Problems writing to JDBC Driver File '" + fileName + "'. Caught: " + e);
 			throw e;
 		}
 	}
@@ -1909,11 +1909,11 @@ public class JdbcDriverHelper
 			}
 			catch (SAXException e)
 			{
-				_logger.warn("Problems Creating JDBC Driver File XML Parser '"+getFileName()+"'. Caught: "+e, e);
+				_logger.warn("Problems Creating JDBC Driver File XML Parser '" + getFileName() + "'. Caught: " + e, e);
 			}
 			catch (ParserConfigurationException e)
 			{
-				_logger.warn("Problems Creating JDBC Driver File XML Parser '"+getFileName()+"'. Caught: "+e, e);
+				_logger.warn("Problems Creating JDBC Driver File XML Parser '" + getFileName() + "'. Caught: " + e, e);
 			}
 		}
 
@@ -1954,15 +1954,15 @@ public class JdbcDriverHelper
 			}
 			catch (SAXException e)
 			{
-				_logger.warn("Problems Parsing JDBC Driver File File '"+fileName+"'. Caught: "+e, e);
+				_logger.warn("Problems Parsing JDBC Driver File File '" + fileName + "'. Caught: " + e, e);
 			}
 			catch (FileNotFoundException e)
 			{
-				_logger.info("The JDBC Driver File '"+fileName+"' wasn't found. Caught: "+e);
+				_logger.info("The JDBC Driver File '" + fileName + "' wasn't found. Caught: " + e);
 			}
 			catch (IOException e)
 			{
-				_logger.warn("Problems Parsing JDBC Driver File '"+fileName+"'. Caught: "+e, e);
+				_logger.warn("Problems Parsing JDBC Driver File '" + fileName + "'. Caught: " + e, e);
 			}
 			return _entryList;
 		}

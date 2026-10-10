@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -138,7 +138,7 @@ extends DbmsVersionPanelAbstract
 
 		long version = Ver.oracleVersionStringToNumber(oraVerStr);
 
-		_logger.debug("ORACLE-parseVersionStringToNum(versionStr='"+versionStr+"'): oraVerStr='"+oraVerStr+"', <<<<<< returns: "+version);
+		_logger.debug("ORACLE-parseVersionStringToNum(versionStr='" + versionStr + "'): oraVerStr='" + oraVerStr + "', <<<<<< returns: " + version);
 		return version;
 	}
 	

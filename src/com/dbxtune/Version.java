@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -31,11 +31,11 @@ public class Version
 {
 	public static       String PRODUCT_STRING     = "DbxTune";      // Do not have spaces etc in this one
 //	public static final String VERSION_STRING     = "4.6.0";        // Use this for public releases
-	public static final String VERSION_STRING     = "4.6.0.95.dev"; // Use this for early releases
-	public static final String BUILD_STRING       = "2026-10-09/build 645";
+	public static final String VERSION_STRING     = "4.6.0.96.dev"; // Use this for early releases
+	public static final String BUILD_STRING       = "2026-10-10/build 648";
 
-	public static final String GIT_DATE_STRING    = "2026-10-09";  // try to update this
-	public static final String GIT_REVISION_STR   = "610";         // used by CheckForUpdates --- update this on every check-in (emulates Subversion "Revision:" tag)
+	public static final String GIT_DATE_STRING    = "2026-10-10";  // try to update this
+	public static final String GIT_REVISION_STR   = "612";     // used by CheckForUpdates --- update this on every check-in (emulates Subversion "Revision:" tag)
 
 	public static final boolean IS_DEVELOPMENT_VERSION  = true; // if true: date expiration will be checked on startup
 	public static final String  DEV_VERSION_EXPIRE_STR  = "2027-11-30";  // "YYYY-MM-DD" 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -479,7 +479,7 @@ public class RSyntaxUtilitiesX
 
 			if (_textArea.getActionForKeyStroke(keyStroke) != null)
 			{
-				_logger.warn("Sorry but keyBinding for command '"+NAME+"' using keyStroke '"+keyStroke+"', is already used, ignoring this Key Mapping.");
+				_logger.warn("Sorry but keyBinding for command '" + NAME + "' using keyStroke '" + keyStroke + "', is already used, ignoring this Key Mapping.");
 			}
 			else
 			{
@@ -490,7 +490,7 @@ public class RSyntaxUtilitiesX
 				_textArea.registerKeyboardAction(this, NAME, keyStroke, JComponent.WHEN_FOCUSED);
 				//_textArea.getInputMap().put(keyStroke, NAME); // doesn't work...
 			}
-			_logger.debug("_textArea.getActionForKeyStroke("+keyStroke+"), command("+NAME+"): "+_textArea.getActionForKeyStroke(keyStroke) );
+			_logger.debug("_textArea.getActionForKeyStroke(" + keyStroke + "), command(" + NAME + "): " + _textArea.getActionForKeyStroke(keyStroke) );
 			
 			_replaceDialog = new ReplaceDialog(_frame, this);
 		}
@@ -501,7 +501,7 @@ public class RSyntaxUtilitiesX
 //System.out.println("actionPerformed(): e="+e);
 
 			String command = e.getActionCommand();
-			_logger.debug("ReplaceDialogAction.actionPerformed(): command = '"+command+"'.");
+			_logger.debug("ReplaceDialogAction.actionPerformed(): command = '" + command + "'.");
 
 			// If it's the dialog, open it
 			if ( NAME.equals(command) )
@@ -617,7 +617,7 @@ public class RSyntaxUtilitiesX
 
 			if (_textArea.getActionForKeyStroke(keyStroke) != null)
 			{
-				_logger.warn("Sorry but keyBinding for command '"+NAME+"' using keyStroke '"+keyStroke+"', is already used, ignoring this Key Mapping.");
+				_logger.warn("Sorry but keyBinding for command '" + NAME + "' using keyStroke '" + keyStroke + "', is already used, ignoring this Key Mapping.");
 			}
 			else
 			{
@@ -628,7 +628,7 @@ public class RSyntaxUtilitiesX
 				_textArea.registerKeyboardAction(this, NAME, keyStroke, JComponent.WHEN_FOCUSED);
 				//_textArea.getInputMap().put(keyStroke, NAME); // doesn't work...
 			}
-			_logger.debug("_textArea.getActionForKeyStroke("+keyStroke+"), command("+NAME+"): "+_textArea.getActionForKeyStroke(keyStroke) );
+			_logger.debug("_textArea.getActionForKeyStroke(" + keyStroke + "), command(" + NAME + "): " + _textArea.getActionForKeyStroke(keyStroke) );
 		}
 
 		@Override

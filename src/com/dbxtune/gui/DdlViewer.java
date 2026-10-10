@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -260,8 +260,8 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 		_dependParent_txt.setToolTipText("This would be parent, if we did depend on anything.");
 		_dependsList_lbl .setToolTipText("This depends on the following objects.");
 		_dependsList_txt .setToolTipText("This depends on the following objects.");
-		_source_lbl      .setToolTipText("Source in "+Version.getAppName()+" where the DDL Information was requested.");
-		_source_txt      .setToolTipText("Source in "+Version.getAppName()+" where the DDL Information was requested.");
+		_source_lbl      .setToolTipText("Source in " + Version.getAppName() + " where the DDL Information was requested.");
+		_source_txt      .setToolTipText("Source in " + Version.getAppName() + " where the DDL Information was requested.");
 
 		_object_panel    = createObjectPanel();
 		_optDiag_panel   = createOptDiagPanel();
@@ -653,7 +653,7 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 			tn = findEntry(tn, dbname, objectName, 0);
 			if (tn == null)
 			{
-				String htmlMsg = "<html>The object '"+objectName+"' wasn't found in the DDL View storage.</html>";
+				String htmlMsg = "<html>The object '" + objectName + "' wasn't found in the DDL View storage.</html>";
 				SwingUtils.showInfoMessageExt(this, "Object not found", htmlMsg, null, (JPanel)null);
 
 				return false;
@@ -975,7 +975,7 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 			props.put("user", user);
 			props.put("password", passwd);
 	
-			_logger.debug("getConnection to driver='"+driver+"', url='"+url+"', user='"+user+"'.");
+			_logger.debug("getConnection to driver='" + driver + "', url='" + url + "', user='" + user + "'.");
 			Connection conn = DriverManager.getConnection(url, props);
 	
 			return conn;
@@ -989,11 +989,11 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 				sb.append( e.getMessage() );
 				e = e.getNextException();
 			}
-			JOptionPane.showMessageDialog(null, "Connection FAILED.\n\n"+sb.toString(), Version.getAppName()+" - jdbc connect", JOptionPane.ERROR_MESSAGE);
+			JOptionPane.showMessageDialog(null, "Connection FAILED.\n\n" + sb.toString(), Version.getAppName() + " - jdbc connect", JOptionPane.ERROR_MESSAGE);
 		}
 		catch (Exception e)
 		{
-			JOptionPane.showMessageDialog(null, "Connection FAILED.\n\n"+e.toString(),  Version.getAppName()+" - jdbc connect", JOptionPane.ERROR_MESSAGE);
+			JOptionPane.showMessageDialog(null, "Connection FAILED.\n\n" + e.toString(),  Version.getAppName() + " - jdbc connect", JOptionPane.ERROR_MESSAGE);
 		}
 		return null;
 	}
@@ -1015,7 +1015,7 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 		try
 		{
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-			_logger.info("Using Look And Feel named '"+UIManager.getLookAndFeel().getName()+"', classname='"+UIManager.getLookAndFeel().getClass().getName()+"', toString='"+UIManager.getLookAndFeel()+"'.");
+			_logger.info("Using Look And Feel named '" + UIManager.getLookAndFeel().getName() + "', classname='" + UIManager.getLookAndFeel().getClass().getName() + "', toString='" + UIManager.getLookAndFeel() + "'.");
 		}
 		catch (Exception e)
 		{

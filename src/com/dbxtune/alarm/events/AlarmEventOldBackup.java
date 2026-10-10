@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -71,7 +71,7 @@ extends AlarmEvent
 				AlarmEvent.ServiceState.UP, 
 				"Old or No Database Backup found in '" + cm.getServerName() + "', dbname='" + dbname + "', Backup Age in Hours '" + age + "'" 
 						+ (age == -1 ? ", (where -1 means: Since ASE was started)" : "") 
-						+ ", lastBackupStartOrEndTime='" + lastBackupStartOrEndTime + "'. (thresholdInHours="+thresholdInHours+")",
+						+ ", lastBackupStartOrEndTime='" + lastBackupStartOrEndTime + "'. (thresholdInHours=" + thresholdInHours + ")",
 						thresholdInHours);
 
 		// Adjust the Alarm Full Duration with X seconds

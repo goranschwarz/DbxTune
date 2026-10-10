@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -101,7 +101,7 @@ public class PromptForPassword
 		
 		String[] options = new String[]{"OK", "Cancel"};
 		int option = JOptionPane.showOptionDialog(parent, panel, 
-				"Enter Password for user '"+user+"'.",
+				"Enter Password for user '" + user + "'.",
 				JOptionPane.NO_OPTION, JOptionPane.PLAIN_MESSAGE,
 //				null, options, options[0]);
 				null, options, null);
@@ -118,7 +118,7 @@ public class PromptForPassword
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (conf != null)
 				{
-					String key = "PromptForPassword.saved."+hostname+"."+user;
+					String key = "PromptForPassword.saved." + hostname + "." + user;
 	    			if (savePasswd_chk.isSelected())
 	    			{
 	    				// Save the password ENCRYPTED
@@ -161,7 +161,7 @@ public class PromptForPassword
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 
-		String key = "PromptForPassword.saved."+hostname+"."+user;
+		String key = "PromptForPassword.saved." + hostname + "." + user;
 		return conf.getProperty(key, null);
 	}
 }

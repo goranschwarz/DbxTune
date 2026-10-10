@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -40,7 +40,7 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Found Long running transaction, with state 'Detached' in '" + cm.getServerName() + "', dbname='" + dbname +"'. Seconds=" + inSeconds + ", TranName='"+StringUtils.trim(tranName)+"'. (thresholdInSec="+thresholdInSec+")",
+				"Found Long running transaction, with state 'Detached' in '" + cm.getServerName() + "', dbname='" + dbname + "'. Seconds=" + inSeconds + ", TranName='" + StringUtils.trim(tranName) + "'. (thresholdInSec=" + thresholdInSec + ")",
 				thresholdInSec);
 
 		// Adjust the Alarm Full Duration with X seconds

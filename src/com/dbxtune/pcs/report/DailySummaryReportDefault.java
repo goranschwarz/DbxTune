@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -309,7 +309,7 @@ extends DailySummaryReportAbstract
 		String tabName = "MonSessionParams";
 		String sql = ""
 			    + "select [Type], [ParamName], [ParamValue] \n"
-			    + "from ["+tabName+"] \n"
+			    + "from [" + tabName + "] \n"
 			    + whereType
 //			    + "order by [Type] \n"
 			    + "";
@@ -346,7 +346,7 @@ extends DailySummaryReportAbstract
 		}
 		catch(SQLException ex)
 		{
-			_logger.warn("Problems getting values from '"+tabName+"': " + ex);
+			_logger.warn("Problems getting values from '" + tabName + "': " + ex);
 		}
 
 		return conf;
@@ -677,7 +677,7 @@ extends DailySummaryReportAbstract
 			}
 			catch(IOException ex)
 			{
-				_logger.error("Problems reading External HTML HEAD File '" + f.getAbsolutePath() + "', Skipping this and using System provided header. Caught: "+ex, ex);
+				_logger.error("Problems reading External HTML HEAD File '" + f.getAbsolutePath() + "', Skipping this and using System provided header. Caught: " + ex, ex);
 			}
 		}
 
@@ -1326,7 +1326,7 @@ extends DailySummaryReportAbstract
 				writer.append("    <b>").append(entry.getSubject()).append("</b> \n");
 				writer.append("  </a> \n");
 				writer.append("</h5> \n");
-				writer.append("<div id='collapse_").append(tocDiv).append("' class='collapse" + show+ "' role='tabpanel' aria-labelledby='heading_").append(tocDiv).append("'> \n");
+				writer.append("<div id='collapse_").append(tocDiv).append("' class='collapse" + show + "' role='tabpanel' aria-labelledby='heading_").append(tocDiv).append("'> \n");
 				writer.append("<div class='card-body'> \n");
 				writer.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
 
@@ -1507,7 +1507,7 @@ extends DailySummaryReportAbstract
 			writer.append(StringUtil.exceptionToString(rte));
 			writer.append("</pre>\n");
 			
-			_logger.warn("Problems creating HTML " + getReportName() + ". Caught: "+rte, rte);
+			_logger.warn("Problems creating HTML " + getReportName() + ". Caught: " + rte, rte);
 		}
 
 		writer.append("</html> \n");
@@ -1712,7 +1712,7 @@ extends DailySummaryReportAbstract
 			writer.append(StringUtil.exceptionToString(rte));
 			writer.append("</pre>\n");
 			
-			_logger.warn("Problems creating " + getReportName() + " (ShortMessage). Caught: "+rte, rte);
+			_logger.warn("Problems creating " + getReportName() + " (ShortMessage). Caught: " + rte, rte);
 		}
 
 		writer.append("</html> \n");
@@ -1915,7 +1915,7 @@ extends DailySummaryReportAbstract
 			writer.append(StringUtil.exceptionToString(rte));
 			writer.append("</pre>\n");
 			
-			_logger.warn("Problems creating " + getReportName() + " (MinimalMessage). Caught: "+rte, rte);
+			_logger.warn("Problems creating " + getReportName() + " (MinimalMessage). Caught: " + rte, rte);
 		}
 
 		writer.append("</html> \n");

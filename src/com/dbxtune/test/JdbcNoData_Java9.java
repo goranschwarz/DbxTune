@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -180,7 +180,7 @@ public class JdbcNoData_Java9
 					URL jar = src.getLocation();
 					jarFile = jar + "";
 
-					System.out.println("  DriverManager-Entry: classname='"+className+"', driver='"+driver+"' can be located in JAR File '"+jarFile+"'.");
+					System.out.println("  DriverManager-Entry: classname='" + className + "', driver='" + driver + "' can be located in JAR File '" + jarFile + "'.");
 				}
 			}
 
@@ -276,29 +276,29 @@ public class JdbcNoData_Java9
 			String driverClassName = "com.sybase.jdbc42.jdbc.SybDriver";
 			try
 			{
-				System.out.println("before: DriverManager.getDriver(url)... driverClassName='"+driverClassName+"', url='"+url+"')");
+				System.out.println("before: DriverManager.getDriver(url)... driverClassName='" + driverClassName + "', url='" + url + "')");
 				Driver jdbcDriver = DriverManager.getDriver(url);
-				System.out.println(" after: DriverManager.getDriver(url)... jdbcDriver='"+jdbcDriver+"', driverClassName='"+driverClassName+"', url='"+url+"')");
+				System.out.println(" after: DriverManager.getDriver(url)... jdbcDriver='" + jdbcDriver + "', driverClassName='" + driverClassName + "', url='" + url + "')");
 				
 				if (jdbcDriver == null)
 					Class.forName(driverClassName).newInstance();
 			}
 			catch (Throwable ex)
 			{
-				System.out.println( "Can't locate JDBC driver '"+driverClassName+"' for URL='"+url+"' using 'DriverManager.getDriver(url)' Lets continue, but first try to load the class '"+driverClassName+"' using 'Class.forName(driver).newInstance()' then connect to it using: DriverManager.getConnection(url, props); Caught="+ex);
+				System.out.println( "Can't locate JDBC driver '" + driverClassName + "' for URL='" + url + "' using 'DriverManager.getDriver(url)' Lets continue, but first try to load the class '" + driverClassName + "' using 'Class.forName(driver).newInstance()' then connect to it using: DriverManager.getConnection(url, props); Caught=" + ex);
 
 				try { Class.forName(driverClassName).newInstance(); }
 				catch( Throwable ex2 )
 //				catch( ClassNotFoundException | InstantiationException | IllegalAccessException ex2 )
 				{
-					System.out.println("DriverManager.getDriver(url), threw Exception '"+ex+"', so we did 'Class.forName(driverClass).newInstance()', and that caused: "+ex2);
+					System.out.println("DriverManager.getDriver(url), threw Exception '" + ex + "', so we did 'Class.forName(driverClass).newInstance()', and that caused: " + ex2);
 				}
 			}
 			
-			System.out.println("Connectiong to URL: "+url);
+			System.out.println("Connectiong to URL: " + url);
 			Connection conn = DriverManager.getConnection(url, props);
 
-			System.out.println("Using Java Runtime Environment Version: "+ System.getProperty("java.version"));
+			System.out.println("Using Java Runtime Environment Version: " + System.getProperty("java.version"));
 			System.out.println("Using Driver Version: "                  + conn.getMetaData().getDriverVersion());
 			System.out.println("DBMS Product: "                          + conn.getMetaData().getDatabaseProductName());
 			System.out.println("DBMS Version: "                          + conn.getMetaData().getDatabaseProductVersion());
@@ -309,7 +309,7 @@ public class JdbcNoData_Java9
 			{
 				System.out.println();
 				System.out.println("###############################################################");
-				System.out.println("SQL: "+sql);
+				System.out.println("SQL: " + sql);
 				System.out.println("Data is NOT printed");
 				System.out.println("###############################################################");
 

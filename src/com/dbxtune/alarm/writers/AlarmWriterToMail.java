@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -148,7 +148,7 @@ extends AlarmWriterAbstract
 
 			// SSL PORT
 			if (_sslPort >= 0)
-				email.setSslSmtpPort(_sslPort+""); // Hmm why is this a String parameter?
+				email.setSslSmtpPort(_sslPort + ""); // Hmm why is this a String parameter?
 
 			// START TLS
 			if (_startTls)
@@ -185,11 +185,11 @@ extends AlarmWriterAbstract
 			// SEND
 			email.send();
 
-			_logger.info("Sent mail message: msgBodySizeKb="+msgBodySizeKb+", host='"+_smtpHostname+"', to='"+toList+"', subject='"+msgSubject+"', for server name '" + serverName + "'.");
+			_logger.info("Sent mail message: msgBodySizeKb=" + msgBodySizeKb + ", host='" + _smtpHostname + "', to='" + toList + "', subject='" + msgSubject + "', for server name '" + serverName + "'.");
 		}
 		catch (Exception ex)
 		{
-			_logger.error("Problems sending mail (msgBodySizeKb="+msgBodySizeKb+", host='"+_smtpHostname+"', to='"+toList+"', subject='"+msgSubject+"', for server name '" + serverName + "').", ex);
+			_logger.error("Problems sending mail (msgBodySizeKb=" + msgBodySizeKb + ", host='" + _smtpHostname + "', to='" + toList + "', subject='" + msgSubject + "', for server name '" + serverName + "').", ex);
 		}
 	}
 
@@ -343,7 +343,7 @@ extends AlarmWriterAbstract
 		list.add( new CmSettingsHelper("from",             Type.MANDATORY, PROPKEY_from,                   String .class, conf.getProperty       (PROPKEY_from                  , DEFAULT_from                  ), DEFAULT_from                  , "What should be the senders email address"));
 		list.add( new CmSettingsHelper("Subject-Template",                 PROPKEY_subjectTemplate,        String .class, conf.getProperty       (PROPKEY_subjectTemplate       , DEFAULT_subjectTemplate       ), DEFAULT_subjectTemplate       , "What should be the subject (Note: this is a template)"));
 		list.add( new CmSettingsHelper("Msg-Template",                     PROPKEY_msgBodyTemplate,        String .class, conf.getProperty       (PROPKEY_msgBodyTemplate       , DEFAULT_msgBodyTemplate       ), DEFAULT_msgBodyTemplate       , "What content should we send (Note: this is a template, if the content starts with <html> then it will try to send the mail as a HTML mail.)"));
-		list.add( new CmSettingsHelper("Msg-Template-Use-HTML",            PROPKEY_msgBodyTemplateUseHtml, Boolean.class, conf.getBooleanProperty(PROPKEY_msgBodyTemplateUseHtml, DEFAULT_msgBodyTemplateUseHtml), DEFAULT_msgBodyTemplateUseHtml, "If '"+PROPKEY_msgBodyTemplate+"' is not specified, then use a HTML Template as the default."));
+		list.add( new CmSettingsHelper("Msg-Template-Use-HTML",            PROPKEY_msgBodyTemplateUseHtml, Boolean.class, conf.getBooleanProperty(PROPKEY_msgBodyTemplateUseHtml, DEFAULT_msgBodyTemplateUseHtml), DEFAULT_msgBodyTemplateUseHtml, "If '" + PROPKEY_msgBodyTemplate + "' is not specified, then use a HTML Template as the default."));
 
 		list.add( new CmSettingsHelper("username",                         PROPKEY_username,               String .class, conf.getProperty       (PROPKEY_username              , DEFAULT_username              ), DEFAULT_username              , "If the SMTP server reuires you to login (default: is not to logon)"));
 		list.add( new CmSettingsHelper("password",                         PROPKEY_password,               String .class, conf.getProperty       (PROPKEY_password              , DEFAULT_password              ), DEFAULT_password              , "If the SMTP server reuires you to login (default: is not to logon)"));
@@ -391,7 +391,7 @@ extends AlarmWriterAbstract
 	{
 		super.init(conf);
 
-		_logger.info("Initializing the AlarmWriter component named '"+getName()+"'.");
+		_logger.info("Initializing the AlarmWriter component named '" + getName() + "'.");
 
 		_smtpHostname           = conf.getProperty       (PROPKEY_smtpHostname,           DEFAULT_smtpHostname);
 		_to                     = conf.getProperty       (PROPKEY_to,                     DEFAULT_to);
@@ -419,11 +419,11 @@ extends AlarmWriterAbstract
 		//------------------------------------------
 		// Check for mandatory parameters
 		//------------------------------------------
-		if ( StringUtil.isNullOrBlank(_smtpHostname   ) ) throw new Exception("The property '" + PROPKEY_smtpHostname    + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
-		if ( StringUtil.isNullOrBlank(_to             ) ) throw new Exception("The property '" + PROPKEY_to              + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
-		if ( StringUtil.isNullOrBlank(_from           ) ) throw new Exception("The property '" + PROPKEY_from            + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
-		if ( StringUtil.isNullOrBlank(_subjectTemplate) ) throw new Exception("The property '" + PROPKEY_subjectTemplate + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
-		if ( StringUtil.isNullOrBlank(_msgBodyTemplate) ) throw new Exception("The property '" + PROPKEY_msgBodyTemplate + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
+		if ( StringUtil.isNullOrBlank(_smtpHostname   ) ) throw new Exception("The property '" + PROPKEY_smtpHostname    + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
+		if ( StringUtil.isNullOrBlank(_to             ) ) throw new Exception("The property '" + PROPKEY_to              + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
+		if ( StringUtil.isNullOrBlank(_from           ) ) throw new Exception("The property '" + PROPKEY_from            + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
+		if ( StringUtil.isNullOrBlank(_subjectTemplate) ) throw new Exception("The property '" + PROPKEY_subjectTemplate + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
+		if ( StringUtil.isNullOrBlank(_msgBodyTemplate) ) throw new Exception("The property '" + PROPKEY_msgBodyTemplate + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
 
 		// Parse the 'to string' into a list
 //		_toList = StringUtil.parseCommaStrToList(_to);
@@ -440,7 +440,7 @@ extends AlarmWriterAbstract
 	public void printConfig()
 	{
 		int spaces = 45;
-		_logger.info("Configuration for Alarm Writer Module: "+getName());
+		_logger.info("Configuration for Alarm Writer Module: " + getName());
 		_logger.info("    " + StringUtil.left(PROPKEY_smtpHostname          , spaces) + ": " + _smtpHostname);
 		_logger.info("    " + StringUtil.left(PROPKEY_to                    , spaces) + ": " + _to);
 		_logger.info("    " + StringUtil.left(PROPKEY_from                  , spaces) + ": " + _from);

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -265,7 +265,7 @@ public class WaitCounterSummary
 			WaitCounterEntry wce = _eventEntries.get(waitId);
 			
 			System.out.println(
-				"DEBUG EventID - WaitCounterEntry: ClassName='"+wce._ClassName+"', WaitEventID='"+wce._WaitEventID+"', EventName='"+wce._EventName+"'.\n" +
+				"DEBUG EventID - WaitCounterEntry: ClassName='" + wce._ClassName + "', WaitEventID='" + wce._WaitEventID + "', EventName='" + wce._EventName + "'.\n" +
 				"     WaitTime        Sum = " + wce.getSumWaitTime()              + "\n" +
 				"     Waits           Sum = " + wce.getSumWaits()                 + "\n" +
 				"     WaitTimePerWait Sum = " + wce.getSumWaitTimePerWait()       + "\n" + 
@@ -281,7 +281,7 @@ public class WaitCounterSummary
 			WaitCounterEntry wce = _classEntries.get(className);
 			
 			System.out.println(
-				"DEBUG ClassName - WaitCounterEntry: ClassName='"+wce._ClassName+".\n" +
+				"DEBUG ClassName - WaitCounterEntry: ClassName='" + wce._ClassName + ".\n" +
 				"     WaitTime        Sum = " + wce.getSumWaitTime()              + "\n" +
 				"     Waits           Sum = " + wce.getSumWaits()                 + "\n" +
 				"     WaitTimePerWait Sum = " + wce.getSumWaitTimePerWait()       + "\n" + 
@@ -307,7 +307,7 @@ public class WaitCounterSummary
 
 		public int    getWaitEventID()        { return _WaitEventID; }
 		public String getClassName()          { return _ClassName; }
-		public String getEventNameLabel()     { return "["+_WaitEventID+"] " + _EventName; }
+		public String getEventNameLabel()     { return "[" + _WaitEventID + "] " + _EventName; }
 		public String getEventName()          { return _EventName; }
 
 		public int    getNumberOfAdds()       { return _numberOfAdds; }
@@ -350,7 +350,7 @@ public class WaitCounterSummary
 	{
 		final Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
 
-		String key1 = "Data Source Column Name("+Type.WaitTime+", "+Type.Waits+", "+Type.WaitTimePerWait+")";
+		String key1 = "Data Source Column Name(" + Type.WaitTime + ", " + Type.Waits + ", " + Type.WaitTimePerWait + ")";
 
 		LinkedHashMap<String, String> in = new LinkedHashMap<String, String>();
 		in.put(key1, Configuration.getCombinedConfiguration().getProperty(propkey, defaultValue));
@@ -366,8 +366,8 @@ public class WaitCounterSummary
 			catch (Throwable t) 
 			{
 				String msg = 
-						"<html>Problems converting value '<code>"+newValue+"</code>' into a Type.<br>" +
-						"I will use the default value '<code>"+defaultValue+"</code>' instead.<br>" +
+						"<html>Problems converting value '<code>" + newValue + "</code>' into a Type.<br>" +
+						"I will use the default value '<code>" + defaultValue + "</code>' instead.<br>" +
 						"<br>" +
 						"Please open the dialog and try again.<br>" +
 						"</html>";

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -56,7 +56,7 @@ extends AlarmWriterAbstract
 	@Override
 	public String getDescription()
 	{
-		return "Internally used to write to the application log of "+Version.getAppName();
+		return "Internally used to write to the application log of " + Version.getAppName();
 	}
 	
 	@Override
@@ -65,7 +65,7 @@ extends AlarmWriterAbstract
 	{
 		super.init(conf);
 
-		_logger.info("Initializing the AlarmHandler.AlarmWriter component named '"+getName()+"'.");
+		_logger.info("Initializing the AlarmHandler.AlarmWriter component named '" + getName() + "'.");
 	}
 
 	@Override
@@ -80,7 +80,7 @@ extends AlarmWriterAbstract
 	{
 		if (alarmEvent == null)
 			return;
-		_logger.info("AlarmHandler: -----RAISE-----: "+alarmEvent.getMessage());
+		_logger.info("AlarmHandler: -----RAISE-----: " + alarmEvent.getMessage());
 	}
 
 	@Override
@@ -88,7 +88,7 @@ extends AlarmWriterAbstract
 	{
 		if (alarmEvent == null)
 			return;
-		_logger.info("AlarmHandler: -----RE-RAISE--: "+alarmEvent.getMessage());
+		_logger.info("AlarmHandler: -----RE-RAISE--: " + alarmEvent.getMessage());
 	}
 
 	/**
@@ -99,7 +99,7 @@ extends AlarmWriterAbstract
 	{
 		if (alarmEvent == null)
 			return;
-		_logger.info("AlarmHandler: -----CANCEL----: "+alarmEvent.getMessage());
+		_logger.info("AlarmHandler: -----CANCEL----: " + alarmEvent.getMessage());
 	}
 
 	@Override 

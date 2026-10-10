@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -349,7 +349,7 @@ public class JschTest2
 		@Override
 		public boolean promptPassword(String message)
 		{
-			System.out.println("---------- MyUserInfo: promptPassword() message='"+message+"'.");
+			System.out.println("---------- MyUserInfo: promptPassword() message='" + message + "'.");
 			return false;
 		}
 
@@ -375,7 +375,7 @@ public class JschTest2
 		@Override
 		public boolean promptPassphrase(String message)
 		{
-			System.out.println("---------- MyUserInfo: promptPassphrase() message='"+message+"'.");
+			System.out.println("---------- MyUserInfo: promptPassphrase() message='" + message + "'.");
 			return false;
 		}
 
@@ -402,7 +402,7 @@ public class JschTest2
 		@Override
 		public boolean promptYesNo(String message)
 		{
-			System.out.println("---------- MyUserInfo: promptYesNo() message='"+message+"'.");
+			System.out.println("---------- MyUserInfo: promptYesNo() message='" + message + "'.");
 			return false;
 		}
 
@@ -414,7 +414,7 @@ public class JschTest2
 		@Override
 		public void showMessage(String message)
 		{
-			System.out.println("---------- MyUserInfo: showMessage() message='"+message+"'.");
+			System.out.println("---------- MyUserInfo: showMessage() message='" + message + "'.");
 		}
 
 		/**

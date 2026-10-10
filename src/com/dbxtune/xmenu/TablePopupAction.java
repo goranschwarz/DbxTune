@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -88,9 +88,9 @@ implements ActionListener
 		String s = "Action event detected."
 					+ "    Event source: " + source.getText()
 					+ " (an instance of " + source + ")";
-		_logger.debug("PopupMenuAction: "+s);
-		_logger.debug("PopupMenuAction._classname: "+_classname);
-		_logger.debug("PopupMenuAction._params: "+_params.toString());
+		_logger.debug("PopupMenuAction: " + s);
+		_logger.debug("PopupMenuAction._classname: " + _classname);
+		_logger.debug("PopupMenuAction._params: " + _params.toString());
 
 		LinkedHashMap<String,String> paramsVal = getParamValues();
 		if (paramsVal == null)
@@ -150,7 +150,7 @@ implements ActionListener
 		catch (Exception e)
 		{
 //			JOptionPane.showMessageDialog(_window, "Trying to load classname '"+_classname+"'. Found the following error:\n."+e, "Error", JOptionPane.ERROR_MESSAGE);
-			JOptionPane.showMessageDialog(null, "Trying to load classname '"+_classname+"'. Found the following error:\n."+e, "Error", JOptionPane.ERROR_MESSAGE);
+			JOptionPane.showMessageDialog(null, "Trying to load classname '" + _classname + "'. Found the following error:\n." + e, "Error", JOptionPane.ERROR_MESSAGE);
 		}
 	}
 
@@ -166,7 +166,7 @@ implements ActionListener
 		if (_table instanceof JXTable)
 			row = ((JXTable)_table).convertRowIndexToModel(selectedRow);
 
-		_logger.debug("PopupMenuAction: selected row is "+row);
+		_logger.debug("PopupMenuAction: selected row is " + row);
 
 		// Loop parameters and try to get the position of the
 		for (int p=0; p<_params.size(); p++)
@@ -199,14 +199,14 @@ implements ActionListener
 			}
 
 
-			_logger.debug("PopupMenuAction: column name '"+paramSet+"' has table index "+viewColPos+".");
+			_logger.debug("PopupMenuAction: column name '" + paramSet + "' has table index " + viewColPos + ".");
 
 			TableModel model = _table.getModel();
 			if (viewColPos >= 0)
 			{
 				int modelColPos = ((JXTable)_table).convertColumnIndexToModel(viewColPos);
 				if (modelColPos == -1)
-					throw new RuntimeException("Can't find/convert column from view to model. viewColPos=" + viewColPos + ", modelCol="+modelColPos);
+					throw new RuntimeException("Can't find/convert column from view to model. viewColPos=" + viewColPos + ", modelCol=" + modelColPos);
 
 				Object obj = model.getValueAt(row, modelColPos);
 				String val = "";
@@ -216,7 +216,7 @@ implements ActionListener
 				}
 				else
 				{
-					JOptionPane.showMessageDialog(null, "The value for column '"+paramUsed+"' can not be a NULL or empty.", "Error", JOptionPane.ERROR_MESSAGE);
+					JOptionPane.showMessageDialog(null, "The value for column '" + paramUsed + "' can not be a NULL or empty.", "Error", JOptionPane.ERROR_MESSAGE);
 					return null;
 				}
 
@@ -242,20 +242,20 @@ implements ActionListener
 					paramValues.put(paramUsed, val);
 				}
 
-				_logger.debug("PopupMenuAction: column name '"+paramUsed+"' has value '"+val+"'.");
+				_logger.debug("PopupMenuAction: column name '" + paramUsed + "' has value '" + val + "'.");
 			}
 			else
 			{
 				if ( ! isOptional )
 				{
-					_logger.debug("PopupMenuAction: looking for column name(s) '"+paramSet+"' which could NOT be found.");
-					JOptionPane.showMessageDialog(null, "looking for column name(s) '"+paramSet+"' which could NOT be found in the current result set.", "Error", JOptionPane.ERROR_MESSAGE);
+					_logger.debug("PopupMenuAction: looking for column name(s) '" + paramSet + "' which could NOT be found.");
+					JOptionPane.showMessageDialog(null, "looking for column name(s) '" + paramSet + "' which could NOT be found in the current result set.", "Error", JOptionPane.ERROR_MESSAGE);
 
 					return null;
 				}
 			}
 		}
-		_logger.debug("PopupMenuAction: getParamValues() returns: "+paramValues);
+		_logger.debug("PopupMenuAction: getParamValues() returns: " + paramValues);
 		return paramValues;
 	}
 

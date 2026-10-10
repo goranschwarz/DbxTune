@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -54,7 +54,7 @@ extends TabularCntrPanel
 		   + "<ul>"
 		   + "   <li>When ASE is runing in <i><b>threaded</b> kernel mode</i> IO operations are processed by the IO Thread (multiple ones can be configured).<br>"
 		   + "       In this case discarding <code>IOCPUTime</code> would make sense... (or actually Collapse <code>IOCPUTime</code> into <code>IdleCPUTime</code>) <br>"
-		   + "       To view how efficient the IO Thread is, you can look in Performance Counter '"+CmIoControllers.SHORT_NAME+"', '"+CmThreads.SHORT_NAME+"(ThreadType=DiskController, columns=*Ticks)' or '"+CmDeviceIo.SHORT_NAME+"'.</li>"
+		   + "       To view how efficient the IO Thread is, you can look in Performance Counter '" + CmIoControllers.SHORT_NAME + "', '" + CmThreads.SHORT_NAME + "(ThreadType=DiskController, columns=*Ticks)' or '" + CmDeviceIo.SHORT_NAME + "'.</li>"
 		   + "   <li>When ASE is runing in <i><b>process</b> kernel mode</i>, or in releases earlier than 15.7, IO operations are processed by the <code>engine</code> which issued the IO Operation.<br>"
 		   + "       Then the column <code>IOCPUTime</code> is vital information for checking if a specific engine is doing IO's</li>"
 		   + "</ul>"

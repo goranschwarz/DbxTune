@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -214,7 +214,7 @@ implements SybMessageHandler, AutoCloseable
 		{
 			// JZ0C0 = Connection is already closed
 			if ( "JZ0C0".equals(e.getSQLState()) )
-				_logger.info("Problems when doing close() on AseSqlScript object (restore autoCommit and database context). SQL State 'JZ0C0', Connection is Already closed. JDBC Message: "+e.getMessage());
+				_logger.info("Problems when doing close() on AseSqlScript object (restore autoCommit and database context). SQL State 'JZ0C0', Connection is Already closed. JDBC Message: " + e.getMessage());
 			else
 				_logger.warn("Problems when doing set|getAutoCommit on the connection.", e);
 		}
@@ -249,7 +249,7 @@ implements SybMessageHandler, AutoCloseable
 		catch(ClassNotFoundException e)
 		{
 			//return null;
-			_logger.error("Problems reading file '"+filename+"'. at class '"+className+"'. Caught: "+e, e);
+			_logger.error("Problems reading file '" + filename + "'. at class '" + className + "'. Caught: " + e, e);
 		}
 	}
 
@@ -269,13 +269,13 @@ implements SybMessageHandler, AutoCloseable
 			}
 			else
 			{
-				_logger.error("Problems reading file '"+filename+"'. at class '"+clazz+"'. The URL was null, returned from clazz.getResource(filename)");
+				_logger.error("Problems reading file '" + filename + "'. at class '" + clazz + "'. The URL was null, returned from clazz.getResource(filename)");
 			}
 		}
 		catch(IOException e)
 		{
 //			return null;
-			_logger.error("Problems reading file '"+filename+"'. at class '"+clazz+"'. Caught: "+e, e);
+			_logger.error("Problems reading file '" + filename + "'. at class '" + clazz + "'. Caught: " + e, e);
 		}
 	}
 
@@ -301,7 +301,7 @@ implements SybMessageHandler, AutoCloseable
 		}
 		catch(IOException e)
 		{
-			throw new SQLException("Problems loading the file '"+filename+"'. Caught: "+e.getMessage(), e);
+			throw new SQLException("Problems loading the file '" + filename + "'. Caught: " + e.getMessage(), e);
 		}
 	}
 
@@ -346,7 +346,7 @@ implements SybMessageHandler, AutoCloseable
 					stmnt.setQueryTimeout(_queryTimeout);
 
 				if (_logger.isDebugEnabled()) 
-					_logger.debug("EXECUTING: "+sql);
+					_logger.debug("EXECUTING: " + sql);
 //System.out.println("EXECUTING: -------------------------------------------------------------\n"+sql);
 //				stmnt.executeUpdate(sql);
 				boolean hasRs = stmnt.execute(sql);
@@ -370,7 +370,7 @@ implements SybMessageHandler, AutoCloseable
 						// If warnings found, add them to the LIST
 						for (sqlw = rs.getWarnings(); sqlw != null; sqlw = sqlw.getNextWarning())
 						{
-							_logger.trace("--In loop, sqlw: "+sqlw);
+							_logger.trace("--In loop, sqlw: " + sqlw);
 							//compList.add(new JAseMessage(sqlw.getMessage()));
 						}
 
@@ -390,14 +390,14 @@ implements SybMessageHandler, AutoCloseable
 					// Check if we have more resultsets
 					hasRs = stmnt.getMoreResults();
 
-					_logger.trace( "--hasRs="+hasRs+", rowsAffected="+rowsAffected );
+					_logger.trace( "--hasRs=" + hasRs + ", rowsAffected=" + rowsAffected );
 				}
 				while (hasRs || rowsAffected != -1);
 
 				// Check for warnings
 				for (sqlw = stmnt.getWarnings(); sqlw != null; sqlw = sqlw.getNextWarning())
 				{
-					_logger.trace("====After read RS loop, sqlw: "+sqlw);
+					_logger.trace("====After read RS loop, sqlw: " + sqlw);
 					//compList.add(new JAseMessage(sqlw.getMessage()));
 				}
 
@@ -406,7 +406,7 @@ implements SybMessageHandler, AutoCloseable
 			}
 			catch(SQLWarning w)
 			{
-				_logger.warn("Problems when executing sql: "+sql, w);
+				_logger.warn("Problems when executing sql: " + sql, w);
 //				PluginSupport.LogInfoMessage(sqlwarning.getMessage(), MessageText.formatSQLExceptionDetails(sqlwarning));
 			}
 		}
@@ -516,15 +516,15 @@ implements SybMessageHandler, AutoCloseable
 
 				if (_sybMessageNumberDebug)
 				{
-                    System.out.println("DISCARD(errorCode="+errorCode+"): discardList="+StringUtil.toCommaStr(_discardDbmsErrorNumList));
-                    System.out.println("SQLEX: "+sqe);
+                    System.out.println("DISCARD(errorCode=" + errorCode + "): discardList=" + StringUtil.toCommaStr(_discardDbmsErrorNumList));
+                    System.out.println("SQLEX: " + sqe);
                     //new Exception("Dummy Trace Message to locate from WHERE this was called.").printStackTrace();
 				}
 
 				if (_discardDbmsErrorNumList != null && _discardDbmsErrorNumList.contains(errorCode))
 				{
 					if (_logger.isDebugEnabled())
-						_logger.debug("executeSql(BufferedReader,boolean): Discarding Error code "+errorCode+". Msg='"+sqe.getMessage()+"'.");
+						_logger.debug("executeSql(BufferedReader,boolean): Discarding Error code " + errorCode + ". Msg='" + sqe.getMessage() + "'.");
 
 					return null;
 				}
@@ -532,7 +532,7 @@ implements SybMessageHandler, AutoCloseable
 				if (_discardDbmsErrorTextList != null && _discardDbmsErrorTextList.contains(sqe.getMessage()))
 				{
 					if (_logger.isDebugEnabled())
-						_logger.debug("executeSql(BufferedReader,boolean): Discarding Error code "+errorCode+". Msg='"+sqe.getMessage()+"'.");
+						_logger.debug("executeSql(BufferedReader,boolean): Discarding Error code " + errorCode + ". Msg='" + sqe.getMessage() + "'.");
 
 					return null;
 				}
@@ -635,7 +635,7 @@ implements SybMessageHandler, AutoCloseable
 						// Check if we have more result sets
 						hasRs = stmnt.getMoreResults(); 
 
-						_logger.trace( "--hasRs="+hasRs+", rowsAffected="+rowsAffected );
+						_logger.trace( "--hasRs=" + hasRs + ", rowsAffected=" + rowsAffected );
 					}
 					while (hasRs || rowsAffected != -1);
 
@@ -844,7 +844,7 @@ implements SybMessageHandler, AutoCloseable
 		}
 		catch (IOException ex) 
 		{
-			_logger.error("While reading the input SQL 'go' String, caught: "+ex, ex);
+			_logger.error("While reading the input SQL 'go' String, caught: " + ex, ex);
 		}
 		return cmdCount;
 	}
@@ -1014,7 +1014,7 @@ implements SybMessageHandler, AutoCloseable
 		StringBuffer m = new StringBuffer(500);
 
 		@SuppressWarnings("unused")
-		String threadName = " ThreadName='"+Thread.currentThread().getName()+"'.";
+		String threadName = " ThreadName='" + Thread.currentThread().getName() + "'.";
 
 		@SuppressWarnings("unused")
 		String procName = "";
@@ -1029,7 +1029,7 @@ implements SybMessageHandler, AutoCloseable
 		if (_discardDbmsErrorNumList != null && _discardDbmsErrorNumList.contains(msgNumber))
 		{
 			if (_logger.isDebugEnabled())
-				_logger.debug("executeSql(BufferedReader,boolean): Discarding Error code "+msgNumber+". Msg='"+sqe.getMessage()+"'.");
+				_logger.debug("executeSql(BufferedReader,boolean): Discarding Error code " + msgNumber + ". Msg='" + sqe.getMessage() + "'.");
 
 			return null;
 		}
@@ -1056,7 +1056,7 @@ implements SybMessageHandler, AutoCloseable
 		// Get procName
 		if ( sqe instanceof EedInfo  && ((EedInfo)sqe).getProcedureName() != null )
 		{
-			procName = " ProcName='"+((EedInfo)sqe).getProcedureName()+"'.";
+			procName = " ProcName='" + ((EedInfo)sqe).getProcedureName() + "'.";
 		}
 
 		// If not print messages or other trace messages (showplan, statistics io, etc)
@@ -1375,9 +1375,9 @@ implements SybMessageHandler, AutoCloseable
 
 			sql="declare @partitions int \n" +
 				"select @partitions = count(*) \n" +
-				"from ["+dbname+"]..sysobjects o, ["+dbname+"]..sysusers u, ["+dbname+"]..syspartitions p \n" +
-				"where o.name = '"+objname+"' \n" +
-				"  and u.name = '"+owner+"' \n" +
+				"from [" + dbname + "]..sysobjects o, [" + dbname + "]..sysusers u, [" + dbname + "]..syspartitions p \n" +
+				"where o.name = '" + objname + "' \n" +
+				"  and u.name = '" + owner + "' \n" +
 				"  and o.id  = p.id \n" +
 				"  and o.uid = o.uid \n" +
 				"  and p.indid = 0 \n" +
@@ -1385,7 +1385,7 @@ implements SybMessageHandler, AutoCloseable
 				"if (@partitions > 1) \n" +
 				"    print 'Table is partitioned, and this is not working so well with sp__optdiag, sorry.' \n" +
 				"else \n" +
-				"    exec ["+dbname+"]..sp__optdiag '"+owner+"."+objname+"' \n" +
+				"    exec [" + dbname + "]..sp__optdiag '" + owner + "." + objname + "' \n" +
 				"print 'xxxxxxxxxxxxxxx' \n" +
 				"raiserror 99999 'test raise error...' \n" +
 				"print 'yyyyyyyyyyyyyyy' \n" +

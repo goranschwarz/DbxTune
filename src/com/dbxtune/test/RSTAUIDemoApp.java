@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -85,7 +85,7 @@ public class RSTAUIDemoApp extends JFrame implements ActionListener, SearchListe
 //		for (int i=0; i<am.length; i++)
 //			System.out.println("getActionMap["+i+"]: "+textArea.getActionMap().get(am[i]));
 
-		System.out.println("getInputMap: "+textArea.getInputMap());
+		System.out.println("getInputMap: " + textArea.getInputMap());
 		KeyStroke[] im = textArea.getInputMap().allKeys();
 		for (int i=0; i<im.length; i++)
 		{
@@ -95,8 +95,8 @@ public class RSTAUIDemoApp extends JFrame implements ActionListener, SearchListe
 			
 			String xxx = 
 				"getInputMap[" + i + "]: " +
-				"keyStroke "      + StringUtil.left(kstroke  +"", 30, true, "'") + ", " +
-				"maps to action " + StringUtil.left(actionKey+"", 30, true, "'") + ", " +
+				"keyStroke "      + StringUtil.left(kstroke  + "", 30, true, "'") + ", " +
+				"maps to action " + StringUtil.left(actionKey + "", 30, true, "'") + ", " +
 				"action Object: " + actionObj;
 			System.out.println(xxx);
 			textArea.append(xxx);
@@ -146,7 +146,7 @@ public class RSTAUIDemoApp extends JFrame implements ActionListener, SearchListe
 	@Override
 	public void actionPerformed(ActionEvent e)
 	{
-		System.out.println("actionPerformed(): e="+e);
+		System.out.println("actionPerformed(): e=" + e);
 		
 //		String command = e.getActionCommand();
 //		SearchContext context = findDialog.getSearchContext();
@@ -176,7 +176,7 @@ public class RSTAUIDemoApp extends JFrame implements ActionListener, SearchListe
 	@Override
 	public void searchEvent(SearchEvent e)
 	{
-		System.out.println("searchEvent(): e="+e);
+		System.out.println("searchEvent(): e=" + e);
 		SearchContext context = e.getSearchContext();
 
 		SearchResult sr = SearchEngine.find(textArea, context);

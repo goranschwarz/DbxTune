@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -220,7 +220,7 @@ implements ActionListener, TableModelListener
 				"Load values into the below table from any of the templates in the drop down list.<br>" +
 				"<UL>" +
 				"<li> If all selected values in the table is matching a template, that template name will be displayed in the drop down list.</li>" +
-				"<li> If template name is '"+NO_TEMPLATE_IS_SELECTED+"', it means that the current selection can't be found within any of the templates.</li>" +
+				"<li> If template name is '" + NO_TEMPLATE_IS_SELECTED + "', it means that the current selection can't be found within any of the templates.</li>" +
 				"</UL>" +
 				"</html>";
 		_templateLoad_lbl.setToolTipText(tooltip);
@@ -385,8 +385,8 @@ implements ActionListener, TableModelListener
 				   )
 				{
 					int res = JOptionPane.showConfirmDialog(this,
-							"Current selection is already saved as the template '"+currentSelectionExistsAsName+"'.\n" +
-							    "Do you still want to save it as '"+newName+"'.\n" +
+							"Current selection is already saved as the template '" + currentSelectionExistsAsName + "'.\n" +
+							    "Do you still want to save it as '" + newName + "'.\n" +
 							    "\n" +
 							    "Note: It could be difficult to access the template from the drop down list.\n" +
 							    "\n" +
@@ -527,22 +527,22 @@ implements ActionListener, TableModelListener
 			
 			if (cm == null)
 			{
-				_logger.warn("The cm named '"+tabName+"' can't be found in the 'GetCounters' object.");
+				_logger.warn("The cm named '" + tabName + "' can't be found in the 'GetCounters' object.");
 				continue;
 			}
 
 			if (_logger.isDebugEnabled())
 			{
-				String debugStr = "doApply() name="+StringUtil.left("'"+tabName+"'", 30) +
-					" "+CounterSetTemplates.PROPKEY_queryTimeout+"="+(tm.isCellChanged(r, TAB_POS_QUERY_TIMEOUT) ? "X":" ") +
-					" "+CounterSetTemplates.PROPKEY_postpone    +"="+(tm.isCellChanged(r, TAB_POS_POSTPONE     ) ? "X":" ") +
-					" "+CounterSetTemplates.PROPKEY_paused      +"="+(tm.isCellChanged(r, TAB_POS_PAUSED       ) ? "X":" ") +
-					" "+CounterSetTemplates.PROPKEY_bg          +"="+(tm.isCellChanged(r, TAB_POS_BG           ) ? "X":" ") +
-					" "+CounterSetTemplates.PROPKEY_resetNC20   +"="+(tm.isCellChanged(r, TAB_POS_RNC20        ) ? "X":" ") +
-					" "+CounterSetTemplates.PROPKEY_storePcs    +"="+(tm.isCellChanged(r, TAB_POS_STORE_PCS    ) ? "X":" ") +
-					" "+CounterSetTemplates.PROPKEY_pcsAbs      +"="+(tm.isCellChanged(r, TAB_POS_STORE_ABS    ) ? "X":" ") +
-					" "+CounterSetTemplates.PROPKEY_pcsDiff     +"="+(tm.isCellChanged(r, TAB_POS_STORE_DIFF   ) ? "X":" ") +
-					" "+CounterSetTemplates.PROPKEY_pcsRate     +"="+(tm.isCellChanged(r, TAB_POS_STORE_RATE   ) ? "X":" ");
+				String debugStr = "doApply() name=" + StringUtil.left("'" + tabName + "'", 30) +
+					" " + CounterSetTemplates.PROPKEY_queryTimeout + "=" + (tm.isCellChanged(r, TAB_POS_QUERY_TIMEOUT) ? "X":" ") +
+					" " + CounterSetTemplates.PROPKEY_postpone    + "=" + (tm.isCellChanged(r, TAB_POS_POSTPONE     ) ? "X":" ") +
+					" " + CounterSetTemplates.PROPKEY_paused      + "=" + (tm.isCellChanged(r, TAB_POS_PAUSED       ) ? "X":" ") +
+					" " + CounterSetTemplates.PROPKEY_bg          + "=" + (tm.isCellChanged(r, TAB_POS_BG           ) ? "X":" ") +
+					" " + CounterSetTemplates.PROPKEY_resetNC20   + "=" + (tm.isCellChanged(r, TAB_POS_RNC20        ) ? "X":" ") +
+					" " + CounterSetTemplates.PROPKEY_storePcs    + "=" + (tm.isCellChanged(r, TAB_POS_STORE_PCS    ) ? "X":" ") +
+					" " + CounterSetTemplates.PROPKEY_pcsAbs      + "=" + (tm.isCellChanged(r, TAB_POS_STORE_ABS    ) ? "X":" ") +
+					" " + CounterSetTemplates.PROPKEY_pcsDiff     + "=" + (tm.isCellChanged(r, TAB_POS_STORE_DIFF   ) ? "X":" ") +
+					" " + CounterSetTemplates.PROPKEY_pcsRate     + "=" + (tm.isCellChanged(r, TAB_POS_STORE_RATE   ) ? "X":" ");
 				_logger.debug(debugStr);
 			}
 
@@ -779,18 +779,18 @@ implements ActionListener, TableModelListener
 				else                            ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_OFF_SMALL;
 			}
 			if (ppe == null)
-				throw new RuntimeException("Can't find the SYSTEM TEMPLATE named '"+templateName+"'.");
+				throw new RuntimeException("Can't find the SYSTEM TEMPLATE named '" + templateName + "'.");
 		}
 		else
 		{
-			String propKey = "tcpConfigDialog.template.name."+templateName;
+			String propKey = "tcpConfigDialog.template.name." + templateName;
 			String propVal = tmpConf.getProperty(propKey);
 			if (propVal == null)
 			{
-				_logger.warn("The key '"+propKey+"', can't be found in the file '"+tmpConf.getFilename()+"'.");
+				_logger.warn("The key '" + propKey + "', can't be found in the file '" + tmpConf.getFilename() + "'.");
 				SwingUtils.showErrorMessage(this, "Error loading Template", 
-						"Can't load the Template Named '"+templateName+"'\n\n" +
-						"The key '"+propKey+"', can't be found in the file '"+tmpConf.getFilename()+"'.", null);
+						"Can't load the Template Named '" + templateName + "'\n\n" +
+						"The key '" + propKey + "', can't be found in the file '" + tmpConf.getFilename() + "'.", null);
 				return false;
 			}
 			ppe = new PropPropEntry(propVal);
@@ -836,7 +836,7 @@ implements ActionListener, TableModelListener
 			}
 			catch (Exception e) 
 			{
-				_logger.error("Problem when loading Template '"+templateName+"', for tab '"+name+"', caught: "+e.getMessage());
+				_logger.error("Problem when loading Template '" + templateName + "', for tab '" + name + "', caught: " + e.getMessage());
 				return false;
 			}
 		}
@@ -882,16 +882,16 @@ implements ActionListener, TableModelListener
 				else                            ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_OFF_SMALL;
 			}
 			if (ppe == null)
-				throw new NameNotFoundException("Can't find the SYSTEM TEMPLATE named '"+templateName+"'.");
+				throw new NameNotFoundException("Can't find the SYSTEM TEMPLATE named '" + templateName + "'.");
 		}
 		else
 		{
-			String propKey = "tcpConfigDialog.template.name."+templateName;
+			String propKey = "tcpConfigDialog.template.name." + templateName;
 			String propVal = tmpConf.getProperty(propKey);
 			if (propVal == null)
 			{
-				_logger.warn("The key '"+propKey+"', can't be found in the file '"+tmpConf.getFilename()+"'.");
-				throw new NameNotFoundException("Can't find the USER DEFINED TEMPLATE named '"+templateName+"' in config file(s) '"+tmpConf.getFilename()+"'.");
+				_logger.warn("The key '" + propKey + "', can't be found in the file '" + tmpConf.getFilename() + "'.");
+				throw new NameNotFoundException("Can't find the USER DEFINED TEMPLATE named '" + templateName + "' in config file(s) '" + tmpConf.getFilename() + "'.");
 			}
 			ppe = new PropPropEntry(propVal);
 		}
@@ -901,7 +901,7 @@ implements ActionListener, TableModelListener
 		// LOAD foreach of the CM's
 		for (String name : ppe)
 		{
-			_logger.debug("setTemplate(): PPE: for name '"+name+"'.");
+			_logger.debug("setTemplate(): PPE: for name '" + name + "'.");
 			try
 			{
 				int     queryTimeout = ppe.getIntMandatoryProperty(    name, CounterSetTemplates.PROPKEY_queryTimeout);
@@ -918,7 +918,7 @@ implements ActionListener, TableModelListener
 
 				if (cm == null)
 				{
-					_logger.warn("The cm named '"+name+"' can't be found in the 'CounterController' object, continuing with next cm.");
+					_logger.warn("The cm named '" + name + "' can't be found in the 'CounterController' object, continuing with next cm.");
 					continue;
 				}
 
@@ -935,7 +935,7 @@ implements ActionListener, TableModelListener
 			}
 			catch (Exception e) 
 			{
-				_logger.error("Problem when setting Template '"+templateName+"', for CM '"+name+"', caught: "+e.getMessage());
+				_logger.error("Problem when setting Template '" + templateName + "', for CM '" + name + "', caught: " + e.getMessage());
 				return false;
 			}
 		}
@@ -983,7 +983,7 @@ implements ActionListener, TableModelListener
 		// Full output:
 		// CmName1={entry}; CmName2={entry}; CmName3={entry};
 		
-		String propKey = "tcpConfigDialog.template.name."+templateName;
+		String propKey = "tcpConfigDialog.template.name." + templateName;
 		PropPropEntry ppe = getPpeFromTable();
 
 		// Set it in the template map... 
@@ -1006,14 +1006,14 @@ implements ActionListener, TableModelListener
 		if (tmpConf == null)
 			return false;
 
-		String propKey = "tcpConfigDialog.template.name."+templateName;
+		String propKey = "tcpConfigDialog.template.name." + templateName;
 		String propVal = tmpConf.getProperty(propKey);
 		if (propVal == null)
 		{
-			_logger.warn("The key '"+propKey+"', can't be found in the file '"+tmpConf.getFilename()+"'.");
+			_logger.warn("The key '" + propKey + "', can't be found in the file '" + tmpConf.getFilename() + "'.");
 			SwingUtils.showErrorMessage(this, "Error Removing Template", 
-					"Can't remove the Template Named '"+templateName+"'\n\n" +
-					"The key '"+propKey+"', can't be found in the file '"+tmpConf.getFilename()+"'.", null);
+					"Can't remove the Template Named '" + templateName + "'\n\n" +
+					"The key '" + propKey + "', can't be found in the file '" + tmpConf.getFilename() + "'.", null);
 			return false;
 		}
 		
@@ -1264,7 +1264,7 @@ implements ActionListener, TableModelListener
 				String tabName      = (String)   getValueAt(row, TAB_POS_TAB_NAME);
 
 				if (_logger.isDebugEnabled())
-					_logger.debug("isCellEditable: row="+row+", col="+col+", storePcs="+storePcs+", tabName='"+tabName+"'.");
+					_logger.debug("isCellEditable: row=" + row + ", col=" + col + ", storePcs=" + storePcs + ", tabName='" + tabName + "'.");
 
 				// Get CountersModel and check if that model supports editing for Abs, Diff & Rate
 //				CountersModel cm  = GetCounters.getInstance().getCmByDisplayName(tabName);

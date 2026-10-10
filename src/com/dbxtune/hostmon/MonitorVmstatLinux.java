@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -52,7 +52,7 @@ extends MonitorVmstat
 	public String getCommand()
 	{
 		String cmd = super.getCommand();
-		return cmd != null ? cmd : "vmstat "+getSleepTime();
+		return cmd != null ? cmd : "vmstat " + getSleepTime();
 	}
 
 	@Override
@@ -61,7 +61,7 @@ extends MonitorVmstat
 		HostMonitorMetaData md = new HostMonitorMetaData();
 		md.setTableName(getModuleName());
 
-		_logger.info("When creating meta data for Linux 'vmstat', initializing it using utility version "+VersionShort.toStr(utilVersion)+" (intVer="+utilVersion+").");
+		_logger.info("When creating meta data for Linux 'vmstat', initializing it using utility version " + VersionShort.toStr(utilVersion) + " (intVer=" + utilVersion + ").");
 
 		//--------------------------------------------------------
 		// the below extra descriptions was grabbed from - http://www.lazysystemadmin.com/2011/04/understanding-vmstat-output-explained.html
@@ -75,16 +75,16 @@ extends MonitorVmstat
 		String procs_r_tooltip = "<html>The number of processes waiting for run time.<br>       How many processes are waiting for CPU time.</html>";
 		String procs_b_tooltip = "<html>The number of processes in uninterruptible sleep.<br>   Wait Queue - Process which are waiting for I/O (disk, network, user input,etc..)</html>";
 		
-		String memory_swpd_tooltip = "<html>the amount of virtual memory used.<br>      Shows how many blocks are swapped out to disk (paged). Total Virtual memory usage. <br> <b>Note:</b> you can see the swap area configured in server using 'cat /proc/swaps'<br>"+noteOnBlocks+"</html>";
-		String memory_free_tooltip = "<html>the amount of idle memory.<br>              Idle Memory.<br>"+noteOnBlocks+"</html>";
-		String memory_buff_tooltip = "<html>the amount of memory used as buffers.<br>   Memory used as buffers, like before/after I/O operations.<br>"+noteOnBlocks+"</html>";
-		String memory_cache_tooltip = "<html>the amount of memory used as cache.<br>    Memory used as cache by the Operating System.<br>"+noteOnBlocks+"</html>";
+		String memory_swpd_tooltip = "<html>the amount of virtual memory used.<br>      Shows how many blocks are swapped out to disk (paged). Total Virtual memory usage. <br> <b>Note:</b> you can see the swap area configured in server using 'cat /proc/swaps'<br>" + noteOnBlocks + "</html>";
+		String memory_free_tooltip = "<html>the amount of idle memory.<br>              Idle Memory.<br>" + noteOnBlocks + "</html>";
+		String memory_buff_tooltip = "<html>the amount of memory used as buffers.<br>   Memory used as buffers, like before/after I/O operations.<br>" + noteOnBlocks + "</html>";
+		String memory_cache_tooltip = "<html>the amount of memory used as cache.<br>    Memory used as cache by the Operating System.<br>" + noteOnBlocks + "</html>";
 		
-		String swap_si_tooltip = "<html>Amount of memory swapped in from disk (/s).<br>   How many blocks per second the operating system is swapping in. <br>i.e Memory swapped in from the disk (Read from swap area to Memory)<br>           Note: In Ideal condition, We like to see si and so at 0 most of the time, and we definitely don�t like to see more than 10 blocks per second.<br>"+noteOnBlocks+"</html>";
-		String swap_so_tooltip = "<html>Amount of memory swapped to disk (/s).<br>        How many blocks per second the operating system is swaped Out.  <br>i.e Memory swapped to the disk (Written to swap area and cleared from Memory)<br> Note: In Ideal condition, We like to see si and so at 0 most of the time, and we definitely don�t like to see more than 10 blocks per second.<br>"+noteOnBlocks+"</html>";
+		String swap_si_tooltip = "<html>Amount of memory swapped in from disk (/s).<br>   How many blocks per second the operating system is swapping in. <br>i.e Memory swapped in from the disk (Read from swap area to Memory)<br>           Note: In Ideal condition, We like to see si and so at 0 most of the time, and we definitely don�t like to see more than 10 blocks per second.<br>" + noteOnBlocks + "</html>";
+		String swap_so_tooltip = "<html>Amount of memory swapped to disk (/s).<br>        How many blocks per second the operating system is swaped Out.  <br>i.e Memory swapped to the disk (Written to swap area and cleared from Memory)<br> Note: In Ideal condition, We like to see si and so at 0 most of the time, and we definitely don�t like to see more than 10 blocks per second.<br>" + noteOnBlocks + "</html>";
 		
-		String io_bi_tooltip = "<html>Blocks received from a block device (blocks/s).<br>   Blocks received from block device - Read (like a hard disk).<br>"+noteOnBlocks+"</html>";
-		String io_bo_tooltip = "<html>Blocks sent to a block device (blocks/s).<br>         Blocks sent to a block device - Write.<br>"+noteOnBlocks+"</html>";
+		String io_bi_tooltip = "<html>Blocks received from a block device (blocks/s).<br>   Blocks received from block device - Read (like a hard disk).<br>" + noteOnBlocks + "</html>";
+		String io_bo_tooltip = "<html>Blocks sent to a block device (blocks/s).<br>         Blocks sent to a block device - Write.<br>" + noteOnBlocks + "</html>";
 		
 		String system_in_tooltip = "<html>The number of interrupts per second, including the clock.<br>   </html>";
 		String system_cs_tooltip = "<html>The number of context switches per second.<br>                  </html>";

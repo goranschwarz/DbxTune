@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -701,7 +701,7 @@ public class StringUtil
 
 			Object oldVal = map.put(key, val);
 			if (oldVal != null)
-				_logger.warn("Found an already existing value for the key '"+key+"'. The existing value '"+oldVal+"' is replaced with the new value '"+val+"'.");
+				_logger.warn("Found an already existing value for the key '" + key + "'. The existing value '" + oldVal + "' is replaced with the new value '" + val + "'.");
 		}
 		parser.close();
 
@@ -1230,7 +1230,7 @@ public class StringUtil
 
 		if (expandToSize > maxSize)
 		{
-			_logger.warn("StringUtils.left(): expandToSize can't be above "+maxSize+", using this value. expandToSize="+expandToSize+", inStr.length()="+str.length());
+			_logger.warn("StringUtils.left(): expandToSize can't be above " + maxSize + ", using this value. expandToSize=" + expandToSize + ", inStr.length()=" + str.length());
 			expandToSize = maxSize;
 		}
 		int maxPadSize = expandToSize - str.length();
@@ -1418,8 +1418,8 @@ public class StringUtil
 			envVal = System.getProperty(envName);
 			if (envVal == null)
 			{
-				_logger.warn("System.getenv(): Is not supported on this platform or version of Java. Please pass '-D"+envName+"=value' when starting the JVM.");
-				System.out.println("System.getenv(): Is not supported on this platform or version of Java. Please pass '-D"+envName+"=value' when starting the JVM.");
+				_logger.warn("System.getenv(): Is not supported on this platform or version of Java. Please pass '-D" + envName + "=value' when starting the JVM.");
+				System.out.println("System.getenv(): Is not supported on this platform or version of Java. Please pass '-D" + envName + "=value' when starting the JVM.");
 			}
 		}
 
@@ -1432,7 +1432,7 @@ public class StringUtil
 		// Not found at all, simply set it to "" -- empty
 		if (envVal == null)
 		{
-			_logger.debug("The Environment variable '"+envName+"' cant be found.");
+			_logger.debug("The Environment variable '" + envName + "' cant be found.");
 		}
 
 		return envVal;
@@ -1457,7 +1457,7 @@ public class StringUtil
 				
 				if (writeInfoOnOverwrittenValues && oldVal != null && !oldVal.equals(val))
 				{
-					_logger.info("Overwriting environment variable '"+key+"'. oldValue='"+oldVal+"', newValue='"+val+"'");
+					_logger.info("Overwriting environment variable '" + key + "'. oldValue='" + oldVal + "', newValue='" + val + "'");
 				}
 			}
 			else
@@ -4003,7 +4003,7 @@ public class StringUtil
 		if (prefixColName != null && prefixColData != null)
 		{
 			if (prefixColName.length != prefixColData.length)
-				throw new IllegalArgumentException("tableToString(): prefixColName.length="+prefixColName.length+" is NOT equal prefixColData.length="+prefixColData.length);
+				throw new IllegalArgumentException("tableToString(): prefixColName.length=" + prefixColName.length + " is NOT equal prefixColData.length=" + prefixColData.length);
 			doPrefix = true;
 		}
 
@@ -4013,7 +4013,7 @@ public class StringUtil
 			tHead = new ArrayList<String>();
 
 			for (int c=0; c<cols; c++)
-				tableHead.add("dummy-"+(c+1));
+				tableHead.add("dummy-" + (c+1));
 			
 		}
 
@@ -4534,7 +4534,7 @@ public class StringUtil
 		{
 			if (StringUtil.hasValue(logMessage))
 			{
-				logMessage = logMessage.replace("${maxlen}", ""+maxLen);
+				logMessage = logMessage.replace("${maxlen}", "" + maxLen);
 				RuntimeException rte = new RuntimeException("Creating RuntimeException just so we can trace the origin caller. logMessage: " + logMessage);
 				_logger.warn("Truncated a to long string. MaxLenth=" + maxLen + ", PassedStrLength=" + str.length() + ". User message=|" + logMessage + "|. PassedStr=|" + str + "|", rte);
 			}
@@ -4850,11 +4850,11 @@ public class StringUtil
 		System.out.println(StringUtil.parseMailFromAddress("a@x.com <Xxx Yyy>", 2).equals("Xxx Yyy") ? "OK-6" : "FAIL-6 - |" + StringUtil.parseMailFromAddress("a@x.com <Xxx Yyy>", 2) + "|");
 		System.exit(0);
 
-		System.out.println(StringUtil.truncate(null             , 10, true , null) == null               ? "OK" : "FAIL - "+StringUtil.truncate(null, 10, true, null));
-		System.out.println(StringUtil.truncate("123"            , 10, true , null).equals("123")         ? "OK" : "FAIL - "+StringUtil.truncate("123"            , 10, true , null));
-		System.out.println(StringUtil.truncate("123456789-"     , 10, true , null).equals("123456789-")  ? "OK" : "FAIL - "+StringUtil.truncate("123456789-"     , 10, true , null));
-		System.out.println(StringUtil.truncate("123456789-12345", 10, true , null).equals("1234567...")  ? "OK" : "FAIL - "+StringUtil.truncate("123456789-12345", 10, true , null));
-		System.out.println(StringUtil.truncate("123456789-12345", 10, false, null).equals("123456789-")  ? "OK" : "FAIL - "+StringUtil.truncate("123456789-12345", 10, false, null));
+		System.out.println(StringUtil.truncate(null             , 10, true , null) == null               ? "OK" : "FAIL - " + StringUtil.truncate(null, 10, true, null));
+		System.out.println(StringUtil.truncate("123"            , 10, true , null).equals("123")         ? "OK" : "FAIL - " + StringUtil.truncate("123"            , 10, true , null));
+		System.out.println(StringUtil.truncate("123456789-"     , 10, true , null).equals("123456789-")  ? "OK" : "FAIL - " + StringUtil.truncate("123456789-"     , 10, true , null));
+		System.out.println(StringUtil.truncate("123456789-12345", 10, true , null).equals("1234567...")  ? "OK" : "FAIL - " + StringUtil.truncate("123456789-12345", 10, true , null));
+		System.out.println(StringUtil.truncate("123456789-12345", 10, false, null).equals("123456789-")  ? "OK" : "FAIL - " + StringUtil.truncate("123456789-12345", 10, false, null));
 		System.exit(0);
 
 		System.out.println(StringUtil.startsWithIgnoreBlankIgnoreCase(null, null)        == true  ? "OK" : "FAIL");
@@ -4869,16 +4869,16 @@ public class StringUtil
 		// Check if envVariableSubstitution() works with having a default value of another variable name, which does NOT seems to work...
 		System.setProperty("DBXTUNE_ALARM_SOURCE_DIR", "-dbxtune-alarm-source-dir-");
 		System.setProperty("DBXTUNE_HOME",             "-dbxtune-home-");
-		System.out.println("envVariableSubstitution: ${DBXTUNE_ALARM_SOURCE_DIR:-${DBXTUNE_HOME}}/resources/alarm-handler-src = |" + envVariableSubstitution("${DBXTUNE_ALARM_SOURCE_DIR:-${DBXTUNE_HOME}}/resources/alarm-handler-src")+"|");
+		System.out.println("envVariableSubstitution: ${DBXTUNE_ALARM_SOURCE_DIR:-${DBXTUNE_HOME}}/resources/alarm-handler-src = |" + envVariableSubstitution("${DBXTUNE_ALARM_SOURCE_DIR:-${DBXTUNE_HOME}}/resources/alarm-handler-src") + "|");
 
 		System.setProperty("XXX", "-xxx-");
 		System.setProperty("YYY", "-yyy-");
-		System.out.println("envVariableSubstitution: ${XXX} = |" + envVariableSubstitution("${XXX}")+"|");
-		System.out.println("envVariableSubstitution: ${YYY} = |" + envVariableSubstitution("${YYY}")+"|");
-		System.out.println("envVariableSubstitution: ${ZZZ} = |" + envVariableSubstitution("${ZZZ}")+"|");
-		System.out.println("envVariableSubstitution: ${ZZZ:-} = |" + envVariableSubstitution("${ZZZ:-}")+"|");
-		System.out.println("envVariableSubstitution: ${XXX:-${YYY}} = |" + envVariableSubstitution("${XXX:-${YYY}}")+"|");
-		System.out.println("envVariableSubstitution: ${AAA:-${BBB}} = |" + envVariableSubstitution("${AAA:-${BBB}}")+"|");
+		System.out.println("envVariableSubstitution: ${XXX} = |" + envVariableSubstitution("${XXX}") + "|");
+		System.out.println("envVariableSubstitution: ${YYY} = |" + envVariableSubstitution("${YYY}") + "|");
+		System.out.println("envVariableSubstitution: ${ZZZ} = |" + envVariableSubstitution("${ZZZ}") + "|");
+		System.out.println("envVariableSubstitution: ${ZZZ:-} = |" + envVariableSubstitution("${ZZZ:-}") + "|");
+		System.out.println("envVariableSubstitution: ${XXX:-${YYY}} = |" + envVariableSubstitution("${XXX:-${YYY}}") + "|");
+		System.out.println("envVariableSubstitution: ${AAA:-${BBB}} = |" + envVariableSubstitution("${AAA:-${BBB}}") + "|");
 		System.exit(0);
 
 		System.out.println("stripHtmlStartEnd(): |" + StringUtil.stripHtmlStartEnd("<html>12345</html>") + "|");
@@ -4913,39 +4913,39 @@ public class StringUtil
 		String[] htmlStrArr = {"a<>bc", "<html>a<b>b</b>c</html>", "abc,"};
 		for (String s : htmlStrArr)
 		{
-			System.out.println("str1='"+stripHtml(s)+"'.");
+			System.out.println("str1='" + stripHtml(s) + "'.");
 		}
 		System.exit(0);
 
 		String[] str = {"abc", "abc ", "abc,", "abc, ", "abc,\t", "abc,\n", "abc,\t\t", "abc,\n\n", "abc,\t\n"};
 		for (String s : str)
 		{
-			System.out.println("str1='"+removeLastComma(s)+"'.");
+			System.out.println("str1='" + removeLastComma(s) + "'.");
 		}
 		System.exit(0);
 
 		String[] strArr = commaStrToArray("");
-		System.out.println("length="+strArr.length);
+		System.out.println("length=" + strArr.length);
 		for (int i=0; i<strArr.length; i++)
 		{
-			System.out.println("arr["+i+"]='"+strArr[i]+"'.");
+			System.out.println("arr[" + i + "]='" + strArr[i] + "'.");
 		}
 		System.exit(0);
 
-		System.out.println("MAP=|" + parseCommaStrToMap("aaa=11\\,11,bbbbb=2222, cccc=3333") +"|.");
-		System.out.println("MAP=|" + parseCommaStrToMap("{aaa=1111,bbbbb=2222, cccc=3333}") +"|.");
-		System.out.println("MAP=|" + parseCommaStrToMap("{aaa=1111, bbbbb=2222, cccc=3333,}") +"|.");
+		System.out.println("MAP=|" + parseCommaStrToMap("aaa=11\\,11,bbbbb=2222, cccc=3333") + "|.");
+		System.out.println("MAP=|" + parseCommaStrToMap("{aaa=1111,bbbbb=2222, cccc=3333}") + "|.");
+		System.out.println("MAP=|" + parseCommaStrToMap("{aaa=1111, bbbbb=2222, cccc=3333,}") + "|.");
 
 		String t1Str = "{aaa=1111, bbb=2222, bbb=3333,}";
 		Map<String,List<String>> t1Map = parseCommaStrToMultiMap(t1Str);
-		System.out.println("MMAP=|" + t1Map +"|.");
-		System.out.println("MMAP.toCommaStrMultiMap=|" + toCommaStrMultiMap(t1Map) +"|.");
+		System.out.println("MMAP=|" + t1Map + "|.");
+		System.out.println("MMAP.toCommaStrMultiMap=|" + toCommaStrMultiMap(t1Map) + "|.");
 
-		System.out.println("MMAP.toCommaStrMultiMap(useKey)=|" + toCommaStrMultiMap(t1Map, "=", ",", true, false) +"|.");
-		System.out.println("MMAP.toCommaStrMultiMap(useVal)=|" + toCommaStrMultiMap(t1Map, "=", ",", false, true) +"|.");
+		System.out.println("MMAP.toCommaStrMultiMap(useKey)=|" + toCommaStrMultiMap(t1Map, "=", ",", true, false) + "|.");
+		System.out.println("MMAP.toCommaStrMultiMap(useVal)=|" + toCommaStrMultiMap(t1Map, "=", ",", false, true) + "|.");
 
-		System.out.println("MMAP.toCommaStrMultiMapKey=|" + toCommaStrMultiMapKey(t1Map) +"|.");
-		System.out.println("MMAP.toCommaStrMultiMapVal=|" + toCommaStrMultiMapVal(t1Map) +"|.");
+		System.out.println("MMAP.toCommaStrMultiMapKey=|" + toCommaStrMultiMapKey(t1Map) + "|.");
+		System.out.println("MMAP.toCommaStrMultiMapVal=|" + toCommaStrMultiMapVal(t1Map) + "|.");
 //		System.exit(0);
 
 		System.out.println("TEST: StringUtil BEGIN.");

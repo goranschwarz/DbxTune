@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -86,8 +86,8 @@ public class Utf8TableSizeChecker
 		// DO THE THING
 		try
 		{
-			String sql = "select * from "+checkTabName;
-			System.out.println("\tDO SQL: "+sql);
+			String sql = "select * from " + checkTabName;
+			System.out.println("\tDO SQL: " + sql);
 
 			Statement stmnt = _conn.createStatement();
 			ResultSet rs = stmnt.executeQuery(sql);
@@ -116,9 +116,9 @@ public class Utf8TableSizeChecker
 							String tabName = md.getTableName(c);
 							String colName = md.getColumnLabel(c);
 
-							System.out.println("\tWARNING: catName='"+catName+"', schemaName='"+schName+"', tabName='"+tabName+"', colName='"+colName+"', atRow="+row+", colLen="+colLen+", utf8Len="+utf8Len+", strValue='"+strVal+"'.");
+							System.out.println("\tWARNING: catName='" + catName + "', schemaName='" + schName + "', tabName='" + tabName + "', colName='" + colName + "', atRow=" + row + ", colLen=" + colLen + ", utf8Len=" + utf8Len + ", strValue='" + strVal + "'.");
 
-							String key = catName+"."+schName+"."+tabName+"("+colName+"): colLen="+colLen;
+							String key = catName + "." + schName + "." + tabName + "(" + colName + "): colLen=" + colLen;
 							Integer maxLen = _maxLenMap.get(key);
 							if (maxLen != null && utf8Len > maxLen)
 								_maxLenMap.put(key, utf8Len);
@@ -132,7 +132,7 @@ public class Utf8TableSizeChecker
 		}
 		catch (Exception e)
 		{
-			System.out.println("\tWARNING: Problems in checkTable("+checkTabName+"): Caught: "+e);
+			System.out.println("\tWARNING: Problems in checkTable(" + checkTabName + "): Caught: " + e);
 //			e.printStackTrace();
 		}
 	}
@@ -142,7 +142,7 @@ public class Utf8TableSizeChecker
 		for (String key : _maxLenMap.keySet())
 		{
 			int maxUtf8Len = _maxLenMap.get(key);
-			System.out.println("\t"+key+", maxUtf8Len="+maxUtf8Len);
+			System.out.println("\t" + key + ", maxUtf8Len=" + maxUtf8Len);
 		}
 	}
 	
@@ -194,7 +194,7 @@ public class Utf8TableSizeChecker
 			fis = new FileInputStream(filename);
 			reader = new BufferedReader(new InputStreamReader(fis));
 
-			System.out.println("Reading File: "+filename);
+			System.out.println("Reading File: " + filename);
 
 			for(String line = reader.readLine(); line != null; line = reader.readLine())
 			{
@@ -205,7 +205,7 @@ public class Utf8TableSizeChecker
 			}
 			reader.close();
 
-			System.out.println("\tFound Content: "+list);
+			System.out.println("\tFound Content: " + list);
 			return list;
 		}
 		catch (FileNotFoundException ex)
@@ -251,13 +251,13 @@ public class Utf8TableSizeChecker
 		System.out.println("Usage: url user passwd filename");
 		System.out.println(" NOTE: filename could be a filename or just a list of table names");
 		System.out.println("-----------------------------------------");
-		System.out.println("URL:      "+url);
-		System.out.println("USER:     "+user);
-		System.out.println("PASSWD:   "+passwd);
+		System.out.println("URL:      " + url);
+		System.out.println("USER:     " + user);
+		System.out.println("PASSWD:   " + passwd);
 		if (tableList == null)
-			System.out.println("filename: "+filename);
+			System.out.println("filename: " + filename);
 		else
-			System.out.println("table list: "+tableList);
+			System.out.println("table list: " + tableList);
 		System.out.println("-----------------------------------------");
 
 		if (filename == null)
@@ -282,7 +282,7 @@ public class Utf8TableSizeChecker
     		
     		for (String tab : tableList)
 			{
-    			System.out.println("CHECKING TABLE: "+tab);
+    			System.out.println("CHECKING TABLE: " + tab);
         		tc.checkTable(tab);
 			}
 
@@ -293,7 +293,7 @@ public class Utf8TableSizeChecker
     			System.out.println("");
     			System.out.println("=============================================================");
     			System.out.println("Report of table columns that needs to be extended in length ");
-    			System.out.println("Number of columns exceeding DB Storage length: "+tc.getExceedCount());
+    			System.out.println("Number of columns exceeding DB Storage length: " + tc.getExceedCount());
     			System.out.println("-------------------------------------------------------------");
         		tc.printReport();
     			System.out.println("-------------------------------------------------------------");

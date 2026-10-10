@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -20,7 +20,7 @@
  * along with DbxTune.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is free software: you can redistribute it and/or modify
@@ -237,7 +237,7 @@ public class SpaceForecast
 				}
 				catch (Exception ex)
 				{
-					_logger.error("Problems when open the URL '"+reportFile+"'. Caught: "+ex, ex);
+					_logger.error("Problems when open the URL '" + reportFile + "'. Caught: " + ex, ex);
 				}
 			}
 		}
@@ -843,7 +843,7 @@ public class SpaceForecast
 								+ "WITH [chunks] AS ( \n"
 								+ "    SELECT \n"
 								+ "        '" + name + "' AS [dbname] \n"
-								+ "        ,[" + name+ "]  AS [val] \n"
+								+ "        ,[" + name + "]  AS [val] \n"
 								+ "        ,[" + tsColumn + "] \n"
 								+ "        ,LAG([" + name + "]) OVER (ORDER BY [" + tsColumn + "]) AS [prevVal] \n"
 								+ "    FROM " + tabName + " \n"
@@ -2335,7 +2335,7 @@ public class SpaceForecast
 		        boolean diskExpanded = changeEvent.stream().anyMatch(e -> isBetween(e.ts, startInstant, endInstant));
 		        
 //		        changeEvents.add( diskExpanded ? "1" : "0"); // only true/false
-		        changeEvents.add( diskExpanded ? current.freeMbMin+"" : "0"); // Set to same value as Free MB so we can position the graph at the *correct* height
+		        changeEvents.add( diskExpanded ? current.freeMbMin + "" : "0"); // Set to same value as Free MB so we can position the graph at the *correct* height
 
 		        // Tooltip
 		        String tip = String.format("%d;%s;%s;%s",
@@ -3143,16 +3143,16 @@ public class SpaceForecast
 		public String toString()
 		{
 			return "mount="                   + String.format("%-20s", mount)
-					+" | state="              + String.format("%-15s", state)
-					+" | slope="              + String.format("%.2f",  slopeMbPerHour)
-					+" | R2="                 + String.format("%.3f",  r2)
-					+" | confidence="         + etaConfidence
-					+" | current="            + currentAvailable
-					+" | ETA="                + hoursToFull
-					+" | TmpFilesMinMb="      + (dipStats.dipCount > 0 ? String.format("%.0f", dipStats.minDuringTmpFilesMb) : "n/a")
-					+" | TmpFilesMaxDrop="    + (dipStats.dipCount > 0 ? String.format("%.0f GB", dipStats.maxTmpFilesDropMb/1024) : "n/a")
-					+" | TmpFilesOverflowETA="+ (hoursUntilTmpFilesOverflow != null ? String.format("%.0f h / %.1f d", hoursUntilTmpFilesOverflow, hoursUntilTmpFilesOverflow/24) : "n/a"
-					+" | zeroMbEventCount="   + zeroMbEventCount
+					+ " | state="              + String.format("%-15s", state)
+					+ " | slope="              + String.format("%.2f",  slopeMbPerHour)
+					+ " | R2="                 + String.format("%.3f",  r2)
+					+ " | confidence="         + etaConfidence
+					+ " | current="            + currentAvailable
+					+ " | ETA="                + hoursToFull
+					+ " | TmpFilesMinMb="      + (dipStats.dipCount > 0 ? String.format("%.0f", dipStats.minDuringTmpFilesMb) : "n/a")
+					+ " | TmpFilesMaxDrop="    + (dipStats.dipCount > 0 ? String.format("%.0f GB", dipStats.maxTmpFilesDropMb/1024) : "n/a")
+					+ " | TmpFilesOverflowETA=" + (hoursUntilTmpFilesOverflow != null ? String.format("%.0f h / %.1f d", hoursUntilTmpFilesOverflow, hoursUntilTmpFilesOverflow/24) : "n/a"
+					+ " | zeroMbEventCount="   + zeroMbEventCount
 					);
 		}
 	}

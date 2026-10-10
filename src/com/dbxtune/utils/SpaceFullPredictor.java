@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -1738,7 +1738,7 @@ public class SpaceFullPredictor
 
 			// SSL PORT
 			if (sslPort >= 0)
-				email.setSslSmtpPort(sslPort+""); // Hmm why is this a String parameter?
+				email.setSslSmtpPort(sslPort + ""); // Hmm why is this a String parameter?
 
 			// START TLS
 			if (startTls)
@@ -1809,7 +1809,7 @@ public class SpaceFullPredictor
 				}
 				catch (Exception ex)
 				{
-					_logger.error("Problems when open the URL '"+reportFile+"'. Caught: "+ex, ex);
+					_logger.error("Problems when open the URL '" + reportFile + "'. Caught: " + ex, ex);
 				}
 			}
 		}

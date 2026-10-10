@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -29,7 +29,7 @@ extends JAseMessage
 	
 	public JLoadfileMessage(String message, String originSql)
 	{
-		super("LOADFILE: "+message, originSql);
+		super("LOADFILE: " + message, originSql);
 
 		setForeground(ColorUtils.VERY_DARK_BLUE);
 	}

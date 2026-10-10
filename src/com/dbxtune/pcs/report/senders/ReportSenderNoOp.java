@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -54,7 +54,7 @@ extends ReportSenderAbstract
 		if (saveIsEnabled)
 			saveToStr = " But the property '" + DailySummaryReportFactory.PROPKEY_save + "' is enabled, so the report will be saved to directory '" + saveDir + "'.";
 
-		_logger.info("No Operation Sender: The report for server '"+serverName+"' will NOT be sent anywhere..." + saveToStr);
+		_logger.info("No Operation Sender: The report for server '" + serverName + "' will NOT be sent anywhere..." + saveToStr);
 	}
 
 
@@ -69,7 +69,7 @@ extends ReportSenderAbstract
 	@Override
 	public void printConfig()
 	{
-		_logger.info("Configuration for Report Sender Module: "+getName());
+		_logger.info("Configuration for Report Sender Module: " + getName());
 		_logger.info("    This module has no configuration.");
 	}
 }

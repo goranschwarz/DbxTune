@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -48,7 +48,7 @@ public abstract class SqlCaptureBrokerAbstract implements ISqlCaptureBroker
 	public DbxConnection createConnection()
 	throws Exception
 	{
-		String appName = Version.getAppName()+"-SqlCaptureBroker";
+		String appName = Version.getAppName() + "-SqlCaptureBroker";
 		
 		boolean hasGui = DbxTune.hasGui();
 		if (hasGui)

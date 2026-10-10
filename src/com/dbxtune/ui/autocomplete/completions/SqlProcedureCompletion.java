@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -99,8 +99,8 @@ extends SqlCompletion
 		_procInfo = pi;
 
 		String shortDesc = 
-			"<font color='blue'>"+(pi._oraPackageName==null?"":"PACKAGE ")+pi._procType+"</font>" +
-			(StringUtil.isNullOrBlank(pi._procSpecificName) ? "" : ", SpecificName="+pi._procSpecificName) +
+			"<font color='blue'>" + (pi._oraPackageName==null?"":"PACKAGE ")+pi._procType + "</font>" +
+			(StringUtil.isNullOrBlank(pi._procSpecificName) ? "" : ", SpecificName=" + pi._procSpecificName) +
 //			" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(pi._procRemark) ? "No Description" : pi._procRemark) + "</font></i>";
 			" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(pi._procRemark) ? "" : stripMultiLineHtml(pi._procRemark)) + "</font></i>";
 		setShortDescription(shortDesc);

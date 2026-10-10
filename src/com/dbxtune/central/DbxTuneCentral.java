@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -464,11 +464,11 @@ public class DbxTuneCentral
 		_logger.info("Using Java VM Implementation  Vendor:  " + System.getProperty("java.vm.vendor"));
 		_logger.info("Using Java VM Implementation  Name:    " + System.getProperty("java.vm.name"));
 		_logger.info("Using Java VM Home:    " + System.getProperty("java.home"));
-		_logger.info("Java class format version number: " +System.getProperty("java.class.version"));
-		_logger.info("Java class path: " +System.getProperty("java.class.path"));
-		_logger.info("List of paths to search when loading libraries: " +System.getProperty("java.library.path"));
-		_logger.info("Name of JIT compiler to use: " +System.getProperty("java.compiler"));
-		_logger.info("Path of extension directory or directories: " +System.getProperty("java.ext.dirs"));
+		_logger.info("Java class format version number: " + System.getProperty("java.class.version"));
+		_logger.info("Java class path: " + System.getProperty("java.class.path"));
+		_logger.info("List of paths to search when loading libraries: " + System.getProperty("java.library.path"));
+		_logger.info("Name of JIT compiler to use: " + System.getProperty("java.compiler"));
+		_logger.info("Path of extension directory or directories: " + System.getProperty("java.ext.dirs"));
 
 		_logger.info("Maximum memory is set to:  " + Runtime.getRuntime().maxMemory() / 1024 / 1024 + " MB. this could be changed with  -Xmx###m (where ### is number of MB)"); // jdk 1.4 or higher
 		_logger.info("Total Physical Memory on this machine:  " +  Memory.getTotalPhysicalMemorySizeInMB() + " MB.");

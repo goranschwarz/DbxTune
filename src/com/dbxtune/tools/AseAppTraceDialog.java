@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -876,7 +876,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 			}
 			catch (NumberFormatException nfe)
 			{
-				SwingUtils.showErrorMessage("SPID must be a number", "Spid '"+spidStr+"' must be a number.", nfe);
+				SwingUtils.showErrorMessage("SPID must be a number", "Spid '" + spidStr + "' must be a number.", nfe);
 			}
 		}
 
@@ -1082,7 +1082,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		_aseStopTrace_but .setVisible(   isConnected );  // Enable   when connected, so we can stop
 
 		if (isConnected)
-			setTitle("ASE Application Tracing on SPID "+_spid); // Set window title
+			setTitle("ASE Application Tracing on SPID " + _spid); // Set window title
 		else
 			setTitle("ASE Application Tracing - Not Connected"); // Set window title
 	}
@@ -1159,7 +1159,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 					_traceOutSave_txt.setText(newDir);
 
 					SwingUtils.showInfoMessage(this, "Directory not found", 
-						"<html>The directory '"+curDir+"' didn't exist!<br>Setting the save directory to '"+newDir+"'.</html>");
+						"<html>The directory '" + curDir + "' didn't exist!<br>Setting the save directory to '" + newDir + "'.</html>");
 				}
 			}
 		}
@@ -1180,7 +1180,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 					_procSave_txt.setText(newDir);
 
 					SwingUtils.showInfoMessage(this, "Directory not found", 
-						"<html>The directory '"+curDir+"' didn't exist!<br>Setting the save directory to '"+newDir+"'.</html>");
+						"<html>The directory '" + curDir + "' didn't exist!<br>Setting the save directory to '" + newDir + "'.</html>");
 				}
 			}
 		}
@@ -1206,7 +1206,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 
 		try
 		{
-			Connection conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-helpAppTrace", null);
+			Connection conn = AseConnectionFactory.getConnection(null, Version.getAppName() + "-helpAppTrace", null);
 
 			Statement stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery(sql);
@@ -1221,11 +1221,11 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		}
 		catch (Exception e)
 		{
-			String msg = "Problems execute SQL '"+sql+"', Caught: " + e.toString();
+			String msg = "Problems execute SQL '" + sql + "', Caught: " + e.toString();
 			_logger.warn(msg);
 //			_traceCmdLog.addLog(msg);
 			addTraceCmdLog(msg);
-			SwingUtils.showErrorMessage("ASE Problem", "Problems when doing: "+sql, e);
+			SwingUtils.showErrorMessage("ASE Problem", "Problems when doing: " + sql, e);
 		}
 	}
 
@@ -1264,7 +1264,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 	{
 		_spidExistsInAse = false;
 
-		WaitForExecDialog aseWait = new WaitForExecDialog(this, "Connecting to ASE, for Application Tracing of SPID "+_spid);
+		WaitForExecDialog aseWait = new WaitForExecDialog(this, "Connecting to ASE, for Application Tracing of SPID " + _spid);
 		BgExecutor aseWaitTask = new BgExecutor(aseWait)
 		{
 			@Override
@@ -1272,7 +1272,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 			{
 				try
 				{
-					_aseConn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-AppTrace-"+_spid, null);
+					_aseConn = AseConnectionFactory.getConnection(null, Version.getAppName() + "-AppTrace-" + _spid, null);
 					_aseServerName = AseConnectionUtils.getAseServername(_aseConn);
 					_srvVersionStr = AseConnectionUtils.getAseVersionStr(_aseConn);
 
@@ -1285,7 +1285,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 					String sql = 
 						"select spid \n" +
 						"from master..sysprocesses \n" +
-						"where spid = "+_spid;
+						"where spid = " + _spid;
 					ResultSet rs = statement.executeQuery(sql);
 					while(rs.next())
 						_spidExistsInAse = true;
@@ -1343,7 +1343,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 //		if (srvVersion < 1502000 )
 		if (srvVersion < Ver.ver(15,0,2) )
 		{
-			String msg = "The ASE Version must be above 15.0.2, which was the release that introduced 'Application Tracing'. You connected to "+Ver.versionNumToStr(srvVersion)+".";
+			String msg = "The ASE Version must be above 15.0.2, which was the release that introduced 'Application Tracing'. You connected to " + Ver.versionNumToStr(srvVersion) + ".";
 			_logger.info(msg);
 			SwingUtils.showWarnMessage(this, "Need a later ASE Version", msg, null);
 			closeAseConn();
@@ -1360,7 +1360,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 
 			if ( ! ok )
 			{
-				String msg = "The user '"+AseConnectionFactory.getUser()+"' does not have '"+AseConnectionUtils.SA_ROLE+"' or '"+AseConnectionUtils.SSO_ROLE+"', so I can't do Application Tracing.";
+				String msg = "The user '" + AseConnectionFactory.getUser() + "' does not have '" + AseConnectionUtils.SA_ROLE + "' or '" + AseConnectionUtils.SSO_ROLE + "', so I can't do Application Tracing.";
 				_logger.info(msg);
 				SwingUtils.showWarnMessage(this, "Not authorized to do Application Tracing", msg, null);
 				closeAseConn();
@@ -1372,7 +1372,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		// ERROR if the SPID didn't exist
 		if ( ! _spidExistsInAse )
 		{
-			String msg = "SPID '"+_spid+"' did NOT exists in the ASE when the ASE AppTrace Controller Thread connected.";
+			String msg = "SPID '" + _spid + "' did NOT exists in the ASE when the ASE AppTrace Controller Thread connected.";
 			_logger.info(msg);
 			SwingUtils.showWarnMessage(this, "SPID didn't exists in ASE", msg, null);
 			closeAseConn();
@@ -1399,7 +1399,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 			final String keyFile = _sshKeyFile_txt.getText();
 
 			_sshConn = new SshConnection(host, port, user, passwd, keyFile);
-			WaitForExecDialog wait = new WaitForExecDialog(this, "SSH Connecting to "+host+", with user "+user);
+			WaitForExecDialog wait = new WaitForExecDialog(this, "SSH Connecting to " + host + ", with user " + user);
 			_sshConn.setWaitForDialog(wait);
 
 			BgExecutor waitTask = new BgExecutor(wait)
@@ -1413,7 +1413,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 					}
 					catch (Exception e) 
 					{
-						SwingUtils.showErrorMessage("SSH Connect failed", "SSH Connection to "+host+":"+portStr+" with user '"+user+"' Failed.", e);
+						SwingUtils.showErrorMessage("SSH Connect failed", "SSH Connection to " + host + ":" + portStr + " with user '" + user + "' Failed.", e);
 						_sshConn = null;
 						closeAseConn();
 					}
@@ -1447,7 +1447,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
     			}
     			else
     			{
-    				String msg = "The trace file '"+_fileTail.getFilename()+"' was not found. (SSH Access mode)";
+    				String msg = "The trace file '" + _fileTail.getFilename() + "' was not found. (SSH Access mode)";
     				_logger.error(msg);
     				SwingUtils.showErrorMessage("Trace file not found", msg, null);
     				stopTrace();
@@ -1471,7 +1471,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 			}
 			else
 			{
-				String msg = "The trace file '"+_fileTail.getFilename()+"' was not found. (Local Access mode)";
+				String msg = "The trace file '" + _fileTail.getFilename() + "' was not found. (Local Access mode)";
 				_logger.error(msg);
 				SwingUtils.showErrorMessage("Trace file not found", msg, null);
 				stopTrace();
@@ -1501,7 +1501,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 //		execSql("set switch on 3604 with no_info");
 
 		String traceFile = getAseTraceFileFinal();
-		execSql("set tracefile '"+traceFile+"' for "+_spid);
+		execSql("set tracefile '" + traceFile + "' for " + _spid);
 		
 		if (_aseOptShowSql_chk.isSelected())
 			setOption("show_sqltext", true);
@@ -1529,7 +1529,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 	{
 		option = option.trim();
 
-		execSql("set "+option+" "+value);
+		execSql("set " + option + " " + value);
 		
 		if ( "on".equals(value.toLowerCase()) )
 			_currentOptions.add(option);
@@ -1546,10 +1546,10 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 			// set tracefile off for SPID, does not seem to work ok, this starts to 
 			// be written to the ASE error log if we do not turn stuff off
 			for (String option : _currentOptions)
-				execSql("set "+option+" off");
+				execSql("set " + option + " off");
 
 //			execSql("set tracefile off for "+_spid);
-			execSql("set tracefile off -- for "+_spid);
+			execSql("set tracefile off -- for " + _spid);
 //			execSql("set tracefile off");
 		}
 	}
@@ -1571,7 +1571,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 				}
 				catch (Exception e)
 				{
-					String msg = "Problems deleting the 'tail' file. Caught: "+e;
+					String msg = "Problems deleting the 'tail' file. Caught: " + e;
 					_logger.info(msg);
 					
 					SwingUtils.showWarnMessage(this, "Problems deleting ASE Trace File", msg, e);
@@ -1619,7 +1619,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		if (_aseConn == null)
 			return;
 
-		_logger.debug("execSql(): "+sql);
+		_logger.debug("execSql(): " + sql);
 		
 		try
 		{
@@ -1632,11 +1632,11 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		}
 		catch (SQLException e)
 		{
-			String msg = "Problems execute SQL '"+sql+"', Caught: " + e.toString();
+			String msg = "Problems execute SQL '" + sql + "', Caught: " + e.toString();
 			_logger.warn(msg);
 //			_traceCmdLog.addLog(msg);
 			addTraceCmdLog(msg);
-			SwingUtils.showErrorMessage("ASE Problem", "Problems when doing: "+sql, e);
+			SwingUtils.showErrorMessage("ASE Problem", "Problems when doing: " + sql, e);
 		}
 	}
 
@@ -1739,32 +1739,32 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 
 		conf.setProperty("aseAppTrace.ase.delSrvTraceFileOnStop",   _aseDelSrvFileOnStop_chk.isSelected() );
 		
-		conf.setProperty("aseAppTrace.ase."+_aseHostName+".saveDir",_aseSaveDir_txt        .getText() );
+		conf.setProperty("aseAppTrace.ase." + _aseHostName + ".saveDir",_aseSaveDir_txt        .getText() );
 		conf.setProperty("aseAppTrace.ase.templateFile",   _aseSaveTemplate_cbx.getSelectedItem().toString() );
 
 
 		//----------------------------------
 		// TYPE
 		//----------------------------------
-		conf.setProperty("aseAppTrace.accessType."+_aseHostName, _accessType_cbx.getSelectedIndex() );
+		conf.setProperty("aseAppTrace.accessType." + _aseHostName, _accessType_cbx.getSelectedIndex() );
 
 		//----------------------------------
 		// SSH
 		//----------------------------------
-		conf.setProperty("aseAppTrace.ssh.conn."+_aseHostName+".hostname",   _sshHostname_txt.getText() );
-		conf.setProperty("aseAppTrace.ssh.conn."+_aseHostName+".port",       _sshPort_txt.getText() );
-		conf.setProperty("aseAppTrace.ssh.conn."+_aseHostName+".username",   _sshUsername_txt.getText() );
-		conf.setProperty("aseAppTrace.ssh.conn."+_aseHostName+".keyFile",    _sshKeyFile_txt.getText() );
+		conf.setProperty("aseAppTrace.ssh.conn." + _aseHostName + ".hostname",   _sshHostname_txt.getText() );
+		conf.setProperty("aseAppTrace.ssh.conn." + _aseHostName + ".port",       _sshPort_txt.getText() );
+		conf.setProperty("aseAppTrace.ssh.conn." + _aseHostName + ".username",   _sshUsername_txt.getText() );
+		conf.setProperty("aseAppTrace.ssh.conn." + _aseHostName + ".keyFile",    _sshKeyFile_txt.getText() );
 
 		if ( StringUtil.hasValue(_sshTailOsCmd_txt.getText()) )
-			conf.setProperty("aseAppTrace.ssh.conn."+_aseHostName+".tailOsCmd", _sshTailOsCmd_txt.getText() );
+			conf.setProperty("aseAppTrace.ssh.conn." + _aseHostName + ".tailOsCmd", _sshTailOsCmd_txt.getText() );
 
 		if (_sshPassword_chk.isSelected())
-			conf.setProperty("aseAppTrace.ssh.conn."+_aseHostName+".password", _sshPassword_txt.getText(), true);
+			conf.setProperty("aseAppTrace.ssh.conn." + _aseHostName + ".password", _sshPassword_txt.getText(), true);
 		else
-			conf.remove("aseAppTrace.ssh.conn."+_aseHostName+".password");
+			conf.remove("aseAppTrace.ssh.conn." + _aseHostName + ".password");
 
-		conf.setProperty("aseAppTrace.ssh.conn."+_aseHostName+".savePassword", _sshPassword_chk.isSelected() );
+		conf.setProperty("aseAppTrace.ssh.conn." + _aseHostName + ".savePassword", _sshPassword_chk.isSelected() );
 
 		//----------------------------------
 		// MOUNT
@@ -1828,7 +1828,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 
 		_aseDelSrvFileOnStop_chk.setSelected(conf.getBooleanProperty("aseAppTrace.ase.delSrvTraceFileOnStop",   _aseDelSrvFileOnStop_chk.isSelected()));
 
-		String saveDir = conf.getProperty("aseAppTrace.ase."+_aseHostName+".saveDir");
+		String saveDir = conf.getProperty("aseAppTrace.ase." + _aseHostName + ".saveDir");
 		if (saveDir == null)
 		{
 			saveDir = "/tmp/";
@@ -1864,7 +1864,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		//----------------------------------
 		// TYPE
 		//----------------------------------
-		_accessType_cbx.setSelectedIndex( conf.getIntProperty("aseAppTrace.accessType."+_aseHostName, 0) );
+		_accessType_cbx.setSelectedIndex( conf.getIntProperty("aseAppTrace.accessType." + _aseHostName, 0) );
 
 		if (_accessType_cbx.getSelectedIndex() == 0)
 		{
@@ -1880,14 +1880,14 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		//----------------------------------
 		// SSH
 		//----------------------------------
-		_sshHostname_txt .setText( conf.getProperty   ("aseAppTrace.ssh.conn."+_aseHostName+".hostname",  _aseHostName) );
-		_sshPort_txt     .setText( conf.getProperty   ("aseAppTrace.ssh.conn."+_aseHostName+".port",      _sshPort_txt     .getText()) );
-		_sshUsername_txt .setText( conf.getProperty   ("aseAppTrace.ssh.conn."+_aseHostName+".username",  _sshUsername_txt .getText()) );
-		_sshPassword_txt .setText( conf.getProperty   ("aseAppTrace.ssh.conn."+_aseHostName+".password",  _sshPassword_txt .getText()) );
-		_sshKeyFile_txt  .setText( conf.getProperty   ("aseAppTrace.ssh.conn."+_aseHostName+".keyFile",   _sshKeyFile_txt  .getText()) );
-		_sshTailOsCmd_txt.setText( conf.getPropertyRaw("aseAppTrace.ssh.conn."+_aseHostName+".tailOsCmd", _sshTailOsCmd_txt.getText()) ); // This contains variables etc
+		_sshHostname_txt .setText( conf.getProperty   ("aseAppTrace.ssh.conn." + _aseHostName + ".hostname",  _aseHostName) );
+		_sshPort_txt     .setText( conf.getProperty   ("aseAppTrace.ssh.conn." + _aseHostName + ".port",      _sshPort_txt     .getText()) );
+		_sshUsername_txt .setText( conf.getProperty   ("aseAppTrace.ssh.conn." + _aseHostName + ".username",  _sshUsername_txt .getText()) );
+		_sshPassword_txt .setText( conf.getProperty   ("aseAppTrace.ssh.conn." + _aseHostName + ".password",  _sshPassword_txt .getText()) );
+		_sshKeyFile_txt  .setText( conf.getProperty   ("aseAppTrace.ssh.conn." + _aseHostName + ".keyFile",   _sshKeyFile_txt  .getText()) );
+		_sshTailOsCmd_txt.setText( conf.getPropertyRaw("aseAppTrace.ssh.conn." + _aseHostName + ".tailOsCmd", _sshTailOsCmd_txt.getText()) ); // This contains variables etc
 
-		_sshPassword_chk.setSelected( conf.getBooleanProperty("aseAppTrace.ssh.conn."+_aseHostName+".savePassword", _sshPassword_chk.isSelected()) );
+		_sshPassword_chk.setSelected( conf.getBooleanProperty("aseAppTrace.ssh.conn." + _aseHostName + ".savePassword", _sshPassword_chk.isSelected()) );
 
 
 		//----------------------------------
@@ -2037,11 +2037,11 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 				"I have STOPPED Application Tracing \n" +
 				"To start a new Trace, Close the Trace window... \n" +
 				"\n" +
-				"Note: you can raise the memory parameter -Xmx###m in the "+Version.getAppName()+" start script.\n" +
-				"Current max memory setting seems to be around "+maxConfigMemInMB+" MB.\n" +
-				"After Garbage Collection, you now have "+mbLeftAfterGc+" free MB.", 
+				"Note: you can raise the memory parameter -Xmx###m in the " + Version.getAppName() + " start script.\n" +
+				"Current max memory setting seems to be around " + maxConfigMemInMB + " MB.\n" +
+				"After Garbage Collection, you now have " + mbLeftAfterGc + " free MB.", 
 				JOptionPane.INFORMATION_MESSAGE);
-		JDialog dialog = optionPane.createDialog(this, "out-of-memory @ "+dateStr);
+		JDialog dialog = optionPane.createDialog(this, "out-of-memory @ " + dateStr);
 		dialog.setModal(false);
 		dialog.setVisible(true);
 
@@ -2063,7 +2063,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 	{
 		if (memoryLeftInMB < 100)
 		{
-			_logger.info("Looks like free memory is below "+memoryLeftInMB+" MB, lets do cleanup...");
+			_logger.info("Looks like free memory is below " + memoryLeftInMB + " MB, lets do cleanup...");
 			outOfMemoryHandler();
 		}
 	}
@@ -2259,7 +2259,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 			}
 			catch (Exception e)
 			{
-				String msg = "Problems saving Trace output to file '"+filename+"'. Caught: "+e;
+				String msg = "Problems saving Trace output to file '" + filename + "'. Caught: " + e;
 				_logger.error(msg);
 				SwingUtils.showErrorMessage("Problems Saving Trace Output file.", msg, e);
 			}
@@ -2414,7 +2414,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		{
 			if ( ! _procTextLookupQueue.contains(procName) )
 			{
-				_logger.debug("ADDING PROC '"+procName+"' TO LOOKUP QUEUE.");
+				_logger.debug("ADDING PROC '" + procName + "' TO LOOKUP QUEUE.");
 				_procTextLookupQueue.add(procName);
 			}
 		}
@@ -2441,7 +2441,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 			if ( ! (dir.endsWith("\\") || dir.endsWith("/")) )
 				dir += "/";
 			String filename = dir + procname + ".sql";
-			_logger.info("AppTrace: Saving procedure name '"+procname+"' to file '"+filename+"'.");
+			_logger.info("AppTrace: Saving procedure name '" + procname + "' to file '" + filename + "'.");
 
 			try
 			{
@@ -2451,7 +2451,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 			}
 			catch (Exception e)
 			{
-				String msg = "Problems saving Procedure Text to file '"+filename+"'. Caught: "+e;
+				String msg = "Problems saving Procedure Text to file '" + filename + "'. Caught: " + e;
 				_logger.error(msg);
 				SwingUtils.showErrorMessage("Problems Saving Procedure Text to file.", msg, e);
 			}
@@ -2494,8 +2494,8 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 								//--------------------------------------------
 								// GET OBJECT TEXT
 								sql = " select c.text "
-									+ " from ["+dbname+"]..sysobjects o, ["+dbname+"]..syscomments c "
-									+ " where o.name = '"+procName+"' "
+									+ " from [" + dbname + "]..sysobjects o, [" + dbname + "]..syscomments c "
+									+ " where o.name = '" + procName + "' "
 									+ "   and o.id = c.id "
 									+ " order by c.number, c.colid2, c.colid ";
 				
@@ -2515,7 +2515,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 				
 									if (sb.length() > 0)
 									{
-										_logger.debug("---FINNISHED(FOUND)--- LOOKUP on PROC '"+procName+"' length="+sb.length()+", put it in the cache...");
+										_logger.debug("---FINNISHED(FOUND)--- LOOKUP on PROC '" + procName + "' length=" + sb.length() + ", put it in the cache...");
 
 										setProcNameText(procName, sb.toString());
 
@@ -2524,11 +2524,11 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 										break; // loop _dblist
 									}
 									else
-										_logger.debug("---FINNISHED(NOT FOUND): --- LOOKUP on PROC: '"+dbname+".."+procName+"'.");
+										_logger.debug("---FINNISHED(NOT FOUND): --- LOOKUP on PROC: '" + dbname + ".." + procName + "'.");
 								}
 								catch (SQLException e)
 								{
-									_logger.warn("Problems getting Stored Procedure Text for '"+procName+"'. Error="+e.getErrorCode()+", SqlState="+e.getSQLState()+", Msg="+e.getMessage());
+									_logger.warn("Problems getting Stored Procedure Text for '" + procName + "'. Error=" + e.getErrorCode() + ", SqlState=" + e.getSQLState() + ", Msg=" + e.getMessage());
 								}
 							}
 							// Next time the proc is requested, start from START of the list
@@ -2616,7 +2616,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 			             "   and spid != @@spid ";
 			try
 			{
-				Connection conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-getSpidList", null);
+				Connection conn = AseConnectionFactory.getConnection(null, Version.getAppName() + "-getSpidList", null);
 
 				Statement stmt = conn.createStatement();
 				ResultSet rs = stmt.executeQuery(sql);
@@ -2651,9 +2651,9 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 			}
 			catch (Exception e)
 			{
-				String msg = "Problems execute SQL '"+sql+"', Caught: " + e.toString();
+				String msg = "Problems execute SQL '" + sql + "', Caught: " + e.toString();
 				_logger.warn(msg);
-				SwingUtils.showErrorMessage("ASE Problem", "Problems when doing: "+sql, e);
+				SwingUtils.showErrorMessage("ASE Problem", "Problems when doing: " + sql, e);
 			}
 		}
 		
@@ -3160,7 +3160,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		try
 		{
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-			_logger.info("Using Look And Feel named '"+UIManager.getLookAndFeel().getName()+"', classname='"+UIManager.getLookAndFeel().getClass().getName()+"', toString='"+UIManager.getLookAndFeel()+"'.");
+			_logger.info("Using Look And Feel named '" + UIManager.getLookAndFeel().getName() + "', classname='" + UIManager.getLookAndFeel().getClass().getName() + "', toString='" + UIManager.getLookAndFeel() + "'.");
 		}
 		catch (Exception e)
 		{
@@ -3218,7 +3218,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 						{
 							Statement stmt = conn.createStatement();
 //							ResultSet rs = stmt.executeQuery("exec sp_doDummy   select javaTime='"+System.currentTimeMillis()+"', tiemNow=getdate()");
-							ResultSet rs = stmt.executeQuery("exec sp_who   select javaTime='"+System.currentTimeMillis()+"', tiemNow=getdate()");
+							ResultSet rs = stmt.executeQuery("exec sp_who   select javaTime='" + System.currentTimeMillis() + "', tiemNow=getdate()");
 							while (rs.next())
 							{
 								rs.getString(1);

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -529,13 +529,13 @@ public abstract class DbmsObjectIdCache
 		}
 		catch(ConcurrentModificationException ex)
 		{
-			_logger.warn("DbmsObjectIdCache, lowOnMemoryHandler(): when removing entries from the cache, we caught ConcurrentModificationException... lets just continue... Exception: "+ex);
+			_logger.warn("DbmsObjectIdCache, lowOnMemoryHandler(): when removing entries from the cache, we caught ConcurrentModificationException... lets just continue... Exception: " + ex);
 		}
 
 		int countAfterClean  = size();
 		removeCount = countBeforeClean - countAfterClean;
 
-		_logger.warn("DbmsObjectIdCache, lowOnMemoryHandler() was called. Removed "+removeCount+" entries from the DbmsObjectIdCache (config: '"+PROPKEY_lowOnMememory_removePct+"'="+removePct+"). Number of entries before clean was "+countBeforeClean+", after clean was "+countAfterClean+".");
+		_logger.warn("DbmsObjectIdCache, lowOnMemoryHandler() was called. Removed " + removeCount + " entries from the DbmsObjectIdCache (config: '" + PROPKEY_lowOnMememory_removePct + "'=" + removePct + "). Number of entries before clean was " + countBeforeClean + ", after clean was " + countAfterClean + ".");
 		_statDecreaseCalls++;
 	}
 

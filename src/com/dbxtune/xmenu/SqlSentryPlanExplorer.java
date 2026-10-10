@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -113,8 +113,8 @@ extends XmenuActionBase
 			catch (Exception e)
 			{
 				SwingUtils.showErrorMessage(null, "Problems Writing tempfile", 
-						"Problems writing to tempfile '"+tempFile+"':\n\n" +
-						e.getMessage()+"\n\n",
+						"Problems writing to tempfile '" + tempFile + "':\n\n" +
+						e.getMessage() + "\n\n",
 						e);
 			}
 			
@@ -160,7 +160,7 @@ extends XmenuActionBase
 					int returnValue = fc.showOpenDialog(MainFrame.getInstance());
 					if (returnValue == JFileChooser.APPROVE_OPTION) 
 					{
-						cmd_txt.setText( fc.getSelectedFile()+"" );
+						cmd_txt.setText( fc.getSelectedFile() + "" );
 						conf.setProperty(PROPKEY_SQL_PLAN_EXPLORER, cmd_txt.getText());
 						conf.save();
 					}
@@ -197,7 +197,7 @@ extends XmenuActionBase
 					+ "Problem: <code>" + e.getMessage() + "</code><br>"
 					+ "<br>"
 					+ "If the command can't be found, you can specify what binary to run using the <br>"
-					+ "property <code>"+PROPKEY_SQL_PLAN_EXPLORER+"=...</code> In the file <code>"+conf.getFilename()+"</code>.<br>"
+					+ "property <code>" + PROPKEY_SQL_PLAN_EXPLORER + "=...</code> In the file <code>" + conf.getFilename() + "</code>.<br>"
 					+ "<br>"
 					+ "Or specify the command in the text field below. <b>Note</b>: The button \"...\" opens a file chooser dialog.<br>"
 					+ "<br>"
@@ -246,7 +246,7 @@ extends XmenuActionBase
 		}
 		catch (SQLException e)
 		{
-			JOptionPane.showMessageDialog(null, "Executing 'SqlServerUtils.getXmlQueryPlan()'. Found the following error:\n."+e, "Error", JOptionPane.ERROR_MESSAGE);
+			JOptionPane.showMessageDialog(null, "Executing 'SqlServerUtils.getXmlQueryPlan()'. Found the following error:\n." + e, "Error", JOptionPane.ERROR_MESSAGE);
 		}
 		return query_plan;
 	}

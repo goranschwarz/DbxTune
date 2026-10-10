@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -23,6 +23,8 @@ package com.dbxtune.hostmon;
 
 import java.io.InputStream;
 import java.lang.invoke.MethodHandles;
+import java.nio.charset.Charset;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -39,7 +41,11 @@ extends HostMonitorConnection
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	private SshConnection _sshConn;
-	
+
+	/** Windows only: A long lived PowerShell process on the remote host, see executeInPowershellSession() */
+	private PowershellSession _psSession;
+	private int               _psSessionFailCount = 0;
+
 	public HostMonitorConnectionSsh(SshConnection sshConn)
 	{
 		super(ConnectionType.SSH);
@@ -94,6 +100,11 @@ extends HostMonitorConnection
 	@Override
 	public void closeConnection()
 	{
+		// EOF on STDIN, so the remote 'powershell' exits by itself
+		PowershellSession psSession = _psSession;
+		if (psSession != null)
+			psSession.close();
+
 		_sshConn.close();
 	}
 
@@ -173,6 +184,77 @@ extends HostMonitorConnection
 		ExecutionWrapperShh execWrapper = new ExecutionWrapperShh(_sshConn);
 		execWrapper.executeCommand(cmd, isStreamingCommand);
 		return execWrapper;
+	}
+
+	@Override
+	public synchronized ExecutionWrapper executeInPowershellSession(String psScript) throws Exception
+	{
+		if ( ! _sshConn.isWindows() || _psSessionFailCount >= 3 )
+			return null;
+
+		Configuration conf = Configuration.getCombinedConfiguration();
+		if ( ! conf.getBooleanProperty(HostMonitor.PROPKEY_windows_powershell_session_enabled, HostMonitor.DEFAULT_windows_powershell_session_enabled) )
+		{
+			if (_psSession != null)
+			{
+				_psSession.close();
+				_psSession = null;
+			}
+			return null;
+		}
+
+		// Start a new session: First time, or after a SSH reconnect (the channel of the old session is then closed)
+		boolean isNewSession = (_psSession == null || _psSession.isClosed());
+		if (isNewSession)
+		{
+			if (_psSession != null)
+				_psSession.close();
+
+			// NOTE: SSH problems here are thrown to the caller (and handled like for any other command)
+			final ExecChannel execChannel = _sshConn.execCommand(PowershellSession.START_COMMAND, false); // false = NO PTY
+			_psSession = new PowershellSession(execChannel.getChannel().getOutputStream(), execChannel.getStdout(), execChannel.getStderr(), Charset.forName(getOsCharset()))
+			{
+				@Override public boolean isClosed() { return execChannel.getChannel().isClosed(); }
+				@Override public void    close()    { super.close(); execChannel.getChannel().disconnect(); } // First EOF on STDIN (powershell exits by itself), then disconnect
+			};
+		}
+
+		try
+		{
+			if (isNewSession)
+			{
+				// First command: This is where we pay for loading PowerShell/.NET, and it proves that STDIN/STDOUT works via the login shell
+				long startTime = System.currentTimeMillis();
+				_psSession.execute("$ProgressPreference = 'SilentlyContinue'", conf.getIntProperty(HostMonitor.PROPKEY_windows_powershell_session_startTimeoutSec, HostMonitor.DEFAULT_windows_powershell_session_startTimeoutSec));
+
+				_logger.info("Started a PowerShell session at '" + getHostname() + "' in " + (System.currentTimeMillis() - startTime) + " ms, using '" + PowershellSession.START_COMMAND + "'. "
+						+ "Non-streaming Host Monitor commands will be executed in that session (instead of starting a new 'powershell' for every execution). "
+						+ "This can be disabled with: " + HostMonitor.PROPKEY_windows_powershell_session_enabled + " = false");
+			}
+
+			ExecutionWrapper execWrapper = _psSession.execute(psScript, conf.getIntProperty(HostMonitor.PROPKEY_executeAndParse_timeoutSec, HostMonitor.DEFAULT_executeAndParse_timeoutSec));
+			_psSessionFailCount = 0;
+			return execWrapper;
+		}
+		catch (Exception ex)
+		{
+			// The session is in a unknown state (output from the failed script may arrive later), so throw it away
+			_psSession.close();
+			_psSession = null;
+			_psSessionFailCount++;
+
+			_logger.warn("Problems using the PowerShell session at '" + getHostname() + "', the script will instead be executed as a normal OS Command (which starts a new 'powershell'). "
+					+ (_psSessionFailCount >= 3
+							? "This was failure number " + _psSessionFailCount + " in a row, so the PowerShell session will NOT be used anymore for this connection. "
+							: "A new session will be started on next execution. ")
+					+ "The PowerShell session can be disabled with: " + HostMonitor.PROPKEY_windows_powershell_session_enabled + " = false. Caught: " + ex);
+
+			// On timeout: The sample is abandoned (like for any other command that times out)
+			if (ex instanceof TimeoutException)
+				throw ex;
+
+			return null;
+		}
 	}
 
 

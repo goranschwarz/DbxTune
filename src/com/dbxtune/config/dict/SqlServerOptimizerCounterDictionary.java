@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -89,7 +89,7 @@ public class SqlServerOptimizerCounterDictionary
 		}
 
 		// Compose an empty one
-		return "<html><code>" +name + "</code> not found in dictionary.</html>";
+		return "<html><code>" + name + "</code> not found in dictionary.</html>";
 	}
 
 

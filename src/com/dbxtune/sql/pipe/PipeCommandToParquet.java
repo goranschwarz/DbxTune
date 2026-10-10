@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -177,20 +177,20 @@ extends PipeCommandAbstract
 //			_params._fieldTermReadable = StringUtil.escapeControlChars(_params._fieldTerm);
 //			_params._rowTermReadable   = StringUtil.escapeControlChars(_params._rowTerm);
 
-			System.out.println("TOPARQUET Param: _append        = '"+ _params._append            + "'.");
-			System.out.println("TOPARQUET Param: _overwrite     = '"+ _params._overwrite         + "'.");
+			System.out.println("TOPARQUET Param: _append        = '" + _params._append            + "'.");
+			System.out.println("TOPARQUET Param: _overwrite     = '" + _params._overwrite         + "'.");
 //			System.out.println("TOPARQUET Param: _fieldTerm     = '"+ _params._fieldTermReadable + "'.");
 //			System.out.println("TOPARQUET Param: _rowTerm       = '"+ _params._rowTermReadable   + "'.");
 //			System.out.println("TOPARQUET Param: _nullValue     = '"+ _params._nullValue         + "'.");
 //			System.out.println("TOPARQUET Param: _charset       = '"+ _params._charset           + "'.");
 //			System.out.println("TOPARQUET Param: _trimValues    = '"+ _params._trimValues        + "'.");
-			System.out.println("TOPARQUET Param: _queryInfo     = '"+ _params._queryInfo         + "'.");
-			System.out.println("TOPARQUET Param: _rsInfo        = '"+ _params._rsInfo            + "'.");
-			System.out.println("TOPARQUET Param: _noGuiQuestion = '"+ _params._noGuiQuestion     + "'.");
+			System.out.println("TOPARQUET Param: _queryInfo     = '" + _params._queryInfo         + "'.");
+			System.out.println("TOPARQUET Param: _rsInfo        = '" + _params._rsInfo            + "'.");
+			System.out.println("TOPARQUET Param: _noGuiQuestion = '" + _params._noGuiQuestion     + "'.");
 		}
 		else
 		{
-			throw new PipeCommandException("PipeCommand, cmd='"+input+"' is unknown. Available commands is: toparquet");
+			throw new PipeCommandException("PipeCommand, cmd='" + input + "' is unknown. Available commands is: toparquet");
 		}
 	}
 	
@@ -229,7 +229,7 @@ extends PipeCommandAbstract
 		else if (rowsWritten .equals(type))   return _rowsWritten;
 		else if (message     .equals(type))   return _message;
 		else
-			throw new IllegalArgumentException("Input argument/type '"+type+"' is unknown. Known types '"+rowsSelected+"', '"+rowsWritten+"'.");
+			throw new IllegalArgumentException("Input argument/type '" + type + "' is unknown. Known types '" + rowsSelected + "', '" + rowsWritten + "'.");
 	}
 
 	@Override 
@@ -373,7 +373,7 @@ extends PipeCommandAbstract
 			{
 				String htmlMsg = "<html>"
 						+ "<h2>File already exists!</h2>"
-						+ "<code>"+_outfile+"</code><br>"
+						+ "<code>" + _outfile + "</code><br>"
 						+ "<br>"
 						+ "Tip: you can use <code>-o</code> or <code>--overwrite</code> option<br>"
 						+ "Tip: you can use <code>-a</code> or <code>--append</code> option<br>"
@@ -417,7 +417,7 @@ extends PipeCommandAbstract
 					if (returnValue == JFileChooser.APPROVE_OPTION) 
 					{
 						_outfile = fc.getSelectedFile();
-						System.out.println(_outfile+"");
+						System.out.println(_outfile + "");
 					}
 				}
 				//----------------------------
@@ -425,12 +425,12 @@ extends PipeCommandAbstract
 				//----------------------------
 				else if (answer == 3)
 				{
-					throw new Exception("Cancel was pressed during 'File already exists dialog'. filename: "+_outfile);
+					throw new Exception("Cancel was pressed during 'File already exists dialog'. filename: " + _outfile);
 				}
 			}
 
 			if (_outfile.exists()  &&  ! _cmdParams._append  &&  ! _cmdParams._overwrite)
-				throw new Exception("File already exists, please use -o|--overwrite or -a|--append flag. filename='"+_outfile+"'.");
+				throw new Exception("File already exists, please use -o|--overwrite or -a|--append flag. filename='" + _outfile + "'.");
 
 //			try
 //			{
@@ -446,7 +446,7 @@ extends PipeCommandAbstract
 //			
 //			_logger.info("Opened the file '"+_outfile+"' to write data. Options: append="+_cmdParams._append+", overwrite="+_cmdParams._overwrite+", header="+_cmdParams._header+", fieldTerm='"+_cmdParams._fieldTermReadable+"', rowTerm='"+_cmdParams._rowTermReadable+"', charset='"+_cmdParams._charset+"', queryInfo='"+_cmdParams._queryInfo+"', rsInfo='"+_cmdParams._rsInfo+"', noGuiQuestion='"+_cmdParams._noGuiQuestion+"'.");
 
-			_logger.info("Opened the file '"+_outfile+"' to write data. Options: append="+_cmdParams._append+", overwrite="+_cmdParams._overwrite+", header="+_cmdParams._header+", queryInfo='"+_cmdParams._queryInfo+"', rsInfo='"+_cmdParams._rsInfo+"', noGuiQuestion='"+_cmdParams._noGuiQuestion+"'.");
+			_logger.info("Opened the file '" + _outfile + "' to write data. Options: append=" + _cmdParams._append + ", overwrite=" + _cmdParams._overwrite + ", header=" + _cmdParams._header + ", queryInfo='" + _cmdParams._queryInfo + "', rsInfo='" + _cmdParams._rsInfo + "', noGuiQuestion='" + _cmdParams._noGuiQuestion + "'.");
 		}
 
 		public void close()
@@ -559,7 +559,7 @@ extends PipeCommandAbstract
 					}
 					catch (SQLException sqle)
 					{
-System.out.println("ROW: "+totalCount+" - Problems reading row "+totalCount+", column c="+c+", sourceName='"+sourceColNames.get(c-1)+"'. Caught: "+sqle);
+System.out.println("ROW: " + totalCount + " - Problems reading row " + totalCount + ", column c=" + c + ", sourceName='" + sourceColNames.get(c-1) + "'. Caught: " + sqle);
 						throw sqle;
 					}
 				}
@@ -567,14 +567,14 @@ System.out.println("ROW: "+totalCount+" - Problems reading row "+totalCount+", c
 				pipeCmd._rowsWritten++;
 
 				if (_progressDialog != null && ((totalCount % 100) == 0) )
-					_progressDialog.setState("Written "+totalCount+" rows to the output file.");
+					_progressDialog.setState("Written " + totalCount + " rows to the output file.");
 			}
 			sourceRs.close();
 
 //			pipeCmd._message = "Successfully wrote "+totalCount+" row(s) to file '"+_outfile+"'.\n" + 
 //			"Using options: append="+_cmdParams._append+", overwrite="+_cmdParams._overwrite+", header="+_cmdParams._header+", fieldTerm='"+_cmdParams._fieldTermReadable+"', rowTerm='"+_cmdParams._rowTermReadable+"', charset='"+_cmdParams._charset+"', trim="+_cmdParams._trimValues+", queryInfo='"+_cmdParams._queryInfo+"', rsInfo='"+_cmdParams._rsInfo+"', noGuiQuestion='"+_cmdParams._noGuiQuestion+"'.";
-			pipeCmd._message = "Successfully wrote "+totalCount+" row(s) to file '"+_outfile+"'.\n" + 
-			"Using options: append="+_cmdParams._append+", overwrite="+_cmdParams._overwrite+", header="+_cmdParams._header+", queryInfo='"+_cmdParams._queryInfo+"', rsInfo='"+_cmdParams._rsInfo+"', noGuiQuestion='"+_cmdParams._noGuiQuestion+"'.";
+			pipeCmd._message = "Successfully wrote " + totalCount + " row(s) to file '" + _outfile + "'.\n" + 
+			"Using options: append=" + _cmdParams._append + ", overwrite=" + _cmdParams._overwrite + ", header=" + _cmdParams._header + ", queryInfo='" + _cmdParams._queryInfo + "', rsInfo='" + _cmdParams._rsInfo + "', noGuiQuestion='" + _cmdParams._noGuiQuestion + "'.";
 
 			return totalCount;
 		}

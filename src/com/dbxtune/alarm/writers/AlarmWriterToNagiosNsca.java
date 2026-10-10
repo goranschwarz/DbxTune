@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -116,15 +116,15 @@ extends AlarmWriterAbstract
 		try
 		{
 			sender.send(payload);
-			_logger.info("Sent message message: hostname='"+_hostname+".");
+			_logger.info("Sent message message: hostname='" + _hostname + ".");
 		}
 		catch (NagiosException e)
 		{
-			_logger.error("Problems sending Nagios message. hostname='"+_hostname+"', port="+_port, e);
+			_logger.error("Problems sending Nagios message. hostname='" + _hostname + "', port=" + _port, e);
 		}
 		catch (IOException e)
 		{
-			_logger.error("Problems sending Nagios message. hostname='"+_hostname+"', port="+_port, e);
+			_logger.error("Problems sending Nagios message. hostname='" + _hostname + "', port=" + _port, e);
 		}
 	}
 
@@ -214,7 +214,7 @@ extends AlarmWriterAbstract
 	{
 		super.init(conf);
 
-		_logger.info("Initializing the AlarmWriter component named '"+getName()+"'.");
+		_logger.info("Initializing the AlarmWriter component named '" + getName() + "'.");
 
 		_hostname        = conf.getProperty       (PROPKEY_hostname,        DEFAULT_hostname);
 		_port            = conf.getIntProperty    (PROPKEY_port,            DEFAULT_port);
@@ -228,9 +228,9 @@ extends AlarmWriterAbstract
 		//------------------------------------------
 		// Check for mandatory parameters
 		//------------------------------------------
-		if ( StringUtil.isNullOrBlank(_hostname   ) ) throw new Exception("The property '" + PROPKEY_hostname    + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
-		if ( _port == -1                            ) throw new Exception("The property '" + PROPKEY_port        + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
-		if ( StringUtil.isNullOrBlank(_msgTemplate) ) throw new Exception("The property '" + PROPKEY_msgTemplate + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
+		if ( StringUtil.isNullOrBlank(_hostname   ) ) throw new Exception("The property '" + PROPKEY_hostname    + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
+		if ( _port == -1                            ) throw new Exception("The property '" + PROPKEY_port        + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
+		if ( StringUtil.isNullOrBlank(_msgTemplate) ) throw new Exception("The property '" + PROPKEY_msgTemplate + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
 //		if ( StringUtil.isNullOrBlank(_username   ) ) throw new Exception("The property '" + PROPKEY_username    + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
 //		if ( StringUtil.isNullOrBlank(_password   ) ) throw new Exception("The property '" + PROPKEY_password    + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
 
@@ -243,7 +243,7 @@ extends AlarmWriterAbstract
 	public void printConfig()
 	{
 		int spaces = 45;
-		_logger.info("Configuration for Alarm Writer Module: "+getName());
+		_logger.info("Configuration for Alarm Writer Module: " + getName());
 		_logger.info("    " + StringUtil.left(PROPKEY_hostname          , spaces) + ": " + _hostname);
 		_logger.info("    " + StringUtil.left(PROPKEY_port              , spaces) + ": " + _port);
 		_logger.info("    " + StringUtil.left(PROPKEY_msgTemplate       , spaces) + ": " + _msgTemplate);

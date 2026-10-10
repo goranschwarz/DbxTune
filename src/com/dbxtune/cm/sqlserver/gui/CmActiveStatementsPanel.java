@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -64,7 +64,7 @@ extends TabularCntrPanel
 		String colorStr = null;
 
 		// YELLOW = SYSTEM process
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.system");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.system");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -79,7 +79,7 @@ extends TabularCntrPanel
 
 
 		// Mark the row as ORANGE if PK has been visible on more than 1 sample
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.multiSampled");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.multiSampled");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -96,7 +96,7 @@ extends TabularCntrPanel
 
 		
 		// Mark the row as LIGHT_BLUE if this SPID is waiting for MEMORY GRANTS
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.waitingForMemoryGrant");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.waitingForMemoryGrant");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -116,7 +116,7 @@ extends TabularCntrPanel
 
 
 		// Mark the row as PINK if this SPID is BLOCKED by another thread
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocked");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.blocked");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -133,7 +133,7 @@ extends TabularCntrPanel
 
 
 		// Mark the row as RED if blocks other users from working
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocking");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.blocking");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -151,7 +151,7 @@ extends TabularCntrPanel
 
 	
 		// Mark the CELL as GREEN if "dop" > 1
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.dop");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.dop");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -171,7 +171,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.GREEN), null));
 
 		// Mark the CELL as GREEN if "exec_status" is "running" or "runnable"
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.dop");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.dop");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override

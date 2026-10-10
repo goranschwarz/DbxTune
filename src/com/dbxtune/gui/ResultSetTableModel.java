@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -388,7 +388,7 @@ public class ResultSetTableModel
 				else
 				{
 //					_logger.info("For column '"+columnLabel+"', columnDisplaySize is '"+columnDisplaySize+"', which is above max value of '"+maxDisplaySize+"', using max value. The max value can be changed with java parameter '-DResultSetTableModel.maxDisplaySize=sizeInBytes'. ResultSetTableModel.name='"+getName()+"'");
-					_logger.debug("For column '"+columnLabel+"', columnDisplaySize is '"+columnDisplaySize+"', which is above max value of '"+maxDisplaySize+"', using max value. The max value can be changed with java parameter '-DResultSetTableModel.maxDisplaySize=sizeInBytes'. ResultSetTableModel.name='"+getName()+"'");
+					_logger.debug("For column '" + columnLabel + "', columnDisplaySize is '" + columnDisplaySize + "', which is above max value of '" + maxDisplaySize + "', using max value. The max value can be changed with java parameter '-DResultSetTableModel.maxDisplaySize=sizeInBytes'. ResultSetTableModel.name='" + getName() + "'");
 					columnDisplaySize = maxDisplaySize;
 				}
 			}
@@ -431,7 +431,7 @@ public class ResultSetTableModel
 		}
 		if (isJsonColumn)
 		{
-			_logger.info("Special code path for (SQL-Server) JSON Concat of several rows into a single row... This can be disabled with the property '"+PROPKEY_SqlServerJconConcatRows+"=false'.");
+			_logger.info("Special code path for (SQL-Server) JSON Concat of several rows into a single row... This can be disabled with the property '" + PROPKEY_SqlServerJconConcatRows + "=false'.");
 			int rowCount = 0;
 			StringBuilder sb = new StringBuilder();
 			while(rs.next())
@@ -439,7 +439,7 @@ public class ResultSetTableModel
 				String str = rs.getString(1);
 
 				if (_logger.isDebugEnabled())
-					_logger.debug("JSON Concat row("+rowCount+"), value=|"+str+"|");
+					_logger.debug("JSON Concat row(" + rowCount + "), value=|" + str + "|");
 
 				sb.append(str);
 				rowCount++;
@@ -648,7 +648,7 @@ public class ResultSetTableModel
 //		rs.close();
 
 		if (progress != null)
-			progress.setState(originProgressState + " Read done, rows "+_readCount + (_abortedAfterXRows<0 ? "" : ", then stopped, due to 'top' restriction.") );
+			progress.setState(originProgressState + " Read done, rows " + _readCount + (_abortedAfterXRows<0 ? "" : ", then stopped, due to 'top' restriction.") );
 		
 		_readResultSetTime = (int) (System.currentTimeMillis() - startTime);
 	}
@@ -917,7 +917,7 @@ public class ResultSetTableModel
 	{
 		// Check column count
 		if (getColumnCount() != rstm.getColumnCount())
-			throw new ModelMissmatchException("Column COUNT missmatch. current count="+getColumnCount()+", passed count="+rstm.getColumnCount());
+			throw new ModelMissmatchException("Column COUNT missmatch. current count=" + getColumnCount() + ", passed count=" + rstm.getColumnCount());
 		
 		// Check column name differences
 		if (checkColumnNames)
@@ -925,7 +925,7 @@ public class ResultSetTableModel
 			for (int i=0; i<getColumnCount(); i++)
 			{
 				if ( ! _rsmdColumnLabel.get(i).equals(rstm._rsmdColumnLabel.get(i)) )
-					throw new ModelMissmatchException("Column NAME missmatch. current columns="+_rsmdColumnLabel+", passed columns="+rstm._rsmdColumnLabel);
+					throw new ModelMissmatchException("Column NAME missmatch. current columns=" + _rsmdColumnLabel + ", passed columns=" + rstm._rsmdColumnLabel);
 			}
 		}
 
@@ -933,7 +933,7 @@ public class ResultSetTableModel
 		for (int i=0; i<getColumnCount(); i++)
 		{
 			if ( ! _rsmdColumnTypeStr.get(i).equals(rstm._rsmdColumnTypeStr.get(i)) )
-				throw new ModelMissmatchException("Column DATATYPE missmatch. current jdbcDataTypes="+_rsmdColumnTypeStr+", passed jdbcDataTypes="+rstm._rsmdColumnTypeStr);
+				throw new ModelMissmatchException("Column DATATYPE missmatch. current jdbcDataTypes=" + _rsmdColumnTypeStr + ", passed jdbcDataTypes=" + rstm._rsmdColumnTypeStr);
 		}
 
 		if (merge == false)
@@ -993,7 +993,7 @@ public class ResultSetTableModel
 			int colNumber = cols.indexOf(grepColName);
 			if (colNumber < 0)
 			{
-				_logger.warn("PipeGrep: no column named '"+grepColName+"' in current ResultSet. it has following columns '"+cols+"'.");
+				_logger.warn("PipeGrep: no column named '" + grepColName + "' in current ResultSet. it has following columns '" + cols + "'.");
 				return true;
 			}
 			else
@@ -1089,27 +1089,27 @@ public class ResultSetTableModel
 						int precision = rsmd.getPrecision(col);
 						int scale     = rsmd.getScale(col);
 							
-						columnTypeName += "("+precision+","+scale+")";
+						columnTypeName += "(" + precision + "," + scale + ")";
 					}
 
 					//-----------------------------------------------------
 					if (columnType == java.sql.Types.CHAR || columnType == java.sql.Types.VARCHAR)
 					{
 						int length = rsmd.getColumnDisplaySize(col);
-						columnTypeName += "("+length+")";
+						columnTypeName += "(" + length + ")";
 					}
 
 					//-----------------------------------------------------
 					if (columnType == java.sql.Types.NCHAR)
 					{
 						int length = rsmd.getColumnDisplaySize(col) / ncharsize;
-						columnTypeName = "nchar("+length+")";
+						columnTypeName = "nchar(" + length + ")";
 					}
 					//-----------------------------------------------------
 					if (columnType == java.sql.Types.NVARCHAR)
 					{
 						int length = rsmd.getColumnDisplaySize(col) / ncharsize;
-						columnTypeName = "nvarchar("+length+")";
+						columnTypeName = "nvarchar(" + length + ")";
 					}
 
 					//-----------------------------------------------------
@@ -1123,14 +1123,14 @@ public class ResultSetTableModel
 						
 						if      (length == 1073741823) /* unitext: no need to specify length */;
 						else if (length == 2147483647) /* text   : no need to specify length */;
-						else columnTypeName += "("+length+")";
+						else columnTypeName += "(" + length + ")";
 					}
 
 					//-----------------------------------------------------
 					if (columnType == java.sql.Types.BINARY || columnType == java.sql.Types.VARBINARY)
 					{
 						int length = rsmd.getColumnDisplaySize(col) / 2;
-						columnTypeName += "("+length+")";
+						columnTypeName += "(" + length + ")";
 					}
 					//-----------------------------------------------------
 					if (columnType == java.sql.Types.LONGVARBINARY)
@@ -1139,7 +1139,7 @@ public class ResultSetTableModel
 						if ("varbinary".equals(columnTypeName))
 						{
 							int length = rsmd.getColumnDisplaySize(col) / 2;
-							columnTypeName += "("+length+")";
+							columnTypeName += "(" + length + ")";
 						}
 						// other LONGVARBINARY. just let them be, like "image"
 					}
@@ -1155,7 +1155,7 @@ public class ResultSetTableModel
 						int precision = rsmd.getPrecision(col);
 						int scale     = rsmd.getScale(col);
 
-						columnTypeName += "("+precision+","+scale+")";
+						columnTypeName += "(" + precision + "," + scale + ")";
 					}
 					else if (
 					        columnType == java.sql.Types.CHAR 
@@ -1165,12 +1165,12 @@ public class ResultSetTableModel
 					   )
 					{
 						int columnDisplaySize = Math.max(rsmd.getColumnDisplaySize(col), rsmd.getPrecision(col));
-						columnTypeName += (columnDisplaySize >= 2_147_483_647) ? "(max)" : "("+columnDisplaySize+")";
+						columnTypeName += (columnDisplaySize >= 2_147_483_647) ? "(max)" : "(" + columnDisplaySize + ")";
 					}
 					else if ( columnType == java.sql.Types.NCHAR || columnType == java.sql.Types.NVARCHAR )
 					{
 						int columnDisplaySize = Math.max(rsmd.getColumnDisplaySize(col), rsmd.getPrecision(col));
-						columnTypeName += (columnDisplaySize >= 1_073_741_823) ? "(max)" : "("+columnDisplaySize+")";
+						columnTypeName += (columnDisplaySize >= 1_073_741_823) ? "(max)" : "(" + columnDisplaySize + ")";
 					}
 				}
 				//---------------------------------
@@ -1183,7 +1183,7 @@ public class ResultSetTableModel
 						int precision = rsmd.getPrecision(col);
 						int scale     = rsmd.getScale(col);
 						
-						columnTypeName += "("+precision+","+scale+")";
+						columnTypeName += "(" + precision + "," + scale + ")";
 					}
 		
 					// Binary goes as datatype 'bytea' and does NOT have a length specification
@@ -1202,7 +1202,7 @@ public class ResultSetTableModel
 					{
 						int columnDisplaySize = Math.max(rsmd.getColumnDisplaySize(col), rsmd.getPrecision(col));
 							
-						columnTypeName += "("+columnDisplaySize+")";
+						columnTypeName += "(" + columnDisplaySize + ")";
 		
 						if (columnDisplaySize >= 2_147_483_647)
 							columnTypeName = "text";
@@ -1218,7 +1218,7 @@ public class ResultSetTableModel
 						int precision = rsmd.getPrecision(col);
 						int scale     = rsmd.getScale(col);
 							
-						columnTypeName += "("+precision+","+scale+")";
+						columnTypeName += "(" + precision + "," + scale + ")";
 					}
 					if (    columnType == java.sql.Types.CHAR 
 					     || columnType == java.sql.Types.VARCHAR 
@@ -1229,7 +1229,7 @@ public class ResultSetTableModel
 					   )
 					{
 						int columnDisplaySize = Math.max(rsmd.getColumnDisplaySize(col), rsmd.getPrecision(col));
-						columnTypeName += "("+columnDisplaySize+")";
+						columnTypeName += "(" + columnDisplaySize + ")";
 					}
 				}
 			}
@@ -1271,16 +1271,16 @@ public class ResultSetTableModel
 				case java.sql.Types.FLOAT:        return "float";
 				case java.sql.Types.REAL:         return "real";
 				case java.sql.Types.DOUBLE:       return "double";
-				case java.sql.Types.NUMERIC:      return "numeric("+precision+","+scale+")";
-				case java.sql.Types.DECIMAL:      return "decimal("+precision+","+scale+")";
-				case java.sql.Types.CHAR:         return "char("+columnDisplaySize+")";
-				case java.sql.Types.VARCHAR:      return "varchar("+columnDisplaySize+")";
+				case java.sql.Types.NUMERIC:      return "numeric(" + precision + "," + scale + ")";
+				case java.sql.Types.DECIMAL:      return "decimal(" + precision + "," + scale + ")";
+				case java.sql.Types.CHAR:         return "char(" + columnDisplaySize + ")";
+				case java.sql.Types.VARCHAR:      return "varchar(" + columnDisplaySize + ")";
 				case java.sql.Types.LONGVARCHAR:  return "text";
 				case java.sql.Types.DATE:         return "date";
 				case java.sql.Types.TIME:         return "time";
 				case java.sql.Types.TIMESTAMP:    return "datetime";
-				case java.sql.Types.BINARY:       return "binary("+columnDisplaySize+")";    // just in case we need the extra length when storing a binary with the prefix '0x'
-				case java.sql.Types.VARBINARY:    return "varbinary("+columnDisplaySize+")"; // just in case we need the extra length when storing a binary with the prefix '0x'
+				case java.sql.Types.BINARY:       return "binary(" + columnDisplaySize + ")";    // just in case we need the extra length when storing a binary with the prefix '0x'
+				case java.sql.Types.VARBINARY:    return "varbinary(" + columnDisplaySize + ")"; // just in case we need the extra length when storing a binary with the prefix '0x'
 //				case java.sql.Types.BINARY:       return "binary("+(columnDisplaySize+2)+")";    // just in case we need the extra length when storing a binary with the prefix '0x'
 //				case java.sql.Types.VARBINARY:    return "varbinary("+(columnDisplaySize+2)+")"; // just in case we need the extra length when storing a binary with the prefix '0x'
 				case java.sql.Types.LONGVARBINARY:return "image";
@@ -1296,7 +1296,7 @@ public class ResultSetTableModel
 //				case java.sql.Types.DATALINK:     return "-DATALINK-";
 				case java.sql.Types.BOOLEAN:      return "bit";
 				default:
-					columnTypeName = "unknown-jdbc-datatype("+columnType+")";;
+					columnTypeName = "unknown-jdbc-datatype(" + columnType + ")";;
 				}
 			}
 			catch (SQLException e1)
@@ -1683,7 +1683,7 @@ public class ResultSetTableModel
 
 	    //------------------------- UNHANDLED TYPES  ---------------------------
 		default:
-			return "unknown-jdbc-datatype("+columnType+")";
+			return "unknown-jdbc-datatype(" + columnType + ")";
 		}
 	}
 
@@ -1776,7 +1776,7 @@ public class ResultSetTableModel
 		if ("microsoft.sql.GEOGRAPHY"                   .equals(name)) return -158;
 
 		//------------------------- UNHANDLED TYPES  ---------------------------
-		_logger.warn("The string JDBC Datatype '"+name+"' is unknown, returning Integer.MIN_VALUE = "+ Integer.MIN_VALUE);
+		_logger.warn("The string JDBC Datatype '" + name + "' is unknown, returning Integer.MIN_VALUE = " + Integer.MIN_VALUE);
 		return Integer.MIN_VALUE;
 	}
 
@@ -2167,7 +2167,7 @@ public class ResultSetTableModel
 		// If it's called from 'JTable.editingStopped' then we probably opened the cell, to do: copy content
 		if ( ! JavaUtils.isCalledFrom(dummyEx, "JTable.editingStopped") )
 		{
-			_logger.warn("In ResultSetTableModel named='" + getName() + "', you called setValueAt(value='" + value+ "', row=" + row + ", column=" + column+ "). which will do NOTHING (no operation is implemented).", dummyEx);
+			_logger.warn("In ResultSetTableModel named='" + getName() + "', you called setValueAt(value='" + value + "', row=" + row + ", column=" + column + "). which will do NOTHING (no operation is implemented).", dummyEx);
 		}
 	}
 
@@ -2177,7 +2177,7 @@ public class ResultSetTableModel
 		if (row != null)
 			row.set(c, value);
 		else
-			_logger.warn("setValueAtWithOverride::The row returned NULL. (row="+r+", col="+c+", val='"+value+"')");
+			_logger.warn("setValueAtWithOverride::The row returned NULL. (row=" + r + ", col=" + c + ", val='" + value + "')");
 	}
 
 	public void setValueAtWithOverride(Object value, int r, String colName)
@@ -2193,7 +2193,7 @@ public class ResultSetTableModel
 		if (row != null)
 			row.set(c, value);
 		else
-			_logger.warn("setValueAtWithOverride::The row returned NULL. (row="+r+", col="+c+", val='"+value+"')");
+			_logger.warn("setValueAtWithOverride::The row returned NULL. (row=" + r + ", col=" + c + ", val='" + value + "')");
 	}
 
 //	public void addTableModelListener(TableModelListener l)
@@ -2269,7 +2269,7 @@ public class ResultSetTableModel
 	public String getToolTipTextForTableHeader(int index)
 	{
 		if (_showRowNumber && index == 0)
-			return "<html>Column '<b><code>"+ROW_NUMBER_COLNAME+"</code></b>' is not part of the actual Result Set, it has been added when reading the data.</html>";
+			return "<html>Column '<b><code>" + ROW_NUMBER_COLNAME + "</code></b>' is not part of the actual Result Set, it has been added when reading the data.</html>";
 
 //		if (_showRowNumber)
 //			index--;
@@ -2575,7 +2575,7 @@ public class ResultSetTableModel
 		if (getRowCount() == 0)
 			return "Table has 0 rows";
 		if (row >= getRowCount())
-			return "Table has "+getRowCount()+" rows, and you wanted to look at row "+row;
+			return "Table has " + getRowCount() + " rows, and you wanted to look at row " + row;
 
 		StringBuilder sb = new StringBuilder();
 		
@@ -3354,7 +3354,7 @@ public class ResultSetTableModel
 					if (strValLen > maxStrLen)
 					{
 						strVal =  strVal.substring(0, maxStrLen);
-						strVal += "...<br><font color='orange'><i><b>NOTE:</b> content is truncated after " + maxStrLen + " chars (actual length is "+strValLen+"), tooltip on this cell might show full content.</i></font>";
+						strVal += "...<br><font color='orange'><i><b>NOTE:</b> content is truncated after " + maxStrLen + " chars (actual length is " + strValLen + "), tooltip on this cell might show full content.</i></font>";
 					}
 				}
 			}
@@ -3793,7 +3793,7 @@ public class ResultSetTableModel
 	public void addColumn(String colname, int pos, int jdbcType, String sqlTypeShort, String sqlTypeLong, int length, int scale, Object defaultValue, Class<?> clazz)
 	{
 		if (pos < 0)
-			throw new RuntimeException("Column position can't be negative. pos="+pos);
+			throw new RuntimeException("Column position can't be negative. pos=" + pos);
 		if (pos > getColumnCount())
 			throw new RuntimeException("Column position can't be larger than current column count. colCount=" + getColumnCount() + ", pos=" + pos);
 
@@ -3900,7 +3900,7 @@ public class ResultSetTableModel
 		if (col_pos == -1)
 		{
 //			throw new ColumnNameNotFound("Column name '" + colName + "' not found in table '" + getName() +"'.");
-			_logger.error("Column name '" + colName + "' not found in table '" + getName() +"'. Not possible to remove any rows for this column.");
+			_logger.error("Column name '" + colName + "' not found in table '" + getName() + "'. Not possible to remove any rows for this column.");
 			return removedRows;
 		}
 
@@ -4131,7 +4131,7 @@ public class ResultSetTableModel
 			}
 			catch (ParseException pe)
 			{
-				_logger.warn("Problem reading Short value for mrow="+mrow+", column='"+colName+"', TableModelNamed='"+getName()+"', returning null. Caught: "+pe);
+				_logger.warn("Problem reading Short value for mrow=" + mrow + ", column='" + colName + "', TableModelNamed='" + getName() + "', returning null. Caught: " + pe);
 				return null;
 			}
 		}
@@ -4162,7 +4162,7 @@ public class ResultSetTableModel
 			}
 			catch (ParseException pe)
 			{
-				_logger.warn("Problem reading Short value for mrow="+mrow+", mcol='"+mcol+"', TableModelNamed='"+getName()+"', returning null. Caught: "+pe);
+				_logger.warn("Problem reading Short value for mrow=" + mrow + ", mcol='" + mcol + "', TableModelNamed='" + getName() + "', returning null. Caught: " + pe);
 				return null;
 			}
 		}
@@ -4201,7 +4201,7 @@ public class ResultSetTableModel
 			}
 			catch (ParseException pe)
 			{
-				_logger.warn("Problem reading Integer value for mrow="+mrow+", column='"+colName+"', TableModelNamed='"+getName()+"', returning null. Caught: "+pe);
+				_logger.warn("Problem reading Integer value for mrow=" + mrow + ", column='" + colName + "', TableModelNamed='" + getName() + "', returning null. Caught: " + pe);
 				return null;
 			}
 		}
@@ -4232,7 +4232,7 @@ public class ResultSetTableModel
 			}
 			catch (ParseException pe)
 			{
-				_logger.warn("Problem reading Integer value for mrow="+mrow+", mcol='"+mcol+"', TableModelNamed='"+getName()+"', returning null. Caught: "+pe);
+				_logger.warn("Problem reading Integer value for mrow=" + mrow + ", mcol='" + mcol + "', TableModelNamed='" + getName() + "', returning null. Caught: " + pe);
 				return null;
 			}
 		}
@@ -4291,7 +4291,7 @@ public class ResultSetTableModel
 			}
 			catch (ParseException pe)
 			{
-				_logger.warn("Problem reading Long value for mrow="+mrow+", column='"+colName+"', TableModelNamed='"+getName()+"', returning null. Caught: "+pe);
+				_logger.warn("Problem reading Long value for mrow=" + mrow + ", column='" + colName + "', TableModelNamed='" + getName() + "', returning null. Caught: " + pe);
 				return null;
 			}
 		}
@@ -4322,7 +4322,7 @@ public class ResultSetTableModel
 			}
 			catch (ParseException pe)
 			{
-				_logger.warn("Problem reading Long value for mrow="+mrow+", mcol='"+mcol+"', TableModelNamed='"+getName()+"', returning null. Caught: "+pe);
+				_logger.warn("Problem reading Long value for mrow=" + mrow + ", mcol='" + mcol + "', TableModelNamed='" + getName() + "', returning null. Caught: " + pe);
 				return null;
 			}
 		}
@@ -4360,7 +4360,7 @@ public class ResultSetTableModel
 			try	{ return TimeUtils.parseToTimestampX(o.toString());	}
 			catch(ParseException e2) {}
 			
-			_logger.warn("Problem reading Timestamp value for mrow="+mrow+", column='"+colName+"', TableModelNamed='"+getName()+"', value='" + o + "', returning returning DEFAULT='" + defaultNullValue + "'. Caught: "+e);
+			_logger.warn("Problem reading Timestamp value for mrow=" + mrow + ", column='" + colName + "', TableModelNamed='" + getName() + "', value='" + o + "', returning returning DEFAULT='" + defaultNullValue + "'. Caught: " + e);
 			return null;
 		}
 	}
@@ -4386,7 +4386,7 @@ public class ResultSetTableModel
 			catch(ParseException e2) {}
 			
 			String colName = getColumnName(mcol);
-			_logger.warn("Problem reading Timestamp value for mrow="+mrow+", mcol="+mcol+", column='"+colName+"', TableModelNamed='"+getName()+"',value='" + o + "', returning null. Caught: "+e);
+			_logger.warn("Problem reading Timestamp value for mrow=" + mrow + ", mcol=" + mcol + ", column='" + colName + "', TableModelNamed='" + getName() + "',value='" + o + "', returning null. Caught: " + e);
 			return null;
 		}
 	}
@@ -4424,7 +4424,7 @@ public class ResultSetTableModel
 			}
 			catch (ParseException pe)
 			{
-				_logger.warn("Problem reading Double value for mrow="+mrow+", column='"+colName+"', TableModelNamed='"+getName()+"', returning null. Caught: "+pe);
+				_logger.warn("Problem reading Double value for mrow=" + mrow + ", column='" + colName + "', TableModelNamed='" + getName() + "', returning null. Caught: " + pe);
 				return null;
 			}
 		}
@@ -4455,7 +4455,7 @@ public class ResultSetTableModel
 			}
 			catch (ParseException pe)
 			{
-				_logger.warn("Problem reading Double value for mrow="+mrow+", mcol='"+mcol+"', TableModelNamed='"+getName()+"', returning null. Caught: "+pe);
+				_logger.warn("Problem reading Double value for mrow=" + mrow + ", mcol='" + mcol + "', TableModelNamed='" + getName() + "', returning null. Caught: " + pe);
 				return null;
 			}
 		}
@@ -4494,7 +4494,7 @@ public class ResultSetTableModel
 			}
 			catch (ParseException pe)
 			{
-				_logger.warn("Problem reading BigDecimal value for mrow="+mrow+", column='"+colName+"', TableModelNamed='"+getName()+"', returning null. Caught: "+pe);
+				_logger.warn("Problem reading BigDecimal value for mrow=" + mrow + ", column='" + colName + "', TableModelNamed='" + getName() + "', returning null. Caught: " + pe);
 				return null;
 			}
 		}
@@ -4525,7 +4525,7 @@ public class ResultSetTableModel
 			}
 			catch (ParseException pe)
 			{
-				_logger.warn("Problem reading BigDecimal value for mrow="+mrow+", mcol='"+mcol+"', TableModelNamed='"+getName()+"', returning null. Caught: "+pe);
+				_logger.warn("Problem reading BigDecimal value for mrow=" + mrow + ", mcol='" + mcol + "', TableModelNamed='" + getName() + "', returning null. Caught: " + pe);
 				return null;
 			}
 		}
@@ -4562,7 +4562,7 @@ public class ResultSetTableModel
 		{
 			if (_handleColumnNotFoundAsNullValueInGetValues)
 				return null;
-			throw new RuntimeException("Can't find column '"+colName+"' in TableModel named '"+getName()+"'.");
+			throw new RuntimeException("Can't find column '" + colName + "' in TableModel named '" + getName() + "'.");
 		}
 		
 //System.out.println("getValueAsObject(mrow="+mrow+", colName='"+colName+"'): col_pos="+col_pos+", mrow="+mrow+", mcol="+mcol+".");
@@ -4671,7 +4671,7 @@ public class ResultSetTableModel
 				
 				int colId = nocase ? findColumnNoCase(whereColName) : findColumn(whereColName);
 				if (colId == -1)
-					throw new RuntimeException("Can't find column '"+whereColName+"' in TableModel named '"+getName()+"'.");
+					throw new RuntimeException("Can't find column '" + whereColName + "' in TableModel named '" + getName() + "'.");
 
 				Object rowColVal = getValueAt(r, colId);
 				
@@ -5598,13 +5598,13 @@ public class ResultSetTableModel
 			for (int i=0; i<tables.size(); i++)
 			{
 				_logger.debug("--------------------------------------------------------------------");
-				_logger.debug("MTR["+i+"]=" + tableIsMultiLine.get(i));
+				_logger.debug("MTR[" + i + "]=" + tableIsMultiLine.get(i));
 				
 				List<String> table = tables.get(i);
-				_logger.debug("TABLE["+i+"]: rows=" + table.size());
+				_logger.debug("TABLE[" + i + "]: rows=" + table.size());
 				for (int r=0; r<table.size(); r++)
 				{
-					_logger.debug("     ROW["+r+"]: " + table.get(r));
+					_logger.debug("     ROW[" + r + "]: " + table.get(r));
 				}
 			}
 		}
@@ -6099,7 +6099,7 @@ public class ResultSetTableModel
 		// metaData
 		JsonNode metaDatasNode = JsonUtils.getNode(root, "metaData");
 		if (_logger.isDebugEnabled())
-			_logger.debug(" - metaData.count='"+metaDatasNode.size()+"'.");
+			_logger.debug(" - metaData.count='" + metaDatasNode.size() + "'.");
 		int pos=-1;
 		for (JsonNode metaData : metaDatasNode)
 		{
@@ -6122,7 +6122,7 @@ public class ResultSetTableModel
 		// rows
 		JsonNode rowsNode = JsonUtils.getNode(root, "rows");
 		if (_logger.isDebugEnabled())
-			_logger.debug(" - rows.count='"+rowsNode.size()+"'.");
+			_logger.debug(" - rows.count='" + rowsNode.size() + "'.");
 		for (JsonNode row : rowsNode)
 		{
 			ArrayList<Object> rowList = new ArrayList<>( metaColumnCount > 1 ? metaColumnCount : 10); 
@@ -6392,7 +6392,7 @@ public class ResultSetTableModel
 				ResultSetTableModel rstm = createResultSetTableModel(rs, name, sql, false);
 				
 				if (_logger.isDebugEnabled())
-					_logger.debug(name + "rstm.getRowCount()="+ rstm.getRowCount());
+					_logger.debug(name + "rstm.getRowCount()=" + rstm.getRowCount());
 				
 				return rstm;
 			}
@@ -6445,7 +6445,7 @@ public class ResultSetTableModel
 				ResultSetTableModel rstm = createResultSetTableModel(rs, name, sql, doTruncate);
 				
 				if (_logger.isDebugEnabled())
-					_logger.debug(name + "rstm.getRowCount()="+ rstm.getRowCount());
+					_logger.debug(name + "rstm.getRowCount()=" + rstm.getRowCount());
 				
 				return rstm;
 			}
@@ -6502,7 +6502,7 @@ public class ResultSetTableModel
     		+ "|db2   |               2|\n"
     		+ "+------+----------------+\n"
     		+ "Rows 2\n"
-    		+"";
+    		+ "";
 		
 		// Note: the below is output from sp_help on SQL Server, it's not a MultiLine (because no extra separator)
 		//       how should it be parsed?... for the moment it will be 5 rows... (with empty columns at the starting columns)
@@ -6529,7 +6529,7 @@ public class ResultSetTableModel
 			+ "                                                                                                                                                                                                    \n"  
 			+ "No foreign keys reference table 'dbo.Kund_till_Kontaktperson_relation', or you do not have permissions on referencing tables.                                                                       \n"  
 			+ "No views with schema binding reference table 'dbo.Kund_till_Kontaktperson_relation'.                                                                                                                \n"  
-    		+"";
+    		+ "";
 
 		List<ResultSetTableModel> rstmList = parseTextTables(str);
 //		List<ResultSetTableModel> rstmList = parseTextTables(str + test2);

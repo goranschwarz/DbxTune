@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -274,7 +274,7 @@ extends SqlStatementAbstract
 			if (StringUtil.hasValue(_params._extraParams))
 				ddlgen.setExtraParams(_params._extraParams);
 				
-			setProgressState("<html>Generating DDL Objects...: <br><code>"+(ddlgen==null?"null":ddlgen.getCommandForType(type, name))+"</code></html>");
+			setProgressState("<html>Generating DDL Objects...: <br><code>" + (ddlgen==null?"null":ddlgen.getCommandForType(type, name)) + "</code></html>");
 			
 			// Generate the DDL
 			String retStr = ddlgen.getDdlForType(type, name);
@@ -327,10 +327,10 @@ extends SqlStatementAbstract
 			if (ddlgen != null)
 				_resultCompList.add(new JAseMessage(ddlgen.getUsedCommand(), _originCmd));
 
-			_logger.warn("Problems when generating DDL Statements: args="+(ddlgen==null?"null":ddlgen.getUsedCommand())+", Caught="+ex, ex);
+			_logger.warn("Problems when generating DDL Statements: args=" + (ddlgen==null?"null":ddlgen.getUsedCommand()) + ", Caught=" + ex, ex);
 			SwingUtils.showErrorMessage(null, "Problems generating DDL", 
 					"<html>Problems when generating DDL Statements:<br>"
-					+ "args="+(ddlgen==null?"null":ddlgen.getUsedCommand())+"<br>"
+					+ "args=" + (ddlgen==null?"null":ddlgen.getUsedCommand()) + "<br>"
 					+ "<br>"
 					+ ex
 					+ "</html>", ex);

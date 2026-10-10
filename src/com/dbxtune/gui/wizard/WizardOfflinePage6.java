@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -73,32 +73,32 @@ implements ActionListener
 	private JCheckBox            _pcsDdl_enabledForDatabaseObjects_chk       = new JCheckBox("DB Objects",              PersistentCounterHandler.DEFAULT_ddl_enabledForDatabaseObjects);
 	private JCheckBox            _pcsDdl_enabledForStatementCache_chk        = new JCheckBox("Statement Cache",         PersistentCounterHandler.DEFAULT_ddl_enabledForStatementCache);
 	private JLabel               _pcsDdl_afterDdlLookupSleepTimeInMs_lbl     = new JLabel("Sleep Time");
-	private JTextField           _pcsDdl_afterDdlLookupSleepTimeInMs_txt     = new JTextField(""+PersistentCounterHandler.DEFAULT_ddl_afterDdlLookupSleepTimeInMs);
+	private JTextField           _pcsDdl_afterDdlLookupSleepTimeInMs_txt     = new JTextField("" + PersistentCounterHandler.DEFAULT_ddl_afterDdlLookupSleepTimeInMs);
 	private JCheckBox            _pcsDdl_addDependantObjectsToDdlInQueue_chk = new JCheckBox("Store Dependent Objects", PersistentCounterHandler.DEFAULT_ddl_addDependantObjectsToDdlInQueue);
 
 	//---- PCS: Capture SQL Statements
 	private JCheckBox            _pcsCapSql_doSqlCaptureAndStore_chk          = new JCheckBox("Do SQL Capture and Store", PersistentCounterHandler.DEFAULT_sqlCap_doSqlCaptureAndStore);
 	private JLabel               _pcsCapSql_sleepTimeInMs_lbl                 = new JLabel("Sleep Time");
-	private JTextField           _pcsCapSql_sleepTimeInMs_txt                 = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_sleepTimeInMs);
+	private JTextField           _pcsCapSql_sleepTimeInMs_txt                 = new JTextField("" + PersistentCounterHandler.DEFAULT_sqlCap_sleepTimeInMs);
 	private JCheckBox            _pcsCapSql_doSqlText_chk                     = new JCheckBox("SQL Text",       PersistentCounterHandler.DEFAULT_sqlCap_doSqlText);
 	private JCheckBox            _pcsCapSql_doStatementInfo_chk               = new JCheckBox("Statement Info", PersistentCounterHandler.DEFAULT_sqlCap_doStatementInfo);
 	private JCheckBox            _pcsCapSql_doPlanText_chk                    = new JCheckBox("Plan Text",      PersistentCounterHandler.DEFAULT_sqlCap_doPlanText);
 
 	private JLabel               _pcsCapSql_saveStatement_lbl                 = new JLabel("                   But only save Statements if: "); // apces is for "aligning" with the field _pcsCapSql_sendDdlForLookup_chk
 	private JLabel               _pcsCapSql_saveStatement_execTime_lbl        = new JLabel("Exec Time is above (ms)");
-	private JTextField           _pcsCapSql_saveStatement_execTime_txt        = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_execTime, 3);
+	private JTextField           _pcsCapSql_saveStatement_execTime_txt        = new JTextField("" + PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_execTime, 3);
 	private JLabel               _pcsCapSql_saveStatement_logicalRead_lbl     = new JLabel(", and Logical Reads >");
-	private JTextField           _pcsCapSql_saveStatement_logicalRead_txt     = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_logicalReads, 3);
+	private JTextField           _pcsCapSql_saveStatement_logicalRead_txt     = new JTextField("" + PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_logicalReads, 3);
 	private JLabel               _pcsCapSql_saveStatement_physicalRead_lbl    = new JLabel(", and Physical Reads >");
-	private JTextField           _pcsCapSql_saveStatement_physicalRead_txt    = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_physicalReads, 3);
+	private JTextField           _pcsCapSql_saveStatement_physicalRead_txt    = new JTextField("" + PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_physicalReads, 3);
 
 	private JCheckBox            _pcsCapSql_sendDdlForLookup_chk              = new JCheckBox("Send Statements for DDL Lookup if:", PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup);
 	private JLabel               _pcsCapSql_sendDdlForLookup_execTime_lbl     = new JLabel("Exec Time is above (ms)");
-	private JTextField           _pcsCapSql_sendDdlForLookup_execTime_txt     = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_execTime, 3);
+	private JTextField           _pcsCapSql_sendDdlForLookup_execTime_txt     = new JTextField("" + PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_execTime, 3);
 	private JLabel               _pcsCapSql_sendDdlForLookup_logicalRead_lbl  = new JLabel(", and Logical Reads >");
-	private JTextField           _pcsCapSql_sendDdlForLookup_logicalRead_txt  = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_logicalReads, 3);
+	private JTextField           _pcsCapSql_sendDdlForLookup_logicalRead_txt  = new JTextField("" + PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_logicalReads, 3);
 	private JLabel               _pcsCapSql_sendDdlForLookup_physicalRead_lbl = new JLabel(", and Physical Reads >");
-	private JTextField           _pcsCapSql_sendDdlForLookup_physicalRead_txt = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_physicalReads, 3);
+	private JTextField           _pcsCapSql_sendDdlForLookup_physicalRead_txt = new JTextField("" + PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_physicalReads, 3);
 
 	public static String getDescription() { return WIZ_DESC; }
 	@Override
@@ -334,7 +334,7 @@ implements ActionListener
 		}
 		else
 		{
-			_logger.info("Functionality for '" + WIZ_DESC + "' is not supported for '"+Version.getAppName()+"'. No properties will be written for this wizard page.");
+			_logger.info("Functionality for '" + WIZ_DESC + "' is not supported for '" + Version.getAppName() + "'. No properties will be written for this wizard page.");
 		}
 	}
 

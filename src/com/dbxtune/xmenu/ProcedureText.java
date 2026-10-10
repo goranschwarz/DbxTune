@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -183,7 +183,7 @@ extends XmenuActionBase
 
 		if ( objText == null )
 		{
-			JOptionPane.showMessageDialog(null, "The stored procedure '"+procName+"' can't be found in database '"+dbname+"'.", "Error", JOptionPane.ERROR_MESSAGE);
+			JOptionPane.showMessageDialog(null, "The stored procedure '" + procName + "' can't be found in database '" + dbname + "'.", "Error", JOptionPane.ERROR_MESSAGE);
 		}
 		else
 		{
@@ -292,7 +292,7 @@ extends XmenuActionBase
 							tabname = ss[2];
 						}
 					}
-					String sql = "exec ["+dbname+"]..sp_help '"+tabname+"'";
+					String sql = "exec [" + dbname + "]..sp_help '" + tabname + "'";
 
 					QueryWindow qw = new QueryWindow(_conn, sql, null, false, WindowType.JFRAME, null);
 					qw.openTheWindow();
@@ -312,7 +312,7 @@ extends XmenuActionBase
 			{
 				if (e.isPopupTrigger())
 				{
-					System.out.println("_popup.show(e.getComponent()='"+e.getComponent()+"', e.getX()='"+e.getX()+"', e.getY()='"+e.getY()+"')");
+					System.out.println("_popup.show(e.getComponent()='" + e.getComponent() + "', e.getX()='" + e.getX() + "', e.getY()='" + e.getY() + "')");
 					if (_rightClickPopupMenu != null)
 					{
 						//System.out.println("SHOW AT, e.getX()='"+e.getX()+"', e.getY()='"+e.getY()+"')");

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -296,8 +296,8 @@ implements Runnable
 		String writerClasses = _conf.getProperty(PROPKEY_WriterClass);
 
 		_logger.info("Configuration for CentralPcsWriterHandler");
-		_logger.info("                  "+PROPKEY_WriterClass+"                              = "+writerClasses);
-		_logger.info("                  "+PROPKEY_warnQueueSizeThresh+"                      = "+_warnQueueSizeThresh);
+		_logger.info("                  " + PROPKEY_WriterClass + "                              = " + writerClasses);
+		_logger.info("                  " + PROPKEY_warnQueueSizeThresh + "                      = " + _warnQueueSizeThresh);
 //		_logger.info("                  "+PROPKEY_ddl_doDdlLookupAndStore+"                  = "+_doDdlLookupAndStore);
 //		if (_doDdlLookupAndStore)
 //		{
@@ -371,7 +371,7 @@ implements Runnable
 					_logger.warn("You passed an '" + PROPKEY_WriterClass + "' that starts with 'com.asetune...' [" + oldName + "], instead lets use the prefix 'com.dbxtune...' [" + newName + "].");
 				}
 
-				_logger.debug("Instantiating and Initializing WriterClass='"+writerClassName+"'.");
+				_logger.debug("Instantiating and Initializing WriterClass='" + writerClassName + "'.");
 				try
 				{
 					Class<?> c = Class.forName( writerClassName );
@@ -380,11 +380,11 @@ implements Runnable
 				}
 				catch (ClassCastException e)
 				{
-					throw new ClassCastException("When trying to load writerWriter class '"+writerClassName+"'. The writerWriter do not seem to follow the interface 'com.dbxtune.pcs.IPersistWriter'");
+					throw new ClassCastException("When trying to load writerWriter class '" + writerClassName + "'. The writerWriter do not seem to follow the interface 'com.dbxtune.pcs.IPersistWriter'");
 				}
 				catch (ClassNotFoundException e)
 				{
-					throw new ClassNotFoundException("Tried to load writerWriter class '"+writerClassName+"'.", e);
+					throw new ClassNotFoundException("Tried to load writerWriter class '" + writerClassName + "'.", e);
 				}
 	
 				// Now initialize the User Defined AlarmWriter
@@ -437,7 +437,7 @@ implements Runnable
 		_lowOnMemoryHandlerCalls++;
 		if (_lowOnMemoryHandlerCalls > _lowOnMemoryHandlerCallsThreshold)
 		{
-			_logger.warn("Persistant Counter Handler, lowOnMemoryHandler() has now been called "+_lowOnMemoryHandlerCalls+" times, decided to call outOfMemoryHandler() to do more extensive cleanup.");
+			_logger.warn("Persistant Counter Handler, lowOnMemoryHandler() has now been called " + _lowOnMemoryHandlerCalls + " times, decided to call outOfMemoryHandler() to do more extensive cleanup.");
 			outOfMemoryHandler();
 			_lowOnMemoryHandlerCalls = 0;
 			return;
@@ -454,14 +454,14 @@ implements Runnable
 	public void outOfMemoryHandler()
 	{
 		_outOfMemoryHandlerCallCount++;
-		_logger.warn("Persistant Counter Handler, outOfMemoryHandler() was called. callCount="+_outOfMemoryHandlerCallCount+".");
+		_logger.warn("Persistant Counter Handler, outOfMemoryHandler() was called. callCount=" + _outOfMemoryHandlerCallCount + ".");
 
 		boolean fire = false;
 
 		// Clear the PCS queues if the outOfMemoryHandler() has been called more that X number of times since we last emptied the queue
 		if (_outOfMemoryHandlerCallCount > 3)
 		{
-			_logger.warn("Persistant Counter Handler, outOfMemoryHandler() was called. Emtying the Counter Store/Write queue, which has "+_containerQueue.size()+" entries.");
+			_logger.warn("Persistant Counter Handler, outOfMemoryHandler() was called. Emtying the Counter Store/Write queue, which has " + _containerQueue.size() + " entries.");
 			_containerQueue.clear();
 			_outOfMemoryHandlerCallCount = 0;
 			fire = true;
@@ -497,9 +497,9 @@ implements Runnable
 			// Grab some H2 statistics
 			String h2WriterStat = "";
 			try { h2WriterStat = H2WriterStat.getInstance().refreshCounters().getStatString(); } 
-			catch(Exception ex) { _logger.info("Problems getting H2WriterStat. Continuing anyway... Caught: "+ex, ex); }
+			catch(Exception ex) { _logger.info("Problems getting H2WriterStat. Continuing anyway... Caught: " + ex, ex); }
 
-			_logger.warn("The persistent queue has "+qsize+" entries. The persistent writer might not keep in pace. " + currentConsumeTimeStr + h2WriterStat);
+			_logger.warn("The persistent queue has " + qsize + " entries. The persistent writer might not keep in pace. " + currentConsumeTimeStr + h2WriterStat);
 
 			// call each writes to let them know about this.
 			for (ICentralPersistWriter pw : _writerClasses)
@@ -705,7 +705,7 @@ implements Runnable
 				// BEGIN-OF-SAMPLE If we want to do anything in here
 				if ( ! pw.beginOfSample(cont) )
 				{
-					_logger.warn("Calling beginOfSample() failed for PersistWriter named '"+pw.getName()+"'. Discarding this consume(ObjectLookupQueueEntry:Input) queue entry and continuing with next writer.");
+					_logger.warn("Calling beginOfSample() failed for PersistWriter named '" + pw.getName() + "'. Discarding this consume(ObjectLookupQueueEntry:Input) queue entry and continuing with next writer.");
 					continue;
 				}
 
@@ -728,10 +728,10 @@ implements Runnable
 					String contSessionStartTimeStr  = contSessionStartTime == null ? "-null-" : TimeUtils.toString(contSessionStartTime);
 					String    pwSessionStartTimeStr =   pwSessionStartTime == null ? "-null-" : TimeUtils.toString(pwSessionStartTime);
 					
-					System.out.println("############################-STARTING-A-NEW-SESSION-########### srvName='"+cont.getServerName()+"'.");
-					System.out.println("## Writer["+pw.getName()+"] -->> startSession(): ");
-					System.out.println("##    !pw.isSessionStarted()="+!pw.isSessionStarted(sessionName));
-					System.out.println("##    startNewSession       ="+startNewSession);
+					System.out.println("############################-STARTING-A-NEW-SESSION-########### srvName='" + cont.getServerName() + "'.");
+					System.out.println("## Writer[" + pw.getName() + "] -->> startSession(): ");
+					System.out.println("##    !pw.isSessionStarted()=" + !pw.isSessionStarted(sessionName));
+					System.out.println("##    startNewSession       =" + startNewSession);
 					System.out.println("##");
 					System.out.println("##    cont.getSessionStartTime().getTime() = " + contSessionStartTime + " - '" + contSessionStartTimeStr + "'.");
 					System.out.println("##      pw.getSessionStartTime().getTime() = " + pwSessionStartTime   + " - '" + pwSessionStartTimeStr   + "'.");
@@ -790,12 +790,12 @@ implements Runnable
 			}
 			catch (Exception ex)
 			{
-				_logger.error("The Persistent Writer '"+pw.getName()+"' caught exception. Continuing with next Writer...", ex);
+				_logger.error("The Persistent Writer '" + pw.getName() + "' caught exception. Continuing with next Writer...", ex);
 				pw.endOfSample(cont, true);
 			}
 			catch (Throwable t)
 			{
-				_logger.error("The Persistent Writer '"+pw.getName()+"' got runtime error in consume(). Continuing with next Writer...", t);
+				_logger.error("The Persistent Writer '" + pw.getName() + "' got runtime error in consume(). Continuing with next Writer...", t);
 				pw.endOfSample(cont, true);
 			}
 		}
@@ -846,7 +846,7 @@ implements Runnable
 	public void run()
 	{
 		String threadName = _thread.getName();
-		_logger.info("Starting a thread for the module '"+threadName+"'.");
+		_logger.info("Starting a thread for the module '" + threadName + "'.");
 
 		isInitialized();
 
@@ -860,7 +860,7 @@ implements Runnable
 			//catch (InterruptedException ignore) {}
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("Thread '"+threadName+"', waiting on queue...");
+				_logger.debug("Thread '" + threadName + "', waiting on queue...");
 
 			try 
 			{
@@ -895,7 +895,7 @@ implements Runnable
 				_currentConsumeStartTime = 0;
 
 				prevConsumeTimeMs = stopTime-startTime;
-				_logger.debug("It took "+prevConsumeTimeMs+" ms to persist the above information (using all writers).");
+				_logger.debug("It took " + prevConsumeTimeMs + " ms to persist the above information (using all writers).");
 				
 // I think this is better to do AFTER they have been saved in saveAlarms() or that the clear() only removes alarms that are OLDER than X minutes
 //				// Clear some stuff after each container.
@@ -908,11 +908,11 @@ implements Runnable
 			}
 		}
 
-		_logger.info("Emptying the queue for module '"+threadName+"', which had "+_containerQueue.size()+" entries.");
+		_logger.info("Emptying the queue for module '" + threadName + "', which had " + _containerQueue.size() + " entries.");
 		_containerQueue.clear();
 		fireQueueSizeChange();
 
-		_logger.info("Thread '"+threadName+"' was stopped.");
+		_logger.info("Thread '" + threadName + "' was stopped.");
 	}
 
 	/**
@@ -965,7 +965,7 @@ implements Runnable
 	 */
 	public void stop(boolean clearQueues, int maxWaitTimeInMs)
 	{
-		_logger.info("Received 'stop' request in CentralPcsWriterHandler. with clearQueues="+clearQueues+", maxWaitTimeInMs="+maxWaitTimeInMs);
+		_logger.info("Received 'stop' request in CentralPcsWriterHandler. with clearQueues=" + clearQueues + ", maxWaitTimeInMs=" + maxWaitTimeInMs);
 
 		_running = false;
 
@@ -987,7 +987,7 @@ implements Runnable
 			}
 			else
 			{
-				_logger.info("The thread '"+_thread.getName()+"' is currently (not waiting on Queue Input), so it's probably storing last received Queue Message in the datastore. We will NOT send interrupt, but instead wait for the message to be persisted in the datastore.");
+				_logger.info("The thread '" + _thread.getName() + "' is currently (not waiting on Queue Input), so it's probably storing last received Queue Message in the datastore. We will NOT send interrupt, but instead wait for the message to be persisted in the datastore.");
 			}
 
 			_thread = null;
@@ -1135,12 +1135,12 @@ implements Runnable
 		_maxLenPersistWriterName = Math.max(_maxLenPersistWriterName, persistWriterName.length());
 		_maxLenServerName        = Math.max(_maxLenServerName,        serverName       .length());
 		
-		_logger.info("Persisting Counters using " + StringUtil.left("'"+persistWriterName+"', ", _maxLenPersistWriterName+4)
-				+ "for serverName="               + StringUtil.left("'"+serverName       +"', ", _maxLenServerName+4)
-				+ "sessionStartTime='"            + StringUtil.left(sessionStartTime +"",23)   + "', "
-				+ "sessionSampleTime='"           + StringUtil.left(sessionSampleTime+"",23)   + "'. "
+		_logger.info("Persisting Counters using " + StringUtil.left("'" + persistWriterName + "', ", _maxLenPersistWriterName+4)
+				+ "for serverName="               + StringUtil.left("'" + serverName       + "', ", _maxLenServerName+4)
+				+ "sessionStartTime='"            + StringUtil.left(sessionStartTime + "",23)   + "', "
+				+ "sessionSampleTime='"           + StringUtil.left(sessionSampleTime + "",23)   + "'. "
 				+ "This persist took ["           + TimeUtils.msToTimeStrShort(persistTimeInMs) + "] " + StringUtil.left(persistTimeInMs + " ms. ", 10)
-				+ "qs="                           + StringUtil.left(pcsQueueSize+".", 4) // ###.
+				+ "qs="                           + StringUtil.left(pcsQueueSize + ".", 4) // ###.
 				+ "jvmMemoryLeftInMB="            + Memory.getMemoryLeftInMB() + ". " 
 				+ h2WriterStat 
 				+ writerStatistics.getStatisticsString() );

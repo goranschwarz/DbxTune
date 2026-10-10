@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -424,7 +424,7 @@ extends SqlServerAbstract
 
 		// DO NOT TRUST: new data that hasn't yet been DIFF Calculated (it only has 1 sample, so it's probably Asolute values, which are *to high*)
 		// If we would trust the above values, it will/may create statistical problems (showing to high values in specific periods)
-		boolean skipNewDiffRateRows    = localConf.getBooleanProperty(this.getClass().getSimpleName()+".skipNewDiffRateRows", true);
+		boolean skipNewDiffRateRows    = localConf.getBooleanProperty(this.getClass().getSimpleName() + ".skipNewDiffRateRows", true);
 
 		//  SQL for: only records that has been diff calculations (not first time seen, some ASE Versions has a bug that do not clear counters on reuse)
 		String sql_and_skipNewOrDiffRateRows = "  and [CmNewDiffRateRow] = 0 \n"; // This is the "old" way... and used for backward compatibility
@@ -561,7 +561,7 @@ extends SqlServerAbstract
 			    + "     [dbname] \n"
 			    + "    ,[query_hash] \n"
 			    + "    ,max([object_name])                     as [ProcName] \n"
-			    + "    ,max([" + col_SqlText +"])              as [SqlText] \n"
+			    + "    ,max([" + col_SqlText + "])              as [SqlText] \n"
 			    + "    ,cast('' as varchar(30))                as [ExecPlan] \n"
 			    + "    \n"
 			    + "    ,count(DISTINCT [query_plan_hash])      as [plan_hash__count] \n" 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -696,9 +696,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 				String lcRefreshTime  = (cm == null) ? "Unavailable" : cm.getLcRefreshTime() + " ms.";
 
 				return "<html>" +
-						"SQL Refresh time: "+sqlRefreshTime+"<br>" +
-						"GUI Refresh Time: "+guiRefreshTime+"<br>" +
-						"Local Calculation Time: "+lcRefreshTime+"<br>" +
+						"SQL Refresh time: " + sqlRefreshTime + "<br>" +
+						"GUI Refresh Time: " + guiRefreshTime + "<br>" +
+						"Local Calculation Time: " + lcRefreshTime + "<br>" +
 						"</html>";
 			}
 		};
@@ -712,7 +712,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 		String tooltip = "";
 
-		tooltip = "The name we used when "+Version.getAppName()+" connected to the server, meaning name in sql.ini or interfaces ";
+		tooltip = "The name we used when " + Version.getAppName() + " connected to the server, meaning name in sql.ini or interfaces ";
 //		_localServerName_lbl  .setText("Local server name");
 		_localServerName_lbl  .setText("Connection Info");
 		_localServerName_lbl  .setToolTipText(tooltip);
@@ -1190,7 +1190,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_fullTranslog_txt.setEditable(false);
 
 		tooltip = "<html>Oldest Open Transaction in any database, presented in seconds.<br>" +
-				"Check Performance Counter '"+CmOpenDatabases.SHORT_NAME+"' for details.<br>" +
+				"Check Performance Counter '" + CmOpenDatabases.SHORT_NAME + "' for details.<br>" +
 				"<br>" +
 				"<b>Note</b>: if value is -99, this means that you did not have access to the 'master..syslogshold' table.</html>";
 		_oldestOpenTran_lbl.setText("Oldest Open Tran");
@@ -1223,14 +1223,14 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 				catch (NumberFormatException nfe)
 				{
 					int default_oldestOpenTranInSecThreshold = Configuration.getCombinedConfiguration().getIntProperty(CmSummary.PROPKEY_oldestOpenTranInSecThreshold, CmSummary.DEFAULT_oldestOpenTranInSecThreshold);
-					SwingUtils.showErrorMessage(CmSummaryPanel.this, "Must be a number", "The value '"+_oldestOpenTranThreshold_txt.getText()+"' is not a number. Resetting this to last known value '"+default_oldestOpenTranInSecThreshold+"'.", nfe);
+					SwingUtils.showErrorMessage(CmSummaryPanel.this, "Must be a number", "The value '" + _oldestOpenTranThreshold_txt.getText() + "' is not a number. Resetting this to last known value '" + default_oldestOpenTranInSecThreshold + "'.", nfe);
 					_oldestOpenTranThreshold_txt.setText(default_oldestOpenTranInSecThreshold + "");
 				}
 			}
 		});
 		
 		tooltip = "<html>Oldest Open Transaction in any database. This is the 'transaction name'.<br>" +
-				"Check Performance Counter '"+CmOpenDatabases.SHORT_NAME+"' for details.<br>" +
+				"Check Performance Counter '" + CmOpenDatabases.SHORT_NAME + "' for details.<br>" +
 				"<br>" +
 				"<b>Note</b>: if value is '-', this means that you did not have access to the 'master..syslogshold' table.</html>";
 		_oldestOpenTranName_lbl.setText("Open Tran Name");
@@ -1239,7 +1239,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_oldestOpenTranName_txt.setEditable(false);
 
 		tooltip = "<html>Oldest Open Transaction in any database. This is the 'database name'.<br>" +
-				"Check Performance Counter '"+CmOpenDatabases.SHORT_NAME+"' for details.<br>" +
+				"Check Performance Counter '" + CmOpenDatabases.SHORT_NAME + "' for details.<br>" +
 				"<br>" +
 				"<b>Note</b>: if value is '-', this means that you did not have access to the 'master..syslogshold' table.</html>";
 		_oldestOpenTranDbName_lbl.setText("Open Tran DBName");
@@ -1248,7 +1248,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_oldestOpenTranDbName_txt.setEditable(false);
 
 		tooltip = "<html>Oldest Open Transaction in any database. This is the responsible 'spid'.<br>" +
-				"Check Performance Counter '"+CmOpenDatabases.SHORT_NAME+"' for details.<br>" +
+				"Check Performance Counter '" + CmOpenDatabases.SHORT_NAME + "' for details.<br>" +
 				"<br>" +
 				"<b>Note</b>: if value is -1, this means that you did not have access to the 'master..syslogshold' table.</html>";
 		_oldestOpenTranSpid_lbl.setText("Open Tran SPID");
@@ -1810,7 +1810,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Problems when executing sql: "+sql, e);
+			_logger.warn("Problems when executing sql: " + sql, e);
 		}
 		
 		if ( ! "".equals(_clusterName_txt.getText()) )
@@ -2041,7 +2041,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 				_cpuSystem_txt        .setText("");
 				_cpuIdle_txt          .setText("");
 				
-				_logger.warn("Problems calculating CPU usage timings in cm '"+cm.getName()+"'. CPUTime="+CPUTime+", CPUUser="+CPUUser+", CPUSystem="+cpuSystem+", CPUIdle="+cpuIdle+". Setting fields to blank. Caught: "+e);
+				_logger.warn("Problems calculating CPU usage timings in cm '" + cm.getName() + "'. CPUTime=" + CPUTime + ", CPUUser=" + CPUUser + ", CPUSystem=" + cpuSystem + ", CPUIdle=" + cpuIdle + ". Setting fields to blank. Caught: " + e);
 			}
 		}
 		
@@ -2059,7 +2059,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		//----------------------------------------------
 		int lockWaits          = StringUtil.parseInt(_lockWaits_txt.getText(), 0);
 //		int lockWaitsThreshold = StringUtil.parseInt(_lockWaitThreshold_txt.getText(), 0);
-		_logger.debug("LOCK-WAITS="+lockWaits+", TEXT='"+_lockWaits_txt.getText()+"'.");
+		_logger.debug("LOCK-WAITS=" + lockWaits + ", TEXT='" + _lockWaits_txt.getText() + "'.");
 		if (lockWaits > 0)
 		{
 			_lockWaits_txt    .setBackground(Color.RED);
@@ -2088,7 +2088,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		// Check FULL LOGS and, do notification
 		//----------------------------------------------
 		int fullLogs = StringUtil.parseInt(_fullTranslog_txt.getText(), 0);
-		_logger.debug("FULL-LOG="+lockWaits+", TEXT='"+_fullTranslog_txt.getText()+"'.");
+		_logger.debug("FULL-LOG=" + lockWaits + ", TEXT='" + _fullTranslog_txt.getText() + "'.");
 		if (fullLogs > 0)
 		{
 			_fullTranslog_txt.setBackground(Color.RED);
@@ -2116,7 +2116,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		//----------------------------------------------
 		int oldestOpenTranInSec          = StringUtil.parseInt(_oldestOpenTran_txt.getText(), 0);
 		int oldestOpenTranInSecThreshold = StringUtil.parseInt(_oldestOpenTranThreshold_txt.getText(), 0);
-		_logger.debug("OLDEST-OPEN-TRANSACTION="+oldestOpenTranInSec+", TEXT='"+_oldestOpenTran_txt.getText()+"'.");
+		_logger.debug("OLDEST-OPEN-TRANSACTION=" + oldestOpenTranInSec + ", TEXT='" + _oldestOpenTran_txt.getText() + "'.");
 		if (oldestOpenTranInSec > oldestOpenTranInSecThreshold)
 		{
 			_oldestOpenTran_txt.setBackground(Color.RED);
@@ -2394,7 +2394,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		{
 //			String dateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(AseTune.getCounterCollector().getMonDisConnectTime());
 			String dateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(CounterController.getInstance().getMonDisConnectTime());
-			setWatermarkText("Disconnect at: \n"+dateStr);
+			setWatermarkText("Disconnect at: \n" + dateStr);
 		}
 		else
 		{

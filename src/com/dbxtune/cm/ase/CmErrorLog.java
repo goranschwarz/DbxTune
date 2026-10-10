@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -75,7 +75,7 @@ extends CountersModelAppend
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -103,7 +103,7 @@ extends CountersModelAppend
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmErrorLog(counterController, guiController);
 	}
@@ -162,7 +162,7 @@ extends CountersModelAppend
 			instanceId = "InstanceID, ";
 		}
 
-		cols1 = "Time, "+instanceId+"SPID, KPID, FamilyID, EngineNumber, ErrorNumber, Severity, ";
+		cols1 = "Time, " + instanceId + "SPID, KPID, FamilyID, EngineNumber, ErrorNumber, Severity, ";
 		cols2 = "";
 		cols3 = "ErrorMessage";
 		if (srvVersion >= Ver.ver(12,5,1))
@@ -194,7 +194,7 @@ extends CountersModelAppend
 		}
 		else
 		{
-			setSqlWhere("WHERE Time > '"+prevSample+"' "); 
+			setSqlWhere("WHERE Time > '" + prevSample + "' "); 
 		}
 
 		// Now get the SQL from super method...
@@ -306,7 +306,7 @@ extends CountersModelAppend
 
 		if (col_Time_pos < 0 || col_ErrorNumber_pos < 0 || col_Severity_pos < 0 || col_ErrorMessage_pos < 0)
 		{
-			_logger.error("When checking for alarms, could not find all columns. skipping this. [col_Time_pos=["+col_Time_pos+"], ErrorNumber_pos="+col_ErrorNumber_pos+", Severity_pos="+col_Severity_pos+", ErrorMessage_pos="+col_ErrorMessage_pos+"]");
+			_logger.error("When checking for alarms, could not find all columns. skipping this. [col_Time_pos=[" + col_Time_pos + "], ErrorNumber_pos=" + col_ErrorNumber_pos + ", Severity_pos=" + col_Severity_pos + ", ErrorMessage_pos=" + col_ErrorMessage_pos + "]");
 			return;
 		}
 		
@@ -325,17 +325,17 @@ extends CountersModelAppend
 
 			if (o_Time == null || !(o_Time instanceof Timestamp) )
 			{
-				_logger.error("When checking for alarms, the column 'Time' is NOT an Timestamp, skipping this row. [Time="+o_Time+"]");
+				_logger.error("When checking for alarms, the column 'Time' is NOT an Timestamp, skipping this row. [Time=" + o_Time + "]");
 				continue;
 			}
 			if (o_errorNumber == null || !(o_errorNumber instanceof Integer) )
 			{
-				_logger.error("When checking for alarms, the column 'ErrorNumber' is NOT an integer, skipping this row. [ErrorNumber="+o_errorNumber+"]");
+				_logger.error("When checking for alarms, the column 'ErrorNumber' is NOT an integer, skipping this row. [ErrorNumber=" + o_errorNumber + "]");
 				continue;
 			}
 			if (o_severity == null || !(o_severity instanceof Integer) )
 			{
-				_logger.error("When checking for alarms, the column 'Severity' is NOT an integer, skipping this row. [Severity="+o_severity+"]");
+				_logger.error("When checking for alarms, the column 'Severity' is NOT an integer, skipping this row. [Severity=" + o_severity + "]");
 				continue;
 			}
 
@@ -494,7 +494,7 @@ extends CountersModelAppend
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_Severity, DEFAULT_alarm_Severity);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+getName()+"): threshold="+threshold+", severity='"+severity+"'.");
+					System.out.println("##### sendAlarmRequest(" + getName() + "): threshold=" + threshold + ", severity='" + severity + "'.");
 
 				if (severity > threshold && severity < 99)
 				{
@@ -508,7 +508,7 @@ extends CountersModelAppend
 					{
 						// Skipping this error number
 						if (_logger.isDebugEnabled())
-							_logger.debug("ErrorNumber "+errorNumber+" is part of the 'error-number-skip-list', so it wont be raised. (num="+errorNumber+", severity="+severity+", text='"+ErrorMessage+"')");
+							_logger.debug("ErrorNumber " + errorNumber + " is part of the 'error-number-skip-list', so it wont be raised. (num=" + errorNumber + ", severity=" + severity + ", text='" + ErrorMessage + "')");
 					}
 					else
 					{

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -101,7 +101,7 @@ extends RowFilter<TableModel, Integer>
 	 */
 	public void setFilter(JTable table, String[] colNames, String[] disregardCols)
 	{
-		_logger.trace("Setting filter: colNames="+colNames);
+		_logger.trace("Setting filter: colNames=" + colNames);
 		
 		if (table == null || colNames == null)
 			return;
@@ -116,7 +116,7 @@ extends RowFilter<TableModel, Integer>
 			cols[i] = getColumnPos(table, colNames[i]);
 			if (cols[i] == -1)
 			{
-				_logger.debug("Can't find column name '"+colNames[i]+"' in JTable when setting filter.");
+				_logger.debug("Can't find column name '" + colNames[i] + "' in JTable when setting filter.");
 			}
 			else
 			{
@@ -129,12 +129,12 @@ extends RowFilter<TableModel, Integer>
 						if ( disregardCols[d].equals(colNames[i]) )
 						{
 							cols[i] = -1;
-							_logger.trace("setFilter(table, colnames[]): -dissRegard- cols["+i+"]="+cols[i]+", for colName '"+colNames[i]+"'.");
+							_logger.trace("setFilter(table, colnames[]): -dissRegard- cols[" + i + "]=" + cols[i] + ", for colName '" + colNames[i] + "'.");
 							break;
 						}
 					}
 				}
-				_logger.trace("setFilter(table, colnames[]): cols["+i+"]="+cols[i]+", for colName '"+colNames[i]+"'.");
+				_logger.trace("setFilter(table, colnames[]): cols[" + i + "]=" + cols[i] + ", for colName '" + colNames[i] + "'.");
 			}
 		}
 		
@@ -147,7 +147,7 @@ extends RowFilter<TableModel, Integer>
 	 */
 	public void setFilter(int[] cols)
 	{
-		_logger.trace("Setting filter: cols="+cols);
+		_logger.trace("Setting filter: cols=" + cols);
 
 		if (cols == null)
 			return;
@@ -199,7 +199,7 @@ extends RowFilter<TableModel, Integer>
 				if (cellValue != null)
 				{
 					String className = cellValue.getClass().getName();
-					_logger.trace(" > Column position "+c+" is NOT a Number, the class type is '"+className+"'.");
+					_logger.trace(" > Column position " + c + " is NOT a Number, the class type is '" + className + "'.");
 				}
 			}
 		}

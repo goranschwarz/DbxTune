@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -2111,7 +2111,7 @@ extends JDialog
 			Vector<Vector<Object>> rows = new Vector<Vector<Object>>();
 			Vector<Object> row = new Vector<Object>();
 
-			row.add("conn.getMetaData()."+method);
+			row.add("conn.getMetaData()." + method);
 			row.add(e.getMessage());
 			rows.add(row);
 
@@ -2375,9 +2375,9 @@ extends JDialog
 		String catalogDesc          = catalog          == null ? "null" : '"' + catalog          + '"';
 		String schemaPatternDesc    = schemaPattern    == null ? "null" : '"' + schemaPattern    + '"';
 		String valueNamePatternDesc = valueNamePattern == null ? "null" : '"' + valueNamePattern + '"';
-		String tableTypesDesc       = tableTypes       == null ? "null" : Arrays.asList(tableTypes)+"";
+		String tableTypesDesc       = tableTypes       == null ? "null" : Arrays.asList(tableTypes) + "";
 		
-		String apiCall = "parameters to getTables("+catalogDesc+", "+schemaPatternDesc+", "+valueNamePatternDesc+", "+tableTypesDesc+")";
+		String apiCall = "parameters to getTables(" + catalogDesc + ", " + schemaPatternDesc + ", " + valueNamePatternDesc + ", " + tableTypesDesc + ")";
 		_ta_api_lbl.setText(apiCall);
 
 		try
@@ -2419,7 +2419,7 @@ extends JDialog
 		String valueNamePatternDesc = valueNamePattern == null ? "null" : '"' + valueNamePattern + '"';
 		String columnTypesDesc      = columnNamePattern== null ? "null" : '"' + columnNamePattern + '"';
 		
-		String apiCall = "parameters to getColumns("+catalogDesc+", "+schemaPatternDesc+", "+valueNamePatternDesc+", "+columnTypesDesc+")";
+		String apiCall = "parameters to getColumns(" + catalogDesc + ", " + schemaPatternDesc + ", " + valueNamePatternDesc + ", " + columnTypesDesc + ")";
 		_co_api_lbl.setText(apiCall);
 
 		try
@@ -2463,7 +2463,7 @@ extends JDialog
 		String schemaPatternDesc    = schemaPattern    == null ? "null" : '"' + schemaPattern    + '"';
 		String valueNamePatternDesc = valueNamePattern == null ? "null" : '"' + valueNamePattern + '"';
 		
-		String apiCall = "parameters to getPrimaryKeys("+catalogDesc+", "+schemaPatternDesc+", "+valueNamePatternDesc+")";
+		String apiCall = "parameters to getPrimaryKeys(" + catalogDesc + ", " + schemaPatternDesc + ", " + valueNamePatternDesc + ")";
 		_pk_api_lbl.setText(apiCall);
 
 		try
@@ -2505,7 +2505,7 @@ extends JDialog
 		String schemaPatternDesc    = schemaPattern    == null ? "null" : '"' + schemaPattern    + '"';
 		String valueNamePatternDesc = valueNamePattern == null ? "null" : '"' + valueNamePattern + '"';
 		
-		String apiCall = "parameters to getBestRowIdentifier("+catalogDesc+", "+schemaPatternDesc+", "+valueNamePatternDesc+", "+scope+", "+nullable+")";
+		String apiCall = "parameters to getBestRowIdentifier(" + catalogDesc + ", " + schemaPatternDesc + ", " + valueNamePatternDesc + ", " + scope + ", " + nullable + ")";
 		_br_api_lbl.setText(apiCall);
 
 		try
@@ -2551,7 +2551,7 @@ extends JDialog
 		String schemaPatternDesc    = schemaPattern    == null ? "null" : '"' + schemaPattern    + '"';
 		String valueNamePatternDesc = valueNamePattern == null ? "null" : '"' + valueNamePattern + '"';
 		
-		String apiCall = "parameters to getIndexInfo("+catalogDesc+", "+schemaPatternDesc+", "+valueNamePatternDesc+", "+unique+", "+approximate+")";
+		String apiCall = "parameters to getIndexInfo(" + catalogDesc + ", " + schemaPatternDesc + ", " + valueNamePatternDesc + ", " + unique + ", " + approximate + ")";
 		_ix_api_lbl.setText(apiCall);
 
 		if (_ix_useOrigin_chk.isVisible())
@@ -2598,7 +2598,7 @@ extends JDialog
 		String schemaPatternDesc    = schemaPattern    == null ? "null" : '"' + schemaPattern    + '"';
 		String valueNamePatternDesc = valueNamePattern == null ? "null" : '"' + valueNamePattern + '"';
 		
-		String apiCall = "parameters to getImportedKeys("+catalogDesc+", "+schemaPatternDesc+", "+valueNamePatternDesc+")";
+		String apiCall = "parameters to getImportedKeys(" + catalogDesc + ", " + schemaPatternDesc + ", " + valueNamePatternDesc + ")";
 		_ik_api_lbl.setText(apiCall);
 
 		try
@@ -2638,7 +2638,7 @@ extends JDialog
 		String schemaPatternDesc    = schemaPattern    == null ? "null" : '"' + schemaPattern    + '"';
 		String valueNamePatternDesc = valueNamePattern == null ? "null" : '"' + valueNamePattern + '"';
 		
-		String apiCall = "parameters to getExportedKeys("+catalogDesc+", "+schemaPatternDesc+", "+valueNamePatternDesc+")";
+		String apiCall = "parameters to getExportedKeys(" + catalogDesc + ", " + schemaPatternDesc + ", " + valueNamePatternDesc + ")";
 		_ek_api_lbl.setText(apiCall);
 
 		try
@@ -2678,7 +2678,7 @@ extends JDialog
 		String schemaPatternDesc    = schemaPattern    == null ? "null" : '"' + schemaPattern    + '"';
 		String valueNamePatternDesc = valueNamePattern == null ? "null" : '"' + valueNamePattern + '"';
 		
-		String apiCall = "parameters to getProcedures("+catalogDesc+", "+schemaPatternDesc+", "+valueNamePatternDesc+")";
+		String apiCall = "parameters to getProcedures(" + catalogDesc + ", " + schemaPatternDesc + ", " + valueNamePatternDesc + ")";
 		_pr_api_lbl.setText(apiCall);
 
 		try
@@ -2718,7 +2718,7 @@ extends JDialog
 		String schemaPatternDesc    = schemaPattern    == null ? "null" : '"' + schemaPattern    + '"';
 		String valueNamePatternDesc = valueNamePattern == null ? "null" : '"' + valueNamePattern + '"';
 		
-		String apiCall = "parameters to getFunctions("+catalogDesc+", "+schemaPatternDesc+", "+valueNamePatternDesc+")";
+		String apiCall = "parameters to getFunctions(" + catalogDesc + ", " + schemaPatternDesc + ", " + valueNamePatternDesc + ")";
 		_fu_api_lbl.setText(apiCall);
 
 		try
@@ -2760,7 +2760,7 @@ extends JDialog
 		String valueNamePatternDesc = valueNamePattern == null ? "null" : '"' + valueNamePattern + '"';
 		String colNamePatternDesc   = colNamePattern   == null ? "null" : '"' + colNamePattern   + '"';
 		
-		String apiCall = "parameters to getFunctionColumns("+catalogDesc+", "+schemaPatternDesc+", "+valueNamePatternDesc+", "+colNamePatternDesc+")";
+		String apiCall = "parameters to getFunctionColumns(" + catalogDesc + ", " + schemaPatternDesc + ", " + valueNamePatternDesc + ", " + colNamePatternDesc + ")";
 		_fc_api_lbl.setText(apiCall);
 
 		try

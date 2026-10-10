@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -55,7 +55,7 @@ implements IUserDefinedAlarmInterrogator
 		String[] desiredCols = {"DBName", "OldestTranInSeconds", "OldestTranName", "TransactionLogFull"};
 		if ( ! cm.hasColumns(desiredCols) )
 		{
-			_logger.warn("Not all desired column names was available in cm '"+cm.getName()+"'. Missing columns: " + cm.getMissingColumns(desiredCols));
+			_logger.warn("Not all desired column names was available in cm '" + cm.getName() + "'. Missing columns: " + cm.getMissingColumns(desiredCols));
 			return;
 		}
 		
@@ -94,7 +94,7 @@ implements IUserDefinedAlarmInterrogator
 			Double TransactionLogFull = cm.getRateValueAsDouble(r, "TransactionLogFull");
 			if (TransactionLogFull != null)
 			{
-				_logger.debug("##### sendAlarmRequest("+cm.getName()+"): dbname='"+dbname+"', TransactionLogFull='"+TransactionLogFull+"'.");
+				_logger.debug("##### sendAlarmRequest(" + cm.getName() + "): dbname='" + dbname + "', TransactionLogFull='" + TransactionLogFull + "'.");
 				if (AlarmHandler.hasInstance())
 				{
 					int threshold = 0;

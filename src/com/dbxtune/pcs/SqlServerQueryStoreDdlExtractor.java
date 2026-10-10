@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -115,7 +115,7 @@ extends Task
 		DbxConnection conn = null;
 		try
 		{
-			_logger.info("Query Store DDL Extractor: Creating a new connection to server '" + srvName+ "'.");
+			_logger.info("Query Store DDL Extractor: Creating a new connection to server '" + srvName + "'.");
 			conn = DbxConnection.connect(null, connProp);
 		}
 		catch (Exception ex)
@@ -149,7 +149,7 @@ extends Task
 		}
 		else
 		{
-			_logger.info("Query Store DDL Extractor: Examin 'Query Store' On server '" + srvName+ "' for the following " + enabledDatabases.size() + " database(s): " + enabledDatabases);
+			_logger.info("Query Store DDL Extractor: Examin 'Query Store' On server '" + srvName + "' for the following " + enabledDatabases.size() + " database(s): " + enabledDatabases);
 
 			// loop and extract each of the databases
 			for (String dbname : enabledDatabases)

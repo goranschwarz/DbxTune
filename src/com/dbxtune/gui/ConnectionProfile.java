@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -149,7 +149,7 @@ public class ConnectionProfile
 		else if (entry instanceof JdbcEntry)    _jdbcEntry    = (JdbcEntry) entry;
 		else if (entry instanceof OfflineEntry) _offlineEntry = (OfflineEntry) entry;
 		else
-			throw new RuntimeException("Unknown ConnectionProfile Entry Object. entry="+entry.getClass().getName());
+			throw new RuntimeException("Unknown ConnectionProfile Entry Object. entry=" + entry.getClass().getName());
 	}
 
 	public ConnectionProfile(String name, String type, String srvType, ConnProfileEntry entry)
@@ -163,7 +163,7 @@ public class ConnectionProfile
 		else if (entry instanceof JdbcEntry)    _jdbcEntry    = (JdbcEntry) entry;
 		else if (entry instanceof OfflineEntry) _offlineEntry = (OfflineEntry) entry;
 		else
-			throw new RuntimeException("Unknown ConnectionProfile Entry Object. entry="+entry.getClass().getName());
+			throw new RuntimeException("Unknown ConnectionProfile Entry Object. entry=" + entry.getClass().getName());
 	}
 
 	public ConnectionProfile(String name, String productName, ConnProfileEntry entry)
@@ -174,7 +174,7 @@ public class ConnectionProfile
 		else if (entry instanceof JdbcEntry)    { _type = Type.JDBC;    _jdbcEntry    = (JdbcEntry) entry; }
 		else if (entry instanceof OfflineEntry) { _type = Type.OFFLINE; _offlineEntry = (OfflineEntry) entry; }
 		else
-			throw new RuntimeException("Unknown ConnectionProfile Entry Object. entry="+entry.getClass().getName());
+			throw new RuntimeException("Unknown ConnectionProfile Entry Object. entry=" + entry.getClass().getName());
 
 		_srvType = getServerType(_type, productName);
 	}
@@ -223,7 +223,7 @@ public class ConnectionProfile
 		if      (_type == Type.TDS)     _tdsEntry    ._profileTypeName = profileTypeName;
 		else if (_type == Type.JDBC)    _jdbcEntry   ._profileTypeName = profileTypeName;
 		else if (_type == Type.OFFLINE) _offlineEntry._profileTypeName = profileTypeName;
-		else _logger.warn("setProfileType() unknown type = "+_type);
+		else _logger.warn("setProfileType() unknown type = " + _type);
 	}
 
 	public String getProfileTypeName()
@@ -232,7 +232,7 @@ public class ConnectionProfile
 		else if (_type == Type.JDBC)    return _jdbcEntry   ._profileTypeName;
 		else if (_type == Type.OFFLINE) return _offlineEntry._profileTypeName;
 
-		throw new RuntimeException("Unknow _type: "+_type);
+		throw new RuntimeException("Unknow _type: " + _type);
 	}
 
 	@Override
@@ -288,11 +288,11 @@ public class ConnectionProfile
 	{
 //		throw new IllegalStateException("No Entry has been assigned. _tdsEntry==null, _jdbcEntry==null, _offlineEntry==null");
 
-		if      (entry instanceof TdsEntry    ) { if (_type != Type.TDS    ) throw new IllegalStateException("Passed entry is TdsEntry, but current Type is '"+_type+"'."); }
-		else if (entry instanceof JdbcEntry   ) { if (_type != Type.JDBC   ) throw new IllegalStateException("Passed entry is JdbcEntry, but current Type is '"+_type+"'."); }
-		else if (entry instanceof OfflineEntry) { if (_type != Type.OFFLINE) throw new IllegalStateException("Passed entry is OfflineEntry, but current Type is '"+_type+"'."); }
+		if      (entry instanceof TdsEntry    ) { if (_type != Type.TDS    ) throw new IllegalStateException("Passed entry is TdsEntry, but current Type is '" + _type + "'."); }
+		else if (entry instanceof JdbcEntry   ) { if (_type != Type.JDBC   ) throw new IllegalStateException("Passed entry is JdbcEntry, but current Type is '" + _type + "'."); }
+		else if (entry instanceof OfflineEntry) { if (_type != Type.OFFLINE) throw new IllegalStateException("Passed entry is OfflineEntry, but current Type is '" + _type + "'."); }
 		else
-			throw new RuntimeException("Unknown ConnectionProfile Entry Object. entry="+entry.getClass().getName());
+			throw new RuntimeException("Unknown ConnectionProfile Entry Object. entry=" + entry.getClass().getName());
 
 		if      (entry instanceof TdsEntry)     _tdsEntry     = (TdsEntry) entry;
 		else if (entry instanceof JdbcEntry)    _jdbcEntry    = (JdbcEntry) entry;
@@ -991,7 +991,7 @@ public class ConnectionProfile
 						hostPortStr = AseConnectionFactory.getIHostPortStr(_tdsServer);
 
 					if (StringUtil.isNullOrBlank(hostPortStr))
-						throw new RuntimeException("Can't find server name information about '"+_tdsServer+"'.");
+						throw new RuntimeException("Can't find server name information about '" + _tdsServer + "'.");
 				}
 
 				if (StringUtil.isNullOrBlank(hostPortStr))
@@ -1894,7 +1894,7 @@ public class ConnectionProfile
 	{
 		if (oldValue == null) oldValue = "";
 		if (newValue == null) newValue = "";
-		return htmlTabRowIfChanged(sb, key, Configuration.encryptPropertyValue(key, oldValue+""), Configuration.encryptPropertyValue(key, newValue+""));
+		return htmlTabRowIfChanged(sb, key, Configuration.encryptPropertyValue(key, oldValue + ""), Configuration.encryptPropertyValue(key, newValue + ""));
 	}
 	private static StringBuilder htmlTabRowIfChanged(StringBuilder sb, String key, Object oldValue, Object newValue)
 	{
@@ -1967,7 +1967,7 @@ public class ConnectionProfile
 			}
 			catch (NumberFormatException nfe)
 			{
-				_logger.error("getIntValue(): XML tagName='"+tagName+"', value='"+retValue+"' is not a number, using default value "+defaultVal+" instead.");
+				_logger.error("getIntValue(): XML tagName='" + tagName + "', value='" + retValue + "' is not a number, using default value " + defaultVal + " instead.");
 			}
 		}
 

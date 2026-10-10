@@ -646,7 +646,7 @@ public class Message {
 	private void sendLOGICommand() throws IOException, Exception {
 		if (login != null) {
 			state = STATE_LOGI;
-            String msg = "LOGI "+ login + ((password != null) ? " " + password : "");
+            String msg = "LOGI " + login + ((password != null) ? " " + password : "");
 			handleResponse(conn.send(msg));
 		} else {
 			sendCOVECommand();

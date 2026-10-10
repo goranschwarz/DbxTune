@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -89,7 +89,7 @@ implements DbxConnectionStateInfo
 		if ( isNormalState() )
 			return null;
 
-		String str = "NOTE: in state '"+_state+"'\n"
+		String str = "NOTE: in state '" + _state + "'\n"
 		           + _action;
 		return str;
 	}

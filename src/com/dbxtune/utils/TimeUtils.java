@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -207,7 +207,7 @@ public class TimeUtils
 		execTimeHH = "00" + execTime;
 		execTimeHH = (execTime < 100) ? execTimeHH.substring(execTimeHH.length()-2) : "" + execTime;
 
-		return execTimeHH+":"+execTimeMM+":"+execTimeSS+"."+execTimeMs;
+		return execTimeHH + ":" + execTimeMM + ":" + execTimeSS + "." + execTimeMs;
 	}
 
 	/**
@@ -259,13 +259,13 @@ public class TimeUtils
 		if (format.indexOf(tagStrHH) >= 0)
 		{
 			String withinSquareBrakets = "";
-			int tagStartPos = format.indexOf(tagStrHH+"[");
+			int tagStartPos = format.indexOf(tagStrHH + "[");
 			if (tagStartPos >= 0)
 			{
 				int tagEndPos = format.indexOf("]", tagStartPos); // we should possible check for new tags... %MM
 				if (tagEndPos >= 0)
 				{
-					withinSquareBrakets = format.substring(tagStartPos + (tagStrHH+"[").length(), tagEndPos);
+					withinSquareBrakets = format.substring(tagStartPos + (tagStrHH + "[").length(), tagEndPos);
 				}
 
 				tagStrHH = tagStrHH + "[" + withinSquareBrakets + "]";
@@ -381,13 +381,13 @@ public class TimeUtils
 		if (format.indexOf(tagStrHH) >= 0)
 		{
 			String withinSquareBrakets = "";
-			int tagStartPos = format.indexOf(tagStrHH+"[");
+			int tagStartPos = format.indexOf(tagStrHH + "[");
 			if (tagStartPos >= 0)
 			{
 				int tagEndPos = format.indexOf("]", tagStartPos); // we should possible check for new tags... %MM
 				if (tagEndPos >= 0)
 				{
-					withinSquareBrakets = format.substring(tagStartPos + (tagStrHH+"[").length(), tagEndPos);
+					withinSquareBrakets = format.substring(tagStartPos + (tagStrHH + "[").length(), tagEndPos);
 				}
 
 				tagStrHH = tagStrHH + "[" + withinSquareBrakets + "]";
@@ -404,13 +404,13 @@ public class TimeUtils
 		if (format.indexOf(tagStrDay) >= 0)
 		{
 			String withinSquareBrakets = "";
-			int tagStartPos = format.indexOf(tagStrDay+"[");
+			int tagStartPos = format.indexOf(tagStrDay + "[");
 			if (tagStartPos >= 0)
 			{
 				int tagEndPos = format.indexOf("]", tagStartPos); // we should possible check for new tags... %MM
 				if (tagEndPos >= 0)
 				{
-					withinSquareBrakets = format.substring(tagStartPos + (tagStrDay+"[").length(), tagEndPos);
+					withinSquareBrakets = format.substring(tagStartPos + (tagStrDay + "[").length(), tagEndPos);
 				}
 
 				tagStrDay = tagStrDay + "[" + withinSquareBrakets + "]";
@@ -1286,9 +1286,9 @@ public class TimeUtils
 		String result = TimeUtils.msToTimeStr(format, ms);
 
 		if (expected.equals(result))
-			System.out.println("  OK: result '"+result+"' equals expected value '"+expected+"'.");
+			System.out.println("  OK: result '" + result + "' equals expected value '" + expected + "'.");
 		else
-			System.out.println("FAIL: result '"+result+"' IS NOT equal the expected value '"+expected+"'.");
+			System.out.println("FAIL: result '" + result + "' IS NOT equal the expected value '" + expected + "'.");
 	}
 	public static void main(String[] args)
 	{

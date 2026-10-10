@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -369,10 +369,10 @@ public class OverviewServlet extends HttpServlet
 	throws IOException
 	{
 		if ( ! f.exists() )
-			return "File do not exists: "+f.getAbsolutePath();
+			return "File do not exists: " + f.getAbsolutePath();
 
 		if ( f.length() == 0 )
-			return "Empty file: "+f.getAbsolutePath();
+			return "Empty file: " + f.getAbsolutePath();
 
 		String content = FileUtils.readFile(f, null);
 		if (content != null)
@@ -384,10 +384,10 @@ public class OverviewServlet extends HttpServlet
 	private String getLastLine(File f)
 	{
 		if ( ! f.exists() )
-			return "File do not exists: "+f.getAbsolutePath();
+			return "File do not exists: " + f.getAbsolutePath();
 
 		if ( f.length() == 0 )
-			return "Empty file: "+f.getAbsolutePath();
+			return "Empty file: " + f.getAbsolutePath();
 
 		try
 		{
@@ -569,7 +569,7 @@ public class OverviewServlet extends HttpServlet
 		out.println("<title>Server Overview</title> ");
 		
 		if (refresh > 0)
-			out.println("<meta http-equiv='refresh' content='"+refresh+"' />");
+			out.println("<meta http-equiv='refresh' content='" + refresh + "' />");
 
 		out.println(HtmlStatic.getOverviewHead());
 		
@@ -630,7 +630,7 @@ public class OverviewServlet extends HttpServlet
 		
 		out.println("<h1>DbxTune - Central - " + username + "@" + hostname + "</h1>");
 
-		out.println("<div class='topright'>"+ver+"</div>");
+		out.println("<div class='topright'>" + ver + "</div>");
 
 		out.println("<p>");
 //		out.println("Page loaded: " + (new Timestamp(System.currentTimeMillis())) + ", " );
@@ -789,7 +789,7 @@ public class OverviewServlet extends HttpServlet
 		}
 		catch(SQLException ex) 
 		{
-			out.println("Problems reading from PersistReader. Caught: "+ex);
+			out.println("Problems reading from PersistReader. Caught: " + ex);
 		}
 
 
@@ -1183,7 +1183,7 @@ public class OverviewServlet extends HttpServlet
 
 					if (session.hasStatus(DbxCentralSessions.ST_DISABLED))
 					{
-						_logger.info("List Active Recording: Skipping server '"+session.getServerName()+"', due to status: DISABLED.");
+						_logger.info("List Active Recording: Skipping server '" + session.getServerName() + "', due to status: DISABLED.");
 						continue;
 					}
 
@@ -1214,7 +1214,7 @@ public class OverviewServlet extends HttpServlet
 				{
 					if (session.hasStatus(DbxCentralSessions.ST_DISABLED))
 					{
-						_logger.info("List Active Recording: Skipping server '"+session.getServerName()+"', due to status: DISABLED.");
+						_logger.info("List Active Recording: Skipping server '" + session.getServerName() + "', due to status: DISABLED.");
 						continue;
 					}
 	
@@ -1305,7 +1305,7 @@ public class OverviewServlet extends HttpServlet
 			{
 				if (session.hasStatus(DbxCentralSessions.ST_DISABLED))
 				{
-					_logger.info("List Active Recording: Skipping server '"+session.getServerName()+"', due to status: DISABLED.");
+					_logger.info("List Active Recording: Skipping server '" + session.getServerName() + "', due to status: DISABLED.");
 					continue;
 				}
 				
@@ -1328,7 +1328,7 @@ public class OverviewServlet extends HttpServlet
 				long   refreshAge  = session.getLastSampleAgeInSec();
 				String collectHost = session.getCollectorHostname();
 				String collectUrl  = session.getCollectorCurrentUrl();
-				String url         = "jdbc:h2:tcp://"+collectHost+":19092/"+srvName+"_"+(new SimpleDateFormat("yyyy-MM-dd").format(new Date())+";IFEXISTS=TRUE");
+				String url         = "jdbc:h2:tcp://" + collectHost + ":19092/" + srvName + "_" + (new SimpleDateFormat("yyyy-MM-dd").format(new Date()) + ";IFEXISTS=TRUE");
 
 				String logContentFull    = "NOT Local/Available";
 				String logContentDiscard = "NOT Local/Available";
@@ -1339,9 +1339,9 @@ public class OverviewServlet extends HttpServlet
 				if (isLocalCollector)
 				{
 					collectHost       = "Yes";
-					logContentFull    = "<a href='/log?name="+srvName+".log'><code>"+srvName+".log</code></a>";
-					logContentDiscard = "<a href='/log?name="+srvName+".log&discard=Persisting Counters using'><code>"+srvName+".log</code></a>";
-					logContentFilter  = "<input type='text' placeholder='filter-out some text (regexp can be used), hit <enter> to search' class='search' size='80' style='border:none' onkeydown='openLogFileWithDiscard(this, \""+srvName+".log\")'/>";
+					logContentFull    = "<a href='/log?name=" + srvName + ".log'><code>" + srvName + ".log</code></a>";
+					logContentDiscard = "<a href='/log?name=" + srvName + ".log&discard=Persisting Counters using'><code>" + srvName + ".log</code></a>";
+					logContentFilter  = "<input type='text' placeholder='filter-out some text (regexp can be used), hit <enter> to search' class='search' size='80' style='border:none' onkeydown='openLogFileWithDiscard(this, \"" + srvName + ".log\")'/>";
 
 					Configuration conf = srvInfoMap.get(srvName);
 					if (conf != null)
@@ -1355,7 +1355,7 @@ public class OverviewServlet extends HttpServlet
 					url = collectUrl;
 
 				// set the correct link where to reach the H2 DB
-				String dbxTuneUrl  = dbxTuneGuiUrl.replace(":PORT/", ":"+DbxTune.getGuiWebPort(appName)+"/") + url;
+				String dbxTuneUrl  = dbxTuneGuiUrl.replace(":PORT/", ":" + DbxTune.getGuiWebPort(appName) + "/") + url;
 				
 				String tdAttr = "";
 				if (session.getLastSampleAgeInSec() > (session.getCollectorSampleInterval() * 5) )
@@ -1366,7 +1366,7 @@ public class OverviewServlet extends HttpServlet
 				out.println("    <td>" + srvName + "</td>");
 				out.println("    <td>" + srvDesc + "</td>");
 				out.println("    <td>" + refreshRate + "</td>");
-				out.println("    <td "+tdAttr+">" + refreshAge + "</td>");
+				out.println("    <td " + tdAttr + ">" + refreshAge + "</td>");
 				out.println("    <td>" + collectHost + "</td>");
 				out.println("    <td><div title='" + linkToolTip + "'><a href='" + dbxTuneUrl + "'><code>" + url + "</code></a></div></td>");
 				out.println("    <td>" + logContentFull + "</td>");
@@ -1473,7 +1473,7 @@ public class OverviewServlet extends HttpServlet
 			{
 				if (session.hasStatus(DbxCentralSessions.ST_DISABLED))
 				{
-					_logger.info("List Active Recording: Skipping server '"+session.getServerName()+"', due to status: DISABLED.");
+					_logger.info("List Active Recording: Skipping server '" + session.getServerName() + "', due to status: DISABLED.");
 					continue;
 				}
 
@@ -1511,7 +1511,7 @@ public class OverviewServlet extends HttpServlet
 					File f_alarmFileLog    = new File(alarmFileLog);
 
 					if (_logger.isDebugEnabled())
-						_logger.debug("OverviewServlet: infoFile='"+infoFile+"'[exists="+(new File(infoFile).exists())+"], alarmFileActive='"+alarmFileActive+"'[exists="+(new File(alarmFileActive).exists())+"], alarmFileLog='"+alarmFileLog+"'[exists="+(new File(alarmFileLog).exists())+"].");
+						_logger.debug("OverviewServlet: infoFile='" + infoFile + "'[exists=" + (new File(infoFile).exists()) + "], alarmFileActive='" + alarmFileActive + "'[exists=" + (new File(alarmFileActive).exists()) + "], alarmFileLog='" + alarmFileLog + "'[exists=" + (new File(alarmFileLog).exists()) + "].");
 
 //					if (StringUtil.hasValue(alarmFileActive) && f_alarmFileActive.exists())
 					if (StringUtil.hasValue(alarmFileActive))
@@ -1519,7 +1519,7 @@ public class OverviewServlet extends HttpServlet
 						lastUpdateTs   = "" + (new Timestamp(f_alarmFileActive.lastModified()));
 						lastUpdateAge  = TimeUtils.msToTimeStr("%?DD[d ]%?HH[:]%MM:%SS", System.currentTimeMillis()-f_alarmFileActive.lastModified());
 //						logFileTd      = "<a href='/log?name="+f_alarmFileLog.getName()+"'>file</a> <a href='/alarmLog?name="+f_alarmFileLog.getName()+"&type=CANCEL'>table</a>: "+f_alarmFileLog.getName();
-						logFileTd      = "<a href='/log?name="+f_alarmFileLog.getName()+"'>file</a> <a href='/alarmLog?name="+f_alarmFileLog.getName()+"&type=CANCEL'>table</a> <a href='/alarmLog?name="+srvName+"&age=7d&method=pcs'>pcs</a>: "+f_alarmFileLog.getName();
+						logFileTd      = "<a href='/log?name=" + f_alarmFileLog.getName() + "'>file</a> <a href='/alarmLog?name=" + f_alarmFileLog.getName() + "&type=CANCEL'>table</a> <a href='/alarmLog?name=" + srvName + "&age=7d&method=pcs'>pcs</a>: " + f_alarmFileLog.getName();
 						fileContent    = getActiveAlarmContent(f_alarmFileActive);
 						lastLogLine    = getLastLine(f_alarmFileLog);
 						lastLogLineAge = getLastLineAge(lastLogLine);
@@ -1548,7 +1548,7 @@ public class OverviewServlet extends HttpServlet
 						lastUpdateTs   = "" + session.getLastSampleTime();
 						lastUpdateAge  = TimeUtils.msToTimeStr("%?DD[d ]%?HH[:]%MM:%SS", System.currentTimeMillis()-session.getLastSampleTime().getTime());
 						logFileTd      = "-no-active-alarm-file-";
-						logFileTd      = "<a href='/alarmLog?name="+srvName+"&age=7d&method=pcs'>pcs</a>: -no-active-alarm-file-";
+						logFileTd      = "<a href='/alarmLog?name=" + srvName + "&age=7d&method=pcs'>pcs</a>: -no-active-alarm-file-";
 						fileContent    = "-no-active-alarm-file-";
 						lastLogLine    = "-no-active-alarm-file-";
 						lastLogLineAge = "-no-active-alarm-file-";
@@ -1572,7 +1572,7 @@ public class OverviewServlet extends HttpServlet
 					lastUpdateTs   = "" + session.getLastSampleTime();
 					lastUpdateAge  = TimeUtils.msToTimeStr("%?DD[d ]%?HH[:]%MM:%SS", System.currentTimeMillis()-session.getLastSampleTime().getTime());
 					logFileTd      = "-remote-file-";
-					logFileTd      = "<a href='/alarmLog?name="+srvName+"&age=7d&method=pcs'>pcs</a>: -remote-file-";
+					logFileTd      = "<a href='/alarmLog?name=" + srvName + "&age=7d&method=pcs'>pcs</a>: -remote-file-";
 					fileContent    = "-remote-file-";
 					lastLogLine    = "-remote-file-";
 					lastLogLineAge = "-remote-file-";
@@ -1580,11 +1580,11 @@ public class OverviewServlet extends HttpServlet
 				}
 
 				out.println("  <tr> ");
-				out.println("    <td "+srvTdAttr+">"      + srvName        + "</td>");
+				out.println("    <td " + srvTdAttr + ">"      + srvName        + "</td>");
 				out.println("    <td>"                    + logFileTd      + "</td>");
 				out.println("    <td>"                    + lastUpdateTs   + "</td>");
-				out.println("    <td "+luTdAttr+">"       + lastUpdateAge  + "</td>");
-				out.println("    <td "+srvTdAttr+"><pre>" + fileContent    + "</pre></td>");
+				out.println("    <td " + luTdAttr + ">"       + lastUpdateAge  + "</td>");
+				out.println("    <td " + srvTdAttr + "><pre>" + fileContent    + "</pre></td>");
 				out.println("    <td>"                    + lastLogLineAge + "</td>");
 				out.println("    <td><pre>"               + lastLogLine    + "</pre></td>");
 				out.println("  </tr>");
@@ -1678,7 +1678,7 @@ public class OverviewServlet extends HttpServlet
 			//-------------------------------
 			// BEGIN - CONTENT
 			//-------------------------------
-			out.println("<p>List all the files in the <i>log</i> directory <code>"+ (new File(LOG_DIR)) +"</code>, click the <i>Url</i> to view the content in the file.<br>");
+			out.println("<p>List all the files in the <i>log</i> directory <code>" + (new File(LOG_DIR)) + "</code>, click the <i>Url</i> to view the content in the file.<br>");
 			out.println("Note: If you want to filter out something from the content, Type it in the column <b>Discard Text</b> and hit <i>enter</i><br>");
 			out.println("Column <b>View Options</b>");
 			out.println("<ul>");
@@ -1740,18 +1740,18 @@ public class OverviewServlet extends HttpServlet
 						
 						String urlDiscardStr = "&discard=Persisting Counters using|Sent subscription data for server";
 						out.println("  <tr>");
-						out.println("    <td><a href='/log?name="+f.getName()+"'>"+f.getName()+"</a></td>");
+						out.println("    <td><a href='/log?name=" + f.getName() + "'>" + f.getName() + "</a></td>");
 						out.println("    <td>");
-						out.println("      <a href='/log?name="+f.getName()+"'>plain</a>");
-						out.println("      | <a href='/log?name="+f.getName()+urlDiscardStr+"'>discard</a>");
-						out.println("      | <a href='/log?name="+f.getName()+"&tail=5000'>tail</a>");
-						out.println("      | <a href='/log?name="+f.getName()+urlDiscardStr+"&tail=5000'>tail+discard</a>");
+						out.println("      <a href='/log?name=" + f.getName() + "'>plain</a>");
+						out.println("      | <a href='/log?name=" + f.getName()+urlDiscardStr + "'>discard</a>");
+						out.println("      | <a href='/log?name=" + f.getName() + "&tail=5000'>tail</a>");
+						out.println("      | <a href='/log?name=" + f.getName()+urlDiscardStr + "&tail=5000'>tail+discard</a>");
 						out.println("    </td>");
 						out.println("    <td>" + sizeInGB     + "</td>");
 						out.println("    <td>" + sizeInMB     + "</td>");
 						out.println("    <td>" + sizeInKB     + "</td>");
 						out.println("    <td>" + (new Timestamp(f.lastModified())) + "</td>");
-						out.println("    <td><input type='text' placeholder='filter-out some text (regexp can be used), hit <enter> to search' class='search' size='80' style='border:none' onkeydown='openLogFileWithDiscard(this, \""+f.getName()+"\")'/></td>");
+						out.println("    <td><input type='text' placeholder='filter-out some text (regexp can be used), hit <enter> to search' class='search' size='80' style='border:none' onkeydown='openLogFileWithDiscard(this, \"" + f.getName() + "\")'/></td>");
 						out.println("  </tr>");
 
 					}
@@ -1869,18 +1869,18 @@ public class OverviewServlet extends HttpServlet
 				
 				String urlDiscardStr = "&discard=Persisting Counters using|Sent subscription data for server";
 				out.println("  <tr>");
-				out.println("    <td><a href='/log?name="+f.getName()+"'>"+f.getName()+"</a></td>");
+				out.println("    <td><a href='/log?name=" + f.getName() + "'>" + f.getName() + "</a></td>");
 				out.println("    <td>");
-				out.println("      <a href='/log?name="+f.getName()+"'>plain</a>");
-				out.println("      | <a href='/log?name="+f.getName()+urlDiscardStr+"'>discard</a>");
-				out.println("      | <a href='/log?name="+f.getName()+"&tail=5000'>tail</a>");
-				out.println("      | <a href='/log?name="+f.getName()+urlDiscardStr+"&tail=5000'>tail+discard</a>");
+				out.println("      <a href='/log?name=" + f.getName() + "'>plain</a>");
+				out.println("      | <a href='/log?name=" + f.getName()+urlDiscardStr + "'>discard</a>");
+				out.println("      | <a href='/log?name=" + f.getName() + "&tail=5000'>tail</a>");
+				out.println("      | <a href='/log?name=" + f.getName()+urlDiscardStr + "&tail=5000'>tail+discard</a>");
 				out.println("    </td>");
 				out.println("    <td>" + sizeInGB     + "</td>");
 				out.println("    <td>" + sizeInMB     + "</td>");
 				out.println("    <td>" + sizeInKB     + "</td>");
 				out.println("    <td>" + (new Timestamp(f.lastModified())) + "</td>");
-				out.println("    <td><input type='text' placeholder='filter-out some text (regexp can be used), hit <enter> to search' class='search' size='80' style='border:none' onkeydown='openLogFileWithDiscard(this, \""+f.getName()+"\")'/></td>");
+				out.println("    <td><input type='text' placeholder='filter-out some text (regexp can be used), hit <enter> to search' class='search' size='80' style='border:none' onkeydown='openLogFileWithDiscard(this, \"" + f.getName() + "\")'/></td>");
 				out.println("  </tr>");
 
 			}
@@ -1930,7 +1930,7 @@ public class OverviewServlet extends HttpServlet
 			//-------------------------------
 			// BEGIN - CONTENT
 			//-------------------------------
-			out.println("<p>List all the files in the <i>conf</i> directory <code>"+ (new File(CONF_DIR)) +"</code>, click the <i>Url</i> to view the content in the file.<br>");
+			out.println("<p>List all the files in the <i>conf</i> directory <code>" + (new File(CONF_DIR)) + "</code>, click the <i>Url</i> to view the content in the file.<br>");
 			out.println("Note: If you want to filter out something from the content, Type it in the column <b>Discard Text</b> and hit <i>enter</i></p>");
 			out.println("</p>");
 
@@ -1948,9 +1948,9 @@ public class OverviewServlet extends HttpServlet
 					continue;
 
 				out.println("  <tr>");
-				out.println("    <td><a href='/conf?name="+f.getName()+"'>"+f.getName()+"</a></td>");
+				out.println("    <td><a href='/conf?name=" + f.getName() + "'>" + f.getName() + "</a></td>");
 //				out.println("    <td><a href='/log?name="+f.getName()+"'><code>"+f.getName()+"</code></a></td>");
-				out.println("    <td><input type='text' placeholder='filter-out some text (regexp can be used), hit <enter> to search' class='search' size='80' style='border:none' onkeydown='openConfFileWithDiscard(this, \""+f.getName()+"\")'/></td>");
+				out.println("    <td><input type='text' placeholder='filter-out some text (regexp can be used), hit <enter> to search' class='search' size='80' style='border:none' onkeydown='openConfFileWithDiscard(this, \"" + f.getName() + "\")'/></td>");
 				out.println("  </tr>");
 
 			}
@@ -2001,7 +2001,7 @@ public class OverviewServlet extends HttpServlet
 			//-------------------------------
 			// BEGIN - CONTENT
 			//-------------------------------
-			out.println("<p>List all the files in the <i>reports</i> directory <code>"+ (new File(REPORTS_DIR)) +"</code>, click the <i>Url</i> to view the content in the file.<br>");
+			out.println("<p>List all the files in the <i>reports</i> directory <code>" + (new File(REPORTS_DIR)) + "</code>, click the <i>Url</i> to view the content in the file.<br>");
 			out.println("</p>");
 			out.println("<p>File name is in the format: <i>srv</i>.<i>date(YYYY-MM-DD)</i>_<i>time(HHMM)</i>[.-NTR-].html<br>");
 			out.println("Note: The file is created after midnight and reflects the <b>previous</b> day...<br>");
@@ -2173,7 +2173,7 @@ public class OverviewServlet extends HttpServlet
 			double pctUsed  = 100.0 - (freeGb / totalGb * 100.0);
 			
 			out.println("<p>");
-			out.println("File system usage at '"+dataDir+"', resolved to '"+dataDirRes+"'.<br>");
+			out.println("File system usage at '" + dataDir + "', resolved to '" + dataDirRes + "'.<br>");
 			out.println(String.format("Free = %.1f GB, Total = %.1f GB, Percent Used = %.1f %%<br>", freeGb, totalGb, pctUsed));
 			out.println("</p>");
 			
@@ -2209,7 +2209,7 @@ public class OverviewServlet extends HttpServlet
 					collectorHostname = session.getCollectorHostname(); 
 
 				String jdbcUrl  = "jdbc:h2:tcp://" + collectorHostname + "/" + dbName + ";IFEXISTS=TRUE;DB_CLOSE_ON_EXIT=FALSE";
-				String webUrl   = "http://"+collectorHostname+":8082" + "/login.jsp?url=" + jdbcUrl + "&driver=org.h2.Driver&user=sa";
+				String webUrl   = "http://" + collectorHostname + ":8082" + "/login.jsp?url=" + jdbcUrl + "&driver=org.h2.Driver&user=sa";
 				
 				String sizeInGB = String.format("%.1f GB", f.length() / 1024.0 / 1024.0 / 1024.0);
 				String sizeInMB = String.format("%.1f MB", f.length() / 1024.0 / 1024.0);
@@ -2240,12 +2240,12 @@ public class OverviewServlet extends HttpServlet
 			out.println("<br>");
 			out.println("Quick links to Some Dbx Central log files.");
 			out.println("<ul>");
-			fn = "DBX_CENTRAL.console";                   out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=5000'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=5000'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
-			fn = "DBX_CENTRAL.log";                       out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=5000'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=5000'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
-			fn = "DBX_CENTRAL_H2WriterStatCronTask.log";  out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=5000'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=5000'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
-			fn = "DBX_CENTRAL_CentralH2Defrag.log";       out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=5000'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=5000'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
-			fn = "DBX_CENTRAL_DataDirectoryCleaner.log";  out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=5000'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=5000'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
-			fn = "DBX_CENTRAL_CentralPcsJdbcCleaner.log"; out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=5000'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=5000'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
+			fn = "DBX_CENTRAL.console";                   out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=5000'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=5000'>tail+discard</a> &#8680; <a href='/log?name=" + fn + "'>" + fn + "</a> </li>");
+			fn = "DBX_CENTRAL.log";                       out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=5000'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=5000'>tail+discard</a> &#8680; <a href='/log?name=" + fn + "'>" + fn + "</a> </li>");
+			fn = "DBX_CENTRAL_H2WriterStatCronTask.log";  out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=5000'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=5000'>tail+discard</a> &#8680; <a href='/log?name=" + fn + "'>" + fn + "</a> </li>");
+			fn = "DBX_CENTRAL_CentralH2Defrag.log";       out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=5000'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=5000'>tail+discard</a> &#8680; <a href='/log?name=" + fn + "'>" + fn + "</a> </li>");
+			fn = "DBX_CENTRAL_DataDirectoryCleaner.log";  out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=5000'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=5000'>tail+discard</a> &#8680; <a href='/log?name=" + fn + "'>" + fn + "</a> </li>");
+			fn = "DBX_CENTRAL_CentralPcsJdbcCleaner.log"; out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=5000'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=5000'>tail+discard</a> &#8680; <a href='/log?name=" + fn + "'>" + fn + "</a> </li>");
 //			out.println("  <li><a href='/log?name=DBX_CENTRAL.console'>                   DBX_CENTRAL.console                   </a></li>");
 //			out.println("  <li><a href='/log?name=DBX_CENTRAL.log'>                       DBX_CENTRAL.log                       </a></li>");
 //			out.println("  <li><a href='/log?name=DBX_CENTRAL_CentralH2Defrag.log'>       DBX_CENTRAL_CentralH2Defrag.log       </a></li>");
@@ -2352,7 +2352,7 @@ public class OverviewServlet extends HttpServlet
 							out.println("    <td>"              + rs.getString(c++) + "</td>");
 							out.println("    <td>"              + rs.getString(c++) + "</td>");
 //							out.println("    <td>"              + rs.getString(c++) + "</td>");
-							out.println("    <td "+luTdAttr+">" + rs.getString(c++) + "</td>");
+							out.println("    <td " + luTdAttr + ">" + rs.getString(c++) + "</td>");
 							out.println("    <td>"              + rs.getString(c++) + "</td>");
 							out.println("  </tr>");
 						}
@@ -2453,7 +2453,7 @@ public class OverviewServlet extends HttpServlet
 			BigDecimal sumH2RecordingsUsageGb = new BigDecimal( sumH2RecordingsUsageMb /1024.0 ).setScale(1, RoundingMode.HALF_EVEN);
 
 			out.println("<p>");
-			out.println("File system usage at '"+dataDir+"', resolved to '"+dataDirRes+"'.<br>");
+			out.println("File system usage at '" + dataDir + "', resolved to '" + dataDirRes + "'.<br>");
 //			out.println(String.format("Free = %.1f GB, Usable = %.1f GB, Total = %.1f GB <br>", freeGb, usableGb, totalGb));
 			out.println(String.format("Free = %.1f GB, Total = %.1f GB, Percent Used = %.1f %%<br>", freeGb, totalGb, pctUsed));
 			out.println("With H2 Database Recordings Size of " + sumH2RecordingsUsageMb + " MB (" + sumH2RecordingsUsageGb + " GB).");
@@ -2462,7 +2462,7 @@ public class OverviewServlet extends HttpServlet
 			// Get the same "saved file size info" as DataDirectoryCleaner
 			String fileName = dataDirRes.getAbsolutePath() + File.separatorChar + Configuration.getCombinedConfiguration().getProperty(DataDirectoryCleaner.PROPKEY_savedFileInfo_filename, DataDirectoryCleaner.DEFAULT_savedFileInfo_filename);
 			Configuration savedFileInfo = new Configuration(fileName);
-			_logger.info("Loaded file '"+savedFileInfo.getFilename()+"' to store File Size Information, with "+savedFileInfo.size()+" entries.");
+			_logger.info("Loaded file '" + savedFileInfo.getFilename() + "' to store File Size Information, with " + savedFileInfo.size() + " entries.");
 			
 //			for (Path root : FileSystems.getDefault().getRootDirectories()) 
 //			{
@@ -2548,7 +2548,7 @@ public class OverviewServlet extends HttpServlet
 
 				String url        = "jdbc:h2:tcp://" + collectorHostname + "/" + dbName + ";IFEXISTS=TRUE;DB_CLOSE_ON_EXIT=FALSE";
 //				String dbxTuneUrl = dbxTuneGuiUrl + url;
-				String dbxTuneUrl  = dbxTuneGuiUrl.replace(":PORT/", ":"+DbxTune.getGuiWebPort(dbxTuneName)+"/") + url;
+				String dbxTuneUrl  = dbxTuneGuiUrl.replace(":PORT/", ":" + DbxTune.getGuiWebPort(dbxTuneName) + "/") + url;
 
 //				String downloadH2File = "<a href='/download-recording?name=" + f.getName() + "' download='" + f.getName() + "'>" + dbName + "</a>";
 				String downloadH2File = "<a href='/download-recording?name=" + f.getName() + "'>" + dbName + "</a>";
@@ -2568,7 +2568,7 @@ public class OverviewServlet extends HttpServlet
 					{
 						if (session.getCollectorCurrentUrl() != null)
 							url = session.getCollectorCurrentUrl();
-						dbxTuneUrl = dbxTuneGuiUrl.replace(":PORT/", ":"+DbxTune.getGuiWebPort(dbxTuneName)+"/") + url;
+						dbxTuneUrl = dbxTuneGuiUrl.replace(":PORT/", ":" + DbxTune.getGuiWebPort(dbxTuneName) + "/") + url;
 					}
 				}
 				
@@ -2585,14 +2585,14 @@ public class OverviewServlet extends HttpServlet
 				}
 
 				out.println("  <tr>");
-				out.println("    <td "+style+">" + downloadH2File + "</td>");
-				out.println("    <td "+style+">" + dayOfWeek      + "</td>");
-				out.println("    <td "+style+">" + savedSizeInGB  + "</td>");
-				out.println("    <td "+style+">" + sizeInGB       + "</td>");
-				out.println("    <td "+style+">" + sizeInMB       + "</td>");
-				out.println("    <td "+style+">" + diffSizeInGB   + "</td>");
-				out.println("    <td "+style+"><a href=" + dsrUrl + "><code>" + dsrTxt + "</code></a></td>");
-				out.println("    <td "+style+"><div title='"+linkToolTip+"'><a href='" + dbxTuneUrl + "'><code>" + url + "</code></a></div></td>");
+				out.println("    <td " + style + ">" + downloadH2File + "</td>");
+				out.println("    <td " + style + ">" + dayOfWeek      + "</td>");
+				out.println("    <td " + style + ">" + savedSizeInGB  + "</td>");
+				out.println("    <td " + style + ">" + sizeInGB       + "</td>");
+				out.println("    <td " + style + ">" + sizeInMB       + "</td>");
+				out.println("    <td " + style + ">" + diffSizeInGB   + "</td>");
+				out.println("    <td " + style + "><a href=" + dsrUrl + "><code>" + dsrTxt + "</code></a></td>");
+				out.println("    <td " + style + "><div title='" + linkToolTip + "'><a href='" + dbxTuneUrl + "'><code>" + url + "</code></a></div></td>");
 				out.println("  </tr>");
 			}
 			out.println("</tbody>");
@@ -2654,7 +2654,7 @@ public class OverviewServlet extends HttpServlet
 					fileContent = fileContent.replace("\\=", "=");
 				}
 				
-				out.println("Content of file: "+file);
+				out.println("Content of file: " + file);
 				out.println("<hr>");
 				out.println("<pre>");
 				out.println("<code class='language-properties line-numbers'>");

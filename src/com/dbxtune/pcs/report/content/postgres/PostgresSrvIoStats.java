@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -125,27 +125,27 @@ extends AseAbstract
 		String schema = getReportingInstance().getDbmsSchemaName();
 		boolean sort = true;
 
-		_CmPgIo_IoCacheHitNormalPct = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_CACHE_HIT_NORMAL_PCT,  -1, sort, null, "Buffer 'Cache Hit' By 'Client Table Access' in Percent ("+CmPgIo.SHORT_NAME+")");
-		_CmPgIo_IoCacheHitAllPct    = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_CACHE_HIT_ALL_PCT,     -1, sort, null, "Buffer 'Cache Hit' By 'backend_type:object:context' in Percent ("+CmPgIo.SHORT_NAME+")");
+		_CmPgIo_IoCacheHitNormalPct = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_CACHE_HIT_NORMAL_PCT,  -1, sort, null, "Buffer 'Cache Hit' By 'Client Table Access' in Percent (" + CmPgIo.SHORT_NAME + ")");
+		_CmPgIo_IoCacheHitAllPct    = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_CACHE_HIT_ALL_PCT,     -1, sort, null, "Buffer 'Cache Hit' By 'backend_type:object:context' in Percent (" + CmPgIo.SHORT_NAME + ")");
 
-		_CmPgIo_IoHits              = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_HITS,                  -1, sort, null, "Buffer 'Hits' By 'backend_type:object:context' per Second ("+CmPgIo.SHORT_NAME+")");
-		_CmPgIo_IoEvections         = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_EVICTIONS,             -1, sort, null, "Buffer 'Evictions' By 'backend_type:object:context' per Second ("+CmPgIo.SHORT_NAME+")");
-		_CmPgIo_IoReuses            = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_REUSES,                -1, sort, null, "Buffer 'Reuses' By 'backend_type:object:context' per Second ("+CmPgIo.SHORT_NAME+")");
+		_CmPgIo_IoHits              = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_HITS,                  -1, sort, null, "Buffer 'Hits' By 'backend_type:object:context' per Second (" + CmPgIo.SHORT_NAME + ")");
+		_CmPgIo_IoEvections         = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_EVICTIONS,             -1, sort, null, "Buffer 'Evictions' By 'backend_type:object:context' per Second (" + CmPgIo.SHORT_NAME + ")");
+		_CmPgIo_IoReuses            = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_REUSES,                -1, sort, null, "Buffer 'Reuses' By 'backend_type:object:context' per Second (" + CmPgIo.SHORT_NAME + ")");
 
-		_CmPgIo_IoReads             = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_READS,                 -1, sort, null, "IO 'Reads' By 'backend_type:object:context' per Second ("+CmPgIo.SHORT_NAME+")");
-		_CmPgIo_IoReadTime          = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_READ_TIME,             -1, sort, null, "IO 'Read Time' in ms By 'backend_type:object:context' per Operation ("+CmPgIo.SHORT_NAME+")");
+		_CmPgIo_IoReads             = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_READS,                 -1, sort, null, "IO 'Reads' By 'backend_type:object:context' per Second (" + CmPgIo.SHORT_NAME + ")");
+		_CmPgIo_IoReadTime          = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_READ_TIME,             -1, sort, null, "IO 'Read Time' in ms By 'backend_type:object:context' per Operation (" + CmPgIo.SHORT_NAME + ")");
 
-		_CmPgIo_IoWrites            = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_WRITES,                -1, sort, null, "IO 'Writes' By 'backend_type:object:context' per Second ("+CmPgIo.SHORT_NAME+")");
-		_CmPgIo_IoWriteTime         = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_WRITE_TIME,            -1, sort, null, "IO 'Write Time' in ms By 'backend_type:object:context' per Operation ("+CmPgIo.SHORT_NAME+")");
+		_CmPgIo_IoWrites            = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_WRITES,                -1, sort, null, "IO 'Writes' By 'backend_type:object:context' per Second (" + CmPgIo.SHORT_NAME + ")");
+		_CmPgIo_IoWriteTime         = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_WRITE_TIME,            -1, sort, null, "IO 'Write Time' in ms By 'backend_type:object:context' per Operation (" + CmPgIo.SHORT_NAME + ")");
 
-		_CmPgIo_IoWritebacks        = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_WRITEBACKS,            -1, sort, null, "IO 'Writebacks' By 'backend_type:object:context' per Second ("+CmPgIo.SHORT_NAME+")");
-		_CmPgIo_IoWritebackTime     = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_WRITEBACK_TIME,        -1, sort, null, "IO 'Writeback Time' in ms By 'backend_type:object:context' per Operation ("+CmPgIo.SHORT_NAME+")");
+		_CmPgIo_IoWritebacks        = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_WRITEBACKS,            -1, sort, null, "IO 'Writebacks' By 'backend_type:object:context' per Second (" + CmPgIo.SHORT_NAME + ")");
+		_CmPgIo_IoWritebackTime     = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_WRITEBACK_TIME,        -1, sort, null, "IO 'Writeback Time' in ms By 'backend_type:object:context' per Operation (" + CmPgIo.SHORT_NAME + ")");
 
-		_CmPgIo_IoExtends           = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_EXTENDS,               -1, sort, null, "IO 'Extends' By 'backend_type:object:context' per Second ("+CmPgIo.SHORT_NAME+")");
-		_CmPgIo_IoExtendTime        = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_EXTEND_TIME,           -1, sort, null, "IO 'Extend Time' in ms By 'backend_type:object:context' per Operation ("+CmPgIo.SHORT_NAME+")");
+		_CmPgIo_IoExtends           = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_EXTENDS,               -1, sort, null, "IO 'Extends' By 'backend_type:object:context' per Second (" + CmPgIo.SHORT_NAME + ")");
+		_CmPgIo_IoExtendTime        = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_EXTEND_TIME,           -1, sort, null, "IO 'Extend Time' in ms By 'backend_type:object:context' per Operation (" + CmPgIo.SHORT_NAME + ")");
 
-		_CmPgIo_IoFsyncs            = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_FSYNCS,                -1, sort, null, "IO 'FSyncs' By 'backend_type:object:context' per Second ("+CmPgIo.SHORT_NAME+")");
-		_CmPgIo_IoFsyncTime         = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_FSYNC_TIME,            -1, sort, null, "IO 'FSync Time' in ms By 'backend_type:object:context' per Operation ("+CmPgIo.SHORT_NAME+")");
+		_CmPgIo_IoFsyncs            = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_FSYNCS,                -1, sort, null, "IO 'FSyncs' By 'backend_type:object:context' per Second (" + CmPgIo.SHORT_NAME + ")");
+		_CmPgIo_IoFsyncTime         = createTsLineChart(conn, schema, CmPgIo.CM_NAME, CmPgIo.GRAPH_NAME_FSYNC_TIME,            -1, sort, null, "IO 'FSync Time' in ms By 'backend_type:object:context' per Operation (" + CmPgIo.SHORT_NAME + ")");
 	}
 
 	private IReportChart _CmPgIo_IoCacheHitNormalPct;

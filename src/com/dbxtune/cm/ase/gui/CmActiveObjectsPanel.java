@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -54,7 +54,7 @@ extends TabularCntrPanel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		String colorStr = null;
 
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.index");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.index");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -68,7 +68,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.ORANGE), null));
 
 		// BLOB (text/image columns)
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.blob");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.blob");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override

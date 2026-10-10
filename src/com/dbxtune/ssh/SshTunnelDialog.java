@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -233,7 +233,7 @@ implements ActionListener, KeyListener, FocusListener
 			"<html>" +
 			   "Generate a new random number every time the listener is started.<br>" +
 			   "<br>" +
-			   "This is done by starting too check for free port number at '"+SshTunnelManager.GENERATE_PORT_NUMBER_START+"' then looping until it finds a free port number." +
+			   "This is done by starting too check for free port number at '" + SshTunnelManager.GENERATE_PORT_NUMBER_START + "' then looping until it finds a free port number." +
 			"</html>");
 		_sshLocalPort_but.setToolTipText("Check if the current 'Local Port' is availiable for start a listener service on.");
 
@@ -310,7 +310,7 @@ implements ActionListener, KeyListener, FocusListener
 		                               + "If SSH Authentication model is 'publickey' and you have a password for the <i>private key file</i>, then type this password here.<br>"
 		                               + "If the <i>private key file</i> does <b>not</b> have a password, just type <i>anything here</i> so the button is enabled.<br>"
 		                               + "<br>"
-		                               + "Note 1: To use 'publickey' authentication the file '"+SshConnection.getRsaKeyFilename()+"' is used.<br>"
+		                               + "Note 1: To use 'publickey' authentication the file '" + SshConnection.getRsaKeyFilename() + "' is used.<br>"
 		                               + "Note 2: PUTTY generated keys should also work.<br>"
 //		                               + "Note 2: The above file needs to contain a key in the OpenSSH format.<br>"
 //		                               + "(If you have a PUTTY generated it needs to be converted using <i>puttygen</i>, load the file, then: Menu -&gt; Convertion -&gt; Export OpenSSH Key)<br>"
@@ -542,15 +542,15 @@ implements ActionListener, KeyListener, FocusListener
 				ServerSocket serverSocket = new ServerSocket(localPort);
 				serverSocket.close();
 
-				SwingUtils.showInfoMessage(this, "OK", "Port number '"+localPort+"' is free.");
+				SwingUtils.showInfoMessage(this, "OK", "Port number '" + localPort + "' is free.");
 			}
 			catch (BindException ex)
 			{
-				SwingUtils.showErrorMessage(this, "FAILURE", "Port number '"+localPortStr+"' is bussy, choose another number.", ex);
+				SwingUtils.showErrorMessage(this, "FAILURE", "Port number '" + localPortStr + "' is bussy, choose another number.", ex);
 			}
 			catch (Throwable ex)
 			{
-				SwingUtils.showErrorMessage(this, "FAILURE", "Problems starting a listener on Port number '"+localPortStr+"', check the Exception below.", ex);
+				SwingUtils.showErrorMessage(this, "FAILURE", "Problems starting a listener on Port number '" + localPortStr + "', check the Exception below.", ex);
 			}
 		}
 		
@@ -624,38 +624,38 @@ implements ActionListener, KeyListener, FocusListener
 		}
 		
 		// LOCAL *
-		conf.setProperty(PROP_PREFIX +"local.port.generate."+_hostPortStr, _sshLocalPortRand_chk.isSelected());
-		conf.setProperty(PROP_PREFIX +"local.port."+_hostPortStr,          _sshLocalPort_txt.getText());
-		conf.getProperty(PROP_PREFIX +"local.host."+_hostPortStr,          _sshLocalHost_txt.getText());
+		conf.setProperty(PROP_PREFIX + "local.port.generate." + _hostPortStr, _sshLocalPortRand_chk.isSelected());
+		conf.setProperty(PROP_PREFIX + "local.port." + _hostPortStr,          _sshLocalPort_txt.getText());
+		conf.getProperty(PROP_PREFIX + "local.host." + _hostPortStr,          _sshLocalHost_txt.getText());
 
 		// DESTINATION *
-		conf.setProperty(PROP_PREFIX +"destination.host."+_hostPortStr,    _sshDestHost_txt.getText());
-		conf.setProperty(PROP_PREFIX +"destination.port."+_hostPortStr,    _sshDestPort_txt.getText());
+		conf.setProperty(PROP_PREFIX + "destination.host." + _hostPortStr,    _sshDestHost_txt.getText());
+		conf.setProperty(PROP_PREFIX + "destination.port." + _hostPortStr,    _sshDestPort_txt.getText());
 
 		// Below, set basename as a fallback
 		// HOSTNAME
-		conf.setProperty(PROP_PREFIX +"ssh.conn.host."+_hostPortStr,       _sshHost_txt.getText());
-		conf.setProperty(PROP_PREFIX +"ssh.conn.host",                     _sshHost_txt.getText());
+		conf.setProperty(PROP_PREFIX + "ssh.conn.host." + _hostPortStr,       _sshHost_txt.getText());
+		conf.setProperty(PROP_PREFIX + "ssh.conn.host",                     _sshHost_txt.getText());
 
 		// PORT
-		conf.setProperty(PROP_PREFIX +"ssh.conn.port."+_hostPortStr,       _sshPort_txt.getText());
-		conf.setProperty(PROP_PREFIX +"ssh.conn.port",                     _sshPort_txt.getText());
+		conf.setProperty(PROP_PREFIX + "ssh.conn.port." + _hostPortStr,       _sshPort_txt.getText());
+		conf.setProperty(PROP_PREFIX + "ssh.conn.port",                     _sshPort_txt.getText());
 
 		// USERNAME
-		conf.setProperty(PROP_PREFIX +"ssh.conn.username."+_hostPortStr,   _sshUser_txt.getText());
-		conf.setProperty(PROP_PREFIX +"ssh.conn.username",                 _sshUser_txt.getText());
+		conf.setProperty(PROP_PREFIX + "ssh.conn.username." + _hostPortStr,   _sshUser_txt.getText());
+		conf.setProperty(PROP_PREFIX + "ssh.conn.username",                 _sshUser_txt.getText());
 
 		// PASSWORD
-		conf.setProperty(PROP_PREFIX +"ssh.conn.password."+_hostPortStr,   _sshPasswd_txt.getText(), true);
-		conf.setProperty(PROP_PREFIX +"ssh.conn.password",                 _sshPasswd_txt.getText(), true);
+		conf.setProperty(PROP_PREFIX + "ssh.conn.password." + _hostPortStr,   _sshPasswd_txt.getText(), true);
+		conf.setProperty(PROP_PREFIX + "ssh.conn.password",                 _sshPasswd_txt.getText(), true);
 
 		// INIT KEY FILE
-		conf.setProperty(PROP_PREFIX +"ssh.conn.keyFile."+_hostPortStr,    _sshKeyFile_txt.getText());
-		conf.setProperty(PROP_PREFIX +"ssh.conn.keyFile",                  _sshKeyFile_txt.getText());
+		conf.setProperty(PROP_PREFIX + "ssh.conn.keyFile." + _hostPortStr,    _sshKeyFile_txt.getText());
+		conf.setProperty(PROP_PREFIX + "ssh.conn.keyFile",                  _sshKeyFile_txt.getText());
 
 		// INIT OS CMD
-		conf.setProperty(PROP_PREFIX +"ssh.conn.initOsCmd."+_hostPortStr,  _sshInitOsCmd_txt.getText());
-		conf.setProperty(PROP_PREFIX +"ssh.conn.initOsCmd",                _sshInitOsCmd_txt.getText());
+		conf.setProperty(PROP_PREFIX + "ssh.conn.initOsCmd." + _hostPortStr,  _sshInitOsCmd_txt.getText());
+		conf.setProperty(PROP_PREFIX + "ssh.conn.initOsCmd",                _sshInitOsCmd_txt.getText());
 
 
 		//------------------
@@ -674,18 +674,18 @@ implements ActionListener, KeyListener, FocusListener
 		SshTunnelInfo ti = getSshTunnelInfo(_hostPortStr);
 
 		_sshLocalPortRand_chk.setSelected(ti.isLocalPortGenerated());
-		_sshLocalPort_txt.setText(ti.getLocalPort() +"");
+		_sshLocalPort_txt.setText(ti.getLocalPort() + "");
 		_sshLocalHost_txt.setText(ti.getLocalHost());
 
 		// DESTINATION *
 		_sshDestHost_txt.setText(ti.getDestHost());
-		_sshDestPort_txt.setText(ti.getDestPort() +"");
+		_sshDestPort_txt.setText(ti.getDestPort() + "");
 		
 		// HOSTNAME
 		_sshHost_txt.setText(ti.getSshHost());
 
 		// PORT
-		_sshPort_txt.setText(ti.getSshPort() +"");
+		_sshPort_txt.setText(ti.getSshPort() + "");
 
 		// USERNAME
 		_sshUser_txt.setText(ti.getSshUsername());
@@ -761,13 +761,13 @@ implements ActionListener, KeyListener, FocusListener
 		boolean bolVal;
 
 		// LOCAL *
-		bolVal = conf.getBooleanProperty(PROP_PREFIX +"local.port.generate."+hostPortStr, true);
+		bolVal = conf.getBooleanProperty(PROP_PREFIX + "local.port.generate." + hostPortStr, true);
 		sshInfo.setLocalPortGenerated(bolVal);
 
-		intVal = conf.getIntProperty(PROP_PREFIX +"local.port."+hostPortStr, -1);
+		intVal = conf.getIntProperty(PROP_PREFIX + "local.port." + hostPortStr, -1);
 		sshInfo.setLocalPort(intVal);
 
-		strVal = conf.getProperty(PROP_PREFIX +"local.host."+hostPortStr, "localhost");
+		strVal = conf.getProperty(PROP_PREFIX + "local.host." + hostPortStr, "localhost");
 		sshInfo.setLocalHost(strVal);
 
 		// If the option is used... either set the LocalPort back to -1 or try to check if this port is busy or not...
@@ -777,47 +777,47 @@ implements ActionListener, KeyListener, FocusListener
 
 
 		// DESTINATION *
-		strVal = conf.getProperty(PROP_PREFIX +"destination.host."+hostPortStr, guessDestHostStr);
+		strVal = conf.getProperty(PROP_PREFIX + "destination.host." + hostPortStr, guessDestHostStr);
 		sshInfo.setDestHost(strVal);
 
-		intVal = conf.getIntProperty(PROP_PREFIX +"destination.port."+hostPortStr, guessDestPortInt);
+		intVal = conf.getIntProperty(PROP_PREFIX + "destination.port." + hostPortStr, guessDestPortInt);
 		sshInfo.setDestPort(intVal);
 		
 		// Below, get hostPortStr first, then get basename as a fallback
 		// HOSTNAME
-		strVal     = conf.getProperty(PROP_PREFIX +"ssh.conn.host."+hostPortStr);
+		strVal     = conf.getProperty(PROP_PREFIX + "ssh.conn.host." + hostPortStr);
 		if (strVal == null)
-			strVal = conf.getProperty(PROP_PREFIX +"ssh.conn.host", "");
+			strVal = conf.getProperty(PROP_PREFIX + "ssh.conn.host", "");
 		sshInfo.setSshHost(strVal);
 
 		// PORT
-		intVal     = conf.getIntProperty(PROP_PREFIX +"ssh.conn.port."+hostPortStr, -1);
+		intVal     = conf.getIntProperty(PROP_PREFIX + "ssh.conn.port." + hostPortStr, -1);
 		if (intVal == -1)
-			intVal = conf.getIntProperty(PROP_PREFIX +"ssh.conn.port", 22);
+			intVal = conf.getIntProperty(PROP_PREFIX + "ssh.conn.port", 22);
 		sshInfo.setSshPort(intVal);
 
 		// USERNAME
-		strVal     = conf.getProperty(PROP_PREFIX +"ssh.conn.username."+hostPortStr);
+		strVal     = conf.getProperty(PROP_PREFIX + "ssh.conn.username." + hostPortStr);
 		if (strVal == null)
-			strVal = conf.getProperty(PROP_PREFIX +"ssh.conn.username", System.getProperty("user.name"));
+			strVal = conf.getProperty(PROP_PREFIX + "ssh.conn.username", System.getProperty("user.name"));
 		sshInfo.setSshUsername(strVal);
 
 		// PASSWORD
-		strVal = conf.getProperty(PROP_PREFIX +"ssh.conn.password."+hostPortStr);
+		strVal = conf.getProperty(PROP_PREFIX + "ssh.conn.password." + hostPortStr);
 		if (strVal == null)
-			strVal = conf.getProperty(PROP_PREFIX +"ssh.conn.password", "");
+			strVal = conf.getProperty(PROP_PREFIX + "ssh.conn.password", "");
 		sshInfo.setSshPassword(strVal);
 
 		// KEY FILE
-		strVal     = conf.getProperty(PROP_PREFIX +"ssh.conn.keyFile."+hostPortStr);
+		strVal     = conf.getProperty(PROP_PREFIX + "ssh.conn.keyFile." + hostPortStr);
 		if (strVal == null)
-			strVal = conf.getProperty(PROP_PREFIX +"ssh.conn.keyFile", "");
+			strVal = conf.getProperty(PROP_PREFIX + "ssh.conn.keyFile", "");
 		sshInfo.setSshKeyFile(strVal);
 
 		// INIT OS CMD
-		strVal     = conf.getProperty(PROP_PREFIX +"ssh.conn.initOsCmd."+hostPortStr);
+		strVal     = conf.getProperty(PROP_PREFIX + "ssh.conn.initOsCmd." + hostPortStr);
 		if (strVal == null)
-			strVal = conf.getProperty(PROP_PREFIX +"ssh.conn.initOsCmd", "");
+			strVal = conf.getProperty(PROP_PREFIX + "ssh.conn.initOsCmd", "");
 		sshInfo.setSshInitOsCmd(strVal);
 
 		return sshInfo;

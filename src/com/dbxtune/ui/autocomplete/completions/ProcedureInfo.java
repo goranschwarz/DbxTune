@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -106,14 +106,14 @@ implements Serializable
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Problems looking up Parmeter MetaData for procedure '"+_procName+"'. Caught: "+e);
+			_logger.warn("Problems looking up Parmeter MetaData for procedure '" + _procName + "'. Caught: " + e);
 		}
 	}
 
 	@Override
 	public String toString()
 	{
-		return super.toString() + ": cat='"+_procCat+"', schema='"+_procSchema+"', name='"+_procName+"', type='"+_procType+"', remark='"+_procRemark+"'";
+		return super.toString() + ": cat='" + _procCat + "', schema='" + _procSchema + "', name='" + _procName + "', type='" + _procType + "', remark='" + _procRemark + "'";
 	}
 
 	public String toHtmlString()
@@ -172,7 +172,7 @@ implements Serializable
 			}
 		}
 		if (pi == null)
-			return "Parameter name '"+paramName+"', was not found in procedure '"+_procName+"'.";
+			return "Parameter name '" + paramName + "', was not found in procedure '" + _procName + "'.";
 
 		StringBuilder sb = new StringBuilder();
 		sb.append(_procSchema).append(".<B>").append(_procName).append(".").append(pi._paramName).append("</B> - <font color='blue'>").append(_procType).append(" - COLUMN").append("</font>");
@@ -213,7 +213,7 @@ implements Serializable
 	{
 		ProcedureParameterInfo pi = getParameterInfo(paramName);
 		if (pi == null)
-			return "Parameter name '"+paramName+"', was not found in procedure '"+_procName+"'.";
+			return "Parameter name '" + paramName + "', was not found in procedure '" + _procName + "'.";
 
 		String nulls    = pi._paramIsNullable == DatabaseMetaData.columnNoNulls ? "<b>NOT</b> NULL" : "    NULL";
 		String datatype = pi._paramType;
@@ -233,7 +233,7 @@ implements Serializable
 	{
 		ProcedureParameterInfo pi = getParameterInfo(paramName);
 		if (pi == null)
-			return "Column name '"+paramName+"', was not found in table '"+_procName+"'.";
+			return "Column name '" + paramName + "', was not found in table '" + _procName + "'.";
 
 		if (StringUtil.isNullOrBlank(pi._paramRemark))
 //			return "No Description";

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -142,7 +142,7 @@ extends MainFrame
 					{
 						if ( ! t.isInitialized() )
 						{
-							cpd.setStatus("Getting '"+t.getTabLabel()+"' settings");
+							cpd.setStatus("Getting '" + t.getTabLabel() + "' settings");
 							t.initialize(conn, hostMonConn, true, false, null);
 						}
 					}
@@ -476,7 +476,7 @@ extends MainFrame
 
 		if ( menu.getMenuComponentCount() == 0 )
 		{
-			_logger.warn("No Menuitems has been assigned for the '"+menu.getText()+"'.");
+			_logger.warn("No Menuitems has been assigned for the '" + menu.getText() + "'.");
 			return null;
 
 //			JMenuItem empty = new JMenuItem("No Predefined SQL Statements available.");
@@ -508,7 +508,7 @@ extends MainFrame
 		if (conf == null)
 			conf = Configuration.getCombinedConfiguration();
 
-		_logger.debug("createMenu(): prefix='"+prefix+"'.");		
+		_logger.debug("createMenu(): prefix='" + prefix + "'.");		
 
 		//Create the menu, if it didnt exists. 
 		if (menu == null)
@@ -517,7 +517,7 @@ extends MainFrame
 		boolean firstAdd = true;
 		for (String prefixStr : conf.getUniqueSubKeys(prefix, true))
 		{
-			_logger.debug("createPredefinedSqlMenu(): found prefix '"+prefixStr+"'.");
+			_logger.debug("createPredefinedSqlMenu(): found prefix '" + prefixStr + "'.");
 
 			// Read properties
 			final String menuItemName      = conf.getProperty(    prefixStr + ".name");
@@ -534,12 +534,12 @@ extends MainFrame
 			//---------------------------------------
 			if (menuItemName == null)
 			{
-				_logger.warn("Missing property '"+prefixStr+".name'");
+				_logger.warn("Missing property '" + prefixStr + ".name'");
 				continue;
 			}
 			if (scriptLocationStr == null)
 			{
-				_logger.warn("Missing property '"+prefixStr+".install.scriptLocation'");
+				_logger.warn("Missing property '" + prefixStr + ".install.scriptLocation'");
 				continue;
 			}
 
@@ -571,7 +571,7 @@ extends MainFrame
 								return;
 							}
 							// Get a new connection
-							conn = dbxTuneInstance.getNewConnection(Version.getAppName()+"-InstallProc");
+							conn = dbxTuneInstance.getNewConnection(Version.getAppName() + "-InstallProc");
 						
 							// Open A dialog
 							InstallSqlFromUrlDialog installer = new InstallSqlFromUrlDialog(dbxTuneInstance, "", dbname, menuItemName, scriptLocationStr);

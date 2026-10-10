@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -43,8 +43,8 @@ public class H2DatabaseEventListener implements DatabaseEventListener
 	public void init(String url)
 	{
 //_logger.setLevel(Level.DEBUG);
-		_logger.info ("H2DatabaseEventListener.init(): url='"+url+"'.");
-		_logger.debug("H2DatabaseEventListener.init(): url='"+url+"'.");
+		_logger.info ("H2DatabaseEventListener.init(): url='" + url + "'.");
+		_logger.debug("H2DatabaseEventListener.init(): url='" + url + "'.");
 	}
 
 	/**
@@ -136,8 +136,8 @@ public class H2DatabaseEventListener implements DatabaseEventListener
 	@Override
 	public void exceptionThrown(SQLException ex, String sql)
 	{
-		_logger.info ("H2DatabaseEventListener.exceptionThrown(): SQLException="+ex+", arg1='"+sql+"'.", ex);
-		_logger.debug("H2DatabaseEventListener.exceptionThrown(): SQLException="+ex+", arg1='"+sql+"'.", ex);
+		_logger.info ("H2DatabaseEventListener.exceptionThrown(): SQLException=" + ex + ", arg1='" + sql + "'.", ex);
+		_logger.debug("H2DatabaseEventListener.exceptionThrown(): SQLException=" + ex + ", arg1='" + sql + "'.", ex);
 	}
 
 	// temporary backward compatibility for H2 older version: 1.4.*
@@ -175,8 +175,8 @@ public class H2DatabaseEventListener implements DatabaseEventListener
     		case DatabaseEventListener.STATE_CREATE_INDEX:         return;
 		}
 		
-		_logger.info ("H2DatabaseEventListener.setProgress(): state="+stateToString(state)+", at='"+x+"', max='"+max+"', name='"+name+"'.");
-		_logger.debug("H2DatabaseEventListener.setProgress(): state="+stateToString(state)+", at='"+x+"', max='"+max+"', name='"+name+"'.");
+		_logger.info ("H2DatabaseEventListener.setProgress(): state=" + stateToString(state) + ", at='" + x + "', max='" + max + "', name='" + name + "'.");
+		_logger.debug("H2DatabaseEventListener.setProgress(): state=" + stateToString(state) + ", at='" + x + "', max='" + max + "', name='" + name + "'.");
 	}
 	
 	private String stateToString(int state)

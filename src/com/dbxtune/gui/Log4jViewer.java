@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -529,7 +529,7 @@ implements ActionListener, TableModelListener, CaretListener
 		// CHECKBOX: TAIL
 		if (_optionTail_cb.equals(source))
 		{
-			_logger.debug("CHECKBOX: TAIL = "+_optionTail_cb.isSelected());
+			_logger.debug("CHECKBOX: TAIL = " + _optionTail_cb.isSelected());
 			if (_log4jTableModel != null)
 				_log4jTableModel.fireTableDataChanged();
 		}
@@ -572,7 +572,7 @@ implements ActionListener, TableModelListener, CaretListener
 	private void setFilter()
 	{
 		_logger.trace("setFilter() was called");
-		_logger.debug("CHECKBOX: USE-FILTER = "+_filterUseFilter_cb.isSelected());
+		_logger.debug("CHECKBOX: USE-FILTER = " + _filterUseFilter_cb.isSelected());
 		if (_filterUseFilter_cb.isSelected() == false)
 		{
 			_tableValAndLogLevelRowFilter.resetFilter();
@@ -591,7 +591,7 @@ implements ActionListener, TableModelListener, CaretListener
 		if (_filterDebug_rb.isSelected()) level = level | 16;
 		if (_filterTrace_rb.isSelected()) level = level | 32;
 
-		_logger.debug("FILTER: threadName='"+threadName+"', className='"+className+"', message="+message+".");
+		_logger.debug("FILTER: threadName='" + threadName + "', className='" + className + "', message=" + message + ".");
 
 		if (_tableValAndLogLevelRowFilter == null || threadName == null || className == null || message == null)
 			return;
@@ -946,7 +946,7 @@ implements ActionListener, TableModelListener, CaretListener
 				Log4jClass l = (Log4jClass) _tm.getValueAt(r, LogLevelTableModel.LEVEL_COL_POS); //col 1 = Level
 				if ( ! l._originalLevel.equals(l._level) )
 				{
-					_logger.info("Setting new Level for '"+l._className+"' from '"+l._originalLevel+"', to '"+l._level+"'.");
+					_logger.info("Setting new Level for '" + l._className + "' from '" + l._originalLevel + "', to '" + l._level + "'.");
 //					Logger logger = LogManager.exists(l._className);
 //
 //					if (logger == null)
@@ -1033,7 +1033,7 @@ implements ActionListener, TableModelListener, CaretListener
 			int column    = e.getColumn();
 			int firstRow  = e.getFirstRow();
 			int lastRow   = e.getLastRow();
-			_logger.debug("TableModelEvent: type="+type+", column="+column+", firstRow="+firstRow+", lastRow="+lastRow);
+			_logger.debug("TableModelEvent: type=" + type + ", column=" + column + ", firstRow=" + firstRow + ", lastRow=" + lastRow);
 		
 			// event: AbstactTableModel.fireTableStructureChanged
 			if (column >= 0)
@@ -1123,7 +1123,7 @@ implements ActionListener, TableModelListener, CaretListener
 		@Override
 		public void setValueAt(Object obj, int row, int col)
 		{
-			_logger.trace("row="+row+", col="+col+", obj='"+obj.getClass().getName()+"', obj.toString='"+obj+"'.");
+			_logger.trace("row=" + row + ", col=" + col + ", obj='" + obj.getClass().getName() + "', obj.toString='" + obj + "'.");
 			Log4jClass r = _rows.get(row);
 			switch (col)
 			{

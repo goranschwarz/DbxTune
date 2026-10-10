@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -180,7 +180,7 @@ public class MonWaitEventIdDictionary
 		public String getSourceText()
 		{
 			if (_txtSource != null)
-				return StringUtil.makeApproxLineBreak("<BR><HR><B>Text Source:</B> "+ _txtSource, LINE_BREAK_AFTER, WORD_HYSTERESIS, "<BR>");
+				return StringUtil.makeApproxLineBreak("<BR><HR><B>Text Source:</B> " + _txtSource, LINE_BREAK_AFTER, WORD_HYSTERESIS, "<BR>");
 			else
 			{
 				String str = "";

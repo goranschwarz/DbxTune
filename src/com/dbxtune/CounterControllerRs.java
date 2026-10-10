@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -196,12 +196,12 @@ extends CounterControllerAbstract
 		if (! isCountersCreated())
 			createCounters(hasGui);
 		
-		_logger.info("Initializing all CM objects, using RepServer version number "+srvVersion+" ("+Ver.versionNumToStr(srvVersion)+").");
+		_logger.info("Initializing all CM objects, using RepServer version number " + srvVersion + " (" + Ver.versionNumToStr(srvVersion) + ").");
 
 		// initialize all the CM's
 		for (CountersModel cm : getCmList())
 		{
-			_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using RepServer version number "+srvVersion+".");
+			_logger.debug("Initializing CM named '" + cm.getName() + "', display name '" + cm.getDisplayName() + "', using RepServer version number " + srvVersion + ".");
 
 			// set the version
 			cm.setServerVersion(monTablesVersion);
@@ -244,7 +244,7 @@ extends CounterControllerAbstract
 			RsConnection rsconn = (RsConnection) conn;
 			if (rsconn.isInGatewayMode())
 			{
-				_logger.warn("Still in a RepServer Gateway connection to '"+rsconn.getLastGatewaySrvName()+"'. Closing this by issuing 'disconnect' at the Replication Server.");
+				_logger.warn("Still in a RepServer Gateway connection to '" + rsconn.getLastGatewaySrvName() + "'. Closing this by issuing 'disconnect' at the Replication Server.");
 				rsconn.closeGatewayMode();
 			}
 		}
@@ -297,7 +297,7 @@ extends CounterControllerAbstract
 				}
 			}
 			
-			_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '"+sql+"', Caught: " + sqlex.toString() );
+			_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '" + sql + "', Caught: " + sqlex.toString() );
 			mainSampleTime   = new Timestamp(System.currentTimeMillis());
 			serverName       = "unknown";
 			hostname         = "unknown";

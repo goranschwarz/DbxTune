@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -714,7 +714,7 @@ public class SqlObjectName
 	@Override
 	public String toString() 
 	{
-		return super.toString() + " catName='"+_catName+"', schName='"+_schName+"', objName='"+_objName+"', isFullyQualifiedObject="+isFullyQualifiedObject()+", isSchemaQualifiedObject="+isSchemaQualifiedObject()+", isSimpleQualifiedObject="+isSimpleQualifiedObject()+".";
+		return super.toString() + " catName='" + _catName + "', schName='" + _schName + "', objName='" + _objName + "', isFullyQualifiedObject=" + isFullyQualifiedObject() + ", isSchemaQualifiedObject=" + isSchemaQualifiedObject() + ", isSimpleQualifiedObject=" + isSimpleQualifiedObject() + ".";
 	}
 	
 	
@@ -950,9 +950,9 @@ public class SqlObjectName
 		// in some cases the obj name contains 'XXX.YYY.tabname', so check if 'cat' and 'sch' is part of 'obj', then just reset cat and obj
 		if (StringUtil.hasValue(obj))
 		{
-			if (StringUtil.hasValue(cat) && obj.startsWith(cat+"."))
+			if (StringUtil.hasValue(cat) && obj.startsWith(cat + "."))
 				cat = "";
-			if (StringUtil.hasValue(sch) && obj.indexOf(sch+".") != -1)
+			if (StringUtil.hasValue(sch) && obj.indexOf(sch + ".") != -1)
 				sch = "";
 		}
 

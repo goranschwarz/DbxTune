@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -84,7 +84,7 @@ public class DbxCallableStatement implements CallableStatement
 	public ResultSet executeQuery(String sql) throws SQLException
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("DbxCallableStatement.executeQuery(String): sql='"+sql+"'.");
+			_logger.debug("DbxCallableStatement.executeQuery(String): sql='" + sql + "'.");
 
 		return _cstmnt.executeQuery(sql);
 	}
@@ -108,7 +108,7 @@ public class DbxCallableStatement implements CallableStatement
 	public int executeUpdate(String sql) throws SQLException
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("DbxCallableStatement.executeUpdate(String): sql='"+sql+"'.");
+			_logger.debug("DbxCallableStatement.executeUpdate(String): sql='" + sql + "'.");
 		
 		return _cstmnt.executeUpdate(sql);
 	}
@@ -361,7 +361,7 @@ public class DbxCallableStatement implements CallableStatement
 	public boolean execute(String sql) throws SQLException
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("DbxCallableStatement.execute(String): sql='"+sql+"'.");
+			_logger.debug("DbxCallableStatement.execute(String): sql='" + sql + "'.");
 		
 		return _cstmnt.execute(sql);
 	}

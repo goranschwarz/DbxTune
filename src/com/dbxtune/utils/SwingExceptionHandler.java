@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -37,7 +37,7 @@ public class SwingExceptionHandler
 
 	public void handle(Throwable ex)
 	{
-		_logger.warn("Problems in AWT/Swing Event Dispatch Thread, Caught: "+ex.toString(), ex);
+		_logger.warn("Problems in AWT/Swing Event Dispatch Thread, Caught: " + ex.toString(), ex);
 		
 		// Maybe do some more if we are out of memory.
 		if (ex instanceof OutOfMemoryError)

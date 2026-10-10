@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -53,7 +53,7 @@ extends MonitorMpstat
 	public String getCommand()
 	{
 		String cmd = super.getCommand();
-		return cmd != null ? cmd : "mpstat -P ALL "+getSleepTime();
+		return cmd != null ? cmd : "mpstat -P ALL " + getSleepTime();
 	}
 
 	@Override
@@ -62,7 +62,7 @@ extends MonitorMpstat
 		HostMonitorMetaData md = new HostMonitorMetaData();
 		md.setTableName(getModuleName());
 
-		_logger.info("When creating meta data for Linux 'mpstat', initializing it using utility version "+VersionShort.toStr(utilVersion)+" (intVer="+utilVersion+").");
+		_logger.info("When creating meta data for Linux 'mpstat', initializing it using utility version " + VersionShort.toStr(utilVersion) + " (intVer=" + utilVersion + ").");
 
 		// gorans@gorans-ub:~$ mpstat -V
 		// sysstat version 10.2.0

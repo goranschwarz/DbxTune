@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -331,7 +331,7 @@ implements ActionListener, ConnectionProvider
 						Component comp = _tabPane.getComponentAt(t);
 						String    name = _tabPane.getTitleAt(t);
 			
-						getWaitDialog().setState("Refreshing tab '"+name+"'.");
+						getWaitDialog().setState("Refreshing tab '" + name + "'.");
 						if (comp instanceof DbmsConfigPanel)
 						{
 							((DbmsConfigPanel)comp).refresh();
@@ -344,7 +344,7 @@ implements ActionListener, ConnectionProvider
 				}
 				catch(Exception ex) 
 				{
-					_logger.info("Initialization of the DBMS Configuration did not succeed. Caught: "+ex); 
+					_logger.info("Initialization of the DBMS Configuration did not succeed. Caught: " + ex); 
 				}
 				getWaitDialog().setState("Done");
 

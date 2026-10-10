@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -337,8 +337,8 @@ public class WindowsTypePerfCsvReader
 
 		if (_logger.isDebugEnabled())
 		{
-			_logger.debug("readHeader(): _instanceNameToRowId="+_instanceNameToRowId);
-			_logger.debug("readHeader(): _counterNameToColId ="+_counterNameToColId);
+			_logger.debug("readHeader(): _instanceNameToRowId=" + _instanceNameToRowId);
+			_logger.debug("readHeader(): _counterNameToColId =" + _counterNameToColId);
 		}
 	}
 
@@ -622,7 +622,7 @@ public class WindowsTypePerfCsvReader
 						Object[][] rows = csvr.readRowToObjectRows(line);
 						for (int r=0; r<rows.length; r++)
 						{
-							System.out.println("ROW["+r+"]: " + StringUtil.toCommaStr(rows[r]));
+							System.out.println("ROW[" + r + "]: " + StringUtil.toCommaStr(rows[r]));
 						}
 					}
 //					if (rowCount > 10)

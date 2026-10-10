@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -88,7 +88,7 @@ extends SqlCompletion
 		_tableInfo = ti;
 
 		String shortDesc = 
-			"<font color='blue'>"+ti._tabType+"</font>" +
+			"<font color='blue'>" + ti._tabType + "</font>" +
 //			" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(ti._tabRemark) ? "No Description" : ti._tabRemark) + "</font></i>";
 			" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(ti._tabRemark) ? "" : stripMultiLineHtml(ti._tabRemark)) + "</font></i>";
 		setShortDescription(shortDesc);

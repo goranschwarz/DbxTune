@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -130,9 +130,9 @@ public class DDLGeneratorWrapper
 //		jarFile = new File("C:/projects/AseTune/lib/DDLGen_1501.jar");
 //		jarFile = new File("C:/projects/AseTune/lib/DDLGen_155.jar");
 
-		System.out.println("JAR file: "+jarFile);
-		System.out.println("JAR file.exists(): "+jarFile.exists());
-		System.out.println("JAR file.toURI().toURL(): "+jarFile.toURI().toURL());
+		System.out.println("JAR file: " + jarFile);
+		System.out.println("JAR file.exists(): " + jarFile.exists());
+		System.out.println("JAR file.toURI().toURL(): " + jarFile.toURI().toURL());
 
 		URLClassLoader classLoader = new URLClassLoader(new URL[] {jarFile.toURI().toURL()}, Thread.currentThread().getContextClassLoader());
 		Class<?> clazz = classLoader.loadClass("com.sybase.ddlgen.DDLGenerator");
@@ -184,7 +184,7 @@ public class DDLGeneratorWrapper
 
 	public static void dummyTest1(String[] args)
 	{
-		System.out.println("args: "+StringUtil.toCommaStr(args));
+		System.out.println("args: " + StringUtil.toCommaStr(args));
 		try
 		{
 			ConnectionProp connProp = new ConnectionProp();
@@ -193,8 +193,8 @@ public class DDLGeneratorWrapper
 			connProp.setUsername("sa");
 			connProp.setPassword("sybase");
 			DbxConnection conn = DbxConnection.connect(null, connProp);
-			System.out.println("DBMS Product Name:    "+conn.getDatabaseProductName());
-			System.out.println("DBMS Product Version: "+conn.getDatabaseProductVersion());
+			System.out.println("DBMS Product Name:    " + conn.getDatabaseProductName());
+			System.out.println("DBMS Product Version: " + conn.getDatabaseProductVersion());
 
 			DDLGeneratorWrapper ddlGen = new DDLGeneratorWrapper(conn, args);
 			ddlGen.setParams(args);
@@ -214,7 +214,7 @@ public class DDLGeneratorWrapper
 			Throwable xxx = e;
 			while (xxx != null)
 			{
-				System.out.println("------ "+xxx.getClass().getName());
+				System.out.println("------ " + xxx.getClass().getName());
 				xxx.printStackTrace();
 				xxx = xxx.getCause();
 			}
@@ -227,9 +227,9 @@ public class DDLGeneratorWrapper
 		{
 //			File f = new File("C:/projects/AseTune/lib/DDLGen_1254.jar");
 			File f = new File("C:/projects/AseTune/lib/DDLGen_160.jar");
-			System.out.println("file: "+f);
-			System.out.println("file.exists(): "+f.exists());
-			System.out.println("file.toURI().toURL(): "+f.toURI().toURL());
+			System.out.println("file: " + f);
+			System.out.println("file.exists(): " + f.exists());
+			System.out.println("file.toURI().toURL(): " + f.toURI().toURL());
 
 //			URL[] urls = new URL[] {new URL("file:///C:/projects/AseTune/lib/DDLGen_160.jar")};
 //			ClassLoader classLoader = new URLClassLoader(urls);

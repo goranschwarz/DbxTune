@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -74,7 +74,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -199,7 +199,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmPgStatementsSumDb(counterController, guiController);
 	}
@@ -271,7 +271,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_NEW_STATEMENTS,
 				"SQL Statements [new_statements] per DB", 	                           // Menu CheckBox text
-				"SQL Statements [new_statements] per DB per second ("+SHORT_NAME+")", // Graph Label 
+				"SQL Statements [new_statements] per DB per second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -283,7 +283,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_CALL_COUNT,
 				"SQL Statements [calls] per DB", 	                           // Menu CheckBox text
-				"SQL Statements [calls] per DB per second ("+SHORT_NAME+")", // Graph Label 
+				"SQL Statements [calls] per DB per second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -295,7 +295,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_TOTAL_TIME,
 				"SQL Statements [total_time] per DB", 	                           // Menu CheckBox text
-				"SQL Statements [total_time] per DB per second ("+SHORT_NAME+")", // Graph Label 
+				"SQL Statements [total_time] per DB per second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -307,7 +307,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_ROWS,
 				"SQL Statements [rows] per DB", 	                           // Menu CheckBox text
-				"SQL Statements [rows] per DB per second ("+SHORT_NAME+")", // Graph Label 
+				"SQL Statements [rows] per DB per second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -319,7 +319,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_SHARED_BLKS_HIT,
 				"SQL Statements [shared_blks_hit] per DB", 	                           // Menu CheckBox text
-				"SQL Statements [shared_blks_hit] per DB per second ("+SHORT_NAME+")", // Graph Label 
+				"SQL Statements [shared_blks_hit] per DB per second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -331,7 +331,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_SHARED_BLKS_READ,
 				"SQL Statements [shared_blks_read] per DB", 	                           // Menu CheckBox text
-				"SQL Statements [shared_blks_read] per DB per second ("+SHORT_NAME+")", // Graph Label 
+				"SQL Statements [shared_blks_read] per DB per second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -343,7 +343,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_TEMP_BLK_READ,
 				"SQL Statements [temp_blks_read] per DB", 	                           // Menu CheckBox text
-				"SQL Statements [temp_blks_read] per DB per second ("+SHORT_NAME+")", // Graph Label 
+				"SQL Statements [temp_blks_read] per DB per second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -355,7 +355,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_TEMP_BLK_WRITTEN,
 				"SQL Statements [temp_blks_written] per DB", 	                           // Menu CheckBox text
-				"SQL Statements [temp_blks_written] per DB per second ("+SHORT_NAME+")", // Graph Label 
+				"SQL Statements [temp_blks_written] per DB per second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -367,7 +367,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_WAL_RECORDS,
 				"SQL Statements [wal_records] per DB", 	                           // Menu CheckBox text
-				"SQL Statements [wal_records] per DB per second ("+SHORT_NAME+")", // Graph Label 
+				"SQL Statements [wal_records] per DB per second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -379,7 +379,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_WAL_BYTES,
 				"SQL Statements [wal_bytes] per DB", 	                           // Menu CheckBox text
-				"SQL Statements [wal_bytes] per DB per second ("+SHORT_NAME+")", // Graph Label 
+				"SQL Statements [wal_bytes] per DB per second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 

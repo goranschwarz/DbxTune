@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -129,13 +129,13 @@ public class OsIoStatSlowIo extends OsAbstract
 	}
 
 
-	public static final String PROPKEY_ABOVE_TOTAL_IOS    = OsIoStatSlowIo.class.getSimpleName()+".above.total_ios";
+	public static final String PROPKEY_ABOVE_TOTAL_IOS    = OsIoStatSlowIo.class.getSimpleName() + ".above.total_ios";
 	public static final int    DEFAULT_ABOVE_TOTAL_IOS    = 2;
 
-	public static final String PROPKEY_ABOVE_SERVICE_TIME = OsIoStatSlowIo.class.getSimpleName()+".above.await";
+	public static final String PROPKEY_ABOVE_SERVICE_TIME = OsIoStatSlowIo.class.getSimpleName() + ".above.await";
 	public static final int    DEFAULT_ABOVE_SERVICE_TIME = 50;
 
-	public static final String PROPKEY_SKIP_DEVICE_NAMES  = OsIoStatSlowIo.class.getSimpleName()+".skip.device.names";
+	public static final String PROPKEY_SKIP_DEVICE_NAMES  = OsIoStatSlowIo.class.getSimpleName() + ".skip.device.names";
 //	public static final String DEFAULT_SKIP_DEVICE_NAMES  = "";
 	public static final String DEFAULT_SKIP_DEVICE_NAMES  = "sd";
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -63,7 +63,7 @@ extends CmSummaryAbstract
 		"</html>";
 
 	public static final String   GROUP_NAME       = null;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -98,7 +98,7 @@ extends CmSummaryAbstract
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmSummary(counterController, guiController);
 	}
@@ -143,7 +143,7 @@ extends CmSummaryAbstract
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_XXX,
 			"Dummy Graph", 	                        // Menu CheckBox text
-			"Dummy Graph showing hour, minute, second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Dummy Graph showing hour, minute, second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Hour", "Minute", "Second"}, 
 			LabelType.Static,
@@ -155,7 +155,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_TRANSACTION,
 			"Transaction per second",    // Menu CheckBox text
-			"Transaction per Second ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"Transaction per Second (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -167,7 +167,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
 			"Blocking Locks", 	                     // Menu CheckBox text
-			"Number of Concurrently Blocking Locks ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Number of Concurrently Blocking Locks (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Blocking Locks" }, 
 			LabelType.Static,
@@ -179,7 +179,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_CONNECTION,
 			"Connections/Users", 	          // Menu CheckBox text
-			"Connections/Users connected to Oracle ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Connections/Users connected to Oracle (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "UserConnections (abs)", "distinctLogins (abs)" }, 
 			LabelType.Static,
@@ -191,7 +191,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
 			"Oldest Open Transaction",     // Menu CheckBox text
-			"Oldest Open Transaction, in Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Oldest Open Transaction, in Seconds (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Seconds" }, 
 			LabelType.Static,
@@ -293,7 +293,7 @@ extends CmSummaryAbstract
 			arr[0] = Double.valueOf(hour);
 			arr[1] = Double.valueOf(minute);
 			arr[2] = Double.valueOf(second);
-			_logger.debug("updateGraphData("+tgdp.getName()+"): hour='"+arr[0]+"', minute='"+arr[1]+"', second='"+arr[2]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): hour='" + arr[0] + "', minute='" + arr[1] + "', second='" + arr[2] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -309,7 +309,7 @@ extends CmSummaryAbstract
 
 			dArray[0] = this.getRateValueSum("TRANSACTIONS");
 			dArray[1] = this.getRateValueSum("ROLLBACKS");
-			_logger.debug("updateGraphData("+tgdp.getName()+"): Transactions='"+dArray[0]+"', Rollbacks='"+dArray[1]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): Transactions='" + dArray[0] + "', Rollbacks='" + dArray[1] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
@@ -323,7 +323,7 @@ extends CmSummaryAbstract
 			Double[] arr = new Double[1];
 
 			arr[0] = this.getAbsValueAsDouble (0, "COUNT_BLOCKING_WAIT");
-			_logger.debug("updateGraphData("+tgdp.getName()+"): LockWait='"+arr[0]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): LockWait='" + arr[0] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -338,7 +338,7 @@ extends CmSummaryAbstract
 
 			arr[0] = this.getAbsValueAsDouble (0, "CONNECTED_USERS");
 			arr[1] = this.getAbsValueAsDouble (0, "DISTINCT_LOGINS");
-			_logger.debug("updateGraphData("+tgdp.getName()+"): Connections(Abs)='"+arr[0]+"', distinctLogins(Abs)='"+arr[1]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): Connections(Abs)='" + arr[0] + "', distinctLogins(Abs)='" + arr[1] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -352,7 +352,7 @@ extends CmSummaryAbstract
 			Double[] arr = new Double[1];
 
 			arr[0] = this.getAbsValueAsDouble(0, "OLDEST_OPEN_TRAN_IN_SEC");
-			_logger.debug("updateGraphData("+tgdp.getName()+"): oldestOpenTranInSec='"+arr[0]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): oldestOpenTranInSec='" + arr[0] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);

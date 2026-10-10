@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -1081,13 +1081,13 @@ public class PersistWriterJdbc
 		{
 			_logger.info("Sending Command '" + shutdownCmd + "' to H2 database. (For currentUrl='" + currentUrl + "', dbFile='" + dbFile + "')");
 			stmnt.execute(shutdownCmd);
-			_logger.info("Shutdown H2 database using Command '" + shutdownCmd + "', took " + TimeUtils.msDiffNowToTimeStr("%?HH[:]%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
+			_logger.info("Shutdown H2 database using Command '" + shutdownCmd + "', took " + TimeUtils.msDiffNowToTimeStr("%?HH[:]%MM:%SS.%ms", startTime) + " (MM:SS.ms)");
 		} 
 		catch(SQLException ex) 
 		{
 			// during shutdown we would expect: ErrorCode=90121, SQLState=90121, toString=org.h2.jdbc.JdbcSQLException: Database is already closed (to disable automatic closing at VM shutdown, add ";DB_CLOSE_ON_EXIT=FALSE" to the db URL)
 			if ( ex.getErrorCode() == 90121 )
-				_logger.info("Shutdown H2 database using '" + shutdownCmd + "', took " + TimeUtils.msDiffNowToTimeStr("%?HH[:]%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
+				_logger.info("Shutdown H2 database using '" + shutdownCmd + "', took " + TimeUtils.msDiffNowToTimeStr("%?HH[:]%MM:%SS.%ms", startTime) + " (MM:SS.ms)");
 			else
 			{
 				Throwable rootCauseEx  = ExceptionUtils.getRootCause(ex);
@@ -3982,7 +3982,7 @@ public class PersistWriterJdbc
 					sbSql.append(", ").append(safeStr( ae.getCrTime()     == -1 ? null : new Timestamp(ae.getCrTime())           )); // "createTime"                  datetime      null false   - 15
 					sbSql.append(", ").append(safeStr( ae.getCancelTime() == -1 ? null : new Timestamp(ae.getCancelTime())       )); // "cancelTime"                  datetime      null true    - 16
 					sbSql.append(", ").append(safeStr( ae.getTimeToLive()                                                        )); // "timeToLive"                  int           null true    - 17
-					sbSql.append(", ").append(safeStr( ae.getCrossedThreshold() == null ? null : ae.getCrossedThreshold()+"",15  )); // "threshold"                   varchar(15)   null true    - 18
+					sbSql.append(", ").append(safeStr( ae.getCrossedThreshold() == null ? null : ae.getCrossedThreshold() + "",15  )); // "threshold"                   varchar(15)   null true    - 18
 					sbSql.append(", ").append(safeStr( ae.getData()                                                         ,512 )); // "data"                        varchar(512)  null true    - 19
 					sbSql.append(", ").append(safeStr( ae.getReRaiseData()                                                  ,512 )); // "lastData"                    varchar(512)  null true    - 20
 					sbSql.append(", ").append(safeStr( ae.getDescription()                                                  ,512 )); // "description"                 varchar(512)  null false   - 21
@@ -4080,10 +4080,10 @@ public class PersistWriterJdbc
 				pst.setString   (i++, strMaxLen(ae.getServiceInfo()                                                  ,80 ,"serviceInfo"        )); // serviceInfo                 - varchar(80) , Nullable = false
 //				pst.setString   (i++, strMaxLen(ae.getExtraInfo() == null ? null : ae.getExtraInfo().toString()      ,80 ,"extraInfo"          )); // extraInfo                   - varchar(80) , Nullable = false 
 				pst.setString   (i++, strMaxLen(ae.getExtraInfo()                                                    ,80 ,"extraInfo"          )); // extraInfo                   - varchar(80) , Nullable = false 
-				pst.setString   (i++, strMaxLen(ae.getCategory()+""                                                  ,20 ,"category"           )); // category                    - varchar(20) , Nullable = false
-				pst.setString   (i++, strMaxLen(ae.getSeverity()+""                                                  ,10 ,"severity"           )); // severity                    - varchar(10) , Nullable = false
-				pst.setString   (i++, strMaxLen(ae.getState()+""                                                     ,10 ,"state"              )); // state                       - varchar(10) , Nullable = false
-				pst.setString   (i++, strMaxLen(ae.getAlarmId()+""                                                   ,40 ,"alarmId"            )); // alarmId                     - varchar(40) , Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getCategory() + ""                                                  ,20 ,"category"           )); // category                    - varchar(20) , Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getSeverity() + ""                                                  ,10 ,"severity"           )); // severity                    - varchar(10) , Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getState() + ""                                                     ,10 ,"state"              )); // state                       - varchar(10) , Nullable = false
+				pst.setString   (i++, strMaxLen(ae.getAlarmId() + ""                                                   ,40 ,"alarmId"            )); // alarmId                     - varchar(40) , Nullable = false
 				pst.setInt      (i++,           ae.getReRaiseCount()                                                                            ); // repeatCnt                   - int         , Nullable = false
 				pst.setString   (i++, strMaxLen(ae.getFullDuration(true)                                             ,80 ,"duration"           )); // duration                    - varchar(80) , Nullable = false
 				pst.setString   (i++, strMaxLen(ae.getAlarmDuration()                                                ,20 ,"alarmDuration"      )); // alarmDuration               - varchar(10) , Nullable = false
@@ -4095,7 +4095,7 @@ public class PersistWriterJdbc
 				pst.setTimestamp(i++,           ae.getCancelTime() == -1 ? null : new Timestamp(ae.getCancelTime())                             ); // cancelTime                  - datetime    , Nullable = true 
 //				pst.setInt      (i++,           ae.getTimeToLive() == -1 ? null : ae.getTimeToLive()                                            ); // timeToLive                  - int         , Nullable = true 
 				pst.setInt      (i++,           ae.getTimeToLive()                                                                              ); // timeToLive                  - int         , Nullable = true 
-				pst.setString   (i++, strMaxLen(ae.getCrossedThreshold() == null ? null : ae.getCrossedThreshold()+"",15 ,"threshold"          )); // threshold                   - varchar(15) , Nullable = true 
+				pst.setString   (i++, strMaxLen(ae.getCrossedThreshold() == null ? null : ae.getCrossedThreshold() + "",15 ,"threshold"          )); // threshold                   - varchar(15) , Nullable = true 
 				pst.setString   (i++, strMaxLen(ae.getData()        == null ? null : ae.getData().toString()         ,512,"data"               )); // data                        - varchar(512), Nullable = true 
 				pst.setString   (i++, strMaxLen(ae.getReRaiseData() == null ? null : ae.getReRaiseData().toString()  ,512,"lastData"           )); // lastData                    - varchar(512), Nullable = true 
 				pst.setString   (i++, strMaxLen(ae.getDescription()                                                  ,512,"description"        )); // description                 - varchar(512), Nullable = false
@@ -5927,7 +5927,7 @@ public class PersistWriterJdbc
 		// 4: ValueText         varchar(255)
 		// 5: ValueClob         CLOB
 		String sql = pcsConn.quotifySqlString(
-				  "select [ValueType], [ValueText], [ValueClob] from [" + tabName+ "] \n"
+				  "select [ValueType], [ValueText], [ValueClob] from [" + tabName + "] \n"
 				+ "where [KeyName] = " + safeStr(keyName) + " \n"
 				+ "order by [SessionStartTime] desc"
 				);

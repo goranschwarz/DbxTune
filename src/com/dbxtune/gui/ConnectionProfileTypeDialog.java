@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -82,7 +82,7 @@ implements ActionListener, TableModelListener
 
 	private JLabel                   _color_lbl       = new JLabel("Color");
 	private JTextField               _colorEx_txt     = new JTextField(" Border Color ");
-	private JTextField               _colorRgb_txt    = new JTextField(" "+ConnectionProfileManager.ProfileType.getColorRgbStr(Color.WHITE));
+	private JTextField               _colorRgb_txt    = new JTextField(" " + ConnectionProfileManager.ProfileType.getColorRgbStr(Color.WHITE));
 	private Color                    _color_val       = Color.WHITE;
 	private JButton                  _color_but       = new JButton("Open Color Picker...");
 	
@@ -170,7 +170,7 @@ implements ActionListener, TableModelListener
 		ProfileType example = createProfileType();
 		ConnectionProfileManager.setBorderForConnectionProfileType(getContentPane(), example);
 		_colorEx_txt.setBackground(example._color);
-		_colorRgb_txt.setText(" "+example.getColorRgbStr());
+		_colorRgb_txt.setText(" " + example.getColorRgbStr());
 		
 		_currentProfileType = example;
 	}

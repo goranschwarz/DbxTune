@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -94,8 +94,8 @@ extends PostgresAbstract
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		// Get some configuration
-		String categoryList  = localConf.getProperty(this.getClass().getSimpleName()+".category.list",       "'File Locations', 'Statistics / Query and Index Statistics Collector'");
-		String paramNameList = localConf.getProperty(this.getClass().getSimpleName()+".parameter.name.list", "'max_connections'");
+		String categoryList  = localConf.getProperty(this.getClass().getSimpleName() + ".category.list",       "'File Locations', 'Statistics / Query and Index Statistics Collector'");
+		String paramNameList = localConf.getProperty(this.getClass().getSimpleName() + ".parameter.name.list", "'max_connections'");
 
 		String sql = ""
 			+ "select \n"

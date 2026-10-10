@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -787,7 +787,7 @@ public abstract class ReportChartAbstract implements IReportChart
 		writer.append("\n");
 		writer.append("\n");
 		writer.append("<div id='div_chart_" + tagName + "' style='display:none'>\n");
-		writer.append("<canvas id='canvas_" + tagName + "' width='" + width +"' height='" + height + "'></canvas> \n");
+		writer.append("<canvas id='canvas_" + tagName + "' width='" + width + "' height='" + height + "'></canvas> \n");
 		writer.append("</div>\n");
 
 		// Write the JavaScript part... which will hide the IMAGE and show the ChartJS object

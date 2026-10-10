@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -254,7 +254,7 @@ implements PropertyChangeListener, ActionListener
 //		_execSqlTimer.stop();
 		_totalExecTimeVal_lbl.setText( TimeUtils.msToTimeStr("%?HH[:]%MM:%SS.%ms", System.currentTimeMillis() - _totalExecStartTime) );
 		if (_totalExecCount > 1)
-			_batchExecTimeVal_lbl.setText( TimeUtils.msToTimeStr("%?HH[:]%MM:%SS.%ms", System.currentTimeMillis() - _batchExecStartTime) + " (go # "+(_currentExecCounter+1)+" of "+_totalExecCount+")");
+			_batchExecTimeVal_lbl.setText( TimeUtils.msToTimeStr("%?HH[:]%MM:%SS.%ms", System.currentTimeMillis() - _batchExecStartTime) + " (go # " + (_currentExecCounter+1) + " of " + _totalExecCount + ")");
 		else
 			_batchExecTimeVal_lbl.setText( TimeUtils.msToTimeStr("%?HH[:]%MM:%SS.%ms", System.currentTimeMillis() - _batchExecStartTime) );
 
@@ -504,7 +504,7 @@ implements PropertyChangeListener, ActionListener
 				}
 				catch(SQLException ex)
 				{
-					SwingUtils.showErrorMessage(_owner, "Cancel", "Problems sending cancel to Server: "+ex, ex);
+					SwingUtils.showErrorMessage(_owner, "Cancel", "Problems sending cancel to Server: " + ex, ex);
 //					SwingUtils.showErrorMessage(_owner, "Cancel", "Problems sending cancel to Server (conn will be closed): "+ex, ex);
 
 					// Close the Connection
@@ -525,7 +525,7 @@ implements PropertyChangeListener, ActionListener
 					}
 					catch(SQLException ex)
 					{
-						SwingUtils.showErrorMessage(_owner, "Cancel", "Problems doing cancel to on the Statement level: "+ex, ex);
+						SwingUtils.showErrorMessage(_owner, "Cancel", "Problems doing cancel to on the Statement level: " + ex, ex);
 //						SwingUtils.showErrorMessage(_owner, "Cancel", "Problems doing cancel to on the Statement level (conn will be closed): "+ex, ex);
 
 						// Close the Connection

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -57,7 +57,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -85,7 +85,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmWorkerThread(counterController, guiController);
 	}
@@ -122,7 +122,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_ACTIVE_THREADS,
 			"Worker Threads in Use ", 	                                  // Menu CheckBox text
-			"Worker Threads in Use & Parallel Queries per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Worker Threads in Use & Parallel Queries per second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "ThreadsActive", "ParallelQueries" }, 
 			LabelType.Static,
@@ -179,7 +179,7 @@ extends CountersModel
 			arr[1] = this.getRateValueSum("ParallelQueries");
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("updateGraphData("+tgdp.getName()+"): ThreadsActive='"+arr[0]+"', ParallelQueries='"+arr[1]+"'.");
+				_logger.debug("updateGraphData(" + tgdp.getName() + "): ThreadsActive='" + arr[0] + "', ParallelQueries='" + arr[1] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);

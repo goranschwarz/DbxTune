@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -261,7 +261,7 @@ extends JComponent
 		{
 			graphType = guessGraphType();
 			
-			_pipeCmd.addInfoMessage("Guessed Graph/Chart Type '"+graphType+"'.");
+			_pipeCmd.addInfoMessage("Guessed Graph/Chart Type '" + graphType + "'.");
 		}
 
 		//-----------------------------------------
@@ -269,7 +269,7 @@ extends JComponent
 		//-----------------------------------------
 		if (GraphType.AREA.equals(graphType) || GraphType.SAREA.equals(graphType) || GraphType.STACKEDAREA.equals(graphType))
 		{
-			_pipeCmd.addInfoMessage("creating 'Category' dataset for graph type '"+graphType+"'.");
+			_pipeCmd.addInfoMessage("creating 'Category' dataset for graph type '" + graphType + "'.");
 			
 			CategoryDataset dataset = createCategoryDataset(graphType);
 			
@@ -290,7 +290,7 @@ extends JComponent
 		//-----------------------------------------
 		else if (GraphType.BAR.equals(graphType) || GraphType.SBAR.equals(graphType) || GraphType.STACKEDBAR.equals(graphType))
 		{
-			_pipeCmd.addInfoMessage("creating 'Category' dataset for graph type '"+graphType+"'.");
+			_pipeCmd.addInfoMessage("creating 'Category' dataset for graph type '" + graphType + "'.");
 
 			CategoryDataset dataset = createCategoryDataset(graphType);
 			
@@ -331,7 +331,7 @@ extends JComponent
 		//-----------------------------------------
 		else if (GraphType.LINE.equals(graphType))
 		{
-			_pipeCmd.addInfoMessage("creating 'Category' dataset for graph type '"+graphType+"'.");
+			_pipeCmd.addInfoMessage("creating 'Category' dataset for graph type '" + graphType + "'.");
 
 			CategoryDataset dataset = createCategoryDataset(graphType);
 			
@@ -347,7 +347,7 @@ extends JComponent
 		//-----------------------------------------
 		else if (GraphType.PIE.equals(graphType))
 		{
-			_pipeCmd.addInfoMessage("creating 'Pie' dataset for graph type '"+graphType+"'.");
+			_pipeCmd.addInfoMessage("creating 'Pie' dataset for graph type '" + graphType + "'.");
 
 			Map<String, DefaultPieDataset> pieMap = createPieDataset(graphType);			
 			
@@ -389,7 +389,7 @@ extends JComponent
 		//-----------------------------------------
 		else if (GraphType.TS.equals(graphType) || GraphType.TIMESERIES.equals(graphType))
 		{
-			_pipeCmd.addInfoMessage("creating 'Time Series' dataset for graph type '"+graphType+"'.");
+			_pipeCmd.addInfoMessage("creating 'Time Series' dataset for graph type '" + graphType + "'.");
 
 			XYDataset dataset = createTimeSeriesDataset(graphType);
 
@@ -406,7 +406,7 @@ extends JComponent
 		//-----------------------------------------
 		else if (GraphType.GANTT.equals(graphType))
 		{
-			_pipeCmd.addInfoMessage("creating 'Gantt' dataset for graph type '"+graphType+"'.");
+			_pipeCmd.addInfoMessage("creating 'Gantt' dataset for graph type '" + graphType + "'.");
 
 			IntervalCategoryDataset dataset = createGanttDataset(graphType);
 
@@ -539,8 +539,8 @@ extends JComponent
 			}
 			else
 			{
-				_pipeCmd.addWarningMessage("Not possible to use --showDataValues for "+graphType+". (plot instance '"+plot.getClass().getSimpleName()+"' is not handled)");
-				_logger.warn("The 'Plot' is NOT in instance of 'CategoryPlot/PiePlot' for graphType='"+graphType+"'. Can't set 'showDataValues'. Plot instance is '"+plot.getClass().getName()+"'.");
+				_pipeCmd.addWarningMessage("Not possible to use --showDataValues for " + graphType + ". (plot instance '" + plot.getClass().getSimpleName() + "' is not handled)");
+				_logger.warn("The 'Plot' is NOT in instance of 'CategoryPlot/PiePlot' for graphType='" + graphType + "'. Can't set 'showDataValues'. Plot instance is '" + plot.getClass().getName() + "'.");
 			}
 		}
 
@@ -583,7 +583,7 @@ extends JComponent
 
 			if ( ! successShowShapes )
 			{
-				_pipeCmd.addWarningMessage("Not possible to use --showShapes for "+graphType+". (plot instance '"+plot.getClass().getSimpleName()+"' is not handled)");
+				_pipeCmd.addWarningMessage("Not possible to use --showShapes for " + graphType + ". (plot instance '" + plot.getClass().getSimpleName() + "' is not handled)");
 			}
 		}
 
@@ -805,7 +805,7 @@ extends JComponent
 		{
 			graphType = GraphType.TIMESERIES;
 
-			_pipeCmd.addInfoMessage("guessGraphType(): set graphType to '"+graphType+"'. Due to: FIRST Column is a TimeStamp");
+			_pipeCmd.addInfoMessage("guessGraphType(): set graphType to '" + graphType + "'. Due to: FIRST Column is a TimeStamp");
 			return graphType;
 		}
 
@@ -815,7 +815,7 @@ extends JComponent
 		{
 			graphType = GraphType.PIE;
 
-			_pipeCmd.addInfoMessage("guessGraphType(): set graphType to '"+graphType+"'. Due to: FIRST Column is a 'String' and there is only two columns");
+			_pipeCmd.addInfoMessage("guessGraphType(): set graphType to '" + graphType + "'. Due to: FIRST Column is a 'String' and there is only two columns");
 			return graphType;
 		}
 
@@ -826,7 +826,7 @@ extends JComponent
 			graphType = GraphType.PIE;
 			_pipeCmd.setPivot(true);
 
-			_pipeCmd.addInfoMessage("guessGraphType(): set graphType to '"+graphType+"'. ENABLE-PIVOT mode and USING ALL COLUMNS...  Due to: ROWCOUNT=1");
+			_pipeCmd.addInfoMessage("guessGraphType(): set graphType to '" + graphType + "'. ENABLE-PIVOT mode and USING ALL COLUMNS...  Due to: ROWCOUNT=1");
 			return graphType;
 		}
 
@@ -834,7 +834,7 @@ extends JComponent
 		// DEFAULT RULE
 		graphType = GraphType.BAR;
 		
-		_pipeCmd.addInfoMessage("guessGraphType(): set graphType to '"+graphType+"'. Due to: -end-of-guesses-");
+		_pipeCmd.addInfoMessage("guessGraphType(): set graphType to '" + graphType + "'. Due to: -end-of-guesses-");
 		return graphType;
 	}
 
@@ -913,10 +913,10 @@ extends JComponent
 					colPos = _tm.findColumn(colName);
 
 				if (colPos < 0)
-					throw new RuntimeException("The column '"+colName+"' is NOT part of the ResultSet. Can NOT continue...");
+					throw new RuntimeException("The column '" + colName + "' is NOT part of the ResultSet. Can NOT continue...");
 
 				if (colPos >= _tm.getColumnCount())
-					throw new RuntimeException("The specified column '"+colName+"' at colPos "+colPos+" is ABOVE ResultSet column count of "+_tm.getColumnCount()+". Can NOT continue...");
+					throw new RuntimeException("The specified column '" + colName + "' at colPos " + colPos + " is ABOVE ResultSet column count of " + _tm.getColumnCount() + ". Can NOT continue...");
 				
 				resList.add(colPos);
 			}
@@ -965,7 +965,7 @@ extends JComponent
 				String colName     = _tm.getColumnName(col);
 				int jdbcColumnType = _tm.getSqlType(col); // starts at 0
 
-				_pipeCmd.addInfoMessage("INFO: Skipping [UNSUPPORTED-COLUMN-VALUE-DATA-TYPE]: col="+col+", colName='"+colName+"', jdbcColumnType="+jdbcColumnType+", jdbcColumnTypeStr='"+ResultSetTableModel.getColumnJavaSqlTypeName(jdbcColumnType)+"'.");
+				_pipeCmd.addInfoMessage("INFO: Skipping [UNSUPPORTED-COLUMN-VALUE-DATA-TYPE]: col=" + col + ", colName='" + colName + "', jdbcColumnType=" + jdbcColumnType + ", jdbcColumnTypeStr='" + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcColumnType) + "'.");
 			}
 		}
 		return keepList;
@@ -1001,7 +1001,7 @@ extends JComponent
 			if (obj instanceof Comparable)
 				return (Comparable) _tm.getValueAt(row, keyList.get(0));
 			else
-				throw new RuntimeException("getRowKey(row="+row+", keyList.size()==1): The fetched object '"+obj.getClass().getName()+"' is not a instance of Comparable.");
+				throw new RuntimeException("getRowKey(row=" + row + ", keyList.size()==1): The fetched object '" + obj.getClass().getName() + "' is not a instance of Comparable.");
 		}
 
 		// Add all KEY Columns
@@ -1038,9 +1038,9 @@ extends JComponent
 		if (_pipeCmd.isDebugEnabled())
 		{
 			_pipeCmd.addDebugMessage("createCategoryDataset()");
-			_pipeCmd.addDebugMessage("pivot="+pivot);
-			_pipeCmd.addDebugMessage("rowCount="+rowCount);
-			_pipeCmd.addDebugMessage("colCount="+colCount);
+			_pipeCmd.addDebugMessage("pivot=" + pivot);
+			_pipeCmd.addDebugMessage("rowCount=" + rowCount);
+			_pipeCmd.addDebugMessage("colCount=" + colCount);
 		}
 		
 		// Get/Compose the KEY and Values Column List
@@ -1115,9 +1115,9 @@ extends JComponent
 					String colValStr = _tm.getValueAsObject(row, col) + "";
 					int jdbcColumnType = _tm.getSqlType(col);
 
-					String msg = "Problems reading: row="+row+", col="+col+", colName='"+colName+"', colValStr='"+colValStr+"', rowKey='"+rowKey+"', columnKey='"+columnKey+"', jdbcColumnType="+jdbcColumnType+", jdbcColumnTypeStr='"+ResultSetTableModel.getColumnJavaSqlTypeName(jdbcColumnType)+"'.";
+					String msg = "Problems reading: row=" + row + ", col=" + col + ", colName='" + colName + "', colValStr='" + colValStr + "', rowKey='" + rowKey + "', columnKey='" + columnKey + "', jdbcColumnType=" + jdbcColumnType + ", jdbcColumnTypeStr='" + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcColumnType) + "'.";
 					
-					_pipeCmd.addWarningMessage(msg + " Caught: "+ex);
+					_pipeCmd.addWarningMessage(msg + " Caught: " + ex);
 					_logger.error(msg, ex);
 				}
 			}
@@ -1155,7 +1155,7 @@ extends JComponent
 				dataset.setValue(value, rKey, cKey);
 
 				if (_pipeCmd.isDebugEnabled())
-					_pipeCmd.addDebugMessage("setOrIncrementValue(): ->SET-VALUE-2->: [row="+row+", col="+col+", srcColName='"+_tm.getColumnName(col)+"']:  rKey='"+rKey+"', cKey='"+cKey+"', value="+value);
+					_pipeCmd.addDebugMessage("setOrIncrementValue(): ->SET-VALUE-2->: [row=" + row + ", col=" + col + ", srcColName='" + _tm.getColumnName(col) + "']:  rKey='" + rKey + "', cKey='" + cKey + "', value=" + value);
 			}
 			else
 			{
@@ -1163,7 +1163,7 @@ extends JComponent
 				dataset.setValue(newValue, rKey, cKey);
 
 				if (_pipeCmd.isDebugEnabled())
-					_pipeCmd.addDebugMessage("setOrIncrementValue(): INCREMENT-VALUE: [row="+row+", col="+col+", srcColName='"+_tm.getColumnName(col)+"']: rKey='"+rKey+"', cKey='"+cKey+"', curValue="+curValue+", addValue="+value+", setNewValue="+newValue);
+					_pipeCmd.addDebugMessage("setOrIncrementValue(): INCREMENT-VALUE: [row=" + row + ", col=" + col + ", srcColName='" + _tm.getColumnName(col) + "']: rKey='" + rKey + "', cKey='" + cKey + "', curValue=" + curValue + ", addValue=" + value + ", setNewValue=" + newValue);
 			}
 		}
 		catch (UnknownKeyException ex)
@@ -1171,7 +1171,7 @@ extends JComponent
 			dataset.setValue(value, rKey, cKey);
 			
 			if (_pipeCmd.isDebugEnabled())
-				_pipeCmd.addDebugMessage("setOrIncrementValue(): ->SET-VALUE-1->: [row="+row+", col="+col+", srcColName='"+_tm.getColumnName(col)+"']:  rKey='"+rKey+"', cKey='"+cKey+"', value="+value);
+				_pipeCmd.addDebugMessage("setOrIncrementValue(): ->SET-VALUE-1->: [row=" + row + ", col=" + col + ", srcColName='" + _tm.getColumnName(col) + "']:  rKey='" + rKey + "', cKey='" + cKey + "', value=" + value);
 		}
 	}
 //	public CategoryDataset createCategoryDataset()
@@ -1288,9 +1288,9 @@ extends JComponent
 		if (_pipeCmd.isDebugEnabled())
 		{
 			_pipeCmd.addDebugMessage("createPieDataset()");
-			_pipeCmd.addDebugMessage("pivot="+pivot);
-			_pipeCmd.addDebugMessage("rowCount="+rowCount);
-			_pipeCmd.addDebugMessage("colCount="+colCount);
+			_pipeCmd.addDebugMessage("pivot=" + pivot);
+			_pipeCmd.addDebugMessage("rowCount=" + rowCount);
+			_pipeCmd.addDebugMessage("colCount=" + colCount);
 		}
 		
 		// Get/Compose the KEY and Values Column List
@@ -1308,7 +1308,7 @@ extends JComponent
 		if ( rowCount == 1 && pivot )
 		{
 			String type = "ONE-ROW_and_PIVOT";
-			_pipeCmd.addInfoMessage(""+type+" --- STRATEGY: Each column will be a piece of the pie.");
+			_pipeCmd.addInfoMessage("" + type + " --- STRATEGY: Each column will be a piece of the pie.");
 
 			// LOOP Columns
 			for (Integer col : valPosList)
@@ -1340,14 +1340,14 @@ extends JComponent
 					String colValStr   = _tm.getValueAsObject(row, col) + "";
 					int jdbcColumnType = _tm.getSqlType(col);
 
-					_pipeCmd.addErrorMessage(type+" unhandled row="+row+" column["+col+"]='"+colName+"', with colValStr='"+colValStr+"', datatype["+jdbcColumnType+"]='"+ResultSetTableModel.getColumnJavaSqlTypeName(jdbcColumnType)+"'.");
+					_pipeCmd.addErrorMessage(type + " unhandled row=" + row + " column[" + col + "]='" + colName + "', with colValStr='" + colValStr + "', datatype[" + jdbcColumnType + "]='" + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcColumnType) + "'.");
 				}
 			}
 		}
 		else if ( valPosList.size() == 1 )
 		{
 			String type = "MANY-ROW_and_ONE-VAL-COL";
-			_pipeCmd.addInfoMessage(""+type+" --- STRATEGY: Duplicate keys will be summarized.");
+			_pipeCmd.addInfoMessage("" + type + " --- STRATEGY: Duplicate keys will be summarized.");
 
 			// keep count on duplicate values
 			boolean doSumOnDuplicates = true;
@@ -1382,7 +1382,7 @@ extends JComponent
 					String colValStr   = _tm.getValueAsObject(row, col) + "";
 					int jdbcColumnType = _tm.getSqlType(col);
 
-					_pipeCmd.addErrorMessage(type+": unhandled row="+row+" column["+col+"]='"+colName+"', with colValStr='"+colValStr+"', datatype["+jdbcColumnType+"]='"+ResultSetTableModel.getColumnJavaSqlTypeName(jdbcColumnType)+"'.");
+					_pipeCmd.addErrorMessage(type + ": unhandled row=" + row + " column[" + col + "]='" + colName + "', with colValStr='" + colValStr + "', datatype[" + jdbcColumnType + "]='" + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcColumnType) + "'.");
 				}
 				
 				// apply with duplicate detection
@@ -1398,7 +1398,7 @@ extends JComponent
 							if (_pipeCmd.isDebugEnabled())
 							{
 								String colName = _tm.getColumnName(col);
-								_pipeCmd.addDebugMessage(type+": DUPLICATE-KEY-EXISTS_DO-SUM: row="+row+" column["+col+"]='"+colName+"', rowKey='"+rowKey+"', with existingVal="+prevVal+", rowVal="+rowVal+", NEW-SUM-VALUE="+newVal+".");
+								_pipeCmd.addDebugMessage(type + ": DUPLICATE-KEY-EXISTS_DO-SUM: row=" + row + " column[" + col + "]='" + colName + "', rowKey='" + rowKey + "', with existingVal=" + prevVal + ", rowVal=" + rowVal + ", NEW-SUM-VALUE=" + newVal + ".");
 							}
 
 							if (doSumOnDuplicates)
@@ -1423,7 +1423,7 @@ extends JComponent
 			if (pivot)
 			{
 				String type = "MANY-ROW_and_MANY-COLS_and_PIVOT";
-				_pipeCmd.addInfoMessage(""+type+" --- STRATEGY: Applying SUM for all records in each column.");
+				_pipeCmd.addInfoMessage("" + type + " --- STRATEGY: Applying SUM for all records in each column.");
 				
 				// LOOP Columns
 				for (Integer col : valPosList)
@@ -1454,7 +1454,7 @@ extends JComponent
 							String colValStr   = _tm.getValueAsObject(row, col) + "";
 							int jdbcColumnType = _tm.getSqlType(col);
 
-							_pipeCmd.addErrorMessage(type+": unhandled row="+row+" column["+col+"]='"+colName+"', with colValStr='"+colValStr+"', datatype["+jdbcColumnType+"]='"+ResultSetTableModel.getColumnJavaSqlTypeName(jdbcColumnType)+"'.");
+							_pipeCmd.addErrorMessage(type + ": unhandled row=" + row + " column[" + col + "]='" + colName + "', with colValStr='" + colValStr + "', datatype[" + jdbcColumnType + "]='" + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcColumnType) + "'.");
 						}
 
 						// apply with duplicate detection.. do SUM on duplicates
@@ -1487,7 +1487,7 @@ extends JComponent
 			else
 			{
 				String type = "MANY-ROW_and_MANY-COLS_and_NOPIVOT";
-				_pipeCmd.addInfoMessage(""+type+" --- STRATEGY: Create ONE PIE Chart for each row");
+				_pipeCmd.addInfoMessage("" + type + " --- STRATEGY: Create ONE PIE Chart for each row");
 
 				Map<String, DefaultPieDataset> pieMap = new LinkedHashMap<>();
 
@@ -1507,7 +1507,7 @@ extends JComponent
 					}
 					else
 					{
-						_pipeCmd.addInfoMessage(type+"-KEY-EXISTS_DO-SUM: row="+row+", rowKey='"+rowKey+"', SUM will be done on all column values.");
+						_pipeCmd.addInfoMessage(type + "-KEY-EXISTS_DO-SUM: row=" + row + ", rowKey='" + rowKey + "', SUM will be done on all column values.");
 					}
 						
 					// LOOP Columns
@@ -1535,7 +1535,7 @@ extends JComponent
 							String colValStr   = _tm.getValueAsObject(row, col) + "";
 							int jdbcColumnType = _tm.getSqlType(col);
 
-							_pipeCmd.addErrorMessage(type+": unhandled row="+row+" column["+col+"]='"+colName+"', with colValStr='"+colValStr+"', datatype["+jdbcColumnType+"]='"+ResultSetTableModel.getColumnJavaSqlTypeName(jdbcColumnType)+"'.");
+							_pipeCmd.addErrorMessage(type + ": unhandled row=" + row + " column[" + col + "]='" + colName + "', with colValStr='" + colValStr + "', datatype[" + jdbcColumnType + "]='" + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcColumnType) + "'.");
 						}
 
 						// apply with duplicate detection.. do SUM on duplicates
@@ -1655,8 +1655,8 @@ extends JComponent
 		{
 			_pipeCmd.addDebugMessage("createTimeSeriesDataset()");
 //			_pipeCmd.addDebugMessage("pivot="+pivot);
-			_pipeCmd.addDebugMessage("rowCount="+rowCount);
-			_pipeCmd.addDebugMessage("colCount="+colCount);
+			_pipeCmd.addDebugMessage("rowCount=" + rowCount);
+			_pipeCmd.addDebugMessage("colCount=" + colCount);
 		}
 
 		// Get/Compose the KEY and Values Column List
@@ -1670,7 +1670,7 @@ extends JComponent
 			String colName     = _tm.getColumnName(tsKeyCol);
 			int jdbcColumnType = _tm.getSqlType(tsKeyCol);
 			
-			String msg = "ERROR: Invalid SQL, First column must be of a time/date/timestamp. colName='"+colName+"', jdbcColumnType="+jdbcColumnType+", jdbcColumnTypeStr='"+ResultSetTableModel.getColumnJavaSqlTypeName(jdbcColumnType)+"'.";
+			String msg = "ERROR: Invalid SQL, First column must be of a time/date/timestamp. colName='" + colName + "', jdbcColumnType=" + jdbcColumnType + ", jdbcColumnTypeStr='" + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcColumnType) + "'.";
 			_pipeCmd.addErrorMessage(msg);
 
 			throw new RuntimeException(msg);
@@ -1850,8 +1850,8 @@ extends JComponent
 		{
 			_pipeCmd.addDebugMessage("createGanttDataset()");
 //			_pipeCmd.addDebugMessage("pivot="+pivot);
-			_pipeCmd.addDebugMessage("rowCount="+rowCount);
-			_pipeCmd.addDebugMessage("colCount="+colCount);
+			_pipeCmd.addDebugMessage("rowCount=" + rowCount);
+			_pipeCmd.addDebugMessage("colCount=" + colCount);
 		}
 
 		// Get/Compose the KEY and Values Column List
@@ -1889,8 +1889,8 @@ extends JComponent
 			int    tsEndJdbcColumnType = _tm.getSqlType(   endTimeCol);
 			
 			String msg = "ERROR: Invalid SQL: \n"
-					+ " - First column must be of a time/date/timestamp. StartColName='"+tsStartColName+"', StartJdbcColumnType="+tsStartJdbcColumnType+", StartJdbcColumnTypeStr='"+ResultSetTableModel.getColumnJavaSqlTypeName(tsStartJdbcColumnType)+"'. \n"
-					+ " - Second column must be of a time/date/timestamp. EndColName='"+tsEndColName+"', EndJdbcColumnType="+tsEndJdbcColumnType+", EndJdbcColumnTypeStr='"+ResultSetTableModel.getColumnJavaSqlTypeName(tsEndJdbcColumnType)+"'. \n";
+					+ " - First column must be of a time/date/timestamp. StartColName='" + tsStartColName + "', StartJdbcColumnType=" + tsStartJdbcColumnType + ", StartJdbcColumnTypeStr='" + ResultSetTableModel.getColumnJavaSqlTypeName(tsStartJdbcColumnType) + "'. \n"
+					+ " - Second column must be of a time/date/timestamp. EndColName='" + tsEndColName + "', EndJdbcColumnType=" + tsEndJdbcColumnType + ", EndJdbcColumnTypeStr='" + ResultSetTableModel.getColumnJavaSqlTypeName(tsEndJdbcColumnType) + "'. \n";
 			_pipeCmd.addErrorMessage(msg);
 
 			throw new RuntimeException(msg);
@@ -1983,7 +1983,7 @@ extends JComponent
 				String colName     = _tm.getColumnName(col);
 				int jdbcColumnType = _tm.getSqlType(col); // starts at 0
 
-				_pipeCmd.addDebugMessage("Changed value using RegEx '"+removeRegEx+"' for row="+row+", col="+col+", colName='"+colName+"'. From '"+str+"' to '"+newStr+"'. Extra info: origin jdbcColumnType="+jdbcColumnType+", jdbcColumnTypeStr='"+ResultSetTableModel.getColumnJavaSqlTypeName(jdbcColumnType)+"'.");
+				_pipeCmd.addDebugMessage("Changed value using RegEx '" + removeRegEx + "' for row=" + row + ", col=" + col + ", colName='" + colName + "'. From '" + str + "' to '" + newStr + "'. Extra info: origin jdbcColumnType=" + jdbcColumnType + ", jdbcColumnTypeStr='" + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcColumnType) + "'.");
 			}
 			
 			// Assign the new value
@@ -1999,7 +1999,7 @@ extends JComponent
 			String colName     = _tm.getColumnName(col);
 			int jdbcColumnType = _tm.getSqlType(col); // starts at 0
 
-			_pipeCmd.addWarningMessage("Problems converting String to Double: Skipping row="+row+", col="+col+", colName='"+colName+"', colValStr='"+str+"', jdbcColumnType="+jdbcColumnType+", jdbcColumnTypeStr='"+ResultSetTableModel.getColumnJavaSqlTypeName(jdbcColumnType)+"'.");
+			_pipeCmd.addWarningMessage("Problems converting String to Double: Skipping row=" + row + ", col=" + col + ", colName='" + colName + "', colValStr='" + str + "', jdbcColumnType=" + jdbcColumnType + ", jdbcColumnTypeStr='" + ResultSetTableModel.getColumnJavaSqlTypeName(jdbcColumnType) + "'.");
 			
 			return null;
 		}

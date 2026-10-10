@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -235,7 +235,7 @@ public class JavaVersion
 		{
 			System.out.println("");
 			System.out.println("===============================================================");
-			System.out.println(" This application needs a runtime Java "+checkForVersion+" or higher.");
+			System.out.println(" This application needs a runtime Java " + checkForVersion + " or higher.");
 			System.out.println(" Current 'java.version' = " + System.getProperty("java.version"));
 			System.out.println(" which is parsed into the Java (major) Version Number: " + JavaVersion.getMajor());
 			System.out.println("---------------------------------------------------------------");

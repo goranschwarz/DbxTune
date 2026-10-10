@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -186,7 +186,7 @@ extends PostgresAbstract
 		}
 		catch(Exception ex)
 		{
-			_logger.warn("Problems getting ASE Page Size from DDL Storage. Using 2K Pages as the default. asePageSizeDivDec=" + asePageSizeDivDec + ", asePageSizeDivInt="+asePageSizeDivInt, ex);
+			_logger.warn("Problems getting ASE Page Size from DDL Storage. Using 2K Pages as the default. asePageSizeDivDec=" + asePageSizeDivDec + ", asePageSizeDivInt=" + asePageSizeDivInt, ex);
 		}
 
 		//-------------------------------------------------------

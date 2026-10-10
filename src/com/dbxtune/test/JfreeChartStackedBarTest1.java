@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -128,7 +128,7 @@ public class JfreeChartStackedBarTest1 extends ApplicationFrame
 				LegendItemCollection xxx = super.getLegendItems();
 				for (int i = 0; i < xxx.getItemCount(); i++)
 				{
-					System.out.println("------ getLegendItems() ----- ["+i+"]="+xxx.get(i).getLabel());
+					System.out.println("------ getLegendItems() ----- [" + i + "]=" + xxx.get(i).getLabel());
 				}
 				
 //				LegendItemCollection zzz = new LegendItemCollection();

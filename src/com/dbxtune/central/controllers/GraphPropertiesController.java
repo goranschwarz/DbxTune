@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -100,7 +100,7 @@ extends HttpServlet
 				{
 					if ( ! reader.hasServerSession(name) )
 					{
-						resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Session/Server name '"+name+"' do not exist in the DBX Central Database.");
+						resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Session/Server name '" + name + "' do not exist in the DBX Central Database.");
 						return;
 					}
 
@@ -116,8 +116,8 @@ extends HttpServlet
 		}
 		catch (Exception e)
 		{
-			_logger.info("Problem accessing DBMS or writing JSON, Caught: "+e, e);
-			throw new ServletException("Problem accessing db or writing JSON, Caught: "+e, e);
+			_logger.info("Problem accessing DBMS or writing JSON, Caught: " + e, e);
+			throw new ServletException("Problem accessing db or writing JSON, Caught: " + e, e);
 		}
 		
 		out.println(payload);

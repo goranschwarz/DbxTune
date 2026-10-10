@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -55,7 +55,7 @@ classpathList.add(0, "C:/projects/AseTune/lib/DDLGen.jar");
 //classpathList.add(0, "C:/projects/AseTune/lib/DDLGen_1501.jar");
 //classpathList.add(0, "C:/projects/AseTune/lib/jconn3.jar");
 		classpath = StringUtil.toCommaStr(classpathList, System.getProperty("path.separator"));
-System.out.println("classpath: "+classpath);
+System.out.println("classpath: " + classpath);
 
 		
 		List<String> pbCmd = new ArrayList<String>();
@@ -66,19 +66,19 @@ System.out.println("classpath: "+classpath);
 		for (String param : args)
 			pbCmd.add(param);
 
-		System.out.println("exec: "+pbCmd);
+		System.out.println("exec: " + pbCmd);
 		ProcessBuilder builder = new ProcessBuilder(pbCmd);
 //		builder.redirectErrorStream(true); // redirect stderr to stdout
 		Process process = builder.start();
 		process.waitFor();
 		int osRetCode = process.exitValue();
-		System.out.println("genDdl.osRetcode="+osRetCode);
+		System.out.println("genDdl.osRetcode=" + osRetCode);
 
 		String stdout = readStream(process.getInputStream());
 		String stderr = readStream(process.getErrorStream());
 
-		System.out.println("genDdl.stdout=|||"+stdout+"|||");
-		System.out.println("genDdl.stderr=|||"+stderr+"|||");
+		System.out.println("genDdl.stdout=|||" + stdout + "|||");
+		System.out.println("genDdl.stderr=|||" + stderr + "|||");
 
 		return stdout;
 	}

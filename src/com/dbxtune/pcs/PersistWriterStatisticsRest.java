@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -43,11 +43,11 @@ extends PersistWriterStatistics
 	public String getStatisticsString()
 	{
 		return 
-			  "lastCrJsonTimeInMs="+ _lastCrJsonTimeInMs
+			  "lastCrJsonTimeInMs=" + _lastCrJsonTimeInMs
 			+ ", avgCrJsonTimeInMs=" + ( _crJsonCount == 0 ? "na" : _sumCrJsonTimeInMs/_crJsonCount ) 
 			+ ", maxCrJsonTimeInMs=" + _maxCrJsonTimeInMs 
 			+ ", crJsonCount=" + _crJsonCount
-			+ ", lastSendTimeInMs="+ _lastSendTimeInMs
+			+ ", lastSendTimeInMs=" + _lastSendTimeInMs
 			+ ", avgSendTimeInMs=" + ( _sendCount == 0 ? "na" : _sumSendTimeInMs/_sendCount ) 
 			+ ", maxSendTimeInMs=" + _maxSendTimeInMs 
 			+ ", sendCount=" + _sendCount

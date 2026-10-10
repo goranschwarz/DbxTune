@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -130,13 +130,13 @@ public class SshTunnelInfo
 	{
 		LinkedHashMap<String, String> cfg = new LinkedHashMap<String, String>();
 		
-		cfg.put("isLocalPortGenerated", isLocalPortGenerated()+"");
-		cfg.put("LocalPort",            (isLocalPortGenerated() ? -1 : getLocalPort())+"");
+		cfg.put("isLocalPortGenerated", isLocalPortGenerated() + "");
+		cfg.put("LocalPort",            (isLocalPortGenerated() ? -1 : getLocalPort()) + "");
 		cfg.put("LocalHost",            getLocalHost());
 		cfg.put("DestHost",             getDestHost());
-		cfg.put("DestPort",             getDestPort()+"");
+		cfg.put("DestPort",             getDestPort() + "");
 		cfg.put("SshHost",              getSshHost());
-		cfg.put("SshPort",              getSshPort()+"");
+		cfg.put("SshPort",              getSshPort() + "");
 		cfg.put("SshUsername",          getSshUsername());
 		cfg.put("SshPassword",          hidePasswd ? "**secret**" : passwdInPlainText ? getSshPassword() : Configuration.encryptPropertyValue("SshPassword", getSshPassword()));
 		cfg.put("SshKeyFile",           getSshKeyFile());

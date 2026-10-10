@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -66,7 +66,7 @@ extends CompletionProviderAbstract
 
 	public static CompletionProviderAbstract installAutoCompletion(TextEditorPane textPane, RTextScrollPane scroll, ErrorStrip errorStrip, Window window, ConnectionProvider connectionProvider)
 	{
-		_logger.info("Installing Syntax and AutoCompleation for Sybase Replication Agent X ("+AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_RCL+").");
+		_logger.info("Installing Syntax and AutoCompleation for Sybase Replication Agent X (" + AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_RCL + ").");
 		textPane.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_RCL);
 //		textPane.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
 
@@ -510,7 +510,7 @@ extends CompletionProviderAbstract
 						if (params.equals("(none)"))
 							params = "";
 						else
-							params = " "+params;
+							params = " " + params;
 							
 						RaxInfo raxInfo = new RaxInfo();
 						raxInfo._name        = cmd + params;
@@ -531,7 +531,7 @@ extends CompletionProviderAbstract
 				}
 				catch (SQLException sqle)
 				{
-					_logger.info("Problems when getting COMMAND dictionary, skipping this and continuing. Caught: "+sqle);
+					_logger.info("Problems when getting COMMAND dictionary, skipping this and continuing. Caught: " + sqle);
 				}
 				
 
@@ -563,12 +563,12 @@ extends CompletionProviderAbstract
 				ri._name,
 				! quoteNames 
 					? ri._name 
-					: "\""+ri._name+"\"");
+					: "\"" + ri._name + "\"");
 
 			_raxInfo = ri;
 
 			String shortDesc = 
-				"<font color=\"blue\">"+ri._type+"</font>" +
+				"<font color=\"blue\">" + ri._type + "</font>" +
 //				" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(ri._desc) ? "No Description" : ri._desc) + "</font></i>";
 				" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(ri._desc) ? "" : ri._desc) + "</font></i>";
 			setShortDescription(shortDesc);

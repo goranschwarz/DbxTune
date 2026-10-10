@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -66,7 +66,7 @@ public class DictCompression
 					return type;
 			}
 
-			throw new IllegalArgumentException("Unknown DigestType '" + text + "' found, possible values: "+StringUtil.toCommaStr(DigestType.values()));
+			throw new IllegalArgumentException("Unknown DigestType '" + text + "' found, possible values: " + StringUtil.toCommaStr(DigestType.values()));
 		}
 	};
 

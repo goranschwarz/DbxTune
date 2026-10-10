@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -259,13 +259,13 @@ extends SqlStatementAbstract
 
 		try
 		{
-			setProgressState("Connecting to host '"+_params._hostName+"' as '"+_params._loginName+"' using SSH.");
+			setProgressState("Connecting to host '" + _params._hostName + "' as '" + _params._loginName + "' using SSH.");
 			sshConn = new SshConnection(_params._hostName, _params._portNumber, _params._loginName, _params._password, _params._identity);
 //			sshConn.setWaitForDialog(this.);
 			sshConn.setGuiOwner(_owner);
 			sshConn.connect();
 				
-			setProgressState("Executing cmd: "+_params._cmd);
+			setProgressState("Executing cmd: " + _params._cmd);
 			String retStr = sshConn.execCommandOutputAsStr(_params._cmd);
 			
 			if (StringUtil.hasValue(retStr))
@@ -290,10 +290,10 @@ extends SqlStatementAbstract
 //			if (ddlgen != null)
 //				_resultCompList.add(new JAseMessage(_params._cmd, _originCmd));
 
-			_logger.warn("Problems when Executing SSH Command: cmd="+_params._cmd+", Caught="+ex, ex);
+			_logger.warn("Problems when Executing SSH Command: cmd=" + _params._cmd + ", Caught=" + ex, ex);
 			SwingUtils.showErrorMessage(null, "Problems Executing SSH Command", 
 					"<html>Problems when Executing SSH Command:<br>"
-					+ "cmd="+_params._cmd+"<br>"
+					+ "cmd=" + _params._cmd + "<br>"
 					+ "<br>"
 					+ ex
 					+ "</html>", ex);

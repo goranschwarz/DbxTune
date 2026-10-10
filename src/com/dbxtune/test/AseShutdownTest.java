@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -80,7 +80,7 @@ public class AseShutdownTest
 				errStr += sqle.getMessage() + " ";
 				sqle = sqle.getNextException();
 			}
-			System.out.println("Failed to execute 'set quoted_identifier off' when connecting. Problem: "+errStr);
+			System.out.println("Failed to execute 'set quoted_identifier off' when connecting. Problem: " + errStr);
 		}
 
 		_conn = conn;
@@ -125,7 +125,7 @@ public class AseShutdownTest
 			}
 			rs.close();
 
-			System.out.println("crdate='"+crdate+"'.");
+			System.out.println("crdate='" + crdate + "'.");
 
 			boolean aseInShutdown = false;
 			SQLWarning w = stmnt.getWarnings();
@@ -134,11 +134,11 @@ public class AseShutdownTest
 				// Msg=6002: A SHUTDOWN command is already in progress. Please log off.
 				if (w.getErrorCode() == 6002)
 				{
-					System.out.println("======SQLWarning: Msg="+w.getErrorCode()+", str='"+w.getMessage()+"', sqlState="+w.getSQLState()+", class="+w.getClass().getName());
+					System.out.println("======SQLWarning: Msg=" + w.getErrorCode() + ", str='" + w.getMessage() + "', sqlState=" + w.getSQLState() + ", class=" + w.getClass().getName());
 					aseInShutdown = true;
 					break;
 				}
-				System.out.println("SQLWarning: Msg="+w.getErrorCode()+", str='"+w.getMessage()+"', sqlState="+w.getSQLState()+", class="+w.getClass().getName());
+				System.out.println("SQLWarning: Msg=" + w.getErrorCode() + ", str='" + w.getMessage() + "', sqlState=" + w.getSQLState() + ", class=" + w.getClass().getName());
 				
 				w = w.getNextWarning();
 			}
@@ -147,7 +147,7 @@ public class AseShutdownTest
 		}
 		catch (SQLException e)
 		{
-			System.err.println("Msg="+e.getErrorCode()+", sqlState="+e.getSQLState()+", class="+e.getClass().getName());
+			System.err.println("Msg=" + e.getErrorCode() + ", sqlState=" + e.getSQLState() + ", class=" + e.getClass().getName());
 			e.printStackTrace();
 		}
 	}
@@ -165,13 +165,13 @@ public class AseShutdownTest
 		if (args.length > 2) user = args[2];
 		if (args.length > 3) pawd = args[3];
 
-		System.out.println("host = '"+host+"'");
-		System.out.println("port = '"+port+"'");
-		System.out.println("user = '"+user+"'");
-		System.out.println("pwd  = '"+pawd+"'");
+		System.out.println("host = '" + host + "'");
+		System.out.println("port = '" + port + "'");
+		System.out.println("user = '" + user + "'");
+		System.out.println("pwd  = '" + pawd + "'");
 		
 		String jdbcDriver    = "com.sybase.jdbc42.jdbc.SybDriver";
-		String jdbcUrl       = "jdbc:sybase:Tds:"+host+":"+port;
+		String jdbcUrl       = "jdbc:sybase:Tds:" + host + ":" + port;
 		String jdbcUser      = user;
 		String jdbcPasswd    = pawd;
 		Properties jdbcProps = null;

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -70,14 +70,14 @@ public class AseSpConfigureDictionary
 			return rec._description;
 
 		// Compose an empty one
-		return "sp_configure option '"+name+"' not found in dictionary.";
+		return "sp_configure option '" + name + "' not found in dictionary.";
 	}
 
 
 	private void set(SpConfigureRecord rec)
 	{
 		if ( _entries.containsKey(rec._name))
-			System.out.println("sp_configure option '"+rec._name+"' already exists. It will be overwritten.");
+			System.out.println("sp_configure option '" + rec._name + "' already exists. It will be overwritten.");
 
 		_entries.put(rec._name.toLowerCase(), rec);
 	}

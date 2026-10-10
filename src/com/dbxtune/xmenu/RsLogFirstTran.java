@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -67,7 +67,7 @@ extends XmenuActionBase
 		{
 			String dsdb = infoCol.substring(infoCol.indexOf(" ")).trim().replace(".", ", ");
 			
-			String rcl = "sysadmin log_first_tran, "+dsdb;
+			String rcl = "sysadmin log_first_tran, " + dsdb;
 
 			try
 			{
@@ -85,12 +85,12 @@ extends XmenuActionBase
 			}
 			catch (SQLException ex)
 			{
-				SwingUtils.showErrorMessage(getOwner(), "Problem", "Problems executing '"+rcl+"'.", ex);
+				SwingUtils.showErrorMessage(getOwner(), "Problem", "Problems executing '" + rcl + "'.", ex);
 			}
 		}
 		else
 		{
-			SwingUtils.showInfoMessage(getOwner(), "Not supported", "Resume for '"+nameCol+"' is not supported, only 'DSI' and 'DSI EXEC' threads are possible.");
+			SwingUtils.showInfoMessage(getOwner(), "Not supported", "Resume for '" + nameCol + "' is not supported, only 'DSI' and 'DSI EXEC' threads are possible.");
 			return;
 		}
 	}

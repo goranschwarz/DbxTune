@@ -599,7 +599,7 @@ public class GTabbedPane
 		
 					if ( name.equals(mi.getName()) )
 					{
-						_logger.debug("Found JMenuItem for name '"+name+"'.");
+						_logger.debug("Found JMenuItem for name '" + name + "'.");
 						return mi;
 					}
 				}
@@ -633,13 +633,13 @@ public class GTabbedPane
 	}
 	private JMenu getMenuNamed(JMenu menu, String name)
 	{
-		_logger.trace("getMenuNamed(): name='"+name+"', jmenu.getName()='"+menu.getName()+"'.");
+		_logger.trace("getMenuNamed(): name='" + name + "', jmenu.getName()='" + menu.getName() + "'.");
 		if ( name.equals(menu.getName()) )
 		{
-			_logger.debug("Found JMenu for name '"+name+"'.");
+			_logger.debug("Found JMenu for name '" + name + "'.");
 			return menu;
 		}
-		_logger.trace("getMenuNamed(): name='"+name+"', menu.getMenuComponentCount()='"+menu.getMenuComponentCount()+"'.");
+		_logger.trace("getMenuNamed(): name='" + name + "', menu.getMenuComponentCount()='" + menu.getMenuComponentCount() + "'.");
 		for (int i=0; i<menu.getMenuComponentCount(); i++)
 		{
 			Component comp = menu.getMenuComponent(i);
@@ -894,12 +894,12 @@ public class GTabbedPane
 //	}
 	private void windowOpenClose(int viewIndex)
 	{
-		_logger.debug("windowOpenClose(viewIndex="+viewIndex+"): title='"+getTitleAt(viewIndex)+"'.");
+		_logger.debug("windowOpenClose(viewIndex=" + viewIndex + "): title='" + getTitleAt(viewIndex) + "'.");
 
 		TabExtendedEntry xe = getViewExtendedEntry(viewIndex);
 		if (xe == null)
 		{
-			_logger.debug("windowOpenClose(viewIndex="+viewIndex+"): title='"+getTitleAt(viewIndex)+"'. NO TabExtendedEntry WAS FOUND, leaving method at top.");
+			_logger.debug("windowOpenClose(viewIndex=" + viewIndex + "): title='" + getTitleAt(viewIndex) + "'. NO TabExtendedEntry WAS FOUND, leaving method at top.");
 			return;
 		}
 
@@ -911,7 +911,7 @@ public class GTabbedPane
 				if ( ! allowed )
 				{
 					JOptionPane.showMessageDialog(this, 
-							"The tab named '"+xe._tabName+"' Can't be UnDocked.\n" +
+							"The tab named '" + xe._tabName + "' Can't be UnDocked.\n" +
 								"The decision for this was taken by the underlying component.",
 							"Un Dock", JOptionPane.INFORMATION_MESSAGE);
 					return;
@@ -1010,12 +1010,12 @@ public class GTabbedPane
 					public void windowClosing(WindowEvent e)
 					{
 						String name = e.getWindow().getName();
-						_logger.debug("FRAME.windowClosing: name = '"+name+"'.");
+						_logger.debug("FRAME.windowClosing: name = '" + name + "'.");
 
 						TabExtendedEntry xe = getExtendedEntry(name);
 						if (xe == null)
 						{
-							_logger.info("The internal ExtendedEntry for '"+name+"' Can't be found. Can't undock the window...");
+							_logger.info("The internal ExtendedEntry for '" + name + "' Can't be found. Can't undock the window...");
 						}
 						else
 						{
@@ -1086,7 +1086,7 @@ public class GTabbedPane
 				if ( ! allowed )
 				{
 					JOptionPane.showMessageDialog(this, 
-							"The tab named '"+xe._tabName+"' Can't be Docked.\n" +
+							"The tab named '" + xe._tabName + "' Can't be Docked.\n" +
 								"The decision for this was taken by the underlying component.",
 							"Dock", JOptionPane.INFORMATION_MESSAGE);
 					return;
@@ -1108,7 +1108,7 @@ public class GTabbedPane
 	*/
 	private TabExtendedEntry getViewExtendedEntry(int viewIndex)
 	{
-		_logger.trace("getViewExtendedEntry(index="+viewIndex+"), _extEntry.size() = "+_extEntry.size());
+		_logger.trace("getViewExtendedEntry(index=" + viewIndex + "), _extEntry.size() = " + _extEntry.size());
 
 		for (Enumeration iter = _extEntry.elements(); iter.hasMoreElements();)
         {
@@ -1122,15 +1122,15 @@ public class GTabbedPane
 
 			if (xe != null)
 			{
-				_logger.debug("getViewExtendedEntry(viewIndex="+viewIndex+") - xe._saveName='"+xe._tabName+"'.");
+				_logger.debug("getViewExtendedEntry(viewIndex=" + viewIndex + ") - xe._saveName='" + xe._tabName + "'.");
 		        if (xe._tabIndex == viewIndex)
 		        {
-		        	_logger.debug("getViewExtendedEntry(viewIndex="+viewIndex+") - FOUND ENTRY: "+xe);
+		        	_logger.debug("getViewExtendedEntry(viewIndex=" + viewIndex + ") - FOUND ENTRY: " + xe);
 		        	return xe;
 		        }
 			}
         }
-    	_logger.debug("getViewExtendedEntry(viewIndex="+viewIndex+") - NOT FOUND -");
+    	_logger.debug("getViewExtendedEntry(viewIndex=" + viewIndex + ") - NOT FOUND -");
 		return null; 
 	}
 
@@ -1146,7 +1146,7 @@ public class GTabbedPane
 		else
 			xe = (TabExtendedEntry) o;
 		
-		_logger.trace("getModelExtendedEntry(modelIndex="+modelIndex+"), found entry("+(o instanceof UndockedTabHolder ? "UndockedTabHolder" : "TabExtendedEntry")+"): "+xe);
+		_logger.trace("getModelExtendedEntry(modelIndex=" + modelIndex + "), found entry(" + (o instanceof UndockedTabHolder ? "UndockedTabHolder" : "TabExtendedEntry") + "): " + xe);
 		return xe;
 	}
 
@@ -1162,15 +1162,15 @@ public class GTabbedPane
 			else
 				xe = (TabExtendedEntry) o;
 
-			_logger.debug("getExtendedEntryIndex(name='"+name+"') - xe._saveName='"+xe._tabName+"'.");
+			_logger.debug("getExtendedEntryIndex(name='" + name + "') - xe._saveName='" + xe._tabName + "'.");
 	        if (name.equals(xe._tabName))
 	        {
-	        	_logger.debug("getExtendedEntryIndex(name='"+name+"') - FOUND ENTRY: "+xe);
+	        	_logger.debug("getExtendedEntryIndex(name='" + name + "') - FOUND ENTRY: " + xe);
 //	        	return xe._tabIndex;
 	        	return xe._modelIndex;
 	        }
         }
-    	_logger.debug("getExtendedEntryIndex(name='"+name+"') - NOT FOUND -");
+    	_logger.debug("getExtendedEntryIndex(name='" + name + "') - NOT FOUND -");
 		return -1; 
 	}
 
@@ -1195,15 +1195,15 @@ public class GTabbedPane
 
 			if (xe != null)
 			{
-				_logger.debug("getExtendedEntry(name='"+name+"') - xe._saveName='"+xe._tabName+"'.");
+				_logger.debug("getExtendedEntry(name='" + name + "') - xe._saveName='" + xe._tabName + "'.");
 		        if (name.equals(xe._tabName))
 		        {
-		        	_logger.debug("getExtendedEntry(name='"+name+"') - FOUND ENTRY: "+xe);
+		        	_logger.debug("getExtendedEntry(name='" + name + "') - FOUND ENTRY: " + xe);
 		        	return xe;
 		        }
 			}
         }
-    	_logger.debug("getExtendedEntry(name='"+name+"') - NOT FOUND -");
+    	_logger.debug("getExtendedEntry(name='" + name + "') - NOT FOUND -");
 		return null; 
 	}
 
@@ -1334,7 +1334,7 @@ public class GTabbedPane
 		int modelIndex = tp.getModelExtendedEntryIndex(tabName);
 		if (modelIndex < 0)
 		{
-			_logger.warn("setVisibleAtModel(parentName='"+parentName+"', tabName='"+tabName+"', toVisible="+toVisible+") Couldn't find tabName. modelIndex="+modelIndex);
+			_logger.warn("setVisibleAtModel(parentName='" + parentName + "', tabName='" + tabName + "', toVisible=" + toVisible + ") Couldn't find tabName. modelIndex=" + modelIndex);
 			return; // FIXME: maybe throw an exception here
 		}
 		tp.setVisibleAtModel(modelIndex, toVisible);
@@ -1344,7 +1344,7 @@ public class GTabbedPane
 		int modelIndex = getModelExtendedEntryIndex(tabName);
 		if (modelIndex < 0)
 		{
-			_logger.warn("setVisibleAtModel(tabName='"+tabName+"', toVisible="+toVisible+") Couldn't find tabName. modelIndex="+modelIndex);
+			_logger.warn("setVisibleAtModel(tabName='" + tabName + "', toVisible=" + toVisible + ") Couldn't find tabName. modelIndex=" + modelIndex);
 			return; // FIXME: maybe throw an exception here
 		}
 		setVisibleAtModel(modelIndex, toVisible);
@@ -1458,7 +1458,7 @@ public class GTabbedPane
 		int modelIndex = getModelExtendedEntryIndex(tabName);
 		if (modelIndex < 0)
 		{
-			_logger.warn("isVisibleAtModel(tabName='"+tabName+"') Couldn't find tabName. modelIndex="+modelIndex);
+			_logger.warn("isVisibleAtModel(tabName='" + tabName + "') Couldn't find tabName. modelIndex=" + modelIndex);
 			return false; // FIXME: maybe throw an exception here
 		}
 		return isVisibleAtModel(modelIndex);
@@ -1558,7 +1558,7 @@ public class GTabbedPane
 //		return getComponentAtModel(modelIndex).getForeground();
 		TabExtendedEntry xe = getModelExtendedEntry(modelIndex);
 		if (xe == null)
-			throw new RuntimeException("TabExtendedEntry was null for model index "+modelIndex);
+			throw new RuntimeException("TabExtendedEntry was null for model index " + modelIndex);
 		if ( ! xe._isVisible )
 			return xe.getBackground();
 
@@ -1713,7 +1713,7 @@ public class GTabbedPane
 	public void setTabOrder(List<String> newTabOrder)
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("New tab order START: "+newTabOrder);
+			_logger.debug("New tab order START: " + newTabOrder);
 
 		// Grab current tab order, and add the ones that are not included in input 'newTabOrder'
 		List<String> currentTabOrder = getTabOrder();
@@ -1721,7 +1721,7 @@ public class GTabbedPane
 		newTabOrder.addAll(currentTabOrder);
 
 		if (_logger.isDebugEnabled())
-			_logger.debug("New tab order FIXED: "+newTabOrder);
+			_logger.debug("New tab order FIXED: " + newTabOrder);
 
 		// remove ChangeListener(s) while we delete/inserts the tables, then restore them again
 		ChangeListener[] saveListeners = getChangeListeners();
@@ -1745,7 +1745,7 @@ public class GTabbedPane
 				TabExtendedEntry xe = getExtendedEntry(tabName);
 				if (xe == null)
 				{
-					_logger.info("Can't find tab named '"+tabName+"' in the current tab pane, skipping this one when setting tab order.");
+					_logger.info("Can't find tab named '" + tabName + "' in the current tab pane, skipping this one when setting tab order.");
 				}
 				else
 				{
@@ -1759,7 +1759,7 @@ public class GTabbedPane
 		}
 		catch(Throwable t)
 		{
-			_logger.warn("While remove/restoring all the tabs an Exception occurred, which will be discarded. Now I will restore all ChangeListeners. Caught: "+t, t);
+			_logger.warn("While remove/restoring all the tabs an Exception occurred, which will be discarded. Now I will restore all ChangeListeners. Caught: " + t, t);
 		}
 		finally
 		{
@@ -1849,9 +1849,9 @@ public class GTabbedPane
 
 		if (_logger.isTraceEnabled())
 		{
-			_logger.trace("setTabOrderAndVisibility(List): showTabs="+showTabs);
-			_logger.trace("setTabOrderAndVisibility(List): tabOrder="+tabOrder);
-			_logger.trace("setTabOrderAndVisibility(List): hideTabs="+hideTabs);
+			_logger.trace("setTabOrderAndVisibility(List): showTabs=" + showTabs);
+			_logger.trace("setTabOrderAndVisibility(List): tabOrder=" + tabOrder);
+			_logger.trace("setTabOrderAndVisibility(List): hideTabs=" + hideTabs);
 		}
 
 		// now make the actions
@@ -2039,14 +2039,14 @@ public class GTabbedPane
 	@Override
 	public void insertTab(String title, Icon icon, Component component, String tip, final int index)
 	{
-		_logger.trace("insertTab(title, icon, comp, tip, index): index="+index+", title="+title+", icon='"+icon+"', component="+component+", tip="+tip);
+		_logger.trace("insertTab(title, icon, comp, tip, index): index=" + index + ", title=" + title + ", icon='" + icon + "', component=" + component + ", tip=" + tip);
 
 		// Write warning message if the title is already in the Map
 //FIXME: This needs to be on a "global" level... or really: think this true a bit more... or check all the "sub GTabbedPanes as well"
 		Component compExist = getComponentAtTitle(title, true);
 		if (compExist != null)
 		{
-			_logger.warn("The title '"+title+"' is already added by this TabbedPane or any sub TabbedPane(s). It holds the following Component: "+compExist, new Exception("The title '"+title+"' has already been inserted in his GTabbedPane"));
+			_logger.warn("The title '" + title + "' is already added by this TabbedPane or any sub TabbedPane(s). It holds the following Component: " + compExist, new Exception("The title '" + title + "' has already been inserted in his GTabbedPane"));
 		}
 //		_titlesMap.put(title, component);
 
@@ -2176,7 +2176,7 @@ public class GTabbedPane
 	@Override
 	public void removeTabAt(int viewIndex)
 	{
-		_logger.trace("removeTabAt(index): viewIndex="+viewIndex);
+		_logger.trace("removeTabAt(index): viewIndex=" + viewIndex);
 
 //printExtendedEntryTable("BEFORE: ");
 		Component component = getComponentAt(viewIndex);
@@ -2193,7 +2193,7 @@ public class GTabbedPane
 //			TabExtendedEntry xeAtViewIndex = getViewExtendedEntry(viewIndex);
 //			xeAtViewIndex._lastViewIndex = viewIndex;
 
-			_logger.trace("removeTabAt(index): viewIndex="+viewIndex+", comp='"+component.getClass().getName()+"', REMOVING TabExtendedEntry.");
+			_logger.trace("removeTabAt(index): viewIndex=" + viewIndex + ", comp='" + component.getClass().getName() + "', REMOVING TabExtendedEntry.");
 			_extEntry.removeElementAt(viewIndex);
 
 			fixTabExtendedEntry();
@@ -2597,14 +2597,14 @@ public class GTabbedPane
 					{ 
 						if ( isEnabledAt(tabIndex) )
 						{
-							_logger.debug("SINGLE-RIGHT-CLICK: OVER ENABLED TAB: "+tabName);
+							_logger.debug("SINGLE-RIGHT-CLICK: OVER ENABLED TAB: " + tabName);
 							setEnabledX(dock,   false);
 							setEnabledX(undock, true);
 							setEnabledX(ontop,  false);
 						}
 						else
 						{
-							_logger.debug("SINGLE-RIGHT-CLICK: OVER UN-ENABLED TAB: "+tabName);
+							_logger.debug("SINGLE-RIGHT-CLICK: OVER UN-ENABLED TAB: " + tabName);
 							setEnabledX(dock,   true);
 							setEnabledX(undock, false);
 							setEnabledX(ontop,  true);
@@ -2650,7 +2650,7 @@ public class GTabbedPane
 												// windowOpenClose(index);
 											}
 										}
-										_logger.debug("GOTO: "+mi.getText());
+										_logger.debug("GOTO: " + mi.getText());
 									}
 								}
 							});
@@ -2698,7 +2698,7 @@ public class GTabbedPane
 			// SINGLE click
 			if (e.getClickCount() == 1)
 			{
-				_logger.debug("GTabbedPane.MouseListener: SINGLE-Click on index="+tabIndex+", name='"+tabName+"', tabComp="+tabComp);
+				_logger.debug("GTabbedPane.MouseListener: SINGLE-Click on index=" + tabIndex + ", name='" + tabName + "', tabComp=" + tabComp);
 
 				// If the tab is expanded into its own window: show the window
 				if ( tabComp instanceof  UndockedTabHolder )
@@ -2717,7 +2717,7 @@ public class GTabbedPane
 					String className = "";
 					if (tabComp != null)
 						className = tabComp.getClass().getName();
-					_logger.debug("GTabbedPane.MouseListener: DOUBLE-Click on index="+tabIndex+", name='"+tabName+"', tabCompClassName='"+className+"', tabComp="+tabComp);
+					_logger.debug("GTabbedPane.MouseListener: DOUBLE-Click on index=" + tabIndex + ", name='" + tabName + "', tabCompClassName='" + className + "', tabComp=" + tabComp);
 				}
 
 				// If we double clicked on UndockedTabHolder, then dock window
@@ -2752,10 +2752,10 @@ public class GTabbedPane
 				if (tabName != null)
 				{
 					JOptionPane.showMessageDialog(this, 
-						"The tab named '"+tabName+"' Can't be UnDocked.\n" +
+						"The tab named '" + tabName + "' Can't be UnDocked.\n" +
 						"It needs to be a JPanel, JScrollPane or implements the interface 'DockUndockManagement'.\n" +
 						"\n" +
-						"Current class name is '"+tabComp.getClass().getName()+"'.", 
+						"Current class name is '" + tabComp.getClass().getName() + "'.", 
 						"UnDock", JOptionPane.ERROR_MESSAGE);
 					return;
 				}
@@ -2808,13 +2808,13 @@ public class GTabbedPane
 		@Override
 		public String getText()
 		{
-			return "The content for the tab '"+_tabName+"' is undocked.";
+			return "The content for the tab '" + _tabName + "' is undocked.";
 		}
 		
 		@Override
 		public String toString()
 		{
-			return "_tabIndex="+_tabIndex+", _modelIndex="+_modelIndex+", _rmBeforeTab="+_rmBeforeTab+", _isVisible="+_isVisible+", _isDocked="+_isDocked+", _tabName='"+_tabName+"', _icon='"+_icon+"', _comp="+_comp;
+			return "_tabIndex=" + _tabIndex + ", _modelIndex=" + _modelIndex + ", _rmBeforeTab=" + _rmBeforeTab + ", _isVisible=" + _isVisible + ", _isDocked=" + _isDocked + ", _tabName='" + _tabName + "', _icon='" + _icon + "', _comp=" + _comp;
 		}
 	}
 

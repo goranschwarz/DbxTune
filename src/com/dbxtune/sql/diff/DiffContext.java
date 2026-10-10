@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -276,12 +276,12 @@ public class DiffContext
 		// Check Column Count
 		//---------------------------------------------------
 		if (_leftDt.getColumnCount() != _rightDt.getColumnCount())
-			throw new DiffException("Number of columns on the left and right side is not equal. Left table '"+_leftDt.getFullTableName()+"', Right table '"+_rightDt.getFullTableName()+"'.\n" 
+			throw new DiffException("Number of columns on the left and right side is not equal. Left table '" + _leftDt.getFullTableName() + "', Right table '" + _rightDt.getFullTableName() + "'.\n" 
 					+ getErrorColumnInfo(getLeftDt()) + "\n" 
 					+ getErrorColumnInfo(getRightDt()) );
 		
 		if (isTraceEnabled())
-			addTraceMessage("left_ColCount="+_leftDt.getColumnCount()+", left_ColCount="+_rightDt.getColumnCount());
+			addTraceMessage("left_ColCount=" + _leftDt.getColumnCount() + ", left_ColCount=" + _rightDt.getColumnCount());
 		
 		// If no PK was specified, then get it from the LEFT DiffTable
 		if (getPkColumns() == null)
@@ -395,7 +395,7 @@ public class DiffContext
 	{
 		String colDesc = "";
 		for (int c=0; c<dt.getColumnCount(); c++)
-			colDesc += "col["+c+"]={name='" + dt.getColumnNames().get(c) + "', jdbcDataType=" + ResultSetTableModel.getColumnJavaSqlTypeName(dt.getJdbcDataTypes().get(c)) + "}, ";
+			colDesc += "col[" + c + "]={name='" + dt.getColumnNames().get(c) + "', jdbcDataType=" + ResultSetTableModel.getColumnJavaSqlTypeName(dt.getJdbcDataTypes().get(c)) + "}, ";
 		
 		colDesc = colDesc.substring(0, colDesc.length() - 2);
 		

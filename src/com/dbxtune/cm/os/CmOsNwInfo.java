@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -57,7 +57,7 @@ extends CounterModelHostMonitor
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_HOST_MONITOR;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -74,7 +74,7 @@ extends CounterModelHostMonitor
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmOsNwInfo(counterController, guiController);
 	}
@@ -131,7 +131,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_RECV_BANDWIDTH_KB,
 			"Network Received KB", 	                                           // Menu CheckBox text
-			"Network Received KB per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"Network Received KB per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -144,7 +144,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_RECV_BANDWIDTH_MBIT,
 			"Network Received Mbit", 	                                         // Menu CheckBox text
-			"Network Received Mbit per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"Network Received Mbit per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MBit, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -157,7 +157,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_RECV_PACKETS,
 			"Network Received Packets", 	                                        // Menu CheckBox text
-			"Network Received Packets per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"Network Received Packets per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -170,7 +170,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_TRANS_BANDWIDTH_KB,
 			"Network Transmitted in KB", 	                                         // Menu CheckBox text
-			"Network Transmitted in KB per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"Network Transmitted in KB per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -183,7 +183,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_TRANS_BANDWIDTH_MBIT,
 			"Network Transmitted in Mbit", 	                                         // Menu CheckBox text
-			"Network Transmitted in Mbit per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")",  // Label 
+			"Network Transmitted in Mbit per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")",  // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MBit, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -196,7 +196,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_TRANS_PACKETS,
 			"Network Transmitted Packets", 	                                           // Menu CheckBox text
-			"Network Transmitted Packets per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"Network Transmitted Packets per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -209,7 +209,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_ALL_BANDWIDTH_MBIT,
 			"Network Received/Transmitted all NIC in Mbit", 	                                        // Menu CheckBox text
-			"Network Received/Transmitted all NIC in Mbit per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"Network Received/Transmitted all NIC in Mbit per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MBit, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] {"Received", "Transmitted"}, 
 			LabelType.Static,

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -164,12 +164,12 @@ extends CounterControllerAbstract
 		if (! isCountersCreated())
 			createCounters(hasGui);
 		
-		_logger.info("Initializing all CM objects, using Replication Agent version number "+srvVersion+" ("+Ver.versionNumToStr(srvVersion)+").");
+		_logger.info("Initializing all CM objects, using Replication Agent version number " + srvVersion + " (" + Ver.versionNumToStr(srvVersion) + ").");
 
 		// initialize all the CM's
 		for (CountersModel cm : getCmList())
 		{
-			_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using Replication Agent version number "+srvVersion+".");
+			_logger.debug("Initializing CM named '" + cm.getName() + "', display name '" + cm.getDisplayName() + "', using Replication Agent version number " + srvVersion + ".");
 
 			// set the version
 			cm.setServerVersion(monTablesVersion);
@@ -263,7 +263,7 @@ extends CounterControllerAbstract
 				}
 			}
 			
-			_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '"+sql+"', Caught: " + sqlex.toString() );
+			_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '" + sql + "', Caught: " + sqlex.toString() );
 			mainSampleTime   = new Timestamp(System.currentTimeMillis());
 			srvName          = "unknown";
 			srvHostname      = "unknown";

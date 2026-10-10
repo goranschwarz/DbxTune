@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -195,7 +195,7 @@ public class AlarmWriterSettingsTableModel extends AbstractTableModel
 		catch (ValidationException ex)
 		{
 //			SwingUtils.showTimedBalloonTip(this, row, col, 10*1000, true, "Validation error: "+ex.getMessage());
-			SwingUtils.showTimedBalloonTip(this, row, col, 10*1000, true, "<html>Validation error: <b>Value will be discarded</b><br><pre>"+ex.getMessage()+"</pre></html>");
+			SwingUtils.showTimedBalloonTip(this, row, col, 10*1000, true, "<html>Validation error: <b>Value will be discarded</b><br><pre>" + ex.getMessage() + "</pre></html>");
 			return;
 		}
 

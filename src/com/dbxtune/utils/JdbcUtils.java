@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -126,7 +126,7 @@ public class JdbcUtils
 				urlHelper.setUrlOptionsMap(urlMap);
 				url = urlHelper.getUrl();
 				
-				_logger.info("Added some options to the H2 URL. New URL is '"+url+"'.");
+				_logger.info("Added some options to the H2 URL. New URL is '" + url + "'.");
 			}
 		}
 
@@ -137,7 +137,7 @@ public class JdbcUtils
 			props.put("user", user);
 			props.put("password", passwd);
 	
-			_logger.debug("getConnection to driver='"+driver+"', url='"+url+"', user='"+user+"'.");
+			_logger.debug("getConnection to driver='" + driver + "', url='" + url + "', user='" + user + "'.");
 			Connection conn = DriverManager.getConnection(url, props);
 	
 			return conn;
@@ -152,16 +152,16 @@ public class JdbcUtils
 				e = e.getNextException();
 			}
 			if (parentComp == null)
-				_logger.error("Connection FAILED url='"+url+"', message: "+sb);
+				_logger.error("Connection FAILED url='" + url + "', message: " + sb);
 			else
-				JOptionPane.showMessageDialog(parentComp, "Connection FAILED.\n\n"+sb.toString(), Version.getAppName()+" - jdbc connect", JOptionPane.ERROR_MESSAGE);
+				JOptionPane.showMessageDialog(parentComp, "Connection FAILED.\n\n" + sb.toString(), Version.getAppName() + " - jdbc connect", JOptionPane.ERROR_MESSAGE);
 		}
 		catch (Exception e)
 		{
 			if (parentComp == null)
-				_logger.error("Connection FAILED url='"+url+"', Exception: "+e);
+				_logger.error("Connection FAILED url='" + url + "', Exception: " + e);
 			else
-				JOptionPane.showMessageDialog(parentComp, "Connection FAILED.\n\n"+e.toString(),  Version.getAppName()+" - jdbc connect", JOptionPane.ERROR_MESSAGE);
+				JOptionPane.showMessageDialog(parentComp, "Connection FAILED.\n\n" + e.toString(),  Version.getAppName() + " - jdbc connect", JOptionPane.ERROR_MESSAGE);
 		}
 		return null;
 	}

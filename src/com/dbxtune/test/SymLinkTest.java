@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -92,19 +92,19 @@ public class SymLinkTest
 
 		if (symLinkPath.toFile().exists())
 		{
-			log(ps, logList, "  * SKIPPING Create Symbolic Link, reason: File '"+symLinkPath+"' already exists.");
+			log(ps, logList, "  * SKIPPING Create Symbolic Link, reason: File '" + symLinkPath + "' already exists.");
 			return false;
 		}
 
 		try
 		{
 			Files.createSymbolicLink(symLinkPath, existingFilePath);
-			log(ps, logList, "  * Create Symbolic Link from '"+symLinkName+"' to '"+existingFile+"' succeeded. "+comment);
+			log(ps, logList, "  * Create Symbolic Link from '" + symLinkName + "' to '" + existingFile + "' succeeded. " + comment);
 			return true;
 		}
 		catch(Exception ex)
 		{
-			log(ps, logList, "ERROR: Create Symbolic Link from '"+symLinkName+"' to '"+existingFile+"' failed. Caught: "+ex);
+			log(ps, logList, "ERROR: Create Symbolic Link from '" + symLinkName + "' to '" + existingFile + "' failed. Caught: " + ex);
 			return false;
 		}
 	}
@@ -131,12 +131,12 @@ public class SymLinkTest
 		{
 			if (f.mkdir())
 			{
-				log(ps, logList, "Creating directory '"+f+"' "+comment);
+				log(ps, logList, "Creating directory '" + f + "' " + comment);
 				return f;
 			}
 			else
 			{
-				log(ps, logList, "WARNING: Creating directory '"+f+"' FAILED.");
+				log(ps, logList, "WARNING: Creating directory '" + f + "' FAILED.");
 			}
 		}
 		return null;

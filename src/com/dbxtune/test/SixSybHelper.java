@@ -679,7 +679,7 @@ public class SixSybHelper
 
 				// Create test objects
 				for (int i = 0; i < numOfThreads; i++)
-					list.add( new DeadlockTester(prop, "T"+(i+1), numOfLoopsPerThread, tryDeadlockWithSixCode) );
+					list.add( new DeadlockTester(prop, "T" + (i+1), numOfLoopsPerThread, tryDeadlockWithSixCode) );
 
 				// Connect
 				for (DeadlockTester dlt : list)

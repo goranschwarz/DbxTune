@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -66,15 +66,15 @@ public class MonTablesDictionaryDefault extends MonTablesDictionary
 		// - SORT order ID and NAME
 		// - Can this possible be a SAP Business Suite System
 
-		try { setDbmsServerName          ( conn.getDbmsServerName()    ); } catch(SQLException ex) { _logger.warn("initializeVersionInfo() problems when getting getDbmsServerName(). Caught: "+ex); }
-		try { setDbmsExecutableVersionStr( conn.getDbmsVersionStr()    ); } catch(SQLException ex) { _logger.warn("initializeVersionInfo() problems when getting getDbmsVersionStr(). Caught: "+ex); }
+		try { setDbmsServerName          ( conn.getDbmsServerName()    ); } catch(SQLException ex) { _logger.warn("initializeVersionInfo() problems when getting getDbmsServerName(). Caught: " + ex); }
+		try { setDbmsExecutableVersionStr( conn.getDbmsVersionStr()    ); } catch(SQLException ex) { _logger.warn("initializeVersionInfo() problems when getting getDbmsVersionStr(). Caught: " + ex); }
 		      setDbmsExecutableVersionNum( conn.getDbmsVersionNumber() ); 
 
-		try { setDbmsSortName            (conn.getDbmsSortOrderName());   } catch(SQLException ex) { _logger.warn("initializeVersionInfo() problems when getting getDbmsSortOrderName(). Caught: "+ex); }
-		try { setDbmsSortId              (conn.getDbmsSortOrderId());     } catch(SQLException ex) { _logger.warn("initializeVersionInfo() problems when getting getDbmsSortOrderId().   Caught: "+ex); }
+		try { setDbmsSortName            (conn.getDbmsSortOrderName());   } catch(SQLException ex) { _logger.warn("initializeVersionInfo() problems when getting getDbmsSortOrderName(). Caught: " + ex); }
+		try { setDbmsSortId              (conn.getDbmsSortOrderId());     } catch(SQLException ex) { _logger.warn("initializeVersionInfo() problems when getting getDbmsSortOrderId().   Caught: " + ex); }
 
-		try { setDbmsCharsetName         (conn.getDbmsCharsetName());     } catch(SQLException ex) { _logger.warn("initializeVersionInfo() problems when getting getDbmsCharsetName(). Caught: "+ex); }
-		try { setDbmsCharsetId           (conn.getDbmsCharsetId());       } catch(SQLException ex) { _logger.warn("initializeVersionInfo() problems when getting getDbmsCharsetId().   Caught: "+ex); }
+		try { setDbmsCharsetName         (conn.getDbmsCharsetName());     } catch(SQLException ex) { _logger.warn("initializeVersionInfo() problems when getting getDbmsCharsetName(). Caught: " + ex); }
+		try { setDbmsCharsetId           (conn.getDbmsCharsetId());       } catch(SQLException ex) { _logger.warn("initializeVersionInfo() problems when getting getDbmsCharsetId().   Caught: " + ex); }
 
 //		//------------------------------------
 //		// Can this possible be a SAP Business Suite System

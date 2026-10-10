@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -214,7 +214,7 @@ public class NetIo extends AbstractSysmonType
 			addReportHead2("  Total TDS Packets Received");
 			for (int e=0; e<NumEngines; e++)
 				if (engine_clock_ticks[e] > 0)
-					addReportLnPct("    Engine "+e, engine_no_packets_received[e], engSum_no_packets_received);
+					addReportLnPct("    Engine " + e, engine_no_packets_received[e], engSum_no_packets_received);
 			addReportLnSum2();
 			addReportLnCntSum("  Total TDS Packets Rec'd", engSum_no_packets_received);
 			addReportLn   ();
@@ -222,7 +222,7 @@ public class NetIo extends AbstractSysmonType
 			addReportHead2("  Total Bytes Received");
 			for (int e=0; e<NumEngines; e++)
 				if (engine_clock_ticks[e] > 0)
-					addReportLnPct("    Engine "+e, engine_no_bytes_received[e], engSum_no_bytes_received);
+					addReportLnPct("    Engine " + e, engine_no_bytes_received[e], engSum_no_bytes_received);
 			addReportLnSum2();
 			addReportLnCntSum("  Total Bytes Rec'd", engSum_no_bytes_received);
 			addReportLn   ();
@@ -237,7 +237,7 @@ public class NetIo extends AbstractSysmonType
 			addReportHead2("  Total TDS Packets Sent");
 			for (int e=0; e<NumEngines; e++)
 				if (engine_clock_ticks[e] > 0)
-					addReportLnPct("    Engine "+e, engine_no_packets_sent[e], engSum_no_packets_sent);
+					addReportLnPct("    Engine " + e, engine_no_packets_sent[e], engSum_no_packets_sent);
 			addReportLnSum2();
 			addReportLnCntSum("  Total TDS Packets Sent", engSum_no_packets_sent);
 			addReportLn   ();
@@ -245,7 +245,7 @@ public class NetIo extends AbstractSysmonType
 			addReportHead2("  Total Bytes Sent");
 			for (int e=0; e<NumEngines; e++)
 				if (engine_clock_ticks[e] > 0)
-					addReportLnPct("    Engine "+e, engine_no_bytes_sent[e], engSum_no_bytes_sent);
+					addReportLnPct("    Engine " + e, engine_no_bytes_sent[e], engSum_no_bytes_sent);
 			addReportLnSum2();
 			addReportLnCntSum("  Total Bytes Sent", engSum_no_bytes_sent);
 			addReportLn   ();

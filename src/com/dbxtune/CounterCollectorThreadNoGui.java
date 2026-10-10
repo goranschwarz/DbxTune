@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -207,7 +207,7 @@ implements Memory.MemoryListener
 		if (foundChar == ' ')
 			return true;
 		
-		String suggestedName = dbmsServer.replace(foundChar+"", "__");
+		String suggestedName = dbmsServer.replace(foundChar + "", "__");
 		throw new Exception("DBMS Server name '" + dbmsServer + "' is NOT ALLOWED. It containes character '" + foundChar + "' which will cause problems in various places. Please use an alternate name using cmd line switch -A|--serverAlias NameOfServer, for example: -A " + suggestedName + ". This name will be used as Collector DatabaseName and various other files.");
 	}
 
@@ -225,7 +225,7 @@ implements Memory.MemoryListener
 		if (foundChar == ' ')
 			return true;
 		
-		String suggestedName = dbmsServer.replace(foundChar+"", "__");
+		String suggestedName = dbmsServer.replace(foundChar + "", "__");
 		throw new Exception("DBMS Alias Server name '" + dbmsServer + "' is NOT ALLOWED. It containes character '" + foundChar + "' which will cause problems in various places. Please use another alternate name, for example: -A " + suggestedName);
 	}
 
@@ -247,9 +247,9 @@ implements Memory.MemoryListener
 		// WRITE init message, jupp a little late, but I wanted to grab the _name
 		String cmTemplateOption = _storeProps.getProperty("cmdLine.cmOptions");
 		if (cmTemplateOption != null)
-			_logger.info("Initializing the NO-GUI sampler component. Using command line template '"+cmTemplateOption+"'.");
+			_logger.info("Initializing the NO-GUI sampler component. Using command line template '" + cmTemplateOption + "'.");
 		else
-			_logger.info("Initializing the NO-GUI sampler component. Using config file '"+_storeProps.getFilename()+"'.");
+			_logger.info("Initializing the NO-GUI sampler component. Using config file '" + _storeProps.getFilename() + "'.");
 
 
 		// Reset the search order to be "just" Configuration.PCS
@@ -260,11 +260,11 @@ implements Memory.MemoryListener
 //		String pcsConfigFile     = cmTemplateOption                                   != null ? "template="+cmTemplateOption : _storeProps.getFilename();
 //		_logger.info("Combined Configuration Search Order has been changed to '"+StringUtil.toCommaStr(Configuration.getSearchOrder())+"'. This means that USER_CONF='"+userConfigFile+"' and USER_TEMP='"+userTmpConfigFile+"' wont be used for as fallback configurations. Only the PCS='"+pcsConfigFile+"' config will be used.");
 
-		_logger.info("NO-GUI Init - Combined Configuration Search Order is '"+StringUtil.toCommaStr(Configuration.getSearchOrder())+"'.");
-		_logger.info("              PCS         Using Configuration file '"+(Configuration.getInstance(Configuration.PCS)         == null ? "-no-instance-" : Configuration.getInstance(Configuration.PCS        ).getFilename())+"'.");
-		_logger.info("              USER_TEMP   Using Configuration file '"+(Configuration.getInstance(Configuration.USER_TEMP)   == null ? "-no-instance-" : Configuration.getInstance(Configuration.USER_TEMP  ).getFilename())+"'.");
-		_logger.info("              USER_CONF   Using Configuration file '"+(Configuration.getInstance(Configuration.USER_CONF)   == null ? "-no-instance-" : Configuration.getInstance(Configuration.USER_CONF  ).getFilename())+"'.");
-		_logger.info("              SYSTEM_CONF Using Configuration file '"+(Configuration.getInstance(Configuration.SYSTEM_CONF) == null ? "-no-instance-" : Configuration.getInstance(Configuration.SYSTEM_CONF).getFilename())+"'.");
+		_logger.info("NO-GUI Init - Combined Configuration Search Order is '" + StringUtil.toCommaStr(Configuration.getSearchOrder()) + "'.");
+		_logger.info("              PCS         Using Configuration file '" + (Configuration.getInstance(Configuration.PCS)         == null ? "-no-instance-" : Configuration.getInstance(Configuration.PCS        ).getFilename()) + "'.");
+		_logger.info("              USER_TEMP   Using Configuration file '" + (Configuration.getInstance(Configuration.USER_TEMP)   == null ? "-no-instance-" : Configuration.getInstance(Configuration.USER_TEMP  ).getFilename()) + "'.");
+		_logger.info("              USER_CONF   Using Configuration file '" + (Configuration.getInstance(Configuration.USER_CONF)   == null ? "-no-instance-" : Configuration.getInstance(Configuration.USER_CONF  ).getFilename()) + "'.");
+		_logger.info("              SYSTEM_CONF Using Configuration file '" + (Configuration.getInstance(Configuration.SYSTEM_CONF) == null ? "-no-instance-" : Configuration.getInstance(Configuration.SYSTEM_CONF).getFilename()) + "'.");
 
 		// PROPERTY: sleepTime
 		_sleepTime               = _storeProps.getIntMandatoryProperty(offlinePrefix + "sampleTime");
@@ -275,7 +275,7 @@ implements Memory.MemoryListener
 		try {
 			PersistWriterBase.getRecordingStartTime(_deferedStartTime);
 		} catch (Exception e) {
-			throw new Exception("Deferred start time '"+CounterController.PROPKEY_startRecordingAtTime+"' is faulty configured, Caught: "+e.getMessage());
+			throw new Exception("Deferred start time '" + CounterController.PROPKEY_startRecordingAtTime + "' is faulty configured, Caught: " + e.getMessage());
 		}
 
 		// PROPERTY: shutdownAfterXHours
@@ -337,8 +337,8 @@ implements Memory.MemoryListener
 //			}
 //		}
 
-		if (_dbmsUsername == null) throw new Exception("No DBMS User has been specified. Not by commandLine parameters '-U', or by property 'conn.dbmsUsername' in the file '"+_storeProps.getFilename()+"'.");
-		if (_dbmsServer == null)   throw new Exception("No DBMS Server has been specified. Not by commandLine parameters '-S', or by property 'conn.dbmsName' in the file '"+_storeProps.getFilename()+"'.");
+		if (_dbmsUsername == null) throw new Exception("No DBMS User has been specified. Not by commandLine parameters '-U', or by property 'conn.dbmsUsername' in the file '" + _storeProps.getFilename() + "'.");
+		if (_dbmsServer == null)   throw new Exception("No DBMS Server has been specified. Not by commandLine parameters '-S', or by property 'conn.dbmsName' in the file '" + _storeProps.getFilename() + "'.");
 
 		// Check the server name for characters we KNOW will be hard to use, like: 
 		//  * '/' -- slash     in a H2 database name will cause H" to create a directory... 
@@ -380,8 +380,8 @@ implements Memory.MemoryListener
 				aseServerStr = AseConnectionFactory.getIHostPortStr(_dbmsServer);
 				if (aseServerStr == null)
 				{
-					_logger.info("Can't resolve or find ASE Server named '"+_dbmsServer+"' in the interfaces/sql.ini file. Fallback on 'aseHostPort', which is '"+_dbmsHostPortStr+"'.");
-					throw new Exception("Can't resolve or find ASE Server named '"+_dbmsServer+"' in the interfaces/sql.ini file. Fallback on 'aseHostPort', which is '"+_dbmsHostPortStr+"'.");
+					_logger.info("Can't resolve or find ASE Server named '" + _dbmsServer + "' in the interfaces/sql.ini file. Fallback on 'aseHostPort', which is '" + _dbmsHostPortStr + "'.");
+					throw new Exception("Can't resolve or find ASE Server named '" + _dbmsServer + "' in the interfaces/sql.ini file. Fallback on 'aseHostPort', which is '" + _dbmsHostPortStr + "'.");
 					//aseServerStr = _dbmsHostPortStr;
 				}
 			}
@@ -395,7 +395,7 @@ implements Memory.MemoryListener
 			if ( ! AseConnectionFactory.isHostPortStrValid(aseServerStr) )
 			{
 				String error = AseConnectionFactory.isHostPortStrValidReason(aseServerStr);
-				throw new Exception("The ASE Server connection specification '"+aseServerStr+"' is in a faulty format. The format should be 'hostname:port[,hostname2:port2[,hostnameN:portN]]', error='"+error+"'.");
+				throw new Exception("The ASE Server connection specification '" + aseServerStr + "' is in a faulty format. The format should be 'hostname:port[,hostname2:port2[,hostnameN:portN]]', error='" + error + "'.");
 			}
 			_dbmsHostPortStr = aseServerStr;
 
@@ -422,8 +422,8 @@ implements Memory.MemoryListener
 			if (cons != null)
 			{
 				System.out.println("-----------------------------------------------------------------------------");
-				System.out.println("No password for DBMS was specified use command line parameter -P or property 'conn.dbmsPassword' in the file '"+_storeProps.getFilename()+"'.");
-				System.out.println("Connecting to server '"+_dbmsServer+"' at '"+_dbmsHostPortStr+"' with the user name '"+_dbmsUsername+"'.");
+				System.out.println("No password for DBMS was specified use command line parameter -P or property 'conn.dbmsPassword' in the file '" + _storeProps.getFilename() + "'.");
+				System.out.println("Connecting to server '" + _dbmsServer + "' at '" + _dbmsHostPortStr + "' with the user name '" + _dbmsUsername + "'.");
 				System.out.println("Note: you may store the password in '${HOME}/.passwd.enc' using: ${HOME}/.dbxtune/dbxc/bin/dbxPassword.{sh|bat} set -S srvName -U username -P theSecretPassword");
 				System.out.println("-----------------------------------------------------------------------------");
 				char[] passwd = cons.readPassword("Password: ");
@@ -461,8 +461,8 @@ implements Memory.MemoryListener
 			if (cons != null)
 			{
 				System.out.println("-----------------------------------------------------------------------------");
-				System.out.println("No SSH password was specified use command line parameter -p or property 'conn.sshPassword' in the file '"+_storeProps.getFilename()+"'.");
-				System.out.println("Connecting to host name '"+_sshHostname+"' with the user name '"+_sshUsername+"'.");
+				System.out.println("No SSH password was specified use command line parameter -p or property 'conn.sshPassword' in the file '" + _storeProps.getFilename() + "'.");
+				System.out.println("Connecting to host name '" + _sshHostname + "' with the user name '" + _sshUsername + "'.");
 				System.out.println("Note: you may store the password in '${HOME}/.passwd.enc' using: ${HOME}/.dbxtune/dbxc/bin/dbxPassword.{sh|bat} set -S srvName -U username -P theSecretPassword");
 				System.out.println("  or: Add a SSH Key File.");
 				System.out.println("-----------------------------------------------------------------------------");
@@ -501,7 +501,7 @@ implements Memory.MemoryListener
 			"sleepOnFailedConnectTime='" + _sleepOnFailedConnectTime + "', " +
 			"_dbmsUsername='"            + _dbmsUsername             + "', " +
 			"_dbmsPassword='"            + "*hidden*"                + "', " +
-			"_dbmsServer='"              + _dbmsServer + "("+_dbmsHostPortStr+")', " +
+			"_dbmsServer='"              + _dbmsServer + "(" + _dbmsHostPortStr + ")', " +
 			"_sshUsername='"             + _sshUsername              + "', " +
 			"_sshPassword='"             + "*hidden*"                + "', "  +
 			"_sshKeyFile='"              + _sshKeyFile               + "', " +
@@ -510,10 +510,10 @@ implements Memory.MemoryListener
 			"_localHostMon='"            + _localHostMon             + "', " +
 			"_localHostMonWrapperCmd='"  + _localHostMonWrapperCmd   + "', " +
 			".";
-		_logger.info("Configuration for NO-GUI sampler: "+configStr);
+		_logger.info("Configuration for NO-GUI sampler: " + configStr);
 
 		if (_scriptWaitForNextSample != null)
-			_logger.info("Using Java Script when waiting for next sample period. Script: "+_scriptWaitForNextSample);
+			_logger.info("Using Java Script when waiting for next sample period. Script: " + _scriptWaitForNextSample);
 
 		// Setting internal "system property" variable 'SERVERNAME' to "specified server name" or the "hostName.portNum" 
 		// This might be used by the AlarmWriterToFile or similar
@@ -583,7 +583,7 @@ implements Memory.MemoryListener
 					}
 					catch (NumberFormatException ignore)
 					{
-						_logger.error("Can't read postpone time from the string '"+optStr[1]+"', since it's not a number. Full cmName/option was '"+optStr+"'.");
+						_logger.error("Can't read postpone time from the string '" + optStr[1] + "', since it's not a number. Full cmName/option was '" + optStr + "'.");
 					}
 				}
 
@@ -600,7 +600,7 @@ implements Memory.MemoryListener
 				}
 				else
 				{
-					_logger.warn("CM named '"+cmName+"' can't be found in the list of available CM's.");
+					_logger.warn("CM named '" + cmName + "' can't be found in the list of available CM's.");
 				}
 			}
 
@@ -611,12 +611,12 @@ implements Memory.MemoryListener
 				if ( cm.isActive() )
 				{
 					activeCount++;
-					_logger.info(">Enabled  CM named "+StringUtil.left("'"+cm.getName()+"',", 20+3)+" postpone "+StringUtil.left("'"+cm.getPostponeTime()+"',", 5+3)+"Tab Name '"+cm.getDisplayName()+"'.");
+					_logger.info(">Enabled  CM named " + StringUtil.left("'" + cm.getName() + "',", 20+3) + " postpone " + StringUtil.left("'" + cm.getPostponeTime() + "',", 5+3) + "Tab Name '" + cm.getDisplayName() + "'.");
 				}
 				else 
-					_logger.info(" DISABLED CM named "+StringUtil.left("'"+cm.getName()+"',", 20+3)+" postpone "+StringUtil.left("'"+cm.getPostponeTime()+"',", 5+3)+"Tab Name '"+cm.getDisplayName()+"'.");
+					_logger.info(" DISABLED CM named " + StringUtil.left("'" + cm.getName() + "',", 20+3) + " postpone " + StringUtil.left("'" + cm.getPostponeTime() + "',", 5+3) + "Tab Name '" + cm.getDisplayName() + "'.");
 			}
-			_logger.info("Setting "+activeCount+" CM's in active-sampling-state. The CMList contained "+getCounterController().getCmList().size()+" entries.");
+			_logger.info("Setting " + activeCount + " CM's in active-sampling-state. The CMList contained " + getCounterController().getCmList().size() + " entries.");
 			if (activeCount == 0)
 				throw new Exception("Can't find any CM's to sample. Check the command line option '-n cmNames'.");
 		}
@@ -665,7 +665,7 @@ implements Memory.MemoryListener
 					{
 						cm.setActive(false, "Inactivated by offline config");
 
-						_logger.info(" DISABLED CM named "+StringUtil.left("'"+cm.getName()+"',", 20+3)+" postpone "+StringUtil.left("'"+cm.getPostponeTime()+"',", 5+3)+"Tab Name '"+cm.getDisplayName()+"'. " + extraDescription);
+						_logger.info(" DISABLED CM named " + StringUtil.left("'" + cm.getName() + "',", 20+3) + " postpone " + StringUtil.left("'" + cm.getPostponeTime() + "',", 5+3) + "Tab Name '" + cm.getDisplayName() + "'. " + extraDescription);
 					}
 					else
 					{
@@ -673,14 +673,14 @@ implements Memory.MemoryListener
 						//The offline props file indicates this CM should be sampled, persist it.
 						cm.setPersistCounters(true, false);
 
-						_logger.info(">Enabled  CM named "+StringUtil.left("'"+cm.getName()+"',", 20+3)+" postpone "+StringUtil.left("'"+cm.getPostponeTime()+"',", 5+3)+"Tab Name '"+cm.getDisplayName()+"'. " + extraDescription);
+						_logger.info(">Enabled  CM named " + StringUtil.left("'" + cm.getName() + "',", 20+3) + " postpone " + StringUtil.left("'" + cm.getPostponeTime() + "',", 5+3) + "Tab Name '" + cm.getDisplayName() + "'. " + extraDescription);
 					}
 				}
 			}
-			_logger.info("Setting "+activeCount+" CM's in active-sampling-state. The CMList contained "+getCounterController().getCmList().size()+" entries.");
+			_logger.info("Setting " + activeCount + " CM's in active-sampling-state. The CMList contained " + getCounterController().getCmList().size() + " entries.");
 			if (activeCount == 0)
 			{
-				throw new Exception("Can't find any CM's to sample. Check the file '"+_storeProps.getFilename()+"', for the any keys ending with '.sample' and mark them as 'true'.");
+				throw new Exception("Can't find any CM's to sample. Check the file '" + _storeProps.getFilename() + "', for the any keys ending with '.sample' and mark them as 'true'.");
 			}
 		}
 
@@ -697,7 +697,7 @@ implements Memory.MemoryListener
 		if (activeCountHostMon > 0)
 		{
 			if (_sshHostname == null || _sshUsername == null || (_sshPassword == null && _sshKeyFile == null) )
-				throw new Exception("There are "+activeCountHostMon+" active Performance Counters that are doing Host Monitoring, this is using SSH for communication, but no hostname/user/passwd is given. hostname='"+_sshHostname+"', username='"+_sshUsername+"', password='"+(_sshPassword==null?null:"*has*passwd*")+"', keyFile='"+_sshKeyFile+"'.");
+				throw new Exception("There are " + activeCountHostMon + " active Performance Counters that are doing Host Monitoring, this is using SSH for communication, but no hostname/user/passwd is given. hostname='" + _sshHostname + "', username='" + _sshUsername + "', password='" + (_sshPassword==null?null:"*has*passwd*") + "', keyFile='" + _sshKeyFile + "'.");
 		}
 		
 		// Add a "low memory" listener... so we can cleanup some stuff...
@@ -752,7 +752,7 @@ implements Memory.MemoryListener
 				
 				
 				// Write warning message
-				_logger.warn("Low on memory usage, invoking manual Garbage Collection... Memory info before GC: percentageUsed="+percentageUsedStr+", maxMemoryMb="+(maxMemory/1024/1024)+", usedMemoryMb="+(usedMemory/1024/1024)+", freeMemoryMb="+(freeMem/1024/1024) + ". Memory Information: " + memoryInfo);
+				_logger.warn("Low on memory usage, invoking manual Garbage Collection... Memory info before GC: percentageUsed=" + percentageUsedStr + ", maxMemoryMb=" + (maxMemory/1024/1024) + ", usedMemoryMb=" + (usedMemory/1024/1024) + ", freeMemoryMb=" + (freeMem/1024/1024) + ". Memory Information: " + memoryInfo);
 
 				// Do manual Garbage Collection
 				System.gc();
@@ -1042,10 +1042,10 @@ implements Memory.MemoryListener
 					if (postpone <= 0)
 						activeCmList.add(name);
 					else
-						activeCmList.add(name+":"+postpone);
+						activeCmList.add(name + ":" + postpone);
 				}
 			}
-			_logger.info("Found --noGui '"+cmOptions+"': enabling cm's named "+activeCmList);
+			_logger.info("Found --noGui '" + cmOptions + "': enabling cm's named " + activeCmList);
 		}
 		//----------------------------------------
 		// Some sort of TEMPLATE was found WITH add/remove individual CM's from the template
@@ -1070,23 +1070,23 @@ implements Memory.MemoryListener
 
 				if (CounterSetTemplates.getShortName(cmName) == null && CounterSetTemplates.getLongName(cmName) == null)
 				{
-					throw new Exception("Unknown name '"+cmName+"', This wasn't found in the template '"+templateName+"' or any other template.");
+					throw new Exception("Unknown name '" + cmName + "', This wasn't found in the template '" + templateName + "' or any other template.");
 				}
 
 				if ("+".equals(modifier))
 				{
 					addCmList.add(cmName);
-					_logger.info("Adding sampling of CM '"+cmName+"', to the template '"+templateName+"' for this session.");
+					_logger.info("Adding sampling of CM '" + cmName + "', to the template '" + templateName + "' for this session.");
 				}
 				else if ("-".equals(modifier))
 				{
 					if (CounterSetTemplates.getShortName(cmName) != null) removeCmList.add(CounterSetTemplates.getShortName(cmName));
 					if (CounterSetTemplates.getLongName (cmName) != null) removeCmList.add(CounterSetTemplates.getLongName (cmName));
-					_logger.info("Removing sampling of CM '"+cmName+"', from the template '"+templateName+"' for this session.");
+					_logger.info("Removing sampling of CM '" + cmName + "', from the template '" + templateName + "' for this session.");
 				}
 				else
 				{
-					throw new Exception("Unknown option '"+str+"', when add/remove CM's in template '"+templateName+"'. First char in modifier must be '+' or '-' to add/remove the CM from the template.");
+					throw new Exception("Unknown option '" + str + "', when add/remove CM's in template '" + templateName + "'. First char in modifier must be '+' or '-' to add/remove the CM from the template.");
 //					_logger.warn("Unknown option '"+str+"', when add/remove CM's in template '"+templateName+"'. First char in modifier must be '+' or '-' to add/remove the CM from the template. This will be discarded.");
 				}
 			}
@@ -1105,7 +1105,7 @@ implements Memory.MemoryListener
 					if (postpone <= 0)
 						activeCmList.add(name);
 					else
-						activeCmList.add(name+":"+postpone);
+						activeCmList.add(name + ":" + postpone);
 				}
 			}
 
@@ -1113,7 +1113,7 @@ implements Memory.MemoryListener
 			for (String str : addCmList)
 				activeCmList.add(str);
 
-			_logger.info("Found --noGui '"+cmOptions+"': enabling cm's named "+activeCmList);
+			_logger.info("Found --noGui '" + cmOptions + "': enabling cm's named " + activeCmList);
 		}
 		//----------------------------------------
 		// No template just a list of CM's
@@ -1124,7 +1124,7 @@ implements Memory.MemoryListener
 			for (String str : sa)
 				activeCmList.add(str);
 
-			_logger.info("Found --noGui aListOfCmNames: enabling cm's named "+activeCmList);
+			_logger.info("Found --noGui aListOfCmNames: enabling cm's named " + activeCmList);
 		}
 
 		return activeCmList;
@@ -1252,7 +1252,7 @@ implements Memory.MemoryListener
 		// remember when we started
 		long threadStartTime = System.currentTimeMillis();
 
-		_logger.info("Thread '"+Thread.currentThread().getName()+"' starting...");
+		_logger.info("Thread '" + Thread.currentThread().getName() + "' starting...");
 
 		// What the collector is doing right now: kept in memory, and pushed to DbxCentral if a sample takes long time
 		RefreshStatusNoGui refreshStatus = new RefreshStatusNoGui(_sleepTime);
@@ -1273,8 +1273,8 @@ implements Memory.MemoryListener
 			if ( ! getCounterController().isMonConnected(true, true))
 			{
 				_logger.info("-----------------------------------------------------------------------------------------");
-				_logger.debug("Connecting to DBMS server using. user='"+_dbmsUsername+"', passwd='"+_dbmsPassword+"', hostPortStr='"+_dbmsHostPortStr+"'. dbmsServer='"+_dbmsServer+"'");
-				_logger.info( "Connecting to DBMS server using. user='"+_dbmsUsername+"', passwd='"+ "*hidden*" +"', hostPortStr='"+_dbmsHostPortStr+"'. dbmsServer='"+_dbmsServer+"'");
+				_logger.debug("Connecting to DBMS server using. user='" + _dbmsUsername + "', passwd='" + _dbmsPassword + "', hostPortStr='" + _dbmsHostPortStr + "'. dbmsServer='" + _dbmsServer + "'");
+				_logger.info( "Connecting to DBMS server using. user='" + _dbmsUsername + "', passwd='" + "*hidden*" + "', hostPortStr='" + _dbmsHostPortStr + "'. dbmsServer='" + _dbmsServer + "'");
 				refreshStatus.setStatus("Connecting to the monitored server.");
 
 
@@ -1289,7 +1289,7 @@ implements Memory.MemoryListener
 //					}
 
 					if (System.getProperty("nogui.password.print", "false").equalsIgnoreCase("true"))
-						System.out.println("#### DEBUG ####: Connecting to DBMS server using. user='"+_dbmsUsername+"', passwd='"+_dbmsPassword+"', hostPortStr='"+_dbmsHostPortStr+"'. dbmsServer='"+_dbmsServer+"'");
+						System.out.println("#### DEBUG ####: Connecting to DBMS server using. user='" + _dbmsUsername + "', passwd='" + _dbmsPassword + "', hostPortStr='" + _dbmsHostPortStr + "'. dbmsServer='" + _dbmsServer + "'");
 
 					// Make a connection using any specific implementation for the installed counter controller
 					DbxConnection conn = getCounterController().noGuiConnect(_dbmsUsername, _dbmsPassword, _dbmsServer, _dbmsHostPortStr, _jdbcUrlOptions);
@@ -1324,16 +1324,16 @@ implements Memory.MemoryListener
 						// connection failed, and we should retry
 						// Do nothing here, later on in the code will will (send alarms), and start at the top again
 						connectException = ex;
-						connectInfoMsg   = "Username='"+_dbmsUsername+"', Password='"+ "*secret*"    +"', Server='"+_dbmsServer+"', HostPortStr='"+_dbmsHostPortStr+"', UrlOptions='"+_jdbcUrlOptions+"'. Caught: "+ex;
+						connectInfoMsg   = "Username='" + _dbmsUsername + "', Password='" + "*secret*"    + "', Server='" + _dbmsServer + "', HostPortStr='" + _dbmsHostPortStr + "', UrlOptions='" + _jdbcUrlOptions + "'. Caught: " + ex;
 						
 						// But at least, log the exception...
-						_logger.info ("Problems connecting to DBMS, retry  will be done later. Username='"+_dbmsUsername+"', Password='"+ "*secret*"    +"', Server='"+_dbmsServer+"', HostPortStr='"+_dbmsHostPortStr+"', UrlOptions='"+_jdbcUrlOptions+"'. Caught: "+ex);
-						_logger.debug("Problems connecting to DBMS, retry  will be done later. Username='"+_dbmsUsername+"', Password='"+ _dbmsPassword +"', Server='"+_dbmsServer+"', HostPortStr='"+_dbmsHostPortStr+"', UrlOptions='"+_jdbcUrlOptions+"'. Caught: "+ex);
+						_logger.info ("Problems connecting to DBMS, retry  will be done later. Username='" + _dbmsUsername + "', Password='" + "*secret*"    + "', Server='" + _dbmsServer + "', HostPortStr='" + _dbmsHostPortStr + "', UrlOptions='" + _jdbcUrlOptions + "'. Caught: " + ex);
+						_logger.debug("Problems connecting to DBMS, retry  will be done later. Username='" + _dbmsUsername + "', Password='" + _dbmsPassword + "', Server='" + _dbmsServer + "', HostPortStr='" + _dbmsHostPortStr + "', UrlOptions='" + _jdbcUrlOptions + "'. Caught: " + ex);
 					}
 					catch (Exception ex2)
 					{
 						_logger.info("-----------------------------------------------------------------------------------------");
-						_logger.info("Problems connecting to DBMS, non-retryable error. Username='"+_dbmsUsername+"', Password='"+_dbmsPassword+"', Server='"+_dbmsServer+"', HostPortStr='"+_dbmsHostPortStr+"', UrlOptions='"+_jdbcUrlOptions+"'. Caught: "+ex);
+						_logger.info("Problems connecting to DBMS, non-retryable error. Username='" + _dbmsUsername + "', Password='" + _dbmsPassword + "', Server='" + _dbmsServer + "', HostPortStr='" + _dbmsHostPortStr + "', UrlOptions='" + _jdbcUrlOptions + "'. Caught: " + ex);
 						_logger.info("-----------------------------------------------------------------------------------------");
 
 						// Disconnect, and get out of here...
@@ -1370,7 +1370,7 @@ implements Memory.MemoryListener
 
 				if ( ! getCounterController().isMonConnected(true, true) )
 				{
-					_logger.error("Problems connecting to DBMS server. sleeping for "+_sleepOnFailedConnectTime+" seconds before retry...");
+					_logger.error("Problems connecting to DBMS server. sleeping for " + _sleepOnFailedConnectTime + " seconds before retry...");
 
 					// Send ALARM: Server is down (note this will also issue and endOfScan in the AlarmHandler)
 					String fallbackSrvName = _dbmsHostPortStr;
@@ -1380,7 +1380,7 @@ implements Memory.MemoryListener
 					sendAlarmServerIsDown(fallbackSrvName, connectException, connectInfoMsg);
 
 					// Sleep a short while
-					refreshStatus.setStatus("Connect FAILED, I will try again in "+_sleepOnFailedConnectTime+" seconds.");
+					refreshStatus.setStatus("Connect FAILED, I will try again in " + _sleepOnFailedConnectTime + " seconds.");
 					getCounterController().sleep(_sleepOnFailedConnectTime * 1000);
 					
 					// START AT THE TOP AGAIN
@@ -1421,9 +1421,9 @@ implements Memory.MemoryListener
 				{
 					if (_sshHostname != null && _sshUsername != null && (_sshPassword != null || _sshKeyFile != null))
 					{
-						_logger.info( "Connecting to SSH server using. user='"+_sshUsername+"', passwd='"+ "*hidden*" +"', port='"+_sshPort+"'. hostname='"+_sshHostname+"', keyFile='"+_sshKeyFile+"'.");
+						_logger.info( "Connecting to SSH server using. user='" + _sshUsername + "', passwd='" + "*hidden*" + "', port='" + _sshPort + "'. hostname='" + _sshHostname + "', keyFile='" + _sshKeyFile + "'.");
 						if (System.getProperty("nogui.password.print", "false").equalsIgnoreCase("true"))
-							System.out.println("#### DEBUG ####: Connecting to SSH server using. user='"+_sshUsername+"', passwd='"+ _sshPassword +"', port='"+_sshPort+"', hostname='"+_sshHostname+"', keyFile='"+_sshKeyFile+"'.");
+							System.out.println("#### DEBUG ####: Connecting to SSH server using. user='" + _sshUsername + "', passwd='" + _sshPassword + "', port='" + _sshPort + "', hostname='" + _sshHostname + "', keyFile='" + _sshKeyFile + "'.");
 		
 						// get a connection
 						try
@@ -1463,6 +1463,16 @@ implements Memory.MemoryListener
 										_logger.error("On Hostmon SSH Connect, problems executing command '" + killCommand + "' at '" + hostMonConn.getHostname() + "'. Skipping this and continuing. Caught: " + ex, ex);
 									}
 								}
+
+								// ON Windows: Start the PowerShell session now, so the first sample do not have to wait for PowerShell/.NET to load
+								try
+								{
+									hostMonConn.executeInPowershellSession("$PSVersionTable.PSVersion.ToString()");
+								}
+								catch (Exception ex)
+								{
+									_logger.warn("On Hostmon SSH Connect, problems starting the PowerShell session at '" + hostMonConn.getHostname() + "'. Skipping this and continuing. Caught: " + ex);
+								}
 							}
 
 							getCounterController().setHostMonConnection(hostMonConn);
@@ -1470,7 +1480,7 @@ implements Memory.MemoryListener
 						}
 						catch (Exception e)
 						{
-							_logger.error("Host Monitoring: Failed to connect to SSH hostname='"+_sshHostname+"', user='"+_sshUsername+"'.", e);
+							_logger.error("Host Monitoring: Failed to connect to SSH hostname='" + _sshHostname + "', user='" + _sshUsername + "'.", e);
 
 							// Remember the error (used by: checkSendAlarmHostMonConnectionDown)
 							_hostMonLastConnectException = e;
@@ -1505,7 +1515,7 @@ implements Memory.MemoryListener
 				}
 				catch(SQLException ex) 
 				{
-					_logger.info("Initialization of the DBMS Configuration did not succeed. Caught: "+ex); 
+					_logger.info("Initialization of the DBMS Configuration did not succeed. Caught: " + ex); 
 				}
 
 				// for ASE only
@@ -1661,7 +1671,7 @@ implements Memory.MemoryListener
 						cm.setSampleTimeHead(  headerInfo.getMainSampleTime());
 						cm.setCounterClearTime(headerInfo.getCounterClearTime());
 
-						refreshStatus.setStatus("Refreshing... "+cm.getDisplayName());
+						refreshStatus.setStatus("Refreshing... " + cm.getDisplayName());
 						long cmRefreshStartTime = System.currentTimeMillis();
 						try
 						{
@@ -1684,7 +1694,7 @@ implements Memory.MemoryListener
 							cm.setSampleException(ex);
 
 							// Try to re-connect, otherwise we might "cancel" some ongoing alarms (due to the fact that we do 'end-of-scan' at the end of the loop)
-							_logger.info("Try reconnect. When refreshing the data for cm '"+cm.getName()+"', we got 'LostConnectionException'.");
+							_logger.info("Try reconnect. When refreshing the data for cm '" + cm.getName() + "', we got 'LostConnectionException'.");
 							DbxConnection conn = getCounterController().getMonConnection();
 							if (conn != null)
 							{
@@ -1699,13 +1709,13 @@ implements Memory.MemoryListener
 								}
 								catch(Exception reconnectEx)
 								{
-									_logger.error("Problem when reconnecting. Caught: "+reconnectEx);
+									_logger.error("Problem when reconnecting. Caught: " + reconnectEx);
 								}
 							}
 							// If we got an exception, go and check if we are still connected
 							if ( ! getCounterController().isMonConnected(true, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
 							{
-								_logger.warn("Breaking check loop, due to 'not-connected' (after trying to re-connect). Next check loop will do new connection. When refreshing the data for cm '"+getName()+"', we Caught an Exception and we are no longer connected to the monitored server.");
+								_logger.warn("Breaking check loop, due to 'not-connected' (after trying to re-connect). Next check loop will do new connection. When refreshing the data for cm '" + getName() + "', we Caught an Exception and we are no longer connected to the monitored server.");
 								break; // break: LOOP CM's
 							}
 						}
@@ -1713,9 +1723,9 @@ implements Memory.MemoryListener
 						{
 							// log the stack trace for all others than the SQLException
 							if (ex instanceof SQLException)
-								_logger.warn("Problem when refreshing cm '"+cm.getName()+"'. Caught: " + ex);
+								_logger.warn("Problem when refreshing cm '" + cm.getName() + "'. Caught: " + ex);
 							else
-								_logger.warn("Problem when refreshing cm '"+cm.getName()+"'. Caught: " + ex, ex);
+								_logger.warn("Problem when refreshing cm '" + cm.getName() + "'. Caught: " + ex, ex);
 
 							cm.setSampleException(ex);
 
@@ -1744,7 +1754,7 @@ implements Memory.MemoryListener
 					if ( cm == null )
 						continue;
 
-					refreshStatus.setStatus("Post Refreshing... "+cm.getDisplayName());
+					refreshStatus.setStatus("Post Refreshing... " + cm.getDisplayName());
 					cm.doPostRefresh(refreshedCms);
 				}
 
@@ -1756,7 +1766,7 @@ implements Memory.MemoryListener
 				_logger.debug("---- Do Alarm handling...");
 				for (CountersModel cm : refreshedCms.values())
 				{
-					refreshStatus.setStatus("Alarm Handling... "+cm.getDisplayName());
+					refreshStatus.setStatus("Alarm Handling... " + cm.getDisplayName());
 					cm.wrapperFor_sendAlarmRequest();
 				}
 
@@ -1825,11 +1835,11 @@ implements Memory.MemoryListener
 			}
 			catch (Throwable t)
 			{
-				_logger.error(Version.getAppName()+": error in GetCounters loop.", t);
+				_logger.error(Version.getAppName() + ": error in GetCounters loop.", t);
 
 				if (t instanceof OutOfMemoryError)
 				{
-					_logger.error(Version.getAppName()+": in GetCounters loop, caught 'OutOfMemoryError'. Calling: Memory.fireOutOfMemory(), which hopefully will release some memory.");
+					_logger.error(Version.getAppName() + ": in GetCounters loop, caught 'OutOfMemoryError'. Calling: Memory.fireOutOfMemory(), which hopefully will release some memory.");
 					Memory.fireOutOfMemory();
 				}
 			}
@@ -1862,7 +1872,7 @@ implements Memory.MemoryListener
 				{
 					String startDateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(threadStartTime));
 
-					_logger.info("Shutting down the 'no-gui' service. Stop time was set to '"+_shutdownAtTime+"'. It was started at '"+startDateStr+"'.");
+					_logger.info("Shutting down the 'no-gui' service. Stop time was set to '" + _shutdownAtTime + "'. It was started at '" + startDateStr + "'.");
 					break;
 				}
 			}
@@ -1885,7 +1895,7 @@ implements Memory.MemoryListener
 				}
 				catch (Exception ex)
 				{
-					_logger.error("Problems during 're-connect' after a sample is finished. Caught: "+ex);
+					_logger.error("Problems during 're-connect' after a sample is finished. Caught: " + ex);
 				}
 			}
 
@@ -1977,14 +1987,14 @@ implements Memory.MemoryListener
 			if (_logger.isDebugEnabled())
 			{
 				getCounterController().setWaitEvent("next sample period...");
-				_logger.debug("Sleeping for "+sleepTime+" seconds. Waiting for " + getCounterController().getWaitEvent() );
+				_logger.debug("Sleeping for " + sleepTime + " seconds. Waiting for " + getCounterController().getWaitEvent() );
 			}
 
 			// notify the heartbeat that we are still running...
 			HeartbeatMonitor.doHeartbeat();
 
 			// Sleep / wait for next sample
-			refreshStatus.setStatus("Sleeping for "+sleepTime+" seconds.");
+			refreshStatus.setStatus("Sleeping for " + sleepTime + " seconds.");
 			if (_scriptWaitForNextSample != null)
 				scriptWaitForNextSample();
 			else
@@ -2058,7 +2068,7 @@ implements Memory.MemoryListener
 		if (pch != null)
 		{
 			int maxWaitTimeInMs = 10 * 1000;
-			_logger.info("Stopping the PCS Thread (and it's sub threads). maxWaitTimeInMs="+maxWaitTimeInMs);
+			_logger.info("Stopping the PCS Thread (and it's sub threads). maxWaitTimeInMs=" + maxWaitTimeInMs);
 			pch.stop(true, maxWaitTimeInMs);
 		}
 
@@ -2095,7 +2105,7 @@ implements Memory.MemoryListener
 			NoGuiManagementServer.getInstance().stopServer();
 		}
 		
-		_logger.info("Thread '"+Thread.currentThread().getName()+"' ending, this should lead to a server STOP.");
+		_logger.info("Thread '" + Thread.currentThread().getName() + "' ending, this should lead to a server STOP.");
 		
 		
 //		_logger.info("DUMMY WHICH SHOULD BE REMOVED... ONLY FOR TESTING PURPOSES OF ShutdownHook TIMEOUT... sleeping for 99 sec...");
@@ -2260,12 +2270,12 @@ implements Memory.MemoryListener
 				}
 
 				// If we got here, the script did NOT return a number
-				throw new ScriptException("scriptWaitForNextSample(): unknown return code '"+rc+"' of type '"+rc.getClass().getName()+"'.");
+				throw new ScriptException("scriptWaitForNextSample(): unknown return code '" + rc + "' of type '" + rc.getClass().getName() + "'.");
 			}
 		}
 		catch (ScriptException e)
 		{
-			_logger.warn("JavaScript problems with 'WaitForNextSample' JavaScriptCode '"+_scriptWaitForNextSample+"'. Falling back to 'sleep("+_sleepTime+")' Caught: "+e);
+			_logger.warn("JavaScript problems with 'WaitForNextSample' JavaScriptCode '" + _scriptWaitForNextSample + "'. Falling back to 'sleep(" + _sleepTime + ")' Caught: " + e);
 			getCounterController().sleep(_sleepTime * 1000);
 		}
 	}

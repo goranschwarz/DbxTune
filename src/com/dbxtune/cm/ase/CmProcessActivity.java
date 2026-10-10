@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -103,7 +103,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -144,7 +144,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmProcessActivity(counterController, guiController);
 	}
@@ -192,11 +192,11 @@ extends CountersModel
 			if (_asePageSizeInBytes > 0)
 				_asePageSizeInBytes = _asePageSizeInBytes * 1024; 
 			
-			_logger.info("Initializing '"+getName()+"', the ASE Page size is: "+_asePageSizeInBytes);
+			_logger.info("Initializing '" + getName() + "', the ASE Page size is: " + _asePageSizeInBytes);
 		}
 		catch(SQLException ex)
 		{
-			_logger.info("Problems getting ASE Page Size. Caught: "+ex);
+			_logger.info("Problems getting ASE Page Size. Caught: " + ex);
 		}
 
 		return superRc;
@@ -251,7 +251,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_CHKPT_HK,
 			"Checkpoint and HK Writes",                     // Menu CheckBox text
-			"Checkpoint and Housekeeper Writes Per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Checkpoint and Housekeeper Writes Per Second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Checkpoint Writes", "HK Wash Writes", "HK GC Writes", "HK Chores Writes" }, 
 			LabelType.Static,
@@ -264,7 +264,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_BATCH_COUNT,
 			"SQL Batch/Statement Count",                   // Menu CheckBox text
-			"SQL Batches/Statements Processed Per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SQL Batches/Statements Processed Per Second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "SQL Batch/Statement Count" }, 
 			LabelType.Static,
@@ -277,7 +277,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_EXEC_TIME,
 			"Max Active SQL Execution Time In Seconds",                   // Menu CheckBox text
-			"Max Active SQL Execution Time In Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Max Active SQL Execution Time In Seconds (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Max Active SQL Execution Time In Seconds" }, 
 			LabelType.Static,
@@ -290,7 +290,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_EXEC_COUNT,
 			"Active SQL Statement Execution Count",                   // Menu CheckBox text
-			"Active SQL Statement Execution Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Active SQL Statement Execution Count (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Active/Concurrent SQL Statement Execution Count" }, 
 			LabelType.Static,
@@ -303,7 +303,7 @@ extends CountersModel
 		// GRAPH pssinfo(SP.spid, 'tempdb_pages')
 		addTrendGraph(GRAPH_NAME_TEMPDB_SUM,
 			"Tempdb Usage in MB, using pssinfo",                   // Menu CheckBox text
-			"Tempdb Usage in MB, using pssinfo ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Tempdb Usage in MB, using pssinfo (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Tempdb usage: sum(pssinfo_tempdb_pages) in MB" }, // pssinfo(SP.spid, 'tempdb_pages') 
 			LabelType.Static,
@@ -377,9 +377,9 @@ extends CountersModel
 		boolean sample_sqlText        = conf.getBooleanProperty(PROPKEY_sample_sqlText,       DEFAULT_sample_sqlText);
 
 		// Should we sample SYSTEM SPID's
-		String sql_sample_systemThreads = "--and SP.suid > 0 -- Property: "+PROPKEY_sample_systemThreads+" is "+sample_systemThreads+". \n";
+		String sql_sample_systemThreads = "--and SP.suid > 0 -- Property: " + PROPKEY_sample_systemThreads + " is " + sample_systemThreads + ". \n";
 		if ( ! sample_systemThreads )
-			sql_sample_systemThreads = "  and SP.suid > 0 -- Property: "+PROPKEY_sample_systemThreads+" is "+sample_systemThreads+". \n";
+			sql_sample_systemThreads = "  and SP.suid > 0 -- Property: " + PROPKEY_sample_systemThreads + " is " + sample_systemThreads + ". \n";
 
 		// If not ASE 16, do not sample SQL Text
 		if (srvVersion < Ver.ver(16,0,0, 2)) // 16.0 PL1 didn't have 
@@ -522,7 +522,7 @@ extends CountersModel
 			+ "  StatementExecInMs = CASE WHEN datediff(day, ST.StartTime, getdate()) >= 24 THEN -1 ELSE  datediff(ms, ST.StartTime, getdate()) END, \n"
 			+ QueryOptimizationTime + ase160_sp3_nl
 			+ "  MP.Command, SP.tran_name, \n"
-			+ "  HasLastKnownSqlText = convert(bit,0), "+HasSqlText+" \n"
+			+ "  HasLastKnownSqlText = convert(bit,0), " + HasSqlText + " \n"
 			+ "  MP.BatchID, BatchIdDiff=convert(int,MP.BatchID), \n" // BatchIdDiff diff calculated
 			+ "  procName = isnull(object_name(SP.id, SP.dbid), object_name(SP.id, 2)), \n"
 			+ "  SP.stmtnum, SP.linenum, \n"
@@ -746,7 +746,7 @@ extends CountersModel
 
 		if (pos_WaitEventID < 0 || pos_WaitEventDesc < 0 || pos_WaitClassDesc < 0)
 		{
-			_logger.debug("Can't find the position for columns ('WaitEventID'="+pos_WaitEventID+", 'WaitEventDesc'="+pos_WaitEventDesc+", 'WaitClassDesc'="+pos_WaitClassDesc+")");
+			_logger.debug("Can't find the position for columns ('WaitEventID'=" + pos_WaitEventID + ", 'WaitEventDesc'=" + pos_WaitEventDesc + ", 'WaitClassDesc'=" + pos_WaitClassDesc + ")");
 			return;
 		}
 		
@@ -758,13 +758,13 @@ extends CountersModel
 		
 		if (pos_BlockingSPID < 0)
 		{
-			_logger.debug("Can't find the position for column ('BlockingSPID'="+pos_BlockingSPID+")");
+			_logger.debug("Can't find the position for column ('BlockingSPID'=" + pos_BlockingSPID + ")");
 			return;
 		}
 		
 		if (pos_AvgBytesPerSentPacket < 0 || pos_AvgBytesPerReceivedPacket < 0 || pos_BytesSent < 0 || pos_PacketsSent < 0 || pos_BytesReceived < 0 || pos_PacketsReceived < 0)
 		{
-			_logger.debug("Can't find the position for column ('pos_AvgBytesPerSentPacket'="+pos_AvgBytesPerSentPacket+", pos_AvgBytesPerReceivedPacket="+pos_AvgBytesPerReceivedPacket+", pos_BytesSent="+pos_BytesSent+", pos_PacketsSent="+pos_PacketsSent+", pos_BytesReceived="+pos_BytesReceived+", pos_PacketsReceived="+pos_PacketsReceived+")");
+			_logger.debug("Can't find the position for column ('pos_AvgBytesPerSentPacket'=" + pos_AvgBytesPerSentPacket + ", pos_AvgBytesPerReceivedPacket=" + pos_AvgBytesPerReceivedPacket + ", pos_BytesSent=" + pos_BytesSent + ", pos_PacketsSent=" + pos_PacketsSent + ", pos_BytesReceived=" + pos_BytesReceived + ", pos_PacketsReceived=" + pos_PacketsReceived + ")");
 			return;
 		}
 		
@@ -888,7 +888,7 @@ extends CountersModel
 
 		if (pos_AvgBytesPerSentPacket < 0 || pos_AvgBytesPerReceivedPacket < 0)
 		{
-			_logger.debug("Can't find the position for column ('pos_AvgBytesPerSentPacket'="+pos_AvgBytesPerSentPacket+", pos_AvgBytesPerReceivedPacket="+pos_AvgBytesPerReceivedPacket+")");
+			_logger.debug("Can't find the position for column ('pos_AvgBytesPerSentPacket'=" + pos_AvgBytesPerSentPacket + ", pos_AvgBytesPerReceivedPacket=" + pos_AvgBytesPerReceivedPacket + ")");
 			return;
 		}
 		
@@ -1000,7 +1000,7 @@ extends CountersModel
 
 			if (pos_Command < 0 || pos_PhysicalWrites < 0)
 			{
-				_logger.debug("Can't find the position for column ('Command'="+pos_Command+", 'PhysicalWrites'="+pos_PhysicalWrites+")");
+				_logger.debug("Can't find the position for column ('Command'=" + pos_Command + ", 'PhysicalWrites'=" + pos_PhysicalWrites + ")");
 				return;
 			}
 			
@@ -1042,7 +1042,7 @@ extends CountersModel
 			arr[1] = Double.valueOf(o_HkWashWrite     == null ? "0" : o_HkWashWrite    .toString());
 			arr[2] = Double.valueOf(o_HkGcWrite       == null ? "0" : o_HkGcWrite      .toString());
 			arr[3] = Double.valueOf(o_HkChoresWrite   == null ? "0" : o_HkChoresWrite  .toString());
-			_logger.debug("updateGraphData(ChkptHkGraph): o_CheckpointWrite='"+o_CheckpointWrite+"', o_HkWashWrite='"+o_HkWashWrite+"', o_HkGcWrite='"+o_HkGcWrite+"', o_HkChoresWrite='"+o_HkChoresWrite+"'.");
+			_logger.debug("updateGraphData(ChkptHkGraph): o_CheckpointWrite='" + o_CheckpointWrite + "', o_HkWashWrite='" + o_HkWashWrite + "', o_HkGcWrite='" + o_HkGcWrite + "', o_HkChoresWrite='" + o_HkChoresWrite + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1077,12 +1077,12 @@ extends CountersModel
 
 			if (pos_BatchIdDiff < 0)
 			{
-				_logger.debug("Can't find the position for column ('BatchIdDiff'="+pos_BatchIdDiff+")");
+				_logger.debug("Can't find the position for column ('BatchIdDiff'=" + pos_BatchIdDiff + ")");
 				return;
 			}
 			if (pos_Application < 0)
 			{
-				_logger.debug("Can't find the position for column ('Application'="+pos_Application+")");
+				_logger.debug("Can't find the position for column ('Application'=" + pos_Application + ")");
 				return;
 			}
 			
@@ -1114,7 +1114,7 @@ extends CountersModel
 			arr[0] = Double.valueOf(BatchIdDiff_sum);
 
 			if (_logger.isDebugEnabled())
-				_logger.debug("updateGraphData("+tgdp.getName()+"): BatchIdDiff_sum='"+BatchIdDiff_sum+"'.");
+				_logger.debug("updateGraphData(" + tgdp.getName() + "): BatchIdDiff_sum='" + BatchIdDiff_sum + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1153,22 +1153,22 @@ extends CountersModel
 
 			if (pos_suid < 0)
 			{
-				_logger.debug("Can't find the position for column ('suid'="+pos_suid+")");
+				_logger.debug("Can't find the position for column ('suid'=" + pos_suid + ")");
 				return;
 			}
 			if (pos_StatementExecInMs < 0)
 			{
-				_logger.debug("Can't find the position for column ('StatementExecInMs'="+pos_StatementExecInMs+")");
+				_logger.debug("Can't find the position for column ('StatementExecInMs'=" + pos_StatementExecInMs + ")");
 				return;
 			}
 			if (pos_WaitEventID < 0)
 			{
-				_logger.debug("Can't find the position for column ('WaitEventID'="+pos_WaitEventID+")");
+				_logger.debug("Can't find the position for column ('WaitEventID'=" + pos_WaitEventID + ")");
 				return;
 			}
 			if (pos_Application < 0)
 			{
-				_logger.debug("Can't find the position for column ('Application'="+pos_Application+")");
+				_logger.debug("Can't find the position for column ('Application'=" + pos_Application + ")");
 				return;
 			}
 			
@@ -1219,7 +1219,7 @@ extends CountersModel
 			arr[0] = Double.valueOf(maxValue / 1000.0);
 
 			if (_logger.isDebugEnabled())
-				_logger.debug("updateGraphData("+tgdp.getName()+"): StatementExecInMs_maxValue='"+maxValue+"'.");
+				_logger.debug("updateGraphData(" + tgdp.getName() + "): StatementExecInMs_maxValue='" + maxValue + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1258,22 +1258,22 @@ extends CountersModel
 
 			if (pos_suid < 0)
 			{
-				_logger.debug("Can't find the position for column ('suid'="+pos_suid+")");
+				_logger.debug("Can't find the position for column ('suid'=" + pos_suid + ")");
 				return;
 			}
 			if (pos_StatementExecInMs < 0)
 			{
-				_logger.debug("Can't find the position for column ('StatementExecInMs'="+pos_StatementExecInMs+")");
+				_logger.debug("Can't find the position for column ('StatementExecInMs'=" + pos_StatementExecInMs + ")");
 				return;
 			}
 			if (pos_WaitEventID < 0)
 			{
-				_logger.debug("Can't find the position for column ('WaitEventID'="+pos_WaitEventID+")");
+				_logger.debug("Can't find the position for column ('WaitEventID'=" + pos_WaitEventID + ")");
 				return;
 			}
 			if (pos_Application < 0)
 			{
-				_logger.debug("Can't find the position for column ('Application'="+pos_Application+")");
+				_logger.debug("Can't find the position for column ('Application'=" + pos_Application + ")");
 				return;
 			}
 			
@@ -1324,7 +1324,7 @@ extends CountersModel
 			arr[0] = Double.valueOf(count);
 
 			if (_logger.isDebugEnabled())
-				_logger.debug("updateGraphData("+tgdp.getName()+"): StatementExecInMs_count='"+count+"'.");
+				_logger.debug("updateGraphData(" + tgdp.getName() + "): StatementExecInMs_count='" + count + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1364,7 +1364,7 @@ extends CountersModel
 
 			if (pos_pssinfo_tempdb_pages < 0)
 			{
-				_logger.debug("Can't find the position for column ('pssinfo_tempdb_pages'="+pos_pssinfo_tempdb_pages+")");
+				_logger.debug("Can't find the position for column ('pssinfo_tempdb_pages'=" + pos_pssinfo_tempdb_pages + ")");
 				return;
 			}
 			
@@ -1391,7 +1391,7 @@ extends CountersModel
 			arr[0] = Double.valueOf(sum_pssinfo_tempdb_pages / pagesToMbDivider);
 
 			if (_logger.isDebugEnabled())
-				_logger.debug("updateGraphData("+tgdp.getName()+"): sum_pssinfo_tempdb_pages='"+sum_pssinfo_tempdb_pages+"'.");
+				_logger.debug("updateGraphData(" + tgdp.getName() + "): sum_pssinfo_tempdb_pages='" + sum_pssinfo_tempdb_pages + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1450,7 +1450,7 @@ extends CountersModel
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_StatementExecInSec, DEFAULT_alarm_StatementExecInSec);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", StatementExecInSec='"+StatementExecInSec+"'.");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", StatementExecInSec='" + StatementExecInSec + "'.");
 
 //					also -- copy it to SqlServerTune, PgTune, etc...
 

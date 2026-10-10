@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -770,7 +770,7 @@ public abstract class MainFrame
 
 //			_windowTitleAppend = "This DEVELOPMENT VERSION will NOT work after '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"', then you will have to download a later version.";
 //			_windowTitleAppend = "This Version Expires at '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"'.";
-			_windowTitleAppend = "Expires at '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"'.";
+			_windowTitleAppend = "Expires at '" + df.format(Version.DEV_VERSION_EXPIRE_DATE) + "'.";
 		}
 		if (DbxTune.hasDevVersionExpired())
 		{
@@ -1048,8 +1048,8 @@ public abstract class MainFrame
 				{
 					final String[] sa = name.split(";");
 					final String tabName   = sa[0];
-					final String groupName = sa.length > 1 ? "<i>"+sa[1]+"</i> - " : "";
-					final String menuText = "<html>"+groupName+"<b>"+tabName+"</b></html>";
+					final String groupName = sa.length > 1 ? "<i>" + sa[1] + "</i> - " : "";
+					final String menuText = "<html>" + groupName + "<b>" + tabName + "</b></html>";
 
 					// Add separator on new groups
 					if ( lastGroup != null && ! lastGroup.equals(groupName) )
@@ -1106,8 +1106,8 @@ public abstract class MainFrame
 				{
 					final String[] sa = name.split(";");
 					final String tabName   = sa[0];
-					final String groupName = sa.length > 1 ? " - <i>"+sa[1]+"</i>" : "";
-					final String menuText = "<html><b>"+tabName+"</b>"+groupName+"</html>";
+					final String groupName = sa.length > 1 ? " - <i>" + sa[1] + "</i>" : "";
+					final String menuText = "<html><b>" + tabName + "</b>" + groupName + "</html>";
 					JMenuItem mi = new JMenuItem();
 					mi.setText(menuText);
 					mi.setIcon(_mainTabbedPane.getIconAtTitle(tabName));
@@ -1158,8 +1158,8 @@ public abstract class MainFrame
 				{
 					final String[] sa = name.split(";");
 					final String tabName   = sa[0];
-					final String groupName = sa.length > 1 ? "<i>"+sa[1]+"</i> - " : "";
-					final String menuText = "<html>"+groupName+"<b>"+tabName+"</b></html>";
+					final String groupName = sa.length > 1 ? "<i>" + sa[1] + "</i> - " : "";
+					final String menuText = "<html>" + groupName + "<b>" + tabName + "</b></html>";
 
 					JMenuItem mi = new JMenuItem();
 					mi.setText(menuText);
@@ -1210,8 +1210,8 @@ public abstract class MainFrame
 				{
 					final String[] sa = name.split(";");
 					final String tabName   = sa[0];
-					final String groupName = sa.length > 1 ? "<i>"+sa[1]+"</i> - " : "";
-					final String menuText = "<html>"+groupName+"<b>"+tabName+"</b></html>";
+					final String groupName = sa.length > 1 ? "<i>" + sa[1] + "</i> - " : "";
+					final String menuText = "<html>" + groupName + "<b>" + tabName + "</b></html>";
 
 					JMenuItem mi = new JMenuItem();
 					mi.setText(menuText);
@@ -1720,7 +1720,7 @@ public abstract class MainFrame
 		
 		_autoRefreshOnTabChange_mi     = new JCheckBoxMenuItem("Auto Refresh when you change Performance Counter Tab", false);
 		_refreshRate_mi                = new JMenuItem("Refresh Rate...");
-		_prefShowAppNameInTitle_mi     = new JCheckBoxMenuItem("Show '"+Version.getAppName()+"' as Prefix in Window Title", DEFAULT_showAppNameInTitle);
+		_prefShowAppNameInTitle_mi     = new JCheckBoxMenuItem("Show '" + Version.getAppName() + "' as Prefix in Window Title", DEFAULT_showAppNameInTitle);
 		_groupTcpInTabPane_mi          = new JCheckBoxMenuItem("Group Performance Counters in Tabular Panels", useTcpGroups());
 		_prefJvmMemoryConfig_mi        = new JMenuItem("Java/JVM Memory Parameters...");
 		_optSummaryOperShowAbs_mi      = new JCheckBoxMenuItem("Show Absolute Counters for Summary Operations",   DEFAULT_summaryOperations_showAbs);
@@ -2101,7 +2101,7 @@ public abstract class MainFrame
 		String actionCmd = e.getActionCommand();
 		_inActionCommand = actionCmd;
 
-		_logger.debug("ACTION '"+actionCmd+"'.");
+		_logger.debug("ACTION '" + actionCmd + "'.");
 
 		if (ACTION_CONNECT.equals(actionCmd))
 			action_connect(e);
@@ -2228,7 +2228,7 @@ public abstract class MainFrame
 //NOTE: probably needs to get ConnProps from PersistReader and use that (or can we trust the "default ConnProps")
 					try 
 					{
-						DbxConnection conn = getNewConnection(Version.getAppName()+"-QueryWindow");
+						DbxConnection conn = getNewConnection(Version.getAppName() + "-QueryWindow");
 //						Connection conn = JdbcUtils.connect(this, jdbcDriver, jdbcUrl, jdbcUser, jdbcPasswd);
 						QueryWindow qf = new QueryWindow(conn, true, WindowType.JFRAME);
 						qf.openTheWindow();
@@ -2256,12 +2256,12 @@ public abstract class MainFrame
 						return;
 					}
 
-					AseConnectionFactory.setPropertiesForAppname(Version.getAppName()+"-QueryWindow", "IGNORE_DONE_IN_PROC", "true");
-					DbxConnection.setPropertyForAppname(Version.getAppName()+"-QueryWindow", "IGNORE_DONE_IN_PROC", "true");
+					AseConnectionFactory.setPropertiesForAppname(Version.getAppName() + "-QueryWindow", "IGNORE_DONE_IN_PROC", "true");
+					DbxConnection.setPropertyForAppname(Version.getAppName() + "-QueryWindow", "IGNORE_DONE_IN_PROC", "true");
 	
 //					Connection conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-QueryWindow", null);
 //					Connection conn = getNewConnection(Version.getAppName()+"-QueryWindow");
-					DbxConnection conn = getNewConnection(Version.getAppName()+"-QueryWindow");
+					DbxConnection conn = getNewConnection(Version.getAppName() + "-QueryWindow");
 					QueryWindow qf = new QueryWindow(conn, true, WindowType.JFRAME);
 					qf.openTheWindow();
 				}
@@ -2350,7 +2350,7 @@ public abstract class MainFrame
 
 			for (TabularCntrPanel tcp : _TcpMap.values())
 			{
-				_logger.trace("ACTION_VIEW_STORAGE: setTail("+_viewStorage_chk.isSelected()+"), '"+tcp.getPanelName()+"'.");
+				_logger.trace("ACTION_VIEW_STORAGE: setTail(" + _viewStorage_chk.isSelected() + "), '" + tcp.getPanelName() + "'.");
 
 				if (_viewStorage_chk.isSelected())
 				{
@@ -2493,12 +2493,12 @@ public abstract class MainFrame
 					  "This reduce the memory usage in the future.<br>" +
 					  "<br>" +
 					  "<b>Note</b>: you can raise the memory parameter <code>-Xmx###m</code> from MainMenu-&gt;View-&gt;Preferences-&gt;Java/JVM Memory Parameters...<br>" +
-					  "<b>Note</b>: you can raise the memory parameter <code>-Xmx###m</code> in the "+Version.getAppName()+" start script.<br>" +
-					  "Current max memory setting seems to be around "+maxConfigMemInMB+" MB.<br>" +
-					  "After Garbage Collection, you now have "+mbLeftAfterGc+" free MB.<br>" +
+					  "<b>Note</b>: you can raise the memory parameter <code>-Xmx###m</code> in the " + Version.getAppName() + " start script.<br>" +
+					  "Current max memory setting seems to be around " + maxConfigMemInMB + " MB.<br>" +
+					  "After Garbage Collection, you now have " + mbLeftAfterGc + " free MB.<br>" +
 					"</html>", 
 					JOptionPane.INFORMATION_MESSAGE);
-			JDialog dialog = optionPane.createDialog(this, "out-of-memory @ "+dateStr); 
+			JDialog dialog = optionPane.createDialog(this, "out-of-memory @ " + dateStr); 
 			dialog.setModal(false);
 			dialog.setVisible(true);
 
@@ -2546,8 +2546,8 @@ public abstract class MainFrame
 					JOptionPane optionPane = new JOptionPane(
 							"<html>" +
 							  "<h2>Sorry, FREE Memory starts to get LOW </h2>" +
-							  "Low Memory Threshold limit is "+CounterCollectorThreadAbstract.MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB+" MB<br>" +
-							  "Currently there are "+memLeft+" MB left.<br>" +
+							  "Low Memory Threshold limit is " + CounterCollectorThreadAbstract.MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB + " MB<br>" +
+							  "Currently there are " + memLeft + " MB left.<br>" +
 							  "<br>" +
 							  "I have <b>enabled</b> 'system' Garbage Collection after each data sample! <br>" +
 							  "This can be disabled at: Menu-&gt;View-&gt;Preferences <br>" +
@@ -2560,17 +2560,17 @@ public abstract class MainFrame
 							  "</b>" +
 							  "<br>" +
 							  "<b>Note</b>: you can raise the memory parameter <code>-Xmx###m</code> from MainMenu-&gt;View-&gt;Preferences-&gt;Java/JVM Memory Parameters...<br>" +
-							  "<b>Note</b>: you can raise the memory parameter <code>-Xmx###m</code> in the "+Version.getAppName()+" start script.<br>" +
-							  "Current max memory setting seems to be around "+maxConfigMemInMB+" MB.<br>" +
+							  "<b>Note</b>: you can raise the memory parameter <code>-Xmx###m</code> in the " + Version.getAppName() + " start script.<br>" +
+							  "Current max memory setting seems to be around " + maxConfigMemInMB + " MB.<br>" +
 							"</html>",
 							JOptionPane.INFORMATION_MESSAGE);
-					JDialog dialog = optionPane.createDialog(this, "low-on-memory @ "+dateStr);
+					JDialog dialog = optionPane.createDialog(this, "low-on-memory @ " + dateStr);
 					dialog.setModal(false);
 					dialog.setVisible(true);
 				}
 				else
 				{
-					_logger.warn("Caught a memory peek of where some subsystem thought we were running lower than "+CounterCollectorThreadGui.DEFAULT_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB+" MB free, but when double checking in the action handler, we still got "+memLeft+" MB Left. So aborting this 'LOW_ON_MEMORY' action.");
+					_logger.warn("Caught a memory peek of where some subsystem thought we were running lower than " + CounterCollectorThreadGui.DEFAULT_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB + " MB free, but when double checking in the action handler, we still got " + memLeft + " MB Left. So aborting this 'LOW_ON_MEMORY' action.");
 				}
 			}
 
@@ -2587,16 +2587,16 @@ public abstract class MainFrame
 				appName = "dbxtune";
 
 			String fileList = "";
-			String extraInfo = Version.getAppName() + ", Version: "+ Version.getVersionStr();
+			String extraInfo = Version.getAppName() + ", Version: " + Version.getVersionStr();
 			
 			// Main window
-			String main = Screenshot.windowScreenshot(this, AppDir.getDbxUserHomeDir(), appName+".main", true, extraInfo);
+			String main = Screenshot.windowScreenshot(this, AppDir.getDbxUserHomeDir(), appName + ".main", true, extraInfo);
 			fileList += main + NL;
 
 			// ALL Summary graphs (even hidden ones, eg the ones outside of the ScrollPane)
 			// Note: the Header/Labels on the graphs are not there, this is due to the fact that they are printed "later" with the Watermark stuff that uses the AbstractComponentDecorator...
 			Component summaryComp = CounterController.getSummaryPanel().getGraphPanel().getGraphPanelNoScroll();
-			String summaryPanel = Screenshot.windowScreenshot(summaryComp, AppDir.getDbxUserHomeDir(), appName+".graphs", true, extraInfo);
+			String summaryPanel = Screenshot.windowScreenshot(summaryComp, AppDir.getDbxUserHomeDir(), appName + ".graphs", true, extraInfo);
 			fileList += summaryPanel + NL;
 
 			// LOOP all CounterModels, and check if they got any windows open, then screenshot that also
@@ -2611,7 +2611,7 @@ public abstract class MainFrame
 					if (tp.isTabUnDocked(cm.getDisplayName()))
 					{
 						JFrame frame = tp.getTabUnDockedFrame(cm.getDisplayName());
-						String fn = Screenshot.windowScreenshot(frame, AppDir.getDbxUserHomeDir(), appName+"."+cm.getName(), true, extraInfo);
+						String fn = Screenshot.windowScreenshot(frame, AppDir.getDbxUserHomeDir(), appName + "." + cm.getName(), true, extraInfo);
 						fileList += fn + NL;
 					}
 				}
@@ -2784,7 +2784,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 //			if ((_currentPanel != null) && (AseTune.getCounterCollector().getMonConnection() != null) && (_currentPanel.getCm() != null) && (!_currentPanel.getCm().isDataInitialized()))
 			if ((_currentPanel != null) && (CounterController.getInstance().getMonConnection() != null) && (_currentPanel.getCm() != null) && (!_currentPanel.getCm().isDataInitialized()))
 			{
-				CounterController.getInstance().setWaitEvent("data to be initialization in the panel '"+_currentPanel.getPanelName()+"'...");
+				CounterController.getInstance().setWaitEvent("data to be initialization in the panel '" + _currentPanel.getPanelName() + "'...");
 				//statusFld.setText("Waiting for data to be initialization in the panel '"+currentPanel.getPanelName()+"'...");
 			}
 
@@ -2829,7 +2829,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				_readSlider.setLabelTable(dict);
 
 //				_readSlider.repaint();
-				_logger.trace("MainFrame.stateChanged().InMemoryCounterHandler: dict = "+dict);
+				_logger.trace("MainFrame.stateChanged().InMemoryCounterHandler: dict = " + dict);
 				
 				//TODO: set slider to "correct" place, if we are not already at that position.
 				int imchIndex = imch.indexOf(_currentPc);
@@ -2838,13 +2838,13 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 					int sliderIndex = _readSlider.getValue();
 					if (sliderIndex != imchIndex)
 					{
-						_logger.trace("MOVING: setting slider to '"+imchIndex+"', from '"+sliderIndex+"'.");
+						_logger.trace("MOVING: setting slider to '" + imchIndex + "', from '" + sliderIndex + "'.");
 						_readSlider.setValue(imchIndex);
 					}
 				}
 				else // Not found: probably aged out, should we go to oldest entry
 				{
-					_logger.trace("AGED-OUT: SETTING SLIDER TO MAX "+(imch.getSize()-1) );
+					_logger.trace("AGED-OUT: SETTING SLIDER TO MAX " + (imch.getSize()-1) );
 					_readSlider.setValue(imch.getSize()-1);
 				}
 			}
@@ -2857,11 +2857,11 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		{
 			if (_logger.isTraceEnabled())
 			{
-				_logger.trace("ReadSlider: getValueIsAdjusting="+_readSlider.getValueIsAdjusting()
-					+", value="+_readSlider.getValue()
-					+", min="+_readSlider.getMinimum()
-					+", max="+_readSlider.getMaximum()
-					+", CangeEvent="+e
+				_logger.trace("ReadSlider: getValueIsAdjusting=" + _readSlider.getValueIsAdjusting()
+					+ ", value=" + _readSlider.getValue()
+					+ ", min=" + _readSlider.getMinimum()
+					+ ", max=" + _readSlider.getMaximum()
+					+ ", CangeEvent=" + e
 				);
 			}
 
@@ -2896,11 +2896,11 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		{
 			if (_logger.isTraceEnabled())
 			{
-				_logger.trace("OfflineSlider: getValueIsAdjusting="+_offlineSlider.getValueIsAdjusting()
-					+", value="+_offlineSlider.getValue()
-					+", min="+_offlineSlider.getMinimum()
-					+", max="+_offlineSlider.getMaximum()
-					+", CangeEvent="+e
+				_logger.trace("OfflineSlider: getValueIsAdjusting=" + _offlineSlider.getValueIsAdjusting()
+					+ ", value=" + _offlineSlider.getValue()
+					+ ", min=" + _offlineSlider.getMinimum()
+					+ ", max=" + _offlineSlider.getMaximum()
+					+ ", CangeEvent=" + e
 				);
 			}
 
@@ -3126,7 +3126,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		}
 		catch (Exception e)
 		{
-			_logger.warn("Trying to get a new SQL Connection for AppName='"+appName+"', Caught: "+e, e);
+			_logger.warn("Trying to get a new SQL Connection for AppName='" + appName + "', Caught: " + e, e);
 			return null;
 		}
 //		throw new RuntimeException("MainFrame has not implemented the method 'getNewConnection(String)'");
@@ -3287,7 +3287,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		if ( connType == ConnectionDialog.TDS_CONN)
 		{
 			if (DbxTune.hasDevVersionExpired())
-				throw new RuntimeException(Version.getAppName()+" DEV Version has expired, can't connect to a DB Server. only 'PCS - Read mode' is available.");
+				throw new RuntimeException(Version.getAppName() + " DEV Version has expired, can't connect to a DB Server. only 'PCS - Read mode' is available.");
 
 			HostMonitorConnection hostMonConn = connDialog.getHostMonConn();
 //			if (connDialog.isHostMonEnabled())
@@ -3367,7 +3367,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		if ( connType == ConnectionDialog.JDBC_CONN)
 		{
 			if (DbxTune.hasDevVersionExpired())
-				throw new RuntimeException(Version.getAppName()+" DEV Version has expired, can't connect to a DB Server. only 'PCS - Read mode' is available.");
+				throw new RuntimeException(Version.getAppName() + " DEV Version has expired, can't connect to a DB Server. only 'PCS - Read mode' is available.");
 
 //			HostMonitorConnection hostMonConn = new HostMonitorConnectionSsh(connDialog.getSshConn());
 			HostMonitorConnection hostMonConn = connDialog.getHostMonConn();
@@ -3544,7 +3544,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 		_logger.info("Starting a thread that will do disconnect after this sample session is finished.");
 
-		WaitForExecDialog wait = new WaitForExecDialog(MainFrame.getInstance(), "Disconnecting from "+disconnectFrom);
+		WaitForExecDialog wait = new WaitForExecDialog(MainFrame.getInstance(), "Disconnecting from " + disconnectFrom);
 
 		// Kick this of as it's own thread, otherwise the sleep below, might block the Swing Event Dispatcher Thread
 		BgExecutor terminateConnectionTask = new BgExecutor(wait)
@@ -3578,8 +3578,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 							break;
 
 						char pc = progressChars[ i % 4 ];
-						_logger.info("Waiting for CounterController to stop before I can: Clearing components... Waited for "+sleptSoFar+" ms so far. Giving up after "+timeoutAfter+" seconds");
-						getWaitDialog().setState("Waiting for 'refresh' to end "+pc);
+						_logger.info("Waiting for CounterController to stop before I can: Clearing components... Waited for " + sleptSoFar + " ms so far. Giving up after " + timeoutAfter + " seconds");
+						getWaitDialog().setState("Waiting for 'refresh' to end " + pc);
 
 						try { Thread.sleep(500); }
 						catch (InterruptedException ignore) {}
@@ -3633,7 +3633,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				{
 					if (cm != null)
 					{
-						getWaitDialog().setState("Clearing Performance Counter '"+cm.getDisplayName()+"'.");
+						getWaitDialog().setState("Clearing Performance Counter '" + cm.getDisplayName() + "'.");
 						cm.clear();
 					}
 				}
@@ -3645,7 +3645,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				// Close all cm's
 				for (CountersModel cm : CounterController.getInstance().getCmList())
 				{
-					getWaitDialog().setState("SQL Closing CM '"+cm.getDisplayName()+"'.");
+					getWaitDialog().setState("SQL Closing CM '" + cm.getDisplayName() + "'.");
 					cm.close();
 				}
 				
@@ -3762,7 +3762,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				{
 					if (cm != null)
 					{
-						getWaitDialog().setState("Resetting Performance Counter '"+cm.getDisplayName()+"'.");
+						getWaitDialog().setState("Resetting Performance Counter '" + cm.getDisplayName() + "'.");
 						cm.reset();
 					}
 				}
@@ -4336,20 +4336,20 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				if (indexTs == null)
 					continue;
 
-				if (_logger.isTraceEnabled()) _logger.trace("CHECK ts='"+ts+"', indexTs='"+indexTs+"'.");
+				if (_logger.isTraceEnabled()) _logger.trace("CHECK ts='" + ts + "', indexTs='" + indexTs + "'.");
 
 				// IF input timestamp is SMALLER than first entry in the TS List, choose index=0
 				if (i == 0 && ts.before(indexTs))
 				{
 					sliderPos = i;
-					if (_logger.isTraceEnabled()) _logger.trace("--->>> TS is SMALLER than first index entry: sliderPos='"+sliderPos+"', ts='"+ts+"', indexTs='"+indexTs+"'.");
+					if (_logger.isTraceEnabled()) _logger.trace("--->>> TS is SMALLER than first index entry: sliderPos='" + sliderPos + "', ts='" + ts + "', indexTs='" + indexTs + "'.");
 					break;
 				}
 				// IF input timestamp is EQUAL, choose index=currentIndex
 				else if (ts.equals(indexTs))
 				{
 					sliderPos = i;
-					if (_logger.isTraceEnabled()) _logger.trace("--->>> FOUND EXACT MATCH: ts='"+ts+"', indexTs='"+indexTs+"'.");
+					if (_logger.isTraceEnabled()) _logger.trace("--->>> FOUND EXACT MATCH: ts='" + ts + "', indexTs='" + indexTs + "'.");
 					break;
 				}
 				// No exact match, go and grab the CLOSEST timestamp in the TS List
@@ -4372,13 +4372,13 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 						
 						Timestamp closeEnough = ( a < b ) ? smallerTs : largerTs;
 						sliderPos = _offlineTsList.indexOf(closeEnough);
-						if (_logger.isTraceEnabled()) _logger.trace("--->>> CLOSE ENOUGH: ts='"+ts+"', indexTs='"+indexTs+"', sliderPos='"+sliderPos+"', closeEnough='"+closeEnough+"', smallerTs='"+smallerTs+"', largerTs='"+largerTs+"', a='"+a+"', b='"+b+"'.");
+						if (_logger.isTraceEnabled()) _logger.trace("--->>> CLOSE ENOUGH: ts='" + ts + "', indexTs='" + indexTs + "', sliderPos='" + sliderPos + "', closeEnough='" + closeEnough + "', smallerTs='" + smallerTs + "', largerTs='" + largerTs + "', a='" + a + "', b='" + b + "'.");
 						break;
 					}
 				}
 			}
 				
-			if (_logger.isTraceEnabled()) _logger.trace("_offlineSlider.setValue("+sliderPos+"); and NOTIFY LISTENERS");
+			if (_logger.isTraceEnabled()) _logger.trace("_offlineSlider.setValue(" + sliderPos + "); and NOTIFY LISTENERS");
 			if (sliderPos >= 0)
 			{
 				// the sliders listeners will be notified and do the rest of the work.
@@ -4393,7 +4393,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			InMemoryCounterHandler imch = InMemoryCounterHandler.getInstance();
 			if (imch != null)
 			{
-				_logger.trace("MainFrame.setTimeLinePoint(): Ts="+ts);
+				_logger.trace("MainFrame.setTimeLinePoint(): Ts=" + ts);
 				
 				int index = imch.indexOf(ts);
 				if (index >= 0)
@@ -4401,7 +4401,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 					//int sliderPos = (_readSlider.getMaximum() - index) - 1; 
 					int sliderPos = index;
 	
-					_logger.trace("MainFrame.setTimeLinePoint(): index="+index+", sliderPos="+sliderPos);
+					_logger.trace("MainFrame.setTimeLinePoint(): index=" + index + ", sliderPos=" + sliderPos);
 					// This will call the stateChanged
 					// which does the rest of the work.
 					_readSlider.setValue(sliderPos);
@@ -4452,7 +4452,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		String groupName = tcp.getGroupName();
 		if ( ! StringUtil.isNullOrBlank(groupName) && useTcpGroups())
 		{
-			_logger.debug("MainFrame.addTcp(): adding to group "+StringUtil.left("'"+groupName+"',", 20)+" tcpName='"+tcp.getName()+"'.");
+			_logger.debug("MainFrame.addTcp(): adding to group " + StringUtil.left("'" + groupName + "',", 20) + " tcpName='" + tcp.getName() + "'.");
 			GTabbedPane gtp = _mainTabbedPane;
 			int index = gtp.indexOfTab(groupName);
 			if (index >= 0)
@@ -4470,7 +4470,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		}
 		else
 		{
-			_logger.debug("MainFrame.addTcp(): NO GROUP groupName='"+groupName+"', tcpName='"+tcp.getName()+"'.");
+			_logger.debug("MainFrame.addTcp(): NO GROUP groupName='" + groupName + "', tcpName='" + tcp.getName() + "'.");
 			_mainTabbedPane.addTab(tcp.getPanelName(), tcp.getIcon(), tcp, tcp.getCm().getDescription());
 		}
 
@@ -4599,7 +4599,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			int activeAlarmCount = AlarmWriterToTableModel.getInstance().getActiveTableModel().getRowCount();
 
 			if (activeAlarmCount > 0)
-				_alarmView_but.setText(""+activeAlarmCount);
+				_alarmView_but.setText("" + activeAlarmCount);
 			else
 				_alarmView_but.setText("");
 		}
@@ -4630,7 +4630,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	public void setBlockingLocks(boolean visible, int blockCount)
 	{
 		if (blockCount > 0)
-			_blockAlert_but.setText(blockCount+" Blocked SPID's, ");
+			_blockAlert_but.setText(blockCount + " Blocked SPID's, ");
 		else
 			_blockAlert_but.setText("");
 
@@ -4647,7 +4647,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	public void setFullTransactionLog(boolean visible, int fullCount)
 	{
 		if (fullCount > 0)
-			_fullTranlogAlert_but.setText(fullCount+" DB Log(s) are full, ");
+			_fullTranlogAlert_but.setText(fullCount + " DB Log(s) are full, ");
 		else
 			_fullTranlogAlert_but.setText("");
 
@@ -4664,7 +4664,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	public void setOldestOpenTran(boolean visible, int seconds)
 	{
 		if (seconds > 0)
-			_oldestOpenTran_but.setText("Oldest Open Transaction is "+seconds+" seconds, ");
+			_oldestOpenTran_but.setText("Oldest Open Transaction is " + seconds + " seconds, ");
 		else
 			_oldestOpenTran_but.setText("");
 
@@ -5329,7 +5329,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		else
 		{
 			// UNKNOWN type.
-			throw new RuntimeException("Unknown menu status '"+status+"'.");
+			throw new RuntimeException("Unknown menu status '" + status + "'.");
 		}
 	}
 
@@ -5504,8 +5504,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				if (_invokeAndWait)
 				{
     				try { SwingUtilities.invokeAndWait(this); }
-    				catch (InterruptedException e)      { _logger.info("StatusWrapper.setStatus(), calling SwingUtilities.invokeAndWait(), Caught: "+e); }
-    				catch (InvocationTargetException e) { _logger.warn("StatusWrapper.setStatus(), calling SwingUtilities.invokeAndWait(), Caught: "+e, e); }
+    				catch (InterruptedException e)      { _logger.info("StatusWrapper.setStatus(), calling SwingUtilities.invokeAndWait(), Caught: " + e); }
+    				catch (InvocationTargetException e) { _logger.warn("StatusWrapper.setStatus(), calling SwingUtilities.invokeAndWait(), Caught: " + e, e); }
 				}
 				else
 				{
@@ -5534,7 +5534,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		if ( ! SwingUtils.isEventQueueThread() )
 		{
 			if (_logger.isDebugEnabled())
-				_logger.debug("MainFrame.setStatus() -NOT-IN-EDT-: ThreadName=='"+Thread.currentThread().getName()+"', type="+type+", param='"+param+"'.");
+				_logger.debug("MainFrame.setStatus() -NOT-IN-EDT-: ThreadName=='" + Thread.currentThread().getName() + "', type=" + type + ", param='" + param + "'.");
 
 //System.out.println("MainFrame.setStatus() -NOT-IN-EDT-: ThreadName=='"+Thread.currentThread().getName()+"', type="+type+", param='"+param+"'.");
 			if (_statusWrapper == null)
@@ -5590,7 +5590,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				else
 					name = "unknown";
 
-				getInstance().setSrvInTitle("offline:"+name);
+				getInstance().setSrvInTitle("offline:" + name);
 
 				setMenuMode(ST_OFFLINE_CONNECT);
 				_lastKnownStatus = ST_OFFLINE_CONNECT;
@@ -5771,7 +5771,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 //			_statusMemory.setText(
 //				"Memory: Used "+Memory.getUsedMemoryInMB() +
 //				" MB, Free "+Memory.getMemoryLeftInMB() + " MB");
-			_statusMemory.setText("Free "+Memory.getMemoryLeftInMB() + " MB");
+			_statusMemory.setText("Free " + Memory.getMemoryLeftInMB() + " MB");
 		}
 	}
 
@@ -5886,7 +5886,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 					" MP.SecondsWaiting, " +
 					" MP.SecondsConnected , " +
 					" MP.WaitEventID, " +
-					" WaitEventDescription = (select W.Description from master..monWaitEventInfo W where W.WaitEventID = MP.WaitEventID "+monWaitEventInfoWhere+"), " +
+					" WaitEventDescription = (select W.Description from master..monWaitEventInfo W where W.WaitEventID = MP.WaitEventID " + monWaitEventInfoWhere + "), " +
 					" MP.BlockingSPID, " +
 					" procname = (select isnull(object_name(sp.id, sp.dbid), object_name(sp.id, 2)) from master..sysprocesses sp where sp.spid = MP.SPID), " +
 					" MP.BatchID, " +
@@ -5894,7 +5894,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 					" MP.BlockingXLOID, " +
 					" MP.MasterTransactionID" +
 					" from master.dbo.monProcess MP " +
-					" where "+whereColName+" = ? ";
+					" where " + whereColName + " = ? ";
 			}
 		}
 		
@@ -5935,8 +5935,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		String orderAndVisibility = tmpConf.getProperty("main.tab.orderAndVisibility");
 		if (orderAndVisibility != null)
 		{
-			_logger.info("Loading TabbedPane 'Tab Titles' order and visibility using property 'main.tab.orderAndVisibility', which looks like '"+orderAndVisibility+"'.");
-			_logger.info("To change/remove the sorting use the menu 'Counter Tab View'. OR to get rid of this sorting simply delete the entry 'main.tab.orderAndVisibility' in the file '"+tmpConf.getFilename()+"'.");
+			_logger.info("Loading TabbedPane 'Tab Titles' order and visibility using property 'main.tab.orderAndVisibility', which looks like '" + orderAndVisibility + "'.");
+			_logger.info("To change/remove the sorting use the menu 'Counter Tab View'. OR to get rid of this sorting simply delete the entry 'main.tab.orderAndVisibility' in the file '" + tmpConf.getFilename() + "'.");
 			_mainTabbedPane.setTabOrderAndVisibility(orderAndVisibility);
 		}
 	}
@@ -5948,7 +5948,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
 		if (tmpConf != null)
 		{
-			_logger.info("Saving TabbedPane 'Tab Titles' order and visibility using property 'main.tab.orderAndVisibility', which looks like '"+tabOptions+"'.");
+			_logger.info("Saving TabbedPane 'Tab Titles' order and visibility using property 'main.tab.orderAndVisibility', which looks like '" + tabOptions + "'.");
 			tmpConf.setProperty("main.tab.orderAndVisibility", tabOptions);
 			tmpConf.save();
 		}
@@ -5957,7 +5957,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	public void removeTabOrderAndVisibility()
 	{
 		Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
-		_logger.info("Removing the ordering and visibility entry 'main.tab.orderAndVisibility' in the file '"+tmpConf.getFilename()+"'.");
+		_logger.info("Removing the ordering and visibility entry 'main.tab.orderAndVisibility' in the file '" + tmpConf.getFilename() + "'.");
 		tmpConf.remove("main.tab.orderAndVisibility");
 		tmpConf.save();
 	}
@@ -5992,7 +5992,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			String val = conf.getProperty(key);
 			String name = key.substring(prefix.length());
 
-			_logger.debug("Adding UD Cell Tooltip for colName='"+name+"', SQL='"+val+"'.");
+			_logger.debug("Adding UD Cell Tooltip for colName='" + name + "', SQL='" + val + "'.");
 			_udTooltipMap.put(name, val);
 		}
 	}
@@ -6473,7 +6473,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				// Show a message
 				String htmlMsg = "<html>"
 						+ "<h3>External request - Open offline recording</h3>"
-						+ "To URL: <code>"+url+"</code><br>"
+						+ "To URL: <code>" + url + "</code><br>"
 						+ "<br>"
 						+ "Click <i>Connect</i> will do the following:"
 						+ "<ul>"

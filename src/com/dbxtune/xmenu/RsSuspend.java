@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -100,7 +100,7 @@ extends XmenuActionBase
 		}
 		else
 		{
-			SwingUtils.showInfoMessage(null, "Not yet implemented", "Suspend for '"+nameCol+"' is not yet implemented.");
+			SwingUtils.showInfoMessage(null, "Not yet implemented", "Suspend for '" + nameCol + "' is not yet implemented.");
 			return;
 		}
 	}

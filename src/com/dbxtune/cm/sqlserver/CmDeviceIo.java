@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -68,7 +68,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_DISK;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -104,7 +104,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmDeviceIo(counterController, guiController);
 	}
@@ -160,7 +160,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SRW_ALL_DISK_KB,
 			"Disk Throughput in KB (Sum,Read,Write), per Second and ALL Devices", // Menu CheckBox text
-			"Disk Throughput in KB (Sum,Read,Write), per Second and ALL Devices ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Disk Throughput in KB (Sum,Read,Write), per Second and ALL Devices (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Sum_KB_ALL_devices", "Read_KB_ALL_devices", "Write_KB_ALL_devices" },
 			LabelType.Static,
@@ -173,7 +173,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SRW_ALL_DISK_IO,
 			"Number of Disk Operations (Sum,Read,Write), per Second and ALL Devices", // Menu CheckBox text
-			"Number of Disk Operations (Sum,Read,Write), per Second and ALL Devices ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Number of Disk Operations (Sum,Read,Write), per Second and ALL Devices (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Sum_ALL_devices", "Read_ALL_devices", "Write_ALL_devices" },
 			LabelType.Static,
@@ -186,7 +186,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_RW_ALL_DISK_IO,
 			"Number of Disk Operations (Read+Write), per Second and ALL Devices", // Menu CheckBox text
-			"Number of Disk Operations (Read+Write), per Second and ALL Devices ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Number of Disk Operations (Read+Write), per Second and ALL Devices (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "ALL_devices" },
 			LabelType.Static,
@@ -199,7 +199,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_R_ALL_DISK_IO,
 			"Number of Disk Operations (Read), per Second and ALL Devices", // Menu CheckBox text
-			"Number of Disk Operations (Read), per Second and ALL Devices ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Number of Disk Operations (Read), per Second and ALL Devices (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "ALL_devices" },
 			LabelType.Static,
@@ -212,7 +212,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_W_ALL_DISK_IO,
 			"Number of Disk Operations (Write), per Second and ALL Devices", // Menu CheckBox text
-			"Number of Disk Operations (Write), per Second and ALL Devices ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Number of Disk Operations (Write), per Second and ALL Devices (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "ALL_devices" },
 			LabelType.Static,
@@ -227,7 +227,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_RW_DISK_IO,
 			"Number of Disk Operations (Read+Write), per Second and Device", // Menu CheckBox text
-			"Number of Disk Operations (Read+Write), per Second and Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Number of Disk Operations (Read+Write), per Second and Device (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -240,7 +240,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_R_DISK_IO,
 			"Number of Disk Operations (Read), per Second and Device", // Menu CheckBox text
-			"Number of Disk Operations (Read), per Second and Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Number of Disk Operations (Read), per Second and Device (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -253,7 +253,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_W_DISK_IO,
 			"Number of Disk Operations (Write), per Second and Device", // Menu CheckBox text
-			"Number of Disk Operations (Write), per Second and Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Number of Disk Operations (Write), per Second and Device (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -281,7 +281,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_R_AVG_KB_PER_IO,
 			"Average (Read) KB Per Disk IO, per Device", // Menu CheckBox text
-			"Average (Read) KB Per Disk IO, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Average (Read) KB Per Disk IO, per Device (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -294,7 +294,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_W_AVG_KB_PER_IO,
 			"Average (Write) KB Per Disk IO, per Device", // Menu CheckBox text
-			"Average (Write) KB Per Disk IO, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Average (Write) KB Per Disk IO, per Device (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -309,7 +309,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_RW_SERVICE_TIME,
 			"Device IO Service Time (Read+Write), per Device",                 // Menu CheckBox text
-			"Device IO Service Time (Read+Write) in Milliseconds, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Device IO Service Time (Read+Write) in Milliseconds, per Device (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -322,7 +322,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_R_SERVICE_TIME,
 			"Device IO Service Time (Read), per Device",                 // Menu CheckBox text
-			"Device IO Service Time (Read) in Milliseconds, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Device IO Service Time (Read) in Milliseconds, per Device (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -335,7 +335,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_W_SERVICE_TIME,
 			"Device IO Service Time (Write), per Device",                 // Menu CheckBox text
-			"Device IO Service Time (Write) in Milliseconds, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Device IO Service Time (Write) in Milliseconds, per Device (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -449,7 +449,7 @@ extends CountersModel
 		}
 
 		// Special thing for Azure SQL Database
-		String joinMasterFiles = "JOIN sys." + master_files +" b ON a.file_id = b.file_id AND a.database_id = b.database_id \n";
+		String joinMasterFiles = "JOIN sys." + master_files + " b ON a.file_id = b.file_id AND a.database_id = b.database_id \n";
 		if (ssVersionInfo.isAzureDb() || ssVersionInfo.isAzureSynapseAnalytics())
 		{
 			// NOTE: for Azure SQL Database, tempdb will have faulty 'devicename' and 'physical_name' (but lets fix that LATER)
@@ -471,26 +471,26 @@ extends CountersModel
 		       "                         WHEN a.file_id = 2 THEN '_Log' \n" +
 		       "                         ELSE '_fid_' + cast(a.file_id as varchar(10)) \n" +
 		       "                     END, \n" +
-		       "TotalIOs           = "+TotalIOs+", \n" +
+		       "TotalIOs           = " + TotalIOs + ", \n" +
 		       "Reads              = a.num_of_reads, \n" +
 		       "ReadsKB            = (a.num_of_bytes_read / 1024), \n" +
 		       "AvgReadKbPerIo     = convert(numeric(10,1), (a.num_of_bytes_read / 1024.0) / (1.0 * NULLIF(a.num_of_reads, 0))), \n" +
-		       "ReadsPct           = CASE WHEN "+TotalIOs+" > 0 \n" +
-		       "                          THEN convert(numeric(10,1), (a.num_of_reads + 0.0) / ("+TotalIOs+" + 0.0) * 100.0 ) \n" +
+		       "ReadsPct           = CASE WHEN " + TotalIOs + " > 0 \n" +
+		       "                          THEN convert(numeric(10,1), (a.num_of_reads + 0.0) / (" + TotalIOs + " + 0.0) * 100.0 ) \n" +
 		       "                          ELSE convert(numeric(10,1), 0.0 ) \n" +
 		       "                     END, \n" +
 		       "Writes             = a.num_of_writes, \n" +
 		       "WritesKB           = (a.num_of_bytes_written / 1024), \n" +
 		       "AvgWriteKbPerIo    = convert(numeric(10,1), (a.num_of_bytes_written / 1024.0) / (1.0 * NULLIF(a.num_of_writes, 0))), \n" +
-		       "WritesPct          = CASE WHEN "+TotalIOs+" > 0 \n" +
-		       "                          THEN convert(numeric(10,1), (a.num_of_writes + 0.0) / ("+TotalIOs+" + 0.0) * 100.0 ) \n" +
+		       "WritesPct          = CASE WHEN " + TotalIOs + " > 0 \n" +
+		       "                          THEN convert(numeric(10,1), (a.num_of_writes + 0.0) / (" + TotalIOs + " + 0.0) * 100.0 ) \n" +
 		       "                          ELSE convert(numeric(10,1), 0.0 ) \n" +
 		       "                     END, \n" +
 		       "IOTime             = a.io_stall, \n" + 
 		       "ReadTime           = a.io_stall_read_ms, \n" + 
 		       "WriteTime          = a.io_stall_write_ms, \n" + 
-		       "AvgServ_ms         = CASE WHEN "+TotalIOs+" > 0 \n" +
-		       "                          THEN convert(numeric(10,1), a.io_stall / convert(numeric(18,0), "+TotalIOs+")) \n" +
+		       "AvgServ_ms         = CASE WHEN " + TotalIOs + " > 0 \n" +
+		       "                          THEN convert(numeric(10,1), a.io_stall / convert(numeric(18,0), " + TotalIOs + ")) \n" +
 		       "                          ELSE convert(numeric(10,1), null) \n" +
 		       "                     END, \n" +
 		       "ReadServiceTimeMs  = CASE WHEN a.num_of_reads > 0 \n" +

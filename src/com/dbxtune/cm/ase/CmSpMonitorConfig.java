@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -74,7 +74,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -104,7 +104,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmSpMonitorConfig(counterController, guiController);
 	}
@@ -218,7 +218,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_PROC_CACHE_PCT_USAGE,
 			"Procedure Cache Usage in Percent", 	                                 // Menu CheckBox text
-			"Procedure Cache Usage in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Procedure Cache Usage in Percent (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Percent Usage" }, 
 			LabelType.Static,
@@ -231,7 +231,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_PROC_CACHE_MEM_USAGE,
 			"Procedure Cache Usage in MB", 	                                 // Menu CheckBox text
-			"Procedure Cache Usage in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Procedure Cache Usage in MB (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Total Memory MB", "Free MB", "Used MB", "Max Ever Used MB"},
 			LabelType.Static,
@@ -244,7 +244,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_METADATA_PCT_USAGE,
 			"MetaData Cache Usage in Percent", 	                                 // Menu CheckBox text
-			"MetaData Cache Usage in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"MetaData Cache Usage in Percent (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "number of open objects", "number of open indexes", "number of open partitions", "number of locks", "number of sort buffers", "number of user connections", "number of worker processes"},
 			LabelType.Static,
@@ -257,7 +257,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_METADATA_ACTIVE,
 			"MetaData Cache Active Count", 	                                 // Menu CheckBox text
-			"MetaData Cache Active Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"MetaData Cache Active Count (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "number of open objects", "number of open indexes", "number of open partitions", "number of locks", "number of sort buffers", "number of user connections", "number of worker processes"},
 			LabelType.Static,
@@ -270,7 +270,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_METADATA_REUSE,
 			"MetaData Cache Reuse Count", 	                                 // Menu CheckBox text
-			"MetaData Cache Reuse Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"MetaData Cache Reuse Count (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 //			new String[] { "number of open objects", "number of open indexes", "number of open partitions", "number of locks", "number of sort buffers", "number of user connections", "number of worker processes"},
 			new String[] { "number of open objects", "number of open indexes", "number of open partitions"},
@@ -291,7 +291,7 @@ extends CountersModel
 			// Get a array of rowId's where the column 'Name' has the value 'procedure cache size'
 			int[] rqRows = this.getAbsRowIdsWhere("Name", "procedure cache size");
 			if (rqRows == null)
-				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Name', 'procedure cache size'), returned null, so I can't do more here.");
+				_logger.warn("When updateGraphData for '" + tgdp.getName() + "', getAbsRowIdsWhere('Name', 'procedure cache size'), returned null, so I can't do more here.");
 			else
 			{
 				Double pctAct   = this.getAbsValueAsDouble(rqRows[0], "Pct_act");
@@ -300,7 +300,7 @@ extends CountersModel
 				data[0]  = pctAct;
 
 				if (_logger.isDebugEnabled())
-					_logger.debug(tgdp.getName()+": pctAct="+pctAct);
+					_logger.debug(tgdp.getName() + ": pctAct=" + pctAct);
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), data);
@@ -314,7 +314,7 @@ extends CountersModel
 			// Get a array of rowId's where the column 'Name' has the value 'procedure cache size'
 			int[] rqRows = this.getAbsRowIdsWhere("Name", "procedure cache size");
 			if (rqRows == null)
-				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Name', 'procedure cache size'), returned null, so I can't do more here.");
+				_logger.warn("When updateGraphData for '" + tgdp.getName() + "', getAbsRowIdsWhere('Name', 'procedure cache size'), returned null, so I can't do more here.");
 			else
 			{
 				Double numFree   = this.getAbsValueAsDouble(rqRows[0], "Num_free");
@@ -323,7 +323,7 @@ extends CountersModel
 				//Double reuseCnt  = this.getAbsValueAsDouble(rqRows[0], "Reuse_cnt");
 				
 				if (_logger.isDebugEnabled())
-					_logger.debug(tgdp.getName()+": numFree="+numFree+", numActive="+numActive+", maxUsed="+maxUsed+".");
+					_logger.debug(tgdp.getName() + ": numFree=" + numFree + ", numActive=" + numActive + ", maxUsed=" + maxUsed + ".");
 
 				if (numFree   != null) numFree   = numFree   / 512.0;
 				if (numActive != null) numActive = numActive / 512.0;
@@ -338,7 +338,7 @@ extends CountersModel
 				//data[4]  = reuseCnt;
 
 				if (_logger.isDebugEnabled())
-					_logger.debug(tgdp.getName()+": Total Memory MB="+data[0]+", Free MB="+data[1]+", Used MB="+data[2]+", Max Ever Used MB="+data[3]);
+					_logger.debug(tgdp.getName() + ": Total Memory MB=" + data[0] + ", Free MB=" + data[1] + ", Used MB=" + data[2] + ", Max Ever Used MB=" + data[3]);
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), data);
@@ -385,7 +385,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"', '"+pk4+"'='"+val4+"', '"+pk5+"'='"+val5+"', '"+pk6+"'='"+val6+"', '"+pk7+"'='"+val7+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk1 + "'='" + val1 + "', '" + pk2 + "'='" + val2 + "', '" + pk3 + "'='" + val3 + "', '" + pk4 + "'='" + val4 + "', '" + pk5 + "'='" + val5 + "', '" + pk6 + "'='" + val6 + "', '" + pk7 + "'='" + val7 + "'.");
 			}
 		}
 
@@ -427,7 +427,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"', '"+pk4+"'='"+val4+"', '"+pk5+"'='"+val5+"', '"+pk6+"'='"+val6+"', '"+pk7+"'='"+val7+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk1 + "'='" + val1 + "', '" + pk2 + "'='" + val2 + "', '" + pk3 + "'='" + val3 + "', '" + pk4 + "'='" + val4 + "', '" + pk5 + "'='" + val5 + "', '" + pk6 + "'='" + val6 + "', '" + pk7 + "'='" + val7 + "'.");
 			}
 		}
 
@@ -468,7 +468,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk1 + "'='" + val1 + "', '" + pk2 + "'='" + val2 + "', '" + pk3 + "'='" + val3 + "'.");
 			}
 		}
 	}
@@ -670,7 +670,7 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ProcedureCacheUsagePct, DEFAULT_alarm_ProcedureCacheUsagePct);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", 'procedure cache size': numFreeMb='"+(numFree/512.0)+"', pctAct='"+pctAct+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", 'procedure cache size': numFreeMb='" + (numFree/512.0) + "', pctAct='" + pctAct + "'.");
 
 				if (pctAct.intValue() > threshold)
 				{
@@ -695,7 +695,7 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfOpenObjectsPct, DEFAULT_alarm_NumberOfOpenObjectsPct);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", 'number of open objects': numFree='"+numFree+"', numActive="+numActive+", pctAct='"+pctAct+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", 'number of open objects': numFree='" + numFree + "', numActive=" + numActive + ", pctAct='" + pctAct + "'.");
 
 				if (pctAct.intValue() > threshold)
 				{
@@ -718,7 +718,7 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfOpenPartitionsPct, DEFAULT_alarm_NumberOfOpenPartitionsPct);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", 'number of open partitions': numFree='"+numFree+"', numActive="+numActive+", pctAct='"+pctAct+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", 'number of open partitions': numFree='" + numFree + "', numActive=" + numActive + ", pctAct='" + pctAct + "'.");
 
 				if (pctAct.intValue() > threshold)
 				{
@@ -741,7 +741,7 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfOpenIndexesPct, DEFAULT_alarm_NumberOfOpenIndexesPct);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", 'number of open indexes': numFree='"+numFree+"', numActive="+numActive+", pctAct='"+pctAct+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", 'number of open indexes': numFree='" + numFree + "', numActive=" + numActive + ", pctAct='" + pctAct + "'.");
 
 				if (pctAct.intValue() > threshold)
 				{
@@ -764,7 +764,7 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfOpenDatabasesPct, DEFAULT_alarm_NumberOfOpenDatabasesPct);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", 'number of open databases': numFree='"+numFree+"', numActive="+numActive+", pctAct='"+pctAct+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", 'number of open databases': numFree='" + numFree + "', numActive=" + numActive + ", pctAct='" + pctAct + "'.");
 
 				if (pctAct.intValue() > threshold)
 				{
@@ -788,7 +788,7 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfLocksPct, DEFAULT_alarm_NumberOfLocksPct);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", 'number of locks': numFree='"+numFree+"', numActive="+numActive+", pctAct='"+pctAct+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", 'number of locks': numFree='" + numFree + "', numActive=" + numActive + ", pctAct='" + pctAct + "'.");
 
 				if (pctAct.intValue() > threshold)
 				{
@@ -811,7 +811,7 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfUserConnectionsPct, DEFAULT_alarm_NumberOfUserConnectionsPct);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", 'number of user connections': numFree='"+numFree+"', numActive="+numActive+", pctAct='"+pctAct+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", 'number of user connections': numFree='" + numFree + "', numActive=" + numActive + ", pctAct='" + pctAct + "'.");
 
 				if (pctAct.intValue() > threshold)
 				{
@@ -838,7 +838,7 @@ extends CountersModel
 				if ("procedure cache size".equals(cfgName))
 				{
 					// EMULATE: Error=701, Severity=17, Text=There is not enough procedure cache to run this procedure, trigger, or SQL batch. Retry later, or ask your SA to reconfigure ASE with more procedure cache.
-					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 701, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). There is not enough procedure cache to run this procedure, trigger, or SQL batch. Retry later, or ask your SA to reconfigure ASE with more procedure cache.", null);
+					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 701, "Configuration '" + cfgName + "' has ZERO free slots (numFree=" + numFree + ", threshold=" + outOfThreshold + "). There is not enough procedure cache to run this procedure, trigger, or SQL batch. Retry later, or ask your SA to reconfigure ASE with more procedure cache.", null);
 
 					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
 					alarm.setAlarmDescriptionProvider(this, createUsageDescriptionProvider(r, cfgName, chartLabel, groupName, outOfThreshold, " free"));
@@ -851,7 +851,7 @@ extends CountersModel
 				}
 				else if ("number of open objects".equals(cfgName))
 				{
-					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.", null);
+					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '" + cfgName + "' has ZERO free slots (numFree=" + numFree + ", threshold=" + outOfThreshold + "). The server will re-use older entries, which will degrade performance. Please add more '" + cfgName + "'.", null);
 
 					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
 					alarm.setAlarmDescriptionProvider(this, createUsageDescriptionProvider(r, cfgName, chartLabel, groupName, outOfThreshold, " free"));
@@ -864,7 +864,7 @@ extends CountersModel
 				}
 				else if ("number of open partitions".equals(cfgName))
 				{
-					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.", null);
+					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '" + cfgName + "' has ZERO free slots (numFree=" + numFree + ", threshold=" + outOfThreshold + "). The server will re-use older entries, which will degrade performance. Please add more '" + cfgName + "'.", null);
 
 					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
 					alarm.setAlarmDescriptionProvider(this, createUsageDescriptionProvider(r, cfgName, chartLabel, groupName, outOfThreshold, " free"));
@@ -877,7 +877,7 @@ extends CountersModel
 				}
 				else if ("number of open indexes".equals(cfgName))
 				{
-					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.", null);
+					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '" + cfgName + "' has ZERO free slots (numFree=" + numFree + ", threshold=" + outOfThreshold + "). The server will re-use older entries, which will degrade performance. Please add more '" + cfgName + "'.", null);
 
 					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
 					alarm.setAlarmDescriptionProvider(this, createUsageDescriptionProvider(r, cfgName, chartLabel, groupName, outOfThreshold, " free"));
@@ -890,7 +890,7 @@ extends CountersModel
 				}
 				else if ("number of open databases".equals(cfgName))
 				{
-					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.", null);
+					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '" + cfgName + "' has ZERO free slots (numFree=" + numFree + ", threshold=" + outOfThreshold + "). The server will re-use older entries, which will degrade performance. Please add more '" + cfgName + "'.", null);
 
 					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
 					alarm.setAlarmDescriptionProvider(this, createUsageDescriptionProvider(r, cfgName, chartLabel, groupName, outOfThreshold, " free"));
@@ -904,7 +904,7 @@ extends CountersModel
 				else if ("number of locks".equals(cfgName))
 				{
 					// EMULATE: Error=1204, Severity=17, Text=ASE has run out of LOCKS. Re-run your command when there are fewer active users, or contact a user with System Administrator (SA) role to reconfigure ASE with more LOCKS.
-					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 1204, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). ASE has run out of LOCKS. Re-run your command when there are fewer active users, or contact a user with System Administrator (SA) role to reconfigure ASE with more LOCKS.", null);
+					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 1204, "Configuration '" + cfgName + "' has ZERO free slots (numFree=" + numFree + ", threshold=" + outOfThreshold + "). ASE has run out of LOCKS. Re-run your command when there are fewer active users, or contact a user with System Administrator (SA) role to reconfigure ASE with more LOCKS.", null);
 
 					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
 					alarm.setAlarmDescriptionProvider(this, createUsageDescriptionProvider(r, cfgName, chartLabel, groupName, outOfThreshold, " free"));
@@ -918,7 +918,7 @@ extends CountersModel
 				else if ("number of user connections".equals(cfgName))
 				{
 					// EMULATE: Error=1601, Severity=21, Text=There are not enough 'user connections' available to start a new process. Retry when there are fewer active users, or ask your System Administrator to reconfigure ASE with more user connections.
-					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 1601, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). There are not enough 'user connections' available to start a new process. Retry when there are fewer active users, or ask your System Administrator to reconfigure ASE with more user connections.", null);
+					AlarmEvent alarm = new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 1601, "Configuration '" + cfgName + "' has ZERO free slots (numFree=" + numFree + ", threshold=" + outOfThreshold + "). There are not enough 'user connections' available to start a new process. Retry when there are fewer active users, or ask your System Administrator to reconfigure ASE with more user connections.", null);
 
 					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
 					alarm.setAlarmDescriptionProvider(this, createUsageDescriptionProvider(r, cfgName, chartLabel, groupName, outOfThreshold, " free"));
@@ -932,7 +932,7 @@ extends CountersModel
 			}
 			
 			if ( didAlarm && (debugPrint || _logger.isDebugEnabled()) )
-				System.out.println("##### sendAlarmRequest("+cm.getName()+"): name='"+cfgName+"', pctAct='"+pctAct+"', numFree='"+numFree+"'.");
+				System.out.println("##### sendAlarmRequest(" + cm.getName() + "): name='" + cfgName + "', pctAct='" + pctAct + "', numFree='" + numFree + "'.");
 		}
 
 		
@@ -957,7 +957,7 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfOpenObjectsReuseDiff, DEFAULT_alarm_NumberOfOpenObjectsReuseDiff);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", '" + cfgName + "': reuse_cnt='"+reuse_cnt+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", '" + cfgName + "': reuse_cnt='" + reuse_cnt + "'.");
 
 				if (reuse_cnt.intValue() > threshold)
 				{
@@ -981,7 +981,7 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfOpenPartitionsReuseDiff, DEFAULT_alarm_NumberOfOpenPartitionsReuseDiff);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", '" + cfgName + "': reuse_cnt='"+reuse_cnt+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", '" + cfgName + "': reuse_cnt='" + reuse_cnt + "'.");
 
 				if (reuse_cnt.intValue() > threshold)
 				{
@@ -1005,7 +1005,7 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfOpenIndexesReuseDiff, DEFAULT_alarm_NumberOfOpenIndexesReuseDiff);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", '" + cfgName + "': reuse_cnt='"+reuse_cnt+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", '" + cfgName + "': reuse_cnt='" + reuse_cnt + "'.");
 
 				if (reuse_cnt.intValue() > threshold)
 				{
@@ -1089,17 +1089,17 @@ extends CountersModel
 		
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
-		list.add(new CmSettingsHelper("ProcedureCacheUsagePct",     isAlarmSwitch, PROPKEY_alarm_ProcedureCacheUsagePct    , Integer.class, conf.getIntProperty(PROPKEY_alarm_ProcedureCacheUsagePct    , DEFAULT_alarm_ProcedureCacheUsagePct    ), DEFAULT_alarm_ProcedureCacheUsagePct    , "If '"+"ProcedureCacheUsagePct"    +"' is greater than ## Percent then send 'AlarmEventProcedureCacheLowOnMemory'." ));
-		list.add(new CmSettingsHelper("NumberOfOpenObjectsPct",     isAlarmSwitch, PROPKEY_alarm_NumberOfOpenObjectsPct    , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfOpenObjectsPct    , DEFAULT_alarm_NumberOfOpenObjectsPct    ), DEFAULT_alarm_NumberOfOpenObjectsPct    , "If '"+"NumberOfOpenObjectsPct"    +"' is greater than ## Percent then send 'AlarmEvent...'." ));
-		list.add(new CmSettingsHelper("NumberOfOpenPartitionsPct",  isAlarmSwitch, PROPKEY_alarm_NumberOfOpenPartitionsPct , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfOpenPartitionsPct , DEFAULT_alarm_NumberOfOpenPartitionsPct ), DEFAULT_alarm_NumberOfOpenPartitionsPct , "If '"+"NumberOfOpenPartitionsPct" +"' is greater than ## Percent then send 'AlarmEvent...'." ));
-		list.add(new CmSettingsHelper("NumberOfOpenIndexesPct",     isAlarmSwitch, PROPKEY_alarm_NumberOfOpenIndexesPct    , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfOpenIndexesPct    , DEFAULT_alarm_NumberOfOpenIndexesPct    ), DEFAULT_alarm_NumberOfOpenIndexesPct    , "If '"+"NumberOfOpenIndexesPct"    +"' is greater than ## Percent then send 'AlarmEvent...'." ));
-		list.add(new CmSettingsHelper("NumberOfOpenDatabasesPct",   isAlarmSwitch, PROPKEY_alarm_NumberOfOpenDatabasesPct  , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfOpenDatabasesPct  , DEFAULT_alarm_NumberOfOpenDatabasesPct  ), DEFAULT_alarm_NumberOfOpenDatabasesPct  , "If '"+"NumberOfOpenDatabasesPct"  +"' is greater than ## Percent then send 'AlarmEvent...'." ));
-		list.add(new CmSettingsHelper("NumberOfLocksPct",           isAlarmSwitch, PROPKEY_alarm_NumberOfLocksPct          , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfLocksPct          , DEFAULT_alarm_NumberOfLocksPct          ), DEFAULT_alarm_NumberOfLocksPct          , "If '"+"NumberOfLocksPct"          +"' is greater than ## Percent then send 'AlarmEvent...'." ));
-		list.add(new CmSettingsHelper("NumberOfUserConnectionsPct", isAlarmSwitch, PROPKEY_alarm_NumberOfUserConnectionsPct, Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfUserConnectionsPct, DEFAULT_alarm_NumberOfUserConnectionsPct), DEFAULT_alarm_NumberOfUserConnectionsPct, "If '"+"NumberOfUserConnectionsPct"+"' is greater than ## Percent then send 'AlarmEvent...'." ));
+		list.add(new CmSettingsHelper("ProcedureCacheUsagePct",     isAlarmSwitch, PROPKEY_alarm_ProcedureCacheUsagePct    , Integer.class, conf.getIntProperty(PROPKEY_alarm_ProcedureCacheUsagePct    , DEFAULT_alarm_ProcedureCacheUsagePct    ), DEFAULT_alarm_ProcedureCacheUsagePct    , "If '" + "ProcedureCacheUsagePct"    + "' is greater than ## Percent then send 'AlarmEventProcedureCacheLowOnMemory'." ));
+		list.add(new CmSettingsHelper("NumberOfOpenObjectsPct",     isAlarmSwitch, PROPKEY_alarm_NumberOfOpenObjectsPct    , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfOpenObjectsPct    , DEFAULT_alarm_NumberOfOpenObjectsPct    ), DEFAULT_alarm_NumberOfOpenObjectsPct    , "If '" + "NumberOfOpenObjectsPct"    + "' is greater than ## Percent then send 'AlarmEvent...'." ));
+		list.add(new CmSettingsHelper("NumberOfOpenPartitionsPct",  isAlarmSwitch, PROPKEY_alarm_NumberOfOpenPartitionsPct , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfOpenPartitionsPct , DEFAULT_alarm_NumberOfOpenPartitionsPct ), DEFAULT_alarm_NumberOfOpenPartitionsPct , "If '" + "NumberOfOpenPartitionsPct" + "' is greater than ## Percent then send 'AlarmEvent...'." ));
+		list.add(new CmSettingsHelper("NumberOfOpenIndexesPct",     isAlarmSwitch, PROPKEY_alarm_NumberOfOpenIndexesPct    , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfOpenIndexesPct    , DEFAULT_alarm_NumberOfOpenIndexesPct    ), DEFAULT_alarm_NumberOfOpenIndexesPct    , "If '" + "NumberOfOpenIndexesPct"    + "' is greater than ## Percent then send 'AlarmEvent...'." ));
+		list.add(new CmSettingsHelper("NumberOfOpenDatabasesPct",   isAlarmSwitch, PROPKEY_alarm_NumberOfOpenDatabasesPct  , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfOpenDatabasesPct  , DEFAULT_alarm_NumberOfOpenDatabasesPct  ), DEFAULT_alarm_NumberOfOpenDatabasesPct  , "If '" + "NumberOfOpenDatabasesPct"  + "' is greater than ## Percent then send 'AlarmEvent...'." ));
+		list.add(new CmSettingsHelper("NumberOfLocksPct",           isAlarmSwitch, PROPKEY_alarm_NumberOfLocksPct          , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfLocksPct          , DEFAULT_alarm_NumberOfLocksPct          ), DEFAULT_alarm_NumberOfLocksPct          , "If '" + "NumberOfLocksPct"          + "' is greater than ## Percent then send 'AlarmEvent...'." ));
+		list.add(new CmSettingsHelper("NumberOfUserConnectionsPct", isAlarmSwitch, PROPKEY_alarm_NumberOfUserConnectionsPct, Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfUserConnectionsPct, DEFAULT_alarm_NumberOfUserConnectionsPct), DEFAULT_alarm_NumberOfUserConnectionsPct, "If '" + "NumberOfUserConnectionsPct" + "' is greater than ## Percent then send 'AlarmEvent...'." ));
 
-		list.add(new CmSettingsHelper("NumberOfOpenObjectsReuseDiff",     isAlarmSwitch, PROPKEY_alarm_NumberOfOpenObjectsReuseDiff    , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfOpenObjectsReuseDiff    , DEFAULT_alarm_NumberOfOpenObjectsReuseDiff    ), DEFAULT_alarm_NumberOfOpenObjectsReuseDiff    , "If '"+"NumberOfOpenObjects.Reuse_cnt.diff"    +"' is greater than ## for a sample period then send 'AlarmEvent...'." ));
-		list.add(new CmSettingsHelper("NumberOfOpenPartitionsReuseDiff",  isAlarmSwitch, PROPKEY_alarm_NumberOfOpenPartitionsReuseDiff , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfOpenPartitionsReuseDiff , DEFAULT_alarm_NumberOfOpenPartitionsReuseDiff ), DEFAULT_alarm_NumberOfOpenPartitionsReuseDiff , "If '"+"NumberOfOpenPartitions.Reuse_cnt.diff" +"' is greater than ## for a sample period then send 'AlarmEvent...'." ));
-		list.add(new CmSettingsHelper("NumberOfOpenIndexesReuseDiff",     isAlarmSwitch, PROPKEY_alarm_NumberOfOpenIndexesReuseDiff    , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfOpenIndexesReuseDiff    , DEFAULT_alarm_NumberOfOpenIndexesReuseDiff    ), DEFAULT_alarm_NumberOfOpenIndexesReuseDiff    , "If '"+"NumberOfOpenIndexes.Reuse_cnt.diff"    +"' is greater than ## for a sample period then send 'AlarmEvent...'." ));
+		list.add(new CmSettingsHelper("NumberOfOpenObjectsReuseDiff",     isAlarmSwitch, PROPKEY_alarm_NumberOfOpenObjectsReuseDiff    , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfOpenObjectsReuseDiff    , DEFAULT_alarm_NumberOfOpenObjectsReuseDiff    ), DEFAULT_alarm_NumberOfOpenObjectsReuseDiff    , "If '" + "NumberOfOpenObjects.Reuse_cnt.diff"    + "' is greater than ## for a sample period then send 'AlarmEvent...'." ));
+		list.add(new CmSettingsHelper("NumberOfOpenPartitionsReuseDiff",  isAlarmSwitch, PROPKEY_alarm_NumberOfOpenPartitionsReuseDiff , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfOpenPartitionsReuseDiff , DEFAULT_alarm_NumberOfOpenPartitionsReuseDiff ), DEFAULT_alarm_NumberOfOpenPartitionsReuseDiff , "If '" + "NumberOfOpenPartitions.Reuse_cnt.diff" + "' is greater than ## for a sample period then send 'AlarmEvent...'." ));
+		list.add(new CmSettingsHelper("NumberOfOpenIndexesReuseDiff",     isAlarmSwitch, PROPKEY_alarm_NumberOfOpenIndexesReuseDiff    , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfOpenIndexesReuseDiff    , DEFAULT_alarm_NumberOfOpenIndexesReuseDiff    ), DEFAULT_alarm_NumberOfOpenIndexesReuseDiff    , "If '" + "NumberOfOpenIndexes.Reuse_cnt.diff"    + "' is greater than ## for a sample period then send 'AlarmEvent...'." ));
 		
 		return list;
 	}

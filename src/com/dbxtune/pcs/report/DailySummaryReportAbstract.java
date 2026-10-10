@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -283,7 +283,7 @@ implements IDailySummaryReport
 		}
 		catch (IOException ex)
 		{
-			_logger.error("Problems writing Daily Report to file '" + saveToFileName + "'. Caught: "+ex, ex);
+			_logger.error("Problems writing Daily Report to file '" + saveToFileName + "'. Caught: " + ex, ex);
 		}
 	}
 	
@@ -755,7 +755,7 @@ implements IDailySummaryReport
 			}
 		}
 		
-		String dbxCentralBaseUrl = dbxCentralProt + "://" + dbxCentralHost + ( dbxCentralPort == -1 ? "" : ":"+dbxCentralPort);
+		String dbxCentralBaseUrl = dbxCentralProt + "://" + dbxCentralHost + ( dbxCentralPort == -1 ? "" : ":" + dbxCentralPort);
 		return dbxCentralBaseUrl;
 	}
 
@@ -837,7 +837,7 @@ implements IDailySummaryReport
 		}
 		
 		// Compose URL's
-		String dbxCentralBaseUrl = dbxCentralProt + "://" + dbxCentralHost + ( dbxCentralPort == -1 ? "" : ":"+dbxCentralPort);
+		String dbxCentralBaseUrl = dbxCentralProt + "://" + dbxCentralHost + ( dbxCentralPort == -1 ? "" : ":" + dbxCentralPort);
 
 		// Return a Text with links
 		return dbxCentralBaseUrl;
@@ -848,7 +848,7 @@ implements IDailySummaryReport
 	public String createDbxCentralLink(boolean isFullText)
 	{
 		String dbxCentralBaseUrl = getDbxCentralPublicBaseUrl();
-		String dbxCentralUrlLast = dbxCentralBaseUrl + "/report?op=viewLatest&name="+getServerName();
+		String dbxCentralUrlLast = dbxCentralBaseUrl + "/report?op=viewLatest&name=" + getServerName();
 		String dbxCentralUrlAll  = dbxCentralBaseUrl + "/overview#reportfiles";
 
 		// Return a Text with links
@@ -910,7 +910,7 @@ implements IDailySummaryReport
 		}
 		
 		String dbxCentralBaseUrl = getDbxCentralInternalBaseUrl();
-		String dbxCentralUrlSkip = dbxCentralBaseUrl + "/api/dsr/skip?srvName="+srvName;
+		String dbxCentralUrlSkip = dbxCentralBaseUrl + "/api/dsr/skip?srvName=" + srvName;
 //		String dbxCentralUrlSkip = dbxCentralBaseUrl + "/api/dsr/skip;
 
 		_logger.info("Refreshing Daily Summary Report SKIP Entries for srvName '" + srvName + "' from DbxCentral, calling: " + dbxCentralUrlSkip);
@@ -1217,7 +1217,7 @@ implements IDailySummaryReport
 		// Start/end time for the recording
 		String sql = ""
 			+ "select min([SessionSampleTime]), max([SessionSampleTime]) \n"
-			+ "from "+PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.SESSION_SAMPLES, null, true) + " \n"
+			+ "from " + PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.SESSION_SAMPLES, null, true) + " \n"
 			+ "";
 
 		sql = conn.quotifySqlString(sql);

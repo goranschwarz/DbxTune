@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -441,7 +441,7 @@ public class H2UrlHelper
 			// If it's a ZIP file, but the URL isn't ZIP, the construct a total new URL 
 			if ( ! url.startsWith("jdbc:h2:zip:") && newDbFile.toLowerCase().endsWith(".zip") )
 			{
-				url = "jdbc:h2:zip:"+newDbFile+"!/"+dbname;
+				url = "jdbc:h2:zip:" + newDbFile + "!/" + dbname;
 			}
 			else
 			{	
@@ -490,7 +490,7 @@ public class H2UrlHelper
 		H2UrlHelper h = new H2UrlHelper(url);
 		System.out.println("");
 		System.out.println("########################################################");
-		System.out.println(" URL="+url);
-		System.out.println(" toString="+h);
+		System.out.println(" URL=" + url);
+		System.out.println(" toString=" + h);
 	}
 }

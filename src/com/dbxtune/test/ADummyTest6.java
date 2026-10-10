@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -36,14 +36,14 @@ public class ADummyTest6
 	{
 		for (Thread th : Thread.getAllStackTraces().keySet()) 
 		{
-			System.out.println("XXX: isDaemon="+th.isDaemon()+", threadName=|"+th.getName()+"|, th.getClass().getName()=|"+th.getClass().getName()+"|.");
+			System.out.println("XXX: isDaemon=" + th.isDaemon() + ", threadName=|" + th.getName() + "|, th.getClass().getName()=|" + th.getClass().getName() + "|.");
 
 			ThreadGroup tg = th.getThreadGroup();
 			boolean isSystem = tg == null ? false : "system".equalsIgnoreCase(tg.getName());
 			String  tgName   = tg == null ? "-null-" : tg.getName();
-					System.out.println("isSystem="+isSystem+", tgName='"+tgName+"'."); 
+					System.out.println("isSystem=" + isSystem + ", tgName='" + tgName + "'."); 
 //			System.out.println("getThreadGroup="+th.getThreadGroup()); 
-			System.out.println("Stacktrace for Thread '"+th.getName()+"'." 
+			System.out.println("Stacktrace for Thread '" + th.getName() + "'." 
 					+ StringUtil.stackTraceToString(th.getStackTrace()));
 		}
 	}

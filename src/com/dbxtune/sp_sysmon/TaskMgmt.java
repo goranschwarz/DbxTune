@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -330,7 +330,7 @@ extends AbstractSysmonType
 		for (int i=0; i<fld_EngineCtxSwitchArray.length; i++)
 		{
 			fld_EngineCtxSwitchAllEngines += fld_EngineCtxSwitchArray[i];
-			addReportLnPct("    Engine "+i, fld_EngineCtxSwitchArray[i], NumTaskSwitch);
+			addReportLnPct("    Engine " + i, fld_EngineCtxSwitchArray[i], NumTaskSwitch);
 		}
 		if (fld_EngineCtxSwitchArray.length > 1)
 		{

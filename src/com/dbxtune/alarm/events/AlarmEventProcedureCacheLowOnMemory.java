@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -39,10 +39,10 @@ extends AlarmEvent
 				AlarmEvent.Category.SRV_CONFIG,
 				AlarmEvent.Severity.WARNING,
 				AlarmEvent.ServiceState.UP, 
-				"Stored Procedure Cache Memory is getting low in server '" + cm.getServerName() + "'. FreeSpaceInMB="+freeSpaceInMb+", UsedSpaceInPct="+usedSpaceInPct+". (thresholdInPct="+thresholdInPct+")",
+				"Stored Procedure Cache Memory is getting low in server '" + cm.getServerName() + "'. FreeSpaceInMB=" + freeSpaceInMb + ", UsedSpaceInPct=" + usedSpaceInPct + ". (thresholdInPct=" + thresholdInPct + ")",
 				null);
 
-		setData("FreeSpaceInMB="+freeSpaceInMb+", UsedSpaceInPct="+usedSpaceInPct);
+		setData("FreeSpaceInMB=" + freeSpaceInMb + ", UsedSpaceInPct=" + usedSpaceInPct);
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);

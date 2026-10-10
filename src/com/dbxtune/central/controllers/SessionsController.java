@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -130,12 +130,12 @@ extends HttpServlet
 				}
 				catch (IOException ex)
 				{
-					_logger.warn("Problems reading file '"+f+"'. This is used to sort the 'sessions list'. Skipping this... Caught: "+ex);
+					_logger.warn("Problems reading file '" + f + "'. This is used to sort the 'sessions list'. Skipping this... Caught: " + ex);
 				}
 
 				if ( ! map.isEmpty() )
 				{
-					_logger.info("Sorting sessions using file '"+f+"' in the following order "+StringUtil.toCommaStrQuoted('"', map.keySet()));
+					_logger.info("Sorting sessions using file '" + f + "' in the following order " + StringUtil.toCommaStrQuoted('"', map.keySet()));
 					List<DbxCentralSessions> newList = new ArrayList<>();
 
 					// foreach serverName in the list, transfer fetched list entries
@@ -162,7 +162,7 @@ extends HttpServlet
 			}
 			else
 			{
-				_logger.info("Sorting sessions will not be done. file '"+f+"' do not exist.");
+				_logger.info("Sorting sessions will not be done. file '" + f + "' do not exist.");
 			}
 
 			if (getGraphs)
@@ -183,8 +183,8 @@ extends HttpServlet
 		}
 		catch (Exception e)
 		{
-			_logger.info("Problem accessing DBMS or writing JSON, Caught: "+e, e);
-			throw new ServletException("Problem accessing db or writing JSON, Caught: "+e, e);
+			_logger.info("Problem accessing DBMS or writing JSON, Caught: " + e, e);
+			throw new ServletException("Problem accessing db or writing JSON, Caught: " + e, e);
 		}
 		
 		out.println(payload);

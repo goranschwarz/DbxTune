@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -68,7 +68,7 @@ extends TabularCntrPanel
 		String colorStr = null;
 
 		// Mark the row as PINK if this SPID is BLOCKED by another thread
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.status.notOk");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.status.notOk");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -104,7 +104,7 @@ extends TabularCntrPanel
 //				list.add(new CmSettingsHelper("Sleep Time Between Update/Select", PROPKEY_update_maxWaitTimeMs       , Long   .class, conf.getLongProperty   (PROPKEY_update_maxWaitTimeMs        , DEFAULT_update_maxWaitTimeMs        ), DEFAULT_update_maxWaitTimeMs,       "Sleep X milliseconds between the update and the select (so data have time to replicate)" ));
 
 				l_updateActive_chk        .setSelected(conf.getBooleanProperty(CmWsRepLatency.PROPKEY_update_active             , CmWsRepLatency.DEFAULT_update_active));
-				l_updateActiveInterval_txt.setText(""+ conf.getLongProperty   (CmWsRepLatency.PROPKEY_update_activeIntervalInSec, CmWsRepLatency.DEFAULT_update_activeIntervalInSec));
+				l_updateActiveInterval_txt.setText("" + conf.getLongProperty   (CmWsRepLatency.PROPKEY_update_activeIntervalInSec, CmWsRepLatency.DEFAULT_update_activeIntervalInSec));
 				//FIXME: no GUI field for: PROPKEY_update_maxWaitTimeMs
 				
 				// ReInitialize the SQL
@@ -126,7 +126,7 @@ extends TabularCntrPanel
 		l_updateActive_chk = new JCheckBox("Update Active DB", defaultOpt);
 
 		l_updateActiveInterval_lbl = new JLabel("Update Active Interval in Seconds");
-		l_updateActiveInterval_txt = new JTextField(conf.getLongProperty(CmWsRepLatency.PROPKEY_update_activeIntervalInSec, CmWsRepLatency.DEFAULT_update_activeIntervalInSec)+"", 5);
+		l_updateActiveInterval_txt = new JTextField(conf.getLongProperty(CmWsRepLatency.PROPKEY_update_activeIntervalInSec, CmWsRepLatency.DEFAULT_update_activeIntervalInSec) + "", 5);
 
 		l_updateActive_chk.setName(CmWsRepLatency.PROPKEY_update_active);
 

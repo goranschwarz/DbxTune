@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -392,9 +392,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 				String lcRefreshTime  = (cm == null) ? "Unavailable" : cm.getLcRefreshTime() + " ms.";
 
 				return "<html>" +
-						"SQL Refresh time: "+sqlRefreshTime+"<br>" +
-						"GUI Refresh Time: "+guiRefreshTime+"<br>" +
-						"Local Calculation Time: "+lcRefreshTime+"<br>" +
+						"SQL Refresh time: " + sqlRefreshTime + "<br>" +
+						"GUI Refresh Time: " + guiRefreshTime + "<br>" +
+						"Local Calculation Time: " + lcRefreshTime + "<br>" +
 						"</html>";
 			}
 		};
@@ -408,7 +408,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 		String tooltip = "";
 
-		tooltip = "The name we used when "+Version.getAppName()+" connected to the server, meaning name in sql.ini or interfaces ";
+		tooltip = "The name we used when " + Version.getAppName() + " connected to the server, meaning name in sql.ini or interfaces ";
 //		_localServerName_lbl  .setText("Local server name");
 		_localServerName_lbl  .setText("Connection Info");
 		_localServerName_lbl  .setToolTipText(tooltip);
@@ -1384,7 +1384,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		
 		_atAtServerName_txt.setText(cm.getAbsString (0, "serverName"));
 		_srvVersion_txt    .setText(cm.getAbsString (0, "rsVersion"));
-		_lastSampleTime_txt.setText(""+cm.getSampleTime());
+		_lastSampleTime_txt.setText("" + cm.getSampleTime());
 			
 		// Fix the version string a bit and position it at start of the text
 		_srvVersion_txt.setText( _srvVersion_txt.getText().replace("Replication Server/", "") );
@@ -1825,7 +1825,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		else if ( CounterController.hasInstance() && CounterController.getInstance().getMonDisConnectTime() != null )
 		{
 			String dateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(CounterController.getInstance().getMonDisConnectTime());
-			setWatermarkText("Disconnect at: \n"+dateStr);
+			setWatermarkText("Disconnect at: \n" + dateStr);
 		}
 		else
 		{

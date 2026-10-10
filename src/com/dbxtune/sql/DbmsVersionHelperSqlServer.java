@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -33,13 +33,13 @@ implements IDbmsVersionHelper
 		verStr = major + "";
 		
 		if (minor > 0)
-			verStr += " R"+minor;  // SQL Server 2008 R2
+			verStr += " R" + minor;  // SQL Server 2008 R2
 		
 		if (sp > 0)
-			verStr += " SP"+sp;
+			verStr += " SP" + sp;
 		
 		if (cu > 0)
-			verStr += " CU"+cu;
+			verStr += " CU" + cu;
 		
 		return verStr;
 		

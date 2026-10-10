@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -147,8 +147,8 @@ public class DbUtils
 		String schemaTerm       = "";
 		int    maxSchemaNameLen = 0;
 		
-		try { schemaTerm       = dbmd.getSchemaTerm();          } catch(SQLException ex) { _logger.debug("Problems executing: conn.getMetaData().getSchemaTerm(): Caught: "+ex); }
-		try { maxSchemaNameLen = dbmd.getMaxSchemaNameLength(); } catch(SQLException ex) { _logger.debug("Problems executing: conn.getMetaData().getMaxSchemaNameLength() Caught: "+ex); }
+		try { schemaTerm       = dbmd.getSchemaTerm();          } catch(SQLException ex) { _logger.debug("Problems executing: conn.getMetaData().getSchemaTerm(): Caught: " + ex); }
+		try { maxSchemaNameLen = dbmd.getMaxSchemaNameLength(); } catch(SQLException ex) { _logger.debug("Problems executing: conn.getMetaData().getMaxSchemaNameLength() Caught: " + ex); }
 
 		if (maxSchemaNameLen <= 0 && StringUtil.isNullOrBlank(schemaTerm))
 			return false;
@@ -169,7 +169,7 @@ public class DbUtils
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Problems when calling getAutoCommit(). Caught: "+e);
+			_logger.warn("Problems when calling getAutoCommit(). Caught: " + e);
 			return true;
 		}
 	}
@@ -267,7 +267,7 @@ public class DbUtils
 				if (DbUtils.isProductName(dbVendorName, DbUtils.DB_PROD_NAME_SYBASE_ASE))
 				{
 					if (_logger.isDebugEnabled())
-						_logger.debug("setAutoCommit("+dbVendorName+"): Special logic for Sybase ASE.");
+						_logger.debug("setAutoCommit(" + dbVendorName + "): Special logic for Sybase ASE.");
 
 					Statement stmnt = conn.createStatement();
 					stmnt.executeUpdate(toValue ? "set chained off" : "set chained on"); // set chained on|off: true=OFF, false=ON
@@ -322,7 +322,7 @@ public class DbUtils
 					rs.close();
 					sb.append("</TABLE>");
 					sb.append("<BR>");
-					sb.insert(0, "User <b>holds "+sybLockCount+" locks</b> in the server. Below is a summary table with current locks.<br>");
+					sb.insert(0, "User <b>holds " + sybLockCount + " locks</b> in the server. Below is a summary table with current locks.<br>");
 					sybLockHtmlTable = sb.toString();
 
 					// If jConnect has MessageHandler, the exception might be down graded to warnings... so check for this... and Throw that as an Exception
@@ -331,13 +331,13 @@ public class DbUtils
 
 					stmnt.close();
 				}
-				catch (SQLException ex2) { _logger.warn("Problem checking if we are holding locks in the server. SQL='"+sql+"'. Caught: "+ex2); }
+				catch (SQLException ex2) { _logger.warn("Problem checking if we are holding locks in the server. SQL='" + sql + "'. Caught: " + ex2); }
 			}
 
 			// IF ASE and Lock Count is 0: simply do COMMIT and try to setAutoCommit() again
 			if (sybLockCount == 0)
 			{
-				_logger.info("setAutoCommit(): problems, but when examin the syslocks, the current SPID holds NO locks. So I will COMMIT and try setAutoCommit("+toValue+") again. BTW Exception Caught when trying setAutoCommit("+toValue+") the first time: "+ex.getMessage().replace('\n', ' '));
+				_logger.info("setAutoCommit(): problems, but when examin the syslocks, the current SPID holds NO locks. So I will COMMIT and try setAutoCommit(" + toValue + ") again. BTW Exception Caught when trying setAutoCommit(" + toValue + ") the first time: " + ex.getMessage().replace('\n', ' '));
 				try
 				{
 					conn.commit();
@@ -345,13 +345,13 @@ public class DbUtils
 				}
 				catch(SQLException ex2)
 				{
-					SwingUtils.showErrorMessage(owner, "setAutoCommit problem", "Sorry, Problems issuing JDBC setAutoCommit("+toValue+") on the connection.", ex);
+					SwingUtils.showErrorMessage(owner, "setAutoCommit problem", "Sorry, Problems issuing JDBC setAutoCommit(" + toValue + ") on the connection.", ex);
 				}
 			}
 			else // NOT SYBASE ASE or spid is holding locks...
 			{
     			String htmlMsg = "<html>"
-    					+ "Problems issuing JDBC setAutoCommit(<b>"+toValue+"</b>) on the connection<br>"
+    					+ "Problems issuing JDBC setAutoCommit(<b>" + toValue + "</b>) on the connection<br>"
     					+ "<br>"
     					+ calledFrom + (StringUtil.isNullOrBlank(calledFrom) ? "" : "<br><br>") // Add newlines if a text was provided
     					+ (sybLockHtmlTable == null ? "" : sybLockHtmlTable)
@@ -365,8 +365,8 @@ public class DbUtils
     					+ "My guess is that some <i>explicit</i> or <i>implicit</i> change was done on the system<br>"
     					+ "Please try one of the below methods to solve the issue."
     					+ "<ul>"
-    					+ "  <li>Commit - Will commit current transaction and then retry the setAutoCommit(<b>"+toValue+"</b>)</li>"
-    					+ "  <li>Rollback - Will rollback current transaction and then retry the setAutoCommit(<b>"+toValue+"</b>)</li>"
+    					+ "  <li>Commit - Will commit current transaction and then retry the setAutoCommit(<b>" + toValue + "</b>)</li>"
+    					+ "  <li>Rollback - Will rollback current transaction and then retry the setAutoCommit(<b>" + toValue + "</b>)</li>"
     					+ "  <li>Cancel - Will simply do nothing and just continues.</li>"
     					+ "</ul>"
     					+ "</html>";
@@ -394,7 +394,7 @@ public class DbUtils
     				}
     				catch(SQLException ex2)
     				{
-    					SwingUtils.showErrorMessage(owner, "setAutoCommit problem", "Sorry, there were still Problems issuing JDBC setAutoCommit("+toValue+") on the connection.", ex);
+    					SwingUtils.showErrorMessage(owner, "setAutoCommit problem", "Sorry, there were still Problems issuing JDBC setAutoCommit(" + toValue + ") on the connection.", ex);
     				}
     			}
     			// CANCEL
@@ -537,7 +537,7 @@ public class DbUtils
 		}
 		else
 		{
-			return "unsupported product name '"+dbProduct+"'.";			
+			return "unsupported product name '" + dbProduct + "'.";			
 		}
 
 		String retStr = "";
@@ -1174,7 +1174,7 @@ public class DbUtils
 		}
 		catch (SQLException e)
 		{
-			_logger.debug("When getting HANA Server Instance Name. sql='"+sql+"', Caught exception.", e);
+			_logger.debug("When getting HANA Server Instance Name. sql='" + sql + "', Caught exception.", e);
 
 			return UNKNOWN;
 		}
@@ -1209,7 +1209,7 @@ public class DbUtils
 		}
 		catch (SQLException e)
 		{
-			_logger.debug("When getting HANA Version Number. sql='"+sql+"', Caught exception.", e);
+			_logger.debug("When getting HANA Version Number. sql='" + sql + "', Caught exception.", e);
 
 			return UNKNOWN;
 		}
@@ -1289,9 +1289,9 @@ public class DbUtils
 		String schema = objectName.substring(0, firstDot).trim();
 		String name   = objectName.substring(firstDot+1).trim();
 
-		String sqlGetObjType  = "select OBJECT_TYPE from PUBLIC.OBJECTS    where SCHEMA_NAME = '"+schema+"' and OBJECT_NAME    = '"+name+"'";
-		String sqlGetProcText = "select DEFINITION  from PUBLIC.PROCEDURES where SCHEMA_NAME = '"+schema+"' and PROCEDURE_NAME = '"+name+"'";
-		String sqlGetFuncText = "select DEFINITION  from PUBLIC.FUNCTIONS  where SCHEMA_NAME = '"+schema+"' and FUNCTION_NAME  = '"+name+"'";
+		String sqlGetObjType  = "select OBJECT_TYPE from PUBLIC.OBJECTS    where SCHEMA_NAME = '" + schema + "' and OBJECT_NAME    = '" + name + "'";
+		String sqlGetProcText = "select DEFINITION  from PUBLIC.PROCEDURES where SCHEMA_NAME = '" + schema + "' and PROCEDURE_NAME = '" + name + "'";
+		String sqlGetFuncText = "select DEFINITION  from PUBLIC.FUNCTIONS  where SCHEMA_NAME = '" + schema + "' and FUNCTION_NAME  = '" + name + "'";
 
 		try
 		{
@@ -1307,7 +1307,7 @@ public class DbUtils
 			else if (objType.equalsIgnoreCase("FUNCTION"))  sql = sqlGetFuncText;
 			else
 			{
-				_logger.warn("getHanaObjectText(objectName='"+objectName+"'), was of type '"+objType+"', which isn't implemented yet, returning null");
+				_logger.warn("getHanaObjectText(objectName='" + objectName + "'), was of type '" + objType + "', which isn't implemented yet, returning null");
 				return null;
 			}
 
@@ -1322,7 +1322,7 @@ public class DbUtils
 		}
 		catch(SQLException e)
 		{
-			_logger.warn("Problems getting procedure/function text for '"+objectName+"' from HANA. Error Number: "+e.getErrorCode()+", Message: " + e.getMessage());
+			_logger.warn("Problems getting procedure/function text for '" + objectName + "' from HANA. Error Number: " + e.getErrorCode() + ", Message: " + e.getMessage());
 		}
 		return null;
 	}
@@ -1367,7 +1367,7 @@ public class DbUtils
 		}
 		catch (SQLException e)
 		{
-			_logger.debug("When getting Oracle Server Instance Name. sql='"+sql+"', Caught exception.", e);
+			_logger.debug("When getting Oracle Server Instance Name. sql='" + sql + "', Caught exception.", e);
 
 			return UNKNOWN;
 		}
@@ -1400,7 +1400,7 @@ public class DbUtils
 		}
 		catch (SQLException e)
 		{
-			_logger.debug("When getting Oracle Version Number. sql='"+sql+"', Caught exception.", e);
+			_logger.debug("When getting Oracle Version Number. sql='" + sql + "', Caught exception.", e);
 
 			return UNKNOWN;
 		}
@@ -1432,7 +1432,7 @@ public class DbUtils
 		}
 		catch (SQLException e)
 		{
-			_logger.debug("When getting Oracle Server CharacterSet. sql='"+sql+"', Caught exception.", e);
+			_logger.debug("When getting Oracle Server CharacterSet. sql='" + sql + "', Caught exception.", e);
 
 			return UNKNOWN;
 		}
@@ -1464,7 +1464,7 @@ public class DbUtils
 		}
 		catch (SQLException e)
 		{
-			_logger.debug("When getting Oracle Server Sort Order. sql='"+sql+"', Caught exception.", e);
+			_logger.debug("When getting Oracle Server Sort Order. sql='" + sql + "', Caught exception.", e);
 
 			return UNKNOWN;
 		}
@@ -1567,8 +1567,8 @@ public class DbUtils
 			"SELECT TEXT \n" +
 //			"FROM DBA_SOURCE \n" +
 			"FROM ALL_SOURCE \n" +                   // ALL_SOURCE will hopefully need less authority/grants than DBA_SOURCE
-			"WHERE OWNER = '"+schema+"' \n" +
-			"  AND NAME = '"+name+"' \n" +
+			"WHERE OWNER = '" + schema + "' \n" +
+			"  AND NAME = '" + name + "' \n" +
 //			"  AND TYPE = '????' \n" +
 			"ORDER BY LINE \n";
 
@@ -1598,7 +1598,7 @@ public class DbUtils
 		catch (SQLException e)
 		{
 			returnText = null;
-			_logger.warn("Problems getting text for ORACLE object '"+objectName+"'. Caught: "+e); 
+			_logger.warn("Problems getting text for ORACLE object '" + objectName + "'. Caught: " + e); 
 		}
 
 		return returnText;
@@ -1700,7 +1700,7 @@ public class DbUtils
 		}
 		catch (SQLException e)
 		{
-			_logger.debug("When getting DB2 Server Instance Name. sql='"+sql+"', Caught exception.", e);
+			_logger.debug("When getting DB2 Server Instance Name. sql='" + sql + "', Caught exception.", e);
 
 			return UNKNOWN;
 		}
@@ -1732,7 +1732,7 @@ public class DbUtils
 		}
 		catch (SQLException e)
 		{
-			_logger.debug("When getting DB2 Version String. sql='"+sql+"', Caught exception.", e);
+			_logger.debug("When getting DB2 Version String. sql='" + sql + "', Caught exception.", e);
 
 			return UNKNOWN;
 		}
@@ -1778,7 +1778,7 @@ public class DbUtils
 		}
 		catch (SQLException e)
 		{
-			_logger.debug("When getting DB2 Server CharacterSet. sql='"+sql+"', Caught exception.", e);
+			_logger.debug("When getting DB2 Server CharacterSet. sql='" + sql + "', Caught exception.", e);
 
 			return UNKNOWN;
 		}
@@ -2043,7 +2043,7 @@ public class DbUtils
 				else
 					truncStr = str.substring(0, maxStrLen);
 					
-				_logger.debug("DbUtils.safeStr(): MaxLen="+maxStrLen+". Truncating value |"+str+"|, into |"+truncStr+"|.");
+				_logger.debug("DbUtils.safeStr(): MaxLen=" + maxStrLen + ". Truncating value |" + str + "|, into |" + truncStr + "|.");
 				str = truncStr;
 			}
 
@@ -2132,7 +2132,7 @@ public class DbUtils
 				else
 					truncStr = str.substring(0, maxStrLen);
 					
-				_logger.debug("DbUtils.safeStr(): MaxLen="+maxStrLen+". Truncating value |"+str+"|, into |"+truncStr+"|.");
+				_logger.debug("DbUtils.safeStr(): MaxLen=" + maxStrLen + ". Truncating value |" + str + "|, into |" + truncStr + "|.");
 				str = truncStr;
 			}
 
@@ -2316,7 +2316,7 @@ public class DbUtils
 		catch(SQLException e)
 		{
 			if (printErrors)
-				_logger.warn("Problems when executing sql statement: "+sql+" SqlException: ErrorCode="+e.getErrorCode()+", SQLState="+e.getSQLState()+", toString="+e.toString());
+				_logger.warn("Problems when executing sql statement: " + sql + " SqlException: ErrorCode=" + e.getErrorCode() + ", SQLState=" + e.getSQLState() + ", toString=" + e.toString());
 			throw e;
 		}
 
@@ -2354,11 +2354,11 @@ public class DbUtils
 	private static void test(int testCase, int expected, String str)
 	{
 		System.out.println();
-		System.out.println(">>>>> BEGIN, test case("+testCase+"): expected="+expected);
+		System.out.println(">>>>> BEGIN, test case(" + testCase + "): expected=" + expected);
 		int r = getLineForFirstStatement(str);
 		if (r != expected)
 		{
-			System.out.println("###### FAILED, test case("+testCase+"): ret="+r+", expected="+expected+" ===== THE STR:");
+			System.out.println("###### FAILED, test case(" + testCase + "): ret=" + r + ", expected=" + expected + " ===== THE STR:");
 			Scanner sc = new Scanner(str);
 			int lineNumber = 0;
 			while (sc.hasNextLine())
@@ -2368,7 +2368,7 @@ public class DbUtils
 		}
 		else
 		{
-			System.out.println("<<<<< -END-, test case("+testCase+"): -OK-OK-OK-");
+			System.out.println("<<<<< -END-, test case(" + testCase + "): -OK-OK-OK-");
 		}
 	}
 	public static void main(String[] args)

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -88,7 +88,7 @@ extends ReportEntryAbstract
 		String tabName = "MonSessionParams";
 		String sql = ""
 			    + "select [Type], [ParamName], [ParamValue] \n"
-			    + "from ["+tabName+"] \n"
+			    + "from [" + tabName + "] \n"
 			    + "where [ParamName] in("
 			    		+ "'"    + PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_execTime
 			    		+ "', '" + PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_logicalReads
@@ -117,7 +117,7 @@ extends ReportEntryAbstract
 		}
 		catch(SQLException ex)
 		{
-			_logger.warn("Problems getting values from '"+tabName+"': " + ex);
+			_logger.warn("Problems getting values from '" + tabName + "': " + ex);
 		}
 
 		Configuration conf = Configuration.getCombinedConfiguration();
@@ -299,7 +299,7 @@ extends ReportEntryAbstract
 				tableInfoMap.put("DBName"     , markIfDifferent(entry.getDbName(), currentDbname));
 				tableInfoMap.put("Schema"     ,                 entry.getSchemaName()      );
 				tableInfoMap.put("View"       ,                 entry.getTableName()       );
-				tableInfoMap.put("Created"    ,                 entry.getCrDate()+""       );
+				tableInfoMap.put("Created"    ,                 entry.getCrDate() + ""       );
 //				tableInfoMap.put("References" ,                 entry.getViewReferences()+""); // instead show this in the: Index Info section
 				tableInfoMap.put("DDL"        ,                 getFormattedSqlAsTooltipDiv(entry._objectText, "View DDL", DbUtils.DB_PROD_NAME_SYBASE_ASE));
 			}
@@ -314,8 +314,8 @@ extends ReportEntryAbstract
 				tableInfoMap.put("Data Pages" , nf.format(      entry.getDataPages() ));
 				tableInfoMap.put("Index MB"   , nf.format(      entry.getIndexMb()   ));
 				tableInfoMap.put("LOB MB"     , entry.getLobMb() == -1 ? "-no-lob-" : nf.format( entry.getLobMb() ));
-				tableInfoMap.put("Created"    ,                entry.getCrDate()+""       );
-				tableInfoMap.put("Sampled"    ,                entry.getSampleTime()+""   );
+				tableInfoMap.put("Created"    ,                entry.getCrDate() + ""       );
+				tableInfoMap.put("Sampled"    ,                entry.getSampleTime() + ""   );
 				tableInfoMap.put("Lock Scheme",                entry.getLockScheme() );
 				tableInfoMap.put("Index Count", entry.getIndexCount() + (entry.getIndexCount() > 0 ? "" : " <b><font color='red'>&lt;&lt;-- Warning NO index</font></b>") );
 				tableInfoMap.put("DDL Info"   , getTextAsTooltipDiv(entry._objectText, "Table Info", getDdlMaxLengthTable()));
@@ -2194,7 +2194,7 @@ extends ReportEntryAbstract
 		{
 			//_problem = ex;
 
-			_logger.warn("Problems getting XML Showplan for name = '"+sSqlIdStr+"': " + ex);
+			_logger.warn("Problems getting XML Showplan for name = '" + sSqlIdStr + "': " + ex);
 			throw ex;
 		}
 
@@ -2515,23 +2515,23 @@ extends ReportEntryAbstract
 						ssqlRstm.add(rstm);
 
 					if (_logger.isDebugEnabled())
-						_logger.debug("_ssqlRstm.getRowCount()="+ rstm.getRowCount());
+						_logger.debug("_ssqlRstm.getRowCount()=" + rstm.getRowCount());
 				}
 			}
 			catch(SQLException ex)
 			{
 				//_problem = ex;
 
-				_logger.warn("Problems getting SQL Statement name = '"+name+"': " + ex);
+				_logger.warn("Problems getting SQL Statement name = '" + name + "': " + ex);
 				throw ex;
 			} 
 			catch(ModelMissmatchException ex)
 			{
 				//_problem = ex;
 
-				_logger.warn("Problems (merging into previous ResultSetTableModel) when getting SQL by name = '"+name+"': " + ex);
+				_logger.warn("Problems (merging into previous ResultSetTableModel) when getting SQL by name = '" + name + "': " + ex);
 				
-				throw new SQLException("Problems (merging into previous ResultSetTableModel) when getting SQL by name = '"+name+"': " + ex, ex);
+				throw new SQLException("Problems (merging into previous ResultSetTableModel) when getting SQL by name = '" + name + "': " + ex, ex);
 			} 
 		}
 		
@@ -2640,7 +2640,7 @@ extends ReportEntryAbstract
 		
 		if (entries == null)
 		{
-			return "No entry for '"+ whereColValMap +"' was found. known keys: " + map.keySet();
+			return "No entry for '" + whereColValMap + "' was found. known keys: " + map.keySet();
 		}
 		
 		sb.append("-- There are ").append( entries._actualSize ).append(" Distinct SQL Text(s) found in the SQL Capture Recording, by column(s): " + whereColValMap + " \n");
@@ -3149,12 +3149,12 @@ extends ReportEntryAbstract
 		
 		if (entry == null)
 		{
-			return "No entry for '"+ whereColValMap +"' was found. known keys: " + map.keySet();
+			return "No entry for '" + whereColValMap + "' was found. known keys: " + map.keySet();
 		}
 
 		if (entry.waitTime == null && entry.rootCauseInfo == null)
 		{
-			return "Entry for '"+ whereColValMap +"' was found. But NO INFORMATION has been assigned to it.";
+			return "Entry for '" + whereColValMap + "' was found. But NO INFORMATION has been assigned to it.";
 		}
 		
 		StringBuilder sb = new StringBuilder();

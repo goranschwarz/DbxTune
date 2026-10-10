@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -78,7 +78,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = Ver.ver(2016);
 	public static final long     NEED_CE_VERSION  = 0;
@@ -111,7 +111,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmSpidWait(counterController, guiController);
 	}
@@ -396,7 +396,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_WAIT_TIME_MS,
 			"SPID Wait, group by wait_type - wait_time_ms, Average", 	                   // Menu CheckBox text
-			"SPID Wait, group by wait_type - wait_time_ms, Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SPID Wait, group by wait_type - wait_time_ms, Average (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -408,7 +408,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_WAITING_TASKS_COUNT,
 			"SPID Wait, group by wait_type - waiting_tasks_count, Average", 	                   // Menu CheckBox text
-			"SPID Wait, group by wait_type - waiting_tasks_count, Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SPID Wait, group by wait_type - waiting_tasks_count, Average (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -420,7 +420,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_WaitTimePerCount,
 			"SPID Wait, group by wait_type - WaitTimePerCount, Average", 	                   // Menu CheckBox text
-			"SPID Wait, group by wait_type - WaitTimePerCount, Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SPID Wait, group by wait_type - WaitTimePerCount, Average (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -522,14 +522,14 @@ extends CountersModel
 			if ( skipWaitTypeSet.contains(WaitType) )
 			{
 				if (_logger.isDebugEnabled())
-					_logger.debug("createDataset():GRAPH-DATA: "+getName()+": WaitType["+WaitType_pos+"]='"+WaitType+"', WaitTime["+WaitTime_pos+"]='"+WaitTime+"', WaitCount["+WaitCount_pos+"]='"+WaitCount+"', WaitTimePerCount["+WaitTimePerCount_pos+"]='"+WaitTimePerCount+"'.");
+					_logger.debug("createDataset():GRAPH-DATA: " + getName() + ": WaitType[" + WaitType_pos + "]='" + WaitType + "', WaitTime[" + WaitTime_pos + "]='" + WaitTime + "', WaitCount[" + WaitCount_pos + "]='" + WaitCount + "', WaitTimePerCount[" + WaitTimePerCount_pos + "]='" + WaitTimePerCount + "'.");
 				continue;
 			}
 
 //			if (_logger.isDebugEnabled())
 //				_logger.debug("createDataset():GRAPH-DATA: "+getName()+": ClassName("+ClassName_pos+")='"+ClassName+"', EventName("+EventName_pos+")='"+EventName+"', WaitTime("+WaitTime_pos+")='"+WaitTime+"', Waits("+Waits_pos+")='"+Waits+"', WaitTimePerCount("+WaitTimePerCount_pos+")='"+WaitTimePerCount+"'.");
 			if (_logger.isDebugEnabled())
-				_logger.debug("updateGraphData():GRAPH-DATA: "+getName()+": Skipping - WaitType["+WaitType_pos+"]='"+WaitType+".");
+				_logger.debug("updateGraphData():GRAPH-DATA: " + getName() + ": Skipping - WaitType[" + WaitType_pos + "]='" + WaitType + ".");
 
 			Double sumWaitTime         = eventWaitTime        .get(WaitTypeLower);
 			Double sumWaitCount        = eventWaitCount       .get(WaitTypeLower);
@@ -591,7 +591,7 @@ extends CountersModel
 		{
 			//System.out.println("GRAPH_NAME='"+tgdp.getName()+"'.");
 			if (_logger.isDebugEnabled())
-				_logger.debug("cm='"+StringUtil.left(this.getName(),25)+"', trendGraphsData="+tgdp);
+				_logger.debug("cm='" + StringUtil.left(this.getName(),25) + "', trendGraphsData=" + tgdp);
 			
 			if (GRAPH_NAME_WAIT_TIME_MS.equals(tgdp.getName()))
 			{

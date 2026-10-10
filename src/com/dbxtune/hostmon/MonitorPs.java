@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -57,7 +57,7 @@ extends HostMonitor
 			conn.connect();
 
 		if ( ! conn.isConnected() )
-			throw new Exception("Failed to connect to the remote host. conn="+conn);
+			throw new Exception("Failed to connect to the remote host. conn=" + conn);
 
 		String osname = conn.getOsName();
 		//System.out.println("OS Name: '"+osname+"'.");
@@ -96,7 +96,7 @@ extends HostMonitor
 		}					
 		else
 		{
-			throw new Exception("The Unix system '"+osname+"', is not supported by the module 'MonitorPs' for the moment.");
+			throw new Exception("The Unix system '" + osname + "', is not supported by the module 'MonitorPs' for the moment.");
 		}
 
 		mon.setConnection(conn);
@@ -122,7 +122,7 @@ extends HostMonitor
 //	{
 //		try
 //		{
-//			SshConnection conn = new SshConnection("sunspot", "gorans", "YHNmju76");
+//			SshConnection conn = new SshConnection("sunspot", "gorans", "xxxx");
 ////			SshConnection conn = new SshConnection("bluesky2", "gorans", "xxxx");
 //		
 //			HostMonitor mon = createMonitor(conn, false);

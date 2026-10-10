@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -78,7 +78,7 @@ public class SplashDemo extends Frame implements ActionListener {
         g.fillRect(120,140,200,40);
         g.setPaintMode();
         g.setColor(Color.BLACK);
-        g.drawString("Loading "+comps[(frame/5)%3]+"...", 120, 150);
+        g.drawString("Loading " + comps[(frame/5)%3] + "...", 120, 150);
     }
     public SplashDemo() {
         super("SplashWindow demo");

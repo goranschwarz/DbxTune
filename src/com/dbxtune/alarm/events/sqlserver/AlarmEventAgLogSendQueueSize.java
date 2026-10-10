@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -49,7 +49,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SPACE,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Log Send Queue Size is getting HIGH, in Server '" + cm.getServerName() + "' for Availability group '" + agName + "', serverName='" + serverName + "'. queueSizeInMb='"+queueSizeInMb+"'. (thresholdInMb="+thresholdInMb+")",
+				"Log Send Queue Size is getting HIGH, in Server '" + cm.getServerName() + "' for Availability group '" + agName + "', serverName='" + serverName + "'. queueSizeInMb='" + queueSizeInMb + "'. (thresholdInMb=" + thresholdInMb + ")",
 				thresholdInMb
 				);
 

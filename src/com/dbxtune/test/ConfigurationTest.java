@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -41,7 +41,7 @@ public class ConfigurationTest
 		conf.save();
 
 		String dummy = conf.getProperty("dummy");
-		System.out.println("dummy='"+dummy+"'");
+		System.out.println("dummy='" + dummy + "'");
 		if ( ! "xxx".equals(dummy))
 			System.out.println("test 1: ----------------------- FAILED -------------------------------");
 	}
@@ -54,7 +54,7 @@ public class ConfigurationTest
 		conf.save();
 
 		String dummy = conf.getProperty("dummy");
-		System.out.println("dummy='"+dummy+"'");
+		System.out.println("dummy='" + dummy + "'");
 		if ( ! "xxx".equals(dummy))
 			System.out.println("test 1: ----------------------- FAILED -------------------------------");
 	}

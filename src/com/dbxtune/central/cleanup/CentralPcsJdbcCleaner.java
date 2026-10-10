@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -173,7 +173,7 @@ extends Task
 
 		// Get "ServerNames" so we know what DBMS schemas we should iterate
 		String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_SESSIONS, null, true);
-		String sql = "select distinct " + lq+"ServerName"+rq + " from " + tabName + " order by 1";
+		String sql = "select distinct " + lq + "ServerName" + rq + " from " + tabName + " order by 1";
 		List<String> schemaList = new ArrayList<>();
 		// autoclose: stmnt, rs
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
@@ -243,7 +243,7 @@ extends Task
 		// Get expected number of samples to delete
 		int sessionsSampleCount = -99;
 		tabName = CentralPersistWriterBase.getTableName(conn, schema, Table.SESSION_SAMPLES, null, true);
-		sql = "select count(*) from " + tabName + " where " + lq+"SessionSampleTime"+rq + " < ? ";
+		sql = "select count(*) from " + tabName + " where " + lq + "SessionSampleTime" + rq + " < ? ";
 		try (PreparedStatement pstmnt = conn.prepareStatement(sql))
 		{
 			pstmnt.setTimestamp(1, olderThan);
@@ -267,7 +267,7 @@ extends Task
 		// Get "graph" tables
 		List<String> graphTables = new ArrayList<>();
 		tabName = CentralPersistWriterBase.getTableName(conn, schema, Table.GRAPH_PROPERTIES, null, true);
-		sql = "select distinct " + lq+"TableName"+rq + " from " + tabName + " order by 1 ";
+		sql = "select distinct " + lq + "TableName" + rq + " from " + tabName + " order by 1 ";
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 		{
 			while (rs.next())
@@ -286,7 +286,7 @@ extends Task
 			
 			// TODO: delete TOP #### from ... in a loop so we do not use up to much transaction log for some databases
 			
-			sql = "delete from " + lq+schema+rq + "." + lq+name+rq + " where " + lq+"SessionSampleTime"+rq + " < ? ";
+			sql = "delete from " + lq+schema+rq + "." + lq+name+rq + " where " + lq + "SessionSampleTime" + rq + " < ? ";
 
 			String dryRunComment = "";
 			if (_dryRun)
@@ -358,12 +358,12 @@ extends Task
 		String sql = null;
 		if      (Table.ALARM_ACTIVE          .equals(table)) return 0; // Do not delete from this
 		else if (Table.CM_LAST_SAMPLE_JSON   .equals(table)) return 0; // Do not delete from this
-		else if (Table.CM_HISTORY_SAMPLE_JSON.equals(table)) sql = "delete from " + fullTabName + " where " + lq+"SessionSampleTime"+rq + " < ? ";
-		else if (Table.ALARM_HISTORY         .equals(table)) sql = "delete from " + fullTabName + " where " + lq+"SessionSampleTime"+rq + " < ? ";
-		else if (Table.GRAPH_PROPERTIES      .equals(table)) sql = "delete from " + fullTabName + " where " + lq+"SessionStartTime" +rq + " < ? ";
-		else if (Table.SESSION_SAMPLE_DETAILS.equals(table)) sql = "delete from " + fullTabName + " where " + lq+"SessionSampleTime"+rq + " < ? ";
-		else if (Table.SESSION_SAMPLES       .equals(table)) sql = "delete from " + fullTabName + " where " + lq+"SessionSampleTime"+rq + " < ? ";
-		else if (Table.SESSION_SAMPLE_SUM    .equals(table)) sql = "delete from " + fullTabName + " where " + lq+"SessionStartTime" +rq + " < ? ";
+		else if (Table.CM_HISTORY_SAMPLE_JSON.equals(table)) sql = "delete from " + fullTabName + " where " + lq + "SessionSampleTime" + rq + " < ? ";
+		else if (Table.ALARM_HISTORY         .equals(table)) sql = "delete from " + fullTabName + " where " + lq + "SessionSampleTime" + rq + " < ? ";
+		else if (Table.GRAPH_PROPERTIES      .equals(table)) sql = "delete from " + fullTabName + " where " + lq + "SessionStartTime" + rq + " < ? ";
+		else if (Table.SESSION_SAMPLE_DETAILS.equals(table)) sql = "delete from " + fullTabName + " where " + lq + "SessionSampleTime" + rq + " < ? ";
+		else if (Table.SESSION_SAMPLES       .equals(table)) sql = "delete from " + fullTabName + " where " + lq + "SessionSampleTime" + rq + " < ? ";
+		else if (Table.SESSION_SAMPLE_SUM    .equals(table)) sql = "delete from " + fullTabName + " where " + lq + "SessionStartTime" + rq + " < ? ";
 
 		if (StringUtil.isNullOrBlank(sql))
 			return 0;
@@ -403,8 +403,8 @@ extends Task
 		else if (Table.CENTRAL_GRAPH_PROFILES.equals(table)) return 0; // Do not delete from this
 		else if (Table.CENTRAL_SESSIONS      .equals(table)) 
 		{
-			sql               = "delete from " + fullTabName + " where " + lq+"SessionStartTime"+rq + " < ? ";
-			sqlGetOldestEntry = "select min(" + lq+"SessionStartTime"+rq + ") from " + fullTabName;
+			sql               = "delete from " + fullTabName + " where " + lq + "SessionStartTime" + rq + " < ? ";
+			sqlGetOldestEntry = "select min(" + lq + "SessionStartTime" + rq + ") from " + fullTabName;
 		}
 
 		if (StringUtil.isNullOrBlank(sql))
@@ -491,7 +491,7 @@ extends Task
 		}
 		catch(SQLException ex)
 		{
-			_logger.error("Problems getting tables using: conn.getMetaData().getColumns(null, '" + schema + "', '%', 'SessionSampleTime') -- ErrorCode=" + ex.getErrorCode() + ", SqlState='" + ex.getSQLState()+ "', Message='" + ex.getMessage() + "'.", ex);
+			_logger.error("Problems getting tables using: conn.getMetaData().getColumns(null, '" + schema + "', '%', 'SessionSampleTime') -- ErrorCode=" + ex.getErrorCode() + ", SqlState='" + ex.getSQLState() + "', Message='" + ex.getMessage() + "'.", ex);
 
 			//---------------------------------------------------------------
 			// FALLBACK -- using conn.getMetaData().getTables
@@ -499,9 +499,9 @@ extends Task
 			try (ResultSet rs = conn.getMetaData().getTables(null, schema, "%", null))
 			{
 				ResultSetTableModel rstm = new ResultSetTableModel(rs, "getTables");
-				_logger.info("FALLBACK using conn.getMetaData().getTables(null, " + schema +", '%', null) -- Found " + rstm.getRowCount() + " tables");
+				_logger.info("FALLBACK using conn.getMetaData().getTables(null, " + schema + ", '%', null) -- Found " + rstm.getRowCount() + " tables");
 				if (_logger.isDebugEnabled())
-					_logger.debug("FALLBACK using conn.getMetaData().getTables(null, " + schema +", '%', null) -- Found tables:\n" + rstm.toAsciiTableString());
+					_logger.debug("FALLBACK using conn.getMetaData().getTables(null, " + schema + ", '%', null) -- Found tables:\n" + rstm.toAsciiTableString());
 				
 				for (int r=0; r<rstm.getRowCount(); r++)
 				{
@@ -516,7 +516,7 @@ extends Task
 					{
 						if ( ! dummyRstm.hasColumnNoCase("SessionSampleTime") )
 						{
-							_logger.info("FALLBACK using conn.getMetaData().getTables(null, " + schema +", '%', null) -- Skipping table '" + tabName + "'. The table did NOT have any column named 'SessionSampleTime'. Known Columns: " + dummyRstm.getColumnNames());
+							_logger.info("FALLBACK using conn.getMetaData().getTables(null, " + schema + ", '%', null) -- Skipping table '" + tabName + "'. The table did NOT have any column named 'SessionSampleTime'. Known Columns: " + dummyRstm.getColumnNames());
 							continue;
 						}
 					}
@@ -535,13 +535,13 @@ extends Task
 					}
 					else
 					{
-						_logger.info("FALLBACK using conn.getMetaData().getTables(null, " + schema +", '%', null) -- Skipping table '" + tabName + "'. The name did not look like: 'MonAlarmHistory', '*_(abs|diff|rate)' or '*_*'");
+						_logger.info("FALLBACK using conn.getMetaData().getTables(null, " + schema + ", '%', null) -- Skipping table '" + tabName + "'. The name did not look like: 'MonAlarmHistory', '*_(abs|diff|rate)' or '*_*'");
 					}
 				}
 			}
 			catch(SQLException ex2)
 			{
-				_logger.error("FALLBACK Problems getting tables using: conn.getMetaData().getTables(null, " + schema +", '%', null) -- ErrorCode=" + ex2.getErrorCode() + ", SqlState='" + ex2.getSQLState()+ "', Message='" + ex2.getMessage() + "'.", ex2);
+				_logger.error("FALLBACK Problems getting tables using: conn.getMetaData().getTables(null, " + schema + ", '%', null) -- ErrorCode=" + ex2.getErrorCode() + ", SqlState='" + ex2.getSQLState() + "', Message='" + ex2.getMessage() + "'.", ex2);
 				_logger.error("Cleanup of 'LocalMetrics' IS NOT POSSIBLE!!!");
 			}
 		}
@@ -572,7 +572,7 @@ extends Task
 		
 		// TODO: delete TOP #### from ... in a loop so we do not use up to much transaction log for some databases
 		
-		String sql = "delete from " + lq+schema+rq + "." + lq+tabName+rq + " where " + lq+"SessionSampleTime"+rq + " < ? ";
+		String sql = "delete from " + lq+schema+rq + "." + lq+tabName+rq + " where " + lq + "SessionSampleTime" + rq + " < ? ";
 
 		String dryRunComment = "";
 		if (_dryRun)

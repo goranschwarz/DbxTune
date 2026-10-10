@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -99,7 +99,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -160,7 +160,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmSessions(counterController, guiController);
 	}
@@ -789,7 +789,7 @@ extends CountersModel
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_StatementExecInSec, DEFAULT_alarm_StatementExecInSec);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", StatementExecInSec='"+StatementExecInSec+"'.");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", StatementExecInSec='" + StatementExecInSec + "'.");
 
 					boolean isValidRow = true;
 
@@ -810,7 +810,7 @@ extends CountersModel
 							if (executing_managed_code && ("SLEEP_TASK".equals(wait_type) || "SLEEP_TASK".equals(last_wait_type)) )
 							{
 								if (debugPrint || _logger.isDebugEnabled())
-									System.out.println("##### sendAlarmRequest("+cm.getName()+"): SKIPPING record: executing_managed_code="+executing_managed_code+", wait_type='"+wait_type+"', last_wait_type='"+last_wait_type+"'.");
+									System.out.println("##### sendAlarmRequest(" + cm.getName() + "): SKIPPING record: executing_managed_code=" + executing_managed_code + ", wait_type='" + wait_type + "', last_wait_type='" + last_wait_type + "'.");
 								isValidRow = false;
 							}
 						}
@@ -944,7 +944,7 @@ extends CountersModel
 					boolean threshold = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_alarm_DacInUse, DEFAULT_alarm_DacInUse);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", endpoint_type='"+endpoint_type+"'.");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", endpoint_type='" + endpoint_type + "'.");
 
 					if (endpoint_type.startsWith("DAC") && threshold == true)
 					{

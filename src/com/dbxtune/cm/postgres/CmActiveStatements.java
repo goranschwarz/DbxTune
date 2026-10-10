@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -106,7 +106,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -134,7 +134,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmActiveStatements(counterController, guiController);
 	}
@@ -1150,7 +1150,7 @@ extends CountersModel
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ImBlockingOthersMaxTimeInSec, DEFAULT_alarm_ImBlockingOthersMaxTimeInSec);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): ImBlockingOtherPids='" + ImBlockingOtherPids + "', ImBlockedByPids='" + ImBlockedByPids + "'; ImBlockingOthersMaxTimeInSec=" + ImBlockingOthersMaxTimeInSec + ", threshold=" + threshold + ".");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): ImBlockingOtherPids='" + ImBlockingOtherPids + "', ImBlockedByPids='" + ImBlockedByPids + "'; ImBlockingOthersMaxTimeInSec=" + ImBlockingOthersMaxTimeInSec + ", threshold=" + threshold + ".");
 
 					List<String> ImBlockingOtherPidsList = StringUtil.commaStrToList(ImBlockingOtherPids);
 					String BlockingOtherPidsStr = ImBlockingOtherPidsList + "";
@@ -1158,7 +1158,7 @@ extends CountersModel
 					long   pid                  = cm.getRateValueAsLong(r, "pid");
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", ImBlockingOthersMaxTimeInSec='"+ImBlockingOthersMaxTimeInSec+"', ImBlockingOtherPidsList="+ImBlockingOtherPidsList);
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", ImBlockingOthersMaxTimeInSec='" + ImBlockingOthersMaxTimeInSec + "', ImBlockingOtherPidsList=" + ImBlockingOtherPidsList);
 
 					// If MaxTime is "unknown" or above the threshold (unknown could be: not available in this DBMS Version or we failed to fetch/calculate it)
 					if (ImBlockingOthersMaxTimeInSec == -1 || ImBlockingOthersMaxTimeInSec > threshold)
@@ -1224,7 +1224,7 @@ extends CountersModel
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_HoldingXLocksWhileWaitForClientInputInSec, DEFAULT_alarm_HoldingXLocksWhileWaitForClientInputInSec);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold=" + threshold + ", stmnt_start_sec=" + stmnt_start_sec + ", pid_exlock_count=" + pid_exlock_count + ", state='" + state + "'.");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", stmnt_start_sec=" + stmnt_start_sec + ", pid_exlock_count=" + pid_exlock_count + ", state='" + state + "'.");
 
 					if (stmnt_start_sec > threshold)
 					{
@@ -1292,7 +1292,7 @@ extends CountersModel
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_HoldingAdvisoryLocksWhileWaitForClientInputInSec, DEFAULT_alarm_HoldingAdvisoryLocksWhileWaitForClientInputInSec);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold=" + threshold + ", stmnt_start_sec=" + stmnt_start_sec + ", pid_advlock_count=" + pid_advlock_count + ", state='" + state + "'.");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", stmnt_start_sec=" + stmnt_start_sec + ", pid_advlock_count=" + pid_advlock_count + ", state='" + state + "'.");
 
 					if (stmnt_start_sec > threshold)
 					{
@@ -1379,7 +1379,7 @@ extends CountersModel
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_StatementExecInSec, DEFAULT_alarm_StatementExecInSec);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", StatementExecInSec='"+StatementExecInSec+"'.");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", StatementExecInSec='" + StatementExecInSec + "'.");
 
 					if (StatementExecInSec > threshold)
 					{
@@ -1482,7 +1482,7 @@ extends CountersModel
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_OpenXactInSec, DEFAULT_alarm_OpenXactInSec);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", xactTimeInSec='"+xactTimeInSec+"'.");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", xactTimeInSec='" + xactTimeInSec + "'.");
 
 					if (xactTimeInSec > threshold)
 					{

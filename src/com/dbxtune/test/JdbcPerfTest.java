@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -140,8 +140,8 @@ public class JdbcPerfTest
 			// Add some for SQL Server
 			if (jdbcUrl.startsWith("jdbc:sqlserver:"))
 			{
-				if (props.getProperty("encrypt")                == null) props.put("encrypt",                true+"");
-				if (props.getProperty("trustServerCertificate") == null) props.put("trustServerCertificate", true+"");
+				if (props.getProperty("encrypt")                == null) props.put("encrypt",                true + "");
+				if (props.getProperty("trustServerCertificate") == null) props.put("trustServerCertificate", true + "");
 			}
 
 			// Add some for Sybase ASE

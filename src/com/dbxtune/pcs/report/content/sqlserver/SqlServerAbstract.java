@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -117,23 +117,23 @@ extends ReportEntryAbstract
 						planRstm.add(rstm);
 
 					if (_logger.isDebugEnabled())
-						_logger.debug("_planRstm.getRowCount()="+ rstm.getRowCount());
+						_logger.debug("_planRstm.getRowCount()=" + rstm.getRowCount());
 				}
 			}
 			catch(SQLException ex)
 			{
 				//_problem = ex;
 
-				_logger.warn("Problems getting SQL Statement name = '"+name+"': " + ex);
+				_logger.warn("Problems getting SQL Statement name = '" + name + "': " + ex);
 				throw ex;
 			} 
 			catch(ModelMissmatchException ex)
 			{
 				//_problem = ex;
 
-				_logger.warn("Problems (merging into previous ResultSetTableModel) when getting SQL by name = '"+name+"': " + ex);
+				_logger.warn("Problems (merging into previous ResultSetTableModel) when getting SQL by name = '" + name + "': " + ex);
 				
-				throw new SQLException("Problems (merging into previous ResultSetTableModel) when getting SQL by name = '"+name+"': " + ex, ex);
+				throw new SQLException("Problems (merging into previous ResultSetTableModel) when getting SQL by name = '" + name + "': " + ex, ex);
 			} 
 		}
 		
@@ -211,7 +211,7 @@ extends ReportEntryAbstract
 			{
 				//_problem = ex;
 
-				_logger.warn("Problems getting SQL Statement name = '"+name+"': " + ex);
+				_logger.warn("Problems getting SQL Statement name = '" + name + "': " + ex);
 				throw ex;
 			} 
 		}
@@ -732,7 +732,7 @@ extends ReportEntryAbstract
 				tableInfoMap.put("DBName"     , markIfDifferent(entry.getDbName(), currentDbname));
 				tableInfoMap.put("Schema"     ,                 entry.getSchemaName()      );
 				tableInfoMap.put("View"       ,                 entry.getTableName()       );
-				tableInfoMap.put("Created"    ,                 entry.getCrDate()+""       );
+				tableInfoMap.put("Created"    ,                 entry.getCrDate() + ""       );
 //				tableInfoMap.put("References" ,                 entry.getViewReferences()+""); // instead show this in the: Index Info section
 				tableInfoMap.put("DDL"        ,                 getFormattedSqlAsTooltipDiv(entry._objectText, "View DDL", DbUtils.DB_PROD_NAME_MSSQL));
 			}
@@ -741,7 +741,7 @@ extends ReportEntryAbstract
 				tableInfoMap.put("DBName"     , markIfDifferent(entry.getDbName(), currentDbname));
 				tableInfoMap.put("Schema"     ,                 entry.getSchemaName()      );
 				tableInfoMap.put("Table"      ,                 entry.getTableName()       );
-				tableInfoMap.put("Created"    ,                 entry.getCrDate()+""       );
+				tableInfoMap.put("Created"    ,                 entry.getCrDate() + ""       );
 				tableInfoMap.put("Rowcount"   , nf.format(      entry.getRowTotal()       ));
 				tableInfoMap.put("Partitions" , nf.format(      entry.getPartitionCount() ));
 				tableInfoMap.put("Total MB"   , nf.format(      entry.getTotalMb()        ));
@@ -749,8 +749,8 @@ extends ReportEntryAbstract
 				tableInfoMap.put("Lob MB"     , nf.format(      entry.getLobMb()          ));
 				tableInfoMap.put("Overflow MB", nf.format(      entry.getRowOverflowMb()  ));
 				tableInfoMap.put("Index MB"   , nf.format(      entry.getIndexMb()        ));
-				tableInfoMap.put("Created"    ,                 entry.getCrDate()+""       );
-				tableInfoMap.put("Sampled"    ,                 entry.getSampleTime()+""   );
+				tableInfoMap.put("Created"    ,                 entry.getCrDate() + ""       );
+				tableInfoMap.put("Sampled"    ,                 entry.getSampleTime() + ""   );
 				tableInfoMap.put("Index Count", entry.getIndexCount() + (entry.getIndexCount() > 0 ? "" : " <b><font color='red'>&lt;&lt;-- Warning NO index</font></b>") );
 				tableInfoMap.put("DDL Info"   , entry._objectText   == null ? "-"             : getTextAsTooltipDiv(entry._objectText, "Table Info", getDdlMaxLengthTable()));
 //				tableInfoMap.put("Triggers"   , "-not-yet-impl-");

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -211,7 +211,7 @@ extends PersistWriterJdbc
 			catch (SQLException e2) {}
 
 			isSevereProblem(conn, e);
-			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode(), e);
+			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()=" + e.getErrorCode(), e);
 		}
 		finally
 		{
@@ -254,7 +254,7 @@ extends PersistWriterJdbc
 			return;
 		}
 
-		_logger.debug("Persisting Counters for CounterModel='"+cm.getName()+"'.");
+		_logger.debug("Persisting Counters for CounterModel='" + cm.getName() + "'.");
 
 		int counterType = 0;
 		int absRows     = 0;

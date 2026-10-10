@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -74,7 +74,7 @@ extends TabularCntrPanel
 		String colorStr = null;
 
 		// Mark the row as RED if Stalls is above 0
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.stalls");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.stalls");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -104,7 +104,7 @@ extends TabularCntrPanel
 				Configuration conf = Configuration.getCombinedConfiguration();
 
 				_onZeroLogicalReads_chk.setSelected(conf.getBooleanProperty(CmCachePools.PROPKEY_CacheHitRateTo100PctOnZeroReads, CmCachePools.DEFAULT_CacheHitRateTo100PctOnZeroReads));
-				_slideWindowTime_txt   .setText(""+ conf.getIntProperty    (CmCachePools.PROPKEY_CacheSlideTimeInSec            , CmCachePools.DEFAULT_CacheSlideTimeInSec));
+				_slideWindowTime_txt   .setText("" + conf.getIntProperty    (CmCachePools.PROPKEY_CacheSlideTimeInSec            , CmCachePools.DEFAULT_CacheSlideTimeInSec));
 
 				// ReInitialize the SQL
 				getCm().setSql(null);

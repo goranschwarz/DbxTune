@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -103,7 +103,7 @@ implements ActionListener, FocusListener
 		super(owner, "Java/JVM Memory Parameters", true);
 
 		if (StringUtil.isNullOrBlank(appName) || StringUtil.isNullOrBlank(filename))
-			throw new IllegalArgumentException("JvmMemorySettingsDialog: The params appName='"+appName+"' and filename='"+filename+"', must have some values.");
+			throw new IllegalArgumentException("JvmMemorySettingsDialog: The params appName='" + appName + "' and filename='" + filename + "', must have some values.");
 
 		_owner        = owner;
 		_appName      = appName;
@@ -177,16 +177,16 @@ implements ActionListener, FocusListener
 		_memInfo_lbl.setText("<html>"
 				+ "Available Memory on this Machine:"
 				+ "<ul>"
-				+ "  <li>Total Physical Memory="+Memory.getTotalPhysicalMemorySizeInMB()+" MB</li>"
-				+ "  <li>Free Physical Memory="+Memory.getFreePhysicalMemorySizeInMB()+" MB</li>"
+				+ "  <li>Total Physical Memory=" + Memory.getTotalPhysicalMemorySizeInMB() + " MB</li>"
+				+ "  <li>Free Physical Memory=" + Memory.getFreePhysicalMemorySizeInMB() + " MB</li>"
 				+ "</ul>"
 				+ "<br>"
-				+ "This is a "+jvmBitSize+" bit Java/JVM, on a " 
+				+ "This is a " + jvmBitSize + " bit Java/JVM, on a " 
 					+ (jvmBitSize < 64 ? 
 							"32 bit can only use 1-2 GB of memory<br>Try to download a 64 bit JVM, which gives you more memory..." : 
 							"64 bit you can use <i>all</i> the 'free' memory<br>")
 				+ "<br>"
-				+ "The settings are stored in file '"+_filename+"'<br>"
+				+ "The settings are stored in file '" + _filename + "'<br>"
 				+ "<br>"
 				+ "For JVM memory parameters examples, search the web for 'java memory settings'.<br>"
 				+ "<br>"
@@ -246,7 +246,7 @@ implements ActionListener, FocusListener
 			}
 			catch(Exception ex)
 			{
-				SwingUtils.showErrorMessage(_owner, "Errors when writing to file", "Problems writing to file '"+_filename+"'.", ex);
+				SwingUtils.showErrorMessage(_owner, "Errors when writing to file", "Problems writing to file '" + _filename + "'.", ex);
 				return;
 			}
 			saveProps();

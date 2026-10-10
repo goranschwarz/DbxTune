@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -60,7 +60,7 @@ extends TabularCntrPanel
 		+ "Only show executions that has accured at the last X minutes (default is 10 minutes).<br>"
 		+ "<br>"
 		+ "<b>Note:</b> This will just restrict number or rows a bit, It's probably better than <i>'Show only SQL executed since last sample time'</i> but same rules applies.<br>"
-		+ "<b>Note:</b> Number of minutes can be changed using the property: <code>"+CmSqlStats.PROPKEY_sample_lastXminutesTime+"</code><br>"
+		+ "<b>Note:</b> Number of minutes can be changed using the property: <code>" + CmSqlStats.PROPKEY_sample_lastXminutesTime + "</code><br>"
 		+ "</html>";
 			
 	public static final String  TOOLTIP_sample_lastXminutesTime = 
@@ -180,7 +180,7 @@ extends TabularCntrPanel
 //				list.add(new CmSettingsHelper("Show only SQL exected last ## minutes",        PROPKEY_sample_lastXminutesTime , Integer.class, conf.getIntProperty    (PROPKEY_sample_lastXminutesTime , DEFAULT_sample_lastXminutesTime ), DEFAULT_sample_lastXminutesTime, CmExecQueryStatsPanel.TOOLTIP_sample_lastXminutesTime ));
 
 				_sampleLastXminutes_chk     .setSelected(conf.getBooleanProperty(CmSqlStats.PROPKEY_sample_lastXminutes,     CmSqlStats.DEFAULT_sample_lastXminutes));        
-				_sampleLastXminutes_txt     .setText(""+ conf.getIntProperty    (CmSqlStats.PROPKEY_sample_lastXminutesTime, CmSqlStats.DEFAULT_sample_lastXminutesTime));
+				_sampleLastXminutes_txt     .setText("" + conf.getIntProperty    (CmSqlStats.PROPKEY_sample_lastXminutesTime, CmSqlStats.DEFAULT_sample_lastXminutesTime));
 				_sampleAfterPrevSample_chk  .setSelected(conf.getBooleanProperty(CmSqlStats.PROPKEY_sample_afterPrevSample,  CmSqlStats.DEFAULT_sample_afterPrevSample));
 				_sampleExtraWhereClause_txt .setText    (conf.getProperty       (CmSqlStats.PROPKEY_sample_extraWhereClause, CmSqlStats.DEFAULT_sample_extraWhereClause));
 
@@ -203,7 +203,7 @@ extends TabularCntrPanel
 
 //		_sampleLastXminutes_chk     = new JCheckBox("Show only SQL executed last 10 minutes",         conf == null ? CmSqlStats.DEFAULT_sample_lastXminutes    : conf.getBooleanProperty(CmSqlStats.PROPKEY_sample_lastXminutes,     CmSqlStats.DEFAULT_sample_lastXminutes));
 		_sampleLastXminutes_chk     = new JCheckBox("Show only SQL executed last",                    conf == null ? CmSqlStats.DEFAULT_sample_lastXminutes    : conf.getBooleanProperty(CmSqlStats.PROPKEY_sample_lastXminutes,     CmSqlStats.DEFAULT_sample_lastXminutes));
-		_sampleLastXminutes_txt     = new JTextField(""+                                             (conf == null ? CmSqlStats.DEFAULT_sample_lastXminutesTime: conf.getIntProperty    (CmSqlStats.PROPKEY_sample_lastXminutesTime, CmSqlStats.DEFAULT_sample_lastXminutesTime)), 3);
+		_sampleLastXminutes_txt     = new JTextField("" +                                             (conf == null ? CmSqlStats.DEFAULT_sample_lastXminutesTime: conf.getIntProperty    (CmSqlStats.PROPKEY_sample_lastXminutesTime, CmSqlStats.DEFAULT_sample_lastXminutesTime)), 3);
 		_sampleLastXminutes_lbl     = new JLabel("minutes");
 		_sampleAfterPrevSample_chk  = new JCheckBox("Show only SQL executed since last sample time",  conf == null ? CmSqlStats.DEFAULT_sample_afterPrevSample : conf.getBooleanProperty(CmSqlStats.PROPKEY_sample_afterPrevSample,  CmSqlStats.DEFAULT_sample_afterPrevSample));
 		_sampleExtraWhereClause_txt = new RSyntaxTextAreaX();
@@ -265,7 +265,7 @@ extends TabularCntrPanel
 				int    sampleTimeInt = StringUtil.parseInt(sampleTimeStr, -1);
 				if (sampleTimeInt < 0)
 				{
-					SwingUtils.showErrorMessage(CmSqlStatsPanel.this, "Not a Number", "This must be specified as an integer value, and it was '"+sampleTimeStr+"'.", null);
+					SwingUtils.showErrorMessage(CmSqlStatsPanel.this, "Not a Number", "This must be specified as an integer value, and it was '" + sampleTimeStr + "'.", null);
 					_sampleLastXminutes_txt.setText(CmSqlStats.DEFAULT_sample_lastXminutesTime + "");
 					return;
 				}
@@ -295,7 +295,7 @@ extends TabularCntrPanel
 				int    sampleTimeInt = StringUtil.parseInt(sampleTimeStr, -1);
 				if (sampleTimeInt < 0)
 				{
-					SwingUtils.showErrorMessage(CmSqlStatsPanel.this, "Not a Number", "This must be specified as an integer value, and it was '"+sampleTimeStr+"'.", null);
+					SwingUtils.showErrorMessage(CmSqlStatsPanel.this, "Not a Number", "This must be specified as an integer value, and it was '" + sampleTimeStr + "'.", null);
 					_sampleLastXminutes_txt.setText(CmSqlStats.DEFAULT_sample_lastXminutesTime + "");
 					return;
 				}

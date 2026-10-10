@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -107,7 +107,7 @@ extends CountersModel
 			"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -150,7 +150,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmActiveStatements(counterController, guiController);
 	}
@@ -1517,8 +1517,8 @@ extends CountersModel
 		
 		if (pos_SPID < 0 || pos_HasShowPlan < 0 || pos_ShowPlanText < 0)
 		{
-System.out.println("Can't find the position for columns ('SPID'="+pos_SPID+", 'HasShowPlan'="+pos_HasShowPlan+", 'ShowPlanText'="+pos_ShowPlanText+")");
-			_logger.debug("Can't find the position for columns ('SPID'="+pos_SPID+", 'HasShowPlan'="+pos_HasShowPlan+", 'ShowPlanText'="+pos_ShowPlanText+")");
+System.out.println("Can't find the position for columns ('SPID'=" + pos_SPID + ", 'HasShowPlan'=" + pos_HasShowPlan + ", 'ShowPlanText'=" + pos_ShowPlanText + ")");
+			_logger.debug("Can't find the position for columns ('SPID'=" + pos_SPID + ", 'HasShowPlan'=" + pos_HasShowPlan + ", 'ShowPlanText'=" + pos_ShowPlanText + ")");
 			return;
 		}
 
@@ -1536,8 +1536,8 @@ System.out.println("Can't find the position for columns ('SPID'="+pos_SPID+", 'H
 
 		if (pos_HasMonSqlText < 0 || pos_MonSqlText < 0)
 		{
-System.out.println("Can't find the position for columns (''HasMonSqlText'="+pos_HasMonSqlText+", 'MonSqlText'="+pos_MonSqlText+")");
-			_logger.debug("Can't find the position for columns (''HasMonSqlText'="+pos_HasMonSqlText+", 'MonSqlText'="+pos_MonSqlText+")");
+System.out.println("Can't find the position for columns (''HasMonSqlText'=" + pos_HasMonSqlText + ", 'MonSqlText'=" + pos_MonSqlText + ")");
+			_logger.debug("Can't find the position for columns (''HasMonSqlText'=" + pos_HasMonSqlText + ", 'MonSqlText'=" + pos_MonSqlText + ")");
 			return;
 		}
 
@@ -1549,68 +1549,68 @@ System.out.println("Can't find the position for columns (''HasMonSqlText'="+pos_
 		
 		if (pos_HasLiveQueryPlan < 0 || pos_LiveQueryPlan < 0)
 		{
-System.out.println("Can't find the position for columns ('HasLiveQueryPlan'="+pos_HasLiveQueryPlan+", 'LiveQueryPlan'="+pos_LiveQueryPlan+")");
-			_logger.debug("Can't find the position for columns ('HasLiveQueryPlan'="+pos_HasLiveQueryPlan+", 'LiveQueryPlan'="+pos_LiveQueryPlan+")");
+System.out.println("Can't find the position for columns ('HasLiveQueryPlan'=" + pos_HasLiveQueryPlan + ", 'LiveQueryPlan'=" + pos_LiveQueryPlan + ")");
+			_logger.debug("Can't find the position for columns ('HasLiveQueryPlan'=" + pos_HasLiveQueryPlan + ", 'LiveQueryPlan'=" + pos_LiveQueryPlan + ")");
 			return;
 		}
 
 		if (pos_BlockingOtherSpids < 0 || pos_BlockingSPID < 0)
 		{
-System.out.println("Can't find the position for columns ('BlockingOtherSpids'="+pos_BlockingOtherSpids+", 'BlockingSPID'="+pos_BlockingSPID+")");
-			_logger.debug("Can't find the position for columns ('BlockingOtherSpids'="+pos_BlockingOtherSpids+", 'BlockingSPID'="+pos_BlockingSPID+")");
+System.out.println("Can't find the position for columns ('BlockingOtherSpids'=" + pos_BlockingOtherSpids + ", 'BlockingSPID'=" + pos_BlockingSPID + ")");
+			_logger.debug("Can't find the position for columns ('BlockingOtherSpids'=" + pos_BlockingOtherSpids + ", 'BlockingSPID'=" + pos_BlockingSPID + ")");
 			return;
 		}
 		
 		if (pos_wait_time < 0|| pos_ImBlockingOthersMaxTimeInSec < 0)
 		{
-System.out.println("Can't find the position for columns ('wait_time'="+pos_wait_time+", 'ImBlockingOthersMaxTimeInSec'="+pos_ImBlockingOthersMaxTimeInSec+")");
-			_logger.debug("Can't find the position for columns ('wait_time'="+pos_wait_time+", 'ImBlockingOthersMaxTimeInSec'="+pos_ImBlockingOthersMaxTimeInSec+")");
+System.out.println("Can't find the position for columns ('wait_time'=" + pos_wait_time + ", 'ImBlockingOthersMaxTimeInSec'=" + pos_ImBlockingOthersMaxTimeInSec + ")");
+			_logger.debug("Can't find the position for columns ('wait_time'=" + pos_wait_time + ", 'ImBlockingOthersMaxTimeInSec'=" + pos_ImBlockingOthersMaxTimeInSec + ")");
 			return;
 		}
 		
 		if (pos_multiSampled < 0)
 		{
-System.out.println("Can't find the position for columns ('multiSampled'="+pos_multiSampled+")");
-			_logger.debug("Can't find the position for columns ('multiSampled'="+pos_multiSampled+")");
+System.out.println("Can't find the position for columns ('multiSampled'=" + pos_multiSampled + ")");
+			_logger.debug("Can't find the position for columns ('multiSampled'=" + pos_multiSampled + ")");
 			return;
 		}
 		
 		if (pos_StartTime < 0)
 		{
-System.out.println("Can't find the position for columns ('StartTime'="+pos_StartTime+")");
-			_logger.debug("Can't find the position for columns ('StartTime'="+pos_StartTime+")");
+System.out.println("Can't find the position for columns ('StartTime'=" + pos_StartTime + ")");
+			_logger.debug("Can't find the position for columns ('StartTime'=" + pos_StartTime + ")");
 			return;
 		}
 
 		if (pos_StmntStart < 0)
 		{
-System.out.println("Can't find the position for columns ('StmntStart'="+pos_StmntStart+")");
-			_logger.debug("Can't find the position for columns ('StmntStart'="+pos_StmntStart+")");
+System.out.println("Can't find the position for columns ('StmntStart'=" + pos_StmntStart + ")");
+			_logger.debug("Can't find the position for columns ('StmntStart'=" + pos_StmntStart + ")");
 			return;
 		}
 
 		if (pos_sql_handle < 0)
 		{
-System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_handle+")");
-			_logger.debug("Can't find the position for columns ('sql_handle'="+pos_sql_handle+")");
+System.out.println("Can't find the position for columns ('sql_handle'=" + pos_sql_handle + ")");
+			_logger.debug("Can't find the position for columns ('sql_handle'=" + pos_sql_handle + ")");
 			return;
 		}
 
 		if (pos_HasSpidLocks < 0 || pos_SpidLocks < 0 || pos_SpidLockCount < 0)
 		{
-			_logger.debug("Can't find the position for columns ('HasSpidLocks'="+pos_HasSpidLocks+", 'SpidLocks'="+pos_SpidLocks+", 'SpidLockCount'="+pos_SpidLockCount+")");
+			_logger.debug("Can't find the position for columns ('HasSpidLocks'=" + pos_HasSpidLocks + ", 'SpidLocks'=" + pos_SpidLocks + ", 'SpidLockCount'=" + pos_SpidLockCount + ")");
 			return;
 		}
 		
 		if (pos_BlockedSpidsInfo < 0)
 		{
-			_logger.debug("Can't find the position for columns ('BlockedSpidsInfo'="+pos_BlockedSpidsInfo+")");
+			_logger.debug("Can't find the position for columns ('BlockedSpidsInfo'=" + pos_BlockedSpidsInfo + ")");
 			return;
 		}
 
 		if (pos_HasBlockedSpidsInfo < 0)
 		{
-			_logger.debug("Can't find the position for columns ('HasBlockedSpidsInfo'="+pos_HasBlockedSpidsInfo+")");
+			_logger.debug("Can't find the position for columns ('HasBlockedSpidsInfo'=" + pos_HasBlockedSpidsInfo + ")");
 			return;
 		}
 
@@ -2406,7 +2406,7 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ImBlockingOthersMaxTimeInSec, DEFAULT_alarm_ImBlockingOthersMaxTimeInSec);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): ImBlockedBySessionId="+ImBlockedBySessionId+"; ImBlockingOthersMaxTimeInSec='"+ImBlockingOthersMaxTimeInSec+"', threshold="+threshold+".");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): ImBlockedBySessionId=" + ImBlockedBySessionId + "; ImBlockingOthersMaxTimeInSec='" + ImBlockingOthersMaxTimeInSec + "', threshold=" + threshold + ".");
 
 					if (ImBlockedBySessionId == 0) // meaning: THIS SPID is responsible for the block (it's not blocked, meaning; the root cause)
 					{
@@ -2416,7 +2416,7 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 						int    spid                  = cm.getRateValueAsDouble(r, "session_id").intValue();
 
 						if (debugPrint || _logger.isDebugEnabled())
-							System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", ImBlockingOthersMaxTimeInSec='"+ImBlockingOthersMaxTimeInSec+"', ImBlockingOtherSessionIdsList="+ImBlockingOtherSessionIdsList);
+							System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", ImBlockingOthersMaxTimeInSec='" + ImBlockingOthersMaxTimeInSec + "', ImBlockingOtherSessionIdsList=" + ImBlockingOtherSessionIdsList);
 
 						if (ImBlockingOthersMaxTimeInSec > threshold)
 						{
@@ -2511,7 +2511,7 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_HoldingLocksWhileWaitForClientInputInSec, DEFAULT_alarm_HoldingLocksWhileWaitForClientInputInSec);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", ExecTimeInSec='"+ExecTimeInSec+"'.");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", ExecTimeInSec='" + ExecTimeInSec + "'.");
 
 					if (ExecTimeInSec > threshold)
 					{
@@ -2616,7 +2616,7 @@ System.out.println("Can't find the position for columns ('sql_handle'="+pos_sql_
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_TempdbUsageMb, DEFAULT_alarm_TempdbUsageMb);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", TempdbUsageMb='"+TempdbUsageMb);
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", TempdbUsageMb='" + TempdbUsageMb);
 
 					if (TempdbUsageMb > threshold)
 					{

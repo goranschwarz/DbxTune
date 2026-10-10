@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -735,7 +735,7 @@ public class SqlCaptureStatementStatisticsSample
 		else if (ms >= 50000 && ms <= 100000)  addExecTimeInternal(StatType.EXEC_SPAN, EXEC_SPAN_50_to_100_sec , spid, batchId, ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, ssqlId, procedureId, procName, contextId, lineNumber, dbname, dbid, queryOptimizationTime); 
 		else if (ms >= 100000)                 addExecTimeInternal(StatType.EXEC_SPAN, EXEC_SPAN_ABOVE_100_sec , spid, batchId, ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, ssqlId, procedureId, procName, contextId, lineNumber, dbname, dbid, queryOptimizationTime); 
 		else
-			System.out.println("addExecTime(ms="+ms+", logicalReads="+logicalReads+", physicalReads="+physicalReads);
+			System.out.println("addExecTime(ms=" + ms + ", logicalReads=" + logicalReads + ", physicalReads=" + physicalReads);
 
 		// Add SUMMARY
 		//addExecTimeInternal(EXEC_SPAN_SUMMARY , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procedureId, procName, lineNumber, dbname);

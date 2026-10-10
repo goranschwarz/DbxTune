@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -144,7 +144,7 @@ extends SqlServerAbstract
 								+ "You may not take advantage of new functionality, which is available at this SQL-Server version... \n"
 								+ "Server compatibility_level is: " + compatLevel_tempdb + dbVersionToStr(compatLevel_tempdb);
 
-						strVal = "<div title=\""+tooltip+"\"> <font color='red'>" + strVal + "</font><div>";
+						strVal = "<div title=\"" + tooltip + "\"> <font color='red'>" + strVal + "</font><div>";
 					}
 				}
 
@@ -169,7 +169,7 @@ extends SqlServerAbstract
 						String tooltip = "Column 'collation_name' " + collation_name_curDb + " is different than 'tempdb'.\n"
 								+ "This might give you substandard performance, due to implicit convertions... \n";
 
-						strVal = "<div title=\""+tooltip+"\"> <font color='red'>" + strVal + "</font><div>";
+						strVal = "<div title=\"" + tooltip + "\"> <font color='red'>" + strVal + "</font><div>";
 					}
 				}
 
@@ -195,7 +195,7 @@ extends SqlServerAbstract
 					if ((LogSizeInMb - 100) > DataSizeInMb)
 					{
 						String tooltip = "Column 'LogSizeInMb' is high. You need to 'backup' or 'truncate' the transaction log every now and then.";
-						strVal = "<div title=\""+tooltip+"\"> <font color='red'>" + strVal + "</font><div>";
+						strVal = "<div title=\"" + tooltip + "\"> <font color='red'>" + strVal + "</font><div>";
 					}
 				}
 				return strVal;

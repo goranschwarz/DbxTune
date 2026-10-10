@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -138,7 +138,7 @@ extends PersistWriterBase
 		}
 		catch (ConnectException ex) 
 		{
-			_logger.error("Problems connecting/sending REST call to '"+_confSlot0._urlLastUsed+"'. The entry will be saved in the 'error-queue' and sent later. Caught: "+ex);
+			_logger.error("Problems connecting/sending REST call to '" + _confSlot0._urlLastUsed + "'. The entry will be saved in the 'error-queue' and sent later. Caught: " + ex);
 			_confSlot0.addToErrorQueue(cont, msgStr);
 			
 			// if destination has been down for some time: Send Alarm ?
@@ -146,7 +146,7 @@ extends PersistWriterBase
 		}
 		catch (Exception ex)
 		{
-			_logger.error("Problems creating MSG or sending REST call to '"+_confSlot0._urlLastUsed+"'. Caught: "+ex , ex);
+			_logger.error("Problems creating MSG or sending REST call to '" + _confSlot0._urlLastUsed + "'. Caught: " + ex , ex);
 		}
 
 		// Loop over the "extra" configurations and send to *each* destination
@@ -164,7 +164,7 @@ extends PersistWriterBase
 			}
 			catch (ConnectException ex) 
 			{
-				_logger.error("Problems connecting/sending REST call to '"+slot._urlLastUsed+"'. The entry will be saved in the 'error-queue' and sent later. Caught: "+ex);
+				_logger.error("Problems connecting/sending REST call to '" + slot._urlLastUsed + "'. The entry will be saved in the 'error-queue' and sent later. Caught: " + ex);
 				slot.addToErrorQueue(cont, msgStr);
 
 				// if destination has been down for some time: Send Alarm ?
@@ -172,7 +172,7 @@ extends PersistWriterBase
 			}
 			catch (Exception ex)
 			{
-				_logger.error("Problems creating MSG or sending REST call to '"+slot._urlLastUsed+"'. Caught: "+ex , ex);
+				_logger.error("Problems creating MSG or sending REST call to '" + slot._urlLastUsed + "'. Caught: " + ex , ex);
 			}
 		}
 	}
@@ -191,7 +191,7 @@ extends PersistWriterBase
 		// Is it time to send Alarm
 		if (lastSendSuccessInSec > slot._errorSendAlarmThresholdInSec)
 		{
-			String sourceSrvName = Configuration.getCombinedConfiguration().getProperty("SERVERNAME", "srv-"+slot._cfgName);
+			String sourceSrvName = Configuration.getCombinedConfiguration().getProperty("SERVERNAME", "srv-" + slot._cfgName);
 
 			AlarmEvent alarmEvent = new AlarmEventHttpDestinationDown(sourceSrvName, slot._cfgName, slot._urlLastUsed, lastSendSuccessInSec, slot._errorSendAlarmThresholdInSec);
 
@@ -440,14 +440,14 @@ extends PersistWriterBase
 					if (label == null)
 					{
 						if (_logger.isDebugEnabled())
-							_logger.debug("Writing InfluxDB Graph, LABEL was null, setting it to 'lbl-"+d+"'. For cm='"+getName()+"', longGraphName='"+longGraphName+"', label='"+label+"', data="+data);
-						label = "lbl-"+d;
+							_logger.debug("Writing InfluxDB Graph, LABEL was null, setting it to 'lbl-" + d + "'. For cm='" + getName() + "', longGraphName='" + longGraphName + "', label='" + label + "', data=" + data);
+						label = "lbl-" + d;
 					}
 
 					if (data == null)
 					{
 						if (_logger.isDebugEnabled())
-							_logger.debug("Writing InfluxDB Graph, DATA was null, setting it to 0. For cm='"+getName()+"', longGraphName='"+longGraphName+"', label='"+label+"', data="+data);
+							_logger.debug("Writing InfluxDB Graph, DATA was null, setting it to 0. For cm='" + getName() + "', longGraphName='" + longGraphName + "', label='" + label + "', data=" + data);
 						data = 0d;
 					}
 
@@ -549,11 +549,11 @@ extends PersistWriterBase
 		int responceCode = response.statusCode();
 		if ( responceCode >= 203) // see 'https://httpstatuses.com/' for http codes... or at the bottom of this source code
 		{
-			throw new Exception("Create InfluxDB database '" + dbname + "': Failed : HTTP error code : " + responceCode + " ("+HttpUtils.httpResponceCodeToText(responceCode)+"). From URL '"+slot._urlLastUsed+"'.");
+			throw new Exception("Create InfluxDB database '" + dbname + "': Failed : HTTP error code : " + responceCode + " (" + HttpUtils.httpResponceCodeToText(responceCode) + "). From URL '" + slot._urlLastUsed + "'.");
 		}
 		else
 		{
-			_logger.debug("Responce code "+responceCode+" ("+HttpUtils.httpResponceCodeToText(responceCode)+"). From URL '"+slot._urlLastUsed+"'.");
+			_logger.debug("Responce code " + responceCode + " (" + HttpUtils.httpResponceCodeToText(responceCode) + "). From URL '" + slot._urlLastUsed + "'.");
 		}
 
 		String output = response.body().trim();
@@ -633,7 +633,7 @@ extends PersistWriterBase
 			// HTTP/1.1 404 Not Found
 			// {"error":"database not found: \"mydb1\""}
 
-			_logger.warn("Database '"+_srvName+"' NOT FOUND in InfluxDB... Lets try to create it.  INFO: Responce code "+responceCode+" ("+HttpUtils.httpResponceCodeToText(responceCode)+"). From URL '"+slot._urlLastUsed+"'.");
+			_logger.warn("Database '" + _srvName + "' NOT FOUND in InfluxDB... Lets try to create it.  INFO: Responce code " + responceCode + " (" + HttpUtils.httpResponceCodeToText(responceCode) + "). From URL '" + slot._urlLastUsed + "'.");
 
 			// If Create database SUCCEEDS, call this method again... to retry sending the message...
 			if ( createDatabase(_srvName, slot) )
@@ -647,15 +647,15 @@ extends PersistWriterBase
 		}
 		else if ( responceCode >= 203) // see 'https://httpstatuses.com/' for http codes... or at the bottom of this source code
 		{
-			throw new Exception("Failed : HTTP error code : " + responceCode + " ("+HttpUtils.httpResponceCodeToText(responceCode)+"). From URL '"+slot._urlLastUsed+"'. Sent Msg content.length: "+text.length());
+			throw new Exception("Failed : HTTP error code : " + responceCode + " (" + HttpUtils.httpResponceCodeToText(responceCode) + "). From URL '" + slot._urlLastUsed + "'. Sent Msg content.length: " + text.length());
 		}
 		else
 		{
 			int threshold = 1000;
 			if (sendTime > threshold)
-				_logger.warn("HTTP REST Call took longer than expected. sendTimeInMs = "+sendTime+", which is above threshold="+threshold+", Responce code "+responceCode+" ("+HttpUtils.httpResponceCodeToText(responceCode)+"). From URL '"+slot._urlLastUsed+"'. Sent Msg content.length: "+text.length()+", "+(text.length()/1024)+" KB");
+				_logger.warn("HTTP REST Call took longer than expected. sendTimeInMs = " + sendTime + ", which is above threshold=" + threshold + ", Responce code " + responceCode + " (" + HttpUtils.httpResponceCodeToText(responceCode) + "). From URL '" + slot._urlLastUsed + "'. Sent Msg content.length: " + text.length() + ", " + (text.length()/1024) + " KB");
 
-			_logger.debug("Responce code "+responceCode+" ("+HttpUtils.httpResponceCodeToText(responceCode)+"). From URL '"+slot._urlLastUsed+"'. Sent Msg content.length: "+text.length()+", "+(text.length()/1024)+" KB");
+			_logger.debug("Responce code " + responceCode + " (" + HttpUtils.httpResponceCodeToText(responceCode) + "). From URL '" + slot._urlLastUsed + "'. Sent Msg content.length: " + text.length() + ", " + (text.length()/1024) + " KB");
 		}
 
 		// Mark last success time
@@ -679,7 +679,7 @@ extends PersistWriterBase
 
 		int firstColonPos = keyVal.indexOf(':');
 		if (firstColonPos == -1)
-			throw new Exception("Problem parsing the value '"+keyVal+"', can't find any ':' in it.");
+			throw new Exception("Problem parsing the value '" + keyVal + "', can't find any ':' in it.");
 
 		String key = keyVal.substring(0, firstColonPos);
 		String val = keyVal.substring(firstColonPos+1).trim();
@@ -717,7 +717,7 @@ extends PersistWriterBase
 	public void printConfig()
 	{
 		int spaces = 55;
-		_logger.info("Configuration for Persist Writer Module: "+getName());
+		_logger.info("Configuration for Persist Writer Module: " + getName());
 		_logger.info("    " + StringUtil.left(key(PROPKEY_url                              ), spaces) + ": " + _confSlot0._url);
 
 		_logger.info("    " + StringUtil.left(key(PROPKEY_username                         ), spaces) + ": " + _confSlot0._username);
@@ -796,7 +796,7 @@ extends PersistWriterBase
 		{
 			if ( dir.mkdirs() )
 			{
-				_logger.info("Created the recovery directory '"+configSlot._errorSaveToDiskPath+"' for configuration '"+configSlot._cfgName+"'.");
+				_logger.info("Created the recovery directory '" + configSlot._errorSaveToDiskPath + "' for configuration '" + configSlot._cfgName + "'.");
 			}
 		}
 	}
@@ -823,11 +823,11 @@ extends PersistWriterBase
 	@Override
 	public void init(Configuration conf) throws Exception
 	{
-		System.out.println(getName()+": INIT.....................................");
+		System.out.println(getName() + ": INIT.....................................");
 
 		_conf = conf;
 
-		_logger.info("Initializing the PersistWriter component named '"+getName()+"'.");
+		_logger.info("Initializing the PersistWriter component named '" + getName() + "'.");
 
 		_confSlot0._url            = conf.getProperty       (key(PROPKEY_url              ), DEFAULT_url);
 		_confSlot0._cfgName        = "slot0";
@@ -902,7 +902,7 @@ extends PersistWriterBase
 			
 			if (StringUtil.isNullOrBlank(url))
 			{
-				_logger.warn("When getting configuration for config '"+cfgKey+"' using property '"+key(PROPKEY_url, cfgKey)+"' no value for URL was found. Skipping this section.");
+				_logger.warn("When getting configuration for config '" + cfgKey + "' using property '" + key(PROPKEY_url, cfgKey) + "' no value for URL was found. Skipping this section.");
 			}
 			else
 			{
@@ -949,7 +949,7 @@ extends PersistWriterBase
 		//------------------------------------------
 		// Check for mandatory parameters
 		//------------------------------------------
-		if ( StringUtil.isNullOrBlank(_confSlot0._url) )          throw new Exception("The property '" + PROPKEY_url          + "' is mandatory for the PersistWriter named '"+getName()+"'.");
+		if ( StringUtil.isNullOrBlank(_confSlot0._url) )          throw new Exception("The property '" + PROPKEY_url          + "' is mandatory for the PersistWriter named '" + getName() + "'.");
 
 
 		//------------------------------------------
@@ -973,7 +973,7 @@ extends PersistWriterBase
 		}
 		catch(MalformedURLException ex) 
 		{ 
-			throw new Exception("The URL '"+testUrl+"' for config '"+cfgName+"' seems to be malformed. Caught: "+ex, ex); 
+			throw new Exception("The URL '" + testUrl + "' for config '" + cfgName + "' seems to be malformed. Caught: " + ex, ex); 
 		}
 		
 		printConfig();
@@ -1152,14 +1152,14 @@ extends PersistWriterBase
 					String srv = cont.getServerNameOrAlias(); 
 					File   f   = new File(_errorSaveToDiskPath + File.separatorChar + RECOVERY_FILE_PREFIX + srv + "." + _cfgName + "." + ts + "." + RECOVERY_FILE_SUFFIX);
 
-					_logger.info("addToErrorQueue(SAVE-TO-DISK): cfgName='"+_cfgName+"'. Saving to file: "+f);
+					_logger.info("addToErrorQueue(SAVE-TO-DISK): cfgName='" + _cfgName + "'. Saving to file: " + f);
 					try
 					{
 						FileUtils.write(f, msgStr, StandardCharsets.UTF_8);
 					}
 					catch (IOException ex)
 					{
-						_logger.error("addToErrorQueue(SAVE-TO-DISK): cfgName='"+_cfgName+"'. Error when saving to file '"+f+"'. Caught: "+ex, ex);
+						_logger.error("addToErrorQueue(SAVE-TO-DISK): cfgName='" + _cfgName + "'. Error when saving to file '" + f + "'. Caught: " + ex, ex);
 					}
 				}
 				// IN-MEMORY error queue
@@ -1170,13 +1170,13 @@ extends PersistWriterBase
 					while (_errorQueue.size() > _errorMemQueueSize)
 					{
 						_errorQueue.removeFirst();
-						_logger.info("addToErrorQueue(IN-MEMORY): Removing 'oldest' entry in the ErrorQueue for config name '"+_cfgName+"'. _errorQueue.size()="+_errorQueue.size()+", maxEntries="+_errorMemQueueSize);
+						_logger.info("addToErrorQueue(IN-MEMORY): Removing 'oldest' entry in the ErrorQueue for config name '" + _cfgName + "'. _errorQueue.size()=" + _errorQueue.size() + ", maxEntries=" + _errorMemQueueSize);
 					}
 				}
 			}
 			catch (RuntimeException ex)
 			{
-				_logger.error("Runtime Problems in: addToErrorQueue(), cfgName='"+_cfgName+"', continuing anyway... Caught: " + ex, ex);
+				_logger.error("Runtime Problems in: addToErrorQueue(), cfgName='" + _cfgName + "', continuing anyway... Caught: " + ex, ex);
 			}
 		}
 
@@ -1213,7 +1213,7 @@ extends PersistWriterBase
 							String filename = file.getName();
 							if (filename.startsWith(RECOVERY_FILE_PREFIX + srv + "." + _cfgName + "."))
 							{
-								_logger.info("sendErrorQueue(SAVE-TO-DISK): cfgName='"+_cfgName+"', srv='"+srv+"'. trying to recover and send file: "+file);
+								_logger.info("sendErrorQueue(SAVE-TO-DISK): cfgName='" + _cfgName + "', srv='" + srv + "'. trying to recover and send file: " + file);
 								try
 								{
 									String msgStr = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
@@ -1221,7 +1221,7 @@ extends PersistWriterBase
 									// If the file is empty... delete the file and go to next
 									if (StringUtil.isNullOrBlank(msgStr))
 									{
-										_logger.info("sendErrorQueue(SAVE-TO-DISK): cfgName='"+_cfgName+"', srv='"+srv+"'. Found empty file, just deleting it and continuing with next... deleted file: "+file);
+										_logger.info("sendErrorQueue(SAVE-TO-DISK): cfgName='" + _cfgName + "', srv='" + srv + "'. Found empty file, just deleting it and continuing with next... deleted file: " + file);
 										file.delete();
 										continue;
 									}
@@ -1243,25 +1243,25 @@ extends PersistWriterBase
 									int sleepThreshold = 5;
 									if (serverSideQueueSize > sleepThreshold)
 									{
-										_logger.info("sendErrorQueue(SAVE-TO-DISK): serverSideQueueSize="+serverSideQueueSize+", Sleeping "+_errorSaveToDiskSuccessSleepTimeMs+" ms for config name '"+_cfgName+"', srv='"+srv+"', sendCount="+sendCount+", after sending file '"+file+"'. This not to overload the Central Server.");
+										_logger.info("sendErrorQueue(SAVE-TO-DISK): serverSideQueueSize=" + serverSideQueueSize + ", Sleeping " + _errorSaveToDiskSuccessSleepTimeMs + " ms for config name '" + _cfgName + "', srv='" + srv + "', sendCount=" + sendCount + ", after sending file '" + file + "'. This not to overload the Central Server.");
 										Thread.sleep(_errorSaveToDiskSuccessSleepTimeMs);
 									}
 								}
 								catch (InterruptedException ex)
 								{
-									_logger.info("sendErrorQueue(SAVE-TO-DISK): Interupted when doing disk entry recovery at file '"+file+"' in the ErrorQueue for config name '"+_cfgName+"'. to '"+_urlLastUsed+"'.");
+									_logger.info("sendErrorQueue(SAVE-TO-DISK): Interupted when doing disk entry recovery at file '" + file + "' in the ErrorQueue for config name '" + _cfgName + "'. to '" + _urlLastUsed + "'.");
 									break;
 								}
 								catch (ConnectException ex) 
 								{
 									// log WITHOUT stacktrace
-									_logger.info("sendErrorQueue(SAVE-TO-DISK): Resending PROBLEMS for disk entry '"+file+"' in the ErrorQueue for config name '"+_cfgName+"'. to '"+_urlLastUsed+"'. It will be kept on disk... Caught: "+ex);
+									_logger.info("sendErrorQueue(SAVE-TO-DISK): Resending PROBLEMS for disk entry '" + file + "' in the ErrorQueue for config name '" + _cfgName + "'. to '" + _urlLastUsed + "'. It will be kept on disk... Caught: " + ex);
 									break;
 								}
 								catch (Exception ex) 
 								{
 									// log with STACKTRACE
-									_logger.info("sendErrorQueue(SAVE-TO-DISK): Resending PROBLEMS for disk entry '"+file+"' in the ErrorQueue for config name '"+_cfgName+"'. to '"+_urlLastUsed+"'. It will be kept on disk... Caught: "+ex, ex);
+									_logger.info("sendErrorQueue(SAVE-TO-DISK): Resending PROBLEMS for disk entry '" + file + "' in the ErrorQueue for config name '" + _cfgName + "'. to '" + _urlLastUsed + "'. It will be kept on disk... Caught: " + ex, ex);
 									break;
 								}
 							} // end: correct file
@@ -1285,7 +1285,7 @@ extends PersistWriterBase
 							// Get message
 							String msgStr = _errorQueue.getFirst();
 
-							_logger.info("sendErrorQueue(IN-MEMORY): Resending 'oldest' entry in the ErrorQueue for config name '"+_cfgName+"'. _errorQueue.size()="+_errorQueue.size());
+							_logger.info("sendErrorQueue(IN-MEMORY): Resending 'oldest' entry in the ErrorQueue for config name '" + _cfgName + "'. _errorQueue.size()=" + _errorQueue.size());
 							
 							// send message (if we have problems an exception will be thrown)
 							sendMessage(msgStr, this);
@@ -1297,13 +1297,13 @@ extends PersistWriterBase
 						catch (ConnectException ex) 
 						{
 							// log WITHOUT stacktrace
-							_logger.info("sendErrorQueue(IN-MEMORY): Resending PROBLEMS for 'oldest' entry in the ErrorQueue for config name '"+_cfgName+"'. _errorQueue.size()="+_errorQueue.size()+". to '"+_urlLastUsed+"'. It will be kept in the queue... Caught: "+ex);
+							_logger.info("sendErrorQueue(IN-MEMORY): Resending PROBLEMS for 'oldest' entry in the ErrorQueue for config name '" + _cfgName + "'. _errorQueue.size()=" + _errorQueue.size() + ". to '" + _urlLastUsed + "'. It will be kept in the queue... Caught: " + ex);
 							break;
 						}
 						catch (Exception ex) 
 						{
 							// log with STACKTRACE
-							_logger.info("sendErrorQueue(IN-MEMORY): Resending PROBLEMS for 'oldest' entry in the ErrorQueue for config name '"+_cfgName+"'. _errorQueue.size()="+_errorQueue.size()+". to '"+_urlLastUsed+"'. It will be kept in the queue... Caught: "+ex, ex);
+							_logger.info("sendErrorQueue(IN-MEMORY): Resending PROBLEMS for 'oldest' entry in the ErrorQueue for config name '" + _cfgName + "'. _errorQueue.size()=" + _errorQueue.size() + ". to '" + _urlLastUsed + "'. It will be kept in the queue... Caught: " + ex, ex);
 							break;
 						}
 					}
@@ -1312,7 +1312,7 @@ extends PersistWriterBase
 			}
 			catch (RuntimeException ex)
 			{
-				_logger.error("Runtime Problems in: sendErrorQueue(), cfgName='"+_cfgName+"', continuing anyway... Caught: " + ex, ex);
+				_logger.error("Runtime Problems in: sendErrorQueue(), cfgName='" + _cfgName + "', continuing anyway... Caught: " + ex, ex);
 				return 0;
 			}
 		}
@@ -1338,16 +1338,16 @@ extends PersistWriterBase
 						if (FileUtils.isFileOlder(file, timeMillis))
 						{
 							if (file.delete())
-								_logger.info("removeOldErrorFiles(): cfgName='"+_cfgName+"', srv='"+srv+"'. SUCCESS: removing file: "+file);
+								_logger.info("removeOldErrorFiles(): cfgName='" + _cfgName + "', srv='" + srv + "'. SUCCESS: removing file: " + file);
 							else
-								_logger.info("removeOldErrorFiles(): cfgName='"+_cfgName+"', srv='"+srv+"'. FAILED: removing file: "+file);
+								_logger.info("removeOldErrorFiles(): cfgName='" + _cfgName + "', srv='" + srv + "'. FAILED: removing file: " + file);
 						}
 					}
 				}
 			}
 			catch (RuntimeException ex)
 			{
-				_logger.error("Runtime Problems in: removeOldErrorFiles(), cfgName='"+_cfgName+"', continuing anyway... Caught: " + ex, ex);
+				_logger.error("Runtime Problems in: removeOldErrorFiles(), cfgName='" + _cfgName + "', continuing anyway... Caught: " + ex, ex);
 			}
 		}
 	}

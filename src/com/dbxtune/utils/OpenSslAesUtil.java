@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -707,10 +707,10 @@ public class OpenSslAesUtil
 //							}
 							if (serverName != null)
 							{
-								_logger.debug("----- readPasswdFromFile(): row["+rowNumber+"]: serverName='" + serverName + "', fServer='" + fServer + "'");
+								_logger.debug("----- readPasswdFromFile(): row[" + rowNumber + "]: serverName='" + serverName + "', fServer='" + fServer + "'");
 								if (serverName.equals(fServer))
 								{
-									_logger.debug("----- readPasswdFromFile(): MATCH: level-1, row["+rowNumber+"]");
+									_logger.debug("----- readPasswdFromFile(): MATCH: level-1, row[" + rowNumber + "]");
 									srvMatchEncPasswd      = fEncPasswd;
 									srvMatchEncPasswdAtRow = rowNumber;
 									break;
@@ -721,10 +721,10 @@ public class OpenSslAesUtil
 									String shortServerName = StringUtil.extractHostnameFromFqdn(serverName);
 									String shortfileServer = StringUtil.extractHostnameFromFqdn(fServer);
 
-									_logger.debug("----- readPasswdFromFile(): row["+rowNumber+"]: shortServerName='" + shortServerName + "', shortfileServer='" + shortfileServer + "'");
+									_logger.debug("----- readPasswdFromFile(): row[" + rowNumber + "]: shortServerName='" + shortServerName + "', shortfileServer='" + shortfileServer + "'");
 									if (shortServerName.equals(shortfileServer))
 									{
-										_logger.debug("----- readPasswdFromFile(): MATCH: level-2, row["+rowNumber+"]");
+										_logger.debug("----- readPasswdFromFile(): MATCH: level-2, row[" + rowNumber + "]");
 										srvMatchEncPasswd      = fEncPasswd;
 										srvMatchEncPasswdAtRow = rowNumber;
 										break;
@@ -1163,7 +1163,7 @@ public class OpenSslAesUtil
 		}
 		else
 		{
-			throw new FileNotFoundException("The password file '"+f+"' didn't exist.");
+			throw new FileNotFoundException("The password file '" + f + "' didn't exist.");
 		}
 	}
 
@@ -1406,13 +1406,13 @@ public class OpenSslAesUtil
 		{
 			String txt_abc123 = "abc123456789-123456789-123456789-";
 //			String txt_abc123 = "h1SYsxOSG7/3p5en";
-			System.out.println("Origin String to be encoded=|" + txt_abc123 +"|.");
+			System.out.println("Origin String to be encoded=|" + txt_abc123 + "|.");
 
 			String enc_abc123 = encode("sybase", txt_abc123, VERSION_1);
-			System.out.println("Encoded=|" + enc_abc123 +"|.");
+			System.out.println("Encoded=|" + enc_abc123 + "|.");
 
 			String dec_abc123 = decode("sybase", enc_abc123);
-			System.out.println("Decoded=|" + dec_abc123 +"|.");
+			System.out.println("Decoded=|" + dec_abc123 + "|.");
 			
 			if (txt_abc123.equals(dec_abc123))
 				System.out.println("decode = SUCCESS");
@@ -1427,13 +1427,13 @@ public class OpenSslAesUtil
 		try
 		{
 			String txt_abc123 = "abc123-version-2";
-			System.out.println("Origin String to be encoded=|" + txt_abc123 +"|.");
+			System.out.println("Origin String to be encoded=|" + txt_abc123 + "|.");
 
 			String enc_abc123 = encode("sybase", txt_abc123, VERSION_2);
-			System.out.println("Encoded=|" + enc_abc123 +"|.");
+			System.out.println("Encoded=|" + enc_abc123 + "|.");
 
 			String dec_abc123 = decode("sybase", enc_abc123);
-			System.out.println("Decoded=|" + dec_abc123 +"|.");
+			System.out.println("Decoded=|" + dec_abc123 + "|.");
 			
 			if (txt_abc123.equals(dec_abc123))
 				System.out.println("decode = SUCCESS");

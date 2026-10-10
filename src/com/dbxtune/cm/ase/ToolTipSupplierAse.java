@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -144,13 +144,13 @@ extends CmToolTipSupplierDefault
 							List<Completion> list = _complProvider.getTableListWithGuiProgress(conn, dbName, tabOwnerName, objectName, false);
 
 							if (_logger.isDebugEnabled())
-								_logger.debug("ToolTipSupplierAse.getToolTipTextOnTableCell(ObjectName): dbName='"+dbName+"', ownerName='"+tabOwnerName+"', objectName='"+objectName+"', cm='"+_cm.getName()+"'. list.size()="+(list==null?"-null-":list.size())+".");
+								_logger.debug("ToolTipSupplierAse.getToolTipTextOnTableCell(ObjectName): dbName='" + dbName + "', ownerName='" + tabOwnerName + "', objectName='" + objectName + "', cm='" + _cm.getName() + "'. list.size()=" + (list==null?"-null-":list.size()) + ".");
 
 							if ( list != null )
 							{
-								if      (list.size() == 0) return "No table information found for table '"+tabOwnerName+"."+objectName+"' in database '"+dbName+"'.";
+								if      (list.size() == 0) return "No table information found for table '" + tabOwnerName + "." + objectName + "' in database '" + dbName + "'.";
 								else if (list.size() == 1) return list.get(0).getSummary();
-								else                       return "Found table information, but I found MORE than 1 table, count="+list.size()+". I can only show info for 1 table. (database='"+dbName+"', table='"+tabOwnerName+"."+objectName+"')";
+								else                       return "Found table information, but I found MORE than 1 table, count=" + list.size() + ". I can only show info for 1 table. (database='" + dbName + "', table='" + tabOwnerName + "." + objectName + "')";
 							}
 						}
 					}
@@ -216,7 +216,7 @@ extends CmToolTipSupplierDefault
 								CounterTableModel ctmRate = cm.getCounterDataRate();
 								if (ctmRate == null)
 								{
-									return "<html>Counters of type 'rate' was not saved for Performance Counter '"+CmProcessActivity.SHORT_NAME+"'.</html>";
+									return "<html>Counters of type 'rate' was not saved for Performance Counter '" + CmProcessActivity.SHORT_NAME + "'.</html>";
 								}
 								else
 								{
@@ -226,8 +226,8 @@ extends CmToolTipSupplierDefault
 									else
 									{
 										return "<html>" +
-												"Current Cell value '"+cellValue+"' is not a <i>Number</i>.<br>" +
-												"The object type is <code>"+cellValue.getClass().getName()+"</code><br>" +
+												"Current Cell value '" + cellValue + "' is not a <i>Number</i>.<br>" +
+												"The object type is <code>" + cellValue.getClass().getName() + "</code><br>" +
 												"It must be of datatype <code>Number</code><br>" +
 												"</html>";
 									}
@@ -283,14 +283,14 @@ extends CmToolTipSupplierDefault
 									}
 								}
 //								return "<html>Can't find the SPID '"+cellValue+"' in Performance Counter '"+GetCounters.CM_DESC__PROCESS_ACTIVITY+"'.</html>";
-								return "<html>Can't find the "+whereColName+" '"+cellValue+"' in Performance Counter '"+CmProcessActivity.SHORT_NAME+"'.</html>";
+								return "<html>Can't find the " + whereColName + " '" + cellValue + "' in Performance Counter '" + CmProcessActivity.SHORT_NAME + "'.</html>";
 							}
 						}
 					} // end: offline
 				} // end: SPID
 
 				return "<html>" +
-				       "No runtime tool tip available for '"+colName+"'. <br>" +
+				       "No runtime tool tip available for '" + colName + "'. <br>" +
 				       "Not connected to the monitored server.<br>" +
 				       "</html>";
 			}
@@ -343,10 +343,10 @@ extends CmToolTipSupplierDefault
 				}
 				catch (SQLException ex)
 				{
-					_logger.warn("Problems when executing sql for cm='"+_cm.getName()+"', getToolTipTextOnTableCell(colName='"+colName+"', cellValue='"+cellValue+"'): "+sql, ex);
+					_logger.warn("Problems when executing sql for cm='" + _cm.getName() + "', getToolTipTextOnTableCell(colName='" + colName + "', cellValue='" + cellValue + "'): " + sql, ex);
 					return "<html>" +  
-					       "Trying to get tooltip details for colName='"+colName+"', value='"+cellValue+"'.<br>" +
-					       "Problems when executing sql: "+sql+"<br>" +
+					       "Trying to get tooltip details for colName='" + colName + "', value='" + cellValue + "'.<br>" +
+					       "Problems when executing sql: " + sql + "<br>" +
 					       ex.toString() +
 					       "</html>";
 				}

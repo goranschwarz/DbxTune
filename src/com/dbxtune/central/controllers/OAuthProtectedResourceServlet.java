@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  *
  * This file is part of DbxTune
  * DbxTune is free software: you can redistribute it and/or modify

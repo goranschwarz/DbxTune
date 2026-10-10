@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -150,7 +150,7 @@ public abstract class XmlPlanCache
 	 */
 	public void outOfMemoryHandler()
 	{
-		_logger.info("Clearing all content from the XmlPlanCache. Number of entries before clean was "+_cache.size());
+		_logger.info("Clearing all content from the XmlPlanCache. Number of entries before clean was " + _cache.size());
 		_statResetCalls++;
 		// Simply create a new _cache to clear it.
 //		_cache = new HashMap<String, String>();
@@ -246,13 +246,13 @@ public abstract class XmlPlanCache
 		}
 		catch(ConcurrentModificationException ex)
 		{
-			_logger.warn("XmlPlanCache, lowOnMemoryHandler(): when removing entries from the cache, we caught ConcurrentModificationException... lets just continue... Exception: "+ex);
+			_logger.warn("XmlPlanCache, lowOnMemoryHandler(): when removing entries from the cache, we caught ConcurrentModificationException... lets just continue... Exception: " + ex);
 		}
 
 		int countAfterClean  = _cache.size();
 		removeCount = countBeforeClean - countAfterClean;
 
-		_logger.warn("XmlPlanCache, lowOnMemoryHandler() was called. Removed "+removeCount+" entries from the XmlPlanCache (config: '"+PROPKEY_lowOnMememory_removeAgeMinutes+"'="+removeAgeMinutes+"). Number of entries before clean was "+countBeforeClean+", after clean was "+countAfterClean+".");
+		_logger.warn("XmlPlanCache, lowOnMemoryHandler() was called. Removed " + removeCount + " entries from the XmlPlanCache (config: '" + PROPKEY_lowOnMememory_removeAgeMinutes + "'=" + removeAgeMinutes + "). Number of entries before clean was " + countBeforeClean + ", after clean was " + countAfterClean + ".");
 		_statDecreaseCalls++;
 	}
 
@@ -443,7 +443,7 @@ public abstract class XmlPlanCache
 		if (_statReportModulus > _statReportModulusMax)
 			_statReportModulus = _statReportModulusMax;
 
-		_logger.info("XmlPlanCache Statistics: Size="+_cache.size()+", ResetCalls="+_statResetCalls+", DecreaseCalls="+_statDecreaseCalls+", LogicalRead="+_statLogicalRead+", LogicalWrite="+_statLogicalWrite+", BulkPhysicalReads="+_statBulkPhysicalReads+", PhysicalRead="+_statPhysicalRead);
+		_logger.info("XmlPlanCache Statistics: Size=" + _cache.size() + ", ResetCalls=" + _statResetCalls + ", DecreaseCalls=" + _statDecreaseCalls + ", LogicalRead=" + _statLogicalRead + ", LogicalWrite=" + _statLogicalWrite + ", BulkPhysicalReads=" + _statBulkPhysicalReads + ", PhysicalRead=" + _statPhysicalRead);
 	}
 
 	/**

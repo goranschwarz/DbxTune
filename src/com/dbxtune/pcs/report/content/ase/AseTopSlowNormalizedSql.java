@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -302,7 +302,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 	@Override
 	public String getSubject()
 	{
-		return "Top [SQL Captured] - " + _reportType + " - SLOW Normalized SQL Statements (order by: " + _orderByCol_noBrackets + ", origin: monSysStatement) [with gt: execTime="+_statement_gt_execTime+", logicalReads="+_statement_gt_logicalReads+", physicalReads="+_statement_gt_physicalReads+"]";
+		return "Top [SQL Captured] - " + _reportType + " - SLOW Normalized SQL Statements (order by: " + _orderByCol_noBrackets + ", origin: monSysStatement) [with gt: execTime=" + _statement_gt_execTime + ", logicalReads=" + _statement_gt_logicalReads + ", physicalReads=" + _statement_gt_physicalReads + "]";
 	}
 
 	@Override
@@ -336,8 +336,8 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 				"NormJavaSqlHashCode = -2 -- Not Able to Parse/Normalize SQL Text <br>" +
 				"NormJavaSqlHashCode = -1 -- NO SQLText was found. <br>" +
 				"<br>" +
-				"Thresholds: with GreaterThan: execTime="+_statement_gt_execTime+", logicalReads="+_statement_gt_logicalReads+", physicalReads="+_statement_gt_physicalReads+"<br>" +
-				"Thresholds: having " + _orderByCol_noBrackets +" &gt;= 1000 <br>" +
+				"Thresholds: with GreaterThan: execTime=" + _statement_gt_execTime + ", logicalReads=" + _statement_gt_logicalReads + ", physicalReads=" + _statement_gt_physicalReads + "<br>" +
+				"Thresholds: having " + _orderByCol_noBrackets + " &gt;= 1000 <br>" +
 				"<br>" +
 				"ASE Source table is 'master.dbo.monSysStatement', which is a <i>ring buffer</i>, if the buffer is small, then we will be missing entries. <br>" +
 				"PCS Source table is 'MonSqlCapStatements'. (PCS = Persistent Counter Store) <br>" +
@@ -486,8 +486,8 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 			    + "   ,avg([LogicalReads])          as [LogicalReads__avg] \n"
 			    
 			    + "   ,cast('' as varchar(512))     as [LogicalReadsMb__chart] \n"
-			    + "   ,sum([LogicalReads]) / "+asePageSizeDivider+" as [LogicalReadsMb__sum] \n"
-			    + "   ,avg([LogicalReads]) * 1.0 / "+asePageSizeDivider+" as [LogicalReadsMb__avg] \n"
+			    + "   ,sum([LogicalReads]) / " + asePageSizeDivider + " as [LogicalReadsMb__sum] \n"
+			    + "   ,avg([LogicalReads]) * 1.0 / " + asePageSizeDivider + " as [LogicalReadsMb__avg] \n"
 			    
 			    + "   ,cast('' as varchar(512))     as [RowsAffected__chart] \n"
 			    + "   ,sum([RowsAffected])          as [RowsAffected__sum] \n"
@@ -873,7 +873,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 							{
 								setProblemException(ex);
 	
-								_logger.warn("Problems getting SQL by NormJavaSqlHashCode = "+NormJavaSqlHashCode+": " + ex + ". SQL=|" + sql + "|.");
+								_logger.warn("Problems getting SQL by NormJavaSqlHashCode = " + NormJavaSqlHashCode + ": " + ex + ". SQL=|" + sql + "|.");
 							} 
 						}
 						

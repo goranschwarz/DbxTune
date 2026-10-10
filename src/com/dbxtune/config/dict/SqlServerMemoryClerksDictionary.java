@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -86,14 +86,14 @@ public class SqlServerMemoryClerksDictionary
 			return rec._description;
 
 		// Compose an empty one
-		return "<html><code>"+name+"</code> not found in dictionary.</html>";
+		return "<html><code>" + name + "</code> not found in dictionary.</html>";
 	}
 
 
 	private void set(TypeRecord rec)
 	{
 		if ( _types.containsKey(rec._id))
-			System.out.println("ID '"+rec._id+"' already exists. It will be overwritten.");
+			System.out.println("ID '" + rec._id + "' already exists. It will be overwritten.");
 
 		_types.put(rec._id, rec);
 	}

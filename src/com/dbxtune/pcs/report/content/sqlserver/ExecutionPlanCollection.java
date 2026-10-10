@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -290,7 +290,7 @@ public class ExecutionPlanCollection
 			{
 				//_problem = ex;
 
-				_logger.warn("Problems getting SQL Statement name = '"+planId+"': " + ex);
+				_logger.warn("Problems getting SQL Statement name = '" + planId + "': " + ex);
 				throw ex;
 			} 
 		}

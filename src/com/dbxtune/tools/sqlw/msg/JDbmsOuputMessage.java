@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -37,7 +37,7 @@ extends JAseMessage
 
 	public JDbmsOuputMessage(String message, String originSql, String connectedToProductName)
 	{
-		super(getDbmsType(connectedToProductName)+" DBMS_OUTPUT.GET_LINE(): "+message, originSql);
+		super(getDbmsType(connectedToProductName) + " DBMS_OUTPUT.GET_LINE(): " + message, originSql);
 
 		setForeground(ColorUtils.VERY_DARK_BLUE);
 	}

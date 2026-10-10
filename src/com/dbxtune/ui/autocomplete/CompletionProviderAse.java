@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -65,7 +65,7 @@ extends CompletionProviderAbstractSql
 
 	public static CompletionProviderAbstract installAutoCompletion(TextEditorPane textPane, RTextScrollPane scroll, ErrorStrip errorStrip, Window window, ConnectionProvider connectionProvider)
 	{
-		_logger.info("Installing Syntax and AutoCompleation for Sybase ASE ("+AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL+").");
+		_logger.info("Installing Syntax and AutoCompleation for Sybase ASE (" + AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL + ").");
 		textPane.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
 //		textPane.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
 
@@ -723,7 +723,7 @@ extends CompletionProviderAbstractSql
 			}
 			catch (SQLException sqle)
 			{
-				_logger.info("Problems when getting ASE monTables dictionary, skipping this and continuing. Caught: "+sqle);
+				_logger.info("Problems when getting ASE monTables dictionary, skipping this and continuing. Caught: " + sqle);
 			}
 		}
 	}
@@ -1076,7 +1076,7 @@ extends CompletionProviderAbstractSql
 				}
 				catch (SQLException sqle)
 				{
-					_logger.info("Problems when getting ASE monTableColumns dictionary, skipping this and continuing. Caught: "+sqle);
+					_logger.info("Problems when getting ASE monTableColumns dictionary, skipping this and continuing. Caught: " + sqle);
 				}
 			} // end: bulkRefresh
 		} // end: hasMonRole
@@ -1108,7 +1108,7 @@ extends CompletionProviderAbstractSql
 			catalogName = "";
 		else
 		{
-			catColSql = "'"+catalogName+"'"; // simply use the input parameter as the result
+			catColSql = "'" + catalogName + "'"; // simply use the input parameter as the result
 			catalogName += "..";
 		}
 		
@@ -1117,9 +1117,9 @@ extends CompletionProviderAbstractSql
 			schemaName = "";
 		else
 		{
-			schColSql = "'"+schemaName+"'"; // simply use the input parameter as the result
+			schColSql = "'" + schemaName + "'"; // simply use the input parameter as the result
 //			schemaName = " and uid = user_id('"+schemaName+"')";
-			schemaName = " and uid = (select uid from "+catalogName+"sysusers where name = '"+schemaName+"')";
+			schemaName = " and uid = (select uid from " + catalogName + "sysusers where name = '" + schemaName + "')";
 		}
 		
 		if (procName == null)
@@ -1130,11 +1130,11 @@ extends CompletionProviderAbstractSql
 //			if ( ! procName.endsWith("%") )
 			if (wildcardSearch && ! procName.endsWith("%") )
 				procName += "%";
-			procName = " and name like '"+procName+"'";
+			procName = " and name like '" + procName + "'";
 		}
 
 //		String sql = "select db_name(), user_name(uid), name from "+catalogName+"sysobjects where type in('P', 'SF') " + procName; // SF = Function
-		String sql = "select "+catColSql+", "+schColSql+", name from "+catalogName+"sysobjects where type in('P') " + procName + schemaName;
+		String sql = "select " + catColSql + ", " + schColSql + ", name from " + catalogName + "sysobjects where type in('P') " + procName + schemaName;
 //System.out.println("ASE: refreshCompletionForProcedures() SQL: "+sql);
 
 		Statement stmnt = conn.createStatement();

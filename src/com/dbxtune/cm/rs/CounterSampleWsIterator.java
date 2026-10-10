@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -267,12 +267,12 @@ extends CounterSample
 			// set the new connection pool in the map
 			_cpm.setPool(name, cp);
 
-			_logger.info("Created a new Connection Pool for WS '"+name+"', with maxSize=5, connProp="+connProp);
+			_logger.info("Created a new Connection Pool for WS '" + name + "', with maxSize=5, connProp=" + connProp);
 		}
 
 		// Set status in GUI if available
 		if (cm != null && cm.hasCounterController())
-			cm.getCounterController().getRefreshStatus().setSubStatus("get conn to WS '"+name+"'");
+			cm.getCounterController().getRefreshStatus().setSubStatus("get conn to WS '" + name + "'");
 			
 		// Get a connection from the connection pool (it could be new; or reused, so we need to check if it's in a RS-GateWay-Connection or not)
 		DbxConnection dbConn = cp.getConnection(guiOwner);
@@ -294,9 +294,9 @@ extends CounterSample
 		}
 
 		// If we havent created a Gateway Connection to the Destination SRV... issue 'connect to SRV.db'
-		String sql = "connect to "+name;
+		String sql = "connect to " + name;
 
-		_logger.info("Issuing a Gateway connection for WS '"+name+"', rcl cmd: "+sql);
+		_logger.info("Issuing a Gateway connection for WS '" + name + "', rcl cmd: " + sql);
 
 		try (Statement stmnt = dbConn.createStatement())
 		{
@@ -351,7 +351,7 @@ extends CounterSample
 		else
 		{
 			// The connection pool did not exists, close this connection.
-			_logger.info("When trying to 'give back' a connection to the connection pool with key '"+name+"'. The key could not be found, so CLOSING the connection instead.");
+			_logger.info("When trying to 'give back' a connection to the connection pool with key '" + name + "'. The key could not be found, so CLOSING the connection instead.");
 			
 			// Close the connection...
 			dbConn.closeNoThrow();
@@ -464,7 +464,7 @@ extends CounterSample
 	{
 		int queryTimeout = cm.getQueryTimeout();
 		if (_logger.isDebugEnabled())
-			_logger.debug(getName()+": queryTimeout="+queryTimeout);
+			_logger.debug(getName() + ": queryTimeout=" + queryTimeout);
 
 		
 		// Create a RSMD that will be used
@@ -558,7 +558,7 @@ extends CounterSample
 					String state = wsEntry.getActiveConnState();
 					if ( ! "Active/".equalsIgnoreCase(state) )
 					{
-						_logger.info("Skipping ACTIVE Connection '"+name+"', State should be in 'Active/', and current status is in '"+state+"'.");
+						_logger.info("Skipping ACTIVE Connection '" + name + "', State should be in 'Active/', and current status is in '" + state + "'.");
 						continue;
 					}
 					
@@ -568,7 +568,7 @@ extends CounterSample
 						dbConn = getConnection(cm, srvConn, name);
 						
 						if (cm.hasCounterController())
-							cm.getCounterController().getRefreshStatus().setSubStatus("update active '"+name+"'");
+							cm.getCounterController().getRefreshStatus().setSubStatus("update active '" + name + "'");
 
 						String updateTable = 
 								"-- Create the dummy table if it do not exist \n" +
@@ -585,7 +585,7 @@ extends CounterSample
 						}
 						catch (SQLException ex)
 						{
-							_logger.warn("Problems updating dummy table 'rsTune_ws_dummy_update' at '"+name+"'. But continuing with next step. Caught: Error="+ex.getErrorCode()+", Msg='"+stripLastNl(ex.getMessage())+"', SQL="+updateTable);
+							_logger.warn("Problems updating dummy table 'rsTune_ws_dummy_update' at '" + name + "'. But continuing with next step. Caught: Error=" + ex.getErrorCode() + ", Msg='" + stripLastNl(ex.getMessage()) + "', SQL=" + updateTable);
 						}
 
 						try ( Statement stmnt = dbConn.createStatement(); ResultSet rs = stmnt.executeQuery("select getdate()") )
@@ -595,14 +595,14 @@ extends CounterSample
 						}
 						catch (SQLException ex)
 						{
-							_logger.warn("Problems executing 'select getdate()' at '"+name+"'. But continuing with next step. Caught: Error="+ex.getErrorCode()+", Msg='"+stripLastNl(ex.getMessage())+"'. ACTION: Closing the connection");
+							_logger.warn("Problems executing 'select getdate()' at '" + name + "'. But continuing with next step. Caught: Error=" + ex.getErrorCode() + ", Msg='" + stripLastNl(ex.getMessage()) + "'. ACTION: Closing the connection");
 							// Closing the connection... for example if the Gateway connection has failed and we are still in RepServer...
 							dbConn.closeNoThrow();
 						}
 					}
 					catch (SQLException sqlEx)
 					{
-						_logger.warn("CounterSample("+getName()+").getCnt : ACTIVE='"+name+"', ErrorCode=" + sqlEx.getErrorCode() + ", Message=|" + stripLastNl(sqlEx.getMessage()) + "|. Inner-ACTION: Closing the connection.");
+						_logger.warn("CounterSample(" + getName() + ").getCnt : ACTIVE='" + name + "', ErrorCode=" + sqlEx.getErrorCode() + ", Message=|" + stripLastNl(sqlEx.getMessage()) + "|. Inner-ACTION: Closing the connection.");
 						if (dbConn != null)
 							dbConn.closeNoThrow();
 
@@ -670,16 +670,16 @@ extends CounterSample
 				sendSql = "" +
 						"declare @activeLocalTime varchar(30)   set @activeLocalTime = " + DbUtils.safeStr(wsEntry.getActiveTimestamp()) +
 						"select \n" + 
-						"    LogicalId           = convert(int,         " +wsEntry.getLogicalConnId()+"), \n" +
-						"    LogicalName         = convert(varchar(80), '"+wsEntry.getLogicalConnName()+"'), \n" +
+						"    LogicalId           = convert(int,         " + wsEntry.getLogicalConnId() + "), \n" +
+						"    LogicalName         = convert(varchar(80), '" + wsEntry.getLogicalConnName() + "'), \n" +
 						" \n" +                  
-						"    ActiveId            = convert(int,         " +wsEntry.getActiveConnId()+"), \n" +
-						"    ActiveName          = convert(varchar(80), '"+wsEntry.getActiveConnName()+"'), \n" +
-						"    ActiveState         = convert(varchar(80), '"+wsEntry.getActiveConnState()+"'), \n" +
+						"    ActiveId            = convert(int,         " + wsEntry.getActiveConnId() + "), \n" +
+						"    ActiveName          = convert(varchar(80), '" + wsEntry.getActiveConnName() + "'), \n" +
+						"    ActiveState         = convert(varchar(80), '" + wsEntry.getActiveConnState() + "'), \n" +
 						" \n" +                  
-						"    StandbyId           = convert(int,         " +wsEntry.getStandbyConnId()+"), \n" +
-						"    StandbyName         = convert(varchar(80), '"+wsEntry.getStandbyConnName()+"'), \n" +
-						"    StandbyState        = convert(varchar(80), '"+wsEntry.getStandbyConnState()+"'), \n" +
+						"    StandbyId           = convert(int,         " + wsEntry.getStandbyConnId() + "), \n" +
+						"    StandbyName         = convert(varchar(80), '" + wsEntry.getStandbyConnName() + "'), \n" +
+						"    StandbyState        = convert(varchar(80), '" + wsEntry.getStandbyConnState() + "'), \n" +
 						" \n" +
 						"    LatencyInSec        = datediff(ss,         x.origin_time, x.dest_commit_time), \n" +
 						"    ApplyAgeInSec       = datediff(ss,         x.dest_commit_time, getdate()),     \n" +
@@ -692,15 +692,15 @@ extends CounterSample
 						"    StandbyLocalTime    = getdate(),  \n" +
 						"    StandbyMsg          = convert(varchar(1024), ''),  \n" +
 						" \n" +
-						"    RsId                = convert(int,         " +wsEntry.getRsId()+"), \n" +
-						"    RsName              = convert(varchar(80), '"+wsEntry.getRsSrvName()+"'), \n" +
+						"    RsId                = convert(int,         " + wsEntry.getRsId() + "), \n" +
+						"    RsName              = convert(varchar(80), '" + wsEntry.getRsSrvName() + "'), \n" +
 						" \n" +
-						"    OpInProgress        = convert(varchar(128), '"+wsEntry.getOpInProgress()+"'), \n" +
-						"    StateOfOpInProgress = convert(varchar(128), '"+wsEntry.getStateOfOpInProgress()+"'), \n" +
-						"    Spid                = convert(varchar(10),  '"+wsEntry.getSpid()+"') \n" +
+						"    OpInProgress        = convert(varchar(128), '" + wsEntry.getOpInProgress() + "'), \n" +
+						"    StateOfOpInProgress = convert(varchar(128), '" + wsEntry.getStateOfOpInProgress() + "'), \n" +
+						"    Spid                = convert(varchar(10),  '" + wsEntry.getSpid() + "') \n" +
 						" \n" +
-						" from "+wsEntry.getStandbyConnDbName()+".dbo.rs_lastcommit x \n" +
-						" where origin = "+wsEntry.getActiveConnId()+" \n" +
+						" from " + wsEntry.getStandbyConnDbName() + ".dbo.rs_lastcommit x \n" +
+						" where origin = " + wsEntry.getActiveConnId() + " \n" +
 						"";
 				
 				// To make it visible in the "tab", and also if we got exception... The Correct SQL Will be printed.
@@ -724,14 +724,14 @@ extends CounterSample
 					//       Maybe update a "simulated" ApplyAge etc... based on last "date" + sampleTime or similar "stuff"
 
 					if (cm.hasCounterController())
-						cm.getCounterController().getRefreshStatus().setSubStatus("check standby '"+name+"'");
+						cm.getCounterController().getRefreshStatus().setSubStatus("check standby '" + name + "'");
 
 					Statement stmnt = dbConn.createStatement();
 					ResultSet rs;
 
 					stmnt.setQueryTimeout(queryTimeout); // XX seconds query timeout
 					if (_logger.isDebugEnabled())
-						_logger.debug("QUERY_TIMEOUT="+queryTimeout+", for SampleCnt='"+getName()+"'.");
+						_logger.debug("QUERY_TIMEOUT=" + queryTimeout + ", for SampleCnt='" + getName() + "'.");
 
 
 					// Allow 'go' in the string, then we should send multiple batches
@@ -762,9 +762,9 @@ extends CounterSample
 
 						if (_logger.isDebugEnabled())
 						{
-							_logger.debug("##### BEGIN (send sql), batchCounter="+batchCounter+" ############################### "+ getName());
+							_logger.debug("##### BEGIN (send sql), batchCounter=" + batchCounter + " ############################### " + getName());
 							_logger.debug(sendSql);
-							_logger.debug("##### END   (send sql), batchCounter="+batchCounter+" ############################### "+ getName());
+							_logger.debug("##### END   (send sql), batchCounter=" + batchCounter + " ############################### " + getName());
 							_logger.debug("");
 						}
 
@@ -797,7 +797,7 @@ extends CounterSample
 
 								if (rowsAffected >= 0)
 								{
-									_logger.debug("DDL or DML rowcount = "+rowsAffected);
+									_logger.debug("DDL or DML rowcount = " + rowsAffected);
 								}
 								else
 								{
@@ -808,7 +808,7 @@ extends CounterSample
 							// Check if we have more result sets
 							hasRs = stmnt.getMoreResults();
 			
-							_logger.trace( "--hasRs="+hasRs+", rsNum="+rsNum+", rowsAffected="+rowsAffected );
+							_logger.trace( "--hasRs=" + hasRs + ", rsNum=" + rsNum + ", rowsAffected=" + rowsAffected );
 						}
 						while (hasRs || rowsAffected != -1);
 			
@@ -860,14 +860,14 @@ extends CounterSample
 				}
 				catch (SQLException sqlEx)
 				{
-					String standbyMsg = "STANDBY='"+name+"', ErrorCode=" + sqlEx.getErrorCode() + ", Message=" + stripLastNl(sqlEx.getMessage());
+					String standbyMsg = "STANDBY='" + name + "', ErrorCode=" + sqlEx.getErrorCode() + ", Message=" + stripLastNl(sqlEx.getMessage());
 
 					// Add a row (with most "Standby" fields empty/null), but the "StandbyMsg" filled in with the ERROR message 
 					_rows.add(createSkipRow(wsEntry, standbyMsg));
 //					addRow(cm, createSkipRow(wsEntry, standbyMsg)); // this wont work here
 
 					// Closing the connection... for example if the Gateway connection has failed and we are still in RepServer...
-					_logger.warn("CounterSample("+getName()+").getCnt : STANDBY='"+name+"', ErrorCode=" + sqlEx.getErrorCode() + ", Message=|" + stripLastNl(sqlEx.getMessage()) + "|. Inner-ACTION: Closing the connection.");
+					_logger.warn("CounterSample(" + getName() + ").getCnt : STANDBY='" + name + "', ErrorCode=" + sqlEx.getErrorCode() + ", Message=|" + stripLastNl(sqlEx.getMessage()) + "|. Inner-ACTION: Closing the connection.");
 					if (dbConn != null)
 						dbConn.closeNoThrow();
 					
@@ -911,12 +911,12 @@ extends CounterSample
 					// Things did NOT work as expected... investigate a bit more here...
 					// However since we have the "StandbyMsg" column now, maybe the "GUI WaterMark message" is not needed...
 					
-					_logger.warn("In the Active/Standby check we had "+sqlExList.size()+" Below are this list: ");
+					_logger.warn("In the Active/Standby check we had " + sqlExList.size() + " Below are this list: ");
 					for (int ec= 0; ec<sqlExList.size(); ec++)
-						_logger.warn("  -- Active/Standby check Exception["+ec+"]: " + sqlExList.get(ec));
+						_logger.warn("  -- Active/Standby check Exception[" + ec + "]: " + sqlExList.get(ec));
 
 					for (int r=0; r<_rows.size(); r++)
-						_logger.info("Just for intermidiate DEBUG: Row[" + r + "] still contains the following values: "+ _rows.get(r));
+						_logger.info("Just for intermidiate DEBUG: Row[" + r + "] still contains the following values: " + _rows.get(r));
 				}
 			}
 
@@ -926,10 +926,10 @@ extends CounterSample
 		{
 			if (sqlExList.size() == 0)
 			{
-				_logger.warn("CounterSample("+getName()+").getCnt : ErrorCode=" + sqlEx.getErrorCode() + ", Message=|" + stripLastNl(sqlEx.getMessage()) + "|. SQL: "+sql, sqlEx);
+				_logger.warn("CounterSample(" + getName() + ").getCnt : ErrorCode=" + sqlEx.getErrorCode() + ", Message=|" + stripLastNl(sqlEx.getMessage()) + "|. SQL: " + sql, sqlEx);
 				if (sqlEx.toString().indexOf("SocketTimeoutException") > 0)
 				{
-					_logger.info("QueryTimeout in '"+getName()+"', with query timeout '"+queryTimeout+"'. This can be changed with the config option '"+getName()+".queryTimeout=seconds' in the config file.");
+					_logger.info("QueryTimeout in '" + getName() + "', with query timeout '" + queryTimeout + "'. This can be changed with the config option '" + getName() + ".queryTimeout=seconds' in the config file.");
 				}
 			}
 			else
@@ -938,7 +938,7 @@ extends CounterSample
 				{
 					if (x.toString().indexOf("SocketTimeoutException") > 0)
 					{
-						_logger.info("QueryTimeout in '"+getName()+"', with query timeout '"+queryTimeout+"'. This can be changed with the config option '"+getName()+".queryTimeout=seconds' in the config file.");
+						_logger.info("QueryTimeout in '" + getName() + "', with query timeout '" + queryTimeout + "'. This can be changed with the config option '" + getName() + ".queryTimeout=seconds' in the config file.");
 					}
 				}
 			}
@@ -948,13 +948,13 @@ extends CounterSample
 		}
 		catch (IOException ex)
 		{
-			_logger.error("While reading the input SQL 'go' String, caught: "+ex, ex);
-			throw new SQLException("While reading the input SQL 'go' String, caught: "+ex, ex);
+			_logger.error("While reading the input SQL 'go' String, caught: " + ex, ex);
+			throw new SQLException("While reading the input SQL 'go' String, caught: " + ex, ex);
 		}
 		catch (Exception ex)
 		{
-			_logger.error("Problems when connecting to DBMS via connection pool, caught: "+ex, ex);
-			throw new SQLException("Problems when connecting to DBMS via connection pool, caught: "+ex, ex);
+			_logger.error("Problems when connecting to DBMS via connection pool, caught: " + ex, ex);
+			throw new SQLException("Problems when connecting to DBMS via connection pool, caught: " + ex, ex);
 		}
 		finally
 		{

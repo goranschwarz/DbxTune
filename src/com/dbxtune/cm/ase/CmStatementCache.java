@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -72,7 +72,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_CACHE;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 //	public static final long     NEED_SRV_VERSION = 15020;
 //	public static final long     NEED_SRV_VERSION = 1502000;
@@ -104,7 +104,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmStatementCache(counterController, guiController);
 	}
@@ -147,7 +147,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_REQUEST_PER_SEC,
 			"Statement Cache Requests", 	                           // Menu CheckBox text
-			"Number of Requests from the Statement Cache, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Number of Requests from the Statement Cache, per Second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "NumSearches", "HitCount", "NumInserts", "NumRemovals" }, 
 			LabelType.Static,
@@ -160,7 +160,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_HIT_RATE_PCT,
 			"Statement Cache Hit Rate", 	                           // Menu CheckBox text
-			"Statement Cache Hit Rate, in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")",                    // Label 
+			"Statement Cache Hit Rate, in Percent (" + GROUP_NAME + "->" + SHORT_NAME + ")",                    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Hit rate" }, 
 			LabelType.Static,
@@ -173,7 +173,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_INS_DEL_PER_SEC,
 			"Statement Cache Add/Remove Count", 	                           // Menu CheckBox text
-			"Statement Cache Add/Remove Count, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Statement Cache Add/Remove Count, per Second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "NumRemovals", "NumInserts" }, 
 			LabelType.Static,
@@ -186,7 +186,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_INS_DEL_PER_SAMPLE,
 			"Statement Cache Add/Remove Count, per Sample Period", 	                           // Menu CheckBox text
-			"Statement Cache Add/Remove Count, per Sample Period ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Statement Cache Add/Remove Count, per Sample Period (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "NumRemovals", "NumInserts" }, 
 			LabelType.Static,
@@ -199,7 +199,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_MEM_USAGE,
 			"Statement Cache Memory Usage", 	                           // Menu CheckBox text
-			"Statement Cache Memory Usage, in KB ("+GROUP_NAME+"->"+SHORT_NAME+")",                    // Label 
+			"Statement Cache Memory Usage, in KB (" + GROUP_NAME + "->" + SHORT_NAME + ")",                    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "TotalSizeKB", "UsedSizeKB", "UnusedSizeKB" }, 
 			LabelType.Static,
@@ -212,7 +212,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_NUM_STMNTS_IN_CACHE,
 			"Number of Statement in the Statement Cache", 	                           // Menu CheckBox text
-			"Number of Statement in the Statement Cache ("+GROUP_NAME+"->"+SHORT_NAME+")",                    // Label 
+			"Number of Statement in the Statement Cache (" + GROUP_NAME + "->" + SHORT_NAME + ")",                    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "NumStatements" }, 
 			LabelType.Static,
@@ -225,7 +225,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_RECOMPILE_REASON,
 			"Number of Recompiles in the Statement Cache", 	                           // Menu CheckBox text
-			"Number of Recompiles in the Statement Cache, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")",                    // Label 
+			"Number of Recompiles in the Statement Cache, per Second (" + GROUP_NAME + "->" + SHORT_NAME + ")",                    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "SchemaChanges", "PlanFlushes" }, 
 			LabelType.Static,
@@ -437,7 +437,7 @@ extends CountersModel
 			arr[3] = this.getRateValueSum("NumRemovals");
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("updateGraphData(StatementCache:RequestPerSecGraph): NumSearches='"+arr[0]+"', HitCount='"+arr[1]+"', NumInserts='"+arr[2]+"', NumRemovals='"+arr[3]+"'.");
+				_logger.debug("updateGraphData(StatementCache:RequestPerSecGraph): NumSearches='" + arr[0] + "', HitCount='" + arr[1] + "', NumInserts='" + arr[2] + "', NumRemovals='" + arr[3] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -450,7 +450,7 @@ extends CountersModel
 			arr[0] = this.getRateValueSum("CacheHitPct");
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("updateGraphData(StatementCache:HitRatePctGraph): CacheHitPct='"+arr[0]+"'.");
+				_logger.debug("updateGraphData(StatementCache:HitRatePctGraph): CacheHitPct='" + arr[0] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -464,7 +464,7 @@ extends CountersModel
 			arr[1] = this.getRateValueSum("NumInserts");
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("updateGraphData(StatementCache:InsDel): NumRemovals='"+arr[0]+"', NumInserts='"+arr[1]+"'.");
+				_logger.debug("updateGraphData(StatementCache:InsDel): NumRemovals='" + arr[0] + "', NumInserts='" + arr[1] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -478,7 +478,7 @@ extends CountersModel
 			arr[1] = this.getDiffValueSum("NumInserts");
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("updateGraphData(StatementCache:InsDel per Sample): NumRemovals='"+arr[0]+"', NumInserts='"+arr[1]+"'.");
+				_logger.debug("updateGraphData(StatementCache:InsDel per Sample): NumRemovals='" + arr[0] + "', NumInserts='" + arr[1] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -493,7 +493,7 @@ extends CountersModel
 			arr[2] = this.getRateValueSum("UnusedSizeKB");
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("updateGraphData(StatementCache:MemoryUsage): TotalSizeKB='"+arr[0]+"', UsedSizeKB='"+arr[1]+"', UnusedSizeKB='"+arr[2]+"'.");
+				_logger.debug("updateGraphData(StatementCache:MemoryUsage): TotalSizeKB='" + arr[0] + "', UsedSizeKB='" + arr[1] + "', UnusedSizeKB='" + arr[2] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -506,7 +506,7 @@ extends CountersModel
 			arr[0] = this.getRateValueSum("NumStatements");
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("updateGraphData(StatementCache:NumStmntsInCache): NumStatements='"+arr[0]+"'.");
+				_logger.debug("updateGraphData(StatementCache:NumStmntsInCache): NumStatements='" + arr[0] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -520,7 +520,7 @@ extends CountersModel
 			arr[1] = this.getRateValueSum("NumRecompilesPlanFlushes");
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("updateGraphData(StatementCache:"+tgdp.getName()+"): NumRecompilesSchemaChanges='"+arr[0]+"', NumRecompilesPlanFlushes='"+arr[1]+"'.");
+				_logger.debug("updateGraphData(StatementCache:" + tgdp.getName() + "): NumRecompilesSchemaChanges='" + arr[0] + "', NumRecompilesPlanFlushes='" + arr[1] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -557,7 +557,7 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_CacheHitPct, DEFAULT_alarm_CacheHitPct);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", CacheHitPct='"+CacheHitPct+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", CacheHitPct='" + CacheHitPct + "'.");
 
 				if (CacheHitPct.intValue() < threshold)
 				{

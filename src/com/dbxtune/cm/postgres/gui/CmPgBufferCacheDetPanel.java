@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -103,7 +103,7 @@ extends TabularCntrPanel
 //				list.add(new CmSettingsHelper("Limit num of rowcount", PROPKEY_sample_topRowsCount , Integer.class, conf.getIntProperty    (PROPKEY_sample_topRowsCount , DEFAULT_sample_topRowsCount ), DEFAULT_sample_topRowsCount, "Get only first # rows (select top # ...), number of rows" ));
 
 				l_sampleTopRows_chk      .setSelected(conf.getBooleanProperty(CmPgBufferCacheDet.PROPKEY_sample_topRows,      CmPgBufferCacheDet.DEFAULT_sample_topRows));
-				l_sampleTopRowsCount_txt .setText(""+ conf.getIntProperty    (CmPgBufferCacheDet.PROPKEY_sample_topRowsCount, CmPgBufferCacheDet.DEFAULT_sample_topRowsCount));
+				l_sampleTopRowsCount_txt .setText("" + conf.getIntProperty    (CmPgBufferCacheDet.PROPKEY_sample_topRowsCount, CmPgBufferCacheDet.DEFAULT_sample_topRowsCount));
 
 				// ReInitialize the SQL
 				getCm().setSql(null);
@@ -126,10 +126,10 @@ extends TabularCntrPanel
 		l_filterOutSystemTables_but = new JButton("Set 'filter', remove system tables");
 		
 		l_sampleTopRows_chk.setName(CmPgBufferCacheDet.PROPKEY_sample_topRows);
-		l_sampleTopRows_chk.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmPgBufferCacheDet.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
+		l_sampleTopRows_chk.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top " + CmPgBufferCacheDet.DEFAULT_sample_topRowsCount + "</b> c1, c2, c3 from tablename where...</code></html>");
 
 		l_sampleTopRowsCount_txt.setName(CmPgBufferCacheDet.PROPKEY_sample_topRowsCount);
-		l_sampleTopRowsCount_txt.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmPgBufferCacheDet.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
+		l_sampleTopRowsCount_txt.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top " + CmPgBufferCacheDet.DEFAULT_sample_topRowsCount + "</b> c1, c2, c3 from tablename where...</code></html>");
 
 		l_filterOutSystemTables_but.setToolTipText("<html>The will just set the free text filter to discard schema names 'pg_*' and 'information_schema' </html>");
 		
@@ -166,8 +166,8 @@ extends TabularCntrPanel
 				catch (NumberFormatException nfe)
 				{
 					intVal = CmPgBufferCacheDet.DEFAULT_sample_topRowsCount;
-					SwingUtils.showWarnMessage(CmPgBufferCacheDetPanel.this, "Not a Number", "<html>This must be a number, you entered '"+strVal+"'.<br>Setting to default value '"+intVal+"'.</html>", nfe);
-					l_sampleTopRowsCount_txt.setText(intVal+"");
+					SwingUtils.showWarnMessage(CmPgBufferCacheDetPanel.this, "Not a Number", "<html>This must be a number, you entered '" + strVal + "'.<br>Setting to default value '" + intVal + "'.</html>", nfe);
+					l_sampleTopRowsCount_txt.setText(intVal + "");
 				}
 				conf.setProperty(CmPgBufferCacheDet.PROPKEY_sample_topRowsCount, intVal);
 				conf.save();

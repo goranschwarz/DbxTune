@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -212,7 +212,7 @@ extends DbmsExtractorAbstract
 			String srvName = "DUMMY";
 			int daysToCopy = 7;
 			
-			_logger.info("On PCS Database Rollover: Extracting 'Backup History' information On server '" + srvName+ "'.");
+			_logger.info("On PCS Database Rollover: Extracting 'Backup History' information On server '" + srvName + "'.");
 			try
 			{
 				AseBackupHistoryExtractor extractor = new AseBackupHistoryExtractor(daysToCopy, monConn, pcsConn);

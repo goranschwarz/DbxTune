@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -164,7 +164,7 @@ implements Runnable
 						return null;
 					}
 				}
-				_logger.fine("ConnectionProvider(): _storeConn="+_storeConn);
+				_logger.fine("ConnectionProvider(): _storeConn=" + _storeConn);
 				return _storeConn;
 			}
 		};
@@ -233,10 +233,10 @@ implements Runnable
 								long       rDiff = rAbs - _lastCountRowSave;
 								BigDecimal rRate = calcRate(timeDiff, rDiff);
 								
-								dlStatStr += "DummyLoad{sampleTime="+timeDiffStr
-										+ ", Consumer"   + "[cnt="+_consumeCount+", usedMs="+_sumConsumeTime+", maxMs="+_maxConsumeTime+", avgMs="+avgConsumeTime+"]"
-										+ ", Containers" + "[abs="+cAbs+", diff="+cDiff+", rate="+cRate+"]"
-										+ ", Rows"       + "[abs="+rAbs+", diff="+rDiff+", rate="+rRate+"]"
+								dlStatStr += "DummyLoad{sampleTime=" + timeDiffStr
+										+ ", Consumer"   + "[cnt=" + _consumeCount + ", usedMs=" + _sumConsumeTime + ", maxMs=" + _maxConsumeTime + ", avgMs=" + avgConsumeTime + "]"
+										+ ", Containers" + "[abs=" + cAbs + ", diff=" + cDiff + ", rate=" + cRate + "]"
+										+ ", Rows"       + "[abs=" + rAbs + ", diff=" + rDiff + ", rate=" + rRate + "]"
 										+ "}, ";
 							}
 
@@ -277,7 +277,7 @@ implements Runnable
 		} 
 		catch (NumberFormatException ex) 
 		{
-			_logger.warning("Calculating RATE value had problems. diffVal="+diffVal+" (divided by) timeDiffInMs="+timeDiffInMs+". Setting rate to 0.0  Caught: " + ex);
+			_logger.warning("Calculating RATE value had problems. diffVal=" + diffVal + " (divided by) timeDiffInMs=" + timeDiffInMs + ". Setting rate to 0.0  Caught: " + ex);
 			rate = new BigDecimal(0.0);
 		}
 		return rate;
@@ -380,11 +380,11 @@ implements Runnable
 				long dbFileSizeAfter = dbFile.length();
 				long sizeDiff = dbFileSizeAfter - dbFileSizeBefore;
 
-				_logger.info("Shutdown H2 database file size info, after '"+sql+"'. " 
+				_logger.info("Shutdown H2 database file size info, after '" + sql + "'. " 
 						+ "DiffMb="     + String.format("%.1f", (sizeDiff        /1024.0/1024.0))
 						+ ", BeforeMb=" + String.format("%.1f", (dbFileSizeBefore/1024.0/1024.0))
 						+ ", AfterMb="  + String.format("%.1f", (dbFileSizeAfter /1024.0/1024.0))
-						+ ", Filename='"+dbFile.getAbsolutePath()
+						+ ", Filename='" + dbFile.getAbsolutePath()
 						+ "'.");
 			}
 
@@ -538,7 +538,7 @@ implements Runnable
 		{
 			// Normally all columns will be filled with "relevant" information... but in this test.. just dummy values
 			sql = "insert into #DbxCentralSessions#(#SessionStartTime#, #Status#, #ServerName#, #OnHostname#, #ProductString#, #VersionString#, #BuildString#, #CollectorHostname#, #CollectorSampleInterval#, #CollectorCurrentUrl#, #CollectorInfoFile#, #NumOfSamples#, #LastSampleTime#)"
-			    + " values('"                       +sessionStartTime+"', 0, '"   +serverName+"', 'dummyHost', 'dummyTune',    'dummy',         'dummy',       'localhost',         -1,                        'dummyUrl',            'dummyFile',         0,              '2001-01-01 00:00')";
+			    + " values('"                       + sessionStartTime + "', 0, '"   + serverName + "', 'dummyHost', 'dummyTune',    'dummy',         'dummy',       'localhost',         -1,                        'dummyUrl',            'dummyFile',         0,              '2001-01-01 00:00')";
 			sql = sql.replace('#', '"');
 
 			try(Statement stmnt = conn.createStatement())
@@ -926,7 +926,7 @@ implements Runnable
 		public void start()
 		{
 			_thread = new Thread(this);
-			_thread.setName("PerfCollector - srvName="+_name);
+			_thread.setName("PerfCollector - srvName=" + _name);
 			_thread.setDaemon(true);
 			
 			_thread.start();
@@ -1088,7 +1088,7 @@ implements Runnable
 			
 			for (int c=0; c<_size; c++)
 			{
-				PerfCollectorData pcd = new PerfCollectorData(this, "CmDummy_chart_"+c, c);
+				PerfCollectorData pcd = new PerfCollectorData(this, "CmDummy_chart_" + c, c);
 				pcd.generate();
 				
 				_pcdList.add(pcd);
@@ -1186,7 +1186,7 @@ implements Runnable
 			
 			for (int c=0; c<_dataArray.length; c++)
 			{
-				sql += "   ,#columnName-"+c+"#   numeric(16,2)   NULL \n";
+				sql += "   ,#columnName-" + c + "#   numeric(16,2)   NULL \n";
 			}
 			sql += ") \n";
 			

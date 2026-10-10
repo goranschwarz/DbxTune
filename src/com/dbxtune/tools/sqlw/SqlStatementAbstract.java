@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -194,7 +194,7 @@ implements SqlStatement
 					hostPortStr = AseConnectionFactory.getIHostPortStr(srvName);
 
 				if (StringUtil.isNullOrBlank(hostPortStr))
-					throw new Exception("Can't find server name information about '"+srvName+"', hostPortStr=null. Please try with -S hostname:port");
+					throw new Exception("Can't find server name information about '" + srvName + "', hostPortStr=null. Please try with -S hostname:port");
 
 				url = "jdbc:sybase:Tds:" + hostPortStr;
 
@@ -233,7 +233,7 @@ implements SqlStatement
 				{
 					// Set the new database name
 					JdbcUrlParser p = JdbcUrlParser.parse(tmpUrl);
-					p.setPath("/"+tmpDbname); // set the new database name
+					p.setPath("/" + tmpDbname); // set the new database name
 
 					String newUrl = p.toUrl();
 					cp.setUrl(newUrl);
@@ -269,13 +269,13 @@ implements SqlStatement
 				DatabaseMetaData dbmd = conn.getMetaData();
 				String msg;
 
-				try { msg = "Connected to DBMS Server Name '"          + conn.getDbmsServerName()         +"'."; ma.addDebugMessage(msg);} catch (SQLException ignore) {}
-				try { msg = "Connected to URL '"                       + dbmd.getURL()                    +"'."; ma.addDebugMessage(msg);} catch (SQLException ignore) {}
-				try { msg = "Connected using driver name '"            + dbmd.getDriverName()             +"'."; ma.addDebugMessage(msg);} catch (SQLException ignore) {}
-				try { msg = "Connected using driver version '"         + dbmd.getDriverVersion()          +"'."; ma.addDebugMessage(msg);} catch (SQLException ignore) {}
-				try { msg = "Connected to destination DBMS Vendor '"   + dbmd.getDatabaseProductName()    +"'."; ma.addDebugMessage(msg);} catch (SQLException ignore) {}
-				try { msg = "Connected to destination DBMS Version '"  + dbmd.getDatabaseProductVersion() +"'."; ma.addDebugMessage(msg);} catch (SQLException ignore) {}
-				try { msg = "Current Catalog in the destination srv '" + conn.getCatalog()                +"'."; ma.addDebugMessage(msg);} catch (SQLException ignore) {}
+				try { msg = "Connected to DBMS Server Name '"          + conn.getDbmsServerName()         + "'."; ma.addDebugMessage(msg);} catch (SQLException ignore) {}
+				try { msg = "Connected to URL '"                       + dbmd.getURL()                    + "'."; ma.addDebugMessage(msg);} catch (SQLException ignore) {}
+				try { msg = "Connected using driver name '"            + dbmd.getDriverName()             + "'."; ma.addDebugMessage(msg);} catch (SQLException ignore) {}
+				try { msg = "Connected using driver version '"         + dbmd.getDriverVersion()          + "'."; ma.addDebugMessage(msg);} catch (SQLException ignore) {}
+				try { msg = "Connected to destination DBMS Vendor '"   + dbmd.getDatabaseProductName()    + "'."; ma.addDebugMessage(msg);} catch (SQLException ignore) {}
+				try { msg = "Connected to destination DBMS Version '"  + dbmd.getDatabaseProductVersion() + "'."; ma.addDebugMessage(msg);} catch (SQLException ignore) {}
+				try { msg = "Current Catalog in the destination srv '" + conn.getCatalog()                + "'."; ma.addDebugMessage(msg);} catch (SQLException ignore) {}
 			}
 			catch (SQLException ignore) {}
 		}

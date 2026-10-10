@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -65,7 +65,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -93,7 +93,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmIqStatistics(counterController, guiController);
 	}
@@ -136,7 +136,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_STAT_OPER,
 			"Connections, Operations and Load", // Menu CheckBox text
-			"Connections, Operations and Load ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Connections, Operations and Load (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Connections Active", "Operations Waiting", "Operations Active", "Active Load Statements" }, 
 			LabelType.Static,
@@ -148,7 +148,7 @@ extends CountersModel
 		
 		addTrendGraph(GRAPH_NAME_STAT_DISK,
 			"Disk activity", // Menu CheckBox text
-			"Disk activity ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Disk activity (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Main Store Disk Reads",	"Main Store Disk Writes", "Temp Store Disk Reads", "Temp Store Disk Writes", "Cache Dbspace Disk Reads", "Cache Dbspace Disk Writes"}, 
 			LabelType.Static,
@@ -160,7 +160,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_STAT_CPUS,
 			"CPU usage",                     // Menu CheckBox text
-			"CPU usage (100 per core) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"CPU usage (100 per core) (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Cpu Total Time", "Cpu User Time", "Cpu System Time"}, 
 			LabelType.Static,

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -76,12 +76,12 @@ extends CountersModel
 		"Use the filer 'Do NOT show unchanged counter rows', to exclude counters that has <b>not</b> changed.<br>" +
 		"<br>" +
 		"<b>Note:</b> <br>" +
-		"This will take even more resources than the Performance Counter '"+CmSpidWait.SHORT_NAME+"'<br>" +
+		"This will take even more resources than the Performance Counter '" + CmSpidWait.SHORT_NAME + "'<br>" +
 		"So try the 'Local Options' panel, and the 'Apply Extra Where Clause' to restrict the result set as much as possible." +
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -112,7 +112,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmSpidCpuWait(counterController, guiController);
 	}
@@ -626,7 +626,7 @@ extends CountersModel
 
 		if (pos_WaitEventID < 0 || pos_WaitEventDesc < 0 || pos_WaitClassDesc < 0)
 		{
-			_logger.debug("Can't find the position for columns ('WaitEventID'="+pos_WaitEventID+", 'WaitEventDesc'="+pos_WaitEventDesc+", 'WaitClassDesc'="+pos_WaitClassDesc+")");
+			_logger.debug("Can't find the position for columns ('WaitEventID'=" + pos_WaitEventID + ", 'WaitEventDesc'=" + pos_WaitEventDesc + ", 'WaitClassDesc'=" + pos_WaitClassDesc + ")");
 			return;
 		}
 		
@@ -715,31 +715,31 @@ extends CountersModel
 		
 		if (pos_SPID < 0 || pos_HasShowPlan < 0 || pos_ShowPlanText < 0)
 		{
-			_logger.debug("Can't find the position for columns ('SPID'="+pos_SPID+", 'HasShowPlan'="+pos_HasShowPlan+", 'ShowPlanText'="+pos_ShowPlanText+")");
+			_logger.debug("Can't find the position for columns ('SPID'=" + pos_SPID + ", 'HasShowPlan'=" + pos_HasShowPlan + ", 'ShowPlanText'=" + pos_ShowPlanText + ")");
 			return;
 		}
 
 		if (pos_HasDbccSqlText < 0 || pos_DbccSqlText < 0)
 		{
-			_logger.debug("Can't find the position for columns ('HasDbccSqlText'="+pos_HasDbccSqlText+", 'DbccSqlText'="+pos_DbccSqlText+")");
+			_logger.debug("Can't find the position for columns ('HasDbccSqlText'=" + pos_HasDbccSqlText + ", 'DbccSqlText'=" + pos_DbccSqlText + ")");
 			return;
 		}
 
 		if (pos_HasProcCallStack < 0 || pos_ProcCallStack < 0)
 		{
-			_logger.debug("Can't find the position for columns ('HasProcCallStack'="+pos_HasProcCallStack+", 'ProcCallStack'="+pos_ProcCallStack+")");
+			_logger.debug("Can't find the position for columns ('HasProcCallStack'=" + pos_HasProcCallStack + ", 'ProcCallStack'=" + pos_ProcCallStack + ")");
 			return;
 		}
 
 		if (pos_HasMonSqlText < 0 || pos_MonSqlText < 0)
 		{
-			_logger.debug("Can't find the position for columns (''HasMonSqlText'="+pos_HasMonSqlText+", 'MonSqlText'="+pos_MonSqlText+")");
+			_logger.debug("Can't find the position for columns (''HasMonSqlText'=" + pos_HasMonSqlText + ", 'MonSqlText'=" + pos_MonSqlText + ")");
 			return;
 		}
 
 		if (pos_HasStacktrace < 0 || pos_DbccStacktrace < 0)
 		{
-			_logger.debug("Can't find the position for columns ('HasShowplan'="+pos_HasStacktrace+", 'DbccStacktrace'="+pos_DbccStacktrace+")");
+			_logger.debug("Can't find the position for columns ('HasShowplan'=" + pos_HasStacktrace + ", 'DbccStacktrace'=" + pos_DbccStacktrace + ")");
 			return;
 		}
 

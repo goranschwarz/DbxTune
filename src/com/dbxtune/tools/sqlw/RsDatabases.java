@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -149,7 +149,7 @@ public class RsDatabases
 		}
 		catch (SQLException sqle)
 		{
-			String msg = "Problems when executing '"+cmd+"' in RSD Server.";
+			String msg = "Problems when executing '" + cmd + "' in RSD Server.";
 			_logger.error(msg + sqle);
 
 			return null;

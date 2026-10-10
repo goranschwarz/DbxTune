@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -101,7 +101,7 @@ public class DbxConnectionPoolMap
 			int closeCount = cp.close();
 			
 			if (closeCount > 0)
-				_logger.info("Closed "+closeCount+" connection which was mapped to '"+key+"'.");
+				_logger.info("Closed " + closeCount + " connection which was mapped to '" + key + "'.");
 			
 			count += closeCount;
 		}

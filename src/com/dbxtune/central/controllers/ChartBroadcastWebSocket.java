@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -104,7 +104,7 @@ public class ChartBroadcastWebSocket
 	{
 		ClientSubscription cs = _subsMap.get(session);
 		if (cs != null)
-			_logger.info("Message Received from a Web Subscriber. remoteHost='"+cs._remoteHost+"', serverList='"+cs._serverNameList+"', graphList='"+cs._graphNameList+"', session='"+session+"'. message=|"+message+"|.");
+			_logger.info("Message Received from a Web Subscriber. remoteHost='" + cs._remoteHost + "', serverList='" + cs._serverNameList + "', graphList='" + cs._graphNameList + "', session='" + session + "'. message=|" + message + "|.");
 
 		// Just responce with the same message, in uppercase
 		if ( session.isOpen() )
@@ -142,7 +142,7 @@ public class ChartBroadcastWebSocket
 //			};
 //			_timer.scheduleAtFixedRate(run, 0, 1, TimeUnit.SECONDS);
 //		}
-		_logger.info("Adding a Web Subscriber. remoteHost='"+remoteHost+"', serverList='"+serverList+"', graphList='"+graphList+"', session='"+session+"'.");
+		_logger.info("Adding a Web Subscriber. remoteHost='" + remoteHost + "', serverList='" + serverList + "', graphList='" + graphList + "', session='" + session + "'.");
 
 		// If any of the subscribed servers is in a long running sample, send the last "refresh status" (so the browser shows it at once)
 		for (String srvName : cs._serverNameList)
@@ -167,7 +167,7 @@ public class ChartBroadcastWebSocket
 		ClientSubscription cs = _subsMap.remove(session);
 
 		if (cs != null)
-			_logger.info("Removed a Web Subscriber. remoteHost='"+cs._remoteHost+"', serverList='"+cs._serverNameList+"', graphList='"+cs._graphNameList+"', session='"+session+"'.");
+			_logger.info("Removed a Web Subscriber. remoteHost='" + cs._remoteHost + "', serverList='" + cs._serverNameList + "', graphList='" + cs._graphNameList + "', session='" + session + "'.");
 	}
 	
 //	private void sendTimeToAll()

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -43,7 +43,7 @@ public class JdbcCursorTest
 		}
 		catch (SQLException e)
 		{
-			System.err.println("Problems srvWaitfor(). sql="+sql);
+			System.err.println("Problems srvWaitfor(). sql=" + sql);
 			e.printStackTrace();
 		}
 	}
@@ -68,7 +68,7 @@ public class JdbcCursorTest
 		}
 		catch (SQLException e)
 		{
-			System.err.println("Problems getSpid(). sql="+sql);
+			System.err.println("Problems getSpid(). sql=" + sql);
 			e.printStackTrace();
 		}
 		
@@ -95,7 +95,7 @@ public class JdbcCursorTest
 		}
 		catch (SQLException e)
 		{
-			System.err.println("Problems getsrvVersion(). sql="+sql);
+			System.err.println("Problems getsrvVersion(). sql=" + sql);
 			e.printStackTrace();
 		}
 		
@@ -132,7 +132,7 @@ public class JdbcCursorTest
 		}
 		catch (SQLException e)
 		{
-			System.err.println("Problems getsrvVersion(). sql="+sql);
+			System.err.println("Problems getsrvVersion(). sql=" + sql);
 			e.printStackTrace();
 		}
 		
@@ -169,7 +169,7 @@ public class JdbcCursorTest
 		}
 		catch (SQLException e)
 		{
-			System.err.println("Problems getsrvVersion(). sql="+sql);
+			System.err.println("Problems getsrvVersion(). sql=" + sql);
 			e.printStackTrace();
 		}
 		
@@ -217,7 +217,7 @@ public class JdbcCursorTest
 				String rs_dbname     = rs.getString(7);
 				String rs_class      = rs.getString(8);
 
-				System.out.println("   [" + row +"] "
+				System.out.println("   [" + row + "] "
 						+ "fid="          + rs_fid 
 						+ ", spid="       + rs_spid 
 						+ ", locktype="   + rs_locktype 
@@ -252,7 +252,7 @@ public class JdbcCursorTest
 				String SequenceInBatch = rs.getString(3);
 				String SQLText         = rs.getString(4);
 
-				System.out.println("   [" + row +"] SPID=" + SPID + ", BatchID=" + BatchID + ", seq=" + SequenceInBatch + ", SQLText=|" + SQLText + "|.");
+				System.out.println("   [" + row + "] SPID=" + SPID + ", BatchID=" + BatchID + ", seq=" + SequenceInBatch + ", SQLText=|" + SQLText + "|.");
 			}
 		}
 		catch (Exception ex)
@@ -281,14 +281,14 @@ java -cp classes;lib/jconn4.jar com.dbxtune.test.JdbcCursorTest gorans-ub3 1600 
 		if (args.length > 3) pawd = args[3];
 		if (args.length > 4) fUrl = args[4];
 
-		System.out.println("host = '"+host+"'");
-		System.out.println("port = '"+port+"'");
-		System.out.println("user = '"+user+"'");
-		System.out.println("pawd = '"+pawd+"'");
-		System.out.println("fUrl = '"+fUrl+"'");
+		System.out.println("host = '" + host + "'");
+		System.out.println("port = '" + port + "'");
+		System.out.println("user = '" + user + "'");
+		System.out.println("pawd = '" + pawd + "'");
+		System.out.println("fUrl = '" + fUrl + "'");
 		
 //		String jdbcDriver    = "com.sybase.jdbc42.jdbc.SybDriver";
-		String jdbcUrl       = "jdbc:sybase:Tds:"+host+":"+port;
+		String jdbcUrl       = "jdbc:sybase:Tds:" + host + ":" + port;
 		String jdbcUser      = user;
 		String jdbcPasswd    = pawd;
 		Properties jdbcProps = null;
@@ -297,7 +297,7 @@ java -cp classes;lib/jconn4.jar com.dbxtune.test.JdbcCursorTest gorans-ub3 1600 
 			jdbcUrl = fUrl;
 
 		System.out.println("---------------------------------------------------------------------------------------");
-		System.out.println("Using URL '"+jdbcUrl+"' when connectiong to DBMS.");
+		System.out.println("Using URL '" + jdbcUrl + "' when connectiong to DBMS.");
 		System.out.println("---------------------------------------------------------------------------------------");
 
 		try

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -225,7 +225,7 @@ extends PipeCommandAbstract
 //			if ("ts".equalsIgnoreCase(text))
 //				return TIMESERIES;
 
-			throw new IllegalArgumentException("Unknown GraphType '" + text + "' found, possible values: "+StringUtil.toCommaStr(GraphType.values()));
+			throw new IllegalArgumentException("Unknown GraphType '" + text + "' found, possible values: " + StringUtil.toCommaStr(GraphType.values()));
 		}
 	};
 	
@@ -275,7 +275,7 @@ extends PipeCommandAbstract
 		}
 		else
 		{
-			throw new PipeCommandException("PipeCommand, cmd='"+input+"' is unknown. Available commands is: graph or chart");
+			throw new PipeCommandException("PipeCommand, cmd='" + input + "' is unknown. Available commands is: graph or chart");
 		}
 		
 //		System.out.println("PipeCommandGrep: _optV='"+_optV+"', _optX='"+_optX+"', _type='"+_type+"', _grepStr='"+_grepStr+"'.");

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -72,7 +72,7 @@ public class JdbcMsSqlAgFailoverTest
 				close();
 
 				int sleep = 1000;
-				System.out.println("--- Sleeping for " + sleep + " ms, before retrying... at: cnt=" + cnt +", of Total=" + _numOfExecutions);
+				System.out.println("--- Sleeping for " + sleep + " ms, before retrying... at: cnt=" + cnt + ", of Total=" + _numOfExecutions);
 				cnt--;
 				try { Thread.sleep(sleep); }
 				catch(InterruptedException ignore) {}
@@ -107,7 +107,7 @@ public class JdbcMsSqlAgFailoverTest
 		{
 			int lastId = getLastId();
 			if (lastId != _lastInsertedId)
-				throw new Exception("Expected ID=" + _lastInsertedId +", but last inserted id was: " + lastId);
+				throw new Exception("Expected ID=" + _lastInsertedId + ", but last inserted id was: " + lastId);
 
 			_lastInsertedId = insertNewId(_lastInsertedId + 1);
 			
@@ -188,7 +188,7 @@ public class JdbcMsSqlAgFailoverTest
 		if (props.getProperty("user")            == null) props.put("user",            _jdbcUser);
 		if (props.getProperty("password")        == null) props.put("password",        _jdbcPasswd);
 		
-		System.out.println("Using URL '"+_jdbcUrl+"' when connectiong to DBMS.");
+		System.out.println("Using URL '" + _jdbcUrl + "' when connectiong to DBMS.");
 
 		_conn = DriverManager.getConnection(_jdbcUrl, props);
 
@@ -320,7 +320,7 @@ public class JdbcMsSqlAgFailoverTest
 		}
 		catch (SQLException e)
 		{
-			System.err.println("Problems printSystemInfo(). sql="+sql);
+			System.err.println("Problems printSystemInfo(). sql=" + sql);
 			e.printStackTrace();
 		}
 	}
@@ -354,16 +354,16 @@ java -cp classes;lib/jconn3.jar com.dbxtune.test.JdbcMsSqlAgTest ston60238837a 1
 		if (args.length > 5) execCount = args[5];
 		if (args.length > 6) fUrl      = args[6];
 
-		System.out.println("host      = '"+host+"'");
-		System.out.println("port      = '"+port+"'");
-		System.out.println("user      = '"+user+"'");
-		System.out.println("pawd      = '"+pawd+"'");
-		System.out.println("dbname    = '"+dbname+"'");
-		System.out.println("execCount =  "+execCount);
-		System.out.println("fUrl      = '"+fUrl+"'");
+		System.out.println("host      = '" + host + "'");
+		System.out.println("port      = '" + port + "'");
+		System.out.println("user      = '" + user + "'");
+		System.out.println("pawd      = '" + pawd + "'");
+		System.out.println("dbname    = '" + dbname + "'");
+		System.out.println("execCount =  " + execCount);
+		System.out.println("fUrl      = '" + fUrl + "'");
 		
 //		String jdbcDriver    = "com.sybase.jdbc42.jdbc.SybDriver";
-		String jdbcUrl       = "jdbc:sqlserver://" + host + ":" + port + (dbname==null?"":";databaseName="+dbname);
+		String jdbcUrl       = "jdbc:sqlserver://" + host + ":" + port + (dbname==null?"":";databaseName=" + dbname);
 		String jdbcUser      = user;
 		String jdbcPasswd    = pawd;
 		String jdbcDbname    = dbname;

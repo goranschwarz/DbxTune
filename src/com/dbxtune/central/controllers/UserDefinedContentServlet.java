@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -122,7 +122,7 @@ extends HttpServlet
 		out.println("<title>" + udc.getDbmsServerName() + " - " + udc.getName() + "</title> ");
 		
 		if (refresh > 0)
-			out.println("<meta http-equiv='refresh' content='"+refresh+"' />");
+			out.println("<meta http-equiv='refresh' content='" + refresh + "' />");
 
 		out.println(HtmlStatic.getUserDefinedContentHead());
 		

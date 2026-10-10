@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -157,11 +157,11 @@ public class Encrypter
 //			String inStr     = "sybase12";
 			String inStr     = "a string that is a bit long";
 			String encrypted = encrypter.encrypt(inStr);
-			System.out.println("encrypted='"+encrypted+"', source='"+inStr+"'.");
+			System.out.println("encrypted='" + encrypted + "', source='" + inStr + "'.");
 
 			// Decrypt
 			String decrypted = encrypter.decrypt(encrypted);
-			System.out.println("encrypted='"+encrypted+"', afterDecrypt='"+decrypted+"'.");
+			System.out.println("encrypted='" + encrypted + "', afterDecrypt='" + decrypted + "'.");
 		}
 		catch (Exception e)
 		{

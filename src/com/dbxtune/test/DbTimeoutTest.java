@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -62,13 +62,13 @@ public class DbTimeoutTest
 			Connection conn = DriverManager.getConnection(url, props);
 
 			int aseSpid = AseConnectionUtils.getAseSpid(conn);
-			System.out.println("ASE SPID="+aseSpid);
+			System.out.println("ASE SPID=" + aseSpid);
 
 			try
 			{
 //				String sql = "waitfor delay '00:01:00'";
 				String sql = "select * from tempdb..t1";
-				System.out.println("DO SQL: "+sql);
+				System.out.println("DO SQL: " + sql);
 
 				Statement stmt = conn.createStatement();
 //				stmt.executeUpdate("use tempdb");
@@ -79,16 +79,16 @@ public class DbTimeoutTest
 //				CallableStatement stmt = conn.prepareCall("{?=call p1(?)}");
 
 				int timeout = 10;
-				System.out.println("Setting setQueryTimeout("+timeout+")");
+				System.out.println("Setting setQueryTimeout(" + timeout + ")");
 				stmt.setQueryTimeout(timeout);
 
-				System.out.println("Executing SQL '"+sql+"'.");
+				System.out.println("Executing SQL '" + sql + "'.");
 				ResultSet rs = stmt.executeQuery(sql);
 				int row=0;
 				while(rs.next())
 				{
 					row++;
-					System.out.println("reading result set, row "+row);
+					System.out.println("reading result set, row " + row);
 				}
 				rs.close();
 			}
@@ -101,21 +101,21 @@ public class DbTimeoutTest
 			{
 //				String sql = "waitfor delay '00:01:00'";
 				String sql = "select @@spid";
-				System.out.println("DO SQL: "+sql);
+				System.out.println("DO SQL: " + sql);
 
 				Statement stmt = conn.createStatement();
 
 				int timeout = 10;
-				System.out.println("Setting setQueryTimeout("+timeout+")");
+				System.out.println("Setting setQueryTimeout(" + timeout + ")");
 				stmt.setQueryTimeout(timeout);
 
-				System.out.println("Executing SQL '"+sql+"'.");
+				System.out.println("Executing SQL '" + sql + "'.");
 				ResultSet rs = stmt.executeQuery(sql);
 				int row=0;
 				while(rs.next())
 				{
 					row++;
-					System.out.println("reading result set, row "+row+": spid="+rs.getString(1));
+					System.out.println("reading result set, row " + row + ": spid=" + rs.getString(1));
 				}
 				rs.close();
 			}
@@ -125,7 +125,7 @@ public class DbTimeoutTest
 			}
 
 			long sleepTime = 1*60*1000;
-			System.out.println("SLEEPING to not terminate the login. sleep="+sleepTime);
+			System.out.println("SLEEPING to not terminate the login. sleep=" + sleepTime);
 			Thread.sleep(sleepTime);
 		}
 		catch (Exception e)

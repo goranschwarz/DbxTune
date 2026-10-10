@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -70,7 +70,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_DISK;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -100,7 +100,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmDeviceIo(counterController, guiController);
 	}
@@ -147,7 +147,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_RW_ALL_DISK_IO,
 			"Number of Disk Operations (Read+Write), per Second and ALL Devices", // Menu CheckBox text
-			"Number of Disk Operations (Read+Write), per Second and ALL Devices ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Number of Disk Operations (Read+Write), per Second and ALL Devices (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "ALL_devices" },
 			LabelType.Static,
@@ -160,7 +160,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_R_ALL_DISK_IO,
 			"Number of Disk Operations (Read), per Second and ALL Devices", // Menu CheckBox text
-			"Number of Disk Operations (Read), per Second and ALL Devices ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Number of Disk Operations (Read), per Second and ALL Devices (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "ALL_devices" },
 			LabelType.Static,
@@ -173,7 +173,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_W_ALL_DISK_IO,
 			"Number of Disk Operations (Write), per Second and ALL Devices", // Menu CheckBox text
-			"Number of Disk Operations (Write), per Second and ALL Devices ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Number of Disk Operations (Write), per Second and ALL Devices (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "ALL_devices" },
 			LabelType.Static,
@@ -187,7 +187,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_RW_DISK_IO,
 			"Number of Disk Operations (Read+Write), per Second and Device", // Menu CheckBox text
-			"Number of Disk Operations (Read+Write), per Second and Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Number of Disk Operations (Read+Write), per Second and Device (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
@@ -199,7 +199,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_R_DISK_IO,
 			"Number of Disk Operations (Read), per Second and Device", // Menu CheckBox text
-			"Number of Disk Operations (Read), per Second and Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Number of Disk Operations (Read), per Second and Device (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
@@ -211,7 +211,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_W_DISK_IO,
 			"Number of Disk Operations (Write), per Second and Device", // Menu CheckBox text
-			"Number of Disk Operations (Write), per Second and Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Number of Disk Operations (Write), per Second and Device (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
@@ -225,7 +225,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_RW_SERVICE_TIME,
 			"Device IO Service Time (Read+Write), per Device",                 // Menu CheckBox text
-			"Device IO Service Time (Read+Write) in Milliseconds, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Device IO Service Time (Read+Write) in Milliseconds, per Device (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
@@ -237,7 +237,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_R_SERVICE_TIME,
 			"Device IO Service Time (Read), per Device",                 // Menu CheckBox text
-			"Device IO Service Time (Read) in Milliseconds, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Device IO Service Time (Read) in Milliseconds, per Device (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
@@ -249,7 +249,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_W_SERVICE_TIME,
 			"Device IO Service Time (Write), per Device",                 // Menu CheckBox text
-			"Device IO Service Time (Write) in Milliseconds, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Device IO Service Time (Write) in Milliseconds, per Device (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
@@ -400,10 +400,10 @@ extends CountersModel
 //			nl_15702  = "\n";
 		}
 		
-		cols1 += "LogicalName, TotalIOs = "+TotalIOs+", \n" +
+		cols1 += "LogicalName, TotalIOs = " + TotalIOs + ", \n" +
 		         "Reads, \n" +
-		         "ReadsPct = CASE WHEN "+TotalIOs+" > 0 \n" +
-		         "                THEN convert(numeric(10,1), (Reads + 0.0) / ("+TotalIOs+" + 0.0) * 100.0 ) \n" +
+		         "ReadsPct = CASE WHEN " + TotalIOs + " > 0 \n" +
+		         "                THEN convert(numeric(10,1), (Reads + 0.0) / (" + TotalIOs + " + 0.0) * 100.0 ) \n" +
 		         "                ELSE convert(numeric(10,1), 0.0 ) \n" +
 		         "           END, \n" +
 		         "APFReads, \n" +
@@ -412,19 +412,19 @@ extends CountersModel
 		         "                   ELSE convert(numeric(10,1), 0.0 ) \n" +
 		         "              END, \n" +
 		         "Writes, \n" +
-		         "WritesPct = CASE WHEN "+TotalIOs+" > 0 \n" +
-		         "                 THEN convert(numeric(10,1), (Writes + 0.0) / ("+TotalIOs+" + 0.0) * 100.0 ) \n" +
+		         "WritesPct = CASE WHEN " + TotalIOs + " > 0 \n" +
+		         "                 THEN convert(numeric(10,1), (Writes + 0.0) / (" + TotalIOs + " + 0.0) * 100.0 ) \n" +
 		         "                 ELSE convert(numeric(10,1), 0.0 ) \n" +
 		         "            END, \n" +
 		         "DevSemaphoreRequests, DevSemaphoreWaits, IOTime, " + ReadTime + WriteTime + "\n";
 		cols2 += "AvgServ_ms = CASE \n" +
-				 "               WHEN "+TotalIOs+" > 0 \n" +
-				 "               THEN convert(numeric(10,1), IOTime / convert(numeric(10,0), "+TotalIOs+")) \n" +
+				 "               WHEN " + TotalIOs + " > 0 \n" +
+				 "               THEN convert(numeric(10,1), IOTime / convert(numeric(10,0), " + TotalIOs + ")) \n" +
 				 "               ELSE convert(numeric(10,1), null) \n" +
 				 "             END, \n" +
 				 ReadServiceTimeMs +
 				 WriteServiceTimeMs;
-		cols3 += DeviceType+" PhysicalName";
+		cols3 += DeviceType + " PhysicalName";
 //		if (srvVersion >= 15010 || (srvVersion >= 12540 && srvVersion < 15000) )
 //		if (srvVersion >= 1501000 || (srvVersion >= 1254000 && srvVersion < 1500000) )
 		if (srvVersion >= Ver.ver(15,0,1) || (srvVersion >= Ver.ver(12,5,4) && srvVersion < Ver.ver(15,0)) )

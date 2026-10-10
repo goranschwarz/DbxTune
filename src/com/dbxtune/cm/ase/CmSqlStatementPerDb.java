@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -87,7 +87,7 @@ extends CountersModel
 		"Reqirements for this to work" +
 		"<ul>" +
 		"  <li>You need to record the session</li>" +
-		"  <li>Option 'Do SQL Capture and Store' for 'Statement Info' needs to be enabled.<br>Which is properties '"+PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore+"' and '"+PersistentCounterHandler.PROPKEY_sqlCap_doStatementInfo+"'.</li>" +
+		"  <li>Option 'Do SQL Capture and Store' for 'Statement Info' needs to be enabled.<br>Which is properties '" + PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore + "' and '" + PersistentCounterHandler.PROPKEY_sqlCap_doStatementInfo + "'.</li>" +
 		"  <li>ASE Configuration 'statement pipe active' and 'statement pipe max messages', needs to be enabled.</li>" +
 		"</ul>" +
 		"Note: If ASE config 'statement pipe max messages' is set to low, we might <i>miss</i> entries in the queue/event-pipe<br>" +
@@ -95,7 +95,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -164,7 +164,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmSqlStatementPerDb(counterController, guiController);
 	}
@@ -225,7 +225,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_TOT_EXEC_SEC,
 				"SQL Statements Per DB - Total Statements Executed/sec", // Menu CheckBox text
-				"SQL Statements Per DB - Total Statements Executed/sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - Total Statements Executed/sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -237,7 +237,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_TOT_BATCHES_SEC,
 				"SQL Statements Per DB - SQL Batches Executed/sec", // Menu CheckBox text
-				"SQL Statements Per DB - SQL Batches Executed/secc ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - SQL Batches Executed/secc (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -249,7 +249,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_TOT_STMNT_CACHE_SEC,
 				"SQL Statements Per DB - SQL in Statement Cache Executed/sec", // Menu CheckBox text
-				"SQL Statements Per DB - SQL in Statement Cache Executed/sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - SQL in Statement Cache Executed/sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -261,7 +261,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_TOT_DYNAMIC_SQL_SEC,
 				"SQL Statements Per DB - Dynamic SQL/sec", // Menu CheckBox text
-				"SQL Statements Per DB - Dynamic SQL/sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - Dynamic SQL/sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -273,7 +273,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_TOT_STMNT_IN_PROC_SEC,
 				"SQL Statements Per DB - Statements in Procedures Executed/sec", // Menu CheckBox text
-				"SQL Statements Per DB - Statements in Procedures Executed/sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - Statements in Procedures Executed/sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -287,7 +287,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_SUM_EXEC_TIME,
 				"SQL Statements Per DB - Sum Execution Time in ms", // Menu CheckBox text
-				"SQL Statements Per DB - Sum Execution Time in ms ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - Sum Execution Time in ms (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -299,7 +299,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_SUM_LOGICAL_READ,
 				"SQL Statements Per DB - Sum Logical Reads", // Menu CheckBox text
-				"SQL Statements Per DB - Sum Logical Reads ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - Sum Logical Reads (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -311,7 +311,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_SUM_PHYSICAL_READ,
 				"SQL Statements Per DB - Sum Physical Reads", // Menu CheckBox text
-				"SQL Statements Per DB - Sum Physical Reads ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - Sum Physical Reads (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -323,7 +323,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_SUM_CPU_TIME,
 				"SQL Statements Per DB - Sum CPU Time in ms", // Menu CheckBox text
-				"SQL Statements Per DB - Sum CPU Time in ms ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - Sum CPU Time in ms (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -335,7 +335,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_SUM_WAIT_TIME,
 				"SQL Statements Per DB - Sum Wait Time in ms", // Menu CheckBox text
-				"SQL Statements Per DB - Sum Wait Time in ms ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - Sum Wait Time in ms (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -347,7 +347,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_SUM_ROWS_AFFECTED,
 				"SQL Statements Per DB - Sum Number of Rows Affected", // Menu CheckBox text
-				"SQL Statements Per DB - Sum Number of Rows Affected ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - Sum Number of Rows Affected (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -360,7 +360,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_SUM_COMPILE_CNT,
 			"SQL Statements Per DB - Sum Query Compile/Optimization Count per Sec", // Menu CheckBox text
-			"SQL Statements Per DB - Sum Query Compile/Optimization Count per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SQL Statements Per DB - Sum Query Compile/Optimization Count per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 //			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
 //			LabelType.Static,
@@ -375,7 +375,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_SUM_COMPILE_TIME,
 			"SQL Statements Per DB - Sum Query Compile/Optimization Time", // Menu CheckBox text
-			"SQL Statements Per DB - Sum Query Compile/Optimization Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SQL Statements Per DB - Sum Query Compile/Optimization Time (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 //			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
 //			LabelType.Static,
@@ -390,7 +390,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_COMPILE_TYPE_CNT,
 			"SQL Statements - Sum Query Compile/Optimization Type Count per Sec", // Menu CheckBox text
-			"SQL Statements - Sum Query Compile/Optimization Type Count per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SQL Statements - Sum Query Compile/Optimization Type Count per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Pure Language", "Language In Statement Cache", "Dynamic (Prepared) Statements In Statement Cache" }, 
 			LabelType.Static,
@@ -404,7 +404,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_ERROR_COUNT,
 				"SQL Statements Per DB - Errors/sec", // Menu CheckBox text
-				"SQL Statements Per DB - Errors/sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - Errors/sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -622,7 +622,7 @@ extends CountersModel
 		{
 			if ( ! PersistentCounterHandler.hasInstance() )
 			{
-				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"'. No recording is active, which this CM depends on.");
+				_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '" + getDisplayName() + "'. No recording is active, which this CM depends on.");
 				setActive(false, "No recording is active, which this CM depends on.");
 				return false;
 			}
@@ -634,15 +634,15 @@ extends CountersModel
 
 			if ( ! sqlCap_doSqlCaptureAndStore )
 			{
-				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"'. Configuration '"+PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore+"' is NOT enabled");
-				setActive(false, "Configuration '"+PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore+"' is NOT enabled, which this CM depends on.");
+				_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '" + getDisplayName() + "'. Configuration '" + PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore + "' is NOT enabled");
+				setActive(false, "Configuration '" + PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore + "' is NOT enabled, which this CM depends on.");
 				return false;
 			}
 
 			if ( ! sqlCap_doStatementInfo )
 			{
-				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"'. Configuration '"+PersistentCounterHandler.PROPKEY_sqlCap_doStatementInfo+"' is NOT enabled");
-				setActive(false, "Configuration '"+PersistentCounterHandler.PROPKEY_sqlCap_doStatementInfo+"' is NOT enabled, which this CM depends on.");
+				_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '" + getDisplayName() + "'. Configuration '" + PersistentCounterHandler.PROPKEY_sqlCap_doStatementInfo + "' is NOT enabled");
+				setActive(false, "Configuration '" + PersistentCounterHandler.PROPKEY_sqlCap_doStatementInfo + "' is NOT enabled, which this CM depends on.");
 				return false;
 			}
 		}

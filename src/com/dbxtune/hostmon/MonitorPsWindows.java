@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -21,6 +21,7 @@
 package com.dbxtune.hostmon;
 
 import com.dbxtune.cm.os.CmOsPs;
+import com.dbxtune.ssh.SshConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 
@@ -48,10 +49,27 @@ extends HostMonitor
 	public String getCommand()
 	{
 		String cmd = super.getCommand();
-		
+
 		if (StringUtil.hasValue(cmd))
 			return cmd;
-		
+
+		String psScript = getPowershellScript();
+
+		// If the login shell is PowerShell: It expands $_ and $null inside double quotes (before our 'powershell' sees them), so use single quotes
+		String osName = getConnection() == null ? null : getConnection().getOsName();
+		if (osName != null && osName.startsWith("Windows-Powershell-"))
+			return "powershell -NoLogo -NoProfile -NonInteractive -Command '" + psScript.replace("'", "''") + "'";
+
+		return "powershell -NoLogo -NoProfile -NonInteractive -Command \"" + psScript + "\"";
+	}
+
+	@Override
+	public String getPowershellScript()
+	{
+		// A command from the configuration is always executed as a normal OS Command
+		if (StringUtil.hasValue(super.getCommand()))
+			return null;
+
 		int top = Configuration.getCombinedConfiguration().getIntProperty(CmOsPs.PROPKEY_top, CmOsPs.DEFAULT_top);
 
 		String discNullCpu = " | Where-Object { $_.CPU -ne $null -and $_.CPU -gt 0 }";   // Get rid of processes that has NO CPU Usage
@@ -66,12 +84,10 @@ extends HostMonitor
 
 		// NOTE: [cultureinfo]::CurrentCulture = 'en-US'; will force the "CPU(s)" output to be: ###,###.## instead of some localized string ex: ### ###,##
 		//       if the localized string is returned... parsing may of numbers may fail!
-		return "powershell \"" // -start- quote for embedded command
-				+ "(Get-Culture).NumberFormat.NumberGroupSeparator=''; "     // numbers should not have comma separators for readability
+		return    "(Get-Culture).NumberFormat.NumberGroupSeparator=''; "     // numbers should not have comma separators for readability
 				+ "(Get-Culture).NumberFormat.NumberDecimalSeparator='.'; "  // numbers should have "." separator for ####.12
-				+ "Get-Process" + discNullCpu + sort + topProcs + autoFormat
-				+ "\""; // -end- quote for embedded command
-		
+				+ "Get-Process" + discNullCpu + sort + topProcs + autoFormat;
+
 		// or Get-Process | Get-Member ... to get ALL Members and get specific counter members
 		// or possibly: tasklist
 		// or powershell Get-WMIObject Win32_Process
@@ -80,6 +96,38 @@ extends HostMonitor
 		// more on PWSH... possibly output to | ConvertTo-Csv -NoTypeInformation
 		// and select some "columns"... Get-Process | Where-Object { $_.CPU -ne $null } | Sort-Object CPU -Descending | Select-Object Id, SessionId, StartTime, ProcessName, CPU, HandleCount, Threads, BasePriority, PriorityClass, ProcessorAffinity, MaxWorkingSet, MinWorkingSet, NonpagedSystemMemorySize64, PagedMemorySize64, PagedSystemMemorySize64, PeakPagedMemorySize64, PeakVirtualMemorySize64, PeakWorkingSet64, PrivateMemorySize64, VirtualMemorySize64, WorkingSet64, PrivilegedProcessorTime, TotalProcessorTime, UserProcessorTime, Company, FileVersion, Path, Product, ProductVersion | select -first 10 | ConvertTo-Csv -NoTypeInformation
 		// NOTE: If we change to 'Select-Object' we can also get 'StartTime' and if its a 'typeperf' process that has been running for a "long" time, lets kill it (because they seems to be laying around after we do disconnect, The SSHD does not kill it's subprocesses on exit...)
+	}
+
+	/**
+	 * The last column "ProcessName" may contain spaces (like 'Memory Compression'), then we get to many fields (and the row would be discarded)<br>
+	 * So "wrap up" everything from the last column and onwards into "ProcessName"
+	 */
+	@Override
+	public String[] parseRow(HostMonitorMetaData md, String row, String[] preParsed, int type)
+	{
+		// Error messages should not end up as "processes"
+		if (type == SshConnection.STDERR_DATA)
+			return null;
+
+		if (preParsed.length > md.getParseColumnCount())
+		{
+			String[] allCols = new String[md.getParseColumnCount()];
+
+			// Copy all columns to the left of "ProcessName"
+			for (int i=0; i<allCols.length; i++)
+				allCols[i] = preParsed[i];
+
+			// Then concatenate the rest into "ProcessName"
+			String processName = "";
+			for (int i=allCols.length-1; i<preParsed.length; i++)
+				processName += preParsed[i] + " ";
+
+			allCols[allCols.length-1] = processName.trim();
+
+			preParsed = allCols;
+		}
+
+		return super.parseRow(md, row, preParsed, type);
 	}
 
 	@Override

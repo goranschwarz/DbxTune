@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -41,7 +41,7 @@ extends AlarmEvent
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
 				// Note: max length for the below message is 512
-				"A high number of Client Error Messages has been observed in the server '" + cm.getServerName() + "'. ErrorMessagesPerSecond="+errorCountPerSec+". Threshold='"+threshold+"')",
+				"A high number of Client Error Messages has been observed in the server '" + cm.getServerName() + "'. ErrorMessagesPerSecond=" + errorCountPerSec + ". Threshold='" + threshold + "')",
 				threshold // crossedThreshold... well this one do not have a number.
 				);
 

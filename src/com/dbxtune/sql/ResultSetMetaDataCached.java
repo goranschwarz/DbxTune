@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -319,7 +319,7 @@ public class ResultSetMetaDataCached implements ResultSetMetaData, java.io.Seria
 		if (sourceRsmd == null)
 			sourceRsmd = sourceRs.getMetaData();
 		
-		_logger.debug("Creating new CachedResultSetMetaData from origin Dbms '"+_originDbms+"'.");
+		_logger.debug("Creating new CachedResultSetMetaData from origin Dbms '" + _originDbms + "'.");
 
 		_entries = new ArrayList<ResultSetMetaDataCached.Entry>(sourceRsmd.getColumnCount());
 
@@ -585,7 +585,7 @@ public class ResultSetMetaDataCached implements ResultSetMetaData, java.io.Seria
 	{
 		if (sourceRsmd.isStateOrigin())
 		{
-			_logger.warn("WARNING: transformToTargetDbms(ResultSetMetaDataCached sourceRsmd.dbmsProdName='"+sourceRsmd.getDatabaseProductName()+"', String dbmsProductName='"+dbmsProductName+"'): sourceRsmd is NOT YET NORMALIZED at the Source DBMS. I'll try to do that FIRST.");
+			_logger.warn("WARNING: transformToTargetDbms(ResultSetMetaDataCached sourceRsmd.dbmsProdName='" + sourceRsmd.getDatabaseProductName() + "', String dbmsProductName='" + dbmsProductName + "'): sourceRsmd is NOT YET NORMALIZED at the Source DBMS. I'll try to do that FIRST.");
 			sourceRsmd = sourceRsmd.createNormalizedRsmd();
 		}
 

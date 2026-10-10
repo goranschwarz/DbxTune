@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -989,7 +989,7 @@ extends SqlServerAbstract
 			
 			String line1 = "## step_id=" + step_id + " " + (StringUtil.hasValue(disabled_by_step) ? "(***DISABLED*** by step_id=" + disabled_by_step + ")" : "") + ", name='" + step_name + "'";
 //			String line2 = ("## subsystem='" + subsystem + "'" + (StringUtil.hasValue(database_name) ? ", dbname='"+database_name+"' " : " ") + "------------------------------------------------------------------------------").substring(0, 80);
-			String line2 = "## subsystem='" + subsystem + "'" + (StringUtil.hasValue(database_name) ? ", dbname='"+database_name+"'" : "");
+			String line2 = "## subsystem='" + subsystem + "'" + (StringUtil.hasValue(database_name) ? ", dbname='" + database_name + "'" : "");
 			String line3 = command;
 			sb.append("##==============================================================================\n");
 			sb.append(line1).append("\n");
@@ -1772,7 +1772,7 @@ extends SqlServerAbstract
 					return "<div title='Click to Open' "
 							+ "data-bs-toggle='modal' "
 							+ "data-bs-target='#dbx-view-sqltext-dialog' "
-							+ "data-objectname='" + ("step_id=" + stepId +", jobName=" + jobName) + "' "
+							+ "data-objectname='" + ("step_id=" + stepId + ", jobName=" + jobName) + "' "
 							+ "data-tooltip=\""   + getTooltipFor_jobStepCommand(jobName, stepId) + "\" "
 							+ ">&#x1F4AC; Show</div>"; // symbol popup with "..."
 				}
@@ -1792,7 +1792,7 @@ extends SqlServerAbstract
 							+ "data-bs-toggle='modal' "
 							+ "data-bs-target='#dbx-jobScheduler-timeline-dialog' "
 							+ "data-objectname='" + jobName  + "' "
-							+ "data-objectname='" + ("step_id=" + step_id +", jobName=" + jobName + ", execTime=" + execTime) + "' "
+							+ "data-objectname='" + ("step_id=" + step_id + ", jobName=" + jobName + ", execTime=" + execTime) + "' "
 							+ "data-starttime='"  + execTime + "' "
 							+ "data-tooltip=\""   + getTooltipFor_allExecTimes(job_id, step_id) + "\" "
 							+ ">&#x1F4AC; Show</div>" // symbol popup with "..."
@@ -1814,7 +1814,7 @@ extends SqlServerAbstract
 							+ "data-bs-toggle='modal' "
 							+ "data-bs-target='#dbx-jobScheduler-timeline-dialog' "
 							+ "data-objectname='" + jobName  + "' "
-							+ "data-objectname='" + ("step_id=" + step_id +", jobName=" + jobName + ", execTime=" + execTime) + "' "
+							+ "data-objectname='" + ("step_id=" + step_id + ", jobName=" + jobName + ", execTime=" + execTime) + "' "
 							+ "data-starttime='"  + execTime + "' "
 							+ "data-tooltip=\""   + getTooltipFor_allExecTimes(job_id, step_id) + "\" "
 							+ ">&#x1F4AC; Show</div>" // symbol popup with "..."
@@ -1904,7 +1904,7 @@ extends SqlServerAbstract
 					return "<div title='Click to Open' "
 							+ "data-bs-toggle='modal' "
 							+ "data-bs-target='#dbx-view-sqltext-dialog' "
-							+ "data-objectname='" + ("step_id=" + step_id +", jobName=" + jobName) + "' "
+							+ "data-objectname='" + ("step_id=" + step_id + ", jobName=" + jobName) + "' "
 							+ "data-tooltip=\""   + getTooltipFor_jobStepCommand(jobName, step_id) + "\" "
 							+ ">&#x1F4AC; Show</div>"; // symbol popup with "..."
 				}
@@ -1923,7 +1923,7 @@ extends SqlServerAbstract
 					return "<div title='Click to Open' "
 						+ "data-bs-toggle='modal' "
 						+ "data-bs-target='#dbx-jobScheduler-timeline-dialog' "
-						+ "data-objectname='" + ("step_id=" + step_id +", jobName=" + jobName + ", execTime=" + execTime) + "' "
+						+ "data-objectname='" + ("step_id=" + step_id + ", jobName=" + jobName + ", execTime=" + execTime) + "' "
 						+ "data-starttime='"  + execTime + "' "
 						+ "data-tooltip=\""   + getTooltipFor_allExecTimes(job_id, step_id) + "\" "
 						+ ">&#x1F4AC; Show</div>" // symbol popup with "..."

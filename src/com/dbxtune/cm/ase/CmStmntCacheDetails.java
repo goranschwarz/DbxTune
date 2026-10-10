@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -78,7 +78,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_CACHE;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 //	public static final long     NEED_SRV_VERSION = 15020;
 //	public static final long     NEED_SRV_VERSION = 1502000;
@@ -113,7 +113,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmStmntCacheDetails(counterController, guiController);
 	}
@@ -304,9 +304,9 @@ extends CountersModel
 		String comment = "";
 		
 		//----- SQL TEXT
-		comment = "Property: "+PROPKEY_sample_sqlText+" is "+sampleSqlText+".";
-		String sql_hasSqlText  = " HasSqltext    = convert(bit,0), -- "+comment+" \n";
-		String sql_doSqltext   = " sqltext       = convert(text, '"+comment+"'), \n";
+		comment = "Property: " + PROPKEY_sample_sqlText + " is " + sampleSqlText + ".";
+		String sql_hasSqlText  = " HasSqltext    = convert(bit,0), -- " + comment + " \n";
+		String sql_doSqltext   = " sqltext       = convert(text, '" + comment + "'), \n";
 		if ( sampleSqlText )
 		{
 			sql_hasSqlText     = " HasSqltext    = convert(bit,1), \n";
@@ -314,9 +314,9 @@ extends CountersModel
 		}
 
 		//----- SHOWPLAN
-		comment = "Property: "+PROPKEY_sample_showplan+" is "+sampleShowplan+".";
-		String sql_hasShowplan = " HasShowplan   = convert(bit,0), -- "+comment+" \n";
-		String sql_doShowplan  = " msgAsColValue = convert(text, '"+comment+"'), \n";
+		comment = "Property: " + PROPKEY_sample_showplan + " is " + sampleShowplan + ".";
+		String sql_hasShowplan = " HasShowplan   = convert(bit,0), -- " + comment + " \n";
+		String sql_doShowplan  = " msgAsColValue = convert(text, '" + comment + "'), \n";
 		if ( sampleShowplan )
 		{
 			sql_hasShowplan    = " HasShowplan   = CASE WHEN show_plan(-1,SSQLID,-1,-1) < 0 THEN convert(bit,0) ELSE convert(bit,1) END, \n";
@@ -325,9 +325,9 @@ extends CountersModel
 		}
 
 		//----- XML PLAN
-		comment = "Property: "+PROPKEY_sample_xmlPlan+" is "+sampleXmlPlan+".";
-		String sql_hasXmlPlan  = " HasXmlPlan    = convert(bit,0), -- "+comment+" \n";
-		String sql_doXmlPlan   = " xmlPlan       = convert(text, '"+comment+"'), \n";
+		comment = "Property: " + PROPKEY_sample_xmlPlan + " is " + sampleXmlPlan + ".";
+		String sql_hasXmlPlan  = " HasXmlPlan    = convert(bit,0), -- " + comment + " \n";
+		String sql_doXmlPlan   = " xmlPlan       = convert(text, '" + comment + "'), \n";
 		if (srvVersion >= Ver.ver(15,7))
 		{
 			if ( sampleXmlPlan )
@@ -340,16 +340,16 @@ extends CountersModel
 		else
 		{
 			comment = "XML Plan is only available from ASE 15.7.0 or above.";
-			sql_hasXmlPlan = " HasXmlPlan    = convert(bit,0), -- "+comment+" \n";
-			sql_doXmlPlan  = " xmlPlan       = convert(text, '"+comment+"'), \n";
+			sql_hasXmlPlan = " HasXmlPlan    = convert(bit,0), -- " + comment + " \n";
+			sql_doXmlPlan  = " xmlPlan       = convert(text, '" + comment + "'), \n";
 		}
 		
 		//----- SHOWPLAN
-		comment = "Property: "+PROPKEY_sample_metricsCountGtZero+" is "+sampleMetricsCountGtZero+".";
-		String sql_metricsCountGtZero = "  and MetricsCount > 0 -- "+comment+" \n";
+		comment = "Property: " + PROPKEY_sample_metricsCountGtZero + " is " + sampleMetricsCountGtZero + ".";
+		String sql_metricsCountGtZero = "  and MetricsCount > 0 -- " + comment + " \n";
 		if ( ! sampleMetricsCountGtZero )
 		{
-			sql_metricsCountGtZero = "  -- and MetricsCount > 0 -- "+comment+" \n";
+			sql_metricsCountGtZero = "  -- and MetricsCount > 0 -- " + comment + " \n";
 		}
 
 
@@ -458,10 +458,10 @@ extends CountersModel
 			LockWaits + LockWaitTime + LockWaitsDiff + LockWaitTimeDiff + nl_15702 +
 			MaxSortTime + SortSpilledCount + SortCount + TotalSortTime + SortCountDiff + TotalSortTimeDiff + nl_15702 + 
 			" MetricsCount, \n" +               // Number of executions over which query metrics were captured.
-			" MaxElapsedTime, MinElapsedTime, AvgElapsedTime, "+ TotalElapsedTime + TotalElapsedTimeDiff + "\n" + // Elapsed time value.
-			" MaxLIO,         MinLIO,         AvgLIO,         "+ TotalLIO         + TotalLioDiff         + "\n" + // Logical IO
-			" MaxPIO,         MinPIO,         AvgPIO,         "+ TotalPIO         + TotalPioDiff         + "\n" + // Physical IO
-			" MaxCpuTime,     MinCpuTime,     AvgCpuTime,     "+ TotalCpuTime     + TotalCpuTimeDiff     + "\n" + // Execution time.
+			" MaxElapsedTime, MinElapsedTime, AvgElapsedTime, " + TotalElapsedTime + TotalElapsedTimeDiff + "\n" + // Elapsed time value.
+			" MaxLIO,         MinLIO,         AvgLIO,         " + TotalLIO         + TotalLioDiff         + "\n" + // Logical IO
+			" MaxPIO,         MinPIO,         AvgPIO,         " + TotalPIO         + TotalPioDiff         + "\n" + // Physical IO
+			" MaxCpuTime,     MinCpuTime,     AvgCpuTime,     " + TotalCpuTime     + TotalCpuTimeDiff     + "\n" + // Execution time.
 			TotalEstWaitTime +
 			TotalEstWaitTimeDiff +
 			" LastUsedDate, \n" +               // Date when this statement was last used.
@@ -551,7 +551,7 @@ extends CountersModel
 
 		if (pos_xmlPlan < 0 || pos_HasXmlPlan < 0 || pos_ObjectName < 0)
 		{
-			_logger.debug("Can't find the position for columns (xmlPlan="+pos_xmlPlan+", HasXmlPlan="+pos_HasXmlPlan+", ObjectName="+pos_ObjectName+")");
+			_logger.debug("Can't find the position for columns (xmlPlan=" + pos_xmlPlan + ", HasXmlPlan=" + pos_HasXmlPlan + ", ObjectName=" + pos_ObjectName + ")");
 			return;
 		}
 

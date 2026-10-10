@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -780,7 +780,7 @@ public class QueryWindow
                                  
 	private JMenu                _preferences_m              = new JMenu("Preferences");
 	private JCheckBoxMenuItem    _prefWinOnConnect_mi        = new JCheckBoxMenuItem("Restore Window Position, based on Connection", DEFAULT_restoreWinSizeForConn);
-	private JCheckBoxMenuItem    _prefShowAppNameInTitle_mi  = new JCheckBoxMenuItem("Show '"+APP_NAME+"' as Prefix in Window Title", DEFAULT_showAppNameInTitle);
+	private JCheckBoxMenuItem    _prefShowAppNameInTitle_mi  = new JCheckBoxMenuItem("Show '" + APP_NAME + "' as Prefix in Window Title", DEFAULT_showAppNameInTitle);
 	private JCheckBoxMenuItem    _prefSplitHorizontal_mi     = new JCheckBoxMenuItem("Editor and Output Windows side-by-side", DEFAULT_horizontalOrientation);
 	private JCheckBoxMenuItem    _prefPlaceCntrlInToolbar_mi = new JCheckBoxMenuItem("Place 'Execute' and other control buttons in the Toolbar", DEFAULT_commandPanelInToolbar);
 	private JCheckBoxMenuItem    _prefShowAseMsgToolip_mi    = new JCheckBoxMenuItem("Enable tooltip on Messages in the Result Output", JAseMessage.DEFAULT_showToolTip);
@@ -857,7 +857,7 @@ public class QueryWindow
 
 		// Check if the configuration file exists
 		if ( ! (new File(propFile)).exists() )
-			throw new FileNotFoundException("The configuration file '"+propFile+"' doesn't exists.");
+			throw new FileNotFoundException("The configuration file '" + propFile + "' doesn't exists.");
 
 		// -----------------------------------------------------------------
 		// CHECK JAVA JVM VERSION
@@ -869,12 +869,12 @@ public class QueryWindow
 		{
 			System.out.println("");
 			System.out.println("===============================================================");
-			System.out.println(" "+Version.getAppName()+" needs a runtime Java 7 or higher.");
+			System.out.println(" " + Version.getAppName() + " needs a runtime Java 7 or higher.");
 			System.out.println(" java.version = " + System.getProperty("java.version"));
 			System.out.println(" which is parsed into the number: " + JavaVersion.getVersion());
 			System.out.println("---------------------------------------------------------------");
 			System.out.println("");
-			throw new Exception(Version.getAppName()+" needs a runtime Java 7 or higher.");
+			throw new Exception(Version.getAppName() + " needs a runtime Java 7 or higher.");
 		}
 
 		// The SAVE Properties for shared Tail
@@ -951,7 +951,7 @@ public class QueryWindow
 						String debugOption = entry.getKey();
 						String description = entry.getValue();
 
-						System.out.println(" "+StringUtil.left(debugOption, 15, true) + " " + description);
+						System.out.println(" " + StringUtil.left(debugOption, 15, true) + " " + description);
 					}
 					System.out.println();
 					// Get of of here if it was a list option
@@ -986,41 +986,41 @@ public class QueryWindow
 
 		// Print out the memory configuration
 		// And the JVM info
-		_logger.info("Starting "+Version.getAppName()+", version "+Version.getVersionStr()+", build "+Version.getBuildStr());
+		_logger.info("Starting " + Version.getAppName() + ", version " + Version.getVersionStr() + ", build " + Version.getBuildStr());
 //		_logger.info("GUI mode "+_gui);
-		_logger.info("Debug Options enabled: "+Debug.getDebugsString());
+		_logger.info("Debug Options enabled: " + Debug.getDebugsString());
 
-		_logger.info("Using Java Runtime Environment Version: "+System.getProperty("java.version"));
+		_logger.info("Using Java Runtime Environment Version: " + System.getProperty("java.version"));
 //		_logger.info("Using Java Runtime Environment Vendor: "+System.getProperty("java.vendor"));
 //		_logger.info("Using Java Vendor URL: "+System.getProperty("java.vendor.url"));
 //		_logger.info("Using Java VM Specification Version: "+System.getProperty("java.vm.specification.version"));
 //		_logger.info("Using Java VM Specification Vendor:  "+System.getProperty("java.vm.specification.vendor"));
 //		_logger.info("Using Java VM Specification Name:    "+System.getProperty("java.vm.specification.name"));
-		_logger.info("Using Java VM Implementation  Version: "+System.getProperty("java.vm.version"));
-		_logger.info("Using Java VM Implementation  Vendor:  "+System.getProperty("java.vm.vendor"));
-		_logger.info("Using Java VM Implementation  Name:    "+System.getProperty("java.vm.name"));
-		_logger.info("Using Java VM Home:    "+System.getProperty("java.home"));
-		_logger.info("Java class format version number: " +System.getProperty("java.class.version"));
-		_logger.info("Java class path: " +System.getProperty("java.class.path"));
-		_logger.info("List of paths to search when loading libraries: " +System.getProperty("java.library.path"));
-		_logger.info("Name of JIT compiler to use: " +System.getProperty("java.compiler"));
-		_logger.info("Path of extension directory or directories: " +System.getProperty("java.ext.dirs"));
+		_logger.info("Using Java VM Implementation  Version: " + System.getProperty("java.vm.version"));
+		_logger.info("Using Java VM Implementation  Vendor:  " + System.getProperty("java.vm.vendor"));
+		_logger.info("Using Java VM Implementation  Name:    " + System.getProperty("java.vm.name"));
+		_logger.info("Using Java VM Home:    " + System.getProperty("java.home"));
+		_logger.info("Java class format version number: " + System.getProperty("java.class.version"));
+		_logger.info("Java class path: " + System.getProperty("java.class.path"));
+		_logger.info("List of paths to search when loading libraries: " + System.getProperty("java.library.path"));
+		_logger.info("Name of JIT compiler to use: " + System.getProperty("java.compiler"));
+		_logger.info("Path of extension directory or directories: " + System.getProperty("java.ext.dirs"));
 
-		_logger.info("Maximum memory is set to:  "+Runtime.getRuntime().maxMemory() / 1024 / 1024 + " MB. this could be changed with  -Xmx###m (where ### is number of MB)"); // jdk 1.4 or higher
-		_logger.info("Total Physical Memory on this machine:  "+ Memory.getTotalPhysicalMemorySizeInMB() + " MB.");
-		_logger.info("Free Physical Memory on this machine:  "+ Memory.getFreePhysicalMemorySizeInMB() + " MB.");
-		_logger.info("Running on Operating System Name:  "+System.getProperty("os.name"));
-		_logger.info("Running on Operating System Version:  "+System.getProperty("os.version"));
-		_logger.info("Running on Operating System Architecture:  "+System.getProperty("os.arch"));
-		_logger.info("The application was started by the username:  "+System.getProperty("user.name"));
-		_logger.info("The application was started in the directory:   "+System.getProperty("user.dir"));
-		_logger.info("The user '"+System.getProperty("user.name")+"' home directory:   "+System.getProperty("user.home"));
+		_logger.info("Maximum memory is set to:  " + Runtime.getRuntime().maxMemory() / 1024 / 1024 + " MB. this could be changed with  -Xmx###m (where ### is number of MB)"); // jdk 1.4 or higher
+		_logger.info("Total Physical Memory on this machine:  " + Memory.getTotalPhysicalMemorySizeInMB() + " MB.");
+		_logger.info("Free Physical Memory on this machine:  " + Memory.getFreePhysicalMemorySizeInMB() + " MB.");
+		_logger.info("Running on Operating System Name:  " + System.getProperty("os.name"));
+		_logger.info("Running on Operating System Version:  " + System.getProperty("os.version"));
+		_logger.info("Running on Operating System Architecture:  " + System.getProperty("os.arch"));
+		_logger.info("The application was started by the username:  " + System.getProperty("user.name"));
+		_logger.info("The application was started in the directory:   " + System.getProperty("user.dir"));
+		_logger.info("The user '" + System.getProperty("user.name") + "' home directory:   " + System.getProperty("user.home"));
 
-		_logger.info("System configuration file is '"+propFile+"'.");
-		_logger.info("User configuration file is '"+userPropFile+"'.");
-		_logger.info("Storing temporary configurations in file '"+tmpPropFile+"'.");
-		_logger.info("Combined Configuration Search Order '"+StringUtil.toCommaStr(Configuration.getSearchOrder())+"'.");
-		_logger.info("Combined Configuration Search Order, With file names: "+StringUtil.toCommaStr(Configuration.getSearchOrder(true)));
+		_logger.info("System configuration file is '" + propFile + "'.");
+		_logger.info("User configuration file is '" + userPropFile + "'.");
+		_logger.info("Storing temporary configurations in file '" + tmpPropFile + "'.");
+		_logger.info("Combined Configuration Search Order '" + StringUtil.toCommaStr(Configuration.getSearchOrder()) + "'.");
+		_logger.info("Combined Configuration Search Order, With file names: " + StringUtil.toCommaStr(Configuration.getSearchOrder(true)));
 
 		if (crAppDirLog != null && !crAppDirLog.isEmpty())
 		{
@@ -1142,7 +1142,7 @@ public class QueryWindow
 				try {
 					sendExecStatistics(true);
 				} catch (Exception ex) {
-					_logger.error("Problems calling 'sendExecStatistics(true)'. Continuing anyway. Caught: "+ex, ex);
+					_logger.error("Problems calling 'sendExecStatistics(true)'. Continuing anyway. Caught: " + ex, ex);
 				}
 				_logger.debug("----End Shutdown Hook");
 			}
@@ -1158,7 +1158,7 @@ public class QueryWindow
 		boolean useEdtHang = System.getProperty("user.name").equals("goran");
 		if (Debug.hasDebug(DebugOptions.EDT_HANG) || useEdtHang)
 		{
-			_logger.info("Installing a Swing EDT (Event Dispatch Thread) - Hang Monitor, which will write information about long running EDT operations to the "+Version.getAppName()+" log.");
+			_logger.info("Installing a Swing EDT (Event Dispatch Thread) - Hang Monitor, which will write information about long running EDT operations to the " + Version.getAppName() + " log.");
 			EventDispatchThreadHangMonitor.initMonitoring();
 //			RepaintManager.setCurrentManager(new CheckThreadViolationRepaintManager());
 		}
@@ -1230,19 +1230,19 @@ public class QueryWindow
 		}
 		if (winType == WindowType.JFRAME)
 		{
-			_titlePrefix = Version.getAppName()+" Query";
+			_titlePrefix = Version.getAppName() + " Query";
 			_jframe  = new JFrame(_titlePrefix);
 			_window  = _jframe;
 		}
 		if (winType == WindowType.JDIALOG)
 		{
-			_titlePrefix = Version.getAppName()+" Query";
+			_titlePrefix = Version.getAppName() + " Query";
 			_jdialog = new JDialog((Dialog)null, _titlePrefix);
 			_window  = _jdialog;
 		}
 		if (winType == WindowType.JDIALOG_MODAL)
 		{
-			_titlePrefix = Version.getAppName()+" Query";
+			_titlePrefix = Version.getAppName() + " Query";
 			_jdialog = new JDialog((Dialog)null, _titlePrefix, true);
 			_window  = _jdialog;
 		}
@@ -1406,7 +1406,7 @@ public class QueryWindow
 				@Override
 				public void propertyChange(PropertyChangeEvent evt)
 				{
-					int divloc = StringUtil.parseInt( evt.getNewValue()+"", -1);
+					int divloc = StringUtil.parseInt( evt.getNewValue() + "", -1);
 					if (_splitPane_chk.isSelected())
 						_splitPaneDivLastHorLoc = divloc;
 					else
@@ -1831,7 +1831,7 @@ public class QueryWindow
 			"<html>" +
 			"Save current working file before sending SQL to server<br>" +
 			"<b>Note</b>: If no file is assigned (only temporary text), then do <b>not</b> save.<br>" +
-			"<b>Usage</b>: For example if you share a file between two or more "+Version.getAppName()+" instances, then you want the other instance to reload any changes you make. This so you don't have conflicting edits in the different editors.<br>" +
+			"<b>Usage</b>: For example if you share a file between two or more " + Version.getAppName() + " instances, then you want the other instance to reload any changes you make. This so you don't have conflicting edits in the different editors.<br>" +
 			"</html>");
 		
 		_fRestoreUntitled_mi.setToolTipText(
@@ -1984,13 +1984,13 @@ public class QueryWindow
 				"<b>NOTE</b> If the above SqlPlus simulation logic doesn't work...<br>" +
 				"Just <b>disable</b> this option and use 'go' to send the statement. <br>" +
 				"</td> " +
-				"</tr>" +// END complex row
+				"</tr>" + // END complex row
 				"</table>" +
 				"</html>");
 		_enableDbmsOutput_chk.setToolTipText(
 				"<html>" +
 				"Enable DBMS OUTPUT trace statements to be received at the client.<br>" +
-				"At start we will execute: <code>dbms_output.enable("+ Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_enableDbmsInitSize, DEFAULT_enableDbmsInitSize) +")</code><br>" +
+				"At start we will execute: <code>dbms_output.enable(" + Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_enableDbmsInitSize, DEFAULT_enableDbmsInitSize) + ")</code><br>" +
 				"For each SQL 'batch' sent, we will execute: <code>dbms_output.get_line</code><br>" +
 				"</html>");
 		_appendResults_chk.setToolTipText(
@@ -2554,7 +2554,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 				File f = new File(inputFile);
 				if ( ! f.exists() )
 				{
-					SwingUtils.showInfoMessage("File doesn't exists", "The input file '"+inputFile+"' doesn't exists.");
+					SwingUtils.showInfoMessage("File doesn't exists", "The input file '" + inputFile + "' doesn't exists.");
 				}
 				else
 				{
@@ -2643,7 +2643,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 					}
 					
 					int answer = JOptionPane.showOptionDialog(_window, 
-							"The File '"+f+"' has not been saved.",
+							"The File '" + f + "' has not been saved.",
 							"Save file?", 
 							JOptionPane.DEFAULT_OPTION,
 							JOptionPane.QUESTION_MESSAGE,
@@ -2901,7 +2901,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		_getObjectTextOnError_chk   .setSelected( conf.getBooleanProperty(PROPKEY_getObjectTextOnError,                            DEFAULT_getObjectTextOnError) );
 //		_jdbcAutoCommit_chk         .setSelected( conf.getBooleanProperty(PROPKEY_jdbcAutoCommit,                                  DEFAULT_jdbcAutoCommit) );
 //		_jdbcAutoCommit_chk         .setVisible(  conf.getBooleanProperty(PROPKEY_jdbcAutoCommitShow,                              DEFAULT_jdbcAutoCommitShow) );
-		_fetchSize_txt              .setText    ( conf.getProperty       (PROPKEY_jdbcFetchSize,                                   DEFAULT_jdbcFetchSize+"") );
+		_fetchSize_txt              .setText    ( conf.getProperty       (PROPKEY_jdbcFetchSize,                                   DEFAULT_jdbcFetchSize + "") );
 		_sendCommentsOnly_chk       .setSelected( conf.getBooleanProperty(PROPKEY_sendCommentsOnly,                                DEFAULT_sendCommentsOnly) );
 		_rsInTabs_chk               .setSelected( conf.getBooleanProperty(PROPKEY_rsInTabs,                                        DEFAULT_rsInTabs) );
 		_replaceFakeQuotedId_chk    .setSelected( conf.getBooleanProperty(PROPKEY_replaceFakeQuotedIdent,                          DEFAULT_replaceFakeQuotedIdent) );
@@ -2992,10 +2992,10 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		// or just simply save ScreenSize/ScreenPosition/divierLocation
 		if (saveWinPropsForConn)
 		{
-			conf.setLayoutProperty("QueryWindow."+srvKey+".size.width",                    _window.getSize().width);
-			conf.setLayoutProperty("QueryWindow."+srvKey+".size.height",                   _window.getSize().height);
-			conf.setLayoutProperty("QueryWindow."+srvKey+".splitPane.location.horizontal", _splitPaneDivLastHorLoc);
-			conf.setLayoutProperty("QueryWindow."+srvKey+".splitPane.location.vertical",   _splitPaneDivLastVerLoc);
+			conf.setLayoutProperty("QueryWindow." + srvKey + ".size.width",                    _window.getSize().width);
+			conf.setLayoutProperty("QueryWindow." + srvKey + ".size.height",                   _window.getSize().height);
+			conf.setLayoutProperty("QueryWindow." + srvKey + ".splitPane.location.horizontal", _splitPaneDivLastHorLoc);
+			conf.setLayoutProperty("QueryWindow." + srvKey + ".splitPane.location.vertical",   _splitPaneDivLastVerLoc);
 		}
 		else
 		{
@@ -3009,8 +3009,8 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		{
 			if (saveWinPropsForConn)
 			{
-				conf.setLayoutProperty("QueryWindow."+srvKey+".size.pos.x",  _window.getLocationOnScreen().x);
-				conf.setLayoutProperty("QueryWindow."+srvKey+".size.pos.y",  _window.getLocationOnScreen().y);
+				conf.setLayoutProperty("QueryWindow." + srvKey + ".size.pos.x",  _window.getLocationOnScreen().x);
+				conf.setLayoutProperty("QueryWindow." + srvKey + ".size.pos.y",  _window.getLocationOnScreen().y);
 			}
 			else
 			{
@@ -3053,19 +3053,19 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 
 		String spoStr = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_horizontalOrientation, DEFAULT_horizontalOrientation) ? "horizontal" : "vertical";
 
-		width   = conf.getLayoutProperty("QueryWindow."+srvStr+".size.width",                 width);
-		height  = conf.getLayoutProperty("QueryWindow."+srvStr+".size.height",                height);
-		winPosX = conf.getLayoutProperty("QueryWindow."+srvStr+".size.pos.x",                 winPosX);
-		winPosY = conf.getLayoutProperty("QueryWindow."+srvStr+".size.pos.y",                 winPosY);
-		divLoc  = conf.getLayoutProperty("QueryWindow."+srvStr+".splitPane.location."+spoStr, divLoc);
+		width   = conf.getLayoutProperty("QueryWindow." + srvStr + ".size.width",                 width);
+		height  = conf.getLayoutProperty("QueryWindow." + srvStr + ".size.height",                height);
+		winPosX = conf.getLayoutProperty("QueryWindow." + srvStr + ".size.pos.x",                 winPosX);
+		winPosY = conf.getLayoutProperty("QueryWindow." + srvStr + ".size.pos.y",                 winPosY);
+		divLoc  = conf.getLayoutProperty("QueryWindow." + srvStr + ".splitPane.location." + spoStr, divLoc);
 
 		if (width == -1 && height == -1 && winPosX == -1 && winPosY == -1 && divLoc == -1)
 		{
-			_logger.info("Trying to load window location and size for the connection named '"+srvStr+"', but no window properties was found for that connection.");
+			_logger.info("Trying to load window location and size for the connection named '" + srvStr + "', but no window properties was found for that connection.");
 			return;
 		}
 
-		_logger.info("Loading window location and size for the connection named '"+srvStr+"'. (width="+width+", height="+height+", winPosX="+winPosX+", winPosY="+winPosY+", divLoc="+divLoc+")");
+		_logger.info("Loading window location and size for the connection named '" + srvStr + "'. (width=" + width + ", height=" + height + ", winPosX=" + winPosX + ", winPosY=" + winPosY + ", divLoc=" + divLoc + ")");
 
 		// Set size
 		if (width != -1 && height != -1)
@@ -3075,7 +3075,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		if (winPosX != -1 && winPosY != -1)
 		{
     		if ( SwingUtils.isOutOfScreen(winPosX, winPosY, width, height) )
-    			_logger.info("When loading window location and size for the connection named '"+srvStr+"', some values was 'out-of-screen-position'. Skipping X & Y positioning. (width="+width+", height="+height+", winPosX="+winPosX+", winPosY="+winPosY+", divLoc="+divLoc+")");
+    			_logger.info("When loading window location and size for the connection named '" + srvStr + "', some values was 'out-of-screen-position'. Skipping X & Y positioning. (width=" + width + ", height=" + height + ", winPosX=" + winPosX + ", winPosY=" + winPosY + ", divLoc=" + divLoc + ")");
     		{
     			_logger.debug("Open main window in last known position.");
     			_window.setLocation(winPosX, winPosY);
@@ -3179,8 +3179,8 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 						"<html>" +
 						"Connection to the server was lost!<br>" +
 						"<br>" +
-						"Do you want to reconnect to server '"+srvName+"', as user '"+userName+"'<br>" +
-						"I will Also <b>try</b> to restore the database context to '"+dbname+"'<br>" +
+						"Do you want to reconnect to server '" + srvName + "', as user '" + userName + "'<br>" +
+						"I will Also <b>try</b> to restore the database context to '" + dbname + "'<br>" +
 						"<br>" +
 						"Please note that all settings which you have made by various 'set some_option value' will be lost. <br>" +
 						"</html>";
@@ -3240,7 +3240,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		Object source    = e.getSource();
 		String actionCmd = e.getActionCommand();
 
-		_logger.debug("ACTION '"+actionCmd+"'.");
+		_logger.debug("ACTION '" + actionCmd + "'.");
 
 		if (ACTION_CONNECT.equals(actionCmd))
 			action_connect(e);
@@ -3530,8 +3530,8 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		}
 		else
 		{
-			_logger.error("Unknown connection type '"+connType+"' in getServernameToDisplayInTitle(connType)");
-			return "unknownConnType("+connType+")";
+			_logger.error("Unknown connection type '" + connType + "' in getServernameToDisplayInTitle(connType)");
+			return "unknownConnType(" + connType + ")";
 		}
 	}
 	/**
@@ -3737,7 +3737,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		}
 		else
 		{
-			_logger.error("Unknown connection type '"+connType+"' in setVariousInfoAfterConnect(connType)");
+			_logger.error("Unknown connection type '" + connType + "' in setVariousInfoAfterConnect(connType)");
 		}
 	}
 	
@@ -3851,14 +3851,14 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 
 					SqlUtils.setPrettyPrintDatabaseProductName(_connectedToProductName);
 					
-					_logger.info("Connected to DatabaseProductName='"+_connectedToProductName+"', DatabaseProductVersion='"+_connectedToProductVersion+"', srvVersionNum="+_srvVersion+" ("+Ver.versionNumToStr(_srvVersion, _connectedToProductName)+"), DatabaseServerName='"+_connectedToServerName+"', InitialCatalog='"+_connectedInitialCatalog+"' with Username='"+_connectedAsUser+"', toURL='"+_connectedWithUrl+"', using Driver='"+_connectedDriverName+"', DriverVersion='"+_connectedDriverVersion+"'.");
+					_logger.info("Connected to DatabaseProductName='" + _connectedToProductName + "', DatabaseProductVersion='" + _connectedToProductVersion + "', srvVersionNum=" + _srvVersion + " (" + Ver.versionNumToStr(_srvVersion, _connectedToProductName) + "), DatabaseServerName='" + _connectedToServerName + "', InitialCatalog='" + _connectedInitialCatalog + "' with Username='" + _connectedAsUser + "', toURL='" + _connectedWithUrl + "', using Driver='" + _connectedDriverName + "', DriverVersion='" + _connectedDriverVersion + "'.");
 				} 
 				catch (Throwable ex) 
 				{
 					if (_logger.isDebugEnabled())
-						_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: "+ex, ex);
+						_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: " + ex, ex);
 					else
-						_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: "+ex);
+						_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: " + ex);
 				}
 				
 				return null;
@@ -3970,14 +3970,14 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 
 					SqlUtils.setPrettyPrintDatabaseProductName(_connectedToProductName);
 					
-					_logger.info("Connected to DatabaseProductName='"+_connectedToProductName+"', DatabaseProductVersion='"+_connectedToProductVersion+"', srvVersionNum="+_srvVersion+" ("+Ver.versionNumToStr(_srvVersion, _connectedToProductName)+"), DatabaseServerName='"+_connectedToServerName+"', InitialCatalog='"+_connectedInitialCatalog+"' with Username='"+_connectedAsUser+"', toURL='"+_connectedWithUrl+"', using Driver='"+_connectedDriverName+"', DriverVersion='"+_connectedDriverVersion+"'.");
+					_logger.info("Connected to DatabaseProductName='" + _connectedToProductName + "', DatabaseProductVersion='" + _connectedToProductVersion + "', srvVersionNum=" + _srvVersion + " (" + Ver.versionNumToStr(_srvVersion, _connectedToProductName) + "), DatabaseServerName='" + _connectedToServerName + "', InitialCatalog='" + _connectedInitialCatalog + "' with Username='" + _connectedAsUser + "', toURL='" + _connectedWithUrl + "', using Driver='" + _connectedDriverName + "', DriverVersion='" + _connectedDriverVersion + "'.");
 				} 
 				catch (Throwable ex) 
 				{
 					if (_logger.isDebugEnabled())
-						_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: "+ex, ex);
+						_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: " + ex, ex);
 					else
-						_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: "+ex);
+						_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: " + ex);
 				}
 
 
@@ -4046,14 +4046,14 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 								try
 								{
 									sql = "set flushmessage on";
-									_logger.info("On connect executing sql: "+sql);
+									_logger.info("On connect executing sql: " + sql);
 									Statement stmnt = _conn.createStatement();
 									stmnt.executeUpdate(sql);
 									stmnt.close();
 								}
 								catch(SQLException ex)
 								{
-									_logger.warn("During connect tried to execute sql '"+sql+"', Skipping the and continuing... caught: "+ex);
+									_logger.warn("During connect tried to execute sql '" + sql + "', Skipping the and continuing... caught: " + ex);
 								}
 
 								// Check ASE Grace Period
@@ -4127,7 +4127,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 								// Setting this property will make it to NOT print error messages...
 								System.setProperty(ResultSetMetaDataCached.PROPKEY_SYSTEM_onException_skipMethodsCsv, "isCaseSensitive, isSearchable, getColumnTypeName");
 
-								_logger.info("Connected to Replication Server version '"+_srvVersion+"'.");
+								_logger.info("Connected to Replication Server version '" + _srvVersion + "'.");
 							}
 							else if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_RAX))
 							{
@@ -4169,7 +4169,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 									resultCompList2.add(0, new JAseMessage("Messages below was received when connecting to Replication Agent\n----------------------------------------------------------------------------------------------", "connect"));
 								addToResultsetPanel(resultCompList2, false, false, false, null);
 
-								_logger.info("Connected to Replication Agent X version '"+_srvVersion+"'.");
+								_logger.info("Connected to Replication Agent X version '" + _srvVersion + "'.");
 							}
 							else if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_ASA))
 							{
@@ -4190,7 +4190,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 //								_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
 //								_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
 								
-								_logger.info("Connected to SQL Anywhere version '"+_srvVersion+"'.");
+								_logger.info("Connected to SQL Anywhere version '" + _srvVersion + "'.");
 							}
 							else if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_IQ))
 							{
@@ -4211,7 +4211,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 //								_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
 //								_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
 								
-								_logger.info("Connected to Sybase IQ version '"+_srvVersion+"'.");
+								_logger.info("Connected to Sybase IQ version '" + _srvVersion + "'.");
 							}
 							else
 							{
@@ -4222,7 +4222,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 								_tooltipProviderAbstract     = new ToolTipSupplierJdbc(_window, _compleationProviderAbstract, connProvider);
 								_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 
-								_logger.info("Connected to 'other' Sybase TDS server with product name'"+_connectedToProductName+"'.");
+								_logger.info("Connected to 'other' Sybase TDS server with product name'" + _connectedToProductName + "'.");
 							}
 
 							_setAseOptions_but.setComponentPopupMenu( createSetAseOptionButtonPopupMenu(_srvVersion) );
@@ -5213,7 +5213,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 
 			int winPosX = _window.getLocationOnScreen().x;
 			int winPosY = _window.getLocationOnScreen().y;
-			String propPropEntryStr = "WinProps={x="+winPosX+", y="+winPosY+"}"; // see PropPropEntry
+			String propPropEntryStr = "WinProps={x=" + winPosX + ", y=" + winPosY + "}"; // see PropPropEntry
 
 			ProcessBuilder pb = new ProcessBuilder(cmdLineParams);
 			Map<String, String> env = pb.environment();
@@ -5253,9 +5253,9 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		}
 		catch (IOException ex)
 		{
-			SwingUtils.showErrorMessage(_window, "Problems starting new "+Version.getAppName(), 
+			SwingUtils.showErrorMessage(_window, "Problems starting new " + Version.getAppName(), 
 				"<html>" +
-				"<h2>Problems starting a new "+Version.getAppName()+"</h2>" +
+				"<h2>Problems starting a new " + Version.getAppName() + "</h2>" +
 				"OS Start Directory: " + SQLW_HOME + "<br>" +
 				"OS Command Array: " + cmdLineParams +  "<br>" +
 				"</html>", ex);
@@ -5278,7 +5278,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 			
 			Object[] buttons = {"Save File", "Save As new file", "Discard changes", "Cancel"};
 			int answer = JOptionPane.showOptionDialog(_window, 
-					"The File '"+f+"' has not been saved.",
+					"The File '" + f + "' has not been saved.",
 					"Save file?", 
 					JOptionPane.DEFAULT_OPTION,
 					JOptionPane.QUESTION_MESSAGE,
@@ -5379,7 +5379,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 			
 			Object[] buttons = {"Save File", "Save As new file", "Discard changes", "Cancel"};
 			int answer = JOptionPane.showOptionDialog(_window, 
-					"The File '"+f+"' has not been saved.",
+					"The File '" + f + "' has not been saved.",
 					"Save file?", 
 					JOptionPane.DEFAULT_OPTION,
 					JOptionPane.QUESTION_MESSAGE,
@@ -5652,8 +5652,8 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		if (overwriteQuestion && saveDiffInMs > 100) // f.lastModified() > _untitledFileLastModified ... didn't work, it always differed a few milliseconds
 		{
 			String htmlMsg = "<html>"
-				+ "Another application (<i>possible another SQL Window</i>) has updated the file <code>"+fileName+"</code><br>"
-				+ "The file was last saved "+TimeUtils.msToTimeStr(saveDiffInMs)+" ago (format HH:MM:SS.ms).<br>"
+				+ "Another application (<i>possible another SQL Window</i>) has updated the file <code>" + fileName + "</code><br>"
+				+ "The file was last saved " + TimeUtils.msToTimeStr(saveDiffInMs) + " ago (format HH:MM:SS.ms).<br>"
 				+ "<br>"
 				+ "If you save it you will overwrite the changes made by the other application.<br>"
 				+ "<b>Note:</b> 'Always Overwrite (this session)' is reseted when the application is restarted.<br>"
@@ -5724,7 +5724,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		}
 		catch (IOException ex)
 		{
-			_logger.warn("Trying to save untiltled file to '"+fileName+"', no worries, just continuing... Note: The file can be changed using property '"+PROPKEY_untitledFileName+"', set property '"+PROPKEY_saveUntitledFile+"' to 'false' to disable this functionality.. Caught: "+ex);
+			_logger.warn("Trying to save untiltled file to '" + fileName + "', no worries, just continuing... Note: The file can be changed using property '" + PROPKEY_untitledFileName + "', set property '" + PROPKEY_saveUntitledFile + "' to 'false' to disable this functionality.. Caught: " + ex);
 		}
 	}
 
@@ -5882,7 +5882,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 			if ( ! defaultSaveAsDir.exists() )
 			{
 				if (defaultSaveAsDir.mkdir())
-					_logger.info("Creating directory '"+defaultSaveAsDir+"' to hold various files for "+Version.getAppName());
+					_logger.info("Creating directory '" + defaultSaveAsDir + "' to hold various files for " + Version.getAppName());
 			}
 			currentFilePath = defaultSaveAsDir;
 		}
@@ -5912,7 +5912,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 			// or not they want to overwrite it.
 			if (file.exists()) 
 			{
-				int answer = JOptionPane.showConfirmDialog(_window, "The File '"+file.getName()+"' Already Exists", "File Already Exists", JOptionPane.YES_NO_OPTION);
+				int answer = JOptionPane.showConfirmDialog(_window, "The File '" + file.getName() + "' Already Exists", "File Already Exists", JOptionPane.YES_NO_OPTION);
 				if (answer != JOptionPane.YES_OPTION) 
 				{
 					return;
@@ -6053,7 +6053,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 				}
 				catch(SQLException ex) 
 				{
-					_logger.info("Initialization of the DBMS Configuration did not succeed. Caught: "+ex); 
+					_logger.info("Initialization of the DBMS Configuration did not succeed. Caught: " + ex); 
 				}
 				getWaitDialog().setState("Done");
 
@@ -6308,7 +6308,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 			// NOT supported in ASE versions below 15.0.2
 			String htmlMsg = 
 				"<html>" +
-				"  <h2>Sorry this functionality is not available in ASE "+Ver.versionNumToStr(srvVersionNum)+"</h2>" +
+				"  <h2>Sorry this functionality is not available in ASE " + Ver.versionNumToStr(srvVersionNum) + "</h2>" +
 				"  Application Tracing is introduced in ASE 15.0.2" +
 				"</html>";
 			SwingUtils.showInfoMessage(_window, "Not supported for this ASE Version", htmlMsg);
@@ -6403,13 +6403,13 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 					ddlgen = DdlGen.create(getConnection());
 					ddlgen.setDefaultDbname(dbname);
 
-					getWaitDialog().setState("<html>Generating DDL Objects...: <br><code>"+(ddlgen==null?"null":ddlgen.getCommandForType(Type.DB, dbname))+"</code></html>");
+					getWaitDialog().setState("<html>Generating DDL Objects...: <br><code>" + (ddlgen==null?"null":ddlgen.getCommandForType(Type.DB, dbname)) + "</code></html>");
 					return ddlgen.getDdlForDb(dbname);
 				}
 				catch (Throwable ex)
 				{
-					_logger.warn("Problems when generating DDL Statements for dbname "+dbname+", args="+(ddlgen==null?"null":ddlgen.getUsedCommand()), ex);
-					SwingUtils.showErrorMessage(_window, "Problems generating DDL", "Problems when generating DDL Statements for dbname "+dbname+"\nargs="+(ddlgen==null?"null":ddlgen.getUsedCommand()), ex);
+					_logger.warn("Problems when generating DDL Statements for dbname " + dbname + ", args=" + (ddlgen==null?"null":ddlgen.getUsedCommand()), ex);
+					SwingUtils.showErrorMessage(_window, "Problems generating DDL", "Problems when generating DDL Statements for dbname " + dbname + "\nargs=" + (ddlgen==null?"null":ddlgen.getUsedCommand()), ex);
 				}
 
 				getWaitDialog().setState("Done");
@@ -6686,7 +6686,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 			{
 				JTabbedPane tp = (JTabbedPane) comp;
 				_lastTabIndex = tp.getSelectedIndex();
-				_logger.trace("Save last tab index pos as "+_lastTabIndex+", tp="+tp);
+				_logger.trace("Save last tab index pos as " + _lastTabIndex + ", tp=" + tp);
 			}
 		}
 
@@ -6773,7 +6773,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		height  = conf.getLayoutProperty("QueryWindow.size.height",                height);
 		winPosX = conf.getLayoutProperty("QueryWindow.size.pos.x",                 winPosX);
 		winPosY = conf.getLayoutProperty("QueryWindow.size.pos.y",                 winPosY);
-		divLoc  = conf.getLayoutProperty("QueryWindow.splitPane.location."+spoStr, divLoc);
+		divLoc  = conf.getLayoutProperty("QueryWindow.splitPane.location." + spoStr, divLoc);
 
 		_splitPaneDivLastHorLoc  = conf.getLayoutProperty("QueryWindow.splitPane.location.horizontal", -1);
 		_splitPaneDivLastVerLoc  = conf.getLayoutProperty("QueryWindow.splitPane.location.vertical",   -1);
@@ -6803,7 +6803,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		if (System.getenv("SQLW_CLONE_CONNECT_PROPS") != null)
 		{
 			String propPropStr = System.getenv("SQLW_CLONE_CONNECT_PROPS");
-			_logger.info("SQLW_CLONE_CONNECT_PROPS was passed with the values: "+propPropStr);
+			_logger.info("SQLW_CLONE_CONNECT_PROPS was passed with the values: " + propPropStr);
 			
 			PropPropEntry ppe = new PropPropEntry(propPropStr);
 			winPosX = ppe.getIntProperty("WinProps", "x", winPosX);
@@ -7083,7 +7083,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 //			if (cm != null && cm.getGuiController() != null)
 //				cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "get conn to db '"+dbname+"'");
 			
-			_logger.info("Reusing a Connection for db '"+dbname+"', which was cached in a connection pool.");
+			_logger.info("Reusing a Connection for db '" + dbname + "', which was cached in a connection pool.");
 			return _connPoolMap.getPool(dbname).getConnection(guiOwner);
 		}
 
@@ -7098,7 +7098,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		// Set the new database name
 		String url = connProp.getUrl();
 		JdbcUrlParser p = JdbcUrlParser.parse(url); 
-		p.setPath("/"+dbname); // set the new database name
+		p.setPath("/" + dbname); // set the new database name
 
 		url = p.toUrl();
 		connProp.setUrl(url);
@@ -7114,7 +7114,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		// grab a new connection.
 		DbxConnection dbConn = cp.getConnection(guiOwner);
 
-		_logger.info("Created a new Connection for db '"+dbname+"', which will be cached in a connection pool. with maxSize=5, url='"+url+"', connProp="+connProp);
+		_logger.info("Created a new Connection for db '" + dbname + "', which will be cached in a connection pool. with maxSize=5, url='" + url + "', connProp=" + connProp);
 		
 		// when first connection is successful, add the connection pool to the MAP
 		_connPoolMap.setPool(dbname, cp);
@@ -7143,7 +7143,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 			catch(SQLException ignore) {}
 		}
 
-		_logger.info("releaseConnectionToPool(): dbname='"+dbname+"'.");
+		_logger.info("releaseConnectionToPool(): dbname='" + dbname + "'.");
 		
 		if (_connPoolMap.hasMapping(dbname))
 		{
@@ -7153,7 +7153,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 		{
 			ConnectionProp connProp = dbConn.getConnProp();
 			if (connProp == null)
-				throw new RuntimeException("No ConnectionProperty object could be found at the connection passed to releaseConnectionToPool(dbname='"+dbname+"').");
+				throw new RuntimeException("No ConnectionProperty object could be found at the connection passed to releaseConnectionToPool(dbname='" + dbname + "').");
 			
 			// The connection pool did not exists, create a pool and add it to that 
 			// Create a new connection pool for this DB
@@ -7207,7 +7207,7 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 				
 				if (cp == null)
 				{
-					SwingUtils.showErrorMessage(_window, "Connect", "Connection Profile '"+profileName+"' was not found.", null);;
+					SwingUtils.showErrorMessage(_window, "Connect", "Connection Profile '" + profileName + "' was not found.", null);;
 					//throw new SQLException("Connection Profile '"+profileName+"' was not found.");
 					return;
 				}
@@ -7321,8 +7321,8 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 					String vendorName = _conn.getDatabaseProductName();
 					String htmlMsg = "<html>"
 							+ "<h2>Changing database <i>is not really</i> supported by " + vendorName + "</h2>"
-							+ "Changing database context is <i>emulated</i> by creating a new connection to the database/catalog '"+dbname+"'.<br>"
-							+ "<i>note: The connection will be reused when/if changing back to previous '"+currentCatalog+"' database.</i><br>"
+							+ "Changing database context is <i>emulated</i> by creating a new connection to the database/catalog '" + dbname + "'.<br>"
+							+ "<i>note: The connection will be reused when/if changing back to previous '" + currentCatalog + "' database.</i><br>"
 							+ "<br>"
 							+ "This is <b>important to keep in mind</b>, when thinking about <b>transaction scope!</b><br>"
 							+ "The <b>connection id</b> is displayed in the status bar (at the bottom of the window).<br>"
@@ -7389,7 +7389,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 			// CHECK that we actually succeeded in changing database.
 			String newCurrentCatalog = _conn.getCatalog();
 			if ( ! dbname.equals(newCurrentCatalog) )
-				throw new SQLException("Change Catalog/Database request did not succeed. Requested='"+dbname+"', Current='"+newCurrentCatalog+"'.");
+				throw new SQLException("Change Catalog/Database request did not succeed. Requested='" + dbname + "', Current='" + newCurrentCatalog + "'.");
 
 			return true;
 		}
@@ -7399,7 +7399,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 			JOptionPane.showMessageDialog(
 //					QueryWindow.this, 
 					_window, 
-					"Error Number: "+e.getErrorCode()+"\n" + e.getMessage(),
+					"Error Number: " + e.getErrorCode() + "\n" + e.getMessage(),
 					"Error", JOptionPane.ERROR_MESSAGE);
 			getCurrentDb();
 			//e.printStackTrace();
@@ -7434,7 +7434,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 //					QueryWindow.this, 
 					_window, 
 					"Problems getting current Working Database:\n" +
-					"Error Number: "+e.getErrorCode()+"\n" + e.getMessage(),
+					"Error Number: " + e.getErrorCode() + "\n" + e.getMessage(),
 					"Error", JOptionPane.ERROR_MESSAGE);
 			return null;
 		}
@@ -7491,7 +7491,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 			throw new SQLException("No databases available.");
 
 		if ( ! _dbnames_cbx.contains(dbname) )
-			throw new SQLException("Database '"+dbname+"' isn't available.");
+			throw new SQLException("Database '" + dbname + "' isn't available.");
 
 		_dbnames_cbx.setSelectedItem(dbname);
 	}
@@ -7871,7 +7871,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 			@Override
 			public void menuSelected(MenuEvent e)
 			{
-				System.out.println("menuSelected(): e="+e);
+				System.out.println("menuSelected(): e=" + e);
 
 				JMenu menu = (JMenu)e.getSource();
 //				if (menu.getItemCount() > 0)
@@ -8272,7 +8272,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 			String dateTimeNowStr = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
 			String appenModeStr   = 
 				"#######################################################\n" +
-				"## "+dateTimeNowStr+" - Append Mode is ON.\n" +
+				"## " + dateTimeNowStr + " - Append Mode is ON.\n" +
 				"#######################################################";
 
 			if (_asPlainText_chk.isSelected())
@@ -8470,7 +8470,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 			_resPanelTextScroll.setVisible(true);
 			_resTabbedPane     .setVisible(false);
 
-			_logger.trace("NO RS: "+ ( _resultCompList != null ? _resultCompList.size() : -1 ));
+			_logger.trace("NO RS: " + ( _resultCompList != null ? _resultCompList.size() : -1 ));
 
 			RSyntaxTextAreaX out = new RSyntaxTextAreaX();
 			RSyntaxUtilitiesX.installRightClickMenuExtentions(out, _resPanelTextScroll, _window);
@@ -8816,7 +8816,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 						}
 					}
 					scriptRow = startRowInSelection + batchStartRow + lineNumber + lineNumberAdjust;
-					String scriptRowStr = (batchStartRow >= 0 ? " ("+extraDesc+"script row "+scriptRow+")" : "");
+					String scriptRowStr = (batchStartRow >= 0 ? " (" + extraDesc + "script row " + scriptRow + ")" : "");
 
 					sb.append( (firstOnLine ? "" : ", ") + "Line " + ceedi.getLineNumber() + scriptRowStr);
 					if (ceedi.supportsEedParams()) sb.append(", Status "    + ceedi.getStatus());
@@ -8836,7 +8836,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 				if (msg.endsWith("\n"))
 					sb.append(msg);
 				else
-					sb.append(msg+"\n");
+					sb.append(msg + "\n");
 
 			} // end: hasEedInfo()
 			else
@@ -8878,7 +8878,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 						else
 						{
 							String msg = "SQL-Warning: " +
-									_connectedToProductName + ": ErrorCode "+sqe.getErrorCode()+", SQLState "+sqe.getSQLState()+", WarningClass: " + sqe.getClass().getName() + "\n"
+									_connectedToProductName + ": ErrorCode " + sqe.getErrorCode() + ", SQLState " + sqe.getSQLState() + ", WarningClass: " + sqe.getClass().getName() + "\n"
 									+ sqe.getMessage();
 							sb.append(msg);
 						}
@@ -8886,7 +8886,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 					else
 					{
 						String msg = "Unexpected SQL-Exception: " +
-								_connectedToProductName + ": ErrorCode "+sqe.getErrorCode()+", SQLState "+sqe.getSQLState()+", ExceptionClass: " + sqe.getClass().getName() + "\n"
+								_connectedToProductName + ": ErrorCode " + sqe.getErrorCode() + ", SQLState " + sqe.getSQLState() + ", ExceptionClass: " + sqe.getClass().getName() + "\n"
 								+ sqe.getMessage();
 						sb.append(msg);
 					}
@@ -8937,7 +8937,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 //							boolean aMatch = line.matches(regexpStr);
 							boolean aMatch = Pattern.compile(grep.getConfig()).matcher(line).find();
 //							System.out.println(">>>>> aMatch="+aMatch+", isOptV="+grep.isOptV()+", regexp='"+regexpStr+"'.");
-							System.out.println(">>>>> aMatch="+aMatch+", isOptV="+grep.isOptV()+", regexp='"+grep.getConfig()+"'.");
+							System.out.println(">>>>> aMatch=" + aMatch + ", isOptV=" + grep.isOptV() + ", regexp='" + grep.getConfig() + "'.");
 							if (grep.isOptV())
 								aMatch = !aMatch;
 							if (aMatch)
@@ -8959,7 +8959,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 					if ( grep.isOptX() )
 					{
 //						if (msgNum > 20000 && msgSeverity == 16)
-							aseMsg = "Msg "+msgNum+": " + msgText;
+							aseMsg = "Msg " + msgNum + ": " + msgText;
 					}
 				}
 
@@ -8967,7 +8967,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 				resultCompList.add( new JAseMessage(aseMsg, msgNum, msgText, msgSeverity, scriptRow, currentSql, objectText, _query_txt) );
 
 				if (_logger.isTraceEnabled())
-					_logger.trace("ASE Msg("+debugStr+"): "+aseMsg);
+					_logger.trace("ASE Msg(" + debugStr + "): " + aseMsg);
 			}
 
 			sqe = sqe.getNextException();
@@ -9078,7 +9078,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 						if (sqle.getErrorCode() == 32)
 						{
 							if (_logger.isDebugEnabled())
-								_logger.debug("Discarding RepServer Message: "+ AseConnectionUtils.sqlExceptionToString(sqle));
+								_logger.debug("Discarding RepServer Message: " + AseConnectionUtils.sqlExceptionToString(sqle));
 							return null;
 						}
 					}
@@ -9219,7 +9219,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 				}
 				catch(Throwable t)
 				{
-					_logger.warn("Problem trying to figgure out if this is a 'comment only' batch. Just skipping this and continuing... Caught="+t);
+					_logger.warn("Problem trying to figgure out if this is a 'comment only' batch. Just skipping this and continuing... Caught=" + t);
 				}
 				
 				// Replace FAKE Quoted Identifiers '[' and ']' with DBMS Vendor specific chars 
@@ -9234,7 +9234,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 					sql = sql.replace("\\n", "\n");
 				}
 
-				progress.setState("Sending SQL to server for statement " + (sr.getSqlBatchNumber()+1) + " of "+batchCount+", starting at row "+(sr.getSqlBatchStartLine()+1) );
+				progress.setState("Sending SQL to server for statement " + (sr.getSqlBatchNumber()+1) + " of " + batchCount + ", starting at row " + (sr.getSqlBatchStartLine()+1) );
 
 				sr_goTabbedPane = sr.hasOption_asTabbedPane();
 				sr_goPlaneText  = sr.hasOption_asPlainText();
@@ -9297,7 +9297,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 						} 
 						catch(SQLException ex) 
 						{
-							putSqlWarningMsgs(ex, _resultCompList, null, "foreachdb="+tmpDbname, sr.getSqlBatchStartLine(), startRowInSelection, sql);
+							putSqlWarningMsgs(ex, _resultCompList, null, "foreachdb=" + tmpDbname, sr.getSqlBatchStartLine(), startRowInSelection, sql);
 							continue;
 						}
     
@@ -9397,8 +9397,8 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 								{
 									incRsCount();
 									rsCount++;
-									_statusBar.setMsg("Reading resultset "+rsCount+".");
-									progress.setState("Reading resultset "+rsCount+".");
+									_statusBar.setMsg("Reading resultset " + rsCount + ".");
+									progress.setState("Reading resultset " + rsCount + ".");
 				
 									// Get next ResultSet to work with
 									ResultSet rs = stmnt.getResultSet();
@@ -9425,7 +9425,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 										
 										if ( ! keepRs )
 										{
-											_resultCompList.add( new JAseMessage("SKIPPING ResultSet number "+rsCount+" due to: keepList="+keepRsList+", skipList="+skipRsList, sql) );
+											_resultCompList.add( new JAseMessage("SKIPPING ResultSet number " + rsCount + " due to: keepList=" + keepRsList + ", skipList=" + skipRsList, sql) );
 											while(rs.next())
 												; // Just Read every row in the RS to "clear" it...
 											rs.close();
@@ -9742,7 +9742,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 									if (rowsAffected >= 0)
 									{
 	    								incIudRowsCount(rowsAffected);
-										_logger.debug("---- DDL or DML (statement with no-resultset) Rowcount: "+rowsAffected);
+										_logger.debug("---- DDL or DML (statement with no-resultset) Rowcount: " + rowsAffected);
 
 										if (_showRowCount_chk.isSelected() || sr.hasOption_rowCount() || sr.hasOption_noData())
 											_resultCompList.add( new JAseRowCount(rowsAffected, sql) );
@@ -9765,7 +9765,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 								putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-rs.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
 
 								if (_logger.isTraceEnabled())
-									_logger.trace( "--loopCount="+loopCount+", hasRs="+hasRs+", rowsAffected="+rowsAffected+", "+((hasRs || rowsAffected != -1) ? "continue-to-loop" : "<<< EXIT LOOP <<<") );
+									_logger.trace( "--loopCount=" + loopCount + ", hasRs=" + hasRs + ", rowsAffected=" + rowsAffected + ", " + ((hasRs || rowsAffected != -1) ? "continue-to-loop" : "<<< EXIT LOOP <<<") );
 							}
 							while (hasRs || rowsAffected != -1);
 				
@@ -9840,7 +9840,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 							}
 
 							// If something goes wrong, clear the message line
-							_statusBar.setMsg("Error: "+ex.getMessage());
+							_statusBar.setMsg("Error: " + ex.getMessage());
 
 							// when NOT using jConnect, I can't downgrade a SQLException to a SQLWarning
 							// so we will always end up here (for the moment)
@@ -10009,12 +10009,12 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 //		}
 		catch (IOException ex)
 		{
-			_logger.error("While reading the input SQL 'go' String, caught: "+ex, ex);
+			_logger.error("While reading the input SQL 'go' String, caught: " + ex, ex);
 			throw ex;
 		}
 		catch (PipeCommandException ex)
 		{
-			_logger.warn("Problems creating the 'go | pipeCommand'. Caught: "+ex, ex);
+			_logger.warn("Problems creating the 'go | pipeCommand'. Caught: " + ex, ex);
 			if (guiShowErrors)
 			{
 				SwingUtils.showWarnMessage("Problems creating PipeCommand", ex.getMessage(), ex);
@@ -10023,7 +10023,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 		}
 		catch (GoSyntaxException ex)
 		{
-			_logger.warn("Problems parsing the SQL Batch Terminator ('go'). Caught: "+ex, ex);
+			_logger.warn("Problems parsing the SQL Batch Terminator ('go'). Caught: " + ex, ex);
 			if (guiShowErrors)
 			{
 				String htmlMsg = "<html>" + ex.getMessage().replace("\n", "<br>") + "</html>";
@@ -10257,7 +10257,7 @@ checkPanelSize(_resPanel, comp);
 					else
 					{
 						if (_logger.isTraceEnabled())
-							_logger.trace("1-RS: JAseMessage: "+msg.getText());
+							_logger.trace("1-RS: JAseMessage: " + msg.getText());
 						_resPanel.add(msg, "gapy 1, growx, pushx");
 						parseAseMessage(msg, _resPanel, false);
 
@@ -10276,7 +10276,7 @@ checkPanelSize(_resPanel, comp);
 			}
 			closeStatisticsIoMessage(_resPanel, false);
 //			_msgline.setText(" "+rowCount+" rows, and "+msgCount+" messages.");
-			_statusBar.setMsg(" "+rowCount+" rows, and "+msgCount+" messages.");
+			_statusBar.setMsg(" " + rowCount + " rows, and " + msgCount + " messages.");
 		}
 		else if ( numOfTables > 1 || (numOfTables == 1 && asRsTabbedPane) )
 		{
@@ -10287,7 +10287,7 @@ checkPanelSize(_resPanel, comp);
 			int msgCount = 0;
 			int rowCount = 0;
 			if (_logger.isTraceEnabled())
-				_logger.trace("Several RS: "+compList.size());
+				_logger.trace("Several RS: " + compList.size());
 			
 			// AS TABBED PANEL
 			if (asRsTabbedPane)
@@ -10340,11 +10340,11 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 						JComponent p = createTablePanel(tableRs, true, jTableFilterText);
 
 //						tabPane.addTab("Result "+(i++), p);
-						final String titleName = "ResultSet "+(i++);
+						final String titleName = "ResultSet " + (i++);
 						_resTabbedPane.addTab(titleName, p);
 						
 						// Add "link" buttom in the MSG Panel
-						JButton viewRsButton = new JButton("View "+titleName);
+						JButton viewRsButton = new JButton("View " + titleName);
 						viewRsButton.addActionListener(new ActionListener()
 						{
 							@Override
@@ -10362,11 +10362,11 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 						JGraphResultSet graphRs = (JGraphResultSet)jcomp;
 						JComponent p = createGraphPanel(graphRs, true);
 
-						final String titleName = "ResultSet "+(i++);
+						final String titleName = "ResultSet " + (i++);
 						_resTabbedPane.addTab(titleName, p);
 						
 						// Add "link" buttom in the MSG Panel
-						JButton viewRsButton = new JButton("View "+titleName);
+						JButton viewRsButton = new JButton("View " + titleName);
 						viewRsButton.addActionListener(new ActionListener()
 						{
 							@Override
@@ -10383,11 +10383,11 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 					{
 						JPlainResultSet plainRs = (JPlainResultSet)jcomp;
 //						_resPanel.add(createPlainRsTextArea(plainRs), "gapy 1, growx, pushx");
-						final String titleName = "ResultSet "+(i++);
+						final String titleName = "ResultSet " + (i++);
 						_resTabbedPane.addTab(titleName, createPlainRsTextArea(plainRs));
 
 						// Add "link" buttom in the MSG Panel
-						JButton viewRsButton = new JButton("View "+titleName);
+						JButton viewRsButton = new JButton("View " + titleName);
 						viewRsButton.addActionListener(new ActionListener()
 						{
 							@Override
@@ -10417,7 +10417,7 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 						else
 						{
 							if (_logger.isTraceEnabled())
-								_logger.trace("1-RS: JAseMessage: "+msg.getText());
+								_logger.trace("1-RS: JAseMessage: " + msg.getText());
 //							_resPanel.add(msg, "gapy 1, growx, pushx");
 							msgPanel.add(msg, "gapy 1, growx, pushx");
 							parseAseMessage(msg, _resPanel, true);
@@ -10445,11 +10445,11 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 //						tabPane.setSelectedIndex(_lastTabIndex);
 						_resTabbedPane.setSelectedIndex(_lastTabIndex);
 						if (_logger.isTraceEnabled())
-							_logger.trace("Restore last tab index pos to "+_lastTabIndex);
+							_logger.trace("Restore last tab index pos to " + _lastTabIndex);
 					}
 				}
 //				_msgline.setText(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
-				_statusBar.setMsg(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
+				_statusBar.setMsg(" " + numOfTables + " ResultSet with totally " + rowCount + " rows, and " + msgCount + " messages.");
 				
 			} // end: (numOfTables > 1)
 			else // not as Tabbed Panel
@@ -10488,7 +10488,7 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 //						JPanel p = createTablePanel(tableRs);
 						JComponent p = createTablePanel(tableRs, false, jTableFilterText);
 
-						Border border = BorderFactory.createTitledBorder("ResultSet "+(i++));
+						Border border = BorderFactory.createTitledBorder("ResultSet " + (i++));
 						p.setBorder(border);
 
 						_resPanel.add(p, "");
@@ -10500,7 +10500,7 @@ checkPanelSize(_resPanel, p);
 						JGraphResultSet graphRs = (JGraphResultSet)jcomp;
 						JComponent p = createGraphPanel(graphRs, false);
 
-						Border border = BorderFactory.createTitledBorder("ResultSet "+(i++));
+						Border border = BorderFactory.createTitledBorder("ResultSet " + (i++));
 						p.setBorder(border);
 
 						_resPanel.add(p, "grow, push");
@@ -10531,7 +10531,7 @@ checkPanelSize(_resPanel, comp);
 						else
 						{
 							if (_logger.isTraceEnabled())
-								_logger.trace("1-RS: JAseMessage: "+msg.getText());
+								_logger.trace("1-RS: JAseMessage: " + msg.getText());
 							_resPanel.add(msg, "gapy 1, growx, pushx");
 							parseAseMessage(msg, _resPanel, false);
 
@@ -10550,7 +10550,7 @@ checkPanelSize(_resPanel, comp);
 				}
 				closeStatisticsIoMessage(_resPanel, false);
 //				_msgline.setText(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
-				_statusBar.setMsg(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
+				_statusBar.setMsg(" " + numOfTables + " ResultSet with totally " + rowCount + " rows, and " + msgCount + " messages.");
 			}
 		}
 		else // NO table output, only messages etc.
@@ -10564,7 +10564,7 @@ checkPanelSize(_resPanel, comp);
 				_resTabbedPane     .setVisible(false);
 
 				if (_logger.isTraceEnabled())
-					_logger.trace("NO RS: "+compList.size());
+					_logger.trace("NO RS: " + compList.size());
 
 				RSyntaxTextAreaX out = null;
 //				if ( _result_txt == null || ! _appendResults_chk.isSelected() )
@@ -10708,7 +10708,7 @@ checkPanelSize(_resPanel, comp);
 						else
 						{
 							if (_logger.isTraceEnabled())
-								_logger.trace("1-RS: JAseMessage: "+msg.getText());
+								_logger.trace("1-RS: JAseMessage: " + msg.getText());
 							_resPanel.add(msg, "gapy 1, growx, pushx");
 							parseAseMessage(msg, _resPanel, false);
 
@@ -10730,7 +10730,7 @@ checkPanelSize(_resPanel, comp);
 
 
 //			_msgline.setText("NO ResultSet, but "+msgCount+" messages.");
-			_statusBar.setMsg("NO ResultSet, but "+msgCount+" messages.");
+			_statusBar.setMsg("NO ResultSet, but " + msgCount + " messages.");
 		}
 
 		// Move scroll so that first commponent (Clear Button) that was appended will be visible
@@ -11036,14 +11036,14 @@ checkPanelSize(_resPanel, comp);
 				else
 				{
 					// if ddlType & ddlName matches: Simply print out this as "INFO" 
-					_logger.info("Oracle: non matching row in ALL_ERRORS table found (ddlType='"+ddlType+"', ddlOwner='"+ddlOwner+"', ddlName='"+ddlName+"'): type='"+type+"', owner='"+owner+"', name='"+name+"', sequence="+sequence+", line="+line+", position="+position+", attribute='"+attribute+"', message_number="+message_number+", text="+text.replace('\n', ' '));
+					_logger.info("Oracle: non matching row in ALL_ERRORS table found (ddlType='" + ddlType + "', ddlOwner='" + ddlOwner + "', ddlName='" + ddlName + "'): type='" + type + "', owner='" + owner + "', name='" + name + "', sequence=" + sequence + ", line=" + line + ", position=" + position + ", attribute='" + attribute + "', message_number=" + message_number + ", text=" + text.replace('\n', ' '));
 				}
 			}
 			rs.close();
 		}
 		catch(SQLException e)
 		{
-			_logger.warn("Problem occurred geting ORACLE 'SHOW ERRORS' messages. sql='"+sql_showErrors+"', Caught: " + e);
+			_logger.warn("Problem occurred geting ORACLE 'SHOW ERRORS' messages. sql='" + sql_showErrors + "', Caught: " + e);
 		}
 	}
 
@@ -11312,7 +11312,7 @@ checkPanelSize(_resPanel, comp);
 
 		boolean isJson = false;
 		
-		_logger.info("Special output optimization for "+(isJson?"JSON":"XML")+" data presentation. A Special output will be made for this type, and the content would also be pretty printed/formated.");// This can be disabled with the property '"+PROPKEY_FixMe+"=false'.");
+		_logger.info("Special output optimization for " + (isJson?"JSON":"XML") + " data presentation. A Special output will be made for this type, and the content would also be pretty printed/formated.");// This can be disabled with the property '"+PROPKEY_FixMe+"=false'.");
 
 		// Get firt row/column
 		Object val = jtable.getValueAt(0, col);
@@ -13045,11 +13045,11 @@ checkPanelSize(_resPanel, comp);
 			// Add entry
 			JCheckBoxMenuItem mi;
 
-			String miText = "<html>set <b>"+opt.getText()+"</b> - <i><font color='green'>"+opt.getTooltip()+"</font></i></html>";
-			String toolTipText = "<html>"+opt.getTooltip()+"<br>" +
+			String miText = "<html>set <b>" + opt.getText() + "</b> - <i><font color='green'>" + opt.getTooltip() + "</font></i></html>";
+			String toolTipText = "<html>" + opt.getTooltip() + "<br>" +
 					"<br>" +
-					"SQL used to set <b>on</b>: <code>"+opt.getSqlOn()+"</code><br>" +
-					"SQL used to set <b>off</b>: <code>"+opt.getSqlOff()+"</code><br>" +
+					"SQL used to set <b>on</b>: <code>" + opt.getSqlOn() + "</code><br>" +
+					"SQL used to set <b>off</b>: <code>" + opt.getSqlOff() + "</code><br>" +
 					"</html>";
 
 			mi = new JCheckBoxMenuItem();
@@ -13070,7 +13070,7 @@ checkPanelSize(_resPanel, comp);
 					boolean onOff = xmi.isSelected();
 					String sql = onOff ? opt.getSqlOn() : opt.getSqlOff();
 
-					_logger.info("Setting: "+sql);
+					_logger.info("Setting: " + sql);
 
 					try
 					{
@@ -13082,15 +13082,15 @@ checkPanelSize(_resPanel, comp);
 						String wmsg = AseConnectionUtils.getSqlWarningMsgs(stmnt.getWarnings());
 						if ( ! StringUtil.isNullOrBlank(wmsg) )
 						{
-							_logger.info("Change Setting output: "+wmsg);
+							_logger.info("Change Setting output: " + wmsg);
 							stmnt.clearWarnings();
 						}
 						stmnt.close();
 					}
 					catch (SQLException ex)
 					{
-						_logger.warn("Problems execute SQL '"+sql+"', Caught: " + ex.toString() );
-						SwingUtils.showErrorMessage("Problems set option", "Problems execute SQL '"+sql+"'\n\n"+ex.getMessage(), ex);
+						_logger.warn("Problems execute SQL '" + sql + "', Caught: " + ex.toString() );
+						SwingUtils.showErrorMessage("Problems set option", "Problems execute SQL '" + sql + "'\n\n" + ex.getMessage(), ex);
 					}
 				}
 			});
@@ -13232,11 +13232,11 @@ checkPanelSize(_resPanel, comp);
 			// Add entry
 			JCheckBoxMenuItem mi;
 
-			String miText = "<html>set <b>"+opt.getText()+"</b> - <i><font color='green'>"+opt.getTooltip()+"</font></i></html>";
-			String toolTipText = "<html>"+opt.getTooltip()+"<br>" +
+			String miText = "<html>set <b>" + opt.getText() + "</b> - <i><font color='green'>" + opt.getTooltip() + "</font></i></html>";
+			String toolTipText = "<html>" + opt.getTooltip() + "<br>" +
 					"<br>" +
-					"SQL used to set <b>on</b>: <code>"+opt.getSqlOn()+"</code><br>" +
-					"SQL used to set <b>off</b>: <code>"+opt.getSqlOff()+"</code><br>" +
+					"SQL used to set <b>on</b>: <code>" + opt.getSqlOn() + "</code><br>" +
+					"SQL used to set <b>off</b>: <code>" + opt.getSqlOff() + "</code><br>" +
 					"</html>";
 
 			mi = new JCheckBoxMenuItem();
@@ -13257,7 +13257,7 @@ checkPanelSize(_resPanel, comp);
 					boolean onOff = xmi.isSelected();
 					String sql = onOff ? opt.getSqlOn() : opt.getSqlOff();
 
-					_logger.info("Setting: "+sql);
+					_logger.info("Setting: " + sql);
 
 					try
 					{
@@ -13269,15 +13269,15 @@ checkPanelSize(_resPanel, comp);
 						String wmsg = AseConnectionUtils.getSqlWarningMsgs(stmnt.getWarnings());
 						if ( ! StringUtil.isNullOrBlank(wmsg) )
 						{
-							_logger.info("Change Setting output: "+wmsg);
+							_logger.info("Change Setting output: " + wmsg);
 							stmnt.clearWarnings();
 						}
 						stmnt.close();
 					}
 					catch (SQLException ex)
 					{
-						_logger.warn("Problems execute SQL '"+sql+"', Caught: " + ex.toString() );
-						SwingUtils.showErrorMessage("Problems set option", "Problems execute SQL '"+sql+"'\n\n"+ex.getMessage(), ex);
+						_logger.warn("Problems execute SQL '" + sql + "', Caught: " + ex.toString() );
+						SwingUtils.showErrorMessage("Problems set option", "Problems execute SQL '" + sql + "'\n\n" + ex.getMessage(), ex);
 					}
 				}
 			});
@@ -13456,7 +13456,7 @@ checkPanelSize(_resPanel, comp);
 		_printRsInfo_chk           .setText("<html><b>Print ResultSet Info</b>           - <i><font color='green'>Print Info about the ResultSet in the output.</font></i> 'go prsi'</html>");
 		_rsRtrimStrings_chk        .setText("<html><b>Rtrim String values</b>            - <i><font color='green'>Do you want to remove trailing blanks from \"strings\"</html>");
 		_rsTrimStrings_chk         .setText("<html><b>Trim String values</b>             - <i><font color='green'>Do you want to remove leading/trailing blanks from \"strings\"</html>");
-		_rsShowRowNumber_chk       .setText("<html><b>Show Row Number</b>                - <i><font color='green'>Add a Row Number as first column '"+ResultSetTableModel.ROW_NUMBER_COLNAME+"' when displaying data</html>");
+		_rsShowRowNumber_chk       .setText("<html><b>Show Row Number</b>                - <i><font color='green'>Add a Row Number as first column '" + ResultSetTableModel.ROW_NUMBER_COLNAME + "' when displaying data</html>");
 		_clientTiming_chk          .setText("<html><b>Client Timing</b>                  - <i><font color='green'>How long does a SQL Statement takes from the clients perspective.</font></i> 'go time'</html>");
 		_useSemicolonHack_chk      .setText("<html><b>Use Semicolon to Send</b>          - <i><font color='green'>Use semicolon ';' at the end of a line to send SQL to Server.</font></i></html>");
 		_enableDbmsOutput_chk      .setText("<html><b>Enable dbms_output.get_line</b>    - <i><font color='green'>Receive Oracle/DB2 DBMS Output trace statements.</font></i></html>");
@@ -13514,7 +13514,7 @@ checkPanelSize(_resPanel, comp);
 				String key1 = "Number of rows";
 
 				LinkedHashMap<String, String> in = new LinkedHashMap<String, String>();
-				in.put(key1, Configuration.getCombinedConfiguration().getProperty( PROPKEY_limitRsRowsReadCount, DEFAULT_limitRsRowsReadCount+""));
+				in.put(key1, Configuration.getCombinedConfiguration().getProperty( PROPKEY_limitRsRowsReadCount, DEFAULT_limitRsRowsReadCount + ""));
 
 				Map<String,String> results = ParameterDialog.showParameterDialog(_window, "Limit ResultSet", in, false);
 
@@ -13623,14 +13623,14 @@ checkPanelSize(_resPanel, comp);
 				{
 					if (_limitRsRowsRead_chk.equals(comp))
 					{
-						String config = Configuration.getCombinedConfiguration().getProperty(PROPKEY_limitRsRowsReadCount, DEFAULT_limitRsRowsReadCount+"");
-						String label  = "<html><b>Limit ResultSet to "+config+" rows</b> - <i><font color='green'><b>Stop</b> reading the ResultSet after <b>"+config+"</b> rows.</font></i> 'go top "+config+"'</html>";
+						String config = Configuration.getCombinedConfiguration().getProperty(PROPKEY_limitRsRowsReadCount, DEFAULT_limitRsRowsReadCount + "");
+						String label  = "<html><b>Limit ResultSet to " + config + " rows</b> - <i><font color='green'><b>Stop</b> reading the ResultSet after <b>" + config + "</b> rows.</font></i> 'go top " + config + "'</html>";
 						_limitRsRowsRead_chk.setText(label);
 					}
 					if (_sqlBatchTermDialog_mi.equals(comp))
 					{
 						String config = Configuration.getCombinedConfiguration().getProperty(PROPKEY_sqlBatchTerminator, DEFAULT_sqlBatchTerminator);
-						String label  = "<html><b>Change SQL Batch 'Send' Terminator...</b> - <i><font color='green'>Current terminator is '<b>"+config+"</b>'</font></i></html>";
+						String label  = "<html><b>Change SQL Batch 'Send' Terminator...</b> - <i><font color='green'>Current terminator is '<b>" + config + "</b>'</font></i></html>";
 						_sqlBatchTermDialog_mi.setText(label);
 					}
 				}
@@ -14335,7 +14335,7 @@ checkPanelSize(_resPanel, comp);
 		commandList.add(FavoriteCommandEntry.addSeparator());
 		
 		commandList.add(new FavoriteCommandEntry(VendorType.RS, "RSSD: rmp_queue ''",                 "", "Show Queue size for each database/connection, by calling rmp_queue"));
-		commandList.add(new FavoriteCommandEntry(VendorType.RS, "RSSD: "+CmDbQueueSizeInRssd.rmpQueue(0), 
+		commandList.add(new FavoriteCommandEntry(VendorType.RS, "RSSD: " + CmDbQueueSizeInRssd.rmpQueue(0), 
 		                                                        "RSSD: rmp_queue, SQL Statement",         "Show Queue size for each database/connection, by calling SQL extracted from rmp_queue"));
 		commandList.add(new FavoriteCommandEntry(VendorType.RS, "RSSD: rs_helpexception",             "", "Show the records in the Exception Log, right click on the table and choose, view or delete."));
 		commandList.add(new FavoriteCommandEntry(VendorType.RS, "RSSD: rs_helpdb",                    "", "What databases are connected to the system"));
@@ -14575,7 +14575,7 @@ checkPanelSize(_resPanel, comp);
 								+ "Problem setting keyboard shortcut for '" + actionName + "'. <br>"
 								+ "The KeyStroke '" + actionKey + "' is already assigned to '" + currentMapping + "'.<br>"
 								+ "<br>"
-								+ "Do you still want to assign '" + actionName + "' to the key '" + actionKey +"'</html>";
+								+ "Do you still want to assign '" + actionName + "' to the key '" + actionKey + "'</html>";
 
 						int dialogResult = JOptionPane.showConfirmDialog(_window, msg, "Key Mapping", JOptionPane.YES_NO_OPTION);
 						if(dialogResult == JOptionPane.NO_OPTION)
@@ -14641,11 +14641,11 @@ checkPanelSize(_resPanel, comp);
 						  "<br> " +
 						  "<b>Command Template:</b><br> " +
 						  "<hr> " + // ---------------------------------
-						  "<pre>"+cmd+"</pre><br> " +
+						  "<pre>" + cmd + "</pre><br> " +
 						  "<br> " +
 						  "<b>Command to Execute:</b><br> " +
 						  "<hr> " + // ---------------------------------
-						  "<pre>"+cmdToExec+"</pre><br> " +
+						  "<pre>" + cmdToExec + "</pre><br> " +
 						"</html>";
 //					int answer = JOptionPane.showConfirmDialog(_window, new JLabel(msgHtml), "Confirm", JOptionPane.YES_NO_OPTION);
 //					if (answer == 1)
@@ -14686,11 +14686,11 @@ checkPanelSize(_resPanel, comp);
 						  "<br> " +
 						  "<b>Command Template:</b><br> " +
 						  "<hr> " + // ---------------------------------
-						  "<pre>"+cmd+"</pre><br> " +
+						  "<pre>" + cmd + "</pre><br> " +
 						  "<br> " +
 						  "<b>Command to Execute:</b><br> " +
 						  "<hr> " + // ---------------------------------
-						  "<pre>"+cmdToExec+"</pre><br> " +
+						  "<pre>" + cmdToExec + "</pre><br> " +
 						"</html>";
 //					int answer = JOptionPane.showConfirmDialog(_window, new JLabel(msgHtml), "Confirm", JOptionPane.YES_NO_OPTION);
 //					if (answer == 1)
@@ -14766,7 +14766,7 @@ checkPanelSize(_resPanel, comp);
 		conf.removeAll("LastFileList.");
 		for (int i=0; i<_lastFileNameList.size(); i++)
 		{
-			String key = "LastFileList."+i+".name";
+			String key = "LastFileList." + i + ".name";
 			String val = _lastFileNameList.get(i);
 //System.out.println("addFileHistory(): key='"+key+"', value='"+val+"'.");
 			conf.setProperty(key, val);
@@ -14797,7 +14797,7 @@ checkPanelSize(_resPanel, comp);
 		// set entries...
 		for (int i=0; i<_lastFileNameSaveMax; i++)
 		{
-			String key = "LastFileList."+i+".name";
+			String key = "LastFileList." + i + ".name";
 			String val = conf.getProperty(key, "");
 			
 			// Only add it if the file really exists
@@ -14862,8 +14862,8 @@ checkPanelSize(_resPanel, comp);
 				+ "In the <i>'Untitled'</i> file we store <i>temporary</i> commands until next application session.<br>"
 				+ "This so you can restart the application and continue to work at a later time...<br>"
 				+ "<br>"
-				+ "Filename is: <code>"+fileName+"</code><br>"
-				+ "This can be changed with the property: <code>"+PROPKEY_untitledFileName+"</code>"
+				+ "Filename is: <code>" + fileName + "</code><br>"
+				+ "This can be changed with the property: <code>" + PROPKEY_untitledFileName + "</code>"
 				+ "</html>");
 //		mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_U, KeyEvent.ALT_MASK | KeyEvent.SHIFT_MASK));
 		mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_U, KeyEvent.ALT_DOWN_MASK | KeyEvent.SHIFT_DOWN_MASK));
@@ -15130,7 +15130,7 @@ checkPanelSize(_resPanel, comp);
 							"in: file.lastModified()   = " + sdf.format(new Date(file.lastModified())) + "<br>" +
 							"in: savedLastModifiedTime = " + sdf.format(new Date(savedLastModifiedTime)) + "<br>" +
 							"diff in:                  = " + TimeUtils.msToTimeStr(file.lastModified() - savedLastModifiedTime) + "<br>" +
-							"isModifiedOutsideEditor() = "+ _query_txt.isModifiedOutsideEditor() + "<br>" +
+							"isModifiedOutsideEditor() = " + _query_txt.isModifiedOutsideEditor() + "<br>" +
 							"</pre>";
 				}
 
@@ -15142,7 +15142,7 @@ checkPanelSize(_resPanel, comp);
 //				Object[] buttons = {"Load Changes", "Not now", "Not Ever"};
 				Object[] buttons = {"Load Changes", "Not now"};
 				int answer = JOptionPane.showOptionDialog(_window, 
-						"<html>Another application has updated the file "+file+"<br>Reload it?."+debugStr+"</html>",
+						"<html>Another application has updated the file " + file + "<br>Reload it?." + debugStr + "</html>",
 						"Reload file", 
 						JOptionPane.DEFAULT_OPTION,
 						JOptionPane.QUESTION_MESSAGE,
@@ -15681,15 +15681,15 @@ checkPanelSize(_resPanel, comp);
 //		String host = AseConnectionFactory.getIHost(server);
 //		int    port = AseConnectionFactory.getIPort(server);
 		String hostPortStr = AseConnectionFactory.getIHostPortStr(server);
-		System.out.println("Connectiong to server='"+server+"'. Which is located on '"+hostPortStr+"'.");
+		System.out.println("Connectiong to server='" + server + "'. Which is located on '" + hostPortStr + "'.");
 		DbxConnection conn = null;
 		try
 		{
 			Properties props = new Properties();
 			props.put("CHARSET", "iso_1");
-			AseConnectionFactory.setPropertiesForAppname(Version.getAppName()+"-QueryWindow", "IGNORE_DONE_IN_PROC", "true");
+			AseConnectionFactory.setPropertiesForAppname(Version.getAppName() + "-QueryWindow", "IGNORE_DONE_IN_PROC", "true");
 			
-			Connection c = AseConnectionFactory.getConnection(hostPortStr, null, "sa", "", Version.getAppName()+"-QueryWindow", Version.getVersionStr(), null, props, null);
+			Connection c = AseConnectionFactory.getConnection(hostPortStr, null, "sa", "", Version.getAppName() + "-QueryWindow", Version.getVersionStr(), null, props, null);
 			conn = DbxConnection.createDbxConnection(c);
 		}
 		catch (SQLException e)
@@ -15755,7 +15755,7 @@ checkPanelSize(_resPanel, comp);
 		pw.println("  ");
 		pw.println("options:");
 		pw.println("  -h,--help                 Usage information.");
-		pw.println("  -v,--version              Display "+Version.getAppName()+" and JVM Version.");
+		pw.println("  -v,--version              Display " + Version.getAppName() + " and JVM Version.");
 		pw.println("  -x,--debug <dbg1,dbg2>    Debug options: a comma separated string");
 		pw.println("                            To get available option, do -x list");
 		pw.println("  -J,--javaSystemProp <k=v> set Java System Property, same as java -Dkey=value");
@@ -15792,7 +15792,7 @@ checkPanelSize(_resPanel, comp);
 
 		// create the Options
 		options.addOption( "h", "help",        false, "Usage information." );
-		options.addOption( "v", "version",     false, "Display "+Version.getAppName()+" and JVM Version." );
+		options.addOption( "v", "version",     false, "Display " + Version.getAppName() + " and JVM Version." );
 		options.addOption( "x", "debug",       true,  "Debug options: a comma separated string dbg1,dbg2,dbg3" );
 
 		options.addOption( "a", "createAppDir",false, "create application directory and exit");
@@ -15836,7 +15836,7 @@ checkPanelSize(_resPanel, comp);
 			for (Iterator<Option> it=cmd.iterator(); it.hasNext();)
 			{
 				Option opt = it.next();
-				_logger.debug("parseCommandLine: swith='"+opt.getOpt()+"', value='"+opt.getValue()+"'.");
+				_logger.debug("parseCommandLine: swith='" + opt.getOpt() + "', value='" + opt.getValue() + "'.");
 			}
 		}
 
@@ -15886,7 +15886,7 @@ checkPanelSize(_resPanel, comp);
 			else if ( cmd.hasOption("version") )
 			{
 				System.out.println();
-				System.out.println(Version.getAppName()+" Version: " + Version.getVersionStr() + " JVM: " + System.getProperty("java.version"));
+				System.out.println(Version.getAppName() + " Version: " + Version.getVersionStr() + " JVM: " + System.getProperty("java.version"));
 				System.out.println();
 			}
 			//-------------------------------
@@ -15930,7 +15930,7 @@ checkPanelSize(_resPanel, comp);
 
 						boolean debug = true;
 						if (debug)
-							System.out.println(" ----->>>>> SETTING SYSTEM PROPERTY: key=|"+key+"|, val=|"+val+"|.");
+							System.out.println(" ----->>>>> SETTING SYSTEM PROPERTY: key=|" + key + "|, val=|" + val + "|.");
 					}
 
 				}

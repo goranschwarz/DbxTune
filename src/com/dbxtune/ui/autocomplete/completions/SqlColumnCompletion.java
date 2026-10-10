@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -64,10 +64,10 @@ extends SqlCompletion
 		TableColumnInfo ci = _tableInfo.getColumnInfo(colname);
 		String colPos = "";
 		if (ci != null)
-			colPos = "pos="+ci._colPos+", ";
+			colPos = "pos=" + ci._colPos + ", ";
 
 		String shortDesc = 
-			"<font color='blue'>"+_tableInfo.getColDdlDesc(colname)+"</font>" +
+			"<font color='blue'>" + _tableInfo.getColDdlDesc(colname) + "</font>" +
 			" -- <i><font color='green'>" + colPos + _tableInfo.getColDescription(colname) + "</font></i>";
 		setShortDescription(shortDesc);
 		//setSummary(_tableInfo.toHtmlString(colname));

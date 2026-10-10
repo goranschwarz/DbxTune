@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -348,17 +348,17 @@ extends JXTable
 			// If called for first time and we get problems, try once more...
 			if (neastLevel == 0)
 			{
-				_logger.info("Problems setting GTable.setModel(). (first time call) Table/Component name='"+getName()+"'. TableModel=(class="+(newModel==null?"null":newModel.getClass().getName())+", toString='"+newModel+"'). I guess this is a bug in JXTable, which doesn't take into account that we have hidden columns... Caught: "+ex);
+				_logger.info("Problems setting GTable.setModel(). (first time call) Table/Component name='" + getName() + "'. TableModel=(class=" + (newModel==null?"null":newModel.getClass().getName()) + ", toString='" + newModel + "'). I guess this is a bug in JXTable, which doesn't take into account that we have hidden columns... Caught: " + ex);
 				setModelInternal(newModel, neastLevel++);
 			}
 			else
 			{
-				_logger.warn("Problems setting GTable.setModel(). (second time call) Table/Component name='"+getName()+"'. TableModel=(class="+(newModel==null?"null":newModel.getClass().getName())+", toString='"+newModel+"'). I guess this is a bug in JXTable, which doesn't take into account that we have hidden columns... Caught: "+ex, ex);
+				_logger.warn("Problems setting GTable.setModel(). (second time call) Table/Component name='" + getName() + "'. TableModel=(class=" + (newModel==null?"null":newModel.getClass().getName()) + ", toString='" + newModel + "'). I guess this is a bug in JXTable, which doesn't take into account that we have hidden columns... Caught: " + ex, ex);
 			}
 		}
 		catch (Throwable ex)
 		{
-			_logger.warn("Problems setting GTable.setModel(). Table/Component name='"+getName()+"'. TableModel=(class="+(newModel==null?"null":newModel.getClass().getName())+", toString='"+newModel+"').", ex);
+			_logger.warn("Problems setting GTable.setModel(). Table/Component name='" + getName() + "'. TableModel=(class=" + (newModel==null?"null":newModel.getClass().getName()) + ", toString='" + newModel + "').", ex);
 		}
 	}
 
@@ -503,7 +503,7 @@ extends JXTable
     				}
     				catch(Throwable ignore) 
     				{
-    					_logger.warn("Problems in GTable when rendering type '"+value.getClass().getName()+"', object '"+value+"'. returning a toString instead. Caught: "+ignore);
+    					_logger.warn("Problems in GTable when rendering type '" + value.getClass().getName() + "', object '" + value + "'. returning a toString instead. Caught: " + ignore);
     					return value==null ? NULL_REPLACE : value.toString(); 
     				}
 				}
@@ -534,7 +534,7 @@ extends JXTable
     				}
     				catch(Throwable ignore) 
     				{
-    					_logger.warn("Problems in GTable when rendering type '"+value.getClass().getName()+"', object '"+value+"'. returning a toString instead. Caught: "+ignore);
+    					_logger.warn("Problems in GTable when rendering type '" + value.getClass().getName() + "', object '" + value + "'. returning a toString instead. Caught: " + ignore);
     					return value==null ? NULL_REPLACE : value.toString(); 
     				}
 				}
@@ -565,7 +565,7 @@ extends JXTable
     				}
     				catch(Throwable ignore) 
     				{
-    					_logger.warn("Problems in GTable when rendering type '"+value.getClass().getName()+"', object '"+value+"'. returning a toString instead. Caught: "+ignore);
+    					_logger.warn("Problems in GTable when rendering type '" + value.getClass().getName() + "', object '" + value + "'. returning a toString instead. Caught: " + ignore);
     					return value==null ? NULL_REPLACE : value.toString(); 
     				}
 				}
@@ -666,7 +666,7 @@ extends JXTable
 				{
 //if (getName().equals("CMobjActivity"))
 //System.out.println("columnAdded(): tabName='"+getName()+"', TIME TO LOAD COL ORDER.");
-					_logger.debug("columnAdded(): tabName='"+getName()+"', TIME TO LOAD COL ORDER.");
+					_logger.debug("columnAdded(): tabName='" + getName() + "', TIME TO LOAD COL ORDER.");
 					_tableStructureChangedFlag = false;
 //					_thisTable.loadColumnLayout();
 					GTable.this.loadColumnLayout();
@@ -802,7 +802,7 @@ extends JXTable
 					{
 						final TableColumnExt tcx = (TableColumnExt) getColumnModel().getColumn(getLastMousePressedAtViewHeaderCol());
     
-    					mi = new JMenuItem("Hide this column '"+tcx.getHeaderValue()+"'"); // Resizes all columns to fit their content
+    					mi = new JMenuItem("Hide this column '" + tcx.getHeaderValue() + "'"); // Resizes all columns to fit their content
     					p.add(mi);
     					mi.addActionListener(new ActionListener()
     					{
@@ -840,17 +840,17 @@ extends JXTable
 									try	{ tcx.setVisible(mi.isSelected()); }
 									catch (IndexOutOfBoundsException ex)
 									{
-										_logger.info("Problems setting TableColumnExt.setVisible(). (first time exec) Table/Component name='"+getName()+"'. I guess this is a bug in JXTable, which doesn't take into account that we have hidden columns... Caught: "+ex);
+										_logger.info("Problems setting TableColumnExt.setVisible(). (first time exec) Table/Component name='" + getName() + "'. I guess this is a bug in JXTable, which doesn't take into account that we have hidden columns... Caught: " + ex);
 										tcx.setVisible(mi.isSelected());
 									}
 								}
 								catch (IndexOutOfBoundsException ex)
 								{
-									_logger.warn("Problems setting TableColumnExt.setVisible(). (second time exec) Table/Component name='"+getName()+"'. I guess this is a bug in JXTable, which doesn't take into account that we have hidden columns... Caught: "+ex);
+									_logger.warn("Problems setting TableColumnExt.setVisible(). (second time exec) Table/Component name='" + getName() + "'. I guess this is a bug in JXTable, which doesn't take into account that we have hidden columns... Caught: " + ex);
 								}
 								catch (Throwable ex)
 								{
-									_logger.warn("Problems setting TableColumnExt.setVisible(). Table/Component name='"+getName()+"'. I guess this is a bug in JXTable, which doesn't take into account that we have hidden columns... Caught: "+ex, ex);
+									_logger.warn("Problems setting TableColumnExt.setVisible(). Table/Component name='" + getName() + "'. I guess this is a bug in JXTable, which doesn't take into account that we have hidden columns... Caught: " + ex, ex);
 								}
 							}
 						});
@@ -936,7 +936,7 @@ extends JXTable
 
 		viewColPos = convertColumnIndexToView(modelColPos);
 		if (viewColPos < 0)
-			_logger.debug(getName()+ ": findViewColumn('"+colName+"'): modelIndex="+modelColPos+", viewIndex="+viewColPos+", the column must be hidden in the view.");
+			_logger.debug(getName() + ": findViewColumn('" + colName + "'): modelIndex=" + modelColPos + ", viewIndex=" + viewColPos + ", the column must be hidden in the view.");
 
 		return viewColPos;
 	}
@@ -974,7 +974,7 @@ extends JXTable
 			try {colViewPos = tcm.getColumnIndex(colName);}
 			catch (IllegalArgumentException ignore) {}
 
-			System.out.println(prefix + "printColumnLayout() cm='"+cmName+"': colName="+StringUtil.left(colName,30)+", modelPos="+colModelPos+", viewPos="+colViewPos+", isVisible="+colIsVisible+", sort="+colSort+", identifier='"+tcx.getIdentifier()+"', toString="+tc);
+			System.out.println(prefix + "printColumnLayout() cm='" + cmName + "': colName=" + StringUtil.left(colName,30) + ", modelPos=" + colModelPos + ", viewPos=" + colViewPos + ", isVisible=" + colIsVisible + ", sort=" + colSort + ", identifier='" + tcx.getIdentifier() + "', toString=" + tc);
 		}
 	}
 	/**
@@ -1008,12 +1008,12 @@ extends JXTable
 				srvVersion = cm.getServerVersion();
 		}
 		// get the values from configuration
-		String confKey = cmName + ".gui.column.header.props.["+SwingUtils.getScreenResulutionAsString()+"]." + srvVersion;
+		String confKey = cmName + ".gui.column.header.props.[" + SwingUtils.getScreenResulutionAsString() + "]." + srvVersion;
 		String confVal = conf.getProperty(confKey);
 		if (confVal == null)
 		{
 			// Revert back to "previous" version
-			confKey = cmName + ".gui.column.header.props.["+SwingUtils.getScreenResulutionAsString()+"]";
+			confKey = cmName + ".gui.column.header.props.[" + SwingUtils.getScreenResulutionAsString() + "]";
 			confVal = conf.getProperty(confKey);
 		}
 		if (confVal == null)
@@ -1036,7 +1036,7 @@ extends JXTable
 			}
 			catch (ParseException e)
 			{
-				_logger.info("Problems parsing '"+confKey+"' with string '"+strArr[i]+"'. Caught: "+e);
+				_logger.info("Problems parsing '" + confKey + "' with string '" + strArr[i] + "'. Caught: " + e);
 				continue;
 			}
 		}
@@ -1044,7 +1044,7 @@ extends JXTable
 		// If table model and config are "out of sync", do not load
 		if (colProps.size() != getModel().getColumnCount())
 		{
-			_logger.info(confKey + " has '"+colProps.size()+"' values and the table model has '"+getModel().getColumnCount()+"' columns. I will skip moving columns around, the original column layout will be used.");
+			_logger.info(confKey + " has '" + colProps.size() + "' values and the table model has '" + getModel().getColumnCount() + "' columns. I will skip moving columns around, the original column layout will be used.");
 			loadColumnLayout(getPreferredColumnLayout());
 			return;
 		}
@@ -1073,12 +1073,12 @@ extends JXTable
 				if (chpe._sortOrderPos == i)
 				{
 					if (_logger.isDebugEnabled())
-						_logger.debug(i+": Setting '"+StringUtil.left(chpe._colName,20)+"', viewPos="+chpe._viewPos+",  to "+chpe._sortOrder+", sortOrderPos="+chpe._sortOrderPos+", ModelColumnCount="+getModel().getColumnCount()+", RowSorterModelColumnCount="+getRowSorter().getModel().getColumnCount()+", name="+getName());
+						_logger.debug(i + ": Setting '" + StringUtil.left(chpe._colName,20) + "', viewPos=" + chpe._viewPos + ",  to " + chpe._sortOrder + ", sortOrderPos=" + chpe._sortOrderPos + ", ModelColumnCount=" + getModel().getColumnCount() + ", RowSorterModelColumnCount=" + getRowSorter().getModel().getColumnCount() + ", name=" + getName());
 
 					if (chpe._viewPos < getRowSorter().getModel().getColumnCount())
 						setSortOrder(chpe._viewPos, chpe._sortOrder);
 					else
-						_logger.debug("Can't set the sort order for column '"+chpe._colName+"'. viewPos < RowSorterModelColumnCount, this will be retried later? Info RowSorterModelColumnCount="+getRowSorter().getModel().getColumnCount()+", TableModelColumnCount="+getModel().getColumnCount()+", viewPos="+chpe._viewPos+", TableName="+getName());
+						_logger.debug("Can't set the sort order for column '" + chpe._colName + "'. viewPos < RowSorterModelColumnCount, this will be retried later? Info RowSorterModelColumnCount=" + getRowSorter().getModel().getColumnCount() + ", TableModelColumnCount=" + getModel().getColumnCount() + ", viewPos=" + chpe._viewPos + ", TableName=" + getName());
 				}
 			}
 		}
@@ -1122,14 +1122,14 @@ extends JXTable
 			{
 				if ( chpe._isVisible == false && tcx.isVisible() )
 				{
-					_logger.trace("loadColumnLayout() cm='"+getName()+"': ACTION -> HIDE '"+colName+"'.");
+					_logger.trace("loadColumnLayout() cm='" + getName() + "': ACTION -> HIDE '" + colName + "'.");
 					tcx.setVisible(false);
 					fixCount++;
 				}
 
 				if ( chpe._isVisible == true && !tcx.isVisible() )
 				{
-					_logger.trace("loadColumnLayout() cm='"+getName()+"': ACTION -> SHOW '"+colName+"'.");
+					_logger.trace("loadColumnLayout() cm='" + getName() + "': ACTION -> SHOW '" + colName + "'.");
 					tcx.setVisible(true);
 					fixCount++;
 				}
@@ -1165,12 +1165,12 @@ extends JXTable
 //	System.out.println("          >>> chpe._viewPos=" + chpe._viewPos + ", chpe._afterColName=|" + chpe._afterColName + "|, propViewPos=" + propViewPos);
 //			}
 
-			_logger.trace("loadColumnLayout() cm='"+getName()+"': info '"+StringUtil.left(colName,30)+"' colViewPos(from)='"+colViewPos+"', chpe._viewPos(to)='"+chpe._viewPos+"'.");
+			_logger.trace("loadColumnLayout() cm='" + getName() + "': info '" + StringUtil.left(colName,30) + "' colViewPos(from)='" + colViewPos + "', chpe._viewPos(to)='" + chpe._viewPos + "'.");
 			if (colViewPos >= 0 && propViewPos >= 0)
 			{
 				if (colViewPos != propViewPos)
 				{
-					_logger.trace("loadColumnLayout() cm='"+getName()+"': ACTION -> MOVE '"+colName+"' from '"+colViewPos+"' -> '"+propViewPos+"'.");
+					_logger.trace("loadColumnLayout() cm='" + getName() + "': ACTION -> MOVE '" + colName + "' from '" + colViewPos + "' -> '" + propViewPos + "'.");
 
 					// hmmm, this will trigger columnMove
 					// but we have the timer before saveColumnLayout is kicked of, so we should be fine
@@ -1193,8 +1193,8 @@ extends JXTable
 					}
 					catch (Throwable t) 
 					{
-						_logger.info ("loadColumnLayout() problems when calling tcmx.moveColumn(colViewPos, propViewPos): (to get stacktrace enable debug loggin) Caught: "+t); 
-						_logger.debug("loadColumnLayout() problems when calling tcmx.moveColumn(colViewPos, propViewPos): Caught: "+t, t); 
+						_logger.info ("loadColumnLayout() problems when calling tcmx.moveColumn(colViewPos, propViewPos): (to get stacktrace enable debug loggin) Caught: " + t); 
+						_logger.debug("loadColumnLayout() problems when calling tcmx.moveColumn(colViewPos, propViewPos): Caught: " + t, t); 
 					}
 
 					fixCount++;
@@ -1269,8 +1269,8 @@ extends JXTable
 			if (cm.isRuntimeInitialized())
 				srvVersion = cm.getServerVersion();
 		}
-		String confKeyBase    = cmName + ".gui.column.header.props.["+SwingUtils.getScreenResulutionAsString()+"]";
-		String confKeyVersion = cmName + ".gui.column.header.props.["+SwingUtils.getScreenResulutionAsString()+"]." + srvVersion;
+		String confKeyBase    = cmName + ".gui.column.header.props.[" + SwingUtils.getScreenResulutionAsString() + "]";
+		String confKeyVersion = cmName + ".gui.column.header.props.[" + SwingUtils.getScreenResulutionAsString() + "]." + srvVersion;
 		String confVal = "";
 
 		TableColumnModel tcm = getColumnModel();
@@ -1298,7 +1298,7 @@ extends JXTable
 
 //if (getName().equals("CMobjActivity"))
 //System.out.println("saveColumnLayout() cm='"+cmName+"': colName="+StringUtil.left(colName,30)+", modelPos="+colModelPos+", viewPos="+colViewPos+", isVisible="+colIsVisible+", sort="+colSort+", identifier='"+tcx.getIdentifier()+"', toString="+tc);
-			_logger.debug("saveColumnLayout() cm='"+cmName+"': colName="+StringUtil.left(colName,30)+", modelPos="+colModelPos+", viewPos="+colViewPos+", isVisible="+colIsVisible+", sort="+colSort+", sortPos="+colSortPos+", identifier='"+tcx.getIdentifier()+"', width="+colWidth+", toString="+tc);
+			_logger.debug("saveColumnLayout() cm='" + cmName + "': colName=" + StringUtil.left(colName,30) + ", modelPos=" + colModelPos + ", viewPos=" + colViewPos + ", isVisible=" + colIsVisible + ", sort=" + colSort + ", sortPos=" + colSortPos + ", identifier='" + tcx.getIdentifier() + "', width=" + colWidth + ", toString=" + tc);
 
 			ColumnHeaderPropsEntry chpe = new ColumnHeaderPropsEntry(colName, colModelPos, colViewPos, colIsVisible, colSort, colSortPos, colWidth);
 			if (toOriginalLayout)
@@ -1327,11 +1327,11 @@ extends JXTable
 			}
 
 			// Append to the Config Value
-			confVal += chpe+"; ";
+			confVal += chpe + "; ";
 		}
 		confVal = confVal.substring(0, confVal.length()-2);
-		_logger.debug("saveColumnLayout() SAVE PROPERTY: "+confKeyBase+"="+confVal);
-		_logger.debug("saveColumnLayout() SAVE PROPERTY: "+confKeyVersion+"="+confVal);
+		_logger.debug("saveColumnLayout() SAVE PROPERTY: " + confKeyBase + "=" + confVal);
+		_logger.debug("saveColumnLayout() SAVE PROPERTY: " + confKeyVersion + "=" + confVal);
 
 		conf.setProperty(confKeyBase,    confVal);
 		conf.setProperty(confKeyVersion, confVal);
@@ -1432,8 +1432,8 @@ extends JXTable
 				    }
 				});
 			}
-			catch (InterruptedException e1)      { _logger.info("SwingUtilities.invokeAndWait(privateTableChanged), Caught: "+e1); }
-			catch (InvocationTargetException e1) { _logger.info("SwingUtilities.invokeAndWait(privateTableChanged), threw exception: "+e1, e1); }
+			catch (InterruptedException e1)      { _logger.info("SwingUtilities.invokeAndWait(privateTableChanged), Caught: " + e1); }
+			catch (InvocationTargetException e1) { _logger.info("SwingUtilities.invokeAndWait(privateTableChanged), threw exception: " + e1, e1); }
 		}
 		else
         	privateTableChanged(e);
@@ -1465,8 +1465,8 @@ extends JXTable
 				}
 				else
 				{
-					_logger.info("GTable='"+getName()+"', Problems when calling super.tableChanged(e). (enable debug mode to see stacktrace) Caught: "+t); // no stacktrace to log, just info message...
-					_logger.debug("GTable='"+getName()+"', Problems when calling super.tableChanged(e). Caught: "+t, t);
+					_logger.info("GTable='" + getName() + "', Problems when calling super.tableChanged(e). (enable debug mode to see stacktrace) Caught: " + t); // no stacktrace to log, just info message...
+					_logger.debug("GTable='" + getName() + "', Problems when calling super.tableChanged(e). Caught: " + t, t);
 				}
 			}
 
@@ -1512,7 +1512,7 @@ extends JXTable
 			}
 			catch (Throwable t)
 			{
-				_logger.warn("GTable='"+getName()+"', Problems when restoring selected row. Caught: "+t, t);
+				_logger.warn("GTable='" + getName() + "', Problems when restoring selected row. Caught: " + t, t);
 			}
 			
 	
@@ -1873,7 +1873,7 @@ extends JXTable
 				int mpos = tc.getModelIndex();
 				String mColName = getModel().getColumnName(mpos);
 
-				System.out.println("setVisibleColumns(List<String> columns): not instance of 'TableColumnExt'. mpos="+mpos+", mColName='"+mColName+"'.");
+				System.out.println("setVisibleColumns(List<String> columns): not instance of 'TableColumnExt'. mpos=" + mpos + ", mColName='" + mColName + "'.");
 			}
 		}
 	}
@@ -1902,7 +1902,7 @@ extends JXTable
 				int mpos = tc.getModelIndex();
 				String mColName = getModel().getColumnName(mpos);
 
-				System.out.println("getVisibleColumns(): not instance of 'TableColumnExt'. mpos="+mpos+", mColName='"+mColName+"'.");
+				System.out.println("getVisibleColumns(): not instance of 'TableColumnExt'. mpos=" + mpos + ", mColName='" + mColName + "'.");
 			}
 		}
 
@@ -1947,7 +1947,7 @@ extends JXTable
 		}
 		catch(NumberFormatException e)
 		{
-			_logger.warn("Problem reading Short value for vrow="+vrow+", column='"+colName+"', tableName='"+getName()+"', returning null. Caught: "+e);
+			_logger.warn("Problem reading Short value for vrow=" + vrow + ", column='" + colName + "', tableName='" + getName() + "', returning null. Caught: " + e);
 			return null;
 		}
 	}
@@ -1972,7 +1972,7 @@ extends JXTable
 		}
 		catch(NumberFormatException e)
 		{
-			_logger.warn("Problem reading Integer value for vrow="+vrow+", column='"+colName+"', tableName='"+getName()+"', returning null. Caught: "+e);
+			_logger.warn("Problem reading Integer value for vrow=" + vrow + ", column='" + colName + "', tableName='" + getName() + "', returning null. Caught: " + e);
 			return null;
 		}
 	}
@@ -1997,7 +1997,7 @@ extends JXTable
 		}
 		catch(NumberFormatException e)
 		{
-			_logger.warn("Problem reading Long value for vrow="+vrow+", column='"+colName+"', tableName='"+getName()+"', returning null. Caught: "+e);
+			_logger.warn("Problem reading Long value for vrow=" + vrow + ", column='" + colName + "', tableName='" + getName() + "', returning null. Caught: " + e);
 			return null;
 		}
 	}
@@ -2024,7 +2024,7 @@ extends JXTable
 		}
 		catch(ParseException e)
 		{
-			_logger.warn("Problem reading Timestamp value for vrow="+vrow+", column='"+colName+"', tableName='"+getName()+"', returning null. Caught: "+e);
+			_logger.warn("Problem reading Timestamp value for vrow=" + vrow + ", column='" + colName + "', tableName='" + getName() + "', returning null. Caught: " + e);
 			return null;
 		}
 	}
@@ -2049,7 +2049,7 @@ extends JXTable
 		}
 		catch(NumberFormatException e)
 		{
-			_logger.warn("Problem reading BigDecimal value for vrow="+vrow+", column='"+colName+"', tableName='"+getName()+"', returning null. Caught: "+e);
+			_logger.warn("Problem reading BigDecimal value for vrow=" + vrow + ", column='" + colName + "', tableName='" + getName() + "', returning null. Caught: " + e);
 			return null;
 		}
 	}
@@ -2079,7 +2079,7 @@ extends JXTable
 			}
 		}
 		if (mcol < 0)
-			throw new RuntimeException("Can't find column '"+colName+"' in JTable named '"+getName()+"'.");
+			throw new RuntimeException("Can't find column '" + colName + "' in JTable named '" + getName() + "'.");
 		
 //System.out.println("getValueAsObject(vrow="+vrow+", colName='"+colName+"'): col_pos="+col_pos+", mrow="+mrow+", mcol="+mcol+".");
 		Object o = tm.getValueAt(mrow, mcol);
@@ -2137,7 +2137,7 @@ extends JXTable
 		}
 		catch(NumberFormatException e)
 		{
-			_logger.warn("Problem reading Short value for vrow="+getSelectedRow()+", column='"+colName+"', tableName='"+getName()+"', returning null. Caught: "+e);
+			_logger.warn("Problem reading Short value for vrow=" + getSelectedRow() + ", column='" + colName + "', tableName='" + getName() + "', returning null. Caught: " + e);
 			return null;
 		}
 	}
@@ -2162,7 +2162,7 @@ extends JXTable
 		}
 		catch(NumberFormatException e)
 		{
-			_logger.warn("Problem reading Integer value for vrow="+getSelectedRow()+", column='"+colName+"', tableName='"+getName()+"', returning null. Caught: "+e);
+			_logger.warn("Problem reading Integer value for vrow=" + getSelectedRow() + ", column='" + colName + "', tableName='" + getName() + "', returning null. Caught: " + e);
 			return null;
 		}
 	}
@@ -2187,7 +2187,7 @@ extends JXTable
 		}
 		catch(NumberFormatException e)
 		{
-			_logger.warn("Problem reading Long value for vrow="+getSelectedRow()+", column='"+colName+"', tableName='"+getName()+"', returning null. Caught: "+e);
+			_logger.warn("Problem reading Long value for vrow=" + getSelectedRow() + ", column='" + colName + "', tableName='" + getName() + "', returning null. Caught: " + e);
 			return null;
 		}
 	}
@@ -2214,7 +2214,7 @@ extends JXTable
 		}
 		catch(ParseException e)
 		{
-			_logger.warn("Problem reading Timestamp value for vrow="+getSelectedRow()+", column='"+colName+"', tableName='"+getName()+"', returning null. Caught: "+e);
+			_logger.warn("Problem reading Timestamp value for vrow=" + getSelectedRow() + ", column='" + colName + "', tableName='" + getName() + "', returning null. Caught: " + e);
 			return null;
 		}
 	}
@@ -2239,7 +2239,7 @@ extends JXTable
 		}
 		catch(NumberFormatException e)
 		{
-			_logger.warn("Problem reading BigDecimal value for vrow="+getSelectedRow()+", column='"+colName+"', tableName='"+getName()+"', returning null. Caught: "+e);
+			_logger.warn("Problem reading BigDecimal value for vrow=" + getSelectedRow() + ", column='" + colName + "', tableName='" + getName() + "', returning null. Caught: " + e);
 			return null;
 		}
 	}
@@ -2268,7 +2268,7 @@ extends JXTable
 			}
 		}
 		if (mcol < 0)
-			throw new RuntimeException("Can't find column '"+colName+"' in JTable named '"+getName()+"'.");
+			throw new RuntimeException("Can't find column '" + colName + "' in JTable named '" + getName() + "'.");
 		
 		Object o = tm.getValueAt(mrow, mcol);
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -100,9 +100,9 @@ extends OsTableRow
 				}
 				else
 				{
-					throw new RuntimeException("Unsupported data type for column '"+ce._colName+"' when adding to summary "
-							+ "currentValue('"+thisVal+"')=" + (thisVal == null ? "can-not-determen-className" : thisVal.getClass().getName())
-							+ ", addValue('"+addVal+"')="    + (addVal  == null ? "can-not-determen-className" : addVal.getClass().getName())
+					throw new RuntimeException("Unsupported data type for column '" + ce._colName + "' when adding to summary "
+							+ "currentValue('" + thisVal + "')=" + (thisVal == null ? "can-not-determen-className" : thisVal.getClass().getName())
+							+ ", addValue('" + addVal + "')="    + (addVal  == null ? "can-not-determen-className" : addVal.getClass().getName())
 							+ ".");
 				}
 			}
@@ -146,7 +146,7 @@ extends OsTableRow
 				}
 				else
 				{
-					throw new RuntimeException("Unsupported data type for column '"+ce._colName+"' when calculating average on value='"+thisVal+"' of type '"+thisVal.getClass().getName()+"'.");
+					throw new RuntimeException("Unsupported data type for column '" + ce._colName + "' when calculating average on value='" + thisVal + "' of type '" + thisVal.getClass().getName() + "'.");
 				}
 			}
 		}

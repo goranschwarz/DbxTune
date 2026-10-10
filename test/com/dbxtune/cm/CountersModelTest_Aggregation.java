@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -134,9 +134,9 @@ public class CountersModelTest_Aggregation
 		_cm.refresh(_conn);
 		_cm.refresh(_conn);  // INVESTIGATE WHY WE NEED TO DO A SECONDS REFRESH
 
-System.out.println("_cm.getSql()="+_cm.getSql());
-System.out.println("_cm.getColumnCount()="+_cm.getColumnCount());
-System.out.println("_cm.getRowCount()="+_cm.getRowCount());
+System.out.println("_cm.getSql()=" + _cm.getSql());
+System.out.println("_cm.getColumnCount()=" + _cm.getColumnCount());
+System.out.println("_cm.getRowCount()=" + _cm.getRowCount());
 		assertEquals("getColumnCount", 7, _cm.getColumnCount());
 		assertEquals("getRowCount"   , 5, _cm.getRowCount());
 		assertEquals("getAbsValueSum" , Double.valueOf(10d), _cm.getAbsValueSum("C1_SUM"));

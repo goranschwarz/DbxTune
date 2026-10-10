@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -87,7 +87,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFramePostgres.TCP_GROUP_REPLICATION;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -133,7 +133,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmPgReplication(counterController, guiController);
 	}
@@ -379,7 +379,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_TOTAL_LAG,
 			"Replication Lag in KB", 	                // Menu CheckBox text
-			"Replication Lag in KB ("+SHORT_NAME+")", // Graph Label 
+			"Replication Lag in KB (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.REPLICATION,
@@ -390,7 +390,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_REP_AGE_SECONDS,
 			"Replication Age in Seconds", 	                // Menu CheckBox text
-			"Replication Age in Seconds ("+SHORT_NAME+")", // Graph Label 
+			"Replication Age in Seconds (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.REPLICATION,
@@ -534,7 +534,7 @@ extends CountersModel
 			}
 			catch (SQLException ex)
 			{
-				_logger.warn("Problems getting status information (pg_is_in_recovery, pg_stat_replication, check-if-table-exists) from DBMS. Skipping 'updatePrimaryInstance'. Caught: Error="+ex.getErrorCode()+", Msg='"+ex.getMessage().trim()+"', SQL="+sql);
+				_logger.warn("Problems getting status information (pg_is_in_recovery, pg_stat_replication, check-if-table-exists) from DBMS. Skipping 'updatePrimaryInstance'. Caught: Error=" + ex.getErrorCode() + ", Msg='" + ex.getMessage().trim() + "', SQL=" + sql);
 				return;
 				// <<<<<<<<<<<<<<<<<< return <<<<<<<<<<<<<<<<<<<<<
 			}
@@ -567,7 +567,7 @@ extends CountersModel
 				}
 				catch (SQLException ex)
 				{
-					_logger.warn("Problems creating/granting table 'postgrestune_ha_dummy_update'. Skipping 'updatePrimaryInstance'. Caught: Error="+ex.getErrorCode()+", Msg='"+ex.getMessage().trim()+"', SQL="+sql);
+					_logger.warn("Problems creating/granting table 'postgrestune_ha_dummy_update'. Skipping 'updatePrimaryInstance'. Caught: Error=" + ex.getErrorCode() + ", Msg='" + ex.getMessage().trim() + "', SQL=" + sql);
 
 					ConnectionProp connProps = conn.getConnProp();
 					String curentUsername = connProps == null ? "-unknown-" : connProps.getUsername();
@@ -657,7 +657,7 @@ extends CountersModel
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_TotalLagKb, DEFAULT_alarm_TotalLagKb);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", total_lag_kb='"+total_lag_kb+"'.");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", total_lag_kb='" + total_lag_kb + "'.");
 
 					if (total_lag_kb.intValue() > threshold)
 					{
@@ -725,7 +725,7 @@ extends CountersModel
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ReplyTimeInSeconds, DEFAULT_alarm_ReplyTimeInSeconds);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", reply_time_seconds='"+reply_time_seconds+"'.");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", reply_time_seconds='" + reply_time_seconds + "'.");
 
 					if (reply_time_seconds.intValue() > threshold)
 					{

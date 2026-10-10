@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -170,16 +170,16 @@ extends ReportChartAbstract
 		
 		String sql = 
 				"select DATEADD(MINUTE, DATEDIFF(MINUTE, '2000-01-01', [SessionSampleTime]) / " + samplePeriod + " * " + samplePeriod + ", '2000-01-01') as [SamplePeriod] \n" 
-				+"      ,[" + getGroupColumnName() + "] \n"
-				+"      ,sum([" + getValueColumnName() + "])" + divideByValue + " as [" + getValueColumnName() + "] \n"
-				+" from " + getSchemaNameSqlPrefix() + "[" + getTableName() + "] \n"
-				+" where 1 = 1 \n"
+				+ "      ,[" + getGroupColumnName() + "] \n"
+				+ "      ,sum([" + getValueColumnName() + "])" + divideByValue + " as [" + getValueColumnName() + "] \n"
+				+ " from " + getSchemaNameSqlPrefix() + "[" + getTableName() + "] \n"
+				+ " where 1 = 1 \n"
 				+ getReportEntry().getReportPeriodSqlWhere()
 //				+ keepGroupWhere
 //				+ skipGroupWhere
 ////			+ "	--  and [SessionSampleTime] between '2020-09-10 13:00' and '2020-09-10 14:00' \n"
 				+ "group by DATEADD(MINUTE, DATEDIFF(MINUTE, '2000-01-01', [SessionSampleTime]) / " + samplePeriod + " * " + samplePeriod + ", '2000-01-01'), [" + getGroupColumnName() + "] \n"
-				+" order by 1, 2 \n"
+				+ " order by 1, 2 \n"
 				;
 
 		return sql;

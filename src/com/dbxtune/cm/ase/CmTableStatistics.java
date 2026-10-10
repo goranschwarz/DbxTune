@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -80,7 +80,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = Ver.ver(15, 0);
 	public static final long     NEED_CE_VERSION  = 0;
@@ -109,7 +109,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmTableStatistics(counterController, guiController);
 	}
@@ -422,10 +422,10 @@ extends CountersModel
 		boolean sample_partitions        = conf.getBooleanProperty(PROPKEY_sample_partitions,        DEFAULT_sample_partitions);
 
 		// sample_spaceUsage
-		String sqlCol_PageUtilization  = "	PageUtilization       = convert(bigint, -1), -- property '"+PROPKEY_sample_spaceUsage+"' is disabled.\n";
-		String sqlCol_ActualDataPages  = "	ActualDataPages       = convert(bigint, -1), -- property '"+PROPKEY_sample_spaceUsage+"' is disabled.\n";
-		String sqlCol_ActualIndexPages = "	ActualIndexPages      = convert(bigint, -1), -- property '"+PROPKEY_sample_spaceUsage+"' is disabled.\n";
-		String sqlCol_ReservedPages    = "	ReservedPages         = convert(bigint, -1), -- property '"+PROPKEY_sample_spaceUsage+"' is disabled.\n";
+		String sqlCol_PageUtilization  = "	PageUtilization       = convert(bigint, -1), -- property '" + PROPKEY_sample_spaceUsage + "' is disabled.\n";
+		String sqlCol_ActualDataPages  = "	ActualDataPages       = convert(bigint, -1), -- property '" + PROPKEY_sample_spaceUsage + "' is disabled.\n";
+		String sqlCol_ActualIndexPages = "	ActualIndexPages      = convert(bigint, -1), -- property '" + PROPKEY_sample_spaceUsage + "' is disabled.\n";
+		String sqlCol_ReservedPages    = "	ReservedPages         = convert(bigint, -1), -- property '" + PROPKEY_sample_spaceUsage + "' is disabled.\n";
 		if (sample_spaceUsage)
 		{
 			sqlCol_PageUtilization  = "	PageUtilization       = convert(numeric(10,2), CASE WHEN I.indid > 1 OR reserved_pages(@dbid, I.id, 0) = 0 THEN NULL ELSE 100.0 * data_pages(@dbid, I.id, 0) / reserved_pages(@dbid, I.id, 0) END), \n";
@@ -435,17 +435,17 @@ extends CountersModel
 		}
 
 		// sample_minPageLimit
-		String sqlWhere_MinPageLimit = "  and (S.pagecnt + S.leafcnt) > 1 -- Property '"+PROPKEY_sample_minPageLimit+"' is '"+sample_minPageLimit+"' and '"+PROPKEY_sample_minPageLimitCount+"' to "+sample_minPageLimitCount+".\n";
+		String sqlWhere_MinPageLimit = "  and (S.pagecnt + S.leafcnt) > 1 -- Property '" + PROPKEY_sample_minPageLimit + "' is '" + sample_minPageLimit + "' and '" + PROPKEY_sample_minPageLimitCount + "' to " + sample_minPageLimitCount + ".\n";
 		if (sample_minPageLimit)
 		{
-			sqlWhere_MinPageLimit    = "  and (S.pagecnt + S.leafcnt) > "+sample_minPageLimitCount+" -- Property '"+PROPKEY_sample_minPageLimit+"' is '"+sample_minPageLimit+"' and '"+PROPKEY_sample_minPageLimitCount+"' to "+sample_minPageLimitCount+".\n";
+			sqlWhere_MinPageLimit    = "  and (S.pagecnt + S.leafcnt) > " + sample_minPageLimitCount + " -- Property '" + PROPKEY_sample_minPageLimit + "' is '" + sample_minPageLimit + "' and '" + PROPKEY_sample_minPageLimitCount + "' to " + sample_minPageLimitCount + ".\n";
 		}
 
 		// sample_systemTables
-		String sqlWhere_SystemTables = "  and S.id              > 100 -- SKIP: system tables... Property '"+PROPKEY_sample_systemTables+"' is '"+sample_systemTables+"'. \n";
+		String sqlWhere_SystemTables = "  and S.id              > 100 -- SKIP: system tables... Property '" + PROPKEY_sample_systemTables + "' is '" + sample_systemTables + "'. \n";
 		if (sample_systemTables)
 		{
-			sqlWhere_SystemTables    = "--and S.id              > 100 -- SKIP: system tables... Property '"+PROPKEY_sample_systemTables+"' is '"+sample_systemTables+"'.\n";
+			sqlWhere_SystemTables    = "--and S.id              > 100 -- SKIP: system tables... Property '" + PROPKEY_sample_systemTables + "' is '" + sample_systemTables + "'.\n";
 		}
 
 		// sample_partitions
@@ -780,7 +780,7 @@ extends CountersModel
 			if (conf.getBooleanProperty(PROPKEY_disable_spaceUsage_onTimeout, DEFAULT_disable_spaceUsage_onTimeout))
 			{
 				setQueryTimeout(getDefaultQueryTimeout(), true);
-				_logger.warn("CM='"+getName()+"'. Setting Query Timeout to default of '"+getDefaultQueryTimeout()+"', from method handelTimeoutException().");
+				_logger.warn("CM='" + getName() + "'. Setting Query Timeout to default of '" + getDefaultQueryTimeout() + "', from method handelTimeoutException().");
 				return;
 			}
 		}
@@ -802,7 +802,7 @@ extends CountersModel
 				setSql(null);
 	
 				String key=PROPKEY_sample_spaceUsage;
-				_logger.warn("CM='"+getName()+"'. Disabling the column 'PageUtilization', 'ActualDataPages', 'ActualIndexPages', 'ReservedPages' from method handelTimeoutException(). This is done by setting "+key+"=false");
+				_logger.warn("CM='" + getName() + "'. Disabling the column 'PageUtilization', 'ActualDataPages', 'ActualIndexPages', 'ReservedPages' from method handelTimeoutException(). This is done by setting " + key + "=false");
 				
 				if (getGuiController() != null && getGuiController().hasGUI())
 				{
@@ -810,7 +810,7 @@ extends CountersModel
 
 					JOptionPane optionPane = new JOptionPane(
 							"<html>" +
-							"The query for CM '"+getName()+"' took to long... and received a Timeout.<br>" +
+							"The query for CM '" + getName() + "' took to long... and received a Timeout.<br>" +
 							"<br>" +
 							"This may be caused by the function <code>data_pages()</code> or <code>reserved_pages()</code>, which is used to get how storage the table is using.<br>" +
 							"<br>" +
@@ -818,7 +818,7 @@ extends CountersModel
 							"I just disabled option 'Sample Space Usage'... You can try to enable it again later.<br>" +
 							"</html>",
 							JOptionPane.INFORMATION_MESSAGE);
-					JDialog dialog = optionPane.createDialog(MainFrame.getInstance(), "Disabled 'Sample Space Usage' @ "+dateStr);
+					JDialog dialog = optionPane.createDialog(MainFrame.getInstance(), "Disabled 'Sample Space Usage' @ " + dateStr);
 					dialog.setModal(false);
 					dialog.setVisible(true);
 				}

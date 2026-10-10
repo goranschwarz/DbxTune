@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -39,11 +39,11 @@ extends AlarmEvent
 				Version.getAppName(), // serviceType
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo
-				rangeType+"",         // extraInfo
+				rangeType + "",         // extraInfo
 				AlarmEvent.Category.CPU,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Exhausting CPU Scheduling resources in '" + cm.getServerName() + "'. RunQueueLength: avg_1min=" + avg_1min + ", avg_5min="+avg_5min+", avg_15min="+avg_15min+". (threshold="+threshold+")",
+				"Exhausting CPU Scheduling resources in '" + cm.getServerName() + "'. RunQueueLength: avg_1min=" + avg_1min + ", avg_5min=" + avg_5min + ", avg_15min=" + avg_15min + ". (threshold=" + threshold + ")",
 				threshold);
 
 		// Set: Time To Live if postpone is enabled

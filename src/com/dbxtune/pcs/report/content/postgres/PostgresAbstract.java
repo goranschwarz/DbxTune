@@ -1,5 +1,5 @@
 /***************************************R****************************************
- * Copyright (C) 2010-2019 Goran SchwarzUD = 
+ * Copyright (C) 2010-2027 Goran SchwarzUD = 
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -427,7 +427,7 @@ extends ReportEntryAbstract
 				tableInfoMap.put("DBName"     ,            markIfDifferent(entry.getDbName(), firstEntryDbname));
 //				tableInfoMap.put("Schema"     ,            entry.getSchemaName()      );
 //				tableInfoMap.put("Function"   ,            entry.getTableName()       );
-				tableInfoMap.put("Created"    ,            entry.getCrDate()+""       );
+				tableInfoMap.put("Created"    ,            entry.getCrDate() + ""       );
 //				tableInfoMap.put("References" ,            entry.getCursorReferences()+""); // instead show this in the: Index Info section
 				tableInfoMap.put("SQL Text"   ,            getFormattedSqlAsTooltipDiv(entry._objectText, "Cursor SQL Text", DbUtils.DB_PROD_NAME_POSTGRES));
 			}
@@ -459,7 +459,7 @@ extends ReportEntryAbstract
 				tableInfoMap.put("Index MB"    , nf.format( entry.getIndexMb()   ));
 				tableInfoMap.put("Toast/LOB MB", entry.getToastMb() == -1 ? "-no-toast-" : nf.format( entry.getToastMb()   ));
 //				tableInfoMap.put("Created"     , entry.getCrDate()+""       );
-				tableInfoMap.put("Sampled"     , entry.getSampleTime()+""   );
+				tableInfoMap.put("Sampled"     , entry.getSampleTime() + ""   );
 				tableInfoMap.put("Index Count" , entry.getIndexCount() + (entry.getIndexCount() > 0 ? "" : " <b><font color='red'>&lt;&lt;-- Warning NO index</font></b>") );
 				tableInfoMap.put("DDL Info"    , getTextAsTooltipDiv(entry._objectText, "Table Info", getDdlMaxLengthTable()));
 				tableInfoMap.put("Triggers"    , entry._triggersText == null ? "-no-triggers-" : getTextAsTooltipDiv(entry._triggersText, "Trigger Info", getDdlMaxLengthTrigger()));

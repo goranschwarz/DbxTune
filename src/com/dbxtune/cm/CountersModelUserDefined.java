@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -146,7 +146,7 @@ public class CountersModelUserDefined
 				{
 					if (sqlVersionNumInKey < Ver.ver(12,5,0,3))
 					{
-						_logger.warn("Reading User Defined Counter '"+getName()+"' with specialized sql for version number '"+sqlVersionNumInKey+"'. First version number that we support is "+Ver.ver(12,5,0,3)+" (which is Ase Version 12.5.0.3 in a numbered format, ("+Ver.ver(12,5,0,3)+" is new to be able to support ServicePackage, so for version '15.7.0 SP100'="+Ver.ver(15,7,0,100)+", '15.7.0 ESD#4'="+Ver.ver(15,7,0,4)+", '15.7.0 ESD#4.2'="+Ver.ver(12,7,0,4,2)+") ), disregarding this entry.");
+						_logger.warn("Reading User Defined Counter '" + getName() + "' with specialized sql for version number '" + sqlVersionNumInKey + "'. First version number that we support is " + Ver.ver(12,5,0,3) + " (which is Ase Version 12.5.0.3 in a numbered format, (" + Ver.ver(12,5,0,3) + " is new to be able to support ServicePackage, so for version '15.7.0 SP100'=" + Ver.ver(15,7,0,100) + ", '15.7.0 ESD#4'=" + Ver.ver(15,7,0,4) + ", '15.7.0 ESD#4.2'=" + Ver.ver(12,7,0,4,2) + ") ), disregarding this entry.");
 					}
 					else
 					{
@@ -159,7 +159,7 @@ public class CountersModelUserDefined
 			}
 			if (sqlVersionHigh > 0)
 			{
-				_logger.info("Initializing User Defined Counter '"+getName()+"' with sql using version number '"+sqlVersionHigh+"'.");
+				_logger.info("Initializing User Defined Counter '" + getName() + "' with sql using version number '" + sqlVersionHigh + "'.");
 	
 				String val = (String) _sqlVerStr.get( Integer.valueOf(sqlVersionHigh) );
 				return val;

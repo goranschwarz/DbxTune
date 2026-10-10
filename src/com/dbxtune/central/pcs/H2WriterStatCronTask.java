@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -85,6 +85,6 @@ extends Task
 		// Get a Statistics String
 		String statStr = _h2WriterStat.getStatString();
 
-		_logger.info("H2 Writer Statistics: "+statStr);
+		_logger.info("H2 Writer Statistics: " + statStr);
 	}
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -97,7 +97,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -133,7 +133,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmPerfCounters(counterController, guiController);
 	}
@@ -240,7 +240,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_CPU_PCT,
 			"CPU Usage in Percent", // Menu CheckBox text
-			"CPU Usage in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"CPU Usage in Percent (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "CPU usage %" }, 
 			LabelType.Static,
@@ -253,7 +253,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_CPU_EFFECTIVE_PCT,
 			"CPU Usage Effective in Percent", // Menu CheckBox text
-			"CPU Usage Effective in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"CPU Usage Effective in Percent (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "CPU effective %" }, 
 			LabelType.Static,
@@ -266,7 +266,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_BATCHES_SEC,
 			"SQL Batches Received per Sec", // Menu CheckBox text
-			"SQL Batches Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SQL Batches Received per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Batch Requests/sec" }, 
 			LabelType.Static,
@@ -279,7 +279,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_BATCHES_TIME_SPAN_ALL,
 			"SQL Batches (all) In Time Span Received per Sec", // Menu CheckBox text
-			"SQL Batches (all) In Time Span Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SQL Batches (all) In Time Span Received per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
 			LabelType.Static,
@@ -292,7 +292,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_BATCHES_TIME_SPAN_0,
 			"SQL Batches (0-10ms) In Time Span Received per Sec", // Menu CheckBox text
-			"SQL Batches (0-10ms) In Time Span Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SQL Batches (0-10ms) In Time Span Received per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "<1ms", "1-2ms", "2-5ms", "5-10ms" }, 
 			LabelType.Static,
@@ -305,7 +305,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_BATCHES_TIME_SPAN_1,
 			"SQL Batches (10ms-100ms) In Time Span Received per Sec", // Menu CheckBox text
-			"SQL Batches (10ms-100ms) In Time Span Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SQL Batches (10ms-100ms) In Time Span Received per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "10-20ms", "20-50ms", "50-100ms" }, 
 			LabelType.Static,
@@ -318,7 +318,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_BATCHES_TIME_SPAN_2,
 			"SQL Batches (100ms-1s) In Time Span Received per Sec", // Menu CheckBox text
-			"SQL Batches (100ms-1s) In Time Span Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SQL Batches (100ms-1s) In Time Span Received per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "100-200ms", "200-500ms", "500ms-1s" }, 
 			LabelType.Static,
@@ -331,7 +331,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_BATCHES_TIME_SPAN_3,
 			"SQL Batches (1s-10s) In Time Span Received per Sec", // Menu CheckBox text
-			"SQL Batches (1s-10s) In Time Span Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SQL Batches (1s-10s) In Time Span Received per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "1-2s", "2-5s", "5-10s" }, 
 			LabelType.Static,
@@ -344,7 +344,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_BATCHES_TIME_SPAN_4,
 			"SQL Batches (>10s) In Time Span Received per SAMPLE", // Menu CheckBox text
-			"SQL Batches (>10s) In Time Span Received per SAMPLE ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SQL Batches (>10s) In Time Span Received per SAMPLE (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "10-20s", "20-50s", "50-100s", ">100s" }, 
 			LabelType.Static,
@@ -357,7 +357,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_CACHE_HIT_RATE,
 			"Buffer Cache Hit Rate", // Menu CheckBox text
-			"Buffer Cache Hit Rate, in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Buffer Cache Hit Rate, in Percent (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Buffer cache hit ratio (Cache Hit Percent)" }, 
 			LabelType.Static,
@@ -370,7 +370,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_CACHE_PLE,
 			"Page Life Expectancy", // Menu CheckBox text
-			"Page Life Expectancy ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Page Life Expectancy (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Page life expectancy (high is good)" }, 
 			LabelType.Static,
@@ -383,7 +383,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_CACHE_READS,
 			"Buffer Cache Reads", // Menu CheckBox text
-			"Buffer Cache Reads per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Buffer Cache Reads per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Page lookups (LogicalReads)", "Page reads (PhysicalReads)", "Readahead pages (PhysicalReads)" }, 
 			LabelType.Static,
@@ -396,7 +396,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_CACHE_PHY_READS,
 			"Buffer Cache Physical Reads", // Menu CheckBox text
-			"Buffer Cache Physical Reads per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Buffer Cache Physical Reads per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Page Reads (PhysicalReads)", "Read Ahead Pages (PhysicalReads)" }, 
 			LabelType.Static,
@@ -409,7 +409,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_CACHE_PHY_READ_AHEAD_PCT,
 			"Buffer Cache Physical Readahead Percent", // Menu CheckBox text
-			"Buffer Cache Physical Readahead Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Buffer Cache Physical Readahead Percent (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Readahead Percent" }, 
 			LabelType.Static,
@@ -422,7 +422,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_CACHE_WRITES,
 			"Buffer Cache Writes", // Menu CheckBox text
-			"Buffer Cache Writes per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Buffer Cache Writes per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Page writes", "Checkpoint pages", "Background writer pages", "Lazy writes" }, 
 			LabelType.Static,
@@ -435,7 +435,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_CACHE_DATA_SIZE,
 			"Buffer Cache Data Size in MB", // Menu CheckBox text
-			"Buffer Cache Data Size in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Buffer Cache Data Size in MB (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Database pages" }, 
 			LabelType.Static,
@@ -448,7 +448,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_TEMP_STAT,
 			"Temp Table Stats", // Menu CheckBox text
-			"Temp Table Stats ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Temp Table Stats (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Active Temp Tables", "Temp Tables Creation Rate", "Temp Tables For Destruction" }, 
 			LabelType.Static,
@@ -461,7 +461,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_TEMPDB_FREE_SPACE,
 			"Tempdb Free Space", // Menu CheckBox text
-			"Tempdb Free Space ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Tempdb Free Space (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Free Space in tempdb (KB)" }, 
 			LabelType.Static,
@@ -474,7 +474,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_VERSION_STORE,
 			"Version Store in Tempdb", // Menu CheckBox text
-			"Version Store in Tempdb ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Version Store in Tempdb (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Version Store Size (KB)", "Version Generation rate (KB/s)", "Version Cleanup rate (KB/s)" }, 
 			LabelType.Static,
@@ -487,7 +487,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SNAPSHOT_ISOLATION,
 			"Snapshot Isolation", // Menu CheckBox text
-			"Snapshot Isolation ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Snapshot Isolation (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Snapshot Transactions", "Update Snapshot Transactions", "NonSnapshot Version Transactions", "Longest Transaction Running Time", "Update conflict ratio" }, 
 			LabelType.Static,
@@ -500,7 +500,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_LOG_CACHE_HIT_RATE,
 			"Log Cache Hit Rate", // Menu CheckBox text
-			"Log Cache Hit Rate, in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Log Cache Hit Rate, in Percent (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -513,7 +513,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_LOG_CACHE_READS,
 			"Log Cache Reads", // Menu CheckBox text
-			"Log Cache Reads per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Log Cache Reads per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -526,7 +526,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_LOG_POOL_REQUESTS,
 			"Log Pool Requets", // Menu CheckBox text
-			"Log Pool Requets per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Log Pool Requets per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -539,7 +539,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_TRANS_SEC,
 			"Transactions", // Menu CheckBox text
-			"Transactions per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Transactions per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -552,7 +552,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_TRANS_WRITE_SEC,
 			"Write Transactions", // Menu CheckBox text
-			"Write Transactions per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Write Transactions per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -565,7 +565,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_TRANS_ACTIVE,
 			"Active Transactions", // Menu CheckBox text
-			"Active Transactions ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Active Transactions (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -578,7 +578,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_COMPILE,
 			"SQL Compilations", // Menu CheckBox text
-			"SQL Compilations per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SQL Compilations per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "SQL Compilations/sec" }, 
 			LabelType.Static,
@@ -591,7 +591,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_RECOMPILE,
 			"SQL Re-Compilations", // Menu CheckBox text
-			"SQL Re-Compilations per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SQL Re-Compilations per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "SQL Re-Compilations/sec" }, 
 			LabelType.Static,
@@ -604,7 +604,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_BLOCKED_PROCESSES,
 			"Blocked Processes", // Menu CheckBox text
-			"Blocked Processes ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Blocked Processes (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Processes blocked" }, 
 			LabelType.Static,
@@ -617,7 +617,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PAGE_SPLITS,
 			"Page Splits", // Menu CheckBox text
-			"Page Splits per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Page Splits per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Page Splits/sec" }, 
 			LabelType.Static,
@@ -630,7 +630,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_FWD_RIDS,
 			"Forwarded Records", // Menu CheckBox text
-			"Forwarded Records per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Forwarded Records per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Forwarded Records/sec" }, 
 			LabelType.Static,
@@ -643,7 +643,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_ACCESS_METHODS,
 			"Access Methods", // Menu CheckBox text
-			"Access Methods per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Access Methods per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Full Scans/sec", "Range Scans/sec", "Probe Scans/sec" }, 
 			LabelType.Static,
@@ -656,7 +656,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_LATCH_WAITS,
 			"Latch Waits", // Menu CheckBox text
-			"Latch Waits per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Latch Waits per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Latch Waits/sec" }, 
 			LabelType.Static,
@@ -669,7 +669,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_LATCH_WAIT_TIME,
 			"Average Latch Wait Time", // Menu CheckBox text
-			"Average Latch Wait Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Average Latch Wait Time (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Average Latch Wait Time (ms)" }, 
 			LabelType.Static,
@@ -683,7 +683,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_FREE_LIST_STALLS,
 			"Buffer Cache - Waiting for free pages per Sec", // Menu CheckBox text
-			"Buffer Cache - Waiting for free pages per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Buffer Cache - Waiting for free pages per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Free list stalls/sec" }, 
 			LabelType.Static,
@@ -696,7 +696,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_MEMORY_GRANTS_PENDING,
 			"'Memory Grants Pending' per Sec", // Menu CheckBox text
-			"'Memory Grants Pending' per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"'Memory Grants Pending' per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Memory Grants Pending" }, 
 			LabelType.Static,
@@ -710,7 +710,7 @@ extends CountersModel
 		
 		addTrendGraph(GRAPH_NAME_PLAN_CACHE_HIT_RATE,
 			"Plan Cache Hit Rate", // Menu CheckBox text
-			"Plan Cache Hit Rate ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Plan Cache Hit Rate (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "SQL Plans", "Object Plans(sp/tr/func)", "Temporary Tables & Table Variables", "Bound Trees", "Extended Stored Procedures" }, 
 			LabelType.Static,
@@ -723,7 +723,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PLAN_CACHE_MB,
 			"Plan Cache Size in MB", // Menu CheckBox text
-			"Plan Cache Size in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Plan Cache Size in MB (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "SQL Plans", "Object Plans", "Temporary Tables & Table Variables", "Bound Trees", "Extended Stored Procedures" }, 
 			LabelType.Static,
@@ -736,7 +736,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PLAN_CACHE_OBJ_CNT,
 			"Plan Cache Object Count", // Menu CheckBox text
-			"Plan Cache Object Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Plan Cache Object Count (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "SQL Plans", "Object Plans", "Temporary Tables & Table Variables", "Bound Trees", "Extended Stored Procedures" }, 
 			LabelType.Static,
@@ -749,7 +749,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PLAN_CACHE_OBJ_USE,
 			"Plan Cache Objects In Use", // Menu CheckBox text
-			"Plan Cache Objects In Use ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Plan Cache Objects In Use (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "SQL Plans", "Object Plans", "Temporary Tables & Table Variables", "Bound Trees", "Extended Stored Procedures" }, 
 			LabelType.Static,
@@ -762,7 +762,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_MEMORY_MANAGER,
 			"Memory Manager", // Menu CheckBox text
-			"Memory Manager ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Memory Manager (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -775,7 +775,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_MEMORY_TARGET_VS_TOTAL,
 			"Target vs Total Memory", // Menu CheckBox text
-			"Target vs Total Memory ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Target vs Total Memory (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Target Server Memory (KB)", "Total Server Memory (KB)" }, 
 			LabelType.Static,
@@ -788,7 +788,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_MEMORY_STOLEN,
 			"Stolen Server Memory, from Buffer Pool", // Menu CheckBox text
-			"Stolen Server Memory, from Buffer Pool ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Stolen Server Memory, from Buffer Pool (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Stolen Server Memory, in MB" }, 
 			LabelType.Static,
@@ -801,7 +801,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_QUERY_STORE_TOTAL,
 			"Query Story Total", // Menu CheckBox text
-			"Query Store Total ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Query Store Total (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "CPU Usage", "Physical Reads", "Logical Reads", "Logical Writes" }, 
 			LabelType.Static,
@@ -814,7 +814,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_QUERY_STORE_DB_CPU,
 			"Query Story DB - CPU", // Menu CheckBox text
-			"Query Store DB - CPU ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Query Store DB - CPU (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -827,7 +827,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_QUERY_STORE_DB_PHYS_READ,
 			"Query Story DB - Physical Reads", // Menu CheckBox text
-			"Query Store DB - Physical Reads ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Query Store DB - Physical Reads (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -840,7 +840,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_QUERY_STORE_DB_LOGI_READ,
 			"Query Story DB - Logical Reads", // Menu CheckBox text
-			"Query Store DB - Logical Reads ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Query Store DB - Logical Reads (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -853,7 +853,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_QUERY_STORE_DB_LOGI_WRITE,
 			"Query Story DB - Logical Writes", // Menu CheckBox text
-			"Query Store DB - Logical Writes ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Query Store DB - Logical Writes (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -866,7 +866,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_DEADLOCK_DETAILS,
 			"Deadlock Count Details", // Menu CheckBox text
-			"Deadlock Count Details ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Deadlock Count Details (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -879,7 +879,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_COLUMNSTORE_ALL,
 			"Column Store Total", // Menu CheckBox text
-			"Column Store Total ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Column Store Total (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { 
 					"Delta Rowgroups Created", 
@@ -903,7 +903,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_ERRORS,
 			"SQL Errors", // Menu CheckBox text
-			"SQL Errors ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SQL Errors (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { 
 					"Total", 
@@ -998,7 +998,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk+"'='"+val+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk + "'='" + val + "'.");
 			}
 		}
 
@@ -1030,7 +1030,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk+"'='"+val+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk + "'='" + val + "'.");
 			}
 		}
 
@@ -1057,7 +1057,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value for pk-row: '"+pk+"'='"+val+"'.");
+					tg.setWarningLabel("Failed to get value for pk-row: '" + pk + "'='" + val + "'.");
 			}
 		}
 
@@ -1132,7 +1132,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value for 'some' pk-row: '"+pk1+"'='"+val1+"'.");
+					tg.setWarningLabel("Failed to get value for 'some' pk-row: '" + pk1 + "'='" + val1 + "'.");
 			}
 		}
 
@@ -1168,7 +1168,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value for 'some' pk-row: '"+pk1+"'='"+val1+"'.");
+					tg.setWarningLabel("Failed to get value for 'some' pk-row: '" + pk1 + "'='" + val1 + "'.");
 			}
 		}
 
@@ -1201,7 +1201,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value for 'some' pk-row: '"+pk5+"'='"+val5+"'.");
+					tg.setWarningLabel("Failed to get value for 'some' pk-row: '" + pk5 + "'='" + val5 + "'.");
 			}
 		}
 
@@ -1234,7 +1234,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value for 'some' pk-row: '"+pk8+"'='"+val8+"'.");
+					tg.setWarningLabel("Failed to get value for 'some' pk-row: '" + pk8 + "'='" + val8 + "'.");
 			}
 		}
 
@@ -1267,7 +1267,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value for 'some' pk-row: '"+pk11+"'='"+val11+"'.");
+					tg.setWarningLabel("Failed to get value for 'some' pk-row: '" + pk11 + "'='" + val11 + "'.");
 			}
 		}
 
@@ -1303,7 +1303,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value for 'some' pk-row: '"+pk14+"'='"+val14+"'.");
+					tg.setWarningLabel("Failed to get value for 'some' pk-row: '" + pk14 + "'='" + val14 + "'.");
 			}
 		}
 
@@ -1328,7 +1328,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk+"'='"+val+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk + "'='" + val + "'.");
 			}
 		}
 
@@ -1359,7 +1359,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk1 + "'='" + val1 + "', '" + pk2 + "'='" + val2 + "', '" + pk3 + "'='" + val3 + "'.");
 			}
 		}
 
@@ -1387,7 +1387,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk1 + "'='" + val1 + "', '" + pk2 + "'='" + val2 + "'.");
 			}
 		}
 
@@ -1418,7 +1418,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+PageReadsPerSec+"', '"+pk2+"'='"+ReadaheadPagesPerSec+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk1 + "'='" + PageReadsPerSec + "', '" + pk2 + "'='" + ReadaheadPagesPerSec + "'.");
 			}
 		}
 
@@ -1453,7 +1453,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"', '"+pk4+"'='"+val4+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk1 + "'='" + val1 + "', '" + pk2 + "'='" + val2 + "', '" + pk3 + "'='" + val3 + "', '" + pk4 + "'='" + val4 + "'.");
 			}
 		}
 
@@ -1479,7 +1479,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk1 + "'='" + val1 + "'.");
 			}
 		}
 
@@ -1510,7 +1510,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk1 + "'='" + val1 + "', '" + pk2 + "'='" + val2 + "', '" + pk3 + "'='" + val3 + "'.");
 			}
 		}
 
@@ -1535,7 +1535,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk1 + "'='" + val1 + "'.");
 			}
 		}
 
@@ -1566,7 +1566,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk1 + "'='" + val1 + "', '" + pk2 + "'='" + val2 + "', '" + pk3 + "'='" + val3 + "'.");
 			}
 		}
 
@@ -1603,7 +1603,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"', '"+pk4+"'='"+val4+"', '"+pk5+"'='"+val5+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk1 + "'='" + val1 + "', '" + pk2 + "'='" + val2 + "', '" + pk3 + "'='" + val3 + "', '" + pk4 + "'='" + val4 + "', '" + pk5 + "'='" + val5 + "'.");
 			}
 		}
 
@@ -1657,7 +1657,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk+"'='"+val+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk + "'='" + val + "'.");
 			}
 		}
 
@@ -1807,7 +1807,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk+"'='"+val+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk + "'='" + val + "'.");
 			}
 		}
 
@@ -1832,7 +1832,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk+"'='"+val+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk + "'='" + val + "'.");
 			}
 		}
 
@@ -1857,7 +1857,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk+"'='"+val+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk + "'='" + val + "'.");
 			}
 		}
 
@@ -1882,7 +1882,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk+"'='"+val+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk + "'='" + val + "'.");
 			}
 		}
 
@@ -1907,7 +1907,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk+"'='"+val+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk + "'='" + val + "'.");
 			}
 		}
 
@@ -1938,7 +1938,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk1 + "'='" + val1 + "', '" + pk2 + "'='" + val2 + "', '" + pk3 + "'='" + val3 + "'.");
 			}
 		}
 
@@ -1963,7 +1963,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk+"'='"+val+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk + "'='" + val + "'.");
 			}
 		}
 
@@ -1988,7 +1988,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk+"'='"+val+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk + "'='" + val + "'.");
 			}
 		}
 
@@ -2013,7 +2013,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk+"'='"+val+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk + "'='" + val + "'.");
 			}
 		}
 
@@ -2038,7 +2038,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk+"'='"+val+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk + "'='" + val + "'.");
 			}
 		}
 		
@@ -2075,7 +2075,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"', '"+pk4+"'='"+val4+"', '"+pk5+"'='"+val5+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk1 + "'='" + val1 + "', '" + pk2 + "'='" + val2 + "', '" + pk3 + "'='" + val3 + "', '" + pk4 + "'='" + val4 + "', '" + pk5 + "'='" + val5 + "'.");
 			}
 		}
 
@@ -2112,7 +2112,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"', '"+pk4+"'='"+val4+"', '"+pk5+"'='"+val5+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk1 + "'='" + val1 + "', '" + pk2 + "'='" + val2 + "', '" + pk3 + "'='" + val3 + "', '" + pk4 + "'='" + val4 + "', '" + pk5 + "'='" + val5 + "'.");
 			}
 		}
 
@@ -2149,7 +2149,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"', '"+pk4+"'='"+val4+"', '"+pk5+"'='"+val5+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk1 + "'='" + val1 + "', '" + pk2 + "'='" + val2 + "', '" + pk3 + "'='" + val3 + "', '" + pk4 + "'='" + val4 + "', '" + pk5 + "'='" + val5 + "'.");
 			}
 		}
 
@@ -2186,7 +2186,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"', '"+pk4+"'='"+val4+"', '"+pk5+"'='"+val5+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk1 + "'='" + val1 + "', '" + pk2 + "'='" + val2 + "', '" + pk3 + "'='" + val3 + "', '" + pk4 + "'='" + val4 + "', '" + pk5 + "'='" + val5 + "'.");
 			}
 		}
 
@@ -2238,7 +2238,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk1 + "'='" + val1 + "', '" + pk2 + "'='" + val2 + "'.");
 			}
 		}
 
@@ -2263,7 +2263,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk1 + "'='" + val1 + "'.");
 			}
 		}
 
@@ -2297,7 +2297,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"', '"+pk4+"'='"+val4+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk1 + "'='" + val1 + "', '" + pk2 + "'='" + val2 + "', '" + pk3 + "'='" + val3 + "', '" + pk4 + "'='" + val4 + "'.");
 			}
 		}
 
@@ -2551,7 +2551,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"', '"+pk4+"'='"+val4+"', '"+pk5+"'='"+val5+"', '"+pk6+"'='"+val6+"', '"+pk7+"'='"+val7+"', '"+pk8+"'='"+val8+"', '"+pk9+"'='"+val9+"', '"+pk10+"'='"+val10+"', '"+pk11+"'='"+val11+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk1 + "'='" + val1 + "', '" + pk2 + "'='" + val2 + "', '" + pk3 + "'='" + val3 + "', '" + pk4 + "'='" + val4 + "', '" + pk5 + "'='" + val5 + "', '" + pk6 + "'='" + val6 + "', '" + pk7 + "'='" + val7 + "', '" + pk8 + "'='" + val8 + "', '" + pk9 + "'='" + val9 + "', '" + pk10 + "'='" + val10 + "', '" + pk11 + "'='" + val11 + "'.");
 			}
 		}
 
@@ -2598,7 +2598,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk1+"'='"+val1+"', '"+pk2+"'='"+val2+"', '"+pk3+"'='"+val3+"', '"+pk4+"'='"+val4+"', '"+pk5+"'='"+val5+"'.");
+					tg.setWarningLabel("Failed to get value(s) for pk-row: '" + pk1 + "'='" + val1 + "', '" + pk2 + "'='" + val2 + "', '" + pk3 + "'='" + val3 + "', '" + pk4 + "'='" + val4 + "', '" + pk5 + "'='" + val5 + "'.");
 			}
 		}
 	}
@@ -2777,7 +2777,7 @@ extends CountersModel
 
 		if (object_name_pos == -1 || counter_name_pos == -1 || instance_name_pos == -1 || cntr_value_pos == -1 || calculated_value_pos == -1 || cntr_type_name_pos == -1)
 		{
-			_logger.warn("Can't find all desired columns. object_name_pos="+object_name_pos+", counter_name_pos="+counter_name_pos+", instance_name_pos="+instance_name_pos+", cntr_value_pos="+cntr_value_pos+", calculated_value_pos="+calculated_value_pos+", cntr_type_name_pos="+cntr_type_name_pos+".");
+			_logger.warn("Can't find all desired columns. object_name_pos=" + object_name_pos + ", counter_name_pos=" + counter_name_pos + ", instance_name_pos=" + instance_name_pos + ", cntr_value_pos=" + cntr_value_pos + ", calculated_value_pos=" + calculated_value_pos + ", cntr_type_name_pos=" + cntr_type_name_pos + ".");
 			return;
 		}
 
@@ -2785,7 +2785,7 @@ extends CountersModel
 		int diffRowcount = diffData.getRowCount();
 		
 		if (absRowcount != diffRowcount)
-			_logger.warn("Number of rows in ABS and DIFF counters should be the same, otherwise this probably wont work. absRowcount="+absRowcount+", diffRowcount="+diffRowcount);
+			_logger.warn("Number of rows in ABS and DIFF counters should be the same, otherwise this probably wont work. absRowcount=" + absRowcount + ", diffRowcount=" + diffRowcount);
 		
 		// Clear the "known databases"
 		_dbnames.clear();
@@ -2829,12 +2829,12 @@ extends CountersModel
 						else
 						{
 							_logger.debug("################## >>>>>>>>>>>> ");
-							_logger.debug("                                object_name          =|"+object_name+"|");
-							_logger.debug("                                counter_name         =|"+counter_name+"|");
-							_logger.debug("                                instance_name        =|"+instance_name+"|");
-							_logger.debug("                                nextRow_object_name  =|"+nextRow_object_name+"|");
-							_logger.debug("                                nextRow_counter_name =|"+nextRow_counter_name+"|");
-							_logger.debug("                                nextRow_instance_name=|"+nextRow_instance_name+"|");
+							_logger.debug("                                object_name          =|" + object_name + "|");
+							_logger.debug("                                counter_name         =|" + counter_name + "|");
+							_logger.debug("                                instance_name        =|" + instance_name + "|");
+							_logger.debug("                                nextRow_object_name  =|" + nextRow_object_name + "|");
+							_logger.debug("                                nextRow_counter_name =|" + nextRow_counter_name + "|");
+							_logger.debug("                                nextRow_instance_name=|" + nextRow_instance_name + "|");
 						}
 					}
 				}
@@ -2882,12 +2882,12 @@ extends CountersModel
 						else
 						{
 							_logger.debug("################## >>>>>>>>>>>> ");
-							_logger.debug("                                object_name          =|"+object_name+"|");
-							_logger.debug("                                counter_name         =|"+counter_name+"|");
-							_logger.debug("                                instance_name        =|"+instance_name+"|");
-							_logger.debug("                                nextRow_object_name  =|"+nextRow_object_name+"|");
-							_logger.debug("                                nextRow_counter_name =|"+nextRow_counter_name+"|");
-							_logger.debug("                                nextRow_instance_name=|"+nextRow_instance_name+"|");
+							_logger.debug("                                object_name          =|" + object_name + "|");
+							_logger.debug("                                counter_name         =|" + counter_name + "|");
+							_logger.debug("                                instance_name        =|" + instance_name + "|");
+							_logger.debug("                                nextRow_object_name  =|" + nextRow_object_name + "|");
+							_logger.debug("                                nextRow_counter_name =|" + nextRow_counter_name + "|");
+							_logger.debug("                                nextRow_instance_name=|" + nextRow_instance_name + "|");
 						}
 					}
 				}
@@ -2956,11 +2956,11 @@ extends CountersModel
 			
 			String desc = "";
 			if      ("PERF_COUNTER_LARGE_RAWCOUNT".equals(cntr_type_name)) desc = "Provides the <b>last observed value</b> for the counter; for this type of counter, the values in cntr_value can be used directly, making this the most easily usable type<br>"
-			                                                                    + Version.getAppName()+" also helps you calculate the difference from previous sample, look at the <i>diff</i> counters, rr the <i>rate</i> counters...<br>"
+			                                                                    + Version.getAppName() + " also helps you calculate the difference from previous sample, look at the <i>diff</i> counters, rr the <i>rate</i> counters...<br>"
 			                                                                    + "<br><b>Formula</b>: none, just the counter as it is"
 			                                                                    + seeAlso;
 			else if ("PERF_COUNTER_BULK_COUNT"    .equals(cntr_type_name)) desc = "Provides the average number of operations per second. <b>Two readings of cntr_value will be required for this counter type, in order to get the per second averages</b><br>"
-			                                                                    + Version.getAppName()+" does this for you just select the <i>rate</i> counters and the <i>per second</i> is calculated for you<br>"
+			                                                                    + Version.getAppName() + " does this for you just select the <i>rate</i> counters and the <i>per second</i> is calculated for you<br>"
 			                                                                    + "<br><b>Formula</b>: <code>calculated_value = (Value2 - Value1) / (seconds between samples)</code>"
 			                                                                    + seeAlso;
 			else if ("PERF_LARGE_RAW_FRACTION"    .equals(cntr_type_name)) desc = "Used in conjunction with PERF_LARGE_RAW_BASE to calculate ratio values, such as the cache hit ratio<br>"
@@ -2975,10 +2975,10 @@ extends CountersModel
 			else if ("PERF_LARGE_RAW_BASE"        .equals(cntr_type_name)) desc = "Used in the translation of PERF_LARGE_RAW_FRACTION and PERF_AVERAGE_BULK values to readable output; should not be displayed alone.<br>"
 			                                                                    + "Internal use."
 			                                                                    + seeAlso;
-			else desc = "Unknown cntr_type_name value: <b>"+cntr_type_name+"</b>";
+			else desc = "Unknown cntr_type_name value: <b>" + cntr_type_name + "</b>";
 
 			
-			return "<html><b>"+cntr_type_name+"</b><br><br>"+desc+"</html>";
+			return "<html><b>" + cntr_type_name + "</b><br><br>" + desc + "</html>";
 		}
 
 		return super.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
@@ -3016,7 +3016,7 @@ extends CountersModel
 				double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_FreeListStalls, DEFAULT_alarm_FreeListStalls);
 				
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): FreeListStalls -- threshold="+threshold+", freeListStalls='"+freeListStalls+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): FreeListStalls -- threshold=" + threshold + ", freeListStalls='" + freeListStalls + "'.");
 
 				if (freeListStalls > threshold)
 				{
@@ -3081,7 +3081,7 @@ extends CountersModel
 				double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_LazyWrites, DEFAULT_alarm_LazyWrites);
 				
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): LazyWrites -- threshold="+threshold+", lazyWrites='"+lazyWrites+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): LazyWrites -- threshold=" + threshold + ", lazyWrites='" + lazyWrites + "'.");
 
 				if (lazyWrites > threshold)
 				{

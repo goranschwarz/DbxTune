@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -58,7 +58,7 @@ extends MonitorIo
     	 * The unit of the scaled output depends on how large the statistics value being printed is. 
 		 */
 		String cmd = super.getCommand();
-		return cmd != null ? cmd : "vxstat -o alldgs -i "+getSleepTime()+" -S";    // at disk group level... should I add -S at the end to get 
+		return cmd != null ? cmd : "vxstat -o alldgs -i " + getSleepTime() + " -S";    // at disk group level... should I add -S at the end to get 
 //		return cmd != null ? cmd : "vxstat -o alldgs -d -i "+getSleepTime()+" -S"; // for the individual disks
 	}
 

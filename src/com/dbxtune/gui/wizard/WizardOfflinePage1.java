@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -197,7 +197,7 @@ implements ActionListener
 
 			if (_interfacesDriver != null)
 			{
-				_logger.debug("Just opened the interfaces file '"+ _interfacesDriver.getBundle() +"'.");
+				_logger.debug("Just opened the interfaces file '" + _interfacesDriver.getBundle() + "'.");
 				
 				String[] servers = _interfacesDriver.getServers();
 				if (servers != null)
@@ -205,7 +205,7 @@ implements ActionListener
 					Arrays.sort(servers);
 					for (int i=0; i<servers.length; i++)
 					{
-						_logger.debug("Adding server '"+ servers[i] +"' to serverListCB.");
+						_logger.debug("Adding server '" + servers[i] + "' to serverListCB.");
 						_dbmsName.addItem(servers[i]);
 					}
 				}
@@ -222,7 +222,7 @@ implements ActionListener
 				} 
 				catch(RuntimeException e)
 				{
-					_logger.warn("Problems getting info about server '"+servername+"' from the interfaces or sql.ini file.");
+					_logger.warn("Problems getting info about server '" + servername + "' from the interfaces or sql.ini file.");
 				}
 //				_dbmsName.setText("");
 //				_dbmsHost.setText("");
@@ -276,7 +276,7 @@ implements ActionListener
 				try { Integer.parseInt(sa[i]); } 
 				catch (NumberFormatException e) 
 				{
-					return "Port Number '"+sa[i]+"' needs to be a number.";
+					return "Port Number '" + sa[i] + "' needs to be a number.";
 				}
 			}
 			
@@ -293,7 +293,7 @@ implements ActionListener
 			problem = problem.substring(0, problem.length()-2);
 		}
 		
-		return problem.length() == 0 ? null : "Following fields can't be empty: "+problem;
+		return problem.length() == 0 ? null : "Following fields can't be empty: " + problem;
 	}
 
 	@Override
@@ -375,7 +375,7 @@ implements ActionListener
 			rs.close();
 			conn.close();
 
-			JOptionPane.showMessageDialog(this, "Connection succeeded.\n\n"+srvVersionStr, Version.getAppName()+" - connect check", JOptionPane.INFORMATION_MESSAGE);
+			JOptionPane.showMessageDialog(this, "Connection succeeded.\n\n" + srvVersionStr, Version.getAppName() + " - connect check", JOptionPane.INFORMATION_MESSAGE);
 			return true;
 		}
 		catch (SQLException e)
@@ -387,11 +387,11 @@ implements ActionListener
 				sb.append( e.getMessage() );
 				e = e.getNextException();
 			}
-			JOptionPane.showMessageDialog(this, "Connection FAILED.\n\n"+sb.toString(), Version.getAppName()+" - connect check", JOptionPane.ERROR_MESSAGE);
+			JOptionPane.showMessageDialog(this, "Connection FAILED.\n\n" + sb.toString(), Version.getAppName() + " - connect check", JOptionPane.ERROR_MESSAGE);
 		}
 		catch (Exception e)
 		{
-			JOptionPane.showMessageDialog(this, "Connection FAILED.\n\n"+e.toString(),  Version.getAppName()+" - connect check", JOptionPane.ERROR_MESSAGE);
+			JOptionPane.showMessageDialog(this, "Connection FAILED.\n\n" + e.toString(),  Version.getAppName() + " - connect check", JOptionPane.ERROR_MESSAGE);
 		}
 		return false;
 	}

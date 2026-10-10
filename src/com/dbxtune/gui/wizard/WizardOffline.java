@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -184,7 +184,7 @@ public class WizardOffline
 				if (o != null)
 					className = o.getClass().getName();
 
-				_logger.error("Internal ERROR: settings Map must contain STRING only values. The following value violates this: key='"+k+"', val='"+o+"', type='"+className+"'.");
+				_logger.error("Internal ERROR: settings Map must contain STRING only values. The following value violates this: key='" + k + "', val='" + o + "', type='" + className + "'.");
 			}
 		}
 	}
@@ -218,14 +218,14 @@ public class WizardOffline
 				Object o = settings.get(k);
 				if ( ! (o instanceof String) )
 				{
-					_logger.error("Internal ERROR: ClassCastException from settingsMap with key='"+k+"', val='"+o+"', type='"+o.getClass().getName()+"'.");
+					_logger.error("Internal ERROR: ClassCastException from settingsMap with key='" + k + "', val='" + o + "', type='" + o.getClass().getName() + "'.");
 				}
 			}
 			throw e;
 		}
 
 		if (encrypt)
-			val = Configuration.encryptPropertyValue(newKey, val+"");
+			val = Configuration.encryptPropertyValue(newKey, val + "");
 
 		if (alwaysAdd)
 			settings.put(newKey, val);
@@ -319,7 +319,7 @@ public class WizardOffline
 			}
 			else if (obj instanceof Boolean)
 			{
-				System.out.println("WIZARD-OFFLINE-FINNISH:WARNING(autoconvert: Boolean->String) key='"+key+"', value='"+obj+"'.");
+				System.out.println("WIZARD-OFFLINE-FINNISH:WARNING(autoconvert: Boolean->String) key='" + key + "', value='" + obj + "'.");
 				val = obj + "";
 			}
 			else if (obj instanceof Configuration)
@@ -328,7 +328,7 @@ public class WizardOffline
 			}
 			else
 			{
-				System.out.println("WIZARD-OFFLINE-FINNISH: key='"+key+"', is NOT String/Configuration it is type=" + (obj == null ? "-value-is-null-" : obj.getClass().getName()) );
+				System.out.println("WIZARD-OFFLINE-FINNISH: key='" + key + "', is NOT String/Configuration it is type=" + (obj == null ? "-value-is-null-" : obj.getClass().getName()) );
 				continue;
 			}
 
@@ -1074,7 +1074,7 @@ public class WizardOffline
 			catch(IOException e)
 			{
 				fileData.append("Problems open the file '").append(filename).append("'.");
-				SwingUtils.showErrorMessage("Problems open file", "Problems open the file '"+filename+"'.", e);
+				SwingUtils.showErrorMessage("Problems open file", "Problems open the file '" + filename + "'.", e);
 			}
 
 			String fileContent = fileData.toString();
@@ -1192,7 +1192,7 @@ public class WizardOffline
 			} 
 			catch(Exception ex)
 			{
-				SwingUtils.showErrorMessage("Problems saving file", "Problems saving the file '"+filename+"'.", ex);
+				SwingUtils.showErrorMessage("Problems saving file", "Problems saving the file '" + filename + "'.", ex);
 			}
 		}
 	}

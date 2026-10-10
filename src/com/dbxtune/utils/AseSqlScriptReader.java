@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -200,7 +200,7 @@ public class AseSqlScriptReader
 	{
 		_file = null;
 		if (file.exists())
-			throw new FileNotFoundException("The input file '"+file.toString()+"' doesn't exists.");
+			throw new FileNotFoundException("The input file '" + file.toString() + "' doesn't exists.");
 		_file = file;
 
 		_reader = new FileReader(_file);
@@ -896,7 +896,7 @@ public class AseSqlScriptReader
 										try { _multiExecWait = Integer.parseInt( word2 ); }
 										catch (NumberFormatException nfe) 
 										{
-											error = "Sub command 'wait #' The parameter '"+word2+"' is not a number.";
+											error = "Sub command 'wait #' The parameter '" + word2 + "' is not a number.";
 										}
 									}
 									else if ("foreachdb".equalsIgnoreCase(word1))
@@ -916,7 +916,7 @@ public class AseSqlScriptReader
 										try { _topRows = Integer.parseInt( word2 ); }
 										catch (NumberFormatException nfe) 
 										{
-											error = "Sub command 'top #' The parameter '"+word2+"' is not a number.";
+											error = "Sub command 'top #' The parameter '" + word2 + "' is not a number.";
 										}
 									}
 									else if ("bottom".equalsIgnoreCase(word1))
@@ -924,62 +924,62 @@ public class AseSqlScriptReader
 										try { _bottomRows = Integer.parseInt( word2 ); }
 										catch (NumberFormatException nfe) 
 										{
-											error = "Sub command 'bottom #' The parameter '"+word2+"' is not a number.";
+											error = "Sub command 'bottom #' The parameter '" + word2 + "' is not a number.";
 										}
 									}
 									else if ("rowc".equalsIgnoreCase(word1))
 									{
 										_rowCount = 1;
 										if (StringUtil.hasValue(word2))
-											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
+											error = "Sub command '" + word1 + "' does not accept any parameters.\nYou passed the parameter '" + word2 + "'.";
 									}
 									else if ("plain".equalsIgnoreCase(word1))
 									{
 										_asPlainText = 1;
 										if (StringUtil.hasValue(word2))
-											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
+											error = "Sub command '" + word1 + "' does not accept any parameters.\nYou passed the parameter '" + word2 + "'.";
 									}
 									else if ("tab".equalsIgnoreCase(word1))
 									{
 										_asTabbedPane = 1;
 										if (StringUtil.hasValue(word2))
-											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
+											error = "Sub command '" + word1 + "' does not accept any parameters.\nYou passed the parameter '" + word2 + "'.";
 									}
 									else if ("nodata".equalsIgnoreCase(word1))
 									{
 										_noData = 1;
 										if (StringUtil.hasValue(word2))
-											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
+											error = "Sub command '" + word1 + "' does not accept any parameters.\nYou passed the parameter '" + word2 + "'.";
 									}
 									else if ("append".equalsIgnoreCase(word1))
 									{
 										_appendOutput = 1;
 										if (StringUtil.hasValue(word2))
-											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
+											error = "Sub command '" + word1 + "' does not accept any parameters.\nYou passed the parameter '" + word2 + "'.";
 									}
 									else if ("psql".equalsIgnoreCase(word1))
 									{
 										_printSql = 1;
 										if (StringUtil.hasValue(word2))
-											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
+											error = "Sub command '" + word1 + "' does not accept any parameters.\nYou passed the parameter '" + word2 + "'.";
 									}
 									else if ("prsi".equalsIgnoreCase(word1))
 									{
 										_printRsi = 1;
 										if (StringUtil.hasValue(word2))
-											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
+											error = "Sub command '" + word1 + "' does not accept any parameters.\nYou passed the parameter '" + word2 + "'.";
 									}
 									else if ("time".equalsIgnoreCase(word1))
 									{
 										_printClientTiming = 1;
 										if (StringUtil.hasValue(word2))
-											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
+											error = "Sub command '" + word1 + "' does not accept any parameters.\nYou passed the parameter '" + word2 + "'.";
 									}
 									else if ("mrs".equalsIgnoreCase(word1))
 									{
 										_mergeRs = 1;
 										if (StringUtil.hasValue(word2))
-											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
+											error = "Sub command '" + word1 + "' does not accept any parameters.\nYou passed the parameter '" + word2 + "'.";
 									}
 									else if ("keeprs".equalsIgnoreCase(word1))
 									{
@@ -991,7 +991,7 @@ public class AseSqlScriptReader
 											try { _keepRs.add( Integer.valueOf(str) ); }
 											catch (NumberFormatException nfe)
 											{
-												error = "Sub command 'keeprs #' The parameter '"+str+"' is not a number. Caught: "+nfe;
+												error = "Sub command 'keeprs #' The parameter '" + str + "' is not a number. Caught: " + nfe;
 											}
 										}
 									}
@@ -1005,7 +1005,7 @@ public class AseSqlScriptReader
 											try { _skipRs.add( Integer.valueOf(str) ); }
 											catch (NumberFormatException nfe)
 											{
-												error = "Sub command 'skiprs #' The parameter '"+str+"' is not a number. Caught: "+nfe;
+												error = "Sub command 'skiprs #' The parameter '" + str + "' is not a number. Caught: " + nfe;
 											}
 										}
 									}
@@ -1017,30 +1017,30 @@ public class AseSqlScriptReader
 									{
 										_replaceFakeQuotedId = 1;
 										if (StringUtil.hasValue(word2))
-											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
+											error = "Sub command '" + word1 + "' does not accept any parameters.\nYou passed the parameter '" + word2 + "'.";
 									}
 									else if ("rnl".equalsIgnoreCase(word1))
 									{
 										_replaceNewlines = 1;
 										if (StringUtil.hasValue(word2))
-											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
+											error = "Sub command '" + word1 + "' does not accept any parameters.\nYou passed the parameter '" + word2 + "'.";
 									}
 									else
 									{
-										error = "Unknown sub command '"+word1+"'.";
+										error = "Unknown sub command '" + word1 + "'.";
 									}
 
 									// If we have "spill" in the sub command
 									// probably that next sub command wasn't comma(,) separated
 									if (StringUtil.hasValue(word3))
 									{
-										error = "Have you forgot to comma separate different sub commands?.\nCurrent sub command looks like '"+subCmd+"'.";
+										error = "Have you forgot to comma separate different sub commands?.\nCurrent sub command looks like '" + subCmd + "'.";
 									}
 									
 									if (error != null)
 									{
 										String desc = 
-											error +" \n" +
+											error + " \n" +
 											"\n" +
 											"Syntax is 'go [#1] [,top #2] [,bottom #3] [,wait #4] [,foreachdb [db1:db2:db3]] [,plain] [,tab] [,nodata] [,append] [,psql] [,prsi] [,time] [,mrs] [,keeprs #5[:#5]] [,skiprs #5[:#5]] [,filter str] [,rfqi] [,rnl]'\n" +
 											"\n" +

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -162,8 +162,8 @@ public class DiffTable
 		if (pkList == null && context.getPkGeneratedColumns() != null)
 		{
 			pkList = context.getPkGeneratedColumns();
-			_context.addDebugMessage("Re-Using PK columns from "+ ( DiffSide.LEFT.equals(_diffSide) ? DiffSide.RIGHT : DiffSide.LEFT )
-					+". For table '"+_fullTableName+"'. No PK was passed to "+_diffSide+" DiffTable and looking at the ResultSet and Can't find any (PK or unique index) in the ResultSet's MetadaData.");
+			_context.addDebugMessage("Re-Using PK columns from " + ( DiffSide.LEFT.equals(_diffSide) ? DiffSide.RIGHT : DiffSide.LEFT )
+					+ ". For table '" + _fullTableName + "'. No PK was passed to " + _diffSide + " DiffTable and looking at the ResultSet and Can't find any (PK or unique index) in the ResultSet's MetadaData.");
 		}
 
 		// Use ALL columns as a PK (but only basic data types, NOT LOB Columns etc)
@@ -172,14 +172,14 @@ public class DiffTable
 			pkList = buildAllNormalColumnsAsPkFromResultSet();
 			if (pkList != null)
 			{
-				_context.addWarningMessage("Generated PK Columns from ALL Usable Table Columns. For table '"+_fullTableName+"'. NOTE: Only missing rows will be reported (when ALL columns are used). NOTE: Make sure that the ResultSet is SORTED according to the GeneratedPkList="+pkList+" otherwise A LOT of rows will be reported. No PK was passed to "+_diffSide+" DiffTable and looking at the ResultSet and Can't find any (PK or unique index) in the ResultSet's MetadaData.");
+				_context.addWarningMessage("Generated PK Columns from ALL Usable Table Columns. For table '" + _fullTableName + "'. NOTE: Only missing rows will be reported (when ALL columns are used). NOTE: Make sure that the ResultSet is SORTED according to the GeneratedPkList=" + pkList + " otherwise A LOT of rows will be reported. No PK was passed to " + _diffSide + " DiffTable and looking at the ResultSet and Can't find any (PK or unique index) in the ResultSet's MetadaData.");
 				generatedPk = true;
 			}
 		}
 		
 		if (pkList == null)
-			throw new DiffException("No PK was passed to "+_diffSide+" DiffTable and looking at the ResultSet and Can't find any (Primary Key or unique index) in the ResultSet's MetadaData. "
-					+ "For table '"+_fullTableName+"'. "
+			throw new DiffException("No PK was passed to " + _diffSide + " DiffTable and looking at the ResultSet and Can't find any (Primary Key or unique index) in the ResultSet's MetadaData. "
+					+ "For table '" + _fullTableName + "'. "
 					+ "Even if you do NOT have a PK, please specify columns (with --keyCols) which you think is \"unique\", and can be used to detect row differences. "
 					+ "NOTE: Data MUST be sorted on the those columns. (the diff algorithm is using a 'internal merge join' strategy on PK Cols to figgure out in what order it should read the streaming Results, since data isn't cached/stored in memory before logic is applied)");
 
@@ -195,7 +195,7 @@ public class DiffTable
 			int pos = StringUtil.indexOfIgnoreCase(_colNameList, pkCol);
 //System.out.println(_diffSide+": lookup pkCol='"+pkCol+"', hasPos="+pos);
 			if (pos == -1)
-				throw new DiffException("Primary Key Column '"+pkCol+"' was not found in the ResultSet. For table '"+_fullTableName+"'.");
+				throw new DiffException("Primary Key Column '" + pkCol + "' was not found in the ResultSet. For table '" + _fullTableName + "'.");
 
 			_pkPos.add(pos);
 		}
@@ -249,7 +249,7 @@ public class DiffTable
 			String fullTabName = tables.get(0);
 
 			if ( tables.size() > 1)
-				_context.addWarningMessage("getFullTableName["+_diffSide+"]: The ResultSet contained "+tables.size()+" table references, Using the first found table '"+fullTabName+"'. Other Referenced Tables="+tables);
+				_context.addWarningMessage("getFullTableName[" + _diffSide + "]: The ResultSet contained " + tables.size() + " table references, Using the first found table '" + fullTabName + "'. Other Referenced Tables=" + tables);
 
 			return fullTabName;
 		}
@@ -368,7 +368,7 @@ public class DiffTable
 				{
 					try 
 					{
-						_context.addDebugMessage("Find PkCols["+_diffSide+"]: For table '"+_fullTableName+"'. Creating a new temporary connection to " +_diffSide + " to get PrimaryKey information. Please specify --keyCols to get around this...");
+						_context.addDebugMessage("Find PkCols[" + _diffSide + "]: For table '" + _fullTableName + "'. Creating a new temporary connection to " + _diffSide + " to get PrimaryKey information. Please specify --keyCols to get around this...");
 						conn = DbxConnection.connect(_context.getGuiOwnerAsWindow(), _connProps);
 
 						if (_dbmsVendor == null)
@@ -381,13 +381,13 @@ public class DiffTable
 					} 
 					catch (Exception ex) 
 					{
-						_context.addErrorMessage("Find PkCols["+_diffSide+"]: For table '"+_fullTableName+"'. Problems Connecting to " +_diffSide + " to get PrimaryKey information. This will/may slow down the diff process. Please specify --keyCols to get around this problem.");
+						_context.addErrorMessage("Find PkCols[" + _diffSide + "]: For table '" + _fullTableName + "'. Problems Connecting to " + _diffSide + " to get PrimaryKey information. This will/may slow down the diff process. Please specify --keyCols to get around this problem.");
 					}
 				}
 
 				if (conn == null)
 				{
-					_context.addWarningMessage("Find PkCols["+_diffSide+"]: For table '"+_fullTableName+"'. When getting PK Information, I'll reuse the connection from the ResultSet. This will/may cause performance problems. Please specify --keyCols to get around this problem.");
+					_context.addWarningMessage("Find PkCols[" + _diffSide + "]: For table '" + _fullTableName + "'. When getting PK Information, I'll reuse the connection from the ResultSet. This will/may cause performance problems. Please specify --keyCols to get around this problem.");
 					conn = rs.getStatement().getConnection();
 					
 					if (_dbmsVendor == null)
@@ -402,20 +402,20 @@ public class DiffTable
 				pkCols = TableInfo.getPkOrFirstUniqueIndex(conn, obj.getCatalogNameNull(), obj.getSchemaNameNull(), obj.getObjectName());
 
 				if (pkCols.isEmpty())
-					_context.addWarningMessage("Find PkCols["+_diffSide+"]: For table '"+_fullTableName+"'. NO Primary Keys (or unique index) was found.");
+					_context.addWarningMessage("Find PkCols[" + _diffSide + "]: For table '" + _fullTableName + "'. NO Primary Keys (or unique index) was found.");
 				else
-					_context.addDebugMessage("Find PkCols["+_diffSide+"]: For table '"+_fullTableName+"'. The following columns "+pkCols+" will be used as a Primary Key Columns for DIFF.");
+					_context.addDebugMessage("Find PkCols[" + _diffSide + "]: For table '" + _fullTableName + "'. The following columns " + pkCols + " will be used as a Primary Key Columns for DIFF.");
 
 				if (createdNewConnection)
 				{
-					_context.addDebugMessage("Find PkCols["+_diffSide+"]: For table '"+_fullTableName+"'. Closing the temporary connection we just created to get PrimaryKey information. Please specify --keyCols if you do not want this.");
+					_context.addDebugMessage("Find PkCols[" + _diffSide + "]: For table '" + _fullTableName + "'. Closing the temporary connection we just created to get PrimaryKey information. Please specify --keyCols if you do not want this.");
 					try { conn.close(); }
 					catch(SQLException ignore) {}
 				}
 			}
 			else
 			{
-				_context.addWarningMessage("Find PkCols["+_diffSide+"]: The ResultSet contained NO table references, Sorry i can only figgure out the PK Cols.");
+				_context.addWarningMessage("Find PkCols[" + _diffSide + "]: The ResultSet contained NO table references, Sorry i can only figgure out the PK Cols.");
 			}
 			
 			if (pkCols.isEmpty())
@@ -425,7 +425,7 @@ public class DiffTable
 		}
 		catch(SQLException ex)
 		{
-			_context.addErrorMessage("Find PkCols["+_diffSide+"]: For table '"+_fullTableName+"'. Problems trying to get Primary Key Columns from the source ResultSet. Caught: " + ex);
+			_context.addErrorMessage("Find PkCols[" + _diffSide + "]: For table '" + _fullTableName + "'. Problems trying to get Primary Key Columns from the source ResultSet. Caught: " + ex);
 			//_logger.error("Problems trying to get Primary Key Columns from the source ResultSet", ex);
 			
 			return null;
@@ -767,7 +767,7 @@ public class DiffTable
 		String jdbcTypeName = ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType);
 		
 		// Not supported: THROW EXCEPTION
-		throw new DiffException("JDBC Dataype "+jdbcType+" = '"+jdbcTypeName+"' is NOT Supported for Primary Key columns. ColPos=, ColName='"+colName+"'. For table '"+_fullTableName+"'.");
+		throw new DiffException("JDBC Dataype " + jdbcType + " = '" + jdbcTypeName + "' is NOT Supported for Primary Key columns. ColPos=, ColName='" + colName + "'. For table '" + _fullTableName + "'.");
 	}
 	
 	public boolean isJdbcDataTypeSupportedInPkColumn(String colName)
@@ -931,7 +931,7 @@ public class DiffTable
 		String jdbcTypeName = ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType);
 		
 		// Not supported: THROW EXCEPTION
-		throw new DiffException("JDBC Dataype "+jdbcType+" = '"+jdbcTypeName+"' is NOT Supported for Diff columns. ColPos=, ColName='"+colName+"'. For table '"+_fullTableName+"'.");
+		throw new DiffException("JDBC Dataype " + jdbcType + " = '" + jdbcTypeName + "' is NOT Supported for Diff columns. ColPos=, ColName='" + colName + "'. For table '" + _fullTableName + "'.");
 	}
 	
 	public boolean isJdbcDataTypeSupportedInDiffColumn(int colPos)
@@ -1263,7 +1263,7 @@ public class DiffTable
 		}
 		catch (SQLException ex) 
 		{
-			_context.addWarningMessage("Canceling " + _diffSide + " ResultSet caught problem... skipping the cancel. ex: "+ex);
+			_context.addWarningMessage("Canceling " + _diffSide + " ResultSet caught problem... skipping the cancel. ex: " + ex);
 		}
 	}
 }

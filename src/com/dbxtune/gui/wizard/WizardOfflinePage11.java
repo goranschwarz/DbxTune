@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -308,7 +308,7 @@ System.out.println("WizardOfflinePage.11.createSendToMailPanel(): " + conf);
 			try { Pattern.compile(regxpVal); }
 			catch(PatternSyntaxException ex) 
 			{ 
-				return fieldName+": The RegExp '"+regxpVal+"' seems to be faulty. Caught: "+ex.getMessage(); 
+				return fieldName + ": The RegExp '" + regxpVal + "' seems to be faulty. Caught: " + ex.getMessage(); 
 			}
 		}
 			
@@ -320,7 +320,7 @@ System.out.println("WizardOfflinePage.11.createSendToMailPanel(): " + conf);
 			try { Pattern.compile(regxpVal); }
 			catch(PatternSyntaxException ex) 
 			{ 
-				return fieldName+": The RegExp '"+regxpVal+"' seems to be faulty. Caught: "+ex.getMessage(); 
+				return fieldName + ": The RegExp '" + regxpVal + "' seems to be faulty. Caught: " + ex.getMessage(); 
 			}
 		}
 		
@@ -405,7 +405,7 @@ System.out.println("WizardOfflinePage.11.createSendToMailPanel(): " + conf);
 					{
 						if (StringUtil.isNullOrBlank(val))
 						{
-							return "Field '"+cmsh.getName()+"' is mandatory.";
+							return "Field '" + cmsh.getName() + "' is mandatory.";
 						}
 					}
 
@@ -413,7 +413,7 @@ System.out.println("WizardOfflinePage.11.createSendToMailPanel(): " + conf);
 					try { cmsh.isValidInput(val); }
 					catch (ValidationException ex)
 					{
-						return "Field '"+cmsh.getName()+"': "+ex.getMessage();
+						return "Field '" + cmsh.getName() + "': " + ex.getMessage();
 					}
 					
 					// Check for defaults and write "DEFAULT: " to wizard data if its a default value

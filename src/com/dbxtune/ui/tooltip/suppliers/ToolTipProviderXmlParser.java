@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -59,12 +59,12 @@ extends DefaultHandler
 		}
 		catch (SAXException e)
 		{
-			_logger.warn("Problems Creating ToolTip Provider XML Parser '"+getFileName()+"'. Caught: "+e, e);
+			_logger.warn("Problems Creating ToolTip Provider XML Parser '" + getFileName() + "'. Caught: " + e, e);
 			_lastException = e;
 		}
 		catch (ParserConfigurationException e)
 		{
-			_logger.warn("Problems Creating ToolTip Provider XML Parser '"+getFileName()+"'. Caught: "+e, e);
+			_logger.warn("Problems Creating ToolTip Provider XML Parser '" + getFileName() + "'. Caught: " + e, e);
 			_lastException = e;
 		}
 	}
@@ -81,12 +81,12 @@ extends DefaultHandler
 		}
 		catch (SAXException e)
 		{
-			_logger.warn("Problems Parsing ToolTip Provider Entry '"+entry+"'. Caught: "+e, e);
+			_logger.warn("Problems Parsing ToolTip Provider Entry '" + entry + "'. Caught: " + e, e);
 			_lastException = e;
 		}
 		catch (IOException e)
 		{
-			_logger.warn("Problems Parsing ToolTip Provider Entry '"+entry+"'. Caught: "+e, e);
+			_logger.warn("Problems Parsing ToolTip Provider Entry '" + entry + "'. Caught: " + e, e);
 			_lastException = e;
 		}
 		return _lastEntry;
@@ -124,12 +124,12 @@ extends DefaultHandler
 		}
 		catch (SAXException e)
 		{
-			_logger.warn("Problems Parsing ToolTip Provider File '"+fileName+"'. Caught: "+e, e);
+			_logger.warn("Problems Parsing ToolTip Provider File '" + fileName + "'. Caught: " + e, e);
 			_lastException = e;
 		}
 		catch (IOException e)
 		{
-			_logger.warn("Problems Parsing ToolTip Provider File '"+fileName+"'. Caught: "+e, e);
+			_logger.warn("Problems Parsing ToolTip Provider File '" + fileName + "'. Caught: " + e, e);
 			_lastException = e;
 		}
 		return _entryList;
@@ -206,7 +206,7 @@ extends DefaultHandler
 			else if (TtpEntry.XML_TAG_ENTRIES        .equals(qName)) { /* DO NOTHING ON </Entries>*/ }
 			else 
 			{
-				_logger.warn("Found a 'end' tag '"+qName+"'"+getXmlFileDetailes()+", that was not expected, skipping this and continuing...");
+				_logger.warn("Found a 'end' tag '" + qName + "'" + getXmlFileDetailes() + ", that was not expected, skipping this and continuing...");
 			}
 		}
 		_xmlTagBuffer.setLength(0);
@@ -223,7 +223,7 @@ extends DefaultHandler
 			int lineNum     = _locator.getLineNumber();
 			int colPos      = _locator.getColumnNumber();
 			String systemId = _locator.getSystemId();
-			lineSpec = ", at line="+lineNum+", col="+colPos+", ID="+systemId;
+			lineSpec = ", at line=" + lineNum + ", col=" + colPos + ", ID=" + systemId;
 		}
 		return lineSpec;
 	}

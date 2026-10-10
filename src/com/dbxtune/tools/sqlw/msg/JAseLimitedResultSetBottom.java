@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -29,7 +29,7 @@ extends JAseMessage
 
 	public JAseLimitedResultSetBottom(int numberOfRows, int bottomLimit, String originSql)
 	{
-		super("Discarded "+numberOfRows+" first rows from the ResultSet, and only keeping the last "+bottomLimit+" records.", originSql);
+		super("Discarded " + numberOfRows + " first rows from the ResultSet, and only keeping the last " + bottomLimit + " records.", originSql);
 //		init();
 
 		setForeground(ColorUtils.DARK_RED);

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -147,9 +147,9 @@ public class MySqlConnection extends DbxConnection
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+			_logger.error("getTableExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex);
 			if (_logger.isDebugEnabled())
-				_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+				_logger.debug("getTableExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex, ex);
 		}
 		
 		return extraInfo;
@@ -204,9 +204,9 @@ public class MySqlConnection extends DbxConnection
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("getDbmsExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+			_logger.error("getDbmsExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex);
 			if (_logger.isDebugEnabled())
-				_logger.debug("getDbmsExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+				_logger.debug("getDbmsExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex, ex);
 		}
 
 
@@ -225,7 +225,7 @@ public class MySqlConnection extends DbxConnection
 			while (rs.next())
 			{
 				row++;
-				String key        = "<b>has-slave-"+row+"</b>";
+				String key        = "<b>has-slave-" + row + "</b>";
 				
 				String Server_id  = rs.getString(1);
 				String Host       = rs.getString(2);
@@ -233,16 +233,16 @@ public class MySqlConnection extends DbxConnection
 				String Master_id  = rs.getString(4);
 				String Slave_UUID = rs.getString(5);
 				
-				String val = "</b>MasterId=<b>"+Master_id+"</b>, SlaveHost=<b>"+Host+"</b>, SlavePort=<b>"+Port+"</b>, SlaveId=<b>"+Server_id+"</b>, SlaveUUID=<b>"+Slave_UUID+"</b>";
+				String val = "</b>MasterId=<b>" + Master_id + "</b>, SlaveHost=<b>" + Host + "</b>, SlavePort=<b>" + Port + "</b>, SlaveId=<b>" + Server_id + "</b>, SlaveUUID=<b>" + Slave_UUID + "</b>";
 				
 				map.put(key, val);
 			}
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("getDbmsExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+			_logger.error("getDbmsExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex);
 			if (_logger.isDebugEnabled())
-				_logger.debug("getDbmsExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+				_logger.debug("getDbmsExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex, ex);
 		}
 
 
@@ -316,23 +316,23 @@ public class MySqlConnection extends DbxConnection
 			while (rs.next())
 			{
 				row++;
-				String key        = "<b>has-master-"+row+"</b>";
+				String key        = "<b>has-master-" + row + "</b>";
 				
 				String Master_id    = rs.getString("Master_Server_Id");
 				String Master_Host  = rs.getString("Master_Host");
 				String Master_Port  = rs.getString("Master_Port");
 				String Master_UUID  = rs.getString("Master_UUID");
 				
-				String val = "</b>MasterId=<b>"+Master_id+"</b>, MasterHost=<b>"+Master_Host+"</b>, MasterPort=<b>"+Master_Port+"</b>, MasterUUID=<b>"+Master_UUID+"</b>";
+				String val = "</b>MasterId=<b>" + Master_id + "</b>, MasterHost=<b>" + Master_Host + "</b>, MasterPort=<b>" + Master_Port + "</b>, MasterUUID=<b>" + Master_UUID + "</b>";
 				
 				map.put(key, val);
 			}
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("getDbmsExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+			_logger.error("getDbmsExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex);
 			if (_logger.isDebugEnabled())
-				_logger.debug("getDbmsExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+				_logger.debug("getDbmsExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex, ex);
 		}
 
 		return map;
@@ -390,7 +390,7 @@ public class MySqlConnection extends DbxConnection
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problem getting MySQL DBMS Server Name, setting this to 'unknown'. SQL='"+sql+"', caught: "+ex);
+			_logger.warn("Problem getting MySQL DBMS Server Name, setting this to 'unknown'. SQL='" + sql + "', caught: " + ex);
 			serverName = "unknown";
 		}
 		

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -1352,7 +1352,7 @@ public class SshConnection
 							continue;
 
 						if (_logger.isDebugEnabled())
-							_logger.debug("Received on STDOUT: "+row);
+							_logger.debug("Received on STDOUT: " + row);
 
 						// do callback
 						execFeedback.onData(STDOUT_DATA, row);
@@ -1379,7 +1379,7 @@ public class SshConnection
 							continue;
 						
 						if (_logger.isDebugEnabled())
-							_logger.debug("Received on STDERR: "+row);
+							_logger.debug("Received on STDERR: " + row);
 
 						// do callback
 						execFeedback.onData(STDERR_DATA, row);

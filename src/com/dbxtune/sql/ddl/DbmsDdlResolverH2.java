@@ -1,5 +1,5 @@
 /*******************************************************************************
-DbmsDdlResolverDerbyDbmsDdlResolverDb2 * Copyright (C) 2010-2025 Goran Schwarz
+DbmsDdlResolverDerbyDbmsDdlResolverDb2 * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -122,14 +122,14 @@ extends DbmsDdlResolverAbstract
 		case java.sql.Types.DOUBLE:                  return "double precision";
 		case java.sql.Types.NUMERIC:                 return numericFix(length, scale); // return "numeric("+length+","+scale+")";
 		case java.sql.Types.DECIMAL:                 return decimalFix(length, scale); // "decimal("+length+","+scale+")";
-		case java.sql.Types.CHAR:                    return "char("+length+")";
+		case java.sql.Types.CHAR:                    return "char(" + length + ")";
 		case java.sql.Types.VARCHAR:                 return varcharFix(length);           // if ABOVE 1000000000 -> clob
 		case java.sql.Types.LONGVARCHAR:             return "clob";
 		case java.sql.Types.DATE:                    return "date";
 		case java.sql.Types.TIME:                    return "time";
 		case java.sql.Types.TIMESTAMP:               return "timestamp";
-		case java.sql.Types.BINARY:                  return "binary("+length+")";
-		case java.sql.Types.VARBINARY:               return "varbinary("+length+")";
+		case java.sql.Types.BINARY:                  return "binary(" + length + ")";
+		case java.sql.Types.VARBINARY:               return "varbinary(" + length + ")";
 		case java.sql.Types.LONGVARBINARY:           return "blob";
 		case java.sql.Types.NULL:                    return "blob";                      // Not really supported just use 'blob'
 		case java.sql.Types.OTHER:                   return "other";
@@ -145,7 +145,7 @@ extends DbmsDdlResolverAbstract
 
 		//------------------------- JDBC 4.0 (java 1.6) -----------------------------------
 		case java.sql.Types.ROWID:                   return "varchar(20)";                 // Just guessing here... from https://docs.oracle.com/cd/B28359_01/server.111/b28318/datatype.htm#CNCPT1846
-		case java.sql.Types.NCHAR:                   return "char("+length+")";
+		case java.sql.Types.NCHAR:                   return "char(" + length + ")";
 		case java.sql.Types.NVARCHAR:                return nvarcharFix(length);           // if ABOVE 1000000000 -> clob
 		case java.sql.Types.LONGNVARCHAR:            return "clob";
 		case java.sql.Types.NCLOB:                   return "clob";

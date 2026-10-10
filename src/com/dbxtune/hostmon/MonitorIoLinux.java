@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -86,7 +86,7 @@ extends MonitorIo
 		}
 		else
 		{
-			_logger.warn("Number of fields for iostat could not be resoved. ioStatColCount=" + ioStatColCount + ". So we need to resolv to parsing the version number. utilVersionAsStr=" + VersionShort.toStr(utilVersion)+", utilVersionAsInt=" + utilVersion);
+			_logger.warn("Number of fields for iostat could not be resoved. ioStatColCount=" + ioStatColCount + ". So we need to resolv to parsing the version number. utilVersionAsStr=" + VersionShort.toStr(utilVersion) + ", utilVersionAsInt=" + utilVersion);
 
 			if ( utilVersion >= VersionShort.toInt(12,5,4))
 			{
@@ -257,8 +257,8 @@ extends MonitorIo
 		
 		
 //System.out.println("MonitorIoLinux.createMetaData(utilVersion="+utilVersion+")");
-		_logger.info("When creating meta data for Linux 'iostat', initializing it using utility version "+VersionShort.toStr(utilVersion)+" (intVer="+utilVersion+"), extraInfo_ioStatColCount="+extraInfo_ioStatColCount+", ioStatColCount="+ioStatColCount+".");
-		_logger.debug("MonitorIoLinux.createMetaData(utilVersion="+utilVersion+")");
+		_logger.info("When creating meta data for Linux 'iostat', initializing it using utility version " + VersionShort.toStr(utilVersion) + " (intVer=" + utilVersion + "), extraInfo_ioStatColCount=" + extraInfo_ioStatColCount + ", ioStatColCount=" + ioStatColCount + ".");
+		_logger.debug("MonitorIoLinux.createMetaData(utilVersion=" + utilVersion + ")");
 
 		boolean alwaysFalse = false;
 		if (alwaysFalse)
@@ -267,7 +267,7 @@ extends MonitorIo
 		}
 		else if ( ioStatColCount >= 23) // -1 is not defined or "offline" mode... so choose the type with most columns (in the future might save the utilVersion in the offline database)
 		{
-			_logger.info("Initializing MetaData with 23 (or above [" + ioStatColCount + "]) column. utilVersion='"+VersionShort.toStr(utilVersion)+"', intVer="+utilVersion+", VersionShort.toInt(12,2,0)="+VersionShort.toInt(12,2,0));
+			_logger.info("Initializing MetaData with 23 (or above [" + ioStatColCount + "]) column. utilVersion='" + VersionShort.toStr(utilVersion) + "', intVer=" + utilVersion + ", VersionShort.toInt(12,2,0)=" + VersionShort.toInt(12,2,0));
 
 			md.addStrColumn( "device",            1,  1, false,   30, "iostat[Device]: This column gives the device (or partition) name as listed in the /dev directory.");
 			md.addIntColumn( "samples",           2,  0, true,        "Number of 'sub' sample entries of iostat this value is based on");
@@ -316,7 +316,7 @@ extends MonitorIo
 		}
 		else if ( ioStatColCount >= 21) // -1 is not defined or "offline" mode... so choose the type with most columns (in the future might save the utilVersion in the offline database)
 		{
-			_logger.info("Initializing MetaData with 21 (or above) column. utilVersion='"+VersionShort.toStr(utilVersion)+"', intVer="+utilVersion+", VersionShort.toInt(12,2,0)="+VersionShort.toInt(12,2,0));
+			_logger.info("Initializing MetaData with 21 (or above) column. utilVersion='" + VersionShort.toStr(utilVersion) + "', intVer=" + utilVersion + ", VersionShort.toInt(12,2,0)=" + VersionShort.toInt(12,2,0));
 
 			md.addStrColumn( "device",            1,  1, false,   30, "iostat[Device]: This column gives the device (or partition) name as listed in the /dev directory.");
 			md.addIntColumn( "samples",           2,  0, true,        "Number of 'sub' sample entries of iostat this value is based on");
@@ -363,7 +363,7 @@ extends MonitorIo
 		}
 		else if ( ioStatColCount >= 16) // -1 is not defined or "offline" mode... so choose the type with most columns (in the future might save the utilVersion in the offline database)
 		{
-			_logger.info("Initializing MetaData with 16 (or above) column. utilVersion='"+VersionShort.toStr(utilVersion)+"', intVer="+utilVersion+", VersionShort.toInt(11,5,7)="+VersionShort.toInt(11,5,7));
+			_logger.info("Initializing MetaData with 16 (or above) column. utilVersion='" + VersionShort.toStr(utilVersion) + "', intVer=" + utilVersion + ", VersionShort.toInt(11,5,7)=" + VersionShort.toInt(11,5,7));
 
 			md.addStrColumn( "device",            1,  1, false,   30, "Disk device name (origin iostat colname='Device')");
 			md.addIntColumn( "samples",           2,  0, true,        "Number of 'sub' sample entries of iostat this value is based on");
@@ -400,7 +400,7 @@ extends MonitorIo
 		}
 		else if ( ioStatColCount >= 14 || utilVersion == -1) // -1 is not defined or "offline" mode... so choose the type with most columns (in the future might save the utilVersion in the offline database)
 		{
-			_logger.info("Initializing MetaData with 14 column. utilVersion='"+VersionShort.toStr(utilVersion)+"', intVer="+utilVersion+", VersionShort.toInt(9,1,2)="+VersionShort.toInt(9,1,2));
+			_logger.info("Initializing MetaData with 14 column. utilVersion='" + VersionShort.toStr(utilVersion) + "', intVer=" + utilVersion + ", VersionShort.toInt(9,1,2)=" + VersionShort.toInt(9,1,2));
 			
 			md.addStrColumn( "device",            1,  1, false,   30, "Disk device name");
 			md.addIntColumn( "samples",           2,  0, true,        "Number of 'sub' sample entries of iostat this value is based on");
@@ -431,7 +431,7 @@ extends MonitorIo
 		}
 		else
 		{
-			_logger.info("Initializing MetaData with 12 column. utilVersion='"+VersionShort.toStr(utilVersion)+"', intVer="+utilVersion);
+			_logger.info("Initializing MetaData with 12 column. utilVersion='" + VersionShort.toStr(utilVersion) + "', intVer=" + utilVersion);
 
 			md.addStrColumn( "device",            1,  1, false,   30, "Disk device name");
 			md.addIntColumn( "samples",           2,  0, true,        "Number of 'sub' sample entries of iostat this value is based on");

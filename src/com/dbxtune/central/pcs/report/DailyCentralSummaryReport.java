@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -50,7 +50,7 @@ public class DailyCentralSummaryReport
 	{
 		if ( ! DailySummaryReportFactory.isCreateReportEnabled() )
 		{
-			_logger.info("Daily Summary Report is NOT Enabled, this can be enabled using property '"+DailySummaryReportFactory.PROPKEY_create+"=true'.");
+			_logger.info("Daily Summary Report is NOT Enabled, this can be enabled using property '" + DailySummaryReportFactory.PROPKEY_create + "=true'.");
 			return;
 		}
 
@@ -111,7 +111,7 @@ public class DailyCentralSummaryReport
 		}
 		catch(Exception ex)
 		{
-			_logger.error("Problems Sending Daily Summary Report. Caught: "+ex, ex);
+			_logger.error("Problems Sending Daily Summary Report. Caught: " + ex, ex);
 		}
 	}
 	//---------------------------------------------

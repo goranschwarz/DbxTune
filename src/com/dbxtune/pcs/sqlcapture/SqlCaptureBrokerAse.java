@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -261,12 +261,12 @@ extends SqlCaptureBrokerAbstract
 						if (code == 12052 || code == 12036)
 						{
 							if (_nonConfiguredMonitoringCount == 0)
-								_logger.warn("sybMessageHandler: SQL Capture is allowing monitoring even if it's NOT properly configured. Received the following message which will just be printed this time. MsgNum="+code+", Text='"+msgStr+"'.");
+								_logger.warn("sybMessageHandler: SQL Capture is allowing monitoring even if it's NOT properly configured. Received the following message which will just be printed this time. MsgNum=" + code + ", Text='" + msgStr + "'.");
 							
 							_nonConfiguredMonitoringCount++;
 							
 							if (_logger.isDebugEnabled())
-								_logger.debug("sybMessageHandler: _nonConfiguredMonitoringCount="+_nonConfiguredMonitoringCount+": Msg="+code+", '"+msgStr+"'.");
+								_logger.debug("sybMessageHandler: _nonConfiguredMonitoringCount=" + _nonConfiguredMonitoringCount + ": Msg=" + code + ", '" + msgStr + "'.");
 							
 							return null; // JDBC Caller will NOT be aborted, or a Exception will NOT be throw to the caller
 						}
@@ -275,7 +275,7 @@ extends SqlCaptureBrokerAbstract
 						if (code == 950)
 						{
 							if (_logger.isDebugEnabled())
-								_logger.debug("sybMessageHandler: Discarding the following message: Msg="+code+", '"+msgStr+"'.");
+								_logger.debug("sybMessageHandler: Discarding the following message: Msg=" + code + ", '" + msgStr + "'.");
 							
 							return null; // JDBC Caller will NOT be aborted, or a Exception will NOT be throw to the caller
 						}
@@ -366,7 +366,7 @@ extends SqlCaptureBrokerAbstract
 		}
 		catch(SQLException ex)
 		{
-			_logger.warn("Problems getting column definition for tabel '" + schemaPrefixPlain + tabName + "', skipping alter check. caught: "+ex);
+			_logger.warn("Problems getting column definition for tabel '" + schemaPrefixPlain + tabName + "', skipping alter check. caught: " + ex);
 		}
 
 		//-------------------------------------------------------------
@@ -405,20 +405,20 @@ extends SqlCaptureBrokerAbstract
 				//	_logger.error("Problems creating Dictionary Compressed table for '" + MON_SQL_STATEMENT + "' colName '" + col_BlockedBySqlText_name + "'.", ex);
 				//}
 			}
-			if ( ! colNames.contains(col_BlockedBySqlText_name) ) list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+col_BlockedBySqlText_name+rq,40)+" "+fill(getDatatype(conn, col_BlockedBySqlText_jdbcType, col_BlockedBySqlText_jdbcLen),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains(col_BlockedBySqlText_name) ) list.add("alter table " + lq+tabName+rq + " add  " + fill(lq+col_BlockedBySqlText_name+rq,40) + " " + fill(getDatatype(conn, col_BlockedBySqlText_jdbcType, col_BlockedBySqlText_jdbcLen),20) + " " + getNullable(true) + "\n"); // needs: getNullable(true) when adding col
 			// END: Special for 'BlockedBySqlText'
 			
 			// Now check for missing columns and add them
-			if ( ! colNames.contains("WaitTimeDetails"     ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"WaitTimeDetails"     +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 4000),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
-			if ( ! colNames.contains("BlockedBySpid"       ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"BlockedBySpid"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
-			if ( ! colNames.contains("BlockedByKpid"       ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByKpid"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
-			if ( ! colNames.contains("BlockedByBatchId"    ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByBatchId"    +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
-			if ( ! colNames.contains("BlockedByCommand"    ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByCommand"    +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30  ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
-			if ( ! colNames.contains("BlockedByApplication") ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByApplication"+rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30  ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
-			if ( ! colNames.contains("BlockedByTranId"     ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"BlockedByTranId"     +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255 ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
-			if ( ! colNames.contains("RewrittenSqlText"    ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"RewrittenSqlText"    +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
-			if ( ! colNames.contains("ParseEx1"            ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"ParseEx1"            +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
-			if ( ! colNames.contains("ParseEx2"            ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"ParseEx2"            +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("WaitTimeDetails"     ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq + " add  " + fill(lq + "WaitTimeDetails"     + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 4000),20) + " " + getNullable(true) + "\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("BlockedBySpid"       ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq + " add  " + fill(lq + "BlockedBySpid"       + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("BlockedByKpid"       ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq + " add  " + fill(lq + "BlockedByKpid"       + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("BlockedByBatchId"    ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq + " add  " + fill(lq + "BlockedByBatchId"    + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("BlockedByCommand"    ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq + " add  " + fill(lq + "BlockedByCommand"    + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 30  ),20) + " " + getNullable(true) + "\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("BlockedByApplication") ) list.add("alter table " + schemaPrefix +lq+tabName+rq + " add  " + fill(lq + "BlockedByApplication" + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 30  ),20) + " " + getNullable(true) + "\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("BlockedByTranId"     ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq + " add  " + fill(lq + "BlockedByTranId"     + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 255 ),20) + " " + getNullable(true) + "\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("RewrittenSqlText"    ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq + " add  " + fill(lq + "RewrittenSqlText"    + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true) + "\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("ParseEx1"            ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq + " add  " + fill(lq + "ParseEx1"            + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true) + "\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("ParseEx2"            ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq + " add  " + fill(lq + "ParseEx2"            + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true) + "\n"); // needs: getNullable(true) when adding col
 
 			return list;			
 		}
@@ -502,9 +502,9 @@ extends SqlCaptureBrokerAbstract
 		//-------------------------------------------------------------
 		if (MON_CAP_SPID_INFO.equals(tabName))
 		{
-			if ( ! colNames.contains("SecondsConnected") ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"SecondsConnected"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER                                   ),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
-			if ( ! colNames.contains("SqlText"         ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"SqlText"         +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, SpidInfoBatchIdEntry.SQL_TEXT_LEN),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
-			if ( ! colNames.contains("BlockingSqlText" ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq+ " add  "+ fill(lq+"BlockingSqlText" +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, SpidInfoBatchIdEntry.SQL_TEXT_LEN),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("SecondsConnected") ) list.add("alter table " + schemaPrefix +lq+tabName+rq + " add  " + fill(lq + "SecondsConnected" + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER                                   ),20) + " " + getNullable(true) + "\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("SqlText"         ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq + " add  " + fill(lq + "SqlText"         + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, SpidInfoBatchIdEntry.SQL_TEXT_LEN),20) + " " + getNullable(true) + "\n"); // needs: getNullable(true) when adding col
+			if ( ! colNames.contains("BlockingSqlText" ) ) list.add("alter table " + schemaPrefix +lq+tabName+rq + " add  " + fill(lq + "BlockingSqlText" + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, SpidInfoBatchIdEntry.SQL_TEXT_LEN),20) + " " + getNullable(true) + "\n"); // needs: getNullable(true) when adding col
 		}
 
 		//-------------------------------------------------------------
@@ -603,64 +603,64 @@ extends SqlCaptureBrokerAbstract
 			
 			sbSql.append("create table " + schemaPrefix + tabName + "\n");
 			sbSql.append("( \n");
-			sbSql.append("    "+fill(lq+"sampleTime"             +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"InstanceID"             +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"SPID"                   +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n"); // NOTE If this pos is changed: alter _stmnt_SPID_pos
-			sbSql.append("   ,"+fill(lq+"KPID"                   +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n"); // NOTE If this pos is changed: alter _stmnt_KPID_pos
-			sbSql.append("   ,"+fill(lq+"DBID"                   +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"ProcedureID"            +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"PlanID"                 +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"BatchID"                +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n"); // NOTE If this pos is changed: alter _stmnt_BatchID_pos
-			sbSql.append("   ,"+fill(lq+"ContextID"              +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"LineNumber"             +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"ObjOwnerID"             +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"DBName"                 +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   30),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"HashKey"                +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"SsqlId"                 +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"ProcName"               +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  255),20)+" "+getNullable(true)+"\n"); // NULLABLE
-			sbSql.append("   ,"+fill(lq+"Elapsed_ms"             +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"CpuTime"                +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"WaitTime"               +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"MemUsageKB"             +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"PhysicalReads"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"LogicalReads"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"RowsAffected"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"ErrorStatus"            +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"ProcNestLevel"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"StatementNumber"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"QueryOptimizationTime"  +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"PagesModified"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"PacketsSent"            +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"PacketsReceived"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"NetworkPacketSize"      +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"PlansAltered"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"StartTime"              +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"EndTime"                +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("    " + fill(lq + "sampleTime"             + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP    ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "InstanceID"             + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "SPID"                   + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n"); // NOTE If this pos is changed: alter _stmnt_SPID_pos
+			sbSql.append("   ," + fill(lq + "KPID"                   + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n"); // NOTE If this pos is changed: alter _stmnt_KPID_pos
+			sbSql.append("   ," + fill(lq + "DBID"                   + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "ProcedureID"            + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "PlanID"                 + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "BatchID"                + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n"); // NOTE If this pos is changed: alter _stmnt_BatchID_pos
+			sbSql.append("   ," + fill(lq + "ContextID"              + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "LineNumber"             + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "ObjOwnerID"             + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "DBName"                 + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   30),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "HashKey"                + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "SsqlId"                 + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "ProcName"               + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,  255),20) + " " + getNullable(true) + "\n"); // NULLABLE
+			sbSql.append("   ," + fill(lq + "Elapsed_ms"             + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "CpuTime"                + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "WaitTime"               + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "MemUsageKB"             + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "PhysicalReads"          + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "LogicalReads"           + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "RowsAffected"           + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "ErrorStatus"            + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "ProcNestLevel"          + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "StatementNumber"        + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "QueryOptimizationTime"  + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "PagesModified"          + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "PacketsSent"            + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "PacketsReceived"        + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "NetworkPacketSize"      + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "PlansAltered"           + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "StartTime"              + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP    ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "EndTime"                + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP    ),20) + " " + getNullable(false) + "\n");
 
-			sbSql.append("   ,"+fill(lq+"ServerLogin"            +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30  ),20)+" "+getNullable(true)+"\n"); // NULLABLE
-			sbSql.append("   ,"+fill(lq+"AddStatus"              +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
-			sbSql.append("   ,"+fill(lq+"JavaSqlLength"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
-			sbSql.append("   ,"+fill(lq+"JavaSqlLengthShort"     +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
-			sbSql.append("   ,"+fill(lq+"NormJavaSqlLength"      +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
-			sbSql.append("   ,"+fill(lq+"JavaSqlHashCode"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
-			sbSql.append("   ,"+fill(lq+"JavaSqlHashCodeShort"   +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
-			sbSql.append("   ,"+fill(lq+"NormJavaSqlHashCode"    +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
-			sbSql.append("   ,"+fill(lq+"RewrittenSqlText"       +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true)+"\n"); // NULLABLE
-			sbSql.append("   ,"+fill(lq+"ParseEx1"               +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true)+"\n"); // NULLABLE
-			sbSql.append("   ,"+fill(lq+"ParseEx2"               +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true)+"\n"); // NULLABLE
+			sbSql.append("   ," + fill(lq + "ServerLogin"            + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 30  ),20) + " " + getNullable(true) + "\n"); // NULLABLE
+			sbSql.append("   ," + fill(lq + "AddStatus"              + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n"); // NULLABLE
+			sbSql.append("   ," + fill(lq + "JavaSqlLength"          + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n"); // NULLABLE
+			sbSql.append("   ," + fill(lq + "JavaSqlLengthShort"     + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n"); // NULLABLE
+			sbSql.append("   ," + fill(lq + "NormJavaSqlLength"      + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n"); // NULLABLE
+			sbSql.append("   ," + fill(lq + "JavaSqlHashCode"        + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n"); // NULLABLE
+			sbSql.append("   ," + fill(lq + "JavaSqlHashCodeShort"   + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n"); // NULLABLE
+			sbSql.append("   ," + fill(lq + "NormJavaSqlHashCode"    + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n"); // NULLABLE
+			sbSql.append("   ," + fill(lq + "RewrittenSqlText"       + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true) + "\n"); // NULLABLE
+			sbSql.append("   ," + fill(lq + "ParseEx1"               + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true) + "\n"); // NULLABLE
+			sbSql.append("   ," + fill(lq + "ParseEx2"               + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true) + "\n"); // NULLABLE
 
-			sbSql.append("   ,"+fill(lq+col_SQLText_name         +rq,40)+" "+fill(getDatatype(conn, col_SQLText_jdbcType,          col_SQLText_jdbcLen         ),20)+" "+getNullable(true) +"\n"); // NULLABLE
-			sbSql.append("   ,"+fill(lq+col_NormSQLText_name     +rq,40)+" "+fill(getDatatype(conn, col_NormSQLText_jdbcType,      col_NormSQLText_jdbcLen     ),20)+" "+getNullable(true) +"\n"); // NULLABLE
-			sbSql.append("   ,"+fill(lq+col_PlanText_name        +rq,40)+" "+fill(getDatatype(conn, col_PlanText_jdbcType,         col_PlanText_jdbcLen        ),20)+" "+getNullable(true) +"\n"); // NULLABLE
-			sbSql.append("   ,"+fill(lq+col_BlockedBySqlText_name+rq,40)+" "+fill(getDatatype(conn, col_BlockedBySqlText_jdbcType, col_BlockedBySqlText_jdbcLen),20)+" "+getNullable(true) +"\n"); // NULLABLE
+			sbSql.append("   ," + fill(lq+col_SQLText_name         +rq,40) + " " + fill(getDatatype(conn, col_SQLText_jdbcType,          col_SQLText_jdbcLen         ),20) + " " + getNullable(true) + "\n"); // NULLABLE
+			sbSql.append("   ," + fill(lq+col_NormSQLText_name     +rq,40) + " " + fill(getDatatype(conn, col_NormSQLText_jdbcType,      col_NormSQLText_jdbcLen     ),20) + " " + getNullable(true) + "\n"); // NULLABLE
+			sbSql.append("   ," + fill(lq+col_PlanText_name        +rq,40) + " " + fill(getDatatype(conn, col_PlanText_jdbcType,         col_PlanText_jdbcLen        ),20) + " " + getNullable(true) + "\n"); // NULLABLE
+			sbSql.append("   ," + fill(lq+col_BlockedBySqlText_name+rq,40) + " " + fill(getDatatype(conn, col_BlockedBySqlText_jdbcType, col_BlockedBySqlText_jdbcLen),20) + " " + getNullable(true) + "\n"); // NULLABLE
 
-			sbSql.append("   ,"+fill(lq+"WaitTimeDetails"        +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 4000),20)+" "+getNullable(true)+"\n"); // NULLABLE
-			sbSql.append("   ,"+fill(lq+"BlockedBySpid"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
-			sbSql.append("   ,"+fill(lq+"BlockedByKpid"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
-			sbSql.append("   ,"+fill(lq+"BlockedByBatchId"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n"); // NULLABLE
-			sbSql.append("   ,"+fill(lq+"BlockedByCommand"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30  ),20)+" "+getNullable(true)+"\n"); // NULLABLE
-			sbSql.append("   ,"+fill(lq+"BlockedByApplication"   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30  ),20)+" "+getNullable(true)+"\n"); // NULLABLE
-			sbSql.append("   ,"+fill(lq+"BlockedByTranId"        +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255 ),20)+" "+getNullable(true)+"\n"); // NULLABLE
+			sbSql.append("   ," + fill(lq + "WaitTimeDetails"        + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 4000),20) + " " + getNullable(true) + "\n"); // NULLABLE
+			sbSql.append("   ," + fill(lq + "BlockedBySpid"          + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n"); // NULLABLE
+			sbSql.append("   ," + fill(lq + "BlockedByKpid"          + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n"); // NULLABLE
+			sbSql.append("   ," + fill(lq + "BlockedByBatchId"       + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n"); // NULLABLE
+			sbSql.append("   ," + fill(lq + "BlockedByCommand"       + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 30  ),20) + " " + getNullable(true) + "\n"); // NULLABLE
+			sbSql.append("   ," + fill(lq + "BlockedByApplication"   + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 30  ),20) + " " + getNullable(true) + "\n"); // NULLABLE
+			sbSql.append("   ," + fill(lq + "BlockedByTranId"        + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 255 ),20) + " " + getNullable(true) + "\n"); // NULLABLE
 			sbSql.append(") \n");
 			
 			return sbSql.toString();
@@ -802,29 +802,29 @@ extends SqlCaptureBrokerAbstract
 			
 			sbSql.append("create table " + schemaPrefix + tabName + "\n");
 			sbSql.append("( \n");
-			sbSql.append("    "+fill(lq+"sampleTime"         +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP     ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"SPID"               +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"KPID"               +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"BatchID"            +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"ContextID"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"LineNumber"         +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"SecondsConnected"   +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"Command"            +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30   ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"SecondsWaiting"     +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"WaitEventID"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"BlockingSPID"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"BlockingKPID"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"BlockingBatchID"    +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"BlockingXLOID"      +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"NumChildren"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"Login"              +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30   ),20)+" "+getNullable(true )+"\n");
-			sbSql.append("   ,"+fill(lq+"DBName"             +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30   ),20)+" "+getNullable(true )+"\n");
-			sbSql.append("   ,"+fill(lq+"Application"        +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30   ),20)+" "+getNullable(true )+"\n");
-			sbSql.append("   ,"+fill(lq+"HostName"           +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30   ),20)+" "+getNullable(true )+"\n");
-			sbSql.append("   ,"+fill(lq+"MasterTransactionID"+rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255  ),20)+" "+getNullable(true )+"\n");
-			sbSql.append("   ,"+fill(lq+"snapWaitTimeDetails"+rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 4000 ),20)+" "+getNullable(true )+"\n");
-			sbSql.append("   ,"+fill(lq+"SqlText"            +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, SpidInfoBatchIdEntry.SQL_TEXT_LEN ),20)+" "+getNullable(true )+"\n");
-			sbSql.append("   ,"+fill(lq+"BlockingSqlText"    +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, SpidInfoBatchIdEntry.SQL_TEXT_LEN ),20)+" "+getNullable(true )+"\n");
+			sbSql.append("    " + fill(lq + "sampleTime"         + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP     ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "SPID"               + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER       ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "KPID"               + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER       ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "BatchID"            + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER       ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "ContextID"          + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER       ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "LineNumber"         + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER       ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "SecondsConnected"   + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER       ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "Command"            + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 30   ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "SecondsWaiting"     + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER       ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "WaitEventID"        + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER       ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "BlockingSPID"       + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER       ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "BlockingKPID"       + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER       ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "BlockingBatchID"    + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER       ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "BlockingXLOID"      + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER       ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "NumChildren"        + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER       ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "Login"              + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 30   ),20) + " " + getNullable(true ) + "\n");
+			sbSql.append("   ," + fill(lq + "DBName"             + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 30   ),20) + " " + getNullable(true ) + "\n");
+			sbSql.append("   ," + fill(lq + "Application"        + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 30   ),20) + " " + getNullable(true ) + "\n");
+			sbSql.append("   ," + fill(lq + "HostName"           + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 30   ),20) + " " + getNullable(true ) + "\n");
+			sbSql.append("   ," + fill(lq + "MasterTransactionID" + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 255  ),20) + " " + getNullable(true ) + "\n");
+			sbSql.append("   ," + fill(lq + "snapWaitTimeDetails" + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 4000 ),20) + " " + getNullable(true ) + "\n");
+			sbSql.append("   ," + fill(lq + "SqlText"            + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, SpidInfoBatchIdEntry.SQL_TEXT_LEN ),20) + " " + getNullable(true ) + "\n");
+			sbSql.append("   ," + fill(lq + "BlockingSqlText"    + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, SpidInfoBatchIdEntry.SQL_TEXT_LEN ),20) + " " + getNullable(true ) + "\n");
 			sbSql.append(") \n");
 
 			return sbSql.toString();
@@ -837,16 +837,16 @@ extends SqlCaptureBrokerAbstract
 			
 			sbSql.append("create table " + schemaPrefix + tabName + "\n");
 			sbSql.append("( \n");
-			sbSql.append("    "+fill(lq+"sampleTime"         +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP     ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"SPID"               +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"KPID"               +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"WaitEventID"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"WaitClassID"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"snapshotBatchID"    +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"Waits_abs"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"Waits_diff"         +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"WaitTime_abs"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(lq+"WaitTime_diff"      +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER       ),20)+" "+getNullable(false)+"\n");
+			sbSql.append("    " + fill(lq + "sampleTime"         + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP     ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "SPID"               + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER       ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "KPID"               + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER       ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "WaitEventID"        + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER       ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "WaitClassID"        + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER       ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "snapshotBatchID"    + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER       ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "Waits_abs"          + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER       ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "Waits_diff"         + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER       ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "WaitTime_abs"       + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER       ),20) + " " + getNullable(false) + "\n");
+			sbSql.append("   ," + fill(lq + "WaitTime_diff"      + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER       ),20) + " " + getNullable(false) + "\n");
 			sbSql.append(") \n");
 
 			return sbSql.toString();
@@ -1410,7 +1410,7 @@ extends SqlCaptureBrokerAbstract
 		if (MON_SQL_STATEMENT.equals(tabName))
 		{
 //			list.add("create index " + conn.quotify(tabName+"_ix1") + " on " + conn.quotify(tabName) + "(" + conn.quotify("BatchID", "SPID", "KPID") + ")\n");
-			list.add("create index " + conn.quotify(tabName+"_ix2") + " on " + schemaPrefix + conn.quotify(tabName) + "(" + conn.quotify("StartTime", "EndTime")    + ")\n");
+			list.add("create index " + conn.quotify(tabName + "_ix2") + " on " + schemaPrefix + conn.quotify(tabName) + "(" + conn.quotify("StartTime", "EndTime")    + ")\n");
 		}
 
 //		if (MON_SQL_PLAN.equals(tabName))
@@ -1420,12 +1420,12 @@ extends SqlCaptureBrokerAbstract
 
 		if (MON_CAP_SPID_INFO.equals(tabName))
 		{
-			list.add("create index " + conn.quotify(tabName+"_ix1") + " on " + schemaPrefix + conn.quotify(tabName) + "(" + conn.quotify("sampleTime", "SPID", "KPID") + ")\n");
+			list.add("create index " + conn.quotify(tabName + "_ix1") + " on " + schemaPrefix + conn.quotify(tabName) + "(" + conn.quotify("sampleTime", "SPID", "KPID") + ")\n");
 		}
 
 		if (MON_CAP_WAIT_INFO.equals(tabName))
 		{
-			list.add("create index " + conn.quotify(tabName+"_ix1") + " on " + schemaPrefix + conn.quotify(tabName) + "(" + conn.quotify("sampleTime", "SPID", "KPID", "WaitEventID") + ")\n");
+			list.add("create index " + conn.quotify(tabName + "_ix1") + " on " + schemaPrefix + conn.quotify(tabName) + "(" + conn.quotify("sampleTime", "SPID", "KPID", "WaitEventID") + ")\n");
 		}
 
 		return list;
@@ -1711,7 +1711,7 @@ extends SqlCaptureBrokerAbstract
 
 	private int doReconfigure(DbxConnection conn, String cfgName, int cfgCurrent, int cfgValue)
 	{
-		_logger.info("ASE Configuration '"+cfgName+"' for 'SQL Capture', will be reconfigured from value '"+cfgCurrent+"' to value '"+cfgValue+"'.");
+		_logger.info("ASE Configuration '" + cfgName + "' for 'SQL Capture', will be reconfigured from value '" + cfgCurrent + "' to value '" + cfgValue + "'.");
 
 		try
 		{
@@ -1719,15 +1719,15 @@ extends SqlCaptureBrokerAbstract
 		}
 		catch (SQLException e)
 		{
-			_logger.error("Problems setting ASE configuration '"+cfgName+"' to '"+cfgValue+"'. Caught: "+AseConnectionUtils.sqlExceptionToString(e));
+			_logger.error("Problems setting ASE configuration '" + cfgName + "' to '" + cfgValue + "'. Caught: " + AseConnectionUtils.sqlExceptionToString(e));
 		}
 
 		int configHasValue = AseConnectionUtils.getAseConfigRunValueNoEx(conn, cfgName);
 		if (_logger.isDebugEnabled()) 
-			_logger.debug("After re-config, the ASE Configuration '"+cfgName+"', now has value '"+configHasValue+"'.");
+			_logger.debug("After re-config, the ASE Configuration '" + cfgName + "', now has value '" + configHasValue + "'.");
 
 		if (configHasValue != cfgValue)
-			_logger.warn("After re-config, the ASE Configuration '"+cfgName+"', now has value '"+configHasValue+"', but the value we wanted to be after reconiguring was '"+configHasValue+"'.");
+			_logger.warn("After re-config, the ASE Configuration '" + cfgName + "', now has value '" + configHasValue + "', but the value we wanted to be after reconiguring was '" + configHasValue + "'.");
 		
 		return configHasValue;
 	}
@@ -1772,12 +1772,12 @@ extends SqlCaptureBrokerAbstract
 			_planTextPipeActive       = AseConnectionUtils.getAseConfigRunValue(conn, CFGNAME_aseConfig_plan_text_pipe_active);
 			_planTextPipeMaxMessages  = AseConnectionUtils.getAseConfigRunValue(conn, CFGNAME_aseConfig_plan_text_pipe_max_messages);
 			
-			if (_sqlTextPipeActive        < cfg_sqlTextPipeActive)        { doReconfigure = true; _logger.warn("The ASE Configuration '" + CFGNAME_aseConfig_sql_text_pipe_active        + "' is lower (currently="+ _sqlTextPipeActive        +") than the suggested value '" + cfg_sqlTextPipeActive        + "'. If --reconfigure is enabled, this will automatically be configured."); }
-			if (_sqlTextPipeMaxMessages   < cfg_sqlTextPipeMaxMessages)   { doReconfigure = true; _logger.warn("The ASE Configuration '" + CFGNAME_aseConfig_sql_text_pipe_max_messages  + "' is lower (currently="+ _sqlTextPipeMaxMessages   +") than the suggested value '" + cfg_sqlTextPipeMaxMessages   + "'. If --reconfigure is enabled, this will automatically be configured."); }
-			if (_statementPipeActive      < cfg_statementPipeActive)      { doReconfigure = true; _logger.warn("The ASE Configuration '" + CFGNAME_aseConfig_statement_pipe_active       + "' is lower (currently="+ _statementPipeActive      +") than the suggested value '" + cfg_statementPipeActive      + "'. If --reconfigure is enabled, this will automatically be configured."); }
-			if (_statementPipeMaxMessages < cfg_statementPipeMaxMessages) { doReconfigure = true; _logger.warn("The ASE Configuration '" + CFGNAME_aseConfig_statement_pipe_max_messages + "' is lower (currently="+ _statementPipeMaxMessages +") than the suggested value '" + cfg_statementPipeMaxMessages + "'. If --reconfigure is enabled, this will automatically be configured."); }
-			if (_planTextPipeActive       < cfg_planTextPipeActive)       { doReconfigure = true; _logger.warn("The ASE Configuration '" + CFGNAME_aseConfig_plan_text_pipe_active       + "' is lower (currently="+ _planTextPipeActive       +") than the suggested value '" + cfg_planTextPipeActive       + "'. If --reconfigure is enabled, this will automatically be configured."); }
-			if (_planTextPipeMaxMessages  < cfg_planTextPipeMaxMessages)  { doReconfigure = true; _logger.warn("The ASE Configuration '" + CFGNAME_aseConfig_plan_text_pipe_max_messages + "' is lower (currently="+ _planTextPipeMaxMessages  +") than the suggested value '" + cfg_planTextPipeMaxMessages  + "'. If --reconfigure is enabled, this will automatically be configured."); }
+			if (_sqlTextPipeActive        < cfg_sqlTextPipeActive)        { doReconfigure = true; _logger.warn("The ASE Configuration '" + CFGNAME_aseConfig_sql_text_pipe_active        + "' is lower (currently=" + _sqlTextPipeActive        + ") than the suggested value '" + cfg_sqlTextPipeActive        + "'. If --reconfigure is enabled, this will automatically be configured."); }
+			if (_sqlTextPipeMaxMessages   < cfg_sqlTextPipeMaxMessages)   { doReconfigure = true; _logger.warn("The ASE Configuration '" + CFGNAME_aseConfig_sql_text_pipe_max_messages  + "' is lower (currently=" + _sqlTextPipeMaxMessages   + ") than the suggested value '" + cfg_sqlTextPipeMaxMessages   + "'. If --reconfigure is enabled, this will automatically be configured."); }
+			if (_statementPipeActive      < cfg_statementPipeActive)      { doReconfigure = true; _logger.warn("The ASE Configuration '" + CFGNAME_aseConfig_statement_pipe_active       + "' is lower (currently=" + _statementPipeActive      + ") than the suggested value '" + cfg_statementPipeActive      + "'. If --reconfigure is enabled, this will automatically be configured."); }
+			if (_statementPipeMaxMessages < cfg_statementPipeMaxMessages) { doReconfigure = true; _logger.warn("The ASE Configuration '" + CFGNAME_aseConfig_statement_pipe_max_messages + "' is lower (currently=" + _statementPipeMaxMessages + ") than the suggested value '" + cfg_statementPipeMaxMessages + "'. If --reconfigure is enabled, this will automatically be configured."); }
+			if (_planTextPipeActive       < cfg_planTextPipeActive)       { doReconfigure = true; _logger.warn("The ASE Configuration '" + CFGNAME_aseConfig_plan_text_pipe_active       + "' is lower (currently=" + _planTextPipeActive       + ") than the suggested value '" + cfg_planTextPipeActive       + "'. If --reconfigure is enabled, this will automatically be configured."); }
+			if (_planTextPipeMaxMessages  < cfg_planTextPipeMaxMessages)  { doReconfigure = true; _logger.warn("The ASE Configuration '" + CFGNAME_aseConfig_plan_text_pipe_max_messages + "' is lower (currently=" + _planTextPipeMaxMessages  + ") than the suggested value '" + cfg_planTextPipeMaxMessages  + "'. If --reconfigure is enabled, this will automatically be configured."); }
 
 			_sampleSqlText    = doSqlText       && _sqlTextPipeActive   > 0 && _sqlTextPipeMaxMessages   > 0;
 			_sampleStatements = doStatementInfo && _statementPipeActive > 0 && _statementPipeMaxMessages > 0;
@@ -1800,7 +1800,7 @@ extends SqlCaptureBrokerAbstract
 					if ( ! hasSaRole )
 					{
 						doReconfigure = false;
-						_logger.warn("Can not adjust the configuration '* pipe active' or '* pipe max messages'. To do that the connected user needs to have '"+AseConnectionUtils.SA_ROLE+"'.");
+						_logger.warn("Can not adjust the configuration '* pipe active' or '* pipe max messages'. To do that the connected user needs to have '" + AseConnectionUtils.SA_ROLE + "'.");
 					}
 				}
 			}
@@ -1830,7 +1830,7 @@ extends SqlCaptureBrokerAbstract
 			_sampleStatements = doStatementInfo;
 			_samplePlan       = doPlanText;
 
-			_logger.warn("Problems getting ASE Configuration for 'sql text pipe *', 'statement pipe *' or 'plan text pipe *', Trusting "+Version.getAppName()+" config instead (sampleSqlText="+_sampleSqlText+", sampleStatements="+_sampleStatements+", samplePlanText="+_samplePlan+"). Caught: "+ex);
+			_logger.warn("Problems getting ASE Configuration for 'sql text pipe *', 'statement pipe *' or 'plan text pipe *', Trusting " + Version.getAppName() + " config instead (sampleSqlText=" + _sampleSqlText + ", sampleStatements=" + _sampleStatements + ", samplePlanText=" + _samplePlan + "). Caught: " + ex);
 		}
 	}
 
@@ -1843,7 +1843,7 @@ extends SqlCaptureBrokerAbstract
 		// Get any specific where clause for the monSysStatements
 		String statementWhereClause = getProperty(PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_whereClause, PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_whereClause);
 		if (StringUtil.hasValue(statementWhereClause))
-			_logger.info("Applying user defined where clause when sampling monSysStatements. extra where clause appended is '"+statementWhereClause+"'.");
+			_logger.info("Applying user defined where clause when sampling monSysStatements. extra where clause appended is '" + statementWhereClause + "'.");
 		else
 			statementWhereClause = "1 = 1";
 
@@ -1933,12 +1933,12 @@ extends SqlCaptureBrokerAbstract
 		_sql_sqlText 
 			= sqlPrefix
 			+ "select getdate() as sampleTime, \n"
-			+ "    "+InstanceID+"\n"
+			+ "    " + InstanceID + "\n"
 			+ "    SPID, \n"
 			+ "    KPID, \n"
 			+ "    BatchID, \n"
 			+ "    SequenceInBatch, \n"
-			+ "    "+ServerLogin+"\n"
+			+ "    " + ServerLogin + "\n"
 //			+ "    convert(int, -1) as AddMethod,\n"
 //			+ "    convert(int, -1) as JavaSqlLength,\n"
 //			+ "    convert(int, -1) as JavaSqlLengthShort,\n"
@@ -1956,7 +1956,7 @@ extends SqlCaptureBrokerAbstract
 			= sqlPrefix
 			+ "select \n"
 			+ "    getdate() as sampleTime, \n"
-			+ "    "+InstanceID+"\n"
+			+ "    " + InstanceID + "\n"
 			+ "    SPID, \n"
 			+ "    KPID, \n"
 // Possibly ADD 'Application' to make it easier to detect WHAT application (or possibly Login) that are using up most resources.
@@ -2022,7 +2022,7 @@ extends SqlCaptureBrokerAbstract
 		_sql_sqlPlanText 
 			= sqlPrefix
 			+ "select getdate() as sampleTime, \n"
-			+ "    "+InstanceID+"\n"
+			+ "    " + InstanceID + "\n"
 			+ "    SPID, \n"
 			+ "    KPID, \n"
 			+ "    PlanID, \n"
@@ -2030,7 +2030,7 @@ extends SqlCaptureBrokerAbstract
 			+ "    ContextID, \n"
 			+ "    SequenceNumber, \n"
 			+ "    DBID, \n"
-			+ "    "+DBName+"\n"
+			+ "    " + DBName + "\n"
 			+ "    ProcedureID, \n"
 //			+ "    convert(int, -1) as AddMethod,\n"
 			+ "    PlanText \n"
@@ -2319,7 +2319,7 @@ extends SqlCaptureBrokerAbstract
 			}
 			catch(SQLException ex)
 			{
-				_logger.error("SQL Capture problems when capturing 'SPID Information' Caught "+AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: "+_sql_spidInfo, ex);
+				_logger.error("SQL Capture problems when capturing 'SPID Information' Caught " + AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: " + _sql_spidInfo, ex);
 			}
 			//if (! justAddedEntries.isEmpty() )
 			//{
@@ -2370,7 +2370,7 @@ extends SqlCaptureBrokerAbstract
 				}
 				catch(SQLException ex)
 				{
-					_logger.error("SQL Capture problems when capturing 'SPID SqlText' Caught "+AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: "+sql, ex);
+					_logger.error("SQL Capture problems when capturing 'SPID SqlText' Caught " + AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: " + sql, ex);
 				}
 
 				// Loop the record to update "BlockingKPID, BlockingBatchID, BlockingSqlText" (BlockingSPID is already known)
@@ -2451,7 +2451,7 @@ extends SqlCaptureBrokerAbstract
 				}
 				catch(SQLException ex)
 				{
-					_logger.error("SQL Capture problems when capturing 'SPID WAIT Information' Caught "+AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: "+sql, ex);
+					_logger.error("SQL Capture problems when capturing 'SPID WAIT Information' Caught " + AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: " + sql, ex);
 				}
 				
 				// if we want to persist the "active" SPID's then we might want to add "current known Wait Information" to that entry
@@ -2657,7 +2657,7 @@ extends SqlCaptureBrokerAbstract
 										}
 										else
 										{
-											_logger.info("XmlPlanCache do not have an instance. Skipping XML Plan lookup for name '"+procName+"'.");
+											_logger.info("XmlPlanCache do not have an instance. Skipping XML Plan lookup for name '" + procName + "'.");
 										}
 									}
 									
@@ -2781,12 +2781,12 @@ extends SqlCaptureBrokerAbstract
 					// Warning on first time or every X minute/hour
 					if (_lastConfigOverflowMsgTime_statementPipeMaxMessages == -1 || TimeUtils.msDiffNow(_lastConfigOverflowMsgTime_statementPipeMaxMessages) > _lastConfigOverflowMsgTimeThreshold)
 					{
-						_logger.warn("The configuration '"+configName+"' might be to low. " 
-								+ "For the last '"+TimeUtils.msToTimeStr("%HH:%MM", _lastConfigOverflowMsgTimeThreshold)+"' (HH:MM), "
-								+ "We have read "+_lastConfigOverflowMsgVSum_statementPipeMaxMessages+" rows. "
+						_logger.warn("The configuration '" + configName + "' might be to low. " 
+								+ "For the last '" + TimeUtils.msToTimeStr("%HH:%MM", _lastConfigOverflowMsgTimeThreshold) + "' (HH:MM), "
+								+ "We have read " + _lastConfigOverflowMsgVSum_statementPipeMaxMessages + " rows. "
 								+ "On " + _lastConfigOverflowMsgVCnt_statementPipeMaxMessages + " occations. "
 								+ "Average read per occation was " + (_lastConfigOverflowMsgVSum_statementPipeMaxMessages / _lastConfigOverflowMsgVCnt_statementPipeMaxMessages) + " rows. "
-								+ "And the configuration value for '"+configName+"' is "+configVal);
+								+ "And the configuration value for '" + configName + "' is " + configVal);
 
 						// Reset the values, so we can print new message in X minutes/hours
 						_lastConfigOverflowMsgTime_statementPipeMaxMessages = System.currentTimeMillis();
@@ -2801,7 +2801,7 @@ extends SqlCaptureBrokerAbstract
 				if (ex.getErrorCode() == 12052)
 					_sampleStatements = false;
 				
-				_logger.error("SQL Capture problems when capturing 'SQL Statements' Caught "+AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: "+_sql_sqlStatements, ex);
+				_logger.error("SQL Capture problems when capturing 'SQL Statements' Caught " + AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: " + _sql_sqlStatements, ex);
 			}
 			
 			long captureTime = TimeUtils.msDiffNow(captureStartTime);
@@ -2875,12 +2875,12 @@ extends SqlCaptureBrokerAbstract
 					// Warning on first time or every X minute/hour
 					if (_lastConfigOverflowMsgTime_sqlTextPipeMaxMessages == -1 || TimeUtils.msDiffNow(_lastConfigOverflowMsgTime_sqlTextPipeMaxMessages) > _lastConfigOverflowMsgTimeThreshold)
 					{
-						_logger.warn("The configuration '"+configName+"' might be to low. " 
-								+ "For the last '"+TimeUtils.msToTimeStr("%HH:%MM", _lastConfigOverflowMsgTimeThreshold)+"' (HH:MM), "
-								+ "We have read "+_lastConfigOverflowMsgVSum_sqlTextPipeMaxMessages+" rows. "
+						_logger.warn("The configuration '" + configName + "' might be to low. " 
+								+ "For the last '" + TimeUtils.msToTimeStr("%HH:%MM", _lastConfigOverflowMsgTimeThreshold) + "' (HH:MM), "
+								+ "We have read " + _lastConfigOverflowMsgVSum_sqlTextPipeMaxMessages + " rows. "
 								+ "On " + _lastConfigOverflowMsgVCnt_sqlTextPipeMaxMessages + " occations. "
 								+ "Average read per occation was " + (_lastConfigOverflowMsgVSum_sqlTextPipeMaxMessages / _lastConfigOverflowMsgVCnt_sqlTextPipeMaxMessages) + " rows. "
-								+ "And the configuration value for '"+configName+"' is "+configVal);
+								+ "And the configuration value for '" + configName + "' is " + configVal);
 
 						// Reset the values, so we can print new message in X minutes/hours
 						_lastConfigOverflowMsgTime_sqlTextPipeMaxMessages = System.currentTimeMillis();
@@ -2895,7 +2895,7 @@ extends SqlCaptureBrokerAbstract
 				if (ex.getErrorCode() == 12052)
 					_sampleSqlText = false;
 				
-				_logger.error("SQL Capture problems when capturing 'SQL Text' Caught "+AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: "+_sql_sqlText, ex);
+				_logger.error("SQL Capture problems when capturing 'SQL Text' Caught " + AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: " + _sql_sqlText, ex);
 			}
 
 			long captureTime = TimeUtils.msDiffNow(captureStartTime);
@@ -2961,12 +2961,12 @@ extends SqlCaptureBrokerAbstract
 					// Warning on first time or every X minute/hour
 					if (_lastConfigOverflowMsgTime_planTextPipeMaxMessages == -1 || TimeUtils.msDiffNow(_lastConfigOverflowMsgTime_planTextPipeMaxMessages) > _lastConfigOverflowMsgTimeThreshold)
 					{
-						_logger.warn("The configuration '"+configName+"' might be to low. " 
-								+ "For the last '"+TimeUtils.msToTimeStr("%HH:%MM", _lastConfigOverflowMsgTimeThreshold)+"' (HH:MM), "
-								+ "We have read "+_lastConfigOverflowMsgVSum_planTextPipeMaxMessages+" rows. "
+						_logger.warn("The configuration '" + configName + "' might be to low. " 
+								+ "For the last '" + TimeUtils.msToTimeStr("%HH:%MM", _lastConfigOverflowMsgTimeThreshold) + "' (HH:MM), "
+								+ "We have read " + _lastConfigOverflowMsgVSum_planTextPipeMaxMessages + " rows. "
 								+ "On " + _lastConfigOverflowMsgVCnt_planTextPipeMaxMessages + " occations. "
 								+ "Average read per occation was " + (_lastConfigOverflowMsgVSum_planTextPipeMaxMessages / _lastConfigOverflowMsgVCnt_planTextPipeMaxMessages) + " rows. "
-								+ "And the configuration value for '"+configName+"' is "+configVal);
+								+ "And the configuration value for '" + configName + "' is " + configVal);
 
 						// Reset the values, so we can print new message in X minutes/hours
 						_lastConfigOverflowMsgTime_planTextPipeMaxMessages = System.currentTimeMillis();
@@ -2983,7 +2983,7 @@ extends SqlCaptureBrokerAbstract
 				if (ex.getErrorCode() == 12052)
 					_samplePlan = false;
 				
-				_logger.error("SQL Capture problems when capturing 'SQL Plan Text' Caught "+AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: "+_sql_sqlPlanText, ex);
+				_logger.error("SQL Capture problems when capturing 'SQL Plan Text' Caught " + AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: " + _sql_sqlPlanText, ex);
 			}
 
 			long captureTime = TimeUtils.msDiffNow(captureStartTime);
@@ -3263,10 +3263,10 @@ extends SqlCaptureBrokerAbstract
 //printPcsAdd = true;
 			if (printPcsAdd || _logger.isDebugEnabled())
 			{
-				_logger.info("  >> pcs >> [addCnt=" + _statSqlTextAddCount + ",noSqlCnt=" + _statSqlTextNoSqlCount + "] STATEMENT: ms=" + stRec.Elapsed_ms + ", rowc=" + stRec.RowsAffected + ", error=" + stRec.ErrorStatus + ", spid=" + stRec.SPID + ", kpid=" + stRec.KPID + ", batchId=" + stRec.BatchID + ", addStatus=" + stRec.AddStatus + ", sql=|" + StringUtils.normalizeSpace(sqlText) + "|, normalizedSqlTextJavaHashCode=" + stRec.NormJavaSqlHashCode + (stRec.ErrorStatus == 0 ? "" : ", MsgText="+AseErrorMessageDictionary.getInstance().getDescription(stRec.ErrorStatus)) );
+				_logger.info("  >> pcs >> [addCnt=" + _statSqlTextAddCount + ",noSqlCnt=" + _statSqlTextNoSqlCount + "] STATEMENT: ms=" + stRec.Elapsed_ms + ", rowc=" + stRec.RowsAffected + ", error=" + stRec.ErrorStatus + ", spid=" + stRec.SPID + ", kpid=" + stRec.KPID + ", batchId=" + stRec.BatchID + ", addStatus=" + stRec.AddStatus + ", sql=|" + StringUtils.normalizeSpace(sqlText) + "|, normalizedSqlTextJavaHashCode=" + stRec.NormJavaSqlHashCode + (stRec.ErrorStatus == 0 ? "" : ", MsgText=" + AseErrorMessageDictionary.getInstance().getDescription(stRec.ErrorStatus)) );
 				if (StringUtil.isNullOrBlank(sqlText))
 				{
-					_logger.error("            ************************* NO-SQL-TEXT ************************** spid=" + stRec.SPID + ", kpid=" + stRec.KPID + ", batchId=" + stRec.BatchID + ", addStatus=" + stRec.AddStatus + ", sql=|"+sqlText+"|.");
+					_logger.error("            ************************* NO-SQL-TEXT ************************** spid=" + stRec.SPID + ", kpid=" + stRec.KPID + ", batchId=" + stRec.BatchID + ", addStatus=" + stRec.AddStatus + ", sql=|" + sqlText + "|.");
 				}
 			}
 

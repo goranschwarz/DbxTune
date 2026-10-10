@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -48,7 +48,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SPACE,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Replication Server Stable device (Queuing system) in Server '" + cm.getServerName() + "' is starting to get full, type='"+alarmType+"', usedSpaceInMb="+usedSpaceInMb+", freeSpaceInMb="+freeSpaceInMb+", usedPct="+usedPct+". (threshold="+threshold+")",
+				"Replication Server Stable device (Queuing system) in Server '" + cm.getServerName() + "' is starting to get full, type='" + alarmType + "', usedSpaceInMb=" + usedSpaceInMb + ", freeSpaceInMb=" + freeSpaceInMb + ", usedPct=" + usedPct + ". (threshold=" + threshold + ")",
 				threshold
 				);
 
@@ -56,6 +56,6 @@ extends AlarmEvent
 		setTimeToLive(cm);
 
 		// Set the raw data carier
-		setData("usedSpaceInMb="+usedSpaceInMb+", freeSpaceInMb="+freeSpaceInMb+", usedPct="+usedPct);
+		setData("usedSpaceInMb=" + usedSpaceInMb + ", freeSpaceInMb=" + freeSpaceInMb + ", usedPct=" + usedPct);
 	}
 }

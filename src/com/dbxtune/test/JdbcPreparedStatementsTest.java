@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -86,7 +86,7 @@ public class JdbcPreparedStatementsTest
 				errStr += sqle.getMessage() + " ";
 				sqle = sqle.getNextException();
 			}
-			System.out.println("Failed to execute 'set quoted_identifier off' when connecting. Problem: "+errStr);
+			System.out.println("Failed to execute 'set quoted_identifier off' when connecting. Problem: " + errStr);
 		}
 
 		// Create a new cache map, when new connection
@@ -163,7 +163,7 @@ public class JdbcPreparedStatementsTest
 		}
 		catch (SQLException e)
 		{
-			System.err.println("Problems printDynamicSqlStat(). sql="+sql);
+			System.err.println("Problems printDynamicSqlStat(). sql=" + sql);
 			e.printStackTrace();
 		}
 	}
@@ -189,7 +189,7 @@ public class JdbcPreparedStatementsTest
 		}
 		catch (SQLException e)
 		{
-			System.err.println("Problems getSpid(). sql="+sql);
+			System.err.println("Problems getSpid(). sql=" + sql);
 			e.printStackTrace();
 		}
 		
@@ -217,7 +217,7 @@ public class JdbcPreparedStatementsTest
 		}
 		catch (SQLException e)
 		{
-			System.err.println("Problems getsrvVersion(). sql="+sql);
+			System.err.println("Problems getsrvVersion(). sql=" + sql);
 			e.printStackTrace();
 		}
 		
@@ -235,7 +235,7 @@ public class JdbcPreparedStatementsTest
 		PreparedStatement pstmnt = _pstmntMap.get(sql);
 		if (pstmnt == null)
 		{
-			System.out.println("DEBUG: GENERATING a new PreparedStatement for SQL: "+sql);
+			System.out.println("DEBUG: GENERATING a new PreparedStatement for SQL: " + sql);
 			Connection conn = getConnection();
 			pstmnt = conn.prepareStatement(sql);
 
@@ -269,7 +269,7 @@ public class JdbcPreparedStatementsTest
 		}
 		catch (SQLException e)
 		{
-			System.err.println("Problems loading 'crdate' for table '"+tabname+"'. sql="+sql);
+			System.err.println("Problems loading 'crdate' for table '" + tabname + "'. sql=" + sql);
 			e.printStackTrace();
 			return null;
 		}
@@ -303,7 +303,7 @@ public class JdbcPreparedStatementsTest
 		}
 		catch (SQLException e)
 		{
-			System.err.println("Problems loading 'crdate' for table '"+tabname+"'. sql="+sql);
+			System.err.println("Problems loading 'crdate' for table '" + tabname + "'. sql=" + sql);
 			e.printStackTrace();
 			return null;
 		}
@@ -320,12 +320,12 @@ public class JdbcPreparedStatementsTest
 		if (subCase == 3) closePrepStmnt50Pct = true;
 
 		System.out.println();
-		System.out.println("############ TEST "+testCase+":"+subCase+" ############## ---BEGIN---");
-		System.out.println("PROPS="+jdbcProps);
+		System.out.println("############ TEST " + testCase + ":" + subCase + " ############## ---BEGIN---");
+		System.out.println("PROPS=" + jdbcProps);
 
 		jt.connect(jdbcDriver, jdbcUrl, jdbcUser, jdbcPasswd, jdbcProps);
-		System.out.println("ASE Version used in this test is: "+jt.getsrvVersion());
-		System.out.println("SPID used in this test is: "+jt.getSpid());
+		System.out.println("ASE Version used in this test is: " + jt.getsrvVersion());
+		System.out.println("SPID used in this test is: " + jt.getSpid());
 		if (testCase == 3)
 		{
 			System.out.println("RUNNING getCrDateReuse()");
@@ -358,7 +358,7 @@ public class JdbcPreparedStatementsTest
 			}
 		}
 		long stopTime = System.currentTimeMillis();
-		System.out.println("Exec time for "+num+" iterations: "+(stopTime-startTime)+" ms. closePrepStmnt="+closePrepStmnt+", closePrepStmnt50Pct="+closePrepStmnt50Pct);
+		System.out.println("Exec time for " + num + " iterations: " + (stopTime-startTime) + " ms. closePrepStmnt=" + closePrepStmnt + ", closePrepStmnt50Pct=" + closePrepStmnt50Pct);
 		
 		jt.printDynamicSqlStat();
 		jt.close();
@@ -383,13 +383,13 @@ java -cp classes;lib/jconn3.jar com.dbxtune.test.JdbcPreparedStatementsTest ston
 		if (args.length > 2) user = args[2];
 		if (args.length > 3) pawd = args[3];
 
-		System.out.println("host = '"+host+"'");
-		System.out.println("port = '"+port+"'");
-		System.out.println("user = '"+user+"'");
-		System.out.println("pawd = '"+pawd+"'");
+		System.out.println("host = '" + host + "'");
+		System.out.println("port = '" + port + "'");
+		System.out.println("user = '" + user + "'");
+		System.out.println("pawd = '" + pawd + "'");
 		
 		String jdbcDriver    = "com.sybase.jdbc42.jdbc.SybDriver";
-		String jdbcUrl       = "jdbc:sybase:Tds:"+host+":"+port;
+		String jdbcUrl       = "jdbc:sybase:Tds:" + host + ":" + port;
 		String jdbcUser      = user;
 		String jdbcPasswd    = pawd;
 		Properties jdbcProps = null;

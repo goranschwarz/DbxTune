@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -690,7 +690,7 @@ implements ActionListener, FocusListener, KeyListener, ChangeListener
 	// Key Listeners
 	@Override public void keyTyped(KeyEvent e) {}
 	@Override public void keyPressed(KeyEvent e) {}
-	@Override public void keyReleased(KeyEvent e) { System.out.println("keyReleased(): e="+e); checkForProblem(); }
+	@Override public void keyReleased(KeyEvent e) { System.out.println("keyReleased(): e=" + e); checkForProblem(); }
 
 	private static String getComboBoxValue(JComboBox<String> cbx)
 	{
@@ -1344,7 +1344,7 @@ implements ActionListener, FocusListener, KeyListener, ChangeListener
 						}
 						catch (Exception ex)
 						{
-							SwingUtils.showErrorMessage(null, "Problems Open HTML", "Problems when open the URL '"+f.toURI()+"'.", ex);
+							SwingUtils.showErrorMessage(null, "Problems Open HTML", "Problems when open the URL '" + f.toURI() + "'.", ex);
 						}
 					}
 				}

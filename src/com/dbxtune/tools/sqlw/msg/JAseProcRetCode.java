@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -31,7 +31,7 @@ extends JAseMessage
 
 	public JAseProcRetCode(final int returnCode, String originSql)
 	{
-		super("(return status = "+returnCode+")", originSql);
+		super("(return status = " + returnCode + ")", originSql);
 		_returnCode = returnCode;
 //		init();
 		

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -47,7 +47,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SPACE,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Low Operating System Disk Free Space (MB) in Server '" + cm.getServerName() + "' at MountPoint '" + mountPoint + "', FreeSpaceInMB="+freeSpaceInMb+", UsedSpaceInPct="+usedSpaceInPct+". (thresholdInMb="+thresholdInMb+")",
+				"Low Operating System Disk Free Space (MB) in Server '" + cm.getServerName() + "' at MountPoint '" + mountPoint + "', FreeSpaceInMB=" + freeSpaceInMb + ", UsedSpaceInPct=" + usedSpaceInPct + ". (thresholdInMb=" + thresholdInMb + ")",
 				thresholdInMb
 				);
 
@@ -55,7 +55,7 @@ extends AlarmEvent
 		setTimeToLive(cm);
 
 		// Set the raw data carier
-		setData("mountPoint="+mountPoint+",mb="+freeSpaceInMb+",pct="+usedSpaceInPct);
+		setData("mountPoint=" + mountPoint + ",mb=" + freeSpaceInMb + ",pct=" + usedSpaceInPct);
 	}
 
 	/**
@@ -77,7 +77,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SPACE,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Low Operating System Disk Free Space (PCT) in Server '" + cm.getServerName() + "' at MountPoint '" + mountPoint + "', FreeSpaceInMB="+freeSpaceInMb+", UsedSpaceInPct="+usedSpaceInPct+". (thresholdInPct="+thresholdInPct+")",
+				"Low Operating System Disk Free Space (PCT) in Server '" + cm.getServerName() + "' at MountPoint '" + mountPoint + "', FreeSpaceInMB=" + freeSpaceInMb + ", UsedSpaceInPct=" + usedSpaceInPct + ". (thresholdInPct=" + thresholdInPct + ")",
 				thresholdInPct
 				);
 
@@ -85,6 +85,6 @@ extends AlarmEvent
 		setTimeToLive(cm);
 
 		// Set the raw data carier
-		setData("mountPoint="+mountPoint+",mb="+freeSpaceInMb+",pct="+usedSpaceInPct);
+		setData("mountPoint=" + mountPoint + ",mb=" + freeSpaceInMb + ",pct=" + usedSpaceInPct);
 	}
 }

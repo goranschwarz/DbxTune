@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -94,7 +94,7 @@ public class WatchdogIsFileChanged
 	 */
 	public void setFile(File f)
 	{
-		_logger.debug("WATCHDOG: setFile(): BEGIN: f="+f);
+		_logger.debug("WATCHDOG: setFile(): BEGIN: f=" + f);
 
 		try
 		{
@@ -118,7 +118,7 @@ public class WatchdogIsFileChanged
 			setPaused(false);
 		}
 
-		_logger.debug("WATCHDOG: setFile():   END: f="+f);
+		_logger.debug("WATCHDOG: setFile():   END: f=" + f);
 	}
 
 	/** 
@@ -138,13 +138,13 @@ public class WatchdogIsFileChanged
 					{
 						try 
 						{
-							_logger.debug("WATCHDOG: run(): CHECKING FILE: _currentFile="+_currentFile);
+							_logger.debug("WATCHDOG: run(): CHECKING FILE: _currentFile=" + _currentFile);
 
 							if (_currentFile != null)
 							{
 								if (_currentFile.lastModified() > _currentFileLastModified)
 								{
-									_logger.debug("WATCHDOG: run(): FILE HAS CHANGED: _currentFile="+_currentFile);
+									_logger.debug("WATCHDOG: run(): FILE HAS CHANGED: _currentFile=" + _currentFile);
 									
 									_checker.fileHasChanged(_currentFile, _currentFileLastModified);
 									
@@ -157,7 +157,7 @@ public class WatchdogIsFileChanged
 						}
 						catch (Throwable t)
 						{
-							_logger.warn("WatchdogIsFileChanged had problems when checking file, but continuing. Caught: "+t, t);
+							_logger.warn("WatchdogIsFileChanged had problems when checking file, but continuing. Caught: " + t, t);
 						}
 					}
 	

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -1604,7 +1604,7 @@ extends CentralPersistWriterBase
 					// FIXME: check if "VersionString" is the same as Version.getVersionStr()
 					//        if not, just throw a WARNING message to the log
 					int currentDbVersion = -1;
-					sql = "select " + lq+"DbVersion"+rq+" from " +lq+onlyTabName+rq; // possibly: where ProductString = Version.getAppName()
+					sql = "select " + lq + "DbVersion" + rq + " from " + lq+onlyTabName+rq; // possibly: where ProductString = Version.getAppName()
 					Statement stmnt = conn.createStatement();
 					rs = stmnt.executeQuery(sql);
 					while (rs.next())
@@ -1624,7 +1624,7 @@ extends CentralPersistWriterBase
 						
 						if (newDbxCentralVersion != currentDbVersion)
 						{
-							sql = "update " + lq+onlyTabName+rq + "set " + lq+"DbVersion"+rq+ " = " + newDbxCentralVersion + " where " + lq+"DbVersion"+rq+ " = " + currentDbVersion;
+							sql = "update " + lq+onlyTabName+rq + "set " + lq + "DbVersion" + rq + " = " + newDbxCentralVersion + " where " + lq + "DbVersion" + rq + " = " + currentDbVersion;
 							stmnt = conn.createStatement();
 							stmnt.executeUpdate(sql);
 							stmnt.close();
@@ -1823,7 +1823,7 @@ extends CentralPersistWriterBase
 			step = 1;
 			// Add column 'CollectorSampleInterval' to table 'DbxCentralSessions'
 			String onlyTabName = getTableName(conn, null, Table.CENTRAL_SESSIONS, null, false);
-			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq+"CollectorSampleInterval"+rq + " int null"; // NOTE: 'not null' is not supported at upgrades
+			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq + "CollectorSampleInterval" + rq + " int null"; // NOTE: 'not null' is not supported at upgrades
 			internalDbUpgradeDdlExec(conn, step, sql);
 		}
 
@@ -1833,7 +1833,7 @@ extends CentralPersistWriterBase
 			step = 2;
 			// Add column 'ProfileDescription' to table 'DbxCentralGraphProfiles'
 			String onlyTabName = getTableName(conn, null, Table.CENTRAL_GRAPH_PROFILES, null, false);
-			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq+"ProfileDescription"+rq + " text null"; // NOTE: 'not null' is not supported at upgrades
+			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq + "ProfileDescription" + rq + " text null"; // NOTE: 'not null' is not supported at upgrades
 			internalDbUpgradeDdlExec(conn, step, sql);
 		}
 
@@ -1843,17 +1843,17 @@ extends CentralPersistWriterBase
 			step = 3;
 			// Add column 'CollectorCurrentUrl' to table 'DbxCentralSessions'
 			String onlyTabName = getTableName(conn, null, Table.CENTRAL_SESSIONS, null, false);
-			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq+"CollectorCurrentUrl"+rq + " varchar(80) null"; // NOTE: 'not null' is not supported at upgrades
+			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq + "CollectorCurrentUrl" + rq + " varchar(80) null"; // NOTE: 'not null' is not supported at upgrades
 			internalDbUpgradeDdlExec(conn, step, sql);
 
 			step = 4;
 			// Add column 'Status' to table 'DbxCentralSessions'
-			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq+"Status"+rq + " int null"; // NOTE: 'not null' is not supported at upgrades
+			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq + "Status" + rq + " int null"; // NOTE: 'not null' is not supported at upgrades
 			internalDbUpgradeDdlExec(conn, step, sql);
 
 			step = 5;
 			// Set column 'Status' to be 0
-			sql = "update " + lq+onlyTabName+rq + " set " + lq+"Status"+rq + " = 0"; 
+			sql = "update " + lq+onlyTabName+rq + " set " + lq + "Status" + rq + " = 0"; 
 			internalDbUpgradeDdlExec(conn, step, sql);
 		}
 
@@ -1863,7 +1863,7 @@ extends CentralPersistWriterBase
 			step = 6;
 			// Add column 'CollectorInfoFile' to table 'DbxCentralSessions'
 			String onlyTabName = getTableName(conn, null, Table.CENTRAL_SESSIONS, null, false);
-			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq+"CollectorInfoFile"+rq + " varchar(256) null"; // NOTE: 'not null' is not supported at upgrades
+			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq + "CollectorInfoFile" + rq + " varchar(256) null"; // NOTE: 'not null' is not supported at upgrades
 			internalDbUpgradeDdlExec(conn, step, sql);
 		}
 		
@@ -1894,7 +1894,7 @@ extends CentralPersistWriterBase
 			step = 8;
 			// Add column 'ProfileDescription' to table 'DbxCentralGraphProfiles'
 			String onlyTabName = getTableName(conn, null, Table.CENTRAL_GRAPH_PROFILES, null, false);
-			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq+"ProfileUrlOptions"+rq + " varchar(1024) null"; // NOTE: 'not null' is not supported at upgrades
+			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq + "ProfileUrlOptions" + rq + " varchar(1024) null"; // NOTE: 'not null' is not supported at upgrades
 			internalDbUpgradeDdlExec(conn, step, sql);
 		}
 
@@ -1929,7 +1929,7 @@ extends CentralPersistWriterBase
 				{
 					if ( ! colNames.contains("graphcategory"))
 					{
-						sql = "alter table " + lq+schemaName+rq + "." + lq + onlyTabName + rq + " add column " + lq+"GraphCategory"+rq + " varchar(30) null"; // NOTE: 'not null' is not supported at upgrades
+						sql = "alter table " + lq+schemaName+rq + "." + lq + onlyTabName + rq + " add column " + lq + "GraphCategory" + rq + " varchar(30) null"; // NOTE: 'not null' is not supported at upgrades
 						internalDbUpgradeDdlExec(conn, step, sql);
 					}
 				}
@@ -1988,7 +1988,7 @@ extends CentralPersistWriterBase
 				{
 					if ( ! colNames.contains("graphprops"))
 					{
-						sql = "alter table " + lq+schemaName+rq + "." + lq + onlyTabName + rq + " add column " + lq+"GraphProps"+rq + " varchar(1024) null"; // NOTE: 'not null' is not supported at upgrades
+						sql = "alter table " + lq+schemaName+rq + "." + lq + onlyTabName + rq + " add column " + lq + "GraphProps" + rq + " varchar(1024) null"; // NOTE: 'not null' is not supported at upgrades
 						internalDbUpgradeDdlExec(conn, step, sql);
 					}
 				}
@@ -2023,7 +2023,7 @@ extends CentralPersistWriterBase
 
 			// Add column 'CollectorInfoFile' to table 'DbxCentralSessions'
 			String onlyTabName = getTableName(conn, null, Table.CENTRAL_SESSIONS, null, false);
-			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq+"ServerDisplayName"+rq + " varchar(60) null"; // NOTE: 'not null' is not supported at upgrades
+			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq + "ServerDisplayName" + rq + " varchar(60) null"; // NOTE: 'not null' is not supported at upgrades
 			internalDbUpgradeDdlExec(conn, step, sql);
 		}
 
@@ -2079,12 +2079,12 @@ extends CentralPersistWriterBase
 					// Add column 'graphCollectedCount', 'absCollectedRows', 'diffCollectedRows' and 'rateCollectedRows' to table 'DbxSessionSampleDetailes'
 					sql = "alter table " + lq+schemaName+rq + "." + lq+onlyTabName+rq + " "
 							+ " add ( "
-							+ "        " + lq+"graphCollectedCount"+rq + " int null "
-							+ "      , " + lq+"absCollectedRows"   +rq + " int null "
-							+ "      , " + lq+"diffCollectedRows"  +rq + " int null "
-							+ "      , " + lq+"rateCollectedRows"  +rq + " int null "
+							+ "        " + lq + "graphCollectedCount" + rq + " int null "
+							+ "      , " + lq + "absCollectedRows"   + rq + " int null "
+							+ "      , " + lq + "diffCollectedRows"  + rq + " int null "
+							+ "      , " + lq + "rateCollectedRows"  + rq + " int null "
 							+ "     ) "
-							+ " after " + lq+"rateSaveRows"+rq;
+							+ " after " + lq + "rateSaveRows" + rq;
 
 					internalDbUpgradeDdlExec(conn, step, sql, "42S21"); // 42S21 = Error=42121, SQLState=42S21, Message=Duplicate column name "graphCollectedCount"
 				}
@@ -2111,8 +2111,8 @@ extends CentralPersistWriterBase
 				{
 					// Add column 'alarmId',
 					sql = "alter table " + lq+schemaName+rq + "." + lq+alarmActiveTabName+rq + " "
-							+ " add ( " + lq+"alarmId"+rq + " varchar(40) null ) "
-							+ " after " + lq+"state"+rq;
+							+ " add ( " + lq + "alarmId" + rq + " varchar(40) null ) "
+							+ " after " + lq + "state" + rq;
 
 					internalDbUpgradeDdlExec(conn, step, sql);
 				}
@@ -2121,8 +2121,8 @@ extends CentralPersistWriterBase
 				{
 					// Add column 'alarmId',
 					sql = "alter table " + lq+schemaName+rq + "." + lq+alarmHistoryTabName+rq + " "
-							+ " add ( " + lq+"alarmId"+rq + " varchar(40) null ) "
-							+ " after " + lq+"state"+rq;
+							+ " add ( " + lq + "alarmId" + rq + " varchar(40) null ) "
+							+ " after " + lq + "state" + rq;
 
 					internalDbUpgradeDdlExec(conn, step, sql);
 				}
@@ -2149,7 +2149,7 @@ extends CentralPersistWriterBase
 				{
 					// Add column 'alarmId',
 					sql = "alter table " + lq+schemaName+rq + "." + lq+alarmActiveTabName+rq + " "
-							+ " add ( " + lq+"alarmOptions"+rq + " CLOB null ) ";
+							+ " add ( " + lq + "alarmOptions" + rq + " CLOB null ) ";
 
 					internalDbUpgradeDdlExec(conn, step, sql);
 				}
@@ -2158,7 +2158,7 @@ extends CentralPersistWriterBase
 				{
 					// Add column 'alarmId',
 					sql = "alter table " + lq+schemaName+rq + "." + lq+alarmHistoryTabName+rq + " "
-							+ " add ( " + lq+"alarmOptions"+rq + " CLOB null ) ";
+							+ " add ( " + lq + "alarmOptions" + rq + " CLOB null ) ";
 
 					internalDbUpgradeDdlExec(conn, step, sql);
 				}
@@ -2173,39 +2173,39 @@ extends CentralPersistWriterBase
 
 			String[] ignoreDupCol = IGNORE_SQLSTATE_DUPLICATE_COLUMN;
 
-			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"Status"       +rq + " integer    not null default " + DbxCentralUser.UserStatus.ACTIVE.getBit();
+			sql = "alter table " + lq+usersTabName+rq + " add column " + lq + "Status"       + rq + " integer    not null default " + DbxCentralUser.UserStatus.ACTIVE.getBit();
 			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
 
-			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"AddDate"      +rq + " timestamp  null";
+			sql = "alter table " + lq+usersTabName+rq + " add column " + lq + "AddDate"      + rq + " timestamp  null";
 			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
 
-			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"UpdateDate"   +rq + " timestamp  null";
+			sql = "alter table " + lq+usersTabName+rq + " add column " + lq + "UpdateDate"   + rq + " timestamp  null";
 			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
 
-			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"LastLoginDate"+rq + " timestamp  null";
+			sql = "alter table " + lq+usersTabName+rq + " add column " + lq + "LastLoginDate" + rq + " timestamp  null";
 			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
 
-			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"Source"       +rq + " varchar(32)  null";
+			sql = "alter table " + lq+usersTabName+rq + " add column " + lq + "Source"       + rq + " varchar(32)  null";
 			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
 
-			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"FullName"     +rq + " varchar(256) null";
+			sql = "alter table " + lq+usersTabName+rq + " add column " + lq + "FullName"     + rq + " varchar(256) null";
 			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
 
-			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"RequestReason"+rq + " varchar(512) null";
+			sql = "alter table " + lq+usersTabName+rq + " add column " + lq + "RequestReason" + rq + " varchar(512) null";
 			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
 
-			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"ApprovedBy"  +rq + " varchar(128) null";
+			sql = "alter table " + lq+usersTabName+rq + " add column " + lq + "ApprovedBy"  + rq + " varchar(128) null";
 			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
 
-			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"ApproveDate" +rq + " timestamp  null";
+			sql = "alter table " + lq+usersTabName+rq + " add column " + lq + "ApproveDate" + rq + " timestamp  null";
 			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
 
 			// Default existing rows to ACTIVE (Status=1)
-			sql = "update " + lq+usersTabName+rq + " set " + lq+"Status"+rq + " = " + DbxCentralUser.UserStatus.ACTIVE.getBit() + " where " + lq+"Status"+rq + " is null or " + lq+"Status"+rq + " = 0";
+			sql = "update " + lq+usersTabName+rq + " set " + lq + "Status" + rq + " = " + DbxCentralUser.UserStatus.ACTIVE.getBit() + " where " + lq + "Status" + rq + " is null or " + lq + "Status" + rq + " = 0";
 			internalDbUpgradeDdlExec(conn, step, sql);
 
 			// Stamp AddDate for existing rows where it is null
-			sql = "update " + lq+usersTabName+rq + " set " + lq+"AddDate"+rq + " = current_timestamp where " + lq+"AddDate"+rq + " is null";
+			sql = "update " + lq+usersTabName+rq + " set " + lq + "AddDate" + rq + " = current_timestamp where " + lq + "AddDate" + rq + " is null";
 			internalDbUpgradeDdlExec(conn, step, sql);
 		}
 
@@ -2216,7 +2216,7 @@ extends CentralPersistWriterBase
 			String usersTabName = getTableName(conn, null, Table.CENTRAL_USERS, null, false);
 			String[] ignoreDupCol = IGNORE_SQLSTATE_DUPLICATE_COLUMN;
 
-			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"LoginFailCount"+rq + " integer not null default 0";
+			sql = "alter table " + lq+usersTabName+rq + " add column " + lq + "LoginFailCount" + rq + " integer not null default 0";
 			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
 		}
 
@@ -2227,7 +2227,7 @@ extends CentralPersistWriterBase
 			String usersTabName = getTableName(conn, null, Table.CENTRAL_USERS, null, false);
 			String[] ignoreDupCol = IGNORE_SQLSTATE_DUPLICATE_COLUMN;
 
-			sql = "alter table " + lq+usersTabName+rq + " add column " + lq+"LoginCount"+rq + " integer not null default 0";
+			sql = "alter table " + lq+usersTabName+rq + " add column " + lq + "LoginCount" + rq + " integer not null default 0";
 			internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
 		}
 
@@ -2251,7 +2251,7 @@ extends CentralPersistWriterBase
 				if (DbUtils.checkIfTableExists(conn, null, schemaName, alarmActiveTabName))
 				{
 					sql = "alter table " + lq+schemaName+rq + "." + lq+alarmActiveTabName+rq + " "
-							+ " add ( " + lq+"cancelDescription"+rq + " CLOB null ) ";
+							+ " add ( " + lq + "cancelDescription" + rq + " CLOB null ) ";
 
 					internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
 				}
@@ -2259,7 +2259,7 @@ extends CentralPersistWriterBase
 				if (DbUtils.checkIfTableExists(conn, null, schemaName, alarmHistoryTabName))
 				{
 					sql = "alter table " + lq+schemaName+rq + "." + lq+alarmHistoryTabName+rq + " "
-							+ " add ( " + lq+"cancelDescription"+rq + " CLOB null ) ";
+							+ " add ( " + lq + "cancelDescription" + rq + " CLOB null ) ";
 
 					internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
 				}
@@ -2291,7 +2291,7 @@ extends CentralPersistWriterBase
 		{
 			if ( ! colNames.contains("category"))
 			{
-				String sql = "alter table " + lq+schemaName+rq + "." + lq+onlyTabName+rq + " add column " + lq+"category"+rq + " varchar(20) null"; // NOTE: 'not null' is not supported at upgrades
+				String sql = "alter table " + lq+schemaName+rq + "." + lq+onlyTabName+rq + " add column " + lq + "category" + rq + " varchar(20) null"; // NOTE: 'not null' is not supported at upgrades
 				internalDbUpgradeDdlExec(conn, step, sql);
 			}
 		}
@@ -2325,11 +2325,11 @@ extends CentralPersistWriterBase
 			String sql;
 			
 			// Column 'data'
-			sql = "alter table " + lq+schemaName+rq + "." + lq + onlyTabName + rq + dbmsSpecificSyntax_beforeColName + lq+"data"+rq + " varchar(180)";
+			sql = "alter table " + lq+schemaName+rq + "." + lq + onlyTabName + rq + dbmsSpecificSyntax_beforeColName + lq + "data" + rq + " varchar(180)";
 			internalDbUpgradeDdlExec(conn, step, sql);
 
 			// Column 'lastData'
-			sql = "alter table " + lq+schemaName+rq + "." + lq + onlyTabName + rq + dbmsSpecificSyntax_beforeColName + lq+"lastData"+rq + " varchar(180)";
+			sql = "alter table " + lq+schemaName+rq + "." + lq + onlyTabName + rq + dbmsSpecificSyntax_beforeColName + lq + "lastData" + rq + " varchar(180)";
 			internalDbUpgradeDdlExec(conn, step, sql);
 		}
 	}
@@ -2363,11 +2363,11 @@ extends CentralPersistWriterBase
 			String sql;
 			
 			// Column 'data'
-			sql = "alter table " + lq+schemaName+rq + "." + lq + onlyTabName + rq + dbmsSpecificSyntax_beforeColName + lq+"data"+rq + " varchar(512)";
+			sql = "alter table " + lq+schemaName+rq + "." + lq + onlyTabName + rq + dbmsSpecificSyntax_beforeColName + lq + "data" + rq + " varchar(512)";
 			internalDbUpgradeDdlExec(conn, step, sql);
 
 			// Column 'lastData'
-			sql = "alter table " + lq+schemaName+rq + "." + lq + onlyTabName + rq + dbmsSpecificSyntax_beforeColName + lq+"lastData"+rq + " varchar(512)";
+			sql = "alter table " + lq+schemaName+rq + "." + lq + onlyTabName + rq + dbmsSpecificSyntax_beforeColName + lq + "lastData" + rq + " varchar(512)";
 			internalDbUpgradeDdlExec(conn, step, sql);
 		}
 	}
@@ -2401,7 +2401,7 @@ extends CentralPersistWriterBase
 			String sql;
 			
 			// Column 'duration'
-			sql = "alter table " + lq+schemaName+rq + "." + lq + onlyTabName + rq + dbmsSpecificSyntax_beforeColName + lq+"duration"+rq + " varchar(80)";
+			sql = "alter table " + lq+schemaName+rq + "." + lq + onlyTabName + rq + dbmsSpecificSyntax_beforeColName + lq + "duration" + rq + " varchar(80)";
 			internalDbUpgradeDdlExec(conn, step, sql);
 		}
 	}
@@ -2428,19 +2428,19 @@ extends CentralPersistWriterBase
 		{
 			if ( ! colNames.contains("alarmDuration"))
 			{
-				String sql = "alter table " + lq+schemaName+rq + "." + lq+onlyTabName+rq + " add column " + lq+"alarmDuration"+rq + " varchar(20) null"; // NOTE: 'not null' is not supported at upgrades
+				String sql = "alter table " + lq+schemaName+rq + "." + lq+onlyTabName+rq + " add column " + lq + "alarmDuration" + rq + " varchar(20) null"; // NOTE: 'not null' is not supported at upgrades
 				internalDbUpgradeDdlExec(conn, step, sql);
 			}
 
 			if ( ! colNames.contains("fullDuration"))
 			{
-				String sql = "alter table " + lq+schemaName+rq + "." + lq+onlyTabName+rq + " add column " + lq+"fullDuration"+rq + " varchar(20) null"; // NOTE: 'not null' is not supported at upgrades
+				String sql = "alter table " + lq+schemaName+rq + "." + lq+onlyTabName+rq + " add column " + lq + "fullDuration" + rq + " varchar(20) null"; // NOTE: 'not null' is not supported at upgrades
 				internalDbUpgradeDdlExec(conn, step, sql);
 			}
 
 			if ( ! colNames.contains("fullDurationAdjustmentInSec"))
 			{
-				String sql = "alter table " + lq+schemaName+rq + "." + lq+onlyTabName+rq + " add column " + lq+"fullDurationAdjustmentInSec"+rq + " int null"; // NOTE: 'not null' is not supported at upgrades
+				String sql = "alter table " + lq+schemaName+rq + "." + lq+onlyTabName+rq + " add column " + lq + "fullDurationAdjustmentInSec" + rq + " int null"; // NOTE: 'not null' is not supported at upgrades
 				internalDbUpgradeDdlExec(conn, step, sql);
 			}
 		}
@@ -2494,7 +2494,7 @@ extends CentralPersistWriterBase
 		{
 			if (allowSqlState != null && StringUtil.equalsAny(e.getSQLState(), allowSqlState))
 			{
-				_logger.info("Found issue, but continuing since SQLState='" + e.getSQLState() + "' IS in allowSqlState=" + StringUtil.toCommaStr(allowSqlState)+ ", this during upgrade step[" + step + "] of Internal Dbx Central Database when executing DDL sql statement: " + sql + ", Error=" + e.getErrorCode() + ", SQLState=" + e.getSQLState() + ", Message=|" + e.getMessage() + "|");
+				_logger.info("Found issue, but continuing since SQLState='" + e.getSQLState() + "' IS in allowSqlState=" + StringUtil.toCommaStr(allowSqlState) + ", this during upgrade step[" + step + "] of Internal Dbx Central Database when executing DDL sql statement: " + sql + ", Error=" + e.getErrorCode() + ", SQLState=" + e.getSQLState() + ", Message=|" + e.getMessage() + "|");
 			}
 			else
 			{
@@ -3517,12 +3517,12 @@ extends CentralPersistWriterBase
 
 		sbSql = new StringBuilder();
 		sbSql.append(" update ").append(tabName);
-		sbSql.append(" set   "+lq+"graphSamples"+rq+" = "+lq+"graphSamples"+rq+" + ").append( (graphSaveCount > 0 ? 1 : 0) ).append(", ");
-		sbSql.append("       "+lq+"absSamples"+rq+"   = "+lq+"absSamples"+rq+"   + ").append( (absSaveRows    > 0 ? 1 : 0) ).append(", ");
-		sbSql.append("       "+lq+"diffSamples"+rq+"  = "+lq+"diffSamples"+rq+"  + ").append( (diffSaveRows   > 0 ? 1 : 0) ).append(", ");
-		sbSql.append("       "+lq+"rateSamples"+rq+"  = "+lq+"rateSamples"+rq+"  + ").append( (rateSaveRows   > 0 ? 1 : 0) ).append("");
-		sbSql.append(" where "+lq+"SessionStartTime"+rq+" = '").append(sessionStartTime).append("'");
-		sbSql.append("   and "+lq+"CmName"+rq+" = '").append(cme.getName()).append("'");
+		sbSql.append(" set   " + lq + "graphSamples" + rq + " = " + lq + "graphSamples" + rq + " + ").append( (graphSaveCount > 0 ? 1 : 0) ).append(", ");
+		sbSql.append("       " + lq + "absSamples" + rq + "   = " + lq + "absSamples" + rq + "   + ").append( (absSaveRows    > 0 ? 1 : 0) ).append(", ");
+		sbSql.append("       " + lq + "diffSamples" + rq + "  = " + lq + "diffSamples" + rq + "  + ").append( (diffSaveRows   > 0 ? 1 : 0) ).append(", ");
+		sbSql.append("       " + lq + "rateSamples" + rq + "  = " + lq + "rateSamples" + rq + "  + ").append( (rateSaveRows   > 0 ? 1 : 0) ).append("");
+		sbSql.append(" where " + lq + "SessionStartTime" + rq + " = '").append(sessionStartTime).append("'");
+		sbSql.append("   and " + lq + "CmName" + rq + " = '").append(cme.getName()).append("'");
 
 		try
 		{
@@ -4445,13 +4445,13 @@ return -1;
 		{
 			_logger.info("Sending Command '" + shutdownCmd + "' to H2 database.");
 			stmnt.execute(shutdownCmd);
-			_logger.info("Shutdown H2 database using Command '" + shutdownCmd + "', took " + TimeUtils.msDiffNowToTimeStr("%?HH[:]%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
+			_logger.info("Shutdown H2 database using Command '" + shutdownCmd + "', took " + TimeUtils.msDiffNowToTimeStr("%?HH[:]%MM:%SS.%ms", startTime) + " (MM:SS.ms)");
 		} 
 		catch(SQLException ex) 
 		{
 			// during shutdown we would expect: ErrorCode=90121, SQLState=90121, toString=org.h2.jdbc.JdbcSQLException: Database is already closed (to disable automatic closing at VM shutdown, add ";DB_CLOSE_ON_EXIT=FALSE" to the db URL)
 			if ( ex.getErrorCode() == 90121 )
-				_logger.info("Shutdown H2 database using '" + shutdownCmd + "', took " + TimeUtils.msDiffNowToTimeStr("%?HH[:]%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
+				_logger.info("Shutdown H2 database using '" + shutdownCmd + "', took " + TimeUtils.msDiffNowToTimeStr("%?HH[:]%MM:%SS.%ms", startTime) + " (MM:SS.ms)");
 			else
 			{
 				Throwable rootCauseEx  = ExceptionUtils.getRootCause(ex);
@@ -4606,15 +4606,15 @@ return -1;
 
 		String sql = "INSERT INTO " + tabName
 				+ " (" 
-				+        lq + "UserName"     +rq
-				+ ", " + lq + "Password"     +rq
-				+ ", " + lq + "Email"        +rq
-				+ ", " + lq + "Roles"        +rq
-				+ ", " + lq + "Status"       +rq
-				+ ", " + lq + "AddDate"      +rq
-				+ ", " + lq + "Source"       +rq
-				+ ", " + lq + "FullName"     +rq
-				+ ", " + lq + "RequestReason"+rq
+				+        lq + "UserName"     + rq
+				+ ", " + lq + "Password"     + rq
+				+ ", " + lq + "Email"        + rq
+				+ ", " + lq + "Roles"        + rq
+				+ ", " + lq + "Status"       + rq
+				+ ", " + lq + "AddDate"      + rq
+				+ ", " + lq + "Source"       + rq
+				+ ", " + lq + "FullName"     + rq
+				+ ", " + lq + "RequestReason" + rq
 				+ ")"
 				+ " VALUES (?, ?, ?, ?, ?, current_timestamp, ?, ?, ?)";
 				//          1  2  3  4  5                     6  7  8
@@ -4644,8 +4644,8 @@ return -1;
 		String rq = conn.getRightQuote();
 
 		String sql = "UPDATE " + tabName
-				+ " SET "   + lq+"Roles"+rq    + " = ?"
-				+ " WHERE " + lq+"UserName"+rq  + " = ?";
+				+ " SET "   + lq + "Roles" + rq    + " = ?"
+				+ " WHERE " + lq + "UserName" + rq  + " = ?";
 
 		try (PreparedStatement pstmt = conn.prepareStatement(sql))
 		{
@@ -4665,8 +4665,8 @@ return -1;
 		String rq = conn.getRightQuote();
 
 		String sql = "UPDATE " + tabName
-				+ " SET "   + lq+"Password"+rq  + " = ?"
-				+ " WHERE " + lq+"UserName"+rq   + " = ?";
+				+ " SET "   + lq + "Password" + rq  + " = ?"
+				+ " WHERE " + lq + "UserName" + rq   + " = ?";
 
 		try (PreparedStatement pstmt = conn.prepareStatement(sql))
 		{
@@ -4686,8 +4686,8 @@ return -1;
 		String rq = conn.getRightQuote();
 
 		String sql = "UPDATE " + tabName
-				+ " SET "   + lq+"Email"+rq     + " = ?"
-				+ " WHERE " + lq+"UserName"+rq  + " = ?";
+				+ " SET "   + lq + "Email" + rq     + " = ?"
+				+ " WHERE " + lq + "UserName" + rq  + " = ?";
 
 		try (PreparedStatement pstmt = conn.prepareStatement(sql))
 		{
@@ -4707,8 +4707,8 @@ return -1;
 		String rq = conn.getRightQuote();
 
 		String sql = "UPDATE " + tabName
-				+ " SET "   + lq+"FullName"+rq  + " = ?"
-				+ " WHERE " + lq+"UserName"+rq  + " = ?";
+				+ " SET "   + lq + "FullName" + rq  + " = ?"
+				+ " WHERE " + lq + "UserName" + rq  + " = ?";
 
 		try (PreparedStatement pstmt = conn.prepareStatement(sql))
 		{
@@ -4726,8 +4726,8 @@ return -1;
 		String lq = conn.getLeftQuote();
 		String rq = conn.getRightQuote();
 		String sql = "UPDATE " + tabName
-				+ " SET " + lq+"Status"+rq + " = ?, " + lq+"UpdateDate"+rq + " = current_timestamp"
-				+ " WHERE " + lq+"UserName"+rq + " = ?";
+				+ " SET " + lq + "Status" + rq + " = ?, " + lq + "UpdateDate" + rq + " = current_timestamp"
+				+ " WHERE " + lq + "UserName" + rq + " = ?";
 		try (PreparedStatement pstmt = conn.prepareStatement(sql))
 		{
 			pstmt.setInt   (1, newStatus);
@@ -4744,11 +4744,11 @@ return -1;
 		String lq = conn.getLeftQuote();
 		String rq = conn.getRightQuote();
 		String sql = "UPDATE " + tabName
-				+ " SET " + lq+"Status"+rq     + " = ?"
-				+ ", "    + lq+"ApprovedBy"+rq + " = ?"
-				+ ", "    + lq+"ApproveDate"+rq+ " = current_timestamp"
-				+ ", "    + lq+"UpdateDate"+rq + " = current_timestamp"
-				+ " WHERE " + lq+"UserName"+rq + " = ?";
+				+ " SET " + lq + "Status" + rq     + " = ?"
+				+ ", "    + lq + "ApprovedBy" + rq + " = ?"
+				+ ", "    + lq + "ApproveDate" + rq + " = current_timestamp"
+				+ ", "    + lq + "UpdateDate" + rq + " = current_timestamp"
+				+ " WHERE " + lq + "UserName" + rq + " = ?";
 		try (PreparedStatement pstmt = conn.prepareStatement(sql))
 		{
 			pstmt.setInt   (1, DbxCentralUser.UserStatus.ACTIVE.getBit());
@@ -4766,10 +4766,10 @@ return -1;
 		String lq = conn.getLeftQuote();
 		String rq = conn.getRightQuote();
 		String sql = "UPDATE " + tabName
-				+ " SET " + lq+"LastLoginDate"+rq  + " = current_timestamp"
-				+   ", " + lq+"LoginFailCount"+rq  + " = 0"
-				+   ", " + lq+"LoginCount"+rq      + " = " + lq+"LoginCount"+rq + " + 1"
-				+ " WHERE " + lq+"UserName"+rq + " = ?";
+				+ " SET " + lq + "LastLoginDate" + rq  + " = current_timestamp"
+				+   ", " + lq + "LoginFailCount" + rq  + " = 0"
+				+   ", " + lq + "LoginCount" + rq      + " = " + lq + "LoginCount" + rq + " + 1"
+				+ " WHERE " + lq + "UserName" + rq + " = ?";
 		try (PreparedStatement pstmt = conn.prepareStatement(sql))
 		{
 			pstmt.setString(1, username);
@@ -4785,8 +4785,8 @@ return -1;
 		String lq = conn.getLeftQuote();
 		String rq = conn.getRightQuote();
 		String sql = "UPDATE " + tabName
-				+ " SET " + lq+"LoginFailCount"+rq + " = " + lq+"LoginFailCount"+rq + " + 1"
-				+ " WHERE " + lq+"UserName"+rq + " = ?";
+				+ " SET " + lq + "LoginFailCount" + rq + " = " + lq + "LoginFailCount" + rq + " + 1"
+				+ " WHERE " + lq + "UserName" + rq + " = ?";
 		try (PreparedStatement pstmt = conn.prepareStatement(sql))
 		{
 			pstmt.setString(1, username);
@@ -4804,7 +4804,7 @@ return -1;
 		String rq = conn.getRightQuote();
 
 		String sql = "DELETE FROM " + tabName
-				+ " WHERE " + lq+"UserName"+rq + " = ?";
+				+ " WHERE " + lq + "UserName" + rq + " = ?";
 
 		try (PreparedStatement pstmt = conn.prepareStatement(sql))
 		{

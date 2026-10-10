@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -69,7 +69,7 @@ extends WizardPage
 
 		String note = "<html>" +
 			"NOTE: If you create any <b>good</b> Collector that works on the ASE level and " +
-			"you want it to be part of "+Version.getAppName()+", just send me the Configuration file, or the properties " +
+			"you want it to be part of " + Version.getAppName() + ", just send me the Configuration file, or the properties " +
 			"that defines the Collector. And hopefully it will be in the next release.<br>" +
 			"Send it to: goran_schwarz@hotmail.com<br>" +
 			"</html>";

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -100,7 +100,7 @@ extends DbmsObjectIdCache
 		}
 		catch(SQLException e)
 		{
-			_logger.error("Problem when CHECKING the SQL-Server 'lock timeout' for DbmsObjectIdCacheSqlServer.onConnect(). SQL="+sql);
+			_logger.error("Problem when CHECKING the SQL-Server 'lock timeout' for DbmsObjectIdCacheSqlServer.onConnect(). SQL=" + sql);
 		}
 		
 		//------- SET LOCK_TIMEOUT
@@ -109,12 +109,12 @@ extends DbmsObjectIdCache
 			sql = setSql;
 			try(Statement stmnt = conn.createStatement())
 			{
-				_logger.info("SETTING 'lock timeout' from " + currentLockTimeout + " to " + desiredLockTimeoutMs + " for DbmsObjectIdCacheSqlServer.onConnect(). executing SQL="+sql);
+				_logger.info("SETTING 'lock timeout' from " + currentLockTimeout + " to " + desiredLockTimeoutMs + " for DbmsObjectIdCacheSqlServer.onConnect(). executing SQL=" + sql);
 				stmnt.executeUpdate(sql);
 			}
 			catch(SQLException e)
 			{
-				_logger.error("Problem when SETTING the SQL-Server 'lock timeout' for DbmsObjectIdCacheSqlServer.onConnect(). SQL="+sql);
+				_logger.error("Problem when SETTING the SQL-Server 'lock timeout' for DbmsObjectIdCacheSqlServer.onConnect(). SQL=" + sql);
 			}
 		}
 	}
@@ -154,7 +154,7 @@ extends DbmsObjectIdCache
 		// If we do not have a dbname we can't continue.
 		if (StringUtil.isNullOrBlank(dbname))
 		{
-			_logger.warn("Can't lookup ObjectName reason: dbid=" + dbid + " was resolved to null or blank (dbname='" + dbname+ "') for lookupType=" + lookupType + ", dbid=" + dbid + ", lookupId=" + lookupId + ".");
+			_logger.warn("Can't lookup ObjectName reason: dbid=" + dbid + " was resolved to null or blank (dbname='" + dbname + "') for lookupType=" + lookupType + ", dbid=" + dbid + ", lookupId=" + lookupId + ".");
 			return null;
 		}
 

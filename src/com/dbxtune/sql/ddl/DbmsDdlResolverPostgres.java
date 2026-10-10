@@ -1,5 +1,5 @@
 /*******************************************************************************
-DbmsDdlResolverDerbyDbmsDdlResolverDb2 * Copyright (C) 2010-2025 Goran Schwarz
+DbmsDdlResolverDerbyDbmsDdlResolverDb2 * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -263,9 +263,9 @@ extends DbmsDdlResolverAbstract
 		case java.sql.Types.FLOAT:                   return "float8";
 		case java.sql.Types.REAL:                    return "real";
 		case java.sql.Types.DOUBLE:                  return "float8";
-		case java.sql.Types.NUMERIC:                 return "numeric("+length+","+scale+")";
-		case java.sql.Types.DECIMAL:                 return "decimal("+length+","+scale+")";
-		case java.sql.Types.CHAR:                    return "char("+length+")";
+		case java.sql.Types.NUMERIC:                 return "numeric(" + length + "," + scale + ")";
+		case java.sql.Types.DECIMAL:                 return "decimal(" + length + "," + scale + ")";
+		case java.sql.Types.CHAR:                    return "char(" + length + ")";
 		case java.sql.Types.VARCHAR:                 return varcharFix(length);           // if ABOVE 65535 -> text
 		case java.sql.Types.LONGVARCHAR:             return "text";
 		case java.sql.Types.DATE:                    return "date";
@@ -288,7 +288,7 @@ extends DbmsDdlResolverAbstract
 
 		//------------------------- JDBC 4.0 (java 1.6) -----------------------------------
 		case java.sql.Types.ROWID:                   return "varchar(20)";                 // Just guessing here... from https://docs.oracle.com/cd/B28359_01/server.111/b28318/datatype.htm#CNCPT1846
-		case java.sql.Types.NCHAR:                   return "char("+length+")";
+		case java.sql.Types.NCHAR:                   return "char(" + length + ")";
 		case java.sql.Types.NVARCHAR:                return nvarcharFix(length);          // if ABOVE 65535 -> text
 		case java.sql.Types.LONGNVARCHAR:            return "text";
 		case java.sql.Types.NCLOB:                   return "text";

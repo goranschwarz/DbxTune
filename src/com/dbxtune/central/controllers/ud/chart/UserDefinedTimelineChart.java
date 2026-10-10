@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -182,7 +182,7 @@ extends UserDefinedChartAbstract
 				+ ( getRefresh() <= 0 ? "" : "&refresh=" + getRefresh() )
 				+ "&showKeys=false"
 				+ "&onlyLevelZero=false"
-				+ "&startTime="+_defaultStartTime;
+				+ "&startTime=" + _defaultStartTime;
 	}
 
 	@Override

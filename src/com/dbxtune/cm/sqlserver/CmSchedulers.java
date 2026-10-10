@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -62,7 +62,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -112,7 +112,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmSchedulers(counterController, guiController);
 	}
@@ -296,7 +296,7 @@ extends CountersModel
 		{
 			int[] rowIds = this.getAbsRowIdsWhere("status", "VISIBLE ONLINE");
 			if (rowIds == null)
-				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
+				_logger.warn("When updateGraphData for '" + tgdp.getName() + "', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
 			else
 			{
 				Double[] arr = new Double[2];
@@ -304,7 +304,7 @@ extends CountersModel
 				arr[1] = this.getAbsValueAvg(rowIds, "runnable_tasks_count");
 
 				if (_logger.isDebugEnabled())
-					_logger.debug("updateGraphData("+tgdp.getName()+"): runnable_tasks_count(sum)='"+arr[0]+"', runnable_tasks_count(avg)='"+arr[1]+"'.");
+					_logger.debug("updateGraphData(" + tgdp.getName() + "): runnable_tasks_count(sum)='" + arr[0] + "', runnable_tasks_count(avg)='" + arr[1] + "'.");
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -319,7 +319,7 @@ extends CountersModel
 			// Get a array of rowId's where the column 'status' has the value 'VISIBLE ONLINE'
 			int[] rowIds = this.getAbsRowIdsWhere("status", "VISIBLE ONLINE");
 			if (rowIds == null)
-				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
+				_logger.warn("When updateGraphData for '" + tgdp.getName() + "', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
 			else
 			{
 				Double[] data  = new Double[rowIds.length];
@@ -338,8 +338,8 @@ extends CountersModel
 				{
 					String debugStr = "";
 					for (int i=0; i<data.length; i++)
-						debugStr += label[i] + "='"+data[i]+"', ";
-					_logger.debug("updateGraphData("+tgdp.getName()+"): "+debugStr);
+						debugStr += label[i] + "='" + data[i] + "', ";
+					_logger.debug("updateGraphData(" + tgdp.getName() + "): " + debugStr);
 				}
 
 				// Set the values
@@ -354,7 +354,7 @@ extends CountersModel
 		{	
 			int[] rowIds = this.getAbsRowIdsWhere("status", "VISIBLE ONLINE");
 			if (rowIds == null)
-				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
+				_logger.warn("When updateGraphData for '" + tgdp.getName() + "', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
 			else
 			{
 				Double[] arr = new Double[2];
@@ -362,7 +362,7 @@ extends CountersModel
 				arr[1] = this.getAbsValueAvg(rowIds, "pending_disk_io_count");
 
 				if (_logger.isDebugEnabled())
-					_logger.debug("updateGraphData("+tgdp.getName()+"): pending_disk_io_count(sum)='"+arr[0]+"', pending_disk_io_count(avg)='"+arr[1]+"'.");
+					_logger.debug("updateGraphData(" + tgdp.getName() + "): pending_disk_io_count(sum)='" + arr[0] + "', pending_disk_io_count(avg)='" + arr[1] + "'.");
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -377,7 +377,7 @@ extends CountersModel
 			// Get a array of rowId's where the column 'status' has the value 'VISIBLE ONLINE'
 			int[] rowIds = this.getAbsRowIdsWhere("status", "VISIBLE ONLINE");
 			if (rowIds == null)
-				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
+				_logger.warn("When updateGraphData for '" + tgdp.getName() + "', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
 			else
 			{
 				Double[] data  = new Double[rowIds.length];
@@ -396,8 +396,8 @@ extends CountersModel
 				{
 					String debugStr = "";
 					for (int i=0; i<data.length; i++)
-						debugStr += label[i] + "='"+data[i]+"', ";
-					_logger.debug("updateGraphData("+tgdp.getName()+"): "+debugStr);
+						debugStr += label[i] + "='" + data[i] + "', ";
+					_logger.debug("updateGraphData(" + tgdp.getName() + "): " + debugStr);
 				}
 
 				// Set the values
@@ -413,7 +413,7 @@ extends CountersModel
 			// Get a array of rowId's where the column 'status' has the value 'VISIBLE ONLINE'
 			int[] rowIds = this.getAbsRowIdsWhere("status", "VISIBLE ONLINE");
 			if (rowIds == null)
-				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
+				_logger.warn("When updateGraphData for '" + tgdp.getName() + "', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
 			else
 			{
 				Double[] data  = new Double[rowIds.length + 1];
@@ -458,7 +458,7 @@ extends CountersModel
 			// Get a array of rowId's where the column 'status' has the value 'VISIBLE ONLINE'
 			int[] rowIds = this.getAbsRowIdsWhere("status", "VISIBLE ONLINE");
 			if (rowIds == null)
-				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
+				_logger.warn("When updateGraphData for '" + tgdp.getName() + "', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
 			else
 			{
 				Double[] arr = new Double[1];
@@ -467,7 +467,7 @@ extends CountersModel
 				arr[0] = cpuUsageMsSum / 10.0 / (rowIds.length * 1.0);
 
 				if (_logger.isDebugEnabled())
-					_logger.debug("updateGraphData("+tgdp.getName()+"): runnable_tasks_count(sum)='"+arr[0]+"', runnable_tasks_count(avg)='"+arr[1]+"'.");
+					_logger.debug("updateGraphData(" + tgdp.getName() + "): runnable_tasks_count(sum)='" + arr[0] + "', runnable_tasks_count(avg)='" + arr[1] + "'.");
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -482,7 +482,7 @@ extends CountersModel
 			// Get a array of rowId's where the column 'status' has the value 'VISIBLE ONLINE'
 			int[] rowIds = this.getAbsRowIdsWhere("status", "VISIBLE ONLINE");
 			if (rowIds == null)
-				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
+				_logger.warn("When updateGraphData for '" + tgdp.getName() + "', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
 			else
 			{
 				Double[] data  = new Double[rowIds.length];
@@ -502,8 +502,8 @@ extends CountersModel
 				{
 					String debugStr = "";
 					for (int i=0; i<data.length; i++)
-						debugStr += label[i] + "='"+data[i]+"', ";
-					_logger.debug("updateGraphData("+tgdp.getName()+"): "+debugStr);
+						debugStr += label[i] + "='" + data[i] + "', ";
+					_logger.debug("updateGraphData(" + tgdp.getName() + "): " + debugStr);
 				}
 
 				// Set the values
@@ -519,7 +519,7 @@ extends CountersModel
 			// Get a array of rowId's where the column 'status' has the value 'VISIBLE ONLINE'
 			int[] rowIds = this.getAbsRowIdsWhere("status", "VISIBLE ONLINE");
 			if (rowIds == null)
-				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
+				_logger.warn("When updateGraphData for '" + tgdp.getName() + "', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
 			else
 			{
 				Double[] data  = new Double[rowIds.length];
@@ -538,8 +538,8 @@ extends CountersModel
 				{
 					String debugStr = "";
 					for (int i=0; i<data.length; i++)
-						debugStr += label[i] + "='"+data[i]+"', ";
-					_logger.debug("updateGraphData("+tgdp.getName()+"): "+debugStr);
+						debugStr += label[i] + "='" + data[i] + "', ";
+					_logger.debug("updateGraphData(" + tgdp.getName() + "): " + debugStr);
 				}
 
 				// Set the values
@@ -555,7 +555,7 @@ extends CountersModel
 			// Get a array of rowId's where the column 'status' has the value 'VISIBLE ONLINE'
 			int[] rowIds = this.getAbsRowIdsWhere("status", "VISIBLE ONLINE");
 			if (rowIds == null)
-				_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
+				_logger.warn("When updateGraphData for '" + tgdp.getName() + "', getAbsRowIdsWhere('status', 'VISIBLE ONLINE'), returned null, so I can't do more here.");
 			else
 			{
 				Double[] arr = new Double[2];
@@ -563,7 +563,7 @@ extends CountersModel
 				arr[1] = this.getRateValueAvg(rowIds, "total_scheduler_delay_ms");
 
 				if (_logger.isDebugEnabled())
-					_logger.debug("updateGraphData("+tgdp.getName()+"): runnable_tasks_count(sum)='"+arr[0]+"', runnable_tasks_count(avg)='"+arr[1]+"'.");
+					_logger.debug("updateGraphData(" + tgdp.getName() + "): runnable_tasks_count(sum)='" + arr[0] + "', runnable_tasks_count(avg)='" + arr[1] + "'.");
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), arr);

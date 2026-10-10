@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -198,7 +198,7 @@ public class RefreshProcess extends Thread
 
 //		RuntimeException rte =  new RuntimeException("DEBUG exception to get from where this method was called from.");
 //		_logger.debug("Setting CaptureRestrictingSql to '"+str+"'.", rte);
-		_logger.debug("Setting HistoryRestrictingSql to '"+str+"'.");
+		_logger.debug("Setting HistoryRestrictingSql to '" + str + "'.");
 	}
 	
 
@@ -247,7 +247,7 @@ public class RefreshProcess extends Thread
 	{
 		String id = batch.getKey();
 		if (_logger.isDebugEnabled())
-			_logger.debug("Adding SQL text for for id='"+id+"'. text="+batch.getSqlText(false));
+			_logger.debug("Adding SQL text for for id='" + id + "'. text=" + batch.getSqlText(false));
 		_batchHistory.put(id, batch);
 	}
 
@@ -256,7 +256,7 @@ public class RefreshProcess extends Thread
 		Batch batch = _batchHistory.get(id);
 		
 		if (batch == null)
-			_logger.debug("No SQL text was found for batch  id='"+id+"'.");
+			_logger.debug("No SQL text was found for batch  id='" + id + "'.");
 		
 		return batch;
 	}
@@ -266,7 +266,7 @@ public class RefreshProcess extends Thread
 		Batch batch = _batchHistory.get(id);
 		
 		if (batch == null)
-			_logger.debug("No SQL text was found for batch  id='"+id+"', spid='"+spid+"', kpid='"+kpid+"', batchId='"+batchId+"'.");
+			_logger.debug("No SQL text was found for batch  id='" + id + "', spid='" + spid + "', kpid='" + kpid + "', batchId='" + batchId + "'.");
 		
 		return batch;
 	}
@@ -638,7 +638,7 @@ public class RefreshProcess extends Thread
 							activeStmtHasChanged      = true;
 							if (_logger.isDebugEnabled())
 							{
-								_logger.debug("currentStmtHasChanged: _activeBatch.spid("+_activeBatch.spid+") != _activeSpid("+_activeSpid+")   &&   _activeBatch.kpid("+_activeBatch.kpid+") != _activeKpid("+_activeKpid+")   &&   _activeBatch.batchId("+_activeBatch.batchId+") != _activeBatchID("+_activeBatchID+").");
+								_logger.debug("currentStmtHasChanged: _activeBatch.spid(" + _activeBatch.spid + ") != _activeSpid(" + _activeSpid + ")   &&   _activeBatch.kpid(" + _activeBatch.kpid + ") != _activeKpid(" + _activeKpid + ")   &&   _activeBatch.batchId(" + _activeBatch.batchId + ") != _activeBatchID(" + _activeBatchID + ").");
 							}
 
 							_activeBatch.spid          = _activeSpid;
@@ -970,7 +970,7 @@ public class RefreshProcess extends Thread
 						// DO nothing, we are "emptying" the table
 					}
 					rs.close();
-					_logger.info("END:   Discarding everything in the transient monSysStatement table in the first sample. this took "+TimeUtils.msToTimeStr(System.currentTimeMillis()-startTime)+".");
+					_logger.info("END:   Discarding everything in the transient monSysStatement table in the first sample. this took " + TimeUtils.msToTimeStr(System.currentTimeMillis()-startTime) + ".");
 				}
 
 				currentSql = sql;
@@ -1071,7 +1071,7 @@ public class RefreshProcess extends Thread
 						// DO nothing, we are "emptying" the table
 					}
 					rs.close();
-					_logger.info("END:   Discarding everything in the transient monSysSQLText table in the first sample. this took "+TimeUtils.msToTimeStr(System.currentTimeMillis()-startTime)+".");
+					_logger.info("END:   Discarding everything in the transient monSysSQLText table in the first sample. this took " + TimeUtils.msToTimeStr(System.currentTimeMillis()-startTime) + ".");
 				}
 
 				sql += " order by SPID, KPID, BatchID, SequenceInBatch \n";
@@ -1176,7 +1176,7 @@ public class RefreshProcess extends Thread
 						// DO nothing, we are "emptying" the table
 					}
 					rs.close();
-					_logger.info("END:   Discarding everything in the transient monSysPlanText table in the first sample. this took "+TimeUtils.msToTimeStr(System.currentTimeMillis()-startTime)+".");
+					_logger.info("END:   Discarding everything in the transient monSysPlanText table in the first sample. this took " + TimeUtils.msToTimeStr(System.currentTimeMillis()-startTime) + ".");
 				}
 
 				sql += " order by SPID, KPID, PlanID, SequenceNumber";
@@ -1432,20 +1432,20 @@ public class RefreshProcess extends Thread
 		}
 		catch (SQLException SQLEx)
 		{
-			_logger.error("SQL Capture Tool, RefreshProcess: Msg="+SQLEx.getErrorCode()+", caught:" + SQLEx);
-			_logger.error("Got SQL error(s) when refreshing information. SQL="+currentSql, SQLEx);
+			_logger.error("SQL Capture Tool, RefreshProcess: Msg=" + SQLEx.getErrorCode() + ", caught:" + SQLEx);
+			_logger.error("Got SQL error(s) when refreshing information. SQL=" + currentSql, SQLEx);
 
 			pdf.setRefreshError(SQLEx);
 			
-			pdf.setStatusBar("Error when executing SQL, check 'Restrictions syntax'. ASE Message '"+SQLEx.getMessage()+"'.", true);
+			pdf.setStatusBar("Error when executing SQL, check 'Restrictions syntax'. ASE Message '" + SQLEx.getMessage() + "'.", true);
 
 			if (DbxTune.hasGui())
 			{
 				String htmlMsg = "<html>" +
 					"Problems executing SQL Statement.<br>" +
-					"ASE Error Number '"+SQLEx.getErrorCode()+"'<br>" +
-					"ASE SQL State '"+SQLEx.getSQLState()+"'<br>" +
-					"ASE Message '"+SQLEx.getMessage()+"'<br>" +
+					"ASE Error Number '" + SQLEx.getErrorCode() + "'<br>" +
+					"ASE SQL State '" + SQLEx.getSQLState() + "'<br>" +
+					"ASE Message '" + SQLEx.getMessage() + "'<br>" +
 					"<br>" +
 					"<b>Check the below SQL and see if any of your 'Extra Where Clauses / order by' may cause them.</b><br>" +
 					"<i>TIP: Check and Use alias for table names...</i><br>" +
@@ -1476,7 +1476,7 @@ public class RefreshProcess extends Thread
 				linenumber++;
 		}
 		// set rows
-		_logger.debug("setting JTextArea to rows='"+linenumber+"'");
+		_logger.debug("setting JTextArea to rows='" + linenumber + "'");
 		text.setRows(linenumber);
 
 	}
@@ -1526,12 +1526,12 @@ public class RefreshProcess extends Thread
 		if (objOwnerId <= 0)
 			objOwnerId = 1;
 
-		return displayProcInBatchWindow(dbname, objOwnerId+"", procName, procLine, planId);
+		return displayProcInBatchWindow(dbname, objOwnerId + "", procName, procLine, planId);
 	}
 	public int displayProcInBatchWindow(String dbname, String objOwnerNameOrId, String procName, int procLine, int planId)
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("displayProcInBatchWindow(dbname='"+dbname+"', objOwnerNameOrId='"+objOwnerNameOrId+"', procName='"+procName+"', procLine="+procLine+", planId="+planId+").");
+			_logger.debug("displayProcInBatchWindow(dbname='" + dbname + "', objOwnerNameOrId='" + objOwnerNameOrId + "', procName='" + procName + "', procLine=" + procLine + ", planId=" + planId + ").");
 
 		if (StringUtil.isNullOrBlank(procName))
 			return -1; // -1 = Text not found
@@ -1542,7 +1542,7 @@ public class RefreshProcess extends Thread
 //		String        sqlStatement = null;
 //		StringBuilder procTextSb   = null;
 		String        procTextStr  = null;
-		String        fullProcName = dbname+"."+objOwnerNameOrId+"."+procName;
+		String        fullProcName = dbname + "." + objOwnerNameOrId + "." + procName;
 		boolean       isStatementCacheEntry = false;
 
 		// See if this the procName is a StatementCache or a Dynamic/Prepared statement and if it is: get the text via show_ached_plan_in_xml()
@@ -1976,7 +1976,7 @@ public class RefreshProcess extends Thread
 
 	public void displayPlan(int spid, int kpid, int batchId, int planId, int dbId, int procId, int sqlLine)
 	{
-		_logger.debug("displayPlan(): batchId="+batchId+", planId="+planId+", dbId="+dbId+", procId="+procId+", sqlLine="+sqlLine+".");
+		_logger.debug("displayPlan(): batchId=" + batchId + ", planId=" + planId + ", dbId=" + dbId + ", procId=" + procId + ", sqlLine=" + sqlLine + ".");
 		pdf.planTextArea.setCaretPosition(0);
 
 		// planID in monSysPlanText is not the same as planID in monSysStatement
@@ -2002,7 +2002,7 @@ public class RefreshProcess extends Thread
 
 	public void setSelectedStatement(int rowid)
 	{
-		_logger.debug("setSelectedStatement(rowid="+rowid+")");
+		_logger.debug("setSelectedStatement(rowid=" + rowid + ")");
 
 		// This method is called *several* times...
 		// So only do action when, rowid, chaanges
@@ -2018,7 +2018,7 @@ public class RefreshProcess extends Thread
 			Object o = _historyStmtModel.getValueAt(rowid, 0);
 			if (o == null)
 			{
-				_logger.error("Row "+rowid+" column 0, does NOT contain any data...");
+				_logger.error("Row " + rowid + " column 0, does NOT contain any data...");
 				return;
 			}
 //			_logger.debug("setSelectedStatement()"
@@ -2043,7 +2043,7 @@ public class RefreshProcess extends Thread
 			int procId     = ((Number) (_historyStmtModel.getValueAt(rowid, pos_historyProcedureID-1))).intValue();
 
 			if (_logger.isDebugEnabled())
-				_logger.debug("setSelectedStatement(), batchId='" + batchId + "', planId='" + planId + "', dbId='" + dbId + "', procId='" + procId + "', (sqlLine='"+sqlLine+"')");
+				_logger.debug("setSelectedStatement(), batchId='" + batchId + "', planId='" + planId + "', dbId='" + dbId + "', procId='" + procId + "', (sqlLine='" + sqlLine + "')");
 
 			int textType = -1;
 
@@ -2168,7 +2168,7 @@ public class RefreshProcess extends Thread
 	throws SQLException
 	{
 		boolean b = false;
-		ResultSet rs = stmt.executeQuery("sp_configure '"+cfgName+"'");
+		ResultSet rs = stmt.executeQuery("sp_configure '" + cfgName + "'");
 		while ( rs.next() )
 		{
 			if (rs.getInt(5) > 0) 
@@ -2185,7 +2185,7 @@ public class RefreshProcess extends Thread
 	 */
 	public void clear()
 	{
-		_logger.debug("Before clear(), _batchHistory had "+_batchHistory.size()+" entries.");
+		_logger.debug("Before clear(), _batchHistory had " + _batchHistory.size() + " entries.");
 		_batchHistory.clear();
 
 //		_logger.debug("Before clear(), _plansHistory had "+_plansHistory.size()+" entries.");
@@ -2194,13 +2194,13 @@ public class RefreshProcess extends Thread
 //		_logger.debug("Before clear(), _compiledPlansHistory had "+_compiledPlansHistory.size()+" entries.");
 //		_compiledPlansHistory.clear();
 
-		_logger.debug("Before clear(), _procedureTextCache had "+_procedureTextCache.size()+" entries.");
+		_logger.debug("Before clear(), _procedureTextCache had " + _procedureTextCache.size() + " entries.");
 		_procedureTextCache.clear();
 
-		_logger.debug("Before clear(), _activeStmtModel had "+_activeStmtModel.getRowCount()+" entries.");
+		_logger.debug("Before clear(), _activeStmtModel had " + _activeStmtModel.getRowCount() + " entries.");
 		_activeStmtModel.clear();
 
-		_logger.debug("Before clear(), _historyStmtModel had "+_historyStmtModel.getRowCount()+" entries.");
+		_logger.debug("Before clear(), _historyStmtModel had " + _historyStmtModel.getRowCount() + " entries.");
 		_historyStmtModel.clear();
 
 		pdf.batchTextArea.setText("");
@@ -2261,7 +2261,7 @@ public class RefreshProcess extends Thread
 
 				if (saveToDir == null)
 				{
-					_logger.error("Directory name was not specified and "+envNameSaveDir+" or "+envNameHomeDir+" was not set, can't save information about Historical Statements.");
+					_logger.error("Directory name was not specified and " + envNameSaveDir + " or " + envNameHomeDir + " was not set, can't save information about Historical Statements.");
 					return;
 				}
 			}
@@ -2270,7 +2270,7 @@ public class RefreshProcess extends Thread
 		// no BCP file was passed
 		if (bcpFilename != null  && bcpFilename.length() == 0)
 		{
-			bcpFilename = saveToDir + "/capStmts."+fileTime+".bcp";
+			bcpFilename = saveToDir + "/capStmts." + fileTime + ".bcp";
 		}
 
 		// no TXT file was passed
@@ -2280,13 +2280,13 @@ public class RefreshProcess extends Thread
 //			String time = txtSdf.format(new Date());
 //			
 //			txtFilename = saveToDir + "/capStmts."+time+".txt";
-			txtFilename = saveToDir + "/capStmts."+fileTime+".txt";
+			txtFilename = saveToDir + "/capStmts." + fileTime + ".txt";
 		}
 
 		// no TXT file was passed
 		if (tabDefFilename != null  && tabDefFilename.length() == 0)
 		{
-			tabDefFilename = saveToDir + "/capStmts."+fileTime+".ddl.sql";
+			tabDefFilename = saveToDir + "/capStmts." + fileTime + ".ddl.sql";
 		}
 
 		// Open all files
@@ -2319,7 +2319,7 @@ public class RefreshProcess extends Thread
 		}
 		catch (FileNotFoundException e)
 		{
-			_logger.warn("Problems opening/creating the a file. "+e);
+			_logger.warn("Problems opening/creating the a file. " + e);
 			return;
 		}
 		
@@ -3074,7 +3074,7 @@ public class RefreshProcess extends Thread
 		}
 		catch (SQLException SQLEx)
 		{
-			_logger.error(Version.getAppName()+" : error in refreshProcess getting options. ", SQLEx);
+			_logger.error(Version.getAppName() + " : error in refreshProcess getting options. ", SQLEx);
 			// SQLEx.printStackTrace();
 		}
 	}
@@ -3132,7 +3132,7 @@ public class RefreshProcess extends Thread
 					}
 				});
 
-				SwingUtils.showInfoMessageExt(pdf, Version.getAppName()+" - SPID monitoring",
+				SwingUtils.showInfoMessageExt(pdf, Version.getAppName() + " - SPID monitoring",
 						msg.toString(), chk, (JPanel)null);
 
 				AseConfigMonitoringDialog.showDialog(pdf, _conn, -1, true);
@@ -3372,10 +3372,10 @@ public class RefreshProcess extends Thread
 			{
 				if (_activeBatch != null)
 				{
-					pdf.kpidFld.setText(_activeBatch.kpid+"");
+					pdf.kpidFld.setText(_activeBatch.kpid + "");
 					pdf.kpidFld.setForeground(Color.BLUE);
 
-					pdf.spidFld.setText(_activeBatch.spid+"");
+					pdf.spidFld.setText(_activeBatch.spid + "");
 					pdf.spidFld.setForeground(Color.BLUE);
 
 					if (true)           _cmProcObjects.setSqlWhere(" and KPID = " + _activeBatch.kpid);
@@ -3407,7 +3407,7 @@ public class RefreshProcess extends Thread
 		}
 		catch (Exception e)
 		{
-			_logger.error(Version.getAppName()+" : error in refreshProcess loop. ", e);
+			_logger.error(Version.getAppName() + " : error in refreshProcess loop. ", e);
 			//e.printStackTrace();
 		}
 		finally

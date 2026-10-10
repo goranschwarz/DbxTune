@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -148,7 +148,7 @@ implements ActionListener
 			} 
 			catch (Exception e) 
 			{
-				return "'Start the recording at' needs to be in format hh[:mm] "+e.getMessage();
+				return "'Start the recording at' needs to be in format hh[:mm] " + e.getMessage();
 			}
 		}
 
@@ -161,7 +161,7 @@ implements ActionListener
 			} 
 			catch (Exception e) 
 			{
-				return "'Shutdown after # hours' needs to be in format hh[:mm] "+e.getMessage();
+				return "'Shutdown after # hours' needs to be in format hh[:mm] " + e.getMessage();
 			}
 		}
 		
@@ -171,7 +171,7 @@ implements ActionListener
 			problem = problem.substring(0, problem.length()-2);
 		}
 		
-		return problem.length() == 0 ? null : "Following fields can't be empty: "+problem;
+		return problem.length() == 0 ? null : "Following fields can't be empty: " + problem;
 	}
 
 	@Override

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -174,7 +174,7 @@ extends TdsConnection
 		try
 		{
 			// Get locking schema
-			sql = "select lockscheme(object_id('" + cat + "." + schema + "." + table + "'), db_id('"+cat+"'))";
+			sql = "select lockscheme(object_id('" + cat + "." + schema + "." + table + "'), db_id('" + cat + "'))";
 			Statement stmnt = _conn.createStatement();
 			ResultSet rs = stmnt.executeQuery(sql);
 			while (rs.next())
@@ -184,13 +184,13 @@ extends TdsConnection
 		}
 		catch(SQLException ex)
 		{
-			_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+			_logger.error("getTableExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex);
 		}
 
 		boolean getIndexTypeInfo = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_getTableExtraInfo_getIndexTypeInfo, DEFAULT_getTableExtraInfo_getIndexTypeInfo);
 		if (getIndexTypeInfo)
 		{
-			sql = "exec "+cat+"..sp_helpindex '" + schema + "." + table + "'";
+			sql = "exec " + cat + "..sp_helpindex '" + schema + "." + table + "'";
 			try
 			{
 				List<ResultSetTableModel> rstmList = DbUtils.exec(_conn, sql, 2);
@@ -209,7 +209,7 @@ extends TdsConnection
 						// SYBASE also has: index_max_rows_per_page, index_fillfactor, index_reservepagegap, index_created, index_local
 						// But we do not read that... for the moment!
 
-						extIndexInfo.put(indexName, "Desc=["+indexDescription+"]");
+						extIndexInfo.put(indexName, "Desc=[" + indexDescription + "]");
 					}
 
 					// ADD INFO
@@ -218,16 +218,16 @@ extends TdsConnection
 			}
 			catch (SQLException ex)
 			{
-				_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+				_logger.error("getTableExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex);
 				if (_logger.isDebugEnabled())
-					_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+					_logger.debug("getTableExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex, ex);
 			}
 		}
 		
 		boolean useSpSpaceused = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_getTableExtraInfo_useSpSpaceused, DEFAULT_getTableExtraInfo_useSpSpaceused);
 		if (useSpSpaceused)
 		{
-			sql = "exec "+cat+"..sp_spaceused '" + schema + "." + table + "', 1";
+			sql = "exec " + cat + "..sp_spaceused '" + schema + "." + table + "', 1";
 			try
 			{
 				List<ResultSetTableModel> rstmList = DbUtils.exec(_conn, sql, 2);
@@ -266,7 +266,7 @@ extends TdsConnection
 							indexCount++;
 
 							String index_name = indexInfo.getValueAsString (r, "index_name", true, "");
-							if (index_name.equalsIgnoreCase("t"+table))
+							if (index_name.equalsIgnoreCase("t" + table))
 							{
 //								sumLobSize     += StringUtil.parseInt( indexInfo.getValueAsString(r, "size"    , true, "").replace(" KB", ""), 0);
 //								sumLobReserved += StringUtil.parseInt( indexInfo.getValueAsString(r, "reserved", true, "").replace(" KB", ""), 0);
@@ -288,7 +288,7 @@ extends TdsConnection
 								sumIndexReserved += indexReserved;
 								sumIndexUnused   += indexUnused;
 
-								extIndexInfo.put(index_name, "size="+nf.format(indexSize)+" KB, reserved="+nf.format(indexReserved)+" KB, unused="+nf.format(indexUnused)+" KB");
+								extIndexInfo.put(index_name, "size=" + nf.format(indexSize) + " KB, reserved=" + nf.format(indexReserved) + " KB, unused=" + nf.format(indexUnused) + " KB");
 							}
 						}
 
@@ -310,19 +310,19 @@ extends TdsConnection
 
 					// ADD INFO
 					extraInfo.put(TableExtraInfo.TableRowCount,      new TableExtraInfo(TableExtraInfo.TableRowCount,      "Row Count",        rowtotal     , "Number of rows in the table. Note: exec dbname..sp_spaceused 'schema.tabname', 1", null));
-					extraInfo.put(TableExtraInfo.TableTotalSizeInKb, new TableExtraInfo(TableExtraInfo.TableTotalSizeInKb, "Total Size In KB", data+index   , "Details from sp_spaceused: reserved="+nf.format(reserved)+" KB, data="+nf.format(data)+" KB, index_size="+nf.format(index)+" KB, unused="+nf.format(unused)+" KB", null));
+					extraInfo.put(TableExtraInfo.TableTotalSizeInKb, new TableExtraInfo(TableExtraInfo.TableTotalSizeInKb, "Total Size In KB", data+index   , "Details from sp_spaceused: reserved=" + nf.format(reserved) + " KB, data=" + nf.format(data) + " KB, index_size=" + nf.format(index) + " KB, unused=" + nf.format(unused) + " KB", null));
 					extraInfo.put(TableExtraInfo.TableDataSizeInKb,  new TableExtraInfo(TableExtraInfo.TableDataSizeInKb,  "Data Size In KB",  data         , "From 'sp_spaceued', columns 'data'.", null));
-					extraInfo.put(TableExtraInfo.TableIndexSizeInKb, new TableExtraInfo(TableExtraInfo.TableIndexSizeInKb, "Index Size In KB", sumIndexSize , "From 'sp_spaceued', index section, sum of 'size'. Details: size="+nf.format(sumIndexSize)+" KB, reserved="+nf.format(sumIndexReserved)+" KB, unused="+nf.format(sumIndexUnused)+" KB", null));
+					extraInfo.put(TableExtraInfo.TableIndexSizeInKb, new TableExtraInfo(TableExtraInfo.TableIndexSizeInKb, "Index Size In KB", sumIndexSize , "From 'sp_spaceued', index section, sum of 'size'. Details: size=" + nf.format(sumIndexSize) + " KB, reserved=" + nf.format(sumIndexReserved) + " KB, unused=" + nf.format(sumIndexUnused) + " KB", null));
 					extraInfo.put(TableExtraInfo.TableIndexCount,    new TableExtraInfo(TableExtraInfo.TableIndexCount,    "Index Count",      indexCount   , "", null));
-					extraInfo.put(TableExtraInfo.TableLobSizeInKb,   new TableExtraInfo(TableExtraInfo.TableLobSizeInKb,   "LOB Size In KB",   sumLobSize   , "From 'sp_spaceued', index section, 'size' of columns name 't"+table+"'. Details: size="+nf.format(sumLobSize)+" KB, reserved="+nf.format(sumLobReserved)+" KB, unused="+nf.format(sumLobUnused)+" KB", null));
+					extraInfo.put(TableExtraInfo.TableLobSizeInKb,   new TableExtraInfo(TableExtraInfo.TableLobSizeInKb,   "LOB Size In KB",   sumLobSize   , "From 'sp_spaceued', index section, 'size' of columns name 't" + table + "'. Details: size=" + nf.format(sumLobSize) + " KB, reserved=" + nf.format(sumLobReserved) + " KB, unused=" + nf.format(sumLobUnused) + " KB", null));
 					extraInfo.put(TableExtraInfo.TableLockScheme,    new TableExtraInfo(TableExtraInfo.TableLockScheme,    "Locking Scheme",   lockingScheme, "Table locking Scheme (allpages, datapages, datarows)", null));
 				}
 			}
 			catch (SQLException ex)
 			{
-				_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+				_logger.error("getTableExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex);
 				if (_logger.isDebugEnabled())
-					_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+					_logger.debug("getTableExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex, ex);
 			}
 		}
 		else
@@ -330,13 +330,13 @@ extends TdsConnection
 //			sql = "select row_count(db_id('"+cat+"'), object_id('"+schema+"."+table+"'))";
 			sql = "select"
 					+ "    rowCnt  = row_count(db_id('" + cat + "'), object_id('" + cat + "." + schema + "." + table + "')), \n"
-					+ "    partCnt = (select count(*) from " + (cat==null ? "" : cat+".") + "dbo.syspartitions where id = object_id('" + cat + "." + schema + "." + table + "') and indid in(0,1)) \n"
+					+ "    partCnt = (select count(*) from " + (cat==null ? "" : cat + ".") + "dbo.syspartitions where id = object_id('" + cat + "." + schema + "." + table + "') and indid in(0,1)) \n"
 					+ "";
 			
 			long dbmsVersion = getCachedDbmsVersionNumber();
 			if (dbmsVersion < Ver.ver(15,0))
 			{
-				_logger.warn("getTableExtraInfo() isn't yet implemented for version '"+dbmsVersion+"', It needs to be at least 15.0"); 
+				_logger.warn("getTableExtraInfo() isn't yet implemented for version '" + dbmsVersion + "', It needs to be at least 15.0"); 
 				return null;
 			}
 
@@ -356,9 +356,9 @@ extends TdsConnection
 			}
 			catch (SQLException ex)
 			{
-				_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+				_logger.error("getTableExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex);
 				if (_logger.isDebugEnabled())
-					_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+					_logger.debug("getTableExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex, ex);
 			}
 			
 		}
@@ -422,7 +422,7 @@ extends TdsConnection
 		long dbmsVersion = getCachedDbmsVersionNumber();
 		if (dbmsVersion < Ver.ver(15,0))
 		{
-			_logger.warn("getTableExtraInfo() isn't yet implemented for version '"+dbmsVersion+"', It needs to be at least 15.0"); 
+			_logger.warn("getTableExtraInfo() isn't yet implemented for version '" + dbmsVersion + "', It needs to be at least 15.0"); 
 			return -1;
 		}
 
@@ -476,9 +476,9 @@ extends TdsConnection
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("Problems executing sql '"+sql+"'. Caught="+ex);
+			_logger.error("Problems executing sql '" + sql + "'. Caught=" + ex);
 			if (_logger.isDebugEnabled())
-				_logger.debug("Problems executing sql '"+sql+"'. Caught="+ex, ex);
+				_logger.debug("Problems executing sql '" + sql + "'. Caught=" + ex, ex);
 		}
 
 		return list;

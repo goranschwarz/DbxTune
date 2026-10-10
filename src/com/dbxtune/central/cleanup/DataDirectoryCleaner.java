@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -786,7 +786,7 @@ extends Task
 				}
 
 				// Write how much we deleted...
-				logMsg = "Summary of all deleted files deleted was " + NumberUtils.round(deletedFilesSizeMbSum, 1) + " MB (" + NumberUtils.round(deletedFilesSizeMbSum*1.0/1024.0, 1)+ " GB).";
+				logMsg = "Summary of all deleted files deleted was " + NumberUtils.round(deletedFilesSizeMbSum, 1) + " MB (" + NumberUtils.round(deletedFilesSizeMbSum*1.0/1024.0, 1) + " GB).";
 				_logger.info(_prefix + logMsg);
 				appendToLastExecShortReport(logMsg);
 

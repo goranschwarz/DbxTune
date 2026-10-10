@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -39,7 +39,7 @@ extends AlarmEvent
 				AlarmEvent.Category.LOCK,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.AFFECTED, 
-				"Found Blocking locks in '" + cm.getServerName() + "'. Count=" + count + ". (threshold="+threshold+")",
+				"Found Blocking locks in '" + cm.getServerName() + "'. Count=" + count + ". (threshold=" + threshold + ")",
 				threshold);
 
 		// Set: Time To Live if postpone is enabled
@@ -60,7 +60,7 @@ extends AlarmEvent
 				AlarmEvent.Category.LOCK,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.AFFECTED, 
-				"Found Blocking locks in '" + cm.getServerName() + "'. Count=" + count + ", with maxWaitTime=" + maxWaitTime + ". (thresholdInSec="+thresholdInSec+")",
+				"Found Blocking locks in '" + cm.getServerName() + "'. Count=" + count + ", with maxWaitTime=" + maxWaitTime + ". (thresholdInSec=" + thresholdInSec + ")",
 				thresholdInSec);
 
 		// Adjust the Alarm Full Duration with X seconds
@@ -80,11 +80,11 @@ extends AlarmEvent
 				Version.getAppName(), // serviceType
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo
-				spid < 0 ? null : "spid="+spid,         // extraInfo
+				spid < 0 ? null : "spid=" + spid,         // extraInfo
 				AlarmEvent.Category.LOCK,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.AFFECTED, 
-				"Found Blocking locks in '" + cm.getServerName() + "'. For SPID=" + spid + ", BlockingOthersMaxTimeInSec=" + blockingOthersMaxTimeInSec + ", BlockingOtherSpids=" + blockingOtherSpids + ", BlockCount=" + blockCount + ". (thresholdInSec="+thresholdInSec+")",
+				"Found Blocking locks in '" + cm.getServerName() + "'. For SPID=" + spid + ", BlockingOthersMaxTimeInSec=" + blockingOthersMaxTimeInSec + ", BlockingOtherSpids=" + blockingOtherSpids + ", BlockCount=" + blockCount + ". (thresholdInSec=" + thresholdInSec + ")",
 				thresholdInSec);
 
 		// Adjust the Alarm Full Duration with X seconds

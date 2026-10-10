@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -88,7 +88,7 @@ public class AlarmSettingsTable extends JXTable
 		Configuration conf = Configuration.getCombinedConfiguration();
 		String colorStr = null;
 
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.isNotDefaultValue");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.isNotDefaultValue");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -62,9 +62,9 @@ public class RaxCounterDict
 		String oldDesc = _counterDesc.get(name);
 		if (oldDesc != null && !oldDesc.equalsIgnoreCase(desc))
 		{
-			System.out.println("WARNING: adding counter '"+name+"', which already has a description.");
-			System.out.println("         old desc='"+oldDesc+"'");
-			System.out.println("         new desc='"+desc+"'");
+			System.out.println("WARNING: adding counter '" + name + "', which already has a description.");
+			System.out.println("         old desc='" + oldDesc + "'");
+			System.out.println("         new desc='" + desc + "'");
 		}
 
 		_counterDesc.put(name, desc);
@@ -216,6 +216,6 @@ public class RaxCounterDict
 	{
 		// Just a test to see if we are creating duplicate descriptions...
 		// If there are duplicates, some System.out.println("WARNING: ...") should be printed 
-		System.out.println("XXXXX="+getDesc("xxx"));
+		System.out.println("XXXXX=" + getDesc("xxx"));
 	}
 }

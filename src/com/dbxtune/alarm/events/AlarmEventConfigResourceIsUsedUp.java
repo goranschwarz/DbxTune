@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -44,7 +44,7 @@ extends AlarmEvent
 				null);
 
 		String errorNumStr = errorNumber <= 0 ? "" : "Error Number = " + errorNumber + ", ";
-		String desc = "Configuration resource '"+cfgName+"' is used up in server '" + cm.getServerName() + "', at '" + errorlogTs + "'. " + errorNumStr + "Error Message: " + errorMessage.trim();
+		String desc = "Configuration resource '" + cfgName + "' is used up in server '" + cm.getServerName() + "', at '" + errorlogTs + "'. " + errorNumStr + "Error Message: " + errorMessage.trim();
 		setDescription(desc);
 		
 		// Set: Time To Live if postpone is enabled

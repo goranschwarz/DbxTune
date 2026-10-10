@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -60,7 +60,7 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Extensive Usage of OS Swapping (both 'in' and 'out'), which may Thrash the performance on hostname '" + hostname + "' " + note + ", maxCap=" + maxCap + ". Time to increase memory or move some processes. swapIn=[avgVal=" + swapIn_avg + ", PeakTs='" + swapIn_peakTimestamp + "', peakVal=" + swapIn_peakVal + "], swapOut=[avgVal=" + swapIn_avg + ", peakTs='" + swapOut_peakTimestamp + "', peakVal=" + swapOut_peakVal + "]. (threshold="+threshold+")",
+				"Extensive Usage of OS Swapping (both 'in' and 'out'), which may Thrash the performance on hostname '" + hostname + "' " + note + ", maxCap=" + maxCap + ". Time to increase memory or move some processes. swapIn=[avgVal=" + swapIn_avg + ", PeakTs='" + swapIn_peakTimestamp + "', peakVal=" + swapIn_peakVal + "], swapOut=[avgVal=" + swapIn_avg + ", peakTs='" + swapOut_peakTimestamp + "', peakVal=" + swapOut_peakVal + "]. (threshold=" + threshold + ")",
 				threshold);
 
 		// Set: Time To Live if postpone is enabled

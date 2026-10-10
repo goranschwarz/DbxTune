@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -59,7 +59,7 @@ public class DownloadServlet extends HttpServlet
 		if (principal != null)
 			currentUsername = principal.getName();
 
-		String from = "from getRemoteHost='" + req.getRemoteHost() + "', currentUsername='"+currentUsername+"', by user '" + req.getRemoteUser() + "'.";
+		String from = "from getRemoteHost='" + req.getRemoteHost() + "', currentUsername='" + currentUsername + "', by user '" + req.getRemoteUser() + "'.";
 		
 //		if (!hasCorrectSecurityToken(req))
 //        {
@@ -147,7 +147,7 @@ public class DownloadServlet extends HttpServlet
 				Collections.sort(dbxTuneFileList);
 				downloadFile = dbxTuneFileList.getLast();
 
-				_logger.info("Found the following DbxTune ZIP files " + dbxTuneFileList + ". Choosing '"+downloadFile+"'.");
+				_logger.info("Found the following DbxTune ZIP files " + dbxTuneFileList + ". Choosing '" + downloadFile + "'.");
 				
 			} // end: DBXTUNE_HOME
 			else
@@ -162,9 +162,9 @@ public class DownloadServlet extends HttpServlet
 
 		if ( ! downloadFile.exists() )
 		{
-			throw new ServletException("File '+"+downloadFile+"+' doesn't exists on server.");
+			throw new ServletException("File '+" + downloadFile + "+' doesn't exists on server.");
 		}
-		_logger.info("Download-Start: File location on server '"+downloadFile.getAbsolutePath()+"'. "+from);
+		_logger.info("Download-Start: File location on server '" + downloadFile.getAbsolutePath() + "'. " + from);
 		ServletContext ctx = getServletContext();
 		InputStream fis = new FileInputStream(downloadFile);
 		String mimeType = ctx.getMimeType(downloadFile.getAbsolutePath());
@@ -182,7 +182,7 @@ public class DownloadServlet extends HttpServlet
 		os.close();
 		fis.close();
 		
-		_logger.info("Download-End: File '"+downloadFile.getName()+"' downloaded to client was successfully. "+from);
+		_logger.info("Download-End: File '" + downloadFile.getName() + "' downloaded to client was successfully. " + from);
 	}
 
 /*------ code was "grabbed" from:

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -160,7 +160,7 @@ public class FileUtils
 				{
 					String htmlMsg = "<html>" +
     						"<h3>Confirm Overwite of file</h3>" +
-    						"The destination file <code>"+to_name+"</code> exists!</b><br>" +
+    						"The destination file <code>" + to_name + "</code> exists!</b><br>" +
     						"Do you want to overwrite the existing file?</b><br>" +
     						"<br>" +
     						"File copy information:<br>" +
@@ -416,7 +416,7 @@ public class FileUtils
 		}
 		catch (IOException e)
 		{
-			_logger.debug("getFileEncoding(): Caught: "+e, e);
+			_logger.debug("getFileEncoding(): Caught: " + e, e);
 		}
 
 		return encoding;
@@ -729,13 +729,13 @@ public class FileUtils
 			}
 			else
 			{
-				_logger.error("Problems reading file '"+filename+"'. at class '"+clazz+"'. The URL was null, returned from clazz.getResource(filename)");
+				_logger.error("Problems reading file '" + filename + "'. at class '" + clazz + "'. The URL was null, returned from clazz.getResource(filename)");
 				return null;
 			}
 		}
 		catch(IOException e)
 		{
-			_logger.error("Problems reading file '"+filename+"'. at class '"+clazz+"'. Caught: "+e, e);
+			_logger.error("Problems reading file '" + filename + "'. at class '" + clazz + "'. Caught: " + e, e);
 			return null;
 		}
 		finally 

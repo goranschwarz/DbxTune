@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -143,7 +143,7 @@ public class Utf8Iso1Tester
 				
 				System.out.println();
 				System.out.println("################################################");
-				System.out.println("HAS OOB CHARS errorCount=" + errorCount + ", at possition="+firstOobPos+", xmlEntry=["+(i+1)+"/"+eCount+"]");
+				System.out.println("HAS OOB CHARS errorCount=" + errorCount + ", at possition=" + firstOobPos + ", xmlEntry=[" + (i+1) + "/" + eCount + "]");
 				System.out.println("Error lines: ");
 				for (String str : errorLines)
 					System.out.println("   line: |" + str + "|");

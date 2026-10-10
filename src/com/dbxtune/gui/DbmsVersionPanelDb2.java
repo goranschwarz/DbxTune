@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -74,7 +74,7 @@ extends DbmsVersionPanelAbstract
 
 		long version = Ver.db2VersionStringToNumber("DB2 v" + tmpVerStr);
 
-		_logger.debug("DB2-parseVersionStringToNum(versionStr='"+versionStr+"'): tmpVerStr='"+tmpVerStr+"', <<<<<< returns: "+version);
+		_logger.debug("DB2-parseVersionStringToNum(versionStr='" + versionStr + "'): tmpVerStr='" + tmpVerStr + "', <<<<<< returns: " + version);
 		return version;
 	}
 	

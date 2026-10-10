@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -235,7 +235,7 @@ implements ActionListener, TableModelListener
 			for (int r=0; r<tm.getRowCount(); r++)
 			{
 				String colName  = (String) tm.getValueAt(r, TAB_POS_COL_NAME);
-				boolean colIsPk = (pkStr.indexOf(colName+", ") != -1);
+				boolean colIsPk = (pkStr.indexOf(colName + ", ") != -1);
 
 				tm.setValueAt(Boolean.valueOf(colIsPk), r, TAB_POS_CHECK);
 			}

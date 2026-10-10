@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -188,19 +188,19 @@ extends JPanel
 		_maxInMemHistoryInMinutes_chk.setHorizontalTextPosition(SwingConstants.LEFT);
 
 		_donate_but.setName("DONATE"); // just for trace
-		_donate_but.setToolTipText("<html>Goto "+Version.getAppName()+" home page where you can read more about how you can support the project.<br><br>"+DONATE_URL+"<html>");
+		_donate_but.setToolTipText("<html>Goto " + Version.getAppName() + " home page where you can read more about how you can support the project.<br><br>" + DONATE_URL + "<html>");
 		_donate_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/donate.gif"));
 		_donate_but.setContentAreaFilled(false);
 		_donate_but.setMargin( new Insets(0,0,0,0) );
 		
 		_sourceforge_but.setName("SF"); // just for trace
-		_sourceforge_but.setToolTipText("<html>Goto "+Version.getAppName()+" at Sourceforge. Here you can: <UL> <LI>Recommend "+Version.getAppName()+" to others</LI> <LI>Make comments/recommendations</LI> <LI>Add: Support Questions</LI> <LI>Add: Bug Reports</LI> <LI>Add: Feature Requests</LI> </UL>"+SOURCEFORGE_URL+"<html>");
+		_sourceforge_but.setToolTipText("<html>Goto " + Version.getAppName() + " at Sourceforge. Here you can: <UL> <LI>Recommend " + Version.getAppName() + " to others</LI> <LI>Make comments/recommendations</LI> <LI>Add: Support Questions</LI> <LI>Add: Bug Reports</LI> <LI>Add: Feature Requests</LI> </UL>" + SOURCEFORGE_URL + "<html>");
 		_sourceforge_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/sourceforge_logo.png"));
 		_sourceforge_but.setContentAreaFilled(false);
 		_sourceforge_but.setMargin( new Insets(0,0,0,0) );
 		
 		_facebook_but.setName("FB"); // just for trace
-		_facebook_but.setToolTipText("<html>Goto "+Version.getAppName()+" Facebook Page <UL> <LI>Press 'like' to get information about upcoming changes.</LI> <LI>Or write something on the wall.</LI> </UL>"+FACEBOOK_URL+"</html>");
+		_facebook_but.setToolTipText("<html>Goto " + Version.getAppName() + " Facebook Page <UL> <LI>Press 'like' to get information about upcoming changes.</LI> <LI>Or write something on the wall.</LI> </UL>" + FACEBOOK_URL + "</html>");
 //		_facebook_but.setText("Join now");
 		_facebook_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/facebook_button.png"));
 //		_facebook_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/facebook_favicon.png"));
@@ -372,7 +372,7 @@ extends JPanel
 				}
 				catch (Exception ex)
 				{
-					_logger.error("Problems when open the Facebook page '"+FACEBOOK_URL+"'. Caught: "+e);
+					_logger.error("Problems when open the Facebook page '" + FACEBOOK_URL + "'. Caught: " + e);
 				}
 			}
 		});
@@ -392,7 +392,7 @@ extends JPanel
 				}
 				catch (Exception ex)
 				{
-					_logger.error("Problems when open the SourceForge page '"+SOURCEFORGE_URL+"'. Caught: "+e);
+					_logger.error("Problems when open the SourceForge page '" + SOURCEFORGE_URL + "'. Caught: " + e);
 				}
 			}
 		});
@@ -412,7 +412,7 @@ extends JPanel
 				}
 				catch (Exception ex)
 				{
-					_logger.error("Problems when open the donate page '"+DONATE_URL+"'. Caught: "+e);
+					_logger.error("Problems when open the donate page '" + DONATE_URL + "'. Caught: " + e);
 				}
 			}
 		});
@@ -420,7 +420,7 @@ extends JPanel
 
 	private void setChartMaxHistoryTimeInMinutes(int minutes)
 	{
-		_logger.debug("set-Chart-MaxHistoryTimeInMinutes(minutes="+minutes+")");
+		_logger.debug("set-Chart-MaxHistoryTimeInMinutes(minutes=" + minutes + ")");
 
 		// Set the Spinner model
 		_maxChartHistoryInMinutes_spm.setValue( Integer.valueOf(minutes) );
@@ -478,7 +478,7 @@ extends JPanel
 
 	private void setInMemMaxHistoryTimeInMinutes(int minutes)
 	{
-		_logger.debug("set-In-Mem-MaxHistoryTimeInMinutes(minutes="+minutes+")");
+		_logger.debug("set-In-Mem-MaxHistoryTimeInMinutes(minutes=" + minutes + ")");
 
 		// Set the spinner
 		_maxInMemHistoryInMinutes_spm.setValue( Integer.valueOf(minutes) );
@@ -527,7 +527,7 @@ extends JPanel
 		
 		// Throw exception if name is already "in use"
 		if (alreadyUsedBy != null)
-			throw new RuntimeException("Sorry the trend graph named '"+tg.getName()+"' for CM '"+tg.getCm().getName()+"' is already used by another CM '"+alreadyUsedBy.getCm().getName()+"', the name must be unique.");
+			throw new RuntimeException("Sorry the trend graph named '" + tg.getName() + "' for CM '" + tg.getCm().getName() + "' is already used by another CM '" + alreadyUsedBy.getCm().getName() + "', the name must be unique.");
 
 		_graphOriginOrderMap .put(tg.getName(), tg);
 		_graphCurrentOrderMap.put(tg.getName(), tg);
@@ -566,7 +566,7 @@ extends JPanel
 		str = _maxInMemHistoryInMinutes_spm.getNumber().toString();
 		conf.setProperty("in-memory.history", str);
 
-		str = _maxInMemHistoryInMinutes_chk.isSelected()+"";
+		str = _maxInMemHistoryInMinutes_chk.isSelected() + "";
 		conf.setProperty("in-memory.history.in-sync-with-graph-history", str);
 
 		// Graph Order
@@ -708,7 +708,7 @@ extends JPanel
 	{
 		TrendGraph tg = _graphCurrentOrderMap.get(graphName);
 		if (tg == null)
-			throw new RuntimeException("Couldn't find graph name '"+graphName+"' in the list of graphs: "+_graphCurrentOrderMap);
+			throw new RuntimeException("Couldn't find graph name '" + graphName + "' in the list of graphs: " + _graphCurrentOrderMap);
 		tg.setEnable(enabled);
 	}
 
@@ -737,7 +737,7 @@ extends JPanel
 			{
 				// hmm problems... not in origin...
 				if (printWarnings)
-					_logger.warn("Graph name '"+graphName+"' could not be found in the original map.");
+					_logger.warn("Graph name '" + graphName + "' could not be found in the original map.");
 			}
 			else
 			{
@@ -792,7 +792,7 @@ extends JPanel
 			if (tg == null)
 			{
 				// hmm problems... not in origin...
-				_logger.warn("Graph name '"+graphName+"' could not be found in the original map.");
+				_logger.warn("Graph name '" + graphName + "' could not be found in the original map.");
 			}
 			else
 			{

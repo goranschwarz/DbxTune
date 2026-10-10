@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -114,7 +114,7 @@ implements WizardResultProducer
 			catch (IOException e)
 			{
 				summaryMessage += "\n\n##################################\n";
-				summaryMessage += "Problems when APPENDING User Defined Counter the to file '"+cfgFile+"'.\n";
+				summaryMessage += "Problems when APPENDING User Defined Counter the to file '" + cfgFile + "'.\n";
 				summaryMessage += e.getMessage() + "\n";
 				summaryMessage += "Opening the 'log viewer' so you can check other log messages.\n";
 			}

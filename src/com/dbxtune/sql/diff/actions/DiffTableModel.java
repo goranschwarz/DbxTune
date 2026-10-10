@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -92,7 +92,7 @@ extends AbstractTableModel
 		for (Object[] row : _sink.getLeftMissingRows())
 		{
 			List<Object> newRow = new ArrayList<>(_colNames.size());
-			newRow.add("<html><span style='background-color:"+htmlColorLeft+"'>&lt;&lt;&lt; LEFT-side-is-missing-row:</span></html>");
+			newRow.add("<html><span style='background-color:" + htmlColorLeft + "'>&lt;&lt;&lt; LEFT-side-is-missing-row:</span></html>");
 			for (int c=0; c<row.length; c++)
 				newRow.add(DiffTable.toTableValue(row[c]));
 
@@ -103,7 +103,7 @@ extends AbstractTableModel
 		for (Object[] row : _sink.getRightMissingRows())
 		{
 			List<Object> newRow = new ArrayList<>(_colNames.size());
-			newRow.add("<html><span style='background-color:"+htmlColorRight+"'>&gt;&gt;&gt; RIGHT-side-is-missing-row:</span></html>");
+			newRow.add("<html><span style='background-color:" + htmlColorRight + "'>&gt;&gt;&gt; RIGHT-side-is-missing-row:</span></html>");
 			for (int c=0; c<row.length; c++)
 				newRow.add(DiffTable.toTableValue(row[c]));
 
@@ -115,7 +115,7 @@ extends AbstractTableModel
 		{
 			List<Object> newRow = new ArrayList<>(_colNames.size());
 
-			newRow.add("<html>&lt;-&gt; COLS DIFF: <span style='color:"+htmlColorPk+"'><b>PK column</b></span> - <span style='background-color:"+htmlColorLeft+"'>left value</span> - <span style='background-color:"+htmlColorRight+"'>right value</span></html>");
+			newRow.add("<html>&lt;-&gt; COLS DIFF: <span style='color:" + htmlColorPk + "'><b>PK column</b></span> - <span style='background-color:" + htmlColorLeft + "'>left value</span> - <span style='background-color:" + htmlColorRight + "'>right value</span></html>");
 
 			int pkPos = 0; // What PK Array Position are we at
 			for (int c=1; c<_colNames.size(); c++)
@@ -126,7 +126,7 @@ extends AbstractTableModel
 				if (_pkColPos.contains(adjCol))
 				{
 //System.out.println("DIFF:::PK adjCol="+adjCol+", drv._pk[pkPos]="+drv._pk[pkPos]+", drv._pk="+StringUtil.toCommaStr(drv._pk));
-					newRow.add( "<html><b><font color='"+htmlColorPk+"'>" + dcv.getPkValues() [pkPos++] + "</font></b><html>");
+					newRow.add( "<html><b><font color='" + htmlColorPk + "'>" + dcv.getPkValues() [pkPos++] + "</font></b><html>");
 				}
 				else
 				{

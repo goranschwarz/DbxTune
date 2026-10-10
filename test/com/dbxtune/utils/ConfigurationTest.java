@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -55,7 +55,7 @@ public class ConfigurationTest
 		
 		Configuration conf1 = new Configuration("conf1", f1.getAbsolutePath());
 		conf1.setProperty("include.test", f2.getAbsolutePath());
-		conf1.setProperty("include.do-not-exist", "/tmp/qwerty.should-not-exists."+System.currentTimeMillis());
+		conf1.setProperty("include.do-not-exist", "/tmp/qwerty.should-not-exists." + System.currentTimeMillis());
 		conf1.setProperty("test.1.1", "test-1-1");
 		conf1.setProperty("test.1.2", "test-1-2");
 		conf1.setProperty("test.duplicate", "from-conf1");
@@ -93,8 +93,8 @@ public class ConfigurationTest
 				Configuration.USER_CONF,    // Third
 				Configuration.SYSTEM_CONF); // Forth
 
-		System.out.println("Combined Configuration Search Order '"+StringUtil.toCommaStr(Configuration.getSearchOrder())+"'.");
-		System.out.println("Combined Configuration Search Order, With file names: "+StringUtil.toCommaStr(Configuration.getSearchOrder(true)));
+		System.out.println("Combined Configuration Search Order '" + StringUtil.toCommaStr(Configuration.getSearchOrder()) + "'.");
+		System.out.println("Combined Configuration Search Order, With file names: " + StringUtil.toCommaStr(Configuration.getSearchOrder(true)));
 
 		Configuration sys = Configuration.getInstance(Configuration.SYSTEM_CONF);
 		sys.setProperty("key.test.system.1", "val-test-system-1");
@@ -109,7 +109,7 @@ public class ConfigurationTest
 		// Check for existence
 		Configuration combConf = Configuration.getCombinedConfiguration();
 		String val = combConf.getProperty("tmp.key.1");
-		System.out.println("cConf.getProperty('tmp.key.1')=="+val);
+		System.out.println("cConf.getProperty('tmp.key.1')==" + val);
 		assertEquals("tmp-val-1", val);
 		
 		//------------------------------------------------
@@ -121,11 +121,11 @@ public class ConfigurationTest
 		// Check for existence
 		combConf = Configuration.getCombinedConfiguration();
 		val = combConf.getProperty("tmp.key.boolean.1");
-		System.out.println("cConf.getProperty('tmp.key.boolean.1')=="+val);
+		System.out.println("cConf.getProperty('tmp.key.boolean.1')==" + val);
 		assertEquals("false", val);
 
 		boolean bval = combConf.getBooleanProperty("tmp.key.boolean.1", true);
-		System.out.println("cConf.getBooleanProperty('tmp.key.boolean.1')=="+bval);
+		System.out.println("cConf.getBooleanProperty('tmp.key.boolean.1')==" + bval);
 		assertEquals(false, bval);
 		
 	}

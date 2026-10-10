@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -171,7 +171,7 @@ public class ProcessDetailFrame
 	protected JComboBox<String> comboBox_historyWhereSql     = new JComboBox<String>();
 	private   JButton           button_historyWhereSql       = new JButton("Remove from template");
 	private   JCheckBox         discardPreOpenStmntsCheckbox = new JCheckBox("Discard historical/captured statements that happened before the dialogue was opened.", true);
-	private   JCheckBox         discardAseTuneApp_chk        = new JCheckBox("Discard Statements from application '"+DISCARD_APP_NAME+"'.", true);
+	private   JCheckBox         discardAseTuneApp_chk        = new JCheckBox("Discard Statements from application '" + DISCARD_APP_NAME + "'.", true);
                                 
 	private   JPanel            planPanel                    = new JPanel();
 	private   JPanel            batchPanel                   = new JPanel();
@@ -627,7 +627,7 @@ public class ProcessDetailFrame
 					conf.getIntProperty("table.setSelectionBackground.g", 180),
 					conf.getIntProperty("table.setSelectionBackground.b", 191));
 
-				_logger.debug("table.setSelectionBackground("+newBg+").");
+				_logger.debug("table.setSelectionBackground(" + newBg + ").");
 				_historyStatementsTable.setSelectionBackground(newBg);
 			}
 		}
@@ -637,7 +637,7 @@ public class ProcessDetailFrame
 			if ( ! (bgc.getRed()==178 && bgc.getGreen()==180 && bgc.getBlue()==191) )
 			{
 				Color newBg = new Color(178, 180, 191);
-				_logger.debug("table.setSelectionBackground("+newBg+"). Config could not be read, trusting defaults...");
+				_logger.debug("table.setSelectionBackground(" + newBg + "). Config could not be read, trusting defaults...");
 				_historyStatementsTable.setSelectionBackground(newBg);
 			}
 		}
@@ -713,7 +713,7 @@ public class ProcessDetailFrame
 					conf.getIntProperty("table.setSelectionBackground.g", 180),
 					conf.getIntProperty("table.setSelectionBackground.b", 191));
 
-				_logger.debug("table.setSelectionBackground("+newBg+").");
+				_logger.debug("table.setSelectionBackground(" + newBg + ").");
 				activeStatementTable.setSelectionBackground(newBg);
 			}
 		}
@@ -723,7 +723,7 @@ public class ProcessDetailFrame
 			if ( ! (bgc.getRed()==178 && bgc.getGreen()==180 && bgc.getBlue()==191) )
 			{
 				Color newBg = new Color(178, 180, 191);
-				_logger.debug("table.setSelectionBackground("+newBg+"). Config could not be read, trusting defaults...");
+				_logger.debug("table.setSelectionBackground(" + newBg + "). Config could not be read, trusting defaults...");
 				activeStatementTable.setSelectionBackground(newBg);
 			}
 		}
@@ -1103,7 +1103,7 @@ public class ProcessDetailFrame
 				" <li> historyStmts.YYYY-MM-DD.txt     </li>" +
 				" <li> historyStmts.YYYY-MM-DD.ddl.sql </li>" +
 				"</ul>" +
-				"in Directory "+envNameSaveDir+" or "+envNameHomeDir+"<br>" +
+				"in Directory " + envNameSaveDir + " or " + envNameHomeDir + "<br>" +
 				envNameSaveDir + " = " + StringUtil.getEnvVariableValue(envNameSaveDir) + "<br>" +
 				envNameHomeDir + " = " + StringUtil.getEnvVariableValue(envNameHomeDir) + "<br>" +
 			"</html>");
@@ -1329,7 +1329,7 @@ public class ProcessDetailFrame
 //			}
 //		});
 		
-		_activeStmntSqlWhereClause_cbx.setToolTipText("Add your extra where clauses on the monXXX table. make sure that only columns in that table are used. "+Version.getAppName()+"'s errorlog will show faulty SQL statements.");
+		_activeStmntSqlWhereClause_cbx.setToolTipText("Add your extra where clauses on the monXXX table. make sure that only columns in that table are used. " + Version.getAppName() + "'s errorlog will show faulty SQL statements.");
 		_activeStmntSqlWhereClause_cbx.setEditable(true);
 		_activeStmntSqlWhereClause_cbx.addItem("");
 		_activeStmntSqlWhereClause_cbx.addActionListener(new ActionListener()
@@ -1350,7 +1350,7 @@ public class ProcessDetailFrame
 			}
 		});
 
-		_activeStmntSqlOrderBy_cbx.setToolTipText("Change 'order by' clauses on the monXXX table. "+Version.getAppName()+"'s errorlog will show faulty SQL statements.");
+		_activeStmntSqlOrderBy_cbx.setToolTipText("Change 'order by' clauses on the monXXX table. " + Version.getAppName() + "'s errorlog will show faulty SQL statements.");
 		_activeStmntSqlOrderBy_cbx.setEditable(true);
 		_activeStmntSqlOrderBy_cbx.addItem("");
 		_activeStmntSqlOrderBy_cbx.addActionListener(new ActionListener()
@@ -1430,7 +1430,7 @@ public class ProcessDetailFrame
 		historyWhereSqlPanel.setToolTipText("SQL Text for 'historical' SQL Statements will be showed here.");
 		
 
-		comboBox_historyWhereSql.setToolTipText("Add your extra where clauses on the monSysStatement table. make sure that only columns in theat table are used. "+Version.getAppName()+"'s errorlog will show faulty SQL statements.");
+		comboBox_historyWhereSql.setToolTipText("Add your extra where clauses on the monSysStatement table. make sure that only columns in theat table are used. " + Version.getAppName() + "'s errorlog will show faulty SQL statements.");
 		comboBox_historyWhereSql.setEditable(true);
 		comboBox_historyWhereSql.addItem("");
 		comboBox_historyWhereSql.addActionListener(new java.awt.event.ActionListener()
@@ -1461,7 +1461,7 @@ public class ProcessDetailFrame
 				saveProps();
 			}
 		});
-		discardAseTuneApp_chk.setToolTipText("If you want to discard or show events from monSysStatements that was generated by application '"+DISCARD_APP_NAME+"'.");
+		discardAseTuneApp_chk.setToolTipText("If you want to discard or show events from monSysStatements that was generated by application '" + DISCARD_APP_NAME + "'.");
 		discardAseTuneApp_chk.addActionListener(new java.awt.event.ActionListener()
 		{
 			@Override
@@ -1665,7 +1665,7 @@ public class ProcessDetailFrame
 		// Open the connection
 //		cnx = OpenConnectionDlg.getAnotherConnection(Version.getAppName()+"-spid", true);
 //		cnx = AseConnectionFactory.getConnection(null, Version.getAppName()+"-spid", null);
-		cnx = _connectionProvider.getNewConnection(Version.getAppName()+"-spid");
+		cnx = _connectionProvider.getNewConnection(Version.getAppName() + "-spid");
 		if (cnx == null)
 		{
 			throw new RuntimeException("Sorry could not get a connection. conn=null");
@@ -2015,18 +2015,18 @@ public class ProcessDetailFrame
 				if (o != null)
 				{
 					saveCount++;
-					tmpConf.setProperty(base + "active.statement.extraWhere."+saveCount, o.toString());
+					tmpConf.setProperty(base + "active.statement.extraWhere." + saveCount, o.toString());
 
-					_logger.debug("saveProps(): processDetailFrame.spid.active.statement.extraWhere."+saveCount+"='"+o.toString()+"'.");
+					_logger.debug("saveProps(): processDetailFrame.spid.active.statement.extraWhere." + saveCount + "='" + o.toString() + "'.");
 				}
 			}
 			tmpConf.setProperty(   base + "active.statement.extraWhere.count", saveCount);
-			_logger.debug("saveProps(): processDetailFrame.spid.active.statement.extraWhere.count='"+saveCount+"'.");
+			_logger.debug("saveProps(): processDetailFrame.spid.active.statement.extraWhere.count='" + saveCount + "'.");
 
 			tmpConf.setProperty(   base + "active.statement.extraWhere.active", Math.max(0, _activeStmntSqlWhereClause_cbx.getSelectedIndex()));
-			_logger.debug("saveProps(): processDetailFrame.spid.active.statement.extraWhere.active='"+Math.max(0, _activeStmntSqlWhereClause_cbx.getSelectedIndex())+"'.");
+			_logger.debug("saveProps(): processDetailFrame.spid.active.statement.extraWhere.active='" + Math.max(0, _activeStmntSqlWhereClause_cbx.getSelectedIndex()) + "'.");
 
-			tmpConf.setProperty(PROP_ACTIVE_STATEMENT_EXTRA_WHERE, _activeStmntSqlWhereClause_cbx.getSelectedItem()+"");
+			tmpConf.setProperty(PROP_ACTIVE_STATEMENT_EXTRA_WHERE, _activeStmntSqlWhereClause_cbx.getSelectedItem() + "");
 			
 			// ACTIVE Statements ORDER BY
 			//---------------------------------------
@@ -2039,18 +2039,18 @@ public class ProcessDetailFrame
 				if (o != null)
 				{
 					saveCount++;
-					tmpConf.setProperty(base + "active.statement.orderBy."+saveCount, o.toString());
+					tmpConf.setProperty(base + "active.statement.orderBy." + saveCount, o.toString());
 
-					_logger.debug("saveProps(): processDetailFrame.spid.active.statement.orderBy."+saveCount+"='"+o.toString()+"'.");
+					_logger.debug("saveProps(): processDetailFrame.spid.active.statement.orderBy." + saveCount + "='" + o.toString() + "'.");
 				}
 			}
 			tmpConf.setProperty(   base + "active.statement.orderBy.count", saveCount);
-			_logger.debug("saveProps(): processDetailFrame.spid.active.statement.orderBy.count='"+saveCount+"'.");
+			_logger.debug("saveProps(): processDetailFrame.spid.active.statement.orderBy.count='" + saveCount + "'.");
 
 			tmpConf.setProperty(   base + "active.statement.orderBy.active", Math.max(0, _activeStmntSqlOrderBy_cbx.getSelectedIndex()));
-			_logger.debug("saveProps(): processDetailFrame.spid.active.statement.orderBy.active='"+Math.max(0, _activeStmntSqlOrderBy_cbx.getSelectedIndex())+"'.");
+			_logger.debug("saveProps(): processDetailFrame.spid.active.statement.orderBy.active='" + Math.max(0, _activeStmntSqlOrderBy_cbx.getSelectedIndex()) + "'.");
 
-			tmpConf.setProperty(PROP_ACTIVE_STATEMENT_ORDER_BY, _activeStmntSqlOrderBy_cbx.getSelectedItem()+"");
+			tmpConf.setProperty(PROP_ACTIVE_STATEMENT_ORDER_BY, _activeStmntSqlOrderBy_cbx.getSelectedItem() + "");
 
 			// HISTORY Statements WHERE
 			//---------------------------------------
@@ -2063,16 +2063,16 @@ public class ProcessDetailFrame
 				if (o != null)
 				{
 					saveCount++;
-					tmpConf.setProperty(base + "plan.extraWhere."+saveCount, o.toString());
+					tmpConf.setProperty(base + "plan.extraWhere." + saveCount, o.toString());
 
-					_logger.debug("saveProps(): processDetailFrame.spid.plan.extraWhere."+saveCount+"='"+o.toString()+"'.");
+					_logger.debug("saveProps(): processDetailFrame.spid.plan.extraWhere." + saveCount + "='" + o.toString() + "'.");
 				}
 			}
 			tmpConf.setProperty(   base + "plan.extraWhere.count", saveCount);
-			_logger.debug("saveProps(): processDetailFrame.spid.plan.extraWhere.count='"+saveCount+"'.");
+			_logger.debug("saveProps(): processDetailFrame.spid.plan.extraWhere.count='" + saveCount + "'.");
 
 			tmpConf.setProperty(   base + "plan.extraWhere.active", Math.max(0, comboBox_historyWhereSql.getSelectedIndex()));
-			_logger.debug("saveProps(): processDetailFrame.spid.plan.extraWhere.active='"+Math.max(0, comboBox_historyWhereSql.getSelectedIndex())+"'.");
+			_logger.debug("saveProps(): processDetailFrame.spid.plan.extraWhere.active='" + Math.max(0, comboBox_historyWhereSql.getSelectedIndex()) + "'.");
 
 
 			tmpConf.setProperty(base + "plan.discardPreOpenStmnts", discardPreOpenStmntsCheckbox.isSelected());
@@ -2225,16 +2225,16 @@ public class ProcessDetailFrame
 		active  = props.getIntProperty(base + "active.statement.extraWhere.active", -1);
 		if ( count != -1  && active != -1 )
 		{
-			_logger.debug("loadProps(): processDetailFrame.spid.active.statement.extraWhere.active='"+active+"'.");
+			_logger.debug("loadProps(): processDetailFrame.spid.active.statement.extraWhere.active='" + active + "'.");
 
 			active = Math.max(0, active);
 			for (int i=1; i<=count; i++)
 			{
-				String str = props.getProperty(base + "active.statement.extraWhere."+i).trim();
+				String str = props.getProperty(base + "active.statement.extraWhere." + i).trim();
 				_activeStmntSqlWhereClause_cbx.insertItemAt(str, i);
-				_logger.debug("loadProps(): processDetailFrame.active.statement.plan.extraWhere."+i+"='"+str+"'.");
+				_logger.debug("loadProps(): processDetailFrame.active.statement.plan.extraWhere." + i + "='" + str + "'.");
 			}
-			_logger.debug("loadProps(): Set active template to index="+active+".");
+			_logger.debug("loadProps(): Set active template to index=" + active + ".");
 			_activeStmntSqlWhereClause_cbx.setSelectedIndex(active);
 		}
 		else
@@ -2251,23 +2251,23 @@ public class ProcessDetailFrame
 		}
 		// this entry is the one used by RefreshProcess
 		if (tmpConf != null)
-			tmpConf.setProperty(PROP_ACTIVE_STATEMENT_EXTRA_WHERE, _activeStmntSqlWhereClause_cbx.getSelectedItem()+"");
+			tmpConf.setProperty(PROP_ACTIVE_STATEMENT_EXTRA_WHERE, _activeStmntSqlWhereClause_cbx.getSelectedItem() + "");
 
 		// ACTIVE STATEMENT: ORDER BY
 		count   = props.getIntProperty(base + "active.statement.orderBy.count", -1);
 		active  = props.getIntProperty(base + "active.statement.orderBy.active", -1);
 		if ( count != -1  && active != -1 )
 		{
-			_logger.debug("loadProps(): processDetailFrame.spid.active.statement.orderBy.active='"+active+"'.");
+			_logger.debug("loadProps(): processDetailFrame.spid.active.statement.orderBy.active='" + active + "'.");
 
 			active = Math.max(0, active);
 			for (int i=1; i<=count; i++)
 			{
-				String str = props.getProperty(base + "active.statement.orderBy."+i).trim();
+				String str = props.getProperty(base + "active.statement.orderBy." + i).trim();
 				_activeStmntSqlOrderBy_cbx.insertItemAt(str, i);
-				_logger.debug("loadProps(): processDetailFrame.active.statement.plan.orderBy."+i+"='"+str+"'.");
+				_logger.debug("loadProps(): processDetailFrame.active.statement.plan.orderBy." + i + "='" + str + "'.");
 			}
-			_logger.debug("loadProps(): Set active template to index="+active+".");
+			_logger.debug("loadProps(): Set active template to index=" + active + ".");
 			_activeStmntSqlOrderBy_cbx.setSelectedIndex(active);
 		}
 		else
@@ -2280,7 +2280,7 @@ public class ProcessDetailFrame
 		}
 		// this entry is the one used by RefreshProcess
 		if (tmpConf != null)
-			tmpConf.setProperty(PROP_ACTIVE_STATEMENT_ORDER_BY, _activeStmntSqlOrderBy_cbx.getSelectedItem()+"");
+			tmpConf.setProperty(PROP_ACTIVE_STATEMENT_ORDER_BY, _activeStmntSqlOrderBy_cbx.getSelectedItem() + "");
 
 //		_activeStmntSqlWhereClause_txt.setText(props.getProperty(PROP_ACTIVE_STATEMENT_EXTRA_WHERE, ""));
 //		_activeStmntSqlOrderBy_txt    .setText(props.getProperty(PROP_ACTIVE_STATEMENT_ORDER_BY,    ""));
@@ -2290,16 +2290,16 @@ public class ProcessDetailFrame
 		active  = props.getIntProperty(base + "plan.extraWhere.active", -1);
 		if ( count != -1  && active != -1 )
 		{
-			_logger.debug("loadProps(): processDetailFrame.spid.plan.extraWhere.active='"+active+"'.");
+			_logger.debug("loadProps(): processDetailFrame.spid.plan.extraWhere.active='" + active + "'.");
 
 			active = Math.max(0, active);
 			for (int i=1; i<=count; i++)
 			{
-				String str = props.getProperty(base + "plan.extraWhere."+i).trim();
+				String str = props.getProperty(base + "plan.extraWhere." + i).trim();
 				comboBox_historyWhereSql.insertItemAt(str, i);
-				_logger.debug("loadProps(): processDetailFrame.spid.plan.extraWhere."+i+"='"+str+"'.");
+				_logger.debug("loadProps(): processDetailFrame.spid.plan.extraWhere." + i + "='" + str + "'.");
 			}
-			_logger.debug("loadProps(): Set active template to index="+active+".");
+			_logger.debug("loadProps(): Set active template to index=" + active + ".");
 			comboBox_historyWhereSql.setSelectedIndex(active);
 		}
 		else
@@ -2552,8 +2552,8 @@ public class ProcessDetailFrame
 //			pauseButton .setVisible(!isPaused);
 //			resumeButton.setVisible( isPaused);
 
-			activeStatementsPan.setToolTipText("<html><b>Last SQL Used To get ACTIVE SQL Statements </b><br><code><pre>"+refressProcess.getActiveStatementsSql() +"</pre></code></html>");
-			historyWhereSqlPanel.setToolTipText("<html><b>Last SQL Used To get HISTORY SQL Statements</b><br><code><pre>"+refressProcess.getHistoryStatementsSql()+"</pre></code></html>");
+			activeStatementsPan.setToolTipText("<html><b>Last SQL Used To get ACTIVE SQL Statements </b><br><code><pre>" + refressProcess.getActiveStatementsSql() + "</pre></code></html>");
+			historyWhereSqlPanel.setToolTipText("<html><b>Last SQL Used To get HISTORY SQL Statements</b><br><code><pre>" + refressProcess.getHistoryStatementsSql() + "</pre></code></html>");
 
 		}
 	}
@@ -2853,7 +2853,7 @@ public class ProcessDetailFrame
 	{
 //		text.setCaretPosition(0);
 
-		int start = text.getText().indexOf("(at line "+sqlLine+")");
+		int start = text.getText().indexOf("(at line " + sqlLine + ")");
 		int end = text.getText().indexOf("\n", start);
 		end += 1;
 
@@ -2879,7 +2879,7 @@ public class ProcessDetailFrame
 				Point pointAtPos = text.modelToView(start).getLocation();
 				pointAtPos.x = 0; // Always point to LEFT in the viewport/scrollbar
 				
-				_logger.debug("text.modelToView(start): "+ pointAtPos);
+				_logger.debug("text.modelToView(start): " + pointAtPos);
 				Container parent = text.getParent();
 				while ( parent != null )
 				{

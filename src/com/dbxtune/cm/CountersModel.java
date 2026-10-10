@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -630,7 +630,7 @@ implements Cloneable, ITableTooltip
 		if ( ! isValidCmName(getName(), isSystemCm()) )
 		{
 			String err = checkForValidCmName(getName());
-			throw new RuntimeException("Problems when creating cm '"+getName()+"'. "+err);
+			throw new RuntimeException("Problems when creating cm '" + getName() + "'. " + err);
 		}
 	}
 
@@ -660,7 +660,7 @@ implements Cloneable, ITableTooltip
 		}
 		catch (CloneNotSupportedException e)
 		{
-			_logger.warn("In '"+this.getName()+"', caught: "+e, e);
+			_logger.warn("In '" + this.getName() + "', caught: " + e, e);
 			c = new CountersModel();
 		}
 
@@ -794,9 +794,9 @@ implements Cloneable, ITableTooltip
 		for (int i = 0; i < tml.length; i++)
 		{
 			if (tml[i] instanceof TabularCntrPanel)
-				System.out.println("TableModelListener["+i+"] = "+((TabularCntrPanel)tml[i]).getPanelName());
+				System.out.println("TableModelListener[" + i + "] = " + ((TabularCntrPanel)tml[i]).getPanelName());
 			else
-				System.out.println("TableModelListener["+i+"] = "+tml[i]);
+				System.out.println("TableModelListener[" + i + "] = " + tml[i]);
 		}
 	}
 	@Override
@@ -1500,7 +1500,7 @@ implements Cloneable, ITableTooltip
 			if ( getTimeToNextPostponedRefresh() > 0 )
 			{
 				if (_logger.isDebugEnabled()) 
-					_logger.debug("Next refresh for the cm '"+getName()+"' will have to wait '"+TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh())+"'.");
+					_logger.debug("Next refresh for the cm '" + getName() + "' will have to wait '" + TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh()) + "'.");
 				refresh = false;
 			}
 
@@ -1543,7 +1543,7 @@ implements Cloneable, ITableTooltip
 			if ( getTimeToNextPostponedRefresh() > 0 )
 			{
 				if (_logger.isDebugEnabled()) 
-					_logger.debug("Next refresh for the cm '"+getName()+"' will have to wait '"+TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh())+"'.");
+					_logger.debug("Next refresh for the cm '" + getName() + "' will have to wait '" + TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh()) + "'.");
 				refresh = false;
 			}
 
@@ -1952,7 +1952,7 @@ implements Cloneable, ITableTooltip
 		else if (whatData == DATA_DIFF) data = _diffData;
 		else if (whatData == DATA_RATE) data = _rateData;
 		else
-			throw new RuntimeException("Only ABS, DIFF, or RATE data is available. you passed whatData="+whatData);
+			throw new RuntimeException("Only ABS, DIFF, or RATE data is available. you passed whatData=" + whatData);
 
 		if (data == null)
 			return null;
@@ -1989,7 +1989,7 @@ implements Cloneable, ITableTooltip
 	public void setClientProperty(String key, Object value)
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug(getName()+".setClientProperty(key='"+key+"', value='"+value+"') valueDataType='"+(value==null?"null":value.getClass().getName())+"'.");
+			_logger.debug(getName() + ".setClientProperty(key='" + key + "', value='" + value + "') valueDataType='" + (value==null?"null":value.getClass().getName()) + "'.");
 
 		_clientProperty.put(key, value);
 	}
@@ -2007,7 +2007,7 @@ implements Cloneable, ITableTooltip
 	{
 		Object obj = _clientProperty.get(key);
 		if (_logger.isDebugEnabled())
-			_logger.debug(getName()+".getClientProperty(key='"+key+"') returns='"+obj+"', type='"+(obj==null?"null":obj.getClass().getName())+"'.");
+			_logger.debug(getName() + ".getClientProperty(key='" + key + "') returns='" + obj + "', type='" + (obj==null?"null":obj.getClass().getName()) + "'.");
 		return obj;
 	}
 
@@ -2253,7 +2253,7 @@ implements Cloneable, ITableTooltip
 				if (strValLen > maxStrLen && !cellIsHtmlContent)
 				{
 					strVal =  strVal.substring(0, maxStrLen);
-					strVal += "...<br><font color='orange'><i><b>NOTE:</b> content is truncated after " + maxStrLen + " chars (actual length is "+strValLen+").</i></font>";
+					strVal += "...<br><font color='orange'><i><b>NOTE:</b> content is truncated after " + maxStrLen + " chars (actual length is " + strValLen + ").</i></font>";
 				}
 
 				// Specific column that we should NOT inject newlines into
@@ -2426,7 +2426,7 @@ implements Cloneable, ITableTooltip
 					if (strValLen > maxStrLen)
 					{
 						strVal =  strVal.substring(0, maxStrLen);
-						strVal += "...<br><font color='orange'><i><b>NOTE:</b> content is truncated after " + maxStrLen + " chars (actual length is "+strValLen+").</i></font>";
+						strVal += "...<br><font color='orange'><i><b>NOTE:</b> content is truncated after " + maxStrLen + " chars (actual length is " + strValLen + ").</i></font>";
 					}
 				}
 				
@@ -2462,7 +2462,7 @@ implements Cloneable, ITableTooltip
 		// Check if we are in REFRESH for this CM, then return NULL, otherwise we may get into "strange lock/deadlock" situations with EDT (if we fetch data from the CM using get{abs|diff|rate}xxx)
 		if (isInRefresh())
 		{
-			_logger.info("Skipping tooltip for cm="+getName()+", due to isInRefresh()=true. Otherwise we could run into strange locking situations with the Event Dispatch Thread");
+			_logger.info("Skipping tooltip for cm=" + getName() + ", due to isInRefresh()=true. Otherwise we could run into strange locking situations with the Event Dispatch Thread");
 //			return "Currently refreshing counters, tooltip is not available at this point, retry in a second.";
 			return "Sorry: tooltip isn't available, while counters are refreshed... Retry in a second.";
 		}
@@ -2791,16 +2791,16 @@ implements Cloneable, ITableTooltip
 
 		// Get UserDefined: graph 'category' properties
 		Configuration conf = Configuration.getCombinedConfiguration();
-		String udCategoryProp = this.getClass().getSimpleName()+".graph."+name+".category";
+		String udCategoryProp = this.getClass().getSimpleName() + ".graph." + name + ".category";
 		String udCategory     = conf.getProperty(udCategoryProp, null);
 		if (StringUtil.hasValue(udCategory))
 		{
-			_logger.info(getName() + ": Overriding/Reading default value of '"+graphCategory+"' for Graph Category using property '"+udCategoryProp+"' with value '"+udCategory+"'.");
+			_logger.info(getName() + ": Overriding/Reading default value of '" + graphCategory + "' for Graph Category using property '" + udCategoryProp + "' with value '" + udCategory + "'.");
 
 			try {
 				graphCategory = Category.valueOf(udCategory);
 			} catch (IllegalArgumentException e) {
-				_logger.error("Problems parsing Graph Category Value '"+udCategory+"' for the property '"+udCategoryProp+"'. known values: "+StringUtil.toCommaStr(Category.values())+". Caught: "+e);
+				_logger.error("Problems parsing Graph Category Value '" + udCategory + "' for the property '" + udCategoryProp + "'. known values: " + StringUtil.toCommaStr(Category.values()) + ". Caught: " + e);
 			}
 		}
 
@@ -2824,7 +2824,7 @@ implements Cloneable, ITableTooltip
 			
 			long execTime = System.currentTimeMillis() - startTime;
 			if (_logger.isDebugEnabled())
-				_logger.debug("addTrendGraph('"+name+"'): crTimeMs="+execTime);
+				_logger.debug("addTrendGraph('" + name + "'): crTimeMs=" + execTime);
 //System.out.println("addTrendGraph('"+name+"'): crTimeMs="+execTime);
 
 			addTrendGraph(name, tg, true);
@@ -2841,7 +2841,7 @@ implements Cloneable, ITableTooltip
 	private void addTrendGraph(String name, TrendGraph tg, boolean addToSummary)
 	{
 		if (_trendGraphs.containsKey(name))
-			throw new RuntimeException("Sorry the trend graph named '"+name+"' is already used, the name must be unique.");
+			throw new RuntimeException("Sorry the trend graph named '" + name + "' is already used, the name must be unique.");
 
 		_trendGraphs.put(name, tg);
 		
@@ -2871,7 +2871,7 @@ implements Cloneable, ITableTooltip
 	{
 		TrendGraph tg = getTrendGraph(name);
 		if (tg == null)
-			throw new RuntimeException("The TrendGraph '"+name+"', couldn't be found in the CounterModel '"+getName()+"'.");
+			throw new RuntimeException("The TrendGraph '" + name + "', couldn't be found in the CounterModel '" + getName() + "'.");
 
 		tg.setEnable(enable);
 	}
@@ -2880,7 +2880,7 @@ implements Cloneable, ITableTooltip
 	{
 		TrendGraph tg = getTrendGraph(name);
 		if (tg == null)
-			throw new RuntimeException("The TrendGraph '"+name+"', couldn't be found in the CounterModel '"+getName()+"'.");
+			throw new RuntimeException("The TrendGraph '" + name + "', couldn't be found in the CounterModel '" + getName() + "'.");
 
 		return tg.isGraphEnabled();
 	}
@@ -3006,14 +3006,14 @@ implements Cloneable, ITableTooltip
 				else if (op.equals("absSum"))        data = this.getAbsValueSum(colName);
 				else
 				{
-					_logger.warn("Graph named '"+graphName+"' has unknown operator '"+op+"' for column '"+colName+"', cm='"+this.getName()+"'.");
+					_logger.warn("Graph named '" + graphName + "' has unknown operator '" + op + "' for column '" + colName + "', cm='" + this.getName() + "'.");
 				}
 
 				dataArray[i] = data;
 			}
 			if (_logger.isDebugEnabled())
 			{
-				String debugStr = "Graph named '" + graphName + "', cm='"+this.getName()+"', type 'byCol' add data: ";
+				String debugStr = "Graph named '" + graphName + "', cm='" + this.getName() + "', type 'byCol' add data: ";
 				for (int i=0; i<_graphDataColNames.length; i++)
 				{
 					debugStr += _graphDataColNames[i] + "='" + dataArray[i] + "', ";
@@ -3053,7 +3053,7 @@ implements Cloneable, ITableTooltip
 					else if (op.equals("absVal"))  labelObj = this.getAbsPkValue(i);
 				}
 				if (labelObj == null)
-					labelObj = "row-"+i;
+					labelObj = "row-" + i;
 
 				// Get data
 				if      (op.equals("rateVal")) data = this.getRateValueAsDouble(i, colName);
@@ -3061,7 +3061,7 @@ implements Cloneable, ITableTooltip
 				else if (op.equals("absVal"))  data = this.getAbsValueAsDouble(i,  colName);
 				else
 				{
-					_logger.warn("Graph named '"+graphName+"' has unknown operator '"+op+"' for column '"+colName+"', cm='"+this.getName()+"'.");
+					_logger.warn("Graph named '" + graphName + "' has unknown operator '" + op + "' for column '" + colName + "', cm='" + this.getName() + "'.");
 				}
 
 				 // label: remove any PK delimiter at the end
@@ -3075,10 +3075,10 @@ implements Cloneable, ITableTooltip
 
 			if (_logger.isDebugEnabled())
 			{
-				_logger.debug("Graph named '" + graphName + "', cm='"+this.getName()+"', type 'byRow' add data: ");;
+				_logger.debug("Graph named '" + graphName + "', cm='" + this.getName() + "', type 'byRow' add data: ");;
 				for (int i=0; i<dataArray.length; i++)
 				{
-					_logger.debug(" :::: row="+i+", data='"+dataArray[i]+"', label='"+labelArray[i]+"'.");
+					_logger.debug(" :::: row=" + i + ", data='" + dataArray[i] + "', label='" + labelArray[i] + "'.");
 				}
 			}
 
@@ -3087,7 +3087,7 @@ implements Cloneable, ITableTooltip
 		}
 		else
 		{
-			_logger.warn("Unknown graph type("+_graphType+").");
+			_logger.warn("Unknown graph type(" + _graphType + ").");
 		}
 	} // end: method
 
@@ -3109,7 +3109,7 @@ implements Cloneable, ITableTooltip
 		
 		if (getRowCount() == 0)
 		{
-			_logger.debug("Current sample has 0 rows for CM '"+getName()+"' when trying to update it's graphs. Skipping updateGraphData().");
+			_logger.debug("Current sample has 0 rows for CM '" + getName() + "' when trying to update it's graphs. Skipping updateGraphData().");
 			return;
 		}
 
@@ -3121,7 +3121,7 @@ implements Cloneable, ITableTooltip
 				
 				//System.out.println("cm='"+StringUtil.left(this.getName(),25)+"', _trendGraphData="+tgdp);
 				if (_logger.isDebugEnabled())
-					_logger.debug("cm='"+StringUtil.left(this.getName(),25)+"', _trendGraphData="+tgdp);
+					_logger.debug("cm='" + StringUtil.left(this.getName(),25) + "', _trendGraphData=" + tgdp);
 
 				// Check if history is ENABLED for this TrendGraph
 				if (isGraphDataHistoryEnabled(tgdp.getName()))
@@ -3315,7 +3315,7 @@ implements Cloneable, ITableTooltip
 	private void addTrendGraphData(String name, TrendGraphDataPoint tgdp)
 	{
 		if (_trendGraphsData.containsKey(name))
-			throw new RuntimeException("Sorry the trend graph named '"+name+"' is already used, the name must be unique.");
+			throw new RuntimeException("Sorry the trend graph named '" + name + "' is already used, the name must be unique.");
 
 		_trendGraphsData.put(name, tgdp);
 	}
@@ -3623,7 +3623,7 @@ implements Cloneable, ITableTooltip
 	// FIXME: maybe declare this method and class as abstract, instead of throwing the exception.
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
-		throw new UnsupportedOperationException("The method CountersModel.getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
+		throw new UnsupportedOperationException("The method CountersModel.getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='" + getName() + "'.");
 	}
 
 	public String getSqlInitForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
@@ -3654,7 +3654,7 @@ implements Cloneable, ITableTooltip
 //	}
 	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
-		throw new UnsupportedOperationException("The method CountersModel.getPkForVersion(long srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
+		throw new UnsupportedOperationException("The method CountersModel.getPkForVersion(long srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='" + getName() + "'.");
 	}
 
 //	public String[] getDependsOnConfigForVersion(DbxConnection conn, long srvVersion, boolean isClusterEnabled)
@@ -3887,12 +3887,12 @@ implements Cloneable, ITableTooltip
 					
 					if (_logger.isDebugEnabled())
 					{
-						_logger.debug("##### BEGIN doSqlInit(send sql), batchCounter="+batchCounter+" ############################### "+ getName());
+						_logger.debug("##### BEGIN doSqlInit(send sql), batchCounter=" + batchCounter + " ############################### " + getName());
 						_logger.debug(sql);
-						_logger.debug("##### END   doSqlInit(send sql), batchCounter="+batchCounter+" ############################### "+ getName());
+						_logger.debug("##### END   doSqlInit(send sql), batchCounter=" + batchCounter + " ############################### " + getName());
 						_logger.debug("");
 					}
-					_logger.info(getName()+": doSqlInit() sending statement: "+sql.trim());
+					_logger.info(getName() + ": doSqlInit() sending statement: " + sql.trim());
 
 					try
 					{
@@ -3902,7 +3902,7 @@ implements Cloneable, ITableTooltip
 					}
 					catch (SQLException e)
 					{
-						_logger.warn("Problem when executing the 'init' SQL statement: ErrorCode="+e.getErrorCode()+", SQL="+sql, e);
+						_logger.warn("Problem when executing the 'init' SQL statement: ErrorCode=" + e.getErrorCode() + ", SQL=" + sql, e);
 						//return false;
 					}
 					batchCounter++;
@@ -3911,7 +3911,7 @@ implements Cloneable, ITableTooltip
 			}
 			catch (IOException ex) 
 			{
-				_logger.error("While reading the input SQL 'go' String, caught: "+ex, ex);
+				_logger.error("While reading the input SQL 'go' String, caught: " + ex, ex);
 			}
 		}
 		return true;
@@ -3960,12 +3960,12 @@ implements Cloneable, ITableTooltip
 					
 					if (_logger.isDebugEnabled())
 					{
-						_logger.debug("##### BEGIN doSqlClose(send sql), batchCounter="+batchCounter+" ############################### "+ getName());
+						_logger.debug("##### BEGIN doSqlClose(send sql), batchCounter=" + batchCounter + " ############################### " + getName());
 						_logger.debug(sql);
-						_logger.debug("##### END   doSqlClose(send sql), batchCounter="+batchCounter+" ############################### "+ getName());
+						_logger.debug("##### END   doSqlClose(send sql), batchCounter=" + batchCounter + " ############################### " + getName());
 						_logger.debug("");
 					}
-					_logger.info(getName()+": doSqlClose() sending statement: "+sql.trim());
+					_logger.info(getName() + ": doSqlClose() sending statement: " + sql.trim());
 
 					try
 					{
@@ -3975,7 +3975,7 @@ implements Cloneable, ITableTooltip
 					}
 					catch (SQLException e)
 					{
-						_logger.warn("Problem when executing the 'close' SQL statement: ErrorCode="+e.getErrorCode()+", SQL="+sql, e);
+						_logger.warn("Problem when executing the 'close' SQL statement: ErrorCode=" + e.getErrorCode() + ", SQL=" + sql, e);
 						//return;// false;
 					}
 					batchCounter++;
@@ -3984,7 +3984,7 @@ implements Cloneable, ITableTooltip
 			}
 			catch (IOException ex) 
 			{
-				_logger.error("While reading the input SQL 'go' String, caught: "+ex, ex);
+				_logger.error("While reading the input SQL 'go' String, caught: " + ex, ex);
 			}
 			finally
 			{
@@ -4064,14 +4064,14 @@ implements Cloneable, ITableTooltip
 
 			if (_logger.isDebugEnabled()) 
 				_logger.debug(getName() + ": should be HIDDEN.");
-			_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"'. The following role(s) were needed '"+StringUtil.toCommaStr(dependsOnRole)+"', and you do not have the following role(s) '"+didNotHaveRoles+"'.");
+			_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '" + getDisplayName() + "'. The following role(s) were needed '" + StringUtil.toCommaStr(dependsOnRole) + "', and you do not have the following role(s) '" + didNotHaveRoles + "'.");
 
-			setActive(false, "This info is only available if you have '"+StringUtil.toCommaStr(dependsOnRole)+"' role(s) enabled.\nYou are missing the following role(s) '"+didNotHaveRoles+"'.");
+			setActive(false, "This info is only available if you have '" + StringUtil.toCommaStr(dependsOnRole) + "' role(s) enabled.\nYou are missing the following role(s) '" + didNotHaveRoles + "'.");
 
 			TabularCntrPanel tcp = getTabPanel();
 			if (tcp != null)
 			{
-				tcp.setToolTipText("<html>This tab will only be visible if you have '"+StringUtil.toCommaStr(dependsOnRole)+"' role(s) enabled.<br>You are missing the following role(s) '"+didNotHaveRoles+"'.</html>");
+				tcp.setToolTipText("<html>This tab will only be visible if you have '" + StringUtil.toCommaStr(dependsOnRole) + "' role(s) enabled.<br>You are missing the following role(s) '" + didNotHaveRoles + "'.</html>");
 			}
 			return false;
 		}
@@ -4096,7 +4096,7 @@ implements Cloneable, ITableTooltip
 	public boolean checkDependsOnConfig(DbxConnection conn, String configNameVal)
 	{
 		if (configNameVal == null || (configNameVal != null && configNameVal.equals("")) )
-			throw new IllegalArgumentException("checkDependsOnConfig(): configNameVal='"+configNameVal+"' must be a value.");
+			throw new IllegalArgumentException("checkDependsOnConfig(): configNameVal='" + configNameVal + "' must be a value.");
 
 		String[] configNameArr = configNameVal.split("=");
 		String configName    = configNameVal;
@@ -4106,7 +4106,7 @@ implements Cloneable, ITableTooltip
 
 		int configHasValue = AseConnectionUtils.getAseConfigRunValueNoEx(conn, configName);
 		if (_logger.isDebugEnabled()) 
-			_logger.debug("Checking for DBMS Configuration '"+configName+"', which has value '"+configHasValue+"'. Option to re-configure to value '"+reConfigValue+"' if not set.");
+			_logger.debug("Checking for DBMS Configuration '" + configName + "', which has value '" + configHasValue + "'. Option to re-configure to value '" + reConfigValue + "' if not set.");
 
 		// In NO_GUI mode, we might want to auto configure monitoring...
 		boolean doReconfigure = false;
@@ -4132,11 +4132,11 @@ implements Cloneable, ITableTooltip
 			boolean hasSaRole = AseConnectionUtils.hasRole(conn, AseConnectionUtils.SA_ROLE);
 			if ( ! hasSaRole )
 			{
-				_logger.warn("Can not adjust the configuration '"+configName+"' to value '"+reConfigValue+"'. To do that the connected user needs to have '"+AseConnectionUtils.SA_ROLE+"'.");
+				_logger.warn("Can not adjust the configuration '" + configName + "' to value '" + reConfigValue + "'. To do that the connected user needs to have '" + AseConnectionUtils.SA_ROLE + "'.");
 			}
 			else
 			{
-				_logger.info("DBMS Configuration '"+configName+"' for Counters Model '"+getName()+"', named '"+getDisplayName()+"', will be reconfigured from value '"+configHasValue+"' to value '"+reConfigValue+"'.");
+				_logger.info("DBMS Configuration '" + configName + "' for Counters Model '" + getName() + "', named '" + getDisplayName() + "', will be reconfigured from value '" + configHasValue + "' to value '" + reConfigValue + "'.");
 
 				try
 				{
@@ -4144,12 +4144,12 @@ implements Cloneable, ITableTooltip
 				}
 				catch (SQLException e)
 				{
-					_logger.error("Problems setting DBMS configuration '"+configName+"' to '"+reConfigValue+"'. Caught: "+AseConnectionUtils.sqlExceptionToString(e));
+					_logger.error("Problems setting DBMS configuration '" + configName + "' to '" + reConfigValue + "'. Caught: " + AseConnectionUtils.sqlExceptionToString(e));
 				}
 
 				configHasValue = AseConnectionUtils.getAseConfigRunValueNoEx(conn, configName);
 				if (_logger.isDebugEnabled()) 
-					_logger.debug("After re-config, the DBMS Configuration '"+configName+"', now has value '"+configHasValue+"'.");
+					_logger.debug("After re-config, the DBMS Configuration '" + configName + "', now has value '" + configHasValue + "'.");
 			}
 		}
 
@@ -4163,7 +4163,7 @@ implements Cloneable, ITableTooltip
 		{
 			if (isNonConfiguredMonitoringAllowed())
 			{
-				_logger.warn("Non Configured Monitoring is allowed: When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in DBMS Version "+getServerVersionStr()+", I found that '"+configName+"' wasn't configured (which is done with: sp_configure '"+configName+"'), so counters in '"+getDisplayName()+"' may not be relyable.");
+				_logger.warn("Non Configured Monitoring is allowed: When trying to initialize Counters Model '" + getName() + "', named '" + getDisplayName() + "' in DBMS Version " + getServerVersionStr() + ", I found that '" + configName + "' wasn't configured (which is done with: sp_configure '" + configName + "'), so counters in '" + getDisplayName() + "' may not be relyable.");
 				return true;
 			}
 
@@ -4172,19 +4172,19 @@ implements Cloneable, ITableTooltip
 			String reconfigOptionStr = " or using the nogui mode: --reconfigure switch";
 			if (reConfigValue == null)
 				reconfigOptionStr = "";
-			_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in DBMS Version "+getServerVersionStr()+", I found that '"+configName+"' wasn't configured (which is done with: sp_configure '"+configName+"'"+reconfigOptionStr+"), so monitoring information about '"+getDisplayName()+"' will NOT be enabled.");
+			_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '" + getDisplayName() + "' in DBMS Version " + getServerVersionStr() + ", I found that '" + configName + "' wasn't configured (which is done with: sp_configure '" + configName + "'" + reconfigOptionStr + "), so monitoring information about '" + getDisplayName() + "' will NOT be enabled.");
 
 			String problemDesc = getProblemDesc();
 			if (problemDesc == null)
 				problemDesc = "";
 
-			problemDesc += "sp_configure '"+configName+"' has NOT been enabled.\n";
+			problemDesc += "sp_configure '" + configName + "' has NOT been enabled.\n";
 			setActive(false, problemDesc);
 
 			TabularCntrPanel tcp = getTabPanel();
 			if (tcp != null)
 			{
-				tcp.setToolTipText("This tab will only be visible if: sp_configure '"+configName+"' has been enabled.");
+				tcp.setToolTipText("This tab will only be visible if: sp_configure '" + configName + "' has been enabled.");
 			}
 			return false;
 		}
@@ -4364,7 +4364,7 @@ implements Cloneable, ITableTooltip
 		{
 			if (_logger.isDebugEnabled())
 				_logger.debug(getName() + ": should be HIDDEN.");
-			_logger.warn("When trying to initialize Counters Model '" + getName() + ")', named '" + getDisplayName() + "' in DBMS Cluster Edition Version " + getServerVersionStr()+", I need at least DBMS Cluster Edition Version "+getDependsOnCeVersionStr() + " for that.");
+			_logger.warn("When trying to initialize Counters Model '" + getName() + ")', named '" + getDisplayName() + "' in DBMS Cluster Edition Version " + getServerVersionStr() + ", I need at least DBMS Cluster Edition Version " + getDependsOnCeVersionStr() + " for that.");
 
 			setActive(false, "This info is only available if DBMS Cluster Edition Server Version is above " + getDependsOnCeVersionStr());
 
@@ -4407,7 +4407,7 @@ implements Cloneable, ITableTooltip
 		long srvVersion = AseConnectionUtils.getAseVersionNumber(conn);
 		if (srvVersion < needSrvVersion)
 		{
-			_logger.warn("When trying to checking stored procedure '"+procName+"' in '"+dbname+"' the Current DBMS Version is to low '"+Ver.versionNumToStr(srvVersion)+"', this procedure needs DBMS Version '"+Ver.versionNumToStr(needSrvVersion)+"' to install.");
+			_logger.warn("When trying to checking stored procedure '" + procName + "' in '" + dbname + "' the Current DBMS Version is to low '" + Ver.versionNumToStr(srvVersion) + "', this procedure needs DBMS Version '" + Ver.versionNumToStr(needSrvVersion) + "' to install.");
 			return false;
 		}
 
@@ -4418,9 +4418,9 @@ implements Cloneable, ITableTooltip
 		if (crDate == null || ( crDate != null && crDate.getTime() < procDateThreshold.getTime()) )
 		{
 			if (crDate == null)
-				_logger.info("Checking for stored procedure '"+procName+"' in '"+dbname+"', which was NOT found.");
+				_logger.info("Checking for stored procedure '" + procName + "' in '" + dbname + "', which was NOT found.");
 			else
-				_logger.info("Checking for stored procedure '"+procName+"' in '"+dbname+"', which was to old, crdate was '"+crDate+"', re-creation threshold date is '"+procDateThreshold+"'.");
+				_logger.info("Checking for stored procedure '" + procName + "' in '" + dbname + "', which was to old, crdate was '" + crDate + "', re-creation threshold date is '" + procDateThreshold + "'.");
 
 			boolean hasProc = false;
 
@@ -4433,7 +4433,7 @@ implements Cloneable, ITableTooltip
 
 			if ( ! hasRole )
 			{
-				_logger.warn("Can not (re)create procedure '"+procName+"' in '"+dbname+"', for doing that the connected user needs to have '"+needsRoleToRecreate+"'.");
+				_logger.warn("Can not (re)create procedure '" + procName + "' in '" + dbname + "', for doing that the connected user needs to have '" + needsRoleToRecreate + "'.");
 			}
 			else
 			{
@@ -4441,14 +4441,14 @@ implements Cloneable, ITableTooltip
 				try
 				{
 					script = new AseSqlScript(conn, 30); // 30 sec timeout
-					_logger.info("Creating procedure '"+procName+"' in '"+dbname+"'.");
-					script.setMsgPrefix(scriptName+": ");
+					_logger.info("Creating procedure '" + procName + "' in '" + dbname + "'.");
+					script.setMsgPrefix(scriptName + ": ");
 					script.execute(scriptLocation, scriptName);
 					hasProc = true;
 				}
 				catch (SQLException e) 
 				{
-					_logger.error("Problem loading the script '"+scriptName+"'.", e);
+					_logger.error("Problem loading the script '" + scriptName + "'.", e);
 				}
 				finally
 				{
@@ -4459,24 +4459,24 @@ implements Cloneable, ITableTooltip
 
 			if ( ! hasProc )
 			{
-				String msg = "Missing stored proc '"+procName+"' in database '"+dbname+"' please create it.";
+				String msg = "Missing stored proc '" + procName + "' in database '" + dbname + "' please create it.";
 				setActive(false, msg);
 
 				if (_logger.isDebugEnabled()) 
 					_logger.debug(getName() + ": should be HIDDEN.");
 //				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in DBMS Version "+getServerVersion()+", "+msg+" (connect with a user that has '"+needsRoleToRecreate+"' or load the proc from '$"+DbxTune.getInstance().getAppHomeEnvName()+"/classes' or unzip dbxtune.jar. under the class '"+scriptLocation.getClass().getName()+"' you will find the script '"+scriptName+"').");
-				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in DBMS Version "+getServerVersion()+", "+msg+" (connect with a user that has '"+needsRoleToRecreate+"' or load the proc from '$DBXTUNE_HOME/classes' or unzip dbxtune.jar. under the class '"+scriptLocation.getClass().getName()+"' you will find the script '"+scriptName+"').");
+				_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '" + getDisplayName() + "' in DBMS Version " + getServerVersion() + ", " + msg + " (connect with a user that has '" + needsRoleToRecreate + "' or load the proc from '$DBXTUNE_HOME/classes' or unzip dbxtune.jar. under the class '" + scriptLocation.getClass().getName() + "' you will find the script '" + scriptName + "').");
 
 				TabularCntrPanel tcp = getTabPanel();
 				if (tcp != null)
 				{
-					tcp.setToolTipText("This tab will only be visible if the stored procedure '"+procName+"' exists in '"+dbname+"'.");
+					tcp.setToolTipText("This tab will only be visible if the stored procedure '" + procName + "' exists in '" + dbname + "'.");
 				}
 			}
 		}
 		else
 		{
-			_logger.info("No Need to re-create procedure '"+procName+"' in '"+dbname+"', creation date was '"+crDate+"', re-creation threshold date is '"+procDateThreshold+"'.");
+			_logger.info("No Need to re-create procedure '" + procName + "' in '" + dbname + "', creation date was '" + crDate + "', re-creation threshold date is '" + procDateThreshold + "'.");
 		}
 		return true;
 	}
@@ -4781,10 +4781,10 @@ implements Cloneable, ITableTooltip
 		{
 			if      (e instanceof PcsSavedException)            { /*do nothing*/ }
 			else if (e instanceof LostConnectionException)      { /*do nothing*/ }
-			else if (e instanceof NoValidRowsInSample)          _logger.debug("setSampleException() for cm '"+getName()+"'. " + e.toString()); // do not pass the "stacktrace" in the errorlog
-			else if (e instanceof DependsOnCmPostponeException) _logger.info ("setSampleException() for cm '"+getName()+"'. " + e.toString()); // do not pass the "stacktrace" in the errorlog
-			else if (e instanceof SQLException)                 _logger.info ("setSampleException() for cm '"+getName()+"'. " + e.toString()); // do not pass the "stacktrace" in the errorlog
-			else                                                _logger.warn ("setSampleException() for cm '"+getName()+"'. " + e.toString(), e);
+			else if (e instanceof NoValidRowsInSample)          _logger.debug("setSampleException() for cm '" + getName() + "'. " + e.toString()); // do not pass the "stacktrace" in the errorlog
+			else if (e instanceof DependsOnCmPostponeException) _logger.info ("setSampleException() for cm '" + getName() + "'. " + e.toString()); // do not pass the "stacktrace" in the errorlog
+			else if (e instanceof SQLException)                 _logger.info ("setSampleException() for cm '" + getName() + "'. " + e.toString()); // do not pass the "stacktrace" in the errorlog
+			else                                                _logger.warn ("setSampleException() for cm '" + getName() + "'. " + e.toString(), e);
 		}
 	}
 
@@ -4940,7 +4940,7 @@ implements Cloneable, ITableTooltip
 						if (colname.equals(_diffDissColumns[j]))
 							found = true;
 					}
-					_logger.trace(_name+" col["+i+"]="+found+", colname="+colname);
+					_logger.trace(_name + " col[" + i + "]=" + found + ", colname=" + colname);
 					_isDiffDissCol[i] = found;
 				}
 			}
@@ -4961,7 +4961,7 @@ implements Cloneable, ITableTooltip
 						if (colname.equals(_diffColumns[j]))
 							found = true;
 					}
-					_logger.trace(_name+" col["+i+"]="+found+", colname="+colname);
+					_logger.trace(_name + " col[" + i + "]=" + found + ", colname=" + colname);
 					_isDiffCol[i] = found;
 				}
 			}
@@ -4983,7 +4983,7 @@ implements Cloneable, ITableTooltip
 						if (colname.equals(_pctColumns[j]))
 							found = true;
 					}
-					_logger.trace(_name+" col["+i+"]="+found+", colname="+colname);
+					_logger.trace(_name + " col[" + i + "]=" + found + ", colname=" + colname);
 					_isPctCol[i] = found;
 				}
 			}
@@ -5004,9 +5004,9 @@ implements Cloneable, ITableTooltip
 		long timeLimit = 5000;
 		if (timeDiff > timeLimit)
 		{
-			String msg = "The cm '"+this.getName()+"' depends on '"+cm.getName()+"', which last refresh time was '"+timeDiff+"' ms ago. " +
-					"Next refresh time for '"+cm.getName()+"' is in "+TimeUtils.msToTimeStr("%HH:%MM:%SS", cm.getTimeToNextPostponedRefresh())+". " +
-					"The limit has to be less than '"+timeLimit+"' ms.";
+			String msg = "The cm '" + this.getName() + "' depends on '" + cm.getName() + "', which last refresh time was '" + timeDiff + "' ms ago. " +
+					"Next refresh time for '" + cm.getName() + "' is in " + TimeUtils.msToTimeStr("%HH:%MM:%SS", cm.getTimeToNextPostponedRefresh()) + ". " +
+					"The limit has to be less than '" + timeLimit + "' ms.";
 			//_logger.warn(msg);
 			throw new DependsOnCmPostponeException(msg);
 		}
@@ -5024,7 +5024,7 @@ implements Cloneable, ITableTooltip
 			CountersModel cm = getCounterController().getCmByName(cmName);
 			if (cm == null)
 			{
-				String msg = "The cm '"+this.getName()+"' depends on '"+cmName+"', which can't be found.";
+				String msg = "The cm '" + this.getName() + "' depends on '" + cmName + "', which can't be found.";
 				//_logger.error(msg);
 				throw new Exception(msg);
 			}
@@ -5073,7 +5073,7 @@ implements Cloneable, ITableTooltip
 			CountersModel cm = getCounterController().getCmByName(cmName);
 			if (cm == null)
 			{
-				String msg = "The cm '"+this.getName()+"' wants to check if cm '"+cmName+"' needs to be refreshed, bat that CM ("+cmName+") can't be found.";
+				String msg = "The cm '" + this.getName() + "' wants to check if cm '" + cmName + "' needs to be refreshed, bat that CM (" + cmName + ") can't be found.";
 				_logger.warn(msg);
 			}
 			else
@@ -5165,7 +5165,7 @@ implements Cloneable, ITableTooltip
     		if (getTimeToNextPostponedRefresh() > 0)
     		{
     			if (_logger.isDebugEnabled()) 
-    				_logger.debug("Next refresh for the cm '"+getName()+"' will have to wait '"+TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh())+"'.");
+    				_logger.debug("Next refresh for the cm '" + getName() + "' will have to wait '" + TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh()) + "'.");
     			// NOTE: should we do setValidSampleData(false) here or not?, I think so...
     			setValidSampleData(false);
     			return;
@@ -5225,8 +5225,8 @@ implements Cloneable, ITableTooltip
 			//       so any implemeters of refreshGetData(conn) need to think a bit...
 			if ( ! getCounterController().isMonConnected(true, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
 			{
-				_logger.warn("When refreshing the data for cm '"+getName()+"', we Caught an Exception and we are no longer connected to the monitored server. Exception="+e);
-				throw new LostConnectionException("When refreshing the data for cm '"+getName()+"', we Caught an Exception and we are no longer connected to the monitored server. Caught: "+e, e);
+				_logger.warn("When refreshing the data for cm '" + getName() + "', we Caught an Exception and we are no longer connected to the monitored server. Exception=" + e);
+				throw new LostConnectionException("When refreshing the data for cm '" + getName() + "', we Caught an Exception and we are no longer connected to the monitored server. Caught: " + e, e);
 			}
 
 			throw e;
@@ -5306,7 +5306,7 @@ implements Cloneable, ITableTooltip
 			return -1;
 
 		if (_logger.isDebugEnabled())
-			_logger.debug("Refreshing Counters for '"+getName()+"'.");
+			_logger.debug("Refreshing Counters for '" + getName() + "'.");
 
 		// Start the timer which will be kicked of after X milliseconds
 		// This so we can do something if the refresh takes to long time
@@ -5471,9 +5471,9 @@ implements Cloneable, ITableTooltip
 			// If we got an exception, go and check if we are still connected
 			if ( ! getCounterController().isMonConnected(true, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
 			{
-				_logger.warn("When refreshing the data for cm '"+getName()+"', we Caught an Exception and we are no longer connected to the monitored server. Exception="+e);
+				_logger.warn("When refreshing the data for cm '" + getName() + "', we Caught an Exception and we are no longer connected to the monitored server. Exception=" + e);
 				//return -1;
-				throw new LostConnectionException("When refreshing the data for cm '"+getName()+"', we Caught an Exception and we are no longer connected to the monitored server. Caught: "+e, e);
+				throw new LostConnectionException("When refreshing the data for cm '" + getName() + "', we Caught an Exception and we are no longer connected to the monitored server. Caught: " + e, e);
 			}
 
 			// Msg 10353:               You must have any of the following role(s) to execute this command/procedure: 'mon_role' . Please contact a user with the appropriate role for help.
@@ -5514,7 +5514,7 @@ implements Cloneable, ITableTooltip
 								"</html>", 
 								JOptionPane.ERROR_MESSAGE);
 //						JDialog dialog = optionPane.createDialog(MainFrame.getInstance(), "Monitoring has been disabled @ "+dateStr);
-						JDialog dialog = optionPane.createDialog((getGuiController() == null ? null : getGuiController().getGuiHandle()), "Monitoring has been disabled @ "+dateStr);
+						JDialog dialog = optionPane.createDialog((getGuiController() == null ? null : getGuiController().getGuiHandle()), "Monitoring has been disabled @ " + dateStr);
 						dialog.setModal(false);
 						dialog.setVisible(true);
 
@@ -5526,7 +5526,7 @@ implements Cloneable, ITableTooltip
 				else
 				{
 					// Maybe downgrade this to a INFO message in a later release...
-					_logger.warn("Trying to Re-Initializing Performance Counter '"+getDisplayName()+"' shortName='"+getName()+"', After receiving MsgNumber '"+errorCode+"', with Description '"+errorMsg+"'.");
+					_logger.warn("Trying to Re-Initializing Performance Counter '" + getDisplayName() + "' shortName='" + getName() + "', After receiving MsgNumber '" + errorCode + "', with Description '" + errorMsg + "'.");
 	
 					initSql(conn);
 	
@@ -5537,7 +5537,7 @@ implements Cloneable, ITableTooltip
 					}
 					catch (Exception ex2)
 					{
-						_logger.warn("Problems Re-Initializing Performance Counter '"+getDisplayName()+"' shortName='"+getName()+"', After MsgNumber '"+errorCode+"', with Description '"+errorMsg+"', Caught: "+ex2, ex2);
+						_logger.warn("Problems Re-Initializing Performance Counter '" + getDisplayName() + "' shortName='" + getName() + "', After MsgNumber '" + errorCode + "', with Description '" + errorMsg + "', Caught: " + ex2, ex2);
 					}
 				}
 			}
@@ -5551,10 +5551,10 @@ implements Cloneable, ITableTooltip
 				// - checking/dropping at the start of the SQL Batch...
 				// - dropping the tables at the end of this method: dropTempTables()
 				_aseError_2714_count++;
-				_logger.info("Temp Table Creation error for cm '"+getName()+"'. Setting _aseError_2714_count="+_aseError_2714_count+"' after "+_aseError_2714_actionThreshold+" errors an action will be taken, which is 're-connect'.");
+				_logger.info("Temp Table Creation error for cm '" + getName() + "'. Setting _aseError_2714_count=" + _aseError_2714_count + "' after " + _aseError_2714_actionThreshold + " errors an action will be taken, which is 're-connect'.");
 				if (_aseError_2714_count > _aseError_2714_actionThreshold)
 				{
-					_logger.warn("Temp Table Creation error for CM='"+getName()+"'. The connection is marked for 're-connect'. After all CM's has been refreshed the DBMS connection will be re-established. (_aseError_2714_count="+_aseError_2714_count+", _aseError_2714_actionThreshold="+_aseError_2714_actionThreshold+").");
+					_logger.warn("Temp Table Creation error for CM='" + getName() + "'. The connection is marked for 're-connect'. After all CM's has been refreshed the DBMS connection will be re-established. (_aseError_2714_count=" + _aseError_2714_count + ", _aseError_2714_actionThreshold=" + _aseError_2714_actionThreshold + ").");
 
 					// Mark the connection...
 					conn.setConnectionMark(DbxConnection.MarkTypes.MarkForReConnect);
@@ -5979,7 +5979,7 @@ implements Cloneable, ITableTooltip
 
 					// Set: Info fields
 					if (getGuiController() != null)
-						getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "GUI refresh of '"+_displayName+"'");
+						getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "GUI refresh of '" + _displayName + "'");
 
 					try
 					{
@@ -5987,7 +5987,7 @@ implements Cloneable, ITableTooltip
 						{
 							//System.out.println(getName()+":-fireTable-STRUCTURE-CHANGED-");
 							if (_logger.isDebugEnabled())
-								_logger.debug(getName()+":------doFireTableStructureChanged------");
+								_logger.debug(getName() + ":------doFireTableStructureChanged------");
 							fireTableStructureChanged();
 							
 							// Hmm do I need to do this here...
@@ -5997,20 +5997,20 @@ implements Cloneable, ITableTooltip
 						{
 							//System.out.println(getName()+":-fireTable-STRUCTURE-CHANGED-");
 							if (_logger.isDebugEnabled()) 
-								_logger.debug(getName()+":------doFireTableStructureChanged------");
+								_logger.debug(getName() + ":------doFireTableStructureChanged------");
 							fireTableStructureChanged();
 						}
 						else
 						{
 							//System.out.println(getName()+":-fireTableData-CHANGED-");
 							if (_logger.isDebugEnabled()) 
-								_logger.debug(getName()+":-fireTableData-CHANGED-");
+								_logger.debug(getName() + ":-fireTableData-CHANGED-");
 							fireTableDataChanged();
 						}
 					}
 					catch(Throwable t)
 					{
-						_logger.warn("Problem when doing fireTableStructureChanged() or fireTableDataChanged(), for the CM='"+thisCm.getName()+"'", t);
+						_logger.warn("Problem when doing fireTableStructureChanged() or fireTableDataChanged(), for the CM='" + thisCm.getName() + "'", t);
 					}
 
 					// reset: Info fields
@@ -6086,17 +6086,17 @@ implements Cloneable, ITableTooltip
 	{
 		for (String tabname : _dropTempTableList)
 		{
-			_logger.info("Trying to drop temporary table '"+tabname+"' after we have received an SQLException in refreshGetData()");
+			_logger.info("Trying to drop temporary table '" + tabname + "' after we have received an SQLException in refreshGetData()");
 
 			try
 			{
 				Statement stmnt = conn.createStatement();
-				stmnt.executeUpdate("drop table "+tabname);
+				stmnt.executeUpdate("drop table " + tabname);
 				stmnt.close();
 			}
 			catch(SQLException e)
 			{
-				_logger.warn("Problems drop temporary table '"+tabname+"'. Msg="+e.getErrorCode()+", "+e.getMessage());
+				_logger.warn("Problems drop temporary table '" + tabname + "'. Msg=" + e.getErrorCode() + ", " + e.getMessage());
 			}
 		}
 	}
@@ -6123,7 +6123,7 @@ implements Cloneable, ITableTooltip
 	{
 		for (String cmd : _cleanupCmdsOnExceptionList)
 		{
-			_logger.info("Trying execute cmd '"+cmd+"' after we have received an SQLException in refreshGetData()");
+			_logger.info("Trying execute cmd '" + cmd + "' after we have received an SQLException in refreshGetData()");
 
 			try
 			{
@@ -6133,7 +6133,7 @@ implements Cloneable, ITableTooltip
 			}
 			catch(SQLException e)
 			{
-				_logger.warn("Problems executing '"+cmd+"'. Msg="+e.getErrorCode()+", "+e.getMessage());
+				_logger.warn("Problems executing '" + cmd + "'. Msg=" + e.getErrorCode() + ", " + e.getMessage());
 			}
 		}
 	}
@@ -6154,7 +6154,7 @@ implements Cloneable, ITableTooltip
 	{
 //		return CounterSample.computeDiffCnt(prevSample, newSample, deletedRows, pkCols, isDiffCol, isCountersCleared);
 		// Initialize result structure
-		CounterSample diffCnt = new CounterSample(newSample, false, newSample._name+"-diff");
+		CounterSample diffCnt = new CounterSample(newSample, false, newSample._name + "-diff");
 
 		long newTsMilli      = newSample.getSampleTime().getTime();
 		long oldTsMilli      = oldSample.getSampleTime().getTime();
@@ -6247,7 +6247,7 @@ implements Cloneable, ITableTooltip
 							}
 							catch(NumberFormatException nfe)
 							{
-								_logger.warn("CounterSampleSetName='"+newSample._name+"', className='"+newRowObj.getClass().getName()+"' columns can't be 'diff' calculated. colName='"+colName+"', key='"+newPk+"', oldObj='"+oldRowObj+"', newObj='"+newRowObj+"'. Trying to convert it to a Number Caught: "+nfe);
+								_logger.warn("CounterSampleSetName='" + newSample._name + "', className='" + newRowObj.getClass().getName() + "' columns can't be 'diff' calculated. colName='" + colName + "', key='" + newPk + "', oldObj='" + oldRowObj + "', newObj='" + newRowObj + "'. Trying to convert it to a Number Caught: " + nfe);
 								diffRow.add(newRowObj);
 							}
 								
@@ -6407,7 +6407,7 @@ implements Cloneable, ITableTooltip
 		}
 		else
 		{
-			_logger.warn(counterSetName+": failure in diffColumnValue(colName='"+colName+"', prevColVal='"+prevColVal+"', newColVal='"+newColVal+"'), with prevColVal='"+prevColVal.getClass().getName()+"', newColVal='"+newColVal.getClass().getName()+"'. Returning the new value instead.");
+			_logger.warn(counterSetName + ": failure in diffColumnValue(colName='" + colName + "', prevColVal='" + prevColVal + "', newColVal='" + newColVal + "'), with prevColVal='" + prevColVal.getClass().getName() + "', newColVal='" + newColVal.getClass().getName() + "'. Returning the new value instead.");
 			return newColVal;
 		}
 
@@ -6430,7 +6430,7 @@ implements Cloneable, ITableTooltip
 	{
 //		return CounterSample.computeRatePerSec(diffData, isDiffCol, isPctCol);
 		// Initialize result structure
-		CounterSample rate  = new CounterSample(diffData, false, diffData._name+"-rate");
+		CounterSample rate  = new CounterSample(diffData, false, diffData._name + "-rate");
 
 		int sampleInterval = diffData.getSampleInterval();
 		
@@ -6490,7 +6490,7 @@ implements Cloneable, ITableTooltip
 					else
 					{
 						String colName = diffData.getColumnName(i);
-						_logger.warn("CounterSampleSetName='"+diffData._name+"', className='"+originObject.getClass().getName()+"' columns can't be 'rate' calculated. colName='"+colName+"', originObject='"+originObject+"', keeping this object.");
+						_logger.warn("CounterSampleSetName='" + diffData._name + "', className='" + originObject.getClass().getName() + "' columns can't be 'rate' calculated. colName='" + colName + "', originObject='" + originObject + "', keeping this object.");
 						newObject = originObject;
 					}
 				}
@@ -6540,7 +6540,7 @@ implements Cloneable, ITableTooltip
 
 		String[] colInfo = getDdlDetailsColNames();
 		if ( colInfo == null || (colInfo != null && colInfo.length < 2) )
-			throw new RuntimeException("getDdlDetailsColNames() must return a String array with a length of 2 or more. colInfoArr='"+StringUtil.toCommaStr(colInfo)+"'.");
+			throw new RuntimeException("getDdlDetailsColNames() must return a String array with a length of 2 or more. colInfoArr='" + StringUtil.toCommaStr(colInfo) + "'.");
 
 		int DBName_pos     = absData.findColumn(colInfo[0]);
 		int ObjectName_pos = absData.findColumn(colInfo[1]);
@@ -6562,7 +6562,7 @@ implements Cloneable, ITableTooltip
 			{
 				if (sendDdlDetailsRequestForSpecificRow((String)DBName_obj, (String)ObjectName_obj, r, absData, diffData, rateData))
 				{
-					pch.addDdl((String)DBName_obj, (String)ObjectName_obj, getName()+".abs, row="+r);
+					pch.addDdl((String)DBName_obj, (String)ObjectName_obj, getName() + ".abs, row=" + r);
 					sentRows++;
 					if (sentRows >= rowsToSend)
 						break;
@@ -6589,7 +6589,7 @@ implements Cloneable, ITableTooltip
 			final int colPos = diffData.findColumn(column);
 			if (colPos == -1)
 			{
-				_logger.error("sendDdlDetailsRequest() cmName='"+diffData.getName()+"', sortDescOnColumns='"+StringUtil.toCommaStr(sortDescOnColumns)+"', but column '"+column+"' can't be found in diffValues (known cols="+StringUtil.toCommaStr(diffData.getColNames())+"), trying with next column.");
+				_logger.error("sendDdlDetailsRequest() cmName='" + diffData.getName() + "', sortDescOnColumns='" + StringUtil.toCommaStr(sortDescOnColumns) + "', but column '" + column + "' can't be found in diffValues (known cols=" + StringUtil.toCommaStr(diffData.getColNames()) + "), trying with next column.");
 				continue;
 			}
 
@@ -6614,7 +6614,7 @@ implements Cloneable, ITableTooltip
 							if ( ((Number)objVal1).doubleValue() > ((Number)objVal2).doubleValue() ) return -1;
 							return 0;
 						}
-						_logger.warn("CM='"+getName()+"', NOT A NUMBER colName='"+column+"', colPos="+colPos+": objVal1="+objVal1.getClass().getName()+", objVal2="+objVal2.getClass().getName());
+						_logger.warn("CM='" + getName() + "', NOT A NUMBER colName='" + column + "', colPos=" + colPos + ": objVal1=" + objVal1.getClass().getName() + ", objVal2=" + objVal2.getClass().getName());
 						return 0;
 					}
 				});
@@ -6634,7 +6634,7 @@ implements Cloneable, ITableTooltip
 					if (counter.intValue() == 0)
 					{
 						if (_logger.isDebugEnabled())
-							_logger.debug("- - - - - - - - - CM("+getName()+").sendDdlDetailsRequest  - - - - - Skipping ZERO VALUE for dbname='"+DBName_obj+"', ObjectName='"+ObjectName_obj+"', column='"+column+"', row="+r+", counterObj="+counter_obj+", counter.intValue()="+counter.intValue());
+							_logger.debug("- - - - - - - - - CM(" + getName() + ").sendDdlDetailsRequest  - - - - - Skipping ZERO VALUE for dbname='" + DBName_obj + "', ObjectName='" + ObjectName_obj + "', column='" + column + "', row=" + r + ", counterObj=" + counter_obj + ", counter.intValue()=" + counter.intValue());
 						continue;
 					}
 				}
@@ -6647,7 +6647,7 @@ implements Cloneable, ITableTooltip
 //System.out.println("CM='"+getName()+"', DIFF TOP("+rows+") ROWS: "+column+" = "+sortOnCol_obj+", db='"+DBName_obj+"', objName='"+ObjectName_obj+"'.");
 
 				if (DBName_obj instanceof String && ObjectName_obj instanceof String)
-					pch.addDdl((String)DBName_obj, (String)ObjectName_obj, getName()+".diff.sortCol."+column+", row="+r);
+					pch.addDdl((String)DBName_obj, (String)ObjectName_obj, getName() + ".diff.sortCol." + column + ", row=" + r);
 			}
 		}
 
@@ -6971,7 +6971,7 @@ implements Cloneable, ITableTooltip
 			}
 			catch (Throwable t)
 			{
-				_logger.warn("Problems executing sendAlarmRequest() in CM '"+getName()+"'. This will be ignored, and monitoring will continue... Caught: "+t, t);
+				_logger.warn("Problems executing sendAlarmRequest() in CM '" + getName() + "'. This will be ignored, and monitoring will continue... Caught: " + t, t);
 			}
 		}
 
@@ -7000,7 +7000,7 @@ implements Cloneable, ITableTooltip
 			}
 			catch (Throwable t) 
 			{
-				_logger.warn("Problems executing User Defined Alarm Interrogater in CM '"+getName()+"'. This will be ignored, and monitoring will continue... Caught: "+t, t);
+				_logger.warn("Problems executing User Defined Alarm Interrogater in CM '" + getName() + "'. This will be ignored, and monitoring will continue... Caught: " + t, t);
 			}
 
 			// or use: compile on the fly java and store class/bytecode in memory and execute it via reflection
@@ -7114,7 +7114,7 @@ implements Cloneable, ITableTooltip
 		List<CmSettingsHelper> alarms = getLocalAlarmSettings();
 		if (alarms.isEmpty())
 		{
-			_logger.info("System Defined Alarms are NOT enabled for '"+getName()+"'.");
+			_logger.info("System Defined Alarms are NOT enabled for '" + getName() + "'.");
 			return;
 		}
 
@@ -7125,7 +7125,7 @@ implements Cloneable, ITableTooltip
 		boolean isSystemAlarmsEnabled = isSystemAlarmsEnabled();
 		String  prefix = "       ";
 		
-		_logger.info("System Defined Alarms properties are listed below for '"+getName()+"'.");
+		_logger.info("System Defined Alarms properties are listed below for '" + getName() + "'.");
 
 		_logger.info(prefix + replaceCmName(PROPKEY_ALARM_isAlarmsEnabled) + " = " + isAlarmEnabled + (isAlarmEnabled ? "" : "        ##### NOTE: all Alarms are DISABLED, so below propertirs wont be used."));
 //		if ( ! isAlarmEnabled )
@@ -7145,7 +7145,7 @@ implements Cloneable, ITableTooltip
 			if ( sh.isAlarmSwitch() )
 			{
 				String propName = replaceCmAndColName(getName(), PROPKEY_ALARM_isSystemAlarmsForColumnEnabled, colname);
-				String propVal  = conf.getProperty(propName, DEFAULT_ALARM_isSystemAlarmsForColumnEnabled+"");
+				String propVal  = conf.getProperty(propName, DEFAULT_ALARM_isSystemAlarmsForColumnEnabled + "");
 
 				// At what times can the alarms be triggered
 				String cronProp = replaceCmAndColName(PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, colname);
@@ -7158,7 +7158,7 @@ implements Cloneable, ITableTooltip
 					cronPatStr = cronPatStr.substring(1);
 				}
 				if ( ! SchedulingPattern.validate(cronPatStr) )
-					_logger.error("The cron scheduling pattern '"+cronPatStr+"' is NOT VALID. for the property '"+replaceCmAndColName(PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, colname)+"', this will not be used at runtime, furter warnings will also be issued.");
+					_logger.error("The cron scheduling pattern '" + cronPatStr + "' is NOT VALID. for the property '" + replaceCmAndColName(PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, colname) + "', this will not be used at runtime, furter warnings will also be issued.");
 
 				String cronPatDesc = CronUtils.getCronExpressionDescriptionForAlarms(cronPat);
 
@@ -7309,7 +7309,7 @@ implements Cloneable, ITableTooltip
 		}
 		catch(InvalidPatternException ex)
 		{
-			_logger.error("The specified 'cron' value '"+cronStr+"' for property '"+replaceCmAndColName(PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, colname)+"' is not a valid cron-pattern. This will be disregarded. Caught: "+ex);
+			_logger.error("The specified 'cron' value '" + cronStr + "' for property '" + replaceCmAndColName(PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, colname) + "' is not a valid cron-pattern. This will be disregarded. Caught: " + ex);
 		}
 
 		return enabled;
@@ -7576,7 +7576,7 @@ implements Cloneable, ITableTooltip
 					{
 						String propVal = Configuration.USE_DEFAULT_PREFIX + defVal;
 						writeConf.setProperty(propName, propVal);
-System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + propName + "', to: " + propVal);
+System.out.println("CM='" + getName() + "': writeConf.setProperty(propName='" + propName + "', to: " + propVal);
 
 						// We need to update CmPanel to refresh it's GUI components
 						TabularCntrPanel tabPanel = getTabPanel();
@@ -7598,7 +7598,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 	 */
 	public String getBasicConfigurationDescription()
 	{
-		return "This module '"+getDisplayName()+"' should have <code>ShowCmPropertiesDialog</code> availablity.";
+		return "This module '" + getDisplayName() + "' should have <code>ShowCmPropertiesDialog</code> availablity.";
 	}
 
 	
@@ -7610,7 +7610,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 	public void setDataSource(int dataSource, boolean saveProps)
 	{
 		if (dataSource != DATA_ABS && dataSource != DATA_DIFF && dataSource != DATA_RATE)
-			throw new RuntimeException("Unknown dataView was specified. you specified dataView="+dataSource+". known values: DATA_ABS="+DATA_ABS+", DATA_DIFF="+DATA_DIFF+", DATA_RATE="+DATA_RATE+".");
+			throw new RuntimeException("Unknown dataView was specified. you specified dataView=" + dataSource + ". known values: DATA_ABS=" + DATA_ABS + ", DATA_DIFF=" + DATA_DIFF + ", DATA_RATE=" + DATA_RATE + ".");
 		_dataSource = dataSource;
 
 		// Update GUI's that are listening.
@@ -7670,7 +7670,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 		if      (whatData == DATA_ABS)  return "DATA_ABS";
 		else if (whatData == DATA_DIFF) return "DATA_DIFF";
 		else if (whatData == DATA_RATE) return "DATA_RATE";
-		else return "UNKNOWN DATA TYPE OF '"+whatData+"'.";
+		else return "UNKNOWN DATA TYPE OF '" + whatData + "'.";
 	}
 
 
@@ -8187,7 +8187,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 		if (colId < 0 || colId > data.getColumnCount())
 		{
 			if (_logger.isDebugEnabled()) 
-				_logger.debug("getValue: column id " + colId + " is out of range. column Count is "+data.getColumnCount());
+				_logger.debug("getValue: column id " + colId + " is out of range. column Count is " + data.getColumnCount());
 			return null;
 		}
 		if (data.getRowCount() <= rowId)
@@ -8222,7 +8222,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 		if (data == null)
 		{
 			if (_logger.isDebugEnabled()) 
-				_logger.debug(getName()+".getValue(whatData="+getWhatDataTranslationStr(whatData)+", pkStr='"+pkStr+"', colname='"+colname+"'): data==null; return null");
+				_logger.debug(getName() + ".getValue(whatData=" + getWhatDataTranslationStr(whatData) + ", pkStr='" + pkStr + "', colname='" + colname + "'): data==null; return null");
 			return def;
 		}
 
@@ -8231,7 +8231,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 		if (rowId < 0)
 		{
 			if (_logger.isDebugEnabled())
-				_logger.debug(getName()+".getValue(whatData="+getWhatDataTranslationStr(whatData)+", pkStr='"+pkStr+"', colname='"+colname+"'): rowId="+rowId+": rowId < 0; return null");
+				_logger.debug(getName() + ".getValue(whatData=" + getWhatDataTranslationStr(whatData) + ", pkStr='" + pkStr + "', colname='" + colname + "'): rowId=" + rowId + ": rowId < 0; return null");
 			return def;
 		}
 
@@ -8240,7 +8240,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 		if (o == null)
 		{
 			if (_logger.isDebugEnabled()) 
-				_logger.debug(getName()+".getValue(whatData="+getWhatDataTranslationStr(whatData)+", pkStr='"+pkStr+"', colname='"+colname+"'): rowId="+rowId+": o==null; return null");
+				_logger.debug(getName() + ".getValue(whatData=" + getWhatDataTranslationStr(whatData) + ", pkStr='" + pkStr + "', colname='" + colname + "'): rowId=" + rowId + ": o==null; return null");
 			return def;
 		}
 
@@ -8384,7 +8384,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 		if (colPos < 0 || colPos > data.getColumnCount())
 		{
 			if (_logger.isDebugEnabled()) 
-				_logger.debug("getMaxValue: column pos " + colPos + " is out of range. column Count is "+data.getColumnCount());
+				_logger.debug("getMaxValue: column pos " + colPos + " is out of range. column Count is " + data.getColumnCount());
 			return null;
 		}
 		if (data.getRowCount() == 0)
@@ -8471,7 +8471,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 		if (colPos < 0 || colPos > data.getColumnCount())
 		{
 			if (_logger.isDebugEnabled()) 
-				_logger.debug("getMinValue: column pos " + colPos + " is out of range. column Count is "+data.getColumnCount());
+				_logger.debug("getMinValue: column pos " + colPos + " is out of range. column Count is " + data.getColumnCount());
 			return null;
 		}
 		if (data.getRowCount() == 0)
@@ -8558,7 +8558,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 		if (colPos < 0 || colPos > data.getColumnCount())
 		{
 			if (_logger.isDebugEnabled()) 
-				_logger.debug("getSumValue: column pos " + colPos + " is out of range. column Count is "+data.getColumnCount());
+				_logger.debug("getSumValue: column pos " + colPos + " is out of range. column Count is " + data.getColumnCount());
 			return null;
 		}
 		if (data.getRowCount() == 0)
@@ -8645,7 +8645,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 		if (colPos < 0 || colPos > data.getColumnCount())
 		{
 			if (_logger.isDebugEnabled()) 
-				_logger.debug("getCountGtZero: column pos " + colPos + " is out of range. column Count is "+data.getColumnCount());
+				_logger.debug("getCountGtZero: column pos " + colPos + " is out of range. column Count is " + data.getColumnCount());
 			return 0;
 		}
 		if (data.getRowCount() == 0)
@@ -9254,7 +9254,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 				
 				int colId = data.findColumn(whereColName, caseSensitive);
 				if (colId == -1)
-					throw new RuntimeException("Can't find column '"+whereColName+"' in TableModel named '"+getName()+"'.");
+					throw new RuntimeException("Can't find column '" + whereColName + "' in TableModel named '" + getName() + "'.");
 
 				Object rowColVal = data.getValueAt(r, colId);
 				
@@ -9585,7 +9585,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 				// maybe use property change listeners instead: firePropChanged("status", "refreshing");
 
 				long timeSpent = System.currentTimeMillis() - _refreshTimerStartTime;
-				_tabPanel.setWatermarkText("Refreshing data, passed time "+TimeUtils.msToTimeStr("%MM:%SS.%ms", timeSpent));
+				_tabPanel.setWatermarkText("Refreshing data, passed time " + TimeUtils.msToTimeStr("%MM:%SS.%ms", timeSpent));
 			}
 		}
 	}
@@ -9681,7 +9681,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 //		for (INonConfiguredMonitoring listener : _nonConfiguredMonitoringListeners)
 //			listener.someMethodInTheListener();
 
-		_logger.warn("CM: name='"+getName()+"', hasNonConfiguredMonitoringHappened()=true, getNonConfiguedMonitoringMessage='"+getNonConfiguredMonitoringMessage(false)+"'.");
+		_logger.warn("CM: name='" + getName() + "', hasNonConfiguredMonitoringHappened()=true, getNonConfiguedMonitoringMessage='" + getNonConfiguredMonitoringMessage(false) + "'.");
 
 		// the below is done within the watermark check
 //		TabularCntrPanel tcp = getTabPanel();
@@ -9795,7 +9795,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 
 		if (mrow < 0 || mrow >= _isNewDeltaOrRateRow.length)
 		{
-			_logger.warn("isNewDeltaOrRateRow(mrow="+mrow+"): is out of range: _isNewDeltaOrRateRow.length="+_isNewDeltaOrRateRow.length);
+			_logger.warn("isNewDeltaOrRateRow(mrow=" + mrow + "): is out of range: _isNewDeltaOrRateRow.length=" + _isNewDeltaOrRateRow.length);
 			return false;
 		}
 		// For development purposes
@@ -9824,7 +9824,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 		if (mrow >= 0 && mrow < _isNewDeltaOrRateRow.length)
 			_isNewDeltaOrRateRow[mrow] = isNewDeltaOrRateRow;
 		else
-			_logger.warn("computeDiffCnt(): cm='"+getName()+"', _isNewDeltaOrRateRow[newRowId="+mrow+"]=FALSE, _isNewDeltaOrRateRow.length="+_isNewDeltaOrRateRow.length+".");
+			_logger.warn("computeDiffCnt(): cm='" + getName() + "', _isNewDeltaOrRateRow[newRowId=" + mrow + "]=FALSE, _isNewDeltaOrRateRow.length=" + _isNewDeltaOrRateRow.length + ".");
 	}
 
 	
@@ -9921,7 +9921,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 		if      (type == DATA_ABS)  counterType = "absCounters";
 		else if (type == DATA_DIFF) counterType = "diffCounters";
 		else if (type == DATA_RATE) counterType = "rateCounters";
-		else throw new IOException("Unknown type="+type);
+		else throw new IOException("Unknown type=" + type);
 
 		// Set name
 		gen.writeFieldName(counterType);
@@ -9942,7 +9942,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 				String name = getColumnName(c);  
 				
 				if (name == null)
-					throw new IOException("When writing JSON CM='"+getName()+"', CounterType="+type+", row="+r+", col="+c+", Column Name was 'null' (not set).");
+					throw new IOException("When writing JSON CM='" + getName() + "', CounterType=" + type + ", row=" + r + ", col=" + c + ", Column Name was 'null' (not set).");
 
 				gen.writeFieldName(name);
 				if (obj == null)
@@ -10024,14 +10024,14 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 		// Check some other parameters
 		if (writerOptions.throwOnMissingMandatoryParams)
 		{
-			if (getSampleTime() == null) throw new NullPointerException("When writing CM '"+getName()+"' to JSON. 'sessionSampleTime' value was NULL, which is mandatory.");
-			if (getTimestamp()  == null) throw new NullPointerException("When writing CM '"+getName()+"' to JSON. 'cmSampleTime' value was NULL, which is mandatory.");
+			if (getSampleTime() == null) throw new NullPointerException("When writing CM '" + getName() + "' to JSON. 'sessionSampleTime' value was NULL, which is mandatory.");
+			if (getTimestamp()  == null) throw new NullPointerException("When writing CM '" + getName() + "' to JSON. 'cmSampleTime' value was NULL, which is mandatory.");
 		}
 		else
 		{
 			boolean doReturn = false;
-			if (getSampleTime() == null) { doReturn = true; _logger.warn("When writing CM '"+getName()+"' to JSON. 'sessionSampleTime' value was NULL, which is mandatory, skipping this CM and continue with next.."); }
-			if (getTimestamp()  == null) { doReturn = true; _logger.warn("When writing CM '"+getName()+"' to JSON. 'cmSampleTime' value was NULL, which is mandatory, skipping this CM and continue with next..."); }
+			if (getSampleTime() == null) { doReturn = true; _logger.warn("When writing CM '" + getName() + "' to JSON. 'sessionSampleTime' value was NULL, which is mandatory, skipping this CM and continue with next.."); }
+			if (getTimestamp()  == null) { doReturn = true; _logger.warn("When writing CM '" + getName() + "' to JSON. 'cmSampleTime' value was NULL, which is mandatory, skipping this CM and continue with next..."); }
 			
 			if (doReturn)
 				return;
@@ -10130,7 +10130,7 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 				}
 				catch (Exception ex)
 				{
-					_logger.error("Write JSON JDBC MetaData data, for CM='"+getName()+"'. Caught: "+ex, ex);
+					_logger.error("Write JSON JDBC MetaData data, for CM='" + getName() + "'. Caught: " + ex, ex);
 				}
 			}
 
@@ -10218,16 +10218,16 @@ System.out.println("CM='"+getName()+"': writeConf.setProperty(propName='" + prop
 
 						if (StringUtil.isNullOrBlank(label))
 						{
-System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + label + "', setting it to 'lbl-"+d+"'. For cm='"+getName()+"', graphName='"+graphName+"', label='"+label+"', data="+data);
+System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + label + "', setting it to 'lbl-" + d + "'. For cm='" + getName() + "', graphName='" + graphName + "', label='" + label + "', data=" + data);
 							if (_logger.isDebugEnabled())
-								_logger.debug("Writing JSON Graph, LABEL was NULL or blank '" + label + "', setting it to 'lbl-"+d+"'. For cm='"+getName()+"', graphName='"+graphName+"', label='"+label+"', data="+data);
-							label = "lbl-"+d;
+								_logger.debug("Writing JSON Graph, LABEL was NULL or blank '" + label + "', setting it to 'lbl-" + d + "'. For cm='" + getName() + "', graphName='" + graphName + "', label='" + label + "', data=" + data);
+							label = "lbl-" + d;
 						}
 
 						if (data == null)
 						{
 							if (_logger.isDebugEnabled())
-								_logger.debug("Writing JSON Graph, DATA was null, setting it to 0. For cm='"+getName()+"', graphName='"+graphName+"', label='"+label+"', data="+data);
+								_logger.debug("Writing JSON Graph, DATA was null, setting it to 0. For cm='" + getName() + "', graphName='" + graphName + "', label='" + label + "', data=" + data);
 							data = 0d;
 						}
 
@@ -10560,7 +10560,7 @@ System.out.println("DEBUG: Writing JSON Graph, LABEL was NULL or blank '" + labe
 		if (doReCalc)
 		{
 			if (_aggregatedRowId == -1)
-				throw new RuntimeException("calculateAggregateRow() RE-CALC do NOT have an _aggregatedRowId. Cont continue. counterType=" + getWhatDataTranslationStr(counterType) + ", cs.RowCnt=" + cs.getRowCount() + ", _aggregatedRowId=" + _aggregatedRowId + ", cm='" + getName() + "', csName='" + cs.getName() + "'. aggRow="+aggRow);
+				throw new RuntimeException("calculateAggregateRow() RE-CALC do NOT have an _aggregatedRowId. Cont continue. counterType=" + getWhatDataTranslationStr(counterType) + ", cs.RowCnt=" + cs.getRowCount() + ", _aggregatedRowId=" + _aggregatedRowId + ", cm='" + getName() + "', csName='" + cs.getName() + "'. aggRow=" + aggRow);
 			else
 				cs.setRow(this, _aggregatedRowId, aggRow);
 		}

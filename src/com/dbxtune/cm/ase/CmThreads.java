@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -70,7 +70,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 //	public static final long     NEED_SRV_VERSION = 15700;
 //	public static final long     NEED_SRV_VERSION = 1570000;
@@ -104,7 +104,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmThreads(counterController, guiController);
 	}
@@ -145,7 +145,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_BUSY_AVG,
 			"CPU Thread BusyTicksPct Average per Pool Type",                  // Menu CheckBox text
-			"CPU Thread BusyTicksPct Average per Pool Type ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"CPU Thread BusyTicksPct Average per Pool Type (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
@@ -157,7 +157,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_BUSY_THREAD,
 			"CPU Thread BusyTicksPct Usage per Thread",                  // Menu CheckBox text
-			"CPU Thread BusyTicksPct Usage per Thread ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"CPU Thread BusyTicksPct Usage per Thread (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
@@ -169,7 +169,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_TASKS,
 			"Tasks Executed per Thread",                  // Menu CheckBox text
-			"Tasks Executed per Thread ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Tasks Executed per Thread (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,

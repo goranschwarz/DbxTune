@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -291,7 +291,7 @@ public class ConnectionProfileManager
 			if (color == null)
 				return "rgb(255,255,255)"; // WHITE
 
-			return "rgb("+color.getRed()+","+color.getGreen()+","+color.getBlue()+")";
+			return "rgb(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ")";
 		}
 		public String getColorRgbStr()
 		{
@@ -299,7 +299,7 @@ public class ConnectionProfileManager
 		}
 		public String getMarginStr()
 		{
-			return "top="+_borderMargins.top+", left="+_borderMargins.left+", bottom="+_borderMargins.bottom+", right="+_borderMargins.right;
+			return "top=" + _borderMargins.top + ", left=" + _borderMargins.left + ", bottom=" + _borderMargins.bottom + ", right=" + _borderMargins.right;
 		}
 
 		@Override
@@ -315,9 +315,9 @@ public class ConnectionProfileManager
 			// If background is the same as the ProfileType, then do not add any color... it will just look strange when selection the value
 			// otherwise: lets use HTML coloring...
 			if (defaultComboBoxBgColor.equals(_color))
-				return "<html>"+getName()+"</html>"; // Still do HTML rendering of the string 
+				return "<html>" + getName() + "</html>"; // Still do HTML rendering of the string 
 			else
-				return "<html><font fgcolor='black', bgcolor='"+getColorRgbStr()+"'>"+getName()+"</font></html>"; // Note this is used by the JComboBox to "color" the items
+				return "<html><font fgcolor='black', bgcolor='" + getColorRgbStr() + "'>" + getName() + "</font></html>"; // Note this is used by the JComboBox to "color" the items
 //			return "<html>"+getName()+"<i><font bgcolor='"+getColorRgbStr()+"'> - Color</font></i></html>"; // Note this is used by the JComboBox to "color" the items
 //			return "<html><font fgcolor='black', bgcolor='"+getColorRgbStr()+"'>"+getName()+"</font></html>"; // Note this is used by the JComboBox to "color" the items
 //			return super.toString() + "; name='"+_name+"', color{"+getColorRgbStr()+"}, borderMargins{top="+_borderMargins.top+",left="+_borderMargins.left+",bottom="+_borderMargins.bottom+",right="+_borderMargins.right+"}";
@@ -426,7 +426,7 @@ public class ConnectionProfileManager
 		if ( _instance == null )
 		{
 			String filename = Configuration.getCombinedConfiguration().getProperty(PROPKEY_STORAGE_FILE, DEFAULT_STORAGE_FILE);
-			_logger.debug("No Connection Profile has yet been initiated, creating one now using file '"+filename+"'.");
+			_logger.debug("No Connection Profile has yet been initiated, creating one now using file '" + filename + "'.");
 			_instance = new ConnectionProfileManager(filename);
 		}
 
@@ -481,7 +481,7 @@ public class ConnectionProfileManager
 			{
 				String htmlMsg = 
 						"<html>"
-						+ "The Connection Dialog storage file '"+filename+"' doesn't exist!<br>"
+						+ "The Connection Dialog storage file '" + filename + "' doesn't exist!<br>"
 						+ "<br>"
 						+ "Do you want to create the above file and start to use that?"
 						+ "</html>";
@@ -493,14 +493,14 @@ public class ConnectionProfileManager
 				}
 				else
 				{
-					RuntimeException ex = new RuntimeException("File '"+filename+"' not found (and 'create-new-file' was declined). Cant continue to parse the file.");
-					_logger.error("File '"+filename+"' not found (and 'create-new-file' was declined). Cant continue to parse the file.", ex);
+					RuntimeException ex = new RuntimeException("File '" + filename + "' not found (and 'create-new-file' was declined). Cant continue to parse the file.");
+					_logger.error("File '" + filename + "' not found (and 'create-new-file' was declined). Cant continue to parse the file.", ex);
 //					throw ex;
 					return;
 				}
 			}
 		}
-		_logger.info("Connection Profile Manager will use the file "+filename+" to store profile information.");
+		_logger.info("Connection Profile Manager will use the file " + filename + " to store profile information.");
 
 		// Only set if it's a new name
 //		if ( ! filename.equals(_filename) )
@@ -518,7 +518,7 @@ public class ConnectionProfileManager
 	public void reload()
 	{
 		String filename = getFilename();
-		_logger.info("Re-loading Connection Profile Manage using filename='"+filename+"'.");
+		_logger.info("Re-loading Connection Profile Manage using filename='" + filename + "'.");
 		setFilename(filename);
 		_profileTreeModel.reload(); // this will call: fireTreeStructureChanged(...)
 	}
@@ -535,7 +535,7 @@ public class ConnectionProfileManager
 			String prevDateStr = sdf.format(new Date(_fileLastModified));
 			String newDateStr  = sdf.format(new Date(f.lastModified()));
 
-			_logger.info("The underlying Connection Profile Manage storage was has been changed. prevDate='"+prevDateStr+"', newDate='"+newDateStr+"', filename='"+f+"'.");
+			_logger.info("The underlying Connection Profile Manage storage was has been changed. prevDate='" + prevDateStr + "', newDate='" + newDateStr + "', filename='" + f + "'.");
 			return true;
 		}
 		return false;
@@ -707,7 +707,7 @@ public class ConnectionProfileManager
 				}
 				catch (Throwable t) 
 				{
-					_logger.warn("Problems Add a ConnectionProfile named '"+connProfile.getName()+"'. Trying to continuing anyway... Caught: "+t, t);
+					_logger.warn("Problems Add a ConnectionProfile named '" + connProfile.getName() + "'. Trying to continuing anyway... Caught: " + t, t);
 				}
 			}
 		}
@@ -755,7 +755,7 @@ public class ConnectionProfileManager
 			}
 			catch(Throwable t)
 			{
-				_logger.debug("Problems when updating the tree node '"+node[node.length-1]+"'. Caught: "+t, t);
+				_logger.debug("Problems when updating the tree node '" + node[node.length-1] + "'. Caught: " + t, t);
 			}
 		}
 
@@ -843,7 +843,7 @@ public class ConnectionProfileManager
 				String htmlMsg = 
 						"<html>"
 						+ "<h3>Can't delete</h3>"
-						+ catalog + " has " +node.getChildCount() + " <i>children</i> connected to it.<br>"
+						+ catalog + " has " + node.getChildCount() + " <i>children</i> connected to it.<br>"
 						+ "First delete or move all children."
 						+ "</html>";
 				SwingUtils.showWarnMessage("Has children", htmlMsg, null);
@@ -1126,7 +1126,7 @@ public class ConnectionProfileManager
 
 		// SELECTED profile overrides profiles by KEY
 		ConnectionProfile selectedProfile = getProfile(selectedProfileName);
-		_logger.debug("possiblyAddChange(): key='"+key+"', productName='"+productName+"', connProfile="+connProfile+", selectedProfileName='"+selectedProfileName+"', selectedProfile="+selectedProfile);
+		_logger.debug("possiblyAddChange(): key='" + key + "', productName='" + productName + "', connProfile=" + connProfile + ", selectedProfileName='" + selectedProfileName + "', selectedProfile=" + selectedProfile);
 		if (selectedProfile != null)
 			connProfile = selectedProfile;
 
@@ -1254,7 +1254,7 @@ public class ConnectionProfileManager
 				boolean showDialog_H2_offline = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_connProfile_serverAdd_showDialog_H2_offline, DEFAULT_connProfile_serverAdd_showDialog_H2_offline);
 				if ( ! showDialog_H2_offline )
 				{
-					_logger.info("Do not show the 'Save dialog' for H2 OFFLINE Sessions... Normally we dont want to store that in the profile. To enable this for H2, set property: "+PROPKEY_connProfile_serverAdd_showDialog_H2_offline+"=true");
+					_logger.info("Do not show the 'Save dialog' for H2 OFFLINE Sessions... Normally we dont want to store that in the profile. To enable this for H2, set property: " + PROPKEY_connProfile_serverAdd_showDialog_H2_offline + "=true");
 					showConnProfilePanel = false;
 				}
 			}
@@ -1371,7 +1371,7 @@ public class ConnectionProfileManager
 
 			String profileMsg = 
 					"<html>" +
-					"<h3>Add "+_connProfile.getSrvType()+" server to Connection Profile</h3>" +
+					"<h3>Add " + _connProfile.getSrvType() + " server to Connection Profile</h3>" +
 					"The server name was <b>not</b> found in file <code>" + getFilename() + "</code><br>" +
 					"Do you want to add it to Connection Profile?<br>" +
 					"<br>" +
@@ -1445,7 +1445,7 @@ public class ConnectionProfileManager
 
 			if (_interfacesName_pan.isVisible())
 			{
-				String currentItem = _interfacesName_cbx.getEditor().getItem()+"";
+				String currentItem = _interfacesName_cbx.getEditor().getItem() + "";
 				boolean bussy = AseConnectionFactory.getIHostPortStr(currentItem) != null;
 				_interfacesName_bussy.setVisible(bussy);
 
@@ -1455,7 +1455,7 @@ public class ConnectionProfileManager
 
 			if (_profileName_pan.isVisible())
 			{
-				String currentItem = _profileName_cbx.getEditor().getItem()+"";
+				String currentItem = _profileName_cbx.getEditor().getItem() + "";
 				boolean bussy = getProfile(currentItem) != null;
 				_profileName_bussy.setVisible(bussy);
 
@@ -1567,7 +1567,7 @@ public class ConnectionProfileManager
 				setVisible(true);
 			else
 			{
-				_logger.info("Save Dialog will NOT be opened... _interfacesName_pan.isVisible()="+_interfacesName_pan.isVisible()+", _profileName_pan.isVisible()="+_profileName_pan.isVisible());
+				_logger.info("Save Dialog will NOT be opened... _interfacesName_pan.isVisible()=" + _interfacesName_pan.isVisible() + ", _profileName_pan.isVisible()=" + _profileName_pan.isVisible());
 			}
 		}
 	}
@@ -1591,7 +1591,7 @@ public class ConnectionProfileManager
 
 		String htmlMsg = "<html>" +
 				"<h3>Connection Attributes has been changed</h3>" +
-				"Profile Name '<b>"+connProfile.getName()+"</b>'.<br>" +
+				"Profile Name '<b>" + connProfile.getName() + "</b>'.<br>" +
 				"You have changed some Attributes since the last time you connected with this profile.<br>" +
 				"<br>" +
 				"Below is the changes made:<br>" +
@@ -1624,7 +1624,7 @@ public class ConnectionProfileManager
 
 		if (SAVE_AS.equals(choice))
 		{
-			ConnectionProfile connProfileCopy = connProfile.copy(connProfile, connProfile.getName()+"_copy");
+			ConnectionProfile connProfileCopy = connProfile.copy(connProfile, connProfile.getName() + "_copy");
 			connProfileCopy.setEntry(newConnProfileEntry);
 //			setProfileEntry(connProfileCopy, newConnProfileEntry);
 
@@ -1904,7 +1904,7 @@ public class ConnectionProfileManager
 			{
 				String htmlMsg = "<html>" +
 					"<h3>Warning</h3>" +
-					"Name service file <code>"+currentInterfacesFile+"</code> is <b>not writable</b><br>" +
+					"Name service file <code>" + currentInterfacesFile + "</code> is <b>not writable</b><br>" +
 					"So adding/changing entries will be impossible!<br>" +
 					"<br>" +
 					"If you copy the file to a <i>private</i> file, then you can add and maintain you'r own entries in that file.<br>" +
@@ -1951,7 +1951,7 @@ public class ConnectionProfileManager
         						"   <li>from: <code>" + currentInterfacesFile + "</code></li>" +
         						"   <li>to:   <code>" + privateSqlIni         + "</code></li>" +
         						"</ul>" +
-        						"So lets <b>continue to use the file <code>"+currentInterfacesFile+"</code></b><br>" +
+        						"So lets <b>continue to use the file <code>" + currentInterfacesFile + "</code></b><br>" +
         						"</html>";
 						SwingUtils.showWarnMessage(owner, "Copy File: Problems", htmlMsg, ex);
 					}
@@ -2034,7 +2034,7 @@ public class ConnectionProfileManager
 					{
 						SwingUtils.showErrorMessage(null, "Faulty Regex", 
 								  "<html>"
-								+ "The regex '<b>"+_filterProfileName+"</b>' is not valid.<br>"
+								+ "The regex '<b>" + _filterProfileName + "</b>' is not valid.<br>"
 								+ "Error:"
 								+ "<pre>"
 								+ StringUtil.toHtmlString(ex.getMessage())
@@ -2168,11 +2168,11 @@ public class ConnectionProfileManager
 		File f = new File(filename);
 		if (f.exists())
 		{
-			_logger.error("ConnectionProfileManager.createStorageFile(): The file '"+filename+"' already exists, I will not overvrite it.");
+			_logger.error("ConnectionProfileManager.createStorageFile(): The file '" + filename + "' already exists, I will not overvrite it.");
 			return;
 		}
 		
-		_logger.info("Creating a new file '"+filename+"' for Connection Profile Manager to store profile information.");
+		_logger.info("Creating a new file '" + filename + "' for Connection Profile Manager to store profile information.");
 		save(filename, true);
 	}
 
@@ -2228,12 +2228,12 @@ public class ConnectionProfileManager
 						
 						long saveTime = System.currentTimeMillis() - startTime;
 						if (saveTime > 1000)
-							_logger.warn("ConnectionProfileManager.save() took "+saveTime+" ms... File name ='"+filename+"'. You might have a slow IO subsystem...");
+							_logger.warn("ConnectionProfileManager.save() took " + saveTime + " ms... File name ='" + filename + "'. You might have a slow IO subsystem...");
 //System.out.println("Configuration.save() currentSaveCount="+currentSaveCount+". TIME = "+saveTime+ (saveTime < 1000 ? "" : " ------- WARNING ------ WARNING ----- WARNING ---- SAVE Took to long time..."));
 					}
 					catch (Exception e)
 					{
-						_logger.error("Problems saving Connection Profile to the file='"+filename+"', currentSaveCount="+currentSaveCount+". Caught: "+e, e);
+						_logger.error("Problems saving Connection Profile to the file='" + filename + "', currentSaveCount=" + currentSaveCount + ". Caught: " + e, e);
 					}
 					finally 
 					{
@@ -2295,7 +2295,7 @@ public class ConnectionProfileManager
 			File f = new File(filename);
 			if (f.exists())
 			{
-				_logger.debug("ConnectionProfileManager.save(): saving a recovery file to '"+tmpRecoveryFilename+"', which will be deleted if no problems where found.");
+				_logger.debug("ConnectionProfileManager.save(): saving a recovery file to '" + tmpRecoveryFilename + "', which will be deleted if no problems where found.");
 				FileUtils.copy(filename, tmpRecoveryFilename);
 
 				// Save to a Backup file... (but only if the backup file is older than 1 hour)
@@ -2322,7 +2322,7 @@ public class ConnectionProfileManager
 					if (backupFile_2.exists()) backupFile_2.renameTo(backupFile_3);
 					if (backupFile_1.exists()) backupFile_1.renameTo(backupFile_2);
 					
-					_logger.debug("ConnectionProfileManager.save(): saving a backup file to '"+backupFilename_1+"'.");
+					_logger.debug("ConnectionProfileManager.save(): saving a backup file to '" + backupFilename_1 + "'.");
 					FileUtils.copy(filename, backupFilename_1);
 				}
 			}
@@ -2393,8 +2393,8 @@ public class ConnectionProfileManager
 						}
 						else
 						{
-							Exception error = new Exception("_profileTreeRoot.getChildCount()="+(_profileTreeRoot == null ? "null" : _profileTreeRoot.getChildCount())+", _profileTreeRoot="+_profileTreeRoot);
-							_logger.warn("ConnectionProfileManager trying to save to file '"+filename+"', but ROOT entry seems to 'empty'. For debug reasons, save a stacktrace", error);
+							Exception error = new Exception("_profileTreeRoot.getChildCount()=" + (_profileTreeRoot == null ? "null" : _profileTreeRoot.getChildCount()) + ", _profileTreeRoot=" + _profileTreeRoot);
+							_logger.warn("ConnectionProfileManager trying to save to file '" + filename + "', but ROOT entry seems to 'empty'. For debug reasons, save a stacktrace", error);
 						}
 					}
 
@@ -2444,7 +2444,7 @@ public class ConnectionProfileManager
 							catch (Throwable t)
 							{
 								problemMap.put(entry.getName(), t);
-								_logger.error("Problems writing XML ENTRY for name='"+entry.getName()+"', type="+entry.getType()+", srvType="+entry.getSrvType()+" to file '"+filename+"'. Continuing with next entry. Caught: "+t, t);
+								_logger.error("Problems writing XML ENTRY for name='" + entry.getName() + "', type=" + entry.getType() + ", srvType=" + entry.getSrvType() + " to file '" + filename + "'. Continuing with next entry. Caught: " + t, t);
 							}
 							
 							byteBuffer = ByteBuffer.wrap(sb.toString().getBytes(Charset.forName("UTF-8")));
@@ -2480,17 +2480,17 @@ public class ConnectionProfileManager
 		}
 		catch (IOException e)
 		{
-			_logger.warn("Problems writing to Connection Profile file '"+filename+"'. Caught: "+e);
+			_logger.warn("Problems writing to Connection Profile file '" + filename + "'. Caught: " + e);
 			
 			String htmlMsg = 
 					"<html>"
 					+ "<h3>Problems writing to Connection Profile storage file</h3>"
-					+ "Storage file name: <code>"+filename+"</code><br>"
+					+ "Storage file name: <code>" + filename + "</code><br>"
 					+ "<br>"
 					+ "A copy was made of the file before the save process started.<br>"
-					+ "Recovery file: <code>"+tmpRecoveryFilename+"</code><br>"
+					+ "Recovery file: <code>" + tmpRecoveryFilename + "</code><br>"
 					+ "<br>"
-					+ "Exception: " + e +"<br>"
+					+ "Exception: " + e + "<br>"
 					+ "</html>";
 			SwingUtils.showErrorMessage("Write error", htmlMsg, e);
 //			throw e;
@@ -2499,13 +2499,13 @@ public class ConnectionProfileManager
 		// Remove the recovery file if everything succeeded
 		if (problemMap.size() == 0)
 		{
-			_logger.debug("ConnectionProfileManager.save(): SAVE-SUCCEED: removing the recovery file '"+tmpRecoveryFilename+"'.");
+			_logger.debug("ConnectionProfileManager.save(): SAVE-SUCCEED: removing the recovery file '" + tmpRecoveryFilename + "'.");
 			File f = new File(tmpRecoveryFilename);
 			f.delete();
 		}
 		else
 		{
-			_logger.error("Some problems saving the Connection Profile Storage file '"+filename+"', problemCount="+problemMap.size()+". A backup/restore file has been saved as '"+tmpRecoveryFilename+"' if you want to revert back to that file.");
+			_logger.error("Some problems saving the Connection Profile Storage file '" + filename + "', problemCount=" + problemMap.size() + ". A backup/restore file has been saved as '" + tmpRecoveryFilename + "' if you want to revert back to that file.");
 
 			String problemEntries = "";
 			Throwable firstEx = null;
@@ -2520,13 +2520,13 @@ public class ConnectionProfileManager
 					"<html>"
 					+ "<h3>Problems writing to Connection Profile storage file</h3>"
 					+ "Found some issues when writing some Connection Profile Entries<br>"
-					+ "problemCount: " + problemMap.size() +"<br>"
-					+ "problemEntries: " + problemEntries +"<br>"
+					+ "problemCount: " + problemMap.size() + "<br>"
+					+ "problemEntries: " + problemEntries + "<br>"
 					+ "<br>"
-					+ "Storage file name: <code>"+filename+"</code><br>"
+					+ "Storage file name: <code>" + filename + "</code><br>"
 					+ "<br>"
 					+ "A copy was made of the file before the save process started.<br>"
-					+ "Recovery file: <code>"+tmpRecoveryFilename+"</code><br>"
+					+ "Recovery file: <code>" + tmpRecoveryFilename + "</code><br>"
 					+ "<br>"
 					+ "If the storage file is <b>corrupt</b> you may want to revert back to the recovery file.<br>"
 					+ "</html>";
@@ -2562,7 +2562,7 @@ public class ConnectionProfileManager
 			}
 			else
 			{
-				_logger.warn("getXmlProfileTree(): object is unknown type. ClassName='"+o.getClass().getName()+"', toString='"+o+"', nestLevel="+nestLevel+", thisNode='"+thisNode+"'.");
+				_logger.warn("getXmlProfileTree(): object is unknown type. ClassName='" + o.getClass().getName() + "', toString='" + o + "', nestLevel=" + nestLevel + ", thisNode='" + thisNode + "'.");
 				String name = o.toString();
 				sb.append(indentStr).append("<").append(XML_PROFILE_TREE_ENTRY).append(" ").append(XML_PROFILE_TREE_ENTRY_ATTR_NAME).append("=\"").append(name).append("\"/>\n");
 			}
@@ -2600,7 +2600,7 @@ public class ConnectionProfileManager
 			{
 				Node node = nlist.item(i);
 		 
-				_logger.debug("Current Element at '"+subTag+"' :" + node.getNodeName());
+				_logger.debug("Current Element at '" + subTag + "' :" + node.getNodeName());
 				if (node.getNodeType() == Node.ELEMENT_NODE) 
 				{
 					try
@@ -2610,7 +2610,7 @@ public class ConnectionProfileManager
 					}
 					catch (Throwable tr)
 					{
-						_logger.warn("Problems parsing an entry. This entry will be skipped. Entry='"+node.getTextContent()+"', File '"+filename+"'.", tr);
+						_logger.warn("Problems parsing an entry. This entry will be skipped. Entry='" + node.getTextContent() + "', File '" + filename + "'.", tr);
 					}
 		 		}
 			}
@@ -2622,7 +2622,7 @@ public class ConnectionProfileManager
 			{
 				Node node = nlist.item(i);
 		 
-				_logger.debug("Current Element at '"+subTag+"' :" + node.getNodeName());
+				_logger.debug("Current Element at '" + subTag + "' :" + node.getNodeName());
 				if (node.getNodeType() == Node.ELEMENT_NODE) 
 				{
 					try
@@ -2632,7 +2632,7 @@ public class ConnectionProfileManager
 					}
 					catch (Throwable tr)
 					{
-						_logger.warn("Problems parsing an entry. This entry will be skipped. Entry='"+node.getTextContent()+"', File '"+filename+"'.", tr);
+						_logger.warn("Problems parsing an entry. This entry will be skipped. Entry='" + node.getTextContent() + "', File '" + filename + "'.", tr);
 					}
 		 		}
 			}
@@ -2644,7 +2644,7 @@ public class ConnectionProfileManager
 			{
 				Node node = nlist.item(i);
 		 
-				_logger.debug("Current Element at '"+subTag+"' :" + node.getNodeName());
+				_logger.debug("Current Element at '" + subTag + "' :" + node.getNodeName());
 				if (node.getNodeType() == Node.ELEMENT_NODE) 
 				{
 					try
@@ -2654,7 +2654,7 @@ public class ConnectionProfileManager
 					}
 					catch (Throwable tr)
 					{
-						_logger.warn("Problems parsing an entry. This entry will be skipped. Entry='"+node.getTextContent()+"', File '"+filename+"'.", tr);
+						_logger.warn("Problems parsing an entry. This entry will be skipped. Entry='" + node.getTextContent() + "', File '" + filename + "'.", tr);
 					}
 		 		}
 			}
@@ -2724,15 +2724,15 @@ public class ConnectionProfileManager
 		}
 		catch (ParserConfigurationException e)
 		{
-			_logger.error("parseXmlFile(filename='"+filename+"'): Caught: "+e, e);
+			_logger.error("parseXmlFile(filename='" + filename + "'): Caught: " + e, e);
 		}
 		catch (SAXException e)
 		{
-			_logger.error("parseXmlFile(filename='"+filename+"'): Caught: "+e, e);
+			_logger.error("parseXmlFile(filename='" + filename + "'): Caught: " + e, e);
 		}
 		catch (IOException e)
 		{
-			_logger.error("parseXmlFile(filename='"+filename+"'): Caught: "+e, e);
+			_logger.error("parseXmlFile(filename='" + filename + "'): Caught: " + e, e);
 		}
 	}
 
@@ -2756,12 +2756,12 @@ public class ConnectionProfileManager
 					}
 					catch (Throwable tr)
 					{
-						_logger.warn("Problems parsing an entry. This entry will be skipped. Entry='"+node.getTextContent()+"', File '"+getFilename()+"'.", tr);
+						_logger.warn("Problems parsing an entry. This entry will be skipped. Entry='" + node.getTextContent() + "', File '" + getFilename() + "'.", tr);
 					}
 				}
 				else
 				{
-					_logger.warn("Connection Profile found unknwon XML tag '"+tagName+"' when parsing file '"+getFilename()+"'. Skipping this and continuing with next one...");
+					_logger.warn("Connection Profile found unknwon XML tag '" + tagName + "' when parsing file '" + getFilename() + "'. Skipping this and continuing with next one...");
 				}
 	 		}
 		}
@@ -2801,12 +2801,12 @@ public class ConnectionProfileManager
 					{
 						DefaultMutableTreeNode newTreeNode = new DefaultMutableTreeNode(name, false);
 						treeNode.add(newTreeNode);
-						_logger.warn("Connection Profile '"+name+"' wasn't found in the list of known connection profiles. Skipping this and continuing with next one...");
+						_logger.warn("Connection Profile '" + name + "' wasn't found in the list of known connection profiles. Skipping this and continuing with next one...");
 					}
 				}
 				else
 				{
-					_logger.warn("Connection Profile found unknwon XML tag '"+tagName+"' when parsing file '"+getFilename()+"'. Skipping this and continuing with next one...");
+					_logger.warn("Connection Profile found unknwon XML tag '" + tagName + "' when parsing file '" + getFilename() + "'. Skipping this and continuing with next one...");
 				}
 	 		}
 		}
@@ -2824,7 +2824,7 @@ public class ConnectionProfileManager
 	{
 		if ( ! (cont instanceof JPanel) )
 		{
-			_logger.debug("setConnectionProfileType(): returning without doing anything. Passed Container is not JPanel. cont="+cont);
+			_logger.debug("setConnectionProfileType(): returning without doing anything. Passed Container is not JPanel. cont=" + cont);
 			return;
 		}
 		JPanel contentPane = (JPanel) cont;
@@ -2838,7 +2838,7 @@ public class ConnectionProfileManager
 		}
 
 		if (_logger.isDebugEnabled())
-			_logger.debug("Setting Connection Profile Type to name='"+profileType.getName()+"' in Container=."+cont);
+			_logger.debug("Setting Connection Profile Type to name='" + profileType.getName() + "' in Container=." + cont);
 
 		if (    profileType._borderMargins.top    == 0 
 		     && profileType._borderMargins.left   == 0 

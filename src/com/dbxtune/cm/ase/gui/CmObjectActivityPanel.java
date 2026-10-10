@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -75,7 +75,7 @@ extends TabularCntrPanel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		String colorStr = null;
 
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.index");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.index");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -89,7 +89,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.ORANGE), null));
 
 		// BLOB (text/image columns)
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.blob");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.blob");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -103,7 +103,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, ColorConstants.COLOR_DATATYPE_BLOB), null));
 
 		// WORK TABLES (in tempdb)
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.tempdbWorkTables");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.tempdbWorkTables");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -152,7 +152,7 @@ extends TabularCntrPanel
 		l_sampleRowCount_chk.setToolTipText("<html>" +
 				"Sample Table Row Count using ASE functions <code>row_count()</code> and <code>data_pages()</code>.<br>" +
 				"<b>Note 1</b>: Only in ASE 15.0.2 or higher.<br>" +
-				"<b>Note 2</b>: You can also set the property '"+CmObjectActivity.PROPKEY_sample_tabRowCount+"'=true|false' in the configuration file.<br>" +
+				"<b>Note 2</b>: You can also set the property '" + CmObjectActivity.PROPKEY_sample_tabRowCount + "'=true|false' in the configuration file.<br>" +
 				"<b>Note 3</b>: To check if this is enabled or not, use the Properties dialog in this tab pane, right click + properties...<br>" +
 				"<b>Note 4</b>: Warning this may <b>block</b> collection if anyone holds <b>exclusive table locks</b>. In ASE 15.7 SP130 or above function row_count() has option 'noblock', which will be used.<br>" +
 				"</html>");
@@ -184,10 +184,10 @@ extends TabularCntrPanel
 		final JTextField sampleTopRowsCount_txt = new JTextField(Integer.toString(defaultIntOpt), 5);
 
 		sampleTopRows_chk.setName(CmObjectActivity.PROPKEY_sample_topRows);
-		sampleTopRows_chk.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmObjectActivity.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
+		sampleTopRows_chk.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top " + CmObjectActivity.DEFAULT_sample_topRowsCount + "</b> c1, c2, c3 from tablename where...</code></html>");
 
 		sampleTopRowsCount_txt.setName(CmObjectActivity.PROPKEY_sample_topRowsCount);
-		sampleTopRowsCount_txt.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmObjectActivity.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
+		sampleTopRowsCount_txt.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top " + CmObjectActivity.DEFAULT_sample_topRowsCount + "</b> c1, c2, c3 from tablename where...</code></html>");
 
 		sampleTopRows_chk.addActionListener(new ActionListener()
 		{
@@ -222,8 +222,8 @@ extends TabularCntrPanel
 				catch (NumberFormatException nfe)
 				{
 					intVal = CmObjectActivity.DEFAULT_sample_topRowsCount;
-					SwingUtils.showWarnMessage(CmObjectActivityPanel.this, "Not a Number", "<html>This must be a number, you entered '"+strVal+"'.<br>Setting to default value '"+intVal+"'.</html>", nfe);
-					sampleTopRowsCount_txt.setText(intVal+"");
+					SwingUtils.showWarnMessage(CmObjectActivityPanel.this, "Not a Number", "<html>This must be a number, you entered '" + strVal + "'.<br>Setting to default value '" + intVal + "'.</html>", nfe);
+					sampleTopRowsCount_txt.setText(intVal + "");
 				}
 				conf.setProperty(CmObjectActivity.PROPKEY_sample_topRowsCount, intVal);
 				conf.save();
@@ -444,7 +444,7 @@ extends TabularCntrPanel
 //					continue;
 //			}
 			if (DBName_obj instanceof String && ObjectName_obj instanceof String)
-				pch.addDdl((String)DBName_obj, (String)ObjectName_obj, getName()+".guiSorted, row="+r);
+				pch.addDdl((String)DBName_obj, (String)ObjectName_obj, getName() + ".guiSorted, row=" + r);
 		}
 		
 	}

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -69,7 +69,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 //	public static final long     NEED_SRV_VERSION = 1570100; // 15.7 SP100
 	public static final long     NEED_SRV_VERSION = Ver.ver(15,7,0,100); // 15.7 SP100
@@ -99,7 +99,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmExecutionTime(counterController, guiController);
 	}
@@ -146,7 +146,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_EXECUTION_COUNT,
 			"ASE SubSystem Execution Count", 	                                 // Menu CheckBox text
-			"ASE SubSystem Operations - Execution Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"ASE SubSystem Operations - Execution Count (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -159,7 +159,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_EXECUTION_TIME,
 			"ASE SubSystem Execution MicroSeconds", 	                                 // Menu CheckBox text
-			"ASE SubSystem Operations - Execution Time, in Micro Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"ASE SubSystem Operations - Execution Time, in Micro Seconds (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MICROSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -172,7 +172,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_EXECUTION_TIME_PER_COUNT,
 			"ASE SubSystem Execution MicroSeconds per Count", 	                                 // Menu CheckBox text
-			"ASE SubSystem Operations - Execution Time, in Micro Seconds per Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"ASE SubSystem Operations - Execution Time, in Micro Seconds per Count (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MICROSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -185,7 +185,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_CPU_USAGE_PCT,
 			"ASE SubSystem Execution CPU Usage Percent", 	                                 // Menu CheckBox text
-			"ASE SubSystem Operations - CPU Usage Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"ASE SubSystem Operations - CPU Usage Percent (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,

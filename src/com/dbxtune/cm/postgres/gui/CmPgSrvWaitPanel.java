@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -206,7 +206,7 @@ extends TabularCntrPanel
 						{
 							String key = entry.getKey();
 							Double val = entry.getValue();
-							dataset.addValue(val, "(class) "+key, "Class - est_wait_time_ms");
+							dataset.addValue(val, "(class) " + key, "Class - est_wait_time_ms");
 						}
 					}
 					
@@ -216,7 +216,7 @@ extends TabularCntrPanel
 						{
 							String key = entry.getKey();
 							Double val = entry.getValue();
-							dataset.addValue(val, "(class) "+key, "Class - wait_count");
+							dataset.addValue(val, "(class) " + key, "Class - wait_count");
 						}
 					}
 				}

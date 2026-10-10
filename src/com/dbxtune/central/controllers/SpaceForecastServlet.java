@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -112,7 +112,7 @@ extends HttpServlet
 			{
 				if ( ! reader.hasServerSession(srvName) )
 				{
-					resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Server name '"+srvName+"' do not exist in the DBX Central Database.");
+					resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Server name '" + srvName + "' do not exist in the DBX Central Database.");
 					return;
 				}
 			}
@@ -235,7 +235,7 @@ extends HttpServlet
 			{
 				if ( ! outType.toLowerCase().startsWith("html") )
 				{
-					resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "outType '" + outType +"' is not supported for type='all'.");
+					resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "outType '" + outType + "' is not supported for type='all'.");
 				}
 
 				payload = "";

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -149,7 +149,7 @@ public class PipeCommand
 		}
 		else
 		{
-			throw new PipeCommandException("PipeCommand, cmd='"+_cmdStr+"' is unknown. Available commands is: grep, egrep, bcp, tofile, toparquet, convert, iconv, lq, linkedquery, graph, chart, diff");
+			throw new PipeCommandException("PipeCommand, cmd='" + _cmdStr + "' is unknown. Available commands is: grep, egrep, bcp, tofile, toparquet, convert, iconv, lq, linkedquery, graph, chart, diff");
 		}
 	}
 	

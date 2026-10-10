@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -87,9 +87,9 @@ public class DbxTuneLogServlet extends HttpServlet
 			try {
 				numOfLines = Integer.parseInt(tailParam);
 			} catch (NumberFormatException e) {
-				_logger.error("Parameter 'tail' is not a number. tailParam='"+tailParam+"'.");
+				_logger.error("Parameter 'tail' is not a number. tailParam='" + tailParam + "'.");
 
-				resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Parameter 'tail' is not a number. tailParam='"+tailParam+"'.");
+				resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Parameter 'tail' is not a number. tailParam='" + tailParam + "'.");
 				return;
 			}
 		}
@@ -157,11 +157,11 @@ public class DbxTuneLogServlet extends HttpServlet
 		if (StringUtil.hasValue(discardRegExp))
 		{
     		try { pattern = Pattern.compile(discardRegExp); }
-    		catch (PatternSyntaxException ex) { throw new ServletException("Error in 'discard' RegExp pattern. Caught: "+ex); }
+    		catch (PatternSyntaxException ex) { throw new ServletException("Error in 'discard' RegExp pattern. Caught: " + ex); }
 		}
 		
 		// Open file and itterate
-		File f = new File(LOG_DIR+"/"+inputName);
+		File f = new File(LOG_DIR + "/" + inputName);
 		try ( FileInputStream in = new FileInputStream(f); 
 		      BufferedReader  br = new BufferedReader(new InputStreamReader(in)); )
 		{
@@ -228,14 +228,14 @@ public class DbxTuneLogServlet extends HttpServlet
 		}
 		catch (Exception ex)
 		{
-			throw new ServletException("Problems reading file '"+f+"'.", ex);
+			throw new ServletException("Problems reading file '" + f + "'.", ex);
 		}
 	}
 
 	private void asCode(String inputName, String inputType, String discardRegExp, int tailNumOfLines)
 	throws ServletException, IOException
 	{
-		File f = new File(LOG_DIR+"/"+inputName);
+		File f = new File(LOG_DIR + "/" + inputName);
 
 		out.println("<!DOCTYPE html>");
 		out.println("<html>");
@@ -375,7 +375,7 @@ public class DbxTuneLogServlet extends HttpServlet
 			out.println("function logTailConnectWs() ");
 			out.println("{ ");
 			out.println("  const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://'; ");
-			out.println("  logTailWebSocket = new WebSocket(protocol + location.host + '/logtail?name="+inputName+"'); ");
+			out.println("  logTailWebSocket = new WebSocket(protocol + location.host + '/logtail?name=" + inputName + "'); ");
 			out.println("");
 			out.println("  logTailWebSocket.onopen = function(event) ");
 			out.println("  { ");
@@ -489,7 +489,7 @@ public class DbxTuneLogServlet extends HttpServlet
     		catch (PatternSyntaxException ex) 
     		{ 
     			out.println("<p>"); 
-    			out.println("Error in 'discard' RegExp pattern. Caught: "+ex+"<br>"); 
+    			out.println("Error in 'discard' RegExp pattern. Caught: " + ex + "<br>"); 
     			out.println("So discarding will NOT be done<br>"); 
     			out.println("</p>"); 
     		}
@@ -560,7 +560,7 @@ public class DbxTuneLogServlet extends HttpServlet
 		}
 		catch (Exception ex)
 		{
-			throw new ServletException("Problems reading file '"+f+"'.", ex);
+			throw new ServletException("Problems reading file '" + f + "'.", ex);
 		}
 
 		out.println("</pre>");
@@ -704,7 +704,7 @@ public class DbxTuneLogServlet extends HttpServlet
     		catch (PatternSyntaxException ex) 
     		{ 
     			out.println("<p>"); 
-    			out.println("Error in 'discard' RegExp pattern. Caught: "+ex+"<br>"); 
+    			out.println("Error in 'discard' RegExp pattern. Caught: " + ex + "<br>"); 
     			out.println("So discarding will NOT be done<br>"); 
     			out.println("</p>"); 
     		}
@@ -725,7 +725,7 @@ public class DbxTuneLogServlet extends HttpServlet
 		out.println("</thead> ");
 
 		out.println("<tbody>");
-		File f = new File(LOG_DIR+"/"+inputName);
+		File f = new File(LOG_DIR + "/" + inputName);
 		try
 		{
 			FileInputStream in = new FileInputStream(f);
@@ -786,7 +786,7 @@ public class DbxTuneLogServlet extends HttpServlet
 		}
 		catch (Exception ex)
 		{
-			throw new ServletException("Problems reading file '"+f+"'.", ex);
+			throw new ServletException("Problems reading file '" + f + "'.", ex);
 		}
 
 //		out.println("<script>                                                                  ");

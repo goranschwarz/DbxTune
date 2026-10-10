@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -312,7 +312,7 @@ implements ActionListener
 
 		// Check if the configuration file exists
 		if ( ! (new File(propFile)).exists() )
-			throw new FileNotFoundException("The configuration file '"+propFile+"' doesn't exists.");
+			throw new FileNotFoundException("The configuration file '" + propFile + "' doesn't exists.");
 
 		// -----------------------------------------------------------------
 		// CHECK JAVA JVM VERSION
@@ -324,12 +324,12 @@ implements ActionListener
 		{
 			System.out.println("");
 			System.out.println("===============================================================");
-			System.out.println(" "+Version.getAppName()+" needs a runtime Java 7 or higher.");
+			System.out.println(" " + Version.getAppName() + " needs a runtime Java 7 or higher.");
 			System.out.println(" java.version = " + System.getProperty("java.version"));
 			System.out.println(" which is parsed into the number: " + JavaVersion.getVersion());
 			System.out.println("---------------------------------------------------------------");
 			System.out.println("");
-			throw new Exception(Version.getAppName()+" needs a runtime Java 7 or higher.");
+			throw new Exception(Version.getAppName() + " needs a runtime Java 7 or higher.");
 		}
 
 		// The SAVE Properties...
@@ -390,7 +390,7 @@ implements ActionListener
 						String debugOption = entry.getKey();
 						String description = entry.getValue();
 
-						System.out.println(" "+StringUtil.left(debugOption, 15, true) + " " + description);
+						System.out.println(" " + StringUtil.left(debugOption, 15, true) + " " + description);
 					}
 					System.out.println();
 					// Get of of here if it was a list option
@@ -436,7 +436,7 @@ implements ActionListener
 		Connection conn = null;
 		if ( ! StringUtil.isNullOrBlank(asePassword) )
 		{
-			_logger.info("Connecting as user '"+aseUsername+"' to server='"+aseServer+"'. Which is located on '"+hostPortStr+"'.");
+			_logger.info("Connecting as user '" + aseUsername + "' to server='" + aseServer + "'. Which is located on '" + hostPortStr + "'.");
 			try
 			{
 				Properties props = new Properties();
@@ -488,19 +488,19 @@ implements ActionListener
 		}
 		if (winType == WindowType.JFRAME)
 		{
-			_titlePrefix = Version.getAppName()+" Query";
+			_titlePrefix = Version.getAppName() + " Query";
 			_jframe  = new JFrame(_titlePrefix);
 			_window  = _jframe;
 		}
 		if (winType == WindowType.JDIALOG)
 		{
-			_titlePrefix = Version.getAppName()+" Query";
+			_titlePrefix = Version.getAppName() + " Query";
 			_jdialog = new JDialog((Dialog)null, _titlePrefix);
 			_window  = _jdialog;
 		}
 		if (winType == WindowType.JDIALOG_MODAL)
 		{
-			_titlePrefix = Version.getAppName()+" Query";
+			_titlePrefix = Version.getAppName() + " Query";
 			_jdialog = new JDialog((Dialog)null, _titlePrefix, true);
 			_window  = _jdialog;
 		}
@@ -1315,7 +1315,7 @@ implements ActionListener
 
 //System.out.println("ACTION LISTENER: source='"+source+"', actionCmd='"+actionCmd+"'.");
 
-		_logger.debug("ACTION '"+actionCmd+"'.");
+		_logger.debug("ACTION '" + actionCmd + "'.");
 
 		boolean showMaint = _filterOutAppliedTrans_chk.isSelected();
 		_maintUsername_lbl.setEnabled(showMaint);
@@ -1447,7 +1447,7 @@ implements ActionListener
 			if ( lSrv instanceof LogicalConnectionItem )
 			{
 				String[] sa = ((LogicalConnectionItem) lSrv)._logicalName.split("\\.");
-System.out.println("setRclCommand(): logicalName='"+((LogicalConnectionItem) lSrv)._logicalName+"'. sa.length="+sa.length);
+System.out.println("setRclCommand(): logicalName='" + ((LogicalConnectionItem) lSrv)._logicalName + "'. sa.length=" + sa.length);
 				_selectedDestSrvName   = sa.length >= 1 ? sa[0] : null;
 				_selectedDestDbName    = sa.length >= 2 ? sa[1] : null;
 				dbid = "'" + _selectedDestSrvName + "', '" + _selectedDestDbName + "'";
@@ -1476,10 +1476,10 @@ System.out.println("setRclCommand(): logicalName='"+((LogicalConnectionItem) lSr
 					String connType  = _queueTypeIn_rbt.isSelected() ? "STANDBY" : "ACTIVE";
 					SwingUtils.showInfoMessage(_window, "No Queue for this", 
 							"<html>"
-							+ "Sorry the logical connection '"+lSrvName+"' doesn't have an "+queueType+" Queue.<br>"
-							+ "Which means that it do not have a "+connType+" connection attached to it.<br>"
+							+ "Sorry the logical connection '" + lSrvName + "' doesn't have an " + queueType + " Queue.<br>"
+							+ "Which means that it do not have a " + connType + " connection attached to it.<br>"
 							+ "<br>"
-							+ "Try to Switch to the "+switchTo+" Queue instead..."
+							+ "Try to Switch to the " + switchTo + " Queue instead..."
 							+ "</html>");
 					return;
 				}
@@ -1508,7 +1508,7 @@ System.out.println("setRclCommand(): logicalName='"+((LogicalConnectionItem) lSr
 				dbid = "'" + _selectedDestRouteName + "'";
 			}
 		}
-System.out.println("setRclCommand(): to get rs_lastcommit values: _selectedDestSrvName='"+_selectedDestSrvName+"', _selectedDestDbName='"+_selectedDestDbName+"'.");
+System.out.println("setRclCommand(): to get rs_lastcommit values: _selectedDestSrvName='" + _selectedDestSrvName + "', _selectedDestDbName='" + _selectedDestDbName + "'.");
 
 		if (dbid == null)
 			dbid = "<DBID>";
@@ -1524,17 +1524,17 @@ System.out.println("setRclCommand(): to get rs_lastcommit values: _selectedDestS
 //		if (qid == null)
 //			qid = "<0|1>";
 		
-		if (_filterSeg_sp.isEnabled())                   seg = ""+_filterSeg_spm.getValue();
+		if (_filterSeg_sp.isEnabled())                   seg = "" + _filterSeg_spm.getValue();
 		if (_filterSegStartFirstActive_chk.isSelected()) seg = "-1";
 		if (_filterSegShowDeletedData_chk .isSelected()) seg = "-2";
 
-		if (_filterStartBlk_sp.isEnabled())              blk = ""+_filterStartBlk_spm.getValue();
+		if (_filterStartBlk_sp.isEnabled())              blk = "" + _filterStartBlk_spm.getValue();
 		
-		if (_filterBlkCount_sp.isEnabled())              blk = ""+_filterBlkCount_spm.getValue();
+		if (_filterBlkCount_sp.isEnabled())              blk = "" + _filterBlkCount_spm.getValue();
 		if (_filterBlkCountToEndSeg_chk   .isSelected()) cnt = "-1";
 		if (_filterBlkCountToEndQueue_chk .isSelected()) cnt = "-2";
 
-		if (_filterRows_sp.isEnabled())                  numCmds = ""+_filterRows_spm.getValue();
+		if (_filterRows_sp.isEnabled())                  numCmds = "" + _filterRows_spm.getValue();
 		if (_filterRowsShowAll_chk.isSelected())         numCmds = "-1";
 
 //		Syntax in 15.7.1
@@ -1550,11 +1550,11 @@ System.out.println("setRclCommand(): to get rs_lastcommit values: _selectedDestS
 			cnt     = "-1";
 //			numCmds = "-1";
 			opt     = "L0";
-			_rclCmd_txt.setText("sysadmin dump_queue, "+dbid+", "+qid+", "+seg+", "+blk+", "+cnt+", "+opt+", client");
+			_rclCmd_txt.setText("sysadmin dump_queue, " + dbid + ", " + qid + ", " + seg + ", " + blk + ", " + cnt + ", " + opt + ", client");
 		}
 		else
 		{
-			_rclCmd_txt.setText("sysadmin dump_queue, "+dbid+", "+qid+", "+seg+", "+blk+", "+cnt+", "+numCmds+", "+opt+", client");
+			_rclCmd_txt.setText("sysadmin dump_queue, " + dbid + ", " + qid + ", " + seg + ", " + blk + ", " + cnt + ", " + numCmds + ", " + opt + ", client");
 		}
 	}
 
@@ -1625,14 +1625,14 @@ System.out.println("setRclCommand(): to get rs_lastcommit values: _selectedDestS
 			_connectedAsUser           = connDialog.getUsername();
 			_connectedWithUrl          = connDialog.getUrl();
 
-			_logger.info("Connected to DatabaseProductName='"+_connectedToProductName+"', DatabaseProductVersion='"+_connectedToProductVersion+"', DatabaseServerName='"+_connectedToServerName+"' with Username='"+_connectedAsUser+"', toURL='"+_connectedWithUrl+"'.");
+			_logger.info("Connected to DatabaseProductName='" + _connectedToProductName + "', DatabaseProductVersion='" + _connectedToProductVersion + "', DatabaseServerName='" + _connectedToServerName + "' with Username='" + _connectedAsUser + "', toURL='" + _connectedWithUrl + "'.");
 		} 
 		catch (Throwable ex) 
 		{
 			if (_logger.isDebugEnabled())
-				_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: "+ex, ex);
+				_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: " + ex, ex);
 			else
-				_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: "+ex);
+				_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: " + ex);
 		}
 		
 		if ( connType == ConnectionDialog.TDS_CONN)
@@ -1645,11 +1645,11 @@ System.out.println("setRclCommand(): to get rs_lastcommit values: _selectedDestS
 				if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_RS))
 				{
 					_srvVersion = AseConnectionUtils.getRsVersionNumber(_conn);
-					_logger.info("Connected to Replication Server version '"+_srvVersion+"'.");
+					_logger.info("Connected to Replication Server version '" + _srvVersion + "'.");
 				}
 				else
 				{
-					_logger.info("Connected to 'other' Sybase TDS server with product name'"+_connectedToProductName+"'.");
+					_logger.info("Connected to 'other' Sybase TDS server with product name'" + _connectedToProductName + "'.");
 				}
 
 				setComponentVisibility();
@@ -1666,7 +1666,7 @@ System.out.println("setRclCommand(): to get rs_lastcommit values: _selectedDestS
 	 */
 	public boolean setDsDbName(String dsdb)
 	{
-System.out.println("----- setDsDbName(): dsdb='"+dsdb+"'.");
+System.out.println("----- setDsDbName(): dsdb='" + dsdb + "'.");
 
 		if (StringUtil.isNullOrBlank(dsdb))
 			return false;
@@ -1695,7 +1695,7 @@ System.out.println("----- setDsDbName(): dsdb='"+dsdb+"'.");
 						cbx.setSelectedIndex(i);
 						found = true;
 						rbt.setSelected(true);
-System.out.println("----- setDsDbName(): FOUND in LOGICAL: index="+i+", dsdb='"+dsdb+"'.");
+System.out.println("----- setDsDbName(): FOUND in LOGICAL: index=" + i + ", dsdb='" + dsdb + "'.");
 						break;
 					}
 				}
@@ -1716,7 +1716,7 @@ System.out.println("----- setDsDbName(): FOUND in LOGICAL: index="+i+", dsdb='"+
 						cbx.setSelectedIndex(i);
 						found = true;
 						rbt.setSelected(true);
-System.out.println("----- setDsDbName(): FOUND in PHYSICAL: index="+i+", dsdb='"+dsdb+"'.");
+System.out.println("----- setDsDbName(): FOUND in PHYSICAL: index=" + i + ", dsdb='" + dsdb + "'.");
 						break;
 					}
 				}
@@ -1737,7 +1737,7 @@ System.out.println("----- setDsDbName(): FOUND in PHYSICAL: index="+i+", dsdb='"
 						cbx.setSelectedIndex(i);
 						found = true;
 						rbt.setSelected(true);
-System.out.println("----- setDsDbName(): FOUND in ROUTES: index="+i+", dsdb='"+dsdb+"'.");
+System.out.println("----- setDsDbName(): FOUND in ROUTES: index=" + i + ", dsdb='" + dsdb + "'.");
 						break;
 					}
 				}
@@ -1747,7 +1747,7 @@ System.out.println("----- setDsDbName(): FOUND in ROUTES: index="+i+", dsdb='"+d
 		// NOT FOUND
 		if ( ! found )
 		{
-			System.out.println("----- setDsDbName(): -NOT-FOUND-  dsdb='"+dsdb+"'.");
+			System.out.println("----- setDsDbName(): -NOT-FOUND-  dsdb='" + dsdb + "'.");
 		}
 		
 		return found;
@@ -1759,7 +1759,7 @@ System.out.println("----- setDsDbName(): FOUND in ROUTES: index="+i+", dsdb='"+d
 	 */
 	public boolean setDbId(int dbid)
 	{
-System.out.println("----- setDbId(): dbid="+dbid+".");
+System.out.println("----- setDbId(): dbid=" + dbid + ".");
 		return setDsDbName(_rsDatabases.getSrvDb(dbid));
 	}
 
@@ -1770,7 +1770,7 @@ System.out.println("----- setDbId(): dbid="+dbid+".");
 	 */
 	public void setQueueType(int queueType)
 	{
-System.out.println("----- setQueueType(): queueType="+queueType+".");
+System.out.println("----- setQueueType(): queueType=" + queueType + ".");
 		// IN queue
 		if (queueType == 1)
 		{
@@ -1845,7 +1845,7 @@ System.out.println("----- setQueueType(): queueType="+queueType+".");
 		@Override
 		public String toString()
 		{
-			return "<html><font color='blue'>" + _logicalName + "</font> -- <i><font color='green'><b>Active</b> "+_activeName+", <b>Standby</b> "+_standbyName+"</font></i></html>";
+			return "<html><font color='blue'>" + _logicalName + "</font> -- <i><font color='green'><b>Active</b> " + _activeName + ", <b>Standby</b> " + _standbyName + "</font></i></html>";
 		}
 	}
 	/** class to be added to JComboBox */
@@ -1984,7 +1984,7 @@ System.out.println("----- setQueueType(): queueType="+queueType+".");
 		final Connection conn = _conn;
 		final String rcl = _rclCmd_txt.getText();
 		
-System.out.println("RCL TO EXECUTE: "+rcl);
+System.out.println("RCL TO EXECUTE: " + rcl);
 
 if (e != null)
 saveProps();
@@ -2012,11 +2012,11 @@ saveProps();
 					if (ConnectionProfileManager.hasInstance())
 					{
 						ConnectionProfile connProfile = ConnectionProfileManager.getInstance().getFirstProfileThatStartsWith(_selectedDestSrvName);
-System.out.println("connProfile="+connProfile);
+System.out.println("connProfile=" + connProfile);
 						if (connProfile != null)
 						{
 							TdsEntry tdsEntry = connProfile.getTdsEntry();
-System.out.println("tdsEntry="+tdsEntry);
+System.out.println("tdsEntry=" + tdsEntry);
 							if (tdsEntry != null)
 							{
 								String hosts = tdsEntry._tdsHosts;
@@ -2038,7 +2038,7 @@ System.out.println("tdsEntry="+tdsEntry);
 						in.put(key2, "");
 //						in.put(key3, "false");
 
-						Map<String,String> results = ParameterDialog.showParameterDialog(_window, "Connection details for: "+_selectedDestSrvName, in, false);
+						Map<String,String> results = ParameterDialog.showParameterDialog(_window, "Connection details for: " + _selectedDestSrvName, in, false);
 						if (results != null)
 						{
 							hostPortStr = AseConnectionFactory.toHostPortStr(results.get(key1), results.get(key2));
@@ -2048,7 +2048,7 @@ System.out.println("tdsEntry="+tdsEntry);
 						}
 					}
 				}
-System.out.println("hostPortStr="+hostPortStr);
+System.out.println("hostPortStr=" + hostPortStr);
 
 //				tmp_rsLastcommit = RsLastcommit.getRsLastcommit(conn, _selectedDestSrvName, _selectedDestDbName);
 				tmp_rsLastcommit = RsLastcommit.getRsLastcommit(_selectedDestSrvName, hostPortStr, _selectedDestDbName, username, password);
@@ -2059,11 +2059,11 @@ System.out.println("hostPortStr="+hostPortStr);
 				String msg = "<html>" +
 						"Can <b>not</b> filter out Already Applied or Replicated records<br>" +
 						"<br>" +
-						"Problems accessing the table '<b>rs_lastcommit</b>' in ASE '<b>"+_selectedDestSrvName+"</b>' db '<b>"+_selectedDestDbName+"</b>' <br>" +
+						"Problems accessing the table '<b>rs_lastcommit</b>' in ASE '<b>" + _selectedDestSrvName + "</b>' db '<b>" + _selectedDestDbName + "</b>' <br>" +
 						"So I can not filter out already applied transactions...<br>" +
 						"All available entries will be displayed.<br>" +
 						"<br>" +
-						"Problem: <i>"+e1.getMessage()+"</i>" +
+						"Problem: <i>" + e1.getMessage() + "</i>" +
 						"</html>";
 				SwingUtils.showErrorMessage("Problems getting RsLastcommit info", msg, e1);
 			}
@@ -2104,7 +2104,7 @@ System.out.println("hostPortStr="+hostPortStr);
 					}
 					catch(SQLException ex)
 					{
-						SwingUtils.showErrorMessage("Cancel", "Problems sending cancel to ASE: "+ex, ex);
+						SwingUtils.showErrorMessage("Cancel", "Problems sending cancel to ASE: " + ex, ex);
 					}
 				}
 				//super.cancel();
@@ -2254,7 +2254,7 @@ System.out.println("TO TXT - end");
 				{
 					// If something goes wrong, clear the message line
 //					_msgline.setText("Error: "+ex.getMessage());
-					_statusBar.setMsg("Error: "+ex.getMessage());
+					_statusBar.setMsg("Error: " + ex.getMessage());
 					ex.printStackTrace();
 
 					// Then display the error in a dialog box
@@ -2341,7 +2341,7 @@ System.out.println("TO TXT - end");
 		{
 			discardQueueRecordsList.add("-- Removing Queue Records with a OriginQueueID less than OQID");
 			for (RsLastcommitEntry rse : rsLastcommit.values())
-				discardQueueRecordsList.add("-- Origin="+rse._origin+", OQID=0x"+rse._origin_qid+", SecondaryQID=0x"+rse._secondary_qid);
+				discardQueueRecordsList.add("-- Origin=" + rse._origin + ", OQID=0x" + rse._origin_qid + ", SecondaryQID=0x" + rse._secondary_qid);
 
 			transList.add(discardQueueRecordsList);
 		}
@@ -2356,7 +2356,7 @@ System.out.println("TO TXT - end");
 			{
 				cmdsRead++;
 				if (wait != null && (cmdsRead % reportEveryRow) == 0)
-					wait.setState("Read "+cmdsRead+" Command from the Queue.");
+					wait.setState("Read " + cmdsRead + " Command from the Queue.");
 
 //				try { Thread.sleep(200); }
 //				catch (InterruptedException ignore) {}
@@ -2402,7 +2402,7 @@ System.out.println("TO TXT - end");
 				{
 					// FIXME: move this _CHK to a input variable
 					if (_filterDebugAppliedTrans_chk.isSelected())
-						discardQueueRecordsList.add("/* discarded: Origin="+orgnSiteid+", OQID="+orgnQid+", seqNo="+seqNo+", Cmd: */ "+command);
+						discardQueueRecordsList.add("/* discarded: Origin=" + orgnSiteid + ", OQID=" + orgnQid + ", seqNo=" + seqNo + ", Cmd: */ " + command);
 
 					discardQueueRecordCount++;
 					
@@ -2548,18 +2548,18 @@ System.out.println("TO TXT - end");
 						}
 						else
 						{
-							System.out.println("hmmm tran '"+tranid+"' not in tmpMap.");
+							System.out.println("hmmm tran '" + tranid + "' not in tmpMap.");
 						}
 					}
 				}
 
 				if ( _logger.isDebugEnabled() )
 				{
-					_logger.debug("dumpWsQueue(alreadyAppliedToDest="+alreadyAppliedToDest+"): qNumber='"+qNumber+"', qType='"+qType+"', segment='"+segment
-						+"', block='"+block+"', row='"+row+"', messageLen='"+messageLen+"', orgnSiteid='"+orgnSiteid
-						+"', orgnTime='"+orgnTime+"', orgnQid='"+orgnQid+"', orgnUser='"+orgnUser+"', tranName='"+tranName
-						+"', localQid='"+localQid+"', status='"+status+"', tranid='"+tranid+"', logicalOrgnSiteid='"+logicalOrgnSiteid
-						+"', version='"+version+"', commandLen='"+commandLen+"', seqNo='"+seqNo+"', command='"+command+"'.");
+					_logger.debug("dumpWsQueue(alreadyAppliedToDest=" + alreadyAppliedToDest + "): qNumber='" + qNumber + "', qType='" + qType + "', segment='" + segment
+						+ "', block='" + block + "', row='" + row + "', messageLen='" + messageLen + "', orgnSiteid='" + orgnSiteid
+						+ "', orgnTime='" + orgnTime + "', orgnQid='" + orgnQid + "', orgnUser='" + orgnUser + "', tranName='" + tranName
+						+ "', localQid='" + localQid + "', status='" + status + "', tranid='" + tranid + "', logicalOrgnSiteid='" + logicalOrgnSiteid
+						+ "', version='" + version + "', commandLen='" + commandLen + "', seqNo='" + seqNo + "', command='" + command + "'.");
 				}
 
 //				// If negative number, log everything
@@ -2574,7 +2574,7 @@ System.out.println("TO TXT - end");
 
 			if (rsLastcommit != null)
 			{
-				discardQueueRecordsList.add("-- "+discardQueueRecordCount+" Records were discared.");
+				discardQueueRecordsList.add("-- " + discardQueueRecordCount + " Records were discared.");
 				discardQueueRecordsList.add("reset");
 			}
 		}
@@ -2596,13 +2596,13 @@ System.out.println("TO TXT - end");
 				String warnHeader = "#####################################################################\n" +
 				                    "#### WARNING #### WARNING #### WARNING #### WARNING #### WARNING ####\n" +
 				                    "#### BELOW TRANSACTION IS NOT COMPLETE - CNT WAS PROBABLY TO LOW ####\n" +
-				                    "#### " + list.size()+ " records was found in this un-closed transaction ####\n" +
+				                    "#### " + list.size() + " records was found in this un-closed transaction ####\n" +
 				                    "#####################################################################\n";
 	
 				String warnFooter = "#####################################################################\n" +
 				                    "#### WARNING #### WARNING #### WARNING #### WARNING #### WARNING ####\n" +
 				                    "#### ABOVE TRANSACTION IS NOT COMPLETE - CNT WAS PROBABLY TO LOW ####\n" +
-				                    "#### " + list.size()+ " records was found in this un-closed transaction ####\n" +
+				                    "#### " + list.size() + " records was found in this un-closed transaction ####\n" +
 				                    "#####################################################################\n" +
 				                    "reset";
 
@@ -2911,7 +2911,7 @@ System.out.println("TO TXT - end");
 		pw.println("  ");
 		pw.println("options:");
 		pw.println("  -h,--help                 Usage information.");
-		pw.println("  -v,--version              Display "+Version.getAppName()+" and JVM Version.");
+		pw.println("  -v,--version              Display " + Version.getAppName() + " and JVM Version.");
 		pw.println("  -x,--debug <dbg1,dbg2>    Debug options: a comma separated string");
 		pw.println("                            To get available option, do -x list");
 		pw.println("  ");
@@ -2935,7 +2935,7 @@ System.out.println("TO TXT - end");
 
 		// create the Options
 		options.addOption( "h", "help",        false, "Usage information." );
-		options.addOption( "v", "version",     false, "Display "+Version.getAppName()+" and JVM Version." );
+		options.addOption( "v", "version",     false, "Display " + Version.getAppName() + " and JVM Version." );
 		options.addOption( "x", "debug",       true,  "Debug options: a comma separated string dbg1,dbg2,dbg3" );
 
 		options.addOption( "U", "user",        true, "Username when connecting to server." );
@@ -2967,7 +2967,7 @@ System.out.println("TO TXT - end");
 			for (@SuppressWarnings("unchecked") Iterator<Option> it=cmd.iterator(); it.hasNext();)
 			{
 				Option opt = it.next();
-				_logger.debug("parseCommandLine: swith='"+opt.getOpt()+"', value='"+opt.getValue()+"'.");
+				_logger.debug("parseCommandLine: swith='" + opt.getOpt() + "', value='" + opt.getValue() + "'.");
 			}
 		}
 
@@ -2997,7 +2997,7 @@ System.out.println("TO TXT - end");
 			else if ( cmd.hasOption("version") )
 			{
 				System.out.println();
-				System.out.println(Version.getAppName()+" Version: " + Version.getVersionStr() + " JVM: " + System.getProperty("java.version"));
+				System.out.println(Version.getAppName() + " Version: " + Version.getVersionStr() + " JVM: " + System.getProperty("java.version"));
 				System.out.println();
 			}
 			//-------------------------------

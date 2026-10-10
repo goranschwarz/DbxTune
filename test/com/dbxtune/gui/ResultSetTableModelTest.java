@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -100,7 +100,7 @@ public class ResultSetTableModelTest
 			String sqlText  = rstm1.getValueAsString(r, "SqlText");
 			String planText = rstm2.getValueAsString(r, "PlanText");
 
-			assertEquals("expected sqtext-"+r, sqlText, planText);
+			assertEquals("expected sqtext-" + r, sqlText, planText);
 		}
 	}
 

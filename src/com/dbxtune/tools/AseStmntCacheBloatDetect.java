@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -746,7 +746,7 @@ public class AseStmntCacheBloatDetect
 
 		try
 		{
-			System.out.println(" - Connectiong to URL: " +url);
+			System.out.println(" - Connectiong to URL: " + url);
 			DbxConnection conn = AseStmntCacheBloatDetect.connect(url, user, passwd, System.out);
 
 			System.out.println(" - Executing AseStmntCacheBloatDetect");

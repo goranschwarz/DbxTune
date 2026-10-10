@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -63,7 +63,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -91,7 +91,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmIqStatusParsed(counterController, guiController);
 	}
@@ -136,7 +136,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_VERSION,
 			"Versioning", 	                        // Menu CheckBox text
-			"Versioning, using Absolute Values ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Versioning, using Absolute Values (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Active Txn Versions - Count", "Active Txn Versions - Created MB", "Active Txn Versions - Deleted MB", "Other Versions - Count", "Other Versions - MB" }, 
 			LabelType.Static,
@@ -149,7 +149,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_COMPRESSION,
 			"Compression Ratio", 	                        // Menu CheckBox text
-			"Compression Ratio - in Percent, Absolute Values ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Compression Ratio - in Percent, Absolute Values (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Main IQ I/O - Compression Ratio", "Temporary IQ I/O - Compression Ratio" }, 
 			LabelType.Static,
@@ -162,7 +162,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_CACHE_READS,
 			"Cache Activity - Logical Reads", 	                        // Menu CheckBox text
-			"Cache Activity - Logical Reads, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Cache Activity - Logical Reads, per Second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Main - Logical Read", "Temporary - Logical Read" }, 
 			LabelType.Static,
@@ -175,7 +175,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_CACHE_MAIN,
 			"Cache IO Activity - Main", 	                        // Menu CheckBox text
-			"Cache IO Activity - Main, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Cache IO Activity - Main, per Second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Physical Read", "Pages Created", "Pages Dirtied", "Physically Written", "Pages Destroyed" }, 
 			LabelType.Static,
@@ -188,7 +188,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_CACHE_TEMP,
 			"Cache IO Activity - Temporary", 	                        // Menu CheckBox text
-			"Cache IO Activity - Temporary, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Cache IO Activity - Temporary, per Second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Physical Read", "Pages Created", "Pages Dirtied", "Physically Written", "Pages Destroyed" }, 
 			LabelType.Static,
@@ -545,12 +545,12 @@ extends CountersModel
 			}
 			catch(Exception ex)
 			{
-				_logger.warn(getName()+": Problems parsing entry name='"+name+"', strValue'"+strValue+"'. Caught: "+ex);
-				_logger.debug(getName()+": Problems parsing entry name='"+name+"', strValue'"+strValue+"'. Caught: "+ex, ex);
-				addRow(newSample, name+" ParseException",  strValue, -1, "ParseException",  "Caught: "+ex.toString());
+				_logger.warn(getName() + ": Problems parsing entry name='" + name + "', strValue'" + strValue + "'. Caught: " + ex);
+				_logger.debug(getName() + ": Problems parsing entry name='" + name + "', strValue'" + strValue + "'. Caught: " + ex, ex);
+				addRow(newSample, name + " ParseException",  strValue, -1, "ParseException",  "Caught: " + ex.toString());
 			}
 		}
-System.out.println("AFTER: startRowc="+rowc+", endRowc="+newSample.getRowCount());
+System.out.println("AFTER: startRowc=" + rowc + ", endRowc=" + newSample.getRowCount());
 	}
 	private void addRow(CounterSample newSample, String name, String strValue, int intValue, String unit, String desc)
 	{

@@ -636,12 +636,13 @@ var DbxConfig2 = (function()
 			var info = [['CM Name', cm.cmName, true], ['Display Name', cm.displayName], ['Group Name', cm.groupName], ['Primary Key', toStr(cm.pkCols), true],
 			            ['Diff Columns', toStr(cm.diffCols), true], ['Percent Columns', toStr(cm.pctCols), true], ['Need Server Config', toStr(cm.needSrvConfig), true],
 			            ['Need Server Roles', toStr(cm.needSrvRoles)], ['Need Server Version', toStr(cm.needSrvVersion)], ['Depends On CM', toStr(cm.dependsOnCm), true]];
+			if (cm.osCommand) info.push(['OS Host', cm.osHost], ['OS Command Mode', cm.osCommandExecMode]);   // Host Monitor CM's
 			h += '<dl class="c2-info">';
 			info.forEach(function(i) { h += '<dt>' + i[0] + '</dt><dd' + (i[2] ? ' class="c2-mono"' : '') + '>' + (i[1] ? esc(i[1]) : '<span class="c2-faint">-</span>') + '</dd>'; });
 			h += '</dl>';
-			[['Init SQL', cm.sqlInit], ['Get Counter SQL', cm.sqlRefresh], ['Close SQL', cm.sqlClose]].forEach(function(s) {
+			[['Init SQL', cm.sqlInit, 'sql'], ['Get Counter SQL', cm.sqlRefresh, 'sql'], ['Close SQL', cm.sqlClose, 'sql'], ['OS Command', cm.osCommand, 'none']].forEach(function(s) {
 				if (toStr(s[1]).trim() === '') return;
-				h += '<div class="c2-sec">' + s[0] + '</div><pre class="c2-sql"><code class="language-sql">' + esc(toStr(s[1])) + '</code></pre>';
+				h += '<div class="c2-sec">' + s[0] + '</div><pre class="c2-sql"><code class="language-' + s[2] + '">' + esc(toStr(s[1])) + '</code></pre>';
 			});
 		}
 		h += '</div>';

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -73,7 +73,7 @@ public class LogoutServlet extends HttpServlet
 		if (session != null)
 		{
 			session.invalidate();
-			_logger.info("Logout: username='"+username+"'.");
+			_logger.info("Logout: username='" + username + "'.");
 		}
 
 //		response.sendRedirect(request.getContextPath() + "/index.html");

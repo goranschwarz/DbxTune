@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -68,7 +68,7 @@ extends TabularCntrPanelAppend
 
 		//---------------------------------------------------------------------------------------
 		// ORANGE = Error
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.error");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.error");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -84,7 +84,7 @@ extends TabularCntrPanelAppend
 
 		//---------------------------------------------------------------------------------------
 		// RED = Critical
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.critical");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.critical");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -91,7 +91,7 @@ extends CmSummaryAbstract
 		"</html>";
 
 	public static final String   GROUP_NAME       = null;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -127,7 +127,7 @@ extends CmSummaryAbstract
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmSummary(counterController, guiController);
 	}
@@ -217,7 +217,7 @@ extends CmSummaryAbstract
 		addTrendGraph(
 			GRAPH_NAME_TRANSACTION,
 			"ASE Operations - Transaction per second",                         // Menu CheckBox text
-			"ASE Operations - Transaction per Second ("+SHORT_NAME+")", // Label 
+			"ASE Operations - Transaction per Second (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Transactions", "Rollbacks" },
 			LabelType.Dynamic,
@@ -229,7 +229,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_SELECT_OPERATIONS,
 			"ASE Operations - Selects per second", 	                     // Menu CheckBox text
-			"ASE Operations - Selects per Second ("+SHORT_NAME+")", // Label 
+			"ASE Operations - Selects per Second (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Selects" }, 
 			LabelType.Static,
@@ -241,7 +241,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_IUDM_OPERATIONS,
 			"ASE Operations - Ins/Upd/Del/Merge per second", 	                   // Menu CheckBox text
-			"ASE Operations - Ins/Upd/Del/Merge per Second ("+SHORT_NAME+")", // Label 
+			"ASE Operations - Ins/Upd/Del/Merge per Second (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Total DML", "Inserts", "Updates", "Deletes", "Merges" }, 
 			LabelType.Static,
@@ -253,7 +253,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_TAB_IND_ACCESS,
 			"ASE Operations - Table/Index Access per second", 	                    // Menu CheckBox text
-			"ASE Operations - Table/Index Access per Second ("+SHORT_NAME+")", // Label 
+			"ASE Operations - Table/Index Access per Second (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "TableAccesses", "IndexAccesses" }, 
 			LabelType.Static,
@@ -265,7 +265,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_TEMPDB_ACCESS,
 			"ASE Operations - Tempdb Object, Work Tables per second", 	                        // Menu CheckBox text
-			"ASE Operations - Tempdb Objects and Work Tables per Second ("+SHORT_NAME+")", // Label 
+			"ASE Operations - Tempdb Objects and Work Tables per Second (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "TempDbObjects", "WorkTables" }, 
 			LabelType.Static,
@@ -277,7 +277,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_ULC,
 			"ASE Operations - User Log Cache per second", 	                                // Menu CheckBox text
-			"ASE Operations - User Log Cache Information per Second ("+SHORT_NAME+")", // Label 
+			"ASE Operations - User Log Cache Information per Second (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "ULCFlushes", "ULCFlushFull", "ULCKBWritten" }, 
 			LabelType.Static,
@@ -289,7 +289,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_IO_RW,
 			"ASE Operations - IO's per second", 	                  // Menu CheckBox text
-			"ASE Operations - IO's per Second ("+SHORT_NAME+")", // Label 
+			"ASE Operations - IO's per Second (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "PagesRead", "PagesWritten", "PhysicalReads", "PhysicalWrites" }, 
 			LabelType.Static,
@@ -301,7 +301,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_LOGICAL_READ,
 			"ASE Operations - Logical Reads per second", 	                   // Menu CheckBox text
-			"ASE Operations - Logical Reads per Second ("+SHORT_NAME+")", // Label 
+			"ASE Operations - Logical Reads per Second (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "LogicalReads" }, 
 			LabelType.Static,
@@ -313,7 +313,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_LOGICAL_READ_MB,
 			"ASE Operations - Logical Reads in MB per second", 	                   // Menu CheckBox text
-			"ASE Operations - Logical Reads in MB  per Second ("+SHORT_NAME+")", // Label 
+			"ASE Operations - Logical Reads in MB  per Second (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "LogicalReadsMb" }, 
 			LabelType.Static,
@@ -325,7 +325,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
 			"Blocking Locks", 	                                     // Menu CheckBox text
-			"Number of Concurrently Blocking Locks ("+SHORT_NAME+")", // Label 
+			"Number of Concurrently Blocking Locks (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Blocking Locks" }, 
 			LabelType.Static,
@@ -337,7 +337,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_CONNECTION,
 			"Connections/Users in ASE", 	          // Menu CheckBox text
-			"Connections/Users connected to the ASE ("+SHORT_NAME+")", // Label 
+			"Connections/Users connected to the ASE (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "UserConnections (abs)", "distinctLogins (abs)", "@@connections (diff)", "@@connections (rate)" }, 
 			LabelType.Static,
@@ -349,7 +349,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_CONNECTION_RATE,
 			"Connection Rate in ASE", 	          // Menu CheckBox text
-			"Connection Attemtps per Second (source @@connections) ("+SHORT_NAME+")", // Label 
+			"Connection Attemtps per Second (source @@connections) (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "@@connections (rate)" }, 
 			LabelType.Static,
@@ -361,7 +361,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_AA_DISK_READ_WRITE,
 			"Disk read/write, Global Variables", 	                         // Menu CheckBox text
-			"Disk read/write per second, using @@total_read, @@total_write ("+SHORT_NAME+")", // Label 
+			"Disk read/write per second, using @@total_read, @@total_write (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Total (read + write)", "@@total_read", "@@total_write" }, 
 			LabelType.Static,
@@ -373,7 +373,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_AA_NW_PACKET,
 			"Network Packets received/sent, Global Variables", 	                            // Menu CheckBox text
-			"Network Packets received/sent per second, using @@pack_received, @@pack_sent ("+SHORT_NAME+")", // Label 
+			"Network Packets received/sent per second, using @@pack_received, @@pack_sent (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Total (received + sent + errors)", "@@pack_received", "@@pack_sent", "@@packet_errors" }, 
 			LabelType.Static,
@@ -385,7 +385,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
 			"Oldest Open Transaction in any Databases",     // Menu CheckBox text
-			"Oldest Open Transaction in any Databases, in Seconds ("+SHORT_NAME+")", // Label 
+			"Oldest Open Transaction in any Databases, in Seconds (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Seconds" }, 
 			LabelType.Static,
@@ -397,7 +397,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_LOCK_COUNT,
 			"Lock Count", 	                   // Menu CheckBox text
-			"Lock Count, number of concurrent locks (from syslocks) ("+SHORT_NAME+")", // Label 
+			"Lock Count, number of concurrent locks (from syslocks) (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Lock Count" }, 
 			LabelType.Static,
@@ -409,7 +409,7 @@ extends CmSummaryAbstract
 		
 		addTrendGraph(GRAPH_NAME_DEADLOCK_COUNT,
 			"Deadlock Count", // Menu CheckBox text
-			"Deadlock Count ("+SHORT_NAME+")", // Label 
+			"Deadlock Count (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Deadlock Count" },
 			LabelType.Static,
@@ -494,7 +494,7 @@ extends CmSummaryAbstract
 			// Check if we can do select on syslogshold
 			canDoSelectOnSyslogshold = AseConnectionUtils.canDoSelectOnTable(conn, "master.dbo.syslogshold");
 			if ( ! canDoSelectOnSyslogshold )
-				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"'. Problems accessing 'master.dbo.syslogshold' table, column 'oldestOpenTranInSec' will not hold valid data.");
+				_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '" + getDisplayName() + "'. Problems accessing 'master.dbo.syslogshold' table, column 'oldestOpenTranInSec' will not hold valid data.");
 		}
 		else
 			nwAddrInfo = "'tcp listeners goes here, if we are connected'";
@@ -558,7 +558,7 @@ extends CmSummaryAbstract
 		int default_oldestOpenTranInSecThreshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_oldestOpenTranInSecThreshold, DEFAULT_oldestOpenTranInSecThreshold);
 		String oldestOpenTranInSecThreshold            = ", oldestOpenTranInSecThreshold = @oldestOpenTranInSecThreshold \n";
 		String preDeclare_oldestOpenTranInSecThreshold = "declare @oldestOpenTranInSecThreshold int \n";
-		String preAssign_oldestOpenTranInSecThreshold  = "select @oldestOpenTranInSecThreshold = "+default_oldestOpenTranInSecThreshold+" \n";
+		String preAssign_oldestOpenTranInSecThreshold  = "select @oldestOpenTranInSecThreshold = " + default_oldestOpenTranInSecThreshold + " \n";
 
 		// oldestOpenTranInSec
 		String oldestOpenTranInSec            = ", oldestOpenTranInSec = @oldestOpenTranInSec \n";
@@ -706,7 +706,7 @@ extends CmSummaryAbstract
 				", bootcount          = @@bootcount \n" + // from 12.5.0.3
 //				", recovery_state     = "+ (srvVersion >= 12510 ? "@@recovery_state" : "'Introduced in ASE 12.5.1'") + " \n" +
 //				", recovery_state     = "+ (srvVersion >= 1251000 ? "@@recovery_state" : "'Introduced in ASE 12.5.1'") + " \n" +
-				", recovery_state     = "+ (srvVersion >= Ver.ver(12,5,1) ? "@@recovery_state" : "'Introduced in ASE 12.5.1'") + " \n" +
+				", recovery_state     = " + (srvVersion >= Ver.ver(12,5,1) ? "@@recovery_state" : "'Introduced in ASE 12.5.1'") + " \n" +
 
 				", cpu_busy           = @@cpu_busy \n" +
 				", cpu_io             = @@io_busy \n" +
@@ -915,7 +915,7 @@ extends CmSummaryAbstract
 				arr[0] = calcCPUTime      .doubleValue();
 				arr[1] = calcSystemCPUTime.doubleValue();
 				arr[2] = calcUserCPUTime  .doubleValue();
-				_logger.debug("updateGraphData(aaCpuGraph): @@cpu_busy+@@cpu_io='"+arr[0]+"', @@cpu_io='"+arr[1]+"', @@cpu_busy='"+arr[2]+"'.");
+				_logger.debug("updateGraphData(aaCpuGraph): @@cpu_busy+@@cpu_io='" + arr[0] + "', @@cpu_io='" + arr[1] + "', @@cpu_busy='" + arr[2] + "'.");
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -954,7 +954,7 @@ extends CmSummaryAbstract
 
 					dArray[0] = this.getRateValueSum("Transactions");
 					dArray[1] = this.getRateValueSum("Rollbacks");
-					_logger.debug("updateGraphData("+tgdp.getName()+"): Transactions='"+dArray[0]+"', Rollbacks='"+dArray[1]+"'.");
+					_logger.debug("updateGraphData(" + tgdp.getName() + "): Transactions='" + dArray[0] + "', Rollbacks='" + dArray[1] + "'.");
 
 					// Set the values
 					tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
@@ -965,7 +965,7 @@ extends CmSummaryAbstract
 					String[] lArray = new String[] { "Transactions" };
 
 					dArray[0] = this.getRateValueSum("Transactions");
-					_logger.debug("updateGraphData("+tgdp.getName()+"): Transactions='"+dArray[0]+"'.");
+					_logger.debug("updateGraphData(" + tgdp.getName() + "): Transactions='" + dArray[0] + "'.");
 
 					// Set the values
 					tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
@@ -1000,7 +1000,7 @@ extends CmSummaryAbstract
 				Double[] arr = new Double[1];
 
 				arr[0] = this.getRateValueSum("Selects");
-				_logger.debug("updateGraphData("+tgdp.getName()+"): Selects='"+arr[0]+"'.");
+				_logger.debug("updateGraphData(" + tgdp.getName() + "): Selects='" + arr[0] + "'.");
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1045,7 +1045,7 @@ extends CmSummaryAbstract
 				arr[2] = updates;
 				arr[3] = deletes;
 				arr[4] = merges;
-				_logger.debug("updateGraphData("+tgdp.getName()+"): TotalDML='"+arr[0]+"', Inserts='"+arr[1]+"', Updates='"+arr[2]+"', Deletes='"+arr[3]+"', Merges='"+arr[4]+"'.");
+				_logger.debug("updateGraphData(" + tgdp.getName() + "): TotalDML='" + arr[0] + "', Inserts='" + arr[1] + "', Updates='" + arr[2] + "', Deletes='" + arr[3] + "', Merges='" + arr[4] + "'.");
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1080,7 +1080,7 @@ extends CmSummaryAbstract
 
 				arr[0] = this.getRateValueSum("TableAccesses");
 				arr[1] = this.getRateValueSum("IndexAccesses");
-				_logger.debug("updateGraphData("+tgdp.getName()+"): TableAccesses='"+arr[0]+"', IndexAccesses='"+arr[1]+"'.");
+				_logger.debug("updateGraphData(" + tgdp.getName() + "): TableAccesses='" + arr[0] + "', IndexAccesses='" + arr[1] + "'.");
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1115,7 +1115,7 @@ extends CmSummaryAbstract
 
 				arr[0] = this.getRateValueSum("TempDbObjects");
 				arr[1] = this.getRateValueSum("WorkTables");
-				_logger.debug("updateGraphData("+tgdp.getName()+"): TempDbObjects='"+arr[0]+"', WorkTables='"+arr[1]+"'.");
+				_logger.debug("updateGraphData(" + tgdp.getName() + "): TempDbObjects='" + arr[0] + "', WorkTables='" + arr[1] + "'.");
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1151,7 +1151,7 @@ extends CmSummaryAbstract
 				arr[0] = this.getRateValueSum("ULCFlushes");
 				arr[1] = this.getRateValueSum("ULCFlushFull");
 				arr[2] = this.getRateValueSum("ULCKBWritten");
-				_logger.debug("updateGraphData("+tgdp.getName()+"): ULCFlushes='"+arr[0]+"', ULCFlushFull='"+arr[1]+"', ULCKBWritten='"+arr[2]+"'.");
+				_logger.debug("updateGraphData(" + tgdp.getName() + "): ULCFlushes='" + arr[0] + "', ULCFlushFull='" + arr[1] + "', ULCKBWritten='" + arr[2] + "'.");
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1188,7 +1188,7 @@ extends CmSummaryAbstract
 				arr[1] = this.getRateValueSum("PagesWritten");
 				arr[2] = this.getRateValueSum("PhysicalReads");
 				arr[3] = this.getRateValueSum("PhysicalWrites");
-				_logger.debug("updateGraphData("+tgdp.getName()+"): PagesRead='"+arr[0]+"', PagesWritten='"+arr[1]+"', PhysicalReads='"+arr[2]+"', PhysicalWrites='"+arr[3]+"'.");
+				_logger.debug("updateGraphData(" + tgdp.getName() + "): PagesRead='" + arr[0] + "', PagesWritten='" + arr[1] + "', PhysicalReads='" + arr[2] + "', PhysicalWrites='" + arr[3] + "'.");
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1222,7 +1222,7 @@ extends CmSummaryAbstract
 				Double[] arr = new Double[1];
 
 				arr[0] = this.getRateValueSum("LogicalReads");
-				_logger.debug("updateGraphData("+tgdp.getName()+"): LogicalReads='"+arr[0]+"'.");
+				_logger.debug("updateGraphData(" + tgdp.getName() + "): LogicalReads='" + arr[0] + "'.");
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1259,7 +1259,7 @@ extends CmSummaryAbstract
 				Double[] arr = new Double[1];
 
 				arr[0] = this.getRateValueSum("LogicalReads") / asePageSizeDivideToGetMb;
-				_logger.debug("updateGraphData("+tgdp.getName()+"): LogicalReadsMb='"+arr[0]+"'.");
+				_logger.debug("updateGraphData(" + tgdp.getName() + "): LogicalReadsMb='" + arr[0] + "'.");
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1274,7 +1274,7 @@ extends CmSummaryAbstract
 			Double[] arr = new Double[1];
 
 			arr[0] = this.getAbsValueAsDouble (0, "LockCount");
-			_logger.debug("updateGraphData("+tgdp.getName()+"): LockCount='"+arr[0]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): LockCount='" + arr[0] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1288,7 +1288,7 @@ extends CmSummaryAbstract
 			Double[] arr = new Double[1];
 
 			arr[0] = this.getAbsValueAsDouble (0, "LockWaits");
-			_logger.debug("updateGraphData("+tgdp.getName()+"): LockWait='"+arr[0]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): LockWait='" + arr[0] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1305,7 +1305,7 @@ extends CmSummaryAbstract
 			arr[1] = this.getAbsValueAsDouble (0, "distinctLogins");
 			arr[2] = this.getDiffValueAsDouble(0, "aaConnections");
 			arr[3] = this.getRateValueAsDouble(0, "aaConnections");
-			_logger.debug("updateGraphData("+tgdp.getName()+"): Connections(Abs)='"+arr[0]+"', distinctLogins(Abs)='"+arr[1]+"', aaConnections(Diff)='"+arr[2]+"', aaConnections(Rate)='"+arr[3]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): Connections(Abs)='" + arr[0] + "', distinctLogins(Abs)='" + arr[1] + "', aaConnections(Diff)='" + arr[2] + "', aaConnections(Rate)='" + arr[3] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1319,7 +1319,7 @@ extends CmSummaryAbstract
 			Double[] arr = new Double[1];
 
 			arr[0] = this.getRateValueAsDouble(0, "aaConnections");
-			_logger.debug("updateGraphData("+tgdp.getName()+"): aaConnections(Rate)='"+arr[0]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): aaConnections(Rate)='" + arr[0] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1338,7 +1338,7 @@ extends CmSummaryAbstract
 			arr[0] = io_total_read + io_total_write;
 			arr[1] = io_total_read;
 			arr[2] = io_total_write;
-			_logger.debug("updateGraphData("+tgdp.getName()+"): total='"+arr[0]+"', io_total_read='"+arr[1]+"', io_total_write='"+arr[2]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): total='" + arr[0] + "', io_total_read='" + arr[1] + "', io_total_write='" + arr[2] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1359,7 +1359,7 @@ extends CmSummaryAbstract
 			arr[1] = pack_received;
 			arr[2] = pack_sent;
 			arr[3] = packet_errors;
-			_logger.debug("updateGraphData("+tgdp.getName()+"): total='"+arr[0]+"', pack_received='"+arr[1]+"', pack_sent='"+arr[2]+"', packet_errors='"+arr[3]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): total='" + arr[0] + "', pack_received='" + arr[1] + "', pack_sent='" + arr[2] + "', packet_errors='" + arr[3] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1373,7 +1373,7 @@ extends CmSummaryAbstract
 			Double[] arr = new Double[1];
 
 			arr[0] = this.getAbsValueAsDouble(0, "oldestOpenTranInSec");
-			_logger.debug("updateGraphData("+tgdp.getName()+"): oldestOpenTranInSec='"+arr[0]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): oldestOpenTranInSec='" + arr[0] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1388,7 +1388,7 @@ extends CmSummaryAbstract
 			Double[] arr = new Double[1];
 
 			arr[0] = this.getDiffValueAsDouble(0, "NumDeadlocks");
-			_logger.debug("updateGraphData("+tgdp.getName()+"): NumDeadlocks='"+arr[0]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): NumDeadlocks='" + arr[0] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1485,7 +1485,7 @@ extends CmSummaryAbstract
 					double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_TotalCPUTime, DEFAULT_alarm_TotalCPUTime);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): TotalCPUTime - threshold="+threshold+", pctCPUTime='"+pctCPUTime+"', pctSystemCPUTime='"+pctUserCPUTime+"', pctUserCPUTime='"+pctSystemCPUTime+"', pctIdleCPUTime='"+pctIdleCPUTime+"'.");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): TotalCPUTime - threshold=" + threshold + ", pctCPUTime='" + pctCPUTime + "', pctSystemCPUTime='" + pctUserCPUTime + "', pctUserCPUTime='" + pctSystemCPUTime + "', pctIdleCPUTime='" + pctIdleCPUTime + "'.");
 
 					if (pctCPUTime.doubleValue() > threshold)
 					{
@@ -1506,7 +1506,7 @@ extends CmSummaryAbstract
 					double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_UserCPUTime, DEFAULT_alarm_UserCPUTime);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): UserCPUTime - threshold="+threshold+", pctCPUTime='"+pctCPUTime+"', pctSystemCPUTime='"+pctUserCPUTime+"', pctUserCPUTime='"+pctSystemCPUTime+"', pctIdleCPUTime='"+pctIdleCPUTime+"'.");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): UserCPUTime - threshold=" + threshold + ", pctCPUTime='" + pctCPUTime + "', pctSystemCPUTime='" + pctUserCPUTime + "', pctUserCPUTime='" + pctSystemCPUTime + "', pctIdleCPUTime='" + pctIdleCPUTime + "'.");
 
 					if (pctUserCPUTime.doubleValue() > threshold)
 					{
@@ -1527,7 +1527,7 @@ extends CmSummaryAbstract
 					double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_IoCPUTime, DEFAULT_alarm_IoCPUTime);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): IoCPUTime - threshold="+threshold+", pctCPUTime='"+pctCPUTime+"', pctSystemCPUTime='"+pctUserCPUTime+"', pctUserCPUTime='"+pctSystemCPUTime+"', pctIdleCPUTime='"+pctIdleCPUTime+"'.");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): IoCPUTime - threshold=" + threshold + ", pctCPUTime='" + pctCPUTime + "', pctSystemCPUTime='" + pctUserCPUTime + "', pctUserCPUTime='" + pctSystemCPUTime + "', pctIdleCPUTime='" + pctIdleCPUTime + "'.");
 
 					if (pctSystemCPUTime.doubleValue() > threshold)
 					{
@@ -1558,7 +1558,7 @@ extends CmSummaryAbstract
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LockWaits, DEFAULT_alarm_LockWaits);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", LockWaits='"+LockWaits+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", LockWaits='" + LockWaits + "'.");
 
 				if (LockWaits.intValue() > threshold)
 				{
@@ -1686,7 +1686,7 @@ extends CmSummaryAbstract
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_oldestOpenTranInSec, DEFAULT_alarm_oldestOpenTranInSec);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", oldestOpenTranInSec='"+oldestOpenTranInSec+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", oldestOpenTranInSec='" + oldestOpenTranInSec + "'.");
 
 				if (oldestOpenTranInSec.intValue() > threshold)
 				{
@@ -1826,7 +1826,7 @@ extends CmSummaryAbstract
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_fullTranslogCount, DEFAULT_alarm_fullTranslogCount);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", fullTranslogCount='"+fullTranslogCount+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", fullTranslogCount='" + fullTranslogCount + "'.");
 
 				if (fullTranslogCount.intValue() > threshold)
 				{

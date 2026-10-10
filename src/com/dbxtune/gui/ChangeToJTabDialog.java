@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -130,7 +130,7 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 		JPanel panel = SwingUtils.createPanel("Action", true);
 		panel.setLayout(new MigLayout("insets 0", "", "")); // insets Top Left
 															// Bottom Right
-		_action_change_rb.setToolTipText("Set the selected active tab to '"+_toTabName+"' when this event happens.");
+		_action_change_rb.setToolTipText("Set the selected active tab to '" + _toTabName + "' when this event happens.");
 		_action_stay_rb  .setToolTipText("Do nothing when this event happens.");
 
 		_action_change_rb.setText("<html>Change focus to tab '<b>" + _toTabName + "</b>'.</html>");
@@ -158,7 +158,7 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 		                                        "You will newer have to see this popup again when this event happens.<br>" +
 		                                        "The selected action will always be executed without any popup question.<br>" +
 		                                        "<br>" +
-		                                        "Note: To reset this option you will need to edit the file '"+configFile+"'<br>and remove all entries for '"+PROP_PREFIX+"."+_toTabName+"'.</p>" +
+		                                        "Note: To reset this option you will need to edit the file '" + configFile + "'<br>and remove all entries for '" + PROP_PREFIX + "." + _toTabName + "'.</p>" +
 		                                        "</html>");
 		_next_rememberSession_rb.setToolTipText("So this popup wont be displayed until next time you start the application and the same event happens.");
 		_next_alwaysAsk_rb      .setToolTipText("This popup will be shown every time this event happens.");
@@ -336,7 +336,7 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 			_tabPane.setSelectedTitle(_toTabName);
 
 		if (_externalActionListener != null)
-			_externalActionListener.actionPerformed(new ActionEvent(this, 0, "open:"+_toTabName));
+			_externalActionListener.actionPerformed(new ActionEvent(this, 0, "open:" + _toTabName));
 	}
 
 	private void loadProps()
@@ -446,7 +446,7 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 		if (conf == null) 
 			return;
 
-		conf.removeAll(ChangeToJTabDialog.PROP_PREFIX+"."+toTabName+".");
+		conf.removeAll(ChangeToJTabDialog.PROP_PREFIX + "." + toTabName + ".");
 		conf.save();
 	}
 

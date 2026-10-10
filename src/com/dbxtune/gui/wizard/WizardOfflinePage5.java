@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -97,8 +97,8 @@ implements ActionListener
 		_sshHostname.setToolTipText("What host name should we connect to when polling for Performance Counters.");
 		_sshPort    .setToolTipText("Port number, the SSH server runs on.");
 		_sshUsername.setToolTipText("User name to be used when logging on the the above host name.");
-		_sshPassword.setToolTipText("Password, you can override this with the '-p' command line switch when starting "+Version.getAppName()+" in no-gui mode, and yes the stored value is encrypted.");
-		_sshKeyFile .setToolTipText("SSH Private Key File, you can override this with the '-k' command line switch when starting "+Version.getAppName()+" in no-gui mode.");
+		_sshPassword.setToolTipText("Password, you can override this with the '-p' command line switch when starting " + Version.getAppName() + " in no-gui mode, and yes the stored value is encrypted.");
+		_sshKeyFile .setToolTipText("SSH Private Key File, you can override this with the '-k' command line switch when starting " + Version.getAppName() + " in no-gui mode.");
 		_noHostMonWasSelected.setToolTipText("");
 
 		_noHostMonWasSelected.setVisible(false);
@@ -260,14 +260,14 @@ implements ActionListener
 			problem = problem.substring(0, problem.length()-2);
 		}
 		if ( problem.length() > 0 )
-			return "Following fields can't be empty: "+problem;
+			return "Following fields can't be empty: " + problem;
 
 
 		// CHECK port number
 		try { Integer.parseInt(_sshPort.getText()); }
 		catch (NumberFormatException e)
 		{
-			return "Port must be a NUMBER, current value is '"+_sshPort.getText()+"'.";
+			return "Port must be a NUMBER, current value is '" + _sshPort.getText() + "'.";
 		}
 
 		return null;

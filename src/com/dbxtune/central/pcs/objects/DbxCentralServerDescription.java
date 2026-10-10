@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -247,7 +247,7 @@ public class DbxCentralServerDescription
 		}
 		else
 		{
-			throw new FileNotFoundException("DbxCentral Server Configuration File '"+filename+"' did not exist.");
+			throw new FileNotFoundException("DbxCentral Server Configuration File '" + filename + "' did not exist.");
 		}
 		
 		return map;
@@ -313,7 +313,7 @@ public class DbxCentralServerDescription
 		}
 		else
 		{
-			throw new FileNotFoundException("DbxCentral Server Configuration File '"+filename+"' did not exist.");
+			throw new FileNotFoundException("DbxCentral Server Configuration File '" + filename + "' did not exist.");
 		}
 		
 		return foundRow;

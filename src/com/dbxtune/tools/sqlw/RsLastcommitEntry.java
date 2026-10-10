@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -76,7 +76,7 @@ public class RsLastcommitEntry
 	@Override
 	public String toString()
 	{
-		return "origin='"+_origin+"', originQId='"+_origin_qid+"', secondaryQId='"+_secondary_qid+"', originTime='"+_origin_time+"', destTime='"+_dest_commit_time+"', sampleTime='"+_sample_time+"'. Parsed: genId='"+_generationId+"', logTimestamp='"+_logTimestamp+"', logPage='"+_logPage+"', logRow='"+_logRow+"'.";
+		return "origin='" + _origin + "', originQId='" + _origin_qid + "', secondaryQId='" + _secondary_qid + "', originTime='" + _origin_time + "', destTime='" + _dest_commit_time + "', sampleTime='" + _sample_time + "'. Parsed: genId='" + _generationId + "', logTimestamp='" + _logTimestamp + "', logPage='" + _logPage + "', logRow='" + _logRow + "'.";
 	}
 
 	/**
@@ -180,7 +180,7 @@ public class RsLastcommitEntry
 			if ( ! rows )
 			{
 //				_logger.warn("Can't find any rows in the rs_lastcommit for the '"+mdb.getManagedType()+"' in database '"+mdb.getSrvDbname()+"' for RepServer origin dbid '"+dbid+"'.");
-				_logger.warn("Can't find any rows in the rs_lastcommit in database '"+dbname+"' for RepServer origin dbid '"+dbid+"'.");
+				_logger.warn("Can't find any rows in the rs_lastcommit in database '" + dbname + "' for RepServer origin dbid '" + dbid + "'.");
 				return null;
 			}
 
@@ -188,7 +188,7 @@ public class RsLastcommitEntry
 		}
 		catch (SQLException sqle)
 		{
-			String msg = "Problems when executing '"+cmd+"' in Server '"+srvname+"'. ";
+			String msg = "Problems when executing '" + cmd + "' in Server '" + srvname + "'. ";
 			_logger.error(msg + sqle);
 		}
 
@@ -262,7 +262,7 @@ public class RsLastcommitEntry
 		
 		if (_logger.isDebugEnabled())
 		{
-			_logger.debug("genId='"+genId+"', logTs='"+logTs+"', logRowId='"+logRowId+"'(logPage="+_logPage+",logRow="+_logRow+"), p4='"+p4+"', p5='"+p5+"', p6='"+p6+"', p7='"+p7+"', p8='"+p8+"', p9='"+p9+"'");
+			_logger.debug("genId='" + genId + "', logTs='" + logTs + "', logRowId='" + logRowId + "'(logPage=" + _logPage + ",logRow=" + _logRow + "), p4='" + p4 + "', p5='" + p5 + "', p6='" + p6 + "', p7='" + p7 + "', p8='" + p8 + "', p9='" + p9 + "'");
 		}
 	}
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -167,7 +167,7 @@ extends AlarmWriterAbstract
 	@Override
 	public String getDescription()
 	{
-		return "Internally used by the 'Persistent Counter Storage' when using NO-GUI Mode of "+Version.getAppName();
+		return "Internally used by the 'Persistent Counter Storage' when using NO-GUI Mode of " + Version.getAppName();
 	}
 	
 	@Override
@@ -176,7 +176,7 @@ extends AlarmWriterAbstract
 	{
 		super.init(conf);
 
-		_logger.info("Initializing the AlarmHandler.AlarmWriter component named '"+getName()+"'.");
+		_logger.info("Initializing the AlarmHandler.AlarmWriter component named '" + getName() + "'.");
 	}
 
 	@Override
@@ -189,7 +189,7 @@ extends AlarmWriterAbstract
 	@Override
 	public void raise(AlarmEvent alarmEvent) 
 	{
-		_logger.debug     (getName()+": -----RAISE-----: "+alarmEvent);
+		_logger.debug     (getName() + ": -----RAISE-----: " + alarmEvent);
 
 		addEntry(alarmEvent, ACTION_RAISE);
 	}
@@ -197,7 +197,7 @@ extends AlarmWriterAbstract
 	@Override
 	public void reRaise(AlarmEvent alarmEvent) 
 	{
-		_logger.debug     (getName()+": -----RE-RAISE-----: "+alarmEvent);
+		_logger.debug     (getName() + ": -----RE-RAISE-----: " + alarmEvent);
 
 		addEntry(alarmEvent, ACTION_RE_RAISE);
 	}
@@ -208,7 +208,7 @@ extends AlarmWriterAbstract
 	@Override
 	public void cancel(AlarmEvent alarmEvent) 
 	{
-		_logger.debug(     getName()+": -----CANCEL-----: "+alarmEvent);
+		_logger.debug(     getName() + ": -----CANCEL-----: " + alarmEvent);
 
 		// hmmm...
 		if (isCallReRaiseEnabled())
@@ -222,7 +222,7 @@ extends AlarmWriterAbstract
 	@Override 
 	public void endOfScan(List<AlarmEvent> activeAlarms) 
 	{
-		_logger.debug     (getName()+": -----END-OF-SCAN-----: activeAlarms Count="+activeAlarms.size());
+		_logger.debug     (getName() + ": -----END-OF-SCAN-----: activeAlarms Count=" + activeAlarms.size());
 
 		AlarmEvent eosEvent = new AlarmEventEndOfScan(activeAlarms.size());
 		addEntry(eosEvent, "END-OF-SCAN");
@@ -243,7 +243,7 @@ extends AlarmWriterAbstract
 				AlarmEvent.Category.INTERNAL,
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UNKNOWN, 
-				"EndOfScan activeAlarmSize="+activeAlarmSize,
+				"EndOfScan activeAlarmSize=" + activeAlarmSize,
 				null);
 			
 			setData(activeAlarmSize);

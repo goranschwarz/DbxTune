@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -1186,7 +1186,7 @@ extends UserDefinedActionAbstract
 						// Check if we have more result sets
 						hasRs = stmnt.getMoreResults(); 
 
-						_logger.trace( "--hasRs="+hasRs+", rowsAffected="+rowsAffected );
+						_logger.trace( "--hasRs=" + hasRs + ", rowsAffected=" + rowsAffected );
 					}
 					while (hasRs || rowsAffected != -1);
 
@@ -1583,7 +1583,7 @@ extends UserDefinedActionAbstract
 				if (msg.endsWith("\n"))
 					sb.append(msg);
 				else
-					sb.append(msg+"\n");
+					sb.append(msg + "\n");
 
 			} // end: hasEedInfo()
 			else
@@ -1629,7 +1629,7 @@ extends UserDefinedActionAbstract
 						else
 						{
 							String msg = "SQL-Warning: " +
-									_connectedToProductName + ": ErrorCode "+sqe.getErrorCode()+", SQLState "+sqe.getSQLState()+", WarningClass: " + sqe.getClass().getName() + "\n"
+									_connectedToProductName + ": ErrorCode " + sqe.getErrorCode() + ", SQLState " + sqe.getSQLState() + ", WarningClass: " + sqe.getClass().getName() + "\n"
 									+ sqe.getMessage();
 							sb.append(msg);
 						}
@@ -1637,7 +1637,7 @@ extends UserDefinedActionAbstract
 					else
 					{
 						String msg = "Unexpected SQL-Exception: " +
-								_connectedToProductName + ": ErrorCode "+sqe.getErrorCode()+", SQLState "+sqe.getSQLState()+", ExceptionClass: " + sqe.getClass().getName() + "\n"
+								_connectedToProductName + ": ErrorCode " + sqe.getErrorCode() + ", SQLState " + sqe.getSQLState() + ", ExceptionClass: " + sqe.getClass().getName() + "\n"
 								+ sqe.getMessage();
 						sb.append(msg);
 					}

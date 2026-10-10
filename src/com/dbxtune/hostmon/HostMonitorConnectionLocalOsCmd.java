@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -221,7 +221,7 @@ extends HostMonitorConnection
 		else if (LinuxUtilType.UPTIME.equals(utilType)) cmd = "uptime -V";
 		else if (LinuxUtilType.PS    .equals(utilType)) cmd = "ps -V";
 		else
-			throw new Exception("Unsupported utility of '"+utilType+"'.");
+			throw new Exception("Unsupported utility of '" + utilType + "'.");
 
 		
 		String output = execCommandOutputAsStr(cmd);

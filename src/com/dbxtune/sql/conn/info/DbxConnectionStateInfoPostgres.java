@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -68,7 +68,7 @@ extends DbxConnectionStateInfoGenericJdbc
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("Error in refresh() problems executing sql='"+sql+"'.", ex);
+			_logger.error("Error in refresh() problems executing sql='" + sql + "'.", ex);
 		}
 
 		
@@ -85,7 +85,7 @@ extends DbxConnectionStateInfoGenericJdbc
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("Error in refresh() problems executing sql='"+sql+"'.", ex);
+			_logger.error("Error in refresh() problems executing sql='" + sql + "'.", ex);
 		}
 
 	}

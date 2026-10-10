@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -209,10 +209,10 @@ extends SqlStatementAbstract
 		_params._fieldTermReadable = StringUtil.escapeControlChars(_params._fieldTerm);
 		_params._rowTermReadable   = StringUtil.escapeControlChars(_params._rowTerm);
 
-        System.out.println("TOFILE Param: _fieldTerm     = '"+ _params._fieldTermReadable + "'.");
-        System.out.println("TOFILE Param: _rowTerm       = '"+ _params._rowTermReadable   + "'.");
-        System.out.println("TOFILE Param: _nullValue     = '"+ _params._nullValue         + "'.");
-        System.out.println("TOFILE Param: _charset       = '"+ _params._charset           + "'.");
+        System.out.println("TOFILE Param: _fieldTerm     = '" + _params._fieldTermReadable + "'.");
+        System.out.println("TOFILE Param: _rowTerm       = '" + _params._rowTermReadable   + "'.");
+        System.out.println("TOFILE Param: _nullValue     = '" + _params._nullValue         + "'.");
+        System.out.println("TOFILE Param: _charset       = '" + _params._charset           + "'.");
 
 		// List java char sets
 		if (_params._listJavaCharSets)
@@ -382,15 +382,15 @@ extends SqlStatementAbstract
 		// Check if the file exists
 		File f = new File(_params._filename);
 		if ( ! f.exists() )
-			throw new SQLException("loadfile: File '"+_params._filename+"' doesn't exists.");
+			throw new SQLException("loadfile: File '" + _params._filename + "' doesn't exists.");
 
 		if (StringUtil.isNullOrBlank(_params._charset))
 		{
 			_params._charset = FileUtils.getFileEncoding(f);
 //			addResultMessage("No charset was specified, interrogation of the file guessed it was of charset '"+_params._charset+"'. If this is faulty please use the -c or --charset flag. \nNote: Available charsets: "+Charset.availableCharsets().keySet());
-			addResultMessage("No charset was specified, interrogation of the file guessed it was of charset '"+_params._charset+"'. If this is faulty please use the -c or --charset flag. \nNote: To get available charsets, plase specify -l or --listJavaCharSets");
+			addResultMessage("No charset was specified, interrogation of the file guessed it was of charset '" + _params._charset + "'. If this is faulty please use the -c or --charset flag. \nNote: To get available charsets, plase specify -l or --listJavaCharSets");
 		}
-System.out.println("fileEncoding=|"+_params._charset+"|.");
+System.out.println("fileEncoding=|" + _params._charset + "|.");
 
 		// Check if the table exists
 //		SqlObjectName sqlObj = new SqlObjectName(_params._tablename, _conn.getDatabaseProductName(), null, false);
@@ -418,10 +418,10 @@ System.out.println("fileEncoding=|"+_params._charset+"|.");
 		}
 		rs.close();
 
-		System.out.println("Result from: RSMD.getTables(); count="+count);
+		System.out.println("Result from: RSMD.getTables(); count=" + count);
 		if (_tabColumns.size() == 0)
 		{
-			throw new SQLException("Table '"+_params._tablename+"' doesnt exists.");
+			throw new SQLException("Table '" + _params._tablename + "' doesnt exists.");
 			// Create a SQL statement like: create table XXX (yyy datatype null/not_null)
 			// FIXME
 			//System.out.println("-NOT-YET-IMPLEMENTED-: Create the destination table.");
@@ -481,16 +481,16 @@ System.out.println("fileEncoding=|"+_params._charset+"|.");
 			{
 				_fileColumnMap = new LinkedHashMap<String, Integer>();
 				for (int c=0; c<fileColCount; c++)
-					_fileColumnMap.put("f"+(c+1), c);
+					_fileColumnMap.put("f" + (c+1), c);
 			}
 		}
 		catch (IOException e)
 		{
-			throw new SQLException("Problems Reading file '"+_params._filename+"', caught: "+e, e);
+			throw new SQLException("Problems Reading file '" + _params._filename + "', caught: " + e, e);
 		}
 
-		System.out.println("File  Columns: "+_fileColumnMap.keySet());
-		System.out.println("Table Columns: "+_tabColumns);
+		System.out.println("File  Columns: " + _fileColumnMap.keySet());
+		System.out.println("Table Columns: " + _tabColumns);
 
 		List<String> fileColList = new ArrayList<String>(_fileColumnMap.keySet());
 		String tableString = StringUtil.toTableString(fileColList, _filePreview);
@@ -505,7 +505,7 @@ System.out.println("fileEncoding=|"+_params._charset+"|.");
 		if (fileColCount != _tabColumns.size())
 		{
 			String msg = "ERROR: The file and table do not have the same number of columns. \n" +
-					"TableColumnCount="+_tabColumns.size()+", FileColumnCount="+fileColCount+"\n"+
+					"TableColumnCount=" + _tabColumns.size() + ", FileColumnCount=" + fileColCount + "\n" +
 					"\n" +
 					"Table columns: " + _tabColumns + "\n" +
 					"\n" +
@@ -519,7 +519,7 @@ System.out.println("fileEncoding=|"+_params._charset+"|.");
 		if (_params._preview)
 		{
 			String msg = "STOP: Preview of the file was specified.\n" +
-					"TableColumnCount="+_tabColumns.size()+", FileColumnCount="+fileColCount+"\n"+
+					"TableColumnCount=" + _tabColumns.size() + ", FileColumnCount=" + fileColCount + "\n" +
 					"\n" +
 					"Table columns: " + _tabColumns + "\n" +
 					"\n" +
@@ -595,7 +595,7 @@ System.out.println("fileEncoding=|"+_params._charset+"|.");
 //		if ("".equals("xxx"))
 //			throw new SQLException("Sorry not yet implemented.");
 		
-		setProgressState("Load CSV file '"+_params._filename+"'.");
+		setProgressState("Load CSV file '" + _params._filename + "'.");
 
 //		System.out.println("NOTE: here we should implement the LOADFILE command...");
 //
@@ -640,8 +640,8 @@ System.out.println("fileEncoding=|"+_params._charset+"|.");
 			if ( _params._truncate )
 			{
 				setProgressState("Trying to truncate table");
-				_logger.info("LOADFILE: truncating table '"+_params._tablename+"'.");
-				addResultMessage("truncating table '"+_params._tablename+"'.");
+				_logger.info("LOADFILE: truncating table '" + _params._tablename + "'.");
+				addResultMessage("truncating table '" + _params._tablename + "'.");
 
 				String sql = "TRUNCATE TABLE " + _params._tablename;
 				// delete data from table before loading csv
@@ -651,13 +651,13 @@ System.out.println("fileEncoding=|"+_params._charset+"|.");
 				}
 				catch(SQLException e)
 				{
-					_logger.info("Problems with '"+sql+"', trying a normal 'DELETE FROM ...'. Caught: Err="+e.getErrorCode()+", State='"+e.getSQLState()+"', msg='"+e.getMessage()+"'.");
+					_logger.info("Problems with '" + sql + "', trying a normal 'DELETE FROM ...'. Caught: Err=" + e.getErrorCode() + ", State='" + e.getSQLState() + "', msg='" + e.getMessage() + "'.");
 					sql = "DELETE FROM " + _params._tablename;
 					_conn.createStatement().execute(sql);
 				}
 			}
 
-			setProgressState("Using: "+query);
+			setProgressState("Using: " + query);
 
 			_conn.setAutoCommit(false);
 			ps = _conn.prepareStatement(query);
@@ -670,8 +670,8 @@ System.out.println("fileEncoding=|"+_params._charset+"|.");
 			int count = 0;
 			Date date = null;
 
-			_logger.info("LOADFILE: filename='"+_params._filename+"', charset='"+_params._charset+"', tablename='"+_params._tablename+"'.");
-			addResultMessage("filename='"+_params._filename+"', charset='"+_params._charset+"', tablename='"+_params._tablename+"'.");
+			_logger.info("LOADFILE: filename='" + _params._filename + "', charset='" + _params._charset + "', tablename='" + _params._tablename + "'.");
+			addResultMessage("filename='" + _params._filename + "', charset='" + _params._charset + "', tablename='" + _params._tablename + "'.");
 //			reader = new FileReader(_filename);
 //			reader = new FileInputStream
 //			reader = new BufferedReader( new InputStreamReader( new FileInputStream(_filename), _params._charset ) );
@@ -693,10 +693,10 @@ System.out.println("fileEncoding=|"+_params._charset+"|.");
 			
 			CSVParser parser = CSVParser.parse(new File(_params._filename), Charset.forName(_params._charset), format);
 //			Iterable<CSVRecord> records = CSVFormat.RFC4180.parse(reader);
-System.out.println("LOADFILE: table columns: "+_tabColumns);
-System.out.println("LOADFILE: file fields: "+parser.getHeaderMap());
-System.out.println("LOADFILE: parser format: "+format.toString());
-addResultMessage("parser format: "+format.toString());
+System.out.println("LOADFILE: table columns: " + _tabColumns);
+System.out.println("LOADFILE: file fields: " + parser.getHeaderMap());
+System.out.println("LOADFILE: parser format: " + format.toString());
+addResultMessage("parser format: " + format.toString());
 			int row=0;
 			long startTime = System.currentTimeMillis();
 			for (CSVRecord record : parser)
@@ -763,13 +763,13 @@ addResultMessage("parser format: "+format.toString());
 				{
 					if ( (count % sendBatchSize) == 0 )
 					{
-						setProgressState("Executing batch at "+record.getRecordNumber());
+						setProgressState("Executing batch at " + record.getRecordNumber());
 						ps.executeBatch();
 					}
 				}
 				else
 				{
-					setProgressState("Executing record "+record.getRecordNumber()+" in \"safe\" mode.");
+					setProgressState("Executing record " + record.getRecordNumber() + " in \"safe\" mode.");
 					try
 					{
 						ps.executeBatch();
@@ -777,8 +777,8 @@ addResultMessage("parser format: "+format.toString());
 					catch (SQLException e)
 					{
 						skippedRecordsList.add(record);
-						_logger.warn("LOADFILE: Skipping record due to load problem. Record '"+record+"', caught problem: "+e);
-						addResultMessage("Skipping one record due to load problem. Record '"+record+"', caught problem: "+e);
+						_logger.warn("LOADFILE: Skipping record due to load problem. Record '" + record + "', caught problem: " + e);
+						addResultMessage("Skipping one record due to load problem. Record '" + record + "', caught problem: " + e);
 						_rowsInserted--;
 					}
 				}
@@ -797,10 +797,10 @@ addResultMessage("parser format: "+format.toString());
 			
 			String skipInfo = "";
 			if (skippedRecordsList.size() > 0)
-				skipInfo = "Skipped "+skippedRecordsList.size()+" records due to issues. ";
+				skipInfo = "Skipped " + skippedRecordsList.size() + " records due to issues. ";
 			
 			BigDecimal rowsPerSec = new BigDecimal(String.valueOf(_rowsInserted*1000.0/execTime)).setScale(1, BigDecimal.ROUND_HALF_UP);
-			addResultMessage("Added "+_rowsInserted+" rows to table '"+_params._tablename+"'. "+skipInfo+"Using time "+TimeUtils.msToTimeStr("%?HH[:]%MM:%SS.%ms", execTime)+". Which is "+rowsPerSec+" records per second.");
+			addResultMessage("Added " + _rowsInserted + " rows to table '" + _params._tablename + "'. " + skipInfo + "Using time " + TimeUtils.msToTimeStr("%?HH[:]%MM:%SS.%ms", execTime) + ". Which is " + rowsPerSec + " records per second.");
 		}
 		catch (CheckAndStopException e)
 		{
@@ -813,7 +813,7 @@ addResultMessage("parser format: "+format.toString());
 			e.printStackTrace();
 //			throw new Exception("Error occured while loading data from file to database." + e.getMessage());
 			if (lastRecord != null)
-				addResultMessage("Last read record was line "+lastRecord.getRecordNumber()+", and contained: "+lastRecord);
+				addResultMessage("Last read record was line " + lastRecord.getRecordNumber() + ", and contained: " + lastRecord);
 			throw e;
 		}
 		catch (Exception e)
@@ -917,7 +917,7 @@ addResultMessage("parser format: "+format.toString());
 		{
 			fileColumnMap = new LinkedHashMap<String, Integer>();
 			for (int c=0; c<fileColCount; c++)
-				fileColumnMap.put("f"+(c+1), c);
+				fileColumnMap.put("f" + (c+1), c);
 		}
 		
 		//List<String> fileColList = new ArrayList<String>(fileColumnMap.keySet());

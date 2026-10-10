@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -730,7 +730,7 @@ public abstract class PersistWriterBase
 		case DIFF:                       return schemaPrefix + lq + cm.getName() + "_diff"        + rq;
 		case RATE:                       return schemaPrefix + lq + cm.getName() + "_rate"        + rq;
 		default:
-			throw new RuntimeException("Unknown type of '"+type+"' in getTableName()."); 
+			throw new RuntimeException("Unknown type of '" + type + "' in getTableName()."); 
 		}
 	}
 
@@ -882,14 +882,14 @@ public abstract class PersistWriterBase
 				
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
-				sbSql.append("    "+fill(lq+"SessionStartTime"+rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP  ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"ProductString"   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"VersionString"   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"BuildString"     +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"SourceDate"      +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"SourceRev"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER    ),20)+" "+getNullable(false)+"\n");
+				sbSql.append("    " + fill(lq + "SessionStartTime" + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP  ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "ProductString"   + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 30),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "VersionString"   + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 30),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "BuildString"     + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 30),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "SourceDate"      + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 30),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "SourceRev"       + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER    ),20) + " " + getNullable(false) + "\n");
 				sbSql.append("\n");
-				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionStartTime"+rq+")\n");
+				sbSql.append("   ,PRIMARY KEY (" + lq + "SessionStartTime" + rq + ")\n");
 				sbSql.append(") \n");
 				
 				ddlList.add(sbSql.toString());
@@ -900,12 +900,12 @@ public abstract class PersistWriterBase
 
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
-				sbSql.append("    "+fill(lq+"SessionStartTime"+rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP  ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"ServerName"      +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"NumOfSamples"    +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER    ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"LastSampleTime"  +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP  ),20)+" "+getNullable(true)+"\n");
+				sbSql.append("    " + fill(lq + "SessionStartTime" + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP  ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "ServerName"      + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 30),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "NumOfSamples"    + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER    ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "LastSampleTime"  + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP  ),20) + " " + getNullable(true) + "\n");
 				sbSql.append("\n");
-				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionStartTime"+rq+")\n");
+				sbSql.append("   ,PRIMARY KEY (" + lq + "SessionStartTime" + rq + ")\n");
 				sbSql.append(") \n");
 
 				ddlList.add(sbSql.toString());
@@ -916,12 +916,12 @@ public abstract class PersistWriterBase
 
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
-				sbSql.append("    "+fill(lq+"SessionStartTime"+rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP   ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"Type"            +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 20 ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"ParamName"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"ParamValue"      +rq,40)+" "+fill(getDatatype(conn, Types.CLOB        ),20)+" "+getNullable(true)+"\n");
+				sbSql.append("    " + fill(lq + "SessionStartTime" + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP   ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "Type"            + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 20 ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "ParamName"       + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 255),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "ParamValue"      + rq,40) + " " + fill(getDatatype(conn, Types.CLOB        ),20) + " " + getNullable(true) + "\n");
 				sbSql.append("\n");
-				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionStartTime"+rq+", "+lq+"Type"+rq+", "+lq+"ParamName"+rq+")\n");
+				sbSql.append("   ,PRIMARY KEY (" + lq + "SessionStartTime" + rq + ", " + lq + "Type" + rq + ", " + lq + "ParamName" + rq + ")\n");
 				sbSql.append(") \n");
 
 				ddlList.add(sbSql.toString());
@@ -932,11 +932,11 @@ public abstract class PersistWriterBase
 
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
-				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"SessionSampleTime"+rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP),20)+" "+getNullable(false)+"\n");
+				sbSql.append("    " + fill(lq + "SessionStartTime" + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "SessionSampleTime" + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP),20) + " " + getNullable(false) + "\n");
 				sbSql.append("\n");
 //				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionStartTime"+rq+", "+lq+"SessionSampleTime"+rq+")\n");
-				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionSampleTime"+rq+", "+lq+"SessionStartTime"+rq+")\n");
+				sbSql.append("   ,PRIMARY KEY (" + lq + "SessionSampleTime" + rq + ", " + lq + "SessionStartTime" + rq + ")\n");
 				sbSql.append(") \n");
 
 				ddlList.add(sbSql.toString());
@@ -947,13 +947,13 @@ public abstract class PersistWriterBase
 
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
-				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP  ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"CmName"           +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"absSamples"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER    ),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"diffSamples"      +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER    ),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"rateSamples"      +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER    ),20)+" "+getNullable(true)+"\n");
+				sbSql.append("    " + fill(lq + "SessionStartTime" + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP  ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "CmName"           + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 30),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "absSamples"       + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER    ),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "diffSamples"      + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER    ),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "rateSamples"      + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER    ),20) + " " + getNullable(true) + "\n");
 				sbSql.append("\n");
-				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionStartTime"+rq+", "+lq+"CmName"+rq+")\n");
+				sbSql.append("   ,PRIMARY KEY (" + lq + "SessionStartTime" + rq + ", " + lq + "CmName" + rq + ")\n");
 				sbSql.append(") \n");
 
 				ddlList.add(sbSql.toString());
@@ -964,24 +964,24 @@ public abstract class PersistWriterBase
 
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
-				sbSql.append("    "+fill(lq+"SessionStartTime"      +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"SessionSampleTime"     +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"CmName"                +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30  ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"type"                  +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"graphCount"            +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"absRows"               +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"diffRows"              +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"rateRows"              +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"sqlRefreshTime"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"guiRefreshTime"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"lcRefreshTime"         +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"nonCfgMonHappened"     +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"nonCfgMonMissingParams"+rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 100 ),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"nonCfgMonMessages"     +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 1024),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"isCountersCleared"     +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"hasValidSampleData"    +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"exceptionMsg"          +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 1024),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"exceptionFullText"     +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true)+"\n");
+				sbSql.append("    " + fill(lq + "SessionStartTime"      + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP    ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "SessionSampleTime"     + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP    ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "CmName"                + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 30  ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "type"                  + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "graphCount"            + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "absRows"               + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "diffRows"              + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "rateRows"              + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "sqlRefreshTime"        + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "guiRefreshTime"        + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "lcRefreshTime"         + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "nonCfgMonHappened"     + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "nonCfgMonMissingParams" + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 100 ),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "nonCfgMonMessages"     + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 1024),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "isCountersCleared"     + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "hasValidSampleData"    + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "exceptionMsg"          + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 1024),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "exceptionFullText"     + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true) + "\n");
 				sbSql.append(") \n");
 
 				ddlList.add(sbSql.toString());
@@ -992,14 +992,14 @@ public abstract class PersistWriterBase
 
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
-				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"TableID"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"Columns"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"Parameters"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"Indicators"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"Size"             +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"TableName"        +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, MonTableEntry.TABLE_NAME_MAXLEN ),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"Description"      +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, MonTableEntry.DESCRIPTION_MAXLEN),20)+" "+getNullable(true)+"\n");
+				sbSql.append("    " + fill(lq + "SessionStartTime" + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP    ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "TableID"          + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "Columns"          + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "Parameters"       + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "Indicators"       + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "Size"             + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "TableName"        + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, MonTableEntry.TABLE_NAME_MAXLEN ),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "Description"      + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, MonTableEntry.DESCRIPTION_MAXLEN),20) + " " + getNullable(true) + "\n");
 				sbSql.append(") \n");
 
 				ddlList.add(sbSql.toString());
@@ -1010,18 +1010,18 @@ public abstract class PersistWriterBase
 
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
-				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"TableID"          +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"ColumnID"         +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"TypeID"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"Precision"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"Scale"            +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"Length"           +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"Indicators"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"TableName"        +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, MonTableColumnsEntry.TABLE_NAME_MAXLEN ),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"ColumnName"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, MonTableColumnsEntry.COLUMN_NAME_MAXLEN),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"TypeName"         +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, MonTableColumnsEntry.TYPE_NAME_MAXLEN  ),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(lq+"Description"      +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, MonTableColumnsEntry.DESCRIPTION_MAXLEN),20)+" "+getNullable(true)+"\n");
+				sbSql.append("    " + fill(lq + "SessionStartTime" + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP    ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "TableID"          + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "ColumnID"         + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "TypeID"           + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "Precision"        + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "Scale"            + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "Length"           + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "Indicators"       + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "TableName"        + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, MonTableColumnsEntry.TABLE_NAME_MAXLEN ),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "ColumnName"       + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, MonTableColumnsEntry.COLUMN_NAME_MAXLEN),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "TypeName"         + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, MonTableColumnsEntry.TYPE_NAME_MAXLEN  ),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "Description"      + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, MonTableColumnsEntry.DESCRIPTION_MAXLEN),20) + " " + getNullable(true) + "\n");
 				sbSql.append(") \n");
 				
 				ddlList.add(sbSql.toString());
@@ -1033,7 +1033,7 @@ public abstract class PersistWriterBase
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 //				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP),20)+" "+getNullable(false)+"\n");
+				sbSql.append("    " + fill(lq + "SessionStartTime" + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP),20) + " " + getNullable(false) + "\n");
 
 				// Get ALL other column names from the DBMS Config dictionary
 				if (DbmsConfigManager.hasInstance())
@@ -1043,7 +1043,7 @@ public abstract class PersistWriterBase
     				{
 //    					sbSql.append("   ,"+fill(lq+dbmsCfg.getColumnName(i)+rq,40)+" "+fill(dbmsCfg.getSqlDataType(i),20)+" "+getNullable( dbmsCfg.getSqlDataType(i).equalsIgnoreCase("bit") ? false : true)+"\n");
     					// Maybe this should also be fixed: meaning: dbmsCfg.getSqlDataType(i) should be java.sql.Types instead of a String
-    					sbSql.append("   ,"+fill(lq+dbmsCfg.getColumnName(i)+rq,40)+" "+fill(dbmsCfg.getSqlDataType(conn, i),20)+" "+getNullable( dbmsCfg.getSqlDataType(conn, i).equalsIgnoreCase("bit") ? false : true)+"\n");
+    					sbSql.append("   ," + fill(lq+dbmsCfg.getColumnName(i)+rq,40) + " " + fill(dbmsCfg.getSqlDataType(conn, i),20) + " " + getNullable( dbmsCfg.getSqlDataType(conn, i).equalsIgnoreCase("bit") ? false : true) + "\n");
     				}
 				}
 				sbSql.append(") \n");
@@ -1056,9 +1056,9 @@ public abstract class PersistWriterBase
 
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
-				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP  ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"configName"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 30),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"configText"       +rq,40)+" "+fill(getDatatype(conn, Types.CLOB       ),20)+" "+getNullable(true )+"\n");
+				sbSql.append("    " + fill(lq + "SessionStartTime" + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP  ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "configName"       + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 30),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "configText"       + rq,40) + " " + fill(getDatatype(conn, Types.CLOB       ),20) + " " + getNullable(true ) + "\n");
 				sbSql.append(") \n");
 
 				ddlList.add(sbSql.toString());
@@ -1069,14 +1069,14 @@ public abstract class PersistWriterBase
 
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
-				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP   ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"SrvRestartDate"   +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP   ),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"Discarded"        +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER     ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"ConfigName"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  80),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"Severity"         +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  30),20)+" "+getNullable(true) +"\n");
-				sbSql.append("   ,"+fill(lq+"Description"      +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,2048),20)+" "+getNullable(true) +"\n");
-				sbSql.append("   ,"+fill(lq+"Resolution"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,2048),20)+" "+getNullable(true) +"\n");
-				sbSql.append("   ,"+fill(lq+"PropertyName"     +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 256),20)+" "+getNullable(true )+"\n");
+				sbSql.append("    " + fill(lq + "SessionStartTime" + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP   ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "SrvRestartDate"   + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP   ),20) + " " + getNullable(true ) + "\n");
+				sbSql.append("   ," + fill(lq + "Discarded"        + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER     ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "ConfigName"       + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,  80),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "Severity"         + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,  30),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "Description"      + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,2048),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "Resolution"       + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,2048),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "PropertyName"     + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 256),20) + " " + getNullable(true ) + "\n");
 				sbSql.append(") \n");
 
 				ddlList.add(sbSql.toString());
@@ -1101,13 +1101,13 @@ public abstract class PersistWriterBase
 
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
-				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP   ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"KeyName"          +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"ValueType"        +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  30),20)+" "+getNullable(false)+"\n"); // integer, text, json...
-				sbSql.append("   ,"+fill(lq+"ValueText"        +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 255),20)+" "+getNullable(true )+"\n"); // storage for "short" values (255 chars)
-				sbSql.append("   ,"+fill(lq+"ValueClob"        +rq,40)+" "+fill(getDatatype(conn, Types.CLOB        ),20)+" "+getNullable(true )+"\n"); // storage for "long" values
+				sbSql.append("    " + fill(lq + "SessionStartTime" + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP   ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "KeyName"          + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 255),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "ValueType"        + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,  30),20) + " " + getNullable(false) + "\n"); // integer, text, json...
+				sbSql.append("   ," + fill(lq + "ValueText"        + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 255),20) + " " + getNullable(true ) + "\n"); // storage for "short" values (255 chars)
+				sbSql.append("   ," + fill(lq + "ValueClob"        + rq,40) + " " + fill(getDatatype(conn, Types.CLOB        ),20) + " " + getNullable(true ) + "\n"); // storage for "long" values
 				sbSql.append("\n");
-				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionStartTime"+rq+", "+lq+"KeyName"+rq+")\n");
+				sbSql.append("   ,PRIMARY KEY (" + lq + "SessionStartTime" + rq + ", " + lq + "KeyName" + rq + ")\n");
 				sbSql.append(") \n");
 
 				ddlList.add(sbSql.toString());
@@ -1118,22 +1118,22 @@ public abstract class PersistWriterBase
 
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
-				sbSql.append("    "+fill(lq+"dbname"           +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   30),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"owner"            +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   30),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"objectName"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  255),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"type"             +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   20),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"crdate"           +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"sampleTime"       +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"source"           +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  255),20)+" "+getNullable(true) +"\n");
-				sbSql.append("   ,"+fill(lq+"dependParent"     +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  255),20)+" "+getNullable(true) +"\n");
-				sbSql.append("   ,"+fill(lq+"dependLevel"      +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"dependList"       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR, 1500),20)+" "+getNullable(true) +"\n");
-				sbSql.append("   ,"+fill(lq+"objectText"       +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true) +"\n");
-				sbSql.append("   ,"+fill(lq+"dependsText"      +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true) +"\n");
-				sbSql.append("   ,"+fill(lq+"optdiagText"      +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true) +"\n");
-				sbSql.append("   ,"+fill(lq+"extraInfoText"    +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true) +"\n");
+				sbSql.append("    " + fill(lq + "dbname"           + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   30),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "owner"            + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   30),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "objectName"       + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,  255),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "type"             + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   20),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "crdate"           + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP    ),20) + " " + getNullable(true ) + "\n");
+				sbSql.append("   ," + fill(lq + "sampleTime"       + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP    ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "source"           + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,  255),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "dependParent"     + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,  255),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "dependLevel"      + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "dependList"       + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR, 1500),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "objectText"       + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "dependsText"      + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "optdiagText"      + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true) + "\n");
+				sbSql.append("   ," + fill(lq + "extraInfoText"    + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true) + "\n");
 				sbSql.append("\n");
-				sbSql.append("   ,PRIMARY KEY ("+lq+"dbname"+rq+", "+lq+"owner"+rq+", "+lq+"objectName"+rq+")\n");
+				sbSql.append("   ,PRIMARY KEY (" + lq + "dbname" + rq + ", " + lq + "owner" + rq + ", " + lq + "objectName" + rq + ")\n");
 				sbSql.append(") \n");
 
 				ddlList.add(sbSql.toString());
@@ -1144,34 +1144,34 @@ public abstract class PersistWriterBase
 
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
-				sbSql.append("    "+fill(lq+"alarmClass"                 +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"serviceType"                +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"serviceName"                +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"serviceInfo"                +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"extraInfo"                  +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n"); // Note: Part of PK and can't allow NULL
-				sbSql.append("   ,"+fill(lq+"category"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   20),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"severity"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   10),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"state"                      +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   10),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"alarmId"                    +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   40),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"repeatCnt"                  +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"duration"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"alarmDuration"              +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   20),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"fullDuration"               +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   20),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"fullDurationAdjustmentInSec"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"createTime"                 +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"cancelTime"                 +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"timeToLive"                 +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"threshold"                  +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   15),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"data"                       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"lastData"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"description"                +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"lastDescription"            +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"extendedDescription"        +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"lastExtendedDescription"    +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"alarmOptions"               +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"cancelDescription"          +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
+				sbSql.append("    " + fill(lq + "alarmClass"                 + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   80),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "serviceType"                + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   80),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "serviceName"                + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   80),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "serviceInfo"                + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   80),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "extraInfo"                  + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   80),20) + " " + getNullable(false) + "\n"); // Note: Part of PK and can't allow NULL
+				sbSql.append("   ," + fill(lq + "category"                   + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   20),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "severity"                   + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   10),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "state"                      + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   10),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "alarmId"                    + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   40),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "repeatCnt"                  + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "duration"                   + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   80),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "alarmDuration"              + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   20),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "fullDuration"               + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   20),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "fullDurationAdjustmentInSec" + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "createTime"                 + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP    ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "cancelTime"                 + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP    ),20) + " " + getNullable(true ) + "\n");
+				sbSql.append("   ," + fill(lq + "timeToLive"                 + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true ) + "\n");
+				sbSql.append("   ," + fill(lq + "threshold"                  + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   15),20) + " " + getNullable(true ) + "\n");
+				sbSql.append("   ," + fill(lq + "data"                       + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,  512),20) + " " + getNullable(true ) + "\n");
+				sbSql.append("   ," + fill(lq + "lastData"                   + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,  512),20) + " " + getNullable(true ) + "\n");
+				sbSql.append("   ," + fill(lq + "description"                + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,  512),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "lastDescription"            + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,  512),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "extendedDescription"        + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true ) + "\n");
+				sbSql.append("   ," + fill(lq + "lastExtendedDescription"    + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true ) + "\n");
+				sbSql.append("   ," + fill(lq + "alarmOptions"               + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true ) + "\n");
+				sbSql.append("   ," + fill(lq + "cancelDescription"          + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true ) + "\n");
 				sbSql.append("\n");
-				sbSql.append("   ,PRIMARY KEY ("+lq+"alarmClass"+rq+", "+lq+"serviceType"+rq+", "+lq+"serviceName"+rq+", "+lq+"serviceInfo"+rq+", "+lq+"extraInfo"+rq+", "+lq+"severity"+rq+")\n");
+				sbSql.append("   ,PRIMARY KEY (" + lq + "alarmClass" + rq + ", " + lq + "serviceType" + rq + ", " + lq + "serviceName" + rq + ", " + lq + "serviceInfo" + rq + ", " + lq + "extraInfo" + rq + ", " + lq + "severity" + rq + ")\n");
 				sbSql.append(") \n");
 
 				ddlList.add(sbSql.toString());
@@ -1182,38 +1182,38 @@ public abstract class PersistWriterBase
 
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
-				sbSql.append("    "+fill(lq+"SessionStartTime"           +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"SessionSampleTime"          +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"eventTime"                  +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"action"                     +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   15),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"alarmClass"                 +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"serviceType"                +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"serviceName"                +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"serviceInfo"                +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"extraInfo"                  +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n"); // Note: Part of PK and can't allow NULL
-				sbSql.append("   ,"+fill(lq+"category"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   20),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"severity"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   10),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"state"                      +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   10),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"alarmId"                    +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   40),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"repeatCnt"                  +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"duration"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   80),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"alarmDuration"              +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   20),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"fullDuration"               +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   20),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"fullDurationAdjustmentInSec"+rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"createTime"                 +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"cancelTime"                 +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP    ),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"timeToLive"                 +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER      ),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"threshold"                  +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,   15),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"data"                       +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"lastData"                   +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"description"                +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"lastDescription"            +rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,  512),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"extendedDescription"        +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"lastExtendedDescription"    +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"alarmOptions"               +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(lq+"cancelDescription"          +rq,40)+" "+fill(getDatatype(conn, Types.CLOB         ),20)+" "+getNullable(true )+"\n");
+				sbSql.append("    " + fill(lq + "SessionStartTime"           + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP    ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "SessionSampleTime"          + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP    ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "eventTime"                  + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP    ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "action"                     + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   15),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "alarmClass"                 + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   80),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "serviceType"                + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   80),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "serviceName"                + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   80),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "serviceInfo"                + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   80),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "extraInfo"                  + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   80),20) + " " + getNullable(false) + "\n"); // Note: Part of PK and can't allow NULL
+				sbSql.append("   ," + fill(lq + "category"                   + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   20),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "severity"                   + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   10),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "state"                      + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   10),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "alarmId"                    + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   40),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "repeatCnt"                  + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "duration"                   + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   80),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "alarmDuration"              + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   20),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "fullDuration"               + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   20),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "fullDurationAdjustmentInSec" + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "createTime"                 + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP    ),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "cancelTime"                 + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP    ),20) + " " + getNullable(true ) + "\n");
+				sbSql.append("   ," + fill(lq + "timeToLive"                 + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER      ),20) + " " + getNullable(true ) + "\n");
+				sbSql.append("   ," + fill(lq + "threshold"                  + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   15),20) + " " + getNullable(true ) + "\n");
+				sbSql.append("   ," + fill(lq + "data"                       + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,  512),20) + " " + getNullable(true ) + "\n");
+				sbSql.append("   ," + fill(lq + "lastData"                   + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,  512),20) + " " + getNullable(true ) + "\n");
+				sbSql.append("   ," + fill(lq + "description"                + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,  512),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "lastDescription"            + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,  512),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "extendedDescription"        + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true ) + "\n");
+				sbSql.append("   ," + fill(lq + "lastExtendedDescription"    + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true ) + "\n");
+				sbSql.append("   ," + fill(lq + "alarmOptions"               + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true ) + "\n");
+				sbSql.append("   ," + fill(lq + "cancelDescription"          + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true ) + "\n");
 				sbSql.append("\n");
-				sbSql.append("   ,PRIMARY KEY ("+lq+"eventTime"+rq+", "+lq+"action"+rq+", "+lq+"alarmClass"+rq+", "+lq+"serviceType"+rq+", "+lq+"serviceName"+rq+", "+lq+"serviceInfo"+rq+", "+lq+"extraInfo"+rq+", "+lq+"severity"+rq+")\n");
+				sbSql.append("   ,PRIMARY KEY (" + lq + "eventTime" + rq + ", " + lq + "action" + rq + ", " + lq + "alarmClass" + rq + ", " + lq + "serviceType" + rq + ", " + lq + "serviceName" + rq + ", " + lq + "serviceInfo" + rq + ", " + lq + "extraInfo" + rq + ", " + lq + "severity" + rq + ")\n");
 				sbSql.append(") \n");
 
 				ddlList.add(sbSql.toString());
@@ -1224,20 +1224,20 @@ public abstract class PersistWriterBase
 
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
-				sbSql.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"SessionSampleTime"+rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"CmSampleTime"     +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"CmSampleMs"       +rq,40)+" "+fill(getDatatype(conn, Types.INTEGER  ),20)+" "+getNullable(false)+"\n");
+				sbSql.append("    " + fill(lq + "SessionStartTime" + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "SessionSampleTime" + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "CmSampleTime"     + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP),20) + " " + getNullable(false) + "\n");
+				sbSql.append("   ," + fill(lq + "CmSampleMs"       + rq,40) + " " + fill(getDatatype(conn, Types.INTEGER  ),20) + " " + getNullable(false) + "\n");
 //				sbSql.append("   ,"+fill(lq+"CmNewDiffRateRow" +rq,40)+" "+fill(getDatatype(conn, Types.TINYINT  ),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"CmRowState"       +rq,40)+" "+fill(getDatatype(conn, Types.TINYINT  ),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ," + fill(lq + "CmRowState"       + rq,40) + " " + fill(getDatatype(conn, Types.TINYINT  ),20) + " " + getNullable(false) + "\n");
 				sbSql.append("\n");
 				
 				ResultSetMetaData rsmd = cm.getResultSetMetaData();
 				
 				if ( rsmd == null )
-					throw new SQLException("ResultSetMetaData for CM '"+cm.getName()+"' was null.");
+					throw new SQLException("ResultSetMetaData for CM '" + cm.getName() + "' was null.");
 				if ( rsmd.getColumnCount() == 0 )
-					throw new SQLException("NO Columns was found for CM '"+cm.getName()+"'.");
+					throw new SQLException("NO Columns was found for CM '" + cm.getName() + "'.");
 
 				int cols = rsmd.getColumnCount();
 				for (int c=1; c<=cols; c++) 
@@ -1346,9 +1346,9 @@ public abstract class PersistWriterBase
 		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 		
 		if ( rsmd == null )
-			throw new SQLException("ResultSetMetaData for CM '"+cm.getName()+"' was null.");
+			throw new SQLException("ResultSetMetaData for CM '" + cm.getName() + "' was null.");
 		if ( rsmd.getColumnCount() == 0 )
-			throw new SQLException("NO Columns was found for CM '"+cm.getName()+"'.");
+			throw new SQLException("NO Columns was found for CM '" + cm.getName() + "'.");
 
 		// Set a SQL Schema Name Prefix (if 'schemaName' was passed/assigned)
 		String schemaPrefix = StringUtil.isNullOrBlank(schemaName) ? "" : lq + schemaName + rq + ".";
@@ -1846,7 +1846,7 @@ public abstract class PersistWriterBase
 		else if (type == SESSION_SAMPLE_DETAILES)
 		{
 			String tabName = getTableName(conn, null, type, null, false); 
-			return "create index " + lq+tabName+"_ix1"+rq + " on " + schemaPrefix + lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
+			return "create index " + lq+tabName + "_ix1" + rq + " on " + schemaPrefix + lq+tabName+rq + "(" + lq + "SessionSampleTime" + rq + ")\n";
 
 //			if ( DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(getDatabaseProductName()) )
 //				return "create index " +     tabName+"_ix1"   + " on " + lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
@@ -1904,12 +1904,12 @@ public abstract class PersistWriterBase
 		else if (type == ALARM_HISTORY)
 		{
 			String tabName = getTableName(conn, null, type, null, false);
-			return "create index " + lq+tabName+"_ix1"+rq + " on " + schemaPrefix + lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
+			return "create index " + lq+tabName + "_ix1" + rq + " on " + schemaPrefix + lq+tabName+rq + "(" + lq + "SessionSampleTime" + rq + ")\n";
 		}
 		else if (type == ABS || type == DIFF || type == RATE)
 		{
 			String tabName = getTableName(conn, null, type, cm, false);
-			return "create index " + lq+tabName+"_ix1"+rq + " on " + schemaPrefix + lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
+			return "create index " + lq+tabName + "_ix1" + rq + " on " + schemaPrefix + lq+tabName+rq + "(" + lq + "SessionSampleTime" + rq + ")\n";
 		}
 		else
 		{
@@ -2055,9 +2055,9 @@ public abstract class PersistWriterBase
 
 		sb.append("create table " + schemaPrefix + lq+tabName+rq + "\n");
 		sb.append("( \n");
-		sb.append("    "+fill(lq+"SessionStartTime" +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP),20)+" "+getNullable(false)+"\n");
-		sb.append("   ,"+fill(lq+"SessionSampleTime"+rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP),20)+" "+getNullable(false)+"\n");
-		sb.append("   ,"+fill(lq+"CmSampleTime"     +rq,40)+" "+fill(getDatatype(conn, Types.TIMESTAMP),20)+" "+getNullable(false)+"\n");
+		sb.append("    " + fill(lq + "SessionStartTime" + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP),20) + " " + getNullable(false) + "\n");
+		sb.append("   ," + fill(lq + "SessionSampleTime" + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP),20) + " " + getNullable(false) + "\n");
+		sb.append("   ," + fill(lq + "CmSampleTime"     + rq,40) + " " + fill(getDatatype(conn, Types.TIMESTAMP),20) + " " + getNullable(false) + "\n");
 		sb.append("\n");
 
 		if (GraphStorageType.LABEL_IN_SEPARATE_COLUMN.equals(graphStorageType))
@@ -2069,8 +2069,8 @@ public abstract class PersistWriterBase
 
 			for (int d=0; d<dataArr.length; d++)
 			{
-				sb.append("   ,"+fill(lq+"label_"+d+rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,100   ),20)+" "+getNullable(true)+"\n");
-				sb.append("   ,"+fill(lq+"data_" +d+rq,40)+" "+fill(getDatatype(conn, Types.NUMERIC, 16, 2),20)+" "+getNullable(true)+"\n");
+				sb.append("   ," + fill(lq + "label_" + d+rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,100   ),20) + " " + getNullable(true) + "\n");
+				sb.append("   ," + fill(lq + "data_" + d+rq,40) + " " + fill(getDatatype(conn, Types.NUMERIC, 16, 2),20) + " " + getNullable(true) + "\n");
 			}
 			sb.append(") \n");
 		}
@@ -2083,7 +2083,7 @@ public abstract class PersistWriterBase
 			// loop all labels
 			for (int l=0; l<labelArr.length; l++)
 			{
-				sb.append("   ,"+fill(lq+labelArr[l]+rq,40)+" "+fill(getDatatype(conn, Types.NUMERIC, 16, 2),20)+" "+getNullable(true)+"\n");
+				sb.append("   ," + fill(lq+labelArr[l]+rq,40) + " " + fill(getDatatype(conn, Types.NUMERIC, 16, 2),20) + " " + getNullable(true) + "\n");
 			}
 			sb.append(") \n");
 		}
@@ -2100,7 +2100,7 @@ public abstract class PersistWriterBase
 		// Set a SQL Schema Name Prefix (if 'schemaName' was passed/assigned)
 		String schemaPrefix = StringUtil.isNullOrBlank(schemaName) ? "" : lq + schemaName + rq + ".";
 
-		return "create index " + lq+tgdp.getName()+"_ix1"+rq + " on " + schemaPrefix + lq+tabName+rq + "("+lq+"SessionSampleTime"+rq+")\n";
+		return "create index " + lq+tgdp.getName() + "_ix1" + rq + " on " + schemaPrefix + lq+tabName+rq + "(" + lq + "SessionSampleTime" + rq + ")\n";
 	}
 
 	public static List<String> getGraphAlterTableDdlString(DbxConnection conn, GraphStorageType graphStorageType, String schemaName, String tabName, TrendGraphDataPoint tgdp)
@@ -2136,8 +2136,8 @@ public abstract class PersistWriterBase
 				{
 					for (int d=colCounter; d<dataArr.length; d++)
 					{
-						list.add("alter table " + schemaPrefix + lq+tabName+rq + " add  "+fill(lq+"label_"+d+rq,40)+" "+fill(getDatatype(conn, Types.VARCHAR,100   ),20)+" "+getNullable(true)+" \n");
-						list.add("alter table " + schemaPrefix + lq+tabName+rq + " add  "+fill(lq+"data_" +d+rq,40)+" "+fill(getDatatype(conn, Types.NUMERIC, 16, 2),20)+" "+getNullable(true)+" \n");
+						list.add("alter table " + schemaPrefix + lq+tabName+rq + " add  " + fill(lq + "label_" + d+rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,100   ),20) + " " + getNullable(true) + " \n");
+						list.add("alter table " + schemaPrefix + lq+tabName+rq + " add  " + fill(lq + "data_" + d+rq,40) + " " + fill(getDatatype(conn, Types.NUMERIC, 16, 2),20) + " " + getNullable(true) + " \n");
 					}
 				}
 			}
@@ -2204,10 +2204,10 @@ public abstract class PersistWriterBase
 		{
 			int hour   = Integer.parseInt(hourStr);
 			int minute = Integer.parseInt(minuteStr);
-			if (hour   > 23  ) throw new NumberFormatException("Record time (Hour) is to high. hour='"+hour+"' must be between 0 and 23.");
-			if (hour   < 0   ) throw new NumberFormatException("Record time (Hour) is to low.  hour='"+hour+"' must be between 0 and 23.");
-			if (minute > 59  ) throw new NumberFormatException("Record time (Minute) is to high. hour='"+minute+"' must be between 0 and 59.");
-			if (minute < 0   ) throw new NumberFormatException("Record time (Minute) is to low.  hour='"+minute+"' must be between 0 and 59.");
+			if (hour   > 23  ) throw new NumberFormatException("Record time (Hour) is to high. hour='" + hour + "' must be between 0 and 23.");
+			if (hour   < 0   ) throw new NumberFormatException("Record time (Hour) is to low.  hour='" + hour + "' must be between 0 and 23.");
+			if (minute > 59  ) throw new NumberFormatException("Record time (Minute) is to high. hour='" + minute + "' must be between 0 and 59.");
+			if (minute < 0   ) throw new NumberFormatException("Record time (Minute) is to low.  hour='" + minute + "' must be between 0 and 59.");
 
 			Date now = new Date();
 			Calendar cal = new GregorianCalendar();
@@ -2225,7 +2225,7 @@ public abstract class PersistWriterBase
 		}
 		catch (NumberFormatException e)
 		{
-			throw new Exception("Hour and Minute Must be in numbers. Caught: "+e.getMessage(), e);
+			throw new Exception("Hour and Minute Must be in numbers. Caught: " + e.getMessage(), e);
 		}
 	}
 	
@@ -2258,10 +2258,10 @@ public abstract class PersistWriterBase
 		{
 			int hour   = Integer.parseInt(hourStr);
 			int minute = Integer.parseInt(minuteStr);
-			if (hour   > 999 ) throw new NumberFormatException("Record time (Hour) is to high. hour='"+hour+"' must be between 0 and 999.");
-			if (hour   < 0   ) throw new NumberFormatException("Record time (Hour) is to low.  hour='"+hour+"' must be between 0 and 999.");
-			if (minute > 59  ) throw new NumberFormatException("Record time (Minute) is to high. hour='"+minute+"' must be between 00 and 59.");
-			if (minute < 0   ) throw new NumberFormatException("Record time (Minute) is to low.  hour='"+minute+"' must be between 00 and 59.");
+			if (hour   > 999 ) throw new NumberFormatException("Record time (Hour) is to high. hour='" + hour + "' must be between 0 and 999.");
+			if (hour   < 0   ) throw new NumberFormatException("Record time (Hour) is to low.  hour='" + hour + "' must be between 0 and 999.");
+			if (minute > 59  ) throw new NumberFormatException("Record time (Minute) is to high. hour='" + minute + "' must be between 00 and 59.");
+			if (minute < 0   ) throw new NumberFormatException("Record time (Minute) is to low.  hour='" + minute + "' must be between 00 and 59.");
 
 			Date now = new Date();
 			if (startTime != null)
@@ -2278,7 +2278,7 @@ public abstract class PersistWriterBase
 		}
 		catch (NumberFormatException e)
 		{
-			throw new Exception("Hour and Minute Must be in numbers. Caught: "+e.getMessage(), e);
+			throw new Exception("Hour and Minute Must be in numbers. Caught: " + e.getMessage(), e);
 		}
 	}
 	
@@ -2301,11 +2301,11 @@ public abstract class PersistWriterBase
 		{
 			waitUntilDate = getRecordingStartTime(startTime);
 			waitUntilStr  = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(waitUntilDate);
-			_logger.info("Found the deferred start time '"+waitUntilStr+"'. I will have to wait...");
+			_logger.info("Found the deferred start time '" + waitUntilStr + "'. I will have to wait...");
 		}
 		catch (Exception e) 
 		{
-			_logger.warn("Problems getting deferred start time. So I will skip waiting and continue the start. Caught: "+e.getMessage());
+			_logger.warn("Problems getting deferred start time. So I will skip waiting and continue the start. Caught: " + e.getMessage());
 			return;
 		}
 
@@ -2316,7 +2316,7 @@ public abstract class PersistWriterBase
 
 			if (waitUntilDate.getTime() < now)
 			{
-				_logger.info("DONE waiting for the deferred start time '"+waitUntilStr+"'. Lets continuing the start sequence.");
+				_logger.info("DONE waiting for the deferred start time '" + waitUntilStr + "'. Lets continuing the start sequence.");
 				break;
 			}
 
@@ -2324,12 +2324,12 @@ public abstract class PersistWriterBase
 			if (waitDialog != null)
 			{
 				sleepTimeInSec = 1;
-				waitDialog.setState("Time left to Connect (Hours:Minutes:Seconds) "+waitTimeLeft);
+				waitDialog.setState("Time left to Connect (Hours:Minutes:Seconds) " + waitTimeLeft);
 			}
 			else
 			{
 				sleepTimeInSec = 60;
-				_logger.info("Waiting for the start time '"+waitUntilStr+"' before continuing the start sequence ("+waitTimeLeft+").");
+				_logger.info("Waiting for the start time '" + waitUntilStr + "' before continuing the start sequence (" + waitTimeLeft + ").");
 			}
 			Thread.sleep(1000 * sleepTimeInSec); // may be interrupted
 		}

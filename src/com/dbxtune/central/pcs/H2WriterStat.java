@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -268,7 +268,7 @@ public class H2WriterStat
 				_h2DbFile = urlHelper.getDbFile();
 				if (_h2DbFile == null)
 				{
-					_logger.warn("Can't extract H2 database file from the URL '"+url+"'. Skipping checking the File Size.");
+					_logger.warn("Can't extract H2 database file from the URL '" + url + "'. Skipping checking the File Size.");
 				}
 				
 			}
@@ -277,7 +277,7 @@ public class H2WriterStat
 		catch (SQLException ex)
 		{
 			_h2DbFile = null;
-			_logger.warn("Skipping examin the H2-File-Size. Got problems when getting the URL from the connections metadata. Skipping checking the File Size. Caught: "+ex);
+			_logger.warn("Skipping examin the H2-File-Size. Got problems when getting the URL from the connections metadata. Skipping checking the File Size. Caught: " + ex);
 		}
 
 		try
@@ -295,7 +295,7 @@ public class H2WriterStat
 	public H2WriterStat refreshCounters(Connection conn)
 	{
 //		String sql = "select #NAME#, cast(#VALUE# as bigint) as #VALUE# from #INFORMATION_SCHEMA#.#SETTINGS# where #NAME# in ('"+FILE_READ+"', '"+FILE_WRITE+"', '"+PAGE_COUNT+"')";
-		String sql = "select #SETTING_NAME#, cast(#SETTING_VALUE# as bigint) as #SETTING_VALUE# from #INFORMATION_SCHEMA#.#SETTINGS# where #SETTING_NAME# in ('"+FILE_READ+"', '"+FILE_WRITE+"', '"+PAGE_COUNT+"')";
+		String sql = "select #SETTING_NAME#, cast(#SETTING_VALUE# as bigint) as #SETTING_VALUE# from #INFORMATION_SCHEMA#.#SETTINGS# where #SETTING_NAME# in ('" + FILE_READ + "', '" + FILE_WRITE + "', '" + PAGE_COUNT + "')";
 		sql = sql.replace('#',  '"'); // Replace all # into H2 QuotedIdentifier
 
 		try (Statement stmnt = conn.createStatement())
@@ -349,7 +349,7 @@ public class H2WriterStat
 						} 
 						catch (NumberFormatException ex) 
 						{
-							_logger.warn("Calculating RATE value had problems. diffVal="+diffVal+" (divided by) _lastIntervallInMs="+_lastIntervallInMs+". Setting rate to 0.0  Caught: " + ex);
+							_logger.warn("Calculating RATE value had problems. diffVal=" + diffVal + " (divided by) _lastIntervallInMs=" + _lastIntervallInMs + ". Setting rate to 0.0  Caught: " + ex);
 							rate = new BigDecimal(0.0);
 						}
 
@@ -777,7 +777,7 @@ public class H2WriterStat
 		for (String colname : names)
 		{
 			String propName = PROPKEY_ALARM_isSystemAlarmsForColumnEnabled.replace("<COLNAME>", colname);
-			String propVal = conf.getProperty(propName, DEFAULT_ALARM_isSystemAlarmsForColumnEnabled+"");
+			String propVal = conf.getProperty(propName, DEFAULT_ALARM_isSystemAlarmsForColumnEnabled + "");
 
 			// At what times can the alarms be triggered
 			String cronProp = PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange.replace("<COLNAME>", colname);
@@ -790,7 +790,7 @@ public class H2WriterStat
 				cronPatStr = cronPatStr.substring(1);
 			}
 			if ( ! SchedulingPattern.validate(cronPatStr) )
-				_logger.error("The cron scheduling pattern '"+cronPatStr+"' is NOT VALID. for the property '" + cronProp + "', this will not be used at runtime, furter warnings will also be issued.");
+				_logger.error("The cron scheduling pattern '" + cronPatStr + "' is NOT VALID. for the property '" + cronProp + "', this will not be used at runtime, furter warnings will also be issued.");
 
 			String cronPatDesc = CronUtils.getCronExpressionDescriptionForAlarms(cronPat);
 
@@ -1094,7 +1094,7 @@ public class H2WriterStat
 				}
 				catch (SQLException ex)
 				{
-					_logger.info("Central Persist Writer Connection Provider has problems getting a connection. Caught: "+ex);
+					_logger.info("Central Persist Writer Connection Provider has problems getting a connection. Caught: " + ex);
 				}
 			}
 			return null;

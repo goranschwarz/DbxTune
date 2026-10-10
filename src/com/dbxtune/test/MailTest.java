@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -140,11 +140,11 @@ public class MailTest
 			// SEND
 			email.send();
 
-			System.out.println("Sent mail message: plainSizeKb="+msgBodyTextSizeKb+", htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+smtpHostname+"', to='"+to+"', cc='"+cc+"', subject='"+msgSubject+"'.");
+			System.out.println("Sent mail message: plainSizeKb=" + msgBodyTextSizeKb + ", htmlSizeKb=" + msgBodyHtmlSizeKb + ", host='" + smtpHostname + "', to='" + to + "', cc='" + cc + "', subject='" + msgSubject + "'.");
 		}
 		catch (Exception ex)
 		{
-			System.out.println("Problems sending mail (plainSizeKb="+msgBodyTextSizeKb+", htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+smtpHostname+"', to='"+to+"', cc='"+cc+"', subject='"+msgSubject+"').");
+			System.out.println("Problems sending mail (plainSizeKb=" + msgBodyTextSizeKb + ", htmlSizeKb=" + msgBodyHtmlSizeKb + ", host='" + smtpHostname + "', to='" + to + "', cc='" + cc + "', subject='" + msgSubject + "').");
 			ex.printStackTrace();
 		}
 		

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -75,7 +75,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = Ver.ver(15,7,1, 303);   // above 15.7.1 SP203 DOES NOT have it. lets guess SP 300 (doc says that SP 303 has it, but I can't find 300,301,302)
 	public static final long     NEED_CE_VERSION  = 0;
@@ -158,7 +158,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmRsMemory(counterController, guiController);
 	}
@@ -237,7 +237,7 @@ extends CountersModel
 
 				if (totalMemUsed == null)
 				{
-					_logger.warn("Skipping GraphUpdate of '"+GRAPH_NAME_MEMORY_PCT+"'. reason: value for 'Total', 'Memory_Consumed_Mb' was not found or null.");
+					_logger.warn("Skipping GraphUpdate of '" + GRAPH_NAME_MEMORY_PCT + "'. reason: value for 'Total', 'Memory_Consumed_Mb' was not found or null.");
 				}
 				else
 				{
@@ -394,17 +394,17 @@ extends CountersModel
 				} 
 				catch (NumberFormatException nfe) 
 				{
-					_logger.error("Problem parsing/converting String Value '"+str+"' to integer for RS configuration '"+cfgName+"'. Caught: "+nfe);
+					_logger.error("Problem parsing/converting String Value '" + str + "' to integer for RS configuration '" + cfgName + "'. Caught: " + nfe);
 					_memoryLimitSizeMb = -1;
 				}
 			}
 
-			_logger.info("When initializing '"+getName()+"', Succeed get run value for RS configuration '"+cfgName+"' = "+_memoryLimitSizeMb + " MB");
+			_logger.info("When initializing '" + getName() + "', Succeed get run value for RS configuration '" + cfgName + "' = " + _memoryLimitSizeMb + " MB");
 		}
 		catch (SQLException ex)
 		{
 			_memoryLimitSizeMb = -1;
-			_logger.warn("When initializing '"+getName()+"', failed to get RS configuration '"+cfgName+"', continuing anyway. sql=|"+sql+"|, Caught: "+ex);
+			_logger.warn("When initializing '" + getName() + "', failed to get RS configuration '" + cfgName + "', continuing anyway. sql=|" + sql + "|, Caught: " + ex);
 		}
 		
 		return superRc;
@@ -579,7 +579,7 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_MemoryUsedPct1, DEFAULT_alarm_MemoryUsedPct1);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): level-1 - threshold="+threshold+", usedMemInMb="+usedMemInMb+", freeMemInMb="+freeMemInMb+", usedPct="+usedPct+".");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): level-1 - threshold=" + threshold + ", usedMemInMb=" + usedMemInMb + ", freeMemInMb=" + freeMemInMb + ", usedPct=" + usedPct + ".");
 
 				if (usedPct.intValue() > threshold)
 				{
@@ -596,7 +596,7 @@ extends CountersModel
 				threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_MemoryUsedPct2,  DEFAULT_alarm_MemoryUsedPct2);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): level-2 - threshold="+threshold+", usedMemInMb="+usedMemInMb+", freeMemInMb="+freeMemInMb+", usedPct="+usedPct+".");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): level-2 - threshold=" + threshold + ", usedMemInMb=" + usedMemInMb + ", freeMemInMb=" + freeMemInMb + ", usedPct=" + usedPct + ".");
 
 				if (usedPct.intValue() > threshold)
 				{
@@ -613,7 +613,7 @@ extends CountersModel
 				threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_MemoryUsedPct3,  DEFAULT_alarm_MemoryUsedPct3);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): level-3 - threshold="+threshold+", usedMemInMb="+usedMemInMb+", freeMemInMb="+freeMemInMb+", usedPct="+usedPct+".");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): level-3 - threshold=" + threshold + ", usedMemInMb=" + usedMemInMb + ", freeMemInMb=" + freeMemInMb + ", usedPct=" + usedPct + ".");
 
 				if (usedPct.intValue() > threshold)
 				{
@@ -630,7 +630,7 @@ extends CountersModel
 				threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_MemoryUsedPct4,  DEFAULT_alarm_MemoryUsedPct4);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): level-4 - threshold="+threshold+", usedMemInMb="+usedMemInMb+", freeMemInMb="+freeMemInMb+", usedPct="+usedPct+".");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): level-4 - threshold=" + threshold + ", usedMemInMb=" + usedMemInMb + ", freeMemInMb=" + freeMemInMb + ", usedPct=" + usedPct + ".");
 
 				if (usedPct.intValue() > threshold)
 				{

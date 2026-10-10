@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -225,7 +225,7 @@ implements ActionListener, FocusListener
 		_cc_spp_chk .setSelected(_completionProviderAbstract.isLookupSystemProcedureColumns());
 
 		_serialize_chk.setSelected(_completionProviderAbstract.isSaveCacheEnabled());
-		_serialize_txt.setText    (_completionProviderAbstract.getSaveCacheTimeInMs()+"");
+		_serialize_txt.setText    (_completionProviderAbstract.getSaveCacheTimeInMs() + "");
 
 		_saveQuestion_chk.setSelected(_completionProviderAbstract.isSaveCacheQuestionEnabled());
 

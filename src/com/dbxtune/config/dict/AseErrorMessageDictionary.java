@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -56,7 +56,7 @@ public class AseErrorMessageDictionary
 		@Override
 		public String toString()
 		{
-			return StringUtil.left(_msgNum+"", 5) + " - " + _description;
+			return StringUtil.left(_msgNum + "", 5) + " - " + _description;
 		}
 		
 		public String getDescription()
@@ -93,14 +93,14 @@ public class AseErrorMessageDictionary
 		}
 
 		// Compose an empty one
-		return "Error Number '"+msgNum+"' not found in dictionary.";
+		return "Error Number '" + msgNum + "' not found in dictionary.";
 	}
 
 
 	private void add(AseErrorMessageEntry entry)
 	{
 		if ( _messages.containsKey(entry._msgNum))
-			System.out.println("Error Number '"+entry._msgNum+"' already exists. It will be overwritten.");
+			System.out.println("Error Number '" + entry._msgNum + "' already exists. It will be overwritten.");
 
 		_messages.put(entry._msgNum, entry);
 	}

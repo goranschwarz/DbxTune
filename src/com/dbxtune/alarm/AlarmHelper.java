@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -78,7 +78,7 @@ public class AlarmHelper
 		// Thats why we add "mandatory.contentList.forColName." to the beginning of the columnName
 		//            this         .PROPKEY_alarm_MandatoryColNameContent            = "<CM_NAME>.alarm.system.mandatory.contentList.forColName.<COL_NAME>";
 
-		if ( ! cm.isSystemAlarmsForColumnEnabledAndInTimeRange("mandatory.contentList.forColName."+colName) ) 
+		if ( ! cm.isSystemAlarmsForColumnEnabledAndInTimeRange("mandatory.contentList.forColName." + colName) ) 
 			return;
 
 		// Get a list of values we want the column to contain
@@ -169,7 +169,7 @@ public class AlarmHelper
 					String.class, 
 					conf.getProperty(fixCmName(cm, colName, PROPKEY_alarm_MandatoryColNameContent), DEFAULT_alarm_MandatoryColNameContent), 
 					DEFAULT_alarm_MandatoryColNameContent, 
-					"If any of the specified 'names/values' in the list is missing from the column '"+colName+"' then send alarm 'AlarmEventMissingMandatoryContent'." 
+					"If any of the specified 'names/values' in the list is missing from the column '" + colName + "' then send alarm 'AlarmEventMissingMandatoryContent'." 
 				));
 
 			list.add(new CmSettingsHelper(

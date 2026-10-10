@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -97,7 +97,7 @@ extends AbstractTreeTableModel
 	public Object getChild(Object parent, int index) 
 	{
 //System.out.println("getChildCount(parent='"+parent+"', index='"+index+"', parent.objType='"+(parent==null?"null":parent.getClass().getName())+"')");
-		_logger.debug("getChildCount(parent='"+parent+"', index='"+index+"')");
+		_logger.debug("getChildCount(parent='" + parent + "', index='" + index + "')");
 		if (parent instanceof DbList)
 		{
 			return _dblist.get(index);
@@ -122,7 +122,7 @@ extends AbstractTreeTableModel
 	@Override
 	public int getChildCount(Object parent) 
 	{
-		_logger.debug("getChildCount(parent='"+parent+"')");
+		_logger.debug("getChildCount(parent='" + parent + "')");
 		if (parent instanceof DbEntry)
 		{
 			return ((DbEntry) parent).getChildCount();
@@ -153,7 +153,7 @@ extends AbstractTreeTableModel
 	@Override
 	public String getColumnName(int column) 
 	{
-		_logger.debug("getColumnName(column='"+column+"')");
+		_logger.debug("getColumnName(column='" + column + "')");
 		if      (column == 0) return "DBName";
 		else if (column == 1) return "Type";
 		else if (column == 2) return "Cnt";
@@ -173,7 +173,7 @@ extends AbstractTreeTableModel
 	@Override
 	public Class<?> getColumnClass(int column) 
 	{
-		_logger.debug("getColumnClass(column='"+column+"')");
+		_logger.debug("getColumnClass(column='" + column + "')");
 		switch (column) 
 		{
 		case 0:  return String   .class;
@@ -191,7 +191,7 @@ extends AbstractTreeTableModel
 	@Override
 	public Object getValueAt(Object node, int column) 
 	{
-		_logger.debug("getValueAt(node='"+node+"', column='"+column+"')");
+		_logger.debug("getValueAt(node='" + node + "', column='" + column + "')");
 		if (node instanceof DbEntry)
 		{
 			DbEntry rec = (DbEntry) node;
@@ -257,7 +257,7 @@ extends AbstractTreeTableModel
 	@Override
 	public int getIndexOfChild(Object parent, Object child) 
 	{
-		_logger.debug("getIndexOfChild(parent='"+parent+"', child='"+child+"'.)");
+		_logger.debug("getIndexOfChild(parent='" + parent + "', child='" + child + "'.)");
 //		if (parent instanceof SessionLevel && child instanceof SessionLevel) 
 //		{
 //		}
@@ -275,7 +275,7 @@ extends AbstractTreeTableModel
 	@Override
 	public boolean isLeaf(Object node) 
 	{
-		_logger.debug("isLeaf(node='"+node+"')");
+		_logger.debug("isLeaf(node='" + node + "')");
 
 		if (node instanceof ObjectEntry) 
 			return true;
@@ -311,7 +311,7 @@ extends AbstractTreeTableModel
 		public String getDisplayString(){ return _dbname; }
 //		public String toString()        { return getDisplayString(); }
 		@Override
-		public String toString()        { return "DbEntry("+_dbname+")"; }
+		public String toString()        { return "DbEntry(" + _dbname + ")"; }
 	}
 	protected static class TypeEntry
 	{
@@ -327,7 +327,7 @@ extends AbstractTreeTableModel
 		public String getDisplayString(){ return getTypeName(); }
 //		public String toString()        { return getDisplayString(); }
 		@Override
-		public String toString()        { return "TypeEntry("+_type+")"; }
+		public String toString()        { return "TypeEntry(" + _type + ")"; }
 	}
 	protected static class ObjectEntry
 	{
@@ -353,6 +353,6 @@ extends AbstractTreeTableModel
 		public String getDisplayString(){ return _name; }
 //		public String toString()        { return getDisplayString(); }
 		@Override
-		public String toString()        { return "ObjectEntry("+_dbname+":"+_type+":"+_name+")"; }
+		public String toString()        { return "ObjectEntry(" + _dbname + ":" + _type + ":" + _name + ")"; }
 	}
 }

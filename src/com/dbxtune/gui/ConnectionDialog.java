@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -450,32 +450,32 @@ public class ConnectionDialog
 	private JCheckBox            _pcsDdl_enabledForDatabaseObjects_chk       = new JCheckBox("DB Objects",              PersistentCounterHandler.DEFAULT_ddl_enabledForDatabaseObjects);
 	private JCheckBox            _pcsDdl_enabledForStatementCache_chk        = new JCheckBox("Statement Cache",         PersistentCounterHandler.DEFAULT_ddl_enabledForStatementCache);
 	private JLabel               _pcsDdl_afterDdlLookupSleepTimeInMs_lbl     = new JLabel("Sleep Time");
-	private JTextField           _pcsDdl_afterDdlLookupSleepTimeInMs_txt     = new JTextField(""+PersistentCounterHandler.DEFAULT_ddl_afterDdlLookupSleepTimeInMs);
+	private JTextField           _pcsDdl_afterDdlLookupSleepTimeInMs_txt     = new JTextField("" + PersistentCounterHandler.DEFAULT_ddl_afterDdlLookupSleepTimeInMs);
 	private JCheckBox            _pcsDdl_addDependantObjectsToDdlInQueue_chk = new JCheckBox("Store Dependent Objects", PersistentCounterHandler.DEFAULT_ddl_addDependantObjectsToDdlInQueue);
 
 	//---- PCS: Capture SQL Statements
 	private JCheckBox            _pcsCapSql_doSqlCaptureAndStore_chk          = new JCheckBox("Do SQL Capture and Store", PersistentCounterHandler.DEFAULT_sqlCap_doSqlCaptureAndStore);
 	private JLabel               _pcsCapSql_sleepTimeInMs_lbl                 = new JLabel("Sleep Time");
-	private JTextField           _pcsCapSql_sleepTimeInMs_txt                 = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_sleepTimeInMs);
+	private JTextField           _pcsCapSql_sleepTimeInMs_txt                 = new JTextField("" + PersistentCounterHandler.DEFAULT_sqlCap_sleepTimeInMs);
 	private JCheckBox            _pcsCapSql_doSqlText_chk                     = new JCheckBox("SQL Text",       PersistentCounterHandler.DEFAULT_sqlCap_doSqlText);
 	private JCheckBox            _pcsCapSql_doStatementInfo_chk               = new JCheckBox("Statement Info", PersistentCounterHandler.DEFAULT_sqlCap_doStatementInfo);
 	private JCheckBox            _pcsCapSql_doPlanText_chk                    = new JCheckBox("Plan Text",      PersistentCounterHandler.DEFAULT_sqlCap_doPlanText);
 	
 	private JLabel               _pcsCapSql_saveStatement_lbl                 = new JLabel("                   But only save Statements if: "); // apces is for "aligning" with the field _pcsCapSql_sendDdlForLookup_chk
 	private JLabel               _pcsCapSql_saveStatement_execTime_lbl        = new JLabel("Exec Time is above (ms)");
-	private JTextField           _pcsCapSql_saveStatement_execTime_txt        = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_execTime, 3);
+	private JTextField           _pcsCapSql_saveStatement_execTime_txt        = new JTextField("" + PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_execTime, 3);
 	private JLabel               _pcsCapSql_saveStatement_logicalRead_lbl     = new JLabel(", and Logical Reads >");
-	private JTextField           _pcsCapSql_saveStatement_logicalRead_txt     = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_logicalReads, 3);
+	private JTextField           _pcsCapSql_saveStatement_logicalRead_txt     = new JTextField("" + PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_logicalReads, 3);
 	private JLabel               _pcsCapSql_saveStatement_physicalRead_lbl    = new JLabel(", and Physical Reads >");
-	private JTextField           _pcsCapSql_saveStatement_physicalRead_txt    = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_physicalReads, 3);
+	private JTextField           _pcsCapSql_saveStatement_physicalRead_txt    = new JTextField("" + PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_physicalReads, 3);
 
 	private JCheckBox            _pcsCapSql_sendDdlForLookup_chk              = new JCheckBox("Send Statements for DDL Lookup if:", PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup);
 	private JLabel               _pcsCapSql_sendDdlForLookup_execTime_lbl     = new JLabel("Exec Time is above (ms)");
-	private JTextField           _pcsCapSql_sendDdlForLookup_execTime_txt     = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_execTime, 3);
+	private JTextField           _pcsCapSql_sendDdlForLookup_execTime_txt     = new JTextField("" + PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_execTime, 3);
 	private JLabel               _pcsCapSql_sendDdlForLookup_logicalRead_lbl  = new JLabel(", and Logical Reads >");
-	private JTextField           _pcsCapSql_sendDdlForLookup_logicalRead_txt  = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_logicalReads, 3);
+	private JTextField           _pcsCapSql_sendDdlForLookup_logicalRead_txt  = new JTextField("" + PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_logicalReads, 3);
 	private JLabel               _pcsCapSql_sendDdlForLookup_physicalRead_lbl = new JLabel(", and Physical Reads >");
-	private JTextField           _pcsCapSql_sendDdlForLookup_physicalRead_txt = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_physicalReads, 3);
+	private JTextField           _pcsCapSql_sendDdlForLookup_physicalRead_txt = new JTextField("" + PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_physicalReads, 3);
 
 	//---- OFFLINE panel
 	@SuppressWarnings("unused")
@@ -605,7 +605,7 @@ public class ConnectionDialog
 		String dbxTuneSaveDir = Configuration.getCombinedConfiguration().getProperty("DBXTUNE_SAVE_DIR");
 		if (StringUtil.hasValue(dbxTuneSaveDir))
 		{
-			_logger.info("Setting 'DBXTUNE_SAVE_DIR' in the System Properties to value '"+dbxTuneSaveDir+"'.");
+			_logger.info("Setting 'DBXTUNE_SAVE_DIR' in the System Properties to value '" + dbxTuneSaveDir + "'.");
 			System.setProperty("DBXTUNE_SAVE_DIR", dbxTuneSaveDir);
 		}
 	}
@@ -741,7 +741,7 @@ public class ConnectionDialog
 		if      (tabId == TDS_CONN    ) _tab.setSelectedTitle(TAB_TITLE_ASE);
 		else if (tabId == OFFLINE_CONN) _tab.setSelectedTitle(TAB_TITLE_OFFLINE);
 		else if (tabId == JDBC_CONN   ) _tab.setSelectedTitle(TAB_TITLE_JDBC);
-		else _logger.warn("setSelectedTab(tabId="+tabId+"): invalid tabId="+tabId);
+		else _logger.warn("setSelectedTab(tabId=" + tabId + "): invalid tabId=" + tabId);
 	}
 
 	/**
@@ -784,7 +784,7 @@ public class ConnectionDialog
 		try
 		{
 			productName = conn.getMetaData().getDatabaseProductName();
-			_logger.debug("getDatabaseProductName() returns: '"+productName+"'.");
+			_logger.debug("getDatabaseProductName() returns: '" + productName + "'.");
 			return productName; 
 		}
 		catch (SQLException e)
@@ -829,7 +829,7 @@ public class ConnectionDialog
 					rs.close();
 					stmt.close();
 
-					_logger.info("Replication Server with RSSD at '"+str1+"."+str2+"'.");
+					_logger.info("Replication Server with RSSD at '" + str1 + "." + str2 + "'.");
 
 					// If the above statement succeeds, then it must be a RepServer without metadata installed.
 					productName = DbUtils.DB_PROD_NAME_SYBASE_RS;
@@ -852,7 +852,7 @@ public class ConnectionDialog
 						rs.close();
 						stmt.close();
 						
-						_logger.info("Replication Agent Version '"+str1+"'.");
+						_logger.info("Replication Agent Version '" + str1 + "'.");
 						
 						// If the above statement succeeds, then it must be a RepServer without metadata installed.
 						productName = DbUtils.DB_PROD_NAME_SYBASE_RAX;
@@ -875,7 +875,7 @@ public class ConnectionDialog
 							str1 = rs.getString(1);
 							str2 = rs.getString(2);
 							
-							_logger.info("DR Agent Version info type='"+str1+"', version='"+str2+"'.");
+							_logger.info("DR Agent Version info type='" + str1 + "', version='" + str2 + "'.");
 
 							if ("DR Agent".equals(str1))
 							{
@@ -902,7 +902,7 @@ public class ConnectionDialog
     					{
     						str1 = rs.getString(1);
     						
-        					_logger.info("unknown-srv-type: @@version='"+str1+"'.");
+        					_logger.info("unknown-srv-type: @@version='" + str1 + "'.");
 
     						if (StringUtil.hasValue(str1))
     						{
@@ -922,7 +922,7 @@ public class ConnectionDialog
 				if (StringUtil.hasValue(productName))
 					return productName;
 			}
-			_logger.debug("getDatabaseProductName() Caught: "+e, e);
+			_logger.debug("getDatabaseProductName() Caught: " + e, e);
 			throw e;
 		}
 	}
@@ -949,7 +949,7 @@ public class ConnectionDialog
 		try
 		{
 			String str = conn.getMetaData().getDatabaseProductVersion();
-			_logger.debug("getDatabaseProductVersion() returns: '"+str+"'.");
+			_logger.debug("getDatabaseProductVersion() returns: '" + str + "'.");
 			return str; 
 		}
 		catch (SQLException e)
@@ -971,7 +971,7 @@ public class ConnectionDialog
 					rs.close();
 					stmt.close();
 
-					_logger.info("Replication Server with Version string '"+str+"'.");
+					_logger.info("Replication Server with Version string '" + str + "'.");
 
 					// If the above statement succeeds, then it must be a RepServer without metadata installed.
 					return str;
@@ -991,7 +991,7 @@ public class ConnectionDialog
 					rs.close();
 					stmt.close();
 
-					_logger.info("Replication Agent Version '"+str1+"'.");
+					_logger.info("Replication Agent Version '" + str1 + "'.");
 
 					// If the above statement succeeds, then it must be a RepServer without metadata installed.
 					return str1;
@@ -1010,7 +1010,7 @@ public class ConnectionDialog
 						str1 = rs.getString(1);
 						str2 = rs.getString(2);
 						
-						_logger.info("DR Agent Version info type='"+str1+"', version='"+str2+"'.");
+						_logger.info("DR Agent Version info type='" + str1 + "', version='" + str2 + "'.");
 
 						if ("DR Agent".equals(str1))
 						{
@@ -1023,7 +1023,7 @@ public class ConnectionDialog
 				}
 				catch(SQLException ignoreRsExceptions) {_logger.debug("getDatabaseProductVersion(): at DR Agent", ignoreRsExceptions);}
 			}
-			_logger.debug("getDatabaseProductVersion() Caught: "+e, e);
+			_logger.debug("getDatabaseProductVersion() Caught: " + e, e);
 			throw e;
 		}
 	}
@@ -1045,7 +1045,7 @@ public class ConnectionDialog
 		}
 		catch (SQLException e)
 		{
-			_logger.debug("isDatabaseProduct() Caught: "+e, e);
+			_logger.debug("isDatabaseProduct() Caught: " + e, e);
 			return false;
 		}
 	}
@@ -1154,7 +1154,7 @@ public class ConnectionDialog
 		try
 		{
 			String str = conn.getMetaData().getDriverName();
-			_logger.debug("getDriverName() returns: '"+str+"'.");
+			_logger.debug("getDriverName() returns: '" + str + "'.");
 			return str; 
 		}
 		catch (SQLException e)
@@ -1171,7 +1171,7 @@ public class ConnectionDialog
 					while ( rs.next() )
 					{
 						str = rs.getString(1);
-						_logger.debug("getDriverName(): RepServer check, using version "+str);
+						_logger.debug("getDriverName(): RepServer check, using version " + str);
 					}
 					rs.close();
 					stmt.close();
@@ -1182,7 +1182,7 @@ public class ConnectionDialog
 				}
 				catch(SQLException ignoreRsExceptions) {}
 			}
-			_logger.debug("getDriverName() Caught: "+e, e);
+			_logger.debug("getDriverName() Caught: " + e, e);
 			throw e;
 		}
 	}
@@ -1211,7 +1211,7 @@ public class ConnectionDialog
 		try
 		{
     		String str = conn.getMetaData().getDriverVersion();
-    		_logger.debug("getDriverVersion() returns: '"+str+"'.");
+    		_logger.debug("getDriverVersion() returns: '" + str + "'.");
     		return str; 
 		}
 		catch (SQLException e)
@@ -1228,7 +1228,7 @@ public class ConnectionDialog
 					while ( rs.next() )
 					{
 						str = rs.getString(1);
-						_logger.debug("getDriverVersion(): RepServer check, using version "+str);
+						_logger.debug("getDriverVersion(): RepServer check, using version " + str);
 					}
 					rs.close();
 					stmt.close();
@@ -1239,7 +1239,7 @@ public class ConnectionDialog
 				}
 				catch(SQLException ignoreRsExceptions) {}
 			}
-			_logger.debug("getDriverVersion() Caught: "+e, e);
+			_logger.debug("getDriverVersion() Caught: " + e, e);
 			throw e;
 		}
 	}
@@ -1290,7 +1290,7 @@ public class ConnectionDialog
 			String port = sa[1];
 
 			if ( ! AseConnectionFactory.isHostPortStrValid(server) )
-				throw new Exception("Problems the server name '"+server+"'. "+AseConnectionFactory.isHostPortStrValidReason(server));
+				throw new Exception("Problems the server name '" + server + "'. " + AseConnectionFactory.isHostPortStrValidReason(server));
 
 			_aseHost_txt.setText(host);
 			_asePort_txt.setText(port);
@@ -1299,7 +1299,7 @@ public class ConnectionDialog
 		{
 			String str = AseConnectionFactory.resolvInterfaceEntry(server);
 			if (str == null)
-				throw new Exception("ASE Server name '"+server+"' was not part of the known ASE server's.");
+				throw new Exception("ASE Server name '" + server + "' was not part of the known ASE server's.");
 
 			_aseServer_cbx.setSelectedItem(server);
 		}
@@ -1419,7 +1419,7 @@ public class ConnectionDialog
 		
 		if (cp == null)
 		{
-			SwingUtils.showErrorMessage(this, "Connect", "Connection Profile '"+name+"' was not found.", null);;
+			SwingUtils.showErrorMessage(this, "Connect", "Connection Profile '" + name + "' was not found.", null);;
 			//throw new SQLException("Connection Profile '"+profileName+"' was not found.");
 			return;
 		}
@@ -1855,7 +1855,7 @@ public class ConnectionDialog
 			}
 		});
 		nodeSelectionTimer.setRepeats(false);
-		_logger.debug("nodeSelectionTimerInterval="+nodeSelectionTimerInterval);
+		_logger.debug("nodeSelectionTimerInterval=" + nodeSelectionTimerInterval);
 
 		// Tree Expand Listener... save the state on Dialog OK/CLOSE
 		_connProfileTree.addTreeExpansionListener(new TreeExpansionListener()
@@ -2137,8 +2137,8 @@ public class ConnectionDialog
 		String hostmonTabTip = "Connect to Operating System host machine where DB Server is hosted to monitor IO and or CPU performance.";
 		String pcsTabTip     = "In GUI mode save Data Counter to a Storage, which can be view later by the 'offline' mode.";
 		String offlineTabTip = "<html>" +
-		                       "Connect to a 'offline' Counter Storage where "+Version.getAppName()+" has stored counter data.<br>" +
-		                       Version.getAppName()+" will switch to 'offline' mode and just reads data from the Counter Storage.<br>" +
+		                       "Connect to a 'offline' Counter Storage where " + Version.getAppName() + " has stored counter data.<br>" +
+		                       Version.getAppName() + " will switch to 'offline' mode and just reads data from the Counter Storage.<br>" +
 		                       "</html>";
 		String jdbcTabTip    = "<html>Connect to any JDBC data source</html>";
 
@@ -2342,8 +2342,8 @@ public class ConnectionDialog
 		_aseOptions_lbl     .setToolTipText("<html>JConnect Options that can be set.<br>Syntax: OPT1=value[, OPT2=value]<br>Or press the '...' button to add enties.</html>");
 		_aseOptions_txt     .setToolTipText("<html>JConnect Options that can be set.<br>Syntax: OPT1=value[, OPT2=value]<br>Or press the '...' button to add enties.</html>");
 		_aseOptions_but     .setToolTipText("Open a Dialog where available options are presented.");
-		_aseConnUrl_chk     .setToolTipText("<html>Actual URL used to connect the monitored server.<br>"+urlExample+"</html>");
-		_aseConnUrl_txt     .setToolTipText("<html>Actual URL used to connect the monitored server.<br>"+urlExample+"</html>");
+		_aseConnUrl_chk     .setToolTipText("<html>Actual URL used to connect the monitored server.<br>" + urlExample + "</html>");
+		_aseConnUrl_txt     .setToolTipText("<html>Actual URL used to connect the monitored server.<br>" + urlExample + "</html>");
 		_aseSshTunnel_chk   .setToolTipText(
 			"<html>" +
 			    "Use a SSH (Secure Shell) connection as a tunnel or intermediate hop, when you can't connect " +
@@ -2530,7 +2530,7 @@ public class ConnectionDialog
 		_dbxTuneOptionsPanel = panel;
 
 //		_aseOptionSavePwd_chk          .setToolTipText("Save the password in the configuration file, and yes it's encrypted");
-		_aseOptionConnOnStart_chk      .setToolTipText("When "+Version.getAppName()+" starts use the Server and connect automatically (if the below 'Persisten Counter Storage' is enabled, it will also be used at startup)");
+		_aseOptionConnOnStart_chk      .setToolTipText("When " + Version.getAppName() + " starts use the Server and connect automatically (if the below 'Persisten Counter Storage' is enabled, it will also be used at startup)");
 		_aseOptionReConnOnFailure_chk  .setToolTipText("If connection to the monitored server is lost in some way, try to reconnect to the server again automatically.");
 		_aseOptionStore_chk            .setToolTipText("Store GUI Counter Data in a database (Persistent Counter Storage), which can be viewed later, connect to it from the 'offline' tab");
 		_aseHostMonitor_chk            .setToolTipText("Connect to the Operating System host via SSH, to monitor IO statistics and/or CPU usage.");
@@ -2789,16 +2789,16 @@ public class ConnectionDialog
 
 		s = "Hover over the different subsection and the ToolTip manager will display more information about the various topics.";
 		t = s;
-		txt = new GLabel("<html>"+s+"</html>");
-		txt.setToolTipText("<html>"+t+"</html>");
+		txt = new GLabel("<html>" + s + "</html>");
+		txt.setToolTipText("<html>" + t + "</html>");
 		panel.add(txt, "wmin 100, push, grow, wrap 10");
 
 		s = "<b>- What is this Basic Operating System Monitoring.</b>";
 		t = "If you want to monitor the Operating System with some basic command, this is one way you can do it.<br>" +
 		    "And also if you are storing the Performance Counters in a Persistent storage, the OS Monitoring is in sync with <br>" +
 		    "the Performance Counters from the monitored  Server, which makes it easier to correlate the various metrics.";
-		txt = new GLabel("<html>"+s+"</html>");
-		txt.setToolTipText("<html>"+t+"</html>");
+		txt = new GLabel("<html>" + s + "</html>");
+		txt.setToolTipText("<html>" + t + "</html>");
 		panel.add(txt, "wmin 100, push, grow, wrap 10");
 
 		s = "<b>- What OS Monitoring Commands are supported for the moment.</b>";
@@ -2821,8 +2821,8 @@ public class ConnectionDialog
 				"  <li>For <code>uptime</code> - Simulation using: <code> typeperf -si ${sleepTime} \"\\System\\*\" </code></li>" +
 				"</ul>" +
 		    "";
-		txt = new GLabel("<html>"+s+"</html>");
-		txt.setToolTipText("<html>"+t+"</html>");
+		txt = new GLabel("<html>" + s + "</html>");
+		txt.setToolTipText("<html>" + t + "</html>");
 		panel.add(txt, "wmin 100, push, grow, wrap 10");
 
 		s = "<b>- But every Operating System work slightly different.</b>";
@@ -2846,10 +2846,10 @@ public class ConnectionDialog
 		    "If you need to debug or check what the OS Command is sending, you can add the following to the Configuration file:<br>" +
 		    "<code>log4j.logger.com.dbxtune.hostmon.HostMonitor=DEBUG</code><br>" +
 		    "<br>" +
-		    "Or you can use the 'log viewer' to change the 'log level' while "+Version.getAppName()+" is still running: <br>" +
+		    "Or you can use the 'log viewer' to change the 'log level' while " + Version.getAppName() + " is still running: <br>" +
 		    "MainMenu->View->Open Log Window..., then Press 'Set log level'... locate com.dbxtune.hostmon.HostMonitor and change it.";
-		txt = new GLabel("<html>"+s+"</html>");
-		txt.setToolTipText("<html>"+t+"</html>");
+		txt = new GLabel("<html>" + s + "</html>");
+		txt.setToolTipText("<html>" + t + "</html>");
 		panel.add(txt, "wmin 100, push, grow, wrap 10");
 
 		s = "<b>- The big picture of how it's implememted.</b>";
@@ -2857,20 +2857,20 @@ public class ConnectionDialog
 		    "<ul>" +
 		    "  <li> Start a background task that executes for instance 'iostat' every 2 seconds (iostat -xdz 2) or whatever sample period (see section above).</li>" +
 		    "  <li> Parse the output from the OS Command and store it in a intermediate in-memory storage.</li>" +
-		    "  <li> Then when "+Version.getAppName()+" think it's time to sample some Performance Counters (depends on "+Version.getAppName()+" sample time)<br>" +
+		    "  <li> Then when " + Version.getAppName() + " think it's time to sample some Performance Counters (depends on " + Version.getAppName() + " sample time)<br>" +
 		    "       The subsystem does an <b>average</b> calculation on the intermediate stored values and then resets the intermidiate storage so that new samples from the OS Command can be sampled. <br>" +
-		    "  <li> Now the Performance Counters or values are available to view in "+Version.getAppName()+".</li>" +
+		    "  <li> Now the Performance Counters or values are available to view in " + Version.getAppName() + ".</li>" +
 		    "</ul>" +
 		    "For 'vmstat' I choose a slightly different approach, this since 'vmstat' is only delivering one row per vmstats-sample period. <br>" +
 		    "So in this case I do <b>not</b> do a summary or average calculation.<br>" +
 		    "<br>" +
 		    "Instead I simply displays <b>all</b> the sampled records I have received from the command with a 'timestamp' column to indicate when it was received.<br>" +
 		    "If you instead want to have some kind of average or summary, please notify me and explain...";
-		txt = new GLabel("<html>"+s+"</html>");
-		txt.setToolTipText("<html>"+t+"</html>");
+		txt = new GLabel("<html>" + s + "</html>");
+		txt.setToolTipText("<html>" + t + "</html>");
 		panel.add(txt, "wmin 100, push, grow, wrap 10");
 
-		s = "<b>- What to expect in upcomming releases of "+Version.getAppName()+".</b>";
+		s = "<b>- What to expect in upcomming releases of " + Version.getAppName() + ".</b>";
 		t = "In current release there are limited support for User Defined OS Monitoring, which you can add to the Configuration file<br>" +
 			"In future release, the plan is to add a <b>Wizard</b> where you can add User Defined Host Monitor Counters and maybe support for diff/rate counters as well.<br>" +
 			"<br>" +
@@ -2892,8 +2892,8 @@ public class ConnectionDialog
 		    "hostmon.udc.TestGoransLs.addStrColumn.filename         = {length=99, sqlColumnNumber=8,  parseColumnNumber=8,  isNullable=true,  description=xxx}<BR>" +
 		    "</pre>" +
 		    "Some Graph properties can also be added, they are using the same notation as for 'SQL Used Defined Counters'.";
-		txt = new GLabel("<html>"+s+"</html>");
-		txt.setToolTipText("<html>"+t+"</html>");
+		txt = new GLabel("<html>" + s + "</html>");
+		txt.setToolTipText("<html>" + t + "</html>");
 		panel.add(txt, "wmin 100, push, grow, wrap 10");
 
 		return panel;
@@ -2934,7 +2934,7 @@ public class ConnectionDialog
 		"    The HOSTNAME will be substituted with the output from ASE function <code>asehostname()</code> of which ASE server we are monitoring.<br>" +
 		"  </li>" +
 		"  <li><code>${DBXTUNE_HOME}</code> <br>" +
-		"    The DBXTUNE_HOME will be substituted with the installation path of "+Version.getAppName()+".<br>" +
+		"    The DBXTUNE_HOME will be substituted with the installation path of " + Version.getAppName() + ".<br>" +
 		"  </li>" +
 		"  <li><code>${DBXTUNE_SAVE_DIR}</code> <br>" +
 		"    The DBXTUNE_SAVE_DIR will be substituted with ${DBXTUNE_HOME}/data or whatever the environment variable is set to.<br>" +
@@ -3114,8 +3114,8 @@ public class ConnectionDialog
 
 		// http://www.h2database.com/html/features.html#database_url
 		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:[<path>]<dbname>");
-		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE}");
-		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:${"+envNameSaveDir+"}/${HOSTNAME}_${DATE}");
+		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:${" + envNameSaveDir + "}/${SERVERNAME}_${DATE}");
+		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:${" + envNameSaveDir + "}/${HOSTNAME}_${DATE}");
 //		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:[<path>]<dbname>;AUTO_SERVER=TRUE");
 //		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE};AUTO_SERVER=TRUE");
 //		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:${"+envNameSaveDir+"}/${HOSTNAME}_${DATE};AUTO_SERVER=TRUE");
@@ -3373,8 +3373,8 @@ public class ConnectionDialog
 		_offlineJdbcPassword_lbl.setToolTipText("Password to be used by the Persistent Counter Storage to READ Counter Data");
 		_offlineJdbcPassword_txt.setToolTipText("Password to be used by the Persistent Counter Storage to READ Counter Data");
 		_offlineTestConn_but    .setToolTipText("Make a test connection to the above JDBC datastore");
-		_offlineCheckForNewSessions_chk.setToolTipText("<html>If "+Version.getAppName()+" still collects data into the offline database, go and check for new samples.<br>Using this option we can run "+Version.getAppName()+" in offline mode while the GUI can read from the shared database.</html>");
-		_offlineH2Option_startH2NwSrv_chk.setToolTipText("<html>Start the H2 database engine in 'server' mode.<br>This enables other "+Version.getAppName()+" client to be connected to the same database.<br>Or you can use any third party product database viewer to read the content at the same time.</html>");
+		_offlineCheckForNewSessions_chk.setToolTipText("<html>If " + Version.getAppName() + " still collects data into the offline database, go and check for new samples.<br>Using this option we can run " + Version.getAppName() + " in offline mode while the GUI can read from the shared database.</html>");
+		_offlineH2Option_startH2NwSrv_chk.setToolTipText("<html>Start the H2 database engine in 'server' mode.<br>This enables other " + Version.getAppName() + " client to be connected to the same database.<br>Or you can use any third party product database viewer to read the content at the same time.</html>");
 
 //		_offlineTestConn_lbl.setForeground(Color.BLUE);
 //		_offlineTestConn_lbl.setFont( _ok_lbl.getFont().deriveFont(Font.BOLD) );
@@ -4350,7 +4350,7 @@ public class ConnectionDialog
 				String[] ports = StringUtil.commaStrToArray(_asePort_txt.getText());
 				if (hosts.length != ports.length)
 				{
-					otherProblem = "Host has "+hosts.length+" entries, Port has "+ports.length+" entries. They must match";
+					otherProblem = "Host has " + hosts.length + " entries, Port has " + ports.length + " entries. They must match";
 				}
 			}
 		}
@@ -4432,19 +4432,19 @@ public class ConnectionDialog
 					interfacesFileName = "$SYBASE/interfaces";
 
 				String privateInterfacesFile = AseConnectionFactory.getPrivateInterfacesFile(true);
-				_logger.info("Trying to open the local "+Version.getAppName()+" Name/Directory Service file '"+privateInterfacesFile+"'.");
+				_logger.info("Trying to open the local " + Version.getAppName() + " Name/Directory Service file '" + privateInterfacesFile + "'.");
 				AseConnectionFactory.createPrivateInterfacesFile(privateInterfacesFile); // if it exists, this does nothing...
 				System.setProperty("interfaces.file", privateInterfacesFile);
 
 				String htmlMsg = "<html>" + 
-						"The Name Service file '"+file+"' doesn't exists.<br>" +
+						"The Name Service file '" + file + "' doesn't exists.<br>" +
 						"<br>" +
 						"Instead, lets try to use the default <i>private</i> Name Service file: " + privateInterfacesFile + "<br>" +
 						"<br>" +
 						"<b>Note</b>: If the faulty file was restored from a Connection Profile, <b>you need save the profile</b> to get rid of this message in the future</b><br>" +
 						"<br>" +
 						"Name Service file is used to lookup a Sybase Server into a hostname and port number.<br>" +
-						"The default Sybase Name Service file is normally named '"+interfacesFileName+"'.<br>" + 
+						"The default Sybase Name Service file is normally named '" + interfacesFileName + "'.<br>" + 
 						"</html>";
 				SwingUtils.showWarnMessage(this, "Name Service file dosn't exists", htmlMsg, null);
 				file = privateInterfacesFile;
@@ -4455,13 +4455,13 @@ public class ConnectionDialog
 			// Can we READ the file
 			if ( ! FileUtils.canRead(file) )
 			{
-				_logger.warn("The file '"+file+"' is NOT Readable...");
+				_logger.warn("The file '" + file + "' is NOT Readable...");
 			}
 
 			// Can we WRITE to the file
 			if ( ! FileUtils.canWrite(file) )
 			{
-				_logger.warn("The file '"+file+"' is NOT Writable...");
+				_logger.warn("The file '" + file + "' is NOT Writable...");
 
 				// The copy interfaces file is instead done:
 				// - When you try to edit the interfaces file
@@ -4485,7 +4485,7 @@ public class ConnectionDialog
 		catch (Exception e)
 		{
 			SwingUtils.showErrorMessage(this, "Problems setting new Name Service file", 
-				"Problems setting the Name Service file '"+file+"'." +
+				"Problems setting the Name Service file '" + file + "'." +
 				"\n\n" + e.getMessage(), e);
 			
 			// Maybe try to edit the file
@@ -4493,7 +4493,7 @@ public class ConnectionDialog
 			{
 				String str = 
 					"<html>" +
-					"Do you want to edit the file "+file+"<br>" +
+					"Do you want to edit the file " + file + "<br>" +
 					"<br>" +
 					"It looks like it was 'unknown format', which could be fixed if you edit the file.<br>" +
 					"</html>";
@@ -4671,7 +4671,7 @@ public class ConnectionDialog
 			props.put("password", password);
 			try
 			{
-				_logger.info("Connecting to DB Server using RAW-URL username='"+username+"', URL='"+tdsUseUrlStr+"'.");
+				_logger.info("Connecting to DB Server using RAW-URL username='" + username + "', URL='" + tdsUseUrlStr + "'.");
 //				_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, AseConnectionFactory.getDriver(), tdsUseUrlStr, props, _checkAseCfg, _sshConn, sshTunnelInfo, _desiredProductName, sqlInit);
 //				_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, AseConnectionFactory.getDriver(), tdsUseUrlStr, props, _options._srvExtraChecks, _sshConn, sshTunnelInfo, _desiredProductName, sqlInit, srvIcon);
 //				_aseConn = AseConnectionFactory.getConnection(AseConnectionFactory.getDriver(), rawUrl, props, null);
@@ -4701,13 +4701,13 @@ public class ConnectionDialog
 			catch (SQLException e)
 			{
 				String msg = AseConnectionUtils.showSqlExceptionMessage(this, "Problems Connecting", "Problems when connecting to the data server.", e); 
-				_logger.warn("Problems when connecting to a DB Server. "+msg);
+				_logger.warn("Problems when connecting to a DB Server. " + msg);
 				return false;
 			}
 			catch (Exception e)
 			{
 				SwingUtils.showErrorMessage(this, "Problems Connecting", "Problems when connecting to the data server.\n\n" + e.getMessage(), e);
-				_logger.warn("Problems when connecting to a DB Server. Caught: "+e);
+				_logger.warn("Problems when connecting to a DB Server. Caught: " + e);
 				return false;
 			}
 			//<<<<<----- RETURN after this
@@ -4730,20 +4730,20 @@ public class ConnectionDialog
 			catch (NumberFormatException e) 
 			{
 				SwingUtils.showErrorMessage(this, "Problem with port number", 
-					"The port number '"+sa[i]+"' is not a number.", e);
+					"The port number '" + sa[i] + "' is not a number.", e);
 				return false;
 			}
 		}
 		if (sa == null || (sa != null && sa.length == 0) )
 		{
 			SwingUtils.showErrorMessage(this, "Problem with port number", 
-					"The port number '"+ports+"' is either missing or is not a number.", null);
+					"The port number '" + ports + "' is either missing or is not a number.", null);
 				return false;
 		}
 
-		_logger.debug("Setting connection info to AseConnectionFactory appname='"+Version.getAppName()
-				+"', user='"+username+"', password='"+password
-				+"', host='"+hosts+"', port='"+ports+"'.");
+		_logger.debug("Setting connection info to AseConnectionFactory appname='" + Version.getAppName()
+				+ "', user='" + username + "', password='" + password
+				+ "', host='" + hosts + "', port='" + ports + "'.");
 
 		// reset the sshTunnel info if not selected
 		if ( ! aseSshTunnel )
@@ -4789,7 +4789,7 @@ public class ConnectionDialog
 		
 		try
 		{
-			_logger.info("Connecting to DB Server '"+AseConnectionFactory.getServer()+"'.  hostPortStr='"+AseConnectionFactory.getHostPortStr()+"', user='"+AseConnectionFactory.getUser()+"'.");
+			_logger.info("Connecting to DB Server '" + AseConnectionFactory.getServer() + "'.  hostPortStr='" + AseConnectionFactory.getHostPortStr() + "', user='" + AseConnectionFactory.getUser() + "'.");
 
 			String urlStr = AseConnectionFactory.getUrlTemplateBase() + AseConnectionFactory.getHostPortStr();
 //			_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, urlStr, _options._srvExtraChecks, _sshConn, sshTunnelInfo, _desiredProductName, sqlInit, srvIcon);
@@ -4809,12 +4809,12 @@ public class ConnectionDialog
 		{
 			// The below shows a showErrorMessage
 			String msg = AseConnectionUtils.showSqlExceptionMessage(this, "Problems Connecting", "Problems when connecting to the data server.", e); 
-			_logger.warn("Problems when connecting to a  Server. "+msg);
+			_logger.warn("Problems when connecting to a  Server. " + msg);
 			return false;
 		}
 		catch (Exception e)
 		{
-			_logger.warn("Problems when connecting to a DB Server. Caught: "+e);
+			_logger.warn("Problems when connecting to a DB Server. Caught: " + e);
 			SwingUtils.showErrorMessage(this, "Problems Connecting", 
 					"Problems when connecting to the data server." +
 					"\n\n" + e.getMessage(), e);
@@ -4909,12 +4909,12 @@ public class ConnectionDialog
 		catch (NumberFormatException e) 
 		{
 			SwingUtils.showErrorMessage(this, "Problem with port number", 
-				"The port number '"+portStr+"' is not a number.", e);
+				"The port number '" + portStr + "' is not a number.", e);
 			return null;
 		}
 
 
-		_logger.info("Creating HostMon Connection-Object to hostname='"+hostname+"'.  port='"+port+"', username='"+username+"', keyFile='"+keyFile+"', localOsCmd='"+localOsCmd+"', localOsCmdWrapper='"+localOsCmdWrapper+"'.");
+		_logger.info("Creating HostMon Connection-Object to hostname='" + hostname + "'.  port='" + port + "', username='" + username + "', keyFile='" + keyFile + "', localOsCmd='" + localOsCmd + "', localOsCmdWrapper='" + localOsCmdWrapper + "'.");
 		
 		HostMonitorConnection hostMonConn;
 		if (localOsCmd)
@@ -5003,8 +5003,8 @@ public class ConnectionDialog
 					String tmpSave = pcs;
 					pcs = pcs.replace("com.asetune.", "com.dbxtune.");
 
-					Exception tmpEx = new Exception("MAKE THE LOG MESSAGE STICK OUT: Found old configuration '" + tmpSave+ "' which was replaced with '" + pcs + "'."); 
-					_logger.warn("Found old configuration '" + tmpSave+ "' which was replaced with '" + pcs + "'.", tmpEx);
+					Exception tmpEx = new Exception("MAKE THE LOG MESSAGE STICK OUT: Found old configuration '" + tmpSave + "' which was replaced with '" + pcs + "'."); 
+					_logger.warn("Found old configuration '" + tmpSave + "' which was replaced with '" + pcs + "'.", tmpEx);
 				}
 
 				if (pcs.equals("com.dbxtune.pcs.PersistWriterJdbc"))
@@ -5158,8 +5158,8 @@ public class ConnectionDialog
 			_offlineCheckForNewSessions_chk.setSelected(entry._checkForNewSessions);
 		}
 		
-		String configStr = "jdbcDriver='"+jdbcDriver+"', jdbcUrl='"+jdbcUrl+"', jdbcUser='"+jdbcUser+"', jdbcPasswd='*hidden*'.";
-		_logger.info("Configuration for PersistReader component named 'PersistReader': "+configStr);
+		String configStr = "jdbcDriver='" + jdbcDriver + "', jdbcUrl='" + jdbcUrl + "', jdbcUser='" + jdbcUser + "', jdbcPasswd='*hidden*'.";
+		_logger.info("Configuration for PersistReader component named 'PersistReader': " + configStr);
 
 		//-----------------------------------------------------
 		// IF Jdbc driver: H2
@@ -5419,7 +5419,7 @@ public class ConnectionDialog
 				urlHelper.setUrlOptionsMap(urlMap);
 				jdbcUrl = urlHelper.getUrl();
 				
-				_logger.info("Added some options to the H2 URL. New URL is '"+jdbcUrl+"'.");
+				_logger.info("Added some options to the H2 URL. New URL is '" + jdbcUrl + "'.");
 			}
 		}
 
@@ -5486,7 +5486,7 @@ public class ConnectionDialog
 			_logger.error(msg);
 			JOptionPane.showMessageDialog(this, 
 					"<html>" + msg + "</html>", 
-					Version.getAppName()+" - offline db check", 
+					Version.getAppName() + " - offline db check", 
 					JOptionPane.ERROR_MESSAGE);
 			return false;
 		}
@@ -5520,18 +5520,18 @@ public class ConnectionDialog
 			try	{ getDatabaseMajorVersion   = dbmd.getDatabaseMajorVersion();   } catch (Throwable ignore) {}
 			try	{ getDatabaseMinorVersion   = dbmd.getDatabaseMinorVersion();   } catch (Throwable ignore) {}
 
-			_logger.info("Connected using JDBC driver Name='"+getDriverName
-					+"', Version='"         +getDriverVersion
-					+"', MajorVersion='"    +getDriverMajorVersion
-					+"', MinorVersion='"    +getDriverMinorVersion
-					+"', JdbcMajorVersion='"+getJDBCMajorVersion
-					+"', JdbcMinorVersion='"+getJDBCMinorVersion
-					+"'.");
-			_logger.info("Connected to Database Product Name='"+getDatabaseProductName
-					+"', Version='"     +getDatabaseProductVersion
-					+"', MajorVersion='"+getDatabaseMajorVersion
-					+"', MinorVersion='"+getDatabaseMinorVersion
-					+"'.");
+			_logger.info("Connected using JDBC driver Name='" + getDriverName
+					+ "', Version='"         + getDriverVersion
+					+ "', MajorVersion='"    + getDriverMajorVersion
+					+ "', MinorVersion='"    + getDriverMinorVersion
+					+ "', JdbcMajorVersion='" + getJDBCMajorVersion
+					+ "', JdbcMinorVersion='" + getJDBCMinorVersion
+					+ "'.");
+			_logger.info("Connected to Database Product Name='" + getDatabaseProductName
+					+ "', Version='"     + getDatabaseProductVersion
+					+ "', MajorVersion='" + getDatabaseMajorVersion
+					+ "', MinorVersion='" + getDatabaseMinorVersion
+					+ "'.");
 
 			// if H2
 			// Set some specific stuff
@@ -5631,7 +5631,7 @@ public class ConnectionDialog
 	}
 	private boolean dbExecSetting(Connection conn, String dbProductName, String sql)
 	{
-		_logger.info(dbProductName+": "+sql);
+		_logger.info(dbProductName + ": " + sql);
 		try
 		{
 			return dbExec(conn, sql, true);
@@ -5658,7 +5658,7 @@ public class ConnectionDialog
 		}
 		catch(SQLException e)
 		{
-			_logger.warn("Problems when executing sql statement: "+sql);
+			_logger.warn("Problems when executing sql statement: " + sql);
 			throw e;
 		}
 
@@ -6052,11 +6052,11 @@ if ( ! jdbcSshTunnelUse )
 			props.put("user", user);
 			props.put("password", passwd);
 	
-			_logger.debug("Try getConnection to driver='"+driver+"', url='"+url+"', user='"+user+"'.");
+			_logger.debug("Try getConnection to driver='" + driver + "', url='" + url + "', user='" + user + "'.");
 			Connection conn = DriverManager.getConnection(url, props);
 			conn.close();
 	
-			JOptionPane.showMessageDialog(this, "Connection succeeded.", Version.getAppName()+" - connect check", JOptionPane.INFORMATION_MESSAGE);
+			JOptionPane.showMessageDialog(this, "Connection succeeded.", Version.getAppName() + " - connect check", JOptionPane.INFORMATION_MESSAGE);
 			return true;
 		}
 		catch (SQLException e)
@@ -6069,12 +6069,12 @@ if ( ! jdbcSshTunnelUse )
 				e = e.getNextException();
 			}
 //			JOptionPane.showMessageDialog(this, "Connection FAILED.\n\n"+sb.toString(), Version.getAppName()+" - connect check", JOptionPane.ERROR_MESSAGE);
-			SwingUtils.showErrorMessage(Version.getAppName()+" - connect check", "Connection FAILED.\n\n"+sb.toString(), e);
+			SwingUtils.showErrorMessage(Version.getAppName() + " - connect check", "Connection FAILED.\n\n" + sb.toString(), e);
 		}
 		catch (Exception e)
 		{
 //			JOptionPane.showMessageDialog(this, "Connection FAILED.\n\n"+e.toString(),  Version.getAppName()+" - connect check", JOptionPane.ERROR_MESSAGE);
-			SwingUtils.showErrorMessage(Version.getAppName()+" - connect check", "Connection FAILED.\n\n"+e.toString(), e);
+			SwingUtils.showErrorMessage(Version.getAppName() + " - connect check", "Connection FAILED.\n\n" + e.toString(), e);
 		}
 		return false;
 	}
@@ -6108,7 +6108,7 @@ if ( ! jdbcSshTunnelUse )
 		// --- ASE: CHECKBOX: SERVERS ---
 		if (_aseServer_cbx.equals(source))
 		{
-			_logger.debug("_server_cbx.actionPerformed(): getSelectedIndex()='"+_aseServer_cbx.getSelectedIndex()+"', getSelectedItem()='"+StringUtil.getSelectedItemString(_aseServer_cbx)+"'.");
+			_logger.debug("_server_cbx.actionPerformed(): getSelectedIndex()='" + _aseServer_cbx.getSelectedIndex() + "', getSelectedItem()='" + StringUtil.getSelectedItemString(_aseServer_cbx) + "'.");
 	
 			// NOTE: index 0 is "host:port" or SERVER_FIRST_ENTRY("-CHOOSE A SERVER-")
 			//       so we wont touch host_txt and port_txt if we are on index 0
@@ -6511,10 +6511,10 @@ if ( ! jdbcSshTunnelUse )
 			{
 				SwingUtils.showErrorMessage("Not a number", 
 					"<html>" +
-						"Sleep Time must be a number, currently it is '"+str+"'.<br>" +
+						"Sleep Time must be a number, currently it is '" + str + "'.<br>" +
 						"Resetting to default value: " + PersistentCounterHandler.DEFAULT_ddl_afterDdlLookupSleepTimeInMs +
 					"</html>", nfe);
-				_pcsDdl_afterDdlLookupSleepTimeInMs_txt.setText(""+PersistentCounterHandler.DEFAULT_ddl_afterDdlLookupSleepTimeInMs);
+				_pcsDdl_afterDdlLookupSleepTimeInMs_txt.setText("" + PersistentCounterHandler.DEFAULT_ddl_afterDdlLookupSleepTimeInMs);
 			}
 		}
 		
@@ -6722,7 +6722,7 @@ if ( ! jdbcSshTunnelUse )
 		// --- JDBC: CHECKBOX: USE SSH TUNNEL
 		if (_jdbcSshTunnel_chk.equals(source))
 		{
-			String urlHostPortStr = JdbcUrlParser.parse(_jdbcUrl_cbx.getSelectedItem()+"").getHostPortStr();
+			String urlHostPortStr = JdbcUrlParser.parse(_jdbcUrl_cbx.getSelectedItem() + "").getHostPortStr();
 			_jdbcSshTunnelInfo = SshTunnelDialog.getSshTunnelInfo(urlHostPortStr);
 			updateSshTunnelDescription();
 
@@ -6733,7 +6733,7 @@ if ( ! jdbcSshTunnelUse )
 		// --- JDBC: BUTTON: "SSH Tunnel"
 		if (_jdbcSshTunnel_but.equals(source))
 		{
-			String hostPortStr = JdbcUrlParser.parse(_jdbcUrl_cbx.getSelectedItem()+"").getHostPortStr();
+			String hostPortStr = JdbcUrlParser.parse(_jdbcUrl_cbx.getSelectedItem() + "").getHostPortStr();
 
 			SshTunnelDialog dialog = new SshTunnelDialog(this, hostPortStr);
 			dialog.setVisible(true);
@@ -6854,7 +6854,7 @@ if ( ! jdbcSshTunnelUse )
 			{
 				if      (_options._showAseTab)  connType = TDS_CONN;
 				else if (_options._showJdbcTab) connType = JDBC_CONN;
-				else throw new RuntimeException("Sorry I can't figgure out where to connect, please choose tab '"+TAB_TITLE_ASE+"' or '"+TAB_TITLE_JDBC+"'.");
+				else throw new RuntimeException("Sorry I can't figgure out where to connect, please choose tab '" + TAB_TITLE_ASE + "' or '" + TAB_TITLE_JDBC + "'.");
 			}
 
 			// Save the connection profile if tree expanded/collapsed has changed
@@ -7283,7 +7283,7 @@ if ( ! jdbcSshTunnelUse )
 						if (startTime != null)
 						{
 							// Create a Waitfor Dialog
-							WaitForExecDialog wait = new WaitForExecDialog(this, "Waiting for a Deferred Connect, at: "+SimpleDateFormat.getDateTimeInstance().format(startTime));
+							WaitForExecDialog wait = new WaitForExecDialog(this, "Waiting for a Deferred Connect, at: " + SimpleDateFormat.getDateTimeInstance().format(startTime));
 	
 							// Create the Executor object
 							WaitForExecDialog.BgExecutor doWork = new WaitForExecDialog.BgExecutor(wait)
@@ -7440,7 +7440,7 @@ if ( ! jdbcSshTunnelUse )
 			else
 			{
 				// This could not happen but lets put it ion here if we change the code
-				throw new RuntimeException("Unknow connection type. connType="+connType);
+				throw new RuntimeException("Unknow connection type. connType=" + connType);
 			}
 			
 			
@@ -7476,7 +7476,7 @@ if ( ! jdbcSshTunnelUse )
 						{
 							SwingUtils.showInfoMessage(this, "Error loading Template", 
 									"<html>"
-									+ "Can't load the Template Named '"+aseOptionUseTemplateName+"'<br>"
+									+ "Can't load the Template Named '" + aseOptionUseTemplateName + "'<br>"
 									+ "<br>"
 									+ "Continuing the connect process, but without the specified template loaded."
 									+ "</html>");
@@ -7531,7 +7531,7 @@ if ( ! jdbcSshTunnelUse )
 	    			else
 	    			{
 	    				// This could not happen but lets put it ion here if we change the code
-	    				throw new RuntimeException("Unknow connection type. connType="+connType);
+	    				throw new RuntimeException("Unknow connection type. connType=" + connType);
 	    			}
 				}
 			}
@@ -7712,7 +7712,7 @@ if ( ! jdbcSshTunnelUse )
 		}
 		else
 		{
-			_logger.error("Unknown connection type of '"+connType+"'. This was found in updateConnectionProfile() when trying to update the connection profile.");
+			_logger.error("Unknown connection type of '" + connType + "'. This was found in updateConnectionProfile() when trying to update the connection profile.");
 			return;
 		}
 	}
@@ -7734,13 +7734,13 @@ if ( ! jdbcSshTunnelUse )
 		entry._dbxtuneOptDissConnectLater       = _aseDeferredDisConnect_chk   .isSelected();
 		if (entry._dbxtuneOptConnectLater)
 		{
-			entry._dbxtuneOptConnectLaterHour       = _aseDeferredConnectHour_spm  .getNumber()+"";
-			entry._dbxtuneOptConnectLaterMinute     = _aseDeferredConnectMinute_spm.getNumber()+"";
+			entry._dbxtuneOptConnectLaterHour       = _aseDeferredConnectHour_spm  .getNumber() + "";
+			entry._dbxtuneOptConnectLaterMinute     = _aseDeferredConnectMinute_spm.getNumber() + "";
 		}
 		if (entry._dbxtuneOptConnectLater)
 		{
-			entry._dbxtuneOptDissConnectLaterHour   = _aseDeferredDisConnectHour_spm  .getNumber()+"";
-			entry._dbxtuneOptDissConnectLaterMinute = _aseDeferredDisConnectMinute_spm.getNumber()+"";
+			entry._dbxtuneOptDissConnectLaterHour   = _aseDeferredDisConnectHour_spm  .getNumber() + "";
+			entry._dbxtuneOptDissConnectLaterMinute = _aseDeferredDisConnectMinute_spm.getNumber() + "";
 		}
 
 		if (entry._dbxtuneOptOsMonitoring)
@@ -7818,7 +7818,7 @@ if ( ! jdbcSshTunnelUse )
 			_hostmonPassword_txt     .setText(    entry._osMonPassword);
 			_hostmonOptionSavePwd_chk.setSelected(entry._osMonSavePassword);
 			_hostmonHost_txt         .setText(    entry._osMonHost);
-			_hostmonPort_txt         .setText(    entry._osMonPort+"");
+			_hostmonPort_txt         .setText(    entry._osMonPort + "");
 			_hostmonKeyFile_txt      .setText(    entry._osMonKeyFile);
 
 			_hostMonLocalOsCmd_chk       .setSelected(entry._osMonLocalOsCmd       );
@@ -7838,20 +7838,20 @@ if ( ! jdbcSshTunnelUse )
 			_pcsDdl_enabledForDatabaseObjects_chk      .setSelected(    entry._pcsWriterDdlLookupEnabledForDatabaseObjects);
 			_pcsDdl_enabledForStatementCache_chk       .setSelected(    entry._pcsWriterDdlLookupEnabledForStatementCache);
 			_pcsDdl_addDependantObjectsToDdlInQueue_chk.setSelected(    entry._pcsWriterDdlStoreDependantObjects);
-			_pcsDdl_afterDdlLookupSleepTimeInMs_txt    .setText(        entry._pcsWriterDdlLookupSleepTime+"");
+			_pcsDdl_afterDdlLookupSleepTimeInMs_txt    .setText(        entry._pcsWriterDdlLookupSleepTime + "");
 			
 			_pcsCapSql_doSqlCaptureAndStore_chk         .setSelected(entry._pcsWriterCapSql_doSqlCaptureAndStore             );
 			_pcsCapSql_doSqlText_chk                    .setSelected(entry._pcsWriterCapSql_doSqlText                        );
 			_pcsCapSql_doStatementInfo_chk              .setSelected(entry._pcsWriterCapSql_doStatementInfo                  );
 			_pcsCapSql_doPlanText_chk                   .setSelected(entry._pcsWriterCapSql_doPlanText                       );
-			_pcsCapSql_sleepTimeInMs_txt                .setText(""+ entry._pcsWriterCapSql_sleepTimeInMs                    );
-			_pcsCapSql_saveStatement_execTime_txt       .setText(""+ entry._pcsWriterCapSql_saveStatement_gt_execTime        );
-			_pcsCapSql_saveStatement_logicalRead_txt    .setText(""+ entry._pcsWriterCapSql_saveStatement_gt_logicalReads    );
-			_pcsCapSql_saveStatement_physicalRead_txt   .setText(""+ entry._pcsWriterCapSql_saveStatement_gt_physicalReads   );
+			_pcsCapSql_sleepTimeInMs_txt                .setText("" + entry._pcsWriterCapSql_sleepTimeInMs                    );
+			_pcsCapSql_saveStatement_execTime_txt       .setText("" + entry._pcsWriterCapSql_saveStatement_gt_execTime        );
+			_pcsCapSql_saveStatement_logicalRead_txt    .setText("" + entry._pcsWriterCapSql_saveStatement_gt_logicalReads    );
+			_pcsCapSql_saveStatement_physicalRead_txt   .setText("" + entry._pcsWriterCapSql_saveStatement_gt_physicalReads   );
 			_pcsCapSql_sendDdlForLookup_chk             .setSelected(entry._pcsWriterCapSql_sendDdlForLookup                 );
-			_pcsCapSql_sendDdlForLookup_execTime_txt    .setText(""+ entry._pcsWriterCapSql_sendDdlForLookup_gt_execTime     );
-			_pcsCapSql_sendDdlForLookup_logicalRead_txt .setText(""+ entry._pcsWriterCapSql_sendDdlForLookup_gt_logicalReads );
-			_pcsCapSql_sendDdlForLookup_physicalRead_txt.setText(""+ entry._pcsWriterCapSql_sendDdlForLookup_gt_physicalReads);
+			_pcsCapSql_sendDdlForLookup_execTime_txt    .setText("" + entry._pcsWriterCapSql_sendDdlForLookup_gt_execTime     );
+			_pcsCapSql_sendDdlForLookup_logicalRead_txt .setText("" + entry._pcsWriterCapSql_sendDdlForLookup_gt_logicalReads );
+			_pcsCapSql_sendDdlForLookup_physicalRead_txt.setText("" + entry._pcsWriterCapSql_sendDdlForLookup_gt_physicalReads);
 		}
 	}
 
@@ -7881,7 +7881,7 @@ if ( ! jdbcSshTunnelUse )
 				_aseHost_txt               .setText(        entry._tdsHosts);
 				_asePort_txt               .setText(        entry._tdsPorts);
 //				_aseDbname_txt             .setText(        entry._tdsDbname);
-				_aseLoginTimeout_txt       .setText(        entry._tdsLoginTimout+"");
+				_aseLoginTimeout_txt       .setText(        entry._tdsLoginTimout + "");
 				_aseSshTunnel_chk          .setSelected(    entry._tdsShhTunnelUse);
 				_aseSshTunnelInfo          =                entry._tdsShhTunnelInfo;
 				_aseClientCharset_cbx      .setSelectedItem(entry._tdsClientCharset);
@@ -8022,7 +8022,7 @@ if ( ! jdbcSshTunnelUse )
 			}
 			else
 			{
-				SwingUtils.showErrorMessage("Unknown Connection Profile Type", "Unknown Connection Profile Type of '"+connProfile.getType()+"'.", null);
+				SwingUtils.showErrorMessage("Unknown Connection Profile Type", "Unknown Connection Profile Type of '" + connProfile.getType() + "'.", null);
 			}
 		}
 		finally
@@ -8054,7 +8054,7 @@ if ( ! jdbcSshTunnelUse )
 		else if (entry.isType(ConnectionProfile.Type.OFFLINE)) { action_connect(OFFLINE_CONN, entry, null); }
 		else
 		{
-			SwingUtils.showErrorMessage("Unknown Connection Profile Type", "Unknown Connection Profile Type of '"+entry.getType()+"'.", null);
+			SwingUtils.showErrorMessage("Unknown Connection Profile Type", "Unknown Connection Profile Type of '" + entry.getType() + "'.", null);
 		}
 	}
 
@@ -8126,18 +8126,18 @@ if ( ! jdbcSshTunnelUse )
 			
 			String sshKeyFileDesc = "";
 			if (StringUtil.hasValue(sshKeyFile))
-				sshKeyFileDesc = ", <br>SSH Key File '<b>"+sshKeyFile+"</b>'";
+				sshKeyFileDesc = ", <br>SSH Key File '<b>" + sshKeyFile + "</b>'";
 
 			String initOsCmdDesc = "";
 			if (StringUtil.hasValue(sshInitOsCmd))
-				initOsCmdDesc = ", <br>Init OS Cmd '<b>"+sshInitOsCmd+"</b>'";
+				initOsCmdDesc = ", <br>Init OS Cmd '<b>" + sshInitOsCmd + "</b>'";
 
 			_aseSshTunnelDesc_lbl.setText(
 				"<html>" +
 					"Local Port  '<b>" + (generateLocalPort ? "*generated*" : localPort) + "</b>', " +
 					"Dest Host   '<b>" + destHost + ":" + destPort  + "</b>', <br>" +
 					"SSH Host    '<b>" + sshHost  + ":" + sshPort   + "</b>', " +
-					"SSH User    '<b>" + sshUser   + "</b>'"+sshKeyFileDesc+initOsCmdDesc+". " +
+					"SSH User    '<b>" + sshUser   + "</b>'" + sshKeyFileDesc+initOsCmdDesc + ". " +
 					(_logger.isDebugEnabled() ? "SSH Passwd '<b>" + sshPass + "</b>' " : "") +
 				"</html>");
 		}
@@ -8173,18 +8173,18 @@ if ( ! jdbcSshTunnelUse )
 			
 			String sshKeyFileDesc = "";
 			if (StringUtil.hasValue(sshKeyFile))
-				sshKeyFileDesc = ", <br>SSH Key File '<b>"+sshKeyFile+"</b>'";
+				sshKeyFileDesc = ", <br>SSH Key File '<b>" + sshKeyFile + "</b>'";
 
 			String initOsCmdDesc = "";
 			if (StringUtil.hasValue(sshInitOsCmd))
-				initOsCmdDesc = ", <br>Init OS Cmd '<b>"+sshInitOsCmd+"</b>'";
+				initOsCmdDesc = ", <br>Init OS Cmd '<b>" + sshInitOsCmd + "</b>'";
 
 			_jdbcSshTunnelDesc_lbl.setText(
 				"<html>" +
 					"Local Port  '<b>" + (generateLocalPort ? "*generated*" : localPort) + "</b>', " +
 					"Dest Host   '<b>" + destHost + ":" + destPort  + "</b>', <br>" +
 					"SSH Host    '<b>" + sshHost  + ":" + sshPort   + "</b>', " +
-					"SSH User    '<b>" + sshUser   + "</b>'"+sshKeyFileDesc+initOsCmdDesc+". " +
+					"SSH User    '<b>" + sshUser   + "</b>'" + sshKeyFileDesc+initOsCmdDesc + ". " +
 					(_logger.isDebugEnabled() ? "SSH Passwd '<b>" + sshPass + "</b>' " : "") +
 				"</html>");
 		}
@@ -8330,7 +8330,7 @@ if ( ! jdbcSshTunnelUse )
 			if (_aseHostPortResolve_chk.isSelected())
 			{
 				// if username has been stored, restore "all" other saved properties
-				String user = Configuration.getCombinedConfiguration().getProperty("conn.username."+hostPortStr);
+				String user = Configuration.getCombinedConfiguration().getProperty("conn.username." + hostPortStr);
 				if (StringUtil.hasValue(user)) 
 					loadPropsForServer(hostPortStr);
 
@@ -8498,52 +8498,52 @@ if ( ! jdbcSshTunnelUse )
 		conf.setProperty("conn.port",                           _asePort_txt.getText());
 
 		conf.setProperty("conn.username",                       _aseUsername_txt.getText());
-		conf.setProperty("conn.username."+hostPort,             _aseUsername_txt.getText());
+		conf.setProperty("conn.username." + hostPort,             _aseUsername_txt.getText());
 		if (_aseOptionSavePwd_chk.isSelected())
 		{
 			conf.setProperty("conn.password",           _asePassword_txt.getText(), true);
-			conf.setProperty("conn.password."+hostPort, _asePassword_txt.getText(), true);
+			conf.setProperty("conn.password." + hostPort, _asePassword_txt.getText(), true);
 		}
 		else
 		{
 			conf.remove("conn.password");
-			conf.remove("conn.password."+hostPort);
+			conf.remove("conn.password." + hostPort);
 		}
 
 		conf.setProperty("conn.login.timeout",                  _aseLoginTimeout_txt.getText() );
-		conf.setProperty("conn.login.timeout."+hostPort,        _aseLoginTimeout_txt.getText() );
+		conf.setProperty("conn.login.timeout." + hostPort,        _aseLoginTimeout_txt.getText() );
 
 		conf.setProperty(PROPKEY_CONN_SSH_TUNNEL,               _aseSshTunnel_chk.isSelected() );
-		conf.setProperty(PROPKEY_CONN_SSH_TUNNEL+"."+hostPort,  _aseSshTunnel_chk.isSelected() );
+		conf.setProperty(PROPKEY_CONN_SSH_TUNNEL + "." + hostPort,  _aseSshTunnel_chk.isSelected() );
 
 		conf.setProperty("conn.login.client.charset",           StringUtil.getSelectedItemString(_aseClientCharset_cbx) );
-		conf.setProperty("conn.login.client.charset."+hostPort, StringUtil.getSelectedItemString(_aseClientCharset_cbx) );
+		conf.setProperty("conn.login.client.charset." + hostPort, StringUtil.getSelectedItemString(_aseClientCharset_cbx) );
 
 		conf.setProperty("conn.login.sql.init",                 _aseSqlInit_txt.getText() );
-		conf.setProperty("conn.login.sql.init."+hostPort,       _aseSqlInit_txt.getText() );
+		conf.setProperty("conn.login.sql.init." + hostPort,       _aseSqlInit_txt.getText() );
 
 		conf.setProperty("conn.url.raw",                        _aseConnUrl_txt.getText() );
-		conf.setProperty("conn.url.raw."+hostPort,              _aseConnUrl_txt.getText() );
+		conf.setProperty("conn.url.raw." + hostPort,              _aseConnUrl_txt.getText() );
 		conf.setProperty("conn.url.raw.checkbox",               _aseConnUrl_chk.isSelected() );
-		conf.setProperty("conn.url.raw.checkbox."+hostPort,     _aseConnUrl_chk.isSelected() );
+		conf.setProperty("conn.url.raw.checkbox." + hostPort,     _aseConnUrl_chk.isSelected() );
 		conf.setProperty("conn.url.options",                    _aseOptions_txt.getText() );
-		conf.setProperty("conn.url.options."+hostPort,          _aseOptions_txt.getText() );
+		conf.setProperty("conn.url.options." + hostPort,          _aseOptions_txt.getText() );
 
 		conf.setProperty("conn.savePassword",                             _aseOptionSavePwd_chk.isSelected() );
-		conf.setProperty("conn.savePassword."+hostPort,                   _aseOptionSavePwd_chk.isSelected() );
+		conf.setProperty("conn.savePassword." + hostPort,                   _aseOptionSavePwd_chk.isSelected() );
 		conf.setProperty("conn.passwordEncryptionOverNetwork",            _aseOptionPwdEncryption_chk.isSelected() );
-		conf.setProperty("conn.passwordEncryptionOverNetwork."+hostPort,  _aseOptionPwdEncryption_chk.isSelected() );
+		conf.setProperty("conn.passwordEncryptionOverNetwork." + hostPort,  _aseOptionPwdEncryption_chk.isSelected() );
 		conf.setProperty(PROPKEY_CONNECT_ON_STARTUP,                      _aseOptionConnOnStart_chk.isSelected() );
 		conf.setProperty(PROPKEY_RECONNECT_ON_FAILURE,                    _aseOptionReConnOnFailure_chk.isSelected());
 
 		conf.setProperty("conn.counter.use.template",                _aseOptionUseTemplate_chk.isSelected() );
-		conf.setProperty("conn.counter.use.template."+hostPort,      _aseOptionUseTemplate_chk.isSelected() );
+		conf.setProperty("conn.counter.use.template." + hostPort,      _aseOptionUseTemplate_chk.isSelected() );
 		conf.setProperty("conn.counter.use.template.name",           StringUtil.getSelectedItemString(_aseOptionUseTemplate_cbx) );
-		conf.setProperty("conn.counter.use.template.name."+hostPort, StringUtil.getSelectedItemString(_aseOptionUseTemplate_cbx) );
+		conf.setProperty("conn.counter.use.template.name." + hostPort, StringUtil.getSelectedItemString(_aseOptionUseTemplate_cbx) );
 		conf.setProperty("conn.persistCounterStorage",               _aseOptionStore_chk.isSelected() );
-		conf.setProperty("conn.persistCounterStorage."+hostPort,     _aseOptionStore_chk.isSelected() );
+		conf.setProperty("conn.persistCounterStorage." + hostPort,     _aseOptionStore_chk.isSelected() );
 		conf.setProperty("conn.hostMonitoring",                      _aseHostMonitor_chk.isSelected() );
-		conf.setProperty("conn.hostMonitoring."+hostPort,            _aseHostMonitor_chk.isSelected() );
+		conf.setProperty("conn.hostMonitoring." + hostPort,            _aseHostMonitor_chk.isSelected() );
 		conf.setProperty("conn.getDbmsConfig",                       _aseGetDbmsConfig_chk.isSelected() );
 		conf.setProperty("conn.deferred.connect",                    _aseDeferredConnect_chk.isSelected() );
 		conf.setProperty("conn.deferred.connect.hour",               _aseDeferredConnectHour_sp  .getValue().toString() );
@@ -8557,19 +8557,19 @@ if ( ! jdbcSshTunnelUse )
 		//----------------------------------
 		if ( _aseHostMonitor_chk.isSelected() )
 		{
-			conf.setProperty("ssh.conn.hostname."+hostPort,   _hostmonHost_txt    .getText() );
-			conf.setProperty("ssh.conn.port."+hostPort,       _hostmonPort_txt    .getText() );
-			conf.setProperty("ssh.conn.username."+hostPort,   _hostmonUsername_txt.getText() );
+			conf.setProperty("ssh.conn.hostname." + hostPort,   _hostmonHost_txt    .getText() );
+			conf.setProperty("ssh.conn.port." + hostPort,       _hostmonPort_txt    .getText() );
+			conf.setProperty("ssh.conn.username." + hostPort,   _hostmonUsername_txt.getText() );
 
 			if (_hostmonOptionSavePwd_chk.isSelected())
-				conf.setProperty("ssh.conn.password."+hostPort, _hostmonPassword_txt.getText(), true);
+				conf.setProperty("ssh.conn.password." + hostPort, _hostmonPassword_txt.getText(), true);
 			else
-				conf.remove("ssh.conn.password."+hostPort);
+				conf.remove("ssh.conn.password." + hostPort);
 
 			conf.setProperty("ssh.conn.savePassword", _hostmonOptionSavePwd_chk.isSelected() );
 
-			conf.setProperty("ssh.conn.hostmon.localOsCmd."+hostPort,        _hostMonLocalOsCmd_chk       .isSelected() );
-			conf.setProperty("ssh.conn.hostmon.localOsCmdWrapper."+hostPort, _hostmonLocalOsCmdWrapper_txt.getText() );
+			conf.setProperty("ssh.conn.hostmon.localOsCmd." + hostPort,        _hostMonLocalOsCmd_chk       .isSelected() );
+			conf.setProperty("ssh.conn.hostmon.localOsCmdWrapper." + hostPort, _hostmonLocalOsCmdWrapper_txt.getText() );
 			
 		}
 
@@ -8644,19 +8644,19 @@ if ( ! jdbcSshTunnelUse )
 			conf.setProperty("jdbc.jdbcPasswd",          _jdbcPassword_txt.getText(), true );
 
 			conf.setProperty("jdbc.login.sql.init",         _jdbcSqlInit_txt.getText() );
-			conf.setProperty("jdbc.login.sql.init."+urlStr, _jdbcSqlInit_txt.getText() );
+			conf.setProperty("jdbc.login.sql.init." + urlStr, _jdbcSqlInit_txt.getText() );
 
 //			conf.setProperty(PROPKEY_CONN_JDBC_SSH_TUNNEL,               _jdbcSshTunnel_chk.isSelected() );
 //			conf.setProperty(PROPKEY_CONN_JDBC_SSH_TUNNEL+"."+hostPort,  _jdbcSshTunnel_chk.isSelected() );
 
 			conf.setProperty(PROPKEY_CONN_SQLSERVER_WIN_AUTH,             _jdbcSqlServerUseWindowsAuthentication_chk.isSelected() );
-			conf.setProperty(PROPKEY_CONN_SQLSERVER_WIN_AUTH+"."+urlStr,  _jdbcSqlServerUseWindowsAuthentication_chk.isSelected() );
+			conf.setProperty(PROPKEY_CONN_SQLSERVER_WIN_AUTH + "." + urlStr,  _jdbcSqlServerUseWindowsAuthentication_chk.isSelected() );
 
 			conf.setProperty(PROPKEY_CONN_SQLSERVER_ENCRYPT,             _jdbcSqlServerUseEncrypt_chk.isSelected() );
-			conf.setProperty(PROPKEY_CONN_SQLSERVER_ENCRYPT+"."+urlStr,  _jdbcSqlServerUseEncrypt_chk.isSelected() );
+			conf.setProperty(PROPKEY_CONN_SQLSERVER_ENCRYPT + "." + urlStr,  _jdbcSqlServerUseEncrypt_chk.isSelected() );
 
 			conf.setProperty(PROPKEY_CONN_SQLSERVER_TRUST_CERT,             _jdbcSqlServerUseTrustServerCertificate_chk.isSelected() );
-			conf.setProperty(PROPKEY_CONN_SQLSERVER_TRUST_CERT+"."+urlStr,  _jdbcSqlServerUseTrustServerCertificate_chk.isSelected() );
+			conf.setProperty(PROPKEY_CONN_SQLSERVER_TRUST_CERT + "." + urlStr,  _jdbcSqlServerUseTrustServerCertificate_chk.isSelected() );
 		}
 
 		//------------------
@@ -8735,7 +8735,7 @@ if ( ! jdbcSshTunnelUse )
 
 		str = conf.getProperty("conn.login.timeout");
 		if (str == null)
-			str = conf.getProperty(AseConnectionFactory.PROPKEY_LOGINTIMEOUT, AseConnectionFactory.DEFAULT_LOGINTIMEOUT+"");
+			str = conf.getProperty(AseConnectionFactory.PROPKEY_LOGINTIMEOUT, AseConnectionFactory.DEFAULT_LOGINTIMEOUT + "");
 		_aseLoginTimeout_txt.setText(str);
 
 		bol = conf.getBooleanProperty(PROPKEY_CONN_SSH_TUNNEL, DEFAULT_CONN_SSH_TUNNEL);
@@ -9041,7 +9041,7 @@ if ( ! jdbcSshTunnelUse )
 		String str = null;
 
 		// First do "conn.password.hostName.portNum", if not found, go to "conn.password"
-		str = conf.getProperty("conn.password."+hostPortStr);
+		str = conf.getProperty("conn.password." + hostPortStr);
 		if (str != null)
 		{
 			return str;
@@ -9103,7 +9103,7 @@ if ( ! jdbcSshTunnelUse )
 		//----------------------------------------
 
 		// First do "conn.username.hostName.portNum", if not found, go to "conn.username"
-		str = conf.getProperty("conn.username."+hostPortStr);
+		str = conf.getProperty("conn.username." + hostPortStr);
 		if (str != null)
 		{
 			_aseUsername_txt.setText(str);
@@ -9122,8 +9122,8 @@ if ( ! jdbcSshTunnelUse )
 
 
 		// SavePassword and NetworkEncryptionOfPassword
-		_aseOptionSavePwd_chk      .setSelected(conf.getBooleanProperty("conn.savePassword."+hostPortStr,                  conf.getBooleanProperty("conn.savePassword", true)));
-		_aseOptionPwdEncryption_chk.setSelected(conf.getBooleanProperty("conn.passwordEncryptionOverNetwork."+hostPortStr, conf.getBooleanProperty("conn.passwordEncryptionOverNetwork", true)));
+		_aseOptionSavePwd_chk      .setSelected(conf.getBooleanProperty("conn.savePassword." + hostPortStr,                  conf.getBooleanProperty("conn.savePassword", true)));
+		_aseOptionPwdEncryption_chk.setSelected(conf.getBooleanProperty("conn.passwordEncryptionOverNetwork." + hostPortStr, conf.getBooleanProperty("conn.passwordEncryptionOverNetwork", true)));
 		action_nwPasswdEncryption();
 		
 //		str = conf.getProperty("conn.password."+hostPortStr);
@@ -9150,36 +9150,36 @@ if ( ! jdbcSshTunnelUse )
 //			if (str != null)
 //				_aseSshTunnel_chk.setSelected( Boolean.parseBoolean(str) );
 //		}
-		_aseSshTunnel_chk.setSelected( conf.getBooleanProperty(PROPKEY_CONN_SSH_TUNNEL+"."+hostPortStr, DEFAULT_CONN_SSH_TUNNEL) );
+		_aseSshTunnel_chk.setSelected( conf.getBooleanProperty(PROPKEY_CONN_SSH_TUNNEL + "." + hostPortStr, DEFAULT_CONN_SSH_TUNNEL) );
 		if (_aseSshTunnel_chk.isSelected())
 			_aseSshTunnelInfo = SshTunnelDialog.getSshTunnelInfo(hostPortStr);
 		updateSshTunnelDescription();
 
 		// Client CHARSET
-		_aseClientCharset_cbx.setSelectedItem( conf.getProperty("conn.login.client.charset."+hostPortStr, ""));
+		_aseClientCharset_cbx.setSelectedItem( conf.getProperty("conn.login.client.charset." + hostPortStr, ""));
 
 		// SQL Init
-		_aseSqlInit_txt.setText( conf.getProperty("conn.login.sql.init."+hostPortStr, ""));
+		_aseSqlInit_txt.setText( conf.getProperty("conn.login.sql.init." + hostPortStr, ""));
 
 		// Login timeout
-		_aseLoginTimeout_txt.setText(conf.getProperty("conn.login.timeout."+hostPortStr, AseConnectionFactory.DEFAULT_LOGINTIMEOUT+""));
+		_aseLoginTimeout_txt.setText(conf.getProperty("conn.login.timeout." + hostPortStr, AseConnectionFactory.DEFAULT_LOGINTIMEOUT + ""));
 
 		// Use RAW URL string
-		_aseConnUrl_chk.setSelected(conf.getBooleanProperty("conn.url.raw.checkbox."+hostPortStr, false));
+		_aseConnUrl_chk.setSelected(conf.getBooleanProperty("conn.url.raw.checkbox." + hostPortStr, false));
 		if (_aseConnUrl_chk.isSelected())
-			_aseConnUrl_txt.setText(conf.getProperty("conn.url.raw."+hostPortStr, ""));
+			_aseConnUrl_txt.setText(conf.getProperty("conn.url.raw." + hostPortStr, ""));
 
 		// URL Options
-		_aseOptions_txt.setText(conf.getProperty("conn.url.options."+hostPortStr, ""));
+		_aseOptions_txt.setText(conf.getProperty("conn.url.options." + hostPortStr, ""));
 
 
 		// Counter Template
-		_aseOptionUseTemplate_chk.setSelected(conf.getBooleanProperty("conn.counter.use.template."+hostPortStr, false));
-		_aseOptionUseTemplate_cbx.setSelectedItem(conf.getProperty(   "conn.counter.use.template.name."+hostPortStr, NO_TEMPLATE_IS_SELECTED));
+		_aseOptionUseTemplate_chk.setSelected(conf.getBooleanProperty("conn.counter.use.template." + hostPortStr, false));
+		_aseOptionUseTemplate_cbx.setSelectedItem(conf.getProperty(   "conn.counter.use.template.name." + hostPortStr, NO_TEMPLATE_IS_SELECTED));
 
 		// PCS 
-		_aseOptionStore_chk.setSelected(conf.getBooleanProperty("conn.persistCounterStorage."+hostPortStr, false));
-		_aseHostMonitor_chk.setSelected(conf.getBooleanProperty("conn.hostMonitoring."+hostPortStr, false));
+		_aseOptionStore_chk.setSelected(conf.getBooleanProperty("conn.persistCounterStorage." + hostPortStr, false));
+		_aseHostMonitor_chk.setSelected(conf.getBooleanProperty("conn.hostMonitoring." + hostPortStr, false));
 
 
 
@@ -9188,28 +9188,28 @@ if ( ! jdbcSshTunnelUse )
 		//----------------------------------------
 
 		// USERNAME
-		str = conf.getProperty("ssh.conn.username."+hostPortStr, "");
+		str = conf.getProperty("ssh.conn.username." + hostPortStr, "");
 		_hostmonUsername_txt.setText(str);
 
 		// PASSWORD
-		str = conf.getProperty("ssh.conn.password."+hostPortStr, "");
+		str = conf.getProperty("ssh.conn.password." + hostPortStr, "");
 		_hostmonPassword_txt.setText(str);
 
 		// HOSTNAME
-		str = conf.getProperty("ssh.conn.hostname."+hostPortStr, "");
+		str = conf.getProperty("ssh.conn.hostname." + hostPortStr, "");
 		_hostmonHost_txt.setText(str);
 
 		// PORT
-		str = conf.getProperty("ssh.conn.port."+hostPortStr, "22");
+		str = conf.getProperty("ssh.conn.port." + hostPortStr, "22");
 		_hostmonPort_txt.setText(str);
 
 		
 		// Hostmon Local OS
-		boolean bol = conf.getBooleanProperty("ssh.conn.hostmon.localOsCmd."+hostPortStr, false);
+		boolean bol = conf.getBooleanProperty("ssh.conn.hostmon.localOsCmd." + hostPortStr, false);
 		_hostMonLocalOsCmd_chk.setSelected(bol);
 
 		// Hostmon Local OS Wrapper
-		str = conf.getProperty("ssh.conn.hostmon.localOsCmdWrapper."+hostPortStr, "");
+		str = conf.getProperty("ssh.conn.hostmon.localOsCmdWrapper." + hostPortStr, "");
 		_hostmonLocalOsCmdWrapper_txt.setText(str);
 		
 		//----------------------------------------
@@ -9315,13 +9315,13 @@ if ( ! jdbcSshTunnelUse )
 									"Using a network drive for recordings will be <b>much</b> slower.<br>" +
 									"The recomendation is to use a local drive as the database storage!<br>" +
 									"<br>" +
-									"The selected storage file is '"+filename+"'.<br>" +
+									"The selected storage file is '" + filename + "'.<br>" +
 									"Is this on a local drive?<br>" +
 									"<br>" +
-									"The localized System Type Description from the Operating System, is '<b>"+systemType+"</b>'.<br>" +
+									"The localized System Type Description from the Operating System, is '<b>" + systemType + "</b>'.<br>" +
 									"If this string doesn't contain 'local', then it's considdered as a network drive.<br>" +
 									"<br>" +
-									"Note: If the localized type '<b>"+systemType+"</b>' containes 'local' in you'r localization, please email me at goran_schwarz@hotmail.com the localized string.<br>" +
+									"Note: If the localized type '<b>" + systemType + "</b>' containes 'local' in you'r localization, please email me at goran_schwarz@hotmail.com the localized string.<br>" +
 									"<br>" +
 									"This is just a warning message, but be aware that the storage thread might not keep up...<br>" +
 									"</html>";
@@ -10309,7 +10309,7 @@ if ( ! jdbcSshTunnelUse )
 			if (server == null || (server != null && server.trim().equals("")) )
 			{
 				if (_logger.isTraceEnabled())
-					_logger.trace("hostPort='"+hostAndPort+"' was NOT FOUND.");
+					_logger.trace("hostPort='" + hostAndPort + "' was NOT FOUND.");
 				_model.set(0, hostAndPort);
 				setSelectedIndex(0);
 				setForeground(Color.BLUE);
@@ -10317,7 +10317,7 @@ if ( ! jdbcSshTunnelUse )
 			else
 			{
 				if (_logger.isTraceEnabled())
-					_logger.trace("Found='"+server+"' for hostPort='"+hostAndPort+"'.");
+					_logger.trace("Found='" + server + "' for hostPort='" + hostAndPort + "'.");
 
 				if ( ! server.equals(getSelectedItem()) )
 				{
@@ -10385,7 +10385,7 @@ if ( ! jdbcSshTunnelUse )
 			{
 				if (la[i] instanceof JComboBox)
 				{
-					_logger.debug("refresh("+_type+"): "+ StringUtil.getSelectedItemString( ((JComboBox<String>)la[i]) ) );
+					_logger.debug("refresh(" + _type + "): " + StringUtil.getSelectedItemString( ((JComboBox<String>)la[i]) ) );
 					cbxOwner = (JComboBox<String>)la[i];
 					currentSelected = notSelectedValueToNull(StringUtil.getSelectedItemString(cbxOwner));
 				}
@@ -10577,7 +10577,7 @@ if ( ! jdbcSshTunnelUse )
 
 		System.out.println("showTdsOnlyConnectionDialog ...");
 		Connection conn = ConnectionDialog.showTdsOnlyConnectionDialog(null);
-		System.out.println("showTdsOnlyConnectionDialog, returned: conn="+conn);
+		System.out.println("showTdsOnlyConnectionDialog, returned: conn=" + conn);
 
 		// DO THE THING
 //		ConnectionDialog connDialog = new ConnectionDialog(null, null, true, true, false, false, false, true, false);
@@ -10609,7 +10609,7 @@ if ( ! jdbcSshTunnelUse )
 				System.out.println("- no  PCS Handler");
 
 			Configuration options = connDialog.getAseOptions();
-			System.out.println("- OPTIONS: "+options);
+			System.out.println("- OPTIONS: " + options);
 			
 		}
 

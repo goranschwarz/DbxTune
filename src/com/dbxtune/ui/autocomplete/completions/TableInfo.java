@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -292,7 +292,7 @@ System.out.println("ADDING: fkName='" + fkName + "'. DDL: " + missingIndexInfoDe
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Problems looking up Column MetaData for table '"+_tabName+"'. Caught: "+e);
+			_logger.warn("Problems looking up Column MetaData for table '" + _tabName + "'. Caught: " + e);
 		}
 	}
 
@@ -393,7 +393,7 @@ System.out.println("ADDING: fkName='" + fkName + "'. DDL: " + missingIndexInfoDe
 	@Override
 	public String toString()
 	{
-		return super.toString() + ": cat='"+_tabCat+"', schema='"+_tabSchema+"', name='"+_tabName+"', type='"+_tabType+"', remark='"+_tabRemark+"'";
+		return super.toString() + ": cat='" + _tabCat + "', schema='" + _tabSchema + "', name='" + _tabName + "', type='" + _tabType + "', remark='" + _tabRemark + "'";
 	}
 	public String toHtmlString()
 	{
@@ -1011,7 +1011,7 @@ System.out.println("ADDING: fkName='" + fkName + "'. DDL: " + missingIndexInfoDe
 			}
 		}
 		if (ci == null)
-			return "Column name '"+colname+"', was not found in table '"+_tabName+"'.";
+			return "Column name '" + colname + "', was not found in table '" + _tabName + "'.";
 
 		StringBuilder sb = new StringBuilder();
 		sb.append(_tabSchema).append(".<B>").append(_tabName).append(".").append(ci._colName).append("</B> - <font color='blue'>").append(_tabType).append(" - COLUMN").append("</font>");
@@ -1059,7 +1059,7 @@ System.out.println("ADDING: fkName='" + fkName + "'. DDL: " + missingIndexInfoDe
 	{
 		TableColumnInfo ci = getColumnInfo(colname);
 		if (ci == null)
-			return "Column name '"+colname+"', was not found in table '"+_tabName+"'.";
+			return "Column name '" + colname + "', was not found in table '" + _tabName + "'.";
 
 		String nulls    = ci._colIsNullable == DatabaseMetaData.columnNoNulls ? "<b>NOT</b> NULL" : "    NULL";
 		String datatype = ci._colType;
@@ -1079,7 +1079,7 @@ System.out.println("ADDING: fkName='" + fkName + "'. DDL: " + missingIndexInfoDe
 	{
 		TableColumnInfo ci = getColumnInfo(colname);
 		if (ci == null)
-			return "Column name '"+colname+"', was not found in table '"+_tabName+"'.";
+			return "Column name '" + colname + "', was not found in table '" + _tabName + "'.";
 
 		if (StringUtil.isNullOrBlank(ci._colRemark))
 //			return "No Description";
@@ -1107,9 +1107,9 @@ System.out.println("ADDING: fkName='" + fkName + "'. DDL: " + missingIndexInfoDe
 	{
 		TableColumnInfo ci = getColumnInfo(colname);
 		if (ci == null)
-			return "  -- Column name '"+colname+"', was not found in table '"+_tabName+"'.";
+			return "  -- Column name '" + colname + "', was not found in table '" + _tabName + "'.";
 
-		String dispColName = includeColName ? StringUtil.left(colname, getMaxColLenth())+" : " : "";
+		String dispColName = includeColName ? StringUtil.left(colname, getMaxColLenth()) + " : " : "";
 		
 		String datatype = ci._colType;
 		String nulls    = ci._colIsNullable == DatabaseMetaData.columnNoNulls ? ": NOT NULL" : ": Allow NULL";
@@ -1129,7 +1129,7 @@ System.out.println("ADDING: fkName='" + fkName + "'. DDL: " + missingIndexInfoDe
 	{
 		TableColumnInfo ci = getColumnInfo(colname);
 		if (ci == null)
-			return "Column name '"+colname+"', was not found in table '"+_tabName+"'.";
+			return "Column name '" + colname + "', was not found in table '" + _tabName + "'.";
 
 		String datatype = ci._colType;
 		String example = "0";
@@ -1154,7 +1154,7 @@ System.out.println("ADDING: fkName='" + fkName + "'. DDL: " + missingIndexInfoDe
 	public String toSelect(boolean forExec, int top)
 	{
 		StringBuilder sb = new StringBuilder();
-		String topStr = top > 0 ? "top "+top : "";
+		String topStr = top > 0 ? "top " + top : "";
 		String fullTabName = StringUtil.sqlSafeAlways(StringUtil.hasValue(_tabSchema) ? _tabSchema : _tabCat) + "." + StringUtil.sqlSafeAlways(_tabName);
 
 		sb.append("select ").append(topStr).append("\n");
@@ -1167,7 +1167,7 @@ System.out.println("ADDING: fkName='" + fkName + "'. DDL: " + missingIndexInfoDe
 			comma = ", ";
 		}
 
-		sb.append("from ").append(fullTabName).append("  -- pk='"+_pk+"'").append(StringUtil.isNullOrBlank(_tabRemark) ? "" : " -- desc: "+_tabRemark).append("\n");
+		sb.append("from ").append(fullTabName).append("  -- pk='" + _pk + "'").append(StringUtil.isNullOrBlank(_tabRemark) ? "" : " -- desc: " + _tabRemark).append("\n");
 
 		if ( ! forExec )
 		{

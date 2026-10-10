@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -77,7 +77,7 @@ extends CountersModelAppend
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -105,7 +105,7 @@ extends CountersModelAppend
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmErrorLog(counterController, guiController);
 	}
@@ -148,7 +148,7 @@ extends CountersModelAppend
 		DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
 		if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
 		{
-			_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '"+getDisplayName() + "', connected to Azure SQL Database or Analytics, which do NOT support reading the errorlog file via 'xp_readerrorlog'.");
+			_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '" + getDisplayName() + "', connected to Azure SQL Database or Analytics, which do NOT support reading the errorlog file via 'xp_readerrorlog'.");
 
 			setActive(false, "This info is NOT available in Azure SQL Database or Azure Synapse/Analytics.");
 
@@ -224,7 +224,7 @@ extends CountersModelAppend
 			}
 			else
 			{
-				_logger.error("checkDependsOnRole() - executing '"+sql+"'", ex);
+				_logger.error("checkDependsOnRole() - executing '" + sql + "'", ex);
 
 				setActive(false, ex.getMessage()); 
 
@@ -319,17 +319,17 @@ extends CountersModelAppend
 //		}
 		if (col_LogDate_pos < 0)
 		{
-			_logger.error("When checking for alarms, could not find all columns. skipping this. [LogDate_pos="+col_LogDate_pos+"]");
+			_logger.error("When checking for alarms, could not find all columns. skipping this. [LogDate_pos=" + col_LogDate_pos + "]");
 			return;
 		}
 		if (col_ProcessInfo_pos < 0)
 		{
-			_logger.error("When checking for alarms, could not find all columns. skipping this. [ProcessInfo_pos="+col_ProcessInfo_pos+"]");
+			_logger.error("When checking for alarms, could not find all columns. skipping this. [ProcessInfo_pos=" + col_ProcessInfo_pos + "]");
 			return;
 		}
 		if (col_Text_pos < 0)
 		{
-			_logger.error("When checking for alarms, could not find all columns. skipping this. [Text_pos="+col_Text_pos+"]");
+			_logger.error("When checking for alarms, could not find all columns. skipping this. [Text_pos=" + col_Text_pos + "]");
 			return;
 		}
 		
@@ -595,7 +595,7 @@ extends CountersModelAppend
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_Severity, DEFAULT_alarm_Severity);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+getName()+"): threshold="+threshold+", severity='"+severity+"'.");
+					System.out.println("##### sendAlarmRequest(" + getName() + "): threshold=" + threshold + ", severity='" + severity + "'.");
 
 				if (severity > threshold && severity < 99)
 				{
@@ -609,7 +609,7 @@ extends CountersModelAppend
 					{
 						// Skipping this error number
 						if (_logger.isDebugEnabled())
-							_logger.debug("ErrorNumber "+errorNum+" is part of the 'error-number-skip-list', so it wont be raised. (num="+errorNum+", severity="+severity+", text='"+errorTxt+"')");
+							_logger.debug("ErrorNumber " + errorNum + " is part of the 'error-number-skip-list', so it wont be raised. (num=" + errorNum + ", severity=" + severity + ", text='" + errorTxt + "')");
 					}
 					else
 					{

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -221,7 +221,7 @@ public class DataCache extends AbstractSysmonType
 		}
 		else
 		{
-			addReportLn("Sorry, cant continue, '@@maxpagesize' is not 2048, 4096, 8192 or 16384. The value '"+asePageSize+"' is unknown.");
+			addReportLn("Sorry, cant continue, '@@maxpagesize' is not 2048, 4096, 8192 or 16384. The value '" + asePageSize + "' is unknown.");
 			return;
 		}
 		
@@ -299,19 +299,19 @@ public class DataCache extends AbstractSysmonType
 //			if (groupName.startsWith("buffer_") && ( fieldName.equals("bufgrab_"+io1page+"k") || fieldName.equals("bufgrab_"+io2page+"k") || fieldName.equals("bufgrab_"+io4page+"k") || fieldName.equals("bufgrab_"+io8page+"k")) )
 //				LargeIO_Effectiveness_Cached_sum += value;
 
-			if (groupName.startsWith("buffer_") && fieldName.equals("bufgrab_"+io1page+"k") ) LargeIO_Effectiveness_Cached_1pg += value * 1; // turn # of masses into # of logical pages
-			if (groupName.startsWith("buffer_") && fieldName.equals("bufgrab_"+io2page+"k") ) LargeIO_Effectiveness_Cached_2pg += value * 2; // turn # of masses into # of logical pages
-			if (groupName.startsWith("buffer_") && fieldName.equals("bufgrab_"+io4page+"k") ) LargeIO_Effectiveness_Cached_4pg += value * 4; // turn # of masses into # of logical pages
-			if (groupName.startsWith("buffer_") && fieldName.equals("bufgrab_"+io8page+"k") ) LargeIO_Effectiveness_Cached_8pg += value * 8; // turn # of masses into # of logical pages
+			if (groupName.startsWith("buffer_") && fieldName.equals("bufgrab_" + io1page + "k") ) LargeIO_Effectiveness_Cached_1pg += value * 1; // turn # of masses into # of logical pages
+			if (groupName.startsWith("buffer_") && fieldName.equals("bufgrab_" + io2page + "k") ) LargeIO_Effectiveness_Cached_2pg += value * 2; // turn # of masses into # of logical pages
+			if (groupName.startsWith("buffer_") && fieldName.equals("bufgrab_" + io4page + "k") ) LargeIO_Effectiveness_Cached_4pg += value * 4; // turn # of masses into # of logical pages
+			if (groupName.startsWith("buffer_") && fieldName.equals("bufgrab_" + io8page + "k") ) LargeIO_Effectiveness_Cached_8pg += value * 8; // turn # of masses into # of logical pages
 
 			// LargeIO_Effectiveness_Used
 //			if (groupName.startsWith("buffer_") && fieldName.matches("bufgrab_ref_[0-9]+K") && !fieldName.equals("bufgrab_"+io8page+"k") )
 //				LargeIO_Effectiveness_Used += value;
 
-			if (groupName.startsWith("buffer_") && fieldName.matches("bufgrab_ref_"+io1page+"K") ) LargeIO_Effectiveness_Used_1pg += value;
-			if (groupName.startsWith("buffer_") && fieldName.matches("bufgrab_ref_"+io2page+"K") ) LargeIO_Effectiveness_Used_2pg += value;
-			if (groupName.startsWith("buffer_") && fieldName.matches("bufgrab_ref_"+io4page+"K") ) LargeIO_Effectiveness_Used_4pg += value;
-			if (groupName.startsWith("buffer_") && fieldName.matches("bufgrab_ref_"+io8page+"K") ) LargeIO_Effectiveness_Used_8pg += value;
+			if (groupName.startsWith("buffer_") && fieldName.matches("bufgrab_ref_" + io1page + "K") ) LargeIO_Effectiveness_Used_1pg += value;
+			if (groupName.startsWith("buffer_") && fieldName.matches("bufgrab_ref_" + io2page + "K") ) LargeIO_Effectiveness_Used_2pg += value;
+			if (groupName.startsWith("buffer_") && fieldName.matches("bufgrab_ref_" + io4page + "K") ) LargeIO_Effectiveness_Used_4pg += value;
+			if (groupName.startsWith("buffer_") && fieldName.matches("bufgrab_ref_" + io8page + "K") ) LargeIO_Effectiveness_Used_8pg += value;
 
 			//-----------------------------------------------------------------------
 			// APF_Activity_Requested
@@ -451,7 +451,7 @@ public class DataCache extends AbstractSysmonType
 		divideBy = LargeIO_req;
 		addReportLn   ("  Large I/O Usage"); //NOT_WORKING_CORRECTLY???
 		addReportLnPct("    Large I/Os Performed", LargeIO_Performed, divideBy);
-		addReportLn   ("### Large I/Os Performed: LargeIO_Performed(prefetch_as_requested|prefetch_page_realign|prefetch_increase)='"+LargeIO_Performed+"', LargeIO_req(prefetch_req)='"+LargeIO_req+"'."); //NOT_WORKING_CORRECTLY???
+		addReportLn   ("### Large I/Os Performed: LargeIO_Performed(prefetch_as_requested|prefetch_page_realign|prefetch_increase)='" + LargeIO_Performed + "', LargeIO_req(prefetch_req)='" + LargeIO_req + "'."); //NOT_WORKING_CORRECTLY???
 
 		addReportLn   ();
 		addReportLn   ("    Large I/Os Denied due to");
@@ -556,7 +556,7 @@ public class DataCache extends AbstractSysmonType
 		int    value       = 0;
 		String description = "";
 
-		String cacheGroupName = "buffer_"+entry._id;
+		String cacheGroupName = "buffer_" + entry._id;
 		boolean isLocklessDataCache = entry._description.indexOf("Lockless Data Cache") >= 0;
 
 
@@ -706,16 +706,16 @@ public class DataCache extends AbstractSysmonType
 
 			//-----------------------------------------------------------------------
 			// LargeIO_Detail_Cached
-			if (groupName.equals(cacheGroupName) && fieldName.equals("bufgrab_"+io1page+"k") ) LargeIO_Detail_Cached_1pg += value;
-			if (groupName.equals(cacheGroupName) && fieldName.equals("bufgrab_"+io2page+"k") ) LargeIO_Detail_Cached_2pg += value;
-			if (groupName.equals(cacheGroupName) && fieldName.equals("bufgrab_"+io4page+"k") ) LargeIO_Detail_Cached_4pg += value;
-			if (groupName.equals(cacheGroupName) && fieldName.equals("bufgrab_"+io8page+"k") ) LargeIO_Detail_Cached_8pg += value;
+			if (groupName.equals(cacheGroupName) && fieldName.equals("bufgrab_" + io1page + "k") ) LargeIO_Detail_Cached_1pg += value;
+			if (groupName.equals(cacheGroupName) && fieldName.equals("bufgrab_" + io2page + "k") ) LargeIO_Detail_Cached_2pg += value;
+			if (groupName.equals(cacheGroupName) && fieldName.equals("bufgrab_" + io4page + "k") ) LargeIO_Detail_Cached_4pg += value;
+			if (groupName.equals(cacheGroupName) && fieldName.equals("bufgrab_" + io8page + "k") ) LargeIO_Detail_Cached_8pg += value;
 
 			// LargeIO_Detail_Used
-			if (groupName.equals(cacheGroupName) && fieldName.equals("bufgrab_ref_"+io1page+"K") ) LargeIO_Detail_Used_1pg += value;
-			if (groupName.equals(cacheGroupName) && fieldName.equals("bufgrab_ref_"+io2page+"K") ) LargeIO_Detail_Used_2pg += value;
-			if (groupName.equals(cacheGroupName) && fieldName.equals("bufgrab_ref_"+io4page+"K") ) LargeIO_Detail_Used_4pg += value;
-			if (groupName.equals(cacheGroupName) && fieldName.equals("bufgrab_ref_"+io8page+"K") ) LargeIO_Detail_Used_8pg += value;
+			if (groupName.equals(cacheGroupName) && fieldName.equals("bufgrab_ref_" + io1page + "K") ) LargeIO_Detail_Used_1pg += value;
+			if (groupName.equals(cacheGroupName) && fieldName.equals("bufgrab_ref_" + io2page + "K") ) LargeIO_Detail_Used_2pg += value;
+			if (groupName.equals(cacheGroupName) && fieldName.equals("bufgrab_ref_" + io4page + "K") ) LargeIO_Detail_Used_4pg += value;
+			if (groupName.equals(cacheGroupName) && fieldName.equals("bufgrab_ref_" + io8page + "K") ) LargeIO_Detail_Used_8pg += value;
 
 			//-----------------------------------------------------------------------
 			// DirtyReadBehavior_PageRequest
@@ -759,7 +759,7 @@ public class DataCache extends AbstractSysmonType
 		addReportLn   ();
 		addReportLn   ();
 		addReportLn   ("  ######################################################");
-		addReportLn   ("  Cache: "+entry._name);
+		addReportLn   ("  Cache: " + entry._name);
 		addReportLn   ("  ######################################################");
 		addReportLn   ("                                  per sec      per xact       count  % of total");
 		addReportLn   ("                             ------------  ------------  ----------  ----------");
@@ -790,7 +790,7 @@ public class DataCache extends AbstractSysmonType
 //		if (bufgrab_1pg > 0)
 		if (entry.hasPoolSize(io1page))
 		{
-			addReportLn   ("    "+io1page+" KB Pool");
+			addReportLn   ("    " + io1page + " KB Pool");
 			addReportLnPct("      LRU Buffer Grab",           bufgrab_1pg,        CacheTurnover_BuffersGrabbed);
 			addReportLnPct("        Grabbed Locked Buffer",   bufgrab_locked_1pg, bufgrab_1pg);
 			addReportLnPct("        Grabbed Dirty",           bufgrab_dirty_1pg,  bufgrab_1pg);
@@ -798,7 +798,7 @@ public class DataCache extends AbstractSysmonType
 //		if (bufgrab_2pg > 0)
 		if (entry.hasPoolSize(io2page))
 		{
-			addReportLn   ("    "+io2page+" KB Pool");
+			addReportLn   ("    " + io2page + " KB Pool");
 			addReportLnPct("      LRU Buffer Grab",           bufgrab_2pg,        CacheTurnover_BuffersGrabbed);
 			addReportLnPct("        Grabbed Locked Buffer",   bufgrab_locked_2pg, bufgrab_2pg);
 			addReportLnPct("        Grabbed Dirty",           bufgrab_dirty_2pg,  bufgrab_2pg);
@@ -806,7 +806,7 @@ public class DataCache extends AbstractSysmonType
 //		if (bufgrab_4pg > 0)
 		if (entry.hasPoolSize(io4page))
 		{
-			addReportLn   ("    "+io4page+" KB Pool");
+			addReportLn   ("    " + io4page + " KB Pool");
 			addReportLnPct("      LRU Buffer Grab",           bufgrab_4pg,        CacheTurnover_BuffersGrabbed);
 			addReportLnPct("        Grabbed Locked Buffer",   bufgrab_locked_4pg, bufgrab_4pg);
 			addReportLnPct("        Grabbed Dirty",           bufgrab_dirty_4pg,  bufgrab_4pg);
@@ -814,7 +814,7 @@ public class DataCache extends AbstractSysmonType
 //		if (bufgrab_8pg > 0)
 		if (entry.hasPoolSize(io8page))
 		{
-			addReportLn   ("    "+io8page+" KB Pool");
+			addReportLn   ("    " + io8page + " KB Pool");
 			addReportLnPct("      LRU Buffer Grab",           bufgrab_8pg,        CacheTurnover_BuffersGrabbed);
 			addReportLnPct("        Grabbed Locked Buffer",   bufgrab_locked_8pg, bufgrab_8pg);
 			addReportLnPct("        Grabbed Dirty",           bufgrab_dirty_8pg,  bufgrab_8pg);
@@ -878,31 +878,31 @@ public class DataCache extends AbstractSysmonType
 		addReportLn   ("  Large I/O Detail"); //NOT_WORKING_CORRECTLY
 		if (entry.hasPoolSize(io1page))
 		{
-			addReportLn   ("    "+io1page+" KB Pool");
+			addReportLn   ("    " + io1page + " KB Pool");
 			addReportLnCnt("      Pages Cached",   LargeIO_Detail_Cached_1pg);
 			addReportLnPct("      Pages Used",     LargeIO_Detail_Used_1pg, LargeIO_Detail_Cached_1pg);
-addReportLn   ("### "+io1page+" KB Pool: LargeIO_Detail_Cached_1pg='"+LargeIO_Detail_Cached_1pg+"', LargeIO_Detail_Used_1pg='"+LargeIO_Detail_Used_1pg+"'.");
+addReportLn   ("### " + io1page + " KB Pool: LargeIO_Detail_Cached_1pg='" + LargeIO_Detail_Cached_1pg + "', LargeIO_Detail_Used_1pg='" + LargeIO_Detail_Used_1pg + "'.");
 		}
 		if (entry.hasPoolSize(io2page))
 		{
-			addReportLn   ("    "+io2page+" KB Pool");
+			addReportLn   ("    " + io2page + " KB Pool");
 			addReportLnCnt("      Pages Cached",   LargeIO_Detail_Cached_2pg);
 			addReportLnPct("      Pages Used",     LargeIO_Detail_Used_2pg, LargeIO_Detail_Cached_2pg);
-addReportLn   ("### "+io2page+" KB Pool: LargeIO_Detail_Cached_2pg='"+LargeIO_Detail_Cached_2pg+"', LargeIO_Detail_Used_2pg='"+LargeIO_Detail_Used_2pg+"'.");
+addReportLn   ("### " + io2page + " KB Pool: LargeIO_Detail_Cached_2pg='" + LargeIO_Detail_Cached_2pg + "', LargeIO_Detail_Used_2pg='" + LargeIO_Detail_Used_2pg + "'.");
 		}
 		if (entry.hasPoolSize(io4page))
 		{
-			addReportLn   ("    "+io4page+" KB Pool");
+			addReportLn   ("    " + io4page + " KB Pool");
 			addReportLnCnt("      Pages Cached",   LargeIO_Detail_Cached_4pg);
 			addReportLnPct("      Pages Used",     LargeIO_Detail_Used_4pg, LargeIO_Detail_Cached_4pg);
-addReportLn   ("### "+io4page+" KB Pool: LargeIO_Detail_Cached_4pg='"+LargeIO_Detail_Cached_4pg+"', LargeIO_Detail_Used_4pg='"+LargeIO_Detail_Used_4pg+"'.");
+addReportLn   ("### " + io4page + " KB Pool: LargeIO_Detail_Cached_4pg='" + LargeIO_Detail_Cached_4pg + "', LargeIO_Detail_Used_4pg='" + LargeIO_Detail_Used_4pg + "'.");
 		}
 		if (entry.hasPoolSize(io8page))
 		{
-			addReportLn   ("    "+io8page+" KB Pool");
+			addReportLn   ("    " + io8page + " KB Pool");
 			addReportLnCnt("      Pages Cached",   LargeIO_Detail_Cached_8pg);
 			addReportLnPct("      Pages Used",     LargeIO_Detail_Used_8pg, LargeIO_Detail_Cached_8pg);
-addReportLn   ("### "+io8page+" KB Pool: LargeIO_Detail_Cached_8pg='"+LargeIO_Detail_Cached_8pg+"', LargeIO_Detail_Used_8pg='"+LargeIO_Detail_Used_8pg+"'.");
+addReportLn   ("### " + io8page + " KB Pool: LargeIO_Detail_Cached_8pg='" + LargeIO_Detail_Cached_8pg + "', LargeIO_Detail_Used_8pg='" + LargeIO_Detail_Used_8pg + "'.");
 		}
 		addReportLn   ();
 		addReportLn   ("  Dirty Read Behavior");

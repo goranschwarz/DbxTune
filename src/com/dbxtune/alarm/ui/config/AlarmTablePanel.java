@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -63,7 +63,7 @@ implements TableModelListener
 		_alarmTableModel.addTableModelListener(this); // call this.tableChanged(TableModelEvent) when the table changed
 
 		GTableFilter filter = new GTableFilter(_alarmTable, GTableFilter.ROW_COUNT_LAYOUT_LEFT, true);
-		filter.setText("where ["+AlarmTableModel.TAB_HEADER[AlarmTableModel.TAB_POS_HAS_SYSTEM]+"] = 'true' or ["+AlarmTableModel.TAB_HEADER[AlarmTableModel.TAB_POS_HAS_UD]+"] = 'true'");
+		filter.setText("where [" + AlarmTableModel.TAB_HEADER[AlarmTableModel.TAB_POS_HAS_SYSTEM] + "] = 'true' or [" + AlarmTableModel.TAB_HEADER[AlarmTableModel.TAB_POS_HAS_UD] + "] = 'true'");
 
 		JScrollPane scroll = new JScrollPane(_alarmTable);
 		add(filter, "pushx, growx, gapleft 10, gapright 10, wrap");
@@ -149,8 +149,8 @@ implements TableModelListener
 				// <CMNAME>.alarm.system.enabled
 //				conf.setProperty(CountersModel.replaceCmName(ae._cmName, CountersModel.PROPKEY_ALARM_isAlarmsEnabled),       ae._isEnabled);
 //				conf.setProperty(CountersModel.replaceCmName(ae._cmName, CountersModel.PROPKEY_ALARM_isSystemAlarmsEnabled), ae._isSystemEnabled);
-				conf.setProperty(CountersModel.replaceCmName(ae._cmName, CountersModel.PROPKEY_ALARM_isAlarmsEnabled),       ae._isEnabled       == CountersModel.DEFAULT_ALARM_isAlarmsEnabled       ? Configuration.USE_DEFAULT_PREFIX + ae._isEnabled       : ae._isEnabled+"");
-				conf.setProperty(CountersModel.replaceCmName(ae._cmName, CountersModel.PROPKEY_ALARM_isSystemAlarmsEnabled), ae._isSystemEnabled == CountersModel.DEFAULT_ALARM_isSystemAlarmsEnabled ? Configuration.USE_DEFAULT_PREFIX + ae._isSystemEnabled : ae._isSystemEnabled+"");
+				conf.setProperty(CountersModel.replaceCmName(ae._cmName, CountersModel.PROPKEY_ALARM_isAlarmsEnabled),       ae._isEnabled       == CountersModel.DEFAULT_ALARM_isAlarmsEnabled       ? Configuration.USE_DEFAULT_PREFIX + ae._isEnabled       : ae._isEnabled + "");
+				conf.setProperty(CountersModel.replaceCmName(ae._cmName, CountersModel.PROPKEY_ALARM_isSystemAlarmsEnabled), ae._isSystemEnabled == CountersModel.DEFAULT_ALARM_isSystemAlarmsEnabled ? Configuration.USE_DEFAULT_PREFIX + ae._isSystemEnabled : ae._isSystemEnabled + "");
 
 //				// Write for all system settings
 //				for (AlarmSettingsEntry ase : ae._settings)
@@ -170,7 +170,7 @@ implements TableModelListener
 					// Only for names that do not contin ' ' spaces... FIXME: This is UGGLY, create a type/property which describes if we should write the '*.enable.*' property or not...
 //					if ( ase.getName().indexOf(' ') == -1)
 					if (ase.isAlarmSwitch())
-						conf.setProperty(CountersModel.replaceCmAndColName(ae._cmName, CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnEnabled, ase.getName()), ase.isDefaultValue() ? Configuration.USE_DEFAULT_PREFIX + ase.isSelected() : ase.isSelected()+"");
+						conf.setProperty(CountersModel.replaceCmAndColName(ae._cmName, CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnEnabled, ase.getName()), ase.isDefaultValue() ? Configuration.USE_DEFAULT_PREFIX + ase.isSelected() : ase.isSelected() + "");
 
 					// Various properties defined by the CounterModel
 					// probably looks like: <CMNAME>.alarm.system.if.<COLNAME>.gt
@@ -185,8 +185,8 @@ implements TableModelListener
 				// <CMNAME>.alarm.enabled
 				// <CMNAME>.alarm.userdefined.enabled
 				// <CMNAME>.alarm.userdefined.source.filename
-				conf.setProperty(CountersModel.replaceCmName(ae._cmName, CountersModel.PROPKEY_ALARM_isAlarmsEnabled),            ae._isEnabled            == CountersModel.DEFAULT_ALARM_isAlarmsEnabled            ? Configuration.USE_DEFAULT_PREFIX + ae._isEnabled            : ae._isEnabled+"");
-				conf.setProperty(CountersModel.replaceCmName(ae._cmName, CountersModel.PROPKEY_ALARM_isUserdefinedAlarmsEnabled), ae._isUserDefinedEnabled == CountersModel.DEFAULT_ALARM_isUserdefinedAlarmsEnabled ? Configuration.USE_DEFAULT_PREFIX + ae._isUserDefinedEnabled : ae._isUserDefinedEnabled+"");
+				conf.setProperty(CountersModel.replaceCmName(ae._cmName, CountersModel.PROPKEY_ALARM_isAlarmsEnabled),            ae._isEnabled            == CountersModel.DEFAULT_ALARM_isAlarmsEnabled            ? Configuration.USE_DEFAULT_PREFIX + ae._isEnabled            : ae._isEnabled + "");
+				conf.setProperty(CountersModel.replaceCmName(ae._cmName, CountersModel.PROPKEY_ALARM_isUserdefinedAlarmsEnabled), ae._isUserDefinedEnabled == CountersModel.DEFAULT_ALARM_isUserdefinedAlarmsEnabled ? Configuration.USE_DEFAULT_PREFIX + ae._isUserDefinedEnabled : ae._isUserDefinedEnabled + "");
 				//conf.setProperty(CountersModel.replaceCmName(ae._cmName, CountersModel.PROPKEY_ALARM_userdefinedSourceFilename),  ae._sourceFilename); // Maby in the future... if we want to specify the source file...
 			}
 		}

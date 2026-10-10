@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -58,7 +58,7 @@ public class TableDefinition
 	private void addColumn(TableColumnEntry entry)
 	{
 		if (_columns.containsKey(entry._name))
-			throw new RuntimeException("Column name '"+entry._name+"' is already taken in table '"+_tabName+"'.");
+			throw new RuntimeException("Column name '" + entry._name + "' is already taken in table '" + _tabName + "'.");
 		
 		_columns.put(entry._name, entry);
 	}
@@ -66,7 +66,7 @@ public class TableDefinition
 	public void addPkColumn(String colname)
 	{
 		if (_pk.contains(colname))
-			throw new RuntimeException("Column name '"+colname+"' is already part of the primary key in table '"+_tabName+"'.");
+			throw new RuntimeException("Column name '" + colname + "' is already part of the primary key in table '" + _tabName + "'.");
 		
 		_pk.add(colname);
 	}

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -108,7 +108,7 @@ public class AlarmWriterSettingsTable extends JXTable
 		String colorStr = null;
 
 		// MANDATORY
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.mandatory");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.mandatory");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -125,7 +125,7 @@ public class AlarmWriterSettingsTable extends JXTable
 		}, SwingUtils.parseColor(colorStr, TrendGraphColors.LIGHT_RED), null));
 
 		// PROBABLY
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.probably");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.probably");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -142,7 +142,7 @@ public class AlarmWriterSettingsTable extends JXTable
 		}, SwingUtils.parseColor(colorStr, TrendGraphColors.VERY_LIGHT_YELLOW), null));
 
 		// NON DEFAULT
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.isNotDefaultValue");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.isNotDefaultValue");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -159,7 +159,7 @@ public class AlarmWriterSettingsTable extends JXTable
 		}, SwingUtils.parseColor(colorStr, Color.LIGHT_GRAY), null));
 
 		// TEMPLATE VALUE
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.isNotDefaultValue");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.isNotDefaultValue");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -154,7 +154,7 @@ public class VelocityJson
 			@Override
 			public Object invalidGetMethod(Context context, String reference, Object object, String property, Info info)
 			{
-				System.out.println("DEBUG: invalid-Get-Method(context, reference='"+reference+"', object='"+object+"', info='"+info+"')");
+				System.out.println("DEBUG: invalid-Get-Method(context, reference='" + reference + "', object='" + object + "', info='" + info + "')");
 				reportInvalidReference(reference, null, info);
 				return null;
 			}
@@ -162,7 +162,7 @@ public class VelocityJson
 			@Override
 			public boolean invalidSetMethod(Context context, String leftreference, String rightreference, Info info)
 			{
-				System.out.println("DEBUG: invalid-Set-Method(context, leftreference='"+leftreference+"', rightreference='"+rightreference+"', info='"+info+"')");
+				System.out.println("DEBUG: invalid-Set-Method(context, leftreference='" + leftreference + "', rightreference='" + rightreference + "', info='" + info + "')");
 				reportInvalidReference(leftreference, null, info);
 				return false;
 			}
@@ -170,7 +170,7 @@ public class VelocityJson
 			@Override
 			public Object invalidMethod(Context context, String reference, Object object, String method, Info info)
 			{
-				System.out.println("DEBUG: invalid-Method(context, reference='"+reference+"', object='"+object+"', method='"+method+"', info='"+info+"')");
+				System.out.println("DEBUG: invalid-Method(context, reference='" + reference + "', object='" + object + "', method='" + method + "', info='" + info + "')");
 				if (reference == null)
 					reportInvalidReference(object.getClass().getName() + "." + method, method, info);
 				else
@@ -180,9 +180,9 @@ public class VelocityJson
 
 			private void reportInvalidReference(String reference, String method, Info info)
 			{
-				String lineStr   = "[line "+info.getLine()+", column "+info.getColumn()+"]";
-				String methodStr = StringUtil.isNullOrBlank(method) ? "" : ", method='"+method+"'";
-				throw new ParseErrorException("Reference '"+reference+"'"+methodStr+" do not exists. at "+lineStr, info);
+				String lineStr   = "[line " + info.getLine() + ", column " + info.getColumn() + "]";
+				String methodStr = StringUtil.isNullOrBlank(method) ? "" : ", method='" + method + "'";
+				throw new ParseErrorException("Reference '" + reference + "'" + methodStr + " do not exists. at " + lineStr, info);
 			}
 		};
 		

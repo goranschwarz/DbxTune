@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -76,7 +76,7 @@ extends AlarmEvent
 				getSeverity(errorNum), 
 				getServiceState(errorNum), 
 				// Note: max length for the below message is 512
-				"The Client Error Message " + errorNum + " has been raised " + errorCount + " times for database '" + dbname + "' in last sample interval of " + cm.getSampleInterval() + " ms to client connection(s) from server '" + cm.getServerName() + "'. Threshold='"+threshold,
+				"The Client Error Message " + errorNum + " has been raised " + errorCount + " times for database '" + dbname + "' in last sample interval of " + cm.getSampleInterval() + " ms to client connection(s) from server '" + cm.getServerName() + "'. Threshold='" + threshold,
 				threshold // crossedThreshold... well this one do not have a number.
 				);
 

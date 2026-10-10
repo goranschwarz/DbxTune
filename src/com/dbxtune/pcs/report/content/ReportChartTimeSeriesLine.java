@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -284,7 +284,7 @@ extends ReportChartAbstract
 					try {
 						skipNameAboveValue.put(e.getKey(), Double.valueOf(e.getValue()));
 					} catch (NumberFormatException nfe) {
-						_logger.warn("Skipping 'SKIP_COLNAME_WITH_VALUE_ABOVE' key='"+e.getKey()+"', value='"+e.getValue()+"', caught: " + nfe);
+						_logger.warn("Skipping 'SKIP_COLNAME_WITH_VALUE_ABOVE' key='" + e.getKey() + "', value='" + e.getValue() + "', caught: " + nfe);
 					}
 				}
 			}
@@ -297,7 +297,7 @@ extends ReportChartAbstract
 					try {
 						skipNameBelowValue.put(e.getKey(), Double.valueOf(e.getValue()));
 					} catch (NumberFormatException nfe) {
-						_logger.warn("Skipping 'SKIP_COLNAME_WITH_VALUE_BELOW' key='"+e.getKey()+"', value='"+e.getValue()+"', caught: " + nfe);
+						_logger.warn("Skipping 'SKIP_COLNAME_WITH_VALUE_BELOW' key='" + e.getKey() + "', value='" + e.getValue() + "', caught: " + nfe);
 					}
 				}
 			}
@@ -409,7 +409,7 @@ extends ReportChartAbstract
 							continue;
 
 						if (label == null)
-							label = "colnum-"+ca;
+							label = "colnum-" + ca;
 						
 						boolean addEntry = true;
 
@@ -427,7 +427,7 @@ extends ReportChartAbstract
 								// is GREATER than
 								if (dataValue > entry.getValue())
 								{
-									_logger.info("Skipping value in graphName='"+tabName+"', label='"+label+"' with dataValue="+dataValue+", is ABOVE threshold=" + entry.getValue());
+									_logger.info("Skipping value in graphName='" + tabName + "', label='" + label + "' with dataValue=" + dataValue + ", is ABOVE threshold=" + entry.getValue());
 									addEntry = false;
 								}
 							}
@@ -440,7 +440,7 @@ extends ReportChartAbstract
 								// is LESS than
 								if (dataValue < entry.getValue())
 								{
-									_logger.info("Skipping value in graphName='"+tabName+"', label='"+label+"' with dataValue="+dataValue+", is BELOW threshold=" + entry.getValue());
+									_logger.info("Skipping value in graphName='" + tabName + "', label='" + label + "' with dataValue=" + dataValue + ", is BELOW threshold=" + entry.getValue());
 									addEntry = false;
 								}
 							}
@@ -521,10 +521,10 @@ extends ReportChartAbstract
 		String tabName = cmName + "_" + graphName;
 		String sql = 
 				 "select * "
-				+"from " + getSchemaNameSqlPrefix() + "[" + tabName + "] \n"
+				+ "from " + getSchemaNameSqlPrefix() + "[" + tabName + "] \n"
 				+ "where 1 = 1 \n"
 				+ getReportEntry().getReportPeriodSqlWhere()
-				+" order by [SessionSampleTime] \n"
+				+ " order by [SessionSampleTime] \n"
 				;
 		
 		sql = conn.quotifySqlString(sql);
@@ -593,7 +593,7 @@ extends ReportChartAbstract
 								// is GREATER than
 								if (dataValue > entry.getValue())
 								{
-									_logger.info("Skipping value in graphName='"+tabName+"', label='"+label+"' with dataValue="+dataValue+", is ABOVE threshold=" + entry.getValue());
+									_logger.info("Skipping value in graphName='" + tabName + "', label='" + label + "' with dataValue=" + dataValue + ", is ABOVE threshold=" + entry.getValue());
 									addEntry = false;
 								}
 							}
@@ -606,7 +606,7 @@ extends ReportChartAbstract
 								// is LESS than
 								if (dataValue < entry.getValue())
 								{
-									_logger.info("Skipping value in graphName='"+tabName+"', label='"+label+"' with dataValue="+dataValue+", is BELOW threshold=" + entry.getValue());
+									_logger.info("Skipping value in graphName='" + tabName + "', label='" + label + "' with dataValue=" + dataValue + ", is BELOW threshold=" + entry.getValue());
 									addEntry = false;
 								}
 							}

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -133,7 +133,7 @@ implements ResultSetMetaData
 			if (e._colName.equals(name))
 				return e;
 		}
-		throw new RuntimeException("The getColumn("+name+") could not be found.");
+		throw new RuntimeException("The getColumn(" + name + ") could not be found.");
 	}
 
 	/**
@@ -149,7 +149,7 @@ implements ResultSetMetaData
 			if (e._sqlColNum == col)
 				return e;
 		}
-		throw new RuntimeException("The getSqlColumn("+col+") could not be found.");
+		throw new RuntimeException("The getSqlColumn(" + col + ") could not be found.");
 	}
 
 	/**
@@ -511,7 +511,7 @@ implements ResultSetMetaData
 		   ) 
 		{
 			if (ce._dateParseFormat == null)
-				throw new RuntimeException("The column '"+ce._colName+"' has not set the date parsing format.");
+				throw new RuntimeException("The column '" + ce._colName + "' has not set the date parsing format.");
 			else
 			{
 				try 
@@ -523,7 +523,7 @@ implements ResultSetMetaData
 				}
 				catch (ParseException e) 
 				{
-					throw new RuntimeException("The column '"+ce._colName+"' can't parsing using the format '"+ce._dateParseFormat+"'.", e);
+					throw new RuntimeException("The column '" + ce._colName + "' can't parsing using the format '" + ce._dateParseFormat + "'.", e);
 				}
 			}
 		}
@@ -537,7 +537,7 @@ implements ResultSetMetaData
 			}
 			catch (RuntimeException e)
 			{
-				throw new RuntimeException("Problems when creating a new Object for the column '"+ce._colName+"'. Caught: "+e.getMessage(), e);
+				throw new RuntimeException("Problems when creating a new Object for the column '" + ce._colName + "'. Caught: " + e.getMessage(), e);
 			}
 		}
 
@@ -597,17 +597,17 @@ implements ResultSetMetaData
 //			case java.sql.Types.DATALINK:     return "-DATALINK-";
 			case java.sql.Types.BOOLEAN:      return Boolean.valueOf(strVal);
 			default:
-				throw new RuntimeException("Unsupported data type was found in the dictionary java.sql.Types '"+sqlType+"', value='"+val+"'.");
+				throw new RuntimeException("Unsupported data type was found in the dictionary java.sql.Types '" + sqlType + "', value='" + val + "'.");
 			}
 		}
 		catch (NumberFormatException e)
 		{
-			_logger.warn("When creating a new Object for column '"+ce._colName+"' with value '"+val+"', a NumberFormatException was thrown, which implies that the value is not a number. Creating the object with a zero value instead.");
+			_logger.warn("When creating a new Object for column '" + ce._colName + "' with value '" + val + "', a NumberFormatException was thrown, which implies that the value is not a number. Creating the object with a zero value instead.");
 			return createJavaObject(ce, null);
 		}
 		catch (ParseException e) // for: SimpleDateFormat.parse()
 		{
-			throw new RuntimeException("Problems parsing value '"+strVal+"' of java.sql.Types '"+sqlType+"'. Caught: "+e.getMessage(), e);
+			throw new RuntimeException("Problems parsing value '" + strVal + "' of java.sql.Types '" + sqlType + "'. Caught: " + e.getMessage(), e);
 		}
 	}
 
@@ -660,7 +660,7 @@ implements ResultSetMetaData
 //		case java.sql.Types.DATALINK:     return "-DATALINK-";
 		case java.sql.Types.BOOLEAN:      return Boolean.valueOf(false);
 		default:
-			throw new RuntimeException("Unsupported data type was found in the dictionary java.sql.Types '"+sqlType+"', value='"+val+"'.");
+			throw new RuntimeException("Unsupported data type was found in the dictionary java.sql.Types '" + sqlType + "', value='" + val + "'.");
 		}
 	}
 	
@@ -743,23 +743,23 @@ implements ResultSetMetaData
 		for (DbxTuneResultSetMetaData.ColumnEntry ce : getColumns())
 		{
 			e++;
-			sb.append("entry ").append(StringUtil.right(e+"",2)).append(": ");
-			sb.append("colName='")     .append(StringUtil.left(ce._colName      +"', ",3+ 30));
-			sb.append("isPartOfPk='")  .append(StringUtil.left(ce._isPartOfPk   +"', ",3+ 5));
-			sb.append("isStatColumn='").append(StringUtil.left(ce._isStatColumn +"', ",3+ 5));
-			sb.append("sqlDataType='") .append(StringUtil.left(ce._sqlDataType  +"', ",3+ 10));
-			sb.append("dispLength='")  .append(StringUtil.left(ce._displayLength+"', ",3+ 2));
-			sb.append("precision='")   .append(StringUtil.left(ce._precision    +"', ",3+ 2));
-			sb.append("scale='")       .append(StringUtil.left(ce._scale        +"', ",3+ 2));
-			sb.append("isNullable='")  .append(StringUtil.left(ce._isNullable   +"', ",3+ 5));
-			sb.append("sqlColNum='")   .append(StringUtil.left(ce._sqlColNum    +"', ",3+ 2));
-			sb.append("isNumber='")    .append(StringUtil.left(ce._isNumber     +"', ",3+ 5));
-			sb.append("isPct='")       .append(StringUtil.left(ce._isPct        +"', ",3+ 5));
-			sb.append("status='")      .append(StringUtil.left(ce._status       +"', ",3+ 2));
+			sb.append("entry ").append(StringUtil.right(e + "",2)).append(": ");
+			sb.append("colName='")     .append(StringUtil.left(ce._colName      + "', ",3+ 30));
+			sb.append("isPartOfPk='")  .append(StringUtil.left(ce._isPartOfPk   + "', ",3+ 5));
+			sb.append("isStatColumn='").append(StringUtil.left(ce._isStatColumn + "', ",3+ 5));
+			sb.append("sqlDataType='") .append(StringUtil.left(ce._sqlDataType  + "', ",3+ 10));
+			sb.append("dispLength='")  .append(StringUtil.left(ce._displayLength + "', ",3+ 2));
+			sb.append("precision='")   .append(StringUtil.left(ce._precision    + "', ",3+ 2));
+			sb.append("scale='")       .append(StringUtil.left(ce._scale        + "', ",3+ 2));
+			sb.append("isNullable='")  .append(StringUtil.left(ce._isNullable   + "', ",3+ 5));
+			sb.append("sqlColNum='")   .append(StringUtil.left(ce._sqlColNum    + "', ",3+ 2));
+			sb.append("isNumber='")    .append(StringUtil.left(ce._isNumber     + "', ",3+ 5));
+			sb.append("isPct='")       .append(StringUtil.left(ce._isPct        + "', ",3+ 5));
+			sb.append("status='")      .append(StringUtil.left(ce._status       + "', ",3+ 2));
 
-			sb.append("schemaName='")  .append(StringUtil.left(ce._schemaName   +"', ",3+ 30));
-			sb.append("tableName='")   .append(StringUtil.left(ce._tableName    +"', ",3+ 30));
-			sb.append("catalogName='") .append(StringUtil.left(ce._catalogName  +"', ",3+ 30));
+			sb.append("schemaName='")  .append(StringUtil.left(ce._schemaName   + "', ",3+ 30));
+			sb.append("tableName='")   .append(StringUtil.left(ce._tableName    + "', ",3+ 30));
+			sb.append("catalogName='") .append(StringUtil.left(ce._catalogName  + "', ",3+ 30));
 
 			sb.append("description='") .append(ce._description).append("'");
 			sb.append(".\n");

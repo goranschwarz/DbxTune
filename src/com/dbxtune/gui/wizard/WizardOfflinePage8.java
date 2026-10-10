@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -134,8 +134,8 @@ implements ActionListener, PropertyChangeListener
 		boolean isAlarmHandlingEnabled = _enableAlarmHandling_chk.isSelected();
 		_alarmWritersPanel.setVisible(isAlarmHandlingEnabled);
 		
-		putWizardData("to-be-discarded.enableAlarmHandling", isAlarmHandlingEnabled+""); // Note: STRING
-		putWizardData(AlarmHandler.PROPKEY_enable,           isAlarmHandlingEnabled+""); // Note: STRING
+		putWizardData("to-be-discarded.enableAlarmHandling", isAlarmHandlingEnabled + ""); // Note: STRING
+		putWizardData(AlarmHandler.PROPKEY_enable,           isAlarmHandlingEnabled + ""); // Note: STRING
 
 		if ( isAlarmHandlingEnabled )
 		{

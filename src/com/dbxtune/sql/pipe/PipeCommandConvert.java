@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -86,12 +86,12 @@ extends PipeCommandAbstract
 				
 				availableCharsets =StringUtil.removeLastComma(availableCharsets);
 				
-				throw new PipeCommandException("Available chartsets encoding: \n"+availableCharsets);
+				throw new PipeCommandException("Available chartsets encoding: \n" + availableCharsets);
 			}
 		}
 		else
 		{
-			throw new PipeCommandException("PipeCommand, cmd='"+input+"' is unknown. Available commands is: convert, iconv");
+			throw new PipeCommandException("PipeCommand, cmd='" + input + "' is unknown. Available commands is: convert, iconv");
 		}
 		
 //		System.out.println("PipeCommandGrep: _optV='"+_optV+"', _optX='"+_optX+"', _type='"+_type+"', _grepStr='"+_grepStr+"'.");
@@ -100,7 +100,7 @@ extends PipeCommandAbstract
 	@Override
 	public String getConfig()
 	{
-		return "convert: from='"+_fromCharset+"', to='"+_toCharset+"'.";
+		return "convert: from='" + _fromCharset + "', to='" + _toCharset + "'.";
 	}
 
 	public String convert(int row, int col, String toBeConverted)
@@ -118,7 +118,7 @@ extends PipeCommandAbstract
 		}
 		catch (UnsupportedEncodingException ex)
 		{
-			String msg = "Problems converting row="+row+", col="+col+", value '"+toBeConverted+"' from '"+_fromCharset+"' to '"+_toCharset+"'. Caught: "+ex;
+			String msg = "Problems converting row=" + row + ", col=" + col + ", value '" + toBeConverted + "' from '" + _fromCharset + "' to '" + _toCharset + "'. Caught: " + ex;
 			throw new SQLException(msg);
 		}
 		
@@ -216,8 +216,8 @@ extends PipeCommandAbstract
 		sb.append("usage: convert [-f encoding] [-t encoding] \n");
 		sb.append("\n");
 		sb.append("options: \n");
-		sb.append("  -f,--from-code <encoding>  Convert characters from encoding, default='"+DEFAULT_fromCharset+"'. \n");
-		sb.append("  -t,--to-code   <encoding>  Convert characters to encoding,   default='"+DEFAULT_toCharset+"'. \n");
+		sb.append("  -f,--from-code <encoding>  Convert characters from encoding, default='" + DEFAULT_fromCharset + "'. \n");
+		sb.append("  -t,--to-code   <encoding>  Convert characters to encoding,   default='" + DEFAULT_toCharset + "'. \n");
 		sb.append("  -l,--list                  List known coded character sets. \n");
 		sb.append("  \n");
 		sb.append("  convert or iconv tries to convert from one charset to another\n");

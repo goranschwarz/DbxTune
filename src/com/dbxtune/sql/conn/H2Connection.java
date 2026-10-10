@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -121,7 +121,7 @@ public class H2Connection extends DbxConnection
 		}
 		catch (SQLException e)
 		{
-			_logger.debug("When getting DBMS Version ('"+sql+"'), Caught exception.", e);
+			_logger.debug("When getting DBMS Version ('" + sql + "'), Caught exception.", e);
 
 			return UNKNOWN;
 		}
@@ -143,9 +143,9 @@ public class H2Connection extends DbxConnection
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("getDbmsExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+			_logger.error("getDbmsExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex);
 			if (_logger.isDebugEnabled())
-				_logger.debug("getDbmsExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+				_logger.debug("getDbmsExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex, ex);
 		}
 		
 		return map;
@@ -185,9 +185,9 @@ public class H2Connection extends DbxConnection
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+			_logger.error("getTableExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex);
 			if (_logger.isDebugEnabled())
-				_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+				_logger.debug("getTableExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex, ex);
 		}
 		
 		return extraInfo;

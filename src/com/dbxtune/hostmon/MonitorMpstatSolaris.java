@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -45,7 +45,7 @@ extends MonitorMpstat
 	public String getCommand()
 	{
 		String cmd = super.getCommand();
-		return cmd != null ? cmd : "mpstat "+getSleepTime();
+		return cmd != null ? cmd : "mpstat " + getSleepTime();
 	}
 
 	@Override

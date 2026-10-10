@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -101,8 +101,8 @@ implements DbxConnectionStateInfo
 		if ( isNormalState() )
 			return null;
 
-		if ( ! NORMAL_MODE.equals(_mode)   ) return "In mode: "+_mode; 
-		if ( "SUSPECT"    .equals(_status) ) return "RS Threads are down: status="+_status;
+		if ( ! NORMAL_MODE.equals(_mode)   ) return "In mode: " + _mode; 
+		if ( "SUSPECT"    .equals(_status) ) return "RS Threads are down: status=" + _status;
 
 		return null;
 	}

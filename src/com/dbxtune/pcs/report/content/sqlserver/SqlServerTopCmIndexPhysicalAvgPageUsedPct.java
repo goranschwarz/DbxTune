@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -111,8 +111,8 @@ extends SqlServerAbstract
 	{
 //		_topRows  = localConf.getIntProperty(this.getClass().getSimpleName()+".top"     , _topRows);
 		_topRows = getTopRows();
-		_belowPct = localConf.getIntProperty(this.getClass().getSimpleName()+".belowPct", _belowPct);
-		_minRows  = localConf.getIntProperty(this.getClass().getSimpleName()+".minRows" , _minRows);
+		_belowPct = localConf.getIntProperty(this.getClass().getSimpleName() + ".belowPct", _belowPct);
+		_minRows  = localConf.getIntProperty(this.getClass().getSimpleName() + ".minRows" , _minRows);
 
 		String sql = getCmDiffColumnsAsSqlComment("CmIndexPhysical")
 				+ "select top " + _topRows + " \n"

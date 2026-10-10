@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -51,7 +51,7 @@ public class TdsUnknownConnection extends DbxConnection
 	@Override
 	public boolean isValid(int timeout) throws SQLException
 	{
-		System.out.println("INFO: TdsUnknownConnection.isValid("+timeout+") is using !isClosed() instead of isValid()");
+		System.out.println("INFO: TdsUnknownConnection.isValid(" + timeout + ") is using !isClosed() instead of isValid()");
 		return ! _conn.isClosed();
 	}
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -62,8 +62,8 @@ extends MonTablesDictionary
 	private static String TAB_NAME                  = "?TAB_NAME?";
 //	private static String SQL_TABLES                = "select TableID, Columns, Parameters, Indicators, Size, TableName, Description from master..monTables";
 //	private static String SQL_COLUMNS               = "select TableID, ColumnID, TypeID, Precision, Scale, Length, Indicators, TableName, ColumnName, TypeName, Description from master..monTableColumns where TableName = '?TAB_NAME?'";
-	private static String SQL_TABLES                = "select [TableID], [Columns], [Parameters], [Indicators], [Size], [TableName], [Description] from "+FROM_TAB_NAME;
-	private static String SQL_COLUMNS               = "select [TableID], [ColumnID], [TypeID], [Precision], [Scale], [Length], [Indicators], [TableName], [ColumnName], [TypeName], [Description] from "+FROM_TAB_NAME+" where [TableName] = '"+TAB_NAME+"'";
+	private static String SQL_TABLES                = "select [TableID], [Columns], [Parameters], [Indicators], [Size], [TableName], [Description] from " + FROM_TAB_NAME;
+	private static String SQL_COLUMNS               = "select [TableID], [ColumnID], [TypeID], [Precision], [Scale], [Length], [Indicators], [TableName], [ColumnName], [TypeName], [Description] from " + FROM_TAB_NAME + " where [TableName] = '" + TAB_NAME + "'";
 //	private static String SQL_TABLES                = "select TableID, Columns, Parameters, Indicators, Size, TableName, Description from "+FROM_TAB_NAME;
 //	private static String SQL_COLUMNS               = "select TableID, ColumnID, TypeID, Precision, Scale, Length, Indicators, TableName, ColumnName, TypeName, Description from "+FROM_TAB_NAME+" where TableName = '"+TAB_NAME+"'";
 //	private static String SQL_TABLES                = "select * from "+FROM_TAB_NAME;
@@ -172,7 +172,7 @@ extends MonTablesDictionary
 			{
 				_logger.error("MonTablesDictionary:initialize, _monWaitClassInfo", ex);
 				if (hasGui)
-					SwingUtils.showErrorMessage("MonTablesDictionary - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
+					SwingUtils.showErrorMessage("MonTablesDictionary - Initialize", "SQL Exception: " + ex.getMessage() + "\n\nThis was found when executing SQL statement:\n\n" + sql, ex);
 				return;
 			}
 	
@@ -218,7 +218,7 @@ extends MonTablesDictionary
 			{
 				_logger.error("MonTablesDictionary:initialize, _monWaitEventInfo", ex);
 				if (hasGui)
-					SwingUtils.showErrorMessage("MonTablesDictionary - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
+					SwingUtils.showErrorMessage("MonTablesDictionary - Initialize", "SQL Exception: " + ex.getMessage() + "\n\nThis was found when executing SQL statement:\n\n" + sql, ex);
 				return;
 			}
 		}
@@ -267,7 +267,7 @@ extends MonTablesDictionary
 		{
 			_logger.error("MonTablesDictionary:initialize, @@version", ex);
 			if (hasGui)
-				SwingUtils.showErrorMessage("MonTablesDictionary - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
+				SwingUtils.showErrorMessage("MonTablesDictionary - Initialize", "SQL Exception: " + ex.getMessage() + "\n\nThis was found when executing SQL statement:\n\n" + sql, ex);
 			return;
 		}
 
@@ -406,7 +406,7 @@ extends MonTablesDictionary
 				// Stored procedure 'sp_version' not found. Specify owner.objectname or use sp_help to check whether the object exists (sp_help may produce lots of output).
 				if (ex.getErrorCode() == 2812)
 				{
-					String msg = "ASE 'installmaster' script may be of a faulty version. ASE Version is '"+Ver.versionNumToStr(getDbmsExecutableVersionNum())+"'. " +
+					String msg = "ASE 'installmaster' script may be of a faulty version. ASE Version is '" + Ver.versionNumToStr(getDbmsExecutableVersionNum()) + "'. " +
 							"The stored procedure 'sp_version' was introduced in ASE 12.5.4, which I can't find in the connected ASE, this implies that 'installmaster' has not been applied after upgrade. " +
 							"Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version.";
 					_logger.error(msg);
@@ -415,7 +415,7 @@ extends MonTablesDictionary
 						"<html>" +
 						"ASE 'installmaster' script may be of a faulty version. <br>" +
 						"<br>" +
-						"ASE Version is '"+Ver.versionNumToStr(getDbmsExecutableVersionNum())+"'.<br>" +
+						"ASE Version is '" + Ver.versionNumToStr(getDbmsExecutableVersionNum()) + "'.<br>" +
 						"<br>" +
 						"The stored procedure 'sp_version' was introduced in ASE 12.5.4, which I can't find in the connected ASE, <br>" +
 						"this implies that 'installmaster' has <b>not</b> been applied after upgrade.<br>" +
@@ -426,27 +426,27 @@ extends MonTablesDictionary
 						"  <code>isql -Usa -Psecret -SSRVNAME -w999 -i$SYBASE/$SYBASE_ASE/scripts/installmaster</code><br>" +
 						"</font>" +
 						"<br>" +
-						"If this is <b>not</b> done, SQL Statements issued by "+Version.getAppName()+" may fail due to version inconsistency (wrong column names etc).<br>" +
+						"If this is <b>not</b> done, SQL Statements issued by " + Version.getAppName() + " may fail due to version inconsistency (wrong column names etc).<br>" +
 						"<br>" +
 						"Also the MDA tables(mon*) may deliver faulty or corrupt information, because the MDA proxy table definitions are not in sync with it's underlying data structures.<br>" +
 						"</html>";
 					if (hasGui)
-						SwingUtils.showErrorMessage(MainFrame.getInstance(), Version.getAppName()+" - MonTablesDictionary - Initialize", msgHtml, null);
+						SwingUtils.showErrorMessage(MainFrame.getInstance(), Version.getAppName() + " - MonTablesDictionary - Initialize", msgHtml, null);
 				}
 				else
 				{
-					_logger.warn("MonTablesDictionary:initialize, problems executing: "+SQL_SP_VERSION+ ". Exception: "+ex.getMessage());
+					_logger.warn("MonTablesDictionary:initialize, problems executing: " + SQL_SP_VERSION + ". Exception: " + ex.getMessage());
 
 					String msgHtml = 
 						"<html>" +
 						"Problems when executing sp_version. <br>" +
-						"Msg: <code>"+ex.getErrorCode()+"</code><br>" +
-						"Text: <code>"+ex.getMessage()+"</code><br>" +
+						"Msg: <code>" + ex.getErrorCode() + "</code><br>" +
+						"Text: <code>" + ex.getMessage() + "</code><br>" +
 						"<br>" +
 						"ASE 'installmaster' script may be of a faulty version. <br>" +
 						"Or the stored procedure 'sp_version' has been replaced with a customer specific one.<br>" +
 						"<br>" +
-						"ASE Version is '"+Ver.versionNumToStr(getDbmsExecutableVersionNum())+"'.<br>" +
+						"ASE Version is '" + Ver.versionNumToStr(getDbmsExecutableVersionNum()) + "'.<br>" +
 						"<br>" +
 						"To fix the issue Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' again and check it's status by executing: <code>sp_version</code>. <br>" +
 						"<br>" +
@@ -455,19 +455,19 @@ extends MonTablesDictionary
 						"  <code>isql -Usa -Psecret -SSRVNAME -w999 -i$SYBASE/$SYBASE_ASE/scripts/installmaster</code><br>" +
 						"</font>" +
 						"<br>" +
-						"If this is <b>not</b> done, SQL Statements issued by "+Version.getAppName()+" may fail due to version inconsistency (wrong column names etc).<br>" +
+						"If this is <b>not</b> done, SQL Statements issued by " + Version.getAppName() + " may fail due to version inconsistency (wrong column names etc).<br>" +
 						"<br>" +
 						"Also the MDA tables(mon*) may deliver faulty or corrupt information, because the MDA proxy table definitions are not in sync with it's underlying data structures.<br>" +
 						"</html>";
 					if (hasGui)
-						SwingUtils.showErrorMessage(MainFrame.getInstance(), Version.getAppName()+" - MonTablesDictionary - Initialize", msgHtml, null);
+						SwingUtils.showErrorMessage(MainFrame.getInstance(), Version.getAppName() + " - MonTablesDictionary - Initialize", msgHtml, null);
 					return;
 				}
 			}
 		} // end: if (srvVersionNum >= 12.5.4)
 
-		_logger.info("ASE 'montables'     for sp_version shows: Status='"+getDbmsMonTableStatusStr()     +"', VersionNum='"+getDbmsMonTableVersionNum()     +"', VersionStr='"+getDbmsMonTableVersionStr()+"'.");
-		_logger.info("ASE 'installmaster' for sp_version shows: Status='"+getDbmsInstallMasterStatusStr()+"', VersionNum='"+getDbmsInstallMasterVersionNum()+"', VersionStr='"+getDbmsInstallMasterVersionStr()+"'.");
+		_logger.info("ASE 'montables'     for sp_version shows: Status='" + getDbmsMonTableStatusStr()     + "', VersionNum='" + getDbmsMonTableVersionNum()     + "', VersionStr='" + getDbmsMonTableVersionStr() + "'.");
+		_logger.info("ASE 'installmaster' for sp_version shows: Status='" + getDbmsInstallMasterStatusStr() + "', VersionNum='" + getDbmsInstallMasterVersionNum() + "', VersionStr='" + getDbmsInstallMasterVersionStr() + "'.");
 
 		//-------- montables ------
 		// is installed monitor tables fully installed.
@@ -477,7 +477,7 @@ extends MonTablesDictionary
 			{
 				String msg = "ASE Monitoring tables has not been completely installed. Please check it's status with: sp_version";
 				if (DbxTune.hasGui())
-					JOptionPane.showMessageDialog(MainFrame.getInstance(), msg, Version.getAppName()+" - connect check", JOptionPane.WARNING_MESSAGE);
+					JOptionPane.showMessageDialog(MainFrame.getInstance(), msg, Version.getAppName() + " - connect check", JOptionPane.WARNING_MESSAGE);
 				_logger.warn(msg);
 			}
 		}
@@ -489,9 +489,9 @@ extends MonTablesDictionary
 			// strip off the ROLLUP VERSION  (divide by 10 takes away last digit)
 			if (getDbmsExecutableVersionNum()/100000 != getDbmsMonTableVersionNum()/100000) // Ver.ver(...) can we use that in some way here... if VER "length" changes the xx/100000 needs to be changed
 			{
-				String msg = "ASE Monitoring tables may be of a faulty version. ASE Version is '"+Ver.versionNumToStr(getDbmsExecutableVersionNum())+"' while MonTables version is '"+Ver.versionNumToStr(getDbmsMonTableVersionNum())+"'. Please check it's status with: sp_version";
+				String msg = "ASE Monitoring tables may be of a faulty version. ASE Version is '" + Ver.versionNumToStr(getDbmsExecutableVersionNum()) + "' while MonTables version is '" + Ver.versionNumToStr(getDbmsMonTableVersionNum()) + "'. Please check it's status with: sp_version";
 				if (hasGui)
-					JOptionPane.showMessageDialog(MainFrame.getInstance(), msg, Version.getAppName()+" - connect check", JOptionPane.WARNING_MESSAGE);
+					JOptionPane.showMessageDialog(MainFrame.getInstance(), msg, Version.getAppName() + " - connect check", JOptionPane.WARNING_MESSAGE);
 				_logger.warn(msg);
 			}
 		}
@@ -504,7 +504,7 @@ extends MonTablesDictionary
 			{
 				String msg = "ASE 'installmaster' script has not been completely installed. Please check it's status with: sp_version";
 				if (hasGui)
-					JOptionPane.showMessageDialog(MainFrame.getInstance(), msg, Version.getAppName()+" - connect check", JOptionPane.ERROR_MESSAGE);
+					JOptionPane.showMessageDialog(MainFrame.getInstance(), msg, Version.getAppName() + " - connect check", JOptionPane.ERROR_MESSAGE);
 				_logger.error(msg);
 			}
 		}
@@ -517,7 +517,7 @@ extends MonTablesDictionary
 			{
 				if (getDbmsExecutableVersionNum() != getDbmsInstallMasterVersionNum())
 				{
-					String msg = "ASE 'installmaster' script may be of a faulty version. ASE Version is '"+Ver.versionNumToStr(getDbmsExecutableVersionNum())+"' while 'installmaster' version is '"+Ver.versionNumToStr(getDbmsInstallMasterVersionNum())+"'. Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version.";
+					String msg = "ASE 'installmaster' script may be of a faulty version. ASE Version is '" + Ver.versionNumToStr(getDbmsExecutableVersionNum()) + "' while 'installmaster' version is '" + Ver.versionNumToStr(getDbmsInstallMasterVersionNum()) + "'. Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version.";
 					_logger.warn(msg);
 	
 					if (hasGui)
@@ -526,13 +526,13 @@ extends MonTablesDictionary
 							"<html>" +
 							"ASE 'installmaster' script may be of a faulty version. <br>" +
 							"<br>" +
-							"ASE Version is '"+Ver.versionNumToStr(getDbmsExecutableVersionNum())+"' while 'installmaster' version is '"+Ver.versionNumToStr(getDbmsInstallMasterVersionNum())+"'. <br>" +
+							"ASE Version is '" + Ver.versionNumToStr(getDbmsExecutableVersionNum()) + "' while 'installmaster' version is '" + Ver.versionNumToStr(getDbmsInstallMasterVersionNum()) + "'. <br>" +
 							"Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version. <br>" +
 							"<br>" +
 							"Do the following on the machine that hosts the ASE:<br>" +
 							"<code>isql -Usa -Psecret -SSRVNAME -w999 -i$SYBASE/$SYBASE_ASE/scripts/installmaster</code><br>" +
 							"<br>" +
-							"If this is <b>not</b> done, SQL Statements issued by "+Version.getAppName()+" may fail due to version inconsistency (wrong column names etc).<br>" +
+							"If this is <b>not</b> done, SQL Statements issued by " + Version.getAppName() + " may fail due to version inconsistency (wrong column names etc).<br>" +
 							"<br>" +
 							"Also the MDA tables(mon*) may deliver faulty or corrupt information, because the MDA proxy table definitions are not in sync with it's underlying data structures.<br>" +
 							"<br>" +
@@ -565,9 +565,9 @@ extends MonTablesDictionary
 							setTrustMonTablesVersion(answer == 0);
 
 							if (trustMonTablesVersion())
-								_logger.warn("ASE Binary and 'montables/installmaster' is out of sync, installmaster has not been applied. The user decided to use the 'current installmaster version'. The used MDA table layout will be '"+Ver.versionNumToStr(getDbmsInstallMasterVersionNum())+"'. ASE Binary version was '"+Ver.versionNumToStr(getDbmsExecutableVersionNum())+"'.");
+								_logger.warn("ASE Binary and 'montables/installmaster' is out of sync, installmaster has not been applied. The user decided to use the 'current installmaster version'. The used MDA table layout will be '" + Ver.versionNumToStr(getDbmsInstallMasterVersionNum()) + "'. ASE Binary version was '" + Ver.versionNumToStr(getDbmsExecutableVersionNum()) + "'.");
 							else
-								_logger.warn("ASE Binary and 'montables/installmaster' is out of sync, installmaster has not been applied. The user decided to use the 'ASE Binary version'. The used MDA table layout will be '"+Ver.versionNumToStr(getDbmsExecutableVersionNum())+"'. ASE installmaster version was '"+Ver.versionNumToStr(getDbmsInstallMasterVersionNum())+"'.");
+								_logger.warn("ASE Binary and 'montables/installmaster' is out of sync, installmaster has not been applied. The user decided to use the 'ASE Binary version'. The used MDA table layout will be '" + Ver.versionNumToStr(getDbmsExecutableVersionNum()) + "'. ASE installmaster version was '" + Ver.versionNumToStr(getDbmsInstallMasterVersionNum()) + "'.");
 						}
 					}
 				}
@@ -619,7 +619,7 @@ extends MonTablesDictionary
 		{
 			_logger.error("initializeVersionInfo, @@version", ex);
 			if (hasGui())
-				SwingUtils.showErrorMessage("MonTablesDictionary - initializeVersionInfo", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
+				SwingUtils.showErrorMessage("MonTablesDictionary - initializeVersionInfo", "SQL Exception: " + ex.getMessage() + "\n\nThis was found when executing SQL statement:\n\n" + sql, ex);
 			return;
 		}
 		setEarlyVersionInfo(true);
@@ -739,7 +739,7 @@ extends MonTablesDictionary
 				_logger.warn("Tooltip on column headers wasn't available in the offline database. This simply means that tooltip wont be showed in various places.");
 				return;
 			}
-			_logger.error("MonTablesDictionary:initialize:sql='"+sql+"'", ex);
+			_logger.error("MonTablesDictionary:initialize:sql='" + sql + "'", ex);
 			return;
 		}
 
@@ -802,7 +802,7 @@ extends MonTablesDictionary
 					_logger.warn("Tooltip on column headers wasn't available in the offline database. This simply means that tooltip wont be showed in various places.");
 					return;
 				}
-				_logger.error("MonTablesDictionary:initialize:sql='"+sql+"'", ex);
+				_logger.error("MonTablesDictionary:initialize:sql='" + sql + "'", ex);
 				return;
 			}
 		}

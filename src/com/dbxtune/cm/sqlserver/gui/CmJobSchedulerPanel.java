@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -65,7 +65,7 @@ extends TabularCntrPanel
 		String colorStr = null;
 
 		// GREEN = RUNNING_OK
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.RUNNING_OK");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.RUNNING_OK");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -79,7 +79,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.GREEN), null));
 
 		// ORANGE = RUNNING_LONG
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.RUNNING_LONG");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.RUNNING_LONG");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -93,7 +93,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.ORANGE), null));
 
 		// PINK = MISSED
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.MISSED");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.MISSED");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -107,7 +107,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.PINK), null));
 
 		// RED = FAILED_LAST_RUN
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.FAILED_LAST_RUN");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.FAILED_LAST_RUN");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override

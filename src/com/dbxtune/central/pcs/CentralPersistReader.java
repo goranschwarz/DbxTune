@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -216,13 +216,13 @@ public class CentralPersistReader
 		cp.setUrl        (_jdbcUrl);
 		cp.setUsername   (_jdbcUsername);
 		cp.setPassword   (_jdbcPassword);
-		cp.setAppName    (Version.getAppName()+"-pcsReader");
+		cp.setAppName    (Version.getAppName() + "-pcsReader");
 //		DbxConnectionPool connPool = new DbxConnectionPool(cp, 30);
 //		DbxConnectionPool.setInstance(connPool);
 		
 		_connectionPool = new DbxConnectionPool(this.getClass().getSimpleName(), cp, 30);
 		
-		_logger.info("PCS Reader initialized using: "+getConnectionInfo());
+		_logger.info("PCS Reader initialized using: " + getConnectionInfo());
 	}
 
 
@@ -497,7 +497,7 @@ public class CentralPersistReader
 		String tabName = CentralPersistWriterBase.getTableName(conn, schema, Table.ALARM_ACTIVE, null, true);
 
 		String sql = "select "
-					+ "  '"+schema+"' as " + lq + "srvName"     + rq
+					+ "  '" + schema + "' as " + lq + "srvName"     + rq
 					+ " ," + lq + "alarmClass"                  + rq
 					+ " ," + lq + "serviceType"                 + rq
 					+ " ," + lq + "serviceName"                 + rq
@@ -524,8 +524,8 @@ public class CentralPersistReader
 					+ " ," + lq + "lastExtendedDescription"     + rq
 					+ " ," + lq + "alarmOptions"                + rq
 					+ " ," + lq + "cancelDescription"           + rq
-				+" from " + tabName
-				+" order by " + lq+"createTime"+rq + ", " +lq+"cancelTime"+rq;
+				+ " from " + tabName
+				+ " order by " + lq + "createTime" + rq + ", " + lq + "cancelTime" + rq;
 
 		// Change '[' and ']' into DBMS Vendor Specific Identity Quote Chars
 		sql = conn.quotifySqlString(sql);
@@ -737,7 +737,7 @@ public class CentralPersistReader
 			whereStr += "   and " + lq + "eventTime" + rq + " <= '" + endTime.trim() + "' \n";
 		
 		String sql = "select "
-					+ "  '"+schema+"' as " + lq + "srvName"     + rq
+					+ "  '" + schema + "' as " + lq + "srvName"     + rq
 					+ " ," + lq + "SessionStartTime"            + rq
 					+ " ," + lq + "SessionSampleTime"           + rq
 					+ " ," + lq + "eventTime"                   + rq
@@ -768,10 +768,10 @@ public class CentralPersistReader
 					+ " ," + lq + "lastExtendedDescription"     + rq
 					+ " ," + lq + "alarmOptions"                + rq
 					+ " ," + lq + "cancelDescription"           + rq
-				+" from " + tabName
+				+ " from " + tabName
 				+whereStr
 			//	+" order by " + lq+"createTime"+rq + ", " +lq+"cancelTime"+rq;
-				+" order by " + lq+"SessionStartTime"+rq + ", " +lq+"SessionSampleTime"+rq + ", " +lq+"eventTime"+rq;
+				+ " order by " + lq + "SessionStartTime" + rq + ", " + lq + "SessionSampleTime" + rq + ", " + lq + "eventTime" + rq;
 
 //System.out.println("----- getAlarmHistory(): SQL=|" + sql + "|");
 		// autoclose: stmnt, rs
@@ -1073,12 +1073,12 @@ public class CentralPersistReader
 		String tabName = CentralPersistWriterBase.getTableName(conn, schema, Table.CM_LAST_SAMPLE_JSON, null, true);
 
 		String sql = "select "
-					+ "  '"+schema+"' as " + lq + "srvName" + rq
+					+ "  '" + schema + "' as " + lq + "srvName" + rq
 					+ " ," + lq + "SessionSampleTime"       + rq
 					+ " ," + lq + "CmName"                  + rq
 					+ " ," + lq + "JsonText"                + rq
-				+" from " + tabName
-				+" where " + lq+"CmName"+rq + " = " + DbUtils.safeStr(cmName); // Possibly convert to IN (...javaList...)
+				+ " from " + tabName
+				+ " where " + lq + "CmName" + rq + " = " + DbUtils.safeStr(cmName); // Possibly convert to IN (...javaList...)
 
 		// Change '[' and ']' into DBMS Vendor Specific Identity Quote Chars
 		sql = conn.quotifySqlString(sql);
@@ -1312,14 +1312,14 @@ public class CentralPersistReader
 		String tabName = CentralPersistWriterBase.getTableName(conn, schema, Table.CM_HISTORY_SAMPLE_JSON, null, true);
 
 		String sql = "select "
-					+ "  '"+schema+"' as " + lq + "srvName" + rq
+					+ "  '" + schema + "' as " + lq + "srvName" + rq
 					+ " ," + lq + "SessionSampleTime"       + rq
 					+ " ," + lq + "CmName"                  + rq
 					+ " ," + lq + "JsonText"                + rq
-				+" from " + tabName
-				+" where " + lq+"CmName"+rq + " = " + DbUtils.safeStr(cmName)
-				+"   and " + lq+"SessionSampleTime"+rq + " >= " + DbUtils.safeStr(startTs) // We could have used BETWEEN '' AND ''
-				+"   and " + lq+"SessionSampleTime"+rq + "  < " + DbUtils.safeStr(endTs)
+				+ " from " + tabName
+				+ " where " + lq + "CmName" + rq + " = " + DbUtils.safeStr(cmName)
+				+ "   and " + lq + "SessionSampleTime" + rq + " >= " + DbUtils.safeStr(startTs) // We could have used BETWEEN '' AND ''
+				+ "   and " + lq + "SessionSampleTime" + rq + "  < " + DbUtils.safeStr(endTs)
 				;
 //System.out.println(">>>>>>>>>>>>>>>>>>>> getHistorySampleForCm(); SQL=|" + sql + "|");
 
@@ -1595,17 +1595,17 @@ public class CentralPersistReader
 
 		String whereCmName = "";
 		if (StringUtil.hasValue(cmName))
-			whereCmName = "   and " + lq+"CmName"+rq + " = " + DbUtils.safeStr(cmName);
+			whereCmName = "   and " + lq + "CmName" + rq + " = " + DbUtils.safeStr(cmName);
 		
 		String sql = "select "
-					+ "  '"+schema+"' as " + lq + "srvName" + rq
+					+ "  '" + schema + "' as " + lq + "srvName" + rq
 					+ " ," + lq + "SessionSampleTime"       + rq
 					+ " ," + lq + "CmName"                  + rq
 				+ " from " + tabName
 				+ " where 1 = 1 "
 				+ whereCmName
-				+ "   and " + lq+"SessionSampleTime"+rq + " >= " + DbUtils.safeStr(startTs) // We could have used BETWEEN '' AND ''
-				+ "   and " + lq+"SessionSampleTime"+rq + "  < " + DbUtils.safeStr(endTs)
+				+ "   and " + lq + "SessionSampleTime" + rq + " >= " + DbUtils.safeStr(startTs) // We could have used BETWEEN '' AND ''
+				+ "   and " + lq + "SessionSampleTime" + rq + "  < " + DbUtils.safeStr(endTs)
 				;
 //System.out.println(">>>>>>>>>>>>>>>>>>>> getHistoryActiveSamplesForCm(); SQL=|" + sql + "|");
 
@@ -1668,7 +1668,7 @@ public class CentralPersistReader
 	throws SQLException
 	{
 		if (conn == null)
-			throw new SQLException("Connection must be valid, conn="+conn);
+			throw new SQLException("Connection must be valid, conn=" + conn);
 
 		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
 		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
@@ -1693,10 +1693,10 @@ public class CentralPersistReader
 //					+ " ," + lq + "CollectorMgtInfo"        + rq
 					+ " ," + lq + "NumOfSamples"            + rq
 					+ " ," + lq + "LastSampleTime"          + rq
-				+" from " + tabName
-				+" where " + lq + "ServerName"       + rq + " = '" + serverName + "'"
-				+"   and " + lq + "SessionStartTime" + rq + " = (select max("+lq+"SessionStartTime"+rq+") from "+tabName+" where "+lq+"ServerName"+rq+" = '"+serverName+"') "
-				+"";
+				+ " from " + tabName
+				+ " where " + lq + "ServerName"       + rq + " = '" + serverName + "'"
+				+ "   and " + lq + "SessionStartTime" + rq + " = (select max(" + lq + "SessionStartTime" + rq + ") from " + tabName + " where " + lq + "ServerName" + rq + " = '" + serverName + "') "
+				+ "";
 
 		// Get server order/description file
 		Map<String, DbxCentralServerDescription> sdMap = new HashMap<>();
@@ -1706,7 +1706,7 @@ public class CentralPersistReader
 		}
 		catch (IOException ex)
 		{
-			_logger.warn("Problems reading file '"+DbxCentralServerDescription.getDefaultFile()+"'. This is used to sort the 'sessions list'. Skipping this... Caught: "+ex);
+			_logger.warn("Problems reading file '" + DbxCentralServerDescription.getDefaultFile() + "'. This is used to sort the 'sessions list'. Skipping this... Caught: " + ex);
 		}
 		
 		// autoclose: stmnt, rs
@@ -1826,7 +1826,7 @@ public class CentralPersistReader
 //						+ " ," + lq + "CollectorMgtInfo"        + rq
 						+ " ," + lq + "NumOfSamples"            + rq
 						+ " ," + lq + "LastSampleTime"          + rq
-					+" from " + tabName
+					+ " from " + tabName
 					+ whereStr
 					+ orderByStr;
 			List<DbxCentralSessions> list = new ArrayList<>();
@@ -1838,7 +1838,7 @@ public class CentralPersistReader
 			}
 			catch (IOException ex)
 			{
-				_logger.warn("Problems reading file '"+DbxCentralServerDescription.getDefaultFile()+"'. This is used to sort the 'sessions list'. Skipping this... Caught: "+ex);
+				_logger.warn("Problems reading file '" + DbxCentralServerDescription.getDefaultFile() + "'. This is used to sort the 'sessions list'. Skipping this... Caught: " + ex);
 			}
 			
 			// autoclose: stmnt, rs
@@ -1925,7 +1925,7 @@ public class CentralPersistReader
 			String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_SESSIONS, null, true);
 
 			String sessionStartTime = null;
-			sql = "select max("+lq+"SessionStartTime"+rq+") from "+tabName+" where "+lq+"ServerName"+rq+" = '"+sessionName+"'";
+			sql = "select max(" + lq + "SessionStartTime" + rq + ") from " + tabName + " where " + lq + "ServerName" + rq + " = '" + sessionName + "'";
 
 			// autoclose: stmnt, rs
 			try (Statement stmnt = conn.createStatement())
@@ -1942,7 +1942,7 @@ public class CentralPersistReader
 			}
 			
 			tabName = CentralPersistWriterBase.getTableName(conn, sessionName, Table.GRAPH_PROPERTIES, null, true);
-			sql = "select "+lq+"TableName"+rq+" from "+tabName+" where "+lq+"SessionStartTime"+rq+" = '"+sessionStartTime+"'";
+			sql = "select " + lq + "TableName" + rq + " from " + tabName + " where " + lq + "SessionStartTime" + rq + " = '" + sessionStartTime + "'";
 			List<String> list = new ArrayList<>();
 
 			// autoclose: stmnt, rs
@@ -1993,27 +1993,27 @@ public class CentralPersistReader
 			
 			String sqlExists = 
 				 " select 1"
-				+" from " + tabName
-				+" where " + lq + "ProductString" + rq + " = '" + dbxProduct     + "'"
-				+"   and " + lq + "UserName"      + rq + " = '" + dbxUser        + "'"
-				+"   and " + lq + "ProfileName"   + rq + " = '" + dbxProfileName + "'"
+				+ " from " + tabName
+				+ " where " + lq + "ProductString" + rq + " = '" + dbxProduct     + "'"
+				+ "   and " + lq + "UserName"      + rq + " = '" + dbxUser        + "'"
+				+ "   and " + lq + "ProfileName"   + rq + " = '" + dbxProfileName + "'"
 				;
 
 			String sqlDelete = 
 				 " delete from " + tabName
-				+" where " + lq + "ProductString" + rq + " = '" + dbxProduct     + "'"
-				+"   and " + lq + "UserName"      + rq + " = '" + dbxUser        + "'"
-				+"   and " + lq + "ProfileName"   + rq + " = '" + dbxProfileName + "'"
+				+ " where " + lq + "ProductString" + rq + " = '" + dbxProduct     + "'"
+				+ "   and " + lq + "UserName"      + rq + " = '" + dbxUser        + "'"
+				+ "   and " + lq + "ProfileName"   + rq + " = '" + dbxProfileName + "'"
 				;
 
 			String sqlUpdate = 
 				 " update " + tabName
-				+" set " + lq + "ProfileDescription" + rq + " = ?"
-				+"    ," + lq + "ProfileValue"       + rq + " = ?"
-				+"    ," + lq + "ProfileUrlOptions"  + rq + " = ?"
-				+" where " + lq + "ProductString"    + rq + " = '" + dbxProduct     + "'"
-				+"   and " + lq + "UserName"         + rq + " = '" + dbxUser        + "'"
-				+"   and " + lq + "ProfileName"      + rq + " = '" + dbxProfileName + "'"
+				+ " set " + lq + "ProfileDescription" + rq + " = ?"
+				+ "    ," + lq + "ProfileValue"       + rq + " = ?"
+				+ "    ," + lq + "ProfileUrlOptions"  + rq + " = ?"
+				+ " where " + lq + "ProductString"    + rq + " = '" + dbxProduct     + "'"
+				+ "   and " + lq + "UserName"         + rq + " = '" + dbxUser        + "'"
+				+ "   and " + lq + "ProfileName"      + rq + " = '" + dbxProfileName + "'"
 				;
 
 			String[] insCols = new String[]{"ProductString", "UserName", "ProfileName", "ProfileDescription", "ProfileValue", "ProfileUrlOptions"};
@@ -2021,7 +2021,7 @@ public class CentralPersistReader
 			String sqlInsert = 
 				 " insert into " + tabName + " (" + StringUtil.toCommaStrQuoted(lq, rq, insCols) + ")"
 //				+" values(" + StringUtil.toCommaStrQuoted(q, insVals) + ")"
-				+" values(?, ?, ?, ?, ?, ?)"
+				+ " values(?, ?, ?, ?, ?, ?)"
 				;
 
 			boolean rowExists = false;
@@ -2039,31 +2039,31 @@ public class CentralPersistReader
 				}
 			}
 
-			_logger.debug("setGraphProfile(): EXISTS="+rowExists+": "+sqlExists);
+			_logger.debug("setGraphProfile(): EXISTS=" + rowExists + ": " + sqlExists);
 			int rowCount = 0;
 			if (rowExists)
 			{
 				// If profileValue is empty... remove the profile.
 				String profileValue = profile.getProfileValue();
-				_logger.debug("setGraphProfile(): profileValue: |"+profileValue+"|.");
+				_logger.debug("setGraphProfile(): profileValue: |" + profileValue + "|.");
 				
 				if (StringUtil.isNullOrBlank(profileValue) || (profileValue != null && "[]".equals(profileValue.trim())) )
 				{
 					try (Statement stmnt = conn.createStatement())
 					{
-						_logger.debug("setGraphProfile(): DELETE: "+sqlDelete);
+						_logger.debug("setGraphProfile(): DELETE: " + sqlDelete);
 						
 						stmnt.executeUpdate(sqlDelete);
 						rowCount = stmnt.getUpdateCount();
 						if (rowCount != 1)
 						{
-							throw new SQLException("Problems deleting profile '"+dbxProfileName+"' for DbxProduct '"+dbxProduct+"'. rowcount="+rowCount+", expected rowcount was 1. "+profile);
+							throw new SQLException("Problems deleting profile '" + dbxProfileName + "' for DbxProduct '" + dbxProduct + "'. rowcount=" + rowCount + ", expected rowcount was 1. " + profile);
 						}
 					}
 				}
 				else
 				{
-					_logger.debug("setGraphProfile(): UPDATE: "+sqlUpdate);
+					_logger.debug("setGraphProfile(): UPDATE: " + sqlUpdate);
 					
 					try (PreparedStatement pstmnt = conn.prepareStatement(sqlUpdate))
 					{
@@ -2075,20 +2075,20 @@ public class CentralPersistReader
 						rowCount = pstmnt.getUpdateCount();
 						if (rowCount != 1)
 						{
-							throw new SQLException("Problems updating profile '"+dbxProfileName+"' for DbxProduct '"+dbxProduct+"'. rowcount="+rowCount+", expected rowcount was 1. "+profile);
+							throw new SQLException("Problems updating profile '" + dbxProfileName + "' for DbxProduct '" + dbxProduct + "'. rowcount=" + rowCount + ", expected rowcount was 1. " + profile);
 						}
 					}
 				}
 			}
 			else
 			{
-				_logger.debug("setGraphProfile(): INSERT: "+sqlInsert);
+				_logger.debug("setGraphProfile(): INSERT: " + sqlInsert);
 				
 				// If profileValue is empty... Throw exception
 				String profileValue = profile.getProfileValue();
 				if (StringUtil.isNullOrBlank(profileValue) || (profileValue != null && "[]".equals(profileValue.trim())) )
 				{
-					throw new SQLException("The passed value for 'profileValue' is empty, this is NOT allowed. "+profile);
+					throw new SQLException("The passed value for 'profileValue' is empty, this is NOT allowed. " + profile);
 				}
 
 				try (PreparedStatement pstmnt = conn.prepareStatement(sqlInsert))
@@ -2104,7 +2104,7 @@ public class CentralPersistReader
 					rowCount = pstmnt.getUpdateCount();
 					if (rowCount != 1)
 					{
-						throw new SQLException("Problems inserting profile '"+dbxProfileName+"' for DbxProduct '"+dbxProduct+"'. rowcount="+rowCount+", expected rowcount was 1. "+profile);
+						throw new SQLException("Problems inserting profile '" + dbxProfileName + "' for DbxProduct '" + dbxProduct + "'. rowcount=" + rowCount + ", expected rowcount was 1. " + profile);
 					}
 				}
 			}
@@ -2138,8 +2138,8 @@ public class CentralPersistReader
 					+ " ," + lq + "ProfileDescription" + rq
 					+ " ," + lq + "ProfileValue"       + rq
 					+ " ," + lq + "ProfileUrlOptions"  + rq
-				+" from " + tabName
-				+" where 1 = 1"
+				+ " from " + tabName
+				+ " where 1 = 1"
 				;
 
 			if (StringUtil.hasValue(dbxTypeName))
@@ -2365,9 +2365,9 @@ public class CentralPersistReader
 			String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_GRAPH_PROFILES, null, true);
 
 			String sql = "select " + lq + "ProfileValue" + rq
-					+" from " + tabName
-					+" where " + lq + "ProfileName" + rq + " = '" + name + "'"
-					+"   and " + lq + "UserName"    + rq + " = '" + user + "'"
+					+ " from " + tabName
+					+ " where " + lq + "ProfileName" + rq + " = '" + name + "'"
+					+ "   and " + lq + "UserName"    + rq + " = '" + user + "'"
 					;
 			if (StringUtil.hasValue(dbxTypeName))
 				sql += "   and " + lq + "ProductString" + rq + " = '" + dbxTypeName + "'";
@@ -2411,9 +2411,9 @@ public class CentralPersistReader
 			String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_SESSIONS, null, true);
 
 			String sql = "select " + lq + "ProductString" + rq
-					+" from " + tabName
-					+" where " + lq + "ServerName"       + rq + " = '" + name + "'"
-					+"   and " + lq + "SessionStartTime" + rq + " = (select max("+lq+"SessionStartTime"+rq+") from "+tabName+" where "+lq+"ServerName"+rq+" = '"+name+"')"
+					+ " from " + tabName
+					+ " where " + lq + "ServerName"       + rq + " = '" + name + "'"
+					+ "   and " + lq + "SessionStartTime" + rq + " = (select max(" + lq + "SessionStartTime" + rq + ") from " + tabName + " where " + lq + "ServerName" + rq + " = '" + name + "')"
 					;
 
 			String result = "";
@@ -2477,12 +2477,12 @@ public class CentralPersistReader
 						+ " ," + lq + "isPercentGraph"   + rq
 						+ " ," + lq + "visibleAtStart"   + rq
 						+ " ," + lq + "initialOrder"     + rq
-					+" from " + tabName
-					+" where " + lq + "SessionStartTime" + rq + " = " + whereSessionStartTime
+					+ " from " + tabName
+					+ " where " + lq + "SessionStartTime" + rq + " = " + whereSessionStartTime
 			//		+"   and " + lq + "visibleAtStart"   + rq + " = 1"
 			//		+"   and " + lq + "CmName"    + rq + " = 'CmSummary' " 
 			//		+"   and " + lq + "GraphName" + rq + " like 'aa%' " 
-					+" order by " + lq + "initialOrder" + rq
+					+ " order by " + lq + "initialOrder" + rq
 					;
 
 			List<DbxGraphProperties> list = new ArrayList<>();
@@ -2806,9 +2806,9 @@ public class CentralPersistReader
 							+ " ," + lq + "isPercentGraph"   + rq
 							+ " ," + lq + "visibleAtStart"   + rq
 							+ " ," + lq + "initialOrder"     + rq
-						+" from " + tabName
-						+" where "    + lq + "SessionStartTime" + rq + " = " + whereSessionStartTime
-						+" order by " + lq + "initialOrder" + rq
+						+ " from " + tabName
+						+ " where "    + lq + "SessionStartTime" + rq + " = " + whereSessionStartTime
+						+ " order by " + lq + "initialOrder" + rq
 						;
 
 				// autoclose: stmnt, rs
@@ -2903,7 +2903,7 @@ public class CentralPersistReader
 						}
 						catch (IOException e)
 						{
-							_logger.warn("Problems parsing System Profile for '"+dbxProd+"', Caught: "+e, e);
+							_logger.warn("Problems parsing System Profile for '" + dbxProd + "', Caught: " + e, e);
 						}
 					}
 				}
@@ -3017,7 +3017,7 @@ public class CentralPersistReader
 			+ ", " + lq + "RequestReason" + rq
 			+ ", " + lq + "ApprovedBy"    + rq
 			+ ", " + lq + "ApproveDate"   + rq
-			+ ", " + lq + "LoginFailCount"+ rq
+			+ ", " + lq + "LoginFailCount" + rq
 			+ ", " + lq + "LoginCount"    + rq
 			;
 	}
@@ -3063,7 +3063,7 @@ public class CentralPersistReader
 
 			String sql = "SELECT " + dbxCentralUsersSelectCols(lq, rq)
 					+ " FROM "  + tabName
-					+ " WHERE " + lq+"UserName"+rq + " = ?";
+					+ " WHERE " + lq + "UserName" + rq + " = ?";
 
 			try (PreparedStatement pstmt = conn.prepareStatement(sql))
 			{
@@ -3098,7 +3098,7 @@ public class CentralPersistReader
 
 			String sql = "SELECT " + dbxCentralUsersSelectCols(lq, rq)
 					+ " FROM "     + tabName
-					+ " ORDER BY " + lq+"UserName"+rq;
+					+ " ORDER BY " + lq + "UserName" + rq;
 
 			try (PreparedStatement pstmt = conn.prepareStatement(sql);
 			     ResultSet rs = pstmt.executeQuery())
@@ -3130,7 +3130,7 @@ public class CentralPersistReader
 
 			String sql = "SELECT " + dbxCentralUsersSelectCols(lq, rq)
 					+ " FROM "  + tabName
-					+ " WHERE " + lq+"Email"+rq + " = ?";
+					+ " WHERE " + lq + "Email" + rq + " = ?";
 
 			try (PreparedStatement pstmt = conn.prepareStatement(sql))
 			{
@@ -3165,9 +3165,9 @@ public class CentralPersistReader
 
 			String sql = "SELECT " + dbxCentralUsersSelectCols(lq, rq)
 					+ " FROM "  + tabName
-					+ " WHERE " + lq+"Email"+rq + " IS NOT NULL AND " + lq+"Email"+rq + " <> ''"
-					+ "   AND " + lq+"Roles"+rq + " LIKE '%admin%'"
-					+ " ORDER BY " + lq+"UserName"+rq;
+					+ " WHERE " + lq + "Email" + rq + " IS NOT NULL AND " + lq + "Email" + rq + " <> ''"
+					+ "   AND " + lq + "Roles" + rq + " LIKE '%admin%'"
+					+ " ORDER BY " + lq + "UserName" + rq;
 
 			try (PreparedStatement pstmt = conn.prepareStatement(sql);
 			     ResultSet rs = pstmt.executeQuery())
@@ -3209,9 +3209,9 @@ public class CentralPersistReader
 					+ " ,[StringVal] \n"     
 					+ " ,[Description] \n"     
 					+ " ,[SqlTextExample] \n"
-					+" from [" + tabName + "] \n"
-					+" where 1 = 1 \n"
-					+andSrvName
+					+ " from [" + tabName + "] \n"
+					+ " where 1 = 1 \n"
+					+ andSrvName
 					+andClassName
 					+andEntryType
 					+ "order by [SrvName], [ClassName], [EntryType], [StringVal]"
@@ -3310,12 +3310,12 @@ public class CentralPersistReader
 
 			// Build SQL
 			String sql = "delete \n"
-					+" from [" + tabName + "] \n"
-					+" where 1 = 1 \n"
-					+"   and [SrvName]   = " + DbUtils.safeStr( srvName   ) + " \n"
-					+"   and [ClassName] = " + DbUtils.safeStr( className ) + " \n"
-					+"   and [EntryType] = " + DbUtils.safeStr( entryType ) + " \n"
-					+"   and [StringVal] = " + DbUtils.safeStr( stringVal ) + " \n"
+					+ " from [" + tabName + "] \n"
+					+ " where 1 = 1 \n"
+					+ "   and [SrvName]   = " + DbUtils.safeStr( srvName   ) + " \n"
+					+ "   and [ClassName] = " + DbUtils.safeStr( className ) + " \n"
+					+ "   and [EntryType] = " + DbUtils.safeStr( entryType ) + " \n"
+					+ "   and [StringVal] = " + DbUtils.safeStr( stringVal ) + " \n"
 					;
 			
 			sql = conn.quotifySqlString(sql);
@@ -3393,10 +3393,10 @@ public class CentralPersistReader
 				+ " ," + lq + "GraphProps"       + rq
 				+ " ," + lq + "GraphCategory"    + rq
 				+ " ," + lq + "isPercentGraph"   + rq
-				+" from " + tabName
-				+" where " + lq + "CmName"           + rq + " = '" + cmName + "'"
-				+"   and " + lq + "GraphName"        + rq + " = '" + graphName + "'"
-				+"   and " + lq + "SessionStartTime" + rq + " = (select max(" + lq + "SessionStartTime" + rq + ") from " + tabName + ")"
+				+ " from " + tabName
+				+ " where " + lq + "CmName"           + rq + " = '" + cmName + "'"
+				+ "   and " + lq + "GraphName"        + rq + " = '" + graphName + "'"
+				+ "   and " + lq + "SessionStartTime" + rq + " = (select max(" + lq + "SessionStartTime" + rq + ") from " + tabName + ")"
 				;
 
 			// autoclose: stmnt, rs
@@ -3574,8 +3574,8 @@ public class CentralPersistReader
 					threshold = sampleValue;
 				
 				sql = "select count(*) "
-						+" from " + tabName
-						+" where " + lq + "SessionSampleTime" + rq + " >= " + whereSessionSampleTime
+						+ " from " + tabName
+						+ " where " + lq + "SessionSampleTime" + rq + " >= " + whereSessionSampleTime
 						;
 				// autoclose: stmnt, rs
 				try (Statement stmnt = conn.createStatement())
@@ -3605,14 +3605,14 @@ public class CentralPersistReader
 					}
 				}
 				//System.out.println("GraphData AUTO... dataRowCount="+dataRowCount+", sampleType="+sampleType+", sampleValue="+sampleValue+" :::: for sessionName='"+sessionName+"', cmName='"+cmName+"', graphName='"+graphName+"'.");
-				_logger.debug("GraphData AUTO... dataRowCount="+dataRowCount+", sampleType="+sampleType+", sampleValue="+sampleValue+" :::: for sessionName='"+sessionName+"', cmName='"+cmName+"', graphName='"+graphName+"'.");
+				_logger.debug("GraphData AUTO... dataRowCount=" + dataRowCount + ", sampleType=" + sampleType + ", sampleValue=" + sampleValue + " :::: for sessionName='" + sessionName + "', cmName='" + cmName + "', graphName='" + graphName + "'.");
 			}
 
 
 			sql = "select * "
-					+" from " + tabName
-					+" where "    + lq + "SessionSampleTime" + rq + " >= " + whereSessionSampleTime
-					+" order by " + lq + "SessionSampleTime" + rq 
+					+ " from " + tabName
+					+ " where "    + lq + "SessionSampleTime" + rq + " >= " + whereSessionSampleTime
+					+ " order by " + lq + "SessionSampleTime" + rq 
 					;
 
 			// A Map that will indicate that ONLY NULL values was fetched from the database
@@ -4041,7 +4041,7 @@ public class CentralPersistReader
 					}
 					else
 					{
-						throw new RuntimeException("Reached un-determened code... The sampleType="+sampleType+" has not yet been implemeted, sampleValue="+sampleValue);
+						throw new RuntimeException("Reached un-determened code... The sampleType=" + sampleType + " has not yet been implemeted, sampleValue=" + sampleValue);
 					}
 				}
 			}
@@ -4049,12 +4049,12 @@ public class CentralPersistReader
 			// For debugging purposes
 			if (readCount == 0)
 			{
-				_logger.info("NO Records was found: getGraphData(sessionName='"+sessionName+"', cmName='"+cmName+"', graphName='"+graphName+"', startTime='"+startTime+"', endTime='"+endTime+"', sampleType="+sampleType+", sampleValue="+sampleValue+") SQL=|"+sql+"|, readCount="+readCount+", retListSize="+list.size());
+				_logger.info("NO Records was found: getGraphData(sessionName='" + sessionName + "', cmName='" + cmName + "', graphName='" + graphName + "', startTime='" + startTime + "', endTime='" + endTime + "', sampleType=" + sampleType + ", sampleValue=" + sampleValue + ") SQL=|" + sql + "|, readCount=" + readCount + ", retListSize=" + list.size());
 			}
 			
 //			System.out.println("getGraphData(sessionName='"+sessionName+"', cmName='"+cmName+"', graphName='"+graphName+"', startTime='"+startTime+"', endTime='"+endTime+"', sampleType="+sampleType+", sampleValue="+sampleValue+") SQL=|"+sql+"|, readCount="+readCount+", retListSize="+list.size());
 			if (_logger.isDebugEnabled())
-				_logger.debug("getGraphData(sessionName='"+sessionName+"', cmName='"+cmName+"', graphName='"+graphName+"', startTime='"+startTime+"', endTime='"+endTime+"', sampleType="+sampleType+", sampleValue="+sampleValue+") SQL=|"+sql+"|, readCount="+readCount+", retListSize="+list.size());
+				_logger.debug("getGraphData(sessionName='" + sessionName + "', cmName='" + cmName + "', graphName='" + graphName + "', startTime='" + startTime + "', endTime='" + endTime + "', sampleType=" + sampleType + ", sampleValue=" + sampleValue + ") SQL=|" + sql + "|, readCount=" + readCount + ", retListSize=" + list.size());
 
 
 			// Removing series/labels that ONLY hold NULL values in the database
@@ -4846,7 +4846,7 @@ public class CentralPersistReader
 			}
 			if (rowc != 1)
 			{
-				throw new SQLException("Expected to find 1 row, but "+rowc+" was returned using SQL: "+sqlGet);
+				throw new SQLException("Expected to find 1 row, but " + rowc + " was returned using SQL: " + sqlGet);
 			}
 			
 			int newStatus = 0;
@@ -4864,7 +4864,7 @@ public class CentralPersistReader
 			try (Statement stmnt = conn.createStatement())
 			{
 				int count = stmnt.executeUpdate(sqlApply);
-				_logger.info("Set Session status to "+newStatus+" for ServerName '"+name+"'. This affected "+count+" session rows. SQL Executed: "+sqlApply);
+				_logger.info("Set Session status to " + newStatus + " for ServerName '" + name + "'. This affected " + count + " session rows. SQL Executed: " + sqlApply);
 				return count;
 			}
 		}
@@ -4936,7 +4936,7 @@ public class CentralPersistReader
 						}
 						catch (IOException ex)
 						{
-							_logger.warn("Problems reading file '"+srvDescFile+"'. This is used to sort the 'sessions list'. Skipping this... Caught: "+ex);
+							_logger.warn("Problems reading file '" + srvDescFile + "'. This is used to sort the 'sessions list'. Skipping this... Caught: " + ex);
 						}
 						
 						// Sort if we have any entries

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -258,7 +258,7 @@ public class CounterControllerAse extends CounterControllerAbstract
 		if (! isCountersCreated())
 			createCounters(hasGui);
 		
-		_logger.info("Initializing all CM objects, using ASE server version number "+srvVersion+" ("+Ver.versionNumToStr(srvVersion)+"), isClusterEnabled="+isClusterEnabled+" with monTables Install version "+monTablesVersion+" ("+Ver.versionNumToStr(monTablesVersion)+").");
+		_logger.info("Initializing all CM objects, using ASE server version number " + srvVersion + " (" + Ver.versionNumToStr(srvVersion) + "), isClusterEnabled=" + isClusterEnabled + " with monTables Install version " + monTablesVersion + " (" + Ver.versionNumToStr(monTablesVersion) + ").");
 
 		// Get active ASE Roles
 		//List<String> activeRoleList = AseConnectionUtils.getActiveRoles(conn);
@@ -309,7 +309,7 @@ public class CounterControllerAse extends CounterControllerAbstract
 		// initialize all the CM's
 		for (CountersModel cm : getCmList())
 		{
-			_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using ASE server version number "+srvVersion+".");
+			_logger.debug("Initializing CM named '" + cm.getName() + "', display name '" + cm.getDisplayName() + "', using ASE server version number " + srvVersion + ".");
 
 			// set the version
 			cm.setServerVersion(monTablesVersion);
@@ -545,7 +545,7 @@ public class CounterControllerAse extends CounterControllerAbstract
 					// Msg 938: Database 'xxx' is unavailable. It is undergoing LOAD TRANSACTION.
 					if (code == 937 || code == 938)
 					{
-						_logger.debug("createPcsHeaderInfo(): Discarding Msg "+code+", Str '"+msgStr+"'.");
+						_logger.debug("createPcsHeaderInfo(): Discarding Msg " + code + ", Str '" + msgStr + "'.");
 						
 						return null; // do NOT threat this as an error... An exception will NOT be thrown to the caller
 					}
@@ -634,7 +634,7 @@ public class CounterControllerAse extends CounterControllerAbstract
 			if (StringUtil.isNullOrBlank(aseServerName)) aseServerName = "unknown";
 			if (StringUtil.isNullOrBlank(aseHostname))   aseHostname   = "unknown";
 			
-			_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static/saved values' (mainSampleTime='" + mainSampleTime + "', aseServerName='" + aseServerName + "', aseHostname='" + aseHostname + "', counterClearTime='" + counterClearTime + "'). SQL '"+sql+"', Caught: " + sqlex.toString() );
+			_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static/saved values' (mainSampleTime='" + mainSampleTime + "', aseServerName='" + aseServerName + "', aseHostname='" + aseHostname + "', counterClearTime='" + counterClearTime + "'). SQL '" + sql + "', Caught: " + sqlex.toString() );
 		}
 		finally
 		{
@@ -728,11 +728,11 @@ public class CounterControllerAse extends CounterControllerAbstract
 					rs.close();
 					stmt.close();
 	
-					_logger.debug("Checking for full transaction log in the master database. Results: isLogFull='"+isLogFull+"', spaceLeft='"+spaceLeft+"'.");
+					_logger.debug("Checking for full transaction log in the master database. Results: isLogFull='" + isLogFull + "', spaceLeft='" + spaceLeft + "'.");
 	
 					if (isLogFull > 0  ||  spaceLeft <= 50) // 50 pages, is 100K in a 2K ASE (well int's NOT MB at least)
 					{
-						_logger.warn("Truncating the transaction log in the master database. Issuing SQL 'dump tran master with truncate_only'. isLogFull='"+isLogFull+"', spaceLeftInPages='"+spaceLeft+"'.");
+						_logger.warn("Truncating the transaction log in the master database. Issuing SQL 'dump tran master with truncate_only'. isLogFull='" + isLogFull + "', spaceLeftInPages='" + spaceLeft + "'.");
 						stmt = conn.createStatement();
 						stmt.execute("dump tran master with truncate_only");
 						stmt.close();
@@ -745,13 +745,13 @@ public class CounterControllerAse extends CounterControllerAbstract
 									"<html>" +
 									"Transaction log in the master database has been <b>truncated</b>. <br>" +
 									"<br>" +
-									"Space left in the master database transaction log was: spaceLeftInPages='"+spaceLeft+"'.<br>" +
+									"Space left in the master database transaction log was: spaceLeftInPages='" + spaceLeft + "'.<br>" +
 									"If the transaction log in the master database becomes full, the system <i>could</i> <b>halt</b>...<br>" +
 									"<br>" +
 									"SQL Issued: <code>dump tran master with truncate_only</code><br>" +
 									"</html>",
 									JOptionPane.INFORMATION_MESSAGE);
-							JDialog dialog = optionPane.createDialog(MainFrame.getInstance(), "ASE master transaction log was truncated @ "+dateStr);
+							JDialog dialog = optionPane.createDialog(MainFrame.getInstance(), "ASE master transaction log was truncated @ " + dateStr);
 							dialog.setModal(false);
 							dialog.setVisible(true);
 						}
@@ -976,7 +976,7 @@ public class CounterControllerAse extends CounterControllerAbstract
 
 		
 		// EXTRACT
-		_logger.info("On PCS Database Rollover: Extracting 'Backup History' information On server '" + srvName+ "'.");
+		_logger.info("On PCS Database Rollover: Extracting 'Backup History' information On server '" + srvName + "'.");
 		try
 		{
 			AseBackupHistoryExtractor extractor = new AseBackupHistoryExtractor(daysToCopy, conn, pcsConn);
@@ -1021,7 +1021,7 @@ public class CounterControllerAse extends CounterControllerAbstract
 				_logger.info("Adding jConnect JDBC connection property 'ENCRYPT_PASSWORD=true'");
 			}
 			
-			Connection jdbcConn = AseConnectionFactory.getConnection(dbmsHostPortStr, null, dbmsUsername, dbmsPassword, Version.getAppName()+"-nogui", Version.getVersionStr(), null, props, null);
+			Connection jdbcConn = AseConnectionFactory.getConnection(dbmsHostPortStr, null, dbmsUsername, dbmsPassword, Version.getAppName() + "-nogui", Version.getVersionStr(), null, props, null);
 			DbxConnection conn = DbxConnection.createDbxConnection(jdbcConn);
 
 			// set the connection props so it can be reused...
@@ -1054,7 +1054,7 @@ public class CounterControllerAse extends CounterControllerAbstract
 					} 
 					catch(Exception e) 
 					{
-						_logger.error("Problems getting a new connection. Caught: "+e, e);
+						_logger.error("Problems getting a new connection. Caught: " + e, e);
 						return null;
 					}
 				}
@@ -1108,15 +1108,15 @@ public class CounterControllerAse extends CounterControllerAbstract
 		catch (SQLException e)
 		{
 			String msg = AseConnectionUtils.getMessageFromSQLException(e, false); 
-			_logger.error("Problems when connecting to a ASE Server. "+msg);
+			_logger.error("Problems when connecting to a ASE Server. " + msg);
 
 			// JZ00L: Login failed
 			if (e.getSQLState().equals("JZ00L"))
 			{
-				_logger.error("Faulty PASSWORD when connecting to the server '"+dbmsServer+"' at '"+dbmsHostPortStr+"', with user '"+dbmsUsername+"', I cant recover from this... exiting...");
+				_logger.error("Faulty PASSWORD when connecting to the server '" + dbmsServer + "' at '" + dbmsHostPortStr + "', with user '" + dbmsUsername + "', I cant recover from this... exiting...");
 
 				// STOP: throw Exception() will case use to "stop/exit"
-				throw new Exception("Faulty PASSWORD when connecting to the server '"+dbmsServer+"' at '"+dbmsHostPortStr+"', with user '"+dbmsUsername+"', I cant recover from this... exiting...");
+				throw new Exception("Faulty PASSWORD when connecting to the server '" + dbmsServer + "' at '" + dbmsHostPortStr + "', with user '" + dbmsUsername + "', I cant recover from this... exiting...");
 			}
 			
 			_logger.info("Connection failed, right now... A new connection attempt will done soon...");
@@ -1124,10 +1124,10 @@ public class CounterControllerAse extends CounterControllerAbstract
 		}
 		catch (Exception e)
 		{
-			_logger.error("Problems when connecting to a ASE Server. Caught: "+e);
+			_logger.error("Problems when connecting to a ASE Server. Caught: " + e);
 
 			// STOP: throw Exception() will case use to "stop/exit"
-			throw new Exception("Problems when connecting to a ASE Server. Caught: "+e, e);
+			throw new Exception("Problems when connecting to a ASE Server. Caught: " + e, e);
 		}
 //		// we should never get here
 //		throw new Exception("We should never get here...");

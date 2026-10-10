@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -45,7 +45,7 @@ extends CompletionProviderAbstractSql
 
 	public static CompletionProviderAbstract installAutoCompletion(TextEditorPane textPane, RTextScrollPane scroll, ErrorStrip errorStrip, Window window, ConnectionProvider connectionProvider)
 	{
-		_logger.info("Installing Syntax and AutoCompleation for JDBC ("+SyntaxConstants.SYNTAX_STYLE_SQL+").");
+		_logger.info("Installing Syntax and AutoCompleation for JDBC (" + SyntaxConstants.SYNTAX_STYLE_SQL + ").");
 		textPane.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
 
 		CompletionProviderAbstract acProvider = createCompletionProvider(window, connectionProvider);

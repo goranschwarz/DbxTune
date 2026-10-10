@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -158,7 +158,7 @@ public class GInputValidator
 				_isValid = false;
 				_txt.setBorder(_errorBorder);
 				
-				String msg = "<html>Validation error: <b>Value did not pass validation</b><br><pre>"+ex.getMessage()+"</pre></html>";
+				String msg = "<html>Validation error: <b>Value did not pass validation</b><br><pre>" + ex.getMessage() + "</pre></html>";
 				_txt.setToolTipText(msg);
 				if (_showBaloonToolTip)
 				{
@@ -219,7 +219,7 @@ public class GInputValidator
 		public boolean isValid(String val) throws ValidationException
 		{
 			try { Pattern.compile(val); }
-			catch(PatternSyntaxException ex) { throw new ValidationException("The RegExp '"+val+"' seems to be faulty. Caught: "+ex.getMessage()); }
+			catch(PatternSyntaxException ex) { throw new ValidationException("The RegExp '" + val + "' seems to be faulty. Caught: " + ex.getMessage()); }
 			return true;
 		}
 	}
@@ -232,7 +232,7 @@ public class GInputValidator
 		public boolean isValid(String val) throws ValidationException
 		{
 			try { new URL(val); }
-			catch(MalformedURLException ex) { throw new ValidationException("The URL '"+val+"' seems to be malformed. Caught: "+ex.getMessage()); }
+			catch(MalformedURLException ex) { throw new ValidationException("The URL '" + val + "' seems to be malformed. Caught: " + ex.getMessage()); }
 			return true;
 		}
 	}
@@ -244,7 +244,7 @@ public class GInputValidator
 		public boolean isValid(String val) throws ValidationException
 		{
 			try { Gson gson = new Gson(); gson.fromJson(val, Object.class); }
-			catch(JsonSyntaxException ex) { throw new ValidationException("The JSON content seems to be faulty. Caught: "+ex.getMessage()); }
+			catch(JsonSyntaxException ex) { throw new ValidationException("The JSON content seems to be faulty. Caught: " + ex.getMessage()); }
 			return true;
 		}
 	}
@@ -257,7 +257,7 @@ public class GInputValidator
 		public boolean isValid(String val) throws ValidationException
 		{
 			try { Integer.parseInt(val); }
-			catch(NumberFormatException ex) { throw new ValidationException("The value '"+val+"' is not a valid Integer: "+ex.getMessage()); }
+			catch(NumberFormatException ex) { throw new ValidationException("The value '" + val + "' is not a valid Integer: " + ex.getMessage()); }
 			return true;
 		}
 	}
@@ -270,7 +270,7 @@ public class GInputValidator
 		public boolean isValid(String val) throws ValidationException
 		{
 			try { new SimpleDateFormat(val); }
-			catch(IllegalArgumentException ex) { throw new ValidationException("The value '"+val+"' is not a valid SimpleDateFormat: "+ex.getMessage()); }
+			catch(IllegalArgumentException ex) { throw new ValidationException("The value '" + val + "' is not a valid SimpleDateFormat: " + ex.getMessage()); }
 			return true;
 		}
 	}
@@ -290,11 +290,11 @@ public class GInputValidator
 
 				// MAP-KEY: Check key (if it passes regexp check) 
 				try { Pattern.compile(mapKey); }
-				catch(PatternSyntaxException ex) { throw new ValidationException("The RegExp '"+mapVal+"' seems to be faulty, for key '"+mapKey+"'. Caught: "+ex.getMessage()); }
+				catch(PatternSyntaxException ex) { throw new ValidationException("The RegExp '" + mapVal + "' seems to be faulty, for key '" + mapKey + "'. Caught: " + ex.getMessage()); }
 
 				// MAP-VAL: Check number
 				try { NumberUtils.createNumber(mapVal); }
-				catch (NumberFormatException ex) { throw new ValidationException("The number value '"+mapVal+"' is not a number for key '"+mapKey+"'. Caught: "+ex.getMessage()); }
+				catch (NumberFormatException ex) { throw new ValidationException("The number value '" + mapVal + "' is not a number for key '" + mapKey + "'. Caught: " + ex.getMessage()); }
 			}
 			
 			return true;

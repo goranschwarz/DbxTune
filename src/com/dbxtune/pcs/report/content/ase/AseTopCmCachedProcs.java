@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -289,8 +289,8 @@ public class AseTopCmCachedProcs extends AseAbstract
 		// So DO NOT TRUST NEWLY created PlanID's 
 		// Although this can create statistical problems:
 		//   - if a procedure is *constantly* recompiled (due to "whatever" reason), those procedures will be discarded from below report
-		boolean skipNewDiffRateRows    = localConf.getBooleanProperty(this.getClass().getSimpleName()+".skipNewDiffRateRows", false);
-		boolean hasSkipNewDiffRateRows = localConf.hasProperty(       this.getClass().getSimpleName()+".skipNewDiffRateRows");
+		boolean skipNewDiffRateRows    = localConf.getBooleanProperty(this.getClass().getSimpleName() + ".skipNewDiffRateRows", false);
+		boolean hasSkipNewDiffRateRows = localConf.hasProperty(       this.getClass().getSimpleName() + ".skipNewDiffRateRows");
 
 		// try to figure out if we have *new* diff values that exceeds (using column 'ExecutionCount')
 		if ( ! hasSkipNewDiffRateRows )
@@ -403,7 +403,7 @@ public class AseTopCmCachedProcs extends AseAbstract
 		String col_ExecutionTime__sum             = !dummyRstm.hasColumnNoCase("ExecutionTime"           ) ? "" : "    ,sum([ExecutionTime])         as [ExecutionTime__sum]          \n"; 
 		String col_PhysicalReads__sum             = !dummyRstm.hasColumnNoCase("PhysicalReads"           ) ? "" : "    ,sum([PhysicalReads])         as [PhysicalReads__sum]          \n"; 
 		String col_LogicalReads__sum              = !dummyRstm.hasColumnNoCase("LogicalReads"            ) ? "" : "    ,sum([LogicalReads])          as [LogicalReads__sum]           \n"; 
-		String col_LogicalReadsMb__sum            = !dummyRstm.hasColumnNoCase("LogicalReads"            ) ? "" : "    ,sum([LogicalReads])*1.0/"+asePageSizeDivider+" as [LogicalReadsMb__sum]         \n"; 
+		String col_LogicalReadsMb__sum            = !dummyRstm.hasColumnNoCase("LogicalReads"            ) ? "" : "    ,sum([LogicalReads])*1.0/" + asePageSizeDivider + " as [LogicalReadsMb__sum]         \n"; 
 		String col_PhysicalWrites__sum            = !dummyRstm.hasColumnNoCase("PhysicalWrites"          ) ? "" : "    ,sum([PhysicalWrites])        as [PhysicalWrites__sum]         \n"; 
 		String col_PagesWritten__sum              = !dummyRstm.hasColumnNoCase("PagesWritten"            ) ? "" : "    ,sum([PagesWritten])          as [PagesWritten__sum]           \n"; 
 		String col_SnapExecutionCount__sum        = !dummyRstm.hasColumnNoCase("SnapExecutionCount"      ) ? "" : "    ,sum([SnapExecutionCount])    as [SnapExecutionCount__sum]     \n"; 
@@ -418,7 +418,7 @@ public class AseTopCmCachedProcs extends AseAbstract
 		String col_ExecutionTime__avg             = !dummyRstm.hasColumnNoCase("ExecutionTime"           ) ? "" : "    ,cast( sum([ExecutionTime])      * 1.0 / nullif(sum([ExecutionCount]), 0)    as numeric(19,1)) as [ExecutionTime__avg]          \n"; 
 		String col_PhysicalReads__avg             = !dummyRstm.hasColumnNoCase("PhysicalReads"           ) ? "" : "    ,cast( sum([PhysicalReads])      * 1.0 / nullif(sum([ExecutionCount]), 0)    as numeric(19,1)) as [PhysicalReads__avg]          \n"; 
 		String col_LogicalReads__avg              = !dummyRstm.hasColumnNoCase("LogicalReads"            ) ? "" : "    ,cast( sum([LogicalReads])       * 1.0 / nullif(sum([ExecutionCount]), 0)    as numeric(19,1)) as [LogicalReads__avg]           \n"; 
-		String col_LogicalReadsMb__avg            = !dummyRstm.hasColumnNoCase("LogicalReads"            ) ? "" : "    ,cast( sum([LogicalReads])*1.0/"+asePageSizeDivider+" / nullif(sum([ExecutionCount]), 0) as numeric(19,1)) as [LogicalReadsMb__avg]           \n"; 
+		String col_LogicalReadsMb__avg            = !dummyRstm.hasColumnNoCase("LogicalReads"            ) ? "" : "    ,cast( sum([LogicalReads])*1.0/" + asePageSizeDivider + " / nullif(sum([ExecutionCount]), 0) as numeric(19,1)) as [LogicalReadsMb__avg]           \n"; 
 		String col_PhysicalWrites__avg            = !dummyRstm.hasColumnNoCase("PhysicalWrites"          ) ? "" : "    ,cast( sum([PhysicalWrites])     * 1.0 / nullif(sum([ExecutionCount]), 0)    as numeric(19,1)) as [PhysicalWrites__avg]         \n"; 
 		String col_PagesWritten__avg              = !dummyRstm.hasColumnNoCase("PagesWritten"            ) ? "" : "    ,cast( sum([PagesWritten])       * 1.0 / nullif(sum([ExecutionCount]), 0)    as numeric(19,1)) as [PagesWritten__avg]           \n"; 
 		String col_SnapExecutionCount__avg        = !dummyRstm.hasColumnNoCase("SnapExecutionCount"      ) ? "" : "    ,cast( sum([SnapExecutionCount]) * 1.0 / nullif(sum([ExecutionCount]), 0)    as numeric(19,1)) as [SnapExecutionCount__avg]     \n"; 
@@ -754,7 +754,7 @@ public class AseTopCmCachedProcs extends AseAbstract
 						.setHtmlWhereKeyColumnName   (whereKeyColumn)
 						.setDbmsTableName            ("CmCachedProcs_diff")
 						.setDbmsSampleTimeColumnName ("SessionSampleTime")
-						.setDbmsDataValueColumnName  ("sum([LogicalReads])*1.0/"+asePageSizeDivider+" / nullif(sum([ExecutionCount]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(1)
+						.setDbmsDataValueColumnName  ("sum([LogicalReads])*1.0/" + asePageSizeDivider + " / nullif(sum([ExecutionCount]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(1)
 						.setDbmsWhereKeyColumnName   (whereKeyColumn)
 						.setDbmsExtraWhereClause     (whereFilter_skipNewDiffRateRows)
 						.validate()));

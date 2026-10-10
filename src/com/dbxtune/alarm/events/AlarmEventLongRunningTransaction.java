@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -40,7 +40,7 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
-				"Found Long running transaction in '" + cm.getServerName() + "'. DBName='" + dbname + "', Seconds=" + oldestTranInSeconds + ", SPID=" + spid + ", tranName='" + tranName + "', cmd='" + tranCmd + "', waitType='" + waitType + "', login='" + loginName + "', tempdbUsageMb=" + tempdbUsageMb + ". (thresholdInSec="+thresholdInSec+")",
+				"Found Long running transaction in '" + cm.getServerName() + "'. DBName='" + dbname + "', Seconds=" + oldestTranInSeconds + ", SPID=" + spid + ", tranName='" + tranName + "', cmd='" + tranCmd + "', waitType='" + waitType + "', login='" + loginName + "', tempdbUsageMb=" + tempdbUsageMb + ". (thresholdInSec=" + thresholdInSec + ")",
 				thresholdInSec);
 
 		// Adjust the Alarm Full Duration with X seconds
@@ -63,7 +63,7 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
-				"Found Long running transaction in '" + cm.getServerName() + "', dbname='" + dbname +"'. Seconds=" + oldestTranInSeconds + ", TranName='"+StringUtils.trim(oldestTranName)+"'. (thresholdInSec="+thresholdInSec+")",
+				"Found Long running transaction in '" + cm.getServerName() + "', dbname='" + dbname + "'. Seconds=" + oldestTranInSeconds + ", TranName='" + StringUtils.trim(oldestTranName) + "'. (thresholdInSec=" + thresholdInSec + ")",
 				thresholdInSec);
 
 		// Adjust the Alarm Full Duration with X seconds

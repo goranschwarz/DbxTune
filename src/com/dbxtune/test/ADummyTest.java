@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -35,8 +35,8 @@ public class ADummyTest
 			colModifier = colName.substring(colNameSepPos + 1);
 			colName     = colName.substring(0, colNameSepPos);
 		}
-		System.out.println("colName    ='"+colName+"'.");
-		System.out.println("colModifier='"+colModifier+"'.");
+		System.out.println("colName    ='" + colName + "'.");
+		System.out.println("colModifier='" + colModifier + "'.");
 
 
 		//xxx: get/set last file choosen...action in some way...
@@ -52,13 +52,13 @@ public class ADummyTest
 	public static void testUrl(String url)
 	{
 		System.out.println("-------------------------------------------------------------");
-		System.out.println("INPUT url='"+url+"'.");
+		System.out.println("INPUT url='" + url + "'.");
 
 		H2UrlHelper h = new H2UrlHelper(url);
-		System.out.println("h.getRawFileString() = '"+h.getRawFileString()        +"'.");
-		System.out.println("h.getFile()          = '"+h.getFile()                 +"'.");
-		System.out.println("h.getDir()           = '"+h.getDir()                  +"'.");
-		System.out.println("h.getDir(def)        = '"+h.getDir("c:/tmp") +"'.");
+		System.out.println("h.getRawFileString() = '" + h.getRawFileString()        + "'.");
+		System.out.println("h.getFile()          = '" + h.getFile()                 + "'.");
+		System.out.println("h.getDir()           = '" + h.getDir()                  + "'.");
+		System.out.println("h.getDir(def)        = '" + h.getDir("c:/tmp") + "'.");
 
 //		ConnectionInfo ci = new ConnectionInfo(url, new Properties());
 //		System.out.println("getUrl         = '"+ci.getURL()         +"'.");

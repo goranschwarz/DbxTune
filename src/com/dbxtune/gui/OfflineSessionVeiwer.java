@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -463,9 +463,9 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 	*/
 	private void setLevelCbx()
 	{
-		_day_cbx   .setSelectedItem(""+_dayLevel);
-		_hour_cbx  .setSelectedItem(""+_hourLevel);
-		_minute_cbx.setSelectedItem(""+_minuteLevel);
+		_day_cbx   .setSelectedItem("" + _dayLevel);
+		_hour_cbx  .setSelectedItem("" + _hourLevel);
+		_minute_cbx.setSelectedItem("" + _minuteLevel);
 	}
 	private void getLevelCbx()
 	{
@@ -635,7 +635,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 		}
 		catch(SQLException ex) 
 		{
-			_logger.info("Initialization of the DBMS Configuration did not succeed. Caught: "+ex); 
+			_logger.info("Initialization of the DBMS Configuration did not succeed. Caught: " + ex); 
 		}
 
 		// load the column tool tip (if any was saved)
@@ -659,7 +659,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 	{
 		int row = _treeTable.getSelectedRow();
 		Object o = _treeTable.getValueAt(row, 0);
-		_logger.info("SHOW_BUT was pressed, currentRow="+row+", value='"+o+"'.");
+		_logger.info("SHOW_BUT was pressed, currentRow=" + row + ", value='" + o + "'.");
 
 		PersistReader reader = PersistReader.getInstance();
 		if (reader == null)
@@ -752,7 +752,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 			}
 			catch(SQLException ex) 
 			{
-				_logger.info("Initialization of the DBMS Configuration did not succeed. Caught: "+ex); 
+				_logger.info("Initialization of the DBMS Configuration did not succeed. Caught: " + ex); 
 			}
 		}
 		
@@ -781,17 +781,17 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 				String msg = 
 					"<HTML>" +
 					"<TABLE BORDER=0 CELLSPACING=0 CELLPADDING=1>" +
-					"   <TR> <TD><B>Name:            <B>&nbsp;</TD> <TD>"+ monVersionInfo._productString +"</TD> </TR>" +
+					"   <TR> <TD><B>Name:            <B>&nbsp;</TD> <TD>" + monVersionInfo._productString + "</TD> </TR>" +
 					"   <TR> <TD><B>                 <B>&nbsp;</TD> <TD></TD> </TR>" +
-					"   <TR> <TD><B>Version:         <B>&nbsp;</TD> <TD>"+ monVersionInfo._versionString +"</TD> </TR>" +
-					"   <TR> <TD><B>Build:           <B>&nbsp;</TD> <TD>"+ monVersionInfo._buildString   +"</TD> </TR>" +
+					"   <TR> <TD><B>Version:         <B>&nbsp;</TD> <TD>" + monVersionInfo._versionString + "</TD> </TR>" +
+					"   <TR> <TD><B>Build:           <B>&nbsp;</TD> <TD>" + monVersionInfo._buildString   + "</TD> </TR>" +
 					"   <TR> <TD><B>                 <B>&nbsp;</TD> <TD></TD> </TR>" +
-					"   <TR> <TD><B>Source Date:     <B>&nbsp;</TD> <TD>"+ monVersionInfo._sourceDate    +"</TD> </TR>" +
-					"   <TR> <TD><B>Source Revision: <B>&nbsp;</TD> <TD>"+ monVersionInfo._sourceRev     +"</TD> </TR>" +
+					"   <TR> <TD><B>Source Date:     <B>&nbsp;</TD> <TD>" + monVersionInfo._sourceDate    + "</TD> </TR>" +
+					"   <TR> <TD><B>Source Revision: <B>&nbsp;</TD> <TD>" + monVersionInfo._sourceRev     + "</TD> </TR>" +
 //					"   <TR> <TD><B>DB Product Name: <B>&nbsp;</TD> <TD>"+ monVersionInfo._dbProductName +"</TD> </TR>" +
 					"</TABLE>" +
 					"</HTML>";
-				SwingUtils.showInfoMessage(this, Version.getAppName()+" Version used when storing counters", msg);
+				SwingUtils.showInfoMessage(this, Version.getAppName() + " Version used when storing counters", msg);
 			}
 		}
 	}
@@ -1198,7 +1198,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 			if (e.getKeyCode() == KeyEvent.VK_ENTER)
 			{
 				int row = _treeTable.getSelectedRow();
-				_logger.info("<---RETURN---> was pressed, currentRow="+row+", value='"+_treeTable.getValueAt(row, 0)+"'.");
+				_logger.info("<---RETURN---> was pressed, currentRow=" + row + ", value='" + _treeTable.getValueAt(row, 0) + "'.");
 				
 				doActionShow();
 			}

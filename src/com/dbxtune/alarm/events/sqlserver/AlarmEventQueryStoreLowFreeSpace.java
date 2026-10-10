@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -56,7 +56,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SPACE,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Low Free Space in Query Store (" + type + ") in Server '" + cm.getServerName() + "' and dbname '" + dbname + "', UsedSpaceInPct="+qsUsedSpaceInPct+", FreeSpaceInMB="+qsFreeSpaceInMb+", UsedSpaceInMb="+qsUsedSpaceInMb+", MaxSizeInMb="+qsMaxSizeInMb+". (thresholdInPct="+threshold+")",
+				"Low Free Space in Query Store (" + type + ") in Server '" + cm.getServerName() + "' and dbname '" + dbname + "', UsedSpaceInPct=" + qsUsedSpaceInPct + ", FreeSpaceInMB=" + qsFreeSpaceInMb + ", UsedSpaceInMb=" + qsUsedSpaceInMb + ", MaxSizeInMb=" + qsMaxSizeInMb + ". (thresholdInPct=" + threshold + ")",
 				threshold
 				);
 
@@ -64,6 +64,6 @@ extends AlarmEvent
 		setTimeToLive(cm);
 
 		// Set the raw data 
-		setData("dbname '" + dbname + "', UsedSpaceInPct="+qsUsedSpaceInPct+", FreeSpaceInMB="+qsFreeSpaceInMb+", UsedSpaceInMb="+qsUsedSpaceInMb+", MaxSizeInMb="+qsMaxSizeInMb);
+		setData("dbname '" + dbname + "', UsedSpaceInPct=" + qsUsedSpaceInPct + ", FreeSpaceInMB=" + qsFreeSpaceInMb + ", UsedSpaceInMb=" + qsUsedSpaceInMb + ", MaxSizeInMb=" + qsMaxSizeInMb);
 	}
 }

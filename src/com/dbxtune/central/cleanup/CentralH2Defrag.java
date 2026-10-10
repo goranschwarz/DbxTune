@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -110,7 +110,7 @@ extends Task
 		String url = connProps.getUrl();
 		if ( url != null && ! url.startsWith("jdbc:h2:") )
 		{
-			_logger.info("Skipping H2 Shutdown Defrag, the database is not H2, url must start with 'jdbc:h2:'. Current URL='"+url+"'.");
+			_logger.info("Skipping H2 Shutdown Defrag, the database is not H2, url must start with 'jdbc:h2:'. Current URL='" + url + "'.");
 			return;
 		}
 		
@@ -123,7 +123,7 @@ extends Task
 		File dbFile = urlHelper.getDbFile();
 		if (dbFile == null)
 		{
-			_logger.info("Skipping H2 Shutdown Defrag, can't extract H2 database file from the URL '"+url+"'. If the URL contains a filename, the file might not exist.");
+			_logger.info("Skipping H2 Shutdown Defrag, can't extract H2 database file from the URL '" + url + "'. If the URL contains a filename, the file might not exist.");
 			return;
 		}
 		else
@@ -191,7 +191,7 @@ extends Task
 				shutdownConfig.setProperty("h2.shutdown.type", H2ShutdownType.DEFRAG.toString());  // DEFAULT, IMMEDIATELY, COMPACT, DEFRAG
 
 				boolean doRestart = true;
-				String reason = "Restart (with DEFRAG) Requested from "+CentralH2Defrag.class.getSimpleName()+".";
+				String reason = "Restart (with DEFRAG) Requested from " + CentralH2Defrag.class.getSimpleName() + ".";
 				ShutdownHandler.shutdown(reason, doRestart, shutdownConfig);
 			}
 			catch (Exception e)
@@ -217,7 +217,7 @@ extends Task
 		H2StorageInfo savedInfo = new H2StorageInfo(dbFileSizeMb, h2DbFilename);
 		
 		File h2StorageInfoFile = new File(H2_STORAGE_INFO_FILENAME);
-		_logger.info("Saving H2 storage information to file '"+h2StorageInfoFile+"'. dbFileSizeMb="+dbFileSizeMb);
+		_logger.info("Saving H2 storage information to file '" + h2StorageInfoFile + "'. dbFileSizeMb=" + dbFileSizeMb);
 
 		try
 		{
@@ -227,7 +227,7 @@ extends Task
 		}
 		catch (Exception e) 
 		{
-			_logger.warn("Problems writing file '"+h2StorageInfoFile+"', continuing anyway. Caught: "+e);
+			_logger.warn("Problems writing file '" + h2StorageInfoFile + "', continuing anyway. Caught: " + e);
 		}
 	}
 
@@ -248,7 +248,7 @@ extends Task
 			}
 			catch (Exception e) 
 			{
-				_logger.warn("Problems reading file '"+h2StorageInfoFile+"', continuing anyway. Caught: "+e);
+				_logger.warn("Problems reading file '" + h2StorageInfoFile + "', continuing anyway. Caught: " + e);
 			}
 		}
 		return savedInfo;
@@ -289,7 +289,7 @@ extends Task
 		@Override
 		public String toString()
 		{
-			return "fileSizeMb="+fileSizeMb+", atDateStr='"+atDateStr+"'";
+			return "fileSizeMb=" + fileSizeMb + ", atDateStr='" + atDateStr + "'";
 		}
 	}
 }

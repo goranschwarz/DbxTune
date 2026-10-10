@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -148,7 +148,7 @@ public class IqLogParser
 
 		try
 		{
-			System.out.println("Opening file: "+file);
+			System.out.println("Opening file: " + file);
 			FileReader fileReader = new FileReader(new File(file));
 			BufferedReader br = new BufferedReader(fileReader);
 
@@ -384,7 +384,7 @@ public class IqLogParser
 			br.close();
 			fileReader.close();
 
-			System.out.println("Done Parsing file: "+file);
+			System.out.println("Done Parsing file: " + file);
 		}
 		catch(IOException e)
 		{
@@ -453,12 +453,12 @@ public class IqLogParser
 	{
 		ps.append("=======================================================================================\n");
 		ps.append("IQ Log Report:\n");
-		ps.append("File:     "+_currentFile).append("\n");
+		ps.append("File:     " + _currentFile).append("\n");
 //		ps.append("Start:    "+_dateFormat.format(_startTime)).append("\n");
 //		ps.append("End:      "+_dateFormat.format(_endTime)).append("\n");
-		ps.append("Start:    "+TimeUtils.toString(_startTime)).append("\n");
-		ps.append("End:      "+TimeUtils.toString(_endTime)).append("\n");
-		ps.append("Duration: "+msToTimeStr("%HH:%MM", _endTime.getTime() - _startTime.getTime()) + "    (HH:MM)").append("\n");
+		ps.append("Start:    " + TimeUtils.toString(_startTime)).append("\n");
+		ps.append("End:      " + TimeUtils.toString(_endTime)).append("\n");
+		ps.append("Duration: " + msToTimeStr("%HH:%MM", _endTime.getTime() - _startTime.getTime()) + "    (HH:MM)").append("\n");
 		ps.append("=======================================================================================\n");
 		ps.append("\n");
 		
@@ -481,14 +481,14 @@ public class IqLogParser
 			StringBuilder section = new StringBuilder();
 			section.append("\n");
 			section.append("#######################################################################################\n");
-			section.append("Start='"+_dateFormat.format(connLvl._startTime)+"', end='"+_dateFormat.format(connLvl._endTime)+"', length(HH:MM)='"+msToTimeStr("%HH:%MM", connLvl._endTime.getTime() - connLvl._startTime.getTime())+"'.\n");
+			section.append("Start='" + _dateFormat.format(connLvl._startTime) + "', end='" + _dateFormat.format(connLvl._endTime) + "', length(HH:MM)='" + msToTimeStr("%HH:%MM", connLvl._endTime.getTime() - connLvl._startTime.getTime()) + "'.\n");
 			section.append("User='").append(connLvl.getUser()).append("', ConnID='").append(connLvl._connId).append("'.\n");
 
 			if (_cmdLineOpt._topRows > 0 && _cmdLineOpt._topRows != Integer.MAX_VALUE)
 				section.append("Only top=").append(_cmdLineOpt._topRows).append(" will be presented.\n");
 
 			if (connLvl._cancelReqCnt > 0)
-				section.append("Cancel Requests="+connLvl._cancelReqCnt+"\n");
+				section.append("Cancel Requests=" + connLvl._cancelReqCnt + "\n");
 
 			Operation rsLastCommit = null;
 			for (Operation op : opList)
@@ -497,9 +497,9 @@ public class IqLogParser
 				{
 					if (rsLastCommit != null)
 					{
-						section.append("WARNING: we seems to have more than 1 entry for 'rs_lastcommit' for section '"+key+"'.\n");
-						section.append("     rsLastCommit: "+rsLastCommit+"\n");
-						section.append("               op: "+op+"\n");
+						section.append("WARNING: we seems to have more than 1 entry for 'rs_lastcommit' for section '" + key + "'.\n");
+						section.append("     rsLastCommit: " + rsLastCommit + "\n");
+						section.append("               op: " + op + "\n");
 					}
 					rsLastCommit = op;
 				}
@@ -586,7 +586,7 @@ public class IqLogParser
 
 				ps.append("\n");
 				ps.append("#######################################################################################\n");
-				ps.append("User='").append(connLvl.getUser()).append("', ConnID='").append(connLvl._connId).append("', QueryPlanCount=").append(connLvl.getQueryPlanCount()+"").append(".\n");
+				ps.append("User='").append(connLvl.getUser()).append("', ConnID='").append(connLvl._connId).append("', QueryPlanCount=").append(connLvl.getQueryPlanCount() + "").append(".\n");
 				ps.append("#######################################################################################\n");
 				for (QueryPlan qplan : connLvl.getQueryPlanList())
 				{
@@ -600,10 +600,10 @@ public class IqLogParser
 		ps.append("=======================================================================================\n");
 		ps.append("--END-OF-REPORT--:\n");
 		ps.append("=======================================================================================\n");
-		ps.append("File:     "+_currentFile).append("\n");
-		ps.append("Start:    "+_dateFormat.format(_startTime)).append("\n");
-		ps.append("End:      "+_dateFormat.format(_endTime)).append("\n");
-		ps.append("Duration: "+msToTimeStr("%HH:%MM", _endTime.getTime() - _startTime.getTime()) + "    (HH:MM)").append("\n");
+		ps.append("File:     " + _currentFile).append("\n");
+		ps.append("Start:    " + _dateFormat.format(_startTime)).append("\n");
+		ps.append("End:      " + _dateFormat.format(_endTime)).append("\n");
+		ps.append("Duration: " + msToTimeStr("%HH:%MM", _endTime.getTime() - _startTime.getTime()) + "    (HH:MM)").append("\n");
 		ps.append("=======================================================================================\n");
 		ps.append("\n");
 	}
@@ -740,7 +740,7 @@ public class IqLogParser
 		public void setUser(String user)
 		{
 			if ( _user != null && !_user.equals(user) && !_user.startsWith("--"))
-				System.out.println("ConnLevelInfo: _connId='', is already assigned a user with name '"+_user+"', this will be overwritten with the new name '"+user+"'.");
+				System.out.println("ConnLevelInfo: _connId='', is already assigned a user with name '" + _user + "', this will be overwritten with the new name '" + user + "'.");
 			_user = user;
 		}
 
@@ -856,7 +856,7 @@ public class IqLogParser
 			if (opStr.equalsIgnoreCase("Delete"))  return OpType.DELETE;
 			if (opStr.equalsIgnoreCase("summary")) return OpType.SUMMARY;
 
-			throw new RuntimeException("Uknown operation '"+opStr+"'.");
+			throw new RuntimeException("Uknown operation '" + opStr + "'.");
 		}
 
 		public void summary(Operation op)
@@ -1019,7 +1019,7 @@ public class IqLogParser
 			}
 			catch (FileNotFoundException e)
 			{
-				System.err.println("Problems opening the output file '"+cmdLineOptions._outfile+"', Caught: "+e);
+				System.err.println("Problems opening the output file '" + cmdLineOptions._outfile + "', Caught: " + e);
 				e.printStackTrace();
 				return;
 			}

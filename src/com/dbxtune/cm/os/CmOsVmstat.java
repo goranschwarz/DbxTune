@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -67,7 +67,7 @@ extends CounterModelHostMonitor
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_HOST_MONITOR;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -84,7 +84,7 @@ extends CounterModelHostMonitor
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmOsVmstat(counterController, guiController);
 	}
@@ -136,7 +136,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_PROCS_USAGE,
 			"vmstat: Processes Usage",                                // Menu CheckBox text
-			"vmstat: Processes Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"vmstat: Processes Usage (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -149,7 +149,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_SWAP_USAGE,
 			"vmstat: Swap Usage",                                // Menu CheckBox text
-			"vmstat: Swap Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"vmstat: Swap Usage (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -162,7 +162,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_MEM_USAGE,
 			"vmstat: Memory Usage",                                // Menu CheckBox text
-			"vmstat: Memory Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"vmstat: Memory Usage (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -174,7 +174,7 @@ extends CounterModelHostMonitor
 
 		addTrendGraph(GRAPH_NAME_SWAP_IN_OUT,
 			"vmstat: Swap In/Out per sec",                                // Menu CheckBox text
-			"vmstat: Swap In/Out per sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"vmstat: Swap In/Out per sec (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -186,7 +186,7 @@ extends CounterModelHostMonitor
 
 		addTrendGraph(GRAPH_NAME_IO_READ_WRITE,
 			"vmstat: IO Read/Write or blk-in/out per sec",                                // Menu CheckBox text
-			"vmstat: IO Read/Write or blk-in/out per sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"vmstat: IO Read/Write or blk-in/out per sec (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -199,7 +199,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_CPU_USAGE,
 			"vmstat: CPU Usage",                                // Menu CheckBox text
-			"vmstat: CPU Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"vmstat: CPU Usage (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -231,8 +231,8 @@ extends CounterModelHostMonitor
 
 			Double[] arr = new Double[2];
 			String[] label = new String[] {
-					"RunQueue - # Processes Waiting for CPU time ["+procs_r+"]", 
-					"WaitQueue - # Process Waiting for I/O (disk, network, user input,etc..) ["+procs_b+"]"};
+					"RunQueue - # Processes Waiting for CPU time [" + procs_r + "]", 
+					"WaitQueue - # Process Waiting for I/O (disk, network, user input,etc..) [" + procs_b + "]"};
 			
 			arr[0] = this.getAbsValueAvg(procs_r);
 			arr[1] = this.getAbsValueAvg(procs_b);
@@ -249,7 +249,7 @@ extends CounterModelHostMonitor
 			else if (isConnectedToVendor(OsVendor.Hp))      { memory_swpd = "memory_avm";  } // INVESTIGATE HERE
 
 			Double[] arr = new Double[1];
-			String[] label = new String[] {"How many Blocks are Swapped out to disk (paged). Total Virtual memory usage. ["+memory_swpd+"]"};
+			String[] label = new String[] {"How many Blocks are Swapped out to disk (paged). Total Virtual memory usage. [" + memory_swpd + "]"};
 			
 			arr[0] = this.getAbsValueAvg(memory_swpd);
 
@@ -269,15 +269,15 @@ extends CounterModelHostMonitor
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-    				tg.setWarningLabel("This graph is not available on '"+getConnectedToVendor()+"'.");
+    				tg.setWarningLabel("This graph is not available on '" + getConnectedToVendor() + "'.");
 				return;
 			}
 
 			Double[] arr = new Double[3];
 			String[] label = new String[] {
-					"Idle/Free Memory ["+memory_free+"]", 
-					"Memory used as Buffers ["+memory_buff+"]", 
-					"Memory used as cache by the Operating System ["+memory_cache+"]"};
+					"Idle/Free Memory [" + memory_free + "]", 
+					"Memory used as Buffers [" + memory_buff + "]", 
+					"Memory used as cache by the Operating System [" + memory_cache + "]"};
 			
 			arr[0] = this.getAbsValueAvg(memory_free);
 			arr[1] = this.getAbsValueAvg(memory_buff);
@@ -297,8 +297,8 @@ extends CounterModelHostMonitor
 
 			Double[] arr = new Double[2];
 			String[] label = new String[] {
-					"IN - Read from Swap to Memory ["+swap_si+"]", 
-					"OUT - Written to Swap and Removed from Memory ["+swap_so+"]"};
+					"IN - Read from Swap to Memory [" + swap_si + "]", 
+					"OUT - Written to Swap and Removed from Memory [" + swap_so + "]"};
 			
 			arr[0] = this.getAbsValueAvg(swap_si);
 			arr[1] = this.getAbsValueAvg(swap_so);
@@ -318,14 +318,14 @@ extends CounterModelHostMonitor
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-    				tg.setWarningLabel("This graph is not available on '"+getConnectedToVendor()+"'.");
+    				tg.setWarningLabel("This graph is not available on '" + getConnectedToVendor() + "'.");
 				return;
 			}
 
 			Double[] arr = new Double[2];
 			String[] label = new String[] {
-					"Reads/s - Blocks received from block device ["+io_bi+"]", 
-					"Writes/s - Blocks sent to a block device ["+io_bo+"]"};
+					"Reads/s - Blocks received from block device [" + io_bi + "]", 
+					"Writes/s - Blocks sent to a block device [" + io_bo + "]"};
 			
 			arr[0] = this.getAbsValueAvg(io_bi);
 			arr[1] = this.getAbsValueAvg(io_bo);
@@ -470,7 +470,7 @@ extends CounterModelHostMonitor
 			MovingAverageCounterManager.getInstance(groupName, "swapOut", 60).add(swapOut).getAvg(0, true, maxCap);
 			
 			if (debugPrint || _logger.isDebugEnabled())
-				System.out.println("##### sendAlarmRequest("+cm.getName()+"): swapping: in=" + swapIn + ", out=" + swapOut + ". swapIn_xmAvg=" + swapIn_xmAvg + ", swapOut_xmAvg=" + swapOut_xmAvg);
+				System.out.println("##### sendAlarmRequest(" + cm.getName() + "): swapping: in=" + swapIn + ", out=" + swapOut + ". swapIn_xmAvg=" + swapIn_xmAvg + ", swapOut_xmAvg=" + swapOut_xmAvg);
 
 			if (swapIn_xmAvg > threshold || swapOut_xmAvg > threshold)
 			{
@@ -557,7 +557,7 @@ extends CounterModelHostMonitor
 			MovingAverageCounterManager.getInstance(groupName, "swapOut", 60).add(swapOut).getAvg(0, true, maxCap);
 			
 			if (debugPrint || _logger.isDebugEnabled())
-				System.out.println("##### sendAlarmRequest("+cm.getName()+"): SwapThrashing: in=" + swapIn + ", out=" + swapOut + ". swapIn_xmAvg=" + swapIn_xmAvg + ", swapOut_xmAvg=" + swapOut_xmAvg);
+				System.out.println("##### sendAlarmRequest(" + cm.getName() + "): SwapThrashing: in=" + swapIn + ", out=" + swapOut + ". swapIn_xmAvg=" + swapIn_xmAvg + ", swapOut_xmAvg=" + swapOut_xmAvg);
 
 			// BOTH swap 'in' AND 'out' 
 			if (swapIn_xmAvg > threshold && swapOut_xmAvg > threshold)

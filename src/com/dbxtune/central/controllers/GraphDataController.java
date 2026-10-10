@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -75,7 +75,7 @@ extends HttpServlet
 			catch (NumberFormatException nfe)
 			{
 				sampleValue = -1;
-				_logger.info("Skipping parameter 'sampleValue', which can't be converted to an integer. using default of "+sampleValue+", passed value sampleValueStr='"+sampleValueStr+"'. Caught: "+nfe);
+				_logger.info("Skipping parameter 'sampleValue', which can't be converted to an integer. using default of " + sampleValue + ", passed value sampleValueStr='" + sampleValueStr + "'. Caught: " + nfe);
 			}
 		}
 
@@ -87,7 +87,7 @@ extends HttpServlet
 			catch (IllegalArgumentException ex)
 			{
 				sampleType = SampleType.ALL;
-				_logger.info("Skipping parameter 'sampleType', which can't be converted to a known value. using default of "+sampleType+", passed value sampleTypeStr='"+sampleTypeStr+"'. Caught: "+ex);
+				_logger.info("Skipping parameter 'sampleType', which can't be converted to a known value. using default of " + sampleType + ", passed value sampleTypeStr='" + sampleTypeStr + "'. Caught: " + ex);
 			}
 		}
 //System.out.println("GraphData: getGraphData(sessionName='"+sessionName+"', cmName='"+cmName+"', graphName='"+graphName+"', startTime='"+startTime+"', endTime='"+endTime+"', avgOverMinutes='"+avgOverMinutes+"'.)");
@@ -118,7 +118,7 @@ extends HttpServlet
 //			if ( ! hasSession )
 			if ( ! reader.hasServerSession(sessionName) )
 			{
-				resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Session/Server name '"+sessionName+"' do not exist in the DBX Central Database.");
+				resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Session/Server name '" + sessionName + "' do not exist in the DBX Central Database.");
 				return;
 			}
 		}
@@ -134,8 +134,8 @@ extends HttpServlet
 		}
 		catch (Exception e)
 		{
-			_logger.info("Problem accessing DBMS or writing JSON, Caught: "+e, e);
-			throw new ServletException("Problem accessing db or writing JSON, Caught: "+e, e);
+			_logger.info("Problem accessing DBMS or writing JSON, Caught: " + e, e);
+			throw new ServletException("Problem accessing db or writing JSON, Caught: " + e, e);
 		}
 
 		out.println(payload);

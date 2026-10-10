@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -149,9 +149,9 @@ public class DbxConnectionPool
 			// Maybe: check if the connection is valid before using it
 			if ( ! conn.isValid(1) )
 			{
-				_logger.warn("When getting a connection '"+conn+"' from the connection pool '"+_name+"', the connection was no longer valid.");
+				_logger.warn("When getting a connection '" + conn + "' from the connection pool '" + _name + "', the connection was no longer valid.");
 				conn.closeNoThrow();
-				throw new SQLException("When getting a connection '"+conn+"' from the connection pool '"+_name+"', the connection was no longer valid.");
+				throw new SQLException("When getting a connection '" + conn + "' from the connection pool '" + _name + "', the connection was no longer valid.");
 			}
 			
 			_bussy.addLast(conn);
@@ -166,7 +166,7 @@ public class DbxConnectionPool
 		int bussySize = _bussy.size();
 		if (bussySize > _maxSize)
 		{
-			throw new SQLException("All connection in the pool '"+_name+"' are used. MaxSize="+_maxSize+", URL="+connPropUrl);
+			throw new SQLException("All connection in the pool '" + _name + "' are used. MaxSize=" + _maxSize + ", URL=" + connPropUrl);
 		}
 		
 		// Create a new connection
@@ -175,7 +175,7 @@ public class DbxConnectionPool
 			DbxConnection conn = DbxConnection.connect(guiOwner, _connProp);
 			_bussy.addLast(conn);
 
-			_logger.info("Created a new connection for the pool '"+_name+"'. bussy="+_bussy.size()+", free="+_free.size()+", MaxSize="+_maxSize+", URL="+connPropUrl);
+			_logger.info("Created a new connection for the pool '" + _name + "'. bussy=" + _bussy.size() + ", free=" + _free.size() + ", MaxSize=" + _maxSize + ", URL=" + connPropUrl);
 			
 			return conn;
 		}
@@ -185,7 +185,7 @@ public class DbxConnectionPool
 		}
 		catch (Exception ex) 
 		{
-			throw new SQLException("Problems creating a new connection for the pool '"+_name+"', URL="+connPropUrl+". Caught: "+ex, ex);
+			throw new SQLException("Problems creating a new connection for the pool '" + _name + "', URL=" + connPropUrl + ". Caught: " + ex, ex);
 		}
 	}
 
@@ -201,7 +201,7 @@ public class DbxConnectionPool
 		// Remove the connection from the bussy
 		boolean removed = _bussy.remove(conn);
 		if ( ! removed )
-			_logger.warn("When releasing a connection from connectionPool='"+_name+"'. The connection was not found in the 'bussy' list. releaseConnection(conn='"+conn+"'). After _bussy.remove(conn), the _bussy.size()="+_bussy.size());
+			_logger.warn("When releasing a connection from connectionPool='" + _name + "'. The connection was not found in the 'bussy' list. releaseConnection(conn='" + conn + "'). After _bussy.remove(conn), the _bussy.size()=" + _bussy.size());
 
 		// check that it really was removed, and remove it... MAX attempts = 10, then continue...
 		for (int c=10; c>0; c--)
@@ -214,14 +214,14 @@ public class DbxConnectionPool
 		}
 		
 		if (_logger.isDebugEnabled())
-			_logger.warn("releaseConnection(conn='"+conn+"') connectionPool='"+_name+"', after _bussy.remove(conn), the _bussy.size()="+_bussy.size());
+			_logger.warn("releaseConnection(conn='" + conn + "') connectionPool='" + _name + "', after _bussy.remove(conn), the _bussy.size()=" + _bussy.size());
 
 		// Check if the connection is OK (before we put it in the free pool)
 		try
 		{
 			if ( ! conn.isValid(1) )
 			{
-				_logger.warn("When returning the connection '"+conn+"' to the connection pool '"+_name+"', the connection was no longer valid, CLOSING THIS connection.");
+				_logger.warn("When returning the connection '" + conn + "' to the connection pool '" + _name + "', the connection was no longer valid, CLOSING THIS connection.");
 				conn.closeNoThrow();
 				return;				
 			}
@@ -229,7 +229,7 @@ public class DbxConnectionPool
 			// Check that the conn is not still in a transaction.
 			if (conn.isInTransaction())
 			{
-				String msg = "When returning the connection '"+conn+"' to the connection pool '"+_name+"', the connection was in a transaction. CLOSING THIS Connection.";
+				String msg = "When returning the connection '" + conn + "' to the connection pool '" + _name + "', the connection was in a transaction. CLOSING THIS Connection.";
 				_logger.warn(msg, new SQLException(msg));
 				conn.closeNoThrow();
 				return;				
@@ -244,7 +244,7 @@ public class DbxConnectionPool
 		{
 			conn.closeNoThrow();
 
-			_logger.warn("When returning the connection '"+conn+"' to the connection pool '"+_name+"', caught exception when checking it. CLOSED THIS Connection.", e);
+			_logger.warn("When returning the connection '" + conn + "' to the connection pool '" + _name + "', caught exception when checking it. CLOSED THIS Connection.", e);
 			return;
 		}
 		
@@ -252,7 +252,7 @@ public class DbxConnectionPool
 		// This is if any connection is holding "whatever" resources on the server-side that isn't released until any connection is closed.
 		if (true)
 		{
-			String propName     = _name+".close.threshold.inSeconds";
+			String propName     = _name + ".close.threshold.inSeconds";
 			long connectTime    = conn.getConnectTime();
 			long closeThreshold = Configuration.getCombinedConfiguration().getLongProperty(propName, 3600*24); // 24 Hours
 //			long closeThreshold = Configuration.getCombinedConfiguration().getLongProperty(propName, 3600*24*7); // 7 days
@@ -262,14 +262,14 @@ public class DbxConnectionPool
 //System.out.println("DEBUG: DbxConnectionPool[name='"+_name+"'].releaseConnection(): secondsSinceConnect="+secondsSinceConnect+", closeThreshold="+closeThreshold+", propName='"+propName+"', conn="+conn+", url="+conn.getConnProp().getUrl()+", propsMap="+conn.getPropertyMap());
 				if (secondsSinceConnect > closeThreshold)
 				{
-					String secondsSinceConnectStr = "secondsSinceConnect="+secondsSinceConnect + " [" + TimeUtils.msToTimeStr("%HH:%MM", secondsSinceConnect*1000) + " HH:MM]";
-					String closeThresholdStr      = "threshold="          +closeThreshold      + " [" + TimeUtils.msToTimeStr("%HH:%MM", closeThreshold     *1000) + " HH:MM]";
+					String secondsSinceConnectStr = "secondsSinceConnect=" + secondsSinceConnect + " [" + TimeUtils.msToTimeStr("%HH:%MM", secondsSinceConnect*1000) + " HH:MM]";
+					String closeThresholdStr      = "threshold="          + closeThreshold      + " [" + TimeUtils.msToTimeStr("%HH:%MM", closeThreshold     *1000) + " HH:MM]";
 					ConnectionProp connProp = conn.getConnProp();
-					String connInfo = "(url='"+(connProp==null?"unknown":connProp.getUrl())+"', connPropertyMap='"+conn.getPropertyMap()+"')";
-					_logger.info("When returning the connection '"+conn+"' "+connInfo+" to the connection pool '"+_name+"', the 'keepalive' expired, "
+					String connInfo = "(url='" + (connProp==null?"unknown":connProp.getUrl()) + "', connPropertyMap='" + conn.getPropertyMap() + "')";
+					_logger.info("When returning the connection '" + conn + "' " + connInfo + " to the connection pool '" + _name + "', the 'keepalive' expired, "
 							+ "CLOSING the connection. A new connection will be made on next attempt. " 
-							+ "("+secondsSinceConnectStr+", "+closeThresholdStr+"). "
-							+ "This can be changed with the property '"+propName+"=secondsToLive'.");
+							+ "(" + secondsSinceConnectStr + ", " + closeThresholdStr + "). "
+							+ "This can be changed with the property '" + propName + "=secondsToLive'.");
 					conn.closeNoThrow();
 					return;
 				}

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -39,11 +39,11 @@ extends AlarmEvent
 				Version.getAppName(), // serviceType
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo
-				resource+"",          // extraInfo
+				resource + "",          // extraInfo
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
-				"Extensive Usage of '" + resource + "' in '" + cm.getServerName() + "'. name='" + name + "', alarmValue=" + alarmValue + ". (threshold="+threshold+")",
+				"Extensive Usage of '" + resource + "' in '" + cm.getServerName() + "'. name='" + name + "', alarmValue=" + alarmValue + ". (threshold=" + threshold + ")",
 				threshold);
 
 		// Set: Time To Live if postpone is enabled

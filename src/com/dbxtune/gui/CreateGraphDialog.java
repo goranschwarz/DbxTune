@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -657,7 +657,7 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 				// use the error tooltip, used in Alarm add dialog
 				SwingUtils.showTimedBalloonTip(_keySdf_cbx, 10*1000, true, 
 						"<html>"
-						+ "Validation error: <b>Value will be discarded</b><br><pre>"+ex.getMessage()+"</pre>"
+						+ "Validation error: <b>Value will be discarded</b><br><pre>" + ex.getMessage() + "</pre>"
 						+ "<br>"
 						+ "See: https://docs.oracle.com/javase/8/docs/api/java/text/SimpleDateFormat.html"
 						+ "</html>");
@@ -680,7 +680,7 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 		// --type
 		Object obj = _graphType_cbx.getSelectedItem();
 		if (obj != null)
-			sqlCmd += "--type "+obj+" ";
+			sqlCmd += "--type " + obj + " ";
 		
 		// --pivot
 		if (_pivot_chk.isSelected())
@@ -692,15 +692,15 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 			
 		// --name
 		if (StringUtil.hasValue(_graphName_txt.getText()))
-			sqlCmd += "--name '"+_graphName_txt.getText()+"' ";
+			sqlCmd += "--name '" + _graphName_txt.getText() + "' ";
 
 		// --labelCategory
 		if (StringUtil.hasValue(_labelCategory_txt.getText()))
-			sqlCmd += "--labelCategory '"+_labelCategory_txt.getText()+"' ";
+			sqlCmd += "--labelCategory '" + _labelCategory_txt.getText() + "' ";
 
 		// --labelValue
 		if (StringUtil.hasValue(_labelValue_txt.getText()))
-			sqlCmd += "--labelValue '"+_labelValue_txt.getText()+"' ";
+			sqlCmd += "--labelValue '" + _labelValue_txt.getText() + "' ";
 
 		// --rotateCategoryLabels
 //		if (_rotateCatLab_chk.isSelected())
@@ -710,7 +710,7 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 			String rotateStr = _rotateCatLab_txt.getText().trim();
 			if ( rotateStr.equals("0") || rotateStr.equals("1") || rotateStr.equals("2") || rotateStr.equals("3") || rotateStr.equals("4") )
 			{
-				sqlCmd += "--rotateCategoryLabels "+rotateStr+" ";
+				sqlCmd += "--rotateCategoryLabels " + rotateStr + " ";
 			}
 			else
 			{
@@ -724,7 +724,7 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 //		if (StringUtil.hasValue(sdfFormat))
 //			sqlCmd += "--keySimpleDateFormat '"+sdfFormat+"' ";
 		if (StringUtil.hasValue(sdfFormat))
-			sqlCmd += "--keySimpleDateFormat '"+sdfFormat+"' ";
+			sqlCmd += "--keySimpleDateFormat '" + sdfFormat + "' ";
 
 		// --groupByKeySdf
 		if (_groupByKeySdf_chk.isSelected())
@@ -736,15 +736,15 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 			
 		// --removeRegEx
 		if (StringUtil.hasValue(_removeRegEx_txt.getText()))
-			sqlCmd += "--removeRegEx '"+_removeRegEx_txt.getText()+"' ";
+			sqlCmd += "--removeRegEx '" + _removeRegEx_txt.getText() + "' ";
 
 		// --width
 		if (StringUtil.hasValue(_layoutWidth_txt.getText()))
-			sqlCmd += "--width '"+_layoutWidth_txt.getText()+"' ";
+			sqlCmd += "--width '" + _layoutWidth_txt.getText() + "' ";
 
 		// --height
 		if (StringUtil.hasValue(_layoutHeight_txt.getText()))
-			sqlCmd += "--height '"+_layoutHeight_txt.getText()+"' ";
+			sqlCmd += "--height '" + _layoutHeight_txt.getText() + "' ";
 
 		// --showDataValues
 		if (_showDataValues_chk.isSelected())
@@ -765,17 +765,17 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 		// --keyCols
 		String keyCols = _tm.getKeyColumns();
 		if (StringUtil.hasValue(keyCols))
-			sqlCmd += "--keyCols '"+keyCols+"' ";
+			sqlCmd += "--keyCols '" + keyCols + "' ";
 		
 		// --groupCols
 		String groupCols = _tm.getGroupColumns();
 		if (StringUtil.hasValue(groupCols))
-			sqlCmd += "--groupCols '"+groupCols+"' ";
+			sqlCmd += "--groupCols '" + groupCols + "' ";
 		
 		// --keyCols
 		String valCols = _tm.getValueColumns();
 		if (StringUtil.hasValue(valCols))
-			sqlCmd += "--valCols '"+valCols+"' ";
+			sqlCmd += "--valCols '" + valCols + "' ";
 		
 		// Set the feedback field
 		_feedback_txt.setText("select c1,c2,c3 from someTable\ngo | " + sqlCmd);
@@ -794,7 +794,7 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 		}
 		catch (Exception ex)
 		{
-			SwingUtils.showErrorMessage("Create Graph", "Problems Creating Graph: "+ex.getMessage(), ex);
+			SwingUtils.showErrorMessage("Create Graph", "Problems Creating Graph: " + ex.getMessage(), ex);
 
 			if (frame != null)
 				frame.setVisible(false);
@@ -818,7 +818,7 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 		{
 			SwingUtils.showErrorMessage(this, "Faulty Regex", 
 					  "<html>"
-					+ "The regex '<b>"+regex+"</b>' is not valid.<br>"
+					+ "The regex '<b>" + regex + "</b>' is not valid.<br>"
 					+ "Error:"
 					+ "<pre>"
 					+ StringUtil.toHtmlString(ex.getMessage())
@@ -878,7 +878,7 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 			Configuration conf = Configuration.getCombinedConfiguration();
 			String colorStr = null;
 
-			if (conf != null) colorStr = conf.getProperty(getName()+".color.considdered");
+			if (conf != null) colorStr = conf.getProperty(getName() + ".color.considdered");
 			addHighlighter( new ColorHighlighter(new HighlightPredicate()
 			{
 				@Override

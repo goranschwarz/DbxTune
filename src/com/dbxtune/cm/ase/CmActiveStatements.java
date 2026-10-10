@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -94,7 +94,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -125,7 +125,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmActiveStatements(counterController, guiController);
 	}
@@ -386,7 +386,7 @@ extends CountersModel
 		         "P.SPID, P.KPID, \n" +
 		         "multiSampled=convert(varchar(10),''), \n" +
 		         "S.BatchID, S.LineNumber, \n" +
-		         dbNameCol+", procname=isnull(isnull(object_name(S.ProcedureID,S.DBID),object_name(S.ProcedureID,2)),''), linenum=S.LineNumber, \n" +
+		         dbNameCol + ", procname=isnull(isnull(object_name(S.ProcedureID,S.DBID),object_name(S.ProcedureID,2)),''), linenum=S.LineNumber, \n" +
 		         SrvUserName +
 //		         "P.Command, TranName = convert(varchar(30), NULL), P.Application, \n" +
 		         "P.Command, TranName = (select x.tran_name from master.dbo.sysprocesses x where x.spid = P.SPID and x.kpid = P.KPID), P.Application, \n" +
@@ -445,7 +445,7 @@ extends CountersModel
 			"where S.KPID = P.KPID \n" +
 			"  and P.WaitEventID != 250 -- WaitEventID(250) = 'waiting for input from the network' \n" + // Sometimes the SPID is still in monProcessStatement even if the WaitEventID is 250
 			(isClusterEnabled ? "  and S.InstanceID = P.InstanceID \n" : "") +
-			"  and "+whereSpidNotMe+"\n" +
+			"  and " + whereSpidNotMe + "\n" +
 			"order by S.LogicalReads desc \n" +
 			optGoalPlan;
 
@@ -482,7 +482,7 @@ extends CountersModel
 		         "P.SPID, P.KPID, \n" +
 		         "multiSampled=convert(varchar(10),''), \n" +
 		         "P.BatchID, P.LineNumber, \n" +
-		         dbNameCol+", procname='', linenum=P.LineNumber, \n" +
+		         dbNameCol + ", procname='', linenum=P.LineNumber, \n" +
 		         SrvUserName +
 //		         "P.Command, TranName = convert(varchar(30), NULL), P.Application, \n" +
 		         "P.Command, TranName = (select x.tran_name from master.dbo.sysprocesses x where x.spid = P.SPID and x.kpid = P.KPID), P.Application, \n" +
@@ -503,9 +503,9 @@ extends CountersModel
 		         "HasBlockedSpidsInfo=convert(bit,0), \n" +
 		         "HasLastKnownSqlText=convert(bit,0), \n" +
 		         "SpidLockCount=convert(int,-1), \n" +
-		         "MemUsageKB=-1, "+PhysicalReads+", "+LogicalReads+", \n";
+		         "MemUsageKB=-1, " + PhysicalReads + ", " + LogicalReads + ", \n";
 		cols2 += "";
-		cols3 += PagesModified+", PacketsSent=-1, PacketsReceived=-1, NetworkPacketSize=-1, \n" +
+		cols3 += PagesModified + ", PacketsSent=-1, PacketsReceived=-1, NetworkPacketSize=-1, \n" +
 		         "PlansAltered=-1, StartTime=convert(datetime,NULL), PlanID=-1, P.DBID, ProcedureID=-1, \n" +
 		         "P.SecondsConnected, ConnectionTime=dateadd(second, P.SecondsConnected * -1, getdate()), \n" +
 		         "P.EngineNumber, P.NumChildren, \n" +
@@ -909,37 +909,37 @@ extends CountersModel
 
 		if (pos_WaitEventID < 0 || pos_WaitEventDesc < 0 || pos_WaitClassDesc < 0)
 		{
-			_logger.debug("Can't find the position for columns ('WaitEventID'="+pos_WaitEventID+", 'WaitEventDesc'="+pos_WaitEventDesc+", 'WaitClassDesc'="+pos_WaitClassDesc+")");
+			_logger.debug("Can't find the position for columns ('WaitEventID'=" + pos_WaitEventID + ", 'WaitEventDesc'=" + pos_WaitEventDesc + ", 'WaitClassDesc'=" + pos_WaitClassDesc + ")");
 			return;
 		}
 		
 		if (pos_SPID < 0 || pos_HasShowPlan < 0 || pos_ShowPlanText < 0)
 		{
-			_logger.debug("Can't find the position for columns ('SPID'="+pos_SPID+", 'HasShowPlan'="+pos_HasShowPlan+", 'ShowPlanText'="+pos_ShowPlanText+")");
+			_logger.debug("Can't find the position for columns ('SPID'=" + pos_SPID + ", 'HasShowPlan'=" + pos_HasShowPlan + ", 'ShowPlanText'=" + pos_ShowPlanText + ")");
 			return;
 		}
 
 		if (pos_HasDbccSqlText < 0 || pos_DbccSqlText < 0)
 		{
-			_logger.debug("Can't find the position for columns ('HasDbccSqlText'="+pos_HasDbccSqlText+", 'DbccSqlText'="+pos_DbccSqlText+")");
+			_logger.debug("Can't find the position for columns ('HasDbccSqlText'=" + pos_HasDbccSqlText + ", 'DbccSqlText'=" + pos_DbccSqlText + ")");
 			return;
 		}
 
 		if (pos_HasProcCallStack < 0 || pos_ProcCallStack < 0)
 		{
-			_logger.debug("Can't find the position for columns ('HasProcCallStack'="+pos_HasProcCallStack+", 'ProcCallStack'="+pos_ProcCallStack+")");
+			_logger.debug("Can't find the position for columns ('HasProcCallStack'=" + pos_HasProcCallStack + ", 'ProcCallStack'=" + pos_ProcCallStack + ")");
 			return;
 		}
 
 		if (pos_HasMonSqlText < 0 || pos_MonSqlText < 0)
 		{
-			_logger.debug("Can't find the position for columns (''HasMonSqlText'="+pos_HasMonSqlText+", 'MonSqlText'="+pos_MonSqlText+")");
+			_logger.debug("Can't find the position for columns (''HasMonSqlText'=" + pos_HasMonSqlText + ", 'MonSqlText'=" + pos_MonSqlText + ")");
 			return;
 		}
 
 		if (pos_HasStacktrace < 0 || pos_DbccStacktrace < 0)
 		{
-			_logger.debug("Can't find the position for columns ('HasShowplan'="+pos_HasStacktrace+", 'DbccStacktrace'="+pos_DbccStacktrace+")");
+			_logger.debug("Can't find the position for columns ('HasShowplan'=" + pos_HasStacktrace + ", 'DbccStacktrace'=" + pos_DbccStacktrace + ")");
 			return;
 		}
 		
@@ -951,7 +951,7 @@ extends CountersModel
 		
 		if (pos_HasSpidLocks < 0 || pos_SpidLocks < 0 || pos_SpidLockCount < 0)
 		{
-			_logger.debug("Can't find the position for columns ('HasSpidLocks'="+pos_HasSpidLocks+", 'SpidLocks'="+pos_SpidLocks+", 'SpidLockCount'="+pos_SpidLockCount+")");
+			_logger.debug("Can't find the position for columns ('HasSpidLocks'=" + pos_HasSpidLocks + ", 'SpidLocks'=" + pos_SpidLocks + ", 'SpidLockCount'=" + pos_SpidLockCount + ")");
 			return;
 		}
 		
@@ -963,54 +963,54 @@ extends CountersModel
 		
 		if (pos_BlockingOtherSpids < 0 || pos_BlockingSPID < 0)
 		{
-			_logger.debug("Can't find the position for columns ('BlockingOtherSpids'="+pos_BlockingOtherSpids+", 'BlockingSPID'="+pos_BlockingSPID+")");
+			_logger.debug("Can't find the position for columns ('BlockingOtherSpids'=" + pos_BlockingOtherSpids + ", 'BlockingSPID'=" + pos_BlockingSPID + ")");
 			return;
 		}
 		
 		if (pos_SecondsWaiting < 0)
 		{
-			_logger.debug("Can't find the position for columns ('SecondsWaiting'="+pos_SecondsWaiting+")");
+			_logger.debug("Can't find the position for columns ('SecondsWaiting'=" + pos_SecondsWaiting + ")");
 			return;
 		}
 		
 		if (pos_BlockingOthersMaxTimeInSec < 0)
 		{
-			_logger.debug("Can't find the position for columns ('BlockingOthersMaxTimeInSec'="+pos_BlockingOthersMaxTimeInSec+")");
+			_logger.debug("Can't find the position for columns ('BlockingOthersMaxTimeInSec'=" + pos_BlockingOthersMaxTimeInSec + ")");
 			return;
 		}
 		
 		if (pos_multiSampled < 0)
 		{
-			_logger.debug("Can't find the position for columns ('multiSampled'="+pos_multiSampled+")");
+			_logger.debug("Can't find the position for columns ('multiSampled'=" + pos_multiSampled + ")");
 			return;
 		}
 		
 		if (pos_StartTime < 0)
 		{
-			_logger.debug("Can't find the position for columns ('StartTime'="+pos_StartTime+")");
+			_logger.debug("Can't find the position for columns ('StartTime'=" + pos_StartTime + ")");
 			return;
 		}
 		if (pos_BatchID < 0)
 		{
-			_logger.debug("Can't find the position for columns ('BatchID'="+pos_BatchID+")");
+			_logger.debug("Can't find the position for columns ('BatchID'=" + pos_BatchID + ")");
 			return;
 		}
 		
 		if (pos_BlockedSpidsInfo < 0)
 		{
-			_logger.debug("Can't find the position for columns ('BlockedSpidsInfo'="+pos_BlockedSpidsInfo+")");
+			_logger.debug("Can't find the position for columns ('BlockedSpidsInfo'=" + pos_BlockedSpidsInfo + ")");
 			return;
 		}
 
 		if (pos_HasBlockedSpidsInfo < 0)
 		{
-			_logger.debug("Can't find the position for columns ('HasBlockedSpidsInfo'="+pos_HasBlockedSpidsInfo+")");
+			_logger.debug("Can't find the position for columns ('HasBlockedSpidsInfo'=" + pos_HasBlockedSpidsInfo + ")");
 			return;
 		}
 
 		if (pos_HasLastKnownSqlText < 0)
 		{
-			_logger.debug("Can't find the position for columns ('HasLastKnownSqlText'="+pos_HasLastKnownSqlText+")");
+			_logger.debug("Can't find the position for columns ('HasLastKnownSqlText'=" + pos_HasLastKnownSqlText + ")");
 			return;
 		}
 
@@ -1483,7 +1483,7 @@ extends CountersModel
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_BlockingOthersMaxTimeInSec, DEFAULT_alarm_BlockingOthersMaxTimeInSec);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", BlockingOthersMaxTimeInSec='"+BlockingOthersMaxTimeInSec+"', BlockingOtherSpidsList="+BlockingOtherSpidsList);
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", BlockingOthersMaxTimeInSec='" + BlockingOthersMaxTimeInSec + "', BlockingOtherSpidsList=" + BlockingOtherSpidsList);
 
 					if (BlockingOthersMaxTimeInSec > threshold)
 					{
@@ -1648,7 +1648,7 @@ extends CountersModel
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_StatementExecInSec, DEFAULT_alarm_StatementExecInSec);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", ExecTimeInInSec='"+ExecTimeInInSec+"'.");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", ExecTimeInInSec='" + ExecTimeInInSec + "'.");
 
 					if (ExecTimeInInSec > threshold)
 					{

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -244,12 +244,12 @@ extends Object
 			{
 				try
 				{
-					String cmd = "echo 'loop is "+i+"'";
+					String cmd = "echo 'loop is " + i + "'";
 
-					System.out.println( "Command to execute: "+cmd );
+					System.out.println( "Command to execute: " + cmd );
 					OSCommand oscmd = new OSCommand(cmd);
 					oscmd.execute();
-					System.out.println( "Return code: "+oscmd.returnCode() );
+					System.out.println( "Return code: " + oscmd.returnCode() );
 					System.out.println( "Output from the command:");
 					System.out.println( oscmd.getOutput() );
 					oscmd.close();
@@ -268,10 +268,10 @@ extends Object
 			{
 				try
 				{
-					System.out.println( "Command to execute: '"+args[i]+"'" );
+					System.out.println( "Command to execute: '" + args[i] + "'" );
 					OSCommand oscmd = new OSCommand(args[i]);
 					oscmd.execute();
-					System.out.println( "Return code: "+oscmd.returnCode() );
+					System.out.println( "Return code: " + oscmd.returnCode() );
 					System.out.println( "Output from the command:");
 					System.out.println( oscmd.getOutput() );
 					oscmd.close();

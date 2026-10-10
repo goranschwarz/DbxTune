@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -123,7 +123,7 @@ extends DbmsConfigAbstract
 
 	private static String GET_CONFIG_OFFLINE_MAX_SESSION_SQL = 
 		" (select max([SessionStartTime]) " +
-		"  from ["+PersistWriterJdbc.getTableName(null, null, PersistWriterJdbc.SESSION_DBMS_CONFIG, null, false) + "]" +
+		"  from [" + PersistWriterJdbc.getTableName(null, null, PersistWriterJdbc.SESSION_DBMS_CONFIG, null, false) + "]" +
 		" ) ";
 
 
@@ -520,9 +520,9 @@ extends DbmsConfigAbstract
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("RsConfig:initialize:sql='"+sql+"'", ex);
+			_logger.error("RsConfig:initialize:sql='" + sql + "'", ex);
 			if (_hasGui)
-				SwingUtils.showErrorMessage("RsConfig - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
+				SwingUtils.showErrorMessage("RsConfig - Initialize", "SQL Exception: " + ex.getMessage() + "\n\nThis was found when executing SQL statement:\n\n" + sql, ex);
 			_configMap = null;
 			_configList = null;
 			_configSectionList = null;

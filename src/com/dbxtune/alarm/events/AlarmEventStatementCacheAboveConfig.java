@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -38,7 +38,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SRV_CONFIG,
 				AlarmEvent.Severity.WARNING,
 				AlarmEvent.ServiceState.UP, 
-				"Statement Cache is above the configured value in server '" + cm.getServerName() + "'. configuredSpaceInMb="+configuredSpaceInMb+", usedSpaceInMb="+usedSpaceInMb+", usedSpaceInPct="+usedSpaceInPct+", usedPercentOfProcedurMemory="+usedPctOfProcMemory+". (threshold="+threshold+")",
+				"Statement Cache is above the configured value in server '" + cm.getServerName() + "'. configuredSpaceInMb=" + configuredSpaceInMb + ", usedSpaceInMb=" + usedSpaceInMb + ", usedSpaceInPct=" + usedSpaceInPct + ", usedPercentOfProcedurMemory=" + usedPctOfProcMemory + ". (threshold=" + threshold + ")",
 				null);
 
 		// Set: Time To Live if postpone is enabled

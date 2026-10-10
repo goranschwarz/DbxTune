@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -532,7 +532,7 @@ public class WriterUtils
 			@Override
 			public Object invalidGetMethod(Context context, String reference, Object object, String property, Info info)
 			{
-				_logger.debug("invalid-Get-Method(context, reference='"+reference+"', object='"+object+"', info='"+info+"')");
+				_logger.debug("invalid-Get-Method(context, reference='" + reference + "', object='" + object + "', info='" + info + "')");
 				reportInvalidReference(reference, null, info);
 				return null;
 			}
@@ -540,7 +540,7 @@ public class WriterUtils
 			@Override
 			public boolean invalidSetMethod(Context context, String leftreference, String rightreference, Info info)
 			{
-				_logger.debug("invalid-Set-Method(context, leftreference='"+leftreference+"', rightreference='"+rightreference+"', info='"+info+"')");
+				_logger.debug("invalid-Set-Method(context, leftreference='" + leftreference + "', rightreference='" + rightreference + "', info='" + info + "')");
 				reportInvalidReference(leftreference, null, info);
 				return false;
 			}
@@ -548,7 +548,7 @@ public class WriterUtils
 			@Override
 			public Object invalidMethod(Context context, String reference, Object object, String method, Info info)
 			{
-				_logger.debug("invalid-Method(context, reference='"+reference+"', object='"+object+"', method='"+method+"', info='"+info+"')");
+				_logger.debug("invalid-Method(context, reference='" + reference + "', object='" + object + "', method='" + method + "', info='" + info + "')");
 				if (reference == null)
 					reportInvalidReference(object.getClass().getName() + "." + method, method, info);
 				else
@@ -558,9 +558,9 @@ public class WriterUtils
 
 			private void reportInvalidReference(String reference, String method, Info info)
 			{
-				String lineStr   = "[line "+info.getLine()+", column "+info.getColumn()+"]";
-				String methodStr = StringUtil.isNullOrBlank(method) ? "" : ", method='"+method+"'";
-				throw new ParseErrorException("Reference '"+reference+"'"+methodStr+" do not exists. at "+lineStr, info);
+				String lineStr   = "[line " + info.getLine() + ", column " + info.getColumn() + "]";
+				String methodStr = StringUtil.isNullOrBlank(method) ? "" : ", method='" + method + "'";
+				throw new ParseErrorException("Reference '" + reference + "'" + methodStr + " do not exists. at " + lineStr, info);
 			}
 		};
 		
@@ -653,7 +653,7 @@ public class WriterUtils
 		                                            + "</pre>"
 		                                            + "</html>");
 		desc.put("alarmClass"                 , "<html> <h2>alarmClass                 </h2> Class name of the alarm.                                                                                                                             <br><br>Example: <code>AlarmEventHighCpuUtilazation</code>      </html>");
-		desc.put("serviceType"                , "<html> <h2>serviceType                </h2> Type of Service, this would typically be <code>"+Version.getAppName()+"<code> </html>");
+		desc.put("serviceType"                , "<html> <h2>serviceType                </h2> Type of Service, this would typically be <code>" + Version.getAppName() + "<code> </html>");
 		desc.put("serviceName"                , "<html> <h2>serviceName                </h2> Name of the service, this would be the DBMS Server Name, or possibly the hostname of the server we are monitoring.                                   <br><br>Example: <code>GORAN_1_DS</code>     </html>");
 		desc.put("serviceInfo"                , "<html> <h2>serviceInfo                </h2> Name of the Counter Model that detected the problem.                                                                                                 <br><br>Example: <code>CmSummary</code>      </html>");
 		desc.put("extraInfo"                  , "<html> <h2>extraInfo                  </h2> In some cases a Alarm attches extra parameters/information. For instance CmOpenDatabases puts the database name in here.                             <br><br>Example: <code>PML</code>            </html>");
@@ -758,7 +758,7 @@ public class WriterUtils
 		AlarmEvent ae = new AlarmEventDummy("GORAN_1_DS", "SomeCmName", "SomeExtraInfo", AlarmEvent.Category.OTHER, Severity.WARNING, ServiceState.AFFECTED, -1, 999, "This is an Alarm Example with the data value of '999'", "Extended Description goes here", 0);
 
 		String str = createMessageFromTemplate(AlarmWriterAbstract.ACTION_RAISE, ae, "TEST: ${type} - ${alarmClass} --- $display.truncate(\"This is a long string.\", 10)", true, null, "http://DUMMY-dbxcentral:" + DbxTuneCentral.getWebHttpPort());
-		System.out.println("OUT: "+str);
+		System.out.println("OUT: " + str);
 	}
 }
 

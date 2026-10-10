@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -86,7 +86,7 @@ extends AlarmWriterAbstract
 
 		int firstColonPos = keyVal.indexOf(':');
 		if (firstColonPos == -1)
-			throw new Exception("Problem parsing the value '"+keyVal+"', can't find any ':' in it.");
+			throw new Exception("Problem parsing the value '" + keyVal + "', can't find any ':' in it.");
 
 		String key = keyVal.substring(0, firstColonPos);
 		String val = keyVal.substring(firstColonPos+1).trim();
@@ -132,7 +132,7 @@ extends AlarmWriterAbstract
 			}
 			else
 			{
-				_logger.info("Responce code "+responceCode+" ("+HttpUtils.httpResponceCodeToText(responceCode)+"). From URL '"+_url+"'. Sent JSON content: "+jsonMessage);
+				_logger.info("Responce code " + responceCode + " (" + HttpUtils.httpResponceCodeToText(responceCode) + "). From URL '" + _url + "'. Sent JSON content: " + jsonMessage);
 			}
 
 			// Read responce and print the output...
@@ -145,11 +145,11 @@ extends AlarmWriterAbstract
 		catch (InterruptedException ex)
 		{
 			Thread.currentThread().interrupt();
-			_logger.error("Problems sending REST call to '"+_url+"'. Caught: "+ex, ex);
+			_logger.error("Problems sending REST call to '" + _url + "'. Caught: " + ex, ex);
 		}
 		catch (Exception ex)
 		{
-			_logger.error("Problems sending REST call to '"+_url+"'. Caught: "+ex , ex);
+			_logger.error("Problems sending REST call to '" + _url + "'. Caught: " + ex , ex);
 		}
 	}
 
@@ -212,7 +212,7 @@ extends AlarmWriterAbstract
 	{
 		super.init(conf);
 
-		_logger.info("Initializing the AlarmWriter component named '"+getName()+"'.");
+		_logger.info("Initializing the AlarmWriter component named '" + getName() + "'.");
 
 		_url              = conf.getProperty       (PROPKEY_url,              DEFAULT_url);
 		_jsonTemplate     = conf.getProperty       (PROPKEY_jsonTemplate,     DEFAULT_jsonTemplate);
@@ -231,8 +231,8 @@ extends AlarmWriterAbstract
 		//------------------------------------------
 		// Check for mandatory parameters
 		//------------------------------------------
-		if ( StringUtil.isNullOrBlank(_url) )          throw new Exception("The property '" + PROPKEY_url          + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
-		if ( StringUtil.isNullOrBlank(_jsonTemplate) ) throw new Exception("The property '" + PROPKEY_jsonTemplate + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
+		if ( StringUtil.isNullOrBlank(_url) )          throw new Exception("The property '" + PROPKEY_url          + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
+		if ( StringUtil.isNullOrBlank(_jsonTemplate) ) throw new Exception("The property '" + PROPKEY_jsonTemplate + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
 
 
 		//------------------------------------------
@@ -245,7 +245,7 @@ extends AlarmWriterAbstract
 		}
 		catch(MalformedURLException ex) 
 		{ 
-			throw new Exception("The URL '"+_url+"' seems to be malformed. Caught: "+ex, ex); 
+			throw new Exception("The URL '" + _url + "' seems to be malformed. Caught: " + ex, ex); 
 		}
 	}
 
@@ -253,7 +253,7 @@ extends AlarmWriterAbstract
 	public void printConfig()
 	{
 		int spaces = 35;
-		_logger.info("Configuration for Alarm Writer Module: "+getName());
+		_logger.info("Configuration for Alarm Writer Module: " + getName());
 		_logger.info("    " + StringUtil.left(PROPKEY_url,              spaces) + ": " + _url);
 		_logger.info("    " + StringUtil.left(PROPKEY_jsonTemplate,     spaces) + ": " + _jsonTemplate);
 		_logger.info("    " + StringUtil.left(PROPKEY_isReRaiseEnabled, spaces) + ": " + _isReRaiseEnabled);
@@ -350,7 +350,7 @@ extends AlarmWriterAbstract
 		catch(IOException ex)
 		{
 			ex.toString();
-			return ""+ex;
+			return "" + ex;
 		}
 	}
 }

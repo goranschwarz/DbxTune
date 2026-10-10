@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -38,7 +38,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SRV_CONFIG,
 				AlarmEvent.Severity.WARNING,
 				AlarmEvent.ServiceState.UP, 
-				"Configuration resource '" +cfgName + "' is reuse_cnt=" + reuse_cnt + " in the last sample at server '" + cm.getServerName() + "'.",
+				"Configuration resource '" + cfgName + "' is reuse_cnt=" + reuse_cnt + " in the last sample at server '" + cm.getServerName() + "'.",
 				null);
 
 		setData("reuse_cnt=" + reuse_cnt);

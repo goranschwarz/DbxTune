@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -115,7 +115,7 @@ public class RowFilterValueAndLogLevel extends RowFilter<TableModel, Integer>
 	public void setFilter(int level, String threadName, String className, String message)
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("DEBUG: Setting filter: level="+level+", threadName='"+threadName+"', className='"+className+"', message='"+message+"'.");
+			_logger.debug("DEBUG: Setting filter: level=" + level + ", threadName='" + threadName + "', className='" + className + "', message='" + message + "'.");
 
 		_filterIsActive = true;
 		_level          = level;
@@ -149,7 +149,7 @@ public class RowFilterValueAndLogLevel extends RowFilter<TableModel, Integer>
 	public void setFilterColId(int levelColId, int threadNameColId, int classNameColId, int messageColId)
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("DEBUG: Setting filter ColId's: level="+levelColId+", threadName="+threadNameColId+", className="+classNameColId+", message="+messageColId+".");
+			_logger.debug("DEBUG: Setting filter ColId's: level=" + levelColId + ", threadName=" + threadNameColId + ", className=" + classNameColId + ", message=" + messageColId + ".");
 
 		_levelColId      = levelColId;
 		_threadNameColId = threadNameColId;
@@ -289,9 +289,9 @@ public class RowFilterValueAndLogLevel extends RowFilter<TableModel, Integer>
 		if (_logger.isTraceEnabled())
 		{
 			if ( include )
-				_logger.trace("TRACE: VISIBLE, row="+entry.getIdentifier()+", "+getTraceStr());
+				_logger.trace("TRACE: VISIBLE, row=" + entry.getIdentifier() + ", " + getTraceStr());
 			else
-				_logger.trace("TRACE:    HIDE, row="+entry.getIdentifier()+", "+getTraceStr());
+				_logger.trace("TRACE:    HIDE, row=" + entry.getIdentifier() + ", " + getTraceStr());
 		}
 		
 		return include;

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -214,7 +214,7 @@ extends MonitorUpTime
 					
 					if (_logger.isDebugEnabled())
 					{
-						_logger.debug(getModuleName()+": - AFTER:  currentLoad="+currentLoad+". "
+						_logger.debug(getModuleName() + ": - AFTER:  currentLoad=" + currentLoad + ". "
 								+   "1m=[s:"  + NumberUtils.round(_s_load_avg_1m,  2) + ", s5:" + NumberUtils.round(_s5_load_avg_1m,  2) + "]"
 								+ ", 5m=[s:"  + NumberUtils.round(_s_load_avg_5m,  2) + ", s5:" + NumberUtils.round(_s5_load_avg_1m,  2) + "]"
 								+ ", 15m=[s:" + NumberUtils.round(_s_load_avg_15m, 2) + ", s5:" + NumberUtils.round(_s5_load_avg_1m,  2) + "]"

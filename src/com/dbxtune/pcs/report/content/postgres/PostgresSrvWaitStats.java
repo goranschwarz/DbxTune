@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -193,7 +193,7 @@ extends AseAbstract
 				int    samplePeriod = getOwner().getSamplePeriodInMinutes();
 
 				StringBuilder sb = new StringBuilder();
-				sb.append("<br>Here are the top " + getTopCount() + " '" + groupColName + "' ordered by '" + valueColName +"' for the whole period (while the above chart is in " + samplePeriod + " minutes chunks).<br>\n");
+				sb.append("<br>Here are the top " + getTopCount() + " '" + groupColName + "' ordered by '" + valueColName + "' for the whole period (while the above chart is in " + samplePeriod + " minutes chunks).<br>\n");
 				sb.append("<table class='sortable'> \n");
 				sb.append("<tr> \n");
 				sb.append("  <th>Top #</th> \n");
@@ -375,7 +375,7 @@ extends AseAbstract
 		//----------------------------------------
 		// Lower level -- EVENT ID
 		//----------------------------------------
-		_CmPgSrvWait_byEvent = new ReportChartTimeSeriesStackedBar(this, conn, schema, "CmPgSrvWait", "event_type", samplePeriod, tgcp, "WaitTimeInSec", null, null, null, "Wait Events (top-"+tgcp.getTopCount()+"-WaitEvents) in Seconds, grouped by 10 minutes intervall")
+		_CmPgSrvWait_byEvent = new ReportChartTimeSeriesStackedBar(this, conn, schema, "CmPgSrvWait", "event_type", samplePeriod, tgcp, "WaitTimeInSec", null, null, null, "Wait Events (top-" + tgcp.getTopCount() + "-WaitEvents) in Seconds, grouped by 10 minutes intervall")
 		{
 			@Override
 			protected String getSql()

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -69,7 +69,7 @@ extends CountersModel
 	public static final String   HTML_DESC        = CmSpinlockSum.HTML_DESC.replaceFirst("<CODE>master.dbo.sysmonitors</CODE>", "<CODE>master.dbo.monSpinlockActivity</CODE> introduced in ASE 15.7 ESD#2.");
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 //	public static final long     NEED_SRV_VERSION = 15702;
 //	public static final long     NEED_SRV_VERSION = 1570020;
@@ -103,7 +103,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmSpinlockActivity(counterController, guiController);
 	}
@@ -258,14 +258,14 @@ extends CountersModel
 			{
 				String cacheName = rs.getString(1).trim();
 				_aseCacheNames.add(cacheName);
-				_logger.debug("Added cache name '"+cacheName+"' to the local cache list.");
+				_logger.debug("Added cache name '" + cacheName + "' to the local cache list.");
 			}
 			rs.close();
 			stmt.close();
 		}
 		catch (SQLException e) 
 		{
-			_logger.warn("Problem when executing the 'extra init, to populate ASE Cache names' SQL statement: "+sql, e);
+			_logger.warn("Problem when executing the 'extra init, to populate ASE Cache names' SQL statement: " + sql, e);
 		}
 		
 		return superRc;

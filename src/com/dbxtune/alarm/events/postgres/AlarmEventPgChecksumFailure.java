@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -49,7 +49,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SPACE,
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
-				"Data Checksum failure DATA-CURRUPTION in Server '" + cm.getServerName() + "', dbname='" + dbname + "', checksumFailuresDiff=" + checksumFailuresDiff + ", lastFailure='" + checksumLastFailure+ "', total=" + checksumFailuresTotal + " (threshold=" + threshold + ")",
+				"Data Checksum failure DATA-CURRUPTION in Server '" + cm.getServerName() + "', dbname='" + dbname + "', checksumFailuresDiff=" + checksumFailuresDiff + ", lastFailure='" + checksumLastFailure + "', total=" + checksumFailuresTotal + " (threshold=" + threshold + ")",
 				threshold
 				);
 

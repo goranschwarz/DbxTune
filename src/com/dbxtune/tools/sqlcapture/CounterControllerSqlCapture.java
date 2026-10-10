@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -100,7 +100,7 @@ public class CounterControllerSqlCapture extends CounterControllerAbstract
 		if (! isCountersCreated())
 			createCounters(hasGui);
 		
-		_logger.info("Initializing all CM objects, using ASE server version number "+srvVersion+" ("+Ver.versionNumToStr(srvVersion)+"), isClusterEnabled="+isClusterEnabled+" with monTables Install version "+monTablesVersion+" ("+Ver.versionNumToStr(monTablesVersion)+").");
+		_logger.info("Initializing all CM objects, using ASE server version number " + srvVersion + " (" + Ver.versionNumToStr(srvVersion) + "), isClusterEnabled=" + isClusterEnabled + " with monTables Install version " + monTablesVersion + " (" + Ver.versionNumToStr(monTablesVersion) + ").");
 
 		// Get active Monitor Configuration
 		Map<String,Integer> monitorConfigMap = AseConnectionUtils.getMonitorConfigs(conn);
@@ -128,7 +128,7 @@ public class CounterControllerSqlCapture extends CounterControllerAbstract
 		// initialize all the CM's
 		for (CountersModel cm : getCmList())
 		{
-			_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using ASE server version number "+srvVersion+".");
+			_logger.debug("Initializing CM named '" + cm.getName() + "', display name '" + cm.getDisplayName() + "', using ASE server version number " + srvVersion + ".");
 
 			// set the version
 			cm.setServerVersion(monTablesVersion);

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -169,7 +169,20 @@ public abstract class HostMonitorConnection
 	public abstract ExecutionWrapper executeCommand(String cmd) throws Exception;
 	public abstract ExecutionWrapper executeCommand(String cmd, boolean isStreamingCommand) throws Exception;
 
-	
+	/**
+	 * Windows only: Execute a PowerShell script in a long lived PowerShell session (see {@link PowershellSession}),
+	 * so we don't have to start a new 'powershell' for every execution
+	 *
+	 * @param psScript   A single line PowerShell script
+	 * @return a (already finished) ExecutionWrapper, or <b>null</b> if this connection has no PowerShell session (then use {@link #executeCommand(String)} instead)
+	 * @throws Exception
+	 */
+	public ExecutionWrapper executeInPowershellSession(String psScript) throws Exception
+	{
+		return null;
+	}
+
+
 	/**
 	 * Execute a command and get the results as a String (both STDOUT and STDERR)
 	 * @param cmd

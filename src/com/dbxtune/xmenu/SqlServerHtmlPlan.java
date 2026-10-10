@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -114,7 +114,7 @@ extends XmenuActionBase
 		}
 		catch (SQLException e)
 		{
-			JOptionPane.showMessageDialog(null, "Executing 'SqlServerUtils.getXmlQueryPlan()'. Found the following error:\n."+e, "Error", JOptionPane.ERROR_MESSAGE);
+			JOptionPane.showMessageDialog(null, "Executing 'SqlServerUtils.getXmlQueryPlan()'. Found the following error:\n." + e, "Error", JOptionPane.ERROR_MESSAGE);
 		}
 		return query_plan;
 	}

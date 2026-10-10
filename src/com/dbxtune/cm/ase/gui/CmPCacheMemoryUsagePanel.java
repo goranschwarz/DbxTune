@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -155,10 +155,10 @@ extends TabularCntrPanel
 					Number Active        = (Number)dataTable.getValueAt(r, Active_pos);
 
 					if (_logger.isDebugEnabled())
-						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": ModuleName("+ModuleName_pos+")='"+ModuleName+"', AllocatorName("+AllocatorName_pos+")='"+AllocatorName+"', Active("+Active_pos+")='"+Active+"'.");
+						_logger.debug("createDataset():GRAPH-DATA: " + getName() + ": ModuleName(" + ModuleName_pos + ")='" + ModuleName + "', AllocatorName(" + AllocatorName_pos + ")='" + AllocatorName + "', Active(" + Active_pos + ")='" + Active + "'.");
 
 					if (generateSummary && (showEmptyGraphs || Active.doubleValue() > 0.0) )
-						dataset.addValue(Active.doubleValue(), ModuleName+":"+AllocatorName, "SUMMARY");
+						dataset.addValue(Active.doubleValue(), ModuleName + ":" + AllocatorName, "SUMMARY");
 
 					if (generateModules && (showEmptyGraphs || Active.doubleValue() > 0.0) )
 						dataset.addValue(Active.doubleValue(), AllocatorName, ModuleName);

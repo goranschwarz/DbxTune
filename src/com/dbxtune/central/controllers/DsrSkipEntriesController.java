@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -96,8 +96,8 @@ extends HttpServlet
 		}
 		catch (Exception e)
 		{
-			_logger.info("Problem accessing DBMS or writing JSON, Caught: "+e, e);
-			throw new ServletException("Problem accessing db or writing JSON, Caught: "+e, e);
+			_logger.info("Problem accessing DBMS or writing JSON, Caught: " + e, e);
+			throw new ServletException("Problem accessing db or writing JSON, Caught: " + e, e);
 		}
 		
 		out.println(payload);
@@ -148,7 +148,7 @@ extends HttpServlet
 		}
 		catch (SQLException ex)
 		{
-			_logger.info("Problem accessing DBMS or writing JSON, Caught: "+ex, ex);
+			_logger.info("Problem accessing DBMS or writing JSON, Caught: " + ex, ex);
 
 			// Send: 400
 			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Caught: " + ex);
@@ -221,7 +221,7 @@ extends HttpServlet
 		}
 		catch (SQLException ex)
 		{
-			_logger.info("Problem accessing DBMS or writing JSON, Caught: "+ex, ex);
+			_logger.info("Problem accessing DBMS or writing JSON, Caught: " + ex, ex);
 
 			// Send: 400
 			//resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Caught: " + ex);

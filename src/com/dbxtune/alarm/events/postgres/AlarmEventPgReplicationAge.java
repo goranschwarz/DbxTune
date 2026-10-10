@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -47,7 +47,7 @@ extends AlarmEvent
 				AlarmEvent.Category.RPO,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.AFFECTED, 
-				"Replication Age in Server '" + cm.getServerName() + "' to '" + client_addr + "', age="+reply_time_seconds+". (thresholdInSec="+thresholdInSec+")",
+				"Replication Age in Server '" + cm.getServerName() + "' to '" + client_addr + "', age=" + reply_time_seconds + ". (thresholdInSec=" + thresholdInSec + ")",
 				thresholdInSec
 				);
 

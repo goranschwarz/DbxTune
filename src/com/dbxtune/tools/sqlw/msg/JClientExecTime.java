@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -42,8 +42,8 @@ extends JAseMessage
 				+ " (sqlExec="     + TimeUtils.msToTimeStr( "%?HH[:]%MM:%SS.%ms", execStopTime    - execStartTime)
 				+ ", readResults=" + TimeUtils.msToTimeStr( "%?HH[:]%MM:%SS.%ms", execReadRsSum)
 				+ ", other="       + TimeUtils.msToTimeStr( "%?HH[:]%MM:%SS.%ms", (execFinnishTime - execStopTime) - execReadRsSum)
-				+ "), at '"+(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()))
-				+"', for SQL starting at Line "+atLine, originSql );
+				+ "), at '" + (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()))
+				+ "', for SQL starting at Line " + atLine, originSql );
 
 		_execStartTime   = execStartTime;
 		_execStopTime    = execStopTime;

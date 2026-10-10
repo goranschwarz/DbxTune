@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2019 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -270,7 +270,7 @@ implements IUserDefinedAction
 		//------------------------------------------
 		if (StringUtil.hasValue(_mailTo))
 		{
-			if ( StringUtil.isNullOrBlank(_mailSmtpHostname) ) throw new Exception("The property '" + PROPKEY_mail_smtpHostname    + "' is mandatory for the UserDefinedAction named '"+getName()+"'.");
+			if ( StringUtil.isNullOrBlank(_mailSmtpHostname) ) throw new Exception("The property '" + PROPKEY_mail_smtpHostname    + "' is mandatory for the UserDefinedAction named '" + getName() + "'.");
 //			if ( StringUtil.isNullOrBlank(_mailFrom        ) ) throw new Exception("The property '" + PROPKEY_mail_from            + "' is mandatory for the UserDefinedAction named '"+getName()+"'.");
 		}
 
@@ -403,7 +403,7 @@ implements IUserDefinedAction
 
 			// SSL PORT
 			if (_mailSslPort >= 0)
-				email.setSslSmtpPort(_mailSslPort+""); // Hmm why is this a String parameter?
+				email.setSslSmtpPort(_mailSslPort + ""); // Hmm why is this a String parameter?
 
 			// START TLS
 			if (_mailStartTls)

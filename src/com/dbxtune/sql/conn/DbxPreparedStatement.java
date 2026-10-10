@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -83,7 +83,7 @@ public class DbxPreparedStatement implements PreparedStatement
 	public ResultSet executeQuery(String sql) throws SQLException
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("DbxPreparedStatement.executeQuery(String): sql='"+sql+"'.");
+			_logger.debug("DbxPreparedStatement.executeQuery(String): sql='" + sql + "'.");
 		
 		return _pstmnt.executeQuery(sql);
 	}
@@ -107,7 +107,7 @@ public class DbxPreparedStatement implements PreparedStatement
 	public int executeUpdate(String sql) throws SQLException
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("DbxPreparedStatement.executeUpdate(String): sql='"+sql+"'.");
+			_logger.debug("DbxPreparedStatement.executeUpdate(String): sql='" + sql + "'.");
 		
 		return _pstmnt.executeUpdate(sql);
 	}
@@ -287,7 +287,7 @@ public class DbxPreparedStatement implements PreparedStatement
 	public boolean execute(String sql) throws SQLException
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("DbxPreparedStatement.execute(String): sql='"+sql+"'.");
+			_logger.debug("DbxPreparedStatement.execute(String): sql='" + sql + "'.");
 		
 		return _pstmnt.execute(sql);
 	}

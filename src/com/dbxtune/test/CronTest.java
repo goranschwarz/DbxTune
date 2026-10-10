@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (C) 2010-2025 Goran Schwarz
+ * Copyright (C) 2010-2027 Goran Schwarz
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
@@ -58,7 +58,7 @@ public class CronTest
 //		}
 
 		
-		System.out.println(testName + " : " + "cron["+cronPattern+"]: == " + matches + " ---> description='"+description+"'.");
+		System.out.println(testName + " : " + "cron[" + cronPattern + "]: == " + matches + " ---> description='" + description + "'.");
 	}
 
 	public static void main(String[] args)
