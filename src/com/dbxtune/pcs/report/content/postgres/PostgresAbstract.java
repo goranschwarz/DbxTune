@@ -1,5 +1,5 @@
 /***************************************R****************************************
- * Copyright (C) 2010-2019 Goran SchwarzUD = 
+ * Copyright (C) 2010-2027 Goran SchwarzUD = 
  * 
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
