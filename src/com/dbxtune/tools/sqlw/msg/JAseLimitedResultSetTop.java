@@ -29,7 +29,7 @@ extends JAseMessage
 
 	public JAseLimitedResultSetTop(int numberOfRows, String originSql)
 	{
-		super("Reading the ResultSet was stopped after "+numberOfRows+" rows.", originSql);
+		super("Reading the ResultSet was stopped after " + numberOfRows + " rows.", originSql);
 //		init();
 
 		setForeground(ColorUtils.DARK_RED);

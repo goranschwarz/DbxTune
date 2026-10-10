@@ -120,7 +120,7 @@ public class MailGroupDialog
 		Configuration conf = Configuration.getCombinedConfiguration();
 		boolean show = conf.getBooleanProperty("MailGroupDialog.show", true);
 
-		_logger.debug("Show this message again is: "+show);
+		_logger.debug("Show this message again is: " + show);
 		if ( ! show )
 			return;
 
@@ -152,7 +152,7 @@ public class MailGroupDialog
 
 			boolean show = _doNotShow_chk.isSelected();
 
-			_logger.debug("Show this message again will be set to: "+show);
+			_logger.debug("Show this message again will be set to: " + show);
 			conf.setProperty("MailGroupDialog.show", show);
 			conf.save();
 
@@ -167,8 +167,8 @@ public class MailGroupDialog
 		if (HyperlinkEvent.EventType.ACTIVATED.equals(hle.getEventType())) 
 		{  
 			URL    url    = hle.getURL();
-			String urlStr = ""+hle.getURL();
-			_logger.info("You clicked on '"+urlStr+"'. Browser will be opened.");  
+			String urlStr = "" + hle.getURL();
+			_logger.info("You clicked on '" + urlStr + "'. Browser will be opened.");  
 
 			try
 			{
@@ -176,7 +176,7 @@ public class MailGroupDialog
 			}
 			catch (Exception e)
 			{
-				_logger.error("Problems when open the URL '"+urlStr+"'. Caught: "+e);
+				_logger.error("Problems when open the URL '" + urlStr + "'. Caught: " + e);
 			}
 		}
 	}
@@ -247,7 +247,7 @@ public class MailGroupDialog
 
 			"<b>Join the Information Mailing List.</b><br><br>" +
 			"Go to this page to join the Mailing List<br>" +
-			"<A HREF=\""+ASETUNE_MAIL_GROUP_URL+"\">"+ASETUNE_MAIL_GROUP_URL+"</A><br>" +
+			"<A HREF=\"" + ASETUNE_MAIL_GROUP_URL + "\">" + ASETUNE_MAIL_GROUP_URL + "</A><br>" +
 			"<br>" +
 			"<HR size=\"1\">" +
 			"In this group you can:<br>" +

@@ -491,12 +491,12 @@ public class AlarmWritersTableModel extends AbstractTableModel
 			{
 				if (awe.checkSettingsForMandatoryData())
 				{
-					return "Mandatory values need to be filled in. For writer '"+awe._name+"'.";
+					return "Mandatory values need to be filled in. For writer '" + awe._name + "'.";
 				}
 
 				if (awe.checkSettingsForProbableData())
 				{
-					return "Optional/Template values need to be replaced with real values. For writer '"+awe._name+"'.";
+					return "Optional/Template values need to be replaced with real values. For writer '" + awe._name + "'.";
 				}
 			}
 		}
@@ -535,31 +535,31 @@ public class AlarmWritersTableModel extends AbstractTableModel
 //		}
 
 		String packageName = "com.dbxtune.alarm.writers";
-		System.out.println("\n\n---- START ---- "+packageName+" ----");
+		System.out.println("\n\n---- START ---- " + packageName + " ----");
 		Reflections reflections = new Reflections(packageName);
 
 		Set<Class<? extends IAlarmWriter>> subTypes = reflections.getSubTypesOf(IAlarmWriter.class);
 		
 		for (Class<? extends IAlarmWriter> clazz : subTypes)
 		{
-			System.out.println("xxxx: "+clazz.getSimpleName());
+			System.out.println("xxxx: " + clazz.getSimpleName());
 		}
-		System.out.println("---- END ---- "+packageName+" ----");
+		System.out.println("---- END ---- " + packageName + " ----");
 		
 
 	
 	
 		packageName = "com.dbxtune.pcs";
-		System.out.println("\n\n---- START ----  "+packageName+" ----");
+		System.out.println("\n\n---- START ----  " + packageName + " ----");
 		Reflections reflections2 = new Reflections(packageName);
 
 		Set<Class<? extends IPersistWriter>> subTypes2 = reflections2.getSubTypesOf(IPersistWriter.class);
 		
 		for (Class<? extends IPersistWriter> clazz : subTypes2)
 		{
-			System.out.println("xxxx: "+clazz.getSimpleName());
+			System.out.println("xxxx: " + clazz.getSimpleName());
 		}
-		System.out.println("---- END ----  "+packageName+" ----");
+		System.out.println("---- END ----  " + packageName + " ----");
 		
 	
 	}

@@ -80,7 +80,7 @@ extends XmenuActionBase
 
 	public String getPlan()
 	{
-		String sqlStatement = "select show_cached_plan_in_xml("+_SSQLID+",0,0)";
+		String sqlStatement = "select show_cached_plan_in_xml(" + _SSQLID + ",0,0)";
 
 		String query_plan = null;
 		
@@ -96,7 +96,7 @@ extends XmenuActionBase
 		}
 		catch (Exception e)
 		{
-			JOptionPane.showMessageDialog(null, "Executing SQL command '"+sqlStatement+"'. Found the following error:\n."+e, "Error", JOptionPane.ERROR_MESSAGE);
+			JOptionPane.showMessageDialog(null, "Executing SQL command '" + sqlStatement + "'. Found the following error:\n." + e, "Error", JOptionPane.ERROR_MESSAGE);
 		}
 
 		return query_plan;
@@ -109,7 +109,7 @@ extends XmenuActionBase
 		JPanel textPanel = new JPanel();
 		final RSyntaxTextAreaX textarea      = new RSyntaxTextAreaX();
 		final RTextScrollPane  textareaSroll = new RTextScrollPane(textarea);
-		final JFrame textFrame = new JFrame("XML Plan for SSQLID "+_SSQLID);
+		final JFrame textFrame = new JFrame("XML Plan for SSQLID " + _SSQLID);
 
 		queryPlan = 
 			"<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->\n" +

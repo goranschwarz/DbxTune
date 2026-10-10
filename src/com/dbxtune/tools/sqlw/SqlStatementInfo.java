@@ -187,7 +187,7 @@ implements SqlStatement
 				if (rpcParamsBeginIdx >= 0)
 				{
 					if (rpcParamsEndIdx < 0)
-						throw new SQLException("Missing end parentheses of the dynamic parameter specification. I found ':(' at pos "+rpcParamsBeginIdx+", but no end parenthes");
+						throw new SQLException("Missing end parentheses of the dynamic parameter specification. I found ':(' at pos " + rpcParamsBeginIdx + ", but no end parenthes");
 
 					sqlParamsStr = _sql.substring(startPos, rpcParamsBeginIdx).trim();
 					rpcParamsStr = _sql.substring(rpcParamsBeginIdx + 2, rpcParamsEndIdx);
@@ -200,7 +200,7 @@ implements SqlStatement
 					_sqlParams = SqlParam.parse(rpcParamsStr);
 
 				if (_logger.isDebugEnabled());
-					_logger.debug("NEW SQL for PreparedStatemnent: |"+_sql+"|.");
+					_logger.debug("NEW SQL for PreparedStatemnent: |" + _sql + "|.");
 
 			} // end: _preparedStatement
 
@@ -236,7 +236,7 @@ implements SqlStatement
 				if (rpcParamsBeginIdx >= 0)
 				{
 					if (rpcParamsEndIdx < 0)
-						throw new SQLException("Missing end parentheses of the dynamic parameter specification. I found ':(' at pos "+rpcParamsBeginIdx+", but no end parenthes");
+						throw new SQLException("Missing end parentheses of the dynamic parameter specification. I found ':(' at pos " + rpcParamsBeginIdx + ", but no end parenthes");
 
 					sqlParamsStr = _sql.substring(startPos, rpcParamsBeginIdx).trim();
 					rpcParamsStr = _sql.substring(rpcParamsBeginIdx + 2, rpcParamsEndIdx);
@@ -258,7 +258,7 @@ implements SqlStatement
 				{
 					int endParenthesPos = StringUtil.indexOfEndBrace(sqlParamsStr, sqlParamStart + 1, ')');
 					if (endParenthesPos < 0)
-						throw new SQLException("Missing end parentheses of the procedure parameters. I found '(' at pos "+sqlParamStart+", but no end parenthes");
+						throw new SQLException("Missing end parentheses of the procedure parameters. I found '(' at pos " + sqlParamStart + ", but no end parenthes");
 
 					procName     = sqlParamsStr.substring(0, sqlParamStart);
 					sqlParamsStr = sqlParamsStr.substring(sqlParamStart+1, endParenthesPos);
@@ -291,12 +291,12 @@ implements SqlStatement
 				}
 				
 				if (_doReturnCode)
-					_sql = "{?=call "+procName+"("+sqlParamsStr+")}";
+					_sql = "{?=call " + procName + "(" + sqlParamsStr + ")}";
 				else
-					_sql = "{call "+procName+"("+sqlParamsStr+")}";
+					_sql = "{call " + procName + "(" + sqlParamsStr + ")}";
 				
 				if (_logger.isDebugEnabled());
-					_logger.debug("NEW SQL for CallableStatemnent: |"+_sql+"|.");
+					_logger.debug("NEW SQL for CallableStatemnent: |" + _sql + "|.");
 
 			} // end: _callableStatement
 
@@ -314,11 +314,11 @@ implements SqlStatement
 
 				String msg = "EXEC PROCEDURE AS RPC LOGIC: \n" +
 				             "Trying to execute a stored procedure via RPC method. The parameter list dosn't contain any Question Marks('?') This will probably *force* the JDBC driver to deliver the call as a 'language' statament to the server. \n" +
-				             "Current CallableStatement sql looks like '"+_sql+"'. \n" +
+				             "Current CallableStatement sql looks like '" + _sql + "'. \n" +
 				             "If you want it to be sent as a RPC to the server, you needs to use Question Marks(?) for the parameter(s), and a parameter specification (se below) so that the JDBC driver can issue the call in an aproperiate way. \n" +
-				             "Format of the Parameter Specification is '"+rpcParamSpec+"'. \n" +
-				             "Example of the Parameter Specification '"+rpcParamSpecExample+"'. \n" +
-				             "Example of a SQL that will be translated to a RPC call '"+rpcfullExample+"'.";
+				             "Format of the Parameter Specification is '" + rpcParamSpec + "'. \n" +
+				             "Example of the Parameter Specification '" + rpcParamSpecExample + "'. \n" +
+				             "Example of a SQL that will be translated to a RPC call '" + rpcfullExample + "'.";
 
 				// if issued by '\rpc' then throw an exception
 				// otherwise just write a warning message and continue
@@ -330,9 +330,9 @@ implements SqlStatement
 
 				// Add WARNING Message to the result
 				if (resultCompList != null)
-					resultCompList.add(new JAseMessage(Version.getAppName()+": WARNING - "+msg, _sql));
+					resultCompList.add(new JAseMessage(Version.getAppName() + ": WARNING - " + msg, _sql));
 				else
-					System.out.println("WARNING - "+msg);
+					System.out.println("WARNING - " + msg);
 			}
 			if (questionMarkCount != _sqlParams.size())
 			{
@@ -341,12 +341,12 @@ implements SqlStatement
 				String rpcfullExample      = "\\exec sp_who ? :( string = '2' )";
 				
 				String msg = "EXEC PROCEDURE AS RPC LOGIC: \n" +
-				             "Trying to execute a stored procedure via RPC method. Number of Question Marks('?') doesn't match the parameter specification count (QuestionMarkCount="+questionMarkCount+", paramSpecCount="+_sqlParams.size()+"). \n" +
-				             "Current CallableStatement sql looks like '"+_sql+"'. \n" +
-				             "ParameterSpecification looks like '"+rpcParamsStr+"'. \n" +
-				             "Format of the Parameter Specification is '"+rpcParamSpec+"'. \n" +
-				             "Example of the Parameter Specification '"+rpcParamSpecExample+"'. \n" +
-				             "Example of a SQL that will be translated to a RPC call '"+rpcfullExample+"'.";
+				             "Trying to execute a stored procedure via RPC method. Number of Question Marks('?') doesn't match the parameter specification count (QuestionMarkCount=" + questionMarkCount + ", paramSpecCount=" + _sqlParams.size() + "). \n" +
+				             "Current CallableStatement sql looks like '" + _sql + "'. \n" +
+				             "ParameterSpecification looks like '" + rpcParamsStr + "'. \n" +
+				             "Format of the Parameter Specification is '" + rpcParamSpec + "'. \n" +
+				             "Example of the Parameter Specification '" + rpcParamSpecExample + "'. \n" +
+				             "Example of a SQL that will be translated to a RPC call '" + rpcfullExample + "'.";
 				throw new SQLException(msg);
 			}
 		} // end: exec or call
@@ -376,13 +376,13 @@ implements SqlStatement
 					if (param.isOutputParam())
 					{
 						if (_logger.isDebugEnabled())
-							_logger.debug("SqlStatementInfo: registering OUT PARAM at pos="+pos+", sqlType="+param.getSqlType()+", jdbcSqlType="+ResultSetTableModel.getColumnJavaSqlTypeName(param.getSqlType()));
+							_logger.debug("SqlStatementInfo: registering OUT PARAM at pos=" + pos + ", sqlType=" + param.getSqlType() + ", jdbcSqlType=" + ResultSetTableModel.getColumnJavaSqlTypeName(param.getSqlType()));
 						_cstmnt.registerOutParameter(pos, param.getSqlType());
 					}
 					else
 					{
 						if (_logger.isDebugEnabled())
-							_logger.debug("SqlStatementInfo: registering 'send' PARAM at pos="+pos+", sqlType="+param.getSqlType()+", jdbcSqlType="+ResultSetTableModel.getColumnJavaSqlTypeName(param.getSqlType()));
+							_logger.debug("SqlStatementInfo: registering 'send' PARAM at pos=" + pos + ", sqlType=" + param.getSqlType() + ", jdbcSqlType=" + ResultSetTableModel.getColumnJavaSqlTypeName(param.getSqlType()));
 
 						if (param.getSqlType() == Types.BLOB)
 						{
@@ -428,7 +428,7 @@ implements SqlStatement
 		{
 			if (conn == null)
 			{
-				throw new SQLException("Executing SQL '"+_sql+"' but the connection is NULL.");
+				throw new SQLException("Executing SQL '" + _sql + "' but the connection is NULL.");
 			}
 
 			// Get a "regular" Statement...
@@ -453,7 +453,7 @@ implements SqlStatement
 			{
 				_logger.debug("readRpcReturnCodeAndOutputParameters(): Reading return code from procedure: _cstmnt.getInt(1)");
 				int returnStatus = _cstmnt.getInt(1);
-				_logger.debug("readRpcReturnCodeAndOutputParameters(): return code from procedure: "+returnStatus);
+				_logger.debug("readRpcReturnCodeAndOutputParameters(): return code from procedure: " + returnStatus);
 
 				resultCompList.add( new JAseProcRetCode(returnStatus, _sql) );
 			}
@@ -469,9 +469,9 @@ implements SqlStatement
 					
 					if (param.isOutputParam())
 					{
-						_logger.debug("readRpcReturnCodeAndOutputParameters(): Reading OUTPUT parameter: _cstmnt.getObject("+pos+")");
+						_logger.debug("readRpcReturnCodeAndOutputParameters(): Reading OUTPUT parameter: _cstmnt.getObject(" + pos + ")");
 						Object outParamVal = _cstmnt.getObject(pos);
-						_logger.debug("readRpcReturnCodeAndOutputParameters(): Reading OUTPUT parameter: _cstmnt.getObject("+pos+"): value: "+outParamVal);
+						_logger.debug("readRpcReturnCodeAndOutputParameters(): Reading OUTPUT parameter: _cstmnt.getObject(" + pos + "): value: " + outParamVal);
 
 						// If OUTput parameter is ORACLE SYS_REFCURSOR, then read the ResultSet
 						if (    outParamVal != null 
@@ -479,7 +479,7 @@ implements SqlStatement
 						     && param.getSqlType() == SqlParam.ORACLE_CURSOR_TYPE
 						   )
 						{
-							_logger.debug("readRpcReturnCodeAndOutputParameters(): OUTPUT parameter: "+pos+", is a ResultSet (Oracle cursor ref)");
+							_logger.debug("readRpcReturnCodeAndOutputParameters(): OUTPUT parameter: " + pos + ", is a ResultSet (Oracle cursor ref)");
 
 							ResultSet rs = (ResultSet) outParamVal;
 
@@ -536,30 +536,30 @@ implements SqlStatement
 	//###########################################################################################
 	private static void test(int testnum, boolean shouldWork, DbxConnection conn, String sql, String product, ArrayList<JComponent> resultCompList)
 	{
-		System.out.println(">>>>>>>>> Test number '"+testnum+"'.");
+		System.out.println(">>>>>>>>> Test number '" + testnum + "'.");
 		try
 		{
-			System.out.println("--------- input '"+sql+"'.");
+			System.out.println("--------- input '" + sql + "'.");
 			new SqlStatementInfo(conn, sql, product, resultCompList);
 			
 			if (shouldWork)
-				System.out.println("--------- Test number '"+testnum+"': OK");
+				System.out.println("--------- Test number '" + testnum + "': OK");
 			else
-				System.err.println("--------- Test number '"+testnum+"': ----FAILED-----");
+				System.err.println("--------- Test number '" + testnum + "': ----FAILED-----");
 		}
 		catch (Throwable e)
 		{
 			if (e instanceof SQLException)
-				System.out.println("EXCEPTION: "+e);
+				System.out.println("EXCEPTION: " + e);
 			else
 				e.printStackTrace();
 
 			if ( ! shouldWork )
-				System.out.println("--------- Test number '"+testnum+"': OK");
+				System.out.println("--------- Test number '" + testnum + "': OK");
 			else
-				System.err.println("--------- Test number '"+testnum+"': ----FAILED-----");
+				System.err.println("--------- Test number '" + testnum + "': ----FAILED-----");
 		}
-		System.out.println("<<<<<<<<< Test number '"+testnum+"'.");
+		System.out.println("<<<<<<<<< Test number '" + testnum + "'.");
 		System.out.println();
 	}
 	public static void main(String[] args)

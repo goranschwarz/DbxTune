@@ -41,7 +41,7 @@ extends AlarmEvent
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
 				// Note: max length for the below message is 512
-				"The internal DbxTune Subsystem 'SqlCapture' has not been updated for " + ageInSec + " seconds in server '" + cm.getServerName() + "' please investigate or simply restart the DbxTune Collector. ThresholdInSec='"+thresholdInSec+"')",
+				"The internal DbxTune Subsystem 'SqlCapture' has not been updated for " + ageInSec + " seconds in server '" + cm.getServerName() + "' please investigate or simply restart the DbxTune Collector. ThresholdInSec='" + thresholdInSec + "')",
 				thresholdInSec // crossedThreshold... well this one do not have a number.
 				);
 

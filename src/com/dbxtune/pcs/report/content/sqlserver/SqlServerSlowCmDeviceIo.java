@@ -101,10 +101,10 @@ extends SqlServerAbstract
 	}
 
 
-	public static final String PROPKEY_ABOVE_TOTAL_IOS    = OsIoStatSlowIo.class.getSimpleName()+".above.TotalIOs";
+	public static final String PROPKEY_ABOVE_TOTAL_IOS    = OsIoStatSlowIo.class.getSimpleName() + ".above.TotalIOs";
 	public static final int    DEFAULT_ABOVE_TOTAL_IOS    = 2;
 
-	public static final String PROPKEY_ABOVE_SERVICE_TIME = OsIoStatSlowIo.class.getSimpleName()+".above.AvgServ_ms";
+	public static final String PROPKEY_ABOVE_SERVICE_TIME = OsIoStatSlowIo.class.getSimpleName() + ".above.AvgServ_ms";
 	public static final int    DEFAULT_ABOVE_SERVICE_TIME = 50;
 
 	int _aboveTotalIos    = DEFAULT_ABOVE_TOTAL_IOS;

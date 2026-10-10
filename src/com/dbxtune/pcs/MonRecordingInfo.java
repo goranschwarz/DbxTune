@@ -250,7 +250,7 @@ public class MonRecordingInfo
 		}
 		catch(SQLException ex)
 		{
-			_logger.warn("Problems getting version string using SQL '"+sql+"'. Caught: " + ex);
+			_logger.warn("Problems getting version string using SQL '" + sql + "'. Caught: " + ex);
 		}
 
 		// If the DBMS Version String was changed... when did it happen
@@ -277,7 +277,7 @@ public class MonRecordingInfo
 				}
 				catch(SQLException ex)
 				{
-					_logger.warn("Problems getting MIN(SessionSampleTime) from CHANGED DBMS Version String using SQL '"+sql+"'. Caught: " + ex);
+					_logger.warn("Problems getting MIN(SessionSampleTime) from CHANGED DBMS Version String using SQL '" + sql + "'. Caught: " + ex);
 				}
 			}
 		}

@@ -49,7 +49,7 @@ extends AlarmEvent
 				AlarmEvent.Category.RPO,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Secondary Commit Time is Lagging in Server '" + cm.getServerName() + "' for Availability group '" + agName + "', serverName='" + serverName + "'. age='"+secondaryCommitTimeLag+"'. (thresholdInSec="+thresholdInSec+")",
+				"Secondary Commit Time is Lagging in Server '" + cm.getServerName() + "' for Availability group '" + agName + "', serverName='" + serverName + "'. age='" + secondaryCommitTimeLag + "'. (thresholdInSec=" + thresholdInSec + ")",
 				thresholdInSec
 				);
 

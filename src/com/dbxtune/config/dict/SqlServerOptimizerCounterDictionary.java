@@ -89,7 +89,7 @@ public class SqlServerOptimizerCounterDictionary
 		}
 
 		// Compose an empty one
-		return "<html><code>" +name + "</code> not found in dictionary.</html>";
+		return "<html><code>" + name + "</code> not found in dictionary.</html>";
 	}
 
 

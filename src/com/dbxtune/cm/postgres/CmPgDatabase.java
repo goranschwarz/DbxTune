@@ -83,7 +83,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -164,7 +164,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmPgDatabase(counterController, guiController);
 	}
@@ -537,7 +537,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_FETCH_EFFECIENT_PCT,
 			"Row Fetch Efficiency", 	                // Menu CheckBox text
-			"Row Fetch Efficiency (tup_fetched/tup_returned) in Percent ("+SHORT_NAME+")", // Graph Label 
+			"Row Fetch Efficiency (tup_fetched/tup_returned) in Percent (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.CPU,
@@ -548,7 +548,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_FETCH_EFFECIENT_SLIDE_PCT,
 			"Row Fetch Efficiency SLIDE", 	                // Menu CheckBox text
-			"Row Fetch Efficiency SLIDE (tup_fetched/tup_returned) in Percent ("+SHORT_NAME+")", // Graph Label 
+			"Row Fetch Efficiency SLIDE (tup_fetched/tup_returned) in Percent (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.CPU,
@@ -559,7 +559,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_FETCH_EFFECIENT_ABS_PCT,
 			"Row Fetch Efficiency ABS", 	                // Menu CheckBox text
-			"Row Fetch Efficiency ABS (tup_fetched/tup_returned) in Percent ("+SHORT_NAME+")", // Graph Label 
+			"Row Fetch Efficiency ABS (tup_fetched/tup_returned) in Percent (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.CPU,
@@ -570,7 +570,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_FETCH_EFFECIENT_SUM,
 			"Row Fetch Efficiency SUM", 	                // Menu CheckBox text
-			"Row Fetch Efficiency SUM [tup_returned, tup_fetched] ("+SHORT_NAME+")", // Graph Label 
+			"Row Fetch Efficiency SUM [tup_returned, tup_fetched] (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] {"tup_returned (read)", "tup_fetched (to-client)"}, 
 			LabelType.Static, 
@@ -582,7 +582,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_CONNECTIONS,
 			"Connections", 	                // Menu CheckBox text
-			"Connections ("+SHORT_NAME+")", // Graph Label 
+			"Connections (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.SRV_CONFIG,
@@ -593,7 +593,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_CONNECTIONS_SUM,
 			"Connections Sum", 	                // Menu CheckBox text
-			"Connections Sum ("+SHORT_NAME+")", // Graph Label 
+			"Connections Sum (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] {"srv_config: max_connections", "numbackends"},
 			LabelType.Static, 
@@ -605,7 +605,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_COMMITS,
 			"Commits", 	                           // Menu CheckBox text
-			"Commits per second ("+SHORT_NAME+")", // Graph Label 
+			"Commits per second (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -616,7 +616,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_ROLLBACKS,
 			"Rollbacks", 	                         // Menu CheckBox text
-			"Rollbacks per second ("+SHORT_NAME+")", // Graph Label 
+			"Rollbacks per second (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -627,7 +627,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_CACHE_HIT_PCT,
 			"Data Cache Hit Percent", 	                          // Menu CheckBox text
-			"Data Cache Hit Percent ("+SHORT_NAME+")",            // Graph Label 
+			"Data Cache Hit Percent (" + SHORT_NAME + ")",            // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -638,7 +638,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_TOTAL_READS,
 			"Cache Total Reads (blks_read+blks_hit)", 	                           // Menu CheckBox text
-			"Cache Total Reads (blks_read+blks_hit) Per Second ("+SHORT_NAME+")",  // Graph Label 
+			"Cache Total Reads (blks_read+blks_hit) Per Second (" + SHORT_NAME + ")",  // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -649,7 +649,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_READS,
 			"Physical Reads (blks_read)", 	                          // Menu CheckBox text
-			"Physical Reads (blks_read) per second ("+SHORT_NAME+")", // Graph Label 
+			"Physical Reads (blks_read) per second (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
@@ -660,7 +660,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_CACHE_HITS,
 			"Cache Read Hits (blks_hit)", 	                          // Menu CheckBox text
-			"Cache Read Hits (blks_hit) per second ("+SHORT_NAME+")", // Graph Label 
+			"Cache Read Hits (blks_hit) per second (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.CACHE,
@@ -671,7 +671,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_ROWS_RETURNED,
 			"Rows Returned (rows used after filtering)", 	                         // Menu CheckBox text
-			"Rows Returned (rows used after filtering) per second ("+SHORT_NAME+")", // Graph Label 
+			"Rows Returned (rows used after filtering) per second (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.CPU,
@@ -682,7 +682,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_ROWS_FETCHED,
 			"Rows Fetched (rows read before filter)", 	                          // Menu CheckBox text
-			"Rows Fetched (rows read before filter) per second ("+SHORT_NAME+")", // Graph Label 
+			"Rows Fetched (rows read before filter) per second (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.CPU,
@@ -693,7 +693,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_ROWS_INSERTS,
 			"Rows Inserted", 	                         // Menu CheckBox text
-			"Rows Inserted per second ("+SHORT_NAME+")", // Graph Label 
+			"Rows Inserted per second (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -704,7 +704,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_ROWS_UPDATED,
 			"Rows Updated", 	                         // Menu CheckBox text
-			"Rows Updated per second ("+SHORT_NAME+")", // Graph Label 
+			"Rows Updated per second (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -715,7 +715,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_ROWS_DELETED,
 			"Rows Deleted", 	                         // Menu CheckBox text
-			"Rows Deleted per second ("+SHORT_NAME+")", // Graph Label 
+			"Rows Deleted per second (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -726,7 +726,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_ROWS_INS_UPD_DEL,
 			"Rows Inserted, Updated and Deleted", 	                         // Menu CheckBox text
-			"Rows Inserted, Updated and Deleted per second ("+SHORT_NAME+")", // Graph Label 
+			"Rows Inserted, Updated and Deleted per second (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -737,7 +737,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_ROWS_CONFLICTS,
 			"Conflicting Statements", 	                         // Menu CheckBox text
-			"Conflicting Statements per second ("+SHORT_NAME+")", // Graph Label 
+			"Conflicting Statements per second (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -748,7 +748,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_TEMP_FILES,
 			"Temp Files Created", 	                         // Menu CheckBox text
-			"Temp Files Created per second ("+SHORT_NAME+")", // Graph Label 
+			"Temp Files Created per second (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
@@ -759,7 +759,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_TEMP_BYTES,
 			"Temp Bytes", 	                         // Menu CheckBox text
-			"Temp Bytes per second ("+SHORT_NAME+")", // Graph Label 
+			"Temp Bytes per second (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
@@ -770,7 +770,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_DEADLOCKS,
 			"Deadlocks", 	                         // Menu CheckBox text
-			"Deadlocks per second ("+SHORT_NAME+")", // Graph Label 
+			"Deadlocks per second (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -781,7 +781,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_READ_TIME,
 			"Read Time", 	                         // Menu CheckBox text
-			"Read Time per second ("+SHORT_NAME+")", // Graph Label 
+			"Read Time per second (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
@@ -792,7 +792,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_WRITE_TIME,
 			"Write Time", 	                         // Menu CheckBox text
-			"Write Time per second ("+SHORT_NAME+")", // Graph Label 
+			"Write Time per second (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
@@ -803,7 +803,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_DBSIZE_MB,
 			"DB Size in MB", 	                         // Menu CheckBox text
-			"DB Size in MB ("+SHORT_NAME+")", // Graph Label 
+			"DB Size in MB (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.SPACE,
@@ -843,7 +843,7 @@ extends CountersModel
 				if      (dataType == CountersModel.DATA_ABS)  data = this.getAbsValueAsDouble (r, colname);
 				else if (dataType == CountersModel.DATA_DIFF) data = this.getDiffValueAsDouble(r, colname);
 				else if (dataType == CountersModel.DATA_RATE) data = this.getRateValueAsDouble(r, colname);
-				else throw new RuntimeException("dataType(tgName="+tgdp.getName()+"): Unsupported dataType="+dataType);
+				else throw new RuntimeException("dataType(tgName=" + tgdp.getName() + "): Unsupported dataType=" + dataType);
 				
 				if (data != null)
 					sum += data;
@@ -994,7 +994,7 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_FreeConnections, DEFAULT_alarm_FreeConnections);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): free_connections: threshold="+threshold+", numFree='"+numFree+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): free_connections: threshold=" + threshold + ", numFree='" + numFree + "'.");
 
 				if (numFree < threshold)
 				{
@@ -1053,7 +1053,7 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ChecksumFailures, DEFAULT_alarm_ChecksumFailures);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): checksum_failures: threshold=" + threshold + ", checksum_failures_diff='" + checksum_failures_diff + "'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): checksum_failures: threshold=" + threshold + ", checksum_failures_diff='" + checksum_failures_diff + "'.");
 
 				if (checksum_failures_diff > threshold)
 				{

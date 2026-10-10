@@ -275,7 +275,7 @@ public class CounterSetTemplates
 //		}
 		else
 		{
-			throw new Exception("Unknown template name '"+templateName+"'.");
+			throw new Exception("Unknown template name '" + templateName + "'.");
 		}
 
 		// Some sort of TEMPLATE was found
@@ -290,7 +290,7 @@ public class CounterSetTemplates
 					if (postpone <= 0)
 						activeCmList.add(name);
 					else
-						activeCmList.add(name+":"+postpone);
+						activeCmList.add(name + ":" + postpone);
 				}
 			}
 		}
@@ -308,16 +308,16 @@ public class CounterSetTemplates
 		CounterController.setInstance(counters);
 		counters.init();
 
-		System.out.println("SYSTEM_TEMPLATE_PCS_ON_SMALL  : \n"+SYSTEM_TEMPLATE_PCS_ON_SMALL .toString(25, 6));
-		System.out.println("SYSTEM_TEMPLATE_PCS_ON_MEDIUM : \n"+SYSTEM_TEMPLATE_PCS_ON_MEDIUM.toString(25, 6));
-		System.out.println("SYSTEM_TEMPLATE_PCS_ON_LARGE  : \n"+SYSTEM_TEMPLATE_PCS_ON_LARGE .toString(25, 6));
-		System.out.println("SYSTEM_TEMPLATE_PCS_ON_ALL    : \n"+SYSTEM_TEMPLATE_PCS_ON_ALL   .toString(25, 6));
+		System.out.println("SYSTEM_TEMPLATE_PCS_ON_SMALL  : \n" + SYSTEM_TEMPLATE_PCS_ON_SMALL .toString(25, 6));
+		System.out.println("SYSTEM_TEMPLATE_PCS_ON_MEDIUM : \n" + SYSTEM_TEMPLATE_PCS_ON_MEDIUM.toString(25, 6));
+		System.out.println("SYSTEM_TEMPLATE_PCS_ON_LARGE  : \n" + SYSTEM_TEMPLATE_PCS_ON_LARGE .toString(25, 6));
+		System.out.println("SYSTEM_TEMPLATE_PCS_ON_ALL    : \n" + SYSTEM_TEMPLATE_PCS_ON_ALL   .toString(25, 6));
 
 		System.out.println();
-		System.out.println("SYSTEM_TEMPLATE_PCS_OFF_SMALL : \n"+SYSTEM_TEMPLATE_PCS_OFF_SMALL .toString(25, 6));
-		System.out.println("SYSTEM_TEMPLATE_PCS_OFF_MEDIUM: \n"+SYSTEM_TEMPLATE_PCS_OFF_MEDIUM.toString(25, 6));
-		System.out.println("SYSTEM_TEMPLATE_PCS_OFF_LARGE : \n"+SYSTEM_TEMPLATE_PCS_OFF_LARGE .toString(25, 6));
-		System.out.println("SYSTEM_TEMPLATE_PCS_OFF_ALL   : \n"+SYSTEM_TEMPLATE_PCS_OFF_ALL   .toString(25, 6));
+		System.out.println("SYSTEM_TEMPLATE_PCS_OFF_SMALL : \n" + SYSTEM_TEMPLATE_PCS_OFF_SMALL .toString(25, 6));
+		System.out.println("SYSTEM_TEMPLATE_PCS_OFF_MEDIUM: \n" + SYSTEM_TEMPLATE_PCS_OFF_MEDIUM.toString(25, 6));
+		System.out.println("SYSTEM_TEMPLATE_PCS_OFF_LARGE : \n" + SYSTEM_TEMPLATE_PCS_OFF_LARGE .toString(25, 6));
+		System.out.println("SYSTEM_TEMPLATE_PCS_OFF_ALL   : \n" + SYSTEM_TEMPLATE_PCS_OFF_ALL   .toString(25, 6));
 	}
 }
 

@@ -59,7 +59,7 @@ extends HttpServlet
 		if (principal != null)
 			currentUsername = principal.getName();
 
-		String from = "from getRemoteHost='" + request.getRemoteHost() + "', currentUsername='"+currentUsername+"', by user '" + request.getRemoteUser() + "', UserAgent='" + request.getHeader("User-Agent") + "'.";
+		String from = "from getRemoteHost='" + request.getRemoteHost() + "', currentUsername='" + currentUsername + "', by user '" + request.getRemoteUser() + "', UserAgent='" + request.getHeader("User-Agent") + "'.";
 
 		String recordingsDir = DbxTuneCentral.getAppDataDir();
 		

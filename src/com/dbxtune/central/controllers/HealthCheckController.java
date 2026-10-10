@@ -106,7 +106,7 @@ extends HttpServlet
 			// Check input for {res|result}, which can be: {arr|array|map}
 			if ( ! StringUtil.equalsAny(resType, "arr", "array", "map") )
 			{
-				resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Paramater 'res' or 'result' is '"+resType+"', which is an unknown value. Allowed values are: 'array' or 'map'.");
+				resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Paramater 'res' or 'result' is '" + resType + "', which is an unknown value. Allowed values are: 'array' or 'map'.");
 				return;
 			}
 			if (resType.equals("arr")) resType = "array";
@@ -143,7 +143,7 @@ extends HttpServlet
 			{
 				if ( ! reader.hasServerSession(srvName) )
 				{
-					resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Server name '"+srvName+"' do not exist in the DBX Central Database.");
+					resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Server name '" + srvName + "' do not exist in the DBX Central Database.");
 					return;
 				}
 			}
@@ -184,8 +184,8 @@ extends HttpServlet
 		}
 		catch (Exception e)
 		{
-			_logger.info("Problem accessing DBMS or writing JSON, Caught: "+e, e);
-			throw new ServletException("Problem accessing db or writing JSON, Caught: "+e, e);
+			_logger.info("Problem accessing DBMS or writing JSON, Caught: " + e, e);
+			throw new ServletException("Problem accessing db or writing JSON, Caught: " + e, e);
 		}
 		
 		out.println(payload);

@@ -431,9 +431,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 				String lcRefreshTime  = (cm == null) ? "Unavailable" : cm.getLcRefreshTime() + " ms.";
 
 				return "<html>" +
-						"SQL Refresh time: "+sqlRefreshTime+"<br>" +
-						"GUI Refresh Time: "+guiRefreshTime+"<br>" +
-						"Local Calculation Time: "+lcRefreshTime+"<br>" +
+						"SQL Refresh time: " + sqlRefreshTime + "<br>" +
+						"GUI Refresh Time: " + guiRefreshTime + "<br>" +
+						"Local Calculation Time: " + lcRefreshTime + "<br>" +
 						"</html>";
 			}
 		};
@@ -447,7 +447,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 		String tooltip = "";
 
-		tooltip = "The name we used when "+Version.getAppName()+" connected to the server, meaning name in sql.ini or interfaces ";
+		tooltip = "The name we used when " + Version.getAppName() + " connected to the server, meaning name in sql.ini or interfaces ";
 //		_localServerName_lbl  .setText("Local server name");
 		_localServerName_lbl  .setText("Connection Info");
 		_localServerName_lbl  .setToolTipText(tooltip);
@@ -1579,7 +1579,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_srvVersion_txt        .setText(cm.getAbsString (0, "atAtVersion").replaceFirst("Sybase IQ/", ""));  _srvVersion_txt.setCaretPosition(0);
 //		_srvPageSize_txt       .setText(cm.getAbsString (0, "asePageSize"));
 //		_lastSampleTime_txt    .setText(cm.getAbsString (0, "timeIsNow"));
-		_lastSampleTime_txt    .setText(cm.getSampleTime()+"");
+		_lastSampleTime_txt    .setText(cm.getSampleTime() + "");
 //		_utcTimeDiff_txt       .setText(cm.findColumn("utcTimeDiff") >= 0 ? cm.getAbsString (0, "utcTimeDiff") : "Not available");
 ////		_startDate_txt         .setText(cm.getAbsString (0, "StartDate"));
 ////		_daysRunning_txt       .setText(cm.getAbsString (0, "DaysRunning"));
@@ -2039,7 +2039,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		else if ( CounterController.hasInstance() && CounterController.getInstance().getMonDisConnectTime() != null )
 		{
 			String dateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(CounterController.getInstance().getMonDisConnectTime());
-			setWatermarkText("Disconnect at: \n"+dateStr);
+			setWatermarkText("Disconnect at: \n" + dateStr);
 		}
 		else
 		{

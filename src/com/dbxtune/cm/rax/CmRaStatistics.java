@@ -73,7 +73,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -103,7 +103,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmRaStatistics(counterController, guiController);
 	}
@@ -711,37 +711,37 @@ extends CountersModel
 
 				if ("VM maximum memory".equals(statistics))
 				{
-					String newStatName = statistics+" - MB";
+					String newStatName = statistics + " - MB";
 					BigDecimal newVal = (numberValue == null ? null : numberValue.divide(MB, 1, BigDecimal.ROUND_UP)); 
-					addRow(newSample, component, newStatName, newVal+"", newVal, RaxCounterDict.getDesc(newStatName));
+					addRow(newSample, component, newStatName, newVal + "", newVal, RaxCounterDict.getDesc(newStatName));
 				}
 				else if ("VM total memory allocated".equals(statistics))
 				{
-					String newStatName = statistics+" - MB";
+					String newStatName = statistics + " - MB";
 					BigDecimal newVal = (numberValue == null ? null : numberValue.divide(MB, 1, BigDecimal.ROUND_UP)); 
-					addRow(newSample, component, newStatName, newVal+"", newVal, RaxCounterDict.getDesc(newStatName));
+					addRow(newSample, component, newStatName, newVal + "", newVal, RaxCounterDict.getDesc(newStatName));
 				}
 				else if ("VM free memory".equals(statistics))
 				{
-					String newStatName = statistics+" - MB";
+					String newStatName = statistics + " - MB";
 					BigDecimal newVal = (numberValue == null ? null : numberValue.divide(MB, 1, BigDecimal.ROUND_UP)); 
-					addRow(newSample, component, newStatName, newVal+"", newVal, RaxCounterDict.getDesc(newStatName));
+					addRow(newSample, component, newStatName, newVal + "", newVal, RaxCounterDict.getDesc(newStatName));
 				}
 				else if ("VM memory usage".equals(statistics))
 				{
-					String newStatName = statistics+" - MB";
+					String newStatName = statistics + " - MB";
 					BigDecimal newVal = (numberValue == null ? null : numberValue.divide(MB, 1, BigDecimal.ROUND_UP)); 
-					addRow(newSample, component, newStatName, newVal+"", newVal, RaxCounterDict.getDesc(newStatName));
+					addRow(newSample, component, newStatName, newVal + "", newVal, RaxCounterDict.getDesc(newStatName));
 				}
 				else if ("Total bytes sent".equals(statistics))
 				{
-					String newStatName = statistics+" - KB";
+					String newStatName = statistics + " - KB";
 					BigDecimal newVal = (numberValue == null ? null : numberValue.divide(KB, 1, BigDecimal.ROUND_UP)); 
-					addRow(newSample, component, newStatName, newVal+"", newVal, RaxCounterDict.getDesc(newStatName));
+					addRow(newSample, component, newStatName, newVal + "", newVal, RaxCounterDict.getDesc(newStatName));
 
-					newStatName = statistics+" - MB";
+					newStatName = statistics + " - MB";
 					newVal = (numberValue == null ? null : numberValue.divide(MB, 1, BigDecimal.ROUND_UP)); 
-					addRow(newSample, component, newStatName, newVal+"", newVal, RaxCounterDict.getDesc(newStatName));
+					addRow(newSample, component, newStatName, newVal + "", newVal, RaxCounterDict.getDesc(newStatName));
 				}
 				else if (    "Time statistics obtained"     .equals(statistics) 
 				          || "Time replication last started".equals(statistics) 
@@ -753,7 +753,7 @@ extends CountersModel
 						// Try to parse the 'Wed Apr 15 15:59:57 CEST 2015' into a "normal SQL Timestamp" 
 						SimpleDateFormat parserSDF = new SimpleDateFormat("EEE MMM dd HH:mm:ss Z yyyy", Locale.ENGLISH);
 						Timestamp ts = new Timestamp( parserSDF.parse(value).getTime() );
-						newSample.setValueAt(ts+"", rowId, Value_pos);
+						newSample.setValueAt(ts + "", rowId, Value_pos);
 						
 						// set Counter Clear Time
 						// Note: if "clear after sample" is ON, we still wont see the "YELLOW" color on the field, this since because the time 

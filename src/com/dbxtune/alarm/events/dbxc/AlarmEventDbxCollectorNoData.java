@@ -48,7 +48,7 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"DbxCentral Receiver has not received any data from instance '" + srvName + "' for " + TimeUtils.secToTimeStrLong(secSinceLastRecv)+" (HH:MM:SS) (thresholdInSec="+thresholdInSec+")",
+				"DbxCentral Receiver has not received any data from instance '" + srvName + "' for " + TimeUtils.secToTimeStrLong(secSinceLastRecv) + " (HH:MM:SS) (thresholdInSec=" + thresholdInSec + ")",
 				thresholdInSec
 				);
 
@@ -59,6 +59,6 @@ extends AlarmEvent
 		//setTimeToLive(cm);
 
 		// Set the raw data carrier
-		setData("srvName="+srvName+",secSinceLastRecv="+secSinceLastRecv);
+		setData("srvName=" + srvName + ",secSinceLastRecv=" + secSinceLastRecv);
 	}
 }

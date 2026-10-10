@@ -221,7 +221,7 @@ public class DiffSink
 			for (Integer c : _leftColsPos)  left .add(_leftVals [c]);
 			for (Integer c : _rightColsPos) right.add(_rightVals[c]);
 			
-			return super.toString() + ": pk=|"+StringUtil.toCommaStr(_pk)+"|, leftColPos="+_leftColsPos+", rightColPos="+_rightColsPos+", _leftColVal="+left+", _rightVals="+right+".";
+			return super.toString() + ": pk=|" + StringUtil.toCommaStr(_pk) + "|, leftColPos=" + _leftColsPos + ", rightColPos=" + _rightColsPos + ", _leftColVal=" + left + ", _rightVals=" + right + ".";
 		}
 	}
 }

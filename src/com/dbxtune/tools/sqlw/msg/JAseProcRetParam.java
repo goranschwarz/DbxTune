@@ -44,7 +44,7 @@ extends JAseMessage
 	}
 	public JAseProcRetParam(final int pos, final Object val, final int type, String originSql)
 	{
-		super("RPC Return parameter: pos="+pos+", value="+toValue(val), originSql);
+		super("RPC Return parameter: pos=" + pos + ", value=" + toValue(val), originSql);
 		_pos     = pos;
 		_val     = val;
 		_sqlType = type;

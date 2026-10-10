@@ -214,6 +214,6 @@ public class AdminLogicalStatusEntry
 	public static void main(String[] args)
 	{
 		AdminLogicalStatusEntry x = new AdminLogicalStatusEntry("[180] LDS1.b2b", "[186] PROD_A1_ASE.b2b", "Active/", "[197] PROD_B1_ASE.b2b", "Active/", "[16777317] PROD_REP", "None", "None", "");
-		System.out.println("x="+x);
+		System.out.println("x=" + x);
 	}
 }

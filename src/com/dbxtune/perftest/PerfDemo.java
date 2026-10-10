@@ -289,7 +289,7 @@ implements ActionListener
 
 		if (_interfacesDriver != null)
 		{
-			_logger.debug("Just opened the interfaces file '"+ _interfacesDriver.getBundle() +"'.");
+			_logger.debug("Just opened the interfaces file '" + _interfacesDriver.getBundle() + "'.");
 			
 			_aseName.addItem("<-Choose a server->");
 			String[] servers = _interfacesDriver.getServers();
@@ -298,7 +298,7 @@ implements ActionListener
     			Arrays.sort(servers);
     			for (int i=0; i<servers.length; i++)
     			{
-    				_logger.debug("Adding server '"+ servers[i] +"' to serverListCB.");
+    				_logger.debug("Adding server '" + servers[i] + "' to serverListCB.");
     				_aseName.addItem(servers[i]);
     			}
 			}
@@ -460,13 +460,13 @@ implements ActionListener
 		String tabname = "DestTab%";
 		String sql = 
 			" select tabName          = name, \n" +
-			"        rowsInTable      = row_count (db_id('"+dbname+"'), id), \n" +
-			"        dataSizeInKB     = used_pages(db_id('"+dbname+"'), id) * (@@maxpagesize / 1024), \n" +
-			"        rowsInTableRate  = row_count (db_id('"+dbname+"'), id), \n" +
-			"        dataSizeInKBRate = used_pages(db_id('"+dbname+"'), id) * (@@maxpagesize / 1024)\n" +
-			" from ["+dbname+"]..sysobjects  \n" +
+			"        rowsInTable      = row_count (db_id('" + dbname + "'), id), \n" +
+			"        dataSizeInKB     = used_pages(db_id('" + dbname + "'), id) * (@@maxpagesize / 1024), \n" +
+			"        rowsInTableRate  = row_count (db_id('" + dbname + "'), id), \n" +
+			"        dataSizeInKBRate = used_pages(db_id('" + dbname + "'), id) * (@@maxpagesize / 1024)\n" +
+			" from [" + dbname + "]..sysobjects  \n" +
 			" where type = 'U'  \n" +
-			"   and name like '"+tabname+"' \n" +
+			"   and name like '" + tabname + "' \n" +
 			" order by name ";
 
 		int                needVersion   = 0;
@@ -595,7 +595,7 @@ implements ActionListener
 			String dbname = _aseDbname.getText();
 
 			int consumerId = _qConsThreadList.size();
-			Connection conn = aseConnection(false, false, "qConsumer-"+consumerId, dbname, user, pass, host, port);
+			Connection conn = aseConnection(false, false, "qConsumer-" + consumerId, dbname, user, pass, host, port);
 
 			String qConsExecParams = _qConsExecParams.getText();
 			
@@ -729,13 +729,13 @@ implements ActionListener
 
 	protected void qProducerGenerate(String type, int batchSize)
 	{
-		String typeStr      = (type == null)   ? "@type=null"      : "@type='"+type+"'";
-		String batchSizeStr = (batchSize <= 0) ? "@batchSize=null" : "@batchSize="+batchSize;
+		String typeStr      = (type == null)   ? "@type=null"      : "@type='" + type + "'";
+		String batchSizeStr = (batchSize <= 0) ? "@batchSize=null" : "@batchSize=" + batchSize;
 
 		Connection conn = _qProdGenConn;
-		String sql = "exec qGenerate "+batchSizeStr+", "+typeStr; // @batchSize=10000, @type=null
+		String sql = "exec qGenerate " + batchSizeStr + ", " + typeStr; // @batchSize=10000, @type=null
 
-		System.out.println("BEGIN: qProducerGenerate() sql: "+sql);
+		System.out.println("BEGIN: qProducerGenerate() sql: " + sql);
 		try
 		{
 			Statement stmnt = conn.createStatement();
@@ -744,9 +744,9 @@ implements ActionListener
 		}
 		catch (SQLException e)
 		{
-			_logger.error("qProducerGenerate(): problems exec sql: "+sql);
+			_logger.error("qProducerGenerate(): problems exec sql: " + sql);
 		}
-		System.out.println("END: qProducerGenerate() sql: "+sql);
+		System.out.println("END: qProducerGenerate() sql: " + sql);
 	}
 
 	protected void qTruncate()
@@ -754,7 +754,7 @@ implements ActionListener
 		Connection conn = _qProdGenConn;
 		String sql = "truncate table TestQueue";
 
-		System.out.println("BEGIN: qTruncate() sql: "+sql);
+		System.out.println("BEGIN: qTruncate() sql: " + sql);
 		try
 		{
 			Statement stmnt = conn.createStatement();
@@ -763,15 +763,15 @@ implements ActionListener
 		}
 		catch (SQLException e)
 		{
-			_logger.error("qTruncate(): problems exec sql: "+sql);
+			_logger.error("qTruncate(): problems exec sql: " + sql);
 		}
-		System.out.println("END: qTruncate() sql: "+sql);
+		System.out.println("END: qTruncate() sql: " + sql);
 	}
 
 	private void qControllerAction(String action)
 	{
 		Connection conn = _qCntrlConn;
-		String sql = "exec setAppStatus 'qController', null, '"+action+"'";
+		String sql = "exec setAppStatus 'qController', null, '" + action + "'";
 		try
 		{
 			Statement stmnt = conn.createStatement();
@@ -780,7 +780,7 @@ implements ActionListener
 		}
 		catch (SQLException e)
 		{
-			_logger.error("qControllerAction("+action+"): problems exec sql: "+sql);
+			_logger.error("qControllerAction(" + action + "): problems exec sql: " + sql);
 		}
 	}
 
@@ -806,7 +806,7 @@ implements ActionListener
 		}
 		catch (SQLException e)
 		{
-			_logger.error("getProducerQueueSize(): problems exec sql '"+sql+"'. Caught "+e);
+			_logger.error("getProducerQueueSize(): problems exec sql '" + sql + "'. Caught " + e);
 		}
 		return -1;
 	}
@@ -814,7 +814,7 @@ implements ActionListener
 	protected void refreshQProducerInfo()
 	{
 		int size = getProducerQueueSize();
-		_qProdQSize.setText(size+"");
+		_qProdQSize.setText(size + "");
 
 		if (_qProdQSizeTime != 0)
 		{
@@ -824,7 +824,7 @@ implements ActionListener
 			if ((timeDiff / 1000) > 0)
 			{
 				double rate = sizeDiff / (timeDiff / 1000);
-				_qProdQSizeRate.setText(rate+" per second");
+				_qProdQSizeRate.setText(rate + " per second");
 			}
 		}
 		_qProdQSizeTime = System.currentTimeMillis();
@@ -869,11 +869,11 @@ implements ActionListener
 				_qConsTable.packAll();
 //			SwingUtils.calcColumnWidths(_qConsTable, 0, true);
 			
-			_qConsExecCount.setText(""+_qConsTableModel.getRowCount());
+			_qConsExecCount.setText("" + _qConsTableModel.getRowCount());
 		}
 		catch (SQLException e)
 		{
-			_logger.error("getQConsumerInfo(): problems exec sql '"+sql+"'. Caught "+e);
+			_logger.error("getQConsumerInfo(): problems exec sql '" + sql + "'. Caught " + e);
 		}
 	}
 
@@ -915,7 +915,7 @@ implements ActionListener
 			}
 			catch (SQLException e)
 			{
-				_logger.error("refreshQStatInfo(): problems exec sql '"+sql+"'. Caught "+e);
+				_logger.error("refreshQStatInfo(): problems exec sql '" + sql + "'. Caught " + e);
 			}
 		}
 		if (_qStatCurrentType.equals(STAT_TAB_ROWS))
@@ -927,7 +927,7 @@ implements ActionListener
 			}
 			catch (Exception e)
 			{
-				_logger.error("refreshQStatInfo(): problems exec CounterModel. Caught "+e);
+				_logger.error("refreshQStatInfo(): problems exec CounterModel. Caught " + e);
 			}
 		}
 	}
@@ -981,10 +981,10 @@ implements ActionListener
 			DbxConnection conn = new AseConnection(aseConn);
 
 			if (aseConn instanceof SybConnection)
-				((SybConnection)aseConn).setSybMessageHandler(new PerfDemoSybMessageHandler(appname+": ", this, null));
+				((SybConnection)aseConn).setSybMessageHandler(new PerfDemoSybMessageHandler(appname + ": ", this, null));
 
 			if (conn instanceof TdsConnection)
-				((TdsConnection)conn).setSybMessageHandler(new PerfDemoSybMessageHandler(appname+": ", this, null));
+				((TdsConnection)conn).setSybMessageHandler(new PerfDemoSybMessageHandler(appname + ": ", this, null));
 
 			// select @@version
 			String srvVersionStr = "unknown";
@@ -996,9 +996,9 @@ implements ActionListener
 			}
 			rs.close();
 			if (showInfo)
-				JOptionPane.showMessageDialog(this, "Connection succeeded.\n\n"+srvVersionStr, "PerfDemo - connect check", JOptionPane.INFORMATION_MESSAGE);
+				JOptionPane.showMessageDialog(this, "Connection succeeded.\n\n" + srvVersionStr, "PerfDemo - connect check", JOptionPane.INFORMATION_MESSAGE);
 			else
-				appendToLog("Connection succeeded: "+srvVersionStr);
+				appendToLog("Connection succeeded: " + srvVersionStr);
 
 			if (closeConn)
 			{
@@ -1015,8 +1015,8 @@ implements ActionListener
 			if (dbname != null && !dbname.trim().equals("") && ! currentDbname.equals(dbname) )
 			{
 				JOptionPane.showMessageDialog(this, "Connection FAILED.\n\n" +
-						"Current dbname is '"+currentDbname+"'.\n" +
-						"But you requested to be in '"+dbname+"'.", 
+						"Current dbname is '" + currentDbname + "'.\n" +
+						"But you requested to be in '" + dbname + "'.", 
 						"PerfDemo - connect check", JOptionPane.ERROR_MESSAGE);
 				conn.close();
 				conn = null;
@@ -1036,11 +1036,11 @@ implements ActionListener
 				sb.append( e.getMessage() );
 				e = e.getNextException();
 			}
-			JOptionPane.showMessageDialog(this, "Connection FAILED.\n\n"+sb.toString(), "PerfDemo - connect check", JOptionPane.ERROR_MESSAGE);
+			JOptionPane.showMessageDialog(this, "Connection FAILED.\n\n" + sb.toString(), "PerfDemo - connect check", JOptionPane.ERROR_MESSAGE);
 		}
 		catch (Exception e)
 		{
-			JOptionPane.showMessageDialog(this, "Connection FAILED.\n\n"+e.toString(),  "PerfDemo - connect check", JOptionPane.ERROR_MESSAGE);
+			JOptionPane.showMessageDialog(this, "Connection FAILED.\n\n" + e.toString(),  "PerfDemo - connect check", JOptionPane.ERROR_MESSAGE);
 		}
 		return null;
 	}
@@ -1068,7 +1068,7 @@ implements ActionListener
 		public void run()
 		{
 			Thread.currentThread().setName(_name);
-			System.out.println(Thread.currentThread().getName()+ ": Start.");
+			System.out.println(Thread.currentThread().getName() + ": Start.");
 			boolean running = true;
 			while(running)
 			{
@@ -1078,10 +1078,10 @@ implements ActionListener
 				}
 				catch(Throwable t)
 				{
-					_logger.error(Thread.currentThread().getName()+" Thread had problems, which will be retried. Caught "+t, t);
+					_logger.error(Thread.currentThread().getName() + " Thread had problems, which will be retried. Caught " + t, t);
 				}
 			}
-			System.out.println(Thread.currentThread().getName()+ ": Stopped.");
+			System.out.println(Thread.currentThread().getName() + ": Stopped.");
 		}
 	}
 
@@ -1105,7 +1105,7 @@ implements ActionListener
 			}
 			catch(InterruptedException ignore) 
 			{
-				System.out.println(Thread.currentThread().getName()+ ": was interrupted..");
+				System.out.println(Thread.currentThread().getName() + ": was interrupted..");
 				return false;
 			}
 			return true; // execute me again
@@ -1132,7 +1132,7 @@ implements ActionListener
 			}
 			catch(InterruptedException ignore) 
 			{
-				System.out.println(Thread.currentThread().getName()+ ": was interrupted..");
+				System.out.println(Thread.currentThread().getName() + ": was interrupted..");
 				return false;
 			}
 			return true; // execute me again
@@ -1159,7 +1159,7 @@ implements ActionListener
 			}
 			catch(InterruptedException ignore) 
 			{
-				System.out.println(Thread.currentThread().getName()+ ": was interrupted..");
+				System.out.println(Thread.currentThread().getName() + ": was interrupted..");
 				return false;
 			}
 			return true; // execute me again
@@ -1196,8 +1196,8 @@ implements ActionListener
 		protected String doInBackground() throws Exception
 		{
 //System.out.println(Thread.currentThread().getName()+ ": enter-method: doInBackground()");
-			Thread.currentThread().setName("QueueConsumer-"+_consumerId);
-			System.out.println(Thread.currentThread().getName()+ ": Start.");
+			Thread.currentThread().setName("QueueConsumer-" + _consumerId);
+			System.out.println(Thread.currentThread().getName() + ": Start.");
 
 			if (_conn instanceof SybConnection)
 				((SybConnection)_conn).setSybMessageHandler(new PerfDemoSybMessageHandler(Thread.currentThread().getName(), _perfDemo, this));
@@ -1215,7 +1215,7 @@ implements ActionListener
 				_deadlock = false;
 
 				String exitStatus = null;
-				String sql = "exec qConsumer "+_qConsParams;
+				String sql = "exec qConsumer " + _qConsParams;
 //				try
 //				{
 //					Statement stmnt = _conn.createStatement();
@@ -1297,13 +1297,13 @@ implements ActionListener
 				}
 				catch (SQLException e)
 				{
-					_logger.error("refreshQStatInfo(): problems exec sql '"+sql+"'. Caught "+e);
+					_logger.error("refreshQStatInfo(): problems exec sql '" + sql + "'. Caught " + e);
 				}
 
 				if (_deadlock)
 				{
 					running = true;
-					publish("ThreadName='"+Thread.currentThread().getName()+"', UPS... Caught a DEADLOCK, lets RETRY...");
+					publish("ThreadName='" + Thread.currentThread().getName() + "', UPS... Caught a DEADLOCK, lets RETRY...");
 					continue;
 				}
 
@@ -1318,7 +1318,7 @@ implements ActionListener
 				//	running = true;
 				}
 				
-				publish("ThreadName='"+Thread.currentThread().getName()+"', -end-of-exec-do-new-one-");
+				publish("ThreadName='" + Thread.currentThread().getName() + "', -end-of-exec-do-new-one-");
 //				try 
 //				{
 //					Thread.sleep(1000); 
@@ -1331,7 +1331,7 @@ implements ActionListener
 //				}
 			}
 			_conn.close();
-			publish("ThreadName='"+Thread.currentThread().getName()+"', STOPPING, at end of the run() method.");
+			publish("ThreadName='" + Thread.currentThread().getName() + "', STOPPING, at end of the run() method.");
 			return null;
 		}
 		// isThere_a_STOP_Method____, no it doesnt look like it, maybe use: addPropertyChangeListener(PropertyChangeListener listener)
@@ -1347,7 +1347,7 @@ implements ActionListener
 			for (String str : chunks)
 			{
 //				System.out.println(Thread.currentThread().getName()+ ": process() = '"+str+"'.");
-				_perfDemo.appendToLog(Thread.currentThread().getName()+ ": process() = '"+str+"'.\n");
+				_perfDemo.appendToLog(Thread.currentThread().getName() + ": process() = '" + str + "'.\n");
 			}
 		}
 		
@@ -1591,24 +1591,24 @@ implements ActionListener
 
 			// Loop MSG NUM to check if to discard the message
 			if (_logger.isDebugEnabled())
-				_logger.debug(getLogPrefix() + "INFO Discard message number list: "+_discardMsgNum);
+				_logger.debug(getLogPrefix() + "INFO Discard message number list: " + _discardMsgNum);
 
 			if (_discardMsgNum.contains(codeInt))
 			{
-				_logger.debug(getLogPrefix() + ">>>>> Discarding message: "+logMsg.toString());
+				_logger.debug(getLogPrefix() + ">>>>> Discarding message: " + logMsg.toString());
 				return null;
 			}
 
 			// Loop MSG STR to check if to discard the message
 			if (_logger.isDebugEnabled())
-				_logger.debug(getLogPrefix() + "INFO Discard message text list: "+_discardMsgStr);
+				_logger.debug(getLogPrefix() + "INFO Discard message text list: " + _discardMsgStr);
 
 			for (String regexp : _discardMsgStr)
 			{
 //				if (msgStr.matches(regexp))
 				if (msgStr.indexOf(regexp) >= 0)
 				{
-					_logger.debug(getLogPrefix() + ">>>>> Discarding message: "+logMsg.toString());
+					_logger.debug(getLogPrefix() + ">>>>> Discarding message: " + logMsg.toString());
 					return null;
 				}
 			}

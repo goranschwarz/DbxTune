@@ -244,7 +244,7 @@ implements IGuiController
 				{
 					Properties props = new Properties();
 					props.put("CHARSET", "iso_1");
-					Connection c = AseConnectionFactory.getConnection("192.168.0.110:1570", null, "sa", "sybase", Version.getAppName()+"-"+appname, Version.getVersionStr(), null, props, null);
+					Connection c = AseConnectionFactory.getConnection("192.168.0.110:1570", null, "sa", "sybase", Version.getAppName() + "-" + appname, Version.getVersionStr(), null, props, null);
 					conn = DbxConnection.createDbxConnection(c);
 				}
 				catch (Exception e)

@@ -309,7 +309,7 @@ public class AseUrlHelper
 		}
 
 		if (_logger.isDebugEnabled())
-			_logger.debug("composeUrlEntry: returns '"+urlEntry.toString()+"'.");
+			_logger.debug("composeUrlEntry: returns '" + urlEntry.toString() + "'.");
 
 		return urlEntry.toString();
 	}
@@ -355,7 +355,7 @@ public class AseUrlHelper
 		String urlStart = "jdbc:sybase:Tds:";
 		
 		if ( ! urlStr.startsWith(urlStart) )
-			throw new ParseException("The URL has to start with '"+urlStart+"'. The input looks like '"+urlStr+"'.", 0);
+			throw new ParseException("The URL has to start with '" + urlStart + "'. The input looks like '" + urlStr + "'.", 0);
 			//throw new IllegalArgumentException("The URL has to start with '"+urlStart+"'.");
 
 		Map<String,List<String>> hostPort = null;
@@ -434,7 +434,7 @@ public class AseUrlHelper
 	public static String buildUrlString(Map<String,List<String>> hostPort, String dbname, Map<String,String> options)
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("AseUrlHelper.getUrlString(hostPort='"+hostPort+"', dbname='"+dbname+"', options='"+options+"').");
+			_logger.debug("AseUrlHelper.getUrlString(hostPort='" + hostPort + "', dbname='" + dbname + "', options='" + options + "').");
 
 		if (hostPort == null)
 			throw new IllegalArgumentException("hostPort can't be null");
@@ -447,7 +447,7 @@ public class AseUrlHelper
 		if (urlTemplate == null)
 			throw new IllegalArgumentException("The url template grabbed from AseConnectionFactory can't be null.");
 		if (urlTemplate.indexOf("HOST:PORT") == -1)
-			throw new IllegalArgumentException("The url template grabbed from AseConnectionFactory must contain 'HOST:PORT'. urlTemplate='"+urlTemplate+"'");
+			throw new IllegalArgumentException("The url template grabbed from AseConnectionFactory must contain 'HOST:PORT'. urlTemplate='" + urlTemplate + "'");
 		
 		String url = urlTemplate;
 //		url = url.replaceAll("HOST", _host_txt.getText().trim());
@@ -467,7 +467,7 @@ public class AseUrlHelper
 			url += "?" + StringUtil.toCommaStr(options, "=", "&");
 
 		if (_logger.isDebugEnabled())
-			_logger.debug("AseUrlHelper.returns='"+url+"'.");
+			_logger.debug("AseUrlHelper.returns='" + url + "'.");
 		return url;
 	}
 

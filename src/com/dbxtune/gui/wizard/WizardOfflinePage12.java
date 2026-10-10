@@ -135,7 +135,7 @@ implements ActionListener
 			problem = problem.substring(0, problem.length()-2);
 		}
 		
-		return problem.length() == 0 ? null : "Following fields cant be empty: "+problem;
+		return problem.length() == 0 ? null : "Following fields cant be empty: " + problem;
 	}
 
 	@Override

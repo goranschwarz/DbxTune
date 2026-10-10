@@ -83,7 +83,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -167,7 +167,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmExecQueryStatPerDb(counterController, guiController);
 	}
@@ -247,7 +247,7 @@ extends CountersModel
 		//---------------------------------------------------------------------------
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_PLAN_COUNT,
 				"SQL Statements Per DB - Plan Count", // Menu CheckBox text
-				"SQL Statements Per DB - Plan Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - Plan Count (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -260,7 +260,7 @@ extends CountersModel
 		//---------------------------------------------------------------------------
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_PLAN_DIFF,
 				"SQL Statements Per DB - Plan Count Diff", // Menu CheckBox text
-				"SQL Statements Per DB - Plan Count Diff ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - Plan Count Diff (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -273,7 +273,7 @@ extends CountersModel
 		//---------------------------------------------------------------------------
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_NEW_PLANS,
 				"SQL Statements Per DB - New Plans Since Last Sample", // Menu CheckBox text
-				"SQL Statements Per DB - New Plans Since Last Sample ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - New Plans Since Last Sample (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -286,7 +286,7 @@ extends CountersModel
 		//---------------------------------------------------------------------------
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_REMOVED_PLANS,
 				"SQL Statements Per DB - Removed Plans Since Last Sample", // Menu CheckBox text
-				"SQL Statements Per DB - Removed Plans Since Last Sample ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - Removed Plans Since Last Sample (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -299,7 +299,7 @@ extends CountersModel
 		//---------------------------------------------------------------------------
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_REUSED_PLANS,
 				"SQL Statements Per DB - (Re)Used Plans Since Last Sample", // Menu CheckBox text
-				"SQL Statements Per DB - (Re)Used Plans Since Last Sample ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - (Re)Used Plans Since Last Sample (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -312,7 +312,7 @@ extends CountersModel
 		//---------------------------------------------------------------------------
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_EXEC_SEC,
 				"SQL Statements Per DB - Execution Count/sec", // Menu CheckBox text
-				"SQL Statements Per DB - Execution Count/sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - Execution Count/sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -325,7 +325,7 @@ extends CountersModel
 		//---------------------------------------------------------------------------
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_ELAPSED_TIME,
 				"SQL Statements Per DB - Sum Elapsed Time in ms", // Menu CheckBox text
-				"SQL Statements Per DB - Sum Elapsed Time in ms ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - Sum Elapsed Time in ms (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -338,7 +338,7 @@ extends CountersModel
 		//---------------------------------------------------------------------------
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_WORKER_TIME,
 				"SQL Statements Per DB - Sum CPU/Worker Time in ms", // Menu CheckBox text
-				"SQL Statements Per DB - Sum CPU/Worker Time in ms ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - Sum CPU/Worker Time in ms (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -351,7 +351,7 @@ extends CountersModel
 		//---------------------------------------------------------------------------
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_LOGICAL_WRITE,
 				"SQL Statements Per DB - Sum Logical Writes/sec", // Menu CheckBox text
-				"SQL Statements Per DB - Sum Logical Writes/sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - Sum Logical Writes/sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -364,7 +364,7 @@ extends CountersModel
 		//---------------------------------------------------------------------------
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_LOGICAL_READ,
 				"SQL Statements Per DB - Sum Logical Reads/sec", // Menu CheckBox text
-				"SQL Statements Per DB - Sum Logical Reads/sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - Sum Logical Reads/sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -377,7 +377,7 @@ extends CountersModel
 		//---------------------------------------------------------------------------
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_PHYSICAL_READ,
 				"SQL Statements Per DB - Sum Physical Reads/sec", // Menu CheckBox text
-				"SQL Statements Per DB - Sum Physical Reads/sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - Sum Physical Reads/sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -390,7 +390,7 @@ extends CountersModel
 		//---------------------------------------------------------------------------
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_DB_ROWS_AFFECTED,
 				"SQL Statements Per DB - Sum Rows Affected/sec", // Menu CheckBox text
-				"SQL Statements Per DB - Sum Rows Affected/sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"SQL Statements Per DB - Sum Rows Affected/sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic,
@@ -1250,7 +1250,7 @@ extends CountersModel
 							"The query for CM '" + getName() + "' took to long... and received " + timeoutExceptionCount + " timeouts in sequence.<br>" +
 							"</html>",
 							JOptionPane.INFORMATION_MESSAGE);
-					JDialog dialog = optionPane.createDialog(MainFrame.getInstance(), "Disabled CM '" + getName() + "' @ "+dateStr);
+					JDialog dialog = optionPane.createDialog(MainFrame.getInstance(), "Disabled CM '" + getName() + "' @ " + dateStr);
 					dialog.setModal(false);
 					dialog.setVisible(true);
 				}

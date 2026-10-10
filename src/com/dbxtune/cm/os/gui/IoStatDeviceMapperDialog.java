@@ -643,7 +643,7 @@ implements ActionListener, FocusListener //, ChangeListener
 		_filterOnCurrentHost_chk.setSelected(enable);
 		
 		if (_filterOnCurrentHost_chk.isSelected())
-			_tableFilter.setFilterText("where Hostname='"+_inputHostName+"'");
+			_tableFilter.setFilterText("where Hostname='" + _inputHostName + "'");
 		else
 			_tableFilter.setFilterText("");
 	}
@@ -844,7 +844,7 @@ implements ActionListener, FocusListener //, ChangeListener
 		// Ask question if we want to "auto add" the list
 		String msgHtml = "<html><h3>The following devices can be added.</h3><br><table border=1 cellspacing=0 cellpadding=1> <tr> <th>Hostname</th> <th>Device Name</th> </tr>";
 		for (String device : newDevices)
-			msgHtml += "<tr> <td>"+forHostName+"</td> <td>"+device+"</td> </tr>";
+			msgHtml += "<tr> <td>" + forHostName + "</td> <td>" + device + "</td> </tr>";
 		msgHtml += "</table></html>";
 		
 		Object[] options = {
@@ -1317,7 +1317,7 @@ implements ActionListener, FocusListener //, ChangeListener
 		public void setValueAt(Object value, int row, int column)
 		{
 			if (_logger.isDebugEnabled())
-				_logger.debug("setValueAt(row="+row+", column="+column+", val='"+value+"', Objtype='"+value.getClass().getName()+"')");
+				_logger.debug("setValueAt(row=" + row + ", column=" + column + ", val='" + value + "', Objtype='" + value.getClass().getName() + "')");
 
 			MappingEntry entry = _rows.get(row);
 			switch (column)

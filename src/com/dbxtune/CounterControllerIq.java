@@ -233,12 +233,12 @@ extends CounterControllerAbstract
 		if (! isCountersCreated())
 			createCounters(hasGui);
 		
-		_logger.info("Initializing all CM objects, using IQ server version number "+srvVersion+" ("+Ver.versionNumToStr(srvVersion)+"), isClusterEnabled="+isClusterEnabled+" with monTables Install version "+monTablesVersion+" ("+Ver.versionNumToStr(monTablesVersion)+").");
+		_logger.info("Initializing all CM objects, using IQ server version number " + srvVersion + " (" + Ver.versionNumToStr(srvVersion) + "), isClusterEnabled=" + isClusterEnabled + " with monTables Install version " + monTablesVersion + " (" + Ver.versionNumToStr(monTablesVersion) + ").");
 
 		// initialize all the CM's
 		for (CountersModel cm : getCmList())
 		{
-			_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using IQ server version number "+srvVersion+".");
+			_logger.debug("Initializing CM named '" + cm.getName() + "', display name '" + cm.getDisplayName() + "', using IQ server version number " + srvVersion + ".");
 
 			// set the version
 			cm.setServerVersion(monTablesVersion);
@@ -321,7 +321,7 @@ extends CounterControllerAbstract
 				}
 			}
 			
-			_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '"+sql+"', Caught: " + sqlex.toString() );
+			_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '" + sql + "', Caught: " + sqlex.toString() );
 			mainSampleTime   = new Timestamp(System.currentTimeMillis());
 			aseServerName    = "unknown";
 			aseHostname      = "unknown";

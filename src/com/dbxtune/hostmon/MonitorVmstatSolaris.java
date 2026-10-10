@@ -44,7 +44,7 @@ extends MonitorVmstat
 	public String getCommand()
 	{
 		String cmd = super.getCommand();
-		return cmd != null ? cmd : "vmstat "+getSleepTime();
+		return cmd != null ? cmd : "vmstat " + getSleepTime();
 	}
 
 	@Override

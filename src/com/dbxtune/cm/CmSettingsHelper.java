@@ -77,7 +77,7 @@ public class CmSettingsHelper
 		public boolean isValid(CmSettingsHelper sh, String val) throws ValidationException
 		{
 			try { Pattern.compile(val); }
-			catch(PatternSyntaxException ex) { throw new ValidationException("The RegExp '"+val+"' seems to be faulty. Caught: "+ex.getMessage()); }
+			catch(PatternSyntaxException ex) { throw new ValidationException("The RegExp '" + val + "' seems to be faulty. Caught: " + ex.getMessage()); }
 			return true;
 		}
 	}
@@ -90,7 +90,7 @@ public class CmSettingsHelper
 		public boolean isValid(CmSettingsHelper sh, String val) throws ValidationException
 		{
 			try { new URL(val); }
-			catch(MalformedURLException ex) { throw new ValidationException("The URL '"+val+"' seems to be malformed. Caught: "+ex.getMessage()); }
+			catch(MalformedURLException ex) { throw new ValidationException("The URL '" + val + "' seems to be malformed. Caught: " + ex.getMessage()); }
 			return true;
 		}
 	}
@@ -102,7 +102,7 @@ public class CmSettingsHelper
 		public boolean isValid(CmSettingsHelper sh, String val) throws ValidationException
 		{
 			try { Gson gson = new Gson(); gson.fromJson(val, Object.class); }
-			catch(JsonSyntaxException ex) { throw new ValidationException("The JSON content seems to be faulty. Caught: "+ex.getMessage()); }
+			catch(JsonSyntaxException ex) { throw new ValidationException("The JSON content seems to be faulty. Caught: " + ex.getMessage()); }
 			return true;
 		}
 	}
@@ -115,7 +115,7 @@ public class CmSettingsHelper
 		public boolean isValid(CmSettingsHelper sh, String val) throws ValidationException
 		{
 			try { Integer.parseInt(val); }
-			catch(NumberFormatException ex) { throw new ValidationException("The value '"+val+"' is not a valid Integer: "+ex.getMessage()); }
+			catch(NumberFormatException ex) { throw new ValidationException("The value '" + val + "' is not a valid Integer: " + ex.getMessage()); }
 			return true;
 		}
 	}
@@ -135,11 +135,11 @@ public class CmSettingsHelper
 
 				// MAP-KEY: Check key (if it passes regexp check) 
 				try { Pattern.compile(mapKey); }
-				catch(PatternSyntaxException ex) { throw new ValidationException("The RegExp '"+mapVal+"' seems to be faulty, for key '"+mapKey+"'. Caught: "+ex.getMessage()); }
+				catch(PatternSyntaxException ex) { throw new ValidationException("The RegExp '" + mapVal + "' seems to be faulty, for key '" + mapKey + "'. Caught: " + ex.getMessage()); }
 
 				// MAP-VAL: Check number
 				try { NumberUtils.createNumber(mapVal); }
-				catch (NumberFormatException ex) { throw new ValidationException("The number value '"+mapVal+"' is not a number for key '"+mapKey+"'. Caught: "+ex.getMessage()); }
+				catch (NumberFormatException ex) { throw new ValidationException("The number value '" + mapVal + "' is not a number for key '" + mapKey + "'. Caught: " + ex.getMessage()); }
 			}
 			
 			return true;
@@ -170,7 +170,7 @@ public class CmSettingsHelper
 			}
 			catch(InvalidPatternException ex)
 			{
-				throw new ValidationException("The specified 'cron' value '"+cronStr+"' is not a valid cron-pattern. This will be disregarded. Caught: " + ex.getMessage());
+				throw new ValidationException("The specified 'cron' value '" + cronStr + "' is not a valid cron-pattern. This will be disregarded. Caught: " + ex.getMessage());
 			}
 		}
 	}
@@ -538,55 +538,55 @@ public class CmSettingsHelper
 			if (BigDecimal.class == sh._dataType)
 			{
 				try { new BigDecimal(val); }
-				catch(NumberFormatException ex) { throw new ValidationException("The value '"+val+"' is not a valid BigDecimal: "+ex.getMessage()); }
+				catch(NumberFormatException ex) { throw new ValidationException("The value '" + val + "' is not a valid BigDecimal: " + ex.getMessage()); }
 			}
 				
 			if (BigInteger.class == sh._dataType)
 			{
 				try { new BigInteger(val); }
-				catch(NumberFormatException ex) { throw new ValidationException("The value '"+val+"' is not a valid BigInteger: "+ex.getMessage()); }
+				catch(NumberFormatException ex) { throw new ValidationException("The value '" + val + "' is not a valid BigInteger: " + ex.getMessage()); }
 			}
 				
 			if (Byte.class == sh._dataType)
 			{
 				try { Byte.valueOf(val); }
-				catch(NumberFormatException ex) { throw new ValidationException("The value '"+val+"' is not a valid Byte: "+ex.getMessage()); }
+				catch(NumberFormatException ex) { throw new ValidationException("The value '" + val + "' is not a valid Byte: " + ex.getMessage()); }
 			}
 				
 			if (Double.class == sh._dataType)
 			{
 				try { Double.valueOf(val); }
-				catch(NumberFormatException ex) { throw new ValidationException("The value '"+val+"' is not a valid Double: "+ex.getMessage()); }
+				catch(NumberFormatException ex) { throw new ValidationException("The value '" + val + "' is not a valid Double: " + ex.getMessage()); }
 			}
 				
 			if (Float.class == sh._dataType)
 			{
 				try { Float.valueOf(val); }
-				catch(NumberFormatException ex) { throw new ValidationException("The value '"+val+"' is not a valid Float: "+ex.getMessage()); }
+				catch(NumberFormatException ex) { throw new ValidationException("The value '" + val + "' is not a valid Float: " + ex.getMessage()); }
 			}
 				
 			if (Integer.class == sh._dataType)
 			{
 				try { Integer.valueOf(val); }
-				catch(NumberFormatException ex) { throw new ValidationException("The value '"+val+"' is not a valid Integer: "+ex.getMessage()); }
+				catch(NumberFormatException ex) { throw new ValidationException("The value '" + val + "' is not a valid Integer: " + ex.getMessage()); }
 			}
 				
 			if (Long.class == sh._dataType)
 			{
 				try { Long.valueOf(val); }
-				catch(NumberFormatException ex) { throw new ValidationException("The value '"+val+"' is not a valid Long: "+ex.getMessage()); }
+				catch(NumberFormatException ex) { throw new ValidationException("The value '" + val + "' is not a valid Long: " + ex.getMessage()); }
 			}
 				
 			if (Short.class == sh._dataType)
 			{
 				try { Short.valueOf(val); }
-				catch(NumberFormatException ex) { throw new ValidationException("The value '"+val+"' is not a valid Short: "+ex.getMessage()); }
+				catch(NumberFormatException ex) { throw new ValidationException("The value '" + val + "' is not a valid Short: " + ex.getMessage()); }
 			}
 				
 			if (Boolean.class == sh._dataType)
 			{
 				if ( ! (val.equalsIgnoreCase("true") || val.equalsIgnoreCase("false")) )
-					throw new ValidationException("The value '"+val+"' is not an Boolean: true or false must be given");
+					throw new ValidationException("The value '" + val + "' is not an Boolean: true or false must be given");
 			}
 				
 			return true;

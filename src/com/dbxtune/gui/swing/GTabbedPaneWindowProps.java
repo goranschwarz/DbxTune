@@ -35,6 +35,6 @@ public class GTabbedPaneWindowProps
 	@Override
 	public String toString()
 	{
-		return "undocked="+undocked+", width="+width+", height="+height+", posX="+posX+", posY="+posY+".";
+		return "undocked=" + undocked + ", width=" + width + ", height=" + height + ", posX=" + posX + ", posY=" + posY + ".";
 	}
 }

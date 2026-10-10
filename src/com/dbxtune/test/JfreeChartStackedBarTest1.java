@@ -128,7 +128,7 @@ public class JfreeChartStackedBarTest1 extends ApplicationFrame
 				LegendItemCollection xxx = super.getLegendItems();
 				for (int i = 0; i < xxx.getItemCount(); i++)
 				{
-					System.out.println("------ getLegendItems() ----- ["+i+"]="+xxx.get(i).getLabel());
+					System.out.println("------ getLegendItems() ----- [" + i + "]=" + xxx.get(i).getLabel());
 				}
 				
 //				LegendItemCollection zzz = new LegendItemCollection();

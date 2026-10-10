@@ -80,7 +80,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = Ver.ver(9, 6);
 	public static final long     NEED_CE_VERSION  = 0;
@@ -111,7 +111,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmPgSrvWait(counterController, guiController);
 	}
@@ -397,7 +397,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_SRV_WAIT_TYPE_MS,
 			"Server Estimated Wait Time in ms, group by 'event_type'", 	                   // Menu CheckBox text
-			"Server Estimated Wait Time in ms, group by 'event_type' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Server Estimated Wait Time in ms, group by 'event_type' (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
@@ -409,7 +409,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_SRV_WAIT_MS,
 			"Server Estimated Wait Time in ms, group by 'wait_type', 'event'", 	                   // Menu CheckBox text
-			"Server Estimated Wait Time in ms, group by 'wait_type', 'event' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Server Estimated Wait Time in ms, group by 'wait_type', 'event' (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,

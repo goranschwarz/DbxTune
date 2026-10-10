@@ -197,7 +197,7 @@ public class JdbcUrlParser
 			}
 			catch (ParseException ex)
 			{
-				_logger.warn("Problem parsing the SYBASE URL '"+url+"'. Caught: "+ex, ex);
+				_logger.warn("Problem parsing the SYBASE URL '" + url + "'. Caught: " + ex, ex);
 			}
 		}
 		else if (url.startsWith("jdbc:h2:"))
@@ -217,7 +217,7 @@ public class JdbcUrlParser
 			}
 			catch (Exception ex)
 			{
-				_logger.warn("Problem parsing the H2 URL '"+url+"'. Caught: "+ex, ex);
+				_logger.warn("Problem parsing the H2 URL '" + url + "'. Caught: " + ex, ex);
 			}
 		}
 		else if (url.startsWith("jdbc:sqlserver:"))
@@ -269,9 +269,9 @@ public class JdbcUrlParser
 				URI uri = URI.create(cleanURI);
 
 				if (_logger.isDebugEnabled())
-					_logger.debug("JdbcUrlParser.parse(url='"+url+"'): cleanURI='"+cleanURI+"', uri.getScheme()='"+uri.getScheme()+"', uri.getHost()='"+uri.getHost()+"', uri.getPort()='"+uri.getPort()+"'.");
+					_logger.debug("JdbcUrlParser.parse(url='" + url + "'): cleanURI='" + cleanURI + "', uri.getScheme()='" + uri.getScheme() + "', uri.getHost()='" + uri.getHost() + "', uri.getPort()='" + uri.getPort() + "'.");
 				
-				if (cleanURI.indexOf("//"+uri.getHost()) >= 0)
+				if (cleanURI.indexOf("//" + uri.getHost()) >= 0)
 					p.setHostPrefix("//");
 				
 				p.setDbType     (uri.getScheme());
@@ -284,7 +284,7 @@ public class JdbcUrlParser
 			}
 			catch (Throwable ex)
 			{
-				_logger.warn("Problem parsing the GENERIC URL '"+url+"', cleanURI '"+cleanURI+"'. Caught: "+ex, ex);
+				_logger.warn("Problem parsing the GENERIC URL '" + url + "', cleanURI '" + cleanURI + "'. Caught: " + ex, ex);
 			}
 		}
 
@@ -350,7 +350,7 @@ public class JdbcUrlParser
 	@Override
 	public String toString()
 	{
-		return super.toString() + ": dbType='"+getDbType()+"', host='"+getHost()+"', port="+getPort()+", hostPortStr='"+getHostPortStr()+"', path='"+getPath()+"', options='"+getOptions()+"'.";
+		return super.toString() + ": dbType='" + getDbType() + "', host='" + getHost() + "', port=" + getPort() + ", hostPortStr='" + getHostPortStr() + "', path='" + getPath() + "', options='" + getOptions() + "'.";
 	}
 	
 	public static void main(String[] args)
@@ -402,30 +402,30 @@ public class JdbcUrlParser
 	{
 		System.out.println("");
 		System.out.println("########################################################");
-		System.out.println(" URL="+url);
+		System.out.println(" URL=" + url);
 		JdbcUrlParser p = JdbcUrlParser.parse(url); 
 		p.setHost("XXX"); // set the new server name
 		url = p.toUrl();
-		System.out.println(" xxxxx   ="+url);
-		System.out.println(" toString="+p);
-		System.out.println(" toUrl   ="+p.toUrl());
+		System.out.println(" xxxxx   =" + url);
+		System.out.println(" toString=" + p);
+		System.out.println(" toUrl   =" + p.toUrl());
 	}
 	private static void test(String url)
 	{
 		System.out.println("");
 		System.out.println("########################################################");
-		System.out.println(" URL="+url);
-		System.out.println(" toString="+JdbcUrlParser.parse(url));
+		System.out.println(" URL=" + url);
+		System.out.println(" toString=" + JdbcUrlParser.parse(url));
 	}
 
 	private static void test2(String url)
 	{
 		System.out.println("");
 		System.out.println("## test2 ######################################################");
-		System.out.println("                 URL="+url);
+		System.out.println("                 URL=" + url);
 		JdbcUrlParser p = JdbcUrlParser.parse(url);
 		p.setPath("/YYY");
-		System.out.println(" changed path. toUrl="+p.toUrl());
+		System.out.println(" changed path. toUrl=" + p.toUrl());
 	}
 	
 
@@ -465,7 +465,7 @@ public class JdbcUrlParser
 //			String originUrl = url;
 			
 			if ( ! url.startsWith("jdbc:oracle:thin:") )
-				throw new IllegalArgumentException("Oracle JDBC URL must start with 'jdbc:oracle:thin:', the current url '"+url+"' does not.");
+				throw new IllegalArgumentException("Oracle JDBC URL must start with 'jdbc:oracle:thin:', the current url '" + url + "' does not.");
 
 			try
 			{
@@ -524,7 +524,7 @@ public class JdbcUrlParser
 			}
 			catch (Throwable ex)
 			{
-				_logger.warn("Problem parsing the ORACLE URL '"+url+"'. Caught: "+ex);
+				_logger.warn("Problem parsing the ORACLE URL '" + url + "'. Caught: " + ex);
 			}
 		}
 	}

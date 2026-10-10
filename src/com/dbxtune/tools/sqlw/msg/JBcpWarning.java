@@ -32,7 +32,7 @@ extends JAseMessage
 
 	private static String createStr(SQLWarning sqlw, PipeCommand pipeCmd)
 	{
-		String mainText = "The BCP command '"+pipeCmd.getCmd().getCmdStr()+"' had some Warning messages.\n";
+		String mainText = "The BCP command '" + pipeCmd.getCmd().getCmdStr() + "' had some Warning messages.\n";
 		String sqlWarningsText = "";
 
 		int w = 0;
@@ -40,7 +40,7 @@ extends JAseMessage
 		{
 			String wmsg = sqlw.getMessage();
 			
-			sqlWarningsText += "SQLWarning("+w+"): " + wmsg;
+			sqlWarningsText += "SQLWarning(" + w + "): " + wmsg;
 			if ( ! sqlWarningsText.endsWith("\n") )
 				sqlWarningsText += "\n";
 				
@@ -50,7 +50,7 @@ extends JAseMessage
 			w++;
 		}
 		if (w > 1) // If we had a Warning Chain... add the chain, else "reset" the warnings...
-			sqlWarningsText = "Below is the full SQLWarning chain, there are "+w+" Warnings:\n" + sqlWarningsText;
+			sqlWarningsText = "Below is the full SQLWarning chain, there are " + w + " Warnings:\n" + sqlWarningsText;
 
 		return mainText + sqlWarningsText;
 	}

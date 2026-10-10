@@ -129,7 +129,7 @@ extends Properties
 	private static Window _guiWindow = null;
 	
 	// original serialVersionUID = 5707562050158600080L
-	private static String encrypterBaseKey = "qazZSE44wsxXDR55"+serialVersionUID+"edcCFT66rfvVGY77";
+	private static String encrypterBaseKey = "qazZSE44wsxXDR55" + serialVersionUID + "edcCFT66rfvVGY77";
 //	private static Encrypter baseEncrypter = new Encrypter(encrypterBaseKey);
 
 	private String _embeddedMessage = "This file will be overwritten and maintained by " + Version.getAppName();
@@ -181,7 +181,7 @@ extends Properties
 		Configuration conf = _instMap.get(confName);
 		if ( conf == null )
 		{
-			_logger.warn("Can't find any configuration named '"+confName+"', creating a new one.");
+			_logger.warn("Can't find any configuration named '" + confName + "', creating a new one.");
 			conf = new Configuration();
 			_instMap.put(confName, conf);
 		}
@@ -253,7 +253,7 @@ extends Properties
 			}
 			catch (RuntimeException ex)
 			{
-				_logger.error("Problems when calling PropertyChangeListener '" + l + "'. Caught: "+ex, ex);
+				_logger.error("Problems when calling PropertyChangeListener '" + l + "'. Caught: " + ex, ex);
 			}
 		}
 	}
@@ -783,8 +783,8 @@ extends Properties
 		bw.write("\n");
 		bw.write("\n");
 		bw.write("#--------------------------------------------------------------------\n");
-		bw.write("# The below entries was Append at: "+new Date().toString()+"\n");
-		bw.write("# By: "+responsible+"\n");
+		bw.write("# The below entries was Append at: " + new Date().toString() + "\n");
+		bw.write("# By: " + responsible + "\n");
 		bw.write("#--------------------------------------------------------------------\n");
 		bw.write(str);
 		bw.write("#--------------------------------------------------------------------\n");
@@ -802,10 +802,10 @@ extends Properties
 	{
 		if ( ! _isDirty )
 		{
-			_logger.debug("Save was called, but the configuration '"+getConfName()+"' was not dirty. Skipping this save.");
+			_logger.debug("Save was called, but the configuration '" + getConfName() + "' was not dirty. Skipping this save.");
 			return;
 		}
-		_logger.debug("calling save(false) for the configuration '"+getConfName()+"'. _isDirty="+_isDirty);
+		_logger.debug("calling save(false) for the configuration '" + getConfName() + "'. _isDirty=" + _isDirty);
 		save(false);
 	}
 
@@ -813,7 +813,7 @@ extends Properties
 	{
 		if ( ! _saveIsEnabled && ! withOverride)
 		{
-			_logger.debug("Save is disabled for the configuration '"+getConfName()+"', which uses the file '"+getFilename()+"'.");
+			_logger.debug("Save is disabled for the configuration '" + getConfName() + "', which uses the file '" + getFilename() + "'.");
 			return;
 		}
 		
@@ -865,7 +865,7 @@ extends Properties
 					long freeKB = f.getUsableSpace() / 1024;
 					if (needKB > freeKB)
 					{
-						throw new Exception("Before saving the file '"+_propFileName+"' I predicted that I will need/use "+needKB+" KB during the save. But the filesystem only has "+freeKB+" KB available. If I save the file it might be corrupted. So please clear some additional space, then the files will be saved.");
+						throw new Exception("Before saving the file '" + _propFileName + "' I predicted that I will need/use " + needKB + " KB during the save. But the filesystem only has " + freeKB + " KB available. If I save the file it might be corrupted. So please clear some additional space, then the files will be saved.");
 					}
 
 					FileOutputStream os = new FileOutputStream(f);
@@ -877,15 +877,15 @@ extends Properties
 					
 					long saveTime = System.currentTimeMillis() - startTime;
 					if (saveTime > 1000)
-						_logger.warn("Configuration.save() took "+saveTime+" ms... Config file name ='"+_propFileName+"'. Do you have a slow IO subsystem?");
+						_logger.warn("Configuration.save() took " + saveTime + " ms... Config file name ='" + _propFileName + "'. Do you have a slow IO subsystem?");
 //System.out.println("Configuration.save() currentSaveCount="+currentSaveCount+", name='"+_confName+"'. TIME = "+saveTime+ (saveTime < 1000 ? "" : " ------- WARNING ------ WARNING ----- WARNING ---- SAVE Took to long time..."));
 				}
 				catch (Exception e)
 				{
-					_logger.error("Problems saving Configuration name='"+_confName+"', file='"+_propFileName+"', currentSaveCount="+currentSaveCount+". Caught: "+e, e);
+					_logger.error("Problems saving Configuration name='" + _confName + "', file='" + _propFileName + "', currentSaveCount=" + currentSaveCount + ". Caught: " + e, e);
 					if (hasGui())
 					{
-						String msg = "Problems saving Configuration name='"+_confName+"', file='"+_propFileName+"', currentSaveCount="+currentSaveCount+". Caught: "+e;
+						String msg = "Problems saving Configuration name='" + _confName + "', file='" + _propFileName + "', currentSaveCount=" + currentSaveCount + ". Caught: " + e;
 						SwingUtils.showErrorMessage(_guiWindow, "Save Configuration Error", msg, e);
 					}
 				}
@@ -932,7 +932,7 @@ extends Properties
 			//	String inclFileName = getPropertyRaw(inclKey);
 				String inclFileName = getProperty(inclKey);
 
-				_logger.info("Configuration '"+getConfName()+"'. Reading configuration file '"+inclFileName+"' for the key '"+inclKey+"'.");
+				_logger.info("Configuration '" + getConfName() + "'. Reading configuration file '" + inclFileName + "' for the key '" + inclKey + "'.");
 				try
 				{
 					// Load the file into a new property (which gives us better controll, if we want to check for "duplicates" etc...
@@ -951,7 +951,7 @@ extends Properties
 						
 						if (this.containsKey(incKey))
 						{
-							_logger.warn("Configuration '"+getConfName()+"'. include directive issue: property value already exists, skipping this property. Origin Config File '"+filename+"', includeKey='"+inclKey+"', includeFile='"+inclFileName+"', key='"+incKey+"', skippedValue='"+incVal+"', keepingCurrentValue='"+this.getProperty(incKey)+"'.");
+							_logger.warn("Configuration '" + getConfName() + "'. include directive issue: property value already exists, skipping this property. Origin Config File '" + filename + "', includeKey='" + inclKey + "', includeFile='" + inclFileName + "', key='" + incKey + "', skippedValue='" + incVal + "', keepingCurrentValue='" + this.getProperty(incKey) + "'.");
 						}
 						else
 						{
@@ -961,7 +961,7 @@ extends Properties
 				}
 				catch (FileNotFoundException e)
 				{
-					_logger.error("Configuration '"+getConfName()+"'. While reading the configuration file '"+filename+"' found a 'include' key '"+inclKey+"', however this file '"+inclFileName+"' was not possible to read. continuing anyway. Caught: "+e);
+					_logger.error("Configuration '" + getConfName() + "'. While reading the configuration file '" + filename + "' found a 'include' key '" + inclKey + "', however this file '" + inclFileName + "' was not possible to read. continuing anyway. Caught: " + e);
 				}
 				
 				// Remove the "include" key from the props (this so we dont save the kay, and potentially include it twice...)
@@ -970,7 +970,7 @@ extends Properties
 		}
 		catch (FileNotFoundException e)
 		{
-			_logger.warn("Configuration '"+getConfName()+"'. The file '"+filename+"' could not be loaded, continuing anyway.");
+			_logger.warn("Configuration '" + getConfName() + "'. The file '" + filename + "' could not be loaded, continuing anyway.");
 		}
 		catch (Exception e)
 		{
@@ -991,7 +991,7 @@ extends Properties
 
 		ps.println(heading);
 		if (getFilename() != null)
-			ps.println("Filename='"+getFilename()+"'.");
+			ps.println("Filename='" + getFilename() + "'.");
 
 		List<String> sorted = new ArrayList<>(new TreeSet<String>( stringPropertyNames() ));
 
@@ -1257,7 +1257,7 @@ extends Properties
 		}
 
 		if (_logger.isDebugEnabled())
-			_logger.debug("getScreenResulutionAsString(): returns |"+retStr+"|.");
+			_logger.debug("getScreenResulutionAsString(): returns |" + retStr + "|.");
 
 		return retStr;
 	}
@@ -1313,7 +1313,7 @@ extends Properties
 	{
 		String val = getProperty(propName);
 		if (val == null)
-			throw new MandatoryPropertyException("The property '"+propName+"' is mandatory.");
+			throw new MandatoryPropertyException("The property '" + propName + "' is mandatory.");
 		try
 		{
 //			return Integer.parseInt(val);
@@ -1321,7 +1321,7 @@ extends Properties
 		}
 		catch (NumberFormatException e)
 		{
-			throw new NumberFormatException("The property '"+propName+"' must be a number. I found value '"+val+"'.");
+			throw new NumberFormatException("The property '" + propName + "' must be a number. I found value '" + val + "'.");
 		}
 	}
 	/** Get a int value for property */
@@ -1356,7 +1356,7 @@ extends Properties
 	{
 		String val = getProperty(propName);
 		if (val == null)
-			throw new MandatoryPropertyException("The property '"+propName+"' is mandatory.");
+			throw new MandatoryPropertyException("The property '" + propName + "' is mandatory.");
 //		return Long.parseLong(val);
 		return NumberUtils.toNumber(val).longValue();
 	}
@@ -1392,7 +1392,7 @@ extends Properties
 	{
 		String val = getProperty(propName);
 		if (val == null)
-			throw new MandatoryPropertyException("The property '"+propName+"' is mandatory.");
+			throw new MandatoryPropertyException("The property '" + propName + "' is mandatory.");
 //		return Double.parseDouble(val);
 		return NumberUtils.toNumber(val).doubleValue();
 	}
@@ -1428,7 +1428,7 @@ extends Properties
 	{
 		String val = getProperty(propName);
 		if (val == null)
-			throw new MandatoryPropertyException("The property '"+propName+"' is mandatory.");
+			throw new MandatoryPropertyException("The property '" + propName + "' is mandatory.");
 		return val.equalsIgnoreCase("true");
 	}
 	/** Get a boolean value for property */
@@ -1456,7 +1456,7 @@ extends Properties
 	{
 		String val = getProperty(propName);
 		if (val == null)
-			throw new MandatoryPropertyException("The property '"+propName+"' is mandatory.");
+			throw new MandatoryPropertyException("The property '" + propName + "' is mandatory.");
 		return val;
 	}
 
@@ -1516,7 +1516,7 @@ extends Properties
 				String tmpSave = val;
 				val = val.replace("com.asetune.", "com.dbxtune.");
 
-				_logger.warn("Found old Properties Configuration for property='" + propName + "', value '" + tmpSave+ "' which was replaced with '" + val + "'. ConfigFile='" + getFilename() + "'. This can be disabled with System Property " + asetuneBackwardCompat_propName + "=false");
+				_logger.warn("Found old Properties Configuration for property='" + propName + "', value '" + tmpSave + "' which was replaced with '" + val + "'. ConfigFile='" + getFilename() + "'. This can be disabled with System Property " + asetuneBackwardCompat_propName + "=false");
 			}
 		}
 		
@@ -1551,7 +1551,7 @@ extends Properties
 	{
 		String val = getPropertyRaw(propName);
 		if (val == null)
-			throw new MandatoryPropertyException("The property '"+propName+"' is mandatory.");
+			throw new MandatoryPropertyException("The property '" + propName + "' is mandatory.");
 		return val;
 	}
 
@@ -1630,7 +1630,7 @@ extends Properties
 	{
 		String val = getPropertyRawVal(propName);
 		if (val == null)
-			throw new MandatoryPropertyException("The property '"+propName+"' is mandatory.");
+			throw new MandatoryPropertyException("The property '" + propName + "' is mandatory.");
 		return val;
 	}
 
@@ -1758,7 +1758,7 @@ extends Properties
 
 		if (str == null)
 		{
-			_logger.warn("Setting a property value to NULL, which is a faulty value. I will change this to '' (an empty string) for the key/property-name '"+propName+"', in config '"+getConfName()+"', using file '"+getFilename()+"'.");
+			_logger.warn("Setting a property value to NULL, which is a faulty value. I will change this to '' (an empty string) for the key/property-name '" + propName + "', in config '" + getConfName() + "', using file '" + getFilename() + "'.");
 			str = "";
 		}
 
@@ -1771,7 +1771,7 @@ extends Properties
 			_isDirty = true;
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("Configuration '"+getConfName()+"' changed key='"+propName+"', newValue='"+str+"', oldValue='"+prev+"', _isDirty="+_isDirty+".");
+				_logger.debug("Configuration '" + getConfName() + "' changed key='" + propName + "', newValue='" + str + "', oldValue='" + prev + "', _isDirty=" + _isDirty + ".");
 
 			// If we should have change listeners, this is where we should call: firePropertyChanged(propName, newValue, oldValue);
 		}
@@ -2081,7 +2081,7 @@ extends Properties
 		}
 		catch(IOException e)
 		{
-			_logger.error("Problems when executing the OS Command '"+osCmdStr+"'. Caught: "+e);
+			_logger.error("Problems when executing the OS Command '" + osCmdStr + "'. Caught: " + e);
 			return e.toString();
 		}
 
@@ -2533,7 +2533,7 @@ extends Properties
 			if (filenames.endsWith(", "))
 				filenames = filenames.substring(0, filenames.length() - 2);
 
-			return "Combined Configuration of files: "+filenames;
+			return "Combined Configuration of files: " + filenames;
 		}
 
 		/** Does the property exists within any of the configurations ? */
@@ -2732,7 +2732,7 @@ extends Properties
 		{
 			String val = getProperty(propName);
 			if (val == null)
-				throw new MandatoryPropertyException("The property '"+propName+"' is mandatory.");
+				throw new MandatoryPropertyException("The property '" + propName + "' is mandatory.");
 			return val;
 		}
 
@@ -2796,7 +2796,7 @@ extends Properties
 		{
 			String val = getPropertyRaw(propName);
 			if (val == null)
-				throw new MandatoryPropertyException("The property '"+propName+"' is mandatory.");
+				throw new MandatoryPropertyException("The property '" + propName + "' is mandatory.");
 			return val;
 		}
 
@@ -2869,7 +2869,7 @@ extends Properties
 		{
 			String val = getPropertyRawVal(propName);
 			if (val == null)
-				throw new MandatoryPropertyException("The property '"+propName+"' is mandatory.");
+				throw new MandatoryPropertyException("The property '" + propName + "' is mandatory.");
 			return val;
 		}
 
@@ -2980,11 +2980,11 @@ extends Properties
 		{
 			strArr[i] = strArr[i].trim();
 
-			_logger.trace("parse() strArr["+i+"]='"+strArr[i]+"'.");
+			_logger.trace("parse() strArr[" + i + "]='" + strArr[i] + "'.");
 
 			String[] strKeyVal = strArr[i].split("=");
 			if (strKeyVal.length < 2)
-				throw new ParseException("Faulty key=value representation '"+strArr[i]+"' at position '"+i+"' in the string '"+strArr[i]+"'.", i);
+				throw new ParseException("Faulty key=value representation '" + strArr[i] + "' at position '" + i + "' in the string '" + strArr[i] + "'.", i);
 
 			String key = strKeyVal[0].trim();
 			String val = strKeyVal[1].trim();
@@ -3056,8 +3056,8 @@ extends Properties
 			
 			System.out.println("");
 			System.out.println("operation    = '" + op   + "'");
-			System.out.println("property     = '" + prop +"'");
-			System.out.println("strToEncrypt = '" + inStr +"'");
+			System.out.println("property     = '" + prop + "'");
+			System.out.println("strToEncrypt = '" + inStr + "'");
 			System.out.println("---------------------------------------------------------------------------------------");
 			System.out.println(prop + " = " + encValue);
 			System.out.println("---------------------------------------------------------------------------------------");
@@ -3070,8 +3070,8 @@ extends Properties
 			
 			System.out.println("");
 			System.out.println("operation    = '" + op   + "'");
-			System.out.println("property     = '" + prop +"'");
-			System.out.println("strToDecrypt = '" + inStr +"'");
+			System.out.println("property     = '" + prop + "'");
+			System.out.println("strToDecrypt = '" + inStr + "'");
 			System.out.println("---------------------------------------------------------------------------------------");
 			System.out.println("Decypted value '" + decValue + "'");
 			System.out.println("---------------------------------------------------------------------------------------");
@@ -3149,36 +3149,36 @@ extends Properties
 		sConf.setProperty("udc.prop2.p5", "-system-udc.prop2.p5-");
 
 		Configuration cfg = Configuration.getCombinedConfiguration();
-		System.out.println("tmp      FILENAME='"+tConf.getFilename()+"'.");
-		System.out.println("user     FILENAME='"+uConf.getFilename()+"'.");
-		System.out.println("system   FILENAME='"+sConf.getFilename()+"'.");
-		System.out.println("Combined FILENAME='"+cfg.getFilename()+"'.");
+		System.out.println("tmp      FILENAME='" + tConf.getFilename() + "'.");
+		System.out.println("user     FILENAME='" + uConf.getFilename() + "'.");
+		System.out.println("system   FILENAME='" + sConf.getFilename() + "'.");
+		System.out.println("Combined FILENAME='" + cfg.getFilename() + "'.");
 		System.out.println();
-		System.out.println("TMP:    tmp1    = '"+tConf.getProperty("tmp1")+"'.");
-		System.out.println("USER:   user1   = '"+uConf.getProperty("user1")+"'.");
-		System.out.println("SYSTEM: system1 = '"+sConf.getProperty("system1")+"'.");
+		System.out.println("TMP:    tmp1    = '" + tConf.getProperty("tmp1") + "'.");
+		System.out.println("USER:   user1   = '" + uConf.getProperty("user1") + "'.");
+		System.out.println("SYSTEM: system1 = '" + sConf.getProperty("system1") + "'.");
 		System.out.println();
-		System.out.println("notFound= '"+cfg.getProperty("notFound")+"'.");
-		System.out.println("tmp1    = '"+cfg.getProperty("tmp1")+"'.");
-		System.out.println("user1   = '"+cfg.getProperty("user1")+"'.");
-		System.out.println("system1 = '"+cfg.getProperty("system1")+"'.");
+		System.out.println("notFound= '" + cfg.getProperty("notFound") + "'.");
+		System.out.println("tmp1    = '" + cfg.getProperty("tmp1") + "'.");
+		System.out.println("user1   = '" + cfg.getProperty("user1") + "'.");
+		System.out.println("system1 = '" + cfg.getProperty("system1") + "'.");
 		System.out.println();
-		System.out.println("prop1 = '"+cfg.getProperty("prop1")+"'.");
+		System.out.println("prop1 = '" + cfg.getProperty("prop1") + "'.");
 		System.out.println();
-		System.out.println("prop2.p1 = '"+cfg.getProperty("prop2.p1")+"'.");
-		System.out.println("prop2.p2 = '"+cfg.getProperty("prop2.p2")+"'.");
-		System.out.println("prop2.p3 = '"+cfg.getProperty("prop2.p3")+"'.");
-		System.out.println("prop2.p4 = '"+cfg.getProperty("prop2.p4")+"'.");
-		System.out.println("prop2.p5 = '"+cfg.getProperty("prop2.p5")+"'.");
+		System.out.println("prop2.p1 = '" + cfg.getProperty("prop2.p1") + "'.");
+		System.out.println("prop2.p2 = '" + cfg.getProperty("prop2.p2") + "'.");
+		System.out.println("prop2.p3 = '" + cfg.getProperty("prop2.p3") + "'.");
+		System.out.println("prop2.p4 = '" + cfg.getProperty("prop2.p4") + "'.");
+		System.out.println("prop2.p5 = '" + cfg.getProperty("prop2.p5") + "'.");
 		System.out.println();
-		System.out.println("getKeys('prop2.')     = '"+cfg.getKeys("prop2.")+"'.");
-		System.out.println("getKeys('udc.prop2.') = '"+cfg.getKeys("udc.prop2.")+"'.");
+		System.out.println("getKeys('prop2.')     = '" + cfg.getKeys("prop2.") + "'.");
+		System.out.println("getKeys('udc.prop2.') = '" + cfg.getKeys("udc.prop2.") + "'.");
 		System.out.println();
-		System.out.println("getUniqueSubKeys(TMP: 'udc.prop2.',true)  = '"+tConf.getUniqueSubKeys("udc.prop2.",true)+"'.");
-		System.out.println("getUniqueSubKeys(TMP: 'udc.prop2.',false) = '"+tConf.getUniqueSubKeys("udc.prop2.",false)+"'.");
+		System.out.println("getUniqueSubKeys(TMP: 'udc.prop2.',true)  = '" + tConf.getUniqueSubKeys("udc.prop2.",true) + "'.");
+		System.out.println("getUniqueSubKeys(TMP: 'udc.prop2.',false) = '" + tConf.getUniqueSubKeys("udc.prop2.",false) + "'.");
 		System.out.println();
-		System.out.println("getUniqueSubKeys('prop2.',true)  = '"+cfg.getUniqueSubKeys("prop2.",true)+"'.");
-		System.out.println("getUniqueSubKeys('prop2.',false) = '"+cfg.getUniqueSubKeys("prop2.",false)+"'.");
+		System.out.println("getUniqueSubKeys('prop2.',true)  = '" + cfg.getUniqueSubKeys("prop2.",true) + "'.");
+		System.out.println("getUniqueSubKeys('prop2.',false) = '" + cfg.getUniqueSubKeys("prop2.",false) + "'.");
 
 		
 		
@@ -3301,7 +3301,7 @@ extends Properties
 	private static void testShouldBeNull(Object v1)
 	{
 		if (v1 != null) 
-			throw new RuntimeException("testShouldBeNull: Object SHOULD be NULL, it has value='"+v1+"'.");
+			throw new RuntimeException("testShouldBeNull: Object SHOULD be NULL, it has value='" + v1 + "'.");
 	}
 	private static void testShouldHaveValue(Object v1)
 	{
@@ -3312,9 +3312,9 @@ extends Properties
 	{
 		if (v1 == null && v2 == null)
 			return;
-		if (v1 == null && v2 != null) throw new RuntimeException("testEqual: Values are NOT equal. v1='"+v1+"', v2='"+v2+"'");
-		if (v2 == null && v1 != null) throw new RuntimeException("testEqual: Values are NOT equal. v1='"+v1+"', v2='"+v2+"'");
-		if (! v1.equals(v2))          throw new RuntimeException("testEqual: Values are NOT equal. v1='"+v1+"', v2='"+v2+"', v1='"+v1.getClass().getName()+"', v2='"+v2.getClass().getName()+"'.");
+		if (v1 == null && v2 != null) throw new RuntimeException("testEqual: Values are NOT equal. v1='" + v1 + "', v2='" + v2 + "'");
+		if (v2 == null && v1 != null) throw new RuntimeException("testEqual: Values are NOT equal. v1='" + v1 + "', v2='" + v2 + "'");
+		if (! v1.equals(v2))          throw new RuntimeException("testEqual: Values are NOT equal. v1='" + v1 + "', v2='" + v2 + "', v1='" + v1.getClass().getName() + "', v2='" + v2.getClass().getName() + "'.");
 	}
 	private static void testShouldNotBeEqual(Object v1, Object v2)
 	{
@@ -3322,6 +3322,6 @@ extends Properties
 			return;
 		if (v1 == null && v2 != null) return;
 		if (v2 == null && v1 != null) return;
-		if (v1.equals(v2))            throw new RuntimeException("testNotEqual: Values ARE equal. v1='"+v1+"', v2='"+v2+"', v1='"+v1.getClass().getName()+"', v2='"+v2.getClass().getName()+"'.");
+		if (v1.equals(v2))            throw new RuntimeException("testNotEqual: Values ARE equal. v1='" + v1 + "', v2='" + v2 + "', v1='" + v1.getClass().getName() + "', v2='" + v2.getClass().getName() + "'.");
 	}
 }

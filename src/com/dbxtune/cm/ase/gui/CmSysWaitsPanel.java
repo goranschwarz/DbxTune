@@ -202,7 +202,7 @@ extends TabularCntrPanel
 						continue;
 
 					if (_logger.isDebugEnabled())
-						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": ClassName("+ClassName_pos+")='"+ClassName+"', EventName("+EventName_pos+")='"+EventName+"', WaitTime("+WaitTime_pos+")='"+WaitTime+"', Waits("+Waits_pos+")='"+Waits+"', WaitTimePerWait("+WaitTimePerWait_pos+")='"+WaitTimePerWait+"'.");
+						_logger.debug("createDataset():GRAPH-DATA: " + getName() + ": ClassName(" + ClassName_pos + ")='" + ClassName + "', EventName(" + EventName_pos + ")='" + EventName + "', WaitTime(" + WaitTime_pos + ")='" + WaitTime + "', Waits(" + Waits_pos + ")='" + Waits + "', WaitTimePerWait(" + WaitTimePerWait_pos + ")='" + WaitTimePerWait + "'.");
 
 					if (generateClass)
 					{
@@ -218,13 +218,13 @@ extends TabularCntrPanel
 					if (generateEvent)
 					{
 						if (generateEventWaitTime)
-							dataset.addValue(WaitTime       .doubleValue(), "["+WaitEventID+"] " + EventName, "EventID - WaitTime");
+							dataset.addValue(WaitTime       .doubleValue(), "[" + WaitEventID + "] " + EventName, "EventID - WaitTime");
 
 						if (generateEventWaits)
-							dataset.addValue(Waits          .doubleValue(), "["+WaitEventID+"] " + EventName, "EventID - Waits");
+							dataset.addValue(Waits          .doubleValue(), "[" + WaitEventID + "] " + EventName, "EventID - Waits");
 
 						if (generateEventWaitTimePerWait)
-							dataset.addValue(WaitTimePerWait.doubleValue(), "["+WaitEventID+"] " + EventName, "EventID - WaitTimePerWait");
+							dataset.addValue(WaitTimePerWait.doubleValue(), "[" + WaitEventID + "] " + EventName, "EventID - WaitTimePerWait");
 					}
 				}
 				if (generateClass)
@@ -235,7 +235,7 @@ extends TabularCntrPanel
 						{
 							String key = entry.getKey();
 							Double val = entry.getValue();
-							dataset.addValue(val, "(class) "+key, "Class - WaitTime");
+							dataset.addValue(val, "(class) " + key, "Class - WaitTime");
 						}
 					}
 					
@@ -245,7 +245,7 @@ extends TabularCntrPanel
 						{
 							String key = entry.getKey();
 							Double val = entry.getValue();
-							dataset.addValue(val, "(class) "+key, "Class - Waits");
+							dataset.addValue(val, "(class) " + key, "Class - Waits");
 						}
 					}
 
@@ -255,7 +255,7 @@ extends TabularCntrPanel
 						{
 							String key = entry.getKey();
 							Double val = entry.getValue();
-							dataset.addValue(val, "(class) "+key, "Class - WaitTimePerWait");
+							dataset.addValue(val, "(class) " + key, "Class - WaitTimePerWait");
 						}
 					}
 				}

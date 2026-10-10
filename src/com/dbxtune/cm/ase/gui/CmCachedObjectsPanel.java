@@ -66,7 +66,7 @@ extends TabularCntrPanel
 		String colorStr = null;
 
 		// ORANGE = Index id > 0
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.index");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.index");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -80,7 +80,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.ORANGE), null));
 
 		// BLOB (text/image columns)
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.blob");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.blob");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -108,7 +108,7 @@ extends TabularCntrPanel
 				Configuration conf = Configuration.getCombinedConfiguration();
 
 				l_sampleTopRows_chk      .setSelected(conf.getBooleanProperty(CmCachedObjects.PROPKEY_sample_topRows,      CmCachedObjects.DEFAULT_sample_topRows));
-				l_sampleTopRowsCount_txt .setText(""+ conf.getIntProperty    (CmCachedObjects.PROPKEY_sample_topRowsCount, CmCachedObjects.DEFAULT_sample_topRowsCount));
+				l_sampleTopRowsCount_txt .setText("" + conf.getIntProperty    (CmCachedObjects.PROPKEY_sample_topRowsCount, CmCachedObjects.DEFAULT_sample_topRowsCount));
 
 				// ReInitialize the SQL
 				getCm().setSql(null);
@@ -129,10 +129,10 @@ extends TabularCntrPanel
 		l_sampleTopRowsCount_txt = new JTextField(Integer.toString(defaultIntOpt), 5);
 
 		l_sampleTopRows_chk.setName(CmCachedObjects.PROPKEY_sample_topRows);
-		l_sampleTopRows_chk.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmCachedObjects.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
+		l_sampleTopRows_chk.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top " + CmCachedObjects.DEFAULT_sample_topRowsCount + "</b> c1, c2, c3 from tablename where...</code></html>");
 
 		l_sampleTopRowsCount_txt.setName(CmCachedObjects.PROPKEY_sample_topRowsCount);
-		l_sampleTopRowsCount_txt.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmCachedObjects.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
+		l_sampleTopRowsCount_txt.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top " + CmCachedObjects.DEFAULT_sample_topRowsCount + "</b> c1, c2, c3 from tablename where...</code></html>");
 
 		l_sampleTopRows_chk.addActionListener(new ActionListener()
 		{
@@ -167,8 +167,8 @@ extends TabularCntrPanel
 				catch (NumberFormatException nfe)
 				{
 					intVal = CmCachedObjects.DEFAULT_sample_topRowsCount;
-					SwingUtils.showWarnMessage(CmCachedObjectsPanel.this, "Not a Number", "<html>This must be a number, you entered '"+strVal+"'.<br>Setting to default value '"+intVal+"'.</html>", nfe);
-					l_sampleTopRowsCount_txt.setText(intVal+"");
+					SwingUtils.showWarnMessage(CmCachedObjectsPanel.this, "Not a Number", "<html>This must be a number, you entered '" + strVal + "'.<br>Setting to default value '" + intVal + "'.</html>", nfe);
+					l_sampleTopRowsCount_txt.setText(intVal + "");
 				}
 				conf.setProperty(CmCachedObjects.PROPKEY_sample_topRowsCount, intVal);
 				conf.save();

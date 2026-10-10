@@ -98,7 +98,7 @@ extends AlarmWriterAbstract
 		} 
 		catch (Exception ex) 
 		{
-			_logger.error("Problems sending SNPP message to server '"+_hostname+":"+_port+"'. Caught: "+ex , ex);
+			_logger.error("Problems sending SNPP message to server '" + _hostname + ":" + _port + "'. Caught: " + ex , ex);
 		}
 
 	}
@@ -129,7 +129,7 @@ extends AlarmWriterAbstract
 	{
 		super.init(conf);
 
-		_logger.info("Initializing the AlarmWriter component named '"+getName()+"'.");
+		_logger.info("Initializing the AlarmWriter component named '" + getName() + "'.");
 
 		_hostname         = conf.getProperty   (PROPKEY_hostname,         DEFAULT_hostname);
 		_port             = conf.getIntProperty(PROPKEY_port,             DEFAULT_port);
@@ -142,16 +142,16 @@ extends AlarmWriterAbstract
 		_subject          = conf.getProperty   (PROPKEY_subject,          DEFAULT_subject);
 		
 		// Check for mandatory parameters
-		if ( StringUtil.isNullOrBlank(_hostname       ) ) throw new Exception("The property '" + PROPKEY_hostname        + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
-		if ( _port == -1                                ) throw new Exception("The property '" + PROPKEY_port            + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
-		if ( StringUtil.isNullOrBlank(_msgBodyTemplate) ) throw new Exception("The property '" + PROPKEY_msgBodyTemplate + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
+		if ( StringUtil.isNullOrBlank(_hostname       ) ) throw new Exception("The property '" + PROPKEY_hostname        + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
+		if ( _port == -1                                ) throw new Exception("The property '" + PROPKEY_port            + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
+		if ( StringUtil.isNullOrBlank(_msgBodyTemplate) ) throw new Exception("The property '" + PROPKEY_msgBodyTemplate + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
 	}
 
 	@Override
 	public void printConfig()
 	{
 		int spaces = 45;
-		_logger.info("Configuration for Alarm Writer Module: "+getName());
+		_logger.info("Configuration for Alarm Writer Module: " + getName());
 		_logger.info("    " + StringUtil.left(PROPKEY_hostname        , spaces) + ": " + _hostname);
 		_logger.info("    " + StringUtil.left(PROPKEY_port            , spaces) + ": " + _port);
 		_logger.info("    " + StringUtil.left(PROPKEY_msgBodyTemplate , spaces) + ": " + _msgBodyTemplate);

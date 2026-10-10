@@ -46,7 +46,7 @@ public class DailySummaryReportFactory
 	public static final String  DEFAULT_filter_skip_servername = "";
 
 	public static final String  PROPKEY_reportClassname = "DailySummaryReport.report.classname";
-	public static final String  DEFAULT_reportClassname = "com.dbxtune.pcs.report.DailySummaryReport"+Version.getAppName();
+	public static final String  DEFAULT_reportClassname = "com.dbxtune.pcs.report.DailySummaryReport" + Version.getAppName();
 
 	public static final String  PROPKEY_senderClassname = "DailySummaryReport.sender.classname";
 	public static final String  DEFAULT_senderClassname = "com.dbxtune.pcs.report.senders.ReportSenderToMail";
@@ -153,7 +153,7 @@ public class DailySummaryReportFactory
 		}
 		
 		// Load the REPORT class name
-		_logger.info("Creating a Daily Summary Report Using implementation '"+reportClassname+"', with Report Sender '"+senderClassname+"'.");
+		_logger.info("Creating a Daily Summary Report Using implementation '" + reportClassname + "', with Report Sender '" + senderClassname + "'.");
 		IDailySummaryReport reportClass = null;
 		try
 		{
@@ -162,17 +162,17 @@ public class DailySummaryReportFactory
 		}
 		catch (ClassCastException e)
 		{
-			_logger.error("When trying to load DailySummaryReport class '"+reportClassname+"'. The DailySummaryReport do not seem to follow the interface 'com.dbxtune.pcs.report.IDailySummaryReport'");
+			_logger.error("When trying to load DailySummaryReport class '" + reportClassname + "'. The DailySummaryReport do not seem to follow the interface 'com.dbxtune.pcs.report.IDailySummaryReport'");
 		}
 		catch (Exception e)
 		{
-			_logger.error("Tried to load DailySummaryReport class '"+reportClassname+"' failed. Caught: "+e, e);
+			_logger.error("Tried to load DailySummaryReport class '" + reportClassname + "' failed. Caught: " + e, e);
 		}
 		
 		if (reportClass == null)
 		{
 			reportClass = new DailySummaryReportDefault();
-			_logger.error("DailySummaryReport will be using the Default implementation '"+reportClass.getClass().getName()+"'.");
+			_logger.error("DailySummaryReport will be using the Default implementation '" + reportClass.getClass().getName() + "'.");
 		}
 
 		
@@ -213,17 +213,17 @@ public class DailySummaryReportFactory
 		}
 		catch (ClassCastException e)
 		{
-			_logger.error("When trying to load DailySummaryReport Sender class '"+senderClassname+"'. The DailySummaryReport do not seem to follow the interface 'com.dbxtune.pcs.report.IDailySummaryReport'");
+			_logger.error("When trying to load DailySummaryReport Sender class '" + senderClassname + "'. The DailySummaryReport do not seem to follow the interface 'com.dbxtune.pcs.report.IDailySummaryReport'");
 		}
 		catch (Exception e)
 		{
-			_logger.error("Tried to load DailySummaryReport Sender class '"+senderClassname+"' failed. Caught: "+e, e);
+			_logger.error("Tried to load DailySummaryReport Sender class '" + senderClassname + "' failed. Caught: " + e, e);
 		}
 		
 		if (reportSender == null)
 		{
 			reportSender = new ReportSenderToMail();
-			_logger.error("DailySummaryReport Sender will be using the Default implementation '"+reportSender.getClass().getName()+"'.");
+			_logger.error("DailySummaryReport Sender will be using the Default implementation '" + reportSender.getClass().getName() + "'.");
 		}
 		
 		return reportSender;

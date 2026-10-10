@@ -123,7 +123,7 @@ extends ToolTipSupplierAbstractSql
 		}
 		catch(SQLException ex)
 		{
-			throw new Exception("Problems getting HELP information from MySQL. Error Number: "+ex.getErrorCode()+", Message: " + ex.getMessage(), ex);
+			throw new Exception("Problems getting HELP information from MySQL. Error Number: " + ex.getErrorCode() + ", Message: " + ex.getMessage(), ex);
 		}
 	}
 

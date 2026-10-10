@@ -51,7 +51,7 @@ extends SqlCompletion
 		_dbInfo = di;
 
 		String shortDesc = 
-			"<font color='blue'>"+di._dbType+"</font>" +
+			"<font color='blue'>" + di._dbType + "</font>" +
 //			" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(di._dbRemark) ? "No Description" : di._dbRemark) + "</font></i>";
 			" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(di._dbRemark) ? "" : stripMultiLineHtml(di._dbRemark)) + "</font></i>";
 		setShortDescription(shortDesc);

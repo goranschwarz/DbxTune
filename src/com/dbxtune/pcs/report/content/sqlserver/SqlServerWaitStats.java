@@ -159,7 +159,7 @@ extends SqlServerAbstract
 				int    samplePeriod = getOwner().getSamplePeriodInMinutes();
 
 				StringBuilder sb = new StringBuilder();
-				sb.append("<br>Here are the top " + getTopCount() + " '" + groupColName + "' ordered by '" + valueColName +"' for the whole period (while the above chart is in " + samplePeriod + " minutes chunks).<br>\n");
+				sb.append("<br>Here are the top " + getTopCount() + " '" + groupColName + "' ordered by '" + valueColName + "' for the whole period (while the above chart is in " + samplePeriod + " minutes chunks).<br>\n");
 				sb.append("<table class='sortable'> \n");
 				sb.append("<tr> \n");
 				sb.append("  <th>Top #</th> \n");
@@ -277,8 +277,8 @@ extends SqlServerAbstract
 					sb.append("  <td>").append(formatedWaitTimeMs).append("</td> \n");
 					sb.append("  <td>").append(TimeUtils.msToTimeStr("%?DD[d ]%HH:%MM:%SS", entry.getValue().intValue())).append("</td> \n");
 					sb.append("  <td>").append(sparklineDataStr_wtpc).append("</td> \n");
-					sb.append("  <td> <a href='https://www.sqlskills.com/help/waits/"+entry.getKey()+"' target='_blank'>"+entry.getKey()+"</a>").append("</td> \n");
-					sb.append("  <td> <a href='https://www.google.com/search?q="+entry.getKey()+"' target='_blank'>Google: "+entry.getKey()+"</a>").append("</td> \n");
+					sb.append("  <td> <a href='https://www.sqlskills.com/help/waits/" + entry.getKey() + "' target='_blank'>" + entry.getKey() + "</a>").append("</td> \n");
+					sb.append("  <td> <a href='https://www.google.com/search?q=" + entry.getKey() + "' target='_blank'>Google: " + entry.getKey() + "</a>").append("</td> \n");
 					sb.append("  <td>").append(SqlServerWaitTypeDictionary.getInstance().getDescriptionPlain(entry.getKey())).append("</td> \n");
 					sb.append("</tr> \n");
 				}
@@ -295,7 +295,7 @@ extends SqlServerAbstract
 
 		_CmWaitStat_selected     = createTsStackedBarChart(conn, schema, "CmWaitStats", "wait_type", samplePeriod, null, "wait_time_ms", 1000.0, selected, null, "Wait Types in Seconds (pre-selected), grouped by " + samplePeriod + " minutes intervall");
 		_CmWaitStat_cxpacket     = createTsStackedBarChart(conn, schema, "CmWaitStats", "wait_type", samplePeriod, null, "wait_time_ms", 1000.0, cxpacket, null,  "Wait Type in Seconds (only " + cxpacket + "), grouped by " + samplePeriod + " minutes intervall");
-		_CmWaitStat_all          = createTsStackedBarChart(conn, schema, "CmWaitStats", "wait_type", samplePeriod, tgcp, "wait_time_ms", 1000.0, null,     null, "Wait Types in Seconds (top-"+tgcp.getTopCount()+"-wait_types), grouped by " + samplePeriod + " minutes intervall");
+		_CmWaitStat_all          = createTsStackedBarChart(conn, schema, "CmWaitStats", "wait_type", samplePeriod, tgcp, "wait_time_ms", 1000.0, null,     null, "Wait Types in Seconds (top-" + tgcp.getTopCount() + "-wait_types), grouped by " + samplePeriod + " minutes intervall");
 	}
 
 	private IReportChart _CmWaitStat_selected;

@@ -284,7 +284,7 @@ extends CompletionProviderAbstract
 		if (_localConn == null)
 			return;
 
-		_logger.info("Setting local catalog to '"+_localCatalogName+"' in Completion Provider.");
+		_logger.info("Setting local catalog to '" + _localCatalogName + "' in Completion Provider.");
 		try 
 		{
 			setNeedRefresh(true);
@@ -292,7 +292,7 @@ extends CompletionProviderAbstract
 		}
 		catch(SQLException ex) 
 		{ 
-			_logger.error("Problems setting catalog name to '"+_localCatalogName+"'. ErrorCode=" + ex.getErrorCode() + ", SqlState=" +  ex.getSQLState() + ", Text=|" + ex.getMessage() + "|. Caught: "+ex);
+			_logger.error("Problems setting catalog name to '" + _localCatalogName + "'. ErrorCode=" + ex.getErrorCode() + ", SqlState=" +  ex.getSQLState() + ", Text=|" + ex.getMessage() + "|. Caught: " + ex);
 		}
 	}
 
@@ -302,7 +302,7 @@ extends CompletionProviderAbstract
 			return;
 		
 		//_connectionProvider.releaseConnection(_localConn);
-		try { _logger.info("Closing connection to: "+_localConn.getMetaData().getURL()); }
+		try { _logger.info("Closing connection to: " + _localConn.getMetaData().getURL()); }
 		catch(SQLException ignore) {}
 
 		// Close and reset the connection
@@ -319,7 +319,7 @@ extends CompletionProviderAbstract
 			{
 				_localConn = _connectionProvider.getNewConnection(Version.getAppName() + "-Compl"); // '-Completion' was a bit to long, it may truncate the version part at the end 
 				
-				try { _logger.info("Compleation Provider created a new connection to URL: "+_localConn.getMetaData().getURL()); }
+				try { _logger.info("Compleation Provider created a new connection to URL: " + _localConn.getMetaData().getURL()); }
 				catch(SQLException ignore) {}
 				
 				setCatalog(_localCatalogName, true); // withOverride=true
@@ -335,7 +335,7 @@ extends CompletionProviderAbstract
 					}
 					catch(Exception ex)
 					{
-						_logger.error("Problems in Code Compleation: When trying to re-connect to DBMS there was problems. Caught: "+ex);
+						_logger.error("Problems in Code Compleation: When trying to re-connect to DBMS there was problems. Caught: " + ex);
 					}
 				}
 			}
@@ -919,7 +919,7 @@ extends CompletionProviderAbstract
 	@Override
 	public void loadSavedCacheFromFilePostAction(List<? extends AbstractCompletionX> list, WaitForExecDialog waitDialog)
 	{
-System.out.println("loadSavedCacheFromFilePostAction: START... list.size()="+ (list == null ? null : list.size()) );
+System.out.println("loadSavedCacheFromFilePostAction: START... list.size()=" + (list == null ? null : list.size()) );
 		if (waitDialog != null)
 			waitDialog.setState("Adding Schema names...");
 
@@ -1002,11 +1002,11 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 					
 					String htmlMsg = 
 						"<html>"
-						+ "Creating the completion list took '"+refreshTimeStr+"' (MM:SS.ms).<br>"
-						+ "This is above the configued limit of "+getSaveCacheTimeInMs()+" ms.<br>"
+						+ "Creating the completion list took '" + refreshTimeStr + "' (MM:SS.ms).<br>"
+						+ "This is above the configued limit of " + getSaveCacheTimeInMs() + " ms.<br>"
 						+ "<br>"
 						+ "<b>Do you want to save the completion list to a file?</b><br>"
-						+ "Next time you access the entity '<code>"+getInstanceName()+"</code>'<br>"
+						+ "Next time you access the entity '<code>" + getInstanceName() + "</code>'<br>"
 						+ "the completions will be restored from the saved file.<br>"
 						+ "<br>"
 						+ "This setting can be changed from the Completion button, choose 'Configue'<br>"
@@ -1246,7 +1246,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 			refresh();
 
 		if (_logger.isDebugEnabled())
-			_logger.debug("getCompletionsSql(): _schemaNames="+_schemaNames);
+			_logger.debug("getCompletionsSql(): _schemaNames=" + _schemaNames);
 
 		
 		//-----------------------------------------------------------
@@ -1472,7 +1472,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 				TableInfo ti = tc._tableInfo;
 
 				if (_logger.isDebugEnabled())
-					_logger.debug("type='"+ti._tabType+"', name='"+ti._tabName+"'.");
+					_logger.debug("type='" + ti._tabType + "', name='" + ti._tabName + "'.");
 
 //				if ("TABLE".equals(ti._tabType))
 				if ("TABLE".equals(ti._tabType) || "BASE TABLE".equals(ti._tabType))
@@ -1515,7 +1515,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 			if (_logger.isDebugEnabled())
 			{
 				_logger.debug(">>> in: Complete STORED PROCS");
-				_logger.debug("SqlObjectName: "+etId);
+				_logger.debug("SqlObjectName: " + etId);
 			}
 
 			ArrayList<Completion> procList = new ArrayList<Completion>();
@@ -1568,13 +1568,13 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 			if (etId.isSchemaQualifiedObject()) // SCHEMA.OBJECT
 			{
 				if (_logger.isDebugEnabled())
-					_logger.debug("EXEC: SCHEMA.OBJECT: getProcedureCompletionsFromSchema(): etId.getSchemaName()='"+etId.getSchemaName()+"', etId.getObjectName()='"+etId.getObjectName()+"'.");
+					_logger.debug("EXEC: SCHEMA.OBJECT: getProcedureCompletionsFromSchema(): etId.getSchemaName()='" + etId.getSchemaName() + "', etId.getObjectName()='" + etId.getObjectName() + "'.");
 
 				// Get from the schemas
 				List<Completion> list = getProcedureCompletionsFromSchema(_procedureComplList, etId.getSchemaName(), etId.getObjectName());
 
 				if (_logger.isDebugEnabled())
-					_logger.debug("EXEC: SCHEMA.OBJECT: getProcedureCompletionsFromSchema(): list.size() = "+list.size());
+					_logger.debug("EXEC: SCHEMA.OBJECT: getProcedureCompletionsFromSchema(): list.size() = " + list.size());
 
 				// If cached schema lookup failed, the option might be OFF do a on-the-fly lookup...
 				if (list.isEmpty())
@@ -1589,7 +1589,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 					list = getProcedureListWithGuiProgress(conn, etId.getCatalogName(), etId.getSchemaName(), etId.getObjectName(), isWildcatdMath());
 					
 					if (_logger.isDebugEnabled())
-						_logger.debug("EXEC: SCHEMA.OBJECT: getProcedureCompletionsFromSchema(): list.size() = "+list.size());
+						_logger.debug("EXEC: SCHEMA.OBJECT: getProcedureCompletionsFromSchema(): list.size() = " + list.size());
 				}
 
 				return list;
@@ -1625,7 +1625,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 			for (String schemaName : _schemaNames)
 			{
 				if (_logger.isDebugEnabled())
-					_logger.debug("EXEC(add matching schemas): schemaName='"+schemaName+"', etId.getObjectName()='"+etId.getObjectName()+"'.");
+					_logger.debug("EXEC(add matching schemas): schemaName='" + schemaName + "', etId.getObjectName()='" + etId.getObjectName() + "'.");
 
 				if (startsWithIgnoreCaseOrRegExp(schemaName, etId.getObjectName()))
 					procList.add( new SqlSchemaCompletion(CompletionProviderAbstractSql.this, schemaName) );
@@ -1635,7 +1635,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 			if (startsWithIgnoreCaseOrRegExp(etId.getObjectName(), "sp_"))
 			{
 				if (_logger.isDebugEnabled())
-					_logger.debug("SYSTEM PROC LOOKUP: schName='"+etId.getSchemaName()+"', objName='"+etId.getObjectName()+"'.");
+					_logger.debug("SYSTEM PROC LOOKUP: schName='" + etId.getSchemaName() + "', objName='" + etId.getObjectName() + "'.");
 
 				for (SqlProcedureCompletion pc : _systemProcComplList)
 				{
@@ -1646,8 +1646,8 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 			}
 			if (_logger.isDebugEnabled())
 			{
-				_logger.debug("<<<---PROC_LIST.size(): "+procList.size());
-				_logger.debug("<<<---PROC_LIST: "+procList);
+				_logger.debug("<<<---PROC_LIST.size(): " + procList.size());
+				_logger.debug("<<<---PROC_LIST: " + procList);
 			}
 			return procList;
 		} // end: exec
@@ -1657,12 +1657,12 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 		// Check for database..tab<ctrl+space> 
 		//
 		if (_logger.isDebugEnabled())
-			_logger.debug(">>> etId: "+etId);
+			_logger.debug(">>> etId: " + etId);
 
 		if (etId.isFullyQualifiedObject()) // CATALOG.SCHEMA.OBJECT
 		{
 			if (_logger.isDebugEnabled())
-				_logger.debug(">>> in: TABLES in other databases, (isFullyQualifiedObject=TRUE, CATALOG.SCHEMA.OBJECT) do lookup 'on the fly' for: "+etId);
+				_logger.debug(">>> in: TABLES in other databases, (isFullyQualifiedObject=TRUE, CATALOG.SCHEMA.OBJECT) do lookup 'on the fly' for: " + etId);
 
 			DbxConnection conn = getConnection();
 			if (conn == null)
@@ -1697,19 +1697,19 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 			String colName      = text.substring(lastDot+1);
 			String tabAliasName = text.substring(0, lastDot);
 			if (_logger.isDebugEnabled())
-				_logger.debug("1-tabAliasName='"+tabAliasName+"'.");
+				_logger.debug("1-tabAliasName='" + tabAliasName + "'.");
 
 			while(tabAliasName.indexOf('.') >= 0)
 			{
 				tabAliasName = tabAliasName.substring(tabAliasName.lastIndexOf('.')+1);
 				if (_logger.isDebugEnabled())
-					_logger.debug("2-tabAliasName='"+tabAliasName+"'.");
+					_logger.debug("2-tabAliasName='" + tabAliasName + "'.");
 			}
 
 			colName      = SqlObjectName.stripQuote(colName     , _dbIdentifierQuoteString);
 			tabAliasName = SqlObjectName.stripQuote(tabAliasName, _dbIdentifierQuoteString);
 			if (_logger.isDebugEnabled())
-				_logger.debug("3-tabAliasName='"+tabAliasName+"'.");
+				_logger.debug("3-tabAliasName='" + tabAliasName + "'.");
 
 			// If the "alias" name (word before the dot) is NOT A column, but a SCHEMA name (in the local database, cached in _schemaNames)
 			// then continue lookup tables by schema name
@@ -1718,7 +1718,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 			{
 				String objNamePattern = colName;
 				if (_logger.isDebugEnabled())
-					_logger.debug("IN LOCAL SCHEMA: schema='"+tabAliasName+"', objNamePattern='"+objNamePattern+"'.");
+					_logger.debug("IN LOCAL SCHEMA: schema='" + tabAliasName + "', objNamePattern='" + objNamePattern + "'.");
 
 				// do completion, but only for tables in a specific schema
 //				List<Completion> tables    = getTableCompletionsFromSchema   (completions, tabAliasName, objNamePattern);
@@ -1728,7 +1728,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 				List<Completion> tables    = getTableAndFuncCompletionsFromSchema(completions, tabAliasName, objNamePattern);
 				
 				if (_logger.isDebugEnabled())
-					_logger.debug("<<<---returns: "+tables);
+					_logger.debug("<<<---returns: " + tables);
 
 				return tables;
 			}
@@ -1744,7 +1744,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 				SqlObjectName aliasFullTabName = new SqlObjectName( aliasTabName, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers, _dbStoresLowerCaseIdentifiers, _dbSupportsSchema);
 
 				if (_logger.isDebugEnabled())
-					_logger.debug("XXXX NOT-IN LOCAL SCHEMA: aliasTabName='"+aliasTabName+"', aliasFullTabName='"+aliasFullTabName+"'.");
+					_logger.debug("XXXX NOT-IN LOCAL SCHEMA: aliasTabName='" + aliasTabName + "', aliasFullTabName='" + aliasFullTabName + "'.");
 
 				// Columns to show, will end up in here
 				ArrayList<Completion> colList = new ArrayList<Completion>();
@@ -1781,7 +1781,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 					if (colList.isEmpty())
 					{
 						if (_logger.isDebugEnabled())
-							_logger.debug("XXXX NOT-IN LOCAL SCHEMA: -- CACHED LOOKUP FAILED, found 0 column entries in cache --- (_currentCatalog='"+_currentCatalog+"'.)");
+							_logger.debug("XXXX NOT-IN LOCAL SCHEMA: -- CACHED LOOKUP FAILED, found 0 column entries in cache --- (_currentCatalog='" + _currentCatalog + "'.)");
 
 						aliasFullTabName.setCatalogName(getCurrentCatalog(getConnection()));
 					}
@@ -1808,7 +1808,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 					if (_logger.isDebugEnabled())
 					{
 						_logger.debug("    LOOKUP-RESULT: " + tabList);
-						_logger.debug("    LOOKUP-RESULT: size="+tabList.size());
+						_logger.debug("    LOOKUP-RESULT: size=" + tabList.size());
 					}
 
 					// search the *tables* found when doing lookup (it might return several suggestions)
@@ -1817,7 +1817,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 					for (Completion ce : tabList)
 					{
 						if (_logger.isDebugEnabled())
-							_logger.debug("    COMP.getInputText()='"+ce.getInputText()+"'.");
+							_logger.debug("    COMP.getInputText()='" + ce.getInputText() + "'.");
 
 						if (aliasFullTabName.getObjectName().equalsIgnoreCase(ce.getInputText()))
 						{
@@ -1826,7 +1826,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 						}
 					}
 					if (_logger.isDebugEnabled())
-						_logger.debug("    C = "+c);
+						_logger.debug("    C = " + c);
 
 					// If we found a TABLE, lets get columns that are matching up to currently entered text
 					if (c != null && c instanceof SqlTableCompletion)
@@ -1851,14 +1851,14 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 					final String catName = SqlObjectName.stripQuote( text.substring(0, xdot1), _dbIdentifierQuoteString);
 					final String schName = SqlObjectName.stripQuote( text.substring(xdot1+1) , _dbIdentifierQuoteString);
 					if (_logger.isDebugEnabled())
-						_logger.debug("XXXX NOT-IN LOCAL SCHEMA: DO SCHEMA-LOOKUP catName='"+catName+"', schName='"+schName+"'.");
+						_logger.debug("XXXX NOT-IN LOCAL SCHEMA: DO SCHEMA-LOOKUP catName='" + catName + "', schName='" + schName + "'.");
 
 					// Search all known catalogs/databases
 					for (SqlDbCompletion dc : _dbComplList)
 					{
 						DbInfo di = dc._dbInfo;
 						if (_logger.isDebugEnabled())
-							_logger.debug("XXXX NOT-IN LOCAL SCHEMA: searching catalog, di._dbName='"+di._dbName+"'.");
+							_logger.debug("XXXX NOT-IN LOCAL SCHEMA: searching catalog, di._dbName='" + di._dbName + "'.");
 
 						if (catName.equalsIgnoreCase(di._dbName))
 						{
@@ -1873,7 +1873,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 
 								// lets return all schemas/owners
 								for (String schemaName : _schemaNames)
-									colList.add( new SqlSchemaCompletion(CompletionProviderAbstractSql.this, catName+"."+schemaName) );
+									colList.add( new SqlSchemaCompletion(CompletionProviderAbstractSql.this, catName + "." + schemaName) );
 							}
 							else // Lookup the schemas for the non-local-database do this ON THE FLY (NON CACHED)
 							{
@@ -1894,13 +1894,13 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 								else
 								{
 									if (_logger.isDebugEnabled())
-										_logger.debug("XXXX NOT-IN LOCAL SCHEMA(_dbSupportsSchema="+_dbSupportsSchema+"): DO CATALOG-LOOKUP... LOOKUP-ON-THE-FLY. catName='"+catName+"', schName=*null*, colName='"+colName+"'.");
+										_logger.debug("XXXX NOT-IN LOCAL SCHEMA(_dbSupportsSchema=" + _dbSupportsSchema + "): DO CATALOG-LOOKUP... LOOKUP-ON-THE-FLY. catName='" + catName + "', schName=*null*, colName='" + colName + "'.");
 
 //									List<Completion> list = getTableListWithGuiProgress(conn, catName, schName, colName);
 									List<Completion> list = getTableListWithGuiProgress(conn, catName, null, colName, isWildcatdMath()); // note: colName contains here the start of the table name 
 
 									if (_logger.isDebugEnabled())
-										_logger.debug("XXXX NOT-IN LOCAL SCHEMA(_dbSupportsSchema="+_dbSupportsSchema+"): DO CATALOG-LOOKUP... LOOKUP-ON-THE-FLY. catName='"+catName+"', schName=*null*, colName='"+colName+"'. list.size()=" + (list==null?"NULL":list.size()) );
+										_logger.debug("XXXX NOT-IN LOCAL SCHEMA(_dbSupportsSchema=" + _dbSupportsSchema + "): DO CATALOG-LOOKUP... LOOKUP-ON-THE-FLY. catName='" + catName + "', schName=*null*, colName='" + colName + "'. list.size()=" + (list==null?"NULL":list.size()) );
 
 									if ( list != null && ! list.isEmpty() )
 										colList.addAll(list);
@@ -1913,7 +1913,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 				}
 	
 				if (_logger.isDebugEnabled())
-					_logger.debug("XXXX NOT-IN LOCAL SCHEMA: RETURN: colList.size: "+colList.size());
+					_logger.debug("XXXX NOT-IN LOCAL SCHEMA: RETURN: colList.size: " + colList.size());
 
 				return colList;
 			}
@@ -2217,7 +2217,7 @@ long startTime = System.currentTimeMillis();
 					retComp.add(c);
 			}
 		}
-System.out.println("get-TABLE/FUNC-CompletionsFromSchema: cnt="+retComp.size()+", ms="+(System.currentTimeMillis() - startTime));
+System.out.println("get-TABLE/FUNC-CompletionsFromSchema: cnt=" + retComp.size() + ", ms=" + (System.currentTimeMillis() - startTime));
 		return getCompletionsFrom(retComp, lastPart);
 	}
 
@@ -2234,7 +2234,7 @@ long startTime = System.currentTimeMillis();
 					retComp.add(c);
 			}
 		}
-System.out.println("get-TABLE-CompletionsFromSchema: cnt="+retComp.size()+", ms="+(System.currentTimeMillis() - startTime));
+System.out.println("get-TABLE-CompletionsFromSchema: cnt=" + retComp.size() + ", ms=" + (System.currentTimeMillis() - startTime));
 		return getCompletionsFrom(retComp, lastPart);
 	}
 	
@@ -2251,7 +2251,7 @@ long startTime = System.currentTimeMillis();
 					retComp.add(c);
 			}
 		}
-System.out.println("get-FUNCTION-CompletionsFromSchema: cnt="+retComp.size()+", ms="+(System.currentTimeMillis() - startTime));
+System.out.println("get-FUNCTION-CompletionsFromSchema: cnt=" + retComp.size() + ", ms=" + (System.currentTimeMillis() - startTime));
 		return getCompletionsFrom(retComp, lastPart);
 	}
 	
@@ -2270,7 +2270,7 @@ long startTime = System.currentTimeMillis();
 					retComp.add(c);
 			}
 		}
-System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+", ms="+(System.currentTimeMillis() - startTime));
+System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt=" + retComp.size() + ", ms=" + (System.currentTimeMillis() - startTime));
 		return getCompletionsFrom(retComp, lastPart);
 	}
 
@@ -2341,7 +2341,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 			// First remove all " as " words for aliasing (this since the "as" is optional)
 			fromStr = fromStr.replaceAll("(?i) as ", " ");
 			
-			int aliasIndex = fromStr.indexOf(" "+alias);
+			int aliasIndex = fromStr.indexOf(" " + alias);
 			if (aliasIndex >= 0)
 			{
 				// Now transform all "JOIN" stuff into ordinary table list: t1, t2, t2...
@@ -2694,7 +2694,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		{
 			try {
 				String dbmsSrvName = ((DbxConnection)conn).getDbmsServerName();
-				_logger.info("JDBC DbxConnection   .getDbmsServerName()          is '"+dbmsSrvName+"'.");
+				_logger.info("JDBC DbxConnection   .getDbmsServerName()          is '" + dbmsSrvName + "'.");
 			} catch (SQLException ignore) {} 
 		}
 
@@ -2710,21 +2710,21 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 
 		if (false || _logger.isDebugEnabled())
 		{
-			try { _logger.info("getCatalogSeparator:            "+dbmd.getCatalogSeparator());                                                                    } catch(SQLException ignore) {}
-			try { _logger.info("getCatalogTerm:                 "+dbmd.getCatalogTerm());                                                                         } catch(SQLException ignore) {}
-			try { _logger.info("getDefaultTransactionIsolation: "+dbmd.getDefaultTransactionIsolation());                                                         } catch(SQLException ignore) {}
-			try { _logger.info("getProcedureTerm:               "+dbmd.getProcedureTerm());                                                                       } catch(SQLException ignore) {}
-			try { _logger.info("getSchemaTerm:                  "+dbmd.getSchemaTerm());                                                                          } catch(SQLException ignore) {}
-			try { _logger.info("getSearchStringEscape:          "+dbmd.getSearchStringEscape());                                                                  } catch(SQLException ignore) {}
-			try { _logger.info("getSQLKeywords:                 "+dbmd.getSQLKeywords());                                                                         } catch(SQLException ignore) {}
-			try { _logger.info("getNumericFunctions:            "+dbmd.getNumericFunctions());                                                                    } catch(SQLException ignore) {}
-			try { _logger.info("getSQLStateType:                "+dbmd.getSQLStateType());                                                                        } catch(SQLException ignore) {}
-			try { _logger.info("getStringFunctions:             "+dbmd.getStringFunctions());                                                                     } catch(SQLException ignore) {}
-			try { _logger.info("getSystemFunctions:             "+dbmd.getSystemFunctions());                                                                     } catch(SQLException ignore) {}
-			try { _logger.info("getTimeDateFunctions:           "+dbmd.getTimeDateFunctions());                                                                   } catch(SQLException ignore) {}
-			try { _logger.info("getURL:                         "+dbmd.getURL());                                                                                 } catch(SQLException ignore) {}
-			try { _logger.info("getCatalogs\n"             +new ResultSetTableModel(dbmd.getCatalogs(),              "getCatalogs").toTableString());             } catch(SQLException ignore) {}
-			try { _logger.info("getSchemas\n"              +new ResultSetTableModel(dbmd.getSchemas(),               "getSchemas").toTableString());              } catch(SQLException ignore) {}
+			try { _logger.info("getCatalogSeparator:            " + dbmd.getCatalogSeparator());                                                                    } catch(SQLException ignore) {}
+			try { _logger.info("getCatalogTerm:                 " + dbmd.getCatalogTerm());                                                                         } catch(SQLException ignore) {}
+			try { _logger.info("getDefaultTransactionIsolation: " + dbmd.getDefaultTransactionIsolation());                                                         } catch(SQLException ignore) {}
+			try { _logger.info("getProcedureTerm:               " + dbmd.getProcedureTerm());                                                                       } catch(SQLException ignore) {}
+			try { _logger.info("getSchemaTerm:                  " + dbmd.getSchemaTerm());                                                                          } catch(SQLException ignore) {}
+			try { _logger.info("getSearchStringEscape:          " + dbmd.getSearchStringEscape());                                                                  } catch(SQLException ignore) {}
+			try { _logger.info("getSQLKeywords:                 " + dbmd.getSQLKeywords());                                                                         } catch(SQLException ignore) {}
+			try { _logger.info("getNumericFunctions:            " + dbmd.getNumericFunctions());                                                                    } catch(SQLException ignore) {}
+			try { _logger.info("getSQLStateType:                " + dbmd.getSQLStateType());                                                                        } catch(SQLException ignore) {}
+			try { _logger.info("getStringFunctions:             " + dbmd.getStringFunctions());                                                                     } catch(SQLException ignore) {}
+			try { _logger.info("getSystemFunctions:             " + dbmd.getSystemFunctions());                                                                     } catch(SQLException ignore) {}
+			try { _logger.info("getTimeDateFunctions:           " + dbmd.getTimeDateFunctions());                                                                   } catch(SQLException ignore) {}
+			try { _logger.info("getURL:                         " + dbmd.getURL());                                                                                 } catch(SQLException ignore) {}
+			try { _logger.info("getCatalogs\n"             + new ResultSetTableModel(dbmd.getCatalogs(),              "getCatalogs").toTableString());             } catch(SQLException ignore) {}
+			try { _logger.info("getSchemas\n"              + new ResultSetTableModel(dbmd.getSchemas(),               "getSchemas").toTableString());              } catch(SQLException ignore) {}
 //			try { _logger.info("getClientInfoProperties\n" +new ResultSetTableModel(dbmd.getClientInfoProperties(),  "getClientInfoProperties").toTableString()); } catch(SQLException ignore) {}
 //			try { _logger.info("getTableTypes\n"           +new ResultSetTableModel(dbmd.getTableTypes(),            "getTableTypes").toTableString());           } catch(SQLException ignore) {}
 //			try { _logger.info("getTypeInfo\n"             +new ResultSetTableModel(dbmd.getTypeInfo(),              "getTypeInfo").toTableString());             } catch(SQLException ignore) {}
@@ -2795,7 +2795,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 			}
 			catch (SQLException sqle)
 			{
-				_logger.info("Problems when getting ASE monTables dictionary, skipping this and continuing. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle);
+				_logger.info("Problems when getting ASE monTables dictionary, skipping this and continuing. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: " + sqle);
 			}
 		}
 	}
@@ -3043,7 +3043,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 			}
 			rs.close();
 			
-			_logger.info("Code Completion: refreshCompletionForTables.getTableTypes(): key='"+propKey+"', addList="+addTypesList+", SkipList="+skipTypesList);
+			_logger.info("Code Completion: refreshCompletionForTables.getTableTypes(): key='" + propKey + "', addList=" + addTypesList + ", SkipList=" + skipTypesList);
 
 			if (addTypesList.size() > 0)
 				return addTypesList.toArray(new String[0]);
@@ -3117,7 +3117,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		String[] types = getTableTypes(conn);
 
 		if (_logger.isDebugEnabled())
-			_logger.debug("refreshCompletionForTables(): calling dbmd.getTables(catalog='"+catalogName+"', schema='"+schemaName+"', table='"+tableName+"', types='"+StringUtil.toCommaStr(types)+"')");
+			_logger.debug("refreshCompletionForTables(): calling dbmd.getTables(catalog='" + catalogName + "', schema='" + schemaName + "', table='" + tableName + "', types='" + StringUtil.toCommaStr(types) + "')");
 
 		ResultSet rs = dbmd.getTables(catalogName, schemaName, tableName, types);
 		
@@ -3127,7 +3127,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		{
 			counter++;
 			if ( (counter % 100) == 0 )
-				waitDialog.setState(stateMsg + " (Fetch count "+counter+")");
+				waitDialog.setState(stateMsg + " (Fetch count " + counter + ")");
 
 			TableInfo ti = new TableInfo();
 			ti._tabCat     = StringUtils.trim(rs.getString(1));
@@ -3167,7 +3167,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 
 		ArrayList<TableColumnInfo> retList = new ArrayList<TableColumnInfo>();
 
-		final String stateMsg = "Getting Column information for table '"+tableName+"'.";
+		final String stateMsg = "Getting Column information for table '" + tableName + "'.";
 		waitDialog.setState(stateMsg);
 
 		// fix colName
@@ -3190,7 +3190,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		{
 			counter++;
 			if ( (counter % 100) == 0 )
-				waitDialog.setState(stateMsg + " (Fetch count "+counter+")");
+				waitDialog.setState(stateMsg + " (Fetch count " + counter + ")");
 
 			String tabCatalog = StringUtils.trim(rs.getString("TABLE_CAT"));
 			String tabSchema  = StringUtils.trim(rs.getString("TABLE_SCHEM"));
@@ -3299,7 +3299,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 			{
 				counter++;
 				if ( (counter % 100) == 0 )
-					waitDialog.setState(stateMsg + " (Fetch count "+counter+")");
+					waitDialog.setState(stateMsg + " (Fetch count " + counter + ")");
 
 	//			String tabCatalog = StringUtils.trim(rs.getString("TABLE_CAT"));
 	//			String tabSchema  = StringUtils.trim(rs.getString("TABLE_SCHEM"));
@@ -3343,7 +3343,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 				if (waitDialog.wasCancelPressed())
 					return;
 
-				waitDialog.setState("Getting Column information for table '"+ti._tabName+"'.");
+				waitDialog.setState("Getting Column information for table '" + ti._tabName + "'.");
 //				ti._needColumnRefresh = false;
 //
 //				ResultSet rs = dbmd.getColumns(ti._tabCat, ti._tabSchema, ti._tabName, "%");
@@ -3414,7 +3414,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		if      (type == DatabaseMetaData.functionResultUnknown) return "Function (Return-Unknown)";
 		else if (type == DatabaseMetaData.functionNoTable)       return "Function (Return-Value)";
 		else if (type == DatabaseMetaData.functionReturnsTable)  return "Function (Returns-Table)";
-		else return "Function (unknown-type="+type+")";
+		else return "Function (unknown-type=" + type + ")";
 	}
 
 	protected void enrichCompletionForFunctions(Connection conn, WaitForExecDialog waitDialog)
@@ -3480,7 +3480,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 //		String[] types = getTableTypes(conn);
 
 		if (_logger.isDebugEnabled())
-			_logger.debug("refreshCompletionForFunctions(): calling dbmd.getFunctions(catalog='"+catalogName+"', schema='"+schemaName+"', function='"+functionName+"')");
+			_logger.debug("refreshCompletionForFunctions(): calling dbmd.getFunctions(catalog='" + catalogName + "', schema='" + schemaName + "', function='" + functionName + "')");
 //System.out.println("XXXX(): calling dbmd.getFunctions(catalog='"+catalogName+"', schema='"+schemaName+"', function='"+functionName+"')");
 
 		ResultSet rs = dbmd.getFunctions(catalogName, schemaName, functionName);
@@ -3491,7 +3491,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		{
 			counter++;
 			if ( (counter % 100) == 0 )
-				waitDialog.setState(stateMsg + " (Fetch count "+counter+")");
+				waitDialog.setState(stateMsg + " (Fetch count " + counter + ")");
 
 			// Oracle dosn't seem to support TABLE_CATALOG so do workaround
 			boolean getTypeInt = true;
@@ -3500,14 +3500,14 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 			                        fi._funcCat     = StringUtils.trim( rs.getString("FUNCTION_CAT"));
 			                        fi._funcSchema  = StringUtils.trim( rs.getString("FUNCTION_SCHEM"));
 			                        fi._funcName    = removeSystemChars(rs.getString("FUNCTION_NAME"));
-			if (getTypeInt) { try { fi._funcTypeInt =                   rs.getInt   ("FUNCTION_TYPE"); } catch(SQLException ex) { getTypeInt = false; if (_logger.isDebugEnabled()) _logger.warn("Problems getting 'FUNCTION_TYPE' in refreshCompletionForFunctions(), ErrorCode=" + ex.getErrorCode() + ", SqlState=" +  ex.getSQLState() + ", Text=|" + ex.getMessage() + "|. Caught: '"+ex+"', for: FUNCTION_CAT='"+fi._funcCat+"', FUNCTION_SCHEM='"+fi._funcSchema+"', FUNCTION_NAME='"+fi._funcName+"'."); }	}
+			if (getTypeInt) { try { fi._funcTypeInt =                   rs.getInt   ("FUNCTION_TYPE"); } catch(SQLException ex) { getTypeInt = false; if (_logger.isDebugEnabled()) _logger.warn("Problems getting 'FUNCTION_TYPE' in refreshCompletionForFunctions(), ErrorCode=" + ex.getErrorCode() + ", SqlState=" +  ex.getSQLState() + ", Text=|" + ex.getMessage() + "|. Caught: '" + ex + "', for: FUNCTION_CAT='" + fi._funcCat + "', FUNCTION_SCHEM='" + fi._funcSchema + "', FUNCTION_NAME='" + fi._funcName + "'."); }	}
 			                        fi._funcRemark  = StringUtils.trim( rs.getString("REMARKS"));
 //			                        fi._specificName= StringUtils.trim( rs.getString("SPECIFIC_NAME"));
 
 			fi._funcType = decodeFunctionType(fi._funcTypeInt);
 			fi._isTableValuedFunction = (fi._funcTypeInt == DatabaseMetaData.functionReturnsTable);
 			if (_logger.isDebugEnabled())
-				_logger.debug("refreshCompletionForFunctions: ROW("+counter+")-ADD: fi="+fi);
+				_logger.debug("refreshCompletionForFunctions: ROW(" + counter + ")-ADD: fi=" + fi);
 
 			// add schemas... this is a Set so duplicates is ignored
 			addSchema(fi._funcCat, fi._funcSchema);
@@ -3540,7 +3540,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		if (StringUtil.isNullOrBlank(catalogName))
 			catalogName = getCurrentCatalog(conn);
 
-		final String stateMsg = "Getting Column information for function '"+functionName+"'.";
+		final String stateMsg = "Getting Column information for function '" + functionName + "'.";
 		waitDialog.setState(stateMsg);
 
 		// fix colName
@@ -3595,7 +3595,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		{
 			counter++;
 			if ( (counter % 100) == 0 )
-				waitDialog.setState(stateMsg + " (Fetch count "+counter+")");
+				waitDialog.setState(stateMsg + " (Fetch count " + counter + ")");
 
 			String funcCatalog = StringUtils.trim( rs.getString("FUNCTION_CAT"));
 			String funcSchema  = StringUtils.trim( rs.getString("FUNCTION_SCHEM"));
@@ -3705,7 +3705,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 			{
 				counter++;
 				if ( (counter % 100) == 0 )
-					waitDialog.setState(stateMsg + " (Fetch count "+counter+")");
+					waitDialog.setState(stateMsg + " (Fetch count " + counter + ")");
 
 	//			String tabCatalog = StringUtils.trim( rs.getString("TABLE_CAT"));
 	//			String tabSchema  = StringUtils.trim( rs.getString("TABLE_SCHEM"));
@@ -3749,7 +3749,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 				if (waitDialog.wasCancelPressed())
 					return;
 
-				waitDialog.setState("Getting Column information for function '"+fi._funcName+"'.");
+				waitDialog.setState("Getting Column information for function '" + fi._funcName + "'.");
 				fi._needColumnRefresh = false;
 
 				ResultSet rs = dbmd.getColumns(fi._funcCat, fi._funcSchema, fi._funcName, "%");
@@ -3847,7 +3847,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 				procName += "%";
 		}
 
-		_logger.debug("refreshCompletionForProcedures(): calling dbmd.getProcedures(catalog='"+catalogName+"', schema=null, procName='"+procName+"')");
+		_logger.debug("refreshCompletionForProcedures(): calling dbmd.getProcedures(catalog='" + catalogName + "', schema=null, procName='" + procName + "')");
 
 		ResultSet rs = dbmd.getProcedures(catalogName, schemaName, procName);
 
@@ -3857,7 +3857,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		{
 			counter++;
 			if ( (counter % 100) == 0 )
-				waitDialog.setState(stateMsg + " (Fetch count "+counter+")");
+				waitDialog.setState(stateMsg + " (Fetch count " + counter + ")");
 
 			ProcedureInfo pi = new ProcedureInfo();
 			pi._procCat          = StringUtils.trim(   rs.getString("PROCEDURE_CAT"));
@@ -3903,7 +3903,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		if      (type == DatabaseMetaData.procedureResultUnknown) return "Procedure (Result-Unknown)";
 		else if (type == DatabaseMetaData.procedureNoResult)      return "Procedure (No-Result)";
 		else if (type == DatabaseMetaData.procedureReturnsResult) return "Procedure (Returns-Results)";
-		else return "Procedure (unknown-type="+type+")";
+		else return "Procedure (unknown-type=" + type + ")";
 	}
 
 	protected void refreshCompletionForProcedureParameters(Connection conn, WaitForExecDialog waitDialog, List<ProcedureInfo> procedureInfoList, boolean bulkMode )
@@ -3993,7 +3993,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 			{
 				counter++;
 				if ( (counter % 100) == 0 )
-					waitDialog.setState(stateMsg + " (Fetch count "+counter+")");
+					waitDialog.setState(stateMsg + " (Fetch count " + counter + ")");
 
 				colId++;
 	//			String procCatalog = StringUtils.trim( rs.getString("PROCEDURE_CAT"));
@@ -4039,7 +4039,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 				if (waitDialog.wasCancelPressed())
 					return;
 
-				waitDialog.setState("Getting Parameter information for Procedure '"+pi._procName+"'.");
+				waitDialog.setState("Getting Parameter information for Procedure '" + pi._procName + "'.");
 				pi._needParamsRefresh = false;
 
 				int colId = 0;
@@ -4091,7 +4091,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		case DatabaseMetaData.procedureColumnReturn:  return "RETURN";
 		case DatabaseMetaData.procedureColumnUnknown: return "UNKNOWN";
 		}
-		return "unknown("+type+")";
+		return "unknown(" + type + ")";
 	}
 
 
@@ -4123,7 +4123,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 			if (waitDialog.wasCancelPressed())
 				return;
 
-			waitDialog.setState("Getting Parameter information for Procedure '"+pi._procName+"'.");
+			waitDialog.setState("Getting Parameter information for Procedure '" + pi._procName + "'.");
 		}
 	}
 
@@ -4191,12 +4191,12 @@ if (_guiOwner == null)
 					{
 						getWaitDialog().setState("Creating Mandatory Completions.");
 						refreshCompletionForMandatory(conn, getWaitDialog());
-						_logger.debug("---------------- Refresh Completion: Mandatory Time: "+TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
+						_logger.debug("---------------- Refresh Completion: Mandatory Time: " + TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
 					}
 					catch(SQLException sqle)
 					{
-						_logger.info ("Problems when getting Mandatory Info, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle);
-						_logger.debug("Problems when getting Mandatory Info, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle, sqle);
+						_logger.info ("Problems when getting Mandatory Info, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: " + sqle);
+						_logger.debug("Problems when getting Mandatory Info, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: " + sqle, sqle);
 					}
 
 					//----------------------------------------------------------
@@ -4205,7 +4205,7 @@ if (_guiOwner == null)
 					{
 						getWaitDialog().setState("Creating Static Cmds Completions.");
 						refreshCompletionForStaticCmds();
-						_logger.debug("---------------- Refresh Completion: MISC Time: "+TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
+						_logger.debug("---------------- Refresh Completion: MISC Time: " + TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
 					}
 
 					//----------------------------------------------------------
@@ -4216,12 +4216,12 @@ if (_guiOwner == null)
 						{
 							getWaitDialog().setState("Creating Miscelanious Completions.");
 							refreshCompletionForMisc(conn, getWaitDialog());
-							_logger.debug("---------------- Refresh Completion: MISC Time: "+TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
+							_logger.debug("---------------- Refresh Completion: MISC Time: " + TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
 						}
 						catch(SQLException sqle)
 						{
-							_logger.info ("Problems when getting Miscelenious Info, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle);
-							_logger.debug("Problems when getting Miscelenious Info, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle, sqle);
+							_logger.info ("Problems when getting Miscelenious Info, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: " + sqle);
+							_logger.debug("Problems when getting Miscelenious Info, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: " + sqle, sqle);
 						}
 					}
 
@@ -4235,7 +4235,7 @@ if (_guiOwner == null)
 							//----------------------------------------------------------
 							// Get DB information
 							_dbInfoList = refreshCompletionForDbs(conn, getWaitDialog());
-							_logger.debug("---------------- Refresh Completion: DB Time: "+TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
+							_logger.debug("---------------- Refresh Completion: DB Time: " + TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
 
 //							// If SQLExceptions has been down graded to SQLWarnings in the jConnect message handler
 //							AseConnectionUtils.checkSqlWarningsAndThrowSqlExceptionIfSeverityIsAbove10(conn.getWarnings());
@@ -4253,8 +4253,8 @@ if (_guiOwner == null)
 						}
 						catch(SQLException sqle)
 						{
-							_logger.info ("Problems when getting Database/Catalog info, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle);
-							_logger.debug("Problems when getting Database/Catalog info, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle, sqle);
+							_logger.info ("Problems when getting Database/Catalog info, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: " + sqle);
+							_logger.debug("Problems when getting Database/Catalog info, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: " + sqle, sqle);
 						}
 					}
 
@@ -4268,7 +4268,7 @@ if (_guiOwner == null)
 							thisStartTime = System.currentTimeMillis();
 							_tableInfoList = refreshCompletionForTables(conn, getWaitDialog());
 							enrichCompletionForTables(conn, getWaitDialog());
-							_logger.debug("---------------- Refresh Completion: TAB-1 Time: "+TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
+							_logger.debug("---------------- Refresh Completion: TAB-1 Time: " + TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
 							if (isLookupTableColumns())
 							{
 								if (_tableInfoList.size() < 25)
@@ -4313,7 +4313,7 @@ if (_guiOwner == null)
 						catch(SQLException sqle)
 						{
 							_logger.info ("Problems when getting SQL Tables/columns, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: " + sqle);
-							_logger.debug("Problems when getting SQL Tables/columns, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle, sqle);
+							_logger.debug("Problems when getting SQL Tables/columns, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: " + sqle, sqle);
 						}
 					}
 
@@ -4326,7 +4326,7 @@ if (_guiOwner == null)
 						{
 							thisStartTime = System.currentTimeMillis();
 							_functionInfoList = refreshCompletionForFunctions(conn, getWaitDialog());
-							_logger.debug("---------------- Refresh Completion: FUNC-1 Time: "+TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
+							_logger.debug("---------------- Refresh Completion: FUNC-1 Time: " + TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
 							if (isLookupFunctionColumns())
 							{
 								if (_functionInfoList.size() < 25)
@@ -4363,8 +4363,8 @@ if (_guiOwner == null)
 						}
 						catch(SQLException sqle)
 						{
-							_logger.info ("Problems when getting SQL Functions/params, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle);
-							_logger.debug("Problems when getting SQL Functions/params, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle, sqle);
+							_logger.info ("Problems when getting SQL Functions/params, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: " + sqle);
+							_logger.debug("Problems when getting SQL Functions/params, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: " + sqle, sqle);
 						}
 					}
 
@@ -4377,11 +4377,11 @@ if (_guiOwner == null)
 						{
 							thisStartTime = System.currentTimeMillis();
 							_procedureInfoList = refreshCompletionForProcedures(conn, getWaitDialog());
-							_logger.debug("---------------- Refresh Completion: PROC-1 Time: "+TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
+							_logger.debug("---------------- Refresh Completion: PROC-1 Time: " + TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
 							if (isLookupProcedureColumns())
 							{
 								refreshCompletionForProcedureParameters(conn, getWaitDialog(), _procedureInfoList, true);
-								_logger.debug("---------------- Refresh Completion: PROC-2 Time: "+TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
+								_logger.debug("---------------- Refresh Completion: PROC-2 Time: " + TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
 							}
 		
 							getWaitDialog().setState("Creating Procedure Completions.");
@@ -4395,8 +4395,8 @@ if (_guiOwner == null)
 						}
 						catch(SQLException sqle)
 						{
-							_logger.info ("Problems when getting SQL Procedures/params, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle);
-							_logger.debug("Problems when getting SQL Procedures/params, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle, sqle);
+							_logger.info ("Problems when getting SQL Procedures/params, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: " + sqle);
+							_logger.debug("Problems when getting SQL Procedures/params, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: " + sqle, sqle);
 						}
 					}
 
@@ -4411,11 +4411,11 @@ if (_guiOwner == null)
 							if ( _systemProcInfoList.size() == 0 || needRefreshSystemInfo() )
 							{
 								_systemProcInfoList = refreshCompletionForSystemProcedures(conn, getWaitDialog());
-								_logger.debug("---------------- Refresh Completion: SYS PROC-1 Time: "+TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
+								_logger.debug("---------------- Refresh Completion: SYS PROC-1 Time: " + TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
 								if (isLookupSystemProcedureColumns())
 								{
 									refreshCompletionForSystemProcedureParameters(conn, getWaitDialog(), _systemProcInfoList);
-									_logger.debug("---------------- Refresh Completion: SYS PROC-2 Time: "+TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
+									_logger.debug("---------------- Refresh Completion: SYS PROC-2 Time: " + TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
 								}
 		
 								getWaitDialog().setState("Creating System Procedure Completions.");
@@ -4430,12 +4430,12 @@ if (_guiOwner == null)
 						}
 						catch(SQLException sqle)
 						{
-							_logger.info ("Problems when getting SQL System Procedures, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle);
-							_logger.debug("Problems when getting SQL System Procedures, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: "+sqle, sqle);
+							_logger.info ("Problems when getting SQL System Procedures, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: " + sqle);
+							_logger.debug("Problems when getting SQL System Procedures, continuing with next lookup. ErrorCode=" + sqle.getErrorCode() + ", SqlState=" +  sqle.getSQLState() + ", Text=|" + sqle.getMessage() + "|. Caught: " + sqle, sqle);
 						}
 					}
 
-					_logger.debug("Refresh Completion: TOTAL Time: "+TimeUtils.msToTimeStr(System.currentTimeMillis()-allStartTime));
+					_logger.debug("Refresh Completion: TOTAL Time: " + TimeUtils.msToTimeStr(System.currentTimeMillis()-allStartTime));
 				}
 //				catch (SQLException e)
 //				{
@@ -4463,7 +4463,7 @@ if (_guiOwner == null)
 		if (list == null)
 		{
 			if (doWork.hasException())
-				_logger.error("Problems when refreshing Code Completion. Caught:"+doWork.getException(), doWork.getException());
+				_logger.error("Problems when refreshing Code Completion. Caught:" + doWork.getException(), doWork.getException());
 		}
 
 		return list;
@@ -4607,7 +4607,7 @@ if (_guiOwner == null)
 		if (list == null)
 		{
 			if (doWork.hasException())
-				_logger.error("Problems when refreshing Code Completion (for getTableListWithGuiProgress). Caught:"+doWork.getException(), doWork.getException());
+				_logger.error("Problems when refreshing Code Completion (for getTableListWithGuiProgress). Caught:" + doWork.getException(), doWork.getException());
 		}
 
 		if (_logger.isDebugEnabled())
@@ -4759,7 +4759,7 @@ if (_guiOwner == null)
 		if (list == null)
 		{
 			if (doWork.hasException())
-				_logger.error("Problems when refreshing Code Completion (for getProcListWithGuiProgress). Caught:"+doWork.getException(), doWork.getException());
+				_logger.error("Problems when refreshing Code Completion (for getProcListWithGuiProgress). Caught:" + doWork.getException(), doWork.getException());
 		}
 
 		return list;
@@ -4832,7 +4832,7 @@ if (_guiOwner == null)
 		if (list == null)
 		{
 			if (doWork.hasException())
-				_logger.error("Problems when refreshing Code Completion (for getSchemaListWithGuiProgress). Caught:"+doWork.getException(), doWork.getException());
+				_logger.error("Problems when refreshing Code Completion (for getSchemaListWithGuiProgress). Caught:" + doWork.getException(), doWork.getException());
 		}
 
 		return list;
@@ -5727,7 +5727,7 @@ if (_guiOwner == null)
 			}
 			catch (SQLException e)
 			{
-				_logger.info("Installing Completion Provider for JDBC, problems getting Database Product Name. ErrorCode=" + e.getErrorCode() + ", SqlState=" +  e.getSQLState() + ", Text=|" + e.getMessage() + "|. Caught: "+e);
+				_logger.info("Installing Completion Provider for JDBC, problems getting Database Product Name. ErrorCode=" + e.getErrorCode() + ", SqlState=" +  e.getSQLState() + ", Text=|" + e.getMessage() + "|. Caught: " + e);
 				provider = CompletionProviderJdbc.installAutoCompletion(textPane, scroll, errorStrip, window, connProvider);
 			}
 		}
@@ -5924,7 +5924,7 @@ if (_guiOwner == null)
 		}
 		else
 		{
-			return "-- Sorry: table '"+word+"' was not found in the dictionary.";
+			return "-- Sorry: table '" + word + "' was not found in the dictionary.";
 		}
 
 //System.out.println("getSqlFor(word='"+word+"', type='"+type+"') tabInfo="+tabInfo+", sb.length()="+sb.length()+", sqlObj"+sqlObj);
@@ -6065,10 +6065,10 @@ if (_guiOwner == null)
 			}
 			catch (Throwable ex)
 			{
-				_logger.warn("Problems when generating DDL Statements: args="+(ddlgen==null?"null":ddlgen.getUsedCommand())+", Caught="+ex, ex);
+				_logger.warn("Problems when generating DDL Statements: args=" + (ddlgen==null?"null":ddlgen.getUsedCommand()) + ", Caught=" + ex, ex);
 				SwingUtils.showErrorMessage(null, "Problems generating DDL", 
 						"<html>Problems when generating DDL Statements:<br>"
-						+ "args="+(ddlgen==null?"null":ddlgen.getUsedCommand())+"<br>"
+						+ "args=" + (ddlgen==null?"null":ddlgen.getUsedCommand()) + "<br>"
 						+ "<br>"
 						+ ex
 						+ "</html>", ex);

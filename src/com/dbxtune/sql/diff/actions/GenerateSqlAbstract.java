@@ -108,7 +108,7 @@ public abstract class GenerateSqlAbstract
 		}
 		catch (SQLException ex)
 		{
-			throw new RuntimeException("Problems getting 'Auto Increment' columns from Table MetaData. Caught: "+ex, ex);
+			throw new RuntimeException("Problems getting 'Auto Increment' columns from Table MetaData. Caught: " + ex, ex);
 		}
 		
 		return list;

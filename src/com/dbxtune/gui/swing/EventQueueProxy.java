@@ -44,7 +44,7 @@ public class EventQueueProxy extends EventQueue
 		}
 		catch (Throwable t)
 		{
-			_logger.warn("Unhandled Execption in SWING EventDispatchThread when dispatching an event. Caught: "+t, t);
+			_logger.warn("Unhandled Execption in SWING EventDispatchThread when dispatching an event. Caught: " + t, t);
 //			_logger.warn("XXXXXXXXXXXXXX: t.getCause(): "+t.getCause(), t.getCause());
 			
 			if (t instanceof OutOfMemoryError)
@@ -55,7 +55,7 @@ public class EventQueueProxy extends EventQueue
 
 			if (_logger.isDebugEnabled())
 			{
-				SwingUtils.showErrorMessage("Swing EDT Unhandled execption", "Unhandled Execption in SWING EventDispatchThread when dispatching an event. Caught: "+t, t);
+				SwingUtils.showErrorMessage("Swing EDT Unhandled execption", "Unhandled Execption in SWING EventDispatchThread when dispatching an event. Caught: " + t, t);
 			}
 		}
 	}

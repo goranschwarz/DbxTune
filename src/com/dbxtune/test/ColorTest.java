@@ -53,19 +53,19 @@ public class ColorTest
 		String cp5 = "3394815";
 		String cp6 = "-13369396";
 
-		System.out.println("parseColor(cp1a) = '"+SwingUtils.parseColor(cp1a, Color.BLACK) + "'.");
-		System.out.println("parseColor(cp1b) = '"+SwingUtils.parseColor(cp1b, Color.BLACK) + "'.");
-		System.out.println("parseColor(cp2a) = '"+SwingUtils.parseColor(cp2a, Color.BLACK) + "'.");
-		System.out.println("parseColor(cp2b) = '"+SwingUtils.parseColor(cp2b, Color.BLACK) + "'.");
-		System.out.println("parseColor(cp3a) = '"+SwingUtils.parseColor(cp3a, Color.BLACK) + "'.");
-		System.out.println("parseColor(cp3b) = '"+SwingUtils.parseColor(cp3b, Color.BLACK) + "'.");
-		System.out.println("parseColor(cp4a) = '"+SwingUtils.parseColor(cp4a, Color.BLACK) + "'.");
-		System.out.println("parseColor(cp4b) = '"+SwingUtils.parseColor(cp4b, Color.BLACK) + "'.");
-		System.out.println("parseColor(cp5) = '"+SwingUtils.parseColor(cp5, Color.BLACK) + "'.");
-		System.out.println("parseColor(cp6) = '"+SwingUtils.parseColor(cp6, Color.BLACK) + "'.");
+		System.out.println("parseColor(cp1a) = '" + SwingUtils.parseColor(cp1a, Color.BLACK) + "'.");
+		System.out.println("parseColor(cp1b) = '" + SwingUtils.parseColor(cp1b, Color.BLACK) + "'.");
+		System.out.println("parseColor(cp2a) = '" + SwingUtils.parseColor(cp2a, Color.BLACK) + "'.");
+		System.out.println("parseColor(cp2b) = '" + SwingUtils.parseColor(cp2b, Color.BLACK) + "'.");
+		System.out.println("parseColor(cp3a) = '" + SwingUtils.parseColor(cp3a, Color.BLACK) + "'.");
+		System.out.println("parseColor(cp3b) = '" + SwingUtils.parseColor(cp3b, Color.BLACK) + "'.");
+		System.out.println("parseColor(cp4a) = '" + SwingUtils.parseColor(cp4a, Color.BLACK) + "'.");
+		System.out.println("parseColor(cp4b) = '" + SwingUtils.parseColor(cp4b, Color.BLACK) + "'.");
+		System.out.println("parseColor(cp5) = '" + SwingUtils.parseColor(cp5, Color.BLACK) + "'.");
+		System.out.println("parseColor(cp6) = '" + SwingUtils.parseColor(cp6, Color.BLACK) + "'.");
 
-		System.out.println("parseColor(RED) = '"+SwingUtils.parseColor("RED", Color.BLACK) + "'.");
+		System.out.println("parseColor(RED) = '" + SwingUtils.parseColor("RED", Color.BLACK) + "'.");
 
-		System.out.println(cp1a+"=rgb(int):"+SwingUtils.parseColor(cp1a, Color.BLACK).getRGB());
+		System.out.println(cp1a + "=rgb(int):" + SwingUtils.parseColor(cp1a, Color.BLACK).getRGB());
 	}	
 }

@@ -74,7 +74,7 @@ public abstract class DdlGen
 			if (useJdbcMetaDataIfNoImplementation)
 				return new DdlGenJdbcMetaData(conn);
 			else
-				throw new Exception("DBMS Type '"+databaseProductName+"' is not yet supported.");
+				throw new Exception("DBMS Type '" + databaseProductName + "' is not yet supported.");
 		}
 	}
 

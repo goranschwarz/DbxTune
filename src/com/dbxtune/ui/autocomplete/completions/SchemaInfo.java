@@ -39,7 +39,7 @@ implements Serializable
 	@Override
 	public String toString()
 	{
-		return super.toString() + ": name='"+_name+"', catalog='"+_cat+"'";
+		return super.toString() + ": name='" + _name + "', catalog='" + _cat + "'";
 	}
 
 	public String toHtmlString()

@@ -58,7 +58,7 @@ public class CronTest
 //		}
 
 		
-		System.out.println(testName + " : " + "cron["+cronPattern+"]: == " + matches + " ---> description='"+description+"'.");
+		System.out.println(testName + " : " + "cron[" + cronPattern + "]: == " + matches + " ---> description='" + description + "'.");
 	}
 
 	public static void main(String[] args)

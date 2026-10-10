@@ -71,7 +71,7 @@ extends CmSummaryAbstract
 		"</html>";
 
 	public static final String   GROUP_NAME       = null;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -101,7 +101,7 @@ extends CmSummaryAbstract
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmSummary(counterController, guiController);
 	}
@@ -148,7 +148,7 @@ extends CmSummaryAbstract
 	{
 		addTrendGraph(GRAPH_NAME_MAX_XID,
 				"MAX Transaction ID", 	                // Menu CheckBox text
-				"MAX Transaction ID ("+SHORT_NAME+")", // Graph Label 
+				"MAX Transaction ID (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"oldest_backend_xmin_age", "oldest_prepared_xact_age", "oldest_replication_slot_age", "oldest_replica_xact_age"}, 
 				LabelType.Static, 
@@ -160,7 +160,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_OLDEST_XACT_IN_SEC,
 				"Oldest Open Transaction in Seconds", 	                // Menu CheckBox text
-				"Oldest Open Transaction in Seconds ("+SHORT_NAME+")", // Graph Label 
+				"Oldest Open Transaction in Seconds (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"oldest_xact_start_in_sec"}, 
 				LabelType.Static, 
@@ -172,7 +172,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_OLDEST_STMNT_IN_SEC,
 				"Oldest Statement in Seconds", 	                // Menu CheckBox text
-				"Oldest Statement in Seconds ("+SHORT_NAME+")", // Graph Label 
+				"Oldest Statement in Seconds (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"oldest_stmnt_start_in_sec"}, 
 				LabelType.Static, 
@@ -184,7 +184,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_OLDEST_STATE_IN_SEC,
 				"Oldest State in Seconds", 	                // Menu CheckBox text
-				"Oldest State in Seconds ("+SHORT_NAME+")", // Graph Label 
+				"Oldest State in Seconds (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -196,7 +196,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_OLDEST_COMBO_IN_SEC,
 				"Oldest Xact/Stmnt/State in Seconds", 	                // Menu CheckBox text
-				"Oldest Xact/Stmnt/State in Seconds ("+SHORT_NAME+")", // Graph Label 
+				"Oldest Xact/Stmnt/State in Seconds (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -208,7 +208,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_BLOCKING_LOCK_COUNT,
 				"Blocking Locks Count", 	                // Menu CheckBox text
-				"Blocking Locks Count ("+SHORT_NAME+")", // Graph Label 
+				"Blocking Locks Count (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"blocking_lock_count"}, 
 				LabelType.Static, 
@@ -220,7 +220,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_BLOCKING_MAX_WAIT_TIME,
 				"Max Wait Time for Blocking Locks in Seconds", 	                // Menu CheckBox text
-				"Max Wait Time for Blocking Locks in Seconds ("+SHORT_NAME+")", // Graph Label 
+				"Max Wait Time for Blocking Locks in Seconds (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"blocking_lock_wait_in_sec"}, 
 				LabelType.Static, 
@@ -635,7 +635,7 @@ extends CmSummaryAbstract
 					tmpBlockingLockWaitInSec = 999999d;
 				
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", blocking_lock_count='"+blocking_lock_count+"', waitThreshold="+waitThreshold+", blocking_lock_wait_in_sec='"+blocking_lock_wait_in_sec+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", blocking_lock_count='" + blocking_lock_count + "', waitThreshold=" + waitThreshold + ", blocking_lock_wait_in_sec='" + blocking_lock_wait_in_sec + "'.");
 
 				
 				if (blocking_lock_count > threshold && tmpBlockingLockWaitInSec > waitThreshold)
@@ -680,7 +680,7 @@ extends CmSummaryAbstract
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_oldestOpenTranInSec, DEFAULT_alarm_oldestOpenTranInSec);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", oldest_xact_start_in_sec='"+oldest_xact_start_in_sec+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", oldest_xact_start_in_sec='" + oldest_xact_start_in_sec + "'.");
 
 				if (oldest_xact_start_in_sec > threshold)
 				{
@@ -723,7 +723,7 @@ extends CmSummaryAbstract
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_oldestStatementInSec, DEFAULT_alarm_oldestStatementInSec);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", oldest_xact_start_in_sec='"+oldest_stmnt_start_in_sec+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", oldest_xact_start_in_sec='" + oldest_stmnt_start_in_sec + "'.");
 
 				if (oldest_stmnt_start_in_sec > threshold)
 				{

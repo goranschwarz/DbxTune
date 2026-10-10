@@ -69,7 +69,7 @@ extends CountersModel
 			"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -97,7 +97,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmMemoryGrants(counterController, guiController);
 	}
@@ -257,7 +257,7 @@ extends CountersModel
 
 		if (pos_spid < 0 || pos_liveQueryPlan < 0)
 		{
-			_logger.info("Cant find column 'session_id'="+pos_spid+" or 'live_query_plan'="+pos_liveQueryPlan + ". Skipping fetch/update of 'live_query_plan'.");
+			_logger.info("Cant find column 'session_id'=" + pos_spid + " or 'live_query_plan'=" + pos_liveQueryPlan + ". Skipping fetch/update of 'live_query_plan'.");
 			return;
 		}
 

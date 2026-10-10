@@ -78,7 +78,7 @@ extends CmToolTipSupplierDefault
 	private String getObjectSchema(DbxConnection conn, String dbname, String objectName)
 	{
 		String tabOwner = "dbo";
-		String sql = "select TABLE_SCHEMA from ["+dbname+"].[INFORMATION_SCHEMA].[TABLES] where [TABLE_CATALOG] = '"+dbname+"' and [TABLE_NAME] = '"+objectName+"'";
+		String sql = "select TABLE_SCHEMA from [" + dbname + "].[INFORMATION_SCHEMA].[TABLES] where [TABLE_CATALOG] = '" + dbname + "' and [TABLE_NAME] = '" + objectName + "'";
 
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 		{
@@ -87,7 +87,7 @@ extends CmToolTipSupplierDefault
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problem getting SchemaName from SQL-Server. I will return 'dbo'. SQL='"+sql+"'. Caught="+ex);
+			_logger.warn("Problem getting SchemaName from SQL-Server. I will return 'dbo'. SQL='" + sql + "'. Caught=" + ex);
 			tabOwner = "dbo";
 		}
 		return tabOwner;
@@ -122,13 +122,13 @@ extends CmToolTipSupplierDefault
 					List<Completion> list = _complProvider.getTableListWithGuiProgress(conn, dbName, tabOwnerName, objectName, false);
 
 					if (_logger.isDebugEnabled())
-						_logger.debug("ToolTipSupplierSqlServer.getToolTipTextOnTableCell(ObjectName): dbName='"+dbName+"', ownerName='"+tabOwnerName+"', objectName='"+objectName+"', cm='"+_cm.getName()+"'. list.size()="+(list==null?"-null-":list.size())+".");
+						_logger.debug("ToolTipSupplierSqlServer.getToolTipTextOnTableCell(ObjectName): dbName='" + dbName + "', ownerName='" + tabOwnerName + "', objectName='" + objectName + "', cm='" + _cm.getName() + "'. list.size()=" + (list==null?"-null-":list.size()) + ".");
 
 					if ( list != null )
 					{
-						if      (list.size() == 0) return "No table information found for table '"+tabOwnerName+"."+objectName+"' in database '"+dbName+"'.";
+						if      (list.size() == 0) return "No table information found for table '" + tabOwnerName + "." + objectName + "' in database '" + dbName + "'.";
 						else if (list.size() == 1) return list.get(0).getSummary();
-						else                       return "Found table information, but I found MORE than 1 table, count="+list.size()+". I can only show info for 1 table. (database='"+dbName+"', table='"+tabOwnerName+"."+objectName+"')";
+						else                       return "Found table information, but I found MORE than 1 table, count=" + list.size() + ". I can only show info for 1 table. (database='" + dbName + "', table='" + tabOwnerName + "." + objectName + "')";
 					}
 				}
 			}
@@ -240,7 +240,7 @@ extends CmToolTipSupplierDefault
 						String queryPlanText = SqlServerUtils.getXmlQueryPlanNoThrow(conn, String.valueOf(cellValue));
 
 						if (StringUtil.isNullOrBlank(queryPlanText) || queryPlanText.equalsIgnoreCase("null"))
-							return "Getting query plan for "+cellValue+" returned NULL. (NO QUERY PLAN was available).";
+							return "Getting query plan for " + cellValue + " returned NULL. (NO QUERY PLAN was available).";
 						
 						return createXmlPlanTooltip(queryPlanText);
 					}
@@ -251,7 +251,7 @@ extends CmToolTipSupplierDefault
 //		if ( "session_id".equals(colName) || "SPID".equalsIgnoreCase(colName) || "blocking_session_id".equals(colName) )
 		if ( colName != null && (colName.toLowerCase().contains("session_id") || "SPID".equalsIgnoreCase(colName)) )
 		{
-			int spid = StringUtil.parseInt(cellValue+"", -1);
+			int spid = StringUtil.parseInt(cellValue + "", -1);
 			if (spid > 0)
 			{
 				if (MainFrame.isOfflineConnected())
@@ -289,8 +289,8 @@ extends CmToolTipSupplierDefault
 					catch(SQLException ex)
 					{
 						return "<html>" +  
-							       "Trying to get tooltip details for colName='"+colName+"', value='"+cellValue+"'.<br>" +
-							       "Problems when executing sql: "+localSql+"<br>" +
+							       "Trying to get tooltip details for colName='" + colName + "', value='" + cellValue + "'.<br>" +
+							       "Problems when executing sql: " + localSql + "<br>" +
 							       ex.toString() +
 							       "</html>";
 					}
@@ -354,10 +354,10 @@ extends CmToolTipSupplierDefault
 				}
 				catch (SQLException ex)
 				{
-					_logger.warn("Problems when executing sql for cm='"+_cm.getName()+"', getToolTipTextOnTableCell(colName='"+colName+"', cellValue='"+cellValue+"'): "+sql, ex);
+					_logger.warn("Problems when executing sql for cm='" + _cm.getName() + "', getToolTipTextOnTableCell(colName='" + colName + "', cellValue='" + cellValue + "'): " + sql, ex);
 					return "<html>" +  
-					       "Trying to get tooltip details for colName='"+colName+"', value='"+cellValue+"'.<br>" +
-					       "Problems when executing sql: "+sql+"<br>" +
+					       "Trying to get tooltip details for colName='" + colName + "', value='" + cellValue + "'.<br>" +
+					       "Problems when executing sql: " + sql + "<br>" +
 					       ex.toString() +
 					       "</html>";
 				}
@@ -385,9 +385,9 @@ extends CmToolTipSupplierDefault
 			xmlTmpFile2  = createTempFile("sqlSrvPlan_", ".sqlplan", queryPlanText.getBytes()); // NOTE: A Browser is possibly better at reading the XML than any registered app???
 
 			// Compose ToolTip HTML (with content, & a LINK to be opened in "browser")
-			String htmlUrlStr = ("file:///"+htmlTmpFile);
-			String xmlUrlStr1 = ("file:///"+xmlTmpFile1);
-			String xmlUrlStr2 = ("file:///"+xmlTmpFile2);
+			String htmlUrlStr = ("file:///" + htmlTmpFile);
+			String xmlUrlStr1 = ("file:///" + xmlTmpFile1);
+			String xmlUrlStr2 = ("file:///" + xmlTmpFile2);
 			try	
 			{
 				String propName_xmlInline    = Version.getAppName() + ".tooltip.xmlplan.show.inline";
@@ -412,9 +412,9 @@ extends CmToolTipSupplierDefault
 				sb.append("<a href='").append(OPEN_IN_AZURE_DATA_STUDIO        + xmlUrlStr1).append("'>Open in 'Azure Data Studio'</a> <br>");
 				sb.append("<a href='").append(OPEN_IN_EXTERNAL_BROWSER         + xmlUrlStr2).append("'>Open in 'SSMS' or other...</a> (registered application for file extention <b>'.sqlplan'</b> will be used, Note: This may take a few seconds to start)<br>");
 				sb.append("<br>");
-				sb.append("<a href='").append(SET_PROPERTY_TEMP + propName_autoExternal + "=" + (!showAutoExtern) ).append("'>"+(showAutoExtern ? "Disable" : "Enable")+"</a> - Automatically open in Extrnal Browser. (set property <code>"+propName_autoExternal+"="+(!showAutoExtern)+"</code>)<br>");
+				sb.append("<a href='").append(SET_PROPERTY_TEMP + propName_autoExternal + "=" + (!showAutoExtern) ).append("'>" + (showAutoExtern ? "Disable" : "Enable") + "</a> - Automatically open in Extrnal Browser. (set property <code>" + propName_autoExternal + "=" + (!showAutoExtern) + "</code>)<br>");
 //				sb.append("<a href='").append(SET_PROPERTY_TEMP + propName_xmlInline    + "=" + (!showInline)     ).append("'>"+(showInline     ? "Disable" : "Enable")+"</a> - Show the XML Plan in here. (set property <code>"+propName_xmlInline+"="+(!showInline)+"</code>)<br>");
-				sb.append("<a href='").append(SET_PROPERTY_TEMP + propName_xmlInline    + "=" + (!showInline)     ).append("'>"+(showInline     ? "Disable" : "Enable")+"</a> - Show a Simplified HTML Version of the XML Plan in here. (set property <code>"+propName_xmlInline+"="+(!showInline)+"</code>)<br>");
+				sb.append("<a href='").append(SET_PROPERTY_TEMP + propName_xmlInline    + "=" + (!showInline)     ).append("'>" + (showInline     ? "Disable" : "Enable") + "</a> - Show a Simplified HTML Version of the XML Plan in here. (set property <code>" + propName_xmlInline + "=" + (!showInline) + "</code>)<br>");
 				if (showAutoExtern)
 					sb.append("<h3>Auto open external browser is enabled! (Check the browser for results)</h3>");
 				sb.append("<hr>");
@@ -457,7 +457,7 @@ extends CmToolTipSupplierDefault
 							}
 							catch (Exception ex)
 							{
-								SwingUtils.showErrorMessage(null, "Problems HTML Showplan", "Problems when open the URL '"+htmlTmpFile+"'.", ex);
+								SwingUtils.showErrorMessage(null, "Problems HTML Showplan", "Problems when open the URL '" + htmlTmpFile + "'.", ex);
 							}
 						}
 					}
@@ -467,9 +467,9 @@ extends CmToolTipSupplierDefault
 			}
 			catch (Exception ex) 
 			{
-				_logger.warn("Problems when open the URL '"+htmlUrlStr+"'. Caught: "+ex, ex); 
+				_logger.warn("Problems when open the URL '" + htmlUrlStr + "'. Caught: " + ex, ex); 
 				return 
-					"<html>Problems when open the URL '<code>"+htmlUrlStr+"</code>'.<br>"
+					"<html>Problems when open the URL '<code>" + htmlUrlStr + "</code>'.<br>"
 					+ "Caught: <b>" + ex + "</b><br>"
 					+ "<hr>"
 					+ "<a href='" + OPEN_IN_EXTERNAL_BROWSER + htmlUrlStr + "'>Open tempfile in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>"
@@ -479,7 +479,7 @@ extends CmToolTipSupplierDefault
 		}
 		catch (Exception ex)
 		{
-			return "<html>Sorry problems when creating temporary file '"+htmlTmpFile+"'<br>Caught: "+ex+"</html>";
+			return "<html>Sorry problems when creating temporary file '" + htmlTmpFile + "'<br>Caught: " + ex + "</html>";
 		}
 		
 	}

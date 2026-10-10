@@ -63,7 +63,7 @@ extends AbstractHandler
 		
 		if (MainFrame.hasInstance())
 		{
-			out.println("<h1>"+Version.getAppName()+" - 'connect-offline' Request Received</h1>");
+			out.println("<h1>" + Version.getAppName() + " - 'connect-offline' Request Received</h1>");
 			out.println("The application will ask if you really want to do this!");
 			out.println("<br><br><br><br><br><br><br><br>");
 			out.println("BuildStr: " + Version.getBuildStr());
@@ -71,7 +71,7 @@ extends AbstractHandler
 		else
 		{
 			out.println("<font color='red'>");
-			out.println("<h1>"+Version.getAppName()+" - 'connect-offline' Request FAILED</h1>");
+			out.println("<h1>" + Version.getAppName() + " - 'connect-offline' Request FAILED</h1>");
 			out.println("No DbxTune Window was found in this context.");
 			out.println("<br><br><br><br><br><br><br><br>");
 			out.println("BuildStr: " + Version.getBuildStr());

@@ -169,7 +169,7 @@ extends TabularCntrPanel
 		String colorStr = null;
 
 		// SKIP IN TREND GRAPHS
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.worker.parent");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.worker.parent");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -183,7 +183,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, SKIP_IN_TREND_GRAPHS_COLOR), null));
 
 		// SKIP IN LOCAL GRAPHS
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.worker.parent");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.worker.parent");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override

@@ -144,7 +144,7 @@ extends RuntimeException
 		
 		//------------------------- UNHANDLED TYPES  ---------------------------
 		default:
-			return "unknown-jdbc-datatype("+jdbcType+")";
+			return "unknown-jdbc-datatype(" + jdbcType + ")";
 		}
 		
 	}

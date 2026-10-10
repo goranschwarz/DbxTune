@@ -119,7 +119,7 @@ public class DbxTuneConfServlet extends HttpServlet
 	private void asCode(String inputName, String inputType, String discardRegExp)
 	throws ServletException, IOException
 	{
-		File f = new File(CONF_DIR+"/"+inputName);
+		File f = new File(CONF_DIR + "/" + inputName);
 
 		out.println("<!DOCTYPE html>");
 		out.println("<html>");
@@ -145,7 +145,7 @@ public class DbxTuneConfServlet extends HttpServlet
     		catch (PatternSyntaxException ex) 
     		{ 
     			out.println("<p>"); 
-    			out.println("Error in 'discard' RegExp pattern. Caught: "+ex+"<br>"); 
+    			out.println("Error in 'discard' RegExp pattern. Caught: " + ex + "<br>"); 
     			out.println("So discarding will NOT be done<br>"); 
     			out.println("</p>"); 
     		}
@@ -194,7 +194,7 @@ public class DbxTuneConfServlet extends HttpServlet
 		}
 		catch (Exception ex)
 		{
-			throw new ServletException("Problems reading file '"+f+"'.", ex);
+			throw new ServletException("Problems reading file '" + f + "'.", ex);
 		}
 
 		out.println("</code>");
@@ -258,7 +258,7 @@ public class DbxTuneConfServlet extends HttpServlet
     		catch (PatternSyntaxException ex) 
     		{ 
     			out.println("<p>"); 
-    			out.println("Error in 'discard' RegExp pattern. Caught: "+ex+"<br>"); 
+    			out.println("Error in 'discard' RegExp pattern. Caught: " + ex + "<br>"); 
     			out.println("So discarding will NOT be done<br>"); 
     			out.println("</p>"); 
     		}
@@ -275,7 +275,7 @@ public class DbxTuneConfServlet extends HttpServlet
 		out.println("</thead> ");
 
 		out.println("<tbody>");
-		File f = new File(CONF_DIR+"/"+inputName);
+		File f = new File(CONF_DIR + "/" + inputName);
 		try
 		{
 			FileInputStream in = new FileInputStream(f);
@@ -314,7 +314,7 @@ public class DbxTuneConfServlet extends HttpServlet
 		}
 		catch (Exception ex)
 		{
-			throw new ServletException("Problems reading file '"+f+"'.", ex);
+			throw new ServletException("Problems reading file '" + f + "'.", ex);
 		}
 
 //		out.println("<script>                                                                  ");

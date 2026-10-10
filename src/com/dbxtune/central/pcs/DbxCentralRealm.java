@@ -209,7 +209,7 @@ extends AbstractLoginService
 		try
 		{
 			if ( ! CentralPersistReader.hasInstance() )
-				throw new SQLException("There is NO CentralPersistReader instance. Sorry can't continue to autenticate username '"+username+"'.");
+				throw new SQLException("There is NO CentralPersistReader instance. Sorry can't continue to autenticate username '" + username + "'.");
 
 			// Use the PCS to read information about the user
 			DbxCentralUser dbxcUser = CentralPersistReader.getInstance().getDbxCentralUser(username);
@@ -253,12 +253,12 @@ extends AbstractLoginService
 						passwd = Configuration.getCombinedConfiguration().getProperty(PROPKEY_USER_ADMIN_FALLBACK, DEFAULT_USER_ADMIN_FALLBACK);
 					}
 
-					_logger.info("ADMIN_USER_PASSWORD: User autentication with username 'admin' - No entry found in DbxCentral DB. Using '"+passwd+"' as the default password.");
+					_logger.info("ADMIN_USER_PASSWORD: User autentication with username 'admin' - No entry found in DbxCentral DB. Using '" + passwd + "' as the default password.");
 				}
 				catch (UnknownHostException | SocketException ex)
 				{
 					passwd = Configuration.getCombinedConfiguration().getProperty(PROPKEY_USER_ADMIN_FALLBACK, DEFAULT_USER_ADMIN_FALLBACK);
-					_logger.info("ADMIN_USER_PASSWORD: User autentication with username 'admin' - Problems getting the IP address of the current host. Using '"+passwd+"' as the default password.");
+					_logger.info("ADMIN_USER_PASSWORD: User autentication with username 'admin' - Problems getting the IP address of the current host. Using '" + passwd + "' as the default password.");
 				}
 			}
 				
@@ -302,12 +302,12 @@ extends AbstractLoginService
 	@Override
 	public UserIdentity login(String username, Object credentials, ServletRequest request)
 	{
-		_logger.debug("DbxCentralRealm.login(String username, Object credentials, ServletRequest request): username='"+username+"', credentials='"+credentials+"', request='"+request+"'.");
+		_logger.debug("DbxCentralRealm.login(String username, Object credentials, ServletRequest request): username='" + username + "', credentials='" + credentials + "', request='" + request + "'.");
 
 		// Let the (super AbstractLoginService) do it's work 
 		UserIdentity uid = super.login(username, credentials, request);
 
-		_logger.info("Authenticating username '" + username + "' " +( uid == null ? "FAILED" : "SUCCEEDED") );
+		_logger.info("Authenticating username '" + username + "' " + ( uid == null ? "FAILED" : "SUCCEEDED") );
 
 		if (CentralPcsWriterHandler.hasInstance())
 		{

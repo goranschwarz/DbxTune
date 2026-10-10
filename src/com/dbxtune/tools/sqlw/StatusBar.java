@@ -434,7 +434,7 @@ public class StatusBar extends JPanel
 		} 
 		catch (RuntimeException ex)
 		{
-			_logger.warn("Problems updating StatusBar, this problem was ignored. Caught: "+ex, ex);
+			_logger.warn("Problems updating StatusBar, this problem was ignored. Caught: " + ex, ex);
 		}
 	}
 

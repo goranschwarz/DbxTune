@@ -199,7 +199,7 @@ public class Helper
 		{
 			if ( ! StringUtil.equalsAny(p, knownParams) )
 			{
-				resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Paramater '"+p+"' is an unknown parameter. Known Parameters: "+ StringUtil.toCommaStrQuoted("'", knownParams));
+				resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Paramater '" + p + "' is an unknown parameter. Known Parameters: " + StringUtil.toCommaStrQuoted("'", knownParams));
 				return true;
 			}
 		}

@@ -44,7 +44,7 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Last WAL (Write-Ahead-Log/Transaction-Log) Backup FAILED in Server '" + cm.getServerName() + "' and dbname '" + dbname + "'. (threshold="+threshold+")",
+				"Last WAL (Write-Ahead-Log/Transaction-Log) Backup FAILED in Server '" + cm.getServerName() + "' and dbname '" + dbname + "'. (threshold=" + threshold + ")",
 				threshold
 				);
 

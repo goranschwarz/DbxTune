@@ -46,10 +46,10 @@ public class OpenSslAesUtil
 		if (args.length > 2) server     = args[2];
 		if (args.length > 3) filename   = args[3];
 
-		System.out.println("user       = '"+user+"'");
-		System.out.println("passphrase = '"+passphrase+"'");
-		System.out.println("server     = '"+server+"'");
-		System.out.println("filename   = '"+filename+"'");
+		System.out.println("user       = '" + user + "'");
+		System.out.println("passphrase = '" + passphrase + "'");
+		System.out.println("server     = '" + server + "'");
+		System.out.println("filename   = '" + filename + "'");
 		
 		if (user == null && passphrase == null)
 			System.exit(1);

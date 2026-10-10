@@ -260,7 +260,7 @@ implements Runnable
 	public void setUtilExtraInfoStr(String utilExtraInfoStr)
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("setUtilExtraInfoStr(): utilExtraInfoStr=|"+utilExtraInfoStr+"|.");
+			_logger.debug("setUtilExtraInfoStr(): utilExtraInfoStr=|" + utilExtraInfoStr + "|.");
 
 		if (StringUtil.isNullOrBlank(utilExtraInfoStr))
 			return;
@@ -278,7 +278,7 @@ implements Runnable
 		}
 		catch (IOException ex) 
 		{
-			_logger.info("Problems converting the 'utilExtraInfoStr' String to a property. utilExtraInfoStr=|"+utilExtraInfoStr+"|. Continuing... Configuration object will just be empty." );
+			_logger.info("Problems converting the 'utilExtraInfoStr' String to a property. utilExtraInfoStr=|" + utilExtraInfoStr + "|. Continuing... Configuration object will just be empty." );
 		}
 	}
 	public void setUtilExtraInfoConf(Configuration utilExtraInfo)
@@ -518,14 +518,14 @@ implements Runnable
 		if (rows > 0)
 		{
 			_firstTimeSample = false;
-			_logger.trace("Closing current sample, that has '"+rows+"' rows.");
+			_logger.trace("Closing current sample, that has '" + rows + "' rows.");
 
 			_sampleHolder.add(_currentSample);
 			_currentSample = new OsTable(getMetaData());
 		}
 		else
 		{
-			_logger.debug("SKIPPING: Closing current sample, it had '"+rows+"' rows.");
+			_logger.debug("SKIPPING: Closing current sample, it had '" + rows + "' rows.");
 		}
 	}
 
@@ -791,7 +791,7 @@ implements Runnable
 					if ( strArr != null )
 					{
 						if (_logger.isDebugEnabled())
-							_logger.debug("++ALLOW++: this row has '"+strArr.length+"' entries parseCount='"+md.getParseColumnCount()+"'. Row '"+row+"'. The Input/PreParsed String Array, size("+isa.length+")=["+StringUtil.toCommaStr(isa)+"], The parseRow() returned String Array, size("+strArr.length+")=["+StringUtil.toCommaStr(strArr)+"].");
+							_logger.debug("++ALLOW++: this row has '" + strArr.length + "' entries parseCount='" + md.getParseColumnCount() + "'. Row '" + row + "'. The Input/PreParsed String Array, size(" + isa.length + ")=[" + StringUtil.toCommaStr(isa) + "], The parseRow() returned String Array, size(" + strArr.length + ")=[" + StringUtil.toCommaStr(strArr) + "].");
 
 						// Make a OsTableRow object of the input.
 						// and ADD it to the "sample" table
@@ -811,13 +811,13 @@ implements Runnable
 						catch (OsRecordParseException e)
 						{
 							addException(e);
-							_logger.error("Problems when applying the parsed String Array ["+StringUtil.toCommaStr(strArr)+"].", e);
+							_logger.error("Problems when applying the parsed String Array [" + StringUtil.toCommaStr(strArr) + "].", e);
 						}
 					}
 					else
 					{
 						//_logger.trace("-DISCARD-: The String Array ["+StringUtil.toCommaStr(isa)+"].");
-						_logger.debug("-DISCARD-: This row has '"+isa.length+"' entries. MetaDataExpected parseCount='"+md.getParseColumnCount()+"'. Row '"+row+"'. The Input/PreParsed String Array, size("+isa.length+")=["+StringUtil.toCommaStr(isa)+"].");
+						_logger.debug("-DISCARD-: This row has '" + isa.length + "' entries. MetaDataExpected parseCount='" + md.getParseColumnCount() + "'. Row '" + row + "'. The Input/PreParsed String Array, size(" + isa.length + ")=[" + StringUtil.toCommaStr(isa) + "].");
 					}
 				}
 			}
@@ -830,7 +830,7 @@ implements Runnable
 			if ( strArr != null )
 			{
 				if (_logger.isDebugEnabled())
-					_logger.debug("++ALLOW++: this row has '"+strArr.length+"' entries parseCount='"+md.getParseColumnCount()+"'. Row '"+row+"'. The Input/PreParsed String Array, size("+isa.length+")=["+StringUtil.toCommaStr(isa)+"], The parseRow() returned String Array, size("+strArr.length+")=["+StringUtil.toCommaStr(strArr)+"].");
+					_logger.debug("++ALLOW++: this row has '" + strArr.length + "' entries parseCount='" + md.getParseColumnCount() + "'. Row '" + row + "'. The Input/PreParsed String Array, size(" + isa.length + ")=[" + StringUtil.toCommaStr(isa) + "], The parseRow() returned String Array, size(" + strArr.length + ")=[" + StringUtil.toCommaStr(strArr) + "].");
 
 				// Make a OsTableRow object of the input.
 				// and ADD it to the "sample" table
@@ -857,13 +857,13 @@ implements Runnable
 				catch (OsRecordParseException e)
 				{
 					addException(e);
-					_logger.error("Problems when applying the parsed String Array ["+StringUtil.toCommaStr(strArr)+"].", e);
+					_logger.error("Problems when applying the parsed String Array [" + StringUtil.toCommaStr(strArr) + "].", e);
 				}
 			}
 			else
 			{
 				//_logger.trace("-DISCARD-: The String Array ["+StringUtil.toCommaStr(isa)+"].");
-				_logger.debug("-DISCARD-: This row has '"+isa.length+"' entries. MetaDataExpected parseCount='"+md.getParseColumnCount()+"'. Row '"+row+"'. The Input/PreParsed String Array, size("+isa.length+")=["+StringUtil.toCommaStr(isa)+"].");
+				_logger.debug("-DISCARD-: This row has '" + isa.length + "' entries. MetaDataExpected parseCount='" + md.getParseColumnCount() + "'. Row '" + row + "'. The Input/PreParsed String Array, size(" + isa.length + ")=[" + StringUtil.toCommaStr(isa) + "].");
 			}
 		}
 	}
@@ -929,7 +929,7 @@ implements Runnable
 //		Configuration conf = Configuration.getInstance(Configuration.CONF);
 		Configuration conf = Configuration.getCombinedConfiguration();
 		if (conf != null)
-			sleepTime = conf.getIntProperty("hostmon."+getModuleName()+".sleep", sleepTime);
+			sleepTime = conf.getIntProperty("hostmon." + getModuleName() + ".sleep", sleepTime);
 		return sleepTime;
 	}
 
@@ -945,10 +945,10 @@ implements Runnable
 //		Configuration conf = Configuration.getInstance(Configuration.CONF);
 		Configuration conf = Configuration.getCombinedConfiguration();
 		if (conf != null)
-			oscmd = conf.getProperty("hostmon."+getModuleName()+".cmd");
+			oscmd = conf.getProperty("hostmon." + getModuleName() + ".cmd");
 		
 		if (oscmd != null)
-			_logger.debug(getModuleName()+" found OS Command '"+oscmd+"' in the configuration file.");
+			_logger.debug(getModuleName() + " found OS Command '" + oscmd + "' in the configuration file.");
 
 		return oscmd;
 	}
@@ -1007,7 +1007,7 @@ implements Runnable
 	 */
 	protected void printStartMessage()
 	{
-		_logger.info("Starting the Host Monitoring module '"+getModuleName()+"'.");
+		_logger.info("Starting the Host Monitoring module '" + getModuleName() + "'.");
 	}
 
 	/**
@@ -1015,7 +1015,7 @@ implements Runnable
 	 */
 	protected void printStopMessage()
 	{
-		_logger.info("Stopped the Host Monitoring module '"+getModuleName()+"'.");
+		_logger.info("Stopped the Host Monitoring module '" + getModuleName() + "'.");
 	}
 
 	/**
@@ -1027,13 +1027,13 @@ implements Runnable
 	{
 		if ( ! isOsCommandStreaming() )
 		{
-			_logger.warn(getModuleName()+" the command '"+getCommand()+"' is not marked as a streaming command, therefore you should not a background thread for this, instead use the method executeAndParse() to get a sample. Optionally use method getCurrentSample() to get the last sample results.");
+			_logger.warn(getModuleName() + " the command '" + getCommand() + "' is not marked as a streaming command, therefore you should not a background thread for this, instead use the method executeAndParse() to get a sample. Optionally use method getCurrentSample() to get the last sample results.");
 			return;
 		}
 
 		if (isPaused())
 		{
-			_logger.warn(getModuleName()+" has been paused, to be able to start the Host Monitor '"+getModuleName()+"' you need to invoke the method setPaused(false).");
+			_logger.warn(getModuleName() + " has been paused, to be able to start the Host Monitor '" + getModuleName() + "' you need to invoke the method setPaused(false).");
 			return;
 		}
 
@@ -1060,7 +1060,7 @@ implements Runnable
 		_running = false;
 		if (_thread != null)
 		{
-			_logger.info(getModuleName()+" Was asked to to a shutdown.");
+			_logger.info(getModuleName() + " Was asked to to a shutdown.");
 			_thread.interrupt();
 		}
 	}
@@ -1289,7 +1289,7 @@ implements Runnable
 		try
 		{
 			_lastExecCommand = getCommand();
-			_logger.info("Executing command '"+getCommand()+"', for the module '"+getModuleName()+"'.");
+			_logger.info("Executing command '" + getCommand() + "', for the module '" + getModuleName() + "'.");
 			execWrapper = _hostMonConn.executeCommand(getCommand(), true); // true = Streaming OS Command
 		}
 		catch (Exception e)
@@ -1306,7 +1306,7 @@ implements Runnable
 //			}
 
 			if (notHandled)
-				_logger.error("Problems when executing OS Command '"+getCommand()+"', Caught: "+e.getMessage(), e);
+				_logger.error("Problems when executing OS Command '" + getCommand() + "', Caught: " + e.getMessage(), e);
 
 			_running = false;
 			
@@ -1315,7 +1315,7 @@ implements Runnable
 
 		if (_closeSampleTimeoutDelay > 0)
 		{
-			_logger.debug("Creating 'Close-Sample-Timeout' with the timeout value of '"+_closeSampleTimeoutDelay+"' ms.");
+			_logger.debug("Creating 'Close-Sample-Timeout' with the timeout value of '" + _closeSampleTimeoutDelay + "' ms.");
 			_closeSampleTimeout = new Timer(_closeSampleTimeoutDelay, new ActionListener()
 			{
 				@Override
@@ -1407,10 +1407,10 @@ implements Runnable
 
 					if (row != null && row.toLowerCase().indexOf("command not found") >= 0 || row.toLowerCase().indexOf("access denied") >= 0)
 					{
-						_logger.error(getModuleName()+". The command '"+getCommand()+"' in current $PATH, got following message on STDERR: "+row);
-						addException(new Exception("The command '"+getCommand()+"'\n"
+						_logger.error(getModuleName() + ". The command '" + getCommand() + "' in current $PATH, got following message on STDERR: " + row);
+						addException(new Exception("The command '" + getCommand() + "'\n"
 								+ "in current $PATH\n"
-								+ "got following message on STDERR: "+row));
+								+ "got following message on STDERR: " + row));
 					}
 					
 //					System.err.println(row);
@@ -1420,13 +1420,13 @@ implements Runnable
 			catch (InterruptedIOException ex)
 			{
 				if (_running)
-					_logger.warn("If this was during 'shutdown/stop' sequence, it's OK, if not it will be restarted. This happened when reading output from the OS Command '"+getCommand()+"', Caught: "+ex.getMessage());
+					_logger.warn("If this was during 'shutdown/stop' sequence, it's OK, if not it will be restarted. This happened when reading output from the OS Command '" + getCommand() + "', Caught: " + ex.getMessage());
 				_running = false;
 			}
 			catch (Exception e)
 			{
 				addException(e);
-				_logger.error("Problems when reading output from the OS Command '"+getCommand()+"', Caught: "+e.getMessage(), e);
+				_logger.error("Problems when reading output from the OS Command '" + getCommand() + "', Caught: " + e.getMessage(), e);
 				_running = false;
 			}
 		}
@@ -1480,7 +1480,7 @@ implements Runnable
 	{
 		if (isOsCommandStreaming())
 		{
-			_logger.warn(getModuleName()+" the command '"+getCommand()+"' is marked as a streaming command, therefore you should start() a background thread for this. Then use the method getSummaryTable() to get results.");
+			_logger.warn(getModuleName() + " the command '" + getCommand() + "' is marked as a streaming command, therefore you should start() a background thread for this. Then use the method getSummaryTable() to get results.");
 
 			// FIXME: Should the deliver null or an empty OsTable on errors or Exception
 			return null; 
@@ -1499,7 +1499,7 @@ implements Runnable
 
 			if (execWrapper == null)
 			{
-				_logger.debug("Executing command '"+getCommand()+"' for the module '"+getModuleName()+"'.");
+				_logger.debug("Executing command '" + getCommand() + "' for the module '" + getModuleName() + "'.");
 				execWrapper = _hostMonConn.executeCommand(getCommand());
 			}
 		}
@@ -1511,7 +1511,7 @@ implements Runnable
 			boolean notHandled = _hostMonConn.handleException(e);
 
 			if (notHandled)
-				_logger.error("Problems when executing OS Command '"+getCommand()+"', Caught: "+e.getMessage(), e);
+				_logger.error("Problems when executing OS Command '" + getCommand() + "', Caught: " + e.getMessage(), e);
 
 			// FIXME: Should the deliver null or an empty OsTable on errors or Exception
 			return null; 
@@ -1594,7 +1594,7 @@ implements Runnable
 							continue;
 
 						if (_logger.isDebugEnabled())
-							_logger.debug("Received on STDOUT: "+row);
+							_logger.debug("Received on STDOUT: " + row);
 
 						parseAndApply(getMetaData(), row, SshConnection.STDOUT_DATA);
 					}
@@ -1617,14 +1617,14 @@ implements Runnable
 						if (StringUtil.isNullOrBlank(row))
 							continue;
 						
-						_logger.error("Received on STDERR: "+row);
+						_logger.error("Received on STDERR: " + row);
 						
 						if (row != null && row.toLowerCase().indexOf("command not found") >= 0 || row.toLowerCase().indexOf("access denied") >= 0)
 						{
-							_logger.error(getModuleName()+". The command '"+_lastExecCommand+"' in current $PATH, got following message on STDERR: "+row);
-							addException(new Exception("The command '"+_lastExecCommand+"'\n"
+							_logger.error(getModuleName() + ". The command '" + _lastExecCommand + "' in current $PATH, got following message on STDERR: " + row);
+							addException(new Exception("The command '" + _lastExecCommand + "'\n"
 									+ "in current $PATH\n"
-									+ "got following message on STDERR: "+row));
+									+ "got following message on STDERR: " + row));
 						}
 						else
 						{
@@ -1636,7 +1636,7 @@ implements Runnable
 			catch (Exception e)
 			{
 				addException(e);
-				_logger.error("Problems when reading output from the OS Command '"+_lastExecCommand+"', Caught: "+e.getMessage(), e);
+				_logger.error("Problems when reading output from the OS Command '" + _lastExecCommand + "', Caught: " + e.getMessage(), e);
 			}
 		}
 

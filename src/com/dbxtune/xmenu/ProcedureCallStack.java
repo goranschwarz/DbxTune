@@ -112,7 +112,7 @@ extends XmenuActionBase
 //				"Executing SQL statement: "+sqlStatement, 
 //				"Category", e, Level.WARNING, null) );
 			
-			JOptionPane.showMessageDialog(null, "Executing SQL command '"+sqlStatement+"'. Found the following error:\n."+e, "Error", JOptionPane.ERROR_MESSAGE);
+			JOptionPane.showMessageDialog(null, "Executing SQL command '" + sqlStatement + "'. Found the following error:\n." + e, "Error", JOptionPane.ERROR_MESSAGE);
 			//_window.openErrorWindow(e,_messages.getLocalized(
 			//	_messages.JED06));
 		}
@@ -128,7 +128,7 @@ extends XmenuActionBase
 		JPanel textPanel = new JPanel();
 		//final JTextArea procText = new JTextArea();
 		final JTextArea procText = new LineNumberedPaper(0,0);
-		final JFrame textFrame = new JFrame("Procedure Call stack for SPID "+_spid);
+		final JFrame textFrame = new JFrame("Procedure Call stack for SPID " + _spid);
 			/** ActionListener handles MouseClicks in the Frame's buttons
 			 * In this case to close the Frame or save the text to a file
 			 *@see  java.awt.event.ActionListener

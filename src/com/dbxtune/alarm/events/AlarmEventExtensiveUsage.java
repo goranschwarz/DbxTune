@@ -39,11 +39,11 @@ extends AlarmEvent
 				Version.getAppName(), // serviceType
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo
-				resource+"",          // extraInfo
+				resource + "",          // extraInfo
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
-				"Extensive Usage of '" + resource + "' in '" + cm.getServerName() + "'. name='" + name + "', alarmValue=" + alarmValue + ". (threshold="+threshold+")",
+				"Extensive Usage of '" + resource + "' in '" + cm.getServerName() + "'. name='" + name + "', alarmValue=" + alarmValue + ". (threshold=" + threshold + ")",
 				threshold);
 
 		// Set: Time To Live if postpone is enabled

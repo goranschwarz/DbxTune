@@ -44,7 +44,7 @@ extends MonitorIo
 	public String getCommand()
 	{
 		String cmd = super.getCommand();
-		return cmd != null ? cmd : "iostat "+getSleepTime();
+		return cmd != null ? cmd : "iostat " + getSleepTime();
 	}
 
 	@Override

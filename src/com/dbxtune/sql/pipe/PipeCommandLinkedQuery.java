@@ -101,7 +101,7 @@ extends PipeCommandAbstract
 		}
 		else
 		{
-			throw new PipeCommandException("PipeCommand, cmd='"+input+"' is unknown. Available commands is: lq or linkedquery");
+			throw new PipeCommandException("PipeCommand, cmd='" + input + "' is unknown. Available commands is: lq or linkedquery");
 		}
 	}
 

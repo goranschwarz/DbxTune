@@ -114,7 +114,7 @@ public class AdminServlet extends HttpServlet
 		String inputOp   = req.getParameter("op");
 		String inputName = req.getParameter("name");
 		
-		_logger.info("input: op = '"+inputOp+"'.");
+		_logger.info("input: op = '" + inputOp + "'.");
 
 		if (StringUtil.isNullOrBlank(inputOp))
 			throw new ServletException("No input parameter named 'op'.");
@@ -253,7 +253,7 @@ public class AdminServlet extends HttpServlet
 		}
 		else 
 		{
-			printHelp(out, "No operation named '"+inputOp+"'.");
+			printHelp(out, "No operation named '" + inputOp + "'.");
 			return;
 			//throw new ServletException("No operation named '"+inputOp+"'.");
 		}
@@ -309,13 +309,13 @@ public class AdminServlet extends HttpServlet
 				// issue 'kill #pid#'
 				// wait for it to stop...
 				int pid = stopCollector(name);
-				ao.add("Stopping DbxTune Collector", new ActionType(ActionStatus.SUCCESS, "Succeeded signaling a stopping request (kill " + pid + ") for server '"+name+"'."));
+				ao.add("Stopping DbxTune Collector", new ActionType(ActionStatus.SUCCESS, "Succeeded signaling a stopping request (kill " + pid + ") for server '" + name + "'."));
 				
 				waitforStopCollector = true;
 			}
 			catch (Exception e) 
 			{
-				ao.add("Stopping DbxTune Collector", new ActionType(ActionStatus.FAIL, "Problems stopping server '"+name+"'. Caught: "+e));
+				ao.add("Stopping DbxTune Collector", new ActionType(ActionStatus.FAIL, "Problems stopping server '" + name + "'. Caught: " + e));
 			}
 		}
 
@@ -328,7 +328,7 @@ public class AdminServlet extends HttpServlet
 			try
 			{
 				reader.removeServerSchema(name);
-				ao.add("Remove DBMS Data", new ActionType(ActionStatus.SUCCESS, "Removed the schema '"+name+"'."));
+				ao.add("Remove DBMS Data", new ActionType(ActionStatus.SUCCESS, "Removed the schema '" + name + "'."));
 
 				// Writer may have cached information
 				if (CentralPcsWriterHandler.hasInstance())
@@ -338,18 +338,18 @@ public class AdminServlet extends HttpServlet
 			} 
 			catch (SQLException e) 
 			{
-				ao.add("Remove DBMS Data", new ActionType(ActionStatus.FAIL, "Problems removing the schema '"+name+"'. Caught: "+e));
+				ao.add("Remove DBMS Data", new ActionType(ActionStatus.FAIL, "Problems removing the schema '" + name + "'. Caught: " + e));
 			}
 
 			// MetaData
 			try 
 			{ 
 				int rowCount = reader.removeServerMetaData(name);
-				ao.add("Remove Meta Data", new ActionType(ActionStatus.SUCCESS, "Removed the MetaData for '"+name+"'. rowCount="+rowCount));
+				ao.add("Remove Meta Data", new ActionType(ActionStatus.SUCCESS, "Removed the MetaData for '" + name + "'. rowCount=" + rowCount));
 			} 
 			catch (SQLException e) 
 			{
-				ao.add("Remove Meta Data", new ActionType(ActionStatus.FAIL, "Problems removing the MetaData for '"+name+"'. Caught: "+e));
+				ao.add("Remove Meta Data", new ActionType(ActionStatus.FAIL, "Problems removing the MetaData for '" + name + "'. Caught: " + e));
 			}			
 		}
 
@@ -384,11 +384,11 @@ public class AdminServlet extends HttpServlet
 					}
 				}
 
-				ao.add("Remove H2 DB Files", new ActionType(ActionStatus.SUCCESS, "Removed "+removedList.size()+" DB Files for '"+name+"'. Here is the list "+removedList));
+				ao.add("Remove H2 DB Files", new ActionType(ActionStatus.SUCCESS, "Removed " + removedList.size() + " DB Files for '" + name + "'. Here is the list " + removedList));
 			}
 			catch (Exception e) 
 			{
-				ao.add("Remove H2 DB Files", new ActionType(ActionStatus.FAIL, "Problems removing the H2 DB Files for '"+name+"'. Caught: "+e));
+				ao.add("Remove H2 DB Files", new ActionType(ActionStatus.FAIL, "Problems removing the H2 DB Files for '" + name + "'. Caught: " + e));
 			}
 		}
 
@@ -404,13 +404,13 @@ public class AdminServlet extends HttpServlet
 				boolean foundRow = DbxCentralServerDescription.removeFromFile(filename, name, true); // 3 param: only comment out the file
 
 				if (foundRow)
-					ao.add("Remove From Server List", new ActionType(ActionStatus.SUCCESS, "Removed server in ServerList '"+filename+"' for '"+name+"'."));
+					ao.add("Remove From Server List", new ActionType(ActionStatus.SUCCESS, "Removed server in ServerList '" + filename + "' for '" + name + "'."));
 				else
-					ao.add("Remove From Server List", new ActionType(ActionStatus.FAIL, "Server name '"+name+"' was NOT found in ServerList '"+filename+"'."));
+					ao.add("Remove From Server List", new ActionType(ActionStatus.FAIL, "Server name '" + name + "' was NOT found in ServerList '" + filename + "'."));
 			}
 			catch (Exception e) 
 			{
-				ao.add("Remove From Server List", new ActionType(ActionStatus.FAIL, "Problems removing ServerList '"+filename+"' for '"+name+"'. Caught: "+e));
+				ao.add("Remove From Server List", new ActionType(ActionStatus.FAIL, "Problems removing ServerList '" + filename + "' for '" + name + "'. Caught: " + e));
 			}
 		}
 
@@ -429,14 +429,14 @@ public class AdminServlet extends HttpServlet
 						File f = path.toFile();
 						String filename = f.getName();
 						// Note the: startsWith(name+".log")  will include all "rollover" log files (.log, .log.1, .log.2)
-						if (f.isFile() && filename.startsWith(name) && (filename.startsWith(name+".log") || filename.endsWith(".console")))
+						if (f.isFile() && filename.startsWith(name) && (filename.startsWith(name + ".log") || filename.endsWith(".console")))
 						{
 							f.delete();
 							removedList.add(f.getName());
 						}
 
 						// Also remove "ALARM" file(s)
-						if (f.isFile() && (filename.equals("ALARM.ACTIVE."+name+".txt") || filename.equals("ALARM.LOG."+name+".log")) )
+						if (f.isFile() && (filename.equals("ALARM.ACTIVE." + name + ".txt") || filename.equals("ALARM.LOG." + name + ".log")) )
 						{
 							f.delete();
 							removedList.add(f.getName());
@@ -444,11 +444,11 @@ public class AdminServlet extends HttpServlet
 					}
 				}
 
-				ao.add("Remove Collector Log File", new ActionType(ActionStatus.SUCCESS, "Removed "+removedList.size()+" Collector Log Files for '"+name+"'. Here is the list "+removedList));
+				ao.add("Remove Collector Log File", new ActionType(ActionStatus.SUCCESS, "Removed " + removedList.size() + " Collector Log Files for '" + name + "'. Here is the list " + removedList));
 			}
 			catch (Exception e) 
 			{
-				ao.add("Remove Collector Log File", new ActionType(ActionStatus.FAIL, "Problems Collector Log Files for '"+name+"'. Caught: "+e));
+				ao.add("Remove Collector Log File", new ActionType(ActionStatus.FAIL, "Problems Collector Log Files for '" + name + "'. Caught: " + e));
 			}
 		}
 
@@ -481,11 +481,11 @@ public class AdminServlet extends HttpServlet
 					}
 				}
 
-				ao.add("Remove Collector DSR File", new ActionType(ActionStatus.SUCCESS, "Removed "+removedList.size()+" Collector DSR Files for '"+name+"'. Here is the list "+removedList));
+				ao.add("Remove Collector DSR File", new ActionType(ActionStatus.SUCCESS, "Removed " + removedList.size() + " Collector DSR Files for '" + name + "'. Here is the list " + removedList));
 			}
 			catch (Exception e) 
 			{
-				ao.add("Remove Collector DSR File", new ActionType(ActionStatus.FAIL, "Problems Collector DSR Files for '"+name+"'. Caught: "+e));
+				ao.add("Remove Collector DSR File", new ActionType(ActionStatus.FAIL, "Problems Collector DSR Files for '" + name + "'. Caught: " + e));
 			}
 		}
 
@@ -498,11 +498,11 @@ public class AdminServlet extends HttpServlet
 			{
 				// Wait for server to be stopped
 				long waitTime = waitforStopCollector(name, timeout);
-				ao.add("Waitfor Stopping DbxTune Collector", new ActionType(ActionStatus.SUCCESS, "Succeeded waiting for server '"+name+"' to stop. waitTime=" + waitTime + ", maxWaitTime="+timeout));
+				ao.add("Waitfor Stopping DbxTune Collector", new ActionType(ActionStatus.SUCCESS, "Succeeded waiting for server '" + name + "' to stop. waitTime=" + waitTime + ", maxWaitTime=" + timeout));
 			}
 			catch (TimeoutException e) 
 			{
-				ao.add("Stopping DbxTune Collector", new ActionType(ActionStatus.FAIL, "Timeout waiting for server '"+name+"' to stop. The server will Hopefully soon be stopped. waited for " + timeout + " ms."));
+				ao.add("Stopping DbxTune Collector", new ActionType(ActionStatus.FAIL, "Timeout waiting for server '" + name + "' to stop. The server will Hopefully soon be stopped. waited for " + timeout + " ms."));
 			}
 		}
 
@@ -529,11 +529,11 @@ public class AdminServlet extends HttpServlet
 			try
 			{
 				reader.sessionStatusSet(name, DbxCentralSessions.ST_DISABLED);
-				ao.add("DISABLE", new ActionType(ActionStatus.SUCCESS, "Disabled server '"+name+"'."));
+				ao.add("DISABLE", new ActionType(ActionStatus.SUCCESS, "Disabled server '" + name + "'."));
 			} 
 			catch (SQLException e) 
 			{
-				ao.add("DISABLE", new ActionType(ActionStatus.FAIL, "Problems Disabling server '"+name+"'. Caught: "+e));
+				ao.add("DISABLE", new ActionType(ActionStatus.FAIL, "Problems Disabling server '" + name + "'. Caught: " + e));
 			}
 		}
 		else
@@ -541,11 +541,11 @@ public class AdminServlet extends HttpServlet
 			try
 			{
 				reader.sessionStatusUnSet(name, DbxCentralSessions.ST_DISABLED);
-				ao.add("ENABLE", new ActionType(ActionStatus.SUCCESS, "Enable server '"+name+"'."));
+				ao.add("ENABLE", new ActionType(ActionStatus.SUCCESS, "Enable server '" + name + "'."));
 			} 
 			catch (SQLException e) 
 			{
-				ao.add("ENABLE", new ActionType(ActionStatus.FAIL, "Problems Enabling server '"+name+"'. Caught: "+e));
+				ao.add("ENABLE", new ActionType(ActionStatus.FAIL, "Problems Enabling server '" + name + "'. Caught: " + e));
 			}
 		}
 
@@ -569,11 +569,11 @@ public class AdminServlet extends HttpServlet
 		try
 		{
 			int rowsDeleted = reader.clearAlarmsAllActive(name);
-			ao.add("REMOVE-ACTIVE-ALARMS", new ActionType(ActionStatus.SUCCESS, "Removed " + rowsDeleted + " Active Alarm(s) for server '"+name+"'."));
+			ao.add("REMOVE-ACTIVE-ALARMS", new ActionType(ActionStatus.SUCCESS, "Removed " + rowsDeleted + " Active Alarm(s) for server '" + name + "'."));
 		} 
 		catch (SQLException e) 
 		{
-			ao.add("REMOVE-ACTIVE-ALARMS", new ActionType(ActionStatus.FAIL, "Problems removing Active Alarm(s) for server '"+name+"'. Caught: "+e));
+			ao.add("REMOVE-ACTIVE-ALARMS", new ActionType(ActionStatus.FAIL, "Problems removing Active Alarm(s) for server '" + name + "'. Caught: " + e));
 		}
 
 		return ao;
@@ -629,7 +629,7 @@ public class AdminServlet extends HttpServlet
 		int exitCode = process.waitFor();
 
 		if (exitCode != 0)
-			throw new Exception("Expected return code 0 when issuing command '" + cmd + "'. Actual return code was "+ exitCode);
+			throw new Exception("Expected return code 0 when issuing command '" + cmd + "'. Actual return code was " + exitCode);
 		
 		return pid;
 	}

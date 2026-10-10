@@ -138,7 +138,7 @@ extends DbmsVersionPanelAbstract
 
 		long version = Ver.oracleVersionStringToNumber(oraVerStr);
 
-		_logger.debug("ORACLE-parseVersionStringToNum(versionStr='"+versionStr+"'): oraVerStr='"+oraVerStr+"', <<<<<< returns: "+version);
+		_logger.debug("ORACLE-parseVersionStringToNum(versionStr='" + versionStr + "'): oraVerStr='" + oraVerStr + "', <<<<<< returns: " + version);
 		return version;
 	}
 	

@@ -104,7 +104,7 @@ extends AlarmWriterAbstract
 		if      (ACTION_RAISE .equals(action)) syslogMsgText = WriterUtils.createMessageFromTemplate(action, alarmEvent, _raiseMsgTemplate,  true, null, getDbxCentralUrl());
 		else if (ACTION_CANCEL.equals(action)) syslogMsgText = WriterUtils.createMessageFromTemplate(action, alarmEvent, _cancelMsgTemplate, true, null, getDbxCentralUrl());
 		else 
-			throw new RuntimeException("Unknown action type: "+action);
+			throw new RuntimeException("Unknown action type: " + action);
 
 
 		// Create the basic syslog message
@@ -182,7 +182,7 @@ extends AlarmWriterAbstract
 		}
 		catch(IOException ex)
 		{
-			_logger.error("Problems sending syslog record to server '"+_hostname+":"+_port+"'. Caught: "+ex , ex);
+			_logger.error("Problems sending syslog record to server '" + _hostname + ":" + _port + "'. Caught: " + ex , ex);
 		}
 	}
 	
@@ -253,7 +253,7 @@ extends AlarmWriterAbstract
 		{
 			int rfc = 0;
 			try { rfc = Integer.parseInt(val); }
-			catch(NumberFormatException ex) { throw new ValidationException("The value '"+val+"' is not a valid Integer: "+ex.getMessage()); }
+			catch(NumberFormatException ex) { throw new ValidationException("The value '" + val + "' is not a valid Integer: " + ex.getMessage()); }
 
 			if ( ! (rfc==3164 || rfc == 5424) )
 				throw new ValidationException("Allowed RFC numbers are 3164 or 5424");
@@ -320,7 +320,7 @@ extends AlarmWriterAbstract
 	{
 		super.init(conf);
 
-		_logger.info("Initializing the AlarmWriter component named '"+getName()+"'.");
+		_logger.info("Initializing the AlarmWriter component named '" + getName() + "'.");
 
 		_hostname          = conf.getProperty       (PROPKEY_hostname,          DEFAULT_hostname);
 		_port              = conf.getIntProperty    (PROPKEY_port,              DEFAULT_port);
@@ -338,12 +338,12 @@ extends AlarmWriterAbstract
 		//------------------------------------------
 		// Check for mandatory parameters
 		//------------------------------------------
-		if ( StringUtil.isNullOrBlank(_hostname)          ) throw new Exception("The property '" + PROPKEY_hostname          + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
-		if ( _port == -1                                  ) throw new Exception("The property '" + PROPKEY_port              + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
-		if ( _rfc  == -1                                  ) throw new Exception("The property '" + PROPKEY_rfc               + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
-		if ( StringUtil.isNullOrBlank(_nwProtocol)        ) throw new Exception("The property '" + PROPKEY_networkProtocol   + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
-		if ( StringUtil.isNullOrBlank(_raiseMsgTemplate)  ) throw new Exception("The property '" + PROPKEY_raiseMsgTemplate  + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
-		if ( StringUtil.isNullOrBlank(_cancelMsgTemplate) ) throw new Exception("The property '" + PROPKEY_cancelMsgTemplate + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
+		if ( StringUtil.isNullOrBlank(_hostname)          ) throw new Exception("The property '" + PROPKEY_hostname          + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
+		if ( _port == -1                                  ) throw new Exception("The property '" + PROPKEY_port              + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
+		if ( _rfc  == -1                                  ) throw new Exception("The property '" + PROPKEY_rfc               + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
+		if ( StringUtil.isNullOrBlank(_nwProtocol)        ) throw new Exception("The property '" + PROPKEY_networkProtocol   + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
+		if ( StringUtil.isNullOrBlank(_raiseMsgTemplate)  ) throw new Exception("The property '" + PROPKEY_raiseMsgTemplate  + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
+		if ( StringUtil.isNullOrBlank(_cancelMsgTemplate) ) throw new Exception("The property '" + PROPKEY_cancelMsgTemplate + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
 
 
 		//------------------------------------------
@@ -352,18 +352,18 @@ extends AlarmWriterAbstract
 
 		// RFC
 		if ( ! (_rfc == 3164 || _rfc == 5424) )
-			throw new Exception("The property '" + PROPKEY_rfc + "' can only be 3164 or 5424. current config is '"+_rfc+"' for the AlarmWriter named '"+getName()+"'.");
+			throw new Exception("The property '" + PROPKEY_rfc + "' can only be 3164 or 5424. current config is '" + _rfc + "' for the AlarmWriter named '" + getName() + "'.");
 
 		// NETWORK PROTOCOL
 		if ( ! ("TCP".equalsIgnoreCase(_nwProtocol) || "UDP".equalsIgnoreCase(_nwProtocol)) )
-			throw new Exception("The property '" + PROPKEY_networkProtocol + "' can only be 'TCP' or 'UDP'. current config is '"+_nwProtocol+"' for the AlarmWriter named '"+getName()+"'.");
+			throw new Exception("The property '" + PROPKEY_networkProtocol + "' can only be 'TCP' or 'UDP'. current config is '" + _nwProtocol + "' for the AlarmWriter named '" + getName() + "'.");
 	}
 
 	@Override
 	public void printConfig()
 	{
 		int spaces = 50;
-		_logger.info("Configuration for Alarm Writer Module: "+getName());
+		_logger.info("Configuration for Alarm Writer Module: " + getName());
 		_logger.info("    " + StringUtil.left(PROPKEY_hostname          , spaces) + ": " + _hostname);
 		_logger.info("    " + StringUtil.left(PROPKEY_port              , spaces) + ": " + _port);
 		_logger.info("    " + StringUtil.left(PROPKEY_rfc               , spaces) + ": " + _rfc);

@@ -61,7 +61,7 @@ extends AlarmWriterAbstract
 		super.init(conf);
 
 		// WRITE init message, jupp a little late, but I wanted to grab the _name
-		_logger.info("Initializing the AlarmWriter component named '"+getName()+"'.");
+		_logger.info("Initializing the AlarmWriter component named '" + getName() + "'.");
 
 		_activeAlarms_writeToFileName = conf.getProperty   (PROPKEY_activeFilename,   DEFAULT_activeFilename);
 		_activeAlarms_msgTemplate     = conf.getProperty   (PROPKEY_toActiveTemplate, DEFAULT_toActiveTemplate);
@@ -74,8 +74,8 @@ extends AlarmWriterAbstract
 		//------------------------------------------
 		// Check for mandatory parameters
 		//------------------------------------------
-		if ( StringUtil.isNullOrBlank(_activeAlarms_writeToFileName) ) throw new Exception("The property '" + PROPKEY_activeFilename    + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
-		if ( StringUtil.isNullOrBlank(_activeAlarms_msgTemplate)     ) throw new Exception("The property '" + PROPKEY_toActiveTemplate  + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
+		if ( StringUtil.isNullOrBlank(_activeAlarms_writeToFileName) ) throw new Exception("The property '" + PROPKEY_activeFilename    + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
+		if ( StringUtil.isNullOrBlank(_activeAlarms_msgTemplate)     ) throw new Exception("The property '" + PROPKEY_toActiveTemplate  + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
 		
 		
 		//------------------------------------------
@@ -96,7 +96,7 @@ extends AlarmWriterAbstract
 		}
 		catch (FileNotFoundException e) // If the directory isn't found
 		{
-			String msg = "The AlarmWriter named '"+getName()+"' can't open the ACTIVE writer file '"+_activeAlarms_writeToFileName+"'.";
+			String msg = "The AlarmWriter named '" + getName() + "' can't open the ACTIVE writer file '" + _activeAlarms_writeToFileName + "'.";
 			_logger.error(msg);
 			throw new Exception(msg, e);
 		}
@@ -109,7 +109,7 @@ extends AlarmWriterAbstract
 		if (StringUtil.hasValue(_alarmLog_writeToFileName))
 		{
 			if ( StringUtil.isNullOrBlank(_alarmLog_msgTemplate) ) 
-				throw new Exception("The property '" + PROPKEY_toLogTemplate  + "' is mandatory when a LOG File is given... for the AlarmWriter named '"+getName()+"'.");
+				throw new Exception("The property '" + PROPKEY_toLogTemplate  + "' is mandatory when a LOG File is given... for the AlarmWriter named '" + getName() + "'.");
 
 			try
 			{
@@ -119,7 +119,7 @@ extends AlarmWriterAbstract
 			}
 			catch (FileNotFoundException e) // If the directory isn't found
 			{
-				String msg = "The AlarmWriter named '"+getName()+"' can't open the LOG writer file '"+_activeAlarms_writeToFileName+"'.";
+				String msg = "The AlarmWriter named '" + getName() + "' can't open the LOG writer file '" + _activeAlarms_writeToFileName + "'.";
 				_logger.error(msg);
 				throw new Exception(msg, e);
 			}
@@ -138,7 +138,7 @@ extends AlarmWriterAbstract
 
 		if ( ! new_activeAlarms_writeToFileName.equals(_activeAlarms_writeToFileName) )
 		{
-			_logger.info("Alarm Writer named '"+getName()+"' detected config change for '"+PROPKEY_activeFilename+"', oldVal='"+_activeAlarms_writeToFileName+"', newVal='"+new_activeAlarms_writeToFileName+"'.");
+			_logger.info("Alarm Writer named '" + getName() + "' detected config change for '" + PROPKEY_activeFilename + "', oldVal='" + _activeAlarms_writeToFileName + "', newVal='" + new_activeAlarms_writeToFileName + "'.");
 			_activeAlarms_writeToFileName = new_activeAlarms_writeToFileName;
 
 			// Check/Create the file, do not care about exceptions
@@ -148,7 +148,7 @@ extends AlarmWriterAbstract
 
 		if ( ! new_alarmLog_writeToFileName.equals(_alarmLog_writeToFileName) )
 		{
-			_logger.info("Alarm Writer named '"+getName()+"' detected config change for '"+PROPKEY_logFilename+"', oldVal='"+_alarmLog_writeToFileName+"', newVal='"+new_alarmLog_writeToFileName+"'.");
+			_logger.info("Alarm Writer named '" + getName() + "' detected config change for '" + PROPKEY_logFilename + "', oldVal='" + _alarmLog_writeToFileName + "', newVal='" + new_alarmLog_writeToFileName + "'.");
 			_alarmLog_writeToFileName = new_alarmLog_writeToFileName;
 
 			// Check/Create the file, do not care about exceptions
@@ -173,7 +173,7 @@ extends AlarmWriterAbstract
 	public void printConfig()
 	{
 		int spaces = 45;
-		_logger.info("Configuration for Alarm Writer Module: "+getName());
+		_logger.info("Configuration for Alarm Writer Module: " + getName());
 		_logger.info("    " + StringUtil.left(PROPKEY_activeFilename  , spaces) + ": " + _activeAlarms_writeToFileName);
 		_logger.info("    " + StringUtil.left(PROPKEY_toActiveTemplate, spaces) + ": " + _activeAlarms_msgTemplate);
 		_logger.info("    " + StringUtil.left(PROPKEY_logFilename     , spaces) + ": " + _alarmLog_writeToFileName);
@@ -189,9 +189,9 @@ extends AlarmWriterAbstract
 		
 		Configuration conf = Configuration.getCombinedConfiguration();
 
-		list.add( new CmSettingsHelper("ActiveFileName",    Type.MANDATORY, PROPKEY_activeFilename,   String.class,  conf.getPropertyRaw(PROPKEY_activeFilename,   DEFAULT_activeFilename),   DEFAULT_activeFilename,   "A file where ACTIVE alarms are written to on every 'end-of-scan'. Note starting "+Version.getAppName()+" with -DKEYNAME1=xxx will enable you to use ${KEYNAME1} in the setting value. Note2: ${SERVERNAME} variable is set after a successfull DBMS Connection has been made."));
+		list.add( new CmSettingsHelper("ActiveFileName",    Type.MANDATORY, PROPKEY_activeFilename,   String.class,  conf.getPropertyRaw(PROPKEY_activeFilename,   DEFAULT_activeFilename),   DEFAULT_activeFilename,   "A file where ACTIVE alarms are written to on every 'end-of-scan'. Note starting " + Version.getAppName() + " with -DKEYNAME1=xxx will enable you to use ${KEYNAME1} in the setting value. Note2: ${SERVERNAME} variable is set after a successfull DBMS Connection has been made."));
 		list.add( new CmSettingsHelper("ActiveMsgTemplate", Type.MANDATORY, PROPKEY_toActiveTemplate, String.class,  conf.getPropertyRaw(PROPKEY_toActiveTemplate, DEFAULT_toActiveTemplate), DEFAULT_toActiveTemplate, "Template for what should be written to the ACTIVE filename"));
-		list.add( new CmSettingsHelper("LogFileName",       Type.PROBABLY,  PROPKEY_logFilename,      String.class,  conf.getPropertyRaw(PROPKEY_logFilename,      DEFAULT_logFilename),      DEFAULT_logFilename,      "Write all alarms that is raised/canceled to this file.  Note starting "+Version.getAppName()+" with -DKEYNAME1=xxx will enable you to use ${KEYNAME1} in the setting value. Note2: ${SERVERNAME} variable is set after a successfull DBMS Connection has been made."));
+		list.add( new CmSettingsHelper("LogFileName",       Type.PROBABLY,  PROPKEY_logFilename,      String.class,  conf.getPropertyRaw(PROPKEY_logFilename,      DEFAULT_logFilename),      DEFAULT_logFilename,      "Write all alarms that is raised/canceled to this file.  Note starting " + Version.getAppName() + " with -DKEYNAME1=xxx will enable you to use ${KEYNAME1} in the setting value. Note2: ${SERVERNAME} variable is set after a successfull DBMS Connection has been made."));
 		list.add( new CmSettingsHelper("LogMsgTemplate",    Type.PROBABLY,  PROPKEY_toLogTemplate,    String.class,  conf.getPropertyRaw(PROPKEY_toLogTemplate,    DEFAULT_toLogTemplate),    DEFAULT_toLogTemplate,    "Template for what should be written to the LOG filename"));
 		list.add( new CmSettingsHelper("LogMaxSize",                        PROPKEY_maxFileSizeInMb,  Integer.class, conf.getIntProperty(PROPKEY_maxFileSizeInMb,  DEFAULT_maxFileSizeInMb),  DEFAULT_maxFileSizeInMb,  "How many MB can the log file be."));
 		list.add( new CmSettingsHelper("LogRollover",                       PROPKEY_maxBackupIndex,   Integer.class, conf.getIntProperty(PROPKEY_maxBackupIndex,   DEFAULT_maxBackupIndex),   DEFAULT_maxBackupIndex,   "Log 'rollover' (when log file reaches #MB start a new log file). Save maximum # number of files."));
@@ -242,7 +242,7 @@ extends AlarmWriterAbstract
 	@Override
 	public void raise(AlarmEvent alarmEvent) 
 	{
-		_logger.debug(getName()+": -----RAISE-----: "+alarmEvent);
+		_logger.debug(getName() + ": -----RAISE-----: " + alarmEvent);
 
 		alarmLogAppend(ACTION_RAISE, alarmEvent);
 	}
@@ -262,7 +262,7 @@ extends AlarmWriterAbstract
 	@Override
 	public void cancel(AlarmEvent alarmEvent) 
 	{
-		_logger.debug(getName()+": -----CANCEL-----: "+alarmEvent);
+		_logger.debug(getName() + ": -----CANCEL-----: " + alarmEvent);
 
 		alarmLogAppend(ACTION_CANCEL, alarmEvent);
 	}
@@ -278,7 +278,7 @@ extends AlarmWriterAbstract
 	public void endOfScan(List<AlarmEvent> activeAlarms)
 	{
 		//System.out.println("||||"+getName()+": -----END-OF-SCAN-----.");
-		_logger.debug(getName()+": -----END-OF-SCAN-----.");
+		_logger.debug(getName() + ": -----END-OF-SCAN-----.");
 		writeActiveAlarmFile(activeAlarms);
 	}
 
@@ -295,7 +295,7 @@ extends AlarmWriterAbstract
 	@Override
 	public void restoredAlarms(List<AlarmEvent> restoredAlarms)
 	{
-		_logger.debug(getName()+": -----RESTORED-ALARMS-----.");
+		_logger.debug(getName() + ": -----RESTORED-ALARMS-----.");
 		writeActiveAlarmFile(restoredAlarms);
 	}
 	
@@ -323,7 +323,7 @@ extends AlarmWriterAbstract
 		long fileSize     = alarmLogFile.length();
 
 		if (_logger.isDebugEnabled())
-			_logger.debug("rollover="+(fileSize > rolloverSize)+": filesize='"+fileSize+"', rolloverSize='"+rolloverSize+"'. filesizeInKb='"+(fileSize/1024)+"', rolloverSizeInKb='"+(rolloverSize/1024)+"'. filesizeInMb='"+(fileSize/1024/1024)+"', rolloverSizeInMb='"+(rolloverSize/1024/1024)+"'.");
+			_logger.debug("rollover=" + (fileSize > rolloverSize) + ": filesize='" + fileSize + "', rolloverSize='" + rolloverSize + "'. filesizeInKb='" + (fileSize/1024) + "', rolloverSizeInKb='" + (rolloverSize/1024) + "'. filesizeInMb='" + (fileSize/1024/1024) + "', rolloverSizeInMb='" + (rolloverSize/1024/1024) + "'.");
 
 		if (fileSize > rolloverSize)
 		{
@@ -370,7 +370,7 @@ extends AlarmWriterAbstract
 		}
 		catch (FileNotFoundException e)
 		{
-			String msg = "The AlarmWriter named '"+getName()+"' can't open the writer file '"+_alarmLog_writeToFileName+"'.";
+			String msg = "The AlarmWriter named '" + getName() + "' can't open the writer file '" + _alarmLog_writeToFileName + "'.";
 			_logger.error(msg);
 			return;
 		}
@@ -407,7 +407,7 @@ extends AlarmWriterAbstract
 		}
 		catch (FileNotFoundException e)
 		{
-			String msg = "The AlarmWriter named '"+getName()+"' cant open the writer file '"+_activeAlarms_writeToFileName+"'.";
+			String msg = "The AlarmWriter named '" + getName() + "' cant open the writer file '" + _activeAlarms_writeToFileName + "'.";
 			_logger.error(msg);
 			return;
 		}

@@ -308,7 +308,7 @@ extends CountersModel
 			"";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -336,7 +336,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmSpinlockSum(counterController, guiController);
 	}
@@ -538,7 +538,7 @@ extends CountersModel
 			if ( ! disregardFields.equals(""))
 			{
 				disregardFields = StringUtil.removeLastComma(disregardFields);
-				restrictTmpSysmonitorsWhere = " and field_name not in("+disregardFields+")";
+				restrictTmpSysmonitorsWhere = " and field_name not in(" + disregardFields + ")";
 			}
 		}
 
@@ -551,18 +551,18 @@ extends CountersModel
 		String sqlCreateTmpSysmonitors = 
 			"/*------ Copy 'spinlock_[p|w|s]' rows to local tempdb, this reduces IO in joins below -------*/ \n" +
 			"/*------ Deal with overflow by bumping up to a higher datatype: and adding the negative delta on top of Integer.MAX_VALUE -------*/ \n" +
-			"declare @int_max "+datatype+"    set @int_max =  2147483647 \n" +
-			"declare @int_min "+datatype+"    set @int_min = -2147483648 \n" +
-			"select field_name=convert(varchar(79),field_name), field_id, value = CASE WHEN (value < 0) THEN @int_max + (value - @int_min) ELSE convert("+datatype+", value) END "+instanceid+" into #sysmonitorsP FROM master..sysmonitors WHERE group_name = 'spinlock_p"+spinPostfix+"' "+restrictTmpSysmonitorsWhere+" \n" +
-			"select field_name=convert(varchar(79),field_name), field_id, value = CASE WHEN (value < 0) THEN @int_max + (value - @int_min) ELSE convert("+datatype+", value) END "+instanceid+" into #sysmonitorsW FROM master..sysmonitors WHERE group_name = 'spinlock_w"+spinPostfix+"' "+restrictTmpSysmonitorsWhere+" \n" +
-			"select field_name=convert(varchar(79),field_name), field_id, value = CASE WHEN (value < 0) THEN @int_max + (value - @int_min) ELSE convert("+datatype+", value) END "+instanceid+" into #sysmonitorsS FROM master..sysmonitors WHERE group_name = 'spinlock_s"+spinPostfix+"' "+restrictTmpSysmonitorsWhere+" \n";
+			"declare @int_max " + datatype + "    set @int_max =  2147483647 \n" +
+			"declare @int_min " + datatype + "    set @int_min = -2147483648 \n" +
+			"select field_name=convert(varchar(79),field_name), field_id, value = CASE WHEN (value < 0) THEN @int_max + (value - @int_min) ELSE convert(" + datatype + ", value) END " + instanceid + " into #sysmonitorsP FROM master..sysmonitors WHERE group_name = 'spinlock_p" + spinPostfix + "' " + restrictTmpSysmonitorsWhere + " \n" +
+			"select field_name=convert(varchar(79),field_name), field_id, value = CASE WHEN (value < 0) THEN @int_max + (value - @int_min) ELSE convert(" + datatype + ", value) END " + instanceid + " into #sysmonitorsW FROM master..sysmonitors WHERE group_name = 'spinlock_w" + spinPostfix + "' " + restrictTmpSysmonitorsWhere + " \n" +
+			"select field_name=convert(varchar(79),field_name), field_id, value = CASE WHEN (value < 0) THEN @int_max + (value - @int_min) ELSE convert(" + datatype + ", value) END " + instanceid + " into #sysmonitorsS FROM master..sysmonitors WHERE group_name = 'spinlock_s" + spinPostfix + "' " + restrictTmpSysmonitorsWhere + " \n";
 		sqlCreateTmpSysmonitors += 
 			"-- A 'go' here will make the second batch optimize better \n" +
 			"go \n";
 		
 		String sqlDropTmpTabPWS   = 
 			"\n" +
-			"drop table #sysmonitorsP \n"+
+			"drop table #sysmonitorsP \n" +
 			"drop table #sysmonitorsW \n" +
 			"drop table #sysmonitorsS \n";
 		
@@ -601,9 +601,9 @@ extends CountersModel
 			(isClusterEnabled ? "P.instanceid, \n" : "") +
 			"  spinName     = convert(varchar(50), P.field_name), \n" +
 			"  instances    = count(P.field_id), \n" +
-			"  grabs        = sum(convert("+datatype+", P.value)), \n" +
-			"  waits        = sum(convert("+datatype+", W.value)), \n" +
-			"  spins        = sum(convert("+datatype+", S.value)), \n" +
+			"  grabs        = sum(convert(" + datatype + ", P.value)), \n" +
+			"  waits        = sum(convert(" + datatype + ", W.value)), \n" +
+			"  spins        = sum(convert(" + datatype + ", S.value)), \n" +
 			"  contention   = convert(numeric(4,1), null), \n" +
 			"  spinsPerWait = convert(numeric(12,1), null), \n" +
 			"  description  = convert(varchar(100), '') \n" +
@@ -641,9 +641,9 @@ extends CountersModel
 			(isClusterEnabled ? "P.instanceid, \n" : "") +
 			"  spinName     = convert(varchar(50), convert(varchar(40),P.field_name) + ' # ' + convert(varchar(5), P.field_id-N.start_id)), \n" +
 			"  instances    = convert(int,1), \n" +
-			"  grabs        = convert("+datatype+", P.value), \n" +
-			"  waits        = convert("+datatype+", W.value), \n" +
-			"  spins        = convert("+datatype+", S.value), \n" +
+			"  grabs        = convert(" + datatype + ", P.value), \n" +
+			"  waits        = convert(" + datatype + ", W.value), \n" +
+			"  spins        = convert(" + datatype + ", S.value), \n" +
 			"  contention   = convert(numeric(4,1), null), \n" +
 			"  spinsPerWait = convert(numeric(12,1), null), \n" +
 			"  description  = N.spin_desc \n" +
@@ -890,7 +890,7 @@ extends CountersModel
 
 //					if (prevColVal.doubleValue() > (maxUnsignedInt - threshold) && newColVal.doubleValue() < threshold)
 						diffColVal = new BigDecimal((maxUnsignedInt - prevColVal.doubleValue()) + newColVal.doubleValue() + 1);
-					_logger.debug("diffColumnValue(): CM='"+counterSetName+"', BigDecimal(ASE-numeric) : CmSpinlockSum(colName='"+colName+"', isCountersCleared="+isCountersCleared+"):  AFTER: do special calc. newColVal.doubleValue()='"+newColVal.doubleValue()+"', prevColVal.doubleValue()='"+prevColVal.doubleValue()+"', beforeReCalc.doubleValue()='"+beforeReCalc.doubleValue()+"', diffColVal.doubleValue()='"+diffColVal.doubleValue()+"'.");
+					_logger.debug("diffColumnValue(): CM='" + counterSetName + "', BigDecimal(ASE-numeric) : CmSpinlockSum(colName='" + colName + "', isCountersCleared=" + isCountersCleared + "):  AFTER: do special calc. newColVal.doubleValue()='" + newColVal.doubleValue() + "', prevColVal.doubleValue()='" + prevColVal.doubleValue() + "', beforeReCalc.doubleValue()='" + beforeReCalc.doubleValue() + "', diffColVal.doubleValue()='" + diffColVal.doubleValue() + "'.");
 				}
 
 				if (diffColVal.doubleValue() < 0)
@@ -917,7 +917,7 @@ extends CountersModel
 					
 //					if (prevColVal.longValue() > (maxUnsignedInt - threshold) && newColVal.longValue() < threshold)
 						diffColVal = Long.valueOf((maxUnsignedInt - prevColVal.longValue()) + newColVal.longValue() + 1);
-					_logger.debug("diffColumnValue(): CM='"+counterSetName+"', Long(ASE-bigint) : CmSpinlockSum(colName='"+colName+"', isCountersCleared="+isCountersCleared+"):  AFTER: do special calc. newColVal.longValue()='"+newColVal.longValue()+"', prevColVal.longValue()='"+prevColVal.longValue()+"', beforeReCalc.longValue()='"+beforeReCalc.longValue()+"', diffColVal.longValue()='"+diffColVal.longValue()+"'.");
+					_logger.debug("diffColumnValue(): CM='" + counterSetName + "', Long(ASE-bigint) : CmSpinlockSum(colName='" + colName + "', isCountersCleared=" + isCountersCleared + "):  AFTER: do special calc. newColVal.longValue()='" + newColVal.longValue() + "', prevColVal.longValue()='" + prevColVal.longValue() + "', beforeReCalc.longValue()='" + beforeReCalc.longValue() + "', diffColVal.longValue()='" + diffColVal.longValue() + "'.");
 				}
 
 				if (diffColVal.longValue() < 0)

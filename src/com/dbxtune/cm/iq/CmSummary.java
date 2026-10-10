@@ -65,7 +65,7 @@ extends CmSummaryAbstract
 		"</html>";
 
 	public static final String   GROUP_NAME       = null;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -121,7 +121,7 @@ extends CmSummaryAbstract
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmSummary(counterController, guiController);
 	}
@@ -166,7 +166,7 @@ extends CmSummaryAbstract
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_XXX,
 			"Dummy Graph", 	                        // Menu CheckBox text
-			"Dummy Graph showing hour, minute, second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Dummy Graph showing hour, minute, second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Hour", "Minute", "Second"}, 
 			LabelType.Static,
@@ -179,7 +179,7 @@ extends CmSummaryAbstract
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_CPU,
 			"CPU Summary", 	                        // Menu CheckBox text
-			"CPU Summary, using property('ProcessCPUSystem') and property('ProcessCPUUser') ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"CPU Summary, using property('ProcessCPUSystem') and property('ProcessCPUUser') (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "System+User CPU", "System CPU", "User CPU" }, 
 			LabelType.Static,
@@ -192,7 +192,7 @@ extends CmSummaryAbstract
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_NW_PACKET,
 			"Network Packets received/sent", 	                            // Menu CheckBox text
-			"Network Packets received/sent per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Network Packets received/sent per second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "PacketsReceived", "PacketsSent" }, 
 			LabelType.Static,
@@ -205,7 +205,7 @@ extends CmSummaryAbstract
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_COMMITS,
 			"Commits", 	                            // Menu CheckBox text
-			"Commits per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Commits per second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Commits" }, 
 			LabelType.Static,
@@ -218,7 +218,7 @@ extends CmSummaryAbstract
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_REQUESTS,
 			"RequestsReceived", 	            // Menu CheckBox text
-			"RequestsReceived per second ("+GROUP_NAME+"->"+SHORT_NAME+")", 		// Label 
+			"RequestsReceived per second (" + GROUP_NAME + "->" + SHORT_NAME + ")", 		// Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "ConnectionsActive", "OperationsWaiting", "OperationsActive", "OperationsActiveLoadTableStatements" }, 
 			LabelType.Static,
@@ -349,7 +349,7 @@ extends CmSummaryAbstract
 			arr[0] = Double.valueOf(hour);
 			arr[1] = Double.valueOf(minute);
 			arr[2] = Double.valueOf(second);
-			_logger.debug("updateGraphData("+tgdp.getName()+"): hour='"+arr[0]+"', minute='"+arr[1]+"', second='"+arr[2]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): hour='" + arr[0] + "', minute='" + arr[1] + "', second='" + arr[2] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -382,7 +382,7 @@ extends CmSummaryAbstract
 				arr[0] = pctCPU      .doubleValue();
 				arr[1] = pctSystemCPU.doubleValue();
 				arr[2] = pctUserCPU  .doubleValue();
-				_logger.debug("updateGraphData("+tgdp.getName()+"): pctCPU='"+arr[0]+"', pctSystemCPU='"+arr[1]+"', pctUserCPU='"+arr[2]+"'.");
+				_logger.debug("updateGraphData(" + tgdp.getName() + "): pctCPU='" + arr[0] + "', pctSystemCPU='" + arr[1] + "', pctUserCPU='" + arr[2] + "'.");
 
 			}
 			else
@@ -390,7 +390,7 @@ extends CmSummaryAbstract
 				arr[0] = 0.0;
 				arr[1] = 0.0;
 				arr[2] = 0.0;
-				_logger.debug("updateGraphData("+tgdp.getName()+"): some-value-was-null... ProcessCPU='"+ProcessCPU+"', ProcessCPUSystem='"+ProcessCPUSystem+"', ProcessCPUUser='"+ProcessCPUUser+"'. Adding a 0 pct CPU Usage.");
+				_logger.debug("updateGraphData(" + tgdp.getName() + "): some-value-was-null... ProcessCPU='" + ProcessCPU + "', ProcessCPUSystem='" + ProcessCPUSystem + "', ProcessCPUUser='" + ProcessCPUUser + "'. Adding a 0 pct CPU Usage.");
 			}
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -408,7 +408,7 @@ extends CmSummaryAbstract
 
 			arr[0] = this.getRateValueAsDouble (0, "PacketsReceived");
 			arr[1] = this.getRateValueAsDouble (0, "PacketsSent");
-			_logger.debug("updateGraphData("+tgdp.getName()+"): PacketsReceived='"+arr[0]+"', PacketsSent='"+arr[1]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): PacketsReceived='" + arr[0] + "', PacketsSent='" + arr[1] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -424,7 +424,7 @@ extends CmSummaryAbstract
 			Double[] arr = new Double[1];
 
 			arr[0] = this.getRateValueAsDouble (0, "Commit");
-			_logger.debug("updateGraphData("+tgdp.getName()+"): Commit='"+arr[0]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): Commit='" + arr[0] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -446,7 +446,7 @@ extends CmSummaryAbstract
 			arr[2] = _cm.getAbsValueAsDouble("OperationsActive",                   "stat_value");
 			arr[3] = _cm.getAbsValueAsDouble("OperationsActiveloadTableStatement", "stat_value");
 		
-			_logger.debug("updateGraphData("+tgdp.getName()+"): ConnectionsActive='"+arr[0]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): ConnectionsActive='" + arr[0] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);

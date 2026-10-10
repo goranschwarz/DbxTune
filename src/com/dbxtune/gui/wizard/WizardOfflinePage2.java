@@ -167,7 +167,7 @@ implements ActionListener
 		// Add comment at the bottom
 		String remember = "<html>" +
 			"Remember that you can use variables " +
-			"<code>${DATE}</code>, <code>${SERVERNAME}</code>, <code>${HOSTNAME}<code>, <code>${"+envNameHomeDir+"}<code> and <code>${"+envNameSaveDir+"}<code> " +
+			"<code>${DATE}</code>, <code>${SERVERNAME}</code>, <code>${HOSTNAME}<code>, <code>${" + envNameHomeDir + "}<code> and <code>${" + envNameSaveDir + "}<code> " +
 			"in the 'JDBC Url' specification above." +
 			"</html>";
 
@@ -177,7 +177,7 @@ implements ActionListener
 		add(mll, "span, push, bottom, wrap" );
 		
 		// Also add example that you can COPY from
-		JTextField urlExample_txt = new JTextField("jdbc:h2:file:${"+envNameSaveDir+"}/${HOSTNAME}_${DATE}");
+		JTextField urlExample_txt = new JTextField("jdbc:h2:file:${" + envNameSaveDir + "}/${HOSTNAME}_${DATE}");
 		urlExample_txt.setEditable(false);
 		urlExample_txt.setToolTipText(ConnectionDialog.JDBC_URL_TOOLTIP);
 		add(new JLabel("Example:"), "span, split" );
@@ -201,16 +201,16 @@ implements ActionListener
 //		String envNameSaveDir = DbxTune.getInstance().getAppSaveDirEnvName();  // ASETUNE_SAVE_DIR
 		String envNameSaveDir = "DBXTUNE_SAVE_DIR";
 
-		String defaultUrl = "jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE:format=yyyy-MM-dd;roll=true}";
+		String defaultUrl = "jdbc:h2:file:${" + envNameSaveDir + "}/${SERVERNAME}_${DATE:format=yyyy-MM-dd;roll=true}";
 		
 		_jdbcDriver_cbx.addItem("org.h2.Driver");
 		_jdbcDriver_cbx.addItem(AseConnectionFactory.getDriver());
 
 		// http://www.h2database.com/html/features.html#database_url
 		_jdbcUrl_cbx   .addItem("jdbc:h2:file:[<path>]<dbname>");
-		_jdbcUrl_cbx   .addItem("jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE}");
+		_jdbcUrl_cbx   .addItem("jdbc:h2:file:${" + envNameSaveDir + "}/${SERVERNAME}_${DATE}");
 		_jdbcUrl_cbx   .addItem(defaultUrl);
-		_jdbcUrl_cbx   .addItem("jdbc:h2:file:${"+envNameSaveDir+"}/${HOSTNAME}_${DATE}");
+		_jdbcUrl_cbx   .addItem("jdbc:h2:file:${" + envNameSaveDir + "}/${HOSTNAME}_${DATE}");
 		_jdbcUrl_cbx   .addItem("jdbc:h2:tcp://<host>[:<port>]/<dbname>");
 		_jdbcUrl_cbx   .addItem("jdbc:h2:ssl://<host>[:<port>]/<dbname>");
 
@@ -256,7 +256,7 @@ implements ActionListener
 			problem = problem.substring(0, problem.length()-2);
 		}
 		if ( problem.length() > 0 )
-			return "Following fields cant be empty: "+problem;
+			return "Following fields cant be empty: " + problem;
 
 		if ( _jdbcDriver_cbx.getSelectedItem().toString().trim().equals("org.h2.Driver") )
 		{
@@ -353,7 +353,7 @@ implements ActionListener
 			String currentUrl = _jdbcUrl_cbx.getEditor().getItem().toString();
 			H2UrlHelper h2help = new H2UrlHelper(currentUrl);
 
-			File baseDir = h2help.getDir(System.getProperty(""+envNameSaveDir+""));
+			File baseDir = h2help.getDir(System.getProperty("" + envNameSaveDir + ""));
 			JFileChooser fc = new JFileChooser(baseDir);
 
 			int returnVal = fc.showOpenDialog(this);
@@ -387,11 +387,11 @@ implements ActionListener
 			props.put("user", user);
 			props.put("password", passwd);
 	
-			_logger.debug("Try getConnection to driver='"+driver+"', url='"+url+"', user='"+user+"'.");
+			_logger.debug("Try getConnection to driver='" + driver + "', url='" + url + "', user='" + user + "'.");
 			Connection conn = DriverManager.getConnection(url, props);
 			conn.close();
 	
-			JOptionPane.showMessageDialog(this, "Connection succeeded.", Version.getAppName()+" - connect check", JOptionPane.INFORMATION_MESSAGE);
+			JOptionPane.showMessageDialog(this, "Connection succeeded.", Version.getAppName() + " - connect check", JOptionPane.INFORMATION_MESSAGE);
 			return true;
 		}
 		catch (SQLException e)
@@ -403,11 +403,11 @@ implements ActionListener
 				sb.append( e.getMessage() );
 				e = e.getNextException();
 			}
-			JOptionPane.showMessageDialog(this, "Connection FAILED.\n\n"+sb.toString(), Version.getAppName()+" - connect check", JOptionPane.ERROR_MESSAGE);
+			JOptionPane.showMessageDialog(this, "Connection FAILED.\n\n" + sb.toString(), Version.getAppName() + " - connect check", JOptionPane.ERROR_MESSAGE);
 		}
 		catch (Exception e)
 		{
-			JOptionPane.showMessageDialog(this, "Connection FAILED.\n\n"+e.toString(),  Version.getAppName()+" - connect check", JOptionPane.ERROR_MESSAGE);
+			JOptionPane.showMessageDialog(this, "Connection FAILED.\n\n" + e.toString(),  Version.getAppName() + " - connect check", JOptionPane.ERROR_MESSAGE);
 		}
 		return false;
 	}

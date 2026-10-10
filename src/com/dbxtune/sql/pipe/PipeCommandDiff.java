@@ -94,7 +94,7 @@ extends PipeCommandAbstract
 					return type;
 			}
 
-			throw new IllegalArgumentException("Unknown ActionType '" + text + "' found, possible values: "+StringUtil.toCommaStr(ActionType.values()));
+			throw new IllegalArgumentException("Unknown ActionType '" + text + "' found, possible values: " + StringUtil.toCommaStr(ActionType.values()));
 		}
 	};
 
@@ -231,11 +231,11 @@ extends PipeCommandAbstract
 			checkParsedParameters(_params);
 
 			if (_params._debug)
-				addDebugMessage("CmdLineSwitches: "+_params);
+				addDebugMessage("CmdLineSwitches: " + _params);
 		}
 		else
 		{
-			throw new PipeCommandException("PipeCommand, cmd='"+input+"' is unknown. Available commands is: diff");
+			throw new PipeCommandException("PipeCommand, cmd='" + input + "' is unknown. Available commands is: diff");
 		}
 	}
 	
@@ -260,7 +260,7 @@ extends PipeCommandAbstract
 		{
 			ConnectionProfile cp = ConnectionProfileManager.getInstance().getProfile(params._profile);
 			if (cp == null)
-				throw new PipeCommandException("Profile not found in the ProfileManager. profile name '"+params._profile+"'.");
+				throw new PipeCommandException("Profile not found in the ProfileManager. profile name '" + params._profile + "'.");
 			else
 			{
 				_rightConnectionProfile = cp;
@@ -415,7 +415,7 @@ extends PipeCommandAbstract
 		sb.append("  -q,--query <sq-query>     SQL Statement to exexute towards destination. (default same as source) \n");
 		sb.append("  -c,--diffCols <c1,c2...>  Comma separated list of columns to do diff on (default all columns) \n");
 		sb.append("  -k,--keyCols <c1,c2...>   Comma separated list of KEY columns to use: ColNames or ColPos (pos starts at 0) \n");
-		sb.append("  -A,--action <name>        Action when differance. "+StringUtil.toCommaStr(ActionType.values())+" (default: "+ActionType.TABLE+") \n");
+		sb.append("  -A,--action <name>        Action when differance. " + StringUtil.toCommaStr(ActionType.values()) + " (default: " + ActionType.TABLE + ") \n");
 		sb.append("  -o,--actionOutFile <name> Write the action out put to a file. \n");
 		sb.append("  -g,--go <termStr>         Use this as a command execution string. (default=\\ngo)\n");
 		sb.append("  -x,--debug                Debug, print some extra info \n");
@@ -583,7 +583,7 @@ extends PipeCommandAbstract
 		if (StringUtil.isNullOrBlank(destSql))
 			destSql = getSqlString();
 
-		if (progress != null) progress.setState("Executing SQL at RIGHT hand side DBMS, SQL: "+destSql);
+		if (progress != null) progress.setState("Executing SQL at RIGHT hand side DBMS, SQL: " + destSql);
 		if (_params._debug)   addDebugMessage(  "Executing SQL at target: " + destSql);
 
 		// Execute SQL at RIGHT Hand side
@@ -665,7 +665,7 @@ extends PipeCommandAbstract
 				if (StringUtil.hasValue(_params._actionOutFile))
 				{
 					File f = new File(_params._actionOutFile);
-					addInfoMessage("Saving "+_params._action+" output to file: "+f);
+					addInfoMessage("Saving " + _params._action + " output to file: " + f);
 
 					//String tableStr = ""; SwingUtils.tableToString(_diffTableModel); // FIXME: strip out ALL HTML tags
 					String tableStr = SwingUtils.tableToHtmlString(_diffTableModel);
@@ -684,7 +684,7 @@ extends PipeCommandAbstract
 				if (StringUtil.hasValue(_params._actionOutFile))
 				{
 					File f = new File(_params._actionOutFile);
-					addInfoMessage("Saving "+_params._action+" output to file: "+f);
+					addInfoMessage("Saving " + _params._action + " output to file: " + f);
 
 					FileUtils.writeLines(f, dmlList);
 				}
@@ -701,7 +701,7 @@ extends PipeCommandAbstract
 				if (StringUtil.hasValue(_params._actionOutFile))
 				{
 					File f = new File(_params._actionOutFile);
-					addInfoMessage("Saving "+_params._action+" output to file: "+f);
+					addInfoMessage("Saving " + _params._action + " output to file: " + f);
 
 					FileUtils.writeLines(f, dmlList);
 				}

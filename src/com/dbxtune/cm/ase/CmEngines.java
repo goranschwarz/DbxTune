@@ -87,7 +87,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -133,7 +133,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmEngines(counterController, guiController);
 	}
@@ -206,7 +206,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_CPU_SUM,
 			"CPU Summary", 	                                 // Menu CheckBox text
-			"CPU Summary for all Engines ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"CPU Summary for all Engines (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "System+User CPU", "System CPU", "User CPU" }, 
 			LabelType.Static,
@@ -218,7 +218,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_CPU_ENG,
 			"CPU per Engine",                       // Menu CheckBox text
-			"CPU Usage per Engine (System + User) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"CPU Usage per Engine (System + User) (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -367,8 +367,8 @@ extends CountersModel
 		}
 
 
-		String NonIdleCPUTimePct = "NonIdleCPUTimePct = CASE WHEN CPUTime > 0 \n"+
-			       		           "                         THEN convert(numeric(10,1), (("+NonIdleCPUTime_calc+" + 0.0) / (CPUTime + 0.0)) * 100.0 ) \n" + 
+		String NonIdleCPUTimePct = "NonIdleCPUTimePct = CASE WHEN CPUTime > 0 \n" +
+			       		           "                         THEN convert(numeric(10,1), ((" + NonIdleCPUTime_calc + " + 0.0) / (CPUTime + 0.0)) * 100.0 ) \n" + 
 			       		           "                         ELSE convert(numeric(10,1), 0.0 ) \n" +
 			       		           "                    END, \n";
 		String SystemCPUTimePct  = "SystemCPUTimePct  = CASE WHEN CPUTime > 0 \n" + 
@@ -408,7 +408,7 @@ extends CountersModel
 				"ContextSwitches, Connections, \n";
 
 		cols2 += "";
-		cols3 += "ProcessesAffinitied, Status, StartTime, StopTime, AffinitiedToCPU, "+ThreadID+"OSPID";
+		cols3 += "ProcessesAffinitied, Status, StartTime, StopTime, AffinitiedToCPU, " + ThreadID + "OSPID";
 
 		if (srvVersion >= Ver.ver(12,5,3,2))
 		{
@@ -477,7 +477,7 @@ extends CountersModel
 				{
 					// dummy for easier logic (multiple negation are hard to understand)
 					if (_logger.isDebugEnabled())
-						_logger.debug("updateGraphData(cpuSum): NonIdleCPUTimePct='"+dataArray[0]+"', SystemCPUTimePct='"+dataArray[1]+"', UserCPUTimePct='"+dataArray[2]+"'.");
+						_logger.debug("updateGraphData(cpuSum): NonIdleCPUTimePct='" + dataArray[0] + "', SystemCPUTimePct='" + dataArray[1] + "', UserCPUTimePct='" + dataArray[2] + "'.");
 				}
 				else
 				{
@@ -488,13 +488,13 @@ extends CountersModel
     				labelArray[3] = "IO CPU";
     
     				if (_logger.isDebugEnabled())
-    					_logger.debug("updateGraphData(cpuSum): NonIdleCPUTimePct='"+dataArray[0]+"', SystemCPUTimePct='"+dataArray[1]+"', UserCPUTimePct='"+dataArray[2]+"', IOCPUTimePct='"+dataArray[3]+"'.");
+    					_logger.debug("updateGraphData(cpuSum): NonIdleCPUTimePct='" + dataArray[0] + "', SystemCPUTimePct='" + dataArray[1] + "', UserCPUTimePct='" + dataArray[2] + "', IOCPUTimePct='" + dataArray[3] + "'.");
 				}
 			}
 			else
 			{
 				if (_logger.isDebugEnabled())
-					_logger.debug("updateGraphData(cpuSum): NonIdleCPUTimePct='"+dataArray[0]+"', SystemCPUTimePct='"+dataArray[1]+"', UserCPUTimePct='"+dataArray[2]+"'.");
+					_logger.debug("updateGraphData(cpuSum): NonIdleCPUTimePct='" + dataArray[0] + "', SystemCPUTimePct='" + dataArray[1] + "', UserCPUTimePct='" + dataArray[2] + "'.");
 			}
 
 			// Set the values
@@ -609,7 +609,7 @@ extends CountersModel
 			}
 
 			if (_logger.isDebugEnabled())
-				_logger.debug("----CPUTime = "+CPUTime+", SystemCPUTime = "+SystemCPUTime+", UserCPUTime = "+UserCPUTime+", IOCPUTime = "+IOCPUTime+", IdleCPUTime = "+IdleCPUTime);
+				_logger.debug("----CPUTime = " + CPUTime + ", SystemCPUTime = " + SystemCPUTime + ", UserCPUTime = " + UserCPUTime + ", IOCPUTime = " + IOCPUTime + ", IdleCPUTime = " + IdleCPUTime);
 
 			// Handle divided by 0... (this happens if a engine goes offline
 			BigDecimal calcCPUTime       = null;
@@ -637,7 +637,7 @@ extends CountersModel
 			}
 
 			if (_logger.isDebugEnabled())
-				_logger.debug("++++calc:CPUTime = "+calcCPUTime+", calc:SystemCPUTime = "+calcSystemCPUTime+", calc:UserCPUTime = "+calcUserCPUTime+", calc:IoCPUTime = "+calcIoCPUTime+", calc:IdleCPUTime = "+calcIdleCPUTime);
+				_logger.debug("++++calc:CPUTime = " + calcCPUTime + ", calc:SystemCPUTime = " + calcSystemCPUTime + ", calc:UserCPUTime = " + calcUserCPUTime + ", calc:IoCPUTime = " + calcIoCPUTime + ", calc:IdleCPUTime = " + calcIdleCPUTime);
 	
 			diffData.setValueAt(calcCPUTime,       rowId, NonIdleCPUTimePct_pos );
 			diffData.setValueAt(calcSystemCPUTime, rowId, SystemCPUTimePct_pos  );
@@ -739,7 +739,7 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_CPUTime, DEFAULT_alarm_CPUTime);
 				
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", NonIdleCPUTimePct='"+NonIdleCPUTimePct+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", NonIdleCPUTimePct='" + NonIdleCPUTimePct + "'.");
 
 				if (NonIdleCPUTimePct.intValue() > threshold)
 				{

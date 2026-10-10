@@ -85,7 +85,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -127,7 +127,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmObjectActivity(counterController, guiController);
 	}
@@ -234,9 +234,9 @@ extends CountersModel
 			mtd.addColumn("monOpenObjectActivity", "LastDeleteDateDiff"             ,"<html>How many Milliseconds since last Delete.<br><b>Formula</b>: datediff(ms, LastDeleteDate, getdate())<br></html>");
 
 			mtd.addColumn("monOpenObjectActivity", "LockContPct"                    ,"<html>How many Lock Requests in percent was Blocked by another concurrent SPID's due to incompatible locking issues.<br><b>Note</b>: Do also considder number of LockWaits and not only the percentage.<br><b>Formula</b>: LockWaits / LockRequests * 100.0<br></html>");
-			mtd.addColumn("monOpenObjectActivity", "TabRowCount"                    ,"<html>Table rowcount, using row_count(DBID, ObjectID) to get the count, so it can be a bit off from the actual number of rows.<br><b>Note</b>: If this takes to much resources, it can be disable in any of the configuration files using <code>"+PROPKEY_sample_tabRowCount+"=false</code>.</html>");
-			mtd.addColumn("monOpenObjectActivity", "UsageInMb"                      ,"<html>Number of MB used by this table/index, using data_pages(DBID, ObjectID, IndexID)/(1024*1024/@@maxpagesize) to get the value.<br><b>Note</b>: If this takes to much resources, it can be disable in any of the configuration files using <code>"+getName()+PROPKEY_sample_tabRowCount+"=false</code>.</html>");
-			mtd.addColumn("monOpenObjectActivity", "NumUsedPages"                   ,"<html>Number of Pages used by this table/index, using data_pages(DBID, ObjectID, IndexID) to get the value.<br><b>Note</b>: If this takes to much resources, it can be disable in any of the configuration files using <code>"+getName()+PROPKEY_sample_tabRowCount+"=false</code>.</html>");
+			mtd.addColumn("monOpenObjectActivity", "TabRowCount"                    ,"<html>Table rowcount, using row_count(DBID, ObjectID) to get the count, so it can be a bit off from the actual number of rows.<br><b>Note</b>: If this takes to much resources, it can be disable in any of the configuration files using <code>" + PROPKEY_sample_tabRowCount + "=false</code>.</html>");
+			mtd.addColumn("monOpenObjectActivity", "UsageInMb"                      ,"<html>Number of MB used by this table/index, using data_pages(DBID, ObjectID, IndexID)/(1024*1024/@@maxpagesize) to get the value.<br><b>Note</b>: If this takes to much resources, it can be disable in any of the configuration files using <code>" + getName()+PROPKEY_sample_tabRowCount + "=false</code>.</html>");
+			mtd.addColumn("monOpenObjectActivity", "NumUsedPages"                   ,"<html>Number of Pages used by this table/index, using data_pages(DBID, ObjectID, IndexID) to get the value.<br><b>Note</b>: If this takes to much resources, it can be disable in any of the configuration files using <code>" + getName()+PROPKEY_sample_tabRowCount + "=false</code>.</html>");
 			mtd.addColumn("monOpenObjectActivity", "RowsPerPage"                    ,"<html>Number of rows per page.<br><b>Formula</b>: TabRowCount/NumUsedPages</html>");
 			mtd.addColumn("monOpenObjectActivity", "RowsInsUpdDel"                  ,"<html>RowsInsUpdDel = RowsInserted + RowsDeleted + RowsUpdated<br>So this is simply a summary of all DML changes on this table.</html>");
 			mtd.addColumn("monOpenObjectActivity", "Remark"                         ,"<html>Some tip of what's happening with this table<br><b>Tip</b>: \"Hover\" over the cell to get more information on the Tip.</html>");
@@ -372,11 +372,11 @@ extends CountersModel
 			if (srvVersion >= Ver.ver(16,0,0, 2) || (srvVersion >= Ver.ver(15,7,0, 130) && srvVersion < Ver.ver(16,0)) )
 				rowCountOption = ",'noblock'";
 
-			TabRowCount  = "TabRowCount  = convert(bigint, row_count(A.DBID, A.ObjectID"+rowCountOption+")),   -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
-			UsageInMb    = "UsageInMb    = convert(int, data_pages(A.DBID, A.ObjectID, A.IndexID) / (1024*1024/@@maxpagesize)), -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
-			UsageInKb    = "UsageInKb    = convert(int, data_pages(A.DBID, A.ObjectID, A.IndexID) * (@@maxpagesize/1024)),      -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
-			NumUsedPages = "NumUsedPages = convert(bigint, data_pages(A.DBID, A.ObjectID, A.IndexID)), -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
-			RowsPerPage  = "RowsPerPage  = convert(numeric(9,1), 0),                                   -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
+			TabRowCount  = "TabRowCount  = convert(bigint, row_count(A.DBID, A.ObjectID" + rowCountOption + ")),   -- Disable col with property: " + PROPKEY_sample_tabRowCount + "=false\n";
+			UsageInMb    = "UsageInMb    = convert(int, data_pages(A.DBID, A.ObjectID, A.IndexID) / (1024*1024/@@maxpagesize)), -- Disable col with property: " + PROPKEY_sample_tabRowCount + "=false\n";
+			UsageInKb    = "UsageInKb    = convert(int, data_pages(A.DBID, A.ObjectID, A.IndexID) * (@@maxpagesize/1024)),      -- Disable col with property: " + PROPKEY_sample_tabRowCount + "=false\n";
+			NumUsedPages = "NumUsedPages = convert(bigint, data_pages(A.DBID, A.ObjectID, A.IndexID)), -- Disable col with property: " + PROPKEY_sample_tabRowCount + "=false\n";
+			RowsPerPage  = "RowsPerPage  = convert(numeric(9,1), 0),                                   -- Disable col with property: " + PROPKEY_sample_tabRowCount + "=false\n";
 			DBName       = "A.DBName, \n";
 //			ObjectName   = "A.ObjectName, \n";
 			ObjectName   = "ObjectName = isnull(object_name(A.ObjectID, A.DBID), 'Obj='+A.ObjectName), \n"; // if user is not a valid user in A.DBID, then object_name() will return null
@@ -389,17 +389,17 @@ extends CountersModel
 			if (conf.getBooleanProperty(PROPKEY_sample_objectName, DEFAULT_sample_objectName))
 			{
 				ObjectName = "ObjectName=isnull(object_name(A.ObjectID, A.DBID), 'ObjId='+convert(varchar(30),A.ObjectID))"; // if user is not a valid user in A.DBID, then object_name() will return null
-				_logger.info(PROPKEY_sample_objectName+"=true, using the string '"+ObjectName+"' for ObjectName lookup.");
+				_logger.info(PROPKEY_sample_objectName + "=true, using the string '" + ObjectName + "' for ObjectName lookup.");
 				ObjectName += ", \n";
 			}
 			if (conf.getBooleanProperty(PROPKEY_sample_tabRowCount, DEFAULT_sample_tabRowCount) == false)
 			{
-				TabRowCount  = "TabRowCount  = convert(bigint,-1), -- column is disabled, enable col with property: "+PROPKEY_sample_tabRowCount+"=true\n";
-				UsageInMb    = "UsageInMb    = convert(int,   -1), -- column is disabled, enable col with property: "+PROPKEY_sample_tabRowCount+"=true\n";
-				UsageInKb    = "UsageInKb    = convert(int,   -1), -- column is disabled, enable col with property: "+PROPKEY_sample_tabRowCount+"=true\n";
-				NumUsedPages = "NumUsedPages = convert(bigint,-1), -- column is disabled, enable col with property: "+PROPKEY_sample_tabRowCount+"=true\n";
-				RowsPerPage  = "RowsPerPage  = convert(bigint,-1), -- column is disabled, enable col with property: "+PROPKEY_sample_tabRowCount+"=true\n";
-				_logger.info(PROPKEY_sample_tabRowCount+"=false, Disabling the column 'TabRowCount', 'UsageInMb', 'UsageInKb', 'NumUsedPages', 'RowsPerPage'.");
+				TabRowCount  = "TabRowCount  = convert(bigint,-1), -- column is disabled, enable col with property: " + PROPKEY_sample_tabRowCount + "=true\n";
+				UsageInMb    = "UsageInMb    = convert(int,   -1), -- column is disabled, enable col with property: " + PROPKEY_sample_tabRowCount + "=true\n";
+				UsageInKb    = "UsageInKb    = convert(int,   -1), -- column is disabled, enable col with property: " + PROPKEY_sample_tabRowCount + "=true\n";
+				NumUsedPages = "NumUsedPages = convert(bigint,-1), -- column is disabled, enable col with property: " + PROPKEY_sample_tabRowCount + "=true\n";
+				RowsPerPage  = "RowsPerPage  = convert(bigint,-1), -- column is disabled, enable col with property: " + PROPKEY_sample_tabRowCount + "=true\n";
+				_logger.info(PROPKEY_sample_tabRowCount + "=false, Disabling the column 'TabRowCount', 'UsageInMb', 'UsageInKb', 'NumUsedPages', 'RowsPerPage'.");
 			}
 		}
 
@@ -530,7 +530,7 @@ extends CountersModel
 			int rowCount = conf.getIntProperty(PROPKEY_sample_topRowsCount, DEFAULT_sample_topRowsCount);
 			topRows = "top " + rowCount + " ";
 
-			_logger.warn("CM='"+getName()+"'. Limiting number of rows fetch. Adding phrase '"+topRows+"' at the start of the SQL Statement.");
+			_logger.warn("CM='" + getName() + "'. Limiting number of rows fetch. Adding phrase '" + topRows + "' at the start of the SQL Statement.");
 		}
 
 
@@ -564,7 +564,7 @@ extends CountersModel
 		         NumUsedPages +
 		         RowsPerPage +
 		         // RowsInserted + RowsDeleted + RowsUpdated : will overflow if much changes, so individual converts are neccecary
-		         "RowsInsUpdDel=convert("+bigint+",RowsInserted) + convert("+bigint+",RowsDeleted) + convert("+bigint+",RowsUpdated), \n" +
+		         "RowsInsUpdDel=convert(" + bigint + ",RowsInserted) + convert(" + bigint + ",RowsDeleted) + convert(" + bigint + ",RowsUpdated), \n" +
 		         "RowsInserted, RowsDeleted, RowsUpdated, OptSelectCount, \n" +
 		         MaxInsRowsInXact              + MaxUpdRowsInXact              + MaxDelRowsInXact   + nl_160_sp3_pl4 +
 		         Inserts                       + Updates                       + Deletes            + nl_16000 +
@@ -856,7 +856,7 @@ extends CountersModel
 			         wt_NumUsedPages +
 			         wt_RowsPerPage +
 			         // RowsInserted + RowsDeleted + RowsUpdated : will overflow if much changes, so individual converts are neccecary
-			         "RowsInsUpdDel=convert("+bigint+",-1), \n" +
+			         "RowsInsUpdDel=convert(" + bigint + ",-1), \n" +
 //			         "RowsInserted, RowsDeleted, RowsUpdated, OptSelectCount, \n" +
 			         "RowsInserted = -1, RowsDeleted = -1, RowsUpdated = -1, OptSelectCount = -1, \n" + // Changes from the monOpenObjectActivity
 			         wt_MaxInsRowsInXact              + wt_MaxUpdRowsInXact              + wt_MaxDelRowsInXact   + nl_160_sp3_pl4 +
@@ -895,7 +895,7 @@ extends CountersModel
 			// If LOWER than ASE 15.5 --- RESET the WORK TABLE SQL
 			if (srvVersion < Ver.ver(15,5))
 			{
-				_logger.info("Resetting 'WORK-TABLE' SQL, since version is to low. need version 15.5 and current version is "+srvVersion);
+				_logger.info("Resetting 'WORK-TABLE' SQL, since version is to low. need version 15.5 and current version is " + srvVersion);
 				workTableSql = "";
 			}
 			// If Cluster Edition --- RESET the WORK TABLE SQL
@@ -931,7 +931,7 @@ extends CountersModel
 			if (conf.getBooleanProperty(PROPKEY_disable_tabRowCount_onTimeout, DEFAULT_disable_tabRowCount_onTimeout))
 			{
 				setQueryTimeout(getDefaultQueryTimeout(), true);
-				_logger.warn("CM='"+getName()+"'. Setting Query Timeout to default of '"+getDefaultQueryTimeout()+"', from method handelTimeoutException().");
+				_logger.warn("CM='" + getName() + "'. Setting Query Timeout to default of '" + getDefaultQueryTimeout() + "', from method handelTimeoutException().");
 				return;
 			}
 		}
@@ -954,21 +954,21 @@ extends CountersModel
 				setSql(null);
 	
 				String key=PROPKEY_sample_tabRowCount;
-				_logger.warn("CM='"+getName()+"'. Disabling the column 'TabRowCount', 'NumUsedPages', 'RowsPerPage', from method handelTimeoutException(). This is done by setting "+key+"=false");
+				_logger.warn("CM='" + getName() + "'. Disabling the column 'TabRowCount', 'NumUsedPages', 'RowsPerPage', from method handelTimeoutException(). This is done by setting " + key + "=false");
 
 				// DUMMY: check if config is set... because somewhere there is a problem when reading the value... (at least in no-gui mode)
 				String dummyTest = tempConf.getProperty(PROPKEY_sample_tabRowCount);
 				if (StringUtil.isNullOrBlank(dummyTest))
-					_logger.warn("DEBUG: Disabling of '"+PROPKEY_sample_tabRowCount+"' was not successfull. the value is '"+dummyTest+"'. tempConf="+tempConf);
+					_logger.warn("DEBUG: Disabling of '" + PROPKEY_sample_tabRowCount + "' was not successfull. the value is '" + dummyTest + "'. tempConf=" + tempConf);
 				else if ( ! dummyTest.trim().equalsIgnoreCase("false") )
-					_logger.warn("DEBUG: Disabling of '"+PROPKEY_sample_tabRowCount+"' was not successfull. the value is '"+dummyTest+"'. tempConf="+tempConf);
+					_logger.warn("DEBUG: Disabling of '" + PROPKEY_sample_tabRowCount + "' was not successfull. the value is '" + dummyTest + "'. tempConf=" + tempConf);
 				
 				// DUMMY: check if config is set... because somewhere there is a problem when reading the value... (at least in no-gui mode)
 				dummyTest = Configuration.getCombinedConfiguration().getProperty(PROPKEY_sample_tabRowCount);
 				if (StringUtil.isNullOrBlank(dummyTest))
-					_logger.warn("DEBUG: Disabling of '"+PROPKEY_sample_tabRowCount+"' was not successfull. the value is '"+dummyTest+"'. from Configuration.getCombinedConfiguration()");
+					_logger.warn("DEBUG: Disabling of '" + PROPKEY_sample_tabRowCount + "' was not successfull. the value is '" + dummyTest + "'. from Configuration.getCombinedConfiguration()");
 				else if ( ! dummyTest.trim().equalsIgnoreCase("false") )
-					_logger.warn("DEBUG: Disabling of '"+PROPKEY_sample_tabRowCount+"' was not successfull. the value is '"+dummyTest+"'. from Configuration.getCombinedConfiguration()");
+					_logger.warn("DEBUG: Disabling of '" + PROPKEY_sample_tabRowCount + "' was not successfull. the value is '" + dummyTest + "'. from Configuration.getCombinedConfiguration()");
 
 				// Show a popup, what we did if we are in GUI mode
 				if (getGuiController() != null && getGuiController().hasGUI())
@@ -977,7 +977,7 @@ extends CountersModel
 
 					JOptionPane optionPane = new JOptionPane(
 							"<html>" +
-							"The query for CM '"+getName()+"' took to long... and received a Timeout.<br>" +
+							"The query for CM '" + getName() + "' took to long... and received a Timeout.<br>" +
 							"<br>" +
 							"This may be caused by the function row_count(objid, dbid), which is used to get how many rows a table holds.<br>" +
 							"In combination that someone was holding an exclusive table lock, which in some Ase Versions causes row_count() to block.<br>" +
@@ -987,7 +987,7 @@ extends CountersModel
 							"I just disabled option 'Sample Table Row Count'... You can try to enable it again later.<br>" +
 							"</html>",
 							JOptionPane.INFORMATION_MESSAGE);
-					JDialog dialog = optionPane.createDialog(MainFrame.getInstance(), "Disabled 'Sample Table Row Count' @ "+dateStr);
+					JDialog dialog = optionPane.createDialog(MainFrame.getInstance(), "Disabled 'Sample Table Row Count' @ " + dateStr);
 					dialog.setModal(false);
 					dialog.setVisible(true);
 				}
@@ -1021,7 +1021,7 @@ extends CountersModel
 				// This will force the CM to re-initialize the SQL statement.
 				setSql(null);
 				
-				_logger.info("CM='"+getName()+"'. Re-enable the column 'TabRowCount', 'NumUsedPages', 'RowsPerPage', from method prepareForPcsDatabaseRollover(). This is done by removing properties '" + PROPKEY_sample_tabRowCount + "', '" + PROPKEY_disable_tabRowCount_timestamp + "' from Configuration 'USER_TEMP' with file: " + tempConf.getFilename() );
+				_logger.info("CM='" + getName() + "'. Re-enable the column 'TabRowCount', 'NumUsedPages', 'RowsPerPage', from method prepareForPcsDatabaseRollover(). This is done by removing properties '" + PROPKEY_sample_tabRowCount + "', '" + PROPKEY_disable_tabRowCount_timestamp + "' from Configuration 'USER_TEMP' with file: " + tempConf.getFilename() );
 			}
 		}
 	}

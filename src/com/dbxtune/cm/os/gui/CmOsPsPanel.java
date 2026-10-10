@@ -64,7 +64,7 @@ extends CmOsGenericPanel
 		String colorStr = null;
 
 		// mark cells where IO Operations is not to be trusted 
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.ioIsNotOk");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.ioIsNotOk");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -148,8 +148,8 @@ extends CmOsGenericPanel
 					
 //					list.add(new CmSettingsHelper("Top Rows", PROPKEY_top, Integer.class, conf.getIntProperty(PROPKEY_top, DEFAULT_top), DEFAULT_top, "Number of top rows."));
 
-					_sample_topRows_txt       .setText(""+ conf.getIntProperty    (CmOsPs.PROPKEY_top           , CmOsPs.DEFAULT_top));
-					_sample_minCpuPctUsage_txt.setText(""+ conf.getDoubleProperty (CmOsPs.PROPKEY_minCpuPctUsage, CmOsPs.DEFAULT_minCpuPctUsage));
+					_sample_topRows_txt       .setText("" + conf.getIntProperty    (CmOsPs.PROPKEY_top           , CmOsPs.DEFAULT_top));
+					_sample_minCpuPctUsage_txt.setText("" + conf.getDoubleProperty (CmOsPs.PROPKEY_minCpuPctUsage, CmOsPs.DEFAULT_minCpuPctUsage));
 					_sample_useSudo_cbx   .setSelected(    conf.getBooleanProperty(CmOsPs.PROPKEY_linux_useSudo , CmOsPs.DEFAULT_linux_useSudo));
 				}
 			});
@@ -158,7 +158,7 @@ extends CmOsGenericPanel
 		Configuration conf = Configuration.getCombinedConfiguration();
 
 		_sample_topRows_lbl = new JLabel("Top Rows");
-		_sample_topRows_txt = new JTextField(""+ conf.getIntProperty(CmOsPs.PROPKEY_top, CmOsPs.DEFAULT_top), 5);
+		_sample_topRows_txt = new JTextField("" + conf.getIntProperty(CmOsPs.PROPKEY_top, CmOsPs.DEFAULT_top), 5);
 
 		_sample_topRows_lbl.setToolTipText("<html>Only first # rows from ps<br><br>Note: To get everything use: -1</html>");
 		_sample_topRows_txt.setToolTipText("<html>Only first # rows from ps<br><br>Note: To get everything use: -1</html>");
@@ -168,7 +168,7 @@ extends CmOsGenericPanel
 
 
 		_sample_minCpuPctUsage_lbl = new JLabel("Above CPU%");
-		_sample_minCpuPctUsage_txt = new JTextField(""+ conf.getDoubleProperty(CmOsPs.PROPKEY_minCpuPctUsage, CmOsPs.DEFAULT_minCpuPctUsage), 5);
+		_sample_minCpuPctUsage_txt = new JTextField("" + conf.getDoubleProperty(CmOsPs.PROPKEY_minCpuPctUsage, CmOsPs.DEFAULT_minCpuPctUsage), 5);
 
 		_sample_minCpuPctUsage_lbl.setToolTipText("<html>Only show/collect rows when '%cpu' is above this value<br><br>Note: To get everything use: -1.0</html>");
 		_sample_minCpuPctUsage_txt.setToolTipText("<html>Only show/collect rows when '%cpu' is above this value<br><br>Note: To get everything use: -1.0</html>");

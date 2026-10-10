@@ -182,7 +182,7 @@ extends DbmsConfigAbstract
 
 	private static String GET_CONFIG_OFFLINE_MAX_SESSION_SQL = 
 		" (select max([SessionStartTime]) " +
-		"  from ["+PersistWriterJdbc.getTableName(null, null, PersistWriterJdbc.SESSION_DBMS_CONFIG, null, false) + "]" +
+		"  from [" + PersistWriterJdbc.getTableName(null, null, PersistWriterJdbc.SESSION_DBMS_CONFIG, null, false) + "]" +
 		" ) ";
 
 	// NOTE THE BELOW will be used if table MonSessionDbSrvConfig isn't found (2015-04-18 I changed the name, from Ase to DbSrv to be more generic)
@@ -526,9 +526,9 @@ extends DbmsConfigAbstract
 //				_logger.warn("Tooltip on column headers wasn't available in the offline database. This simply means that tooltip wont be showed in various places.");
 //				return;
 //			}
-			_logger.error("AseConfig:initialize:sql='"+sql+"'", ex);
+			_logger.error("AseConfig:initialize:sql='" + sql + "'", ex);
 			if (_hasGui)
-				SwingUtils.showErrorMessage("AseConfig - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
+				SwingUtils.showErrorMessage("AseConfig - Initialize", "SQL Exception: " + ex.getMessage() + "\n\nThis was found when executing SQL statement:\n\n" + sql, ex);
 			_configMap = null;
 			_configList = null;
 			_configSectionList = null;
@@ -545,7 +545,7 @@ extends DbmsConfigAbstract
 				}
 				catch(Exception reconnectEx)
 				{
-					_logger.warn("AseConfig:initialize(): reconnect failed due to: "+reconnectEx);
+					_logger.warn("AseConfig:initialize(): reconnect failed due to: " + reconnectEx);
 					throw ex; // Note throw the original exception and not reconnectEx
 				}
 			}

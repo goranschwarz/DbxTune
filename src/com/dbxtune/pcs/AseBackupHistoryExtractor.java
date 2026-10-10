@@ -212,7 +212,7 @@ extends DbmsExtractorAbstract
 			String srvName = "DUMMY";
 			int daysToCopy = 7;
 			
-			_logger.info("On PCS Database Rollover: Extracting 'Backup History' information On server '" + srvName+ "'.");
+			_logger.info("On PCS Database Rollover: Extracting 'Backup History' information On server '" + srvName + "'.");
 			try
 			{
 				AseBackupHistoryExtractor extractor = new AseBackupHistoryExtractor(daysToCopy, monConn, pcsConn);

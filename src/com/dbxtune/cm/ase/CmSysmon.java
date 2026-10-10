@@ -60,7 +60,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -88,7 +88,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmSysmon(counterController, guiController);
 	}
@@ -200,8 +200,8 @@ extends CountersModel
 			"select \n" +
 			"  field_name  = d.name, \n" +
 			"  group_name  = 'ase-device-info', \n" +
-			"  field_id    = "+vdevno+", \n" +
-			"  value       = "+vdevno+", \n" +
+			"  field_id    = " + vdevno + ", \n" +
+			"  value       = " + vdevno + ", \n" +
 			"  description = d.phyname \n" +
 			"from master.dbo.sysdevices d \n" +
 			"where d.cntrltype = 0 \n" +
@@ -279,7 +279,7 @@ extends CountersModel
 			"  group_name  = 'ase-global-var', \n" +
 			"  field_id    = convert(int, 0), \n" +
 			"  value       = convert(int, 0), \n" +
-			"  description = "+kernelmode+" \n" +
+			"  description = " + kernelmode + " \n" +
 			"select \n" +
 			"  field_name  = convert(varchar(100), '@@maxpagesize'), \n" +
 			"  group_name  = 'ase-global-var', \n" +
@@ -384,7 +384,7 @@ extends CountersModel
 					// should we set/reset the CM isCountersCleared or not...
 					//setIsCountersCleared(isCountersCleared);
 
-					_logger.debug(getName()+":computeDiffCnt(): CountersClearedCheck(after) PK='"+key+"', oldVal='"+oldVal+"', newVal='"+newVal+"', isCountersCleared="+isCountersCleared+".");
+					_logger.debug(getName() + ":computeDiffCnt(): CountersClearedCheck(after) PK='" + key + "', oldVal='" + oldVal + "', newVal='" + newVal + "', isCountersCleared=" + isCountersCleared + ".");
 				}
 			}
 // If we use detectCounterResetHelper(...) this code is relevant, and can be used instead of above code

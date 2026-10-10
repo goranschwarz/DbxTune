@@ -139,7 +139,7 @@ public class AseTopSlowSqlText extends AseAbstract
 	@Override
 	public String getSubject()
 	{
-		return "Top [SQL Captured] SLOW SQL Text/Language (order by: CpuTime__sum, origin: monSysStatement) [with gt: execTime="+_statement_gt_execTime+", logicalReads="+_statement_gt_logicalReads+", physicalReads="+_statement_gt_physicalReads+"]";
+		return "Top [SQL Captured] SLOW SQL Text/Language (order by: CpuTime__sum, origin: monSysStatement) [with gt: execTime=" + _statement_gt_execTime + ", logicalReads=" + _statement_gt_logicalReads + ", physicalReads=" + _statement_gt_physicalReads + "]";
 	}
 
 	@Override
@@ -160,7 +160,7 @@ public class AseTopSlowSqlText extends AseAbstract
 		rstm.setDescription(
 				"Top [SQL Captured] Slow SQL Text/Language are presented here (ordered by: CpuTime__sum) <br>" +
 				"<br>" +
-				"Thresholds: with GreaterThan: execTime="+_statement_gt_execTime+", logicalReads="+_statement_gt_logicalReads+", physicalReads="+_statement_gt_physicalReads+"<br>" +
+				"Thresholds: with GreaterThan: execTime=" + _statement_gt_execTime + ", logicalReads=" + _statement_gt_logicalReads + ", physicalReads=" + _statement_gt_physicalReads + "<br>" +
 				"Thresholds: having CpuTime__sum &gt;= 1000<br>" +
 				"<br>" +
 				"ASE Source table is 'master.dbo.monSysStatement', which is a <i>ring buffer</i>, if the buffer is small, then we will be missing entries. <br>" +
@@ -462,7 +462,7 @@ public class AseTopSlowSqlText extends AseAbstract
 									setSkipEntriesUrl(_longRstm, "SkipThis", "JavaSqlHashCodeShort", "SQLText");
 									
 									if (_logger.isDebugEnabled())
-										_logger.debug("SqlDetails.getRowCount()="+ rstm.getRowCount());
+										_logger.debug("SqlDetails.getRowCount()=" + rstm.getRowCount());
 								}
 							}
 							catch(SQLException ex)
@@ -470,14 +470,14 @@ public class AseTopSlowSqlText extends AseAbstract
 								setProblemException(ex);
 	
 //								_logger.warn("Problems getting SQL by JavaSqlHashCode = "+JavaSqlHashCode+": " + ex);
-								_logger.warn("Problems getting SQL by JavaSqlHashCodeShort = "+JavaSqlHashCode+": " + ex);
+								_logger.warn("Problems getting SQL by JavaSqlHashCodeShort = " + JavaSqlHashCode + ": " + ex);
 							} 
 							catch(ModelMissmatchException ex)
 							{
 								setProblemException(ex);
 	
 //								_logger.warn("Problems (merging into previous ResultSetTableModel) when getting SQL by JavaSqlHashCode = "+JavaSqlHashCode+": " + ex);
-								_logger.warn("Problems (merging into previous ResultSetTableModel) when getting SQL by JavaSqlHashCodeShort = "+JavaSqlHashCode+": " + ex);
+								_logger.warn("Problems (merging into previous ResultSetTableModel) when getting SQL by JavaSqlHashCodeShort = " + JavaSqlHashCode + ": " + ex);
 							} 
 						}
 					}

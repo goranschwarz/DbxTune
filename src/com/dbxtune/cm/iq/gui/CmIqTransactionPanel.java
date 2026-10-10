@@ -50,7 +50,7 @@ extends TabularCntrPanel
 		String colorStr = null;
 
 		// RED = Blocking
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocking");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.blocking");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override

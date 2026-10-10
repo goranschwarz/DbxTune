@@ -200,8 +200,8 @@ extends CounterTableModel
 				if (ce._sqlColNum > 0)
 				{
 					String str = ce._isNumber ? 
-							StringUtil.right(""+row.getValue(ce._sqlColNum), ce._displayLength) :
-							StringUtil.left(""+row.getValue(ce._sqlColNum), ce._displayLength, false);
+							StringUtil.right("" + row.getValue(ce._sqlColNum), ce._displayLength) :
+							StringUtil.left("" + row.getValue(ce._sqlColNum), ce._displayLength, false);
 					sb.append(str).append(" ");
 				}
 			}
@@ -371,7 +371,7 @@ extends CounterTableModel
 		if (rowId < 0)
 		{
 			if (_logger.isDebugEnabled())
-				_logger.debug("getValue(pkStr='"+pkStr+"', colname='"+colname+"'): rowId="+rowId+": rowId < 0; return null");
+				_logger.debug("getValue(pkStr='" + pkStr + "', colname='" + colname + "'): rowId=" + rowId + ": rowId < 0; return null");
 			return def;
 		}
 
@@ -380,7 +380,7 @@ extends CounterTableModel
 		if (o == null)
 		{
 			if (_logger.isDebugEnabled()) 
-				_logger.debug("getValue(pkStr='"+pkStr+"', colname='"+colname+"'): rowId="+rowId+": o==null; return null");
+				_logger.debug("getValue(pkStr='" + pkStr + "', colname='" + colname + "'): rowId=" + rowId + ": o==null; return null");
 			return def;
 		}
 

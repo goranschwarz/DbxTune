@@ -248,7 +248,7 @@ implements ActionListener, MouseListener
 		if (chkboxText != null  &&  !chkboxText.equals(""))
 		{
 //			String extenedCheckboxText = "<html> <b>"+chkboxText+"</b> - <i>"+cm.getDisplayName()+"</i> </html>";
-			String extenedCheckboxText = "<html> "+chkboxText+" - <b>"+cm.getDisplayName()+"</b> </html>";
+			String extenedCheckboxText = "<html> " + chkboxText + " - <b>" + cm.getDisplayName() + "</b> </html>";
 //			_chkboxMenuItem = new JCheckBoxMenuItem(chkboxText, _initialVisible);
 			_chkboxMenuItem = new JCheckBoxMenuItem(extenedCheckboxText, true);
 			_chkboxMenuItem.addActionListener( this );
@@ -256,7 +256,7 @@ implements ActionListener, MouseListener
 			// MacOS doesn't seems to handle JCheckBoxMenuItem with HTML tags in the MenuBar
 			if (PlatformUtils.Platform_MAC_OS == PlatformUtils.getCurrentPlattform())
 			{
-				extenedCheckboxText = chkboxText+" @ "+cm.getDisplayName();
+				extenedCheckboxText = chkboxText + " @ " + cm.getDisplayName();
 				_chkboxMenuItem.setText(extenedCheckboxText);
 			}
 		}
@@ -410,7 +410,7 @@ implements ActionListener, MouseListener
 	 */
 	public void setTimeLineMarker(long time)
 	{
-		_logger.trace("setTimeLineMarker(time="+time+"): name='"+_graphName+"'.");
+		_logger.trace("setTimeLineMarker(time=" + time + "): name='" + _graphName + "'.");
 		_chart.setRequestedRepaint(true);
 
 		if (_currentTimeLinePoint != null)
@@ -460,19 +460,19 @@ implements ActionListener, MouseListener
 					if (closest == tpBigger.getX() - time)  _currentTimeLinePoint = tpBigger;
 
 					if (_logger.isTraceEnabled())
-						_logger.trace("TrendGraph='"+_chartLabelName+"', no '"+time+"' was found, Choosing a SMALLER timeLinePoint");
+						_logger.trace("TrendGraph='" + _chartLabelName + "', no '" + time + "' was found, Choosing a SMALLER timeLinePoint");
 				}
 			}
 		}
 		if (_currentTimeLinePoint != null)
 		{
-			_logger.trace("TrendGraph='"+_chartLabelName+"', setTimeLineMarked(true)");
+			_logger.trace("TrendGraph='" + _chartLabelName + "', setTimeLineMarked(true)");
 			_currentTimeLinePoint.setTimeLineMarked(true);
 			//_series[0].firePointChanged(_currentTimeLinePoint,  TracePoint2D.STATE_CHANGED);
 		}
 		else
 		{
-			_logger.trace("TrendGraph='"+_chartLabelName+"', did not find point "+time);
+			_logger.trace("TrendGraph='" + _chartLabelName + "', did not find point " + time);
 		}
 	}
 
@@ -492,7 +492,7 @@ implements ActionListener, MouseListener
 	 */
 	public void setTimeLineMarker2(double time)
 	{
-		_logger.trace("setTimeLineMarker(time="+time+"): name='"+_graphName+"'.");
+		_logger.trace("setTimeLineMarker(time=" + time + "): name='" + _graphName + "'.");
 		_chart.setRequestedRepaint(true);
 
 		if (_currentTimeLinePoint2 != null)
@@ -552,19 +552,19 @@ implements ActionListener, MouseListener
 					if (closest == tpBigger.getX() - time)  _currentTimeLinePoint2 = tpBigger;
 
 					if (_logger.isTraceEnabled())
-						_logger.trace("TrendGraph='"+_chartLabelName+"', no '"+time+"' was found, Choosing a SMALLER timeLinePoint");
+						_logger.trace("TrendGraph='" + _chartLabelName + "', no '" + time + "' was found, Choosing a SMALLER timeLinePoint");
 				}
 			}
 		}
 		if (_currentTimeLinePoint2 != null)
 		{
-			_logger.trace("TrendGraph='"+_chartLabelName+"', setTimeLineMarked2(true)");
+			_logger.trace("TrendGraph='" + _chartLabelName + "', setTimeLineMarked2(true)");
 			_currentTimeLinePoint2.setTimeLineMarked2(true);
 			//_series[0].firePointChanged(_currentTimeLinePoint2,  TracePoint2D.STATE_CHANGED);
 		}
 		else
 		{
-			_logger.trace("TrendGraph='"+_chartLabelName+"', did not find point "+time);
+			_logger.trace("TrendGraph='" + _chartLabelName + "', did not find point " + time);
 		}
 	}
 
@@ -810,7 +810,7 @@ implements ActionListener, MouseListener
 
 				// Ok use a fony name if we can't find any...
 				if (newLabelName == null)
-					newLabelName = "Unknown-"+i;
+					newLabelName = "Unknown-" + i;
 
 				_series[i] = new Trace2DLtd(chartMaxSamples);
 				_series[i].setRenderer(_chart); // needed in jChart2D 3.2.1  
@@ -837,7 +837,7 @@ implements ActionListener, MouseListener
 				ITrace2D line = _series[i];
 				if ( ! displayNames[i].equals(line.getName()) )
 				{
-System.out.println("Changing line "+i+" from='"+line.getName()+"', to='"+displayNames[i]+"', for CM='"+getCm().getName()+"', GraphName='"+getName()+"'.");
+System.out.println("Changing line " + i + " from='" + line.getName() + "', to='" + displayNames[i] + "', for CM='" + getCm().getName() + "', GraphName='" + getName() + "'.");
 					line.setName(displayNames[i]);
 				}
 			}
@@ -910,7 +910,7 @@ System.out.println("Changing line "+i+" from='"+line.getName()+"', to='"+display
 //		int curChartHeight = _chart.getYChartStart() - _chart.getYChartEnd(); // This can't be trusted when the graph dosn't have "visible rect" (out of scroll) 
 		int curChartHeight = _chart.getHeight();
 		if (_logger.isDebugEnabled())
-			_logger.debug("TrendGraph["+StringUtil.left(getName(),30)+"].setMinimumChartArea(minChartHeight="+minChartHeight+"): curPanelHeight="+curPanelHeight+", curChartHeight="+curChartHeight+", resize="+(curChartHeight < minChartHeight && curChartHeight > 0)+".");
+			_logger.debug("TrendGraph[" + StringUtil.left(getName(),30) + "].setMinimumChartArea(minChartHeight=" + minChartHeight + "): curPanelHeight=" + curPanelHeight + ", curChartHeight=" + curChartHeight + ", resize=" + (curChartHeight < minChartHeight && curChartHeight > 0) + ".");
 
 		if (curChartHeight < minChartHeight && curChartHeight > 0) 
 		{
@@ -920,7 +920,7 @@ System.out.println("Changing line "+i+" from='"+line.getName()+"', to='"+display
 				return;
 
 			if (_logger.isDebugEnabled())
-				_logger.debug("TrendGraph["+StringUtil.left(getName(),30)+"].setMinimumChartArea(minChartHeight="+minChartHeight+"): IN RESIZE --- curPanelHeight="+curPanelHeight+", curChartHeight="+curChartHeight+": newPanelHeight="+newPanelHeight);
+				_logger.debug("TrendGraph[" + StringUtil.left(getName(),30) + "].setMinimumChartArea(minChartHeight=" + minChartHeight + "): IN RESIZE --- curPanelHeight=" + curPanelHeight + ", curChartHeight=" + curChartHeight + ": newPanelHeight=" + newPanelHeight);
 			
 			// only setMinimumSize() did not resize the panel straight away, so setSize() was also added.
 			_panel.setMinimumSize(new Dimension(-1, newPanelHeight));
@@ -933,7 +933,7 @@ System.out.println("Changing line "+i+" from='"+line.getName()+"', to='"+display
 	{
 //		long startTime;
 		String threadName = Thread.currentThread().getName();
-		_logger.debug("initGraph() was called from threadName='"+threadName+"'.");
+		_logger.debug("initGraph() was called from threadName='" + threadName + "'.");
 
 //		if ( ! threadName.startsWith("AWT-EventQueue") )
 		if ( ! SwingUtils.isEventQueueThread() )
@@ -1185,7 +1185,7 @@ System.out.println("Changing line "+i+" from='"+line.getName()+"', to='"+display
 				LinkedHashMap<String, String> in = new LinkedHashMap<String, String>();
 				in.put(key1, "-1");
 
-				Map<String,String> results = ParameterDialog.showParameterDialog(MainFrame.getInstance(), "Max Value, for Graph: "+getChartLabel(), in, false);
+				Map<String,String> results = ParameterDialog.showParameterDialog(MainFrame.getInstance(), "Max Value, for Graph: " + getChartLabel(), in, false);
 
 				if (results != null)
 				{
@@ -1214,7 +1214,7 @@ System.out.println("Changing line "+i+" from='"+line.getName()+"', to='"+display
 				LinkedHashMap<String, String> in = new LinkedHashMap<String, String>();
 				in.put(key1, Integer.toString( (_panelMinHeight <= 0 ? PANEL_MIN_HEIGHT_DEFAULT : _panelMinHeight) ));
 
-				Map<String,String> results = ParameterDialog.showParameterDialog(MainFrame.getInstance(), "Graph Sizing, for Graph: "+getChartLabel(), in, false);
+				Map<String,String> results = ParameterDialog.showParameterDialog(MainFrame.getInstance(), "Graph Sizing, for Graph: " + getChartLabel(), in, false);
 
 				if (results != null)
 				{
@@ -1336,7 +1336,7 @@ System.out.println("Changing line "+i+" from='"+line.getName()+"', to='"+display
 	
 						JCheckBoxMenuItem mi = new JCheckBoxMenuItem();
 //						mi.setText("<html> <b>"+tg.getLabel()+"</b> - <i>"+cm.getDisplayName()+"</i> </html>");
-						mi.setText("<html> "+tg.getMenuItemText()+" - <b>"+cm.getDisplayName()+"</b> </html>");
+						mi.setText("<html> " + tg.getMenuItemText() + " - <b>" + cm.getDisplayName() + "</b> </html>");
 
 						mi.setSelected(tg.isGraphEnabled());
 						mi.addActionListener(new ActionListener()
@@ -1424,7 +1424,7 @@ System.out.println("Changing line "+i+" from='"+line.getName()+"', to='"+display
 				
 				if (cm == null)
 				{
-					trendGraphPopupMenu.add(new JMenuItem("Performance Counter named '"+cmName+"' couldn't be found."));
+					trendGraphPopupMenu.add(new JMenuItem("Performance Counter named '" + cmName + "' couldn't be found."));
 				}
 				else
 				{
@@ -1432,7 +1432,7 @@ System.out.println("Changing line "+i+" from='"+line.getName()+"', to='"+display
 
 					if (trendGraphs == null || (trendGraphs != null && trendGraphs.length == 0))
 					{
-						trendGraphPopupMenu.add(new JMenuItem("Performance Counter named '"+cmName+"' does NOT have any graphs attached to it."));
+						trendGraphPopupMenu.add(new JMenuItem("Performance Counter named '" + cmName + "' does NOT have any graphs attached to it."));
 					}
 					else
 					{
@@ -1507,7 +1507,7 @@ System.out.println("Changing line "+i+" from='"+line.getName()+"', to='"+display
 					{
 						chartPopupMenu.add(new JSeparator());
 	
-						JMenu aseTuneMenu = new JMenu(Version.getAppName()+" Menu");
+						JMenu aseTuneMenu = new JMenu(Version.getAppName() + " Menu");
 						chartPopupMenu.add(aseTuneMenu);
 	
 						// Create some menu entries and add those to the sub menu...
@@ -1560,7 +1560,7 @@ System.out.println("Changing line "+i+" from='"+line.getName()+"', to='"+display
 	public void actionPerformed(ActionEvent e)
 	{
 		Object s = e.getSource();
-		_logger.trace("TrendGraphAction.actionPerformed(), ActionEvent(classname)="+s.getClass().getName());
+		_logger.trace("TrendGraphAction.actionPerformed(), ActionEvent(classname)=" + s.getClass().getName());
 		if (s instanceof JMenuItem)
 		{
 			JMenuItem source = (JMenuItem) s;
@@ -1583,8 +1583,8 @@ System.out.println("Changing line "+i+" from='"+line.getName()+"', to='"+display
 
 		if (tempProps != null)
 		{
-			tempProps.setProperty("MainFrame.menu."+graphName+".checkbox",  _chkboxMenuItem.isSelected());
-			tempProps.setProperty("Graph."+graphName+".minHeight",          _panelMinHeight);
+			tempProps.setProperty("MainFrame.menu." + graphName + ".checkbox",  _chkboxMenuItem.isSelected());
+			tempProps.setProperty("Graph." + graphName + ".minHeight",          _panelMinHeight);
 
 			tempProps.save();
 		}
@@ -1599,8 +1599,8 @@ System.out.println("Changing line "+i+" from='"+line.getName()+"', to='"+display
 		
 		if (tempProps != null)
 		{
-			_loadProps_menuItem_checkbox = tempProps.getBooleanProperty("MainFrame.menu."+graphName+".checkbox",  _initialVisible);
-			_panelMinHeight = tempProps.getIntProperty("Graph."+graphName+".minHeight",  _panelMinHeight);
+			_loadProps_menuItem_checkbox = tempProps.getBooleanProperty("MainFrame.menu." + graphName + ".checkbox",  _initialVisible);
+			_panelMinHeight = tempProps.getIntProperty("Graph." + graphName + ".minHeight",  _panelMinHeight);
 		}
 	}
 
@@ -1613,7 +1613,7 @@ System.out.println("Changing line "+i+" from='"+line.getName()+"', to='"+display
 		// Check if we got proper version...
 		// NOTE: This a fallback: most problem will be displayed by the below CM.getProblemDesc()
 		if (serverVersion <= _validFromVersion)
-			setWarningLabel("This graph is only available if DBMS version is above "+Ver.versionNumToStr(_validFromVersion));
+			setWarningLabel("This graph is only available if DBMS version is above " + Ver.versionNumToStr(_validFromVersion));
 		else
 			setWarningLabel(null);
 
@@ -1880,7 +1880,7 @@ System.out.println("Changing line "+i+" from='"+line.getName()+"', to='"+display
 				if (my.isTimeLineMarked())
 				{
 					if (_logger.isTraceEnabled())
-						_logger.trace("PointPainterTimeLineMark.paintPoint(): isTimeLineMarked(): graphName="+StringUtil.left(_graphName,15)+", absoluteX="+absoluteX+", absoluteY="+absoluteY+", nextX="+nextX+", nextY="+nextY+".");	
+						_logger.trace("PointPainterTimeLineMark.paintPoint(): isTimeLineMarked(): graphName=" + StringUtil.left(_graphName,15) + ", absoluteX=" + absoluteX + ", absoluteY=" + absoluteY + ", nextX=" + nextX + ", nextY=" + nextY + ".");	
 
 					// Set the color to write the timeline marker
 					Color saveColor = g.getColor();
@@ -1895,7 +1895,7 @@ System.out.println("Changing line "+i+" from='"+line.getName()+"', to='"+display
 				if (my.isTimeLineMarked2())
 				{
 					if (_logger.isTraceEnabled())
-						_logger.trace("PointPainterTimeLineMark.paintPoint(): isTimeLineMarked2(): graphName="+StringUtil.left(_graphName,15)+", absoluteX="+absoluteX+", absoluteY="+absoluteY+", nextX="+nextX+", nextY="+nextY+".");	
+						_logger.trace("PointPainterTimeLineMark.paintPoint(): isTimeLineMarked2(): graphName=" + StringUtil.left(_graphName,15) + ", absoluteX=" + absoluteX + ", absoluteY=" + absoluteY + ", nextX=" + nextX + ", nextY=" + nextY + ".");	
 
 					// Set the color to write the timeline marker
 					Color saveColor = g.getColor();

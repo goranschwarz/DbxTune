@@ -41,7 +41,7 @@ public class MultiLineLabel
 		_internalHtmlTran = true;
 		if (text.indexOf("\n") < 0)
 		{
-			super.setText("<html>"+text+"</html>");
+			super.setText("<html>" + text + "</html>");
 			return;
 		}
 

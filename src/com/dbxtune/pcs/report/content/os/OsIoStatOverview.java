@@ -119,7 +119,7 @@ public class OsIoStatOverview extends OsAbstract
 	}
 
 
-	public static final String PROPKEY_SKIP_DEVICE_NAMES  = OsIoStatOverview.class.getSimpleName()+".skip.device.names";
+	public static final String PROPKEY_SKIP_DEVICE_NAMES  = OsIoStatOverview.class.getSimpleName() + ".skip.device.names";
 //	public static final String DEFAULT_SKIP_DEVICE_NAMES  = "";
 	public static final String DEFAULT_SKIP_DEVICE_NAMES  = "sd";
 

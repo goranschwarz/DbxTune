@@ -56,11 +56,11 @@ public class ShutdownServlet extends HttpServlet
 		if (principal != null)
 			currentUsername = principal.getName();
 
-		String from = "from getRemoteHost='" + req.getRemoteHost() + "', currentUsername='"+currentUsername+"', by user '" + req.getRemoteUser() + "'.";
+		String from = "from getRemoteHost='" + req.getRemoteHost() + "', currentUsername='" + currentUsername + "', by user '" + req.getRemoteUser() + "'.";
 		
 		if (!hasCorrectSecurityToken(req))
         {
-            _logger.warn("Unauthorized shutdown attempt "+from);
+            _logger.warn("Unauthorized shutdown attempt " + from);
             resp.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
@@ -73,7 +73,7 @@ public class ShutdownServlet extends HttpServlet
 		try { 
 			h2ShutdownType = H2ShutdownType.valueOf( req.getParameter("h2ShutdownType") ); 
 		} catch(RuntimeException ex) { 
-			_logger.info("Shutdown type '"+req.getParameter("h2ShutdownType")+"' is unknown value, supported values: "+StringUtil.toCommaStr(H2ShutdownType.values())+". ");
+			_logger.info("Shutdown type '" + req.getParameter("h2ShutdownType") + "' is unknown value, supported values: " + StringUtil.toCommaStr(H2ShutdownType.values()) + ". ");
 		}
 		if (H2ShutdownType.DEFRAG.equals(h2ShutdownType))
 			doDefrag = true;
@@ -85,11 +85,11 @@ public class ShutdownServlet extends HttpServlet
 		resp.setCharacterEncoding("UTF-8");
 //		resp.setContentType("application/json");
 //		resp.setCharacterEncoding("UTF-8");
-		out.println("Received "+type+" request..."+from);
+		out.println("Received " + type + " request..." + from);
 		out.flush();
 		out.close();
 
-		_logger.info("Received shutdown request "+from);
+		_logger.info("Received shutdown request " + from);
 		
 //		if (doDefrag)
 //		{

@@ -91,7 +91,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -124,7 +124,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmWaitStats(counterController, guiController);
 	}
@@ -791,7 +791,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_WAIT_TYPE_TIME,
 			"Server Wait, group by 'wait_type', 'wait_time_ms' Average", 	                   // Menu CheckBox text
-			"Server Wait, group by 'wait_type', 'wait_time_ms' Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Server Wait, group by 'wait_type', 'wait_time_ms' Average (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
@@ -803,7 +803,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_WAIT_CLASS_TIME,
 			"Server Wait: 'wait_time_ms' Rate Value, Group by 'WaitClass'", 	                   // Menu CheckBox text
-			"Server Wait: 'wait_time_ms' Rate Value, Group by 'WaitClass' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Server Wait: 'wait_time_ms' Rate Value, Group by 'WaitClass' (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
@@ -815,7 +815,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_KNOWN_TOP_10_TIME,
 			"Server Wait, Known Top 10 that could cause issues, by 'wait_time_ms'", 	                   // Menu CheckBox text
-			"Server Wait, Known Top 10 that could cause issues, by 'wait_time_ms' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Server Wait, Known Top 10 that could cause issues, by 'wait_time_ms' (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] {"LCK_M_X", "LCK_M_U", "WRITELOG", "LCK_M_IX", "LATCH_EX", "ASYNC_NETWORK_IO", "SOS_SCHEDULER_YIELD", "PAGEIOLATCH_SH", "LCK_M_S", "CXPACKET"},
 			LabelType.Static,
@@ -827,7 +827,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_KNOWN_TOP_10_COUNT,
 			"Server Wait, Known Top 10 that could cause issues, by 'waiting_tasks_count'", 	                   // Menu CheckBox text
-			"Server Wait, Known Top 10 that could cause issues, by 'waiting_tasks_count' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Server Wait, Known Top 10 that could cause issues, by 'waiting_tasks_count' (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] {"LCK_M_X", "LCK_M_U", "WRITELOG", "LCK_M_IX", "LATCH_EX", "ASYNC_NETWORK_IO", "SOS_SCHEDULER_YIELD", "PAGEIOLATCH_SH", "LCK_M_S", "CXPACKET"},
 			LabelType.Static,
@@ -840,7 +840,7 @@ extends CountersModel
 //FIXME; // test/check the below. Also if we should have Alarms on "some" of the Toxic
 		addTrendGraph(GRAPH_NAME_TOXIC_TIME,
 			"Server Toxic Wait Types, by 'wait_time_ms'", 	                   // Menu CheckBox text
-			"Server Toxic Wait Types, by 'wait_time_ms' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Server Toxic Wait Types, by 'wait_time_ms' (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
@@ -852,7 +852,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_TOXIC_COUNT,
 			"Server Toxic Wait Types, by 'waiting_tasks_count'", 	                   // Menu CheckBox text
-			"Server Toxic Wait Types, by 'waiting_tasks_count' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Server Toxic Wait Types, by 'waiting_tasks_count' (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
@@ -864,7 +864,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_TOXIC_TPW,
 			"Server Toxic Wait Types, by 'WaitTimePerCount'", 	                   // Menu CheckBox text
-			"Server Toxic Wait Types, by 'WaitTimePerCount' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Server Toxic Wait Types, by 'WaitTimePerCount' (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
@@ -876,7 +876,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_LOCK_TIME,
 			"Server Waiting to Take Locks, by 'wait_time_ms'", 	                   // Menu CheckBox text
-			"Server Waiting to Take Locks, by 'wait_time_ms' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Server Waiting to Take Locks, by 'wait_time_ms' (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
@@ -888,7 +888,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_LOCK_COUNT,
 			"Server Waiting to Take Locks, by 'waiting_tasks_count'", 	                   // Menu CheckBox text
-			"Server Waiting to Take Locks, by 'waiting_tasks_count' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Server Waiting to Take Locks, by 'waiting_tasks_count' (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
@@ -900,7 +900,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_LOCK_TPW,
 			"Server Waiting to Take Locks, by 'WaitTimePerCount'", 	                   // Menu CheckBox text
-			"Server Waiting to Take Locks, by 'WaitTimePerCount' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Server Waiting to Take Locks, by 'WaitTimePerCount' (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,

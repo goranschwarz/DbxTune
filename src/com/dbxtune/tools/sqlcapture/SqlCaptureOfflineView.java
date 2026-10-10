@@ -477,7 +477,7 @@ implements ActionListener, ChangeListener//, MouseListener
 		JPanel panel = SwingUtils.createPanel("Statements", true);
 		panel.setLayout(new MigLayout("insets 0 0 0 0"));
 
-		_statements_tab.setName(PROPKEY_BASE+"_statements_tab");
+		_statements_tab.setName(PROPKEY_BASE + "_statements_tab");
 		_statements_tab.setSortable(true);
 		_statements_tab.setSortOrderCycle(SortOrder.ASCENDING, SortOrder.DESCENDING, SortOrder.UNSORTED);
 		_statements_tab.packAll(); // set size so that all content in all cells are visible
@@ -492,7 +492,7 @@ implements ActionListener, ChangeListener//, MouseListener
 		Configuration conf = Configuration.getCombinedConfiguration();
 		String colorStr = null;
 
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.ErrorStatus");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.ErrorStatus");
 		_statements_tab.addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -541,7 +541,7 @@ implements ActionListener, ChangeListener//, MouseListener
 
 				if (spid == null || kpid == null || batchId == null)
 				{
-					_logger.info("The "+table.getName()+" ResultSet Table do not contain columns 'SPID', 'KPID' and 'BatchID'. Can't load SQL and Plan Text for current selected row ("+vrow+").");
+					_logger.info("The " + table.getName() + " ResultSet Table do not contain columns 'SPID', 'KPID' and 'BatchID'. Can't load SQL and Plan Text for current selected row (" + vrow + ").");
 				}
 				else
 				{
@@ -558,7 +558,7 @@ implements ActionListener, ChangeListener//, MouseListener
 		JPanel panel = SwingUtils.createPanel("SQL Text List", true);
 		panel.setLayout(new MigLayout("insets 0 0 0 0"));
 
-		_sql_tab.setName(PROPKEY_BASE+"_sql_tab");
+		_sql_tab.setName(PROPKEY_BASE + "_sql_tab");
 		_sql_tab.setSortable(true);
 		_sql_tab.setSortOrderCycle(SortOrder.ASCENDING, SortOrder.DESCENDING, SortOrder.UNSORTED);
 		_sql_tab.packAll(); // set size so that all content in all cells are visible
@@ -601,11 +601,11 @@ implements ActionListener, ChangeListener//, MouseListener
 
 				if (spid == null || kpid == null || batchId == null)
 				{
-					_logger.info("The "+table.getName()+" ResultSet Table do not contain columns 'SPID', 'KPID' and 'BatchID'. Can't load SQL and Plan Text for current selected row ("+vrow+").");
+					_logger.info("The " + table.getName() + " ResultSet Table do not contain columns 'SPID', 'KPID' and 'BatchID'. Can't load SQL and Plan Text for current selected row (" + vrow + ").");
 				}
 				else
 				{
-					_statementsFilter.setFilterText("WHERE SPID = "+spid+" and KPID = "+kpid+" and BatchID = "+batchId);
+					_statementsFilter.setFilterText("WHERE SPID = " + spid + " and KPID = " + kpid + " and BatchID = " + batchId);
 					loadSqlTextAndPlanText(spid, kpid, batchId, procName, true);
 				}
 			}
@@ -619,7 +619,7 @@ implements ActionListener, ChangeListener//, MouseListener
 		JPanel panel = SwingUtils.createPanel("Statements Summary", true);
 		panel.setLayout(new MigLayout("insets 0 0 0 0"));
 
-		_statementsSum_tab.setName(PROPKEY_BASE+"_statementsSum_tab");
+		_statementsSum_tab.setName(PROPKEY_BASE + "_statementsSum_tab");
 		_statementsSum_tab.setSortable(true);
 		_statementsSum_tab.setSortOrderCycle(SortOrder.ASCENDING, SortOrder.DESCENDING, SortOrder.UNSORTED);
 		_statementsSum_tab.packAll(); // set size so that all content in all cells are visible
@@ -677,7 +677,7 @@ implements ActionListener, ChangeListener//, MouseListener
 		JPanel panel = SwingUtils.createPanel("SQL Text Summary", true);
 		panel.setLayout(new MigLayout("insets 0 0 0 0"));
 
-		_sqlSum_tab.setName(PROPKEY_BASE+"_sqlSum_tab");
+		_sqlSum_tab.setName(PROPKEY_BASE + "_sqlSum_tab");
 		_sqlSum_tab.setSortable(true);
 		_sqlSum_tab.setSortOrderCycle(SortOrder.ASCENDING, SortOrder.DESCENDING, SortOrder.UNSORTED);
 		_sqlSum_tab.packAll(); // set size so that all content in all cells are visible
@@ -714,7 +714,7 @@ implements ActionListener, ChangeListener//, MouseListener
 
 		_udqSqlText_txt.setText("-- Write a SQL Statement here, press 'Execute' button to execute it."); // Note: this is also done in loadProps()
 		
-		_udq_tab.setName(PROPKEY_BASE+"_udq_tab");
+		_udq_tab.setName(PROPKEY_BASE + "_udq_tab");
 		_udq_tab.setSortable(true);
 		_udq_tab.setSortOrderCycle(SortOrder.ASCENDING, SortOrder.DESCENDING, SortOrder.UNSORTED);
 		_udq_tab.packAll(); // set size so that all content in all cells are visible
@@ -769,7 +769,7 @@ implements ActionListener, ChangeListener//, MouseListener
 
 				if (spid == null || kpid == null || batchId == null)
 				{
-					_logger.info("The "+table.getName()+" ResultSet Table do not contain columns 'SPID', 'KPID' and 'BatchID'. Can't load SQL and Plan Text for current selected row ("+vrow+").");
+					_logger.info("The " + table.getName() + " ResultSet Table do not contain columns 'SPID', 'KPID' and 'BatchID'. Can't load SQL and Plan Text for current selected row (" + vrow + ").");
 				}
 				else
 				{
@@ -862,12 +862,12 @@ implements ActionListener, ChangeListener//, MouseListener
 		{
 			if (lowVal < 0)
 			{
-				_logger.info("stateChanged(): lowVal < 0    [lowVal="+lowVal+"]");
+				_logger.info("stateChanged(): lowVal < 0    [lowVal=" + lowVal + "]");
 				return;
 			}
 			if (highVal >= _searchRange_list.size())
 			{
-				_logger.info("stateChanged(): highVal >= _searchRange_list.size()    [highVal="+highVal+", _searchRange_list.size()="+_searchRange_list.size()+"]");
+				_logger.info("stateChanged(): highVal >= _searchRange_list.size()    [highVal=" + highVal + ", _searchRange_list.size()=" + _searchRange_list.size() + "]");
 				return;
 			}
 				
@@ -985,7 +985,7 @@ implements ActionListener, ChangeListener//, MouseListener
 			ResultSet rs;
 			RSyntaxTextAreaX ta;
 
-			String where = "where [SPID] = "+spid+" and [KPID] = "+kpid+" and [BatchID] = "+batchId;
+			String where = "where [SPID] = " + spid + " and [KPID] = " + kpid + " and [BatchID] = " + batchId;
 			
 			DbxConnection conn = getConnection();
 			Statement stmnt = conn.createStatement();
@@ -1015,7 +1015,7 @@ implements ActionListener, ChangeListener//, MouseListener
 			}
 			catch (SQLException ex)
 			{
-				_logger.warn("Problems getting column names from table='"+tabName+"', columns 'SQLText' Lets try with origin Columns instead. Dictionary Compression Columns will NOT be resolved", ex);
+				_logger.warn("Problems getting column names from table='" + tabName + "', columns 'SQLText' Lets try with origin Columns instead. Dictionary Compression Columns will NOT be resolved", ex);
 			}
 
 			ta = _sqlText_txt;
@@ -1032,7 +1032,7 @@ implements ActionListener, ChangeListener//, MouseListener
 			}
 			rs.close();
 			if ( ! foundSqlText )
-				ta.setText("-- No SQL Text found: "+where);
+				ta.setText("-- No SQL Text found: " + where);
 			ta.setCaretPosition(0);
 			if (_sqlTextFormatAuto_chk.isSelected())
 				_sqlTextFormat_but.doClick();
@@ -1058,7 +1058,7 @@ implements ActionListener, ChangeListener//, MouseListener
 			}
 			catch (SQLException ex)
 			{
-				_logger.warn("Problems getting column names from table='"+tabName+"', columns 'PlanText' Lets try with origin Columns instead. Dictionary Compression Columns will NOT be resolved", ex);
+				_logger.warn("Problems getting column names from table='" + tabName + "', columns 'PlanText' Lets try with origin Columns instead. Dictionary Compression Columns will NOT be resolved", ex);
 			}
 			
 			ta = _showplan_txt;
@@ -1077,7 +1077,7 @@ implements ActionListener, ChangeListener//, MouseListener
 			}
 			rs.close();
 			if ( ! foundShowPlan )
-				ta.setText("-- No Showplan Text found: "+where);
+				ta.setText("-- No Showplan Text found: " + where);
 			ta.setCaretPosition(0);
 			
 			_sqlTextCurSpid_lbl2    .setText(Integer.toString( spid    ));
@@ -1130,10 +1130,10 @@ implements ActionListener, ChangeListener//, MouseListener
 			_sqlTextCurBatchId_lbl2 .setText("---");
 			_sqlTextCurProcName_lbl2.setText("---");
 
-			_sqlText_txt.setText(""+ex);
+			_sqlText_txt.setText("" + ex);
 			
-			_logger.error("Problems executing sql='"+sql+"'. Caught: "+ex, ex);
-			SwingUtils.showErrorMessage(SqlCaptureOfflineView.this, "SQL Error", "Problems Executing SQL: "+sql, ex);
+			_logger.error("Problems executing sql='" + sql + "'. Caught: " + ex, ex);
+			SwingUtils.showErrorMessage(SqlCaptureOfflineView.this, "SQL Error", "Problems Executing SQL: " + sql, ex);
 		}
 	}
 
@@ -1169,8 +1169,8 @@ implements ActionListener, ChangeListener//, MouseListener
 				}
 				catch(SQLException ex)
 				{
-					_logger.error("Problems executing sql='"+sql+"'. Caught: "+ex, ex);
-					SwingUtils.showErrorMessage(SqlCaptureOfflineView.this, "SQL Error", "Problems Executing SQL: "+sql, ex);
+					_logger.error("Problems executing sql='" + sql + "'. Caught: " + ex, ex);
+					SwingUtils.showErrorMessage(SqlCaptureOfflineView.this, "SQL Error", "Problems Executing SQL: " + sql, ex);
 				}
 
 				return null;
@@ -1227,7 +1227,7 @@ implements ActionListener, ChangeListener//, MouseListener
 		
 		if (SQLText_pos == -1 || NormSQLText_pos == -1)
 		{
-			_logger.info("Enriching Statements information was skipped due to: SQLText_pos="+SQLText_pos+", NormSQLText_pos="+NormSQLText_pos);
+			_logger.info("Enriching Statements information was skipped due to: SQLText_pos=" + SQLText_pos + ", NormSQLText_pos=" + NormSQLText_pos);
 			return rstm;
 		}
 
@@ -1283,8 +1283,8 @@ implements ActionListener, ChangeListener//, MouseListener
 				}
 				catch(SQLException ex)
 				{
-					_logger.error("Problems executing sql='"+sql+"'. Caught: "+ex, ex);
-					SwingUtils.showErrorMessage(SqlCaptureOfflineView.this, "SQL Error", "Problems Executing SQL: "+sql, ex);
+					_logger.error("Problems executing sql='" + sql + "'. Caught: " + ex, ex);
+					SwingUtils.showErrorMessage(SqlCaptureOfflineView.this, "SQL Error", "Problems Executing SQL: " + sql, ex);
 				}
 
 				return null;
@@ -1326,8 +1326,8 @@ implements ActionListener, ChangeListener//, MouseListener
 				}
 				catch(SQLException ex)
 				{
-					_logger.error("Problems executing sql='"+sql+"'. Caught: "+ex, ex);
-					SwingUtils.showErrorMessage(SqlCaptureOfflineView.this, "SQL Error", "Problems Executing SQL: "+sql, ex);
+					_logger.error("Problems executing sql='" + sql + "'. Caught: " + ex, ex);
+					SwingUtils.showErrorMessage(SqlCaptureOfflineView.this, "SQL Error", "Problems Executing SQL: " + sql, ex);
 				}
 
 				return null;
@@ -1368,8 +1368,8 @@ implements ActionListener, ChangeListener//, MouseListener
 				}
 				catch(SQLException ex)
 				{
-					_logger.error("Problems executing sql='"+sql+"'. Caught: "+ex, ex);
-					SwingUtils.showErrorMessage(SqlCaptureOfflineView.this, "SQL Error", "Problems Executing SQL: "+sql, ex);
+					_logger.error("Problems executing sql='" + sql + "'. Caught: " + ex, ex);
+					SwingUtils.showErrorMessage(SqlCaptureOfflineView.this, "SQL Error", "Problems Executing SQL: " + sql, ex);
 				}
 
 				return null;
@@ -1410,8 +1410,8 @@ implements ActionListener, ChangeListener//, MouseListener
 				}
 				catch(SQLException ex)
 				{
-					_logger.error("Problems executing sql='"+sql+"'. Caught: "+ex, ex);
-					SwingUtils.showErrorMessage(SqlCaptureOfflineView.this, "SQL Error", "Problems Executing SQL: "+sql, ex);
+					_logger.error("Problems executing sql='" + sql + "'. Caught: " + ex, ex);
+					SwingUtils.showErrorMessage(SqlCaptureOfflineView.this, "SQL Error", "Problems Executing SQL: " + sql, ex);
 				}
 
 				return null;
@@ -1479,7 +1479,7 @@ implements ActionListener, ChangeListener//, MouseListener
 			}
 			catch (SQLException ex)
 			{
-				_logger.warn("Problems getting column names from table='"+tabNameSqlText+"', columns 'SQLText' or 'NormSQLText'. Lets try with origin Columns instead. Dictionary Compression Columns will NOT be resolved", ex);
+				_logger.warn("Problems getting column names from table='" + tabNameSqlText + "', columns 'SQLText' or 'NormSQLText'. Lets try with origin Columns instead. Dictionary Compression Columns will NOT be resolved", ex);
 			}
 		}
 
@@ -1510,15 +1510,15 @@ implements ActionListener, ChangeListener//, MouseListener
 				"\n" +
 				"  CASE \n" +
 				"    -- Execution WITHIN current time limit \n" + 
-				"    WHEN s.[StartTime] between '" + fromDate + "' and '" + toDate + "' AND s.[EndTime] between '" + fromDate + "' and '" + toDate + "' \n"+
+				"    WHEN s.[StartTime] between '" + fromDate + "' and '" + toDate + "' AND s.[EndTime] between '" + fromDate + "' and '" + toDate + "' \n" +
 				"    THEN '<html><b><font color=''green'' face=''monospace''>&gt;&lt;</font></b> -- <i>Exec-Within</i></html>'  \n" +
 				"\n" +
 				"    -- Execution started BEFORE and ended WITHIN current time limit \n" + 
-				"    WHEN s.[StartTime] < '" + fromDate + "' AND s.[EndTime] between '" + fromDate + "' and '" + toDate + "' \n"+
+				"    WHEN s.[StartTime] < '" + fromDate + "' AND s.[EndTime] between '" + fromDate + "' and '" + toDate + "' \n" +
 				"    THEN '<html><b><font color=''orange'' face=''monospace''>&lt;!</font></b> -- <i>Start-Before</i></html>'  \n" +
 				"\n" +
 				"    -- Execution started AFTER  and ended WITHIN current time limit \n" + 
-				"    WHEN s.[StartTime] > '" + fromDate + "' AND s.[EndTime] > '" + toDate + "' \n"+
+				"    WHEN s.[StartTime] > '" + fromDate + "' AND s.[EndTime] > '" + toDate + "' \n" +
 				"    THEN '<html><b><font color=''orange'' face=''monospace''>!&gt;</font></b> -- <i>End-After</i></html>'  \n" +
 				"\n" +
 				"    -- Execution started BEFORE and are STILL_RUNNING (not finished within current time limit) \n" + 
@@ -1534,15 +1534,15 @@ implements ActionListener, ChangeListener//, MouseListener
 		else if (StringUtil.hasValue(fromDate) || StringUtil.hasValue(toDate))
 		{
 			if (StringUtil.hasValue(fromDate))
-				where += " and s.[sampleTime] >= '"+fromDate+"' \n";
+				where += " and s.[sampleTime] >= '" + fromDate + "' \n";
 			if (StringUtil.hasValue(toDate))
-				where += " and s.[sampleTime] <= '"+toDate+"' \n";
+				where += " and s.[sampleTime] <= '" + toDate + "' \n";
 		}
 
 		// Build SELECT
 		String sql = "SELECT " + columns + " \n"
 				+ "FROM [" + tabNameStmnt + "] s \n"
-				+ "LEFT OUTER JOIN ["+tabNameSqlText+"] t ON s.[SPID] = t.[SPID] AND s.[KPID] = t.[KPID] AND s.[BatchID] = t.[BatchID] \n"
+				+ "LEFT OUTER JOIN [" + tabNameSqlText + "] t ON s.[SPID] = t.[SPID] AND s.[KPID] = t.[KPID] AND s.[BatchID] = t.[BatchID] \n"
 				+ where;
 
 		if (conn != null)
@@ -1566,9 +1566,9 @@ implements ActionListener, ChangeListener//, MouseListener
 		String where    = " where 1=1 \n";
 
 		if (StringUtil.hasValue(fromDate))
-			where += " and [sampleTime] >= '"+fromDate+"' \n";
+			where += " and [sampleTime] >= '" + fromDate + "' \n";
 		if (StringUtil.hasValue(toDate))
-			where += " and [sampleTime] <= '"+toDate+"' \n";
+			where += " and [sampleTime] <= '" + toDate + "' \n";
 
 		
 		// GET Table Name
@@ -1804,7 +1804,7 @@ implements ActionListener, ChangeListener//, MouseListener
 			}
 			catch (SQLException ex)
 			{
-				_logger.warn("Problems getting column names from table='"+tabName+"', columns '" + col_SQLText_dcc + "' Lets try with origin Columns instead. Dictionary Compression Columns will NOT be resolved", ex);
+				_logger.warn("Problems getting column names from table='" + tabName + "', columns '" + col_SQLText_dcc + "' Lets try with origin Columns instead. Dictionary Compression Columns will NOT be resolved", ex);
 			}
 		}
 		
@@ -1951,7 +1951,7 @@ implements ActionListener, ChangeListener//, MouseListener
 				try 
 				{
 					//DbxConnection conn = PersistReader.getInstance().getNewConnection(Version.getAppName()+"-QueryWindow");
-					DbxConnection conn = MainFrame.getInstance().getNewConnection(Version.getAppName()+"-QueryWindow");
+					DbxConnection conn = MainFrame.getInstance().getNewConnection(Version.getAppName() + "-QueryWindow");
 					QueryWindow qf = new QueryWindow(conn, true, WindowType.JFRAME);
 					qf.openTheWindow();
 				}
@@ -2226,7 +2226,7 @@ implements ActionListener, ChangeListener//, MouseListener
 		try
 		{
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-			_logger.info("Using Look And Feel named '"+UIManager.getLookAndFeel().getName()+"', classname='"+UIManager.getLookAndFeel().getClass().getName()+"', toString='"+UIManager.getLookAndFeel()+"'.");
+			_logger.info("Using Look And Feel named '" + UIManager.getLookAndFeel().getName() + "', classname='" + UIManager.getLookAndFeel().getClass().getName() + "', toString='" + UIManager.getLookAndFeel() + "'.");
 		}
 		catch (Exception e)
 		{

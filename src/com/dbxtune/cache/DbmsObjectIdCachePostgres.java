@@ -120,7 +120,7 @@ extends DbmsObjectIdCache
 		// If we do not have a dbname we can't continue.
 		if (StringUtil.isNullOrBlank(dbname))
 		{
-			_logger.warn("Can't lookup ObjectName reason: dbid=" + dbid + " was resolved to null or blank (dbname='" + dbname+ "') for lookupType=" + lookupType + ", dbid=" + dbid + ", lookupId=" + lookupId + ".");
+			_logger.warn("Can't lookup ObjectName reason: dbid=" + dbid + " was resolved to null or blank (dbname='" + dbname + "') for lookupType=" + lookupType + ", dbid=" + dbid + ", lookupId=" + lookupId + ".");
 			return null;
 		}
 
@@ -242,7 +242,7 @@ extends DbmsObjectIdCache
 
 			if (_logger.isDebugEnabled())
 			{
-				_logger.debug(" << DbmsObjectIdCachePostgres.get(SINGEL-OBJ): Lookup for: dbid=" + dbid +", lookupId=" + lookupId + ". Returning: objectInfo=" + objectInfo);
+				_logger.debug(" << DbmsObjectIdCachePostgres.get(SINGEL-OBJ): Lookup for: dbid=" + dbid + ", lookupId=" + lookupId + ". Returning: objectInfo=" + objectInfo);
 			}
 //System.out.println("        << DbmsObjectIdCachePostgres.get(SINGEL-OBJ): Lookup for: dbid=" + dbid +", lookupId=" + lookupId + ". Returning: objectInfo=" + objectInfo);
 
@@ -251,7 +251,7 @@ extends DbmsObjectIdCache
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("Problems connecting to Postgres for database '" + dbname + "'. Skipping (SINGEL-OBJ) Lookup for: database='" + dbname + "', dbid=" + dbid +", lookupId=" + lookupId + "'.", ex);
+			_logger.error("Problems connecting to Postgres for database '" + dbname + "'. Skipping (SINGEL-OBJ) Lookup for: database='" + dbname + "', dbid=" + dbid + ", lookupId=" + lookupId + "'.", ex);
 			return null;
 		}
 	}

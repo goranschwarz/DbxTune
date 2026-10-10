@@ -57,7 +57,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_DISK;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 //	public static final long     NEED_SRV_VERSION = 15700;
 //	public static final long     NEED_SRV_VERSION = 1570000;
@@ -90,7 +90,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmIoControllers(counterController, guiController);
 	}
@@ -130,7 +130,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_PENDING_DISK_IO,
 			"Pending DiskIO's", 	                                 // Menu CheckBox text
-			"Pending DiskIO's, or number of outstanding ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Pending DiskIO's, or number of outstanding (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Pending" }, 
 			LabelType.Static,
@@ -143,7 +143,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_COMPLETED_DISK_IO,
 			"Completed DiskIO's", 	                                 // Menu CheckBox text
-			"Completed DiskIO's per Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Completed DiskIO's per Seconds (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Completed" }, 
 			LabelType.Static,
@@ -186,12 +186,12 @@ extends CountersModel
 		{
     		int[] rqRows = this.getAbsRowIdsWhere("Type", "DiskController");
     		if (rqRows == null)
-    			_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Type', 'DiskController'), returned null, so I can't do more here.");
+    			_logger.warn("When updateGraphData for '" + tgdp.getName() + "', getAbsRowIdsWhere('Type', 'DiskController'), returned null, so I can't do more here.");
     		else
     		{
     			Double[] arr = new Double[1];
     			arr[0] = this.getAbsValueSum(rqRows, "Pending");
-    			_logger.debug("updateGraphData("+GRAPH_NAME_PENDING_DISK_IO+"): Pending='"+arr[0]+"'.");
+    			_logger.debug("updateGraphData(" + GRAPH_NAME_PENDING_DISK_IO + "): Pending='" + arr[0] + "'.");
     
     			// Set the values
     			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -202,12 +202,12 @@ extends CountersModel
 		{
     		int[] rqRows = this.getAbsRowIdsWhere("Type", "DiskController");
     		if (rqRows == null)
-    			_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Type', 'DiskController'), returned null, so I can't do more here.");
+    			_logger.warn("When updateGraphData for '" + tgdp.getName() + "', getAbsRowIdsWhere('Type', 'DiskController'), returned null, so I can't do more here.");
     		else
     		{
     			Double[] arr = new Double[1];
     			arr[0] = this.getRateValueSum(rqRows, "Completed");
-    			_logger.debug("updateGraphData("+GRAPH_NAME_COMPLETED_DISK_IO+"): Completed='"+arr[0]+"'.");
+    			_logger.debug("updateGraphData(" + GRAPH_NAME_COMPLETED_DISK_IO + "): Completed='" + arr[0] + "'.");
     
     			// Set the values
     			tgdp.setDataPoint(this.getTimestamp(), arr);

@@ -74,7 +74,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 //	public static final long     NEED_SRV_VERSION = 15500;
 //	public static final long     NEED_SRV_VERSION = 1550000;
@@ -106,7 +106,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmSysLoad(counterController, guiController);
 	}
@@ -148,7 +148,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_AVG_RUN_QUEUE_LENTH,
 			"Run Queue Length, Server Wide", 	                                    // Menu CheckBox text
-			"Run Queue Length, Average for all instances ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Run Queue Length, Average for all instances (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 //			new String[] { "Now", "Avg last 1 minute", "Avg last 5 minute", "Max last 1 minute", "Max last 5 minute" }, 
 			new String[] { "Now", "Avg last 1 minute", "Avg last 5 minute" }, 
@@ -161,7 +161,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH,
 			"Run Queue Length, Per Engine", 	                                               // Menu CheckBox text
-			"Run Queue Length, Average over last minute, Per Engine ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Run Queue Length, Average over last minute, Per Engine (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -173,7 +173,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_SUM_OUTSTAND_IO,
 			"Outstanding IO's, Server Wide", 	                                    // Menu CheckBox text
-			"Outstanding IO's, Summary for all instances ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Outstanding IO's, Summary for all instances (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Sum Now", "Sum last 1 minute", "Sum last 5 minute", "Sum last 15 minute" }, 
 			LabelType.Static,
@@ -185,7 +185,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO,
 			"Outstanding IO's, Per Engine (at sample)", 	                                   // Menu CheckBox text
-			"Outstanding IO's, When the refresh happened, Per Engine ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Outstanding IO's, When the refresh happened, Per Engine (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -197,7 +197,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_ENGINE_1M_OUTSTAND_IO,
 			"Outstanding IO's, Per Engine (avg 1 minute)", 	                                   // Menu CheckBox text
-			"Outstanding IO's, Average over last minute, Per Engine ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Outstanding IO's, Average over last minute, Per Engine (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -253,7 +253,7 @@ extends CountersModel
 		}
 
 		String sql = 
-			"select "+cols1+"StatisticID, Statistic, EngineNumber, \n" +
+			"select " + cols1 + "StatisticID, Statistic, EngineNumber, \n" +
 			"       Sample, \n" +
 			"       Avg_1min, Avg_5min, Avg_15min, " +
 			"       SteadyState, \n" +
@@ -293,7 +293,7 @@ extends CountersModel
 			{
 				int[] rqRows = this.getAbsRowIdsWhere("Statistic", "run queue length");
 				if (rqRows == null)
-					_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Statistic', 'run queue length'), returned null, so I can't do more here.");
+					_logger.warn("When updateGraphData for '" + tgdp.getName() + "', getAbsRowIdsWhere('Statistic', 'run queue length'), returned null, so I can't do more here.");
 				else
 				{
 //					Double[] arr = new Double[5];
@@ -309,7 +309,7 @@ extends CountersModel
 					arr[0] = this.getAbsValueAvg(rqRows, "Sample");
 					arr[1] = this.getAbsValueAvg(rqRows, "Avg_1min");
 					arr[2] = this.getAbsValueAvg(rqRows, "Avg_5min");
-					_logger.debug("updateGraphData("+GRAPH_NAME_AVG_RUN_QUEUE_LENTH+"): Sample='"+arr[0]+"', Avg_1min='"+arr[1]+"', Avg_5min='"+arr[2]+"'.");
+					_logger.debug("updateGraphData(" + GRAPH_NAME_AVG_RUN_QUEUE_LENTH + "): Sample='" + arr[0] + "', Avg_1min='" + arr[1] + "', Avg_5min='" + arr[2] + "'.");
 
 					// Set the values
 					tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -335,7 +335,7 @@ extends CountersModel
 				// Get a array of rowId's where the column 'Statistic' has the value 'run queue length'
 				int[] rqRows = this.getAbsRowIdsWhere("Statistic", "run queue length");
 				if (rqRows == null)
-					_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Statistic', 'run queue length'), returned null, so I can't do more here.");
+					_logger.warn("When updateGraphData for '" + tgdp.getName() + "', getAbsRowIdsWhere('Statistic', 'run queue length'), returned null, so I can't do more here.");
 				else
 				{
 					Double[] data  = new Double[rqRows.length];
@@ -364,8 +364,8 @@ extends CountersModel
 					{
 						String debugStr = "";
 						for (int i=0; i<data.length; i++)
-							debugStr += label[i] + "='"+data[i]+"', ";
-						_logger.debug("updateGraphData("+GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH+"): "+debugStr);
+							debugStr += label[i] + "='" + data[i] + "', ";
+						_logger.debug("updateGraphData(" + GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH + "): " + debugStr);
 					}
 
 					// Set the values
@@ -391,7 +391,7 @@ extends CountersModel
 			{
 				int[] rqRows = this.getAbsRowIdsWhere("Statistic", "outstanding disk i/os");
 				if (rqRows == null)
-					_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Statistic', 'outstanding disk i/os'), returned null, so I can't do more here.");
+					_logger.warn("When updateGraphData for '" + tgdp.getName() + "', getAbsRowIdsWhere('Statistic', 'outstanding disk i/os'), returned null, so I can't do more here.");
 				else
 				{
 					Double[] arr = new Double[4];
@@ -399,7 +399,7 @@ extends CountersModel
 					arr[1] = this.getAbsValueSum(rqRows, "Avg_1min");
 					arr[2] = this.getAbsValueSum(rqRows, "Avg_5min");
 					arr[3] = this.getAbsValueSum(rqRows, "Avg_15min");
-					_logger.debug("updateGraphData("+GRAPH_NAME_SUM_OUTSTAND_IO+"): Sample='"+arr[0]+"', Sum_1min='"+arr[1]+"', Sum_5min='"+arr[2]+"', Sum_15min='"+arr[3]+"'.");
+					_logger.debug("updateGraphData(" + GRAPH_NAME_SUM_OUTSTAND_IO + "): Sample='" + arr[0] + "', Sum_1min='" + arr[1] + "', Sum_5min='" + arr[2] + "', Sum_15min='" + arr[3] + "'.");
 
 					// Set the values
 					tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -425,7 +425,7 @@ extends CountersModel
 				// Get a array of rowId's where the column 'Statistic' has the value 'run queue length'
 				int[] rqRows = this.getAbsRowIdsWhere("Statistic", "outstanding disk i/os");
 				if (rqRows == null)
-					_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Statistic', 'outstanding disk i/os'), returned null, so I can't do more here.");
+					_logger.warn("When updateGraphData for '" + tgdp.getName() + "', getAbsRowIdsWhere('Statistic', 'outstanding disk i/os'), returned null, so I can't do more here.");
 				else
 				{
 					Double[] data  = new Double[rqRows.length];
@@ -454,8 +454,8 @@ extends CountersModel
 					{
 						String debugStr = "";
 						for (int i=0; i<data.length; i++)
-							debugStr += label[i] + "='"+data[i]+"', ";
-						_logger.debug("updateGraphData("+GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO+"): "+debugStr);
+							debugStr += label[i] + "='" + data[i] + "', ";
+						_logger.debug("updateGraphData(" + GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO + "): " + debugStr);
 					}
 
 					// Set the values
@@ -482,7 +482,7 @@ extends CountersModel
 				// Get a array of rowId's where the column 'Statistic' has the value 'run queue length'
 				int[] rqRows = this.getAbsRowIdsWhere("Statistic", "outstanding disk i/os");
 				if (rqRows == null)
-					_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Statistic', 'outstanding disk i/os'), returned null, so I can't do more here.");
+					_logger.warn("When updateGraphData for '" + tgdp.getName() + "', getAbsRowIdsWhere('Statistic', 'outstanding disk i/os'), returned null, so I can't do more here.");
 				else
 				{
 					Double[] data  = new Double[rqRows.length];
@@ -511,8 +511,8 @@ extends CountersModel
 					{
 						String debugStr = "";
 						for (int i=0; i<data.length; i++)
-							debugStr += label[i] + "='"+data[i]+"', ";
-						_logger.debug("updateGraphData("+GRAPH_NAME_ENGINE_1M_OUTSTAND_IO+"): "+debugStr);
+							debugStr += label[i] + "='" + data[i] + "', ";
+						_logger.debug("updateGraphData(" + GRAPH_NAME_ENGINE_1M_OUTSTAND_IO + "): " + debugStr);
 					}
 
 					// Set the values
@@ -587,7 +587,7 @@ extends CountersModel
 		{
 			int[] rqRows = this.getAbsRowIdsWhere("Statistic", "run queue length");
 			if (rqRows == null)
-				_logger.warn("In sendAlarmRequest for '"+cm.getName()+"', getAbsRowIdsWhere('Statistic', 'run queue length'), returned null, so I can't do more here.");
+				_logger.warn("In sendAlarmRequest for '" + cm.getName() + "', getAbsRowIdsWhere('Statistic', 'run queue length'), returned null, so I can't do more here.");
 			else
 			{
 				// round the double value to 3 decimals
@@ -603,7 +603,7 @@ extends CountersModel
 						double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg1min, DEFAULT_alarm_RunQueueLengthAvg1min);
 
 						if (debugPrint || _logger.isDebugEnabled())
-							System.out.println("##### sendAlarmRequest("+cm.getName()+"): RunQueueLengthAvg1min - threshold="+threshold+", RunQueueLength: avg_1min=" + Avg_1min + ", avg_5min="+Avg_5min+", avg_15min="+Avg_15min+".");
+							System.out.println("##### sendAlarmRequest(" + cm.getName() + "): RunQueueLengthAvg1min - threshold=" + threshold + ", RunQueueLength: avg_1min=" + Avg_1min + ", avg_5min=" + Avg_5min + ", avg_15min=" + Avg_15min + ".");
 
 						if (Avg_1min > threshold)
 						{
@@ -627,7 +627,7 @@ extends CountersModel
 						double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg5min, DEFAULT_alarm_RunQueueLengthAvg5min);
 
 						if (debugPrint || _logger.isDebugEnabled())
-							System.out.println("##### sendAlarmRequest("+cm.getName()+"): RunQueueLengthAvg5min - threshold="+threshold+", RunQueueLength: avg_1min=" + Avg_1min + ", avg_5min="+Avg_5min+", avg_15min="+Avg_15min+".");
+							System.out.println("##### sendAlarmRequest(" + cm.getName() + "): RunQueueLengthAvg5min - threshold=" + threshold + ", RunQueueLength: avg_1min=" + Avg_1min + ", avg_5min=" + Avg_5min + ", avg_15min=" + Avg_15min + ".");
 
 						if (Avg_5min > threshold)
 						{
@@ -651,7 +651,7 @@ extends CountersModel
 						double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg15min, DEFAULT_alarm_RunQueueLengthAvg15min);
 
 						if (debugPrint || _logger.isDebugEnabled())
-							System.out.println("##### sendAlarmRequest("+cm.getName()+"): RunQueueLengthAvg15min - threshold="+threshold+", RunQueueLength: avg_1min=" + Avg_1min + ", avg_5min="+Avg_5min+", avg_15min="+Avg_15min+".");
+							System.out.println("##### sendAlarmRequest(" + cm.getName() + "): RunQueueLengthAvg15min - threshold=" + threshold + ", RunQueueLength: avg_1min=" + Avg_1min + ", avg_5min=" + Avg_5min + ", avg_15min=" + Avg_15min + ".");
 
 						if (Avg_15min > threshold)
 						{

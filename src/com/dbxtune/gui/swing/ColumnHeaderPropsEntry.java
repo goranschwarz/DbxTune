@@ -121,9 +121,9 @@ public class ColumnHeaderPropsEntry
 			int startPos = valStr.indexOf("={");
 			int endPos   = valStr.lastIndexOf("}");
 			if (startPos == -1)
-				throw new ParseException("Can't find '={' in the input string '"+valStr+"'.", 0);
+				throw new ParseException("Can't find '={' in the input string '" + valStr + "'.", 0);
 			if (endPos == -1)
-				throw new ParseException("Can't find ending '}' in the input string '"+valStr+"'.", 0);
+				throw new ParseException("Can't find ending '}' in the input string '" + valStr + "'.", 0);
 			
 			e._colName = valStr.substring(0, startPos);
 
@@ -140,12 +140,12 @@ public class ColumnHeaderPropsEntry
 			//
 			strArr[i] = strArr[i].trim();
 
-			_logger.trace("parse() colName='"+e._colName+"': i="+i+", keyVal='"+strArr[i]+"'.");
+			_logger.trace("parse() colName='" + e._colName + "': i=" + i + ", keyVal='" + strArr[i] + "'.");
 
 			String[] strKeyVal = strArr[i].split("=");
 			if (strKeyVal.length < 2)
 			{
-				_logger.info("Faulty key=value representation '"+strArr[i]+"' at position '"+i+"' in the string '"+strArr[i]+"'.");
+				_logger.info("Faulty key=value representation '" + strArr[i] + "' at position '" + i + "' in the string '" + strArr[i] + "'.");
 				continue;
 			}
 			String key = strKeyVal[0].trim();
@@ -156,7 +156,7 @@ public class ColumnHeaderPropsEntry
 				try { e._modelPos = Integer.parseInt(val); }
 				catch (NumberFormatException ignore) 
 				{
-					throw new ParseException("The value '"+val+"' for key '"+key+"' is not a number.", 0);
+					throw new ParseException("The value '" + val + "' for key '" + key + "' is not a number.", 0);
 				}
 			}
 			else if (key.equals("viewPos"))
@@ -164,7 +164,7 @@ public class ColumnHeaderPropsEntry
 				try { e._viewPos = Integer.parseInt(val); }
 				catch (NumberFormatException ignore) 
 				{
-					throw new ParseException("The value '"+val+"' for key '"+key+"' is not a number.", 0);
+					throw new ParseException("The value '" + val + "' for key '" + key + "' is not a number.", 0);
 				}
 			}
 			else if (key.equals("isVisible"))
@@ -182,21 +182,21 @@ public class ColumnHeaderPropsEntry
 					catch (NumberFormatException ignore) 
 					{
 						e._sortOrderPos = -1;
-						throw new ParseException("The Sort Order position value '"+soEntry[0]+"' for key '"+key+"' is not a number.", 0);
+						throw new ParseException("The Sort Order position value '" + soEntry[0] + "' for key '" + key + "' is not a number.", 0);
 					}
 				}
 				if      (SortOrder.UNSORTED.toString().equals(val))   e._sortOrder = SortOrder.UNSORTED;
 				else if (SortOrder.ASCENDING.toString().equals(val))  e._sortOrder = SortOrder.ASCENDING;
 				else if (SortOrder.DESCENDING.toString().equals(val)) e._sortOrder = SortOrder.DESCENDING;
 				else
-					throw new ParseException("The value '"+val+"' for key '"+key+"' has to be '"+SortOrder.UNSORTED+"|"+SortOrder.ASCENDING+"|"+SortOrder.DESCENDING+"'.", 0);
+					throw new ParseException("The value '" + val + "' for key '" + key + "' has to be '" + SortOrder.UNSORTED + "|" + SortOrder.ASCENDING + "|" + SortOrder.DESCENDING + "'.", 0);
 			}
 			else if (key.equals("width"))
 			{
 				try { e._width = Integer.parseInt(val); }
 				catch (NumberFormatException ignore) 
 				{
-					throw new ParseException("The value '"+val+"' for key '"+key+"' is not a number.", 0);
+					throw new ParseException("The value '" + val + "' for key '" + key + "' is not a number.", 0);
 				}
 			}
 //			else if (key.equals("afterColName"))
@@ -205,7 +205,7 @@ public class ColumnHeaderPropsEntry
 //					e._afterColName = val;
 //			}
 			else
-				throw new ParseException("Unknown key value of '"+key+"' was found in the string '"+valStr+"'.", 0);
+				throw new ParseException("Unknown key value of '" + key + "' was found in the string '" + valStr + "'.", 0);
 		}
 
 		return e;
@@ -226,13 +226,13 @@ public class ColumnHeaderPropsEntry
 	public String toString()
 	{
 		return _colName
-			+ "={modelPos="+ _modelPos
+			+ "={modelPos=" + _modelPos
 			+ ",viewPos="  + _viewPos
-			+ ",isVisible="+ _isVisible
-			+ ",sortOrder="+ ((_sortOrder == SortOrder.UNSORTED) ? _sortOrder : _sortOrderPos+":"+_sortOrder)
+			+ ",isVisible=" + _isVisible
+			+ ",sortOrder=" + ((_sortOrder == SortOrder.UNSORTED) ? _sortOrder : _sortOrderPos + ":" + _sortOrder)
 			+ ",width="    + _width
 //			+ ( StringUtil.isNullOrBlank(_afterColName) ? "" : ",afterColName=" + _afterColName )
-			+"}";
+			+ "}";
 	}
 
 	
@@ -245,23 +245,23 @@ public class ColumnHeaderPropsEntry
 		{ 
 			s = "noSpace={modelPos=1,viewPos=1,isVisible=xxx,sortOrder=unsorted}";
 			p = parseKeyValue(s); 
-			System.out.println("SUCCEEDED: \n\t"+s+"\n\t"+p);
+			System.out.println("SUCCEEDED: \n\t" + s + "\n\t" + p);
 
 			s = "spaceInPropList={modelPos=1, viewPos=1, isVisible=false, sortOrder=ascending}"; 
 			p = parseKeyValue(s); 
-			System.out.println("SUCCEEDED: \n\t"+s+"\n\t"+p);
+			System.out.println("SUCCEEDED: \n\t" + s + "\n\t" + p);
 
 			s = "spaceKeyVal-1={modelPos =1, viewPos =1, isVisible =xxx, sortOrder =descending}"; 
 			p = parseKeyValue(s); 
-			System.out.println("SUCCEEDED: \n\t"+s+"\n\t"+p);
+			System.out.println("SUCCEEDED: \n\t" + s + "\n\t" + p);
 
 			s = "spaceKeyVal-2={modelPos= 1, viewPos= 1, isVisible= xxx, sortOrder= unsorted}"; 
 			p = parseKeyValue(s); 
-			System.out.println("SUCCEEDED: \n\t"+s+"\n\t"+p);
+			System.out.println("SUCCEEDED: \n\t" + s + "\n\t" + p);
 
 			s = "spaceKeyVal-3={modelPos = 1, viewPos = 1, isVisible = xxx, sortOrder = unsorted}"; 
 			p = parseKeyValue(s); 
-			System.out.println("SUCCEEDED: \n\t"+s+"\n\t"+p);
+			System.out.println("SUCCEEDED: \n\t" + s + "\n\t" + p);
 		}
 		catch (ParseException e) { System.out.println("TEST FAILED:"); e.printStackTrace();}
 	}

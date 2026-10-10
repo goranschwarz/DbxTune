@@ -72,7 +72,7 @@ extends CounterModelHostMonitor
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_HOST_MONITOR;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -89,7 +89,7 @@ extends CounterModelHostMonitor
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmOsMeminfo(counterController, guiController);
 	}
@@ -175,7 +175,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_MEM_USED,
 			"meminfo: Used Memory", 	                                // Menu CheckBox text
-			"meminfo: Used Memory ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"meminfo: Used Memory (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "MemUsed in MB" }, 
 			LabelType.Static,
@@ -188,7 +188,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_MEM_AVAILABLE,
 			"meminfo: Available Memory", 	                                // Menu CheckBox text
-			"meminfo: Available Memory ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"meminfo: Available Memory (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MIN_OVER_SAMPLES),
 			new String[] { "MemAvailable in MB" }, 
 			LabelType.Static,
@@ -201,7 +201,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_WIN_PAGING,
 			"meminfo: Windows Paging or Swap Usage", 	                                // Menu CheckBox text
-			"meminfo: Windows Paging or Swap Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"meminfo: Windows Paging or Swap Usage (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Pages/sec", "Pages Input/sec", "Pages Output/sec"}, 
 			LabelType.Static,
@@ -214,7 +214,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_WIN_PAGING_FILE,
 			"meminfo: Windows Paging File Usage", 	                                // Menu CheckBox text
-			"meminfo: Windows Paging File Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"meminfo: Windows Paging File Usage (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Paging File(_Total) - % Usage", "Paging File(_Total) - % Usage Peak"}, 
 			LabelType.Static,
@@ -227,7 +227,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_WIN_COMMIT_PCT,
 			"meminfo: Windows Committed Memory in Percent", 	                                // Menu CheckBox text
-			"meminfo: Windows Committed Memory in Percent, of Commit Limit ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"meminfo: Windows Committed Memory in Percent, of Commit Limit (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "% Committed Bytes In Use" }, 
 			LabelType.Static,
@@ -240,7 +240,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_WIN_COMMIT_MB,
 			"meminfo: Windows Committed Memory vs Commit Limit", 	                                // Menu CheckBox text
-			"meminfo: Windows Committed Memory vs Commit Limit, in MB ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			"meminfo: Windows Committed Memory vs Commit Limit, in MB (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Committed MB", "Commit Limit MB", "Commit Headroom MB" }, 
 			LabelType.Static,
@@ -399,7 +399,7 @@ extends CounterModelHostMonitor
 		// Check rowcount
 		if (thisOsSampleTable.getRowCount() == 0)
 		{
-			_logger.warn(getName() + ".localCalculation(OsTable) expected number of rows > 0, the table contains "+thisOsSampleTable.getRowCount()+" rows.");
+			_logger.warn(getName() + ".localCalculation(OsTable) expected number of rows > 0, the table contains " + thisOsSampleTable.getRowCount() + " rows.");
 			return;
 		}
 		
@@ -654,7 +654,7 @@ extends CounterModelHostMonitor
 			MovingAverageCounterManager.getInstance(groupName, "swapOut", 60).add(swapOut).getAvg(0, true, maxCap);
 			
 			if (debugPrint || _logger.isDebugEnabled())
-				System.out.println("##### sendAlarmRequest("+cm.getName()+"): swapping: in=" + swapIn + ", out=" + swapOut + ". swapIn_xmAvg=" + swapIn_xmAvg + ", swapOut_xmAvg=" + swapOut_xmAvg);
+				System.out.println("##### sendAlarmRequest(" + cm.getName() + "): swapping: in=" + swapIn + ", out=" + swapOut + ". swapIn_xmAvg=" + swapIn_xmAvg + ", swapOut_xmAvg=" + swapOut_xmAvg);
 
 			if (swapIn_xmAvg > threshold || swapOut_xmAvg > threshold)
 			{
@@ -735,7 +735,7 @@ extends CounterModelHostMonitor
 			MovingAverageCounterManager.getInstance(groupName, "swapOut", 60).add(swapOut).getAvg(0, true, maxCap);
 			
 			if (debugPrint || _logger.isDebugEnabled())
-				System.out.println("##### sendAlarmRequest("+cm.getName()+"): SwapThrashing: in=" + swapIn + ", out=" + swapOut + ". swapIn_xmAvg=" + swapIn_xmAvg + ", swapOut_xmAvg=" + swapOut_xmAvg);
+				System.out.println("##### sendAlarmRequest(" + cm.getName() + "): SwapThrashing: in=" + swapIn + ", out=" + swapOut + ". swapIn_xmAvg=" + swapIn_xmAvg + ", swapOut_xmAvg=" + swapOut_xmAvg);
 
 			// BOTH swap 'in' AND 'out' 
 			if (swapIn_xmAvg > threshold && swapOut_xmAvg > threshold)
@@ -820,7 +820,7 @@ extends CounterModelHostMonitor
 				double headroomMb_xmAvg = MovingAverageCounterManager.getInstance(groupName, "commitHeadroomMb", avgMinutes).add(headroomMb).getAvg(-1, true);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): CommitCharge: pct=" + commitPct + ", headroomMb=" + headroomMb + ". commitPct_xmAvg=" + commitPct_xmAvg + ", headroomMb_xmAvg=" + headroomMb_xmAvg);
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): CommitCharge: pct=" + commitPct + ", headroomMb=" + headroomMb + ". commitPct_xmAvg=" + commitPct_xmAvg + ", headroomMb_xmAvg=" + headroomMb_xmAvg);
 
 				boolean isPctAlarm      = thresholdPct        > 0 && commitPct_xmAvg  >= 0 && commitPct_xmAvg  > thresholdPct;
 				boolean isHeadroomAlarm = thresholdHeadroomMb > 0 && headroomMb_xmAvg >= 0 && headroomMb_xmAvg < thresholdHeadroomMb;

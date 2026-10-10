@@ -104,8 +104,8 @@ implements Iterable<String>
 			}
 			catch (ParseException e)
 			{
-				_logger.info("Problems parsing '"+confVal+"' with string '"+strEntry+"'. Caught: "+e);
-				_logger.debug("Problems parsing '"+confVal+"' with string '"+strEntry+"'. Caught: "+e, e);
+				_logger.info("Problems parsing '" + confVal + "' with string '" + strEntry + "'. Caught: " + e);
+				_logger.debug("Problems parsing '" + confVal + "' with string '" + strEntry + "'. Caught: " + e, e);
 				continue;
 			}
 		}	
@@ -218,14 +218,14 @@ implements Iterable<String>
 	{
 		String val = getProperty(mainKey, propName);
 		if (val == null)
-			throw new MandatoryPropertyException("The property '"+mainKey+"', '"+propName+"' is mandatory.");
+			throw new MandatoryPropertyException("The property '" + mainKey + "', '" + propName + "' is mandatory.");
 		try
 		{
 			return Integer.parseInt(val);
 		}
 		catch (NumberFormatException e)
 		{
-			throw new NumberFormatException("The property '"+mainKey+"', '"+propName+"' must be a number. I found value '"+val+"'.");
+			throw new NumberFormatException("The property '" + mainKey + "', '" + propName + "' must be a number. I found value '" + val + "'.");
 		}
 	}
 	/** Get a int value for property */
@@ -256,7 +256,7 @@ implements Iterable<String>
 	{
 		String val = getProperty(mainKey, propName);
 		if (val == null)
-			throw new MandatoryPropertyException("The property '"+mainKey+"', '"+propName+"' is mandatory.");
+			throw new MandatoryPropertyException("The property '" + mainKey + "', '" + propName + "' is mandatory.");
 		return Long.parseLong(val);
 	}
 	/** Get a long value for property */
@@ -287,7 +287,7 @@ implements Iterable<String>
 	{
 		String val = getProperty(mainKey, propName);
 		if (val == null)
-			throw new MandatoryPropertyException("The property '"+mainKey+"', '"+propName+"' is mandatory.");
+			throw new MandatoryPropertyException("The property '" + mainKey + "', '" + propName + "' is mandatory.");
 		return val.equalsIgnoreCase("true");
 	}
 	/** Get a boolean value for property */
@@ -315,7 +315,7 @@ implements Iterable<String>
 	{
 		String val = getProperty(mainKey, propName);
 		if (val == null)
-			throw new MandatoryPropertyException("The property '"+mainKey+"', '"+propName+"' is mandatory.");
+			throw new MandatoryPropertyException("The property '" + mainKey + "', '" + propName + "' is mandatory.");
 		val = val.trim();
 		return val;
 	}
@@ -503,9 +503,9 @@ implements Iterable<String>
 				int startPos = valStr.indexOf("={");
 				int endPos   = valStr.lastIndexOf("}");
 				if (startPos == -1)
-					throw new ParseException("Can't find '={' in the input string '"+valStr+"'.", 0);
+					throw new ParseException("Can't find '={' in the input string '" + valStr + "'.", 0);
 				if (endPos == -1)
-					throw new ParseException("Can't find ending '}' in the input string '"+valStr+"'.", 0);
+					throw new ParseException("Can't find ending '}' in the input string '" + valStr + "'.", 0);
 				
 				e._propName = valStr.substring(0, startPos).trim();
 
@@ -522,12 +522,12 @@ implements Iterable<String>
 				//
 				strArr[i] = strArr[i].trim();
 
-				_logger.trace("parse() colName='"+e._propName+"': i="+i+", keyVal='"+strArr[i]+"'.");
+				_logger.trace("parse() colName='" + e._propName + "': i=" + i + ", keyVal='" + strArr[i] + "'.");
 
 				String[] strKeyVal = strArr[i].split("=", 2); // Preserve any '=' in the value part
 				if (strKeyVal.length < 2)
 				{
-					_logger.info("Faulty key=value representation '"+strArr[i]+"' at position '"+i+"' in the string '"+strArr[i]+"'.");
+					_logger.info("Faulty key=value representation '" + strArr[i] + "' at position '" + i + "' in the string '" + strArr[i] + "'.");
 					continue;
 				}
 				String key = strKeyVal[0].trim();
@@ -681,8 +681,8 @@ implements Iterable<String>
 		PropPropEntry ppe = null;
 
 		ppe = new PropPropEntry("Cm1={p1=1, p2=2, p3=3};Cm2={p1=1,p2=2,p3=3}; Cm3={ p1 = 1, p2 = 2, p3 = 3 };");
-		System.out.println("Test1: '"+ppe+"'.");
-		System.out.println("Test1.getPropertyProp(Cm1): '"+ppe.getPropertyProp("Cm1")+"'.");
+		System.out.println("Test1: '" + ppe + "'.");
+		System.out.println("Test1.getPropertyProp(Cm1): '" + ppe.getPropertyProp("Cm1") + "'.");
 		System.out.println();
 		
 //		ppe = new PropPropEntry("{p1=1,p2=2,p3=3};{p1=1,p2=2,p3=3};");
@@ -691,7 +691,7 @@ implements Iterable<String>
 //		System.out.println();
 		
 		ppe = new PropPropEntry("DBID={modelPos=0,viewPos=0,isVisible=true,sortOrder=UNSORTED}; ObjectID={modelPos=1,viewPos=1,isVisible=true,sortOrder=UNSORTED}; IndexID={modelPos=2,viewPos=2,isVisible=true,sortOrder=UNSORTED}; DBName={modelPos=3,viewPos=3,isVisible=true,sortOrder=UNSORTED}; ObjectName={modelPos=4,viewPos=4,isVisible=true,sortOrder=UNSORTED}; ObjectType={modelPos=5,viewPos=5,isVisible=true,sortOrder=UNSORTED}; PartitionID={modelPos=6,viewPos=6,isVisible=true,sortOrder=UNSORTED}; PartitionName={modelPos=7,viewPos=7,isVisible=true,sortOrder=UNSORTED}; TotalSizeKB={modelPos=8,viewPos=8,isVisible=true,sortOrder=UNSORTED}; CachedKB={modelPos=9,viewPos=9,isVisible=true,sortOrder=UNSORTED}; CacheName={modelPos=10,viewPos=10,isVisible=true,sortOrder=UNSORTED}");
-		System.out.println("Test2: '"+ppe+"'.");
+		System.out.println("Test2: '" + ppe + "'.");
 		System.out.println();
 
 		ppe = new PropPropEntry();
@@ -700,11 +700,11 @@ implements Iterable<String>
 		ppe.put("CM1", "p3", "v3");
 		ppe.put("CM2", "p1", "v1");
 		ppe.put("CM2", "p2", "v2");
-		System.out.println("Test3: '"+ppe+"'.");
+		System.out.println("Test3: '" + ppe + "'.");
 		System.out.println();
 
 		ppe = new PropPropEntry("Objects={postpone=0,paused=false,bg=false,resetNC20=true,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; Processes={postpone=0,paused=false,bg=false,resetNC20=true,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; Databases={postpone=0,paused=false,bg=false,resetNC20=true,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; Temp Db={postpone=0,paused=false,bg=false,resetNC20=true,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; Waits={postpone=0,paused=false,bg=false,resetNC20=true,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; Engines={postpone=0,paused=false,bg=true,resetNC20=true,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; System Load={postpone=0,paused=false,bg=false,resetNC20=false,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; Data Caches={postpone=0,paused=false,bg=true,resetNC20=true,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; Pools={postpone=0,paused=false,bg=false,resetNC20=true,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; Devices={postpone=0,paused=false,bg=false,resetNC20=true,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; IO Sum={postpone=0,paused=false,bg=true,resetNC20=true,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; IO Queue={postpone=0,paused=false,bg=true,resetNC20=true,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; Spinlock Sum={postpone=300,paused=false,bg=false,resetNC20=true,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; Sysmon Raw={postpone=300,paused=false,bg=false,resetNC20=true,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; RepAgent={postpone=300,paused=false,bg=false,resetNC20=true,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; Cached Procedures={postpone=0,paused=false,bg=false,resetNC20=true,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; Procedure Cache={postpone=0,paused=false,bg=true,resetNC20=true,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; Procedure Call Stack={postpone=0,paused=false,bg=false,resetNC20=true,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; Cached Objects={postpone=600,paused=false,bg=false,resetNC20=false,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; Errorlog={postpone=0,paused=false,bg=false,resetNC20=true,storePcs=false,pcsAbs=true,pcsDiff=false,pcsRate=false}; Deadlock={postpone=0,paused=false,bg=false,resetNC20=true,storePcs=false,pcsAbs=true,pcsDiff=false,pcsRate=false}; Proc Cache Module Usage={postpone=0,paused=false,bg=false,resetNC20=false,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; Proc Cache Memory Usage={postpone=0,paused=false,bg=false,resetNC20=false,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; Statement Cache={postpone=0,paused=false,bg=false,resetNC20=false,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; Statement Cache Details={postpone=0,paused=false,bg=false,resetNC20=false,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; Active Objects={postpone=0,paused=false,bg=false,resetNC20=false,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; Active Statements={postpone=0,paused=false,bg=false,resetNC20=true,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; Blocking={postpone=0,paused=false,bg=false,resetNC20=false,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; Missing Statistics={postpone=0,paused=false,bg=false,resetNC20=false,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}; sp_monitorconfig={postpone=600,paused=false,bg=false,resetNC20=false,storePcs=false,pcsAbs=true,pcsDiff=true,pcsRate=true}");
-		System.out.println("TestX: '"+ppe+"'.");
+		System.out.println("TestX: '" + ppe + "'.");
 		System.out.println();
 	}
 }

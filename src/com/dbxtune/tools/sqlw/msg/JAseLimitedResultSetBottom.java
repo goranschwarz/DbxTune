@@ -29,7 +29,7 @@ extends JAseMessage
 
 	public JAseLimitedResultSetBottom(int numberOfRows, int bottomLimit, String originSql)
 	{
-		super("Discarded "+numberOfRows+" first rows from the ResultSet, and only keeping the last "+bottomLimit+" records.", originSql);
+		super("Discarded " + numberOfRows + " first rows from the ResultSet, and only keeping the last " + bottomLimit + " records.", originSql);
 //		init();
 
 		setForeground(ColorUtils.DARK_RED);

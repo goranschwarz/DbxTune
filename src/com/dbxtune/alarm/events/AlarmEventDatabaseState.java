@@ -39,7 +39,7 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Unexpected Database State in Server '" + cm.getServerName() + "' and dbname '" + dbname + "', FoundState: "+alarmState+". (not matching Regex='"+usedRegex+"')",
+				"Unexpected Database State in Server '" + cm.getServerName() + "' and dbname '" + dbname + "', FoundState: " + alarmState + ". (not matching Regex='" + usedRegex + "')",
 				null // crossedThreshold... well this one do not have a number.
 				);
 
@@ -47,6 +47,6 @@ extends AlarmEvent
 		setTimeToLive(cm);
 
 		// Set the raw data
-		setData("dbname="+dbname+",state='"+alarmState+"'.");
+		setData("dbname=" + dbname + ",state='" + alarmState + "'.");
 	}
 }

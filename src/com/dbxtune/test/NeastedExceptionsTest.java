@@ -49,15 +49,15 @@ public class NeastedExceptionsTest
 		if (args.length > 3) pawd = args[3];
 		if (args.length > 4) fUrl = args[4];
 
-		System.out.println("host = '"+host+"'");
-		System.out.println("port = '"+port+"'");
-		System.out.println("user = '"+user+"'");
-		System.out.println("pawd = '"+pawd+"'");
-		System.out.println("fUrl = '"+fUrl+"'");
+		System.out.println("host = '" + host + "'");
+		System.out.println("port = '" + port + "'");
+		System.out.println("user = '" + user + "'");
+		System.out.println("pawd = '" + pawd + "'");
+		System.out.println("fUrl = '" + fUrl + "'");
 		
 //		String jdbcDriver    = "com.sybase.jdbc42.jdbc.SybDriver";
 //		String jdbcUrl       = "jdbc:sybase:Tds:"+host+":"+port;
-		String jdbcUrl       = "jdbc:sqlserver://"+host+":"+port;
+		String jdbcUrl       = "jdbc:sqlserver://" + host + ":" + port;
 //		String jdbcUrl       = "jdbc:jtds:sqlserver://"+host+":"+port;
 		String jdbcUser      = user;
 		String jdbcPasswd    = pawd;
@@ -67,7 +67,7 @@ public class NeastedExceptionsTest
 			jdbcUrl = fUrl;
 
 		System.out.println("---------------------------------------------------------------------------------------");
-		System.out.println("Using URL '"+jdbcUrl+"' when connectiong to DBMS.");
+		System.out.println("Using URL '" + jdbcUrl + "' when connectiong to DBMS.");
 		System.out.println("---------------------------------------------------------------------------------------");
 
 		try
@@ -80,8 +80,8 @@ public class NeastedExceptionsTest
 			
 			if (jdbcUrl.startsWith("jdbc:sqlserver:"))
 			{
-				if (props.getProperty("encrypt")                == null) props.put("encrypt",                true+"");
-				if (props.getProperty("trustServerCertificate") == null) props.put("trustServerCertificate", true+"");
+				if (props.getProperty("encrypt")                == null) props.put("encrypt",                true + "");
+				if (props.getProperty("trustServerCertificate") == null) props.put("trustServerCertificate", true + "");
 			}
 
 //			if (props.getProperty("APPLICATIONNAME") == null) props.put("APPLICATIONNAME", _appname);

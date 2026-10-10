@@ -198,7 +198,7 @@ extends SqlStatementAbstract
 		checkParsedParameters(_params);
 
 		if (_params._debug)
-			addDebugMessage("CmdLineSwitches: "+_params);
+			addDebugMessage("CmdLineSwitches: " + _params);
 	}
 
 	/**
@@ -222,7 +222,7 @@ extends SqlStatementAbstract
 		{
 			ConnectionProfile cp = ConnectionProfileManager.getInstance().getProfile(params._profile);
 			if (cp == null)
-				throw new PipeCommandException("Profile not found in the ProfileManager. profile name '"+params._profile+"'.");
+				throw new PipeCommandException("Profile not found in the ProfileManager. profile name '" + params._profile + "'.");
 			else
 			{
 				_rightConnectionProfile = cp;
@@ -394,9 +394,9 @@ extends SqlStatementAbstract
 		catch (Exception ex)
 		{
 			if (ex instanceof RuntimeException)
-				_logger.error("Problems connecting to remote DBMS, Caught: "+ex, ex);
+				_logger.error("Problems connecting to remote DBMS, Caught: " + ex, ex);
 
-			throw new SQLException("Problems connecting to remote DBMS, Caught: "+ex, ex);
+			throw new SQLException("Problems connecting to remote DBMS, Caught: " + ex, ex);
 		}
 	}
 

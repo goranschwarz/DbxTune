@@ -78,7 +78,7 @@ extends CountersModel
 	"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_CACHE;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -106,7 +106,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmCachedObjects(counterController, guiController);
 	}
@@ -284,7 +284,7 @@ extends CountersModel
 			int rowCount = conf.getIntProperty(PROPKEY_sample_topRowsCount, DEFAULT_sample_topRowsCount);
 			topRows = "top " + rowCount + " ";
 
-			_logger.warn("CM='"+getName()+"'. Limiting number of rows fetch. Adding phrase '"+topRows+"' at the start of the SQL Statement.");
+			_logger.warn("CM='" + getName() + "'. Limiting number of rows fetch. Adding phrase '" + topRows + "' at the start of the SQL Statement.");
 		}
 
 		if (isClusterEnabled)
@@ -302,7 +302,7 @@ extends CountersModel
 		
 		cols1 += "M.DBID, M.OwnerUserID, M.ObjectID, M.IndexID, M.DBName, OwnerName=isnull(M.OwnerName, 'dbo'), M.ObjectName, M.ObjectType, \n";
 		cols2 += "";
-		cols3 += "M.CachedKB, CachedKBDiff=M.CachedKB, "+TableCachedPct+"M.CacheName, M.CacheID, \n" +
+		cols3 += "M.CachedKB, CachedKBDiff=M.CachedKB, " + TableCachedPct + "M.CacheName, M.CacheID, \n" +
 		         "T.TotalCacheSizeKB, CacheUsagePct = convert(numeric(5,1), M.CachedKB/(T.TotalCacheSizeKB*1.0) * 100.0)";
 
 		if (srvVersion >= Ver.ver(15,5,0,4)) // dont really know when this was introduced, but it was in my 15.5.0 ESD#4

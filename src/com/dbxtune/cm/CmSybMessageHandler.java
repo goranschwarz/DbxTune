@@ -70,21 +70,21 @@ implements SybMessageHandler
 		Configuration conf = Configuration.getCombinedConfiguration();
 
 		// Change the default behavior for _discardMsgZero
-		_discardMsgZero          = conf.getBooleanProperty(cmName+".discardMsgZero",          _discardMsgZero);
-		_discardMsgZeroPrintInfo = conf.getBooleanProperty(cmName+".discardMsgZeroPrintInfo", _discardMsgZeroPrintInfo);
+		_discardMsgZero          = conf.getBooleanProperty(cmName + ".discardMsgZero",          _discardMsgZero);
+		_discardMsgZeroPrintInfo = conf.getBooleanProperty(cmName + ".discardMsgZeroPrintInfo", _discardMsgZeroPrintInfo);
 
 		if (_logger.isDebugEnabled())
-			_logger.debug("CmSybMessageHandler: Config for CM '"+cmName+"': discardMsgZero="+_discardMsgZero+", discardMsgZeroPrintInfo="+_discardMsgZeroPrintInfo);
+			_logger.debug("CmSybMessageHandler: Config for CM '" + cmName + "': discardMsgZero=" + _discardMsgZero + ", discardMsgZeroPrintInfo=" + _discardMsgZeroPrintInfo);
 
 		// Change the default behavior for _discardMsgLoadDb
-		_discardMsgLoadDb          = conf.getBooleanProperty(cmName+".discardMsgLoadDb",          _discardMsgLoadDb);
-		_discardMsgLoadDbPrintInfo = conf.getBooleanProperty(cmName+".discardMsgLoadDbPrintInfo", _discardMsgLoadDbPrintInfo);
+		_discardMsgLoadDb          = conf.getBooleanProperty(cmName + ".discardMsgLoadDb",          _discardMsgLoadDb);
+		_discardMsgLoadDbPrintInfo = conf.getBooleanProperty(cmName + ".discardMsgLoadDbPrintInfo", _discardMsgLoadDbPrintInfo);
 		
-		_discardMsgAlterTab          = conf.getBooleanProperty(cmName+".discardMsgAlterTab",          _discardMsgAlterTab);
-		_discardMsgAlterTabPrintInfo = conf.getBooleanProperty(cmName+".discardMsgAlterTabPrintInfo", _discardMsgAlterTabPrintInfo);
+		_discardMsgAlterTab          = conf.getBooleanProperty(cmName + ".discardMsgAlterTab",          _discardMsgAlterTab);
+		_discardMsgAlterTabPrintInfo = conf.getBooleanProperty(cmName + ".discardMsgAlterTabPrintInfo", _discardMsgAlterTabPrintInfo);
 
 		if (_logger.isDebugEnabled())
-			_logger.debug("CmSybMessageHandler: Config for CM '"+cmName+"': discardMsgLoadDb="+_discardMsgLoadDb+", discardMsgLoadDbPrintInfo="+_discardMsgLoadDbPrintInfo);
+			_logger.debug("CmSybMessageHandler: Config for CM '" + cmName + "': discardMsgLoadDb=" + _discardMsgLoadDb + ", discardMsgLoadDbPrintInfo=" + _discardMsgLoadDbPrintInfo);
 
 		// LogName
 		setLogPrefix(cmName);
@@ -351,24 +351,24 @@ implements SybMessageHandler
 
 		// Loop MSG NUM to check if to discard the message
 		if (_logger.isDebugEnabled())
-			_logger.debug(getLogPrefix() + "INFO Discard message number list: "+_discardMsgNum);
+			_logger.debug(getLogPrefix() + "INFO Discard message number list: " + _discardMsgNum);
 
 		if (_discardMsgNum.contains(codeInt))
 		{
-			_logger.debug(getLogPrefix() + ">>>>> Discarding message: "+logMsg.toString());
+			_logger.debug(getLogPrefix() + ">>>>> Discarding message: " + logMsg.toString());
 			return null;
 		}
 
 		// Loop MSG STR to check if to discard the message
 		if (_logger.isDebugEnabled())
-			_logger.debug(getLogPrefix() + "INFO Discard message text list: "+_discardMsgStr);
+			_logger.debug(getLogPrefix() + "INFO Discard message text list: " + _discardMsgStr);
 
 		for (String regexp : _discardMsgStr)
 		{
 //			if (msgStr.matches(regexp))
 			if (msgStr.indexOf(regexp) >= 0)
 			{
-				_logger.debug(getLogPrefix() + ">>>>> Discarding message: "+logMsg.toString());
+				_logger.debug(getLogPrefix() + ">>>>> Discarding message: " + logMsg.toString());
 				return null;
 			}
 		}
@@ -384,7 +384,7 @@ implements SybMessageHandler
 				String msg = sqle.getMessage();
 				if (msg != null && msg.endsWith("\n"))
 					msg = msg.substring(0, msg.length()-1);
-				_logger.info(getLogPrefix() + "Discarding Msg 0, Str '"+msg+"'.");
+				_logger.info(getLogPrefix() + "Discarding Msg 0, Str '" + msg + "'.");
 			}
 			return null;
 		}
@@ -397,7 +397,7 @@ implements SybMessageHandler
 				String msg = sqle.getMessage();
 				if (msg != null && msg.endsWith("\n"))
 					msg = msg.substring(0, msg.length()-1);
-				_logger.info(getLogPrefix() + "Discarding Msg "+code+", Str '"+msg+"'.");
+				_logger.info(getLogPrefix() + "Discarding Msg " + code + ", Str '" + msg + "'.");
 			}
 			return null;
 		}
@@ -410,7 +410,7 @@ implements SybMessageHandler
 				String msg = sqle.getMessage();
 				if (msg != null && msg.endsWith("\n"))
 					msg = msg.substring(0, msg.length()-1);
-				_logger.info(getLogPrefix() + "Discarding Msg "+code+", Str '"+msg+"'.");
+				_logger.info(getLogPrefix() + "Discarding Msg " + code + ", Str '" + msg + "'.");
 			}
 			return null;
 		}

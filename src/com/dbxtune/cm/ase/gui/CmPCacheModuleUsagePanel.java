@@ -136,7 +136,7 @@ extends TabularCntrPanel
 					Number Active     = (Number)dataTable.getValueAt(r, Active_pos);
 
 					if (_logger.isDebugEnabled())
-						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": ModuleName("+ModuleName_pos+")='"+ModuleName+"', Active("+Active_pos+")='"+Active+"'.");
+						_logger.debug("createDataset():GRAPH-DATA: " + getName() + ": ModuleName(" + ModuleName_pos + ")='" + ModuleName + "', Active(" + Active_pos + ")='" + Active + "'.");
 
 					dataset.addValue(Active.doubleValue(), ModuleName, "Active - ModuleName");
 				}

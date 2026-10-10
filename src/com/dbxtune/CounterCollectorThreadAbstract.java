@@ -130,7 +130,7 @@ extends Thread
 	{
 		if (_thread != null)
 		{
-			_logger.debug("Sending 'interrupt' to the thread '"+_thread.getName()+"', this was done by thread '"+Thread.currentThread().getName()+"'.");
+			_logger.debug("Sending 'interrupt' to the thread '" + _thread.getName() + "', this was done by thread '" + Thread.currentThread().getName() + "'.");
 			_thread.interrupt();
 		}
 	}
@@ -142,7 +142,7 @@ extends Thread
 			fallbackSrvName = "-UNKNOWN-";
 
 		if ( ! AlarmHandler.hasInstance() )
-			_logger.warn("No alarm handler installed, so NO alarms will be created for this. sendAlarmServerIsDown(fallbackSrvName='"+fallbackSrvName+"')");
+			_logger.warn("No alarm handler installed, so NO alarms will be created for this. sendAlarmServerIsDown(fallbackSrvName='" + fallbackSrvName + "')");
 
 	
 		AlarmEventSrvDown alarmEventSrvDown = null;
@@ -181,7 +181,7 @@ extends Thread
 				if (StringUtil.isNullOrBlank(serverName)) serverName = fallbackSrvName;
 				if (StringUtil.isNullOrBlank(jdbcUrl   )) jdbcUrl    = connProp.getUrl();
 				
-				_logger.info("Sending AlarmEventSrvDown(serverName='"+serverName+"', jdbcUrl='"+jdbcUrl+"') to the AlarmHandler.");
+				_logger.info("Sending AlarmEventSrvDown(serverName='" + serverName + "', jdbcUrl='" + jdbcUrl + "') to the AlarmHandler.");
 
 				alarmEventSrvDown = new AlarmEventSrvDown(serverName, jdbcUrl, connectException, connectInfoMsg);
 
@@ -201,7 +201,7 @@ extends Thread
 		{
 			if ( AlarmHandler.hasInstance() )
 			{
-				_logger.warn("Can't send detailed AlarmEventSrvDown, instead sending a simplified one sending: new AlarmEventSrvDown(serverName='"+fallbackSrvName+"', jdbcUrl='unknown-url'). Reason: No Monitor Connection or no defaultConnProp. fallbackSrvName='"+fallbackSrvName+"', conn='"+conn+"', conn.getConnProp()='"+(conn==null?"":conn.getConnProp())+"', DbxConnection.hasDefaultConnProp()='"+DbxConnection.hasDefaultConnProp()+"'.");
+				_logger.warn("Can't send detailed AlarmEventSrvDown, instead sending a simplified one sending: new AlarmEventSrvDown(serverName='" + fallbackSrvName + "', jdbcUrl='unknown-url'). Reason: No Monitor Connection or no defaultConnProp. fallbackSrvName='" + fallbackSrvName + "', conn='" + conn + "', conn.getConnProp()='" + (conn==null?"":conn.getConnProp()) + "', DbxConnection.hasDefaultConnProp()='" + DbxConnection.hasDefaultConnProp() + "'.");
 
 				serverName = fallbackSrvName;							
 				jdbcUrl    = "unknown-url";
@@ -239,11 +239,11 @@ extends Thread
 					JdbcUrlParser urlParser = JdbcUrlParser.parse(jdbcUrl);
 					onHost = urlParser.getHost();
 
-					_logger.info("TRACE-INFO: in sendAlarmServerIsDown(), no old HeaderInfo so we need to create a new HeaderInfo(). Parsing JDBC URL '"+jdbcUrl+"', to get onHostname='" + onHost + "'.");
+					_logger.info("TRACE-INFO: in sendAlarmServerIsDown(), no old HeaderInfo so we need to create a new HeaderInfo(). Parsing JDBC URL '" + jdbcUrl + "', to get onHostname='" + onHost + "'.");
 				}
 				catch (Throwable ex)
 				{
-					_logger.info("Problems parsing JDBC URL '"+jdbcUrl+"', this will be ignored.");
+					_logger.info("Problems parsing JDBC URL '" + jdbcUrl + "', this will be ignored.");
 				}
 
 				headerInfo = new HeaderInfo(sessionSampleTime, serverName, onHost, null);

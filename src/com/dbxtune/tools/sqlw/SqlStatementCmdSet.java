@@ -144,7 +144,7 @@ extends SqlStatementAbstract
 					if (sa.length >= 2)
 						_params._value = sa[1]; 
 					if (sa.length >= 3)
-						_logger.warn("Received more values than expected, skipping the rest of the values starting from '"+sa[2]+"'.");
+						_logger.warn("Received more values than expected, skipping the rest of the values starting from '" + sa[2] + "'.");
 				}
 
 				if (StringUtil.isNullOrBlank(_params._value) && StringUtil.hasValue(overflowText))
@@ -247,12 +247,12 @@ extends SqlStatementAbstract
 
 				if (prev != null)
 				{
-    				JSetOutput output = new JSetOutput(_originCmd, null, "cmd: \\set removed variable '"+_params._variable+"' succeeded.");
+    				JSetOutput output = new JSetOutput(_originCmd, null, "cmd: \\set removed variable '" + _params._variable + "' succeeded.");
     				_resultCompList.add(output);
 				}
 				else
 				{
-    				JSetOutput output = new JSetOutput(_originCmd, null, "cmd: \\set removed variable '"+_params._variable+"' was NOT FOUND.");
+    				JSetOutput output = new JSetOutput(_originCmd, null, "cmd: \\set removed variable '" + _params._variable + "' was NOT FOUND.");
     				_resultCompList.add(output);
 				}
 			}
@@ -260,7 +260,7 @@ extends SqlStatementAbstract
 			{
 				String prev = _variableMap.put(_params._variable, _params._value);
 
-				JSetOutput output = new JSetOutput(_originCmd, null, "cmd: \\set assigned variable '"+_params._variable+"' to value '"+_params._value+"', previous value was '"+prev+"'.");
+				JSetOutput output = new JSetOutput(_originCmd, null, "cmd: \\set assigned variable '" + _params._variable + "' to value '" + _params._value + "', previous value was '" + prev + "'.");
 				_resultCompList.add(output);
 			}
 		}
@@ -329,7 +329,7 @@ extends SqlStatementAbstract
 					Pattern compiledRegex = Pattern.compile("\\$\\{.*\\}"); // or maybe: "\\$\\{[A-Za-z0-9_]+\\}"
 					if (compiledRegex.matcher(val).find())
 					{
-    					String msg = "NOTE: substituteVariables(): The input string starts with '"+skip+"', which is part of the 'skip list'... Skipping variable substitution of this statement before execution.";
+    					String msg = "NOTE: substituteVariables(): The input string starts with '" + skip + "', which is part of the 'skip list'... Skipping variable substitution of this statement before execution.";
     					if (resultCompList == null)
     						System.out.println(msg);
     					else
@@ -388,7 +388,7 @@ extends SqlStatementAbstract
 			{
 				envVal = defVal;
 
-				String msg = "substituteVariables(): variable '"+envName+"' has not been set. replacing the variable with '"+envVal+"'. Please set the value using \\set varname=value.";
+				String msg = "substituteVariables(): variable '" + envName + "' has not been set. replacing the variable with '" + envVal + "'. Please set the value using \\set varname=value.";
 				if (resultCompList == null)
 					System.out.println(msg);
 				else
@@ -401,7 +401,7 @@ extends SqlStatementAbstract
 			envVal = envVal.replace('\\', '/');
 
 			// NOW substitute the ENV VARIABLE with a real value...
-			val = val.replaceFirst("\\$\\{"+envNameTxt+"\\}", envVal);
+			val = val.replaceFirst("\\$\\{" + envNameTxt + "\\}", envVal);
 		}
 
 		return val;

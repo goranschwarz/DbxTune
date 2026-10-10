@@ -151,10 +151,10 @@ extends PipeCommandAbstract
 		}
 		else
 		{
-			throw new PipeCommandException("PipeCommand, cmd='"+input+"' is unknown. Available commands is: grep, egrep");
+			throw new PipeCommandException("PipeCommand, cmd='" + input + "' is unknown. Available commands is: grep, egrep");
 		}
 		
-		System.out.println("PipeCommandGrep: _optV='"+_optV+"', _optX='"+_optX+"', _type='"+_type+"', _grepStr='"+_grepStr+"'.");
+		System.out.println("PipeCommandGrep: _optV='" + _optV + "', _optX='" + _optX + "', _type='" + _type + "', _grepStr='" + _grepStr + "'.");
 	}
 
 	@Override

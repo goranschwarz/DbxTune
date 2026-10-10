@@ -299,9 +299,9 @@ implements ActionListener, TableModelListener
 			{
 				String  colName   = (String) tm.getValueAt(r, TAB_POS_COL_NAME);
 
-				boolean isPkCol   = (pkStr  .indexOf(colName+", ") != -1);
-				boolean isDiffCol = (diffStr.indexOf(colName+", ") != -1);
-				boolean isPctCol  = (pctStr .indexOf(colName+", ") != -1);
+				boolean isPkCol   = (pkStr  .indexOf(colName + ", ") != -1);
+				boolean isDiffCol = (diffStr.indexOf(colName + ", ") != -1);
+				boolean isPctCol  = (pctStr .indexOf(colName + ", ") != -1);
 
 				tm.setValueAt(Boolean.valueOf(isPkCol),   r, TAB_POS_COL_PK);
 				tm.setValueAt(Boolean.valueOf(isDiffCol), r, TAB_POS_COL_DIFF);

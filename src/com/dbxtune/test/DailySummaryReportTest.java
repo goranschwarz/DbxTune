@@ -70,11 +70,11 @@ public class DailySummaryReportTest
 //			Configurator.setRootLevel(Level.TRACE);
 		}
 
-		System.out.println("PROPFILE: '"+propFile+"'.");
+		System.out.println("PROPFILE: '" + propFile + "'.");
 		Configuration conf = new Configuration(propFile);
 		Configuration.setInstance(Configuration.USER_TEMP, conf);
 
-		conf.setProperty(DailySummaryReportFactory.PROPKEY_create, true+"");
+		conf.setProperty(DailySummaryReportFactory.PROPKEY_create, true + "");
 
 		// The below values are in: DailySummaryReportTest.props
 //		conf.setProperty(ReportSenderToMail.PROPKEY_smtpHostname, "smtp.gmail.com");
@@ -90,7 +90,7 @@ public class DailySummaryReportTest
 		
 		if ( ! DailySummaryReportFactory.isCreateReportEnabled() )
 		{
-			System.out.println("Daily Summary Report is NOT Enabled, this can be enabled using property '"+DailySummaryReportFactory.PROPKEY_create+"=true'.");
+			System.out.println("Daily Summary Report is NOT Enabled, this can be enabled using property '" + DailySummaryReportFactory.PROPKEY_create + "=true'.");
 			return;
 		}
 		
@@ -176,7 +176,7 @@ public class DailySummaryReportTest
 		}
 		catch(Throwable ex)
 		{
-			_logger.error("Problems Sending Daily Summary Report. Caught: "+ex, ex);
+			_logger.error("Problems Sending Daily Summary Report. Caught: " + ex, ex);
 		}
 	}
 	
@@ -220,7 +220,7 @@ public class DailySummaryReportTest
 				}
 				catch (Exception ex)
 				{
-					_logger.error("Problems when open the URL '"+reportFile+"'. Caught: "+ex, ex);
+					_logger.error("Problems when open the URL '" + reportFile + "'. Caught: " + ex, ex);
 				}
 			}
 		}

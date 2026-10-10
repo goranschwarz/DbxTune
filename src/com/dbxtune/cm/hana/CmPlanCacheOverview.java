@@ -59,7 +59,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_CACHE;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -135,7 +135,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmPlanCacheOverview(counterController, guiController);
 	}
@@ -175,7 +175,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_REQUEST_PER_SEC,
 			"Statement Cache Requests", 	                           // Menu CheckBox text
-			"Number of Requests from the Statement Cache, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Number of Requests from the Statement Cache, per Second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "NumSearches", "HitCount", "NumInserts", "NumRemovals" }, 
 			LabelType.Static,
@@ -188,7 +188,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_HIT_RATE_PCT,
 			"Statement Cache Hit Rate", 	                           // Menu CheckBox text
-			"Statement Cache Hit Rate, in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")",                    // Label 
+			"Statement Cache Hit Rate, in Percent (" + GROUP_NAME + "->" + SHORT_NAME + ")",                    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Hit rate percent" }, 
 			LabelType.Static,
@@ -384,7 +384,7 @@ extends CountersModel
 			arr[3] = this.getRateValueSum("EVICTED_PLAN_COUNT");             // NumRemovals
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("updateGraphData("+tgdp.getName()+"): NumSearches='"+arr[0]+"', HitCount='"+arr[1]+"', NumInserts='"+arr[2]+"', NumRemovals='"+arr[3]+"'.");
+				_logger.debug("updateGraphData(" + tgdp.getName() + "): NumSearches='" + arr[0] + "', HitCount='" + arr[1] + "', NumInserts='" + arr[2] + "', NumRemovals='" + arr[3] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -399,7 +399,7 @@ extends CountersModel
 			arr[0] = this.getRateValueAvgGtZero("CACHE_HIT_PCT");
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("updateGraphData("+tgdp.getName()+"): CacheHitPct='"+arr[0]+"'.");
+				_logger.debug("updateGraphData(" + tgdp.getName() + "): CacheHitPct='" + arr[0] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);

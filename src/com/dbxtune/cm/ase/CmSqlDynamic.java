@@ -77,7 +77,7 @@ extends CountersModel
 		"Reqirements for this to work" +
 		"<ul>" +
 		"  <li>You need to record the session</li>" +
-		"  <li>Option 'Do SQL Capture and Store' for 'SQL Text' needs to be enabled.<br>Which is properties '"+PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore+"' and '"+PersistentCounterHandler.PROPKEY_sqlCap_doSqlText+"'.</li>" +
+		"  <li>Option 'Do SQL Capture and Store' for 'SQL Text' needs to be enabled.<br>Which is properties '" + PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore + "' and '" + PersistentCounterHandler.PROPKEY_sqlCap_doSqlText + "'.</li>" +
 		"  <li>ASE Configuration 'sql text pipe active' and 'sql text pipe max messages', needs to be enabled.</li>" +
 		"</ul>" +
 		"Note: If ASE config 'sql text pipe max messages' is set to low, we might <i>miss</i> entries in the queue/event-pipe<br>" +
@@ -85,7 +85,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -115,7 +115,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmSqlDynamic(counterController, guiController);
 	}
@@ -154,7 +154,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_DYNAMIC_SQL_SEC,
 			"Dynamic SQL Operations per Sec", // Menu CheckBox text
-			"Dynamic SQL Operations per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Dynamic SQL Operations per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -277,7 +277,7 @@ extends CountersModel
 		{
 			if ( ! PersistentCounterHandler.hasInstance() )
 			{
-				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"'. No recording is active, which this CM depends on.");
+				_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '" + getDisplayName() + "'. No recording is active, which this CM depends on.");
 				setActive(false, "No recording is active, which this CM depends on.");
 				return false;
 			}
@@ -289,15 +289,15 @@ extends CountersModel
 
 			if ( ! sqlCap_doSqlCaptureAndStore )
 			{
-				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"'. Configuration '"+PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore+"' is NOT enabled");
-				setActive(false, "Configuration '"+PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore+"' is NOT enabled, which this CM depends on.");
+				_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '" + getDisplayName() + "'. Configuration '" + PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore + "' is NOT enabled");
+				setActive(false, "Configuration '" + PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore + "' is NOT enabled, which this CM depends on.");
 				return false;
 			}
 
 			if ( ! sqlCap_doSqlTextInfo )
 			{
-				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"'. Configuration '"+PersistentCounterHandler.PROPKEY_sqlCap_doSqlText+"' is NOT enabled");
-				setActive(false, "Configuration '"+PersistentCounterHandler.PROPKEY_sqlCap_doSqlText+"' is NOT enabled, which this CM depends on.");
+				_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '" + getDisplayName() + "'. Configuration '" + PersistentCounterHandler.PROPKEY_sqlCap_doSqlText + "' is NOT enabled");
+				setActive(false, "Configuration '" + PersistentCounterHandler.PROPKEY_sqlCap_doSqlText + "' is NOT enabled, which this CM depends on.");
 				return false;
 			}
 		}

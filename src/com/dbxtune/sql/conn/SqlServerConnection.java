@@ -284,7 +284,7 @@ extends DbxConnection
 		}
 		catch (SQLException e)
 		{
-			_logger.debug("When getting DBMS Version ('"+sql+"'), Caught exception.", e);
+			_logger.debug("When getting DBMS Version ('" + sql + "'), Caught exception.", e);
 
 			return UNKNOWN;
 		}
@@ -349,7 +349,7 @@ extends DbxConnection
 			stmt.close();
 
 			if (_logger.isDebugEnabled())
-				_logger.debug("getActiveServerRolesOrPermissions() returns, permissionList='"+permissionList+"'.");
+				_logger.debug("getActiveServerRolesOrPermissions() returns, permissionList='" + permissionList + "'.");
 
 			// Cache the value for next execution
 			_getActiveServerRolesOrPermissions = permissionList;
@@ -357,7 +357,7 @@ extends DbxConnection
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems when executing sql: "+sql, ex);
+			_logger.warn("Problems when executing sql: " + sql, ex);
 			return null;
 		}
 	}
@@ -447,7 +447,7 @@ extends DbxConnection
 		catch (SQLException e)
 		{
 			returnText = null;
-			_logger.warn("Problems getting text for object '"+objectName+"', with owner '"+owner+"', in db '"+dbname+"'. Caught: "+e); 
+			_logger.warn("Problems getting text for object '" + objectName + "', with owner '" + owner + "', in db '" + dbname + "'. Caught: " + e); 
 		}
 
 		return returnText;
@@ -875,7 +875,7 @@ extends DbxConnection
 							// SYBASE also has: index_max_rows_per_page, index_fillfactor, index_reservepagegap, index_created, index_local
 							// But we do not read that... for the moment!
 
-							extIndexInfo.put(indexName, "Desc=["+indexDescription+"]");
+							extIndexInfo.put(indexName, "Desc=[" + indexDescription + "]");
 						}
 
 						// ADD INFO
@@ -884,9 +884,9 @@ extends DbxConnection
 				}
 				catch (SQLException ex)
 				{
-					_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+					_logger.error("getTableExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex);
 					if (_logger.isDebugEnabled())
-						_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+						_logger.debug("getTableExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex, ex);
 				}
 			}
 		}
@@ -934,9 +934,9 @@ extends DbxConnection
 			}
 			catch (SQLException ex)
 			{
-				_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+				_logger.error("getTableExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex);
 				if (_logger.isDebugEnabled())
-					_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+					_logger.debug("getTableExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex, ex);
 			}
 		}
 		
@@ -1096,12 +1096,12 @@ extends DbxConnection
 			}
 			catch (SQLException ex)
 			{
-				_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+				_logger.error("getTableExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex);
 				if (_logger.isDebugEnabled())
-					_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+					_logger.debug("getTableExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex, ex);
 
 				// IF 'dm_db_partition_stats' FAILS, try with 'sp_spaceused'
-				sql = "exec "+cat+".sp_spaceused '" + schema + table + "'"; 
+				sql = "exec " + cat + ".sp_spaceused '" + schema + table + "'"; 
 				try
 				{
 					List<ResultSetTableModel> rstmList = DbUtils.exec(_conn, sql, 2);
@@ -1118,7 +1118,7 @@ extends DbxConnection
 
 					// ADD INFO
 					extraInfo.put(TableExtraInfo.TableRowCount,      new TableExtraInfo(TableExtraInfo.TableRowCount,      "Row Count",        rowtotal    , "Number of rows in the table. Note: exec dbname..sp_spaceused 'schema.tabname'", null));
-					extraInfo.put(TableExtraInfo.TableTotalSizeInKb, new TableExtraInfo(TableExtraInfo.TableTotalSizeInKb, "Total Size In KB", data+index  , "Details from sp_spaceused: reserved="+nf.format(reserved)+" KB, data="+nf.format(data)+" KB, index_size="+nf.format(index)+" KB, unused="+nf.format(unused)+" KB", null));
+					extraInfo.put(TableExtraInfo.TableTotalSizeInKb, new TableExtraInfo(TableExtraInfo.TableTotalSizeInKb, "Total Size In KB", data+index  , "Details from sp_spaceused: reserved=" + nf.format(reserved) + " KB, data=" + nf.format(data) + " KB, index_size=" + nf.format(index) + " KB, unused=" + nf.format(unused) + " KB", null));
 					extraInfo.put(TableExtraInfo.TableDataSizeInKb,  new TableExtraInfo(TableExtraInfo.TableDataSizeInKb,  "Data Size In KB",  data        , "From 'sp_spaceued', column 'data'.", null));
 					extraInfo.put(TableExtraInfo.TableIndexSizeInKb, new TableExtraInfo(TableExtraInfo.TableIndexSizeInKb, "Index Size In KB", index       , "From 'sp_spaceued', column 'index_size'.", null));
 					extraInfo.put(TableExtraInfo.TableIndexCount,    new TableExtraInfo(TableExtraInfo.TableIndexCount,    "Index Count",      indexCount  , "Number of indexes on the table", null));
@@ -1126,9 +1126,9 @@ extends DbxConnection
 				}
 				catch (SQLException ex2)
 				{
-					_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex2);
+					_logger.error("getTableExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex2);
 					if (_logger.isDebugEnabled())
-						_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex2, ex2);
+						_logger.debug("getTableExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex2, ex2);
 				}
 			}
 		}
@@ -1184,9 +1184,9 @@ extends DbxConnection
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("getViewReferences(): Problems executing sql '"+sql+"'. Caught="+ex);
+			_logger.error("getViewReferences(): Problems executing sql '" + sql + "'. Caught=" + ex);
 			if (_logger.isDebugEnabled())
-				_logger.debug("getViewReferences(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+				_logger.debug("getViewReferences(): Problems executing sql '" + sql + "'. Caught=" + ex, ex);
 		}
 
 		return new ArrayList<>(set);

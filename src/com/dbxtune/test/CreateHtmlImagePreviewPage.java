@@ -58,7 +58,7 @@ public class CreateHtmlImagePreviewPage
 		for (File file : listOfFiles)
 		{
 			if ( file.isFile() )
-				System.out.println("<IMG SRC=\""+file.getName()+"\" ALT=\""+file.getName()+"\" TITLE=\""+file.getName()+"\" BORDER=0>");
+				System.out.println("<IMG SRC=\"" + file.getName() + "\" ALT=\"" + file.getName() + "\" TITLE=\"" + file.getName() + "\" BORDER=0>");
 		}
 
 		System.out.println("</BODY>");

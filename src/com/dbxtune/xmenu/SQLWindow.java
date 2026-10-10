@@ -77,7 +77,7 @@ extends XmenuActionBase
 		for (String pv : paramValues.keySet())
 		{
 //			sql = sql.replaceAll("\\$\\{"+pv+"\\}", getParamValue(pv));
-			sql = sql.replace("${"+pv+"}", getParamValue(pv));
+			sql = sql.replace("${" + pv + "}", getParamValue(pv));
 			
 			// System.out.println("xxxxxxxxxxxxxxxx: key='"+pv+"', value='"+getParamValue(pv)+"'.");
 		}
@@ -142,8 +142,8 @@ extends XmenuActionBase
 			Properties props = getAllProperties();
 			if (props != null)
 			{
-				noExec = props.getProperty("noexec",  noExec +"").equalsIgnoreCase("true");
-				goPsql = props.getProperty("go.psql", goPsql +"").equalsIgnoreCase("true");
+				noExec = props.getProperty("noexec",  noExec + "").equalsIgnoreCase("true");
+				goPsql = props.getProperty("go.psql", goPsql + "").equalsIgnoreCase("true");
 			}
 			
 			QueryWindow qf = new QueryWindow(newConn, sql, false, null, closeConnOnExit, WindowType.JFRAME, getConfiguration());

@@ -145,13 +145,13 @@ public class PersistWriterToBcpFiles
 		String propname = null;
 
 		// property: name
-		propname = propPrefix+"name";
+		propname = propPrefix + "name";
 		_name = props.getProperty(propname, _name);
 
 		// WRITE init message, jupp a little late, but I wanted to grab the _name
-		_logger.info("Initializing the PersistentCounterHandler.WriterClass component named '"+_name+"'.");
+		_logger.info("Initializing the PersistentCounterHandler.WriterClass component named '" + _name + "'.");
 		
-		_saveToDir = props.getProperty(propPrefix+"saveToDir");
+		_saveToDir = props.getProperty(propPrefix + "saveToDir");
 		if (_saveToDir == null)
 		{
 //			String envNameSaveDir = DbxTune.getInstance().getAppSaveDirEnvName();  // ASETUNE_SAVE_DIR
@@ -166,22 +166,22 @@ public class PersistWriterToBcpFiles
 
 				if (_saveToDir == null)
 				{
-					String err = "Directory 'PersistWriterToBcpFiles.saveToDir' name was not specified and "+envNameSaveDir+" or "+envNameHomeDir+" was not set, can't save information about DDL table creation for CounterModel '"+getName()+"'."; 
+					String err = "Directory 'PersistWriterToBcpFiles.saveToDir' name was not specified and " + envNameSaveDir + " or " + envNameHomeDir + " was not set, can't save information about DDL table creation for CounterModel '" + getName() + "'."; 
 					_logger.error(err);
 					throw new MandatoryPropertyException(err);
 				}
 			}
 		}
 
-		_moveFilesAfterXSeconds = props.getIntProperty(propPrefix+"moveFilesAfterXSeconds", _moveFilesAfterXSeconds);
+		_moveFilesAfterXSeconds = props.getIntProperty(propPrefix + "moveFilesAfterXSeconds", _moveFilesAfterXSeconds);
 
-		_moveFilesOsCmd = props.getProperty(propPrefix+"moveFilesOsCmd");
+		_moveFilesOsCmd = props.getProperty(propPrefix + "moveFilesOsCmd");
 
-		_moveFilesDateFormat = props.getProperty(propPrefix+"moveFilesDateFormat", _moveFilesDateFormat);
+		_moveFilesDateFormat = props.getProperty(propPrefix + "moveFilesDateFormat", _moveFilesDateFormat);
 
-		_ddlFilesOsCmd = props.getProperty(propPrefix+"ddlFilesOsCmd");
+		_ddlFilesOsCmd = props.getProperty(propPrefix + "ddlFilesOsCmd");
 
-		_logger.info("Configuration for PersistentCounterHandler.WriterClass component named '"+_name+"': "+_configStr);
+		_logger.info("Configuration for PersistentCounterHandler.WriterClass component named '" + _name + "': " + _configStr);
 
 		_configStr = 
 			"saveToDir="               + _saveToDir +
@@ -307,7 +307,7 @@ public class PersistWriterToBcpFiles
 				}
 				catch (FileNotFoundException e)
 				{
-					_logger.warn("Problems opening/creating the a file. "+e);
+					_logger.warn("Problems opening/creating the a file. " + e);
 					return;
 				}
 				catch (IOException e)
@@ -356,7 +356,7 @@ public class PersistWriterToBcpFiles
 		}
 		catch (FileNotFoundException e)
 		{
-			_logger.warn("Problems opening/creating the a file. "+e);
+			_logger.warn("Problems opening/creating the a file. " + e);
 			return;
 		}
 		catch (IOException e)
@@ -429,7 +429,7 @@ public class PersistWriterToBcpFiles
 		}
 		catch (FileNotFoundException e)
 		{
-			_logger.warn("Problems opening/creating the a file. "+e);
+			_logger.warn("Problems opening/creating the a file. " + e);
 			return false;
 		}
 		catch (IOException e)
@@ -459,7 +459,7 @@ public class PersistWriterToBcpFiles
 
 		if ( ! cm.hasDiffData() )
 		{
-			_logger.info("No diffData is available, skipping writing Counters for name='"+cm.getName()+"'.");
+			_logger.info("No diffData is available, skipping writing Counters for name='" + cm.getName() + "'.");
 			return;
 		}
 
@@ -502,7 +502,7 @@ public class PersistWriterToBcpFiles
 		}
 		catch (FileNotFoundException e)
 		{
-			_logger.warn("Problems opening/creating the a file. "+e);
+			_logger.warn("Problems opening/creating the a file. " + e);
 			return;
 		}
 		catch (IOException e)
@@ -523,7 +523,7 @@ public class PersistWriterToBcpFiles
 
 		if (rows == null || cols == null)
 		{
-			_logger.error("Rows or Columns cant be null. rows='"+rows+"', cols='"+cols+"'");
+			_logger.error("Rows or Columns cant be null. rows='" + rows + "', cols='" + cols + "'");
 			return;
 		}
 
@@ -542,7 +542,7 @@ public class PersistWriterToBcpFiles
 
 			// When THIS sample was taken
 			// probably the same time as parentSampleTime, but it can vary some milliseconds or so
-			rowSb.append(cm.getTimestamp()+"");
+			rowSb.append(cm.getTimestamp() + "");
 			rowSb.append(COL_SEP);
 
 			// How long the sample was for, in Milliseconds
@@ -594,12 +594,12 @@ public class PersistWriterToBcpFiles
 		File f = new File(bcpFile);
 		if ( ! f.exists() )
 		{
-			_logger.warn("The file '"+bcpFile+"' does not exists.");
+			_logger.warn("The file '" + bcpFile + "' does not exists.");
 			return false;
 		}
 
 		String newFileName = "";
-		newFileName = bcpFile    .replaceFirst("tmp_",          "final_"+dateStamp+"_");
+		newFileName = bcpFile    .replaceFirst("tmp_",          "final_" + dateStamp + "_");
 		newFileName = newFileName.replaceFirst(".bcp.appender", ".bcp");
 
 		f.renameTo( new File(newFileName) );
@@ -616,12 +616,12 @@ public class PersistWriterToBcpFiles
 				if (retCode != 0)
 				{
 					String retStr  = osCmd.getOutput();
-					_logger.error("Problems when executing the OS Command '"+osCmdStr+"'. The following output was received: "+retStr);
+					_logger.error("Problems when executing the OS Command '" + osCmdStr + "'. The following output was received: " + retStr);
 				}
 			}
 			catch(IOException e)
 			{
-				_logger.error("Problems when executing the OS Command '"+osCmdStr+"'. Caught: "+e);
+				_logger.error("Problems when executing the OS Command '" + osCmdStr + "'. Caught: " + e);
 			}
 		}
 
@@ -633,7 +633,7 @@ public class PersistWriterToBcpFiles
 		File f = new File(ddlFile);
 		if ( ! f.exists() )
 		{
-			_logger.warn("The file '"+ddlFile+"' does not exists.");
+			_logger.warn("The file '" + ddlFile + "' does not exists.");
 			return false;
 		}
 
@@ -649,12 +649,12 @@ public class PersistWriterToBcpFiles
 				if (retCode != 0)
 				{
 					String retStr  = osCmd.getOutput();
-					_logger.error("Problems when executing the OS Command '"+osCmdStr+"'. The following output was received: "+retStr);
+					_logger.error("Problems when executing the OS Command '" + osCmdStr + "'. The following output was received: " + retStr);
 				}
 			}
 			catch(IOException e)
 			{
-				_logger.error("Problems when executing the OS Command '"+osCmdStr+"'. Caught: "+e);
+				_logger.error("Problems when executing the OS Command '" + osCmdStr + "'. Caught: " + e);
 			}
 		}
 		return true;

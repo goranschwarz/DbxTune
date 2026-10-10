@@ -125,12 +125,12 @@ extends HttpServlet
 				}
 				catch (IOException ex)
 				{
-					_logger.warn("Problems reading file '"+f+"'. This is used to sort the 'sessions list'. Skipping this... Caught: "+ex);
+					_logger.warn("Problems reading file '" + f + "'. This is used to sort the 'sessions list'. Skipping this... Caught: " + ex);
 				}
 			}
 			else
 			{
-				_logger.info("Sorting sessions will not be done. file '"+f+"' do not exist.");
+				_logger.info("Sorting sessions will not be done. file '" + f + "' do not exist.");
 			}
 
 			// to JSON
@@ -139,8 +139,8 @@ extends HttpServlet
 		}
 		catch (Exception e)
 		{
-			_logger.info("Problem accessing DBMS or writing JSON, Caught: "+e, e);
-			throw new ServletException("Problem accessing db or writing JSON, Caught: "+e, e);
+			_logger.info("Problem accessing DBMS or writing JSON, Caught: " + e, e);
+			throw new ServletException("Problem accessing db or writing JSON, Caught: " + e, e);
 		}
 		
 		out.println(payload);

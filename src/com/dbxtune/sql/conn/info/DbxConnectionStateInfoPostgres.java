@@ -68,7 +68,7 @@ extends DbxConnectionStateInfoGenericJdbc
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("Error in refresh() problems executing sql='"+sql+"'.", ex);
+			_logger.error("Error in refresh() problems executing sql='" + sql + "'.", ex);
 		}
 
 		
@@ -85,7 +85,7 @@ extends DbxConnectionStateInfoGenericJdbc
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("Error in refresh() problems executing sql='"+sql+"'.", ex);
+			_logger.error("Error in refresh() problems executing sql='" + sql + "'.", ex);
 		}
 
 	}

@@ -88,7 +88,7 @@ extends TabularCntrPanel
 				Configuration conf = Configuration.getCombinedConfiguration();
 
 				l_flush_chk.setSelected(conf.getBooleanProperty(CmQpMetrics.PROPKEY_onSample_flush, CmQpMetrics.DEFAULT_onSample_flush));
-				l_filter_txt.setText(""+conf.getProperty       (CmQpMetrics.PROPKEY_sample_filter , CmQpMetrics.DEFAULT_sample_filter));
+				l_filter_txt.setText("" + conf.getProperty       (CmQpMetrics.PROPKEY_sample_filter , CmQpMetrics.DEFAULT_sample_filter));
 
 				// ReInitialize the SQL
 				getCm().setSql(null);
@@ -164,7 +164,7 @@ extends TabularCntrPanel
 						catch (SQLException ex)
 						{
 							SwingUtils.showErrorMessage("Problems", "Problems when dropping/purging the Query Plan Metrics", ex);
-							_logger.warn("Problems execute SQL '"+sql+"', Caught: " + ex.toString() );
+							_logger.warn("Problems execute SQL '" + sql + "', Caught: " + ex.toString() );
 						}
 
 						getWaitDialog().setState("Done");
@@ -209,7 +209,7 @@ extends TabularCntrPanel
 						catch (SQLException ex)
 						{
 							SwingUtils.showErrorMessage("Problems", "Problems when flushing the Query Plan Metrics", ex);
-							_logger.warn("Problems execute SQL '"+sql+"', Caught: " + ex.toString() );
+							_logger.warn("Problems execute SQL '" + sql + "', Caught: " + ex.toString() );
 						}
 
 						getWaitDialog().setState("Done");

@@ -316,9 +316,9 @@ public abstract class AbstractSysmonType
 		//|  -------------------------  ------------  ------------  ----------  ----------
 		String line = //"  " +
 			StringUtil.left(name       , 32, false) +
-			StringUtil.right(perSec +"", 11) + " " +
-			StringUtil.right(perTran+"", 11) + " " +
-			StringUtil.right(counter+"", 11) + " " +
+			StringUtil.right(perSec + "", 11) + " " +
+			StringUtil.right(perTran + "", 11) + " " +
+			StringUtil.right(counter + "", 11) + " " +
 			StringUtil.right(na        , 11) + comment;
 
 		_reportText.append(line).append("\n");
@@ -367,10 +367,10 @@ public abstract class AbstractSysmonType
 		//|  -------------------------  ------------  ------------  ----------  ----------
 		String line = //"  " +
 			StringUtil.left(name       , 32, false) +
-			StringUtil.right(perSec +"", 11) + " " +
-			StringUtil.right(perTran+"", 11) + " " +
-			StringUtil.right(counter+"", 11) + " " +
-			StringUtil.right(pct +" %" , 11) + comment;
+			StringUtil.right(perSec + "", 11) + " " +
+			StringUtil.right(perTran + "", 11) + " " +
+			StringUtil.right(counter + "", 11) + " " +
+			StringUtil.right(pct + " %" , 11) + comment;
 
 		_reportText.append(line).append("\n");
 	}
@@ -397,7 +397,7 @@ public abstract class AbstractSysmonType
 			StringUtil.right("n/a", 11) + " " +
 			StringUtil.right("n/a", 11) + " " +
 			StringUtil.right("n/a", 11) + " " +
-			StringUtil.right(pct +" %" , 11);
+			StringUtil.right(pct + " %" , 11);
 
 		_reportText.append(line).append("\n");
 	}
@@ -414,7 +414,7 @@ public abstract class AbstractSysmonType
 			StringUtil.left(name       , 32, false) +
 			StringUtil.right("n/a"     , 11) + " " +
 			StringUtil.right("n/a"     , 11) + " " +
-			StringUtil.right(counter+"", 11) + " " +
+			StringUtil.right(counter + "", 11) + " " +
 			StringUtil.right("n/a %"   , 11);
 
 		_reportText.append(line).append("\n");
@@ -448,7 +448,7 @@ public abstract class AbstractSysmonType
 			StringUtil.left(name    , 32, false) +
 			StringUtil.right("n/a"  , 11) + " " +
 			StringUtil.right("n/a"  , 11) + " " +
-			StringUtil.right(calc+"", 11) + " " +
+			StringUtil.right(calc + "", 11) + " " +
 			StringUtil.right("n/a %", 11);
 
 		_reportText.append(line).append("\n");
@@ -469,7 +469,7 @@ public abstract class AbstractSysmonType
 
 		String line = //"  " +
 			StringUtil.left(name,     32, false) +
-			StringUtil.right(""+calc, 11) + " seconds";
+			StringUtil.right("" + calc, 11) + " seconds";
 
 		_reportText.append(line).append("\n");
 	}
@@ -507,7 +507,7 @@ public abstract class AbstractSysmonType
 			String rptHead =
 				"\n" +
 				"===============================================================================\n" +
-				reportName+"\n" +
+				reportName + "\n" +
 				"===============================================================================\n";
 			String rptText = getReportText();
 

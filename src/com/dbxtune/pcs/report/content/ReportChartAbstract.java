@@ -787,7 +787,7 @@ public abstract class ReportChartAbstract implements IReportChart
 		writer.append("\n");
 		writer.append("\n");
 		writer.append("<div id='div_chart_" + tagName + "' style='display:none'>\n");
-		writer.append("<canvas id='canvas_" + tagName + "' width='" + width +"' height='" + height + "'></canvas> \n");
+		writer.append("<canvas id='canvas_" + tagName + "' width='" + width + "' height='" + height + "'></canvas> \n");
 		writer.append("</div>\n");
 
 		// Write the JavaScript part... which will hide the IMAGE and show the ChartJS object

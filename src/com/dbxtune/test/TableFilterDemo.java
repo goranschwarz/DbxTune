@@ -183,9 +183,9 @@ table.getTableHeader().setReorderingAllowed(true);
 				while(true)
 				{
 					count++;
-					System.out.println("Adding: "+count);
-					model.addRow("goran-"+count, "Schwarz-"+count, "any-"+count, count, false);
-					model.addRow("h�kan-"+count, "Schwarz-"+count, "all-"+count, count, false);
+					System.out.println("Adding: " + count);
+					model.addRow("goran-" + count, "Schwarz-" + count, "any-" + count, count, false);
+					model.addRow("h�kan-" + count, "Schwarz-" + count, "all-" + count, count, false);
 
 					System.out.println(" - Sleeping ");
 					try { Thread.sleep(2500);}
@@ -309,7 +309,7 @@ table.getTableHeader().setReorderingAllowed(true);
 			int i=0;
 			for (TableModelListener tml : getTableModelListeners())
 			{
-				System.out.println("       - tml("+(i++)+"): "+tml);
+				System.out.println("       - tml(" + (i++) + "): " + tml);
 			}
 		}
 
@@ -331,12 +331,12 @@ table.getTableHeader().setReorderingAllowed(true);
 			// Invoke this job on the SWING Event Dispather Thread
 			if ( ! SwingUtilities.isEventDispatchThread() )
 			{
-				System.out.println(" --FIRE: LATER in EventDispatchThread, I'm not EDT ("+Thread.currentThread().getName()+").");
+				System.out.println(" --FIRE: LATER in EventDispatchThread, I'm not EDT (" + Thread.currentThread().getName() + ").");
 				SwingUtilities.invokeLater(doWork);
 			}
 			else
 			{
-				System.out.println(" --FIRE: NOW i must be EDT ("+Thread.currentThread().getName()+").");
+				System.out.println(" --FIRE: NOW i must be EDT (" + Thread.currentThread().getName() + ").");
 				doWork.run();
 			}
 		}
@@ -418,7 +418,7 @@ table.getTableHeader().setReorderingAllowed(true);
 				try {data.get(row);}
 				catch(IndexOutOfBoundsException e) 
 				{
-					System.out.println("ERROR: row="+row+", col="+col+", model.rows="+(data.size()-1)+", Exception="+e );
+					System.out.println("ERROR: row=" + row + ", col=" + col + ", model.rows=" + (data.size()-1) + ", Exception=" + e );
 					e.printStackTrace();
 				}
 				return null;

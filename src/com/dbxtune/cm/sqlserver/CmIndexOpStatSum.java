@@ -67,7 +67,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -190,7 +190,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmIndexOpStatSum(counterController, guiController);
 	}
@@ -274,7 +274,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_IUD_INSTANCE,
 			"Insert/Update/Delete Rows Per Second at Instance Level", // Menu CheckBox text
-			"Insert/Update/Delete Rows Per Second at Instance Level ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Insert/Update/Delete Rows Per Second at Instance Level (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] {"IUD_count", "insert_count", "update_count", "delete_count", "delete_ghost_count"}, 
 			LabelType.Static,
@@ -287,7 +287,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_IUD_TEMPDB,
 			"Insert/Update/Delete Rows Per Second for tempdb", // Menu CheckBox text
-			"Insert/Update/Delete Rows Per Second for tempdb ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Insert/Update/Delete Rows Per Second for tempdb (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] {"IUD_count", "insert_count", "update_count", "delete_count", "delete_ghost_count"}, 
 			LabelType.Static,
@@ -300,7 +300,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_IUD_USER_DBS,
 			"Insert/Update/Delete Rows Per Second for User Databases", // Menu CheckBox text
-			"Insert/Update/Delete Rows Per Second for User Databases ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Insert/Update/Delete Rows Per Second for User Databases (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] {"IUD_count", "insert_count", "update_count", "delete_count", "delete_ghost_count"}, 
 			LabelType.Static,
@@ -315,7 +315,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_LEAF_IUD_COUNT,
 			"Insert/Update/Delete Rows Per Second per Database [leaf_IUD_count]", // Menu CheckBox text
-			"Insert/Update/Delete Rows Per Second per Database [leaf_IUD_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Insert/Update/Delete Rows Per Second per Database [leaf_IUD_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -328,7 +328,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_LEAF_INSERT_COUNT,
 			"Insert Rows Per Second per Database [leaf_insert_count]", // Menu CheckBox text
-			"Insert Rows Per Second per Database [leaf_insert_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Insert Rows Per Second per Database [leaf_insert_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -341,7 +341,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_LEAF_UPDATE_COUNT,
 			"Update Rows Per Second per Database [leaf_update_count]", // Menu CheckBox text
-			"Update Rows Per Second per Database [leaf_update_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Update Rows Per Second per Database [leaf_update_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -354,7 +354,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_LEAF_DELETE_COUNT,
 			"Delete Rows Per Second per Database [leaf_delete_count]", // Menu CheckBox text
-			"Delete Rows Per Second per Database [leaf_delete_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Delete Rows Per Second per Database [leaf_delete_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -367,7 +367,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_LEAF_GHOST_COUNT,
 			"Ghost Delete Rows Per Second per Database [leaf_ghost_count]", // Menu CheckBox text
-			"Ghost Delete Rows Per Second per Database [leaf_ghost_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Ghost Delete Rows Per Second per Database [leaf_ghost_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -383,7 +383,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_LEAF_ALLOCATION_COUNT,
 			"Page Allocation/Split Per Second per Database [leaf_allocation_count]", // Menu CheckBox text
-			"Page Allocation/Split Per Second per Database [leaf_allocation_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Page Allocation/Split Per Second per Database [leaf_allocation_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -396,7 +396,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_LEAF_PAGE_MERGE_COUNT,
 			"Page Merges Per Second per Database [leaf_page_merge_count]", // Menu CheckBox text
-			"Page Merges Per Second per Database [leaf_page_merge_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Page Merges Per Second per Database [leaf_page_merge_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -409,7 +409,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_RANGE_SCAN_COUNT,
 			"Range Scans Per Second per Database [range_scan_count]", // Menu CheckBox text
-			"Range Scans Per Second per Database [range_scan_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Range Scans Per Second per Database [range_scan_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -422,7 +422,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_SINGLETON_LOOKUP_COUNT,
 			"Bookmark/Singleton Lookups Per Second per Database [singleton_lookup_count]", // Menu CheckBox text
-			"Bookmark/Singleton Lookups Per Second per Database [singleton_lookup_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Bookmark/Singleton Lookups Per Second per Database [singleton_lookup_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -435,7 +435,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_FORWARD_FETCH_COUNT,
 			"Forward Fetch Count Rows Per Second per Database [forwarded_fetch_count]", // Menu CheckBox text
-			"Forward Fetch Count Rows Per Second per Database [forwarded_fetch_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Forward Fetch Count Rows Per Second per Database [forwarded_fetch_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -448,7 +448,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_LOB_FETCH_IN_BYTES,
 			"LOB Fetch In Bytes Per Second per Database [lob_fetch_in_bytes]", // Menu CheckBox text
-			"LOB Fetch In Bytes Per Second per Database [lob_fetch_in_bytes] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"LOB Fetch In Bytes Per Second per Database [lob_fetch_in_bytes] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_BYTES, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -461,7 +461,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_ROW_OVERFLOW_FETCH_IN_BYTES,
 			"Row Overflow Fetch In Bytes Per Second per Database [row_overflow_fetch_in_bytes]", // Menu CheckBox text
-			"Row Overflow Fetch In Bytes Per Second per Database [row_overflow_fetch_in_bytes] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Row Overflow Fetch In Bytes Per Second per Database [row_overflow_fetch_in_bytes] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_BYTES, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -474,7 +474,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_COLUMN_VALUE_PUSH_OFF_ROW_COUNT,
 			"Column Pushed Off-Row Count Per Second per Database [column_value_push_off_row_count]", // Menu CheckBox text
-			"Column Pushed Off-Row Count Per Second per Database [column_value_push_off_row_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Column Pushed Off-Row Count Per Second per Database [column_value_push_off_row_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -487,7 +487,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_COLUMN_VALUE_PULL_IN_ROW_COUNT,
 			"Column Pulled In-Row Count Per Second per Database [column_value_pull_in_row_count]", // Menu CheckBox text
-			"Column Pulled In-Row Count Per Second per Database [column_value_pull_in_row_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Column Pulled In-Row Count Per Second per Database [column_value_pull_in_row_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -503,7 +503,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_ROW_LOCK_COUNT,
 			"Row Lock Count Per Second per Database [row_lock_count]", // Menu CheckBox text
-			"Row Lock Count Per Second per Database [row_lock_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Row Lock Count Per Second per Database [row_lock_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -516,7 +516,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_ROW_LOCK_WAIT_COUNT,
 			"Row Lock Wait Count Per Second per Database [row_lock_count]", // Menu CheckBox text
-			"Row Lock Wait Count Per Second per Database [row_lock_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Row Lock Wait Count Per Second per Database [row_lock_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -529,7 +529,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_ROW_LOCK_WAIT_MS,
 			"Row Lock Wait Time in MS Per Second per Database [row_lock_wait_in_ms]", // Menu CheckBox text
-			"Row Lock Wait Time in MS Per Second per Database [row_lock_wait_in_ms] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Row Lock Wait Time in MS Per Second per Database [row_lock_wait_in_ms] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -542,7 +542,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_ROW_LOCK_WAIT_MS_PER_COUNT,
 			"Avg Row Lock Wait Time in MS Per Count per Database [row_lock_wait_in_ms_per_count]", // Menu CheckBox text
-			"Avg Row Lock Wait Time in MS Per Count per Database [row_lock_wait_in_ms_per_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Avg Row Lock Wait Time in MS Per Count per Database [row_lock_wait_in_ms_per_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -558,7 +558,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_PAGE_LOCK_COUNT,
 			"Page Lock Count Per Second per Database [page_lock_count]", // Menu CheckBox text
-			"Page Lock Count Per Second per Database [page_lock_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Page Lock Count Per Second per Database [page_lock_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -571,7 +571,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_PAGE_LOCK_WAIT_COUNT,
 			"Page Lock Wait Count Per Second per Database [page_lock_count]", // Menu CheckBox text
-			"Page Lock Wait Count Per Second per Database [page_lock_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Page Lock Wait Count Per Second per Database [page_lock_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -584,7 +584,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_PAGE_LOCK_WAIT_MS,
 			"Page Lock Wait Time in MS Per Second per Database [page_lock_wait_in_ms]", // Menu CheckBox text
-			"Page Lock Wait Time in MS Per Second per Database [page_lock_wait_in_ms] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Page Lock Wait Time in MS Per Second per Database [page_lock_wait_in_ms] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -597,7 +597,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_PAGE_LOCK_WAIT_MS_PER_COUNT,
 			"Avg Page Lock Wait Time in MS Per Count per Database [page_lock_wait_in_ms_per_count]", // Menu CheckBox text
-			"Avg Page Lock Wait Time in MS Per Count per Database [page_lock_wait_in_ms_per_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Avg Page Lock Wait Time in MS Per Count per Database [page_lock_wait_in_ms_per_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -613,7 +613,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_PAGE_LATCH_WAIT_COUNT,
 			"Page Latch Wait Count Per Second per Database [page_latch_wait_count]", // Menu CheckBox text
-			"Page Latch Wait Count Per Second per Database [page_latch_wait_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Page Latch Wait Count Per Second per Database [page_latch_wait_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -626,7 +626,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_PAGE_LATCH_WAIT_MS,
 			"Page Latch Wait Time in MS Per Second per Database [page_latch_wait_in_ms]", // Menu CheckBox text
-			"Page Latch Wait Time in MS Per Second per Database [page_latch_wait_in_ms] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Page Latch Wait Time in MS Per Second per Database [page_latch_wait_in_ms] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -639,7 +639,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_PAGE_LATCH_WAIT_MS_PER_COUNT,
 			"Avg Page Latch Wait Time in MS Per Count per Database [page_latch_wait_in_ms_per_count]", // Menu CheckBox text
-			"Avg Page Latch Wait Time in MS Per Count per Database [page_latch_wait_in_ms_per_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Avg Page Latch Wait Time in MS Per Count per Database [page_latch_wait_in_ms_per_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -655,7 +655,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_PAGE_IO_LATCH_WAIT_COUNT,
 			"Page IO Latch Wait Count Per Second per Database [page_io_latch_wait_count]", // Menu CheckBox text
-			"Page IO Latch Wait Count Per Second per Database [page_io_latch_wait_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Page IO Latch Wait Count Per Second per Database [page_io_latch_wait_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -668,7 +668,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_PAGE_IO_LATCH_WAIT_MS,
 			"Page IO Latch Wait Time in MS Per Second per Database [page_io_latch_wait_in_ms]", // Menu CheckBox text
-			"Page IO Latch Wait Time in MS Per Second per Database [page_io_latch_wait_in_ms] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Page IO Latch Wait Time in MS Per Second per Database [page_io_latch_wait_in_ms] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -681,7 +681,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_PAGE_IO_LATCH_WAIT_MS_PER_COUNT,
 			"Avg Page IO Latch Wait Time in MS Per Count per Database [page_io_latch_wait_in_ms_per_count]", // Menu CheckBox text
-			"Avg Page IO Latch Wait Time in MS Per Count per Database [page_io_latch_wait_in_ms_per_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Avg Page IO Latch Wait Time in MS Per Count per Database [page_io_latch_wait_in_ms_per_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -697,7 +697,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_INDEX_LOCK_PROMATION_ATTEMPT_COUNT,
 			"Lock Promotion Attempt Count Per Second per Database [index_lock_promotion_attempt_count]", // Menu CheckBox text
-			"Lock Promotion Attempt Count Per Second per Database [index_lock_promotion_attempt_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Lock Promotion Attempt Count Per Second per Database [index_lock_promotion_attempt_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -710,7 +710,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_INDEX_LOCK_PROMATION_COUNT,
 			"Lock Promotion Success Count Per Second per Database [index_lock_promotion_count]", // Menu CheckBox text
-			"Lock Promotion Success Count Per Second per Database [index_lock_promotion_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Lock Promotion Success Count Per Second per Database [index_lock_promotion_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -726,7 +726,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_PAGE_COMPRESSION_ATTEMPT_COUNT,
 			"Page Compression Attempt Count Per Second per Database [page_compression_attempt_count]", // Menu CheckBox text
-			"Page Compression Attempt Count Per Second per Database [page_compression_attempt_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Page Compression Attempt Count Per Second per Database [page_compression_attempt_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -739,7 +739,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_PER_DB_PAGE_COMPRESSION_SUCCESS_COUNT,
 			"Page Compression Success Count Per Second per Database [page_compression_success_count]", // Menu CheckBox text
-			"Page Compression Success Count Per Second per Database [page_compression_success_count] ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Page Compression Success Count Per Second per Database [page_compression_success_count] (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,

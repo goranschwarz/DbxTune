@@ -103,7 +103,7 @@ extends TdsConnection
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("closeGatewayMode() had problems. sql='"+sql+"'.", ex);
+			_logger.warn("closeGatewayMode() had problems. sql='" + sql + "'.", ex);
 		}
 	}
 	/**
@@ -167,7 +167,7 @@ extends TdsConnection
 			if (ex.getErrorCode() == 2056)
 				return false;
 			
-			_logger.warn("isInGatewayMode("+timeout+") had problems. sql='"+sql+"'.", ex);
+			_logger.warn("isInGatewayMode(" + timeout + ") had problems. sql='" + sql + "'.", ex);
 			return false;
 		}
 	}
@@ -177,9 +177,9 @@ extends TdsConnection
 	{
 //System.out.println("RsConnection.isValid("+timeout+"): was called");
 		if (timeout < 0)
-			throw new SQLException("The passed timeout value of '"+timeout+"' must be 0 or above.");
+			throw new SQLException("The passed timeout value of '" + timeout + "' must be 0 or above.");
 
-		String sql =  "admin echo, 'DbxConnection-Rs-isValid("+timeout+")'";
+		String sql =  "admin echo, 'DbxConnection-Rs-isValid(" + timeout + ")'";
 		
 		// If we KNOW that we are in gateway mode... issue a simple SQL Statement, so we don't get a error message:
 		//         Msg 2812, Level 16, State 5:
@@ -217,7 +217,7 @@ extends TdsConnection
 			if (isInGatewayMode(timeout))
 				return true;
 			
-			_logger.warn("isValid("+timeout+") had problems. sql='"+sql+"'.", ex);
+			_logger.warn("isValid(" + timeout + ") had problems. sql='" + sql + "'.", ex);
 			return false;
 		}
 	}

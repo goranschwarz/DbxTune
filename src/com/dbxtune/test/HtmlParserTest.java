@@ -34,7 +34,7 @@ public class HtmlParserTest
 		}
 			
 		System.out.println("Usage: progname url");
-		System.out.println("URL: "+urlStr);
+		System.out.println("URL: " + urlStr);
 
 System.out.println("DOESN'T WORK, NEED TO UNCOMMENT");
 

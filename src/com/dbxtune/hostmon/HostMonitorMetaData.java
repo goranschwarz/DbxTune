@@ -239,7 +239,7 @@ implements ResultSetMetaData
 			if (e._colName.equals(name))
 				return e;
 		}
-		throw new RuntimeException("The getColumn("+name+") could not be found.");
+		throw new RuntimeException("The getColumn(" + name + ") could not be found.");
 	}
 
 	/**
@@ -255,7 +255,7 @@ implements ResultSetMetaData
 			if (e._sqlColNum == col)
 				return e;
 		}
-		throw new RuntimeException("The getSqlColumn("+col+") could not be found.");
+		throw new RuntimeException("The getSqlColumn(" + col + ") could not be found.");
 	}
 
 	/**
@@ -271,7 +271,7 @@ implements ResultSetMetaData
 			if (e._parseColNum == col)
 				return e;
 		}
-		throw new RuntimeException("The getParseColumn("+col+") could not be found.");
+		throw new RuntimeException("The getParseColumn(" + col + ") could not be found.");
 	}
 
 	/**
@@ -846,7 +846,7 @@ implements ResultSetMetaData
 		   ) 
 		{
 			if (ce._dateParseFormat == null)
-				throw new RuntimeException("The column '"+ce._colName+"' has not set the date parsing format.");
+				throw new RuntimeException("The column '" + ce._colName + "' has not set the date parsing format.");
 			else
 			{
 				if (val == null)
@@ -868,7 +868,7 @@ implements ResultSetMetaData
 					}
 					catch (ParseException e) 
 					{
-						throw new RuntimeException("The column '"+ce._colName+"' can't parsing using the format '"+ce._dateParseFormat+"'.", e);
+						throw new RuntimeException("The column '" + ce._colName + "' can't parsing using the format '" + ce._dateParseFormat + "'.", e);
 					}
 				}
 			}
@@ -883,7 +883,7 @@ implements ResultSetMetaData
 			}
 			catch (RuntimeException e)
 			{
-				throw new RuntimeException("Problems when creating a new Object for the column '"+ce._colName+"'. Caught: "+e.getMessage(), e);
+				throw new RuntimeException("Problems when creating a new Object for the column '" + ce._colName + "'. Caught: " + e.getMessage(), e);
 			}
 		}
 
@@ -988,17 +988,17 @@ implements ResultSetMetaData
 //			case java.sql.Types.DATALINK:     return "-DATALINK-";
 			case java.sql.Types.BOOLEAN:      return Boolean.valueOf(strVal);
 			default:
-				throw new RuntimeException("Unsupported data type was found in the dictionary java.sql.Types '"+sqlType+"', value='"+val+"'.");
+				throw new RuntimeException("Unsupported data type was found in the dictionary java.sql.Types '" + sqlType + "', value='" + val + "'.");
 			}
 		}
 		catch (NumberFormatException e)
 		{
-			_logger.warn("When creating a new Object for column '"+ce._colName+"' of java.sql.Types='"+sqlType+"' ["+ResultSetTableModel.getColumnJavaSqlTypeName(sqlType)+"] with value '"+val+"', for osCommand='"+_osCommand+"'. A NumberFormatException was thrown, which implies that the value is not a number. Creating the object with a zero value instead.");
+			_logger.warn("When creating a new Object for column '" + ce._colName + "' of java.sql.Types='" + sqlType + "' [" + ResultSetTableModel.getColumnJavaSqlTypeName(sqlType) + "] with value '" + val + "', for osCommand='" + _osCommand + "'. A NumberFormatException was thrown, which implies that the value is not a number. Creating the object with a zero value instead.");
 			return createJavaObject(ce, null);
 		}
 		catch (ParseException e) // for: SimpleDateFormat.parse()
 		{
-			throw new RuntimeException("Problems parsing value '"+strVal+"' of java.sql.Types '"+sqlType+"'. Caught: "+e.getMessage(), e);
+			throw new RuntimeException("Problems parsing value '" + strVal + "' of java.sql.Types '" + sqlType + "'. Caught: " + e.getMessage(), e);
 		}
 	}
 
@@ -1051,7 +1051,7 @@ implements ResultSetMetaData
 //		case java.sql.Types.DATALINK:     return "-DATALINK-";
 		case java.sql.Types.BOOLEAN:      return Boolean.valueOf(false);
 		default:
-			throw new RuntimeException("Unsupported data type was found in the dictionary java.sql.Types '"+sqlType+"', value='"+val+"'.");
+			throw new RuntimeException("Unsupported data type was found in the dictionary java.sql.Types '" + sqlType + "', value='" + val + "'.");
 		}
 	}
 	
@@ -1145,24 +1145,24 @@ implements ResultSetMetaData
 		for (HostMonitorMetaData.ColumnEntry ce : getColumns())
 		{
 			e++;
-			sb.append("entry ").append(StringUtil.right(e+"",2)).append(": ");
-			sb.append("colName='")     .append(StringUtil.left(ce._colName      +"', ",3+ 30));
-			sb.append("isPartOfPk='")  .append(StringUtil.left(ce._isPartOfPk   +"', ",3+ 5));
-			sb.append("isStatColumn='").append(StringUtil.left(ce._isStatColumn +"', ",3+ 5));
-			sb.append("sqlDataType='") .append(StringUtil.left(ce._sqlDataType  +"', ",3+ 10));
-			sb.append("dispLength='")  .append(StringUtil.left(ce._displayLength+"', ",3+ 2));
-			sb.append("precision='")   .append(StringUtil.left(ce._precision    +"', ",3+ 2));
-			sb.append("scale='")       .append(StringUtil.left(ce._scale        +"', ",3+ 2));
-			sb.append("isNullable='")  .append(StringUtil.left(ce._isNullable   +"', ",3+ 5));
-			sb.append("sqlColNum='")   .append(StringUtil.left(ce._sqlColNum    +"', ",3+ 2));
-			sb.append("parseColNum='") .append(StringUtil.left(ce._parseColNum  +"', ",3+ 2));
-			sb.append("isNumber='")    .append(StringUtil.left(ce._isNumber     +"', ",3+ 5));
-			sb.append("isPct='")       .append(StringUtil.left(ce._isPct        +"', ",3+ 5));
-			sb.append("status='")      .append(StringUtil.left(ce._status       +"', ",3+ 2));
+			sb.append("entry ").append(StringUtil.right(e + "",2)).append(": ");
+			sb.append("colName='")     .append(StringUtil.left(ce._colName      + "', ",3+ 30));
+			sb.append("isPartOfPk='")  .append(StringUtil.left(ce._isPartOfPk   + "', ",3+ 5));
+			sb.append("isStatColumn='").append(StringUtil.left(ce._isStatColumn + "', ",3+ 5));
+			sb.append("sqlDataType='") .append(StringUtil.left(ce._sqlDataType  + "', ",3+ 10));
+			sb.append("dispLength='")  .append(StringUtil.left(ce._displayLength + "', ",3+ 2));
+			sb.append("precision='")   .append(StringUtil.left(ce._precision    + "', ",3+ 2));
+			sb.append("scale='")       .append(StringUtil.left(ce._scale        + "', ",3+ 2));
+			sb.append("isNullable='")  .append(StringUtil.left(ce._isNullable   + "', ",3+ 5));
+			sb.append("sqlColNum='")   .append(StringUtil.left(ce._sqlColNum    + "', ",3+ 2));
+			sb.append("parseColNum='") .append(StringUtil.left(ce._parseColNum  + "', ",3+ 2));
+			sb.append("isNumber='")    .append(StringUtil.left(ce._isNumber     + "', ",3+ 5));
+			sb.append("isPct='")       .append(StringUtil.left(ce._isPct        + "', ",3+ 5));
+			sb.append("status='")      .append(StringUtil.left(ce._status       + "', ",3+ 2));
 
-			sb.append("schemaName='")  .append(StringUtil.left(ce._schemaName   +"', ",3+ 30));
-			sb.append("tableName='")   .append(StringUtil.left(ce._tableName    +"', ",3+ 30));
-			sb.append("catalogName='") .append(StringUtil.left(ce._catalogName  +"', ",3+ 30));
+			sb.append("schemaName='")  .append(StringUtil.left(ce._schemaName   + "', ",3+ 30));
+			sb.append("tableName='")   .append(StringUtil.left(ce._tableName    + "', ",3+ 30));
+			sb.append("catalogName='") .append(StringUtil.left(ce._catalogName  + "', ",3+ 30));
 
 			sb.append("description='") .append(ce._description).append("'");
 			sb.append(".\n");
@@ -1407,21 +1407,21 @@ implements ResultSetMetaData
 		{
 			String osIndependentPrefix = "hostmon.udc." + moduleName;
 			if (osname != null)
-				_logger.info("No Operating System specific property entries for '"+prefix+"' can be found, revering to OS independent settings by using the prefix '"+osIndependentPrefix+"'.");
+				_logger.info("No Operating System specific property entries for '" + prefix + "' can be found, revering to OS independent settings by using the prefix '" + osIndependentPrefix + "'.");
 
 			methodArrPos--;
 			optionArrPos--;
 			prefix = osIndependentPrefix;
 			keyList = conf.getKeys(prefix);
 			if (keyList.isEmpty())
-				throw new MandatoryPropertyException("No property entries for '"+prefix+"' can be found.");
+				throw new MandatoryPropertyException("No property entries for '" + prefix + "' can be found.");
 		}
 
 		// Loop all entries in the Configuration that matches
 		for (String key : keyList)
 		{
 			String propValue = conf.getProperty(key);
-			_logger.debug("READING: key="+StringUtil.left(key,60)+" val='"+propValue+"'.");
+			_logger.debug("READING: key=" + StringUtil.left(key,60) + " val='" + propValue + "'.");
 
 			// split the key into it's individual parts
 			String[] keySplit = key.split("\\.");
@@ -1451,7 +1451,7 @@ implements ResultSetMetaData
 			PropPropEntry ppe = null;
 			if (propValue.startsWith("{"))
 			{
-				ppe = new PropPropEntry("DUMMY="+propValue);
+				ppe = new PropPropEntry("DUMMY=" + propValue);
 
 				columnName        = ppe.getProperty       ("DUMMY", "columnName",        option);
 				sqlColumnNumber   = ppe.getIntProperty    ("DUMMY", "sqlColumnNumber",   -1);
@@ -1472,51 +1472,51 @@ implements ResultSetMetaData
 			}
 			else if (method.equals("addStrColumn"))
 			{
-				if (columnName.equals(""))   throw new MandatoryPropertyException("Checking property for '"+moduleName+"': Can't find parameter '"+ "columnName"        +"' for method '"+method+"' which is mandatory.");
-				if (sqlColumnNumber   == -1) throw new MandatoryPropertyException("Checking property for '"+moduleName+"': Can't find parameter '"+ "sqlColumnNumber"   +"' for method '"+method+"' which is mandatory.");
-				if (parseColumnNumber == -1) throw new MandatoryPropertyException("Checking property for '"+moduleName+"': Can't find parameter '"+ "parseColumnNumber" +"' for method '"+method+"' which is mandatory.");
+				if (columnName.equals(""))   throw new MandatoryPropertyException("Checking property for '" + moduleName + "': Can't find parameter '" + "columnName"        + "' for method '" + method + "' which is mandatory.");
+				if (sqlColumnNumber   == -1) throw new MandatoryPropertyException("Checking property for '" + moduleName + "': Can't find parameter '" + "sqlColumnNumber"   + "' for method '" + method + "' which is mandatory.");
+				if (parseColumnNumber == -1) throw new MandatoryPropertyException("Checking property for '" + moduleName + "': Can't find parameter '" + "parseColumnNumber" + "' for method '" + method + "' which is mandatory.");
 
 				int length = ppe.getIntProperty("DUMMY", "length", -1);
 				if (length < 0)
 				{
 					length = 30;
-					_logger.warn("In '"+moduleName+"', the 'length' for String column "+columnName+" was not specified, setting this to '"+length+"'.");
+					_logger.warn("In '" + moduleName + "', the 'length' for String column " + columnName + " was not specified, setting this to '" + length + "'.");
 				}
 				md.addStrColumn(columnName, sqlColumnNumber, parseColumnNumber, isNullable, length, description);
 			}
 			else if (method.equals("addIntColumn"))
 			{
-				if (columnName.equals(""))   throw new MandatoryPropertyException("Checking property for '"+moduleName+"': Can't find parameter '"+ "columnName"        +"' for method '"+method+"' which is mandatory.");
-				if (sqlColumnNumber   == -1) throw new MandatoryPropertyException("Checking property for '"+moduleName+"': Can't find parameter '"+ "sqlColumnNumber"   +"' for method '"+method+"' which is mandatory.");
-				if (parseColumnNumber == -1) throw new MandatoryPropertyException("Checking property for '"+moduleName+"': Can't find parameter '"+ "parseColumnNumber" +"' for method '"+method+"' which is mandatory.");
+				if (columnName.equals(""))   throw new MandatoryPropertyException("Checking property for '" + moduleName + "': Can't find parameter '" + "columnName"        + "' for method '" + method + "' which is mandatory.");
+				if (sqlColumnNumber   == -1) throw new MandatoryPropertyException("Checking property for '" + moduleName + "': Can't find parameter '" + "sqlColumnNumber"   + "' for method '" + method + "' which is mandatory.");
+				if (parseColumnNumber == -1) throw new MandatoryPropertyException("Checking property for '" + moduleName + "': Can't find parameter '" + "parseColumnNumber" + "' for method '" + method + "' which is mandatory.");
 
 				md.addIntColumn(columnName, sqlColumnNumber, parseColumnNumber, isNullable, description);
 			}
 			else if (method.equals("addDatetimeColumn"))
 			{
-				if (columnName.equals(""))   throw new MandatoryPropertyException("Checking property for '"+moduleName+"': Can't find parameter '"+ "columnName"        +"' for method '"+method+"' which is mandatory.");
-				if (sqlColumnNumber   == -1) throw new MandatoryPropertyException("Checking property for '"+moduleName+"': Can't find parameter '"+ "sqlColumnNumber"   +"' for method '"+method+"' which is mandatory.");
-				if (parseColumnNumber == -1) throw new MandatoryPropertyException("Checking property for '"+moduleName+"': Can't find parameter '"+ "parseColumnNumber" +"' for method '"+method+"' which is mandatory.");
+				if (columnName.equals(""))   throw new MandatoryPropertyException("Checking property for '" + moduleName + "': Can't find parameter '" + "columnName"        + "' for method '" + method + "' which is mandatory.");
+				if (sqlColumnNumber   == -1) throw new MandatoryPropertyException("Checking property for '" + moduleName + "': Can't find parameter '" + "sqlColumnNumber"   + "' for method '" + method + "' which is mandatory.");
+				if (parseColumnNumber == -1) throw new MandatoryPropertyException("Checking property for '" + moduleName + "': Can't find parameter '" + "parseColumnNumber" + "' for method '" + method + "' which is mandatory.");
 
 				md.addIntColumn(columnName, sqlColumnNumber, parseColumnNumber, isNullable, description);
 			}
 			else if (method.equals("addStatColumn"))
 			{
-				if (columnName.equals(""))   throw new MandatoryPropertyException("Checking property for '"+moduleName+"': Can't find parameter '"+ "columnName"        +"' for method '"+method+"' which is mandatory.");
-				if (sqlColumnNumber   == -1) throw new MandatoryPropertyException("Checking property for '"+moduleName+"': Can't find parameter '"+ "sqlColumnNumber"   +"' for method '"+method+"' which is mandatory.");
-				if (parseColumnNumber == -1) throw new MandatoryPropertyException("Checking property for '"+moduleName+"': Can't find parameter '"+ "parseColumnNumber" +"' for method '"+method+"' which is mandatory.");
+				if (columnName.equals(""))   throw new MandatoryPropertyException("Checking property for '" + moduleName + "': Can't find parameter '" + "columnName"        + "' for method '" + method + "' which is mandatory.");
+				if (sqlColumnNumber   == -1) throw new MandatoryPropertyException("Checking property for '" + moduleName + "': Can't find parameter '" + "sqlColumnNumber"   + "' for method '" + method + "' which is mandatory.");
+				if (parseColumnNumber == -1) throw new MandatoryPropertyException("Checking property for '" + moduleName + "': Can't find parameter '" + "parseColumnNumber" + "' for method '" + method + "' which is mandatory.");
 
 				int precision = ppe.getIntProperty("DUMMY", "precision", -1);
 				int scale     = ppe.getIntProperty("DUMMY", "scale",     -1);
 				if (precision < 0)
 				{
 					precision = 10;
-					_logger.warn("In '"+moduleName+"', the 'precision' for Statistics column "+columnName+" was not specified, setting this to '"+precision+"'.");
+					_logger.warn("In '" + moduleName + "', the 'precision' for Statistics column " + columnName + " was not specified, setting this to '" + precision + "'.");
 				}
 				if (scale < 0)
 				{
 					scale = 1;
-					_logger.warn("In '"+moduleName+"', the 'scale' for column "+columnName+" was not specified, setting this to '"+scale+"'.");
+					_logger.warn("In '" + moduleName + "', the 'scale' for column " + columnName + " was not specified, setting this to '" + scale + "'.");
 				}
 				md.addStatColumn(columnName, sqlColumnNumber, parseColumnNumber, isNullable, precision, scale, description);
 			}
@@ -1564,14 +1564,14 @@ implements ResultSetMetaData
 			else if (method.equals("graph"))       { /* handled in by outer code */ }
 			else
 			{
-				_logger.warn("Unknown method type '"+method+"' when creating MetaData for module '"+moduleName+"'.");
+				_logger.warn("Unknown method type '" + method + "' when creating MetaData for module '" + moduleName + "'.");
 				//throw new Exception("Unknown method type '"+method+"' when creating MetaData for module '"+moduleName+"'.");
 			}	
 		}
 
 		// CHECK that mandatory fields has been set
 		if ( md.getOsCommand() == null) 
-			throw new MandatoryPropertyException("The property 'hostmon.udc."+moduleName+".osCommand' is mandatory.");
+			throw new MandatoryPropertyException("The property 'hostmon.udc." + moduleName + ".osCommand' is mandatory.");
 
 		if (_logger.isDebugEnabled())
 			_logger.debug("HostMonitorMetaData create() method returns: \n" + md.toTraceString());
@@ -1611,7 +1611,7 @@ implements ResultSetMetaData
 	public void setSkipAndAllowRows(String prefix, Configuration conf)
 	{
 		if (prefix == null)
-			prefix = "hostmon."+getTableName()+".";
+			prefix = "hostmon." + getTableName() + ".";
 
 		if (conf == null)
 			conf = Configuration.getCombinedConfiguration();
@@ -1751,7 +1751,7 @@ implements ResultSetMetaData
 		{
 			HostMonitorMetaData md = HostMonitorMetaData.create(conf, "TestXXX");
 			System.out.println("====================================================");
-			System.out.println("MD=\n"+md.toTraceString());
+			System.out.println("MD=\n" + md.toTraceString());
 			System.out.println("----------------------------------------------------");
 		}
 		catch (MandatoryPropertyException e)

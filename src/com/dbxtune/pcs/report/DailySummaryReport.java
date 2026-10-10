@@ -226,7 +226,7 @@ public class DailySummaryReport
 				}
 				catch (IOException ex)
 				{
-					_logger.error("Problems writing Daily Report to file '" + outFilename + "'. Caught: "+ex, ex);
+					_logger.error("Problems writing Daily Report to file '" + outFilename + "'. Caught: " + ex, ex);
 				}
 			}
 			
@@ -249,7 +249,7 @@ public class DailySummaryReport
 						}
 						catch (Exception ex)
 						{
-							_logger.error("Problems Open the file in a Web Browser. URL '"+f.toURI()+"'.");
+							_logger.error("Problems Open the file in a Web Browser. URL '" + f.toURI() + "'.");
 						}
 					}
 				}
@@ -257,7 +257,7 @@ public class DailySummaryReport
 		}
 		catch(Throwable ex)
 		{
-			_logger.error("Problems Sending Daily Summary Report. Caught: "+ex, ex);
+			_logger.error("Problems Sending Daily Summary Report. Caught: " + ex, ex);
 		}
 		
 	}
@@ -291,7 +291,7 @@ public class DailySummaryReport
 		pw.println("  ");
 		pw.println("options:");
 		pw.println("  -h,--help                 Usage information.");
-		pw.println("  -v,--version              Display "+Version.getAppName()+" and JVM Version.");
+		pw.println("  -v,--version              Display " + Version.getAppName() + " and JVM Version.");
 		pw.println("  -x,--debug                Enable debug tracing to the log file/output.");
 		pw.println("  ");
 		pw.println("  -f,--h2dbfile   <filename>  H2 database file, same as: --url jdbc:h2:file:/path/<filename>;IFEXISTS=TRUE");
@@ -321,7 +321,7 @@ public class DailySummaryReport
 
 		// create the Options
 		options.addOption( "h", "help",        false, "Usage information." );
-		options.addOption( "v", "version",     false, "Display "+Version.getAppName()+" and JVM Version." );
+		options.addOption( "v", "version",     false, "Display " + Version.getAppName() + " and JVM Version." );
 		options.addOption( "x", "debug",       false, "Enable debug tracing to the log file/output." );
 
 		options.addOption( "f", "h2dbfile",    true, "Input filename" );
@@ -424,7 +424,7 @@ public class DailySummaryReport
 			}
 			catch (NumberFormatException ex) 
 			{
-				printHelp(null, "Parameter '-b|--begin-time' value='" + val + "' hour:minute must be of number. hour='"+hourStr+"', minute='"+minuteStr+"'");
+				printHelp(null, "Parameter '-b|--begin-time' value='" + val + "' hour:minute must be of number. hour='" + hourStr + "', minute='" + minuteStr + "'");
 				throw new NormalExitException();
 			}
 		}
@@ -464,7 +464,7 @@ public class DailySummaryReport
 			}
 			catch (NumberFormatException ex) 
 			{
-				printHelp(null, "Parameter '-e|--end-time' value='" + val + "' hour:minute must be of number. hour='"+hourStr+"', minute='"+minuteStr+"'");
+				printHelp(null, "Parameter '-e|--end-time' value='" + val + "' hour:minute must be of number. hour='" + hourStr + "', minute='" + minuteStr + "'");
 				throw new NormalExitException();
 			}
 		}
@@ -536,7 +536,7 @@ public class DailySummaryReport
 			for (Iterator<Option> it=cmd.iterator(); it.hasNext();)
 			{
 				Option opt = it.next();
-				_logger.debug("parseCommandLine: swith='"+opt.getOpt()+"', value='"+opt.getValue()+"'.");
+				_logger.debug("parseCommandLine: swith='" + opt.getOpt() + "', value='" + opt.getValue() + "'.");
 			}
 		}
 
@@ -577,7 +577,7 @@ public class DailySummaryReport
 			else if ( cmd.hasOption("version") )
 			{
 				System.out.println();
-				System.out.println(Version.getAppName()+" Version: " + Version.getVersionStr() + " JVM: " + System.getProperty("java.version"));
+				System.out.println(Version.getAppName() + " Version: " + Version.getVersionStr() + " JVM: " + System.getProperty("java.version"));
 				System.out.println();
 			}
 			//-------------------------------

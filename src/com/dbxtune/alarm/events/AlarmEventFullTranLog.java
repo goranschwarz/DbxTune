@@ -57,7 +57,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SPACE,
 				AlarmEvent.Severity.ERROR, 
 				AlarmEvent.ServiceState.AFFECTED, 
-				"Full transaction log in some database(s) in '" + cm.getServerName() + "'. Count=" + val + ". (threshold="+threshold+")",
+				"Full transaction log in some database(s) in '" + cm.getServerName() + "'. Count=" + val + ". (threshold=" + threshold + ")",
 				threshold);
 
 		// Set: Time To Live if postpone is enabled
@@ -83,7 +83,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SPACE,
 				AlarmEvent.Severity.ERROR, 
 				AlarmEvent.ServiceState.AFFECTED, 
-				"Full transaction log in '" + cm.getServerName() + "', at '" + errorlogTs + "', dbname='" + dbname + "'. (threshold="+threshold+")",
+				"Full transaction log in '" + cm.getServerName() + "', at '" + errorlogTs + "', dbname='" + dbname + "'. (threshold=" + threshold + ")",
 				threshold);
 
 		// Set: Time To Live if postpone is enabled

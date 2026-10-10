@@ -45,7 +45,7 @@ extends CompletionProviderAbstractSql
 
 	public static CompletionProviderAbstract installAutoCompletion(TextEditorPane textPane, RTextScrollPane scroll, ErrorStrip errorStrip, Window window, ConnectionProvider connectionProvider)
 	{
-		_logger.info("Installing Syntax and AutoCompleation for Postgres ("+AsetuneSyntaxConstants.SYNTAX_STYLE_POSTGRES_SQL+").");
+		_logger.info("Installing Syntax and AutoCompleation for Postgres (" + AsetuneSyntaxConstants.SYNTAX_STYLE_POSTGRES_SQL + ").");
 		textPane.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_POSTGRES_SQL);
 
 		CompletionProviderAbstract acProvider = createCompletionProvider(window, connectionProvider);

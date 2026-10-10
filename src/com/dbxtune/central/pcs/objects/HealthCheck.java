@@ -128,7 +128,7 @@ public class HealthCheck
 		{
 			for (DbxAlarmActive alarm : _alarms)
 			{
-				_message += alarm.getAlarmClass() + "[" + alarm.getLastData()+ "]; ";
+				_message += alarm.getAlarmClass() + "[" + alarm.getLastData() + "]; ";
 			}
 			_message = StringUtil.removeLastStr(_message, ";");
 		}
@@ -154,7 +154,7 @@ public class HealthCheck
 				_healthy = false;
 				if ( StringUtil.hasValue(_message) )
 					_message += "; ";
-				_message += "DbxCollectorNoData[No Data has been received from the collector for " + _serverInfo.getLastSampleAgeInSec() + " seconds. ("+TimeUtils.secToTimeStrLong(lastSampleAgeInSec)+") HH:MM:SS]";
+				_message += "DbxCollectorNoData[No Data has been received from the collector for " + _serverInfo.getLastSampleAgeInSec() + " seconds. (" + TimeUtils.secToTimeStrLong(lastSampleAgeInSec) + ") HH:MM:SS]";
 			}
 		}
 	}

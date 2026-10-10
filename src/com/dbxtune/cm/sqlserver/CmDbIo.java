@@ -53,7 +53,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_DISK;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -102,7 +102,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmDbIo(counterController, guiController);
 	}
@@ -329,7 +329,7 @@ extends CountersModel
 		}
 
 		// Special thing for Azure SQL Database
-		String joinMasterFiles = "JOIN sys." + master_files +" b ON a.file_id = b.file_id AND a.database_id = b.database_id \n";
+		String joinMasterFiles = "JOIN sys." + master_files + " b ON a.file_id = b.file_id AND a.database_id = b.database_id \n";
 		if (ssVersionInfo.isAzureDb() || ssVersionInfo.isAzureSynapseAnalytics())
 		{
 			// NOTE: for Azure SQL Database, tempdb will have faulty 'devicename' and 'physical_name' (but lets fix that LATER)

@@ -409,7 +409,7 @@ public abstract class DbxTune
 
 		// Check if the configuration file exists
 		if ( ! (new File(propFile)).exists() )
-			throw new FileNotFoundException("The configuration file '"+propFile+"' doesn't exists.");
+			throw new FileNotFoundException("The configuration file '" + propFile + "' doesn't exists.");
 
 		// -----------------------------------------------------------------
 		// CHECK JAVA JVM VERSION
@@ -421,12 +421,12 @@ public abstract class DbxTune
 		{
 			System.out.println("");
 			System.out.println("===============================================================");
-			System.out.println(" "+Version.getAppName()+" needs a runtime Java 7 or higher.");
+			System.out.println(" " + Version.getAppName() + " needs a runtime Java 7 or higher.");
 			System.out.println(" java.version = " + System.getProperty("java.version"));
 			System.out.println(" which is parsed into the number: " + JavaVersion.getVersion());
 			System.out.println("---------------------------------------------------------------");
 			System.out.println("");
-			throw new Exception(Version.getAppName()+" needs a runtime Java 7 or higher.");
+			throw new Exception(Version.getAppName() + " needs a runtime Java 7 or higher.");
 		}
 
 		// The SAVE Properties for shared Tail
@@ -449,7 +449,7 @@ public abstract class DbxTune
 			{
 				System.out.println("");
 				System.out.println("===============================================================");
-				System.out.println(" WARNING: you have specified cmdline option --tmpConfig "+tmpPropFile);
+				System.out.println(" WARNING: you have specified cmdline option --tmpConfig " + tmpPropFile);
 				System.out.println(" This will NOT be used in NU-GUI mode.");
 				System.out.println(" A new 'USER_TEMP' object will be created on every startup.");
 				System.out.println("---------------------------------------------------------------");
@@ -504,7 +504,7 @@ public abstract class DbxTune
 
 				boolean debug = true;
 				if (debug)
-					System.out.println("   SETTING SYSTEM PROPERTY: key=|"+key+"|, val=|"+val+"|.");
+					System.out.println("   SETTING SYSTEM PROPERTY: key=|" + key + "|, val=|" + val + "|.");
 			}
 
 		}
@@ -574,7 +574,7 @@ public abstract class DbxTune
 						String debugOption = entry.getKey();
 						String description = entry.getValue();
 
-						System.out.println(" "+StringUtil.left(debugOption, 15, true) + " " + description);
+						System.out.println(" " + StringUtil.left(debugOption, 15, true) + " " + description);
 					}
 					System.out.println();
 					// Get of of here if it was a list option
@@ -700,7 +700,7 @@ public abstract class DbxTune
 
 				logFilename += "log" + File.separator;
 
-				logFilename += Version.getAppName()+".nogui."+tmpSrvName+".log";
+				logFilename += Version.getAppName() + ".nogui." + tmpSrvName + ".log";
 			}
 		}
 		_logFileName = logFilename;
@@ -769,9 +769,9 @@ public abstract class DbxTune
 		if (httpProxyPort != null)
 			System.setProperty("http.proxyPort", httpProxyPort);
 
-		_logger.debug("Using proxy settings: http.proxyHost='"+httpProxyHost+"', http.proxyPort='"+httpProxyPort+"'.");
+		_logger.debug("Using proxy settings: http.proxyHost='" + httpProxyHost + "', http.proxyPort='" + httpProxyPort + "'.");
 		if (httpProxyHost != null)
-			_logger.info("Using Java Properties for HTTP Proxy settings: http.proxyHost='"+httpProxyHost+"', http.proxyPort='"+httpProxyPort+"'.");
+			_logger.info("Using Java Properties for HTTP Proxy settings: http.proxyHost='" + httpProxyHost + "', http.proxyPort='" + httpProxyPort + "'.");
 
 		SplashWindow.drawProgress("Initializing..");
 
@@ -795,7 +795,7 @@ public abstract class DbxTune
 //		checkForUpdatesThread.start();
 		long cfuInitStartTime = System.currentTimeMillis();
 		checkForUpdatesThread.run();
-		_logger.info("Init of CheckForUpdate took '"+(System.currentTimeMillis()-cfuInitStartTime)+"' ms.");
+		_logger.info("Init of CheckForUpdate took '" + (System.currentTimeMillis()-cfuInitStartTime) + "' ms.");
 
 		SplashWindow.drawProgress("Initializing...");
 		if (_gui)
@@ -836,45 +836,45 @@ public abstract class DbxTune
 		List<String> jvmStartArguments = runtimeMxBean.getInputArguments();
 		_logger.info("JVM Command Line Argument List: " + jvmStartArguments);
 		
-		SplashWindow.drawProgress("Starting "+Version.getAppName()+", version "+Version.getVersionStr()+", build "+Version.getBuildStr());
+		SplashWindow.drawProgress("Starting " + Version.getAppName() + ", version " + Version.getVersionStr() + ", build " + Version.getBuildStr());
 
 		// Print out the memory configuration
 		// And the JVM info
-		_logger.info("Starting "+Version.getAppName()+", version "+Version.getVersionStr()+", build "+Version.getBuildStr());
-		_logger.info("GUI mode "+_gui);
-		_logger.info("Debug Options enabled: "+Debug.getDebugsString());
+		_logger.info("Starting " + Version.getAppName() + ", version " + Version.getVersionStr() + ", build " + Version.getBuildStr());
+		_logger.info("GUI mode " + _gui);
+		_logger.info("Debug Options enabled: " + Debug.getDebugsString());
 
-		_logger.info("Using Java Runtime Environment Version: "+System.getProperty("java.version"));
+		_logger.info("Using Java Runtime Environment Version: " + System.getProperty("java.version"));
 //		_logger.info("Using Java Runtime Environment Vendor: "+System.getProperty("java.vendor"));
 //		_logger.info("Using Java Vendor URL: "+System.getProperty("java.vendor.url"));
 //		_logger.info("Using Java VM Specification Version: "+System.getProperty("java.vm.specification.version"));
 //		_logger.info("Using Java VM Specification Vendor:  "+System.getProperty("java.vm.specification.vendor"));
 //		_logger.info("Using Java VM Specification Name:    "+System.getProperty("java.vm.specification.name"));
-		_logger.info("Using Java VM Implementation  Version: "+System.getProperty("java.vm.version"));
-		_logger.info("Using Java VM Implementation  Vendor:  "+System.getProperty("java.vm.vendor"));
-		_logger.info("Using Java VM Implementation  Name:    "+System.getProperty("java.vm.name"));
-		_logger.info("Using Java VM Home:    "+System.getProperty("java.home"));
-		_logger.info("Java class format version number: " +System.getProperty("java.class.version"));
-		_logger.info("Java class path: " +System.getProperty("java.class.path"));
-		_logger.info("List of paths to search when loading libraries: " +System.getProperty("java.library.path"));
-		_logger.info("Name of JIT compiler to use: " +System.getProperty("java.compiler"));
-		_logger.info("Path of extension directory or directories: " +System.getProperty("java.ext.dirs"));
+		_logger.info("Using Java VM Implementation  Version: " + System.getProperty("java.vm.version"));
+		_logger.info("Using Java VM Implementation  Vendor:  " + System.getProperty("java.vm.vendor"));
+		_logger.info("Using Java VM Implementation  Name:    " + System.getProperty("java.vm.name"));
+		_logger.info("Using Java VM Home:    " + System.getProperty("java.home"));
+		_logger.info("Java class format version number: " + System.getProperty("java.class.version"));
+		_logger.info("Java class path: " + System.getProperty("java.class.path"));
+		_logger.info("List of paths to search when loading libraries: " + System.getProperty("java.library.path"));
+		_logger.info("Name of JIT compiler to use: " + System.getProperty("java.compiler"));
+		_logger.info("Path of extension directory or directories: " + System.getProperty("java.ext.dirs"));
 
-		_logger.info("Maximum memory is set to:  "+Runtime.getRuntime().maxMemory() / 1024 / 1024 + " MB. this could be changed with  -Xmx###m (where ### is number of MB)"); // jdk 1.4 or higher
-		_logger.info("Total Physical Memory on this machine:  "+ Memory.getTotalPhysicalMemorySizeInMB() + " MB.");
-		_logger.info("Free Physical Memory on this machine:  "+ Memory.getFreePhysicalMemorySizeInMB() + " MB.");
-		_logger.info("Running on Operating System Name:  "+System.getProperty("os.name"));
-		_logger.info("Running on Operating System Version:  "+System.getProperty("os.version"));
-		_logger.info("Running on Operating System Architecture:  "+System.getProperty("os.arch"));
-		_logger.info("The application was started by the username:  "+System.getProperty("user.name"));
-		_logger.info("The application was started in the directory:   "+System.getProperty("user.dir"));
-		_logger.info("The user '"+System.getProperty("user.name")+"' home directory:   "+System.getProperty("user.home"));
+		_logger.info("Maximum memory is set to:  " + Runtime.getRuntime().maxMemory() / 1024 / 1024 + " MB. this could be changed with  -Xmx###m (where ### is number of MB)"); // jdk 1.4 or higher
+		_logger.info("Total Physical Memory on this machine:  " + Memory.getTotalPhysicalMemorySizeInMB() + " MB.");
+		_logger.info("Free Physical Memory on this machine:  " + Memory.getFreePhysicalMemorySizeInMB() + " MB.");
+		_logger.info("Running on Operating System Name:  " + System.getProperty("os.name"));
+		_logger.info("Running on Operating System Version:  " + System.getProperty("os.version"));
+		_logger.info("Running on Operating System Architecture:  " + System.getProperty("os.arch"));
+		_logger.info("The application was started by the username:  " + System.getProperty("user.name"));
+		_logger.info("The application was started in the directory:   " + System.getProperty("user.dir"));
+		_logger.info("The user '" + System.getProperty("user.name") + "' home directory:   " + System.getProperty("user.home"));
 
-		_logger.info("System configuration file is '"+propFile+"'.");
-		_logger.info("User configuration file is '"+userPropFile+"'.");
-		_logger.info("Storing temporary configurations in file '"+tmpPropFile+"'.");
-		_logger.info("Combined Configuration Search Order '"+StringUtil.toCommaStr(Configuration.getSearchOrder())+"'.");
-		_logger.info("Combined Configuration Search Order, With file names: "+StringUtil.toCommaStr(Configuration.getSearchOrder(true)));
+		_logger.info("System configuration file is '" + propFile + "'.");
+		_logger.info("User configuration file is '" + userPropFile + "'.");
+		_logger.info("Storing temporary configurations in file '" + tmpPropFile + "'.");
+		_logger.info("Combined Configuration Search Order '" + StringUtil.toCommaStr(Configuration.getSearchOrder()) + "'.");
+		_logger.info("Combined Configuration Search Order, With file names: " + StringUtil.toCommaStr(Configuration.getSearchOrder(true)));
 
 		if (crAppDirLog != null && !crAppDirLog.isEmpty())
 		{
@@ -890,7 +890,7 @@ public abstract class DbxTune
 		int needMemInMB = Integer.parseInt( appProps.getProperty("minMemoryLimitInMB", needMemInMBStr) );
 		if (maxConfigMemInMB < needMemInMB)
 		{
-			String message = "I need at least "+needMemInMB+" MB to start this process. Maximum memory limit is now configured to "+maxConfigMemInMB+" MB. Specify this at the JVM startup using the -Xmx###m flag. ### is the upper limit (in MB) that this JVM could use.";
+			String message = "I need at least " + needMemInMB + " MB to start this process. Maximum memory limit is now configured to " + maxConfigMemInMB + " MB. Specify this at the JVM startup using the -Xmx###m flag. ### is the upper limit (in MB) that this JVM could use.";
 			_logger.error(message);
 			throw new Exception(message);
 		}
@@ -909,12 +909,12 @@ public abstract class DbxTune
 				if (cmdLineServer.indexOf(":") >= 0)
 				{
 					if ( ! AseConnectionFactory.isHostPortStrValid(cmdLineServer) )
-						throw new Exception("Problems with command line parameter -S"+cmdLineServer+"; "+AseConnectionFactory.isHostPortStrValidReason(cmdLineServer));
+						throw new Exception("Problems with command line parameter -S" + cmdLineServer + "; " + AseConnectionFactory.isHostPortStrValidReason(cmdLineServer));
 				}
 				else
 				{
 					if (AseConnectionFactory.resolvInterfaceEntry(cmdLineServer) == null)
-						throw new Exception("Server '"+cmdLineServer+"' is not found in the file '"+AseConnectionFactory.getIFileName()+"'.");
+						throw new Exception("Server '" + cmdLineServer + "' is not found in the file '" + AseConnectionFactory.getIFileName() + "'.");
 				}
 			}
 
@@ -949,7 +949,7 @@ public abstract class DbxTune
 				if (CounterCollectorThreadNoGui.checkValidCmShortcuts(noGuiConfigFile))
 					storeConfigProps.setProperty("cmdLine.cmOptions", noGuiConfigFile);
 				else
-					throw new FileNotFoundException("The noGuiConfig file '"+noGuiConfigFile+"' doesn't exists.");
+					throw new FileNotFoundException("The noGuiConfig file '" + noGuiConfigFile + "' doesn't exists.");
 			}
 
 			//-------------------------------------------------
@@ -978,7 +978,7 @@ public abstract class DbxTune
 					if (cmdLineServer.indexOf(":") != -1) // HAS ":" is cmdLineServer 
 					{
 						if ( ! AseConnectionFactory.isHostPortStrValid(cmdLineServer) )
-							throw new Exception("Problems with command line parameter -S"+cmdLineServer+"; "+AseConnectionFactory.isHostPortStrValidReason(cmdLineServer));
+							throw new Exception("Problems with command line parameter -S" + cmdLineServer + "; " + AseConnectionFactory.isHostPortStrValidReason(cmdLineServer));
 						
 						dbmsCmdLineSwitchHostname = cmdLineServer.substring(0, cmdLineServer.indexOf(":"));
 
@@ -987,13 +987,13 @@ public abstract class DbxTune
 					else
 					{
 						if (AseConnectionFactory.resolvInterfaceEntry(cmdLineServer) == null)
-							throw new Exception("Server '"+cmdLineServer+"' is not found in the file '"+AseConnectionFactory.getIFileName()+"'.");
+							throw new Exception("Server '" + cmdLineServer + "' is not found in the file '" + AseConnectionFactory.getIFileName() + "'.");
 
 						String hostPort = AseConnectionFactory.getIHostPortStr(cmdLineServer);
 //						appProps.setProperty("cmdLine.aseServer",   hostPort);
 //						storeConfigProps.setProperty("conn.dbmsName",   hostPort);
 						storeConfigProps.setProperty("conn.dbmsHostPort",   hostPort);
-						_logger.info("Resolved the Command Line Switch -S '"+cmdLineServer+"'. To host:port '"+hostPort+"'.");
+						_logger.info("Resolved the Command Line Switch -S '" + cmdLineServer + "'. To host:port '" + hostPort + "'.");
 						
 						plainAseServerName = true;
 					}
@@ -1055,30 +1055,30 @@ public abstract class DbxTune
 						
 						if (asePasswd != null)
 						{
-							_logger.info("No DBMS password was specified. But the password '******', for user '"+aseUser+"', DBMS Server '"+aseServer+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+							_logger.info("No DBMS password was specified. But the password '******', for user '" + aseUser + "', DBMS Server '" + aseServer + "' was grabbed from the file '" + OpenSslAesUtil.getPasswordFilename() + "'.");
 
 							if (_logger.isDebugEnabled())
-								_logger.info("No DBMS password was specified. But the password '"+asePasswd+"', for user '"+aseUser+"', DBMS Server '"+aseServer+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+								_logger.info("No DBMS password was specified. But the password '" + asePasswd + "', for user '" + aseUser + "', DBMS Server '" + aseServer + "' was grabbed from the file '" + OpenSslAesUtil.getPasswordFilename() + "'.");
 
 							if (System.getProperty("nogui.password.print", "false").equalsIgnoreCase("true"))
-								System.out.println("#### DEBUG ####: No DBMS password was specified. But the password '"+asePasswd+"', for user '"+aseUser+"', DBMS Server '"+aseServer+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+								System.out.println("#### DEBUG ####: No DBMS password was specified. But the password '" + asePasswd + "', for user '" + aseUser + "', DBMS Server '" + aseServer + "' was grabbed from the file '" + OpenSslAesUtil.getPasswordFilename() + "'.");
 
 							storeConfigProps.setProperty("conn.dbmsPassword", asePasswd, true); // should we encrypt the passwd or not
 						}
 						else
-							_logger.warn("No DBMS password was specified. and NO entry, for user '"+aseUser+"', DBMS Server '"+aseServer+"' was found in the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+							_logger.warn("No DBMS password was specified. and NO entry, for user '" + aseUser + "', DBMS Server '" + aseServer + "' was found in the file '" + OpenSslAesUtil.getPasswordFilename() + "'.");
 					}
 					catch(DecryptionException ex)
 					{
-						_logger.warn("Problems decrypting the password, for user '"+aseUser+"', DBMS Server '"+aseServer+"'. Probably a bad passphrase for the encrypted passwd. Caught: "+ex);
+						_logger.warn("Problems decrypting the password, for user '" + aseUser + "', DBMS Server '" + aseServer + "'. Probably a bad passphrase for the encrypted passwd. Caught: " + ex);
 					}
 					catch(FileNotFoundException ex)
 					{
-						_logger.warn("The password file '"+OpenSslAesUtil.getPasswordFilename()+"' didn't exists.");
+						_logger.warn("The password file '" + OpenSslAesUtil.getPasswordFilename() + "' didn't exists.");
 					}
 					catch(IOException ex)
 					{
-						_logger.error("Problems reading the password file "+OpenSslAesUtil.getPasswordFilename()+"'. Caught: "+ex);
+						_logger.error("Problems reading the password file " + OpenSslAesUtil.getPasswordFilename() + "'. Caught: " + ex);
 					}
 				}
 			}
@@ -1126,7 +1126,7 @@ public abstract class DbxTune
 						String sshHostname = sa[0];
 						storeConfigProps.setProperty("conn.sshHostname", sshHostname);
 						
-						_logger.info("No SSH Hostname was specified. Resolving this from the DBMS connection to be '"+sshHostname+"'. If this is NOT Correct, please specify it with the -s switch or the property 'conn.sshHostname'.");
+						_logger.info("No SSH Hostname was specified. Resolving this from the DBMS connection to be '" + sshHostname + "'. If this is NOT Correct, please specify it with the -s switch or the property 'conn.sshHostname'.");
 					}
 				}
 			}
@@ -1163,26 +1163,26 @@ public abstract class DbxTune
 					
 					if (sshPasswd != null)
 					{
-						_logger.info("No SSH password was specified. But the password '******', for user '"+sshUser+"', SSH Server '"+sshServer+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+						_logger.info("No SSH password was specified. But the password '******', for user '" + sshUser + "', SSH Server '" + sshServer + "' was grabbed from the file '" + OpenSslAesUtil.getPasswordFilename() + "'.");
 
 						if (_logger.isDebugEnabled())
-							_logger.debug("No SSH password was specified. But the password '"+sshPasswd+"', for user '"+sshUser+"', SSH Server '"+sshServer+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+							_logger.debug("No SSH password was specified. But the password '" + sshPasswd + "', for user '" + sshUser + "', SSH Server '" + sshServer + "' was grabbed from the file '" + OpenSslAesUtil.getPasswordFilename() + "'.");
 
 						if (System.getProperty("nogui.password.print", "false").equalsIgnoreCase("true"))
-							System.out.println("#### DEBUG ####: No SSH password was specified. But the password '"+sshPasswd+"', for user '"+sshUser+"', SSH Server '"+sshServer+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+							System.out.println("#### DEBUG ####: No SSH password was specified. But the password '" + sshPasswd + "', for user '" + sshUser + "', SSH Server '" + sshServer + "' was grabbed from the file '" + OpenSslAesUtil.getPasswordFilename() + "'.");
 
 						storeConfigProps.setProperty("conn.sshPassword", sshPasswd, true); // should we encrypt the passwd or not
 					}
 					else
-						_logger.info("No SSH password was specified and NO entry, for user '"+sshUser+"', SSH Server '"+sshServer+"' was found in the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+						_logger.info("No SSH password was specified and NO entry, for user '" + sshUser + "', SSH Server '" + sshServer + "' was found in the file '" + OpenSslAesUtil.getPasswordFilename() + "'.");
 				}
 				catch(FileNotFoundException ex)
 				{
-					_logger.info("The password file '"+OpenSslAesUtil.getPasswordFilename()+"' didn't exists.");
+					_logger.info("The password file '" + OpenSslAesUtil.getPasswordFilename() + "' didn't exists.");
 				}
 				catch(IOException ex)
 				{
-					_logger.error("Problems reading the password file "+OpenSslAesUtil.getPasswordFilename()+"'. Caught: "+ex);
+					_logger.error("Problems reading the password file " + OpenSslAesUtil.getPasswordFilename() + "'. Caught: " + ex);
 				}
 			}
 
@@ -1209,7 +1209,7 @@ public abstract class DbxTune
 				try {
 					PersistWriterBase.getRecordingStopTime(null,recordingStopTime);
 				} catch (Exception e) {
-					throw new Exception("Switch '-f|--finish' "+e.getMessage());
+					throw new Exception("Switch '-f|--finish' " + e.getMessage());
 				}
 				storeConfigProps.setProperty("offline.shutdownAfterXHours", cmd.getOptionValue('f'));
 			}
@@ -1221,7 +1221,7 @@ public abstract class DbxTune
 				try {
 					PersistWriterBase.getRecordingStartTime(recordingStartTime);
 				} catch (Exception e) {
-					throw new Exception("Switch '-e|--enable' "+e.getMessage());
+					throw new Exception("Switch '-e|--enable' " + e.getMessage());
 				}
 				storeConfigProps.setProperty(CounterController.PROPKEY_startRecordingAtTime, recordingStartTime);
 			}
@@ -1241,13 +1241,13 @@ public abstract class DbxTune
 			if (cmd.hasOption('d'))
 			{
 				String opt = cmd.getOptionValue('d');
-				_logger.info("Command Line Option '-d|--dbname' was specified, dbname to use is '"+opt+"'.");
+				_logger.info("Command Line Option '-d|--dbname' was specified, dbname to use is '" + opt + "'.");
 
 				String opt_D = "H2";
 				if (cmd.hasOption('T'))
 				{
 					opt_D = cmd.getOptionValue('T').toUpperCase();
-					_logger.info("Command Line Option '-T|--dbtype' was specified, type to use is '"+opt_D+"'.");
+					_logger.info("Command Line Option '-T|--dbtype' was specified, type to use is '" + opt_D + "'.");
 				}
 				else
 				{
@@ -1260,12 +1260,12 @@ public abstract class DbxTune
 					String envNameSaveDir    = getAppSaveDirEnvName();  // DBXTUNE_SAVE_DIR
 
 					String jdbcDriver = "org.h2.Driver";
-					String jdbcUrl    = "jdbc:h2:file:"+opt;
+					String jdbcUrl    = "jdbc:h2:file:" + opt;
 					String jdbcUser   = "sa";
 					String jdbcPasswd = "";
 
 					if ("default".equalsIgnoreCase(opt))
-						jdbcUrl = "jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE}";
+						jdbcUrl = "jdbc:h2:file:${" + envNameSaveDir + "}/${SERVERNAME}_${DATE}";
 
 					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcDriver,           jdbcDriver);
 					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcUrl,              jdbcUrl);
@@ -1275,7 +1275,7 @@ public abstract class DbxTune
 
 					storeConfigProps.setProperty(PersistentCounterHandler.PROPKEY_WriterClass, "com.dbxtune.pcs.PersistWriterJdbc");
 
-					_logger.info("PCS: using jdbcDriver='"+jdbcDriver+"', jdbcUrl='"+jdbcUrl+"', jdbcUser='"+jdbcUser+"', jdbcPasswd='*secret*', startH2NetworkServer=true.");
+					_logger.info("PCS: using jdbcDriver='" + jdbcDriver + "', jdbcUrl='" + jdbcUrl + "', jdbcUser='" + jdbcUser + "', jdbcPasswd='*secret*', startH2NetworkServer=true.");
 				}
 				else if (opt_D.equals("ASE"))
 				{
@@ -1292,7 +1292,7 @@ public abstract class DbxTune
 						asePasswd = "";
 
 					String urlOptions =
-						"?APPLICATIONNAME="+Version.getAppName()+"-Writer" +
+						"?APPLICATIONNAME=" + Version.getAppName() + "-Writer" +
 						"&HOSTNAME=" + Version.VERSION_STRING +
 						"&DYNAMIC_PREPARE=true" +
 						"&SQLINITSTRING=set statement_cache off" +
@@ -1300,7 +1300,7 @@ public abstract class DbxTune
 						"";
 
 					String jdbcDriver = AseConnectionFactory.getDriver();
-					String jdbcUrl    = "jdbc:sybase:Tds:"+aseHost+":"+asePort+"/"+aseDbname+urlOptions;
+					String jdbcUrl    = "jdbc:sybase:Tds:" + aseHost + ":" + asePort + "/" + aseDbname+urlOptions;
 					String jdbcUser   = aseUser;
 					String jdbcPasswd = asePasswd;
 
@@ -1311,7 +1311,7 @@ public abstract class DbxTune
 
 					storeConfigProps.setProperty(PersistentCounterHandler.PROPKEY_WriterClass, "com.dbxtune.pcs.PersistWriterJdbc");
 
-					_logger.info("PCS: using jdbcDriver='"+jdbcDriver+"', jdbcUrl='"+jdbcUrl+"', jdbcUser='"+jdbcUser+"', jdbcPasswd='*secret*', dbname='"+aseDbname+"'.");
+					_logger.info("PCS: using jdbcDriver='" + jdbcDriver + "', jdbcUrl='" + jdbcUrl + "', jdbcUser='" + jdbcUser + "', jdbcPasswd='*secret*', dbname='" + aseDbname + "'.");
 				}
 				else if (opt_D.equals("ASA"))
 				{
@@ -1332,7 +1332,7 @@ public abstract class DbxTune
 
 
 					String jdbcDriver = AseConnectionFactory.getDriver();
-					String jdbcUrl    = "jdbc:sybase:Tds:"+asaHost+":"+asaPort+asaDbname;
+					String jdbcUrl    = "jdbc:sybase:Tds:" + asaHost + ":" + asaPort+asaDbname;
 					String jdbcUser   = asaUser;
 					String jdbcPasswd = asaPasswd;
 
@@ -1343,11 +1343,11 @@ public abstract class DbxTune
 
 					storeConfigProps.setProperty(PersistentCounterHandler.PROPKEY_WriterClass, "com.dbxtune.pcs.PersistWriterJdbc");
 
-					_logger.info("PCS: using jdbcDriver='"+jdbcDriver+"', jdbcUrl='"+jdbcUrl+"', jdbcUser='"+jdbcUser+"', jdbcPasswd='*secret*', dbname='"+asaDbname+"'.");
+					_logger.info("PCS: using jdbcDriver='" + jdbcDriver + "', jdbcUrl='" + jdbcUrl + "', jdbcUser='" + jdbcUser + "', jdbcPasswd='*secret*', dbname='" + asaDbname + "'.");
 				}
 				else
 				{
-					throw new Exception("Unknown -T,--dbtype value of '"+opt+"' was specified, known values 'H2|ASE|ASA'.");
+					throw new Exception("Unknown -T,--dbtype value of '" + opt + "' was specified, known values 'H2|ASE|ASA'.");
 				}
 			}
 		}
@@ -1361,12 +1361,12 @@ public abstract class DbxTune
 		{
 			SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
 
-			_logger.info("This DEVELOPMENT VERSION will NOT work after '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"', then you will have to download a later version..");
+			_logger.info("This DEVELOPMENT VERSION will NOT work after '" + df.format(Version.DEV_VERSION_EXPIRE_DATE) + "', then you will have to download a later version..");
 			if ( System.currentTimeMillis() > Version.DEV_VERSION_EXPIRE_DATE.getTime() )
 			{
 				_hasDevVersionExpired = true;
 
-				String msg = "This DEVELOPMENT VERSION has expired. (version='"+Version.getVersionStr()+"', buildStr='"+Version.getBuildStr()+"'). The \"time to live\" period ended at '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"', and the current date is '"+df.format(new Date())+"'. A new version can be downloaded here 'http://www.dbxtune.com'";
+				String msg = "This DEVELOPMENT VERSION has expired. (version='" + Version.getVersionStr() + "', buildStr='" + Version.getBuildStr() + "'). The \"time to live\" period ended at '" + df.format(Version.DEV_VERSION_EXPIRE_DATE) + "', and the current date is '" + df.format(new Date()) + "'. A new version can be downloaded here 'http://www.dbxtune.com'";
 				_logger.error(msg);
 				Exception ex = new Exception(msg);
 				if (_gui)
@@ -1374,13 +1374,13 @@ public abstract class DbxTune
 					try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); }
 					catch (Exception e) { _logger.warn("Problem setting the Look And Feel to 'getSystemLookAndFeelClassName()'.", e); }
 
-					SwingUtils.showErrorMessage(Version.getAppName()+" - This DEVELOPMENT VERSION has expired",
+					SwingUtils.showErrorMessage(Version.getAppName() + " - This DEVELOPMENT VERSION has expired",
 						"<html>" +
 							"<h2>This DEVELOPMENT VERSION has expired.</h2>" +
-							"Current Version is '"+Version.getVersionStr()+"', with the build string '"+Version.getBuildStr()+"'.<br>" +
+							"Current Version is '" + Version.getVersionStr() + "', with the build string '" + Version.getBuildStr() + "'.<br>" +
 							"<br>" +
-							"The <i>time to live</i> period ended at '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"'. <br>" +
-							"And the current date is '"+df.format(new Date())+"'.<br>" +
+							"The <i>time to live</i> period ended at '" + df.format(Version.DEV_VERSION_EXPIRE_DATE) + "'. <br>" +
+							"And the current date is '" + df.format(new Date()) + "'.<br>" +
 							"<br>" +
 							"A new version can be downloaded at <A HREF=\"http://www.dbxtune.com\">http://www.dbxtune.com</A><br>" +
 							"<br>" +
@@ -1390,9 +1390,9 @@ public abstract class DbxTune
 							"But I strongly encourage you to download the latest release!<br>" +
 							"<br>" +
 							"This 'start' option was implemented as a fail-safe mechanism, and " +
-							"should only be used if the new "+Version.getAppName()+" version is not capable of reading the " +
-							"old database. In 99.9% the new "+Version.getAppName()+" version will be able to read " +
-							"Performance Counters stored by a earlier "+Version.getAppName()+" release." +
+							"should only be used if the new " + Version.getAppName() + " version is not capable of reading the " +
+							"old database. In 99.9% the new " + Version.getAppName() + " version will be able to read " +
+							"Performance Counters stored by a earlier " + Version.getAppName() + " release." +
 						"</html>",
 						ex);
 				}
@@ -1454,7 +1454,7 @@ if (_gui && startEvenIfGui_justToTestTheService)
 				
 				// Set some configuration in the file
 				conf.setProperty("dbxtune.app.name",            Version.getAppName());
-				conf.setProperty("dbxtune.startTime",           new Timestamp(System.currentTimeMillis())+"" );
+				conf.setProperty("dbxtune.startTime",           new Timestamp(System.currentTimeMillis()) + "" );
 				conf.setProperty("dbxtune.pid",                 JavaUtils.getProcessId("-1"));
 				conf.setProperty("dbxtune.log.file",            logFilename);
 				conf.setProperty("dbxtune.config.file",         noGuiConfigFile);
@@ -1532,7 +1532,7 @@ if (_gui && startEvenIfGui_justToTestTheService)
 
 					server.setHandler( context );
 
-					_logger.info("Starting local Web server at port "+port+".");
+					_logger.info("Starting local Web server at port " + port + ".");
 					server.start();
 				}
 				catch(Exception ex)
@@ -1601,11 +1601,11 @@ if (_gui && startEvenIfGui_justToTestTheService)
 					
 					// In NI-GUI, you can simulate any DummyAlarm, let us know how...
 					if ( ! _gui )
-						_logger.info("To test the alarm subsystem, you can generate an alarm called 'AlarmEventDummy' by creating the file '"+ah.getDymmyAlarmFileName(null)+"'. The file will be deleted after the alarm is raised.");
+						_logger.info("To test the alarm subsystem, you can generate an alarm called 'AlarmEventDummy' by creating the file '" + ah.getDymmyAlarmFileName(null) + "'. The file will be deleted after the alarm is raised.");
 				}
 				else
 				{
-					_logger.warn("No 'Alarm Writers' was found in the current configuration '"+conf.getFilename()+"'. Alarm Handler will NOT be enabled. To enable the AlarmHandler, please specify any Alarm Writer classes using the configuration key '"+AlarmHandler.PROPKEY_WriterClass+"'.");
+					_logger.warn("No 'Alarm Writers' was found in the current configuration '" + conf.getFilename() + "'. Alarm Handler will NOT be enabled. To enable the AlarmHandler, please specify any Alarm Writer classes using the configuration key '" + AlarmHandler.PROPKEY_WriterClass + "'.");
 				}
 			}
 			catch (Exception ex)
@@ -1625,9 +1625,9 @@ if (_gui && startEvenIfGui_justToTestTheService)
 							+ "<br>"
 							+ "The Alarm Module or any of the Alarm Writers might not work as expected<br>"
 							+ "Please look at the errolog and fix the problem.<br>"
-							+ "<b>Then restart "+Version.getAppName()+"</b><br>"
+							+ "<b>Then restart " + Version.getAppName() + "</b><br>"
 							+ "<br>"
-							+ "However the "+Version.getAppName()+" will start after you dismiss this message."
+							+ "However the " + Version.getAppName() + " will start after you dismiss this message."
 							+ "</html>";
 					SwingUtils.showErrorMessage("Propblems Initializing the Alarm Handler Module", htmlMsg, ex);
 				}
@@ -1638,7 +1638,7 @@ if (_gui && startEvenIfGui_justToTestTheService)
 		
 		if ( ! _gui )
 		{
-			_logger.info("Starting "+Version.getAppName()+" in NO-GUI mode, counters will be sampled into a database.");
+			_logger.info("Starting " + Version.getAppName() + " in NO-GUI mode, counters will be sampled into a database.");
 
 			//---------------------------------
 			// Go and check for updates, before continuing (timeout 10 seconds)
@@ -1713,11 +1713,11 @@ if (_gui && startEvenIfGui_justToTestTheService)
 			Configuration.addCombinedConfigurationFileWatcher_SkipKeyPrefix("conn.");
 
 			String appStartupTime = TimeUtils.msToTimeStr("%MM:%SS.%ms", System.currentTimeMillis() - DbxTune.getStartTime());
-			_logger.info("Application startup time "+appStartupTime+" (MM:SS.ms)");
+			_logger.info("Application startup time " + appStartupTime + " (MM:SS.ms)");
 		}
 		else
 		{
-			_logger.info("Starting "+Version.getAppName()+" in GUI mode.");
+			_logger.info("Starting " + Version.getAppName() + " in GUI mode.");
 
 			// Install a "special" EventQueue, which monitors deadlocks, and other "long" and time
 			// consuming operations on the EDT (Event Dispatch Thread)
@@ -1726,7 +1726,7 @@ if (_gui && startEvenIfGui_justToTestTheService)
 			boolean useEdtHang = System.getProperty("user.name").equals("goran");
 			if (Debug.hasDebug(DebugOptions.EDT_HANG) || useEdtHang)
 			{
-				_logger.info("Installing a Swing EDT (Event Dispatch Thread) - Hang Monitor, which will write information about long running EDT operations to the "+Version.getAppName()+" log.");
+				_logger.info("Installing a Swing EDT (Event Dispatch Thread) - Hang Monitor, which will write information about long running EDT operations to the " + Version.getAppName() + " log.");
 				EventDispatchThreadHangMonitor.initMonitoring();
 //				RepaintManager.setCurrentManager(new CheckThreadViolationRepaintManager());
 			}
@@ -1754,7 +1754,7 @@ if (_gui && startEvenIfGui_justToTestTheService)
 //						UIManager.setLookAndFeel("com.sun.java.swing.plaf.gtk.GTKLookAndFeel"); // GNOME - Linux
 //						UIManager.setLookAndFeel("com.sun.java.swing.plaf.motif.MotifLookAndFeel"); // MOTIF
 
-						_logger.info("Using Look And Feel named '"+UIManager.getLookAndFeel().getName()+"', classname='"+UIManager.getLookAndFeel().getClass().getName()+"', toString='"+UIManager.getLookAndFeel()+"'.");
+						_logger.info("Using Look And Feel named '" + UIManager.getLookAndFeel().getName() + "', classname='" + UIManager.getLookAndFeel().getClass().getName() + "', toString='" + UIManager.getLookAndFeel() + "'.");
 					}
 					catch (Exception e)
 					{
@@ -1890,7 +1890,7 @@ if (_gui && startEvenIfGui_justToTestTheService)
 					}
 
 					String appStartupTime = TimeUtils.msToTimeStr("%MM:%SS.%ms", System.currentTimeMillis() - DbxTune.getStartTime());
-					_logger.info("Application startup time "+appStartupTime+" (MM:SS.ms)");
+					_logger.info("Application startup time " + appStartupTime + " (MM:SS.ms)");
 
 					//-------------------------------
 					// -w|--cfgWizard: Open The Configuration Wizard... and then exit 
@@ -2029,7 +2029,7 @@ if (_gui && startEvenIfGui_justToTestTheService)
 			pw.println();
 		}
 
-		pw.println("usage: "+getAppNameCmd()+" [-C <cfgFile>] [-c <cfgFile>] [-t <filename>] [-h] [-v] [-a]");
+		pw.println("usage: " + getAppNameCmd() + " [-C <cfgFile>] [-c <cfgFile>] [-t <filename>] [-h] [-v] [-a]");
 		pw.println("              [-U <user>]   [-P <passwd>]    [-S <server>] [-A <alias>] [-O <urlOptions>]");
 		pw.println("              [-u <ssUser>] [-p <sshPasswd>] [-s <sshHostname>] [-k <keyFile>]");
 		pw.println("              [-L <logfile>] [-H <dirname>] [-R <dirname>] [-D <key=val>]");
@@ -2041,7 +2041,7 @@ if (_gui && startEvenIfGui_justToTestTheService)
 		pw.println("  -c,--userConfig <cfgName>    User Config file, overrides values in System cfg.");
 		pw.println("  -t,--tmpConfig <filename>    Config file where temporary stuff are stored.");
 		pw.println("  -h,--help                    Usage information.");
-		pw.println("  -v,--version                 Display "+Version.getAppName()+" and JVM Version.");
+		pw.println("  -v,--version                 Display " + Version.getAppName() + " and JVM Version.");
 		pw.println("  -x,--debug <dbg1,dbg2>       Debug options: a comma separated string");
 		pw.println("                               To get available option, do -x list");
 		pw.println("  -a,--createAppDir            Create application dir (~/.dbxtune) and exit.");
@@ -2212,7 +2212,7 @@ if (_gui && startEvenIfGui_justToTestTheService)
 			for (Iterator<Option> it=cmd.iterator(); it.hasNext();)
 			{
 				Option opt = it.next();
-				_logger.debug("parseCommandLine: swith='"+opt.getOpt()+"', value='"+opt.getValue()+"'.");
+				_logger.debug("parseCommandLine: swith='" + opt.getOpt() + "', value='" + opt.getValue() + "'.");
 			}
 		}
 
@@ -2225,7 +2225,7 @@ if (_gui && startEvenIfGui_justToTestTheService)
 		List<String> lst = CounterSetTemplates.getTemplateList(templateName);
 
 		System.out.println("======================================================================");
-		System.out.println("Template name '"+templateName+"', contains the following counters.");
+		System.out.println("Template name '" + templateName + "', contains the following counters.");
 		System.out.println("Short name           Postpone Long Name");
 		System.out.println("-------------------- -------- ----------------------------------------------");
 
@@ -2256,7 +2256,7 @@ if (_gui && startEvenIfGui_justToTestTheService)
 			name = CounterSetTemplates.getLongName(cmName);
 			String longName = (name == null) ? cmName : name;
 
-			System.out.println(StringUtil.left(shortName, 20) + " " + StringUtil.left(postponeTime+"", 8) + " " + longName);
+			System.out.println(StringUtil.left(shortName, 20) + " " + StringUtil.left(postponeTime + "", 8) + " " + longName);
 		}
 		System.out.println();
 
@@ -2287,7 +2287,7 @@ if (_gui && startEvenIfGui_justToTestTheService)
 				for (Object key : javaProps.keySet())
 				{
 					Object val = javaProps.get(key);
-					System.out.println("SYSTEM: key=|"+key+"|, val=|"+val+"|.");
+					System.out.println("SYSTEM: key=|" + key + "|, val=|" + val + "|.");
 				}
 			}
 
@@ -2320,7 +2320,7 @@ if (_gui && startEvenIfGui_justToTestTheService)
 		{
 			for (int i=0; i<args.length; i++)
 			{
-				System.out.println("TRACE-INPUT-ARGS["+i+"] = |"+args[i]+"|");
+				System.out.println("TRACE-INPUT-ARGS[" + i + "] = |" + args[i] + "|");
 			}
 		}
 
@@ -2343,7 +2343,7 @@ if (_gui && startEvenIfGui_justToTestTheService)
 			else if ( cmd.hasOption("version") )
 			{
 				System.out.println();
-				System.out.println(Version.getAppName()+" Version: " + Version.getVersionStr() + " JVM: " + System.getProperty("java.version"));
+				System.out.println(Version.getAppName() + " Version: " + Version.getVersionStr() + " JVM: " + System.getProperty("java.version"));
 				System.out.println();
 			}
 			//-------------------------------
@@ -2386,7 +2386,7 @@ if (_gui && startEvenIfGui_justToTestTheService)
 				else if ("Db2Tune"      .equalsIgnoreCase(_mainClassName)) _instance = new Db2Tune      (cmd);
 				else
 				{
-					throw new Exception("Unknown Implementor of type '"+_mainClassName+"'.");
+					throw new Exception("Unknown Implementor of type '" + _mainClassName + "'.");
 				}
 			}
 		}

@@ -138,7 +138,7 @@ implements ActionListener
 		_dbmsConfig.initialize(conn, hasGui, isOffline, ts);
 
 		// And set the timestamp, for when this was done
-		_timestamp_txt.setText(_dbmsConfig.getTimestamp()+"");
+		_timestamp_txt.setText(_dbmsConfig.getTimestamp() + "");
 	}
 
 	private void init()
@@ -222,7 +222,7 @@ implements ActionListener
 		for (String section : sectionList)
 			_section_cbx.addItem(section);
 
-		_timestamp_txt.setText(_dbmsConfig.getTimestamp()+"");
+		_timestamp_txt.setText(_dbmsConfig.getTimestamp() + "");
 
 		// Add action listener
 		_section_cbx            .addActionListener(this);
@@ -427,7 +427,7 @@ implements ActionListener
 				SwingUtils.showInfoMessage(this, "No output", "Sorry no DDL/SQL was generated.");
 			}
 
-			System.out.println("SHOW THIS IN A SMALL EDITOR='"+reverseEngineerStr+"'.");
+			System.out.println("SHOW THIS IN A SMALL EDITOR='" + reverseEngineerStr + "'.");
 		}
 	}
 
@@ -444,7 +444,7 @@ implements ActionListener
 			final String str = _section_cbx.getSelectedItem() + "";
 
 			if (colIndex < 0)
-				_logger.warn("Column name '"+colName+"' can't be found in DbmsConfig table.");
+				_logger.warn("Column name '" + colName + "' can't be found in DbmsConfig table.");
 			else
 			{
 				RowFilter<TableModel, Integer> filter = new RowFilter<TableModel, Integer>()
@@ -489,7 +489,7 @@ implements ActionListener
 			final int colIndex = _dbmsConfig.findColumn(colName);
 
 			if (colIndex < 0)
-				_logger.warn("Column name '"+colName+"' can't be found in DbmsConfig table.");
+				_logger.warn("Column name '" + colName + "' can't be found in DbmsConfig table.");
 			else
 			{
 				RowFilter<TableModel, Integer> filter = new RowFilter<TableModel, Integer>()
@@ -518,7 +518,7 @@ implements ActionListener
 			final String str   = "Monitoring";
 
 			if (colIndex < 0)
-				_logger.warn("Column name '"+colName+"' can't be found in DbmsConfig table.");
+				_logger.warn("Column name '" + colName + "' can't be found in DbmsConfig table.");
 			else
 			{
 				RowFilter<TableModel, Integer> filter = new RowFilter<TableModel, Integer>()

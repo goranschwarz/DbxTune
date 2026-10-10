@@ -41,7 +41,7 @@ extends AlarmEvent
 				"Found Long running transaction in '" + cm.getServerName() + "', that are HOLDING-LOCKS " 
 						+ (hasExlusiveLocks ? "(Exlusive Locks) " : "") 
 						+ "in DBMS while waiting for Client to send command. Last client command was issued " 
-						+ inSeconds + " seconds ago, at '" + startTime + "'. (thresholdInSec="+thresholdInSec+")",
+						+ inSeconds + " seconds ago, at '" + startTime + "'. (thresholdInSec=" + thresholdInSec + ")",
 						thresholdInSec);
 
 		// Adjust the Alarm Full Duration with X seconds

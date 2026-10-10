@@ -299,7 +299,7 @@ implements ActionListener
 
 		_lOnline_srvName_txt   .setText( dbmsConfig.getDbmsServerName() );
 		_lOnline_version_txt   .setText( dbmsConfig.getDbmsVersionStr() );
-		_lOnline_configDate_txt.setText( dbmsConfig.getTimestamp()+"");
+		_lOnline_configDate_txt.setText( dbmsConfig.getTimestamp() + "");
 		_lOnline_url_txt       .setText( dbmsConfig.getLastUsedUrl() );
 		
 		_lOnline_srvName_txt       .setCaretPosition(0);
@@ -336,7 +336,7 @@ implements ActionListener
 
 		_lOffline_srvName_txt   .setText( dbmsConfig.getDbmsServerName() );
 		_lOffline_version_txt   .setText( dbmsConfig.getDbmsVersionStr() );
-		_lOffline_configDate_txt.setText( dbmsConfig.getTimestamp()+"");
+		_lOffline_configDate_txt.setText( dbmsConfig.getTimestamp() + "");
 		_lOffline_url_txt       .setText( dbmsConfig.getLastUsedUrl() );
 
 		MonRecordingInfo recInfo = dbmsConfig.getOfflineRecordingInfo();
@@ -374,7 +374,7 @@ implements ActionListener
 
 		_rOnline_srvName_txt   .setText( dbmsConfig.getDbmsServerName() );
 		_rOnline_version_txt   .setText( dbmsConfig.getDbmsVersionStr() );
-		_rOnline_configDate_txt.setText( dbmsConfig.getTimestamp()+"");
+		_rOnline_configDate_txt.setText( dbmsConfig.getTimestamp() + "");
 		_rOnline_url_txt       .setText( dbmsConfig.getLastUsedUrl() );
 
 		_rOnline_srvName_txt       .setCaretPosition(0);
@@ -410,7 +410,7 @@ implements ActionListener
 
 		_rOffline_srvName_txt   .setText( dbmsConfig.getDbmsServerName() );
 		_rOffline_version_txt   .setText( dbmsConfig.getDbmsVersionStr() );
-		_rOffline_configDate_txt.setText( dbmsConfig.getTimestamp()+"");
+		_rOffline_configDate_txt.setText( dbmsConfig.getTimestamp() + "");
 		_rOffline_url_txt       .setText( dbmsConfig.getLastUsedUrl() );
 
 		MonRecordingInfo recInfo = dbmsConfig.getOfflineRecordingInfo();

@@ -139,7 +139,7 @@ implements ActionListener
 		CountersModel cm = CounterController.getInstance().getCmByName(cmName);
 		if (cm != null)
 		{
-			return "There is alraedy a CM named '"+cmName+"'.";
+			return "There is alraedy a CM named '" + cmName + "'.";
 		}
 
 		String cmDesc = _shortDesc_txt.getText().trim();
@@ -147,7 +147,7 @@ implements ActionListener
 		cm = CounterController.getInstance().getCmByDisplayName(cmDesc);
 		if (cm != null)
 		{
-			return "The Short Description '"+cmDesc+"' is already used.";
+			return "The Short Description '" + cmDesc + "' is already used.";
 		}
 
 		String problem = "";
@@ -207,7 +207,7 @@ implements ActionListener
 					_longDesc_txt.setCaretPosition(0);
 				}
 				else
-					_name_txt.setText("NoLuck-"+cmName);
+					_name_txt.setText("NoLuck-" + cmName);
 			}
 		}
 	}
@@ -443,8 +443,8 @@ implements ActionListener
 					row = new Vector<Object>();
 					row.add(Boolean.valueOf(false));
 					row.add( SwingUtils.readImageIcon(Version.class, "images/ud_counter_activity.png") );
-					row.add("cmDummy"+i);
-					row.add("Dummy Tab "+i);
+					row.add("cmDummy" + i);
+					row.add("Dummy Tab " + i);
 					row.add( UUID.randomUUID().toString() + " : " + UUID.randomUUID().toString());
 					tab.add(row);
 				}			

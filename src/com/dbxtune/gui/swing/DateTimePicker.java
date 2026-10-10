@@ -185,7 +185,7 @@ public class DateTimePicker extends JXDatePicker
 		}
 		catch(ParseException ex)
 		{
-			System.out.println(this.getClass().getName() + ": setText(str='"+str+"'). Caught: "+ex);
+			System.out.println(this.getClass().getName() + ": setText(str='" + str + "'). Caught: " + ex);
 		}
 	}
 

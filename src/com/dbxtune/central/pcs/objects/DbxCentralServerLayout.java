@@ -429,7 +429,7 @@ public class DbxCentralServerLayout
 		} // end: file exists
 		else
 		{
-			throw new FileNotFoundException("DbxCentral Server Configuration File '"+filename+"' did not exist.");
+			throw new FileNotFoundException("DbxCentral Server Configuration File '" + filename + "' did not exist.");
 		}
 	
 		//-------------------------------------------

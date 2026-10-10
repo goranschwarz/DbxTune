@@ -118,43 +118,43 @@ public class StressConnect
 					// Create file 	
 					BufferedWriter out = new BufferedWriter(new FileWriter(propFile));
 					out.write("# ASE Connection information\n");
-					out.write("ase.host      = "+_host+"\n");
-					out.write("ase.port      = "+_port+"\n");
+					out.write("ase.host      = " + _host + "\n");
+					out.write("ase.port      = " + _port + "\n");
 					out.write("#ase.dbname   = tempdb\n");
-					out.write("ase.username  = "+_username+"\n");
-					out.write("ase.password  = "+_password+"\n");
-					out.write("#ase.appname  = "+_appname+"\n");
+					out.write("ase.username  = " + _username + "\n");
+					out.write("ase.password  = " + _password + "\n");
+					out.write("#ase.appname  = " + _appname + "\n");
 					out.write("#ase.hostname = someClientName\n");
 					out.write("\n");
 					out.write("# If we want to exec something in the database, place it in this file\n");
 					out.write("#exec.filename = filename.sql\n");
 					out.write("\n");
 					out.write("# Number of java threads cuncurrently that will try to connect in a loop\n");
-					out.write("worker.threads = "+_numOfThreads+"\n");
+					out.write("worker.threads = " + _numOfThreads + "\n");
 					out.write("\n");
 					out.write("# How many millisecond to each connect thread sleep after a connect attempt\n");
-					out.write("worker.sleepAfterConnect = "+_connSleepTime+"\n");
+					out.write("worker.sleepAfterConnect = " + _connSleepTime + "\n");
 					out.write("\n");
 					out.write("# Sleep time between statistic reports\n");
-					out.write("stat.sleepTime = "+_statSleepTime+"\n");
+					out.write("stat.sleepTime = " + _statSleepTime + "\n");
 					out.write("\n");
 					out.write("# Get Spinlock Monitoring in the statistics report\n");
-					out.write("stat.doSpinMon = "+_statDoSpinMon+"\n");
+					out.write("stat.doSpinMon = " + _statDoSpinMon + "\n");
 					out.write("\n");
 					out.write("# get only top # rows from spinmon\n");
-					out.write("stat.doSpinMon.top = "+_statDoSpinMonRows+"\n");
+					out.write("stat.doSpinMon.top = " + _statDoSpinMonRows + "\n");
 					out.write("\n");
 					out.write("# Username and password for user to get spinmon statistics (must have sa_role)\n");
-					out.write("stat.doSpinMon.username = "+_statDoSpinMonUsername+"\n");
-					out.write("stat.doSpinMon.password = "+_statDoSpinMonPassword+"\n");
+					out.write("stat.doSpinMon.username = " + _statDoSpinMonUsername + "\n");
+					out.write("stat.doSpinMon.password = " + _statDoSpinMonPassword + "\n");
 					out.write("\n");
 					out.write("# Print some extra info: @@total_read, @@total_write, @@pack_received, @@pack_sent, @@packet_errors, @@total_errors\n");
-					out.write("stat.extraInfo = "+_statExtraInfo+"\n");
+					out.write("stat.extraInfo = " + _statExtraInfo + "\n");
 					out.write("\n");
 
 					out.close();
 					
-					System.out.println("Created a properties file '"+propFile.getCanonicalPath()+"', which will be used for configuration.");
+					System.out.println("Created a properties file '" + propFile.getCanonicalPath() + "', which will be used for configuration.");
 					System.out.println("");
 					System.out.println("Please edit the file with server host, port, username & password...");
 					System.out.println("");
@@ -167,13 +167,13 @@ public class StressConnect
 			}
 			else
 			{
-				try { System.out.println("Using default properties file '"+propFile.getCanonicalPath()+"'."); }
+				try { System.out.println("Using default properties file '" + propFile.getCanonicalPath() + "'."); }
 				catch (IOException e) { e.printStackTrace(); }
 			}
 		}
 		else
 		{
-			System.out.println("Using properties file '"+configFile+"' for configuration.");
+			System.out.println("Using properties file '" + configFile + "' for configuration.");
 		}
 		
 		Configuration config = new Configuration(configFile);
@@ -201,15 +201,15 @@ public class StressConnect
 		_statExtraInfo         = config.getBooleanProperty("stat.extraInfo",          _statExtraInfo);
 		
 		System.out.println("############# CONFIGURATION ######################");
-		System.out.println("ase.host     = "+_host);
-		System.out.println("ase.port     = "+_port);
-		System.out.println("ase.dbname   = "+_dbname);
-		System.out.println("ase.username = "+_username);
-		System.out.println("ase.password = "+_password);
-		System.out.println("ase.appname  = "+_appname);
-		System.out.println("ase.hostname = "+_hostname);
+		System.out.println("ase.host     = " + _host);
+		System.out.println("ase.port     = " + _port);
+		System.out.println("ase.dbname   = " + _dbname);
+		System.out.println("ase.username = " + _username);
+		System.out.println("ase.password = " + _password);
+		System.out.println("ase.appname  = " + _appname);
+		System.out.println("ase.hostname = " + _hostname);
 		System.out.println("--------------------------------------------------");
-		System.out.println("exec.filename = "+_execFile);
+		System.out.println("exec.filename = " + _execFile);
 		System.out.println("--------------------------------------------------");
 		System.out.println("worker.threads           = " + _numOfThreads);
 		System.out.println("worker.sleepAfterConnect = " + _connSleepTime);
@@ -226,7 +226,7 @@ public class StressConnect
 	public void firstTestConnect()
 	throws Exception
 	{
-		System.out.println("Trying to do initial Test Login to '"+_host+":"+_port+"' with user '"+_username+"'.");
+		System.out.println("Trying to do initial Test Login to '" + _host + ":" + _port + "' with user '" + _username + "'.");
 		
 		//Connection conn = AseConnectionFactory.getConnection(_host, _port, _dbname, _username, _password, _appname, _hostname, _connProps);
 		Connection conn = jdbcConnect(_host, _port, _dbname, _username, _password, _appname, _hostname, _connProps);
@@ -235,8 +235,8 @@ public class StressConnect
 		// Get active roles and print those
 		List<String> activeRoles = AseConnectionUtils.getActiveRoles(conn);
 		
-		System.out.println("Initial Test Login to '"+_host+":"+_port+"' with user '"+_username+"' SUCCEEDED.");
-		System.out.println("Active roles for the user is: "+StringUtil.toCommaStr(activeRoles));
+		System.out.println("Initial Test Login to '" + _host + ":" + _port + "' with user '" + _username + "' SUCCEEDED.");
+		System.out.println("Active roles for the user is: " + StringUtil.toCommaStr(activeRoles));
 	}
 
 	public void statisticsConnect()
@@ -246,7 +246,7 @@ public class StressConnect
 		if ( ! _statDoSpinMon )
 			return;
 
-		System.out.println("Statistics: Connecting to '"+_host+":"+_port+"' with user '"+_statDoSpinMonUsername+"'.");
+		System.out.println("Statistics: Connecting to '" + _host + ":" + _port + "' with user '" + _statDoSpinMonUsername + "'.");
 		
 //		Connection conn = AseConnectionFactory.getConnection(_host, _port, _dbname, _statDoSpinMonUsername, _statDoSpinMonPassword, "StressConnStatistics", _hostname, _connProps);
 		Connection conn = jdbcConnect(_host, _port, _dbname, _statDoSpinMonUsername, _statDoSpinMonPassword, "StressConnStatistics", _hostname, _connProps);
@@ -255,13 +255,13 @@ public class StressConnect
 		List<String> activeRoles = AseConnectionUtils.getActiveRoles(conn);
 		if ( ! activeRoles.contains("sa_role") )
 		{
-			throw new Exception("Statistics: user '"+_statDoSpinMonUsername+"', must have 'sa_role'. list of current roles: "+StringUtil.toCommaStr(activeRoles));
+			throw new Exception("Statistics: user '" + _statDoSpinMonUsername + "', must have 'sa_role'. list of current roles: " + StringUtil.toCommaStr(activeRoles));
 		}
 		
 		// Get server version, spinmon use different queries
 		_statSrvVersion = AseConnectionUtils.getAseVersionNumber(conn);
 		
-		System.out.println("Statistics: Connecting to '"+_host+":"+_port+"' with user '"+_statDoSpinMonUsername+"' SUCCEEDED.");
+		System.out.println("Statistics: Connecting to '" + _host + ":" + _port + "' with user '" + _statDoSpinMonUsername + "' SUCCEEDED.");
 		_statDoSpinMonConn = conn;
 	}
 
@@ -295,8 +295,8 @@ public class StressConnect
 		{
 			if (intervall == 0)
 			{
-				System.out.println("Sleeping for '"+_statSleepTime+"' ms between Statistics sample.");
-				System.out.println("DB Worker sleeps '"+_connSleepTime+"' ms between connect's");
+				System.out.println("Sleeping for '" + _statSleepTime + "' ms between Statistics sample.");
+				System.out.println("DB Worker sleeps '" + _connSleepTime + "' ms between connect's");
 			}
 
 			if (_statDoSpinMon)
@@ -353,52 +353,52 @@ public class StressConnect
 
 			// Print statistics
 			System.out.println("---------------------------------------------------------------------------------------------------- ");
-			System.out.println("----------------------------- threads='"+_numOfThreads+"', intervall='"+intervall+"' ------ at: " + timeNowStr);
+			System.out.println("----------------------------- threads='" + _numOfThreads + "', intervall='" + intervall + "' ------ at: " + timeNowStr);
 			System.out.println("---------------------------------------------------------------------------------------------------- ");
-			System.out.println("connectAttempts:             "+connectAttempts);
-			System.out.println("connectSuccess:              "+connectSuccess);
-			System.out.println("connectFailed:               "+connectFailed);
+			System.out.println("connectAttempts:             " + connectAttempts);
+			System.out.println("connectSuccess:              " + connectSuccess);
+			System.out.println("connectFailed:               " + connectFailed);
 			if (srvCountersDiff != null)
 			{
-			System.out.println("@@connections   diff:        "+srvCountersDiff._connections);
+			System.out.println("@@connections   diff:        " + srvCountersDiff._connections);
 			if (_statExtraInfo)
 			{
-			System.out.println("@@total_read    diff:        "+srvCountersDiff._io_total_read);
-			System.out.println("@@total_write   diff:        "+srvCountersDiff._io_total_write);
-			System.out.println("@@pack_received diff:        "+srvCountersDiff._pack_received);
-			System.out.println("@@pack_sent     diff:        "+srvCountersDiff._pack_sent);
-			System.out.println("@@packet_errors diff:        "+srvCountersDiff._packet_errors);
-			System.out.println("@@total_errors  diff:        "+srvCountersDiff._total_errors);
+			System.out.println("@@total_read    diff:        " + srvCountersDiff._io_total_read);
+			System.out.println("@@total_write   diff:        " + srvCountersDiff._io_total_write);
+			System.out.println("@@pack_received diff:        " + srvCountersDiff._pack_received);
+			System.out.println("@@pack_sent     diff:        " + srvCountersDiff._pack_sent);
+			System.out.println("@@packet_errors diff:        " + srvCountersDiff._packet_errors);
+			System.out.println("@@total_errors  diff:        " + srvCountersDiff._total_errors);
 			}
 			}
-			System.out.println("connectTime:                 "+connectTime);
+			System.out.println("connectTime:                 " + connectTime);
 			System.out.println("---------------------------------------------------------------------------------------------------- ");
-			System.out.println("connectAttempts per second:  "+connectAttempts     / (intervall/1000.0));
-			System.out.println("connectSuccess  per second:  "+connectSuccess      / (intervall/1000.0));
-			System.out.println("connectFailed   per second:  "+connectFailed       / (intervall/1000.0));
+			System.out.println("connectAttempts per second:  " + connectAttempts     / (intervall/1000.0));
+			System.out.println("connectSuccess  per second:  " + connectSuccess      / (intervall/1000.0));
+			System.out.println("connectFailed   per second:  " + connectFailed       / (intervall/1000.0));
 			if (srvCountersDiff != null)
 			{
-			System.out.println("@@connections   per second:  "+srvCountersDiff._connections    / (intervall/1000.0));
+			System.out.println("@@connections   per second:  " + srvCountersDiff._connections    / (intervall/1000.0));
 			if (_statExtraInfo)
 			{
-			System.out.println("@@total_read    per second:  "+srvCountersDiff._io_total_read  / (intervall/1000.0));
-			System.out.println("@@total_write   per second:  "+srvCountersDiff._io_total_write / (intervall/1000.0));
-			System.out.println("@@pack_received per second:  "+srvCountersDiff._pack_received  / (intervall/1000.0));
-			System.out.println("@@pack_sent     per second:  "+srvCountersDiff._pack_sent      / (intervall/1000.0));
-			System.out.println("@@packet_errors per second:  "+srvCountersDiff._packet_errors  / (intervall/1000.0));
-			System.out.println("@@total_errors  per second:  "+srvCountersDiff._total_errors   / (intervall/1000.0));
+			System.out.println("@@total_read    per second:  " + srvCountersDiff._io_total_read  / (intervall/1000.0));
+			System.out.println("@@total_write   per second:  " + srvCountersDiff._io_total_write / (intervall/1000.0));
+			System.out.println("@@pack_received per second:  " + srvCountersDiff._pack_received  / (intervall/1000.0));
+			System.out.println("@@pack_sent     per second:  " + srvCountersDiff._pack_sent      / (intervall/1000.0));
+			System.out.println("@@packet_errors per second:  " + srvCountersDiff._packet_errors  / (intervall/1000.0));
+			System.out.println("@@total_errors  per second:  " + srvCountersDiff._total_errors   / (intervall/1000.0));
 			}
-			System.out.println("       ASE Total--CPU-Time: "+srvCountersDiff._calcCPUTime       + "%");
-			System.out.println("       ASE User---CPU-Time: "+srvCountersDiff._calcUserCPUTime   + "%");
-			System.out.println("       ASE System-CPU-Time: "+srvCountersDiff._calcSystemCPUTime + "%");
+			System.out.println("       ASE Total--CPU-Time: " + srvCountersDiff._calcCPUTime       + "%");
+			System.out.println("       ASE User---CPU-Time: " + srvCountersDiff._calcUserCPUTime   + "%");
+			System.out.println("       ASE System-CPU-Time: " + srvCountersDiff._calcSystemCPUTime + "%");
 			}
-			System.out.println("connectTime(ms) per connect: "+ ( connectSuccess > 0 ? connectTime/connectSuccess : "no-succesfull-connects"));
+			System.out.println("connectTime(ms) per connect: " + ( connectSuccess > 0 ? connectTime/connectSuccess : "no-succesfull-connects"));
 			System.out.println("---------------------------------------------------------------------------------------------------- ");
 
 			if (_statDoSpinMon)
 			{
 				String spinMonStr = spinMonCalculate(_statDoSpinMonRows);
-				System.out.println("SPINMON output: (first "+_statDoSpinMonRows+" rows)");
+				System.out.println("SPINMON output: (first " + _statDoSpinMonRows + " rows)");
 				System.out.println(spinMonStr);
 			}
 		}
@@ -476,7 +476,7 @@ public class StressConnect
 			}
 			catch (SQLException e)
 			{
-				System.out.println("ERROR: getCounters() SQL='"+sql+"', caught: "+e);
+				System.out.println("ERROR: getCounters() SQL='" + sql + "', caught: " + e);
 			}
 		}
 		
@@ -580,7 +580,7 @@ public class StressConnect
 		catch (SQLException e)
 		{
 			_statDoSpinMon = false;
-			System.out.println("ERROR: spinMonReset() caught: "+e);
+			System.out.println("ERROR: spinMonReset() caught: " + e);
 			System.out.println("ERROR: spinMonReset() turning spinmon OFF");
 		}
 	}
@@ -602,7 +602,7 @@ public class StressConnect
 		catch (SQLException e)
 		{
 			_statDoSpinMon = false;
-			System.out.println("ERROR: spinMonPopulate() caught: "+e);
+			System.out.println("ERROR: spinMonPopulate() caught: " + e);
 			System.out.println("ERROR: spinMonPopulate() turning spinmon OFF");
 		}
 	}
@@ -653,9 +653,9 @@ public class StressConnect
 			"   S.value as total_spins, \n" +
 			"	P.value / @xacts as grabs_per_xact \n" +
 			"from sysmonitors P, sysmonitors W, sysmonitors S \n" +
-			"where P.group_name = '"+spinP+"' \n" +
-			"  and W.group_name = '"+spinW+"' \n" +
-			"  and S.group_name = '"+spinS+"' \n" +
+			"where P.group_name = '" + spinP + "' \n" +
+			"  and W.group_name = '" + spinW + "' \n" +
+			"  and S.group_name = '" + spinS + "' \n" +
 			"  and P.field_id = W.field_id \n" +
 			"  and P.field_id = S.field_id \n" +
 			"  and W.field_id =  S.field_id \n" +
@@ -699,10 +699,10 @@ public class StressConnect
 		catch (SQLException e)
 		{
 			_statDoSpinMon = false;
-			System.out.println("ERROR: spinMonCalculate() caught: "+e);
+			System.out.println("ERROR: spinMonCalculate() caught: " + e);
 			System.out.println("ERROR: spinMonCalculate() turning spinmon OFF");
 		}
-		return "NO RESULTS FROM spinMonCalculate(): _statDoSpinMon="+_statDoSpinMon;
+		return "NO RESULTS FROM spinMonCalculate(): _statDoSpinMon=" + _statDoSpinMon;
 	}
 
 	//----------------------------------------------------------------------------------------------------------
@@ -747,7 +747,7 @@ public class StressConnect
 		if (appname  != null) connProps.put("APPLICATIONNAME", appname);
 		if (hostname != null) connProps.put("HOSTNAME",        hostname);
 
-		Connection conn = DriverManager.getConnection("jdbc:sybase:Tds:"+host+":"+port, connProps);
+		Connection conn = DriverManager.getConnection("jdbc:sybase:Tds:" + host + ":" + port, connProps);
 		return conn;
 	}
 
@@ -846,7 +846,7 @@ public class StressConnect
 				_statConnectFailed++;
 
 				//e.printStackTrace();
-				System.out.println("ThreadId="+Thread.currentThread().getId() + ": PROBLEMS in connectAndClose(), Caught: "+e);
+				System.out.println("ThreadId=" + Thread.currentThread().getId() + ": PROBLEMS in connectAndClose(), Caught: " + e);
 			}
 		}
 	}

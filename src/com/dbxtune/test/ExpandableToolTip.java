@@ -124,7 +124,7 @@ public class ExpandableToolTip  implements KeyListener, MouseListener, FocusList
 		h = new JEditorPane();
 		h.setContentType("text/html");
 		h.addHyperlinkListener(this);
-		String context = "<html><body><table width='"+WIDTH_HTML+"'><tr><td><p><font size=+1>"+toolTipText+"</font></p>"+helpText+"</td></tr></table></body></html>";
+		String context = "<html><body><table width='" + WIDTH_HTML + "'><tr><td><p><font size=+1>" + toolTipText + "</font></p>" + helpText + "</td></tr></table></body></html>";
 		h.setText(context);
 		h.setEditable(true);
 		h.addHyperlinkListener(this);

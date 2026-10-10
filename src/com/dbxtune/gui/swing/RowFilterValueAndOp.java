@@ -116,7 +116,7 @@ extends RowFilter<TableModel, Integer>
 	 */
 	public void setFilter(int op, int col, String val)
 	{
-		_logger.debug("Setting filter: op="+op+", col="+col+", val='"+val+"'.");
+		_logger.debug("Setting filter: op=" + op + ", col=" + col + ", val='" + val + "'.");
 
 		_filterIsActive = true;
 		_filterOp       = op;
@@ -237,7 +237,7 @@ extends RowFilter<TableModel, Integer>
 				// Problems creating a object...
 				// So lets go to some fallback... probably a string...
 				//e.printStackTrace();
-				_logger.info("Problems create a Number of the string '"+_filterVal+"' for filtering, using String matching instead. "+e.getMessage());
+				_logger.info("Problems create a Number of the string '" + _filterVal + "' for filtering, using String matching instead. " + e.getMessage());
 				_filterObj = _filterVal;
 			}
 		}
@@ -276,7 +276,7 @@ extends RowFilter<TableModel, Integer>
 		}
 		else
 		{
-			_logger.warn("Unknown _filterOp = "+_filterOp);
+			_logger.warn("Unknown _filterOp = " + _filterOp);
 		}
 
 		// If we get here, which never really happens, show the row...

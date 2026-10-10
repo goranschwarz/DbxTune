@@ -60,7 +60,7 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
-				"Extensive Usage of OS Swapping on hostname '" + hostname + "' " + note + ", maxCap=" + maxCap + ". Time to increase memory or move some processes. swapIn=[avgVal=" + swapIn_avg + ", PeakTs='" + swapIn_peakTimestamp + "', peakVal=" + swapIn_peakVal + "], swapOut=[avgVal=" + swapIn_avg + ", peakTs='" + swapOut_peakTimestamp + "', peakVal=" + swapOut_peakVal + "]. (threshold="+threshold+")",
+				"Extensive Usage of OS Swapping on hostname '" + hostname + "' " + note + ", maxCap=" + maxCap + ". Time to increase memory or move some processes. swapIn=[avgVal=" + swapIn_avg + ", PeakTs='" + swapIn_peakTimestamp + "', peakVal=" + swapIn_peakVal + "], swapOut=[avgVal=" + swapIn_avg + ", peakTs='" + swapOut_peakTimestamp + "', peakVal=" + swapOut_peakVal + "]. (threshold=" + threshold + ")",
 				threshold);
 
 		// Set: Time To Live if postpone is enabled

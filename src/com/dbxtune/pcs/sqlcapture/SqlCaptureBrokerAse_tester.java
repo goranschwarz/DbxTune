@@ -269,12 +269,12 @@ extends SqlCaptureBrokerAse
 	public static void selectFrom(DbxConnection conn, String tabName)
 	throws SQLException
 	{
-		String sql = conn.quotifySqlString("select * from ["+tabName+"]");
+		String sql = conn.quotifySqlString("select * from [" + tabName + "]");
 		
 		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
 		{
 			ResultSetTableModel rstm = new ResultSetTableModel(rs, "dummy");
-			System.out.println("\n#### Table: "+tabName+ "\n" + rstm.toAsciiTableString());
+			System.out.println("\n#### Table: " + tabName + "\n" + rstm.toAsciiTableString());
 		}
 	}
 	

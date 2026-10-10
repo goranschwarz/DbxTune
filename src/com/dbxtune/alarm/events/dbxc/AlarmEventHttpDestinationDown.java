@@ -59,7 +59,7 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"HTTP Destination could not send data to '" + cfgName + "' with URL '" + url + "' for " + TimeUtils.msToTimeStr("%HH:%MM:%SS", secSinceLastSuccessSend*1000)+" (HH:MM:SS) (thresholdInSec="+thresholdInSec+")",
+				"HTTP Destination could not send data to '" + cfgName + "' with URL '" + url + "' for " + TimeUtils.msToTimeStr("%HH:%MM:%SS", secSinceLastSuccessSend*1000) + " (HH:MM:SS) (thresholdInSec=" + thresholdInSec + ")",
 				thresholdInSec
 				);
 
@@ -70,6 +70,6 @@ extends AlarmEvent
 		//setTimeToLive(cm);
 
 		// Set the raw data carrier
-		setData("cfgName"+cfgName+", url='"+url+"', secSinceLastSuccessSend="+secSinceLastSuccessSend); // note: limit is 80 characters...
+		setData("cfgName" + cfgName + ", url='" + url + "', secSinceLastSuccessSend=" + secSinceLastSuccessSend); // note: limit is 80 characters...
 	}
 }

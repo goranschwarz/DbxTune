@@ -75,7 +75,7 @@ public class SqlServerUtils
 		}
 		catch(SQLException e)
 		{
-			String msg = "Problems getting text from sys.dm_exec_query_plan, about '"+planHandleHexStr+"'. Msg="+e.getErrorCode()+", Text='" + e.getMessage() + "'. Caught: "+e;
+			String msg = "Problems getting text from sys.dm_exec_query_plan, about '" + planHandleHexStr + "'. Msg=" + e.getErrorCode() + ", Text='" + e.getMessage() + "'. Caught: " + e;
 			_logger.warn(msg); 
 
 			return null;
@@ -156,7 +156,7 @@ public class SqlServerUtils
 		}
 		catch(SQLException e)
 		{
-			String msg = "Problems getting text from sys.dm_exec_sql_text, about '"+sqlHandleHexStr+"'. Msg="+e.getErrorCode()+", Text='" + e.getMessage() + "'. Caught: "+e;
+			String msg = "Problems getting text from sys.dm_exec_sql_text, about '" + sqlHandleHexStr + "'. Msg=" + e.getErrorCode() + ", Text='" + e.getMessage() + "'. Caught: " + e;
 			_logger.warn(msg); 
 
 			return null;
@@ -233,7 +233,7 @@ public class SqlServerUtils
 		}
 		catch (Exception e)
 		{
-			_logger.info("Problems executing sql='select query_plan from sys.dm_exec_query_statistics_xml("+spid+")'. Caught: " + e);
+			_logger.info("Problems executing sql='select query_plan from sys.dm_exec_query_statistics_xml(" + spid + ")'. Caught: " + e);
 			return null;
 		}
 	}
@@ -1243,7 +1243,7 @@ public class SqlServerUtils
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems getting root blockers. ErrorCode=" + ex.getErrorCode() + ", SqlState='" + ex.getSQLState() + "', Text='" + ex.getMessage()+ "'. SQL=|" + sql + "|, Caught: " + ex);
+			_logger.warn("Problems getting root blockers. ErrorCode=" + ex.getErrorCode() + ", SqlState='" + ex.getSQLState() + "', Text='" + ex.getMessage() + "'. SQL=|" + sql + "|, Caught: " + ex);
 		}
 		
 		return rootBlockers;
@@ -1332,7 +1332,7 @@ public class SqlServerUtils
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems looking up Procedure Name '" + procName + "' from any database. ErrorCode=" + ex.getErrorCode() + ", SqlState='" + ex.getSQLState() + "', Text='" + ex.getMessage()+ "'. SQL=|" + sql + "|, Caught: " + ex);
+			_logger.warn("Problems looking up Procedure Name '" + procName + "' from any database. ErrorCode=" + ex.getErrorCode() + ", SqlState='" + ex.getSQLState() + "', Text='" + ex.getMessage() + "'. SQL=|" + sql + "|, Caught: " + ex);
 			return defaultIfNotFound;
 		}
 	}

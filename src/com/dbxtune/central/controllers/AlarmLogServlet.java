@@ -165,7 +165,7 @@ public class AlarmLogServlet extends HttpServlet
 //		w.setPrettyPrinter(new DefaultPrettyPrinter());
 		
 		// Open file and itterate
-		File f = new File(LOG_DIR+"/"+inputName);
+		File f = new File(LOG_DIR + "/" + inputName);
 		try ( FileInputStream in = new FileInputStream(f); 
 		      BufferedReader  br = new BufferedReader(new InputStreamReader(in)); )
 		{
@@ -277,7 +277,7 @@ public class AlarmLogServlet extends HttpServlet
 		}
 		catch (Exception ex)
 		{
-			throw new ServletException("Problems reading file '"+f+"'.", ex);
+			throw new ServletException("Problems reading file '" + f + "'.", ex);
 		}
 	}
 
@@ -306,7 +306,7 @@ public class AlarmLogServlet extends HttpServlet
 //		out.println("<textarea id='logtext'>");
 		out.println("<pre>");
 
-		File f = new File(LOG_DIR+"/"+inputName);
+		File f = new File(LOG_DIR + "/" + inputName);
 		try ( FileInputStream in = new FileInputStream(f); 
 		      BufferedReader  br = new BufferedReader(new InputStreamReader(in)); )
 		{
@@ -320,7 +320,7 @@ public class AlarmLogServlet extends HttpServlet
 		}
 		catch (Exception ex)
 		{
-			throw new ServletException("Problems reading file '"+f+"'.", ex);
+			throw new ServletException("Problems reading file '" + f + "'.", ex);
 		}
 
 		out.println("</pre>");
@@ -430,7 +430,7 @@ public class AlarmLogServlet extends HttpServlet
 		out.println("</thead> ");
 
 		out.println("<tbody>");
-		File f = new File(LOG_DIR+"/"+inputName);
+		File f = new File(LOG_DIR + "/" + inputName);
 		try
 		{
 			FileInputStream in = new FileInputStream(f);
@@ -534,7 +534,7 @@ public class AlarmLogServlet extends HttpServlet
 		}
 		catch (Exception ex)
 		{
-			throw new ServletException("Problems reading file '"+f+"'.", ex);
+			throw new ServletException("Problems reading file '" + f + "'.", ex);
 		}
 
 //		out.println("<script>                                                                  ");

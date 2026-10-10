@@ -145,12 +145,12 @@ implements Serializable
 		if ( _logger.isDebugEnabled() )
 		{
 			for (AlarmEvent alarmEvent : _alarms)
-				_logger.debug("Active--Alarms: "+alarmEvent);
+				_logger.debug("Active--Alarms: " + alarmEvent);
 			if (_alarms.size() == 0)
 				_logger.debug("Active--Alarms: IS EMPTY");
 
 			for (AlarmEvent alarmEvent : currentScanAlarms._alarms)
-				_logger.debug("CurrentScan---Alarms: "+alarmEvent);
+				_logger.debug("CurrentScan---Alarms: " + alarmEvent);
 			if (currentScanAlarms._alarms.size() == 0)
 				_logger.debug("CurrentScan---Alarms: IS EMPTY");
 		}
@@ -183,7 +183,7 @@ implements Serializable
 		if ( _logger.isDebugEnabled() )
 		{
 			for (AlarmEvent alarmEvent : cancelList)
-				_logger.debug("Cancel-Alarms: "+alarmEvent);
+				_logger.debug("Cancel-Alarms: " + alarmEvent);
 			if (cancelList.size() == 0)
 				_logger.debug("Cancel-Alarms: IS EMPTY");
 		}
@@ -229,7 +229,7 @@ implements Serializable
 		if ( _logger.isDebugEnabled() )
 		{
 			for (AlarmEvent alarmEvent : ac._alarms)
-				_logger.debug("Restored--Alarm: "+alarmEvent);
+				_logger.debug("Restored--Alarm: " + alarmEvent);
 		}
 
 		return ac;

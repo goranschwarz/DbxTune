@@ -153,7 +153,7 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 		_exampleAlarmEventList = new ArrayList<>();
 		for (int i=0; i<10; i++)
 		{
-			AlarmEvent ae = new AlarmEventDummy("GORAN_"+i+"_DS", "SomeCmName-"+i, "SomeExtraInfo-"+i, Category.OTHER, Severity.WARNING, ServiceState.AFFECTED, -1, 150+i, "This is an Alarm Example with the data value of '"+(150+i)+"'", "Extended Description goes here - "+i, 0);
+			AlarmEvent ae = new AlarmEventDummy("GORAN_" + i + "_DS", "SomeCmName-" + i, "SomeExtraInfo-" + i, Category.OTHER, Severity.WARNING, ServiceState.AFFECTED, -1, 150+i, "This is an Alarm Example with the data value of '" + (150+i) + "'", "Extended Description goes here - " + i, 0);
 			_exampleAlarmEventList.add(ae);
 		}
 
@@ -390,8 +390,8 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 		_copyDesignerCard_but.setToolTipText("<html>Copy just the Adaptive Card to the clipboard - without the Teams message envelope around it, which the Designer does not accept.<br>"
 				+ "Then paste it into the <b>Card Payload Editor</b> at <code>" + ADAPTIVE_CARD_DESIGNER + "</code>, replacing everything that is there.</html>");
 
-		_templateHelp_but .setToolTipText("Open the default web browser at "+TEMPLATE_HELP);;
-		_sendTestAlarm_but.setToolTipText("<html>Send a Test Alarm using the above template<br>Using AlarmWriter: <code>"+_currentWriterClassName+"</code></html>");
+		_templateHelp_but .setToolTipText("Open the default web browser at " + TEMPLATE_HELP);;
+		_sendTestAlarm_but.setToolTipText("<html>Send a Test Alarm using the above template<br>Using AlarmWriter: <code>" + _currentWriterClassName + "</code></html>");
 		
 		return panel;
 	}
@@ -506,7 +506,7 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 			conf.setProperty(_currentPropKey, _editor_txt.getText());
 			try
 			{
-				System.out.println("Instantiating and Initializing AlarmWriterClass='"+_currentWriterClassName+"'.");
+				System.out.println("Instantiating and Initializing AlarmWriterClass='" + _currentWriterClassName + "'.");
 				try
 				{
 					Class<?> c = Class.forName( writerClassName );
@@ -514,11 +514,11 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 				}
 				catch (ClassCastException ex)
 				{
-					throw new ClassCastException("When trying to load alarmWriter class '"+writerClassName+"'. The alarmWriter do not seem to follow the interface '"+IAlarmWriter.class.getName()+"'");
+					throw new ClassCastException("When trying to load alarmWriter class '" + writerClassName + "'. The alarmWriter do not seem to follow the interface '" + IAlarmWriter.class.getName() + "'");
 				}
 				catch (ClassNotFoundException ex)
 				{
-					throw new ClassNotFoundException("Tried to load alarmWriter class '"+writerClassName+"'.", ex);
+					throw new ClassNotFoundException("Tried to load alarmWriter class '" + writerClassName + "'.", ex);
 				}
 
 				// Now initialize the User Defined AlarmWriter
@@ -542,13 +542,13 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 				}
 				else
 				{
-					throw new Exception("Unknow send type '"+sendType+"'.");
+					throw new Exception("Unknow send type '" + sendType + "'.");
 				}
 				
 			}
 			catch(Exception ex)
 			{
-				SwingUtils.showErrorMessage("Send dummy alarm", "Some problem sending the dummy alarm to '"+writerClassName+"'.", ex);
+				SwingUtils.showErrorMessage("Send dummy alarm", "Some problem sending the dummy alarm to '" + writerClassName + "'.", ex);
 			}
 		}
     }
@@ -576,7 +576,7 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 		int line = 1 + _editor_txt.getCaretLineNumber();
 		int col  = 1 + _editor_txt.getCaretOffsetFromLineStart();
 		
-		String str = "Caret at: row="+line+", col="+col;
+		String str = "Caret at: row=" + line + ", col=" + col;
 		
 		_editorRowCol_lbl.setText(str);
 	}
@@ -660,7 +660,7 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 	private void saveProps()
   	{
 		Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
-		String base = this.getClass().getSimpleName()+".";
+		String base = this.getClass().getSimpleName() + ".";
 
 		if (tmpConf != null)
 		{
@@ -681,7 +681,7 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 		int     y         = -1;
 
 		Configuration tmpConf = Configuration.getCombinedConfiguration();
-		String base = this.getClass().getSimpleName()+".";
+		String base = this.getClass().getSimpleName() + ".";
 
 		setSize(width, height);
 
@@ -785,7 +785,7 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 
 			try
 			{
-				String type = _setAlarmType_cbx.getSelectedItem()+"";
+				String type = _setAlarmType_cbx.getSelectedItem() + "";
 				String str = createPreview(type);
 				_example_lbl.setText(str);
 			}

@@ -74,7 +74,7 @@ extends TabularCntrPanel
 		// HIGHLIGHTER that changes color when a new SPID number is on next row...
 
 		if (conf != null) 
-			colorStr = conf.getProperty(getName()+".color.group");
+			colorStr = conf.getProperty(getName() + ".color.group");
 
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
@@ -131,7 +131,7 @@ extends TabularCntrPanel
 
 	
 		// GREEN = active
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.active");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.active");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override

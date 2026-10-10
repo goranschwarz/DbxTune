@@ -85,6 +85,6 @@ extends Task
 		// Get a Statistics String
 		String statStr = _h2WriterStat.getStatString();
 
-		_logger.info("H2 Writer Statistics: "+statStr);
+		_logger.info("H2 Writer Statistics: " + statStr);
 	}
 }

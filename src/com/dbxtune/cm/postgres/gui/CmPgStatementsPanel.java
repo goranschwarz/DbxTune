@@ -74,7 +74,7 @@ extends TabularCntrPanel
 
 //				list.add(new CmSettingsHelper("Sample 'total_time' above", PROPKEY_sample_total_time_gt  , Integer.class, conf.getIntProperty(PROPKEY_sample_total_time_gt  , DEFAULT_sample_total_time_gt  ), DEFAULT_sample_total_time_gt  , "Sample 'total_time' above" ));
 
-				_totalTimeGt_txt.setText(""+ conf.getIntProperty(CmPgStatements.PROPKEY_sample_total_time_gt, CmPgStatements.DEFAULT_sample_total_time_gt));
+				_totalTimeGt_txt.setText("" + conf.getIntProperty(CmPgStatements.PROPKEY_sample_total_time_gt, CmPgStatements.DEFAULT_sample_total_time_gt));
 
 				// ReInitialize the SQL
 				getCm().setSql(null);

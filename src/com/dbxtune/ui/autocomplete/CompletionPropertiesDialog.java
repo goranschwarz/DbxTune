@@ -225,7 +225,7 @@ implements ActionListener, FocusListener
 		_cc_spp_chk .setSelected(_completionProviderAbstract.isLookupSystemProcedureColumns());
 
 		_serialize_chk.setSelected(_completionProviderAbstract.isSaveCacheEnabled());
-		_serialize_txt.setText    (_completionProviderAbstract.getSaveCacheTimeInMs()+"");
+		_serialize_txt.setText    (_completionProviderAbstract.getSaveCacheTimeInMs() + "");
 
 		_saveQuestion_chk.setSelected(_completionProviderAbstract.isSaveCacheQuestionEnabled());
 

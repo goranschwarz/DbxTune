@@ -77,7 +77,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -107,7 +107,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmMemoryClerks(counterController, guiController);
 	}
@@ -152,7 +152,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_MEMORY_CLERK_BUFFER_POOL,
 			"Buffer Pool Memory Clerk, in MB", // Menu CheckBox text
-			"Buffer Pool Memory Clerk, in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Buffer Pool Memory Clerk, in MB (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] {"Buffer Pool (MEMORYCLERK_SQLBUFFERPOOL)"}, 
 			LabelType.Static,
@@ -165,7 +165,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_MEMORY_CLERKS_TOP,
 			"Top 10 Memory Clerks, in MB", // Menu CheckBox text
-			"Top 10 Memory Clerks, in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Top 10 Memory Clerks, in MB (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -178,7 +178,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_MEMORY_TTM_VS_ALL_CLERKS,
 			"All Memory Clerks vs Target & Total Memory, in MB", // Menu CheckBox text
-			"All Memory Clerks vs Target & Total Memory, in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"All Memory Clerks vs Target & Total Memory, in MB (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] {"SUM of All Memory Clerks", "Target Server Memory MB", "Total Server Memory MB", "Buffer Pool Memory Clerk", "All Other Memory Clerks"}, 
 			LabelType.Static,

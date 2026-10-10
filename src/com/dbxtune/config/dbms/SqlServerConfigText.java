@@ -140,8 +140,8 @@ public abstract class SqlServerConfigText
 
 			String    srvName    = "-UNKNOWN-";
 			Timestamp srvRestart = null;
-			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex="+ex);}
-			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex="+ex);}
+			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex=" + ex);}
+			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex=" + ex);}
 
 			// Get databaseName and compatibility_level for databases that are below the current SQL-Server's compatibility_level
 			String sql = ""
@@ -175,7 +175,7 @@ public abstract class SqlServerConfigText
 			}
 			catch (SQLException ex)
 			{
-				_logger.error("Problems getting SQL-Server 'compatibility_level', using sql '"+sql+"'. Caught: "+ex, ex);
+				_logger.error("Problems getting SQL-Server 'compatibility_level', using sql '" + sql + "'. Caught: " + ex, ex);
 			}
 		}
 	}
@@ -258,8 +258,8 @@ public abstract class SqlServerConfigText
 
 			String    srvName    = "-UNKNOWN-";
 			Timestamp srvRestart = null;
-			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex="+ex);}
-			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex="+ex);}
+			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex=" + ex);}
+			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex=" + ex);}
 
 			String sql = ""
 				    + "DECLARE @tempdb_callation nvarchar(128) \n"
@@ -391,8 +391,8 @@ public abstract class SqlServerConfigText
 
 			String    srvName    = "-UNKNOWN-";
 			Timestamp srvRestart = null;
-			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex="+ex);}
-			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex="+ex);}
+			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex=" + ex);}
+			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex=" + ex);}
 
 			// First get used drive letters (for Windows)
 			String sql = "select distinct substring(physical_name, 1, 1) from sys.master_files where physical_name like '[A-Za-z]:%'";
@@ -407,7 +407,7 @@ public abstract class SqlServerConfigText
 			}
 			catch (SQLException ex)
 			{
-				_logger.error("Problems getting SQL-Server 'Used Windows Drive Letters', using sql '"+sql+"'. Caught: "+ex, ex);
+				_logger.error("Problems getting SQL-Server 'Used Windows Drive Letters', using sql '" + sql + "'. Caught: " + ex, ex);
 			}
 
 			
@@ -646,8 +646,8 @@ public abstract class SqlServerConfigText
 
 			String    srvName    = "-UNKNOWN-";
 			Timestamp srvRestart = null;
-			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex="+ex);}
-			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex="+ex);}
+			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex=" + ex);}
+			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex=" + ex);}
 
 			//---------------------------------------------------------------------------
 			// Check for match of "data file count" and "cores"
@@ -694,7 +694,7 @@ public abstract class SqlServerConfigText
 			}
 			catch (SQLException ex)
 			{
-				_logger.error("Problems getting SQL-Server 'tempdb' settings, using sql '"+sql+"'. Caught: "+ex, ex);
+				_logger.error("Problems getting SQL-Server 'tempdb' settings, using sql '" + sql + "'. Caught: " + ex, ex);
 			}
 
 			//---------------------------------------------------------------------------
@@ -802,7 +802,7 @@ public abstract class SqlServerConfigText
 				}
 				catch (Exception ex)
 				{
-					_logger.error("Problems getting SQL-Server 'tempdb data files', using sql '"+sql+"'. Caught: "+ex, ex);
+					_logger.error("Problems getting SQL-Server 'tempdb data files', using sql '" + sql + "'. Caught: " + ex, ex);
 				}
 			}
 
@@ -1006,8 +1006,8 @@ public abstract class SqlServerConfigText
 
 			String    srvName    = "-UNKNOWN-";
 			Timestamp srvRestart = null;
-			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex="+ex);}
-			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex="+ex);}
+			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex=" + ex);}
+			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex=" + ex);}
 
 			String sql = "select count(*), sum(error_count) from msdb.dbo.suspect_pages";
 			
@@ -1034,7 +1034,7 @@ public abstract class SqlServerConfigText
 			}
 			catch (SQLException ex)
 			{
-				_logger.error("Problems getting SQL-Server 'Suspect Page Count', using sql '"+sql+"'. Caught: "+ex, ex);
+				_logger.error("Problems getting SQL-Server 'Suspect Page Count', using sql '" + sql + "'. Caught: " + ex, ex);
 			}
 		}
 	}
@@ -1070,8 +1070,8 @@ public abstract class SqlServerConfigText
 
 			String    srvName    = "-UNKNOWN-";
 			Timestamp srvRestart = null;
-			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex="+ex);}
-			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex="+ex);}
+			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex=" + ex);}
+			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex=" + ex);}
 
 			String sql = ""
 				    + "SELECT \n"
@@ -1120,7 +1120,7 @@ public abstract class SqlServerConfigText
 			}
 			catch (SQLException ex)
 			{
-				_logger.error("Problems getting SQL-Server 'Suspect Page Count', using sql '"+sql+"'. Caught: "+ex, ex);
+				_logger.error("Problems getting SQL-Server 'Suspect Page Count', using sql '" + sql + "'. Caught: " + ex, ex);
 			}
 		}
 	}
@@ -1155,8 +1155,8 @@ public abstract class SqlServerConfigText
 
 			String    srvName    = "-UNKNOWN-";
 			Timestamp srvRestart = null;
-			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex="+ex);}
-			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex="+ex);}
+			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex=" + ex);}
+			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex=" + ex);}
 
 			String sql = "SELECT instant_file_initialization_enabled FROM sys.dm_server_services WHERE servicename LIKE 'SQL Server (%'";
 			
@@ -1180,7 +1180,7 @@ public abstract class SqlServerConfigText
 			}
 			catch (SQLException ex)
 			{
-				_logger.error("Problems getting SQL-Server 'instant_file_initialization', using sql '"+sql+"'. Caught: "+ex, ex);
+				_logger.error("Problems getting SQL-Server 'instant_file_initialization', using sql '" + sql + "'. Caught: " + ex, ex);
 			}
 		}
 	}
@@ -1516,8 +1516,8 @@ public abstract class SqlServerConfigText
 
 			String    srvName    = "-UNKNOWN-";
 			Timestamp srvRestart = null;
-			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex="+ex);}
-			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex="+ex);}
+			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex=" + ex);}
+			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex=" + ex);}
 
 			String configStr = getConfig();
 
@@ -1686,8 +1686,8 @@ public abstract class SqlServerConfigText
 
 			String    srvName    = "-UNKNOWN-";
 			Timestamp srvRestart = null;
-			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex="+ex);}
-			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex="+ex);}
+			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex=" + ex);}
+			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex=" + ex);}
 
 			// Get the config, transform the text into "ResultSetTableModel" and check for issues...
 			String configStr = getConfig();

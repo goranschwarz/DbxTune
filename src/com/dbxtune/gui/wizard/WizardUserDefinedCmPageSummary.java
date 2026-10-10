@@ -90,7 +90,7 @@ extends WizardPage
 //
 //		add(button, "wrap 10");
 
-		_appendToCfg_chk.setToolTipText("Append the above text to the end of the configuration file '"+cfgFile+"'. The GUI has to be restarted for the changes to take affect.");
+		_appendToCfg_chk.setToolTipText("Append the above text to the end of the configuration file '" + cfgFile + "'. The GUI has to be restarted for the changes to take affect.");
 		add(_appendToCfg_chk, "wrap");
 
 		_addTmpToCfg_chk.setToolTipText("Add the Counter Model to the GUI, NOTE: this will NOT be saved in the configuration file.");
@@ -121,7 +121,7 @@ extends WizardPage
 			String exists  = conf.getProperty(key);
 			if (exists != null)
 			{
-				return "The key '"+key+"' already exists in the file '"+cfgFile+"'.";
+				return "The key '" + key + "' already exists in the file '" + cfgFile + "'.";
 			}
 		}
 		

@@ -207,7 +207,7 @@ public class AseStackTraceAnalyzer
 						} 
 						catch(RuntimeException rte) 
 						{
-							_logger.warn("Problem parsing: Iteration and Interval. row='"+row+"', Caught="+rte);
+							_logger.warn("Problem parsing: Iteration and Interval. row='" + row + "', Caught=" + rte);
 						}
 					}
 					else if (row.startsWith("---- Sample"))
@@ -240,7 +240,7 @@ public class AseStackTraceAnalyzer
 						} 
 						catch(RuntimeException rte) 
 						{
-							_logger.warn("Problem parsing: sample & engine number. row='"+row+"', Caught="+rte);
+							_logger.warn("Problem parsing: sample & engine number. row='" + row + "', Caught=" + rte);
 						}
 					}
 					else if (row.indexOf(" is offline and will not be sampled") >= 0)
@@ -268,7 +268,7 @@ public class AseStackTraceAnalyzer
 							{
 								pos += " spid ".length();
 								try { spid = Integer.parseInt( row.substring(pos, row.indexOf(",", pos)) ); }
-								catch(NumberFormatException nfe) {System.out.println("Parse-spid SPID '"+row+"', caught: "+nfe);}
+								catch(NumberFormatException nfe) {System.out.println("Parse-spid SPID '" + row + "', caught: " + nfe);}
 							}
 
 							// get kpid
@@ -277,7 +277,7 @@ public class AseStackTraceAnalyzer
 							{
 								pos += " kpid ".length();
 								try { kpid = Integer.parseInt( row.substring(pos, row.indexOf(",", pos)) ); }
-								catch(NumberFormatException nfe) {System.out.println("Parse-spid KPID '"+row+"', caught: "+nfe);}
+								catch(NumberFormatException nfe) {System.out.println("Parse-spid KPID '" + row + "', caught: " + nfe);}
 							}
 
 							// get suid
@@ -286,7 +286,7 @@ public class AseStackTraceAnalyzer
 							{
 								pos += " suid ".length();
 								try { suid = Integer.parseInt( row.substring(pos) ); }
-								catch(NumberFormatException nfe) {System.out.println("Parse-spid SUID '"+row+"', caught: "+nfe);}
+								catch(NumberFormatException nfe) {System.out.println("Parse-spid SUID '" + row + "', caught: " + nfe);}
 							}
 						}
 						else if (row.startsWith("******** End of stack trace, kernel"))
@@ -299,7 +299,7 @@ public class AseStackTraceAnalyzer
 							{
 								pos += " kpid ".length();
 								try { kpid = Integer.parseInt( row.substring(pos) ); }
-								catch(NumberFormatException nfe) {System.out.println("Parse-kpid KPID '"+row+"', caught: "+nfe);}
+								catch(NumberFormatException nfe) {System.out.println("Parse-kpid KPID '" + row + "', caught: " + nfe);}
 							}
 						}
 
@@ -313,7 +313,7 @@ public class AseStackTraceAnalyzer
 						if (addThis)
 						{
 							if (_logger.isDebugEnabled())
-								_logger.debug("ADD SAMPLE: -- sample ="+sample+", engine="+engine+". _start="+_startRead+", _stop="+_stopRead+", _engine="+_engine+": stack="+stackList);
+								_logger.debug("ADD SAMPLE: -- sample =" + sample + ", engine=" + engine + ". _start=" + _startRead + ", _stop=" + _stopRead + ", _engine=" + _engine + ": stack=" + stackList);
 
 							Collections.reverse(stackList);
 							addStackEntry(stackList, sample, engine, kpid, spid, suid, sampleStartRow, rowNum, objectList, sampleContent);
@@ -346,7 +346,7 @@ public class AseStackTraceAnalyzer
 						}
 						catch (RuntimeException rte)
 						{
-							_logger.warn("Problem parsing: 'pc: ' entry. substring(startPos="+startPos+", endPos="+endPos+"), row='"+row+"', Caught="+rte);
+							_logger.warn("Problem parsing: 'pc: ' entry. substring(startPos=" + startPos + ", endPos=" + endPos + "), row='" + row + "', Caught=" + rte);
 						}
 
 						if (f.length() > 0)
@@ -421,7 +421,7 @@ public class AseStackTraceAnalyzer
 						{
 							pos += searchStr.length();
 							try { dbid = Integer.parseInt( row.substring(pos, row.indexOf(endStr, pos)) ); }
-							catch(RuntimeException rte) {_logger.warn("Problems Parse-object(dbid) '"+row+"', caught: "+rte);}
+							catch(RuntimeException rte) {_logger.warn("Problems Parse-object(dbid) '" + row + "', caught: " + rte);}
 						}
 
 						searchStr = " objid: ";
@@ -431,7 +431,7 @@ public class AseStackTraceAnalyzer
 						{
 							pos += searchStr.length();
 							try { objid = Integer.parseInt( row.substring(pos, row.indexOf(endStr, pos)) ); }
-							catch(RuntimeException rte) {_logger.warn("Problems Parse-object(objid) '"+row+"', caught: "+rte);}
+							catch(RuntimeException rte) {_logger.warn("Problems Parse-object(objid) '" + row + "', caught: " + rte);}
 						}
 
 //						searchStr = " name: '";
@@ -449,7 +449,7 @@ public class AseStackTraceAnalyzer
 								if (name.endsWith("'"))
 									name = name.substring(0, name.length()-1);
 							}
-							catch(RuntimeException rte) {_logger.warn("Problems Parse-object(name) '"+row+"', caught: "+rte);}
+							catch(RuntimeException rte) {_logger.warn("Problems Parse-object(name) '" + row + "', caught: " + rte);}
 						}
 
 						searchStr = " sdes: ";
@@ -459,7 +459,7 @@ public class AseStackTraceAnalyzer
 						{
 							pos += searchStr.length();
 							try { sdes = row.substring(pos, row.indexOf(endStr, pos)); }
-							catch(RuntimeException rte) {_logger.warn("Problems Parse-object(sdes) '"+row+"', caught: "+rte);}
+							catch(RuntimeException rte) {_logger.warn("Problems Parse-object(sdes) '" + row + "', caught: " + rte);}
 						}
 
 //						if (dbid != -1 && objid != -1 && name != null)
@@ -1266,7 +1266,7 @@ public class AseStackTraceAnalyzer
 									for (SampleEngineDetailes sed : se._sampleEngineDetailes.values())
 										matrix[sed._sample][sed._engine] = true;
 									
-									sb.append("<html><b>Current stack:</b> <code>"+se._stackStartStr+"</code><br><b>Was found in following samples/engines</b><br>");
+									sb.append("<html><b>Current stack:</b> <code>" + se._stackStartStr + "</code><br><b>Was found in following samples/engines</b><br>");
 									sb.append("<br>");
 
 									sb.append("<table border=1 cellspacing=1 cellpadding=0>");
@@ -1294,16 +1294,16 @@ public class AseStackTraceAnalyzer
 
 								if (_functionStackStart_chk.isSelected())
 								{
-									tip = "<html>Stack Traces Start:" + se._name+"<br>";
+									tip = "<html>Stack Traces Start:" + se._name + "<br>";
 									tip += "Callers of this function, which are filtered out:" + se._name + "<br>";
-									tip += "Number of callers: "+se._root._functionStackStartDiscardMap.size()+"<br>";
+									tip += "Number of callers: " + se._root._functionStackStartDiscardMap.size() + "<br>";
 									tip += "<br>";
 									for (Map.Entry<String,Integer> entry : se._root._functionStackStartDiscardMap.entrySet()) 
 									{
 										String key = entry.getKey();
 										int    val = entry.getValue();
 
-										tip += "Parent Stack='"+key+"', count=<b><font color='blue'>" + val + "</font></b><br>";
+										tip += "Parent Stack='" + key + "', count=<b><font color='blue'>" + val + "</font></b><br>";
 									}
 									tip += "</html>";
 								}
@@ -1346,11 +1346,11 @@ public class AseStackTraceAnalyzer
 			_str = str;
 			if (_str != null)
 			{
-				_sampleCount_txt        .setText(_str.getSampleIterations()+"");
-				_actualSampleCount_txt  .setText(_str.getActualSamples()+"");
-				_sampleSleep_txt        .setText(_str.getSampleInterval()+"");
-				_expectedSampleSlots_txt.setText(_str.getExpectedSampleSlots()+"");
-				_actualSampleSlots_txt  .setText(_str.getActualSampleSlots()+"");
+				_sampleCount_txt        .setText(_str.getSampleIterations() + "");
+				_actualSampleCount_txt  .setText(_str.getActualSamples() + "");
+				_sampleSleep_txt        .setText(_str.getSampleInterval() + "");
+				_expectedSampleSlots_txt.setText(_str.getExpectedSampleSlots() + "");
+				_actualSampleSlots_txt  .setText(_str.getActualSampleSlots() + "");
 
 				// if we are "missing" samples, mark it as RED
 				_actualSampleCount_txt.setBackground(_sampleCount_txt.getBackground());
@@ -1457,7 +1457,7 @@ public class AseStackTraceAnalyzer
 							String msg = 
 								"<html>" +
 								"Problems when reading/parsing file<br>" +
-								"Filename '"+str.getFile()+"'.<br>" +
+								"Filename '" + str.getFile() + "'.<br>" +
 								"<br>" +
 								"Problem: " + e.getMessage() +
 								"</html>";
@@ -2254,7 +2254,7 @@ public class AseStackTraceAnalyzer
 			{
 				SampleEngineDetailes sed = _se.getSampleEngineDetailes(row, col);
 				if (sed == null)
-					return "None for row="+row+", col="+col;
+					return "None for row=" + row + ", col=" + col;
 				
 //				System.out.println("SED _sample:               "+sed._sample);
 //				System.out.println("SED _engine:               "+sed._engine);
@@ -2612,7 +2612,7 @@ public class AseStackTraceAnalyzer
 
 			if (StringUtil.isNullOrBlank(exampleStr))
 			{
-				throw new RuntimeException("Script type '"+scriptType+"' is not implemeted.");
+				throw new RuntimeException("Script type '" + scriptType + "' is not implemeted.");
 			}
 
 			// Top panel
@@ -2806,7 +2806,7 @@ public class AseStackTraceAnalyzer
 		try
 		{
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-			_logger.info("Using Look And Feel named '"+UIManager.getLookAndFeel().getName()+"', classname='"+UIManager.getLookAndFeel().getClass().getName()+"', toString='"+UIManager.getLookAndFeel()+"'.");
+			_logger.info("Using Look And Feel named '" + UIManager.getLookAndFeel().getName() + "', classname='" + UIManager.getLookAndFeel().getClass().getName() + "', toString='" + UIManager.getLookAndFeel() + "'.");
 		}
 		catch (Exception e)
 		{

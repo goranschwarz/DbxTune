@@ -201,7 +201,7 @@ public class JschTest
 		@Override
 		public boolean promptPassword(String message)
 		{
-			System.out.println("---------- MyUserInfo: promptPassword() message='"+message+"'.");
+			System.out.println("---------- MyUserInfo: promptPassword() message='" + message + "'.");
 			return false;
 		}
 
@@ -227,7 +227,7 @@ public class JschTest
 		@Override
 		public boolean promptPassphrase(String message)
 		{
-			System.out.println("---------- MyUserInfo: promptPassphrase() message='"+message+"'.");
+			System.out.println("---------- MyUserInfo: promptPassphrase() message='" + message + "'.");
 			return false;
 		}
 
@@ -254,7 +254,7 @@ public class JschTest
 		@Override
 		public boolean promptYesNo(String message)
 		{
-			System.out.println("---------- MyUserInfo: promptYesNo() message='"+message+"'.");
+			System.out.println("---------- MyUserInfo: promptYesNo() message='" + message + "'.");
 			return false;
 		}
 
@@ -266,7 +266,7 @@ public class JschTest
 		@Override
 		public void showMessage(String message)
 		{
-			System.out.println("---------- MyUserInfo: showMessage() message='"+message+"'.");
+			System.out.println("---------- MyUserInfo: showMessage() message='" + message + "'.");
 		}
 
 		/**

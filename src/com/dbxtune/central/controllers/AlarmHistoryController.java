@@ -81,7 +81,7 @@ extends HttpServlet
 			{
 				if ( ! reader.hasServerSession(srv) )
 				{
-					resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Server name '"+srv+"' do not exist in the DBX Central Database.");
+					resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Server name '" + srv + "' do not exist in the DBX Central Database.");
 					return;
 				}
 			}
@@ -95,8 +95,8 @@ extends HttpServlet
 		}
 		catch (Exception e)
 		{
-			_logger.info("Problem accessing DBMS or writing JSON, Caught: "+e, e);
-			throw new ServletException("Problem accessing db or writing JSON, Caught: "+e, e);
+			_logger.info("Problem accessing DBMS or writing JSON, Caught: " + e, e);
+			throw new ServletException("Problem accessing db or writing JSON, Caught: " + e, e);
 		}
 		
 		out.println(payload);

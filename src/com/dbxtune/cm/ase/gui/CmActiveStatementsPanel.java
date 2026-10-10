@@ -75,7 +75,7 @@ extends TabularCntrPanel
 		String colorStr = null;
 
 		// Mark the row as YELLOW if holding any locks
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.holdingLocks");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.holdingLocks");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -89,7 +89,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.YELLOW), null));
 
 		// Mark the row as ORANGE if PK has been visible on more than 1 sample
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.multiSampled");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.multiSampled");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -105,7 +105,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.ORANGE), null));
 
 		// Mark the row as PINK if this SPID is BLOCKED by another thread
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocked");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.blocked");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -121,7 +121,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.PINK), null));
 
 		// Mark the row as RED if blocks other users from working
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocking");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.blocking");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -159,7 +159,7 @@ extends TabularCntrPanel
 				l_sampleHoldingLocks_chk    .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_holdingLocks    , CmActiveStatements.DEFAULT_sample_holdingLocks   ));
 				l_sampleSpidLocks_chk       .setSelected(conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_spidLocks       , CmActiveStatements.DEFAULT_sample_spidLocks      ));
 
-				l_sampleHoldingLocks_gt_SecondsWaiting_txt.setText(""+conf.getIntProperty(CmActiveStatements.PROPKEY_sample_holdingLocks_gt_SecondsWaiting, CmActiveStatements.DEFAULT_sample_holdingLocks_gt_SecondsWaiting));
+				l_sampleHoldingLocks_gt_SecondsWaiting_txt.setText("" + conf.getIntProperty(CmActiveStatements.PROPKEY_sample_holdingLocks_gt_SecondsWaiting, CmActiveStatements.DEFAULT_sample_holdingLocks_gt_SecondsWaiting));
 
 				// ReInitialize the SQL
 				getCm().setSql(null);
@@ -186,7 +186,7 @@ extends TabularCntrPanel
 		l_sampleHoldingLocks_chk    = new JCheckBox("Show SPID's holding locks", conf == null ? CmActiveStatements.DEFAULT_sample_holdingLocks    : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_holdingLocks    , CmActiveStatements.DEFAULT_sample_holdingLocks   ));
 		l_sampleSpidLocks_chk       = new JCheckBox("Get SPID Locks",            conf == null ? CmActiveStatements.DEFAULT_sample_spidLocks       : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_spidLocks       , CmActiveStatements.DEFAULT_sample_spidLocks      ));
 
-		l_sampleHoldingLocks_gt_SecondsWaiting_txt = new JTextField(""+conf.getIntProperty(CmActiveStatements.PROPKEY_sample_holdingLocks_gt_SecondsWaiting, CmActiveStatements.DEFAULT_sample_holdingLocks_gt_SecondsWaiting), 5);
+		l_sampleHoldingLocks_gt_SecondsWaiting_txt = new JTextField("" + conf.getIntProperty(CmActiveStatements.PROPKEY_sample_holdingLocks_gt_SecondsWaiting, CmActiveStatements.DEFAULT_sample_holdingLocks_gt_SecondsWaiting), 5);
 		
 		
 		l_sampleShowplan_chk       .setName(CmActiveStatements.PROPKEY_sample_showplan       );

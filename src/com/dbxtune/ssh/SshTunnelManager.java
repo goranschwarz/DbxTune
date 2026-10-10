@@ -175,7 +175,7 @@ public class SshTunnelManager
 			{
 				lpfw.incrementUsage();
 				// FIXME: should we test if the connection is up and running / valid
-				_logger.info("Reusing an Previously setup Tunnel for '"+hostPortStr+"' that uses Local Port '"+lpfw._localPort+"', which sshConnKey '"+connKey+"'.");
+				_logger.info("Reusing an Previously setup Tunnel for '" + hostPortStr + "' that uses Local Port '" + lpfw._localPort + "', which sshConnKey '" + connKey + "'.");
 				sshTunnelInfo.setLocalPort(lpfw._localPort);
 				return;
 			}
@@ -195,7 +195,7 @@ public class SshTunnelManager
 			if (sshConnWrap._sshConnection.isConnected())
 			{
 				sshConnWrap.incrementUsage();
-				_logger.info("Reusing an already connected SSH Connection to "+connInfo);
+				_logger.info("Reusing an already connected SSH Connection to " + connInfo);
 				makeNewShhConnection = false;
 			}
 			else
@@ -230,16 +230,16 @@ public class SshTunnelManager
 					if (StringUtil.isNullOrBlank(osCmd))
 						continue;
 					
-					_logger.info("SSH Connect, Init Cmd, Executing Command ("+(i+1)+" of "+cmdArr.length+") = '"+osCmd+"'. When Connection to "+sshTunnelInfo.getSshHost()+":"+sshTunnelInfo.getSshPort()+" with user '"+sshTunnelInfo.getSshUsername()+"'.");
+					_logger.info("SSH Connect, Init Cmd, Executing Command (" + (i+1) + " of " + cmdArr.length + ") = '" + osCmd + "'. When Connection to " + sshTunnelInfo.getSshHost() + ":" + sshTunnelInfo.getSshPort() + " with user '" + sshTunnelInfo.getSshUsername() + "'.");
 					try
 					{
 						String output = sshConn.execCommandOutputAsStr(osCmd);
 						if (StringUtil.hasValue(output))
-							_logger.info("SSH Init OS Command ("+(i+1)+" of "+cmdArr.length+") '"+osCmd+"' produced the following output: " + output);
+							_logger.info("SSH Init OS Command (" + (i+1) + " of " + cmdArr.length + ") '" + osCmd + "' produced the following output: " + output);
 					}
 					catch (IOException e) 
 					{
-						_logger.warn("SSH Init OS Command '"+osCmd+"' probably failed: " + e.toString());
+						_logger.warn("SSH Init OS Command '" + osCmd + "' probably failed: " + e.toString());
 					}
 				}
 			}
@@ -277,13 +277,13 @@ public class SshTunnelManager
 			{
 				try
 				{
-					_logger.info("Closing the LocalPortForwarder on port '"+lpfw._localPort+"'.");
+					_logger.info("Closing the LocalPortForwarder on port '" + lpfw._localPort + "'.");
 //					lpfw._localPortForwarder.close();
 					lpfw.close();
 				}
 				catch (Exception e)
 				{
-					_logger.warn("Problem closing the LocalPortForwarder on port '"+lpfw._localPort+"'.", e);
+					_logger.warn("Problem closing the LocalPortForwarder on port '" + lpfw._localPort + "'.", e);
 				}
 				_tunnelCache.remove(hostPortStr);
 			}
@@ -298,7 +298,7 @@ public class SshTunnelManager
 				// if not used anymore, close the listener
 				if (cw._numberOfUsers <= 0)
 				{
-					_logger.warn("Closing the SshConnection to '"+cw._sshConnection.getHost()+":"+cw._sshConnection.getPort()+"', User '"+cw._sshConnection.getUsername()+"'.");
+					_logger.warn("Closing the SshConnection to '" + cw._sshConnection.getHost() + ":" + cw._sshConnection.getPort() + "', User '" + cw._sshConnection.getUsername() + "'.");
 					cw._sshConnection.close();
 					_connectionCache.remove(lpfw._sshConnKey);
 				}
@@ -332,7 +332,7 @@ public class SshTunnelManager
 				if (ex instanceof IOException)
 					throw (IOException)ex;
 
-				throw new IOException("Unhandled exception when trying to find new local port. Caught: "+ex, ex);
+				throw new IOException("Unhandled exception when trying to find new local port. Caught: " + ex, ex);
 			}
 		}
 		// we should never get here

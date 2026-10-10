@@ -47,7 +47,7 @@ extends AlarmEvent
 				AlarmEvent.Category.DOWN,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.AFFECTED, 
-				"Not a normal State in Server '" + cm.getServerName() + "' for Logical Connection '" + logicalName + "', colName='"+colName+"', state='"+state+"', msg='"+msg+"'. (regexp="+regexp+")",
+				"Not a normal State in Server '" + cm.getServerName() + "' for Logical Connection '" + logicalName + "', colName='" + colName + "', state='" + state + "', msg='" + msg + "'. (regexp=" + regexp + ")",
 				null
 				);
 

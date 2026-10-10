@@ -71,7 +71,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_CACHE;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 //	public static final long     NEED_SRV_VERSION = 15010;
 //	public static final long     NEED_SRV_VERSION = 1501000;
@@ -104,7 +104,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmPCacheModuleUsage(counterController, guiController);
 	}
@@ -142,7 +142,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_MODULE_USAGE,
 			"Procedure Cache Module Usage", 	                                 // Menu CheckBox text
-			"Procedure Cache Module Usage (in page count) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Procedure Cache Module Usage (in page count) (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
@@ -154,7 +154,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_MODULE_USAGE_MB,
 			"Procedure Cache Module Usage", 	                                 // Menu CheckBox text
-			"Procedure Cache Module Usage (in MB) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Procedure Cache Module Usage (in MB) (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
@@ -320,35 +320,35 @@ extends CountersModel
 		//------------------------------------------------
 		// Get 'statement cache size' RUN Size on init.
 		cfgName = "statement cache size";
-		sql = "select runValueInMb = isnull(value/512, -1) from master.dbo.sysconfigures where config = (select config from master.dbo.sysconfigures where comment = '"+cfgName+"')";
+		sql = "select runValueInMb = isnull(value/512, -1) from master.dbo.sysconfigures where config = (select config from master.dbo.sysconfigures where comment = '" + cfgName + "')";
 		try( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql) )
 		{
 			while(rs.next())
 				_statementCacheConfigSizeMb = rs.getInt(1);
 
-			_logger.info("When "+calledFrom+" '"+getName()+"', Succeed get run value for ASE configuration '"+cfgName+"' = "+_statementCacheConfigSizeMb + " MB");
+			_logger.info("When " + calledFrom + " '" + getName() + "', Succeed get run value for ASE configuration '" + cfgName + "' = " + _statementCacheConfigSizeMb + " MB");
 		}
 		catch (SQLException ex)
 		{
 			_statementCacheConfigSizeMb = -1;
-			_logger.warn("When "+calledFrom+" '"+getName()+"', failed to get ASE configuration '"+cfgName+"', continuing anyway. sql=|"+sql+"|, Caught: "+ex);
+			_logger.warn("When " + calledFrom + " '" + getName() + "', failed to get ASE configuration '" + cfgName + "', continuing anyway. sql=|" + sql + "|, Caught: " + ex);
 		}
 		
 		//------------------------------------------------
 		// Get 'procedure cache size' RUN Size on init.
 		cfgName = "procedure cache size";
-		sql = "select runValueInMb = isnull(value/512, -1) from master.dbo.sysconfigures where config = (select config from master.dbo.sysconfigures where comment = '"+cfgName+"')";
+		sql = "select runValueInMb = isnull(value/512, -1) from master.dbo.sysconfigures where config = (select config from master.dbo.sysconfigures where comment = '" + cfgName + "')";
 		try( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql) )
 		{
 			while(rs.next())
 				_procedureCacheConfigSizeMb = rs.getInt(1);
 
-			_logger.info("When "+calledFrom+" '"+getName()+"', Succeed get run value for ASE configuration '"+cfgName+"' = "+_procedureCacheConfigSizeMb + " MB");
+			_logger.info("When " + calledFrom + " '" + getName() + "', Succeed get run value for ASE configuration '" + cfgName + "' = " + _procedureCacheConfigSizeMb + " MB");
 		}
 		catch (SQLException ex)
 		{
 			_procedureCacheConfigSizeMb = -1;
-			_logger.warn("When "+calledFrom+" '"+getName()+"', failed to get ASE configuration '"+cfgName+"', continuing anyway. sql=|"+sql+"|, Caught: "+ex);
+			_logger.warn("When " + calledFrom + " '" + getName() + "', failed to get ASE configuration '" + cfgName + "', continuing anyway. sql=|" + sql + "|, Caught: " + ex);
 		}
 
 		_lastAseConfigRefresh = System.currentTimeMillis();
@@ -367,7 +367,7 @@ extends CountersModel
 		long lastRefreshAgeInSec = (System.currentTimeMillis() - _lastAseConfigRefresh) / 1000;
 		if ( lastRefreshAgeInSec > _refreshAseConfigThresholdInSec)
 		{
-			_logger.info("Time to refresh ASE Configuration. refreshAgeInSec="+lastRefreshAgeInSec+", thresholdInSec="+_refreshAseConfigThresholdInSec);
+			_logger.info("Time to refresh ASE Configuration. refreshAgeInSec=" + lastRefreshAgeInSec + ", thresholdInSec=" + _refreshAseConfigThresholdInSec);
 
 			// refresh configuration
 			DbxConnection conn = getCounterController().getMonConnection();
@@ -386,7 +386,7 @@ extends CountersModel
 		// Get a array of rowId's where the column 'Name' has the value 'procedure cache size'
 		int[] rqRows = this.getAbsRowIdsWhere("ModuleName", "Statement Cache");
 		if (rqRows == null)
-			_logger.warn("When checking for alarms in '"+getName()+"', getAbsRowIdsWhere('ModuleName', 'Statement Cache'), returned null, so I can't do more here.");
+			_logger.warn("When checking for alarms in '" + getName() + "', getAbsRowIdsWhere('ModuleName', 'Statement Cache'), returned null, so I can't do more here.");
 		else
 		{
 			//-------------------------------------------------------
@@ -404,7 +404,7 @@ extends CountersModel
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_StatementCacheUsagePct, DEFAULT_alarm_StatementCacheUsagePct);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", _statementCacheConfigSizeMb="+_statementCacheConfigSizeMb+", activeMb="+activeMb+", stmntCachePctUsed="+stmntCachePctUsed+", procCachePctUsed="+procCachePctUsed+".");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", _statementCacheConfigSizeMb=" + _statementCacheConfigSizeMb + ", activeMb=" + activeMb + ", stmntCachePctUsed=" + stmntCachePctUsed + ", procCachePctUsed=" + procCachePctUsed + ".");
 
 					if (stmntCachePctUsed.intValue() > threshold)
 					{

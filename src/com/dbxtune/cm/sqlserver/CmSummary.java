@@ -89,7 +89,7 @@ extends CmSummaryAbstract
 		"</html>";
 
 	public static final String   GROUP_NAME       = null;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -126,7 +126,7 @@ extends CmSummaryAbstract
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmSummary(counterController, guiController);
 	}
@@ -243,7 +243,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
 			"Blocking Locks", 	                                     // Menu CheckBox text
-			"Number of Concurrently Blocking Locks, above " + LockWaitsThresholdSec + " sec, from sysprocesses ("+SHORT_NAME+")", // Label 
+			"Number of Concurrently Blocking Locks, above " + LockWaitsThresholdSec + " sec, from sysprocesses (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Blocking Locks" }, 
 			LabelType.Static,
@@ -255,7 +255,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_CONNECTION,
 			"Connections/Users in SQL-Server", 	          // Menu CheckBox text
-			"Connections/Users connected to the SQL-Server ("+SHORT_NAME+")", // Label 
+			"Connections/Users connected to the SQL-Server (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "UserConnections (abs)", "distinctLogins (abs)", "@@connections (diff)", "@@connections (rate)" }, 
 			LabelType.Static,
@@ -267,7 +267,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_CONNECTION_RATE,
 			"Connection Rate in ASE", 	          // Menu CheckBox text
-			"Connection Attemtps per Second, using @@connections ("+SHORT_NAME+")", // Label 
+			"Connection Attemtps per Second, using @@connections (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "@@connections (rate)" }, 
 			LabelType.Static,
@@ -279,7 +279,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_AA_DISK_READ_WRITE,
 			"Disk read/write, Global Variables", 	                         // Menu CheckBox text
-			"Disk read/write per second, using @@total_read, @@total_write ("+SHORT_NAME+")", // Label 
+			"Disk read/write per second, using @@total_read, @@total_write (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "@@total_read", "@@total_write" }, 
 			LabelType.Static,
@@ -291,7 +291,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_AA_NW_PACKET,
 			"Network Packets received/sent, Global Variables", 	                            // Menu CheckBox text
-			"Network Packets received/sent per second, using @@pack_received, @@pack_sent ("+SHORT_NAME+")", // Label 
+			"Network Packets received/sent per second, using @@pack_received, @@pack_sent (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" }, 
 			LabelType.Static,
@@ -303,7 +303,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
 			"Oldest Open Transaction in any Databases",     // Menu CheckBox text
-			"Oldest Open Transaction in any Databases, in Seconds ("+SHORT_NAME+")", // Label 
+			"Oldest Open Transaction in any Databases, in Seconds (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Seconds" }, 
 			LabelType.Static,
@@ -315,7 +315,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_MAX_SQL_EXEC_TIME_IN_SEC,
 			"Max Active SQL Execution Time In Seconds",     // Menu CheckBox text
-			"Max Active SQL Execution Time In Second ("+SHORT_NAME+")", // Label 
+			"Max Active SQL Execution Time In Second (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Max Active SQL Execution Time In Seconds" }, 
 			LabelType.Static,
@@ -327,7 +327,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_TEMPDB_SPID_USAGE,
 			"Tempdb Usage by SPID's in MB",     // Menu CheckBox text
-			"Tempdb Usage by SPID's in MB ("+SHORT_NAME+")", // Label 
+			"Tempdb Usage by SPID's in MB (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "All", "User Objects", "Internal Objects" }, 
 			LabelType.Static,
@@ -339,7 +339,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_TARGET_AND_TOTAL_MEM_MB,
 			"Target and Total Server Memory in MB",     // Menu CheckBox text
-			"Target and Total Server Memory in MB ("+SHORT_NAME+")", // Label 
+			"Target and Total Server Memory in MB (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Target Server Memory MB", "Total Server Memory MB" }, 
 			LabelType.Static,
@@ -351,7 +351,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_MEMORY_UTILAZATION_PCT,
 			"SQL Server Memory Utilazation in Percent", // Menu CheckBox text
-			"SQL Server Memory Utilazation in Percent ("+SHORT_NAME+")", // Label 
+			"SQL Server Memory Utilazation in Percent (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "process_memory_utilization_percentage" }, 
 			LabelType.Static,
@@ -363,7 +363,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_OS_MEMORY_FREE_MB,
 			"OS Free/Available Memory in MB", // Menu CheckBox text
-			"OS Free/Available Memory in MB ("+SHORT_NAME+")", // Label 
+			"OS Free/Available Memory in MB (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MIN_OVER_SAMPLES),
 			new String[] { "available_physical_memory_mb" }, 
 			LabelType.Static,
@@ -375,7 +375,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_PERFMON_MEMORY,
 			"PerfMon: SQL Server Memory Usage", // Menu CheckBox text
-			"PerfMon: SQL Server Memory Usage ("+SHORT_NAME+")", // Label 
+			"PerfMon: SQL Server Memory Usage (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Buffer Pool Cache Memory MB", "Granted Workspace Memory MB", "Stolen Server Memory MB" }, 
 			LabelType.Static,
@@ -387,7 +387,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_WORKER_THREAD_USAGE,
 			"SQL Server Worker Threads Usage", // Menu CheckBox text
-			"SQL Server Worker Threads Usage ("+SHORT_NAME+")", // Label 
+			"SQL Server Worker Threads Usage (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "maxWorkers", "usedWorkers", "availableWorkers", "workersWaitingForCPU", "requestsWaitingForWorkers", "allocatedWorkers" },
 			LabelType.Static,
@@ -399,7 +399,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_WT_WAITING_FOR_CPU,
 			"SQL Server Workers That are Waiting for CPU to be Scheduled", // Menu CheckBox text
-			"SQL Server Workers That are Waiting for CPU to be Scheduled ("+SHORT_NAME+")", // Label 
+			"SQL Server Workers That are Waiting for CPU to be Scheduled (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "workersWaitingForCPU", "workersWaitingForCPU_perScheduler" },
 			LabelType.Static,
@@ -411,7 +411,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_TASKS_WAITING_FOR_WORKERS,
 			"Tasks/Requests that are Waiting for Available Worker Threads", // Menu CheckBox text
-			"Tasks/Requests that are Waiting for Available Worker Threads ("+SHORT_NAME+")", // Label 
+			"Tasks/Requests that are Waiting for Available Worker Threads (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "requestsWaitingForWorkers" },
 			LabelType.Static,
@@ -423,7 +423,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_DEADLOCK_COUNT_SUM,
 			"Deadlock Count", // Menu CheckBox text
-			"Deadlock Count ("+SHORT_NAME+")", // Label 
+			"Deadlock Count (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Deadlock Count" },
 			LabelType.Static,
@@ -435,7 +435,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_MEMORY_PRESSURE,
 			"Memory Pressure", // Menu CheckBox text
-			"Memory Pressure ("+SHORT_NAME+")", // Label 
+			"Memory Pressure (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "osMem_system_high_memory_signal_state", "osMem_system_low_memory_signal_state", "memProcessPhysicalMemoryLow", "memProcessVirtualMemoryLow" },
 			LabelType.Static,
@@ -1189,7 +1189,7 @@ extends CmSummaryAbstract
 				arr[0] = calcCPUTime      .doubleValue();
 				arr[1] = calcSystemCPUTime.doubleValue();
 				arr[2] = calcUserCPUTime  .doubleValue();
-				_logger.debug("updateGraphData("+tgdp.getName()+"): @@cpu_busy+@@cpu_io='"+arr[0]+"', @@cpu_io='"+arr[1]+"', @@cpu_busy='"+arr[2]+"'.");
+				_logger.debug("updateGraphData(" + tgdp.getName() + "): @@cpu_busy+@@cpu_io='" + arr[0] + "', @@cpu_io='" + arr[1] + "', @@cpu_busy='" + arr[2] + "'.");
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1238,7 +1238,7 @@ extends CmSummaryAbstract
 			Double[] arr = new Double[1];
 
 			arr[0] = this.getAbsValueAsDouble (0, "LockWaits");
-			_logger.debug("updateGraphData(BlockingLocksGraph): LockWait='"+arr[0]+"'.");
+			_logger.debug("updateGraphData(BlockingLocksGraph): LockWait='" + arr[0] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1255,7 +1255,7 @@ extends CmSummaryAbstract
 			arr[1] = this.getAbsValueAsDouble (0, "distinctLogins");
 			arr[2] = this.getDiffValueAsDouble(0, "aaConnections");
 			arr[3] = this.getRateValueAsDouble(0, "aaConnections");
-			_logger.debug("updateGraphData("+tgdp.getName()+"): Connections(Abs)='"+arr[0]+"', distinctLogins(Abs)='"+arr[1]+"', aaConnections(Diff)='"+arr[2]+"', aaConnections(Rate)='"+arr[3]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): Connections(Abs)='" + arr[0] + "', distinctLogins(Abs)='" + arr[1] + "', aaConnections(Diff)='" + arr[2] + "', aaConnections(Rate)='" + arr[3] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1269,7 +1269,7 @@ extends CmSummaryAbstract
 			Double[] arr = new Double[1];
 
 			arr[0] = this.getRateValueAsDouble(0, "aaConnections");
-			_logger.debug("updateGraphData("+tgdp.getName()+"): aaConnections(Rate)='"+arr[0]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): aaConnections(Rate)='" + arr[0] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1284,7 +1284,7 @@ extends CmSummaryAbstract
 
 			arr[0] = this.getRateValueAsDouble (0, "io_total_read");
 			arr[1] = this.getRateValueAsDouble (0, "io_total_write");
-			_logger.debug("updateGraphData("+tgdp.getName()+"): io_total_read='"+arr[0]+"', io_total_write='"+arr[1]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): io_total_read='" + arr[0] + "', io_total_write='" + arr[1] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1300,7 +1300,7 @@ extends CmSummaryAbstract
 			arr[0] = this.getRateValueAsDouble (0, "pack_received");
 			arr[1] = this.getRateValueAsDouble (0, "pack_sent");
 			arr[2] = this.getRateValueAsDouble (0, "packet_errors");
-			_logger.debug("updateGraphData("+tgdp.getName()+"): packet_errors='"+arr[0]+"', total_errors='"+arr[1]+"', packet_errors='"+arr[2]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): packet_errors='" + arr[0] + "', total_errors='" + arr[1] + "', packet_errors='" + arr[2] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1314,7 +1314,7 @@ extends CmSummaryAbstract
 			Double[] arr = new Double[1];
 
 			arr[0] = this.getAbsValueAsDouble(0, "oldestOpenTranInSec");
-			_logger.debug("updateGraphData("+tgdp.getName()+"): oldestOpenTranInSec='"+arr[0]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): oldestOpenTranInSec='" + arr[0] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1328,7 +1328,7 @@ extends CmSummaryAbstract
 			Double[] arr = new Double[1];
 
 			arr[0] = this.getAbsValueAsDouble(0, "maxSqlExecTimeInSec");
-			_logger.debug("updateGraphData("+tgdp.getName()+"): maxSqlExecTimeInSec='"+arr[0]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): maxSqlExecTimeInSec='" + arr[0] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1345,7 +1345,7 @@ extends CmSummaryAbstract
 			arr[1] = this.getAbsValueAsDouble(0, "tempdbUsageMbUser"    , true, -1d);
 			arr[2] = this.getAbsValueAsDouble(0, "tempdbUsageMbInternal", true, -1d);
 
-			_logger.debug("updateGraphData("+tgdp.getName()+"): tempdbUsageMbAll='"+arr[0]+"', tempdbUsageMbUser='"+arr[1]+"', tempdbUsageMbInternal='"+arr[2]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): tempdbUsageMbAll='" + arr[0] + "', tempdbUsageMbUser='" + arr[1] + "', tempdbUsageMbInternal='" + arr[2] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1361,7 +1361,7 @@ extends CmSummaryAbstract
 			arr[0] = this.getAbsValueAsDouble(0, "Target_Server_Memory_MB", true, -1d);
 			arr[1] = this.getAbsValueAsDouble(0, "Total_Server_Memory_MB" , true, -1d);
 
-			_logger.debug("updateGraphData("+tgdp.getName()+"): Target_Server_Memory_MB='"+arr[0]+"', Total_Server_Memory_MB='"+arr[1]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): Target_Server_Memory_MB='" + arr[0] + "', Total_Server_Memory_MB='" + arr[1] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1376,7 +1376,7 @@ extends CmSummaryAbstract
 
 			arr[0] = this.getAbsValueAsDouble(0, "process_memory_utilization_pct", true, -1d);
 
-			_logger.debug("updateGraphData("+tgdp.getName()+"): process_memory_utilization_pct='"+arr[0]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): process_memory_utilization_pct='" + arr[0] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1391,7 +1391,7 @@ extends CmSummaryAbstract
 
 			arr[0] = this.getAbsValueAsDouble(0, "available_physical_memory_mb", true, -1d);
 
-			_logger.debug("updateGraphData("+tgdp.getName()+"): available_physical_memory_mb='"+arr[0]+"'.");
+			_logger.debug("updateGraphData(" + tgdp.getName() + "): available_physical_memory_mb='" + arr[0] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1646,7 +1646,7 @@ extends CmSummaryAbstract
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LockWaits, DEFAULT_alarm_LockWaits);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", LockWaits='"+LockWaits+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", LockWaits='" + LockWaits + "'.");
 
 				if (LockWaits.intValue() > threshold)
 				{
@@ -1692,7 +1692,7 @@ extends CmSummaryAbstract
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_oldestOpenTranInSec, DEFAULT_alarm_oldestOpenTranInSec);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", oldestOpenTranInSec='"+oldestOpenTranInSec+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", oldestOpenTranInSec='" + oldestOpenTranInSec + "'.");
 
 				if (oldestOpenTranInSec > threshold)
 				{
@@ -1794,7 +1794,7 @@ extends CmSummaryAbstract
 				Integer suspectPageErrors = cm.getAbsValueAsInteger(0, "suspectPageErrors", false, -1);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", suspectPageCount="+suspectPageCount+", suspectPageErrors="+suspectPageErrors+".");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", suspectPageCount=" + suspectPageCount + ", suspectPageErrors=" + suspectPageErrors + ".");
 
 				if (suspectPageCount.intValue() > threshold)
 				{
@@ -1841,7 +1841,7 @@ extends CmSummaryAbstract
 			int availableWorkers          = cm.getAbsValueAsInteger(0, "availableWorkers"         , false, -1);
 
 			if (debugPrint || _logger.isDebugEnabled())
-				System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold=" + threshold + ", requestsWaitingForWorkers=" + requestsWaitingForWorkers + ", availableWorkers=" + availableWorkers + ", availableWorkersThreshold=" + availableWorkersThreshold);
+				System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", requestsWaitingForWorkers=" + requestsWaitingForWorkers + ", availableWorkers=" + availableWorkers + ", availableWorkersThreshold=" + availableWorkersThreshold);
 
 			if (requestsWaitingForWorkers > threshold && availableWorkers <= availableWorkersThreshold)
 			{
@@ -1893,7 +1893,7 @@ extends CmSummaryAbstract
 			int availableWorkers  = cm.getAbsValueAsInteger(0, "availableWorkers", false, -1);
 
 			if (debugPrint || _logger.isDebugEnabled())
-				System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", availableWorkers="+availableWorkers+".");
+				System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", availableWorkers=" + availableWorkers + ".");
 
 			if (maxWorkers > 0 && availableWorkers <= threshold)
 			{
@@ -1997,7 +1997,7 @@ extends CmSummaryAbstract
 			String sqlAgentStatus  = cm.getAbsString(0, "sql_agent_status", true, "");
 
 			if (debugPrint || _logger.isDebugEnabled())
-				System.out.println("##### sendAlarmRequest("+cm.getName()+"): statusExpectedRegEx='"+statusExpectedRegEx+"', sqlAgentStatus='"+sqlAgentStatus+"'.");
+				System.out.println("##### sendAlarmRequest(" + cm.getName() + "): statusExpectedRegEx='" + statusExpectedRegEx + "', sqlAgentStatus='" + sqlAgentStatus + "'.");
 
 			
 			// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)

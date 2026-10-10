@@ -179,7 +179,7 @@ public class AseConfigMonitoringDialog
 	private JLabel             _predefinedConfigs_lbl            = new JLabel("Configuration Templates");
 	private JComboBox<String>  _predefinedConfigs_cbx            = new JComboBox<String>(PDC_OPTIONS_STR);
 
-	private JLabel             _configurabelMemory_lbl           = new JLabel("#"+default_configurabelMemoryText);
+	private JLabel             _configurabelMemory_lbl           = new JLabel("#" + default_configurabelMemoryText);
 
 	// PANEL: OTHER                                              
 	private JCheckBox          _cfgCapMissingStatistics_chk      = new JCheckBox("Capture Missing Statistics");
@@ -250,7 +250,7 @@ public class AseConfigMonitoringDialog
 
 				_isXfsLicenseEnabled = isXfsLicenseEnabled(_conn);
 
-				_logger.debug("init() Need to refresh the ASE Server version number, it is now '"+_srvVersionNum+"', isClusterEnabled="+_isClusterEnabled+".");
+				_logger.debug("init() Need to refresh the ASE Server version number, it is now '" + _srvVersionNum + "', isClusterEnabled=" + _isClusterEnabled + ".");
 			}
 		}
 
@@ -641,9 +641,9 @@ public class AseConfigMonitoringDialog
 		panel.setLayout(new MigLayout("","",""));   // insets Top Left Bottom Right
 
 		//--- TOOLTIP
-		_onExitDoNotDisable_rb.setToolTipText("Monitoring is not disabled when "+Version.getAppName()+" is terminated.");
-		_onExitAutoDisable_rb .setToolTipText("If no other "+Version.getAppName()+" is running at the same time, the monitoring will be disabled and on next login it will be enabled again.");
-		_onExitAsk_rb         .setToolTipText("A popup will ask you if you want to disable Monitoring everytime the '"+Version.getAppName()+"' is terminated.");
+		_onExitDoNotDisable_rb.setToolTipText("Monitoring is not disabled when " + Version.getAppName() + " is terminated.");
+		_onExitAutoDisable_rb .setToolTipText("If no other " + Version.getAppName() + " is running at the same time, the monitoring will be disabled and on next login it will be enabled again.");
+		_onExitAsk_rb         .setToolTipText("A popup will ask you if you want to disable Monitoring everytime the '" + Version.getAppName() + "' is terminated.");
 
 		ButtonGroup group = new ButtonGroup();
 		group.add(_onExitDoNotDisable_rb);
@@ -704,7 +704,7 @@ public class AseConfigMonitoringDialog
 	@Override
 	public void setVisible(boolean visible)
 	{
-		_logger.debug("AseConfigMonitoringDialog.setVisible("+visible+")");
+		_logger.debug("AseConfigMonitoringDialog.setVisible(" + visible + ")");
 
 //		if ( ! AseConnectionUtils.hasRole(_conn, AseConnectionUtils.SA_ROLE) )
 //		{
@@ -724,7 +724,7 @@ public class AseConfigMonitoringDialog
 			if (_srvVersionNum <= 0)
 			{
 				_srvVersionNum = AseConnectionUtils.getAseVersionNumber(_conn);
-				_logger.debug("setVisible("+visible+") Need to refresh the ASE Server version number, it is now '"+_srvVersionNum+"'.");
+				_logger.debug("setVisible(" + visible + ") Need to refresh the ASE Server version number, it is now '" + _srvVersionNum + "'.");
 
 				_isClusterEnabled = AseConnectionUtils.isClusterEnabled(_conn);
 			}
@@ -779,7 +779,7 @@ public class AseConfigMonitoringDialog
 				Component c = jpanel.getComponent(i);
 				if ( ! (c instanceof JComponent) )
 				{
-					_logger.warn("Component num="+i+" is not a JComponent, skipping this and continuing with next component. comp="+c);
+					_logger.warn("Component num=" + i + " is not a JComponent, skipping this and continuing with next component. comp=" + c);
 					continue;
 				}
 				JComponent comp = (JComponent) c;
@@ -1357,9 +1357,9 @@ public class AseConfigMonitoringDialog
 				{
 					if (cfgVal != runVal)
 					{
-						_logger.debug("Config option("+cfgVal+") not same as run("+runVal+")");
+						_logger.debug("Config option(" + cfgVal + ") not same as run(" + runVal + ")");
 						((JSpinner.DefaultEditor)((JSpinner)this._maxSqlTextMonitored_sp).getEditor()).getTextField().setForeground(Color.RED);
-						_maxSqlTextMonitored_sp.setToolTipText("ASE server needs to be rebooted since this is a static configuration parameter. The run value is still "+runVal+".");
+						_maxSqlTextMonitored_sp.setToolTipText("ASE server needs to be rebooted since this is a static configuration parameter. The run value is still " + runVal + ".");
 					}
 					else
 					{
@@ -1378,7 +1378,7 @@ public class AseConfigMonitoringDialog
 				{
 					// Do nothing here
 					// We could print out "unhandled" configuration options.
-					_logger.info("UNKNOWN option '"+config+"' this is probably a new option after "+Version.getAppName()+" has been developed. executed command sp_configure 'Monitoring'.");
+					_logger.info("UNKNOWN option '" + config + "' this is probably a new option after " + Version.getAppName() + " has been developed. executed command sp_configure 'Monitoring'.");
 				}
 			}
 			rs.close();
@@ -1459,7 +1459,7 @@ public class AseConfigMonitoringDialog
 		catch (SQLException e)
 		{
 			AseConnectionUtils.showSqlExceptionMessage(this, msgDialogTitle, 
-					"Error when executing the following SQL statement: "+sql, e); 
+					"Error when executing the following SQL statement: " + sql, e); 
 		}
 		return enabled > 0;
 	}
@@ -1484,7 +1484,7 @@ public class AseConfigMonitoringDialog
 				for (CountersModel cm : cmList)
 					cmNames.add(cm.getName());
 
-				_logger.info("Re-Initializing Performance Counter(s) '"+StringUtil.toCommaStr(cmNames)+"', due to ASE Configuration changes. config='"+aseConfig+"', to='"+newConfigVal+"'.");
+				_logger.info("Re-Initializing Performance Counter(s) '" + StringUtil.toCommaStr(cmNames) + "', due to ASE Configuration changes. config='" + aseConfig + "', to='" + newConfigVal + "'.");
 
 				for (CountersModel cm : cmList)
 				{
@@ -1535,7 +1535,7 @@ public class AseConfigMonitoringDialog
 						String cmShortName = cm.getName();
 						String cmLongName  = cm.getDisplayName();
 
-						_logger.warn("Re-Initializing Performance Counter '"+cmLongName+"' shortName='"+cmShortName+"', due to ASE Configuration changes. config='"+aseConfig+"', to='"+newConfigVal+"'.", e);
+						_logger.warn("Re-Initializing Performance Counter '" + cmLongName + "' shortName='" + cmShortName + "', due to ASE Configuration changes. config='" + aseConfig + "', to='" + newConfigVal + "'.", e);
 					}
 				}
 			}
@@ -1623,7 +1623,7 @@ public class AseConfigMonitoringDialog
 				_configErrors = true;
 				comp.setToolTipText(errStr);
 				
-				_logger.warn("checkAndSetAseConfig(): Problems when configuring '"+config+"', got error '"+errStr+"'.");
+				_logger.warn("checkAndSetAseConfig(): Problems when configuring '" + config + "', got error '" + errStr + "'.");
 				
 				if (comp instanceof JCheckBox)
 				{
@@ -1694,8 +1694,8 @@ public class AseConfigMonitoringDialog
 								break;
 	
 							char pc = progressChars[ i % 4 ];
-							_logger.info("Waiting for GetCounters to stop before I can: Clearing components... Waited for "+sleptSoFar+" ms so far. Giving up after "+timeoutAfter+" seconds");
-							getWaitDialog().setState("Waiting for 'refresh' to end "+pc);
+							_logger.info("Waiting for GetCounters to stop before I can: Clearing components... Waited for " + sleptSoFar + " ms so far. Giving up after " + timeoutAfter + " seconds");
+							getWaitDialog().setState("Waiting for 'refresh' to end " + pc);
 	
 							try { Thread.sleep(500); }
 							catch (InterruptedException ignore) {}
@@ -1787,7 +1787,7 @@ public class AseConfigMonitoringDialog
 		boolean onExitPrompt       = false;
 
 		String str = conf.getProperty("config.on_exit", ON_EXIT_STR[ON_EXIT_NONE]);
-		_logger.debug("loadProps: 'config.on_exit' = '"+str+"'");
+		_logger.debug("loadProps: 'config.on_exit' = '" + str + "'");
 		if (str != null)
 		{
 			if ( str.equals(ON_EXIT_STR[ON_EXIT_NONE]) )    onExitDoNotDisable = true;
@@ -1819,7 +1819,7 @@ public class AseConfigMonitoringDialog
 				cancelDesc =	"<br><li>If 'Cancel' the Disconnect will be aborted.<br></li>";
 
 			str = "<html>" +
-					"Do you want to disable ASE monitoring when exiting "+Version.getAppName()+"<br>" +
+					"Do you want to disable ASE monitoring when exiting " + Version.getAppName() + "<br>" +
 					"<ul>" +
 					"<li>" +
 					   "If 'Yes' the following SQL statement will be sent to the ASE Server:<br>" +
@@ -1833,7 +1833,7 @@ public class AseConfigMonitoringDialog
 				optionType = JOptionPane.YES_NO_CANCEL_OPTION;
 
 			int answer = JOptionPane.showConfirmDialog(parent, str, "Disable Monitoring On Disconnect Or Exit", optionType, JOptionPane.QUESTION_MESSAGE);
-			_logger.debug("onExitPrompt: "+answer);
+			_logger.debug("onExitPrompt: " + answer);
  			
 			if ( answer == JOptionPane.YES_OPTION )
 			{
@@ -1857,7 +1857,7 @@ public class AseConfigMonitoringDialog
 				int otherAseTuneCount = 0;
 
 				Statement stmt = conn.createStatement();
-				ResultSet rs = stmt.executeQuery("select count(*)-1 from master..sysprocesses where program_name like '"+Version.getAppName()+"%'");
+				ResultSet rs = stmt.executeQuery("select count(*)-1 from master..sysprocesses where program_name like '" + Version.getAppName() + "%'");
 				while (rs.next())
 				{
 					otherAseTuneCount = rs.getInt(1);
@@ -1867,7 +1867,7 @@ public class AseConfigMonitoringDialog
 				
 				if ( otherAseTuneCount > 0 )
 				{
-					JOptionPane.showMessageDialog(parent, "There are "+otherAseTuneCount+" other '"+Version.getAppName()+"' applications connected to the ASE Server. I can't disable monitoring for the moment.", "Disable Monitoring On Disconnect Or Exit", JOptionPane.INFORMATION_MESSAGE);
+					JOptionPane.showMessageDialog(parent, "There are " + otherAseTuneCount + " other '" + Version.getAppName() + "' applications connected to the ASE Server. I can't disable monitoring for the moment.", "Disable Monitoring On Disconnect Or Exit", JOptionPane.INFORMATION_MESSAGE);
 				}
 				else
 				{
@@ -1901,7 +1901,7 @@ public class AseConfigMonitoringDialog
 			if ( _onExitAutoDisable_rb .isSelected() ) onExit = ON_EXIT_STR[ON_EXIT_DISABLE];
 			if ( _onExitAsk_rb         .isSelected() ) onExit = ON_EXIT_STR[ON_EXIT_PROMPT];
 
-			_logger.debug("saveProps: 'config.on_exit' = '"+onExit+"'");
+			_logger.debug("saveProps: 'config.on_exit' = '" + onExit + "'");
 
 			Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 			if (conf == null)
@@ -1929,7 +1929,7 @@ public class AseConfigMonitoringDialog
 		String str = null;
 
 		str = conf.getProperty("config.on_exit", ON_EXIT_STR[ON_EXIT_NONE]);
-		_logger.debug("loadProps: 'config.on_exit' = '"+str+"'");
+		_logger.debug("loadProps: 'config.on_exit' = '" + str + "'");
 		if (str != null)
 		{
 			if ( str.equals(ON_EXIT_STR[ON_EXIT_NONE]) )    _onExitDoNotDisable_rb.setSelected(true);
@@ -1969,7 +1969,7 @@ public class AseConfigMonitoringDialog
 			
 
 			// Add BEGIN html tags
-			tt = "<html>"+tt;
+			tt = "<html>" + tt;
 
 			// Add CM's that depends on this configuration
 			if (CounterController.hasInstance())
@@ -1982,7 +1982,7 @@ public class AseConfigMonitoringDialog
     				if (cmList.size() > 0)
     				{
     					tt += "<br><br>";
-    					tt += "Configuration '<b>"+cfg+"</b>', must be set for the following Performance Counters to work.";
+    					tt += "Configuration '<b>" + cfg + "</b>', must be set for the following Performance Counters to work.";
     					tt += "<ul>";
     					for (CountersModel cm : cmList)
     					{

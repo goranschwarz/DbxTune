@@ -131,6 +131,6 @@ public class DbxCentralProfile
 	@Override
 	public String toString()
 	{
-		return super.toString() + " productString='"+_productString+"', userName='"+_userName+"', profileType='"+_profileType+"', profileName='"+_profileName+"', profileDescription='"+_profileDescription+"', profileValue='"+_profileValue+"'.";
+		return super.toString() + " productString='" + _productString + "', userName='" + _userName + "', profileType='" + _profileType + "', profileName='" + _profileName + "', profileDescription='" + _profileDescription + "', profileValue='" + _profileValue + "'.";
 	}
 }

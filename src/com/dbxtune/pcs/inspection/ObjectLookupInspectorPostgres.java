@@ -726,7 +726,7 @@ extends ObjectLookupInspectorAbstract
 			else
 			{
 				// Unknown type
-				_logger.warn("doObjectInfoLookup_doWork(), unhandled OBJECT TYPE '" + type + "'. This entry will simply be skipped. storeEntry="+storeEntry);
+				_logger.warn("doObjectInfoLookup_doWork(), unhandled OBJECT TYPE '" + type + "'. This entry will simply be skipped. storeEntry=" + storeEntry);
 				continue;
 			}
 

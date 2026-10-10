@@ -52,7 +52,7 @@ extends TabularCntrPanel
 		// WHITE = idle : do nothing
 
 		// Mark the row as PINK if this SPID is BLOCKED by another thread
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocked");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.blocked");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override

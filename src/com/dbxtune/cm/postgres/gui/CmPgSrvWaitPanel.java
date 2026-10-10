@@ -206,7 +206,7 @@ extends TabularCntrPanel
 						{
 							String key = entry.getKey();
 							Double val = entry.getValue();
-							dataset.addValue(val, "(class) "+key, "Class - est_wait_time_ms");
+							dataset.addValue(val, "(class) " + key, "Class - est_wait_time_ms");
 						}
 					}
 					
@@ -216,7 +216,7 @@ extends TabularCntrPanel
 						{
 							String key = entry.getKey();
 							Double val = entry.getValue();
-							dataset.addValue(val, "(class) "+key, "Class - wait_count");
+							dataset.addValue(val, "(class) " + key, "Class - wait_count");
 						}
 					}
 				}

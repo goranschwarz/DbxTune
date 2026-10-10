@@ -479,7 +479,7 @@ public class DbxTuneSample
 					String name = counterEntry.getColumnName(c);  
 					
 					if (name == null)
-						throw new IOException("When writing JSON CM='"+getName()+"', CounterType="+counterType+", row="+r+", col="+c+", Column Name was 'null' (not set).");
+						throw new IOException("When writing JSON CM='" + getName() + "', CounterType=" + counterType + ", row=" + r + ", col=" + c + ", Column Name was 'null' (not set).");
 
 //if ("ShowPlanText".equals(name))
 //{
@@ -622,7 +622,7 @@ public class DbxTuneSample
 			if (StringUtil.hasValue(label))
 				_labelValue.put(label, value);
 			else
-				System.out.println("Graph '"+_name+"', Adding a label that seems to be empty. Skipping this. DEBUG: Origin JSON Text: "+_originJsonStr);
+				System.out.println("Graph '" + _name + "', Adding a label that seems to be empty. Skipping this. DEBUG: Origin JSON Text: " + _originJsonStr);
 		}
 
 		public boolean hasData()
@@ -816,7 +816,7 @@ public class DbxTuneSample
 	{
 		JsonNode n = node.get(fieldName);
 		if (n == null)
-			throw new MissingFieldException("Expecting field '"+fieldName+"' which was not found, this can't be a valid DbxTune PCS Content.");
+			throw new MissingFieldException("Expecting field '" + fieldName + "' which was not found, this can't be a valid DbxTune PCS Content.");
 		return n;
 	}
 
@@ -867,7 +867,7 @@ public class DbxTuneSample
 	{
 		JsonNode n = node.get(fieldName);
 		if (n == null)
-			throw new MissingFieldException("Expecting field '"+fieldName+"' which was not found, this can't be a valid DbxTune PCS Content.");
+			throw new MissingFieldException("Expecting field '" + fieldName + "' which was not found, this can't be a valid DbxTune PCS Content.");
 		if (n.isNull())
 			return null;
 		return n.asText();
@@ -1004,7 +1004,7 @@ public class DbxTuneSample
 	{
 		JsonNode n = node.get(fieldName);
 		if (n == null)
-			throw new MissingFieldException("Expecting field '"+fieldName+"' which was not found, this can't be a valid DbxTune PCS Content.");
+			throw new MissingFieldException("Expecting field '" + fieldName + "' which was not found, this can't be a valid DbxTune PCS Content.");
 		return n.asInt();
 	}
 
@@ -1036,7 +1036,7 @@ public class DbxTuneSample
 	{
 		JsonNode n = node.get(fieldName);
 		if (n == null)
-			throw new MissingFieldException("Expecting field '"+fieldName+"' which was not found, this can't be a valid DbxTune PCS Content.");
+			throw new MissingFieldException("Expecting field '" + fieldName + "' which was not found, this can't be a valid DbxTune PCS Content.");
 		return n.asBoolean();
 	}
 
@@ -1068,7 +1068,7 @@ public class DbxTuneSample
 	{
 		JsonNode n = node.get(fieldName);
 		if (n == null)
-			throw new MissingFieldException("Expecting field '"+fieldName+"' which was not found, this can't be a valid DbxTune PCS Content.");
+			throw new MissingFieldException("Expecting field '" + fieldName + "' which was not found, this can't be a valid DbxTune PCS Content.");
 		return n.asDouble();
 	}
 
@@ -1135,7 +1135,7 @@ public class DbxTuneSample
 	{
 		JsonNode n = node.get(fieldName);
 		if (n == null)
-			throw new MissingFieldException("Expecting field '"+fieldName+"' which was not found, this can't be a valid DbxTune PCS Content.");
+			throw new MissingFieldException("Expecting field '" + fieldName + "' which was not found, this can't be a valid DbxTune PCS Content.");
 		
 		if (n.isNull())
 			return null;
@@ -1178,7 +1178,7 @@ public class DbxTuneSample
 		}
 		
 
-		throw new MissingFieldException("Problems parsing the Timestamp for field '"+fieldName+"' using value '"+str+"'. Caught: "+ex, ex); 
+		throw new MissingFieldException("Problems parsing the Timestamp for field '" + fieldName + "' using value '" + str + "'. Caught: " + ex, ex); 
 	}
 
 	/**
@@ -1355,7 +1355,7 @@ public class DbxTuneSample
 //			sample._cmListEnabledCounters = cmListEnabledCounters;
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("sessionStartTime='"+sessionStartTime+"', sessionSampleTime='"+sessionSampleTime+"', serverName='"+serverName+"', serverNameAlias='"+serverNameAlias+"', serverDisplayName='"+serverDisplayName+"', onHostname='"+onHostname+"'.");
+				_logger.debug("sessionStartTime='" + sessionStartTime + "', sessionSampleTime='" + sessionSampleTime + "', serverName='" + serverName + "', serverNameAlias='" + serverNameAlias + "', serverDisplayName='" + serverDisplayName + "', onHostname='" + onHostname + "'.");
 
 			// Wall clock time of the whole sample (sent by newer collectors only)
 			sample._sampleDurationMs = getInt(headNode, "sampleDurationMs", -1);
@@ -1403,7 +1403,7 @@ public class DbxTuneSample
 				}
 			}
 			if (_logger.isDebugEnabled())
-				_logger.debug(" - activeAlarms.size='"+sample._activeAlarms.size()+"'.");
+				_logger.debug(" - activeAlarms.size='" + sample._activeAlarms.size() + "'.");
 
 			// ALARMS EVENTS
 			JsonNode alarmEventsNode = root.get("alarmEvents");
@@ -1452,12 +1452,12 @@ public class DbxTuneSample
 				}
 			}
 			if (_logger.isDebugEnabled())
-				_logger.debug(" - alarmEvents.size='"+sample._alarmEvents.size()+"'.");
+				_logger.debug(" - alarmEvents.size='" + sample._alarmEvents.size() + "'.");
 
 			// COLLECTORS
 			JsonNode collectorsNode = getNode(root, "collectors");
 			if (_logger.isDebugEnabled())
-				_logger.debug(" - collectorsNode.count='"+collectorsNode.size()+"'.");
+				_logger.debug(" - collectorsNode.count='" + collectorsNode.size() + "'.");
 			for (JsonNode collector : collectorsNode)
 			{
 				String    cmName       = getString   (collector, "cmName");
@@ -1492,20 +1492,20 @@ public class DbxTuneSample
 				if (debugPrint)
 				{
 					System.out.println("-------------------------------------------------------------------------------------------------------");
-					System.out.println(" - SrvName='"+serverName+"', CmName='"+cmName+"', CmSampleTime='"+cmSampleTime+"', CmSampleMs='"+cmSampleMs+"', Type='"+type+"'.");
+					System.out.println(" - SrvName='" + serverName + "', CmName='" + cmName + "', CmSampleTime='" + cmSampleTime + "', CmSampleMs='" + cmSampleMs + "', Type='" + type + "'.");
 				}
 
 				JsonNode countersNode = collector.get("counters"); // NOTE: Counters is an Object
 				if (countersNode != null)
 				{
 					if (debugPrint)
-						System.out.println(" - SrvName='"+serverName+"', COUNTERS: Counters.size='"+countersNode.size()+"', Counters.getNodeType()="+countersNode.getNodeType()+".");
+						System.out.println(" - SrvName='" + serverName + "', COUNTERS: Counters.size='" + countersNode.size() + "', Counters.getNodeType()=" + countersNode.getNodeType() + ".");
 
 					JsonNode metaDataNode = countersNode.get("metaData");
 					if (metaDataNode != null)
 					{
 						if (debugPrint)
-							System.out.println(" - - SrvName='"+serverName+"', COUNTERS: CmName='"+cmName+"', metaData.count='"+metaDataNode.size()+"'.");
+							System.out.println(" - - SrvName='" + serverName + "', COUNTERS: CmName='" + cmName + "', metaData.count='" + metaDataNode.size() + "'.");
 
 						for (JsonNode metaData : metaDataNode)
 						{
@@ -1530,7 +1530,7 @@ public class DbxTuneSample
 					if (absCountersNode != null)
 					{
 						if (debugPrint)
-							System.out.println(" - - SrvName='"+serverName+"', COUNTERS: CmName='"+cmName+"', AbsCounters.count='"+absCountersNode.size()+"', absCountersNode="+absCountersNode);
+							System.out.println(" - - SrvName='" + serverName + "', COUNTERS: CmName='" + cmName + "', AbsCounters.count='" + absCountersNode.size() + "', absCountersNode=" + absCountersNode);
 
 						for (JsonNode absCounters : absCountersNode)
 						{
@@ -1552,7 +1552,7 @@ public class DbxTuneSample
 					if (diffCountersNode != null)
 					{
 						if (debugPrint)
-							System.out.println(" - - SrvName='"+serverName+"', COUNTERS: CmName='"+cmName+"', DiffCounters.count='"+diffCountersNode.size()+"', diffCountersNode="+diffCountersNode);
+							System.out.println(" - - SrvName='" + serverName + "', COUNTERS: CmName='" + cmName + "', DiffCounters.count='" + diffCountersNode.size() + "', diffCountersNode=" + diffCountersNode);
 
 						for (JsonNode diffCounters : diffCountersNode)
 						{
@@ -1574,7 +1574,7 @@ public class DbxTuneSample
 					if (rateCountersNode != null)
 					{
 						if (debugPrint)
-							System.out.println(" - - SrvName='"+serverName+"', COUNTERS: CmName='"+cmName+"', RateCounters.count='"+rateCountersNode.size()+"', rateCountersNode="+rateCountersNode);
+							System.out.println(" - - SrvName='" + serverName + "', COUNTERS: CmName='" + cmName + "', RateCounters.count='" + rateCountersNode.size() + "', rateCountersNode=" + rateCountersNode);
 
 						for (JsonNode rateCounters : rateCountersNode)
 						{
@@ -1597,7 +1597,7 @@ public class DbxTuneSample
 				if (graphsNode != null)
 				{
 					if (debugPrint)
-						System.out.println(" - SrvName='"+serverName+"', Graphs.count='"+graphsNode.size()+"'.");
+						System.out.println(" - SrvName='" + serverName + "', Graphs.count='" + graphsNode.size() + "'.");
 
 //fireGraphData("graph: "+ new Timestamp(System.currentTimeMillis()) + " - - CmName='"+CmName+"', Graphs.count='"+Graphs.size()+"'.");
 //fireGraphData("{\"graph\": \""+ new Timestamp(System.currentTimeMillis()) + " - - CmName='"+CmName+"', Graphs.count='"+Graphs.size()+"'.\"}");
@@ -1620,7 +1620,7 @@ public class DbxTuneSample
 						
 						JsonNode dataEntry = graphs.get("data");
 						if (debugPrint)
-							System.out.println(" - - SrvName='"+serverName+"', CmName='"+cmName+"', GraphName='"+graphName+"', Data='"+dataEntry+"'.");
+							System.out.println(" - - SrvName='" + serverName + "', CmName='" + cmName + "', GraphName='" + graphName + "', Data='" + dataEntry + "'.");
 
 						if (dataEntry != null)
 						{
@@ -1651,14 +1651,14 @@ public class DbxTuneSample
 			
 			if (debugPrint)
 			{
-				System.out.println("### The Sample has: "+sample.getCollectors().size()+" collector entries. sessionStartTime="+sample.getSessionStartTime()+", sessionSampleTime="+sample.getSessionSampleTime()+", serverName="+sample.getServerName()+", onHostname="+sample.getOnHostname()+".");
+				System.out.println("### The Sample has: " + sample.getCollectors().size() + " collector entries. sessionStartTime=" + sample.getSessionStartTime() + ", sessionSampleTime=" + sample.getSessionSampleTime() + ", serverName=" + sample.getServerName() + ", onHostname=" + sample.getOnHostname() + ".");
 				for (CmEntry cmEntry : sample.getCollectors())
 				{
-					System.out.println("    -- SrvName='"+serverName+"', The CmEntry '"+cmEntry.getName()+"' has: "
-							+ cmEntry.getGraphMap()    .size()      +" Graph entries, "
-							+ cmEntry.getAbsCounters() .getRowCount()+" Abs rows, "
-							+ cmEntry.getDiffCounters().getRowCount()+" Diff rows, "
-							+ cmEntry.getRateCounters().getRowCount()+" Rate rows, "
+					System.out.println("    -- SrvName='" + serverName + "', The CmEntry '" + cmEntry.getName() + "' has: "
+							+ cmEntry.getGraphMap()    .size()      + " Graph entries, "
+							+ cmEntry.getAbsCounters() .getRowCount() + " Abs rows, "
+							+ cmEntry.getDiffCounters().getRowCount() + " Diff rows, "
+							+ cmEntry.getRateCounters().getRowCount() + " Rate rows, "
 							);
 				}
 			}
@@ -1742,8 +1742,8 @@ public class DbxTuneSample
 			gen.writeStringField("appVersion"       , getAppVersion());
 			gen.writeStringField("appBuildString"   , getAppBuildStr());
 
-			gen.writeStringField("sessionStartTime" , getSessionStartTime()  +"");
-			gen.writeStringField("sessionSampleTime", getSessionSampleTime() +"");
+			gen.writeStringField("sessionStartTime" , getSessionStartTime()  + "");
+			gen.writeStringField("sessionSampleTime", getSessionSampleTime() + "");
 			gen.writeStringField("serverName"       , getServerName());
 			gen.writeStringField("onHostname"       , getOnHostname());
 			gen.writeNumberField("collectorSampleInterval", getCollectorSampleInterval()); // used by the browser to detect when data is late

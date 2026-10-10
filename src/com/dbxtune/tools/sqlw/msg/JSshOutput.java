@@ -32,7 +32,7 @@ extends JPlainResultSet
 		
 		_text = ddlText;
 		setText(ddlText);
-		insert("-- ssh: "+usedCommand +"\nreset\n\n", 0);
+		insert("-- ssh: " + usedCommand + "\nreset\n\n", 0);
 	}
 
 	@Override

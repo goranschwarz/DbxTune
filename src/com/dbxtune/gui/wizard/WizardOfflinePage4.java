@@ -285,7 +285,7 @@ implements ActionListener, TableModelListener
 				}
 				catch (NumberFormatException ignore) 
 				{
-					return "option '"+option+"', must be a number. Now it's '"+optionStrVal+"'.";
+					return "option '" + option + "', must be a number. Now it's '" + optionStrVal + "'.";
 				}
 			}
 			if (optionType.equals("Boolean"))
@@ -300,7 +300,7 @@ implements ActionListener, TableModelListener
 				else ok = false;
 				
 				if (!ok)
-					return "option '"+option+"', must be 'true' or 'false'. Now it's '"+optionStrVal+"'.";
+					return "option '" + option + "', must be 'true' or 'false'. Now it's '" + optionStrVal + "'.";
 			}
 
 			// Now write the info...

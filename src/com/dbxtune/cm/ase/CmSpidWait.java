@@ -82,7 +82,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -110,7 +110,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmSpidWait(counterController, guiController);
 	}
@@ -352,7 +352,7 @@ extends CountersModel
 
 		if (pos_WaitEventID < 0 || pos_WaitEventDesc < 0 || pos_WaitClassDesc < 0)
 		{
-			_logger.debug("Can't find the position for columns ('WaitEventID'="+pos_WaitEventID+", 'WaitEventDesc'="+pos_WaitEventDesc+", 'WaitClassDesc'="+pos_WaitClassDesc+")");
+			_logger.debug("Can't find the position for columns ('WaitEventID'=" + pos_WaitEventID + ", 'WaitEventDesc'=" + pos_WaitEventDesc + ", 'WaitClassDesc'=" + pos_WaitClassDesc + ")");
 			return;
 		}
 		
@@ -454,7 +454,7 @@ extends CountersModel
 		//----------------------------------
 		addTrendGraph(GRAPH_NAME_EVENT_WAITS,
 			"SPID Wait, group by EventID, Waits Average", 	                   // Menu CheckBox text
-			"SPID Wait, group by EventID, Waits Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SPID Wait, group by EventID, Waits Average (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -466,7 +466,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_EVENT_WTIME,
 			"SPID Wait, group by EventID, WaitTime Average", 	                   // Menu CheckBox text
-			"SPID Wait, group by EventID, WaitTime Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SPID Wait, group by EventID, WaitTime Average (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -478,7 +478,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_EVENT_WTPW,
 			"SPID Wait, group by EventID, WaitTimePerWait Average", 	                   // Menu CheckBox text
-			"SPID Wait, group by EventID, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SPID Wait, group by EventID, WaitTimePerWait Average (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -493,7 +493,7 @@ extends CountersModel
 		//----------------------------------
 		addTrendGraph(GRAPH_NAME_CLASS_WAITS,
 			"SPID Wait, group by ClassName, Waits Average", 	                     // Menu CheckBox text
-			"SPID Wait, group by ClassName, Waits Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SPID Wait, group by ClassName, Waits Average (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -505,7 +505,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_CLASS_WTIME,
 			"SPID Wait, group by ClassName, WaitTime Average", 	                     // Menu CheckBox text
-			"SPID Wait, group by ClassName, WaitTime Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SPID Wait, group by ClassName, WaitTime Average (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -517,7 +517,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_CLASS_WTPW,
 			"SPID Wait, group by ClassName, WaitTimePerWait Average", 	                     // Menu CheckBox text
-			"SPID Wait, group by ClassName, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SPID Wait, group by ClassName, WaitTimePerWait Average (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -596,7 +596,7 @@ extends CountersModel
 		for (String str : StringUtil.commaStrToSet(skipEventIdListStr))
 		{
 			try { skipEventIdList.add(Integer.parseInt(str)); }
-			catch (NumberFormatException nfe) {_logger.info("CmName='"+getName()+"' updateGraphData(): when reading property '"+PROPKEY_trendGraph_skipWaitIdList+"' found a non number('"+str+"') in the list of WaitEventID's to skip. This specific 'ID' will not be added to the list. The full input-list, which has problems looks like '"+skipEventIdListStr+"'.");}
+			catch (NumberFormatException nfe) {_logger.info("CmName='" + getName() + "' updateGraphData(): when reading property '" + PROPKEY_trendGraph_skipWaitIdList + "' found a non number('" + str + "') in the list of WaitEventID's to skip. This specific 'ID' will not be added to the list. The full input-list, which has problems looks like '" + skipEventIdListStr + "'.");}
 		}
 		
 		// GET CONFIG: skipEventClassList
@@ -614,7 +614,7 @@ extends CountersModel
 		WaitCounterSummary.Type type = WaitCounterSummary.Type.WaitTimePerWait; 
 		String dataSourceStr = conf.getProperty(PROPKEY_trendGraph_dataSource, DEFAULT_trendGraph_dataSource);
 		try { type = WaitCounterSummary.Type.valueOf(dataSourceStr); }
-		catch (Throwable t) { _logger.warn("CM='"+getName()+"', Problems converting '"+dataSourceStr+"' to WaitCounterSummary.Type. Using '"+type+"' instead."); }
+		catch (Throwable t) { _logger.warn("CM='" + getName() + "', Problems converting '" + dataSourceStr + "' to WaitCounterSummary.Type. Using '" + type + "' instead."); }
 
 		// Create the Summary object
 		WaitCounterSummary wcs = WaitCounterSummary.create(this, skipEventIdList, skipEventClassList, skipUserNameList, skipSystemThreads);

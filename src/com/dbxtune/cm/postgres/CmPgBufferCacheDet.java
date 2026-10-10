@@ -73,7 +73,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_CACHE;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 //	public static final long     NEED_SRV_VERSION = Ver.ver(14);
 	public static final long     NEED_SRV_VERSION = 0;
@@ -105,7 +105,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmPgBufferCacheDet(counterController, guiController);
 	}
@@ -195,7 +195,7 @@ extends CountersModel
 		// No need to continue if we havn't got the columns we need
 		if (database_pos == -1 || relation_pos == -1 || dbname_pos == -1 || schema_name_pos == -1 || relation_name_pos == -1)
 		{
-			_logger.info("localCalculation(): Desired columns not available (database_pos="+database_pos+", relation_pos="+relation_pos+", dbname_pos="+dbname_pos+", schema_name_pos="+schema_name_pos+", relation_name_pos="+relation_name_pos+"), can't resolv 'database:id' and 'relation:id' into real names.");
+			_logger.info("localCalculation(): Desired columns not available (database_pos=" + database_pos + ", relation_pos=" + relation_pos + ", dbname_pos=" + dbname_pos + ", schema_name_pos=" + schema_name_pos + ", relation_name_pos=" + relation_name_pos + "), can't resolv 'database:id' and 'relation:id' into real names.");
 			return;
 		}
 
@@ -325,7 +325,7 @@ extends CountersModel
 			int rowCount = conf.getIntProperty(PROPKEY_sample_topRowsCount, DEFAULT_sample_topRowsCount);
 			topRows = "LIMIT " + rowCount + " \n";
 
-			_logger.warn("CM='"+getName()+"'. Limiting number of rows fetch. Adding phrase '" + topRows.trim() + "' at the end of the SQL Statement.");
+			_logger.warn("CM='" + getName() + "'. Limiting number of rows fetch. Adding phrase '" + topRows.trim() + "' at the end of the SQL Statement.");
 		}
 
 		String sql = ""

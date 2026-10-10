@@ -532,14 +532,14 @@ public abstract class AseConfigText
 				if (stop >= 0)
 				{
 					String mb = configStr.substring(start, stop);
-					_logger.debug("parse Available Memory for reconfiguration: start="+start+", stop="+stop+", MB='"+mb+"'.");
+					_logger.debug("parse Available Memory for reconfiguration: start=" + start + ", stop=" + stop + ", MB='" + mb + "'.");
 					try 
 					{
 						_freeMemory = Double.parseDouble(mb);
 					}
 					catch(NumberFormatException e)
 					{
-						_logger.warn("Can't parse the Free MB for reuse, MB='"+mb+"'. Caught="+e);
+						_logger.warn("Can't parse the Free MB for reuse, MB='" + mb + "'. Caught=" + e);
 						_freeMemory = null; 
 					}
 				}
@@ -591,7 +591,7 @@ public abstract class AseConfigText
 				"where a.name in ('max memory', 'total logical memory') \n" +
 				"  and a.config = b.config \n" +
 				" \n" +
-				"print '%1! "+MB_AVAIL_FOR_RECONF_STR+".', @freeMb  \n" +
+				"print '%1! " + MB_AVAIL_FOR_RECONF_STR + ".', @freeMb  \n" +
 
 				"print '' \n" +
 				"print '######################################################################################' \n" +
@@ -654,7 +654,7 @@ public abstract class AseConfigText
 			}
 			catch(SQLException ex)
 			{
-				_logger.error("Problems getting ASE 'default data cache' size, when getting DBMS ServerName or VersionNumber. Caught: "+ex, ex);
+				_logger.error("Problems getting ASE 'default data cache' size, when getting DBMS ServerName or VersionNumber. Caught: " + ex, ex);
 			}
 				
 			
@@ -670,13 +670,13 @@ public abstract class AseConfigText
 			}
 			catch(SQLException ex)
 			{
-				_logger.error("Problems getting ASE 'default data cache' size, using sql '"+sql+"'. Caught: "+ex, ex);
+				_logger.error("Problems getting ASE 'default data cache' size, using sql '" + sql + "'. Caught: " + ex, ex);
 			}
 
 			// If 'default data cache' is at "factory" setting...
 			if (defaultDataCacheSizeInMb > 0 && defaultDataCacheSizeInMb < 10)
 			{
-				String key = "DbmsConfigIssue."+srvName+".defaultDataCache.atFactorySetting";
+				String key = "DbmsConfigIssue." + srvName + ".defaultDataCache.atFactorySetting";
 				
 				DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, "default data cache", Severity.WARNING, 
 						"The 'default data cache' is configured at the factory setting... 8 MB or similar... This is WAY TO LOW.", 
@@ -821,7 +821,7 @@ public abstract class AseConfigText
 			}
 			catch(SQLException ex)
 			{
-				_logger.error("Problems getting ASE 'sp_helpdevice' for dsync/directio, when getting DBMS ServerName or VersionNumber. Caught: "+ex, ex);
+				_logger.error("Problems getting ASE 'sp_helpdevice' for dsync/directio, when getting DBMS ServerName or VersionNumber. Caught: " + ex, ex);
 			}
 				
 			
@@ -843,14 +843,14 @@ public abstract class AseConfigText
 					// dsync and directio is not valid options for RAW or BLOCK devices
 					if (!description.contains("file system device"))
 					{
-						_logger.info("Checking Configuration for 'HelpDevice': Skipping device name '"+deviceName+"', description does NOT contain 'file system device'. description='" + description + "'.");
+						_logger.info("Checking Configuration for 'HelpDevice': Skipping device name '" + deviceName + "', description does NOT contain 'file system device'. description='" + description + "'.");
 						continue;
 					}
 
 					// skip any device names that contains "temp" or "tmp"
 					if (deviceName.indexOf("temp") >= 0 || deviceName.indexOf("tmp") >= 0)
 					{
-						_logger.info("Checking Configuration for 'HelpDevice': Skipping device name '"+deviceName+"', which looks like a 'temp' device. (reason: name contains 'temp' or 'tmp')");
+						_logger.info("Checking Configuration for 'HelpDevice': Skipping device name '" + deviceName + "', which looks like a 'temp' device. (reason: name contains 'temp' or 'tmp')");
 						continue;
 					}
 					
@@ -859,11 +859,11 @@ public abstract class AseConfigText
 					
 					if ( hasDsync == false && hasDirectIo == false)
 					{
-						String key = "DbmsConfigIssue."+srvName+".device."+deviceName+".noDsyncOrDirectIo";
+						String key = "DbmsConfigIssue." + srvName + ".device." + deviceName + ".noDsyncOrDirectIo";
 						
-						DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, "device '"+deviceName+"' no dsync or directio", Severity.WARNING, 
-								"The device name '"+deviceName+"' with physical name '"+physName+"' is not correctly configured for durability, directio=false and dsync=false.", 
-								"Fix this using: exec sp_deviceattr '"+deviceName+"', 'directio', 'true' \n"
+						DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, "device '" + deviceName + "' no dsync or directio", Severity.WARNING, 
+								"The device name '" + deviceName + "' with physical name '" + physName + "' is not correctly configured for durability, directio=false and dsync=false.", 
+								"Fix this using: exec sp_deviceattr '" + deviceName + "', 'directio', 'true' \n"
 										+ "\n" 
 										+ "Note: you also need to restart ASE for 'sp_deviceattr' to take effect.");
 
@@ -873,7 +873,7 @@ public abstract class AseConfigText
 			}
 			catch(SQLException ex)
 			{
-				_logger.error("Problems getting ASE 'sp_helpdevice' for dsync/directio, using sql '"+sql+"'. Caught: "+ex, ex);
+				_logger.error("Problems getting ASE 'sp_helpdevice' for dsync/directio, using sql '" + sql + "'. Caught: " + ex, ex);
 			}
 		}
 	}
@@ -1258,7 +1258,7 @@ public abstract class AseConfigText
 			}
 			catch(SQLException ex)
 			{
-				_logger.error("Problems getting ASE 'sp_monitorconfig', when getting DBMS ServerName or VersionNumber. Caught: "+ex, ex);
+				_logger.error("Problems getting ASE 'sp_monitorconfig', when getting DBMS ServerName or VersionNumber. Caught: " + ex, ex);
 			}
 				
 			
@@ -1275,21 +1275,21 @@ public abstract class AseConfigText
 
 					// System.out.println("MonitorConfig: row: Name='"+name+"', Num_free="+numFree+", Num_active="+numActive+", Pct_Act="+pctActive+", Max_Used="+maxUsed+", Num_Reuse="+numReuse);
 					if (_logger.isDebugEnabled())
-						_logger.debug("MonitorConfig: row: Name='"+name+"', Num_free="+numFree+", Num_active="+numActive+", Pct_Act="+pctActive+", Max_Used="+maxUsed+", Num_Reuse="+numReuse);
+						_logger.debug("MonitorConfig: row: Name='" + name + "', Num_free=" + numFree + ", Num_active=" + numActive + ", Pct_Act=" + pctActive + ", Max_Used=" + maxUsed + ", Num_Reuse=" + numReuse);
 
 					if ( numReuse > 0 )
 					{
-						String key = "DbmsConfigIssue."+srvName+".sp_monitorconfig."+name+".numReuse";
+						String key = "DbmsConfigIssue." + srvName + ".sp_monitorconfig." + name + ".numReuse";
 						
 						DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, name, Severity.WARNING, 
-								"Configuration '"+name+"' has Num_Reuse="+numReuse+" (in sp_monitorconfig 'all'). \n"
+								"Configuration '" + name + "' has Num_Reuse=" + numReuse + " (in sp_monitorconfig 'all'). \n"
 										+ "The server will re-use older entries, which will degrade performance. \n"
 										+ "\n" 
 										+ "Note: This might be older 'Num_Reuse' counters, if the server hasn't rebooted.", 
-								"Fix this using: exec sp_configure '"+name+"', ##### \n"
+								"Fix this using: exec sp_configure '" + name + "', ##### \n"
 										+ "\n" 
 										+ "Note: You can also check 'Num_Reuse', by: exec sp_monitorconfig 'all' \n"
-										+ "Details: Name='"+name+"', Num_free="+numFree+", Num_active="+numActive+", Pct_Act="+pctActive+", Max_Used="+maxUsed+", Num_Reuse="+numReuse);
+										+ "Details: Name='" + name + "', Num_free=" + numFree + ", Num_active=" + numActive + ", Pct_Act=" + pctActive + ", Max_Used=" + maxUsed + ", Num_Reuse=" + numReuse);
 
 						DbmsConfigManager.getInstance().addConfigIssue(issue);
 					}
@@ -1297,7 +1297,7 @@ public abstract class AseConfigText
 			}
 			catch(SQLException ex)
 			{
-				_logger.error("Problems getting ASE 'sp_monitorconfig', using sql '"+sql+"'. Caught: "+ex, ex);
+				_logger.error("Problems getting ASE 'sp_monitorconfig', using sql '" + sql + "'. Caught: " + ex, ex);
 			}
 		}
 	}

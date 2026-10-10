@@ -122,7 +122,7 @@ extends HttpServlet
 		out.println("<title>" + udc.getDbmsServerName() + " - " + udc.getName() + "</title> ");
 		
 		if (refresh > 0)
-			out.println("<meta http-equiv='refresh' content='"+refresh+"' />");
+			out.println("<meta http-equiv='refresh' content='" + refresh + "' />");
 
 		out.println(HtmlStatic.getUserDefinedContentHead());
 		

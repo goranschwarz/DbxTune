@@ -54,7 +54,7 @@ public class JdbcConnectTest
 		}
 		catch (SQLException e)
 		{
-			System.err.println("Problems getSpid(). sql="+sql);
+			System.err.println("Problems getSpid(). sql=" + sql);
 			e.printStackTrace();
 		}
 		
@@ -81,7 +81,7 @@ public class JdbcConnectTest
 		}
 		catch (SQLException e)
 		{
-			System.err.println("Problems getsrvVersion(). sql="+sql);
+			System.err.println("Problems getsrvVersion(). sql=" + sql);
 			e.printStackTrace();
 		}
 		
@@ -120,14 +120,14 @@ java -cp "classes;lib\jdbc_drivers\mssql-jdbc-11.2.1.jre8.jar" -Dmssql.jdbc.debu
 		if (args.length > 3) pawd = args[3];
 		if (args.length > 4) fUrl = args[4];
 
-		System.out.println("host = '"+host+"'");
-		System.out.println("port = '"+port+"'");
-		System.out.println("user = '"+user+"'");
-		System.out.println("pawd = '"+pawd+"'");
-		System.out.println("fUrl = '"+fUrl+"'");
+		System.out.println("host = '" + host + "'");
+		System.out.println("port = '" + port + "'");
+		System.out.println("user = '" + user + "'");
+		System.out.println("pawd = '" + pawd + "'");
+		System.out.println("fUrl = '" + fUrl + "'");
 		
 //		String jdbcDriver    = "com.sybase.jdbc42.jdbc.SybDriver";
-		String jdbcUrl       = "jdbc:sybase:Tds:"+host+":"+port;
+		String jdbcUrl       = "jdbc:sybase:Tds:" + host + ":" + port;
 		String jdbcUser      = user;
 		String jdbcPasswd    = pawd;
 		Properties jdbcProps = null;
@@ -136,7 +136,7 @@ java -cp "classes;lib\jdbc_drivers\mssql-jdbc-11.2.1.jre8.jar" -Dmssql.jdbc.debu
 			jdbcUrl = fUrl;
 
 		System.out.println("---------------------------------------------------------------------------------------");
-		System.out.println("Using URL '"+jdbcUrl+"' when connectiong to DBMS.");
+		System.out.println("Using URL '" + jdbcUrl + "' when connectiong to DBMS.");
 		System.out.println("---------------------------------------------------------------------------------------");
 
 		boolean mssqlJdbcDebug = System.getProperty("mssql.jdbc.debug", "false").equalsIgnoreCase("true");
@@ -181,8 +181,8 @@ java -cp "classes;lib\jdbc_drivers\mssql-jdbc-11.2.1.jre8.jar" -Dmssql.jdbc.debu
 			
 			if (jdbcUrl.startsWith("jdbc:sybase:Tds") || jdbcUrl.startsWith("jdbc:sqlserver:"))
 			{
-				System.out.println("@@spid:    "+getSpid(conn));
-				System.out.println("@@version: "+getsrvVersion(conn));
+				System.out.println("@@spid:    " + getSpid(conn));
+				System.out.println("@@version: " + getsrvVersion(conn));
 			}
 
 			System.out.println("Disconnecting from DBMS...");

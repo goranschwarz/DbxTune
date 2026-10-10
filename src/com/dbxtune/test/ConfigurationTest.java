@@ -41,7 +41,7 @@ public class ConfigurationTest
 		conf.save();
 
 		String dummy = conf.getProperty("dummy");
-		System.out.println("dummy='"+dummy+"'");
+		System.out.println("dummy='" + dummy + "'");
 		if ( ! "xxx".equals(dummy))
 			System.out.println("test 1: ----------------------- FAILED -------------------------------");
 	}
@@ -54,7 +54,7 @@ public class ConfigurationTest
 		conf.save();
 
 		String dummy = conf.getProperty("dummy");
-		System.out.println("dummy='"+dummy+"'");
+		System.out.println("dummy='" + dummy + "'");
 		if ( ! "xxx".equals(dummy))
 			System.out.println("test 1: ----------------------- FAILED -------------------------------");
 	}

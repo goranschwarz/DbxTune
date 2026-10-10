@@ -53,7 +53,7 @@ extends TabularCntrPanel
 		+ "Only show executions that has accured at the last X minutes (default is 10 minutes).<br>"
 		+ "<br>"
 		+ "<b>Note:</b> This will just restrict number or rows a bit, It's probably better than <i>'Show only SQL executed since last sample time'</i> but same rules applies.<br>"
-		+ "<b>Note:</b> Number of minutes can be changed using the property: <code>"+CmPlanCacheDetails.PROPKEY_sample_lastXminutesTime+"</code><br>"
+		+ "<b>Note:</b> Number of minutes can be changed using the property: <code>" + CmPlanCacheDetails.PROPKEY_sample_lastXminutesTime + "</code><br>"
 		+ "</html>";
 	public static final String  TOOLTIP_sample_lastXminutesTime = 
 		"<html>"

@@ -76,7 +76,7 @@ extends DbmsVersionPanelAbstract
 		int shortVerNum = VersionShort.parse(tmpVerStr);
 		long version = Ver.shortVersionStringToNumber(shortVerNum);
 
-		_logger.debug("POSTGRES-parseVersionStringToNum(versionStr='"+versionStr+"'): tmpVerStr='"+tmpVerStr+"', <<<<<< returns: "+version);
+		_logger.debug("POSTGRES-parseVersionStringToNum(versionStr='" + versionStr + "'): tmpVerStr='" + tmpVerStr + "', <<<<<< returns: " + version);
 		return version;
 	}
 	

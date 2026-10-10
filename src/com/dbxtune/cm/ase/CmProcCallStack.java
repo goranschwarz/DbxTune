@@ -66,7 +66,7 @@ extends CountersModel
 	"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -94,7 +94,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmProcCallStack(counterController, guiController);
 	}
@@ -244,7 +244,7 @@ extends CountersModel
 
 		if (pos_SPID < 0 || pos_ContextID < 0 || pos_MaxContextID < 0)
 		{
-			_logger.debug("Can't find the position for columns ('SPID'"+pos_SPID+", 'ContextID'="+pos_ContextID+", 'MaxContextID'="+pos_MaxContextID+")");
+			_logger.debug("Can't find the position for columns ('SPID'" + pos_SPID + ", 'ContextID'=" + pos_ContextID + ", 'MaxContextID'=" + pos_MaxContextID + ")");
 			return;
 		}
 		

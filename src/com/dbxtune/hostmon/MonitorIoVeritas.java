@@ -58,7 +58,7 @@ extends MonitorIo
     	 * The unit of the scaled output depends on how large the statistics value being printed is. 
 		 */
 		String cmd = super.getCommand();
-		return cmd != null ? cmd : "vxstat -o alldgs -i "+getSleepTime()+" -S";    // at disk group level... should I add -S at the end to get 
+		return cmd != null ? cmd : "vxstat -o alldgs -i " + getSleepTime() + " -S";    // at disk group level... should I add -S at the end to get 
 //		return cmd != null ? cmd : "vxstat -o alldgs -d -i "+getSleepTime()+" -S"; // for the individual disks
 	}
 

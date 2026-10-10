@@ -55,7 +55,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SPACE,
 				severity, 
 				AlarmEvent.ServiceState.UP, 
-				"Full Space " + spaceType + " Prediction at server '" + srvName + "', name='" + name + "', extraName='" + extraName + "', hoursToDiskFull=" + hoursUntilFull + ". (threshold="+threshold+")",
+				"Full Space " + spaceType + " Prediction at server '" + srvName + "', name='" + name + "', extraName='" + extraName + "', hoursToDiskFull=" + hoursUntilFull + ". (threshold=" + threshold + ")",
 				threshold);
 
 //		// Set: Time To Live if postpone is enabled

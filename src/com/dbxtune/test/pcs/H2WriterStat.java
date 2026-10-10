@@ -299,7 +299,7 @@ public class H2WriterStat
 //				}
 				if ( _h2DbFile != null && ! _h2DbFile.exists() )
 				{
-					_logger.warning("Can't extract H2 database file from the URL '"+url+"'. Or the file '" + _h2DbFile + "' do NOT exist. Skipping checking the File Size.");
+					_logger.warning("Can't extract H2 database file from the URL '" + url + "'. Or the file '" + _h2DbFile + "' do NOT exist. Skipping checking the File Size.");
 					_h2DbFile = null;
 				}
 				
@@ -308,7 +308,7 @@ public class H2WriterStat
 		catch (SQLException ex)
 		{
 			_h2DbFile = null;
-			_logger.warning("Skipping examin the H2-File-Size. Got problems when getting the URL from the connections metadata. Skipping checking the File Size. Caught: "+ex);
+			_logger.warning("Skipping examin the H2-File-Size. Got problems when getting the URL from the connections metadata. Skipping checking the File Size. Caught: " + ex);
 		}
 
 		try
@@ -326,7 +326,7 @@ public class H2WriterStat
 	public H2WriterStat refreshCounters(Connection conn)
 	{
 //		String sql = "select #NAME#, cast(#VALUE# as bigint) as #VALUE# from #INFORMATION_SCHEMA#.#SETTINGS# where #NAME# in ('"+FILE_READ+"', '"+FILE_WRITE+"', '"+PAGE_COUNT+"')".replace('#', '"');
-		String sql = "select #SETTING_NAME#, cast(#SETTING_VALUE# as bigint) as #SETTING_VALUE# from #INFORMATION_SCHEMA#.#SETTINGS# where #SETTING_NAME# in ('"+FILE_READ+"', '"+FILE_WRITE+"', '"+PAGE_COUNT+"')".replace('#', '"');
+		String sql = "select #SETTING_NAME#, cast(#SETTING_VALUE# as bigint) as #SETTING_VALUE# from #INFORMATION_SCHEMA#.#SETTINGS# where #SETTING_NAME# in ('" + FILE_READ + "', '" + FILE_WRITE + "', '" + PAGE_COUNT + "')".replace('#', '"');
 
 		try (Statement stmnt = conn.createStatement())
 		{
@@ -379,7 +379,7 @@ public class H2WriterStat
 						} 
 						catch (NumberFormatException ex) 
 						{
-							_logger.warning("Calculating RATE value had problems. diffVal="+diffVal+" (divided by) _lastIntervallInMs="+_lastIntervallInMs+". Setting rate to 0.0  Caught: " + ex);
+							_logger.warning("Calculating RATE value had problems. diffVal=" + diffVal + " (divided by) _lastIntervallInMs=" + _lastIntervallInMs + ". Setting rate to 0.0  Caught: " + ex);
 							rate = new BigDecimal(0.0);
 						}
 

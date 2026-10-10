@@ -226,7 +226,7 @@ extends CounterCollectorThreadAbstract
 							cm.setSampleException(ex);
 
 							// Try to re-connect, otherwise we might "cancel" some ongoing alarms (due to the fact that we do 'end-of-scan' at the end of the loop)
-							_logger.info("Try reconnect. When refreshing the data for cm '"+cm.getName()+"', we got 'LostConnectionException'.");
+							_logger.info("Try reconnect. When refreshing the data for cm '" + cm.getName() + "', we got 'LostConnectionException'.");
 							DbxConnection conn = getCounterController().getMonConnection();
 							if (conn != null)
 							{
@@ -241,13 +241,13 @@ extends CounterCollectorThreadAbstract
 								}
 								catch(Exception reconnectEx)
 								{
-									_logger.error("Problem when reconnecting. Caught: "+reconnectEx);
+									_logger.error("Problem when reconnecting. Caught: " + reconnectEx);
 								}
 							}
 							// If we got an exception, go and check if we are still connected
 							if ( ! getCounterController().isMonConnected(true, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
 							{
-								_logger.warn("Breaking check loop, due to 'not-connected' (after trying to re-connect). Next check loop will do new connection. When refreshing the data for cm '"+getName()+"', we Caught an Exception and we are no longer connected to the monitored server.");
+								_logger.warn("Breaking check loop, due to 'not-connected' (after trying to re-connect). Next check loop will do new connection. When refreshing the data for cm '" + getName() + "', we Caught an Exception and we are no longer connected to the monitored server.");
 								break; // break: LOOP CM's
 							}
 						}
@@ -255,9 +255,9 @@ extends CounterCollectorThreadAbstract
 						{
 							// log the stack trace for all others than the SQLException
 							if (ex instanceof SQLException)
-								_logger.warn("Problem when refreshing cm '"+cm.getName()+"'. Caught: " + ex);
+								_logger.warn("Problem when refreshing cm '" + cm.getName() + "'. Caught: " + ex);
 							else
-								_logger.warn("Problem when refreshing cm '"+cm.getName()+"'. Caught: " + ex, ex);
+								_logger.warn("Problem when refreshing cm '" + cm.getName() + "'. Caught: " + ex, ex);
 
 							cm.setSampleException(ex);
 
@@ -336,11 +336,11 @@ extends CounterCollectorThreadAbstract
 			}
 			catch (Throwable t)
 			{
-				_logger.error(Version.getAppName()+": error in GetCounters loop.", t);
+				_logger.error(Version.getAppName() + ": error in GetCounters loop.", t);
 
 				if (t instanceof OutOfMemoryError)
 				{
-					_logger.error(Version.getAppName()+": in GetCounters loop, caught 'OutOfMemoryError'. Calling: Memory.fireOutOfMemory(), which hopefully will release some memory.");
+					_logger.error(Version.getAppName() + ": in GetCounters loop, caught 'OutOfMemoryError'. Calling: Memory.fireOutOfMemory(), which hopefully will release some memory.");
 					Memory.fireOutOfMemory();
 				}
 			}

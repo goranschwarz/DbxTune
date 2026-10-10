@@ -97,7 +97,7 @@ extends CounterSample
 	{
 		int queryTimeout = cm.getQueryTimeout();
 		if (_logger.isDebugEnabled())
-			_logger.debug(getName()+": queryTimeout="+queryTimeout);
+			_logger.debug(getName() + ": queryTimeout=" + queryTimeout);
 
 		long execStartTime = System.currentTimeMillis();
 
@@ -125,17 +125,17 @@ extends CounterSample
 				// set context to the correct database
 				conn.setCatalog(catname);
 				if (_logger.isDebugEnabled())
-					_logger.debug("Setting database context to '"+catname+"'.");
+					_logger.debug("Setting database context to '" + catname + "'.");
 
 				if (cm.hasCounterController())
-					cm.getCounterController().getRefreshStatus().setSubStatus("for db '"+catname+"'");
+					cm.getCounterController().getRefreshStatus().setSubStatus("for db '" + catname + "'");
 
 				Statement stmnt = conn.createStatement();
 				ResultSet rs;
 
 				stmnt.setQueryTimeout(queryTimeout); // XX seconds query timeout
 				if (_logger.isDebugEnabled())
-					_logger.debug("QUERY_TIMEOUT="+queryTimeout+", for SampleCnt='"+getName()+"'.");
+					_logger.debug("QUERY_TIMEOUT=" + queryTimeout + ", for SampleCnt='" + getName() + "'.");
 
 
 				// Allow 'go' in the string, then we should send multiple batches
@@ -166,9 +166,9 @@ extends CounterSample
 
 					if (_logger.isDebugEnabled())
 					{
-						_logger.debug("##### BEGIN (send sql), batchCounter="+batchCounter+" ############################### "+ getName());
+						_logger.debug("##### BEGIN (send sql), batchCounter=" + batchCounter + " ############################### " + getName());
 						_logger.debug(sendSql);
-						_logger.debug("##### END   (send sql), batchCounter="+batchCounter+" ############################### "+ getName());
+						_logger.debug("##### END   (send sql), batchCounter=" + batchCounter + " ############################### " + getName());
 						_logger.debug("");
 					}
 
@@ -213,7 +213,7 @@ extends CounterSample
 
 							if (rowsAffected >= 0)
 							{
-								_logger.debug("DDL or DML rowcount = "+rowsAffected);
+								_logger.debug("DDL or DML rowcount = " + rowsAffected);
 							}
 							else
 							{
@@ -224,7 +224,7 @@ extends CounterSample
 						// Check if we have more result sets
 						hasRs = stmnt.getMoreResults();
 		
-						_logger.trace( "--hasRs="+hasRs+", rsNum="+rsNum+", rowsAffected="+rowsAffected );
+						_logger.trace( "--hasRs=" + hasRs + ", rsNum=" + rsNum + ", rowsAffected=" + rowsAffected );
 					}
 					while (hasRs || rowsAffected != -1);
 		
@@ -243,10 +243,10 @@ extends CounterSample
 		{
 			long execTime = TimeUtils.msDiffNow(execStartTime);
 
-			_logger.warn("CounterSample("+getName()+").getCnt : ErrorCode=" + sqlEx.getErrorCode() + ", SqlState=" + sqlEx.getSQLState() + ", Message=|" + sqlEx.getMessage() + "|. execTimeInMs=" + execTime + ", SQL: "+sql, sqlEx);
+			_logger.warn("CounterSample(" + getName() + ").getCnt : ErrorCode=" + sqlEx.getErrorCode() + ", SqlState=" + sqlEx.getSQLState() + ", Message=|" + sqlEx.getMessage() + "|. execTimeInMs=" + execTime + ", SQL: " + sql, sqlEx);
 			if (sqlEx.toString().indexOf("SocketTimeoutException") > 0)
 			{
-				_logger.info("QueryTimeout in '"+getName()+"', with query timeout '"+queryTimeout+"'. This can be changed with the config option '"+getName()+".queryTimeout=seconds' in the config file.");
+				_logger.info("QueryTimeout in '" + getName() + "', with query timeout '" + queryTimeout + "'. This can be changed with the config option '" + getName() + ".queryTimeout=seconds' in the config file.");
 			}
 
 			//return false;
@@ -254,8 +254,8 @@ extends CounterSample
 		}
 		catch (IOException ex)
 		{
-			_logger.error("While reading the input SQL 'go' String, caught: "+ex, ex);
-			throw new SQLException("While reading the input SQL 'go' String, caught: "+ex, ex);
+			_logger.error("While reading the input SQL 'go' String, caught: " + ex, ex);
+			throw new SQLException("While reading the input SQL 'go' String, caught: " + ex, ex);
 		}
 		finally
 		{
@@ -263,10 +263,10 @@ extends CounterSample
 			if ( StringUtil.hasValue(originCatalog) )
 			{
 				if (cm.hasCounterController())
-					cm.getCounterController().getRefreshStatus().setSubStatus("restoring DB Context to '"+originCatalog+"'");
+					cm.getCounterController().getRefreshStatus().setSubStatus("restoring DB Context to '" + originCatalog + "'");
 
 				try { conn.setCatalog(originCatalog); }
-				catch (SQLException ex) { _logger.warn("Problems restoring the current catalog/dbname to '"+originCatalog+"'. Caught: "+ex); }
+				catch (SQLException ex) { _logger.warn("Problems restoring the current catalog/dbname to '" + originCatalog + "'. Caught: " + ex); }
 
 				if (cm.hasCounterController())
 					cm.getCounterController().getRefreshStatus().setSubStatus("");

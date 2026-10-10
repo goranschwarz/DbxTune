@@ -327,7 +327,7 @@ public class AseTopCmObjectActivity extends AseAbstract
 		// SUM columns
 		String UsedCount__sum               = !dummyRstm.hasColumnNoCase("UsedCount"            ) ? "" : "    ,sum([UsedCount])                                      as [UsedCount__sum] \n";
 		String LogicalReads__sum            = !dummyRstm.hasColumnNoCase("LogicalReads"         ) ? "" : "    ,sum([LogicalReads])                                   as [LogicalReads__sum] \n";
-		String LogicalReadsMb__sum          = !dummyRstm.hasColumnNoCase("LogicalReads"         ) ? "" : "    ,sum([LogicalReads]) / "+asePageSizeDivider+"          as [LogicalReadsMb__sum] \n";
+		String LogicalReadsMb__sum          = !dummyRstm.hasColumnNoCase("LogicalReads"         ) ? "" : "    ,sum([LogicalReads]) / " + asePageSizeDivider + "          as [LogicalReadsMb__sum] \n";
 		String PhysicalReads__sum           = !dummyRstm.hasColumnNoCase("PhysicalReads"        ) ? "" : "    ,sum([PhysicalReads])                                  as [PhysicalReads__sum] \n";
 		String APFReads__sum                = !dummyRstm.hasColumnNoCase("APFReads"             ) ? "" : "    ,sum([APFReads])                                       as [APFReads__sum] \n";
 		String PagesRead__sum               = !dummyRstm.hasColumnNoCase("PagesRead"            ) ? "" : "    ,sum([PagesRead])                                      as [PagesRead__sum] \n";
@@ -376,7 +376,7 @@ public class AseTopCmObjectActivity extends AseAbstract
 
 		// AVG columns
 		String AvgLogicalReads              = !dummyRstm.hasColumnNoCase("LogicalReads"         ) ? "" : "    ,sum([LogicalReads])          *1.0 / nullif(sum([UsedCount]), 0)  as [AvgLogicalReads] \n";
-		String AvgLogicalReadsMb            = !dummyRstm.hasColumnNoCase("LogicalReads"         ) ? "" : "    ,sum([LogicalReads]) * 1.0 / "+asePageSizeDivider+" / nullif(sum([UsedCount]), 0)  as [AvgLogicalReadsMb] \n";
+		String AvgLogicalReadsMb            = !dummyRstm.hasColumnNoCase("LogicalReads"         ) ? "" : "    ,sum([LogicalReads]) * 1.0 / " + asePageSizeDivider + " / nullif(sum([UsedCount]), 0)  as [AvgLogicalReadsMb] \n";
 		String AvgPhysicalReads             = !dummyRstm.hasColumnNoCase("PhysicalReads"        ) ? "" : "    ,sum([PhysicalReads])         *1.0 / nullif(sum([UsedCount]), 0)  as [AvgPhysicalReads] \n";
 		String AvgAPFReads                  = !dummyRstm.hasColumnNoCase("APFReads"             ) ? "" : "    ,sum([APFReads])              *1.0 / nullif(sum([UsedCount]), 0)  as [AvgAPFReads] \n";
 		String AvgPagesRead                 = !dummyRstm.hasColumnNoCase("PagesRead"            ) ? "" : "    ,sum([PagesRead])             *1.0 / nullif(sum([UsedCount]), 0)  as [AvgPagesRead] \n";

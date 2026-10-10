@@ -48,7 +48,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SPACE,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"A "+type+" Queue for '"+name+"' in Server '" + cm.getServerName() + "' is above the configured threshold. current size = "+size+". (threshold="+threshold+")",
+				"A " + type + " Queue for '" + name + "' in Server '" + cm.getServerName() + "' is above the configured threshold. current size = " + size + ". (threshold=" + threshold + ")",
 				threshold
 				);
 

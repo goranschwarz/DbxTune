@@ -93,7 +93,7 @@ extends ToolTipSupplierAbstractSql
 				if (params.equals("(none)"))
 					params = "";
 				else
-					params = "("+params+")";
+					params = "(" + params + ")";
 					
 				TtpEntry e = new TtpEntry();
 				e.setCmdName    (cmd + params);
@@ -109,7 +109,7 @@ extends ToolTipSupplierAbstractSql
 		}
 		catch(SQLException ex)
 		{
-			throw new Exception("Problems getting HELP information from RAX. Error Number: "+ex.getErrorCode()+", Message: " + ex.getMessage(), ex);
+			throw new Exception("Problems getting HELP information from RAX. Error Number: " + ex.getErrorCode() + ", Message: " + ex.getMessage(), ex);
 		}
 	}
 }

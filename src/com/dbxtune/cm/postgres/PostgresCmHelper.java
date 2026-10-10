@@ -81,14 +81,14 @@ public class PostgresCmHelper
 		// No need to continue if we havn't got the columns we need
 		if (dbid_pos == -1 || relid_pos == -1)
 		{
-			_logger.info("resolveSchemaAndRelationName(): Desired columns not available (database_pos="+dbid_pos+", relation_pos="+relid_pos+"), can't resolv 'database:id' and 'relation:id' into real names.");
+			_logger.info("resolveSchemaAndRelationName(): Desired columns not available (database_pos=" + dbid_pos + ", relation_pos=" + relid_pos + "), can't resolv 'database:id' and 'relation:id' into real names.");
 			return;
 		}
 
 		// No need to continue if we havn't got the columns we need
 		if (dbname_pos == -1 && schema_name_pos == -1 && relation_name_pos == -1)
 		{
-			_logger.info("resolveSchemaAndRelationName(): all destiantion table are -1. Skipping the lookup (dbname_pos="+dbname_pos+", schema_name_pos="+schema_name_pos+", relation_name_pos="+relation_name_pos+"), can't resolv 'database:id' and 'relation:id' into real names.");
+			_logger.info("resolveSchemaAndRelationName(): all destiantion table are -1. Skipping the lookup (dbname_pos=" + dbname_pos + ", schema_name_pos=" + schema_name_pos + ", relation_name_pos=" + relation_name_pos + "), can't resolv 'database:id' and 'relation:id' into real names.");
 			return;
 		}
 
@@ -166,7 +166,7 @@ public class PostgresCmHelper
 		// No need to continue if we havn't got the columns we need
 		if (totalCount_pos == -1 || doneCount_pos == -1 || percent_pos == -1)
 		{
-			_logger.info("resolvePercentDone(): Desired columns not available (totalCount_pos="+totalCount_pos+", doneCount_pos="+doneCount_pos+", percent_pos="+percent_pos+").");
+			_logger.info("resolvePercentDone(): Desired columns not available (totalCount_pos=" + totalCount_pos + ", doneCount_pos=" + doneCount_pos + ", percent_pos=" + percent_pos + ").");
 			return;
 		}
 
@@ -308,7 +308,7 @@ public class PostgresCmHelper
 					+ "<br>"
 					+ "Or possibly issue: CREATE EXTENSION pg_stat_statements <br>"
 					+ "<br>"
-					+ message+"</html>");
+					+ message + "</html>");
 		}
 		
 		return false;
@@ -440,7 +440,7 @@ public class PostgresCmHelper
 					+ "<br>"
 					+ "And issue: CREATE EXTENSION pg_wait_sampling <br>"
 					+ "<br>"
-					+ message+"</html>");
+					+ message + "</html>");
 		}
 		
 		return false;

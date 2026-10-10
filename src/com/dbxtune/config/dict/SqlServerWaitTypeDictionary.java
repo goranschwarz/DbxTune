@@ -85,8 +85,8 @@ public class SqlServerWaitTypeDictionary
 	public String getDescriptionHtml(String waitName)
 	{
 		String extraInfo = "<br><hr>External Description, from: Paul Randal, www.sqlskills.com<br>"
-				+ "Open in Tooltip Window:   <A HREF='https://www.sqlskills.com/help/waits/"+waitName+"'>https://www.sqlskills.com/help/waits/"+waitName+"</A><br>"
-				+ "Open in External Browser: <A HREF='"+CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER+"https://www.sqlskills.com/help/waits/"+waitName+"'>https://www.sqlskills.com/help/waits/"+waitName+"</A><br>"
+				+ "Open in Tooltip Window:   <A HREF='https://www.sqlskills.com/help/waits/" + waitName + "'>https://www.sqlskills.com/help/waits/" + waitName + "</A><br>"
+				+ "Open in External Browser: <A HREF='" + CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + "https://www.sqlskills.com/help/waits/" + waitName + "'>https://www.sqlskills.com/help/waits/" + waitName + "</A><br>"
 				+ "</html>";
 
 		WaitTypeRecord rec = _waitTypes.get(waitName);
@@ -99,14 +99,14 @@ public class SqlServerWaitTypeDictionary
 		}
 
 		// Compose an empty one
-		return "<html><code>"+waitName+"</code> not found in dictionary."+extraInfo;
+		return "<html><code>" + waitName + "</code> not found in dictionary." + extraInfo;
 	}
 
 
 	private void set(WaitTypeRecord rec)
 	{
 		if ( _waitTypes.containsKey(rec._id))
-			System.out.println("Trace flag '"+rec._id+"' already exists. It will be overwritten.");
+			System.out.println("Trace flag '" + rec._id + "' already exists. It will be overwritten.");
 
 		_waitTypes.put(rec._id, rec);
 	}

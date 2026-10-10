@@ -290,7 +290,7 @@ public class ExecutionPlanCollection
 			{
 				//_problem = ex;
 
-				_logger.warn("Problems getting SQL Statement name = '"+planId+"': " + ex);
+				_logger.warn("Problems getting SQL Statement name = '" + planId + "': " + ex);
 				throw ex;
 			} 
 		}

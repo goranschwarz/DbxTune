@@ -43,7 +43,7 @@ implements IObjectLookupInspector
 	public DbxConnection createConnection()
 	throws Exception
 	{
-		String appName = Version.getAppName()+"-ObjInfoLookup";
+		String appName = Version.getAppName() + "-ObjInfoLookup";
 		
 		boolean hasGui = DbxTune.hasGui();
 		if (hasGui)

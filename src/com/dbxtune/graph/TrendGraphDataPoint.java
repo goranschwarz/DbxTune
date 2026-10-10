@@ -225,7 +225,7 @@ implements Cloneable
 			_labelArray = RUNTIME_REPLACED_LABELS;
 		
 		if (labelArray == null)
-			throw new RuntimeException("Sorry you can not initialize the TrendGraphDataPoint, named '"+name+"' with a null labelArray. Please use 'TrendGraphDataPoint.RUNTIME_REPLACED_LABELS', if they are not known at initialization time.");
+			throw new RuntimeException("Sorry you can not initialize the TrendGraphDataPoint, named '" + name + "' with a null labelArray. Please use 'TrendGraphDataPoint.RUNTIME_REPLACED_LABELS', if they are not known at initialization time.");
 
 		_name           = name;
 		_graphLabel     = graphLabel;
@@ -307,13 +307,13 @@ implements Cloneable
 	public void setDataPoint(Date date, Double[] dataArray)
 	{
 		if (dataArray == null)
-			throw new RuntimeException("The passed dataArray is null. TrendGraphDataPoint named '"+getName()+"'.");
+			throw new RuntimeException("The passed dataArray is null. TrendGraphDataPoint named '" + getName() + "'.");
 
 		if (_labelArray == null)
-			throw new RuntimeException("_labelArray has not been set in the TrendGraphDataPoint named '"+getName()+"'. (_initializedWithRuntimeReplacedLabels="+_initializedWithRuntimeReplacedLabels+")");
+			throw new RuntimeException("_labelArray has not been set in the TrendGraphDataPoint named '" + getName() + "'. (_initializedWithRuntimeReplacedLabels=" + _initializedWithRuntimeReplacedLabels + ")");
 
 		if (_labelArray.length != dataArray.length)
-			throw new RuntimeException("Missmatch in labelArray size and dataArray size. _labelArray.length="+_labelArray.length+", labels='"+StringUtil.toCommaStr(_labelArray)+"', dataArray.length="+dataArray.length+", data='"+StringUtil.toCommaStr(dataArray)+"'. in TrendGraphDataPoint '"+getName()+"'.");
+			throw new RuntimeException("Missmatch in labelArray size and dataArray size. _labelArray.length=" + _labelArray.length + ", labels='" + StringUtil.toCommaStr(_labelArray) + "', dataArray.length=" + dataArray.length + ", data='" + StringUtil.toCommaStr(dataArray) + "'. in TrendGraphDataPoint '" + getName() + "'.");
 
 		// use common method
 		setDataPoint(date, _labelArray, null, dataArray);
@@ -321,13 +321,13 @@ implements Cloneable
 	public void setDataPoint(Date date, String[] labelArray, Double[] dataArray)
 	{
 		if (dataArray == null)
-			throw new RuntimeException("The passed dataArray is null. TrendGraphDataPoint named '"+getName()+"'.");
+			throw new RuntimeException("The passed dataArray is null. TrendGraphDataPoint named '" + getName() + "'.");
 
 		if (labelArray == null)
-			throw new RuntimeException("The passed labelArray is null. TrendGraphDataPoint named '"+getName()+"'.");
+			throw new RuntimeException("The passed labelArray is null. TrendGraphDataPoint named '" + getName() + "'.");
 
 		if (labelArray.length != dataArray.length)
-			throw new RuntimeException("Missmatch in the passed labelArray size and dataArray size. labelArray.length="+labelArray.length+", dataArray.length="+dataArray.length+". in TrendGraphDataPoint '"+getName()+"'.");
+			throw new RuntimeException("Missmatch in the passed labelArray size and dataArray size. labelArray.length=" + labelArray.length + ", dataArray.length=" + dataArray.length + ". in TrendGraphDataPoint '" + getName() + "'.");
 
 		// use common method
 		setDataPoint(date, labelArray, null, dataArray);
@@ -335,19 +335,19 @@ implements Cloneable
 	public void setDataPoint(Date date, String[] labelArray, String[] labelDisplayArray, Double[] dataArray)
 	{
 		if (dataArray == null)
-			throw new RuntimeException("The passed dataArray is null. TrendGraphDataPoint named '"+getName()+"'.");
+			throw new RuntimeException("The passed dataArray is null. TrendGraphDataPoint named '" + getName() + "'.");
 
 		if (labelArray == null)
-			throw new RuntimeException("The passed labelArray is null. TrendGraphDataPoint named '"+getName()+"'.");
+			throw new RuntimeException("The passed labelArray is null. TrendGraphDataPoint named '" + getName() + "'.");
 
 		if (labelArray.length == 0)
-			throw new RuntimeException("The passed labelArray is of length 0. TrendGraphDataPoint named '"+getName()+"'.");
+			throw new RuntimeException("The passed labelArray is of length 0. TrendGraphDataPoint named '" + getName() + "'.");
 
 		if (labelArray.length != dataArray.length)
-			throw new RuntimeException("Missmatch in the passed labelArray size and dataArray size. labelArray.length="+labelArray.length+", labels='"+StringUtil.toCommaStr(labelArray)+"', dataArray.length="+dataArray.length+", data='"+StringUtil.toCommaStr(dataArray)+"'. in TrendGraphDataPoint '"+getName()+"'.");
+			throw new RuntimeException("Missmatch in the passed labelArray size and dataArray size. labelArray.length=" + labelArray.length + ", labels='" + StringUtil.toCommaStr(labelArray) + "', dataArray.length=" + dataArray.length + ", data='" + StringUtil.toCommaStr(dataArray) + "'. in TrendGraphDataPoint '" + getName() + "'.");
 
 		if (labelDisplayArray != null && labelArray.length != labelDisplayArray.length)
-			throw new RuntimeException("Missmatch in the passed labelArray size and labelDisplayArray size. labelArray.length="+labelArray.length+", labels='"+StringUtil.toCommaStr(labelArray)+"', labelDisplayArray.length="+labelDisplayArray.length+", labelDisplayArray='"+StringUtil.toCommaStr(labelDisplayArray)+"'. in TrendGraphDataPoint '"+getName()+"'.");
+			throw new RuntimeException("Missmatch in the passed labelArray size and labelDisplayArray size. labelArray.length=" + labelArray.length + ", labels='" + StringUtil.toCommaStr(labelArray) + "', labelDisplayArray.length=" + labelDisplayArray.length + ", labelDisplayArray='" + StringUtil.toCommaStr(labelDisplayArray) + "'. in TrendGraphDataPoint '" + getName() + "'.");
 
 		// First time we add data this, and it's initialized with RUNTIME_REPLACED_LABELS, then we expect some columns in the input.
 //		if ( labelArray == null && _initializedWithRuntimeReplacedLabels )

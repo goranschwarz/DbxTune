@@ -105,7 +105,7 @@ public class Memory
 	{
 		for (MemoryListener ml : getMemoryListener())
 		{
-			_logger.info("Memory.fireOutOfMemory(): calling outOfMemoryHandler() on listener: "+ml);
+			_logger.info("Memory.fireOutOfMemory(): calling outOfMemoryHandler() on listener: " + ml);
 			ml.outOfMemoryHandler();
 		}
 	}
@@ -142,7 +142,7 @@ public class Memory
 	{
 		if (_checkThread != null)
 		{
-			_logger.info("Received 'evaluate' notification from thread '"+Thread.currentThread().getName()+"', the memory monitor thread will 'now' evaluate the memory usage.");
+			_logger.info("Received 'evaluate' notification from thread '" + Thread.currentThread().getName() + "', the memory monitor thread will 'now' evaluate the memory usage.");
 			_checkThread.interrupt();
 		}
 		else
@@ -184,7 +184,7 @@ public class Memory
 			}
 			catch (InterruptedException ex)
 			{
-				_logger.info("Memory.evaluateAndWait(maxWaitTime="+maxWaitTime+"): was interupted. ex="+ex);
+				_logger.info("Memory.evaluateAndWait(maxWaitTime=" + maxWaitTime + "): was interupted. ex=" + ex);
 			}
 		}
 	}
@@ -244,7 +244,7 @@ public class Memory
 		
 							int mbLeftAfterGc = getMemoryLeftInMB();
 		
-							_logger.info("Free memory seems to be less that "+mbLeftAtStart+" MB. After Garbage Collection we got "+mbLeftAfterGc+" MB." + getMemoryInfoMB());
+							_logger.info("Free memory seems to be less that " + mbLeftAtStart + " MB. After Garbage Collection we got " + mbLeftAfterGc + " MB." + getMemoryInfoMB());
 		
 							// If still not enough memory, return true, which should mean TAKE ACTION;
 							if (mbLeftAfterGc <= _memLimitInMb)
@@ -271,12 +271,12 @@ public class Memory
 						
 						if (exceptionCount > exceptionCountExitThreshold)
 						{
-							_logger.info("Caught '"+t+"', so I will stop the memory checker thread. exceptionCount="+exceptionCount+", exceptionCountExitThreshold="+exceptionCountExitThreshold, t);
+							_logger.info("Caught '" + t + "', so I will stop the memory checker thread. exceptionCount=" + exceptionCount + ", exceptionCountExitThreshold=" + exceptionCountExitThreshold, t);
 							_running = false;
 						}
 						else
 						{
-							_logger.warn("Memory checker, Caught '"+t+"', skipping this and continuing... exceptionCount="+exceptionCount+", exceptionCountExitThreshold="+exceptionCountExitThreshold, t);
+							_logger.warn("Memory checker, Caught '" + t + "', skipping this and continuing... exceptionCount=" + exceptionCount + ", exceptionCountExitThreshold=" + exceptionCountExitThreshold, t);
 						}
 						// Reset execption count, if it has gone more that X milliseconds since last exception
 						if (System.currentTimeMillis() - lastExceptionTime > lastExceptionTimeThreshold)
@@ -333,7 +333,7 @@ public class Memory
 
 			int mbLeftAfterGc = getMemoryLeftInMB();
 
-			_logger.info("Free memory seems to be less that "+mbLeftAtStart+" MB. After Garbage Collection we got "+mbLeftAfterGc+" MB." + getMemoryInfoMB());
+			_logger.info("Free memory seems to be less that " + mbLeftAtStart + " MB. After Garbage Collection we got " + mbLeftAfterGc + " MB." + getMemoryInfoMB());
 
 			// If still not enough memory, return true, which should mean TAKE ACTION;
 			if (mbLeftAfterGc <= thresholdMbLeft)

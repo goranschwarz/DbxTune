@@ -45,7 +45,7 @@ extends MonitorMpstat
 	public String getCommand()
 	{
 		String cmd = super.getCommand();
-		return cmd != null ? cmd : "mpstat "+getSleepTime();
+		return cmd != null ? cmd : "mpstat " + getSleepTime();
 	}
 
 	@Override

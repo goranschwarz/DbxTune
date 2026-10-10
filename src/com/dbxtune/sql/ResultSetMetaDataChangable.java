@@ -93,7 +93,7 @@ implements ResultSetMetaData
 			break;
 
 		default:
-			throw new IllegalArgumentException("Unknown translation type "+jdbcColumnType);
+			throw new IllegalArgumentException("Unknown translation type " + jdbcColumnType);
 		}
 		setExtendedEntry(column, columnDisplaySize, columnType, columnTypeName, columnClassName);
 	}

@@ -100,7 +100,7 @@ public class CentralPcsDirectoryReceiver
 			_logger.info("Starting: Central PCS Directory Receiver.");
 
 			_receiveDirWatcher = new ReceiverDirectoryWatcher(dirName);
-			_receiveDirWatcher.setName("ReceiverDirectoryWatcher::"+dirName);
+			_receiveDirWatcher.setName("ReceiverDirectoryWatcher::" + dirName);
 			_receiveDirWatcher.setDaemon(true);
 			_receiveDirWatcher.start();
 		}

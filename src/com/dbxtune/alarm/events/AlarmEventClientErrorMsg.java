@@ -76,7 +76,7 @@ extends AlarmEvent
 				getSeverity(errorNum), 
 				getServiceState(errorNum), 
 				// Note: max length for the below message is 512
-				"The Client Error Message " + errorNum + " has been raised " + errorCount + " times for database '" + dbname + "' in last sample interval of " + cm.getSampleInterval() + " ms to client connection(s) from server '" + cm.getServerName() + "'. Threshold='"+threshold,
+				"The Client Error Message " + errorNum + " has been raised " + errorCount + " times for database '" + dbname + "' in last sample interval of " + cm.getSampleInterval() + " ms to client connection(s) from server '" + cm.getServerName() + "'. Threshold='" + threshold,
 				threshold // crossedThreshold... well this one do not have a number.
 				);
 

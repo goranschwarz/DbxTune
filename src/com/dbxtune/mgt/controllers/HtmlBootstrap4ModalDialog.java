@@ -69,7 +69,7 @@ public class HtmlBootstrap4ModalDialog
 		writer.println("                <div class='modal-footer'> ");
 		for (Button entry : getButtons())
 		{
-			writer.println("                    <button type='button' class='btn btn-outline-" + entry._buttonType + "' onclick='" + entry._functionNameOnClick +"();'>" + entry._name+ "</button> ");
+			writer.println("                    <button type='button' class='btn btn-outline-" + entry._buttonType + "' onclick='" + entry._functionNameOnClick + "();'>" + entry._name + "</button> ");
 		}
 		writer.println("                    &emsp;&emsp;&emsp;&emsp;&emsp; ");
 		writer.println("                    <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button> ");

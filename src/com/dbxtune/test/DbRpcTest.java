@@ -50,7 +50,7 @@ public class DbRpcTest
 			Connection conn = AseConnectionFactory.getConnection("localhost", 5000, null, "sa", "", "DbRpcTest", null, null);
 
 			String sql = "exec master..sp_help 'dbo.monLocks' ";
-			System.out.println("DO SQL: "+sql);
+			System.out.println("DO SQL: " + sql);
 
 //			AseSqlScript ss = new AseSqlScript(conn, 10);
 //			try	{ 
@@ -82,11 +82,11 @@ public class DbRpcTest
 				while(rs.next())
 				{
 					row++;
-					System.out.println("reading result set, row "+row);
+					System.out.println("reading result set, row " + row);
 				}
 				rs.close();
 	            int returnStat = stmt.getInt(1);
-	            System.out.println("PROC RC="+returnStat);
+	            System.out.println("PROC RC=" + returnStat);
 
 			}
 			catch (SQLException e)

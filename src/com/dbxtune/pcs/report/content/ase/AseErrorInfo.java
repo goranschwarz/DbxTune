@@ -332,13 +332,13 @@ public class AseErrorInfo extends AseAbstract
 		{
 			setProblemException(ex);
 
-			_logger.warn("Problems getting ErrorSqlText for ErrorStatus = "+errorNumber+": " + ex);
+			_logger.warn("Problems getting ErrorSqlText for ErrorStatus = " + errorNumber + ": " + ex);
 		} 
 		catch(ModelMissmatchException ex)
 		{
 			setProblemException(ex);
 
-			_logger.warn("Problems (merging into previous ResultSetTableModel) when getting ErrorSqlText for ErrorStatus = "+errorNumber+": " + ex);
+			_logger.warn("Problems (merging into previous ResultSetTableModel) when getting ErrorSqlText for ErrorStatus = " + errorNumber + ": " + ex);
 		} 
 	}
 

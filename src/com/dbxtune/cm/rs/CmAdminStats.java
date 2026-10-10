@@ -74,7 +74,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrameRs.TCP_GROUP_MC;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -109,7 +109,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmAdminStats(counterController, guiController);
 	}
@@ -604,9 +604,9 @@ extends CountersModel
 				System.out.println("     ====>>> NEW-INSTANCE. rowId=" + rowId + ": module='" + module + "': --- instance='" + instance + ".");
 				currentInstance = instance;
 
-				if (xrstm.addStrColumn ("Instance",   -1, false, 255, "")) System.out.println("    1>> module='"+module+"': Instance='"+currentInstance+"', addColumn='Instance'.");
-				if (xrstm.addIntColumn ("InstanceId", -1, false,      "")) System.out.println("    1>> module='"+module+"': Instance='"+currentInstance+"', addColumn='InstanceId'.");
-				if (xrstm.addLongColumn(name,         -1, true,       "")) System.out.println("    1>> module='"+module+"': Instance='"+currentInstance+"', addColumn='"+name+"'.");
+				if (xrstm.addStrColumn ("Instance",   -1, false, 255, "")) System.out.println("    1>> module='" + module + "': Instance='" + currentInstance + "', addColumn='Instance'.");
+				if (xrstm.addIntColumn ("InstanceId", -1, false,      "")) System.out.println("    1>> module='" + module + "': Instance='" + currentInstance + "', addColumn='InstanceId'.");
+				if (xrstm.addLongColumn(name,         -1, true,       "")) System.out.println("    1>> module='" + module + "': Instance='" + currentInstance + "', addColumn='" + name + "'.");
 
 				row = new ArrayList<Object>(xrstm.getColumnCount());
 				row.add(instance);
@@ -682,7 +682,7 @@ extends CountersModel
 		else if (whatData == DATA_DIFF) cs = getCounterSampleDiff();
 		else if (whatData == DATA_RATE) cs = getCounterSampleRate();
 		else
-			throw new RuntimeException("Only ABS, DIFF, or RATE data is available. you passed whatData="+whatData);
+			throw new RuntimeException("Only ABS, DIFF, or RATE data is available. you passed whatData=" + whatData);
 
 		// Find column Id's
 		List<String> colNames = cs.getColNames();

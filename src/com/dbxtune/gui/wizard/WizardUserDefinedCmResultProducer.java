@@ -114,7 +114,7 @@ implements WizardResultProducer
 			catch (IOException e)
 			{
 				summaryMessage += "\n\n##################################\n";
-				summaryMessage += "Problems when APPENDING User Defined Counter the to file '"+cfgFile+"'.\n";
+				summaryMessage += "Problems when APPENDING User Defined Counter the to file '" + cfgFile + "'.\n";
 				summaryMessage += e.getMessage() + "\n";
 				summaryMessage += "Opening the 'log viewer' so you can check other log messages.\n";
 			}

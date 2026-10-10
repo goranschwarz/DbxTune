@@ -127,13 +127,13 @@ extends CounterCollectorThreadAbstract
 		if (cmdLineUsername != null || cmdLinePassword != null || cmdLineServer != null)
 		{
 			String ppeStr = ConnectionDialog.PROPKEY_CONNECT_ON_STARTUP + 
-				"={dbmsUsername="+ conf.getProperty("cmdLine.dbmsUsername") + 
-				",dbmsPassword=" + conf.getProperty("cmdLine.dbmsPassword") + 
-				",dbmsServer="   + conf.getProperty("cmdLine.dbmsServer") + 
-				",sshUsername=" + conf.getProperty("cmdLine.sshUsername") + 
-				",sshPassword=" + conf.getProperty("cmdLine.sshPassword") +
-				",sshHostname=" + conf.getProperty("cmdLine.sshHostname") +
-				",sshPort="     + conf.getProperty("cmdLine.sshPort") +
+				"={dbmsUsername=" + conf.getProperty("cmdLine.dbmsUsername") + 
+				",dbmsPassword="  + conf.getProperty("cmdLine.dbmsPassword") + 
+				",dbmsServer="    + conf.getProperty("cmdLine.dbmsServer") + 
+				",sshUsername="   + conf.getProperty("cmdLine.sshUsername") + 
+				",sshPassword="   + conf.getProperty("cmdLine.sshPassword") +
+				",sshHostname="   + conf.getProperty("cmdLine.sshHostname") +
+				",sshPort="       + conf.getProperty("cmdLine.sshPort") +
 				"}";
 			MainFrame mf = MainFrame.getInstance();
 			if (mf != null)
@@ -152,7 +152,7 @@ extends CounterCollectorThreadAbstract
 				String port    = conf.getProperty("conn.port");
 				String user    = conf.getProperty("conn.username");
 				String aseServer = AseConnectionFactory.getServer();
-				_logger.info("Connecting ON-STARTUP to host='"+host+"', port='"+port+"', srvName='"+aseServer+"', user='"+user+"'. This by using a non visible ConnectionDialog.");
+				_logger.info("Connecting ON-STARTUP to host='" + host + "', port='" + port + "', srvName='" + aseServer + "', user='" + user + "'. This by using a non visible ConnectionDialog.");
 	
 				final MainFrame mf = MainFrame.getInstance();
 				if (mf != null)
@@ -226,7 +226,7 @@ extends CounterCollectorThreadAbstract
 			_logger.error("Problems initializing InMemoryCounterHandler,", e);
 		}
 
-		_logger.info("Thread '"+Thread.currentThread().getName()+"' starting...");
+		_logger.info("Thread '" + Thread.currentThread().getName() + "' starting...");
 
 		// What the collector is doing right now: shown in the MainFrame status bar
 		IRefreshStatus refreshStatus = new RefreshStatusGui();
@@ -300,19 +300,19 @@ extends CounterCollectorThreadAbstract
 
 								String str = getCounterController().getMonConnection().getDbmsServerName();
 
-								_logger.info("Re-connected to monitored server '"+str+"' after a 'lost connection'.");
+								_logger.info("Re-connected to monitored server '" + str + "' after a 'lost connection'.");
 								reconnectProblemsSleeptSeconds = 0;
 
 								MainFrame.getInstance().setStatus(MainFrame.ST_CONNECT);
 							}
 							catch (Exception e)
 							{
-								_logger.warn("Problem when re-connecting to monitored server. Caught: "+e);
-								_logger.debug("Problem when re-connecting to monitored server. Caught: "+e, e);
+								_logger.warn("Problem when re-connecting to monitored server. Caught: " + e);
+								_logger.debug("Problem when re-connecting to monitored server. Caught: " + e, e);
 								refreshStatus.setStatus("Re-connect FAILED, I will soon try again.");
 
 								// Send ALARM
-								sendAlarmServerIsDown(null, e, "Problem when re-connecting to monitored server. Caught: "+e);
+								sendAlarmServerIsDown(null, e, "Problem when re-connecting to monitored server. Caught: " + e);
 								
 								// On connect failure sleep for a little longer
 								int sleepTime = 5000;
@@ -380,7 +380,7 @@ extends CounterCollectorThreadAbstract
 						int shorterSleepTime = 5;
 						if (sleepTime > shorterSleepTime)
 						{
-							_logger.info("Setting initial sleep time from "+sleepTime+" seconds to "+shorterSleepTime+" seconds the first 3 times we refresh data, this so graphs initially has some representive value.");
+							_logger.info("Setting initial sleep time from " + sleepTime + " seconds to " + shorterSleepTime + " seconds the first 3 times we refresh data, this so graphs initially has some representive value.");
 							sleepTime = shorterSleepTime;
 						}
 					}
@@ -403,7 +403,7 @@ extends CounterCollectorThreadAbstract
 								doJavaGc = true;
 
 							if (_logger.isDebugEnabled())
-								_logger.debug("lastJavaGcTimeDiff="+lastJavaGcTimeDiff+", Timeout is "+doJavaGcAfterXMinutesValue*60*1000+", doJavaGc="+doJavaGc);
+								_logger.debug("lastJavaGcTimeDiff=" + lastJavaGcTimeDiff + ", Timeout is " + doJavaGcAfterXMinutesValue*60*1000 + ", doJavaGc=" + doJavaGc);
 						}
 
 						// Do Java Garbage Collection?
@@ -429,7 +429,7 @@ extends CounterCollectorThreadAbstract
 										System.gc();
 										_lastJavaGcWasDoneAt = System.currentTimeMillis();
 
-										_logger.debug("Just called: System.gc() and took "+(_lastJavaGcWasDoneAt - gcStartAt)+" ms. GUI progress was DISPLAYED.");
+										_logger.debug("Just called: System.gc() and took " + (_lastJavaGcWasDoneAt - gcStartAt) + " ms. GUI progress was DISPLAYED.");
 										return null;
 									}
 								};
@@ -441,15 +441,15 @@ extends CounterCollectorThreadAbstract
 								System.gc();
 								_lastJavaGcWasDoneAt = System.currentTimeMillis();
 
-								_logger.debug("Just called: System.gc() and took "+(_lastJavaGcWasDoneAt - gcStartAt)+" ms. NO gui progress...");
+								_logger.debug("Just called: System.gc() and took " + (_lastJavaGcWasDoneAt - gcStartAt) + " ms. NO gui progress...");
 							}
 
 							getCounterController().setWaitEvent("next sample period...");
-							refreshStatus.setStatus("Sleeping for "+i+" seconds, waiting for "+getCounterController().getWaitEvent());
+							refreshStatus.setStatus("Sleeping for " + i + " seconds, waiting for " + getCounterController().getWaitEvent());
 						}
 
 						if (MainFrame.getStatus(MainFrame.ST_STATUS_FIELD).startsWith("Sleeping for "))
-							refreshStatus.setStatus("Sleeping for "+i+" seconds, waiting for "+getCounterController().getWaitEvent());
+							refreshStatus.setStatus("Sleeping for " + i + " seconds, waiting for " + getCounterController().getWaitEvent());
 
 						// Update Watermarks on all the CM tabs
 //						for (CountersModel cm : _CMList)
@@ -549,19 +549,19 @@ extends CounterCollectorThreadAbstract
 //						long collectionTime = now - GetCounters.getInstance().getMonConnectionTime().getTime();
 						long collectionTime = now - CounterController.getInstance().getMonConnectionTime().getTime();
 
-						_logger.info("Disconnect from ASE. Stop time was set to '"+stopDateStr+"'. It was started at '"+startDateStr+"'.");
+						_logger.info("Disconnect from ASE. Stop time was set to '" + stopDateStr + "'. It was started at '" + startDateStr + "'.");
 						MainFrame.getInstance().action_disconnect();
 
 						SwingUtils.showInfoMessage(MainFrame.getInstance(), "Disconnected", 
 								"<html>" +
 								"<h1>Intentional Disconnect from ASE.</h1>" +
 								"<br>" +
-								"Connection was started at: <b>"+startDateStr+"</b> <br>" +
-								"Stop/disconnect time was set to: <b>"+stopDateStr+"</b> <br>" +
+								"Connection was started at: <b>" + startDateStr + "</b> <br>" +
+								"Stop/disconnect time was set to: <b>" + stopDateStr + "</b> <br>" +
 								"<br>" +
-								"Collection time was: "+TimeUtils.msToTimeStr("<b>%HH</b> Hours and <b>%MM</b> Minutes", collectionTime)+" <br>" +
+								"Collection time was: " + TimeUtils.msToTimeStr("<b>%HH</b> Hours and <b>%MM</b> Minutes", collectionTime) + " <br>" +
 								"<br>" +
-								"Time is now: <b>"+nowStr+"</b> <br>" +
+								"Time is now: <b>" + nowStr + "</b> <br>" +
 								"</html>");
 						break;
 					}
@@ -678,7 +678,7 @@ extends CounterCollectorThreadAbstract
 						try
 						{
 //System.out.println("############################## main: do-refresh: "+cm.getDisplayName());
-							refreshStatus.setStatus("Refreshing... "+cm.getDisplayName());
+							refreshStatus.setStatus("Refreshing... " + cm.getDisplayName());
 							cm.setSampleException(null);
 							cm.refresh();
 							
@@ -705,7 +705,7 @@ extends CounterCollectorThreadAbstract
 							cm.setSampleException(ex);
 
 							// Try to re-connect, otherwise we might "cancel" some ongoing alarms (due to the fact that we do 'end-of-scan' at the end of the loop)
-							_logger.info("Try reconnect. When refreshing the data for cm '"+cm.getName()+"', we got 'LostConnectionException'.");
+							_logger.info("Try reconnect. When refreshing the data for cm '" + cm.getName() + "', we got 'LostConnectionException'.");
 							DbxConnection conn = getCounterController().getMonConnection();
 							if (conn != null)
 							{
@@ -720,13 +720,13 @@ extends CounterCollectorThreadAbstract
 								}
 								catch(Exception reconnectEx)
 								{
-									_logger.error("Problem when reconnecting. Caught: "+reconnectEx);
+									_logger.error("Problem when reconnecting. Caught: " + reconnectEx);
 								}
 							}
 							// If we got an exception, go and check if we are still connected
 							if ( ! getCounterController().isMonConnected(true, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
 							{
-								_logger.warn("Breaking check loop, due to 'not-connected' (after trying to re-connect). Next check loop will do new connection. When refreshing the data for cm '"+getName()+"', we Caught an Exception and we are no longer connected to the monitored server.");
+								_logger.warn("Breaking check loop, due to 'not-connected' (after trying to re-connect). Next check loop will do new connection. When refreshing the data for cm '" + getName() + "', we Caught an Exception and we are no longer connected to the monitored server.");
 								break; // break: LOOP CM's
 							}
 						}
@@ -771,7 +771,7 @@ extends CounterCollectorThreadAbstract
 					if ( cm == null )
 						continue;
 
-					refreshStatus.setStatus("Post Refreshing... "+cm.getDisplayName());
+					refreshStatus.setStatus("Post Refreshing... " + cm.getDisplayName());
 
 					cm.doPostRefresh(refreshedCms);
 				}
@@ -783,7 +783,7 @@ extends CounterCollectorThreadAbstract
 				_logger.debug("---- Do Alarm handling...");
 				for (CountersModel cm : refreshedCms.values())
 				{
-					refreshStatus.setStatus("Alarm Handling... "+cm.getDisplayName());
+					refreshStatus.setStatus("Alarm Handling... " + cm.getDisplayName());
 
 					cm.wrapperFor_sendAlarmRequest();
 				}
@@ -905,17 +905,17 @@ extends CounterCollectorThreadAbstract
 					}
 					catch (Exception ex)
 					{
-						_logger.error("Problems during 're-connect' after a sample is finished. Caught: "+ex);
+						_logger.error("Problems during 're-connect' after a sample is finished. Caught: " + ex);
 					}
 				}
 
 				getCounterController().setWaitEvent("next sample period...");
-				refreshStatus.setStatus("Sleeping for "+MainFrame.getRefreshInterval()+" seconds.");
+				refreshStatus.setStatus("Sleeping for " + MainFrame.getRefreshInterval() + " seconds.");
 			}
 			catch (Exception e)
 			{
 				// System.out.println(Version.getAppName()+" : error in GetCounters loop. "+e);
-				_logger.error(Version.getAppName()+" : error in GetCounters loop ("+e.getMessage()+").", e);
+				_logger.error(Version.getAppName() + " : error in GetCounters loop (" + e.getMessage() + ").", e);
 			}
 			finally
 			{
@@ -923,7 +923,7 @@ extends CounterCollectorThreadAbstract
 			}
 		} // END: while(_running)
 
-		_logger.info("Thread '"+Thread.currentThread().getName()+"' ending...");
+		_logger.info("Thread '" + Thread.currentThread().getName() + "' ending...");
 	}
 
 	/**
@@ -966,7 +966,7 @@ extends CounterCollectorThreadAbstract
 					}
 					catch(Throwable t)
 					{
-						_logger.info("isMonConnectedWatchDog: caught: "+t);
+						_logger.info("isMonConnectedWatchDog: caught: " + t);
 					}
 				}
 			};

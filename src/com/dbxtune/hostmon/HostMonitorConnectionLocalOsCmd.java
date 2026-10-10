@@ -221,7 +221,7 @@ extends HostMonitorConnection
 		else if (LinuxUtilType.UPTIME.equals(utilType)) cmd = "uptime -V";
 		else if (LinuxUtilType.PS    .equals(utilType)) cmd = "ps -V";
 		else
-			throw new Exception("Unsupported utility of '"+utilType+"'.");
+			throw new Exception("Unsupported utility of '" + utilType + "'.");
 
 		
 		String output = execCommandOutputAsStr(cmd);

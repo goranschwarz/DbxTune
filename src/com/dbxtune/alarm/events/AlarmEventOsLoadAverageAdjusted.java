@@ -70,11 +70,11 @@ extends AlarmEvent
 				Version.getAppName(), // serviceType
 				hostname,             // serviceName
 				serviceInfoName,      // serviceInfo
-				rangeType+"",         // extraInfo
+				rangeType + "",         // extraInfo
 				AlarmEvent.Category.CPU,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Exhausting CPU Scheduling resources at OperatingSystem level on hostname '" + hostname + "'. adjLoadAverage: 1min=" + avg_1min + ", 5min=" + avg_5min + ", 15min=" + avg_15min + ", 30min=" + avg_30min + ", 60min=" + avg_60min + ". (threshold="+threshold+")",
+				"Exhausting CPU Scheduling resources at OperatingSystem level on hostname '" + hostname + "'. adjLoadAverage: 1min=" + avg_1min + ", 5min=" + avg_5min + ", 15min=" + avg_15min + ", 30min=" + avg_30min + ", 60min=" + avg_60min + ". (threshold=" + threshold + ")",
 				threshold);
 
 		// Set the raw data carier: run queue length average 1 minute

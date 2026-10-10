@@ -247,7 +247,7 @@ public class DbxCentralServerDescription
 		}
 		else
 		{
-			throw new FileNotFoundException("DbxCentral Server Configuration File '"+filename+"' did not exist.");
+			throw new FileNotFoundException("DbxCentral Server Configuration File '" + filename + "' did not exist.");
 		}
 		
 		return map;
@@ -313,7 +313,7 @@ public class DbxCentralServerDescription
 		}
 		else
 		{
-			throw new FileNotFoundException("DbxCentral Server Configuration File '"+filename+"' did not exist.");
+			throw new FileNotFoundException("DbxCentral Server Configuration File '" + filename + "' did not exist.");
 		}
 		
 		return foundRow;

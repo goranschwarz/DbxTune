@@ -279,19 +279,19 @@ extends AlarmWriterAbstract
 		String propname = null;
 
 		// property: name
-		propname = propPrefix+"name";
+		propname = propPrefix + "name";
 		_writeToFileName = conf.getProperty(propname, _name);
 
 		// WRITE init message, jupp a little late, but I wanted to grab the _name
-		_logger.info("Initializing the AlarmHandler.AlarmWriter component named '"+_name+"'.");
+		_logger.info("Initializing the AlarmHandler.AlarmWriter component named '" + _name + "'.");
 
 		// property: filename
 		// and then open the file.
-		propname = propPrefix+"filename";
+		propname = propPrefix + "filename";
 		_writeToFileName = conf.getProperty(propname);
 		if (_writeToFileName == null)
 		{
-			throw new Exception("The property '"+propname+"' is mandatory for the AlarmWriter named '"+getName()+"'.");
+			throw new Exception("The property '" + propname + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
 		}
 		try
 		{
@@ -301,7 +301,7 @@ extends AlarmWriterAbstract
 		}
 		catch (FileNotFoundException e)
 		{
-			String msg = "The AlarmWriter named '"+getName()+"' cant open the writer file '"+_writeToFileName+"'.";
+			String msg = "The AlarmWriter named '" + getName() + "' cant open the writer file '" + _writeToFileName + "'.";
 			_logger.error(msg);
 			throw new Exception(msg, e);
 		}
@@ -334,18 +334,18 @@ extends AlarmWriterAbstract
 			String className = key.replaceFirst(classPrefix, "");
 
 			// Add it to the mapper
-			_logger.debug("AddToMapper: key='"+className+"', val='"+val+"'.");
+			_logger.debug("AddToMapper: key='" + className + "', val='" + val + "'.");
 			_mappedAlarmClasses.put(className, val);
 		}
 		
 		if (_mappedAlarmClasses.size() == 0)
 		{
-			throw new Exception("There are NO properties named '"+classPrefix+"', you need atleast one. AlarmWriter named '"+getName()+"'.");
+			throw new Exception("There are NO properties named '" + classPrefix + "', you need atleast one. AlarmWriter named '" + getName() + "'.");
 		}
 
 		
 		// property: map.default
-		propname = propPrefix+"map.default";
+		propname = propPrefix + "map.default";
 		_unMapped = conf.getProperty(propname);
 	}
 
@@ -371,13 +371,13 @@ extends AlarmWriterAbstract
 	@Override
 	public void raise(AlarmEvent alarmEvent) 
 	{
-		_logger.debug(getName()+": -----RAISE-----: "+alarmEvent);
+		_logger.debug(getName() + ": -----RAISE-----: " + alarmEvent);
 	}
 
 	@Override
 	public void reRaise(AlarmEvent alarmEvent)
 	{
-		_logger.debug(getName()+": -----RE-RAISE-----: "+alarmEvent);
+		_logger.debug(getName() + ": -----RE-RAISE-----: " + alarmEvent);
 	}
 
 	/**
@@ -386,7 +386,7 @@ extends AlarmWriterAbstract
 	@Override
 	public void cancel(AlarmEvent alarmEvent) 
 	{
-		_logger.debug(getName()+": -----CANCEL-----: "+alarmEvent);
+		_logger.debug(getName() + ": -----CANCEL-----: " + alarmEvent);
 	}
 
 	/**
@@ -402,7 +402,7 @@ extends AlarmWriterAbstract
 	@Override
 	public void restoredAlarms(List<AlarmEvent> restoredAlarms)
 	{
-		_logger.debug(getName()+": -----RESTORED-ALARMS-----.");
+		_logger.debug(getName() + ": -----RESTORED-ALARMS-----.");
 		writeAlarmFile(restoredAlarms);
 	}
 
@@ -422,7 +422,7 @@ extends AlarmWriterAbstract
 	@Override
 	public void endOfScan(List<AlarmEvent> activeAlarms)
 	{
-		_logger.debug(getName()+": -----END-OF-SCAN-----.");
+		_logger.debug(getName() + ": -----END-OF-SCAN-----.");
 		writeAlarmFile(activeAlarms);
 	}
 
@@ -565,7 +565,7 @@ extends AlarmWriterAbstract
 		}
 		catch (FileNotFoundException e)
 		{
-			String msg = "The AlarmWriter named '"+getName()+"' cant open the writer file '"+_writeToFileName+"'.";
+			String msg = "The AlarmWriter named '" + getName() + "' cant open the writer file '" + _writeToFileName + "'.";
 			_logger.error(msg);
 			return;
 		}
@@ -633,7 +633,7 @@ extends AlarmWriterAbstract
 				// Do not print empty rows.
 				if ( ! thisRowEvent.equals("") )
 				{
-					_logger.debug("writeAlarmFile.ACTUAL_WRITE_TO_FILE: '"+thisRowEvent+"'.");
+					_logger.debug("writeAlarmFile.ACTUAL_WRITE_TO_FILE: '" + thisRowEvent + "'.");
 					
 					//----------------------------------
 					// FINALY WRITE TO THE FILE
@@ -669,7 +669,7 @@ extends AlarmWriterAbstract
 		mappedTo = mappedTo.replaceAll( "\\?serviceType\\?", ae.getServiceType() );
 		mappedTo = mappedTo.replaceAll( "\\?serviceName\\?", ae.getServiceName() );
 		mappedTo = mappedTo.replaceAll( "\\?serviceInfo\\?", ae.getServiceInfo() );
-		mappedTo = mappedTo.replaceAll( "\\?extraInfo\\?",   ae.getExtraInfo()+"" );
+		mappedTo = mappedTo.replaceAll( "\\?extraInfo\\?",   ae.getExtraInfo() + "" );
 		mappedTo = mappedTo.replaceAll( "\\?category\\?",    ae.getCategory().toString() );
 		mappedTo = mappedTo.replaceAll( "\\?severity\\?",    ae.getSeverity().toString() );
 		mappedTo = mappedTo.replaceAll( "\\?state\\?",       ae.getState().toString() );

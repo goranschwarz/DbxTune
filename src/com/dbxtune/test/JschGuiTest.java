@@ -368,7 +368,7 @@ public class JschGuiTest
 //	    			JFileChooser fc = new JFileChooser(fsv);
 					fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
 //					fc.setApproveButtonText("Choose");
-					fc.setDialogTitle("SSH Remote Files at "+hostPortLabel+" (NOTE: This is NOT working in a good manner)");
+					fc.setDialogTitle("SSH Remote Files at " + hostPortLabel + " (NOTE: This is NOT working in a good manner)");
 //					fc.setAccessory( new JLabel("NOTE: This is NOT working in a good manner...") );
 					
 //					String str = _logFilename_txt.getText();
@@ -594,10 +594,10 @@ public class JschGuiTest
 			try {port = Integer.parseInt(portStr);} 
 			catch(NumberFormatException ignore) {}
 
-System.out.println("sshConnect(): host='"+host+"', port='"+port+"', user='"+user+"', passwd='"+passwd+"', keyFile='"+keyFile+"'");
+System.out.println("sshConnect(): host='" + host + "', port='" + port + "', user='" + user + "', passwd='" + passwd + "', keyFile='" + keyFile + "'");
 			
 			final SshConnection sshConn = new SshConnection(host, port, user, passwd, keyFile);
-			WaitForExecDialog wait = new WaitForExecDialog(this, "SSH Connecting to "+host+", with user "+user);
+			WaitForExecDialog wait = new WaitForExecDialog(this, "SSH Connecting to " + host + ", with user " + user);
 			sshConn.setWaitForDialog(wait);
 
 			BgExecutor waitTask = new BgExecutor(wait)
@@ -611,7 +611,7 @@ System.out.println("sshConnect(): host='"+host+"', port='"+port+"', user='"+user
 					}
 					catch (Exception e) 
 					{
-						SwingUtils.showErrorMessage("SSH Connect failed", "SSH Connection to "+host+":"+portStr+" with user '"+user+"' Failed.", e);
+						SwingUtils.showErrorMessage("SSH Connect failed", "SSH Connection to " + host + ":" + portStr + " with user '" + user + "' Failed.", e);
 //						sshConn = null;
 					}
 					return null;

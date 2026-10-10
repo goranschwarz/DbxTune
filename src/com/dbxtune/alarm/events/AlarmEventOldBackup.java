@@ -71,7 +71,7 @@ extends AlarmEvent
 				AlarmEvent.ServiceState.UP, 
 				"Old or No Database Backup found in '" + cm.getServerName() + "', dbname='" + dbname + "', Backup Age in Hours '" + age + "'" 
 						+ (age == -1 ? ", (where -1 means: Since ASE was started)" : "") 
-						+ ", lastBackupStartOrEndTime='" + lastBackupStartOrEndTime + "'. (thresholdInHours="+thresholdInHours+")",
+						+ ", lastBackupStartOrEndTime='" + lastBackupStartOrEndTime + "'. (thresholdInHours=" + thresholdInHours + ")",
 						thresholdInHours);
 
 		// Adjust the Alarm Full Duration with X seconds

@@ -67,7 +67,7 @@ extends TabularCntrPanel
 		String colorStr = null;
 
 		// YELLOW = SYSTEM process
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.system");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.system");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -81,7 +81,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.YELLOW), null));
 
 		// GREEN = RUNNING or RUNNABLE process
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.running");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.running");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -96,7 +96,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.GREEN), null));
 
 		// ORANGE = spid has OpenTrans
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.opentran");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.opentran");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -132,7 +132,7 @@ extends TabularCntrPanel
 
 				l_sampleSystemThreads_chk  .setSelected(conf.getBooleanProperty(CmTempdbSpidUsage.PROPKEY_sample_systemThreads   , CmTempdbSpidUsage.DEFAULT_sample_systemThreads));
 				l_sampleSqlText_chk        .setSelected(conf.getBooleanProperty(CmTempdbSpidUsage.PROPKEY_sample_sqlText         , CmTempdbSpidUsage.DEFAULT_sample_sqlText));      
-				l_sampleTotalUsageMbMin_txt.setText(""+ conf.getDoubleProperty (CmTempdbSpidUsage.PROPKEY_sample_TotalUsageMb_min, CmTempdbSpidUsage.DEFAULT_sample_TotalUsageMb_min));
+				l_sampleTotalUsageMbMin_txt.setText("" + conf.getDoubleProperty (CmTempdbSpidUsage.PROPKEY_sample_TotalUsageMb_min, CmTempdbSpidUsage.DEFAULT_sample_TotalUsageMb_min));
 
 				// ReInitialize the SQL
 				getCm().setSql(null);
@@ -146,7 +146,7 @@ extends TabularCntrPanel
 		l_sampleSystemThreads_chk   = new JCheckBox ("Show system processes",                                 conf == null ? CmTempdbSpidUsage.DEFAULT_sample_systemThreads                       : conf.getBooleanProperty(CmTempdbSpidUsage.PROPKEY_sample_systemThreads                      , CmTempdbSpidUsage.DEFAULT_sample_systemThreads));
 		l_sampleSqlText_chk         = new JCheckBox ("Sample Last Executed SQL Text",                         conf == null ? CmTempdbSpidUsage.DEFAULT_sample_sqlText                             : conf.getBooleanProperty(CmTempdbSpidUsage.PROPKEY_sample_sqlText                            , CmTempdbSpidUsage.DEFAULT_sample_sqlText));
 		l_sampleTotalUsageMbMin_lbl = new JLabel    ("Total Usage Mb Min Value");
-		l_sampleTotalUsageMbMin_txt = new JTextField(""+(                                                     conf == null ? CmTempdbSpidUsage.DEFAULT_sample_TotalUsageMb_min                    : conf.getDoubleProperty (CmTempdbSpidUsage.PROPKEY_sample_TotalUsageMb_min                   , CmTempdbSpidUsage.DEFAULT_sample_TotalUsageMb_min)), 5);
+		l_sampleTotalUsageMbMin_txt = new JTextField("" + (                                                     conf == null ? CmTempdbSpidUsage.DEFAULT_sample_TotalUsageMb_min                    : conf.getDoubleProperty (CmTempdbSpidUsage.PROPKEY_sample_TotalUsageMb_min                   , CmTempdbSpidUsage.DEFAULT_sample_TotalUsageMb_min)), 5);
 //		l_sampleIntObj_chk          = new JCheckBox ("Include 'Sess/TaskInternalObjectMb' in 'TotalUsageMb'", conf == null ? CmTempdbSpidUsage.DEFAULT_sample_TotalUsageMb_includeInternalObjects : conf.getBooleanProperty(CmTempdbSpidUsage.PROPKEY_sample_TotalUsageMb_includeInternalObjects, CmTempdbSpidUsage.DEFAULT_sample_TotalUsageMb_includeInternalObjects));
 
 		l_sampleSystemThreads_chk.setName(CmTempdbSpidUsage.PROPKEY_sample_systemThreads);
@@ -228,8 +228,8 @@ extends TabularCntrPanel
 				catch (NumberFormatException nfe)
 				{
 					dblVal = CmTempdbSpidUsage.DEFAULT_sample_TotalUsageMb_min;
-					SwingUtils.showWarnMessage(CmTempdbSpidUsagePanel.this, "Not a Number", "<html>This must be a number, you entered '"+strVal+"'.<br>Setting to default value '"+dblVal+"'.</html>", nfe);
-					l_sampleTotalUsageMbMin_txt.setText(dblVal+"");
+					SwingUtils.showWarnMessage(CmTempdbSpidUsagePanel.this, "Not a Number", "<html>This must be a number, you entered '" + strVal + "'.<br>Setting to default value '" + dblVal + "'.</html>", nfe);
+					l_sampleTotalUsageMbMin_txt.setText(dblVal + "");
 				}
 				conf.setProperty(CmTempdbSpidUsage.PROPKEY_sample_TotalUsageMb_min, dblVal);
 				conf.save();

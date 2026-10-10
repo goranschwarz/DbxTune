@@ -192,7 +192,7 @@ public class AseLicensInfo
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems when checking grace period. SQL issued '"+sql+"' SQLException Error="+ex.getErrorCode()+", Msg='"+StringUtil.stripNewLine(ex.getMessage())+"'.");
+			_logger.warn("Problems when checking grace period. SQL issued '" + sql + "' SQLException Error=" + ex.getErrorCode() + ", Msg='" + StringUtil.stripNewLine(ex.getMessage()) + "'.");
 			return null;
 		}
 	}
@@ -235,7 +235,7 @@ public class AseLicensInfo
 					// add newline if we have several rows
 					warningStr = warningStr == null ? "" : warningStr + "\n";
 
-					warningStr += "Server '"+aseSrvName+"' is in grace period and will stop working at '"+licGraceExpiry+"'. (licName='"+licName+"', licEdition='"+licEdition+"', licType='"+licType+"').";
+					warningStr += "Server '" + aseSrvName + "' is in grace period and will stop working at '" + licGraceExpiry + "'. (licName='" + licName + "', licEdition='" + licEdition + "', licType='" + licType + "').";
 				}
 			}
 			rs.close();
@@ -245,8 +245,8 @@ public class AseLicensInfo
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems when checking grace period. SQL issued '"+sql+"' SQLException Error="+ex.getErrorCode()+", Msg='"+StringUtil.stripNewLine(ex.getMessage())+"'.");
-			return "Problems when checking grace period. ("+StringUtil.stripNewLine(ex.getMessage()+").");
+			_logger.warn("Problems when checking grace period. SQL issued '" + sql + "' SQLException Error=" + ex.getErrorCode() + ", Msg='" + StringUtil.stripNewLine(ex.getMessage()) + "'.");
+			return "Problems when checking grace period. (" + StringUtil.stripNewLine(ex.getMessage() + ").");
 		}
 	}
 }

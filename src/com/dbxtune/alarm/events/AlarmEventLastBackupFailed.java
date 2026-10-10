@@ -44,7 +44,7 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Last " + type + " Backup FAILED in Server '" + cm.getServerName() + "' and dbname '" + dbname + "'. (threshold="+threshold+")",
+				"Last " + type + " Backup FAILED in Server '" + cm.getServerName() + "' and dbname '" + dbname + "'. (threshold=" + threshold + ")",
 				threshold
 				);
 

@@ -140,11 +140,11 @@ public class MailTest
 			// SEND
 			email.send();
 
-			System.out.println("Sent mail message: plainSizeKb="+msgBodyTextSizeKb+", htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+smtpHostname+"', to='"+to+"', cc='"+cc+"', subject='"+msgSubject+"'.");
+			System.out.println("Sent mail message: plainSizeKb=" + msgBodyTextSizeKb + ", htmlSizeKb=" + msgBodyHtmlSizeKb + ", host='" + smtpHostname + "', to='" + to + "', cc='" + cc + "', subject='" + msgSubject + "'.");
 		}
 		catch (Exception ex)
 		{
-			System.out.println("Problems sending mail (plainSizeKb="+msgBodyTextSizeKb+", htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+smtpHostname+"', to='"+to+"', cc='"+cc+"', subject='"+msgSubject+"').");
+			System.out.println("Problems sending mail (plainSizeKb=" + msgBodyTextSizeKb + ", htmlSizeKb=" + msgBodyHtmlSizeKb + ", host='" + smtpHostname + "', to='" + to + "', cc='" + cc + "', subject='" + msgSubject + "').");
 			ex.printStackTrace();
 		}
 		

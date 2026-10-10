@@ -305,7 +305,7 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 
 		panel.setToolTipText(
 			"<html>" +
-			"Commands from all SQLWindows are stored in the shared history file '"+getFileName()+"'.<br>" +
+			"Commands from all SQLWindows are stored in the shared history file '" + getFileName() + "'.<br>" +
 			"The <i>Source</i> column in the table indicates from which SQLWindow Session it was executed in.<br>" +
 			"<br>" +
 			"<b>Tip</b>: Drag command(s) from any History Table Window and Drop them on the 'execute' button in any SQLWindow to execute them." +
@@ -468,7 +468,7 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 						        "<tr> <td><b>Source: </b></td> <td>" + source + "</td> </tr>" +
 						      "</table>" +
 						      "<hr>" +
-						      "<pre>"+cmd+"</pre>" +
+						      "<pre>" + cmd + "</pre>" +
 						      "</html>";
 					}
 				}
@@ -877,7 +877,7 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 			} 
 			catch (PatternSyntaxException pse)
 			{
-				_logger.warn("JXTable: setRowFilter(): Incorrect pattern syntax '"+lookupFieldText+"'.");
+				_logger.warn("JXTable: setRowFilter(): Incorrect pattern syntax '" + lookupFieldText + "'.");
 			}
 		}
 		
@@ -899,7 +899,7 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 			} 
 			catch (PatternSyntaxException pse)
 			{
-				_logger.warn("JXTable: setRowFilter(): Incorrect pattern syntax '"+lookupFieldText+"'.");
+				_logger.warn("JXTable: setRowFilter(): Incorrect pattern syntax '" + lookupFieldText + "'.");
 			}
 		}
 
@@ -1077,7 +1077,7 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 		int limitLen = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_ENTRY_LIMIT_SIZE, DEFAULT_ENTRY_LIMIT_SIZE);
 		if (cmdLen > limitLen)
 		{
-			_logger.info("Adding SQL entry to the history was skipped. It was to big, size limit is set to "+limitLen+" and the Command length was "+cmdLen+" bytes.");
+			_logger.info("Adding SQL entry to the history was skipped. It was to big, size limit is set to " + limitLen + " and the Command length was " + cmdLen + " bytes.");
 			return;
 		}
 		// Only append to the history file if it's a NEW SQL Statement
@@ -1095,7 +1095,7 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 		}
 		catch (Throwable e)
 		{
-			_logger.warn("Problems writing to the history file '"+getFileName()+"'. Continuing without appending record to the history file. It will still be available in the History Table, just not persisted to the history file. Caught: "+e);
+			_logger.warn("Problems writing to the history file '" + getFileName() + "'. Continuing without appending record to the history file. It will still be available in the History Table, just not persisted to the history file. Caught: " + e);
 
 			// Add it to the GUI at least...
 			CommandHistoryEntry entry = new CommandHistoryEntry(null, server, username, dbname, cmd, null, null);
@@ -1108,7 +1108,7 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 				String msgHtml = 
 					"<html>" +
 					"<h2>Problems writing to the history file</h2>" +
-					"Filename: <code>"+getFileName()+"</code><br>" +
+					"Filename: <code>" + getFileName() + "</code><br>" +
 					"<br>" +
 					"Continuing without appending record to the history file. <br>" +
 					"The Command will still be available in the History Table, just not persisted to the history file.<br>" +
@@ -1328,7 +1328,7 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 	{
 		try
 		{
-			_logger.warn("Writing a new history file '"+fileName+"'. Entries that will be written "+list.size()+".");
+			_logger.warn("Writing a new history file '" + fileName + "'. Entries that will be written " + list.size() + ".");
 			@SuppressWarnings("resource")
 			RandomAccessFile raf = new RandomAccessFile(fileName, "rw");
 			FileChannel channel = raf.getChannel();
@@ -1396,7 +1396,7 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 		}
 		catch (IOException e)
 		{
-			_logger.warn("Problems writing to history file '"+getFileName()+"'. No history entry was added. Caught: "+e);
+			_logger.warn("Problems writing to history file '" + getFileName() + "'. No history entry was added. Caught: " + e);
 			throw e;
 		}
 	}
@@ -1476,7 +1476,7 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 			}
 			catch (Exception e)
 			{
-				_logger.warn("Problems creating the file '"+_fileName+"'");
+				_logger.warn("Problems creating the file '" + _fileName + "'");
 				return;
 			}
 			_fileTail.start();
@@ -1532,11 +1532,11 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 			}
 			catch (SAXException e)
 			{
-				_logger.warn("Problems Creating History XML Parser '"+getFileName()+"'. Caught: "+e, e);
+				_logger.warn("Problems Creating History XML Parser '" + getFileName() + "'. Caught: " + e, e);
 			}
 			catch (ParserConfigurationException e)
 			{
-				_logger.warn("Problems Creating History XML Parser '"+getFileName()+"'. Caught: "+e, e);
+				_logger.warn("Problems Creating History XML Parser '" + getFileName() + "'. Caught: " + e, e);
 			}
 		}
 
@@ -1551,11 +1551,11 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 			}
 			catch (SAXException e)
 			{
-				_logger.warn("Problems Parsing Command history Entry '"+entry+"'. Caught: "+e, e);
+				_logger.warn("Problems Parsing Command history Entry '" + entry + "'. Caught: " + e, e);
 			}
 			catch (IOException e)
 			{
-				_logger.warn("Problems Parsing Command history Entry '"+entry+"'. Caught: "+e, e);
+				_logger.warn("Problems Parsing Command history Entry '" + entry + "'. Caught: " + e, e);
 			}
 			return _lastEntry;
 		}
@@ -1585,11 +1585,11 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 			}
 			catch (SAXException e)
 			{
-				_logger.warn("Problems Parsing Command history File '"+fileName+"'. Caught: "+e, e);
+				_logger.warn("Problems Parsing Command history File '" + fileName + "'. Caught: " + e, e);
 			}
 			catch (IOException e)
 			{
-				_logger.warn("Problems Parsing Command history File '"+fileName+"'. Caught: "+e, e);
+				_logger.warn("Problems Parsing Command history File '" + fileName + "'. Caught: " + e, e);
 			}
 			return _entryList;
 		}
@@ -1673,7 +1673,7 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 		String dateStr = new SimpleDateFormat("yyyy-MM-dd_HHmm").format(new Date(System.currentTimeMillis()));
 
 		String fromFileStr   = fileName;
-		String backupFileStr = fileName + ".backup."+dateStr+".xml";
+		String backupFileStr = fileName + ".backup." + dateStr + ".xml";
 
 		File fromFile   = new File(fromFileStr);
 //		File backupFile = new File(backupFileStr);
@@ -1686,8 +1686,8 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 		if (fromFileSize > rSizeInKb*1024)
 		try
 		{
-			_logger.info("History file will be reduced to contain only "+saveCount+" entries. Current File Size is "+(fromFileSize/1024)+" KB. The reduction only happens if file is larger than "+rSizeInKb+" KB.");
-			_logger.info("History file will be copied from '"+fromFileStr+"', to '"+backupFileStr+"'.");
+			_logger.info("History file will be reduced to contain only " + saveCount + " entries. Current File Size is " + (fromFileSize/1024) + " KB. The reduction only happens if file is larger than " + rSizeInKb + " KB.");
+			_logger.info("History file will be copied from '" + fromFileStr + "', to '" + backupFileStr + "'.");
 			FileUtils.copy(fromFileStr, backupFileStr);
 
 			// Parse the file into a List
@@ -1697,11 +1697,11 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 			// Write the List
 			newHistoryFile(fromFileStr, entryList);
 
-			_logger.info("History file reduction was successfully for file '"+fromFileSize+"'.");
+			_logger.info("History file reduction was successfully for file '" + fromFileSize + "'.");
 		}
 		catch (IOException e)
 		{
-			_logger.warn("Problem copy the history file to a backup. from '"+fromFileStr+"', to '"+backupFileStr+"'. Caught: "+e, e);
+			_logger.warn("Problem copy the history file to a backup. from '" + fromFileStr + "', to '" + backupFileStr + "'. Caught: " + e, e);
 		}
 	}
 

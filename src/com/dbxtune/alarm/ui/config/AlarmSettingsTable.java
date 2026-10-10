@@ -88,7 +88,7 @@ public class AlarmSettingsTable extends JXTable
 		Configuration conf = Configuration.getCombinedConfiguration();
 		String colorStr = null;
 
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.isNotDefaultValue");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.isNotDefaultValue");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override

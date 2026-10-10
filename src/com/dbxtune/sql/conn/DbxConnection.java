@@ -269,13 +269,13 @@ implements Connection, AutoCloseable
 			}
 			catch (Exception ex)
 			{
-				_logger.warn( "Can't locate JDBC driver '"+driverClass+"' for URL='"+url+"' using 'DriverManager.getDriver(url)' Lets continue, but first try to load the class '"+driverClass+"' using 'Class.forName(driver).newInstance()' then connect to it using: DriverManager.getConnection(url, props); Caught="+ex);
-				_logger.debug("Can't locate JDBC driver '"+driverClass+"' for URL='"+url+"' using 'DriverManager.getDriver(url)' Lets continue, but first try to load the class '"+driverClass+"' using 'Class.forName(driver).newInstance()' then connect to it using: DriverManager.getConnection(url, props); Caught="+ex, ex);
+				_logger.warn( "Can't locate JDBC driver '" + driverClass + "' for URL='" + url + "' using 'DriverManager.getDriver(url)' Lets continue, but first try to load the class '" + driverClass + "' using 'Class.forName(driver).newInstance()' then connect to it using: DriverManager.getConnection(url, props); Caught=" + ex);
+				_logger.debug("Can't locate JDBC driver '" + driverClass + "' for URL='" + url + "' using 'DriverManager.getDriver(url)' Lets continue, but first try to load the class '" + driverClass + "' using 'Class.forName(driver).newInstance()' then connect to it using: DriverManager.getConnection(url, props); Caught=" + ex, ex);
 
 				try { Class.forName(driverClass).newInstance(); }
 				catch( ClassNotFoundException | InstantiationException | IllegalAccessException ex2 )
 				{
-					_logger.warn("DriverManager.getDriver(url), threw Exception '"+ex+"', so we did 'Class.forName(driverClass).newInstance()', and that caused: "+ex2);
+					_logger.warn("DriverManager.getDriver(url), threw Exception '" + ex + "', so we did 'Class.forName(driverClass).newInstance()', and that caused: " + ex2);
 				}
 				//JdbcDriverHelper.newDriverInstance(driverClass);
 			}
@@ -349,7 +349,7 @@ implements Connection, AutoCloseable
 				}
 			}
 
-			_logger.debug("getConnection to driver='"+driverClass+"', url='"+url+"', user='"+user+"'.");
+			_logger.debug("getConnection to driver='" + driverClass + "', url='" + url + "', user='" + user + "'.");
 //System.out.println("getConnection to driver='"+driverClass+"', url='"+url+"', user='"+user+"'.");
 //new Exception("DUMMY EX to get CALLSTACK").printStackTrace();
 
@@ -386,7 +386,7 @@ implements Connection, AutoCloseable
 				if (sshTunnelInfo != null)
 				{
 					String msg = "SSH Tunnel is NOT-YET-IMPLEMENTED when guiOwner is null, for now: Please pass GUI Owner for this to work.";
-					System.out.println("WARNING: "+msg);
+					System.out.println("WARNING: " + msg);
 					_logger.warn(msg, new Exception(msg));
 				}
 
@@ -538,7 +538,7 @@ implements Connection, AutoCloseable
 		// If it's already a DbxConnection, lets simply exit
 		if (conn instanceof DbxConnection)
 		{
-new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection... <<<----- simply getting out of here...").printStackTrace();
+new Exception("createDbxConnection(conn='" + conn + "'): is ALREADY A DbxConnection... <<<----- simply getting out of here...").printStackTrace();
 			return (DbxConnection)conn;
 		}
 
@@ -547,7 +547,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		try
 		{
 			productName = conn.getMetaData().getDatabaseProductName();
-			_logger.debug("createDbxConnection(conn).getDatabaseProductName() returns: '"+productName+"'.");
+			_logger.debug("createDbxConnection(conn).getDatabaseProductName() returns: '" + productName + "'.");
 
 			// The Postgres Wire Protocol is used by some other DBMS's as well: CockroachDB, H2... 
 			if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_POSTGRES))
@@ -594,7 +594,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 					rs.close();
 					stmt.close();
 
-					_logger.info("Replication Server with RSSD at '"+str1+"."+str2+"'.");
+					_logger.info("Replication Server with RSSD at '" + str1 + "." + str2 + "'.");
 
 					// If the above statement succeeds, then it must be a RepServer without metadata installed.
 					productName = DbUtils.DB_PROD_NAME_SYBASE_RS;
@@ -616,7 +616,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
     					rs.close();
     					stmt.close();
     
-    					_logger.info("Replication Agent Version '"+str1+"'.");
+    					_logger.info("Replication Agent Version '" + str1 + "'.");
     
     					// If the above statement succeeds, then it must be a RepServer without metadata installed.
     					productName = DbUtils.DB_PROD_NAME_SYBASE_RAX;
@@ -638,7 +638,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
     						str1 = rs.getString(1);
     						str2 = rs.getString(2);
     						
-    						_logger.info("DR Agent Version info type='"+str1+"', version='"+str2+"'.");
+    						_logger.info("DR Agent Version info type='" + str1 + "', version='" + str2 + "'.");
 
     						if ("DR Agent".equals(str1))
     						{
@@ -664,7 +664,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
     					{
     						str1 = rs.getString(1);
     						
-        					_logger.info("Data Assurance Version '"+str1+"'.");
+        					_logger.info("Data Assurance Version '" + str1 + "'.");
 
     						if (StringUtil.hasValue(str1))
     						{
@@ -690,7 +690,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
     					{
     						str1 = rs.getString(1);
     						
-        					_logger.info("unknown-srv-type: @@version='"+str1+"'.");
+        					_logger.info("unknown-srv-type: @@version='" + str1 + "'.");
 
     						if (StringUtil.hasValue(str1))
     						{
@@ -709,7 +709,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 			}
 			
 			if (StringUtil.isNullOrBlank(productName))
-				_logger.warn("Problems getting database product name. conn='"+conn+"', Caught: "+e);
+				_logger.warn("Problems getting database product name. conn='" + conn + "', Caught: " + e);
 		}
 
 
@@ -971,7 +971,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 			if (c == leftChar && !inSingleQuotes)
 				inDbmsQicCount++;
 
-System.out.println("i="+i+", c='"+c+"', cc='"+cc+"', inSingleQuotes="+inSingleQuotes+", inDbmsQicCount="+inDbmsQicCount);
+System.out.println("i=" + i + ", c='" + c + "', cc='" + cc + "', inSingleQuotes=" + inSingleQuotes + ", inDbmsQicCount=" + inDbmsQicCount);
 			if (inSingleQuotes)
 			{
 				sb.append(c);
@@ -984,7 +984,7 @@ System.out.println("i="+i+", c='"+c+"', cc='"+cc+"', inSingleQuotes="+inSingleQu
 				if (c == rightChar && cc != rightChar)
 					inDbmsQicCount--;
 
-System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDbmsQicCount);
+System.out.println(" ---- i=" + i + ", c='" + c + "', cc='" + cc + "', inDbmsQicCount=" + inDbmsQicCount);
 				// If it's the FIRST or LAST character of the Quoted String then REPLACE with DBMS Quotes
 				if (inDbmsQicCount == 1 || inDbmsQicCount == 0)
 				{
@@ -1236,7 +1236,7 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 
 		// Check if it's the same DbxConnection subclass
 		if ( ! this.getClass().getName().equals( newConn.getClass().getName() ) )
-			throw new Exception("Connection succeeded, but It's not the same subclass as previously... Can't continue. thisClass='"+this.getClass().getName()+"', newClass='"+newConn.getClass().getName()+"'.");
+			throw new Exception("Connection succeeded, but It's not the same subclass as previously... Can't continue. thisClass='" + this.getClass().getName() + "', newClass='" + newConn.getClass().getName() + "'.");
 		
 		// Set the internal Connection again
 		_conn = newConn._conn;
@@ -1257,7 +1257,7 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 		String title = "Checking DB Connection";
 		
 		if (_logger.isDebugEnabled())
-			_logger.debug("DbxConnection.isConnectionOk(guiMsgOnError="+guiMsgOnError+", guiOwner='"+guiOwner+"'): _conn="+_conn+", _conn.class="+(_conn==null?"-null-":_conn.getClass().getName())+", this.class="+this.getClass().getName()+", _databaseProductName='"+_databaseProductName+"'.");
+			_logger.debug("DbxConnection.isConnectionOk(guiMsgOnError=" + guiMsgOnError + ", guiOwner='" + guiOwner + "'): _conn=" + _conn + ", _conn.class=" + (_conn==null?"-null-":_conn.getClass().getName()) + ", this.class=" + this.getClass().getName() + ", _databaseProductName='" + _databaseProductName + "'.");
 
 		if ( _conn == null ) 
 		{	
@@ -1397,7 +1397,7 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 		try
 		{
 			String str = _conn.getMetaData().getDatabaseProductName();
-			_logger.debug("getDatabaseProductName() returns: '"+str+"'.");
+			_logger.debug("getDatabaseProductName() returns: '" + str + "'.");
 			
 			_databaseProductName = str;
 			return str; 
@@ -1430,7 +1430,7 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 //				}
 //				catch(SQLException ignoreRsExceptions) {}
 //			}
-			_logger.debug("getDatabaseProductName() Caught: "+e, e);
+			_logger.debug("getDatabaseProductName() Caught: " + e, e);
 			throw e;
 		}
 	}
@@ -1465,7 +1465,7 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 		try
 		{
 			String str = _conn.getMetaData().getDatabaseProductVersion();
-			_logger.debug("getDatabaseProductVersion() returns: '"+str+"'.");
+			_logger.debug("getDatabaseProductVersion() returns: '" + str + "'.");
 			
 			_databaseProductVersion = str;
 			return str; 
@@ -1486,7 +1486,7 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 					rs.close();
 					stmt.close();
 
-					_logger.info("Replication Server with Version string '"+str+"'.");
+					_logger.info("Replication Server with Version string '" + str + "'.");
 
 					// If the above statement succeeds, then it must be a RepServer without metadata installed.
 					_databaseProductVersion = str;
@@ -1508,7 +1508,7 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 					rs.close();
 					stmt.close();
 
-					_logger.info("Replication Agent Version '"+str1+"'.");
+					_logger.info("Replication Agent Version '" + str1 + "'.");
 
 					// If the above statement succeeds, then it must be a RepServer without metadata installed.
 					_databaseProductVersion = str1;
@@ -1527,7 +1527,7 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 					{
 						str1 = rs.getString(1);
 						
-    					_logger.info("Data Assurance Version '"+str1+"'.");
+    					_logger.info("Data Assurance Version '" + str1 + "'.");
 
 						if (StringUtil.hasValue(str1))
 						{
@@ -1554,7 +1554,7 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 						str1 = rs.getString(1);
 						str2 = rs.getString(2);
 						
-						_logger.info("DR Agent Version info type='"+str1+"', version='"+str2+"'.");
+						_logger.info("DR Agent Version info type='" + str1 + "', version='" + str2 + "'.");
 
 						if ("DR Agent".equals(str1))
 						{
@@ -1593,7 +1593,7 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 //				}
 //				catch(SQLException ignoreRsExceptions) {}
 //			}
-			_logger.debug("getDatabaseProductVersion() Caught: "+e, e);
+			_logger.debug("getDatabaseProductVersion() Caught: " + e, e);
 			throw e;
 		}
 	}
@@ -1612,7 +1612,7 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 		}
 		catch (SQLException e)
 		{
-			_logger.debug("isDatabaseProduct() Caught: "+e, e);
+			_logger.debug("isDatabaseProduct() Caught: " + e, e);
 			return false;
 		}
 		
@@ -2135,7 +2135,7 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("getDbmsVersionNumber(): Problems calling getDatabaseProductName(), returning -1, caught: "+ex);
+			_logger.warn("getDbmsVersionNumber(): Problems calling getDatabaseProductName(), returning -1, caught: " + ex);
 			return -1;
 		}
 
@@ -2203,7 +2203,7 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 				if (DbUtils.DB_PROD_NAME_POSTGRES.equals(currentDbProductName)) {} 
 				// If 'unknown' then write warning message so we can see if it's "parsed" correctly for that product. When it's verified we can add a line in the above if statement
 				else
-					_logger.info("getDbmsVersionNumber(): Unhandled ProductName='"+currentDbProductName+"' with VersionString='"+verStr+"' parsed into: shortVerInt="+shortVerInt+", dbmsVersionNumber="+dbmsVersionNumber);
+					_logger.info("getDbmsVersionNumber(): Unhandled ProductName='" + currentDbProductName + "' with VersionString='" + verStr + "' parsed into: shortVerInt=" + shortVerInt + ", dbmsVersionNumber=" + dbmsVersionNumber);
 			}
 			catch (SQLException ex)
 			{
@@ -2267,7 +2267,7 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 		catch(SQLException ex)
 		{
 			if (_logger.isDebugEnabled())
-				_logger.debug("Problems closing connection, Caught: "+ex);
+				_logger.debug("Problems closing connection, Caught: " + ex);
 		}
 	}
 	
@@ -2341,7 +2341,7 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 		catch(SQLException e)
 		{
 			if (printErrors)
-				_logger.warn("Problems when executing sql statement: "+sql+" SqlException: ErrorCode="+e.getErrorCode()+", SQLState="+e.getSQLState()+", toString="+e.toString());
+				_logger.warn("Problems when executing sql statement: " + sql + " SqlException: ErrorCode=" + e.getErrorCode() + ", SQLState=" + e.getSQLState() + ", toString=" + e.toString());
 			throw e;
 		}
 	}
@@ -2882,7 +2882,7 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 		}
 		catch (SQLException ex) 
 		{
-			_logger.warn("Problems when getting Quoted Identifier. returning char '\"'. DatabaseMetaData.getIdentifierQuoteString() caught: "+ex);
+			_logger.warn("Problems when getting Quoted Identifier. returning char '\"'. DatabaseMetaData.getIdentifierQuoteString() caught: " + ex);
 			return "\"";
 		}
 		
@@ -2903,7 +2903,7 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 		}
 		catch (SQLException ex) 
 		{
-			_logger.warn("Problems when getting Extra Name Characters for without Quoted Identifier. returning char ''. DatabaseMetaData.getExtraNameCharacters() caught: "+ex);
+			_logger.warn("Problems when getting Extra Name Characters for without Quoted Identifier. returning char ''. DatabaseMetaData.getExtraNameCharacters() caught: " + ex);
 			return "";
 		}
 		

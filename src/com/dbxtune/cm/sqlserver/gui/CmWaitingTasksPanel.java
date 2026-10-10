@@ -52,7 +52,7 @@ extends TabularCntrPanel
 		String colorStr = null;
 
 		// PINK = spid is BLOCKED by some other user
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocked");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.blocked");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override

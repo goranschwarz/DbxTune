@@ -126,16 +126,16 @@ extends DbmsDdlResolverAbstract
 		case java.sql.Types.FLOAT:                   return "FLOAT";                         // ANSI
 		case java.sql.Types.REAL:                    return "REAL";                          // ANSI
 		case java.sql.Types.DOUBLE:                  return "DOUBLE PRECISION";              // ANSI
-		case java.sql.Types.NUMERIC:                 return "NUMERIC("+length+","+scale+")"; // ANSI
-		case java.sql.Types.DECIMAL:                 return "DECIMAL("+length+","+scale+")"; // ANSI
-		case java.sql.Types.CHAR:                    return "CHARACTER("+length+")";         // ANSI has 'CHARACTER'          but we could have mapped it to 'CHAR'
-		case java.sql.Types.VARCHAR:                 return "CHARACTER VARYING("+length+")"; // ANSI has 'CHARACTER VARYING'  but we could have mapped it to 'VARCHAR'
+		case java.sql.Types.NUMERIC:                 return "NUMERIC(" + length + "," + scale + ")"; // ANSI
+		case java.sql.Types.DECIMAL:                 return "DECIMAL(" + length + "," + scale + ")"; // ANSI
+		case java.sql.Types.CHAR:                    return "CHARACTER(" + length + ")";         // ANSI has 'CHARACTER'          but we could have mapped it to 'CHAR'
+		case java.sql.Types.VARCHAR:                 return "CHARACTER VARYING(" + length + ")"; // ANSI has 'CHARACTER VARYING'  but we could have mapped it to 'VARCHAR'
 		case java.sql.Types.LONGVARCHAR:             return "CHARACTER LARGE OBJECT";        // ANSI
 		case java.sql.Types.DATE:                    return "DATE";                          // ANSI
 		case java.sql.Types.TIME:                    return "TIME";                          // ANSI
 		case java.sql.Types.TIMESTAMP:               return "TIMESTAMP";                     // ANSI
-		case java.sql.Types.BINARY:                  return "BINARY("+length+")";            // ANSI
-		case java.sql.Types.VARBINARY:               return "BINARY VARYING("+length+")";    // ANSI
+		case java.sql.Types.BINARY:                  return "BINARY(" + length + ")";            // ANSI
+		case java.sql.Types.VARBINARY:               return "BINARY VARYING(" + length + ")";    // ANSI
 		case java.sql.Types.LONGVARBINARY:           return "BINARY LARGE OBJECT";           // ANSI has 'BINARY LARGE OBJECT' but we could have mapped it to 'BLOB'
 		case java.sql.Types.NULL:                    return "BINARY LARGE OBJECT";           // ---- NOT part of ANSI - map to BLOB
 		case java.sql.Types.OTHER:                   return "BINARY LARGE OBJECT";           // ---- NOT part of ANSI - map to BLOB
@@ -151,8 +151,8 @@ extends DbmsDdlResolverAbstract
 
 		//------------------------- JDBC 4.0 (java 1.6) -----------------------------------
 		case java.sql.Types.ROWID:                   return "CHARACTER VARYING(20)";                  // Just guessing here... from https://docs.oracle.com/cd/B28359_01/server.111/b28318/datatype.htm#CNCPT1846
-		case java.sql.Types.NCHAR:                   return "NATIONAL CHARACTER("+length+")";         // ANSI has 'NATIONAL CHARACTER'         but we could have mapped it to 'NCHAR'
-		case java.sql.Types.NVARCHAR:                return "NATIONAL CHARACTER VARYING("+length+")"; // ANSI has 'NATIONAL CHARACTER VARYING' but we could have mapped it to 'NVARCHAR'
+		case java.sql.Types.NCHAR:                   return "NATIONAL CHARACTER(" + length + ")";         // ANSI has 'NATIONAL CHARACTER'         but we could have mapped it to 'NCHAR'
+		case java.sql.Types.NVARCHAR:                return "NATIONAL CHARACTER VARYING(" + length + ")"; // ANSI has 'NATIONAL CHARACTER VARYING' but we could have mapped it to 'NVARCHAR'
 		case java.sql.Types.LONGNVARCHAR:            return "NATIONAL CHARACTER LARGE OBJECT";        // ANSI
 		case java.sql.Types.NCLOB:                   return "NATIONAL CHARACTER LARGE OBJECT";        // ANSI
 		case java.sql.Types.SQLXML:                  return "NATIONAL CHARACTER LARGE OBJECT";        // ---- NOT part of ANSI - map to NCLOB

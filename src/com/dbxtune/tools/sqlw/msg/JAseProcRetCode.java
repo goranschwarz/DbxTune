@@ -31,7 +31,7 @@ extends JAseMessage
 
 	public JAseProcRetCode(final int returnCode, String originSql)
 	{
-		super("(return status = "+returnCode+")", originSql);
+		super("(return status = " + returnCode + ")", originSql);
 		_returnCode = returnCode;
 //		init();
 		

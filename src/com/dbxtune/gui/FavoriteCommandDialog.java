@@ -398,7 +398,7 @@ implements ActionListener, FocusListener //, ChangeListener
 						        "<tr> <td><b>Key:         </b></td> <td>" + key  + "</td> </tr>" +
 						      "</table>" +
 						      "<hr>" +
-						      "<pre>"+cmd+"</pre>" +
+						      "<pre>" + cmd + "</pre>" +
 						      "</html>";
 					}
 				}
@@ -804,13 +804,13 @@ implements ActionListener, FocusListener //, ChangeListener
 		}
 		catch (Throwable e)
 		{
-			_logger.warn("Problems writing to the Favorite Command File '"+getFileName()+"'. Caught: "+e);
+			_logger.warn("Problems writing to the Favorite Command File '" + getFileName() + "'. Caught: " + e);
 
 			// GUI popup with the error, AND a JCheckBox to "not show this message again"
 			String msgHtml = 
 				"<html>" +
 				"<h2>Problems writing to the Favorite Command File</h2>" +
-				"Filename: <code>"+getFileName()+"</code><br>" +
+				"Filename: <code>" + getFileName() + "</code><br>" +
 				"</html>";
 
 			SwingUtils.showErrorMessage(_parentWindow, "Problems Saving to Favorite Command File.", msgHtml, e);
@@ -1221,7 +1221,7 @@ implements ActionListener, FocusListener //, ChangeListener
 		}
 		catch (IOException e)
 		{
-			_logger.warn("Problems writing to Favorite Commands file '"+fileName+"'. No history entry was added. Caught: "+e);
+			_logger.warn("Problems writing to Favorite Commands file '" + fileName + "'. No history entry was added. Caught: " + e);
 			throw e;
 		}
 	}
@@ -1278,11 +1278,11 @@ implements ActionListener, FocusListener //, ChangeListener
 			}
 			catch (SAXException e)
 			{
-				_logger.warn("Problems Creating Favorite Commands XML Parser '"+getFileName()+"'. Caught: "+e, e);
+				_logger.warn("Problems Creating Favorite Commands XML Parser '" + getFileName() + "'. Caught: " + e, e);
 			}
 			catch (ParserConfigurationException e)
 			{
-				_logger.warn("Problems Creating Favorite Commands XML Parser '"+getFileName()+"'. Caught: "+e, e);
+				_logger.warn("Problems Creating Favorite Commands XML Parser '" + getFileName() + "'. Caught: " + e, e);
 			}
 		}
 
@@ -1323,15 +1323,15 @@ implements ActionListener, FocusListener //, ChangeListener
 			}
 			catch (SAXException e)
 			{
-				_logger.warn("Problems Parsing Favorite Commands File '"+fileName+"'. Caught: "+e, e);
+				_logger.warn("Problems Parsing Favorite Commands File '" + fileName + "'. Caught: " + e, e);
 			}
 			catch (FileNotFoundException e)
 			{
-				_logger.info("The Favorite Command File '"+fileName+"' wasn't found. Caught: "+e);
+				_logger.info("The Favorite Command File '" + fileName + "' wasn't found. Caught: " + e);
 			}
 			catch (IOException e)
 			{
-				_logger.warn("Problems Parsing Favorite Commands File '"+fileName+"'. Caught: "+e, e);
+				_logger.warn("Problems Parsing Favorite Commands File '" + fileName + "'. Caught: " + e, e);
 			}
 			return _entryList;
 		}
@@ -1785,8 +1785,8 @@ implements ActionListener, FocusListener //, ChangeListener
 	public static String setBasicInfo(JComponent comp, String name, String desc, String icon, String key, String cmd)
 	{
 		String xName = (StringUtil.isNullOrBlank(name)) ? cmd  : name;
-		String xDesc = (StringUtil.isNullOrBlank(desc)) ? ""   : " - <i><font color=\"green\">"+desc+"</font></i>";
-		String xText = "<html><b>"+xName+"</b>"+xDesc+"</html>";
+		String xDesc = (StringUtil.isNullOrBlank(desc)) ? ""   : " - <i><font color=\"green\">" + desc + "</font></i>";
+		String xText = "<html><b>" + xName + "</b>" + xDesc + "</html>";
 
 //		String xTTip = (desc != null) ? desc : "<html><pre>" + cmd + "</pre></html>";
 		String xTTip = "<html><pre>" + cmd + "</pre></html>";
@@ -2388,7 +2388,7 @@ implements ActionListener, FocusListener //, ChangeListener
 						}
 					}
 					
-					_favoriteKey_txt.setText(keyStroke+"");
+					_favoriteKey_txt.setText(keyStroke + "");
 				}
 			}
 		}
@@ -2406,7 +2406,7 @@ implements ActionListener, FocusListener //, ChangeListener
 			// --- BUTTON: OK ---
 			if (_ok.equals(source))
 			{
-				_entry.setType       (_favoriteType_cbx.getSelectedItem()+"");
+				_entry.setType       (_favoriteType_cbx.getSelectedItem() + "");
 				_entry.setName       (_favoriteName_txt.getText());
 				_entry.setDescription(_favoriteDesc_txt.getText());
 				_entry.setIcon       (_favoriteIcon_txt.getText());

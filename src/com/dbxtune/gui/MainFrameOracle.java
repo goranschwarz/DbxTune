@@ -125,7 +125,7 @@ extends MainFrame
 					{
 						if ( ! t.isInitialized() )
 						{
-							cpd.setStatus("Getting '"+t.getTabLabel()+"' settings");
+							cpd.setStatus("Getting '" + t.getTabLabel() + "' settings");
 							t.initialize(conn, hostMonConn, true, false, null);
 						}
 					}

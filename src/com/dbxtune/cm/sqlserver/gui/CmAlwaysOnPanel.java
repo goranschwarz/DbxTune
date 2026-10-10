@@ -97,7 +97,7 @@ extends TabularCntrPanel
 //		}, SwingUtils.parseColor(colorStr, Color.PINK), null));
 
 		// RED = PROBLEMS
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.problems");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.problems");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -197,7 +197,7 @@ extends TabularCntrPanel
 
 		
 		// GREEN = Validated
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.Validated");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.Validated");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -281,7 +281,7 @@ extends TabularCntrPanel
 //				list.add(new CmSettingsHelper("Sample Live Remote Data Perf Counters", PROPKEY_sample_liveRemoteData       , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_liveRemoteDataPerfCnt , DEFAULT_sample_liveRemoteDataPerfCnt ), DEFAULT_sample_liveRemoteDataPerfCnt, "Fetch Live Data (PerfCounters) from SECONDARY Server, so we evaluate Remote Performance Counters on the local server side. NOTE: This also needs 'Sample Live Remote Data'." ));
 
 				l_updateActive_chk        .setSelected(conf.getBooleanProperty(CmAlwaysOn.PROPKEY_update_primary             , CmAlwaysOn.DEFAULT_update_primary));
-				l_updateActiveInterval_txt.setText(""+ conf.getLongProperty   (CmAlwaysOn.PROPKEY_update_primaryIntervalInSec, CmAlwaysOn.DEFAULT_update_primaryIntervalInSec));
+				l_updateActiveInterval_txt.setText("" + conf.getLongProperty   (CmAlwaysOn.PROPKEY_update_primaryIntervalInSec, CmAlwaysOn.DEFAULT_update_primaryIntervalInSec));
 
 				l_showRemoteRows_chk      .setSelected(conf.getBooleanProperty(CmAlwaysOn.PROPKEY_show_RemoteRows      , CmAlwaysOn.DEFAULT_show_RemoteRows));
 				l_sampleLiveRemoteData_chk.setSelected(conf.getBooleanProperty(CmAlwaysOn.PROPKEY_sample_liveRemoteData, CmAlwaysOn.DEFAULT_sample_liveRemoteData));
@@ -303,11 +303,11 @@ extends TabularCntrPanel
 
 		l_updateActive_chk         = new JCheckBox("Update Primary DB,", conf.getBooleanProperty(CmAlwaysOn.PROPKEY_update_primary, CmAlwaysOn.DEFAULT_update_primary));
 		l_updateActiveInterval_lbl = new JLabel("Interval in Seconds");
-		l_updateActiveInterval_txt = new JTextField(conf.getLongProperty(CmAlwaysOn.PROPKEY_update_primaryIntervalInSec, CmAlwaysOn.DEFAULT_update_primaryIntervalInSec)+"", 5);
+		l_updateActiveInterval_txt = new JTextField(conf.getLongProperty(CmAlwaysOn.PROPKEY_update_primaryIntervalInSec, CmAlwaysOn.DEFAULT_update_primaryIntervalInSec) + "", 5);
 
 		l_showRemoteRows_chk       = new JCheckBox("Show 'REMOTE'",                                            conf.getBooleanProperty(CmAlwaysOn.PROPKEY_show_RemoteRows      , CmAlwaysOn.DEFAULT_show_RemoteRows));
-		l_sampleLiveRemoteData_chk = new JCheckBox("Sample '"+CmAlwaysOn.COLVAL_LOCALITY_REMOTE_LIVE_DATA+"'", conf.getBooleanProperty(CmAlwaysOn.PROPKEY_sample_liveRemoteData, CmAlwaysOn.DEFAULT_sample_liveRemoteData));
-		l_showLiveRemoteData_chk   = new JCheckBox("Show '"  +CmAlwaysOn.COLVAL_LOCALITY_REMOTE_LIVE_DATA+"'", conf.getBooleanProperty(CmAlwaysOn.PROPKEY_show_liveRemoteData  , CmAlwaysOn.DEFAULT_show_liveRemoteData));
+		l_sampleLiveRemoteData_chk = new JCheckBox("Sample '" + CmAlwaysOn.COLVAL_LOCALITY_REMOTE_LIVE_DATA + "'", conf.getBooleanProperty(CmAlwaysOn.PROPKEY_sample_liveRemoteData, CmAlwaysOn.DEFAULT_sample_liveRemoteData));
+		l_showLiveRemoteData_chk   = new JCheckBox("Show '"  + CmAlwaysOn.COLVAL_LOCALITY_REMOTE_LIVE_DATA + "'", conf.getBooleanProperty(CmAlwaysOn.PROPKEY_show_liveRemoteData  , CmAlwaysOn.DEFAULT_show_liveRemoteData));
 
 		getAlwaysOnHealth_lbl.setToolTipText("<html>"
 				+ "Open a QueryWindow where a SQL Statement will be executed to the <b>current</b> SQL-Server<br>"
@@ -502,7 +502,7 @@ extends TabularCntrPanel
 	{
 		try 
 		{
-			DbxConnection conn = DbxConnection.connect(SwingUtilities.getWindowAncestor(CmAlwaysOnPanel.this), Version.getAppName()+"-AlwaysOn_health");
+			DbxConnection conn = DbxConnection.connect(SwingUtilities.getWindowAncestor(CmAlwaysOnPanel.this), Version.getAppName() + "-AlwaysOn_health");
 			final QueryWindow qw = new QueryWindow(conn, sql, null, true, WindowType.JDIALOG, null);
 			qw.setSize(1700, 800);
 			qw.setLocationRelativeTo(CmAlwaysOnPanel.this);

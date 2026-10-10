@@ -129,7 +129,7 @@ public class H2LongTermTester
 			catch(SQLException e)
 			{
 				if (printErrors)
-					System.out.println("Problems when executing sql statement: "+sql+" SqlException: ErrorCode="+e.getErrorCode()+", SQLState="+e.getSQLState()+", toString="+e.toString());
+					System.out.println("Problems when executing sql statement: " + sql + " SqlException: ErrorCode=" + e.getErrorCode() + ", SQLState=" + e.getSQLState() + ", toString=" + e.toString());
 //				throw e;
 				return -1;
 			}
@@ -220,9 +220,9 @@ public class H2LongTermTester
 
 			sb.append("create table " + ifNotExists + qic+_tabName+qic + "\n");
 			sb.append("( \n");
-			sb.append("    "+qic+"SessionStartTime" +qic+" datetime  not null \n");
-			sb.append("   ,"+qic+"SessionSampleTime"+qic+" datetime  not null \n");
-			sb.append("   ,"+qic+"CmSampleTime"     +qic+" datetime  not null \n");
+			sb.append("    " + qic + "SessionStartTime" + qic + " datetime  not null \n");
+			sb.append("   ," + qic + "SessionSampleTime" + qic + " datetime  not null \n");
+			sb.append("   ," + qic + "CmSampleTime"     + qic + " datetime  not null \n");
 			sb.append("\n");
 
 			// loop all columns
@@ -244,7 +244,7 @@ public class H2LongTermTester
 
 			String ifNotExists = "IF NOT EXISTS ";
 			
-			list.add("create index " + ifNotExists + qic+_tabName+"_ix1"+qic + " on " + qic+_tabName+qic + "("+qic+"SessionSampleTime"+qic+")\n");
+			list.add("create index " + ifNotExists + qic+_tabName + "_ix1" + qic + " on " + qic+_tabName+qic + "(" + qic + "SessionSampleTime" + qic + ")\n");
 			
 			return list;
 		}
@@ -315,7 +315,7 @@ public class H2LongTermTester
 		throws SQLException
 		{
 			_conn = DriverManager.getConnection(url, user, passwd);
-			System.out.println("DBWORKER["+_workerId+"]: Connected to url: "+url);
+			System.out.println("DBWORKER[" + _workerId + "]: Connected to url: " + url);
 		}
 		
 		public void onConnect()
@@ -342,7 +342,7 @@ public class H2LongTermTester
 		public void start()
 		{
 			_thread = new Thread(this);
-			_thread.setName("DbWorker-"+_workerId);
+			_thread.setName("DbWorker-" + _workerId);
 //			_thread.setDaemon(true);
 			_thread.start();
 		}
@@ -425,10 +425,10 @@ public class H2LongTermTester
 
 				System.out.println("STATS: "
 						+ "fileDiffKb="    + fileDiffKb
-						+", dbFileSizeKb=" + dbFileSizeKb
-						+", inserts="      + _inserts
-						+", crTable="      + _crTable
-						+", crIndex="      + _crIndex
+						+ ", dbFileSizeKb=" + dbFileSizeKb
+						+ ", inserts="      + _inserts
+						+ ", crTable="      + _crTable
+						+ ", crIndex="      + _crIndex
 						);
 
 				
@@ -437,7 +437,7 @@ public class H2LongTermTester
 			}
 			else
 			{
-				System.out.println("STATS: File does not exist: _h2Dbfile="+_h2Dbfile);
+				System.out.println("STATS: File does not exist: _h2Dbfile=" + _h2Dbfile);
 			}
 		}
 		
@@ -499,7 +499,7 @@ public class H2LongTermTester
 		}
 		
 
-		System.out.println("INFO: dbname='"+dbname+"'.");
+		System.out.println("INFO: dbname='" + dbname + "'.");
 		
 		H2LongTermTester ltt = new H2LongTermTester(dbname);
 		ltt.start();

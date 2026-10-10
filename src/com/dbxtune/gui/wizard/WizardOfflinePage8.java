@@ -134,8 +134,8 @@ implements ActionListener, PropertyChangeListener
 		boolean isAlarmHandlingEnabled = _enableAlarmHandling_chk.isSelected();
 		_alarmWritersPanel.setVisible(isAlarmHandlingEnabled);
 		
-		putWizardData("to-be-discarded.enableAlarmHandling", isAlarmHandlingEnabled+""); // Note: STRING
-		putWizardData(AlarmHandler.PROPKEY_enable,           isAlarmHandlingEnabled+""); // Note: STRING
+		putWizardData("to-be-discarded.enableAlarmHandling", isAlarmHandlingEnabled + ""); // Note: STRING
+		putWizardData(AlarmHandler.PROPKEY_enable,           isAlarmHandlingEnabled + ""); // Note: STRING
 
 		if ( isAlarmHandlingEnabled )
 		{

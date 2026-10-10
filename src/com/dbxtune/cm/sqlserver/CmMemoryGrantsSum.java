@@ -73,7 +73,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -107,7 +107,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmMemoryGrantsSum(counterController, guiController);
 	}
@@ -342,7 +342,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_GRANTEE_WAITER_COUNT,
 				"Memory Grants and Wait Count",        // Menu CheckBox text
-				"Memory Grants and Wait Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"Memory Grants and Wait Count (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"grantee_count", "waiter_count"}, 
 				LabelType.Static,
@@ -354,7 +354,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_GRANTED_MEMORY_SUM,
 				"Memory Grant Summary in MB",        // Menu CheckBox text
-				"Memory Grant Summary in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"Memory Grant Summary in MB (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"granted_memory_mb", "used_memory_mb"}, 
 				LabelType.Static,
@@ -366,7 +366,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_GRANTED_MEMORY_PCT,
 				"Memory Granted in Percent of Total Available Memory",        // Menu CheckBox text
-				"Memory Granted in Percent of Total Available Memory ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"Memory Granted in Percent of Total Available Memory (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"granted_memory_pct"}, 
 				LabelType.Static,

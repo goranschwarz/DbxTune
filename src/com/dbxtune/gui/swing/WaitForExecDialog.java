@@ -268,7 +268,7 @@ implements PropertyChangeListener, ActionListener
 	public void setState(final String string)
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("WaitForExecDialog.setState('"+string+"');");
+			_logger.debug("WaitForExecDialog.setState('" + string + "');");
 
 //		_state_lbl.setText(string);
 		if (SwingUtilities.isEventDispatchThread())
@@ -287,8 +287,8 @@ implements PropertyChangeListener, ActionListener
 			};
 //			SwingUtilities.invokeLater(doAsEdt);
 			try { SwingUtilities.invokeAndWait(doAsEdt); }
-			catch (InterruptedException e)      { _logger.info("CallWrapper.setState(), calling SwingUtilities.invokeAndWait(), Caught: "+e); }
-			catch (InvocationTargetException e) { _logger.warn("CallWrapper.setState(), calling SwingUtilities.invokeAndWait(), Caught: "+e, e); }
+			catch (InterruptedException e)      { _logger.info("CallWrapper.setState(), calling SwingUtilities.invokeAndWait(), Caught: " + e); }
+			catch (InvocationTargetException e) { _logger.warn("CallWrapper.setState(), calling SwingUtilities.invokeAndWait(), Caught: " + e, e); }
 		}
 	}
 	
@@ -300,7 +300,7 @@ implements PropertyChangeListener, ActionListener
 	public void propertyChange(PropertyChangeEvent event) 
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("WaitForExecDialog.propertyChange(): propName="+event.getPropertyName()+", newVal="+event.getNewValue()+", oldVal="+event.getOldValue()+", PropagationId="+event.getPropagationId()+", getSource="+event.getSource() + ", label='" + _label.getText() + "'.");
+			_logger.debug("WaitForExecDialog.propertyChange(): propName=" + event.getPropertyName() + ", newVal=" + event.getNewValue() + ", oldVal=" + event.getOldValue() + ", PropagationId=" + event.getPropagationId() + ", getSource=" + event.getSource() + ", label='" + _label.getText() + "'.");
 
 		// Close this window when the Swing worker has completed
 		if ("state".equals(event.getPropertyName()) && StateValue.DONE == event.getNewValue()) 
@@ -352,7 +352,7 @@ implements PropertyChangeListener, ActionListener
 			if ( SwingUtilities.isEventDispatchThread() )
 			{
 				if (_logger.isDebugEnabled())
-					_logger.debug("WaitForExecDialog.execAndWait(): -normal- executed on EDT thread... _label="+_label.getText());
+					_logger.debug("WaitForExecDialog.execAndWait(): -normal- executed on EDT thread... _label=" + _label.getText());
 					
 	//System.out.println("WaitForExecDialog.execAndWait(): -normal- executed on EDT thread... _label="+_label.getText());
 				return internal_execAndWait(execClass, graceTime);
@@ -360,7 +360,7 @@ implements PropertyChangeListener, ActionListener
 			else
 			{
 				if (_logger.isDebugEnabled())
-					_logger.debug("WaitForExecDialog.execAndWait(): -NOT-EXECUTED-ON-EDT-THREAD- do:invokeAndWait(): caller thread='"+Thread.currentThread().getName()+"'. _label="+_label.getText());
+					_logger.debug("WaitForExecDialog.execAndWait(): -NOT-EXECUTED-ON-EDT-THREAD- do:invokeAndWait(): caller thread='" + Thread.currentThread().getName() + "'. _label=" + _label.getText());
 					
 	//System.out.println("WaitForExecDialog.execAndWait(): -NOT-EXECUTED-ON-EDT-THREAD- do:invokeAndWait(): caller thread='"+Thread.currentThread().getName()+"'. _label="+_label.getText());
 				Runnable doRun = new Runnable()
@@ -373,8 +373,8 @@ implements PropertyChangeListener, ActionListener
 				};
 
 				try { SwingUtilities.invokeAndWait(doRun); }
-				catch (InterruptedException e)      { _logger.info("WaitForExecDialog.execAndWait() was executed using not EDT Thread (thread='"+Thread.currentThread().getName()+"'), and called SwingUtilities.invokeAndWait(), Caught: "+e); }
-				catch (InvocationTargetException e) { _logger.warn("WaitForExecDialog.execAndWait() was executed using not EDT Thread (thread='"+Thread.currentThread().getName()+"'), and called SwingUtilities.invokeAndWait(), Caught: "+e, e); }
+				catch (InterruptedException e)      { _logger.info("WaitForExecDialog.execAndWait() was executed using not EDT Thread (thread='" + Thread.currentThread().getName() + "'), and called SwingUtilities.invokeAndWait(), Caught: " + e); }
+				catch (InvocationTargetException e) { _logger.warn("WaitForExecDialog.execAndWait() was executed using not EDT Thread (thread='" + Thread.currentThread().getName() + "'), and called SwingUtilities.invokeAndWait(), Caught: " + e, e); }
 
 				return _notEdtRetObj;
 			}
@@ -631,12 +631,12 @@ implements PropertyChangeListener, ActionListener
 		}
 		catch (InterruptedException e)
 		{
-			_logger.warn("execAndWait Caught: "+e, e);
+			_logger.warn("execAndWait Caught: " + e, e);
 			return null;
 		}
 		catch (ExecutionException e)
 		{
-			_logger.warn("execAndWait Caught: "+e, e);
+			_logger.warn("execAndWait Caught: " + e, e);
 			return null;
 		}
 	}

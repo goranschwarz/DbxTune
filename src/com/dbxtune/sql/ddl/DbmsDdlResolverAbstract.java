@@ -348,7 +348,7 @@ implements IDbmsDataTypeResolver, IDbmsDdlResolver
 			// ----------------------------------
 			case Types.CHAR:
 			case Types.VARCHAR:
-				msg = "DbmsDdlResolverAbstract.dataTypeResolverForSource().checkSourceDataTypes(): TabName='" + entry.getTableName() + "', Column='" + entry.getColumnLabel() + "', jdbcType='" + DataTypeNotResolvedException.getJdbcTypeAsString(entry.getColumnType())+ "'. has getPrecision()=" + entry.getPrecision() + ". This seems to be unlikely, please cast the data in SQL to use a specific length.";
+				msg = "DbmsDdlResolverAbstract.dataTypeResolverForSource().checkSourceDataTypes(): TabName='" + entry.getTableName() + "', Column='" + entry.getColumnLabel() + "', jdbcType='" + DataTypeNotResolvedException.getJdbcTypeAsString(entry.getColumnType()) + "'. has getPrecision()=" + entry.getPrecision() + ". This seems to be unlikely, please cast the data in SQL to use a specific length.";
 				_logger.warn(msg, new RuntimeException(msg));
 				break;
 
@@ -356,7 +356,7 @@ implements IDbmsDataTypeResolver, IDbmsDdlResolver
 			case Types.NCHAR:
 			case Types.NVARCHAR:
 //			case Types.LONGNVARCHAR:
-				msg = "DbmsDdlResolverAbstract.dataTypeResolverForSource().checkSourceDataTypes(): TabName='" + entry.getTableName() + "',Column='" + entry.getColumnLabel() + "', jdbcType='" + DataTypeNotResolvedException.getJdbcTypeAsString(entry.getColumnType())+ "'. has getPrecision()=" + entry.getPrecision() + ". This seems to be unlikely, please cast the data in SQL to use a specific length.";
+				msg = "DbmsDdlResolverAbstract.dataTypeResolverForSource().checkSourceDataTypes(): TabName='" + entry.getTableName() + "',Column='" + entry.getColumnLabel() + "', jdbcType='" + DataTypeNotResolvedException.getJdbcTypeAsString(entry.getColumnType()) + "'. has getPrecision()=" + entry.getPrecision() + ". This seems to be unlikely, please cast the data in SQL to use a specific length.";
 				_logger.warn(msg, new RuntimeException(msg));
 				break;
 
@@ -364,14 +364,14 @@ implements IDbmsDataTypeResolver, IDbmsDdlResolver
 			case Types.BINARY:
 			case Types.VARBINARY:
 //			case Types.LONGVARBINARY:
-				msg = "DbmsDdlResolverAbstract.dataTypeResolverForSource().checkSourceDataTypes(): TabName='" + entry.getTableName() + "',Column='" + entry.getColumnLabel() + "', jdbcType='" + DataTypeNotResolvedException.getJdbcTypeAsString(entry.getColumnType())+ "'. has getPrecision()=" + entry.getPrecision() + ". This seems to be unlikely, please cast the data in SQL to use a specific length.";
+				msg = "DbmsDdlResolverAbstract.dataTypeResolverForSource().checkSourceDataTypes(): TabName='" + entry.getTableName() + "',Column='" + entry.getColumnLabel() + "', jdbcType='" + DataTypeNotResolvedException.getJdbcTypeAsString(entry.getColumnType()) + "'. has getPrecision()=" + entry.getPrecision() + ". This seems to be unlikely, please cast the data in SQL to use a specific length.";
 				_logger.warn(msg, new RuntimeException(msg));
 				break;
 
 			// ----------------------------------
 			case Types.DECIMAL:
 			case Types.NUMERIC:
-				msg = "DbmsDdlResolverAbstract.dataTypeResolverForSource().checkSourceDataTypes(): TabName='" + entry.getTableName() + "',Column='" + entry.getColumnLabel() + "', jdbcType='" + DataTypeNotResolvedException.getJdbcTypeAsString(entry.getColumnType())+ "'. has getPrecision()=" + entry.getPrecision() + ", getScale()=" + entry.getScale() + ". This seems to be unlikely, please cast the data in SQL to use a specific length.";
+				msg = "DbmsDdlResolverAbstract.dataTypeResolverForSource().checkSourceDataTypes(): TabName='" + entry.getTableName() + "',Column='" + entry.getColumnLabel() + "', jdbcType='" + DataTypeNotResolvedException.getJdbcTypeAsString(entry.getColumnType()) + "'. has getPrecision()=" + entry.getPrecision() + ", getScale()=" + entry.getScale() + ". This seems to be unlikely, please cast the data in SQL to use a specific length.";
 				_logger.warn(msg, new RuntimeException(msg));
 				break;
 			}
@@ -995,7 +995,7 @@ implements IDbmsDataTypeResolver, IDbmsDdlResolver
 
 			String colDataType = dataTypeResolverToTarget(tc);
 			sb.append( 
-					String.format("   %s %-"+maxColNameLen+"s %-30s %s     -- %-25s {jdbcTypeNumber=%d}\n", 
+					String.format("   %s %-" + maxColNameLen + "s %-30s %s     -- %-25s {jdbcTypeNumber=%d}\n", 
 							comma,
 							leftQuote + escapeQuotedIdentifier(tc.getColumnLabel()) + rightQuote,
 							colDataType, // column.getColumnDataType().getDatabaseSpecificTypeName(),
@@ -1171,7 +1171,7 @@ implements IDbmsDataTypeResolver, IDbmsDdlResolver
 		{
 			String colDataType = dataTypeResolverToTarget(entry);
 			sb.append( 
-					String.format("   %s %-"+maxColNameLen+"s %-30s %s     -- %-25s {jdbcTypeNumber=%d}\n", 
+					String.format("   %s %-" + maxColNameLen + "s %-30s %s     -- %-25s {jdbcTypeNumber=%d}\n", 
 							comma,
 							leftQuote + escapeQuotedIdentifier(entry.getColumnLabel()) + rightQuote,
 							colDataType, // column.getColumnDataType().getDatabaseSpecificTypeName(),

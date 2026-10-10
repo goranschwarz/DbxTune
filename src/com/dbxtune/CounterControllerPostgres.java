@@ -227,12 +227,12 @@ extends CounterControllerAbstract
 		if (! isCountersCreated())
 			createCounters(hasGui);
 		
-		_logger.info("Initializing all CM objects, using Postgres version number "+srvVersion+". ("+Ver.versionNumToStr(srvVersion)+")");
+		_logger.info("Initializing all CM objects, using Postgres version number " + srvVersion + ". (" + Ver.versionNumToStr(srvVersion) + ")");
 
 		// initialize all the CM's
 		for (CountersModel cm : getCmList())
 		{
-			_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using Postgres version number "+srvVersion+".");
+			_logger.debug("Initializing CM named '" + cm.getName() + "', display name '" + cm.getDisplayName() + "', using Postgres version number " + srvVersion + ".");
 
 			// set the version
 			cm.setServerVersion(monTablesVersion);
@@ -351,7 +351,7 @@ extends CounterControllerAbstract
 				dbmsServerName   = DbxTune.stripSrvName(hostname + ":" + port);
 				dbmsHostname     = hostname;
 				
-				_logger.debug("createPcsHeaderInfo(): dbmsServerName='"+dbmsServerName+"', dbmsHostname='"+dbmsHostname+"', mainSampleTime='"+mainSampleTime+"'.");
+				_logger.debug("createPcsHeaderInfo(): dbmsServerName='" + dbmsServerName + "', dbmsHostname='" + dbmsHostname + "', mainSampleTime='" + mainSampleTime + "'.");
 			}
 			rs.close();
 			stmt.close();
@@ -370,7 +370,7 @@ extends CounterControllerAbstract
 				}
 			}
 			
-			_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '"+sql+"', Caught: " + sqlex.toString() );
+			_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '" + sql + "', Caught: " + sqlex.toString() );
 			mainSampleTime   = new Timestamp(System.currentTimeMillis());
 			dbmsServerName   = "unknown";
 			dbmsHostname     = "unknown";
@@ -453,7 +453,7 @@ extends CounterControllerAbstract
 		String sql = "SET SESSION " + optName + " = " + confVal;
 		try (Statement stmnt = conn.createStatement() )
 		{
-			_logger.info("onMonConnect(): pid="+conn.getDbmsSessionId()+", dbname='" + dbname + "'. Setting Postgres session option '" + optName + "' using sql: " + sql);
+			_logger.info("onMonConnect(): pid=" + conn.getDbmsSessionId() + ", dbname='" + dbname + "'. Setting Postgres session option '" + optName + "' using sql: " + sql);
 			stmnt.executeUpdate(sql);
 
 			return confVal;
@@ -490,12 +490,12 @@ extends CounterControllerAbstract
 			{
 				ret = rs.getString(1);
 				if (print)
-					_logger.info("onMonConnect(): pid="+conn.getDbmsSessionId()+", dbname='" + dbname + "'. current setting for '" + optName + "' is '" + ret + "'.");
+					_logger.info("onMonConnect(): pid=" + conn.getDbmsSessionId() + ", dbname='" + dbname + "'. current setting for '" + optName + "' is '" + ret + "'.");
 			}
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems in onMonConnect(): pid="+conn.getDbmsSessionId()+", dbname='" + dbname + "'. When GET property '" + optName + "', using sql='" + sql + "'. Continuing... Caught: MsgNum=" + ex.getErrorCode() + ": " + ex);
+			_logger.warn("Problems in onMonConnect(): pid=" + conn.getDbmsSessionId() + ", dbname='" + dbname + "'. When GET property '" + optName + "', using sql='" + sql + "'. Continuing... Caught: MsgNum=" + ex.getErrorCode() + ": " + ex);
 		}
 		return ret;
 	}
@@ -551,7 +551,7 @@ extends CounterControllerAbstract
 				} 
 				catch(Exception e) 
 				{
-					_logger.error("Problems getting a new connection. Caught: "+e, e);
+					_logger.error("Problems getting a new connection. Caught: " + e, e);
 					return null;
 				}
 			}

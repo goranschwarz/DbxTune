@@ -88,7 +88,7 @@ extends SqlCompletion
 		_tableInfo = ti;
 
 		String shortDesc = 
-			"<font color='blue'>"+ti._tabType+"</font>" +
+			"<font color='blue'>" + ti._tabType + "</font>" +
 //			" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(ti._tabRemark) ? "No Description" : ti._tabRemark) + "</font></i>";
 			" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(ti._tabRemark) ? "" : stripMultiLineHtml(ti._tabRemark)) + "</font></i>";
 		setShortDescription(shortDesc);

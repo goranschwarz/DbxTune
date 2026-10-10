@@ -80,7 +80,7 @@ public class Logging
 			}
 			catch (FileNotFoundException e)
 			{
-				System.out.println("Unable to find the file '"+_propFile+"', continuing anyway, using hard coded values for logging.");
+				System.out.println("Unable to find the file '" + _propFile + "', continuing anyway, using hard coded values for logging.");
 			}
 			catch (Exception e)
 			{

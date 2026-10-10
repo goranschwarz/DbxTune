@@ -104,10 +104,10 @@ public class RepServerUtils
 			String defaultConfigStr = "";
 
 			String extraInfo = 
-				"runValue="    +StringUtil.left(_runValue,    20, true, "'", "', ")
-				+"datatype="   +StringUtil.left(_datatype,    11, true, "'", "', ")
-				+"legalValues="+StringUtil.left(_legalValues, 35, true, "'", "', ")
-				+"status="     +StringUtil.left(_status,      50, true, "'", "'.");
+				"runValue="    + StringUtil.left(_runValue,    20, true, "'", "', ")
+				+ "datatype="   + StringUtil.left(_datatype,    11, true, "'", "', ")
+				+ "legalValues=" + StringUtil.left(_legalValues, 35, true, "'", "', ")
+				+ "status="     + StringUtil.left(_status,      50, true, "'", "'.");
 
 			if ( _isDefaultConfigured )
 				comment = " -- Default Configured,                                " + extraInfo;
@@ -116,7 +116,7 @@ public class RepServerUtils
 				comment = " -- This is a configuration this is normally different for all Replication Servers";
 
 			if (isConfigOptionChanged())
-				defaultConfigStr = " -- CHANGED CONFIGURATION: default="+StringUtil.left(_defaultValue, 20, true, "'", "'. ") + extraInfo;
+				defaultConfigStr = " -- CHANGED CONFIGURATION: default=" + StringUtil.left(_defaultValue, 20, true, "'", "'. ") + extraInfo;
 
 			return defaultConfigStr + comment;
 		}
@@ -130,25 +130,25 @@ public class RepServerUtils
 
 	public static List<ConfigEntry> getConnectionConfig(Connection conn, String ds, String db)
 	{
-		String rcl = "admin config, 'connection', '"+ds+"', '"+db+"'";
+		String rcl = "admin config, 'connection', '" + ds + "', '" + db + "'";
 		return getConfig(conn, rcl);
 	}
 
 	public static List<ConfigEntry> getLogicalConnectionConfig(Connection conn, String lds, String ldb)
 	{
-		String rcl = "admin config, 'logical_connection', '"+lds+"', '"+ldb+"'";
+		String rcl = "admin config, 'logical_connection', '" + lds + "', '" + ldb + "'";
 		return getConfig(conn, rcl);
 	}
 
 	public static List<ConfigEntry> getTableConnectionConfig(Connection conn, String ds, String db)
 	{
-		String rcl = "admin config, 'table', '"+ds+"', '"+db+"'";
+		String rcl = "admin config, 'table', '" + ds + "', '" + db + "'";
 		return getConfig(conn, rcl);
 	}
 
 	public static List<ConfigEntry> getRouteConfig(Connection conn, String destinationRs)
 	{
-		String rcl = "admin config, 'route', '"+destinationRs+"'";
+		String rcl = "admin config, 'route', '" + destinationRs + "'";
 		return getConfig(conn, rcl);
 	}
 
@@ -270,7 +270,7 @@ public class RepServerUtils
 			if (ex.getErrorCode() == 15565)
 				return result;
 
-			_logger.warn("Problems when executing rcl: "+rcl, ex);
+			_logger.warn("Problems when executing rcl: " + rcl, ex);
 			return null;
 		}
 
@@ -302,7 +302,7 @@ public class RepServerUtils
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems when executing: "+cmd, ex);
+			_logger.warn("Problems when executing: " + cmd, ex);
 		}
 		
 		return result;
@@ -389,7 +389,7 @@ public class RepServerUtils
 	throws SQLException
 	{
 		// connect "srv"."db"
-		String cmd = "connect to \""+srv+"\".\""+db+"\"";
+		String cmd = "connect to \"" + srv + "\".\"" + db + "\"";
 		try
 		{
 			Statement stmt = conn.createStatement();
@@ -401,7 +401,7 @@ public class RepServerUtils
 			// 15539 - Gateway connection to 'GORAN_3_DS.rssd' is created.
 			if (ex.getErrorCode() == 15539)
 				return;
-			_logger.warn("Problems when executing: "+cmd, ex);
+			_logger.warn("Problems when executing: " + cmd, ex);
 			throw ex;
 		}
 	}
@@ -421,7 +421,7 @@ public class RepServerUtils
 			// 15540 - Gateway connection to 'GORAN_3_DS.rssd' is dropped.
 			if (ex.getErrorCode() == 15540)
 				return;
-			_logger.warn("Problems when executing: "+cmd, ex);
+			_logger.warn("Problems when executing: " + cmd, ex);
 			throw ex;
 		}
 	}
@@ -439,7 +439,7 @@ public class RepServerUtils
 			// 15540 - Gateway connection to 'GORAN_3_DS.rssd' is dropped.
 			if (ex.getErrorCode() == 15540)
 				return;
-			_logger.warn("Problems when executing: "+cmd, ex);
+			_logger.warn("Problems when executing: " + cmd, ex);
 		}
 	}
 
@@ -458,7 +458,7 @@ public class RepServerUtils
 			// 15539 - Gateway connection to 'GORAN_3_DS.rssd' is created.
 			if (ex.getErrorCode() == 15539)
 				return;
-			_logger.warn("Problems when executing: "+cmd, ex);
+			_logger.warn("Problems when executing: " + cmd, ex);
 			throw ex;
 		}
 	}
@@ -492,7 +492,7 @@ public class RepServerUtils
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems when executing: "+cmd, ex);
+			_logger.warn("Problems when executing: " + cmd, ex);
 			return null;
 		}
 
@@ -553,8 +553,8 @@ public class RepServerUtils
 					      "where ptype != 'L' \n" +
 					      "  and ldbid = ( select dbid  \n" +
 					      "                from rs_databases \n" +
-					      "                where dsname = '"+ds+"' \n" +
-					      "                  and dbname = '"+db+"' \n" +
+					      "                where dsname = '" + ds + "' \n" +
+					      "                  and dbname = '" + db + "' \n" +
 					      "              ) \n";
 					
 					String active  = "none";
@@ -584,7 +584,7 @@ public class RepServerUtils
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems when executing: "+cmd, ex);
+			_logger.warn("Problems when executing: " + cmd, ex);
 			return null;
 		}
 
@@ -685,10 +685,10 @@ public class RepServerUtils
 //System.out.println("CONN: dsdb='"+dsdb+"', ds='"+ds+"', db='"+db+"'.");
 
 			if (waitDialog != null) 
-				waitDialog.setState("Getting Physical Connection Configuration, for '"+ds+"."+db+"'.");
+				waitDialog.setState("Getting Physical Connection Configuration, for '" + ds + "." + db + "'.");
 
 			sb.append("\n");
-			sb.append("/* CONNECTION: "+ds+"."+db).append(" */\n");
+			sb.append("/* CONNECTION: " + ds + "." + db).append(" */\n");
 			boolean printedRecords = false;
 			List<ConfigEntry> config = getConnectionConfig(conn, ds, db);
 			for (ConfigEntry ce : config)
@@ -719,7 +719,7 @@ public class RepServerUtils
 				sb.append("      -- no local configurations").append("\n");
 
 			sb.append("   ---------------------------------------------------------------------------\n");
-			sb.append("   -- TABLE LEVEL CONFIGURATION: "+ds+"."+db).append(" \n");
+			sb.append("   -- TABLE LEVEL CONFIGURATION: " + ds + "." + db).append(" \n");
 			printedRecords = false;
 			config = getTableConnectionConfig(conn, ds, db);
 			for (ConfigEntry ce : config)
@@ -772,10 +772,10 @@ public class RepServerUtils
 //System.out.println("LOG CONN: dsdb='"+dsdb+"', lds='"+lds+"', ldb='"+ldb+"'.");
 
 			if (waitDialog != null) 
-				waitDialog.setState("Getting Logical Connection Configuration, for '"+lds+"."+ldb+"'.");
+				waitDialog.setState("Getting Logical Connection Configuration, for '" + lds + "." + ldb + "'.");
 
 			sb.append("\n");
-			sb.append("/* LOGICAL CONNECTION: "+lds+"."+ldb).append(" */\n");
+			sb.append("/* LOGICAL CONNECTION: " + lds + "." + ldb).append(" */\n");
 			boolean printedRecords = false;
 			List<ConfigEntry> config = getLogicalConnectionConfig(conn, lds, ldb);
 			for (ConfigEntry ce : config)
@@ -820,7 +820,7 @@ public class RepServerUtils
 		for (String routeTo : rsRoutes)
 		{
 			if (waitDialog != null) 
-				waitDialog.setState("Getting Route Configuration, for '"+routeTo+"'.");
+				waitDialog.setState("Getting Route Configuration, for '" + routeTo + "'.");
 
 			sb.append("\n");
 			sb.append("/* ROUTE To: ").append(routeTo).append(" */\n");
@@ -865,7 +865,7 @@ public class RepServerUtils
 	public static boolean isRepAgentAlive(Connection conn, String dsname, String dbname)
 	throws SQLException
 	{
-		String cmd = "exec sp_help_rep_agent '"+dbname+"', 'process'";
+		String cmd = "exec sp_help_rep_agent '" + dbname + "', 'process'";
 
 		// Expected output: for more info see: isRepAgentAlive()
 
@@ -897,7 +897,7 @@ public class RepServerUtils
 		}
 		catch (SQLException sqle)
 		{
-			String msg = "Problems when executing '"+cmd+"' in ASE Server '"+dsname+"'. ";
+			String msg = "Problems when executing '" + cmd + "' in ASE Server '" + dsname + "'. ";
 			_logger.error(msg + AseConnectionUtils.sqlExceptionToString(sqle));
 			throw sqle;
 		}
@@ -906,7 +906,7 @@ public class RepServerUtils
 	public static void stopRepAgent(Connection conn, String dsname, String dbname, boolean force)
 	throws SQLException
 	{
-		String cmd = "exec ["+dbname+"]..sp_stop_rep_agent '"+dbname+"'";
+		String cmd = "exec [" + dbname + "]..sp_stop_rep_agent '" + dbname + "'";
 		if (force)
 			cmd += ", 'nowait'";
 
@@ -921,7 +921,7 @@ public class RepServerUtils
 		}
 		catch (SQLException sqle)
 		{
-			String msg = "Problems when executing '"+cmd+"' in ASE Server '"+dsname+"'. ";
+			String msg = "Problems when executing '" + cmd + "' in ASE Server '" + dsname + "'. ";
 			_logger.error(msg + AseConnectionUtils.sqlExceptionToString(sqle));
 			throw sqle;
 		}
@@ -930,7 +930,7 @@ public class RepServerUtils
 	public static void startRepAgent(Connection conn, String dsname, String dbname)
 	throws SQLException
 	{
-		String cmd = "exec ["+dbname+"]..sp_start_rep_agent '"+dbname+"'";
+		String cmd = "exec [" + dbname + "]..sp_start_rep_agent '" + dbname + "'";
 
 		// Expected output: for more info see: isRepAgentAlive()
 
@@ -943,7 +943,7 @@ public class RepServerUtils
 		}
 		catch (SQLException sqle)
 		{
-			String msg = "Problems when executing '"+cmd+"' in ASE Server '"+dsname+"'. ";
+			String msg = "Problems when executing '" + cmd + "' in ASE Server '" + dsname + "'. ";
 			_logger.error(msg + AseConnectionUtils.sqlExceptionToString(sqle));
 			throw sqle;
 		}
@@ -1015,10 +1015,10 @@ public class RepServerUtils
 		if (args.length >= 3) user = args[2];
 		if (args.length >= 4) pass = args[3];
 
-		System.out.println("       host:   "+host);
-		System.out.println("       port:   "+port);
-		System.out.println("       user:   "+user);
-		System.out.println("       passwd: "+pass);
+		System.out.println("       host:   " + host);
+		System.out.println("       port:   " + port);
+		System.out.println("       user:   " + user);
+		System.out.println("       passwd: " + pass);
 		
 		int portNum = Integer.parseInt(port);
 		try

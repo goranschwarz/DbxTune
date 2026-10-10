@@ -148,7 +148,7 @@ extends TabularCntrPanel
 //		}, SwingUtils.parseColor(colorStr, TrendGraphColors.VERY_LIGHT_BLUE), null));
 
 		// YELLOW = OLDEST OPEN TRANSACTION above 0
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.oldestOpenTranInSeconds");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.oldestOpenTranInSeconds");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -202,7 +202,7 @@ extends TabularCntrPanel
 //		}, SwingUtils.parseColor(colorStr, Color.RED), null));
 
 		// RED (or 1 cell) = LOG Size is LARGER than the DATA Size
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.wal.is.larger.than.data.size");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.wal.is.larger.than.data.size");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -226,7 +226,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.RED), null));
 
 		// RED (or 1 cell) = VLF Count 
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.vlf.high");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.vlf.high");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -280,7 +280,7 @@ extends TabularCntrPanel
 //					Number DataSizeUsedPct  = (Number)dataTable.getValueAt(r, DataSizeUsedPct_pos);
 
 					if (_logger.isDebugEnabled())
-						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": DBName("+DBName_pos+")='"+DBName+"', LogSizeFreeInMb("+LogSizeFreeInMb_pos+")='"+LogSizeFreeInMb+"', LogSizeUsedPct("+LogSizeUsedPct_pos+")='"+LogSizeUsedPct+"'.");
+						_logger.debug("createDataset():GRAPH-DATA: " + getName() + ": DBName(" + DBName_pos + ")='" + DBName + "', LogSizeFreeInMb(" + LogSizeFreeInMb_pos + ")='" + LogSizeFreeInMb + "', LogSizeUsedPct(" + LogSizeUsedPct_pos + ")='" + LogSizeUsedPct + "'.");
 
 					if (LogSizeFreeInMb == null || LogSizeUsedPct == null)
 						continue;
@@ -305,7 +305,7 @@ extends TabularCntrPanel
 					double usedPct = 100.0 - freePct;
 					BigDecimal freeMb = new BigDecimal(Math.random() * 1000.0).setScale(1, RoundingMode.HALF_EVEN);
 
-					categoryDataset.addValue(usedPct, "FREE MB: "+freeMb, "dummy_db_"+i);
+					categoryDataset.addValue(usedPct, "FREE MB: " + freeMb, "dummy_db_" + i);
 				}
 			}
 		}
@@ -346,7 +346,7 @@ extends TabularCntrPanel
 //					if (_logger.isDebugEnabled())
 //						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": DBName("+DBName_pos+")='"+DBName+"', LogSizeFreeInMb("+LogSizeFreeInMb_pos+")='"+LogSizeFreeInMb+"', LogSizeUsedPct("+LogSizeUsedPct_pos+")='"+LogSizeUsedPct+"'.");
 					if (_logger.isDebugEnabled())
-					_logger.debug("createDataset():GRAPH-DATA: "+getName()+": DBName("+DBName_pos+")='"+DBName+"', DataSizeFreeInMb("+DataSizeFreeInMb_pos+")='"+DataSizeFreeInMb+"', DataSizeUsedPct("+DataSizeUsedPct_pos+")='"+DataSizeUsedPct+"'.");
+					_logger.debug("createDataset():GRAPH-DATA: " + getName() + ": DBName(" + DBName_pos + ")='" + DBName + "', DataSizeFreeInMb(" + DataSizeFreeInMb_pos + ")='" + DataSizeFreeInMb + "', DataSizeUsedPct(" + DataSizeUsedPct_pos + ")='" + DataSizeUsedPct + "'.");
 
 					if (DataSizeFreeInMb == null || DataSizeUsedPct == null)
 						continue;
@@ -370,7 +370,7 @@ extends TabularCntrPanel
 					double usedPct = 100.0 - freePct;
 					BigDecimal freeMb = new BigDecimal(Math.random() * 1000.0).setScale(1, RoundingMode.HALF_EVEN);
 
-					categoryDataset.addValue(usedPct, "FREE MB: "+freeMb, "dummy_db_"+i);
+					categoryDataset.addValue(usedPct, "FREE MB: " + freeMb, "dummy_db_" + i);
 				}
 			}
 		}
@@ -438,7 +438,7 @@ extends TabularCntrPanel
 					Number DataOsDiskUsedPct   = (Number) dataTable.getValueAt(r, DataOsDiskUsedPct_pos);
 					
 					if (_logger.isDebugEnabled())
-						_logger.debug("createDataset():GRAPH-OS-DISK: "+getName()+": "
+						_logger.debug("createDataset():GRAPH-OS-DISK: " + getName() + ": "
 								+ "LogOsDiskLabel("    + LogOsDiskLabel_pos    + ")='" + LogOsDiskLabel    + "', "
 								+ "LogOsDisk("         + LogOsDisk_pos         + ")='" + LogOsDisk         + "', "
 								+ "LogOsFileName("     + LogOsFileName_pos     + ")='" + LogOsFileName     + "', "
@@ -493,7 +493,7 @@ extends TabularCntrPanel
 					double usedPct = 100.0 - freePct;
 					BigDecimal freeMb = new BigDecimal(Math.random() * 1000.0).setScale(1, RoundingMode.HALF_EVEN);
 
-					categoryDataset.addValue(usedPct, "FREE MB: "+freeMb, "dummy_db_"+i);
+					categoryDataset.addValue(usedPct, "FREE MB: " + freeMb, "dummy_db_" + i);
 				}
 			}
 		}
@@ -754,9 +754,9 @@ extends TabularCntrPanel
 		final JLabel            graphType_lbl    = new JLabel("Graph Orientation");
 		final JComboBox<String> graphType_cbx    = new JComboBox<String>(graphTypeArr);
 
-		enableLogGraph_chk   .setToolTipText("Show the graph for '"+CHART_TITLE_LOG+"'.");
-		enableDataGraph_chk  .setToolTipText("Show the graph for '"+CHART_TITLE_DATA+"'.");
-		enableOsDiskGraph_chk.setToolTipText("Show the graph for '"+CHART_TITLE_OS_DISK+"'.");
+		enableLogGraph_chk   .setToolTipText("Show the graph for '" + CHART_TITLE_LOG + "'.");
+		enableDataGraph_chk  .setToolTipText("Show the graph for '" + CHART_TITLE_DATA + "'.");
+		enableOsDiskGraph_chk.setToolTipText("Show the graph for '" + CHART_TITLE_OS_DISK + "'.");
 
 		String tooltip =
 			"<html>" +

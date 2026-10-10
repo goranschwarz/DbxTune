@@ -163,7 +163,7 @@ extends TabularCntrPanel
 					Number CpuUsagePct         = (Number)dataTable.getValueAt(r, CpuUsagePct_pos);
 
 					if (_logger.isDebugEnabled())
-						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": OperationName("+OperationName_pos+")='"+OperationName+"', ExecutionCnt("+ExecutionCnt_pos+")='"+ExecutionCnt+"', ExecutionTime("+ExecutionTime_pos+")='"+ExecutionTime+"', ExecutionTimePerCnt("+ExecutionTimePerCnt_pos+")='"+ExecutionTimePerCnt+"', CpuUsagePct("+CpuUsagePct_pos+")='"+CpuUsagePct+"'.");
+						_logger.debug("createDataset():GRAPH-DATA: " + getName() + ": OperationName(" + OperationName_pos + ")='" + OperationName + "', ExecutionCnt(" + ExecutionCnt_pos + ")='" + ExecutionCnt + "', ExecutionTime(" + ExecutionTime_pos + ")='" + ExecutionTime + "', ExecutionTimePerCnt(" + ExecutionTimePerCnt_pos + ")='" + ExecutionTimePerCnt + "', CpuUsagePct(" + CpuUsagePct_pos + ")='" + CpuUsagePct + "'.");
 
 					// add 0 if null value...
 					if (ExecutionCnt       == null) ExecutionCnt        = Double.valueOf(0);

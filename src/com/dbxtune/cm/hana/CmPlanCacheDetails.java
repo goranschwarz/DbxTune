@@ -58,7 +58,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_CACHE;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -153,7 +153,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmPlanCacheDetails(counterController, guiController);
 	}
@@ -277,7 +277,7 @@ extends CountersModel
 
 		String sql_sample_lastXminutes = "";
 		if (sample_lastXminutes)
-			sql_sample_lastXminutes = "  AND LAST_EXECUTION_TIMESTAMP > ADD_SECONDS(current_timestamp, -("+sample_lastXminutesTime+"*60))\n";
+			sql_sample_lastXminutes = "  AND LAST_EXECUTION_TIMESTAMP > ADD_SECONDS(current_timestamp, -(" + sample_lastXminutesTime + "*60))\n";
 
 		String sql = 
 			"select \n" +
@@ -373,7 +373,7 @@ extends CountersModel
     		if (prevSample == null)
     			setSqlWhere("AND 1=0"); // do not get any rows for the first sample...
     		else
-    			setSqlWhere("AND LAST_EXECUTION_TIMESTAMP > '"+prevSample+"' "); 
+    			setSqlWhere("AND LAST_EXECUTION_TIMESTAMP > '" + prevSample + "' "); 
 		}
 		else
 			setSqlWhere("");

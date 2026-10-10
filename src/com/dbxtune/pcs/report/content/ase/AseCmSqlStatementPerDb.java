@@ -186,7 +186,7 @@ extends PostgresAbstract
 		}
 		catch(Exception ex)
 		{
-			_logger.warn("Problems getting ASE Page Size from DDL Storage. Using 2K Pages as the default. asePageSizeDivDec=" + asePageSizeDivDec + ", asePageSizeDivInt="+asePageSizeDivInt, ex);
+			_logger.warn("Problems getting ASE Page Size from DDL Storage. Using 2K Pages as the default. asePageSizeDivDec=" + asePageSizeDivDec + ", asePageSizeDivInt=" + asePageSizeDivInt, ex);
 		}
 
 		//-------------------------------------------------------

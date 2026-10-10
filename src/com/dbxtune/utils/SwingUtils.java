@@ -221,7 +221,7 @@ public class SwingUtils
 		Component[] comp = c.getComponents();
 		for (int i=0; i<comp.length; i++)
 		{
-			System.out.println(text+".comp["+i+"].type="+comp[i].getClass().getName());
+			System.out.println(text + ".comp[" + i + "].type=" + comp[i].getClass().getName());
 //			if (comp[i] instanceof JPanel)
 //			{
 //				JPanel jp = (JPanel) comp[i]; 
@@ -237,7 +237,7 @@ public class SwingUtils
 			Component parent = c.getParent();
 			if (parent != null)
 			{
-				System.out.println(text + " .depth["+i+"].parentClassName="+parent.getClass().getName());
+				System.out.println(text + " .depth[" + i + "].parentClassName=" + parent.getClass().getName());
 			}
 			c = parent;
 		}
@@ -287,11 +287,11 @@ public class SwingUtils
 			catch (UnsupportedFlavorException ex)
 			{
 				//highly unlikely since we are using a standard DataFlavor
-				_logger.error("getClipboardContents(): "+ex, ex);
+				_logger.error("getClipboardContents(): " + ex, ex);
 			}
 			catch (IOException ex) 
 			{
-				_logger.error("getClipboardContents(): "+ex, ex);
+				_logger.error("getClipboardContents(): " + ex, ex);
 			}
 		}
 		return result;
@@ -671,11 +671,11 @@ public class SwingUtils
 			}
 			catch (InterruptedException e)
 			{
-				_logger.error("Problems showing message. Caught: "+e, e);
+				_logger.error("Problems showing message. Caught: " + e, e);
 			}
 			catch (InvocationTargetException e)
 			{
-				_logger.error("Problems showing message. Caught: "+e, e);
+				_logger.error("Problems showing message. Caught: " + e, e);
 			}
 		}
 	}
@@ -809,7 +809,7 @@ public class SwingUtils
 //		System.out.println("---->>>>>>>>>>>>>>>>>> Using the icon '"+url+"'.");
 		if (url == null)
 		{
-			_logger.error("Can't find the resource for class='"+clazz+"', filename='"+filename+"'.");
+			_logger.error("Can't find the resource for class='" + clazz + "', filename='" + filename + "'.");
 			return null;
 		}
 
@@ -829,7 +829,7 @@ public class SwingUtils
 			iconImage = new ImageIcon(image);
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("readImageIcon(): isHiDpi()="+isHiDpi()+", getHiDpiScale()="+getHiDpiScale()+", scaleFactor="+scaleFactor+", newWidth="+newWidth+", newHeight="+newHeight+", newWidthAfter="+iconImage.getIconWidth()+", newHeightAfter="+iconImage.getIconHeight()+".");
+				_logger.debug("readImageIcon(): isHiDpi()=" + isHiDpi() + ", getHiDpiScale()=" + getHiDpiScale() + ", scaleFactor=" + scaleFactor + ", newWidth=" + newWidth + ", newHeight=" + newHeight + ", newWidthAfter=" + iconImage.getIconWidth() + ", newHeightAfter=" + iconImage.getIconHeight() + ".");
 		}
 		return iconImage;
 
@@ -1103,7 +1103,7 @@ public class SwingUtils
 				sa = colorStr.split(",");
 
 			if ( ! (sa.length == 3 || sa.length == 4) )
-				throw new ParseException("Color string '"+colorStr+"' does not have two or three divider characters of '.' or ','", -1);
+				throw new ParseException("Color string '" + colorStr + "' does not have two or three divider characters of '.' or ','", -1);
 
 			ia[3] = 255; // set alpha to default
 			for(int i=0; i<sa.length; i++)
@@ -1115,11 +1115,11 @@ public class SwingUtils
 				}
 				catch (NumberFormatException ignore) 
 				{
-					throw new ParseException("Color string '"+colorStr+"' has a non number in the "+(i+1)+" field.", i);
+					throw new ParseException("Color string '" + colorStr + "' has a non number in the " + (i+1) + " field.", i);
 				}
 
 				if (ia[i] > 255)
-					throw new ParseException("Color string '"+colorStr+"' has a 'to big' number in the "+(i+1)+" field. max is 255.", i);
+					throw new ParseException("Color string '" + colorStr + "' has a 'to big' number in the " + (i+1) + " field. max is 255.", i);
 			}
 			return new Color(ia[0], ia[1], ia[2], ia[3]);
 		}
@@ -1135,7 +1135,7 @@ public class SwingUtils
 				colorStr = colorStr.substring(2);
 
 			if ( ! (colorStr.length() == 6 || colorStr.length() == 8) )
-				throw new ParseException("Color string '"+colorStr+"' has to be of the length 6 (or 8 if you want to have alpha).", -1);
+				throw new ParseException("Color string '" + colorStr + "' has to be of the length 6 (or 8 if you want to have alpha).", -1);
 
 			try
 			{
@@ -1150,7 +1150,7 @@ public class SwingUtils
 			}
 			catch (NumberFormatException ignore)
 			{
-				throw new ParseException("Color string '"+colorStr+"' has a non number in the field.", -1);
+				throw new ParseException("Color string '" + colorStr + "' has a non number in the field.", -1);
 			}
 		}
 		
@@ -1175,7 +1175,7 @@ public class SwingUtils
 		// OUT of options.
 		// -----------------------------------------
 		
-		throw new ParseException("Color string '"+colorStr+"' can't be parsed. I tried 'int' & 'r,g,b[,a]|r.g.b[.a]' & '#rrggbb[aa]|0xrrggbb[aa]' & 'java colors' (out of parser implementations).", -1);
+		throw new ParseException("Color string '" + colorStr + "' can't be parsed. I tried 'int' & 'r,g,b[,a]|r.g.b[.a]' & '#rrggbb[aa]|0xrrggbb[aa]' & 'java colors' (out of parser implementations).", -1);
 	}
 
 	public static String tableToString(TableModel tm)
@@ -1281,7 +1281,7 @@ public class SwingUtils
 		if (prefixColName != null && prefixColData != null)
 		{
 			if (prefixColName.length != prefixColData.length)
-				throw new IllegalArgumentException("tableToString(): prefixColName.length="+prefixColName.length+" is NOT equal prefixColData.length="+prefixColData.length);
+				throw new IllegalArgumentException("tableToString(): prefixColName.length=" + prefixColName.length + " is NOT equal prefixColData.length=" + prefixColData.length);
 			doPrefix = true;
 		}
 
@@ -1913,7 +1913,7 @@ public class SwingUtils
 		}
 
 		if (_logger.isDebugEnabled())
-			_logger.debug("getScreenResulutionAsString(): returns |"+retStr+"|.");
+			_logger.debug("getScreenResulutionAsString(): returns |" + retStr + "|.");
 
 		return retStr;
 	}
@@ -1996,18 +1996,18 @@ public class SwingUtils
 
 				if (_logger.isDebugEnabled())
 				{
-					_logger.debug("setWindowMinSize(): actWinHeight="+thisWinHeight+", calcWinMinHeight="+calcWinMinHeight+".");
-					_logger.debug("setWindowMinSize(): actWinWidth ="+thisWinWidth +", calcWinMinWidth ="+calcWinMinWidth+".");
+					_logger.debug("setWindowMinSize(): actWinHeight=" + thisWinHeight + ", calcWinMinHeight=" + calcWinMinHeight + ".");
+					_logger.debug("setWindowMinSize(): actWinWidth =" + thisWinWidth + ", calcWinMinWidth =" + calcWinMinWidth + ".");
 				}
 
 				if (thisWinHeight < calcWinMinHeight)
 				{
-					_logger.info("setWindowMinSize(): Adjusting minimum window HEIGHT from '"+thisWinHeight+"' to minimum '"+calcWinMinHeight+"'.");
+					_logger.info("setWindowMinSize(): Adjusting minimum window HEIGHT from '" + thisWinHeight + "' to minimum '" + calcWinMinHeight + "'.");
 					win.setSize(win.getWidth(), calcWinMinHeight);
 				}
 				if (thisWinWidth < calcWinMinWidth)
 				{
-					_logger.info("setWindowMinSize(): Adjusting minimum window WIDTH from '"+thisWinWidth+"' to minimum '"+calcWinMinWidth+"'.");
+					_logger.info("setWindowMinSize(): Adjusting minimum window WIDTH from '" + thisWinWidth + "' to minimum '" + calcWinMinWidth + "'.");
 					win.setSize(calcWinMinWidth, win.getHeight());
 				}
 			}
@@ -2398,7 +2398,7 @@ public class SwingUtils
 			if (comp instanceof JComponent)
 				jcomp = (JComponent) comp;
 			else
-				throw new RuntimeException("showTimedBalloonTip: jcomp was null and the derived componen was not a JComponent. comp="+comp);
+				throw new RuntimeException("showTimedBalloonTip: jcomp was null and the derived componen was not a JComponent. comp=" + comp);
 		}
 
 		// Make some noice
@@ -2432,7 +2432,7 @@ public class SwingUtils
 			if (comp instanceof JComponent)
 				jcomp = (JComponent) comp;
 			else
-				throw new RuntimeException("showTimedBalloonTip: jcomp was null and the derived componen was not a JComponent. comp="+comp);
+				throw new RuntimeException("showTimedBalloonTip: jcomp was null and the derived componen was not a JComponent. comp=" + comp);
 		}
 		
 		JTable table;
@@ -2450,7 +2450,7 @@ public class SwingUtils
 			if (table == null)
 			{
 				SwingUtils.printParents(jcomp, "showTimedBalloonTip: ");
-				throw new RuntimeException("showTimedBalloonTip: component was not a JTable. comp="+jcomp);
+				throw new RuntimeException("showTimedBalloonTip: component was not a JTable. comp=" + jcomp);
 			}
 		}
 

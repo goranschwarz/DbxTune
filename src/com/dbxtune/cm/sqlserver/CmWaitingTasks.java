@@ -78,7 +78,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -124,7 +124,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmWaitingTasks(counterController, guiController);
 	}
@@ -384,7 +384,7 @@ extends CountersModel
 
 		if (resource_description_pos == -1 || resource_description_decoded_pos == -1)
 		{
-			_logger.error("Cant find desired columns: resource_description_pos=" + resource_description_pos +", resource_description_decoded_pos=" + resource_description_decoded_pos);
+			_logger.error("Cant find desired columns: resource_description_pos=" + resource_description_pos + ", resource_description_decoded_pos=" + resource_description_decoded_pos);
 			return;
 		}
 
@@ -539,7 +539,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_WAIT_COUNT,
 			"Number of Current Wait Tasks", 	                   // Menu CheckBox text
-			"Number of Current Wait Tasks ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Number of Current Wait Tasks (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] {"WaitCount"},
 			LabelType.Static,
@@ -551,7 +551,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_WAIT_MAX_TIME,
 			"Max Wait Time in ms for Current Tasks", 	                   // Menu CheckBox text
-			"Max Wait Time in ms for Current Tasks ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Max Wait Time in ms for Current Tasks (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] {"wait_duration_ms"},
 			LabelType.Static,

@@ -431,7 +431,7 @@ implements ActionListener, TableModelListener
 			String diffStr = (String)getWizardData("diff")              + ", ";
 			String pctStr  = (String)getWizardData("pct")               + ", ";
 			String gColStr = (String)getWizardData("graph.data.cols")   + ", ";
-			String gMthStr = (String)getWizardData("graph.data.methods")+ ", ";
+			String gMthStr = (String)getWizardData("graph.data.methods") + ", ";
 			String gLblStr = (String)getWizardData("graph.data.labels") + ", ";
 
 //System.out.println("PK: "      + pkStr);
@@ -445,10 +445,10 @@ implements ActionListener, TableModelListener
 			{
 				String  colName   = (String) tm.getValueAt(r, TAB_POS_COL_NAME);
 
-				boolean isPkCol   = (pkStr  .indexOf(colName+", ") != -1);
-				boolean isDiffCol = (diffStr.indexOf(colName+", ") != -1);
-				boolean isPctCol  = (pctStr .indexOf(colName+", ") != -1);
-				boolean isGraphCol= (gColStr.indexOf(colName+", ") != -1);
+				boolean isPkCol   = (pkStr  .indexOf(colName + ", ") != -1);
+				boolean isDiffCol = (diffStr.indexOf(colName + ", ") != -1);
+				boolean isPctCol  = (pctStr .indexOf(colName + ", ") != -1);
+				boolean isGraphCol= (gColStr.indexOf(colName + ", ") != -1);
 
 				tm.setValueAt(Boolean.valueOf(isPkCol),   r, TAB_POS_COL_PK);
 				tm.setValueAt(Boolean.valueOf(isDiffCol), r, TAB_POS_COL_DIFF);
@@ -619,13 +619,13 @@ implements ActionListener, TableModelListener
 				if ( ((Boolean)tm.getValueAt(r, TAB_POS_CHECK)).booleanValue() )
 				{
 					if (tm.getValueAt(r, TAB_POS_METHOD).equals(NO_METHOD))
-						return "Row "+(r+1)+" is selected, but no 'Method' has been choosen.";
+						return "Row " + (r+1) + " is selected, but no 'Method' has been choosen.";
 
 					if ( ! ((Boolean)tm.getValueAt(r, TAB_POS_COL_DIFF)).booleanValue() )
 					{
 						String methodStr = (String) tm.getValueAt(r, TAB_POS_METHOD);
 						if ( ! methodStr.startsWith("abs") )
-							return "Row "+(r+1)+" is selected, but no 'Method' can only be 'abs*'. Diff/Rate is not available.";
+							return "Row " + (r+1) + " is selected, but no 'Method' can only be 'abs*'. Diff/Rate is not available.";
 					}
 					rows++;
 				}
@@ -644,13 +644,13 @@ implements ActionListener, TableModelListener
 				if ( ((Boolean)tm.getValueAt(r, TAB_POS_CHECK)).booleanValue() )
 				{
 					if (tm.getValueAt(r, TAB_POS_METHOD).equals(NO_METHOD))
-						return "Row "+(r+1)+" is selected, but no 'Method' has been choosen.";
+						return "Row " + (r+1) + " is selected, but no 'Method' has been choosen.";
 
 					if ( ! ((Boolean)tm.getValueAt(r, TAB_POS_COL_DIFF)).booleanValue() )
 					{
 						String methodStr = (String) tm.getValueAt(r, TAB_POS_METHOD);
 						if ( ! methodStr.startsWith("abs") )
-							return "Row "+(r+1)+" is selected, but no 'Method' can only be 'abs*'. Diff/Rate is not available.";
+							return "Row " + (r+1) + " is selected, but no 'Method' can only be 'abs*'. Diff/Rate is not available.";
 					}
 					rows++;
 				}

@@ -83,11 +83,11 @@ implements ActionListener, FocusListener, CaretListener
 	                                                      "Specify this as a number/integer.<br>" +
 //	                                                      "Example 1: 15030, which is 15.0.3<br>" +
 //	                                                      "Example 2: 15031, which is 15.0.3 ESD#1<br>" +
-	                                                      "Example 1: "+Ver.ver(15,0,3)    +", which is 15.0.3<br>" +
-	                                                      "Example 2: "+Ver.ver(15,0,3,1)  +", which is 15.0.3 ESD#1<br>" +
-	                                                      "Example 3: "+Ver.ver(15,0,3,4,2)+", which is 15.0.3 ESD#4.2<br>" +
-	                                                      "Example 4: "+Ver.ver(15,7,0,100)+", which is 15.7 SP100<br>" +
-	                                                      "Example 5: "+Ver.ver(16,0,0,1,1)+", which is 16.0 SP01 PL01<br>" +
+	                                                      "Example 1: " + Ver.ver(15,0,3)    + ", which is 15.0.3<br>" +
+	                                                      "Example 2: " + Ver.ver(15,0,3,1)  + ", which is 15.0.3 ESD#1<br>" +
+	                                                      "Example 3: " + Ver.ver(15,0,3,4,2) + ", which is 15.0.3 ESD#4.2<br>" +
+	                                                      "Example 4: " + Ver.ver(15,7,0,100) + ", which is 15.7 SP100<br>" +
+	                                                      "Example 5: " + Ver.ver(16,0,0,1,1) + ", which is 16.0 SP01 PL01<br>" +
 	                                                      "Note: always use 7 digits as the version number. Or 0 if you mean 'any version'<br>" +
 	                                                  "</html>";
 
@@ -261,7 +261,7 @@ implements ActionListener, FocusListener, CaretListener
 			_sqlInit_txt    .setText( cm.getSqlInit() );
 			_sql_txt        .setText( cm.getSql() );
 			_sqlClose_txt   .setText( cm.getSqlClose() );
-			_needVersion_txt.setText( cm.getDependsOnVersion()+"" );
+			_needVersion_txt.setText( cm.getDependsOnVersion() + "" );
 			_needConfig_txt .setText( StringUtil.toCommaStr(cm.getDependsOnRole()) );
 			_needConfig_txt .setText( StringUtil.toCommaStr(cm.getDependsOnConfig()) );
 			_monTables_txt  .setText( StringUtil.toCommaStr(cm.getMonTablesInQuery()) );
@@ -299,7 +299,7 @@ implements ActionListener, FocusListener, CaretListener
 			problem = problem.substring(0, problem.length()-2);
 		}
 		if ( problem.length() > 0 )
-			return "Following fields cant be empty: "+problem;
+			return "Following fields cant be empty: " + problem;
 
 		// NEED VERSION
 		if ( ! _needVersion_txt.getText().equals(NEED_VERSION_DEFAULT) )
@@ -317,13 +317,13 @@ implements ActionListener, FocusListener, CaretListener
 					return "DBMS Version needs to be a number."; 
 				}
 				if (srvVersionNum > 0 && srvVersionStr.length() != Long.toString(Ver.ver(15,0,3,1,1)).length() )
-					return "DBMS Version needs to be a number, Example "+Ver.ver(15,0,3,1,1)+" (15.0.3 ESD#1.1).";
+					return "DBMS Version needs to be a number, Example " + Ver.ver(15,0,3,1,1) + " (15.0.3 ESD#1.1).";
 			}
 		}
 
 		// NEED ROLE
 		if (_needRole_txt.getText().equals(NEED_ROLE_DEFAULT))
-			return "Substitute '"+NEED_ROLE_DEFAULT+"' to something usefull. Or make it empty";
+			return "Substitute '" + NEED_ROLE_DEFAULT + "' to something usefull. Or make it empty";
 
 		if (_needRole_txt.getText().indexOf("<") >= 0 || _needRole_txt.getText().indexOf(">") >= 0)
 			return "Take away the '<' and/or '>' chars in 'needs role'.";
@@ -331,7 +331,7 @@ implements ActionListener, FocusListener, CaretListener
 
 		// NEED CONFIG
 		if (_needConfig_txt.getText().equals(NEED_CONFIG_DEFAULT))
-			return "Substitute '"+NEED_CONFIG_DEFAULT+"' to something usefull. Or make it empty";
+			return "Substitute '" + NEED_CONFIG_DEFAULT + "' to something usefull. Or make it empty";
 
 		if (_needConfig_txt.getText().indexOf("<") >= 0 || _needConfig_txt.getText().indexOf(">") >= 0)
 			return "Take away the '<' and/or '>' chars in 'needs config'.";
@@ -342,7 +342,7 @@ implements ActionListener, FocusListener, CaretListener
 		
 		// MONITOR TABLES
 		if (_monTables_txt.getText().equals(MON_TABLES_DEFAULT))
-			return "Substitute '"+MON_TABLES_DEFAULT+"' to something usefull. Or make it empty";
+			return "Substitute '" + MON_TABLES_DEFAULT + "' to something usefull. Or make it empty";
 	
 		if (_monTables_txt.getText().indexOf("<") >= 0 || _monTables_txt.getText().indexOf(">") >= 0)
 			return "Take away the '<' and/or '>' chars in 'monitor tables'.";
@@ -374,7 +374,7 @@ implements ActionListener, FocusListener, CaretListener
 			try 
 			{
 //				Connection conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-wiz-udc", null);
-				DbxConnection conn = DbxConnection.connect(SwingUtilities.getWindowAncestor(this), Version.getAppName()+"-wiz-udc");
+				DbxConnection conn = DbxConnection.connect(SwingUtilities.getWindowAncestor(this), Version.getAppName() + "-wiz-udc");
 				QueryWindow qw = new QueryWindow(conn, sql, null, true, WindowType.JDIALOG_MODAL, null);
 //				qw.setModal(true);
 //				qw.setModalExclusionType(Dialog.ModalExclusionType.APPLICATION_EXCLUDE);
@@ -407,7 +407,7 @@ implements ActionListener, FocusListener, CaretListener
 		try 
 		{
 //			Connection conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-wiz-udc", null);
-			DbxConnection conn = DbxConnection.connect(SwingUtilities.getWindowAncestor(this), Version.getAppName()+"-wiz-udc");
+			DbxConnection conn = DbxConnection.connect(SwingUtilities.getWindowAncestor(this), Version.getAppName() + "-wiz-udc");
 			CountersModel cm = new CountersModel();
 //			CounterSample sample = new CounterSample("dbxtune-wiz-udc-test", true, null, null);
 			CounterSample sample = cm.createCounterSample("dbxtune-wiz-udc-test", true, null, null);

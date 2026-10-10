@@ -72,7 +72,7 @@ public class SqlParam
 	public static SqlParam parseEntry(String entry)
 	{
 		if (entry == null)
-			throw new RuntimeException("Problem parsing RPC Parameter entry '"+entry+"', is NULL.");
+			throw new RuntimeException("Problem parsing RPC Parameter entry '" + entry + "', is NULL.");
 
 		boolean isOracleResultSetOutputParameter = entry.trim().equalsIgnoreCase("ora_rs");
 
@@ -88,7 +88,7 @@ public class SqlParam
 
 		int eqPos   = entry.indexOf('=');
 		if (eqPos == -1)
-			throw new RuntimeException("Problem parsing RPC Parameter entry '"+entry+"', no equal char is found. Expecting: 'int|bigint|string|numeric|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|clob|blob = value' or 'ora_rs'");
+			throw new RuntimeException("Problem parsing RPC Parameter entry '" + entry + "', no equal char is found. Expecting: 'int|bigint|string|numeric|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|clob|blob = value' or 'ora_rs'");
 		String type = entry.substring(0, eqPos).trim();
 		String val  = entry.substring(eqPos+1).trim();
 		
@@ -177,7 +177,7 @@ public class SqlParam
 			else
 			{
 				try { p._val = Integer.valueOf(val); }
-				catch(NumberFormatException e) {throw new RuntimeException(" Problems parsing value '"+val+"' to a Integer.", e);}
+				catch(NumberFormatException e) {throw new RuntimeException(" Problems parsing value '" + val + "' to a Integer.", e);}
 			}
 		}
 		// BIGINT
@@ -189,7 +189,7 @@ public class SqlParam
 			else
 			{
 				try { p._val = Long.valueOf(val); }
-				catch(NumberFormatException e) {throw new RuntimeException(" Problems parsing value '"+val+"' to a Long.", e);}
+				catch(NumberFormatException e) {throw new RuntimeException(" Problems parsing value '" + val + "' to a Long.", e);}
 			}
 		}
 		// NUMERIC
@@ -201,7 +201,7 @@ public class SqlParam
 			else
 			{
 				try { p._val = new BigDecimal(val); }
-				catch(NumberFormatException e) {throw new RuntimeException(" Problems parsing value '"+val+"' to a BigDecimal.", e);}
+				catch(NumberFormatException e) {throw new RuntimeException(" Problems parsing value '" + val + "' to a BigDecimal.", e);}
 			}
 		}
 		// DOUBLE
@@ -213,7 +213,7 @@ public class SqlParam
 			else
 			{
 				try { p._val = Double.valueOf(val); }
-				catch(NumberFormatException e) {throw new RuntimeException(" Problems parsing value '"+val+"' to a Double.", e);}
+				catch(NumberFormatException e) {throw new RuntimeException(" Problems parsing value '" + val + "' to a Double.", e);}
 			}
 		}
 		// TIMESTAMP
@@ -228,7 +228,7 @@ public class SqlParam
 					fmt = "yyyy-MM-dd HH:mm:ss";
 				SimpleDateFormat sdf = new SimpleDateFormat(fmt);
 				try { p._val = new java.sql.Timestamp( sdf.parse(val).getTime() ); }
-				catch (ParseException e) { throw new RuntimeException("Problems parsing value '"+val+"' to a Timestamp using the format '"+fmt+"'. For format see: http://docs.oracle.com/javase/7/docs/api/java/text/SimpleDateFormat.html", e); }
+				catch (ParseException e) { throw new RuntimeException("Problems parsing value '" + val + "' to a Timestamp using the format '" + fmt + "'. For format see: http://docs.oracle.com/javase/7/docs/api/java/text/SimpleDateFormat.html", e); }
 			}
 		}
 		// DATE
@@ -243,7 +243,7 @@ public class SqlParam
 					fmt = "yyyy-MM-dd";
 				SimpleDateFormat sdf = new SimpleDateFormat(fmt);
 				try { p._val = new java.sql.Date( sdf.parse(val).getTime() ); }
-				catch (ParseException e) { throw new RuntimeException("Problems parsing value '"+val+"' to a Date using the format '"+fmt+"'. For format see: http://docs.oracle.com/javase/7/docs/api/java/text/SimpleDateFormat.html", e); }
+				catch (ParseException e) { throw new RuntimeException("Problems parsing value '" + val + "' to a Date using the format '" + fmt + "'. For format see: http://docs.oracle.com/javase/7/docs/api/java/text/SimpleDateFormat.html", e); }
 			}
 		}
 		// TIME
@@ -258,7 +258,7 @@ public class SqlParam
 					fmt = "HH:mm:ss";
 				SimpleDateFormat sdf = new SimpleDateFormat(fmt);
 				try { p._val = new java.sql.Time( sdf.parse(val).getTime() ); }
-				catch (ParseException e) { throw new RuntimeException("Problems parsing value '"+val+"' to a Time using the format '"+fmt+"'. For format see: http://docs.oracle.com/javase/7/docs/api/java/text/SimpleDateFormat.html", e); }
+				catch (ParseException e) { throw new RuntimeException("Problems parsing value '" + val + "' to a Time using the format '" + fmt + "'. For format see: http://docs.oracle.com/javase/7/docs/api/java/text/SimpleDateFormat.html", e); }
 			}
 		}
 		// NCLOB
@@ -268,7 +268,7 @@ public class SqlParam
 			p._val = isNull ? null : readCLobValue(StringUtil.envVariableSubstitution(val)); 
 
 			if (_logger.isDebugEnabled())
-				_logger.debug("NCLOB.content=|"+p._val+"|");
+				_logger.debug("NCLOB.content=|" + p._val + "|");
 		}
 		// CLOB
 		else if ("clob".equals(type)) 
@@ -277,7 +277,7 @@ public class SqlParam
 			p._val = isNull ? null : readCLobValue(StringUtil.envVariableSubstitution(val)); 
 
 			if (_logger.isDebugEnabled())
-				_logger.debug("CLOB.content=|"+p._val+"|");
+				_logger.debug("CLOB.content=|" + p._val + "|");
 		}
 		// BLOB
 		else if ("blob".equals(type)) 
@@ -286,7 +286,7 @@ public class SqlParam
 			p._val = isNull ? null : readBLobValue(StringUtil.envVariableSubstitution(val)); 
 		}
 		// UNKNOWN
-		else throw new RuntimeException("Unknown RPC Datatype '"+type+"'. known datatypes 'int|bigint|string|nstring|numeric|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|nclob|clob|blob|ora_rs'");
+		else throw new RuntimeException("Unknown RPC Datatype '" + type + "'. known datatypes 'int|bigint|string|nstring|numeric|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|nclob|clob|blob|ora_rs'");
 
 //System.out.println("p._val=|"+p._val+"|, obj=" + (p._val == null ? "-null-" : p._val.getClass().getName()) );
 		return p;
@@ -311,20 +311,20 @@ public class SqlParam
 		// Convert it into a string using the file encoding
 		if (encoding == null)
 		{
-			_logger.info("CLOB - Charset convertion to charset '"+encoding+"'. using: return ByteArrayOutputStream.toString(). To debug the returned String. Enable debug mode on '"+SqlParam.class.getName()+"'");
+			_logger.info("CLOB - Charset convertion to charset '" + encoding + "'. using: return ByteArrayOutputStream.toString(). To debug the returned String. Enable debug mode on '" + SqlParam.class.getName() + "'");
 			return buffer.toString();
 		}
 		else
 		{
 			try
 			{
-				_logger.info("CLOB - Charset convertion to charset '"+encoding+"'. using: return new String(byte[], encoding='"+encoding+"'). To debug the returned String. Enable debug mode on '"+SqlParam.class.getName()+"'");
+				_logger.info("CLOB - Charset convertion to charset '" + encoding + "'. using: return new String(byte[], encoding='" + encoding + "'). To debug the returned String. Enable debug mode on '" + SqlParam.class.getName() + "'");
 				return new String(ba, encoding);
 			}
 			catch (UnsupportedEncodingException ex)
 			{
-				_logger.info("Problem creating a string with the encoding '"+encoding+"'. Caught: "+ex, ex);
-				_logger.info("CLOB:Fallback - Charset convertion. using: return ByteArrayOutputStream.toString(). To debug the returned String. Enable debug mode on '"+SqlParam.class.getName()+"'");
+				_logger.info("Problem creating a string with the encoding '" + encoding + "'. Caught: " + ex, ex);
+				_logger.info("CLOB:Fallback - Charset convertion. using: return ByteArrayOutputStream.toString(). To debug the returned String. Enable debug mode on '" + SqlParam.class.getName() + "'");
 				return buffer.toString();
 			}
 		}
@@ -367,12 +367,12 @@ public class SqlParam
 				
 				ContentInfoUtil util = new ContentInfoUtil();
 				ContentInfo info = util.findMatch( firstChunk );
-				_logger.info("Loaded file or URL '"+urlStr+"', with encoding '"+encoding+"', which is of Content '" + (info == null ? "unknown" : info.toString()) + "'.");
+				_logger.info("Loaded file or URL '" + urlStr + "', with encoding '" + encoding + "', which is of Content '" + (info == null ? "unknown" : info.toString()) + "'.");
 			}
 		}
 		catch (IOException e)
 		{
-			throw new RuntimeException("Problems reading the InputStream from the URL or file '" + urlStr + "'. Caught: "+e, e);
+			throw new RuntimeException("Problems reading the InputStream from the URL or file '" + urlStr + "'. Caught: " + e, e);
 		}
 
 		return buffer;
@@ -400,7 +400,7 @@ public class SqlParam
 		}
 		catch (Exception e)
 		{
-			throw new RuntimeException("Problems reading the URL or file '" + urlStr + "'. Caught: "+e, e);
+			throw new RuntimeException("Problems reading the URL or file '" + urlStr + "'. Caught: " + e, e);
 		}
 	}
 
@@ -410,14 +410,14 @@ public class SqlParam
 
 		List<String> tmp = StringUtil.splitOnCommasAllowQuotes(rpcParamsStr, true);
 		if ( tmp.size() == 0 && StringUtil.isNullOrBlank(tmp.get(0)) )
-			throw new RuntimeException("Problem parsing RPC Parameter String '"+rpcParamsStr+"', it looks like it's empty. Expecting: 'int|bigint|string|nstring|numeric|double|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|nclob|clob|blob = value' or 'ora_rs'.");
+			throw new RuntimeException("Problem parsing RPC Parameter String '" + rpcParamsStr + "', it looks like it's empty. Expecting: 'int|bigint|string|nstring|numeric|double|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|nclob|clob|blob = value' or 'ora_rs'.");
 		
 		for (int i=0; i<tmp.size(); i++)
 		{
 			String entry = tmp.get(i).trim();
 			SqlParam p = parseEntry(entry);
 			if (_logger.isDebugEnabled())
-				_logger.debug("RPC PARAM "+i+": |"+entry+"|. type=|"+p._sqlType+"|, val=|"+p._val+"|, isOutParam="+p._isOutput+".");
+				_logger.debug("RPC PARAM " + i + ": |" + entry + "|. type=|" + p._sqlType + "|, val=|" + p._val + "|, isOutParam=" + p._isOutput + ".");
 //System.out.println("RPC PARAM "+i+": |"+entry+"|. type=|"+p._sqlType+"|, val=|"+p._val+"|, isOutParam="+p._isOutput+".");
 			retList.add(p);
 		}

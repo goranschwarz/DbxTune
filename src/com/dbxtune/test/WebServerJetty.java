@@ -84,7 +84,7 @@ public class WebServerJetty
 		
 		String webDir = getAppWebDir();
 		WebAppContext webapp1 = new WebAppContext();
-		webapp1.setDescriptor(webDir+"/WEB-INF/web.xml");
+		webapp1.setDescriptor(webDir + "/WEB-INF/web.xml");
 		webapp1.setResourceBase(webDir);
 //		webapp1.setContextPath("/");
 //		webapp1.getInitParams().put("org.eclipse.jetty.servlet.Default.useFileMappedBuffer", "false");

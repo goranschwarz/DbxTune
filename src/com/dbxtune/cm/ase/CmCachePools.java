@@ -79,7 +79,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_CACHE;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -110,7 +110,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmCachePools(counterController, guiController);
 	}
@@ -168,7 +168,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_POOL_HIT_RATE,
 			"Cache Pools Hit Rate", 	               // Menu CheckBox text
-			"Cache Pools Hit Rate Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Cache Pools Hit Rate Percent (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -181,7 +181,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_POOL_UTIL,
 			"Cache Pools Utilization", 	               // Menu CheckBox text
-			"Cache Pools Utilization Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Cache Pools Utilization Percent (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -194,7 +194,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_POOL_USED_MB,
 			"Cache Pools Used MB", 	               // Menu CheckBox text
-			"Cache Pools Used MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Cache Pools Used MB (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -207,7 +207,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_POOL_FREE_MB,
 			"Cache Pools Free MB", 	               // Menu CheckBox text
-			"Cache Pools Free MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Cache Pools Free MB (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MIN_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -220,7 +220,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_POOL_TO_MRU,
 			"Cache Pools MRU Replacement", 	               // Menu CheckBox text
-			"Cache Pools MRU Replacement per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Cache Pools MRU Replacement per Second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -233,7 +233,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_POOL_TO_LRU,
 			"Cache Pools LRU fetch-and-discard Placement", 	               // Menu CheckBox text
-			"Cache Pools LRU fetch-and-discard Placement per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Cache Pools LRU fetch-and-discard Placement per Second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -246,7 +246,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_POOL_LOGICAL_READ,
 			"Cache Pools Logical Reads", 	               // Menu CheckBox text
-			"Cache Pools Logical Reads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Cache Pools Logical Reads per Second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -259,7 +259,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_POOL_REAL_PHYSICAL_READ,
 			"Cache Pools Real Physical Reads (Physical+APF)", 	               // Menu CheckBox text
-			"Cache Pools Real Physical Reads (Physical+APF) per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Cache Pools Real Physical Reads (Physical+APF) per Second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -272,7 +272,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_POOL_PHYSICAL_READ,
 			"Cache Pools Physical Reads", 	               // Menu CheckBox text
-			"Cache Pools Physical Reads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Cache Pools Physical Reads per Second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -285,7 +285,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_POOL_APF_READ,
 			"Cache Pools APF Reads", 	               // Menu CheckBox text
-			"Cache Pools APF Reads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Cache Pools APF Reads per Second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -298,7 +298,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_POOL_APF_PCT,
 			"Cache Pools APF Reads Percent", 	               // Menu CheckBox text
-			"Cache Pools APF Reads Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Cache Pools APF Reads Percent (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -311,7 +311,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_POOL_REPLACE_SLIDE,
 			"Cache Pools Replacement Slide", 	               // Menu CheckBox text
-			"Cache Pools Replacement Slide Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Cache Pools Replacement Slide Percent (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -324,7 +324,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_POOL_PHYSICAL_WRITES,
 			"Cache Pools Physical Writes", 	               // Menu CheckBox text
-			"Cache Pools Physical Writes per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Cache Pools Physical Writes per Second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -768,7 +768,7 @@ extends CountersModel
 		String calcAllocatedPages = "(AllocatedKB*(1024.0/@@maxpagesize))";
 		String calcDivPgsToMb     = "(1024*1024/@@maxpagesize)";                   // for 2K=512, 4K=256, 8K=128, 16K=64 
 		String calcPagesPerIO     = "(IOBufferSize/@@maxpagesize)";
-		String calcPagesRead      = "(PagesRead/"+calcPagesPerIO+")";
+		String calcPagesRead      = "(PagesRead/" + calcPagesPerIO + ")";
 //		String calcPhysicalReads  = "PhysicalReads";
 
 //		if (srvVersion >= 15700)
@@ -780,12 +780,12 @@ extends CountersModel
 			LogicalReads      = "LogicalReads, \n";
 			PhysicalWrites    = "PhysicalWrites, \n";
 			RealPhysicalReads = "RealPhysicalReads = convert(bigint, PhysicalReads) + convert(bigint, APFReads), \n";
-			PhysicalReadsPct  = "PhysicalReadsPct = CASE WHEN (PagesRead > 0) THEN convert(numeric(10,1), (((1.0*PhysicalReads*"+calcPagesPerIO+")/(1.0*PagesRead)) * 100.0)) ELSE 0.0 END,\n";
+			PhysicalReadsPct  = "PhysicalReadsPct = CASE WHEN (PagesRead > 0) THEN convert(numeric(10,1), (((1.0*PhysicalReads*" + calcPagesPerIO + ")/(1.0*PagesRead)) * 100.0)) ELSE 0.0 END,\n";
 			APFReads          = "APFReads, \n";
-			APFReadsPct       = "APFReadsPct = CASE WHEN (PagesRead > 0) THEN convert(numeric(10,1), (((1.0*APFReads*"+calcPagesPerIO+")/(1.0*PagesRead)) * 100.0)) ELSE 0.0 END,\n";
+			APFReadsPct       = "APFReadsPct = CASE WHEN (PagesRead > 0) THEN convert(numeric(10,1), (((1.0*APFReads*" + calcPagesPerIO + ")/(1.0*PagesRead)) * 100.0)) ELSE 0.0 END,\n";
 			APFPercentage     = "APFPercentage, \n";
 			WashSize          = "WashSize, \n";
-			CacheHitRate      = "CacheHitRate = convert(numeric(10,1), 100 - ("+calcPagesRead+"*1.0/(LogicalReads+1)) * 100.0), \n";
+			CacheHitRate      = "CacheHitRate = convert(numeric(10,1), 100 - (" + calcPagesRead + "*1.0/(LogicalReads+1)) * 100.0), \n";
 		}
 		
 		cols1 += "CacheName, \n" +
@@ -797,16 +797,16 @@ extends CountersModel
 		         "PagesPerIO         = IOBufferSize/@@maxpagesize, \n" +
 		         "AllocatedMb        = AllocatedKB / 1024, \n" +
 		         "AllocatedKB, \n" +
-		         "AllocatedPages     = convert(int,"+calcAllocatedPages+"), \n" +
+		         "AllocatedPages     = convert(int," + calcAllocatedPages + "), \n" +
 		         "PagesTouchedDiff   = PagesTouched, \n" +
-		         "UsedSizeInMbDiff   = convert(int, PagesTouched / "+calcDivPgsToMb+" ), \n" +
-		         "UnUsedSizeInMbDiff = convert(int, ("+calcAllocatedPages+" - PagesTouched) / "+calcDivPgsToMb+" ), \n" +
+		         "UsedSizeInMbDiff   = convert(int, PagesTouched / " + calcDivPgsToMb + " ), \n" +
+		         "UnUsedSizeInMbDiff = convert(int, (" + calcAllocatedPages + " - PagesTouched) / " + calcDivPgsToMb + " ), \n" +
 		         "PagesTouched, \n" +
-		         "UsedSizeInMb       = convert(int, PagesTouched / "+calcDivPgsToMb+" ), \n" +
-		         "UnUsedSizeInMb     = convert(int, ("+calcAllocatedPages+" - PagesTouched) / "+calcDivPgsToMb+" ), \n" +
-		         "CacheUtilization   = convert(numeric(12,1), PagesTouched / "+calcAllocatedPages+" * 100.0), \n" +
+		         "UsedSizeInMb       = convert(int, PagesTouched / " + calcDivPgsToMb + " ), \n" +
+		         "UnUsedSizeInMb     = convert(int, (" + calcAllocatedPages + " - PagesTouched) / " + calcDivPgsToMb + " ), \n" +
+		         "CacheUtilization   = convert(numeric(12,1), PagesTouched / " + calcAllocatedPages + " * 100.0), \n" +
 		         LogicalReads + 
-		         "RealPagesRead      = "+calcPagesRead+", \n" +
+		         "RealPagesRead      = " + calcPagesRead + ", \n" +
 		         "PagesRead, \n" +
 		         CacheHitRate +
 		         APFReads +
@@ -818,13 +818,13 @@ extends CountersModel
 		         "Stalls, \n" +
 		         "BuffersToMRU, \n" +
 		         "BuffersToLRU, \n" +
-		         "CacheReplacementPct        = convert(numeric(12,1), 1.0*PagesRead / "+calcAllocatedPages+"), \n" +
+		         "CacheReplacementPct        = convert(numeric(12,1), 1.0*PagesRead / " + calcAllocatedPages + "), \n" +
 		         "CacheReplacementSlidePct   = convert(numeric(12,1), 0), \n" +
 		         "CacheSlideTime             = convert(varchar(30), 'not-for-absolute-values'), \n" +
 		         "PagesReadInSlide           = convert(int, 0), \n" +
 		         "CacheEfficiency  = CASE \n" +
 		         "                      WHEN PagesRead > 0 \n" +
-		         "                      THEN convert(numeric(12,1), "+calcAllocatedPages+" / PagesRead * 100.0) \n" +
+		         "                      THEN convert(numeric(12,1), " + calcAllocatedPages + " / PagesRead * 100.0) \n" +
 		         "                      ELSE 0.0 \n" +
 		         "                   END, \n" +
 		         "CacheEfficiencySlide      = convert(numeric(5,1), 0) \n" +
@@ -897,7 +897,7 @@ extends CountersModel
 			double allocatedPages = AllocatedKB*(1024.0/SrvPageSize);
 
 			if (_logger.isDebugEnabled())
-				_logger.debug("----AllocatedKB = "+AllocatedKB+", PagesTouched = "+PagesTouched+", PagesRead = "+PagesRead+", SrvPageSize = "+SrvPageSize);
+				_logger.debug("----AllocatedKB = " + AllocatedKB + ", PagesTouched = " + PagesTouched + ", PagesRead = " + PagesRead + ", SrvPageSize = " + SrvPageSize);
 
 			// Handle divided by 0... (this happens if a engine goes offline
 			BigDecimal calcCacheUtilization = null;
@@ -924,7 +924,7 @@ extends CountersModel
 			}
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("++++calcCacheUtilization = "+calcCacheUtilization+", calcCacheEfficiency = "+calcCacheEfficiency);
+				_logger.debug("++++calcCacheUtilization = " + calcCacheUtilization + ", calcCacheEfficiency = " + calcCacheEfficiency);
 	
 			diffData.setValueAt(calcCacheUtilization, rowId, CacheUtilizationId );
 			diffData.setValueAt(calcCacheEfficiency,  rowId, CacheEfficiencyId  );

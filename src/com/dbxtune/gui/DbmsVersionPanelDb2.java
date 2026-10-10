@@ -74,7 +74,7 @@ extends DbmsVersionPanelAbstract
 
 		long version = Ver.db2VersionStringToNumber("DB2 v" + tmpVerStr);
 
-		_logger.debug("DB2-parseVersionStringToNum(versionStr='"+versionStr+"'): tmpVerStr='"+tmpVerStr+"', <<<<<< returns: "+version);
+		_logger.debug("DB2-parseVersionStringToNum(versionStr='" + versionStr + "'): tmpVerStr='" + tmpVerStr + "', <<<<<< returns: " + version);
 		return version;
 	}
 	

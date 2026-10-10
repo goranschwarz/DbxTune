@@ -32,7 +32,7 @@ extends JPlainResultSet
 		
 		_text = ddlText;
 		setText(ddlText);
-		insert("-- ddlgen: "+usedCommand +"\nreset\n\n", 0);
+		insert("-- ddlgen: " + usedCommand + "\nreset\n\n", 0);
 	}
 
 	@Override

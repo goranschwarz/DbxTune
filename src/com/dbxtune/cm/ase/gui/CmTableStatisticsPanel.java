@@ -63,7 +63,7 @@ extends TabularCntrPanel
 		String colorStr = null;
 
 		// (LockSchema == 'allpages') >>>> extremely light blue, close to while
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.apl");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.apl");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -77,7 +77,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, new Color(230, 242, 255)), null));
 
 		// Table do not have any indexes >>>> extremely light pink
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.noindexes");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.noindexes");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -92,7 +92,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, new Color(255, 230, 230)), null));
 
 		// (IndexID > 0) >>>> ORANGE
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.index");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.index");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -109,7 +109,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.ORANGE), null));
 
 		// BLOB (text/image columns)
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.blob");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.blob");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -123,7 +123,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, ColorConstants.COLOR_DATATYPE_BLOB), null));
 
 		// System Tables >>>> YELLOW
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.apl");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.apl");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -165,7 +165,7 @@ extends TabularCntrPanel
 				l_samplePartitions_chk       .setSelected(conf.getBooleanProperty(CmTableStatistics.PROPKEY_sample_partitions       , CmTableStatistics.DEFAULT_sample_partitions));
 				
 				l_sampleMinPageLimit_chk     .setSelected(conf.getBooleanProperty(CmTableStatistics.PROPKEY_sample_minPageLimit     , CmTableStatistics.DEFAULT_sample_minPageLimit));
-				l_sampleMinPageLimitCount_txt.setText(""+ conf.getIntProperty    (CmTableStatistics.PROPKEY_sample_minPageLimitCount, CmTableStatistics.DEFAULT_sample_minPageLimitCount));
+				l_sampleMinPageLimitCount_txt.setText("" + conf.getIntProperty    (CmTableStatistics.PROPKEY_sample_minPageLimitCount, CmTableStatistics.DEFAULT_sample_minPageLimitCount));
 
 				// ReInitialize the SQL
 				getCm().setSql(null);
@@ -218,10 +218,10 @@ extends TabularCntrPanel
 		l_sampleMinPageLimitCount_txt = new JTextField(Integer.toString(defaultIntOpt), 6);
 
 		l_sampleMinPageLimit_chk.setName(CmTableStatistics.PROPKEY_sample_minPageLimit);
-		l_sampleMinPageLimit_chk.setToolTipText("<html>Only fetch Table Information for Tables that has more than "+CmTableStatistics.DEFAULT_sample_minPageLimitCount+" Pages. So Skip <i>smaller</i> tables.<br>Note: When it's disabled, the Page Limit will be set to 1.</html>");
+		l_sampleMinPageLimit_chk.setToolTipText("<html>Only fetch Table Information for Tables that has more than " + CmTableStatistics.DEFAULT_sample_minPageLimitCount + " Pages. So Skip <i>smaller</i> tables.<br>Note: When it's disabled, the Page Limit will be set to 1.</html>");
 
 		l_sampleMinPageLimitCount_txt.setName(CmTableStatistics.PROPKEY_sample_minPageLimitCount);
-		l_sampleMinPageLimitCount_txt.setToolTipText("<html>Only fetch Table Information for Tables that has more than "+CmTableStatistics.DEFAULT_sample_minPageLimitCount+" Pages. So Skip <i>smaller</i> tables<br>Note: When it's disabled, the Page Limit will be set to 1.</html>");
+		l_sampleMinPageLimitCount_txt.setToolTipText("<html>Only fetch Table Information for Tables that has more than " + CmTableStatistics.DEFAULT_sample_minPageLimitCount + " Pages. So Skip <i>smaller</i> tables<br>Note: When it's disabled, the Page Limit will be set to 1.</html>");
 
 		l_sampleMinPageLimit_chk.addActionListener(new ActionListener()
 		{
@@ -256,8 +256,8 @@ extends TabularCntrPanel
 				catch (NumberFormatException nfe)
 				{
 					intVal = CmTableStatistics.DEFAULT_sample_minPageLimitCount;
-					SwingUtils.showWarnMessage(CmTableStatisticsPanel.this, "Not a Number", "<html>This must be a number, you entered '"+strVal+"'.<br>Setting to default value '"+intVal+"'.</html>", nfe);
-					l_sampleMinPageLimitCount_txt.setText(intVal+"");
+					SwingUtils.showWarnMessage(CmTableStatisticsPanel.this, "Not a Number", "<html>This must be a number, you entered '" + strVal + "'.<br>Setting to default value '" + intVal + "'.</html>", nfe);
+					l_sampleMinPageLimitCount_txt.setText(intVal + "");
 				}
 				conf.setProperty(CmTableStatistics.PROPKEY_sample_minPageLimitCount, intVal);
 				conf.save();

@@ -472,7 +472,7 @@ implements AutoCloseable
 			}
 			catch (IOException ex)
 			{
-				_logger.warn("Problems reading file '" + srvListFile + "'. This is used to sort the 'sessions list'. Skipping this... Caught: "+ex);
+				_logger.warn("Problems reading file '" + srvListFile + "'. This is used to sort the 'sessions list'. Skipping this... Caught: " + ex);
 			}
 
 			if ( ! map.isEmpty() )
@@ -705,7 +705,7 @@ implements AutoCloseable
 		System.out.println("Usage: dsr_priority_test create|start|stop [servername]");
 
 		for (int i=0; i<args.length; i++)
-			System.out.println(" - Params[" + i + "]: |" + args[i]+ "|.");
+			System.out.println(" - Params[" + i + "]: |" + args[i] + "|.");
 
 		if (args.length <= 0)
 			System.exit(1);

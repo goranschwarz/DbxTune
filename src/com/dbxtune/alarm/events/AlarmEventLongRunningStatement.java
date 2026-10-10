@@ -40,7 +40,7 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
-				"Found Long running SQL Statement in '" + cm.getServerName() + "'. Seconds=" + inSeconds + ", StartTime='" + startTime + "', dbname='" + dbname +"', Login='" + login + "', Command='" + command + "', TranName='" + StringUtils.trim(tranName) + "'. (thresholdInSec=" + thresholdInSec + ")",
+				"Found Long running SQL Statement in '" + cm.getServerName() + "'. Seconds=" + inSeconds + ", StartTime='" + startTime + "', dbname='" + dbname + "', Login='" + login + "', Command='" + command + "', TranName='" + StringUtils.trim(tranName) + "'. (thresholdInSec=" + thresholdInSec + ")",
 				thresholdInSec);
 
 		// Adjust the Alarm Full Duration with X seconds
@@ -50,6 +50,6 @@ extends AlarmEvent
 		setTimeToLive(cm);
 
 		// Set the raw data carrier
-		setData("Seconds=" + inSeconds + ", StartTime='" + startTime + "', dbname='" + dbname +"', Login='" + login + "', Command='" + command + "', TranName='" + StringUtils.trim(tranName) + "'.");
+		setData("Seconds=" + inSeconds + ", StartTime='" + startTime + "', dbname='" + dbname + "', Login='" + login + "', Command='" + command + "', TranName='" + StringUtils.trim(tranName) + "'.");
 	}
 }

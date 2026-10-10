@@ -120,8 +120,8 @@ extends HttpServlet
 		}
 
 		// If no match, then do NOT allow the hosts to enter data
-		_logger.warn("The hostname '"+remoteHost+"' is NOT allowed to send Performance Counter Data. allowedHostList="+allowedHostList);
-		resp.sendError(HttpServletResponse.SC_UNAUTHORIZED, "The hostname '"+remoteHost+"' is NOT allowed to send Performance Counter Data.");
+		_logger.warn("The hostname '" + remoteHost + "' is NOT allowed to send Performance Counter Data. allowedHostList=" + allowedHostList);
+		resp.sendError(HttpServletResponse.SC_UNAUTHORIZED, "The hostname '" + remoteHost + "' is NOT allowed to send Performance Counter Data.");
 		return false;
 	}
 
@@ -135,7 +135,7 @@ extends HttpServlet
 		String remoteUser = req.getRemoteUser();
 
 		if (_logger.isDebugEnabled())
-			_logger.debug("/api/pcs/receiver: received request from: remoteHost='"+remoteHost+"', remoteAddr='"+remoteAddr+"', remotePort='"+remotePort+"', remoteUser='"+remoteUser+"'");
+			_logger.debug("/api/pcs/receiver: received request from: remoteHost='" + remoteHost + "', remoteAddr='" + remoteAddr + "', remotePort='" + remotePort + "', remoteUser='" + remoteUser + "'");
 
 		// Check if the remote host is allowed to send data.
 		if ( ! checkRemoteHostAllowed(req, resp) )
@@ -162,7 +162,7 @@ extends HttpServlet
 			int pcsQueueSize = CentralPcsWriterHandler.getInstance().getQueueSize();
 
 			ServletOutputStream out = resp.getOutputStream();
-			out.print("{ \"queueSize\": "+pcsQueueSize+" }");
+			out.print("{ \"queueSize\": " + pcsQueueSize + " }");
 			out.flush();
 			out.close();
 		}
@@ -179,7 +179,7 @@ extends HttpServlet
 		if ( ! CentralPcsWriterHandler.hasInstance() )
 		{
 			String srvName = sample == null ? "-sample-is-null-" : sample.getServerName();
-			_logger.info("Trying to add sample for '"+srvName+"' to CentralPcsWriterHandler. But it has NO instance... Skipping pcsAdd(sample);");
+			_logger.info("Trying to add sample for '" + srvName + "' to CentralPcsWriterHandler. But it has NO instance... Skipping pcsAdd(sample);");
 			return;
 		}
 
@@ -228,7 +228,7 @@ extends HttpServlet
 		{
 			StringBuilder sb = new StringBuilder();
 			
-			sb.append("### The Sample has: "+sample.getCollectors().size()+" collector entries. sessionStartTime="+sample.getSessionStartTime()+", sessionSampleTime="+sample.getSessionSampleTime()+", serverName="+sample.getServerName()+", onHostname="+sample.getOnHostname()+".\n");
+			sb.append("### The Sample has: " + sample.getCollectors().size() + " collector entries. sessionStartTime=" + sample.getSessionStartTime() + ", sessionSampleTime=" + sample.getSessionSampleTime() + ", serverName=" + sample.getServerName() + ", onHostname=" + sample.getOnHostname() + ".\n");
 			for (CmEntry cmEntry : sample.getCollectors())
 			{
 				sb.append(String.format("    -- The CmEntry %s has: %2d Graph entries, %5d Abs rows, %5d Diff rows, %5d Rate rows. \n"

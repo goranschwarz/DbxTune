@@ -148,7 +148,7 @@ extends DbxConnection
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problem getting DB2 DBMS Server Name, setting this to 'unknownHostName'. SQL='"+sql+"', caught: "+ex);
+			_logger.warn("Problem getting DB2 DBMS Server Name, setting this to 'unknownHostName'. SQL='" + sql + "', caught: " + ex);
 			db2HostName = "unknownHostName";
 		}
 
@@ -167,7 +167,7 @@ extends DbxConnection
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problem getting DB2 DBMS Server Name, setting this to 'unknown'. SQL='"+sql+"', caught: "+ex);
+			_logger.warn("Problem getting DB2 DBMS Server Name, setting this to 'unknown'. SQL='" + sql + "', caught: " + ex);
 			serverName = "unknown";
 		}
 

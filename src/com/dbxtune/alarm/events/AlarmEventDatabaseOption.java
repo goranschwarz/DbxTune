@@ -49,6 +49,6 @@ extends AlarmEvent
 		setTimeToLive(cm);
 
 		// Set the raw data
-		setData("dbname="+dbname+", addedOptions=" + addedOptions + ", removedOptions=" + removedOptions);
+		setData("dbname=" + dbname + ", addedOptions=" + addedOptions + ", removedOptions=" + removedOptions);
 	}
 }

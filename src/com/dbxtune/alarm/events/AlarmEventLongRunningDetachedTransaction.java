@@ -40,7 +40,7 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Found Long running transaction, with state 'Detached' in '" + cm.getServerName() + "', dbname='" + dbname +"'. Seconds=" + inSeconds + ", TranName='"+StringUtils.trim(tranName)+"'. (thresholdInSec="+thresholdInSec+")",
+				"Found Long running transaction, with state 'Detached' in '" + cm.getServerName() + "', dbname='" + dbname + "'. Seconds=" + inSeconds + ", TranName='" + StringUtils.trim(tranName) + "'. (thresholdInSec=" + thresholdInSec + ")",
 				thresholdInSec);
 
 		// Adjust the Alarm Full Duration with X seconds

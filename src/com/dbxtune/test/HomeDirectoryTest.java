@@ -26,7 +26,7 @@ import java.io.IOException;
 public class HomeDirectoryTest
 {
 	private static final String USER_HOME = System.getProperty("user.home");
-	private static final String DBXTUNE_HOME_STR = USER_HOME+"/.dbxtune";
+	private static final String DBXTUNE_HOME_STR = USER_HOME + "/.dbxtune";
 
 	public static void main(String[] args)
 	{
@@ -35,7 +35,7 @@ public class HomeDirectoryTest
 		
 		try
 		{
-			System.out.println("dbxtuneHomeDir='"+dbxtuneHomeDir.getCanonicalPath()+"'.");
+			System.out.println("dbxtuneHomeDir='" + dbxtuneHomeDir.getCanonicalPath() + "'.");
 		}
 		catch (IOException e)
 		{
@@ -44,7 +44,7 @@ public class HomeDirectoryTest
 
 		if (dbxtuneHomeDir.exists())
 		{
-			System.out.println("dir '"+DBXTUNE_HOME_STR+"' existed.");
+			System.out.println("dir '" + DBXTUNE_HOME_STR + "' existed.");
 		}
 	}
 }

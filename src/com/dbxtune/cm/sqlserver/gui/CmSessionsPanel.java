@@ -71,7 +71,7 @@ extends TabularCntrPanel
 //		}, SwingUtils.parseColor(colorStr, Color.YELLOW), null));
 
 		// GREEN = RUNNING or RUNNABLE process
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.running");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.running");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -85,7 +85,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.GREEN), null));
 
 		// LIGHT_GREEN = suspended process
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.suspended");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.suspended");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -99,7 +99,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, new Color(212, 255, 163)), null));
 
 		// ORANGE = spid has OpenTrans
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.opentran");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.opentran");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -113,7 +113,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.ORANGE), null));
 
 		// PINK = spid is BLOCKED by some other user
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocked");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.blocked");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -127,7 +127,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.PINK), null));
 
 		// RED = spid is BLOCKING other spids from running
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocking");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.blocking");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override

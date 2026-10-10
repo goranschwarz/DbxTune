@@ -74,7 +74,7 @@ implements PropertyChangeListener
 		// Recheck values in the table...
 		if ("tableChanged".equals(evt.getPropertyName()) && "javaEditor".equals(evt.getOldValue()))
 		{
-			_alarmTablePanel.fireUserDefinedAlarmMayHaveChanged(evt.getNewValue()+"");
+			_alarmTablePanel.fireUserDefinedAlarmMayHaveChanged(evt.getNewValue() + "");
 		}
 	}
 

@@ -69,7 +69,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = Ver.ver(16);
 	public static final long     NEED_CE_VERSION  = 0;
@@ -113,7 +113,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmPgIo(counterController, guiController);
 	}
@@ -485,7 +485,7 @@ extends CountersModel
 		//-----------------------------
 		addTrendGraph(GRAPH_NAME_CACHE_HIT_NORMAL_PCT,
 				"Buffer 'Cache Hit' By 'Client Table Access' in Percent", 	                // Menu CheckBox text
-				"Buffer 'Cache Hit' By 'Client Table Access' in Percent ("+SHORT_NAME+")", // Graph Label 
+				"Buffer 'Cache Hit' By 'Client Table Access' in Percent (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"client backend::relation::normal"}, 
 				LabelType.Static, 
@@ -497,7 +497,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_CACHE_HIT_ALL_PCT,
 				"Buffer 'Cache Hit' By 'backend_type:object:context' in Percent", 	                // Menu CheckBox text
-				"Buffer 'Cache Hit' By 'backend_type:object:context' in Percent ("+SHORT_NAME+")", // Graph Label 
+				"Buffer 'Cache Hit' By 'backend_type:object:context' in Percent (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -510,7 +510,7 @@ extends CountersModel
 		//-----------------------------
 		addTrendGraph(GRAPH_NAME_HITS,
 				"Buffer 'Hits' By 'backend_type:object:context' per Second", 	                // Menu CheckBox text
-				"Buffer 'Hits' By 'backend_type:object:context' per Second ("+SHORT_NAME+")", // Graph Label 
+				"Buffer 'Hits' By 'backend_type:object:context' per Second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -522,7 +522,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_EVICTIONS,
 				"Buffer 'Evictions' By 'backend_type:object:context' per Second", 	                // Menu CheckBox text
-				"Buffer 'Evictions' By 'backend_type:object:context' per Second ("+SHORT_NAME+")", // Graph Label 
+				"Buffer 'Evictions' By 'backend_type:object:context' per Second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -534,7 +534,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_REUSES,
 				"Buffer 'Reuses' By 'backend_type:object:context' per Second", 	                // Menu CheckBox text
-				"Buffer 'Reuses' By 'backend_type:object:context' per Second ("+SHORT_NAME+")", // Graph Label 
+				"Buffer 'Reuses' By 'backend_type:object:context' per Second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -547,7 +547,7 @@ extends CountersModel
 		//-----------------------------
 		addTrendGraph(GRAPH_NAME_READS,
 				"IO 'Reads' By 'backend_type:object:context' per Second", 	                // Menu CheckBox text
-				"IO 'Reads' By 'backend_type:object:context' per Second ("+SHORT_NAME+")", // Graph Label 
+				"IO 'Reads' By 'backend_type:object:context' per Second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -559,7 +559,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_READ_TIME,
 				"IO 'Read Time' in ms By 'backend_type:object:context' per Operation", 	                // Menu CheckBox text
-				"IO 'Read Time' in ms By 'backend_type:object:context' per Operation ("+SHORT_NAME+")", // Graph Label 	
+				"IO 'Read Time' in ms By 'backend_type:object:context' per Operation (" + SHORT_NAME + ")", // Graph Label 	
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -573,7 +573,7 @@ extends CountersModel
 		//-----------------------------
 		addTrendGraph(GRAPH_NAME_WRITES,
 				"IO 'Writes' By 'backend_type:object:context' per Second", 	                // Menu CheckBox text
-				"IO 'Writes' By 'backend_type:object:context' per Second ("+SHORT_NAME+")", // Graph Label 
+				"IO 'Writes' By 'backend_type:object:context' per Second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -585,7 +585,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_WRITE_TIME,
 				"IO 'Write Time' in ms By 'backend_type:object:context' per Operation", 	                // Menu CheckBox text
-				"IO 'Write Time' in ms By 'backend_type:object:context' per Operation ("+SHORT_NAME+")", // Graph Label 	
+				"IO 'Write Time' in ms By 'backend_type:object:context' per Operation (" + SHORT_NAME + ")", // Graph Label 	
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -599,7 +599,7 @@ extends CountersModel
 		//-----------------------------
 		addTrendGraph(GRAPH_NAME_WRITEBACKS,
 				"IO 'Writebacks' By 'backend_type:object:context' per Second", 	                // Menu CheckBox text
-				"IO 'Writebacks' By 'backend_type:object:context' per Second ("+SHORT_NAME+")", // Graph Label 
+				"IO 'Writebacks' By 'backend_type:object:context' per Second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -611,7 +611,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_WRITEBACK_TIME,
 				"IO 'Writeback Time' in ms By 'backend_type:object:context' per Operation", 	                // Menu CheckBox text
-				"IO 'Writeback Time' in ms By 'backend_type:object:context' per Operation ("+SHORT_NAME+")", // Graph Label 	
+				"IO 'Writeback Time' in ms By 'backend_type:object:context' per Operation (" + SHORT_NAME + ")", // Graph Label 	
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -625,7 +625,7 @@ extends CountersModel
 		//-----------------------------
 		addTrendGraph(GRAPH_NAME_EXTENDS,
 				"IO 'Extends' By 'backend_type:object:context' per Second", 	                // Menu CheckBox text
-				"IO 'Extends' By 'backend_type:object:context' per Second ("+SHORT_NAME+")", // Graph Label 
+				"IO 'Extends' By 'backend_type:object:context' per Second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -637,7 +637,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_EXTEND_TIME,
 				"IO 'Extend Time' in ms By 'backend_type:object:context' per Operation", 	                // Menu CheckBox text
-				"IO 'Extend Time' in ms By 'backend_type:object:context' per Operation ("+SHORT_NAME+")", // Graph Label 	
+				"IO 'Extend Time' in ms By 'backend_type:object:context' per Operation (" + SHORT_NAME + ")", // Graph Label 	
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -651,7 +651,7 @@ extends CountersModel
 		//-----------------------------
 		addTrendGraph(GRAPH_NAME_FSYNCS,
 				"IO 'FSyncs' By 'backend_type:object:context' per Second", 	                // Menu CheckBox text
-				"IO 'FSyncs' By 'backend_type:object:context' per Second ("+SHORT_NAME+")", // Graph Label 
+				"IO 'FSyncs' By 'backend_type:object:context' per Second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -663,7 +663,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_FSYNC_TIME,
 				"IO 'FSync Time' in ms By 'backend_type:object:context' per Operation", 	                // Menu CheckBox text
-				"IO 'FSync Time' in ms By 'backend_type:object:context' per Operation ("+SHORT_NAME+")", // Graph Label 	
+				"IO 'FSync Time' in ms By 'backend_type:object:context' per Operation (" + SHORT_NAME + ")", // Graph Label 	
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 

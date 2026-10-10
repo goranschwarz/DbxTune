@@ -94,7 +94,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -122,7 +122,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmPgActivity(counterController, guiController);
 	}
@@ -182,7 +182,7 @@ extends CountersModel
 		//--------------------------------------------------------
 		addTrendGraph(GRAPH_NAME_PARALELL_WORKER_USAGE,
 				"Parallel Execution Usage", 	                // Menu CheckBox text
-				"Parallel Execution Usage ("+SHORT_NAME+")", // Graph Label 
+				"Parallel Execution Usage (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"Total Used Workers", "Num of Paralell Statements", "Avg Workers per Statement"}, 
 				LabelType.Static, 
@@ -744,7 +744,7 @@ extends CountersModel
 					long threshold = Configuration.getCombinedConfiguration().getLongProperty(PROPKEY_alarm_StatementExecInSec, DEFAULT_alarm_StatementExecInSec);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", StatementExecInSec='"+StatementExecInSec+"'.");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", StatementExecInSec='" + StatementExecInSec + "'.");
 
 					if (StatementExecInSec > threshold)
 					{

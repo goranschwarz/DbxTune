@@ -87,7 +87,7 @@ extends XmenuActionBase
 //		}
 		else
 		{
-			SwingUtils.showInfoMessage(null, "Not yet implemented", "Dump Queue for '"+nameCol+"' can't be done or not yet implemented.");
+			SwingUtils.showInfoMessage(null, "Not yet implemented", "Dump Queue for '" + nameCol + "' can't be done or not yet implemented.");
 			return;
 		}
 		
@@ -108,18 +108,18 @@ extends XmenuActionBase
 				boolean onlyChangedConfigs = false;
 				Map<String, String> configDescription = RepServerUtils.getConfigDescriptions(conn);
 
-				getWaitDialog().setState("Getting Physical Connection Configuration, for '"+ds+"."+db+"'.");
+				getWaitDialog().setState("Getting Physical Connection Configuration, for '" + ds + "." + db + "'.");
 
 				// FIXME: Active/Standby DSI connections are not handled, then we should print the logical connection config
 				
 				StringBuilder sb = new StringBuilder();
 				sb.append("\n");
-				sb.append("/* CONNECTION: "+ds+"."+db).append(" */\n");
+				sb.append("/* CONNECTION: " + ds + "." + db).append(" */\n");
 				boolean printedRecords = false;
 				List<ConfigEntry> config = RepServerUtils.getConnectionConfig(conn, ds, db);
 				for (ConfigEntry ce : config)
 				{
-					System.out.println("CE: "+ce);
+					System.out.println("CE: " + ce);
 
 					if ( (onlyChangedConfigs && ce.isConfigOptionChanged()) || ! onlyChangedConfigs )
 					{

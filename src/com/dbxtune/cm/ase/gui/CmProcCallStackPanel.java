@@ -57,7 +57,7 @@ extends TabularCntrPanel
 		String colorStr = null;
 
 		// Mark the row as GREEN if it's the EXECUTING procedure
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.executing");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.executing");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override

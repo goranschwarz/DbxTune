@@ -919,16 +919,16 @@ implements ICounterController
 //			if (getInstance().getCmByName(name) != null)
 			if (CounterController.getInstance().getCmByName(name) != null)
 			{
-				_logger.info("Already loaded the UDC named '"+name+"', skipping this and continue with next one.");
+				_logger.info("Already loaded the UDC named '" + name + "', skipping this and continue with next one.");
 				continue;
 			}
-			SplashWindow.drawProgress("Loading: User Defined Counter Model '"+name+"'");
+			SplashWindow.drawProgress("Loading: User Defined Counter Model '" + name + "'");
 			
 			String startKey = prefix + name + ".";
 			
 			Map<Integer, String> sqlVer = null;
 
-			_logger.info("Loading/Initializing User Defined Counter '"+name+"'.");
+			_logger.info("Loading/Initializing User Defined Counter '" + name + "'.");
 
 			// Get the individual properties
 			final String  udcName          = conf.getProperty(startKey    + "name");
@@ -961,26 +961,26 @@ implements ICounterController
 			// CHECK for mandatory properties
 			if (udcName == null)
 			{
-				_logger.error("Can't initialize User Defined Counter '"+name+"', no 'name' has been defined.");
+				_logger.error("Can't initialize User Defined Counter '" + name + "', no 'name' has been defined.");
 				failCount++;
 				continue;
 			}
 			if (udcSql == null)
 			{
-				_logger.error("Can't initialize User Defined Counter '"+name+"', no 'sql' has been defined.");
+				_logger.error("Can't initialize User Defined Counter '" + name + "', no 'sql' has been defined.");
 				failCount++;
 				continue;
 			}
 			if (udcPkPos != null)
 			{
-				_logger.error("Can't initialize User Defined Counter '"+name+"', 'pkPos' are not longer supported, please use 'pk' instead.");
+				_logger.error("Can't initialize User Defined Counter '" + name + "', 'pkPos' are not longer supported, please use 'pk' instead.");
 				failCount++;
 				continue;
 			}
 
 			if (udcPk == null)
 			{
-				_logger.error("Can't initialize User Defined Counter '"+name+"', no 'pk' has been defined.");
+				_logger.error("Can't initialize User Defined Counter '" + name + "', no 'pk' has been defined.");
 				failCount++;
 				continue;
 			}
@@ -999,7 +999,7 @@ implements ICounterController
 				}
 				catch(NumberFormatException ex)
 				{
-					_logger.warn("Problems initialize User Defined Counter '"+name+"', a sql.##### where ##### should specify ASE server version if faulty in the string '"+sqlVersionStr+"'.");
+					_logger.warn("Problems initialize User Defined Counter '" + name + "', a sql.##### where ##### should specify ASE server version if faulty in the string '" + sqlVersionStr + "'.");
 					failCount++;
 					continue;
 				}
@@ -1042,9 +1042,9 @@ implements ICounterController
 
 			for (int i=0; i<udcPkArray   .length; i++) udcPkList.add( udcPkArray[i] ); 
 
-			_logger.info("Creating User Defined Counter '"+name+"' with sql '"+udcSql+"'.");
+			_logger.info("Creating User Defined Counter '" + name + "' with sql '" + udcSql + "'.");
 			if (guiController != null && guiController.hasGUI())
-				guiController.splashWindowProgress("Loading: UD Counter Model '"+name+"'");
+				guiController.splashWindowProgress("Loading: UD Counter Model '" + name + "'");
 
 			// Finally create the Counter model and all it's surroundings...
 			@SuppressWarnings("serial")
@@ -1123,12 +1123,12 @@ implements ICounterController
 
 		if (udcGraphDataCols == null)
 		{
-			_logger.error("Can't add a graph to the User Defined Counter '"+name+"', no 'graph.data.cols' has been defined.");
+			_logger.error("Can't add a graph to the User Defined Counter '" + name + "', no 'graph.data.cols' has been defined.");
 			addGraph = false;
 		}
 		if (udcGraphDataMethods == null)
 		{
-			_logger.error("Can't add a graph to the User Defined Counter '"+name+"', no 'graph.data.methods' has been defined.");
+			_logger.error("Can't add a graph to the User Defined Counter '" + name + "', no 'graph.data.methods' has been defined.");
 			addGraph = false;
 		}
 		if (udcGraphDataLabels == null)
@@ -1138,7 +1138,7 @@ implements ICounterController
 		else if (udcGraphTypeStr.equalsIgnoreCase("byRow"))	udcGraphType = TrendGraph.TYPE_BY_ROW;
 		else
 		{
-			_logger.error("Can't add a graph to the User Defined Counter '"+name+"', no 'graph.type' can only be 'byCol' or 'byRow'.");
+			_logger.error("Can't add a graph to the User Defined Counter '" + name + "', no 'graph.type' can only be 'byCol' or 'byRow'.");
 			addGraph = false;
 		}
 
@@ -1158,12 +1158,12 @@ implements ICounterController
 
 		if (udcGraphDataColsArr.length != udcGraphDataMethodsArr.length)
 		{
-			_logger.error("Can't add a graph to the User Defined Counter '"+name+"'. 'graph.data.cols' has "+udcGraphDataColsArr.length+" entries while 'graph.data.methods' has "+udcGraphDataMethodsArr.length+" entries, they has to be equal.");
+			_logger.error("Can't add a graph to the User Defined Counter '" + name + "'. 'graph.data.cols' has " + udcGraphDataColsArr.length + " entries while 'graph.data.methods' has " + udcGraphDataMethodsArr.length + " entries, they has to be equal.");
 			addGraph = false;
 		}
 		if (udcGraphDataColsArr.length != udcGraphDataLabelsArr.length)
 		{
-			_logger.error("Can't add a graph to the User Defined Counter '"+name+"'. 'graph.data.cols' has "+udcGraphDataColsArr.length+" entries while 'graph.data.labels' has "+udcGraphDataLabelsArr.length+" entries, they has to be equal.");
+			_logger.error("Can't add a graph to the User Defined Counter '" + name + "'. 'graph.data.cols' has " + udcGraphDataColsArr.length + " entries while 'graph.data.labels' has " + udcGraphDataLabelsArr.length + " entries, they has to be equal.");
 			addGraph = false;
 		}
 
@@ -1171,8 +1171,8 @@ implements ICounterController
 		{
 			if ( ! CountersModel.isValidGraphMethod(udcGraphDataMethodsArr[i], true))
 			{
-				_logger.error("Can't add a graph to the User Defined Counter '"+name+"'. 'The graph method '"+udcGraphDataMethodsArr[i]+"' is unknown.");
-				_logger.error("Valid method names is: "+CountersModel.getValidGraphMethodsString(true));
+				_logger.error("Can't add a graph to the User Defined Counter '" + name + "'. 'The graph method '" + udcGraphDataMethodsArr[i] + "' is unknown.");
+				_logger.error("Valid method names is: " + CountersModel.getValidGraphMethodsString(true));
 				addGraph = false;
 			}
 		}
@@ -1183,7 +1183,7 @@ implements ICounterController
 			udcGraphSeriesLabelType = LabelType.Dynamic;
 			if (udcGraphDataColsArr.length > 1)
 			{
-				_logger.warn("Add a graph using type 'byRow' to the User Defined Counter '"+name+"'. Only the first entry in 'graph.data.cols', 'graph.data.labels', 'graph.data.methods' will be used");
+				_logger.warn("Add a graph using type 'byRow' to the User Defined Counter '" + name + "'. Only the first entry in 'graph.data.cols', 'graph.data.labels', 'graph.data.methods' will be used");
 			}
 		}
 
@@ -1280,11 +1280,11 @@ implements ICounterController
 
 		for (String name : conf.getUniqueSubKeys(prefix, false))
 		{
-			SplashWindow.drawProgress("Loading: Host Monitor User Defined Counter '"+name+"'");
+			SplashWindow.drawProgress("Loading: Host Monitor User Defined Counter '" + name + "'");
 			
 			String startKey = prefix + name + ".";
 
-			_logger.debug("STARTING TO Initializing Host Monitor User Defined Counter '"+name+"'.");
+			_logger.debug("STARTING TO Initializing Host Monitor User Defined Counter '" + name + "'.");
 
 //			final String  udcName          = conf.getProperty(startKey    + "name");
 //			final String  udcDisplayName   = conf.getProperty(startKey    + "displayName", udcName);
@@ -1301,9 +1301,9 @@ implements ICounterController
 //			final String  udcGraphDataMethods = conf.getProperty(startKey + "graph.data.methods");
 //			final String  udcGraphDataLabels  = conf.getProperty(startKey + "graph.data.labels");
 
-			_logger.info("Creating User Defined Host Monitor Counter '"+name+"'.");
+			_logger.info("Creating User Defined Host Monitor Counter '" + name + "'.");
 			if (guiController != null && guiController.hasGUI())
-				guiController.splashWindowProgress("Loading: UD Host Counter Model '"+name+"'");
+				guiController.splashWindowProgress("Loading: UD Host Counter Model '" + name + "'");
 
 			
 			boolean negativeDiffCountersToZero = true;
@@ -1418,7 +1418,7 @@ implements ICounterController
 									boolean isRunning = hostMonitor.isRunning();
 									boolean isPaused  = hostMonitor.isPaused();
 
-									l_hostmonThreadIsRunning_lbl.setText("<html>Command: <b>"+hostMonitor.getCommand()+"</b></html>");
+									l_hostmonThreadIsRunning_lbl.setText("<html>Command: <b>" + hostMonitor.getCommand() + "</b></html>");
 									l_hostmonThreadNotInit_lbl  .setVisible( false );
 
 									if ( hostMonitor.isOsCommandStreaming() )
@@ -1550,7 +1550,7 @@ implements ICounterController
 		catch (InterruptedException ignore)
 		{
 			if (_logger.isDebugEnabled())
-				_logger.debug("Thread '"+Thread.currentThread().getName()+"' was interrupted.", new Exception("Dummy exception, to get callstack from where this happened."));
+				_logger.debug("Thread '" + Thread.currentThread().getName() + "' was interrupted.", new Exception("Dummy exception, to get callstack from where this happened."));
 			return false;
 		}
 		finally
@@ -1827,7 +1827,7 @@ implements ICounterController
 //System.out.println("isClosed(): autoCommit="+conn.getAutoCommit()+", sql="+sql);
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("isClosed(): sql="+sql);
+				_logger.debug("isClosed(): sql=" + sql);
 			
 //			stmnt = conn.createStatement();
 			stmnt.setQueryTimeout(timeout);
@@ -1875,7 +1875,7 @@ implements ICounterController
 		}
 		catch(RuntimeException ex)
 		{
-			_logger.error("Problem in method: isClosed(), returning true and continuing. Caught: "+ex+".", ex);
+			_logger.error("Problem in method: isClosed(), returning true and continuing. Caught: " + ex + ".", ex);
 			_isClosed_lastReturnVal = true;
 			return _isClosed_lastReturnVal;
 			//return true;
@@ -2355,7 +2355,7 @@ implements ICounterController
 				else
 				{
 					sleepTime = shorterSleepTime;
-					_logger.info("Setting override-sleep time to "+sleepTime+" (from "+suggestedSleepTime+"). This since previous sample had 'demand-refresh'. Decision based on CM '"+cmName+"' with "+cmRefreshedInMs+" ms since last refresh. Requested Counters: "+getCmDemandRefreshList());
+					_logger.info("Setting override-sleep time to " + sleepTime + " (from " + suggestedSleepTime + "). This since previous sample had 'demand-refresh'. Decision based on CM '" + cmName + "' with " + cmRefreshedInMs + " ms since last refresh. Requested Counters: " + getCmDemandRefreshList());
 					break;
 				}
 			}
@@ -2475,17 +2475,17 @@ implements ICounterController
 		if ("SqlServerTune" .equalsIgnoreCase(dbxTune)) 
 		{
 			int socketTimeout = Configuration.getCombinedConfiguration().getIntProperty("SqlServerTune.jdbc.socketTimeout", 60*1000);
-			jdbcProps.put("socketTimeout", socketTimeout+"");
+			jdbcProps.put("socketTimeout", socketTimeout + "");
 			
-			_logger.info("Adding SQL-Server JDBC connection property 'socketTimeout="+socketTimeout+"'");
+			_logger.info("Adding SQL-Server JDBC connection property 'socketTimeout=" + socketTimeout + "'");
 		}
 		
 
 		// Make the connection, and create a DbxConnection
 		try
 		{
-			_logger.info("Connecting to: jdbcUrl='"+jdbcUrl+"'.");
-			_logger.debug("Connecting to: jdbcUrl='"+jdbcUrl+"', jdbcProps='"+jdbcProps+"'.");
+			_logger.info("Connecting to: jdbcUrl='" + jdbcUrl + "'.");
+			_logger.debug("Connecting to: jdbcUrl='" + jdbcUrl + "', jdbcProps='" + jdbcProps + "'.");
 
 			Connection jdbcConn = DriverManager.getConnection(jdbcUrl, jdbcProps);
 			DbxConnection conn = DbxConnection.createDbxConnection(jdbcConn);
@@ -2512,7 +2512,7 @@ implements ICounterController
 		catch(SQLException ex)
 		{
 			jdbcProps.put("password", "*secret*");
-			_logger.info("Connection properties used when tring to connecting using: DriverManager.getConnection(jdbcUrl='"+jdbcUrl+"', jdbcProps='"+jdbcProps+"')");
+			_logger.info("Connection properties used when tring to connecting using: DriverManager.getConnection(jdbcUrl='" + jdbcUrl + "', jdbcProps='" + jdbcProps + "')");
 			throw ex;
 		}
 	}

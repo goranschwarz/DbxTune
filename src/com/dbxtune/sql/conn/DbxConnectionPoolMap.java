@@ -101,7 +101,7 @@ public class DbxConnectionPoolMap
 			int closeCount = cp.close();
 			
 			if (closeCount > 0)
-				_logger.info("Closed "+closeCount+" connection which was mapped to '"+key+"'.");
+				_logger.info("Closed " + closeCount + " connection which was mapped to '" + key + "'.");
 			
 			count += closeCount;
 		}

@@ -67,7 +67,7 @@ extends CounterModelHostMonitor
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_HOST_MONITOR;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -84,7 +84,7 @@ extends CounterModelHostMonitor
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmOsMpstat(counterController, guiController);
 	}
@@ -126,7 +126,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_MpSum,
 			"mpstat: CPU usage Summary",                 // Menu CheckBox text
-			"mpstat: CPU usage Summary ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			"mpstat: CPU usage Summary (" + GROUP_NAME + "->" + SHORT_NAME + ")",   // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -139,7 +139,7 @@ extends CounterModelHostMonitor
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_MpCpu,
 			"mpstat: CPU usage per core",                 // Menu CheckBox text
-			"mpstat: CPU usage per core (usr+sys+iowait) ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			"mpstat: CPU usage per core (usr+sys+iowait) (" + GROUP_NAME + "->" + SHORT_NAME + ")",   // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -262,7 +262,7 @@ extends CounterModelHostMonitor
 					if (idlePct_pos    < 0) msg += "'idlePct|idl|id', ";
 
 					if (tg != null)
-						tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/AIX systems");
+						tg.setWarningLabel("Column(s) " + StringUtil.removeLastComma(msg) + " can't be found. This graph is only supported on Linux/Solaris/AIX systems");
 				}
 				else
 				{
@@ -432,7 +432,7 @@ extends CounterModelHostMonitor
 					if (idlePct_pos    < 0) msg += "'idlePct|idl|id', ";
 
 					if (tg != null)
-						tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/AIX systems");
+						tg.setWarningLabel("Column(s) " + StringUtil.removeLastComma(msg) + " can't be found. This graph is only supported on Linux/Solaris/AIX systems");
 				}
 				else
 				{

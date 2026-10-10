@@ -49,7 +49,7 @@ public class DbxTuneLogTailWebSocket
 	@OnWebSocketMessage
 	public void onText(Session session, String message) throws IOException
 	{
-		_logger.info("log-tail: Message Received from a Web Subscriber. session='"+session+"'. message=|"+message+"|.");
+		_logger.info("log-tail: Message Received from a Web Subscriber. session='" + session + "'. message=|" + message + "|.");
 
 		// Just responce with the same message, in uppercase
 		if ( session.isOpen() )
@@ -82,7 +82,7 @@ public class DbxTuneLogTailWebSocket
 		File f = new File(fullFilename);
 		if ( ! f.exists() )
 		{
-			System.out.println("DbxTuneLogTailWebSocket.onConnect(): File not found: '"+fullFilename+"'.");
+			System.out.println("DbxTuneLogTailWebSocket.onConnect(): File not found: '" + fullFilename + "'.");
 //			throw new IOException("File not found: '"+fullFilename+"'.");
 		}
 
@@ -105,7 +105,7 @@ public class DbxTuneLogTailWebSocket
 //			};
 //			_timer.scheduleAtFixedRate(run, 0, 1, TimeUnit.SECONDS);
 //		}
-		_logger.info("log-tail: Adding a Web Subscriber. remoteHost='"+remoteHost+"', filename='"+filename+"', session='"+session+"'.");
+		_logger.info("log-tail: Adding a Web Subscriber. remoteHost='" + remoteHost + "', filename='" + filename + "', session='" + session + "'.");
 	}
 
 	@OnWebSocketClose
@@ -121,7 +121,7 @@ public class DbxTuneLogTailWebSocket
 //
 //		if (cs != null)
 //			_logger.info("Removed a Web Subscriber. remoteHost='"+cs._remoteHost+"', serverList='"+cs._serverNameList+"', graphList='"+cs._graphNameList+"', session='"+session+"'.");
-		_logger.info("log-tail: Removed a Web Subscriber. session='"+session+"'.");
+		_logger.info("log-tail: Removed a Web Subscriber. session='" + session + "'.");
 	}
 	
 	
@@ -153,27 +153,27 @@ public class DbxTuneLogTailWebSocket
 		{
 			_tailerThread = new Thread(_tailer);
 			_tailerThread.setDaemon(true);
-			_tailerThread.setName("tail:"+_filename);
+			_tailerThread.setName("tail:" + _filename);
 			_tailerThread.start();
 		}
 
 		public void stop()
 		{
-			_logger.info("Stopping tail thread for '"+_filename+"'. session='"+_session+"'.");
+			_logger.info("Stopping tail thread for '" + _filename + "'. session='" + _session + "'.");
 			_tailer.stop();
 		}
 
 		@Override
 		public void init(Tailer tailer)
 		{
-			_logger.info("TailerListener.init(): tailer="+tailer);
+			_logger.info("TailerListener.init(): tailer=" + tailer);
 		}
 
 		@Override
 		public void fileNotFound()
 		{
 			_logger.info("TailerListener.fileNotFound()");
-			sendToClient("TailerListener.fileNotFound(): "+_filename);
+			sendToClient("TailerListener.fileNotFound(): " + _filename);
 		}
 
 		@Override
@@ -192,7 +192,7 @@ public class DbxTuneLogTailWebSocket
 		@Override
 		public void handle(Exception ex)
 		{
-			_logger.info("TailerListener.handle(): ex='"+ex+"'.");
+			_logger.info("TailerListener.handle(): ex='" + ex + "'.");
 		}
 
 		private void sendToClient(String msg)
@@ -205,7 +205,7 @@ public class DbxTuneLogTailWebSocket
 			}
 			catch (IOException e)
 			{
-				_logger.warn("Problem sending log line to client. filename='"+_filename+"'.", e);
+				_logger.warn("Problem sending log line to client. filename='" + _filename + "'.", e);
 				e.printStackTrace();
 			}
 		}

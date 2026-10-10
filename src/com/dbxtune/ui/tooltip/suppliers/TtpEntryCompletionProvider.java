@@ -38,7 +38,7 @@ public class TtpEntryCompletionProvider
 
 	public static CompletionProvider installAutoCompletion(TextEditorPane textPane)
 	{
-		_logger.info("Installing Syntax and AutoCompleation for TtpEntry ("+SyntaxConstants.SYNTAX_STYLE_XML+").");
+		_logger.info("Installing Syntax and AutoCompleation for TtpEntry (" + SyntaxConstants.SYNTAX_STYLE_XML + ").");
 		textPane.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_XML);
 
 		CompletionProvider provider = createCompletionProvider();

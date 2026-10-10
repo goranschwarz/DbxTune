@@ -84,7 +84,7 @@ extends AlarmEvent
 				"Server is DOWN. Name='" + serverName + "', url='" + url + "'.",
 				null);
 		
-		setExtendedDescription("Connect Info Message: "+connectInfoMsg, null);
+		setExtendedDescription("Connect Info Message: " + connectInfoMsg, null);
 		setData( StringUtil.isNullOrBlank(serverName) ? url : serverName );
 	}
 

@@ -184,7 +184,7 @@ public class SqlUtils
 		if (dbxTuneHome == null) dbxTuneHome = System.getenv("APPL_HOME");
 		if (dbxTuneHome == null) dbxTuneHome = System.getProperties().getProperty("APPL_HOME");
 		
-		String progDir      = System.getProperties().getProperty("dbxtune.sql.pretty.print.dir",      new File(dbxTuneHome+"/resources/bin").toString());
+		String progDir      = System.getProperties().getProperty("dbxtune.sql.pretty.print.dir",      new File(dbxTuneHome + "/resources/bin").toString());
 		String progCmd      = System.getProperties().getProperty("dbxtune.sql.pretty.print.cmd",      "SqlFormatter");
 		String progSwitches = System.getProperties().getProperty("dbxtune.sql.pretty.print.switches", "/ae");
 
@@ -220,7 +220,7 @@ public class SqlUtils
 
 		if (StringUtil.hasValue(stderr) && StringUtil.isNullOrBlank(stdout))
 		{
-			throw new Exception("Problem parsing SQL: "+stderr);
+			throw new Exception("Problem parsing SQL: " + stderr);
 		}
 
 		if (sql.endsWith("\n"))

@@ -55,7 +55,7 @@ extends TabularCntrPanel
 		String colorStr = null;
 
 		// PINK = NO INDEX in string
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.noindex");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.noindex");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override

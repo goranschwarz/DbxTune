@@ -93,7 +93,7 @@ public class HiDpiIcon extends ImageIcon
 	public synchronized void paintIcon(Component c, Graphics g, int x, int y)
 	{
 		boolean retina = c != null && isRetina(c);
-System.out.println("paintIcon(): retina="+retina);
+System.out.println("paintIcon(): retina=" + retina);
 retina = true;
 		if ( !retina )
 		{
@@ -106,7 +106,7 @@ retina = true;
 		int height = image.getHeight(c);
 		final Graphics2D g2d = (Graphics2D) g.create(x, y, width, height);
 
-System.out.println("paintIcon(): image.getWidth="+width+", image.getHeight="+height);
+System.out.println("paintIcon(): image.getWidth=" + width + ", image.getHeight=" + height);
 //		g2d.scale(0.5, 0.5);
 		g2d.scale(2.0, 2.0);
 		g2d.drawImage(twoTimesImageIcon.getImage(), 0, 0, c);

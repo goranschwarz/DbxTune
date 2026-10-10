@@ -99,7 +99,7 @@ extends CountersModel
 		"Reqirements for this to work" +
 		"<ul>" +
 		"  <li>You need to record the session</li>" +
-		"  <li>Option 'Do SQL Capture and Store' for 'Statement Info' needs to be enabled.<br>Which is properties '"+PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore+"' and '"+PersistentCounterHandler.PROPKEY_sqlCap_doStatementInfo+"'.</li>" +
+		"  <li>Option 'Do SQL Capture and Store' for 'Statement Info' needs to be enabled.<br>Which is properties '" + PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore + "' and '" + PersistentCounterHandler.PROPKEY_sqlCap_doStatementInfo + "'.</li>" +
 		"  <li>ASE Configuration 'statement pipe active' and 'statement pipe max messages', needs to be enabled.</li>" +
 		"</ul>" +
 		"Note: If ASE config 'statement pipe max messages' is set to low, we might <i>miss</i> entries in the queue/event-pipe<br>" +
@@ -107,7 +107,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -151,7 +151,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmSqlStatement(counterController, guiController);
 	}
@@ -214,7 +214,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SEC,
 			"SQL Statements Executed per Sec", // Menu CheckBox text
-			"SQL Statements Executed per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SQL Statements Executed per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Total Statements Executed/sec", "SQL Batches Executed/sec", "SQL in Statement Cache Executed/sec", "Dynamic SQL/sec", "Statements in Procedures Executed/sec" }, 
 			LabelType.Static,
@@ -227,7 +227,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_ALL,
 			"SQL Statements (all) In Time Span Received per Sec", // Menu CheckBox text
-			"SQL Statements (all) In Time Span Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SQL Statements (all) In Time Span Received per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
 			LabelType.Static,
@@ -240,7 +240,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_NOOP,
 			"SQL Statements (0 ms and 0 LogicalReads) In Time Span Received per Sec", // Menu CheckBox text
-			"SQL Statements (0 ms and 0 LogicalReads) In Time Span Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SQL Statements (0 ms and 0 LogicalReads) In Time Span Received per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "0 ms ExecTime AND 0 LogicalReads" }, 
 			LabelType.Static,
@@ -253,7 +253,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_0,
 			"SQL Statements (0-10ms) In Time Span Received per Sec", // Menu CheckBox text
-			"SQL Statements (0-10ms) In Time Span Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SQL Statements (0-10ms) In Time Span Received per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "<1ms", "1-2ms", "2-5ms", "5-10ms" }, 
 			LabelType.Static,
@@ -266,7 +266,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_1,
 			"SQL Statements (10ms-100ms) In Time Span Received per Sec", // Menu CheckBox text
-			"SQL Statements (10ms-100ms) In Time Span Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SQL Statements (10ms-100ms) In Time Span Received per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "10-20ms", "20-50ms", "50-100ms" }, 
 			LabelType.Static,
@@ -279,7 +279,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_2,
 			"SQL Statements (100ms-1s) In Time Span Received per Sec", // Menu CheckBox text
-			"SQL Statements (100ms-1s) In Time Span Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SQL Statements (100ms-1s) In Time Span Received per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "100-200ms", "200-500ms", "500ms-1s" }, 
 			LabelType.Static,
@@ -292,7 +292,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_3,
 			"SQL Statements (1s-10s) In Time Span Received per Sec", // Menu CheckBox text
-			"SQL Statements (1s-10s) In Time Span Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SQL Statements (1s-10s) In Time Span Received per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "1-2s", "2-5s", "5-10s" }, 
 			LabelType.Static,
@@ -305,7 +305,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_4,
 			"SQL Statements (>10s) In Time Span Received per SAMPLE", // Menu CheckBox text
-			"SQL Statements (>10s) In Time Span Received per SAMPLE ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"SQL Statements (>10s) In Time Span Received per SAMPLE (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "10-20s", "20-50s", "50-100s", ">100s" }, 
 			LabelType.Static,
@@ -324,7 +324,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_EXEC_TIME,
 			"Sum Exec Time per sec Over SQL Response Time", // Menu CheckBox text
-			"Sum Exec Time per sec Over SQL Response Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Sum Exec Time per sec Over SQL Response Time (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
 			LabelType.Static,
@@ -337,7 +337,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_LOGICAL_READ,
 			"Sum Logical Reads per sec Over SQL Response Time", // Menu CheckBox text
-			"Sum Logical Reads per sec Over SQL Response Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Sum Logical Reads per sec Over SQL Response Time (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
 			LabelType.Static,
@@ -350,7 +350,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_PHYSICAL_READ,
 			"Sum Physical Reads per sec Over SQL Response Time", // Menu CheckBox text
-			"Sum Physical Reads per sec Over SQL Response Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Sum Physical Reads per sec Over SQL Response Time (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
 			LabelType.Static,
@@ -363,7 +363,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_CPU_TIME,
 			"Sum CPU Time per sec Over SQL Response Time", // Menu CheckBox text
-			"Sum CPU Time per sec Over SQL Response Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Sum CPU Time per sec Over SQL Response Time (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
 			LabelType.Static,
@@ -376,7 +376,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_WAIT_TIME,
 			"Sum Wait Time per sec Over SQL Response Time", // Menu CheckBox text
-			"Sum Wait Time per sec Over SQL Response Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Sum Wait Time per sec Over SQL Response Time (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
 			LabelType.Static,
@@ -389,7 +389,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_ROWS_AFFECTED,
 			"Sum Rows Affected per sec Over SQL Response Time", // Menu CheckBox text
-			"Sum Rows Affected per sec Over SQL Response Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Sum Rows Affected per sec Over SQL Response Time (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
 			LabelType.Static,
@@ -402,7 +402,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_COMPILE_CNT,
 			"Sum Query Compile/Optimization Count per sec Over SQL Response Time", // Menu CheckBox text
-			"Sum Query Compile/Optimization Count per sec Over SQL Response Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Sum Query Compile/Optimization Count per sec Over SQL Response Time (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
 			LabelType.Static,
@@ -415,7 +415,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_COMPILE_TIME,
 			"Sum Query Compile/Optimization Time Over SQL Response Time", // Menu CheckBox text
-			"Sum Query Compile/Optimization Time Over SQL Response Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Sum Query Compile/Optimization Time Over SQL Response Time (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
 			LabelType.Static,
@@ -428,7 +428,7 @@ extends CountersModel
 		//-----
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_ERROR_COUNT,
 			"Sum SQL Statements Error Count Per Sec", // Menu CheckBox text
-			"Sum SQL Statements Error Count Per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Sum SQL Statements Error Count Per Sec (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "errorCount" }, 
 			LabelType.Static,
@@ -559,7 +559,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value for 'some' pk-row: '"+pk1+"'='"+val1+"'.");
+					tg.setWarningLabel("Failed to get value for 'some' pk-row: '" + pk1 + "'='" + val1 + "'.");
 			}
 		}
 
@@ -593,7 +593,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value for 'some' pk-row: '"+pk1+"'='"+val1+"'.");
+					tg.setWarningLabel("Failed to get value for 'some' pk-row: '" + pk1 + "'='" + val1 + "'.");
 			}
 		}
 
@@ -624,7 +624,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value for 'some' pk-row: '"+pk5+"'='"+val5+"'.");
+					tg.setWarningLabel("Failed to get value for 'some' pk-row: '" + pk5 + "'='" + val5 + "'.");
 			}
 		}
 
@@ -655,7 +655,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value for 'some' pk-row: '"+pk8+"'='"+val8+"'.");
+					tg.setWarningLabel("Failed to get value for 'some' pk-row: '" + pk8 + "'='" + val8 + "'.");
 			}
 		}
 
@@ -686,7 +686,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value for 'some' pk-row: '"+pk11+"'='"+val11+"'.");
+					tg.setWarningLabel("Failed to get value for 'some' pk-row: '" + pk11 + "'='" + val11 + "'.");
 			}
 		}
 
@@ -721,7 +721,7 @@ extends CountersModel
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setWarningLabel("Failed to get value for 'some' pk-row: '"+pk14+"'='"+val14+"'.");
+					tg.setWarningLabel("Failed to get value for 'some' pk-row: '" + pk14 + "'='" + val14 + "'.");
 			}
 		}
 //		public static final String GRAPH_NAME_SQL_STATEMENT_SUM_EXEC_TIME     = "SqlStmntSumExecMs";
@@ -985,7 +985,7 @@ extends CountersModel
 		{
 			if ( ! PersistentCounterHandler.hasInstance() )
 			{
-				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"'. No recording is active, which this CM depends on.");
+				_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '" + getDisplayName() + "'. No recording is active, which this CM depends on.");
 				setActive(false, "No recording is active, which this CM depends on.");
 				return false;
 			}
@@ -997,15 +997,15 @@ extends CountersModel
 
 			if ( ! sqlCap_doSqlCaptureAndStore )
 			{
-				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"'. Configuration '"+PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore+"' is NOT enabled");
-				setActive(false, "Configuration '"+PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore+"' is NOT enabled, which this CM depends on.");
+				_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '" + getDisplayName() + "'. Configuration '" + PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore + "' is NOT enabled");
+				setActive(false, "Configuration '" + PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore + "' is NOT enabled, which this CM depends on.");
 				return false;
 			}
 
 			if ( ! sqlCap_doStatementInfo )
 			{
-				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"'. Configuration '"+PersistentCounterHandler.PROPKEY_sqlCap_doStatementInfo+"' is NOT enabled");
-				setActive(false, "Configuration '"+PersistentCounterHandler.PROPKEY_sqlCap_doStatementInfo+"' is NOT enabled, which this CM depends on.");
+				_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '" + getDisplayName() + "'. Configuration '" + PersistentCounterHandler.PROPKEY_sqlCap_doStatementInfo + "' is NOT enabled");
+				setActive(false, "Configuration '" + PersistentCounterHandler.PROPKEY_sqlCap_doStatementInfo + "' is NOT enabled, which this CM depends on.");
 				return false;
 			}
 		}
@@ -1545,7 +1545,7 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ErrorCountPerSec, DEFAULT_alarm_ErrorCountPerSec);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", errorCountPerSec='"+errorCountPerSec+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", errorCountPerSec='" + errorCountPerSec + "'.");
 
 				if (errorCountPerSec.intValue() > threshold)
 				{
@@ -1877,7 +1877,7 @@ extends CountersModel
 									String errorDesc = AseErrorMessageDictionary.getInstance().getDescription(alarmErrorNum);
 									
 									if (debugPrint || _logger.isDebugEnabled())
-										System.out.println("##### sendAlarmRequest("+cm.getName()+"): ErrorNumber="+alarmErrorNum+", Count="+errorCount+", is above threshold="+alarmThreshold+".)");
+										System.out.println("##### sendAlarmRequest(" + cm.getName() + "): ErrorNumber=" + alarmErrorNum + ", Count=" + errorCount + ", is above threshold=" + alarmThreshold + ".)");
 
 									// if 1105 (out-of-space) -- Get TranLog Charts 'LogSize Left in MB' from CmOpenDatabases
 									// NOTE: Make the chart for ALL Databases, since it might be 'tempdb' that the 1105 happens in (even if the current working database is a User Database)
@@ -1930,7 +1930,7 @@ extends CountersModel
 				int thresholdInSec = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_SqlCapUpdateAgeSec, DEFAULT_alarm_SqlCapUpdateAgeSec);
 				
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): SqlCaptureAge - thresholdInSec="+thresholdInSec+", ageInSec="+ageInSec+".");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): SqlCaptureAge - thresholdInSec=" + thresholdInSec + ", ageInSec=" + ageInSec + ".");
 
 				// possibly get Connection connect time also ... and check if we "just" connected... to alarm after a connection "down" time...
 				if (getCounterController().getMonConnection() != null)
@@ -1938,7 +1938,7 @@ extends CountersModel
 					int lastConnectTimeInSec = (int) getCounterController().getMonConnection().getConnectTime() / 1000;
 					
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): SqlCaptureAge - thresholdInSec="+thresholdInSec+", ageInSec="+ageInSec+", lastConnectTimeInSec="+lastConnectTimeInSec+".");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): SqlCaptureAge - thresholdInSec=" + thresholdInSec + ", ageInSec=" + ageInSec + ", lastConnectTimeInSec=" + lastConnectTimeInSec + ".");
 
 					if (lastConnectTimeInSec > 0 && lastConnectTimeInSec < ageInSec)
 					{
@@ -2020,7 +2020,7 @@ extends CountersModel
 		{
 			Map<String, String> map = StringUtil.parseCommaStrToMap(cfgVal);
 			if (_logger.isDebugEnabled())
-				_logger.debug(prefix + "Initializing alarm 'ErrorNumbers'. After parseCommaStrToMap, map looks like: "+map);
+				_logger.debug(prefix + "Initializing alarm 'ErrorNumbers'. After parseCommaStrToMap, map looks like: " + map);
 			
 			for (String key : map.keySet())
 			{
@@ -2032,11 +2032,11 @@ extends CountersModel
 					int count = NumberUtils.createNumber(val).intValue();
 					_map_alarm_ErrorNumbers.put(error, count);
 
-					_logger.info(prefix + "Initializing alarm. Using 'ErrorNumbers', ErrorMsg='"+key+"', thresholdCount="+count+", ErrorDescription='"+AseErrorMessageDictionary.getInstance().getDescription(error)+"'.");
+					_logger.info(prefix + "Initializing alarm. Using 'ErrorNumbers', ErrorMsg='" + key + "', thresholdCount=" + count + ", ErrorDescription='" + AseErrorMessageDictionary.getInstance().getDescription(error) + "'.");
 				}
 				catch (NumberFormatException ex)
 				{
-					_logger.info(prefix + "Initializing alarm. Skipping 'ErrorNumbers' enty ErrorMsg='"+key+"', val='"+val+"'. The value is not a number.");
+					_logger.info(prefix + "Initializing alarm. Skipping 'ErrorNumbers' enty ErrorMsg='" + key + "', val='" + val + "'. The value is not a number.");
 				}
 			}
 		}

@@ -68,11 +68,11 @@ extends DbmsDdlResolverAbstract
 //			else if ( length == 38 && scale ==    0 ) { entry.setColumnType(Types.BIGINT ); entry.setColumnTypeName("bigint"); System.out.println("REMAPPING(ORACLE) index="+entry.getColumnPos()+", columnName=["+entry.getColumnName()+"]: Types.NUMERIC, _precision="+length+", _scale="+scale+", _columnTypeName="+entry.getColumnTypeName()+" -------to>>>>>> BIGINT");}
 
 			// changed 0:-127 & 0:0 to BIGINT instead of INT (since Oracle internal $V tables are overflowing...)
-			if      ( length ==  0 && scale == -127 ) { entry.setColumnType(Types.BIGINT ); entry.setColumnTypeName("bigint"); _logger.debug("REMAPPING(ORACLE) index="+entry.getColumnPos()+", columnName=["+entry.getColumnName()+"]: Types.NUMERIC, _precision="+length+", _scale="+scale+", _columnTypeName="+entry.getColumnTypeName()+" -------to>>>>>> BIGINT");}
-			else if ( length ==  0 && scale ==    0 ) { entry.setColumnType(Types.BIGINT ); entry.setColumnTypeName("bigint"); _logger.debug("REMAPPING(ORACLE) index="+entry.getColumnPos()+", columnName=["+entry.getColumnName()+"]: Types.NUMERIC, _precision="+length+", _scale="+scale+", _columnTypeName="+entry.getColumnTypeName()+" -------to>>>>>> BIGINT");}
-			else if ( length == 10 && scale ==    0 ) { entry.setColumnType(Types.INTEGER); entry.setColumnTypeName("int"   ); _logger.debug("REMAPPING(ORACLE) index="+entry.getColumnPos()+", columnName=["+entry.getColumnName()+"]: Types.NUMERIC, _precision="+length+", _scale="+scale+", _columnTypeName="+entry.getColumnTypeName()+" -------to>>>>>> INTEGER");}
-			else if ( length == 19 && scale ==    0 ) { entry.setColumnType(Types.BIGINT ); entry.setColumnTypeName("bigint"); _logger.debug("REMAPPING(ORACLE) index="+entry.getColumnPos()+", columnName=["+entry.getColumnName()+"]: Types.NUMERIC, _precision="+length+", _scale="+scale+", _columnTypeName="+entry.getColumnTypeName()+" -------to>>>>>> BIGINT");}
-			else if ( length == 38 && scale ==    0 ) { entry.setColumnType(Types.BIGINT ); entry.setColumnTypeName("bigint"); _logger.debug("REMAPPING(ORACLE) index="+entry.getColumnPos()+", columnName=["+entry.getColumnName()+"]: Types.NUMERIC, _precision="+length+", _scale="+scale+", _columnTypeName="+entry.getColumnTypeName()+" -------to>>>>>> BIGINT");}
+			if      ( length ==  0 && scale == -127 ) { entry.setColumnType(Types.BIGINT ); entry.setColumnTypeName("bigint"); _logger.debug("REMAPPING(ORACLE) index=" + entry.getColumnPos() + ", columnName=[" + entry.getColumnName() + "]: Types.NUMERIC, _precision=" + length + ", _scale=" + scale + ", _columnTypeName=" + entry.getColumnTypeName() + " -------to>>>>>> BIGINT");}
+			else if ( length ==  0 && scale ==    0 ) { entry.setColumnType(Types.BIGINT ); entry.setColumnTypeName("bigint"); _logger.debug("REMAPPING(ORACLE) index=" + entry.getColumnPos() + ", columnName=[" + entry.getColumnName() + "]: Types.NUMERIC, _precision=" + length + ", _scale=" + scale + ", _columnTypeName=" + entry.getColumnTypeName() + " -------to>>>>>> BIGINT");}
+			else if ( length == 10 && scale ==    0 ) { entry.setColumnType(Types.INTEGER); entry.setColumnTypeName("int"   ); _logger.debug("REMAPPING(ORACLE) index=" + entry.getColumnPos() + ", columnName=[" + entry.getColumnName() + "]: Types.NUMERIC, _precision=" + length + ", _scale=" + scale + ", _columnTypeName=" + entry.getColumnTypeName() + " -------to>>>>>> INTEGER");}
+			else if ( length == 19 && scale ==    0 ) { entry.setColumnType(Types.BIGINT ); entry.setColumnTypeName("bigint"); _logger.debug("REMAPPING(ORACLE) index=" + entry.getColumnPos() + ", columnName=[" + entry.getColumnName() + "]: Types.NUMERIC, _precision=" + length + ", _scale=" + scale + ", _columnTypeName=" + entry.getColumnTypeName() + " -------to>>>>>> BIGINT");}
+			else if ( length == 38 && scale ==    0 ) { entry.setColumnType(Types.BIGINT ); entry.setColumnTypeName("bigint"); _logger.debug("REMAPPING(ORACLE) index=" + entry.getColumnPos() + ", columnName=[" + entry.getColumnName() + "]: Types.NUMERIC, _precision=" + length + ", _scale=" + scale + ", _columnTypeName=" + entry.getColumnTypeName() + " -------to>>>>>> BIGINT");}
 		}
 
 		//---------------------------------------------------
@@ -94,7 +94,7 @@ extends DbmsDdlResolverAbstract
 				// CHANGE Precision
 				entry.setPrecision(length);
 				
-				_logger.debug("REMAPPING(ORACLE) index="+entry.getColumnPos()+", columnName=["+entry.getColumnName()+"]: Types.BINARY|VARBINARY, _precision=0, _columnTypeName="+entry.getColumnTypeName()+" -------to>>>>>> BINARY|VARBINARY length=" + length);
+				_logger.debug("REMAPPING(ORACLE) index=" + entry.getColumnPos() + ", columnName=[" + entry.getColumnName() + "]: Types.BINARY|VARBINARY, _precision=0, _columnTypeName=" + entry.getColumnTypeName() + " -------to>>>>>> BINARY|VARBINARY length=" + length);
 			}
 		}
 	}
@@ -123,16 +123,16 @@ extends DbmsDdlResolverAbstract
 		case java.sql.Types.FLOAT:                   return "float";
 		case java.sql.Types.REAL:                    return "real";
 		case java.sql.Types.DOUBLE:                  return "double precision";
-		case java.sql.Types.NUMERIC:                 return "number("+length+","+scale+")";
-		case java.sql.Types.DECIMAL:                 return "number("+length+","+scale+")";
-		case java.sql.Types.CHAR:                    return "char("+length+")";
-		case java.sql.Types.VARCHAR:                 return "varchar2("+length+")";
+		case java.sql.Types.NUMERIC:                 return "number(" + length + "," + scale + ")";
+		case java.sql.Types.DECIMAL:                 return "number(" + length + "," + scale + ")";
+		case java.sql.Types.CHAR:                    return "char(" + length + ")";
+		case java.sql.Types.VARCHAR:                 return "varchar2(" + length + ")";
 		case java.sql.Types.LONGVARCHAR:             return "clob";
 		case java.sql.Types.DATE:                    return "date";
 		case java.sql.Types.TIME:                    return "date";    // TIME is not supported and ALL documents are saying just DATE instead... will that work ????
 		case java.sql.Types.TIMESTAMP:               return "timestamp";
-		case java.sql.Types.BINARY:                  return "raw("+length+")";
-		case java.sql.Types.VARBINARY:               return "raw("+length+")";
+		case java.sql.Types.BINARY:                  return "raw(" + length + ")";
+		case java.sql.Types.VARBINARY:               return "raw(" + length + ")";
 		case java.sql.Types.LONGVARBINARY:           return "blob";
 		case java.sql.Types.NULL:                    return "blob";
 		case java.sql.Types.OTHER:                   return "blob";
@@ -148,8 +148,8 @@ extends DbmsDdlResolverAbstract
 
 		//------------------------- JDBC 4.0 (java 1.6) -----------------------------------
 		case java.sql.Types.ROWID:                   return "urowid";
-		case java.sql.Types.NCHAR:                   return "nchar("+length+")";
-		case java.sql.Types.NVARCHAR:                return "nvarchar2("+length+")";
+		case java.sql.Types.NCHAR:                   return "nchar(" + length + ")";
+		case java.sql.Types.NVARCHAR:                return "nvarchar2(" + length + ")";
 		case java.sql.Types.LONGNVARCHAR:            return "nclob";
 		case java.sql.Types.NCLOB:                   return "nclob";
 		case java.sql.Types.SQLXML:                  return "xmltype";

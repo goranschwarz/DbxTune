@@ -238,7 +238,7 @@ extends JDialog
 				
 				// Simply escape * chars and try again...
 				String modSearchString = searchString.replace("*", "\\*");
-				_logger.info("Failed to serach with RegExp, falling back to 'escape' all '*' chars. Current Search String '"+searchString+"', Modified Serach String '"+modSearchString+"', Caught: "+ex);
+				_logger.info("Failed to serach with RegExp, falling back to 'escape' all '*' chars. Current Search String '" + searchString + "', Modified Serach String '" + modSearchString + "', Caught: " + ex);
 				_tab.setRowFilter(RowFilters.regexFilter(Pattern.CASE_INSENSITIVE, modSearchString + ".*", mcols));
 			}
 		}

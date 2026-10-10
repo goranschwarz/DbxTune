@@ -525,8 +525,8 @@ implements
 			try { setCm(_cm); } 
 			catch (Throwable e) 
 			{
-				_logger.info(getName()+" had some issues when doing setCm(_cm) back to the original cm. Caught and ignored: "+e);
-				_logger.debug(getName()+" had some issues when doing setCm(_cm) back to the original cm. Caught and ignored: "+e, e);
+				_logger.info(getName() + " had some issues when doing setCm(_cm) back to the original cm. Caught and ignored: " + e);
+				_logger.debug(getName() + " had some issues when doing setCm(_cm) back to the original cm. Caught and ignored: " + e, e);
 			}
 
 			loadFilterProps();
@@ -933,7 +933,7 @@ implements
 			// of course it would be safer to check all values to...
 			if (tmSize == cbSize)
 			{
-				_logger.debug("refreshFilterColumns(): " + getName() + "no change in count, skipping refresh, tmSize="+tmSize+", cbxSize="+cbSize);
+				_logger.debug("refreshFilterColumns(): " + getName() + "no change in count, skipping refresh, tmSize=" + tmSize + ", cbxSize=" + cbSize);
 				return;
 			}
 		}
@@ -1036,7 +1036,7 @@ implements
 		// Get if and HOW we should adjust the column width
 		final AutoAdjustTableColumnWidth autoAdjustType = getAutoAdjustTableColumnWidthType();
 		if (_logger.isDebugEnabled())
-			_logger.debug(getCm().getName()+": adjustTableColumnWidth(): autoAdjustType="+autoAdjustType);
+			_logger.debug(getCm().getName() + ": adjustTableColumnWidth(): autoAdjustType=" + autoAdjustType);
 
 		if (AutoAdjustTableColumnWidth.AUTO_OFF.equals(autoAdjustType))
 			return;
@@ -1698,7 +1698,7 @@ implements
 		group.add(autoOff);
 
 		// Get saved value... if not found: use "global"
-		String key = getPanelName()+".autoAdjustTableColumnWidth";
+		String key = getPanelName() + ".autoAdjustTableColumnWidth";
 		Configuration conf = Configuration.getCombinedConfiguration();
 //		String autoAdjustTableColumnWidth = conf.getProperty("", AutoAdjustTableColumnWidth.GLOBAL.toString());
 		String autoAdjustTableColumnWidth = conf.getProperty(key, AutoAdjustTableColumnWidth.GLOBAL.toString());
@@ -1709,7 +1709,7 @@ implements
 		else if (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.AUTO_OFF           .toString())) autoOff         .setSelected(true);
 		else
 		{
-			_logger.warn(getPanelName()+" Can't find appropriate value for "+key+" = '"+autoAdjustTableColumnWidth+"'. Setting value to '"+AutoAdjustTableColumnWidth.AUTO_GROW_ON+"'");
+			_logger.warn(getPanelName() + " Can't find appropriate value for " + key + " = '" + autoAdjustTableColumnWidth + "'. Setting value to '" + AutoAdjustTableColumnWidth.AUTO_GROW_ON + "'");
 		}
 
 		useGlobal.addActionListener(new ActionListener()
@@ -2010,7 +2010,7 @@ implements
 					if (conf != null)
 					{
 						conf.setProperty(CmToolTipSupplierDefault.PROPKEY_TABLE_TOOLTIP_FOCUSABLE.replace("<CMNAME>", _cm.getName()), toValue);
-						_logger.info("Setting 'On cell tooltip, use Focusable Tooltip' to '"+toValue+"' for CounterModel '"+_cm.getName()+"'.");
+						_logger.info("Setting 'On cell tooltip, use Focusable Tooltip' to '" + toValue + "' for CounterModel '" + _cm.getName() + "'.");
 					}
 				}
 			}
@@ -2040,7 +2040,7 @@ implements
 					if (conf != null)
 					{
 						conf.setProperty(CmToolTipSupplierDefault.PROPKEY_TABLE_TOOLTIP_SHOW_PK.replace("<CMNAME>", _cm.getName()), toValue);
-						_logger.info("Setting 'Show PrimaryKey value(s) on cell tooltip' to '"+toValue+"' for CounterModel '"+_cm.getName()+"'.");
+						_logger.info("Setting 'Show PrimaryKey value(s) on cell tooltip' to '" + toValue + "' for CounterModel '" + _cm.getName() + "'.");
 					}
 				}
 			}
@@ -2069,7 +2069,7 @@ implements
 					if (conf != null)
 					{
 						conf.setProperty(CmToolTipSupplierDefault.PROPKEY_TABLE_TOOLTIP_SHOW_ALL.replace("<CMNAME>", _cm.getName()), toValue);
-						_logger.info("Setting 'Show ALL value(s) on cell tooltip' to '"+toValue+"' for CounterModel '"+_cm.getName()+"'.");
+						_logger.info("Setting 'Show ALL value(s) on cell tooltip' to '" + toValue + "' for CounterModel '" + _cm.getName() + "'.");
 					}
 				}
 			}
@@ -2179,7 +2179,7 @@ implements
 		{
 			String htmlMsg = 
 				"<html>" +
-				"Sorry no properties dialog is available for '"+cm.getDisplayName()+"'.<br>" +
+				"Sorry no properties dialog is available for '" + cm.getDisplayName() + "'.<br>" +
 				"<br>" +
 				"Basic Configuration info:<br>" +
 				cm.getBasicConfigurationDescription() +
@@ -2374,9 +2374,9 @@ implements
 				String lcRefreshTime  = (cm == null) ? "Unavailable" : cm.getLcRefreshTime() + " ms.";
 
 				return "<html>" +
-						"SQL Refresh time: "+sqlRefreshTime+"<br>" +
-						"GUI Refresh Time: "+guiRefreshTime+"<br>" +
-						"Local Calculation Time: "+lcRefreshTime+"<br>" +
+						"SQL Refresh time: " + sqlRefreshTime + "<br>" +
+						"GUI Refresh Time: " + guiRefreshTime + "<br>" +
+						"Local Calculation Time: " + lcRefreshTime + "<br>" +
 						"</html>";
 			}
 		};
@@ -2516,7 +2516,7 @@ implements
 				{
 					// ALLOW NON CONFIGURED ASE MONITORING
 					mi = new JCheckBoxMenuItem();
-					mi.setText("<html>Allow collection of Performance Counters even if Server is not configured for this ("+StringUtil.toCommaStr(cm.getDependsOnConfig())+") - <i>Counters should <b>not</b> be trusted.</i> </html>");
+					mi.setText("<html>Allow collection of Performance Counters even if Server is not configured for this (" + StringUtil.toCommaStr(cm.getDependsOnConfig()) + ") - <i>Counters should <b>not</b> be trusted.</i> </html>");
 					mi.setSelected(cm.isNonConfiguredMonitoringAllowed());
 					mi.addActionListener(new ActionListener()
 					{
@@ -2532,7 +2532,7 @@ implements
 								cm.setActive(true, null); // set to active if anothing has in-activated it
 								cm.setSql(null);          // make the CM reinitialize it's SQL, check config etc...
 
-								_logger.info("Setting 'Allow non-configured ASE Monitoring' to '"+toValue+"' for CounterModel '"+cm.getName()+"'.");
+								_logger.info("Setting 'Allow non-configured ASE Monitoring' to '" + toValue + "' for CounterModel '" + cm.getName() + "'.");
 							}
 						}
 					});
@@ -2554,7 +2554,7 @@ implements
 
 								cm.setNewDeltaOrRateRowHighlightEnabled(toValue, true); // calls saveProps() on the CM
 
-								_logger.info("Setting 'Highlight new diff/rate rows' to '"+toValue+"' for CounterModel '"+cm.getName()+"'.");
+								_logger.info("Setting 'Highlight new diff/rate rows' to '" + toValue + "' for CounterModel '" + cm.getName() + "'.");
 							}
 						}
 					});
@@ -2580,7 +2580,7 @@ implements
 								if (conf != null)
 								{
 									conf.setProperty(CmToolTipSupplierDefault.PROPKEY_TABLE_TOOLTIP_SHOW_PK.replace("<CMNAME>", cm.getName()), toValue);
-									_logger.info("Setting 'Show PrimaryKey value(s) on cell tooltip' to '"+toValue+"' for CounterModel '"+cm.getName()+"'.");
+									_logger.info("Setting 'Show PrimaryKey value(s) on cell tooltip' to '" + toValue + "' for CounterModel '" + cm.getName() + "'.");
 								}
 							}
 						}
@@ -2607,7 +2607,7 @@ implements
 								if (conf != null)
 								{
 									conf.setProperty(CmToolTipSupplierDefault.PROPKEY_TABLE_TOOLTIP_SHOW_ALL.replace("<CMNAME>", cm.getName()), toValue);
-									_logger.info("Setting 'Show ALL value(s) on cell tooltip' to '"+toValue+"' for CounterModel '"+cm.getName()+"'.");
+									_logger.info("Setting 'Show ALL value(s) on cell tooltip' to '" + toValue + "' for CounterModel '" + cm.getName() + "'.");
 								}
 							}
 						}
@@ -2634,7 +2634,7 @@ implements
 								if (conf != null)
 								{
 									conf.setProperty(CmToolTipSupplierDefault.PROPKEY_TABLE_TOOLTIP_FOCUSABLE.replace("<CMNAME>", cm.getName()), toValue);
-									_logger.info("Setting 'On cell tooltip, use Focusable Tooltip' to '"+toValue+"' for CounterModel '"+cm.getName()+"'.");
+									_logger.info("Setting 'On cell tooltip, use Focusable Tooltip' to '" + toValue + "' for CounterModel '" + cm.getName() + "'.");
 								}
 							}
 						}
@@ -2808,7 +2808,7 @@ implements
 					@Override
 					public void actionPerformed(ActionEvent e)
 					{
-						_logger.debug("TCP: CALL: updateExtendedInfoPanel(): panelName='"+getPanelName()+"'.");
+						_logger.debug("TCP: CALL: updateExtendedInfoPanel(): panelName='" + getPanelName() + "'.");
 
 						_lastUpdateExtendedInfoPanelTimer.stop();
 						updateExtendedInfoPanel();
@@ -3647,7 +3647,7 @@ implements
 			}
 			catch(IllegalArgumentException ex) // When row wasn't found in: _dataTable.getColumn(column).getModelIndex()
 			{
-				_logger.info("Can't find column '"+column+"' in the datatable '"+_dataTable.getName()+"'.");
+				_logger.info("Can't find column '" + column + "' in the datatable '" + _dataTable.getName() + "'.");
 			}
 		}
 		setWatermark();
@@ -3675,7 +3675,7 @@ implements
 		Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
 		if (tmpConf != null)
 		{
-			tmpConf.setProperty(getPanelName()+".autoAdjustTableColumnWidth", val.toString());
+			tmpConf.setProperty(getPanelName() + ".autoAdjustTableColumnWidth", val.toString());
 			tmpConf.save();
 		}
 	}
@@ -3687,7 +3687,7 @@ implements
 		AutoAdjustTableColumnWidth returnThis = AutoAdjustTableColumnWidth.AUTO_GROW_ON;
 		AutoAdjustTableColumnWidth mfSetting = MainFrame.getInstance() != null ? MainFrame.getInstance().getTcpAutoAdjustTableColumnWidthType() : AutoAdjustTableColumnWidth.AUTO_GROW_ON;
 		
-		String key = getPanelName()+".autoAdjustTableColumnWidth";
+		String key = getPanelName() + ".autoAdjustTableColumnWidth";
 		String autoAdjustTableColumnWidth = conf.getProperty(key, AutoAdjustTableColumnWidth.GLOBAL.toString());
 
 		if      (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.GLOBAL              .name())) returnThis = mfSetting;
@@ -3695,7 +3695,7 @@ implements
 		else if (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.AUTO_GROW_ON        .name())) returnThis = AutoAdjustTableColumnWidth.AUTO_GROW_ON;
 		else if (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.AUTO_OFF            .name())) returnThis = AutoAdjustTableColumnWidth.AUTO_OFF;
 		else {
-			_logger.warn(getPanelName()+" Can't find appropriate value for "+key+" = '"+autoAdjustTableColumnWidth+"'.");
+			_logger.warn(getPanelName() + " Can't find appropriate value for " + key + " = '" + autoAdjustTableColumnWidth + "'.");
 			returnThis = AutoAdjustTableColumnWidth.AUTO_GROW_ON;
 		}
 
@@ -3707,7 +3707,7 @@ implements
 		String headerProps = null;
 		if (cm != null)
 			if (cm.isRuntimeInitialized())
-				headerProps = conf.getProperty(getName() + ".gui.column.header.props.["+SwingUtils.getScreenResulutionAsString()+"]." + cm.getServerVersion());
+				headerProps = conf.getProperty(getName() + ".gui.column.header.props.[" + SwingUtils.getScreenResulutionAsString() + "]." + cm.getServerVersion());
 		if (headerProps == null)
 			returnThis = AutoAdjustTableColumnWidth.AUTO_GROW_ON;
 //		if (headerProps != null)
@@ -3832,13 +3832,13 @@ implements
 		{
 			int dividerLocation  = _mainSplitPane.getDividerLocation();
 			if (dividerLocation > 0)
-				tmpConf.setProperty(keyPrefix+"mainSplitPane.dividerLocation",  dividerLocation);
+				tmpConf.setProperty(keyPrefix + "mainSplitPane.dividerLocation",  dividerLocation);
 			else
-				tmpConf.remove(keyPrefix+"mainSplitPane.dividerLocation");
+				tmpConf.remove(keyPrefix + "mainSplitPane.dividerLocation");
 		}
 
-		tmpConf.setProperty(keyPrefix+"freeTextFilter.value",    _tableRowFilterFreeText.getText());
-		tmpConf.setProperty(keyPrefix+"freeTextFilter.selected", _tableRowFilterFreeText.isFilterChkboxSelected());
+		tmpConf.setProperty(keyPrefix + "freeTextFilter.value",    _tableRowFilterFreeText.getText());
+		tmpConf.setProperty(keyPrefix + "freeTextFilter.selected", _tableRowFilterFreeText.isFilterChkboxSelected());
 
 		tmpConf.save();
 	}
@@ -3857,7 +3857,7 @@ implements
 		JSplitPane mainSplitPane = getMainSplitPane();
 		if (mainSplitPane != null)
 		{
-			int dividerLocation  = conf.getIntProperty(keyPrefix+"mainSplitPane.dividerLocation",  0);
+			int dividerLocation  = conf.getIntProperty(keyPrefix + "mainSplitPane.dividerLocation",  0);
 
 			if (dividerLocation == 0)
 				dividerLocation = getDefaultMainSplitPaneDividerLocation();
@@ -3865,8 +3865,8 @@ implements
 			_mainSplitPane.setDividerLocation(dividerLocation);
 		}
 
-		_tableRowFilterFreeText.setText(                 conf.getProperty(       keyPrefix+"freeTextFilter.value",    "")   );
-		_tableRowFilterFreeText.setFilterChkboxSelected( conf.getBooleanProperty(keyPrefix+"freeTextFilter.selected", true) );
+		_tableRowFilterFreeText.setText(                 conf.getProperty(       keyPrefix + "freeTextFilter.value",    "")   );
+		_tableRowFilterFreeText.setFilterChkboxSelected( conf.getBooleanProperty(keyPrefix + "freeTextFilter.selected", true) );
 	}
 
 	/**  */
@@ -3892,10 +3892,10 @@ implements
 
 		String keyPrefix = cmName + ".filter.";
 
-		conf.setProperty(keyPrefix+"column",        _filterColumn_cb.getSelectedItem().toString());
-		conf.setProperty(keyPrefix+"operation",     FILTER_OP_STR_ARR_SHORT[_filterOperation_cb.getSelectedIndex()]);
-		conf.setProperty(keyPrefix+"value",         _filterValue_tf.getText());
-		conf.setProperty(keyPrefix+"noZeroCounter", _filterNoZeroCounters_chk.isSelected());
+		conf.setProperty(keyPrefix + "column",        _filterColumn_cb.getSelectedItem().toString());
+		conf.setProperty(keyPrefix + "operation",     FILTER_OP_STR_ARR_SHORT[_filterOperation_cb.getSelectedIndex()]);
+		conf.setProperty(keyPrefix + "value",         _filterValue_tf.getText());
+		conf.setProperty(keyPrefix + "noZeroCounter", _filterNoZeroCounters_chk.isSelected());
 		conf.save();
 	}
 
@@ -3921,10 +3921,10 @@ implements
 		
 		String keyPrefix = cmName + ".filter.";
 
-		String column        = conf.getProperty(keyPrefix+"column");
-		String operation     = conf.getProperty(keyPrefix+"operation");
-		String value         = conf.getProperty(keyPrefix+"value");
-		String noZeroCounter = conf.getProperty(keyPrefix+"noZeroCounter");
+		String column        = conf.getProperty(keyPrefix + "column");
+		String operation     = conf.getProperty(keyPrefix + "operation");
+		String value         = conf.getProperty(keyPrefix + "value");
+		String noZeroCounter = conf.getProperty(keyPrefix + "noZeroCounter");
 
 		// Load values...
 		if (column != null)
@@ -5031,7 +5031,7 @@ implements
 					_topPanel.setBackground(NON_CONFIGURED_MONITORING_COLOR);
 					msg = "<html>WARNING: Counters may not be trusted<br>" +
 				      "Some ASE Configuration has been disabled, which data relies on.<br>" + 
-				      "Missing config(s): <b>"+cm.getNonConfiguredMonitoringMissingParams()+"</b><br>";
+				      "Missing config(s): <b>" + cm.getNonConfiguredMonitoringMissingParams() + "</b><br>";
 					if (cm.getNonConfiguedMonitoringMessageList() != null)
 					{
 						msg += "<br>";
@@ -5113,7 +5113,7 @@ implements
 			{
 				CountersModel dcm = _cm.getDependantCmThatHasPostponeTime();
 				setWatermarkText("Postponing next sample refresh until '" + TimeUtils.msToTimeStr("%HH:%MM:%SS", dcm.getTimeToNextPostponedRefresh()) + "'.\n" +
-					"Waiting for dependant Performance Counter '"+dcm.getDisplayName()+"'.");
+					"Waiting for dependant Performance Counter '" + dcm.getDisplayName() + "'.");
 			}
 			else if ( !_cm.hasAbsData() )
 			{
@@ -5171,7 +5171,7 @@ implements
 				_topPanel.setBackground(NON_CONFIGURED_MONITORING_COLOR);
 				msg = "<html>WARNING: Counters may not be trusted<br>" +
 			      "Some ASE Configuration has been disabled, which data relies on.<br>" + 
-			      "Missing config(s): <b>"+cm.getNonConfiguredMonitoringMissingParams()+"</b><br>";
+			      "Missing config(s): <b>" + cm.getNonConfiguredMonitoringMissingParams() + "</b><br>";
 				if (cm.getNonConfiguedMonitoringMessageList() != null)
 				{
 					msg += "<br>";
@@ -5455,7 +5455,7 @@ implements
 		if ( _inMemHistCm == null )
 		{
 			// do anything here? ... most of the stuff is done in setDisplayCm()
-			_logger.debug("readInMemHistSample('"+_inMemHistSampleTime+"'): cm=null");
+			_logger.debug("readInMemHistSample('" + _inMemHistSampleTime + "'): cm=null");
 		}
 
 		// Mark that we have already read data from in-memory storage
@@ -5581,7 +5581,7 @@ implements
 		if ( _offlineCm == null )
 		{
 			// do anything here? ... most of the stuff is done in setDisplayCm()
-			_logger.debug("readOfflineSample('"+_offlineSampleTime+"'): _cmOffline=null");
+			_logger.debug("readOfflineSample('" + _offlineSampleTime + "'): _cmOffline=null");
 System.out.println("OFFLINE-SAMPLE-NOT-FOUND: readOfflineSample('" + _offlineSampleTime + "'): _cmOffline=null");
 		}
 
@@ -5650,7 +5650,7 @@ System.out.println("OFFLINE-SAMPLE-NOT-FOUND: readOfflineSample('" + _offlineSam
 			if ( _offlineCm == null )
 			{
 				// do anything here? ... most of the stuff is done in setDisplayCm()
-				_logger.debug("readOfflineSample('"+_offlineSampleTime+"'): _cmOffline=null");
+				_logger.debug("readOfflineSample('" + _offlineSampleTime + "'): _cmOffline=null");
 			}
 	
 			// Mark that we have already read data from offline storage

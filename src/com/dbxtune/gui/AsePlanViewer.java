@@ -351,7 +351,7 @@ implements ActionListener
 				if (data.indexOf("<?xml version=") == -1)
 				{
 					// Or maybe we can open a Editor so we can edit the content...
-					SwingUtils.showErrorMessage(this, "Error loading XML", "The clipboard do not contain xml.\n\n"+data, null);
+					SwingUtils.showErrorMessage(this, "Error loading XML", "The clipboard do not contain xml.\n\n" + data, null);
 				}
 
 				loadXml(data);
@@ -359,7 +359,7 @@ implements ActionListener
 			}
 			catch (Exception ex)
 			{
-				SwingUtils.showErrorMessage(this, "Error loading XML", "Can't load the Clipboard'. Caught: "+ex, ex);
+				SwingUtils.showErrorMessage(this, "Error loading XML", "Can't load the Clipboard'. Caught: " + ex, ex);
 			}
 		}
 
@@ -388,7 +388,7 @@ implements ActionListener
 				}
 				catch(Exception ex)
 				{
-					SwingUtils.showErrorMessage(this, "Error loading file", "Can't load the file '"+file+"'. Caught: "+ex, ex);
+					SwingUtils.showErrorMessage(this, "Error loading file", "Can't load the file '" + file + "'. Caught: " + ex, ex);
 				}
 	        }
 		}
@@ -498,7 +498,7 @@ implements ActionListener
 		{
 			System.out.println("Problem XML: " + xml);
 			ex.printStackTrace();
-			SwingUtils.showErrorMessage(this, "Problems Filling in parameters from XML", "Caught: "+ex, ex);
+			SwingUtils.showErrorMessage(this, "Problems Filling in parameters from XML", "Caught: " + ex, ex);
 		}
 		
 		return map;
@@ -576,7 +576,7 @@ implements ActionListener
 		}
 		catch (Exception ex)
 		{
-			SwingUtils.showErrorMessage(this, "Error loading XML", "Can't load the XML String'. Caught: "+ex, ex);
+			SwingUtils.showErrorMessage(this, "Error loading XML", "Can't load the XML String'. Caught: " + ex, ex);
 
 			// get a new instance next time
 			setInstance(null);
@@ -606,7 +606,7 @@ implements ActionListener
 	{
 		String xmlString = XmlPlanCache.getInstance().getPlan(planName, planId);
 		loadXml(xmlString);
-		setTitle(TITLE + " - " + planName + (planId<=0 ? "" : ":"+planId) );
+		setTitle(TITLE + " - " + planName + (planId<=0 ? "" : ":" + planId) );
 		setVisible(true);
 		return xmlString;
 	}
@@ -665,7 +665,7 @@ implements ActionListener
 		{
 			_deferredCachedXmlPlanTimer.stop();
 			loadXml(_deferredCachedXmlPlan);
-			setTitle(TITLE + " - " + _deferredPlanName + (_deferredPlanId<=0 ? "" : ":"+_deferredPlanId) );
+			setTitle(TITLE + " - " + _deferredPlanName + (_deferredPlanId<=0 ? "" : ":" + _deferredPlanId) );
 			_deferredCachedXmlPlan = "";
 			_deferredPlanName      = "";
 			_deferredPlanId        = 0;
@@ -875,7 +875,7 @@ implements ActionListener
 		
 				statement.executeUpdate("set plan for show_execio_xml off");
 				if(saveTextSize < 105906176)
-					statement.executeUpdate("set textsize "+saveTextSize);
+					statement.executeUpdate("set textsize " + saveTextSize);
 				_hasPlan = true;
 			}
 			catch (SQLException e)

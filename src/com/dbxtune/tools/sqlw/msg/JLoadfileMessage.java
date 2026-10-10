@@ -29,7 +29,7 @@ extends JAseMessage
 	
 	public JLoadfileMessage(String message, String originSql)
 	{
-		super("LOADFILE: "+message, originSql);
+		super("LOADFILE: " + message, originSql);
 
 		setForeground(ColorUtils.VERY_DARK_BLUE);
 	}

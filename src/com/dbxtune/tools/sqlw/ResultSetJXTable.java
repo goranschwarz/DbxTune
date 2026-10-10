@@ -241,7 +241,7 @@ implements ToolTipHyperlinkResolver
     				}
     				catch(Throwable ignore) 
     				{
-    					_logger.warn("Problems in ResultSetJXTable when rendering type '"+value.getClass().getName()+"', object '"+value+"'. returning a toString instead. Caught: "+ignore);
+    					_logger.warn("Problems in ResultSetJXTable when rendering type '" + value.getClass().getName() + "', object '" + value + "'. returning a toString instead. Caught: " + ignore);
     					return value==null ? ResultSetTableModel.DEFAULT_NULL_REPLACE : value.toString(); 
     				}
 				}
@@ -271,7 +271,7 @@ implements ToolTipHyperlinkResolver
     				}
     				catch(Throwable ignore) 
     				{
-    					_logger.warn("Problems in ResultSetJXTable when rendering type '"+value.getClass().getName()+"', object '"+value+"'. returning a toString instead. Caught: "+ignore);
+    					_logger.warn("Problems in ResultSetJXTable when rendering type '" + value.getClass().getName() + "', object '" + value + "'. returning a toString instead. Caught: " + ignore);
     					return value==null ? ResultSetTableModel.DEFAULT_NULL_REPLACE : value.toString(); 
     				}
 				}
@@ -301,7 +301,7 @@ implements ToolTipHyperlinkResolver
     				}
     				catch(Throwable ignore) 
     				{
-    					_logger.warn("Problems in ResultSetJXTable when rendering type '"+value.getClass().getName()+"', object '"+value+"'. returning a toString instead. Caught: "+ignore);
+    					_logger.warn("Problems in ResultSetJXTable when rendering type '" + value.getClass().getName() + "', object '" + value + "'. returning a toString instead. Caught: " + ignore);
     					return value==null ? ResultSetTableModel.DEFAULT_NULL_REPLACE : value.toString(); 
     				}
 				}
@@ -836,12 +836,12 @@ implements ToolTipHyperlinkResolver
 		{
 			_logger.debug("");
 			_logger.debug("##################################################################################");
-			_logger.debug("hyperlinkResolv(): event.getDescription()  ="+event.getDescription());
-			_logger.debug("hyperlinkResolv(): event.getURL()          ="+event.getURL());
-			_logger.debug("hyperlinkResolv(): event.getEventType()    ="+event.getEventType());
-			_logger.debug("hyperlinkResolv(): event.getSourceElement()="+event.getSourceElement());
-			_logger.debug("hyperlinkResolv(): event.getSource()       ="+event.getSource());
-			_logger.debug("hyperlinkResolv(): event.toString()        ="+event.toString());
+			_logger.debug("hyperlinkResolv(): event.getDescription()  =" + event.getDescription());
+			_logger.debug("hyperlinkResolv(): event.getURL()          =" + event.getURL());
+			_logger.debug("hyperlinkResolv(): event.getEventType()    =" + event.getEventType());
+			_logger.debug("hyperlinkResolv(): event.getSourceElement()=" + event.getSourceElement());
+			_logger.debug("hyperlinkResolv(): event.getSource()       =" + event.getSource());
+			_logger.debug("hyperlinkResolv(): event.toString()        =" + event.toString());
 		}
 
 		if (desc.startsWith(CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER))
@@ -853,7 +853,7 @@ implements ToolTipHyperlinkResolver
 			}
 			catch (MalformedURLException e)
 			{
-				_logger.warn("Problems open URL='"+urlStr+"', in external Browser.", e);
+				_logger.warn("Problems open URL='" + urlStr + "', in external Browser.", e);
 			}
 		}
 
@@ -943,7 +943,7 @@ implements ToolTipHyperlinkResolver
 				}
 				catch(UnsupportedEncodingException ex)
 				{
-					_logger.warn("getContentSpecificToolTipText(cellStr, bytes): POSSIBLY_BINARY_HTML, AFTER DECODE: info(mime-type)="+info+", Problems creating a string with detectedCharsetAtStart '"+detectedCharsetAtStart+"'. Caught: "+ex);
+					_logger.warn("getContentSpecificToolTipText(cellStr, bytes): POSSIBLY_BINARY_HTML, AFTER DECODE: info(mime-type)=" + info + ", Problems creating a string with detectedCharsetAtStart '" + detectedCharsetAtStart + "'. Caught: " + ex);
 				}
 			}
 		}
@@ -991,7 +991,7 @@ implements ToolTipHyperlinkResolver
 					}
 					catch(UnsupportedEncodingException ex)
 					{
-						_logger.warn("getContentSpecificToolTipText(cellStr, bytes): isBase64=true, AFTER DECODE: info(mime-type)="+info+", Problems creating a string with detectedCharsetBase64Decoded '"+detectedCharsetBase64Decoded+"'. Caught: "+ex);
+						_logger.warn("getContentSpecificToolTipText(cellStr, bytes): isBase64=true, AFTER DECODE: info(mime-type)=" + info + ", Problems creating a string with detectedCharsetBase64Decoded '" + detectedCharsetBase64Decoded + "'. Caught: " + ex);
 					}
 				}
 			}
@@ -1042,7 +1042,7 @@ implements ToolTipHyperlinkResolver
 						tmpFile = createTempFile("sqlw_JSON_tooltip_", ".html", bytes); // NOTE: A Browser is possibly better at reading the JSON than any registered app???
 
 						// Compose ToolTip HTML (with content, & a LINK to be opened in "browser")
-						String urlStr = ("file:///"+tmpFile);
+						String urlStr = ("file:///" + tmpFile);
 						try	
 						{
 							URL url = new URL(urlStr);
@@ -1069,9 +1069,9 @@ implements ToolTipHyperlinkResolver
 						}
 						catch (Exception ex) 
 						{
-							_logger.warn("Problems when open the URL '"+urlStr+"'. Caught: "+ex, ex); 
+							_logger.warn("Problems when open the URL '" + urlStr + "'. Caught: " + ex, ex); 
 							return 
-								"<html>Problems when open the URL '<code>"+urlStr+"</code>'.<br>"
+								"<html>Problems when open the URL '<code>" + urlStr + "</code>'.<br>"
 								+ "Caught: <b>" + ex + "</b><br>"
 								+ "<hr>"
 								+ "<a href='" + CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + urlStr + "'>Open tempfile in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>"
@@ -1081,7 +1081,7 @@ implements ToolTipHyperlinkResolver
 					}
 					catch (Exception ex)
 					{
-						return "<html>Sorry problems when creating temporary file '"+tmpFile+"'<br>Caught: "+ex+"</html>";
+						return "<html>Sorry problems when creating temporary file '" + tmpFile + "'<br>Caught: " + ex + "</html>";
 					}
 				}
 				else
@@ -1107,7 +1107,7 @@ implements ToolTipHyperlinkResolver
 					tmpFile = createTempFile("sqlw_HTML_tooltip_", fileExtention, bytes);
 
 					// Compose ToolTip HTML (with content, & a LINK to be opened in "browser")
-					String urlStr = ("file:///"+tmpFile);
+					String urlStr = ("file:///" + tmpFile);
 					try	
 					{
 						URL url = new URL(urlStr);
@@ -1132,9 +1132,9 @@ implements ToolTipHyperlinkResolver
 					}
 					catch (Exception ex) 
 					{
-						_logger.warn("Problems when open the URL '"+urlStr+"'. Caught: "+ex, ex); 
+						_logger.warn("Problems when open the URL '" + urlStr + "'. Caught: " + ex, ex); 
 						return 
-							"<html>Problems when open the URL '<code>"+urlStr+"</code>'.<br>"
+							"<html>Problems when open the URL '<code>" + urlStr + "</code>'.<br>"
 							+ "Caught: <b>" + ex + "</b><br>"
 							+ "<hr>"
 							+ "<a href='" + CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + urlStr + "'>Open tempfile in External Browser</a> (registered application for file extention <b>'" + fileExtention + "'</b> will be used)<br>"
@@ -1144,7 +1144,7 @@ implements ToolTipHyperlinkResolver
 				}
 				catch (Exception ex)
 				{
-					return "<html>Sorry problems when creating temporary file '"+tmpFile+"'<br>Caught: "+ex+"</html>";
+					return "<html>Sorry problems when creating temporary file '" + tmpFile + "'<br>Caught: " + ex + "</html>";
 				}
 			}
 
@@ -1191,7 +1191,7 @@ implements ToolTipHyperlinkResolver
 					tmpFile = createTempFile("sqlw_XML_tooltip_", xmlExtention, bytes);
 
 					// Compose ToolTip HTML (with content, & a LINK to be opened in "browser")
-					String urlStr = ("file:///"+tmpFile);
+					String urlStr = ("file:///" + tmpFile);
 					try	
 					{
 						URL url = new URL(urlStr);
@@ -1218,8 +1218,8 @@ implements ToolTipHyperlinkResolver
 						else
 						{
     						sb.append("<font color='red'>Sorry the content is to big to display <b>here</b>, please open the file in above link!</font><br>");
-    						sb.append("Current max size is: "+maxDisplayLenKb+" KB<br>");
-    						sb.append("Note: This can be changed with property '"+PROPKEY_TOOLTIP_XML_INLINE_MAX_SIZE_KB+"'<br>");
+    						sb.append("Current max size is: " + maxDisplayLenKb + " KB<br>");
+    						sb.append("Note: This can be changed with property '" + PROPKEY_TOOLTIP_XML_INLINE_MAX_SIZE_KB + "'<br>");
 						}
 
 						sb.append("</html>");
@@ -1228,9 +1228,9 @@ implements ToolTipHyperlinkResolver
 					}
 					catch (Exception ex) 
 					{
-						_logger.warn("Problems when open the URL '"+urlStr+"'. Caught: "+ex, ex); 
+						_logger.warn("Problems when open the URL '" + urlStr + "'. Caught: " + ex, ex); 
 						return 
-							"<html>Problems when open the URL '<code>"+urlStr+"</code>'.<br>"
+							"<html>Problems when open the URL '<code>" + urlStr + "</code>'.<br>"
 							+ "Caught: <b>" + ex + "</b><br>"
 							+ "<hr>"
 							+ "<a href='" + CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + urlStr + "'>Open tempfile in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>"
@@ -1240,7 +1240,7 @@ implements ToolTipHyperlinkResolver
 				}
 				catch (Exception ex)
 				{
-					return "<html>Sorry problems when creating temporary file '"+tmpFile+"'<br>Caught: "+ex+"</html>";
+					return "<html>Sorry problems when creating temporary file '" + tmpFile + "'<br>Caught: " + ex + "</html>";
 				}
 			}
 			
@@ -1265,7 +1265,7 @@ implements ToolTipHyperlinkResolver
 				tmpFile = createTempFile("sqlw_UNKNOWN_tooltip_", ".txt", bytes);
 
 				// Compose ToolTip HTML (with content, & a LINK to be opened in "browser")
-				String urlStr = ("file:///"+tmpFile);
+				String urlStr = ("file:///" + tmpFile);
 				try	
 				{
 					URL url = new URL(urlStr);
@@ -1288,7 +1288,7 @@ implements ToolTipHyperlinkResolver
 					if (strValLen > maxStrLen)
 					{
 						cellStr =  cellStr.substring(0, maxStrLen) + " ... ";
-						truncatedMsg = "<font color='orange'><i><b>NOTE:</b> content is truncated after " + maxStrLen + " chars (actual length is "+strValLen+").</i></font>";
+						truncatedMsg = "<font color='orange'><i><b>NOTE:</b> content is truncated after " + maxStrLen + " chars (actual length is " + strValLen + ").</i></font>";
 					}
 						
 					sb.append("<pre><code>");
@@ -1302,9 +1302,9 @@ implements ToolTipHyperlinkResolver
 				}
 				catch (Exception ex) 
 				{
-					_logger.warn("Problems when open the URL '"+urlStr+"'. Caught: "+ex, ex); 
+					_logger.warn("Problems when open the URL '" + urlStr + "'. Caught: " + ex, ex); 
 					return 
-						"<html>Problems when open the URL '<code>"+urlStr+"</code>'.<br>"
+						"<html>Problems when open the URL '<code>" + urlStr + "</code>'.<br>"
 						+ "Caught: <b>" + ex + "</b><br>"
 						+ "<hr>"
 						+ "<a href='" + CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + urlStr + "'>Open tempfile in External Browser</a> (registered application for file extention <b>'.txt'</b> will be used)<br>"
@@ -1314,7 +1314,7 @@ implements ToolTipHyperlinkResolver
 			}
 			catch (Exception ex)
 			{
-				return "<html>Sorry problems when creating temporary file '"+tmpFile+"'<br>Caught: "+ex+"</html>";
+				return "<html>Sorry problems when creating temporary file '" + tmpFile + "'<br>Caught: " + ex + "</html>";
 			}
 		} // end: if (info == null)
 		//---------------------------------------------------------------------------
@@ -1390,7 +1390,7 @@ implements ToolTipHyperlinkResolver
 //
 //							return sb.toString();
 
-							String urlStr = ("file:///"+tmpFile);
+							String urlStr = ("file:///" + tmpFile);
 							try	
 							{
 								URL url = new URL(urlStr);
@@ -1416,9 +1416,9 @@ implements ToolTipHyperlinkResolver
 							}
 							catch (Exception ex) 
 							{
-								_logger.warn("Problems when open the URL '"+urlStr+"'. Caught: "+ex, ex); 
+								_logger.warn("Problems when open the URL '" + urlStr + "'. Caught: " + ex, ex); 
 								return 
-									"<html>Problems when open the URL '<code>"+urlStr+"</code>'.<br>"
+									"<html>Problems when open the URL '<code>" + urlStr + "</code>'.<br>"
 									+ "Caught: <b>" + ex + "</b><br>"
 									+ "<hr>"
 									+ "<a href='" + CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + urlStr + "'>Open tempfile in External Browser</a> (registered application for mime type <b>'" + mimeType + "'</b> will be used)<br>"
@@ -1429,7 +1429,7 @@ implements ToolTipHyperlinkResolver
 					}
 					catch (Exception ex)
 					{
-						return "<html>Sorry problems when creating temporary file '"+tmpFile+"'<br>Caught: "+ex+"</html>";
+						return "<html>Sorry problems when creating temporary file '" + tmpFile + "'<br>Caught: " + ex + "</html>";
 					}
 				}
 			} // end: is "image/"
@@ -1465,7 +1465,7 @@ implements ToolTipHyperlinkResolver
 					}
 					catch (Exception ex) 
 					{
-						return "<html>Sorry problems when creating temporary file '"+tmpFile+"'<br>Caught: "+ex+"</html>";
+						return "<html>Sorry problems when creating temporary file '" + tmpFile + "'<br>Caught: " + ex + "</html>";
 					}
 				}
 				else // probably starts with '<html>' ... which should be HTML Version 4 or less
@@ -1497,7 +1497,7 @@ implements ToolTipHyperlinkResolver
 					tmpFile = createTempFile("sqlw_XML_tooltip_", ".xml", bytes);
 
 					// Compose ToolTip HTML (with content, & a LINK to be opened in "browser")
-					String urlStr = ("file:///"+tmpFile);
+					String urlStr = ("file:///" + tmpFile);
 					try	
 					{
 						URL url = new URL(urlStr);
@@ -1525,8 +1525,8 @@ implements ToolTipHyperlinkResolver
 						else
 						{
     						sb.append("<font color='red'>Sorry the content is to big to display <b>here</b>, please open the file in above link!</font><br>");
-    						sb.append("Current max size is: "+maxDisplayLenKb+" KB<br>");
-    						sb.append("Note: This can be changed with property '"+PROPKEY_TOOLTIP_XML_INLINE_MAX_SIZE_KB+"'<br>");
+    						sb.append("Current max size is: " + maxDisplayLenKb + " KB<br>");
+    						sb.append("Note: This can be changed with property '" + PROPKEY_TOOLTIP_XML_INLINE_MAX_SIZE_KB + "'<br>");
 						}
 
 						sb.append("</html>");
@@ -1535,10 +1535,10 @@ implements ToolTipHyperlinkResolver
 					}
 					catch (Exception ex) 
 					{
-						_logger.warn("Problems when open the URL '"+urlStr+"'. Caught: "+ex, ex); 
+						_logger.warn("Problems when open the URL '" + urlStr + "'. Caught: " + ex, ex); 
 //System.out.println("ResultSetJXTablegetContentSpecificToolTipText(): XML String causing problem=|"+cellStr+"|.");
 						return 
-							"<html>Problems when open the URL '<code>"+urlStr+"</code>'.<br>"
+							"<html>Problems when open the URL '<code>" + urlStr + "</code>'.<br>"
 							+ "Caught: <b>" + ex + "</b><br>"
 							+ "<hr>"
 							+ "<a href='" + CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + urlStr + "'>Open tempfile in External Browser</a> (registered application for mime type <b>'" + mimeType + "'</b> will be used)<br>"
@@ -1548,7 +1548,7 @@ implements ToolTipHyperlinkResolver
 				}
 				catch (Exception ex)
 				{
-					return "<html>Sorry problems when creating temporary file '"+tmpFile+"'<br>Caught: "+ex+"</html>";
+					return "<html>Sorry problems when creating temporary file '" + tmpFile + "'<br>Caught: " + ex + "</html>";
 				}
 			}
 
@@ -1638,13 +1638,13 @@ implements ToolTipHyperlinkResolver
 					try
 					{
 						// put content in a TEMP file 
-						tmpFile = createTempFile("sqlw_mime_type_"+mimeTypeName+"_tooltip_", fileExt, bytes);
+						tmpFile = createTempFile("sqlw_mime_type_" + mimeTypeName + "_tooltip_", fileExt, bytes);
 
 						return openInLocalAppOrBrowser(info, wasBase64_decoded, guessedCharset, tmpFile);
 					}
 					catch (Exception ex) 
 					{
-						return "<html>Sorry problems when creating temporary file '"+tmpFile+"'<br>Caught: "+ex+"</html>";
+						return "<html>Sorry problems when creating temporary file '" + tmpFile + "'<br>Caught: " + ex + "</html>";
 					}
 				}
 				else
@@ -1688,7 +1688,7 @@ implements ToolTipHyperlinkResolver
 			if ( desktop.isSupported(Desktop.Action.BROWSE) )
 			{
 				String fileExt = FilenameUtils.getExtension(tmpFile.getAbsolutePath());
-				String urlStr = ("file:///"+tmpFile);
+				String urlStr = ("file:///" + tmpFile);
 				try	
 				{
 					URL url = new URL(urlStr);
@@ -1734,9 +1734,9 @@ implements ToolTipHyperlinkResolver
 				}
 				catch (Exception ex) 
 				{
-					_logger.warn("Problems when open the URL '"+urlStr+"'. Caught: "+ex, ex); 
+					_logger.warn("Problems when open the URL '" + urlStr + "'. Caught: " + ex, ex); 
 					return 
-						"<html>Problems when open the URL '<code>"+urlStr+"</code>'.<br>"
+						"<html>Problems when open the URL '<code>" + urlStr + "</code>'.<br>"
 						+ "Caught: <b>" + ex + "</b><br>"
 						+ "<hr>"
 						+ "<a href='" + CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + urlStr + "'>Open tempfile in External Browser</a> (registered application for mime type <b>'" + mimeType + "'</b> or file extention <b>'" + fileExt + "'</b> will be used)<br>"
@@ -1748,7 +1748,7 @@ implements ToolTipHyperlinkResolver
 		return 
 			"<html>"
 			+ "Desktop browsing is not supported.<br>"
-			+ "But the file '"+tmpFile+"' was produced."
+			+ "But the file '" + tmpFile + "' was produced."
 			+ "<hr>"
 			+ "Note: You can still open the above file in any application!"
 			+ "<html/>";

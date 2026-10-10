@@ -95,7 +95,7 @@ extends HttpServlet
 			if ( ! authorizedUsers.contains(userName) )
 			{
 				isAuthorized = false;
-				_logger.info("UserDefinedAction '" + udAction.getName() + "'. We have the desired ROLE, but the user '" + userName + "' was NOT part of the '" + UserDefinedActionAbstract.PROPKEY_authorizedUsers+ "' " + authorizedUsers);
+				_logger.info("UserDefinedAction '" + udAction.getName() + "'. We have the desired ROLE, but the user '" + userName + "' was NOT part of the '" + UserDefinedActionAbstract.PROPKEY_authorizedUsers + "' " + authorizedUsers);
 			}
 		}
 

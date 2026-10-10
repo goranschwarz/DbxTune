@@ -160,7 +160,7 @@ public class H2CentralDropEmptyColumns
 				if (StringUtil.equalsAny(colName, "SessionStartTime", "SessionSampleTime", "CmSampleTime"))
 					continue;
 				
-				sql += "    ,COUNT(" + lq+colName+rq + ") AS " +lq+colName+rq+ " \n";
+				sql += "    ,COUNT(" + lq+colName+rq + ") AS " + lq+colName+rq + " \n";
 			}
 
 			sql += "FROM " + lq+_schema+rq + "." + lq+_table+rq + " \n";
@@ -300,7 +300,7 @@ public class H2CentralDropEmptyColumns
 							entry.setRowcount(notNullCount);
 
 						if (_logger.isTraceEnabled())
-							_logger.trace(_msgPrefix + "cleanup(): schema='" + entry._schema + "', table='" + entry._table + "', column='" + colName+ "', notNullCount=" + notNullCount);
+							_logger.trace(_msgPrefix + "cleanup(): schema='" + entry._schema + "', table='" + entry._table + "', column='" + colName + "', notNullCount=" + notNullCount);
 						
 						if (notNullCount == 0)
 							entry.addAllNullsColumn(colName);

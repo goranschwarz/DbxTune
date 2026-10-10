@@ -48,7 +48,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SPACE,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Replication Server Stable device (Queuing system) in Server '" + cm.getServerName() + "' is starting to get full, type='"+alarmType+"', usedSpaceInMb="+usedSpaceInMb+", freeSpaceInMb="+freeSpaceInMb+", usedPct="+usedPct+". (threshold="+threshold+")",
+				"Replication Server Stable device (Queuing system) in Server '" + cm.getServerName() + "' is starting to get full, type='" + alarmType + "', usedSpaceInMb=" + usedSpaceInMb + ", freeSpaceInMb=" + freeSpaceInMb + ", usedPct=" + usedPct + ". (threshold=" + threshold + ")",
 				threshold
 				);
 
@@ -56,6 +56,6 @@ extends AlarmEvent
 		setTimeToLive(cm);
 
 		// Set the raw data carier
-		setData("usedSpaceInMb="+usedSpaceInMb+", freeSpaceInMb="+freeSpaceInMb+", usedPct="+usedPct);
+		setData("usedSpaceInMb=" + usedSpaceInMb + ", freeSpaceInMb=" + freeSpaceInMb + ", usedPct=" + usedPct);
 	}
 }

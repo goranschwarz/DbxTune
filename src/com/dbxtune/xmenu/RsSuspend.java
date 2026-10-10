@@ -100,7 +100,7 @@ extends XmenuActionBase
 		}
 		else
 		{
-			SwingUtils.showInfoMessage(null, "Not yet implemented", "Suspend for '"+nameCol+"' is not yet implemented.");
+			SwingUtils.showInfoMessage(null, "Not yet implemented", "Suspend for '" + nameCol + "' is not yet implemented.");
 			return;
 		}
 	}

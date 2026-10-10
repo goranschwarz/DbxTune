@@ -301,7 +301,7 @@ public class GMemoryIndicator extends JPanel
 				refreshMemoryData();
 				long newMem = getUsedMemory();
 				long difference = oldMem - newMem;
-				String text = "Garbage collection freed: "+bytesToMb(difference)+" MB.";
+				String text = "Garbage collection freed: " + bytesToMb(difference) + " MB.";
 				JOptionPane.showMessageDialog(this, text, "JVM Heap Information", JOptionPane.INFORMATION_MESSAGE);
 			}
 			break;
@@ -472,7 +472,7 @@ public class GMemoryIndicator extends JPanel
 			// REALLY, The code below, I have no clue what the math does...
 //			String str = "Free: "+bytesToMb(_memoryIndicator.getFreeMemory())+" MB";
 //			String str = bytesToMb(_memoryIndicator.getFreeMemory())+" MB";
-			String str = bytesToMb(_memoryIndicator.getUsedMemory())+" MB";
+			String str = bytesToMb(_memoryIndicator.getUsedMemory()) + " MB";
 			FontRenderContext frc = new FontRenderContext(null, false, false);
 			Rectangle2D bounds = g.getFont().getStringBounds(str, frc);
 			Graphics g2 = g.create();

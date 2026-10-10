@@ -51,7 +51,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -104,7 +104,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmPgBgWriter(counterController, guiController);
 	}
@@ -168,7 +168,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_BUFFER,
 				"Buffers", 	                // Menu CheckBox text
-				"Buffers ("+SHORT_NAME+")", // Graph Label 
+				"Buffers (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"Written During Checkpoints [buffers_checkpoint]", "Written [buffers_clean]", "Written Directly by a Backend [buffers_backend]", "Allocated [buffers_alloc]"}, 
 				LabelType.Static, 
@@ -180,7 +180,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_BUFFER_EVENTS,
 				"Buffer Events", 	                // Menu CheckBox text
-				"Buffer Events ("+SHORT_NAME+")", // Graph Label 
+				"Buffer Events (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"Number of bgwriter Stopped by Max Write Count [maxwritten_clean]", "Times a Backend Execute Its Own Fsync [buffers_backend_fsync]"}, 
 				LabelType.Static, 
@@ -192,7 +192,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_CHECKPOINT_COUNT,
 				"Checkpoints Count", 	                // Menu CheckBox text
-				"Checkpoints Count ("+SHORT_NAME+")", // Graph Label 
+				"Checkpoints Count (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"By Timeout [checkpoints_timed]", "By WAL [checkpoints_req]"}, 
 				LabelType.Static, 
@@ -204,7 +204,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_CHECKPOINT_TIME,
 				"Checkpoints Time in ms", 	                // Menu CheckBox text
-				"Checkpoints Time in ms ("+SHORT_NAME+")", // Graph Label 
+				"Checkpoints Time in ms (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"Sync Time [checkpoint_sync_time]", "Write Time [checkpoint_write_time]"}, 
 				LabelType.Static, 

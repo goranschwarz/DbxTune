@@ -92,7 +92,7 @@ extends CountersModel
 		+ "</html>";
 
 	public static final String   GROUP_NAME       = MainFrameRs.TCP_GROUP_MC;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -131,7 +131,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmRsSrcToDest(counterController, guiController);
 	}
@@ -462,13 +462,13 @@ extends CountersModel
 
 				if (rows.size() == 0)
 				//	return false;
-					throw new NoValidRowsInSample("Could not find any records for '"+CM_NAME+"' in CM '"+CmAdminStats.SHORT_NAME+"'.");
+					throw new NoValidRowsInSample("Could not find any records for '" + CM_NAME + "' in CM '" + CmAdminStats.SHORT_NAME + "'.");
 
 		
 				// Find column Id's
 				List<String> colNames = cmAdminStats.getColNames(DATA_ABS);
 				if (colNames == null)
-					throw new NoValidRowsInSample("Could not find any columns in CM '"+CmAdminStats.SHORT_NAME+"'.");
+					throw new NoValidRowsInSample("Could not find any columns in CM '" + CmAdminStats.SHORT_NAME + "'.");
 		
 				for (int colId = 0; colId < colNames.size(); colId++)
 				{
@@ -489,7 +489,7 @@ extends CountersModel
 				for (RsDbInfo rsDbInfo : _rsDbInfoList)
 				{
 					System.out.println("-----------------------------------------------------------------------------");
-					System.out.println("RsDbInfo: "+rsDbInfo);
+					System.out.println("RsDbInfo: " + rsDbInfo);
 					if (rsDbInfo.isDb2Db())
 					{
 						String x_type   = "DB->DB";
@@ -650,13 +650,13 @@ extends CountersModel
 					Long    total      = (Long)    row.get(_total_pos);
 					Long    last       = (Long)    row.get(_last_pos);
 					
-					System.out.println("counterId="+counterId+"("+name+"), instanceId="+instanceId+", modTypeInstVal="+modTypeInstVal+", instance='"+instance+"', type='"+type+"', name='"+name+"', obs="+obs+", total="+total+", last="+last+".");
+					System.out.println("counterId=" + counterId + "(" + name + "), instanceId=" + instanceId + ", modTypeInstVal=" + modTypeInstVal + ", instance='" + instance + "', type='" + type + "', name='" + name + "', obs=" + obs + ", total=" + total + ", last=" + last + ".");
 
 					if      ("OBSERVER".equals(type)) return obs;
 					else if ("MONITOR" .equals(type)) return last;
 
 				}
-				System.out.println(">> NO VAL: inCounterId="+inCounterId+", inInstanceId="+inInstanceId+", inInstanceVal="+inInstanceVal+".");
+				System.out.println(">> NO VAL: inCounterId=" + inCounterId + ", inInstanceId=" + inInstanceId + ", inInstanceVal=" + inInstanceVal + ".");
 				return null;
 			}
 		};
@@ -747,13 +747,13 @@ extends CountersModel
 			}
 			else
 			{
-				_logger.error("Problems reading file '"+filename+"'. at class '"+clazz+"'. The URL was null, returned from clazz.getResource(filename)");
+				_logger.error("Problems reading file '" + filename + "'. at class '" + clazz + "'. The URL was null, returned from clazz.getResource(filename)");
 			}
 		}
 		catch(IOException e)
 		{
 //			return null;
-			_logger.error("Problems reading file '"+filename+"'. at class '"+clazz+"'. Caught: "+e, e);
+			_logger.error("Problems reading file '" + filename + "'. at class '" + clazz + "'. Caught: " + e, e);
 		}
 
 		if ( sb.length() == 0)
@@ -797,29 +797,29 @@ extends CountersModel
 		public String toString()
 		{
 			return super.toString() 
-					+ ": type='"+type+"', " 
-					+ "local_rsid="+local_rsid+", local_rsname='"+local_rsname+"', "
-					+ "src_server='"+src_server+"', src_database='"+src_database+"', src_dbid="+src_dbid+", src_connection='"+src_connection+"', src_rsid="+src_rsid+", src_rsname='"+src_rsname+"', "
-					+ "is_origin="+is_origin+", "
-					+ "dest_server='"+dest_server+"', dest_database='"+dest_database+"', dest_dbid="+dest_dbid+", dest_connection='"+dest_connection+"', dest_rsid="+dest_rsid+", dest_rsname='"+dest_rsname+"', "
-					+ "TABLE(num_repdefs="+num_repdefs+", num_tables="+num_tables+", num_table_subscr="+num_table_subscr+"), "
-					+ "MSA(dbrepid="+dbrepid+", db_repdef_name='"+db_repdef_name+"', db_subscr_name='"+db_subscr_name+"', num_subsets="+num_subsets+"), "
-					+ "WS(logical_conn='"+logical_conn+"', ldbid="+ldbid+").";
+					+ ": type='" + type + "', " 
+					+ "local_rsid=" + local_rsid + ", local_rsname='" + local_rsname + "', "
+					+ "src_server='" + src_server + "', src_database='" + src_database + "', src_dbid=" + src_dbid + ", src_connection='" + src_connection + "', src_rsid=" + src_rsid + ", src_rsname='" + src_rsname + "', "
+					+ "is_origin=" + is_origin + ", "
+					+ "dest_server='" + dest_server + "', dest_database='" + dest_database + "', dest_dbid=" + dest_dbid + ", dest_connection='" + dest_connection + "', dest_rsid=" + dest_rsid + ", dest_rsname='" + dest_rsname + "', "
+					+ "TABLE(num_repdefs=" + num_repdefs + ", num_tables=" + num_tables + ", num_table_subscr=" + num_table_subscr + "), "
+					+ "MSA(dbrepid=" + dbrepid + ", db_repdef_name='" + db_repdef_name + "', db_subscr_name='" + db_subscr_name + "', num_subsets=" + num_subsets + "), "
+					+ "WS(logical_conn='" + logical_conn + "', ldbid=" + ldbid + ").";
 		}
 
 		public String getTableInfo()
 		{
-			return "num_repdefs="+num_repdefs+", num_tables="+num_tables+", num_table_subscr="+num_table_subscr;
+			return "num_repdefs=" + num_repdefs + ", num_tables=" + num_tables + ", num_table_subscr=" + num_table_subscr;
 		}
 
 		public String getMsaInfo()
 		{
-			return "dbrepid="+dbrepid+", db_repdef_name='"+db_repdef_name+"', db_subscr_name='"+db_subscr_name+"', num_subsets="+num_subsets;
+			return "dbrepid=" + dbrepid + ", db_repdef_name='" + db_repdef_name + "', db_subscr_name='" + db_subscr_name + "', num_subsets=" + num_subsets;
 		}
 
 		public String getWsInfo()
 		{
-			return "logical_conn='"+logical_conn+"', ldbid="+ldbid;
+			return "logical_conn='" + logical_conn + "', ldbid=" + ldbid;
 		}
 
 		public boolean isDb2Db()

@@ -64,7 +64,7 @@ extends TabularCntrPanel
 		String colorStr = null;
 
 		// PINK = spid is BLOCKED by some other user
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocked");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.blocked");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -79,7 +79,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.PINK), null));
 
 		// Mark the row as RED if blocks other users from working
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocking");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.blocking");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override

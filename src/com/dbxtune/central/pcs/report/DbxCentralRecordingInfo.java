@@ -165,36 +165,36 @@ extends ReportEntryAbstract
 
 			sb.append("<table class='recording-info'>\n");
 
-			sb.append("  <tr> " + tdBullet +" <td><b>The Report is Produced by : </b></td> <td>" + _reportVersion         + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>The Report is Produced by : </b></td> <td>" + _reportVersion         + "</td> </tr>\n");
 //			sb.append("  <tr> " + tdBullet +" <td><b>Recording was Made Using:   </b></td> <td>" + _recordingVersion      + "</td> </tr>\n");
 
 			if (getReportingInstance().hasReportPeriod())
 			{
 				sb.append(blankTableRow);
-				sb.append("  <tr> " + tdBullet +" <td><b>Report Period Begin Day:  </b></td> <td>" + getReportingInstance().getReportPeriodBeginTime().toLocalDateTime().getDayOfWeek().name() + "</td> </tr>\n");
-				sb.append("  <tr> " + tdBullet +" <td><b>Report Period Begin Time: </b></td> <td>" + TimeUtils.toStringYmdHms(getReportingInstance().getReportPeriodBeginTime()) + "</td> </tr>\n");
-				sb.append("  <tr> " + tdBullet +" <td><b>Report Period End Time    </b></td> <td>" + TimeUtils.toStringYmdHms(getReportingInstance().getReportPeriodEndTime()  ) + "</td> </tr>\n");
-				sb.append("  <tr> " + tdBullet +" <td><b>Report Period Duration:   </b></td> <td>" + getReportingInstance().getReportPeriodDuration()  + "</td> </tr>\n");
+				sb.append("  <tr> " + tdBullet + " <td><b>Report Period Begin Day:  </b></td> <td>" + getReportingInstance().getReportPeriodBeginTime().toLocalDateTime().getDayOfWeek().name() + "</td> </tr>\n");
+				sb.append("  <tr> " + tdBullet + " <td><b>Report Period Begin Time: </b></td> <td>" + TimeUtils.toStringYmdHms(getReportingInstance().getReportPeriodBeginTime()) + "</td> </tr>\n");
+				sb.append("  <tr> " + tdBullet + " <td><b>Report Period End Time    </b></td> <td>" + TimeUtils.toStringYmdHms(getReportingInstance().getReportPeriodEndTime()  ) + "</td> </tr>\n");
+				sb.append("  <tr> " + tdBullet + " <td><b>Report Period Duration:   </b></td> <td>" + getReportingInstance().getReportPeriodDuration()  + "</td> </tr>\n");
 			}
 			else
 			{
 				sb.append(blankTableRow);
-				sb.append("  <tr> " + tdBullet +" <td><b>Report Period: </b></td> <td> <b>Full</b> period</td> </tr>\n");
+				sb.append("  <tr> " + tdBullet + " <td><b>Report Period: </b></td> <td> <b>Full</b> period</td> </tr>\n");
 			}
 			sb.append(blankTableRow);
 //			sb.append("  <tr> " + tdBullet +" <td><b>Local Metric Recording Start Day:          </b></td> <td>" + _lmr_startDay                + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>Local Metric Recording Start Date:         </b></td> <td>" + _lmr_startTime               + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>Local Metric Recording End  Date:          </b></td> <td>" + _lmr_endTime                 + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>Local Metric Recording Duration:           </b></td> <td>" + _lmr_duration                + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>Local Metric Recording Conf Sample Time:   </b></td> <td>" + _lmr_recordingSampleTimeConf + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>Local Metric Recording Actual Sample Time: </b></td> <td>" + _lmr_recordingSampleTimeAct  + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>Local Metric Recording Hostname:           </b></td> <td>" + _lmr_hostMonitorHostname     + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Local Metric Recording Start Date:         </b></td> <td>" + _lmr_startTime               + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Local Metric Recording End  Date:          </b></td> <td>" + _lmr_endTime                 + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Local Metric Recording Duration:           </b></td> <td>" + _lmr_duration                + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Local Metric Recording Conf Sample Time:   </b></td> <td>" + _lmr_recordingSampleTimeConf + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Local Metric Recording Actual Sample Time: </b></td> <td>" + _lmr_recordingSampleTimeAct  + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Local Metric Recording Hostname:           </b></td> <td>" + _lmr_hostMonitorHostname     + "</td> </tr>\n");
 
 			sb.append(blankTableRow);
 //			sb.append("  <tr> " + tdBullet +" <td><b>All Servers Recording Start Day:           </b></td> <td>" + _asr_startDay              + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>All Servers Recording Start Date:          </b></td> <td>" + _asr_startTime             + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>All Servers Recording End  Date:           </b></td> <td>" + _asr_endTime               + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>All Servers Recording Duration:            </b></td> <td>" + _asr_duration              + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>All Servers Recording Start Date:          </b></td> <td>" + _asr_startTime             + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>All Servers Recording End  Date:           </b></td> <td>" + _asr_endTime               + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>All Servers Recording Duration:            </b></td> <td>" + _asr_duration              + "</td> </tr>\n");
 //			sb.append("  <tr> " + tdBullet +" <td><b>All Servers Recording Sample Time:         </b></td> <td>" + _asr_recordingSampleTime   + "</td> </tr>\n");
 
 			// Central Recording DBMS Info
@@ -204,21 +204,21 @@ extends ReportEntryAbstract
 				sb.append(blankTableRow);
 				for (Entry<String, String> entry : _dbmsOtherInfoMap.entrySet())
 				{
-		   			sb.append("  <tr> " + tdBullet +" <td><b>" + entry.getKey() + ":  </b></td> <td>" + entry.getValue()   + "</td> </tr>\n");
+		   			sb.append("  <tr> " + tdBullet + " <td><b>" + entry.getKey() + ":  </b></td> <td>" + entry.getValue()   + "</td> </tr>\n");
 				}
 			}
 
 			// OS info: CORE Count, MEMORY ...
 			sb.append(blankTableRow);
-			sb.append("  <tr> " + tdBullet +" <td><b>OS Core Count:                </b></td> <td>" + _osCoreInfo   + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>OS Physical Memory:           </b></td> <td>" + _osMemoryInfo + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>OS Core Count:                </b></td> <td>" + _osCoreInfo   + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>OS Physical Memory:           </b></td> <td>" + _osMemoryInfo + "</td> </tr>\n");
 
 			// Java Version Info
 			sb.append(blankTableRow);
-			sb.append("  <tr> " + tdBullet +" <td><b>Java Version:                 </b></td> <td>" + System.getProperty("java.version")      + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>Java Vendor:                  </b></td> <td>" + System.getProperty("java.vendor")       + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>Java Home:                    </b></td> <td>" + System.getProperty("java.home")         + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>Java Version Date:            </b></td> <td>" + System.getProperty("java.version.date") + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Java Version:                 </b></td> <td>" + System.getProperty("java.version")      + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Java Vendor:                  </b></td> <td>" + System.getProperty("java.vendor")       + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Java Home:                    </b></td> <td>" + System.getProperty("java.home")         + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Java Version Date:            </b></td> <td>" + System.getProperty("java.version.date") + "</td> </tr>\n");
 
 			sb.append("</table>\n");
 		}

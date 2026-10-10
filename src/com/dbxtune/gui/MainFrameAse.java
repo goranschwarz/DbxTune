@@ -346,7 +346,7 @@ extends MainFrame
 		}
 		catch(SQLException ex) 
 		{
-			_logger.info("Initialization of the DBMS Configuration did not succeed. Caught: "+ex); 
+			_logger.info("Initialization of the DBMS Configuration did not succeed. Caught: " + ex); 
 		}
 
 //		if (DbmsConfigTextManager.hasInstances())
@@ -397,7 +397,7 @@ extends MainFrame
     					htmlMsg, "Warning", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
     			if ( yesNo == JOptionPane.YES_OPTION )
     			{
-    				String sql = "DBCC traceoff("+3650+")";
+    				String sql = "DBCC traceoff(" + 3650 + ")";
     				Statement stmnt = conn.createStatement();
     				stmnt.executeUpdate(sql);
     				stmnt.close();
@@ -410,7 +410,7 @@ extends MainFrame
     				}
     				else
     				{
-    					_logger.error("Could not reset the property '"+CmObjectActivity.PROPKEY_sample_systemTables+"'... conf="+conf);
+    					_logger.error("Could not reset the property '" + CmObjectActivity.PROPKEY_sample_systemTables + "'... conf=" + conf);
     				}
     			}
     		}
@@ -548,7 +548,7 @@ extends MainFrame
 				// NOT supported in ASE versions below 15.0.2
 				String htmlMsg = 
 					"<html>" +
-					"  <h2>Sorry this functionality is not available in ASE "+Ver.versionNumToStr(srvVersionNum)+"</h2>" +
+					"  <h2>Sorry this functionality is not available in ASE " + Ver.versionNumToStr(srvVersionNum) + "</h2>" +
 					"  Application Tracing is introduced in ASE 15.0.2" +
 					"</html>";
 				SwingUtils.showInfoMessage(this, "Not supported for this ASE Version", htmlMsg);
@@ -934,7 +934,7 @@ extends MainFrame
 
 		if ( menu.getMenuComponentCount() == 0 )
 		{
-			_logger.warn("No Menuitems has been assigned for the '"+menu.getText()+"'.");
+			_logger.warn("No Menuitems has been assigned for the '" + menu.getText() + "'.");
 			return null;
 
 //			JMenuItem empty = new JMenuItem("No Predefined SQL Statements available.");
@@ -966,7 +966,7 @@ extends MainFrame
 		if (conf == null)
 			conf = Configuration.getCombinedConfiguration();
 
-		_logger.debug("createMenu(): prefix='"+prefix+"'.");		
+		_logger.debug("createMenu(): prefix='" + prefix + "'.");		
 
 		//Create the menu, if it didnt exists. 
 		if (menu == null)
@@ -975,30 +975,30 @@ extends MainFrame
 		boolean firstAdd = true;
 		for (String prefixStr : conf.getUniqueSubKeys(prefix, true))
 		{
-			_logger.debug("createPredefinedSqlMenu(): found prefix '"+prefixStr+"'.");
+			_logger.debug("createPredefinedSqlMenu(): found prefix '" + prefixStr + "'.");
 
 			// Read properties
-			final String menuItemName      = conf.getProperty(prefixStr    +".name");
-			final String sqlStr            = conf.getProperty(prefixStr    +".execute");
-			final long   needsVersion      = conf.getLongProperty(prefixStr+".install.needsVersion", 0); 
-			final String dbname            = conf.getProperty(prefixStr    +".install.dbname"); 
-			final String procName          = conf.getProperty(prefixStr    +".install.procName"); 
-			final String procDateThreshStr = conf.getProperty(prefixStr    +".install.procDateThreshold"); 
-			final String scriptLocationStr = conf.getProperty(prefixStr    +".install.scriptLocation"); 
-			final String scriptName        = conf.getProperty(prefixStr    +".install.scriptName"); 
-			final String needsRole         = conf.getProperty(prefixStr    +".install.needsRole"); 
+			final String menuItemName      = conf.getProperty(prefixStr    + ".name");
+			final String sqlStr            = conf.getProperty(prefixStr    + ".execute");
+			final long   needsVersion      = conf.getLongProperty(prefixStr + ".install.needsVersion", 0); 
+			final String dbname            = conf.getProperty(prefixStr    + ".install.dbname"); 
+			final String procName          = conf.getProperty(prefixStr    + ".install.procName"); 
+			final String procDateThreshStr = conf.getProperty(prefixStr    + ".install.procDateThreshold"); 
+			final String scriptLocationStr = conf.getProperty(prefixStr    + ".install.scriptLocation"); 
+			final String scriptName        = conf.getProperty(prefixStr    + ".install.scriptName"); 
+			final String needsRole         = conf.getProperty(prefixStr    + ".install.needsRole"); 
 
 			//---------------------------------------
 			// Check that we got everything we needed
 			//---------------------------------------
 			if (menuItemName == null)
 			{
-				_logger.warn("Missing property '"+prefixStr+".name'");
+				_logger.warn("Missing property '" + prefixStr + ".name'");
 				continue;
 			}
 			if (sqlStr == null)
 			{
-				_logger.warn("Missing property '"+prefixStr+".execute'");
+				_logger.warn("Missing property '" + prefixStr + ".execute'");
 				continue;
 			}
 
@@ -1012,14 +1012,14 @@ extends MainFrame
 
 				String missing = "";
 				// Check rest of the mandatory parameters
-				if (procName          == null) missing += prefixStr   +".install.procName, ";
-				if (procDateThreshStr == null) missing += prefixStr   +".install.procDateThreshold, ";
+				if (procName          == null) missing += prefixStr   + ".install.procName, ";
+				if (procDateThreshStr == null) missing += prefixStr   + ".install.procDateThreshold, ";
 //				if (scriptLocationStr == null) missing += prefixStr   +".install.scriptLocation, ";
-				if (scriptName        == null) missing += prefixStr   +".install.scriptName, ";
+				if (scriptName        == null) missing += prefixStr   + ".install.scriptName, ";
 				
 				if ( ! missing.equals("") )
 				{
-					_logger.warn("Missing property '"+missing+"'.");
+					_logger.warn("Missing property '" + missing + "'.");
 					continue;
 				}
 			}
@@ -1035,7 +1035,7 @@ extends MainFrame
 				try { tmpScriptLocation = Class.forName(scriptLocationStr); }
 				catch (ClassNotFoundException e)
 				{
-					_logger.warn("Property "+prefixStr+".install.scriptLocation, contained '"+scriptLocationStr+"', the class can't be loaded. This should be a classname in dbxtune.jar, If it's a path name you want to specify, please use the property '"+prefixStr+".install.scriptName' instead.");
+					_logger.warn("Property " + prefixStr + ".install.scriptLocation, contained '" + scriptLocationStr + "', the class can't be loaded. This should be a classname in dbxtune.jar, If it's a path name you want to specify, please use the property '" + prefixStr + ".install.scriptName' instead.");
 					continue;
 				}
 			}
@@ -1052,7 +1052,7 @@ extends MainFrame
 				try { tmpProcDateThreshold = sdf.parse(procDateThreshStr); }
 				catch (ParseException e)
 				{
-					_logger.warn("Property "+prefixStr+".install.procDateThreshold, contained '"+procDateThreshStr+"', Problems parsing the string, it should look like 'yyyy-MM-dd'.");
+					_logger.warn("Property " + prefixStr + ".install.procDateThreshold, contained '" + procDateThreshStr + "', Problems parsing the string, it should look like 'yyyy-MM-dd'.");
 					continue;
 				}
 			}
@@ -1092,7 +1092,7 @@ extends MainFrame
 //								conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-PreDefinedSql", null);
 //								conn = DbxConnection.connect(Version.getAppName()+"-PreDefinedSql");
 								// or even better, use a ConnectionProvider...
-								conn = dbxTuneInstance.getNewConnection(Version.getAppName()+"-PreDefinedSql");
+								conn = dbxTuneInstance.getNewConnection(Version.getAppName() + "-PreDefinedSql");
 							
 								// Check if the procedure exists (and create it if it dosn't)
 								if (doCheckCreate)

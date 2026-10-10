@@ -68,7 +68,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_CACHE;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = Ver.ver(16);
 	public static final long     NEED_CE_VERSION  = 0;
@@ -107,7 +107,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmPgBufferCacheSum(counterController, guiController);
 	}
@@ -340,7 +340,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_BUFFER_USAGE,
 			"Buffer Cache Usage in MB", 	                   // Menu CheckBox text
-			"Buffer Cache Usage in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Buffer Cache Usage in MB (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] {"buffers_used_mb", "buffers_unused_mb", "buffers_dirty_mb", "buffers_pinned_mb"}, 
 			LabelType.Static, 
@@ -352,7 +352,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_BUFFER_USAGE_PCT,
 			"Buffer Cache Usage in Percent", 	                   // Menu CheckBox text
-			"Buffer Cache Usage in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Buffer Cache Usage in Percent (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] {"buffers_used_pct"}, 
 			LabelType.Static, 
@@ -364,7 +364,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_BUFFER_UNUSED,
 			"Buffer Cache Free/Unused in MB", 	                   // Menu CheckBox text
-			"Buffer Cache Free/Unused in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Buffer Cache Free/Unused in MB (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] {"buffers_unused_mb"}, 
 			LabelType.Static, 
@@ -376,7 +376,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_BUFFER_DIRTY,
 			"Buffer Cache Dirty in Pages and MB", 	                   // Menu CheckBox text
-			"Buffer Cache Dirty in Pages and MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Buffer Cache Dirty in Pages and MB (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] {"buffers_dirty_mb", "buffers_dirty_pages"}, 
 			LabelType.Static, 

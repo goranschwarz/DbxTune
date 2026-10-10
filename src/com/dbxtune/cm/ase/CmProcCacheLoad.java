@@ -58,7 +58,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_CACHE;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -86,7 +86,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmProcCacheLoad(counterController, guiController);
 	}
@@ -123,7 +123,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_REQUEST_PER_SEC,
 			"Procedure Cache Requests", 	                                  // Menu CheckBox text
-			"Number of Procedure Requests per Second (procs,triggers,views) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"Number of Procedure Requests per Second (procs,triggers,views) (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Requests", "Loads" }, 
 			LabelType.Static,
@@ -196,7 +196,7 @@ extends CountersModel
 
 			arr[0] = this.getRateValueSum("Requests");
 			arr[1] = this.getRateValueSum("Loads");
-			_logger.debug("updateGraphData(ProcCacheGraph): Requests='"+arr[0]+"', Loads='"+arr[1]+"'.");
+			_logger.debug("updateGraphData(ProcCacheGraph): Requests='" + arr[0] + "', Loads='" + arr[1] + "'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);

@@ -191,7 +191,7 @@ public class JsonUtils
 	{
 		JsonNode n = node.get(fieldName);
 		if (n == null)
-			throw new MissingFieldException("Expecting field '"+fieldName+"' which was not found.");
+			throw new MissingFieldException("Expecting field '" + fieldName + "' which was not found.");
 		return n;
 	}
 
@@ -242,7 +242,7 @@ public class JsonUtils
 	{
 		JsonNode n = node.get(fieldName);
 		if (n == null)
-			throw new MissingFieldException("Expecting field '"+fieldName+"' which was not found.");
+			throw new MissingFieldException("Expecting field '" + fieldName + "' which was not found.");
 		if (n.isNull())
 			return null;
 		return n.asText();
@@ -350,7 +350,7 @@ public class JsonUtils
 	{
 		JsonNode n = node.get(fieldName);
 		if (n == null)
-			throw new MissingFieldException("Expecting field '"+fieldName+"' which was not found.");
+			throw new MissingFieldException("Expecting field '" + fieldName + "' which was not found.");
 		return n.asInt();
 	}
 
@@ -382,7 +382,7 @@ public class JsonUtils
 	{
 		JsonNode n = node.get(fieldName);
 		if (n == null)
-			throw new MissingFieldException("Expecting field '"+fieldName+"' which was not found.");
+			throw new MissingFieldException("Expecting field '" + fieldName + "' which was not found.");
 		return n.asBoolean();
 	}
 
@@ -414,7 +414,7 @@ public class JsonUtils
 	{
 		JsonNode n = node.get(fieldName);
 		if (n == null)
-			throw new MissingFieldException("Expecting field '"+fieldName+"' which was not found.");
+			throw new MissingFieldException("Expecting field '" + fieldName + "' which was not found.");
 		return n.asDouble();
 	}
 
@@ -481,7 +481,7 @@ public class JsonUtils
 	{
 		JsonNode n = node.get(fieldName);
 		if (n == null)
-			throw new MissingFieldException("Expecting field '"+fieldName+"' which was not found.");
+			throw new MissingFieldException("Expecting field '" + fieldName + "' which was not found.");
 		
 		if (n.isNull())
 			return null;
@@ -524,7 +524,7 @@ public class JsonUtils
 		}
 		
 
-		throw new MissingFieldException("Problems parsing the Timestamp for field '"+fieldName+"' using value '"+str+"'. Caught: "+ex, ex); 
+		throw new MissingFieldException("Problems parsing the Timestamp for field '" + fieldName + "' using value '" + str + "'. Caught: " + ex, ex); 
 	}
 
 	/**
@@ -702,8 +702,8 @@ public class JsonUtils
 		{
 			String content = FileUtils.readFile("C:\\tmp\\QQQQQQQQQQQQQQQQQQQQQQ.json", StandardCharsets.UTF_8.toString());
 //			System.out.println("Content=|"+content+"|.");
-			System.out.println("Content=|"+content.length()+"| bytes.");
-			System.out.println("Content=|"+content.length()/1024+"| KB.");
+			System.out.println("Content=|" + content.length() + "| bytes.");
+			System.out.println("Content=|" + content.length()/1024 + "| KB.");
 
 			long startTime = System.currentTimeMillis();
 			List<String> list = getJsonObjectsFromString(content);

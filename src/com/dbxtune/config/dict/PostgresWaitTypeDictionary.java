@@ -102,14 +102,14 @@ public class PostgresWaitTypeDictionary
 		}
 
 		// Compose an empty one
-		return "<html><code>"+waitName+"</code> not found in dictionary."+extraInfo;
+		return "<html><code>" + waitName + "</code> not found in dictionary." + extraInfo;
 	}
 
 
 	private void set(WaitTypeRecord rec)
 	{
 		if ( _waitTypes.containsKey(rec._id))
-			System.out.println("ID '"+rec._id+"' already exists. It will be overwritten.");
+			System.out.println("ID '" + rec._id + "' already exists. It will be overwritten.");
 
 		_waitTypes.put(rec._id, rec);
 	}

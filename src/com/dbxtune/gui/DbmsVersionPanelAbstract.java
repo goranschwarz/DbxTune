@@ -136,14 +136,14 @@ implements ActionListener, ChangeListener
 		if (_versionMajor_spm.getValue() instanceof Number && ((Number)_versionMajor_spm.getValue()).intValue() >= 1000)
 			majorWidh = "15mm";
 		
-		add(_versionMajor_lbl, "w "+majorWidh+", skip 1, span, hidemode 2, split");
+		add(_versionMajor_lbl, "w " + majorWidh + ", skip 1, span, hidemode 2, split");
 		add(_versionMinor_lbl, "w 10mm, hidemode 2");
 		add(_versionMaint_lbl, "w 10mm, hidemode 2");
 		add(_versionEsd_lbl,   "w 10mm, hidemode 2");
 		add(_versionPl_lbl,    "w 10mm, hidemode 2, wrap");
 
 		add(_version_lbl,      "");
-		add(_versionMajor_sp,  "w "+majorWidh+", span, hidemode 2, split");
+		add(_versionMajor_sp,  "w " + majorWidh + ", span, hidemode 2, split");
 		add(_versionMinor_sp,  "w 10mm, hidemode 2");
 		add(_versionMaint_sp,  "w 10mm, hidemode 2");
 		add(_versionEsd_sp,    "w 10mm, hidemode 2");
@@ -351,7 +351,7 @@ implements ActionListener, ChangeListener
 		int esd   = Ver.versionNumPart(version, Ver.VERSION_SERVICE_PACK);
 		int pl    = Ver.versionNumPart(version, Ver.VERSION_PATCH_LEVEL);
 
-		_logger.debug("parseVersionString: versionStr='"+versionStr+"', version="+version+", major="+major+", minor="+minor+", maint="+maint+", esd="+esd+", pl="+pl+".");
+		_logger.debug("parseVersionString: versionStr='" + versionStr + "', version=" + version + ", major=" + major + ", minor=" + minor + ", maint=" + maint + ", esd=" + esd + ", pl=" + pl + ".");
 		
 		_versionMajor_spm.setValue(major);
 		_versionMinor_spm.setValue(minor);
@@ -382,7 +382,7 @@ implements ActionListener, ChangeListener
 		
 		String srvVersionStr = versionNumToString(srvVersion, major, minor, maint, sp, pl);
 
-		_logger.debug("loadFieldsUsingVersion(): version="+srvVersion+", srvVersionStr='"+srvVersionStr+"'.");
+		_logger.debug("loadFieldsUsingVersion(): version=" + srvVersion + ", srvVersionStr='" + srvVersionStr + "'.");
 		
 		_versionShort_txt.setText(srvVersionStr);
 		parseVersionString(srvVersionStr);

@@ -454,9 +454,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 				String lcRefreshTime  = (cm == null) ? "Unavailable" : cm.getLcRefreshTime() + " ms.";
 
 				return "<html>" +
-						"SQL Refresh time: "+sqlRefreshTime+"<br>" +
-						"GUI Refresh Time: "+guiRefreshTime+"<br>" +
-						"Local Calculation Time: "+lcRefreshTime+"<br>" +
+						"SQL Refresh time: " + sqlRefreshTime + "<br>" +
+						"GUI Refresh Time: " + guiRefreshTime + "<br>" +
+						"Local Calculation Time: " + lcRefreshTime + "<br>" +
 						"</html>";
 			}
 		};
@@ -470,7 +470,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 		String tooltip = "";
 
-		tooltip = "The name we used when "+Version.getAppName()+" connected to the server";
+		tooltip = "The name we used when " + Version.getAppName() + " connected to the server";
 //		_localServerName_lbl  .setText("Local server name");
 		_localServerName_lbl  .setText("Connection Info");
 		_localServerName_lbl  .setToolTipText(tooltip);
@@ -1759,7 +1759,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		try { blockWaitsThreshold = Integer.parseInt(_blockingWaitThreshold_txt.getText()); }
 		catch (NumberFormatException ignore) {}
 
-		_logger.debug("BLOCK-WAITS="+blockWaits+", TEXT='"+_blockingWaitMaxSec_txt.getText()+"'.");
+		_logger.debug("BLOCK-WAITS=" + blockWaits + ", TEXT='" + _blockingWaitMaxSec_txt.getText() + "'.");
 		if (blockWaits > blockWaitsThreshold)
 		{
 			_blockingWaitMaxSec_txt    .setBackground(Color.RED);
@@ -1819,7 +1819,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		try { oldestOpenTranInSecThreshold = Integer.parseInt(_oldestOpenTranThreshold_txt.getText()); }
 		catch (NumberFormatException ignore) {}
 
-		_logger.debug("OLDEST-OPEN-TRANSACTION="+oldestOpenTranInSec+", TEXT='"+_oldestOpenTranSec_txt.getText()+"'.");
+		_logger.debug("OLDEST-OPEN-TRANSACTION=" + oldestOpenTranInSec + ", TEXT='" + _oldestOpenTranSec_txt.getText() + "'.");
 		if (oldestOpenTranInSec > oldestOpenTranInSecThreshold)
 		{
 			_oldestOpenTranSec_txt.setBackground(Color.RED);
@@ -2061,7 +2061,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		else if ( CounterController.hasInstance() && CounterController.getInstance().getMonDisConnectTime() != null )
 		{
 			String dateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(CounterController.getInstance().getMonDisConnectTime());
-			setWatermarkText("Disconnect at: \n"+dateStr);
+			setWatermarkText("Disconnect at: \n" + dateStr);
 		}
 		else
 		{

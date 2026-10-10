@@ -81,7 +81,7 @@ extends ReportSenderAbstract
 
 		// SSL PORT
 		if (_sslPort >= 0)
-			email.setSslSmtpPort(_sslPort+""); // Hmm why is this a String parameter?
+			email.setSslSmtpPort(_sslPort + ""); // Hmm why is this a String parameter?
 
 		// START TLS
 		if (_startTls)
@@ -126,7 +126,7 @@ extends ReportSenderAbstract
 		{
 			if (_sendNtr == false)
 			{
-				_logger.info("Property '"+PROPKEY_sendNtr+"' is enabled. The report for server '"+serverName+"' will NOT be sent.");
+				_logger.info("Property '" + PROPKEY_sendNtr + "' is enabled. The report for server '" + serverName + "' will NOT be sent.");
 				return;
 			}
 		}
@@ -835,7 +835,7 @@ extends ReportSenderAbstract
 //		super.init(conf);
 		Configuration conf = Configuration.getCombinedConfiguration();
 
-		_logger.info("Initializing the ReportSender component named '"+getName()+"'.");
+		_logger.info("Initializing the ReportSender component named '" + getName() + "'.");
 
 		_smtpHostname               = conf.getProperty       (PROPKEY_smtpHostname,               DEFAULT_smtpHostname);
 		_to                         = conf.getProperty       (PROPKEY_to,                         DEFAULT_to);
@@ -867,11 +867,11 @@ extends ReportSenderAbstract
 		//------------------------------------------
 		// Check for mandatory parameters
 		//------------------------------------------
-		if ( StringUtil.isNullOrBlank(_smtpHostname      ) ) throw new Exception("The property '" + PROPKEY_smtpHostname       + "' is mandatory for the ReportSender named '"+getName()+"'.");
-		if ( StringUtil.isNullOrBlank(_to                ) ) throw new Exception("The property '" + PROPKEY_to                 + "' is mandatory for the ReportSender named '"+getName()+"'.");
-		if ( StringUtil.isNullOrBlank(_from              ) ) throw new Exception("The property '" + PROPKEY_from               + "' is mandatory for the ReportSender named '"+getName()+"'.");
-		if ( StringUtil.isNullOrBlank(_subjectTemplate   ) ) throw new Exception("The property '" + PROPKEY_subjectTemplate    + "' is mandatory for the ReportSender named '"+getName()+"'.");
-		if ( StringUtil.isNullOrBlank(_subjectNtrTemplate) ) throw new Exception("The property '" + PROPKEY_subjectNtrTemplate + "' is mandatory for the ReportSender named '"+getName()+"'.");
+		if ( StringUtil.isNullOrBlank(_smtpHostname      ) ) throw new Exception("The property '" + PROPKEY_smtpHostname       + "' is mandatory for the ReportSender named '" + getName() + "'.");
+		if ( StringUtil.isNullOrBlank(_to                ) ) throw new Exception("The property '" + PROPKEY_to                 + "' is mandatory for the ReportSender named '" + getName() + "'.");
+		if ( StringUtil.isNullOrBlank(_from              ) ) throw new Exception("The property '" + PROPKEY_from               + "' is mandatory for the ReportSender named '" + getName() + "'.");
+		if ( StringUtil.isNullOrBlank(_subjectTemplate   ) ) throw new Exception("The property '" + PROPKEY_subjectTemplate    + "' is mandatory for the ReportSender named '" + getName() + "'.");
+		if ( StringUtil.isNullOrBlank(_subjectNtrTemplate) ) throw new Exception("The property '" + PROPKEY_subjectNtrTemplate + "' is mandatory for the ReportSender named '" + getName() + "'.");
 //		if ( StringUtil.isNullOrBlank(_msgBodyTemplate   ) ) throw new Exception("The property '" + PROPKEY_msgBodyTemplate    + "' is mandatory for the ReportSender named '"+getName()+"'.");
 
 		// Parse the 'to string' into a list
@@ -889,7 +889,7 @@ extends ReportSenderAbstract
 	public void printConfig()
 	{
 		int spaces = 50;
-		_logger.info("Configuration for Report Sender Module: "+getName());
+		_logger.info("Configuration for Report Sender Module: " + getName());
 		_logger.info("    " + StringUtil.left(PROPKEY_smtpHostname              , spaces) + ": " + _smtpHostname);
 		_logger.info("    " + StringUtil.left(PROPKEY_to                        , spaces) + ": " + _to);
 		if (JsonUtils.isPossibleJson(_to))

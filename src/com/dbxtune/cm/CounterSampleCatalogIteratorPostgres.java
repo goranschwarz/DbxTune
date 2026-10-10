@@ -159,7 +159,7 @@ extends CounterSampleCatalogIterator
 		{
 			// Set status
 			if (cm != null && cm.hasCounterController())
-				cm.getCounterController().getRefreshStatus().setSubStatus("get conn to db '"+dbname+"'");
+				cm.getCounterController().getRefreshStatus().setSubStatus("get conn to db '" + dbname + "'");
 			
 //			return _cpm.getPool(dbname).getConnection(guiOwner);
 			return cpm.getPool(dbname).getConnection(guiOwner);
@@ -185,7 +185,7 @@ extends CounterSampleCatalogIterator
 		// Set the new database name
 		String url = connProp.getUrl();
 		JdbcUrlParser p = JdbcUrlParser.parse(url); 
-		p.setPath("/"+dbname); // set the new database name
+		p.setPath("/" + dbname); // set the new database name
 
 		url = p.toUrl();
 		connProp.setUrl(url);
@@ -195,14 +195,14 @@ extends CounterSampleCatalogIterator
 
 		// Set status in GUI if available
 		if (cm != null && cm.hasCounterController())
-			cm.getCounterController().getRefreshStatus().setSubStatus("Connecting to db '"+dbname+"'");
+			cm.getCounterController().getRefreshStatus().setSubStatus("Connecting to db '" + dbname + "'");
 
 		try
 		{
 			// grab a new connection.
 			DbxConnection dbConn = cp.getConnection(guiOwner);
 
-			_logger.info("Created a new Connection for db '"+dbname+"', which will be cached in a connection pool. with maxSize=5, url='"+url+"', connProp="+connProp);
+			_logger.info("Created a new Connection for db '" + dbname + "', which will be cached in a connection pool. with maxSize=5, url='" + url + "', connProp=" + connProp);
 
 			// Make the same settings as for a new Monitor Connection
 			if (CounterController.hasInstance())
@@ -277,7 +277,7 @@ extends CounterSampleCatalogIterator
 		else
 		{
 			// The connection pool did not exists, close this connection.
-			_logger.info("When trying to 'give back' a connection to the connection pool with key '"+dbname+"'. The key could not be found, so CLOSING the connection instead.");
+			_logger.info("When trying to 'give back' a connection to the connection pool with key '" + dbname + "'. The key could not be found, so CLOSING the connection instead.");
 			
 			// Close the connection...
 			dbConn.closeNoThrow();
@@ -303,7 +303,7 @@ extends CounterSampleCatalogIterator
 	{
 		int queryTimeout = cm.getQueryTimeout();
 		if (_logger.isDebugEnabled())
-			_logger.debug(getName()+": queryTimeout="+queryTimeout);
+			_logger.debug(getName() + ": queryTimeout=" + queryTimeout);
 
 		long execStartTime = System.currentTimeMillis();
 
@@ -337,17 +337,17 @@ extends CounterSampleCatalogIterator
 					// set context to the correct database
 //					conn.setCatalog(catname);
 					if (_logger.isDebugEnabled())
-						_logger.debug("Setting database context to '"+catname+"'.");
+						_logger.debug("Setting database context to '" + catname + "'.");
 
 					if (cm.hasCounterController())
-						cm.getCounterController().getRefreshStatus().setSubStatus("for db '"+catname+"'");
+						cm.getCounterController().getRefreshStatus().setSubStatus("for db '" + catname + "'");
 
 					Statement stmnt = dbConn.createStatement();
 					ResultSet rs;
 
 					stmnt.setQueryTimeout(queryTimeout); // XX seconds query timeout
 					if (_logger.isDebugEnabled())
-						_logger.debug("QUERY_TIMEOUT="+queryTimeout+", for SampleCnt='"+getName()+"'.");
+						_logger.debug("QUERY_TIMEOUT=" + queryTimeout + ", for SampleCnt='" + getName() + "'.");
 
 
 					// Allow 'go' in the string, then we should send multiple batches
@@ -378,9 +378,9 @@ extends CounterSampleCatalogIterator
 
 						if (_logger.isDebugEnabled())
 						{
-							_logger.debug("##### BEGIN (send sql), batchCounter="+batchCounter+" ############################### "+ getName());
+							_logger.debug("##### BEGIN (send sql), batchCounter=" + batchCounter + " ############################### " + getName());
 							_logger.debug(sendSql);
-							_logger.debug("##### END   (send sql), batchCounter="+batchCounter+" ############################### "+ getName());
+							_logger.debug("##### END   (send sql), batchCounter=" + batchCounter + " ############################### " + getName());
 							_logger.debug("");
 						}
 
@@ -423,7 +423,7 @@ extends CounterSampleCatalogIterator
 
 								if (rowsAffected >= 0)
 								{
-									_logger.debug("DDL or DML rowcount = "+rowsAffected);
+									_logger.debug("DDL or DML rowcount = " + rowsAffected);
 								}
 								else
 								{
@@ -434,7 +434,7 @@ extends CounterSampleCatalogIterator
 							// Check if we have more result sets
 							hasRs = stmnt.getMoreResults();
 			
-							_logger.trace( "--hasRs="+hasRs+", rsNum="+rsNum+", rowsAffected="+rowsAffected );
+							_logger.trace( "--hasRs=" + hasRs + ", rsNum=" + rsNum + ", rowsAffected=" + rowsAffected );
 						}
 						while (hasRs || rowsAffected != -1);
 			
@@ -458,10 +458,10 @@ extends CounterSampleCatalogIterator
 		{
 			long execTime = TimeUtils.msDiffNow(execStartTime);
 
-			_logger.warn("CounterSample("+getName()+").getCnt : ErrorCode=" + sqlEx.getErrorCode() + ", SqlState=" + sqlEx.getSQLState() + ", Message=|" + sqlEx.getMessage() + "|. execTimeInMs=" + execTime + ", SQL: "+sql, sqlEx);
+			_logger.warn("CounterSample(" + getName() + ").getCnt : ErrorCode=" + sqlEx.getErrorCode() + ", SqlState=" + sqlEx.getSQLState() + ", Message=|" + sqlEx.getMessage() + "|. execTimeInMs=" + execTime + ", SQL: " + sql, sqlEx);
 			if (sqlEx.toString().indexOf("SocketTimeoutException") > 0)
 			{
-				_logger.info("QueryTimeout in '"+getName()+"', with query timeout '"+queryTimeout+"'. This can be changed with the config option '"+getName()+".queryTimeout=seconds' in the config file.");
+				_logger.info("QueryTimeout in '" + getName() + "', with query timeout '" + queryTimeout + "'. This can be changed with the config option '" + getName() + ".queryTimeout=seconds' in the config file.");
 			}
 
 			//return false;
@@ -469,13 +469,13 @@ extends CounterSampleCatalogIterator
 		}
 		catch (IOException ex)
 		{
-			_logger.error("While reading the input SQL 'go' String, caught: "+ex, ex);
-			throw new SQLException("While reading the input SQL 'go' String, caught: "+ex, ex);
+			_logger.error("While reading the input SQL 'go' String, caught: " + ex, ex);
+			throw new SQLException("While reading the input SQL 'go' String, caught: " + ex, ex);
 		}
 		catch (Exception ex)
 		{
-			_logger.error("Problems when connecting to Postgres via connection pool, caught: "+ex, ex);
-			throw new SQLException("Problems when connecting to Postgres via connection pool, caught: "+ex, ex);
+			_logger.error("Problems when connecting to Postgres via connection pool, caught: " + ex, ex);
+			throw new SQLException("Problems when connecting to Postgres via connection pool, caught: " + ex, ex);
 		}
 		finally
 		{

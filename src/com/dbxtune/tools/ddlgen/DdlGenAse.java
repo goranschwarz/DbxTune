@@ -124,7 +124,7 @@ public class DdlGenAse extends DdlGen
 		}
 		else 
 		{
-			throw new Exception("Unknown type '"+type+"'.");
+			throw new Exception("Unknown type '" + type + "'.");
 		}
 //		argList.add("-TU"); 
 //		argList.add("-Ntitles"); 
@@ -150,7 +150,7 @@ public class DdlGenAse extends DdlGen
 			if (args2[i].startsWith("-P"))
 				args2[i] = "-P*secret*";
 		}
-		_visibleCommand = "ddlgen "+StringUtil.toCommaStr(args2, " ");
+		_visibleCommand = "ddlgen " + StringUtil.toCommaStr(args2, " ");
 		
 		return args;
 	}

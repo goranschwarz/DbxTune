@@ -100,7 +100,7 @@ public class ResultSetTableModelTest
 			String sqlText  = rstm1.getValueAsString(r, "SqlText");
 			String planText = rstm2.getValueAsString(r, "PlanText");
 
-			assertEquals("expected sqtext-"+r, sqlText, planText);
+			assertEquals("expected sqtext-" + r, sqlText, planText);
 		}
 	}
 

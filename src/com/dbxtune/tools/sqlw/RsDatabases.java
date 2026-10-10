@@ -149,7 +149,7 @@ public class RsDatabases
 		}
 		catch (SQLException sqle)
 		{
-			String msg = "Problems when executing '"+cmd+"' in RSD Server.";
+			String msg = "Problems when executing '" + cmd + "' in RSD Server.";
 			_logger.error(msg + sqle);
 
 			return null;

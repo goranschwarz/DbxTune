@@ -124,7 +124,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 	public enum FileType {ASE_LOG, REPSERVER_LOG, IQ_LOG, UNKNOWN_LOG}
 
 	public final static String APP_NAME              = "tailw";
-	public static final String TAIL_CONFIG_FILE_NAME = System.getProperty("TAIL_CONFIG_FILE_NAME", "conf"+File.separatorChar+"tailw.save.properties");
+	public static final String TAIL_CONFIG_FILE_NAME = System.getProperty("TAIL_CONFIG_FILE_NAME", "conf" + File.separatorChar + "tailw.save.properties");
 
 	
 	private boolean            _startTailAfterSartup   = false;
@@ -293,12 +293,12 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		{
 			System.out.println("");
 			System.out.println("===============================================================");
-			System.out.println(" "+Version.getAppName()+" needs a runtime Java 7 or higher.");
+			System.out.println(" " + Version.getAppName() + " needs a runtime Java 7 or higher.");
 			System.out.println(" java.version = " + System.getProperty("java.version"));
 			System.out.println(" which is parsed into the number: " + JavaVersion.getVersion());
 			System.out.println("---------------------------------------------------------------");
 			System.out.println("");
-			throw new Exception(Version.getAppName()+" needs a runtime Java 7 or higher.");
+			throw new Exception(Version.getAppName() + " needs a runtime Java 7 or higher.");
 		}
 
 		// The SAVE Properties for shared Tail
@@ -386,7 +386,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 //			if (!cmd.hasOption('P') && tdsPassword == null)
 //				tdsPassword = ConnectionDialog.getPasswordForServer(tdsServer);
 
-			_logger.info("Connecting as user '"+tdsUsername+"' to server='"+tdsServer+"'. Which is located on '"+tdsServer+"'.");
+			_logger.info("Connecting as user '" + tdsUsername + "' to server='" + tdsServer + "'. Which is located on '" + tdsServer + "'.");
 			try
 			{
 				Properties props = new Properties();
@@ -486,7 +486,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		
 		if (_conn != null && AseConnectionUtils.isConnectionOk(_conn, true, this))
 		{
-			_logger.info("Getting logfile name information from the database server '"+_servername+"'.");
+			_logger.info("Getting logfile name information from the database server '" + _servername + "'.");
 
 			// Try to get what hostname to do SSH to
 			// NOTE: this is probably not the best way, but at least a start
@@ -624,7 +624,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		_warning_lbl  .setHorizontalAlignment(SwingConstants.RIGHT);
 		_warning_lbl  .setVerticalAlignment(SwingConstants.BOTTOM);
 
-		_filterColorSchema_lbl.setToolTipText("<html>Apply a Color and Filter functionality for this session.<br><br>You can edit the file '"+LogFileFilterAndColorManager.DEFAULT_filename+"', or copy it from '$DBXTUNE_HOME/lib/dbxtune.jar:resources/LogFileFilters.xml'</html>");
+		_filterColorSchema_lbl.setToolTipText("<html>Apply a Color and Filter functionality for this session.<br><br>You can edit the file '" + LogFileFilterAndColorManager.DEFAULT_filename + "', or copy it from '$DBXTUNE_HOME/lib/dbxtune.jar:resources/LogFileFilters.xml'</html>");
 		_filterColorSchema_cbx.setToolTipText(_filterColorSchema_lbl.getToolTipText());
 		_startTail_but        .setToolTipText("Start doing Tail on the log");
 		_stopTail_but         .setToolTipText("Stop doing Tail on the log");
@@ -987,12 +987,12 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 //						SshFileSystemView fsv = new SshFileSystemView(sshConn);
 						RemoteFileSystemView fsv = new RemoteFileSystemView(sshConn);
 						
-						String hostPortLabel = _sshHostname_txt.getText() + ":" +_sshPort_txt.getText();
+						String hostPortLabel = _sshHostname_txt.getText() + ":" + _sshPort_txt.getText();
 
 		    			JFileChooser fc = new JFileChooser(filename, fsv);
 						fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
 //						fc.setApproveButtonText("Choose");
-						fc.setDialogTitle("SSH Remote Files at "+hostPortLabel+" (NOTE: This is NOT working in a good manner)");
+						fc.setDialogTitle("SSH Remote Files at " + hostPortLabel + " (NOTE: This is NOT working in a good manner)");
 //						fc.setAccessory( new JLabel("NOTE: This is NOT working in a good manner...") );
 						
 //						String str = _logFilename_txt.getText();
@@ -1339,7 +1339,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		
 		// append END to log
 		String discardPrefix = foldMessages ? "} // <<<<<<<<<<<< end:" : "############";
-		String discardStr    = discardPrefix + " Discarded "+discardedRecords.size()+" record from the log. <<<<<<<<<<<<\n";
+		String discardStr    = discardPrefix + " Discarded " + discardedRecords.size() + " record from the log. <<<<<<<<<<<<\n";
 
 		// Write "end" message and add a "notation" to the gutter
 		_logTail_txt.append(discardStr);
@@ -1461,11 +1461,11 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 				"I have STOPPED tail of the Log File \n" +
 				"To start a new Trace, Close the Trace window... \n" +
 				"\n" +
-				"Note: you can raise the memory parameter -Xmx###m in the "+Version.getAppName()+" start script.\n" +
-				"Current max memory setting seems to be around "+maxConfigMemInMB+" MB.\n" +
-				"After Garbage Collection, you now have "+mbLeftAfterGc+" free MB.", 
+				"Note: you can raise the memory parameter -Xmx###m in the " + Version.getAppName() + " start script.\n" +
+				"Current max memory setting seems to be around " + maxConfigMemInMB + " MB.\n" +
+				"After Garbage Collection, you now have " + mbLeftAfterGc + " free MB.", 
 				JOptionPane.INFORMATION_MESSAGE);
-		JDialog dialog = optionPane.createDialog(this, "out-of-memory @ "+dateStr);
+		JDialog dialog = optionPane.createDialog(this, "out-of-memory @ " + dateStr);
 		dialog.setModal(false);
 		dialog.setVisible(true);
 
@@ -1486,7 +1486,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 	{
 		if (memoryLeftInMB < 50)
 		{
-			_logger.info("Looks like free memory is below "+memoryLeftInMB+" MB, lets do cleanup...");
+			_logger.info("Looks like free memory is below " + memoryLeftInMB + " MB, lets do cleanup...");
 			outOfMemoryHandler();
 		}
 	}
@@ -1542,53 +1542,53 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 			return;
 		}
 
-		conf.setProperty("LogTail.misc."+getServername()+".tail",     _tailNewRecordsTop_chk.isSelected() || _tailNewRecordsBot_chk.isSelected() );
-		conf.setProperty("LogTail.misc."+getServername()+".filename", _logFilename_txt.getText() );
+		conf.setProperty("LogTail.misc." + getServername() + ".tail",     _tailNewRecordsTop_chk.isSelected() || _tailNewRecordsBot_chk.isSelected() );
+		conf.setProperty("LogTail.misc." + getServername() + ".filename", _logFilename_txt.getText() );
 
-		conf.setProperty("LogTail.misc."+getServername()+".tail_size",       _tailSize_spm      .getNumber().intValue());
-		conf.setProperty("LogTail.misc."+getServername()+".from_file_start", _tailFromStart_cbx.isSelected());
+		conf.setProperty("LogTail.misc." + getServername() + ".tail_size",       _tailSize_spm      .getNumber().intValue());
+		conf.setProperty("LogTail.misc." + getServername() + ".from_file_start", _tailFromStart_cbx.isSelected());
 
-		conf.setProperty("LogTail.misc."+getServername()+".filterGroup", StringUtil.getSelectedItemString(_filterColorSchema_cbx));
+		conf.setProperty("LogTail.misc." + getServername() + ".filterGroup", StringUtil.getSelectedItemString(_filterColorSchema_cbx));
 		
 		//----------------------------------
 		// TYPE
 		//----------------------------------
-		conf.setProperty("LogTail.accessType."+getServername(), _accessType_cbx.getSelectedIndex() );
+		conf.setProperty("LogTail.accessType." + getServername(), _accessType_cbx.getSelectedIndex() );
 
 		//----------------------------------
 		// SSH
 		//----------------------------------
 		if ( ! StringUtil.isNullOrBlank(_sshHostname_txt.getText()) )
-			conf.setProperty("LogTail.ssh.conn."+getServername()+".hostname",   _sshHostname_txt.getText() );
+			conf.setProperty("LogTail.ssh.conn." + getServername() + ".hostname",   _sshHostname_txt.getText() );
 
-		conf.setProperty("LogTail.ssh.conn."+getServername()+".port",       _sshPort_txt.getText() );
+		conf.setProperty("LogTail.ssh.conn." + getServername() + ".port",       _sshPort_txt.getText() );
 
 		if ( ! StringUtil.isNullOrBlank(_sshUsername_txt.getText()) )
-			conf.setProperty("LogTail.ssh.conn."+getServername()+".username",   _sshUsername_txt.getText() );
+			conf.setProperty("LogTail.ssh.conn." + getServername() + ".username",   _sshUsername_txt.getText() );
 
 		if ( ! StringUtil.isNullOrBlank(_sshTailOsCmd_txt.getText()) )
-			conf.setProperty("LogTail.ssh.conn."+getServername()+".tailOsCmd",   _sshTailOsCmd_txt.getText() );
+			conf.setProperty("LogTail.ssh.conn." + getServername() + ".tailOsCmd",   _sshTailOsCmd_txt.getText() );
 
 		if (_sshPassword_chk.isSelected())
-			conf.setProperty("LogTail.ssh.conn."+getServername()+".password", _sshPassword_txt.getText(), true);
+			conf.setProperty("LogTail.ssh.conn." + getServername() + ".password", _sshPassword_txt.getText(), true);
 		else
-			conf.remove("LogTail.ssh.conn."+getServername()+".password");
+			conf.remove("LogTail.ssh.conn." + getServername() + ".password");
 
-		conf.setProperty("LogTail.ssh.conn."+getServername()+".savePassword", _sshPassword_chk.isSelected() );
+		conf.setProperty("LogTail.ssh.conn." + getServername() + ".savePassword", _sshPassword_chk.isSelected() );
 
 		if ( ! StringUtil.isNullOrBlank(_sshKeyFile_txt.getText()) )
-			conf.setProperty("LogTail.ssh.conn."+getServername()+".keyFile",  _sshKeyFile_txt.getText() );
+			conf.setProperty("LogTail.ssh.conn." + getServername() + ".keyFile",  _sshKeyFile_txt.getText() );
 
 		//----------------------------------
 		// SERVERS
 		//----------------------------------
 		if (_serverName_cbx.getSelectedItem() != null)
-			conf.setProperty("LogTail.serverList.active", _serverName_cbx.getSelectedItem() +"" );
+			conf.setProperty("LogTail.serverList.active", _serverName_cbx.getSelectedItem() + "" );
 
-		conf.setProperty("LogTail.serverList.count", _serverName_cbx.getItemCount() +"" );
+		conf.setProperty("LogTail.serverList.count", _serverName_cbx.getItemCount() + "" );
 		conf.removeAll  ("LogTail.serverList.entry.");
 		for (int i=0; i<_serverName_cbx.getItemCount(); i++)
-			conf.setProperty("LogTail.serverList.entry."+i, _serverName_cbx.getItemAt(i).toString() );
+			conf.setProperty("LogTail.serverList.entry." + i, _serverName_cbx.getItemAt(i).toString() );
 
 
 		
@@ -1623,7 +1623,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		{
 			for (int i=0; i<itemCount; i++)
 			{
-				String item = conf.getProperty("LogTail.serverList.entry."+i);
+				String item = conf.getProperty("LogTail.serverList.entry." + i);
 				if (item != null)
 					_serverName_cbx.addItem(item);
 			}
@@ -1647,21 +1647,21 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 			return;
 		}
 
-		_tailNewRecordsTop_chk.setSelected(     conf.getBooleanProperty("LogTail.misc."+servername+".tail", true) );
-		_tailNewRecordsBot_chk.setSelected(     conf.getBooleanProperty("LogTail.misc."+servername+".tail", true) );
+		_tailNewRecordsTop_chk.setSelected(     conf.getBooleanProperty("LogTail.misc." + servername + ".tail", true) );
+		_tailNewRecordsBot_chk.setSelected(     conf.getBooleanProperty("LogTail.misc." + servername + ".tail", true) );
 		
-		_tailSize_spm     .setValue(            conf.getIntProperty(    "LogTail.misc."+servername+".tail_size",       DEFAULT_TAIL_SIZE));
-		_tailFromStart_cbx.setSelected(         conf.getBooleanProperty("LogTail.misc."+servername+".from_file_start", DEFAULT_TAIL_FROM_START));
+		_tailSize_spm     .setValue(            conf.getIntProperty(    "LogTail.misc." + servername + ".tail_size",       DEFAULT_TAIL_SIZE));
+		_tailFromStart_cbx.setSelected(         conf.getBooleanProperty("LogTail.misc." + servername + ".from_file_start", DEFAULT_TAIL_FROM_START));
 		
 		_tailSize_sp.setEnabled( ! _tailFromStart_cbx.isSelected() );
 
-		String filterSchema = conf.getProperty("LogTail.misc."+servername+".filterGroup", LogFileFilterAndColorManager.DEFAULT_FILTER_GROUP);
+		String filterSchema = conf.getProperty("LogTail.misc." + servername + ".filterGroup", LogFileFilterAndColorManager.DEFAULT_FILTER_GROUP);
 		_filterColorSchema_cbx.setSelectedItem(filterSchema);
 		LogFileFilterAndColorManager.getInstance().setFilterGroup(filterSchema);
 
 		if ( ! atStartup )
 		{
-			String logfile = conf.getProperty("LogTail.misc."+servername+".filename");
+			String logfile = conf.getProperty("LogTail.misc." + servername + ".filename");
 			if (logfile != null)
 				_logFilename_txt.setText(logfile);
 		}
@@ -1670,7 +1670,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		//----------------------------------
 		// TYPE
 		//----------------------------------
-		_accessType_cbx.setSelectedIndex( conf.getIntProperty("LogTail.accessType."+servername, 0) );
+		_accessType_cbx.setSelectedIndex( conf.getIntProperty("LogTail.accessType." + servername, 0) );
 
 		if (_accessType_cbx.getSelectedIndex() == 0)
 		{
@@ -1686,14 +1686,14 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		//----------------------------------
 		// SSH
 		//----------------------------------
-		_sshHostname_txt .setText( conf.getProperty   ("LogTail.ssh.conn."+servername+".hostname",  _sshHostname_txt .getText()) );
-		_sshPort_txt     .setText( conf.getProperty   ("LogTail.ssh.conn."+servername+".port",      _sshPort_txt     .getText()) );
-		_sshTailOsCmd_txt.setText( conf.getPropertyRaw("LogTail.ssh.conn."+servername+".tailOsCmd", _sshTailOsCmd_txt.getText()) ); // This contains variables etc
-		_sshUsername_txt .setText( conf.getProperty   ("LogTail.ssh.conn."+servername+".username",  _sshUsername_txt .getText()) );
-		_sshPassword_txt .setText( conf.getProperty   ("LogTail.ssh.conn."+servername+".password",  _sshPassword_txt .getText()) );
-		_sshKeyFile_txt  .setText( conf.getProperty   ("LogTail.ssh.conn."+servername+".keyFile",   _sshKeyFile_txt  .getText()) );
+		_sshHostname_txt .setText( conf.getProperty   ("LogTail.ssh.conn." + servername + ".hostname",  _sshHostname_txt .getText()) );
+		_sshPort_txt     .setText( conf.getProperty   ("LogTail.ssh.conn." + servername + ".port",      _sshPort_txt     .getText()) );
+		_sshTailOsCmd_txt.setText( conf.getPropertyRaw("LogTail.ssh.conn." + servername + ".tailOsCmd", _sshTailOsCmd_txt.getText()) ); // This contains variables etc
+		_sshUsername_txt .setText( conf.getProperty   ("LogTail.ssh.conn." + servername + ".username",  _sshUsername_txt .getText()) );
+		_sshPassword_txt .setText( conf.getProperty   ("LogTail.ssh.conn." + servername + ".password",  _sshPassword_txt .getText()) );
+		_sshKeyFile_txt  .setText( conf.getProperty   ("LogTail.ssh.conn." + servername + ".keyFile",   _sshKeyFile_txt  .getText()) );
 
-		_sshPassword_chk.setSelected( conf.getBooleanProperty("LogTail.ssh.conn."+servername+".savePassword", _sshPassword_chk.isSelected()) );
+		_sshPassword_chk.setSelected( conf.getBooleanProperty("LogTail.ssh.conn." + servername + ".savePassword", _sshPassword_chk.isSelected()) );
 	}
 
 	private void getSavedWindowProps()
@@ -1760,7 +1760,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		catch(NumberFormatException ignore) {}
 
 		final SshConnection sshConn = new SshConnection(host, port, user, passwd, keyFile);
-		WaitForExecDialog wait = new WaitForExecDialog(this, "SSH Connecting to "+host+", with user "+user);
+		WaitForExecDialog wait = new WaitForExecDialog(this, "SSH Connecting to " + host + ", with user " + user);
 		sshConn.setWaitForDialog(wait);
 
 		BgExecutor waitTask = new BgExecutor(wait)
@@ -1804,7 +1804,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 				}
 				catch (Exception e) 
 				{
-					SwingUtils.showErrorMessage("SSH Connect failed", "SSH Connection to "+host+":"+portStr+" with user '"+user+"' Failed.", e);
+					SwingUtils.showErrorMessage("SSH Connect failed", "SSH Connection to " + host + ":" + portStr + " with user '" + user + "' Failed.", e);
 //					sshConn = null;
 				}
 				return null;
@@ -1935,7 +1935,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 				}
 				else
 				{
-					String msg = "The trace file '"+_fileTail.getFilename()+"' was not found. (SSH Access mode)";
+					String msg = "The trace file '" + _fileTail.getFilename() + "' was not found. (SSH Access mode)";
 					_logger.error(msg);
 					SwingUtils.showErrorMessage("Trace file not found", msg, null);
 					stopTail();
@@ -1958,7 +1958,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 			}
 			else
 			{
-				String msg = "The trace file '"+_fileTail.getFilename()+"' was not found. (Local Access mode)";
+				String msg = "The trace file '" + _fileTail.getFilename() + "' was not found. (Local Access mode)";
 				_logger.error(msg);
 				SwingUtils.showErrorMessage("Trace file not found", msg, null);
 				stopTail();
@@ -1990,7 +1990,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 
 		if (isConnected)
 		{
-			String title = "Tail - "+getServername()+" - "+_logFilename_txt.getText() + " (running)";
+			String title = "Tail - " + getServername() + " - " + _logFilename_txt.getText() + " (running)";
 			if ( ! title.equals(getTitle()) )
 			{
 				setTitle(title); // Set window title
@@ -2003,7 +2003,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		}
 		else
 		{
-			String title = "Tail - "+getServername()+" - "+_logFilename_txt.getText() + " (NOT running)";
+			String title = "Tail - " + getServername() + " - " + _logFilename_txt.getText() + " (NOT running)";
 			if ( ! title.equals(getTitle()) )
 			{
 				setTitle(title); // Set window title
@@ -2108,7 +2108,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		try
 		{
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-			_logger.info("Using Look And Feel named '"+UIManager.getLookAndFeel().getName()+"', classname='"+UIManager.getLookAndFeel().getClass().getName()+"', toString='"+UIManager.getLookAndFeel()+"'.");
+			_logger.info("Using Look And Feel named '" + UIManager.getLookAndFeel().getName() + "', classname='" + UIManager.getLookAndFeel().getClass().getName() + "', toString='" + UIManager.getLookAndFeel() + "'.");
 		}
 		catch (Exception e)
 		{
@@ -2165,7 +2165,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		pw.println("  ");
 		pw.println("options:");
 		pw.println("  -h,--help                 Usage information.");
-		pw.println("  -v,--version              Display "+Version.getAppName()+" and JVM Version.");
+		pw.println("  -v,--version              Display " + Version.getAppName() + " and JVM Version.");
 		pw.println("  ");
 		pw.println("  -l,--label <label>        Label name used in the configuration file");
 		pw.println("  -f,--file  <filename>     File to tail");
@@ -2195,7 +2195,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 
 		// create the Options
 		options.addOption( "h", "help",        false, "Usage information." );
-		options.addOption( "v", "version",     false, "Display "+Version.getAppName()+" and JVM Version." );
+		options.addOption( "v", "version",     false, "Display " + Version.getAppName() + " and JVM Version." );
 
 		options.addOption( "l", "label",       true, "Label name used in the configuration file" );
 		options.addOption( "f", "file",        true, "File to tail" );
@@ -2251,7 +2251,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 			for (Iterator<Option> it=cmd.iterator(); it.hasNext();)
 			{
 				Option opt = it.next();
-				_logger.debug("parseCommandLine: swith='"+opt.getOpt()+"', value='"+opt.getValue()+"'.");
+				_logger.debug("parseCommandLine: swith='" + opt.getOpt() + "', value='" + opt.getValue() + "'.");
 			}
 		}
 
@@ -2280,7 +2280,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 			else if ( cmd.hasOption("version") )
 			{
 				System.out.println();
-				System.out.println(Version.getAppName()+" Version: " + Version.getVersionStr() + " JVM: " + System.getProperty("java.version"));
+				System.out.println(Version.getAppName() + " Version: " + Version.getVersionStr() + " JVM: " + System.getProperty("java.version"));
 				System.out.println();
 			}
 			//-------------------------------

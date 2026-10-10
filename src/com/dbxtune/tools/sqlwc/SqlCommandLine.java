@@ -60,12 +60,12 @@ public class SqlCommandLine
 		{
 			System.out.println("");
 			System.out.println("===============================================================");
-			System.out.println(" "+Version.getAppName()+" needs a runtime Java 7 or higher.");
+			System.out.println(" " + Version.getAppName() + " needs a runtime Java 7 or higher.");
 			System.out.println(" java.version = " + System.getProperty("java.version"));
 			System.out.println(" which is parsed into the number: " + JavaVersion.getVersion());
 			System.out.println("---------------------------------------------------------------");
 			System.out.println("");
-			throw new Exception(Version.getAppName()+" needs a runtime Java 7 or higher.");
+			throw new Exception(Version.getAppName() + " needs a runtime Java 7 or higher.");
 		}
 
 		//---------------------------------------------------------------
@@ -116,7 +116,7 @@ public class SqlCommandLine
 						String debugOption = entry.getKey();
 						String description = entry.getValue();
 
-						System.out.println(" "+StringUtil.left(debugOption, 15, true) + " " + description);
+						System.out.println(" " + StringUtil.left(debugOption, 15, true) + " " + description);
 					}
 					System.out.println();
 					// Get of of here if it was a list option
@@ -135,26 +135,26 @@ public class SqlCommandLine
 
 		// Print out the memory configuration
 		// And the JVM info
-		_logger.debug("Starting "+Version.getAppName()+", version "+Version.getVersionStr()+", build "+Version.getBuildStr());
-		_logger.debug("Debug Options enabled: "+Debug.getDebugsString());
+		_logger.debug("Starting " + Version.getAppName() + ", version " + Version.getVersionStr() + ", build " + Version.getBuildStr());
+		_logger.debug("Debug Options enabled: " + Debug.getDebugsString());
 
-		_logger.debug("Using Java Runtime Environment Version: "+System.getProperty("java.version"));
-		_logger.debug("Using Java VM Implementation  Version: "+System.getProperty("java.vm.version"));
-		_logger.debug("Using Java VM Implementation  Vendor:  "+System.getProperty("java.vm.vendor"));
-		_logger.debug("Using Java VM Implementation  Name:    "+System.getProperty("java.vm.name"));
-		_logger.debug("Using Java VM Home:    "+System.getProperty("java.home"));
-		_logger.debug("Java class format version number: " +System.getProperty("java.class.version"));
-		_logger.debug("Java class path: " +System.getProperty("java.class.path"));
-		_logger.debug("List of paths to search when loading libraries: " +System.getProperty("java.library.path"));
-		_logger.debug("Name of JIT compiler to use: " +System.getProperty("java.compiler"));
-		_logger.debug("Path of extension directory or directories: " +System.getProperty("java.ext.dirs"));
+		_logger.debug("Using Java Runtime Environment Version: " + System.getProperty("java.version"));
+		_logger.debug("Using Java VM Implementation  Version: " + System.getProperty("java.vm.version"));
+		_logger.debug("Using Java VM Implementation  Vendor:  " + System.getProperty("java.vm.vendor"));
+		_logger.debug("Using Java VM Implementation  Name:    " + System.getProperty("java.vm.name"));
+		_logger.debug("Using Java VM Home:    " + System.getProperty("java.home"));
+		_logger.debug("Java class format version number: " + System.getProperty("java.class.version"));
+		_logger.debug("Java class path: " + System.getProperty("java.class.path"));
+		_logger.debug("List of paths to search when loading libraries: " + System.getProperty("java.library.path"));
+		_logger.debug("Name of JIT compiler to use: " + System.getProperty("java.compiler"));
+		_logger.debug("Path of extension directory or directories: " + System.getProperty("java.ext.dirs"));
 
-		_logger.debug("Maximum memory is set to:  "+Runtime.getRuntime().maxMemory() / 1024 / 1024 + " MB. this could be changed with  -Xmx###m (where ### is number of MB)"); // jdk 1.4 or higher
-		_logger.debug("Running on Operating System Name:  "+System.getProperty("os.name"));
-		_logger.debug("Running on Operating System Version:  "+System.getProperty("os.version"));
-		_logger.debug("Running on Operating System Architecture:  "+System.getProperty("os.arch"));
-		_logger.debug("The application was started by the username:  "+System.getProperty("user.name"));
-		_logger.debug("The application was started in the directory:   "+System.getProperty("user.dir"));
+		_logger.debug("Maximum memory is set to:  " + Runtime.getRuntime().maxMemory() / 1024 / 1024 + " MB. this could be changed with  -Xmx###m (where ### is number of MB)"); // jdk 1.4 or higher
+		_logger.debug("Running on Operating System Name:  " + System.getProperty("os.name"));
+		_logger.debug("Running on Operating System Version:  " + System.getProperty("os.version"));
+		_logger.debug("Running on Operating System Architecture:  " + System.getProperty("os.arch"));
+		_logger.debug("The application was started by the username:  " + System.getProperty("user.name"));
+		_logger.debug("The application was started in the directory:   " + System.getProperty("user.dir"));
 
 //		_logger.debug("System configuration file is '"+propFile+"'.");
 //		_logger.debug("User configuration file is '"+userPropFile+"'.");
@@ -1098,7 +1098,7 @@ public class SqlCommandLine
 			for (@SuppressWarnings("unchecked") Iterator<Option> it=cmd.iterator(); it.hasNext();)
 			{
 				Option opt = it.next();
-				_logger.debug("parseCommandLine: swith='"+opt.getOpt()+"', value='"+opt.getValue()+"'.");
+				_logger.debug("parseCommandLine: swith='" + opt.getOpt() + "', value='" + opt.getValue() + "'.");
 			}
 		}
 

@@ -247,7 +247,7 @@ extends DefaultCompletionProvider
 		if (f.exists())
 		{
 			f.delete();
-			_logger.info("Removing saved completion cache. filename '"+getSavedCacheFileName()+"'.");
+			_logger.info("Removing saved completion cache. filename '" + getSavedCacheFileName() + "'.");
 		}
 		setSavedCacheInstanceName(null);
 	}
@@ -259,7 +259,7 @@ extends DefaultCompletionProvider
 		if (list == null)
 			return;
 
-		_logger.info("Saving "+list.size()+" entries in completion cache using filename '"+getSavedCacheFileName()+"'.");
+		_logger.info("Saving " + list.size() + " entries in completion cache using filename '" + getSavedCacheFileName() + "'.");
 
 		try
 		{
@@ -271,7 +271,7 @@ extends DefaultCompletionProvider
 		}
 		catch (IOException e)
 		{
-			_logger.warn("Problems saving completion cache to the file '"+getSavedCacheFileName()+"'.", e);
+			_logger.warn("Problems saving completion cache to the file '" + getSavedCacheFileName() + "'.", e);
 		}
 	}
 
@@ -299,7 +299,7 @@ extends DefaultCompletionProvider
 				ArrayList<T> list = new ArrayList<T>();
 				try
 				{
-					getWaitDialog().setState("Restoring from file: "+getSavedCacheFileName());
+					getWaitDialog().setState("Restoring from file: " + getSavedCacheFileName());
 
 					FileInputStream fis = new FileInputStream(getSavedCacheFileName());
 					ObjectInputStream ois = new ObjectInputStream(fis);
@@ -322,7 +322,7 @@ extends DefaultCompletionProvider
 				}
 				catch (Exception e)
 				{
-					_logger.warn("Problems restoring completion cache from the file '"+getSavedCacheFileName()+"'.", e);
+					_logger.warn("Problems restoring completion cache from the file '" + getSavedCacheFileName() + "'.", e);
 					return null;
 				}
 			}
@@ -360,10 +360,10 @@ extends DefaultCompletionProvider
 		if (list == null)
 		{
 			if (doWork.hasException())
-				_logger.error("Problems when restoring Code Completion. Caught:"+doWork.getException(), doWork.getException());
+				_logger.error("Problems when restoring Code Completion. Caught:" + doWork.getException(), doWork.getException());
 		}
 		else
-			_logger.info("Restored "+list.size()+" entries into the completion cache from filename '"+getSavedCacheFileName()+"'.");
+			_logger.info("Restored " + list.size() + " entries into the completion cache from filename '" + getSavedCacheFileName() + "'.");
 
 		return list;
 	}

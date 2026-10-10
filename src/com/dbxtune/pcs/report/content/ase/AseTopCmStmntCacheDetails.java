@@ -344,8 +344,8 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 		// So DO NOT TRUST NEWLY created PlanID's 
 		// Although this can create statistical problems:
 		//   - if a procedure is *constantly* recompiled (due to "whatever" reason), those procedures will be discarded from below report
-		boolean skipNewDiffRateRows    = localConf.getBooleanProperty(this.getClass().getSimpleName()+".skipNewDiffRateRows", false);
-		boolean hasSkipNewDiffRateRows = localConf.hasProperty(this.getClass().getSimpleName()+".skipNewDiffRateRows");
+		boolean skipNewDiffRateRows    = localConf.getBooleanProperty(this.getClass().getSimpleName() + ".skipNewDiffRateRows", false);
+		boolean hasSkipNewDiffRateRows = localConf.hasProperty(this.getClass().getSimpleName() + ".skipNewDiffRateRows");
 
 		// try to figure out if we have *new* diff values that exceeds (using column 'ExecutionCount')
 		if ( ! hasSkipNewDiffRateRows )
@@ -392,7 +392,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 		String col_TotalCpuTime__sum          = !dummyRstm.hasColumnNoCase("TotalCpuTimeDiff"      ) ? "" : " ,sum([TotalCpuTimeDiff])       as [TotalCpuTime__sum] \n"; 
 		String col_TotalEstWaitTime__sum      = !dummyRstm.hasColumnNoCase("TotalElapsedTimeDiff"  ) ? "" : " ,sum([TotalElapsedTimeDiff]) - sum([TotalCpuTimeDiff]) as [TotalEstWaitTime__sum] \n"; 
 		String col_TotalLio__sum              = !dummyRstm.hasColumnNoCase("TotalLioDiff"          ) ? "" : " ,sum([TotalLioDiff])           as [TotalLio__sum] \n"; 
-		String col_TotalLioMb__sum            = !dummyRstm.hasColumnNoCase("TotalLioDiff"          ) ? "" : " ,cast (sum([TotalLioDiff]) / "+asePageSizeDivider+" as bigint) as [TotalLioMb__sum] \n"; // bigint / val in h2 version 1.4.200, seems to return DECIMAL instead of bigint
+		String col_TotalLioMb__sum            = !dummyRstm.hasColumnNoCase("TotalLioDiff"          ) ? "" : " ,cast (sum([TotalLioDiff]) / " + asePageSizeDivider + " as bigint) as [TotalLioMb__sum] \n"; // bigint / val in h2 version 1.4.200, seems to return DECIMAL instead of bigint
 		String col_TotalPio__sum              = !dummyRstm.hasColumnNoCase("TotalPioDiff"          ) ? "" : " ,sum([TotalPioDiff])           as [TotalPio__sum] \n"; 
 		String col_LockWaits__sum             = !dummyRstm.hasColumnNoCase("LockWaitsDiff"         ) ? "" : " ,sum([LockWaitsDiff])          as [LockWaits__sum] \n"; 
 		String col_LockWaitTime__sum          = !dummyRstm.hasColumnNoCase("LockWaitTimeDiff"      ) ? "" : " ,sum([LockWaitTimeDiff])       as [LockWaitTime__sum] \n"; 
@@ -404,7 +404,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 		String col_AvgCpuTime                 = !dummyRstm.hasColumnNoCase("TotalCpuTimeDiff"      ) ? "" : " ,sum([TotalCpuTimeDiff])    *1.0 / nullif(sum([UseCountDiff]), 0)  as [AvgCpuTime] \n";
 		String col_AvgEstWaitTime             = !dummyRstm.hasColumnNoCase("TotalEstWaitTimeDiff"  ) ? "" : " ,sum([TotalEstWaitTimeDiff])*1.0 / nullif(sum([UseCountDiff]), 0)  as [AvgEstWaitTime] \n";
 		String col_AvgLIO                     = !dummyRstm.hasColumnNoCase("TotalLioDiff"          ) ? "" : " ,sum([TotalLioDiff])        *1.0 / nullif(sum([UseCountDiff]), 0)  as [AvgLIO] \n";
-		String col_AvgLioMb                   = !dummyRstm.hasColumnNoCase("TotalLioDiff"          ) ? "" : " ,sum([TotalLioDiff]) * 1.0 / "+asePageSizeDivider+" / nullif(sum([UseCountDiff]), 0)  as [AvgLioMb] \n";
+		String col_AvgLioMb                   = !dummyRstm.hasColumnNoCase("TotalLioDiff"          ) ? "" : " ,sum([TotalLioDiff]) * 1.0 / " + asePageSizeDivider + " / nullif(sum([UseCountDiff]), 0)  as [AvgLioMb] \n";
 		String col_AvgPIO                     = !dummyRstm.hasColumnNoCase("TotalPioDiff"          ) ? "" : " ,sum([TotalPioDiff])        *1.0 / nullif(sum([UseCountDiff]), 0)  as [AvgPIO] \n";
 		String col_AvgLockWaits               = !dummyRstm.hasColumnNoCase("LockWaitsDiff"         ) ? "" : " ,sum([LockWaitsDiff])       *1.0 / nullif(sum([UseCountDiff]), 0)  as [AvgLockWaits] \n";
 		String col_AvgLockWaitTime            = !dummyRstm.hasColumnNoCase("LockWaitTimeDiff"      ) ? "" : " ,sum([LockWaitTimeDiff])    *1.0 / nullif(sum([UseCountDiff]), 0)  as [AvgLockWaitTime] \n";

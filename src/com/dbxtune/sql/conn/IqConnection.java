@@ -106,7 +106,7 @@ extends TdsConnection
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Problems getting IQ Platform. SQL='"+sql+"', Caught: "+e);
+			_logger.warn("Problems getting IQ Platform. SQL='" + sql + "', Caught: " + e);
 			return null;
 		}
 	}
@@ -151,7 +151,7 @@ extends TdsConnection
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Problems getting IQ Msg Log filename. SQL='"+sql+"', Caught: "+e);
+			_logger.warn("Problems getting IQ Msg Log filename. SQL='" + sql + "', Caught: " + e);
 			return null;
 		}
 	}
@@ -180,9 +180,9 @@ extends TdsConnection
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+			_logger.error("getTableExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex);
 			if (_logger.isDebugEnabled())
-				_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+				_logger.debug("getTableExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex, ex);
 		}
 		
 		return extraInfo;

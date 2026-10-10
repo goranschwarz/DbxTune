@@ -213,7 +213,7 @@ public class TablePopupFactory
 	 */
 	public static JPopupMenu createMenu(JPopupMenu popup, String prefix, Configuration conf, JTable table, ConnectionProvider connFactory, Window owner)
 	{
-		_logger.debug("createMenu(): prefix='"+prefix+"'.");
+		_logger.debug("createMenu(): prefix='" + prefix + "'.");
 
 		//Create the popup menu.
 		if (popup == null)
@@ -224,7 +224,7 @@ public class TablePopupFactory
 		boolean firstAdd = true;
 		for (String prefixStr : conf.getUniqueSubKeys(prefix, true))
 		{
-			_logger.debug("createDataTablePopupMenu(): found prefix '"+prefixStr+"'.");
+			_logger.debug("createDataTablePopupMenu(): found prefix '" + prefixStr + "'.");
 
 			// Create a Properties with all "Sub keys", and trim of the prefix... keeping just the "sub key"
 			Properties entryProps = new Properties();
@@ -233,32 +233,32 @@ public class TablePopupFactory
 				String val = conf.getProperty(key);
 
 				// Take away the prefix
-				String shortKey = key.replaceFirst(prefixStr+".", "");
+				String shortKey = key.replaceFirst(prefixStr + ".", "");
 
 				// Stuff it in the Properties 
 				entryProps.put(shortKey, val);
 			}
 			
 			// Read menu name
-			String menuItemName = conf.getPropertyRaw(prefixStr+".name");
+			String menuItemName = conf.getPropertyRaw(prefixStr + ".name");
 
 			// Read menu name
-			String menuItemIcon = conf.getPropertyRaw(prefixStr+".icon");
+			String menuItemIcon = conf.getPropertyRaw(prefixStr + ".icon");
 
 			// Read classname
-			String classname = conf.getPropertyRaw(prefixStr+".classname");
+			String classname = conf.getPropertyRaw(prefixStr + ".classname");
 
 			// Read connName
-			String connName = conf.getPropertyRaw(prefixStr+".connName");
+			String connName = conf.getPropertyRaw(prefixStr + ".connName");
 
 			// config
-			String config = conf.getPropertyRaw(prefixStr+".config");
+			String config = conf.getPropertyRaw(prefixStr + ".config");
 
 			// Read parameters
 			ArrayList<LinkedHashSet<String>> params = new ArrayList<LinkedHashSet<String>>();
 			for (int p=1; true; p++)
 			{
-				String param = conf.getPropertyRaw(prefixStr+".param."+p);
+				String param = conf.getPropertyRaw(prefixStr + ".param." + p);
 				if (param == null)
 					break;
 				else
@@ -271,12 +271,12 @@ public class TablePopupFactory
 			// Check that we got everything we needed
 			if (menuItemName == null)
 			{
-				_logger.warn("Missing property '"+prefixStr+".name'");
+				_logger.warn("Missing property '" + prefixStr + ".name'");
 				continue;
 			}
 			if (classname == null)
 			{
-				_logger.warn("Missing property '"+prefixStr+".classname'");
+				_logger.warn("Missing property '" + prefixStr + ".classname'");
 				continue;
 			}
 
@@ -284,7 +284,7 @@ public class TablePopupFactory
 			{
 				if (config == null)
 				{
-					_logger.warn("Missing property '"+prefixStr+".config', where SQL statement to SQLWindow should be specified.");
+					_logger.warn("Missing property '" + prefixStr + ".config', where SQL statement to SQLWindow should be specified.");
 					continue;
 				}
 			}
@@ -342,10 +342,10 @@ public class TablePopupFactory
 		@Override 
 		public void popupMenuWillBecomeVisible(PopupMenuEvent e)
 		{
-			_logger.trace("popupMenuWillBecomeVisible(), source="+e.getSource());
+			_logger.trace("popupMenuWillBecomeVisible(), source=" + e.getSource());
 			JPopupMenu pop = (JPopupMenu)e.getSource();
 			Component invokerComp = pop.getInvoker();
-			_logger.trace("getInvoker(): "+invokerComp);
+			_logger.trace("getInvoker(): " + invokerComp);
 			if ( ! (invokerComp instanceof JTable) )
 			{
 				_logger.debug("It needs to be a instance of JTable.");
@@ -402,7 +402,7 @@ public class TablePopupFactory
 						if (al[a] instanceof TablePopupAction)
 						{
 							TablePopupAction pa = (TablePopupAction)al[a];
-							_logger.trace("ActionListener["+a+"] is PopupActions, which has pa._params.size()="+pa.getParamCount());
+							_logger.trace("ActionListener[" + a + "] is PopupActions, which has pa._params.size()=" + pa.getParamCount());
 	
 							// Loop all Parameters in the PopupActions
 							int foundColumns = 0;

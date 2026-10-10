@@ -266,7 +266,7 @@ public class CheckDialog
 		if (_logger.isDebugEnabled())
 		{
 			String lastShowDateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(lastShowDate));
-			_logger.debug("Last show date for CheckForUpdate Dialog was '"+lastShowDateStr+"', Saved 'CheckDialog.doNotShowOnFailure' was '"+doNotShowOnFailure+"', msSinceLastShow="+msSinceLastShow+"("+TimeUtils.msToTimeStr(msSinceLastShow)+"), showTimeLimit="+showTimeLimit+"("+TimeUtils.msToTimeStr(showTimeLimit)+").");
+			_logger.debug("Last show date for CheckForUpdate Dialog was '" + lastShowDateStr + "', Saved 'CheckDialog.doNotShowOnFailure' was '" + doNotShowOnFailure + "', msSinceLastShow=" + msSinceLastShow + "(" + TimeUtils.msToTimeStr(msSinceLastShow) + "), showTimeLimit=" + showTimeLimit + "(" + TimeUtils.msToTimeStr(showTimeLimit) + ").");
 		}
 
 		if (msSinceLastShow > showTimeLimit)
@@ -282,7 +282,7 @@ public class CheckDialog
 
 		if (cfu != null && cfu.hasFeedback() && doNotShowFeedback)
 		{
-			_logger.debug("This feedback date was '"+cfu.getFeedbackTime()+"', Saved 'CheckDialog.lastFeebackDate' was '"+lastFeedbackDate+"', doNotShowFeedback="+doNotShowFeedback+".");
+			_logger.debug("This feedback date was '" + cfu.getFeedbackTime() + "', Saved 'CheckDialog.lastFeebackDate' was '" + lastFeedbackDate + "', doNotShowFeedback=" + doNotShowFeedback + ".");
 			// Do not show if: savedFeedbackDate  
 			if ( cfu.getFeedbackTime() > lastFeedbackDate)
 			{
@@ -299,7 +299,7 @@ public class CheckDialog
 
 		if (cfu != null && cfu.isResponseOfHtml() && doNotShowHtmlResponse)
 		{
-			_logger.debug("CheckDialog.doNotShowHtmlResponse="+doNotShowHtmlResponse+", so NOT showing the window, simply returning.");
+			_logger.debug("CheckDialog.doNotShowHtmlResponse=" + doNotShowHtmlResponse + ", so NOT showing the window, simply returning.");
 			return;
 		}
 		
@@ -404,7 +404,7 @@ public class CheckDialog
 				conf.setProperty("CheckDialog.launchBrowserOnHtmlResponse", _launchBrowserOnHtmlResponse_chk.isSelected());
 
 				boolean launchBrowserOnHtmlResponse = _launchBrowserOnHtmlResponse_chk.isSelected();
-				_logger.info("Launch OS Browser on HTML Response was set to '"+launchBrowserOnHtmlResponse+"'.");
+				_logger.info("Launch OS Browser on HTML Response was set to '" + launchBrowserOnHtmlResponse + "'.");
 
 				if (launchBrowserOnHtmlResponse)
 					openHtmlResponseStringInOsBrowser();
@@ -423,8 +423,8 @@ public class CheckDialog
 		if (HyperlinkEvent.EventType.ACTIVATED.equals(hle.getEventType())) 
 		{  
 			URL    url    = hle.getURL();
-			String urlStr = ""+hle.getURL();
-			_logger.info("You clicked on '"+urlStr+"'. On Windows systems a mail client or http browser will be opened.");  
+			String urlStr = "" + hle.getURL();
+			_logger.info("You clicked on '" + urlStr + "'. On Windows systems a mail client or http browser will be opened.");  
 
 			//Desktop.getDesktop().mail(someURI);
 //			if ( System.getProperty("os.name").startsWith("Windows"))
@@ -433,7 +433,7 @@ public class CheckDialog
 				if (urlStr.startsWith("file:/"))
 					urlStr = urlStr.substring("file:/".length());
 
-				String oscmd = "cmd.exe /c start "+urlStr;
+				String oscmd = "cmd.exe /c start " + urlStr;
 				try
 				{
 					Runtime rt = Runtime.getRuntime();
@@ -441,7 +441,7 @@ public class CheckDialog
 				}
 				catch (Exception e)
 				{
-					SwingUtils.showErrorMessage("Problems executing command", "Problems when executing a Windows command to start '"+oscmd+"'.", e);
+					SwingUtils.showErrorMessage("Problems executing command", "Problems when executing a Windows command to start '" + oscmd + "'.", e);
 				}
 			}
 		}
@@ -456,7 +456,7 @@ public class CheckDialog
 		try 
 		{
 			// Create temp file.
-			final File tempFile = File.createTempFile(Version.getAppName()+"_CheckForUpdate_", ".html");
+			final File tempFile = File.createTempFile(Version.getAppName() + "_CheckForUpdate_", ".html");
 
 			_logger.info("Writing the HTML response into " + tempFile.toURI());
 
@@ -478,7 +478,7 @@ public class CheckDialog
 						@Override
 						public void run()
 						{
-							_logger.info("Opening OS browser to view content of: "+tempFile.toURI());
+							_logger.info("Opening OS browser to view content of: " + tempFile.toURI());
 							try { desktop.browse(tempFile.toURI()); }
 							catch (IOException ex) { ex.printStackTrace(); }
 						}
@@ -563,9 +563,9 @@ public class CheckDialog
 			if (_cfu.hasUpgrade())
 			{
 				msg   = "<b><center>New Upgrade is Available</center></b><br><br>" +
-						"Latest version is "+_cfu.getNewAppVersionStr()+"<br><br>" +
+						"Latest version is " + _cfu.getNewAppVersionStr() + "<br><br>" +
 						"And can be downloaded:<br>" +
-						"<A HREF=\""+_cfu.getDownloadUrl()+"\">"+_cfu.getDownloadUrl()+"</A>";
+						"<A HREF=\"" + _cfu.getDownloadUrl() + "\">" + _cfu.getDownloadUrl() + "</A>";
 
 				showWhatsNew = true;
 			}
@@ -599,14 +599,14 @@ public class CheckDialog
 			         "<li>You do <b>not</b> have Internet access from this machine.</li>" +
 			         "<li>You sit behind a Proxy server.</li>" +
 //			         "<li>Or simply because <A HREF=\""+CheckForUpdates.ASETUNE_HOME_URL+"\">"+CheckForUpdates.ASETUNE_HOME_URL+"</A> is down for the moment.</li>" +
-			         "<li>Or simply because <A HREF=\""+CheckForUpdates.getInstance().getHomeUrl()+"\">"+CheckForUpdates.getInstance().getHomeUrl()+"</A> is down for the moment.</li>" +
+			         "<li>Or simply because <A HREF=\"" + CheckForUpdates.getInstance().getHomeUrl() + "\">" + CheckForUpdates.getInstance().getHomeUrl() + "</A> is down for the moment.</li>" +
 			      "</ul>" +
 			      "<br>" +
 			      "<HR size=\"1\">" +
 			      "If you do not have Internet access from this machine,<br>" +
 			      "please do manual checks for new releases at:<br>" +
 //			      "<A HREF=\""+CheckForUpdates.ASETUNE_HOME_URL+"\">"+CheckForUpdates.ASETUNE_HOME_URL+"</A><br>" +
-			      "<A HREF=\""+CheckForUpdates.getInstance().getHomeUrl()+"\">"+CheckForUpdates.getInstance().getHomeUrl()+"</A><br>" +
+			      "<A HREF=\"" + CheckForUpdates.getInstance().getHomeUrl() + "\">" + CheckForUpdates.getInstance().getHomeUrl() + "</A><br>" +
 			      "<br>" +
 			      "<HR size=\"1\">" +
 			      "If you normally have Internet access from this machine<br>" +
@@ -664,7 +664,7 @@ public class CheckDialog
 			String whatsNewUrl = _cfu.getWhatsNewUrl();//default is: "http://www.dbxtune.com/history.html";
 			try
 			{
-				_logger.info(Version.getAppName()+" What's new page is '"+whatsNewUrl+"'.");
+				_logger.info(Version.getAppName() + " What's new page is '" + whatsNewUrl + "'.");
 				JEditorPane whatsNew   = new JEditorPane(new URL(whatsNewUrl));
 				whatsNew.setEditable(false);
 				//whatsNew.setOpaque(false);  
@@ -677,7 +677,7 @@ public class CheckDialog
 			}
 			catch (Exception e)
 			{
-				_logger.warn("Problems opening What's new page '"+whatsNewUrl+"'. Caught: "+e.getMessage());
+				_logger.warn("Problems opening What's new page '" + whatsNewUrl + "'. Caught: " + e.getMessage());
 			}
 		}
 
@@ -686,7 +686,7 @@ public class CheckDialog
 			String feedbackUrl = _cfu.getFeedbackUrl();
 			try
 			{
-				_logger.info(Version.getAppName()+" feedback page is '"+feedbackUrl+"'.");
+				_logger.info(Version.getAppName() + " feedback page is '" + feedbackUrl + "'.");
 				JEditorPane feedbackPane   = new JEditorPane(new URL(feedbackUrl));
 				feedbackPane.setEditable(false);
 				//feedbackPane.setOpaque(false);  
@@ -699,7 +699,7 @@ public class CheckDialog
 			}
 			catch (Exception e)
 			{
-				_logger.warn("Problems opening feedback page '"+feedbackUrl+"'. Caught: "+e.getMessage());
+				_logger.warn("Problems opening feedback page '" + feedbackUrl + "'. Caught: " + e.getMessage());
 			}
 		}
 
@@ -710,11 +710,11 @@ public class CheckDialog
 //			htmlResponseString = htmlResponseString.replaceFirst("<!DOCTYPE((.|\n|\r)*?)\">", "");
 //			htmlResponseString = htmlResponseString.replaceFirst("<!doctype((.|\n|\r)*?)\">", "");
 
-			_logger.info(Version.getAppName()+" HTML Response String was '"+htmlResponseString+"'.");
+			_logger.info(Version.getAppName() + " HTML Response String was '" + htmlResponseString + "'.");
 			JEditorPane htmlResponsePane   = new JEditorPane("text/html", htmlResponseString);
 			if (htmlResponsePane.getDocument().getLength() == 0)
 			{
-				_logger.info(Version.getAppName()+" HTML Response String did not work with the JEditorPane(\"text/html\", 'responseStr') so reverting back to JEditorPane(\"text/plain\", 'responseStr').");
+				_logger.info(Version.getAppName() + " HTML Response String did not work with the JEditorPane(\"text/html\", 'responseStr') so reverting back to JEditorPane(\"text/plain\", 'responseStr').");
 				htmlResponsePane = new JEditorPane("text/plain", htmlResponseString);
 			}
 			feedback.setEditable(false);

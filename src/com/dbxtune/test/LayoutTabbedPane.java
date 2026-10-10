@@ -280,7 +280,7 @@ extends JFrame
 				try
 				{
 					UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-					System.out.println("Using Look And Feel named '"+UIManager.getLookAndFeel().getName()+"', classname='"+UIManager.getLookAndFeel().getClass().getName()+"', toString='"+UIManager.getLookAndFeel()+"'.");
+					System.out.println("Using Look And Feel named '" + UIManager.getLookAndFeel().getName() + "', classname='" + UIManager.getLookAndFeel().getClass().getName() + "', toString='" + UIManager.getLookAndFeel() + "'.");
 				}
 				catch (Exception e)
 				{

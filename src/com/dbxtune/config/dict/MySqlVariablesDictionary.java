@@ -86,14 +86,14 @@ public class MySqlVariablesDictionary
 			return rec._description;
 
 		// Compose an empty one
-		return "<html><code>"+waitName+"</code> not found in dictionary.</html>";
+		return "<html><code>" + waitName + "</code> not found in dictionary.</html>";
 	}
 
 
 	private void set(DescriptionRecord rec)
 	{
 		if ( _descriptionMap.containsKey(rec._key))
-			System.out.println("Key '"+rec._key+"' already exists. It will be overwritten.");
+			System.out.println("Key '" + rec._key + "' already exists. It will be overwritten.");
 
 		_descriptionMap.put(rec._key, rec);
 	}

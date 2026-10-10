@@ -86,18 +86,18 @@ implements ToolTipSupplier, ToolTipHyperlinkResolver
 		
 		try
 		{
-			_logger.info("Installing ToolTip Provider for '"+getName()+"'.");
+			_logger.info("Installing ToolTip Provider for '" + getName() + "'.");
 
 			setEntryList(load());
 			if (getEntryList() != null)
-				_logger.info("Loaded "+_ttpEntryList.size()+" entries into the ToolTip Provider '"+getName()+"'.");
+				_logger.info("Loaded " + _ttpEntryList.size() + " entries into the ToolTip Provider '" + getName() + "'.");
 			else
-				_logger.info("NO entries were loaded into the ToolTip Provider '"+getName()+"'.");
+				_logger.info("NO entries were loaded into the ToolTip Provider '" + getName() + "'.");
 		}
 		catch (Exception e)
 		{
-			_logger.warn ("Problems loading entries into the ToolTip Provider '"+getName()+"'. Caught: "+e);
-			_logger.debug("Problems loading entries into the ToolTip Provider '"+getName()+"'. Caught: "+e, e);
+			_logger.warn ("Problems loading entries into the ToolTip Provider '" + getName() + "'. Caught: " + e);
+			_logger.debug("Problems loading entries into the ToolTip Provider '" + getName() + "'. Caught: " + e, e);
 		}
 	}
 
@@ -139,12 +139,12 @@ implements ToolTipSupplier, ToolTipHyperlinkResolver
 		{
 			_logger.debug("");
 			_logger.debug("##################################################################################");
-			_logger.debug("hyperlinkResolv(): event.getDescription()  ="+event.getDescription());
-			_logger.debug("hyperlinkResolv(): event.getURL()          ="+event.getURL());
-			_logger.debug("hyperlinkResolv(): event.getEventType()    ="+event.getEventType());
-			_logger.debug("hyperlinkResolv(): event.getSourceElement()="+event.getSourceElement());
-			_logger.debug("hyperlinkResolv(): event.getSource()       ="+event.getSource());
-			_logger.debug("hyperlinkResolv(): event.toString()        ="+event.toString());
+			_logger.debug("hyperlinkResolv(): event.getDescription()  =" + event.getDescription());
+			_logger.debug("hyperlinkResolv(): event.getURL()          =" + event.getURL());
+			_logger.debug("hyperlinkResolv(): event.getEventType()    =" + event.getEventType());
+			_logger.debug("hyperlinkResolv(): event.getSourceElement()=" + event.getSourceElement());
+			_logger.debug("hyperlinkResolv(): event.getSource()       =" + event.getSource());
+			_logger.debug("hyperlinkResolv(): event.toString()        =" + event.toString());
 		}
 //System.out.println("");
 //System.out.println("##################################################################################");
@@ -172,7 +172,7 @@ implements ToolTipSupplier, ToolTipHyperlinkResolver
 			}
 			catch (MalformedURLException e)
 			{
-				_logger.warn("Problems open URL='"+urlStr+"', in external Browser.", e);
+				_logger.warn("Problems open URL='" + urlStr + "', in external Browser.", e);
 			}
 		}
 
@@ -286,7 +286,7 @@ implements ToolTipSupplier, ToolTipHyperlinkResolver
 						"<h3>Explanation: ToolTip Provider functionality</h3>" +
 						"When <i>hovering</i> over a text in the editor, the following happens.<br>" +
 						"<ul>" +
-						"  <li>Current word is sent to <b>"+getName()+" ToolTip Provider</b><br>" +
+						"  <li>Current word is sent to <b>" + getName() + " ToolTip Provider</b><br>" +
 						"      The ToolTip Provider will display: <i>explanation</i>, <code>syntax</code> or help text.<br>" +
 						"      If nothing is found, next bullet will be done.</li>" +
 						"  <li>Current word is sent to The <b>Code Completion Subsystem</b><br>" +
@@ -332,9 +332,9 @@ implements ToolTipSupplier, ToolTipHyperlinkResolver
 
 		try
 		{
-		    Pattern pattern = Pattern.compile(word+".*", Pattern.CASE_INSENSITIVE);
+		    Pattern pattern = Pattern.compile(word + ".*", Pattern.CASE_INSENSITIVE);
 			if (word.indexOf("*") >= 0) // if input has '*' change it to '.*' and add '.*' at the end. 
-				pattern = Pattern.compile(word.replace("*", ".*")+".*", Pattern.CASE_INSENSITIVE);
+				pattern = Pattern.compile(word.replace("*", ".*") + ".*", Pattern.CASE_INSENSITIVE);
 
 			StringBuilder sb = new StringBuilder();
 			int rows = 0;
@@ -367,7 +367,7 @@ implements ToolTipSupplier, ToolTipHyperlinkResolver
 		}
 		catch (PatternSyntaxException ex) 
 		{
-			_logger.debug("PatternSyntaxException for word '"+word+"'", ex);
+			_logger.debug("PatternSyntaxException for word '" + word + "'", ex);
 		}
 		return null;
 	}
@@ -436,9 +436,9 @@ implements ToolTipSupplier, ToolTipHyperlinkResolver
 //		return null;
 		try
 		{
-		    Pattern pattern = Pattern.compile(enteredText+".*", Pattern.CASE_INSENSITIVE);
+		    Pattern pattern = Pattern.compile(enteredText + ".*", Pattern.CASE_INSENSITIVE);
 			if (enteredText.indexOf("*") >= 0) // if input has '*' change it to '.*' and add '.*' at the end. 
-				pattern = Pattern.compile(enteredText.replace("*", ".*")+".*", Pattern.CASE_INSENSITIVE);
+				pattern = Pattern.compile(enteredText.replace("*", ".*") + ".*", Pattern.CASE_INSENSITIVE);
 
 			List<Completion> retList = new ArrayList<>();
 
@@ -455,7 +455,7 @@ implements ToolTipSupplier, ToolTipHyperlinkResolver
 		}
 		catch (PatternSyntaxException ex) 
 		{
-			_logger.debug("PatternSyntaxException for word '"+enteredText+"'", ex);
+			_logger.debug("PatternSyntaxException for word '" + enteredText + "'", ex);
 		}
 		return null;
 	}

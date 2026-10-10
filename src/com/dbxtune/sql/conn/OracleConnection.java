@@ -204,9 +204,9 @@ extends DbxConnection
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+			_logger.error("getTableExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex);
 			if (_logger.isDebugEnabled())
-				_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+				_logger.debug("getTableExtraInfo(): Problems executing sql '" + sql + "'. Caught=" + ex, ex);
 		}
 		
 		return extraInfo;
@@ -279,7 +279,7 @@ extends DbxConnection
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems when executing sql: "+sql, ex);
+			_logger.warn("Problems when executing sql: " + sql, ex);
 			return null;
 		}
 	}

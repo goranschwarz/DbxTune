@@ -59,7 +59,7 @@ extends HostMonitor
 			conn.connect();
 
 		if ( ! conn.isConnected() )
-			throw new Exception("Failed to connect to the remote host. conn="+conn);
+			throw new Exception("Failed to connect to the remote host. conn=" + conn);
 
 		String osname = conn.getOsName();
 		//System.out.println("OS Name: '"+osname+"'.");
@@ -92,7 +92,7 @@ extends HostMonitor
 		}					
 		else
 		{
-			throw new Exception("The OS Name '"+osname+"', is not supported by the module 'MonitorMeminfo' for the moment.");
+			throw new Exception("The OS Name '" + osname + "', is not supported by the module 'MonitorMeminfo' for the moment.");
 		}
 
 		mon.setConnection(conn);

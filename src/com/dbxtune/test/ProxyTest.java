@@ -74,7 +74,7 @@ public class ProxyTest
 		ProxySelector myProxySelector = proxySearch.getProxySelector();
 		                
 		ProxySelector.setDefault(myProxySelector);
-		System.out.println("Using proxy selector: "+myProxySelector);
+		System.out.println("Using proxy selector: " + myProxySelector);
 
 		//		String webAddress = "http://www.google.com";
 		String webAddress = "http://www.dbxtune.com";
@@ -88,7 +88,7 @@ public class ProxyTest
 				return;
 			}
 			System.out.println("Proxy Settings found using 'xxx' strategy.\n" +
-					"Proxy used for URL is: "+result.get(0));
+					"Proxy used for URL is: " + result.get(0));
 
 			
 			System.out.println("Now open a connection to the url: " + webAddress);
@@ -104,7 +104,7 @@ public class ProxyTest
 			String line;
 			while ((line = lr.readLine()) != null)
 			{
-				System.out.println("response line "+lr.getLineNumber()+": " + line);
+				System.out.println("response line " + lr.getLineNumber() + ": " + line);
 			}
 			System.out.println("---- END -------------------------------------");
 		}

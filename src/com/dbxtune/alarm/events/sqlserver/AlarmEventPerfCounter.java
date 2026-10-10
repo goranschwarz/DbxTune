@@ -52,7 +52,7 @@ extends AlarmEvent
 				warningText,
 				threshold);
 
-		setData("counterVal="+counterVal);
+		setData("counterVal=" + counterVal);
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);

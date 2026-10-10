@@ -182,7 +182,7 @@ extends UserDefinedChartAbstract
 				+ ( getRefresh() <= 0 ? "" : "&refresh=" + getRefresh() )
 				+ "&showKeys=false"
 				+ "&onlyLevelZero=false"
-				+ "&startTime="+_defaultStartTime;
+				+ "&startTime=" + _defaultStartTime;
 	}
 
 	@Override

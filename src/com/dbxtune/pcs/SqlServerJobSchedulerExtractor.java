@@ -969,7 +969,7 @@ extends DbmsExtractorAbstract
 			String srvName = "DUMMY";
 			int daysToCopy = 1;
 			
-			_logger.info("On PCS Database Rollover: Extracting 'Job Scheduler' information On server '" + srvName+ "'.");
+			_logger.info("On PCS Database Rollover: Extracting 'Job Scheduler' information On server '" + srvName + "'.");
 			try
 			{
 				SqlServerJobSchedulerExtractor extractor = new SqlServerJobSchedulerExtractor(daysToCopy, monConn, pcsConn);

@@ -44,7 +44,7 @@ extends AlarmEvent
 				null);
 
 		String errorNumStr = errorNumber <= 0 ? "" : "Error Number = " + errorNumber + ", ";
-		String desc = "Configuration resource '"+cfgName+"' is used up in server '" + cm.getServerName() + "', at '" + errorlogTs + "'. " + errorNumStr + "Error Message: " + errorMessage.trim();
+		String desc = "Configuration resource '" + cfgName + "' is used up in server '" + cm.getServerName() + "', at '" + errorlogTs + "'. " + errorNumStr + "Error Message: " + errorMessage.trim();
 		setDescription(desc);
 		
 		// Set: Time To Live if postpone is enabled

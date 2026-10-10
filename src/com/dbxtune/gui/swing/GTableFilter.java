@@ -688,7 +688,7 @@ extends JPanel
 			if (_logger.isDebugEnabled())
 			{
 				_logger.debug("-------------------------------------------------------------");
-				_logger.debug("FULL EXPR: "+expr);
+				_logger.debug("FULL EXPR: " + expr);
 			}
 
 			// Create a filter
@@ -781,12 +781,12 @@ extends JPanel
 
 		private void startAnd()
 		{
-			if (_logger.isDebugEnabled()) dp("> startAndOr(): _filterStack.size()="+_andOrStack.size());
+			if (_logger.isDebugEnabled()) dp("> startAndOr(): _filterStack.size()=" + _andOrStack.size());
 			_andOrStack.push(new AndFilter<TableModel, Integer>());
 		}
 		private void startOr()
 		{
-			if (_logger.isDebugEnabled()) dp("> startAndOr(): _filterStack.size()="+_andOrStack.size());
+			if (_logger.isDebugEnabled()) dp("> startAndOr(): _filterStack.size()=" + _andOrStack.size());
 			_andOrStack.push(new OrFilter<TableModel, Integer>());
 		}
 		private void closeAnd()
@@ -803,7 +803,7 @@ extends JPanel
 			else
 				lastLevel.addFilter(thisLevel);
 			
-			if (_logger.isDebugEnabled()) dp("< closeAndOr(): _andOrStack.size()="+_andOrStack.size() +", lastLevel.size()="+lastLevel.size());
+			if (_logger.isDebugEnabled()) dp("< closeAndOr(): _andOrStack.size()=" + _andOrStack.size() + ", lastLevel.size()=" + lastLevel.size());
 		}
 		private void closeOr()
 		{
@@ -859,10 +859,10 @@ extends JPanel
 		@Override public Object visit(OrExpression expr, Object context)
 		{
 			startOr();
-			if (_logger.isDebugEnabled()) in("OR-visitor(start): "+expr);
+			if (_logger.isDebugEnabled()) in("OR-visitor(start): " + expr);
 			expr.getLeftExpression().accept(this, context);
 			expr.getRightExpression().accept(this, context);
-			if (_logger.isDebugEnabled()) out("OR-visitor(end): "+expr);
+			if (_logger.isDebugEnabled()) out("OR-visitor(end): " + expr);
 			closeOr();
 			
 			return context;
@@ -874,10 +874,10 @@ extends JPanel
 		@Override public Object visit(AndExpression expr, Object context)
 		{ 
 			startAnd();
-			if (_logger.isDebugEnabled()) in("AND-visitor(start): "+expr);
+			if (_logger.isDebugEnabled()) in("AND-visitor(start): " + expr);
 			expr.getLeftExpression().accept(this, context);
 			expr.getRightExpression().accept(this, context);
-			if (_logger.isDebugEnabled()) out("AND-visitor(end): "+expr);
+			if (_logger.isDebugEnabled()) out("AND-visitor(end): " + expr);
 			closeAnd();
 			
 			return context;
@@ -888,10 +888,10 @@ extends JPanel
 		//-------------------------------------------------------
 		@Override public Object visit(EqualsTo expr, Object context)
 		{
-			if (_logger.isDebugEnabled()) in("---> EqualsTo-visitor: "+expr);
+			if (_logger.isDebugEnabled()) in("---> EqualsTo-visitor: " + expr);
 			expr.getLeftExpression().accept(this, context);
 			expr.getRightExpression().accept(this, context);
-			if (_logger.isDebugEnabled()) out("<--- EqualsTo-visitor: "+expr);
+			if (_logger.isDebugEnabled()) out("<--- EqualsTo-visitor: " + expr);
 			
 			addRowFilter(new RowFilterOpValue(RowFilterOpValue.FILTER_OP_EQ, _lastColIndex, _lastStrValue));
 			
@@ -903,10 +903,10 @@ extends JPanel
 		//-------------------------------------------------------
 		@Override public Object visit(NotEqualsTo expr, Object context)
 		{
-			if (_logger.isDebugEnabled()) in("---> NotEqualsTo-visitor: "+expr);
+			if (_logger.isDebugEnabled()) in("---> NotEqualsTo-visitor: " + expr);
 			expr.getLeftExpression().accept(this, context);
 			expr.getRightExpression().accept(this, context);
-			if (_logger.isDebugEnabled()) out("<--- NotEqualsTo-visitor: "+expr);
+			if (_logger.isDebugEnabled()) out("<--- NotEqualsTo-visitor: " + expr);
 			
 			addRowFilter(new RowFilterOpValue(RowFilterOpValue.FILTER_OP_NE, _lastColIndex, _lastStrValue));
 			
@@ -918,10 +918,10 @@ extends JPanel
 		//-------------------------------------------------------
 		@Override public Object visit(GreaterThan expr, Object context)
 		{
-			if (_logger.isDebugEnabled()) in("---> GreaterThan-visitor: "+expr);
+			if (_logger.isDebugEnabled()) in("---> GreaterThan-visitor: " + expr);
 			expr.getLeftExpression().accept(this, context);
 			expr.getRightExpression().accept(this, context);
-			if (_logger.isDebugEnabled()) out("<--- GreaterThan-visitor: "+expr);
+			if (_logger.isDebugEnabled()) out("<--- GreaterThan-visitor: " + expr);
 			
 			addRowFilter(new RowFilterOpValue(RowFilterOpValue.FILTER_OP_GT, _lastColIndex, _lastStrValue));
 			
@@ -933,10 +933,10 @@ extends JPanel
 		//-------------------------------------------------------
 		@Override public Object visit(GreaterThanEquals expr, Object context)
 		{
-			if (_logger.isDebugEnabled()) in("---> GreaterThanEquals-visitor: "+expr);
+			if (_logger.isDebugEnabled()) in("---> GreaterThanEquals-visitor: " + expr);
 			expr.getLeftExpression().accept(this, context);
 			expr.getRightExpression().accept(this, context);
-			if (_logger.isDebugEnabled()) out("<--- GreaterThanEquals-visitor: "+expr);
+			if (_logger.isDebugEnabled()) out("<--- GreaterThanEquals-visitor: " + expr);
 			
 			addRowFilter(new RowFilterOpValue(RowFilterOpValue.FILTER_OP_GT_OR_EQ, _lastColIndex, _lastStrValue));
 			
@@ -948,10 +948,10 @@ extends JPanel
 		//-------------------------------------------------------
 		@Override public Object visit(MinorThan expr, Object context)
 		{
-			if (_logger.isDebugEnabled()) in("---> MinorThan-visitor: "+expr);
+			if (_logger.isDebugEnabled()) in("---> MinorThan-visitor: " + expr);
 			expr.getLeftExpression().accept(this, context);
 			expr.getRightExpression().accept(this, context);
-			if (_logger.isDebugEnabled()) out("<--- MinorThan-visitor: "+expr);
+			if (_logger.isDebugEnabled()) out("<--- MinorThan-visitor: " + expr);
 			
 			addRowFilter(new RowFilterOpValue(RowFilterOpValue.FILTER_OP_LT, _lastColIndex, _lastStrValue));
 			
@@ -963,10 +963,10 @@ extends JPanel
 		//-------------------------------------------------------
 		@Override public Object visit(MinorThanEquals expr, Object context)
 		{
-			if (_logger.isDebugEnabled()) in("---> MinorThanEquals-visitor: "+expr);
+			if (_logger.isDebugEnabled()) in("---> MinorThanEquals-visitor: " + expr);
 			expr.getLeftExpression().accept(this, context);
 			expr.getRightExpression().accept(this, context);
-			if (_logger.isDebugEnabled()) out("<--- MinorThanEquals-visitor: "+expr);
+			if (_logger.isDebugEnabled()) out("<--- MinorThanEquals-visitor: " + expr);
 			
 			addRowFilter(new RowFilterOpValue(RowFilterOpValue.FILTER_OP_LT_OR_EQ, _lastColIndex, _lastStrValue));
 			
@@ -982,11 +982,11 @@ extends JPanel
 		//-------------------------------------------------------
 		@Override public Object visit(RegExpMatchOperator expr, Object context)
 		{
-			if (_logger.isDebugEnabled()) in("---> RegExpMatchOperator-visitor: "+expr);
+			if (_logger.isDebugEnabled()) in("---> RegExpMatchOperator-visitor: " + expr);
 			expr.getLeftExpression().accept(this, context);
 			expr.getRightExpression().accept(this, context);
 
-			if (_logger.isDebugEnabled()) out("<--- RegExpMatchOperator-visitor: "+expr);
+			if (_logger.isDebugEnabled()) out("<--- RegExpMatchOperator-visitor: " + expr);
 
 			switch (expr.getOperatorType())
 			{
@@ -1007,7 +1007,7 @@ extends JPanel
 				break;
 
 			default:
-				throw new FilterParserException("Operation 'RegExpMatchOperator' type '"+expr.getOperatorType()+"' not yet implemeted.");
+				throw new FilterParserException("Operation 'RegExpMatchOperator' type '" + expr.getOperatorType() + "' not yet implemeted.");
 			}
 //			addRowFilter(RowFilter.regexFilter(_lastStrValue, _lastColIndex));
 //			addRowFilter(RowFilters.regexFilter(Pattern.CASE_INSENSITIVE, _lastStrValue));
@@ -1020,10 +1020,10 @@ extends JPanel
 		//-------------------------------------------------------
 		@Override public Object visit(LikeExpression expr, Object context)
 		{
-			if (_logger.isDebugEnabled()) in("---> LikeExpression-visitor: "+expr);
+			if (_logger.isDebugEnabled()) in("---> LikeExpression-visitor: " + expr);
 			expr.getLeftExpression().accept(this, context);
 			expr.getRightExpression().accept(this, context);
-			if (_logger.isDebugEnabled()) out("<--- LikeExpression-visitor: "+expr);
+			if (_logger.isDebugEnabled()) out("<--- LikeExpression-visitor: " + expr);
 
 			String likeStr = _lastStrValue.replace("_", ".").replace("%", ".*");
 			likeStr = "^" + likeStr + "$";
@@ -1139,7 +1139,7 @@ extends JPanel
 			// Collect values from the IN list
 //			final ArrayList<String> inListValues = new ArrayList<String>();
 
-			if (_logger.isDebugEnabled()) in("---> InExpression-visitor: "+expr);
+			if (_logger.isDebugEnabled()) in("---> InExpression-visitor: " + expr);
 
 //System.out.println(":::::::::: leftExpression='"+expr.getLeftExpression().getClass().getSimpleName()+"', toStr='"+expr.getLeftExpression()+"'.");
 			// Handle left expression
@@ -1171,31 +1171,31 @@ extends JPanel
 					inListValues.add(val);
 				}
 
-				if (_logger.isDebugEnabled()) in("<--- InExpression-visitor: "+expr);
+				if (_logger.isDebugEnabled()) in("<--- InExpression-visitor: " + expr);
 
 				// Build the filter based on NOT or regular IN
 				if (expr.isNot())
 				{
 					startAnd();
-					if (_logger.isDebugEnabled()) in("---> Simulate-AND-InExpression-visitor(start): "+expr);
+					if (_logger.isDebugEnabled()) in("---> Simulate-AND-InExpression-visitor(start): " + expr);
 					for (String str : inListValues)
 					{
 						addRowFilter(new RowFilterOpValue(RowFilterOpValue.FILTER_OP_NE, _lastColIndex, str));
-						if (_logger.isDebugEnabled()) dp("     add or value: FILTER_OP_NE, colId="+_lastColIndex+", str=|"+str+"|.");
+						if (_logger.isDebugEnabled()) dp("     add or value: FILTER_OP_NE, colId=" + _lastColIndex + ", str=|" + str + "|.");
 					}
-					if (_logger.isDebugEnabled()) out("<--- Simulate-AND-InExpression-visitor(out): "+expr);
+					if (_logger.isDebugEnabled()) out("<--- Simulate-AND-InExpression-visitor(out): " + expr);
 					closeAnd();
 				}
 				else
 				{
 					startOr();
-					if (_logger.isDebugEnabled()) in("---> Simulate-OR-InExpression-visitor(start): "+expr);
+					if (_logger.isDebugEnabled()) in("---> Simulate-OR-InExpression-visitor(start): " + expr);
 					for (String str : inListValues)
 					{
 						addRowFilter(new RowFilterOpValue(RowFilterOpValue.FILTER_OP_EQ, _lastColIndex, str));
-						if (_logger.isDebugEnabled()) dp("     add or value: FILTER_OP_EQ, colId="+_lastColIndex+", str=|"+str+"|.");
+						if (_logger.isDebugEnabled()) dp("     add or value: FILTER_OP_EQ, colId=" + _lastColIndex + ", str=|" + str + "|.");
 					}
-					if (_logger.isDebugEnabled()) out("<--- Simulate-OR-InExpression-visitor(out): "+expr);
+					if (_logger.isDebugEnabled()) out("<--- Simulate-OR-InExpression-visitor(out): " + expr);
 					closeOr();
 				}
 			}
@@ -1265,9 +1265,9 @@ extends JPanel
 		@Override public Object visit(ExpressionList expr, Object context) 
 		{ 
 //			System.out.println("Operation 'ExpressionList' WAS CALLED... What to do in here???. expr=" + expr);
-			if (_logger.isDebugEnabled()) in("---> ExpressionList-visitor: "+expr);
+			if (_logger.isDebugEnabled()) in("---> ExpressionList-visitor: " + expr);
 			if (_logger.isDebugEnabled()) dp("     ExpressionList: expr=" + expr);
-			if (_logger.isDebugEnabled()) out("<--- ExpressionList-visitor: "+expr);
+			if (_logger.isDebugEnabled()) out("<--- ExpressionList-visitor: " + expr);
 			return context;
 		}
 
@@ -1277,9 +1277,9 @@ extends JPanel
 		@Override public Object visit(IsNullExpression expr, Object context)
 		{
 //			throw new FilterParserException("Operation 'IsNullExpression' not yet implemeted."); 
-			if (_logger.isDebugEnabled()) in("---> IsNullExpression-visitor: "+expr);
+			if (_logger.isDebugEnabled()) in("---> IsNullExpression-visitor: " + expr);
 			expr.getLeftExpression().accept(this);
-			if (_logger.isDebugEnabled()) out("<--- IsNullExpression-visitor: "+expr);
+			if (_logger.isDebugEnabled()) out("<--- IsNullExpression-visitor: " + expr);
 
 			if (expr.isNot())
 				addRowFilter(RowFilter.notFilter(new RowFilterOpValue(RowFilterOpValue.FILTER_OP_IS_NULL, _lastColIndex, null)));
@@ -1294,7 +1294,7 @@ extends JPanel
 		//-------------------------------------------------------
 		@Override public Object visit(Between expr, Object context)
 		{
-			if (_logger.isDebugEnabled()) in("---> Between-visitor: "+expr);
+			if (_logger.isDebugEnabled()) in("---> Between-visitor: " + expr);
 			
 			startAnd();
 
@@ -1308,7 +1308,7 @@ extends JPanel
 
 			closeAnd( expr.isNot() );
 
-			if (_logger.isDebugEnabled()) out("<--- Between-visitor: "+expr);
+			if (_logger.isDebugEnabled()) out("<--- Between-visitor: " + expr);
 			
 //			throw new FilterParserException("Operation 'Between' not yet implemeted.");			
 			
@@ -1320,8 +1320,8 @@ extends JPanel
 		//-------------------------------------------------------
 		@Override public Object visit(Column expr, Object context)
 		{
-			if (_logger.isDebugEnabled()) dp("Column-visitor: "+expr);
-			if (_logger.isDebugEnabled()) dp("   getFullyQualifiedName: "+expr.getFullyQualifiedName());
+			if (_logger.isDebugEnabled()) dp("Column-visitor: " + expr);
+			if (_logger.isDebugEnabled()) dp("   getFullyQualifiedName: " + expr.getFullyQualifiedName());
 			
 			// Get around the fact the JSsqlParser sees a quoted string as a quoted-identifier. 
 			// Meaning: name="value" will see |"value"| as a column name... so if it starts/end with quote, just strip it of and put it as a string value.
@@ -1340,7 +1340,7 @@ extends JPanel
 
 				int colIndex = _tm.findColumn(key);
 				if (colIndex < 0)
-					throw new FilterParserException("Column '"+key+"', can't be found in the table.");
+					throw new FilterParserException("Column '" + key + "', can't be found in the table.");
 				_lastColIndex = colIndex;
 //				_lastColName  = key;
 			}
@@ -1353,8 +1353,8 @@ extends JPanel
 		//-------------------------------------------------------
 		@Override public Object visit(StringValue expr, Object context)
 		{
-			if (_logger.isDebugEnabled()) dp("StringValue-visitor: "+expr);
-			if (_logger.isDebugEnabled()) dp("   getValue: "+expr.getValue());
+			if (_logger.isDebugEnabled()) dp("StringValue-visitor: " + expr);
+			if (_logger.isDebugEnabled()) dp("   getValue: " + expr.getValue());
 			_lastStrValue = expr.getValue();
 //			_lastNumValue = null;
 			
@@ -1370,8 +1370,8 @@ extends JPanel
 		//-------------------------------------------------------
 		@Override public Object visit(LongValue expr, Object context)
 		{
-			if (_logger.isDebugEnabled()) dp("LongValue-visitor: "+expr);
-			if (_logger.isDebugEnabled()) dp("   getValue: "+expr.getValue());
+			if (_logger.isDebugEnabled()) dp("LongValue-visitor: " + expr);
+			if (_logger.isDebugEnabled()) dp("   getValue: " + expr.getValue());
 			_lastStrValue = null;
 			_lastStrValue = expr.getStringValue();
 //			_lastNumValue = expr.getValue();
@@ -1384,10 +1384,10 @@ extends JPanel
 		//-------------------------------------------------------
 		@Override public Object visit(DoubleValue expr, Object context)
 		{
-			if (_logger.isDebugEnabled()) dp("DoubleValue-visitor: "+expr);
-			if (_logger.isDebugEnabled()) dp("   getValue: "+expr.getValue());
+			if (_logger.isDebugEnabled()) dp("DoubleValue-visitor: " + expr);
+			if (_logger.isDebugEnabled()) dp("   getValue: " + expr.getValue());
 			_lastStrValue = null;
-			_lastStrValue = expr.getValue()+"";
+			_lastStrValue = expr.getValue() + "";
 //			_lastNumValue = expr.getValue();
 			
 			return context;
@@ -1398,9 +1398,9 @@ extends JPanel
 		//-------------------------------------------------------
 		@Override public Object visit(SignedExpression expr, Object context)
 		{
-			if (_logger.isDebugEnabled()) dp("SignedExpression-visitor: "+expr);
-			if (_logger.isDebugEnabled()) dp("   getSign:       "+expr.getSign());
-			if (_logger.isDebugEnabled()) dp("   getExpression: "+expr.getExpression());
+			if (_logger.isDebugEnabled()) dp("SignedExpression-visitor: " + expr);
+			if (_logger.isDebugEnabled()) dp("   getSign:       " + expr.getSign());
+			if (_logger.isDebugEnabled()) dp("   getExpression: " + expr.getExpression());
 			
 			// NOTE: This is a clumsy way to solve this... but I don't understand how to fix it in a better way...
 			if ('+' == expr.getSign())
@@ -1611,7 +1611,7 @@ extends JPanel
 		@Override
 		public String toString()
 		{
-			return super.toString()+": size="+filters.size()+", filters="+filters;
+			return super.toString() + ": size=" + filters.size() + ", filters=" + filters;
 		}
 
 		@Override
@@ -1701,7 +1701,7 @@ extends JPanel
 		@Override
 		public String toString()
 		{
-			return super.toString()+": "+opToName()+" (colId="+_colId+", val='"+_filterVal+"')";
+			return super.toString() + ": " + opToName() + " (colId=" + _colId + ", val='" + _filterVal + "')";
 		}
 
 		//---------------------------------------------------------------
@@ -1843,7 +1843,7 @@ extends JPanel
 					// Problems creating a object...
 					// So lets go to some fall back... probably a string...
 					//e.printStackTrace();
-					_logger.info("Problems create a Number of the string '"+_filterVal+"' for filtering, TableCellValueClassName='"+className+"'. using String matching instead. Caught: "+t);
+					_logger.info("Problems create a Number of the string '" + _filterVal + "' for filtering, TableCellValueClassName='" + className + "'. using String matching instead. Caught: " + t);
 					_filterObj = _filterVal;
 				}
 			}
@@ -1851,9 +1851,9 @@ extends JPanel
 			// Check how runtime compare are done, print the filter, and the value we are comparing against...
 			if (_logger.isTraceEnabled())
 			{
-				_logger.trace("showInView(): "+getClass().getSimpleName()+"@"+Integer.toHexString(hashCode())+" - "+opToName()+" - "
-					+ "filter=(colId="+_colId+", strVal='"+_filterVal+"', objVal="+_filterObj+", objClass='"+(_filterObj==null?"null":_filterObj.getClass().getName())+"'), "
-					+ "cell(id="+entry.getIdentifier()+", val='"+cellValue+"', class='"+(cellValue==null?"null":cellValue.getClass().getName())+"'.");
+				_logger.trace("showInView(): " + getClass().getSimpleName() + "@" + Integer.toHexString(hashCode()) + " - " + opToName() + " - "
+					+ "filter=(colId=" + _colId + ", strVal='" + _filterVal + "', objVal=" + _filterObj + ", objClass='" + (_filterObj==null?"null":_filterObj.getClass().getName()) + "'), "
+					+ "cell(id=" + entry.getIdentifier() + ", val='" + cellValue + "', class='" + (cellValue==null?"null":cellValue.getClass().getName()) + "'.");
 			}
 
 			// If String, go and do reqexp

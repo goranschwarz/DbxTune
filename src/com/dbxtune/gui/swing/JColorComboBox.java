@@ -395,7 +395,7 @@ public final class JColorComboBox
 	@Override
 	public void setSelectedItem(Object color)
 	{
-		System.out.println("JColorComboBox.setSelectedItem(Object): color.getClass='"+color.getClass().getName()+"', color.toString='"+color+"'.");
+		System.out.println("JColorComboBox.setSelectedItem(Object): color.getClass='" + color.getClass().getName() + "', color.toString='" + color + "'.");
 		if (color instanceof Pair)
 		{
 			super.setSelectedItem(color);

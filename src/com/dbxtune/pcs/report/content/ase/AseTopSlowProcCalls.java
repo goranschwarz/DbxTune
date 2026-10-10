@@ -137,7 +137,7 @@ public class AseTopSlowProcCalls extends AseAbstract
 	@Override
 	public String getSubject()
 	{
-		return "Top [SQL Captured] SLOW Procedure Calls (order by: CpuTime__sum,  origin: monSysStatement) [with gt: execTime="+_statement_gt_execTime+", logicalReads="+_statement_gt_logicalReads+", physicalReads="+_statement_gt_physicalReads+"]";
+		return "Top [SQL Captured] SLOW Procedure Calls (order by: CpuTime__sum,  origin: monSysStatement) [with gt: execTime=" + _statement_gt_execTime + ", logicalReads=" + _statement_gt_logicalReads + ", physicalReads=" + _statement_gt_physicalReads + "]";
 	}
 
 	@Override
@@ -174,7 +174,7 @@ public class AseTopSlowProcCalls extends AseAbstract
 		rstm.setDescription(
 				"Top [SQL Captured] Slow Procedure/LineNumber are presented here (this means at a 'LineNumber' level for Stored Procedures) (ordered by: CpuTime__sum) <br>" +
 				"<br>" +
-				"Thresholds: with GreaterThan: execTime="+_statement_gt_execTime+", logicalReads="+_statement_gt_logicalReads+", physicalReads="+_statement_gt_physicalReads+"<br>" +
+				"Thresholds: with GreaterThan: execTime=" + _statement_gt_execTime + ", logicalReads=" + _statement_gt_logicalReads + ", physicalReads=" + _statement_gt_physicalReads + "<br>" +
 				"Thresholds: having CpuTime__sum &gt;= 1000<br>" +
 				"<br>" +
 				"ASE Source table is 'master.dbo.monSysStatement', which is a <i>ring buffer</i>, if the buffer is small, then we will be missing entries. <br>" +

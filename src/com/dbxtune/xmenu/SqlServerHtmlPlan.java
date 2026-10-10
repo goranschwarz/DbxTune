@@ -114,7 +114,7 @@ extends XmenuActionBase
 		}
 		catch (SQLException e)
 		{
-			JOptionPane.showMessageDialog(null, "Executing 'SqlServerUtils.getXmlQueryPlan()'. Found the following error:\n."+e, "Error", JOptionPane.ERROR_MESSAGE);
+			JOptionPane.showMessageDialog(null, "Executing 'SqlServerUtils.getXmlQueryPlan()'. Found the following error:\n." + e, "Error", JOptionPane.ERROR_MESSAGE);
 		}
 		return query_plan;
 	}

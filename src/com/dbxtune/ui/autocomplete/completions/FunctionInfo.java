@@ -66,8 +66,8 @@ implements Serializable
 		{
 if (existingCi._colName == null || ci._colName == null)
 {
-	System.out.println("existingCi=|"+existingCi+"|.");
-	System.out.println("        ci=|"+ci+"|.");
+	System.out.println("existingCi=|" + existingCi + "|.");
+	System.out.println("        ci=|" + ci + "|.");
 	System.out.println("");
 }
 			if (existingCi._colName.equals(ci._colName))
@@ -121,14 +121,14 @@ if (existingCi._colName == null || ci._colName == null)
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Problems looking up Column MetaData for cat='"+_funcCat+"', schema='"+_funcSchema+"', function='"+_funcName+"'. using 'dbmd.getFunctionColumns()' Caught: "+e);
+			_logger.warn("Problems looking up Column MetaData for cat='" + _funcCat + "', schema='" + _funcSchema + "', function='" + _funcName + "'. using 'dbmd.getFunctionColumns()' Caught: " + e);
 		}
 	}
 
 	@Override
 	public String toString()
 	{
-		return super.toString() + ": cat='"+_funcCat+"', schema='"+_funcSchema+"', name='"+_funcName+"', type='"+_funcType+"', remark='"+_funcRemark+"'";
+		return super.toString() + ": cat='" + _funcCat + "', schema='" + _funcSchema + "', name='" + _funcName + "', type='" + _funcType + "', remark='" + _funcRemark + "'";
 	}
 	public String toHtmlString()
 	{
@@ -184,7 +184,7 @@ if (existingCi._colName == null || ci._colName == null)
 			}
 		}
 		if (ci == null)
-			return "Column name '"+colname+"', was not found in table '"+_funcName+"'.";
+			return "Column name '" + colname + "', was not found in table '" + _funcName + "'.";
 
 		StringBuilder sb = new StringBuilder();
 		sb.append(_funcSchema).append(".<B>").append(_funcName).append(".").append(ci._colName).append("</B> - <font color='blue'>").append(_funcType).append(" - COLUMN").append("</font>");
@@ -224,7 +224,7 @@ if (existingCi._colName == null || ci._colName == null)
 	{
 		FunctionColumnInfo ci = getColumnInfo(colname);
 		if (ci == null)
-			return "Column name '"+colname+"', was not found in table '"+_funcName+"'.";
+			return "Column name '" + colname + "', was not found in table '" + _funcName + "'.";
 
 		String nulls    = ci._colIsNullable == DatabaseMetaData.columnNoNulls ? "<b>NOT</b> NULL" : "    NULL";
 		String datatype = ci._colType;
@@ -244,7 +244,7 @@ if (existingCi._colName == null || ci._colName == null)
 	{
 		FunctionColumnInfo ci = getColumnInfo(colname);
 		if (ci == null)
-			return "Column name '"+colname+"', was not found in table '"+_funcName+"'.";
+			return "Column name '" + colname + "', was not found in table '" + _funcName + "'.";
 
 		if (StringUtil.isNullOrBlank(ci._colRemark))
 //			return "No Description";

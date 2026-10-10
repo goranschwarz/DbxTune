@@ -109,7 +109,7 @@ public class WizardUserDefinedCm
 			e.printStackTrace();
 		}
 		
-		AseConnectionFactory.setAppName ( Version.getAppName()+"-Wizard-UDC" );
+		AseConnectionFactory.setAppName ( Version.getAppName() + "-Wizard-UDC" );
 		AseConnectionFactory.setUser    ( "sa" );
 		AseConnectionFactory.setPassword( "" );
 		AseConnectionFactory.setHostPort( "goransxp", "5000" );

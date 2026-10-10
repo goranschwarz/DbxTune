@@ -71,7 +71,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = Ver.ver(9,4);
 	public static final long     NEED_CE_VERSION  = 0;
@@ -112,7 +112,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmPgArchiver(counterController, guiController);
 	}
@@ -184,7 +184,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_ARCHIVED_COUNT,
 				"Archived Files Count", 	                // Menu CheckBox text
-				"Archived Files Count (archived_count) ("+SHORT_NAME+")", // Graph Label 
+				"Archived Files Count (archived_count) (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] {"archived_count"}, 
 				LabelType.Static, 
@@ -272,7 +272,7 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_failed_count, DEFAULT_alarm_failed_count);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold=" + threshold + ", failed_count_diff='" + failed_count_diff + "', failed_count_abs=" + failed_count_abs + ".");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", failed_count_diff='" + failed_count_diff + "', failed_count_abs=" + failed_count_abs + ".");
 
 				if (failed_count_diff > threshold)
 				{
@@ -323,7 +323,7 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_last_archived_in_seconds, DEFAULT_alarm_last_archived_in_seconds);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold=" + threshold + ", last_archived_in_seconds='" + last_archived_in_seconds + "'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", last_archived_in_seconds='" + last_archived_in_seconds + "'.");
 
 				if (last_archived_in_seconds > threshold)
 				{

@@ -149,7 +149,7 @@ public class PipeCommand
 		}
 		else
 		{
-			throw new PipeCommandException("PipeCommand, cmd='"+_cmdStr+"' is unknown. Available commands is: grep, egrep, bcp, tofile, toparquet, convert, iconv, lq, linkedquery, graph, chart, diff");
+			throw new PipeCommandException("PipeCommand, cmd='" + _cmdStr + "' is unknown. Available commands is: grep, egrep, bcp, tofile, toparquet, convert, iconv, lq, linkedquery, graph, chart, diff");
 		}
 	}
 	

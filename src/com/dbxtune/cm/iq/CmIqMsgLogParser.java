@@ -69,7 +69,7 @@ implements FileTail.TraceListener
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 //	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
 //	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
@@ -82,7 +82,7 @@ implements FileTail.TraceListener
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmIqMsgLogParser(counterController, guiController);
 	}
@@ -185,7 +185,7 @@ implements FileTail.TraceListener
 			_iqMsgFileChanged = false;
 			return;
 		}
-System.out.println("NOTE: iqMsgFile was changed from '"+_iqMsgFile+"' to '"+name+"'.");
+System.out.println("NOTE: iqMsgFile was changed from '" + _iqMsgFile + "' to '" + name + "'.");
 		_iqMsgFileChanged = true;
 		_iqMsgFile        = name;
 	}
@@ -218,7 +218,7 @@ System.out.println("NOTE: iqMsgFile was changed from '"+_iqMsgFile+"' to '"+name
 			}
 			else
 			{
-				throw new Exception("The passed connection is NOT an IqConnection. dbxConn="+dbxConn);
+				throw new Exception("The passed connection is NOT an IqConnection. dbxConn=" + dbxConn);
 			}
 		}
 
@@ -234,7 +234,7 @@ System.out.println("NOTE: iqMsgFile was changed from '"+_iqMsgFile+"' to '"+name
 			}
 			else
 			{
-				throw new Exception("The passed connection is NOT an IqConnection. dbxConn="+dbxConn);
+				throw new Exception("The passed connection is NOT an IqConnection. dbxConn=" + dbxConn);
 			}
 
 			//System.out.println("CmIqMsgLogParser.init(sqlConn): CREATING MONITOR: "+_hostMonType);
@@ -275,7 +275,7 @@ System.out.println("NOTE: iqMsgFile was changed from '"+_iqMsgFile+"' to '"+name
 	@Override
 	public void newTraceRow(String row)
 	{
-		System.out.println("newTraceRow(): |"+row+"|.");
+		System.out.println("newTraceRow(): |" + row + "|.");
 	}
 	/*---------------------------------------------------
 	** END: implementing FileTail.TraceListener
@@ -334,7 +334,7 @@ System.out.println("NOTE: iqMsgFile was changed from '"+_iqMsgFile+"' to '"+name
 			}
 			else
 			{
-				String msg = "The trace file '"+_fileTail.getFilename()+"' was not found. (SSH Access mode)";
+				String msg = "The trace file '" + _fileTail.getFilename() + "' was not found. (SSH Access mode)";
 				_logger.error(msg);
 //				SwingUtils.showErrorMessage("Trace file not found", msg, null);
 				stopTail();
@@ -356,7 +356,7 @@ System.out.println("NOTE: iqMsgFile was changed from '"+_iqMsgFile+"' to '"+name
 			}
 			else
 			{
-				String msg = "The trace file '"+_fileTail.getFilename()+"' was not found. (Local Access mode)";
+				String msg = "The trace file '" + _fileTail.getFilename() + "' was not found. (Local Access mode)";
 				_logger.error(msg);
 //				SwingUtils.showErrorMessage("Trace file not found", msg, null);
 				stopTail();
@@ -633,7 +633,7 @@ System.out.println("Entering refresh() method for " + getName());
 			if (dbxConn instanceof IqConnection)
 				setIqMsgFile( ((IqConnection)dbxConn).getIqMsgFilname() );
 			else
-				throw new Exception("The passed connection is NOT an IqConnection. dbxConn="+dbxConn);
+				throw new Exception("The passed connection is NOT an IqConnection. dbxConn=" + dbxConn);
 		}
 		if (_iqMsgFileChanged)
 		{

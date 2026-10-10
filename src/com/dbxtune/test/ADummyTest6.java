@@ -36,14 +36,14 @@ public class ADummyTest6
 	{
 		for (Thread th : Thread.getAllStackTraces().keySet()) 
 		{
-			System.out.println("XXX: isDaemon="+th.isDaemon()+", threadName=|"+th.getName()+"|, th.getClass().getName()=|"+th.getClass().getName()+"|.");
+			System.out.println("XXX: isDaemon=" + th.isDaemon() + ", threadName=|" + th.getName() + "|, th.getClass().getName()=|" + th.getClass().getName() + "|.");
 
 			ThreadGroup tg = th.getThreadGroup();
 			boolean isSystem = tg == null ? false : "system".equalsIgnoreCase(tg.getName());
 			String  tgName   = tg == null ? "-null-" : tg.getName();
-					System.out.println("isSystem="+isSystem+", tgName='"+tgName+"'."); 
+					System.out.println("isSystem=" + isSystem + ", tgName='" + tgName + "'."); 
 //			System.out.println("getThreadGroup="+th.getThreadGroup()); 
-			System.out.println("Stacktrace for Thread '"+th.getName()+"'." 
+			System.out.println("Stacktrace for Thread '" + th.getName() + "'." 
 					+ StringUtil.stackTraceToString(th.getStackTrace()));
 		}
 	}

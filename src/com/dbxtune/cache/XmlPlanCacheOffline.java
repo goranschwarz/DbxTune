@@ -51,7 +51,7 @@ extends XmlPlanCache
 
 		String schemaName = null;
 		
-		String sql = "select [extraInfoText] from " + PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.DDL_STORAGE, null, true) + " where [objectName] = '"+planName+"' and [type] = 'SS'";
+		String sql = "select [extraInfoText] from " + PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.DDL_STORAGE, null, true) + " where [objectName] = '" + planName + "' and [type] = 'SS'";
 		sql = conn.quotifySqlString(sql);
 		
 		String xmlPlan = null;
@@ -72,7 +72,7 @@ extends XmlPlanCache
 		}
 		catch(SQLException ex)
 		{
-			_logger.error("Problems using getPlanBulk(). SQL='"+sql+"', Caught: "+ex);
+			_logger.error("Problems using getPlanBulk(). SQL='" + sql + "', Caught: " + ex);
 		}
 
 		return xmlPlan;

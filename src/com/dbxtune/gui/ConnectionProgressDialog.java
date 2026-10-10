@@ -233,7 +233,7 @@ implements ActionListener, ConnectionProgressCallback
 			cpd.setVisible(true);
 
 //System.out.println("connectWithProgressDialog(): hasConnection="+(cpd._connection!=null)+", hasException="+(cpd._exception!=null));
-		_logger.debug("hasConnection="+(cpd._connection!=null)+", hasException="+(cpd._exception!=null));
+		_logger.debug("hasConnection=" + (cpd._connection!=null) + ", hasException=" + (cpd._exception!=null));
 		
 		if (cpd._connection != null)
 			return cpd._connection;
@@ -378,13 +378,13 @@ implements ActionListener, ConnectionProgressCallback
 //System.out.println("ConnectionProgressDialog.init(): _sshTunnelInfo != null --- 222222");
 					SshTunnelManager.getInstance().guessPort(tdsUrlHelper.getHostPortStr(), _sshTunnelInfo);
 //System.out.println("ConnectionProgressDialog.init(): _sshTunnelInfo != null --- 333333");
-					addTask(_sshTunnelInfo.getLocalHost()+":"+_sshTunnelInfo.getLocalPort());
+					addTask(_sshTunnelInfo.getLocalHost() + ":" + _sshTunnelInfo.getLocalPort());
 				}
 				else if (_rawJdbcUrl != null)
 				{
 					jdbcUrlParser = JdbcUrlParser.parse(_rawJdbcUrl);
 					SshTunnelManager.getInstance().guessPort(jdbcUrlParser.getHostPortStr(), _sshTunnelInfo);
-					addTask(_sshTunnelInfo.getLocalHost()+":"+_sshTunnelInfo.getLocalPort());
+					addTask(_sshTunnelInfo.getLocalHost() + ":" + _sshTunnelInfo.getLocalPort());
 				}
 			}
 			else
@@ -429,11 +429,11 @@ implements ActionListener, ConnectionProgressCallback
 			}
 			String server = tdsUrlHelper != null ? tdsUrlHelper.getServerName() : _rawJdbcUrl;
 			if (server != null)
-				_server_lbl.setText("<html>Connecting to Server: <b>"+server+"</b>"+aseSshTunnelDesc+"</html>");
+				_server_lbl.setText("<html>Connecting to Server: <b>" + server + "</b>" + aseSshTunnelDesc + "</html>");
 			else
 			{
 				_server_lbl.setText("<html><center>Server is not in the interfaces file<br>" +
-					"Instead, the host:port model will be used.</center>"+aseSshTunnelDesc+"</html>");
+					"Instead, the host:port model will be used.</center>" + aseSshTunnelDesc + "</html>");
 			}
 
 //System.out.println("ConnectionProgressDialog.init(): yyyy");
@@ -443,7 +443,7 @@ implements ActionListener, ConnectionProgressCallback
 			int hostPortCount        = tdsUrlHelper != null ? tdsUrlHelper.getHostPortCount() : 1;
 			_progress.setMaximum( ticksPerSecond * timeoutInSecPerEntry * hostPortCount );
 
-			_logger.debug("_progress.getMaximum()="+_progress.getMaximum());
+			_logger.debug("_progress.getMaximum()=" + _progress.getMaximum());
 		}
 //		catch (ParseException ignore) 
 		catch (Exception ignore) 
@@ -830,7 +830,7 @@ finally
 		else if ( status == ConnectionProgressCallback.FINAL_STATUS_FAILED) {}
 		else
 		{
-			String msg = "setFinalStatus: Unknown status '"+status+"'. know statuses 'FINAL_STATUS_SUCCEEDED | FINAL_STATUS_FAILED'.";
+			String msg = "setFinalStatus: Unknown status '" + status + "'. know statuses 'FINAL_STATUS_SUCCEEDED | FINAL_STATUS_FAILED'.";
 			_logger.error(msg);
 			throw new IllegalArgumentException(msg);
 		}
@@ -844,12 +844,12 @@ finally
 		// FAILED
 		if (status == ConnectionProgressCallback.FINAL_STATUS_FAILED)
 		{
-			String msg = infoObj+"";
+			String msg = infoObj + "";
 			if (infoObj instanceof SQLException)
 				msg = ((SQLException)infoObj).getMessage();
 
 			final int heightBeforeSet = _buttomStatus_lbl.getPreferredSize().height;
-			_buttomStatus_lbl.setText("<html><font color=\"red\"><b>FAILURE:</b> "+msg+"</font></html>");
+			_buttomStatus_lbl.setText("<html><font color=\"red\"><b>FAILURE:</b> " + msg + "</font></html>");
 
 			// Come up with a good tooltip for the _buttomStatus_lbl, if it's an Exception
 			String tooltip = null;
@@ -878,7 +878,7 @@ finally
 				tooltip = "<pre>" + StringUtil.stackTraceToString( ex ) + "</pre>";
 			}
 			if (tooltip != null)
-				_buttomStatus_lbl.setToolTipText("<html>"+tooltip+"</html>");
+				_buttomStatus_lbl.setToolTipText("<html>" + tooltip + "</html>");
 			
 			
 			// If the _buttomStatus_lbl gets bigger (especially with HTML content), then make the dialog bigger as well
@@ -996,7 +996,7 @@ finally
 		for (int r=0; r<tm.getRowCount(); r++)
 		{
 			String hostPort = (String) tm.getValueAt(r, TAB_POS_HOST_PORT);
-			_logger.debug("-in-hostPort='"+taskName+"', -row-"+r+"-hostPort='"+hostPort+"'.");
+			_logger.debug("-in-hostPort='" + taskName + "', -row-" + r + "-hostPort='" + hostPort + "'.");
 
 			// current row == input parameter
 			if (hostPort.equals(taskName))
@@ -1021,21 +1021,21 @@ finally
 						}
 					}
 
-					_logger.debug("Setting: '"+hostPort+"', to='"+TASK_STATUS_CURRENT_TEXT+"', ICON="+_task_current_icon);
+					_logger.debug("Setting: '" + hostPort + "', to='" + TASK_STATUS_CURRENT_TEXT + "', ICON=" + _task_current_icon);
 					tm.setValueAt(_task_current_icon,         r, TAB_POS_ICON);
 					tm.setValueAt(TASK_STATUS_CURRENT_TEXT,   r, TAB_POS_STATUS);
 					tm.setValueAt(infoObj,                    r, TAB_POS_INFO);
 					
-					_progress_lbl.setText("<html>Trying entry: <b>"+taskName+"</b></html>");
+					_progress_lbl.setText("<html>Trying entry: <b>" + taskName + "</b></html>");
 				}
 				else if (status == ConnectionProgressCallback.TASK_STATUS_SUCCEEDED)
 				{
-					_logger.debug("Setting: '"+hostPort+"', to='"+TASK_STATUS_SUCCEEDED_TEXT+"', ICON="+_task_succeeded_icon);
+					_logger.debug("Setting: '" + hostPort + "', to='" + TASK_STATUS_SUCCEEDED_TEXT + "', ICON=" + _task_succeeded_icon);
 					tm.setValueAt(_task_succeeded_icon,       r, TAB_POS_ICON);
 					tm.setValueAt(TASK_STATUS_SUCCEEDED_TEXT, r, TAB_POS_STATUS);
 					tm.setValueAt(infoObj,                    r, TAB_POS_INFO);
 					
-					_progress_lbl.setText("<html>Succeeded connecting to: <b>"+taskName+"</b></html>");
+					_progress_lbl.setText("<html>Succeeded connecting to: <b>" + taskName + "</b></html>");
 
 					// Set progress to 100%
 					_progress.setValue( _progress.getMaximum() );
@@ -1050,23 +1050,23 @@ finally
 				}
 				else if (status == ConnectionProgressCallback.TASK_STATUS_SKIPPED)
 				{
-					_logger.debug("Setting: '"+hostPort+"', to='"+TASK_STATUS_SKIPPED_TEXT+"', ICON="+_task_skipped_icon);
+					_logger.debug("Setting: '" + hostPort + "', to='" + TASK_STATUS_SKIPPED_TEXT + "', ICON=" + _task_skipped_icon);
 					tm.setValueAt(_task_skipped_icon,         r, TAB_POS_ICON);
 					tm.setValueAt(TASK_STATUS_SKIPPED_TEXT,   r, TAB_POS_STATUS);
 					tm.setValueAt(infoObj,                    r, TAB_POS_INFO);
 
-					_progress_lbl.setText("<html>Skipping task: <b>"+taskName+"</b></html>");
+					_progress_lbl.setText("<html>Skipping task: <b>" + taskName + "</b></html>");
 				}
 				else if (    status == ConnectionProgressCallback.TASK_STATUS_FAILED 
 				          || status == ConnectionProgressCallback.TASK_STATUS_FAILED_LAST 
 				        )
 				{
-					_logger.debug("Setting: '"+hostPort+"', to='"+TASK_STATUS_FAILED+"', ICON="+_task_failed_icon);
+					_logger.debug("Setting: '" + hostPort + "', to='" + TASK_STATUS_FAILED + "', ICON=" + _task_failed_icon);
 					tm.setValueAt(_task_failed_icon,          r, TAB_POS_ICON);
 					tm.setValueAt(TASK_STATUS_FAILED_TEXT,    r, TAB_POS_STATUS);
 					tm.setValueAt(infoObj,                    r, TAB_POS_INFO);
 					
-					_progress_lbl.setText("<html>Failed connection to: <b>"+taskName+"</b></html>");
+					_progress_lbl.setText("<html>Failed connection to: <b>" + taskName + "</b></html>");
 
 					// are we on the LAST ROW...
 					if (r == tm.getRowCount()-1  ||  status == ConnectionProgressCallback.TASK_STATUS_FAILED_LAST)
@@ -1086,7 +1086,7 @@ finally
 					}
 				}
 				else
-					_logger.error("hostPort='"+taskName+"', UNKNOWN STATUS="+status);
+					_logger.error("hostPort='" + taskName + "', UNKNOWN STATUS=" + status);
 			}
 		}
 
@@ -1094,7 +1094,7 @@ finally
 		calcTabWidth();
 
 		if (! foundTask)
-			_logger.warn("in-hostPort='"+taskName+"', was NOT found in tab.");
+			_logger.warn("in-hostPort='" + taskName + "', was NOT found in tab.");
 	}
 
 	public void setDesiredProductName(String productName)
@@ -1124,30 +1124,30 @@ finally
 			String dbProductStr = ConnectionDialog.getDatabaseProductName(conn);
 			String dbVersionStr = ConnectionDialog.getDatabaseProductVersion(conn);
 			
-			_logger.debug("Just connected to Database Product '"+dbProductStr+"', with version string '"+dbVersionStr+"'.");
+			_logger.debug("Just connected to Database Product '" + dbProductStr + "', with version string '" + dbVersionStr + "'.");
 
 //			if ( ! expectedProductName.equals(dbProductStr) )
 			if ( ! DbUtils.isProductName(dbProductStr, expectedProductName))
 			{
-				_logger.warn("Sorry you can only connect to Product named '"+getDesiredProductName()+"'. The connected product name was '"+dbProductStr+"', with the version string '"+dbVersionStr+"'.");
+				_logger.warn("Sorry you can only connect to Product named '" + getDesiredProductName() + "'. The connected product name was '" + dbProductStr + "', with the version string '" + dbVersionStr + "'.");
 
 				String htmlMsg = 
 					"<html>" +
-					"<h2>Sorry you can only connect to Database Product named '"+getDesiredProductName()+"'</h2>" +
+					"<h2>Sorry you can only connect to Database Product named '" + getDesiredProductName() + "'</h2>" +
 					"You just connected to a server with the below Product name and version<br>" +
 					"<ul>" +
-					"  <li>Product Name: "+dbProductStr+"</li>" +
-					"  <li>Version String: "+dbVersionStr+"</li>" +
+					"  <li>Product Name: " + dbProductStr + "</li>" +
+					"  <li>Version String: " + dbVersionStr + "</li>" +
 					"</ul>" +
 					"Expected the Following:<br>" +
 					"<ul>" +
-					"  <li>Product Name: "+expectedProductName+"</li>" +
+					"  <li>Product Name: " + expectedProductName + "</li>" +
 					"</ul>" +
 					"</html>";
 				SwingUtils.showWarnMessage("Unsupported Database Product", htmlMsg, null);
 				
 				if (throwException)
-					throw new Exception("Unsupported product name '"+dbProductStr+"'. It must be '"+getDesiredProductName()+"'.");
+					throw new Exception("Unsupported product name '" + dbProductStr + "'. It must be '" + getDesiredProductName() + "'.");
 
 				return false;
 			}
@@ -1155,7 +1155,7 @@ finally
 		}
 		catch (SQLException e)
 		{
-			_logger.debug("Problems when trying to get Database Product and Version. Caught "+e, e);
+			_logger.debug("Problems when trying to get Database Product and Version. Caught " + e, e);
 			if (throwException)
 				throw e;
 			return false; 
@@ -1203,7 +1203,7 @@ finally
 								ex.getMessage() + "<BR>";
 							Throwable cause = ex.getCause();
 							if (cause != null)
-								hostmonMsg += "<BR><b>Reason:</b> "+cause;
+								hostmonMsg += "<BR><b>Reason:</b> " + cause;
 
 //							int answer = JOptionPane.showConfirmDialog(_thisDialog, 
 							int answer = JOptionPane.showConfirmDialog(ConnectionProgressDialog.this, 
@@ -1246,8 +1246,8 @@ finally
 							
 							if (StringUtil.isNullOrBlank(hostPortStr))
 							{
-								_logger.error("Parsing JDBC Url for host/port number failed. jdbcUrl='"+_rawJdbcUrl+"', jdbcUrlParser="+jdbcUrlParser);
-								throw new RuntimeException("Parsing JDBC Url for host/port number failed. jdbcUrl='"+_rawJdbcUrl+"', jdbcUrlParser="+jdbcUrlParser);
+								_logger.error("Parsing JDBC Url for host/port number failed. jdbcUrl='" + _rawJdbcUrl + "', jdbcUrlParser=" + jdbcUrlParser);
+								throw new RuntimeException("Parsing JDBC Url for host/port number failed. jdbcUrl='" + _rawJdbcUrl + "', jdbcUrlParser=" + jdbcUrlParser);
 							}
 						}
 
@@ -1256,7 +1256,7 @@ finally
 							setTaskStatus(TASK_SSH_TUNNEL, ConnectionProgressCallback.TASK_STATUS_CURRENT);
 
 							// Set the host:port to be: localhost:port
-							AseConnectionFactory.setHostPort(_sshTunnelInfo.getLocalHost(), _sshTunnelInfo.getLocalPort()+"");
+							AseConnectionFactory.setHostPort(_sshTunnelInfo.getLocalHost(), _sshTunnelInfo.getLocalPort() + "");
 
 							// Start a tunnel, this will create a SSH Connection, or pick one from the cache
 							tm.setupTunnel(hostPortStr, _sshTunnelInfo);
@@ -1276,10 +1276,10 @@ finally
 								String htmlMsg 
 									= "<html>"
 									+ "<h2>When establishing a Tunnel Connection/Listener</h2>"
-									+ "<b>Problems setting up the tunnel on host '"+_sshTunnelInfo.getLocalHost()+"', port "+_sshTunnelInfo.getLocalPort()+"</b><br>"
+									+ "<b>Problems setting up the tunnel on host '" + _sshTunnelInfo.getLocalHost() + "', port " + _sshTunnelInfo.getLocalPort() + "</b><br>"
 									+ "This port is already in use.<br>"
 									+ "<br>"
-									+ "If this port is setup by some other "+Version.getAppName()+" instance it's <b>ok</b> to continue.<br>"
+									+ "If this port is setup by some other " + Version.getAppName() + " instance it's <b>ok</b> to continue.<br>"
 									+ "But if the port is used for something else, we might connect to the wrong server.<br>"
 									+ "So be a bit carefull, and check what server you actually ended up at after the connection has been established.<br>"
 									+ "<br>"
@@ -1307,7 +1307,7 @@ finally
 					}
 
 
-					_logger.debug("SwingWorker.construct(): _rawJdbcDriver='"+_rawJdbcDriver+"', _rawJdbcUrl='"+_rawJdbcUrl+"', _rawJdbcProps='"+_rawJdbcProps+"'.");
+					_logger.debug("SwingWorker.construct(): _rawJdbcDriver='" + _rawJdbcDriver + "', _rawJdbcUrl='" + _rawJdbcUrl + "', _rawJdbcProps='" + _rawJdbcProps + "'.");
 					
 //					Connection conn;
 					DbxConnection conn;
@@ -1333,7 +1333,7 @@ finally
 						{
 							String taskName = _rawJdbcUrl;
 							if (_sshTunnelInfo != null)
-								taskName = _sshTunnelInfo.getLocalHost()+":"+_sshTunnelInfo.getLocalPort();
+								taskName = _sshTunnelInfo.getLocalHost() + ":" + _sshTunnelInfo.getLocalPort();
 							
 							setTaskStatus(taskName, ConnectionProgressCallback.TASK_STATUS_CURRENT);
 
@@ -1345,20 +1345,20 @@ finally
 								if (_sshTunnelInfo != null)
 								{
 									if (_logger.isDebugEnabled())
-										_logger.debug("SSH-TUNNEL-INFO="+_sshTunnelInfo.getConfigString(true));
+										_logger.debug("SSH-TUNNEL-INFO=" + _sshTunnelInfo.getConfigString(true));
 									JdbcUrlParser jdbcUrlParser = JdbcUrlParser.parse(jdbcUrl);
 									String urlHostPortStr            = jdbcUrlParser.getHostPortStr();
-									String sshTunnelLocalHostPortStr = _sshTunnelInfo.getLocalHost()+":"+_sshTunnelInfo.getLocalPort();
+									String sshTunnelLocalHostPortStr = _sshTunnelInfo.getLocalHost() + ":" + _sshTunnelInfo.getLocalPort();
 									
 									// Try to change the origin HOST:PORT into the SSH Tunnels Local Host:Port
 									// FIXME: implement this in the "parser" instead... See AseUrlHelper class for ideas
 									if (_logger.isDebugEnabled())
-										_logger.debug("SSH-TUNNEL: url origin='"+jdbcUrl+"'. urlHostPortStr='"+urlHostPortStr+"', sshTunnelLocalHostPortStr='"+sshTunnelLocalHostPortStr+"', jdbcUrlParser.toString='"+jdbcUrlParser.toString()+"'.");
+										_logger.debug("SSH-TUNNEL: url origin='" + jdbcUrl + "'. urlHostPortStr='" + urlHostPortStr + "', sshTunnelLocalHostPortStr='" + sshTunnelLocalHostPortStr + "', jdbcUrlParser.toString='" + jdbcUrlParser.toString() + "'.");
 
 									jdbcUrl = jdbcUrl.replace(urlHostPortStr, sshTunnelLocalHostPortStr);
 
 									if (_logger.isDebugEnabled())
-										_logger.debug("SSH-TUNNEL: url fixed ='"+jdbcUrl+"'.");
+										_logger.debug("SSH-TUNNEL: url fixed ='" + jdbcUrl + "'.");
 								}
 //System.out.println("ConnectionProgressDialog.doBackgroundConnect(): _rawJdbcDriver='"+_rawJdbcDriver+"', jdbcUrl='"+jdbcUrl+"', _rawJdbcProps='"+_rawJdbcProps+"'.");
 								conn = DbxConnection.createDbxConnection( jdbcConnect(_rawJdbcDriver, jdbcUrl, _rawJdbcProps) );
@@ -1392,7 +1392,7 @@ finally
 						String tmpUrl = _connProp.getUrl();
 						if (tmpUrl != null && ! tmpUrl.startsWith("jdbc:sybase:Tds:"))
 						{
-							throw new Exception("SORRY ONLY Sybase/jConnect URL is allowed in here. URL '"+tmpUrl+"'.");
+							throw new Exception("SORRY ONLY Sybase/jConnect URL is allowed in here. URL '" + tmpUrl + "'.");
 						}
 
 						//-------------------------
@@ -1532,7 +1532,7 @@ finally
 								sql = sql.trim();
 								if ("".equals(sql))
 									continue;
-								_logger.info("Sending SQL Initialization str: "+sql);
+								_logger.info("Sending SQL Initialization str: " + sql);
 								DbUtils.exec(_connection, sql, -1);
 							}
 							setTaskStatus(TASK_SQL_INIT, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
@@ -1543,7 +1543,7 @@ finally
 							ex.setNextException( new SQLException(
 									"<html>" + // OK: a bit dodgy to have HTML in here, but what the...
 									"<h2>SQL Initialization Failed</h2>" +
-									"Full SQL Init String '"+ _sqlInit + "'<br>" +
+									"Full SQL Init String '" + _sqlInit + "'<br>" +
 									"<br>" +
 									"<b>SQL State:     </b>" + ex.getSQLState()  + "<br>" +
 									"<b>Error number:  </b>" + ex.getErrorCode() + "<br>" +
@@ -1585,7 +1585,7 @@ finally
 
 				// get the output from the background job
 				Object output = get();
-				_logger.debug("Worker OUT: "+output);
+				_logger.debug("Worker OUT: " + output);
 				
 				if (output != null)
 				{
@@ -1595,7 +1595,7 @@ finally
 					if (output instanceof DbxConnection)
 					{
 						DbxConnection conn = (DbxConnection) output;
-						_logger.debug("Worker OUT-Connection: "+conn);
+						_logger.debug("Worker OUT-Connection: " + conn);
 						_connection = conn;
 
 						setFinalStatus(ConnectionProgressCallback.FINAL_STATUS_SUCCEEDED);
@@ -1606,7 +1606,7 @@ finally
 					else if (output instanceof Exception)
 					{
 						Exception ex = (Exception)output;
-						_logger.debug("Worker OUT-Exception: "+ex, ex);
+						_logger.debug("Worker OUT-Exception: " + ex, ex);
 						_exception = ex;
 
 						setFinalStatus(ConnectionProgressCallback.FINAL_STATUS_FAILED, ex);
@@ -1646,7 +1646,7 @@ finally
 					}
 					else
 					{
-						_logger.error("Unknown output from the background swing worker was found. type="+output.getClass().getName()+", object.toString='"+output.toString()+"'.");
+						_logger.error("Unknown output from the background swing worker was found. type=" + output.getClass().getName() + ", object.toString='" + output.toString() + "'.");
 					}
 				}
 				else
@@ -1708,13 +1708,13 @@ finally
 			}
 			catch (Exception ex)
 			{
-				_logger.warn( "Can't locate JDBC driver '"+driver+"' for URL='"+url+"' using 'DriverManager.getDriver(url)' Lets continue, but first try to load the class '"+driver+"' using 'Class.forName(driver).newInstance()' then connect to it using: DriverManager.getConnection(url, props); Caught="+ex);
-				_logger.debug("Can't locate JDBC driver '"+driver+"' for URL='"+url+"' using 'DriverManager.getDriver(url)' Lets continue, but first try to load the class '"+driver+"' using 'Class.forName(driver).newInstance()' then connect to it using: DriverManager.getConnection(url, props); Caught="+ex, ex);
+				_logger.warn( "Can't locate JDBC driver '" + driver + "' for URL='" + url + "' using 'DriverManager.getDriver(url)' Lets continue, but first try to load the class '" + driver + "' using 'Class.forName(driver).newInstance()' then connect to it using: DriverManager.getConnection(url, props); Caught=" + ex);
+				_logger.debug("Can't locate JDBC driver '" + driver + "' for URL='" + url + "' using 'DriverManager.getDriver(url)' Lets continue, but first try to load the class '" + driver + "' using 'Class.forName(driver).newInstance()' then connect to it using: DriverManager.getConnection(url, props); Caught=" + ex, ex);
 
 				try { Class.forName(driver).newInstance(); }
 				catch( ClassNotFoundException | InstantiationException | IllegalAccessException ex2 )
 				{
-					_logger.warn("DriverManager.getDriver(url), threw Exception '"+ex+"', so we did 'Class.forName(driverClass).newInstance()', and that caused: "+ex2);
+					_logger.warn("DriverManager.getDriver(url), threw Exception '" + ex + "', so we did 'Class.forName(driverClass).newInstance()', and that caused: " + ex2);
 				}
 				//JdbcDriverHelper.newDriverInstance(driverClass);
 				//JdbcDriverHelper.newDriverInstance(driverClass);
@@ -1735,7 +1735,7 @@ finally
 			String jdbcAppNamePropVal  = Version.getAppName();
 			if      (url.startsWith("jdbc:sqlserver:"  )) { jdbcAppNamePropName = "applicationName"; }
 			else if (url.startsWith("jdbc:postgresql:" )) { jdbcAppNamePropName = "ApplicationName"; }
-			else if (url.startsWith("jdbc:mysql:"      )) { jdbcAppNamePropName = "connectionAttributes"; jdbcAppNamePropVal = "program_name:"+Version.getAppName(); }
+			else if (url.startsWith("jdbc:mysql:"      )) { jdbcAppNamePropName = "connectionAttributes"; jdbcAppNamePropVal = "program_name:" + Version.getAppName(); }
 			else if (url.startsWith("jdbc:db2:"        )) { jdbcAppNamePropName = ""; }
 			else if (url.startsWith("jdbc:oracle:thin:")) { jdbcAppNamePropName = "v$session.program"; }  // v$session.machine=, v$session.osuser=, v$session.program=JDBC Thin Client, v$session.process=1234
 			else if (url.startsWith("jdbc:sap:"        )) { jdbcAppNamePropName = ""; }
@@ -1750,7 +1750,7 @@ finally
 			}
 
 
-			_logger.debug("getConnection to driver='"+driver+"', url='"+url+"', props='"+props+"'.");
+			_logger.debug("getConnection to driver='" + driver + "', url='" + url + "', props='" + props + "'.");
 
 			StringBuilder sb = new StringBuilder();
 			sb.append( "<html>" );
@@ -1794,7 +1794,7 @@ finally
 				eTmp = eTmp.getNextException();
 			}
 			String extExStr = sb.toString();
-			_logger.info(Version.getAppName()+" - JDBC connect FAILED (catch SQLException) Caught: "+extExStr);
+			_logger.info(Version.getAppName() + " - JDBC connect FAILED (catch SQLException) Caught: " + extExStr);
 
 				
 			SQLException e = ex;
@@ -1918,7 +1918,7 @@ finally
 			if (_dummyTimer.equals(source))
 			{
 				_dummyCounter++;
-				_dummyCounter_lbl.setText("Dummy counter at: "+_dummyCounter);
+				_dummyCounter_lbl.setText("Dummy counter at: " + _dummyCounter);
 			}
 
 			if (_connect_but.equals(source))
@@ -1950,7 +1950,7 @@ finally
 			try
 			{
 				Connection conn = ConnectionProgressDialog.connectWithProgressDialog(this, _hostPortUrl, null, null, null, null, null, null, null);
-				System.out.println("Connection returned. conn="+conn);
+				System.out.println("Connection returned. conn=" + conn);
 			}
 			catch (Exception e)
 			{
@@ -1973,9 +1973,9 @@ finally
 		AseConnectionFactory.setUser("sa");
 		AseConnectionFactory.setPassword("");
 		AseConnectionFactory.setServer(server);
-		System.out.println("Connectiong to server='"+server+"'. Which is located on '"+hostPortStr+"'.");
+		System.out.println("Connectiong to server='" + server + "'. Which is located on '" + hostPortStr + "'.");
 
-		String urlStr = "jdbc:sybase:Tds:"+AseConnectionFactory.getHostPortStr();
+		String urlStr = "jdbc:sybase:Tds:" + AseConnectionFactory.getHostPortStr();
 		
 		JFrame frame = new TestFrame(urlStr);
 		frame.setVisible(true);

@@ -759,7 +759,7 @@ public class Ver
 								}
 								catch (RuntimeException e) // NumberFormatException,
 								{
-									_logger.warn("Problems converting some part(s) of the ESD# in the version string '" + srvVersionNumberStr + "' into a number. ESD# string was '"+versionPart+"'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
+									_logger.warn("Problems converting some part(s) of the ESD# in the version string '" + srvVersionNumberStr + "' into a number. ESD# string was '" + versionPart + "'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
 								}
 							}
 							if (subEsdStart != -1)
@@ -773,7 +773,7 @@ public class Ver
 								}
 								catch (RuntimeException e) // NumberFormatException,
 								{
-									_logger.warn("Problems converting some part(s) of the ESD# in the version string '" + srvVersionNumberStr + "' into a number. ESD# string was '"+versionPart+"'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
+									_logger.warn("Problems converting some part(s) of the ESD# in the version string '" + srvVersionNumberStr + "' into a number. ESD# string was '" + versionPart + "'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
 								}
 							}
 						}
@@ -802,7 +802,7 @@ public class Ver
 							}
 							catch (RuntimeException e) // NumberFormatException,
 							{
-								_logger.warn("Problems converting some part(s) of the SP (ServicePack) in the version string '" + srvVersionNumberStr + "' into a number. Service Pack string was '"+versionPart+"'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
+								_logger.warn("Problems converting some part(s) of the SP (ServicePack) in the version string '" + srvVersionNumberStr + "' into a number. Service Pack string was '" + versionPart + "'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
 							}
 						}
 					}
@@ -830,7 +830,7 @@ public class Ver
 							}
 							catch (RuntimeException e) // NumberFormatException,
 							{
-								_logger.warn("Problems converting some part(s) of the SP (ServicePack) in the version string '" + srvVersionNumberStr + "' into a number. Service Pack string was '"+versionPart+"'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
+								_logger.warn("Problems converting some part(s) of the SP (ServicePack) in the version string '" + srvVersionNumberStr + "' into a number. Service Pack string was '" + versionPart + "'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
 							}
 						}
 					}
@@ -873,17 +873,17 @@ public class Ver
 		String[] sa = versionStr.split("\\.");
 		if (sa.length == 5)
 		{
-			try { major       = Integer.parseInt(sa[0]); } catch(NumberFormatException ex) { major       = 0; _logger.warn("Problem parsing 'major' version string with value '"+sa[0]+"'. Setting this to 0. Caught: "+ex); }
-			try { minor       = Integer.parseInt(sa[1]); } catch(NumberFormatException ex) { minor       = 0; _logger.warn("Problem parsing 'minor' version string with value '"+sa[1]+"'. Setting this to 0. Caught: "+ex); }
+			try { major       = Integer.parseInt(sa[0]); } catch(NumberFormatException ex) { major       = 0; _logger.warn("Problem parsing 'major' version string with value '" + sa[0] + "'. Setting this to 0. Caught: " + ex); }
+			try { minor       = Integer.parseInt(sa[1]); } catch(NumberFormatException ex) { minor       = 0; _logger.warn("Problem parsing 'minor' version string with value '" + sa[1] + "'. Setting this to 0. Caught: " + ex); }
 			      maint       = 0;
-			try { servicePack = Integer.parseInt(sa[2]); } catch(NumberFormatException ex) { servicePack = 0; _logger.warn("Problem parsing 'servicePack' version string with value '"+sa[2]+"'. Setting this to 0. Caught: "+ex); }
-			try { patchLevel  = Integer.parseInt(sa[3]); } catch(NumberFormatException ex) { patchLevel  = 0; _logger.warn("Problem parsing 'patchLevel' version string with value '"+sa[3]+"'. Setting this to 0. Caught: "+ex); }
+			try { servicePack = Integer.parseInt(sa[2]); } catch(NumberFormatException ex) { servicePack = 0; _logger.warn("Problem parsing 'servicePack' version string with value '" + sa[2] + "'. Setting this to 0. Caught: " + ex); }
+			try { patchLevel  = Integer.parseInt(sa[3]); } catch(NumberFormatException ex) { patchLevel  = 0; _logger.warn("Problem parsing 'patchLevel' version string with value '" + sa[3] + "'. Setting this to 0. Caught: " + ex); }
 			
 			return Ver.ver(major, minor, maint, servicePack, patchLevel);
 		}
 		else
 		{
-			_logger.error("HANA Version string '"+versionStr+"' doesn't consist of 5 fields separated be '.', can't parse this version string. returning 0");
+			_logger.error("HANA Version string '" + versionStr + "' doesn't consist of 5 fields separated be '.', can't parse this version string. returning 0");
 			return 0;
 		}
 	}
@@ -911,16 +911,16 @@ public class Ver
 		String[] sa = versionStr.split("\\.");
 		if (sa.length == 4)
 		{
-			try { major = Integer.parseInt(sa[0]); } catch(NumberFormatException ex) { major  = 0; _logger.warn("Problem parsing 'major' version string with value '"+sa[0]+"'. Setting this to 0. Caught: "+ex); }
-			try { minor = Integer.parseInt(sa[1]); } catch(NumberFormatException ex) { minor  = 0; _logger.warn("Problem parsing 'minor' version string with value '"+sa[1]+"'. Setting this to 0. Caught: "+ex); }
-			try { maint = Integer.parseInt(sa[2]); } catch(NumberFormatException ex) { maint  = 0; _logger.warn("Problem parsing 'maint' version string with value '"+sa[2]+"'. Setting this to 0. Caught: "+ex); }
+			try { major = Integer.parseInt(sa[0]); } catch(NumberFormatException ex) { major  = 0; _logger.warn("Problem parsing 'major' version string with value '" + sa[0] + "'. Setting this to 0. Caught: " + ex); }
+			try { minor = Integer.parseInt(sa[1]); } catch(NumberFormatException ex) { minor  = 0; _logger.warn("Problem parsing 'minor' version string with value '" + sa[1] + "'. Setting this to 0. Caught: " + ex); }
+			try { maint = Integer.parseInt(sa[2]); } catch(NumberFormatException ex) { maint  = 0; _logger.warn("Problem parsing 'maint' version string with value '" + sa[2] + "'. Setting this to 0. Caught: " + ex); }
 //			try { build = Integer.parseInt(sa[3]); } catch(NumberFormatException ex) { build  = 0; _logger.warn("Problem parsing 'build' version string with value '"+sa[3]+"'. Setting this to 0. Caught: "+ex); }
 			
 			return Ver.ver(major, minor, maint);
 		}
 		else
 		{
-			_logger.error("SQL-Anywhere or IQ Version string '"+versionStr+"' doesn't consist of 4 fields separated be '.', can't parse this version string. returning 0");
+			_logger.error("SQL-Anywhere or IQ Version string '" + versionStr + "' doesn't consist of 4 fields separated be '.', can't parse this version string. returning 0");
 			return 0;
 		}
 	}
@@ -1064,7 +1064,7 @@ public class Ver
 								}
 								catch (RuntimeException e) // NumberFormatException,
 								{
-									_logger.warn("Problems converting some part(s) of the 'ESD ' in the version string '" + iqVersionNumberStr + "' into a number. 'ESD ' string was '"+versionPart+"'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
+									_logger.warn("Problems converting some part(s) of the 'ESD ' in the version string '" + iqVersionNumberStr + "' into a number. 'ESD ' string was '" + versionPart + "'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
 								}
 							}
 							if (subEsdStart != -1)
@@ -1076,7 +1076,7 @@ public class Ver
 								}
 								catch (RuntimeException e) // NumberFormatException,
 								{
-									_logger.warn("Problems converting some part(s) of the 'ESD ' in the version string '" + iqVersionNumberStr + "' into a number. 'ESD ' string was '"+versionPart+"'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
+									_logger.warn("Problems converting some part(s) of the 'ESD ' in the version string '" + iqVersionNumberStr + "' into a number. 'ESD ' string was '" + versionPart + "'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
 								}
 							}
 						}
@@ -1108,7 +1108,7 @@ public class Ver
 								}
 								catch (RuntimeException e) // NumberFormatException,
 								{
-									_logger.warn("Problems converting some part(s) of the SP (ServicePack) in the version string '" + iqVersionNumberStr + "' into a number. Service Pack string was '"+versionPart+"'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
+									_logger.warn("Problems converting some part(s) of the SP (ServicePack) in the version string '" + iqVersionNumberStr + "' into a number. Service Pack string was '" + versionPart + "'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
 								}
 							}
 						}
@@ -1146,7 +1146,7 @@ public class Ver
 							}
 							catch (RuntimeException e) // NumberFormatException,
 							{
-								_logger.warn("Problems converting some part(s) of the SP (ServicePack) in the version string '" + iqVersionNumberStr + "' into a number. Service Pack string was '"+versionPart+"'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
+								_logger.warn("Problems converting some part(s) of the SP (ServicePack) in the version string '" + iqVersionNumberStr + "' into a number. Service Pack string was '" + versionPart + "'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
 							}
 						}
 					}
@@ -1186,17 +1186,17 @@ public class Ver
 		String[] sa = versionStr.split("\\.");
 		if (sa.length == 5)
 		{
-			try { major       = Integer.parseInt(sa[0]); } catch(NumberFormatException ex) { major       = 0; _logger.warn("Problem parsing 'major' version string with value '"+sa[0]+"'. Setting this to 0. Caught: "+ex); }
-			try { minor       = Integer.parseInt(sa[1]); } catch(NumberFormatException ex) { minor       = 0; _logger.warn("Problem parsing 'minor' version string with value '"+sa[1]+"'. Setting this to 0. Caught: "+ex); }
-			try { maint       = Integer.parseInt(sa[2]); } catch(NumberFormatException ex) { maint       = 0; _logger.warn("Problem parsing 'minor' version string with value '"+sa[2]+"'. Setting this to 0. Caught: "+ex); }
-			try { servicePack = Integer.parseInt(sa[3]); } catch(NumberFormatException ex) { servicePack = 0; _logger.warn("Problem parsing 'servicePack' version string with value '"+sa[3]+"'. Setting this to 0. Caught: "+ex); }
-			try { patchLevel  = Integer.parseInt(sa[4]); } catch(NumberFormatException ex) { patchLevel  = 0; _logger.warn("Problem parsing 'patchLevel' version string with value '"+sa[4]+"'. Setting this to 0. Caught: "+ex); }
+			try { major       = Integer.parseInt(sa[0]); } catch(NumberFormatException ex) { major       = 0; _logger.warn("Problem parsing 'major' version string with value '" + sa[0] + "'. Setting this to 0. Caught: " + ex); }
+			try { minor       = Integer.parseInt(sa[1]); } catch(NumberFormatException ex) { minor       = 0; _logger.warn("Problem parsing 'minor' version string with value '" + sa[1] + "'. Setting this to 0. Caught: " + ex); }
+			try { maint       = Integer.parseInt(sa[2]); } catch(NumberFormatException ex) { maint       = 0; _logger.warn("Problem parsing 'minor' version string with value '" + sa[2] + "'. Setting this to 0. Caught: " + ex); }
+			try { servicePack = Integer.parseInt(sa[3]); } catch(NumberFormatException ex) { servicePack = 0; _logger.warn("Problem parsing 'servicePack' version string with value '" + sa[3] + "'. Setting this to 0. Caught: " + ex); }
+			try { patchLevel  = Integer.parseInt(sa[4]); } catch(NumberFormatException ex) { patchLevel  = 0; _logger.warn("Problem parsing 'patchLevel' version string with value '" + sa[4] + "'. Setting this to 0. Caught: " + ex); }
 			
 			return Ver.ver(major, minor, maint, servicePack, patchLevel);
 		}
 		else
 		{
-			_logger.error("ORACLE Version string '"+versionStr+"' doesn't consist of 5 fields separated be '.', can't parse this version string. returning 0");
+			_logger.error("ORACLE Version string '" + versionStr + "' doesn't consist of 5 fields separated be '.', can't parse this version string. returning 0");
 			return 0;
 		}
 	}
@@ -1221,17 +1221,17 @@ public class Ver
 			if (sa[0].startsWith("v"))
 				sa[0] = sa[0].substring(1).trim();
 
-			try { major       = Integer.parseInt(sa[0]); } catch(NumberFormatException ex) { major       = 0; _logger.warn("Problem parsing 'major' version string with value '"+sa[0]+"'. Setting this to 0. Caught: "+ex); }
-			try { minor       = Integer.parseInt(sa[1]); } catch(NumberFormatException ex) { minor       = 0; _logger.warn("Problem parsing 'minor' version string with value '"+sa[1]+"'. Setting this to 0. Caught: "+ex); }
-			try { maint       = Integer.parseInt(sa[2]); } catch(NumberFormatException ex) { maint       = 0; _logger.warn("Problem parsing 'minor' version string with value '"+sa[2]+"'. Setting this to 0. Caught: "+ex); }
-			try { servicePack = Integer.parseInt(sa[3]); } catch(NumberFormatException ex) { servicePack = 0; _logger.warn("Problem parsing 'servicePack' version string with value '"+sa[3]+"'. Setting this to 0. Caught: "+ex); }
+			try { major       = Integer.parseInt(sa[0]); } catch(NumberFormatException ex) { major       = 0; _logger.warn("Problem parsing 'major' version string with value '" + sa[0] + "'. Setting this to 0. Caught: " + ex); }
+			try { minor       = Integer.parseInt(sa[1]); } catch(NumberFormatException ex) { minor       = 0; _logger.warn("Problem parsing 'minor' version string with value '" + sa[1] + "'. Setting this to 0. Caught: " + ex); }
+			try { maint       = Integer.parseInt(sa[2]); } catch(NumberFormatException ex) { maint       = 0; _logger.warn("Problem parsing 'minor' version string with value '" + sa[2] + "'. Setting this to 0. Caught: " + ex); }
+			try { servicePack = Integer.parseInt(sa[3]); } catch(NumberFormatException ex) { servicePack = 0; _logger.warn("Problem parsing 'servicePack' version string with value '" + sa[3] + "'. Setting this to 0. Caught: " + ex); }
 //			try { patchLevel  = Integer.parseInt(sa[4]); } catch(NumberFormatException ex) { patchLevel  = 0; _logger.warn("Problem parsing 'patchLevel' version string with value '"+sa[4]+"'. Setting this to 0. Caught: "+ex); }
 			
 			return Ver.ver(major, minor, maint, servicePack, patchLevel);
 		}
 		else
 		{
-			_logger.error("DB2 Version string '"+versionStr+"' doesn't consist of 4 fields separated be '.', can't parse this version string. returning 0");
+			_logger.error("DB2 Version string '" + versionStr + "' doesn't consist of 4 fields separated be '.', can't parse this version string. returning 0");
 			return 0;
 		}
 	}
@@ -1328,10 +1328,10 @@ public class Ver
 		String[] sa = versionStr.split("\\.");
 		if (sa.length == 3)
 		{
-			try { major       = Integer.parseInt(sa[0]); } catch(NumberFormatException ex) { major       = 0; _logger.warn("Problem parsing 'major' version string with value '"+sa[0]+"'. Setting this to 0. Caught: "+ex); }
-			try { minor       = Integer.parseInt(sa[1]); } catch(NumberFormatException ex) { minor       = 0; _logger.warn("Problem parsing 'minor' version string with value '"+sa[1]+"'. Setting this to 0. Caught: "+ex); }
+			try { major       = Integer.parseInt(sa[0]); } catch(NumberFormatException ex) { major       = 0; _logger.warn("Problem parsing 'major' version string with value '" + sa[0] + "'. Setting this to 0. Caught: " + ex); }
+			try { minor       = Integer.parseInt(sa[1]); } catch(NumberFormatException ex) { minor       = 0; _logger.warn("Problem parsing 'minor' version string with value '" + sa[1] + "'. Setting this to 0. Caught: " + ex); }
 			      maint       = 0;
-			try { servicePack = Integer.parseInt(sa[2]); } catch(NumberFormatException ex) { servicePack = 0; _logger.warn("Problem parsing 'servicePack' version string with value '"+sa[2]+"'. Setting this to 0. Caught: "+ex); }
+			try { servicePack = Integer.parseInt(sa[2]); } catch(NumberFormatException ex) { servicePack = 0; _logger.warn("Problem parsing 'servicePack' version string with value '" + sa[2] + "'. Setting this to 0. Caught: " + ex); }
 			      patchLevel  = 0;
 		}
 			
@@ -1358,9 +1358,9 @@ public class Ver
 		int minor       = (shortVerInt % 10_000) / 100;
 		int maint       =  shortVerInt % 100;
 
-		if (major > 99) _logger.warn("shortVersionStringToNumber(shortVerInt="+shortVerInt+"): long version string can't handle 'major' greater than 99 (2 digit), the passed shortVerInt="+shortVerInt+" was calculated as major="+major);
-		if (minor > 99) _logger.warn("shortVersionStringToNumber(shortVerInt="+shortVerInt+"): long version string can't handle 'minor' greater than 99 (2 digit), the passed shortVerInt="+shortVerInt+" was calculated as minor="+minor);
-		if (maint > 99) _logger.warn("shortVersionStringToNumber(shortVerInt="+shortVerInt+"): long version string can't handle 'maint' greater than 99 (2 digit), the passed shortVerInt="+shortVerInt+" was calculated as maint="+maint);
+		if (major > 99) _logger.warn("shortVersionStringToNumber(shortVerInt=" + shortVerInt + "): long version string can't handle 'major' greater than 99 (2 digit), the passed shortVerInt=" + shortVerInt + " was calculated as major=" + major);
+		if (minor > 99) _logger.warn("shortVersionStringToNumber(shortVerInt=" + shortVerInt + "): long version string can't handle 'minor' greater than 99 (2 digit), the passed shortVerInt=" + shortVerInt + " was calculated as minor=" + minor);
+		if (maint > 99) _logger.warn("shortVersionStringToNumber(shortVerInt=" + shortVerInt + "): long version string can't handle 'maint' greater than 99 (2 digit), the passed shortVerInt=" + shortVerInt + " was calculated as maint=" + maint);
 
 		return ver(major, minor, maint);
 	}
@@ -1393,53 +1393,53 @@ public class Ver
 //		version = 99_99_99_9999_9999L; System.out.println(version + " = "+ versionNumToStr(version));
 //		System.out.println("----------------------------------------------------------------------------------");
 
-		version = 1250_003_00; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1254_001_00; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1254_010_02; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1570_004_20; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1570_000_00; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1570_100_00; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1570_102_00; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1570_150_00; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1570_160_00; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1570_050_00; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1570_051_00; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1570_060_00; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1600_000_00; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1600_000_01; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1600_001_00; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1600_001_01; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1612_001_01; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 9999_999_99; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1250_003_00; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1254_001_00; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1254_010_02; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1570_004_20; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1570_000_00; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1570_100_00; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1570_102_00; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1570_150_00; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1570_160_00; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1570_050_00; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1570_051_00; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1570_060_00; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1600_000_00; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1600_000_01; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1600_001_00; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1600_001_01; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1612_001_01; System.out.println(version + " = " + versionNumToStr(version));
+		version = 9999_999_99; System.out.println(version + " = " + versionNumToStr(version));
 		System.out.println("----------------------------------------------------------------------------------");
 
-		version = Ver.ver(12,5,4, 10,  2); System.out.println(version + " = "+ versionNumToStr(version));
-		version = Ver.ver(15,7,0, 100   ); System.out.println(version + " = "+ versionNumToStr(version));
-		version = Ver.ver(15,7,0, 101   ); System.out.println(version + " = "+ versionNumToStr(version));
-		version = Ver.ver(16,0          ); System.out.println(version + " = "+ versionNumToStr(version));
-		version = Ver.ver(16,0,0, 0,   1); System.out.println(version + " = "+ versionNumToStr(version));
-		version = Ver.ver(16,0,0, 1     ); System.out.println(version + " = "+ versionNumToStr(version));
-		version = Ver.ver(16,0,0, 1,   1); System.out.println(version + " = "+ versionNumToStr(version));
+		version = Ver.ver(12,5,4, 10,  2); System.out.println(version + " = " + versionNumToStr(version));
+		version = Ver.ver(15,7,0, 100   ); System.out.println(version + " = " + versionNumToStr(version));
+		version = Ver.ver(15,7,0, 101   ); System.out.println(version + " = " + versionNumToStr(version));
+		version = Ver.ver(16,0          ); System.out.println(version + " = " + versionNumToStr(version));
+		version = Ver.ver(16,0,0, 0,   1); System.out.println(version + " = " + versionNumToStr(version));
+		version = Ver.ver(16,0,0, 1     ); System.out.println(version + " = " + versionNumToStr(version));
+		version = Ver.ver(16,0,0, 1,   1); System.out.println(version + " = " + versionNumToStr(version));
 		System.out.println("----------------------------------------------------------------------------------");
 
-		version = Ver.ver(12,5,4, 10,  2); System.out.println(version + " = "+ versionNumToStr(version));
-		version = Ver.ver(15,7,0, 51,  0); System.out.println(version + " = "+ versionNumToStr(version));
-		version = Ver.ver(15,7,0, 101, 0); System.out.println(version + " = "+ versionNumToStr(version));
-		version = Ver.ver(44,5,6, 777,88); System.out.println(version + " = "+ versionNumToStr(version));
+		version = Ver.ver(12,5,4, 10,  2); System.out.println(version + " = " + versionNumToStr(version));
+		version = Ver.ver(15,7,0, 51,  0); System.out.println(version + " = " + versionNumToStr(version));
+		version = Ver.ver(15,7,0, 101, 0); System.out.println(version + " = " + versionNumToStr(version));
+		version = Ver.ver(44,5,6, 777,88); System.out.println(version + " = " + versionNumToStr(version));
 //		version = Ver.ver(1, 2,3, 4,   5); System.out.println(version + " = "+ versionNumToStr(version)); // should fail... do to main<10
 		System.out.println("----------------------------------------------------------------------------------");
 
-		version = 1250_030; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1254_010; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1570_042; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1570_000; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1570_100; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1570_120; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1570_150; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1570_160; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1570_050; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1570_051; System.out.println(version + " = "+ versionNumToStr(version));
-		version = 1570_060; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1250_030; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1254_010; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1570_042; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1570_000; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1570_100; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1570_120; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1570_150; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1570_160; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1570_050; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1570_051; System.out.println(version + " = " + versionNumToStr(version));
+		version = 1570_060; System.out.println(version + " = " + versionNumToStr(version));
 		System.out.println("----------------------------------------------------------------------------------");
 
 //		testVersion(1250011, "12.5.0 ESD#1.1");
@@ -1555,12 +1555,12 @@ public class Ver
 		
 		if (version != expectedNumVer) 
 		{
-			System.out.println("FAILED: version="+version+", expectedVersion="+expectedNumVer+", VersionStr='"+verStr+"'."); 
+			System.out.println("FAILED: version=" + version + ", expectedVersion=" + expectedNumVer + ", VersionStr='" + verStr + "'."); 
 			return false;
 		}
 		else 
 		{
-			System.out.println("OK    : version="+version+", expectedVersion="+expectedNumVer+", VersionStr='"+verStr+"'."); 
+			System.out.println("OK    : version=" + version + ", expectedVersion=" + expectedNumVer + ", VersionStr='" + verStr + "'."); 
 			return true;
 		}
 	}
@@ -1571,12 +1571,12 @@ public class Ver
 		
 		if (version != expectedNumVer) 
 		{
-			System.out.println("FAILED: version="+version+", expectedVersion="+expectedNumVer+", VersionStr='"+verStr+"'."); 
+			System.out.println("FAILED: version=" + version + ", expectedVersion=" + expectedNumVer + ", VersionStr='" + verStr + "'."); 
 			return false;
 		}
 		else 
 		{
-			System.out.println("OK    : version="+version+", expectedVersion="+expectedNumVer+", VersionStr='"+verStr+"'."); 
+			System.out.println("OK    : version=" + version + ", expectedVersion=" + expectedNumVer + ", VersionStr='" + verStr + "'."); 
 			return true;
 		}
 	}
@@ -1587,12 +1587,12 @@ public class Ver
 		
 		if (version != expectedNumVer) 
 		{
-			System.out.println("FAILED: version="+version+", expectedVersion="+expectedNumVer+", VersionStr='"+verStr+"'."); 
+			System.out.println("FAILED: version=" + version + ", expectedVersion=" + expectedNumVer + ", VersionStr='" + verStr + "'."); 
 			return false;
 		}
 		else 
 		{
-			System.out.println("OK    : version="+version+", expectedVersion="+expectedNumVer+", VersionStr='"+verStr+"'."); 
+			System.out.println("OK    : version=" + version + ", expectedVersion=" + expectedNumVer + ", VersionStr='" + verStr + "'."); 
 			return true;
 		}
 	}

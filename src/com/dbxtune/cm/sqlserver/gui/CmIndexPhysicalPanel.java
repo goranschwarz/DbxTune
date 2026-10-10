@@ -138,7 +138,7 @@ extends TabularCntrPanel
 //				list.add(new CmSettingsHelper("Table Size",   PROPKEY_sample_minPageCount , Integer.class, conf.getIntProperty(PROPKEY_sample_minPageCount , DEFAULT_sample_minPageCount ), DEFAULT_sample_minPageCount, "How many data pages should the table have to be included." ));
 
 				l_sampleMode_cbx.setSelectedItem(    conf.getProperty   (CmIndexPhysical.PROPKEY_sample_mode        , CmIndexPhysical.DEFAULT_sample_mode));
-				l_sampleMinPageCount_txt.setText(""+ conf.getIntProperty(CmIndexPhysical.PROPKEY_sample_minPageCount, CmIndexPhysical.DEFAULT_sample_minPageCount));
+				l_sampleMinPageCount_txt.setText("" + conf.getIntProperty(CmIndexPhysical.PROPKEY_sample_minPageCount, CmIndexPhysical.DEFAULT_sample_minPageCount));
 
 				// ReInitialize the SQL
 				getCm().setSql(null);
@@ -199,8 +199,8 @@ extends TabularCntrPanel
 				catch (NumberFormatException nfe)
 				{
 					intVal = CmIndexPhysical.DEFAULT_sample_minPageCount;
-					SwingUtils.showWarnMessage(CmIndexPhysicalPanel.this, "Not a Number", "<html>This must be a number, you entered '"+strVal+"'.<br>Setting to default value '"+intVal+"'.</html>", nfe);
-					l_sampleMinPageCount_txt.setText(intVal+"");
+					SwingUtils.showWarnMessage(CmIndexPhysicalPanel.this, "Not a Number", "<html>This must be a number, you entered '" + strVal + "'.<br>Setting to default value '" + intVal + "'.</html>", nfe);
+					l_sampleMinPageCount_txt.setText(intVal + "");
 				}
 				conf.setProperty(CmIndexPhysical.PROPKEY_sample_minPageCount, intVal);
 				conf.save();

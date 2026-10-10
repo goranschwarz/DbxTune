@@ -44,11 +44,11 @@ extends AlarmEvent
 				Version.getAppName(), // serviceType
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo
-				"THRESHOLD-"+thresholdLevel,       // extraInfo
+				"THRESHOLD-" + thresholdLevel,       // extraInfo
 				AlarmEvent.Category.SRV_CONFIG,
 				thresholdLevel < 3 ? AlarmEvent.Severity.WARNING : AlarmEvent.Severity.ERROR, 
 				thresholdLevel < 3 ? AlarmEvent.ServiceState.UP  : AlarmEvent.ServiceState.AFFECTED,
-				"Replication Server Memory Usage in Server '" + cm.getServerName() + "' is starting to get high, type='THRESHOLD-"+thresholdLevel+"', usedMemoryInMb="+usedMemoryInMb+", freeMemoryInMb="+freeMemoryInMb+", usedPct="+usedPct+", memoryLimit="+memoryLimit+". (threshold="+threshold+")",
+				"Replication Server Memory Usage in Server '" + cm.getServerName() + "' is starting to get high, type='THRESHOLD-" + thresholdLevel + "', usedMemoryInMb=" + usedMemoryInMb + ", freeMemoryInMb=" + freeMemoryInMb + ", usedPct=" + usedPct + ", memoryLimit=" + memoryLimit + ". (threshold=" + threshold + ")",
 				threshold
 				);
 
@@ -56,6 +56,6 @@ extends AlarmEvent
 		setTimeToLive(cm);
 
 		// Set the raw data carier
-		setData("usedMemoryInMb="+usedMemoryInMb+", freeMemoryInMb="+freeMemoryInMb+", usedPct="+usedPct+", memoryLimit="+memoryLimit);
+		setData("usedMemoryInMb=" + usedMemoryInMb + ", freeMemoryInMb=" + freeMemoryInMb + ", usedPct=" + usedPct + ", memoryLimit=" + memoryLimit);
 	}
 }

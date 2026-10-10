@@ -95,7 +95,7 @@ extends CountersModel
 		if (type == HOSTMON_DISKSPACE) return "HOSTMON_DISKSPACE";
 		if (type == HOSTMON_PS)        return "HOSTMON_PS";
 		if (type == HOSTMON_UD_CLASS)  return "HOSTMON_UD_CLASS";
-		return "UNKNOWN TYPE("+type+")";
+		return "UNKNOWN TYPE(" + type + ")";
 	}
 	//----------------------------------------------------------------------------
 	// BEGIN: Constructors
@@ -230,7 +230,7 @@ extends CountersModel
 				_hostMonitor = new MonitorUserDefined(conf, _udModuleName, hostMonConn, false);
 			}
 			else
-				throw new Exception("Unsupported HOSTMON_TYPE of '"+_hostMonType+"'.");
+				throw new Exception("Unsupported HOSTMON_TYPE of '" + _hostMonType + "'.");
 
 			// set this property so we can reach this object from the TabularControlPanel
 			setClientProperty(HostMonitor.PROPERTY_NAME, _hostMonitor);
@@ -388,7 +388,7 @@ extends CountersModel
 		else if (whatData == DATA_DIFF) data = _diffData;
 		else if (whatData == DATA_RATE) data = _rateData;
 		else
-			throw new RuntimeException("Only ABS, DIFF, or RATE data is available. you passed whatData="+whatData);
+			throw new RuntimeException("Only ABS, DIFF, or RATE data is available. you passed whatData=" + whatData);
 
 		if (data == null)
 			return null;
@@ -463,9 +463,9 @@ extends CountersModel
 				}
 			}
 			if (_offlineMetadata != null)
-				_logger.info("Setting Offline Meta Data to use '"+_offlineMetadata.getTableName()+"'.");
+				_logger.info("Setting Offline Meta Data to use '" + _offlineMetadata.getTableName() + "'.");
 			else
-				_logger.warn("Can't find a Offline Meta Data structure for columns: "+cols);
+				_logger.warn("Can't find a Offline Meta Data structure for columns: " + cols);
 //System.out.println(this+"::setColumnNames(): _offlineMetadata="+_offlineMetadata+", this="+this+", getTabPanel()="+getTabPanel());
 
 			// Initialize the GUI
@@ -638,7 +638,7 @@ extends CountersModel
 
 		if ( _hostMonitor.isPaused() )
 		{
-			_logger.info("The Host Monitor module '"+_hostMonitor.getModuleName()+"' is paused.");
+			_logger.info("The Host Monitor module '" + _hostMonitor.getModuleName() + "' is paused.");
 			// do NOT return here, _hostMonitor.getSummaryTable() will return an empty, 0 row result...
 		}
 
@@ -694,7 +694,7 @@ extends CountersModel
 		}
 
 		if (_logger.isDebugEnabled())
-			_logger.debug("OUTPUT Table from '"+_hostMonitor.getModuleName()+"':\n" + tmpNewSample.toTableString());
+			_logger.debug("OUTPUT Table from '" + _hostMonitor.getModuleName() + "':\n" + tmpNewSample.toTableString());
 
 		// set MetaData: otherwise the Persistent Counter Storage can't create tables
 		setResultSetMetaData(tmpNewSample.getMetaData());
@@ -799,7 +799,7 @@ extends CountersModel
 			// if it's the first time sampling...
 			if ( ! isInitialized() )
 			{
-				_logger.debug(getName()+":------doFireTableStructureChanged------");
+				_logger.debug(getName() + ":------doFireTableStructureChanged------");
 				fireTableStructureChanged();
 
 				setInitialized(true);
@@ -832,7 +832,7 @@ extends CountersModel
 
 					if ( ! isInitialized() )
 					{
-						_logger.debug(getName()+":------doFireTableStructureChanged------");
+						_logger.debug(getName() + ":------doFireTableStructureChanged------");
 						fireTableStructureChanged();
 
 						setInitialized(true);
@@ -840,13 +840,13 @@ extends CountersModel
 
 					if (getTabPanel() != null && !getTabPanel().isTableInitialized())
 					{
-						_logger.debug(getName()+":------doFireTableStructureChanged------");
+						_logger.debug(getName() + ":------doFireTableStructureChanged------");
 						fireTableStructureChanged();
 						getTabPanel().adjustTableColumnWidth();
 					}
 					else
 					{
-						_logger.debug(getName()+":-fireTableDataChanged-");
+						_logger.debug(getName() + ":-fireTableDataChanged-");
 						fireTableDataChanged();
 					}
 
@@ -993,7 +993,7 @@ extends CountersModel
 							}
 							catch(NumberFormatException nfe)
 							{
-								_logger.warn("CounterSampleSetName='"+newSampleName+"', className='"+newRowObj.getClass().getName()+"' columns can't be 'diff' calculated. colName='"+colName+"', key='"+newPk+"', oldObj='"+oldRowObj+"', newObj='"+newRowObj+"'. Trying to convert it to a Number Caught: "+nfe);
+								_logger.warn("CounterSampleSetName='" + newSampleName + "', className='" + newRowObj.getClass().getName() + "' columns can't be 'diff' calculated. colName='" + colName + "', key='" + newPk + "', oldObj='" + oldRowObj + "', newObj='" + newRowObj + "'. Trying to convert it to a Number Caught: " + nfe);
 								diffRow.setValue(c, newRowObj);
 							}
 								
@@ -1118,7 +1118,7 @@ extends CountersModel
 					{
 						String colName = diffData.getColumnName(c);
 //						_logger.warn("CounterSampleSetName='"+diffData._name+"', className='"+originObject.getClass().getName()+"' columns can't be 'rate' calculated. colName='"+colName+"', originObject='"+originObject+"', keeping this object.");
-						_logger.warn("OsTable(RateCalc)-CmName='"+getName()+"', className='"+originObject.getClass().getName()+"' columns can't be 'rate' calculated. colName='"+colName+"', originObject='"+originObject+"', keeping this object.");
+						_logger.warn("OsTable(RateCalc)-CmName='" + getName() + "', className='" + originObject.getClass().getName() + "' columns can't be 'rate' calculated. colName='" + colName + "', originObject='" + originObject + "', keeping this object.");
 						newObject = originObject;
 					}
 				}
@@ -1235,10 +1235,10 @@ extends CountersModel
 			"Host Monitor has no specific properties.<br>" +
 			"Please view executed command on the right hand side of the Option Panel<br>" +
 			"<br>" +
-			"hostMonType="+getTypeExplanation(_hostMonType)+".<br>";
+			"hostMonType=" + getTypeExplanation(_hostMonType) + ".<br>";
 
 		if (_hostMonType == HOSTMON_UD_CLASS)
-			ret += "udModuleName='"+_udModuleName+"'<br>";
+			ret += "udModuleName='" + _udModuleName + "'<br>";
 
 		if (_hostMonitor != null)
 		{
@@ -1247,7 +1247,7 @@ extends CountersModel
 			ret += "getName: "     + getName()                           + "<br>";
 			ret += "getCommand: "  + _hostMonitor.getExecutedCommand()   + "<br>";
 			ret += "execMode: "    + _hostMonitor.getExecModeDescription() + "<br>";
-			ret += "getSleepTime: "+ _hostMonitor.getSleepTime()         + "<br>";
+			ret += "getSleepTime: " + _hostMonitor.getSleepTime()         + "<br>";
 			ret += "isPaused: "    + _hostMonitor.isPaused()             + "<br>";
 			ret += "isRunning: "   + _hostMonitor.isRunning()            + "<br>";
 			ret += "isStreaming: " + _hostMonitor.isOsCommandStreaming() + "<br>";

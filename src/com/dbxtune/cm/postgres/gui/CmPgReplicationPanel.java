@@ -97,7 +97,7 @@ extends TabularCntrPanel
 				Configuration conf = Configuration.getCombinedConfiguration();
 
 				l_updateActive_chk        .setSelected(conf.getBooleanProperty(CmPgReplication.PROPKEY_update_primary             , CmPgReplication.DEFAULT_update_primary));
-				l_updateActiveInterval_txt.setText(""+ conf.getLongProperty   (CmPgReplication.PROPKEY_update_primaryIntervalInSec, CmPgReplication.DEFAULT_update_primaryIntervalInSec));
+				l_updateActiveInterval_txt.setText("" + conf.getLongProperty   (CmPgReplication.PROPKEY_update_primaryIntervalInSec, CmPgReplication.DEFAULT_update_primaryIntervalInSec));
 
 				// ReInitialize the SQL
 				//getCm().setSql(null);
@@ -114,7 +114,7 @@ extends TabularCntrPanel
 		
 		l_updateActive_chk         = new JCheckBox("Update Primary Instance,", conf.getBooleanProperty(CmPgReplication.PROPKEY_update_primary, CmPgReplication.DEFAULT_update_primary));
 		l_updateActiveInterval_lbl = new JLabel("Interval in Seconds");
-		l_updateActiveInterval_txt = new JTextField(conf.getLongProperty(CmPgReplication.PROPKEY_update_primaryIntervalInSec, CmPgReplication.DEFAULT_update_primaryIntervalInSec)+"", 5);
+		l_updateActiveInterval_txt = new JTextField(conf.getLongProperty(CmPgReplication.PROPKEY_update_primaryIntervalInSec, CmPgReplication.DEFAULT_update_primaryIntervalInSec) + "", 5);
 		
 		l_updateActive_chk        .setToolTipText("<html>If we are Connect to PRIMARY Instance (and we are in RW mode and there are <i>replication subscribers</i>, then Update a dummy table, this to introduce network traffic in a <i>calm</i> system.</html>");
 		l_updateActiveInterval_lbl.setToolTipText("<html>Do not update primary side every time, but wait for x second between updates.</html>");

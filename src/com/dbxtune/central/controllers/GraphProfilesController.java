@@ -93,7 +93,7 @@ extends HttpServlet
 				// If we did not get any result... Try with no-user
 				if ( list.isEmpty() && StringUtil.hasValue(user) )
 				{
-					_logger.info("No profiles was found for type='"+type+"', user='"+user+"'... Trying with user='' (no-user)");				
+					_logger.info("No profiles was found for type='" + type + "', user='" + user + "'... Trying with user='' (no-user)");				
 					list = reader.getGraphProfiles(type, "");
 				}
 
@@ -104,8 +104,8 @@ extends HttpServlet
 		}
 		catch (Exception e)
 		{
-			_logger.info("Problem accessing DBMS or writing JSON, Caught: "+e, e);
-			throw new ServletException("Problem accessing db or writing JSON, Caught: "+e, e);
+			_logger.info("Problem accessing DBMS or writing JSON, Caught: " + e, e);
+			throw new ServletException("Problem accessing db or writing JSON, Caught: " + e, e);
 		}
 		
 		out.println(payload);
@@ -135,7 +135,7 @@ extends HttpServlet
 
 
 		String dbxProduct = req.getParameter("dbxProduct");
-		System.out.println("dbxProduct="+dbxProduct);
+		System.out.println("dbxProduct=" + dbxProduct);
 		
 		StringBuilder sb = new StringBuilder();
 		String line = null;
@@ -145,7 +145,7 @@ extends HttpServlet
 				sb.append(line);
 		} catch (Exception e) { /*report an error*/ }
 		String jsonStr = sb.toString();
-		System.out.println("jsonStr="+jsonStr);
+		System.out.println("jsonStr=" + jsonStr);
 
 		ObjectMapper om = new ObjectMapper();
 //		DbxCentralProfile profile = om.readValue(req.getReader(), DbxCentralProfile.class);
@@ -163,8 +163,8 @@ extends HttpServlet
 		}
 		catch (Exception e)
 		{
-			_logger.info("Problem accessing DBMS or writing JSON, Caught: "+e, e);
-			throw new ServletException("Problem accessing db, Caught: "+e, e);
+			_logger.info("Problem accessing DBMS or writing JSON, Caught: " + e, e);
+			throw new ServletException("Problem accessing db, Caught: " + e, e);
 		}
 		
 		String payload = "{}"; // it seems that I need to return "something"

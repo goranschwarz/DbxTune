@@ -86,10 +86,10 @@ extends XmenuActionBase
 		Configuration conf = Configuration.getCombinedConfiguration();
 		String optdiag  = conf.getProperty("optdiag", "${SYBASE}/${SYBASE_ASE}/bin/optdiag");
 
-		String cmd = cmdPath + optdiag + " statistics " + _dbname + ".." + _tabname + " -U"+aseUser + " -P"+asePasswd + " -S"+aseSrv;
+		String cmd = cmdPath + optdiag + " statistics " + _dbname + ".." + _tabname + " -U" + aseUser + " -P" + asePasswd + " -S" + aseSrv;
 		//optdiag statistics goran..TestDest_1 -Usa -P -Sgoransxp:5000
 		
-		textarea.setText("Executing OS Command: "+cmd+"\nWaiting for it to finnish...");
+		textarea.setText("Executing OS Command: " + cmd + "\nWaiting for it to finnish...");
 		try
 		{
 			OSCommand osCmd = OSCommand.execute(cmd);
@@ -99,12 +99,12 @@ extends XmenuActionBase
 		}
 		catch (Exception e)
 		{
-			textarea.setText("Problems executing the Operating system command:\n"+cmd+"\n\n"+e.getMessage());
+			textarea.setText("Problems executing the Operating system command:\n" + cmd + "\n\n" + e.getMessage());
 			SwingUtils.showErrorMessage(frame, "Problems Executing OptDiag", 
 					"Problems executing the Operating system command:\n\n" +
-					cmd+"\n\n"+e.getMessage()+"\n\n" +
+					cmd + "\n\n" + e.getMessage() + "\n\n" +
 					"If the optdiag binary cant be found, you can specify what binary to run using the\n" +
-					"property 'optdiag=...' In the "+Version.getAppName()+" properties file '"+Configuration.getCombinedConfiguration().getFilename()+"'.\n\n"
+					"property 'optdiag=...' In the " + Version.getAppName() + " properties file '" + Configuration.getCombinedConfiguration().getFilename() + "'.\n\n"
 					, e);
 			frame.dispose();
 		}
@@ -115,7 +115,7 @@ extends XmenuActionBase
 		JPanel textPanel = new JPanel();
 		//final JTextArea procText = new JTextArea();
 		final JTextArea textarea  = new LineNumberedPaper(0,0);
-		final JFrame textFrame = new JFrame("Optdiag for "+_dbname+".."+_tabname);
+		final JFrame textFrame = new JFrame("Optdiag for " + _dbname + ".." + _tabname);
 
 		textFrame.addWindowListener(new WindowAdapter()
 		{

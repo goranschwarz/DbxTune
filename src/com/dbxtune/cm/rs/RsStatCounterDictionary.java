@@ -71,7 +71,7 @@ public class RsStatCounterDictionary
 	public void addCounter(StatCounterEntry c)
 	{
 		if (_counterIdMap.containsKey(c._counterId))
-			System.out.println("XXXXXXXXXXXXXXXX: counter_id="+c._counterId+" alreasy exists in _counterIdMap ?????");
+			System.out.println("XXXXXXXXXXXXXXXX: counter_id=" + c._counterId + " alreasy exists in _counterIdMap ?????");
 
 		String key = c._moduleName + ":" + c._displayName;
 		if (_counterNameMap.containsKey(key))
@@ -83,9 +83,9 @@ public class RsStatCounterDictionary
 			else
 			{
 				StatCounterEntry i = _counterNameMap.get(c._displayName);
-				System.out.println("XXXXXXXXXXXXXXXX: '"+c._displayName+"' counter name, already exists in _counterNameMap ?????");
-				System.out.println("             CUR: _moduleName="+i._moduleName+", _counterId="+i._counterId);
-				System.out.println("             NEW: _moduleName="+c._moduleName+", _counterId="+c._counterId);
+				System.out.println("XXXXXXXXXXXXXXXX: '" + c._displayName + "' counter name, already exists in _counterNameMap ?????");
+				System.out.println("             CUR: _moduleName=" + i._moduleName + ", _counterId=" + i._counterId);
+				System.out.println("             NEW: _moduleName=" + c._moduleName + ", _counterId=" + c._counterId);
 			}
 			key = c._moduleName + ":" + c._displayName;
 		}
@@ -182,7 +182,7 @@ public class RsStatCounterDictionary
 		}
 		catch (SQLException e)
 		{
-			_logger.error("Problems getting counter information from the RSSD. stillInRssd="+inRssd+", sql="+sql, e);
+			_logger.error("Problems getting counter information from the RSSD. stillInRssd=" + inRssd + ", sql=" + sql, e);
 		}
 		finally
 		{

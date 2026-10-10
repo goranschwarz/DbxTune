@@ -76,7 +76,7 @@ public class OsTableRow
 		int sqlCols   = _md.getColumnCount();
 
 		if (parseCols != inValues.length)
-			throw new OsRecordParseException("MetaData ParseColumnCount="+parseCols+", and input records is '"+inValues.length+"'.");
+			throw new OsRecordParseException("MetaData ParseColumnCount=" + parseCols + ", and input records is '" + inValues.length + "'.");
 		
 		_values = new Object[sqlCols];
 

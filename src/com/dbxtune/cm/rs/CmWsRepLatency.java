@@ -78,7 +78,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -106,7 +106,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmWsRepLatency(counterController, guiController);
 	}
@@ -413,15 +413,15 @@ extends CountersModel
 // But I don't understand... since a "dummy" row is still added in CounterSampleWsIterator.getSample(...) catch(StandbyErrors) _rows.add(createSkipRow(wsEntry, standbyMsg));  
 if (debugPrint || _logger.isDebugEnabled())
 {
-	_logger.debug("##### sendAlarmRequest("+cm.getName()+"): getAbsRowCount()=" + cm.getAbsRowCount() + ", thisSampleLogicalConnections=" + thisSampleLogicalConnections);
-	System.out.println("##### sendAlarmRequest("+cm.getName()+"): getAbsRowCount()=" + cm.getAbsRowCount() + ", thisSampleLogicalConnections=" + thisSampleLogicalConnections);
+	_logger.debug("##### sendAlarmRequest(" + cm.getName() + "): getAbsRowCount()=" + cm.getAbsRowCount() + ", thisSampleLogicalConnections=" + thisSampleLogicalConnections);
+	System.out.println("##### sendAlarmRequest(" + cm.getName() + "): getAbsRowCount()=" + cm.getAbsRowCount() + ", thisSampleLogicalConnections=" + thisSampleLogicalConnections);
 }
 
 			// Get the configuration
 			String configMandatoryLogicalConnections = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_MandatoryLogicalConnections,  DEFAULT_alarm_MandatoryLogicalConnections);
 			
 			if (debugPrint || _logger.isDebugEnabled())
-				System.out.println("##### sendAlarmRequest("+cm.getName()+"): MandatoryLogicalConnections -- configMandatoryLogicalConnections='"+configMandatoryLogicalConnections+"', thisSampleLogicalConnections="+thisSampleLogicalConnections+", _mandatoryLogicalConnections="+_mandatoryLogicalConnections+".");
+				System.out.println("##### sendAlarmRequest(" + cm.getName() + "): MandatoryLogicalConnections -- configMandatoryLogicalConnections='" + configMandatoryLogicalConnections + "', thisSampleLogicalConnections=" + thisSampleLogicalConnections + ", _mandatoryLogicalConnections=" + _mandatoryLogicalConnections + ".");
 
 
 			// Check ALL previous existing Logical Connections (since RsTune was started) 
@@ -499,7 +499,7 @@ if (debugPrint || _logger.isDebugEnabled())
 					String regexp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_ActiveState,  DEFAULT_alarm_ActiveState);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): ActiveState -- regexp='"+regexp+"', state='"+state+"'.");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): ActiveState -- regexp='" + regexp + "', state='" + state + "'.");
 
 					if ( ! state.matches(regexp) ) // default is 'Active/'
 					{
@@ -554,7 +554,7 @@ if (debugPrint || _logger.isDebugEnabled())
 					String regexp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_StandbyState,  DEFAULT_alarm_StandbyState);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): StandbyState -- regexp='"+regexp+"', state='"+state+"'.");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): StandbyState -- regexp='" + regexp + "', state='" + state + "'.");
 
 					if ( (! state.matches(regexp)) || StringUtil.hasValue(standbyMsg)) // default is 'Active/'
 					{
@@ -611,7 +611,7 @@ if (debugPrint || _logger.isDebugEnabled())
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ApplyAgeInMinutes, DEFAULT_alarm_ApplyAgeInMinutes);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", lName='"+lName+"', ApplyAgeInMinutes='"+ApplyAgeInMinutes+"'.");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", lName='" + lName + "', ApplyAgeInMinutes='" + ApplyAgeInMinutes + "'.");
 
 					if (ApplyAgeInMinutes.intValue() > threshold)
 					{
@@ -688,7 +688,7 @@ if (debugPrint || _logger.isDebugEnabled())
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_DataAgeInMinutes, DEFAULT_alarm_DataAgeInMinutes);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", lName='"+lName+"', DataAgeInMinutes='"+DataAgeInMinutes+"'.");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", lName='" + lName + "', DataAgeInMinutes='" + DataAgeInMinutes + "'.");
 
 					if (DataAgeInMinutes.intValue() > threshold)
 					{

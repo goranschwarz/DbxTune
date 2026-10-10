@@ -121,7 +121,7 @@ public class AseConnectionUtils
 		}
 		catch(SQLException e)
 		{
-			_logger.warn("Problems getting current Working Database. Error Number: "+e.getErrorCode()+", Message: " + e.getMessage());
+			_logger.warn("Problems getting current Working Database. Error Number: " + e.getErrorCode() + ", Message: " + e.getMessage());
 //			JOptionPane.showMessageDialog(
 //					QueryWindow.this, 
 //					"Problems getting current Working Database:\n" +
@@ -147,11 +147,11 @@ public class AseConnectionUtils
 		if ( dbNameBeforeChange.equalsIgnoreCase(dbname) )
 		{
 			// No need to change database.
-			_logger.debug("No need to change database to '"+dbNameBeforeChange+"', you are already in it.");
+			_logger.debug("No need to change database to '" + dbNameBeforeChange + "', you are already in it.");
 			return true;
 		}
 
-		String cmd = "use "+dbname;
+		String cmd = "use " + dbname;
 
 //		if (_extensiveLogging)
 //			_logger.info("Start to use the new database '"+dbname+"' in server '"+getServerName()+"' for the '"+getManagedType()+"'. Current database is '"+dbNameBeforeChange+"'.");
@@ -167,7 +167,7 @@ public class AseConnectionUtils
 
 			if ( hasSqlWarnings(stmnt.getWarnings()) )
 			{
-				_logger.info("Received following warnings when changing database to '"+dbname+"', continuing... " + sqlWarningToString(stmnt.getWarnings()) );
+				_logger.info("Received following warnings when changing database to '" + dbname + "', continuing... " + sqlWarningToString(stmnt.getWarnings()) );
 			}
 
 			stmnt.close();
@@ -210,13 +210,13 @@ public class AseConnectionUtils
 				case 968: // 968, 16, 2, Database '%S_DBINFO' is not upgraded and hence is not available for access. Please retry your query after database has been upgraded.
 				case 3471://3471, 10, 2, Database '%.*s' cannot be brought online because it has replicated tables that may not be completely transferred. After making sure that your replication is in sync, use dbcc dbrepair to remove the secondary truncpt.
 					String aseMsg = (e.getMessage() == null) ? "-unknown-" : e.getMessage().replaceAll("\n", "");
-					String msg = "It looks like the database '"+dbname+"' is in 'load database', 'recovery mode' or 'offline', still in the database '"+dbNameBeforeChange+"', please try again later. DbmsMsgNumber="+aseError+", DbmsMsg="+aseMsg;
+					String msg = "It looks like the database '" + dbname + "' is in 'load database', 'recovery mode' or 'offline', still in the database '" + dbNameBeforeChange + "', please try again later. DbmsMsgNumber=" + aseError + ", DbmsMsg=" + aseMsg;
 					_logger.warn(msg);
 					//throw new DbNotRecoveredException(_servername, dbname, getManagedType(), msg, sqle);
 					return false;
 				}
 			}
-			String msg = "Problems when executing '"+cmd+"' in '"+dbNameBeforeChange+"'.";
+			String msg = "Problems when executing '" + cmd + "' in '" + dbNameBeforeChange + "'.";
 			_logger.error(msg + sqlExceptionToString(sqle));
 			//throw new ManageException(msg, sqle);
 			return false;
@@ -239,7 +239,7 @@ public class AseConnectionUtils
 		}
 
 		// Write some debug info
-		_logger.debug("Changed database from '"+dbNameBeforeChange+"' to '"+dbNameAfterChange+"'.");
+		_logger.debug("Changed database from '" + dbNameBeforeChange + "' to '" + dbNameAfterChange + "'.");
 		return true;
 	}
 
@@ -277,11 +277,11 @@ public class AseConnectionUtils
 		{
 			aseGetdate = null;
 
-			String msg = "Problems when executing '"+sql+"' in ASE Server.";
+			String msg = "Problems when executing '" + sql + "' in ASE Server.";
 			_logger.error(msg + sqlExceptionToString(sqle));
 		}
 
-		_logger.debug("getAseGetdate(): getdate()='"+aseGetdate+"'.");
+		_logger.debug("getAseGetdate(): getdate()='" + aseGetdate + "'.");
 
 		return aseGetdate;
 	}
@@ -329,11 +329,11 @@ public class AseConnectionUtils
 		ResultSet	rs     = null;
 
 		String sql = "select crdate " +
-		             "from ["+dbname+"]..sysobjects " +
-		             "where name = '"+objectName+"'";
+		             "from [" + dbname + "]..sysobjects " +
+		             "where name = '" + objectName + "'";
 
 		if (type != null)
-			sql += "  and type = '"+type+"'";
+			sql += "  and type = '" + type + "'";
 
 		if ( ! isConnectionOk(conn, false, null) )
 			return null;
@@ -357,11 +357,11 @@ public class AseConnectionUtils
 		{
 			crDate = null;
 
-			String msg = "Problems when executing '"+sql+"' in ASE Server.";
+			String msg = "Problems when executing '" + sql + "' in ASE Server.";
 			_logger.error(msg + sqlExceptionToString(sqle));
 		}
 
-		_logger.debug("getObjectCreationDate(): objectName='"+objectName+"', created='"+crDate+"'.");
+		_logger.debug("getObjectCreationDate(): objectName='" + objectName + "', created='" + crDate + "'.");
 
 		return crDate;
 	}
@@ -1648,7 +1648,7 @@ public class AseConnectionUtils
 			_logger.debug("MonTablesDictionary:isClusterEnabled(), @@clustermode, probably an early ASE version", ex);
 		}
 
-		_logger.debug("Ase @@clustermode = '"+clusterMode+"'.");
+		_logger.debug("Ase @@clustermode = '" + clusterMode + "'.");
 
 		if (clusterMode == null)
 			return false;
@@ -1677,7 +1677,7 @@ public class AseConnectionUtils
 
 		if (sql == null)
 		{
-			String err = "The passed System View type='"+type+"', is unknown.";
+			String err = "The passed System View type='" + type + "', is unknown.";
 			_logger.error(err);
 			//throw new InvalidXXXXXXXException(err);
 			return;
@@ -1696,7 +1696,7 @@ public class AseConnectionUtils
 		catch (SQLException ex)
 		{
 			String msg = AseConnectionUtils.showSqlExceptionMessage(null, Version.getAppName(), "Problems when setting 'system view' in ASE Server.", ex); 
-			_logger.error("Problems when setting 'system view' in ASE Server. "+msg);
+			_logger.error("Problems when setting 'system view' in ASE Server. " + msg);
 		}
 	}
 
@@ -1725,7 +1725,7 @@ public class AseConnectionUtils
 		catch (SQLException ex)
 		{
 			String msg = AseConnectionUtils.showSqlExceptionMessage(null, Version.getAppName(), "Problems when getting 'system view' in ASE Server.", ex); 
-			_logger.error("Problems when getting 'system view' in ASE Server. "+msg);
+			_logger.error("Problems when getting 'system view' in ASE Server. " + msg);
 		}
 
 		if (ceSystemView == null) 
@@ -1776,7 +1776,7 @@ public class AseConnectionUtils
 				
 				if ( ! "us_english".equals(aseLanguage))
 				{
-					_logger.info("Changing the connected ASE users default Language from '"+aseLanguage+"' to 'us_english'.");
+					_logger.info("Changing the connected ASE users default Language from '" + aseLanguage + "' to 'us_english'.");
 					sql = "set language us_english";
 					stmt = conn.createStatement();
 					stmt.executeUpdate(sql);
@@ -1827,7 +1827,7 @@ public class AseConnectionUtils
 
 			if ( ! srvVersionStr.startsWith(DbUtils.DB_PROD_NAME_SYBASE_ASE) )
 			{
-				String msg = "This doesn't look like an ASE server. @@version='"+srvVersionStr+"'.";
+				String msg = "This doesn't look like an ASE server. @@version='" + srvVersionStr + "'.";
 				_logger.error(msg);
 				if (gui)
 				{
@@ -1835,11 +1835,11 @@ public class AseConnectionUtils
 						"<html>" +
 						"This doesn't look like an Sybase ASE server.<br>" +
 						"<br>" +
-						"The Version String is '<code>"+srvVersionStr+"</code>'. <br>" +
+						"The Version String is '<code>" + srvVersionStr + "</code>'. <br>" +
 						"In my book this ain't a ASE Server, so I can't continue.<br>" +
 						"</html>";
 
-					SwingUtils.showErrorMessage(parent, Version.getAppName()+" - connect check", msgHtml, null);
+					SwingUtils.showErrorMessage(parent, Version.getAppName() + " - connect check", msgHtml, null);
 				}
 				return false;
 			}
@@ -1851,19 +1851,19 @@ public class AseConnectionUtils
 			if (srvVersionNum < Ver.ver(12,5,0,3,0))
 			{
 				// FIXME: 
-				String msg = "The minimum ASE Version supported by "+Version.getAppName()+" is 12.5.0.3 in earlier releases MDA tables doesn't exists. Connected to @@version='"+srvVersionStr+"'.";
+				String msg = "The minimum ASE Version supported by " + Version.getAppName() + " is 12.5.0.3 in earlier releases MDA tables doesn't exists. Connected to @@version='" + srvVersionStr + "'.";
 				_logger.error(msg);
 				if (gui)
 				{
 					String msgHtml = 
 						"<html>" +
-						"The minimum ASE Version supported by "+Version.getAppName()+" is 12.5.0.3<br>" +
+						"The minimum ASE Version supported by " + Version.getAppName() + " is 12.5.0.3<br>" +
 						"in earlier ASE releases MDA tables doesn't exists<br>" +
 						"<br>" +
-						"The Version String is '<code>"+srvVersionStr+"</code>'. <br>" +
+						"The Version String is '<code>" + srvVersionStr + "</code>'. <br>" +
 						"</html>";
 
-					SwingUtils.showErrorMessage(parent, Version.getAppName()+" - connect check", msgHtml, null);
+					SwingUtils.showErrorMessage(parent, Version.getAppName() + " - connect check", msgHtml, null);
 				}
 				return false;
 			}
@@ -1878,7 +1878,7 @@ public class AseConnectionUtils
 			}
 			rs.close();
 
-			_logger.info("Just connected to an ASE Server named '"+atAtServername+"' with Version Number "+srvVersionNum+", and the Version String '"+srvVersionStr+"', using language '"+aseLanguage+"'.");
+			_logger.info("Just connected to an ASE Server named '" + atAtServername + "' with Version Number " + srvVersionNum + ", and the Version String '" + srvVersionStr + "', using language '" + aseLanguage + "'.");
 
 			
 			// if user name is null or empty, then get current user
@@ -1923,15 +1923,15 @@ public class AseConnectionUtils
 //				if (has_sa_role && has_sso_role)
 				if (has_sso_role)
 				{
-					_logger.info("User '"+user+"' has NOT got role 'mon_role', but since this users do have 'sso_role', I will automatically try to grant 'mon_role' to the user '"+user+"'.");
+					_logger.info("User '" + user + "' has NOT got role 'mon_role', but since this users do have 'sso_role', I will automatically try to grant 'mon_role' to the user '" + user + "'.");
 
-					sql = "sp_role 'grant', 'mon_role', '"+user+"'";
+					sql = "sp_role 'grant', 'mon_role', '" + user + "'";
 					stmt.execute(sql);
-					_logger.info("Executed: "+sql);
+					_logger.info("Executed: " + sql);
 
 					sql = "set role 'mon_role' on";
 					stmt.execute(sql);
-					_logger.info("Executed: "+sql);
+					_logger.info("Executed: " + sql);
 
 					// re-check if grant of mon_role succeeded
 					sql = "sp_activeroles 'expand_down'";
@@ -1945,7 +1945,7 @@ public class AseConnectionUtils
 				}
 				else
 				{
-					_logger.info("Automatic grant of 'mon_role' to user '"+user+"' can't be done. This since the user '"+user+"' doesn't have 'sso_role'.");
+					_logger.info("Automatic grant of 'mon_role' to user '" + user + "' can't be done. This since the user '" + user + "' doesn't have 'sso_role'.");
 				}
 
 				// If mon_role was still unsuccessfull
@@ -1961,13 +1961,13 @@ public class AseConnectionUtils
 							"<html>" +
 							"<b>You need 'mon_role' to access monitoring tables</b><br>" +
 							"<br>" +
-							"Have your system administrator grant 'mon_role' to the login '"+user+"'.<br>" +
-							"<i>Note: if current user '"+user+"' had 'sso_role', then the grant is automatically done by "+Version.getAppName()+".</i><br>" +
+							"Have your system administrator grant 'mon_role' to the login '" + user + "'.<br>" +
+							"<i>Note: if current user '" + user + "' had 'sso_role', then the grant is automatically done by " + Version.getAppName() + ".</i><br>" +
 							"<br>" +
 							"The grant can be done with the following command:<br>" +
 //							"<font size=\"4\">" +
-							"  <code>isql -Usa -Psecret -S"+atAtServername+" -w999 </code><br>" +
-							"  <code>1> sp_role 'grant', 'mon_role', '"+user+"'</code><br>" +
+							"  <code>isql -Usa -Psecret -S" + atAtServername + " -w999 </code><br>" +
+							"  <code>1> sp_role 'grant', 'mon_role', '" + user + "'</code><br>" +
 							"  <code>2> go</code><br>" +
 //							"</font>" +
 							"<br>" +
@@ -2031,15 +2031,15 @@ public class AseConnectionUtils
 				// Try to grant access to current user
 				if ( has_sso_role )
 				{
-					_logger.info("User '"+user+"' has NOT got role 'sybase_ts_role', but since this users do have 'sso_role', I will automatically try to grant 'sybase_ts_role' to the user '"+user+"'.");
+					_logger.info("User '" + user + "' has NOT got role 'sybase_ts_role', but since this users do have 'sso_role', I will automatically try to grant 'sybase_ts_role' to the user '" + user + "'.");
 
-					sql = "sp_role 'grant', 'sybase_ts_role', '"+user+"'";
+					sql = "sp_role 'grant', 'sybase_ts_role', '" + user + "'";
 					stmt.execute(sql);
-					_logger.info("Executed: "+sql);
+					_logger.info("Executed: " + sql);
 
 					sql = "set role 'sybase_ts_role' on";
 					stmt.execute(sql);
-					_logger.info("Executed: "+sql);
+					_logger.info("Executed: " + sql);
 
 					// re-check if grant of mon_role succeeded
 					sql = "sp_activeroles 'expand_down'";
@@ -2053,7 +2053,7 @@ public class AseConnectionUtils
 				}
 				else
 				{
-					_logger.info("Automatic grant of 'sybase_ts_role' to user '"+user+"' can't be done. This since the user '"+user+"' doesn't have 'sso_role'.");
+					_logger.info("Automatic grant of 'sybase_ts_role' to user '" + user + "' can't be done. This since the user '" + user + "' doesn't have 'sso_role'.");
 				}
 
 				// If mon_role was still unsuccessfull
@@ -2073,13 +2073,13 @@ public class AseConnectionUtils
 							"<br>" +
 							"<b>This is only a warning message, You will still be allowed to login.</b><br>" +
 							"<br>" +
-							"Have your system administrator grant 'sybase_ts_role' to the login '"+user+"'.<br>" +
-							"Note: if user '"+user+"' has 'sso_role', then "+Version.getAppName()+" would have done this automatically.<br>" +
+							"Have your system administrator grant 'sybase_ts_role' to the login '" + user + "'.<br>" +
+							"Note: if user '" + user + "' has 'sso_role', then " + Version.getAppName() + " would have done this automatically.<br>" +
 							"<br>" +
 							"This can be done with the following command:<br>" +
 //							"<font size=\"4\">" +
-							"  <code>isql -Usa -Psecret -S"+atAtServername+" -w999 </code><br>" +
-							"  <code>1> sp_role 'grant', 'sybase_ts_role', '"+user+"'</code><br>" +
+							"  <code>isql -Usa -Psecret -S" + atAtServername + " -w999 </code><br>" +
+							"  <code>1> sp_role 'grant', 'sybase_ts_role', '" + user + "'</code><br>" +
 							"  <code>2> go</code><br>" +
 //							"</font>" +
 							"</html>";
@@ -2143,7 +2143,7 @@ public class AseConnectionUtils
 						if (srvVersionNum >= Ver.ver(15,0))
 							scriptName = "$SYBASE/$SYBASE_ASE/scripts/installmaster";
 	
-						String msg = "Monitoring tables must be installed ( please apply '"+scriptName+"' )";
+						String msg = "Monitoring tables must be installed ( please apply '" + scriptName + "' )";
 						_logger.error(msg);
 						if (gui)
 						{
@@ -2151,20 +2151,20 @@ public class AseConnectionUtils
 								"<html>" +
 								"ASE Monitoring tables hasn't been installed. <br>" +
 								"<br>" +
-								"ASE Version is '"+Ver.versionNumToStr(srvVersionNum)+"'. <br>" +
-								"Please apply '"+scriptName+"'.<br>" +
+								"ASE Version is '" + Ver.versionNumToStr(srvVersionNum) + "'. <br>" +
+								"Please apply '" + scriptName + "'.<br>" +
 								"" +
 								"<br>" +
 								"Do the following on the machine that hosts the ASE:<br>" +
 								"<font size=\"4\">" +
-								"  <code>isql -Usa -Psecret -S"+atAtServername+" -w999 </code><br>" +
+								"  <code>isql -Usa -Psecret -S" + atAtServername + " -w999 </code><br>" +
 								"  <code>1> sp_addserver loopback, null, @@servername</code><br>" +
 								"  <code>2> go</code><br>" +
-								"  <code>isql -Usa -Psecret -S"+atAtServername+" -w999 -i"+scriptName+"</code><br>" +
+								"  <code>isql -Usa -Psecret -S" + atAtServername + " -w999 -i" + scriptName + "</code><br>" +
 								"</font>" +
 								"</html>";
 	
-							SwingUtils.showErrorMessage(parent, Version.getAppName()+" - connect check", msgHtml, null);
+							SwingUtils.showErrorMessage(parent, Version.getAppName() + " - connect check", msgHtml, null);
 						}
 						return false;
 					}
@@ -2181,7 +2181,7 @@ public class AseConnectionUtils
 				if (needsConfig != null)
 				{
 					sql = "java:method:checkAseConfig()";
-					_logger.debug("Verify monitor configuration: "+StringUtil.toCommaStr(needsConfig));
+					_logger.debug("Verify monitor configuration: " + StringUtil.toCommaStr(needsConfig));
 
 					String errorMesage = checkAseConfig(conn, needsConfig, true, has_sa_role);
 					if ( errorMesage != null )
@@ -2218,7 +2218,7 @@ public class AseConnectionUtils
 							if (has_sa_role)
 							{
 								// Show message, not with the extra dialog
-								SwingUtils.showErrorMessageExt(parent, Version.getAppName()+" - connect check", errorMesage, null, (JPanel)null);
+								SwingUtils.showErrorMessageExt(parent, Version.getAppName() + " - connect check", errorMesage, null, (JPanel)null);
 
 								// open config dialog
 								AseConfigMonitoringDialog.showDialog(parent, conn, srvVersionNum, true);
@@ -2231,32 +2231,32 @@ public class AseConnectionUtils
 								{
 									// Show message, now WITH the extra dialog
 //									SwingUtils.showErrorMessage(parent, Version.getAppName()+" - connect check", errorMesage, null);
-									SwingUtils.showErrorMessageExt(parent, Version.getAppName()+" - connect check", errorMesage, null, tmpPanel);
+									SwingUtils.showErrorMessageExt(parent, Version.getAppName() + " - connect check", errorMesage, null, tmpPanel);
 
 									if (tmpChk.isSelected())
 									{
-										_logger.warn("Continuing with a minimal environment. Config options '"+StringUtil.toCommaStr(needsConfig)+"' is still not enabled");
+										_logger.warn("Continuing with a minimal environment. Config options '" + StringUtil.toCommaStr(needsConfig) + "' is still not enabled");
 										return true;
 									}
-									_logger.warn("Login will be aborted due to: Config options '"+StringUtil.toCommaStr(needsConfig)+"' is still not enabled");
+									_logger.warn("Login will be aborted due to: Config options '" + StringUtil.toCommaStr(needsConfig) + "' is still not enabled");
 									return false;
 								}
 							}
 							else
 							{
-								SwingUtils.showErrorMessageExt(parent, Version.getAppName()+" - connect check", errorMesage, null, tmpPanel);
+								SwingUtils.showErrorMessageExt(parent, Version.getAppName() + " - connect check", errorMesage, null, tmpPanel);
 								if (tmpChk.isSelected())
 								{
-									_logger.warn("Continuing with a minimal environment. Config options '"+StringUtil.toCommaStr(needsConfig)+"' is still not enabled");
+									_logger.warn("Continuing with a minimal environment. Config options '" + StringUtil.toCommaStr(needsConfig) + "' is still not enabled");
 									return true;
 								}
-								_logger.warn("Login will be aborted due to: Config options '"+StringUtil.toCommaStr(needsConfig)+"' is still not enabled");
+								_logger.warn("Login will be aborted due to: Config options '" + StringUtil.toCommaStr(needsConfig) + "' is still not enabled");
 								return false;
 							}
 						}
 						else
 						{
-							_logger.warn("Login will be aborted due to: Config options '"+StringUtil.toCommaStr(needsConfig)+"' is not enabled");
+							_logger.warn("Login will be aborted due to: Config options '" + StringUtil.toCommaStr(needsConfig) + "' is not enabled");
 							return false;
 						}
 					}
@@ -2269,21 +2269,21 @@ public class AseConnectionUtils
 		catch (SQLException ex)
 		{
 			String msg = AseConnectionUtils.showSqlExceptionMessage(parent, 
-					Version.getAppName()+" - connect", 
+					Version.getAppName() + " - connect", 
 					"Problems when connecting to a ASE Server.<br>" +
-					"Last Executed SQL: "+sql, 
+					"Last Executed SQL: " + sql, 
 					ex); 
-			_logger.error("Problems when connecting to a ASE Server. Last Executed SQL '"+sql+"'. "+msg);
+			_logger.error("Problems when connecting to a ASE Server. Last Executed SQL '" + sql + "'. " + msg);
 			return false;
 		}
 		catch (Exception ex)
 		{
-			_logger.error("Problems when connecting to a ASE Server. "+ex.toString());
+			_logger.error("Problems when connecting to a ASE Server. " + ex.toString());
 			if (gui)
 			{
-				SwingUtils.showErrorMessage(parent, Version.getAppName()+" - connect", 
+				SwingUtils.showErrorMessage(parent, Version.getAppName() + " - connect", 
 					"Problems when connecting to a ASE Server" +
-					"\n\n"+ex.getMessage(), ex);
+					"\n\n" + ex.getMessage(), ex);
 			}
 			return false;
 		}
@@ -2296,14 +2296,14 @@ public class AseConnectionUtils
 	throws SQLException
 	{
 		boolean notConfigured = false;
-		String errorMesage = "<HTML><h1>Sorry the ASE server is "+(firstTimeCheck?"":"STILL ")+"not properly configured for monitoring.</h1>";
+		String errorMesage = "<HTML><h1>Sorry the ASE server is " + (firstTimeCheck?"":"STILL ") + "not properly configured for monitoring.</h1>";
 	       errorMesage += "<UL>";
 		for (String cfgOption : needsConfig)
 		{
 			if (getAseConfigRunValue(conn, cfgOption) <= 0)
 			{
-				_logger.warn("ASE Configuration option '"+cfgOption+"' is NOT enabled.");
-				errorMesage += "<LI> ASE option '"+cfgOption+"' is NOT enabled.";
+				_logger.warn("ASE Configuration option '" + cfgOption + "' is NOT enabled.");
+				errorMesage += "<LI> ASE option '" + cfgOption + "' is NOT enabled.";
 				notConfigured = true;
 			}
 		}
@@ -2388,7 +2388,7 @@ public class AseConnectionUtils
 			}
 			else
 			{
-				throw new RuntimeException("checkAndSetAseConfig, unknown type="+type);
+				throw new RuntimeException("checkAndSetAseConfig, unknown type=" + type);
 			}
 			if (doConfig)
 			{
@@ -2439,10 +2439,10 @@ public class AseConnectionUtils
 		if ( ! isNumber )
 			val = "'" + val.trim() + "'";
 
-		_logger.info("Setting ASE Configuration '"+config+"' to value '"+val+"'.");
+		_logger.info("Setting ASE Configuration '" + config + "' to value '" + val + "'.");
 
 		Statement stmt = conn.createStatement();
-		ResultSet rs = stmt.executeQuery("sp_configure '"+config+"', "+val);
+		ResultSet rs = stmt.executeQuery("sp_configure '" + config + "', " + val);
 		while (rs.next())
 		{
 		}
@@ -2456,7 +2456,7 @@ public class AseConnectionUtils
 		int    val = -1;
 
 		Statement stmt = conn.createStatement();
-		ResultSet rs = stmt.executeQuery("sp_configure '"+config+"'");
+		ResultSet rs = stmt.executeQuery("sp_configure '" + config + "'");
 		while (rs.next())
 		{
 			val = rs.getInt(5);
@@ -2473,7 +2473,7 @@ public class AseConnectionUtils
 		String val = null;
 
 		Statement stmt = conn.createStatement();
-		ResultSet rs = stmt.executeQuery("sp_configure '"+config+"'");
+		ResultSet rs = stmt.executeQuery("sp_configure '" + config + "'");
 		while (rs.next())
 		{
 			val = rs.getString(5);
@@ -2535,7 +2535,7 @@ public class AseConnectionUtils
 		int    val = -1;
 
 		Statement stmt = conn.createStatement();
-		ResultSet rs = stmt.executeQuery("sp_configure '"+config+"'");
+		ResultSet rs = stmt.executeQuery("sp_configure '" + config + "'");
 		while (rs.next())
 		{
 			val = rs.getInt(4);
@@ -2552,7 +2552,7 @@ public class AseConnectionUtils
 		String val = "";
 
 		Statement stmt = conn.createStatement();
-		ResultSet rs = stmt.executeQuery("sp_configure '"+config+"'");
+		ResultSet rs = stmt.executeQuery("sp_configure '" + config + "'");
 		while (rs.next())
 		{
 			val = rs.getString(7);
@@ -2606,7 +2606,7 @@ public class AseConnectionUtils
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Problems execute SQL '"+sql+"', Caught: " + e.toString() );
+			_logger.warn("Problems execute SQL '" + sql + "', Caught: " + e.toString() );
 			return false;
 		}
 	}
@@ -2624,7 +2624,7 @@ public class AseConnectionUtils
 			"    and c.type = 'P' \n" +
 			"    and a.type = 'N' \n" +
 			"    and c.low <= datalength(@@options) \n" +
-			"    and a.name = '"+option+"' \n" +
+			"    and a.name = '" + option + "' \n" +
 			"    \n" +
 			"    select @option\n" +
 			"\n";
@@ -2645,7 +2645,7 @@ public class AseConnectionUtils
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Problems execute SQL '"+sql+"', Caught: " + e.toString() );
+			_logger.warn("Problems execute SQL '" + sql + "', Caught: " + e.toString() );
 			return false;
 		}
 	}
@@ -2675,7 +2675,7 @@ public class AseConnectionUtils
 	public static boolean hasRole(Connection conn, String role)
 	{
 		int val = -1;
-		String sql = "select proc_role('"+role+"')";
+		String sql = "select proc_role('" + role + "')";
 		try
 		{
 			Statement stmt = conn.createStatement();
@@ -2689,9 +2689,9 @@ public class AseConnectionUtils
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems when executing sql: "+sql, ex);
+			_logger.warn("Problems when executing sql: " + sql, ex);
 		}
-		_logger.debug("hasRole(role='"+role+"'): SQL 'select proc_role(rolename)' returned="+val+", so rasRole() will return="+(val > 0));
+		_logger.debug("hasRole(role='" + role + "'): SQL 'select proc_role(rolename)' returned=" + val + ", so rasRole() will return=" + (val > 0));
 		return (val > 0);
 	}
 
@@ -2728,12 +2728,12 @@ public class AseConnectionUtils
 			rs.close();
 			stmt.close();
 
-			_logger.debug("getRoles(roleList='"+roleList+"'.");
+			_logger.debug("getRoles(roleList='" + roleList + "'.");
 			return roleList;
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems when executing sql: "+sql, ex);
+			_logger.warn("Problems when executing sql: " + sql, ex);
 			return null;
 		}
 	}
@@ -2762,12 +2762,12 @@ public class AseConnectionUtils
 			rs.close();
 			stmt.close();
 
-			_logger.debug("getActiveRoles(roleList='"+roleList+"'.");
+			_logger.debug("getActiveRoles(roleList='" + roleList + "'.");
 			return roleList;
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems when executing sql: "+sql, ex);
+			_logger.warn("Problems when executing sql: " + sql, ex);
 			return null;
 		}
 	}
@@ -2799,12 +2799,12 @@ public class AseConnectionUtils
 			rs.close();
 			stmt.close();
 
-			_logger.debug("getMonitorConfigs(configMap='"+configMap+"'.");
+			_logger.debug("getMonitorConfigs(configMap='" + configMap + "'.");
 			return configMap;
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems when executing sql: "+sql, ex);
+			_logger.warn("Problems when executing sql: " + sql, ex);
 			return null;
 		}
 	}
@@ -2833,7 +2833,7 @@ public class AseConnectionUtils
 		String htmlNewLine = "\n";
 		if ( addHtmlTags )
 		{
-			htmlBegin   = "<html>"+htmlStartStr+"<pre>";
+			htmlBegin   = "<html>" + htmlStartStr + "<pre>";
 			htmlEnd     = "</pre></html>";
 //			htmlNewLine = "<br>";
 		}
@@ -2848,7 +2848,7 @@ public class AseConnectionUtils
 			}
 		}
 		StringBuilder sb = null;
-		String sql = "exec sp_showplan "+spid+", null, null, null" + showplanExtraParamInAse16;
+		String sql = "exec sp_showplan " + spid + ", null, null, null" + showplanExtraParamInAse16;
 
 		// Set an empty Message handler
 		SybMessageHandler curMsgHandler = null;
@@ -2892,7 +2892,7 @@ public class AseConnectionUtils
 
 					rowsAffected = stmnt.getUpdateCount();
 					if (rowsAffected >= 0)
-						_logger.debug("---- DDL or DML (statement with no-resultset) Rowcount: "+rowsAffected);
+						_logger.debug("---- DDL or DML (statement with no-resultset) Rowcount: " + rowsAffected);
 					else
 						_logger.debug("---- No more results to process.");
 				} // end: no-resultset
@@ -2924,7 +2924,7 @@ public class AseConnectionUtils
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Problems when executing sql: "+sql, e);
+			_logger.warn("Problems when executing sql: " + sql, e);
 		}
 		finally
 		{
@@ -2987,10 +2987,10 @@ public class AseConnectionUtils
 			return;
 
 		// Works with above ASE 12.5.4 and 15.0.2
-		String setSwitch   = "set switch on "+trace+" with no_info";
+		String setSwitch   = "set switch on " + trace + " with no_info";
 
 		// Used as fallback if above 'set switch...' is failing
-		String dbccTraceon = "DBCC traceon("+trace+")";
+		String dbccTraceon = "DBCC traceon(" + trace + ")";
 
 		// TRY with set switch
 		// This should also be changed to check if the MonConnection, is of version... MonConnection needs to be implemented
@@ -3003,7 +3003,7 @@ public class AseConnectionUtils
 		}
 		catch (SQLException e)
 		{
-			_logger.debug("Problems when executing sql '"+setSwitch+"', I will fallback and use '"+dbccTraceon+"' instead.");
+			_logger.debug("Problems when executing sql '" + setSwitch + "', I will fallback and use '" + dbccTraceon + "' instead.");
 
 			// Fallback and use DBCC TRACEON
 			try
@@ -3015,7 +3015,7 @@ public class AseConnectionUtils
 			}
 			catch (SQLException e2)
 			{
-				_logger.warn("Problems when executing sql: "+dbccTraceon, e2);
+				_logger.warn("Problems when executing sql: " + dbccTraceon, e2);
 			}
 		}
 
@@ -3100,7 +3100,7 @@ public class AseConnectionUtils
 	{
 		// Tested that this works on 12.5.3 and above
 		String dbccTraceFlags = 
-			"dbcc istraceon("+trace+") \n" +
+			"dbcc istraceon(" + trace + ") \n" +
 			"select istraceon = case when @@error = 0 then 1 else 0 end";
 
 		try
@@ -3120,7 +3120,7 @@ public class AseConnectionUtils
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Problems when executing sql: "+dbccTraceFlags, e);
+			_logger.warn("Problems when executing sql: " + dbccTraceFlags, e);
 			throw e;
 		}
 	}
@@ -3145,7 +3145,7 @@ public class AseConnectionUtils
 		}
 
 		StringBuilder sb = null;
-		String sql = "select BatchID, LineNumber, SequenceInLine, SQLText from master..monProcessSQLText where SPID = "+spid;
+		String sql = "select BatchID, LineNumber, SequenceInLine, SQLText from master..monProcessSQLText where SPID = " + spid;
 		try
 		{
 			Statement stmt = conn.createStatement();
@@ -3188,7 +3188,7 @@ public class AseConnectionUtils
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Problems when executing sql: "+sql, e);
+			_logger.warn("Problems when executing sql: " + sql, e);
 		}
 
 		if (sb == null)
@@ -3221,7 +3221,7 @@ public class AseConnectionUtils
 		dbccTraceOn(conn, 3604);
 
 		StringBuilder sb = null;
-		String sql = "DBCC sqltext("+spid+")";
+		String sql = "DBCC sqltext(" + spid + ")";
 
 		// Set an empty Message handler
 		SybMessageHandler curMsgHandler = null;
@@ -3258,7 +3258,7 @@ public class AseConnectionUtils
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Problems when executing sql: "+sql, e);
+			_logger.warn("Problems when executing sql: " + sql, e);
 		}
 		finally
 		{
@@ -3368,7 +3368,7 @@ public class AseConnectionUtils
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Problems when executing sql: "+sql, e);
+			_logger.warn("Problems when executing sql: " + sql, e);
 		}
 
 		if (sb == null)
@@ -3503,7 +3503,7 @@ public class AseConnectionUtils
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Problems when executing sql: "+sql, e);
+			_logger.warn("Problems when executing sql: " + sql, e);
 		}
 		finally
 		{
@@ -3572,7 +3572,7 @@ public class AseConnectionUtils
 
 		String query_plan = null;
 		
-		String sql = "select show_cached_plan_in_xml("+ssqlid+", 0, 0)";
+		String sql = "select show_cached_plan_in_xml(" + ssqlid + ", 0, 0)";
 		try
 		{
 			Statement stmt = conn.createStatement();
@@ -3586,7 +3586,7 @@ public class AseConnectionUtils
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Problems when executing sql: "+sql, e);
+			_logger.warn("Problems when executing sql: " + sql, e);
 		}
 
 		if (query_plan == null)
@@ -3713,9 +3713,9 @@ public class AseConnectionUtils
 		if (crDate == null || ( crDate != null && crDate.getTime() < procDateThreshold.getTime()) )
 		{
 			if (crDate == null)
-				_logger.info("Checking for stored procedure '"+procName+"' in '"+dbname+"', which was NOT found.");
+				_logger.info("Checking for stored procedure '" + procName + "' in '" + dbname + "', which was NOT found.");
 			else
-				_logger.info("Checking for stored procedure '"+procName+"' in '"+dbname+"', which was to old, crdate was '"+crDate+"', re-creation threshold date is '"+procDateThreshold+"'.");
+				_logger.info("Checking for stored procedure '" + procName + "' in '" + dbname + "', which was to old, crdate was '" + crDate + "', re-creation threshold date is '" + procDateThreshold + "'.");
 
 			boolean hasProc = false;
 
@@ -3726,7 +3726,7 @@ public class AseConnectionUtils
 				
 				if (srvVersion < needsVersion)
 				{
-					String msg = "The procedure '"+procName+"' in '"+dbname+"', needs at least version '"+needsVersion+"', while we are connected to ASE Version '"+srvVersion+"'.";
+					String msg = "The procedure '" + procName + "' in '" + dbname + "', needs at least version '" + needsVersion + "', while we are connected to ASE Version '" + srvVersion + "'.";
 					_logger.warn(msg);
 					throw new Exception(msg);
 				}
@@ -3741,7 +3741,7 @@ public class AseConnectionUtils
 
 			if ( ! hasRole )
 			{
-				String msg = "Can't (re)create procedure '"+procName+"' in '"+dbname+"', for doing that the connected user needs to have '"+needsRoleToRecreate+"'.";
+				String msg = "Can't (re)create procedure '" + procName + "' in '" + dbname + "', for doing that the connected user needs to have '" + needsRoleToRecreate + "'.";
 				_logger.warn(msg);
 				throw new Exception(msg);
 			}
@@ -3752,8 +3752,8 @@ public class AseConnectionUtils
 				{
 					script = new AseSqlScript(conn, 30); // 30 seconds timeout
 
-					_logger.info("Creating procedure '"+procName+"' in '"+dbname+"'.");
-					script.setMsgPrefix(scriptName+": ");
+					_logger.info("Creating procedure '" + procName + "' in '" + dbname + "'.");
+					script.setMsgPrefix(scriptName + ": ");
 					if (scriptLocation == null)
 						script.execute(scriptName);
 					else
@@ -3762,7 +3762,7 @@ public class AseConnectionUtils
 				}
 				catch (SQLException e) 
 				{
-					String msg = "Problem loading the script '"+scriptName+"'.";
+					String msg = "Problem loading the script '" + scriptName + "'.";
 					_logger.error(msg, e);
 					throw new Exception(msg, e);
 				}
@@ -3780,9 +3780,9 @@ public class AseConnectionUtils
 					location = "'" + scriptName + "'";
 				else
 //					location = "'$"+DbxTune.getInstance().getAppHomeEnvName()+"/classes' under the class '"+scriptLocation.getClass().getName()+"' you will find the script '"+scriptName+"'";
-					location = "'$DBXTUNE_HOME/classes' under the class '"+scriptLocation.getClass().getName()+"' you will find the script '"+scriptName+"'";
+					location = "'$DBXTUNE_HOME/classes' under the class '" + scriptLocation.getClass().getName() + "' you will find the script '" + scriptName + "'";
 
-				String msg = "Missing stored proc '"+procName+"' in database '"+dbname+"' please create it. (connect with a user that has '"+needsRoleToRecreate+"' or load the proc from "+location+").";
+				String msg = "Missing stored proc '" + procName + "' in database '" + dbname + "' please create it. (connect with a user that has '" + needsRoleToRecreate + "' or load the proc from " + location + ").";
 				_logger.warn(msg);
 				throw new Exception(msg);
 				//return false;
@@ -3790,7 +3790,7 @@ public class AseConnectionUtils
 		}
 		else
 		{
-			_logger.info("No Need to re-create procedure '"+procName+"' in '"+dbname+"', creation date was '"+crDate+"', re-creation threshold date is '"+procDateThreshold+"'.");
+			_logger.info("No Need to re-create procedure '" + procName + "' in '" + dbname + "', creation date was '" + crDate + "', re-creation threshold date is '" + procDateThreshold + "'.");
 		}
 		return true;
 	}
@@ -3827,15 +3827,15 @@ public class AseConnectionUtils
 			int objId = Integer.parseInt(objectName);
 
 			sql = "select owner = u.name \n" +
-				      "from ["+dbname+"]..sysobjects o, ["+dbname+"]..sysusers u \n" +
-				      "where o.id  = "+objId+" \n" +
+				      "from [" + dbname + "]..sysobjects o, [" + dbname + "]..sysusers u \n" +
+				      "where o.id  = " + objId + " \n" +
 				      "  and o.uid = u.uid";
 		}
 		catch(NumberFormatException nfe)
 		{
 			sql = "select owner = u.name \n" +
-			      "from ["+dbname+"]..sysobjects o, ["+dbname+"]..sysusers u \n" +
-			      "where o.name = '"+objectName+"' \n" +
+			      "from [" + dbname + "]..sysobjects o, [" + dbname + "]..sysusers u \n" +
+			      "where o.name = '" + objectName + "' \n" +
 			      "  and o.uid  = u.uid";
 		}
 		
@@ -3853,7 +3853,7 @@ public class AseConnectionUtils
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems when executing sql: "+sql, ex);
+			_logger.warn("Problems when executing sql: " + sql, ex);
 		}
 
 		if (StringUtil.isNullOrBlank(owner))
@@ -3951,7 +3951,7 @@ public class AseConnectionUtils
 				//-----------------------------------------------------------
 				int levelOfDetail = Configuration.getCombinedConfiguration().getIntProperty("AseConnectionUtil.getObjectText.show_cached_plan_in_xml.level_of_detail", 0);
 				
-				String sql = "select show_cached_plan_in_xml("+ssqlid+", "+planId+", "+levelOfDetail+")";
+				String sql = "select show_cached_plan_in_xml(" + ssqlid + ", " + planId + ", " + levelOfDetail + ")";
 
 				boolean foundXmlPlan = false;
 				try
@@ -3979,7 +3979,7 @@ public class AseConnectionUtils
 				}
 				catch(SQLException e)
 				{
-					_logger.warn("Problems getting text from Statement Cache about '"+objectName+"'. Msg="+e.getErrorCode()+", Text='" + e.getMessage() + "'. Caught: "+e); 
+					_logger.warn("Problems getting text from Statement Cache about '" + objectName + "'. Msg=" + e.getErrorCode() + ", Text='" + e.getMessage() + "'. Caught: " + e); 
 					returnText = null;
 				}
 
@@ -4007,13 +4007,13 @@ public class AseConnectionUtils
 				{
 					sql =
 						"set switch on 3604 with no_info \n" +
-						"dbcc prsqlcache("+ssqlid+", 1) "; // 1 = also prints showplan"
+						"dbcc prsqlcache(" + ssqlid + ", 1) "; // 1 = also prints showplan"
 				}
 				else
 				{
 					sql=
 						"dbcc traceon(3604) \n" +
-						"dbcc prsqlcache("+ssqlid+", 1) "; // 1 = also prints showplan"
+						"dbcc prsqlcache(" + ssqlid + ", 1) "; // 1 = also prints showplan"
 				}
 				
 				AseSqlScript ss = new AseSqlScript(conn, 10);
@@ -4024,7 +4024,7 @@ public class AseConnectionUtils
 				catch (SQLException e) 
 				{ 
 					returnText = null;
-					_logger.warn("Problems getting text from Statement Cache about '"+objectName+"'. Caught: "+e); 
+					_logger.warn("Problems getting text from Statement Cache about '" + objectName + "'. Caught: " + e); 
 				} 
 				finally 
 				{
@@ -4048,8 +4048,8 @@ public class AseConnectionUtils
 			// GET OBJECT TEXT
 			String sql;
 			sql = " select c.text, c.status, c.id \n"
-				+ " from "+dbnameStr+"sysobjects o, "+dbnameStr+"syscomments c, "+dbnameStr+"sysusers u \n"
-				+ " where o.name = '"+objectName+"' \n" +
+				+ " from " + dbnameStr + "sysobjects o, " + dbnameStr + "syscomments c, " + dbnameStr + "sysusers u \n"
+				+ " where o.name = '" + objectName + "' \n" +
 				(ownerIsNumber 
 				? "   and u.uid  = "  + owner + "  \n" // if owner is a *number* we will use this 
 				: "   and u.name = '" + owner + "' \n" // if owner is a *string* we will use this
@@ -4073,7 +4073,7 @@ public class AseConnectionUtils
 					// if status is ASE: SYSCOM_TEXT_HIDDEN
 					if ((status & 1) == 1)
 					{
-						sb.append("ASE StoredProcedure Source text for compiled object '"+dbname+"."+owner+"."+objectName+"' (id = "+id+") is hidden.");
+						sb.append("ASE StoredProcedure Source text for compiled object '" + dbname + "." + owner + "." + objectName + "' (id = " + id + ") is hidden.");
 						break;
 					}
 
@@ -4094,11 +4094,11 @@ public class AseConnectionUtils
 			catch (SQLException e)
 			{
 				returnText = null;
-				_logger.warn("Problems getting text for object '"+objectName+"', with owner '"+owner+"', in db '"+dbname+"'. Caught: "+e); 
+				_logger.warn("Problems getting text for object '" + objectName + "', with owner '" + owner + "', in db '" + dbname + "'. Caught: " + e); 
 			}
 		}
 		if (_logger.isDebugEnabled())
-			_logger.debug("Fetched text for object '"+objectName+"', with owner '"+owner+"', in db '"+dbname+"'. textLength=" + (returnText==null ? "-null-" : returnText.length()) );
+			_logger.debug("Fetched text for object '" + objectName + "', with owner '" + owner + "', in db '" + dbname + "'. textLength=" + (returnText==null ? "-null-" : returnText.length()) );
 
 		return returnText;
 	}
@@ -4128,7 +4128,7 @@ public class AseConnectionUtils
 		}
 		catch(SQLException e)
 		{
-			_logger.error("Problems accessing ResultSetMetaData, caught: "+e, e);
+			_logger.error("Problems accessing ResultSetMetaData, caught: " + e, e);
 		}
 		return col_pos;
 	}
@@ -4510,7 +4510,7 @@ public class AseConnectionUtils
 	 */
 	public static boolean canDoSelectOnTable(Connection conn, String tableName)
 	{
-		String sql = "select * from "+tableName+" where 1=2";
+		String sql = "select * from " + tableName + " where 1=2";
 
 		// Check if the connection is OK
 		if ( ! isConnectionOk(conn) )
@@ -4532,7 +4532,7 @@ public class AseConnectionUtils
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Authoritization problems when checking simple select on table '"+tableName+"'. SQL issued '"+sql+"' SQLException Error="+ex.getErrorCode()+", Msg='"+StringUtil.stripNewLine(ex.getMessage())+"'.");
+			_logger.warn("Authoritization problems when checking simple select on table '" + tableName + "'. SQL issued '" + sql + "' SQLException Error=" + ex.getErrorCode() + ", Msg='" + StringUtil.stripNewLine(ex.getMessage()) + "'.");
 			return false;
 		}
 	}
@@ -4645,7 +4645,7 @@ public class AseConnectionUtils
 								if (srvName != null && "null".equalsIgnoreCase(srvName))
 									srvName = conn.getDbmsServerName();
 
-								warningStr += "Server '"+srvName+"' is in grace period and will stop working at '"+licGraceExpiry+"'. (licName='"+licName+"').";
+								warningStr += "Server '" + srvName + "' is in grace period and will stop working at '" + licGraceExpiry + "'. (licName='" + licName + "').";
 							}
 						}
 					}
@@ -4667,8 +4667,8 @@ public class AseConnectionUtils
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems when checking grace period. SQL issued '"+sql+"' SQLException Error="+ex.getErrorCode()+", Msg='"+StringUtil.stripNewLine(ex.getMessage())+"'.");
-			return "Problems when checking grace period. ("+StringUtil.stripNewLine(ex.getMessage()+").");
+			_logger.warn("Problems when checking grace period. SQL issued '" + sql + "' SQLException Error=" + ex.getErrorCode() + ", Msg='" + StringUtil.stripNewLine(ex.getMessage()) + "'.");
+			return "Problems when checking grace period. (" + StringUtil.stripNewLine(ex.getMessage() + ").");
 		}
 	}
 	

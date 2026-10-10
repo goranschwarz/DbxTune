@@ -288,7 +288,7 @@ public class RSyntaxTextAreaEditorKitX
 					catch (Exception ex)
 					{
 						UIManager.getLookAndFeel().provideErrorFeedback(textArea);
-System.out.println("Problems pretty print SQL. Caught: "+ex);
+System.out.println("Problems pretty print SQL. Caught: " + ex);
 ex.printStackTrace();
 						return;
 					}

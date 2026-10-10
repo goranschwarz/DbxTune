@@ -61,13 +61,13 @@ public class JdbcNoData
 			props.put("user",      user);
 			props.put("password",  passwd);
 
-			System.out.println("Connectiong to URL: "+url);
+			System.out.println("Connectiong to URL: " + url);
 			Connection conn = DriverManager.getConnection(url, props);
 			
-			System.out.println("Using Java Runtime Environment Version: "+System.getProperty("java.version"));
-			System.out.println("Using Driver Version: "+conn.getMetaData().getDriverVersion());
-			System.out.println("DBMS Product: "+conn.getMetaData().getDatabaseProductName());
-			System.out.println("DBMS Version: "+conn.getMetaData().getDatabaseProductVersion());
+			System.out.println("Using Java Runtime Environment Version: " + System.getProperty("java.version"));
+			System.out.println("Using Driver Version: " + conn.getMetaData().getDriverVersion());
+			System.out.println("DBMS Product: " + conn.getMetaData().getDatabaseProductName());
+			System.out.println("DBMS Version: " + conn.getMetaData().getDatabaseProductVersion());
 
 			
 			/////////////////////////////////////////////////////////////
@@ -75,7 +75,7 @@ public class JdbcNoData
 			{
 				System.out.println();
 				System.out.println("###############################################################");
-				System.out.println("SQL: "+sql);
+				System.out.println("SQL: " + sql);
 				System.out.println("Data is NOT printed");
 				System.out.println("###############################################################");
 				

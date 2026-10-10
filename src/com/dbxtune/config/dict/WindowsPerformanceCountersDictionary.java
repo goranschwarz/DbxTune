@@ -50,7 +50,7 @@ public class WindowsPerformanceCountersDictionary
 		@Override
 		public String toString()
 		{
-			return "srvType='"+_srvType+"', section='"+_section+"', field='"+_field+"', description='"+_description+"'.";
+			return "srvType='" + _srvType + "', section='" + _section + "', field='" + _field + "', description='" + _description + "'.";
 //			return StringUtil.left(_id, 50) + " - " + _description;
 		}
 	}
@@ -75,7 +75,7 @@ public class WindowsPerformanceCountersDictionary
 	 */
 	public String getDescriptionPlain(String section, String field)
 	{
-		Record rec = _map.get(section+"|"+field);
+		Record rec = _map.get(section + "|" + field);
 		if (rec != null)
 			return StringUtil.stripHtml(rec._description);
 
@@ -131,14 +131,14 @@ public class WindowsPerformanceCountersDictionary
 
 	private void set(Record rec)
 	{
-		String pk = rec._section+"|"+rec._field;
+		String pk = rec._section + "|" + rec._field;
 		
 		Record old = _map.get(pk);
 		if ( old != null)
 		{
-			System.out.println("Field '"+pk+"' already exists. It will be overwritten.");
-			System.out.println("      >>> new record: "+rec);
-			System.out.println("      >>> old record: "+old);
+			System.out.println("Field '" + pk + "' already exists. It will be overwritten.");
+			System.out.println("      >>> new record: " + rec);
+			System.out.println("      >>> old record: " + old);
 		}
 
 		_map.put(pk, rec);

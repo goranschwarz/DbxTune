@@ -53,7 +53,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_CACHE;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = Ver.ver(13);
 	public static final long     NEED_CE_VERSION  = 0;
@@ -101,7 +101,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmPgSlru(counterController, guiController);
 	}
@@ -146,7 +146,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_HIT,
 				"Cache Hits [blks_hit] per Second", 	                // Menu CheckBox text
-				"Cache Hits [blks_hit] per Second ("+SHORT_NAME+")", // Graph Label 
+				"Cache Hits [blks_hit] per Second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -158,7 +158,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_READS,
 				"Cache Reads [blks_read] per Second", 	                // Menu CheckBox text
-				"Cache Reads [blks_read] per Second ("+SHORT_NAME+")", // Graph Label 
+				"Cache Reads [blks_read] per Second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 
@@ -170,7 +170,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_WRITES,
 				"Cache Writes [blks_written] per Second", 	                // Menu CheckBox text
-				"Cache Writes [blks_written] per Second ("+SHORT_NAME+")", // Graph Label 
+				"Cache Writes [blks_written] per Second (" + SHORT_NAME + ")", // Graph Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				null, 
 				LabelType.Dynamic, 

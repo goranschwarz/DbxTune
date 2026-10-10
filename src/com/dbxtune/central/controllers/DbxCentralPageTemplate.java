@@ -426,7 +426,7 @@ ex.printStackTrace();
 			writer.append(StringUtil.exceptionToString(rte));
 			writer.append("</pre>\n");
 			
-			_logger.warn("Problems creating HTML content. Caught: "+rte, rte);
+			_logger.warn("Problems creating HTML content. Caught: " + rte, rte);
 		}
 
 		writer.append("</html> \n");

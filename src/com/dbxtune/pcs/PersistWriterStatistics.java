@@ -140,44 +140,44 @@ public class PersistWriterStatistics
 
 	public String getStatisticsString()
 	{
-		_maxLen_inserts                  = Math.max(_maxLen_inserts                , (_inserts                 +", ").length());
-		_maxLen_updates                  = Math.max(_maxLen_updates                , (_updates                 +", ").length());
-		_maxLen_deletes                  = Math.max(_maxLen_deletes                , (_deletes                 +", ").length());
+		_maxLen_inserts                  = Math.max(_maxLen_inserts                , (_inserts                 + ", ").length());
+		_maxLen_updates                  = Math.max(_maxLen_updates                , (_updates                 + ", ").length());
+		_maxLen_deletes                  = Math.max(_maxLen_deletes                , (_deletes                 + ", ").length());
 
-		_maxLen_createTables             = Math.max(_maxLen_createTables           , (_createTables            +", ").length());
-		_maxLen_alterTables              = Math.max(_maxLen_alterTables            , (_alterTables             +", ").length());
-		_maxLen_dropTables               = Math.max(_maxLen_dropTables             , (_dropTables              +", ").length());
+		_maxLen_createTables             = Math.max(_maxLen_createTables           , (_createTables            + ", ").length());
+		_maxLen_alterTables              = Math.max(_maxLen_alterTables            , (_alterTables             + ", ").length());
+		_maxLen_dropTables               = Math.max(_maxLen_dropTables             , (_dropTables              + ", ").length());
 
-		_maxLen_ddlSaveCount             = Math.max(_maxLen_ddlSaveCount           , (_ddlSaveCount            +", ").length());
-		_maxLen_ddlSaveCountSum          = Math.max(_maxLen_ddlSaveCountSum        , (_ddlSaveCountSum         +", ").length());
+		_maxLen_ddlSaveCount             = Math.max(_maxLen_ddlSaveCount           , (_ddlSaveCount            + ", ").length());
+		_maxLen_ddlSaveCountSum          = Math.max(_maxLen_ddlSaveCountSum        , (_ddlSaveCountSum         + ", ").length());
 
-		_maxLen_sqlCaptureBatchCount     = Math.max(_maxLen_sqlCaptureBatchCount   , (_sqlCaptureBatchCount    +", ").length());
-		_maxLen_sqlCaptureEntryCount     = Math.max(_maxLen_sqlCaptureEntryCount   , (_sqlCaptureEntryCount    +", ").length());
-		_maxLen_sqlCaptureBatchCountSum  = Math.max(_maxLen_sqlCaptureBatchCountSum, (_sqlCaptureBatchCountSum +", ").length());
-		_maxLen_sqlCaptureEntryCountSum  = Math.max(_maxLen_sqlCaptureEntryCountSum, (_sqlCaptureEntryCountSum +", ").length());
+		_maxLen_sqlCaptureBatchCount     = Math.max(_maxLen_sqlCaptureBatchCount   , (_sqlCaptureBatchCount    + ", ").length());
+		_maxLen_sqlCaptureEntryCount     = Math.max(_maxLen_sqlCaptureEntryCount   , (_sqlCaptureEntryCount    + ", ").length());
+		_maxLen_sqlCaptureBatchCountSum  = Math.max(_maxLen_sqlCaptureBatchCountSum, (_sqlCaptureBatchCountSum + ", ").length());
+		_maxLen_sqlCaptureEntryCountSum  = Math.max(_maxLen_sqlCaptureEntryCountSum, (_sqlCaptureEntryCountSum + ", ").length());
 
 		String retStr = 
-			  "inserts="                 + StringUtil.left(_inserts                +", "  , _maxLen_inserts                )
-			+ "updates="                 + StringUtil.left(_updates                +", "  , _maxLen_updates                )
-			+ "deletes="                 + StringUtil.left(_deletes                +", "  , _maxLen_deletes                )
+			  "inserts="                 + StringUtil.left(_inserts                + ", "  , _maxLen_inserts                )
+			+ "updates="                 + StringUtil.left(_updates                + ", "  , _maxLen_updates                )
+			+ "deletes="                 + StringUtil.left(_deletes                + ", "  , _maxLen_deletes                )
 
-			+ "createTables="            + StringUtil.left(_createTables           +", "  , _maxLen_createTables           )
-			+ "alterTables="             + StringUtil.left(_alterTables            +", "  , _maxLen_alterTables            )
-			+ "dropTables="              + StringUtil.left(_dropTables             +", "  , _maxLen_dropTables             )
+			+ "createTables="            + StringUtil.left(_createTables           + ", "  , _maxLen_createTables           )
+			+ "alterTables="             + StringUtil.left(_alterTables            + ", "  , _maxLen_alterTables            )
+			+ "dropTables="              + StringUtil.left(_dropTables             + ", "  , _maxLen_dropTables             )
 			;
 
 		// Do NOT print DDL info if we havn't got any...
 		if (_ddlSaveCountSum > 0) retStr += ""
-			+ "ddlSaveCount="            + StringUtil.left(_ddlSaveCount           +", "  , _maxLen_ddlSaveCount           )
-			+ "ddlSaveCountSum="         + StringUtil.left(_ddlSaveCountSum        +", "  , _maxLen_ddlSaveCountSum        )
+			+ "ddlSaveCount="            + StringUtil.left(_ddlSaveCount           + ", "  , _maxLen_ddlSaveCount           )
+			+ "ddlSaveCountSum="         + StringUtil.left(_ddlSaveCountSum        + ", "  , _maxLen_ddlSaveCountSum        )
 			;
 
 		// Do NOT print SQL CAPTURE info if we havn't got any...
 		if (_sqlCaptureEntryCountSum > 0) retStr += ""
-			+ "sqlCaptureBatchCount="    + StringUtil.left(_sqlCaptureBatchCount   +", "  , _maxLen_sqlCaptureBatchCount   )
-			+ "sqlCaptureEntryCount="    + StringUtil.left(_sqlCaptureEntryCount   +", "  , _maxLen_sqlCaptureEntryCount   )
-			+ "sqlCaptureBatchCountSum=" + StringUtil.left(_sqlCaptureBatchCountSum+", "  , _maxLen_sqlCaptureBatchCountSum)
-			+ "sqlCaptureEntryCountSum=" + StringUtil.left(_sqlCaptureEntryCountSum+". "  , _maxLen_sqlCaptureEntryCountSum) // Last line is a '.'
+			+ "sqlCaptureBatchCount="    + StringUtil.left(_sqlCaptureBatchCount   + ", "  , _maxLen_sqlCaptureBatchCount   )
+			+ "sqlCaptureEntryCount="    + StringUtil.left(_sqlCaptureEntryCount   + ", "  , _maxLen_sqlCaptureEntryCount   )
+			+ "sqlCaptureBatchCountSum=" + StringUtil.left(_sqlCaptureBatchCountSum + ", "  , _maxLen_sqlCaptureBatchCountSum)
+			+ "sqlCaptureEntryCountSum=" + StringUtil.left(_sqlCaptureEntryCountSum + ". "  , _maxLen_sqlCaptureEntryCountSum) // Last line is a '.'
 			;
 		
 		return retStr;

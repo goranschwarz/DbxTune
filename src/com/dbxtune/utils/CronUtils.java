@@ -78,8 +78,8 @@ public class CronUtils
 		}
 		
 		if (negation)
-			return "Alarms is NOT allowed '" + description +"'.";
+			return "Alarms is NOT allowed '" + description + "'.";
 		else
-			return "Alarms is allowed '" + description +"'.";
+			return "Alarms is allowed '" + description + "'.";
 	}
 }

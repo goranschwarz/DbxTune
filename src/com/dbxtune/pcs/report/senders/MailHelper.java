@@ -252,18 +252,18 @@ public class MailHelper
 						}
 						else
 						{
-							_logger.info("json[" + jsonArrayLoopCount + "] getMailToAddressForServerName('"+serverName+"'): Skipping 'fallback' entry, since it contains '" + entryFallback + "', which is considdered as 'false'.");
+							_logger.info("json[" + jsonArrayLoopCount + "] getMailToAddressForServerName('" + serverName + "'): Skipping 'fallback' entry, since it contains '" + entryFallback + "', which is considdered as 'false'.");
 						}
 					}
 					else
 					{
-						_logger.info("json[" + jsonArrayLoopCount + "] getMailToAddressForServerName('"+serverName+"'): Skipping JSON entry '" + jsonObj + "', it dosn't contain members: ('serverName' and 'to') or ('fallback' and 'to').");
+						_logger.info("json[" + jsonArrayLoopCount + "] getMailToAddressForServerName('" + serverName + "'): Skipping JSON entry '" + jsonObj + "', it dosn't contain members: ('serverName' and 'to') or ('fallback' and 'to').");
 					}
 				} // end: JSON loop objects
 
 				if (jsonArrayLoopCount == 0)
 				{
-					_logger.warn("getMailToAddressForServerName('"+serverName+"'): NO JSON Array was found in JSON String '" + jsonStr + "', Skipping this and returning ''. for property '" + propKeyTo + "'.");
+					_logger.warn("getMailToAddressForServerName('" + serverName + "'): NO JSON Array was found in JSON String '" + jsonStr + "', Skipping this and returning ''. for property '" + propKeyTo + "'.");
 					return "";
 				}
 				else if ( ! returnSet.isEmpty() )
@@ -272,22 +272,22 @@ public class MailHelper
 				}
 				else if ( ! fallbackSet.isEmpty() )
 				{
-					_logger.info("getMailToAddressForServerName('"+serverName+"'): No matching 'serverName' entry was found for serverName '" + serverName + "' but a 'fallback' entry was found and used. to=" + fallbackSet);
+					_logger.info("getMailToAddressForServerName('" + serverName + "'): No matching 'serverName' entry was found for serverName '" + serverName + "' but a 'fallback' entry was found and used. to=" + fallbackSet);
 					return StringUtil.toCommaStr(fallbackSet);
 				}
 
-				_logger.info("getMailToAddressForServerName('"+serverName+"'): No matching entry was found for serverName '" + serverName + "' in JSON '" + jsonStr + "' using propert '" + propKeyTo + "'. Returning ''(blank) as the email recipiant.");
+				_logger.info("getMailToAddressForServerName('" + serverName + "'): No matching entry was found for serverName '" + serverName + "' in JSON '" + jsonStr + "' using propert '" + propKeyTo + "'. Returning ''(blank) as the email recipiant.");
 				return "";
 			}
 			catch(Exception ex)
 			{
-				_logger.error("getMailToAddressForServerName('"+serverName+"'): Trying to parse the JSON Array String '" + toStr + "', Caught: " + ex, ex);
+				_logger.error("getMailToAddressForServerName('" + serverName + "'): Trying to parse the JSON Array String '" + toStr + "', Caught: " + ex, ex);
 				return "";
 			}
 		}
 		else
 		{
-			_logger.debug("getMailToAddressForServerName('"+serverName+"'): NOT a JSON Array, using as 'plain-email-address': "+propKeyTo+"=|"+toStr+"|");
+			_logger.debug("getMailToAddressForServerName('" + serverName + "'): NOT a JSON Array, using as 'plain-email-address': " + propKeyTo + "=|" + toStr + "|");
 			return toStr;
 		}
 	}

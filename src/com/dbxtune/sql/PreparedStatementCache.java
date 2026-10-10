@@ -133,7 +133,7 @@ public class PreparedStatementCache
 			if (pstmnt == null)
 			{
 				if (_logger.isDebugEnabled())
-					_logger.debug("GENERATING a new PreparedStatement for conn='"+getConnection()+"', with SQL: "+sql);
+					_logger.debug("GENERATING a new PreparedStatement for conn='" + getConnection() + "', with SQL: " + sql);
 	
 				Connection conn = getConnection();
 //				pstmnt = conn.prepareStatement(sql);

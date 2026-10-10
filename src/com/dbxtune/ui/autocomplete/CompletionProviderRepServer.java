@@ -74,7 +74,7 @@ extends CompletionProviderAbstract
 
 	public static CompletionProviderAbstract installAutoCompletion(TextEditorPane textPane, RTextScrollPane scroll, ErrorStrip errorStrip, Window window, ConnectionProvider connectionProvider)
 	{
-		_logger.info("Installing Syntax and AutoCompleation for Sybase Replication Server ("+AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_RCL+").");
+		_logger.info("Installing Syntax and AutoCompleation for Sybase Replication Server (" + AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_RCL + ").");
 		textPane.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_RCL);
 //		textPane.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
 
@@ -631,7 +631,7 @@ extends CompletionProviderAbstract
 					{
 						RsDatabase x = (RsDatabase) rsc._rsInfo;
 
-						ReplacementCompletion rc = new ReplacementCompletion(this, x.dbid+"", "<dbid>", x.dsname+"."+x.dbname+" - "+x._type+" - "+x._desc);
+						ReplacementCompletion rc = new ReplacementCompletion(this, x.dbid + "", "<dbid>", x.dsname + "." + x.dbname + " - " + x._type + " - " + x._desc);
 						cList.add(rc);
 //						cList.add(new BasicCompletion(this, rsdb.dbid+"", rsdb.dsname+"."+rsdb.dbname+" - "+rsdb._type+" - "+rsdb._desc));
 					}
@@ -651,7 +651,7 @@ extends CompletionProviderAbstract
 						if ( ! "CONN".equals(x._type) )
 							continue;
 
-						ReplacementCompletion rc = new ReplacementCompletion(this, x.dsname+"."+x.dbname, "<srv.db>", x.dsname+"."+x.dbname+" - "+x._type+" - "+x._desc);
+						ReplacementCompletion rc = new ReplacementCompletion(this, x.dsname + "." + x.dbname, "<srv.db>", x.dsname + "." + x.dbname + " - " + x._type + " - " + x._desc);
 						cList.add(rc);
 					}
 				}
@@ -670,7 +670,7 @@ extends CompletionProviderAbstract
 						if ( ! "LCONN".equals(x._type) )
 							continue;
 
-						ReplacementCompletion rc = new ReplacementCompletion(this, x.dsname+"."+x.dbname, "<lsrv.db>", x.dsname+"."+x.dbname+" - "+x._type+" - "+x._desc);
+						ReplacementCompletion rc = new ReplacementCompletion(this, x.dsname + "." + x.dbname, "<lsrv.db>", x.dsname + "." + x.dbname + " - " + x._type + " - " + x._desc);
 						cList.add(rc);
 					}
 				}
@@ -686,7 +686,7 @@ extends CompletionProviderAbstract
 					{
 						RsTableRepDef x = (RsTableRepDef) rsc._rsInfo;
 
-						ReplacementCompletion rc = new ReplacementCompletion(this, x.name+"", "<repdef>", x.name+" - "+x._type+" - "+x._desc);
+						ReplacementCompletion rc = new ReplacementCompletion(this, x.name + "", "<repdef>", x.name + " - " + x._type + " - " + x._desc);
 						cList.add(rc);
 					}
 				}
@@ -702,7 +702,7 @@ extends CompletionProviderAbstract
 					{
 						RsTableSub x = (RsTableSub) rsc._rsInfo;
 
-						ReplacementCompletion rc = new ReplacementCompletion(this, x.name+"", "<sub>", x.name+" - "+x._type+" - "+x._desc);
+						ReplacementCompletion rc = new ReplacementCompletion(this, x.name + "", "<sub>", x.name + " - " + x._type + " - " + x._desc);
 						cList.add(rc);
 					}
 				}
@@ -718,7 +718,7 @@ extends CompletionProviderAbstract
 					{
 						RsDbRepDef x = (RsDbRepDef) rsc._rsInfo;
 
-						ReplacementCompletion rc = new ReplacementCompletion(this, x.name+"", "<repdef>", x.name+" - "+x._type+" - "+x._desc);
+						ReplacementCompletion rc = new ReplacementCompletion(this, x.name + "", "<repdef>", x.name + " - " + x._type + " - " + x._desc);
 						cList.add(rc);
 					}
 				}
@@ -734,7 +734,7 @@ extends CompletionProviderAbstract
 					{
 						RsDbSub x = (RsDbSub) rsc._rsInfo;
 
-						ReplacementCompletion rc = new ReplacementCompletion(this, x.name+"", "<repdef>", x.name+" - "+x._type+" - "+x._desc);
+						ReplacementCompletion rc = new ReplacementCompletion(this, x.name + "", "<repdef>", x.name + " - " + x._type + " - " + x._desc);
 						cList.add(rc);
 					}
 				}
@@ -796,7 +796,7 @@ extends CompletionProviderAbstract
 					}
 				}
 				for (String str : srvList)
-					cList.add(new BasicCompletion(this, str+"."));
+					cList.add(new BasicCompletion(this, str + "."));
 				return cList;
 			}
 			// Get DBNAMES
@@ -819,7 +819,7 @@ extends CompletionProviderAbstract
 
 						if ("".equals(dsname) || Util.startsWithIgnoreCase(rsdb.dsname, dsname))
 							if ("".equals(dbname) || Util.startsWithIgnoreCase(rsdb.dbname, dbname))
-								srvList.add(rsdb.dsname+"."+rsdb.dbname);
+								srvList.add(rsdb.dsname + "." + rsdb.dbname);
 					}
 				}
 				for (String str : srvList)
@@ -1128,7 +1128,7 @@ extends CompletionProviderAbstract
 					}
 					catch (SQLException sqle)
 					{
-						_logger.info("Problems when getting ASE monTables dictionary, skipping this and continuing. Caught: "+sqle);
+						_logger.info("Problems when getting ASE monTables dictionary, skipping this and continuing. Caught: " + sqle);
 					}
 					finally
 					{
@@ -1179,12 +1179,12 @@ extends CompletionProviderAbstract
 				ri._name,
 				! quoteNames 
 					? ri._name 
-					: "\""+ri._name+"\"");
+					: "\"" + ri._name + "\"");
 
 			_rsInfo = ri;
 
 			String shortDesc = 
-				"<font color=\"blue\">"+ri._type+"</font>" +
+				"<font color=\"blue\">" + ri._type + "</font>" +
 //				" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(ri._desc) ? "No Description" : ri._desc) + "</font></i>";
 				" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(ri._desc) ? "" : ri._desc) + "</font></i>";
 			setShortDescription(shortDesc);

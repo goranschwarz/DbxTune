@@ -123,7 +123,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -157,7 +157,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmOpenDatabases(counterController, guiController);
 	}
@@ -227,7 +227,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_LOGSEMAPHORE_CONT,
 			"DB Transaction Log Semaphore Contention",            // Menu CheckBox text
-			"DB Transaction Log Semaphore Contention in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"DB Transaction Log Semaphore Contention in Percent (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -239,7 +239,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_LOGSIZE_LEFT_MB,
 			"DB Transaction Log Space Available in MB",        // Menu CheckBox text
-			"DB Transaction Log Space Available in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"DB Transaction Log Space Available in MB (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MIN_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -251,7 +251,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_LOGSIZE_USED_MB,
 			"DB Transaction Log Space Used in MB",        // Menu CheckBox text
-			"DB Transaction Log Space Used in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"DB Transaction Log Space Used in MB (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -263,7 +263,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_LOGSIZE_USED_PCT,
 			"DB Transaction Log Space Used in PCT",     // Menu CheckBox text
-			"DB Transaction Log Space Used in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"DB Transaction Log Space Used in Percent (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -275,7 +275,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_LOGSIZE_MB,
 			"DB Transaction Log Space Size in MB",     // Menu CheckBox text
-			"DB Transaction Log Space Size in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"DB Transaction Log Space Size in MB (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -287,7 +287,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_DATASIZE_LEFT_MB,
 			"DB Data Space Available in MB",        // Menu CheckBox text
-			"DB Data Space Available in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"DB Data Space Available in MB (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MIN_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -299,7 +299,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_DATASIZE_USED_MB,
 			"DB Data Space Used in MB",     // Menu CheckBox text
-			"DB Data Space Used in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"DB Data Space Used in MB (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -311,7 +311,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_DATASIZE_USED_PCT,
 			"DB Data Space Used in PCT",     // Menu CheckBox text
-			"DB Data Space Used in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"DB Data Space Used in Percent (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -323,7 +323,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_DATASIZE_MB,
 			"DB Data Space Size in MB",        // Menu CheckBox text
-			"DB Data Space Size in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"DB Data Space Size in MB (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -335,7 +335,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_TEMPDB_USED_MB,
 			"TempDB Space Used in MB",     // Menu CheckBox text
-			"TempDB Space Used in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"TempDB Space Used in MB (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -347,7 +347,7 @@ extends CountersModel
 
 		addTrendGraph(GRAPH_NAME_TEMPDB_MAX_AND_USED_MB,
 			"TempDB Space Max-Size and Used-Size in MB",     // Menu CheckBox text
-			"TempDB Space Max-Size and Used-Size in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"TempDB Space Max-Size and Used-Size in MB (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -791,7 +791,7 @@ extends CountersModel
 			// Check if we can do select on syslogshold
 			canDoSelectOnSyslogshold = AseConnectionUtils.canDoSelectOnTable(conn, "master.dbo.syslogshold");
 			if ( ! canDoSelectOnSyslogshold )
-				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"'. Problems accessing 'master.dbo.syslogshold' table, columns starting with 'OldestTran*' will not hold valid data.");
+				_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '" + getDisplayName() + "'. Problems accessing 'master.dbo.syslogshold' table, columns starting with 'OldestTran*' will not hold valid data.");
 		}
 
 		if (isClusterEnabled)
@@ -857,7 +857,7 @@ extends CountersModel
 			if (sampleSpaceusage)
 				RawSpaceUsage   = "RawSpaceUsage = spaceusage(od.DBID), ";
 			else
-				RawSpaceUsage   = "RawSpaceUsage = convert(varchar(255), '"+PROPKEY_sample_spaceusage+"=false'), ";
+				RawSpaceUsage   = "RawSpaceUsage = convert(varchar(255), '" + PROPKEY_sample_spaceusage + "=false'), ";
 
 			ReservedMb   = "ReservedMb = convert(numeric(12,3), 0), ";   // Value is derived from spaceusage(dbid)
 			UsedMb       = "UsedMb = convert(numeric(12,3), 0), ";       // Value is derived from spaceusage(dbid)
@@ -1084,7 +1084,7 @@ extends CountersModel
 			if (conf.getBooleanProperty(PROPKEY_disable_spaceusage_onTimeout, DEFAULT_disable_spaceusage_onTimeout))
 			{
 				setQueryTimeout(getDefaultQueryTimeout(), true);
-				_logger.warn("CM='"+getName()+"'. Setting Query Timeout to default of '"+getDefaultQueryTimeout()+"', from method handelTimeoutException().");
+				_logger.warn("CM='" + getName() + "'. Setting Query Timeout to default of '" + getDefaultQueryTimeout() + "', from method handelTimeoutException().");
 				return;
 			}
 		}
@@ -1106,7 +1106,7 @@ extends CountersModel
 				setSql(null);
 	
 				String key=PROPKEY_sample_spaceusage;
-				_logger.warn("CM='"+getName()+"'. Disabling the 'spaceusage' columns, from method handelTimeoutException(). This is done by setting "+key+"=false");
+				_logger.warn("CM='" + getName() + "'. Disabling the 'spaceusage' columns, from method handelTimeoutException(). This is done by setting " + key + "=false");
 				
 				if (getGuiController() != null && getGuiController().hasGUI())
 				{
@@ -1114,7 +1114,7 @@ extends CountersModel
 
 					JOptionPane optionPane = new JOptionPane(
 							"<html>" +
-							"The query for CM '"+getName()+"' took to long... and received a Timeout.<br>" +
+							"The query for CM '" + getName() + "' took to long... and received a Timeout.<br>" +
 							"<br>" +
 							"This may be caused by the function spaceusage(dbid), which is used to get spaceusage on a database level.<br>" +
 							"This sometimes takes to long and may eat recources.<br>" +
@@ -1123,7 +1123,7 @@ extends CountersModel
 							"I just disabled option 'Sample Spaceusage'... You can try to enable it again later.<br>" +
 							"</html>",
 							JOptionPane.INFORMATION_MESSAGE);
-					JDialog dialog = optionPane.createDialog(MainFrame.getInstance(), "Disabled 'Sample Spaceusage' @ "+dateStr);
+					JDialog dialog = optionPane.createDialog(MainFrame.getInstance(), "Disabled 'Sample Spaceusage' @ " + dateStr);
 					dialog.setModal(false);
 					dialog.setVisible(true);
 				}
@@ -1265,7 +1265,7 @@ extends CountersModel
 			// If 'RawSpaceUsage' was found, Only in ASE 16.0 or above
 			if (RawSpaceUsage_pos >= 0)
 			{
-				String RawSpaceUsage = newSample.getValueAt(rowId, RawSpaceUsage_pos)+"";
+				String RawSpaceUsage = newSample.getValueAt(rowId, RawSpaceUsage_pos) + "";
 				
 				// Split up the RawSpaceUsage, which looks looks the following:
 				// 'reserved pages=4190, used pages=3117, data pages=2985, index pages=456, oam pages=132, allocation units=181, row count=21771, tables=57, LOB pages=15, syslogs pages=0'
@@ -1570,7 +1570,7 @@ extends CountersModel
 
 		if (dbMap.isEmpty())
 		{
-			_logger.info("updateGraphData(): Skipping the graphName='"+tgdp.getName()+"' for cm='"+getName()+"', reason: No DB names are availiable in the mapped list. dbMap.isEmpty() == true");
+			_logger.info("updateGraphData(): Skipping the graphName='" + tgdp.getName() + "' for cm='" + getName() + "', reason: No DB names are availiable in the mapped list. dbMap.isEmpty() == true");
 			return;
 		}
 		
@@ -2082,7 +2082,7 @@ extends CountersModel
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_OldestTranInSeconds, DEFAULT_alarm_OldestTranInSeconds);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", dbname='"+dbname+"', OldestTranInSeconds='"+OldestTranInSeconds+"'.");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", dbname='" + dbname + "', OldestTranInSeconds='" + OldestTranInSeconds + "'.");
 
 					if (OldestTranInSeconds.intValue() > threshold)
 					{
@@ -2202,7 +2202,7 @@ extends CountersModel
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_TransactionLogFull, DEFAULT_alarm_TransactionLogFull);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): dbname='"+dbname+"', threshold="+threshold+", TransactionLogFull='"+TransactionLogFull+"'.");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): dbname='" + dbname + "', threshold=" + threshold + ", TransactionLogFull='" + TransactionLogFull + "'.");
 
 					if (TransactionLogFull.intValue() > threshold)
 					{
@@ -2290,7 +2290,7 @@ extends CountersModel
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LastBackupFailed, DEFAULT_alarm_LastBackupFailed);
 
 					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): dbname='"+dbname+"', threshold="+threshold+", LastBackupFailed='"+val+"'.");
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): dbname='" + dbname + "', threshold=" + threshold + ", LastBackupFailed='" + val + "'.");
 
 					if (val.intValue() > threshold)
 					{
@@ -2420,7 +2420,7 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LastDbBackupAgeInHours, DEFAULT_alarm_LastDbBackupAgeInHours);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): dbname='"+dbname+"', threshold="+threshold+", LastDbBackupAgeInHours='"+val+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): dbname='" + dbname + "', threshold=" + threshold + ", LastDbBackupAgeInHours='" + val + "'.");
 
 				if (val.intValue() > threshold || val.intValue() < 0)
 				{
@@ -2548,7 +2548,7 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LastLogBackupAgeInHours, DEFAULT_alarm_LastLogBackupAgeInHours);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): dbname='"+dbname+"', threshold="+threshold+", LastLogBackupAgeInHours='"+val+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): dbname='" + dbname + "', threshold=" + threshold + ", LastLogBackupAgeInHours='" + val + "'.");
 
 				if (val.intValue() > threshold || val.intValue() < 0)
 				{
@@ -2642,7 +2642,7 @@ extends CountersModel
 				Number threshold = getDbFreeSpaceThreshold(dbname, _map_alarm_LowDbFreeSpaceInMb); // This uses dbname.matches(map:anyKey)
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): dbname='"+dbname+"', threshold="+threshold+", LowDbFreeSpaceInMb: DataSizeFreeInMb='"+freeMb+"', DataSizeUsedPct='"+usedPct+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): dbname='" + dbname + "', threshold=" + threshold + ", LowDbFreeSpaceInMb: DataSizeFreeInMb='" + freeMb + "', DataSizeUsedPct='" + usedPct + "'.");
 
 				if (freeMb != null && usedPct != null && threshold != null)
 				{
@@ -2672,7 +2672,7 @@ extends CountersModel
 				Number threshold = getDbFreeSpaceThreshold(dbname, _map_alarm_LowLogFreeSpaceInMb); // This uses dbname.matches(map:anyKey)
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): dbname='"+dbname+"', threshold="+threshold+", LowLogFreeSpaceInMb: LogSizeFreeInMb='"+freeMb+"', LogSizeUsedPct='"+usedPct+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): dbname='" + dbname + "', threshold=" + threshold + ", LowLogFreeSpaceInMb: LogSizeFreeInMb='" + freeMb + "', LogSizeUsedPct='" + usedPct + "'.");
 
 				if (freeMb != null && usedPct != null && threshold != null)
 				{
@@ -2702,7 +2702,7 @@ extends CountersModel
 				Number threshold = getDbFreeSpaceThreshold(dbname, _map_alarm_LowDbFreeSpaceInPct); // This uses dbname.matches(map:anyKey)
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): dbname='"+dbname+"', threshold="+threshold+", LowDbFreeSpaceInPct: DataSizeFreeInMb='"+freeMb+"', DataSizeUsedPct='"+usedPct+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): dbname='" + dbname + "', threshold=" + threshold + ", LowDbFreeSpaceInPct: DataSizeFreeInMb='" + freeMb + "', DataSizeUsedPct='" + usedPct + "'.");
 
 				if (freeMb != null && usedPct != null && threshold != null)
 				{
@@ -2732,7 +2732,7 @@ extends CountersModel
 				Number threshold = getDbFreeSpaceThreshold(dbname, _map_alarm_LowLogFreeSpaceInPct); // This uses dbname.matches(map:anyKey)
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): dbname='"+dbname+"', threshold="+threshold+", LowLogFreeSpaceInPct: LogSizeFreeInMb='"+freeMb+"', LogSizeUsedPct='"+usedPct+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): dbname='" + dbname + "', threshold=" + threshold + ", LowLogFreeSpaceInPct: LogSizeFreeInMb='" + freeMb + "', LogSizeUsedPct='" + usedPct + "'.");
 
 				if (freeMb != null && usedPct != null && threshold != null)
 				{
@@ -2760,7 +2760,7 @@ extends CountersModel
 				Object o_dbOptions  = cm.getAbsValue(r, "DBOptions");
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): dbname='"+dbname+"', dbOptions='"+o_dbOptions+"'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): dbname='" + dbname + "', dbOptions='" + o_dbOptions + "'.");
 
 				if (o_dbOptions != null)
 				{
@@ -2899,7 +2899,7 @@ extends CountersModel
     {
     	if (map == null)
     	{
-    		_logger.warn("getDbFreeSpaceThreshold(dbname=|"+dbname+"|, map=|"+map+"|). map is NULL, which wasn't expected... some initialization must have failed.");
+    		_logger.warn("getDbFreeSpaceThreshold(dbname=|" + dbname + "|, map=|" + map + "|). map is NULL, which wasn't expected... some initialization must have failed.");
     		return null;
     	}
 
@@ -2970,7 +2970,7 @@ extends CountersModel
 		{
 			Map<String, String> map = StringUtil.parseCommaStrToMap(cfgVal);
 			if (_logger.isDebugEnabled())
-				_logger.debug(prefix + "Initializing alarm 'LowDbFreeSpaceInMb'. After parseCommaStrToMap, map looks like: "+map);
+				_logger.debug(prefix + "Initializing alarm 'LowDbFreeSpaceInMb'. After parseCommaStrToMap, map looks like: " + map);
 			
 			for (String key : map.keySet())
 			{
@@ -2981,11 +2981,11 @@ extends CountersModel
 					int mb = NumberUtils.createNumber(val).intValue();
 					_map_alarm_LowDbFreeSpaceInMb.put(key, mb);
 
-					_logger.info(prefix + "Initializing alarm. Using 'LowDbFreeSpaceInMb', dbname='"+key+"', mb="+mb);
+					_logger.info(prefix + "Initializing alarm. Using 'LowDbFreeSpaceInMb', dbname='" + key + "', mb=" + mb);
 				}
 				catch (NumberFormatException ex)
 				{
-					_logger.info(prefix + "Initializing alarm. Skipping 'LowDbFreeSpaceInMb' enty dbname='"+key+"', val='"+val+"'. The value is not a number.");
+					_logger.info(prefix + "Initializing alarm. Skipping 'LowDbFreeSpaceInMb' enty dbname='" + key + "', val='" + val + "'. The value is not a number.");
 				}
 			}
 			
@@ -3013,7 +3013,7 @@ extends CountersModel
 		{
 			Map<String, String> map = StringUtil.parseCommaStrToMap(cfgVal);
 			if (_logger.isDebugEnabled())
-				_logger.debug(prefix + "Initializing alarm 'LowLogFreeSpaceInMb'. After parseCommaStrToMap, map looks like: "+map);
+				_logger.debug(prefix + "Initializing alarm 'LowLogFreeSpaceInMb'. After parseCommaStrToMap, map looks like: " + map);
 			
 			for (String key : map.keySet())
 			{
@@ -3024,11 +3024,11 @@ extends CountersModel
 					int mb = NumberUtils.createNumber(val).intValue();
 					_map_alarm_LowLogFreeSpaceInMb.put(key, mb);
 
-					_logger.info(prefix + "Initializing alarm. Using 'LowLogFreeSpaceInMb', dbname='"+key+"', mb="+mb);
+					_logger.info(prefix + "Initializing alarm. Using 'LowLogFreeSpaceInMb', dbname='" + key + "', mb=" + mb);
 				}
 				catch (NumberFormatException ex)
 				{
-					_logger.info(prefix + "Initializing alarm. Skipping 'LowLogFreeSpaceInMb' enty dbname='"+key+"', val='"+val+"'. The value is not a number.");
+					_logger.info(prefix + "Initializing alarm. Skipping 'LowLogFreeSpaceInMb' enty dbname='" + key + "', val='" + val + "'. The value is not a number.");
 				}
 			}
 			
@@ -3056,7 +3056,7 @@ extends CountersModel
 		{
 			Map<String, String> map = StringUtil.parseCommaStrToMap(cfgVal);
 			if (_logger.isDebugEnabled())
-				_logger.debug(prefix + "Initializing alarm 'LowDbFreeSpaceInPct'. After parseCommaStrToMap, map looks like: "+map);
+				_logger.debug(prefix + "Initializing alarm 'LowDbFreeSpaceInPct'. After parseCommaStrToMap, map looks like: " + map);
 			
 			for (String key : map.keySet())
 			{
@@ -3067,11 +3067,11 @@ extends CountersModel
 					double pct = NumberUtils.createNumber(val).doubleValue();
 					_map_alarm_LowDbFreeSpaceInPct.put(key, pct);
 
-					_logger.info(prefix + "Initializing alarm. Using 'LowDbFreeSpaceInPct', dbname='"+key+"', pct="+pct);
+					_logger.info(prefix + "Initializing alarm. Using 'LowDbFreeSpaceInPct', dbname='" + key + "', pct=" + pct);
 				}
 				catch (NumberFormatException ex)
 				{
-					_logger.info(prefix + "Initializing alarm. Skipping 'LowDbFreeSpaceInPct' enty dbname='"+key+"', val='"+val+"'. The value is not a number.");
+					_logger.info(prefix + "Initializing alarm. Skipping 'LowDbFreeSpaceInPct' enty dbname='" + key + "', val='" + val + "'. The value is not a number.");
 				}
 			}
 			
@@ -3099,7 +3099,7 @@ extends CountersModel
 		{
 			Map<String, String> map = StringUtil.parseCommaStrToMap(cfgVal);
 			if (_logger.isDebugEnabled())
-				_logger.debug(prefix + "Initializing alarm 'LowLogFreeSpaceInPct'. After parseCommaStrToMap, map looks like: "+map);
+				_logger.debug(prefix + "Initializing alarm 'LowLogFreeSpaceInPct'. After parseCommaStrToMap, map looks like: " + map);
 			
 			for (String key : map.keySet())
 			{
@@ -3110,11 +3110,11 @@ extends CountersModel
 					double pct = NumberUtils.createNumber(val).doubleValue();
 					_map_alarm_LowLogFreeSpaceInPct.put(key, pct);
 
-					_logger.info(prefix + "Initializing alarm. Using 'LowLogFreeSpaceInPct', dbname='"+key+"', pct="+pct);
+					_logger.info(prefix + "Initializing alarm. Using 'LowLogFreeSpaceInPct', dbname='" + key + "', pct=" + pct);
 				}
 				catch (NumberFormatException ex)
 				{
-					_logger.info(prefix + "Initializing alarm. Skipping 'LowLogFreeSpaceInPct' enty dbname='"+key+"', val='"+val+"'. The value is not a number.");
+					_logger.info(prefix + "Initializing alarm. Skipping 'LowLogFreeSpaceInPct' enty dbname='" + key + "', val='" + val + "'. The value is not a number.");
 				}
 			}
 

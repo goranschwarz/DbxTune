@@ -350,7 +350,7 @@ public class DiskIo extends AbstractSysmonType
 		for (int i=0; i<NumEngines; i++)
 		{
 			if (fld_clock_ticks[i] > 0)
-				addReportLnSC("    Engine "+i, fld_max_outstanding_AIOs_engine[i]);
+				addReportLnSC("    Engine " + i, fld_max_outstanding_AIOs_engine[i]);
 		}
 		addReportLn("");
 		addReportLn("");
@@ -379,7 +379,7 @@ public class DiskIo extends AbstractSysmonType
     			for (int i=0; i<NumEngines; i++)
     			{
     				if (fld_clock_ticks[0] > 0)
-    					addReportLnPct("      Engine "+i, fld_total_dpoll_completed_aios[i], tmp_total_async);
+    					addReportLnPct("      Engine " + i, fld_total_dpoll_completed_aios[i], tmp_total_async);
     			}
     		}
     		else

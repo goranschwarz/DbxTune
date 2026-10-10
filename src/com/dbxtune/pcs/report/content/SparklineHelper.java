@@ -204,7 +204,7 @@ public class SparklineHelper
 		public int        getDecimalScale()                        { return _decimalScale; }
 		public String     getSparklineClassNamePrefix()            { return _sparklineClassNamePrefix; }
 //		public String     getSparklineClassName()                  { return _sparklineClassName            != null ? _sparklineClassName              : "sparklines_" + getHtmlChartColumnName(); }
-		public String     getSparklineTooltipPostfix()             { return _sparklineTooltipPostfix       != null ? " - " + _sparklineTooltipPostfix : " - " + getGroupDataAggregationType() + " '" + getDbmsDataValueColumnName() +"' in below time period" ; }
+		public String     getSparklineTooltipPostfix()             { return _sparklineTooltipPostfix       != null ? " - " + _sparklineTooltipPostfix : " - " + getGroupDataAggregationType() + " '" + getDbmsDataValueColumnName() + "' in below time period" ; }
 		public String     getNoBrowserText()                       { return _noBrowserText                 != null ? _noBrowserText                   : ""; }
 
 		public String     getSparklineClassName()                  
@@ -311,7 +311,7 @@ public class SparklineHelper
 
 				if (colVal == null)
 				{
-					_logger.warn("Getting value from table '" + rstm.getName() + "', columnName='" + colName + "', row=" + r + ", colPos=" + colPos +", was a NULL value.");
+					_logger.warn("Getting value from table '" + rstm.getName() + "', columnName='" + colName + "', row=" + r + ", colPos=" + colPos + ", was a NULL value.");
 				}
 
 				colValList.add(colVal);
@@ -1298,7 +1298,7 @@ public class SparklineHelper
 						break;
 
 					default:
-						throw new RuntimeException("Unhandled datatype=" + valDt + ", '" + ResultSetTableModel.getColumnJavaSqlTypeName(valDt)+ "' when reading aggreate column for 'sparkline' chart. SQL=|" + sql + "|");
+						throw new RuntimeException("Unhandled datatype=" + valDt + ", '" + ResultSetTableModel.getColumnJavaSqlTypeName(valDt) + "' when reading aggreate column for 'sparkline' chart. SQL=|" + sql + "|");
 					}
 					
 

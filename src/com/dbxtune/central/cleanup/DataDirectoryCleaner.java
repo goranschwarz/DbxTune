@@ -786,7 +786,7 @@ extends Task
 				}
 
 				// Write how much we deleted...
-				logMsg = "Summary of all deleted files deleted was " + NumberUtils.round(deletedFilesSizeMbSum, 1) + " MB (" + NumberUtils.round(deletedFilesSizeMbSum*1.0/1024.0, 1)+ " GB).";
+				logMsg = "Summary of all deleted files deleted was " + NumberUtils.round(deletedFilesSizeMbSum, 1) + " MB (" + NumberUtils.round(deletedFilesSizeMbSum*1.0/1024.0, 1) + " GB).";
 				_logger.info(_prefix + logMsg);
 				appendToLastExecShortReport(logMsg);
 

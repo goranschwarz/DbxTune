@@ -76,7 +76,7 @@ extends DbmsVersionPanelAbstract
 		int shortVerNum = VersionShort.parse(tmpVerStr);
 		long version = Ver.shortVersionStringToNumber(shortVerNum);
 
-		_logger.debug("MYSQL-parseVersionStringToNum(versionStr='"+versionStr+"'): tmpVerStr='"+tmpVerStr+"', <<<<<< returns: "+version);
+		_logger.debug("MYSQL-parseVersionStringToNum(versionStr='" + versionStr + "'): tmpVerStr='" + tmpVerStr + "', <<<<<< returns: " + version);
 		return version;
 	}
 	

@@ -63,7 +63,7 @@ public class ProcessBuilderTester
 		if (StringUtil.hasValue(output))
 			output = output.trim();
 
-System.out.println("execCommandOutputAsStr(cmd=|"+cmd+"|): <<<<<<<< returned=|" + output + "|");
+System.out.println("execCommandOutputAsStr(cmd=|" + cmd + "|): <<<<<<<< returned=|" + output + "|");
 		return output;
 	}
 	

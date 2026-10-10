@@ -39,11 +39,11 @@ extends AlarmEvent
 				Version.getAppName(), // serviceType
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo
-				rangeType+"",         // extraInfo
+				rangeType + "",         // extraInfo
 				AlarmEvent.Category.CPU,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Exhausting CPU Scheduling resources in '" + cm.getServerName() + "'. RunQueueLength: avg_1min=" + avg_1min + ", avg_5min="+avg_5min+", avg_15min="+avg_15min+". (threshold="+threshold+")",
+				"Exhausting CPU Scheduling resources in '" + cm.getServerName() + "'. RunQueueLength: avg_1min=" + avg_1min + ", avg_5min=" + avg_5min + ", avg_15min=" + avg_15min + ". (threshold=" + threshold + ")",
 				threshold);
 
 		// Set: Time To Live if postpone is enabled

@@ -48,6 +48,6 @@ extends AlarmEvent
 		setTimeToLive(ttl);
 
 		// Set the raw data
-		setData("certName="+name+", daysLeft=" + days_to_expiry + ", expiryDate='" + expiry_date + "'.");
+		setData("certName=" + name + ", daysLeft=" + days_to_expiry + ", expiryDate='" + expiry_date + "'.");
 	}
 }

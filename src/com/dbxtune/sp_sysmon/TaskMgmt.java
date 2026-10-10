@@ -330,7 +330,7 @@ extends AbstractSysmonType
 		for (int i=0; i<fld_EngineCtxSwitchArray.length; i++)
 		{
 			fld_EngineCtxSwitchAllEngines += fld_EngineCtxSwitchArray[i];
-			addReportLnPct("    Engine "+i, fld_EngineCtxSwitchArray[i], NumTaskSwitch);
+			addReportLnPct("    Engine " + i, fld_EngineCtxSwitchArray[i], NumTaskSwitch);
 		}
 		if (fld_EngineCtxSwitchArray.length > 1)
 		{

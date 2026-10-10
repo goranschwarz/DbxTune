@@ -168,7 +168,7 @@ extends SqlStatementAbstract
 				}
 				else
 				{
-					throw new DiffException("ERROR: You have specified -a or --actionOutFile '"+_actionOutFile+"' but you have NOT specified either '${leftTabName}' or '${rightTabName}' in the String. This needs to be done.");
+					throw new DiffException("ERROR: You have specified -a or --actionOutFile '" + _actionOutFile + "' but you have NOT specified either '${leftTabName}' or '${rightTabName}' in the String. This needs to be done.");
 				}
 			}
 			if (!_doPreRowCount        )   sb.append("-n ");
@@ -263,7 +263,7 @@ extends SqlStatementAbstract
 		checkParsedParameters(_params);
 
 		if (_params._debug)
-			addDebugMessage("CmdLineSwitches: "+_params);
+			addDebugMessage("CmdLineSwitches: " + _params);
 	}
 
 	/**
@@ -287,7 +287,7 @@ extends SqlStatementAbstract
 		{
 			ConnectionProfile cp = ConnectionProfileManager.getInstance().getProfile(params._profile);
 			if (cp == null)
-				throw new PipeCommandException("Profile not found in the ProfileManager. profile name '"+params._profile+"'.");
+				throw new PipeCommandException("Profile not found in the ProfileManager. profile name '" + params._profile + "'.");
 			else
 			{
 				_rightConnectionProfile = cp;
@@ -440,7 +440,7 @@ extends SqlStatementAbstract
 		sb.append("  -s,--autoSkip             Automatically Skip all tables that are NOT on both sides (shortcut for -f|-F)\n");
 		sb.append("  -d,--dryRun               Do not execute the generated '\\tabdiff' commands, only print what to execute.\n");
 		sb.append("\n");
-		sb.append("  -A,--action <name>        Action when differance. "+StringUtil.toCommaStr(ActionType.values())+" (default: "+ActionType.TABLE+") \n");
+		sb.append("  -A,--action <name>        Action when differance. " + StringUtil.toCommaStr(ActionType.values()) + " (default: " + ActionType.TABLE + ") \n");
 		sb.append("  -a,--actionOutFile <name> Write the action out put to a file. \n");
 		sb.append("  -x,--debug                Debug, print some extra info \n");
 		sb.append("  -X,--trace                Trace, print some extra info (more than debug)\n");
@@ -638,10 +638,10 @@ extends SqlStatementAbstract
 			{
 				// print DEBUG what tables we are SKIPPING
 				for (String name : onlyOnLeftSide)
-					addInfoMessage("Skipping LEFT side table '"+name+"'. Due to --autoSkip");
+					addInfoMessage("Skipping LEFT side table '" + name + "'. Due to --autoSkip");
 
 				for (String name : onlyOnRightSide)
-					addInfoMessage("Skipping RIGHT side table '"+name+"'. Due to --autoSkip");
+					addInfoMessage("Skipping RIGHT side table '" + name + "'. Due to --autoSkip");
 
 				// remove onlyOnLeftSide and onlyOnRightSide from the list we want to do
 				leftTables .removeAll(onlyOnLeftSide);
@@ -649,13 +649,13 @@ extends SqlStatementAbstract
 			}
 			else
 			{
-				throw new DiffException("Tables do not match on LEFT/RIGHT hand side. Please use --leftSkipList, --rightSkipList or --autoSkip. Tables only on LEFT side "+onlyOnLeftSide+", Tables only on on RIGHT side "+onlyOnRightSide);
+				throw new DiffException("Tables do not match on LEFT/RIGHT hand side. Please use --leftSkipList, --rightSkipList or --autoSkip. Tables only on LEFT side " + onlyOnLeftSide + ", Tables only on on RIGHT side " + onlyOnRightSide);
 			}
 		}
 		
 		if (leftTables.size() != rightTables.size())
 		{
-			throw new DiffException("Tables COUNT do not match on LEFT/RIGHT hand side. TableCount left="+leftTables.size()+", right="+rightTables.size()+". Tables only on LEFT side "+onlyOnLeftSide+", Tables only on on RIGHT side "+onlyOnRightSide);
+			throw new DiffException("Tables COUNT do not match on LEFT/RIGHT hand side. TableCount left=" + leftTables.size() + ", right=" + rightTables.size() + ". Tables only on LEFT side " + onlyOnLeftSide + ", Tables only on on RIGHT side " + onlyOnRightSide);
 		}
 		
 		if (leftTables.isEmpty())
@@ -734,7 +734,7 @@ extends SqlStatementAbstract
 		for (String sql = sr.getSqlBatchString(); sql != null; sql = sr.getSqlBatchString())
 		{
 			_progress.setCurrentSqlText(sql, sr.getSqlTotalBatchCount(), sr.getMultiExecCount());
-			_progress.setState("Sending SQL to server for statement " + (sr.getSqlBatchNumber()+1) + " of "+sr.getSqlTotalBatchCount()+", starting at row "+(sr.getSqlBatchStartLine()+1) );
+			_progress.setState("Sending SQL to server for statement " + (sr.getSqlBatchNumber()+1) + " of " + sr.getSqlTotalBatchCount() + ", starting at row " + (sr.getSqlBatchStartLine()+1) );
 
 			SqlStatement sqlStmntInfo = SqlStatementFactory.create(_conn, sql, null, _resultCompList, _progress, _owner, _queryWindow);
 

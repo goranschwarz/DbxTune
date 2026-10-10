@@ -276,10 +276,10 @@ extends JPanel
 			{
 				try 
 				{
-					URL url = AlarmDetailUserDefinedPanel.class.getResource("examples/"+template+".txt");
+					URL url = AlarmDetailUserDefinedPanel.class.getResource("examples/" + template + ".txt");
 					if (url == null)
 					{
-						_logger.error("Can't find the resource for class='"+AlarmDetailUserDefinedPanel.class+"', filename='"+template+".txt'.");
+						_logger.error("Can't find the resource for class='" + AlarmDetailUserDefinedPanel.class + "', filename='" + template + ".txt'.");
 						return;
 					}
 					String fileContent = IOUtils.toString(url, Charset.defaultCharset()); 
@@ -430,7 +430,7 @@ extends JPanel
 			{
 				String msg = e.getMessage();
 				
-				_compileStatus_lbl.setText("Compilation Errors: "+msg);
+				_compileStatus_lbl.setText("Compilation Errors: " + msg);
 				_compileStatus_lbl.setToolTipText(msg);
 				_compileStatus_lbl.setVisible(true);
 
@@ -516,7 +516,7 @@ extends JPanel
 			if ( ! f.exists() )
 			{
 //				System.out.println("FILE do not exists '"+f.getAbsolutePath()+"'");
-				throw new FileNotFoundException("File '"+f.getAbsolutePath()+"' does not exist");
+				throw new FileNotFoundException("File '" + f.getAbsolutePath() + "' does not exist");
 				//String dummy = FileUtils.readFileToString(f); // This will throw "FileDoNotExists"
 			}
 
@@ -537,13 +537,13 @@ extends JPanel
 //				ex2.printStackTrace();
 //			}
 
-			_javaEditor_txt.setText("/* "+ex+" */");
+			_javaEditor_txt.setText("/* " + ex + " */");
 			_javaEditor_txt.setCaretPosition(0);
 			_javaEditor_txt.discardAllEdits();
 			
 //				_javaFileName_txt.setBackground(TrendGraphColors.VERY_LIGHT_RED);
 			_javaFileName_txt.setForeground(Color.RED);
-			_javaFileName_txt.setToolTipText(""+ex);
+			_javaFileName_txt.setToolTipText("" + ex);
 		}
 //		System.out.println("xxx=" + _javaEditor_txt.getFileFullPath());
 
@@ -716,9 +716,9 @@ extends JPanel
 			try
 			{
 				String content = FileUtils.readFileToString(f);
-				System.out.println("##### FileUtils.readFileToString("+f+") ################################");
+				System.out.println("##### FileUtils.readFileToString(" + f + ") ################################");
 				System.out.println(content);
-				System.out.println("##### FileUtils.readFileToString("+f+") ################################");
+				System.out.println("##### FileUtils.readFileToString(" + f + ") ################################");
 				return content;
 			}
 			catch (IOException e)
@@ -739,7 +739,7 @@ extends JPanel
 
 		try
 		{
-			System.out.println("LOADING CLASS: '"+className+"', from scrDir='"+srcDir+"'.");
+			System.out.println("LOADING CLASS: '" + className + "', from scrDir='" + srcDir + "'.");
 
 			Map<String, byte[]> srcStringsMap = new HashMap<>();
 			String xxx= createSourceCode();
@@ -766,18 +766,18 @@ extends JPanel
 ////cl.setDebuggingInfo(true, true, true);
 			IUserDefinedAlarmInterrogator interrogator = (IUserDefinedAlarmInterrogator) cl.loadClass(className).newInstance();
 			interrogator.interrogateCounterData(null);
-			System.out.println("---END---- LOADING CLASS: '"+className+"', from scrDir='"+srcDir+"'.");
+			System.out.println("---END---- LOADING CLASS: '" + className + "', from scrDir='" + srcDir + "'.");
 		}
 		catch(ClassNotFoundException ex)
 		{
 			Throwable cause = ex.getCause();
 			if (cause instanceof CompileException)
 			{
-				System.out.println("111: CompileException: "+cause);
+				System.out.println("111: CompileException: " + cause);
 				System.exit(1);
 			}
 
-			System.out.println("222: ClassNotFoundException: "+ex);
+			System.out.println("222: ClassNotFoundException: " + ex);
 			System.exit(1);
 		}
 		catch (InstantiationException ex)

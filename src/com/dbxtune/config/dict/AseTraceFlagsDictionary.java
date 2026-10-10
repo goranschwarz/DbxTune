@@ -46,7 +46,7 @@ public class AseTraceFlagsDictionary
 		@Override
 		public String toString()
 		{
-			return StringUtil.left(_id+"", 5) + " - " + _description;
+			return StringUtil.left(_id + "", 5) + " - " + _description;
 		}
 	}
 
@@ -70,14 +70,14 @@ public class AseTraceFlagsDictionary
 			return rec.toString();
 
 		// Compose an empty one
-		return "Trace flag '"+traceflag+"' not found in dictionary.";
+		return "Trace flag '" + traceflag + "' not found in dictionary.";
 	}
 
 
 	private void set(TraceFlagRecord rec)
 	{
 		if ( _traceflags.containsKey(rec._id))
-			System.out.println("Trace flag '"+rec._id+"' already exists. It will be overwritten.");
+			System.out.println("Trace flag '" + rec._id + "' already exists. It will be overwritten.");
 
 		_traceflags.put(rec._id, rec);
 	}

@@ -30,7 +30,7 @@ extends JAseMessage
 
 	private static String createStr(String message, PipeCommand pipeCmd)
 	{
-		String mainText = "The TOFILE command '"+pipeCmd.getCmd().getCmdStr()+"' Completed successfully.\n";
+		String mainText = "The TOFILE command '" + pipeCmd.getCmd().getCmdStr() + "' Completed successfully.\n";
 
 		return mainText + message;
 	}

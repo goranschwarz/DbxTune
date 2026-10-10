@@ -43,7 +43,7 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Slow or heavily used OS Disk found in '" + cm.getServerName() + "', device='" + device + "', pctUsed=" + utilPct + ", raiseDelay=" + raiseDelayInMinutes + ". (threshold="+threshold+")",
+				"Slow or heavily used OS Disk found in '" + cm.getServerName() + "', device='" + device + "', pctUsed=" + utilPct + ", raiseDelay=" + raiseDelayInMinutes + ". (threshold=" + threshold + ")",
 				threshold);
 
 		// Adjust the Alarm Full Duration with X seconds

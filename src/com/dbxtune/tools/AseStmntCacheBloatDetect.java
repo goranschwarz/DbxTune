@@ -746,7 +746,7 @@ public class AseStmntCacheBloatDetect
 
 		try
 		{
-			System.out.println(" - Connectiong to URL: " +url);
+			System.out.println(" - Connectiong to URL: " + url);
 			DbxConnection conn = AseStmntCacheBloatDetect.connect(url, user, passwd, System.out);
 
 			System.out.println(" - Executing AseStmntCacheBloatDetect");

@@ -47,7 +47,7 @@ extends AlarmEvent
 				AlarmEvent.Category.HADR,
 				AlarmEvent.Severity.ERROR, 
 				AlarmEvent.ServiceState.AFFECTED, 
-				"SPLIT-BRAIN At server '" + cm.getServerName() + "', found role 'PRIMARY' at both the LOCAL server '" + serverName + "' and the REMOTE-LIVE-DATA server '"+remoteLiveDataServername+"' for the Availability group '" + agName + "'.",
+				"SPLIT-BRAIN At server '" + cm.getServerName() + "', found role 'PRIMARY' at both the LOCAL server '" + serverName + "' and the REMOTE-LIVE-DATA server '" + remoteLiveDataServername + "' for the Availability group '" + agName + "'.",
 				null
 				);
 

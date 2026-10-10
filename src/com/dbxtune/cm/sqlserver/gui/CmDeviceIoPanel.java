@@ -145,7 +145,7 @@ extends TabularCntrPanel
 		String colorStr = null;
 
 		// RED (or 1 cell) = AvgServ_ms
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.service.time.warning");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.service.time.warning");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -215,7 +215,7 @@ extends TabularCntrPanel
 //					if (_logger.isDebugEnabled())
 //						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": LogicalName("+LogicalName_pos+")='"+LogicalName+"', TotalIOs("+TotalIOs_pos+")='"+TotalIOs+"', Reads("+Reads_pos+")='"+Reads+"', APFReads("+APFReads_pos+")='"+APFReads+"', Writes("+Writes_pos+")='"+Writes+"'.");
 					if (_logger.isDebugEnabled())
-						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": LogicalName("+LogicalName_pos+")='"+LogicalName+"', TotalIOs("+TotalIOs_pos+")='"+TotalIOs+"', Reads("+Reads_pos+")='"+Reads+"', Writes("+Writes_pos+")='"+Writes+"'.");
+						_logger.debug("createDataset():GRAPH-DATA: " + getName() + ": LogicalName(" + LogicalName_pos + ")='" + LogicalName + "', TotalIOs(" + TotalIOs_pos + ")='" + TotalIOs + "', Reads(" + Reads_pos + ")='" + Reads + "', Writes(" + Writes_pos + ")='" + Writes + "'.");
 
 					if (generateTotalIo)
 						dataset.addValue(TotalIOs.doubleValue(), LogicalName, "TotalIOs");
@@ -613,8 +613,8 @@ extends TabularCntrPanel
 				catch (NumberFormatException nfe)
 				{
 					intVal = DEFAULT_serviceTimeWarn;
-					SwingUtils.showWarnMessage(CmDeviceIoPanel.this, "Not a Number", "<html>This must be a number, you entered '"+strVal+"'.<br>Setting to default value '"+intVal+"'.</html>", nfe);
-					l_warningAvgServ_ms_txt.setText(intVal+"");
+					SwingUtils.showWarnMessage(CmDeviceIoPanel.this, "Not a Number", "<html>This must be a number, you entered '" + strVal + "'.<br>Setting to default value '" + intVal + "'.</html>", nfe);
+					l_warningAvgServ_ms_txt.setText(intVal + "");
 				}
 				conf.setProperty(PROPKEY_serviceTimeWarn, intVal);
 				conf.save();

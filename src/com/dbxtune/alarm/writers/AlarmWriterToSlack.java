@@ -138,7 +138,7 @@ extends AlarmWriterAbstract
 		catch(IOException ex)
 		{
 			ex.toString();
-			return ""+ex;
+			return "" + ex;
 		}
 	}
 	
@@ -199,7 +199,7 @@ extends AlarmWriterAbstract
 			}
 			else
 			{
-				_logger.info("Responce code "+responceCode+" ("+HttpUtils.httpResponceCodeToText(responceCode)+"). From URL '"+_url+"'. Sent JSON content: "+jsonMessage);
+				_logger.info("Responce code " + responceCode + " (" + HttpUtils.httpResponceCodeToText(responceCode) + "). From URL '" + _url + "'. Sent JSON content: " + jsonMessage);
 			}
 
 			// Read responce and print the output...
@@ -212,11 +212,11 @@ extends AlarmWriterAbstract
 		catch (InterruptedException ex)
 		{
 			Thread.currentThread().interrupt();
-			_logger.error("Problems sending REST call to '"+_url+"'. Caught: "+ex, ex);
+			_logger.error("Problems sending REST call to '" + _url + "'. Caught: " + ex, ex);
 		}
 		catch (Exception ex)
 		{
-			_logger.error("Problems sending REST call to '"+_url+"'. Caught: "+ex , ex);
+			_logger.error("Problems sending REST call to '" + _url + "'. Caught: " + ex , ex);
 		}
 	}
 	
@@ -287,7 +287,7 @@ extends AlarmWriterAbstract
 	{
 		super.init(conf);
 
-		_logger.info("Initializing the AlarmWriter component named '"+getName()+"'.");
+		_logger.info("Initializing the AlarmWriter component named '" + getName() + "'.");
 
 		_url              = conf.getProperty       (PROPKEY_url,              DEFAULT_url);
 		_msgTemplate      = conf.getProperty       (PROPKEY_msgTemplate,      DEFAULT_msgTemplate);
@@ -307,8 +307,8 @@ extends AlarmWriterAbstract
 		//------------------------------------------
 		// Check for mandatory parameters
 		//------------------------------------------
-		if ( StringUtil.isNullOrBlank(_url) )         throw new Exception("The property '" + PROPKEY_url         + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
-		if ( StringUtil.isNullOrBlank(_msgTemplate) ) throw new Exception("The property '" + PROPKEY_msgTemplate + "' is mandatory for the AlarmWriter named '"+getName()+"'.");
+		if ( StringUtil.isNullOrBlank(_url) )         throw new Exception("The property '" + PROPKEY_url         + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
+		if ( StringUtil.isNullOrBlank(_msgTemplate) ) throw new Exception("The property '" + PROPKEY_msgTemplate + "' is mandatory for the AlarmWriter named '" + getName() + "'.");
 
 
 		//------------------------------------------
@@ -321,7 +321,7 @@ extends AlarmWriterAbstract
 		}
 		catch(MalformedURLException ex) 
 		{ 
-			throw new Exception("The URL '"+_url+"' seems to be malformed. Caught: "+ex, ex); 
+			throw new Exception("The URL '" + _url + "' seems to be malformed. Caught: " + ex, ex); 
 		}
 	}
 
@@ -329,7 +329,7 @@ extends AlarmWriterAbstract
 	public void printConfig()
 	{
 		int spaces = 35;
-		_logger.info("Configuration for Alarm Writer Module: "+getName());
+		_logger.info("Configuration for Alarm Writer Module: " + getName());
 		_logger.info("    " + StringUtil.left(PROPKEY_url,              spaces) + ": " + _url);
 		_logger.info("    " + StringUtil.left(PROPKEY_msgTemplate,      spaces) + ": " + _msgTemplate);
 

@@ -64,7 +64,7 @@ extends TabularCntrPanel
 		// WHITE = idle : do nothing
 
 		// GREEN = active
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.active");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.active");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -81,7 +81,7 @@ extends TabularCntrPanel
 
 		
 		// YELLOW = idle in transaction
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.idle_in_transaction");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.idle_in_transaction");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -96,7 +96,7 @@ extends TabularCntrPanel
 
 		
 		// BEIGE = worker process
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.parallel_worker");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.parallel_worker");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -111,7 +111,7 @@ extends TabularCntrPanel
 
 		
 		// Mark the row as PINK if this SPID is BLOCKED by another thread
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocked");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.blocked");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -129,7 +129,7 @@ extends TabularCntrPanel
 
 		
 		// Mark the row as RED if blocks other users from working
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocking");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.blocking");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -149,7 +149,7 @@ extends TabularCntrPanel
 
 	
 		// DARK BEIGE = PARENT of WORKER processes
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.worker.parent");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.worker.parent");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -168,7 +168,7 @@ extends TabularCntrPanel
 
 
 		// GREEN = active (BUT JUST ON THE 'state' column)
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.active");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.active");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override

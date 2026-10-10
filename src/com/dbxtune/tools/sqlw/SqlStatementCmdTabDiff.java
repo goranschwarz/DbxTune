@@ -233,7 +233,7 @@ extends SqlStatementAbstract
 		checkParsedParameters(_params);
 
 		if (_params._debug)
-			addDebugMessage("CmdLineSwitches: "+_params);
+			addDebugMessage("CmdLineSwitches: " + _params);
 	}
 
 	/**
@@ -257,7 +257,7 @@ extends SqlStatementAbstract
 		{
 			ConnectionProfile cp = ConnectionProfileManager.getInstance().getProfile(params._profile);
 			if (cp == null)
-				throw new PipeCommandException("Profile not found in the ProfileManager. profile name '"+params._profile+"'.");
+				throw new PipeCommandException("Profile not found in the ProfileManager. profile name '" + params._profile + "'.");
 			else
 			{
 				_rightConnectionProfile = cp;
@@ -391,7 +391,7 @@ extends SqlStatementAbstract
 		sb.append("  -n,--noRowCount           Disable 'get row count' SQL in PRE Execution. \n");
 		sb.append("  -f,--leftFetchSize <num>  Statement.setFetchSize(###), if above 0, the select will also be done in tran (default=-1)\n");
 		sb.append("  -F,--rightFetchSize <num> Statement.setFetchSize(###), if above 0, the select will also be done in tran (default=same as --leftFetchSize)\n");
-		sb.append("  -A,--action <name>        Action when differance. "+StringUtil.toCommaStr(ActionType.values())+" (default: "+ActionType.TABLE+") \n");
+		sb.append("  -A,--action <name>        Action when differance. " + StringUtil.toCommaStr(ActionType.values()) + " (default: " + ActionType.TABLE + ") \n");
 		sb.append("  -o,--actionOutFile <name> Write the action out put to a file. \n");
 		sb.append("  -g,--go <termStr>         Use this as a command execution string. (default=\\ngo)\n");
 		sb.append("  -L,--skipLobCols          Skip LOB columns in the select list. (that is LONG* types adn *LOB) \n");
@@ -546,8 +546,8 @@ extends SqlStatementAbstract
 
 			//----------------------------------------------------
 			// PRE LEFT - check if table exists
-			if (_progress != null) _progress.setState("Executing PRE SQL at LEFT hand side DBMS to get MetaData, SQL: "+leftPreQuery);
-			if (_params._debug)     addDebugMessage(  "Executing PRE SQL at LEFT hand side DBMS to get MetaData, SQL: "+leftPreQuery);
+			if (_progress != null) _progress.setState("Executing PRE SQL at LEFT hand side DBMS to get MetaData, SQL: " + leftPreQuery);
+			if (_params._debug)     addDebugMessage(  "Executing PRE SQL at LEFT hand side DBMS to get MetaData, SQL: " + leftPreQuery);
 
 			ResultSet leftPreRs = null;
 			try 
@@ -557,15 +557,15 @@ extends SqlStatementAbstract
 			}
 			catch (SQLException ex)
 			{
-				addErrorMessage("Problems executing PRE-SQL on LEFT hand side. SQL='"+leftPreQuery+"'. Caught: "+ex);
+				addErrorMessage("Problems executing PRE-SQL on LEFT hand side. SQL='" + leftPreQuery + "'. Caught: " + ex);
 				throw ex;
 			}
 			
 
 			//----------------------------------------------------
 			// PRE RIGHT - check if table exists
-			if (_progress != null) _progress.setState("Executing PRE SQL at RIGHT hand side DBMS to get MetaData, SQL: "+rightPreQuery);
-			if (_params._debug)     addDebugMessage(  "Executing PRE SQL at RIGHT hand side DBMS to get MetaData, SQL: "+rightPreQuery);
+			if (_progress != null) _progress.setState("Executing PRE SQL at RIGHT hand side DBMS to get MetaData, SQL: " + rightPreQuery);
+			if (_params._debug)     addDebugMessage(  "Executing PRE SQL at RIGHT hand side DBMS to get MetaData, SQL: " + rightPreQuery);
 
 			ResultSet rightPreRs = null;
 			try 
@@ -575,7 +575,7 @@ extends SqlStatementAbstract
 			}
 			catch (SQLException ex)
 			{
-				addErrorMessage("Problems executing PRE-SQL on RIGHT hand side. SQL='"+rightPreQuery+"'. Caught: "+ex);
+				addErrorMessage("Problems executing PRE-SQL on RIGHT hand side. SQL='" + rightPreQuery + "'. Caught: " + ex);
 				throw ex;
 			}
 
@@ -637,7 +637,7 @@ extends SqlStatementAbstract
 			}
 
 			// SET the PK found in the PreQuery (or from the _params._keyCols, which was specified earlier)
-			addDebugMessage("Setting/Using PK Columns in the context to use: "+leftPreDt.getPkColumnNames());
+			addDebugMessage("Setting/Using PK Columns in the context to use: " + leftPreDt.getPkColumnNames());
 			context.setPkColumns(leftPreDt.getPkColumnNames());
 			
 			// Set "pre" UUID columns in the context
@@ -669,8 +669,8 @@ extends SqlStatementAbstract
 			// PRE LEFT - Row Count
 			if (_params._doPreRowCount)
 			{
-				if (_progress != null) _progress.setState("Executing PRE SQL at LEFT hand side DBMS to get Row Count, SQL: "+leftPreCountQuery);
-				if (_params._debug)     addDebugMessage(  "Executing PRE SQL at LEFT hand side DBMS to get Row Count, SQL: "+leftPreCountQuery);
+				if (_progress != null) _progress.setState("Executing PRE SQL at LEFT hand side DBMS to get Row Count, SQL: " + leftPreCountQuery);
+				if (_params._debug)     addDebugMessage(  "Executing PRE SQL at LEFT hand side DBMS to get Row Count, SQL: " + leftPreCountQuery);
 
 				try 
 				{
@@ -682,7 +682,7 @@ extends SqlStatementAbstract
 				}
 				catch (SQLException ex)
 				{
-					addErrorMessage("Problems executing PRE-SQL Row Count on LEFT hand side. SQL='"+leftPreCountQuery+"'. Caught: "+ex);
+					addErrorMessage("Problems executing PRE-SQL Row Count on LEFT hand side. SQL='" + leftPreCountQuery + "'. Caught: " + ex);
 					throw ex;
 				}
 			}
@@ -691,8 +691,8 @@ extends SqlStatementAbstract
 			// PRE RIGHT - Row Count
 			if (_params._doPreRowCount)
 			{
-				if (_progress != null) _progress.setState("Executing PRE SQL at RIGHT hand side DBMS to get Row Count, SQL: "+rightPreCountQuery);
-				if (_params._debug)     addDebugMessage(  "Executing PRE SQL at RIGHT hand side DBMS to get Row Count, SQL: "+rightPreCountQuery);
+				if (_progress != null) _progress.setState("Executing PRE SQL at RIGHT hand side DBMS to get Row Count, SQL: " + rightPreCountQuery);
+				if (_params._debug)     addDebugMessage(  "Executing PRE SQL at RIGHT hand side DBMS to get Row Count, SQL: " + rightPreCountQuery);
 
 				try 
 				{
@@ -704,7 +704,7 @@ extends SqlStatementAbstract
 				}
 				catch (SQLException ex)
 				{
-					addErrorMessage("Problems executing PRE-SQL Row Count on RIGHT hand side. SQL='"+rightPreCountQuery+"'. Caught: "+ex);
+					addErrorMessage("Problems executing PRE-SQL Row Count on RIGHT hand side. SQL='" + rightPreCountQuery + "'. Caught: " + ex);
 					throw ex;
 				}
 			}
@@ -722,8 +722,8 @@ extends SqlStatementAbstract
 				_params._leftFetchSize       = 1_000;
 				leftConn.setAutoCommit(false); // Start a transaction
 
-				addDebugMessage("LEFT Connection is '"+leftConn.getDatabaseProductName()+"', FetchSize will be set to "+_params._leftFetchSize+" and we will start a Transaction where the diff is made (row fetch).");
-				leftExtraInfoMsg += " DbmsVendor='"+leftConn.getDatabaseProductName()+"',FetchSize="+_params._leftFetchSize+",FetchInTran=true";
+				addDebugMessage("LEFT Connection is '" + leftConn.getDatabaseProductName() + "', FetchSize will be set to " + _params._leftFetchSize + " and we will start a Transaction where the diff is made (row fetch).");
+				leftExtraInfoMsg += " DbmsVendor='" + leftConn.getDatabaseProductName() + "',FetchSize=" + _params._leftFetchSize + ",FetchInTran=true";
 			}
 
 			if ((_params._rightFetchSize < 0 && rightConn.isDatabaseProduct(DbUtils.DB_PROD_NAME_POSTGRES)) || _params._rightFetchSize > 0)
@@ -732,14 +732,14 @@ extends SqlStatementAbstract
 				_params._rightFetchSize       = 1_000;
 				rightConn.setAutoCommit(false); // Start a transaction
 
-				addDebugMessage("RIGHT Connection is '"+rightConn.getDatabaseProductName()+"', FetchSize will be set to "+_params._rightFetchSize+" and we will start a Transaction where the diff is made (row fetch).");
-				rightExtraInfoMsg += " DbmsVendor='"+rightConn.getDatabaseProductName()+"',FetchSize="+_params._leftFetchSize+",FetchInTran=true";
+				addDebugMessage("RIGHT Connection is '" + rightConn.getDatabaseProductName() + "', FetchSize will be set to " + _params._rightFetchSize + " and we will start a Transaction where the diff is made (row fetch).");
+				rightExtraInfoMsg += " DbmsVendor='" + rightConn.getDatabaseProductName() + "',FetchSize=" + _params._leftFetchSize + ",FetchInTran=true";
 			}
 
 
 			// Execute query LEFT SIDE
-			if (_progress != null) _progress.setState("Executing SQL at LEFT hand side DBMS, SQL: "+leftQuery);
-			if (_params._debug)     addDebugMessage(  "Executing SQL at LEFT hand side DBMS, SQL: "+leftQuery);
+			if (_progress != null) _progress.setState("Executing SQL at LEFT hand side DBMS, SQL: " + leftQuery);
+			if (_params._debug)     addDebugMessage(  "Executing SQL at LEFT hand side DBMS, SQL: " + leftQuery);
 
 			// Execute SQL at LEFT Hand side
 			ResultSet leftRs = null; // FIXME: close this and the Statement "somewhere"
@@ -752,14 +752,14 @@ extends SqlStatementAbstract
 			}
 			catch (SQLException ex)
 			{
-				addErrorMessage("Problems executing on LEFT hand side. SQL='"+leftQuery+"'. Caught: "+ex);
+				addErrorMessage("Problems executing on LEFT hand side. SQL='" + leftQuery + "'. Caught: " + ex);
 				throw ex;
 			}
 
 
 			// Execute query RIGHT SIDE
-			if (_progress != null) _progress.setState("Executing SQL at RIGHT hand side DBMS, SQL: "+rightQuery);
-			if (_params._debug)     addDebugMessage(  "Executing SQL at RIGHT hand side DBMS, SQL: "+rightQuery);
+			if (_progress != null) _progress.setState("Executing SQL at RIGHT hand side DBMS, SQL: " + rightQuery);
+			if (_params._debug)     addDebugMessage(  "Executing SQL at RIGHT hand side DBMS, SQL: " + rightQuery);
 
 			// Execute SQL at RIGHT Hand side
 			ResultSet rightRs = null; // FIXME: close this and the Statement "somewhere"
@@ -772,7 +772,7 @@ extends SqlStatementAbstract
 			}
 			catch (SQLException ex)
 			{
-				addErrorMessage("Problems executing on RIGHT hand side. SQL='"+rightQuery+"'. Caught: "+ex);
+				addErrorMessage("Problems executing on RIGHT hand side. SQL='" + rightQuery + "'. Caught: " + ex);
 				throw ex;
 			}
 
@@ -862,7 +862,7 @@ extends SqlStatementAbstract
 					if (StringUtil.hasValue(_params._actionOutFile))
 					{
 						File f = new File(_params._actionOutFile);
-						addInfoMessage("Saving "+_params._action+" output to file: "+f);
+						addInfoMessage("Saving " + _params._action + " output to file: " + f);
 
 						//String tableStr = ""; SwingUtils.tableToString(_diffTableModel); // FIXME: strip out ALL HTML tags
 						String tableStr = SwingUtils.tableToHtmlString(diffTableModel);
@@ -881,7 +881,7 @@ extends SqlStatementAbstract
 					if (StringUtil.hasValue(_params._actionOutFile))
 					{
 						File f = new File(_params._actionOutFile);
-						addInfoMessage("Saving "+_params._action+" output to file: "+f);
+						addInfoMessage("Saving " + _params._action + " output to file: " + f);
 
 						FileUtils.writeLines(f, dmlList);
 					}
@@ -898,7 +898,7 @@ extends SqlStatementAbstract
 					if (StringUtil.hasValue(_params._actionOutFile))
 					{
 						File f = new File(_params._actionOutFile);
-						addInfoMessage("Saving "+_params._action+" output to file: "+f);
+						addInfoMessage("Saving " + _params._action + " output to file: " + f);
 
 						FileUtils.writeLines(f, dmlList);
 					}

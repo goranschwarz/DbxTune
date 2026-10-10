@@ -228,7 +228,7 @@ extends CounterTableModel
 			if (_colSqlType == null)
 			{
 				if (_logger.isDebugEnabled())
-					_logger.debug("getColumnClass(colid="+colid+"): _colSqlType is null... returning Object.class intead");
+					_logger.debug("getColumnClass(colid=" + colid + "): _colSqlType is null... returning Object.class intead");
 
 				return Object.class;
 			}
@@ -291,7 +291,7 @@ extends CounterTableModel
 				try {_rows.get(row);}
 				catch(IndexOutOfBoundsException e) 
 				{
-					_logger.debug(getName()+": ERROR Accessing: getValueAt(row="+row+", col="+col+"), CounterSample.name="+_name+", model.size()="+_rows.size()+", Thread='"+Thread.currentThread().getName()+"', Exception="+e, e);
+					_logger.debug(getName() + ": ERROR Accessing: getValueAt(row=" + row + ", col=" + col + "), CounterSample.name=" + _name + ", model.size()=" + _rows.size() + ", Thread='" + Thread.currentThread().getName() + "', Exception=" + e, e);
 //					System.out.println("ERROR Accessing: getValueAt(row="+row+", col="+col+"), CounterSample.name="+_name+", model.size()="+_rows.size()+", Thread='"+Thread.currentThread().getName()+"', Exception="+e);
 //					e.printStackTrace();
 				}
@@ -306,11 +306,11 @@ extends CounterTableModel
 		}
 		catch (IndexOutOfBoundsException e)
 		{
-			_logger.warn(getName()+": getValueAt(row="+row+", col="+col+"): _rows.size()="+_rows.size()+", CounterSample.name="+_name+", Thread='"+Thread.currentThread().getName()+"', returning NULL, IndexOutOfBoundsException... "+e.getMessage());
+			_logger.warn(getName() + ": getValueAt(row=" + row + ", col=" + col + "): _rows.size()=" + _rows.size() + ", CounterSample.name=" + _name + ", Thread='" + Thread.currentThread().getName() + "', returning NULL, IndexOutOfBoundsException... " + e.getMessage());
 		}
 		catch (NullPointerException e)
 		{
-			_logger.warn(getName()+": getValueAt(row="+row+", col="+col+"): CounterSample.name="+_name+", Thread='"+Thread.currentThread().getName()+"', returning NULL, NullPointerException... "+e.getMessage());
+			_logger.warn(getName() + ": getValueAt(row=" + row + ", col=" + col + "): CounterSample.name=" + _name + ", Thread='" + Thread.currentThread().getName() + "', returning NULL, NullPointerException... " + e.getMessage());
 		}
 		return null;
 	}
@@ -552,7 +552,7 @@ extends CounterTableModel
 			}
 		}
 		if (_logger.isDebugEnabled())
-			_logger.debug(getName()+": getRowNumberForPkValue(pk='"+pkStr+"'), returns="+i);
+			_logger.debug(getName() + ": getRowNumberForPkValue(pk='" + pkStr + "'), returns=" + i);
 
 //System.out.println("<<< "+getName()+"-getRowNumberForPkValue("+pkStr+"): returns="+i);
 		return i;
@@ -643,8 +643,8 @@ extends CounterTableModel
 						hasWarning = false;
 					else
 					{
-						wStr = "DbmsMsgNum="+w.getErrorCode()+", " + w.toString();
-						_logger.warn("CounterSample("+getName()+").Warning : " + wStr);
+						wStr = "DbmsMsgNum=" + w.getErrorCode() + ", " + w.toString();
+						_logger.warn("CounterSample(" + getName() + ").Warning : " + wStr);
 						sb.append(wStr).append("\n");
 					}
 				}
@@ -654,12 +654,12 @@ extends CounterTableModel
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("CounterSample("+getName()+").getWarnings : " + ex);
+			_logger.warn("CounterSample(" + getName() + ").getWarnings : " + ex);
 //			ex.printStackTrace();
 		}
 		if (hasWarning)
 		{
-			throw new SQLException("SQL Warning in("+getName()+") Messages: "+sb);
+			throw new SQLException("SQL Warning in(" + getName() + ") Messages: " + sb);
 		}
 	}
 
@@ -693,7 +693,7 @@ extends CounterTableModel
 
 		if (_colSqlType == null)
 		{
-			_logger.error(getName()+": colSqlType are null, this should not happen, returning Object via 'rs.getObject(col)'.");
+			_logger.error(getName() + ": colSqlType are null, this should not happen, returning Object via 'rs.getObject(col)'.");
 			return rs.getObject(col);
 		}
 
@@ -750,7 +750,7 @@ extends CounterTableModel
 				try {                  rawValue = rs.getObject(col); }
 				catch (Throwable t2) { rawValue = "Caught Exception reading RawValue using rs.getObject(col), My guess it's a corrupt Timestamp value."; }
 
-				_logger.warn(getName()+": Problems reading column pos="+col+", name='"+colName+"', RawValue='"+rawValue+"'. in CM '"+cmName+"'. returning a 'default' value instead: return new Timestamp(0); Caught="+t); 
+				_logger.warn(getName() + ": Problems reading column pos=" + col + ", name='" + colName + "', RawValue='" + rawValue + "'. in CM '" + cmName + "'. returning a 'default' value instead: return new Timestamp(0); Caught=" + t); 
 				return new Timestamp(0);
 			}
 		}
@@ -791,7 +791,7 @@ extends CounterTableModel
 	{
 		if (_colSqlType == null)
 		{
-			_logger.error(getName()+": colSqlType are null, this should not happen.");
+			_logger.error(getName() + ": colSqlType are null, this should not happen.");
 			return new Object();
 		}
 		int objSqlType = _colSqlType.get(col - 1);
@@ -832,7 +832,7 @@ extends CounterTableModel
 		case java.sql.Types.DATALINK:     return "-DATALINK-";
 		case java.sql.Types.BOOLEAN:      return Boolean.valueOf(false);
 		default:
-			_logger.error(getName()+": Unknow SQL datatype, when translating a NULL value.");
+			_logger.error(getName() + ": Unknow SQL datatype, when translating a NULL value.");
 			return new Object();
 		}
 	}
@@ -1054,7 +1054,7 @@ extends CounterTableModel
 	{
 		int queryTimeout = cm.getQueryTimeout();
 		if (_logger.isDebugEnabled())
-			_logger.debug(getName()+": queryTimeout="+queryTimeout);
+			_logger.debug(getName() + ": queryTimeout=" + queryTimeout);
 
 		Statement stmnt = null;
 		ResultSet rs = null;
@@ -1081,7 +1081,7 @@ extends CounterTableModel
 
 			stmnt.setQueryTimeout(queryTimeout); // XX seconds query timeout
 			if (_logger.isDebugEnabled())
-				_logger.debug("QUERY_TIMEOUT="+queryTimeout+", for SampleCnt='"+getName()+"'.");
+				_logger.debug("QUERY_TIMEOUT=" + queryTimeout + ", for SampleCnt='" + getName() + "'.");
 
 			_rows   = new ArrayList<List<Object>>();
 
@@ -1113,9 +1113,9 @@ extends CounterTableModel
 
 				if (_logger.isDebugEnabled())
 				{
-					_logger.debug("##### BEGIN (send sql), batchCounter="+batchCounter+" ############################### "+ getName());
+					_logger.debug("##### BEGIN (send sql), batchCounter=" + batchCounter + " ############################### " + getName());
 					_logger.debug(sendSql);
-					_logger.debug("##### END   (send sql), batchCounter="+batchCounter+" ############################### "+ getName());
+					_logger.debug("##### END   (send sql), batchCounter=" + batchCounter + " ############################### " + getName());
 					_logger.debug("");
 				}
 
@@ -1177,18 +1177,18 @@ extends CounterTableModel
 
 						if (rowsAffected >= 0)
 						{
-							_logger.debug(getName()+": DDL or DML rowcount = "+rowsAffected);
+							_logger.debug(getName() + ": DDL or DML rowcount = " + rowsAffected);
 						}
 						else
 						{
-							_logger.debug(getName()+": No more results to process.");
+							_logger.debug(getName() + ": No more results to process.");
 						}
 					}
 	
 					// Check if we have more result sets
 					hasRs = stmnt.getMoreResults();
 	
-					_logger.trace(getName()+": --hasRs="+hasRs+", rsNum="+rsNum+", rowsAffected="+rowsAffected );
+					_logger.trace(getName() + ": --hasRs=" + hasRs + ", rsNum=" + rsNum + ", rowsAffected=" + rowsAffected );
 				}
 				while (hasRs || rowsAffected != -1);
 	
@@ -1206,10 +1206,10 @@ extends CounterTableModel
 		{
 			long execTime = TimeUtils.msDiffNow(execStartTime);
 
-			_logger.warn("CounterSample("+getName()+").getCnt : ErrorCode=" + sqlEx.getErrorCode() + ", SqlState=" + sqlEx.getSQLState() + ", Message=|" + sqlEx.getMessage() + "|. execTimeInMs=" + execTime + ", SQL: " + sql, sqlEx);
+			_logger.warn("CounterSample(" + getName() + ").getCnt : ErrorCode=" + sqlEx.getErrorCode() + ", SqlState=" + sqlEx.getSQLState() + ", Message=|" + sqlEx.getMessage() + "|. execTimeInMs=" + execTime + ", SQL: " + sql, sqlEx);
 			if (sqlEx.toString().indexOf("SocketTimeoutException") > 0)
 			{
-				_logger.info("QueryTimeout in '"+getName()+"', with query timeout '"+queryTimeout+"'. This can be changed with the config option '"+getName()+".queryTimeout=seconds' in the config file.");
+				_logger.info("QueryTimeout in '" + getName() + "', with query timeout '" + queryTimeout + "'. This can be changed with the config option '" + getName() + ".queryTimeout=seconds' in the config file.");
 			}
 
 			//return false;
@@ -1217,8 +1217,8 @@ extends CounterTableModel
 		}
 		catch (IOException ex)
 		{
-			_logger.error(getName()+": While reading the input SQL 'go' String, caught: "+ex, ex);
-			throw new SQLException(getName()+": While reading the input SQL 'go' String, caught: "+ex, ex);
+			_logger.error(getName() + ": While reading the input SQL 'go' String, caught: " + ex, ex);
+			throw new SQLException(getName() + ": While reading the input SQL 'go' String, caught: " + ex, ex);
 		}
 		finally
 		{
@@ -1308,7 +1308,7 @@ extends CounterTableModel
 						_pos_sampleTimeInMs = i;
 					else
 					{
-						_logger.warn(getName()+": found column '"+SPECIAL_COLUMN_sampleTimeInMs+"', but it's not a INTEGER, so it will be treated as a normal column.");
+						_logger.warn(getName() + ": found column '" + SPECIAL_COLUMN_sampleTimeInMs + "', but it's not a INTEGER, so it will be treated as a normal column.");
 					}
 				}
 			}
@@ -1326,7 +1326,7 @@ extends CounterTableModel
 
 			if (pkList != null && (pkList.size() != tmpPkPos.size()) )
 			{
-				throw new RuntimeException("sample, can't find all the primary keys in the ResultSet. pkList='"+pkList+"', _colNames='"+_colNames+"', tmpPkPos='"+tmpPkPos+"'.");
+				throw new RuntimeException("sample, can't find all the primary keys in the ResultSet. pkList='" + pkList + "', _colNames='" + _colNames + "', tmpPkPos='" + tmpPkPos + "'.");
 			}
 				
 			_pkPosArray = new int[tmpPkPos.size()];
@@ -1342,7 +1342,7 @@ extends CounterTableModel
 			int cols = rsmd.getColumnCount();
 			if (getColumnCount() != cols)
 			{
-				_logger.error(getName()+": ResultSet number "+rsNum+" has "+cols+" while it was expected to have "+getColumnCount()+". Skipping this result set.");
+				_logger.error(getName() + ": ResultSet number " + rsNum + " has " + cols + " while it was expected to have " + getColumnCount() + ". Skipping this result set.");
 				return false;
 			}
 
@@ -1353,7 +1353,7 @@ extends CounterTableModel
 				String newType = rsmd.getColumnClassName(i);
 				if ( ! oldType.equals(newType) )
 				{
-					_logger.error(getName()+": ResultSet number "+rsNum+" column number "+i+" (colName='"+rsmd.getColumnLabel(i)+"') has SQL datatype "+newType+", while we expected datatype "+oldType+".  Skipping this result set.");
+					_logger.error(getName() + ": ResultSet number " + rsNum + " column number " + i + " (colName='" + rsmd.getColumnLabel(i) + "') has SQL datatype " + newType + ", while we expected datatype " + oldType + ".  Skipping this result set.");
 					return false;
 				}
 			}
@@ -1412,7 +1412,7 @@ extends CounterTableModel
 				if (_pos_msgAsColValue >= 0)
 					msgAsColValue = AseConnectionUtils.getSqlWarningMsgs(sqlwInRs);
 				else
-					_logger.warn(getName()+": Received a Msg while reading the resultset from '"+getName()+"', This could be mapped to a column by using a column name 'msgAsColValue' in the SELECT statement. Right now it's discarded. The Msg="+sqlwInRs.getErrorCode()+", message text: " + AseConnectionUtils.getSqlWarningMsgs(sqlwInRs));
+					_logger.warn(getName() + ": Received a Msg while reading the resultset from '" + getName() + "', This could be mapped to a column by using a column name 'msgAsColValue' in the SELECT statement. Right now it's discarded. The Msg=" + sqlwInRs.getErrorCode() + ", message text: " + AseConnectionUtils.getSqlWarningMsgs(sqlwInRs));
 			}
 
 			// Get one row
@@ -1436,7 +1436,7 @@ extends CounterTableModel
 				catch(SQLException ex)
 				{
 					val = getDataValue(rs, i, originRsmd);
-					_logger.warn("Failed reading object for cm='"+cm.getName()+"', row="+_rows.size()+", col="+i+", colName='"+_colNames.get(i-1)+"'. Trying to read it again but with the ORIGIN ResultSetMetatData. values using Origin rsmd = '"+val+"'.", ex);
+					_logger.warn("Failed reading object for cm='" + cm.getName() + "', row=" + _rows.size() + ", col=" + i + ", colName='" + _colNames.get(i-1) + "'. Trying to read it again but with the ORIGIN ResultSetMetatData. values using Origin rsmd = '" + val + "'.", ex);
 				}
 
 				// Trim strings
@@ -1449,7 +1449,7 @@ extends CounterTableModel
 				}
 
 				if (rsRowNum == 0 && _logger.isTraceEnabled() )
-					_logger.trace(getName()+": READ_RESULTSET(rsnum "+rsNum+", row 0): col=" + i + ", colName=" + (_colNames.get(i - 1) + "                                   ").substring(0, 25) + ", ObjectType=" + (val == null ? "NULL-VALUE" : val.getClass().getName()));
+					_logger.trace(getName() + ": READ_RESULTSET(rsnum " + rsNum + ", row 0): col=" + i + ", colName=" + (_colNames.get(i - 1) + "                                   ").substring(0, 25) + ", ObjectType=" + (val == null ? "NULL-VALUE" : val.getClass().getName()));
 
 //				if (val == null)
 //					val = fixNullValue(i);
@@ -1493,7 +1493,7 @@ extends CounterTableModel
 			if (_logger.isTraceEnabled())
 			{
 				for (int c=0; c<colCount; c++)
-					_logger.trace(getName()+":    > rsNum="+rsNum+", rsRowNum="+rsRowNum+", getRowCount()="+getRowCount()+", c="+c+", className='"+row.get(c).getClass().getName()+"', value="+row.get(c));
+					_logger.trace(getName() + ":    > rsNum=" + rsNum + ", rsRowNum=" + rsRowNum + ", getRowCount()=" + getRowCount() + ", c=" + c + ", className='" + row.get(c).getClass().getName() + "', value=" + row.get(c));
 			}
 //			if (getName().startsWith(SummaryPanel.CM_NAME))
 //			{
@@ -1522,7 +1522,7 @@ extends CounterTableModel
 
 					if (pkDuplicateAction != 0 && _diffColNames == null)
 					{
-						_logger.warn("Internal Counter Duplicate key in ResultSet for CM '"+getName()+"', pk='"+pkList+"', pkDuplicateAction="+pkDuplicateAction+", BUT _diffColNames is null, this should never happen.");
+						_logger.warn("Internal Counter Duplicate key in ResultSet for CM '" + getName() + "', pk='" + pkList + "', pkDuplicateAction=" + pkDuplicateAction + ", BUT _diffColNames is null, this should never happen.");
 
 						// Read next row
 						continue;
@@ -1532,7 +1532,7 @@ extends CounterTableModel
 						// Possibly change this in the future to check for DuplicateKey action in the CM
 						// meaning instead of just returning true|false ... move this up a bit in the logic to also check for "pkDuplicateAction" etc... 
 						if (cm.actionForSampleDuplicateKey(this, keyStr, curRow, row))
-							_logger.warn("Internal Counter Duplicate key in ResultSet for CM '"+getName()+"', pk='"+pkList+"', a row with the key values '"+key+"' already exists. CurrentRow='"+curRow+"'. NewRow='"+row+"'.");
+							_logger.warn("Internal Counter Duplicate key in ResultSet for CM '" + getName() + "', pk='" + pkList + "', a row with the key values '" + key + "' already exists. CurrentRow='" + curRow + "'. NewRow='" + row + "'.");
 
 						// Read next row
 						continue;
@@ -1567,7 +1567,7 @@ extends CounterTableModel
 							if (diffCollNamePos == -1)
 							{
 								if (_logger.isTraceEnabled())
-									_logger.trace(getName()+":    >> MERGE for key='"+key+"', rowId="+intObj+", colName='"+diffColName+"', colPos="+diffCollNamePos+". COLUMN NOT FOUND... Skipping this column.");
+									_logger.trace(getName() + ":    >> MERGE for key='" + key + "', rowId=" + intObj + ", colName='" + diffColName + "', colPos=" + diffCollNamePos + ". COLUMN NOT FOUND... Skipping this column.");
 							}
 							else
 							{
@@ -1580,18 +1580,18 @@ extends CounterTableModel
 								curRow.set(diffCollNamePos, mergeColVal);
 
 								if (_logger.isTraceEnabled())
-									_logger.trace(getName()+":    >> MERGE for key='"+key+"', rowId="+intObj+", colName='"+diffColName+"', colPos="+diffCollNamePos+", prevValue="+prevColVal+", thisVal="+thisColVal+", mergedVal="+mergeColVal+".");
+									_logger.trace(getName() + ":    >> MERGE for key='" + key + "', rowId=" + intObj + ", colName='" + diffColName + "', colPos=" + diffCollNamePos + ", prevValue=" + prevColVal + ", thisVal=" + thisColVal + ", mergedVal=" + mergeColVal + ".");
 							}
 						}
 						
 						// on MERGE no need to add the row, so just read next row
-						_logger.trace(getName()+":    >> MERGE continue and red next row from ResultSet.");
+						_logger.trace(getName() + ":    >> MERGE continue and red next row from ResultSet.");
 						continue;
 					}
 					// NOT IMPLEMENTED
 					if (pkDuplicateAction == 2)
 					{
-						_logger.warn("Internal Counter Duplicate key in ResultSet for CM '"+getName()+"', pk='"+pkList+"', pkDuplicateAction=2 IS NOT IMPLEMENTED.");
+						_logger.warn("Internal Counter Duplicate key in ResultSet for CM '" + getName() + "', pk='" + pkList + "', pkDuplicateAction=2 IS NOT IMPLEMENTED.");
 
 						// Read next row
 						continue;
@@ -1616,11 +1616,11 @@ extends CounterTableModel
 				_keysToRowid.put(keyStr, Integer.valueOf(rowId));
 				_rowidToKey.add(keyStr);
 				if (_logger.isTraceEnabled())
-					_logger.trace(getName()+":    >> key='"+key+"', rowId="+rowId+", _rowidToKey.addPos="+(_rowidToKey.size()-1));
+					_logger.trace(getName() + ":    >> key='" + key + "', rowId=" + rowId + ", _rowidToKey.addPos=" + (_rowidToKey.size()-1));
 			}
 
 			if (_logger.isDebugEnabled())
-				_logger.debug(getName()+":    >> rowAdded: rowId="+getRowCount()+", key="+key+", row="+row);
+				_logger.debug(getName() + ":    >> rowAdded: rowId=" + getRowCount() + ", key=" + key + ", row=" + row);
 
 			// ADD the row
 			_rows.add(row);
@@ -1706,7 +1706,7 @@ extends CounterTableModel
 
 		if (row.size() != colCount)
 		{
-			throw new IndexOutOfBoundsException("The number of columns in current structure is "+colCount+", while the row we attempt to add has "+row.size()+" columns."); 
+			throw new IndexOutOfBoundsException("The number of columns in current structure is " + colCount + ", while the row we attempt to add has " + row.size() + " columns."); 
 		}
 		
 		if (_rows == null)
@@ -1733,7 +1733,7 @@ extends CounterTableModel
 				if (val != null)
 					key.append(val).append(PK_STR_DELIMITER);
 				else
-					_logger.warn(getName()+": Key containes NULL value, row="+getRowCount()+", col="+c+".");
+					_logger.warn(getName() + ": Key containes NULL value, row=" + getRowCount() + ", col=" + c + ".");
 			}
 		}
 		String keyStr = key.toString();
@@ -1753,7 +1753,7 @@ extends CounterTableModel
 				// Possibly change this in the future to check for DuplicateKey action in the CM
 				// meaning instead of just returning true|false ... move this up a bit in the logic to also check for "pkDuplicateAction" etc... 
 				if (cm.actionForSampleDuplicateKey(this, keyStr, curRow, row))
-					_logger.warn("Internal Counter Duplicate key in ResultSet for CM '"+getName()+"', pk='"+getPkCols(_colIsPk)+"', a row with the key values '"+key+"' already exists. CurrentRow='"+curRow+"'. NewRow='"+row+"'.");
+					_logger.warn("Internal Counter Duplicate key in ResultSet for CM '" + getName() + "', pk='" + getPkCols(_colIsPk) + "', a row with the key values '" + key + "' already exists. CurrentRow='" + curRow + "'. NewRow='" + row + "'.");
 				return -1;
 				//throw new DuplicateKeyException(key, curRow, row);
 			}
@@ -1766,7 +1766,7 @@ extends CounterTableModel
 		int rowId = _rows.size()-1;
 
 		if (_logger.isDebugEnabled())
-			_logger.debug(getName()+": addRow(): rowId="+rowId+", key="+key+", row="+row);
+			_logger.debug(getName() + ": addRow(): rowId=" + rowId + ", key=" + key + ", row=" + row);
 
 		// save PKEY with corresponding row
 		if (_colIsPk != null)
@@ -1811,7 +1811,7 @@ extends CounterTableModel
 		String key = _rowidToKey.get(rowId);
 
 		if (_logger.isDebugEnabled())
-			_logger.debug(getName()+": removeRow(rowId="+rowId+"): key="+key);
+			_logger.debug(getName() + ": removeRow(rowId=" + rowId + "): key=" + key);
 
 		// Removes the row from listOfRows
 		_rows.remove(rowId);
@@ -2321,7 +2321,7 @@ extends CounterTableModel
 		}
 		else
 		{
-			_logger.warn(getName()+": failure in mergeColumnValue(prevColVal='"+prevColVal+"', thisColVal='"+thisColVal+"'), with prevColVal='"+prevColVal.getClass().getName()+"', thisColVal='"+thisColVal.getClass().getName()+"'. Returning the origin value instead.");
+			_logger.warn(getName() + ": failure in mergeColumnValue(prevColVal='" + prevColVal + "', thisColVal='" + thisColVal + "'), with prevColVal='" + prevColVal.getClass().getName() + "', thisColVal='" + thisColVal.getClass().getName() + "'. Returning the origin value instead.");
 			return prevColVal;
 		}
 		return mergeColVal;
@@ -2569,7 +2569,7 @@ extends CounterTableModel
 		if (rowId < 0)
 		{
 			if (_logger.isDebugEnabled())
-				_logger.debug(getName()+".getValue(pkStr='"+pkStr+"', colname='"+colname+"'): rowId="+rowId+": rowId < 0; return null");
+				_logger.debug(getName() + ".getValue(pkStr='" + pkStr + "', colname='" + colname + "'): rowId=" + rowId + ": rowId < 0; return null");
 			return def;
 		}
 
@@ -2578,7 +2578,7 @@ extends CounterTableModel
 		if (o == null)
 		{
 			if (_logger.isDebugEnabled()) 
-				_logger.debug(getName()+".getValue(pkStr='"+pkStr+"', colname='"+colname+"'): rowId="+rowId+": o==null; return null");
+				_logger.debug(getName() + ".getValue(pkStr='" + pkStr + "', colname='" + colname + "'): rowId=" + rowId + ": o==null; return null");
 			return def;
 		}
 
@@ -3003,7 +3003,7 @@ extends CounterTableModel
 				
 				int colId = findColumn(whereColName, caseSensitive);
 				if (colId == -1)
-					throw new RuntimeException("Can't find column '"+whereColName+"' in TableModel named '"+getName()+"'.");
+					throw new RuntimeException("Can't find column '" + whereColName + "' in TableModel named '" + getName() + "'.");
 
 				Object rowColVal = getValueAt(r, colId);
 				

@@ -106,7 +106,7 @@ extends AbstractTableModel
 			case 11: return "LobPageServerReadAheadReads"; 
 			}
 		}
-		return "unknown-"+column;
+		return "unknown-" + column;
 	}
 	
 	@Override
@@ -247,7 +247,7 @@ extends AbstractTableModel
 			case 11: return "Refers to the transfer of a text, ntext, image, varchar(max), nvarchar(max), varbinary(max), or columnstore index pages from disk to the data buffer in memory before it is specifically requested across all databases."; 
 			}
 		}
-		return "unknown-"+column;
+		return "unknown-" + column;
 	}
 	public String getCellToolTipText(int mrow, int mcol, int srvPageSizeKb)
 	{
@@ -377,7 +377,7 @@ extends AbstractTableModel
 		}
 		catch (NumberFormatException nfe)
 		{
-			_logger.error("StatisticsIoTableModel.getInt(): Problem parsing the value '"+str+"'. Caught: "+nfe);
+			_logger.error("StatisticsIoTableModel.getInt(): Problem parsing the value '" + str + "'. Caught: " + nfe);
 			return -99;
 		}
 	}

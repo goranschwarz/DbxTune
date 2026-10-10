@@ -182,7 +182,7 @@ implements Runnable
 				ReceiverEntry entry = new ReceiverEntry(srvName, sampleInterval);
 				_receiverInfo.put(s.getServerName(), entry);
 				
-				_logger.info("Monitoring that we will receive data from collector '"+srvName+"', AlarmThreshold is " + entry.getAlarmThreshold() + " seconds.");
+				_logger.info("Monitoring that we will receive data from collector '" + srvName + "', AlarmThreshold is " + entry.getAlarmThreshold() + " seconds.");
 			}
 		}
 		catch (SQLException ex)
@@ -223,7 +223,7 @@ implements Runnable
 			for (ReceiverEntry entry : _receiverInfo.values())
 			{
 				if (_logger.isDebugEnabled())
-					_logger.debug("CHECKING: srvName='" + entry.getSessionName() + "', AlarmThreshold=" + entry.getAlarmThreshold() + ", ReceiveTimeInSec="+entry.getReceiveTimeInSec());
+					_logger.debug("CHECKING: srvName='" + entry.getSessionName() + "', AlarmThreshold=" + entry.getAlarmThreshold() + ", ReceiveTimeInSec=" + entry.getReceiveTimeInSec());
 
 				if (entry.hasReceiveTimeExpired())
 				{
@@ -292,7 +292,7 @@ implements Runnable
 	public void run()
 	{
 		String threadName = _thread.getName();
-		_logger.info("Starting a thread for the module '"+threadName+"'.");
+		_logger.info("Starting a thread for the module '" + threadName + "'.");
 
 		isInitialized();
 
@@ -322,7 +322,7 @@ implements Runnable
 			}
 		}
 
-		_logger.info("Thread '"+threadName+"' was stopped.");
+		_logger.info("Thread '" + threadName + "' was stopped.");
 	}
 
 

@@ -335,7 +335,7 @@ implements ActionListener, KeyListener
 
         int r = _previewFirstRowCount;
 		_sfPreview_tp.addTab("Raw (first 64KB)",          _sfPreviewRaw_scroll);
-		_sfPreview_tp.addTab("Parsed (first "+r+" rows)", _sfPreviewParsed_scroll);
+		_sfPreview_tp.addTab("Parsed (first " + r + " rows)", _sfPreviewParsed_scroll);
 		
 		_sfPreviewRaw_txt   .setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JSON);
 		_sfPreviewParsed_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JSON);
@@ -436,7 +436,7 @@ implements ActionListener, KeyListener
 		// Add tabs
         int r = _previewFirstRowCount;
 		_ttInfo_tp.addTab("Mapping",                      _ttMap_scroll);
-		_ttInfo_tp.addTab("ResultSet (first "+r+" rows)", _ttRs_scroll);
+		_ttInfo_tp.addTab("ResultSet (first " + r + " rows)", _ttRs_scroll);
 		_ttInfo_tp.addTab("JDBC MetaData",                _ttJdbcMd_scroll);
 		
 		panel.add(_ttName_lbl,            "");
@@ -614,7 +614,7 @@ implements ActionListener, KeyListener
 			cmd += " '" + str + "'";
 
 		
-		_sqlWinCmd_txt.setText("\\loadfile"+cmd);
+		_sqlWinCmd_txt.setText("\\loadfile" + cmd);
 	}
 //
 //		usage: loadfile [options] -T tablename filename
@@ -701,7 +701,7 @@ implements ActionListener, KeyListener
 				String encoding        = guessedEncoding;
 				if (encoding == null)
 					encoding = Charset.defaultCharset().name();
-System.out.println("XXXX: guessedEncoding='"+guessedEncoding+"', encoding='"+encoding+"'.");
+System.out.println("XXXX: guessedEncoding='" + guessedEncoding + "', encoding='" + encoding + "'.");
 
 				// Read 64 K from file
 				String firstRawChunk    = FileUtils.readFile(filename, encoding, 64*1024);
@@ -727,7 +727,7 @@ System.out.println("XXXX: guessedEncoding='"+guessedEncoding+"', encoding='"+enc
 			}
 			catch(Exception ex)
 			{
-				SwingUtils.showErrorMessage(this, "Error reading file", "Problems reading file '"+filename+"'.", ex);
+				SwingUtils.showErrorMessage(this, "Error reading file", "Problems reading file '" + filename + "'.", ex);
 			}
 		}
 		
@@ -846,7 +846,7 @@ System.out.println("XXXX: guessedEncoding='"+guessedEncoding+"', encoding='"+enc
 			TableModel tm = createColumnsTableModel(conn, catalog, schema, table);
 			if (tm != null)
 			{
-				System.out.println("TableModel: rows="+tm.getRowCount()+", cols="+tm.getColumnCount());
+				System.out.println("TableModel: rows=" + tm.getRowCount() + ", cols=" + tm.getColumnCount());
 				setTableModel(_ttJdbcMd_tab, tm);
 				
 				String simpleSelect = "select * from " + fullTableName;
@@ -861,7 +861,7 @@ System.out.println("XXXX: guessedEncoding='"+guessedEncoding+"', encoding='"+enc
 				}
 				catch(SQLException ex)
 				{
-					SwingUtils.showErrorMessage(this, "Get Target Table", "Problems getting first records from the DBMS.\n\nSQL:\n "+simpleSelect, ex);
+					SwingUtils.showErrorMessage(this, "Get Target Table", "Problems getting first records from the DBMS.\n\nSQL:\n " + simpleSelect, ex);
 				}
 			}
 		}
@@ -940,7 +940,7 @@ System.out.println("XXXX: guessedEncoding='"+guessedEncoding+"', encoding='"+enc
 //		String apiCall = "parameters to getColumns("+catalogDesc+", "+schemaPatternDesc+", "+valueNamePatternDesc+", "+columnTypesDesc+")";
 //		_co_api_lbl.setText(apiCall);
 
-		System.out.println("parameters to getColumns("+catalog+", "+schemaPattern+", "+tablePattern+", %)");
+		System.out.println("parameters to getColumns(" + catalog + ", " + schemaPattern + ", " + tablePattern + ", %)");
 		
 		try
 		{
@@ -1055,7 +1055,7 @@ System.out.println("XXXX: guessedEncoding='"+guessedEncoding+"', encoding='"+enc
 			case 1:  return "Source Field";
 			case 2:  return "Action";
 			case 3:  return "xxx";
-			default: return "col-"+col;
+			default: return "col-" + col;
 			}
 		}
 		
@@ -1073,7 +1073,7 @@ System.out.println("XXXX: guessedEncoding='"+guessedEncoding+"', encoding='"+enc
 		@Override
 		public void setValueAt(Object val, int row, int col)
 		{
-			System.out.println("val=|"+val+"| class="+val.getClass().getName());
+			System.out.println("val=|" + val + "| class=" + val.getClass().getName());
 			
 			MapTableEntry e = _dataRows.get(row);
 			
@@ -1102,7 +1102,7 @@ System.out.println("XXXX: guessedEncoding='"+guessedEncoding+"', encoding='"+enc
 			case 2: return e._action;
 			case 3: return "";
 			}
-			return "row="+row+",col="+col;
+			return "row=" + row + ",col=" + col;
 		}
 	}
 	private static class MapTableEntry

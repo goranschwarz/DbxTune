@@ -71,16 +71,16 @@ extends DbmsDdlResolverAbstract
 		case java.sql.Types.FLOAT:                   return "double";
 		case java.sql.Types.REAL:                    return "float";
 		case java.sql.Types.DOUBLE:                  return "double";
-		case java.sql.Types.NUMERIC:                 return "decimal("+length+","+scale+")";
-		case java.sql.Types.DECIMAL:                 return "decimal("+length+","+scale+")";
-		case java.sql.Types.CHAR:                    return "char("+length+")";
-		case java.sql.Types.VARCHAR:                 return "varchar("+length+")";
+		case java.sql.Types.NUMERIC:                 return "decimal(" + length + "," + scale + ")";
+		case java.sql.Types.DECIMAL:                 return "decimal(" + length + "," + scale + ")";
+		case java.sql.Types.CHAR:                    return "char(" + length + ")";
+		case java.sql.Types.VARCHAR:                 return "varchar(" + length + ")";
 		case java.sql.Types.LONGVARCHAR:             return "mediumtext";
 		case java.sql.Types.DATE:                    return "date";
 		case java.sql.Types.TIME:                    return "time";
 		case java.sql.Types.TIMESTAMP:               return "datetime";
-		case java.sql.Types.BINARY:                  return "binary("+length+")";
-		case java.sql.Types.VARBINARY:               return "varbinary("+length+")";
+		case java.sql.Types.BINARY:                  return "binary(" + length + ")";
+		case java.sql.Types.VARBINARY:               return "varbinary(" + length + ")";
 		case java.sql.Types.LONGVARBINARY:           return "mediumblob";
 		case java.sql.Types.NULL:                    return "mediumblob";
 		case java.sql.Types.OTHER:                   return "longblob";
@@ -96,8 +96,8 @@ extends DbmsDdlResolverAbstract
 
 		//------------------------- JDBC 4.0 (java 1.6) -----------------------------------
 		case java.sql.Types.ROWID:                   return "varchar(20)";                 // just guessing here... from https://docs.oracle.com/cd/B28359_01/server.111/b28318/datatype.htm#CNCPT1846
-		case java.sql.Types.NCHAR:                   return "char("+length+")";
-		case java.sql.Types.NVARCHAR:                return "varchar("+length+")";
+		case java.sql.Types.NCHAR:                   return "char(" + length + ")";
+		case java.sql.Types.NVARCHAR:                return "varchar(" + length + ")";
 		case java.sql.Types.LONGNVARCHAR:            return "longtext";
 		case java.sql.Types.NCLOB:                   return "longtext";
 		case java.sql.Types.SQLXML:                  return "longtext";

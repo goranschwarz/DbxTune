@@ -392,7 +392,7 @@ implements IReportEntry
 				ResultSetTableModel rstm = createResultSetTableModel(rs, name, sql, false);
 				
 				if (_logger.isDebugEnabled())
-					_logger.debug(name + "rstm.getRowCount()="+ rstm.getRowCount());
+					_logger.debug(name + "rstm.getRowCount()=" + rstm.getRowCount());
 				
 				return rstm;
 			}
@@ -418,7 +418,7 @@ implements IReportEntry
 				ResultSetTableModel rstm = createResultSetTableModel(rs, name, sql, doTruncate);
 				
 				if (_logger.isDebugEnabled())
-					_logger.debug(name + "rstm.getRowCount()="+ rstm.getRowCount());
+					_logger.debug(name + "rstm.getRowCount()=" + rstm.getRowCount());
 				
 				return rstm;
 			}
@@ -1140,7 +1140,7 @@ implements IReportEntry
 		String tabName = "MonSessionParams";
 		String sql = ""
 			    + "select [Type], [ParamName], [ParamValue] \n"
-			    + "from ["+tabName+"] \n"
+			    + "from [" + tabName + "] \n"
 			    + "where [ParamName] = '" + paramName + "' \n"
 			    + whereType
 			    + "";
@@ -1169,7 +1169,7 @@ implements IReportEntry
 		}
 		catch(SQLException ex)
 		{
-			_logger.warn("Problems getting values from '"+tabName+"': " + ex);
+			_logger.warn("Problems getting values from '" + tabName + "': " + ex);
 		}
 
 		return paramValue;
@@ -1295,7 +1295,7 @@ implements IReportEntry
 				} 
 				catch (SQLException ex) 
 				{
-					query = "Problems getting Dictionary Compressed column for tabName='" +tabName + "', colName='" + colName + "', hashId='" + hashId + "'.";
+					query = "Problems getting Dictionary Compressed column for tabName='" + tabName + "', colName='" + colName + "', hashId='" + hashId + "'.";
 				}
 
 				// set QUERY text in the original ResultSet
@@ -1423,7 +1423,7 @@ implements IReportEntry
 	//--------------------------------------------------------------------------------
 	public String getTopRowsPropertyName()
 	{
-		return getClass().getSimpleName()+".top";
+		return getClass().getSimpleName() + ".top";
 	}
 	public int getTopRowsDefault()
 	{
@@ -1933,10 +1933,10 @@ implements IReportEntry
 		if (StringUtil.hasValue(tooltip))
 		{
 			tooltip = tooltip.replace("'", "&#39;");
-			return "  <th title='" + tooltip + "'>" + colName +"</th> \n";
+			return "  <th title='" + tooltip + "'>" + colName + "</th> \n";
 		}
 
-		return "  <th>" + colName +"</th> \n";
+		return "  <th>" + colName + "</th> \n";
 	}
 
 	/**
@@ -2238,7 +2238,7 @@ implements IReportEntry
 				msgTitle = msgBody.replaceAll("<[^>]*>", " ").replaceAll("\\s+", " ").trim();
 			}
 
-			throw new RuntimeException("HTTP Error: statusCode=" + statusCode +" ('" + HttpUtils.httpResponceCodeToText(statusCode) + "'), url='" + url + "'. message='" + msgTitle + "'.");
+			throw new RuntimeException("HTTP Error: statusCode=" + statusCode + " ('" + HttpUtils.httpResponceCodeToText(statusCode) + "'), url='" + url + "'. message='" + msgTitle + "'.");
 		}
 
 		// Read JSON and return an object

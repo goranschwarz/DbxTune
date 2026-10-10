@@ -64,10 +64,10 @@ extends AlarmEvent
 		setTimeToLive( ttlSec * 1000 );
 
 		// Set data
-		setData("Num="+errorNumber+", Severity="+errorSeverity+", Text=" + errorMessage.trim());
+		setData("Num=" + errorNumber + ", Severity=" + errorSeverity + ", Text=" + errorMessage.trim());
 
 		// Set the description 
-		setDescription("ErrorlogTs='" + errorlogTs + "', Num="+errorNumber+", Severity="+errorSeverity+", Text=" + errorMessage.trim()+ ", ExtraInfo=[AlarmEventSeverity="+alarmSeverity+", "+PROPKEY_alarm_timeToLiveInSeconds+"="+ttlSec+", severityThreshold="+severityThreshold+"]");
+		setDescription("ErrorlogTs='" + errorlogTs + "', Num=" + errorNumber + ", Severity=" + errorSeverity + ", Text=" + errorMessage.trim() + ", ExtraInfo=[AlarmEventSeverity=" + alarmSeverity + ", " + PROPKEY_alarm_timeToLiveInSeconds + "=" + ttlSec + ", severityThreshold=" + severityThreshold + "]");
 	}
 
 	/**

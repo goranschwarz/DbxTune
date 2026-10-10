@@ -316,7 +316,7 @@ public class PersistContainer
 			_counterObjects = new ArrayList<CountersModel>(20);
 
 		if (_logger.isDebugEnabled())
-			_logger.debug("PersistContainer.add: name="+StringUtil.left(cm.getName(),20)+", timeHead="+cm.getSampleTimeHead()+", sampleTime="+cm.getSampleTime()+", interval="+cm.getSampleInterval());
+			_logger.debug("PersistContainer.add: name=" + StringUtil.left(cm.getName(),20) + ", timeHead=" + cm.getSampleTimeHead() + ", sampleTime=" + cm.getSampleTime() + ", interval=" + cm.getSampleInterval());
 
 		// Hmmm, this can probably be done better
 		// The _sampleInterval might be to low or to high

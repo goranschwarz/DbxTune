@@ -206,7 +206,7 @@ implements ActionListener, DocumentListener
 		//Object source    = e.getSource();
 		String actionCmd = e.getActionCommand();
 
-		_logger.debug("ACTION '"+actionCmd+"'.");
+		_logger.debug("ACTION '" + actionCmd + "'.");
 
 		if (ACTION_OK.equals(actionCmd))
 		{
@@ -333,7 +333,7 @@ implements ActionListener, DocumentListener
 		}
 		catch (IOException ioex)
 		{
-			SwingUtils.showErrorMessage("Save File", "<html>Problems Saving file '"+_filename+"'.<br><br><b>"+ioex+"</b></html>", ioex);
+			SwingUtils.showErrorMessage("Save File", "<html>Problems Saving file '" + _filename + "'.<br><br><b>" + ioex + "</b></html>", ioex);
 			return false;
 		}
 	}
@@ -366,7 +366,7 @@ implements ActionListener, DocumentListener
 			{
 				String htmlStr = "<html>" +
 					"<h3>Warning</h3>" +
-					"Name service file '"+filename+"' is <b>read only</b><br>" +
+					"Name service file '" + filename + "' is <b>read only</b><br>" +
 					"So adding/changing entries will be impossible!<br>" +
 					"</html>";
 				SwingUtils.showWarnMessage(null, "read only", htmlStr, null);
@@ -377,7 +377,7 @@ implements ActionListener, DocumentListener
 		}
 		catch (IOException ioex) 
 		{
-			SwingUtils.showErrorMessage("Open File", "Problems Open file '"+_filename+"'.", ioex);
+			SwingUtils.showErrorMessage("Open File", "Problems Open file '" + _filename + "'.", ioex);
 		}
 		_textArea.getDocument().addDocumentListener(this);
 
@@ -430,7 +430,7 @@ implements ActionListener, DocumentListener
 					@Override
 					public void run()
 					{
-						JOptionPane.showMessageDialog(null, "Server '"+_currentSrv+"' not found.");
+						JOptionPane.showMessageDialog(null, "Server '" + _currentSrv + "' not found.");
 					}
 				};
 				SwingUtilities.invokeLater(doLater);

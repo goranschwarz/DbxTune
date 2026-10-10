@@ -154,7 +154,7 @@ implements GTable.ITableTooltip, ToolTipHyperlinkResolver
 
 				for (int i=0; i<pkList.size(); i++)
 				{
-					String val = i < pkValArr.length ? pkValArr[i] : "i="+i+", arr.length="+pkValArr.length;
+					String val = i < pkValArr.length ? pkValArr[i] : "i=" + i + ", arr.length=" + pkValArr.length;
 					sb.append("<tr><td><b>").append(pkList.get(i)).append("</b>&nbsp;</td> <td>").append(val).append("</td></tr>");
 				}
 			}
@@ -217,12 +217,12 @@ implements GTable.ITableTooltip, ToolTipHyperlinkResolver
 		{
 			_logger.debug("");
 			_logger.debug("##################################################################################");
-			_logger.debug("hyperlinkResolv(): event.getDescription()  ="+event.getDescription());
-			_logger.debug("hyperlinkResolv(): event.getURL()          ="+event.getURL());
-			_logger.debug("hyperlinkResolv(): event.getEventType()    ="+event.getEventType());
-			_logger.debug("hyperlinkResolv(): event.getSourceElement()="+event.getSourceElement());
-			_logger.debug("hyperlinkResolv(): event.getSource()       ="+event.getSource());
-			_logger.debug("hyperlinkResolv(): event.toString()        ="+event.toString());
+			_logger.debug("hyperlinkResolv(): event.getDescription()  =" + event.getDescription());
+			_logger.debug("hyperlinkResolv(): event.getURL()          =" + event.getURL());
+			_logger.debug("hyperlinkResolv(): event.getEventType()    =" + event.getEventType());
+			_logger.debug("hyperlinkResolv(): event.getSourceElement()=" + event.getSourceElement());
+			_logger.debug("hyperlinkResolv(): event.getSource()       =" + event.getSource());
+			_logger.debug("hyperlinkResolv(): event.toString()        =" + event.toString());
 		}
 
 		if (desc.startsWith(OPEN_IN_EXTERNAL_BROWSER))
@@ -234,7 +234,7 @@ implements GTable.ITableTooltip, ToolTipHyperlinkResolver
 			}
 			catch (MalformedURLException e)
 			{
-				_logger.warn("Problems open URL='"+urlStr+"', in external Browser.", e);
+				_logger.warn("Problems open URL='" + urlStr + "', in external Browser.", e);
 			}
 		}
 

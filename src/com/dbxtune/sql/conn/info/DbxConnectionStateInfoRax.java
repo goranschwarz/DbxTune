@@ -89,7 +89,7 @@ implements DbxConnectionStateInfo
 		if ( isNormalState() )
 			return null;
 
-		String str = "NOTE: in state '"+_state+"'\n"
+		String str = "NOTE: in state '" + _state + "'\n"
 		           + _action;
 		return str;
 	}

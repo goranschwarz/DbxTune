@@ -49,7 +49,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SPACE,
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
-				"Data Checksum failure DATA-CURRUPTION in Server '" + cm.getServerName() + "', dbname='" + dbname + "', checksumFailuresDiff=" + checksumFailuresDiff + ", lastFailure='" + checksumLastFailure+ "', total=" + checksumFailuresTotal + " (threshold=" + threshold + ")",
+				"Data Checksum failure DATA-CURRUPTION in Server '" + cm.getServerName() + "', dbname='" + dbname + "', checksumFailuresDiff=" + checksumFailuresDiff + ", lastFailure='" + checksumLastFailure + "', total=" + checksumFailuresTotal + " (threshold=" + threshold + ")",
 				threshold
 				);
 

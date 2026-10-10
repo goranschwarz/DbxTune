@@ -64,7 +64,7 @@ extends JAseMessage
 				//System.out.println("SQLWarning: "+sqlw);
 				String wmsg = sqlw.getMessage();
 				
-				sqlWarningsText += "SQLWarning("+w+"): " + wmsg;
+				sqlWarningsText += "SQLWarning(" + w + "): " + wmsg;
 				if ( ! sqlWarningsText.endsWith("\n") )
 					sqlWarningsText += "\n";
 					
@@ -74,7 +74,7 @@ extends JAseMessage
 				w++;
 			}
 			if (w > 1) // If we had a Warning Chain... add the chain, else "reset" the warnings...
-				sqlWarningsText = "\nBelow is the full SQLWarning chain, there are "+w+" Warnings:\n" + sqlWarningsText;
+				sqlWarningsText = "\nBelow is the full SQLWarning chain, there are " + w + " Warnings:\n" + sqlWarningsText;
 		}
 		
 		String text = sqlExceptionsText;
@@ -85,7 +85,7 @@ extends JAseMessage
 			text += sqlWarningsText;
 		}
 
-		return prodName + ": ErrorCode "+ex.getErrorCode()+", SQLState "+ex.getSQLState()+", ExceptionClass: " + ex.getClass().getName() + "\n"
+		return prodName + ": ErrorCode " + ex.getErrorCode() + ", SQLState " + ex.getSQLState() + ", ExceptionClass: " + ex.getClass().getName() + "\n"
 //			+ "("+Version.getAppName()+": The SQL Batch was aborted due to a thrown SQLException)\n"
 			+ text;
 	}

@@ -75,7 +75,7 @@ implements Comparator<Object>
 		if (_context.isTraceEnabled())
 			_context.addTraceMessage("    ColComparator: Left.obj=" + ( left  == null ? null : left .getClass().getCanonicalName() ) 
 			                                       + ", Right.obj=" + ( right == null ? null : right.getClass().getCanonicalName() )
-			                                       +", Left.toString=|" + left + "|, Right.toString=|" + right + "|.");
+			                                       + ", Left.toString=|" + left + "|, Right.toString=|" + right + "|.");
 		if (left == right)
 			return 0;
 
@@ -108,7 +108,7 @@ implements Comparator<Object>
 			return 0;
 
 		// End of line...
-		throw new RuntimeException("Comparator on object, colName='"+_colName+"', problem: Left do not implement 'Comparable' and is not equal to right. Left.obj=|"+left.getClass().getCanonicalName()+"|, Right.obj=|"+right.getClass().getCanonicalName()+"|, Left.toString=|"+left+"|, Right.toString=|"+right+"|.");
+		throw new RuntimeException("Comparator on object, colName='" + _colName + "', problem: Left do not implement 'Comparable' and is not equal to right. Left.obj=|" + left.getClass().getCanonicalName() + "|, Right.obj=|" + right.getClass().getCanonicalName() + "|, Left.toString=|" + left + "|, Right.toString=|" + right + "|.");
 	}
 
 	public int byteCompare(byte[] left, byte[] right)

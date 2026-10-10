@@ -63,7 +63,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = Ver.ver(2016);
 	public static final long     NEED_CE_VERSION  = 0;
@@ -93,7 +93,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmWorkers(counterController, guiController);
 	}
@@ -131,7 +131,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_WORKERS_COUNT,
 				"Workers Free, in Use & Parallel Queries", 	                                // Menu CheckBox text
-				"Workers Free, in Use & Parallel Queries ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				"Workers Free, in Use & Parallel Queries (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 				new String[] { "max_worker_count", "free_worker_count", "reserved_worker_count", "used_worker_count" }, 
 				LabelType.Static,
@@ -154,7 +154,7 @@ extends CountersModel
 		DbmsVersionInfoSqlServer versionInfo = (DbmsVersionInfoSqlServer) conn.getDbmsVersionInfo();
 		if (versionInfo.isAzureDb() || versionInfo.isAzureSynapseAnalytics())
 		{
-			_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '"+getDisplayName() + "', connected to Azure SQL Database or Analytics, which do NOT support this.");
+			_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '" + getDisplayName() + "', connected to Azure SQL Database or Analytics, which do NOT support this.");
 
 			setActive(false, "This info is NOT available in Azure SQL Database or Azure Synapse/Analytics.");
 

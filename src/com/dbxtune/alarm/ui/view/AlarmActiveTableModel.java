@@ -106,7 +106,7 @@ implements ITableTooltip
 			try { ae = list.get(row); }
 			catch(RuntimeException rte)
 			{
-				System.out.println("AlarmActiveTableModel: getValueAt(row="+row+", column="+column+"): list.size()="+list.size()+"  The ActiveAlarm List rowcount must have changed size the JTable got the rowcount. Caught: "+ rte);
+				System.out.println("AlarmActiveTableModel: getValueAt(row=" + row + ", column=" + column + "): list.size()=" + list.size() + "  The ActiveAlarm List rowcount must have changed size the JTable got the rowcount. Caught: " + rte);
 				return null;
 			}
 

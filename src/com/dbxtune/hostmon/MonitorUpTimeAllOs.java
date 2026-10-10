@@ -166,7 +166,7 @@ extends MonitorUpTime
 				if (preParsed.length == md.getParseColumnCount()-1)
 				{
 					if (_logger.isDebugEnabled())
-						_logger.debug(">>>>>>>> PRE-FIX-1(missing fields '## days', but probably has 'min,' since started less than 1 hour) >>>>>>>> "+getModuleName()+".parseRow(): Checking preParsed column count fail. preParsed.length="+preParsed.length+", expectedCount="+md.getParseColumnCount()+", preParsed=["+StringUtil.toCommaStrQuoted('"', preParsed)+"].");
+						_logger.debug(">>>>>>>> PRE-FIX-1(missing fields '## days', but probably has 'min,' since started less than 1 hour) >>>>>>>> " + getModuleName() + ".parseRow(): Checking preParsed column count fail. preParsed.length=" + preParsed.length + ", expectedCount=" + md.getParseColumnCount() + ", preParsed=[" + StringUtil.toCommaStrQuoted('"', preParsed) + "].");
 
 					// 1 field are missing: it has only been running for less than 60 minutes, the third column is "min,"
 					if (preParsed[3].equals("min,")) // Note the ',' at the end
@@ -197,7 +197,7 @@ extends MonitorUpTime
 				else if (preParsed.length == md.getParseColumnCount()-2)
 				{
 					if (_logger.isDebugEnabled())
-						_logger.debug(">>>>>>>> PRE-FIX-2(missing fields '## days') >>>>>>>> "+getModuleName()+".parseRow(): Checking preParsed column count fail. preParsed.length="+preParsed.length+", expectedCount="+md.getParseColumnCount()+", preParsed=["+StringUtil.toCommaStrQuoted('"', preParsed)+"].");
+						_logger.debug(">>>>>>>> PRE-FIX-2(missing fields '## days') >>>>>>>> " + getModuleName() + ".parseRow(): Checking preParsed column count fail. preParsed.length=" + preParsed.length + ", expectedCount=" + md.getParseColumnCount() + ", preParsed=[" + StringUtil.toCommaStrQuoted('"', preParsed) + "].");
 
 					// but instead the third column is "HH:MM"
 					if (preParsed[2].matches("[0-9]?[0-9]:[0-9][0-9],")) // Note the ',' at the end
@@ -230,7 +230,7 @@ extends MonitorUpTime
 			else if (preParsed.length > md.getParseColumnCount())
 			{
 				if (_logger.isDebugEnabled())
-					_logger.debug(">>>>>>>> PRE-FIX(field='min,') >>>>>>>> "+getModuleName()+".parseRow(): Checking preParsed column count fail. preParsed.length="+preParsed.length+", expectedCount="+md.getParseColumnCount()+", preParsed=["+StringUtil.toCommaStrQuoted('"', preParsed)+"].");
+					_logger.debug(">>>>>>>> PRE-FIX(field='min,') >>>>>>>> " + getModuleName() + ".parseRow(): Checking preParsed column count fail. preParsed.length=" + preParsed.length + ", expectedCount=" + md.getParseColumnCount() + ", preParsed=[" + StringUtil.toCommaStrQuoted('"', preParsed) + "].");
 				
 				// if there is one extra field, due to "7 min" instead of "HH:MM"
 				// Remove that field, and "fix" the "7 min" -> "00:07"
@@ -276,13 +276,13 @@ extends MonitorUpTime
 					preParsed = tmp;
 
 					if (_logger.isDebugEnabled())
-						_logger.debug(">>>>>>>> POST-FIX(field='min,') >>>>>>>> "+getModuleName()+".parseRow(): preParsed.length="+preParsed.length+", expectedCount="+md.getParseColumnCount()+", preParsed=["+StringUtil.toCommaStrQuoted('"', preParsed)+"].");
+						_logger.debug(">>>>>>>> POST-FIX(field='min,') >>>>>>>> " + getModuleName() + ".parseRow(): preParsed.length=" + preParsed.length + ", expectedCount=" + md.getParseColumnCount() + ", preParsed=[" + StringUtil.toCommaStrQuoted('"', preParsed) + "].");
 				}
 			}
 
 			// Finally check if we fixed the issue
 			if (preParsed.length != md.getParseColumnCount())
-				_logger.warn(getModuleName()+".parseRow(): Checking preParsed column count fail. preParsed.length="+preParsed.length+", expectedCount="+md.getParseColumnCount()+", preParsed=["+StringUtil.toCommaStrQuoted('"', preParsed)+"].");
+				_logger.warn(getModuleName() + ".parseRow(): Checking preParsed column count fail. preParsed.length=" + preParsed.length + ", expectedCount=" + md.getParseColumnCount() + ", preParsed=[" + StringUtil.toCommaStrQuoted('"', preParsed) + "].");
 		}
 
 // Note: nproc will be filled in by CmOsUptime.localCalculation(OsTable osSampleTable)

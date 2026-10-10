@@ -77,13 +77,13 @@ public class VersionShort
 	 */
 	public static int toInt(int major, int minor, int maint)
 	{
-		if (major > 99) throw new IllegalArgumentException("VersionShort.toint(major="+major+", minor="+minor+", maint="+maint+"): major can't be above 99.");
-		if (minor > 99) throw new IllegalArgumentException("VersionShort.toint(major="+major+", minor="+minor+", maint="+maint+"): minor can't be above 99.");
-		if (maint > 99) throw new IllegalArgumentException("VersionShort.toint(major="+major+", minor="+minor+", maint="+maint+"): maint can't be above 99.");
+		if (major > 99) throw new IllegalArgumentException("VersionShort.toint(major=" + major + ", minor=" + minor + ", maint=" + maint + "): major can't be above 99.");
+		if (minor > 99) throw new IllegalArgumentException("VersionShort.toint(major=" + major + ", minor=" + minor + ", maint=" + maint + "): minor can't be above 99.");
+		if (maint > 99) throw new IllegalArgumentException("VersionShort.toint(major=" + major + ", minor=" + minor + ", maint=" + maint + "): maint can't be above 99.");
 
-		if (major < 0)  throw new IllegalArgumentException("VersionShort.toint(major="+major+", minor="+minor+", maint="+maint+"): major can't be below 0.");
-		if (minor < 0)  throw new IllegalArgumentException("VersionShort.toint(major="+major+", minor="+minor+", maint="+maint+"): minor can't be below 0.");
-		if (maint < 0)  throw new IllegalArgumentException("VersionShort.toint(major="+major+", minor="+minor+", maint="+maint+"): maint can't be below 0.");
+		if (major < 0)  throw new IllegalArgumentException("VersionShort.toint(major=" + major + ", minor=" + minor + ", maint=" + maint + "): major can't be below 0.");
+		if (minor < 0)  throw new IllegalArgumentException("VersionShort.toint(major=" + major + ", minor=" + minor + ", maint=" + maint + "): minor can't be below 0.");
+		if (maint < 0)  throw new IllegalArgumentException("VersionShort.toint(major=" + major + ", minor=" + minor + ", maint=" + maint + "): maint can't be below 0.");
 
 		return    ( major * 10000 )
 				+ ( minor * 100 )
@@ -106,7 +106,7 @@ public class VersionShort
 			return major + "." + minor + "." + maintenance;
 		}
 
-		return "unknown int("+version+")";
+		return "unknown int(" + version + ")";
 	}
 
 	
@@ -121,8 +121,8 @@ public class VersionShort
 		if (toInt(10, 1, 0) != parse("10.1"))   System.err.println("Test parse-2: failed");
 		if (toInt(10, 1, 1) != parse("xxx 10.1.1 xxx")) System.err.println("Test parse-3: failed: ");
 		
-		if ( ! toStr(12345).equals("1.23.45") ) System.err.println("Test toStr(12345): failed: got result '"+toStr(12345)+"', expected '1.23.45'.");
-		if ( ! toStr(30310).equals("3.3.10") ) System.err.println("Test toStr(12345): failed: got result '"+toStr(30310)+"', expected '3.3.10'.");
+		if ( ! toStr(12345).equals("1.23.45") ) System.err.println("Test toStr(12345): failed: got result '" + toStr(12345) + "', expected '1.23.45'.");
+		if ( ! toStr(30310).equals("3.3.10") ) System.err.println("Test toStr(12345): failed: got result '" + toStr(30310) + "', expected '3.3.10'.");
 		
 		
 		System.out.println("END: all test");

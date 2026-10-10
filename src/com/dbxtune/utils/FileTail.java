@@ -244,7 +244,7 @@ public class FileTail
 		}
 		else
 		{
-			throw new RuntimeException("Unknown execution type '"+_execMode+"'.");
+			throw new RuntimeException("Unknown execution type '" + _execMode + "'.");
 		}
 	}
 
@@ -269,7 +269,7 @@ public class FileTail
 		}
 		else
 		{
-			throw new RuntimeException("Unknown execution type '"+_execMode+"'.");
+			throw new RuntimeException("Unknown execution type '" + _execMode + "'.");
 		}
 	}
 
@@ -301,7 +301,7 @@ public class FileTail
 		}
 		else
 		{
-			throw new RuntimeException("Unknown execution type '"+_execMode+"'.");
+			throw new RuntimeException("Unknown execution type '" + _execMode + "'.");
 		}
 	}
 
@@ -321,7 +321,7 @@ public class FileTail
 		}
 		else
 		{
-			throw new RuntimeException("Unknown execution type '"+_execMode+"'.");
+			throw new RuntimeException("Unknown execution type '" + _execMode + "'.");
 		}
 			
 		_thread = new Thread(execCode);
@@ -337,7 +337,7 @@ public class FileTail
 	 */
 	private String getName()
 	{
-		return "FileTail("+_execMode+"): "+_filename;
+		return "FileTail(" + _execMode + "): " + _filename;
 	}
 
 	/**
@@ -357,18 +357,18 @@ public class FileTail
 		{
 			if (_shutdownIsComplete)
 			{
-				_logger.info("The '"+getName()+"' has now been shutdown.");
+				_logger.info("The '" + getName() + "' has now been shutdown.");
 				break;
 			}
 
 			try
 			{
-				_logger.info("Waiting for '"+getName()+"' to complete the shutdown.");
+				_logger.info("Waiting for '" + getName() + "' to complete the shutdown.");
 				Thread.sleep(1000);
 			}
 			catch (InterruptedException e)
 			{
-				_logger.info("The '"+getName()+"' has was interrupted.");
+				_logger.info("The '" + getName() + "' has was interrupted.");
 				break;
 			}
 			
@@ -378,12 +378,12 @@ public class FileTail
 	/** just print a start message */
 	protected void printStartMessage()
 	{
-		_logger.info("Starting "+getName());
+		_logger.info("Starting " + getName());
 	}
 	/** just print a stop message */
 	protected void printStopMessage()
 	{
-		_logger.info("The '"+getName()+"' has now been stopped.");
+		_logger.info("The '" + getName() + "' has now been stopped.");
 	}
 
 	/** Get command used by the SSH connection */
@@ -396,10 +396,10 @@ public class FileTail
 			num = 999;
 		if ( ! StringUtil.isNullOrBlank(os) )
 		{
-			if      (os.equals("Linux")) opt = "-n "+num+" -f";
-			else if (os.equals("SunOS")) opt = "-"+num+"f";
-			else if (os.equals("HP-UX")) opt = "-"+num+"f";
-			else if (os.equals("AIX"))   opt = "-"+num+"f";
+			if      (os.equals("Linux")) opt = "-n " + num + " -f";
+			else if (os.equals("SunOS")) opt = "-" + num + "f";
+			else if (os.equals("HP-UX")) opt = "-" + num + "f";
+			else if (os.equals("AIX"))   opt = "-" + num + "f";
 		}
 		
 		if (StringUtil.hasValue(_osCmd))
@@ -778,7 +778,7 @@ public class FileTail
 									continue;
 
 								if (_logger.isDebugEnabled())
-									_logger.debug("Received on STDOUT: "+row);
+									_logger.debug("Received on STDOUT: " + row);
 
 								// do callback with the STDOUT Row
 								fireNewTraceRow(row);
@@ -804,7 +804,7 @@ public class FileTail
 									continue;
 								
 								if (_logger.isDebugEnabled())
-									_logger.debug("Received on STDERR: "+row);
+									_logger.debug("Received on STDERR: " + row);
 								
 								// do callback with the STDERR Row
 								fireNewTraceRow(row);
@@ -813,7 +813,7 @@ public class FileTail
 					}
 					catch (IOException e)
 					{
-						_logger.error("Problems when reading output from the OS Command '"+getCommand(true)+"', Caught: "+e.getMessage(), e);
+						_logger.error("Problems when reading output from the OS Command '" + getCommand(true) + "', Caught: " + e.getMessage(), e);
 						_running = false;
 					}
 				}
@@ -975,15 +975,15 @@ public class FileTail
 						}
 						catch (InterruptedException e)
 						{
-							_logger.debug("InterruptedException: Tail on file '"+_localFile+"'. Checking if 'running' is still true. Caught: "+e);
+							_logger.debug("InterruptedException: Tail on file '" + _localFile + "'. Checking if 'running' is still true. Caught: " + e);
 						}
 						catch (FileNotFoundException e)
 						{
-							_logger.debug("FileNotFoundException: Tail on file '"+_localFile+"'. Continuing, hopefully it will exist in next iteration. Caught: "+e);
+							_logger.debug("FileNotFoundException: Tail on file '" + _localFile + "'. Continuing, hopefully it will exist in next iteration. Caught: " + e);
 						}
 						catch (IOException e)
 						{
-							_logger.debug("IOException: Tail on file '"+_localFile+"'. This is ignored, continuing. Caught: "+e);
+							_logger.debug("IOException: Tail on file '" + _localFile + "'. This is ignored, continuing. Caught: " + e);
 						}
 					}
 
@@ -992,11 +992,11 @@ public class FileTail
 				} 
 				catch (FileNotFoundException e)
 				{
-					_logger.error("Problems Tail on file '"+_localFile+"'. Caught: "+e, e);
+					_logger.error("Problems Tail on file '" + _localFile + "'. Caught: " + e, e);
 				}
 				catch (IOException e)
 				{
-					_logger.error("Problems Tail on file '"+_localFile+"'. Caught: "+e, e);
+					_logger.error("Problems Tail on file '" + _localFile + "'. Caught: " + e, e);
 				}
 
 				printStopMessage();

@@ -335,7 +335,7 @@ implements AutoCloseable
 //			logFilename = getAppLogDir() + File.separatorChar + "log" + File.separatorChar + Version.getAppName()+".log";
 			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HHmmss");
 			String ts = sdf.format(new Date());
-			logFilename = logPath + Version.getAppName()+"." + ts + ".log";
+			logFilename = logPath + Version.getAppName() + "." + ts + ".log";
 		}
 
 		
@@ -373,7 +373,7 @@ implements AutoCloseable
 		
 		// Print out the memory configuration
 		// And the JVM info
-		_logger.info("Starting " + Version.getAppName() + ", version " + Version.getVersionStr() + ", build "+Version.getBuildStr());
+		_logger.info("Starting " + Version.getAppName() + ", version " + Version.getVersionStr() + ", build " + Version.getBuildStr());
 		_logger.info("Debug Options enabled: "                          + Debug.getDebugsString());
 
 		_logger.info("Using Java Runtime Environment Version: "         + System.getProperty("java.version"));
@@ -985,7 +985,7 @@ implements AutoCloseable
 		cp.setUsername(user);
 		cp.setPassword(passwd);
 		cp.setUrl(url);
-		cp.setAppName(H2CentralDbCopy3.class.getSimpleName() + ": "+type);
+		cp.setAppName(H2CentralDbCopy3.class.getSimpleName() + ": " + type);
 		
 		_logger.info("Connecting to '" + type + "', with user '" + user + "', using url '" + url + "'.");
 //		return DbxConnection.createDbxConnection( DriverManager.getConnection(url, user, passwd) );
@@ -1140,7 +1140,7 @@ implements AutoCloseable
 		ddlList.addAll(ddlTables);
 		ddlList.addAll(ddlIndexes);
 		
-		_logger.info("Applying DDL " + ddlList.size() + " information to TARGET: "+_targetConn.getDbmsServerName());
+		_logger.info("Applying DDL " + ddlList.size() + " information to TARGET: " + _targetConn.getDbmsServerName());
 
 		for (String ddl : ddlList)
 		{
@@ -2126,7 +2126,7 @@ implements AutoCloseable
 			String sql = "select   [SessionStartTime] \n"
 			           + "       , count([SessionStartTime])  as [NumOfSamples] \n"
 			           + "       , max([SessionSampleTime]) as [LastSampleTime] \n"
-			           + "from ["+schema+"].[DbxSessionSamples] \n"
+			           + "from [" + schema + "].[DbxSessionSamples] \n"
 			           + "group by [SessionStartTime]";
 			sql = _targetConn.quotifySqlString(sql);
 //			sql = sql.replace('#', q); // replace # with the DBMS Quoted Identifier Char

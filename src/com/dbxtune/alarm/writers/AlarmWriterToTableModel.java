@@ -99,7 +99,7 @@ extends AlarmWriterAbstract
 	@Override
 	public String getDescription()
 	{
-		return "Internally used by the 'Alarm View' dialog when using GUI Mode of "+Version.getAppName();
+		return "Internally used by the 'Alarm View' dialog when using GUI Mode of " + Version.getAppName();
 	}
 	
 	@Override
@@ -108,7 +108,7 @@ extends AlarmWriterAbstract
 	{
 		super.init(conf);
 
-		_logger.info("Initializing the AlarmHandler.AlarmWriter component named '"+getName()+"'.");
+		_logger.info("Initializing the AlarmHandler.AlarmWriter component named '" + getName() + "'.");
 
 		_historyTableModel = new AlarmHistoryTableModel();
 		_activeTableModel  = new AlarmActiveTableModel();
@@ -125,7 +125,7 @@ extends AlarmWriterAbstract
 	public void raise(AlarmEvent alarmEvent) 
 	{
 //		System.out.println(getName()+": -----RAISE-----: "+alarmEvent);
-		_logger.debug     (getName()+": -----RAISE-----: "+alarmEvent);
+		_logger.debug     (getName() + ": -----RAISE-----: " + alarmEvent);
 
 		_historyTableModel.addEntry(alarmEvent, ACTION_RAISE);
 		SwingUtils.fireTableDataChanged(_activeTableModel);
@@ -136,7 +136,7 @@ extends AlarmWriterAbstract
 	public void reRaise(AlarmEvent alarmEvent) 
 	{
 //		System.out.println(getName()+": -----RE-RAISE-----: "+alarmEvent);
-		_logger.debug     (getName()+": -----RE-RAISE-----: "+alarmEvent);
+		_logger.debug     (getName() + ": -----RE-RAISE-----: " + alarmEvent);
 
 		_historyTableModel.addEntry(alarmEvent, ACTION_RE_RAISE);
 		SwingUtils.fireTableDataChanged(_activeTableModel);
@@ -150,7 +150,7 @@ extends AlarmWriterAbstract
 	public void cancel(AlarmEvent alarmEvent) 
 	{
 //		System.out.println(getName()+": -----CANCEL-----: "+alarmEvent);
-		_logger.debug(     getName()+": -----CANCEL-----: "+alarmEvent);
+		_logger.debug(     getName() + ": -----CANCEL-----: " + alarmEvent);
 
 		// hmmm...
 		if (isCallReRaiseEnabled())
@@ -167,7 +167,7 @@ extends AlarmWriterAbstract
 	public void endOfScan(List<AlarmEvent> activeAlarms) 
 	{
 //		System.out.println(getName()+": -----END-OF-SCAN-----: activeAlarms Count="+activeAlarms.size());
-		_logger.debug     (getName()+": -----END-OF-SCAN-----: activeAlarms Count="+activeAlarms.size());
+		_logger.debug     (getName() + ": -----END-OF-SCAN-----: activeAlarms Count=" + activeAlarms.size());
 
 		AlarmEvent eosEvent = new AlarmEventEndOfScan(activeAlarms.size());
 		_historyTableModel.addEntry(eosEvent, "END-OF-SCAN");
@@ -191,7 +191,7 @@ extends AlarmWriterAbstract
 				AlarmEvent.Category.INTERNAL,
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UNKNOWN, 
-				"EndOfScan activeAlarmSize="+activeAlarmSize,
+				"EndOfScan activeAlarmSize=" + activeAlarmSize,
 				null);
 			
 			setData(activeAlarmSize);

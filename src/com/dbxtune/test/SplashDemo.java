@@ -78,7 +78,7 @@ public class SplashDemo extends Frame implements ActionListener {
         g.fillRect(120,140,200,40);
         g.setPaintMode();
         g.setColor(Color.BLACK);
-        g.drawString("Loading "+comps[(frame/5)%3]+"...", 120, 150);
+        g.drawString("Loading " + comps[(frame/5)%3] + "...", 120, 150);
     }
     public SplashDemo() {
         super("SplashWindow demo");

@@ -742,9 +742,9 @@ extends AlarmWriterAbstract
 			String propKeyGroupRegex = replaceRouteNum(PROPKEY_routeGroupRegex, i);
 			String propKeyUrl        = replaceRouteNum(PROPKEY_routeUrl,        i);
 
-			list.add( new CmSettingsHelper("route-"+i+"-regex",      propKeyRegex,      String.class, conf.getProperty(propKeyRegex,      DEFAULT_routeRegex     ), DEFAULT_routeRegex,      "<html>Route rule #"+i+": If the AlarmEvent's ServerName matches this regexp (full-string match, same as the filter rules above), the message is sent to 'route-"+i+"-url' instead of the default 'URL'.<br>If 'route-"+i+"-groupRegex' is also set, BOTH must match.<br>Rules are evaluated in order route-1 -&gt; route-"+MAX_ROUTES+", first match wins. Leave both blank to disable this rule.<br>Example: <code>prod.*</code></html>", new RegExpInputValidator()));
-			list.add( new CmSettingsHelper("route-"+i+"-groupRegex", propKeyGroupRegex, String.class, conf.getProperty(propKeyGroupRegex, DEFAULT_routeGroupRegex), DEFAULT_routeGroupRegex, "<html>Route rule #"+i+": If the DbxCentral <b>server group</b> matches this regexp (full-string match), the message is sent to 'route-"+i+"-url' instead of the default 'URL'.<br>If 'route-"+i+"-regex' is also set, BOTH must match.<br>The group is the <code>#FORMAT; GROUP; name</code> this server is in, in DbxCentral's SERVER_LIST file (the overview page layout), so moving a server to another group there also moves its alarms to another channel.<br>A server that is not within any group, or whose group is not known (DbxCentral not reachable since startup, or not configured), never matches, so the next rule or the default 'URL' is used.<br>Example: <code>Sybase.*</code></html>", new RegExpInputValidator()));
-			list.add( new CmSettingsHelper("route-"+i+"-url",        propKeyUrl,        String.class, conf.getProperty(propKeyUrl,        DEFAULT_routeUrl       ), DEFAULT_routeUrl,        "The Channel Webhook URL to use when route rule #"+i+" matches.", new UrlInputValidator()));
+			list.add( new CmSettingsHelper("route-" + i + "-regex",      propKeyRegex,      String.class, conf.getProperty(propKeyRegex,      DEFAULT_routeRegex     ), DEFAULT_routeRegex,      "<html>Route rule #" + i + ": If the AlarmEvent's ServerName matches this regexp (full-string match, same as the filter rules above), the message is sent to 'route-" + i + "-url' instead of the default 'URL'.<br>If 'route-" + i + "-groupRegex' is also set, BOTH must match.<br>Rules are evaluated in order route-1 -&gt; route-" + MAX_ROUTES + ", first match wins. Leave both blank to disable this rule.<br>Example: <code>prod.*</code></html>", new RegExpInputValidator()));
+			list.add( new CmSettingsHelper("route-" + i + "-groupRegex", propKeyGroupRegex, String.class, conf.getProperty(propKeyGroupRegex, DEFAULT_routeGroupRegex), DEFAULT_routeGroupRegex, "<html>Route rule #" + i + ": If the DbxCentral <b>server group</b> matches this regexp (full-string match), the message is sent to 'route-" + i + "-url' instead of the default 'URL'.<br>If 'route-" + i + "-regex' is also set, BOTH must match.<br>The group is the <code>#FORMAT; GROUP; name</code> this server is in, in DbxCentral's SERVER_LIST file (the overview page layout), so moving a server to another group there also moves its alarms to another channel.<br>A server that is not within any group, or whose group is not known (DbxCentral not reachable since startup, or not configured), never matches, so the next rule or the default 'URL' is used.<br>Example: <code>Sybase.*</code></html>", new RegExpInputValidator()));
+			list.add( new CmSettingsHelper("route-" + i + "-url",        propKeyUrl,        String.class, conf.getProperty(propKeyUrl,        DEFAULT_routeUrl       ), DEFAULT_routeUrl,        "The Channel Webhook URL to use when route rule #" + i + " matches.", new UrlInputValidator()));
 		}
 
 		return list;
@@ -752,7 +752,7 @@ extends AlarmWriterAbstract
 
 	private static String replaceRouteNum(String propKey, int num)
 	{
-		return propKey.replace("<N>", ""+num);
+		return propKey.replace("<N>", "" + num);
 	}
 
 	/** The property value as a regexp, null if blank. Throws if it's not a valid regexp. */

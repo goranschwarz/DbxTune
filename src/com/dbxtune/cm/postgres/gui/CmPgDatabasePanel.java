@@ -70,7 +70,7 @@ extends TabularCntrPanel
 		String colorStr = null;
 
 		// RED = active
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.checksum_failures");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.checksum_failures");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -109,7 +109,7 @@ extends TabularCntrPanel
 
 //				list.add(new CmSettingsHelper("Slide Window Time", PROPKEY_SlideTimeInSec, Integer.class, conf.getIntProperty(PROPKEY_SlideTimeInSec, DEFAULT_SlideTimeInSec), DEFAULT_SlideTimeInSec, "Set number of seconds the 'slide window time' will keep 'tup_fetched' and 'tup_returned' for." ));
 
-				_slideWindowTime_txt.setText(""+ conf.getIntProperty(CmPgDatabase.PROPKEY_SlideTimeInSec, CmPgDatabase.DEFAULT_SlideTimeInSec));
+				_slideWindowTime_txt.setText("" + conf.getIntProperty(CmPgDatabase.PROPKEY_SlideTimeInSec, CmPgDatabase.DEFAULT_SlideTimeInSec));
 
 				// ReInitialize the SQL
 				//getCm().setSql(null);

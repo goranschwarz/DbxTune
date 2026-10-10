@@ -120,7 +120,7 @@ public class HttpUtils
 		// UNHANDLED
 		// --------------------------------------------------------
 		default:
-			return code+"=UNKNOW STATUS CODE";
+			return code + "=UNKNOW STATUS CODE";
 		}
 	}
 }

@@ -79,7 +79,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFramePostgres.TCP_GROUP_REPLICATION;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = Ver.ver(9,4);
 	public static final long     NEED_CE_VERSION  = 0;
@@ -130,7 +130,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmPgRepSlots(counterController, guiController);
 	}
@@ -193,9 +193,9 @@ extends CountersModel
 		
 		String sql = ""
 			    + "SELECT \n"
-			    + "     CAST(" + pg_wal_lsn_diff + "(" + pg_current_wal_insert_lsn+ "(), restart_lsn)/1024.0        as numeric(12,1)) AS lag_kb \n"
-			    + "    ,CAST(" + pg_wal_lsn_diff + "(" + pg_current_wal_insert_lsn+ "(), restart_lsn)/1024.0        as numeric(12,1)) AS lag_kb_diff \n"
-			    + "    ,CAST(" + pg_wal_lsn_diff + "(" + pg_current_wal_insert_lsn+ "(), restart_lsn)/1024.0/1024.0 as numeric(12,1)) AS lag_mb \n"
+			    + "     CAST(" + pg_wal_lsn_diff + "(" + pg_current_wal_insert_lsn + "(), restart_lsn)/1024.0        as numeric(12,1)) AS lag_kb \n"
+			    + "    ,CAST(" + pg_wal_lsn_diff + "(" + pg_current_wal_insert_lsn + "(), restart_lsn)/1024.0        as numeric(12,1)) AS lag_kb_diff \n"
+			    + "    ,CAST(" + pg_wal_lsn_diff + "(" + pg_current_wal_insert_lsn + "(), restart_lsn)/1024.0/1024.0 as numeric(12,1)) AS lag_mb \n"
 			    + "    ,* \n"
 			    + "FROM pg_replication_slots; \n"
 			    + "";
@@ -279,7 +279,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_LAG_KB,
 			"Replication Lag in KB", 	              // Menu CheckBox text
-			"Replication Lag in KB ("+SHORT_NAME+")", // Graph Label 
+			"Replication Lag in KB (" + SHORT_NAME + ")", // Graph Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.REPLICATION,

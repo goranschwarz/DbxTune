@@ -90,7 +90,7 @@ extends ToolTipSupplierAbstract
 
 				toolTipStr += "<br>";
 				toolTipStr += "<b><code>##############################################################</code></b><br>";
-				toolTipStr += "<b>WARNING:</b> Caught exception: <code>"+ex+"</code><br>";
+				toolTipStr += "<b>WARNING:</b> Caught exception: <code>" + ex + "</code><br>";
 				toolTipStr += "<b><code>##############################################################</code></b><br>";
 				toolTipStr += "<pre>";
 				toolTipStr += StringUtil.stackTraceToString(ex);

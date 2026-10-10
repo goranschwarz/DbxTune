@@ -74,7 +74,7 @@ extends DbmsVersionPanelAbstract
 
 		long version = Ver.hanaVersionStringToNumber(tmpVerStr);
 
-		_logger.debug("HANA-parseVersionStringToNum(versionStr='"+versionStr+"'): tmpVerStr='"+tmpVerStr+"', <<<<<< returns: "+version);
+		_logger.debug("HANA-parseVersionStringToNum(versionStr='" + versionStr + "'): tmpVerStr='" + tmpVerStr + "', <<<<<< returns: " + version);
 		return version;
 	}
 	

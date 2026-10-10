@@ -33,13 +33,13 @@ implements IDbmsVersionHelper
 		verStr = major + "";
 		
 		if (minor > 0)
-			verStr += " R"+minor;  // SQL Server 2008 R2
+			verStr += " R" + minor;  // SQL Server 2008 R2
 		
 		if (sp > 0)
-			verStr += " SP"+sp;
+			verStr += " SP" + sp;
 		
 		if (cu > 0)
-			verStr += " CU"+cu;
+			verStr += " CU" + cu;
 		
 		return verStr;
 		

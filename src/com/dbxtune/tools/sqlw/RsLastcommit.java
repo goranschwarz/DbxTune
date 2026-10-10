@@ -103,11 +103,11 @@ public class RsLastcommit
 	throws OriginNotFoundException
 	{
 		if (originQid == null)
-			throw new IllegalArgumentException("hasOqidBeenApplied(origin="+origin+", originQid='"+originQid+"'): originQid can't be null");
+			throw new IllegalArgumentException("hasOqidBeenApplied(origin=" + origin + ", originQid='" + originQid + "'): originQid can't be null");
 
 		RsLastcommitEntry entry = _map.get(origin);
 		if (entry == null)
-			throw new OriginNotFoundException("Origin "+origin+" can't be found in the Map");
+			throw new OriginNotFoundException("Origin " + origin + " can't be found in the Map");
 
 		String rsLcQid = entry._origin_qid;
 		
@@ -167,9 +167,9 @@ public class RsLastcommit
 		
 		if (_logger.isDebugEnabled())
 		{
-			_logger.debug("hasOqidBeenApplied: trustSecondaryQid="+trustSecondaryQid+", returns "+(ret ? "TRUE":"false")+", origin="+origin + "   " + (ret ? "--- DISCARD":" +++ keep") );
-			_logger.debug("                         queue OQID = '" + originQid + "'   modQueueQid = '" + modOriginQid + "', CmdTextSeqNo="+seqNo+", CmdText='"+command+"'");
-			_logger.debug("                 rs_lastcommit OQID = '" + rsLcQid   + "'   modRsLcQid  = '" + modRsLcQid   + "', CmdTextSeqNo="+seqNo+", CmdText='"+command+"'");
+			_logger.debug("hasOqidBeenApplied: trustSecondaryQid=" + trustSecondaryQid + ", returns " + (ret ? "TRUE":"false") + ", origin=" + origin + "   " + (ret ? "--- DISCARD":" +++ keep") );
+			_logger.debug("                         queue OQID = '" + originQid + "'   modQueueQid = '" + modOriginQid + "', CmdTextSeqNo=" + seqNo + ", CmdText='" + command + "'");
+			_logger.debug("                 rs_lastcommit OQID = '" + rsLcQid   + "'   modRsLcQid  = '" + modRsLcQid   + "', CmdTextSeqNo=" + seqNo + ", CmdText='" + command + "'");
 			_logger.debug("");
 		}
 
@@ -204,7 +204,7 @@ public class RsLastcommit
 				e = e.getNextException();
 			}
 			String msg = 
-				"When trying to login to '"+srvname+"."+dbname+"' with user '"+username+"'.\n" +
+				"When trying to login to '" + srvname + "." + dbname + "' with user '" + username + "'.\n" +
 				"This was done while get records from the 'rs_lastcommit' table.\n" +
 				"\n" +
 				"Connection FAILED." +
@@ -217,7 +217,7 @@ public class RsLastcommit
 		catch (Exception e)
 		{
 			String msg = 
-				"When trying to login to '"+srvname+"."+dbname+"' with user '"+username+"'.\n" +
+				"When trying to login to '" + srvname + "." + dbname + "' with user '" + username + "'.\n" +
 				"This was done while get records from the 'rs_lastcommit' table.\n" +
 				"\n" +
 				"Connection FAILED." +
@@ -281,14 +281,14 @@ public class RsLastcommit
 
 			if ( ! rows )
 			{
-				_logger.warn("Can't find any rows in the rs_lastcommit in server '"+srvname+"' database '"+dbname+"'.");
+				_logger.warn("Can't find any rows in the rs_lastcommit in server '" + srvname + "' database '" + dbname + "'.");
 				return null;
 			}
 			return rsLastcommit;
 		}
 		catch (SQLException sqle)
 		{
-			String msg = "Problems when executing '"+cmd+"' in Server '"+srvname+"'. ";
+			String msg = "Problems when executing '" + cmd + "' in Server '" + srvname + "'. ";
 			_logger.error(msg + sqle);
 
 			throwInFinally = false;

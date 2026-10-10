@@ -37,7 +37,7 @@ extends JAseMessage
 
 	public JDbmsOuputMessage(String message, String originSql, String connectedToProductName)
 	{
-		super(getDbmsType(connectedToProductName)+" DBMS_OUTPUT.GET_LINE(): "+message, originSql);
+		super(getDbmsType(connectedToProductName) + " DBMS_OUTPUT.GET_LINE(): " + message, originSql);
 
 		setForeground(ColorUtils.VERY_DARK_BLUE);
 	}

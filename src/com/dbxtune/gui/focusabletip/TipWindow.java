@@ -161,7 +161,7 @@ class TipWindow extends JWindow implements ActionListener, HyperlinkListener {
 		}
 		catch (Exception e)
 		{
-			System.out.println("Problems loading HTML Browser replacement/plugin class '"+PRIMARY_JEditorPane_class+"'. Falling back to use the default 'javax.swing.JEditorPane'. Caught: "+e);
+			System.out.println("Problems loading HTML Browser replacement/plugin class '" + PRIMARY_JEditorPane_class + "'. Falling back to use the default 'javax.swing.JEditorPane'. Caught: " + e);
 		}
 		finally
 		{
@@ -612,7 +612,7 @@ class TipWindow extends JWindow implements ActionListener, HyperlinkListener {
 					historyIndex--;
 
 				// Show error messsage.
-				showError("Unable to load page '"+newUrl+"'", e);
+				showError("Unable to load page '" + newUrl + "'", e);
 			}
 		}
 		else
@@ -638,7 +638,7 @@ class TipWindow extends JWindow implements ActionListener, HyperlinkListener {
 		try
 		{
 			URL url = new URL(entry);
-			if ( (url+"").startsWith("data:text/html") )
+			if ( (url + "").startsWith("data:text/html") )
 				return null;
 			return url;
 		}
@@ -741,7 +741,7 @@ class TipWindow extends JWindow implements ActionListener, HyperlinkListener {
 								}
 								catch (Exception ex)
 								{
-									showError("Problems when open the URL '"+locationText.getText()+"'. Caught: "+ex, ex);
+									showError("Problems when open the URL '" + locationText.getText() + "'. Caught: " + ex, ex);
 								}
 							}
 						}
@@ -758,7 +758,7 @@ class TipWindow extends JWindow implements ActionListener, HyperlinkListener {
 						int firstEqual = str.indexOf("=");
 						if (firstEqual == -1)
 						{
-							throw new RuntimeException("ToolTipHyperlinkResolver SET_PROPERTY_TEMP, not a properly formed KeyValString. it should have key=val. Can't find any '=' char in the string '"+str+"'.");
+							throw new RuntimeException("ToolTipHyperlinkResolver SET_PROPERTY_TEMP, not a properly formed KeyValString. it should have key=val. Can't find any '=' char in the string '" + str + "'.");
 						}
 						else
 						{
@@ -815,7 +815,7 @@ class TipWindow extends JWindow implements ActionListener, HyperlinkListener {
 		URL url = clazz.getResource(filename);
 		if (url == null)
 		{
-			System.out.println("Can't find the resource for class='"+clazz+"', filename='"+filename+"'.");
+			System.out.println("Can't find the resource for class='" + clazz + "', filename='" + filename + "'.");
 			return null;
 		}
 
@@ -890,7 +890,7 @@ class TipWindow extends JWindow implements ActionListener, HyperlinkListener {
 						}
 						catch (Exception ex)
 						{
-							showError("Problems when open the URL '"+locationText.getText()+"'. Caught: "+ex, ex);
+							showError("Problems when open the URL '" + locationText.getText() + "'. Caught: " + ex, ex);
 						}
 					}
 				}

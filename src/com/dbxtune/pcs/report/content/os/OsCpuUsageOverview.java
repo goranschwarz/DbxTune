@@ -196,7 +196,7 @@ public class OsCpuUsageOverview extends OsAbstract
 
 		// DO NOT TRUST: new data that hasn't yet been DIFF Calculated (it only has 1 sample, so it's probably Asolute values, which are *to high*)
 		// If we would trust the above values, it will/may create statistical problems (showing to high values in specific periods)
-		boolean skipNewDiffRateRows = localConf.getBooleanProperty(this.getClass().getSimpleName()+".skipNewDiffRateRows", true);
+		boolean skipNewDiffRateRows = localConf.getBooleanProperty(this.getClass().getSimpleName() + ".skipNewDiffRateRows", true);
 
 		//  SQL for: only records that has been diff calculations (not first time seen, some ASE Versions has a bug that do not clear counters on reuse)
 		_sql_and_skipNewOrDiffRateRows = "";

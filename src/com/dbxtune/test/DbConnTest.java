@@ -51,7 +51,7 @@ public class DbConnTest
 			Connection conn = AseConnectionFactory.getConnection("gorans-xp", 5000, null, "sa", "", "DbConnTest", null, null);
 
 			String sql = "exec master..sp_help 'dbo.monLocks' ";
-			System.out.println("DO SQL: "+sql);
+			System.out.println("DO SQL: " + sql);
 
 			AseSqlScript ss = new AseSqlScript(conn, 10);
 			try	{ 

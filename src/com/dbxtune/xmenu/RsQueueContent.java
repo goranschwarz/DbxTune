@@ -110,7 +110,7 @@ extends XmenuActionBase
 //		}
 		else
 		{
-			SwingUtils.showInfoMessage(null, "Not yet implemented", "Dump Queue for '"+nameCol+"' can't be done or not yet implemented.");
+			SwingUtils.showInfoMessage(null, "Not yet implemented", "Dump Queue for '" + nameCol + "' can't be done or not yet implemented.");
 			return;
 		}
 		

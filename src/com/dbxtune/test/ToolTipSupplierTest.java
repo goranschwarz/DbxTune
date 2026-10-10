@@ -117,7 +117,7 @@ public class ToolTipSupplierTest extends JFrame
 				"           font-family: " + font.getFamily() + "; " +
 				"           font-size: "	+ font.getSize() + "pt; " +
 //				"           margin: 2px; " +
-				"           line-height: 0.9; "+
+				"           line-height: 0.9; " +
 				"    }" +
 //		        "    h3 { font-size: 1.17em; margin: .83em 0 }"+
 //		        "    h3 { font-size: 1.0em; margin: .83em 0 }"+
@@ -169,7 +169,7 @@ public class ToolTipSupplierTest extends JFrame
 			"<br>";
 
 			for (int i=0; i<100; i++)
-				str += "row - "+i+"<br>";
+				str += "row - " + i + "<br>";
 
 			str += "END<br>";
 			str += "</html>";
@@ -183,12 +183,12 @@ public class ToolTipSupplierTest extends JFrame
 			String desc = event.getDescription();
 			System.out.println("");
 			System.out.println("##################################################################################");
-			System.out.println("hyperlinkResolv(): event.getDescription()  ="+event.getDescription());
-			System.out.println("hyperlinkResolv(): event.getURL()          ="+event.getURL());
-			System.out.println("hyperlinkResolv(): event.getEventType()    ="+event.getEventType());
-			System.out.println("hyperlinkResolv(): event.getSourceElement()="+event.getSourceElement());
-			System.out.println("hyperlinkResolv(): event.getSource()       ="+event.getSource());
-			System.out.println("hyperlinkResolv(): event.toString()        ="+event.toString());
+			System.out.println("hyperlinkResolv(): event.getDescription()  =" + event.getDescription());
+			System.out.println("hyperlinkResolv(): event.getURL()          =" + event.getURL());
+			System.out.println("hyperlinkResolv(): event.getEventType()    =" + event.getEventType());
+			System.out.println("hyperlinkResolv(): event.getSourceElement()=" + event.getSourceElement());
+			System.out.println("hyperlinkResolv(): event.getSource()       =" + event.getSource());
+			System.out.println("hyperlinkResolv(): event.toString()        =" + event.toString());
 
 			if (desc.startsWith("EXTERNAL-BROWSER:"))
 			{
@@ -212,7 +212,7 @@ public class ToolTipSupplierTest extends JFrame
 
 			if (desc.equals("String Functions"))
 			{
-				return ResolverReturn.createOpenInCurrentTooltipWindow(event, "<html><h1>"+desc+"<h1></html>");
+				return ResolverReturn.createOpenInCurrentTooltipWindow(event, "<html><h1>" + desc + "<h1></html>");
 				//return new ResolverReturn(event, "<html><h1>"+desc+"<h1></html>");
 			}
 

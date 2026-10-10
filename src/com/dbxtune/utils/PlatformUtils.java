@@ -67,22 +67,22 @@ public class PlatformUtils
 		
 		if (osName.startsWith("Windows")) 
 		{
-			_logger.trace("Detected Windows platform '"+osName+"'.");
+			_logger.trace("Detected Windows platform '" + osName + "'.");
 			return Platform_WIN;
 		} 
 		if (osName.startsWith("Linux")) 
 		{
-			_logger.trace("Detected Linux platform '"+osName+"'.");
+			_logger.trace("Detected Linux platform '" + osName + "'.");
 			return Platform_LINUX;
 		} 
 		if (osName.startsWith("MacOS") || osName.startsWith("Mac OS X")) 
 		{
-			_logger.trace("Detected Mac OS platform '"+osName+"'.");
+			_logger.trace("Detected Mac OS platform '" + osName + "'.");
 			return Platform_MAC_OS;
 		} 
 		if (osName.startsWith("Solaris")) 
 		{
-			_logger.trace("Detected Solaris platform '"+osName+"'.");
+			_logger.trace("Detected Solaris platform '" + osName + "'.");
 			return Platform_SOLARIS;
 		}
 		

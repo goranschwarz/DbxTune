@@ -54,7 +54,7 @@ extends AlarmEvent
 
 		setRaiseDelayInSec(raiseDelayInSec);
 		
-		setData("cfgVal="+cfgVal);
+		setData("cfgVal=" + cfgVal);
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);
@@ -81,10 +81,10 @@ extends AlarmEvent
 				AlarmEvent.Category.SRV_CONFIG,
 				AlarmEvent.Severity.WARNING,
 				AlarmEvent.ServiceState.UP, 
-				"Configuration resource '"+cfgName+"' is getting low in server '" + cm.getServerName() + "'. NumFree="+numFree+", NumActive="+numActive+", PercentActive="+pctAct+". (threshold="+threshold+")",
+				"Configuration resource '" + cfgName + "' is getting low in server '" + cm.getServerName() + "'. NumFree=" + numFree + ", NumActive=" + numActive + ", PercentActive=" + pctAct + ". (threshold=" + threshold + ")",
 				null);
 
-		setData("NumFree="+numFree+", NumActive="+numActive+", PercentActive="+pctAct);
+		setData("NumFree=" + numFree + ", NumActive=" + numActive + ", PercentActive=" + pctAct);
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);

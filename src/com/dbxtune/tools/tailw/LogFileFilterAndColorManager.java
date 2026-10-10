@@ -110,7 +110,7 @@ public class LogFileFilterAndColorManager
 	}
 	private void loadFile()
 	{
-		System.out.println("loadFile(): _filename='"+_filename+"'.");
+		System.out.println("loadFile(): _filename='" + _filename + "'.");
 		File xmlFile = new File(_filename);
 		String xmlFileContent = null;
 		try
@@ -124,13 +124,13 @@ public class LogFileFilterAndColorManager
 //				_logger.info("The LogFile Filter xml file '"+xmlFile+"' did NOT exists. So no filters will be loaded.");
 				
 				String classPathFileName = "resources/LogFileFilters.xml";
-				_logger.info("The LogFile Filter xml file '"+xmlFile+"' did NOT exists. Trying '"+classPathFileName+"' from the classpath. You can copy the file from $DBXTUNE_HOME/lib/dbxtune.jar:"+classPathFileName);
+				_logger.info("The LogFile Filter xml file '" + xmlFile + "' did NOT exists. Trying '" + classPathFileName + "' from the classpath. You can copy the file from $DBXTUNE_HOME/lib/dbxtune.jar:" + classPathFileName);
 				xmlFileContent = FileUtils.readFile(Version.class, classPathFileName);
 				xmlFile = null;
 
 				if (StringUtil.isNullOrBlank(xmlFileContent))
 				{
-					_logger.warn("The LogFile Filter xml file '"+xmlFile+"' did NOT exists. Nor did I find content in the resource '"+classPathFileName+"'. So no filters will be loaded.");
+					_logger.warn("The LogFile Filter xml file '" + xmlFile + "' did NOT exists. Nor did I find content in the resource '" + classPathFileName + "'. So no filters will be loaded.");
 					return;
 				}
 			}
@@ -169,17 +169,17 @@ public class LogFileFilterAndColorManager
 					String iconStr    = getfilterElement(eElement, "icon");
 					String level      = getfilterElement(eElement, "level");
 
-					System.out.println("filterGroupName=|"+filterGroupName+"|.");
-					System.out.println("    name   =|"+nameStr   +"|");
-					System.out.println("    regExp =|"+regExpStr +"|");
-					System.out.println("    action =|"+actionStr +"|");
-					System.out.println("    fgColor=|"+fgColorStr+"|");
-					System.out.println("    bgColor=|"+bgColorStr+"|");
+					System.out.println("filterGroupName=|" + filterGroupName + "|.");
+					System.out.println("    name   =|" + nameStr   + "|");
+					System.out.println("    regExp =|" + regExpStr + "|");
+					System.out.println("    action =|" + actionStr + "|");
+					System.out.println("    fgColor=|" + fgColorStr + "|");
+					System.out.println("    bgColor=|" + bgColorStr + "|");
 					//FilterEntry fe = new FilterEntry(name, regexp, fgColor, bgColor, action);
 					
 					Action action = Action.Allow;
 					try { action = Action.valueOf(actionStr); }
-					catch (Throwable th) { _logger.error("Not a valid action in FilterGroup='"+filterGroupName+"', FilterName='"+nameStr+"'. The action='"+actionStr+"' is not a valid action. Setting the action to 'Allow'"); }
+					catch (Throwable th) { _logger.error("Not a valid action in FilterGroup='" + filterGroupName + "', FilterName='" + nameStr + "'. The action='" + actionStr + "' is not a valid action. Setting the action to 'Allow'"); }
 
 					Set<FilterEntry> group = _groups.get(filterGroupName);
 					if (group == null)
@@ -193,7 +193,7 @@ public class LogFileFilterAndColorManager
 		}
 		catch (Exception ex)
 		{
-			_logger.error("Problems reading the XML file '"+xmlFile+"'. Caught: "+ex, ex);
+			_logger.error("Problems reading the XML file '" + xmlFile + "'. Caught: " + ex, ex);
 		}
 	}
 	

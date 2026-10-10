@@ -230,13 +230,13 @@ implements DbxConnectionStateInfo
 		}
 		catch (SQLException sqle)
 		{
-			_logger.error("Error in refresh() problems executing sql='"+sql+"'.", sqle);
+			_logger.error("Error in refresh() problems executing sql='" + sql + "'.", sqle);
 		}
 
 //		select count(*) from master.dbo.syslogshold where spid = @@spid
 
 		if (_logger.isDebugEnabled())
-			_logger.debug("refresh(): db_name()='"+_dbname+"', @@spid='"+_spid+"', user_name()='"+_username+"', suser_name()='"+_susername+"', @@transtate="+_tranState+", '"+getTranStateStr()+"', @@trancount="+_tranCount+".");
+			_logger.debug("refresh(): db_name()='" + _dbname + "', @@spid='" + _spid + "', user_name()='" + _username + "', suser_name()='" + _susername + "', @@transtate=" + _tranState + ", '" + getTranStateStr() + "', @@trancount=" + _tranCount + ".");
 //		return csi;
 	}
 
@@ -258,7 +258,7 @@ implements DbxConnectionStateInfo
 			{
 				if (_lockCount > 0)
 					str = "You are in CHAINED MODE (AutoCommit=false)\n"
-						+ "And you are holding "+_lockCount+" locks in the server\n"
+						+ "And you are holding " + _lockCount + " locks in the server\n"
 						+ "Don't forget to commit or rollback!";
 			}
 			else
@@ -324,7 +324,7 @@ implements DbxConnectionStateInfo
 				color="black";
 				break;
 			}
-			hadrInfo  = ", HADR Mode=<font color='"+color+"'>" + _hadrModeInt  + ":<b>" + _hadrModeStr  + "</b></font>, State=<font color='"+color+"'>" + _hadrStateInt + ":<b>" + _hadrStateStr + "</b></font>";
+			hadrInfo  = ", HADR Mode=<font color='" + color + "'>" + _hadrModeInt  + ":<b>" + _hadrModeStr  + "</b></font>, State=<font color='" + color + "'>" + _hadrStateInt + ":<b>" + _hadrStateStr + "</b></font>";
 		}
 
 		// status: Normal state
@@ -361,7 +361,7 @@ implements DbxConnectionStateInfo
 		if (_lockCount > 0)
 			lockText = "<hr>Locks held by this SPID:" + getLockListTableAsHtmlTable() + "<hr>";
 
-		String lockCountStr = _lockCount +"";
+		String lockCountStr = _lockCount + "";
 		if (_lockCount == -999)
 			lockCountStr = "<font color='red'> To see lock count/table you need permission 'VIEW SERVER STATE'</font>";
 
@@ -490,7 +490,7 @@ implements DbxConnectionStateInfo
 				return TSQL_TRANSTATE_NAMES[state];
 
 			default:
-				return "TSQL_UNKNOWN_STATE("+state+")";
+				return "TSQL_UNKNOWN_STATE(" + state + ")";
 		}
 	}
 	protected String tsqlTranStateToDescription(int state)
@@ -513,7 +513,7 @@ implements DbxConnectionStateInfo
 				return TSQL_TRANSTATE_DESCRIPTIONS[state];
 
 			default:
-				return "TSQL_UNKNOWN_STATE("+state+")";
+				return "TSQL_UNKNOWN_STATE(" + state + ")";
 		}
 	}
 	
@@ -687,7 +687,7 @@ implements DbxConnectionStateInfo
 		case 1546: return "Update_row-demand-request";
 		case 1547: return "Sh_nextkey-demand-request";
 		}
-		return "unknown("+type+")";
+		return "unknown(" + type + ")";
 	}
 
 }

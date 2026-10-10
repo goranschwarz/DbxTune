@@ -519,7 +519,7 @@ implements Runnable, ConnectionProvider
 		int qsize = _cmdQueue.size();
 		if (qsize > _warnQueueSizeThresh)
 		{
-			_logger.warn("The Command queue has "+qsize+" entries. The CommandExecutor might not keep in pace.");
+			_logger.warn("The Command queue has " + qsize + " entries. The CommandExecutor might not keep in pace.");
 		}
 
 		_cmdQueue.add(qcmd);
@@ -536,7 +536,7 @@ implements Runnable, ConnectionProvider
 	{
 		if (_readThread != null)
 		{
-			_logger.info("The thread '"+_readThread.getName()+"' is already running. Skipping the start.");
+			_logger.info("The thread '" + _readThread.getName() + "' is already running. Skipping the start.");
 			return;
 		}
 
@@ -555,7 +555,7 @@ implements Runnable, ConnectionProvider
 	public void run()
 	{
 		String threadName = _readThread.getName();
-		_logger.info("Starting a thread for the module '"+threadName+"'.");
+		_logger.info("Starting a thread for the module '" + threadName + "'.");
 
 		_running = true;
 
@@ -565,7 +565,7 @@ implements Runnable, ConnectionProvider
 		while(_running)
 		{
 			if (_logger.isDebugEnabled())
-				_logger.debug("Thread '"+threadName+"', waiting on queue...");
+				_logger.debug("Thread '" + threadName + "', waiting on queue...");
 
 			try 
 			{
@@ -583,7 +583,7 @@ implements Runnable, ConnectionProvider
 						if (_numOfSamplesNow > _numOfSamplesOnLastRefresh)
 						{
 							if (_logger.isDebugEnabled())
-								_logger.debug("New samples is available: '"+(_numOfSamplesNow-_numOfSamplesOnLastRefresh)+"'. _numOfSamplesNow='"+_numOfSamplesNow+"', _numOfSamplesOnLastRefresh='"+_numOfSamplesOnLastRefresh+"'.");
+								_logger.debug("New samples is available: '" + (_numOfSamplesNow-_numOfSamplesOnLastRefresh) + "'. _numOfSamplesNow='" + _numOfSamplesNow + "', _numOfSamplesOnLastRefresh='" + _numOfSamplesOnLastRefresh + "'.");
 							setWatermark( (_numOfSamplesNow-_numOfSamplesOnLastRefresh) + " New samples is available.");
 						}
 					}
@@ -597,18 +597,18 @@ implements Runnable, ConnectionProvider
 				// addCommand(new QueueCommand("loadSessionCms", ts, null, null));
 
 				// DO WORK
-				String cmdStr = qo._cmd + "(ts1="+qo._ts1+", ts2="+qo._ts2+", ts3="+qo._ts3+")";
+				String cmdStr = qo._cmd + "(ts1=" + qo._ts1 + ", ts2=" + qo._ts2 + ", ts3=" + qo._ts3 + ")";
 				if      (CMD_loadTimelineSlider     .equals(qo._cmd)) execLoadTimelineSlider     (qo._ts1, qo._ts2, qo._ts3);
 				else if (CMD_loadSessionGraphs      .equals(qo._cmd)) execLoadSessionGraphs      (qo._ts1, qo._ts2, qo._ts3, qo._int1);
 				else if (CMD_loadSessionCms         .equals(qo._cmd)) execLoadSessionCms         (qo._ts1);
 				else if (CMD_loadSessionCmIndicators.equals(qo._cmd)) execLoadSessionCmIndicators(qo._ts1);
 				else if (CMD_loadSummaryCm          .equals(qo._cmd)) execLoadSummaryCm          (qo._ts1);
 				else if (CMD_loadSessions           .equals(qo._cmd)) execLoadSessions();
-				else _logger.error("Unknown command '"+qo._cmd+"' was taken from the queue.");
+				else _logger.error("Unknown command '" + qo._cmd + "' was taken from the queue.");
 
 				long xStopTime = System.currentTimeMillis();
 				long consumeTimeMs = xStopTime-xStartTime;
-				_logger.debug("It took "+TimeUtils.msToTimeStr(consumeTimeMs)+" to execute: "+cmdStr);
+				_logger.debug("It took " + TimeUtils.msToTimeStr(consumeTimeMs) + " to execute: " + cmdStr);
 				
 			} 
 			catch (InterruptedException ex) 
@@ -617,14 +617,14 @@ implements Runnable, ConnectionProvider
 			}
 			catch (Throwable t)
 			{
-				_logger.error("The thread '"+threadName+"' ran into unexpected problems, but continues, Caught: "+t, t);
+				_logger.error("The thread '" + threadName + "' ran into unexpected problems, but continues, Caught: " + t, t);
 			}
 		}
 
-		_logger.info("Emptying the queue for module '"+threadName+"', which had "+_cmdQueue.size()+" entries.");
+		_logger.info("Emptying the queue for module '" + threadName + "', which had " + _cmdQueue.size() + " entries.");
 		_cmdQueue.clear();
 
-		_logger.info("Thread '"+threadName+"' was stopped.");
+		_logger.info("Thread '" + threadName + "' was stopped.");
 	}
 
 //	public void run() 
@@ -648,7 +648,7 @@ implements Runnable, ConnectionProvider
 	public void setExecMode(int execMode)
 	{
 		if (execMode != EXEC_MODE_BG && execMode != EXEC_MODE_DIRECT)
-			throw new IllegalArgumentException("Setting exec mode to a unknow value of '"+execMode+"'.");
+			throw new IllegalArgumentException("Setting exec mode to a unknow value of '" + execMode + "'.");
 		_execMode = execMode;
 	}
 
@@ -768,15 +768,15 @@ implements Runnable, ConnectionProvider
 		String monTables       = PersistWriterBase.getTableName(_conn, null, PersistWriterBase.SESSION_MON_TAB_DICT,     null, true);
 		String monTableColumns = PersistWriterBase.getTableName(_conn, null, PersistWriterBase.SESSION_MON_TAB_COL_DICT, null, true);
 
-		final String SQL_TABLES                = "select [TableID], [Columns], [Parameters], [Indicators], [Size], [TableName], [Description] from "+monTables;
-		final String SQL_COLUMNS               = "select [TableID], [ColumnID], [TypeID], [Precision], [Scale], [Length], [Indicators], [TableName], [ColumnName], [TypeName], [Description] from "+monTableColumns;
+		final String SQL_TABLES                = "select [TableID], [Columns], [Parameters], [Indicators], [Size], [TableName], [Description] from " + monTables;
+		final String SQL_COLUMNS               = "select [TableID], [ColumnID], [TypeID], [Precision], [Scale], [Length], [Indicators], [TableName], [ColumnName], [TypeName], [Description] from " + monTableColumns;
 
 		String sessionStartTime = sampleId.toString();
 		String sql = null;
 		try
 		{
 			Statement stmt = _conn.createStatement();
-			sql = SQL_TABLES + " where [SessionStartTime] = '"+sessionStartTime+"'";
+			sql = SQL_TABLES + " where [SessionStartTime] = '" + sessionStartTime + "'";
 
 			// replace all '[' and ']' into DBMS Vendor Specific Chars
 			sql = _conn.quotifySqlString(sql);
@@ -810,7 +810,7 @@ implements Runnable, ConnectionProvider
 				_logger.warn("Tooltip on column headers wasn't available in the offline database. This simply means that tooltip wont be showed in various places.");
 				return;
 			}
-			_logger.error("MonTablesDictionary:initialize:sql='"+sql+"'", ex);
+			_logger.error("MonTablesDictionary:initialize:sql='" + sql + "'", ex);
 			return;
 		}
 
@@ -827,7 +827,7 @@ implements Runnable, ConnectionProvider
 			try
 			{
 				Statement stmt = _conn.createStatement();
-				sql = SQL_COLUMNS + " where [SessionStartTime] = '"+sessionStartTime+"' and [TableName] = '"+monTableEntry._tableName+"'";
+				sql = SQL_COLUMNS + " where [SessionStartTime] = '" + sessionStartTime + "' and [TableName] = '" + monTableEntry._tableName + "'";
 
 				// replace all '[' and ']' into DBMS Vendor Specific Chars
 				sql = _conn.quotifySqlString(sql);
@@ -861,7 +861,7 @@ implements Runnable, ConnectionProvider
 					_logger.warn("Tooltip on column headers wasn't available in the offline database. This simply means that tooltip wont be showed in various places.");
 					return;
 				}
-				_logger.error("MonTablesDictionary:initialize:sql='"+sql+"'", ex);
+				_logger.error("MonTablesDictionary:initialize:sql='" + sql + "'", ex);
 				return;
 			}
 		}
@@ -879,7 +879,7 @@ implements Runnable, ConnectionProvider
 			"select [ParamName], [ParamValue] \n" +
 			"from [MonSessionParams] \n" +
 			"where 1=1 \n" +
-			"  and [SessionStartTime] = '"+sampleId+"' \n" +
+			"  and [SessionStartTime] = '" + sampleId + "' \n" +
 			"  and [Type]            in ('system.config', 'user.config', 'temp.config') \n" +
 			"  and [ParamName]     like 'udc.%' \n";
 
@@ -907,7 +907,7 @@ implements Runnable, ConnectionProvider
 		}
 		catch (SQLException e)
 		{
-			_logger.error("Problems getting UDC parameters for sample '"+sampleId+"'.", e);
+			_logger.error("Problems getting UDC parameters for sample '" + sampleId + "'.", e);
 			return null;
 		}
 	}
@@ -939,8 +939,8 @@ implements Runnable, ConnectionProvider
 			"from [MonSessionSampleDetailes] \n" +
 //			"where [SessionStartTime]  = '"+sampleId+"' \n" +
 			"where 1=1 \n" +
-			"  and [SessionSampleTime] < '"+currentSampleTime+"' \n" +
-			"  and [CmName]            = '"+cmName+"' \n" +
+			"  and [SessionSampleTime] < '" + currentSampleTime + "' \n" +
+			"  and [CmName]            = '" + cmName + "' \n" +
 			"  and ([absRows] > 0 or [diffRows] > 0 or [rateRows] > 0) \n" +
 			"order by [SessionSampleTime] desc";
 //System.out.println("getPrevSample.sql=\n"+sql);
@@ -973,7 +973,7 @@ implements Runnable, ConnectionProvider
 		}
 		catch (SQLException e)
 		{
-			_logger.error("Problems getting previous sample for '"+cmName+"'.", e);
+			_logger.error("Problems getting previous sample for '" + cmName + "'.", e);
 			return null;
 		}
 	}
@@ -1018,8 +1018,8 @@ implements Runnable, ConnectionProvider
 			"from [MonSessionSampleDetailes] \n" +
 //			"where [SessionStartTime]  = '"+sampleId+"' \n" +
 			"where 1=1 \n" +
-			"  and [SessionSampleTime] > '"+currentSampleTime+"' \n" +
-			"  and [CmName]            = '"+cmName+"' \n" +
+			"  and [SessionSampleTime] > '" + currentSampleTime + "' \n" +
+			"  and [CmName]            = '" + cmName + "' \n" +
 			"  and ([absRows] > 0 or [diffRows] > 0 or [rateRows] > 0) \n" +
 			"order by [SessionSampleTime] asc";
 
@@ -1053,7 +1053,7 @@ implements Runnable, ConnectionProvider
 		}
 		catch (SQLException e)
 		{
-			_logger.error("Problems getting next sample for '"+cmName+"'.", e);
+			_logger.error("Problems getting next sample for '" + cmName + "'.", e);
 			return null;
 		}
 	}
@@ -1107,7 +1107,7 @@ implements Runnable, ConnectionProvider
 			if (msg != null && msg.toLowerCase().indexOf("timeout") >= 0)
 			{
 				_logger.info ("Got 'timeout' when reading the MonSessions table, retrying this later.");
-				_logger.debug("Got 'timeout' when reading the MonSessions table, retrying this later. Message: "+msg);
+				_logger.debug("Got 'timeout' when reading the MonSessions table, retrying this later. Message: " + msg);
 				return -1;
 			}
 
@@ -1159,7 +1159,7 @@ implements Runnable, ConnectionProvider
 		@Override
 		public String toString()
 		{
-			return "OfflineCm(name='"+name+"', hasAbs="+hasAbs+", hasDiff="+hasDiff+", hasRate="+hasRate+", graphList="+graphList+")";
+			return "OfflineCm(name='" + name + "', hasAbs=" + hasAbs + ", hasDiff=" + hasDiff + ", hasRate=" + hasRate + ", graphList=" + graphList + ")";
 		}
 	}
 	private void addOfflineCm(String name, String type)
@@ -1215,7 +1215,7 @@ implements Runnable, ConnectionProvider
 				String name = tableName.substring(0, sepPos);
 				String type = tableName.substring(sepPos+1);
 				if (_logger.isDebugEnabled())
-					_logger.debug("getStoredCms()-rs-row- TYPE='"+tableType+"', NAME='"+tableName+"'. name='"+name+"', type='"+type+"'");
+					_logger.debug("getStoredCms()-rs-row- TYPE='" + tableType + "', NAME='" + tableName + "'. name='" + name + "', type='" + type + "'");
 //System.out.println("getStoredCms()-rs-row- TYPE='"+tableType+"', NAME='"+tableName+"'. name='"+name+"', type='"+type+"'");
 				
 				name = getNameTranslateDbToCm(name);
@@ -1231,7 +1231,7 @@ implements Runnable, ConnectionProvider
 			sortOfflineCm();
 
 			if (_logger.isDebugEnabled())
-				_logger.debug("_offlineCmMap="+_offlineCmMap);
+				_logger.debug("_offlineCmMap=" + _offlineCmMap);
 		}
 		catch (SQLException e)
 		{
@@ -1262,7 +1262,7 @@ implements Runnable, ConnectionProvider
 			Component comp = tabPane.getComponentAtTitle(tabName);
 			String name = comp.getName();
 
-			_logger.debug("sortOfflineCm() Working on tab named '"+tabName+", component name '"+name+"'");
+			_logger.debug("sortOfflineCm() Working on tab named '" + tabName + ", component name '" + name + "'");
 
 			// Get the OfflineCm for this TAB and store it in the new Map
 			OfflineCm ocm = originOfflineCmMap.get(name);
@@ -1312,10 +1312,10 @@ implements Runnable, ConnectionProvider
 								// Check for errors, all entries should have been removed from the "work" map
 								if (originGraphList.size() > 0)
 								{
-									_logger.warn("The sorting of 'ocm.graphList' for ocm '"+name+"' failed. Continuing with old/unsorted List");
-									_logger.debug("sortOfflineCm() originGraphList("+originGraphList.size()+"): "+StringUtil.toCommaStr(originGraphList));
-									_logger.debug("sortOfflineCm() sortedGraphList("+sortedGraphList.size()+"): "+StringUtil.toCommaStr(sortedGraphList));
-									_logger.debug("sortOfflineCm() ocm.graphList  ("+ocm.graphList.size()+")  : "+StringUtil.toCommaStr(ocm.graphList));
+									_logger.warn("The sorting of 'ocm.graphList' for ocm '" + name + "' failed. Continuing with old/unsorted List");
+									_logger.debug("sortOfflineCm() originGraphList(" + originGraphList.size() + "): " + StringUtil.toCommaStr(originGraphList));
+									_logger.debug("sortOfflineCm() sortedGraphList(" + sortedGraphList.size() + "): " + StringUtil.toCommaStr(sortedGraphList));
+									_logger.debug("sortOfflineCm() ocm.graphList  (" + ocm.graphList.size() + ")  : " + StringUtil.toCommaStr(ocm.graphList));
 								}
 								else
 								{
@@ -1344,10 +1344,10 @@ implements Runnable, ConnectionProvider
 		if (originOfflineCmMap.size() > 0)
 		{
 			_logger.warn("The sorting of '_offlineCmMap' failed. Continuing with old/unsorted Map");
-			_logger.debug("sortOfflineCm() originOfflineCmMap("+originOfflineCmMap.size()+"): "+StringUtil.toCommaStr(originOfflineCmMap));
-			_logger.debug("sortOfflineCm() sortedOfflineCmMap("+sortedOfflineCmMap.size()+"): "+StringUtil.toCommaStr(sortedOfflineCmMap));
-			_logger.debug("sortOfflineCm() misses            ("+misses.size()            +"): "+StringUtil.toCommaStr(misses));
-			_logger.debug("sortOfflineCm() _offlineCmMap     ("+_offlineCmMap.size()     +"): "+StringUtil.toCommaStr(_offlineCmMap));
+			_logger.debug("sortOfflineCm() originOfflineCmMap(" + originOfflineCmMap.size() + "): " + StringUtil.toCommaStr(originOfflineCmMap));
+			_logger.debug("sortOfflineCm() sortedOfflineCmMap(" + sortedOfflineCmMap.size() + "): " + StringUtil.toCommaStr(sortedOfflineCmMap));
+			_logger.debug("sortOfflineCm() misses            (" + misses.size()            + "): " + StringUtil.toCommaStr(misses));
+			_logger.debug("sortOfflineCm() _offlineCmMap     (" + _offlineCmMap.size()     + "): " + StringUtil.toCommaStr(_offlineCmMap));
 		}
 		else
 		{
@@ -1381,7 +1381,7 @@ implements Runnable, ConnectionProvider
 			translatedName = BackwardNameCompatibility.getOldToNew(name, name);
 
 		if (_logger.isDebugEnabled())
-			_logger.debug(" --> Translating name db->CM: '"+name+"' to '"+translatedName+"'.");
+			_logger.debug(" --> Translating name db->CM: '" + name + "' to '" + translatedName + "'.");
 //System.out.println(" --> Translating name db->CM: '"+name+"' to '"+translatedName+"'.");
 
 		return translatedName;
@@ -1411,7 +1411,7 @@ implements Runnable, ConnectionProvider
 			translatedName = BackwardNameCompatibility.getNewToOld(name, name);
 
 		if (_logger.isDebugEnabled())
-			_logger.debug(" <-- Translating name CM->db: '"+name+"' to '"+translatedName+"'.");
+			_logger.debug(" <-- Translating name CM->db: '" + name + "' to '" + translatedName + "'.");
 //System.out.println(" <-- Translating name CM->db: '"+name+"' to '"+translatedName+"'.");
 
 		return translatedName;
@@ -1444,7 +1444,7 @@ implements Runnable, ConnectionProvider
 //		if ( ! (tg.isGraphEnabled() || tg.isVisible()) )
 		if ( ! tg.isGraphEnabled() )
 		{
-			_logger.info("Skipping load of graph (not enabled/visible in GUI) for CM '"+cmName+"', graphName '"+graphName+"'.");
+			_logger.info("Skipping load of graph (not enabled/visible in GUI) for CM '" + cmName + "', graphName '" + graphName + "'.");
 			return 0;
 		}
 
@@ -1583,7 +1583,7 @@ implements Runnable, ConnectionProvider
 						labels, null, startTime, endTime);
 			}
 //System.out.println("Loaded "+row+" rows into TrendGraph named '"+graphName+"', for the CM '"+cmName+"', which took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.");
-			_logger.debug("Loaded "+row+" rows into TrendGraph named '"+graphName+"', for the CM '"+cmName+"', which took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.");
+			_logger.debug("Loaded " + row + " rows into TrendGraph named '" + graphName + "', for the CM '" + cmName + "', which took '" + TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime) + "'.");
 			setStatusText("");
 			
 			tg.setMinimumChartArea();
@@ -1592,7 +1592,7 @@ implements Runnable, ConnectionProvider
 		}
 		catch (SQLException e)
 		{
-			_logger.error("Problems loading graph for cm='"+cmName+"', graph='"+graphName+"'.", e);
+			_logger.error("Problems loading graph for cm='" + cmName + "', graph='" + graphName + "'.", e);
 		}
 		finally 
 		{
@@ -1718,7 +1718,7 @@ implements Runnable, ConnectionProvider
 						labels, null, startTime, endTime);
 			}
 //System.out.println("Loaded "+row+" rows into TrendGraph named '"+graphName+"', for the CM '"+cmName+"', which took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.");
-			_logger.debug("Loaded "+row+" rows into TrendGraph named '"+graphName+"', for the CM '"+cmName+"', which took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.");
+			_logger.debug("Loaded " + row + " rows into TrendGraph named '" + graphName + "', for the CM '" + cmName + "', which took '" + TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime) + "'.");
 			setStatusText("");
 			
 			tg.setMinimumChartArea();
@@ -1727,7 +1727,7 @@ implements Runnable, ConnectionProvider
 		}
 		catch (SQLException e)
 		{
-			_logger.error("Problems loading graph for cm='"+cmName+"', graph='"+graphName+"'.", e);
+			_logger.error("Problems loading graph for cm='" + cmName + "', graph='" + graphName + "'.", e);
 		}
 		finally 
 		{
@@ -1757,13 +1757,13 @@ implements Runnable, ConnectionProvider
 				CountersModel cm = CounterController.getInstance().getCmByName(cmName);
 				if (cm == null)
 				{
-					_logger.warn("Can't find any CM named '"+cmName+"'.");
+					_logger.warn("Can't find any CM named '" + cmName + "'.");
 					continue;
 				}
 				TrendGraph tg = cm.getTrendGraph(graphName);
 				if (tg == null)
 				{
-					_logger.warn("Can't find any TrendGraph named '"+graphName+"', for the CM '"+cmName+"'.");
+					_logger.warn("Can't find any TrendGraph named '" + graphName + "', for the CM '" + cmName + "'.");
 					continue;
 				}
 				tg.setVisible(toValue);
@@ -1812,9 +1812,9 @@ implements Runnable, ConnectionProvider
 					loadEveryXRow = loadSessionGraph(cmName, graphName, sampleId, startTime, endTime, expectedRows);
 				}
 			}
-			String str = "Loading all TrendGraphs took '"+TimeUtils.msToTimeStr("%SS.%ms", System.currentTimeMillis()-xStartTime)+"' seconds.";
+			String str = "Loading all TrendGraphs took '" + TimeUtils.msToTimeStr("%SS.%ms", System.currentTimeMillis()-xStartTime) + "' seconds.";
 			if (loadEveryXRow > 1)
-				str += " Loaded every "+(loadEveryXRow-1)+" row, graphs was to big.";
+				str += " Loaded every " + (loadEveryXRow-1) + " row, graphs was to big.";
 			setStatusText(str);
 			setWatermark();
 		}
@@ -1838,7 +1838,7 @@ implements Runnable, ConnectionProvider
 		mf.resetOfflineSlider();
 		
 		String sql = "select [SessionSampleTime] " +
-		             "from " + PersistWriterBase.getTableName(_conn, null, PersistWriterBase.SESSION_SAMPLES, null, true) + " "+
+		             "from " + PersistWriterBase.getTableName(_conn, null, PersistWriterBase.SESSION_SAMPLES, null, true) + " " +
 		             "where [SessionStartTime] = ? " +
 		             "  AND [SessionSampleTime] >= ? " +
 		             "  AND [SessionSampleTime] <= ? " +
@@ -1886,7 +1886,7 @@ implements Runnable, ConnectionProvider
 //		System.out.println("loadSessionCms(sampleId='"+sampleId+"')");
 
 		long fetchStartTime = System.currentTimeMillis();
-		setStatusText("Loading all counters for time '"+sampleId+"'.");
+		setStatusText("Loading all counters for time '" + sampleId + "'.");
 
 		// Populate _offlineCmMap
 		getStoredCms(false);
@@ -1900,7 +1900,7 @@ implements Runnable, ConnectionProvider
 			loadSessionCm(ocm, sampleId);
 		}
 
-		String str = "Loading took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.";
+		String str = "Loading took '" + TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime) + "'.";
 		_logger.debug(str);
 		setStatusText(str);
 		setWatermark();
@@ -1915,7 +1915,7 @@ implements Runnable, ConnectionProvider
 		CountersModel cm = CounterController.getInstance().getCmByName(cmName);
 		if (cm == null)
 		{
-			_logger.warn("Can't find any CM named '"+cmName+"'.");
+			_logger.warn("Can't find any CM named '" + cmName + "'.");
 			return;
 		}
 		
@@ -1949,10 +1949,10 @@ implements Runnable, ConnectionProvider
 		if      (type == CountersModel.DATA_ABS)  typeStr = "abs";
 		else if (type == CountersModel.DATA_DIFF) typeStr = "diff";
 		else if (type == CountersModel.DATA_RATE) typeStr = "rate";
-		else throw new IllegalArgumentException("Unknown type of "+type+".");
+		else throw new IllegalArgumentException("Unknown type of " + type + ".");
 
 		long fetchStartTime = System.currentTimeMillis();
-		setStatusText("Loading '"+typeStr+"' counters for '"+cmName+"'.");
+		setStatusText("Loading '" + typeStr + "' counters for '" + cmName + "'.");
 
 		//-----------------------------------------------------------------------------
 		// TYPICAL look of a CounterModel table
@@ -1977,11 +1977,11 @@ implements Runnable, ConnectionProvider
 
 		try
 		{
-			sqlColList = DictCompression.getRewriteForSelectColumnList(_conn, null, cmName+"_"+typeStr, cmName, null);
+			sqlColList = DictCompression.getRewriteForSelectColumnList(_conn, null, cmName + "_" + typeStr, cmName, null);
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("Problems getting column names from cm='"+cmName+"', type='"+typeStr+"'. Lets try with ALL Columns instead. Dictionary Compression Columns will NOT be resolved", ex);
+			_logger.error("Problems getting column names from cm='" + cmName + "', type='" + typeStr + "'. Lets try with ALL Columns instead. Dictionary Compression Columns will NOT be resolved", ex);
 
 			sqlColList = "*";
 		}
@@ -1991,7 +1991,7 @@ implements Runnable, ConnectionProvider
 		
 		
 //		String sql  = "select " + sqlColList + " from ["+cmName+"_"+typeStr+"] where [SessionSampleTime] = ? ";
-		String sql2 = "select " + sqlColList + " from ["+cmName+"_"+typeStr+"] where [SessionSampleTime] = '"+sampleTs+"' ";
+		String sql2 = "select " + sqlColList + " from [" + cmName + "_" + typeStr + "] where [SessionSampleTime] = '" + sampleTs + "' ";
 		
 		if (cm instanceof CountersModelAppend)
 		{
@@ -2001,10 +2001,10 @@ implements Runnable, ConnectionProvider
 //				Timestamp sessionStartTime = summaryCm.getSampleTimeHead();
 //				Timestamp sessionStartTime = _lastKnowSessionStartTime;
 
-				sql2 = "select " + sqlColList + " from ["+cmName+"_"+typeStr+"] " +
+				sql2 = "select " + sqlColList + " from [" + cmName + "_" + typeStr + "] " +
 //				       "where [SessionStartTime] = '"+sessionStartTime+"' " +
-				       "where [SessionStartTime] = (select min([SessionStartTime]) from ["+cmName+"_"+typeStr+"] where [SessionSampleTime] = '"+sampleTs+"') " +
-				       "  and [SessionSampleTime] <= '"+sampleTs+"' ";
+				       "where [SessionStartTime] = (select min([SessionStartTime]) from [" + cmName + "_" + typeStr + "] where [SessionSampleTime] = '" + sampleTs + "') " +
+				       "  and [SessionSampleTime] <= '" + sampleTs + "' ";
 //System.out.println("offline:append: sql2=|"+sql2+"|.");
 			}
 		}
@@ -2020,7 +2020,7 @@ implements Runnable, ConnectionProvider
 			Statement pstmnt = _conn.createStatement();
 			
 
-			_logger.debug("loadSessionCm(cmName='"+cmName+"', type='"+typeStr+"', sampleTs='"+sampleTs+"'): "+pstmnt);
+			_logger.debug("loadSessionCm(cmName='" + cmName + "', type='" + typeStr + "', sampleTs='" + sampleTs + "'): " + pstmnt);
 //System.out.println("PersistReader.loadSessionCm(cmName='"+cmName+"', type='"+typeStr+"', sampleTs='"+sampleTs+"'): sql2=" + sql2);
 
 //			ResultSet rs = pstmnt.executeQuery();
@@ -2126,16 +2126,16 @@ implements Runnable, ConnectionProvider
 			if (row == 0)
 			{
 				if (cm.getRowCount() > 0)
-					_logger.info("loadSessionCm(cmName='"+cmName+"', type='"+typeStr+"', sampleTs='"+sampleTs+"'): NO ROW WAS FOUND IN THE STORAGE, but cm.getRowCount()="+cm.getRowCount());
+					_logger.info("loadSessionCm(cmName='" + cmName + "', type='" + typeStr + "', sampleTs='" + sampleTs + "'): NO ROW WAS FOUND IN THE STORAGE, but cm.getRowCount()=" + cm.getRowCount());
 			}
 
 //System.out.println(Thread.currentThread().getName()+": Loaded "+row+" rows into for the CM '"+cmName+"', type='"+typeStr+"', which took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"' for sampleTs '"+sampleTs+"'.");
-			_logger.debug("Loaded "+row+" rows into for the CM '"+cmName+"', type='"+typeStr+"', which took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"' for sampleTs '"+sampleTs+"'.");
+			_logger.debug("Loaded " + row + " rows into for the CM '" + cmName + "', type='" + typeStr + "', which took '" + TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime) + "' for sampleTs '" + sampleTs + "'.");
 			setStatusText("");
 		}
 		catch (SQLException e)
 		{
-			_logger.error("Problems loading cm='"+cmName+"', type='"+typeStr+"'.", e);
+			_logger.error("Problems loading cm='" + cmName + "', type='" + typeStr + "'.", e);
 		}
 	}
 	private static final String  BINARY_PREFIX  = Configuration.getCombinedConfiguration().getProperty(       ResultSetTableModel.PROPKEY_BINERY_PREFIX,  ResultSetTableModel.DEFAULT_BINERY_PREFIX);
@@ -2153,7 +2153,7 @@ implements Runnable, ConnectionProvider
 		CountersModel cm = CounterController.getInstance().getCmByName(cmName);
 		if (cm == null)
 		{
-			_logger.warn("Can't find any CM named '"+cmName+"'.");
+			_logger.warn("Can't find any CM named '" + cmName + "'.");
 			return;
 		}
 		if (true) loadSessionCm(cm, CountersModel.DATA_ABS,  sampleTs);
@@ -2255,7 +2255,7 @@ implements Runnable, ConnectionProvider
 //		System.out.println("loadSessionCmIndicators(sampleId='"+sampleTs+"')");
 
 		long fetchStartTime = System.currentTimeMillis();
-		setStatusText("Loading all counter indicators for time '"+sampleTs+"'.");
+		setStatusText("Loading all counter indicators for time '" + sampleTs + "'.");
 
 		// Reset the Map...
 		_currentIndicatorMap.clear();
@@ -2287,7 +2287,7 @@ implements Runnable, ConnectionProvider
 			pstmnt.setString(1, sampleTs.toString());
 			
 
-			_logger.debug("loadSessionCmIndicators(sampleTs='"+sampleTs+"'): "+pstmnt);
+			_logger.debug("loadSessionCmIndicators(sampleTs='" + sampleTs + "'): " + pstmnt);
 
 			ResultSet rs = pstmnt.executeQuery();
 			ResultSetMetaData rsmd = rs.getMetaData();
@@ -2342,15 +2342,15 @@ implements Runnable, ConnectionProvider
 			pstmnt.close();
 
 //System.out.println("Loaded "+row+" indicators for ts '"+sampleTs+"' , which took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.");
-			_logger.debug("Loaded "+row+" indicators for ts '"+sampleTs+"' , which took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.");
+			_logger.debug("Loaded " + row + " indicators for ts '" + sampleTs + "' , which took '" + TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime) + "'.");
 			setStatusText("");
 		}
 		catch (SQLException e)
 		{
-			_logger.error("Problems loading cm indicators for ts '"+sampleTs+"'.", e);
+			_logger.error("Problems loading cm indicators for ts '" + sampleTs + "'.", e);
 		}
 
-		String str = "Loading indicators took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.";
+		String str = "Loading indicators took '" + TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime) + "'.";
 		_logger.debug(str);
 		setStatusText(str);
 		setWatermark();
@@ -2369,14 +2369,14 @@ implements Runnable, ConnectionProvider
 		{
 			if (_logger.isDebugEnabled())
 			{
-				_logger.debug("No CmIndicator was found in 'map' for cm named '"+name+"' with ts '"+sampleTs+"'.");
+				_logger.debug("No CmIndicator was found in 'map' for cm named '" + name + "' with ts '" + sampleTs + "'.");
 				// Print the content for this sample
 				for (Map.Entry<String,CmIndicator> entry : _currentIndicatorMap.entrySet()) 
 				{
 					String      key = entry.getKey();
 					CmIndicator val = entry.getValue();
 
-					_logger.debug("IndicatorMap: key="+StringUtil.left(key, 20)+": CmIndicator="+val);
+					_logger.debug("IndicatorMap: key=" + StringUtil.left(key, 20) + ": CmIndicator=" + val);
 				}
 			}
 			return null;
@@ -2396,7 +2396,7 @@ implements Runnable, ConnectionProvider
 		CountersModel cm = CounterController.getInstance().getCmByName(cmName);
 		if (cm == null)
 		{
-			_logger.warn("Can't find any CM named '"+cmName+"'.");
+			_logger.warn("Can't find any CM named '" + cmName + "'.");
 			return null;
 		}
 
@@ -2465,7 +2465,7 @@ implements Runnable, ConnectionProvider
 			nl.setSessionList(sessionList);
 		}
 
-		String str = "Loading Sessions took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.";
+		String str = "Loading Sessions took '" + TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime) + "'.";
 		_logger.debug(str);
 		setStatusText(str);
 		setWatermark();
@@ -2504,7 +2504,7 @@ implements Runnable, ConnectionProvider
 			_logger.error("Problems inititialize...", e);
 		}
 
-		String str = "Loading Session List took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.";
+		String str = "Loading Session List took '" + TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime) + "'.";
 		_logger.debug(str);
 		setStatusText(str);
 		
@@ -2515,7 +2515,7 @@ implements Runnable, ConnectionProvider
 	{
 		setWatermark("Loading Sessions...");  // if the window wasn't visible, set the watermark now
 		long fetchStartTime = System.currentTimeMillis();
-		setStatusText("Loading Session Samples for sessionId '"+sessionId+"'.");
+		setStatusText("Loading Session Samples for sessionId '" + sessionId + "'.");
 
 		List<Timestamp> list = new LinkedList<Timestamp>();
 
@@ -2543,7 +2543,7 @@ implements Runnable, ConnectionProvider
 			_logger.error("Problems inititialize...", e);
 		}
 		
-		String str = "Loading Session Samples for sessionId '"+sessionId+"' took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.";
+		String str = "Loading Session Samples for sessionId '" + sessionId + "' took '" + TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime) + "'.";
 		_logger.debug(str);
 		setStatusText(str);
 		
@@ -2554,7 +2554,7 @@ implements Runnable, ConnectionProvider
 	{
 		setWatermark("Loading Sessions...");  // if the window wasn't visible, set the watermark now
 		long fetchStartTime = System.currentTimeMillis();
-		setStatusText("Loading Session Samples CM Summy for sessionId '"+sessionStartTime+"'.");
+		setStatusText("Loading Session Samples CM Summy for sessionId '" + sessionStartTime + "'.");
 
 		// create table MonSessionSampleSum
 		// (
@@ -2602,10 +2602,10 @@ implements Runnable, ConnectionProvider
 		}
 		catch (SQLException e)
 		{
-			_logger.error("Problems loading 'session sample cm summary' for ts '"+sessionStartTime+"'. sql="+sql, e);
+			_logger.error("Problems loading 'session sample cm summary' for ts '" + sessionStartTime + "'. sql=" + sql, e);
 		}
 		
-		String str = "Loading Session Samples for sessionStartTime '"+sessionStartTime+"' took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.";
+		String str = "Loading Session Samples for sessionStartTime '" + sessionStartTime + "' took '" + TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime) + "'.";
 		_logger.debug(str);
 		setStatusText(str);
 		
@@ -2616,7 +2616,7 @@ implements Runnable, ConnectionProvider
 	{
 		setWatermark("Loading Sessions...");  // if the window wasn't visible, set the watermark now
 		long fetchStartTime = System.currentTimeMillis();
-		setStatusText("Loading 'Session Samples CM Counter Info' for sessionId '"+inSessionStartTime+"'.");
+		setStatusText("Loading 'Session Samples CM Counter Info' for sessionId '" + inSessionStartTime + "'.");
 
 		// CREATE TABLE "MonSessionSampleDetailes"
 		// (
@@ -2693,10 +2693,10 @@ implements Runnable, ConnectionProvider
 		}
 		catch (SQLException e)
 		{
-			_logger.error("Problems loading 'session sample cm counter info' for ts '"+inSessionStartTime+"'. sql="+sql, e);
+			_logger.error("Problems loading 'session sample cm counter info' for ts '" + inSessionStartTime + "'. sql=" + sql, e);
 		}
 		
-		String str = "Loading 'Session Samples CM Counter Info' for sessionId '"+inSessionStartTime+"' took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.";
+		String str = "Loading 'Session Samples CM Counter Info' for sessionId '" + inSessionStartTime + "' took '" + TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime) + "'.";
 //System.out.println(str);
 		_logger.debug(str);
 		setStatusText(str);
@@ -2760,7 +2760,7 @@ implements Runnable, ConnectionProvider
 			}
 			catch(SQLException ex)
 			{
-				_logger.error("Problems getting MAX(SessionStartTime) from 'MonVersionInfo' for ts '"+sessionStartTime+"'. sql="+sql, ex);
+				_logger.error("Problems getting MAX(SessionStartTime) from 'MonVersionInfo' for ts '" + sessionStartTime + "'. sql=" + sql, ex);
 			}
 		}
 		
@@ -2799,7 +2799,7 @@ implements Runnable, ConnectionProvider
 
 			if ( ! foundRows )
 			{
-				_logger.warn("No row was found when loading 'MonVersionInfo' for ts '"+sessionStartTime+"'. sql="+sql);
+				_logger.warn("No row was found when loading 'MonVersionInfo' for ts '" + sessionStartTime + "'. sql=" + sql);
 				return null;
 			}
 				
@@ -2807,7 +2807,7 @@ implements Runnable, ConnectionProvider
 		}
 		catch (SQLException e)
 		{
-			_logger.error("Problems loading 'MonVersionInfo' for ts '"+sessionStartTime+"'. sql="+sql, e);
+			_logger.error("Problems loading 'MonVersionInfo' for ts '" + sessionStartTime + "'. sql=" + sql, e);
 			return null;
 		}
 	}
@@ -2897,7 +2897,7 @@ implements Runnable, ConnectionProvider
 		public String toString()
 		{
 //			return "MonVersionInfo(sessionStartTime='"+_sessionStartTime+"', productString='"+_productString+"', versionString='"+_versionString+"', buildString='"+_buildString+"', sourceDate='"+_sourceDate+"', sourceRev='"+_sourceRev+"', _dbProductName='"+_dbProductName+"')";
-			return "MonVersionInfo(sessionStartTime='"+_sessionStartTime+"', productString='"+_productString+"', versionString='"+_versionString+"', buildString='"+_buildString+"', sourceDate='"+_sourceDate+"', sourceRev='"+_sourceRev+"')";
+			return "MonVersionInfo(sessionStartTime='" + _sessionStartTime + "', productString='" + _productString + "', versionString='" + _versionString + "', buildString='" + _buildString + "', sourceDate='" + _sourceDate + "', sourceRev='" + _sourceRev + "')";
 		}
 	}
 
@@ -3201,7 +3201,7 @@ implements Runnable, ConnectionProvider
 	/** calls all listeners using the method <code>setWatermark(String text)</code> */
 	private void setWatermark(String text)
 	{
-		_logger.debug("PersistentReader.setWatermark(text='"+text+"')");
+		_logger.debug("PersistentReader.setWatermark(text='" + text + "')");
 		for (INotificationListener nl : _notificationListeners)
 		{
 			nl.setWatermark(text);
@@ -3216,7 +3216,7 @@ implements Runnable, ConnectionProvider
 	/** calls all listeners using the method <code>setStatusText(String status)</code> */
 	private void setStatusText(String status)
 	{
-		_logger.debug("setStatusText(status='"+status+"')");
+		_logger.debug("setStatusText(status='" + status + "')");
 		for (INotificationListener nl : _notificationListeners)
 		{
 			nl.setStatusText(status);
@@ -3320,10 +3320,10 @@ implements Runnable, ConnectionProvider
 		}
 		catch (SQLException e)
 		{
-			_logger.error("Problems loading 'DDL Detailes'. sql="+sql, e);
+			_logger.error("Problems loading 'DDL Detailes'. sql=" + sql, e);
 		}
 		
-		String str = "Loading 'DDL Detailes' took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.";
+		String str = "Loading 'DDL Detailes' took '" + TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime) + "'.";
 //System.out.println(str);
 		_logger.debug(str);
 		setStatusText(str);
@@ -3395,10 +3395,10 @@ implements Runnable, ConnectionProvider
 		}
 		catch (SQLException e)
 		{
-			_logger.error("Problems loading 'DDL TreeView'. sql="+sql, e);
+			_logger.error("Problems loading 'DDL TreeView'. sql=" + sql, e);
 		}
 		
-		String str = "Loading 'DDL TreeView' took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.";
+		String str = "Loading 'DDL TreeView' took '" + TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime) + "'.";
 //System.out.println(str);
 		_logger.debug(str);
 		setStatusText(str);

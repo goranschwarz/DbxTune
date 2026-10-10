@@ -76,14 +76,14 @@ public class RegExpTest
 //		return m.matches();
 //		m.find()
 
-		System.out.println("matches: TEST 1: "+p.matcher(test1).matches());
-		System.out.println("matches: TEST 2: "+p.matcher(test2).matches());
-		System.out.println("matches: TEST 3: "+p.matcher(test3).matches());
-		System.out.println("matches: TEST 4: "+p.matcher(test4).matches());
+		System.out.println("matches: TEST 1: " + p.matcher(test1).matches());
+		System.out.println("matches: TEST 2: " + p.matcher(test2).matches());
+		System.out.println("matches: TEST 3: " + p.matcher(test3).matches());
+		System.out.println("matches: TEST 4: " + p.matcher(test4).matches());
 
-		System.out.println("find: TEST 1: "+p.matcher(test1).find());
-		System.out.println("find: TEST 2: "+p.matcher(test2).find());
-		System.out.println("find: TEST 3: "+p.matcher(test3).find());
-		System.out.println("find: TEST 4: "+p.matcher(test4).find());
+		System.out.println("find: TEST 1: " + p.matcher(test1).find());
+		System.out.println("find: TEST 2: " + p.matcher(test2).find());
+		System.out.println("find: TEST 3: " + p.matcher(test3).find());
+		System.out.println("find: TEST 4: " + p.matcher(test4).find());
 	}
 }

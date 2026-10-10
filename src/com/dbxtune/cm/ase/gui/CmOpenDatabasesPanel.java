@@ -138,7 +138,7 @@ extends TabularCntrPanel
 		String colorStr = null;
 
 		// LIGHT_BLUE = in 'DUMP DATABASE'
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.dumpdb");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.dumpdb");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -150,7 +150,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, TrendGraphColors.VERY_LIGHT_BLUE), null));
 
 		// YELLOW = OLDEST OPEN TRANSACTION above 0
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.oldestOpenTranInSeconds");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.oldestOpenTranInSeconds");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -162,7 +162,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.YELLOW), null));
 
 		// PINK = TRANSACTION LOG at 90%
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.almostFullTranslog");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.almostFullTranslog");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -174,7 +174,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.PINK), null));
 
 		// RED = FULL TRANSACTION LOG
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.fullTranslog");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.fullTranslog");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -186,7 +186,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.RED), null));
 
 		// RED (or 1 cell) = LAST BACKUP FAILED
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.lastBackupFailed");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.lastBackupFailed");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -235,7 +235,7 @@ extends TabularCntrPanel
 //					Number DataSizeUsedPct  = (Number)dataTable.getValueAt(r, DataSizeUsedPct_pos);
 
 					if (_logger.isDebugEnabled())
-						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": DBName("+DBName_pos+")='"+DBName+"', LogSizeFreeInMb("+LogSizeFreeInMb_pos+")='"+LogSizeFreeInMb+"', LogSizeUsedPct("+LogSizeUsedPct_pos+")='"+LogSizeUsedPct+"'.");
+						_logger.debug("createDataset():GRAPH-DATA: " + getName() + ": DBName(" + DBName_pos + ")='" + DBName + "', LogSizeFreeInMb(" + LogSizeFreeInMb_pos + ")='" + LogSizeFreeInMb + "', LogSizeUsedPct(" + LogSizeUsedPct_pos + ")='" + LogSizeUsedPct + "'.");
 
 					if (dbList.keySet().contains(DBName))
 					{
@@ -257,7 +257,7 @@ extends TabularCntrPanel
 					double usedPct = 100.0 - freePct;
 					BigDecimal freeMb = new BigDecimal(Math.random() * 1000.0).setScale(1, RoundingMode.HALF_EVEN);
 
-					categoryDataset.addValue(usedPct, "FREE MB: "+freeMb, "dummy_db_"+i);
+					categoryDataset.addValue(usedPct, "FREE MB: " + freeMb, "dummy_db_" + i);
 				}
 			}
 		}
@@ -298,7 +298,7 @@ extends TabularCntrPanel
 //					if (_logger.isDebugEnabled())
 //						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": DBName("+DBName_pos+")='"+DBName+"', LogSizeFreeInMb("+LogSizeFreeInMb_pos+")='"+LogSizeFreeInMb+"', LogSizeUsedPct("+LogSizeUsedPct_pos+")='"+LogSizeUsedPct+"'.");
 					if (_logger.isDebugEnabled())
-					_logger.debug("createDataset():GRAPH-DATA: "+getName()+": DBName("+DBName_pos+")='"+DBName+"', DataSizeFreeInMb("+DataSizeFreeInMb_pos+")='"+DataSizeFreeInMb+"', DataSizeUsedPct("+DataSizeUsedPct_pos+")='"+DataSizeUsedPct+"'.");
+					_logger.debug("createDataset():GRAPH-DATA: " + getName() + ": DBName(" + DBName_pos + ")='" + DBName + "', DataSizeFreeInMb(" + DataSizeFreeInMb_pos + ")='" + DataSizeFreeInMb + "', DataSizeUsedPct(" + DataSizeUsedPct_pos + ")='" + DataSizeUsedPct + "'.");
 
 					if (dbList.keySet().contains(DBName))
 					{
@@ -319,7 +319,7 @@ extends TabularCntrPanel
 					double usedPct = 100.0 - freePct;
 					BigDecimal freeMb = new BigDecimal(Math.random() * 1000.0).setScale(1, RoundingMode.HALF_EVEN);
 
-					categoryDataset.addValue(usedPct, "FREE MB: "+freeMb, "dummy_db_"+i);
+					categoryDataset.addValue(usedPct, "FREE MB: " + freeMb, "dummy_db_" + i);
 				}
 			}
 		}
@@ -564,8 +564,8 @@ extends TabularCntrPanel
 		final JLabel            graphType_lbl    = new JLabel("Graph Orientation");
 		final JComboBox<String> graphType_cbx    = new JComboBox<String>(graphTypeArr);
 
-		enableLogGraph_chk .setToolTipText("Show the graph for '"+CHART_TITLE_LOG+"'.");
-		enableDataGraph_chk.setToolTipText("Show the graph for '"+CHART_TITLE_DATA+"'.");
+		enableLogGraph_chk .setToolTipText("Show the graph for '" + CHART_TITLE_LOG + "'.");
+		enableDataGraph_chk.setToolTipText("Show the graph for '" + CHART_TITLE_DATA + "'.");
 		String tooltip =
 			"<html>" +
 			"Reset the option: To automatically switch to this tab when any Database(s) Transaction log is <b>full</b>.<br>" +

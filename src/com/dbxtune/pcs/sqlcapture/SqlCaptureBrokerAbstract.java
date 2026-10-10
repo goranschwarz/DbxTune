@@ -48,7 +48,7 @@ public abstract class SqlCaptureBrokerAbstract implements ISqlCaptureBroker
 	public DbxConnection createConnection()
 	throws Exception
 	{
-		String appName = Version.getAppName()+"-SqlCaptureBroker";
+		String appName = Version.getAppName() + "-SqlCaptureBroker";
 		
 		boolean hasGui = DbxTune.hasGui();
 		if (hasGui)

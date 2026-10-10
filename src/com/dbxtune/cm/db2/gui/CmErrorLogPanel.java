@@ -68,7 +68,7 @@ extends TabularCntrPanelAppend
 
 		//---------------------------------------------------------------------------------------
 		// ORANGE = Error
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.error");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.error");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override
@@ -84,7 +84,7 @@ extends TabularCntrPanelAppend
 
 		//---------------------------------------------------------------------------------------
 		// RED = Critical
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.critical");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.critical");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override

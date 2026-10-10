@@ -52,7 +52,7 @@ extends TabularCntrPanel
 		String colorStr = null;
 
 		// ORANGE = GLOBAL Cursor
-		if (conf != null) colorStr = conf.getProperty(getName()+".color.global");
+		if (conf != null) colorStr = conf.getProperty(getName() + ".color.global");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
 			@Override

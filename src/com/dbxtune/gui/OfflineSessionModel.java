@@ -230,7 +230,7 @@ extends AbstractTreeTableModel
 		{
 			if (ts.getTime() >= sl._startTime.getTime()  && ts.getTime() <= sl._endTime.getTime())
 			{
-				_logger.debug("#### FOUND: "+sl);
+				_logger.debug("#### FOUND: " + sl);
 				getObjectPathForSampleTime(objectPath, sl, ts);
 			}
 		}
@@ -248,7 +248,7 @@ extends AbstractTreeTableModel
 				{
 					if (child.getChildCount() > 0)
 					{
-						_logger.debug(" >>> FOUND: "+child);
+						_logger.debug(" >>> FOUND: " + child);
 						objectPath.add(child);
 						getObjectPathForSampleTime(objectPath, child, ts);
 					}
@@ -259,7 +259,7 @@ extends AbstractTreeTableModel
 				Timestamp sampleTime = (Timestamp)o;
 				if (sampleTime.getTime() == ts.getTime())
 				{
-					_logger.debug("  == FOUND: "+ts);
+					_logger.debug("  == FOUND: " + ts);
 					objectPath.add(sampleTime);
 				}
 			}
@@ -471,7 +471,7 @@ private Map<Timestamp, SampleCmCounterInfo> _xxx_sampleCmCounterInfoMap = null;
 	@Override
 	public Object getChild(Object parent, int index) 
 	{
-		_logger.debug("getChildCount(parent='"+parent+"', index='"+index+"')");
+		_logger.debug("getChildCount(parent='" + parent + "', index='" + index + "')");
 		if (parent instanceof List)
 		{
 			return _sessions.get(index);
@@ -487,7 +487,7 @@ private Map<Timestamp, SampleCmCounterInfo> _xxx_sampleCmCounterInfoMap = null;
 	@Override
 	public int getChildCount(Object parent) 
 	{
-		_logger.debug("getChildCount(parent='"+parent+"')");
+		_logger.debug("getChildCount(parent='" + parent + "')");
 		if (parent instanceof SessionLevel)
 		{
 			return ((SessionLevel) parent).getChildCount();
@@ -522,7 +522,7 @@ private Map<Timestamp, SampleCmCounterInfo> _xxx_sampleCmCounterInfoMap = null;
 	@Override
 	public String getColumnName(int column) 
 	{
-		_logger.debug("getColumnName(column='"+column+"')");
+		_logger.debug("getColumnName(column='" + column + "')");
 		if      (column == 0) return "Sessions";
 		else if (column == 1) return "Start Time";
 		else if (column == 2) return "End Time";
@@ -540,7 +540,7 @@ private Map<Timestamp, SampleCmCounterInfo> _xxx_sampleCmCounterInfoMap = null;
 	@Override
 	public Class<?> getColumnClass(int column) 
 	{
-		_logger.debug("getColumnClass(column='"+column+"')");
+		_logger.debug("getColumnClass(column='" + column + "')");
 		switch (column) 
 		{
 		case 0:  return String.class;
@@ -555,7 +555,7 @@ private Map<Timestamp, SampleCmCounterInfo> _xxx_sampleCmCounterInfoMap = null;
 	@Override
 	public Object getValueAt(Object node, int column) 
 	{
-		_logger.debug("getValueAt(node='"+node+"', column='"+column+"')");
+		_logger.debug("getValueAt(node='" + node + "', column='" + column + "')");
 		if (node instanceof SessionLevel) 
 		{
 			SessionLevel rec = (SessionLevel) node;
@@ -634,7 +634,7 @@ private Map<Timestamp, SampleCmCounterInfo> _xxx_sampleCmCounterInfoMap = null;
 	@Override
 	public int getIndexOfChild(Object parent, Object child) 
 	{
-		_logger.debug("getIndexOfChild(parent='"+parent+"', child='"+child+"'.)");
+		_logger.debug("getIndexOfChild(parent='" + parent + "', child='" + child + "'.)");
 		if (parent instanceof SessionLevel && child instanceof SessionLevel) 
 		{
 		}
@@ -678,7 +678,7 @@ private Map<Timestamp, SampleCmCounterInfo> _xxx_sampleCmCounterInfoMap = null;
 	@Override
 	public boolean isLeaf(Object node) 
 	{
-		_logger.debug("isLeaf(node='"+node+"')");
+		_logger.debug("isLeaf(node='" + node + "')");
 
 		if (node instanceof SessionLevel) 
 			return false;
@@ -725,7 +725,7 @@ public void setSummaryCmCounterInfo(SampleCmCounterInfo summaryCmCounterInfo) {_
 			setEndTime(endTime);
 			setDisplayChildCount(numOfSamples);
 			setDuration();
-			_logger.debug("new SessionLevel(startTime='"+_startTime+"', endTime='"+_endTime+"', duration='"+_duration+"', numOfSamples='"+_numOfSamples+"')");
+			_logger.debug("new SessionLevel(startTime='" + _startTime + "', endTime='" + _endTime + "', duration='" + _duration + "', numOfSamples='" + _numOfSamples + "')");
 		}
 
 //		public SampleCmCounterInfo getCmCounterInfo(Timestamp ts)
@@ -924,13 +924,13 @@ public void setSummaryCmCounterInfo(SampleCmCounterInfo summaryCmCounterInfo) {_
 					return o;
 				}
 			}
-			return "Problems: index="+index+", _children.size()="+_children.size();
+			return "Problems: index=" + index + ", _children.size()=" + _children.size();
 		}
 
 		@Override
 		public String toString()
 		{
-			return("SessionLevel(startTime='"+_startTime+"', endTime='"+_endTime+"', periodStartTime='"+_periodStartTime+"', periodEndTime='"+_periodEndTime+"', numOfSamples='"+_numOfSamples+"'");
+			return("SessionLevel(startTime='" + _startTime + "', endTime='" + _endTime + "', periodStartTime='" + _periodStartTime + "', periodEndTime='" + _periodEndTime + "', numOfSamples='" + _numOfSamples + "'");
 		}
 
 		/**
@@ -961,7 +961,7 @@ public void setSummaryCmCounterInfo(SampleCmCounterInfo summaryCmCounterInfo) {_
 		@Override
 		public String toString()
 		{
-			return("DayLevel(startTime='"+_startTime+"', endTime='"+_endTime+"', periodStartTime='"+_periodStartTime+"', periodEndTime='"+_periodEndTime+"', numOfSamples='"+_numOfSamples+"'");
+			return("DayLevel(startTime='" + _startTime + "', endTime='" + _endTime + "', periodStartTime='" + _periodStartTime + "', periodEndTime='" + _periodEndTime + "', numOfSamples='" + _numOfSamples + "'");
 		}
 
 		@Override
@@ -1014,7 +1014,7 @@ public void setSummaryCmCounterInfo(SampleCmCounterInfo summaryCmCounterInfo) {_
 		@Override
 		public String toString()
 		{
-			return("HourLevel(startTime='"+_startTime+"', endTime='"+_endTime+"', periodStartTime='"+_periodStartTime+"', periodEndTime='"+_periodEndTime+"', numOfSamples='"+_numOfSamples+"'");
+			return("HourLevel(startTime='" + _startTime + "', endTime='" + _endTime + "', periodStartTime='" + _periodStartTime + "', periodEndTime='" + _periodEndTime + "', numOfSamples='" + _numOfSamples + "'");
 		}
 
 		@Override
@@ -1070,7 +1070,7 @@ public void setSummaryCmCounterInfo(SampleCmCounterInfo summaryCmCounterInfo) {_
 		@Override
 		public String toString()
 		{
-			return("MinuteLevel(startTime='"+_startTime+"', endTime='"+_endTime+"', periodStartTime='"+_periodStartTime+"', periodEndTime='"+_periodEndTime+"', numOfSamples='"+_numOfSamples+"'");
+			return("MinuteLevel(startTime='" + _startTime + "', endTime='" + _endTime + "', periodStartTime='" + _periodStartTime + "', periodEndTime='" + _periodEndTime + "', numOfSamples='" + _numOfSamples + "'");
 		}
 
 		@Override

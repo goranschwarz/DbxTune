@@ -188,7 +188,7 @@ extends TabularCntrPanel
 		// HIGHLIGHTER that changes color when a new SPID number is on next row...
 
 		if (conf != null) 
-			colorStr = conf.getProperty(getName()+".color.group");
+			colorStr = conf.getProperty(getName() + ".color.group");
 
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
@@ -297,7 +297,7 @@ extends TabularCntrPanel
 //					if (_logger.isDebugEnabled())
 //						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": ClassName("+ClassName_pos+")='"+ClassName+"', EventName("+EventName_pos+")='"+EventName+"', WaitTime("+WaitTime_pos+")='"+WaitTime+"', WaitCount("+WaitCount_pos+")='"+WaitCount+"', WaitTimePerCount("+WaitTimePerCount_pos+")='"+WaitTimePerCount+"'.");
 					if (_logger.isDebugEnabled())
-						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": WaitType["+WaitType_pos+"]='"+WaitType+"', WaitTime["+WaitTime_pos+"]='"+WaitTime+"', WaitCount["+WaitCount_pos+"]='"+WaitCount+"', WaitTimePerCount["+WaitTimePerCount_pos+"]='"+WaitTimePerCount+"'.");
+						_logger.debug("createDataset():GRAPH-DATA: " + getName() + ": WaitType[" + WaitType_pos + "]='" + WaitType + "', WaitTime[" + WaitTime_pos + "]='" + WaitTime + "', WaitCount[" + WaitCount_pos + "]='" + WaitCount + "', WaitTimePerCount[" + WaitTimePerCount_pos + "]='" + WaitTimePerCount + "'.");
 
 					if (generateEvent)
 					{

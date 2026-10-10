@@ -57,7 +57,7 @@ public class LoginServlet extends HttpServlet
 //		if ( Validate.checkUser(user, pass) )
 		if ( "admin999".equals(username) && "admin999".equals(password) )
 		{
-			_logger.info("Login SUCCEEDED: username='"+username+"'.");
+			_logger.info("Login SUCCEEDED: username='" + username + "'.");
 
 			RequestDispatcher rs = req.getRequestDispatcher("Welcome");
 			rs.forward(req, resp);
@@ -68,7 +68,7 @@ public class LoginServlet extends HttpServlet
 		}
 		else
 		{
-			_logger.info("Login failed: username='"+username+"', password='"+password+"'.");
+			_logger.info("Login failed: username='" + username + "', password='" + password + "'.");
 			
 			out.println("Username or Password incorrect");
 			RequestDispatcher rs = req.getRequestDispatcher("index.html");

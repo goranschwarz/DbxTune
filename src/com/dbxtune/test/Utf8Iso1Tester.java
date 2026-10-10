@@ -143,7 +143,7 @@ public class Utf8Iso1Tester
 				
 				System.out.println();
 				System.out.println("################################################");
-				System.out.println("HAS OOB CHARS errorCount=" + errorCount + ", at possition="+firstOobPos+", xmlEntry=["+(i+1)+"/"+eCount+"]");
+				System.out.println("HAS OOB CHARS errorCount=" + errorCount + ", at possition=" + firstOobPos + ", xmlEntry=[" + (i+1) + "/" + eCount + "]");
 				System.out.println("Error lines: ");
 				for (String str : errorLines)
 					System.out.println("   line: |" + str + "|");

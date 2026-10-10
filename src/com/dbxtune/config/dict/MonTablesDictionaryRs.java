@@ -87,7 +87,7 @@ extends MonTablesDictionary
 		{
 			_logger.error("MonTablesDictionaryRs:initializeVersionInfo, RepServerUtils.getServerName(conn)", ex);
 			if (hasGui)
-				SwingUtils.showErrorMessage("MonTablesDictionary - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when Getting servername:\n\n"+sql, ex);
+				SwingUtils.showErrorMessage("MonTablesDictionary - Initialize", "SQL Exception: " + ex.getMessage() + "\n\nThis was found when Getting servername:\n\n" + sql, ex);
 			return;
 		}
 
@@ -115,9 +115,9 @@ extends MonTablesDictionary
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("MonTablesDictionaryRs:initializeVersionInfo, sql="+sql, ex);
+			_logger.error("MonTablesDictionaryRs:initializeVersionInfo, sql=" + sql, ex);
 			if (hasGui)
-				SwingUtils.showErrorMessage("MonTablesDictionary - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
+				SwingUtils.showErrorMessage("MonTablesDictionary - Initialize", "SQL Exception: " + ex.getMessage() + "\n\nThis was found when executing SQL statement:\n\n" + sql, ex);
 			return;
 		}
 

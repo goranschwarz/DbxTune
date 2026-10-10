@@ -54,7 +54,7 @@ extends AlarmEvent
 				AlarmEvent.Category.CPU,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"High CPU Utilization in '" + cm.getServerName() + "'. CPU at " + totalCpuUsagePct + ". (threshold="+threshold+")",
+				"High CPU Utilization in '" + cm.getServerName() + "'. CPU at " + totalCpuUsagePct + ". (threshold=" + threshold + ")",
 				threshold);
 
 		// Set: Time To Live if postpone is enabled
@@ -82,7 +82,7 @@ extends AlarmEvent
 				AlarmEvent.Category.CPU,
 				severity, 
 				AlarmEvent.ServiceState.UP, 
-				"High CPU Utilization in '" + cm.getServerName() + "'. CPU at " + totalCpuUsagePct + ". (threshold="+threshold+")",
+				"High CPU Utilization in '" + cm.getServerName() + "'. CPU at " + totalCpuUsagePct + ". (threshold=" + threshold + ")",
 				threshold);
 
 		// Set: Time To Live if postpone is enabled
@@ -108,11 +108,11 @@ extends AlarmEvent
 				Version.getAppName(), // serviceType
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo
-				cpuType+"",           // extraInfo
+				cpuType + "",           // extraInfo
 				AlarmEvent.Category.CPU,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"High " + cpuType + " Utilization in '" + cm.getServerName() + "'. CPU at " + totalCpuUsagePct + " percent (total="+totalCpuUsagePct+"%, user="+userCpuUsagePct+"%, system="+systemCpuUsagePct+"%, idle="+idleCpuUsagePct+"%). (threshold="+threshold+")",
+				"High " + cpuType + " Utilization in '" + cm.getServerName() + "'. CPU at " + totalCpuUsagePct + " percent (total=" + totalCpuUsagePct + "%, user=" + userCpuUsagePct + "%, system=" + systemCpuUsagePct + "%, idle=" + idleCpuUsagePct + "%). (threshold=" + threshold + ")",
 				threshold);
 
 		// Set: Time To Live if postpone is enabled

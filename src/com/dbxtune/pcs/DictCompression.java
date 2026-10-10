@@ -66,7 +66,7 @@ public class DictCompression
 					return type;
 			}
 
-			throw new IllegalArgumentException("Unknown DigestType '" + text + "' found, possible values: "+StringUtil.toCommaStr(DigestType.values()));
+			throw new IllegalArgumentException("Unknown DigestType '" + text + "' found, possible values: " + StringUtil.toCommaStr(DigestType.values()));
 		}
 	};
 

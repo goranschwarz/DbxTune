@@ -91,14 +91,14 @@ implements MouseListener, FocusListener
 			if (text != null) 
 			{
 				if (_logger.isDebugEnabled())
-					_logger.debug("OpenTimer::::ACTION.toolTipRequested(): owner="+_owner);
+					_logger.debug("OpenTimer::::ACTION.toolTipRequested(): owner=" + _owner);
 
 				_focusableTip.toolTipRequested(_mouseEnterEvent, text);
 			}
 			else 
 			{
 				if (_logger.isDebugEnabled())
-					_logger.debug("OpenTimer::::ACTION.possiblyDisposeOfTipWindow(): owner="+_owner);
+					_logger.debug("OpenTimer::::ACTION.possiblyDisposeOfTipWindow(): owner=" + _owner);
 
 				// No tool tip text at new location - hide tip window if one is currently visible
 				_focusableTip.possiblyDisposeOfTipWindow();
@@ -142,7 +142,7 @@ implements MouseListener, FocusListener
 			for (int i=0; i<owner.getComponentCount(); i++)
 			{
 				if (_logger.isDebugEnabled())
-					_logger.debug("addMouseListener() to["+i+"]: "+owner.getComponent(i));
+					_logger.debug("addMouseListener() to[" + i + "]: " + owner.getComponent(i));
 
 				owner.getComponent(i).addMouseListener(this);
 				
@@ -152,7 +152,7 @@ implements MouseListener, FocusListener
 		else
 		{
 			if (_logger.isDebugEnabled())
-				_logger.debug("addMouseListener(): "+owner);
+				_logger.debug("addMouseListener(): " + owner);
 
 			owner.addMouseListener(this) ;
 		}
@@ -167,7 +167,7 @@ implements MouseListener, FocusListener
 	public void mouseEntered(final MouseEvent e) 
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("mouseEntered() e="+e);
+			_logger.debug("mouseEntered() e=" + e);
 
 //		e.consume();
 		_openTimer.start();
@@ -181,7 +181,7 @@ implements MouseListener, FocusListener
 	public void mouseExited(MouseEvent e) 
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("mouseExited() e="+e);
+			_logger.debug("mouseExited() e=" + e);
 
 		/* stop timer because mouse was moved away from the object */
 //		e.consume();
@@ -192,7 +192,7 @@ implements MouseListener, FocusListener
 	public void mousePressed(MouseEvent e) 
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("mousePressed() e="+e);
+			_logger.debug("mousePressed() e=" + e);
 
 		_openTimer.stop();
 		
@@ -204,7 +204,7 @@ implements MouseListener, FocusListener
 	public void mouseReleased(MouseEvent e) 
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("mouseReleased() e="+e);
+			_logger.debug("mouseReleased() e=" + e);
 	}
 
 	/**
@@ -214,7 +214,7 @@ implements MouseListener, FocusListener
 	public void focusLost(FocusEvent e) 
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("focusLost() e="+e);
+			_logger.debug("focusLost() e=" + e);
 
 		_openTimer.stop();
 	}
@@ -223,7 +223,7 @@ implements MouseListener, FocusListener
 	public void focusGained(FocusEvent e) 
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("focusGained() e="+e);
+			_logger.debug("focusGained() e=" + e);
 	}
 
 	

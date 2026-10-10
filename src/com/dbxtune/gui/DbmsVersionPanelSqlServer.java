@@ -199,7 +199,7 @@ extends DbmsVersionPanelAbstract
 
 		long version = Ver.sqlServerVersionStringToNumber(msVersionString);
 
-		_logger.debug("MS-parseVersionStringToNum(versionStr='"+versionStr+"'): msVersionString='"+msVersionString+"', <<<<<< returns: "+version);
+		_logger.debug("MS-parseVersionStringToNum(versionStr='" + versionStr + "'): msVersionString='" + msVersionString + "', <<<<<< returns: " + version);
 		return version;
 	}
 	

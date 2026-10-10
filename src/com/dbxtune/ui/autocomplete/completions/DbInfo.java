@@ -43,7 +43,7 @@ implements Serializable
 	@Override
 	public String toString()
 	{
-		return super.toString() + ": name='"+_dbName+"', size='"+_dbSize+"', id='"+_dbId+"', owner='"+_dbOwner+"', crdate='"+_dbCrDate+"', type='"+_dbType+"', remark='"+_dbRemark+"'";
+		return super.toString() + ": name='" + _dbName + "', size='" + _dbSize + "', id='" + _dbId + "', owner='" + _dbOwner + "', crdate='" + _dbCrDate + "', type='" + _dbType + "', remark='" + _dbRemark + "'";
 	}
 
 	public String toHtmlString()

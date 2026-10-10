@@ -442,7 +442,7 @@ public class DailySummartReportServlet extends HttpServlet
 			resp.setCharacterEncoding("UTF-8");
 
 			ServletOutputStream out = resp.getOutputStream();
-			printHelp(out, "No operation named '"+inputOp+"'.");
+			printHelp(out, "No operation named '" + inputOp + "'.");
 			return;
 			//throw new ServletException("No operation named '"+inputOp+"'.");
 		}

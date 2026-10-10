@@ -89,8 +89,8 @@ extends XmlPlanCache
 			// Warning on firt time or every X minute/hour
 			if (_lastWriteRejectPlanTime == -1 || TimeUtils.msDiffNow(_lastWriteRejectPlanTime) > _configRejectPlanTimeThreshold)
 			{
-				_logger.warn("Rejected "+_lastConfigRejectPlanMap.size()+" plan names due to '<planStatus> not executed </planStatus>'. " 
-						+ "For the last '"+TimeUtils.msToTimeStr("%HH:%MM", _configRejectPlanTimeThreshold)+"' (HH:MM), "
+				_logger.warn("Rejected " + _lastConfigRejectPlanMap.size() + " plan names due to '<planStatus> not executed </planStatus>'. " 
+						+ "For the last '" + TimeUtils.msToTimeStr("%HH:%MM", _configRejectPlanTimeThreshold) + "' (HH:MM), "
 						+ "The following plans was rejected (planName=count). " + _lastConfigRejectPlanMap);
 
 				// Reset the values, so we can print new message in X minutes/hours
@@ -146,7 +146,7 @@ extends XmlPlanCache
 		}
 		catch(SQLException ex)
 		{
-			_logger.error("Problems using getPlanBulk(). SQL='"+sql+"', Caught: "+ex);
+			_logger.error("Problems using getPlanBulk(). SQL='" + sql + "', Caught: " + ex);
 		}
 	}
 }

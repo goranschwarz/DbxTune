@@ -235,7 +235,7 @@ public class JavaVersion
 		{
 			System.out.println("");
 			System.out.println("===============================================================");
-			System.out.println(" This application needs a runtime Java "+checkForVersion+" or higher.");
+			System.out.println(" This application needs a runtime Java " + checkForVersion + " or higher.");
 			System.out.println(" Current 'java.version' = " + System.getProperty("java.version"));
 			System.out.println(" which is parsed into the Java (major) Version Number: " + JavaVersion.getMajor());
 			System.out.println("---------------------------------------------------------------");

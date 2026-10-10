@@ -70,7 +70,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_DISK;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
@@ -100,7 +100,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmAdminDiskSpace(counterController, guiController);
 	}
@@ -380,7 +380,7 @@ extends CountersModel
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_SpaceUsedSegs, DEFAULT_alarm_SpaceUsedSegs);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): threshold="+threshold+", usedSpaceInMb="+usedSpaceInMb+", freeSpaceInMb="+freeSpaceInMb+", usedPct="+usedPct+".");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", usedSpaceInMb=" + usedSpaceInMb + ", freeSpaceInMb=" + freeSpaceInMb + ", usedPct=" + usedPct + ".");
 
 				if (usedSpaceInMb > threshold)
 				{
@@ -413,7 +413,7 @@ extends CountersModel
 				int freeSpaceInMb = TotalSegs.intValue() - UsedSegs.intValue();
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): usedSpaceInMb="+usedSpaceInMb+", freeSpaceInMb="+freeSpaceInMb+", usedPct="+usedPct+".");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): usedSpaceInMb=" + usedSpaceInMb + ", freeSpaceInMb=" + freeSpaceInMb + ", usedPct=" + usedPct + ".");
 
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_SpaceFreeSegs, DEFAULT_alarm_SpaceFreeSegs);
 				if (freeSpaceInMb < threshold)
@@ -447,7 +447,7 @@ extends CountersModel
 				int freeSpaceInMb = TotalSegs.intValue() - UsedSegs.intValue();
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest("+cm.getName()+"): usedSpaceInMb="+usedSpaceInMb+", freeSpaceInMb="+freeSpaceInMb+", usedPct="+usedPct+".");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): usedSpaceInMb=" + usedSpaceInMb + ", freeSpaceInMb=" + freeSpaceInMb + ", usedPct=" + usedPct + ".");
 
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_SpaceUsedPct, DEFAULT_alarm_SpaceUsedPct);
 				if (usedPct.intValue() > threshold)

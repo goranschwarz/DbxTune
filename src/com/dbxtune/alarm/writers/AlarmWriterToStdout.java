@@ -65,14 +65,14 @@ extends AlarmWriterAbstract
 		String propname = null;
 
 		// property: name
-		propname = propPrefix+".name";
+		propname = propPrefix + ".name";
 		_name = conf.getProperty(propname, _name);
 	}
 
 	@Override
 	public void printConfig()
 	{
-		_logger.info("Initializing the AlarmHandler.AlarmWriter component named '"+getName()+"'.");
+		_logger.info("Initializing the AlarmHandler.AlarmWriter component named '" + getName() + "'.");
 		_logger.info("                                          This component has no configuration ");
 	}
 
@@ -90,15 +90,15 @@ extends AlarmWriterAbstract
 	@Override
 	public void raise(AlarmEvent alarmEvent) 
 	{
-		System.out.println(getName()+": -----RAISE-----: "+alarmEvent);
-		_logger.debug     (getName()+": -----RAISE-----: "+alarmEvent);
+		System.out.println(getName() + ": -----RAISE-----: " + alarmEvent);
+		_logger.debug     (getName() + ": -----RAISE-----: " + alarmEvent);
 	}
 
 	@Override
 	public void reRaise(AlarmEvent alarmEvent)
 	{
-		System.out.println(getName()+": -----RE-RAISE-----: "+alarmEvent);
-		_logger.debug     (getName()+": -----RE-RAISE-----: "+alarmEvent);
+		System.out.println(getName() + ": -----RE-RAISE-----: " + alarmEvent);
+		_logger.debug     (getName() + ": -----RE-RAISE-----: " + alarmEvent);
 	}
 
 	/**
@@ -107,8 +107,8 @@ extends AlarmWriterAbstract
 	@Override
 	public void cancel(AlarmEvent alarmEvent) 
 	{
-		System.out.println(getName()+": -----CANCEL-----: "+alarmEvent);
-		_logger.debug(     getName()+": -----CANCEL-----: "+alarmEvent);
+		System.out.println(getName() + ": -----CANCEL-----: " + alarmEvent);
+		_logger.debug(     getName() + ": -----CANCEL-----: " + alarmEvent);
 	}
 
 	/**
@@ -121,8 +121,8 @@ extends AlarmWriterAbstract
 	@Override
 	public void endOfScan(List<AlarmEvent> activeAlarms)
 	{
-		System.out.println(getName()+": -----END-OF-SCAN-----.");
-		_logger.debug     (getName()+": -----END-OF-SCAN-----.");
+		System.out.println(getName() + ": -----END-OF-SCAN-----.");
+		_logger.debug     (getName() + ": -----END-OF-SCAN-----.");
 	}
 
 	/**
@@ -138,8 +138,8 @@ extends AlarmWriterAbstract
 	@Override
 	public void restoredAlarms(List<AlarmEvent> restoredAlarms)
 	{
-		System.out.println(getName()+": -----RESTORE-ALARMS-----.");
-		_logger.debug     (getName()+": -----RESTORE-ALARMS-----.");
+		System.out.println(getName() + ": -----RESTORE-ALARMS-----.");
+		_logger.debug     (getName() + ": -----RESTORE-ALARMS-----.");
 	}
 	
 	/**

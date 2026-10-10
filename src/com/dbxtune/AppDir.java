@@ -214,7 +214,7 @@ public class AppDir
 		}
 
 		// Log if we created the DbxCentral directory or not
-		log(ps, logList, "INFO: Created DbxCentral Directory = " + (dbxcCreated != null) +". dbxCentralCreatedDir '" + dbxcCreated + "'.");
+		log(ps, logList, "INFO: Created DbxCentral Directory = " + (dbxcCreated != null) + ". dbxCentralCreatedDir '" + dbxcCreated + "'.");
 
 		// If the 'dbxc' directory was created
 		if (dbxcCreated != null)
@@ -741,7 +741,7 @@ public class AppDir
 					{
 						String key = StringUtils.substringBefore(str, "=").trim();
 						String val = StringUtils.substringAfter (str, "=").trim();
-						System.out.println("ENV: |" + str + "|, key=|"+key+"|, val=|"+val+"|.");
+						System.out.println("ENV: |" + str + "|, key=|" + key + "|, val=|" + val + "|.");
 						
 						if (isWindows)
 						{
@@ -837,7 +837,7 @@ public class AppDir
 									bw.write("set \"" + entry.getKey() + "=" + entry.getValue() + "\"");
 									bw.newLine();
 
-									log(ps, logList, "Appending Environment Variable '" + entry.getKey() +"' with value '" + entry.getValue() + "' to the END of then new ENV file '" + userEnvFileName + "'.");
+									log(ps, logList, "Appending Environment Variable '" + entry.getKey() + "' with value '" + entry.getValue() + "' to the END of then new ENV file '" + userEnvFileName + "'.");
 								}
 							}
 							else
@@ -852,7 +852,7 @@ public class AppDir
 									bw.write("export " + entry.getKey() + "=" + entry.getValue() );
 									bw.newLine();
 
-									log(ps, logList, "Appending Environment Variable '" + entry.getKey() +"' with value '" + entry.getValue() + "' to the END of then new ENV file '" + userEnvFileName + "'.");
+									log(ps, logList, "Appending Environment Variable '" + entry.getKey() + "' with value '" + entry.getValue() + "' to the END of then new ENV file '" + userEnvFileName + "'.");
 								}
 							}
 

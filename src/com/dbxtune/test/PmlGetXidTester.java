@@ -101,7 +101,7 @@ public class PmlGetXidTester
 		long execTime = System.currentTimeMillis() - startTime;
 		
 //		System.out.println("All Workers are done... execTimeInMs="+execTime+", execTimeInMsPerWorker=" + (execTime/_maxWorkers) + ", avgExecTimeInMsPerCall=" + (execTime*1.0/_maxWorkers/_numOfCalls));
-		System.out.println("All Workers are done... execTimeInMs="+execTime);
+		System.out.println("All Workers are done... execTimeInMs=" + execTime);
 		
 		// Print min/max/avg execution times for ALL Workers
 		long sumWorkersExecTime = 0;
@@ -113,20 +113,20 @@ public class PmlGetXidTester
 			minWorkersExecTime = Math.min(minWorkersExecTime, dbWorker._minExecTime);
 			maxWorkersExecTime = Math.max(maxWorkersExecTime, dbWorker._maxExecTime);
 		}
-		System.out.println("    sumWorkersExecTimeInMs="+sumWorkersExecTime);
-		System.out.println("    AvgWorkersExecTimeInMs="+sumWorkersExecTime*1.0/_dbWorkers.size()/_numOfCalls);
-		System.out.println("    minWorkersExecTimeInMs="+minWorkersExecTime);
-		System.out.println("    maxWorkersExecTimeInMs="+maxWorkersExecTime);
+		System.out.println("    sumWorkersExecTimeInMs=" + sumWorkersExecTime);
+		System.out.println("    AvgWorkersExecTimeInMs=" + sumWorkersExecTime*1.0/_dbWorkers.size()/_numOfCalls);
+		System.out.println("    minWorkersExecTimeInMs=" + minWorkersExecTime);
+		System.out.println("    maxWorkersExecTimeInMs=" + maxWorkersExecTime);
 
 		// Check that we managed to check ALL the XID's
 		int expectedEntries = _maxWorkers * _numOfCalls;
 		if (expectedEntries != _idMap.size())
 		{
-			System.out.println("ERROR: expectedEntries="+expectedEntries+", genereatedXidCount="+_idMap.size());
+			System.out.println("ERROR: expectedEntries=" + expectedEntries + ", genereatedXidCount=" + _idMap.size());
 		}
 		else
 		{
-			System.out.println("OK, worked as expected.  genereatedXidCount="+_idMap.size());
+			System.out.println("OK, worked as expected.  genereatedXidCount=" + _idMap.size());
 		}
 		
 		// Close
@@ -182,7 +182,7 @@ public class PmlGetXidTester
 		public void connect(String url, String user, String passwd)
 		throws SQLException
 		{
-			System.out.println("DBWORKER["+_workerId+"]: Connecting to URL='"+url+"'. numOfCalls="+_numOfCalls+", sleepTimeMs="+_sleepTimeMs+", autocommit="+_autoCommit);
+			System.out.println("DBWORKER[" + _workerId + "]: Connecting to URL='" + url + "'. numOfCalls=" + _numOfCalls + ", sleepTimeMs=" + _sleepTimeMs + ", autocommit=" + _autoCommit);
 			_conn = DriverManager.getConnection(url, user, passwd);
 //			System.out.println("DBWORKER["+_workerId+"]: Connected to url: "+url);
 		}
@@ -214,7 +214,7 @@ public class PmlGetXidTester
 					String srvName = rs.getString(1);
 					String dbname  = rs.getString(2);
 					
-					System.out.println("DBWORKER["+_workerId+"]: srvName='"+srvName+"', dbname='"+dbname+"'.");
+					System.out.println("DBWORKER[" + _workerId + "]: srvName='" + srvName + "', dbname='" + dbname + "'.");
 				}
 			}
 			catch (SQLException ex) 
@@ -260,13 +260,13 @@ public class PmlGetXidTester
 					int xid = rs.getInt(1);
 					if (xid == 0)
 					{
-						System.out.println("ERROR: DBWORKER["+_workerId+"]: XID == 0");
+						System.out.println("ERROR: DBWORKER[" + _workerId + "]: XID == 0");
 					}
 					else
 					{
 						String exists = _idMap.put(xid, "WorkerId=" + _workerId + ", callId=" + callId);
 						if (exists != null)
-							System.out.println("ERROR: DBWORKER["+_workerId+"]: XID="+xid+", already exists... added by: "+exists);
+							System.out.println("ERROR: DBWORKER[" + _workerId + "]: XID=" + xid + ", already exists... added by: " + exists);
 					}
 				}
 				if ( ! _autoCommit )
@@ -275,7 +275,7 @@ public class PmlGetXidTester
 			catch (SQLException ex) 
 			{
 				//ex.printStackTrace();
-				System.out.println("MsgNum="+ex.getErrorCode()+", SqlState="+ex.getSQLState()+", MsgStr='"+ex.getMessage().trim()+"'.");
+				System.out.println("MsgNum=" + ex.getErrorCode() + ", SqlState=" + ex.getSQLState() + ", MsgStr='" + ex.getMessage().trim() + "'.");
 			}
 
 			long execTime = System.currentTimeMillis() - startTime;
@@ -288,7 +288,7 @@ public class PmlGetXidTester
 		public void start()
 		{
 			_thread = new Thread(this);
-			_thread.setName("DbWorker-"+_workerId);
+			_thread.setName("DbWorker-" + _workerId);
 //			_thread.setDaemon(true);
 			_thread.start();
 		}
@@ -458,13 +458,13 @@ public class PmlGetXidTester
 		
 		System.out.println("===================================================");
 		System.out.println("INFO:");
-		System.out.println("      username    = '"+username+"'.");
+		System.out.println("      username    = '" + username + "'.");
 		System.out.println("      password    = '*secret*'.");
-		System.out.println("      url         = '"+url+"'.");
-		System.out.println("      workerCount = "+workerCount);
-		System.out.println("      numOfCalls  = "+numOfCalls);
-		System.out.println("      sleepTime   = "+sleepTime);
-		System.out.println("      autoCommit  = "+autoCommit);
+		System.out.println("      url         = '" + url + "'.");
+		System.out.println("      workerCount = " + workerCount);
+		System.out.println("      numOfCalls  = " + numOfCalls);
+		System.out.println("      sleepTime   = " + sleepTime);
+		System.out.println("      autoCommit  = " + autoCommit);
 		System.out.println("===================================================");
 //		String[] sa = System.getProperty("java.class.path").split(";");
 //		for (int i=0; i<sa.length; i++)

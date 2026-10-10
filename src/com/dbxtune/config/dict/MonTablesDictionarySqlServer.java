@@ -233,7 +233,7 @@ extends MonTablesDictionaryDefault
 			                                                                                             + "  <li>0 = IP address is not configured by DHCP.</li>"
 			                                                                                             + "  <li>1 = IP address is configured by DHCP</li>"
 			                                                                                             + "</ul>"
-			                                                                                             +"</p></html>");
+			                                                                                             + "</p></html>");
 			mtd.addColumn("availability_group_listener_ip_addresses", "network_subnet_ip"             , "<html><p>Network subnet IP address that specifies the subnet to which the IP address belongs.</p></html>");
 			mtd.addColumn("availability_group_listener_ip_addresses", "network_subnet_prefix_length"  , "<html><p>Network subnet prefix length of the subnet to which the IP address belongs.</p></html>");
 			mtd.addColumn("availability_group_listener_ip_addresses", "network_subnet_ipv4_mask"      , "<html><p>Network subnet mask of the subnet to which the IP address belongs. <b>network_subnet_ipv4_mask</b> to specify the DHCP <network_subnet_option> options in a WITH DHCP clause of the CREATE AVAILABILITY GROUP or ALTER AVAILABILITY GROUPTransact-SQL statement.<br><br>NULL = IPv6 subnet</p></html>");
@@ -2399,7 +2399,7 @@ extends MonTablesDictionaryDefault
 				+ "";
 
 			// Column names and description
-			mtd.addColumn("dm_exec_plan_attributes", "attribute"   , "<html><p>Name of the attribute associated with this plan. One of the following:<br>" + attributesDetails +"</html>");
+			mtd.addColumn("dm_exec_plan_attributes", "attribute"   , "<html><p>Name of the attribute associated with this plan. One of the following:<br>" + attributesDetails + "</html>");
 			mtd.addColumn("dm_exec_plan_attributes", "value"       , "<html><p>Value of the attribute that is associated with this plan.</p></html>");
 			mtd.addColumn("dm_exec_plan_attributes", "is_cache_key", "<html><p>Indicates whether the attribute is used as part of the cache lookup key for the plan.</p></html>");
 

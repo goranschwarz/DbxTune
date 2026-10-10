@@ -174,41 +174,41 @@ extends ReportEntryAbstract
 
 			sb.append("<table class='recording-info'>\n");
 
-			sb.append("  <tr> " + tdBullet +" <td><b>Recording was Made Using:   </b></td> <td>" + _recordingVersion      + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>The Report is Produced by : </b></td> <td>" + _reportVersion         + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Recording was Made Using:   </b></td> <td>" + _recordingVersion      + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>The Report is Produced by : </b></td> <td>" + _reportVersion         + "</td> </tr>\n");
 			if (getReportingInstance().hasReportPeriod())
 			{
 				sb.append(blankTableRow);
-				sb.append("  <tr> " + tdBullet +" <td><b>Report Period Begin Time: </b></td> <td>" + getReportingInstance().getReportPeriodBeginTime() + "</td> </tr>\n");
-				sb.append("  <tr> " + tdBullet +" <td><b>Report Period End Time    </b></td> <td>" + getReportingInstance().getReportPeriodEndTime()   + "</td> </tr>\n");
-				sb.append("  <tr> " + tdBullet +" <td><b>Report Period Duration:   </b></td> <td>" + getReportingInstance().getReportPeriodDuration()  + "</td> </tr>\n");
+				sb.append("  <tr> " + tdBullet + " <td><b>Report Period Begin Time: </b></td> <td>" + getReportingInstance().getReportPeriodBeginTime() + "</td> </tr>\n");
+				sb.append("  <tr> " + tdBullet + " <td><b>Report Period End Time    </b></td> <td>" + getReportingInstance().getReportPeriodEndTime()   + "</td> </tr>\n");
+				sb.append("  <tr> " + tdBullet + " <td><b>Report Period Duration:   </b></td> <td>" + getReportingInstance().getReportPeriodDuration()  + "</td> </tr>\n");
 			}
 			else
 			{
 				sb.append(blankTableRow);
-				sb.append("  <tr> " + tdBullet +" <td><b>Report Period: </b></td> <td> Full day</td> </tr>\n");
+				sb.append("  <tr> " + tdBullet + " <td><b>Report Period: </b></td> <td> Full day</td> </tr>\n");
 			}
 			sb.append(blankTableRow);
-			sb.append("  <tr> " + tdBullet +" <td><b>Recording Start Day:        </b></td> <td>" + _startDay               + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>Recording Start Date:       </b></td> <td>" + _startTime              + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>Recording End  Date:        </b></td> <td>" + _endTime                + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>Recording Duration:         </b></td> <td>" + _duration               + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>Recording Sample Time:      </b></td> <td>" + _recordingSampleTime    + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Recording Start Day:        </b></td> <td>" + _startDay               + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Recording Start Date:       </b></td> <td>" + _startTime              + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Recording End  Date:        </b></td> <td>" + _endTime                + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Recording Duration:         </b></td> <td>" + _duration               + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Recording Sample Time:      </b></td> <td>" + _recordingSampleTime    + "</td> </tr>\n");
 
 			sb.append(blankTableRow);
-			sb.append("  <tr> " + tdBullet +" <td><b>DBMS Server Name:           </b></td> <td>" + _dbmsServerName         + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>DBMS Server Name:           </b></td> <td>" + _dbmsServerName         + "</td> </tr>\n");
 			if (StringUtil.hasValue(_dbmsDisplayName))
-				sb.append("  <tr> " + tdBullet +" <td><b>DBMS Display Name:      </b></td> <td>" + _dbmsDisplayName        + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>DBMS Version String:        </b></td> <td>" + _dbmsVersionString      + "</td> </tr>\n");
+				sb.append("  <tr> " + tdBullet + " <td><b>DBMS Display Name:      </b></td> <td>" + _dbmsDisplayName        + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>DBMS Version String:        </b></td> <td>" + _dbmsVersionString      + "</td> </tr>\n");
 
 			// If the version String was changed during the recording...
 			// So we experienced an UPGRADE... Lets make a notice about that...
 			if (_dbmsVersionStringChangeTime != null)
 			{
 				sb.append(blankTableRow);
-				sb.append("  <tr> " + tdBullet +" <td bgcolor='red'><b>DBMS Version String CHANGE Time: </b></td> <td>" + _dbmsVersionStringChangeTime + "</td> </tr>\n");
-				sb.append("  <tr> " + tdBullet +" <td bgcolor='red'><b>DBMS MIN Version String:         </b></td> <td>" + _dbmsVersionStringMin        + "</td> </tr>\n");
-				sb.append("  <tr> " + tdBullet +" <td bgcolor='red'><b>DBMS MAX Version String:         </b></td> <td>" + _dbmsVersionStringMax        + "</td> </tr>\n");
+				sb.append("  <tr> " + tdBullet + " <td bgcolor='red'><b>DBMS Version String CHANGE Time: </b></td> <td>" + _dbmsVersionStringChangeTime + "</td> </tr>\n");
+				sb.append("  <tr> " + tdBullet + " <td bgcolor='red'><b>DBMS MIN Version String:         </b></td> <td>" + _dbmsVersionStringMin        + "</td> </tr>\n");
+				sb.append("  <tr> " + tdBullet + " <td bgcolor='red'><b>DBMS MAX Version String:         </b></td> <td>" + _dbmsVersionStringMax        + "</td> </tr>\n");
 				
 				// Also send alarm about this
 				if (AlarmHandler.hasInstance())
@@ -223,15 +223,15 @@ extends ReportEntryAbstract
 			}
 			
 			sb.append(blankTableRow);
-   			sb.append("  <tr> " + tdBullet +" <td><b>DBMS Last Restart at Time:  </b></td> <td>" + _dbmsStartTimeStr       + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>DBMS Last Restart in Days:  </b></td> <td>" + _dbmsStartTimeInDaysStr + "</td> </tr>\n");
+   			sb.append("  <tr> " + tdBullet + " <td><b>DBMS Last Restart at Time:  </b></td> <td>" + _dbmsStartTimeStr       + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>DBMS Last Restart in Days:  </b></td> <td>" + _dbmsStartTimeInDaysStr + "</td> </tr>\n");
 
 			if (_dbmsOtherInfoMap != null && !_dbmsOtherInfoMap.isEmpty())
 			{
 				sb.append(blankTableRow);
 				for (Entry<String, String> entry : _dbmsOtherInfoMap.entrySet())
 				{
-		   			sb.append("  <tr> " + tdBullet +" <td><b>" + entry.getKey() + ":  </b></td> <td>" + entry.getValue()   + "</td> </tr>\n");
+		   			sb.append("  <tr> " + tdBullet + " <td><b>" + entry.getKey() + ":  </b></td> <td>" + entry.getValue()   + "</td> </tr>\n");
 				}
 			}
 
@@ -241,36 +241,36 @@ extends ReportEntryAbstract
 				if (StringUtil.hasValue(_dbmsDisplayName) && _dbmsDisplayName.contains("SQL Server"))
 				{
 					sb.append(blankTableRow);
-					sb.append("  <tr> " + tdBullet +" <td><b>OS Core Info:            </b></td> <td>" + _osCoreInfo   + "</td> </tr>\n");
-					sb.append("  <tr> " + tdBullet +" <td><b>OS Memory Info:          </b></td> <td>" + _osMemoryInfo + "</td> </tr>\n");
+					sb.append("  <tr> " + tdBullet + " <td><b>OS Core Info:            </b></td> <td>" + _osCoreInfo   + "</td> </tr>\n");
+					sb.append("  <tr> " + tdBullet + " <td><b>OS Memory Info:          </b></td> <td>" + _osMemoryInfo + "</td> </tr>\n");
 				}
 				else
 				{
 					sb.append(blankTableRow);
-					sb.append("  <tr> " + tdBullet +" <td><b>OS Core Count:            </b></td> <td>" + _osCoreInfo   + "</td> </tr>\n");
-					sb.append("  <tr> " + tdBullet +" <td><b>OS Physical Memory:       </b></td> <td>" + _osMemoryInfo + "</td> </tr>\n");
+					sb.append("  <tr> " + tdBullet + " <td><b>OS Core Count:            </b></td> <td>" + _osCoreInfo   + "</td> </tr>\n");
+					sb.append("  <tr> " + tdBullet + " <td><b>OS Physical Memory:       </b></td> <td>" + _osMemoryInfo + "</td> </tr>\n");
 				}
 			}
 
 			// Host monitoring
 			sb.append(blankTableRow);
-			sb.append("  <tr> " + tdBullet +" <td><b>Host Monitoring was Enabled:  </b></td> <td>" + _isHostMonitoringEnabled + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>Host Monitoring hostname:     </b></td> <td>" + _hostMonitorHostname     + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Host Monitoring was Enabled:  </b></td> <td>" + _isHostMonitoringEnabled + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Host Monitoring hostname:     </b></td> <td>" + _hostMonitorHostname     + "</td> </tr>\n");
 
 			// Collector Configuration 
 			sb.append(blankTableRow);
-			sb.append("  <tr> " + tdBullet +" <td><b>Sample Period in Seconds:     </b></td> <td>" + getDbxSampleTimeInSec()  + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>Config File:                  </b></td> <td>" + getDbxCfgFile()          + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>Log File:                     </b></td> <td>" + getDbxLogFile()          + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>Counter Information:          </b></td> <td>" + getDbxCmInfo()           + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>Counter Config:               </b></td> <td>" + getDbxCfgInfo()          + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Sample Period in Seconds:     </b></td> <td>" + getDbxSampleTimeInSec()  + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Config File:                  </b></td> <td>" + getDbxCfgFile()          + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Log File:                     </b></td> <td>" + getDbxLogFile()          + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Counter Information:          </b></td> <td>" + getDbxCmInfo()           + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Counter Config:               </b></td> <td>" + getDbxCfgInfo()          + "</td> </tr>\n");
 
 			// Java Version Info
 			sb.append(blankTableRow);
-			sb.append("  <tr> " + tdBullet +" <td><b>Java Version:                 </b></td> <td>" + System.getProperty("java.version")      + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>Java Vendor:                  </b></td> <td>" + System.getProperty("java.vendor")       + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>Java Home:                    </b></td> <td>" + System.getProperty("java.home")         + "</td> </tr>\n");
-			sb.append("  <tr> " + tdBullet +" <td><b>Java Version Date:            </b></td> <td>" + System.getProperty("java.version.date") + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Java Version:                 </b></td> <td>" + System.getProperty("java.version")      + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Java Vendor:                  </b></td> <td>" + System.getProperty("java.vendor")       + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Java Home:                    </b></td> <td>" + System.getProperty("java.home")         + "</td> </tr>\n");
+			sb.append("  <tr> " + tdBullet + " <td><b>Java Version Date:            </b></td> <td>" + System.getProperty("java.version.date") + "</td> </tr>\n");
 
 			sb.append("</table>\n");
 			
@@ -395,7 +395,7 @@ extends ReportEntryAbstract
 			_dbmsVersionStringChangeTime = dsr.getDbmsVersionStrChangeTime();
 			_dbmsServerName         = dsr.getDbmsServerName();
 			_dbmsStartTimeStr       = dsr.getDbmsStartTime()       == null ? "-unknown-" : dsr.getDbmsStartTime().toString();
-			_dbmsStartTimeInDaysStr = dsr.getDbmsStartTimeInDays()     < 0 ? "-unknown-" : dsr.getDbmsStartTimeInDays()+"";
+			_dbmsStartTimeInDaysStr = dsr.getDbmsStartTimeInDays()     < 0 ? "-unknown-" : dsr.getDbmsStartTimeInDays() + "";
 			_dbmsOtherInfoMap       = dsr.getDbmsOtherInfoMap();
 			_recordingVersion       = dsr.getRecDbxAppName() + ", Version: " + dsr.getRecDbxVersionStr() + ", Build: " + dsr.getRecDbxBuildStr();
 

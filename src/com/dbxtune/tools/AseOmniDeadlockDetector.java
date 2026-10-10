@@ -70,7 +70,7 @@ extends Thread
 		@Override
 		public String toString()
 		{
-			return "spid="+_spid+", status='"+_status+"'.";
+			return "spid=" + _spid + ", status='" + _status + "'.";
 		}
 	}
 	private class VictimEntry
@@ -83,7 +83,7 @@ extends Thread
 		@Override
 		public String toString()
 		{
-			return "spid="+_spid+", originRemoteSpid="+_originRemoteSpid+", status='"+_status+"', originAse='"+_originAse+"'.";
+			return "spid=" + _spid + ", originRemoteSpid=" + _originRemoteSpid + ", status='" + _status + "', originAse='" + _originAse + "'.";
 		}
 	}
 	
@@ -96,14 +96,14 @@ extends Thread
 	public void connectLeft()
 	throws SQLException, ClassNotFoundException
 	{
-		_logger.info("Connecting to left server:  host='"+_leftAseHostname+"', port="+_leftAsePort+", user='"+_leftAseUsername+"'.");
+		_logger.info("Connecting to left server:  host='" + _leftAseHostname + "', port=" + _leftAsePort + ", user='" + _leftAseUsername + "'.");
 		_leftConn = connect(_leftAseHostname, _leftAsePort, _leftAseUsername, _leftAsePassword);
 	}
 
 	public void connectRight()
 	throws SQLException, ClassNotFoundException
 	{
-		_logger.info("Connecting to right server:  host='"+_rightAseHostname+"', port="+_rightAsePort+", user='"+_rightAseUsername+"'.");
+		_logger.info("Connecting to right server:  host='" + _rightAseHostname + "', port=" + _rightAsePort + ", user='" + _rightAseUsername + "'.");
 		_rightConn = connect(_rightAseHostname, _rightAsePort, _rightAseUsername, _rightAsePassword);
 	}
 
@@ -134,7 +134,7 @@ extends Thread
 			ResultSet rs = stmt.executeQuery(sql);
 			
 			ResultSetTableModel tm = new ResultSetTableModel(rs, sql);
-			_logger.info("sql: "+sql+"\n"+tm.toTableString());
+			_logger.info("sql: " + sql + "\n" + tm.toTableString());
 	
 			rs.close();
 			stmt.close();
@@ -143,42 +143,42 @@ extends Thread
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Problems executing sql: "+sql, e);
-			return "Problems executing sql: "+sql;
+			_logger.warn("Problems executing sql: " + sql, e);
+			return "Problems executing sql: " + sql;
 		}
 	}
 
 	private void printDeadlockInfo(Connection conn, int spid, ServerSide srvSide, SpidType type)
 	{
 		_logger.info("=====================================================================");
-		_logger.info(" printDeadlockInfo, type="+type+", ServerSide="+srvSide+", SPID="+spid+".");
+		_logger.info(" printDeadlockInfo, type=" + type + ", ServerSide=" + srvSide + ", SPID=" + spid + ".");
 		_logger.info("---------------------------------------------------------------------");
 
 		String res = "";
 
 		//-----------------------
 		res = execSql(conn, "select * from master..sysprocesses where spid = " + spid);
-		_logger.info("SYSPROCESSES: \n"+res);
+		_logger.info("SYSPROCESSES: \n" + res);
 
 		//-----------------------
 		res = execSql(conn, "select * from master..syslocks where spid = " + spid);
-		_logger.info("SYSLOCKS: \n"+res);
+		_logger.info("SYSLOCKS: \n" + res);
 				
 		//-----------------------
 		res = AseConnectionUtils.dbccSqlText(conn, spid, false);
-		_logger.info("DBCC SQL TEXT: \n"+res);
+		_logger.info("DBCC SQL TEXT: \n" + res);
 
 		//-----------------------
 		res = AseConnectionUtils.monSqlText(conn, spid, false);
-		_logger.info("MON SQL TEXT: \n"+res);
+		_logger.info("MON SQL TEXT: \n" + res);
 
 		//-----------------------
 		res = AseConnectionUtils.getShowplan(conn, spid, null, false);
-		_logger.info("SHOWPLAN: \n"+res);
+		_logger.info("SHOWPLAN: \n" + res);
 
 		//-----------------------
 		res = AseConnectionUtils.monProcCallStack(conn, spid, false);
-		_logger.info("PROC CALL STACK: \n"+res);
+		_logger.info("PROC CALL STACK: \n" + res);
 
 		_logger.info("---------------------------------------------------------------------");
 	}
@@ -190,7 +190,7 @@ extends Thread
 
 	private void killSpid(Connection conn, int spid)
 	{
-		String sql = "kill "+spid;
+		String sql = "kill " + spid;
 	
 		try
 		{
@@ -200,14 +200,14 @@ extends Thread
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Problems executing sql: "+sql, e);
+			_logger.warn("Problems executing sql: " + sql, e);
 		}
 	}
 	
 	public ArrayList<RootCauseEntry> getRootCause(Connection conn)
 	throws SQLException
 	{
-		_logger.debug("getRootCause(): conn="+conn);
+		_logger.debug("getRootCause(): conn=" + conn);
 
 		String sql = 
 			"select * \n" +
@@ -227,7 +227,7 @@ extends Thread
 			entry._spid   = rs.getInt   ("spid");
 			entry._status = rs.getString("status");
 
-			System.out.println("getRootCause: "+entry);
+			System.out.println("getRootCause: " + entry);
 			list.add(entry);
 		}
 
@@ -240,7 +240,7 @@ extends Thread
 	public ArrayList<VictimEntry> getVictim(Connection conn)
 	throws SQLException
 	{
-		_logger.debug("getVictim(): conn="+conn);
+		_logger.debug("getVictim(): conn=" + conn);
 
 		String sql = 
 			"select OriginRemoteSpid = substring(program_name, char_length('OmniServer-')+1,99), \n" +
@@ -263,7 +263,7 @@ extends Thread
 			entry._status             = rs.getString("status");
 			entry._originAse          = rs.getString("OriginAse");
 
-			System.out.println("getVictim: "+entry);
+			System.out.println("getVictim: " + entry);
 			list.add(entry);
 		}
 

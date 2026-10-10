@@ -53,7 +53,7 @@ extends AlarmEvent
 		setTimeToLive(cm);
 
 		// Set the raw data carrier
-		setData("state="+module);
+		setData("state=" + module);
 	}
 
 

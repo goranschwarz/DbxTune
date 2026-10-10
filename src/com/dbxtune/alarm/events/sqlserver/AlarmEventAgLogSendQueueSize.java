@@ -49,7 +49,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SPACE,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Log Send Queue Size is getting HIGH, in Server '" + cm.getServerName() + "' for Availability group '" + agName + "', serverName='" + serverName + "'. queueSizeInMb='"+queueSizeInMb+"'. (thresholdInMb="+thresholdInMb+")",
+				"Log Send Queue Size is getting HIGH, in Server '" + cm.getServerName() + "' for Availability group '" + agName + "', serverName='" + serverName + "'. queueSizeInMb='" + queueSizeInMb + "'. (thresholdInMb=" + thresholdInMb + ")",
 				thresholdInMb
 				);
 

@@ -133,7 +133,7 @@ extends DbmsConfigAbstract
 
 	private static String GET_CONFIG_OFFLINE_MAX_SESSION_SQL = 
 		" (select max([SessionStartTime]) " +
-		"  from ["+PersistWriterJdbc.getTableName(null, null, PersistWriterJdbc.SESSION_DBMS_CONFIG, null, false) + "]" +
+		"  from [" + PersistWriterJdbc.getTableName(null, null, PersistWriterJdbc.SESSION_DBMS_CONFIG, null, false) + "]" +
 		" ) ";
 
 
@@ -441,9 +441,9 @@ extends DbmsConfigAbstract
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("RaxConfig:initialize:sql='"+sql+"'", ex);
+			_logger.error("RaxConfig:initialize:sql='" + sql + "'", ex);
 			if (_hasGui)
-				SwingUtils.showErrorMessage("RaxConfig - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
+				SwingUtils.showErrorMessage("RaxConfig - Initialize", "SQL Exception: " + ex.getMessage() + "\n\nThis was found when executing SQL statement:\n\n" + sql, ex);
 			_configMap = null;
 			_configList = null;
 			_configSectionList = null;
@@ -480,8 +480,8 @@ extends DbmsConfigAbstract
 
 		String    srvName    = "-UNKNOWN-";
 		Timestamp srvRestart = null;
-		try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex="+ex);}
-		try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex="+ex);}
+		try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex=" + ex);}
+		try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex=" + ex);}
 
 		
 		//-------------------------------------------------------
@@ -804,7 +804,7 @@ extends DbmsConfigAbstract
 		Integer intVal = DEFAULT_VALUES_MAP.get(configName);
 		if (intVal == null)
 		{
-			System.out.println("getDefaultConfigValue(): configName='"+configName+"', not found, return default value '"+defaultVal+"'.");
+			System.out.println("getDefaultConfigValue(): configName='" + configName + "', not found, return default value '" + defaultVal + "'.");
 			intVal = defaultVal;
 		}
 		
@@ -961,7 +961,7 @@ extends DbmsConfigAbstract
 		String strVal = CONFIG_SECTION_MAP.get(configName);
 		if (strVal == null)
 		{
-			System.out.println("getSectionName(): configName='"+configName+"', not found, return default value '"+defaultVal+"'.");
+			System.out.println("getSectionName(): configName='" + configName + "', not found, return default value '" + defaultVal + "'.");
 			strVal = defaultVal;
 		}
 		
@@ -1124,7 +1124,7 @@ extends DbmsConfigAbstract
 		String strVal = CONFIG_COMMENT_MAP.get(configName);
 		if (strVal == null)
 		{
-			System.out.println("getConfigComment(): configName='"+configName+"', not found, return default value '"+defaultVal+"'.");
+			System.out.println("getConfigComment(): configName='" + configName + "', not found, return default value '" + defaultVal + "'.");
 			strVal = defaultVal;
 		}
 		

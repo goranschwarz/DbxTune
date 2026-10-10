@@ -141,7 +141,7 @@ implements ActionListener, FocusListener
 				setTitle(_name + " - Suspend Connection");
 		}
 		else
-			throw new RuntimeException("Unknown action type: "+_actionType);
+			throw new RuntimeException("Unknown action type: " + _actionType);
 
 
 		setContentPane(createPanel());
@@ -463,9 +463,9 @@ implements ActionListener, FocusListener
 		conf.setProperty("rs.connection.ra.savePassword", _raPassword_chk.isSelected());
 
 		// Save for this specific server.db
-		conf.setProperty("rs.connection."+_name+".ra.username",     _raUsername_txt.getText());
-		conf.setProperty("rs.connection."+_name+".ra.password",     _raPassword_txt.getText());
-		conf.setProperty("rs.connection."+_name+".ra.savePassword", _raPassword_chk.isSelected());
+		conf.setProperty("rs.connection." + _name + ".ra.username",     _raUsername_txt.getText());
+		conf.setProperty("rs.connection." + _name + ".ra.password",     _raPassword_txt.getText());
+		conf.setProperty("rs.connection." + _name + ".ra.savePassword", _raPassword_chk.isSelected());
 
 		conf.save();
 	}
@@ -480,19 +480,19 @@ implements ActionListener, FocusListener
 		String str;
 		
 		// USER
-		str = conf.getProperty("rs.connection."+_name+".ra.username");
+		str = conf.getProperty("rs.connection." + _name + ".ra.username");
 		if (str == null)
 			str = conf.getProperty("rs.connection.ra.username", "sa");
 		_raUsername_txt.setText(str);
 
 		// PASSWORD
-		str = conf.getProperty("rs.connection."+_name+".ra.password");
+		str = conf.getProperty("rs.connection." + _name + ".ra.password");
 		if (str == null)
 			str = conf.getProperty("rs.connection.ra.password", "");
 		_raPassword_txt.setText(str);
 
 		// SAVE PASSWORD
-		str = conf.getProperty("rs.connection."+_name+".ra.savePassword");
+		str = conf.getProperty("rs.connection." + _name + ".ra.savePassword");
 		if (str == null)
 			str = conf.getProperty("rs.connection.ra.savePassword", "true");
 		_raPassword_chk.setSelected(Boolean.parseBoolean(str));
@@ -507,7 +507,7 @@ implements ActionListener, FocusListener
 
 	private void doResumeConnection()
 	{
-		String cmd = "resume connection to "+_name+" ";
+		String cmd = "resume connection to " + _name + " ";
 
 		if (_dsiResumeSkipFirst_chk.isSelected())
 			cmd += "skip transaction";
@@ -520,7 +520,7 @@ implements ActionListener, FocusListener
 
 		final String cmd_final = cmd;
 
-		WaitForExecDialog wait = new WaitForExecDialog(this, _conn, "Resume connection to: "+_name);
+		WaitForExecDialog wait = new WaitForExecDialog(this, _conn, "Resume connection to: " + _name);
 
 		// Kick this of as it's own thread, otherwise the sleep below, might block the Swing Event Dispatcher Thread
 		BgExecutor bgExec = new BgExecutor(wait)
@@ -528,13 +528,13 @@ implements ActionListener, FocusListener
 			@Override
 			public Object doWork()
 			{
-				getWaitDialog().setState("RCL: "+cmd_final);
+				getWaitDialog().setState("RCL: " + cmd_final);
 				// Do the work
 				try
 				{
 					Connection conn = _conn;
 
-					_logger.info("Executing: "+cmd_final);
+					_logger.info("Executing: " + cmd_final);
 					Statement stmnt = conn.createStatement();
 					//stmnt.setQueryTimeout( value );
 					stmnt.executeUpdate(cmd_final);
@@ -556,7 +556,7 @@ implements ActionListener, FocusListener
 				}
 				catch (SQLException sqle)
 				{
-					AseConnectionUtils.showSqlExceptionMessage(RsResumeSuspendDialog.this, "Problems Executing", "Problems when executing SQL Command '"+cmd_final+"'.", sqle); 
+					AseConnectionUtils.showSqlExceptionMessage(RsResumeSuspendDialog.this, "Problems Executing", "Problems when executing SQL Command '" + cmd_final + "'.", sqle); 
 				}
 				return null;
 			}
@@ -572,7 +572,7 @@ implements ActionListener, FocusListener
 		final String password = _raPassword_txt.getText();
 		final String appname  = "RsResumeRa";
 
-		WaitForExecDialog wait = new WaitForExecDialog(this, _conn, "Start Replication Agent "+_name);
+		WaitForExecDialog wait = new WaitForExecDialog(this, _conn, "Start Replication Agent " + _name);
 
 		// Kick this of as it's own thread, otherwise the sleep below, might block the Swing Event Dispatcher Thread
 		BgExecutor bgExec = new BgExecutor(wait)
@@ -586,7 +586,7 @@ implements ActionListener, FocusListener
 				try
 				{
 					// CONNECT TO ASE
-					getWaitDialog().setState("Connecting to server "+dsname);
+					getWaitDialog().setState("Connecting to server " + dsname);
 					cmd = "connecting";
 					conn = AseConnectionFactory.getConnection(dsname, dbname, username, password, appname);
 
@@ -612,7 +612,7 @@ implements ActionListener, FocusListener
 						while (true)
 						{
 							cmd = "stopRepAgent:wait";
-							getWaitDialog().setState("Waiting for RepAgent to stop. "+TimeUtils.msToTimeStr("%MM:%SS", System.currentTimeMillis() - startTime));
+							getWaitDialog().setState("Waiting for RepAgent to stop. " + TimeUtils.msToTimeStr("%MM:%SS", System.currentTimeMillis() - startTime));
 							if ( ! RepServerUtils.isRepAgentAlive(conn, dsname, dbname) )
 							{
 								stopWasDone = true;
@@ -635,7 +635,7 @@ implements ActionListener, FocusListener
 							while (true)
 							{
 								cmd = "stopRepAgent:wait:nowait";
-								getWaitDialog().setState("Waiting for RepAgent to stop, with 'nowait'. "+TimeUtils.msToTimeStr("%MM:%SS", System.currentTimeMillis() - startTime));
+								getWaitDialog().setState("Waiting for RepAgent to stop, with 'nowait'. " + TimeUtils.msToTimeStr("%MM:%SS", System.currentTimeMillis() - startTime));
 								if ( ! RepServerUtils.isRepAgentAlive(conn, dsname, dbname) )
 								{
 									stopWasDone = true;
@@ -648,7 +648,7 @@ implements ActionListener, FocusListener
 						}
 						if ( ! stopWasDone )
 						{
-							SwingUtils.showErrorMessage("Problems Stopping RepAgent", "Could not stop the RepAgent at '"+dsname+"."+dbname+"'.", null);
+							SwingUtils.showErrorMessage("Problems Stopping RepAgent", "Could not stop the RepAgent at '" + dsname + "." + dbname + "'.", null);
 							return null;
 						}
 					}
@@ -668,7 +668,7 @@ implements ActionListener, FocusListener
 					while (true)
 					{
 						cmd = "startRepAgent:wait";
-						getWaitDialog().setState("Waiting for RepAgent to start. "+TimeUtils.msToTimeStr("%MM:%SS", System.currentTimeMillis() - startTime));
+						getWaitDialog().setState("Waiting for RepAgent to start. " + TimeUtils.msToTimeStr("%MM:%SS", System.currentTimeMillis() - startTime));
 						if ( RepServerUtils.isRepAgentAlive(conn, dsname, dbname) )
 						{
 							startWasDone = true;
@@ -680,22 +680,22 @@ implements ActionListener, FocusListener
 					}
 					if ( ! startWasDone)
 					{
-						SwingUtils.showErrorMessage("Problems Starting RepAgent", "Could not start the RepAgent at '"+dsname+"."+dbname+"'. Please check the ASE errorlog for more information.", null);
+						SwingUtils.showErrorMessage("Problems Starting RepAgent", "Could not start the RepAgent at '" + dsname + "." + dbname + "'. Please check the ASE errorlog for more information.", null);
 						return null;
 					}
 				}
 				catch (InterruptedException interupt)
 				{
 					// Cancel was called
-					_logger.info("doResumeRepAgent() dsname='"+dsname+"', dbname='"+dbname+"' was interrupted.");
+					_logger.info("doResumeRepAgent() dsname='" + dsname + "', dbname='" + dbname + "' was interrupted.");
 				}
 				catch (SQLException sqle)
 				{
-					AseConnectionUtils.showSqlExceptionMessage(RsResumeSuspendDialog.this, "Problems Executing", "Problems when executing Command '"+cmd+"'.", sqle); 
+					AseConnectionUtils.showSqlExceptionMessage(RsResumeSuspendDialog.this, "Problems Executing", "Problems when executing Command '" + cmd + "'.", sqle); 
 				}
 				catch (ClassNotFoundException e)
 				{
-					SwingUtils.showErrorMessage("Problems connection", "Could not make a connection to "+_name, e);
+					SwingUtils.showErrorMessage("Problems connection", "Could not make a connection to " + _name, e);
 				}
 				finally
 				{
@@ -719,14 +719,14 @@ implements ActionListener, FocusListener
 
 	private void doSuspendConnection()
 	{
-		String cmd = "suspend connection to "+_name+" ";
+		String cmd = "suspend connection to " + _name + " ";
 
 		if (_dsiSuspendWithNowait_chk.isSelected())
 			cmd += "with nowait";
 
 		final String cmd_final = cmd;
 
-		WaitForExecDialog wait = new WaitForExecDialog(this, _conn, "Suspend connection to: "+_name);
+		WaitForExecDialog wait = new WaitForExecDialog(this, _conn, "Suspend connection to: " + _name);
 
 		// Kick this of as it's own thread, otherwise the sleep below, might block the Swing Event Dispatcher Thread
 		BgExecutor bgExec = new BgExecutor(wait)
@@ -734,13 +734,13 @@ implements ActionListener, FocusListener
 			@Override
 			public Object doWork()
 			{
-				getWaitDialog().setState("RCL: "+cmd_final);
+				getWaitDialog().setState("RCL: " + cmd_final);
 				// Do the work
 				try
 				{
 					Connection conn = _conn;
 
-					_logger.info("Executing: "+cmd_final);
+					_logger.info("Executing: " + cmd_final);
 					Statement stmnt = conn.createStatement();
 					//stmnt.setQueryTimeout( value );
 					stmnt.executeUpdate(cmd_final);
@@ -753,7 +753,7 @@ implements ActionListener, FocusListener
 				}
 				catch (SQLException sqle)
 				{
-					AseConnectionUtils.showSqlExceptionMessage(RsResumeSuspendDialog.this, "Problems Executing", "Problems when executing SQL Command '"+cmd_final+"'.", sqle); 
+					AseConnectionUtils.showSqlExceptionMessage(RsResumeSuspendDialog.this, "Problems Executing", "Problems when executing SQL Command '" + cmd_final + "'.", sqle); 
 				}
 				return null;
 			}
@@ -769,7 +769,7 @@ implements ActionListener, FocusListener
 		final String password = _raPassword_txt.getText();
 		final String appname  = "RsSuspendRa";
 
-		WaitForExecDialog wait = new WaitForExecDialog(this, _conn, "Stop Replication Agent "+_name);
+		WaitForExecDialog wait = new WaitForExecDialog(this, _conn, "Stop Replication Agent " + _name);
 
 		// Kick this of as it's own thread, otherwise the sleep below, might block the Swing Event Dispatcher Thread
 		BgExecutor bgExec = new BgExecutor(wait)
@@ -783,7 +783,7 @@ implements ActionListener, FocusListener
 				try
 				{
 					// CONNECT TO ASE
-					getWaitDialog().setState("Connecting to server "+dsname);
+					getWaitDialog().setState("Connecting to server " + dsname);
 					cmd = "connecting";
 					conn = AseConnectionFactory.getConnection(dsname, dbname, username, password, appname);
 
@@ -809,7 +809,7 @@ implements ActionListener, FocusListener
 						while (true)
 						{
 							cmd = "stopRepAgent:wait";
-							getWaitDialog().setState("Waiting for RepAgent to stop. "+TimeUtils.msToTimeStr("%MM:%SS", System.currentTimeMillis() - startTime));
+							getWaitDialog().setState("Waiting for RepAgent to stop. " + TimeUtils.msToTimeStr("%MM:%SS", System.currentTimeMillis() - startTime));
 							if ( ! RepServerUtils.isRepAgentAlive(conn, dsname, dbname) )
 							{
 								stopWasDone = true;
@@ -832,7 +832,7 @@ implements ActionListener, FocusListener
 							while (true)
 							{
 								cmd = "stopRepAgent:wait:nowait";
-								getWaitDialog().setState("Waiting for RepAgent to stop, with 'nowait'. "+TimeUtils.msToTimeStr("%MM:%SS", System.currentTimeMillis() - startTime));
+								getWaitDialog().setState("Waiting for RepAgent to stop, with 'nowait'. " + TimeUtils.msToTimeStr("%MM:%SS", System.currentTimeMillis() - startTime));
 								if ( ! RepServerUtils.isRepAgentAlive(conn, dsname, dbname) )
 								{
 									stopWasDone = true;
@@ -845,28 +845,28 @@ implements ActionListener, FocusListener
 						}
 						if ( ! stopWasDone )
 						{
-							SwingUtils.showErrorMessage("Problems Stopping RepAgent", "Could not stop the RepAgent at '"+dsname+"."+dbname+"'.", null);
+							SwingUtils.showErrorMessage("Problems Stopping RepAgent", "Could not stop the RepAgent at '" + dsname + "." + dbname + "'.", null);
 							return null;
 						}
 					}
 					else // RepAgent was already running...
 					{
-						SwingUtils.showErrorMessage("Stopping RepAgent", "The RepAgent at '"+dsname+"."+dbname+"' was not running.", null);
+						SwingUtils.showErrorMessage("Stopping RepAgent", "The RepAgent at '" + dsname + "." + dbname + "' was not running.", null);
 						return null;
 					}
 				}
 				catch (InterruptedException interupt)
 				{
 					// Cancel was called
-					_logger.info("doSuspendRepAgent() dsname='"+dsname+"', dbname='"+dbname+"' was interrupted.");
+					_logger.info("doSuspendRepAgent() dsname='" + dsname + "', dbname='" + dbname + "' was interrupted.");
 				}
 				catch (SQLException sqle)
 				{
-					AseConnectionUtils.showSqlExceptionMessage(RsResumeSuspendDialog.this, "Problems Executing", "Problems when executing Command '"+cmd+"'.", sqle); 
+					AseConnectionUtils.showSqlExceptionMessage(RsResumeSuspendDialog.this, "Problems Executing", "Problems when executing Command '" + cmd + "'.", sqle); 
 				}
 				catch (ClassNotFoundException e)
 				{
-					SwingUtils.showErrorMessage("Problems connection", "Could not make a connection to "+_name, e);
+					SwingUtils.showErrorMessage("Problems connection", "Could not make a connection to " + _name, e);
 				}
 				finally
 				{

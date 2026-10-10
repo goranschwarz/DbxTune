@@ -45,7 +45,7 @@ extends CompletionProviderAbstractSql
 
 	public static CompletionProviderAbstract installAutoCompletion(TextEditorPane textPane, RTextScrollPane scroll, ErrorStrip errorStrip, Window window, ConnectionProvider connectionProvider)
 	{
-		_logger.info("Installing Syntax and AutoCompleation for MS SQL-Server ("+AsetuneSyntaxConstants.SYNTAX_STYLE_MSSQL_TSQL+").");
+		_logger.info("Installing Syntax and AutoCompleation for MS SQL-Server (" + AsetuneSyntaxConstants.SYNTAX_STYLE_MSSQL_TSQL + ").");
 		textPane.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_MSSQL_TSQL);
 
 		CompletionProviderAbstract acProvider = createCompletionProvider(window, connectionProvider);

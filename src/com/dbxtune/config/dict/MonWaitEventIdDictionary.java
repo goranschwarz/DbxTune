@@ -180,7 +180,7 @@ public class MonWaitEventIdDictionary
 		public String getSourceText()
 		{
 			if (_txtSource != null)
-				return StringUtil.makeApproxLineBreak("<BR><HR><B>Text Source:</B> "+ _txtSource, LINE_BREAK_AFTER, WORD_HYSTERESIS, "<BR>");
+				return StringUtil.makeApproxLineBreak("<BR><HR><B>Text Source:</B> " + _txtSource, LINE_BREAK_AFTER, WORD_HYSTERESIS, "<BR>");
 			else
 			{
 				String str = "";

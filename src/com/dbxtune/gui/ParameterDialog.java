@@ -243,7 +243,7 @@ public class ParameterDialog
 				String key = entry.getKey();
 				String val = entry.getValue();
 
-				System.out.println("key='"+key+"', val='"+val+"'.");
+				System.out.println("key='" + key + "', val='" + val + "'.");
 			}
 		}
 	}

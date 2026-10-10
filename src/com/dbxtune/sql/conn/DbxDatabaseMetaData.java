@@ -116,12 +116,12 @@ public class DbxDatabaseMetaData implements DatabaseMetaData
 			try
 			{
 				String str = _dbmd.getURL();
-				_logger.debug("DbxDatabaseMetaData.getURL(): returns: "+str);
+				_logger.debug("DbxDatabaseMetaData.getURL(): returns: " + str);
 				return str;
 			}
 			catch (SQLException e)
 			{
-				_logger.debug("DbxDatabaseMetaData.getURL(): throws: "+e, e);
+				_logger.debug("DbxDatabaseMetaData.getURL(): throws: " + e, e);
 				throw e;
 			}
 		}

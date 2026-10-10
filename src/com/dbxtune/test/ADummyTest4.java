@@ -91,12 +91,12 @@ public class ADummyTest4 implements Runnable
 			Object key = keys.nextElement();
 			Object value = UIManager.get (key);
 			if (value != null && value instanceof Font)
-				System.out.println("XXX: key="+StringUtil.left(key.toString(), 40)+"val="+value);
+				System.out.println("XXX: key=" + StringUtil.left(key.toString(), 40) + "val=" + value);
 //				UIManager.put (key, f);
 		}
 		JLabel lll = new JLabel("xxx");
-		System.out.println("JLabel.getSize          = "+lll.getSize());
-		System.out.println("JLabel.getPreferredSize = "+lll.getPreferredSize());
+		System.out.println("JLabel.getSize          = " + lll.getSize());
+		System.out.println("JLabel.getPreferredSize = " + lll.getPreferredSize());
 		System.out.println("-----------------------------------------------");
 
 		SwingUtilities.invokeLater(new ADummyTest4());

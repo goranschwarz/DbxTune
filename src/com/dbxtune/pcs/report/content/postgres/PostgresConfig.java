@@ -94,8 +94,8 @@ extends PostgresAbstract
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		// Get some configuration
-		String categoryList  = localConf.getProperty(this.getClass().getSimpleName()+".category.list",       "'File Locations', 'Statistics / Query and Index Statistics Collector'");
-		String paramNameList = localConf.getProperty(this.getClass().getSimpleName()+".parameter.name.list", "'max_connections'");
+		String categoryList  = localConf.getProperty(this.getClass().getSimpleName() + ".category.list",       "'File Locations', 'Statistics / Query and Index Statistics Collector'");
+		String paramNameList = localConf.getProperty(this.getClass().getSimpleName() + ".parameter.name.list", "'max_connections'");
 
 		String sql = ""
 			+ "select \n"

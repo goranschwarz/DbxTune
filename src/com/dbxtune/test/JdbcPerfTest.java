@@ -140,8 +140,8 @@ public class JdbcPerfTest
 			// Add some for SQL Server
 			if (jdbcUrl.startsWith("jdbc:sqlserver:"))
 			{
-				if (props.getProperty("encrypt")                == null) props.put("encrypt",                true+"");
-				if (props.getProperty("trustServerCertificate") == null) props.put("trustServerCertificate", true+"");
+				if (props.getProperty("encrypt")                == null) props.put("encrypt",                true + "");
+				if (props.getProperty("trustServerCertificate") == null) props.put("trustServerCertificate", true + "");
 			}
 
 			// Add some for Sybase ASE

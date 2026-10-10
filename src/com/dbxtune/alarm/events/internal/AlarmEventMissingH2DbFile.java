@@ -70,7 +70,7 @@ extends AlarmEvent
 		setTimeToLive( ttlSec * 1000 );
 
 		// Set data
-		setData("url="+currentUrl);
+		setData("url=" + currentUrl);
 
 		// Set the description 
 //		setDescription("");

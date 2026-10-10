@@ -73,7 +73,7 @@ public class LogoutServlet extends HttpServlet
 		if (session != null)
 		{
 			session.invalidate();
-			_logger.info("Logout: username='"+username+"'.");
+			_logger.info("Logout: username='" + username + "'.");
 		}
 
 //		response.sendRedirect(request.getContextPath() + "/index.html");

@@ -60,7 +60,7 @@ extends CountersModel
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
-	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+	public static final String   GUI_ICON_FILE    = "images/" + CM_NAME + ".png";
 
 //	public static final long     NEED_SRV_VERSION = 15500;
 //	public static final long     NEED_SRV_VERSION = 1550000;
@@ -95,7 +95,7 @@ extends CountersModel
 	public static CountersModel create(ICounterController counterController, IGuiController guiController)
 	{
 		if (guiController != null && guiController.hasGUI())
-			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+			guiController.splashWindowProgress("Loading: Counter Model '" + CM_NAME + "'");
 
 		return new CmTempdbActivity(counterController, guiController);
 	}
@@ -135,7 +135,7 @@ extends CountersModel
 	{
 		addTrendGraph(GRAPH_NAME_LOGSEMAPHORE_CONT,
 			"TempDB Transaction Log Semaphore Contention ", 	          // Menu CheckBox text
-			"TempDB Transaction Log Semaphore Contention in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"TempDB Transaction Log Semaphore Contention in Percent (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic, 
@@ -148,7 +148,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_LREADS,
 			"TempDB Logical Reads", 	          // Menu CheckBox text
-			"TempDB Logical Reads per seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"TempDB Logical Reads per seconds (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic, 
@@ -161,7 +161,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_PWRITES,
 			"TempDB Physical Writes", 	          // Menu CheckBox text
-			"TempDB Physical Writes per seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"TempDB Physical Writes per seconds (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic, 
@@ -174,7 +174,7 @@ extends CountersModel
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_CAT_LOCK_REQ,
 			"TempDB Catalog Lock Requests", 	          // Menu CheckBox text
-			"TempDB Catalog Lock Requests per seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			"TempDB Catalog Lock Requests per seconds (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic, 

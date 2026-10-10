@@ -289,7 +289,7 @@ public class GTabbedPaneViewDialog
 				}
 				else
 				{
-					SwingUtils.showInfoMessage(this, "Can't move to another group", "<html>Trying to move into a new group<br>This is not supported for the moment<br><br>From group: <b>"+atGroupName+"</b><br>To group: <b>"+toGroupName+"</b><br></html>");
+					SwingUtils.showInfoMessage(this, "Can't move to another group", "<html>Trying to move into a new group<br>This is not supported for the moment<br><br>From group: <b>" + atGroupName + "</b><br>To group: <b>" + toGroupName + "</b><br></html>");
 					return;
 				}
 			}
@@ -318,7 +318,7 @@ public class GTabbedPaneViewDialog
 				}
 				else
 				{
-					SwingUtils.showInfoMessage(this, "Can't move to another group", "<html>Trying to move into a new group<br>This is not supported for the moment<br><br>From group: <b>"+atGroupName+"</b><br>To group: <b>"+toGroupName+"</b><br></html>");
+					SwingUtils.showInfoMessage(this, "Can't move to another group", "<html>Trying to move into a new group<br>This is not supported for the moment<br><br>From group: <b>" + atGroupName + "</b><br>To group: <b>" + toGroupName + "</b><br></html>");
 					return;
 				}
 			}
@@ -651,7 +651,7 @@ public class GTabbedPaneViewDialog
 				{
 					System.out.println("ACTION: Show Counter View Dialog.");
 					int ret = GTabbedPaneViewDialog.showDialog(null, _gtabs);
-					System.out.println("RESPONSE: GTabbedPaneViewDialog.showDialog(...) returned="+ret);
+					System.out.println("RESPONSE: GTabbedPaneViewDialog.showDialog(...) returned=" + ret);
 				}
 			});
 			menu.add(mi);
@@ -679,13 +679,13 @@ public class GTabbedPaneViewDialog
 
 			//----------------------------------------------------------
 			final String[] sa1 = {"1-Object", "4-Waits", "7-Pools"};
-			mi = new JMenuItem("setTabOrder(String[]: '"+Arrays.asList(sa1)+"'.");
+			mi = new JMenuItem("setTabOrder(String[]: '" + Arrays.asList(sa1) + "'.");
 			mi.addActionListener(new ActionListener()
 			{
 				@Override
 				public void actionPerformed(ActionEvent e)
 				{
-					System.out.println("ACTION: setTabOrder(String[]: '"+Arrays.asList(sa1)+"'.");
+					System.out.println("ACTION: setTabOrder(String[]: '" + Arrays.asList(sa1) + "'.");
 					_gtabs.setTabOrder(sa1);
 				}
 			});
@@ -693,13 +693,13 @@ public class GTabbedPaneViewDialog
 
 			//----------------------------------------------------------
 			final String[] sa2 = {"1-Object=true", "4-Waits=false", "7-Pools"};
-			mi = new JMenuItem("setTabOrderAndVisibility(String[]: '"+Arrays.asList(sa2)+"'.");
+			mi = new JMenuItem("setTabOrderAndVisibility(String[]: '" + Arrays.asList(sa2) + "'.");
 			mi.addActionListener(new ActionListener()
 			{
 				@Override
 				public void actionPerformed(ActionEvent e)
 				{
-					System.out.println("ACTION: setTabOrderAndVisibility(String[]: '"+Arrays.asList(sa2)+"'.");
+					System.out.println("ACTION: setTabOrderAndVisibility(String[]: '" + Arrays.asList(sa2) + "'.");
 					_gtabs.setTabOrderAndVisibility(sa2);
 				}
 			});
@@ -707,13 +707,13 @@ public class GTabbedPaneViewDialog
 
 			//----------------------------------------------------------
 			final String str = "1-Object=true, 4-Waits,7-Pools=FALSE";
-			mi = new JMenuItem("setTabOrderAndVisibility(String: '"+str+"')");
+			mi = new JMenuItem("setTabOrderAndVisibility(String: '" + str + "')");
 			mi.addActionListener(new ActionListener()
 			{
 				@Override
 				public void actionPerformed(ActionEvent e)
 				{
-					System.out.println("ACTION: setTabOrderAndVisibility(String: '"+str+"')");
+					System.out.println("ACTION: setTabOrderAndVisibility(String: '" + str + "')");
 					_gtabs.setTabOrderAndVisibility(str);
 				}
 			});
@@ -727,7 +727,7 @@ public class GTabbedPaneViewDialog
 				public void actionPerformed(ActionEvent e)
 				{
 					System.out.println("ACTION: getTabOrderAndVisibility()");
-					System.out.println("RESULT STRING: '"+_gtabs.getTabOrderAndVisibility()+"'.");
+					System.out.println("RESULT STRING: '" + _gtabs.getTabOrderAndVisibility() + "'.");
 				}
 			});
 			menu.add(mi);
@@ -740,7 +740,7 @@ public class GTabbedPaneViewDialog
 		{
 			Object source = e.getSource();
 
-			System.out.println("TestClass: stateChanged() source="+source+", ChangeEvent="+e);
+			System.out.println("TestClass: stateChanged() source=" + source + ", ChangeEvent=" + e);
 			if (source.equals(_gtabs))
 			{
 				int selectedTab = _gtabs.getSelectedIndex();
@@ -751,7 +751,7 @@ public class GTabbedPaneViewDialog
 				}
 
 				String currentTab = _gtabs.getTitleAt(selectedTab);
-				System.out.println("TestClass: stateChanged(): selected tab = '"+currentTab+"'.");
+				System.out.println("TestClass: stateChanged(): selected tab = '" + currentTab + "'.");
 			}
 		}
 	}

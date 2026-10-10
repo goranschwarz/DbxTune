@@ -111,7 +111,7 @@ public class UserDefinedAlarmHandler
 		// if DBXTUNE_UD_ALARM_SOURCE_DIR, is NOT set: set it to ${HOME}/.dbxtune
 		if ( ! conf.hasProperty("DBXTUNE_UD_ALARM_SOURCE_DIR") )
 		{
-			_logger.warn("The environment variable 'DBXTUNE_UD_ALARM_SOURCE_DIR' is NOT set. Setting this to '"+AppDir.getDbxUserHomeDir()+"'.");
+			_logger.warn("The environment variable 'DBXTUNE_UD_ALARM_SOURCE_DIR' is NOT set. Setting this to '" + AppDir.getDbxUserHomeDir() + "'.");
 			System.setProperty("DBXTUNE_UD_ALARM_SOURCE_DIR", AppDir.getDbxUserHomeDir());
 		}
 
@@ -126,9 +126,9 @@ public class UserDefinedAlarmHandler
 
 //		_logger.info("Base Source Code Directory for User Defined Alarm Handler is '" + getSourceDir() + "'.");
 		_logger.info("Configuration for UserDefinedAlarmHandler");
-		_logger.info("                  "+PROPKEY_sourceDir+"          = "+getSourceDir());
-		_logger.info("                  "+PROPKEY_packetBaseName+"     = "+_packetBaseName);
-		_logger.info("                  "+PROPKEY_fallbackClassName+"  = "+_fallbackClassName);
+		_logger.info("                  " + PROPKEY_sourceDir + "          = " + getSourceDir());
+		_logger.info("                  " + PROPKEY_packetBaseName + "     = " + _packetBaseName);
+		_logger.info("                  " + PROPKEY_fallbackClassName + "  = " + _fallbackClassName);
 
 		if ( ! _classSrcDirFile.exists() )
 		{
@@ -235,7 +235,7 @@ public class UserDefinedAlarmHandler
 			{
 				
 //				_logger.info("User Defined Alarm will NOT be enabled for "+StringUtil.left("'"+cm.getName()+"'.", 25)+" Class-Not-Found when trying to compiling object " + StringUtil.left("'"+className+"'.", 25+Version.getAppName().length()+1) + " Using source directory '" + getSourceDir() + "'. To implement User Defined Alarms for this CM: Create the java file '"+getJavaFileName(cm)+"'.");
-				_logger.info("User   Defined Alarms are NOT enabled for "+StringUtil.left("'"+cm.getName()+"'.", 25)+" Class-Not-Found when trying to compiling object " + StringUtil.left("'"+className+"'.", 25+Version.getAppName().length()+1) + " Using source directory '" + getSourceDir() + "'. To implement User Defined Alarms for this CM: Create the java file '"+getJavaFileName(cm)+"'.");
+				_logger.info("User   Defined Alarms are NOT enabled for " + StringUtil.left("'" + cm.getName() + "'.", 25) + " Class-Not-Found when trying to compiling object " + StringUtil.left("'" + className + "'.", 25+Version.getAppName().length()+1) + " Using source directory '" + getSourceDir() + "'. To implement User Defined Alarms for this CM: Create the java file '" + getJavaFileName(cm) + "'.");
 				_logger.debug("Class-Not-Found when trying to compiling object '" + className + "' for CM '" + cm.getName() + "'. Using source directory '" + getSourceDir() + "'.");
 			}
 
@@ -290,7 +290,7 @@ public class UserDefinedAlarmHandler
 	{
 		if ( ! _initialized )
 		{
-			throw new RuntimeException("The '"+this.getClass().getSimpleName()+"' module has NOT yet been initialized.");
+			throw new RuntimeException("The '" + this.getClass().getSimpleName() + "' module has NOT yet been initialized.");
 		}
 	}
 

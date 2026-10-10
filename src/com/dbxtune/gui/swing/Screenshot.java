@@ -101,10 +101,10 @@ public class Screenshot
 
 		// Get File
 		File file = new File(filename);
-		_logger.info("Saving screen capture to file '"+file+"'.");
+		_logger.info("Saving screen capture to file '" + file + "'.");
 		if ( file.exists() )
 		{
-			_logger.info("The file '"+file+"' exists and will be overwritten.");
+			_logger.info("The file '" + file + "' exists and will be overwritten.");
 			file.delete();
 		}
 
@@ -113,7 +113,7 @@ public class Screenshot
 		ImageWriter writer = writers.next();
 		if ( writer == null )
 		{
-			_logger.error("Problems creating a writer for file '"+file+"'.");
+			_logger.error("Problems creating a writer for file '" + file + "'.");
 			return false;
 		}
 
@@ -154,7 +154,7 @@ public class Screenshot
 		}
 		catch (IOException e)
 		{
-			_logger.error("Problems writing screen capture to file '"+file+"'.", e);
+			_logger.error("Problems writing screen capture to file '" + file + "'.", e);
 			return false;
 		}
 		return true;

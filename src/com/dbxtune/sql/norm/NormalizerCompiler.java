@@ -126,7 +126,7 @@ public class NormalizerCompiler
 		// if DBXTUNE_NORMALIZER_SOURCE_DIR, is NOT set: set it to ${HOME}/.dbxtune
 		if ( ! conf.hasProperty("DBXTUNE_NORMALIZER_SOURCE_DIR") )
 		{
-			_logger.warn("The environment variable 'DBXTUNE_NORMALIZER_SOURCE_DIR' is NOT set. Setting this to '"+AppDir.getDbxUserHomeDir()+"'.");
+			_logger.warn("The environment variable 'DBXTUNE_NORMALIZER_SOURCE_DIR' is NOT set. Setting this to '" + AppDir.getDbxUserHomeDir() + "'.");
 			System.setProperty("DBXTUNE_NORMALIZER_SOURCE_DIR", AppDir.getDbxUserHomeDir());
 		}
 
@@ -141,8 +141,8 @@ public class NormalizerCompiler
 
 //		_logger.info("Base Source Code Directory for User Defined Alarm Handler is '" + getSourceDir() + "'.");
 		_logger.info("Configuration for User Defined Normalizer Compiler");
-		_logger.info("                  "+PROPKEY_sourceDir+"          = "+getSourceDir());
-		_logger.info("                  "+PROPKEY_packetBaseName+"     = "+_packetBaseName);
+		_logger.info("                  " + PROPKEY_sourceDir + "          = " + getSourceDir());
+		_logger.info("                  " + PROPKEY_packetBaseName + "     = " + _packetBaseName);
 //		_logger.info("                  "+PROPKEY_fallbackClassName+"  = "+_fallbackClassName);
 
 		if ( ! _classSrcDirFile.exists() )
