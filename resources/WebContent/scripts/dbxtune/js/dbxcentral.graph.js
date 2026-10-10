@@ -3879,7 +3879,51 @@ class DbxGraph
 		} catch (error) {
 			console.log("Failed to install Context menu: error="+error);
 		}
-	
+
+		//---------------------------------------------------------------------------------------------------------
+		// on touch "long-press": open the same context menu as right click
+		//             iOS/iPadOS Safari do NOT fire 'contextmenu' on a long-press, so the menu was unreachable from touch
+		//---------------------------------------------------------------------------------------------------------
+		if ('ontouchstart' in window)
+		{
+			// Stop iOS from showing its own callout / text selection on the long-press
+			newDiv.style.webkitTouchCallout = "none";
+			newDiv.style.webkitUserSelect   = "none";
+			newDiv.style.userSelect         = "none";
+		}
+		let longPressTimer  = null;
+		let longPressOpened = false;
+		let longPressX = 0;
+		let longPressY = 0;
+		newDiv.addEventListener('touchstart', function(e)
+		{
+			clearTimeout(longPressTimer);
+			longPressOpened = false;
+			if (e.touches.length !== 1) // 2 fingers = pinch/scroll, not a long-press
+				return;
+			longPressX = e.touches[0].pageX;
+			longPressY = e.touches[0].pageY;
+			longPressTimer = setTimeout(function()
+			{
+				longPressOpened = true;
+				$(newDiv).contextMenu({x: longPressX, y: longPressY});
+			}, 600);
+		}, {passive: true});
+		newDiv.addEventListener('touchmove', function(e)
+		{
+			// moved more than 10 pixels: it's a scroll/drag, not a long-press
+			if (Math.abs(e.touches[0].pageX - longPressX) > 10 || Math.abs(e.touches[0].pageY - longPressY) > 10)
+				clearTimeout(longPressTimer);
+		}, {passive: true});
+		newDiv.addEventListener('touchend', function(e)
+		{
+			clearTimeout(longPressTimer);
+			// The menu was opened: swallow the simulated mouse click that follows, or it closes the menu at once
+			if (longPressOpened && e.cancelable)
+				e.preventDefault();
+		});
+		newDiv.addEventListener('touchcancel', function(e) { clearTimeout(longPressTimer); });
+
 		//---------------------------------------------------------------------------------------------------------
 		// on "click": get the timestamp in the timeline, and draw a timeline-marker in ALL graphs on the same timestamp
 		//             if you didn't click on a "point" then all timeline-markers are removed
