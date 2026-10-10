@@ -723,8 +723,9 @@ function collectorRequestRefresh()
 } // end: function
 
 
-// do: deferred (since all DOM elements might not be created yet)
-setTimeout(function()
+// do: when the DOM is ready (this file is loaded in <head>: a short setTimeout could fire before <body> was parsed,
+//     then the checkboxes did not exist yet and the saved values were silently ignored, for example 'Auto Open')
+$(function()
 {
 	// Restore MaxExecTimeInMs
 //	var savedVal_activeStatementsExecTime = getStorage('dbxtune_checkboxes_').get("active-statements-execTime-txt");
@@ -767,7 +768,7 @@ setTimeout(function()
 	console.log("RESTORE ALARM Window size: savedVal_activeStatementsCounterType="+savedVal_activeStatementsCounterType);
 	activeStatementsCounterTypeClick( savedVal_activeStatementsCounterType );
 	radionButtonGroupSetSelectedValue("active-statements-counter-type", savedVal_activeStatementsCounterType);
-}, 10);
+});
 
 
 //-----------------------------------------------------------
