@@ -1463,6 +1463,16 @@ implements Memory.MemoryListener
 										_logger.error("On Hostmon SSH Connect, problems executing command '" + killCommand + "' at '" + hostMonConn.getHostname() + "'. Skipping this and continuing. Caught: " + ex, ex);
 									}
 								}
+
+								// ON Windows: Start the PowerShell session now, so the first sample do not have to wait for PowerShell/.NET to load
+								try
+								{
+									hostMonConn.executeInPowershellSession("$PSVersionTable.PSVersion.ToString()");
+								}
+								catch (Exception ex)
+								{
+									_logger.warn("On Hostmon SSH Connect, problems starting the PowerShell session at '" + hostMonConn.getHostname() + "'. Skipping this and continuing. Caught: " + ex);
+								}
 							}
 
 							getCounterController().setHostMonConnection(hostMonConn);

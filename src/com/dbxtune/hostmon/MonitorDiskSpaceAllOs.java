@@ -67,6 +67,16 @@ extends HostMonitor
 		}
 	}
 
+	@Override
+	public String getPowershellScript()
+	{
+		// Only on Windows, and a command from the configuration is always executed as a normal OS Command
+		if ( ! isConnectedToVendor(OsVendor.Windows) || StringUtil.hasValue(super.getCommand()) )
+			return null;
+
+		return getWindowsPowershellScript();
+	}
+
 	// SMALL TEST -- via main... Just to get the Command
 	public static void main(String[] args)
 	{
@@ -103,8 +113,23 @@ extends HostMonitor
 
 		if (osName == null)
 			osName = "";
-		
-		String pwshCmd = ""
+
+		String pwshCmd = getWindowsPowershellScript();
+
+		// Should we return a "clean" PowerShell command or a DOS Command which does: powershell -Command "pwshCmd"
+		if (osName.startsWith("Windows-Powershell-"))
+		{
+			return pwshCmd;
+		}
+		else
+		{
+			return "powershell -NoLogo -NoProfile -NonInteractive -Command \"" + pwshCmd + "\"";
+		}
+	}
+
+	private static String getWindowsPowershellScript()
+	{
+		return ""
 			+ "[System.IO.DriveInfo]::GetDrives() "
 			+ "| Where-Object {$_.DriveType -eq 'Fixed' -and $_.IsReady} "
 			+ "| ForEach-Object "
@@ -119,16 +144,6 @@ extends HostMonitor
 			        + ", (($_.TotalSize-$_.AvailableFreeSpace)/$_.TotalSize*100)"
 			        + ", $mountedOn "
 			+ "}";
-
-		// Should we return a "clean" PowerShell command or a DOS Command which does: powershell -Command "pwshCmd" 
-		if (osName.startsWith("Windows-Powershell-"))
-		{
-			return pwshCmd;
-		}
-		else
-		{
-			return "powershell -Command \"" + pwshCmd + "\"";
-		}
 	}
 	
 

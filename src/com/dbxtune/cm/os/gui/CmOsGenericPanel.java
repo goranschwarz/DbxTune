@@ -174,7 +174,7 @@ extends CmOsAbstractPanel
 				boolean isRunning      = hostMonitor.isRunning();
 				boolean isPaused       = hostMonitor.isPaused();
 
-				_hostmonThreadIsRunning_lbl.setText("<html>Command: <b>" + hostMonitor.getCommand() + "</b></html>");
+				_hostmonThreadIsRunning_lbl.setText("<html>Command: <b>" + hostMonitor.getExecutedCommand() + "</b> &nbsp; (" + hostMonitor.getExecModeDescription() + ")</html>");
 				_hostmonThreadNotInit_lbl  .setVisible( false );
 				_hostmonThreadIsRunning_lbl.setVisible(   isRunning || !isStreamingCmd);
 				_hostmonThreadIsStopped_lbl.setVisible( ! isRunning && isStreamingCmd);

@@ -44,7 +44,9 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.CounterController;
 import com.dbxtune.alarm.ui.config.AlarmWritersTableModel;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CounterModelHostMonitor;
 import com.dbxtune.cm.CountersModel;
+import com.dbxtune.hostmon.HostMonitor;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.CronUtils;
 import com.dbxtune.utils.StringUtil;
@@ -276,6 +278,18 @@ if (auth != null)
 			gen.writeObjectField("sqlInit"       , cm.getSqlInit());
 			gen.writeObjectField("sqlClose"      , cm.getSqlClose());
 			gen.writeObjectField("sqlRefresh"    , cm.getSql());
+
+			// Host Monitor CM's has no SQL, instead show what OS Command that is executed (and how)
+			if (cm instanceof CounterModelHostMonitor)
+			{
+				HostMonitor hostMon = ((CounterModelHostMonitor)cm).getHostMonitor(); // null until the CM is initialized
+				if (hostMon != null && hostMon.getConnection() != null)
+				{
+					gen.writeStringField("osCommand"        , hostMon.getExecutedCommand());
+					gen.writeStringField("osCommandExecMode", hostMon.getExecModeDescription());
+					gen.writeStringField("osHost"           , hostMon.getUsername() + "@" + hostMon.getHostname() + " (" + hostMon.getConnection().getConnectionType() + ", " + hostMon.getConnection().getOsName() + ")");
+				}
+			}
 //System.out.println("----------: CM name()               = |" + cm.getName() + ", displayName=|" + cm.getDisplayName() + "|.");
 
 //			// OBJECT: options

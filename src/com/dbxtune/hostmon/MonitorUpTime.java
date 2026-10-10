@@ -123,7 +123,7 @@ extends HostMonitor
 
 		try
 		{
-			SshConnection conn = new SshConnection("sunspot", "gorans", "YHNmju76");
+			SshConnection conn = new SshConnection("sunspot", "gorans", "xxxx");
 //			SshConnection conn = new SshConnection("bluesky2", "gorans", "xxxx");
 		
 			HostMonitorConnectionSsh hostMonConn = new HostMonitorConnectionSsh(conn);

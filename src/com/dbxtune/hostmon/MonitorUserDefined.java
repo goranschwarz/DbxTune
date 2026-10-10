@@ -195,7 +195,7 @@ extends HostMonitor
 //			SshConnection conn = new SshConnection("sunspot", "gorans", "xxxx");
 //			SshConnection conn = new SshConnection("bluesky2", "gorans", "xxxx");
 			SshConnection conn = new SshConnection("gorans.no-ip.org", "gorans", "dummy");
-//			SshConnection conn = new SshConnection("sweiq-linux", "ajackson", "sybase");
+//			SshConnection conn = new SshConnection("sweiq-linux", "ajackson", "xxxx");
 		
 			HostMonitorConnectionSsh hostMonConn = new HostMonitorConnectionSsh(conn);
 

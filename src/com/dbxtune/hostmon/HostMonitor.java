@@ -74,6 +74,14 @@ implements Runnable
 	public static final String  PROPKEY_executeAndParse_timeoutSec = "HostMonitor.executeAndParse.timeout.seconds";
 	public static final int     DEFAULT_executeAndParse_timeoutSec = 60;
 
+	/** Windows: Execute non-streaming PowerShell scripts in a long lived PowerShell session (started once per connection), instead of starting a new 'powershell' for every execution. See {@link PowershellSession} */
+	public static final String  PROPKEY_windows_powershell_session_enabled = "HostMonitor.windows.powershell.session.enabled";
+	public static final boolean DEFAULT_windows_powershell_session_enabled = true;
+
+	/** Max time (in seconds) to wait for the PowerShell session to start (load PowerShell/.NET and answer on the first command) */
+	public static final String  PROPKEY_windows_powershell_session_startTimeoutSec = "HostMonitor.windows.powershell.session.start.timeout.seconds";
+	public static final int     DEFAULT_windows_powershell_session_startTimeoutSec = 20;
+
 	public static final String  PROPKEY_windows_typeperf_cmd_path = "HostMonitor.windows.typeperf.cmd.path";
 	public static final String  DEFAULT_windows_typeperf_cmd_path = "";
 	
@@ -112,6 +120,10 @@ implements Runnable
 
 	/**The Operating System command that will be used to get valid information*/
 //	private String _command = null;
+
+	/** What was last executed: the OS Command, or the PowerShell script if it was executed in the connections PowerShell session */
+	private String  _lastExecCommand             = null;
+	private boolean _lastExecInPowershellSession = false;
 
 	/** The thread used to execute this Host Monitor */
 	private Thread _thread  = null;
@@ -940,7 +952,40 @@ implements Runnable
 
 		return oscmd;
 	}
-	
+
+	/**
+	 * Windows only: A PowerShell script (single line) that produces the same output as {@link #getCommand()}
+	 * <p>
+	 * If the connection has a PowerShell session, the script is executed in that session, so we don't have to start a new 'powershell' for every execution
+	 * @return null if this module can't be executed that way (then {@link #getCommand()} is used)
+	 */
+	public String getPowershellScript()
+	{
+		return null;
+	}
+
+	/**
+	 * @return What was last executed (the OS Command, or the PowerShell script). If nothing has been executed yet, the OS Command
+	 */
+	public String getExecutedCommand()
+	{
+		return _lastExecCommand != null ? _lastExecCommand : getCommand();
+	}
+
+	/**
+	 * @return A description of how the command is executed (to be displayed in various "properties" dialogs)
+	 */
+	public String getExecModeDescription()
+	{
+		if (isOsCommandStreaming())
+			return "Streaming command (started once)";
+
+		if (_lastExecInPowershellSession)
+			return "PowerShell session (started once per connection, with: " + PowershellSession.START_COMMAND + ")";
+
+		return "New process for every sample";
+	}
+
 
 	/**
 	 * Override this to set what thread name that should be used
@@ -1243,6 +1288,7 @@ implements Runnable
 		ExecutionWrapper execWrapper = null;
 		try
 		{
+			_lastExecCommand = getCommand();
 			_logger.info("Executing command '"+getCommand()+"', for the module '"+getModuleName()+"'.");
 			execWrapper = _hostMonConn.executeCommand(getCommand(), true); // true = Streaming OS Command
 		}
@@ -1443,8 +1489,19 @@ implements Runnable
 		ExecutionWrapper execWrapper = null;
 		try
 		{
-			_logger.debug("Executing command '"+getCommand()+"' for the module '"+getModuleName()+"'.");
-			execWrapper = _hostMonConn.executeCommand(getCommand());
+			// Windows: Execute the PowerShell script in the connections PowerShell session, so we don't have to start a new 'powershell' for every execution
+			String psScript = getPowershellScript();
+			if (psScript != null)
+				execWrapper = _hostMonConn.executeInPowershellSession(psScript); // null = the connection has no session, use the normal command below
+
+			_lastExecInPowershellSession = (execWrapper != null);
+			_lastExecCommand             = (execWrapper != null) ? psScript : getCommand();
+
+			if (execWrapper == null)
+			{
+				_logger.debug("Executing command '"+getCommand()+"' for the module '"+getModuleName()+"'.");
+				execWrapper = _hostMonConn.executeCommand(getCommand());
+			}
 		}
 		catch (Exception e)
 		{
@@ -1504,7 +1561,7 @@ implements Runnable
 					long execTimeSec = (System.currentTimeMillis() - startTime) / 1000;
 					if (timeoutSec > 0 && execTimeSec > timeoutSec)
 					{
-						String msg = "Timeout: The OS Command '" + getCommand() + "' for module '" + getModuleName() + "' has not finished after " + execTimeSec + " seconds. "
+						String msg = "Timeout: The OS Command '" + _lastExecCommand + "' for module '" + getModuleName() + "' has not finished after " + execTimeSec + " seconds. "
 								+ "Abandoning this sample. Either the command hangs on the remote host, or the SSH connection is dead (it will be reconnected on next execution if so). "
 								+ "The timeout can be changed with '" + PROPKEY_executeAndParse_timeoutSec + " = ####' (0 = wait forever).";
 						_logger.error(msg);
@@ -1564,8 +1621,8 @@ implements Runnable
 						
 						if (row != null && row.toLowerCase().indexOf("command not found") >= 0 || row.toLowerCase().indexOf("access denied") >= 0)
 						{
-							_logger.error(getModuleName()+". The command '"+getCommand()+"' in current $PATH, got following message on STDERR: "+row);
-							addException(new Exception("The command '"+getCommand()+"'\n"
+							_logger.error(getModuleName()+". The command '"+_lastExecCommand+"' in current $PATH, got following message on STDERR: "+row);
+							addException(new Exception("The command '"+_lastExecCommand+"'\n"
 									+ "in current $PATH\n"
 									+ "got following message on STDERR: "+row));
 						}
@@ -1579,7 +1636,7 @@ implements Runnable
 			catch (Exception e)
 			{
 				addException(e);
-				_logger.error("Problems when reading output from the OS Command '"+getCommand()+"', Caught: "+e.getMessage(), e);
+				_logger.error("Problems when reading output from the OS Command '"+_lastExecCommand+"', Caught: "+e.getMessage(), e);
 			}
 		}
 
@@ -1595,7 +1652,7 @@ implements Runnable
 		{
 			int osRetCode = execWrapper.getExitStatus();
 			if (osRetCode != 0)
-				_logger.error("OS Return Code " + osRetCode + ". Expected return code is 0 for command: " + getCommand());
+				_logger.error("OS Return Code " + osRetCode + ". Expected return code is 0 for command: " + _lastExecCommand);
 		}
 		catch (Exception ignore) { /* ignore */ }
 

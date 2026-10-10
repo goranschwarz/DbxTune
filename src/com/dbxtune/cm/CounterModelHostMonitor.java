@@ -1245,7 +1245,8 @@ extends CountersModel
 			ret += "<br>";
 			ret += "Some Basic info:<br>";
 			ret += "getName: "     + getName()                           + "<br>";
-			ret += "getCommand: "  + _hostMonitor.getCommand()           + "<br>";
+			ret += "getCommand: "  + _hostMonitor.getExecutedCommand()   + "<br>";
+			ret += "execMode: "    + _hostMonitor.getExecModeDescription() + "<br>";
 			ret += "getSleepTime: "+ _hostMonitor.getSleepTime()         + "<br>";
 			ret += "isPaused: "    + _hostMonitor.isPaused()             + "<br>";
 			ret += "isRunning: "   + _hostMonitor.isRunning()            + "<br>";
