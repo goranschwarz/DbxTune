@@ -1,6 +1,7 @@
 /** dbxGraphCounterDetails.js — Counter Details panel for graph.html */
 // CM Detail Panel state
 var _cmSrvName      = null;
+var _cmGraphSrvName = null;  // server of the graph last clicked -- used when the panel is opened via its button
 var _cmTimestamp    = null;
 var _cmGroup        = null;
 var _cmName         = null;
@@ -2050,7 +2051,7 @@ function cmDetailToggle()
 	$panel.css({ display: 'flex', 'z-index': ++window._dbxTopZ });
 	try { localStorage.setItem('cmDetail-panelOpen', '1'); } catch(e) {}
 	// Auto-load on first open (both live and history mode)
-	if (!_cmSrvName && _serverList && _serverList.length > 0) {
+	if (!_cmSrvName && (_cmGraphSrvName || (_serverList && _serverList.length > 0))) {
 		var _autoTs;
 		if (isHistoryViewActive()) {
 			// History mode: use last-known timestamp or read from the slider display text
@@ -2063,7 +2064,7 @@ function cmDetailToggle()
 			_autoTs = moment().format('YYYY-MM-DD HH:mm:ss');
 		}
 		if (_autoTs && _autoTs.match(/^\d{4}-\d{2}-\d{2}/))
-			cmDetailLoadList(_serverList[0], _autoTs);
+			cmDetailLoadList(_cmGraphSrvName || _serverList[0], _autoTs);
 	}
 }
 
@@ -3798,6 +3799,18 @@ function _cmPropsFindCm(configData, cmName) {
 	for (var i = 0; i < cmList.length; i++)
 		if (cmList[i].cmName === cmName) return cmList[i];
 	return null;
+}
+
+/**
+ * Open the Counter Details panel for a specific server (graph context menu), or switch server if it is already open.
+ */
+function cmDetailOpenForSrv(srvName)
+{
+	_cmGraphSrvName = srvName;
+	if (!$('#cm-detail-panel').is(':visible'))
+		cmDetailToggle();
+	else if (_cmSrvName !== srvName)
+		cmDetailLoadList(srvName, _cmTimestamp);
 }
 
 /**

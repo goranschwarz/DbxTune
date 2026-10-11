@@ -243,13 +243,15 @@ extends HostMonitorConnection
 			_psSession = null;
 			_psSessionFailCount++;
 
-			_logger.warn("Problems using the PowerShell session at '" + getHostname() + "', the script will instead be executed as a normal OS Command (which starts a new 'powershell'). "
+			// On timeout: The sample is abandoned (like for any other command that times out), otherwise the caller executes it as a normal OS Command
+			_logger.warn((ex instanceof TimeoutException
+							? "Timeout in the PowerShell session at '" + getHostname() + "', this sample is abandoned. "
+							: "Problems using the PowerShell session at '" + getHostname() + "', the script will instead be executed as a normal OS Command (which starts a new 'powershell'). ")
 					+ (_psSessionFailCount >= 3
 							? "This was failure number " + _psSessionFailCount + " in a row, so the PowerShell session will NOT be used anymore for this connection. "
 							: "A new session will be started on next execution. ")
 					+ "The PowerShell session can be disabled with: " + HostMonitor.PROPKEY_windows_powershell_session_enabled + " = false. Caught: " + ex);
 
-			// On timeout: The sample is abandoned (like for any other command that times out)
 			if (ex instanceof TimeoutException)
 				throw ex;
 
