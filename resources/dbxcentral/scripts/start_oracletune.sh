@@ -56,6 +56,12 @@ saveDir=${dbxCentralBase}/data
 
 ##----------------------------------------------
 ## Start
+##
+## NOTE: The server name for Oracle is: host:port/serviceName  (example: prod-ora1:1521/ORCL)
+##       Since it contains ':' and '/' you MUST also pass: -A alternateSrvName  (example: -A prod-ora1-ORCL)
+##       The alternate server name is used for log files, H2 Database Recordings, DbxCentral SchemaName, etc...
+##       In the SERVER_LIST file it looks like:
+##         prod-ora1:1521/ORCL ; 1 ; Some Desc ; ${DBXTUNE_CENTRAL_BASE}/bin/start_oracletune.sh <SRVNAME> -A prod-ora1-ORCL
 ##----------------------------------------------
 ${dbxSwHome}/bin/oracletune.sh -n ${cfgFile} -U${dbmsUser} -S${srvName} -u${osUser} -L ${logDir} --savedir ${saveDir} ${extraParams}
 

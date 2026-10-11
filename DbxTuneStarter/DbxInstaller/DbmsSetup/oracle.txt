@@ -1,5 +1,113 @@
-/*
-** TODO: implement instructions how to setup a monitoring user
+/*--------------------------------------------------------------------------------------------
+** Create a separate user for monitoring (if you are lazy you could use 'system' but not recomended)
+**
+** OracleTune only reads documented views: V$..., DBA_... (and CDB_... in a Container Database)
+** It does NOT read any base tables owned by SYS, so ONE of the below options is enough:
+**
+**   Option A: SELECT_CATALOG_ROLE     (recomended)
+**             A role that can read the Data Dictionary views and the V$ views.
+**
+**   Option B: SELECT ANY DICTIONARY
+**             A system privilege that can read ALL objects owned by SYS.
+**             Simpler (it covers everything), but it gives more than OracleTune needs.
+**             In Oracle 11g it also includes SYS.USER$ (which holds the password hashes)
+**
+** If a Performance Counter can't read a view it needs, it will be DISABLED.
+** The reason (and what GRANT to execute) is written in the log file, and as a tooltip on the tab.
+**--------------------------------------------------------------------------------------------
 */
+## as SYS or SYSTEM (or any other DBA account)
+sqlplus / as sysdba
+CREATE USER dbxtune IDENTIFIED BY "the-long-and-arbitrary-password";
+GRANT CREATE SESSION TO dbxtune;
+
+-- Option A
+GRANT SELECT_CATALOG_ROLE TO dbxtune;
+
+-- Option B (instead of option A)
+-- GRANT SELECT ANY DICTIONARY TO dbxtune;
 
 
+/*--------------------------------------------------------------------------------------------
+** Option A only: views that are NOT part of SELECT_CATALOG_ROLE
+**
+** Every view OracleTune reads is covered by SELECT_CATALOG_ROLE, except the ones below.
+** (verified on 11.2.0.2 and 23.26, with a user that only has CREATE SESSION + SELECT_CATALOG_ROLE)
+**
+** NOTE: this must be done as SYS, a DBA user like SYSTEM gets: ORA-01031: insufficient privileges
+**--------------------------------------------------------------------------------------------
+*/
+## as SYS
+sqlplus / as sysdba
+
+-- The alert log (V$DIAG_ALERT_EXT), used by the 'Alert Log' Performance Counter
+GRANT SELECT ON SYS.V_$DIAG_ALERT_EXT TO dbxtune;
+
+-- or in a Container Database (see below)
+-- GRANT SELECT ON SYS.V_$DIAG_ALERT_EXT TO c##dbxtune CONTAINER=ALL;
+
+
+/*--------------------------------------------------------------------------------------------
+** RECOMENDED - A password that does NOT expire
+**
+** In 11g and above, the DEFAULT profile expires the password after 180 days.
+** When that happens the monitoring stops (ORA-28001: the password has expired)
+**--------------------------------------------------------------------------------------------
+*/
+## Check what the user has today
+select u.USERNAME, u.PROFILE, u.ACCOUNT_STATUS, u.EXPIRY_DATE, p.LIMIT as PASSWORD_LIFE_TIME
+from DBA_USERS u
+join DBA_PROFILES p on p.PROFILE = u.PROFILE and p.RESOURCE_NAME = 'PASSWORD_LIFE_TIME'
+where u.USERNAME = 'DBXTUNE';
+
+## One way to fix it: a profile without password expire, just for this user
+CREATE PROFILE dbxtune_profile LIMIT PASSWORD_LIFE_TIME UNLIMITED;
+ALTER USER dbxtune PROFILE dbxtune_profile;
+
+
+/*--------------------------------------------------------------------------------------------
+** Container Database - CDB (12.1 and above)
+**
+** Connect OracleTune to CDB$ROOT with a COMMON user (the name must start with C##)
+** Then tablespaces etc. for ALL Pluggable Databases (PDB's) are monitored from one OracleTune.
+**
+** If you only want to monitor ONE Pluggable Database:
+** create the user in that PDB (as in the first section), and connect OracleTune to the PDB service.
+**--------------------------------------------------------------------------------------------
+*/
+## as SYS, connected to CDB$ROOT
+sqlplus / as sysdba
+CREATE USER c##dbxtune IDENTIFIED BY "the-long-and-arbitrary-password" CONTAINER=ALL;
+GRANT CREATE SESSION TO c##dbxtune CONTAINER=ALL;
+
+-- Option A
+GRANT SELECT_CATALOG_ROLE TO c##dbxtune CONTAINER=ALL;
+
+-- Option B (instead of option A)
+-- GRANT SELECT ANY DICTIONARY TO c##dbxtune CONTAINER=ALL;
+
+## Let the user see data for ALL containers (without this, only data for CDB$ROOT is visible)
+## OracleTune writes a WARNING in the log file at connect, if this is missing
+ALTER USER c##dbxtune SET CONTAINER_DATA=ALL CONTAINER=CURRENT;
+
+
+/*--------------------------------------------------------------------------------------------
+** Test that we can login with the 'dbxtune' user, and that it can read what OracleTune needs
+**--------------------------------------------------------------------------------------------
+*/
+sqlplus dbxtune@//hostname:1521/SERVICE_NAME
+
+## What do we have
+select * from SESSION_ROLES;
+select * from SESSION_PRIVS;
+
+## All of the below should work
+select count(*) from V$SESSION;
+select count(*) from V$DATABASE;
+select count(*) from DBA_TABLESPACES;
+select count(*) from DBA_TABLESPACE_USAGE_METRICS;
+select count(*) from DBA_DATA_FILES;
+select count(*) from DBA_TEMP_FILES;
+
+## In a Container Database: this should show CDB$ROOT, PDB$SEED and all the PDB's
+select CON_ID, NAME, OPEN_MODE from V$CONTAINERS;

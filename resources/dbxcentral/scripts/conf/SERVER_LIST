@@ -14,6 +14,8 @@
 ##    prod-1a-pg.acme.com:1234 ; 1 ; Some Desc ; ${DBXTUNE_CENTRAL_BASE}/bin/start_postgrestune.sh <SRVNAME> -A prod-1a-pg
 ##  Or for a SQL-Server with dynamic ports
 ##    GS-1-WIN\SS_2016 ; 1 ; SQL-Server 2016 on Windows ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.sh <SRVNAME> -A GS-1-WIN__SS_2016
+##  Or for Oracle, where the server name is 'host:port/serviceName' (so -A is always needed)
+##    prod-ora1:1521/ORCL ; 1 ; Oracle 19c ; ${DBXTUNE_CENTRAL_BASE}/bin/start_oracletune.sh <SRVNAME> -A prod-ora1-ORCL
 ##  If server names might be to "like" each others, another switch -N or --displayName can be used to make a more readable description
 ##    This 'displayName' will be used for DbxCentral buttons on the landing page and in Alarm Mail subject etc... 
 ##    NOTE: For the moment the -N or --displayName switch can't have spaces in them (for various reasons), if you still need
@@ -42,6 +44,7 @@ STAGE_ASE        ; 0 ; STAGE                         ; ${DBXTUNE_CENTRAL_BASE}/b
 prod-psql1       ; 1 ; Postgres on default port      ; ${DBXTUNE_CENTRAL_BASE}/bin/start_postgrestune.sh <SRVNAME>
 host-1:1234      ; 1 ; Postgres on non default port  ; ${DBXTUNE_CENTRAL_BASE}/bin/start_postgrestune.sh <SRVNAME> -A prod-1a-pg
 GS-1-WIN\SS_2016 ; 1 ; SQL-Server on dynamic port    ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.sh <SRVNAME> -A GS-1-WIN__SS_2016
+host-2:1521/ORCL ; 1 ; Oracle (host:port/serviceName); ${DBXTUNE_CENTRAL_BASE}/bin/start_oracletune.sh <SRVNAME> -A host-2-ORCL
 
 
 

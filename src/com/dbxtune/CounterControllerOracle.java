@@ -40,6 +40,7 @@ import com.dbxtune.cm.oracle.CmSqlStats;
 import com.dbxtune.cm.oracle.CmSummary;
 import com.dbxtune.cm.oracle.CmSysStat;
 import com.dbxtune.cm.oracle.CmSystemEvent;
+import com.dbxtune.cm.oracle.CmTablespaces;
 import com.dbxtune.cm.os.CmOsDiskSpace;
 import com.dbxtune.cm.os.CmOsIostat;
 import com.dbxtune.cm.os.CmOsMeminfo;
@@ -117,6 +118,7 @@ extends CounterControllerAbstract
 		// Cache
 
 		// Disk
+		CmTablespaces       .create(counterController, guiController);
 		CmIoStatFunction    .create(counterController, guiController);
 		CmIoStatFile        .create(counterController, guiController);
 
@@ -199,7 +201,28 @@ extends CounterControllerAbstract
 		// Get active SQL Server Roles/Permissions
 		List<String> activeServerPermissionList = conn.getActiveServerRolesOrPermissions();
 
-		
+		// What can this login read in the Data Dictionary and the V$ views
+		//  - SELECT_CATALOG_ROLE   is a ROLE      (visible in SESSION_ROLES)
+		//  - SELECT ANY DICTIONARY is a PRIVILEGE (visible in SESSION_PRIVS)
+		// Any of them is enough, the CM's only reads documented V$, DBA_ and CDB_ views
+		boolean hasSelectCatalogRole   = activeServerPermissionList != null && activeServerPermissionList.contains("SELECT_CATALOG_ROLE");
+		boolean hasSelectAnyDictionary = false;
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery("select count(*) from SESSION_PRIVS where PRIVILEGE = 'SELECT ANY DICTIONARY'"))
+		{
+			while (rs.next())
+				hasSelectAnyDictionary = rs.getInt(1) > 0;
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems checking SESSION_PRIVS for 'SELECT ANY DICTIONARY'. Caught: " + ex);
+		}
+
+		if (hasSelectCatalogRole || hasSelectAnyDictionary)
+			_logger.info("The Oracle login has: SELECT_CATALOG_ROLE=" + hasSelectCatalogRole + ", SELECT ANY DICTIONARY=" + hasSelectAnyDictionary + ".");
+		else
+			_logger.warn("The Oracle login has neither 'SELECT_CATALOG_ROLE' nor 'SELECT ANY DICTIONARY'. CM's that can't read their views will be DISABLED. Fix: GRANT SELECT_CATALOG_ROLE TO <user>;");
+
+
 		_logger.info("Initializing all CM objects, using Oracle version number " + srvVersion + ". (" + Ver.versionNumToStr(srvVersion) + ")");
 
 		// initialize all the CM's

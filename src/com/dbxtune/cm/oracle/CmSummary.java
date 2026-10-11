@@ -21,7 +21,6 @@
 package com.dbxtune.cm.oracle;
 
 import java.lang.invoke.MethodHandles;
-import java.util.Calendar;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -132,7 +131,6 @@ extends CmSummaryAbstract
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	public static final String GRAPH_NAME_XXX                = "xxx";
 	public static final String GRAPH_NAME_BLOCKING_LOCKS     = "BlockingLocksGraph";
 	public static final String GRAPH_NAME_CONNECTION         = "ConnectionsGraph";   // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__CONNECTION;
 	public static final String GRAPH_NAME_OLDEST_TRAN_IN_SEC = "OldestTranInSecGraph";
@@ -140,22 +138,9 @@ extends CmSummaryAbstract
 
 	private void addTrendGraphs()
 	{
-		// GRAPH
-		addTrendGraph(GRAPH_NAME_XXX,
-			"Dummy Graph", 	                        // Menu CheckBox text
-			"Dummy Graph showing hour, minute, second (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
-			new String[] { "Hour", "Minute", "Second"}, 
-			LabelType.Static,
-			TrendGraphDataPoint.Category.OTHER,
-			true,  // is Percent Graph
-			false, // visible at start
-			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-			-1);   // minimum height
-
 		addTrendGraph(GRAPH_NAME_TRANSACTION,
 			"Transaction per second",    // Menu CheckBox text
-			"Transaction per Second (" + GROUP_NAME + "->" + SHORT_NAME + ")",    // Label 
+			"Transaction per Second (" + SHORT_NAME + ")",    // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null, 
 			LabelType.Dynamic,
@@ -167,7 +152,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
 			"Blocking Locks", 	                     // Menu CheckBox text
-			"Number of Concurrently Blocking Locks (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
+			"Number of Concurrently Blocking Locks (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Blocking Locks" }, 
 			LabelType.Static,
@@ -179,7 +164,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_CONNECTION,
 			"Connections/Users", 	          // Menu CheckBox text
-			"Connections/Users connected to Oracle (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
+			"Connections/Users connected to Oracle (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "UserConnections (abs)", "distinctLogins (abs)" }, 
 			LabelType.Static,
@@ -191,7 +176,7 @@ extends CmSummaryAbstract
 
 		addTrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
 			"Oldest Open Transaction",     // Menu CheckBox text
-			"Oldest Open Transaction, in Seconds (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
+			"Oldest Open Transaction, in Seconds (" + SHORT_NAME + ")", // Label 
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			new String[] { "Seconds" }, 
 			LabelType.Static,
@@ -271,33 +256,6 @@ extends CmSummaryAbstract
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
 //		long srvVersion = getServerVersion();
-
-		//---------------------------------
-		// GRAPH:
-		//---------------------------------
-		if (GRAPH_NAME_XXX.equals(tgdp.getName()))
-		{	
-			Double[] arr = new Double[3];
-
-			int ms = (int) (System.currentTimeMillis() % 1000l);
-			ms = ms < 0 ? ms+1000 : ms;
-
-			Calendar now = Calendar.getInstance();
-			int hour   = now.get(Calendar.HOUR_OF_DAY);
-			int minute = now.get(Calendar.MINUTE);
-			int second = now.get(Calendar.SECOND);
-			
-//			arr[0] = this.getAbsValueAsDouble (0, "Connections");
-//			arr[1] = this.getAbsValueAsDouble (0, "distinctLogins");
-//			arr[2] = this.getDiffValueAsDouble(0, "aaConnections");
-			arr[0] = Double.valueOf(hour);
-			arr[1] = Double.valueOf(minute);
-			arr[2] = Double.valueOf(second);
-			_logger.debug("updateGraphData(" + tgdp.getName() + "): hour='" + arr[0] + "', minute='" + arr[1] + "', second='" + arr[2] + "'.");
-
-			// Set the values
-			tgdp.setDataPoint(this.getTimestamp(), arr);
-		}
 
 		//---------------------------------
 		// GRAPH:

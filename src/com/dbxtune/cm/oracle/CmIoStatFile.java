@@ -76,7 +76,7 @@ extends CountersModel
 		"RETRIES_ON_ERROR"
 		};
 
-	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
+	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
 	public static final int      DEFAULT_POSTPONE_TIME          = 0;
 	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;;
@@ -84,7 +84,7 @@ extends CountersModel
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
 	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
 	@Override public boolean getDefaultIsNegativeDiffCountersToZero() { return NEGATIVE_DIFF_COUNTERS_TO_ZERO; }
-	@Override public Type    getTemplateLevel()                       { return Type.ALL; }
+	@Override public Type    getTemplateLevel()                       { return Type.LARGE; }
 
 	/**
 	 * FACTORY  method to create the object

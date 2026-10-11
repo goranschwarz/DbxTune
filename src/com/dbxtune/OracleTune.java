@@ -29,7 +29,7 @@ import com.dbxtune.check.CheckForUpdatesOracle;
 import com.dbxtune.config.dbms.IDbmsConfig;
 import com.dbxtune.config.dbms.OracleConfig;
 import com.dbxtune.config.dict.MonTablesDictionary;
-import com.dbxtune.config.dict.MonTablesDictionaryDefault;
+import com.dbxtune.config.dict.MonTablesDictionaryOracle;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.MainFrameOracle;
 import com.dbxtune.pcs.inspection.IObjectLookupInspector;
@@ -144,7 +144,7 @@ extends DbxTune
 	@Override
 	public MonTablesDictionary createMonTablesDictionary()
 	{
-		return new MonTablesDictionaryDefault();
+		return new MonTablesDictionaryOracle();
 	}
 
 	public static void main(String[] args)

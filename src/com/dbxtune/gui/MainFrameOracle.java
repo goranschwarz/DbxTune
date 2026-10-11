@@ -32,6 +32,7 @@ import com.dbxtune.config.dbms.DbmsConfigTextManager;
 import com.dbxtune.config.dbms.IDbmsConfig;
 import com.dbxtune.config.dbms.IDbmsConfigText;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
+import com.dbxtune.config.dict.MonTablesDictionaryOracle;
 import com.dbxtune.gui.ConnectionDialog.Options;
 import com.dbxtune.gui.swing.WaitForExecDialog;
 import com.dbxtune.hostmon.HostMonitorConnection;
@@ -151,6 +152,7 @@ extends MainFrame
 	@Override
 	public void connectOfflineHookin()
 	{
+		MonTablesDictionaryOracle.initExtraMonTablesDictionary();
 	}
 
 //	@Override
