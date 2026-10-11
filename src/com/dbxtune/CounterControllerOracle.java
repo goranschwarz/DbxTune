@@ -54,7 +54,6 @@ import com.dbxtune.pcs.PersistContainer;
 import com.dbxtune.pcs.PersistContainer.HeaderInfo;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.AseConnectionUtils;
-import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.Ver;
 
 
@@ -106,13 +105,7 @@ extends CounterControllerAbstract
 		CmExecutionTime     .create(counterController, guiController);
 		
 		// Object/Access
-		boolean initUnSupportedCms = "gorans3".equals(StringUtil.getHostname());
-		if (hasGui && initUnSupportedCms)
-		{
-			(new Exception("ONLY FOR HOSTNAME 'gorans2'... CmActiveStatements is NOT YET READY")).printStackTrace();
-			
-			CmActiveStatements  .create(counterController, guiController); // NOTE: THIS IS NO WAY NEAR PRODUCTIONS Friendly -- it needs MORE STUFF
-		}
+		CmActiveStatements  .create(counterController, guiController);
 		CmSqlStats          .create(counterController, guiController);
 
 		// Cache

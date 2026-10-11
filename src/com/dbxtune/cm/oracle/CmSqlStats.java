@@ -20,12 +20,23 @@
  ******************************************************************************/
 package com.dbxtune.cm.oracle;
 
+import java.lang.invoke.MethodHandles;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.TimeZone;
 
 import javax.naming.NameNotFoundException;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -34,15 +45,18 @@ import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.oracle.gui.CmSqlStatsPanel;
-import com.dbxtune.cm.sqlserver.gui.CmExecQueryStatsPanel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
+import com.dbxtune.pcs.PcsColumnOptions;
+import com.dbxtune.pcs.PcsColumnOptions.ColumnType;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
+import com.dbxtune.sql.conn.info.DbmsVersionInfoOracle;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
+import com.dbxtune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -50,13 +64,19 @@ import com.dbxtune.utils.StringUtil;
 public class CmSqlStats
 extends CountersModel
 {
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmSqlStats.class.getSimpleName();
 	public static final String   SHORT_NAME       = "SQL Stats";
-	public static final String   HTML_DESC        = 
+	public static final String   HTML_DESC        =
 		"<html>" +
-		"shows Oracle SQL Statistics. <br>" +
+		"What SQL Statements uses the resources? One row per SQL Statement (SQL_ID and execution plan) in the Shared Pool, with how many times it has been executed, and what it has used.<br>" +
+		"<br>" +
+		"By default: only statements that has been executed the last 30 minutes, and the top 1000 of them (the ones with most BUFFER_GETS). This can be changed in the options.<br>" +
+		"<br>" +
+		"<b>Tip</b>: Look at the DIFF or RATE values, sorted on <code>ELAPSED_TIME</code>, <code>CPU_TIME</code> or <code>BUFFER_GETS</code>. That is the statements that uses most resources right now.<br>" +
+		"The time columns (<code>ELAPSED_TIME</code>, <code>CPU_TIME</code>, <code>..._WAIT_TIME</code>) are in microseconds.<br>" +
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
@@ -77,7 +97,6 @@ extends CountersModel
 			,"DIRECT_WRITES"
 			,"CPU_TIME"
 			,"ELAPSED_TIME"
-			,"AVG_HARD_PARSE_TIME"
 			,"APPLICATION_WAIT_TIME"
 			,"CONCURRENCY_WAIT_TIME"
 			,"CLUSTER_WAIT_TIME"
@@ -85,18 +104,14 @@ extends CountersModel
 			,"PLSQL_EXEC_TIME"
 			,"JAVA_EXEC_TIME"
 			,"SORTS"
-			,"SHARABLE_MEM"
 			,"END_OF_FETCH_COUNT"
 			,"PARSE_CALLS"
 			,"ROWS_PROCESSED"
 			,"SERIALIZABLE_ABORTS"
 			,"FETCHES"
 			,"LOADS"
-			,"VERSION_COUNT"
 			,"INVALIDATIONS"
 			,"PX_SERVERS_EXECUTIONS"
-			,"TOTAL_SHARABLE_MEM"
-			,"TYPECHECK_MEM"
 			,"IO_CELL_OFFLOAD_ELIGIBLE_BYTES"
 			,"IO_INTERCONNECT_BYTES"
 			,"PHYSICAL_READ_REQUESTS"
@@ -109,8 +124,8 @@ extends CountersModel
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
-	public static final int      DEFAULT_POSTPONE_TIME          = 0;
-	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;;
+	public static final int      DEFAULT_POSTPONE_TIME          = 60;
+	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;
 
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
 	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
@@ -169,6 +184,9 @@ extends CountersModel
 	public static final String  PROPKEY_sample_lastXminutesTime   = PROP_PREFIX + ".sample.lastXminutes.time";
 	public static final int     DEFAULT_sample_lastXminutesTime   = 30;
 
+	public static final String  PROPKEY_sample_topRows            = PROP_PREFIX + ".sample.topRows";
+	public static final int     DEFAULT_sample_topRows            = 1000;
+
 
 	@Override
 	protected void registerDefaultValues()
@@ -179,6 +197,7 @@ extends CountersModel
 		Configuration.registerDefaultValue(PROPKEY_sample_afterPrevSample,  DEFAULT_sample_afterPrevSample);
 		Configuration.registerDefaultValue(PROPKEY_sample_lastXminutes,     DEFAULT_sample_lastXminutes);
 		Configuration.registerDefaultValue(PROPKEY_sample_lastXminutesTime, DEFAULT_sample_lastXminutesTime);
+		Configuration.registerDefaultValue(PROPKEY_sample_topRows,          DEFAULT_sample_topRows);
 	}
 
 
@@ -188,13 +207,33 @@ extends CountersModel
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
-		
-		list.add(new CmSettingsHelper("Extra Where Clause",                           PROPKEY_sample_extraWhereClause , String .class, conf.getProperty       (PROPKEY_sample_extraWhereClause , DEFAULT_sample_extraWhereClause ), DEFAULT_sample_extraWhereClause, CmExecQueryStatsPanel.TOOLTIP_sample_extraWhereClause ));
-		list.add(new CmSettingsHelper("Show only SQL exected since last sample time", PROPKEY_sample_afterPrevSample  , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_afterPrevSample  , DEFAULT_sample_afterPrevSample  ), DEFAULT_sample_afterPrevSample , CmExecQueryStatsPanel.TOOLTIP_sample_afterPrevSample  ));
-		list.add(new CmSettingsHelper("Show only SQL exected last 30 minutes",        PROPKEY_sample_lastXminutes     , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_lastXminutes     , DEFAULT_sample_lastXminutes     ), DEFAULT_sample_lastXminutes    , CmExecQueryStatsPanel.TOOLTIP_sample_lastXminutes     ));
-		list.add(new CmSettingsHelper("Show only SQL exected last ## minutes",        PROPKEY_sample_lastXminutesTime , Integer.class, conf.getIntProperty    (PROPKEY_sample_lastXminutesTime , DEFAULT_sample_lastXminutesTime ), DEFAULT_sample_lastXminutesTime, CmExecQueryStatsPanel.TOOLTIP_sample_lastXminutesTime ));
+
+		list.add(new CmSettingsHelper("Extra Where Clause",                           PROPKEY_sample_extraWhereClause , String .class, conf.getProperty       (PROPKEY_sample_extraWhereClause , DEFAULT_sample_extraWhereClause ), DEFAULT_sample_extraWhereClause, CmSqlStatsPanel.TOOLTIP_sample_extraWhereClause ));
+		list.add(new CmSettingsHelper("Show only SQL exected since last sample time", PROPKEY_sample_afterPrevSample  , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_afterPrevSample  , DEFAULT_sample_afterPrevSample  ), DEFAULT_sample_afterPrevSample , CmSqlStatsPanel.TOOLTIP_sample_afterPrevSample  ));
+		list.add(new CmSettingsHelper("Show only SQL exected last 30 minutes",        PROPKEY_sample_lastXminutes     , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_lastXminutes     , DEFAULT_sample_lastXminutes     ), DEFAULT_sample_lastXminutes    , CmSqlStatsPanel.TOOLTIP_sample_lastXminutes     ));
+		list.add(new CmSettingsHelper("Show only SQL exected last ## minutes",        PROPKEY_sample_lastXminutesTime , Integer.class, conf.getIntProperty    (PROPKEY_sample_lastXminutesTime , DEFAULT_sample_lastXminutesTime ), DEFAULT_sample_lastXminutesTime, CmSqlStatsPanel.TOOLTIP_sample_lastXminutesTime ));
+		list.add(new CmSettingsHelper("Max Number of Rows",                           PROPKEY_sample_topRows          , Integer.class, conf.getIntProperty    (PROPKEY_sample_topRows          , DEFAULT_sample_topRows          ), DEFAULT_sample_topRows         , "Only get the ## statements that has most BUFFER_GETS (this to limit how much is fetched and stored on systems with many statements)." ));
 
 		return list;
+	}
+
+	@Override
+	public Map<String, PcsColumnOptions> getPcsColumnOptions()
+	{
+		Map<String, PcsColumnOptions> map = super.getPcsColumnOptions();
+
+		// No settings in the super, create one, and set it at super
+		if (map == null)
+		{
+			// The same SQL Text is seen in every sample, so only store it once
+			map = new HashMap<>();
+			map.put("SQL_FULLTEXT", new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+
+			// Set the map in the super
+			setPcsColumnOptions(map);
+		}
+
+		return map;
 	}
 	
 	private void addTrendGraphs()
@@ -312,7 +351,11 @@ extends CountersModel
 	{
 		List <String> pkCols = new LinkedList<String>();
 
+		// V$SQLSTATS has one row per SQL_ID and PLAN_HASH_VALUE (a statement can have more than one execution plan)
+		// CON_ID is always 0 in a non-CDB (and in 11.2), in a CDB the same SQL_ID can exist in many containers
 		pkCols.add("SQL_ID");
+		pkCols.add("PLAN_HASH_VALUE");
+		pkCols.add("CON_ID");
 
 		return pkCols;
 	}
@@ -320,10 +363,48 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		DbmsVersionInfoOracle oraVersionInfo = (DbmsVersionInfoOracle) versionInfo;
+
+		// 11.2 and above
+		String sql = getSql("CAST(0 as NUMBER(10))", "CAST(NULL as VARCHAR2(128))", "");
+
+		// 12.1 and above, in a Container Database: what container is the statement in
+		if (versionInfo.getLongVersion() >= Ver.ver(12,1) && oraVersionInfo.isCdb())
+		{
+			String sqlCdb = getSql("s.CON_ID", "c.NAME", "left join V$CONTAINERS c on c.CON_ID = s.CON_ID \n");
+
+			// The SQL for 12.1 and above can NOT be tested on all versions: so "dry-run" it, and if it fails use the 11.2 SQL (which works on all versions)
+			// conn is null when we just want to "view" the SQL (the CM Properties dialog)
+			if (conn == null)
+			{
+				sql = sqlCdb;
+			}
+			else
+			{
+				try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery("select * from (" + sqlCdb + ") where 1=2"))
+				{
+					sql = sqlCdb;
+				}
+				catch (SQLException ex)
+				{
+					_logger.warn(CM_NAME + ": The SQL for a CDB (version " + Ver.versionNumToStr(versionInfo.getLongVersion()) + ") failed, using the SQL for 11.2 instead. Caught: " + ex.getMessage().trim());
+				}
+			}
+		}
+
+		return sql;
+	}
+
+	/** A comment in the SQL, that in getSql() (at every sample) is replaced with the "since previous sample" where clause, if that option is enabled */
+	private static final String SQL_WHERE_PLACEHOLDER = "/*afterPrevSample*/";
+
+	private String getSql(String CON_ID, String CON_NAME, String joinContainers)
+	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		String  sample_extraWhereClause = conf.getProperty(       PROPKEY_sample_extraWhereClause, DEFAULT_sample_extraWhereClause);
 		boolean sample_lastXminutes     = conf.getBooleanProperty(PROPKEY_sample_lastXminutes,     DEFAULT_sample_lastXminutes);
 		int     sample_lastXminutesTime = conf.getIntProperty(    PROPKEY_sample_lastXminutesTime, DEFAULT_sample_lastXminutesTime);
+		int     sample_topRows          = conf.getIntProperty(    PROPKEY_sample_topRows,          DEFAULT_sample_topRows);
 
 		// Do we have extra where clauses
 		String sql_sample_extraWhereClause = "  -- Extra where clauses will go here. (it will look like: AND the_extra_where_clause) \n";
@@ -332,87 +413,99 @@ extends CountersModel
 
 		String sql_sample_lastXminutes = "";
 		if (sample_lastXminutes)
-			sql_sample_lastXminutes = "  AND LAST_ACTIVE_TIME > sysdate - interval '" + sample_lastXminutesTime + "' minute \n";
-//			sql_sample_lastXminutes = "  AND last_execution_time > dateadd(mi, -"+sample_lastXminutesTime+", getdate())\n";
+			sql_sample_lastXminutes = "  AND s.LAST_ACTIVE_TIME > SYSDATE - interval '" + sample_lastXminutesTime + "' minute \n";
 
+		// The inner SELECT is sorted on BUFFER_GETS, and the outer SELECT takes the first ## rows of that
 		String sql = ""
+			    + "SELECT * FROM ( \n"
 			    + "SELECT \n"
-			    + "     SQL_ID                          \n" // java.sql.Types.VARCHAR   VARCHAR2(13)      -none- \n"
-			    + "    ,PLAN_HASH_VALUE                 \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
+			    + "     s.SQL_ID \n"
+			    + "    ,s.PLAN_HASH_VALUE \n"
+			    + "    ," + CON_ID   + " as CON_ID \n"
+			    + "    ," + CON_NAME + " as CON_NAME \n"
 			    + " \n"
-			    + "    ,EXECUTIONS                      \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,BUFFER_GETS                     \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,DISK_READS                      \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,DIRECT_WRITES                   \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
+			    + "    ,s.EXECUTIONS \n"
+			    + "    ,s.BUFFER_GETS \n"
+			    + "    ,s.DISK_READS \n"
+			    + "    ,s.DIRECT_WRITES \n"
 			    + " \n"
-			    + "    ,CPU_TIME                        \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,ELAPSED_TIME                    \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,AVG_HARD_PARSE_TIME             \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,APPLICATION_WAIT_TIME           \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,CONCURRENCY_WAIT_TIME           \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,CLUSTER_WAIT_TIME               \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,USER_IO_WAIT_TIME               \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,PLSQL_EXEC_TIME                 \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,JAVA_EXEC_TIME                  \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,SORTS                           \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,SHARABLE_MEM                    \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
+			    + "    ,s.CPU_TIME \n"
+			    + "    ,s.ELAPSED_TIME \n"
+			    + "    ,s.AVG_HARD_PARSE_TIME \n"
+			    + "    ,s.APPLICATION_WAIT_TIME \n"
+			    + "    ,s.CONCURRENCY_WAIT_TIME \n"
+			    + "    ,s.CLUSTER_WAIT_TIME \n"
+			    + "    ,s.USER_IO_WAIT_TIME \n"
+			    + "    ,s.PLSQL_EXEC_TIME \n"
+			    + "    ,s.JAVA_EXEC_TIME \n"
+			    + "    ,s.SORTS \n"
+			    + "    ,s.SHARABLE_MEM \n"
 			    + " \n"
-			    + "    ,LAST_ACTIVE_TIME                \n" // java.sql.Types.TIMESTAMP DATE              -none- \n"
-			    + "    ,LAST_ACTIVE_CHILD_ADDRESS       \n" // java.sql.Types.VARBINARY RAW(8)            -none- \n"
+			    + "    ,s.LAST_ACTIVE_TIME \n"
+			    + "    ,s.LAST_ACTIVE_CHILD_ADDRESS \n"
 			    + " \n"
-			    + "    ,END_OF_FETCH_COUNT              \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,PARSE_CALLS                     \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,ROWS_PROCESSED                  \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,SERIALIZABLE_ABORTS             \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,FETCHES                         \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,LOADS                           \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,VERSION_COUNT                   \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,INVALIDATIONS                   \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,PX_SERVERS_EXECUTIONS           \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,TOTAL_SHARABLE_MEM              \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,TYPECHECK_MEM                   \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,IO_CELL_OFFLOAD_ELIGIBLE_BYTES  \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,IO_INTERCONNECT_BYTES           \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,PHYSICAL_READ_REQUESTS          \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,PHYSICAL_READ_BYTES             \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,PHYSICAL_WRITE_REQUESTS         \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,PHYSICAL_WRITE_BYTES            \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-//			    + "    ,EXACT_MATCHING_SIGNATURE      \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-//			    + "    ,FORCE_MATCHING_SIGNATURE      \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,IO_CELL_UNCOMPRESSED_BYTES      \n" // java.sql.Types.NUMERIC   NUMBER(0,-127)    -none- \n"
-			    + "    ,IO_CELL_OFFLOAD_RETURNED_BYTES  \n" // java.sql.Types.NUMERIC   NUMBER(0,0)       -none- \n"
+			    + "    ,s.END_OF_FETCH_COUNT \n"
+			    + "    ,s.PARSE_CALLS \n"
+			    + "    ,s.ROWS_PROCESSED \n"
+			    + "    ,s.SERIALIZABLE_ABORTS \n"
+			    + "    ,s.FETCHES \n"
+			    + "    ,s.LOADS \n"
+			    + "    ,s.VERSION_COUNT \n"
+			    + "    ,s.INVALIDATIONS \n"
+			    + "    ,s.PX_SERVERS_EXECUTIONS \n"
+			    + "    ,s.TOTAL_SHARABLE_MEM \n"
+			    + "    ,s.TYPECHECK_MEM \n"
+			    + "    ,s.IO_CELL_OFFLOAD_ELIGIBLE_BYTES \n"
+			    + "    ,s.IO_INTERCONNECT_BYTES \n"
+			    + "    ,s.PHYSICAL_READ_REQUESTS \n"
+			    + "    ,s.PHYSICAL_READ_BYTES \n"
+			    + "    ,s.PHYSICAL_WRITE_REQUESTS \n"
+			    + "    ,s.PHYSICAL_WRITE_BYTES \n"
+			    + "    ,s.IO_CELL_UNCOMPRESSED_BYTES \n"
+			    + "    ,s.IO_CELL_OFFLOAD_RETURNED_BYTES \n"
 			    + " \n"
-//			    + "    ,SQL_TEXT                      \n" // java.sql.Types.VARCHAR   VARCHAR2(1000)    -none- \n"
-			    + "    ,SQL_FULLTEXT                    \n" // java.sql.Types.CLOB      CLOB              -none- \n"
-			    + "FROM V$SQLSTATS \n"
+			    + "    ,s.SQL_FULLTEXT \n"
+			    + "FROM V$SQLSTATS s \n"
+			    + joinContainers
 				+ "WHERE 1 = 1 -- to make extra where clauses easier \n"
 				+ sql_sample_extraWhereClause
 				+ sql_sample_lastXminutes
-			    + "ORDER BY BUFFER_GETS desc \n"
+				+ "  " + SQL_WHERE_PLACEHOLDER + " \n"
+			    + "ORDER BY s.BUFFER_GETS desc \n"
+			    + ") WHERE ROWNUM <= " + sample_topRows + " \n"
 			    + "";
 
 		return sql;
 	}
 
+	/**
+	 * Called at every sample: if 'afterPrevSample' is enabled, put in a where clause for statements that has been executed since the previous sample
+	 */
 	@Override
 	public String getSql()
 	{
+		String sql = super.getSql();
+		if (sql == null)
+			return null;
+
 		Configuration conf = Configuration.getCombinedConfiguration();
 		boolean sample_afterPrevSample = conf.getBooleanProperty(PROPKEY_sample_afterPrevSample, DEFAULT_sample_afterPrevSample);
 
-		if (sample_afterPrevSample)
-		{
-    		Timestamp prevSample = getPreviousSampleTime();
-    		if (prevSample == null)
-    			setSqlWhere("AND 1=0"); // do not get any rows for the first sample...
-    		else
-    			setSqlWhere("AND LAST_ACTIVE_TIME > '" + prevSample + "' "); 
-		}
-		else
-			setSqlWhere("");
+		if ( ! sample_afterPrevSample )
+			return sql;
 
-		// Now get the SQL from super method...
-		return super.getSql();
+		Timestamp prevSample = getPreviousSampleTime();
+		if (prevSample == null)
+			return sql.replace(SQL_WHERE_PLACEHOLDER, "AND 1=0"); // do not get any rows for the first sample...
+
+		// LAST_ACTIVE_TIME is in the DBMS Servers time (SYSDATE), which can be in another time zone than this collector
+		// So: let the DBMS calculate how long ago the previous sample was (in UTC), and take that off from SYSDATE
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+		String prevSampleUtc = sdf.format(prevSample);
+
+		return sql.replace(SQL_WHERE_PLACEHOLDER,
+				"AND s.LAST_ACTIVE_TIME > SYSDATE - (CAST(SYS_EXTRACT_UTC(SYSTIMESTAMP) as DATE) - TO_DATE('" + prevSampleUtc + "', 'YYYY-MM-DD HH24:MI:SS'))");
 	}
 
 	
