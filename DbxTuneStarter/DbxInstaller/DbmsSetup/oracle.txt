@@ -46,6 +46,13 @@ GRANT SELECT ON SYS.V_$DIAG_ALERT_EXT TO dbxtune;
 -- or in a Container Database (see below)
 -- GRANT SELECT ON SYS.V_$DIAG_ALERT_EXT TO c##dbxtune CONTAINER=ALL;
 
+-- NOTE: In older versions (seen on 11.2, not on 23) Oracle reads ALL logs in the diagnostic directory (the ADR base)
+--       to answer a query on this view, including the listener log. If that log is big, the query is slow.
+--       OracleTune notices that (more than 2 seconds), writes a warning in it's log, and then only reads the alert log once an hour.
+--       Fix: purge the listener log, for example with adrci:
+--           adrci> set homepath diag/tnslsnr/<host>/listener
+--           adrci> purge -age 43200 -type ALERT              (43200 minutes = 30 days)
+
 
 /*--------------------------------------------------------------------------------------------
 ** RECOMENDED - A password that does NOT expire
