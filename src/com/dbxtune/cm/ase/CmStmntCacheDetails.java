@@ -823,6 +823,10 @@ extends CountersModel
 	@Override
 	public String[] getDdlDetailsSortOnColName()
 	{
+		// 'TotalEstWaitTime' is only available in ASE 16.0 (back ported to 15.7 SP130), see getSqlForVersion()
+		if (getServerVersion() < Ver.ver(15,7,0, 130))
+			return new String[] {"UseCount", "UseCountDiff", "AvgLIO", "AvgElapsedTime"};
+
 		String[] sa = {"UseCount", "UseCountDiff", "AvgLIO", "AvgElapsedTime", "TotalEstWaitTime"};
 		return sa;
 	}
