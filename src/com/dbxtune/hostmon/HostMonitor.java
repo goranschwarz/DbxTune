@@ -72,7 +72,7 @@ implements Runnable
 
 	/** Max time (in seconds) a non-streaming OS Command may run in executeAndParse(), after that the sample is abandoned. 0 = wait forever */
 	public static final String  PROPKEY_executeAndParse_timeoutSec = "HostMonitor.executeAndParse.timeout.seconds";
-	public static final int     DEFAULT_executeAndParse_timeoutSec = 60;
+	public static final int     DEFAULT_executeAndParse_timeoutSec = 30;
 
 	/** Windows: Execute non-streaming PowerShell scripts in a long lived PowerShell session (started once per connection), instead of starting a new 'powershell' for every execution. See {@link PowershellSession} */
 	public static final String  PROPKEY_windows_powershell_session_enabled = "HostMonitor.windows.powershell.session.enabled";
@@ -1510,7 +1510,10 @@ implements Runnable
 			// Was the Exception handled by the subsystem or should we handle/log it here  
 			boolean notHandled = _hostMonConn.handleException(e);
 
-			if (notHandled)
+			// NOTE: A timeout comes from the PowerShell session (the script is part of the message), so do NOT print the OS Command, it was never executed
+			if (notHandled && e instanceof java.util.concurrent.TimeoutException)
+				_logger.error("Problems when executing the command for module '" + getModuleName() + "', Caught: " + e.getMessage(), e);
+			else if (notHandled)
 				_logger.error("Problems when executing OS Command '" + getCommand() + "', Caught: " + e.getMessage(), e);
 
 			// FIXME: Should the deliver null or an empty OsTable on errors or Exception

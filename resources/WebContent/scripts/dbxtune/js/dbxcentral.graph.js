@@ -3451,6 +3451,9 @@ class DbxGraph
 		const newDiv = document.createElement("div");
 		newDiv.setAttribute("id", this._fullName);
 		newDiv.setAttribute("graph-line-props", this.buildHtmlAttrGraphLineProps());
+		newDiv.setAttribute("graph-srv-name", this._serverName);
+		// Counter Details: remember the server of the graph last clicked (anywhere in the graph), so the panel uses it when opened via its button
+		newDiv.addEventListener('pointerdown', function() { _cmGraphSrvName = thisClass.getServerName(); });
 		newDiv.style.border = "1px dotted gray";
 		if (dbxGraphChartSchema() === "dark")
 		{
@@ -3538,6 +3541,10 @@ class DbxGraph
 						name: "Graph Settings…",
 						callback: function(key, opt) { DbxGraphSettings.openDialog(); }
 					},
+					counterDetailsThisSrv: {
+						name: "Open 'Counter Details' for this server",
+						callback: function(key, opt) { cmDetailOpenForSrv($(this).attr('graph-srv-name')); }
+					},
 					sep_selectGraphs: '---',
 					resetZoomThis: {
 						name: "Reset - This graph",
@@ -3545,7 +3552,7 @@ class DbxGraph
 						{
 							var graphName = $(this).attr('id');
 							console.log("contextMenu(graphName="+graphName+"): key='"+key+"'.");
-							getGraphByName(graphName)._chartObject.resetZoom();
+							getGraphByDiv($(this)[0])._chartObject.resetZoom();
 						}
 					},
 					resetZoomAll: {
@@ -3565,10 +3572,10 @@ class DbxGraph
 						callback: function(key, opt) 
 						{
 							var graphName = $(this).attr('id');
-							const curVal = getGraphByName(graphName).getMaxValue()
+							const curVal = getGraphByDiv($(this)[0]).getMaxValue()
 							const newVal = prompt("Set a new temporary MAX value (blank is auto):", curVal);
 							console.log("contextMenu(graphName="+graphName+"): key='"+key+"'.");
-							getGraphByName(graphName).setMaxValue(newVal);
+							getGraphByDiv($(this)[0]).setMaxValue(newVal);
 						}
 					},
 					setMinValue: {
@@ -3576,10 +3583,10 @@ class DbxGraph
 						callback: function(key, opt) 
 						{
 							var graphName = $(this).attr('id');
-							const curVal = getGraphByName(graphName).getMinValue()
+							const curVal = getGraphByDiv($(this)[0]).getMinValue()
 							const newVal = prompt("Set a new temporary MIN value (blank is auto):", curVal);
 							console.log("contextMenu(graphName="+graphName+"): key='"+key+"'.");
-							getGraphByName(graphName).setMinValue(newVal);
+							getGraphByDiv($(this)[0]).setMinValue(newVal);
 						}
 					},
 					hideThis: {
@@ -3588,7 +3595,7 @@ class DbxGraph
 						{
 							var graphName = $(this).attr('id');
 							console.log("contextMenu(graphName="+graphName+"): key='"+key+"'.");
-							document.getElementById(graphName).style.display = 'none';
+							$(this).hide();
 						}
 					},
 					filterDialog: {
@@ -3642,7 +3649,7 @@ class DbxGraph
 							console.log("contextMenu(graphName="+graphName+"): key='"+key+"', graphListAttr='"+graphListAttr+"'.");
 
 							// Get serverName this graph is for
-							var srvName = getGraphByName(graphName).getServerName();
+							var srvName = $(this).attr('graph-srv-name');
 
 							// Get Get current URL
 							var currentUrl  = window.location.href;
@@ -3667,7 +3674,7 @@ class DbxGraph
 							console.log("contextMenu(graphName="+graphName+"): key='"+key+"', graphListAttr='"+graphListAttr+"'.");
 
 							// Get serverName this graph is for
-							var srvName = getGraphByName(graphName).getServerName();
+							var srvName = $(this).attr('graph-srv-name');
 
 							// Get Get current URL
 							var currentUrl  = window.location.href;
@@ -3696,7 +3703,7 @@ class DbxGraph
 							console.log("contextMenu(graphName="+graphName+"): key='"+key+"', graphListAttr='"+graphListAttr+"'.");
 
 							// Get serverName this graph is for
-							var srvName = getGraphByName(graphName).getServerName();
+							var srvName = $(this).attr('graph-srv-name');
 
 							// Get Get current URL
 							var currentUrl  = window.location.href;
@@ -3733,7 +3740,7 @@ class DbxGraph
 							console.log("contextMenu(graphName="+graphName+"): key='"+key+"', graphListAttr='"+graphListAttr+"'.");
 
 							// Get serverName this graph is for
-							var srvName = getGraphByName(graphName).getServerName();
+							var srvName = $(this).attr('graph-srv-name');
 
 							// Get Get current URL
 							var currentUrl  = window.location.href;
@@ -3762,7 +3769,7 @@ class DbxGraph
 							console.log("contextMenu(graphName="+graphName+"): key='"+key+"', graphListAttr='"+graphListAttr+"'.");
 
 							// Get serverName this graph is for
-							var srvName = getGraphByName(graphName).getServerName();
+							var srvName = $(this).attr('graph-srv-name');
 
 							// Get Get current URL
 							var currentUrl  = window.location.href;
@@ -5581,17 +5588,18 @@ function dbxTuneLoadCharts(destinationDivId)
 
 
 /**
- * Get the DbxGraph object from the global array by name
+ * Get the DbxGraph object from the global array by its graph "div"
+ * (the graph name is NOT unique: the same graph is shown once per server, and once per day in a Multi Day Chart)
  * 
- * @param {*} name    The name of the graph
+ * @param {*} div    The graph div (the element the context menu was opened on)
  * @returns The DbxGraph Object
  */
-function getGraphByName(name)
+function getGraphByDiv(div)
 {
 	for(var i=0; i<_graphMap.length; i++)
 	{
 		const dbxGraph = _graphMap[i];
-		if (dbxGraph.getFullName() === name)
+		if (dbxGraph._chartDiv === div)
 			return dbxGraph;
 	}
 	return null;
