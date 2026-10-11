@@ -36,7 +36,7 @@
 			<attribute name="javadoc_location" value="https://static.javadoc.io/org.reflections/reflections/0.9.10/index.html"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/jsch-2.28.7.jar"/>
+	<classpathentry kind="lib" path="lib/jsch-2.28.8.jar"/>
 	<classpathentry kind="lib" path="lib/javassist-3.33.0-GA.jar"/>
 	<classpathentry kind="lib" path="lib/jsendnsca-2.1.0.jar">
 		<attributes>
