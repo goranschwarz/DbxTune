@@ -23,6 +23,7 @@ package com.dbxtune.cm.os;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -311,6 +312,48 @@ extends CounterModelHostMonitor
 		MovingAverageCounterManager.getInstance(this.getName(), "15Min", 60).reset();
 		
 		super.reset();
+	}
+
+	/**
+	 * When the OS was started: the time of the last sample - the OS "up time" in that sample.
+	 * <p>
+	 * Used for example when the alarm 'HostMonitorConnectionDown' is cancelled, to tell if the OS was restarted or not.
+	 * <ul>
+	 *   <li>Unix/Linux: columns 'daysUp' and 'hoursUp' (HH:MM), so it is only exact to the minute</li>
+	 *   <li>Windows:    column 'System Up Time' (seconds, an average of the 'typeperf' rows in the sample)</li>
+	 * </ul>
+	 *
+	 * @return null if not known (there is no data, or the up time could not be parsed)
+	 */
+	public Timestamp getOsStartTime()
+	{
+		Timestamp sampleTime = getTimestamp();
+		if (sampleTime == null || getAbsRowCount() == 0)
+			return null;
+
+		long upTimeInSec;
+		if (isConnectedToVendor(OsVendor.Windows))
+		{
+			Double systemUpTime = getAbsValueAsDouble(0, "System Up Time");
+			if (systemUpTime == null)
+				return null;
+
+			upTimeInSec = systemUpTime.longValue();
+		}
+		else
+		{
+			Integer daysUp  = getAbsValueAsInteger(0, "daysUp");
+			String  hoursUp = getAbsString(0, "hoursUp"); // HH:MM (or '00:7' when the OS has been up for less than 10 minutes: 'up 7 min')
+
+			// For example Solaris '1 hr(s)' is not parsed by MonitorUpTimeAllOs
+			if (daysUp == null || ! hoursUp.matches("[0-9]{1,2}:[0-9]{1,2}"))
+				return null;
+
+			String[] hhmm = hoursUp.split(":");
+			upTimeInSec = daysUp * 86400L + Integer.parseInt(hhmm[0]) * 3600L + Integer.parseInt(hhmm[1]) * 60L;
+		}
+
+		return new Timestamp(sampleTime.getTime() - upTimeInSec * 1000);
 	}
 
 	/**

@@ -65,6 +65,7 @@ import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.LostConnectionException;
+import com.dbxtune.cm.os.CmOsUptime;
 import com.dbxtune.config.dbms.DbmsConfigManager;
 import com.dbxtune.config.dbms.DbmsConfigTextManager;
 import com.dbxtune.config.dbms.IDbmsConfig;
@@ -170,7 +171,8 @@ implements Memory.MemoryListener
 
 	private long       _hostMonConnFailStartTime    = 0;    // When did the SSH Host Monitoring connection start to fail (0 = not failing)
 	private Exception  _hostMonLastConnectException = null;
-	
+	private Timestamp  _hostMonOsStartTime          = null; // CmOsUptime.getOsStartTime() from the last sample where the SSH Host Monitoring connection was OK
+
 	private Configuration _storeProps   = null;
 	
 	private transient boolean _running      = true;
@@ -2135,11 +2137,19 @@ implements Memory.MemoryListener
 		//  - CounterModelHostMonitor.refresh() -> SshConnection.execCommand() -> checkConnectionAndPossiblyReconnect() -> reconnect()
 		//  - Streaming HostMonitor threads -> HostMonitorConnectionSsh.handleException() -> reconnect()
 		HostMonitorConnection hostMonConn = getCounterController().getHostMonConnection();
+		CmOsUptime            cmOsUptime  = (CmOsUptime) getCounterController().getCmByName(CmOsUptime.CM_NAME);
 		boolean isConnected = hostMonConn != null && ! hostMonConn.isConnectionClosed();
 		if (isConnected)
 		{
 			_hostMonConnFailStartTime    = 0;
 			_hostMonLastConnectException = null;
+
+			// Remember the OS start time while we are connected, so the alarm can tell if the OS was restarted or not (when it's cancelled)
+			// It can't be read when the alarm is created: CmOsUptime is refreshed also when the connection is down, and then has no data
+			Timestamp osStartTime = cmOsUptime == null ? null : cmOsUptime.getOsStartTime();
+			if (osStartTime != null)
+				_hostMonOsStartTime = osStartTime;
+
 			return;
 		}
 
@@ -2166,7 +2176,11 @@ implements Memory.MemoryListener
 		{
 			_logger.info("Host Monitoring: SSH connection to host '" + _sshHostname + "' has failed for " + secSinceFailStart + " seconds (thresholdInSec=" + thresholdInSec + "). Sending AlarmEventHostMonitorConnectionDown to the AlarmHandler.");
 
-			AlarmEvent alarmEvent = new AlarmEventHostMonitorConnectionDown(srvName, _sshHostname, _sshPort, _sshUsername, secSinceFailStart, thresholdInSec, _hostMonLastConnectException);
+			AlarmEventHostMonitorConnectionDown alarmEvent = new AlarmEventHostMonitorConnectionDown(srvName, _sshHostname, _sshPort, _sshUsername, secSinceFailStart, thresholdInSec, _hostMonLastConnectException);
+
+			// When the alarm is cancelled: set the cancel description to the OS start time, and if the OS was restarted or not
+			alarmEvent.setOsStartTimeOnCancel(cmOsUptime, _hostMonOsStartTime);
+
 			AlarmHandler.getInstance().addAlarm(alarmEvent);
 		}
 	}
