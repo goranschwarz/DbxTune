@@ -36,7 +36,11 @@ import com.dbxtune.cm.oracle.CmBufferPool;
 import com.dbxtune.cm.oracle.CmDataFiles;
 import com.dbxtune.cm.oracle.CmIndexUsage;
 import com.dbxtune.cm.oracle.CmInvalidObjects;
+import com.dbxtune.cm.oracle.CmLatch;
 import com.dbxtune.cm.oracle.CmLibraryCache;
+import com.dbxtune.cm.oracle.CmMemoryAdvice;
+import com.dbxtune.cm.oracle.CmResourceManager;
+import com.dbxtune.cm.oracle.CmServiceStats;
 import com.dbxtune.cm.oracle.CmPdbs;
 import com.dbxtune.cm.oracle.CmUserAccounts;
 import com.dbxtune.cm.oracle.CmPgaStat;
@@ -136,6 +140,9 @@ extends CounterControllerAbstract
 		CmPdbs              .create(counterController, guiController);
 		CmSchedulerJobs     .create(counterController, guiController);
 		CmOpenCursors       .create(counterController, guiController);
+		CmServiceStats      .create(counterController, guiController);
+		CmResourceManager   .create(counterController, guiController);
+		CmLatch             .create(counterController, guiController);
 
 		// Object/Access
 		CmActiveStatements  .create(counterController, guiController);
@@ -151,6 +158,7 @@ extends CounterControllerAbstract
 		CmPgaStat           .create(counterController, guiController);
 		CmBufferPool        .create(counterController, guiController);
 		CmLibraryCache      .create(counterController, guiController);
+		CmMemoryAdvice      .create(counterController, guiController);
 
 		// Disk
 		CmTablespaces       .create(counterController, guiController);
