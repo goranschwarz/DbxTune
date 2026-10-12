@@ -16,7 +16,10 @@
 **   No Diagnostics Pack and no Tuning Pack: no ASH (V$ACTIVE_SESSION_HISTORY), no AWR (DBA_HIST_...),
 **   no ADDM, no SQL Monitor (V$SQL_MONITOR), no DBMS_SQLTUNE, no DBMS_WORKLOAD_REPOSITORY.
 **   So nothing extra has to be licensed to run it, whatever the edition (Free / XE, Standard Edition, Enterprise Edition).
-**   If something that needs such a license is added later, it will be OFF until you turn it on in the configuration.
+**   If something that needs such a license is added later, it is OFF until you say that your organization has the license:
+**       OracleTune.licensed.management.packs=NONE          (the default. Or: DIAGNOSTIC, or: DIAGNOSTIC+TUNING)
+**   and the database must also allow it (the Oracle parameter 'control_management_pack_access').
+**   What is allowed is written in the log file at every connect.
 **
 ** WHAT THE LOGIN NEEDS: 'CREATE SESSION' and ONE of the below
 **   Option A: SELECT_CATALOG_ROLE     (recomended, and what the sections below use)

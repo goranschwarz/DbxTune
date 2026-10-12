@@ -71,6 +71,7 @@ import com.dbxtune.cm.oracle.CmSystemEvent;
 import com.dbxtune.cm.oracle.CmTablespaces;
 import com.dbxtune.cm.oracle.CmTempSegUsage;
 import com.dbxtune.cm.oracle.CmUndoStat;
+import com.dbxtune.cm.oracle.OracleCmUtils;
 import com.dbxtune.cm.os.CmOsDiskSpace;
 import com.dbxtune.cm.os.CmOsIostat;
 import com.dbxtune.cm.os.CmOsMeminfo;
@@ -84,6 +85,7 @@ import com.dbxtune.pcs.PersistContainer;
 import com.dbxtune.pcs.PersistContainer.HeaderInfo;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.AseConnectionUtils;
+import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.Ver;
 
 
@@ -274,6 +276,20 @@ extends CounterControllerAbstract
 			_logger.info("The Oracle login has: SELECT_CATALOG_ROLE=" + hasSelectCatalogRole + ", SELECT ANY DICTIONARY=" + hasSelectAnyDictionary + ".");
 		else
 			_logger.warn("The Oracle login has neither 'SELECT_CATALOG_ROLE' nor 'SELECT ANY DICTIONARY'. CM's that can't read their views will be DISABLED. Fix: GRANT SELECT_CATALOG_ROLE TO <user>;");
+
+		// ORACLE LICENSE: say (in the log, at every connect) if we may use what needs an extra license from Oracle. See OracleCmUtils.getManagementPackFor()
+		String licensedPacks = Configuration.getCombinedConfiguration().getProperty(OracleCmUtils.PROPKEY_licensedManagementPacks, OracleCmUtils.DEFAULT_licensedManagementPacks).trim().toUpperCase();
+		if ( ! licensedPacks.equals("NONE") && ! licensedPacks.equals("DIAGNOSTIC") && ! licensedPacks.equals("DIAGNOSTIC+TUNING") )
+			_logger.warn("The property '" + OracleCmUtils.PROPKEY_licensedManagementPacks + "' is '" + licensedPacks + "', which is not one of: NONE, DIAGNOSTIC, DIAGNOSTIC+TUNING. It is read as NONE.");
+
+		for (String pack : new String[] { OracleCmUtils.PACK_DIAGNOSTIC, OracleCmUtils.PACK_TUNING })
+		{
+			String reason = OracleCmUtils.getManagementPackNotAllowedReason(conn, pack);
+			if (reason == null)
+				_logger.info("Oracle " + pack + " (needs an extra license from Oracle): ALLOWED, by the property '" + OracleCmUtils.PROPKEY_licensedManagementPacks + "=" + licensedPacks + "' and the database parameter 'control_management_pack_access'.");
+			else
+				_logger.info("Oracle " + pack + " (needs an extra license from Oracle): NOT used. " + reason);
+		}
 
 
 		_logger.info("Initializing all CM objects, using Oracle version number " + srvVersion + ". (" + Ver.versionNumToStr(srvVersion) + ")");
