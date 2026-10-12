@@ -2642,8 +2642,9 @@ function dbxTuneGraphSubscribe()
 				}
 				else if ("OracleTune" === appName && metaData !== undefined && metaData.hasOwnProperty('columnName'))
 				{
-					if (metaData.columnName === "SqlText"   && rowData.hasOwnProperty('SqlText')  && rowData.SqlText)  { td.appendChild( createActiveStatementToolTipDiv(rowData.SqlText,  'text') ); }
-					if (metaData.columnName === "ExecPlan"  && rowData.hasOwnProperty('ExecPlan') && rowData.ExecPlan) { td.appendChild( createActiveStatementToolTipDiv(rowData.ExecPlan, 'text') ); }
+					// The tooltip goes on the CHECKBOX columns (as for the other collectors). On the text columns it made the row one line higher.
+					if (metaData.columnName === "HasSqlText"   && rowData.hasOwnProperty('SqlText')  && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.SqlText,  'plsql') ); }
+					if (metaData.columnName === "HasExecPlan"  && rowData.hasOwnProperty('ExecPlan') && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.ExecPlan, 'text' ) ); }
 				}
 			} // end: metaData && columnName
 		};
@@ -2755,20 +2756,32 @@ function dbxTuneGraphSubscribe()
 		}
 		else if ("OracleTune" === appName)
 		{
+			// The same colors, with the same meaning, as for the other collectors (and as the GUI: CmActiveStatementsPanel). The last one that matches wins.
 			trCallback = function(tr, row)
 			{
+				// multiSampled
+				if (row.hasOwnProperty('MultiSampled') && row.MultiSampled !== null && row.MultiSampled !== '')
+					tr.className = "active-statement-row-multi-sampled";
+
 				// Holding open transaction while idle (STATUS != ACTIVE)
 				if (row.hasOwnProperty('HasOpenTxn') && row.HasOpenTxn === 'Y' &&
 				    row.hasOwnProperty('STATUS') && row.STATUS !== 'ACTIVE')
 					tr.className = "active-statement-row-holding-locks-while-idle";
 
-				// Background/system session
-				if (row.hasOwnProperty('USERNAME') && (row.USERNAME === null || row.USERNAME === ''))
-					tr.className = "active-statement-row-sys-process";
+				// Blocked by some other session ('BlockedBySid' is 0 when it is not blocked)
+				var isBlocked = row.hasOwnProperty('BlockedBySid') && row.BlockedBySid !== null && row.BlockedBySid > 0;
+				if (isBlocked)
+					tr.className = "active-statement-row-blocked";
+
+				// Blocking OTHER sessions, and not blocked itself (the root cause)
+				if (row.hasOwnProperty('BlockingOtherSids') && row.BlockingOtherSids !== null && row.BlockingOtherSids !== '' && ! isBlocked)
+					tr.className = "active-statement-row-blocking";
 			};
 			tooltip = "Background colors: \n"
-			        + " * YELLOW: Holds an open transaction while STATUS is not ACTIVE (idle in transaction).\n"
-			        + " * ORANGE: System/background session (no USERNAME).\n"
+			        + " * ORANGE: Multi Sampled Statement (has been running for more than 1 sample) \n"
+			        + " * YELLOW: Holds an open transaction while STATUS is not ACTIVE (waits for the client, and holds its locks) \n"
+			        + " * PINK:   Blocked by some other session \n"
+			        + " * RED:    BLOCKING other session(s) from working.\n"
 					+ "";
 		}
 		else

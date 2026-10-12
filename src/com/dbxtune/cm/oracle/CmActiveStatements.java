@@ -21,6 +21,7 @@
  ******************************************************************************/
 package com.dbxtune.cm.oracle;
 
+import java.awt.event.MouseEvent;
 import java.lang.invoke.MethodHandles;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -34,6 +35,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -51,9 +53,12 @@ import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
+import com.dbxtune.cm.oracle.gui.CmActiveStatementsPanel;
 import com.dbxtune.gui.MainFrame;
+import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.pcs.PcsColumnOptions;
 import com.dbxtune.pcs.PcsColumnOptions.ColumnType;
+import com.dbxtune.sql.ResultSetMetaDataCached;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.sql.conn.info.DbmsVersionInfoOracle;
@@ -83,6 +88,16 @@ extends CountersModel
 		"<p>The background processes, and the session used to collect this information, are not included.</p>" +
 		"<b>Blocking</b>: <code>BlockedBySid</code> is the session this session waits for. <code>BlockingOtherSids</code> are the sessions that waits for this session.<br>" +
 		"A session with an open transaction that is INACTIVE (it waits for the client) holds its locks until the client does COMMIT or ROLLBACK.<br>" +
+		"<br>" +
+		"<b>SQL Text and Execution Plan</b>: hover over the checkbox <code>HasSqlText</code> or <code>HasExecPlan</code>.<br>" +
+		"<br>" +
+		"Background colors:" +
+		"<ul>" +
+		"    <li>ORANGE - The session was executing the same statement in the previous sample as well (MultiSampled)</li>" +
+		"    <li>YELLOW - Has an open transaction, but is not executing anything: it waits for the client, and holds its locks meanwhile</li>" +
+		"    <li>PINK   - Blocked by another session (BlockedBySid)</li>" +
+		"    <li>RED    - Blocks other sessions, and is not blocked itself: the root cause (BlockingOtherSids)</li>" +
+		"</ul>" +
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
@@ -276,7 +291,8 @@ extends CountersModel
 
 	/**
 	 * NOTE: The column aliases in "MixedCase" MUST be quoted, otherwise Oracle makes them UPPERCASE.<br>
-	 * The names "SqlText", "ExecPlan", "HasOpenTxn" (and STATUS, USERNAME) are used by DbxCentral (dbxcentral.graph.js)
+	 * The names "HasSqlText", "SqlText", "HasExecPlan", "ExecPlan", "MultiSampled", "HasOpenTxn", "BlockedBySid", "BlockingOtherSids" and STATUS
+	 * are used by DbxCentral (dbxcentral.graph.js) and by the GUI panel (CmActiveStatementsPanel): tooltips and row colors
 	 */
 	private String getSql(String CON_ID, String CON_NAME, String joinContainers, String joinSqlOnConId, String rowWaitObjectFromWhere)
 	{
@@ -296,6 +312,8 @@ extends CountersModel
 			+ "    ,s.CLIENT_INFO \n"
 			+ "    ,s.LOGON_TIME \n"
 			+ "    ,CAST(NULL as VARCHAR2(10))                                                    as \"MultiSampled\" \n"
+			+ "    ,CAST(0 as NUMBER(1))                                                          as \"HasSqlText\" \n"   // a checkbox, see modifyResultSetMetaData() and localCalculation()
+			+ "    ,CAST(0 as NUMBER(1))                                                          as \"HasExecPlan\" \n"  // a checkbox, see modifyResultSetMetaData() and localCalculation()
 			+ "    ,s.LAST_CALL_ET                                                                as \"ExecTimeInSec\" \n"
 			+ "    ,(SYSDATE - s.LAST_CALL_ET / 86400)                                            as \"LastCallTime\" \n"
 			+ "    ,s.WAIT_CLASS \n"
@@ -341,6 +359,62 @@ extends CountersModel
 			+ "      ) \n"
 			+ "order by s.SID \n"
 			+ "";
+	}
+
+	/**
+	 * Oracle has no boolean type (before 23): in the SQL the "Has..." columns are NUMBER(1), here they are made into BOOLEAN, so they are shown as checkboxes.<br>
+	 * They are set to true in localCalculation(), when the row has a SQL Text / an Execution Plan.
+	 */
+	@Override
+	public ResultSetMetaDataCached modifyResultSetMetaData(ResultSetMetaDataCached rsmdc)
+	{
+		for (String colName : new String[] { "HasSqlText", "HasExecPlan" })
+		{
+			int colPos = rsmdc.findColumn(colName);
+			if (colPos != -1)
+			{
+				rsmdc.setColumnType     (colPos, java.sql.Types.BOOLEAN);
+				rsmdc.setColumnTypeName (colPos, "boolean");
+				rsmdc.setColumnClassName(colPos, "java.lang.Boolean");
+			}
+		}
+
+		return rsmdc;
+	}
+
+	@Override
+	protected TabularCntrPanel createGui()
+	{
+		return new CmActiveStatementsPanel(this);
+	}
+
+	/** The SQL Text and the Execution Plan as a tooltip, on the checkbox column and on the column itself (as the other DbxTune's does) */
+	@Override
+	public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol)
+	{
+		if ("HasSqlText".equals(colName) || "SqlText".equals(colName))
+		{
+			int pos_SqlText = findColumn("SqlText");
+			if (pos_SqlText >= 0)
+			{
+				Object sqlText = getValueAt(modelRow, pos_SqlText);
+				if (sqlText != null && StringUtil.hasValue(sqlText.toString()))
+					return "<html><pre>" + StringEscapeUtils.escapeHtml4(StringUtil.makeApproxLineBreak(sqlText.toString(), 150, 10, "\n")) + "</pre></html>";
+			}
+		}
+
+		if ("HasExecPlan".equals(colName) || "ExecPlan".equals(colName))
+		{
+			int pos_ExecPlan = findColumn("ExecPlan");
+			if (pos_ExecPlan >= 0)
+			{
+				Object execPlan = getValueAt(modelRow, pos_ExecPlan);
+				if (execPlan != null && StringUtil.hasValue(execPlan.toString()))
+					return "<html><pre>" + StringEscapeUtils.escapeHtml4(execPlan.toString()) + "</pre></html>";
+			}
+		}
+
+		return super.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
 	}
 
 	/**
@@ -418,6 +492,20 @@ extends CountersModel
 		}
 
 		//---------------------------------------------------------------
+		// The checkbox 'HasSqlText': true when the row has a SQL Text
+		//---------------------------------------------------------------
+		int pos_HasSqlText = newSample.findColumn("HasSqlText");
+		int pos_SqlText    = newSample.findColumn("SqlText");
+		if (pos_HasSqlText != -1 && pos_SqlText != -1)
+		{
+			for (int rowId = 0; rowId < newSample.getRowCount(); rowId++)
+			{
+				if (StringUtil.hasValue(newSample.getValueAsString(rowId, pos_SqlText)))
+					newSample.setValueAt(Boolean.TRUE, rowId, pos_HasSqlText);
+			}
+		}
+
+		//---------------------------------------------------------------
 		// Execution Plan: for statements that has been executing for a while
 		// A plan is fetched ONCE (then it is in the cache), and only a few NEW plans in each sample (so we do not slow down the collector)
 		//---------------------------------------------------------------
@@ -434,8 +522,9 @@ extends CountersModel
 		int pos_EffectiveChildNumber = newSample.findColumn("EffectiveChildNumber");
 		int pos_PLAN_HASH_VALUE      = newSample.findColumn("PLAN_HASH_VALUE");
 		int pos_ExecPlan             = newSample.findColumn("ExecPlan");
+		int pos_HasExecPlan          = newSample.findColumn("HasExecPlan");
 
-		if (pos_CON_ID == -1 || pos_STATUS == -1 || pos_ExecTimeInSec == -1 || pos_EffectiveSqlId == -1 || pos_EffectiveChildNumber == -1 || pos_PLAN_HASH_VALUE == -1 || pos_ExecPlan == -1)
+		if (pos_CON_ID == -1 || pos_STATUS == -1 || pos_ExecTimeInSec == -1 || pos_EffectiveSqlId == -1 || pos_EffectiveChildNumber == -1 || pos_PLAN_HASH_VALUE == -1 || pos_ExecPlan == -1 || pos_HasExecPlan == -1)
 			return;
 
 		DbxConnection conn = getCounterController() == null ? null : getCounterController().getMonConnection();
@@ -487,7 +576,10 @@ extends CountersModel
 			}
 
 			if (StringUtil.hasValue(execPlan))
-				newSample.setValueAt(execPlan, rowId, pos_ExecPlan);
+			{
+				newSample.setValueAt(execPlan    , rowId, pos_ExecPlan);
+				newSample.setValueAt(Boolean.TRUE, rowId, pos_HasExecPlan);
+			}
 		}
 	}
 
@@ -778,6 +870,8 @@ extends CountersModel
 		setLocalToolTipTextOnTableColumnHeader("CLIENT_INFO",          "<html>Client info string set by the application (via DBMS_APPLICATION_INFO).</html>");
 		setLocalToolTipTextOnTableColumnHeader("LOGON_TIME",           "<html>Time at which the session logged on.</html>");
 		setLocalToolTipTextOnTableColumnHeader("MultiSampled",         "<html>YES = the session was executing the same statement (same SQL_ID, started at the same time) in the previous sample. So it has been running for more than one sample.</html>");
+		setLocalToolTipTextOnTableColumnHeader("HasSqlText",           "<html>Checked if the row has a SQL Text (column 'SqlText'). Hover over the checkbox to see it.</html>");
+		setLocalToolTipTextOnTableColumnHeader("HasExecPlan",          "<html>Checked if the row has an Execution Plan (column 'ExecPlan'). Hover over the checkbox to see it.<br>A plan is only fetched for statements that has been executing for some seconds (see the options).</html>");
 		setLocalToolTipTextOnTableColumnHeader("ExecTimeInSec",        "<html>LAST_CALL_ET: For an ACTIVE session: seconds since it became active (how long the current call has been executing).<br>For an INACTIVE session: seconds since it became inactive (how long it has waited for the client).</html>");
 		setLocalToolTipTextOnTableColumnHeader("LastCallTime",         "<html>The time when the session became ACTIVE (or INACTIVE).<br><b>Formula</b>: SYSDATE - LAST_CALL_ET</html>");
 		setLocalToolTipTextOnTableColumnHeader("WAIT_CLASS",           "<html>Class of the wait event the session is waiting for (e.g. User I/O, Application, Network, Idle). If STATE is not WAITING: the LAST thing it waited for.</html>");
