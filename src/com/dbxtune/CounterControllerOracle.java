@@ -34,6 +34,7 @@ import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.oracle.CmArchiveDest;
 import com.dbxtune.cm.oracle.CmBufferPool;
 import com.dbxtune.cm.oracle.CmDataFiles;
+import com.dbxtune.cm.oracle.CmDataGuard;
 import com.dbxtune.cm.oracle.CmIndexUsage;
 import com.dbxtune.cm.oracle.CmInvalidObjects;
 import com.dbxtune.cm.oracle.CmLatch;
@@ -143,6 +144,7 @@ extends CounterControllerAbstract
 		CmServiceStats      .create(counterController, guiController);
 		CmResourceManager   .create(counterController, guiController);
 		CmLatch             .create(counterController, guiController);
+		CmDataGuard         .create(counterController, guiController);
 
 		// Object/Access
 		CmActiveStatements  .create(counterController, guiController);

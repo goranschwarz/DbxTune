@@ -50,6 +50,7 @@ public abstract class OracleConfigText
 		,OraSecurity
 		,OraAudit
 		,OraResourceManager
+		,OraDataGuard
 		,OraContainers
 		,OraDbLinks
 		,OraNlsParams
@@ -67,6 +68,7 @@ public abstract class OracleConfigText
 		DbmsConfigTextManager.addInstance(new OracleConfigText.Security());
 		DbmsConfigTextManager.addInstance(new OracleConfigText.Audit());
 		DbmsConfigTextManager.addInstance(new OracleConfigText.ResourceManager());
+		DbmsConfigTextManager.addInstance(new OracleConfigText.DataGuard());
 		DbmsConfigTextManager.addInstance(new OracleConfigText.Containers());
 		DbmsConfigTextManager.addInstance(new OracleConfigText.DbLinks());
 		DbmsConfigTextManager.addInstance(new OracleConfigText.NlsParams());
@@ -500,6 +502,44 @@ public abstract class OracleConfigText
 					"select ATTRIBUTE, VALUE, CONSUMER_GROUP, STATUS from DBA_RSRC_GROUP_MAPPINGS order by ATTRIBUTE, VALUE");
 
 			return out;
+		}
+	}
+
+	//---------------------------------------------------------------------------------------------
+	public static class DataGuard extends OracleTab
+	{
+		@Override public String getTabLabel() { return "Data Guard"; }
+		@Override public String getName()     { return ConfigType.OraDataGuard.toString(); }
+
+		@Override
+		protected String doOnlineRefresh(DbxConnection conn, HostMonitorConnection hostMonConn)
+		{
+			// NOTE: This tab has only been seen on databases WITHOUT a standby (there most of the parts are empty). The SQL is the same from 11.2
+			return ""
+				+ textTable(conn, "Role and protection (V$DATABASE)"
+				              + "\n--## DATABASE_ROLE = PRIMARY, PHYSICAL STANDBY, LOGICAL STANDBY or SNAPSHOT STANDBY"
+				              + "\n--## A database without a standby is a PRIMARY with PROTECTION_MODE = MAXIMUM PERFORMANCE"
+				              + "\n--## FORCE_LOGGING should be YES on a primary that has a standby: otherwise NOLOGGING operations never reach the standby",
+					"select DATABASE_ROLE, PROTECTION_MODE, PROTECTION_LEVEL, SWITCHOVER_STATUS, DATAGUARD_BROKER, FORCE_LOGGING, FLASHBACK_ON, GUARD_STATUS, LOG_MODE, OPEN_MODE from V$DATABASE")
+
+				+ textTable(conn, "The databases in the Data Guard configuration (V$DATAGUARD_CONFIG)\n--## From the parameter 'log_archive_config'. Empty (or only this database) = no Data Guard configuration",
+					"select * from V$DATAGUARD_CONFIG")
+
+				+ textTable(conn, "Standby destinations: where the redo is sent (V$ARCHIVE_DEST)"
+				              + "\n--## TRANSMIT_MODE: SYNCHRONOUS = a commit waits for the standby.  ASYNCHRONOUS = it does not"
+				              + "\n--## How far behind each standby is: see the tab 'Data Guard' among the Performance Counters",
+					"select DEST_ID, DEST_NAME, STATUS, DESTINATION, DB_UNIQUE_NAME, TRANSMIT_MODE, AFFIRM, VALID_TYPE, VALID_ROLE, DELAY_MINS, REOPEN_SECS, NET_TIMEOUT, COMPRESSION from V$ARCHIVE_DEST where TARGET = 'STANDBY' and STATUS <> 'INACTIVE' order by DEST_ID")
+
+				+ textTable(conn, "Standby redo logs (V$STANDBY_LOG)"
+				              + "\n--## Needed on a standby for real time apply, and on a primary so it is ready to become a standby"
+				              + "\n--## Rule of thumb: the same size as the online redo logs, and one more group per thread",
+					"select GROUP#, THREAD#, SEQUENCE#, CAST(BYTES / 1048576 as NUMBER(18,1)) as SIZE_MB, USED, ARCHIVED, STATUS from V$STANDBY_LOG order by THREAD#, GROUP#")
+
+				+ textTable(conn, "Parameters (V$SYSTEM_PARAMETER)",
+					"select NAME, DISPLAY_VALUE as VALUE, ISDEFAULT from V$SYSTEM_PARAMETER where (NAME in ('db_unique_name', 'log_archive_config', 'fal_server', 'fal_client', 'standby_file_management', 'dg_broker_start', 'archive_lag_target', 'log_archive_max_processes', 'db_file_name_convert', 'log_file_name_convert', 'remote_login_passwordfile', 'redo_transport_user') or (NAME like 'log_archive_dest%' and VALUE is not null and ISDEFAULT = 'FALSE'))" + andOurContainer(conn) + "order by NAME")
+
+				+ textTable(conn, "The last messages from Data Guard and the archiver (V$DATAGUARD_STATUS)\n--## The newest first, max 30. ERROR_CODE = the ORA- error, 0 = no error",
+					"select * from (select TIMESTAMP, FACILITY, SEVERITY, DEST_ID, ERROR_CODE, MESSAGE from V$DATAGUARD_STATUS order by MESSAGE_NUM desc) where ROWNUM <= 30");
 		}
 	}
 
