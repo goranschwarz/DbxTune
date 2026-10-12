@@ -20,6 +20,12 @@
  ******************************************************************************/
 package com.dbxtune.pcs.report;
 
+import com.dbxtune.pcs.report.content.oracle.OracleAlertLogErrors;
+import com.dbxtune.pcs.report.content.oracle.OracleBackups;
+import com.dbxtune.pcs.report.content.oracle.OracleLoadOverview;
+import com.dbxtune.pcs.report.content.oracle.OracleSpaceOverview;
+import com.dbxtune.pcs.report.content.oracle.OracleTopSql;
+import com.dbxtune.pcs.report.content.oracle.OracleWaitStats;
 import com.dbxtune.pcs.report.content.os.CmOsNwInfoOverview;
 import com.dbxtune.pcs.report.content.os.OsCpuUsageOverview;
 import com.dbxtune.pcs.report.content.os.OsIoStatOverview;
@@ -34,13 +40,20 @@ extends DailySummaryReportDefault
 		// Add the Alarms Active/History
 		super.addReportEntries();
 
-		// SQL
-		//FIXME: addReportEntry( new OracleTopSql(this)(this)   );
-
-		// CPU
+		// Load / CPU / Waits
+		addReportEntry( new OracleLoadOverview(this)   );
 		addReportEntry( new OsCpuUsageOverview(this)   );
+		addReportEntry( new OracleWaitStats(this)      );
 
-		// Disk IO Activity
+		// SQL
+		addReportEntry( new OracleTopSql(this)         );
+
+		// Alert Log and Backups
+		addReportEntry( new OracleAlertLogErrors(this) );
+		addReportEntry( new OracleBackups(this)        );
+
+		// Space, Disk IO Activity
+		addReportEntry( new OracleSpaceOverview(this)  );
 //		addReportEntry( new OsSpaceUsageOverview(this) );
 		addReportEntry( new OsIoStatOverview(this)     );
 		addReportEntry( new OsIoStatSlowIo(this)       );
