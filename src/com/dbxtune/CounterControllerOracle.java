@@ -37,7 +37,10 @@ import com.dbxtune.cm.oracle.CmExecutionTime;
 import com.dbxtune.cm.oracle.CmIoStatFile;
 import com.dbxtune.cm.oracle.CmIoStatFunction;
 import com.dbxtune.cm.oracle.CmActiveStatements;
+import com.dbxtune.cm.oracle.CmLocks;
+import com.dbxtune.cm.oracle.CmLongOps;
 import com.dbxtune.cm.oracle.CmRecoveryArea;
+import com.dbxtune.cm.oracle.CmRedoLog;
 import com.dbxtune.cm.oracle.CmResourceLimit;
 import com.dbxtune.cm.oracle.CmRmanBackup;
 import com.dbxtune.cm.oracle.CmSessions;
@@ -46,6 +49,8 @@ import com.dbxtune.cm.oracle.CmSummary;
 import com.dbxtune.cm.oracle.CmSysStat;
 import com.dbxtune.cm.oracle.CmSystemEvent;
 import com.dbxtune.cm.oracle.CmTablespaces;
+import com.dbxtune.cm.oracle.CmTempSegUsage;
+import com.dbxtune.cm.oracle.CmUndoStat;
 import com.dbxtune.cm.os.CmOsDiskSpace;
 import com.dbxtune.cm.os.CmOsIostat;
 import com.dbxtune.cm.os.CmOsMeminfo;
@@ -115,6 +120,8 @@ extends CounterControllerAbstract
 		// Object/Access
 		CmActiveStatements  .create(counterController, guiController);
 		CmSqlStats          .create(counterController, guiController);
+		CmLocks             .create(counterController, guiController);
+		CmLongOps           .create(counterController, guiController);
 
 		// Cache
 
@@ -122,6 +129,9 @@ extends CounterControllerAbstract
 		CmTablespaces       .create(counterController, guiController);
 		CmRecoveryArea      .create(counterController, guiController);
 		CmArchiveDest       .create(counterController, guiController);
+		CmRedoLog           .create(counterController, guiController);
+		CmUndoStat          .create(counterController, guiController);
+		CmTempSegUsage      .create(counterController, guiController);
 		CmIoStatFunction    .create(counterController, guiController);
 		CmIoStatFile        .create(counterController, guiController);
 
