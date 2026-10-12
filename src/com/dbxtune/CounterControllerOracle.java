@@ -33,6 +33,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.oracle.CmArchiveDest;
 import com.dbxtune.cm.oracle.CmBufferPool;
+import com.dbxtune.cm.oracle.CmDataFiles;
 import com.dbxtune.cm.oracle.CmIndexUsage;
 import com.dbxtune.cm.oracle.CmInvalidObjects;
 import com.dbxtune.cm.oracle.CmLibraryCache;
@@ -52,6 +53,9 @@ import com.dbxtune.cm.oracle.CmRecoveryArea;
 import com.dbxtune.cm.oracle.CmRedoLog;
 import com.dbxtune.cm.oracle.CmResourceLimit;
 import com.dbxtune.cm.oracle.CmRmanBackup;
+import com.dbxtune.cm.oracle.CmOpenCursors;
+import com.dbxtune.cm.oracle.CmRestorePoints;
+import com.dbxtune.cm.oracle.CmSchedulerJobs;
 import com.dbxtune.cm.oracle.CmSegmentSize;
 import com.dbxtune.cm.oracle.CmSegmentStats;
 import com.dbxtune.cm.oracle.CmSessions;
@@ -130,6 +134,8 @@ extends CounterControllerAbstract
 		CmErrorLog          .create(counterController, guiController);
 		CmUserAccounts      .create(counterController, guiController);
 		CmPdbs              .create(counterController, guiController);
+		CmSchedulerJobs     .create(counterController, guiController);
+		CmOpenCursors       .create(counterController, guiController);
 
 		// Object/Access
 		CmActiveStatements  .create(counterController, guiController);
@@ -149,6 +155,8 @@ extends CounterControllerAbstract
 		// Disk
 		CmTablespaces       .create(counterController, guiController);
 		CmSegmentSize       .create(counterController, guiController);
+		CmDataFiles         .create(counterController, guiController);
+		CmRestorePoints     .create(counterController, guiController);
 		CmRecoveryArea      .create(counterController, guiController);
 		CmArchiveDest       .create(counterController, guiController);
 		CmRedoLog           .create(counterController, guiController);

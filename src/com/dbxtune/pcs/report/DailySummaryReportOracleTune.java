@@ -23,6 +23,7 @@ package com.dbxtune.pcs.report;
 import com.dbxtune.pcs.report.content.DbmsConfigIssues;
 import com.dbxtune.pcs.report.content.oracle.OracleAlertLogErrors;
 import com.dbxtune.pcs.report.content.oracle.OracleBackups;
+import com.dbxtune.pcs.report.content.oracle.OracleJobFailures;
 import com.dbxtune.pcs.report.content.oracle.OracleLoadOverview;
 import com.dbxtune.pcs.report.content.oracle.OracleSegmentSize;
 import com.dbxtune.pcs.report.content.oracle.OracleSpaceOverview;
@@ -53,9 +54,10 @@ extends DailySummaryReportDefault
 		addReportEntry( new OracleTopSql(this)         );
 		addReportEntry( new OracleTopSegments(this)    );
 
-		// Alert Log and Backups
+		// Alert Log, Backups and Jobs
 		addReportEntry( new OracleAlertLogErrors(this) );
 		addReportEntry( new OracleBackups(this)        );
+		addReportEntry( new OracleJobFailures(this)    );
 
 		// Space, Disk IO Activity
 		addReportEntry( new OracleSpaceOverview(this)  );

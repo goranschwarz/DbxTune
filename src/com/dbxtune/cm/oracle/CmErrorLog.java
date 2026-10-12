@@ -395,12 +395,14 @@ extends CountersModelAppend
 
 		boolean checkMaxProcessesOrSessions = isSystemAlarmsForColumnEnabledAndInTimeRange("MaxProcessesOrSessions") && conf.getBooleanProperty(PROPKEY_alarm_MaxProcessesOrSessions, DEFAULT_alarm_MaxProcessesOrSessions);
 		boolean checkInternalError          = isSystemAlarmsForColumnEnabledAndInTimeRange("InternalError")          && conf.getBooleanProperty(PROPKEY_alarm_InternalError         , DEFAULT_alarm_InternalError);
+		boolean checkDeadlock               = isSystemAlarmsForColumnEnabledAndInTimeRange("Deadlock")               && conf.getBooleanProperty(PROPKEY_alarm_Deadlock              , DEFAULT_alarm_Deadlock);
 		boolean checkOraError               = isSystemAlarmsForColumnEnabledAndInTimeRange("OraError")               && conf.getBooleanProperty(PROPKEY_alarm_OraError              , DEFAULT_alarm_OraError);
 
 		// Each of them finds an 'ORA-#####' in the message text, and group(1) is the error number
 		Pattern maxProcessesOrSessionsPattern = Pattern.compile("ORA-0*(18|20)(?![0-9])");
 		Pattern internalErrorPattern          = Pattern.compile(conf.getProperty(PROPKEY_alarm_InternalErrorRegex    , DEFAULT_alarm_InternalErrorRegex));
 		Pattern internalErrorSkipPattern      = Pattern.compile(conf.getProperty(PROPKEY_alarm_InternalErrorSkipRegex, DEFAULT_alarm_InternalErrorSkipRegex));
+		Pattern deadlockPattern               = Pattern.compile("ORA-0*(60)(?![0-9])");
 		Pattern oraErrorPattern               = Pattern.compile(conf.getProperty(PROPKEY_alarm_OraErrorRegex         , DEFAULT_alarm_OraErrorRegex));
 		Pattern anyOraErrorPattern            = Pattern.compile("ORA-0*([0-9]+)");
 
@@ -470,6 +472,24 @@ extends CountersModelAppend
 			}
 
 			//-------------------------------------------------------
+			// Deadlock: ORA-00060: Deadlock detected. Two (or more) sessions waited for each other, and Oracle rolled back the statement of one of them
+			//-------------------------------------------------------
+			if (checkDeadlock && deadlockPattern.matcher(messageText).find())
+			{
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest(" + getName() + "): Deadlock: MESSAGE_TEXT='" + StringUtil.truncate(messageText.replace('\n', ' '), 120, true, null) + "'.");
+
+				AlarmEvent ae = new AlarmEventErrorLogEntry(this, AlarmEvent.Severity.WARNING, "ORA-00060", alarmText);
+				ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+				// Information about how to disable this alarm
+				ae.createAlarmOptionsMessage(this, "Deadlock");
+
+				AlarmHandler.getInstance().addAlarm(ae);
+				continue;
+			}
+
+			//-------------------------------------------------------
 			// OraError: the errors a DBA wants to know about (out of memory, corruption, archiver stuck, can't extend...)
 			//-------------------------------------------------------
 			if (checkOraError && (m = oraErrorPattern.matcher(messageText)).find())
@@ -505,6 +525,10 @@ extends CountersModelAppend
 	public static final String  PROPKEY_alarm_InternalErrorSkipRegex = CM_NAME + ".alarm.system.on.InternalError.skip.regex";
 	public static final String  DEFAULT_alarm_InternalErrorSkipRegex = "ORA[- ]0*(700|800)(?![0-9])";
 
+	// ORA-00060: Deadlock detected. The application gets the error and should retry, but someone should know that it happens (the trace file says which statements)
+	public static final String  PROPKEY_alarm_Deadlock               = CM_NAME + ".alarm.system.on.Deadlock";
+	public static final boolean DEFAULT_alarm_Deadlock               = true;
+
 	public static final String  PROPKEY_alarm_OraError               = CM_NAME + ".alarm.system.on.OraError";
 	public static final boolean DEFAULT_alarm_OraError               = true;
 
@@ -531,6 +555,7 @@ extends CountersModelAppend
 		list.add(new CmSettingsHelper("InternalError"           , isAlarmSwitch, PROPKEY_alarm_InternalError         , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_InternalError         , DEFAULT_alarm_InternalError         ), DEFAULT_alarm_InternalError         , "On an incident (MESSAGE_TYPE is INCIDENT_ERROR), or when the message matches the regexp below, send 'AlarmEventErrorLogEntry' with severity ERROR." ));
 		list.add(new CmSettingsHelper("InternalError Regex"     ,                PROPKEY_alarm_InternalErrorRegex    , String .class, conf.getProperty       (PROPKEY_alarm_InternalErrorRegex    , DEFAULT_alarm_InternalErrorRegex    ), DEFAULT_alarm_InternalErrorRegex    , "If 'InternalError' is true; The message is an internal error if it matches this regexp. (the first group must be the error number)", new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("InternalError Skip Regex",                PROPKEY_alarm_InternalErrorSkipRegex, String .class, conf.getProperty       (PROPKEY_alarm_InternalErrorSkipRegex, DEFAULT_alarm_InternalErrorSkipRegex), DEFAULT_alarm_InternalErrorSkipRegex, "If 'InternalError' is true; Skip it if the message or PROBLEM_KEY matches this regexp. Default is the 'soft' errors ORA-00700 and ORA-00800.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("Deadlock"                , isAlarmSwitch, PROPKEY_alarm_Deadlock              , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_Deadlock              , DEFAULT_alarm_Deadlock              ), DEFAULT_alarm_Deadlock              , "On ORA-00060 (Deadlock detected), send 'AlarmEventErrorLogEntry' with severity WARNING." ));
 		list.add(new CmSettingsHelper("OraError"                , isAlarmSwitch, PROPKEY_alarm_OraError              , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_OraError              , DEFAULT_alarm_OraError              ), DEFAULT_alarm_OraError              , "When the message matches the regexp below, send 'AlarmEventErrorLogEntry' with severity WARNING." ));
 		list.add(new CmSettingsHelper("OraError Regex"          ,                PROPKEY_alarm_OraErrorRegex         , String .class, conf.getProperty       (PROPKEY_alarm_OraErrorRegex         , DEFAULT_alarm_OraErrorRegex         ), DEFAULT_alarm_OraErrorRegex         , "If 'OraError' is true; The ORA- errors to send an alarm for. (the first group must be the error number)", new RegExpInputValidator()));
 
