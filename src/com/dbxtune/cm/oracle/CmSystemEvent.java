@@ -202,6 +202,13 @@ extends CountersModel
 		return pkCols;
 	}
 
+	/** If we can't read the views: disable the CM, and tell what to do about it */
+	@Override
+	public boolean checkDependsOnOther(DbxConnection conn)
+	{
+		return OracleCmUtils.checkViewsAreReadable(this, conn, "V$SYSTEM_EVENT");
+	}
+
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{

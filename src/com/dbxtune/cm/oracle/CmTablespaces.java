@@ -54,12 +54,10 @@ import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.graph.TrendGraphDataPoint;
 import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
 import com.dbxtune.gui.MainFrame;
-import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.sql.conn.info.DbmsVersionInfoOracle;
 import com.dbxtune.utils.Configuration;
-import com.dbxtune.utils.DbUtils;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.Ver;
 
@@ -283,29 +281,7 @@ extends CountersModel
 	@Override
 	public boolean checkDependsOnOther(DbxConnection conn)
 	{
-		for (String viewName : new String[] {"DBA_TABLESPACES", "DBA_TABLESPACE_USAGE_METRICS", "DBA_DATA_FILES", "DBA_TEMP_FILES"})
-		{
-			if (DbUtils.checkIfTableIsSelectable(conn, viewName))
-				continue;
-
-			String msg = "The login can't read '" + viewName + "'.";
-			String fix = "GRANT SELECT_CATALOG_ROLE TO <user>;";
-
-			_logger.warn("When trying to initialize Counters Model '" + getName() + "', named '" + getDisplayName() + "': " + msg + " Fix: " + fix);
-
-			setActive(false, msg + "\n" + "Fix: " + fix);
-
-			TabularCntrPanel tcp = getTabPanel();
-			if (tcp != null)
-			{
-				tcp.setUseFocusableTips(true);
-				tcp.setToolTipText("<html>" + msg + "<br>Fix: <code>" + fix.replace("<", "&lt;").replace(">", "&gt;") + "</code></html>");
-			}
-
-			return false;
-		}
-
-		return true;
+		return OracleCmUtils.checkViewsAreReadable(this, conn, "DBA_TABLESPACES", "DBA_TABLESPACE_USAGE_METRICS", "DBA_DATA_FILES", "DBA_TEMP_FILES");
 	}
 
 	@Override
