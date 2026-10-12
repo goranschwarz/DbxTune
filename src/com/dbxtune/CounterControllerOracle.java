@@ -32,6 +32,11 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.oracle.CmArchiveDest;
+import com.dbxtune.cm.oracle.CmBufferPool;
+import com.dbxtune.cm.oracle.CmLibraryCache;
+import com.dbxtune.cm.oracle.CmPgaStat;
+import com.dbxtune.cm.oracle.CmSgaStat;
+import com.dbxtune.cm.oracle.CmSysMetric;
 import com.dbxtune.cm.oracle.CmErrorLog;
 import com.dbxtune.cm.oracle.CmExecutionTime;
 import com.dbxtune.cm.oracle.CmIoStatFile;
@@ -113,6 +118,7 @@ extends CounterControllerAbstract
 		CmSystemEvent       .create(counterController, guiController);
 		CmSysStat           .create(counterController, guiController);
 		CmExecutionTime     .create(counterController, guiController);
+		CmSysMetric         .create(counterController, guiController);
 		CmResourceLimit     .create(counterController, guiController);
 		CmRmanBackup        .create(counterController, guiController);
 		CmErrorLog          .create(counterController, guiController);
@@ -124,6 +130,10 @@ extends CounterControllerAbstract
 		CmLongOps           .create(counterController, guiController);
 
 		// Cache
+		CmSgaStat           .create(counterController, guiController);
+		CmPgaStat           .create(counterController, guiController);
+		CmBufferPool        .create(counterController, guiController);
+		CmLibraryCache      .create(counterController, guiController);
 
 		// Disk
 		CmTablespaces       .create(counterController, guiController);
