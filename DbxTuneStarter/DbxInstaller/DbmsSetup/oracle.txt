@@ -53,6 +53,12 @@ GRANT SELECT ON SYS.V_$DIAG_ALERT_EXT TO dbxtune;
 --           adrci> set homepath diag/tnslsnr/<host>/listener
 --           adrci> purge -age 43200 -type ALERT              (43200 minutes = 30 days)
 
+-- OPTIONAL (12.1 and above): the unified audit policies, only shown in: DBMS Configuration -> tab 'Audit'
+-- Without it that tab still works, but the part 'policies that are enabled' says that it can't read the view.
+-- GRANT AUDIT_VIEWER TO dbxtune;
+-- or in a Container Database
+-- GRANT AUDIT_VIEWER TO c##dbxtune CONTAINER=ALL;
+
 
 /*--------------------------------------------------------------------------------------------
 ** RECOMENDED - A password that does NOT expire

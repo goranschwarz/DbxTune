@@ -45,6 +45,7 @@ import com.dbxtune.config.dbms.DbmsConfigIssue.Severity;
 import com.dbxtune.pcs.MonRecordingInfo;
 import com.dbxtune.pcs.PersistWriterJdbc;
 import com.dbxtune.sql.conn.DbxConnection;
+import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.SwingUtils;
 import com.dbxtune.utils.Ver;
@@ -756,7 +757,34 @@ extends DbmsConfigAbstract
 		{
 			_logger.info("OracleConfig.checkConfig(): Skipping the check for automatic optimizer statistics. Caught: " + ex.getMessage().trim());
 		}
+
+		//-------------------------------------------------------
+		// The audit trail: SYS.AUD$ + SYS.FGA_LOG$ + everything in AUDSYS (the unified audit trail)
+		//-------------------------------------------------------
+		int auditTrailLimitMb = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_check_auditTrailSizeInMb, DEFAULT_check_auditTrailSizeInMb);
+
+		sql = "select round(nvl(sum(BYTES), 0) / 1048576) from DBA_SEGMENTS where (OWNER = 'SYS' and SEGMENT_NAME in ('AUD$', 'FGA_LOG$')) or OWNER = 'AUDSYS'";
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while (rs.next())
+			{
+				int auditTrailMb = rs.getInt(1);
+				if (auditTrailMb > auditTrailLimitMb)
+				{
+					DbmsConfigManager.getInstance().addConfigIssue(new DbmsConfigIssue(srvRestart, keyPrefix + "audit_trail.size", "audit trail size", Severity.INFO,
+							"The audit trail is " + auditTrailMb + " MB (this check is at " + auditTrailLimitMb + " MB). Oracle never removes audit records by itself, so without a purge job it grows for ever (in the SYSTEM or SYSAUX tablespace, unless it has been moved).",
+							"Decide how long the audit records must be kept, then set up a purge job with the package DBMS_AUDIT_MGMT (SET_LAST_ARCHIVE_TIMESTAMP + CREATE_PURGE_JOB). See the 'Audit' tab for which trail it is. To change the limit of this check: " + PROPKEY_check_auditTrailSizeInMb + "=<MB>"));
+				}
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.info("OracleConfig.checkConfig(): Skipping the check for the size of the audit trail. Caught: " + ex.getMessage().trim());
+		}
 	}
+
+	public static final String PROPKEY_check_auditTrailSizeInMb = "OracleConfig.check.auditTrail.sizeInMb.gt";
+	public static final int    DEFAULT_check_auditTrailSizeInMb = 1024;
 
 	/**
 	 * Get description for the configuration name

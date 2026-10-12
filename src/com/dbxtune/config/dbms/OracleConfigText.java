@@ -48,6 +48,8 @@ public abstract class OracleConfigText
 		,OraBackupConfig
 		,OraJobs
 		,OraSecurity
+		,OraAudit
+		,OraResourceManager
 		,OraContainers
 		,OraDbLinks
 		,OraNlsParams
@@ -63,6 +65,8 @@ public abstract class OracleConfigText
 		DbmsConfigTextManager.addInstance(new OracleConfigText.BackupConfig());
 		DbmsConfigTextManager.addInstance(new OracleConfigText.Jobs());
 		DbmsConfigTextManager.addInstance(new OracleConfigText.Security());
+		DbmsConfigTextManager.addInstance(new OracleConfigText.Audit());
+		DbmsConfigTextManager.addInstance(new OracleConfigText.ResourceManager());
 		DbmsConfigTextManager.addInstance(new OracleConfigText.Containers());
 		DbmsConfigTextManager.addInstance(new OracleConfigText.DbLinks());
 		DbmsConfigTextManager.addInstance(new OracleConfigText.NlsParams());
@@ -114,7 +118,7 @@ public abstract class OracleConfigText
 
 			// 942 = table or view does not exist, 1031 = insufficient privileges
 			if (ex.getErrorCode() == 942 || ex.getErrorCode() == 1031)
-				sb.append("If the view exists in this Oracle version, the login is not allowed to read it. Fix: GRANT SELECT_CATALOG_ROLE TO <user>;\n");
+				sb.append("If the view exists in this Oracle version, the login is not allowed to read it. Fix: GRANT SELECT_CATALOG_ROLE TO <user>; (or the role that the title above names)\n");
 		}
 
 		return sb.toString();
@@ -411,6 +415,95 @@ public abstract class OracleConfigText
 	}
 
 	//---------------------------------------------------------------------------------------------
+	public static class Audit extends OracleTab
+	{
+		@Override public String getTabLabel() { return "Audit"; }
+		@Override public String getName()     { return ConfigType.OraAudit.toString(); }
+
+		@Override
+		protected String doOnlineRefresh(DbxConnection conn, HostMonitorConnection hostMonConn)
+		{
+			String out = ""
+				+ textTable(conn, "How big the audit trail is (DBA_SEGMENTS)"
+				              + "\n--## Oracle never removes audit records by itself: without a purge job (DBMS_AUDIT_MGMT) these tables grow for ever"
+				              + "\n--## SYS.AUD$ = the traditional audit trail, SYS.FGA_LOG$ = fine grained auditing, AUDSYS = the unified audit trail (12.1 and above)",
+					"select OWNER, case when OWNER = 'AUDSYS' then 'unified audit trail (all segments)' else SEGMENT_NAME end as AUDIT_TRAIL, TABLESPACE_NAME, count(*) as SEGMENTS, round(sum(BYTES) / 1048576, 1) as MB "
+					+ "from DBA_SEGMENTS where (OWNER = 'SYS' and SEGMENT_NAME in ('AUD$', 'FGA_LOG$')) or OWNER = 'AUDSYS' "
+					+ "group by OWNER, case when OWNER = 'AUDSYS' then 'unified audit trail (all segments)' else SEGMENT_NAME end, TABLESPACE_NAME order by 5 desc")
+
+				+ textTable(conn, "Audit parameters (V$SYSTEM_PARAMETER)\n--## audit_trail = NONE: the traditional auditing is off (in 12.1 and above the unified auditing can still be on)",
+					"select NAME, DISPLAY_VALUE as VALUE, ISDEFAULT from V$SYSTEM_PARAMETER where (NAME like 'audit%' or NAME like 'unified_audit%')" + andOurContainer(conn) + "order by NAME")
+
+				+ textTable(conn, "Traditional auditing: which statements are audited (DBA_STMT_AUDIT_OPTS)",
+					"select USER_NAME, AUDIT_OPTION, SUCCESS, FAILURE from DBA_STMT_AUDIT_OPTS order by USER_NAME, AUDIT_OPTION")
+
+				+ textTable(conn, "Traditional auditing: which system privileges are audited (DBA_PRIV_AUDIT_OPTS)",
+					"select USER_NAME, PRIVILEGE, SUCCESS, FAILURE from DBA_PRIV_AUDIT_OPTS order by USER_NAME, PRIVILEGE");
+
+			// Unified auditing: 12.1 and above
+			if (conn.getDbmsVersionInfo().getLongVersion() >= Ver.ver(12,1))
+			{
+				out += textTable(conn, "Unified auditing (V$OPTION)\n--## TRUE = only unified auditing ('pure' mode).  FALSE = mixed mode: both the traditional and the unified audit trail are written",
+					"select PARAMETER, VALUE from V$OPTION where PARAMETER = 'Unified Auditing'");
+
+				out += textTable(conn, "Unified auditing: the policies that are enabled (AUDIT_UNIFIED_ENABLED_POLICIES)"
+				                     + "\n--## NOTE: this view is NOT part of SELECT_CATALOG_ROLE. It needs: GRANT AUDIT_VIEWER TO <user>",
+					"select * from AUDIT_UNIFIED_ENABLED_POLICIES");
+			}
+
+			return out;
+		}
+	}
+
+	//---------------------------------------------------------------------------------------------
+	public static class ResourceManager extends OracleTab
+	{
+		@Override public String getTabLabel() { return "Resource Manager"; }
+		@Override public String getName()     { return ConfigType.OraResourceManager.toString(); }
+
+		@Override
+		protected String doOnlineRefresh(DbxConnection conn, HostMonitorConnection hostMonConn)
+		{
+			DbmsVersionInfoOracle oraVersionInfo = (DbmsVersionInfoOracle) conn.getDbmsVersionInfo();
+
+			// The limit on CPU usage got a new column name in 12.1
+			String utilizationLimit = oraVersionInfo.getLongVersion() >= Ver.ver(12,1) ? "UTILIZATION_LIMIT" : "MAX_UTILIZATION_LIMIT as UTILIZATION_LIMIT";
+
+			String out = ""
+				+ textTable(conn, "The resource plan that is active right now (V$RSRC_PLAN)"
+				              + "\n--## INTERNAL_PLAN = no plan is set: Oracle does not limit anybody"
+				              + "\n--## A plan like DEFAULT_MAINTENANCE_PLAN is switched in by the nightly maintenance window",
+					"select NAME, IS_TOP_PLAN, CPU_MANAGED, INSTANCE_CAGING, PARALLEL_EXECUTION_MANAGED from V$RSRC_PLAN")
+
+				+ textTable(conn, "Parameters (V$SYSTEM_PARAMETER)\n--## Instance caging = 'cpu_count' is set AND a resource plan is active: then the instance uses at most that many CPUs",
+					"select NAME, DISPLAY_VALUE as VALUE, ISDEFAULT from V$SYSTEM_PARAMETER where NAME in ('resource_manager_plan', 'resource_limit', 'cpu_count', 'parallel_max_servers', 'parallel_degree_policy')" + andOurContainer(conn) + "order by NAME");
+
+			// In CDB$ROOT: how the CPU is shared between the PDBs
+			if (oraVersionInfo.isCdbRoot())
+			{
+				out += textTable(conn, "CDB plans: how the resources are shared between the PDBs (DBA_CDB_RSRC_PLAN_DIRECTIVES)\n--## SHARES = the weight of the PDB.  UTILIZATION_LIMIT = max percent of the CPU",
+					"select PLAN, PLUGGABLE_DATABASE, SHARES, UTILIZATION_LIMIT, PARALLEL_SERVER_LIMIT from DBA_CDB_RSRC_PLAN_DIRECTIVES order by PLAN, PLUGGABLE_DATABASE");
+			}
+
+			out += ""
+				+ textTable(conn, "Plans (DBA_RSRC_PLANS)",
+					"select PLAN, CPU_METHOD, STATUS, MANDATORY, substr(COMMENTS, 1, 80) as COMMENTS from DBA_RSRC_PLANS order by PLAN")
+
+				+ textTable(conn, "What each plan gives each consumer group (DBA_RSRC_PLAN_DIRECTIVES)"
+				              + "\n--## MGMT_P1..P3 = share of the CPU at level 1..3.  UTILIZATION_LIMIT = max percent of the CPU.  ACTIVE_SESS_POOL_P1 = max active sessions, the rest are queued",
+					"select PLAN, GROUP_OR_SUBPLAN, TYPE, MGMT_P1, MGMT_P2, MGMT_P3, " + utilizationLimit + ", ACTIVE_SESS_POOL_P1, PARALLEL_DEGREE_LIMIT_P1, SWITCH_GROUP, SWITCH_TIME, MAX_IDLE_TIME from DBA_RSRC_PLAN_DIRECTIVES order by PLAN, GROUP_OR_SUBPLAN")
+
+				+ textTable(conn, "Consumer groups (DBA_RSRC_CONSUMER_GROUPS)",
+					"select CONSUMER_GROUP, STATUS, MANDATORY, substr(COMMENTS, 1, 80) as COMMENTS from DBA_RSRC_CONSUMER_GROUPS order by CONSUMER_GROUP")
+
+				+ textTable(conn, "Which sessions goes to which consumer group (DBA_RSRC_GROUP_MAPPINGS)",
+					"select ATTRIBUTE, VALUE, CONSUMER_GROUP, STATUS from DBA_RSRC_GROUP_MAPPINGS order by ATTRIBUTE, VALUE");
+
+			return out;
+		}
+	}
+
+	//---------------------------------------------------------------------------------------------
 	public static class Containers extends OracleTab
 	{
 		@Override public String getTabLabel() { return "Containers"; }
@@ -452,7 +545,7 @@ public abstract class OracleConfigText
 	//---------------------------------------------------------------------------------------------
 	public static class DbLinks extends OracleTab
 	{
-		@Override public String getTabLabel() { return "DB Links"; }
+		@Override public String getTabLabel() { return "DB Links and Directories"; }
 		@Override public String getName()     { return ConfigType.OraDbLinks.toString(); }
 
 		@Override
@@ -461,6 +554,9 @@ public abstract class OracleConfigText
 			return ""
 				+ textTable(conn, "Database links: the other databases that this one connects to (DBA_DB_LINKS)\n--## OWNER 'PUBLIC' = every user can use the link.  USERNAME = the account it logs in with on the other side (empty = the same user as here)",
 					"select OWNER, DB_LINK, USERNAME, HOST, to_char(CREATED, 'YYYY-MM-DD') as CREATED from DBA_DB_LINKS order by OWNER, DB_LINK")
+
+				+ textTable(conn, "Directories: the folders on the server that the database is allowed to read and write (DBA_DIRECTORIES)\n--## Used by Data Pump, external tables, UTL_FILE. Most of them comes with Oracle.",
+					"select OWNER, DIRECTORY_NAME, DIRECTORY_PATH from DBA_DIRECTORIES order by DIRECTORY_NAME")
 				;
 		}
 	}
