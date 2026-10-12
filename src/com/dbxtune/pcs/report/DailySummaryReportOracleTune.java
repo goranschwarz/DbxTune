@@ -24,8 +24,11 @@ import com.dbxtune.pcs.report.content.DbmsConfigIssues;
 import com.dbxtune.pcs.report.content.oracle.OracleAlertLogErrors;
 import com.dbxtune.pcs.report.content.oracle.OracleBackups;
 import com.dbxtune.pcs.report.content.oracle.OracleLoadOverview;
+import com.dbxtune.pcs.report.content.oracle.OracleSegmentSize;
 import com.dbxtune.pcs.report.content.oracle.OracleSpaceOverview;
+import com.dbxtune.pcs.report.content.oracle.OracleTopSegments;
 import com.dbxtune.pcs.report.content.oracle.OracleTopSql;
+import com.dbxtune.pcs.report.content.oracle.OracleUnusedIndexes;
 import com.dbxtune.pcs.report.content.oracle.OracleWaitStats;
 import com.dbxtune.pcs.report.content.os.CmOsNwInfoOverview;
 import com.dbxtune.pcs.report.content.os.OsCpuUsageOverview;
@@ -46,8 +49,9 @@ extends DailySummaryReportDefault
 		addReportEntry( new OsCpuUsageOverview(this)   );
 		addReportEntry( new OracleWaitStats(this)      );
 
-		// SQL
+		// SQL, Tables and Indexes
 		addReportEntry( new OracleTopSql(this)         );
+		addReportEntry( new OracleTopSegments(this)    );
 
 		// Alert Log and Backups
 		addReportEntry( new OracleAlertLogErrors(this) );
@@ -55,6 +59,8 @@ extends DailySummaryReportDefault
 
 		// Space, Disk IO Activity
 		addReportEntry( new OracleSpaceOverview(this)  );
+		addReportEntry( new OracleSegmentSize(this)    );
+		addReportEntry( new OracleUnusedIndexes(this)  );
 //		addReportEntry( new OsSpaceUsageOverview(this) );
 		addReportEntry( new OsIoStatOverview(this)     );
 		addReportEntry( new OsIoStatSlowIo(this)       );
