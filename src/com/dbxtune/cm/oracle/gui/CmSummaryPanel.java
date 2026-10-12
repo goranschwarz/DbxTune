@@ -30,6 +30,8 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.lang.invoke.MethodHandles;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
 
@@ -156,7 +158,105 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private JTextField       _Rollbacks_Abs_txt            = new JTextField();
 	private JTextField       _Rollbacks_Diff_txt           = new JTextField();
 	private JTextField       _Rollbacks_Rate_txt           = new JTextField();
-	
+
+	// ORACLE: the database
+	private JLabel           _dbName_lbl                   = new JLabel();
+	private JTextField       _dbName_txt                   = new JTextField();
+
+	private JLabel           _conName_lbl                  = new JLabel();
+	private JTextField       _conName_txt                  = new JTextField();
+
+	private JLabel           _dbRole_lbl                   = new JLabel();
+	private JTextField       _dbRole_txt                   = new JTextField();
+
+	private JLabel           _openMode_lbl                 = new JLabel();
+	private JTextField       _openMode_txt                 = new JTextField();
+
+	private JLabel           _logMode_lbl                  = new JLabel();
+	private JTextField       _logMode_txt                  = new JTextField();
+
+	// ORACLE: sessions and transactions
+	private JLabel           _activeUsers_lbl              = new JLabel();
+	private JTextField       _activeUsers_txt              = new JTextField();
+
+	private JLabel           _oldestOpenTranWho_lbl        = new JLabel();
+	private JTextField       _oldestOpenTranSid_txt        = new JTextField();
+	private JTextField       _oldestOpenTranUsername_txt   = new JTextField();
+
+	private JLabel           _openTranCount_lbl            = new JLabel();
+	private JTextField       _openTranCount_txt            = new JTextField();
+
+	// ORACLE: load (calculated from the time model and the OS statistics, the same numbers as the graphs)
+	private JLabel           _activeSessions_lbl           = new JLabel();
+	private JTextField       _activeSessions_txt           = new JTextField();
+	private JTextField       _activeSessionsCpu_txt        = new JTextField();
+	private JTextField       _activeSessionsWait_txt       = new JTextField();
+
+	private JLabel           _bgCpu_lbl                    = new JLabel();
+	private JTextField       _bgCpu_txt                    = new JTextField();
+
+	private JLabel           _hostCpus_lbl                 = new JLabel();
+	private JTextField       _hostCpus_txt                 = new JTextField();
+
+	private JLabel           _hostCpu_lbl                  = new JLabel();
+	private JTextField       _hostCpuUser_txt              = new JTextField();
+	private JTextField       _hostCpuSys_txt               = new JTextField();
+	private JTextField       _hostCpuIoWait_txt            = new JTextField();
+
+	private JLabel           _hostLoad_lbl                 = new JLabel();
+	private JTextField       _hostLoad_txt                 = new JTextField();
+
+	// ORACLE: counters from V$SYSSTAT (abs, diff, rate)
+	private JLabel           _UserCalls_lbl                = new JLabel();
+	private JTextField       _UserCalls_Abs_txt            = new JTextField();
+	private JTextField       _UserCalls_Diff_txt           = new JTextField();
+	private JTextField       _UserCalls_Rate_txt           = new JTextField();
+
+	private JLabel           _Executions_lbl               = new JLabel();
+	private JTextField       _Executions_Abs_txt           = new JTextField();
+	private JTextField       _Executions_Diff_txt          = new JTextField();
+	private JTextField       _Executions_Rate_txt          = new JTextField();
+
+	private JLabel           _LogicalReads_lbl             = new JLabel();
+	private JTextField       _LogicalReads_Abs_txt         = new JTextField();
+	private JTextField       _LogicalReads_Diff_txt        = new JTextField();
+	private JTextField       _LogicalReads_Rate_txt        = new JTextField();
+
+	private JLabel           _PhysicalReads_lbl            = new JLabel();
+	private JTextField       _PhysicalReads_Abs_txt        = new JTextField();
+	private JTextField       _PhysicalReads_Diff_txt       = new JTextField();
+	private JTextField       _PhysicalReads_Rate_txt       = new JTextField();
+
+	private JLabel           _PhysicalWrites_lbl           = new JLabel();
+	private JTextField       _PhysicalWrites_Abs_txt       = new JTextField();
+	private JTextField       _PhysicalWrites_Diff_txt      = new JTextField();
+	private JTextField       _PhysicalWrites_Rate_txt      = new JTextField();
+
+	private JLabel           _RedoSize_lbl                 = new JLabel();
+	private JTextField       _RedoSize_Abs_txt             = new JTextField();
+	private JTextField       _RedoSize_Diff_txt            = new JTextField();
+	private JTextField       _RedoSize_Rate_txt            = new JTextField();
+
+	private JLabel           _ParseTotal_lbl               = new JLabel();
+	private JTextField       _ParseTotal_Abs_txt           = new JTextField();
+	private JTextField       _ParseTotal_Diff_txt          = new JTextField();
+	private JTextField       _ParseTotal_Rate_txt          = new JTextField();
+
+	private JLabel           _ParseHard_lbl                = new JLabel();
+	private JTextField       _ParseHard_Abs_txt            = new JTextField();
+	private JTextField       _ParseHard_Diff_txt           = new JTextField();
+	private JTextField       _ParseHard_Rate_txt           = new JTextField();
+
+	private JLabel           _Logons_lbl                   = new JLabel();
+	private JTextField       _Logons_Abs_txt               = new JTextField();
+	private JTextField       _Logons_Diff_txt              = new JTextField();
+	private JTextField       _Logons_Rate_txt              = new JTextField();
+
+	private JLabel           _Deadlocks_lbl                = new JLabel();
+	private JTextField       _Deadlocks_Abs_txt            = new JTextField();
+	private JTextField       _Deadlocks_Diff_txt           = new JTextField();
+	private JTextField       _Deadlocks_Rate_txt           = new JTextField();
+
 	// SERVER INFO PANEL
 //	private JTextField       _localServerName_txt          = new JTextField();
 //	private JLabel           _localServerName_lbl          = new JLabel();
@@ -562,8 +662,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_blockingWaitMaxSecDiff_txt    .setToolTipText("The difference since previous sample.");
 		_blockingWaitMaxSecDiff_txt.setForeground(Color.BLUE);
 
-		tooltip = "Time (in seconds) that processes must have waited for blocking in order to be reported.";
-		_oldestOpenTranThreshold_lbl.setText("Oldes Tran threshold");
+		tooltip = "Time (in seconds) that a transaction must have been open in order to be reported. It is the threshold of the alarm 'oldestOpenTranInSec'.";
+		_oldestOpenTranThreshold_lbl.setText("Oldest Tran threshold");
 		_oldestOpenTranThreshold_lbl.setToolTipText(tooltip);
 		_oldestOpenTranThreshold_txt.setToolTipText(tooltip);
 		_oldestOpenTranThreshold_txt.setEditable(false);
@@ -609,6 +709,249 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_Rollbacks_Diff_txt.setForeground(Color.BLUE);
 		_Rollbacks_Rate_txt.setForeground(Color.BLUE);
 		_Rollbacks_Rate_txt.setFont(RATE_FONT);
+
+		//--------------------------
+		// ORACLE: the database
+		//--------------------------
+		tooltip = "The name of the database, taken from V$DATABASE column NAME";
+		_dbName_lbl           .setText("Database");
+		_dbName_lbl           .setToolTipText(tooltip);
+		_dbName_txt           .setToolTipText(tooltip);
+		_dbName_txt           .setEditable(false);
+
+		tooltip = "<html>The container we are connected to, in a Container Database: CDB$ROOT or the name of a Pluggable Database (PDB).<br>Connected to CDB$ROOT, the tabs show all containers. Connected to a PDB, only that one.</html>";
+		_conName_lbl          .setText("Container");
+		_conName_lbl          .setToolTipText(tooltip);
+		_conName_txt          .setToolTipText(tooltip);
+		_conName_txt          .setEditable(false);
+
+		tooltip = "PRIMARY, or a kind of standby database (PHYSICAL STANDBY, LOGICAL STANDBY, SNAPSHOT STANDBY). Taken from V$DATABASE column DATABASE_ROLE";
+		_dbRole_lbl           .setText("Database Role");
+		_dbRole_lbl           .setToolTipText(tooltip);
+		_dbRole_txt           .setToolTipText(tooltip);
+		_dbRole_txt           .setEditable(false);
+
+		tooltip = "How the database is open: READ WRITE, READ ONLY, READ ONLY WITH APPLY, MOUNTED. Taken from V$DATABASE column OPEN_MODE";
+		_openMode_lbl         .setText("Open Mode");
+		_openMode_lbl         .setToolTipText(tooltip);
+		_openMode_txt         .setToolTipText(tooltip);
+		_openMode_txt         .setEditable(false);
+
+		tooltip = "<html>ARCHIVELOG or NOARCHIVELOG. Taken from V$DATABASE column LOG_MODE<br>In NOARCHIVELOG mode the database can only be restored to the time of the last backup.</html>";
+		_logMode_lbl          .setText("Log Mode");
+		_logMode_lbl          .setToolTipText(tooltip);
+		_logMode_txt          .setToolTipText(tooltip);
+		_logMode_txt          .setEditable(false);
+
+		//--------------------------
+		// ORACLE: sessions and transactions
+		//--------------------------
+		tooltip = "<html>Number of user sessions that are doing something right now (V$SESSION: TYPE = 'USER' and STATUS = 'ACTIVE').<br>The session of " + Version.getAppName() + " is one of them.</html>";
+		_activeUsers_lbl      .setText("Active Users");
+		_activeUsers_lbl      .setToolTipText(tooltip);
+		_activeUsers_txt      .setToolTipText(tooltip);
+		_activeUsers_txt      .setEditable(false);
+
+		tooltip = "Who has the oldest open transaction: the session id (SID) and the USERNAME.";
+		_oldestOpenTranWho_lbl     .setText("Oldest Tran SID/User");
+		_oldestOpenTranWho_lbl     .setToolTipText(tooltip);
+		_oldestOpenTranSid_txt     .setToolTipText(tooltip);
+		_oldestOpenTranSid_txt     .setEditable(false);
+		_oldestOpenTranUsername_txt.setToolTipText(tooltip);
+		_oldestOpenTranUsername_txt.setEditable(false);
+
+		tooltip = "Number of open transactions (rows in V$TRANSACTION).";
+		_openTranCount_lbl    .setText("Open Transactions");
+		_openTranCount_lbl    .setToolTipText(tooltip);
+		_openTranCount_txt    .setToolTipText(tooltip);
+		_openTranCount_txt    .setEditable(false);
+
+		//--------------------------
+		// ORACLE: load
+		//--------------------------
+		tooltip = "<html>Average Active Sessions in this sample: <b>all</b> (DB time), of them <b>on CPU</b> (DB CPU) and <b>waiting</b> (DB time - DB CPU).<br>" +
+		          "1.0 = one session was working all the time. When 'on CPU' is close to 'Host CPUs', the host is out of CPU.<br>" +
+		          "The same numbers as the graph 'Average Active Sessions'. Taken from V$SYS_TIME_MODEL.</html>";
+		_activeSessions_lbl    .setText("Active Sess/CPU/Wait");
+		_activeSessions_lbl    .setToolTipText(tooltip);
+		_activeSessions_txt    .setToolTipText(tooltip);
+		_activeSessions_txt    .setEditable(false);
+		_activeSessionsCpu_txt .setToolTipText(tooltip);
+		_activeSessionsCpu_txt .setEditable(false);
+		_activeSessionsWait_txt.setToolTipText(tooltip);
+		_activeSessionsWait_txt.setEditable(false);
+
+		tooltip = "CPU used by the background processes of Oracle in this sample, in CPU seconds per second (V$SYS_TIME_MODEL: background cpu time).";
+		_bgCpu_lbl            .setText("Background CPU");
+		_bgCpu_lbl            .setToolTipText(tooltip);
+		_bgCpu_txt            .setToolTipText(tooltip);
+		_bgCpu_txt            .setEditable(false);
+
+		tooltip = "Number of CPU's (or CPU threads) on the host, as Oracle sees it. Taken from V$OSSTAT: NUM_CPUS";
+		_hostCpus_lbl         .setText("Host CPUs");
+		_hostCpus_lbl         .setToolTipText(tooltip);
+		_hostCpus_txt         .setToolTipText(tooltip);
+		_hostCpus_txt         .setEditable(false);
+
+		tooltip = "<html>CPU usage on the host in this sample, in percent, for ALL processes (not only Oracle): <b>user</b>, <b>system</b> and <b>IO wait</b>.<br>" +
+		          "The same numbers as the graph 'Host CPU Usage in Percent'. Taken from V$OSSTAT. 'IO wait' is not available on all platforms (then it is 0).</html>";
+		_hostCpu_lbl          .setText("Host CPU Usr/Sys/IOw");
+		_hostCpu_lbl          .setToolTipText(tooltip);
+		_hostCpuUser_txt      .setToolTipText(tooltip);
+		_hostCpuUser_txt      .setEditable(false);
+		_hostCpuSys_txt       .setToolTipText(tooltip);
+		_hostCpuSys_txt       .setEditable(false);
+		_hostCpuIoWait_txt    .setToolTipText(tooltip);
+		_hostCpuIoWait_txt    .setEditable(false);
+
+		tooltip = "The load average of the host: the number of processes that are running or waiting to run. Taken from V$OSSTAT: LOAD (not available on all platforms).";
+		_hostLoad_lbl         .setText("Host Load");
+		_hostLoad_lbl         .setToolTipText(tooltip);
+		_hostLoad_txt         .setToolTipText(tooltip);
+		_hostLoad_txt         .setEditable(false);
+
+		//--------------------------
+		// ORACLE: counters from V$SYSSTAT
+		//--------------------------
+		tooltip = "<html>Number of calls from the applications: logon, parse, execute, fetch... (abs, <font color='blue'>diff, <i>rate</i></font>). V$SYSSTAT: user calls</html>";
+		_originToolTip        .put    ("USER_CALLS", tooltip);
+		_UserCalls_lbl        .setText("User Calls");
+		_UserCalls_lbl        .setToolTipText(tooltip);
+		_UserCalls_Abs_txt    .setToolTipText(tooltip);
+		_UserCalls_Abs_txt    .setEditable(false);
+		_UserCalls_Diff_txt   .setEditable(false);
+		_UserCalls_Diff_txt   .setToolTipText(tooltip);
+		_UserCalls_Rate_txt   .setEditable(false);
+		_UserCalls_Rate_txt   .setToolTipText(tooltip);
+		_UserCalls_Diff_txt.setForeground(Color.BLUE);
+		_UserCalls_Rate_txt.setForeground(Color.BLUE);
+		_UserCalls_Rate_txt.setFont(RATE_FONT);
+
+		tooltip = "<html>Number of SQL statements executed, also the recursive ones (abs, <font color='blue'>diff, <i>rate</i></font>). V$SYSSTAT: execute count</html>";
+		_originToolTip        .put    ("EXECUTIONS", tooltip);
+		_Executions_lbl       .setText("Executions");
+		_Executions_lbl       .setToolTipText(tooltip);
+		_Executions_Abs_txt   .setToolTipText(tooltip);
+		_Executions_Abs_txt   .setEditable(false);
+		_Executions_Diff_txt  .setEditable(false);
+		_Executions_Diff_txt  .setToolTipText(tooltip);
+		_Executions_Rate_txt  .setEditable(false);
+		_Executions_Rate_txt  .setToolTipText(tooltip);
+		_Executions_Diff_txt.setForeground(Color.BLUE);
+		_Executions_Rate_txt.setForeground(Color.BLUE);
+		_Executions_Rate_txt.setFont(RATE_FONT);
+
+		tooltip = "<html>Number of blocks read from the buffer cache (abs, <font color='blue'>diff, <i>rate</i></font>). V$SYSSTAT: session logical reads</html>";
+		_originToolTip         .put    ("LOGICAL_READS", tooltip);
+		_LogicalReads_lbl      .setText("Logical Reads");
+		_LogicalReads_lbl      .setToolTipText(tooltip);
+		_LogicalReads_Abs_txt  .setToolTipText(tooltip);
+		_LogicalReads_Abs_txt  .setEditable(false);
+		_LogicalReads_Diff_txt .setEditable(false);
+		_LogicalReads_Diff_txt .setToolTipText(tooltip);
+		_LogicalReads_Rate_txt .setEditable(false);
+		_LogicalReads_Rate_txt .setToolTipText(tooltip);
+		_LogicalReads_Diff_txt.setForeground(Color.BLUE);
+		_LogicalReads_Rate_txt.setForeground(Color.BLUE);
+		_LogicalReads_Rate_txt.setFont(RATE_FONT);
+
+		tooltip = "<html>Number of blocks read from disk (abs, <font color='blue'>diff, <i>rate</i></font>). V$SYSSTAT: physical reads</html>";
+		_originToolTip          .put    ("PHYSICAL_READS", tooltip);
+		_PhysicalReads_lbl      .setText("Physical Reads");
+		_PhysicalReads_lbl      .setToolTipText(tooltip);
+		_PhysicalReads_Abs_txt  .setToolTipText(tooltip);
+		_PhysicalReads_Abs_txt  .setEditable(false);
+		_PhysicalReads_Diff_txt .setEditable(false);
+		_PhysicalReads_Diff_txt .setToolTipText(tooltip);
+		_PhysicalReads_Rate_txt .setEditable(false);
+		_PhysicalReads_Rate_txt .setToolTipText(tooltip);
+		_PhysicalReads_Diff_txt.setForeground(Color.BLUE);
+		_PhysicalReads_Rate_txt.setForeground(Color.BLUE);
+		_PhysicalReads_Rate_txt.setFont(RATE_FONT);
+
+		tooltip = "<html>Number of blocks written to disk (abs, <font color='blue'>diff, <i>rate</i></font>). V$SYSSTAT: physical writes</html>";
+		_originToolTip           .put    ("PHYSICAL_WRITES", tooltip);
+		_PhysicalWrites_lbl      .setText("Physical Writes");
+		_PhysicalWrites_lbl      .setToolTipText(tooltip);
+		_PhysicalWrites_Abs_txt  .setToolTipText(tooltip);
+		_PhysicalWrites_Abs_txt  .setEditable(false);
+		_PhysicalWrites_Diff_txt .setEditable(false);
+		_PhysicalWrites_Diff_txt .setToolTipText(tooltip);
+		_PhysicalWrites_Rate_txt .setEditable(false);
+		_PhysicalWrites_Rate_txt .setToolTipText(tooltip);
+		_PhysicalWrites_Diff_txt.setForeground(Color.BLUE);
+		_PhysicalWrites_Rate_txt.setForeground(Color.BLUE);
+		_PhysicalWrites_Rate_txt.setFont(RATE_FONT);
+
+		tooltip = "<html>Redo generated, in bytes (abs, <font color='blue'>diff, <i>rate</i></font>). V$SYSSTAT: redo size</html>";
+		_originToolTip     .put    ("REDO_SIZE", tooltip);
+		_RedoSize_lbl      .setText("Redo Bytes");
+		_RedoSize_lbl      .setToolTipText(tooltip);
+		_RedoSize_Abs_txt  .setToolTipText(tooltip);
+		_RedoSize_Abs_txt  .setEditable(false);
+		_RedoSize_Diff_txt .setEditable(false);
+		_RedoSize_Diff_txt .setToolTipText(tooltip);
+		_RedoSize_Rate_txt .setEditable(false);
+		_RedoSize_Rate_txt .setToolTipText(tooltip);
+		_RedoSize_Diff_txt.setForeground(Color.BLUE);
+		_RedoSize_Rate_txt.setForeground(Color.BLUE);
+		_RedoSize_Rate_txt.setFont(RATE_FONT);
+
+		tooltip = "<html>Number of parse calls, hard and soft (abs, <font color='blue'>diff, <i>rate</i></font>). V$SYSSTAT: parse count (total)</html>";
+		_originToolTip       .put    ("PARSE_TOTAL", tooltip);
+		_ParseTotal_lbl      .setText("Parses");
+		_ParseTotal_lbl      .setToolTipText(tooltip);
+		_ParseTotal_Abs_txt  .setToolTipText(tooltip);
+		_ParseTotal_Abs_txt  .setEditable(false);
+		_ParseTotal_Diff_txt .setEditable(false);
+		_ParseTotal_Diff_txt .setToolTipText(tooltip);
+		_ParseTotal_Rate_txt .setEditable(false);
+		_ParseTotal_Rate_txt .setToolTipText(tooltip);
+		_ParseTotal_Diff_txt.setForeground(Color.BLUE);
+		_ParseTotal_Rate_txt.setForeground(Color.BLUE);
+		_ParseTotal_Rate_txt.setFont(RATE_FONT);
+
+		tooltip = "<html>Number of hard parses: the statement was not in the shared pool, so it had to be optimized (abs, <font color='blue'>diff, <i>rate</i></font>).<br>Many of them = the applications does not use bind variables. V$SYSSTAT: parse count (hard)</html>";
+		_originToolTip      .put    ("PARSE_HARD", tooltip);
+		_ParseHard_lbl      .setText("Hard Parses");
+		_ParseHard_lbl      .setToolTipText(tooltip);
+		_ParseHard_Abs_txt  .setToolTipText(tooltip);
+		_ParseHard_Abs_txt  .setEditable(false);
+		_ParseHard_Diff_txt .setEditable(false);
+		_ParseHard_Diff_txt .setToolTipText(tooltip);
+		_ParseHard_Rate_txt .setEditable(false);
+		_ParseHard_Rate_txt .setToolTipText(tooltip);
+		_ParseHard_Diff_txt.setForeground(Color.BLUE);
+		_ParseHard_Rate_txt.setForeground(Color.BLUE);
+		_ParseHard_Rate_txt.setFont(RATE_FONT);
+
+		tooltip = "<html>Number of logons (abs, <font color='blue'>diff, <i>rate</i></font>).<br>A high rate = the applications does not use a connection pool. V$SYSSTAT: logons cumulative</html>";
+		_originToolTip   .put    ("LOGONS_CUM", tooltip);
+		_Logons_lbl      .setText("Logons");
+		_Logons_lbl      .setToolTipText(tooltip);
+		_Logons_Abs_txt  .setToolTipText(tooltip);
+		_Logons_Abs_txt  .setEditable(false);
+		_Logons_Diff_txt .setEditable(false);
+		_Logons_Diff_txt .setToolTipText(tooltip);
+		_Logons_Rate_txt .setEditable(false);
+		_Logons_Rate_txt .setToolTipText(tooltip);
+		_Logons_Diff_txt.setForeground(Color.BLUE);
+		_Logons_Rate_txt.setForeground(Color.BLUE);
+		_Logons_Rate_txt.setFont(RATE_FONT);
+
+		tooltip = "<html>Number of deadlocks between sessions, ORA-00060 (abs, <font color='blue'>diff, <i>rate</i></font>). V$SYSSTAT: enqueue deadlocks</html>";
+		_originToolTip      .put    ("DEADLOCKS", tooltip);
+		_Deadlocks_lbl      .setText("Deadlocks");
+		_Deadlocks_lbl      .setToolTipText(tooltip);
+		_Deadlocks_Abs_txt  .setToolTipText(tooltip);
+		_Deadlocks_Abs_txt  .setEditable(false);
+		_Deadlocks_Diff_txt .setEditable(false);
+		_Deadlocks_Diff_txt .setToolTipText(tooltip);
+		_Deadlocks_Rate_txt .setEditable(false);
+		_Deadlocks_Rate_txt .setToolTipText(tooltip);
+		_Deadlocks_Diff_txt.setForeground(Color.BLUE);
+		_Deadlocks_Rate_txt.setForeground(Color.BLUE);
+		_Deadlocks_Rate_txt.setFont(RATE_FONT);
 		
 		
 		
@@ -1066,56 +1409,151 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		
 		panel.add(_dbmsVersion_lbl,              "");
 		panel.add(_dbmsVersion_txt,              "growx, wrap");
-		
+
+		panel.add(_dbName_lbl,                   "");
+		panel.add(_dbName_txt,                   "growx, wrap");
+
+		// only visible in a Container Database
+		panel.add(_conName_lbl,                  "hidemode 3");
+		panel.add(_conName_txt,                  "hidemode 3, growx, wrap");
+
+		panel.add(_dbRole_lbl,                   "");
+		panel.add(_dbRole_txt,                   "growx, wrap");
+
+		panel.add(_openMode_lbl,                 "");
+		panel.add(_openMode_txt,                 "growx, wrap");
+
+		panel.add(_logMode_lbl,                  "");
+		panel.add(_logMode_txt,                  "growx, wrap");
+
 		panel.add(_lastSampleTime_lbl,           "");
 		panel.add(_lastSampleTime_txt,           "growx, wrap");
-		
+
 		panel.add(_utcTimeDiff_lbl,              "");
 		panel.add(_utcTimeDiff_txt,              "growx, wrap");
-		
+
 		panel.add(_startDate_lbl,                "");
 		panel.add(_startDate_txt,                "growx, wrap");
-		
+
 		panel.add(_daysRunning_lbl,              "");
 		panel.add(_daysRunning_txt,              "growx, wrap 20");
-		
+
 		panel.add(_connections_lbl,              "");
 		panel.add(_connectionsAbs_txt,           "growx, split");
 		panel.add(_connectionsDiff_txt,          "growx, wrap");
-		
+
 		panel.add(_distinctLogins_lbl,           "");
 		panel.add(_distinctLoginsAbs_txt,        "growx, split");
 		panel.add(_distinctLoginsDiff_txt,       "growx, wrap");
-		
+
+		panel.add(_activeUsers_lbl,              "");
+		panel.add(_activeUsers_txt,              "growx, wrap 20");
+
+		panel.add(_activeSessions_lbl,           "");
+		panel.add(_activeSessions_txt,           "growx, split");
+		panel.add(_activeSessionsCpu_txt,        "growx, split");
+		panel.add(_activeSessionsWait_txt,       "growx, wrap");
+
+		panel.add(_bgCpu_lbl,                    "");
+		panel.add(_bgCpu_txt,                    "growx, wrap");
+
+		panel.add(_hostCpus_lbl,                 "");
+		panel.add(_hostCpus_txt,                 "growx, wrap");
+
+		panel.add(_hostCpu_lbl,                  "");
+		panel.add(_hostCpuUser_txt,              "growx, split");
+		panel.add(_hostCpuSys_txt,               "growx, split");
+		panel.add(_hostCpuIoWait_txt,            "growx, wrap");
+
+		panel.add(_hostLoad_lbl,                 "");
+		panel.add(_hostLoad_txt,                 "growx, wrap 20");
+
 		panel.add(_oldestOpenTranThreshold_lbl,  "");
 		panel.add(_oldestOpenTranThreshold_txt,  "growx, wrap");
-		
+
 		panel.add(_oldestOpenTranSec_lbl,        "");
 		panel.add(_oldestOpenTranSec_txt,        "growx, wrap");
-		
+
 		panel.add(_oldestOpenTranTime_lbl,       "");
 		panel.add(_oldestOpenTranTime_txt,       "growx, wrap");
-		
+
+		panel.add(_oldestOpenTranWho_lbl,        "");
+		panel.add(_oldestOpenTranSid_txt,        "growx, split");
+		panel.add(_oldestOpenTranUsername_txt,   "growx, wrap");
+
+		panel.add(_openTranCount_lbl,            "");
+		panel.add(_openTranCount_txt,            "growx, wrap 20");
+
 		panel.add(_blockingWaitThreshold_lbl,    "");
 		panel.add(_blockingWaitThreshold_txt,    "growx, wrap");
-		
+
 		panel.add(_blockingWaitCount_lbl,        "");
 		panel.add(_blockingWaitCount_txt,        "growx, split");
 		panel.add(_blockingWaitCountDiff_txt,    "growx, wrap");
-		
+
 		panel.add(_blockingWaitMaxSec_lbl,       "");
 		panel.add(_blockingWaitMaxSec_txt,       "growx, split");
-		panel.add(_blockingWaitMaxSecDiff_txt,   "growx, wrap");
-		
+		panel.add(_blockingWaitMaxSecDiff_txt,   "growx, wrap 20");
+
 		panel.add(_Transactions_lbl,             "hidemode 3");
 		panel.add(_Transactions_Abs_txt,         "hidemode 3, growx, split");
 		panel.add(_Transactions_Diff_txt,        "hidemode 3, growx, split");
 		panel.add(_Transactions_Rate_txt,        "hidemode 3, growx, wrap");
-		                                         
+
 		panel.add(_Rollbacks_lbl,                "hidemode 3");
 		panel.add(_Rollbacks_Abs_txt,            "hidemode 3, growx, split");
 		panel.add(_Rollbacks_Diff_txt,           "hidemode 3, growx, split");
 		panel.add(_Rollbacks_Rate_txt,           "hidemode 3, growx, wrap");
+
+		panel.add(_UserCalls_lbl,                "hidemode 3");
+		panel.add(_UserCalls_Abs_txt,            "hidemode 3, growx, split");
+		panel.add(_UserCalls_Diff_txt,           "hidemode 3, growx, split");
+		panel.add(_UserCalls_Rate_txt,           "hidemode 3, growx, wrap");
+
+		panel.add(_Executions_lbl,               "hidemode 3");
+		panel.add(_Executions_Abs_txt,           "hidemode 3, growx, split");
+		panel.add(_Executions_Diff_txt,          "hidemode 3, growx, split");
+		panel.add(_Executions_Rate_txt,          "hidemode 3, growx, wrap");
+
+		panel.add(_LogicalReads_lbl,             "hidemode 3");
+		panel.add(_LogicalReads_Abs_txt,         "hidemode 3, growx, split");
+		panel.add(_LogicalReads_Diff_txt,        "hidemode 3, growx, split");
+		panel.add(_LogicalReads_Rate_txt,        "hidemode 3, growx, wrap");
+
+		panel.add(_PhysicalReads_lbl,            "hidemode 3");
+		panel.add(_PhysicalReads_Abs_txt,        "hidemode 3, growx, split");
+		panel.add(_PhysicalReads_Diff_txt,       "hidemode 3, growx, split");
+		panel.add(_PhysicalReads_Rate_txt,       "hidemode 3, growx, wrap");
+
+		panel.add(_PhysicalWrites_lbl,           "hidemode 3");
+		panel.add(_PhysicalWrites_Abs_txt,       "hidemode 3, growx, split");
+		panel.add(_PhysicalWrites_Diff_txt,      "hidemode 3, growx, split");
+		panel.add(_PhysicalWrites_Rate_txt,      "hidemode 3, growx, wrap");
+
+		panel.add(_RedoSize_lbl,                 "hidemode 3");
+		panel.add(_RedoSize_Abs_txt,             "hidemode 3, growx, split");
+		panel.add(_RedoSize_Diff_txt,            "hidemode 3, growx, split");
+		panel.add(_RedoSize_Rate_txt,            "hidemode 3, growx, wrap");
+
+		panel.add(_ParseTotal_lbl,               "hidemode 3");
+		panel.add(_ParseTotal_Abs_txt,           "hidemode 3, growx, split");
+		panel.add(_ParseTotal_Diff_txt,          "hidemode 3, growx, split");
+		panel.add(_ParseTotal_Rate_txt,          "hidemode 3, growx, wrap");
+
+		panel.add(_ParseHard_lbl,                "hidemode 3");
+		panel.add(_ParseHard_Abs_txt,            "hidemode 3, growx, split");
+		panel.add(_ParseHard_Diff_txt,           "hidemode 3, growx, split");
+		panel.add(_ParseHard_Rate_txt,           "hidemode 3, growx, wrap");
+
+		panel.add(_Logons_lbl,                   "hidemode 3");
+		panel.add(_Logons_Abs_txt,               "hidemode 3, growx, split");
+		panel.add(_Logons_Diff_txt,              "hidemode 3, growx, split");
+		panel.add(_Logons_Rate_txt,              "hidemode 3, growx, wrap");
+
+		panel.add(_Deadlocks_lbl,                "hidemode 3");
+		panel.add(_Deadlocks_Abs_txt,            "hidemode 3, growx, split");
+		panel.add(_Deadlocks_Diff_txt,           "hidemode 3, growx, split");
+		panel.add(_Deadlocks_Rate_txt,           "hidemode 3, growx, wrap");
 		
 		
 		
@@ -1355,6 +1793,46 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_Rollbacks_Diff_txt     .setVisible(showDiff);
 		_Rollbacks_Rate_txt     .setVisible(showRate);
 
+		_UserCalls_Abs_txt      .setVisible(showAbs);
+		_UserCalls_Diff_txt     .setVisible(showDiff);
+		_UserCalls_Rate_txt     .setVisible(showRate);
+
+		_Executions_Abs_txt     .setVisible(showAbs);
+		_Executions_Diff_txt    .setVisible(showDiff);
+		_Executions_Rate_txt    .setVisible(showRate);
+
+		_LogicalReads_Abs_txt   .setVisible(showAbs);
+		_LogicalReads_Diff_txt  .setVisible(showDiff);
+		_LogicalReads_Rate_txt  .setVisible(showRate);
+
+		_PhysicalReads_Abs_txt  .setVisible(showAbs);
+		_PhysicalReads_Diff_txt .setVisible(showDiff);
+		_PhysicalReads_Rate_txt .setVisible(showRate);
+
+		_PhysicalWrites_Abs_txt .setVisible(showAbs);
+		_PhysicalWrites_Diff_txt.setVisible(showDiff);
+		_PhysicalWrites_Rate_txt.setVisible(showRate);
+
+		_RedoSize_Abs_txt       .setVisible(showAbs);
+		_RedoSize_Diff_txt      .setVisible(showDiff);
+		_RedoSize_Rate_txt      .setVisible(showRate);
+
+		_ParseTotal_Abs_txt     .setVisible(showAbs);
+		_ParseTotal_Diff_txt    .setVisible(showDiff);
+		_ParseTotal_Rate_txt    .setVisible(showRate);
+
+		_ParseHard_Abs_txt      .setVisible(showAbs);
+		_ParseHard_Diff_txt     .setVisible(showDiff);
+		_ParseHard_Rate_txt     .setVisible(showRate);
+
+		_Logons_Abs_txt         .setVisible(showAbs);
+		_Logons_Diff_txt        .setVisible(showDiff);
+		_Logons_Rate_txt        .setVisible(showRate);
+
+		_Deadlocks_Abs_txt      .setVisible(showAbs);
+		_Deadlocks_Diff_txt     .setVisible(showDiff);
+		_Deadlocks_Rate_txt     .setVisible(showRate);
+
 //		_Selects_Abs_txt        .setVisible(showAbs);
 //		_Selects_Diff_txt       .setVisible(showDiff);
 //		_Selects_Rate_txt       .setVisible(showRate);
@@ -1587,6 +2065,87 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 		setFieldAbsDiffRate(cm, "TRANSACTIONS",   _Transactions_lbl,   _Transactions_Abs_txt,   _Transactions_Diff_txt,   _Transactions_Rate_txt);
 		setFieldAbsDiffRate(cm, "ROLLBACKS",      _Rollbacks_lbl,      _Rollbacks_Abs_txt,      _Rollbacks_Diff_txt,      _Rollbacks_Rate_txt);
+		setFieldAbsDiffRate(cm, "USER_CALLS",     _UserCalls_lbl,      _UserCalls_Abs_txt,      _UserCalls_Diff_txt,      _UserCalls_Rate_txt);
+		setFieldAbsDiffRate(cm, "EXECUTIONS",     _Executions_lbl,     _Executions_Abs_txt,     _Executions_Diff_txt,     _Executions_Rate_txt);
+		setFieldAbsDiffRate(cm, "LOGICAL_READS",  _LogicalReads_lbl,   _LogicalReads_Abs_txt,   _LogicalReads_Diff_txt,   _LogicalReads_Rate_txt);
+		setFieldAbsDiffRate(cm, "PHYSICAL_READS", _PhysicalReads_lbl,  _PhysicalReads_Abs_txt,  _PhysicalReads_Diff_txt,  _PhysicalReads_Rate_txt);
+		setFieldAbsDiffRate(cm, "PHYSICAL_WRITES",_PhysicalWrites_lbl, _PhysicalWrites_Abs_txt, _PhysicalWrites_Diff_txt, _PhysicalWrites_Rate_txt);
+		setFieldAbsDiffRate(cm, "REDO_SIZE",      _RedoSize_lbl,       _RedoSize_Abs_txt,       _RedoSize_Diff_txt,       _RedoSize_Rate_txt);
+		setFieldAbsDiffRate(cm, "PARSE_TOTAL",    _ParseTotal_lbl,     _ParseTotal_Abs_txt,     _ParseTotal_Diff_txt,     _ParseTotal_Rate_txt);
+		setFieldAbsDiffRate(cm, "PARSE_HARD",     _ParseHard_lbl,      _ParseHard_Abs_txt,      _ParseHard_Diff_txt,      _ParseHard_Rate_txt);
+		setFieldAbsDiffRate(cm, "LOGONS_CUM",     _Logons_lbl,         _Logons_Abs_txt,         _Logons_Diff_txt,         _Logons_Rate_txt);
+		setFieldAbsDiffRate(cm, "DEADLOCKS",      _Deadlocks_lbl,      _Deadlocks_Abs_txt,      _Deadlocks_Diff_txt,      _Deadlocks_Rate_txt);
+
+		// The database
+		_dbName_txt                 .setText(cm.getAbsString (0, "DB_NAME"));
+		_conName_txt                .setText(cm.getAbsString (0, "CON_NAME"));
+		_dbRole_txt                 .setText(cm.getAbsString (0, "DATABASE_ROLE"));
+		_openMode_txt               .setText(cm.getAbsString (0, "OPEN_MODE"));
+		_logMode_txt                .setText(cm.getAbsString (0, "LOG_MODE"));
+
+		// The container is only there in a Container Database
+		boolean isCdb = "YES".equals(cm.getAbsString(0, "CDB"));
+		_conName_lbl.setVisible(isCdb);
+		_conName_txt.setVisible(isCdb);
+
+		// Sessions and transactions
+		_activeUsers_txt            .setText(cm.getAbsString (0, "ACTIVE_USERS"));
+		_openTranCount_txt          .setText(cm.getAbsString (0, "OPEN_TRAN_COUNT"));
+
+		// Who has the oldest transaction: when there are no open transactions the SID is 0 (or empty), so check OPEN_TRAN_COUNT
+		Integer openTranCount = cm.getAbsValueAsInteger(0, "OPEN_TRAN_COUNT");
+		boolean hasOpenTran   = openTranCount != null && openTranCount > 0;
+		_oldestOpenTranSid_txt      .setText(hasOpenTran ? cm.getAbsString(0, "OLDEST_OPEN_TRAN_SID")      : "");
+		_oldestOpenTranUsername_txt .setText(hasOpenTran ? cm.getAbsString(0, "OLDEST_OPEN_TRAN_USERNAME") : "");
+
+		// Average Active Sessions: DB_TIME, DB_CPU and BG_CPU_TIME are microseconds, so: microseconds per second / 1 000 000 = "seconds per second" = how many sessions was active
+		// No value at the first sample. A negative value: the instance was restarted, so the counters started from 0 again. (isFinite: a BigDecimal can't hold Infinite or NaN)
+		Double dbTimeRate = cm.getRateValueAsDouble(0, "DB_TIME");
+		Double dbCpuRate  = cm.getRateValueAsDouble(0, "DB_CPU");
+		Double bgCpuRate  = cm.getRateValueAsDouble(0, "BG_CPU_TIME");
+		if (dbTimeRate != null && dbCpuRate != null && bgCpuRate != null && dbTimeRate >= 0 && dbCpuRate >= 0 && bgCpuRate >= 0 && Double.isFinite(dbTimeRate + dbCpuRate + bgCpuRate))
+		{
+			double activeSessions = dbTimeRate / 1_000_000.0;
+			double onCpu          = dbCpuRate  / 1_000_000.0;
+			double waiting        = Math.max(0.0, activeSessions - onCpu);
+			double bgCpu          = bgCpuRate  / 1_000_000.0;
+
+			_activeSessions_txt    .setText(new BigDecimal(activeSessions).setScale(2, RoundingMode.HALF_EVEN).toString());
+			_activeSessionsCpu_txt .setText(new BigDecimal(onCpu         ).setScale(2, RoundingMode.HALF_EVEN).toString());
+			_activeSessionsWait_txt.setText(new BigDecimal(waiting       ).setScale(2, RoundingMode.HALF_EVEN).toString());
+			_bgCpu_txt             .setText(new BigDecimal(bgCpu         ).setScale(2, RoundingMode.HALF_EVEN).toString());
+		}
+		else
+		{
+			_activeSessions_txt    .setText("");
+			_activeSessionsCpu_txt .setText("");
+			_activeSessionsWait_txt.setText("");
+			_bgCpu_txt             .setText("");
+		}
+
+		// Host CPU: BUSY + IDLE is all the CPU time there was in the sample (for all CPU's). Note: on Linux IOWAIT is a part of IDLE
+		_hostCpus_txt               .setText(cm.getAbsString (0, "NUM_CPUS"));
+		_hostLoad_txt               .setText(cm.getAbsString (0, "OS_LOAD"));
+
+		Double osBusy   = cm.getDiffValueAsDouble(0, "OS_BUSY_TIME");
+		Double osIdle   = cm.getDiffValueAsDouble(0, "OS_IDLE_TIME");
+		Double osUser   = cm.getDiffValueAsDouble(0, "OS_USER_TIME");
+		Double osSys    = cm.getDiffValueAsDouble(0, "OS_SYS_TIME");
+		Double osIoWait = cm.getDiffValueAsDouble(0, "OS_IOWAIT_TIME");
+		if (osBusy != null && osIdle != null && osUser != null && osSys != null && osIoWait != null && osBusy + osIdle > 0 && osUser >= 0 && osSys >= 0 && osIoWait >= 0)
+		{
+			double total = osBusy + osIdle;
+
+			_hostCpuUser_txt  .setText(new BigDecimal(osUser   / total * 100.0).setScale(1, RoundingMode.HALF_EVEN).toString());
+			_hostCpuSys_txt   .setText(new BigDecimal(osSys    / total * 100.0).setScale(1, RoundingMode.HALF_EVEN).toString());
+			_hostCpuIoWait_txt.setText(new BigDecimal(osIoWait / total * 100.0).setScale(1, RoundingMode.HALF_EVEN).toString());
+		}
+		else
+		{
+			_hostCpuUser_txt  .setText("");
+			_hostCpuSys_txt   .setText("");
+			_hostCpuIoWait_txt.setText("");
+		}
 
 		
 		
@@ -1885,8 +2444,59 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 		_Transactions_Abs_txt       .setText("");
 		_Transactions_Diff_txt      .setText("");
+		_Transactions_Rate_txt      .setText("");
 		_Rollbacks_Abs_txt          .setText("");
 		_Rollbacks_Diff_txt         .setText("");
+		_Rollbacks_Rate_txt         .setText("");
+		_UserCalls_Abs_txt          .setText("");
+		_UserCalls_Diff_txt         .setText("");
+		_UserCalls_Rate_txt         .setText("");
+		_Executions_Abs_txt         .setText("");
+		_Executions_Diff_txt        .setText("");
+		_Executions_Rate_txt        .setText("");
+		_LogicalReads_Abs_txt       .setText("");
+		_LogicalReads_Diff_txt      .setText("");
+		_LogicalReads_Rate_txt      .setText("");
+		_PhysicalReads_Abs_txt      .setText("");
+		_PhysicalReads_Diff_txt     .setText("");
+		_PhysicalReads_Rate_txt     .setText("");
+		_PhysicalWrites_Abs_txt     .setText("");
+		_PhysicalWrites_Diff_txt    .setText("");
+		_PhysicalWrites_Rate_txt    .setText("");
+		_RedoSize_Abs_txt           .setText("");
+		_RedoSize_Diff_txt          .setText("");
+		_RedoSize_Rate_txt          .setText("");
+		_ParseTotal_Abs_txt         .setText("");
+		_ParseTotal_Diff_txt        .setText("");
+		_ParseTotal_Rate_txt        .setText("");
+		_ParseHard_Abs_txt          .setText("");
+		_ParseHard_Diff_txt         .setText("");
+		_ParseHard_Rate_txt         .setText("");
+		_Logons_Abs_txt             .setText("");
+		_Logons_Diff_txt            .setText("");
+		_Logons_Rate_txt            .setText("");
+		_Deadlocks_Abs_txt          .setText("");
+		_Deadlocks_Diff_txt         .setText("");
+		_Deadlocks_Rate_txt         .setText("");
+
+		_dbName_txt                 .setText("");
+		_conName_txt                .setText("");
+		_dbRole_txt                 .setText("");
+		_openMode_txt               .setText("");
+		_logMode_txt                .setText("");
+		_activeUsers_txt            .setText("");
+		_oldestOpenTranSid_txt      .setText("");
+		_oldestOpenTranUsername_txt .setText("");
+		_openTranCount_txt          .setText("");
+		_activeSessions_txt         .setText("");
+		_activeSessionsCpu_txt      .setText("");
+		_activeSessionsWait_txt     .setText("");
+		_bgCpu_txt                  .setText("");
+		_hostCpus_txt               .setText("");
+		_hostCpuUser_txt            .setText("");
+		_hostCpuSys_txt             .setText("");
+		_hostCpuIoWait_txt          .setText("");
+		_hostLoad_txt               .setText("");
 
 		//		_atAtServerName_txt     .setText("");
 //		_listeners_txt          .setText("");
