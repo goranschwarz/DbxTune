@@ -256,7 +256,7 @@ public class Logging
 		// Set default logging level to WARNING for JFree Chart
 //		if (_props.getProperty("log4j.logger.org.jfree") == null)
 //			_props.setProperty("log4j.logger.org.jfree", "WARN");
-		Configurator.setLevel("log4j.logger.org.jfree", Level.WARN);
+		Configurator.setLevel("org.jfree", Level.WARN);
 
 		// Print the Rolling log filename
 		if (logfile != null)
@@ -272,7 +272,7 @@ public class Logging
 					30,           // MaxSize for each File in MB
 					null,         // Filter on this class only
 					null,         // Extra filters
-					Level.INFO);  // And the Log Level
+					Level.ALL);   // And the Log Level: ALL = write what the loggers lets through (INFO by default, but a logger can be set to DEBUG at runtime, see Log4jUtils.setLoggerLevel())
 			
 			_logfile = logfile;
 			_logger.info("Logfile used for " + Version.getAppName() + " will be '" + logfile + "'.");
@@ -283,6 +283,12 @@ public class Logging
 		_logger.info("Total memory that can be used by this JVM is " + (Runtime.getRuntime().maxMemory() / 1024 / 1024) + " MB. This can be changed with the JVM flag -Xmx###m (where ### is number of MB)");
 	}
 	
+	/** @return The log file name set by init(), null if init() has not been called */
+	public static String getLogFilename()
+	{
+		return _logfile;
+	}
+
 	public static final String DEFAULT_LOG_CONSOLE_PATTERN = "%d - %-5p - %-30t - %-30c{1} - %m%n";
 	public static final String DEFAULT_LOG_FILE_PATTERN    = "%d - %-5p - %-30t - %-4L:%-30F - %m%n";
 

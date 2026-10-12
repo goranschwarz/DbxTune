@@ -444,6 +444,18 @@ public class DbxTuneCentral
 //		String propFile = null;
 		Logging.init(null, propFile, logFilename);
 
+		// Set log levels that was saved from the Web UI (Admin -> Log Levels), and remember where to save them
+		// NOTE: The file is created the first time something is saved (hence: only load it if it exists)
+		File logLevelSaveFile = new File(getAppConfDir() + File.separatorChar + "DbxCentral.save.conf");
+		Configuration logLevelSaveCfg = new Configuration();
+		logLevelSaveCfg.setConfName("DBXC_SAVE");
+		if (logLevelSaveFile.exists())
+			logLevelSaveCfg.load(logLevelSaveFile.getAbsolutePath());
+		else
+			logLevelSaveCfg.setFilename(logLevelSaveFile.getAbsolutePath());
+		logLevelSaveCfg.setSaveEnable(true);
+		Log4jUtils.initSavedLogLevels(logLevelSaveCfg);
+
 		// Always register the "gui" LogAppender, which will also send errors to 'dbxtune.com'
 		// Calling this would make GuiLogAppender, to register itself in log4j.
 		GuiLogAppender.getInstance();

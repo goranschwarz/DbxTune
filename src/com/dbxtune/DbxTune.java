@@ -88,6 +88,7 @@ import com.dbxtune.utils.Debug;
 import com.dbxtune.utils.Encrypter;
 import com.dbxtune.utils.JavaUtils;
 import com.dbxtune.utils.JavaVersion;
+import com.dbxtune.utils.Log4jUtils;
 import com.dbxtune.utils.Logging;
 import com.dbxtune.utils.Memory;
 import com.dbxtune.utils.OpenSslAesUtil;
@@ -712,6 +713,10 @@ public abstract class DbxTune
 			Logging.init(null, propFile, logFilename);
 		else
 			Logging.init("nogui.", propFile, logFilename);
+
+		// NO-GUI: Set log levels that was saved from DbxCentral (Admin -> Log Levels), they are in the "Save" Configuration, see: setNoGuiServerConfig()
+		if ( !_gui && Configuration.hasInstance(Configuration.NOGUI_SAVE) )
+			Log4jUtils.initSavedLogLevels(Configuration.getInstance(Configuration.NOGUI_SAVE));
 
 		if (_gui && !SplashWindow.isOk())
 			_logger.info("Splash screen could not be displayed.");

@@ -232,6 +232,7 @@ public class WebServerInitializerJetty
 		webapp.addServlet(ShutdownServlet.class,                      "/admin/shutdown");
 		webapp.addServlet(UsersAdminServlet.class,                    "/admin/users");                      // Goto the "admin" -- "users" section (needs login)
 		webapp.addServlet(LlmAdviceLogServlet.class,                  "/admin/llm-log");                    // Saved "LLM Optimization Advice" requests (admin only)
+		webapp.addServlet(LogLevelAdminServlet.class,                 "/admin/log-level");                  // View/Change Log4j log levels in DbxCentral and the Collectors (admin only)
 		webapp.addServlet(H2WriterStatServlet.class,                  "/h2ws");
 
 		// NavBar: Desktop App
