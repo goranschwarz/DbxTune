@@ -759,6 +759,7 @@ public class SpaceForecast
 				if (graphName.equals("FsAvailableMb"))         rawTableName = cmName + "_FsSizeMb";
 				if (graphName.equals("DbDataSizeLeftMbGraph")) rawTableName = cmName + "_DbDataSizeMbGraph";
 				if (graphName.equals("DbLogSizeLeftMbGraph"))  rawTableName = cmName + "_DbLogSizeMbGraph";
+				if (graphName.equals("TsFreeMb"))              rawTableName = cmName + "_TsMaxMb";            // Oracle: CmTablespaces
 
 				if (DbUtils.checkIfTableExistsNoThrow(conn, null, srvName, rawTableName))
 				{
@@ -954,6 +955,7 @@ public class SpaceForecast
 				if (graphName.equals("FsAvailableMb"))         rawTableName = cmName + "_FsUsedPct";
 				if (graphName.equals("DbDataSizeLeftMbGraph")) rawTableName = cmName + "_DbDataSizeUsedPctGraph";
 				if (graphName.equals("DbLogSizeLeftMbGraph"))  rawTableName = cmName + "_DbLogSizeUsedPctGraph";
+				if (graphName.equals("TsFreeMb"))              rawTableName = cmName + "_TsUsedPct";          // Oracle: CmTablespaces
 
 				if (DbUtils.checkIfTableExistsNoThrow(conn, null, srvName, rawTableName))
 				{
@@ -2157,7 +2159,8 @@ public class SpaceForecast
 			if (graphName.equals("FsAvailableMb"))         type = "OS";
 			if (graphName.equals("DbDataSizeLeftMbGraph")) type = "DBMS_DATA";
 			if (graphName.equals("DbLogSizeLeftMbGraph"))  type = "DBMS_WAL";
-			
+			if (graphName.equals("TsFreeMb"))              type = "DBMS_DATA";   // Oracle: CmTablespaces
+
 			String graphList = "";
 			if ("OS".equals(type))
 			{
@@ -2179,6 +2182,16 @@ public class SpaceForecast
 							+ ",CmDatabases_DbDataSizeLeftMbGraph"
 							+ ",CmDatabases_DbDataSizeUsedMbGraph"
 							+ ",CmDatabases_DbDataSizeUsedPctGraph"
+							;
+				}
+				else if ("CmTablespaces".equals(cmName))
+				{
+					// Oracle
+					graphList = ""
+							+  "CmTablespaces_TsMaxMb"
+							+ ",CmTablespaces_TsFreeMb"
+							+ ",CmTablespaces_TsUsedMb"
+							+ ",CmTablespaces_TsUsedPct"
 							;
 				}
 				else
@@ -2741,6 +2754,7 @@ public class SpaceForecast
 			if (sourceTable.endsWith("_FsAvailableMb"))         this.spaceType = SpaceType.OS_DISK;
 			if (sourceTable.endsWith("_DbDataSizeLeftMbGraph")) this.spaceType = SpaceType.DBMS_DATA;
 			if (sourceTable.endsWith("_DbLogSizeLeftMbGraph"))  this.spaceType = SpaceType.DBMS_WAL;
+			if (sourceTable.endsWith("_TsFreeMb"))              this.spaceType = SpaceType.DBMS_DATA;   // Oracle: CmTablespaces
 
 			// Set extraCol based on table name
 			if (StringUtil.isNullOrBlank(extraName))

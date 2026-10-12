@@ -145,7 +145,8 @@ extends CountersModel
 	//------------------------------------------------------------
 	public static final String GRAPH_NAME_USED_PCT = "TsUsedPct";
 	public static final String GRAPH_NAME_USED_MB  = "TsUsedMb";
-	public static final String GRAPH_NAME_FREE_MB  = "TsFreeMb";
+	public static final String GRAPH_NAME_FREE_MB  = "TsFreeMb";    // used by the DbxCentral Space Forecast Report (SpaceForecastServlet)
+	public static final String GRAPH_NAME_MAX_MB   = "TsMaxMb";     // Not that important... but for the DbxCentral Space Forecast Report
 
 	private void addTrendGraphs()
 	{
@@ -177,6 +178,18 @@ extends CountersModel
 			"Tablespace Free Space in MB", 	                // Menu CheckBox text
 			"Tablespace Free Space in MB, up to Max Size (" + SHORT_NAME + ")", // Graph Label
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MIN_OVER_SAMPLES),
+			null,
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.SPACE,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
+			-1);   // minimum height
+
+		addTrendGraph(GRAPH_NAME_MAX_MB,
+			"Tablespace Max Size in MB", 	                // Menu CheckBox text
+			"Tablespace Max Size in MB: how big it can grow (" + SHORT_NAME + ")", // Graph Label
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -326,6 +339,7 @@ extends CountersModel
 		if (GRAPH_NAME_USED_PCT.equals(tgdp.getName())) colName = "USED_PCT";
 		if (GRAPH_NAME_USED_MB .equals(tgdp.getName())) colName = "USED_MB";
 		if (GRAPH_NAME_FREE_MB .equals(tgdp.getName())) colName = "FREE_MB";
+		if (GRAPH_NAME_MAX_MB  .equals(tgdp.getName())) colName = "MAX_MB";
 
 		if (colName != null)
 		{

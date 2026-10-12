@@ -267,6 +267,7 @@ public class AppDir
 						copyFileToDir(srcDir + "start_sqlservertune.bat",    dbxcBin, ps, logList, "- Change this for customer specializations to SqlServerTune Collectors.");
 						copyFileToDir(srcDir + "start_postgrestune.bat",     dbxcBin, ps, logList, "- Change this for customer specializations to PostgresTune Collectors.");
 						copyFileToDir(srcDir + "start_mysqltune.bat",        dbxcBin, ps, logList, "- Change this for customer specializations to MySqlTune Collectors.");
+						copyFileToDir(srcDir + "start_oracletune.bat",       dbxcBin, ps, logList, "- Change this for customer specializations to OracleTune Collectors.");
 
 						// OR: should we create a LINK here instead?
 //						copyFileToDir(dbxHomeResourceBin + "nssm.exe",       dbxcBin, ps, logList, "- Non Sucking Service Manager, to create services.");
@@ -289,6 +290,7 @@ public class AppDir
 						copyFileToDir(srcDir + "start_sqlservertune.sh",    dbxcBin, ps, logList, "- Change this for customer specializations to SqlServerTune Collectors.");
 						copyFileToDir(srcDir + "start_postgrestune.sh",     dbxcBin, ps, logList, "- Change this for customer specializations to PostgresTune Collectors.");
 						copyFileToDir(srcDir + "start_mysqltune.sh",        dbxcBin, ps, logList, "- Change this for customer specializations to MySqlTune Collectors.");
+						copyFileToDir(srcDir + "start_oracletune.sh",       dbxcBin, ps, logList, "- Change this for customer specializations to OracleTune Collectors.");
 					}
 				}
 
