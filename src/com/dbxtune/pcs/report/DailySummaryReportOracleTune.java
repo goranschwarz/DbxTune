@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.pcs.report;
 
+import com.dbxtune.pcs.report.content.DbmsConfigIssues;
 import com.dbxtune.pcs.report.content.oracle.OracleAlertLogErrors;
 import com.dbxtune.pcs.report.content.oracle.OracleBackups;
 import com.dbxtune.pcs.report.content.oracle.OracleLoadOverview;
@@ -60,5 +61,8 @@ extends DailySummaryReportDefault
 
 		// Network Activity
 		addReportEntry( new CmOsNwInfoOverview(this)   );
+
+		// Configuration
+		addReportEntry( new DbmsConfigIssues(this)     );
 	}
 }
