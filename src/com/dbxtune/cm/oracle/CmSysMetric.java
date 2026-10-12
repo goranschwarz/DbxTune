@@ -63,7 +63,7 @@ extends CountersModel
 		"<code>BEGIN_TIME</code> and <code>END_TIME</code> shows which minute the values are for, and <code>METRIC_UNIT</code> what the value is.<br>" +
 		"<br>" +
 		"<b>Note</b>: This is NOT part of the Diagnostics Pack (it reads V$SYSMETRIC, not the AWR history).<br>" +
-		"<b>Note</b>: In a Container Database, the values are for the whole CDB.<br>" +
+		"<b>Note</b>: In a Container Database, the values are for the whole CDB. So connect to CDB$ROOT: <b>when connected to a PDB this tab is empty</b> (Oracle has no rows in V$SYSMETRIC there).<br>" +
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
