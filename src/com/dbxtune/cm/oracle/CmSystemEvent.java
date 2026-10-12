@@ -24,6 +24,7 @@ package com.dbxtune.cm.oracle;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -353,6 +354,13 @@ extends CountersModel
 
 				// Set the values
 				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+			}
+			else if (tgdp.hasData())
+			{
+				// Nothing to show in this sample: set the lines we already have to 0 (if we do nothing, the values of the previous sample are kept and stored again)
+				Double[] zeros = new Double[tgdp.getLabel().length];
+				Arrays.fill(zeros, 0.0);
+				tgdp.setDataPoint(this.getTimestamp(), tgdp.getLabel(), zeros);
 			}
 		}
 

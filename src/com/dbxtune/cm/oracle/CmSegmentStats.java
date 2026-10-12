@@ -26,6 +26,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -433,7 +434,16 @@ extends CountersModel
 				dataMap.put(names.get(i), perName.get(names.get(i)));
 
 			if (dataMap.size() > 0)
+			{
 				tgdp.setData(this.getTimestamp(), dataMap);
+			}
+			else if (tgdp.hasData())
+			{
+				// Nothing to show in this sample: set the lines we already have to 0 (if we do nothing, the values of the previous sample are kept and stored again)
+				Double[] zeros = new Double[tgdp.getLabel().length];
+				Arrays.fill(zeros, 0.0);
+				tgdp.setDataPoint(this.getTimestamp(), tgdp.getLabel(), zeros);
+			}
 		}
 	}
 }
