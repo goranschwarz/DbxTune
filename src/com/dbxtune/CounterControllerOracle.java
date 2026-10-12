@@ -33,7 +33,10 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.oracle.CmArchiveDest;
 import com.dbxtune.cm.oracle.CmBufferPool;
+import com.dbxtune.cm.oracle.CmInvalidObjects;
 import com.dbxtune.cm.oracle.CmLibraryCache;
+import com.dbxtune.cm.oracle.CmPdbs;
+import com.dbxtune.cm.oracle.CmUserAccounts;
 import com.dbxtune.cm.oracle.CmPgaStat;
 import com.dbxtune.cm.oracle.CmSgaStat;
 import com.dbxtune.cm.oracle.CmSysMetric;
@@ -122,12 +125,15 @@ extends CounterControllerAbstract
 		CmResourceLimit     .create(counterController, guiController);
 		CmRmanBackup        .create(counterController, guiController);
 		CmErrorLog          .create(counterController, guiController);
+		CmUserAccounts      .create(counterController, guiController);
+		CmPdbs              .create(counterController, guiController);
 
 		// Object/Access
 		CmActiveStatements  .create(counterController, guiController);
 		CmSqlStats          .create(counterController, guiController);
 		CmLocks             .create(counterController, guiController);
 		CmLongOps           .create(counterController, guiController);
+		CmInvalidObjects    .create(counterController, guiController);
 
 		// Cache
 		CmSgaStat           .create(counterController, guiController);
