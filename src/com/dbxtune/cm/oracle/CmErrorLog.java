@@ -230,19 +230,20 @@ extends CountersModelAppend
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		// V$DIAG_ALERT_EXT looks different in different versions, and only some of them can be tested: so check what columns the view has (and only guess on the version when we have no connection)
-		//   ADR_HOME       - 11.2 has it (23 has not). When it's there: the view shows ALL logs under the ADR base (other databases, the listener...), so we have to pick out the alert log of THIS database
-		//   CONTAINER_NAME - 23 has it (11.2 has not). The PDB the message is about
+		//   ADR_HOME       - 11.2 and 18 has it (23 has not). In 11.2 the view shows ALL logs under the ADR base (other databases, the listener...), so we have to pick out the alert log of THIS database
+		//                    It's relative to the ADR base, and looks different: 11.2 'diag/rdbms/xe/XE', 18 'diag/rdbms/xe/XE/'. So we check that the full 'ADR Home' ENDS with it.
+		//   CONTAINER_NAME - 18 and 23 has it (11.2 has not). The PDB the message is about
 		// conn is null when we just want to "view" the SQL (the CM Properties dialog)
 		boolean hasAdrHome       = versionInfo.getLongVersion() <  Ver.ver(12,2);
 		boolean hasContainerName = versionInfo.getLongVersion() >= Ver.ver(12,2);
 		if (conn != null)
 		{
-			hasAdrHome       = hasAlertLogColumns(conn, "ADR_PATH_IDX, ADR_HOME");
+			hasAdrHome       = hasAlertLogColumns(conn, "ADR_HOME");
 			hasContainerName = hasAlertLogColumns(conn, "CONTAINER_NAME");
 		}
 
 		String CON_NAME    = hasContainerName ? "CAST(a.CONTAINER_NAME as VARCHAR2(128))" : "CAST(NULL             as VARCHAR2(128))";
-		String onlyThisAdr = hasAdrHome       ? "  and a.ADR_PATH_IDX || '/' || a.ADR_HOME = (select VALUE from V$DIAG_INFO where NAME = 'ADR Home') \n" : "";
+		String onlyThisAdr = hasAdrHome       ? "  and (select VALUE from V$DIAG_INFO where NAME = 'ADR Home') like '%/' || RTRIM(a.ADR_HOME, '/') \n" : "";
 
 		// ${afterLastLogTime} is replaced in getSql(): the last ## hours at the first sample, then "after the last row we have seen"
 		// Note: LOG_TIME is the time on the DBMS host (a TIMESTAMP WITH TIME ZONE can't be stored, so the time zone is dropped), LOG_TIME_TZ is the same time as a string with the time zone
