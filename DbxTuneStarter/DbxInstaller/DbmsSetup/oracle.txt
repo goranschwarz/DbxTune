@@ -1,118 +1,155 @@
 /*--------------------------------------------------------------------------------------------
-** Create a separate user for monitoring (if you are lazy you could use 'system' but not recomended)
+** OracleTune needs ONE thing in the database: a login that can read the system views.
+** (if you are lazy you could use 'system' but not recomended)
 **
-** OracleTune only reads documented views: V$..., DBA_... (and CDB_... in a Container Database)
-** It does NOT read any base tables owned by SYS, so ONE of the below options is enough:
+** IN A NUTSHELL
+**   1: Find out what kind of database you have    -> "WHICH SECTION IS FOR MY SERVER" (just below)
+**   2: Run ONE of the sections 1, 2 or 3          (copy and paste, change the password)
+**   3: Test the login                             -> section 4
 **
-**   Option A: SELECT_CATALOG_ROLE     (recomended)
+** WHAT IT READS
+**   Only documented views: V$..., DBA_... (and CDB_... in a Container Database)
+**   It does NOT read any base tables owned by SYS, and it creates NOTHING in the database.
+**
+** ORACLE LICENSES
+**   OracleTune reads NO view and calls NO package that needs an extra Oracle license.
+**   No Diagnostics Pack and no Tuning Pack: no ASH (V$ACTIVE_SESSION_HISTORY), no AWR (DBA_HIST_...),
+**   no ADDM, no SQL Monitor (V$SQL_MONITOR), no DBMS_SQLTUNE, no DBMS_WORKLOAD_REPOSITORY.
+**   So nothing extra has to be licensed to run it, whatever the edition (Free / XE, Standard Edition, Enterprise Edition).
+**   If something that needs such a license is added later, it will be OFF until you turn it on in the configuration.
+**
+** WHAT THE LOGIN NEEDS: 'CREATE SESSION' and ONE of the below
+**   Option A: SELECT_CATALOG_ROLE     (recomended, and what the sections below use)
 **             A role that can read the Data Dictionary views and the V$ views.
-**
 **   Option B: SELECT ANY DICTIONARY
 **             A system privilege that can read ALL objects owned by SYS.
 **             Simpler (it covers everything), but it gives more than OracleTune needs.
 **             In Oracle 11g it also includes SYS.USER$ (which holds the password hashes)
+**             To use it: replace 'SELECT_CATALOG_ROLE' with 'SELECT ANY DICTIONARY' in the section you run.
 **
 ** If a Performance Counter can't read a view it needs, it will be DISABLED.
 ** The reason (and what GRANT to execute) is written in the log file, and as a tooltip on the tab.
 **--------------------------------------------------------------------------------------------
 */
-## as SYS or SYSTEM (or any other DBA account)
-sqlplus / as sysdba
-CREATE USER dbxtune IDENTIFIED BY "the-long-and-arbitrary-password";
-GRANT CREATE SESSION TO dbxtune;
-
--- Option A
-GRANT SELECT_CATALOG_ROLE TO dbxtune;
-
--- Option B (instead of option A)
--- GRANT SELECT ANY DICTIONARY TO dbxtune;
 
 
 /*--------------------------------------------------------------------------------------------
-** Option A only: views that are NOT part of SELECT_CATALOG_ROLE
-**
-** Every view OracleTune reads is covered by SELECT_CATALOG_ROLE, except the ones below.
-** (verified on 11.2.0.2 and 23.26, with a user that only has CREATE SESSION + SELECT_CATALOG_ROLE)
-**
-** NOTE: this must be done as SYS, a DBA user like SYSTEM gets: ORA-01031: insufficient privileges
+** WHICH SECTION IS FOR MY SERVER
+**--------------------------------------------------------------------------------------------
+*/
+## as SYS, on the database server
+sqlplus / as sysdba
+
+select BANNER from V$VERSION;          -- the version and the edition
+select CDB from V$DATABASE;            -- YES = a Container Database.  In 11.2 the column does not exist (ORA-00904), which means: NO
+show con_name                          -- only in a Container Database: where am I (CDB$ROOT, or the name of a Pluggable Database)
+
+##   Oracle version         Container Database (CDB)        Run
+##   ---------------------  ------------------------------  ------------------------------------------------------------
+##   11.2                   never                           section 1
+##   12.1, 12.2, 18c, 19c   CDB = NO                        section 1
+##   12.1, 12.2, 18c, 19c   CDB = YES                       section 2 (all Pluggable Databases), or section 3 (only one of them)
+##   21c, 23ai, 26ai        always                          section 2 (all Pluggable Databases), or section 3 (only one of them)
+##
+## The service name to connect OracleTune to (hostname:1521/SERVICE_NAME), is one of:
+select NAME from V$SERVICES;
+##   section 1: the service of the database
+##   section 2: the service of the Container Database itself (for example: ORCLCDB, XE, FREE)
+##   section 3: the service of the Pluggable Database         (for example: ORCLPDB1, XEPDB1, FREEPDB1)
+##
+## WHO can run it: SYS can run everything.
+##                 A DBA user like SYSTEM can run everything EXCEPT the grant on the alert log (ORA-01031: insufficient privileges)
+
+
+/*--------------------------------------------------------------------------------------------
+** SECTION 1: a database that is NOT a Container Database
+**            Oracle 11.2, and 12.1 - 19c when CDB = NO
+**            The login: dbxtune
 **--------------------------------------------------------------------------------------------
 */
 ## as SYS
 sqlplus / as sysdba
 
--- The alert log (V$DIAG_ALERT_EXT), used by the 'Alert Log' Performance Counter
+CREATE USER dbxtune IDENTIFIED BY "the-long-and-arbitrary-password";
+GRANT CREATE SESSION TO dbxtune;
+GRANT SELECT_CATALOG_ROLE TO dbxtune;
+
+-- The alert log, used by the Performance Counter 'Alert Log' (and its alarms). NOT part of SELECT_CATALOG_ROLE. Must be done as SYS.
 GRANT SELECT ON SYS.V_$DIAG_ALERT_EXT TO dbxtune;
 
--- or in a Container Database (see below)
--- GRANT SELECT ON SYS.V_$DIAG_ALERT_EXT TO c##dbxtune CONTAINER=ALL;
-
--- NOTE: In older versions (seen on 11.2, not on 23) Oracle reads ALL logs in the diagnostic directory (the ADR base)
---       to answer a query on this view, including the listener log. If that log is big, the query is slow.
---       OracleTune notices that (more than 2 seconds), writes a warning in it's log, and then only reads the alert log once an hour.
---       Fix: purge the listener log, for example with adrci:
---           adrci> set homepath diag/tnslsnr/<host>/listener
---           adrci> purge -age 43200 -type ALERT              (43200 minutes = 30 days)
-
--- OPTIONAL (12.1 and above): the unified audit policies, only shown in: DBMS Configuration -> tab 'Audit'
--- Without it that tab still works, but the part 'policies that are enabled' says that it can't read the view.
--- GRANT AUDIT_VIEWER TO dbxtune;
--- or in a Container Database
--- GRANT AUDIT_VIEWER TO c##dbxtune CONTAINER=ALL;
-
-
-/*--------------------------------------------------------------------------------------------
-** RECOMENDED - A password that does NOT expire
-**
-** In 11g and above, the DEFAULT profile expires the password after 180 days.
-** When that happens the monitoring stops (ORA-28001: the password has expired)
-**--------------------------------------------------------------------------------------------
-*/
-## Check what the user has today
-select u.USERNAME, u.PROFILE, u.ACCOUNT_STATUS, u.EXPIRY_DATE, p.LIMIT as PASSWORD_LIFE_TIME
-from DBA_USERS u
-join DBA_PROFILES p on p.PROFILE = u.PROFILE and p.RESOURCE_NAME = 'PASSWORD_LIFE_TIME'
-where u.USERNAME = 'DBXTUNE';
-
-## One way to fix it: a profile without password expire, just for this user
+-- RECOMENDED: a password that does not expire (see "THE PASSWORD EXPIRES" below)
 CREATE PROFILE dbxtune_profile LIMIT PASSWORD_LIFE_TIME UNLIMITED;
 ALTER USER dbxtune PROFILE dbxtune_profile;
 
 
 /*--------------------------------------------------------------------------------------------
-** Container Database - CDB (12.1 and above)
-**
-** Connect OracleTune to CDB$ROOT with a COMMON user (the name must start with C##)
-** Then tablespaces etc. for ALL Pluggable Databases (PDB's) are monitored from one OracleTune.
-**
-** If you only want to monitor ONE Pluggable Database:
-** create the user in that PDB (as in the first section), and connect OracleTune to the PDB service.
+** SECTION 2: a Container Database, monitor ALL Pluggable Databases (PDB's) from ONE OracleTune
+**            Oracle 12.1 - 19c when CDB = YES, and always from 21c (21c, 23ai, 26ai)
+**            The login: c##dbxtune   (a COMMON user, the name must start with C##)
+**            OracleTune connects to: CDB$ROOT (the service of the Container Database itself)
 **--------------------------------------------------------------------------------------------
 */
-## as SYS, connected to CDB$ROOT
+## as SYS, connected to CDB$ROOT ('show con_name' says: CDB$ROOT)
 sqlplus / as sysdba
+
 CREATE USER c##dbxtune IDENTIFIED BY "the-long-and-arbitrary-password" CONTAINER=ALL;
 GRANT CREATE SESSION TO c##dbxtune CONTAINER=ALL;
-
--- Option A
 GRANT SELECT_CATALOG_ROLE TO c##dbxtune CONTAINER=ALL;
 
--- Option B (instead of option A)
--- GRANT SELECT ANY DICTIONARY TO c##dbxtune CONTAINER=ALL;
-
-## Let the user see data for ALL containers (without this, only data for CDB$ROOT is visible)
-## OracleTune writes a WARNING in the log file at connect, if this is missing
+-- Let the login see data for ALL containers (without this, only data for CDB$ROOT is visible)
+-- OracleTune writes a WARNING in the log file at connect, if this is missing
 ALTER USER c##dbxtune SET CONTAINER_DATA=ALL CONTAINER=CURRENT;
+
+-- The alert log, used by the Performance Counter 'Alert Log' (and its alarms). NOT part of SELECT_CATALOG_ROLE. Must be done as SYS.
+GRANT SELECT ON SYS.V_$DIAG_ALERT_EXT TO c##dbxtune CONTAINER=ALL;
+
+-- RECOMENDED: a password that does not expire (see "THE PASSWORD EXPIRES" below). For a common user the profile must also be common (C##)
+CREATE PROFILE c##dbxtune_profile LIMIT PASSWORD_LIFE_TIME UNLIMITED CONTAINER=ALL;
+ALTER USER c##dbxtune PROFILE c##dbxtune_profile CONTAINER=ALL;
+
+-- OPTIONAL: the unified audit policies, only shown in: DBMS Configuration -> tab 'Audit'
+-- Without it that tab still works, but the part 'policies that are enabled' says that it can't read the view.
+-- GRANT AUDIT_VIEWER TO c##dbxtune CONTAINER=ALL;
 
 
 /*--------------------------------------------------------------------------------------------
-** Test that we can login with the 'dbxtune' user, and that it can read what OracleTune needs
+** SECTION 3: a Container Database, monitor only ONE Pluggable Database (PDB)
+**            (for example when you are the DBA of that PDB, but not of the whole Container Database)
+**            The login: dbxtune   (a LOCAL user in that PDB)
+**            OracleTune connects to: the service of the PDB
+**            What you then see is that PDB only (the tab 'Containers' has one row).
 **--------------------------------------------------------------------------------------------
 */
-sqlplus dbxtune@//hostname:1521/SERVICE_NAME
+## as SYS, then go to the PDB
+sqlplus / as sysdba
+select NAME, OPEN_MODE from V$PDBS;                  -- what are the PDB's called
+ALTER SESSION SET CONTAINER = THE_PDB_NAME;
+show con_name                                        -- should now say: THE_PDB_NAME
+
+CREATE USER dbxtune IDENTIFIED BY "the-long-and-arbitrary-password";
+GRANT CREATE SESSION TO dbxtune;
+GRANT SELECT_CATALOG_ROLE TO dbxtune;
+
+-- The alert log, used by the Performance Counter 'Alert Log' (and its alarms). NOT part of SELECT_CATALOG_ROLE. Must be done as SYS.
+GRANT SELECT ON SYS.V_$DIAG_ALERT_EXT TO dbxtune;
+
+-- RECOMENDED: a password that does not expire (see "THE PASSWORD EXPIRES" below)
+CREATE PROFILE dbxtune_profile LIMIT PASSWORD_LIFE_TIME UNLIMITED;
+ALTER USER dbxtune PROFILE dbxtune_profile;
+
+-- OPTIONAL: the unified audit policies, only shown in: DBMS Configuration -> tab 'Audit'
+-- GRANT AUDIT_VIEWER TO dbxtune;
+
+
+/*--------------------------------------------------------------------------------------------
+** SECTION 4: Test that we can login, and that the login can read what OracleTune needs
+**--------------------------------------------------------------------------------------------
+*/
+sqlplus dbxtune@//hostname:1521/SERVICE_NAME               ## or: c##dbxtune
 
 ## What do we have
-select * from SESSION_ROLES;
-select * from SESSION_PRIVS;
+select * from SESSION_ROLES;                               -- SELECT_CATALOG_ROLE and HS_ADMIN_SELECT_ROLE (which is a part of it).  Option B: no rows
+select * from SESSION_PRIVS;                               -- CREATE SESSION.                                                        Option B: also SELECT ANY DICTIONARY
 
 ## All of the below should work
 select count(*) from V$SESSION;
@@ -121,6 +158,55 @@ select count(*) from DBA_TABLESPACES;
 select count(*) from DBA_TABLESPACE_USAGE_METRICS;
 select count(*) from DBA_DATA_FILES;
 select count(*) from DBA_TEMP_FILES;
+select count(*) from V$DIAG_ALERT_EXT where ORIGINATING_TIMESTAMP > SYSTIMESTAMP - interval '1' hour;     -- the alert log (ORA-00942 = the grant as SYS is missing)
 
-## In a Container Database: this should show CDB$ROOT, PDB$SEED and all the PDB's
+## Section 2 only: this should show CDB$ROOT, PDB$SEED and all the PDB's (only CDB$ROOT = 'SET CONTAINER_DATA=ALL' is missing)
 select CON_ID, NAME, OPEN_MODE from V$CONTAINERS;
+
+
+/*--------------------------------------------------------------------------------------------
+** THE PASSWORD EXPIRES
+**
+** In 11g and above, the DEFAULT profile expires the password after 180 days.
+** When that happens the monitoring stops (ORA-28001: the password has expired)
+** The sections above creates a profile without password expire, just for this login.
+**--------------------------------------------------------------------------------------------
+*/
+## Check what the login has today (LIMIT should say: UNLIMITED)
+select u.USERNAME, u.PROFILE, u.ACCOUNT_STATUS, u.EXPIRY_DATE, p.LIMIT as PASSWORD_LIFE_TIME
+from DBA_USERS u
+join DBA_PROFILES p on p.PROFILE = u.PROFILE and p.RESOURCE_NAME = 'PASSWORD_LIFE_TIME'
+where u.USERNAME in ('DBXTUNE', 'C##DBXTUNE');
+
+
+/*--------------------------------------------------------------------------------------------
+** WHAT IS DIFFERENT BETWEEN THE VERSIONS
+**
+** The grants are the same in all versions. What differs is the Container Database, and what OracleTune can show.
+** A tab that is not available in your version is DISABLED, with the reason as a tooltip on the tab (and in the log file).
+**
+**   11.2          No Container Database: section 1.
+**                 Tabs not available: 'Containers', 'Index Usage'.
+**                 The alert log: see the NOTE below (it can be slow).
+**                 Option B (SELECT ANY DICTIONARY) also gives SYS.USER$, the password hashes.
+**   12.1          The Container Database is new, and it is your choice when the database is created: section 1, or 2 / 3.
+**                 Tabs not available: 'Index Usage'.
+**                 The role AUDIT_VIEWER is new (the OPTIONAL grant).
+**   12.2 - 19c    As 12.1, and 'Index Usage' is available (Oracle tracks how the indexes are used from 12.2).
+**   21c - 26ai    ALWAYS a Container Database (Oracle removed the other kind): section 2 or 3.
+**
+**   All versions  The tab 'Data Guard' is only active when the database sends redo to a standby database.
+**                 The tab 'Containers' shows ALL containers only when connected to CDB$ROOT (section 2).
+**
+** Tested on: 11.2.0.2 (XE), 18c (XE), 21c (XE), 23.26 (Free, the release that is called 23ai and 26ai)
+** NOT tested on: 12.1, 12.2, 19c, Real Application Clusters (RAC)
+**--------------------------------------------------------------------------------------------
+*/
+
+-- NOTE: the alert log in older versions (seen on 11.2, not on 18c, 21c and 23)
+--       Oracle reads ALL logs in the diagnostic directory (the ADR base) to answer a query on V$DIAG_ALERT_EXT, including the listener log.
+--       If that log is big, the query is slow.
+--       OracleTune notices that (more than 2 seconds), writes a warning in it's log, and then only reads the alert log once an hour.
+--       Fix: purge the listener log, for example with adrci:
+--           adrci> set homepath diag/tnslsnr/<host>/listener
+--           adrci> purge -age 43200 -type ALERT              (43200 minutes = 30 days)
