@@ -2666,6 +2666,9 @@ function dbxTuneGraphSubscribe()
 					// The tooltip goes on the CHECKBOX columns (as for the other collectors). On the text columns it made the row one line higher.
 					if (metaData.columnName === "HasSqlText"   && rowData.hasOwnProperty('SqlText')  && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.SqlText,  'plsql') ); }
 					if (metaData.columnName === "HasExecPlan"  && rowData.hasOwnProperty('ExecPlan') && cellContent === true) { td.appendChild( createOracleQueryPlanToolTipDiv(rowData.ExecPlan, rowData, srvName) ); }
+					if (metaData.columnName === "HasSidLocks"        && rowData.hasOwnProperty('SidLocks')        && cellContent === true) { td.appendChild( createLockTableToolTipDiv(rowData.SidLocks       , 'Lock Table'      ) ); }
+					if (metaData.columnName === "HasBlockedSidsInfo" && rowData.hasOwnProperty('BlockedSidsInfo') && cellContent === true) { td.appendChild( createLockTableToolTipDiv(rowData.BlockedSidsInfo, 'Blocked SID Info') ); }
+					if (metaData.columnName === "HasSidWaitInfo"     && rowData.hasOwnProperty('SidWaitInfo')     && cellContent === true) { td.appendChild( createLockTableToolTipDiv(rowData.SidWaitInfo    , 'SID Wait Info'   ) ); }
 				}
 			} // end: metaData && columnName
 		};
