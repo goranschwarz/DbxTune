@@ -114,7 +114,7 @@ extends CountersModel
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
-	public static final int      DEFAULT_POSTPONE_TIME          = 60;
+	public static final int      DEFAULT_POSTPONE_TIME          = 300; // (V$SEGSTAT has a row for every segment and statistic: 5 minutes, as the index CMs of SqlServerTune)
 	public static final int      DEFAULT_QUERY_TIMEOUT          = 30;
 
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }

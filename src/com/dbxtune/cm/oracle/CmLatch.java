@@ -100,7 +100,7 @@ extends CountersModel
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
-	public static final int      DEFAULT_POSTPONE_TIME          = 60;
+	public static final int      DEFAULT_POSTPONE_TIME          = 0;
 	public static final int      DEFAULT_QUERY_TIMEOUT          = 10;
 
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }

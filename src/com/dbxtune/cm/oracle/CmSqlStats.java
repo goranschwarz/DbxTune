@@ -124,7 +124,7 @@ extends CountersModel
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
-	public static final int      DEFAULT_POSTPONE_TIME          = 60;
+	public static final int      DEFAULT_POSTPONE_TIME          = 300; // (every sample is up to 'sample.topRows' statements with their SQL text: 5 minutes, as the statement CMs of SqlServerTune)
 	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;
 
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }

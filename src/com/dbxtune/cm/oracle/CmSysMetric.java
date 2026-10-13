@@ -81,7 +81,7 @@ extends CountersModel
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
-	public static final int      DEFAULT_POSTPONE_TIME          = 60;
+	public static final int      DEFAULT_POSTPONE_TIME          = 0;   // (Oracle calculates the values once a minute: with a shorter sample time the same values are seen more than once, with a postpone time some of them would be missed)
 	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;
 
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
