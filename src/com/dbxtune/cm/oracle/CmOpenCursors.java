@@ -39,6 +39,7 @@ import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventConfigResourceIsLow;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
@@ -376,6 +377,30 @@ extends CountersModel
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 
 		list.add(new CmSettingsHelper("UsedPct", isAlarmSwitch, PROPKEY_alarm_UsedPct, Double.class, conf.getDoubleProperty(PROPKEY_alarm_UsedPct, DEFAULT_alarm_UsedPct), DEFAULT_alarm_UsedPct, "If 'USED_PCT' (open cursors in percent of the parameter 'open_cursors') is greater than ##.# for any session then send 'AlarmEventConfigResourceIsLow'. One alarm per container, for the session that is closest to the limit." ));
+
+		return list;
+	}
+
+	/** Local graph (above the table): how close the sessions are to the limit (the parameter open_cursors) */
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		list.add(new CmChartDescriptor()
+			.id("open-cursors-pct")
+			.title("Open Cursors per Session, in Percent of the Limit (open_cursors)")
+			.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
+			.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
+			.labelColumn("SID")
+			.labelPrefixColumns("USERNAME")
+			.valueColumns("USED_PCT")
+			.seriesLabels("Used %")
+			.barLabelColumn("OPEN_CURSORS")
+			.barLabelPrefix("OPEN: ")
+			.isPercent(true)
+			.thresholdWarn(80)
+			.thresholdCrit(90));
 
 		return list;
 	}

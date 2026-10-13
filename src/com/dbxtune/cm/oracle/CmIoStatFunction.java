@@ -25,6 +25,7 @@ import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.naming.NameNotFoundException;
@@ -35,6 +36,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
@@ -314,5 +316,35 @@ extends CountersModel
 			if (dataMap.size() > 0)
 				tgdp.setData(this.getTimestamp(), dataMap);
 		}
+	}
+
+	/** Local graph (beside the table): which part of the database does the I/O */
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		list.add(new CmChartDescriptor()
+			.id("io-by-function-mb")
+			.title("I/O by Function (MB)")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("FUNCTION_NAME")
+			.valueColumns("TOTAL_MEGABYTES")
+			.seriesLabels("MB")
+			.skipZeroRows(true)
+			.pieOtherLimit(0.02)
+			.splitRatio(0.6));
+
+		list.add(new CmChartDescriptor()
+			.id("io-by-function-reqs")
+			.title("I/O by Function (requests)")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("FUNCTION_NAME")
+			.valueColumns("TOTAL_REQS")
+			.seriesLabels("Requests")
+			.skipZeroRows(true)
+			.pieOtherLimit(0.02));
+
+		return list;
 	}
 }

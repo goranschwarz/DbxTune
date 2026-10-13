@@ -39,6 +39,7 @@ import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventConfigResourceIsLow;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CounterSetTemplates;
@@ -348,6 +349,44 @@ extends CountersModel
 
 		list.add(new CmSettingsHelper("UsedPct"              , isAlarmSwitch, PROPKEY_alarm_UsedPct             , Double.class, conf.getDoubleProperty(PROPKEY_alarm_UsedPct             , DEFAULT_alarm_UsedPct             ), DEFAULT_alarm_UsedPct             , "If 'USED_PCT' is greater than ##.# Percent then send 'AlarmEventConfigResourceIsLow'." ));
 		list.add(new CmSettingsHelper("UsedPct ResourceNames",                PROPKEY_alarm_UsedPctResourceNames, String.class, conf.getProperty      (PROPKEY_alarm_UsedPctResourceNames, DEFAULT_alarm_UsedPctResourceNames), DEFAULT_alarm_UsedPctResourceNames, "If 'UsedPct' is true; Only check resources where 'RESOURCE_NAME' matches this regexp.", new RegExpInputValidator()));
+
+		return list;
+	}
+
+	/** Local graphs (above the table): how much of each limit is used now, and the most that has been used since startup */
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		// The resources without a limit (UNLIMITED) have no percent, so they are not in the charts
+		list.add(new CmChartDescriptor()
+			.id("limit-used-pct")
+			.title("Resource Limits: Used Now in Percent")
+			.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
+			.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
+			.labelColumn("RESOURCE_NAME")
+			.valueColumns("USED_PCT")
+			.seriesLabels("Used %")
+			.barLabelColumn("FREE_COUNT")
+			.barLabelPrefix("FREE: ")
+			.isPercent(true)
+			.thresholdWarn(80)
+			.thresholdCrit(90)
+			.skipZeroRows(true));
+
+		list.add(new CmChartDescriptor()
+			.id("limit-max-used-pct")
+			.title("Resource Limits: Highest Usage since Startup in Percent")
+			.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
+			.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
+			.labelColumn("RESOURCE_NAME")
+			.valueColumns("MAX_USED_PCT")
+			.seriesLabels("Max Used %")
+			.isPercent(true)
+			.thresholdWarn(80)
+			.thresholdCrit(90)
+			.skipZeroRows(true));
 
 		return list;
 	}

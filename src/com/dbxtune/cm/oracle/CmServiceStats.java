@@ -24,6 +24,7 @@ package com.dbxtune.cm.oracle;
 import java.lang.invoke.MethodHandles;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.naming.NameNotFoundException;
@@ -34,6 +35,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
@@ -306,5 +308,37 @@ extends CountersModel
 			if (dataMap.size() > 0)
 				tgdp.setData(this.getTimestamp(), dataMap);
 		}
+	}
+
+	/** Local graphs (beside the table): which service (= which application) uses the database */
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		list.add(new CmChartDescriptor()
+			.id("service-db-time")
+			.title("DB Time by Service (microseconds)")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("SERVICE_NAME")
+			.labelPrefixColumns("CON_NAME")
+			.valueColumns("DB_TIME_MICRO")
+			.seriesLabels("DB Time")
+			.skipZeroRows(true)
+			.pieOtherLimit(0.02)
+			.splitRatio(0.6));
+
+		list.add(new CmChartDescriptor()
+			.id("service-logical-reads")
+			.title("Logical Reads by Service")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("SERVICE_NAME")
+			.labelPrefixColumns("CON_NAME")
+			.valueColumns("SESSION_LOGICAL_READS")
+			.seriesLabels("Logical Reads")
+			.skipZeroRows(true)
+			.pieOtherLimit(0.02));
+
+		return list;
 	}
 }

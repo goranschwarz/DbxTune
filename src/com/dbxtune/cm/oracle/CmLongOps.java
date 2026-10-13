@@ -36,6 +36,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
@@ -289,5 +290,31 @@ extends CountersModel
 		{
 			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e);
 		}
+	}
+
+	/** Local graph (above the table): how far the long operations have come */
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		// The thresholds are above 100: a bar that is nearly full is an operation that is nearly done, which is nothing to warn about
+		list.add(new CmChartDescriptor()
+			.id("longops-pct-done")
+			.title("Long Operations: Percent Done")
+			.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
+			.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
+			.labelColumn("OPNAME")
+			.labelPrefixColumns("SID")
+			.valueColumns("PCT_DONE")
+			.seriesLabels("Done %")
+			.barLabelColumn("TIME_REMAINING")
+			.barLabelPrefix("SECONDS LEFT: ")
+			.groupAggFunc(CmChartDescriptor.AGG_MAX)
+			.isPercent(true)
+			.thresholdWarn(101)
+			.thresholdCrit(101));
+
+		return list;
 	}
 }

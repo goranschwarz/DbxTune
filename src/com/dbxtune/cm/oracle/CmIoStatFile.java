@@ -25,6 +25,7 @@ import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.naming.NameNotFoundException;
@@ -35,6 +36,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
@@ -362,5 +364,38 @@ extends CountersModel
 				tgdp.setData(this.getTimestamp(), avgMs);
 			}
 		}
+	}
+
+	/** Local graphs (beside the table): which kind of files, and which data files, the I/O goes to */
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		list.add(new CmChartDescriptor()
+			.id("io-by-filetype")
+			.title("I/O by File Type (MB)")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("FILETYPE_NAME")
+			.groupByColumn("FILETYPE_NAME")
+			.valueColumns("TOTAL_MEGABYTES")
+			.seriesLabels("MB")
+			.skipZeroRows(true)
+			.pieOtherLimit(0.02)
+			.splitRatio(0.6));
+
+		// Only the data files and the temp files have a name (the other file types are one row for all their files)
+		list.add(new CmChartDescriptor()
+			.id("io-by-file")
+			.title("I/O by Data File and Temp File (MB)")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("FILE_NAME")
+			.valueColumns("TOTAL_MEGABYTES")
+			.seriesLabels("MB")
+			.skipZeroRows(true)
+			.maxItems(15)
+			.pieOtherLimit(0.02));
+
+		return list;
 	}
 }

@@ -39,6 +39,7 @@ import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.oracle.AlarmEventOraTablespaceLowFreeSpace;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
@@ -401,6 +402,44 @@ extends CountersModel
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 
 		list.add(new CmSettingsHelper("TempInUsePct", isAlarmSwitch, PROPKEY_alarm_TempInUsePct, Double.class, conf.getDoubleProperty(PROPKEY_alarm_TempInUsePct, DEFAULT_alarm_TempInUsePct), DEFAULT_alarm_TempInUsePct, "If 'IN_USE_PCT' of a temporary tablespace (what is in use right now, in percent of how big it can get) is greater than ##.# Percent then send 'AlarmEventOraTablespaceLowFreeSpace'." ));
+
+		return list;
+	}
+
+	/** Local graphs (beside the table): which sessions use the temp space, and how full the temporary tablespaces are */
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		// A session can have more than one row (one per kind of segment: SORT, HASH, LOB_DATA...): they are added up
+		list.add(new CmChartDescriptor()
+			.id("temp-by-session")
+			.title("Temp Space per Session (MB)")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("SID")
+			.labelPrefixColumns("USERNAME")
+			.filter("ROW_TYPE", "SESSION")
+			.valueColumns("IN_USE_MB")
+			.seriesLabels("In Use MB")
+			.skipZeroRows(true)
+			.maxItems(15)
+			.pieOtherLimit(0.02)
+			.splitRatio(0.6));
+
+		list.add(new CmChartDescriptor()
+			.id("temp-used-pct")
+			.title("Temporary Tablespaces: In Use in Percent (of the size they can grow to)")
+			.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
+			.labelColumn("TABLESPACE")
+			.filter("ROW_TYPE", "TABLESPACE")
+			.valueColumns("IN_USE_PCT")
+			.seriesLabels("In Use %")
+			.barLabelColumn("IN_USE_MB")
+			.barLabelPrefix("IN USE MB: ")
+			.isPercent(true)
+			.thresholdWarn(80)
+			.thresholdCrit(90));
 
 		return list;
 	}

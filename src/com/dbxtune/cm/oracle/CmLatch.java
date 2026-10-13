@@ -37,6 +37,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
@@ -335,5 +336,37 @@ extends CountersModel
 				tgdp.setDataPoint(this.getTimestamp(), tgdp.getLabel(), zeros);
 			}
 		}
+	}
+
+	/** Local graphs (beside the table): the latches and mutexes that sessions had to wait for */
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		list.add(new CmChartDescriptor()
+			.id("latch-wait-time")
+			.title("Latch and Mutex Wait Time (microseconds)")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("NAME")
+			.valueColumns("WAIT_TIME_MICRO")
+			.seriesLabels("Wait Time")
+			.skipZeroRows(true)
+			.maxItems(15)
+			.pieOtherLimit(0.02)
+			.splitRatio(0.6));
+
+		list.add(new CmChartDescriptor()
+			.id("latch-sleeps")
+			.title("Latch and Mutex Sleeps")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("NAME")
+			.valueColumns("SLEEPS")
+			.seriesLabels("Sleeps")
+			.skipZeroRows(true)
+			.maxItems(15)
+			.pieOtherLimit(0.02));
+
+		return list;
 	}
 }

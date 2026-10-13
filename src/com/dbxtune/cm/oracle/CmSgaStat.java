@@ -24,6 +24,7 @@ package com.dbxtune.cm.oracle;
 import java.lang.invoke.MethodHandles;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.naming.NameNotFoundException;
@@ -34,6 +35,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
@@ -287,5 +289,27 @@ extends CountersModel
 			if (dataMap.size() > 0)
 				tgdp.setData(this.getTimestamp(), dataMap);
 		}
+	}
+
+	/** Local graph (beside the table): how the SGA is divided between its components */
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		// Only the rows that are a part of the SGA (the INFO rows are totals, as 'Maximum SGA Size')
+		list.add(new CmChartDescriptor()
+			.id("sga-components")
+			.title("SGA Components (MB)")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("COMPONENT")
+			.filter("ROW_TYPE", "COMPONENT")
+			.valueColumns("CURRENT_MB")
+			.seriesLabels("Current MB")
+			.skipZeroRows(true)
+			.pieOtherLimit(0.01)
+			.splitRatio(0.6));
+
+		return list;
 	}
 }

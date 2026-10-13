@@ -86,6 +86,14 @@ public class CmChartDescriptor implements Serializable
 	/** Column name used for category labels (X-axis / pie slices). E.g. "DBName", "wait_type". */
 	public String   labelColumn;
 
+	/**
+	 * Columns whose values are put in front of the label, with a '.' between them (empty values are left out).
+	 * Use it when {@link #labelColumn} alone does not say which row it is: with labelColumn "OBJECT_NAME" and the
+	 * prefix columns "CON_NAME", "OWNER" the label becomes "PDB1.HR.EMPLOYEES" (and "HR.EMPLOYEES" when CON_NAME is empty).
+	 * Not used when the rows are grouped ({@link #groupByColumn}).
+	 */
+	public String[] labelPrefixColumns;
+
 	/** Column names whose values form the chart series / datasets. */
 	public String[] valueColumns;
 
@@ -125,6 +133,15 @@ public class CmChartDescriptor implements Serializable
 	 * E.g. "_Total" for CmMemoryClerks which has an aggregate row.
 	 */
 	public String   skipValue;
+
+	/**
+	 * If set: only the rows where this column has the value {@link #filterValue} are in the chart.
+	 * For a CM that has more than one kind of rows in its table (a column like "ROW_TYPE"): chart one kind of them.
+	 */
+	public String   filterColumn;
+
+	/** The value {@link #filterColumn} must have (compared as text). */
+	public String   filterValue;
 
 	/**
 	 * Skip rows where ALL {@link #valueColumns} are zero or null.
@@ -232,6 +249,8 @@ public class CmChartDescriptor implements Serializable
 	public CmChartDescriptor chartType(String type)         { this.chartType      = type;     return this; }
 	public CmChartDescriptor splitDir(String dir)           { this.splitDir       = dir;      return this; }
 	public CmChartDescriptor labelColumn(String col)        { this.labelColumn    = col;      return this; }
+	public CmChartDescriptor labelPrefixColumns(String... cols) { this.labelPrefixColumns = cols; return this; }
+	public CmChartDescriptor filter(String column, String value) { this.filterColumn = column; this.filterValue = value; return this; }
 	public CmChartDescriptor valueColumns(String... cols)   { this.valueColumns   = cols;     return this; }
 	public CmChartDescriptor seriesLabels(String... labels) { this.seriesLabels   = labels;   return this; }
 	public CmChartDescriptor groupByColumn(String col)      { this.groupByColumn  = col;      return this; }

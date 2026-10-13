@@ -40,6 +40,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
@@ -569,5 +570,48 @@ extends CountersModel
 
 			pch.addDdl(PersistentCounterHandler.STATEMENT_CACHE_NAME, sqlId + "_" + ((Number) planHashValue).longValue(), CM_NAME + ".diff.top.ELAPSED_TIME");
 		}
+	}
+
+	/** Local graphs (beside the table): which statements take the time, and which do the reading */
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		list.add(new CmChartDescriptor()
+			.id("sql-elapsed-time")
+			.title("Elapsed Time by Statement (microseconds)")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("SQL_ID")
+			.valueColumns("ELAPSED_TIME")
+			.seriesLabels("Elapsed Time")
+			.skipZeroRows(true)
+			.maxItems(15)
+			.pieOtherLimit(0.02)
+			.splitRatio(0.65));
+
+		list.add(new CmChartDescriptor()
+			.id("sql-cpu-time")
+			.title("CPU Time by Statement (microseconds)")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("SQL_ID")
+			.valueColumns("CPU_TIME")
+			.seriesLabels("CPU Time")
+			.skipZeroRows(true)
+			.maxItems(15)
+			.pieOtherLimit(0.02));
+
+		list.add(new CmChartDescriptor()
+			.id("sql-buffer-gets")
+			.title("Buffer Gets (logical reads) by Statement")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("SQL_ID")
+			.valueColumns("BUFFER_GETS")
+			.seriesLabels("Buffer Gets")
+			.skipZeroRows(true)
+			.maxItems(15)
+			.pieOtherLimit(0.02));
+
+		return list;
 	}
 }

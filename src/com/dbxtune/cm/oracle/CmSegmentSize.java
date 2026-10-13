@@ -36,6 +36,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
@@ -296,5 +297,48 @@ extends CountersModel
 		{
 			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e);
 		}
+	}
+
+	/** Local graphs (beside the table): the biggest segments, and how much each schema holds */
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		// The partitions and LOB segments of a table have their own rows: the ones with the same name are added up
+		list.add(new CmChartDescriptor()
+			.id("seg-biggest")
+			.title("Biggest Segments (MB)")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("SEGMENT_NAME")
+			.labelPrefixColumns("CON_NAME", "OWNER")
+			.valueColumns("SIZE_MB")
+			.seriesLabels("MB")
+			.maxItems(15)
+			.pieOtherLimit(0.02)
+			.splitRatio(0.6));
+
+		// NOTE: the table only has the biggest segments (see the options), so this is the size of THOSE per schema
+		list.add(new CmChartDescriptor()
+			.id("seg-by-schema")
+			.title("Size per Schema (MB), of the segments in the table")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("OWNER")
+			.groupByColumn("OWNER")
+			.valueColumns("SIZE_MB")
+			.seriesLabels("MB")
+			.pieOtherLimit(0.02));
+
+		list.add(new CmChartDescriptor()
+			.id("seg-by-type")
+			.title("Size per Segment Type (MB), of the segments in the table")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("SEGMENT_TYPE")
+			.groupByColumn("SEGMENT_TYPE")
+			.valueColumns("SIZE_MB")
+			.seriesLabels("MB")
+			.pieOtherLimit(0.02));
+
+		return list;
 	}
 }

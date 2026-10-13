@@ -38,6 +38,7 @@ import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.oracle.AlarmEventOraRecoveryAreaLowFreeSpace;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
@@ -390,6 +391,39 @@ extends CountersModel
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 
 		list.add(new CmSettingsHelper("NetUsedPct", isAlarmSwitch, PROPKEY_alarm_NetUsedPct, Double.class, conf.getDoubleProperty(PROPKEY_alarm_NetUsedPct, DEFAULT_alarm_NetUsedPct), DEFAULT_alarm_NetUsedPct, "If 'NET_USED_PCT' (used - reclaimable) is greater than ##.# Percent then send 'AlarmEventOraRecoveryAreaLowFreeSpace'." ));
+
+		return list;
+	}
+
+	/** Local graphs (above the table): how full the recovery area is, and what it is filled with */
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		// NET_USED_PCT: what is used and can NOT be reclaimed (which is also what the alarm looks at)
+		list.add(new CmChartDescriptor()
+			.id("fra-net-used-pct")
+			.title("Recovery Area: Used in Percent (what can not be reclaimed)")
+			.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
+			.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
+			.labelColumn("NAME")
+			.valueColumns("NET_USED_PCT")
+			.seriesLabels("Net Used %")
+			.barLabelColumn("NET_FREE_MB")
+			.isPercent(true)
+			.thresholdWarn(80)
+			.thresholdCrit(90));
+
+		list.add(new CmChartDescriptor()
+			.id("fra-content-pct")
+			.title("Recovery Area: What it Holds (percent of its size)")
+			.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
+			.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
+			.labelColumn("NAME")
+			.valueColumns("ARCHIVED_LOG_PCT", "BACKUP_PCT", "FLASHBACK_LOG_PCT", "OTHER_PCT")
+			.seriesLabels("Archived Logs", "Backups", "Flashback Logs", "Other")
+			.isPercent(true));
 
 		return list;
 	}

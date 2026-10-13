@@ -24,11 +24,13 @@ package com.dbxtune.cm.oracle;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
@@ -233,5 +235,26 @@ extends CountersModel
 			if (dataMap.size() > 0)
 				tgdp.setData(this.getTimestamp(), dataMap);
 		}
+	}
+
+	/** Local graph (beside the table): the biggest statistics of the time model */
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		// Bars, not a pie: the statistics are parts of each other ('DB time' holds 'sql execute elapsed time', which holds 'PL/SQL execution elapsed time'...)
+		list.add(new CmChartDescriptor()
+			.id("time-model")
+			.title("Time Model: where the time goes (microseconds)")
+			.chartType(CmChartDescriptor.CHART_TYPE_HORIZONTAL_BAR)
+			.labelColumn("STAT_NAME")
+			.valueColumns("VALUE")
+			.seriesLabels("Microseconds")
+			.skipZeroRows(true)
+			.maxItems(15)
+			.splitRatio(0.5));
+
+		return list;
 	}
 }

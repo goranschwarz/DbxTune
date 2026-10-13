@@ -42,6 +42,7 @@ import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.oracle.AlarmEventOraPdbNotOpen;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CounterSetTemplates;
@@ -459,6 +460,36 @@ extends CountersModel
 
 		list.add(new CmSettingsHelper("PdbNotOpen"           , isAlarmSwitch, PROPKEY_alarm_PdbNotOpenOpenModes, String.class, conf.getProperty(PROPKEY_alarm_PdbNotOpenOpenModes, DEFAULT_alarm_PdbNotOpenOpenModes), DEFAULT_alarm_PdbNotOpenOpenModes, "If 'OPEN_MODE' matches this regexp, or if 'RESTRICTED' is YES, then send 'AlarmEventOraPdbNotOpen'. Only on a PRIMARY database.", new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("PdbNotOpen Skip Names",                PROPKEY_alarm_PdbNotOpenSkipNames, String.class, conf.getProperty(PROPKEY_alarm_PdbNotOpenSkipNames, DEFAULT_alarm_PdbNotOpenSkipNames), DEFAULT_alarm_PdbNotOpenSkipNames, "If 'PdbNotOpen' is true; Skip containers where 'NAME' matches this regexp. Example: (PDB.SEED|TEST.*)", new RegExpInputValidator()));
+
+		return list;
+	}
+
+	/** Local graphs (beside the table): how big the containers are, and where the sessions are */
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		list.add(new CmChartDescriptor()
+			.id("pdb-size")
+			.title("Size per Container (MB)")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("NAME")
+			.valueColumns("TOTAL_SIZE_MB")
+			.seriesLabels("MB")
+			.skipZeroRows(true)
+			.pieOtherLimit(0.01)
+			.splitRatio(0.6));
+
+		list.add(new CmChartDescriptor()
+			.id("pdb-sessions")
+			.title("Sessions per Container")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("NAME")
+			.valueColumns("SESSIONS")
+			.seriesLabels("Sessions")
+			.skipZeroRows(true)
+			.pieOtherLimit(0.01));
 
 		return list;
 	}

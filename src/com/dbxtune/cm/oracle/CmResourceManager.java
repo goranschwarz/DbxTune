@@ -24,6 +24,7 @@ package com.dbxtune.cm.oracle;
 import java.lang.invoke.MethodHandles;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.naming.NameNotFoundException;
@@ -34,6 +35,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
@@ -305,5 +307,38 @@ extends CountersModel
 			if (dataMap.size() > 0)
 				tgdp.setData(this.getTimestamp(), dataMap);
 		}
+	}
+
+	/** Local graphs (beside the table): which consumer group uses the CPU, and which one is held back by the plan */
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		list.add(new CmChartDescriptor()
+			.id("rsrc-cpu-used")
+			.title("CPU Used by Consumer Group (ms)")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("CONSUMER_GROUP")
+			.labelPrefixColumns("CON_NAME")
+			.valueColumns("CONSUMED_CPU_TIME")
+			.seriesLabels("CPU Used")
+			.skipZeroRows(true)
+			.pieOtherLimit(0.02)
+			.splitRatio(0.6));
+
+		// CPU_WAIT_TIME: the time the sessions of the group had to wait for CPU because of the Resource Manager plan
+		list.add(new CmChartDescriptor()
+			.id("rsrc-cpu-wait")
+			.title("Waited for CPU by Consumer Group (ms): held back by the plan")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("CONSUMER_GROUP")
+			.labelPrefixColumns("CON_NAME")
+			.valueColumns("CPU_WAIT_TIME")
+			.seriesLabels("CPU Wait")
+			.skipZeroRows(true)
+			.pieOtherLimit(0.02));
+
+		return list;
 	}
 }

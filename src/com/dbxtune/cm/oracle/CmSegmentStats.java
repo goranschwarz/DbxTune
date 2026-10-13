@@ -41,6 +41,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
@@ -445,5 +446,51 @@ extends CountersModel
 				tgdp.setDataPoint(this.getTimestamp(), tgdp.getLabel(), zeros);
 			}
 		}
+	}
+
+	/** Local graphs (beside the table): which tables and indexes take the reads, the physical I/O and the row lock waits */
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		// The partitions of a table (or index) have the same label, so they are added up
+		list.add(new CmChartDescriptor()
+			.id("seg-logical-reads")
+			.title("Logical Reads by Segment")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("OBJECT_NAME")
+			.labelPrefixColumns("CON_NAME", "OWNER")
+			.valueColumns("LOGICAL_READS")
+			.seriesLabels("Logical Reads")
+			.skipZeroRows(true)
+			.maxItems(15)
+			.pieOtherLimit(0.02)
+			.splitRatio(0.6));
+
+		list.add(new CmChartDescriptor()
+			.id("seg-physical-io")
+			.title("Physical Reads and Writes by Segment (blocks)")
+			.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
+			.labelColumn("OBJECT_NAME")
+			.labelPrefixColumns("CON_NAME", "OWNER")
+			.valueColumns("PHYSICAL_READS", "PHYSICAL_WRITES")
+			.seriesLabels("Physical Reads", "Physical Writes")
+			.skipZeroRows(true)
+			.maxItems(15));
+
+		list.add(new CmChartDescriptor()
+			.id("seg-row-lock-waits")
+			.title("Row Lock Waits by Segment")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("OBJECT_NAME")
+			.labelPrefixColumns("CON_NAME", "OWNER")
+			.valueColumns("ROW_LOCK_WAITS")
+			.seriesLabels("Row Lock Waits")
+			.skipZeroRows(true)
+			.maxItems(15)
+			.pieOtherLimit(0.02));
+
+		return list;
 	}
 }

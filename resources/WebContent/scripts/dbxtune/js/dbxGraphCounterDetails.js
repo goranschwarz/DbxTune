@@ -2913,6 +2913,11 @@ function _cmChartExtractData(desc, colIdx, rows) {
 	var groupByIdx = desc.groupByColumn ? colIdx[desc.groupByColumn] : undefined;
 	var barLabelIdx = desc.barLabelColumn ? colIdx[desc.barLabelColumn] : undefined;
 
+	// filterColumn/filterValue: only the rows of one kind (a CM with a 'ROW_TYPE' column). A column that is not there filters nothing.
+	var filterIdx = desc.filterColumn ? colIdx[desc.filterColumn] : undefined;
+	// labelPrefixColumns: "PDB1.HR.EMPLOYEES" instead of "EMPLOYEES" (the columns that are not there are left out)
+	var prefixIdxs = (desc.labelPrefixColumns || []).map(function(c) { return colIdx[c]; }).filter(function(i) { return i !== undefined; });
+
 	// Aggregate rows into: { label -> [agg_per_value_column] }
 	// groupAggFunc: "sum" (default), "avg", "max", "first"
 	var aggFunc    = desc.groupAggFunc || 'sum';
@@ -2928,6 +2933,19 @@ function _cmChartExtractData(desc, colIdx, rows) {
 
 		// skipValue filter
 		if (desc.skipValue && String(row[lIdx] || '') === desc.skipValue) return;
+
+		// filterColumn/filterValue
+		if (filterIdx !== undefined && String(row[filterIdx]) !== String(desc.filterValue)) return;
+
+		// labelPrefixColumns (not for a group)
+		if (gIdx === undefined) {
+			var prefix = '';
+			prefixIdxs.forEach(function(pi) {
+				var p = row[pi];
+				if (p !== null && p !== undefined && String(p) !== '') prefix += String(p) + '.';
+			});
+			label = prefix + label;
+		}
 
 		var vals = vIdxs.map(function(vi) {
 			var v = row[vi];

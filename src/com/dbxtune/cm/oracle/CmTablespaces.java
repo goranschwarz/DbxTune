@@ -43,6 +43,7 @@ import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.oracle.AlarmEventOraTablespaceLowFreeSpace;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSettingsHelper.MapNumberValidator;
 import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
@@ -558,6 +559,42 @@ extends CountersModel
 
 		list.add(new CmSettingsHelper("UsedPct"          , isAlarmSwitch, PROPKEY_alarm_UsedPct          , String.class, conf.getProperty(PROPKEY_alarm_UsedPct          , DEFAULT_alarm_UsedPct          ), DEFAULT_alarm_UsedPct          , "If 'USED_PCT' is greater than ##.# Percent then send 'AlarmEventOraTablespaceLowFreeSpace'. format: tablespace1=#, tablespace2=#, .*=#  (Note: the 'tablespace' can use regexp, in a CDB also 'pdbName:tablespace', and the FIRST entry that matches is used)", new MapNumberValidator()));
 		list.add(new CmSettingsHelper("FreeMb"           , isAlarmSwitch, PROPKEY_alarm_FreeMb           , String.class, conf.getProperty(PROPKEY_alarm_FreeMb           , DEFAULT_alarm_FreeMb           ), DEFAULT_alarm_FreeMb           , "If 'FREE_MB' is less than ## MB then send 'AlarmEventOraTablespaceLowFreeSpace'. format: tablespace1=#, tablespace2=#, .*=#  (Note: the 'tablespace' can use regexp, in a CDB also 'pdbName:tablespace', and the FIRST entry that matches is used)", new MapNumberValidator()));
+
+		return list;
+	}
+
+	/** Local graphs (beside the table): how full the tablespaces are, and how much each of them holds */
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		// USED_PCT is of MAX_MB: what the tablespace can grow to (which is also what the alarm looks at)
+		list.add(new CmChartDescriptor()
+			.id("ts-used-pct")
+			.title("Tablespace Usage in Percent (of the size it can grow to)")
+			.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
+			.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
+			.labelColumn("TABLESPACE_NAME")
+			.labelPrefixColumns("CON_NAME")
+			.valueColumns("USED_PCT")
+			.seriesLabels("Used %")
+			.barLabelColumn("FREE_MB")
+			.isPercent(true)
+			.thresholdWarn(80)
+			.thresholdCrit(90));
+
+		list.add(new CmChartDescriptor()
+			.id("ts-used-mb")
+			.title("Used Space per Tablespace (MB)")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
+			.labelColumn("TABLESPACE_NAME")
+			.labelPrefixColumns("CON_NAME")
+			.valueColumns("USED_MB")
+			.seriesLabels("Used MB")
+			.skipZeroRows(true)
+			.pieOtherLimit(0.02));
 
 		return list;
 	}
