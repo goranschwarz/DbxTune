@@ -23,19 +23,33 @@ package com.dbxtune.pcs.report.content.oracle;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.oracle.CmSegmentStats;
 import com.dbxtune.gui.ResultSetTableModel;
+import com.dbxtune.pcs.inspection.ObjectLookupInspectorOracle;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
+import com.dbxtune.pcs.report.content.SparklineHelper;
+import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
+import com.dbxtune.pcs.report.content.SparklineHelper.SparkLineParams;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
+import com.dbxtune.utils.StringUtil;
 
 public class OracleTopSegments
 extends OracleAbstract
 {
 	private ResultSetTableModel _shortRstm;
+	private List<String>        _miniChartJsList = new ArrayList<>();
+	private String              _tableInfoHtml   = "";
 
 	public OracleTopSegments(DailySummaryReportAbstract reportingInstance)
 	{
@@ -70,6 +84,19 @@ extends OracleAbstract
 		w.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
 		w.append(toHtmlTable(_shortRstm));
 
+		// What the tables look like: columns, statistics, sizes, and every index with how it is used (the same block as under a statement in "Top SQL Statements")
+		if (isFullMessageType() && StringUtil.hasValue(_tableInfoHtml))
+		{
+			boolean detailsOpen = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_TABLE_INFO_DETAILS_OPEN, DEFAULT_TABLE_INFO_DETAILS_OPEN);
+
+			w.append("<br>\n");
+			w.append("<details class='dsr-details-tableinfo'" + (detailsOpen ? " open" : "") + "> \n");
+			w.append("<summary>Show/Hide Table information for the tables above (and for the tables of the indexes above)</summary> \n");
+			w.append(_tableInfoHtml);
+			w.append("</details> \n");
+			w.append("<br>\n");
+		}
+
 		if (_CmSegmentStats_SegLogicalReads != null || _CmSegmentStats_SegPhysicalReads != null)
 		{
 			w.append(getDbxCentralLinkWithDescForGraphs(false, "Below are the 10 segments with most reads, sample by sample.",
@@ -80,6 +107,13 @@ extends OracleAbstract
 
 		if (_CmSegmentStats_SegLogicalReads  != null) _CmSegmentStats_SegLogicalReads .writeHtmlContent(w, null, null);
 		if (_CmSegmentStats_SegPhysicalReads != null) _CmSegmentStats_SegPhysicalReads.writeHtmlContent(w, null, null);
+
+		// Write JavaScript code for the mini charts
+		if (isFullMessageType())
+		{
+			for (String str : _miniChartJsList)
+				w.append(str);
+		}
 	}
 
 	@Override
@@ -101,6 +135,18 @@ extends OracleAbstract
 	}
 
 	@Override
+	public List<ReportingIndexEntry> getReportingIndexes()
+	{
+		List<ReportingIndexEntry> list = new ArrayList<>();
+
+		// For the "Table Information": how the tables and their indexes were used during the recording (see OracleAbstract.readSegmentActivity)
+		list.add(new ReportingIndexEntry("CmSegmentStats_diff", "OWNER", "OBJECT_NAME"));
+		list.add(new ReportingIndexEntry("CmSegmentStats_abs" , "OWNER", "OBJECT_NAME", "SessionSampleTime"));
+
+		return list;
+	}
+
+	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		String schema  = getReportingInstance().getDbmsSchemaName();
@@ -115,6 +161,7 @@ extends OracleAbstract
 			    + "from ( \n"
 			    + "    select \n"
 			    + "         max([CON_NAME])                                              as [CON_NAME] \n"
+			    + "        ,[CON_ID] \n"
 			    + "        ,[OWNER] \n"
 			    + "        ,[OBJECT_NAME] \n"
 			    + "        ,[SUBOBJECT_NAME] \n"
@@ -126,12 +173,17 @@ extends OracleAbstract
 			    + "        ,row_number() over (order by sum([DB_BLOCK_CHANGES]) desc)    as [rank_block_changes] \n"
 			    + "        ,row_number() over (order by sum([ROW_LOCK_WAITS])   desc)    as [rank_row_lock_waits] \n"
 			    + " \n"
+			    + "        ,cast('' as varchar(512))                                     as [LOGICAL_READS__chart] \n"
 			    + "        ,sum([LOGICAL_READS])                                         as [LOGICAL_READS__sum] \n"
+			    + "        ,cast('' as varchar(512))                                     as [PHYSICAL_READS__chart] \n"
 			    + "        ,sum([PHYSICAL_READS])                                        as [PHYSICAL_READS__sum] \n"
 			    + "        ,sum([PHYSICAL_READS_DIRECT])                                 as [PHYSICAL_READS_DIRECT__sum] \n"
+			    + "        ,cast('' as varchar(512))                                     as [SEGMENT_SCANS__chart] \n"
 			    + "        ,sum([SEGMENT_SCANS])                                         as [SEGMENT_SCANS__sum] \n"
+			    + "        ,cast('' as varchar(512))                                     as [DB_BLOCK_CHANGES__chart] \n"
 			    + "        ,sum([DB_BLOCK_CHANGES])                                      as [DB_BLOCK_CHANGES__sum] \n"
 			    + "        ,sum([PHYSICAL_WRITES])                                       as [PHYSICAL_WRITES__sum] \n"
+			    + "        ,cast('' as varchar(512))                                     as [ROW_LOCK_WAITS__chart] \n"
 			    + "        ,sum([ROW_LOCK_WAITS])                                        as [ROW_LOCK_WAITS__sum] \n"
 			    + "        ,sum([ITL_WAITS])                                             as [ITL_WAITS__sum] \n"
 			    + "        ,sum([BUFFER_BUSY_WAITS])                                     as [BUFFER_BUSY_WAITS__sum] \n"
@@ -167,6 +219,12 @@ extends OracleAbstract
 				"");
 
 		_shortRstm.setColumnDescription("CON_NAME"                  , "Container (PDB) name. Empty when the database is not a Container Database, or when the collector is connected to a PDB.");
+		_shortRstm.setColumnDescription("CON_ID"                    , "Container ID. 0 when the database is not a Container Database, or when the collector is connected to a PDB.");
+		_shortRstm.setColumnDescription("LOGICAL_READS__chart"      , "Chart: logical reads, in 10 minute chunks\nSo you can see WHEN the segment was read.");
+		_shortRstm.setColumnDescription("PHYSICAL_READS__chart"     , "Chart: physical reads, in 10 minute chunks");
+		_shortRstm.setColumnDescription("SEGMENT_SCANS__chart"      , "Chart: number of full scans, in 10 minute chunks");
+		_shortRstm.setColumnDescription("DB_BLOCK_CHANGES__chart"   , "Chart: block changes, in 10 minute chunks\nSo you can see WHEN the segment was changed.");
+		_shortRstm.setColumnDescription("ROW_LOCK_WAITS__chart"     , "Chart: row lock waits, in 10 minute chunks\nSo you can see WHEN sessions waited for each other.");
 		_shortRstm.setColumnDescription("OWNER"                     , "The schema that owns the object");
 		_shortRstm.setColumnDescription("OBJECT_NAME"               , "Name of the table, index, LOB or cluster");
 		_shortRstm.setColumnDescription("SUBOBJECT_NAME"            , "Name of the partition, empty if it is not a partition");
@@ -186,6 +244,44 @@ extends OracleAbstract
 		_shortRstm.setColumnDescription("ITL_WAITS__sum"            , "Number of times a session had to wait for a transaction slot in a block (fix: a higher INITRANS)");
 		_shortRstm.setColumnDescription("BUFFER_BUSY_WAITS__sum"    , "Number of times a session had to wait for a block that another session was reading in or changing");
 		_shortRstm.setColumnDescription("samples_count"             , "In how many collector samples the segment was recorded");
+
+		//--------------------------------------------------------------------------------
+		// Mini Charts: WHEN during the period. One per row and measure (a NULL partition name is OK: the SQL then says "is null")
+		//--------------------------------------------------------------------------------
+		for (String measure : new String[] { "LOGICAL_READS", "PHYSICAL_READS", "SEGMENT_SCANS", "DB_BLOCK_CHANGES", "ROW_LOCK_WAITS" })
+		{
+			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm,
+					SparkLineParams.create       (DataSource.CounterModel)
+					.setHtmlChartColumnName      (measure + "__chart")
+					.setHtmlWhereKeyColumnName   ("CON_ID, OWNER, OBJECT_NAME, SUBOBJECT_NAME")
+					.setDbmsTableName            ("CmSegmentStats_diff")
+					.setDbmsSampleTimeColumnName ("SessionSampleTime")
+					.setDbmsDataValueColumnName  (measure)
+					.setDbmsWhereKeyColumnName   ("CON_ID, OWNER, OBJECT_NAME, SUBOBJECT_NAME")
+					.setDbmsExtraWhereClause     (sql_and_skipNewDiffRateRows.trim())
+					.setSparklineTooltipPostfix  ("'" + measure + "' in below period")
+					.validate()));
+		}
+
+		//--------------------------------------------------------------------------------
+		// Table Information: what the tables above (and the tables of the indexes above) look like, from the DDL Storage
+		// (CmSegmentStats asks for a lookup of the most used segments, see CmSegmentStats.sendDdlDetailsRequest)
+		// One lookup per container: in a recording from CDB$ROOT the segments can be in different containers
+		//--------------------------------------------------------------------------------
+		Map<String, Set<String>> namesPerContainer = new LinkedHashMap<>();
+		for (int r = 0; r < _shortRstm.getRowCount(); r++)
+		{
+			String type = StringUtil.nullToValue(_shortRstm.getValueAsString(r, "OBJECT_TYPE"), "");
+			String name = _shortRstm.getValueAsString(r, "OWNER") + "." + _shortRstm.getValueAsString(r, "OBJECT_NAME");
+
+			// Not a LOB or a CLUSTER, and not Oracle's own objects (they are not looked up)
+			if ( ! (type.startsWith("TABLE") || type.startsWith("INDEX")) || ObjectLookupInspectorOracle.isDictionaryObject(name) )
+				continue;
+
+			namesPerContainer.computeIfAbsent(StringUtil.nullToValue(_shortRstm.getValueAsString(r, "CON_NAME"), ""), k -> new LinkedHashSet<>()).add(name);
+		}
+		for (Entry<String, Set<String>> entry : namesPerContainer.entrySet())
+			_tableInfoHtml += getDbmsTableInfoAsHtmlTable(conn, entry.getKey(), entry.getValue(), true, "dsr-sub-table-tableinfo");
 
 		// The graphs: only if they were recorded
 		if (doTableExist(conn, schema, CmSegmentStats.CM_NAME + "_" + CmSegmentStats.GRAPH_NAME_LOGICAL_READS))

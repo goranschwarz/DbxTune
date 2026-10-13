@@ -1785,8 +1785,6 @@ implements IReportEntry
 		boolean parseSqlText = true;
 		if ( ! parseSqlText )
 			return "";
-		
-		String tableInfo = "";
 
 		// Parse the SQL Text to get all tables that are used in the Statement
 //		String problemDesc = "";
@@ -1794,6 +1792,24 @@ implements IReportEntry
 //		List<String> tableList = Collections.emptyList();
 //		try { tableList = SqlParserUtils.getTables(sqlText, true); }
 //		catch (ParseException pex) { problemDesc = pex + ""; }
+
+		return getDbmsTableInformationForTables(conn, currentDbname, sqlText, tableList, dbmsVendor);
+	}
+
+	/**
+	 * Same as {@link #getDbmsTableInformationFromSqlText(DbxConnection, String, String, String)}, but for when we already KNOW which tables the statement uses<br>
+	 * (for example Oracle: the tables are in the execution plan, so the SQL Text does not have to be parsed, and tables behind views and synonyms are found as well)
+	 *
+	 * @param conn             Connection to the PCS -- Persistent Counter Storage
+	 * @param currentDbname    Name of the current database we search for (This can be empty or null)
+	 * @param sqlText          The SQL Text (for the <i>Formatted SQL Text</i> tool-tip)
+	 * @param tableList        The tables to get information about
+	 * @param dbmsVendor       The DBMS Vendor the above SQL Text was executed in (SQL Dialect). If null or "" (a <i>standard</i> SQL type will be used)
+	 * @return                 HTML Text (table) with detailed information about the Table and Indexes
+	 */
+	public String getDbmsTableInformationForTables(DbxConnection conn, String currentDbname, String sqlText, Set<String> tableList, String dbmsVendor)
+	{
+		String tableInfo = "";
 
 //-------------------------------------------------
 //		// Get information about ALL tables in list 'tableList' from the DDL Storage

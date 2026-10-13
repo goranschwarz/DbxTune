@@ -43,6 +43,7 @@ import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
@@ -51,6 +52,7 @@ import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.graph.TrendGraphDataPoint;
 import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
 import com.dbxtune.gui.MainFrame;
+import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.sql.conn.info.DbmsVersionInfoOracle;
@@ -164,12 +166,19 @@ extends CountersModel
 	public static final String  PROPKEY_sample_topRows = CM_NAME + ".sample.topRows";
 	public static final int     DEFAULT_sample_topRows = 500;
 
+	public static final String  PROPKEY_ddlStore_topRows = CM_NAME + ".ddlStore.topRows";
+	public static final int     DEFAULT_ddlStore_topRows = 10;
+
+	/** The container (or, when it is not a Container Database: the database) we are connected to: where a segment is, when its CON_NAME is NULL. Set in checkDependsOnOther() */
+	private String _currentContainerName = null;
+
 	@Override
 	protected void registerDefaultValues()
 	{
 		super.registerDefaultValues();
 
-		Configuration.registerDefaultValue(PROPKEY_sample_topRows, DEFAULT_sample_topRows);
+		Configuration.registerDefaultValue(PROPKEY_sample_topRows,   DEFAULT_sample_topRows);
+		Configuration.registerDefaultValue(PROPKEY_ddlStore_topRows, DEFAULT_ddlStore_topRows);
 	}
 
 	/** Used by the: Create 'Offline Session' Wizard */
@@ -180,6 +189,8 @@ extends CountersModel
 		List<CmSettingsHelper> list = new ArrayList<>();
 
 		list.add(new CmSettingsHelper("Max Number of Rows", PROPKEY_sample_topRows, Integer.class, conf.getIntProperty(PROPKEY_sample_topRows, DEFAULT_sample_topRows), DEFAULT_sample_topRows, "Only get the ## segments that has most reads and writes: LOGICAL_READS + PHYSICAL_READS + PHYSICAL_WRITES since the instance was started (this to limit how much is fetched and stored on systems with many segments). On top of that, the 100 segments with most waits are always fetched: ROW_LOCK_WAITS + ITL_WAITS + BUFFER_BUSY_WAITS." ));
+
+		list.add(new CmSettingsHelper("Store Table Info for Top Rows", PROPKEY_ddlStore_topRows, Integer.class, conf.getIntProperty(PROPKEY_ddlStore_topRows, DEFAULT_ddlStore_topRows), DEFAULT_ddlStore_topRows, "In every sample: store information about the tables (columns, statistics, indexes, sizes) of the ## segments with most LOGICAL_READS, PHYSICAL_READS, DB_BLOCK_CHANGES and ROW_LOCK_WAITS since the previous sample (a table is only stored once per recording). The Daily Summary Report shows it under 'Top Tables and Indexes'. 0 = do not store." ));
 
 		return list;
 	}
@@ -233,7 +244,88 @@ extends CountersModel
 	@Override
 	public boolean checkDependsOnOther(DbxConnection conn)
 	{
-		return OracleCmUtils.checkViewsAreReadable(this, conn, "V$SEGSTAT", "V$TABLESPACE", "DBA_OBJECTS");
+		if ( ! OracleCmUtils.checkViewsAreReadable(this, conn, "V$SEGSTAT", "V$TABLESPACE", "DBA_OBJECTS") )
+			return false;
+
+		// Where are we: the name that the DDL Storage has the tables of this container under (the same way as ObjectLookupInspectorOracle gets it for a statement)
+		// 12.1 and above: V$CONTAINERS has one row also when this is NOT a Container Database (with CON_ID 0)
+		_currentContainerName = null;
+		String sql = conn.getDbmsVersionInfo().getLongVersion() >= Ver.ver(12,1)
+				? "select c.NAME from V$CONTAINERS c where c.CON_ID = TO_NUMBER(SYS_CONTEXT('USERENV', 'CON_ID'))"
+				: "select SYS_CONTEXT('USERENV', 'DB_NAME') from DUAL";
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while (rs.next())
+				_currentContainerName = rs.getString(1);
+		}
+		catch (SQLException ex)
+		{
+			_logger.info(CM_NAME + ": Could not get the name of the container we are connected to: no table information is stored for the most used segments. Caught: " + ex.getMessage().trim());
+		}
+
+		return true;
+	}
+
+	/**
+	 * The tables that were used most since the previous sample (read, changed, waited for): send them to the "DDL Storage", which stores what each table
+	 * looks like: columns, statistics, indexes (and how they are used), sizes and triggers. See <code>ObjectLookupInspectorOracle</code><br>
+	 * A segment that is an index gives its table. A table is only stored once per recording: PersistentCounterHandler.addDdl() knows what it already has.<br>
+	 * The Daily Summary Report shows it under "Top Tables and Indexes".
+	 */
+	@Override
+	public void sendDdlDetailsRequest(CounterSample absData, CounterSample diffData, CounterSample rateData)
+	{
+		if ( ! PersistentCounterHandler.hasInstance() || diffData == null )
+			return;
+
+		int topRows = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_ddlStore_topRows, DEFAULT_ddlStore_topRows);
+		if (topRows <= 0)
+			return;
+
+		final int pos_CON_NAME    = diffData.findColumn("CON_NAME");
+		final int pos_OWNER       = diffData.findColumn("OWNER");
+		final int pos_OBJECT_NAME = diffData.findColumn("OBJECT_NAME");
+		final int pos_OBJECT_TYPE = diffData.findColumn("OBJECT_TYPE");
+		if (pos_CON_NAME == -1 || pos_OWNER == -1 || pos_OBJECT_NAME == -1 || pos_OBJECT_TYPE == -1)
+			return;
+
+		PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
+
+		for (String colName : new String[] { "LOGICAL_READS", "PHYSICAL_READS", "DB_BLOCK_CHANGES", "ROW_LOCK_WAITS" })
+		{
+			final int pos = diffData.findColumn(colName);
+			if (pos == -1)
+				continue;
+
+			// Most first
+			List<List<Object>> sorted = new ArrayList<>(diffData.getDataCollection());
+			sorted.sort((row1, row2) -> Double.compare(
+					row2.get(pos) instanceof Number ? ((Number) row2.get(pos)).doubleValue() : 0,
+					row1.get(pos) instanceof Number ? ((Number) row1.get(pos)).doubleValue() : 0));
+
+			for (int r = 0; r < sorted.size() && r < topRows; r++)
+			{
+				List<Object> row = sorted.get(r);
+
+				// The rest did nothing in this sample
+				if ( ! (row.get(pos) instanceof Number) || ((Number) row.get(pos)).doubleValue() <= 0 )
+					break;
+
+				// No name: a dropped object or a temporary segment. A LOB or a CLUSTER is not looked up
+				Object owner = row.get(pos_OWNER);
+				Object name  = row.get(pos_OBJECT_NAME);
+				String type  = row.get(pos_OBJECT_TYPE) == null ? "" : row.get(pos_OBJECT_TYPE).toString();
+				if (owner == null || name == null || ! (type.startsWith("TABLE") || type.startsWith("INDEX")) )
+					continue;
+
+				// CON_NAME is NULL when we are not connected to CDB$ROOT: then it is in the container we are connected to
+				String dbname = row.get(pos_CON_NAME) != null ? row.get(pos_CON_NAME).toString() : _currentContainerName;
+				if (StringUtil.isNullOrBlank(dbname))
+					continue;
+
+				pch.addDdl(dbname, owner + "." + name, CM_NAME + ".diff.top." + colName);
+			}
+		}
 	}
 
 	@Override

@@ -29,8 +29,10 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
@@ -53,9 +55,12 @@ import com.dbxtune.utils.Ver;
  *   <li><b>A statement</b> (dbname = <code>statement_cache</code>, objectName = <code>SQL_ID</code> or <code>SQL_ID_PLANHASHVALUE</code>):<br>
  *       the execution plan as text (DBMS_XPLAN.DISPLAY_CURSOR), and the tables the plan uses. The tables are read from V$SQL_PLAN, which has the owner
  *       of every object: so the SQL text is not parsed, and synonyms do not have to be followed. An index gives the table it is on.<br>
- *       Every table is then sent for a lookup of its own.</li>
+ *       Every table is then sent for a lookup of its own.<br>
+ *       Also who runs it: the parsing schema, the module, and the PL/SQL unit the statement is written in.</li>
  *   <li><b>A table, view, materialized view or synonym</b> (dbname = the container / database name, objectName = <code>OWNER.NAME</code> or just <code>NAME</code>):<br>
- *       columns with their optimizer statistics, the table's size and statistics, its indexes and the size of every segment.<br>
+ *       columns with their optimizer statistics, the table's size and statistics (and how many rows that changed since the statistics were gathered),
+ *       its indexes (with how they are used, from 12.2), the size of every segment, and its triggers (with their source).<br>
+ *       The sizes and row counts are what the data dictionary has: no table or index is read to get them.<br>
  *       A view: its text and what it reads from (DBA_DEPENDENCIES). A synonym: what it points at.</li>
  * </ul>
  * All of it is read from views that need no extra-cost license, and that <code>SELECT_CATALOG_ROLE</code> can read.<br>
@@ -175,11 +180,16 @@ extends ObjectLookupInspectorAbstract
 		boolean hasConId = conn.getDbmsVersionInfo().getLongVersion() >= Ver.ver(12,1);
 
 		// One of the child cursors that has this plan: the one that was used last
-		long childNumber = -1;
-		long conId       = 0;
+		// And WHO runs the statement: the schema it is parsed in, the module (the application), and the PL/SQL unit it is written in (PROGRAM_ID is 0 when it is not in PL/SQL)
+		long   childNumber   = -1;
+		long   conId         = 0;
+		String parsingSchema = null;
+		String module        = null;
+		long   programId     = 0;
+		long   programLine   = 0;
 		String sql = ""
 			+ "select * from ( \n"
-			+ "    select q.CHILD_NUMBER, " + (hasConId ? "q.CON_ID" : "0") + " \n"
+			+ "    select q.CHILD_NUMBER, " + (hasConId ? "q.CON_ID" : "0") + ", q.PARSING_SCHEMA_NAME, q.MODULE, q.PROGRAM_ID, q.PROGRAM_LINE# \n"
 			+ "    from V$SQL q \n"
 			+ "    where q.SQL_ID = '" + sqlId + "' \n"
 			+ (planHashValue == null ? "" : "      and q.PLAN_HASH_VALUE = " + planHashValue + " \n")
@@ -193,8 +203,12 @@ extends ObjectLookupInspectorAbstract
 			{
 				while (rs.next())
 				{
-					childNumber = rs.getLong(1);
-					conId       = rs.getLong(2);
+					childNumber   = rs.getLong(1);
+					conId         = rs.getLong(2);
+					parsingSchema = rs.getString(3);
+					module        = rs.getString(4);
+					programId     = rs.getLong(5);
+					programLine   = rs.getLong(6);
 				}
 			}
 		}
@@ -304,6 +318,27 @@ extends ObjectLookupInspectorAbstract
 				pch.addDdl(dbname, table, this.getClass().getSimpleName() + ".plan", qe._objectName, qe._dependLevel + 1);
 		}
 
+		// The PL/SQL unit the statement is written in (a procedure, a package body, a trigger...): "Executed By" in the report
+		String program = null;
+		if (programId > 0)
+		{
+			sql = forContainer("select o.OWNER, o.OBJECT_NAME, o.OBJECT_TYPE from DBA_OBJECTS o where o.OBJECT_ID = " + programId + " /*CON:o*/", getContainerIdForLookup(conn, conId));
+
+			try (Statement stmnt = conn.createStatement())
+			{
+				stmnt.setQueryTimeout(QUERY_TIMEOUT_SEC);
+				try (ResultSet rs = stmnt.executeQuery(sql))
+				{
+					while (rs.next())
+						program = rs.getString(1) + "." + rs.getString(2) + " (" + rs.getString(3) + (programLine > 0 ? ", line " + programLine : "") + ")";
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.warn("DDL Lookup: Problems getting the PL/SQL unit (PROGRAM_ID=" + programId + ") of SQL_ID='" + sqlId + "'. It is stored without it. Caught: " + ex.getMessage().trim());
+			}
+		}
+
 		// What to store
 		Timestamp now = new Timestamp(System.currentTimeMillis());
 
@@ -315,7 +350,12 @@ extends ObjectLookupInspectorAbstract
 		storeEntry.setOwner       ( dbname );                // where the statement runs (as the SQL Server inspector does)
 		storeEntry.setType        ( TYPE_EXECUTION_PLAN );
 		storeEntry.setExtraInfoText( planText.toString() );  // the plan (in 'extraInfoText', as the other inspectors does)
-		storeEntry.setObjectText  ( "TableList: " + StringUtil.toCommaStr(tables) );
+
+		// objectText: one "Name: value" per line. The first is always the tables. (read by OracleAbstract.getExecutionPlans)
+		storeEntry.setObjectText  ( "TableList: " + StringUtil.toCommaStr(tables)
+				+ (StringUtil.hasValue(parsingSchema) ? "\nParsingSchema: " + parsingSchema.trim()                  : "")
+				+ (StringUtil.hasValue(module)        ? "\nModule: "        + module.replace('\n', ' ').trim()      : "")
+				+ (StringUtil.hasValue(program)       ? "\nProgram: "       + program                               : "") );
 
 		List<DdlDetails> storeList = new ArrayList<>();
 		storeList.add(storeEntry);
@@ -413,6 +453,38 @@ extends ObjectLookupInspectorAbstract
 			}
 		}
 
+		// Not a table: is it an INDEX? (the most used segments, that CmSegmentStats sends, are often indexes.) Then it is the table of the index we want
+		if (objectList.isEmpty())
+		{
+			String sql = forContainer(""
+				+ "select distinct i.TABLE_OWNER, i.TABLE_NAME \n"
+				+ "from DBA_INDEXES i \n"
+				+ "where i.INDEX_NAME = " + q(name) + " \n"
+				+ (owner != null ? "  and i.OWNER = " + q(owner) + " \n" : "  and i.OWNER not in ('" + String.join("', '", ORACLE_OWNERS) + "') \n")
+				+ "  and i.INDEX_TYPE <> 'LOB' /*CON:i*/", conId);
+
+			List<String> indexTables = new ArrayList<>();
+			try (Statement stmnt = conn.createStatement())
+			{
+				stmnt.setQueryTimeout(QUERY_TIMEOUT_SEC);
+				try (ResultSet rs = stmnt.executeQuery(sql))
+				{
+					while (rs.next() && indexTables.size() < MAX_OBJECTS_PER_NAME)
+						indexTables.add(rs.getString(1) + "." + rs.getString(2));
+				}
+			}
+
+			if ( ! indexTables.isEmpty() )
+			{
+				// The index name itself is not asked for again, its table is sent for a lookup of its own
+				pch.markDdlDetailsAsDiscarded(dbname, originObjectName);
+				for (String table : indexTables)
+					pch.addDdl(dbname, table, this.getClass().getSimpleName() + ".index", originObjectName, qe._dependLevel + 1);
+
+				return Collections.emptyList();
+			}
+		}
+
 		if (objectList.isEmpty())
 		{
 			// In the future, do NOT do lookup of this name
@@ -485,9 +557,20 @@ extends ObjectLookupInspectorAbstract
 					+ "    ,t.COMPRESSION \n"
 					+ "    ,trim(t.DEGREE) as DEGREE \n"
 					+ "    ,t.TABLESPACE_NAME \n"
+					// Rows changed since the optimizer statistics were gathered (Oracle writes this down now and then, not at once: so it is "about")
+					+ "    ,(select TO_CHAR(max(m.INSERTS)) from DBA_TAB_MODIFICATIONS m where m.TABLE_OWNER = t.OWNER and m.TABLE_NAME = t.TABLE_NAME and m.PARTITION_NAME is null /*CON:m*/) as MOD_INSERTS \n"
+					+ "    ,(select TO_CHAR(max(m.UPDATES)) from DBA_TAB_MODIFICATIONS m where m.TABLE_OWNER = t.OWNER and m.TABLE_NAME = t.TABLE_NAME and m.PARTITION_NAME is null /*CON:m*/) as MOD_UPDATES \n"
+					+ "    ,(select TO_CHAR(max(m.DELETES)) from DBA_TAB_MODIFICATIONS m where m.TABLE_OWNER = t.OWNER and m.TABLE_NAME = t.TABLE_NAME and m.PARTITION_NAME is null /*CON:m*/) as MOD_DELETES \n"
 					+ "from DBA_TABLES t \n"
 					+ "where t.OWNER      = " + qOwner + " \n"
 					+ "  and t.TABLE_NAME = " + qName  + " /*CON:t*/", conId);
+
+				// 12.2 and above: Oracle tracks how the indexes are used (since the tracking started: it is not reset by a restart)
+				// This goes in at the marker "/*USAGE*/" of the index SQL below. If Oracle does not let us read it, the index SQL is used without it
+				String sqlIndexUsage = conn.getDbmsVersionInfo().getLongVersion() < Ver.ver(12,2) ? "" : ""
+					+ "    ,(select TO_CHAR(max(u.TOTAL_ACCESS_COUNT))              from DBA_INDEX_USAGE u where u.OWNER = i.OWNER and u.NAME = i.INDEX_NAME /*CON:u*/) as TOTAL_ACCESS_COUNT \n"
+					+ "    ,(select TO_CHAR(max(u.TOTAL_ROWS_RETURNED))             from DBA_INDEX_USAGE u where u.OWNER = i.OWNER and u.NAME = i.INDEX_NAME /*CON:u*/) as TOTAL_ROWS_RETURNED \n"
+					+ "    ,(select TO_CHAR(max(u.LAST_USED), 'YYYY-MM-DD HH24:MI') from DBA_INDEX_USAGE u where u.OWNER = i.OWNER and u.NAME = i.INDEX_NAME /*CON:u*/) as LAST_USED \n";
 
 				String sqlIndexes = forContainer(""
 					+ "select \n"
@@ -509,10 +592,51 @@ extends ObjectLookupInspectorAbstract
 					+ "    ,i.COMPRESSION \n"
 					+ "    ,TO_CHAR(i.LAST_ANALYZED, 'YYYY-MM-DD HH24:MI')  as LAST_ANALYZED \n"
 					+ "    ,i.TABLESPACE_NAME \n"
+					+ "/*USAGE*/"
 					+ "from DBA_INDEXES i \n"
 					+ "where i.TABLE_OWNER = " + qOwner + " \n"
 					+ "  and i.TABLE_NAME  = " + qName  + " /*CON:i*/ \n"
 					+ "order by i.INDEX_NAME", conId);
+
+				// The key of a function-based index (and of a DESC column) is a hidden column, like SYS_NC00004$: this is what it really is
+				// It is read on its own, and put into INDEX_KEYS below. Two ways, the first that Oracle accepts is used:
+				//   1: the hidden columns of the table, with the expression as a VARCHAR2 (DATA_DEFAULT_VC: only the newest versions has it)
+				//   2: DBA_IND_EXPRESSIONS, with the expression as a LONG (the CDB_ view does not have that column: so not when we are connected to CDB$ROOT)
+				String sqlHiddenColumns = forContainer(""
+					+ "select c.COLUMN_NAME, c.DATA_DEFAULT_VC \n"
+					+ "from DBA_TAB_COLS c \n"
+					+ "where c.OWNER          = " + qOwner + " \n"
+					+ "  and c.TABLE_NAME     = " + qName  + " \n"
+					+ "  and c.HIDDEN_COLUMN  = 'YES' \n"
+					+ "  and c.VIRTUAL_COLUMN = 'YES' /*CON:c*/", conId);
+
+				String sqlIndexExpressions = forContainer(""
+					+ "select e.INDEX_OWNER, e.INDEX_NAME, e.COLUMN_POSITION, e.COLUMN_EXPRESSION \n"
+					+ "from DBA_IND_EXPRESSIONS e \n"
+					+ "where e.TABLE_OWNER = " + qOwner + " \n"
+					+ "  and e.TABLE_NAME  = " + qName  + " /*CON:e*/", conId);
+
+				String sqlTriggers = forContainer(""
+					+ "select \n"
+					+ "     g.OWNER as TRIGGER_OWNER \n"
+					+ "    ,g.TRIGGER_NAME \n"
+					+ "    ,g.TRIGGER_TYPE \n"
+					+ "    ,g.TRIGGERING_EVENT \n"
+					+ "    ,g.STATUS \n"
+					+ "from DBA_TRIGGERS g \n"
+					+ "where g.TABLE_OWNER      = " + qOwner + " \n"
+					+ "  and g.TABLE_NAME       = " + qName  + " \n"
+					+ "  and g.BASE_OBJECT_TYPE = 'TABLE' /*CON:g*/ \n"
+					+ "order by g.TRIGGER_NAME", conId);
+
+				// The source of the triggers (max 500 lines of each), from DBA_SOURCE: DBA_TRIGGERS has it as a LONG, which the CDB_ views can't give
+				String sqlTriggerSource = forContainer(""
+					+ "select s.OWNER, s.NAME, s.TEXT \n"
+					+ "from DBA_SOURCE s \n"
+					+ "where s.TYPE = 'TRIGGER' \n"
+					+ "  and s.LINE <= 500 \n"
+					+ "  and (s.OWNER, s.NAME) in (select g.OWNER, g.TRIGGER_NAME from DBA_TRIGGERS g where g.TABLE_OWNER = " + qOwner + " and g.TABLE_NAME = " + qName + " and g.BASE_OBJECT_TYPE = 'TABLE' /*CON:g*/) /*CON:s*/ \n"
+					+ "order by s.OWNER, s.NAME, s.LINE", conId);
 
 				// ONE read of DBA_SEGMENTS for all the segments (that view is the expensive one)
 				String sqlSegments = forContainer(""
@@ -533,13 +657,104 @@ extends ObjectLookupInspectorAbstract
 					+ "group by s.OWNER, s.SEGMENT_NAME, s.SEGMENT_TYPE \n"
 					+ "order by s.SEGMENT_TYPE desc, s.SEGMENT_NAME", conId);
 
-				// Each of the three on its own: if one fails, the others are still stored
+				// Each of the four on its own: if one fails, the others are still stored
 				String extraInfo = "";
-				for (String[] part : new String[][] { {"table", sqlTable}, {"indexes", sqlIndexes}, {"segments", sqlSegments} })
+				for (String[] part : new String[][] { {"table", sqlTable}, {"indexes", sqlIndexes}, {"segments", sqlSegments}, {"triggers", sqlTriggers} })
 				{
 					try
 					{
-						extraInfo += ResultSetTableModel.executeQuery(conn, part[1], QUERY_TIMEOUT_SEC, part[0]).toAsciiTableString() + "\n";
+						ResultSetTableModel rstm;
+
+						if ("indexes".equals(part[0]))
+						{
+							// With how the indexes are used. If Oracle does not let us read that: without it
+							try
+							{
+								rstm = ResultSetTableModel.executeQuery(conn, part[1].replace("/*USAGE*/", sqlIndexUsage.isEmpty() ? "" : forContainer(sqlIndexUsage, conId)), QUERY_TIMEOUT_SEC, part[0]);
+							}
+							catch (SQLException ex)
+							{
+								if (sqlIndexUsage.isEmpty())
+									throw ex;
+
+								_logger.info("DDL Lookup. Could not read how the indexes of table " + entry.getSchemaAndObjectName() + " in '" + dbname + "' are used (DBA_INDEX_USAGE): the indexes are stored without it. Caught: " + ex.getMessage().trim());
+								rstm = ResultSetTableModel.executeQuery(conn, part[1].replace("/*USAGE*/", ""), QUERY_TIMEOUT_SEC, part[0]);
+							}
+
+							// The hidden key columns (SYS_NC00004$) are replaced by what they are. If that can't be read: they stay as they are
+							Map<String, String> hiddenColumns  = new HashMap<>(); // name of the hidden column -> its expression
+							int                 pos_INDEX_KEYS = rstm.findColumn("INDEX_KEYS");
+							try (Statement stmnt = conn.createStatement())
+							{
+								stmnt.setQueryTimeout(QUERY_TIMEOUT_SEC);
+								try (ResultSet rs = stmnt.executeQuery(sqlHiddenColumns))
+								{
+									while (rs.next())
+										hiddenColumns.put(rs.getString(1), rs.getString(2));
+								}
+							}
+							catch (SQLException ex)
+							{
+								// No DATA_DEFAULT_VC in this version: DBA_IND_EXPRESSIONS says which POSITION of which index it is, the name is then at that place in INDEX_KEYS
+								try (Statement stmnt = conn.createStatement())
+								{
+									stmnt.setQueryTimeout(QUERY_TIMEOUT_SEC);
+									try (ResultSet rs = stmnt.executeQuery(sqlIndexExpressions))
+									{
+										while (rs.next())
+										{
+											String indexOwner = rs.getString(1);
+											String indexName  = rs.getString(2);
+											int    position   = rs.getInt(3);
+											String expression = rs.getString(4);
+
+											for (int r = 0; r < rstm.getRowCount() && pos_INDEX_KEYS >= 0; r++)
+											{
+												if ( ! (indexOwner.equals(rstm.getValueAsString(r, "INDEX_OWNER")) && indexName.equals(rstm.getValueAsString(r, "INDEX_NAME"))) )
+													continue;
+
+												String[] keys = StringUtil.nullToValue(rstm.getValueAsString(r, pos_INDEX_KEYS), "").split(", ");
+												if (position >= 1 && position <= keys.length)
+													hiddenColumns.put(keys[position - 1].replace(" DESC", ""), expression);
+											}
+										}
+									}
+								}
+								catch (SQLException ex2)
+								{
+									_logger.info("DDL Lookup. Could not read the expressions of the function-based indexes of table " + entry.getSchemaAndObjectName() + " in '" + dbname + "': the keys are stored with the names of the hidden columns. Caught: " + ex2.getMessage().trim());
+								}
+							}
+
+							for (int r = 0; r < rstm.getRowCount() && pos_INDEX_KEYS >= 0 && ! hiddenColumns.isEmpty(); r++)
+							{
+								String indexKeys = rstm.getValueAsString(r, pos_INDEX_KEYS);
+								if (StringUtil.isNullOrBlank(indexKeys))
+									continue;
+
+								String[] keys = indexKeys.split(", ");
+								for (int k = 0; k < keys.length; k++)
+								{
+									String expression = hiddenColumns.get(keys[k].replace(" DESC", ""));
+									if (StringUtil.isNullOrBlank(expression))
+										continue;
+
+									// A DESC column is just the column in quotes: "AMOUNT". Anything else is shown as Oracle has it: UPPER("NAME")
+									expression = expression.trim();
+									if (expression.matches("\"[^\"]+\""))
+										expression = expression.substring(1, expression.length() - 1);
+
+									keys[k] = expression + (keys[k].endsWith(" DESC") ? " DESC" : "");
+								}
+								rstm.setValueAtWithOverride(String.join(", ", keys), r, pos_INDEX_KEYS);
+							}
+						}
+						else
+						{
+							rstm = ResultSetTableModel.executeQuery(conn, part[1], QUERY_TIMEOUT_SEC, part[0]);
+						}
+
+						extraInfo += rstm.toAsciiTableString() + "\n";
 					}
 					catch (SQLException ex)
 					{
@@ -548,6 +763,36 @@ extends ObjectLookupInspectorAbstract
 					}
 				}
 				entry.setExtraInfoText(extraInfo);
+
+				//--------------------------------------------
+				// dependsText: the source of the triggers on the table (most tables has none: then it stays empty)
+				StringBuilder triggerSource = new StringBuilder();
+				try (Statement stmnt = conn.createStatement())
+				{
+					stmnt.setQueryTimeout(QUERY_TIMEOUT_SEC);
+					try (ResultSet rs = stmnt.executeQuery(sqlTriggerSource))
+					{
+						String prevName = null;
+						while (rs.next())
+						{
+							String triggerName = rs.getString(1) + "." + rs.getString(2);
+							String text        = StringUtil.nullToValue(rs.getString(3), "");
+
+							// A new trigger. (the first line of the source is: TRIGGER name BEFORE INSERT ON ...)
+							if ( ! triggerName.equals(prevName) )
+								triggerSource.append(prevName == null ? "" : "\n/\n\n").append("-- ").append(triggerName).append("\nCREATE OR REPLACE ");
+							prevName = triggerName;
+
+							triggerSource.append(text).append(text.endsWith("\n") ? "" : "\n");
+						}
+					}
+				}
+				catch (SQLException ex)
+				{
+					_logger.warn("DDL Lookup. Problems getting the source of the TRIGGERS of table " + entry.getSchemaAndObjectName() + " in '" + dbname + "', source='" + qe._source + "'. Caught: " + ex.getMessage().trim());
+				}
+				if (triggerSource.length() > 0)
+					entry.setDependsText(triggerSource.toString());
 			}
 			else if ("VIEW".equals(type) || "MATERIALIZED VIEW".equals(type))
 			{

@@ -22,11 +22,17 @@ package com.dbxtune.pcs.report.content.oracle;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.dbxtune.cm.oracle.CmSystemEvent;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
+import com.dbxtune.pcs.report.content.SparklineHelper;
+import com.dbxtune.pcs.report.content.SparklineHelper.AggType;
+import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
+import com.dbxtune.pcs.report.content.SparklineHelper.SparkLineParams;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 
@@ -71,7 +77,13 @@ extends OracleAbstract
 		w.append(toHtmlTable(_shortRstm));
 
 		if (isFullMessageType())
+		{
 			_CmSystemEvent_IoEventAvgMs.writeHtmlContent(w, null, "<b>Note</b>: A single block read ('db file sequential read') or a redo write ('log file parallel write') that takes more than 10-20 ms on average says that the disks are slow.");
+
+			// Write JavaScript code for the mini charts
+			for (String str : _miniChartJsList)
+				w.append(str);
+		}
 	}
 
 	@Override
@@ -114,7 +126,9 @@ extends OracleAbstract
 			    + "     [WAIT_CLASS] \n"
 			    + "    ,[EVENT] \n"
 			    + "    ,sum([TOTAL_WAITS_FG])                                                                               as [waits] \n"
+			    + "    ,cast('' as varchar(512))                                                                            as [wait_time_sec__chart] \n"
 			    + "    ,CAST( sum([TIME_WAITED_MICRO_FG]) / 1000000.0                               as DECIMAL(20,1) )      as [wait_time_sec] \n"
+			    + "    ,cast('' as varchar(512))                                                                            as [avg_wait_ms__chart] \n"
 			    + "    ,CAST( sum([TIME_WAITED_MICRO_FG]) / 1000.0 / nullif(sum([TOTAL_WAITS_FG]), 0) as DECIMAL(20,2) )    as [avg_wait_ms] \n"
 			    + "    ,CAST( 100.0 * sum([TIME_WAITED_MICRO_FG]) \n"
 			    + "           / nullif((select sum(t.[TIME_WAITED_MICRO_FG]) from [CmSystemEvent_diff] t where 1 = 1 " + getReportPeriodSqlWhere().trim() + "), 0) as DECIMAL(5,1) ) as [pct_of_all_waits] \n"
@@ -145,7 +159,36 @@ extends OracleAbstract
 		_shortRstm.setColumnDescription("avg_wait_ms"     , "Average time for ONE wait, in milliseconds. Formula: wait time / waits");
 		_shortRstm.setColumnDescription("pct_of_all_waits", "This events share of ALL wait time (for user sessions) in the period, in percent");
 		_shortRstm.setColumnDescription("timeouts"        , "How many of the waits that ended with a timeout");
+		_shortRstm.setColumnDescription("wait_time_sec__chart", "Chart: seconds waited on this event, in 10 minute chunks\nSo you can see WHEN the sessions waited.");
+		_shortRstm.setColumnDescription("avg_wait_ms__chart"  , "Chart: average time for ONE wait in milliseconds, in 10 minute chunks\nSo you can see when it was slower than normal (for a disk IO event: when the disks were slow).");
+
+		//--------------------------------------------------------------------------------
+		// Mini Charts: WHEN during the period
+		//--------------------------------------------------------------------------------
+		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm,
+				SparkLineParams.create       (DataSource.CounterModel)
+				.setHtmlChartColumnName      ("wait_time_sec__chart")
+				.setHtmlWhereKeyColumnName   ("EVENT")
+				.setDbmsTableName            ("CmSystemEvent_diff")
+				.setDbmsSampleTimeColumnName ("SessionSampleTime")
+				.setDbmsDataValueColumnName  ("sum([TIME_WAITED_MICRO_FG]) / 1000000.0").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(1)
+				.setDbmsWhereKeyColumnName   ("EVENT")
+				.setSparklineTooltipPostfix  ("Seconds waited by user sessions in below period")
+				.validate()));
+
+		_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm,
+				SparkLineParams.create       (DataSource.CounterModel)
+				.setHtmlChartColumnName      ("avg_wait_ms__chart")
+				.setHtmlWhereKeyColumnName   ("EVENT")
+				.setDbmsTableName            ("CmSystemEvent_diff")
+				.setDbmsSampleTimeColumnName ("SessionSampleTime")
+				.setDbmsDataValueColumnName  ("sum([TIME_WAITED_MICRO_FG]) / 1000.0 / nullif(sum([TOTAL_WAITS_FG]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED).setDecimalScale(2)
+				.setDbmsWhereKeyColumnName   ("EVENT")
+				.setSparklineTooltipPostfix  ("Average milliseconds for ONE wait in below period")
+				.validate()));
 	}
+
+	private List<String> _miniChartJsList = new ArrayList<>();
 
 	private IReportChart _CmSystemEvent_byWaitClass;
 	private IReportChart _CmSystemEvent_IoEventAvgMs;

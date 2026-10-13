@@ -27,6 +27,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -39,6 +40,7 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.dbxtune.cm.CountersModel;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
@@ -52,7 +54,9 @@ import com.dbxtune.utils.StringUtil;
 
 /**
  * What the Oracle report sections have in common: the information about tables and execution plans that the collector has put
- * in the "DDL Storage" (table <code>MonDdlStorage</code>, written by <code>ObjectLookupInspectorOracle</code>).
+ * in the "DDL Storage" (table <code>MonDdlStorage</code>, written by <code>ObjectLookupInspectorOracle</code>).<br>
+ * To that is added how the table and its indexes were USED during the recording (from <code>CmSegmentStats</code> and <code>CmIndexUsage</code>),
+ * as the other DBMS vendors has it: "diff &lt;- abs".
  * <p>
  * It is also used without a report: by <code>TableInfoServlet</code> ("Table Information" in the execution plan dialog of DbxCentral)
  * and by <code>LlmSqlContextBuilder</code> (what the LLM is told about the tables), via the static methods.
@@ -70,6 +74,24 @@ extends ReportEntryAbstract
 	//--------------------------------------------------------------------------------------------
 	// What is in the DDL Storage about a table (or view / synonym), and about one of its indexes
 	//--------------------------------------------------------------------------------------------
+	/**
+	 * What has been done to a segment (a table or an index, all its partitions together), from <code>CmSegmentStats</code> (V$SEGSTAT).<br>
+	 * -1 = not recorded: the collector only records the most active segments, and the CM can be turned off.
+	 */
+	public static class OraSegmentActivity
+	{
+		public long logicalReads    = -1;
+		public long physicalReads   = -1;
+		public long physicalWrites  = -1;
+		public long blockChanges    = -1;
+		public long segmentScans    = -1;
+		public long rowLockWaits    = -1;
+		public long itlWaits        = -1;
+		public long bufferBusyWaits = -1;
+
+		public boolean isRecorded() { return logicalReads >= 0; }
+	}
+
 	public static class OraIndexInfo
 	{
 		public String owner;
@@ -77,7 +99,7 @@ extends ReportEntryAbstract
 		public String type;             // NORMAL, BITMAP, FUNCTION-BASED NORMAL, LOB...
 		public String uniqueness;       // UNIQUE, NONUNIQUE
 		public String constraintType;   // P = it is the index of the primary key, U = of a unique constraint
-		public String keys;             // the columns: "C1, C2 DESC"
+		public String keys;             // the columns: "C1, C2 DESC". For a function-based index the expression: UPPER("NAME")
 		public long   numRows          = -1;
 		public long   distinctKeys     = -1;
 		public long   blevel           = -1;
@@ -89,6 +111,18 @@ extends ReportEntryAbstract
 		public String partitioned;
 		public String lastAnalyzed;
 		public String tablespace;
+
+		// How the index is used (DBA_INDEX_USAGE, 12.2 and above). 'abs' is since Oracle started to track it, 'diff' is during the recording (from CmIndexUsage)
+		public boolean usageTracked     = false; // false = the version is below 12.2 (or the view could not be read): we do not know
+		public long    absAccessCount   = -1;    // usageTracked and -1: Oracle has no row for the index = it has never been used
+		public long    absRowsReturned  = -1;
+		public long    diffAccessCount  = -1;
+		public long    diffRowsReturned = -1;
+		public String  lastUsed;
+
+		// What was done to the index during the recording (diff), and since the instance was started (abs)
+		public OraSegmentActivity diff = new OraSegmentActivity();
+		public OraSegmentActivity abs  = new OraSegmentActivity();
 
 		public String getDescription()
 		{
@@ -108,6 +142,7 @@ extends ReportEntryAbstract
 		public Timestamp sampleTime;
 		public String    objectText;     // TABLE: the columns as a text table. VIEW: the text of the view. SYNONYM: what it is a synonym for
 		public String    extraInfoText;
+		public String    dependsText;    // TABLE: the source of its triggers (null when it has none)
 
 		public long      numRows        = -1;
 		public long      blocks         = -1;
@@ -125,6 +160,20 @@ extends ReportEntryAbstract
 		public long      tableKb        = -1;
 		public long      indexKb        = -1;
 		public long      lobKb          = -1;
+
+		// Rows changed since the optimizer statistics were gathered (DBA_TAB_MODIFICATIONS). -1 = Oracle has nothing noted (no changes, or not written down yet)
+		public long      modInserts     = -1;
+		public long      modUpdates     = -1;
+		public long      modDeletes     = -1;
+
+		public boolean   triggersLookedUp    = false; // false = the recording was made by a version that did not look for triggers: we do not know
+		public int       triggerCount        = 0;
+		public int       triggerEnabledCount = 0;
+		public String    triggersText;   // the triggers as a text table, and their source. null = the table has no triggers
+
+		// What was done to the table during the recording (diff), and since the instance was started (abs)
+		public OraSegmentActivity diff = new OraSegmentActivity();
+		public OraSegmentActivity abs  = new OraSegmentActivity();
 
 		public List<OraIndexInfo> indexes    = new ArrayList<>();
 		public List<String>       references = new ArrayList<>(); // VIEW / SYNONYM: what it reads from, as OWNER.NAME
@@ -184,7 +233,8 @@ extends ReportEntryAbstract
 	/**
 	 * The execution plans that are stored for a statement: one per PLAN_HASH_VALUE that was seen during the recording.
 	 *
-	 * @return key: PLAN_HASH_VALUE, value: {the plan as text (DBMS_XPLAN), the tables of the plan as "OWNER.T1, OWNER.T2", the container the statement ran in}
+	 * @return key: PLAN_HASH_VALUE, value: {0: the plan as text (DBMS_XPLAN), 1: the tables of the plan as "OWNER.T1, OWNER.T2", 2: the container the statement ran in,
+	 *         3: the schema it is parsed in, 4: the module (the application), 5: the PL/SQL unit the statement is written in}. 3 - 5 can be null.
 	 */
 	public static Map<String, String[]> getExecutionPlans(DbxConnection conn, String sqlId)
 	{
@@ -205,11 +255,18 @@ extends ReportEntryAbstract
 			while (rs.next())
 			{
 				String objectName = rs.getString(1);
-				String tableList  = StringUtil.nullToValue(rs.getString(3), "");
-				if (tableList.startsWith("TableList:"))
-					tableList = tableList.substring("TableList:".length()).trim();
 
-				plans.put(objectName.contains("_") ? objectName.substring(objectName.indexOf('_') + 1) : "", new String[] { rs.getString(2), tableList, rs.getString(4) });
+				// 'objectText' is one "Name: value" per line (see ObjectLookupInspectorOracle)
+				String tableList = "", parsingSchema = null, module = null, program = null;
+				for (String line : StringUtil.nullToValue(rs.getString(3), "").split("\n"))
+				{
+					if (line.startsWith("TableList:"))     tableList     = line.substring("TableList:"    .length()).trim();
+					if (line.startsWith("ParsingSchema:")) parsingSchema = line.substring("ParsingSchema:".length()).trim();
+					if (line.startsWith("Module:"))        module        = line.substring("Module:"       .length()).trim();
+					if (line.startsWith("Program:"))       program       = line.substring("Program:"      .length()).trim();
+				}
+
+				plans.put(objectName.contains("_") ? objectName.substring(objectName.indexOf('_') + 1) : "", new String[] { rs.getString(2), tableList, rs.getString(4), parsingSchema, module, program });
 			}
 		}
 		catch (SQLException ex)
@@ -277,7 +334,7 @@ extends ReportEntryAbstract
 		String and_dbname = StringUtil.isNullOrBlank(dbname) ? "" : "  and upper([dbname]) = " + DbUtils.safeStr(dbname.toUpperCase()) + " \n";
 		String and_owner  = owner == null                    ? "" : "  and upper([owner])  = " + DbUtils.safeStr(owner .toUpperCase()) + " \n";
 
-		String select = "select [dbname], [owner], [objectName], [type], [sampleTime], [objectText], [extraInfoText] \nfrom [MonDdlStorage] \n";
+		String select = "select [dbname], [owner], [objectName], [type], [sampleTime], [objectText], [extraInfoText], [dependsText] \nfrom [MonDdlStorage] \n";
 
 		// As a table, view or synonym
 		List<OraTableInfo> found = readRows(conn, select
@@ -314,6 +371,11 @@ extends ReportEntryAbstract
 			{
 				if (ti.indexes.isEmpty()) // (already parsed when it was found via an index)
 					parseTableText(ti);
+
+				// How the table and its indexes were used during the recording
+				readSegmentActivity(conn, ti);
+				readIndexUsage(conn, ti);
+
 				result.add(ti);
 			}
 			else
@@ -347,6 +409,7 @@ extends ReportEntryAbstract
 				ti.sampleTime    = rs.getTimestamp(5);
 				ti.objectText    = rs.getString(6);
 				ti.extraInfoText = rs.getString(7);
+				ti.dependsText   = rs.getString(8);
 				list.add(ti);
 			}
 		}
@@ -355,8 +418,9 @@ extends ReportEntryAbstract
 	}
 
 	/**
-	 * 'extraInfoText' of a TABLE is three text tables (see ObjectLookupInspectorOracle): the table, its indexes and the size of every segment.<br>
-	 * All values are text: numbers are plain digits (not formatted), sizes are in KB.
+	 * 'extraInfoText' of a TABLE is four text tables (see ObjectLookupInspectorOracle): the table, its indexes, the size of every segment and its triggers.<br>
+	 * All values are text: numbers are plain digits (not formatted), sizes are in KB.<br>
+	 * (a recording made by an earlier version has less: no triggers, no index usage, no "rows changed since the statistics")
 	 */
 	private void parseTableText(OraTableInfo ti)
 	{
@@ -368,6 +432,20 @@ extends ReportEntryAbstract
 		ResultSetTableModel table    = ResultSetTableModel.getTableWithColumnNames(rstmList, false, "OWNER", "TABLE_NAME", "NUM_ROWS");
 		ResultSetTableModel indexes  = ResultSetTableModel.getTableWithColumnNames(rstmList, false, "INDEX_OWNER", "INDEX_NAME", "INDEX_KEYS");
 		ResultSetTableModel segments = ResultSetTableModel.getTableWithColumnNames(rstmList, false, "SEGMENT_OWNER", "SEGMENT_NAME", "SIZE_KB");
+		ResultSetTableModel triggers = ResultSetTableModel.getTableWithColumnNames(rstmList, false, "TRIGGER_OWNER", "TRIGGER_NAME", "TRIGGERING_EVENT");
+
+		ti.triggersLookedUp = triggers != null;
+		if (triggers != null && triggers.getRowCount() > 0)
+		{
+			ti.triggerCount = triggers.getRowCount();
+			for (int r = 0; r < triggers.getRowCount(); r++)
+			{
+				if ("ENABLED".equals(triggers.getValueAsString(r, "STATUS")))
+					ti.triggerEnabledCount++;
+			}
+
+			ti.triggersText = triggers.toAsciiTableString() + "\n" + StringUtil.nullToValue(ti.dependsText, "");
+		}
 
 		if (table != null && table.getRowCount() > 0)
 		{
@@ -384,6 +462,13 @@ extends ReportEntryAbstract
 			ti.compression    =        table.getValueAsString(0, "COMPRESSION");
 			ti.degree         =        table.getValueAsString(0, "DEGREE");
 			ti.tablespace     =        table.getValueAsString(0, "TABLESPACE_NAME");
+
+			if (table.hasColumn("MOD_INSERTS"))
+			{
+				ti.modInserts = toLong(table.getValueAsString(0, "MOD_INSERTS"));
+				ti.modUpdates = toLong(table.getValueAsString(0, "MOD_UPDATES"));
+				ti.modDeletes = toLong(table.getValueAsString(0, "MOD_DELETES"));
+			}
 		}
 
 		if (indexes != null)
@@ -407,6 +492,15 @@ extends ReportEntryAbstract
 				ii.partitioned      =        indexes.getValueAsString(r, "PARTITIONED");
 				ii.lastAnalyzed     =        indexes.getValueAsString(r, "LAST_ANALYZED");
 				ii.tablespace       =        indexes.getValueAsString(r, "TABLESPACE_NAME");
+
+				// 12.2 and above: how the index has been used. (NULL) = Oracle has no row for it = never used since the tracking started
+				if (indexes.hasColumn("TOTAL_ACCESS_COUNT"))
+				{
+					ii.usageTracked    = true;
+					ii.absAccessCount  = toLong(indexes.getValueAsString(r, "TOTAL_ACCESS_COUNT"));
+					ii.absRowsReturned = toLong(indexes.getValueAsString(r, "TOTAL_ROWS_RETURNED"));
+					ii.lastUsed        =        indexes.getValueAsString(r, "LAST_USED");
+				}
 
 				// The index of a LOB column is not something you can use (or change): its size is counted with the LOBs below
 				if ( ! "LOB".equals(ii.type) )
@@ -444,6 +538,178 @@ extends ReportEntryAbstract
 		}
 	}
 
+	/** 'a', 'b', 'c' for a SQL "in (...)" */
+	private static String sqlInList(Set<String> values)
+	{
+		String list = "";
+		for (String value : values)
+			list += (list.isEmpty() ? "" : ", ") + DbUtils.safeStr(value);
+		return list;
+	}
+
+	/**
+	 * What was done to the table and its indexes (V$SEGSTAT): during the recording = the sum of <code>CmSegmentStats_diff</code>,
+	 * and since the instance was started = the last sample of <code>CmSegmentStats_abs</code>. (as the other DBMS vendors has it: "diff &lt;- abs")
+	 * <p>
+	 * Nothing is set when the CM was not recorded, or when the segment was not among the most active ones (the collector only records those).<br>
+	 * It is the whole recording, not the report period: this is also used without a report (and it is how the other DBMS vendors has it).
+	 */
+	private void readSegmentActivity(DbxConnection conn, OraTableInfo ti)
+	{
+		if ( ! DbUtils.checkIfTableExistsNoThrow(conn, null, null, "CmSegmentStats_diff") || ! DbUtils.checkIfTableExistsNoThrow(conn, null, null, "CmSegmentStats_abs") )
+			return;
+
+		Set<String> owners = new LinkedHashSet<>();
+		Set<String> names  = new LinkedHashSet<>();
+		owners.add(ti.owner);
+		names .add(ti.name);
+		for (OraIndexInfo ii : ti.indexes)
+		{
+			owners.add(ii.owner);
+			names .add(ii.name);
+		}
+
+		// A partitioned table or index has one segment per partition: they are summed
+		// CON_NAME is NULL when the collector is NOT connected to CDB$ROOT (then there is only one container in the recording)
+		String kind   = "case when [OBJECT_TYPE] like 'INDEX%' then 'INDEX' when [OBJECT_TYPE] like 'TABLE%' then 'TABLE' else 'OTHER' end";
+		String select = "select [OWNER], [OBJECT_NAME], " + kind + " as [KIND] \n"
+			+ "      ,sum([LOGICAL_READS]), sum([PHYSICAL_READS]), sum([PHYSICAL_WRITES]), sum([DB_BLOCK_CHANGES]), sum([SEGMENT_SCANS]), sum([ROW_LOCK_WAITS]), sum([ITL_WAITS]), sum([BUFFER_BUSY_WAITS]) \n";
+		String where  = ""
+			+ "where [OWNER]       in (" + sqlInList(owners) + ") \n"
+			+ "  and [OBJECT_NAME] in (" + sqlInList(names)  + ") \n"
+			+ "  and ([CON_NAME] is null or [CON_NAME] = " + DbUtils.safeStr(StringUtil.nullToValue(ti.dbname, "")) + ") \n";
+		String groupBy = "group by [OWNER], [OBJECT_NAME], " + kind;
+
+		// {diff or abs, the SQL}. In the "diff": not the first time a segment is seen (then the counters are "since the instance was started")
+		String[][] queries = new String[][] {
+			{"diff", select + "from [CmSegmentStats_diff] \n" + where + "  and " + conn.toBitAnd("[CmRowState]", CountersModel.ROW_STATE__IS_DIFF_OR_RATE_ROW) + " = 0 \n" + groupBy},
+			{"abs" , select + "from [CmSegmentStats_abs] \n"  + where + "  and [SessionSampleTime] = (select max([SessionSampleTime]) from [CmSegmentStats_abs]) \n" + groupBy},
+		};
+
+		for (String[] query : queries)
+		{
+			boolean isDiff = "diff".equals(query[0]);
+
+			try (Statement stmnt = conn.createStatement())
+			{
+				stmnt.setQueryTimeout(10);
+				try (ResultSet rs = stmnt.executeQuery(conn.quotifySqlString(query[1])))
+				{
+					while (rs.next())
+					{
+						String owner = rs.getString(1);
+						String name  = rs.getString(2);
+						String type  = rs.getString(3);
+
+						// Whose numbers is it: the table's, or one of its indexes'
+						OraSegmentActivity activity = null;
+						if ("TABLE".equals(type) && ti.owner.equals(owner) && ti.name.equals(name))
+							activity = isDiff ? ti.diff : ti.abs;
+
+						for (OraIndexInfo ii : ti.indexes)
+						{
+							if ("INDEX".equals(type) && name.equals(ii.name) && owner.equals(ii.owner))
+								activity = isDiff ? ii.diff : ii.abs;
+						}
+
+						if (activity == null)
+							continue;
+
+						activity.logicalReads    = rs.getLong(4);
+						activity.physicalReads   = rs.getLong(5);
+						activity.physicalWrites  = rs.getLong(6);
+						activity.blockChanges    = rs.getLong(7);
+						activity.segmentScans    = rs.getLong(8);
+						activity.rowLockWaits    = rs.getLong(9);
+						activity.itlWaits        = rs.getLong(10);
+						activity.bufferBusyWaits = rs.getLong(11);
+					}
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.warn("Problems getting the activity (CmSegmentStats_" + query[0] + ") of table '" + ti.getFullName() + "' and its indexes. Skipping and continuing. Caught: " + ex);
+			}
+		}
+	}
+
+	/**
+	 * 12.2 and above, how the indexes are used (DBA_INDEX_USAGE): during the recording = the sum of <code>CmIndexUsage_diff</code>,
+	 * and since Oracle started to track it = the last sample of <code>CmIndexUsage_abs</code> (which is newer than what the DDL Storage has: that is from when the table was looked up).
+	 * <p>
+	 * Nothing is set when the CM was not recorded, or when the index was not among the biggest ones (the collector only records those).
+	 */
+	private void readIndexUsage(DbxConnection conn, OraTableInfo ti)
+	{
+		if (ti.indexes.isEmpty())
+			return;
+
+		if ( ! DbUtils.checkIfTableExistsNoThrow(conn, null, null, "CmIndexUsage_diff") || ! DbUtils.checkIfTableExistsNoThrow(conn, null, null, "CmIndexUsage_abs") )
+			return;
+
+		Set<String> owners = new LinkedHashSet<>();
+		Set<String> names  = new LinkedHashSet<>();
+		for (OraIndexInfo ii : ti.indexes)
+		{
+			owners.add(ii.owner);
+			names .add(ii.name);
+		}
+
+		String where = ""
+			+ "where [OWNER]      in (" + sqlInList(owners) + ") \n"
+			+ "  and [INDEX_NAME] in (" + sqlInList(names)  + ") \n"
+			+ "  and ([CON_NAME] is null or [CON_NAME] = " + DbUtils.safeStr(StringUtil.nullToValue(ti.dbname, "")) + ") \n";
+
+		String[][] queries = new String[][] {
+			{"diff", "select [OWNER], [INDEX_NAME], sum([TOTAL_ACCESS_COUNT]), sum([TOTAL_ROWS_RETURNED]), cast(null as timestamp) \nfrom [CmIndexUsage_diff] \n" + where
+					+ "  and " + conn.toBitAnd("[CmRowState]", CountersModel.ROW_STATE__IS_DIFF_OR_RATE_ROW) + " = 0 \n"
+					+ "group by [OWNER], [INDEX_NAME]"},
+			{"abs" , "select [OWNER], [INDEX_NAME], max([TOTAL_ACCESS_COUNT]), max([TOTAL_ROWS_RETURNED]), max([LAST_USED]) \nfrom [CmIndexUsage_abs] \n" + where
+					+ "  and [SessionSampleTime] = (select max([SessionSampleTime]) from [CmIndexUsage_abs]) \n"
+					+ "group by [OWNER], [INDEX_NAME]"},
+		};
+
+		for (String[] query : queries)
+		{
+			boolean isDiff = "diff".equals(query[0]);
+
+			try (Statement stmnt = conn.createStatement())
+			{
+				stmnt.setQueryTimeout(10);
+				try (ResultSet rs = stmnt.executeQuery(conn.quotifySqlString(query[1])))
+				{
+					while (rs.next())
+					{
+						for (OraIndexInfo ii : ti.indexes)
+						{
+							if ( ! (rs.getString(2).equals(ii.name) && rs.getString(1).equals(ii.owner)) )
+								continue;
+
+							if (isDiff)
+							{
+								ii.diffAccessCount  = rs.getLong(3);
+								ii.diffRowsReturned = rs.getLong(4);
+							}
+							else
+							{
+								Timestamp lastUsed = rs.getTimestamp(5);
+
+								ii.usageTracked    = true;
+								ii.absAccessCount  = rs.getLong(3);
+								ii.absRowsReturned = rs.getLong(4);
+								ii.lastUsed        = lastUsed == null ? null : new SimpleDateFormat("yyyy-MM-dd HH:mm").format(lastUsed);
+							}
+						}
+					}
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.warn("Problems getting how the indexes of table '" + ti.getFullName() + "' are used (CmIndexUsage_" + query[0] + "). Skipping and continuing. Caught: " + ex);
+			}
+		}
+	}
+
 	/** @return -1 when there is no value (the text table has "(NULL)" for a NULL: for example a table without statistics) */
 	private static long toLong(String str)
 	{
@@ -472,6 +738,26 @@ extends ReportEntryAbstract
 	{
 		return str == null ? "" : StringEscapeUtils.escapeHtml4(str);
 	}
+
+	/** "during the recording" and "since the start", written as the other DBMS vendors has it: <b>diff</b> &#9887; <i>abs</i>. Empty when none of them was recorded */
+	private String diffAbs(long diff, long abs)
+	{
+		if (diff < 0 && abs < 0)
+			return "";
+
+		if (diff >= 0 && abs >= 0)
+			return diffAbsValues(diff, abs);
+
+		return (diff < 0 ? "-" : "<b>" + num(diff) + "</b>") + " &#9887; " + (abs < 0 ? "-" : "<i>" + num(abs) + "</i>");
+	}
+
+	/** A label in the "Table Info" with a tooltip */
+	private static String label(String text, String tooltip)
+	{
+		return "<span title='" + tooltip.replace("'", "&#39;") + "'>" + text + "</span>";
+	}
+
+	private static final String DIFF_ABS_TOOLTIP = "\n\nTwo values: [during the recording] and [since the database instance was started].\nEmpty = not recorded (the collector only records the most active segments, see CmSegmentStats)";
 
 	/**
 	 * Plain text, one block per table / view: what the LLM is told about the tables of a statement
@@ -515,8 +801,21 @@ extends ReportEntryAbstract
 				sb.append(", compressed");
 			if (StringUtil.hasValue(ti.degree) && ! "1".equals(ti.degree))
 				sb.append(", parallelDegree=").append(ti.degree);
+			if (ti.modInserts > 0 || ti.modUpdates > 0 || ti.modDeletes > 0)
+				sb.append(", rowsChangedSinceStatistics=(inserts=").append(Math.max(0, ti.modInserts)).append(", updates=").append(Math.max(0, ti.modUpdates)).append(", deletes=").append(Math.max(0, ti.modDeletes)).append(")");
 
 			sb.append(", indexCount=").append(ti.indexes.size()).append(")\n");
+
+			// What was done to the table while it was monitored (only when it was among the most active segments)
+			if (ti.diff.isRecorded())
+			{
+				sb.append("Table activity during the monitored period: logicalReads=").append(ti.diff.logicalReads)
+				  .append(", physicalReads=").append(ti.diff.physicalReads)
+				  .append(", blockChanges=").append(ti.diff.blockChanges)
+				  .append(", fullScans=").append(ti.diff.segmentScans)
+				  .append(", rowLockWaits=").append(ti.diff.rowLockWaits)
+				  .append("\n");
+			}
 
 			sb.append("Columns (with optimizer statistics):\n").append(StringUtil.nullToValue(ti.objectText, "-not-found-")).append("\n");
 
@@ -531,9 +830,24 @@ extends ReportEntryAbstract
 				  .append(", blevel=").append(ii.blevel)
 				  .append(", clusteringFactor=").append(ii.clusteringFactor)
 				  .append(", sizeMB=").append(Math.round(Math.max(0, ii.sizeKb) / 1024.0))
-				  .append(", status=").append(ii.status)
-				  .append("\n");
+				  .append(", status=").append(ii.status);
+
+				// 12.2 and above: Oracle tracks how the index is used
+				if (ii.usageTracked)
+				{
+					sb.append(", timesUsed=").append(ii.absAccessCount <= 0 ? "NEVER (since Oracle started to track index usage)" : "" + ii.absAccessCount);
+					if (ii.absAccessCount > 0)
+						sb.append(", rowsReturned=").append(Math.max(0, ii.absRowsReturned)).append(", lastUsed=").append(ii.lastUsed);
+				}
+				if (ii.diff.isRecorded())
+					sb.append(", duringTheMonitoredPeriod=(logicalReads=").append(ii.diff.logicalReads).append(", blockChanges=").append(ii.diff.blockChanges).append(")");
+
+				sb.append("\n");
 			}
+
+			if (ti.triggersText != null)
+				sb.append("Triggers:\n").append(ti.triggersText).append("\n");
+
 			sb.append("---\n");
 		}
 
@@ -636,14 +950,47 @@ extends ReportEntryAbstract
 					map.put("LOB MB" , mb(ti.lobKb));
 				map.put("Avg RowLen" , num(ti.avgRowLen));
 				map.put("Statistics" , statistics);
+
+				// How much that has changed since the statistics were gathered (Oracle says they are stale at 10 percent, if nobody has changed that)
+				long modified = Math.max(0, ti.modInserts) + Math.max(0, ti.modUpdates) + Math.max(0, ti.modDeletes);
+				if (modified > 0)
+				{
+					map.put(label("Changed since Stats", "Rows changed since the optimizer statistics were gathered (DBA_TAB_MODIFICATIONS).\nOracle writes this down now and then, not at once: so it is 'about'."),
+							num(modified) + " rows"
+							+ (ti.numRows > 0 ? " = " + NumberFormat.getInstance().format(Math.round(modified * 1000.0 / ti.numRows) / 10.0) + " %" : "")
+							+ " <i>(ins " + num(Math.max(0, ti.modInserts)) + ", upd " + num(Math.max(0, ti.modUpdates)) + ", del " + num(Math.max(0, ti.modDeletes)) + ")</i>");
+				}
+
 				if ("ENABLED".equals(ti.compression))
 					map.put("Compression", "ENABLED");
 				if (StringUtil.hasValue(ti.degree) && ! "1".equals(ti.degree))
 					map.put("Parallel Degree", html(ti.degree));
 				map.put("Tablespace" , html(ti.tablespace));
 				map.put("Sampled"    , ti.sampleTime + "");
+
+				// What was done to the table: during the recording, and since the instance was started
+				if (ti.diff.isRecorded() || ti.abs.isRecorded())
+				{
+					map.put(label("Logical Reads"  , "Blocks of the table read from memory or disk." + DIFF_ABS_TOOLTIP), diffAbs(ti.diff.logicalReads  , ti.abs.logicalReads));
+					map.put(label("Physical Reads" , "Blocks of the table read from disk."           + DIFF_ABS_TOOLTIP), diffAbs(ti.diff.physicalReads , ti.abs.physicalReads));
+					map.put(label("Physical Writes", "Blocks of the table written to disk."          + DIFF_ABS_TOOLTIP), diffAbs(ti.diff.physicalWrites, ti.abs.physicalWrites));
+					map.put(label("Block Changes"  , "Changes made to blocks of the table (INSERT, UPDATE, DELETE)." + DIFF_ABS_TOOLTIP), diffAbs(ti.diff.blockChanges, ti.abs.blockChanges));
+					map.put(label("Full Scans"     , "Number of times the whole table was scanned."  + DIFF_ABS_TOOLTIP), diffAbs(ti.diff.segmentScans  , ti.abs.segmentScans));
+					map.put(label("Row Lock Waits" , "Number of times a session had to wait for a row that was locked by another session." + DIFF_ABS_TOOLTIP), diffAbs(ti.diff.rowLockWaits, ti.abs.rowLockWaits));
+					if (ti.diff.itlWaits > 0 || ti.abs.itlWaits > 0)
+						map.put(label("ITL Waits"  , "Number of times a session had to wait for a free transaction slot in a block (too many transactions in the same block: a higher INITRANS helps)." + DIFF_ABS_TOOLTIP), diffAbs(ti.diff.itlWaits, ti.abs.itlWaits));
+					if (ti.diff.bufferBusyWaits > 0 || ti.abs.bufferBusyWaits > 0)
+						map.put(label("Buffer Busy Waits", "Number of times a session had to wait for a block that another session was reading into memory or changing." + DIFF_ABS_TOOLTIP), diffAbs(ti.diff.bufferBusyWaits, ti.abs.bufferBusyWaits));
+				}
+
 				map.put("Index Count", ti.indexes.size() + (ti.indexes.size() > 0 ? "" : " <b><font color='red'>&lt;&lt;-- Warning NO index</font></b>"));
 				map.put("Columns"    , getTextAsTooltipDiv(ti.objectText, "Columns and their statistics", getDdlMaxLengthTable()));
+				if (ti.triggersLookedUp)
+				{
+					map.put("Triggers", ti.triggersText == null
+							? "-no-triggers-"
+							: getTextAsTooltipDiv(ti.triggersText, ti.triggerCount + " trigger(s), " + ti.triggerEnabledCount + " enabled", getDdlMaxLengthTrigger()));
+				}
 
 				indexInfo = getIndexInfoAsHtmlTable(ti, classname);
 			}
@@ -667,12 +1014,23 @@ extends ReportEntryAbstract
 
 		String className = StringUtil.hasValue(classname) ? " class='" + classname + "'" : "";
 
+		// Columns that are only there when we have something to put in them
+		boolean hasUsage    = false; // 12.2 and above: Oracle tracks how the indexes are used
+		boolean hasActivity = false; // CmSegmentStats has recorded the table or one of its indexes
+		for (OraIndexInfo ii : ti.indexes)
+		{
+			if (ii.usageTracked)
+				hasUsage = true;
+			if (ii.diff.isRecorded() || ii.abs.isRecorded())
+				hasActivity = true;
+		}
+
 		StringBuilder sb = new StringBuilder();
 		sb.append("<table" + className + "> \n");
 		sb.append("<thead> \n");
 		sb.append("<tr> \n");
 		sb.append(createHtmlTh("Index Name"       , ""));
-		sb.append(createHtmlTh("Keys"             , "The columns of the index, in order"));
+		sb.append(createHtmlTh("Keys"             , "The columns of the index, in order. For a function-based index: the expression."));
 		sb.append(createHtmlTh("Description"      , "PRIMARY KEY / UNIQUE / NONUNIQUE, and what kind of index it is when it is not a normal B-tree"));
 		sb.append(createHtmlTh("RowCount"         , "NUM_ROWS: rows in the index, from the optimizer statistics"));
 		sb.append(createHtmlTh("Distinct Keys"    , "DISTINCT_KEYS: how many different values the index has. Close to RowCount = selective. Few = many rows per value"));
@@ -680,6 +1038,21 @@ extends ReportEntryAbstract
 		sb.append(createHtmlTh("BLevel"           , "BLEVEL: levels above the leaf blocks. A lookup reads BLevel + 1 index blocks"));
 		sb.append(createHtmlTh("Clustering Factor", "CLUSTERING_FACTOR: how well the order of the table rows follows the index.\nClose to the number of table BLOCKS = good (an index range scan reads few table blocks).\nClose to the number of ROWS = bad (every row is a new table block), then the optimizer often prefers a full table scan"));
 		sb.append(createHtmlTh("Size MB"          , ""));
+		if (hasUsage)
+		{
+			sb.append(createHtmlTh("Times Used"   , "(diff <- abs) How many times the index was used by a statement (DBA_INDEX_USAGE.TOTAL_ACCESS_COUNT).\n[during the recording] and [since Oracle started to track it: it is not reset when the database is restarted].\nOracle samples this, and writes it down every 15 minutes: so it is 'about'.\nNEVER on an index that is not unique = it only costs (space, and time at every INSERT, UPDATE and DELETE)."));
+			sb.append(createHtmlTh("Rows Returned", "(diff <- abs) How many rows the index has given (DBA_INDEX_USAGE.TOTAL_ROWS_RETURNED).\nMany rows per use = the index is not selective for how it is used."));
+			sb.append(createHtmlTh("Last Used"    , "When the index was used last (DBA_INDEX_USAGE.LAST_USED)"));
+		}
+		if (hasActivity)
+		{
+			sb.append(createHtmlTh("Logical Reads"    , "(diff <- abs) Blocks of the index read from memory or disk." + DIFF_ABS_TOOLTIP));
+			sb.append(createHtmlTh("Physical Reads"   , "(diff <- abs) Blocks of the index read from disk." + DIFF_ABS_TOOLTIP));
+			sb.append(createHtmlTh("Block Changes"    , "(diff <- abs) Changes made to blocks of the index: what it costs to keep the index up to date at INSERT, UPDATE and DELETE." + DIFF_ABS_TOOLTIP));
+			sb.append(createHtmlTh("Row Lock Waits"   , "(diff <- abs) Number of times a session had to wait for a row lock on the index (for example two sessions that insert the same unique key)." + DIFF_ABS_TOOLTIP));
+			sb.append(createHtmlTh("ITL Waits"        , "(diff <- abs) Number of times a session had to wait for a free transaction slot in a block of the index." + DIFF_ABS_TOOLTIP));
+			sb.append(createHtmlTh("Buffer Busy Waits", "(diff <- abs) Number of times a session had to wait for a block of the index that another session was reading or changing.\nTypical for many concurrent inserts at the right hand side of an index on a sequence number." + DIFF_ABS_TOOLTIP));
+		}
 		sb.append(createHtmlTh("Status"           , "UNUSABLE = the index can not be used until it is rebuilt"));
 		sb.append(createHtmlTh("Statistics"       , "LAST_ANALYZED: when the optimizer statistics were gathered"));
 		sb.append(createHtmlTh("Tablespace"       , ""));
@@ -699,6 +1072,24 @@ extends ReportEntryAbstract
 			sb.append("  <td>").append( num(ii.blevel) ).append("</td> \n");
 			sb.append("  <td>").append( num(ii.clusteringFactor) ).append("</td> \n");
 			sb.append("  <td>").append( mb(ii.sizeKb) ).append("</td> \n");
+			if (hasUsage)
+			{
+				// Never used, as far as Oracle knows: red when the index is not there to stop duplicates
+				boolean neverUsed = ii.usageTracked && ii.absAccessCount <= 0 && ii.diffAccessCount <= 0;
+
+				sb.append("  <td>").append( neverUsed ? ("UNIQUE".equals(ii.uniqueness) ? "NEVER" : "<b><font color='red'>NEVER</font></b>") : diffAbs(ii.diffAccessCount, ii.absAccessCount) ).append("</td> \n");
+				sb.append("  <td>").append( neverUsed ? "" : diffAbs(ii.diffRowsReturned, ii.absRowsReturned) ).append("</td> \n");
+				sb.append("  <td>").append( html(ii.lastUsed) ).append("</td> \n");
+			}
+			if (hasActivity)
+			{
+				sb.append("  <td>").append( diffAbs(ii.diff.logicalReads   , ii.abs.logicalReads)    ).append("</td> \n");
+				sb.append("  <td>").append( diffAbs(ii.diff.physicalReads  , ii.abs.physicalReads)   ).append("</td> \n");
+				sb.append("  <td>").append( diffAbs(ii.diff.blockChanges   , ii.abs.blockChanges)    ).append("</td> \n");
+				sb.append("  <td>").append( diffAbs(ii.diff.rowLockWaits   , ii.abs.rowLockWaits)    ).append("</td> \n");
+				sb.append("  <td>").append( diffAbs(ii.diff.itlWaits       , ii.abs.itlWaits)        ).append("</td> \n");
+				sb.append("  <td>").append( diffAbs(ii.diff.bufferBusyWaits, ii.abs.bufferBusyWaits) ).append("</td> \n");
+			}
 			sb.append("  <td>").append( "UNUSABLE".equals(ii.status) ? "<b><font color='red'>UNUSABLE</font></b>" : html(ii.status) ).append("</td> \n");
 			sb.append("  <td>").append( StringUtil.isNullOrBlank(ii.lastAnalyzed) ? "<font color='red'>NEVER</font>" : html(ii.lastAnalyzed) ).append("</td> \n");
 			sb.append("  <td>").append( html(ii.tablespace) ).append("</td> \n");
