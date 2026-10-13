@@ -702,6 +702,16 @@ function _cmUnpivotRender(r, filter)
 	}
 	h += '</tbody></table>';
 
+	// The scroll position, as for the normal table (see the end of cmDetailRenderFiltered): where the user scrolled to is
+	// kept per CM in localStorage by the scroll listener of #cm-detail-table-wrap. It has to be put back after EVERY render:
+	// each refresh first empties the table ("loading"), and that makes the browser snap the pane to the top.
+	var $scrollPane = $('#cm-detail-table-wrap');
+	var savedTop    = 0, savedLeft = 0;
+	try {
+		var saved = JSON.parse(localStorage.getItem(_scrPfx + 'cmDetail-scroll-' + (r.cmName || 'default')) || 'null');
+		if (saved) { savedTop = saved.top || 0; savedLeft = saved.left || 0; }
+	} catch(e) {}
+
 	// Destroy existing tooltip instances before replacing the DOM (prevents orphaned tooltip divs)
 	_cmDisposeTableTooltips();
 	_cmDetailClickRows = null;   // a click on a line does nothing here: the line already is the "detail"
@@ -710,6 +720,13 @@ function _cmUnpivotRender(r, filter)
 	// Sticky column headers sit just below the sticky info bar
 	var tblEl = document.getElementById('cm-detail-table');
 	if (tblEl) tblEl.style.setProperty('--cm-sticky-h', ($('#cm-detail-sticky-top').outerHeight() || 0) + 'px');
+
+	// Put the scroll position back. _cmRestoringScroll tells the scroll listener that the 'scroll' events this causes
+	// are ours and not the user's (a position that the browser has to clamp must not be saved as the new one).
+	_cmRestoringScroll = true;
+	$scrollPane.scrollTop(savedTop).scrollLeft(savedLeft);
+	setTimeout(function() { $scrollPane.scrollTop(savedTop).scrollLeft(savedLeft); }, 1);   // again, in case the browser resets it after the DOM update
+	setTimeout(function() { _cmRestoringScroll = false; }, 60);
 }
 
 // Helper: build a CM tab icon <img> element.
