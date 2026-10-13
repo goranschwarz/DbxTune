@@ -275,6 +275,7 @@ var dbxLlmAdvice = (function () {
 		if (v.indexOf('sql server') >= 0) return 'tsql';
 		if (v.indexOf('sybase') >= 0 || v.indexOf('adaptive server') >= 0) return 'tsql'; // closest available dialect to Sybase T-SQL
 		if (v.indexOf('postgres') >= 0) return 'postgresql';
+		if (v.indexOf('oracle') >= 0) return 'plsql';
 		return 'sql';
 	}
 

@@ -721,7 +721,7 @@
 
 			// ---- Oracle Execution Plan dialog: the text of DBMS_XPLAN, drawn by dbxShowplanOracle.js ----
 			// The same frame as the ASE dialog above (see its comments for the layout): sections on the left, the Properties
-			// pane on the right. No Table Information / LLM sections: the plan text is all there is to work with.
+			// pane on the right. No Table Information section: there is no DDL lookup for Oracle.
 			"<div class='modal fade' id='dbx-view-oraShowplan-dialog' tabindex='-1' role='dialog' aria-labelledby='dbx-view-oraShowplan-dialog' aria-hidden='true'>",
 			"	<div class='modal-dialog modal-dialog-centered mw-100' role='document'>",
 			"		<div class='modal-content'>",
@@ -785,6 +785,33 @@
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='dbxCopyCodeBlock(\"dbx-view-oraShowplan-sqlContent\");'>Copy SQL</button>",
 			"						<div id='dbx-view-oraShowplan-sqlFmtPanel'></div>",
 			"						<pre><code id='dbx-view-oraShowplan-sqlContent' class='language-sql line-numbers dbx-view-sqltext-content'></code></pre>",
+			"					</div>",
+			"				</details>",
+
+			// The two LLM sections, as in the ASE and SQL Server dialogs (see the comments there). What the LLM gets for Oracle:
+			// the SQL text, the plan text and the server version. No table/index DDL: there is no DDL lookup for Oracle.
+			"				<!-- ▶ LLM Optimization Advice (lazy-loaded on first expand) -->",
+			"				<details id='dbx-osp-sect-llm' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
+			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#129302; LLM Optimization Advice<span class='dbx-llm-summary-info' style='font-weight:normal;color:var(--sp-text-5);'></span></summary>",
+			"					<div style='padding:4px 8px 8px 8px;'>",
+			// The button is OUTSIDE #dbx-osp-llm-body: dbxLlmAdvice.js replaces the whole content of its target
+			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='oraShowplanRefreshLlmAdvice();'>&#8635; Refresh Advice</button>",
+			"						<div id='dbx-osp-llm-body'>",
+			"							<span style='color:var(--sp-text-5);font-size:0.85em;'>Expand to ask an LLM for optimization advice.</span>",
+			"						</div>",
+			"					</div>",
+			"				</details>",
+
+			"				<!-- ▶ LLM Prompt Preview (never calls an LLM: it only builds the prompt) -->",
+			"				<details id='dbx-osp-sect-llmpreview' style='display:none;border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
+			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128203; LLM Prompt Preview<span style='font-weight:normal;color:var(--sp-text-5);'> - Ask your favourite LLM</span></summary>",
+			"					<div style='padding:4px 8px 8px 8px;'>",
+			"						<p class='text-muted' id='dbx-osp-llmpreview-note' style='font-size:0.8em;'>This DbxCentral instance doesn't have LLM Optimization Advice turned on, so nothing gets sent anywhere - but here's the exact prompt it would send. Copy it into any LLM chat (claude.ai, chatgpt.com, ...) yourself for a quick manual shortcut into the same advice.</p>",
+			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='oraShowplanRefreshLlmPreview();'>&#8635; Build Prompt</button>",
+			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='oraShowplanCopyLlmPreview();'>&#128203; Copy Prompt</button>",
+			"						<div id='dbx-osp-llmpreview-body'>",
+			"							<span style='color:var(--sp-text-5);font-size:0.85em;'>Expand to build the prompt.</span>",
+			"						</div>",
 			"					</div>",
 			"				</details>",
 
@@ -1778,6 +1805,10 @@
 	var _oraShowplanLastPlanText = undefined;
 	var _oraShowplanLastParsed = null;      // for the summary at the top of the Plan Analysis section
 	var _oraShowplanSplitterInited = false;
+	// For the two LLM sections: the SQL text as it was given (the SQL Text section may show it re-formatted),
+	// and the DbxTune server name the plan came from ('' for a pasted plan), which is where the Oracle version is read from
+	var _oraShowplanSqlText = '';
+	var _oraShowplanSrv     = '';
 
 	var _oraShowplanHorizontal = true;
 	try {
@@ -1878,6 +1909,7 @@
 				var inPlan = parsed.statements[0].steps[0].root._planInfo.sqlText;
 				if (!$sql.text() && inPlan) {
 					$sql.text(inPlan);
+					_oraShowplanSqlText = inPlan;
 					_autoFormatSql(oraShowplanFormatSql);
 				}
 
@@ -1934,21 +1966,102 @@
 	};
 
 	/**
+	 * The "LLM Optimization Advice" section of the Oracle dialog: ask the LLM about the statement and plan that are shown.
+	 * As _aseShowplanLoadLlmAdvice(), without the table DDL (there is no DDL lookup for Oracle): the LLM gets the SQL text,
+	 * the plan text and - when the plan came from a monitored server - the Oracle version of that server.
+	 */
+	function _oraShowplanLoadLlmAdvice(body) {
+		body.setAttribute('data-loaded', 'true');
+
+		if (typeof dbxLlmAdvice === 'undefined') {
+			body.innerHTML = '<em style="color:var(--sp-text-5);">dbxLlmAdvice.js is not loaded on this page.</em>';
+			return;
+		}
+		if (!_oraShowplanSqlText) {
+			body.innerHTML = '<em style="color:var(--sp-text-5);">No SQL text is available for this plan.</em>';
+			return;
+		}
+		_openLlmAdviceIfConfigured(body, { sql: _oraShowplanSqlText, plan: _oraShowplanLastPlanText || '', dbVendor: 'Oracle', srv: _oraShowplanSrv, target: body });
+	}
+
+	window.oraShowplanRefreshLlmAdvice = function() {
+		var body = document.getElementById('dbx-osp-llm-body');
+		if (body) _oraShowplanLoadLlmAdvice(body);
+	};
+
+	/**
+	 * The "LLM Prompt Preview" section: the exact prompt that would be sent, built by the server (preview:true)
+	 * without calling an LLM - so it also works when DbxCentral.llm.enabled is off.
+	 */
+	function _oraShowplanLoadLlmPreview(body) {
+		body.setAttribute('data-loaded', 'true');
+
+		if (!_oraShowplanSqlText) {
+			body.innerHTML = '<em style="color:var(--sp-text-5);">No SQL text is available for this plan.</em>';
+			return;
+		}
+		body.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Building prompt…</span>';
+		// The same Oracle version the Advice section would send (read live from the server's Collector; '' for a pasted plan)
+		var dbmsVerPromise = (window.dbxLlmAdvice && dbxLlmAdvice.fetchDbmsVersion)
+				? dbxLlmAdvice.fetchDbmsVersion({ srv: _oraShowplanSrv }) : Promise.resolve('');
+		dbmsVerPromise.then(function(dbmsVersion) {
+			$.ajax({
+				url:         '/api/llm/optimize-sql',
+				method:      'POST',
+				contentType: 'application/json',
+				data:        JSON.stringify({ sql: _oraShowplanSqlText, ddlContext: '', plan: _oraShowplanLastPlanText || '', dbVendor: 'Oracle', dbmsVersion: dbmsVersion, preview: true }),
+				dataType:    'json',
+				success: function(r) {
+					if (r && r.promptSent)
+						body.innerHTML = '<pre id="dbx-osp-llmpreview-text" class="mb-0" style="white-space:pre-wrap;max-height:400px;overflow:auto;">' + escapeHtml(r.promptSent) + '</pre>';
+					else
+						body.innerHTML = '<em style="color:var(--sp-text-5);">Could not build a prompt preview.</em>';
+				},
+				error: function(xhr) { body.innerHTML = '<span class="text-danger">Failed to build prompt: HTTP ' + xhr.status + '</span>'; }
+			});
+		});
+	}
+
+	window.oraShowplanRefreshLlmPreview = function() {
+		var body = document.getElementById('dbx-osp-llmpreview-body');
+		if (body) _oraShowplanLoadLlmPreview(body);
+	};
+
+	window.oraShowplanCopyLlmPreview = function() {
+		var el = document.getElementById('dbx-osp-llmpreview-text');
+		if (!el) { alert('Build the prompt first.'); return; }
+		_copyText(el.textContent);
+	};
+
+	/** A new plan is shown: the two LLM sections are closed and emptied, so they load again (for THIS plan) when they are expanded */
+	function _oraShowplanResetLlmSections() {
+		[['dbx-osp-sect-llm',        'dbx-osp-llm-body',        'Expand to ask an LLM for optimization advice.'],
+		 ['dbx-osp-sect-llmpreview', 'dbx-osp-llmpreview-body', 'Expand to build the prompt.']].forEach(function (s) {
+			var sect = document.getElementById(s[0]), body = document.getElementById(s[1]);
+			if (!sect || !body) return;
+			body.setAttribute('data-loaded', 'false');
+			body.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">' + s[2] + '</span>';
+			sect.removeAttribute('open');
+		});
+	}
+
+	/**
 	 * Open the Oracle Execution Plan dialog from code (the standalone page /showplan/oracle does).
 	 * The other way in is an element with data-bs-toggle='modal' data-bs-target='#dbx-view-oraShowplan-dialog'
-	 * and the attributes data-plan / data-sqltext / data-objectname (the Active Statements panel): see the
+	 * and the attributes data-plan / data-sqltext / data-objectname / data-srv (the Active Statements panel): see the
 	 * show.bs.modal handler in _initHandlers().
 	 *
 	 * @param {string} planText     — what DBMS_XPLAN printed (DISPLAY_CURSOR, DISPLAY)
 	 * @param {string} [sqlText]    — the SQL text; when empty the one DBMS_XPLAN printed above the plan is used
 	 * @param {string} [objectName] — optional label for the header
+	 * @param {Object} [meta]       — optional: { srv } = the DbxTune server name the plan came from (the LLM sections read the Oracle version from it)
 	 */
-	window.showOracleShowplanDialog = function (planText, sqlText, objectName) {
+	window.showOracleShowplanDialog = function (planText, sqlText, objectName, meta) {
 		var $dlg = $('#dbx-view-oraShowplan-dialog');
 		if (!$dlg.length) {
 			_injectHtml();
 			_initHandlers();
-			setTimeout(function () { window.showOracleShowplanDialog(planText, sqlText, objectName); }, 50);
+			setTimeout(function () { window.showOracleShowplanDialog(planText, sqlText, objectName, meta); }, 50);
 			return;
 		}
 		if (!planText) return;
@@ -1956,6 +2069,9 @@
 		$('#dbx-view-oraShowplan-objectName', $dlg).text(objectName || '');
 		$('#dbx-view-oraShowplan-planContent', $dlg).text(planText);
 		$('#dbx-view-oraShowplan-sqlContent',  $dlg).text(sqlText || '');
+		_oraShowplanSqlText = sqlText || '';
+		_oraShowplanSrv     = (meta && meta.srv) ? meta.srv : '';
+		_oraShowplanResetLlmSections();
 		_autoFormatSql(oraShowplanFormatSql);
 
 		// Drawn when the dialog is VISIBLE: the renderer measures the boxes, and a hidden dialog has no sizes
@@ -2712,14 +2828,45 @@ function _initGlobalEscClose() {
 		// Oracle: opened by an element with data-bs-toggle='modal' (the Active Statements panel): take the plan from its
 		// data-* attributes. NOT drawn here: the dialog is not visible yet, so nothing can be measured (see the ASE dialog).
 		$('#dbx-view-oraShowplan-dialog').on('show.bs.modal', function (e) {
+			_updateLlmSummaryInfo('dbx-osp-sect-llm');   // before the check below: for both ways of opening
 			if (!e.relatedTarget) return;   // opened by showOracleShowplanDialog(), which has filled the fields itself
 			var data = $(e.relatedTarget).data();
 			$('#dbx-view-oraShowplan-objectName', this).text(data.objectname || '');
 			$('#dbx-view-oraShowplan-planContent', this).text(data.plan || '');
 			$('#dbx-view-oraShowplan-sqlContent', this).text(data.sqltext || '');
+			_oraShowplanSqlText = data.sqltext || '';
+			_oraShowplanSrv     = data.srv || '';
+			_oraShowplanResetLlmSections();
 			_autoFormatSql(oraShowplanFormatSql);
 			_oraShowplanLastPlanText = data.plan;
 		});
+
+		// Oracle LLM Optimization Advice / LLM Prompt Preview: loaded when the section is expanded for the first time
+		// (as the ASE sections below: both are always shown, the heading of the first says when it is not configured)
+		document.getElementById('dbx-osp-sect-llm').addEventListener('toggle', function() {
+			if (!this.open) return;
+			var body = document.getElementById('dbx-osp-llm-body');
+			if (!body || body.getAttribute('data-loaded') === 'true') return;
+			_oraShowplanLoadLlmAdvice(body);
+		});
+		document.getElementById('dbx-osp-sect-llmpreview').addEventListener('toggle', function() {
+			if (!this.open) return;
+			var body = document.getElementById('dbx-osp-llmpreview-body');
+			if (!body || body.getAttribute('data-loaded') === 'true') return;
+			_oraShowplanLoadLlmPreview(body);
+		});
+		if (typeof dbxLlmAdvice !== 'undefined') {
+			dbxLlmAdvice.isEnabled().then(function(enabled) {
+				var llmPreviewSect = document.getElementById('dbx-osp-sect-llmpreview');
+				var llmPreviewNote = document.getElementById('dbx-osp-llmpreview-note');
+				if (llmPreviewSect) llmPreviewSect.style.display = '';
+				if (llmPreviewNote) {
+					llmPreviewNote.textContent = enabled
+						? 'Build the exact prompt that would be sent to the LLM without actually sending it - handy to see what context gets included, or to paste into your own LLM chat instead of using the Advice above.'
+						: "This DbxCentral instance doesn't have LLM Optimization Advice turned on, so nothing gets sent anywhere - but here's the exact prompt it would send. Copy it into any LLM chat (claude.ai, chatgpt.com, ...) yourself for a quick manual shortcut into the same advice.";
+				}
+			});
+		}
 
 		// Oracle: draw the plan once the dialog is visible, and make it draggable / resizable. The same as the
 		// ASE dialog above (and the SQL Server dialog, where each step is explained), with its own localStorage keys.

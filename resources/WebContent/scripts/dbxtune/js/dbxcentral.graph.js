@@ -2324,13 +2324,14 @@ function dbxTuneGraphSubscribe()
 
 		return div;
 	}
-	function createOracleQueryPlanToolTipDiv(data, rowData)
+	function createOracleQueryPlanToolTipDiv(data, rowData, srvName)
 	{
 		// creates a div that will open the Oracle Execution Plan dialog (dbxShowplan.js, #dbx-view-oraShowplan-dialog) -
 		// same trigger pattern as createAseQueryPlanToolTipDiv() above. The plan is the text of DBMS_XPLAN.DISPLAY_CURSOR.
 
 		const dataVal = data;
 		const sqlText = rowData.hasOwnProperty('SqlText') ? (rowData.SqlText || '') : '';
+		const srv     = srvName || (_serverList.length ? _serverList[0] : '');
 
 		const div = document.createElement("div");
 		div.innerHTML = "&nbsp;";
@@ -2340,6 +2341,7 @@ function dbxTuneGraphSubscribe()
 		div.setAttribute("data-objectname" , rowData.EffectiveSqlId ? ('SQL_ID ' + rowData.EffectiveSqlId) : '');
 		div.setAttribute("data-plan"       , dataVal);
 		div.setAttribute("data-sqltext"    , sqlText);
+		div.setAttribute("data-srv"        , srv);
 
 		return div;
 	}
@@ -2385,8 +2387,8 @@ function dbxTuneGraphSubscribe()
 	var ACTIVE_STMT_DB_VENDOR = {
 		AseTune:       'Adaptive Server Enterprise',
 		SqlServerTune: 'Microsoft SQL Server',
-		PostgresTune:  'PostgreSQL'
-		// OracleTune intentionally omitted - not a supported dbVendor for DDL-context lookups
+		PostgresTune:  'PostgreSQL',
+		OracleTune:    'Oracle'   // no DDL-context lookup for Oracle (dbxLlmAdvice.js skips it), but the LLM has to know which DBMS it is
 	};
 
 	function _activeStmtFirstNonEmpty(row, keys)
@@ -2663,7 +2665,7 @@ function dbxTuneGraphSubscribe()
 				{
 					// The tooltip goes on the CHECKBOX columns (as for the other collectors). On the text columns it made the row one line higher.
 					if (metaData.columnName === "HasSqlText"   && rowData.hasOwnProperty('SqlText')  && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.SqlText,  'plsql') ); }
-					if (metaData.columnName === "HasExecPlan"  && rowData.hasOwnProperty('ExecPlan') && cellContent === true) { td.appendChild( createOracleQueryPlanToolTipDiv(rowData.ExecPlan, rowData) ); }
+					if (metaData.columnName === "HasExecPlan"  && rowData.hasOwnProperty('ExecPlan') && cellContent === true) { td.appendChild( createOracleQueryPlanToolTipDiv(rowData.ExecPlan, rowData, srvName) ); }
 				}
 			} // end: metaData && columnName
 		};

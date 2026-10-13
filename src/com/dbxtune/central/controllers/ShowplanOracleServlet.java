@@ -45,7 +45,8 @@ import com.dbxtune.utils.StringUtil;
  * the browser by <code>dbxShowplanOracle.js</code>, in the dialog that <code>dbxShowplan.js</code> holds: the same
  * dialog the 'Active Statements' panel of an Oracle server opens.
  * <ul>
- *   <li>GET: a form to paste a plan into. Nothing is sent to the server: the button opens the dialog with what was pasted.</li>
+ *   <li>GET: a form to paste a plan into. The button opens the dialog with what was pasted, without a round trip to the server
+ *       (the plan only leaves the browser when the user opens one of the LLM sections of the dialog).</li>
  *   <li>POST (plan, sql): the same page, with the dialog opened on the plan that was posted. This is how the
  *       "Open in External Window" button of the dialog hands its plan over.</li>
  * </ul>
@@ -121,6 +122,11 @@ extends HttpServlet
 				HtmlUtils.createJsScriptTag("/scripts/dbxtune/js/dbxShowplanOracle.js") +
 				HtmlUtils.createJsScriptTag("/scripts/panzoom/4.6.2/panzoom.min.js") +
 
+				// The LLM Optimization Advice / LLM Prompt Preview sections of the dialog
+				"    <script src='/scripts/marked/18.0.14/marked.min.js'></script> \n" +
+				"    <script src='/scripts/dompurify/3.4.16/purify.min.js'></script> \n" +
+				"    <script src='/scripts/dbxtune/js/dbxLlmAdvice.js'></script> \n" +
+
 				// The SQL Text section of the dialog: syntax colours and "Format SQL"
 				HtmlUtils.createCssLinkTag("/scripts/prism/prism-1.30.0.css") +
 				HtmlUtils.createJsScriptTag("/scripts/prism/prism-1.30.0.js") +
@@ -136,7 +142,7 @@ extends HttpServlet
 
 				"    <div class='container-fluid px-4 py-3' style='max-width: 1100px;'> \n" +
 				"      <h2>Oracle Execution Plan Viewer</h2> \n" +
-				"      <p class='text-muted'>Paste the text that <code>DBMS_XPLAN</code> prints and press <b>Show Plan</b>. Nothing is sent to the server: the plan is drawn in your browser.</p> \n" +
+				"      <p class='text-muted'>Paste the text that <code>DBMS_XPLAN</code> prints and press <b>Show Plan</b>. The plan is drawn in your browser: it is only sent to the server if you open one of the LLM sections of the dialog.</p> \n" +
 				"      <div class='card shadow-sm'> \n" +
 				"        <div class='card-body'> \n" +
 				"          <div class='mb-2'> \n" +
