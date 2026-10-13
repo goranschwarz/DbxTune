@@ -101,7 +101,7 @@ window.OracleShowplan = (function () {
 		var byId = {}, curId = null;
 		lines.forEach(function (line) {
 			if (!line.trim()) return;
-			var m = /^\s*(\d+)\s+-\s(.*)$/.exec(line);
+			var m = /^\s*\*?\s*(\d+)\s+-\s(.*)$/.exec(line);   // "   2 - ...", and "* 2 - ..." as DBMS_XPLAN.COMPARE_PLANS prints it
 			if (m) {
 				curId = m[1];
 				(byId[curId] = byId[curId] || []).push(m[2].trim());
@@ -115,20 +115,27 @@ window.OracleShowplan = (function () {
 		return byId;
 	}
 
+	// Column headings that are not what DBMS_XPLAN prints, but what people make of them when a plan has to fit on a page
+	// (Oracle's own documentation does it): they are read as the real heading
+	var HEADER_ALIASES = { 'Row': 'Rows', 'Byte': 'Bytes', 'Cost %CPU': 'Cost (%CPU)', 'Cost(%CPU)': 'Cost (%CPU)', 'Start': 'Starts', 'Buff': 'Buffers',
+	                       'INOUT': 'IN-OUT', 'IN OUT': 'IN-OUT' };
+
 	/** One plan table (and the sections below it), starting at the header line "| Id | Operation |..." */
 	function parseOnePlan(lines, headerIdx, info) {
-		var headers = splitCells(lines[headerIdx]).map(function (h) { return h.trim().replace(/\s+/g, ' '); });
+		var headers = splitCells(lines[headerIdx]).map(function (h) { h = h.trim().replace(/\s+/g, ' '); return HEADER_ALIASES[h] || h; });
 		var col = {};
 		headers.forEach(function (h, i) { col[h] = i; });
 		var opCol = col['Operation'];
 		if (opCol === undefined) return null;
 
-		// The rows: from below the dashes under the header, until the first line that is not a table line
+		// The rows: from below the dashes under the header, to the line of dashes that closes the table (or the first
+		// line that is not a table line). An EMPTY line does not end the table: people put them in to group the lines.
 		var i = headerIdx + 1;
-		if (i < lines.length && isDashLine(lines[i])) i++;
+		if (i < lines.length && /^[\s-]*-{5,}[\s-]*$/.test(lines[i])) i++;   // (dashes, and a stray space in them: seen in Oracle's documentation)
 		var nodes = [], byId = {}, stack = [], root = null;
 		for (; i < lines.length; i++) {
 			var line = lines[i];
+			if (!line.trim()) continue;
 			if (line.charAt(0) !== '|') break;
 			var cells = splitCells(line);
 			if (cells.length !== headers.length) continue;   // a line we do not understand: skip it, do not guess
@@ -164,7 +171,8 @@ window.OracleShowplan = (function () {
 					reads:      parseNum(cell('Reads')),
 					writes:     parseNum(cell('Writes')),
 					usedMem:    cell('Used-Mem') || undefined,
-					usedTmp:    cell('Used-Tmp') || undefined
+					usedTmp:    cell('Used-Tmp') || undefined,
+					optOneMulti: cell('O/1/M') || undefined   // format ALLSTATS ALL: how many of the executions ran in memory / with one pass / with several passes over temp
 				},
 				props: {
 					va:           id,                       // the badge on the box, and what a finding's "[Node N]" jumps to
@@ -210,7 +218,8 @@ window.OracleShowplan = (function () {
 		var sections = {}, title = null;
 		for (; i < lines.length; i++) {
 			var l = lines[i];
-			if (/^SQL_ID\s+\S+,\s*child number/i.test(l) || /^Plan hash value:/i.test(l) || /^\|\s*Id\s*\|/.test(l) || /^EXPLAINED SQL STATEMENT:/i.test(l)) break;
+			if (/^SQL_ID\s+\S+,\s*child number/i.test(l) || /^\s*Plan hash value\s*:/i.test(l) || /^\|\s*Id\s*\|/.test(l) || /^EXPLAINED SQL STATEMENT:/i.test(l)
+			 || /^\s*(SQL>\s*)?explain\s+plan\b/i.test(l)) break;
 			// The Hint Report has TWO title lines above its dashes: "Hint Report (identified by...):" and "Total hints for statement: N (...)"
 			if (/^Hint Report/i.test(l)) {
 				title = 'Hint Report';
@@ -222,6 +231,13 @@ window.OracleShowplan = (function () {
 				title = l.trim();
 				sections[title] = [];
 				i++;   // the dashes
+				continue;
+			}
+			// The sections that are read are also known by their title alone: in a pasted SQL*Plus output a page break
+			// can come between the title and its dashes
+			if (/^(Predicate Information|Column Projection Information|Query Block Name|Note\s*$)/i.test(l)) {
+				title = l.trim();
+				sections[title] = [];
 				continue;
 			}
 			if (title !== null && !isDashLine(l)) sections[title].push(l);
@@ -284,13 +300,36 @@ window.OracleShowplan = (function () {
 		ownShare('actTimeSec', 'ownActTimeSec', 'ownActTimePct', 0.1);
 		ownShare('buffers',    'ownBuffers',    'ownBuffersPct', 0);
 
+		// Which operations are run by parallel execution servers. The IN-OUT column says it line by line: P->P, P->S, PCWP
+		// and PCWC are parallel; S->P is a SERIAL operation that hands its rows to the parallel servers; empty is the
+		// query coordinator. A plan table without that column (not every format prints it): all that is below a PX COORDINATOR.
+		var hasInOut = col['IN-OUT'] !== undefined;
+		var parallelOps = 0;
+		(function markParallel(n, belowCoordinator) {
+			n._parallel = hasInOut ? /^(P->P|P->S|PCWP|PCWC)$/.test(n.props.inOut || '') : belowCoordinator;
+			if (n._parallel) parallelOps++;
+			var below = belowCoordinator || /^PX COORDINATOR/.test(n.op);
+			n.children.forEach(function (c) { markParallel(c, below); });
+		})(root, false);
+
 		var hasActuals = false;
-		used.forEach(function (n) {
+		used.forEach(function (n) { if (n.metrics.actRows !== undefined) hasActuals = true; });
+
+		// E-Rows is for ONE execution of the operation, A-Rows is the sum of all its executions (Starts): to compare the
+		// two, the estimate has to be multiplied with Starts.
+		// Not so for a parallel operation: there Starts also counts the parallel servers (and the block ranges of a
+		// PX BLOCK ITERATOR) that ran it, while E-Rows is for all of them together. So in the parallel part the estimate is
+		// only multiplied for what really is executed again and again: the inner side of a nested loop, a FILTER subquery.
+		(function setEstRowsTotal(n, restarted) {
 			var m = n.metrics;
-			if (m.actRows !== undefined) hasActuals = true;
-			// E-Rows is for ONE execution of the operation, A-Rows is the sum of all its executions (Starts):
-			// to compare the two, the estimate has to be multiplied with Starts
-			if (m.estRows !== undefined) m.estRowsTotal = m.estRows * (m.starts > 1 ? m.starts : 1);
+			if (m.estRows !== undefined) m.estRowsTotal = m.estRows * ((m.starts > 1 && (!n._parallel || restarted)) ? m.starts : 1);
+			n.children.forEach(function (c, ci) { setEstRowsTotal(c, restarted || (ci > 0 && /^(NESTED LOOPS|FILTER)/.test(n.op))); });
+		})(root, false);
+
+		// 'ALLSTATS LAST' on a parallel statement: the numbers are those of the query coordinator only, every line that
+		// the parallel servers ran says Starts 0 and A-Rows 0. (PX SEND lines say 0 in every format: they are not counted.)
+		var parallelStatsMissing = hasActuals && parallelOps > 0 && used.every(function (n) {
+			return !n._parallel || /^PX SEND/.test(n.op) || !n.metrics.starts;
 		});
 
 		// An operation that is stopped as soon as there are enough rows (ROWNUM, FETCH FIRST, the first row of a MIN/MAX)
@@ -300,6 +339,23 @@ window.OracleShowplan = (function () {
 			var stopsBelow = below || /^(COUNT STOPKEY|FIRST ROW)/.test(n.op);
 			if (stopsBelow || /^(SORT|WINDOW) .*(STOPKEY|PUSHED RANK)/.test(n.op)) n.metrics.stoppedEarly = true;
 			n.children.forEach(function (c) { markStoppedEarly(c, stopsBelow); });
+		})(root, false);
+
+		// A Bloom filter (JOIN FILTER USE, or SYS_OP_BLOOM_FILTER in the filter of a scan) throws away the rows that cannot
+		// match the join, and the optimizer's estimate does not count on that. So fewer rows than estimated is what it is
+		// for, on the operation itself and on what passes its rows on (PX BLOCK ITERATOR, PX SEND, PX RECEIVE) up to the join.
+		(function markBloomFiltered(n) {
+			var below = false;
+			n.children.forEach(function (c) { if (markBloomFiltered(c)) below = true; });
+			var own = /JOIN FILTER USE/.test(n.op) || (n.props.filter || []).some(function (f) { return /SYS_OP_BLOOM_FILTER/.test(f); });
+			if (own || (below && n.children.length === 1)) n.metrics.bloomFiltered = true;
+			return !!n.metrics.bloomFiltered;
+		})(root);
+		// ...and down from a JOIN FILTER USE to the scan below it, which is where the filter is really applied
+		// (the plan text only says so when it has the Predicate Information)
+		(function markBelowFilterUse(n, under) {
+			if (under) n.metrics.bloomFiltered = true;
+			n.children.forEach(function (c) { markBelowFilterUse(c, (under || /JOIN FILTER USE/.test(n.op)) && n.children.length === 1); });
 		})(root, false);
 
 		var sectionText = {};
@@ -314,7 +370,9 @@ window.OracleShowplan = (function () {
 			sections:    sectionText,
 			hasActuals:  hasActuals,
 			operations:  used.length,
-			inactive:    inactiveCount
+			inactive:    inactiveCount,
+			parallelOps: parallelOps,
+			parallelStatsMissing: parallelStatsMissing
 		};
 		return { root: root, nextLine: i };
 	}
@@ -324,7 +382,15 @@ window.OracleShowplan = (function () {
 		if (!planText || !String(planText).trim()) { lastParseError = 'The plan text is empty.'; return null; }
 
 		var rawText = String(planText).replace(/\r\n?/g, '\n');
-		var lines   = rawText.split('\n');
+		// A plan that was pasted from a mail or a document can be indented: the table lines are read from their '|'
+		var lines   = rawText.split('\n').map(function (l) { return /^\s+(\||-{5,}\s*$)/.test(l) ? l.replace(/^\s+/, '') : l; });
+		// A plan that was pasted from SQL*Plus has its page breaks in it - the column heading "PLAN_TABLE_OUTPUT" and a
+		// line of dashes, anywhere, also between the title of a section and its content - and "n rows selected." at the end
+		lines = lines.filter(function (l, li) {
+			if (/^\s*PLAN_TABLE_OUTPUT\s*$/.test(l)) return false;
+			if (isDashLine(l) && li > 0 && /^\s*PLAN_TABLE_OUTPUT\s*$/.test(lines[li - 1])) return false;
+			return !/^\s*\d+ rows? selected\.\s*$/i.test(l);
+		});
 		var statements = [];
 		var info = {};
 
@@ -340,7 +406,16 @@ window.OracleShowplan = (function () {
 					if (!isDashLine(lines[j])) sqlLines.push(lines[j]);
 				}
 				info.sqlText = sqlLines.join('\n').trim();
-			} else if ((m = /^Plan hash value:\s*(\d+)/i.exec(line))) {
+			} else if (/^\s*(SQL>\s*)?explain\s+plan\b/i.test(line)) {
+				// A pasted SQL*Plus session: "EXPLAIN PLAN FOR <statement>;" somewhere above the plan table
+				var stmtLines = [];
+				for (var k = i; k < lines.length && !/^\|\s*Id\s*\|/.test(lines[k]); k++) {
+					stmtLines.push(lines[k].replace(/^\s*\d+\s{2}/, ''));   // without the line numbers SQL*Plus puts in front
+					if (/;\s*$/.test(lines[k])) break;
+				}
+				var em = /\bfor\b([\s\S]*?);?\s*$/i.exec(stmtLines.join('\n'));
+				info = (em && em[1].trim()) ? { sqlText: em[1].trim() } : {};
+			} else if ((m = /^\s*Plan hash value\s*:\s*(\d+)/i.exec(line))) {
 				info.planHash = m[1];
 			} else if (/^\|\s*Id\s*\|/.test(line)) {
 				var plan = parseOnePlan(lines, i, info);
@@ -357,9 +432,12 @@ window.OracleShowplan = (function () {
 		if (!statements.length) {
 			// The usual reasons, in the words DBMS_XPLAN itself uses
 			var why = /cannot be found|cannot fetch plan|could not be found/i.exec(rawText);
-			lastParseError = why
-				? 'Oracle did not return a plan: "' + rawText.trim().split('\n').filter(function (l) { return /cannot|could not/i.test(l); })[0].trim() + '"'
-				: 'No plan table was found in the text (a line that starts with "| Id | Operation"). Is this the output of DBMS_XPLAN?';
+			if (why)
+				lastParseError = 'Oracle did not return a plan: "' + rawText.trim().split('\n').filter(function (l) { return /cannot|could not/i.test(l); })[0].trim() + '"';
+			else if (/SQL Plan Monitoring Details|SQL Monitoring Report/i.test(rawText))
+				lastParseError = 'This is a SQL Monitor report (DBMS_SQLTUNE.REPORT_SQL_MONITOR), which has another layout than DBMS_XPLAN. It is not supported.';
+			else
+				lastParseError = 'No plan table was found in the text (a line that starts with "| Id | Operation"). Is this the output of DBMS_XPLAN?';
 			return null;
 		}
 		return { format: 'text', rawText: rawText, statements: statements };
@@ -462,6 +540,13 @@ window.OracleShowplan = (function () {
 		// making the box very wide (renderNode() sets the class). A normal one stays on one line, also where the layout would
 		// rather make the box narrow (top-to-bottom, where a box is as wide as the row of its children).
 		+ '.ora-plan-label.ora-plan-label-long { white-space: normal; min-width: 150px; }'
+		// An operation that is run by parallel execution servers: a second "sheet" behind the box, as the SQL Server viewer
+		// draws its parallel operators (the same rules as .ss-plan-parallel-* in dbxShowplanSqlServer.js, where the reasons
+		// are: the sheets are ONE overlay behind the whole tree, see drawParallelStacks()). The chip in the corner is
+		// Oracle's own: the table queue (TQ) of the operation, which says which set of parallel servers runs it.
+		+ '.ora-plan-parallel-overlay { position: absolute; top: 0; left: 0; pointer-events: none; }'
+		+ '.ora-plan-parallel-sheet { position: absolute; border: 1px solid var(--sp-node-border); border-radius: 5px; background: var(--sp-bg); }'
+		+ '.ora-plan-tq-chip { position: absolute; right: -9px; bottom: -9px; height: 15px; padding: 0 5px; border-radius: 8px; background: var(--sp-chip); color: #fff; font-size: 10px; font-weight: 600; line-height: 15px; white-space: nowrap; box-shadow: 0 1px 2px var(--sp-shadow-2); }'
 		// A note that a finding of the Plan Analysis puts on the box of its operation
 		+ '.ora-plan-note { white-space: normal; font-weight: 600; }'
 		+ '.ora-plan-note-warning, .ora-plan-note-error { color: var(--sp-err); }'
@@ -617,7 +702,9 @@ window.OracleShowplan = (function () {
 		{ test: /^(COLLECTION ITERATOR|XMLTABLE|JSONTABLE)/, text: 'The rows come from a function or a collection (TABLE(...), XMLTABLE, JSON_TABLE), not from a table. The optimizer normally has to guess the number of rows.' },
 		{ test: /^(JOIN FILTER|PART JOIN FILTER)/,    text: 'A Bloom filter: CREATE builds it from the join keys of one side of a hash join, USE applies it on the other side (or on its partitions), so that rows that cannot match are thrown away early.' },
 		{ test: /^STATISTICS COLLECTOR/,              text: 'Adaptive plan: counts the rows that pass, and with that Oracle decides during the first execution between a nested loops join and a hash join.' },
+		{ test: /^PX COORDINATOR FORCED SERIAL/,      text: 'The plan was made as a parallel plan, but it is executed serially, by one process: something in the statement does not allow parallel execution here (a function that is not PARALLEL_ENABLE, for example).' },
 		{ test: /^PX COORDINATOR/,                    text: 'The query coordinator of a parallel statement: starts the parallel execution servers and receives their result. Everything below it runs in parallel.' },
+		{ test: /^PX SELECTOR/,                       text: 'Parallel execution (12c and above): ONE of the parallel execution servers runs the operations below it, which cannot be divided (an index range scan, for example), instead of the coordinator doing it.' },
 		{ test: /^PX SEND/,                           text: 'Parallel execution: sends rows to the next set of processes. The word after SEND is how the rows are distributed (HASH, RANGE, BROADCAST, ROUND-ROBIN; QC = to the coordinator).' },
 		{ test: /^PX RECEIVE/,                        text: 'Parallel execution: receives the rows that a PX SEND sent.' },
 		{ test: /^PX (BLOCK|PARTITION)/,              text: 'Parallel execution: divides the table into pieces (ranges of blocks, or partitions) and gives each parallel execution server its own piece.' }
@@ -664,15 +751,16 @@ window.OracleShowplan = (function () {
 	// The estimate is called wrong when it is 10 times off (and it is about more than a handful of rows)
 	function isEstActWarn(m) {
 		if (m.estRowsTotal === undefined || m.actRows === undefined) return false;
+		if (m.starts === 0) return false;   // not executed (or not counted: the parallel part of 'ALLSTATS LAST'), so its 0 rows say nothing
 		if (Math.max(m.estRowsTotal, m.actRows) < 100) return false;
-		if (m.stoppedEarly && m.actRows < m.estRowsTotal) return false;   // it was stopped when there were enough rows
+		if ((m.stoppedEarly || m.bloomFiltered) && m.actRows < m.estRowsTotal) return false;   // it was stopped when there were enough rows, or a Bloom filter took rows away
 		if (m.estRowsTotal <= 0 || m.actRows <= 0) return true;
 		var ratio = m.actRows / m.estRowsTotal;
 		return ratio >= 10 || ratio <= 0.1;
 	}
 	/** "12x more", "40x fewer", "no rows". Nothing while the estimate is within a factor of 2: that is as good as an estimate gets. */
 	function fmtEstActDiff(m) {
-		if (m.estRowsTotal === undefined || m.actRows === undefined) return undefined;
+		if (m.estRowsTotal === undefined || m.actRows === undefined || m.starts === 0) return undefined;
 		if (m.actRows === 0)      return m.estRowsTotal >= 10 ? 'no rows' : undefined;
 		if (m.estRowsTotal <= 0)  return 'estimate was 0';
 		var ratio = m.actRows / m.estRowsTotal;
@@ -768,6 +856,7 @@ window.OracleShowplan = (function () {
 			propRow($s, 'Physical writes',      fmtNum(m.writes));
 			propRow($s, 'Memory used',          m.usedMem);
 			propRow($s, 'Temp used',            m.usedTmp);
+			propRow($s, 'Optimal / 1-pass / multi-pass', m.optOneMulti);
 		});
 
 		propSectionIfAny($c, 'Partitions', function ($s) {
@@ -903,14 +992,28 @@ window.OracleShowplan = (function () {
 		$box.attr('data-va', p.va);
 		$box.append($('<div class="ora-plan-va" title="Operation Id (the Id column of the plan)"></div>').text(p.va));
 
+		// Run by parallel execution servers: the second sheet behind the box is drawn by drawParallelStacks(), the chip
+		// is the table queue. Operations with the same TQ are run together, by the same set of servers.
+		if (node._parallel) {
+			$box.append($('<div class="ora-plan-tq-chip"></div>').text(p.tq || '∥')
+				.attr('title', 'Runs in parallel execution servers.' + (p.tq
+					? '\nTable queue ' + p.tq + ': the operations with the same TQ are run together, by the same set of servers, and they send their rows on through that table queue.'
+					: '')));
+		}
+
 		$box.append($('<div class="ora-plan-icon-row"></div>')
 			.append($('<div class="ora-plan-icon"></div>').attr('style', iconStyleFor(node))));
 		$box.append($('<div class="ora-plan-label"></div>').toggleClass('ora-plan-label-long', node.label.length > 24).text(node.label));
 		var subtitle = subtitleFor(node);
 		if (subtitle) $box.append($('<div class="ora-plan-subtitle"></div>').attr('title', subtitle).text(subtitle));
 
-		// Rows: "Est 1 / Act 2,207 (2,207x more)" when the plan has run-time statistics, else the estimate
-		if (m.actRows !== undefined) {
+		// Rows: "Est 1 / Act 2,207 (2,207x more)" when the plan has run-time statistics, else the estimate.
+		// Starts 0 = no statistics for this line: it was not executed, or - in the parallel part - it was not counted
+		// ('ALLSTATS LAST' only has the coordinator's numbers, and a PX SEND is never counted), so its "0 rows" is not shown.
+		if (m.actRows !== undefined && m.starts === 0) {
+			if (m.estRows !== undefined) $box.append($('<div class="ora-plan-metric"></div>').text('Rows ' + fmtNum(m.estRows)));
+			if (!node._parallel)         $box.append($('<div class="ora-plan-metric"></div>').css('font-style', 'italic').text('not executed'));
+		} else if (m.actRows !== undefined) {
 			var $rows = $('<div class="ora-plan-metric"></div>');
 			if (warn) $rows.addClass('ora-plan-warn-text');
 			$rows.text((m.estRowsTotal === undefined ? '' : 'Est ' + fmtNum(m.estRowsTotal) + ' / ') + 'Act ' + fmtNum(m.actRows));
@@ -937,8 +1040,8 @@ window.OracleShowplan = (function () {
 			}
 			$box.append($m);
 		}
-		if (m.cost       !== undefined) metricWithOwnPct('Cost ' + fmtNum(m.cost),       m.ownCostPct);
-		if (m.actTimeSec !== undefined) metricWithOwnPct('Time ' + fmtSec(m.actTimeSec), m.ownActTimePct);
+		if (m.cost       !== undefined)                   metricWithOwnPct('Cost ' + fmtNum(m.cost),       m.ownCostPct);
+		if (m.actTimeSec !== undefined && m.starts !== 0) metricWithOwnPct('Time ' + fmtSec(m.actTimeSec), m.ownActTimePct);
 
 		(node._boxNotes || []).forEach(function (n) {
 			$box.append($('<div class="ora-plan-metric ora-plan-note ora-plan-note-' + n.severity + '"></div>')
@@ -1127,6 +1230,8 @@ window.OracleShowplan = (function () {
 		  text: 'The optimizer prepared two alternatives for a join (nested loops or hash join) and chose between them during the first execution, from the number of rows it really got. The plan shown is the one that was chosen.' },
 		{ test: /(statistics|cardinality) feedback used/i, severity: 'info',
 		  text: 'An earlier execution of this statement showed that the row estimates were wrong, so Oracle parsed it again with the row counts it had seen. A sign that the statistics do not describe the data well.' },
+		{ test: /Failed to use SQL plan baseline/i, severity: 'warning',
+		  text: 'There is a SQL plan baseline for this statement, but its plan could not be reproduced (an index that it needs was dropped or renamed, for example), so the optimizer chose a plan of its own. The baseline no longer protects this statement.' },
 		{ test: /SQL plan baseline .* used/i, severity: 'info',
 		  text: 'The plan is fixed by a SQL plan baseline (SQL Plan Management): the optimizer may only use the plans that were accepted for this statement. A better plan can exist but is not used until it is accepted (DBA_SQL_PLAN_BASELINES).' },
 		{ test: /SQL profile .* used/i, severity: 'info',
@@ -1195,8 +1300,9 @@ window.OracleShowplan = (function () {
 					var inner = kids[1];
 					while (/^(PARTITION|VIEW)/.test(inner.op) && inner.children.length === 1) inner = inner.children[0];
 					if (isFullScan(inner) || /^INDEX FAST FULL SCAN/.test(inner.op)) {
-						var times     = inner.metrics.starts !== undefined ? inner.metrics.starts : kids[0].metrics.estRows;
-						var timesText = inner.metrics.starts !== undefined ? (times === 1 ? 'once' : fmtNum(times) + ' times') + ' in this execution'
+						var innerRan  = inner.metrics.starts > 0;   // Starts 0 = no run-time statistics for the line: go by the estimate
+						var times     = innerRan ? inner.metrics.starts : kids[0].metrics.estRows;
+						var timesText = innerRan ? (times === 1 ? 'once' : fmtNum(times) + ' times') + ' in this execution'
 						              : (times === undefined ? 'once for each row of the outer side'
 						              : (times <= 1 ? 'once (the outer side is estimated to return 1 row)' : 'an estimated ' + fmtNum(times) + ' times'));
 						fullScansInLoops.push(inner);
@@ -1213,7 +1319,10 @@ window.OracleShowplan = (function () {
 				// --- A full table scan that is a large part of the plan (not one that was stopped after its first rows).
 				// "A large part" is measured in time when the plan has run-time statistics and ran long enough for the
 				// time to mean something, else in buffers (logical reads), else in the optimizer's cost.
-				if (isFullScan(node) && fullScansInLoops.indexOf(node) < 0 && !m.stoppedEarly) {
+				// And not a scan of a table of a few blocks: it can be all of a small plan and still not be worth a word
+				// (less than 100 buffers read, or - without run-time statistics - a cost below 10).
+				var tinyScan = (m.ownBuffers !== undefined && m.starts !== 0) ? m.ownBuffers < 100 : (m.ownCost !== undefined && m.ownCost < 10);
+				if (isFullScan(node) && fullScansInLoops.indexOf(node) < 0 && !m.stoppedEarly && !tinyScan) {
 					var shareOf   = (m.ownActTimePct !== undefined && root.metrics.actTimeSec >= 1) ? 'time'
 					              : (m.ownBuffersPct !== undefined ? 'buffers' : 'cost');
 					var share     = { time: m.ownActTimePct, buffers: m.ownBuffersPct, cost: m.ownCostPct }[shareOf];
@@ -1228,9 +1337,10 @@ window.OracleShowplan = (function () {
 					} else if (hasFilter && (share === undefined || share >= 10)) {
 						// A warning only when the plan itself shows that the filter throws most of the table away:
 						// fewer rows come out than blocks were read (run-time statistics), or than the scan costs (estimate)
-						var fewRows = (m.actRows !== undefined && m.ownBuffers !== undefined) ? m.actRows < m.ownBuffers
+						var hasAct  = m.actRows !== undefined && m.starts !== 0 && m.ownBuffers !== undefined;
+						var fewRows = hasAct ? m.actRows < m.ownBuffers
 						            : (m.actRows === undefined && m.estRows !== undefined && m.ownCost !== undefined && m.estRows < m.ownCost);
-						var rowsText = (m.actRows !== undefined && m.ownBuffers !== undefined)
+						var rowsText = hasAct
 							? 'It returned ' + fmtNum(m.actRows) + ' rows and read ' + fmtNum(m.ownBuffers) + ' buffers (blocks) for them. '
 							: (m.estRows !== undefined ? 'It is estimated to return ' + fmtNum(m.estRows) + ' rows. ' : '');
 						add(node, fewRows ? 'warning' : 'info', 'Full Scan',
@@ -1288,9 +1398,17 @@ window.OracleShowplan = (function () {
 						+ ', a predicate on several columns that depend on each other, uneven data without a histogram, or a function on the column.');
 				}
 
-				// --- Sorts and hash joins that did not fit in memory
+				// --- Sorts and hash joins that did not fit in memory. 'ALLSTATS LAST' says it in Used-Mem ("194K (35)" = 35 passes)
+				// and Used-Tmp, 'ALLSTATS ALL' in O/1/M: how many executions were optimal / one pass / multi pass ("2/0/0").
 				var pass = /\((\d+|M)\)\s*$/.exec(m.usedMem || '');
-				if (m.usedTmp || (pass && pass[1] !== '0')) {
+				var o1m  = /^(\d+)\/(\d+)\/(\d+)$/.exec(m.optOneMulti || '');
+				if (o1m && (o1m[2] !== '0' || o1m[3] !== '0')) {
+					add(node, 'warning', 'Temp Space',
+						node.op + ' did not fit in memory in ' + (parseInt(o1m[2], 10) + parseInt(o1m[3], 10)) + ' of ' + (parseInt(o1m[1], 10) + parseInt(o1m[2], 10) + parseInt(o1m[3], 10)) + ' executions',
+						'O/1/M = ' + m.optOneMulti + ': ' + o1m[1] + ' executions had enough memory (optimal), ' + o1m[2] + ' needed one pass over the temporary tablespace and ' + o1m[3] + ' needed several. '
+						+ 'Fewer rows or narrower rows into the operation is the first thing to look for; after that PGA_AGGREGATE_TARGET.',
+						'Used temp');
+				} else if (m.usedTmp || (pass && pass[1] !== '0')) {
 					add(node, 'warning', 'Temp Space',
 						node.op + ' did not fit in memory' + (m.usedTmp ? ': used temp ' + m.usedTmp : '') + (pass && pass[1] !== '0' ? ' (' + (pass[1] === '1' ? 'one pass' : 'several passes') + ' over temp)' : ''),
 						'The work area for this operation (PGA) was too small for its rows, so they were written to the temporary tablespace and read back. Memory used: ' + (m.usedMem || '?')
@@ -1303,7 +1421,7 @@ window.OracleShowplan = (function () {
 
 				// --- A subquery that is executed row by row
 				if (/^FILTER/.test(node.op) && kids.length >= 2) {
-					var subStarts = kids[1].metrics.starts;
+					var subStarts = kids[1].metrics.starts > 0 ? kids[1].metrics.starts : undefined;   // Starts 0 = no run-time statistics for the line
 					var subTimes  = subStarts !== undefined ? subStarts : kids[0].metrics.estRows;
 					add(node, subTimes !== undefined && subTimes >= 1000 ? 'warning' : 'info', 'Subquery',
 						'Subquery executed row by row (FILTER): '
@@ -1318,13 +1436,44 @@ window.OracleShowplan = (function () {
 						'The first column of the index is not in the predicate, so the index is probed once for each distinct value of that column. Fine when there are few distinct values. An index that starts with the column in the predicate would be read directly.');
 				}
 
-				if (/^PARTITION .* ALL/.test(node.op)) {
+				if (/^(PX )?PARTITION .* ALL/.test(node.op)) {
 					var partObj;
 					DbxShowplanGraph.walkPlanNodes(node, function (n) { if (!partObj && n.props.objName) partObj = n.props.objName; });
 					add(node, 'info', 'Partitions', 'All partitions are read' + (partObj ? ': ' + partObj : ''),
 						'No partitions are left out (no partition pruning): the statement has no usable predicate on the partition key, or the key is wrapped in a function.');
 				}
+
+				// --- Parallel execution: where a parallel plan is not parallel, and where it needs room
+				var flowRows = (m.actRows !== undefined && m.starts !== 0) ? m.actRows : m.estRows;
+				if (p.inOut === 'S->P') {
+					var bigSerial = flowRows !== undefined && flowRows >= 100000;
+					add(node, bigSerial ? 'warning' : 'info', 'Parallel',
+						'Serial part in a parallel plan: ' + nodeTitle(node) + (flowRows !== undefined ? ', ' + fmtNum(flowRows) + ' rows' : ''),
+						'IN-OUT says S->P (serial to parallel): what is below this operation is run by ONE process, which then hands its rows to the parallel execution servers. '
+						+ 'That is fine for a small table. For a big one the whole statement waits for that one process: see why this part is not parallel (the table or the hint has no PARALLEL, or it is read in a way that cannot be divided, an index range scan for example).',
+						bigSerial ? 'Serial part' : undefined);
+				}
+				if (/^PX COORDINATOR FORCED SERIAL/.test(node.op)) {
+					add(node, 'warning', 'Parallel', 'The parallel plan is executed serially (PX COORDINATOR FORCED SERIAL)',
+						'The optimizer made a parallel plan, but something in the statement does not allow it to run in parallel here, so one process does all of it - with a plan that was chosen for many. Usual cause: a PL/SQL function that is not declared PARALLEL_ENABLE.',
+						'Runs serially');
+				}
+				if (/^HASH JOIN .*BUFFERED/.test(node.op)) {
+					add(node, 'info', 'Parallel', 'Buffered hash join' + (flowRows !== undefined ? ': ' + fmtNum(flowRows) + ' rows' : ''),
+						'BUFFERED: the rows that the join produces are kept - in memory, then in the temporary tablespace - until the join has read all of its input, because both inputs arrive through table queues and only two sets of parallel servers can be at work at the same time. '
+						+ 'With many rows this is what fills the temporary tablespace of a parallel query. Another distribution of one input avoids it (PQ_DISTRIBUTE; BROADCAST for a small one).');
+				}
+				if (/^PX SEND BROADCAST/.test(node.op) && flowRows !== undefined && flowRows >= 100000) {
+					add(node, 'info', 'Parallel', 'Broadcast of ' + fmtNum(flowRows) + ' rows to every parallel server',
+						'BROADCAST sends ALL the rows of this input to EACH parallel execution server of the next set, so the rows are multiplied by the degree of parallelism. It is meant for a small input. If the number is an estimate that is too low, the real cost is much higher than the plan says.');
+				}
 			});
+
+			if (pi.parallelStatsMissing) {
+				add(null, 'warning', 'Parallel', 'The run-time statistics of the parallel part are missing',
+					'Every operation that the parallel execution servers ran says Starts 0 and A-Rows 0. With the format ALLSTATS LAST only the work of the query coordinator is shown. '
+					+ 'Use the format ALLSTATS ALL to see the rows and the time of the parallel servers (ALL adds up every execution of the cursor, not only the last one).');
+			}
 
 			// --- What Oracle itself says about the plan
 			pi.notes.forEach(function (note) {
@@ -1352,6 +1501,38 @@ window.OracleShowplan = (function () {
 			}
 		});
 		return findings;
+	}
+
+	/**
+	 * The second "sheet" behind every operation that is run by parallel execution servers (node._parallel), so that the
+	 * parallel part of a plan is seen at a glance - the same look as a parallel operator in the SQL Server viewer.
+	 * This is drawParallelStacks() of dbxShowplanSqlServer.js (where it is explained why the sheets are ONE overlay behind
+	 * the whole tree and not children of their box), with the class prefix changed. It needs the final positions of the
+	 * boxes, so it is called after the leaves are tucked. Can be called again: it replaces what it drew before.
+	 */
+	function drawParallelStacks(treeEl) {
+		var previous = treeEl.querySelector(':scope > div.ora-plan-parallel-overlay');
+		if (previous) previous.remove();
+
+		var boxes = Array.prototype.filter.call(treeEl.querySelectorAll('.ora-plan-box'), function (b) {
+			return b.__oraPlanNode && b.__oraPlanNode._parallel;
+		});
+		if (!boxes.length) return;
+
+		var overlay = document.createElement('div');
+		overlay.className = 'ora-plan-parallel-overlay';
+		var containerRect = treeEl.getBoundingClientRect();
+		boxes.forEach(function (box) {
+			var r = box.getBoundingClientRect();
+			var sheet = document.createElement('div');
+			sheet.className = 'ora-plan-parallel-sheet';
+			sheet.style.left   = (r.left - containerRect.left + 6) + 'px';   // the size of the box, 6px down and to the right
+			sheet.style.top    = (r.top  - containerRect.top  + 6) + 'px';
+			sheet.style.width  = r.width  + 'px';
+			sheet.style.height = r.height + 'px';
+			overlay.appendChild(sheet);
+		});
+		treeEl.insertBefore(overlay, treeEl.firstChild);
 	}
 
 	function render(container, parsed, opts) {
@@ -1401,6 +1582,7 @@ window.OracleShowplan = (function () {
 				else            DbxShowplanGraph.tuckLeavesNearParentVertical($tree[0], 'ora-plan');
 			}
 			if (useLineConnectors) drawConnectorLines($tree[0], horizontal);
+			drawParallelStacks($tree[0]);
 		});
 	}
 
