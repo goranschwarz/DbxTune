@@ -21,6 +21,7 @@
  ******************************************************************************/
 package com.dbxtune.central.controllers;
 
+import java.io.PrintWriter;
 import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -101,6 +102,38 @@ public class DbxTimelineRows
 	public static String toJsTs(Timestamp ts)
 	{
 		return ts == null ? "null" : "'" + toIsoTs(ts) + "'";
+	}
+
+	/**
+	 * Say in the browser that the page is being made, BEFORE the slow part (reading months of history from the database) starts:
+	 * a box with a moving bar and this text (<code>DbxTimeline.progressStart()</code> in dbxTimeline.js).
+	 * <p>
+	 * What has been written of the page so far is flushed to the browser, so the user sees it at once instead of an empty page.
+	 * The box is closed when the timeline has been drawn (<code>DbxTimeline.createLater()</code>), or when the page is complete.
+	 */
+	public static void writeProgressStart(PrintWriter writer, String text)
+	{
+		writer.println("<script>DbxTimeline.progressStart(" + toScriptJsonNoThrow(text) + ");</script>");
+		writer.flush();
+	}
+
+	/** Change the text of the box, for example how many rows that have been read so far. (Also flushed to the browser.) */
+	public static void writeProgressText(PrintWriter writer, String text)
+	{
+		writer.println("<script>DbxTimeline.progressText(" + toScriptJsonNoThrow(text) + ");</script>");
+		writer.flush();
+	}
+
+	private static String toScriptJsonNoThrow(String text)
+	{
+		try
+		{
+			return toScriptJson(text);
+		}
+		catch (JsonProcessingException ex)
+		{
+			return "''";
+		}
 	}
 
 	/**

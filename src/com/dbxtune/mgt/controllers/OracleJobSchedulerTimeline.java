@@ -280,6 +280,7 @@ extends DbxCentralPageTemplate
 			_logger.error("Problems creating the Oracle Job Scheduler Timeline.", ex);
 
 			writer.println("<script>");
+			writer.println("    DbxTimeline.progressDone();");
 			writer.println("    document.getElementById('dbx-servlet-exception').style.display = 'block';");
 			writer.println("    document.getElementById('dbx-servlet-exception').innerHTML = " + toJs("Problems reading the log of the Oracle Scheduler:<br><pre>" + StringEscapeUtils.escapeHtml4(ex.toString()) + "</pre>") + ";");
 			writer.println("</script>");
@@ -309,6 +310,9 @@ extends DbxCentralPageTemplate
 		boolean showAutotasks        = getUrlParameterBoolean_defaultFromDesc("showAutotasks");
 
 		DbxConnection conn = _conn;
+
+		// A long period (months) takes time: say that we are working, and send the start of the page to the browser before we read
+		DbxTimelineRows.writeProgressStart(writer, "Reading the log of the Oracle Scheduler from the database...");
 
 		boolean cdb       = OracleJobSchedulerExtractor.canReadCdbViews(conn);
 		boolean hasErrors = OracleJobSchedulerExtractor.hasErrorsColumn(conn);
@@ -348,10 +352,16 @@ extends DbxCentralPageTemplate
 			+ "from (" + OracleJobSchedulerExtractor.getJobRunsSql(cdb, hasErrors, daysBack) + ") r \n"
 			+ "where r.END_TIME >= " + startDate + " and r.START_TIME <= " + endDate + " \n"
 			+ "order by r.START_TIME, r.LOG_ID";
+		DbxTimelineRows.writeProgressText(writer, "Reading the runs of the period...");
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 		{
+			int readCount = 0;
 			while (rs.next())
 			{
+				// How far we are, now and then (the read is fast, so it is only seen when there are many thousands of runs)
+				if (++readCount % 5000 == 0)
+					DbxTimelineRows.writeProgressText(writer, "Reading the runs of the period: " + readCount + " so far...");
+
 				String    conName  = rs.getString   ("CON_NAME");
 				String    jobKind  = rs.getString   ("JOB_KIND");
 				String    owner    = rs.getString   ("OWNER");
@@ -430,7 +440,7 @@ extends DbxCentralPageTemplate
 				{
 					String    conName = rs.getString   ("CON_NAME");
 					String    owner   = rs.getString   ("OWNER");
-					String    jobName = rs.getString   ("JOB_NAME").replaceFirst("^(ORA\\$AT_.*)_[0-9]+$", "$1");
+					String    jobName = rs.getString   ("JOB_NAME");
 					String    subName = rs.getString   ("JOB_SUBNAME");
 					Timestamp startTs = rs.getTimestamp("START_TIME");
 					long      seconds = rs.getLong     ("ELAPSED_SEC");
@@ -464,7 +474,8 @@ extends DbxCentralPageTemplate
 		writer.println("    // One bar for each run, see /scripts/dbxtune/js/dbxTimeline.js");
 		writer.println("    const _dbxTimelineRows = " + toJs(rows) + ";");
 		writer.println();
-		writer.println("    DbxTimeline.create('timeline', _dbxTimelineRows, {");
+		writer.println("    // createLater: it says \"Drawing N bars...\" while it draws (many thousands of bars take some seconds)");
+		writer.println("    DbxTimeline.createLater('timeline', _dbxTimelineRows, {");
 		writer.println("        start:         " + DbxTimelineRows.toJsTs(startTime) + ",");
 		writer.println("        end:           " + DbxTimelineRows.toJsTs(endTime)   + ",");
 		writer.println("        startExpanded: false,");

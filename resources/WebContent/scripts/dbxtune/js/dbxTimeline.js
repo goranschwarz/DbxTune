@@ -7,6 +7,10 @@
  * Usage:
  *     DbxTimeline.create('timeline', rows, { start: '2026-09-25T00:00:00', end: '2026-09-25T23:59:00', ... });
  *
+ *     DbxTimeline.createLater('timeline', rows, { ... });    the same, but it says "Drawing N bars..." while it draws.
+ *     DbxTimeline.progressStart('Reading from the database...') / progressText(text) / progressDone()
+ *                                                           a box that says that the page is being made, see "Progress" at the end of this file
+ *
  * Each row is one bar:
  *     key         Row key: bars with the same key are drawn on the same row                       (mandatory)
  *     text        Text on the bar
@@ -1257,8 +1261,124 @@ var DbxTimeline = (function () {
 		};
 	}
 
+	//---------------------------------------------------------------------------------------------
+	// Progress: say that something is happening
+	//
+	// A page with a long period (months of job history) takes its time in three places, and without this the browser
+	// shows nothing in any of them:
+	//   1: the server reads from the database   -> the server writes the start of the page with a call to progressStart(),
+	//                                               and FLUSHES it, before it reads (DbxTimelineRows.writeProgressStart() in the servlets).
+	//                                               While it reads it can say how far it is with progressText().
+	//   2: the browser draws thousands of bars  -> createLater() says "Drawing ..." and lets the browser paint that before it
+	//                                               starts (the drawing itself blocks the browser until it is done)
+	//   3: another period is asked for          -> 'beforeunload': the box is shown on the page that is being left, until the
+	//                                               first part of the next page arrives. Also for a reload and the auto-refresh.
+	// It is a box with a moving bar, the text, and for how long it has been going on: how much there is left is not known.
+	//---------------------------------------------------------------------------------------------
+	var PROGRESS_ID      = 'dbx-tl-progress';
+	var _progressStartMs = 0;
+	var _progressTimer   = null;
+	var _drawPending     = false;
+
+	function progressStart(text)
+	{
+		// (can be called before <body> has any content: the page is still arriving)
+		if ( ! document.body )
+			return;
+
+		var box = document.getElementById(PROGRESS_ID);
+		if ( ! box )
+		{
+			box = document.createElement('div');
+			box.id = PROGRESS_ID;
+			box.style.cssText = 'position:fixed; top:70px; left:50%; transform:translateX(-50%); z-index:1080; min-width:380px; max-width:90vw;'
+			                  + 'background:#fff; color:#212529; border:1px solid #adb5bd; border-radius:6px; box-shadow:0 4px 14px rgba(0,0,0,.25); padding:10px 14px; font-size:14px;';
+			box.innerHTML = '<div style="display:flex; justify-content:space-between; gap:16px; margin-bottom:6px;">'
+			              +     '<span data-dbx-tl-progress="text"></span>'
+			              +     '<span style="white-space:nowrap;"><span data-dbx-tl-progress="time" class="text-muted"></span>'
+			              // (a way out, if the page we wait for never comes: the user stopped the loading)
+			              +     '<span data-dbx-tl-progress="close" title="Hide this" style="cursor:pointer; margin-left:10px; color:#6c757d;">&times;</span></span>'
+			              + '</div>'
+			              + '<div class="progress" style="height:10px;"><div class="progress-bar progress-bar-striped progress-bar-animated" style="width:100%;"></div></div>';
+			document.body.appendChild(box);
+			box.querySelector('[data-dbx-tl-progress="close"]').addEventListener('click', progressDone);
+
+			_progressStartMs = Date.now();
+			_progressTimer   = setInterval(function () {
+				var el = document.querySelector('#' + PROGRESS_ID + ' [data-dbx-tl-progress="time"]');
+				if (el)
+					el.textContent = Math.round((Date.now() - _progressStartMs) / 1000) + ' s';
+			}, 1000);
+		}
+		progressText(text);
+	}
+
+	function progressText(text)
+	{
+		var el = document.querySelector('#' + PROGRESS_ID + ' [data-dbx-tl-progress="text"]');
+		if (el)
+			el.textContent = text || 'Working...';
+	}
+
+	function progressDone()
+	{
+		if (_progressTimer)
+			clearInterval(_progressTimer);
+		_progressTimer = null;
+
+		var box = document.getElementById(PROGRESS_ID);
+		if (box)
+			box.parentNode.removeChild(box);
+	}
+
+	/**
+	 * As create(), but first say "Drawing N bars..." and let the browser paint it: with many thousands of bars create() takes
+	 * seconds, and the browser shows nothing new while it runs.
+	 *
+	 * @param onDone  optional, called with what create() returned
+	 */
+	function createLater(containerId, rows, opts, onDone)
+	{
+		var count = (rows || []).length;
+		_drawPending = true;
+		progressStart('Drawing ' + count.toLocaleString() + ' bar' + (count !== 1 ? 's' : '') + '...');
+
+		setTimeout(function () {
+			var timeline = null;
+			try {
+				timeline = create(containerId, rows, opts);
+			} finally {
+				_drawPending = false;
+				progressDone();
+			}
+			if (onDone)
+				onDone(timeline);
+		}, 50);
+	}
+
+	// The page has arrived in full: a box that the server started and nobody closed (the page had nothing to draw) is closed
+	window.addEventListener('load', function () {
+		if ( ! _drawPending )
+			progressDone();
+	});
+
+	// The page is being left for another one (another period, a reload, the auto-refresh): say so until the next one arrives.
+	// 'pageshow' with 'persisted': we came BACK to this page with the Back button, and the box is still on it
+	window.addEventListener('beforeunload', function () {
+		if (document.querySelector('.dbx-tl'))
+			progressStart('Loading...');
+	});
+	window.addEventListener('pageshow', function (ev) {
+		if (ev.persisted)
+			progressDone();
+	});
+
 	return {
 		create:          create,
+		createLater:     createLater,
+		progressStart:   progressStart,
+		progressText:    progressText,
+		progressDone:    progressDone,
 		htmlToPlainText: htmlToPlainText,
 		copyToClipboard: copyToClipboard
 	};

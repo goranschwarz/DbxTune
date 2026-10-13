@@ -258,13 +258,16 @@ extends DbmsExtractorAbstract
 	{
 		String now = collectorNow();
 
+		// (the same name as in the log, see getJobRunsSql(): an automatic maintenance task without the number of the run)
+		String jobName = "case when substr(r.JOB_NAME, 1, 7) = 'ORA$AT_' then regexp_replace(r.JOB_NAME, '_[0-9]+$', '') else r.JOB_NAME end";
+
 		return ""
 			+ "select x.* from ( \n"
 			+ "    select \n"
 			+ "         " + conId(cdb, "r") + "                                         as CON_ID \n"
 			+ "        ," + conName(cdb) + "                                            as CON_NAME \n"
 			+ "        ,CAST(r.OWNER       as VARCHAR2(128))                            as OWNER \n"
-			+ "        ,CAST(r.JOB_NAME    as VARCHAR2(128))                            as JOB_NAME \n"
+			+ "        ,CAST(" + jobName + " as VARCHAR2(128))                          as JOB_NAME \n"
 			+ "        ,CAST(r.JOB_SUBNAME as VARCHAR2(128))                            as JOB_SUBNAME \n"
 			+ "        ,CAST(r.SESSION_ID  as NUMBER(10))                               as SESSION_ID \n"
 			+ "        ,CAST(r.RUNNING_INSTANCE as NUMBER(10))                          as INSTANCE_ID \n"
