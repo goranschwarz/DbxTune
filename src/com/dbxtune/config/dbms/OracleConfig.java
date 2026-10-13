@@ -33,9 +33,12 @@ import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -45,6 +48,7 @@ import com.dbxtune.config.dbms.DbmsConfigIssue.Severity;
 import com.dbxtune.pcs.MonRecordingInfo;
 import com.dbxtune.pcs.PersistWriterJdbc;
 import com.dbxtune.sql.conn.DbxConnection;
+import com.dbxtune.sql.conn.info.DbmsVersionInfoOracle;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.SwingUtils;
@@ -780,6 +784,55 @@ extends DbmsConfigAbstract
 		catch (SQLException ex)
 		{
 			_logger.info("OracleConfig.checkConfig(): Skipping the check for the size of the audit trail. Caught: " + ex.getMessage().trim());
+		}
+
+		//-------------------------------------------------------
+		// Features that need an extra-cost license (an Enterprise Edition option or a management pack), that Oracle has recorded the use of
+		// ONE issue per license: the ones you have can be discarded, and a new one still shows up
+		// Not on the Express and the Free edition: there is nothing extra to pay for
+		//-------------------------------------------------------
+		String edition = ((DbmsVersionInfoOracle) conn.getDbmsVersionInfo()).getEdition();
+		if ( ! OracleConfigText.isFreeEdition(edition) )
+		{
+			boolean isCdbRoot = ((DbmsVersionInfoOracle) conn.getDbmsVersionInfo()).isCdbRoot();
+
+			// Key: the license, value: the features (a feature has one row per container and Oracle version: say it once)
+			Map<String, Set<String>> usagePerLicense = new LinkedHashMap<>();
+
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(OracleConfigText.getExtraCostFeatureUsageSql(conn)))
+			{
+				while (rs.next())
+				{
+					String usage = "'" + rs.getString("FEATURE") + "' ("
+							+ (isCdbRoot ? "in " + rs.getString("CON_NAME") + ", " : "")
+							+ ("TRUE".equals(rs.getString("CURRENTLY_USED")) ? "in use at the last sample, " : "")
+							+ "last seen " + rs.getString("LAST_USED") + ")";
+
+					usagePerLicense.computeIfAbsent(rs.getString("LICENSE"), k -> new LinkedHashSet<>()).add(usage);
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.info("OracleConfig.checkConfig(): Skipping the check for features that need an extra-cost license. Caught: " + ex.getMessage().trim());
+			}
+
+			for (Entry<String, Set<String>> e : usagePerLicense.entrySet())
+			{
+				String license = e.getKey();
+
+				// Max 10 features in the text
+				List<String> usages = new ArrayList<>(e.getValue());
+				String usageList = StringUtil.toCommaStr(usages.subList(0, Math.min(10, usages.size()))) + (usages.size() > 10 ? " ... and " + (usages.size() - 10) + " more" : "");
+
+				DbmsConfigManager.getInstance().addConfigIssue(new DbmsConfigIssue(srvRestart, keyPrefix + "license." + license.toLowerCase().replaceAll("[^a-z0-9]+", "_"), license, Severity.WARNING,
+						"Oracle has recorded the use of features that need the extra-cost license '" + license + "': " + usageList + ". "
+						+ (OracleConfigText.isStandardEdition(edition)
+								? "This is Standard Edition (" + edition + "), where options and management packs can not be licensed at all: so this is a license problem."
+								: "That is fine if '" + license + "' is in your license agreement. If it is not, it is a license problem: this is what Oracle looks at in a license review."),
+						"Compare with your license agreement: Oracle only records what was used, it does not know what you have paid for. "
+						+ "Licensed: discard this issue. Not licensed: find out who or what uses it, and stop that (for the Diagnostics and the Tuning Pack: ALTER SYSTEM SET control_management_pack_access = 'NONE' turns the pack features off). "
+						+ "The list is in the DBMS Configuration tab 'Options and Feature Usage'. Oracle's own check is the script options_packs_usage_statistics.sql (My Oracle Support, Document ID KB143588): run that before a license review."));
+			}
 		}
 	}
 

@@ -127,6 +127,168 @@ public abstract class OracleConfigText
 	}
 
 	/**
+	 * The feature names in DBA_FEATURE_USAGE_STATISTICS that belong to an Enterprise Edition OPTION or a MANAGEMENT PACK: those are licensed separately.
+	 * <p>
+	 * { license, feature name, condition }<br>
+	 * The condition says when the usage counts:
+	 * <ul>
+	 *   <li>ANY         - always</li>
+	 *   <li>COMPRESSION - only when FEATURE_INFO says that compression was used (Data Pump and Data Guard are free without it)</li>
+	 *   <li>ENCRYPTION  - only when FEATURE_INFO says that encryption was used</li>
+	 *   <li>PDBS        - only with more user PDBs than what is free: 3 from 19c, 1 before that (AUX_COUNT is the number of PDBs)</li>
+	 *   <li>V11         - only what version 11 has recorded (later versions record it for things the database does by itself)</li>
+	 *   <li>V12_2       - only what version 12.2 and above has recorded (earlier versions recorded it wrongly)</li>
+	 * </ul>
+	 * Sources:
+	 * <ul>
+	 *   <li>Oracle's manual "Database Licensing Information", 19c and 23ai: the tables with the options and the management packs (which products there are, and what belongs to them)</li>
+	 *   <li>The list of features per product, and the conditions, in Oracle's own script <code>options_packs_usage_statistics.sql</code> (My Oracle Support, Document ID KB143588, earlier 1317265.1),
+	 *       as it was for 12.2 (read from a published copy: the script itself needs a My Oracle Support login)</li>
+	 *   <li>Added from the manuals: 'Oracle SQL Firewall' (it is a part of Database Vault), and the In-Memory features that came in 18c and later</li>
+	 * </ul>
+	 * NOT verified against a real database: the texts in FEATURE_INFO for Data Guard, and for Data Pump with compression or encryption (only without),
+	 * and everything that is not in the Express / Free editions the tests ran on.
+	 * Not in the list, on purpose:
+	 * <ul>
+	 *   <li>What does not need a license (any more): Spatial, Machine Learning ('Data Mining'), Privilege Analysis ('Privilege Capture'), Heat Map, SQL Tuning Sets, network encryption, 'In-Memory Base Level'</li>
+	 *   <li>What every database does by itself: 'Automatic Maintenance - SQL Tuning Advisor', 'Automatic SQL Tuning Advisor' (it is using its advice, a SQL Profile, that needs the Tuning Pack)</li>
+	 *   <li>What Oracle's script leaves out because it is recorded wrongly: 'Advanced Index Compression'</li>
+	 *   <li>Other products than the database options and packs: GoldenGate, Gateways, Exadata and other Oracle storage</li>
+	 * </ul>
+	 */
+	private static final String[][] EXTRA_COST_FEATURES =
+	{
+		{ "Diagnostics Pack"                    , "ADDM"                                                    , "ANY"         },
+		{ "Diagnostics Pack"                    , "AWR Baseline"                                            , "ANY"         },
+		{ "Diagnostics Pack"                    , "AWR Baseline Template"                                   , "ANY"         },
+		{ "Diagnostics Pack"                    , "AWR Report"                                              , "ANY"         },
+		{ "Diagnostics Pack"                    , "Automatic Workload Repository"                           , "ANY"         },
+		{ "Diagnostics Pack"                    , "Baseline Adaptive Thresholds"                            , "ANY"         },
+		{ "Diagnostics Pack"                    , "Baseline Static Computations"                            , "ANY"         },
+		{ "Diagnostics Pack"                    , "Diagnostic Pack"                                         , "ANY"         },
+		{ "Diagnostics Pack"                    , "EM Performance Page"                                     , "ANY"         },
+
+		{ "Tuning Pack"                         , "SQL Access Advisor"                                      , "ANY"         },
+		{ "Tuning Pack"                         , "SQL Monitoring and Tuning pages"                         , "ANY"         },
+		{ "Tuning Pack"                         , "SQL Profile"                                             , "ANY"         },
+		{ "Tuning Pack"                         , "SQL Tuning Advisor"                                      , "ANY"         },
+		{ "Tuning Pack"                         , "Tuning Pack"                                             , "ANY"         },
+		{ "Tuning Pack"                         , "Real-Time SQL Monitoring"                                , "V11"         },
+
+		{ "Data Masking and Subsetting Pack"    , "Data Masking Pack"                                       , "ANY"         },
+		{ "Database Lifecycle Management Pack"  , "Change Management Pack"                                  , "ANY"         },
+		{ "Database Lifecycle Management Pack"  , "EM Config Management Pack"                               , "ANY"         },
+		{ "Database Lifecycle Management Pack"  , "EM Database Provisioning and Patch Automation Pack"      , "ANY"         },
+
+		{ "Partitioning"                        , "Partitioning (user)"                                     , "ANY"         },
+		{ "Partitioning"                        , "Zone maps"                                               , "ANY"         },
+
+		{ "Advanced Compression"                , "Backup HIGH Compression"                                 , "ANY"         },
+		{ "Advanced Compression"                , "Backup LOW Compression"                                  , "ANY"         },
+		{ "Advanced Compression"                , "Backup MEDIUM Compression"                               , "ANY"         },
+		{ "Advanced Compression"                , "Backup ZLIB Compression"                                 , "ANY"         },
+		{ "Advanced Compression"                , "HeapCompression"                                         , "V12_2"       },
+		{ "Advanced Compression"                , "Hybrid Columnar Compression Row Level Locking"           , "ANY"         },
+		{ "Advanced Compression"                , "Information Lifecycle Management"                        , "ANY"         },
+		{ "Advanced Compression"                , "Oracle Advanced Network Compression Service"             , "ANY"         },
+		{ "Advanced Compression"                , "SecureFile Compression (user)"                           , "ANY"         },
+		{ "Advanced Compression"                , "SecureFile Deduplication (user)"                         , "ANY"         },
+		{ "Advanced Compression"                , "Data Guard"                                              , "COMPRESSION" },
+		{ "Advanced Compression"                , "Oracle Utility Datapump (Export)"                        , "COMPRESSION" },
+		{ "Advanced Compression"                , "Oracle Utility Datapump (Import)"                        , "COMPRESSION" },
+
+		{ "Advanced Security"                   , "Data Redaction"                                          , "ANY"         },
+		{ "Advanced Security"                   , "Encrypted Tablespaces"                                   , "ANY"         },
+		{ "Advanced Security"                   , "SecureFile Encryption (user)"                            , "ANY"         },
+		{ "Advanced Security"                   , "Transparent Data Encryption"                             , "ANY"         },
+		{ "Advanced Security"                   , "Backup Encryption"                                       , "V11"         },
+		{ "Advanced Security"                   , "Oracle Utility Datapump (Export)"                        , "ENCRYPTION"  },
+		{ "Advanced Security"                   , "Oracle Utility Datapump (Import)"                        , "ENCRYPTION"  },
+
+		{ "Database In-Memory"                  , "In-Memory ADO Policies"                                  , "ANY"         },
+		{ "Database In-Memory"                  , "In-Memory Aggregation"                                   , "ANY"         },
+		{ "Database In-Memory"                  , "In-Memory Column Store"                                  , "ANY"         },
+		{ "Database In-Memory"                  , "In-Memory Distribute For Service (User Defined)"         , "ANY"         },
+		{ "Database In-Memory"                  , "In-Memory Expressions"                                   , "ANY"         },
+		{ "Database In-Memory"                  , "In-Memory FastStart"                                     , "ANY"         },
+		{ "Database In-Memory"                  , "In-Memory Join Groups"                                   , "ANY"         },
+
+		{ "Active Data Guard"                   , "Active Data Guard - Real-Time Query on Physical Standby" , "ANY"         },
+		{ "Active Data Guard"                   , "Global Data Services"                                    , "ANY"         },
+
+		{ "Database Vault"                      , "Oracle Database Vault"                                   , "ANY"         },
+		{ "Database Vault"                      , "Oracle SQL Firewall"                                     , "ANY"         },
+
+		{ "Label Security"                      , "Label Security"                                          , "ANY"         },
+
+		{ "Multitenant"                         , "Oracle Multitenant"                                      , "PDBS"        },
+		{ "Multitenant"                         , "Oracle Pluggable Databases"                              , "PDBS"        },
+
+		{ "OLAP"                                , "OLAP - Analytic Workspaces"                              , "ANY"         },
+		{ "OLAP"                                , "OLAP - Cubes"                                            , "ANY"         },
+
+		{ "Real Application Clusters"           , "Real Application Clusters (RAC)"                         , "ANY"         },
+		{ "Real Application Clusters"           , "Quality of Service Management"                           , "ANY"         },
+		{ "RAC One Node"                        , "Real Application Cluster One Node"                       , "ANY"         },
+
+		{ "Real Application Testing"            , "Database Replay: Workload Capture"                       , "ANY"         },
+		{ "Real Application Testing"            , "Database Replay: Workload Replay"                        , "ANY"         },
+		{ "Real Application Testing"            , "SQL Performance Analyzer"                                , "ANY"         },
+	};
+
+	/**
+	 * The features that need an extra-cost license, that Oracle has recorded the use of (see {@link #EXTRA_COST_FEATURES}).<br>
+	 * Used by the tab "Options and Feature Usage" and by the check in <code>OracleConfig.checkConfig()</code>
+	 *
+	 * @return SQL with the columns: [CON_NAME, when connected to CDB$ROOT] LICENSE, FEATURE, VERSION, DETECTED_USAGES, CURRENTLY_USED, FIRST_USED, LAST_USED
+	 */
+	public static String getExtraCostFeatureUsageSql(DbxConnection conn)
+	{
+		// Connected to CDB$ROOT: the CDB_ view has the usage of all containers
+		boolean isCdbRoot = ((DbmsVersionInfoOracle) conn.getDbmsVersionInfo()).isCdbRoot();
+		String  view      = isCdbRoot ? "CDB_FEATURE_USAGE_STATISTICS" : "DBA_FEATURE_USAGE_STATISTICS";
+		String  conName   = isCdbRoot ? "(select c.NAME from V$CONTAINERS c where c.CON_ID = x.CON_ID) as CON_NAME, " : "";
+		String  conOrder  = isCdbRoot ? "x.CON_ID, " : "";
+
+		// The list above as rows
+		String map = "";
+		for (String[] f : EXTRA_COST_FEATURES)
+			map += (map.isEmpty() ? "" : " union all \n") + "      select '" + f[0] + "' as LICENSE, '" + f[1] + "' as NAME, '" + f[2] + "' as COND from DUAL";
+
+		String featureInfo  = "to_char(substr(x.FEATURE_INFO, 1, 2000))";
+		String majorVersion = "to_number(regexp_substr(x.VERSION, '^[0-9]+'))";
+
+		// FEATURE_INFO: 'compression used: 3 times' or 'compression used: TRUE' counts, 'compression used: 0 times' and 'compression used: FALSE' does not
+		return ""
+			+ "select " + conName + "m.LICENSE, x.NAME as FEATURE, x.VERSION, x.DETECTED_USAGES, x.CURRENTLY_USED, to_char(x.FIRST_USAGE_DATE, 'YYYY-MM-DD') as FIRST_USED, to_char(x.LAST_USAGE_DATE, 'YYYY-MM-DD') as LAST_USED \n"
+			+ "from " + view + " x \n"
+			+ "join ( \n"
+			+ map + " \n"
+			+ "     ) m on m.NAME = x.NAME \n"
+			+ "where x.DETECTED_USAGES > 0 \n"
+			+ "  and (   m.COND = 'ANY' \n"
+			+ "       or (m.COND = 'COMPRESSION' and regexp_like(" + featureInfo + ", 'compression used: *(TRUE|[0-9 ]*[1-9])', 'i')) \n"
+			+ "       or (m.COND = 'ENCRYPTION'  and regexp_like(" + featureInfo + ", 'encryption used: *(TRUE|[0-9 ]*[1-9])', 'i')) \n"
+			+ "       or (m.COND = 'PDBS'        and x.AUX_COUNT > case when " + majorVersion + " >= 19 then 3 else 1 end) \n"
+			+ "       or (m.COND = 'V11'         and x.VERSION like '11.%') \n"
+			+ "       or (m.COND = 'V12_2'       and (x.VERSION like '12.2%' or " + majorVersion + " >= 18)) \n"
+			+ "      ) \n"
+			+ "order by " + conOrder + "m.LICENSE, x.NAME, x.VERSION";
+	}
+
+	/** The Express and the Free edition: they are free to use, there is nothing extra to pay for (V$INSTANCE.EDITION is XE or FREE) */
+	public static boolean isFreeEdition(String edition)
+	{
+		return "XE".equalsIgnoreCase(edition) || "FREE".equalsIgnoreCase(edition);
+	}
+
+	/** Standard Edition: options and management packs can not be licensed for it (V$INSTANCE.EDITION is SE or SE2) */
+	public static boolean isStandardEdition(String edition)
+	{
+		return "SE".equalsIgnoreCase(edition) || "SE2".equalsIgnoreCase(edition);
+	}
+
+	/**
 	 * For V$SYSTEM_PARAMETER in Oracle 12.1 and above: the rows for the whole CDB (CON_ID 0) and for the container we are connected to.<br>
 	 * (connected to CDB$ROOT that view also has rows for every PDB, and a parameter name would come several times)
 	 */
@@ -299,7 +461,27 @@ public abstract class OracleConfigText
 			String  conName   = isCdbRoot ? "(select c.NAME from V$CONTAINERS c where c.CON_ID = x.CON_ID) as CON_NAME, " : "";
 			String  conOrder  = isCdbRoot ? "x.CON_ID, " : "";
 
+			// What the edition means for the first list
+			String edition     = ((DbmsVersionInfoOracle) conn.getDbmsVersionInfo()).getEdition();
+			String editionNote = "The edition of this database is not known: on Enterprise Edition every LICENSE in the list must be in your license agreement.";
+			if      (isFreeEdition(edition))     editionNote = "This is a FREE edition (" + edition + "): there is nothing extra to pay for, so a row here is NOT a license problem.";
+			else if (isStandardEdition(edition)) editionNote = "This is STANDARD Edition (" + edition + "): options and management packs can NOT be licensed for it, so a row here is a license problem.";
+			else if ("EE".equalsIgnoreCase(edition)) editionNote = "This is ENTERPRISE Edition: every LICENSE in the list must be in your license agreement.";
+
 			return ""
+				+ textTable(conn, "Features that need an EXTRA-COST license, that Oracle has seen being USED (the rows of the next list that do)"
+				                       + "\n--## An Enterprise Edition OPTION (Partitioning, Advanced Compression...) or a MANAGEMENT PACK (Diagnostics, Tuning...) is licensed separately."
+				                       + "\n--## " + editionNote
+				                       + "\n--## No rows = Oracle has not recorded the use of any of them."
+				                       + "\n--## It tells what was USED, not what you have a license for: compare it with your license agreement. It is information, not a license statement."
+				                       + "\n--## Oracle samples the usage about once a week. And it does not see everything: a plain SELECT from a view that belongs to a pack"
+				                       + "\n--## (V$ACTIVE_SESSION_HISTORY, DBA_HIST_...) is not recorded."
+				                       + "\n--## Some usage only counts in some cases, and then only those are listed: Data Pump and Data Guard with compression or encryption,"
+				                       + "\n--## Multitenant with more than 3 PDBs (more than 1 before 19c)."
+				                       + "\n--## Not listed, as in Oracle's own script: what every database does by itself (like 'Automatic Maintenance - SQL Tuning Advisor')."
+				                       + "\n--## Oracle's own check is the script options_packs_usage_statistics.sql (My Oracle Support, Document ID KB143588): run that before a license review.",
+					getExtraCostFeatureUsageSql(conn))
+
 				+ textTable(conn, "Features that Oracle has seen being USED (" + view + ")"
 				                       + "\n--## This is what Oracle's own license review looks at. Oracle samples it about once a week, so something new takes a while to show."
 				                       + "\n--## It tells what was used, NOT what you have a license for: compare it with your license."
