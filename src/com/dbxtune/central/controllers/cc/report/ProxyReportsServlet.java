@@ -70,6 +70,14 @@ extends ProxyHelper
 		{
 			urlStr = "sqlserver/job-scheduler-timeline";
 		}
+		else if ("oracle-job-scheduler-report".equals(reportName))
+		{
+			urlStr = "oracle/job-scheduler-report";
+		}
+		else if ("oracle-job-scheduler-timeline".equals(reportName))
+		{
+			urlStr = "oracle/job-scheduler-timeline";
+		}
 		else
 		{
 			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Report name '" + reportName + "' was NOT found.");

@@ -24,7 +24,7 @@ import com.dbxtune.pcs.report.content.DbmsConfigIssues;
 import com.dbxtune.pcs.report.content.oracle.OracleAlertLogErrors;
 import com.dbxtune.pcs.report.content.oracle.OracleBackups;
 import com.dbxtune.pcs.report.content.oracle.OracleDataGuard;
-import com.dbxtune.pcs.report.content.oracle.OracleJobFailures;
+import com.dbxtune.pcs.report.content.oracle.OracleJobScheduler;
 import com.dbxtune.pcs.report.content.oracle.OracleLoadOverview;
 import com.dbxtune.pcs.report.content.oracle.OracleSegmentSize;
 import com.dbxtune.pcs.report.content.oracle.OracleSpaceOverview;
@@ -58,7 +58,7 @@ extends DailySummaryReportDefault
 		// Alert Log, Backups, Jobs and Data Guard
 		addReportEntry( new OracleAlertLogErrors(this) );
 		addReportEntry( new OracleBackups(this)        );
-		addReportEntry( new OracleJobFailures(this)    );
+		addReportEntry( new OracleJobScheduler(this)   );  // (a recording without the log of the Scheduler gets 'OracleJobFailures' from it)
 		addReportEntry( new OracleDataGuard(this)      );
 
 		// Space, Disk IO Activity

@@ -81,6 +81,7 @@ import com.dbxtune.cm.os.CmOsPs;
 import com.dbxtune.cm.os.CmOsUptime;
 import com.dbxtune.cm.os.CmOsVmstat;
 import com.dbxtune.gui.MainFrame;
+import com.dbxtune.pcs.OracleJobSchedulerExtractor;
 import com.dbxtune.pcs.PersistContainer;
 import com.dbxtune.pcs.PersistContainer.HeaderInfo;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -456,4 +457,61 @@ extends CounterControllerAbstract
 			throw new Exception("The error message suggest that the wrong USER '" + dbmsUsername + "' or PASSWORD '" + dbmsPassword + "' to DBMS server '" + dbmsServer + "' was entered. This is a non-recovarable error. DBMS Error Message='" + ex.getMessage() + "'.", ex);
 		}
 	}
+
+
+
+	//==================================================================
+	// BEGIN: Extract "things" on "Recording Database Rollover"
+	//==================================================================
+	public static final String  PROPKEY_onPcsDatabaseRollover_captureJobScheduler = "OracleTune.onPcsDatabaseRollover.captureJobScheduler";
+	public static final boolean DEFAULT_onPcsDatabaseRollover_captureJobScheduler = true;
+
+	/**
+	 * Before the recording database of the day is closed (and the Daily Summary Report is made of it):
+	 * copy the log of the Scheduler into it, which is what the report section 'OracleJobScheduler' is made of.
+	 */
+	@Override
+	public void doLastRecordingActionBeforeDatabaseRollover(DbxConnection pcsConn)
+	{
+		String srvName = getMonConnection().getDbmsServerNameNoThrow();
+
+		Configuration conf = Configuration.getCombinedConfiguration();
+		if ( ! conf.getBooleanProperty(PROPKEY_onPcsDatabaseRollover_captureJobScheduler, DEFAULT_onPcsDatabaseRollover_captureJobScheduler) )
+		{
+			_logger.info("On PCS Database Rollover: Skipping 'Capture Job Scheduler', due to Configuration '" + PROPKEY_onPcsDatabaseRollover_captureJobScheduler + "' is set to FALSE.");
+			return;
+		}
+
+		// A connection of its own: the collector goes on sampling with its connection meanwhile
+		DbxConnection conn = null;
+		try
+		{
+			_logger.info("On PCS Database Rollover: Creating a new connection to server '" + srvName + "' for extracting 'Job Scheduler' information.");
+			conn = DbxConnection.connect(null, getMonConnection().getConnPropOrDefault());
+		}
+		catch (Exception ex)
+		{
+			_logger.error("On PCS Database Rollover: Failed to establish a new connection to server '" + srvName + "'. SKIPPING 'Job Scheduler' extraction.", ex);
+			return;
+		}
+
+		try
+		{
+			int daysToCopy = conf.getIntProperty(OracleJobSchedulerExtractor.PROPKEY_daysToCopy, OracleJobSchedulerExtractor.DEFAULT_daysToCopy);
+
+			OracleJobSchedulerExtractor jse = new OracleJobSchedulerExtractor(daysToCopy, conn, pcsConn);
+			jse.transfer();
+		}
+		catch (Exception ex)
+		{
+			_logger.error("On PCS Database Rollover: Problems extracting 'Job Scheduler' information from server '" + srvName + "'.", ex);
+		}
+		finally
+		{
+			conn.closeNoThrow();
+		}
+	}
+	//==================================================================
+	// END: Extract "things" on "Recording Database Rollover"
+	//==================================================================
 }
