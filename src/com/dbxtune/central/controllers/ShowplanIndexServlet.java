@@ -31,10 +31,10 @@ import javax.servlet.http.HttpServletResponse;
 import com.dbxtune.central.controllers.HtmlStatic.PageSection;
 
 /**
- * Landing page linking to the three Showplan Viewers ({@link ShowplanSqlServerServlet},
- * {@link ShowplanPostgresServlet}, {@link ShowplanAseServlet}). Uses the same shared
- * {@link HtmlStatic} head/navbar as those pages so all four feel like one consistent
- * section rather than four independently-styled pages.
+ * Landing page linking to the four Showplan Viewers ({@link ShowplanSqlServerServlet},
+ * {@link ShowplanPostgresServlet}, {@link ShowplanAseServlet}, {@link ShowplanOracleServlet}). Uses the same shared
+ * {@link HtmlStatic} head/navbar as those pages so all five feel like one consistent
+ * section rather than five independently-styled pages.
  */
 public class ShowplanIndexServlet
 extends HttpServlet
@@ -94,6 +94,14 @@ extends HttpServlet
 				"          <h5 class='card-title'>SAP ASE (Sybase)</h5> \n" +
 				"          <p class='card-text'>Paste either a <code>show_cached_plan_in_xml</code> XML plan or a classic <code>sp_showplan</code> text plan - the format is auto-detected. Rendered with DbxTune's own graphical plan viewer.</p> \n" +
 				"          <a class='btn btn-primary' href='/showplan/ase'>Open ASE Showplan Viewer</a> \n" +
+				"        </div> \n" +
+				"      </div> \n" +
+				" \n" +
+				"      <div class='card shadow-sm mb-3'> \n" +
+				"        <div class='card-body'> \n" +
+				"          <h5 class='card-title'>Oracle</h5> \n" +
+				"          <p class='card-text'>Paste the text that <code>DBMS_XPLAN</code> prints (<code>DISPLAY_CURSOR</code> or <code>DISPLAY</code>), with or without run-time statistics (<code>ALLSTATS LAST</code>). Rendered with DbxTune's own graphical plan viewer.</p> \n" +
+				"          <a class='btn btn-primary' href='/showplan/oracle'>Open Oracle Execution Plan Viewer</a> \n" +
 				"        </div> \n" +
 				"      </div> \n" +
 				"    </div> \n" +

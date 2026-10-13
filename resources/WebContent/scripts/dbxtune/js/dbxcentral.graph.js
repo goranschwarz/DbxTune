@@ -2324,6 +2324,25 @@ function dbxTuneGraphSubscribe()
 
 		return div;
 	}
+	function createOracleQueryPlanToolTipDiv(data, rowData)
+	{
+		// creates a div that will open the Oracle Execution Plan dialog (dbxShowplan.js, #dbx-view-oraShowplan-dialog) -
+		// same trigger pattern as createAseQueryPlanToolTipDiv() above. The plan is the text of DBMS_XPLAN.DISPLAY_CURSOR.
+
+		const dataVal = data;
+		const sqlText = rowData.hasOwnProperty('SqlText') ? (rowData.SqlText || '') : '';
+
+		const div = document.createElement("div");
+		div.innerHTML = "&nbsp;";
+		div.setAttribute("title"           , "Click to Open the Execution Plan... \n-------------------------------\n" + dataVal);
+		div.setAttribute("data-bs-toggle"     , 'modal');
+		div.setAttribute("data-bs-target"     , '#dbx-view-oraShowplan-dialog');
+		div.setAttribute("data-objectname" , rowData.EffectiveSqlId ? ('SQL_ID ' + rowData.EffectiveSqlId) : '');
+		div.setAttribute("data-plan"       , dataVal);
+		div.setAttribute("data-sqltext"    , sqlText);
+
+		return div;
+	}
 	function createPostgresQueryPlanToolTipDiv(data)
 	{
 		// creates a div that will open a modal-div where we can VIEW a Postgres Execution Plan (using https://github.com/dalibo/pev2?tab=readme-ov-file)
@@ -2644,7 +2663,7 @@ function dbxTuneGraphSubscribe()
 				{
 					// The tooltip goes on the CHECKBOX columns (as for the other collectors). On the text columns it made the row one line higher.
 					if (metaData.columnName === "HasSqlText"   && rowData.hasOwnProperty('SqlText')  && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.SqlText,  'plsql') ); }
-					if (metaData.columnName === "HasExecPlan"  && rowData.hasOwnProperty('ExecPlan') && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.ExecPlan, 'text' ) ); }
+					if (metaData.columnName === "HasExecPlan"  && rowData.hasOwnProperty('ExecPlan') && cellContent === true) { td.appendChild( createOracleQueryPlanToolTipDiv(rowData.ExecPlan, rowData) ); }
 				}
 			} // end: metaData && columnName
 		};

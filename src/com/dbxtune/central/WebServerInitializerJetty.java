@@ -246,6 +246,7 @@ public class WebServerInitializerJetty
 		webapp.addServlet(ShowplanPostgresServlet.class,              "/showplan/postgres");                // Local PEV2 Implementation
 		webapp.addServlet(ShowplanSqlServerServlet.class,             "/showplan/sqlserver");               // Local html-query-plan Implementation
 		webapp.addServlet(ShowplanAseServlet.class,                   "/showplan/ase");                     // Local ASE graphical Showplan Implementation
+		webapp.addServlet(ShowplanOracleServlet.class,                "/showplan/oracle");                  // Local Oracle graphical Execution Plan Implementation (the text of DBMS_XPLAN)
 		webapp.addServlet(LoadPageProgress.class,                     "/lpp/*");                            // Load Page Progress
 		webapp.addServlet(LetsEncryptAcmeChallengeServlet.class,      "/.well-known/acme-challenge/*");
 

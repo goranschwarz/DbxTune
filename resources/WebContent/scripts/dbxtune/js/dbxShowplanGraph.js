@@ -17,9 +17,10 @@
  *     with a single arrowhead and no tooltips. Converging those is a deliberate behaviour change for
  *     ASE, not a refactor - so it is not forced into a shared implementation here.
  *
- * Loaded BEFORE dbxShowplanAse.js / dbxShowplanSqlServer.js (graph.html, ShowplanAseServlet,
- * ShowplanSqlServerServlet). Each renderer keeps thin same-named local wrappers that pass their own
- * prefix, so the (many) existing call sites inside those files stay untouched.
+ * Loaded BEFORE dbxShowplanAse.js / dbxShowplanSqlServer.js / dbxShowplanOracle.js (graph.html,
+ * ShowplanAseServlet, ShowplanSqlServerServlet, ShowplanOracleServlet). Each renderer keeps thin
+ * same-named local wrappers that pass their own prefix, so the (many) existing call sites inside
+ * those files stay untouched. (The Oracle renderer, the third one, calls these functions directly.)
  */
 
 /**

@@ -1,5 +1,5 @@
 /**
- * dbxShowplan.js — injectable Postgres + SQL Server + ASE showplan dialogs
+ * dbxShowplan.js — injectable Postgres + SQL Server + ASE + Oracle showplan dialogs
  *
  * Self-contained: injects its own modal HTML into document.body on DOM ready.
  * No changes to graph.html required beyond adding the <script> tag.
@@ -17,6 +17,8 @@
  *   ssShowplanSetParametersInSql()
  *   showAseShowplanDialog(), aseShowplanFormatSql(), aseShowplanCopySql(),
  *   aseShowplanCopyPlan(), aseShowplanRefreshLlmAdvice()
+ *   showOracleShowplanDialog(), oraShowplanFormatSql(), oraShowplanCopySql(),
+ *   oraShowplanCopyPlan(), oraShowplanOpenExternal()
  *   submit_post_via_hidden_form()
  */
 (function () {
@@ -235,6 +237,7 @@
 	}
 	window.ssShowplanToggleExpand  = function () { _toggleShowplanDlgExpand('dbx-view-ssShowplan-dialog',  'ssShowplan-dlg-');  };
 	window.aseShowplanToggleExpand = function () { _toggleShowplanDlgExpand('dbx-view-aseShowplan-dialog', 'aseShowplan-dlg-'); };
+	window.oraShowplanToggleExpand = function () { _toggleShowplanDlgExpand('dbx-view-oraShowplan-dialog', 'oraShowplan-dlg-'); };
 
 	// SQL table-name extraction (_sqlExtractTables/_nspLoad/_extractTablesAsync) moved into the
 	// shared resources/WebContent/scripts/dbxtune/js/dbxSqlTableNames.js module - the standalone
@@ -714,16 +717,108 @@
 			"			</div>",
 			"		</div>",
 			"	</div>",
+			"</div>",
+
+			// ---- Oracle Execution Plan dialog: the text of DBMS_XPLAN, drawn by dbxShowplanOracle.js ----
+			// The same frame as the ASE dialog above (see its comments for the layout): sections on the left, the Properties
+			// pane on the right. No Table Information / LLM sections: the plan text is all there is to work with.
+			"<div class='modal fade' id='dbx-view-oraShowplan-dialog' tabindex='-1' role='dialog' aria-labelledby='dbx-view-oraShowplan-dialog' aria-hidden='true'>",
+			"	<div class='modal-dialog modal-dialog-centered mw-100' role='document'>",
+			"		<div class='modal-content'>",
+			"			<div class='modal-header' style='cursor:move;'>",
+			"				<span style='color:var(--sp-text-6);margin-right:6px;font-size:1.1em;' title='Drag to move'>&#x2630;</span>",
+			"				<h5 class='modal-title' style='flex:1;min-width:0;'><b>Oracle Execution Plan</b>: <span id='dbx-view-oraShowplan-objectName'></span></h5>",
+			"				<div style='display:flex;align-items:center;flex-shrink:0;'>",
+			"					<span id='dbx-osp-theme' style='font-size:0.8rem;' title='Colours for the Showplan only (Auto = same as the page)'></span>",
+			"					<button type='button' class='btn border-0 p-0 lh-1 opacity-50' style='margin-left:8px;font-size:1.3rem;' title='Expand/restore dialog size' aria-label='Expand/restore dialog size' onclick='oraShowplanToggleExpand();'><span aria-hidden='true'>&#9974;</span></button>",
+			"					<button type='button' class='btn-close' style='margin-left:8px;' data-bs-dismiss='modal' aria-label='Close'></button>",
+			"				</div>",
+			"			</div>",
+			"			<div class='modal-body' style='overflow-x:auto;padding:8px 12px;'>",
+			"				<div class='scroll-tree' style='width:100%;display:flex;align-items:flex-start;'>",
+			"					<div id='dbx-osp-sections' style='flex:1 1 auto;min-width:0;'>",
+
+			"				<!-- ▶ Graphical Plan -->",
+			"				<details open id='dbx-osp-sect-graph' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
+			"					<summary style='position:sticky;top:0;z-index:3;background:var(--sp-bg-2);cursor:pointer;padding:5px 10px;line-height:20px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128202; Graphical Plan (DBMS_XPLAN)</summary>",
+			"					<div style='padding:4px 8px 10px 8px;'>",
+			"						<div style='position:sticky;top:30px;z-index:2;background:var(--sp-bg-2);padding:4px 0;box-shadow:0 3px 4px -3px var(--sp-shadow-2);display:flex;align-items:center;flex-wrap:wrap;row-gap:4px;column-gap:6px;'>",
+			"						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='oraShowplanRedraw();'>&#8635; Redraw</button>",
+			"						<button type='button' id='dbx-view-oraShowplan-zoomBtn' class='btn btn-outline-secondary btn-sm' onclick='oraShowplanToggleZoom();'>&#128269; Enable Zoom</button>",
+			"						<button type='button' id='dbx-view-oraShowplan-zoomFitBtn' class='btn btn-outline-secondary btn-sm' style='display:none;' onclick='oraShowplanZoomToFit();'>&#8862; Zoom to Fit</button>",
+			"						<span style='font-size:0.8em;color:var(--sp-text-5);margin-left:6px;' title='The number in the corner of each box is the Id column of the plan text. An operation asks its children for rows, the first child first: so the plan STARTS at the first leaf (the box furthest in, with the lowest Id) and the rows flow along the arrows up to Id 0.'>Id = the line in the plan text. An operation runs its first child first.</span>",
+			"						<span id='dbx-view-oraShowplan-analysis-link' style='display:none;font-size:0.85em;margin-left:14px;cursor:pointer;font-weight:600;' onclick='oraShowplanJumpToAnalysis();' title='Jump to the Plan Analysis section below'></span>",
+			"						<div style='display:flex;align-items:center;gap:6px;margin-left:auto;'>",
+			"						<button type='button' id='dbx-view-oraShowplan-propsBtn' class='btn btn-outline-secondary btn-sm' onclick='oraShowplanToggleProps();'>&#128203; Hide Properties</button>",
+			"						<button type='button' id='dbx-view-oraShowplan-orientationBtn' class='btn btn-outline-secondary btn-sm' onclick='oraShowplanToggleOrientation();'>&#8646; Top-to-Bottom</button>",
+			"						</div>",
+			"						</div>",
+			"						<div id='dbx-view-oraShowplan-graphFallback' style='display:none;color:var(--sp-text-5);font-size:0.85em;font-style:italic;padding:6px 0;'></div>",
+			"						<div id='dbx-view-oraShowplan-graphViewport' style='margin-top:6px;overflow:auto;max-width:100%;'>",
+			"							<div id='dbx-view-oraShowplan-graphContent' style='width:max-content;min-width:100%;'></div>",
+			"						</div>",
+			"					</div>",
+			"				</details>",
+
+			"				<!-- ▶ Plan Analysis (filled by OracleShowplan.render(), through opts.onFindingsChanged) -->",
+			"				<details id='dbx-osp-sect-analysis' style='display:none;border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
+			"					<summary id='dbx-view-oraShowplan-analysis-summary' style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128270; Plan Analysis</summary>",
+			"					<div id='dbx-view-oraShowplan-analysis-body' style='padding:4px 12px 8px 12px;'></div>",
+			"				</details>",
+
+			// The plan text is a table drawn with characters: it is only readable in a fixed-width font and without line wrapping
+			"				<!-- ▶ Raw Plan Text -->",
+			"				<details id='dbx-osp-sect-plan' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
+			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128196; Raw Plan Text</summary>",
+			"					<div style='padding:4px 8px 8px 8px;'>",
+			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='oraShowplanCopyPlan();'>Copy Plan Text</button>",
+			"						<pre style='overflow:auto;margin:0;'><code id='dbx-view-oraShowplan-planContent' style='white-space:pre;font-size:0.8rem;'></code></pre>",
+			"					</div>",
+			"				</details>",
+
+			"				<!-- ▶ SQL Text -->",
+			"				<details open id='dbx-osp-sect-sql' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
+			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128196; SQL Text</summary>",
+			"					<div style='padding:4px 8px 8px 8px;'>",
+			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='oraShowplanFormatSql();'>Format SQL</button>",
+			_sqlFmtBtn('dbx-view-oraShowplan-sqlFmtPanel', 'oraShowplanFormatSql', 'margin-bottom:4px;'),
+			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='dbxCopyCodeBlock(\"dbx-view-oraShowplan-sqlContent\");'>Copy SQL</button>",
+			"						<div id='dbx-view-oraShowplan-sqlFmtPanel'></div>",
+			"						<pre><code id='dbx-view-oraShowplan-sqlContent' class='language-sql line-numbers dbx-view-sqltext-content'></code></pre>",
+			"					</div>",
+			"				</details>",
+
+			"					</div>",
+			"					<div id='dbx-view-oraShowplan-propsSplit' title='Drag to resize' style='flex:0 0 6px;align-self:stretch;cursor:col-resize;background:var(--sp-bg-3);border-radius:3px;margin:0 4px;'></div>",
+			"					<div id='dbx-view-oraShowplan-propsPane' class='ora-plan-props-scroll' style='flex:0 0 320px;align-self:flex-start;position:sticky;top:4px;overflow:auto;background:var(--sp-bg);max-height:calc(100vh - 260px);border:1px solid var(--sp-border);border-radius:3px;padding:6px 10px 8px 10px;'>",
+			"						<div style='display:flex;align-items:center;justify-content:space-between;gap:6px;border-bottom:1px solid var(--sp-border-2);margin-bottom:6px;padding-bottom:3px;'>",
+			"							<span style='font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--sp-text-5);'>Properties</span>",
+			"							<button type='button' title='Hide the Properties pane' aria-label='Hide the Properties pane' onclick='oraShowplanToggleProps();' style='border:0;background:none;cursor:pointer;color:var(--sp-text-6);font-size:15px;line-height:1;padding:0 2px;'>&times;</button>",
+			"						</div>",
+			"						<div id='dbx-view-oraShowplan-propsBody'></div>",
+			"					</div>",
+			"				</div>",
+			"			</div>",
+			"			<div class='modal-footer'>",
+			"				<button type='button' class='btn btn-outline-secondary' onclick='oraShowplanCopySql();'>Copy SQL</button>",
+			"				<button type='button' class='btn btn-outline-secondary' onclick='oraShowplanCopyPlan();'>Copy Plan</button>",
+			"				<button type='button' class='btn btn-outline-secondary' onclick='oraShowplanOpenExternal();'>Open in External Window</button>",
+			"				&emsp;&emsp;&emsp;&emsp;&emsp;",
+			"				<button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>",
+			"			</div>",
+			"		</div>",
+			"	</div>",
 			"</div>"
 		].join('\n'));
 
-		// Light/dark (dbxShowplanGraph.js DbxShowplanTheme) for every way a plan dialog is opened - the ss/ase
+		// Light/dark (dbxShowplanGraph.js DbxShowplanTheme) for every way a plan dialog is opened - the ss/ase/ora
 		// functions also call apply() before drawing, the pg dialog is opened by Bootstrap data-bs-target only
-		$('#dbx-view-pgShowplan-dialog, #dbx-view-ssShowplan-dialog, #dbx-view-aseShowplan-dialog')
+		$('#dbx-view-pgShowplan-dialog, #dbx-view-ssShowplan-dialog, #dbx-view-aseShowplan-dialog, #dbx-view-oraShowplan-dialog')
 			.on('show.bs.modal', function () { DbxShowplanTheme.refreshSwitches(); DbxShowplanTheme.apply(this); });
-		// The Showplan's own Theme dropdown (Auto / Light / Dark) in the SQL Server and ASE dialog headers, left of the expand button
+		// The Showplan's own Theme dropdown (Auto / Light / Dark) in the SQL Server, ASE and Oracle dialog headers, left of the expand button
 		DbxShowplanTheme.mountSwitch('#dbx-ssp-theme');
 		DbxShowplanTheme.mountSwitch('#dbx-asp-theme');
+		DbxShowplanTheme.mountSwitch('#dbx-osp-theme');
 
 		// ── Showplan Loader input dialog ──────────────────────────────────────────
 		document.body.insertAdjacentHTML('beforeend',
@@ -1675,6 +1770,210 @@
 		}
 	};
 
+	// -------------------------------------------------------------------------
+	// Oracle: the text of DBMS_XPLAN, drawn by dbxShowplanOracle.js (OracleShowplan).
+	// The same pieces as the ASE dialog above (zoom, orientation, Properties pane, redraw); see the comments there.
+	// -------------------------------------------------------------------------
+	var _oraShowplanZoom = undefined;
+	var _oraShowplanLastPlanText = undefined;
+	var _oraShowplanLastParsed = null;      // for the summary at the top of the Plan Analysis section
+	var _oraShowplanSplitterInited = false;
+
+	var _oraShowplanHorizontal = true;
+	try {
+		var _storedOraHorizontal = localStorage.getItem('dbxtune_oraShowplan_horizontal');
+		if (_storedOraHorizontal !== null) _oraShowplanHorizontal = _storedOraHorizontal === 'true';
+	} catch (ex) {}
+
+	var _oraShowplanShowProps = true;
+	try {
+		var _storedOraProps = localStorage.getItem('dbxtune_oraShowplan_showProps');
+		if (_storedOraProps !== null) _oraShowplanShowProps = _storedOraProps === 'true';
+	} catch (ex) {}
+
+	function _oraShowplanApplyPropsVisibility() {
+		var pane  = document.getElementById('dbx-view-oraShowplan-propsPane');
+		var split = document.getElementById('dbx-view-oraShowplan-propsSplit');
+		var btn   = document.getElementById('dbx-view-oraShowplan-propsBtn');
+		if (pane)  pane.style.display  = _oraShowplanShowProps ? '' : 'none';
+		if (split) split.style.display = _oraShowplanShowProps ? '' : 'none';
+		if (btn)   btn.innerHTML = _oraShowplanShowProps ? '&#128203; Hide Properties'
+		                                                 : '&#128203; Show Properties';
+	}
+
+	window.oraShowplanToggleProps = function () {
+		_oraShowplanShowProps = !_oraShowplanShowProps;
+		try { localStorage.setItem('dbxtune_oraShowplan_showProps', _oraShowplanShowProps ? 'true' : 'false'); } catch (ex) {}
+		_oraShowplanApplyPropsVisibility();
+		// Re-render: the renderer only fills the pane it was given when it drew the plan
+		_oraShowplanRenderGraphicalPlan(_oraShowplanLastPlanText);
+	};
+
+	window.oraShowplanToggleZoom = function () {
+		var elem   = document.getElementById('dbx-view-oraShowplan-graphContent');
+		var btn    = document.getElementById('dbx-view-oraShowplan-zoomBtn');
+		var fitBtn = document.getElementById('dbx-view-oraShowplan-zoomFitBtn');
+		if (_oraShowplanZoom === undefined) {
+			if (!elem) return;
+			_oraShowplanZoom = Panzoom(elem, { maxScale: 1, minScale: 0.01, step: 0.05 });
+			elem.addEventListener('wheel', _oraShowplanZoom.zoomWithWheel);
+			if (btn) btn.innerHTML = '&#128269; Disable Zoom';
+			if (fitBtn) fitBtn.style.display = '';
+		} else {
+			// Disable = also give the mouse wheel back to scrolling (see aseShowplanToggleZoom)
+			try { _oraShowplanZoom.reset(); } catch (ex) {}
+			if (elem) elem.removeEventListener('wheel', _oraShowplanZoom.zoomWithWheel);
+			try { _oraShowplanZoom.destroy(); } catch (ex) {}
+			_oraShowplanZoom = undefined;
+			if (btn) btn.innerHTML = '&#128269; Enable Zoom';
+			if (fitBtn) fitBtn.style.display = 'none';
+		}
+	};
+
+	window.oraShowplanZoomToFit = function () {
+		_panzoomZoomToFit(_oraShowplanZoom, document.getElementById('dbx-view-oraShowplan-graphContent'),
+			document.getElementById('dbx-view-oraShowplan-graphViewport'), true /* align top-left */);
+	};
+
+	window.oraShowplanRedraw = function () {
+		_oraShowplanRenderGraphicalPlan(_oraShowplanLastPlanText);
+	};
+
+	window.oraShowplanToggleOrientation = function () {
+		_oraShowplanHorizontal = !_oraShowplanHorizontal;
+		try { localStorage.setItem('dbxtune_oraShowplan_horizontal', _oraShowplanHorizontal ? 'true' : 'false'); } catch (ex) {}
+		_oraShowplanRenderGraphicalPlan(_oraShowplanLastPlanText);
+	};
+
+	/**
+	 * Parses the plan text (OracleShowplan.parseText, dbxShowplanOracle.js) and draws it into
+	 * #dbx-view-oraShowplan-graphContent. When the text is not a plan that can be drawn (DBMS_XPLAN answered
+	 * "cannot be found", or it is not DBMS_XPLAN output at all) the reason is shown instead, and the
+	 * Raw Plan Text section is opened: the text itself is always there to read.
+	 */
+	function _oraShowplanRenderGraphicalPlan(planText) {
+		_oraShowplanLastPlanText = planText;
+
+		var graphEl    = document.getElementById('dbx-view-oraShowplan-graphContent');
+		var fallbackEl = document.getElementById('dbx-view-oraShowplan-graphFallback');
+		var orientBtn  = document.getElementById('dbx-view-oraShowplan-orientationBtn');
+		var zoomBtn    = document.getElementById('dbx-view-oraShowplan-zoomBtn');
+		if (!graphEl) return;
+		if (orientBtn) orientBtn.innerHTML = _oraShowplanHorizontal ? '&#8646; Top-to-Bottom' : '&#8646; Left-to-Right';
+		if (zoomBtn)   zoomBtn.innerHTML   = _oraShowplanZoom !== undefined ? '&#128269; Disable Zoom' : '&#128269; Enable Zoom';
+		if (_oraShowplanZoom !== undefined) { try { _oraShowplanZoom.reset(); } catch (ex) {} }
+
+		var parsed = null, problem = null;
+		try {
+			if (typeof OracleShowplan === 'undefined') {
+				problem = 'dbxShowplanOracle.js is not loaded on this page.';
+			} else {
+				parsed = OracleShowplan.parseText(planText);
+				if (!parsed) problem = OracleShowplan.getLastParseError();
+			}
+			_oraShowplanLastParsed = parsed;
+			if (parsed) {
+				// No SQL text came with the plan (a pasted plan): DBMS_XPLAN.DISPLAY_CURSOR prints the statement above the plan
+				var $sql   = $('#dbx-view-oraShowplan-sqlContent');
+				var inPlan = parsed.statements[0].steps[0].root._planInfo.sqlText;
+				if (!$sql.text() && inPlan) {
+					$sql.text(inPlan);
+					_autoFormatSql(oraShowplanFormatSql);
+				}
+
+				OracleShowplan.render(graphEl, parsed, {
+					horizontal: _oraShowplanHorizontal,
+					connectorStyle: 'lines',
+					layout: 'compact',
+					propsTarget: (_oraShowplanShowProps ? document.getElementById('dbx-view-oraShowplan-propsBody') : null),
+					onFindingsChanged: renderOraAnalysisSection
+				});
+				_oraShowplanApplyPropsVisibility();
+				graphEl.style.display = '';
+				if (fallbackEl) fallbackEl.style.display = 'none';
+				return;
+			}
+		} catch (ex) {
+			console.error('Oracle execution plan: could not draw the plan:', ex);
+			problem = (ex && ex.message) ? ex.message : String(ex);
+		}
+
+		// Nothing to draw: say why, and show the text
+		_oraShowplanLastParsed = null;
+		$(graphEl).empty();
+		graphEl.style.display = 'none';
+		renderOraAnalysisSection(null);
+		if (fallbackEl) {
+			fallbackEl.style.display = '';
+			fallbackEl.innerHTML = 'This text could not be drawn as a plan &mdash; see "Raw Plan Text" below.'
+				+ (problem ? '<div style="margin-top:4px;font-style:normal;color:var(--sp-err-3);">' + escapeHtml(problem) + '</div>' : '');
+		}
+		var rawSect = document.getElementById('dbx-osp-sect-plan');
+		if (rawSect) rawSect.open = true;
+	}
+
+	window.oraShowplanFormatSql = function (silent) {
+		_formatSqlBlock('dbx-view-oraShowplan-sqlContent', 'plsql', silent === true);
+	};
+
+	window.oraShowplanCopySql = function () {
+		_copyText($('#dbx-view-oraShowplan-sqlContent').text());
+	};
+
+	window.oraShowplanCopyPlan = function () {
+		_copyText($('#dbx-view-oraShowplan-planContent').text());
+	};
+
+	window.oraShowplanOpenExternal = function () {
+		var toUrl = '/showplan/oracle';
+		if (!window.location.toString().toLowerCase().startsWith('http')) toUrl = 'http://dbxtune.gorans.org' + toUrl;
+		submit_post_via_hidden_form(toUrl, {
+			plan: _oraShowplanLastPlanText || '',
+			sql:  $('#dbx-view-oraShowplan-sqlContent').text() || ''
+		});
+	};
+
+	/**
+	 * Open the Oracle Execution Plan dialog from code (the standalone page /showplan/oracle does).
+	 * The other way in is an element with data-bs-toggle='modal' data-bs-target='#dbx-view-oraShowplan-dialog'
+	 * and the attributes data-plan / data-sqltext / data-objectname (the Active Statements panel): see the
+	 * show.bs.modal handler in _initHandlers().
+	 *
+	 * @param {string} planText     — what DBMS_XPLAN printed (DISPLAY_CURSOR, DISPLAY)
+	 * @param {string} [sqlText]    — the SQL text; when empty the one DBMS_XPLAN printed above the plan is used
+	 * @param {string} [objectName] — optional label for the header
+	 */
+	window.showOracleShowplanDialog = function (planText, sqlText, objectName) {
+		var $dlg = $('#dbx-view-oraShowplan-dialog');
+		if (!$dlg.length) {
+			_injectHtml();
+			_initHandlers();
+			setTimeout(function () { window.showOracleShowplanDialog(planText, sqlText, objectName); }, 50);
+			return;
+		}
+		if (!planText) return;
+
+		$('#dbx-view-oraShowplan-objectName', $dlg).text(objectName || '');
+		$('#dbx-view-oraShowplan-planContent', $dlg).text(planText);
+		$('#dbx-view-oraShowplan-sqlContent',  $dlg).text(sqlText || '');
+		_autoFormatSql(oraShowplanFormatSql);
+
+		// Drawn when the dialog is VISIBLE: the renderer measures the boxes, and a hidden dialog has no sizes
+		// (see the show.bs.modal handler of the ASE dialog)
+		function _drawAndHighlight() {
+			_oraShowplanRenderGraphicalPlan(planText);
+			if (typeof Prism !== 'undefined') Prism.highlightAll();
+		}
+
+		DbxShowplanTheme.apply($dlg);   // light/dark BEFORE drawing (dbxShowplanGraph.js)
+		if ($dlg.hasClass('show')) {
+			_drawAndHighlight();
+		} else {
+			$dlg.one('shown.bs.modal', _drawAndHighlight);
+			$dlg.modal('show');
+		}
+	};
+
 	window.ssShowplanGetParameters = function () {
 		var xmlText = $('#dbx-view-ssShowplan-xmlContent').text();
 		// null on an unparseable plan - $(null).find() matches nothing, so this falls through to the
@@ -1819,9 +2118,11 @@ function _initGlobalEscClose() {
 		// -- 1. Showplan operator detail panels ----------------------------------------------
 		var ss  = window.SqlServerShowplan;
 		var ase = window.AseShowplan;
-		if (panelsOpenOn(ss) || panelsOpenOn(ase)) {
+		var ora = window.OracleShowplan;
+		if (panelsOpenOn(ss) || panelsOpenOn(ase) || panelsOpenOn(ora)) {
 			if (panelsOpenOn(ss))  { try { ss.closePanels();  } catch (ex) {} }
 			if (panelsOpenOn(ase)) { try { ase.closePanels(); } catch (ex) {} }
+			if (panelsOpenOn(ora)) { try { ora.closePanels(); } catch (ex) {} }
 			e.preventDefault();
 			return;
 		}
@@ -2397,6 +2698,105 @@ function _initGlobalEscClose() {
 			// collapse it instead of expanding it).
 			$dlg.removeData('expanded');
 			aseShowplanToggleExpand();
+
+			if (typeof Prism !== 'undefined') Prism.highlightAll();
+		});
+
+		// Oracle: clear the content on close, so the previous plan is never seen for a moment at the next open
+		$('#dbx-view-oraShowplan-dialog').on('hidden.bs.modal', function () {
+			$('#dbx-view-oraShowplan-planContent').text('');
+			$('#dbx-view-oraShowplan-graphContent').empty();
+			if (window.OracleShowplan) OracleShowplan.closePanels();
+		});
+
+		// Oracle: opened by an element with data-bs-toggle='modal' (the Active Statements panel): take the plan from its
+		// data-* attributes. NOT drawn here: the dialog is not visible yet, so nothing can be measured (see the ASE dialog).
+		$('#dbx-view-oraShowplan-dialog').on('show.bs.modal', function (e) {
+			if (!e.relatedTarget) return;   // opened by showOracleShowplanDialog(), which has filled the fields itself
+			var data = $(e.relatedTarget).data();
+			$('#dbx-view-oraShowplan-objectName', this).text(data.objectname || '');
+			$('#dbx-view-oraShowplan-planContent', this).text(data.plan || '');
+			$('#dbx-view-oraShowplan-sqlContent', this).text(data.sqltext || '');
+			_autoFormatSql(oraShowplanFormatSql);
+			_oraShowplanLastPlanText = data.plan;
+		});
+
+		// Oracle: draw the plan once the dialog is visible, and make it draggable / resizable. The same as the
+		// ASE dialog above (and the SQL Server dialog, where each step is explained), with its own localStorage keys.
+		$('#dbx-view-oraShowplan-dialog').on('shown.bs.modal', function (e) {
+			if (e.relatedTarget) _oraShowplanRenderGraphicalPlan(_oraShowplanLastPlanText);
+
+			if (!_oraShowplanSplitterInited) {
+				_oraShowplanSplitterInited = true;
+				_showplanInitPropsSplitter('ora');
+				_showplanInitDragScroll(document.getElementById('dbx-view-oraShowplan-graphViewport'),
+					function () { return _oraShowplanZoom !== undefined; });
+			}
+			_oraShowplanApplyPropsVisibility();
+
+			var $modal = $(this);
+			var $dlg   = $modal.find('.modal-dialog');
+			var $cont  = $modal.find('.modal-content');
+
+			$modal.find('.modal-body').scrollTop(0).scrollLeft(0);
+
+			var _scrPfx = screen.width + 'x' + screen.height + '_';
+			var savedL = null, savedT = null;
+			try {
+				savedL = localStorage.getItem(_scrPfx + 'oraShowplan-dlg-left');
+				savedT = localStorage.getItem(_scrPfx + 'oraShowplan-dlg-top');
+			} catch(ex) {}
+			var w = Math.round(window.innerWidth  * 0.80);
+			var h = Math.round(window.innerHeight * 0.80);
+			$cont.css({ width: w + 'px', height: h + 'px', position: 'absolute', top: '0', left: '0' });
+
+			$dlg.removeClass('modal-dialog-centered');
+			$dlg.css({ margin: '0', 'max-width': 'none', position: 'absolute' });
+			$modal.css({ overflow: 'hidden' });
+
+			var l = savedL ? parseInt(savedL) : Math.round((window.innerWidth  - w) / 2);
+			var t = savedT ? parseInt(savedT) : Math.round((window.innerHeight - h) / 2);
+			l = Math.max(0, Math.min(l, window.innerWidth  - 120));
+			t = Math.max(0, Math.min(t, window.innerHeight -  60));
+			$dlg.css({ left: l + 'px', top: t + 'px' });
+
+			if ($.fn.draggable && !$dlg.hasClass('ui-draggable')) {
+				$dlg.draggable({
+					handle: '.modal-header',
+					stop: function(ev, ui) {
+						try {
+							localStorage.setItem(_scrPfx + 'oraShowplan-dlg-left', Math.round(ui.position.left));
+							localStorage.setItem(_scrPfx + 'oraShowplan-dlg-top',  Math.round(ui.position.top));
+						} catch(ex) {}
+					}
+				});
+			}
+
+			if ($.fn.resizable && !$cont.hasClass('ui-resizable')) {
+				$cont.resizable({
+					handles:   'all',
+					minWidth:  500,
+					minHeight: 300,
+					stop: function(ev, ui) {
+						var contLeft = parseFloat($cont.css('left')) || 0;
+						var contTop  = parseFloat($cont.css('top'))  || 0;
+						if (contLeft || contTop) {
+							var newLeft = parseFloat($dlg.css('left')) + contLeft;
+							var newTop  = parseFloat($dlg.css('top'))  + contTop;
+							$dlg.css({ left: newLeft + 'px', top: newTop + 'px' });
+							$cont.css({ left: '0', top: '0' });
+						}
+						try {
+							localStorage.setItem(_scrPfx + 'oraShowplan-dlg-left', Math.round(parseFloat($dlg.css('left'))));
+							localStorage.setItem(_scrPfx + 'oraShowplan-dlg-top',  Math.round(parseFloat($dlg.css('top'))));
+						} catch(ex) {}
+					}
+				});
+			}
+
+			// Open it expanded (removeData first: the dialog element is reused, so the flag of an earlier open is still on it)
+			$dlg.removeData('expanded');
+			oraShowplanToggleExpand();
 
 			if (typeof Prism !== 'undefined') Prism.highlightAll();
 		});
@@ -3141,6 +3541,127 @@ function _initGlobalEscClose() {
 		// setTimeout keeps the two in sync automatically if the pulse count/duration ever changes.
 		box.addEventListener('animationend', function onEnd() {
 			box.classList.remove('ase-plan-flash');
+		}, { once: true });
+	};
+
+	/**
+	 * The summary at the top of Oracle's Plan Analysis: what the plan text says about the plan as a whole
+	 * (which cursor, the optimizer's cost, and - when the text has run-time statistics - what the execution used).
+	 * The same block the ASE dialog has ("Runtime"), from what dbxShowplanOracle.js put on the root operation.
+	 */
+	function _oraShowplanSummaryHtml() {
+		var parsed = _oraShowplanLastParsed;
+		if (!parsed || !parsed.statements || !parsed.statements.length) return '';
+		var root = parsed.statements[0].steps[0].root;
+		var pi = root._planInfo, m = root.metrics;
+		var num = function (n) { return Math.round(n).toLocaleString(); };
+
+		var rows = [];
+		if (pi.sqlId)                    rows.push(['SQL_ID', pi.sqlId]);
+		if (pi.childNumber !== undefined) rows.push(['Child number', pi.childNumber]);
+		if (pi.planHash)                 rows.push(['Plan hash value', pi.planHash]);
+		rows.push(['Operations', pi.operations]);
+		if (m.cost !== undefined)        rows.push(['Cost (optimizer)', num(m.cost)]);
+		rows.push(['Run-time statistics', pi.hasActuals ? 'yes' : 'no (estimates only)']);
+		if (m.actRows !== undefined)     rows.push(['Rows returned', num(m.actRows)]);
+		if (m.actTimeSec !== undefined)  rows.push(['Elapsed time', m.actTimeSec + ' s']);
+		if (m.buffers !== undefined)     rows.push(['Buffers (logical reads)', num(m.buffers)]);
+		if (m.reads !== undefined)       rows.push(['Physical reads', num(m.reads)]);
+		if (m.writes !== undefined)      rows.push(['Physical writes', num(m.writes)]);
+		if (parsed.statements.length > 1) rows.push(['Plans in the text', parsed.statements.length + ' (one per child cursor; this is the first)']);
+
+		var sumStyle = 'cursor:pointer;font-size:0.75em;font-weight:700;color:var(--sp-hdr-blue)'
+		             + ';text-transform:uppercase;letter-spacing:0.05em;user-select:none;padding:1px 0;';
+		var html = '<details open style="margin-bottom:6px;">'
+		         + '<summary style="' + sumStyle + '">Plan</summary>'
+		         + '<div style="padding:3px 0 2px 10px;border-left:2px solid var(--sp-border);margin-top:3px;">'
+		         + '<table style="border-collapse:collapse;font-size:0.82em;">';
+		// Two label/value pairs per row, as in the ASE and SQL Server blocks
+		for (var i = 0; i < rows.length; i += 2) {
+			html += '<tr>';
+			for (var j = i; j < i + 2 && j < rows.length; j++) {
+				html += '<td style="padding:1px 6px 1px 0;color:var(--sp-text-4);white-space:nowrap;">' + escapeHtml(rows[j][0]) + '</td>'
+				      + '<td style="padding:1px 18px 1px 0;white-space:nowrap;"><b>' + escapeHtml(rows[j][1]) + '</b></td>';
+			}
+			html += '</tr>';
+		}
+		return html + '</table></div></details>';
+	}
+
+	/**
+	 * Fills the Oracle dialog's "Plan Analysis" section with the findings OracleShowplan.render() made
+	 * (dbxShowplanOracle.js, collectFindings()). Called with null when there is no plan to analyse.
+	 */
+	function renderOraAnalysisSection(findings) {
+		var details = document.getElementById('dbx-osp-sect-analysis');
+		var summary = document.getElementById('dbx-view-oraShowplan-analysis-summary');
+		var bodyEl  = document.getElementById('dbx-view-oraShowplan-analysis-body');
+		var linkEl  = document.getElementById('dbx-view-oraShowplan-analysis-link');
+		if (!details || !summary || !bodyEl) return;
+
+		if (findings === null) {
+			details.style.display = 'none';
+			if (linkEl) linkEl.style.display = 'none';
+			return;
+		}
+		findings = findings || [];
+		var summaryHtml = _oraShowplanSummaryHtml();
+
+		if (findings.length === 0) {
+			summary.innerHTML = '&#10003; <b>Plan Analysis</b> <span style="font-weight:normal;color:var(--sp-text-2);">&mdash; nothing to point at</span>';
+			bodyEl.innerHTML = summaryHtml;
+			details.style.display = '';
+			details.open = !!summaryHtml;
+			if (linkEl) linkEl.style.display = 'none';
+			return;
+		}
+
+		var nErr  = findings.filter(function(f){return f.severity==='error';}).length;
+		var nWarn = findings.filter(function(f){return f.severity==='warning';}).length;
+		var parts = [];
+		if (nErr)  parts.push('<span style="color:var(--sp-err-2);">' + nErr  + ' error'   + (nErr  > 1 ? 's' : '') + '</span>');
+		if (nWarn) parts.push('<span style="color:var(--sp-warn-text-2);">' + nWarn + ' warning' + (nWarn > 1 ? 's' : '') + '</span>');
+		var infoRest = findings.length - nErr - nWarn;
+		if (infoRest > 0) parts.push(infoRest + ' info');
+		summary.innerHTML = (nErr || nWarn ? '&#9888; ' : 'ℹ&#65039; ') + '<b>Plan Analysis &mdash; ' + findings.length
+		                   + ' finding' + (findings.length !== 1 ? 's' : '') + '</b>'
+		                   + (parts.length ? ' (' + parts.join(', ') + ')' : '');
+
+		bodyEl.innerHTML = summaryHtml + renderFindingsListHtml(findings, DbxShowplanTheme.isDark(), 'oraShowplanJumpToNode');
+		details.style.display = '';
+		details.open = true;
+
+		// The pointer in the toolbar above the diagram: only for something that needs attention (a plan that just
+		// has a few notes should not look like it has a problem)
+		if (linkEl) {
+			linkEl.style.display = (nErr || nWarn) ? '' : 'none';
+			linkEl.style.color = nErr ? 'var(--sp-err-2)' : 'var(--sp-warn-text-2)';
+			linkEl.innerHTML = '&#9888; ' + (nErr + nWarn) + ' warning' + (nErr + nWarn !== 1 ? 's' : '') + ' &mdash; see Plan Analysis &#8595;';
+		}
+	}
+
+	window.oraShowplanJumpToAnalysis = function() {
+		var details = document.getElementById('dbx-osp-sect-analysis');
+		if (!details) return;
+		details.open = true;
+		details.scrollIntoView({ behavior: 'smooth', block: 'start' });
+	};
+
+	/**
+	 * A click on the "[Node N]" of a finding: scroll the operation with that Id into view and flash its box
+	 * (the same as aseShowplanJumpToNode above; the boxes get data-va from renderNode() in dbxShowplanOracle.js).
+	 */
+	window.oraShowplanJumpToNode = function(id) {
+		var graphSect = document.getElementById('dbx-osp-sect-graph');
+		if (graphSect) graphSect.open = true;
+		var box = document.querySelector('#dbx-view-oraShowplan-graphContent .ora-plan-box[data-va="' + id + '"]');
+		if (!box) return;
+		box.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+		box.classList.remove('ora-plan-flash');
+		void box.offsetWidth;   // restart the animation when the same box is asked for again
+		box.classList.add('ora-plan-flash');
+		box.addEventListener('animationend', function onEnd() {
+			box.classList.remove('ora-plan-flash');
 		}, { once: true });
 	};
 
