@@ -788,8 +788,18 @@
 			"					</div>",
 			"				</details>",
 
+			// What the collector has stored about the tables of the plan (columns, statistics, indexes, sizes). The names are taken from
+			// the plan that is drawn: the tables AND the indexes (the server finds the table of an index).
+			"				<!-- ▶ Table Information (lazy-loaded on first expand) -->",
+			"				<details id='dbx-osp-sect-tableinfo' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
+			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128220; Table Information</summary>",
+			"					<div id='dbx-osp-tableinfo-body' style='padding:4px 8px 8px 8px;overflow-x:auto;'>",
+			"						<span style='color:var(--sp-text-5);font-size:0.85em;'>Expand to load table and index information.</span>",
+			"					</div>",
+			"				</details>",
+
 			// The two LLM sections, as in the ASE and SQL Server dialogs (see the comments there). What the LLM gets for Oracle:
-			// the SQL text, the plan text and the server version. No table/index DDL: there is no DDL lookup for Oracle.
+			// the SQL text, the plan text, the server version and (when the plan came from a monitored server) the Table Information above as text.
 			"				<!-- ▶ LLM Optimization Advice (lazy-loaded on first expand) -->",
 			"				<details id='dbx-osp-sect-llm' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
 			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#129302; LLM Optimization Advice<span class='dbx-llm-summary-info' style='font-weight:normal;color:var(--sp-text-5);'></span></summary>",
@@ -1805,10 +1815,14 @@
 	var _oraShowplanLastPlanText = undefined;
 	var _oraShowplanLastParsed = null;      // for the summary at the top of the Plan Analysis section
 	var _oraShowplanSplitterInited = false;
-	// For the two LLM sections: the SQL text as it was given (the SQL Text section may show it re-formatted),
-	// and the DbxTune server name the plan came from ('' for a pasted plan), which is where the Oracle version is read from
-	var _oraShowplanSqlText = '';
-	var _oraShowplanSrv     = '';
+	// For the Table Information and the two LLM sections: the SQL text as it was given (the SQL Text section may show it re-formatted),
+	// and where the plan came from: the DbxTune server name ('' for a pasted plan: then there is no table information, and no Oracle version),
+	// the container (PDB) the statement ran in ('' = look in all), and what a Daily Summary Report sends along (the recorded version and statistics)
+	var _oraShowplanSqlText      = '';
+	var _oraShowplanSrv          = '';
+	var _oraShowplanDbname       = '';
+	var _oraShowplanDbmsVersion  = '';
+	var _oraShowplanWorkloadData = '';
 
 	var _oraShowplanHorizontal = true;
 	try {
@@ -1960,15 +1974,97 @@
 		var toUrl = '/showplan/oracle';
 		if (!window.location.toString().toLowerCase().startsWith('http')) toUrl = 'http://dbxtune.gorans.org' + toUrl;
 		submit_post_via_hidden_form(toUrl, {
-			plan: _oraShowplanLastPlanText || '',
-			sql:  $('#dbx-view-oraShowplan-sqlContent').text() || ''
+			plan:         _oraShowplanLastPlanText || '',
+			sql:          $('#dbx-view-oraShowplan-sqlContent').text() || '',
+			srv:          _oraShowplanSrv,
+			dbname:       _oraShowplanDbname,
+			dbmsVersion:  _oraShowplanDbmsVersion,
+			workloadData: _oraShowplanWorkloadData
 		});
 	};
 
 	/**
+	 * The names of the tables and indexes in the plan that is drawn: what "Table Information" asks the collector about.
+	 * Names that the optimizer made up are left out: ':BF0000' (a Bloom filter), 'SYS_TEMP_...' (a materialized WITH query),
+	 * 'VW_...' (a view it created), 'index$_join$_...' (an index join).
+	 */
+	function _oraShowplanObjectNames() {
+		var names = [];
+		if (!_oraShowplanLastParsed) return names;
+		_oraShowplanLastParsed.statements.forEach(function (stmt) {
+			stmt.steps.forEach(function (step) {
+				DbxShowplanGraph.walkPlanNodes(step.root, function (node) {
+					var name = node.props && node.props.objName;
+					if (!name || /^(:|SYS_TEMP_|VW_|index\$_join\$)/i.test(name)) return;
+					if (names.indexOf(name) === -1) names.push(name);
+				});
+			});
+		});
+		return names;
+	}
+
+	/**
+	 * The "Table Information" section: what the collector of the server has stored about the tables of the plan (DDL Storage).
+	 * Only for a plan that came from a monitored server: a pasted plan has nowhere to ask.
+	 */
+	function _oraShowplanLoadTableInfo(body) {
+		body.setAttribute('data-loaded', 'true');
+
+		var tables = _oraShowplanObjectNames();
+		if (!_oraShowplanSrv) {
+			body.innerHTML = '<em style="color:var(--sp-text-5);">Table information is not available: this plan did not come from a monitored server (it was pasted).</em>';
+			return;
+		}
+		if (!tables.length) {
+			body.innerHTML = '<em style="color:var(--sp-text-5);">The plan names no tables or indexes.</em>';
+			return;
+		}
+
+		body.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Loading table information…</span>';
+		$.ajax({
+			url:      '/api/cc/mgt/table-info',
+			data:     { srv: _oraShowplanSrv, dbVendor: 'Oracle', dbname: _oraShowplanDbname, tables: tables.join(',') },
+			dataType: 'json',
+			success:  function(r) {
+				if (r && r.html) {
+					body.innerHTML = '<div style="font-size:0.8em;color:var(--sp-text-2);margin-bottom:6px;">Tables and indexes in the plan: '
+						+ tables.map(function(t) { return '<code>' + escapeHtml(t) + '</code>'; }).join(', ')
+						+ '</div>' + r.html;
+				} else {
+					body.innerHTML = '<em style="color:var(--sp-text-5);">No table information found in the DDL Storage of the collector.</em>';
+				}
+			},
+			error:    function(xhr) {
+				var msg = 'HTTP ' + xhr.status;
+				try { var j = JSON.parse(xhr.responseText); msg += ': ' + (j.message || j.error || ''); } catch(e) {}
+				body.innerHTML = '<span class="text-danger">Failed to load table info: ' + escapeHtml(msg) + '</span>';
+			}
+		});
+	}
+
+	/**
+	 * The same table information as plain text, for the two LLM sections. Resolves to '' when there is nothing to get
+	 * (a pasted plan, no tables, the collector does not answer): the LLM is then asked without it.
+	 */
+	function _oraShowplanFetchDdlContext() {
+		var tables = _oraShowplanObjectNames();
+		if (!_oraShowplanSrv || !tables.length) return Promise.resolve('');
+
+		return new Promise(function (resolve) {
+			$.ajax({
+				url:      '/api/cc/mgt/table-info',
+				data:     { srv: _oraShowplanSrv, dbVendor: 'Oracle', dbname: _oraShowplanDbname, tables: tables.join(','), format: 'text' },
+				dataType: 'json',
+				success:  function(r) { resolve((r && r.text) || ''); },
+				error:    function()  { resolve(''); }
+			});
+		});
+	}
+
+	/**
 	 * The "LLM Optimization Advice" section of the Oracle dialog: ask the LLM about the statement and plan that are shown.
-	 * As _aseShowplanLoadLlmAdvice(), without the table DDL (there is no DDL lookup for Oracle): the LLM gets the SQL text,
-	 * the plan text and - when the plan came from a monitored server - the Oracle version of that server.
+	 * As _aseShowplanLoadLlmAdvice(). The LLM gets the SQL text, the plan text and - when the plan came from a monitored server -
+	 * the Oracle version of that server and what the collector knows about the tables of the plan.
 	 */
 	function _oraShowplanLoadLlmAdvice(body) {
 		body.setAttribute('data-loaded', 'true');
@@ -1981,7 +2077,10 @@
 			body.innerHTML = '<em style="color:var(--sp-text-5);">No SQL text is available for this plan.</em>';
 			return;
 		}
-		_openLlmAdviceIfConfigured(body, { sql: _oraShowplanSqlText, plan: _oraShowplanLastPlanText || '', dbVendor: 'Oracle', srv: _oraShowplanSrv, target: body });
+		_oraShowplanFetchDdlContext().then(function (ddlContext) {
+			_openLlmAdviceIfConfigured(body, { sql: _oraShowplanSqlText, plan: _oraShowplanLastPlanText || '', dbVendor: 'Oracle', srv: _oraShowplanSrv,
+				dbmsVersion: _oraShowplanDbmsVersion, ddlContext: ddlContext, workloadData: _oraShowplanWorkloadData, target: body });
+		});
 	}
 
 	window.oraShowplanRefreshLlmAdvice = function() {
@@ -2001,15 +2100,18 @@
 			return;
 		}
 		body.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Building prompt…</span>';
-		// The same Oracle version the Advice section would send (read live from the server's Collector; '' for a pasted plan)
+		// The same Oracle version the Advice section would send: the one a report recorded, otherwise read live from the
+		// server's Collector ('' for a pasted plan). And the same table information.
 		var dbmsVerPromise = (window.dbxLlmAdvice && dbxLlmAdvice.fetchDbmsVersion)
-				? dbxLlmAdvice.fetchDbmsVersion({ srv: _oraShowplanSrv }) : Promise.resolve('');
-		dbmsVerPromise.then(function(dbmsVersion) {
+				? dbxLlmAdvice.fetchDbmsVersion({ srv: _oraShowplanSrv, dbmsVersion: _oraShowplanDbmsVersion }) : Promise.resolve(_oraShowplanDbmsVersion);
+		Promise.all([dbmsVerPromise, _oraShowplanFetchDdlContext()]).then(function(res) {
+			var dbmsVersion = res[0], ddlContext = res[1];
+			var wlProfile   = (window.dbxLlmAdvice && dbxLlmAdvice.buildWorkloadProfile && _oraShowplanWorkloadData) ? dbxLlmAdvice.buildWorkloadProfile(_oraShowplanWorkloadData) : '';
 			$.ajax({
 				url:         '/api/llm/optimize-sql',
 				method:      'POST',
 				contentType: 'application/json',
-				data:        JSON.stringify({ sql: _oraShowplanSqlText, ddlContext: '', plan: _oraShowplanLastPlanText || '', dbVendor: 'Oracle', dbmsVersion: dbmsVersion, preview: true }),
+				data:        JSON.stringify({ sql: _oraShowplanSqlText, ddlContext: ddlContext || '', plan: _oraShowplanLastPlanText || '', dbVendor: 'Oracle', dbmsVersion: dbmsVersion, workloadProfile: wlProfile, preview: true }),
 				dataType:    'json',
 				success: function(r) {
 					if (r && r.promptSent)
@@ -2033,9 +2135,10 @@
 		_copyText(el.textContent);
 	};
 
-	/** A new plan is shown: the two LLM sections are closed and emptied, so they load again (for THIS plan) when they are expanded */
+	/** A new plan is shown: the Table Information and the two LLM sections are closed and emptied, so they load again (for THIS plan) when they are expanded */
 	function _oraShowplanResetLlmSections() {
-		[['dbx-osp-sect-llm',        'dbx-osp-llm-body',        'Expand to ask an LLM for optimization advice.'],
+		[['dbx-osp-sect-tableinfo',  'dbx-osp-tableinfo-body',  'Expand to load table and index information.'],
+		 ['dbx-osp-sect-llm',        'dbx-osp-llm-body',        'Expand to ask an LLM for optimization advice.'],
 		 ['dbx-osp-sect-llmpreview', 'dbx-osp-llmpreview-body', 'Expand to build the prompt.']].forEach(function (s) {
 			var sect = document.getElementById(s[0]), body = document.getElementById(s[1]);
 			if (!sect || !body) return;
@@ -2054,7 +2157,9 @@
 	 * @param {string} planText     — what DBMS_XPLAN printed (DISPLAY_CURSOR, DISPLAY)
 	 * @param {string} [sqlText]    — the SQL text; when empty the one DBMS_XPLAN printed above the plan is used
 	 * @param {string} [objectName] — optional label for the header
-	 * @param {Object} [meta]       — optional: { srv } = the DbxTune server name the plan came from (the LLM sections read the Oracle version from it)
+	 * @param {Object} [meta]       — optional: { srv, dbname, dbmsVersion, workloadData }. srv = the DbxTune server name the plan came from
+	 *                                 (Table Information and the LLM sections ask its collector), dbname = the container (PDB) of the statement,
+	 *                                 dbmsVersion and workloadData = what a Daily Summary Report recorded (see the ASE dialog)
 	 */
 	window.showOracleShowplanDialog = function (planText, sqlText, objectName, meta) {
 		var $dlg = $('#dbx-view-oraShowplan-dialog');
@@ -2069,8 +2174,11 @@
 		$('#dbx-view-oraShowplan-objectName', $dlg).text(objectName || '');
 		$('#dbx-view-oraShowplan-planContent', $dlg).text(planText);
 		$('#dbx-view-oraShowplan-sqlContent',  $dlg).text(sqlText || '');
-		_oraShowplanSqlText = sqlText || '';
-		_oraShowplanSrv     = (meta && meta.srv) ? meta.srv : '';
+		_oraShowplanSqlText      = sqlText || '';
+		_oraShowplanSrv          = (meta && meta.srv)          ? meta.srv          : '';
+		_oraShowplanDbname       = (meta && meta.dbname)       ? meta.dbname       : '';
+		_oraShowplanDbmsVersion  = (meta && meta.dbmsVersion)  ? meta.dbmsVersion  : '';
+		_oraShowplanWorkloadData = (meta && meta.workloadData) ? meta.workloadData : '';
 		_oraShowplanResetLlmSections();
 		_autoFormatSql(oraShowplanFormatSql);
 
@@ -2344,7 +2452,7 @@ function _initGlobalEscClose() {
 		if (_tableInfoTipInited) return;
 		_tableInfoTipInited = true;
 
-		var SEL = '#dbx-ssp-tableinfo-body [data-tooltip], #dbx-asp-tableinfo-body [data-tooltip]';
+		var SEL = '#dbx-ssp-tableinfo-body [data-tooltip], #dbx-asp-tableinfo-body [data-tooltip], #dbx-osp-tableinfo-body [data-tooltip]';
 		var tip = null;
 
 		function hide() { if (tip) tip.style.display = 'none'; }
@@ -2834,11 +2942,22 @@ function _initGlobalEscClose() {
 			$('#dbx-view-oraShowplan-objectName', this).text(data.objectname || '');
 			$('#dbx-view-oraShowplan-planContent', this).text(data.plan || '');
 			$('#dbx-view-oraShowplan-sqlContent', this).text(data.sqltext || '');
-			_oraShowplanSqlText = data.sqltext || '';
-			_oraShowplanSrv     = data.srv || '';
+			_oraShowplanSqlText      = data.sqltext || '';
+			_oraShowplanSrv          = data.srv || '';
+			_oraShowplanDbname       = data.dbname || '';
+			_oraShowplanDbmsVersion  = '';   // (read live from the collector of 'srv')
+			_oraShowplanWorkloadData = '';
 			_oraShowplanResetLlmSections();
 			_autoFormatSql(oraShowplanFormatSql);
 			_oraShowplanLastPlanText = data.plan;
+		});
+
+		// Oracle Table Information: loaded when the section is expanded for the first time
+		document.getElementById('dbx-osp-sect-tableinfo').addEventListener('toggle', function() {
+			if (!this.open) return;
+			var body = document.getElementById('dbx-osp-tableinfo-body');
+			if (!body || body.getAttribute('data-loaded') === 'true') return;
+			_oraShowplanLoadTableInfo(body);
 		});
 
 		// Oracle LLM Optimization Advice / LLM Prompt Preview: loaded when the section is expanded for the first time

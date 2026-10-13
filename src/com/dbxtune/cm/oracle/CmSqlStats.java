@@ -41,6 +41,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
@@ -51,6 +52,7 @@ import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.pcs.PcsColumnOptions;
 import com.dbxtune.pcs.PcsColumnOptions.ColumnType;
+import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.sql.conn.info.DbmsVersionInfoOracle;
@@ -187,11 +189,16 @@ extends CountersModel
 	public static final String  PROPKEY_sample_topRows            = PROP_PREFIX + ".sample.topRows";
 	public static final int     DEFAULT_sample_topRows            = 1000;
 
+	public static final String  PROPKEY_ddlStore_topRows          = PROP_PREFIX + ".ddlStore.topRows";
+	public static final int     DEFAULT_ddlStore_topRows          = 20;
+
 
 	@Override
 	protected void registerDefaultValues()
 	{
 		super.registerDefaultValues();
+
+		Configuration.registerDefaultValue(PROPKEY_ddlStore_topRows,        DEFAULT_ddlStore_topRows);
 
 		Configuration.registerDefaultValue(PROPKEY_sample_extraWhereClause, DEFAULT_sample_extraWhereClause);
 		Configuration.registerDefaultValue(PROPKEY_sample_afterPrevSample,  DEFAULT_sample_afterPrevSample);
@@ -213,6 +220,7 @@ extends CountersModel
 		list.add(new CmSettingsHelper("Show only SQL exected last 30 minutes",        PROPKEY_sample_lastXminutes     , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_lastXminutes     , DEFAULT_sample_lastXminutes     ), DEFAULT_sample_lastXminutes    , CmSqlStatsPanel.TOOLTIP_sample_lastXminutes     ));
 		list.add(new CmSettingsHelper("Show only SQL exected last ## minutes",        PROPKEY_sample_lastXminutesTime , Integer.class, conf.getIntProperty    (PROPKEY_sample_lastXminutesTime , DEFAULT_sample_lastXminutesTime ), DEFAULT_sample_lastXminutesTime, CmSqlStatsPanel.TOOLTIP_sample_lastXminutesTime ));
 		list.add(new CmSettingsHelper("Max Number of Rows",                           PROPKEY_sample_topRows          , Integer.class, conf.getIntProperty    (PROPKEY_sample_topRows          , DEFAULT_sample_topRows          ), DEFAULT_sample_topRows         , "Only get the ## statements that has most BUFFER_GETS (this to limit how much is fetched and stored on systems with many statements)." ));
+		list.add(new CmSettingsHelper("Store Plans for Top Rows",                     PROPKEY_ddlStore_topRows        , Integer.class, conf.getIntProperty    (PROPKEY_ddlStore_topRows        , DEFAULT_ddlStore_topRows        ), DEFAULT_ddlStore_topRows       , "In every sample: store the execution plan, and information about the tables it uses, for the ## statements with most ELAPSED_TIME since the previous sample (a plan and a table is only stored once per recording). 0 = do not store." ));
 
 		return list;
 	}
@@ -515,41 +523,51 @@ extends CountersModel
 				"AND s.LAST_ACTIVE_TIME > SYSDATE - (CAST(SYS_EXTRACT_UTC(SYSTIMESTAMP) as DATE) - TO_DATE('" + prevSampleUtc + "', 'YYYY-MM-DD HH24:MI:SS'))");
 	}
 
-	
-//	/** 
-//	 * Get number of rows to save/request ddl information for 
-//	 * if 0 is return no lookup will be done.
-//	 */
-//	@Override
-//	public int getMaxNumOfDdlsToPersist()
-//	{
-//		return 10;
-//	}
-//
-//	/** 
-//	 * Get Column names to where DBName and ObjectName is called, this must always return at least a array with 2 strings. 
-//	 */
-//	@Override
-//	public String[] getDdlDetailsColNames()
-//	{
-////		String[] sa = {"dbname", "plan_handle"};
-//		String[] sa = {"SQL_ID", "PLAN_HASH_VALUE"};
-//		return sa;
-//	}
-//	/**
-//	 * Sort descending on this column(s) to get values from the diff/rate structure<br>
-//	 * One sort for every value will be done, meaning we can do "top" for more than 1 column<br>
-//	 * So if we want to do top 10 LogicalReads AND top 10 LockContention
-//	 * If this one returns null, this will not be done
-//	 * @return
-//	 */
-//	@Override
-//	public String[] getDdlDetailsSortOnColName()
-//	{
-////fixme: maybe add an object for every column here, like new ObjectLookupSortPredicate("execution_count", GT, ABS|DIFF|RATE, 0);
-////This so we dont extract so many "extra objects"...
-//
-//		String[] sa = {"EXECUTIONS", "CPU_TIME", "BUFFER_GETS", "ELAPSED_TIME"};
-//		return sa;
-//	}
+
+	/**
+	 * The statements that used most elapsed time since the previous sample: send them to the "DDL Storage", which stores the execution plan
+	 * and (from the plan) information about the tables: columns, statistics, indexes and sizes. See <code>ObjectLookupInspectorOracle</code><br>
+	 * A plan and a table is only stored once per recording: PersistentCounterHandler.addDdl() knows what it already has.
+	 */
+	@Override
+	public void sendDdlDetailsRequest(CounterSample absData, CounterSample diffData, CounterSample rateData)
+	{
+		if ( ! PersistentCounterHandler.hasInstance() || diffData == null )
+			return;
+
+		int topRows = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_ddlStore_topRows, DEFAULT_ddlStore_topRows);
+		if (topRows <= 0)
+			return;
+
+		final int pos_SQL_ID          = diffData.findColumn("SQL_ID");
+		final int pos_PLAN_HASH_VALUE = diffData.findColumn("PLAN_HASH_VALUE");
+		final int pos_ELAPSED_TIME    = diffData.findColumn("ELAPSED_TIME");
+		if (pos_SQL_ID == -1 || pos_PLAN_HASH_VALUE == -1 || pos_ELAPSED_TIME == -1)
+			return;
+
+		// Most elapsed time first
+		List<List<Object>> sorted = new ArrayList<>(diffData.getDataCollection());
+		sorted.sort((row1, row2) -> Double.compare(
+				row2.get(pos_ELAPSED_TIME) instanceof Number ? ((Number) row2.get(pos_ELAPSED_TIME)).doubleValue() : 0,
+				row1.get(pos_ELAPSED_TIME) instanceof Number ? ((Number) row1.get(pos_ELAPSED_TIME)).doubleValue() : 0));
+
+		PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
+
+		for (int r = 0; r < sorted.size() && r < topRows; r++)
+		{
+			Object sqlId         = sorted.get(r).get(pos_SQL_ID);
+			Object planHashValue = sorted.get(r).get(pos_PLAN_HASH_VALUE);
+			Object elapsedTime   = sorted.get(r).get(pos_ELAPSED_TIME);
+
+			// The rest did nothing in this sample
+			if ( ! (elapsedTime instanceof Number) || ((Number) elapsedTime).doubleValue() <= 0 )
+				break;
+
+			// PLAN_HASH_VALUE 0 = a PL/SQL block or a DDL statement: there is no plan
+			if (sqlId == null || ! (planHashValue instanceof Number) || ((Number) planHashValue).longValue() == 0)
+				continue;
+
+			pch.addDdl(PersistentCounterHandler.STATEMENT_CACHE_NAME, sqlId + "_" + ((Number) planHashValue).longValue(), CM_NAME + ".diff.top.ELAPSED_TIME");
+		}
+	}
 }

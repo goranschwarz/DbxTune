@@ -61,6 +61,7 @@ import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.pcs.PcsColumnOptions;
 import com.dbxtune.pcs.PcsColumnOptions.ColumnType;
+import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.sql.ResultSetMetaDataCached;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
@@ -764,6 +765,12 @@ extends CountersModel
 			{
 				newSample.setValueAt(execPlan    , rowId, pos_ExecPlan);
 				newSample.setValueAt(Boolean.TRUE, rowId, pos_HasExecPlan);
+
+				// Also send it to the "DDL Storage": that stores information about the tables of the plan (columns, statistics, indexes, sizes)
+				// which is what "Table Information" and the LLM advice in DbxCentral reads. See ObjectLookupInspectorOracle. (it is only looked up once per recording)
+				long planHashValue = newSample.getValueAsLong(rowId, pos_PLAN_HASH_VALUE, 0L);
+				if (planHashValue != 0 && PersistentCounterHandler.hasInstance())
+					PersistentCounterHandler.getInstance().addDdl(PersistentCounterHandler.STATEMENT_CACHE_NAME, sqlId + "_" + planHashValue, CM_NAME);
 			}
 		}
 	}

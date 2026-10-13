@@ -26,22 +26,33 @@ import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
+import com.dbxtune.central.llm.LlmSqlContextBuilder;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.DictCompression;
+import com.dbxtune.pcs.inspection.ObjectLookupInspectorOracle;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
+import com.dbxtune.pcs.report.content.ShowplanLinkBuilder;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.AggType;
 import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
 import com.dbxtune.pcs.report.content.SparklineHelper.SparkLineParams;
+import com.dbxtune.sql.SqlParserUtils;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
+import com.dbxtune.utils.DbUtils;
+import com.dbxtune.utils.StringUtil;
 
 public class OracleTopSql
 extends OracleAbstract
@@ -51,6 +62,9 @@ extends OracleAbstract
 	private ResultSetTableModel _shortRstm;
 	private ResultSetTableModel _sqlTextRstm;
 	private List<String>        _miniChartJsList = new ArrayList<>();
+
+	/** The execution plans of the statements in the report. Key: the id of the hidden HTML element that holds the plan, value: the text of DBMS_XPLAN */
+	private Map<String, String> _planTexts = new LinkedHashMap<>();
 
 	public OracleTopSql(DailySummaryReportAbstract reportingInstance)
 	{
@@ -103,6 +117,15 @@ extends OracleAbstract
 		{
 			for (String str : _miniChartJsList)
 				w.append(str);
+
+			// The execution plans, each ONCE, as hidden blocks: "View Execution Plan" and "Get LLM Optimization Advice" read them when they are clicked
+			// (type 'text/xmldata' is what dsrOpenLink() expects, the content is the plain text of DBMS_XPLAN: the browser does not parse it)
+			for (Entry<String, String> plan : _planTexts.entrySet())
+			{
+				w.append("\n<script id='").append(plan.getKey()).append("' type='text/xmldata'>\n");
+				w.append(plan.getValue().replace("</script", "<\\/script"));
+				w.append("\n</script>\n");
+			}
 		}
 	}
 
@@ -246,8 +269,12 @@ extends OracleAbstract
 		srs.addColumn("ELAPSED_TIME_ms__per_exec", Types.DECIMAL,       20, 1);
 		srs.addColumn("SQL_FULLTEXT",              Types.VARCHAR, 1024*128, 0);
 
+		String dbxCentralBaseUrl = getReportingInstance().getDbxCentralPublicBaseUrl();
+		String reportSrvName     = getReportingInstance().getServerName();
+
 		for (int r=0; r<_shortRstm.getRowCount(); r++)
 		{
+			String sqlId   = _shortRstm.getValueAsString(r, "SQL_ID");
 			String sqlText = _shortRstm.getValueAsString(r, "SQL_FULLTEXT");
 
 			// When using Dictionary Compression the column is just a hashId: get the real text from the lookup table
@@ -263,12 +290,76 @@ extends OracleAbstract
 				}
 			}
 
+			//--------------------------------------------------------------------------------
+			// The execution plan(s) the collector stored for the statement (DDL Storage): one per PLAN_HASH_VALUE it had during the day
+			// The plan text is written ONCE, in a hidden block (see writeMessageText): the links read it from there when they are clicked
+			//--------------------------------------------------------------------------------
+			Map<String, String[]> plans = getExecutionPlans(conn, sqlId);
+
+			String      planLinks     = "";
+			String      firstPlanId   = null;
+			String      conName       = _shortRstm.getValueAsString(r, "CON_NAME");
+			Set<String> planTableList = new LinkedHashSet<>();
+
+			for (Entry<String, String[]> plan : plans.entrySet())
+			{
+				String planElementId = "oraplan_" + sqlId + "_" + plan.getKey();
+				_planTexts.put(planElementId, plan.getValue()[0]);
+
+				if (firstPlanId == null)
+					firstPlanId = planElementId;
+				if (StringUtil.hasValue(plan.getValue()[2]))
+					conName = plan.getValue()[2];
+				planTableList.addAll(StringUtil.parseCommaStrToList(plan.getValue()[1], true));
+
+				// One plan: "View Execution Plan". Several: the icon and the text once, then a link per plan
+				String link = ShowplanLinkBuilder.buildViewPlanLinkHtml(dbxCentralBaseUrl, planElementId, sqlText, DbUtils.DB_PROD_NAME_ORACLE, reportSrvName, conName,
+						plans.size() == 1 ? "View Execution Plan" : "plan " + plan.getKey(), planLinks.isEmpty());
+
+				if (StringUtil.hasValue(link))
+					planLinks += (planLinks.isEmpty() ? "" : ", ") + (plans.size() > 1 && planLinks.isEmpty() ? link.replace("<a ", "View Execution Plan: <a ") : link);
+			}
+			if (StringUtil.hasValue(planLinks))
+				planLinks += " &emsp; ";
+
+			// "Get LLM Optimization Advice": with the (first) plan. What the tables look like is looked up when the link is clicked
+			String llmAdviceLink = LlmSqlContextBuilder.buildAdviceLinkHtmlJs(dbxCentralBaseUrl, sqlText, firstPlanId, DbUtils.DB_PROD_NAME_ORACLE, reportSrvName, conName);
+
+			// Table Information: for the tables of the plan (Oracle told us which they are)
+			// No plan was stored: the tables that can be read out of the SQL text, without the data dictionary (the collector does not look those up)
+			Set<String> tableList = planTableList;
+			if (plans.isEmpty())
+			{
+				tableList = new LinkedHashSet<>();
+				for (String tableName : SqlParserUtils.getTables(sqlText))
+				{
+					if ( ! ObjectLookupInspectorOracle.isDictionaryObject(tableName) )
+						tableList.add(tableName);
+				}
+			}
+
+			String tableInfo = "";
+			if ( ! tableList.isEmpty() )
+			{
+				String tableInfoHtml = getDbmsTableInfoAsHtmlTable(conn, conName, tableList, true, "dsr-sub-table-tableinfo");
+				if (StringUtil.hasValue(tableInfoHtml))
+				{
+					boolean detailsOpen = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_TABLE_INFO_DETAILS_OPEN, DEFAULT_TABLE_INFO_DETAILS_OPEN);
+
+					tableInfo = "\n<br>\n"
+						+ "<details class='dsr-details-tableinfo'" + (detailsOpen ? " open" : "") + "> \n"
+						+ "<summary>Show/Hide Table information for " + tableList.size() + " table(s)" + (plans.isEmpty() ? "" : " in the execution plan") + ": " + listToHtmlCode(tableList) + "</summary> \n"
+						+ tableInfoHtml
+						+ "</details> \n";
+				}
+			}
+
 			srs.addRow(
-					_shortRstm.getValueAsString(r, "SQL_ID"),
+					sqlId,
 					_shortRstm.getValueAsLong  (r, "EXECUTIONS__sum"),
 					_shortRstm.getValueAsLong  (r, "ELAPSED_TIME_ms__sum"),
 					_shortRstm.getValueAsBigDecimal(r, "ELAPSED_TIME_ms__per_exec"),
-					"<xmp>" + sqlText + "</xmp>");
+					"<xmp>" + sqlText + "</xmp>" + "<br>" + planLinks + llmAdviceLink + tableInfo);
 		}
 
 		try

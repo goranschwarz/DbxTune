@@ -2332,6 +2332,7 @@ function dbxTuneGraphSubscribe()
 		const dataVal = data;
 		const sqlText = rowData.hasOwnProperty('SqlText') ? (rowData.SqlText || '') : '';
 		const srv     = srvName || (_serverList.length ? _serverList[0] : '');
+		const dbname  = rowData.hasOwnProperty('CON_NAME') ? (rowData.CON_NAME || '') : '';   // the container (PDB), empty when it is not a Container Database
 
 		const div = document.createElement("div");
 		div.innerHTML = "&nbsp;";
@@ -2342,6 +2343,7 @@ function dbxTuneGraphSubscribe()
 		div.setAttribute("data-plan"       , dataVal);
 		div.setAttribute("data-sqltext"    , sqlText);
 		div.setAttribute("data-srv"        , srv);
+		div.setAttribute("data-dbname"     , dbname);
 
 		return div;
 	}
@@ -2388,7 +2390,7 @@ function dbxTuneGraphSubscribe()
 		AseTune:       'Adaptive Server Enterprise',
 		SqlServerTune: 'Microsoft SQL Server',
 		PostgresTune:  'PostgreSQL',
-		OracleTune:    'Oracle'   // no DDL-context lookup for Oracle (dbxLlmAdvice.js skips it), but the LLM has to know which DBMS it is
+		OracleTune:    'Oracle'   // (for Oracle dbxLlmAdvice.js looks up the tables of the SQL text also without a 'dbname': it has no database name to give)
 	};
 
 	function _activeStmtFirstNonEmpty(row, keys)
@@ -2475,7 +2477,7 @@ function dbxTuneGraphSubscribe()
 				if (adviceBtn)
 				{
 					adviceBtn.onclick = function() {
-						// 'srv' lets dbxLlmAdvice resolve the DBMS version from the Collector (no 'dbname', so no DDL lookup)
+						// 'srv' lets dbxLlmAdvice resolve the DBMS version from the Collector (no 'dbname', so no DDL lookup: except for Oracle, which needs none)
 						dbxLlmAdvice.open({ sql: llmSql, plan: llmPlan, dbVendor: ACTIVE_STMT_DB_VENDOR[appName], srv: srvName, origin: 'Active Statements' });
 					};
 				}

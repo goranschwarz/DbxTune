@@ -63,7 +63,7 @@ extends HttpServlet
 		resp.setContentType("text/html; charset=UTF-8");
 		resp.setCharacterEncoding("UTF-8");
 		PrintWriter out = resp.getWriter();
-		out.print(createPage(null, null));
+		out.print(createPage(null, null, null, null, null, null));
 		out.flush();
 		out.close();
 	}
@@ -73,6 +73,13 @@ extends HttpServlet
 	{
 		String plan = request.getParameter("plan");
 		String sql  = request.getParameter("sql");
+
+		// Optional, from "Open in External Window" of the dialog and from the links in a Daily Summary Report: where the plan came from.
+		// With 'srv' the dialog can ask that server's collector for Table Information (also what the LLM is told about the tables)
+		String srv          = request.getParameter("srv");
+		String dbname       = request.getParameter("dbname");       // the container (PDB), can be empty
+		String dbmsVersion  = request.getParameter("dbmsVersion");  // recorded by the Daily Summary Report
+		String workloadData = request.getParameter("workloadData"); // execution statistics of the statement, from the same report
 
 		if (_logger.isDebugEnabled())
 			_logger.debug("/showplan/oracle: received request from: remoteHost='" + request.getRemoteHost() + "', remoteAddr='" + request.getRemoteAddr() + "', remoteUser='" + request.getRemoteUser() + "'.");
@@ -86,16 +93,20 @@ extends HttpServlet
 		response.setContentType("text/html; charset=UTF-8");
 		response.setCharacterEncoding("UTF-8");
 		PrintWriter out = response.getWriter();
-		out.print(createPage(plan, sql));
+		out.print(createPage(plan, sql, srv, dbname, dbmsVersion, workloadData));
 		out.flush();
 		out.close();
 	}
 
 	/**
-	 * @param plan  the text of DBMS_XPLAN to open the dialog with, or null: just the form
-	 * @param sql   the SQL statement of the plan, or null (DBMS_XPLAN.DISPLAY_CURSOR prints it above the plan, and that is used then)
+	 * @param plan          the text of DBMS_XPLAN to open the dialog with, or null: just the form
+	 * @param sql           the SQL statement of the plan, or null (DBMS_XPLAN.DISPLAY_CURSOR prints it above the plan, and that is used then)
+	 * @param srv           the DbxTune server name the plan came from, or null (a pasted plan)
+	 * @param dbname        the container (PDB) the statement ran in, or null
+	 * @param dbmsVersion   the Oracle version a report recorded, or null (then the dialog reads it from the collector of 'srv')
+	 * @param workloadData  execution statistics of the statement as a report sends them (JSON), or null
 	 */
-	public static String createPage(String plan, String sql)
+	public static String createPage(String plan, String sql, String srv, String dbname, String dbmsVersion, String workloadData)
 	{
 		String str = "" +
 				"<!DOCTYPE html> \n" +
@@ -177,11 +188,12 @@ extends HttpServlet
 				"    </div> \n" +
 				" \n" +
 				"    <script> \n" +
-				"        function oraShowplanPasteShow() { \n" +
+				// 'meta' is only given for the plan that was POSTED to this page: a plan that is pasted afterwards came from nowhere we know
+				"        function oraShowplanPasteShow(meta) { \n" +
 				"            var plan = document.getElementById('plan').value; \n" +
 				"            var msg  = document.getElementById('ora-showplan-paste-msg'); \n" +
 				"            msg.textContent = plan.trim() ? '' : 'Paste a plan first.'; \n" +
-				"            if (plan.trim()) showOracleShowplanDialog(plan, document.getElementById('sql').value, ''); \n" +
+				"            if (plan.trim()) showOracleShowplanDialog(plan, document.getElementById('sql').value, '', meta); \n" +
 				"        } \n" +
 				"        function oraShowplanPasteReadFile(file) { \n" +
 				"            if (!file) return; \n" +
@@ -214,7 +226,12 @@ extends HttpServlet
 				"    <script> \n" +
 				"        document.getElementById('plan').value = '" + StringEscapeUtils.escapeEcmaScript(plan) + "'; \n" +
 				"        document.getElementById('sql').value  = '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(sql, "")) + "'; \n" +
-				"        oraShowplanPasteShow(); \n" +
+				"        oraShowplanPasteShow({ \n" +
+				"            srv:          '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(srv         , "")) + "', \n" +
+				"            dbname:       '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(dbname      , "")) + "', \n" +
+				"            dbmsVersion:  '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(dbmsVersion , "")) + "', \n" +
+				"            workloadData: '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(workloadData, "")) + "' \n" +
+				"        }); \n" +
 				"    </script> \n";
 		}
 

@@ -33,6 +33,7 @@ import com.dbxtune.config.dict.MonTablesDictionaryOracle;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.MainFrameOracle;
 import com.dbxtune.pcs.inspection.IObjectLookupInspector;
+import com.dbxtune.pcs.inspection.ObjectLookupInspectorOracle;
 import com.dbxtune.pcs.sqlcapture.ISqlCaptureBroker;
 import com.dbxtune.sql.DbmsVersionHelperOracle;
 import com.dbxtune.sql.IDbmsVersionHelper;
@@ -113,7 +114,7 @@ extends DbxTune
 	@Override
 	public IObjectLookupInspector createPcsObjectLookupInspector()
 	{
-		return null;
+		return new ObjectLookupInspectorOracle();
 	}
 
 	@Override
