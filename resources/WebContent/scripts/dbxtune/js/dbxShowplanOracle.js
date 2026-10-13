@@ -9,6 +9,9 @@
  * is what gets pasted into a ticket or a mail), it is what OracleTune records (CmActiveStatements,
  * column 'ExecPlan'), and it already holds the tree: the indentation of the 'Operation' column.
  *
+ * It also reads a SQL Monitor report: the TEXT that DBMS_SQLTUNE.REPORT_SQL_MONITOR prints (see parseMonitorReport()).
+ * That is the plan of ONE execution with what it really did, also while the statement is still executing.
+ *
  * Entry points:
  *   var parsed = OracleShowplan.parseText(planText);
  *   OracleShowplan.render(containerEl, parsed, opts);
@@ -22,16 +25,19 @@
  *     label:    'TABLE ACCESS FULL',
  *     metrics:  { estRows, estBytes, cost, cpuPct, estTimeSec, tempSpc, ownCost, ownCostPct,        // the optimizer's estimate
  *                 starts, actRows, estRowsTotal (= estRows x starts), actTimeSec, ownActTimeSec, ownActTimePct,
- *                 buffers, ownBuffers, ownBuffersPct, reads, writes, usedMem, usedTmp, stoppedEarly },  // only with ALLSTATS
+ *                 buffers, ownBuffers, ownBuffersPct, reads, writes, usedMem, usedTmp, stoppedEarly,    // only with ALLSTATS
+ *                 activityPct, activityDetail[], activitySamples, activeSec, startActive, progress, stillRunning },  // only in a SQL Monitor report
  *     props:    { va (= the operation Id), objName, access[], filter[], storage[], projection, qblock, alias,
- *                 pstart, pstop, tq, inOut, pqDistrib, cells{} (every column of the plan line, as printed) },
+ *                 pstart, pstop, tq, inOut, pqDistrib, cells{} (every column of the plan line, as printed),
+ *                 executing (a SQL Monitor report: at work right now) },
  *     children: [ node, ... ]
  *   }
  * Top-level result:
  *   { format: 'text', rawText, statements: [ { label, meta, steps: [ { label, root: node } ] } ] }
  * One statement per plan table in the text (DISPLAY_CURSOR prints one per child cursor).
  * The root node of each also has: _planInfo { sqlId, childNumber, planHash, sqlText, notes[], sections{},
- *                                             hasActuals, operations, inactive }
+ *                                             hasActuals, operations, inactive,
+ *                                             monitor { status, executing, duration, global[], stats[], samples } }
  *
  * The layout CSS and the connector drawing (drawConnectorLines) are a copy of dbxShowplanAse.js, with
  * the class prefix changed to 'ora-plan' ("copy now, extract later", as dbxShowplanSqlServer.js was made).
@@ -127,6 +133,7 @@ window.OracleShowplan = (function () {
 		headers.forEach(function (h, i) { col[h] = i; });
 		var opCol = col['Operation'];
 		if (opCol === undefined) return null;
+		var monitor = info.monitor;   // set when the table is the one of a SQL Monitor report: see parseMonitorReport()
 
 		// The rows: from below the dashes under the header, to the line of dashes that closes the table (or the first
 		// line that is not a table line). An EMPTY line does not end the table: people put them in to group the lines.
@@ -140,10 +147,19 @@ window.OracleShowplan = (function () {
 			var cells = splitCells(line);
 			if (cells.length !== headers.length) continue;   // a line we do not understand: skip it, do not guess
 
-			// Id: "   0", "*  2" (has a predicate), "-   5" / "- * 5" (not used: the other half of an adaptive plan)
+			// (a SQL Monitor report prints '.' where it has nothing to say about memory)
+			var cell = function (name) { var c = col[name]; var v = c === undefined ? '' : cells[c].trim(); return v === '.' ? '' : v; };
+
+			// Id: "   0", "*  2" (has a predicate), "-   5" / "- * 5" (not used: the other half of an adaptive plan),
+			// "-> 12" (a SQL Monitor report: the operation is executing right now)
 			var idCell = cells[col['Id']] || '';
 			var idMatch = /(\d+)\s*$/.exec(idCell);
-			if (!idMatch) continue;
+			if (!idMatch) {
+				// A SQL Monitor report: an operation with more than one kind of activity has one more line for each of
+				// them, with nothing but that column filled in
+				if (monitor && nodes.length && cell('Activity Detail (# samples)')) nodes[nodes.length - 1].metrics.activityDetail.push(cell('Activity Detail (# samples)'));
+				continue;
+			}
 			var id = idMatch[1];
 
 			// Operation: one more space of indentation for each level in the tree (the root has one space)
@@ -151,34 +167,33 @@ window.OracleShowplan = (function () {
 			var depth  = Math.max(0, (opCell.length - opCell.replace(/^\s+/, '').length) - 1);
 			var op     = opCell.trim();
 
-			var cell = function (name) { var c = col[name]; return c === undefined ? '' : cells[c].trim(); };
 			var costM = /^([0-9.]+[KMGTPE]?)\s*(?:\(\s*(\d+)\s*\))?$/i.exec(cell('Cost (%CPU)') || cell('Cost'));
 
 			var node = {
 				op: op,
 				label: op,
 				metrics: {
-					estRows:    parseNum(cell('Rows') || cell('E-Rows')),
+					estRows:    parseNum(cell('Rows') || cell('E-Rows') || cell('Rows (Estim)')),
 					estBytes:   parseNum(cell('Bytes') || cell('E-Bytes')),
 					cost:       costM ? parseNum(costM[1]) : undefined,
 					cpuPct:     costM && costM[2] !== undefined ? parseInt(costM[2], 10) : undefined,
 					estTimeSec: parseTime(cell('Time') || cell('E-Time')),
 					tempSpc:    parseNum(cell('TempSpc')),
-					starts:     parseNum(cell('Starts')),
-					actRows:    parseNum(cell('A-Rows')),
+					starts:     parseNum(cell('Starts') || cell('Execs')),
+					actRows:    parseNum(cell('A-Rows') || cell('Rows (Actual)')),
 					actTimeSec: parseTime(cell('A-Time')),
 					buffers:    parseNum(cell('Buffers')),
 					reads:      parseNum(cell('Reads')),
 					writes:     parseNum(cell('Writes')),
-					usedMem:    cell('Used-Mem') || undefined,
-					usedTmp:    cell('Used-Tmp') || undefined,
+					usedMem:    cell('Used-Mem') || cell('Mem (Max)') || cell('Mem') || undefined,
+					usedTmp:    cell('Used-Tmp') || cell('Temp (Max)') || cell('Temp') || undefined,
 					optOneMulti: cell('O/1/M') || undefined   // format ALLSTATS ALL: how many of the executions ran in memory / with one pass / with several passes over temp
 				},
 				props: {
 					va:           id,                       // the badge on the box, and what a finding's "[Node N]" jumps to
 					objName:      cell('Name') || undefined,
 					hasPredicate: idCell.indexOf('*') >= 0,
-					inactive:     /^\s*-/.test(idCell),
+					inactive:     /^\s*-(?!>)/.test(idCell),
 					pstart:       cell('Pstart') || undefined,
 					pstop:        cell('Pstop')  || undefined,
 					tq:           cell('TQ')     || undefined,
@@ -191,6 +206,19 @@ window.OracleShowplan = (function () {
 			};
 			headers.forEach(function (h, hi) { var v = cells[hi].trim(); if (v && h !== 'Id' && h !== 'Operation') node.props.cells[h] = v; });
 
+			// A SQL Monitor report: where the time goes. 'Activity (%)' is the share of the samples of the statement (one
+			// each second, of every session that works on it) that were taken in THIS operation, 'Activity Detail' says what
+			// it was doing in them ("Cpu (7)" = on CPU in 7 samples). 'Time Active(s)' is for how long the operation has
+			// been at work, 'Start Active' how many seconds after the start of the statement it began.
+			if (monitor) {
+				node.props.executing        = idCell.indexOf('->') >= 0;
+				node.metrics.activityPct    = parseNum(cell('Activity (%)'));
+				node.metrics.activityDetail = cell('Activity Detail (# samples)') ? [ cell('Activity Detail (# samples)') ] : [];
+				node.metrics.activeSec      = parseNum(cell('Time Active(s)'));
+				node.metrics.startActive    = cell('Start Active') || undefined;
+				node.metrics.progress       = cell('Progress') || undefined;
+			}
+
 			// Hang it in the tree: the parent is the closest line above that is one level less indented
 			while (stack.length && stack[stack.length - 1].depth >= depth) stack.pop();
 			if (stack.length) stack[stack.length - 1].node.children.push(node);
@@ -202,6 +230,45 @@ window.OracleShowplan = (function () {
 			byId[id] = node;
 		}
 		if (!root) return null;
+
+		// A SQL Monitor report lists BOTH alternatives of an adaptive join, and does not mark the one that is not used:
+		//     HASH JOIN
+		//       NESTED LOOPS
+		//         NESTED LOOPS                    (not always there)
+		//           STATISTICS COLLECTOR
+		//             <the first table>
+		//           INDEX RANGE SCAN              how the nested loop reads the second table
+		//         TABLE ACCESS BY INDEX ROWID
+		//       TABLE ACCESS FULL                 how the hash join reads the second table
+		// The alternative that is used is the one whose access of the second table was executed (it has a value in Execs).
+		// While neither of them was (the statement has just started) both are drawn.
+		if (monitor) {
+			// (a report that was pasted without its "Global Information": an operation marked '->' says that it is still executing)
+			if (nodes.some(function (n) { return n.props.executing; })) monitor.executing = true;
+			nodes.forEach(function (n) { n.metrics.stillRunning = !!monitor.executing; });
+
+			var markInactive = function (n) { n.props.inactive = true; n.children.forEach(markInactive); };
+			var wasExecuted  = function (n) { return n.metrics.starts > 0; };
+			nodes.forEach(function (join) {
+				if (!/^HASH JOIN/.test(join.op) || join.children.length !== 2 || !/^NESTED LOOPS/.test(join.children[0].op)) return;
+				var loops = [ join.children[0] ];
+				if (loops[0].children.length && /^NESTED LOOPS/.test(loops[0].children[0].op)) loops.push(loops[0].children[0]);
+				var collector = loops[loops.length - 1].children[0];
+				if (!collector || !/^STATISTICS COLLECTOR/.test(collector.op)) return;
+				var loopInner = [];
+				loops.forEach(function (l) { loopInner = loopInner.concat(l.children.slice(1)); });
+				var loopRan = loopInner.some(wasExecuted), hashRan = wasExecuted(join.children[1]);
+				if (hashRan && !loopRan) {
+					loops.forEach(function (l) { l.props.inactive = true; });
+					loopInner.forEach(markInactive);
+					collector.props.inactive = true;
+				} else if (loopRan && !hashRan) {
+					join.props.inactive = true;
+					collector.props.inactive = true;
+					markInactive(join.children[1]);
+				}
+			});
+		}
 
 		// An adaptive plan printed with '+ADAPTIVE' also lists the operations that were NOT chosen (Id marked '-').
 		// They are not part of the plan that runs: leave them out, and hang what is below them on the closest operation that is used.
@@ -319,11 +386,12 @@ window.OracleShowplan = (function () {
 		// two, the estimate has to be multiplied with Starts.
 		// Not so for a parallel operation: there Starts also counts the parallel servers (and the block ranges of a
 		// PX BLOCK ITERATOR) that ran it, while E-Rows is for all of them together. So in the parallel part the estimate is
-		// only multiplied for what really is executed again and again: the inner side of a nested loop, a FILTER subquery.
+		// only multiplied for what really is executed again and again: the inner side of a nested loop, a FILTER subquery,
+		// a scalar subquery in the select list (the second and later children of an EXPRESSION EVALUATION).
 		(function setEstRowsTotal(n, restarted) {
 			var m = n.metrics;
 			if (m.estRows !== undefined) m.estRowsTotal = m.estRows * ((m.starts > 1 && (!n._parallel || restarted)) ? m.starts : 1);
-			n.children.forEach(function (c, ci) { setEstRowsTotal(c, restarted || (ci > 0 && /^(NESTED LOOPS|FILTER)/.test(n.op))); });
+			n.children.forEach(function (c, ci) { setEstRowsTotal(c, restarted || (ci > 0 && /^(NESTED LOOPS|FILTER|EXPRESSION EVALUATION)/.test(n.op))); });
 		})(root, false);
 
 		// 'ALLSTATS LAST' on a parallel statement: the numbers are those of the query coordinator only, every line that
@@ -361,6 +429,16 @@ window.OracleShowplan = (function () {
 		var sectionText = {};
 		Object.keys(sections).forEach(function (t) { sectionText[t] = sections[t].join('\n').replace(/^\s*\n+|\s+$/g, ''); });
 
+		// A SQL Monitor report: the number of samples of each operation ("Cpu (26)" + "direct path read (9)" = 35), and of the plan
+		if (monitor) {
+			monitor.samples = 0;
+			used.forEach(function (n) {
+				n.metrics.activitySamples = 0;
+				n.metrics.activityDetail.forEach(function (d) { var sm = /\((\d+)\)\s*$/.exec(d); if (sm) n.metrics.activitySamples += parseInt(sm[1], 10); });
+				monitor.samples += n.metrics.activitySamples;
+			});
+		}
+
 		root._planInfo = {
 			sqlId:       info.sqlId,
 			childNumber: info.childNumber,
@@ -372,9 +450,112 @@ window.OracleShowplan = (function () {
 			operations:  used.length,
 			inactive:    inactiveCount,
 			parallelOps: parallelOps,
-			parallelStatsMissing: parallelStatsMissing
+			parallelStatsMissing: parallelStatsMissing,
+			monitor:     monitor   // only for a SQL Monitor report: { status, executing, duration, global[], stats[], samples }
 		};
 		return { root: root, nextLine: i };
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────
+	// Parser: a SQL Monitor report, the text of DBMS_SQLTUNE.REPORT_SQL_MONITOR(type => 'TEXT')
+	// (SQL Monitoring is a part of the Tuning Pack, which is an extra-cost license from Oracle)
+	//
+	//   SQL Monitoring Report
+	//
+	//   SQL Text
+	//   ------------------------------
+	//   select ...
+	//
+	//   Global Information
+	//   ------------------------------
+	//    Status              :  EXECUTING
+	//    SQL ID              :  cawdqs6wwph90
+	//    Duration            :  9s
+	//
+	//   Global Stats
+	//   ===================================================
+	//   | Elapsed |   Cpu   |    IO    | Buffer | Read | ...        the heading of a table is TWO lines
+	//   | Time(s) | Time(s) | Waits(s) |  Gets  | Reqs | ...
+	//   ===================================================
+	//   |    5.53 |    5.52 |     0.01 |  14140 |   44 | ...
+	//   ===================================================
+	//
+	//   SQL Plan Monitoring Details (Plan Hash Value=359705799)
+	//   ==============================================================================================================
+	//   | Id    |      Operation       | Name   |  Rows   | Cost |   Time    | Start  | Execs |   Rows   | Activity | ...
+	//   |       |                      |        | (Estim) |      | Active(s) | Active |       | (Actual) |   (%)    | ...
+	//   ==============================================================================================================
+	//   |  -> 0 | SELECT STATEMENT     |        |         |      |         4 |     +3 |     1 |        0 |          | ...
+	//   |     2 |    HASH JOIN         |        |    161M |  11K |         4 |     +3 |     1 |     113M |    12.50 | ...
+	//
+	// The plan table has the tree in the indentation of 'Operation', as DBMS_XPLAN has, so it is handed to parseOnePlan()
+	// with its heading made into ONE line. What differs is in parseOnePlan(), where it says "SQL Monitor report".
+	// ─────────────────────────────────────────────────────────────────────────
+
+	function isEqualsLine(line) {
+		return /^\s*={5,}\s*$/.test(line);
+	}
+
+	/** A table of the report, from its first line of '=': the heading (its lines put together, column by column) and the row lines */
+	function readMonitorTable(lines, start) {
+		var i = start + 1, headers = [];
+		for (; i < lines.length && lines[i].charAt(0) === '|'; i++) {
+			splitCells(lines[i]).forEach(function (c, ci) { headers[ci] = ((headers[ci] || '') + ' ' + c.trim()).trim(); });
+		}
+		if (i < lines.length && isEqualsLine(lines[i])) i++;
+		var rows = [];
+		for (; i < lines.length && lines[i].charAt(0) === '|'; i++) rows.push(lines[i]);
+		return { headers: headers, rows: rows, nextLine: i };
+	}
+
+	function parseMonitorReport(lines) {
+		var statements = [];
+		var newInfo = function () { return { monitor: { global: [], stats: [] } }; };
+		var info = newInfo();
+
+		for (var i = 0; i < lines.length; i++) {
+			var line = lines[i];
+			var m;
+			if (/^\s*SQL Monitoring Report\s*$/i.test(line)) {
+				info = newInfo();   // (a text can hold more than one report)
+			} else if (/^\s*SQL Text\s*$/i.test(line) && i + 1 < lines.length && isDashLine(lines[i + 1])) {
+				var sqlLines = [];
+				for (i += 2; i < lines.length && !/^\s*(Global Information|Global Stats|Binds|SQL Plan Monitoring Details\b.*)\s*$/i.test(lines[i]); i++) sqlLines.push(lines[i]);
+				info.sqlText = sqlLines.join('\n').trim();
+				i--;
+			} else if (/^\s*Global Information\s*$/i.test(line)) {
+				// " Status              :  EXECUTING", until the empty line
+				for (i++; i < lines.length && lines[i].trim(); i++) {
+					if ((m = /^\s*([^:]+?)\s*:\s+(.*?)\s*$/.exec(lines[i]))) info.monitor.global.push([ m[1], m[2] ]);
+				}
+				info.monitor.global.forEach(function (kv) {
+					if (/^SQL ID$/i.test(kv[0]))   info.sqlId            = kv[1];
+					if (/^Status$/i.test(kv[0]))   info.monitor.status   = kv[1];
+					if (/^Duration$/i.test(kv[0])) info.monitor.duration = kv[1];
+				});
+				info.monitor.executing = /^(EXECUTING|QUEUED)/i.test(info.monitor.status || '');
+			} else if ((m = /^\s*Parallel Execution Details\s*\((.*)\)\s*$/i.exec(line))) {
+				info.monitor.global.push([ 'Parallel execution', m[1].replace(/\s+,/g, ',') ]);   // "DOP=4 , Servers Allocated=8"
+			} else if (/^\s*Global Stats\s*$/i.test(line) && i + 1 < lines.length && isEqualsLine(lines[i + 1])) {
+				var stats = readMonitorTable(lines, i + 1);
+				if (stats.rows.length) {
+					var statCells = splitCells(stats.rows[0]);
+					stats.headers.forEach(function (h, hi) { if (statCells[hi] !== undefined && statCells[hi].trim()) info.monitor.stats.push([ h, statCells[hi].trim() ]); });
+				}
+				i = stats.nextLine - 1;
+			} else if ((m = /^\s*SQL Plan Monitoring Details\b(?:.*Plan Hash Value\s*=\s*(\d+))?/i.exec(line)) && i + 1 < lines.length && isEqualsLine(lines[i + 1])) {
+				info.planHash = m[1];
+				var table = readMonitorTable(lines, i + 1);
+				var plan  = parseOnePlan([ '|' + table.headers.join('|') + '|' ].concat(table.rows), 0, info);
+				if (plan) {
+					var label = 'SQL Monitor report' + (info.sqlId ? ', SQL_ID ' + info.sqlId : '') + (info.planHash ? ', plan hash value ' + info.planHash : '');
+					statements.push({ label: label, meta: info, steps: [ { label: '', root: plan.root } ] });
+				}
+				i = table.nextLine - 1;
+				info = newInfo();
+			}
+		}
+		return statements;
 	}
 
 	function parseText(planText) {
@@ -394,7 +575,11 @@ window.OracleShowplan = (function () {
 		var statements = [];
 		var info = {};
 
-		for (var i = 0; i < lines.length; i++) {
+		// A SQL Monitor report has another layout than DBMS_XPLAN: it is read by itself
+		var isMonitorReport = lines.some(function (l) { return /^\s*SQL Plan Monitoring Details\b/i.test(l); });
+		if (isMonitorReport) statements = parseMonitorReport(lines);
+
+		for (var i = 0; !isMonitorReport && i < lines.length; i++) {
 			var line = lines[i];
 			var m;
 			if ((m = /^SQL_ID\s+(\S+),\s*child number\s+(\d+)/i.exec(line)) || /^EXPLAINED SQL STATEMENT:/i.test(line)) {
@@ -434,8 +619,10 @@ window.OracleShowplan = (function () {
 			var why = /cannot be found|cannot fetch plan|could not be found/i.exec(rawText);
 			if (why)
 				lastParseError = 'Oracle did not return a plan: "' + rawText.trim().split('\n').filter(function (l) { return /cannot|could not/i.test(l); })[0].trim() + '"';
-			else if (/SQL Plan Monitoring Details|SQL Monitoring Report/i.test(rawText))
-				lastParseError = 'This is a SQL Monitor report (DBMS_SQLTUNE.REPORT_SQL_MONITOR), which has another layout than DBMS_XPLAN. It is not supported.';
+			else if (isMonitorReport)
+				lastParseError = 'This is a SQL Monitor report, but its plan table could not be read (the lines below "SQL Plan Monitoring Details"). Only the TEXT report of DBMS_SQLTUNE.REPORT_SQL_MONITOR can be drawn, not the HTML, ACTIVE or XML one.';
+			else if (/SQL Monitoring Report/i.test(rawText))
+				lastParseError = 'This is a SQL Monitor report without a plan: it has no "SQL Plan Monitoring Details". Oracle prints it like that when it has no monitoring data for the statement (any more).';
 			else
 				lastParseError = 'No plan table was found in the text (a line that starts with "| Id | Operation"). Is this the output of DBMS_XPLAN?';
 			return null;
@@ -552,7 +739,10 @@ window.OracleShowplan = (function () {
 		+ '.ora-plan-note-warning, .ora-plan-note-error { color: var(--sp-err); }'
 		+ '.ora-plan-note-info { color: var(--sp-blue); }'
 		// The sections of the plan text in the Properties pane (Outline Data, Hint Report...): they are lists, keep their lines
-		+ '.ora-plan-prop-raw { white-space: pre-wrap; word-break: break-word; }';
+		+ '.ora-plan-prop-raw { white-space: pre-wrap; word-break: break-word; }'
+		// A SQL Monitor report of a statement that is still executing: the operations that are at work right now
+		+ '.ora-plan-box.ora-plan-executing { border-color: var(--sp-blue); border-style: dashed; }'
+		+ '.ora-plan-executing-mark { position: absolute; top: 1px; left: 4px; font-size: 0.8em; color: var(--sp-blue); line-height: 1; }';
 
 	function injectStyle() {
 		if (STYLE_INJECTED) return;
@@ -754,6 +944,7 @@ window.OracleShowplan = (function () {
 		if (m.starts === 0) return false;   // not executed (or not counted: the parallel part of 'ALLSTATS LAST'), so its 0 rows say nothing
 		if (Math.max(m.estRowsTotal, m.actRows) < 100) return false;
 		if ((m.stoppedEarly || m.bloomFiltered) && m.actRows < m.estRowsTotal) return false;   // it was stopped when there were enough rows, or a Bloom filter took rows away
+		if (m.stillRunning && m.actRows < m.estRowsTotal) return false;                        // a SQL Monitor report of a statement that is still executing: the rows are those so far
 		if (m.estRowsTotal <= 0 || m.actRows <= 0) return true;
 		var ratio = m.actRows / m.estRowsTotal;
 		return ratio >= 10 || ratio <= 0.1;
@@ -761,6 +952,7 @@ window.OracleShowplan = (function () {
 	/** "12x more", "40x fewer", "no rows". Nothing while the estimate is within a factor of 2: that is as good as an estimate gets. */
 	function fmtEstActDiff(m) {
 		if (m.estRowsTotal === undefined || m.actRows === undefined || m.starts === 0) return undefined;
+		if (m.stillRunning && m.actRows < m.estRowsTotal) return undefined;   // still executing: "fewer" only means "not yet"
 		if (m.actRows === 0)      return m.estRowsTotal >= 10 ? 'no rows' : undefined;
 		if (m.estRowsTotal <= 0)  return 'estimate was 0';
 		var ratio = m.actRows / m.estRowsTotal;
@@ -859,6 +1051,16 @@ window.OracleShowplan = (function () {
 			propRow($s, 'Optimal / 1-pass / multi-pass', m.optOneMulti);
 		});
 
+		// A SQL Monitor report: where the time of the statement goes
+		propSectionIfAny($c, 'SQL Monitor', function ($s) {
+			propRow($s, 'State',        p.executing ? 'executing right now' : undefined);
+			propRow($s, 'Activity',     m.activityPct === undefined ? undefined : fmtPct(m.activityPct) + ' of the samples of the statement');
+			(m.activityDetail || []).forEach(function (d, i) { propRow($s, i === 0 ? 'Activity detail' : '', d); });
+			propRow($s, 'Time active',  m.activeSec === undefined ? undefined : fmtSec(m.activeSec));
+			propRow($s, 'First active', m.startActive === undefined ? undefined : m.startActive.replace(/^\+/, '') + ' s after the statement started');
+			propRow($s, 'Progress',     m.progress);
+		});
+
 		propSectionIfAny($c, 'Partitions', function ($s) {
 			propRow($s, 'Pstart', p.pstart);
 			propRow($s, 'Pstop',  p.pstop);
@@ -880,6 +1082,15 @@ window.OracleShowplan = (function () {
 			propRow($pi, 'Operations',      pi.operations);
 			propRow($pi, 'Not drawn',       pi.inactive ? pi.inactive + ' inactive operations of the adaptive plan' : undefined);
 			pi.notes.forEach(function (n, i) { propRow($pi, i === 0 ? 'Note' : '', n); });
+			// A SQL Monitor report: what it says about the execution as a whole
+			if (pi.monitor && pi.monitor.global.length) {
+				var $mg = propSection($c, 'SQL Monitor: Global Information');
+				pi.monitor.global.forEach(function (kv) { propRow($mg, kv[0], kv[1]); });
+			}
+			if (pi.monitor && pi.monitor.stats.length) {
+				var $ms = propSection($c, 'SQL Monitor: Global Stats');
+				pi.monitor.stats.forEach(function (kv) { propRow($ms, kv[0], kv[1]); });
+			}
 			// The sections that are not shown per operation (Outline Data, Peeked Binds, Hint Report...)
 			Object.keys(pi.sections).forEach(function (t) {
 				if (/^(Predicate Information|Column Projection Information|Query Block Name|Note$)/i.test(t) || !pi.sections[t]) return;
@@ -939,6 +1150,11 @@ window.OracleShowplan = (function () {
 		} else {
 			row('Est. rows',     fmtNum(m.estRows));
 		}
+		// A SQL Monitor report
+		row('State',      p.executing ? 'executing right now' : undefined);
+		row('Activity',   m.activityPct === undefined ? undefined : fmtPct(m.activityPct) + '  (' + m.activityDetail.join(', ') + ')', m.activityPct >= 50 ? 'ora-plan-detail-pct-warn' : undefined);
+		row('Active',     m.activeSec === undefined ? undefined : fmtSec(m.activeSec) + (m.startActive ? ', from second ' + m.startActive.replace(/^\+/, '') + ' of the statement' : ''));
+		row('Progress',   m.progress);
 		row('Est. size',  fmtBytes(m.estBytes));
 		row('Cost',       m.cost === undefined ? undefined : fmtNum(m.cost) + (m.ownCostPct === undefined ? '' : '  (own: ' + fmtNum(m.ownCost) + ' = ' + fmtPct(m.ownCostPct) + ')'));
 		row('Est. time',  fmtSec(m.estTimeSec));
@@ -1042,6 +1258,18 @@ window.OracleShowplan = (function () {
 		}
 		if (m.cost       !== undefined)                   metricWithOwnPct('Cost ' + fmtNum(m.cost),       m.ownCostPct);
 		if (m.actTimeSec !== undefined && m.starts !== 0) metricWithOwnPct('Time ' + fmtSec(m.actTimeSec), m.ownActTimePct);
+
+		// A SQL Monitor report: the share of the statement's time that is spent in this operation itself (in red from 50%),
+		// and a mark on the operations that are at work right now
+		if (m.activityPct !== undefined) {
+			var $act = $('<div class="ora-plan-metric"></div>').text('Activity ' + fmtPct(m.activityPct)).attr('title', m.activityDetail.join('\n'));
+			if (m.activityPct >= 50) $act.addClass('ora-plan-metric-pct-warn');
+			$box.append($act);
+		}
+		if (p.executing) {
+			$box.addClass('ora-plan-executing');
+			$box.append($('<div class="ora-plan-executing-mark" title="Executing right now (marked -> in the SQL Monitor report)"></div>').text('▶'));
+		}
 
 		(node._boxNotes || []).forEach(function (n) {
 			$box.append($('<div class="ora-plan-metric ora-plan-note ora-plan-note-' + n.severity + '"></div>')
@@ -1319,13 +1547,15 @@ window.OracleShowplan = (function () {
 				// --- A full table scan that is a large part of the plan (not one that was stopped after its first rows).
 				// "A large part" is measured in time when the plan has run-time statistics and ran long enough for the
 				// time to mean something, else in buffers (logical reads), else in the optimizer's cost.
+				// A SQL Monitor report says it directly: the share of the samples (an operation without samples has 0%).
 				// And not a scan of a table of a few blocks: it can be all of a small plan and still not be worth a word
 				// (less than 100 buffers read, or - without run-time statistics - a cost below 10).
 				var tinyScan = (m.ownBuffers !== undefined && m.starts !== 0) ? m.ownBuffers < 100 : (m.ownCost !== undefined && m.ownCost < 10);
 				if (isFullScan(node) && fullScansInLoops.indexOf(node) < 0 && !m.stoppedEarly && !tinyScan) {
-					var shareOf   = (m.ownActTimePct !== undefined && root.metrics.actTimeSec >= 1) ? 'time'
+					var shareOf   = (pi.monitor && pi.monitor.samples >= 5) ? 'activity'
+					              : (m.ownActTimePct !== undefined && root.metrics.actTimeSec >= 1) ? 'time'
 					              : (m.ownBuffersPct !== undefined ? 'buffers' : 'cost');
-					var share     = { time: m.ownActTimePct, buffers: m.ownBuffersPct, cost: m.ownCostPct }[shareOf];
+					var share     = { activity: m.activityPct || 0, time: m.ownActTimePct, buffers: m.ownBuffersPct, cost: m.ownCostPct }[shareOf];
 					var shareText = share === undefined ? '' : ' (' + fmtPct(share) + ' of the plan\'s ' + shareOf + ')';
 					var hasFilter = !!(p.filter || p.storage);
 					if (hasFilter && p.pstart !== undefined && (share === undefined || share >= 10)) {
@@ -1469,6 +1699,33 @@ window.OracleShowplan = (function () {
 				}
 			});
 
+			// --- A SQL Monitor report: what it is, and where the time goes
+			if (pi.monitor) {
+				var mon = pi.monitor;
+				var failed = /ERROR/i.test(mon.status || '');
+				add(null, failed ? 'warning' : 'info', 'SQL Monitor',
+					mon.executing ? 'SQL Monitor report of a statement that is still executing' + (mon.duration ? ' (' + mon.duration + ' so far)' : '')
+					              : 'SQL Monitor report' + (mon.status ? ': status ' + mon.status : '') + (mon.duration ? ', duration ' + mon.duration : ''),
+					'The numbers are what this ONE execution really did: Execs and Rows (Actual) per operation, the memory and the temp space it used. '
+					+ 'Activity is where its time went: Oracle looks at the session(s) of the statement once a second, and Activity is the share of those samples that were taken in the operation itself (not in the operations below it). '
+					+ (mon.samples ? 'This report has ' + mon.samples + ' sample' + (mon.samples !== 1 ? 's' : '') + (mon.samples < 5 ? ', which is too few for the shares to mean much' : '') + '. ' : '')
+					+ (mon.executing ? 'The statement was still running when the report was made: the numbers are those so far, and the operations marked ▶ are the ones that were at work. ' : '')
+					+ (failed ? 'The execution ended with an error. ' : '')
+					+ 'SQL Monitoring is a part of the Tuning Pack, which is an extra-cost license from Oracle.');
+
+				if (mon.samples >= 5) {
+					DbxShowplanGraph.walkPlanNodes(root, function (node) {
+						var m = node.metrics;
+						if (!(m.activityPct >= 50)) return;
+						var waits = m.activityDetail.filter(function (d) { return !/^Cpu\b/i.test(d); });
+						add(node, 'info', 'Activity', fmtPct(m.activityPct) + ' of the time is spent in ' + nodeTitle(node) + ' (Id ' + node.props.va + '): ' + m.activityDetail.join(', '),
+							'This is the operation to look at first. ' + (waits.length
+								? 'It was not only on CPU: the other entries are what it was waiting for, and the number is in how many samples (seconds, roughly).'
+								: 'It was on CPU in all of its samples, so it is the work of the operation itself: the number of rows it has to handle (see Rows (Actual) of the operations below it), not waiting for disk or for locks.'));
+					});
+				}
+			}
+
 			if (pi.parallelStatsMissing) {
 				add(null, 'warning', 'Parallel', 'The run-time statistics of the parallel part are missing',
 					'Every operation that the parallel execution servers ran says Starts 0 and A-Rows 0. With the format ALLSTATS LAST only the work of the query coordinator is shown. '
@@ -1483,7 +1740,8 @@ window.OracleShowplan = (function () {
 			});
 			if (pi.inactive) {
 				add(null, 'info', 'Note', pi.inactive + ' operations of the adaptive plan are not drawn',
-					'The plan text was made with the format +ADAPTIVE, which also lists the alternative that was NOT chosen (the lines marked with "-"). Those are left out of the diagram; they are in the Raw Plan Text.');
+					pi.monitor ? 'A SQL Monitor report lists both alternatives of an adaptive join (a nested loop and a hash join; Oracle decides while the statement runs). The operations of the alternative that was not executed are left out of the diagram; they are in the Raw Plan Text.'
+					           : 'The plan text was made with the format +ADAPTIVE, which also lists the alternative that was NOT chosen (the lines marked with "-"). Those are left out of the diagram; they are in the Raw Plan Text.');
 			}
 
 			// --- Hints that were not used (the Hint Report, Oracle 19c and above)

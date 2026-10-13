@@ -98,6 +98,7 @@ extends CountersModel
 		"<b>Locks, blocked sessions and waits</b>: hover over the checkbox <code>HasSidLocks</code> (the locks the session holds or waits for), " +
 		"<code>HasBlockedSidsInfo</code> (the sessions that wait for it: who, what they execute, their locks) or <code>HasSidWaitInfo</code> (what it has waited for lately).<br>" +
 		"All of this is also in the description of the alarms from this tab.<br>" +
+		"<b>SQL Monitor report</b> (<code>HasSqlMonitorReport</code>): only if you have the Oracle Tuning Pack license, and have said so with the property <code>OracleTune.licensed.management.packs</code>.<br>" +
 		"<br>" +
 		"Background colors:" +
 		"<ul>" +
@@ -184,9 +185,21 @@ extends CountersModel
 	public static final String  PROPKEY_sample_sessionDetails             = CM_NAME + ".sample.sessionDetails";
 	public static final boolean DEFAULT_sample_sessionDetails             = true;
 
+	// SQL Monitor reports need the TUNING PACK (an extra-cost license): this option alone does NOT turn them on, see lookupSqlMonitorReports()
+	public static final String  PROPKEY_sample_sqlMonitor                  = CM_NAME + ".sample.sqlMonitor";
+	public static final boolean DEFAULT_sample_sqlMonitor                  = true;
+
+	public static final String  PROPKEY_sample_sqlMonitor_minExecTimeInSec = CM_NAME + ".sample.sqlMonitor.minExecTimeInSec";
+	public static final int     DEFAULT_sample_sqlMonitor_minExecTimeInSec = 10;
+
 	// How many NEW execution plans do we fetch in ONE sample (the rest is fetched in the next sample, if the statement is still running)
 	private static final int    EXEC_PLAN_MAX_FETCH_PER_SAMPLE = 5;
 	private static final int    EXEC_PLAN_CACHE_SIZE           = 200;
+
+	// SQL Monitor reports: how many are fetched in ONE sample, and for how long the report of an execution is used before a new one is fetched
+	private static final int    SQL_MONITOR_MAX_FETCH_PER_SAMPLE = 3;
+	private static final int    SQL_MONITOR_REFRESH_SEC          = 60;
+	private static final String LOOKUP_SQL_MONITOR               = "SQL Monitor reports";
 
 	// The lookups in localCalculation() (session details, locks, waits): ONE statement for ALL the sessions of the sample, with this timeout
 	private static final int    LOOKUP_QUERY_TIMEOUT_SEC = 5;
@@ -240,6 +253,12 @@ extends CountersModel
 	/** When the two maps above were filled (System.currentTimeMillis). 0 = they are empty */
 	private long _prevSidWaitsTime = 0;
 
+	/** May SQL Monitor reports be fetched (is the Tuning Pack licensed)? null = not yet asked on this connection */
+	private Boolean _sqlMonitorAllowed = null;
+
+	/** The SQL Monitor reports of the statements that are executing now. Key: SID:SERIAL#|SQL_ID|SQL_EXEC_START, value: {Long fetchTime, String report ("" = Oracle had none)} */
+	private Map<String, Object[]> _sqlMonitorCache = new HashMap<>();
+
 	/** Execution plans we already have fetched. Key: CON_ID|SQL_ID|CHILD_NUMBER|PLAN_HASH_VALUE. The oldest entry is removed when the cache is full */
 	private Map<String, String> _execPlanCache = new LinkedHashMap<String, String>()
 	{
@@ -266,6 +285,8 @@ extends CountersModel
 		Configuration.registerDefaultValue(PROPKEY_sample_sidLocks                 , DEFAULT_sample_sidLocks);
 		Configuration.registerDefaultValue(PROPKEY_sample_sidWaits                 , DEFAULT_sample_sidWaits);
 		Configuration.registerDefaultValue(PROPKEY_sample_sessionDetails           , DEFAULT_sample_sessionDetails);
+		Configuration.registerDefaultValue(PROPKEY_sample_sqlMonitor                 , DEFAULT_sample_sqlMonitor);
+		Configuration.registerDefaultValue(PROPKEY_sample_sqlMonitor_minExecTimeInSec, DEFAULT_sample_sqlMonitor_minExecTimeInSec);
 	}
 
 	/** Used by the: Create 'Offline Session' Wizard */
@@ -280,6 +301,8 @@ extends CountersModel
 		list.add(new CmSettingsHelper("Get SID Locks"                  , PROPKEY_sample_sidLocks                 , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_sidLocks                 , DEFAULT_sample_sidLocks                 ), DEFAULT_sample_sidLocks                 , "Get the locks of every session in the table, from V$LOCK (one statement per sample, for all of them, and only when some session has an open transaction or is blocked). This fills 'SidLocks', 'SidLockCount' and the locks in 'BlockedSidsInfo'." ));
 		list.add(new CmSettingsHelper("Get SID Waits"                  , PROPKEY_sample_sidWaits                 , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_sidWaits                 , DEFAULT_sample_sidWaits                 ), DEFAULT_sample_sidWaits                 , "Get what every session in the table has waited for, from V$SESSION_EVENT, V$SESSION_WAIT_HISTORY and V$SESS_TIME_MODEL (three statements per sample). This fills 'SidWaitInfo'." ));
 		list.add(new CmSettingsHelper("Get Session Details"            , PROPKEY_sample_sessionDetails           , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_sessionDetails           , DEFAULT_sample_sessionDetails           ), DEFAULT_sample_sessionDetails           , "Get 'RowWaitRowid', 'PlsqlEntryObject', 'PlsqlCurrentObject', 'PgaUsedMb', 'TempUsedMb' and 'LongOpsInfo' for every session in the table (two statements per sample)." ));
+		list.add(new CmSettingsHelper("Get SQL Monitor Report"         , PROPKEY_sample_sqlMonitor                 , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_sqlMonitor                 , DEFAULT_sample_sqlMonitor                 ), DEFAULT_sample_sqlMonitor                 , "Get the SQL Monitor report (DBMS_SQLTUNE.REPORT_SQL_MONITOR) of the statements that has been executing for a while, max " + SQL_MONITOR_MAX_FETCH_PER_SAMPLE + " per sample. This fills 'SqlMonitorReport'. NOTE: SQL Monitoring is a part of the Oracle TUNING PACK, which is an extra-cost license. So this is ONLY done when the property '" + OracleCmUtils.PROPKEY_licensedManagementPacks + "=DIAGNOSTIC+TUNING' is set (the default is NONE), and the database parameter 'control_management_pack_access' allows it." ));
+		list.add(new CmSettingsHelper("Get SQL Monitor Report, Min ExecTime", PROPKEY_sample_sqlMonitor_minExecTimeInSec, Integer.class, conf.getIntProperty(PROPKEY_sample_sqlMonitor_minExecTimeInSec, DEFAULT_sample_sqlMonitor_minExecTimeInSec), DEFAULT_sample_sqlMonitor_minExecTimeInSec, "Only get the SQL Monitor report for statements that has been executing for at least this number of seconds. (Oracle starts to monitor a statement when it has used 5 seconds of CPU or I/O time, or when it runs in parallel.)" ));
 
 		return list;
 	}
@@ -296,6 +319,7 @@ extends CountersModel
 			map = new HashMap<>();
 			map.put("SqlText" , new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
 			map.put("ExecPlan", new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));
+			map.put("SqlMonitorReport", new PcsColumnOptions(ColumnType.DICTIONARY_COMPRESSION));  // (the same report is used for some samples, see SQL_MONITOR_REFRESH_SEC)
 
 			// Set the map in the super
 			setPcsColumnOptions(map);
@@ -368,7 +392,7 @@ extends CountersModel
 
 	/**
 	 * NOTE: The column aliases in "MixedCase" MUST be quoted, otherwise Oracle makes them UPPERCASE.<br>
-	 * The names "HasSqlText", "SqlText", "HasExecPlan", "ExecPlan", "HasSidLocks", "SidLocks", "HasBlockedSidsInfo", "BlockedSidsInfo", "HasSidWaitInfo", "SidWaitInfo",
+	 * The names "HasSqlText", "SqlText", "HasExecPlan", "ExecPlan", "HasSqlMonitorReport", "SqlMonitorReport", "HasSidLocks", "SidLocks", "HasBlockedSidsInfo", "BlockedSidsInfo", "HasSidWaitInfo", "SidWaitInfo",
 	 * "MultiSampled", "HasOpenTxn", "BlockedBySid", "BlockingOtherSids" and STATUS
 	 * are used by DbxCentral (dbxcentral.graph.js) and by the GUI panel (CmActiveStatementsPanel): tooltips and row colors
 	 */
@@ -392,6 +416,7 @@ extends CountersModel
 			+ "    ,CAST(NULL as VARCHAR2(10))                                                    as \"MultiSampled\" \n"
 			+ "    ,CAST(0 as NUMBER(1))                                                          as \"HasSqlText\" \n"   // a checkbox, see modifyResultSetMetaData() and localCalculation()
 			+ "    ,CAST(0 as NUMBER(1))                                                          as \"HasExecPlan\" \n"  // a checkbox, see modifyResultSetMetaData() and localCalculation()
+			+ "    ,CAST(0 as NUMBER(1))                                                          as \"HasSqlMonitorReport\" \n" // a checkbox for 'SqlMonitorReport' (only with the Tuning Pack license, see lookupSqlMonitorReports())
 			+ "    ,CAST(0 as NUMBER(1))                                                          as \"HasSidLocks\" \n"         // checkboxes for 'SidLocks', 'BlockedSidsInfo' and 'SidWaitInfo', which are
 			+ "    ,CAST(0 as NUMBER(1))                                                          as \"HasBlockedSidsInfo\" \n"  // filled in by localCalculation() (the lookups are NOT part of this SQL: if one
 			+ "    ,CAST(0 as NUMBER(1))                                                          as \"HasSidWaitInfo\" \n"      // of them fails on some Oracle version, the Active Statements are still there)
@@ -434,6 +459,7 @@ extends CountersModel
 			+ "    ,TO_CLOB(NULL)                                                                 as \"BlockedSidsInfo\" \n"
 			+ "    ,TO_CLOB(NULL)                                                                 as \"SidWaitInfo\" \n"
 			+ "    ,TO_CLOB(NULL)                                                                 as \"ExecPlan\" \n"
+			+ "    ,TO_CLOB(NULL)                                                                 as \"SqlMonitorReport\" \n"
 			+ "from V$SESSION s \n"
 			+ joinContainers
 			+ "left join V$TRANSACTION t on t.SES_ADDR = s.SADDR \n"
@@ -460,7 +486,7 @@ extends CountersModel
 	@Override
 	public ResultSetMetaDataCached modifyResultSetMetaData(ResultSetMetaDataCached rsmdc)
 	{
-		for (String colName : new String[] { "HasSqlText", "HasExecPlan", "HasSidLocks", "HasBlockedSidsInfo", "HasSidWaitInfo" })
+		for (String colName : new String[] { "HasSqlText", "HasExecPlan", "HasSqlMonitorReport", "HasSidLocks", "HasBlockedSidsInfo", "HasSidWaitInfo" })
 		{
 			int colPos = rsmdc.findColumn(colName);
 			if (colPos != -1)
@@ -503,6 +529,17 @@ extends CountersModel
 				Object execPlan = getValueAt(modelRow, pos_ExecPlan);
 				if (execPlan != null && StringUtil.hasValue(execPlan.toString()))
 					return "<html><pre>" + StringEscapeUtils.escapeHtml4(execPlan.toString()) + "</pre></html>";
+			}
+		}
+
+		if ("HasSqlMonitorReport".equals(colName) || "SqlMonitorReport".equals(colName))
+		{
+			int pos_SqlMonitorReport = findColumn("SqlMonitorReport");
+			if (pos_SqlMonitorReport >= 0)
+			{
+				Object report = getValueAt(modelRow, pos_SqlMonitorReport);
+				if (report != null && StringUtil.hasValue(report.toString()))
+					return "<html><pre>" + StringEscapeUtils.escapeHtml4(report.toString()) + "</pre></html>";
 			}
 		}
 
@@ -693,6 +730,11 @@ extends CountersModel
 		// Who am I blocking: what they execute, and their locks (from the other rows of the sample, so AFTER the lookups)
 		setBlockedSidsInfo(newSample);
 
+		// SQL Monitor reports of the statements that have been executing for a while.
+		// They need an extra-cost license: the method does nothing unless the license flag says that the Tuning Pack may be used.
+		if (conn != null && conf.getBooleanProperty(PROPKEY_sample_sqlMonitor, DEFAULT_sample_sqlMonitor))
+			lookupSqlMonitorReports(conn, newSample);
+
 		//---------------------------------------------------------------
 		// Execution Plan: for statements that has been executing for a while
 		// A plan is fetched ONCE (then it is in the cache), and only a few NEW plans in each sample (so we do not slow down the collector)
@@ -791,6 +833,9 @@ extends CountersModel
 		_prevSessionEvents.clear();
 		_prevSessTimeModel.clear();
 		_prevSidWaitsTime = 0;
+
+		_sqlMonitorAllowed = null;
+		_sqlMonitorCache.clear();
 	}
 
 	//------------------------------------------------------------
@@ -819,6 +864,114 @@ extends CountersModel
 			_logger.warn(msg);
 		else
 			_logger.debug(msg);
+	}
+
+	/**
+	 * 'SqlMonitorReport': the SQL Monitor report (the text of DBMS_SQLTUNE.REPORT_SQL_MONITOR) of the statements that have been executing for a while.
+	 * It is the plan of THIS execution with what it has done so far: rows per operation, and in which operation the time goes.
+	 * <p>
+	 * <b>SQL Monitoring is a part of the TUNING PACK, which is an extra-cost license from Oracle</b> (and Oracle records every report that is made, as
+	 * the feature 'Real-Time SQL Monitoring'). So nothing here is executed unless OracleCmUtils says that the pack may be used: the property
+	 * 'OracleTune.licensed.management.packs' must say that the organization has the license (the default is that it has not), and the database must allow it.
+	 * <p>
+	 * A report is used for SQL_MONITOR_REFRESH_SEC seconds before a new one is fetched, and only a few are fetched in one sample.
+	 */
+	private void lookupSqlMonitorReports(DbxConnection conn, CounterSample newSample)
+	{
+		int pos_SID                 = newSample.findColumn("SID");
+		int pos_SERIAL              = newSample.findColumn("SERIAL#");
+		int pos_STATUS              = newSample.findColumn("STATUS");
+		int pos_ExecTimeInSec       = newSample.findColumn("ExecTimeInSec");
+		int pos_SQL_ID              = newSample.findColumn("SQL_ID");
+		int pos_SQL_EXEC_START      = newSample.findColumn("SQL_EXEC_START");
+		int pos_SqlMonitorReport    = newSample.findColumn("SqlMonitorReport");
+		int pos_HasSqlMonitorReport = newSample.findColumn("HasSqlMonitorReport");
+
+		if (pos_SID == -1 || pos_SERIAL == -1 || pos_STATUS == -1 || pos_ExecTimeInSec == -1 || pos_SQL_ID == -1 || pos_SQL_EXEC_START == -1 || pos_SqlMonitorReport == -1 || pos_HasSqlMonitorReport == -1)
+			return;
+
+		// The license: asked once per connection
+		if (_sqlMonitorAllowed == null)
+		{
+			String notAllowedReason = OracleCmUtils.getManagementPackNotAllowedReason(conn, OracleCmUtils.PACK_TUNING);
+			_sqlMonitorAllowed = (notAllowedReason == null);
+
+			if (_sqlMonitorAllowed)
+				_logger.info(getName() + ": SQL Monitor reports will be fetched for statements that execute for more than a few seconds (column 'SqlMonitorReport'). They need the Oracle Tuning Pack, and the property '" + OracleCmUtils.PROPKEY_licensedManagementPacks + "' says that it is licensed.");
+			else
+				_logger.debug(getName() + ": SQL Monitor reports are NOT fetched (they need the Oracle Tuning Pack). " + notAllowedReason);
+		}
+		if ( ! _sqlMonitorAllowed )
+			return;
+
+		if ( ! isLookupDue(LOOKUP_SQL_MONITOR) )
+			return;
+
+		int minExecTimeInSec = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_sample_sqlMonitor_minExecTimeInSec, DEFAULT_sample_sqlMonitor_minExecTimeInSec);
+
+		// inst_id: in RAC a SID is only unique within its instance, and the sessions of this CM are the ones of the instance we are connected to
+		String sql = "select DBMS_SQLTUNE.REPORT_SQL_MONITOR(sql_id => ?, session_id => ?, session_serial => ?, inst_id => TO_NUMBER(SYS_CONTEXT('USERENV', 'INSTANCE')), type => 'TEXT', report_level => 'ALL') from DUAL";
+
+		Set<String> executingNow = new HashSet<>();
+		int         fetchCount   = 0;
+		long        now          = System.currentTimeMillis();
+
+		for (int rowId = 0; rowId < newSample.getRowCount(); rowId++)
+		{
+			// Only for sessions that are executing a statement, and has done so for a while
+			String sqlId = newSample.getValueAsString(rowId, pos_SQL_ID);
+			if (StringUtil.isNullOrBlank(sqlId) || ! "ACTIVE".equals(newSample.getValueAsString(rowId, pos_STATUS)) || newSample.getValueAsLong(rowId, pos_ExecTimeInSec, 0L) < minExecTimeInSec)
+				continue;
+
+			long   sid      = newSample.getValueAsLong(rowId, pos_SID   , -1L);
+			long   serial   = newSample.getValueAsLong(rowId, pos_SERIAL, -1L);
+			String cacheKey = sid + ":" + serial + "|" + sqlId + "|" + newSample.getValueAsString(rowId, pos_SQL_EXEC_START);
+			executingNow.add(cacheKey);
+
+			Object[] cached     = _sqlMonitorCache.get(cacheKey);
+			boolean  needsFetch = cached == null || now - (Long) cached[0] >= SQL_MONITOR_REFRESH_SEC * 1000L;
+
+			if (needsFetch && fetchCount < SQL_MONITOR_MAX_FETCH_PER_SAMPLE)
+			{
+				fetchCount++;
+
+				String report = null;
+				try (PreparedStatement pstmnt = conn.prepareStatement(sql))
+				{
+					pstmnt.setQueryTimeout(LOOKUP_QUERY_TIMEOUT_SEC);
+					pstmnt.setString(1, sqlId);
+					pstmnt.setLong  (2, sid);
+					pstmnt.setLong  (3, serial);
+
+					try (ResultSet rs = pstmnt.executeQuery())
+					{
+						if (rs.next())
+							report = rs.getString(1);
+					}
+				}
+				catch (SQLException ex)
+				{
+					lookupFailed(LOOKUP_SQL_MONITOR, ex);
+					break;
+				}
+
+				// Oracle only monitors a statement when it has used some seconds of CPU or I/O time (or runs in parallel): until then the report is just its title
+				if (report == null || report.indexOf("SQL Plan Monitoring Details") < 0)
+					report = "";
+
+				cached = new Object[] { now, report.trim() };
+				_sqlMonitorCache.put(cacheKey, cached);
+			}
+
+			if (cached != null && StringUtil.hasValue((String) cached[1]))
+			{
+				newSample.setValueAt(cached[1]   , rowId, pos_SqlMonitorReport);
+				newSample.setValueAt(Boolean.TRUE, rowId, pos_HasSqlMonitorReport);
+			}
+		}
+
+		// Forget the reports of the statements that are done
+		_sqlMonitorCache.keySet().retainAll(executingNow);
 	}
 
 	/**
@@ -1896,5 +2049,13 @@ extends CountersModel
 		                                                             + "<b>First table</b>: 'DB time' (the time it has been working), how much of that was CPU, and the wait events it has waited most for. Both since the previous sample and since it logged on. From V$SESS_TIME_MODEL and V$SESSION_EVENT.<br>"
 		                                                             + "<b>Second table</b>: the last 10 waits (1 is the latest), from V$SESSION_WAIT_HISTORY.</html>");
 		setLocalToolTipTextOnTableColumnHeader("ExecPlan",             "<html>Execution plan from DBMS_XPLAN.DISPLAY_CURSOR. Only for statements that has been executing for some seconds (see the options).</html>");
+		setLocalToolTipTextOnTableColumnHeader("HasSqlMonitorReport",  "<html>Checked if the row has a SQL Monitor report (column 'SqlMonitorReport'). Hover over the checkbox to see it.<br>"
+		                                                             + "<b>Always empty unless you have said that the Oracle Tuning Pack is licensed</b>: see the tooltip of 'SqlMonitorReport'.</html>");
+		setLocalToolTipTextOnTableColumnHeader("SqlMonitorReport",     "<html>The SQL Monitor report of the statement (DBMS_SQLTUNE.REPORT_SQL_MONITOR, as text): the plan of THIS execution with what it has done so far.<br>"
+		                                                             + "Per operation: how many times it was executed, the rows it has returned, memory and temp space, and <b>Activity</b>: the share of the statement's time that is spent there. '-&gt;' marks the operations that are at work right now.<br>"
+		                                                             + "Only for statements that has been executing for some seconds (see the options), and that Oracle monitors: it starts when a statement has used 5 seconds of CPU or I/O time, or runs in parallel.<br>"
+		                                                             + "<br>"
+		                                                             + "<b>SQL Monitoring is a part of the Oracle Tuning Pack, which is an extra-cost license.</b> So this column is empty unless<br>"
+		                                                             + "the property <code>" + OracleCmUtils.PROPKEY_licensedManagementPacks + "=DIAGNOSTIC+TUNING</code> is set (the default is NONE), and the database parameter <code>control_management_pack_access</code> allows it.</html>");
 	}
 }

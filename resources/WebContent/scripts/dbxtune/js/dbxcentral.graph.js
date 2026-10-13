@@ -2324,10 +2324,11 @@ function dbxTuneGraphSubscribe()
 
 		return div;
 	}
-	function createOracleQueryPlanToolTipDiv(data, rowData, srvName)
+	function createOracleQueryPlanToolTipDiv(data, rowData, srvName, what)
 	{
 		// creates a div that will open the Oracle Execution Plan dialog (dbxShowplan.js, #dbx-view-oraShowplan-dialog) -
-		// same trigger pattern as createAseQueryPlanToolTipDiv() above. The plan is the text of DBMS_XPLAN.DISPLAY_CURSOR.
+		// same trigger pattern as createAseQueryPlanToolTipDiv() above. The plan is the text of DBMS_XPLAN.DISPLAY_CURSOR,
+		// or a SQL Monitor report (column 'SqlMonitorReport', which is only filled in when the Tuning Pack is licensed): the dialog draws both.
 
 		const dataVal = data;
 		const sqlText = rowData.hasOwnProperty('SqlText') ? (rowData.SqlText || '') : '';
@@ -2336,7 +2337,7 @@ function dbxTuneGraphSubscribe()
 
 		const div = document.createElement("div");
 		div.innerHTML = "&nbsp;";
-		div.setAttribute("title"           , "Click to Open the Execution Plan... \n-------------------------------\n" + dataVal);
+		div.setAttribute("title"           , "Click to Open the " + (what || "Execution Plan") + "... \n-------------------------------\n" + dataVal);
 		div.setAttribute("data-bs-toggle"     , 'modal');
 		div.setAttribute("data-bs-target"     , '#dbx-view-oraShowplan-dialog');
 		div.setAttribute("data-objectname" , rowData.EffectiveSqlId ? ('SQL_ID ' + rowData.EffectiveSqlId) : '');
@@ -2668,6 +2669,7 @@ function dbxTuneGraphSubscribe()
 					// The tooltip goes on the CHECKBOX columns (as for the other collectors). On the text columns it made the row one line higher.
 					if (metaData.columnName === "HasSqlText"   && rowData.hasOwnProperty('SqlText')  && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.SqlText,  'plsql') ); }
 					if (metaData.columnName === "HasExecPlan"  && rowData.hasOwnProperty('ExecPlan') && cellContent === true) { td.appendChild( createOracleQueryPlanToolTipDiv(rowData.ExecPlan, rowData, srvName) ); }
+					if (metaData.columnName === "HasSqlMonitorReport" && rowData.hasOwnProperty('SqlMonitorReport') && cellContent === true) { td.appendChild( createOracleQueryPlanToolTipDiv(rowData.SqlMonitorReport, rowData, srvName, 'SQL Monitor Report') ); }
 					if (metaData.columnName === "HasSidLocks"        && rowData.hasOwnProperty('SidLocks')        && cellContent === true) { td.appendChild( createLockTableToolTipDiv(rowData.SidLocks       , 'Lock Table'      ) ); }
 					if (metaData.columnName === "HasBlockedSidsInfo" && rowData.hasOwnProperty('BlockedSidsInfo') && cellContent === true) { td.appendChild( createLockTableToolTipDiv(rowData.BlockedSidsInfo, 'Blocked SID Info') ); }
 					if (metaData.columnName === "HasSidWaitInfo"     && rowData.hasOwnProperty('SidWaitInfo')     && cellContent === true) { td.appendChild( createLockTableToolTipDiv(rowData.SidWaitInfo    , 'SID Wait Info'   ) ); }

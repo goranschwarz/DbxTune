@@ -3829,6 +3829,12 @@ function _initGlobalEscClose() {
 		rows.push(['Operations', pi.operations]);
 		if (m.cost !== undefined)        rows.push(['Cost (optimizer)', num(m.cost)]);
 		rows.push(['Run-time statistics', pi.hasActuals ? 'yes' : 'no (estimates only)']);
+		// A SQL Monitor report: what it says about the execution as a whole ("Elapsed Time(s)", "Buffer Gets"... as it names them)
+		if (pi.monitor) {
+			if (pi.monitor.status)   rows.push(['SQL Monitor status', pi.monitor.status]);
+			if (pi.monitor.duration) rows.push([pi.monitor.executing ? 'Duration (so far)' : 'Duration', pi.monitor.duration]);
+			pi.monitor.stats.forEach(function (kv) { rows.push([kv[0], kv[1]]); });
+		}
 		if (m.actRows !== undefined)     rows.push(['Rows returned', num(m.actRows)]);
 		if (m.actTimeSec !== undefined)  rows.push(['Elapsed time', m.actTimeSec + ' s']);
 		if (m.buffers !== undefined)     rows.push(['Buffers (logical reads)', num(m.buffers)]);

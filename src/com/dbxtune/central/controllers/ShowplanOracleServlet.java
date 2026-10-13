@@ -153,7 +153,7 @@ extends HttpServlet
 
 				"    <div class='container-fluid px-4 py-3' style='max-width: 1100px;'> \n" +
 				"      <h2>Oracle Execution Plan Viewer</h2> \n" +
-				"      <p class='text-muted'>Paste the text that <code>DBMS_XPLAN</code> prints and press <b>Show Plan</b>. The plan is drawn in your browser: it is only sent to the server if you open one of the LLM sections of the dialog.</p> \n" +
+				"      <p class='text-muted'>Paste the text that <code>DBMS_XPLAN</code> prints (or a SQL Monitor report) and press <b>Show Plan</b>. The plan is drawn in your browser: it is only sent to the server if you open one of the LLM sections of the dialog.</p> \n" +
 				"      <div class='card shadow-sm'> \n" +
 				"        <div class='card-body'> \n" +
 				"          <div class='mb-2'> \n" +
@@ -182,7 +182,9 @@ extends HttpServlet
 				"          <pre class='mb-2' style='background:#f4f4f4;padding:6px 8px;border-radius:3px;'>select * from table(DBMS_XPLAN.DISPLAY_CURSOR(null, null, 'ALLSTATS LAST'));</pre> \n" +
 				"          <p class='mb-1'>The plan the optimizer <b>would</b> use, without running the statement:</p> \n" +
 				"          <pre class='mb-2' style='background:#f4f4f4;padding:6px 8px;border-radius:3px;'>explain plan for &lt;statement&gt;;\nselect * from table(DBMS_XPLAN.DISPLAY);</pre> \n" +
-				"          <p class='mb-0 text-muted'>These need no extra license from Oracle. <code>DBMS_XPLAN.DISPLAY_AWR</code> and SQL Monitor reports do (the Diagnostics Pack and the Tuning Pack).</p> \n" +
+				"          <p class='mb-2 text-muted'>These need no extra license from Oracle. <code>DBMS_XPLAN.DISPLAY_AWR</code> and SQL Monitor reports do (the Diagnostics Pack and the Tuning Pack).</p> \n" +
+				"          <p class='mb-1'>A <b>SQL Monitor report</b> can be pasted too, if you have one (the TEXT report, not the HTML or ACTIVE one). It is the plan of one execution with what it really did and where its time went, also while the statement is still running. <b>Only for a database that is licensed for the Tuning Pack</b>:</p> \n" +
+				"          <pre class='mb-0' style='background:#f4f4f4;padding:6px 8px;border-radius:3px;'>select DBMS_SQLTUNE.REPORT_SQL_MONITOR(sql_id =&gt; '&lt;sql_id&gt;', type =&gt; 'TEXT', report_level =&gt; 'ALL') from DUAL;</pre> \n" +
 				"        </div> \n" +
 				"      </div> \n" +
 				"    </div> \n" +
