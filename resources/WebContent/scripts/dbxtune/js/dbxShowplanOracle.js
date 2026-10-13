@@ -421,7 +421,10 @@ window.OracleShowplan = (function () {
 		+ '.ora-plan-tree.ora-plan-compact-v li > ul > li { display: table-cell; vertical-align: top; padding: 40px 6px 0 6px; }'
 		+ '.ora-plan-tree.ora-plan-compact-v li > ul > li:first-child { padding-left: 0; }'
 		+ '.ora-plan-tree.ora-plan-compact-v li > ul > li:last-child { padding-right: 0; }'
-		+ '.ora-plan-tree.ora-plan-compact-h li:only-child, .ora-plan-tree.ora-plan-compact-v li:only-child { padding: 0; }'
+		// compact-h only: in compact-v it would take away the 40px above an operation's ONLY child, which is the room for
+		// the arrow (an Oracle plan nearly always starts with such a chain: SELECT STATEMENT - SORT AGGREGATE - ...).
+		// The same as in dbxShowplanAse.js and dbxShowplanSqlServer.js.
+		+ '.ora-plan-tree.ora-plan-compact-h li:only-child { padding: 0; }'
 		+ '.ora-plan-box { position: relative; border: 1px solid var(--sp-node-border); border-radius: 5px; background: var(--sp-bg); padding: 5px 9px; cursor: pointer; min-width: 120px; max-width: 220px; text-align: center; box-shadow: 0 1px 2px var(--sp-shadow); }'
 		+ '.ora-plan-box:hover { border-color: var(--sp-sel); }'
 		+ '.ora-plan-box.ora-plan-warn { border-color: var(--sp-warn-border); background: var(--sp-warn-bg); }'
@@ -455,10 +458,6 @@ window.OracleShowplan = (function () {
 		+ '.ora-plan-box.ora-plan-selected { border-color: var(--sp-blue); border-width: 2px; box-shadow: 0 0 0 3px rgba(42,110,187,0.18); }'
 		+ '.ora-plan-prop-raw { font-family: monospace; white-space: pre-wrap; font-size: 10px; color: var(--sp-text-2); line-height: 1.35; }'
 		// --- Oracle's own ---
-		// Top-to-bottom: the "li:only-child { padding: 0 }" rule above also takes away the 40px between an operation and its
-		// ONLY child, so a chain of single operations (SELECT STATEMENT - SORT AGGREGATE - FILTER...) was stacked with no room
-		// for the arrow. An Oracle plan nearly always starts with such a chain: give it its space back.
-		+ '.ora-plan-tree.ora-plan-compact-v li > ul > li:only-child { padding: 40px 0 0 0; }'
 		// An Oracle operation can be long ("TABLE ACCESS BY INDEX ROWID BATCHED"): such a label may take two lines instead of
 		// making the box very wide (renderNode() sets the class). A normal one stays on one line, also where the layout would
 		// rather make the box narrow (top-to-bottom, where a box is as wide as the row of its children).
