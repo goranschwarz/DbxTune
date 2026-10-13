@@ -860,4 +860,64 @@ extends CmSummaryAbstract
 
 		return list;
 	}
+
+	/** What the columns are: tooltips in the GUI, and the 'Description' column in DbxCentral (Counter Details, the "unpivot" view) */
+	@Override
+	public void initLocalToolTipTextOnTableColumnHeader()
+	{
+		setLocalToolTipTextOnTableColumnHeader("INSTANCE_NAME",              "<html>Name of the instance. V$INSTANCE</html>");
+		setLocalToolTipTextOnTableColumnHeader("HOST_NAME",                  "<html>The host that the instance runs on. V$INSTANCE</html>");
+		setLocalToolTipTextOnTableColumnHeader("VERSION",                    "<html>Oracle version. From 18c with the Release Update (VERSION_FULL). V$INSTANCE</html>");
+		setLocalToolTipTextOnTableColumnHeader("STARTUP_TIME",               "<html>When the instance was started. V$INSTANCE</html>");
+		setLocalToolTipTextOnTableColumnHeader("DAYS_RUNNING",               "<html>Days since the instance was started.</html>");
+		setLocalToolTipTextOnTableColumnHeader("TIME_NOW",                   "<html>The time on the database server (SYSDATE) when the sample was taken.</html>");
+		setLocalToolTipTextOnTableColumnHeader("UTC_DATE",                   "<html>The same time in UTC.</html>");
+		setLocalToolTipTextOnTableColumnHeader("UTC_MINUTE_DIFF",            "<html>Minutes between the time of the database server and UTC.</html>");
+		setLocalToolTipTextOnTableColumnHeader("DB_NAME",                    "<html>Name of the database. V$DATABASE</html>");
+		setLocalToolTipTextOnTableColumnHeader("DATABASE_ROLE",              "<html>PRIMARY, or a kind of standby database (PHYSICAL STANDBY, LOGICAL STANDBY, SNAPSHOT STANDBY). V$DATABASE</html>");
+		setLocalToolTipTextOnTableColumnHeader("OPEN_MODE",                  "<html>How the database is open: READ WRITE, READ ONLY, READ ONLY WITH APPLY, MOUNTED. V$DATABASE</html>");
+		setLocalToolTipTextOnTableColumnHeader("LOG_MODE",                   "<html>ARCHIVELOG or NOARCHIVELOG. In NOARCHIVELOG mode the database can only be restored to the time of the last backup. V$DATABASE</html>");
+		setLocalToolTipTextOnTableColumnHeader("CDB",                        "<html>YES if it is a Container Database (12.1 and above).</html>");
+		setLocalToolTipTextOnTableColumnHeader("CON_NAME",                   "<html>The container we are connected to: CDB$ROOT or a Pluggable Database (PDB). Empty when it is not a Container Database.</html>");
+
+		setLocalToolTipTextOnTableColumnHeader("DISTINCT_LOGINS",            "<html>Number of different USERNAME's that are connected. V$SESSION</html>");
+		setLocalToolTipTextOnTableColumnHeader("CONNECTED_USERS",            "<html>Number of user sessions (the background processes are not counted). V$SESSION</html>");
+		setLocalToolTipTextOnTableColumnHeader("ACTIVE_USERS",               "<html>Number of user sessions that are doing something right now (STATUS = ACTIVE). The session of the collector is one of them. V$SESSION</html>");
+
+		setLocalToolTipTextOnTableColumnHeader("OLDEST_OPEN_TRAN_IN_SEC",    "<html>How long the oldest open transaction has been open, in seconds. V$TRANSACTION</html>");
+		setLocalToolTipTextOnTableColumnHeader("OLDEST_OPEN_TRAN_TIME",      "<html>When the oldest open transaction started.</html>");
+		setLocalToolTipTextOnTableColumnHeader("OLDEST_OPEN_TRAN_IN_SEC_TH", "<html>The threshold (in seconds) of the alarm 'oldestOpenTranInSec'.</html>");
+		setLocalToolTipTextOnTableColumnHeader("OLDEST_OPEN_TRAN_SID",       "<html>The session (SID) that has the oldest open transaction.</html>");
+		setLocalToolTipTextOnTableColumnHeader("OLDEST_OPEN_TRAN_USERNAME",  "<html>The USERNAME that has the oldest open transaction.</html>");
+		setLocalToolTipTextOnTableColumnHeader("OPEN_TRAN_COUNT",            "<html>Number of open transactions. V$TRANSACTION</html>");
+
+		setLocalToolTipTextOnTableColumnHeader("MAX_BLOCKING_WAIT_IN_SEC",   "<html>The session that has been blocked the longest: how many seconds it has waited. V$SESSION</html>");
+		setLocalToolTipTextOnTableColumnHeader("COUNT_BLOCKING_WAIT",        "<html>Number of sessions that are blocked by another session (they wait for a lock). V$SESSION</html>");
+		setLocalToolTipTextOnTableColumnHeader("BLOCKING_WAIT_IN_SEC_TH",    "<html>The threshold (in seconds) of the alarm 'BlockingLockCount'.</html>");
+
+		setLocalToolTipTextOnTableColumnHeader("TRANSACTIONS",               "<html>Number of commits. V$SYSSTAT: user commits</html>");
+		setLocalToolTipTextOnTableColumnHeader("ROLLBACKS",                  "<html>Number of rollbacks. V$SYSSTAT: user rollbacks</html>");
+		setLocalToolTipTextOnTableColumnHeader("USER_CALLS",                 "<html>Number of calls from the applications: logon, parse, execute, fetch... V$SYSSTAT: user calls</html>");
+		setLocalToolTipTextOnTableColumnHeader("EXECUTIONS",                 "<html>Number of SQL statements executed, also the recursive ones. V$SYSSTAT: execute count</html>");
+		setLocalToolTipTextOnTableColumnHeader("LOGICAL_READS",              "<html>Number of blocks read from the buffer cache. V$SYSSTAT: session logical reads</html>");
+		setLocalToolTipTextOnTableColumnHeader("PHYSICAL_READS",             "<html>Number of blocks read from disk. V$SYSSTAT: physical reads</html>");
+		setLocalToolTipTextOnTableColumnHeader("PHYSICAL_WRITES",            "<html>Number of blocks written to disk. V$SYSSTAT: physical writes</html>");
+		setLocalToolTipTextOnTableColumnHeader("REDO_SIZE",                  "<html>Redo generated, in bytes. V$SYSSTAT: redo size</html>");
+		setLocalToolTipTextOnTableColumnHeader("PARSE_TOTAL",                "<html>Number of parse calls, hard and soft. V$SYSSTAT: parse count (total)</html>");
+		setLocalToolTipTextOnTableColumnHeader("PARSE_HARD",                 "<html>Number of hard parses: the statement was not in the shared pool, so it had to be optimized. Many of them = the applications does not use bind variables. V$SYSSTAT: parse count (hard)</html>");
+		setLocalToolTipTextOnTableColumnHeader("LOGONS_CUM",                 "<html>Number of logons. A high rate = the applications does not use a connection pool. V$SYSSTAT: logons cumulative</html>");
+		setLocalToolTipTextOnTableColumnHeader("DEADLOCKS",                  "<html>Number of deadlocks between sessions (ORA-00060). V$SYSSTAT: enqueue deadlocks</html>");
+
+		setLocalToolTipTextOnTableColumnHeader("DB_TIME",                    "<html>Time the user sessions have spent working (on CPU or waiting), in microseconds. The rate / 1 000 000 = Average Active Sessions. V$SYS_TIME_MODEL: DB time</html>");
+		setLocalToolTipTextOnTableColumnHeader("DB_CPU",                     "<html>CPU time used by the user sessions, in microseconds. The rate / 1 000 000 = sessions on CPU. V$SYS_TIME_MODEL: DB CPU</html>");
+		setLocalToolTipTextOnTableColumnHeader("BG_CPU_TIME",                "<html>CPU time used by the background processes, in microseconds. V$SYS_TIME_MODEL: background cpu time</html>");
+
+		setLocalToolTipTextOnTableColumnHeader("NUM_CPUS",                   "<html>Number of CPU's (or CPU threads) on the host, as Oracle sees it. V$OSSTAT</html>");
+		setLocalToolTipTextOnTableColumnHeader("OS_BUSY_TIME",               "<html>Time the CPU's of the host have been busy, for ALL processes, in centiseconds. V$OSSTAT: BUSY_TIME</html>");
+		setLocalToolTipTextOnTableColumnHeader("OS_IDLE_TIME",               "<html>Time the CPU's of the host have been idle, in centiseconds. BUSY + IDLE = all the CPU time there was. V$OSSTAT: IDLE_TIME</html>");
+		setLocalToolTipTextOnTableColumnHeader("OS_USER_TIME",               "<html>CPU time of the host in user mode, in centiseconds. V$OSSTAT: USER_TIME</html>");
+		setLocalToolTipTextOnTableColumnHeader("OS_SYS_TIME",                "<html>CPU time of the host in system (kernel) mode, in centiseconds. V$OSSTAT: SYS_TIME</html>");
+		setLocalToolTipTextOnTableColumnHeader("OS_IOWAIT_TIME",             "<html>Time the CPU's of the host have waited for IO, in centiseconds (not available on all platforms). V$OSSTAT: IOWAIT_TIME</html>");
+		setLocalToolTipTextOnTableColumnHeader("OS_LOAD",                    "<html>The load average of the host: processes that are running or waiting to run (not available on all platforms). V$OSSTAT: LOAD</html>");
+	}
 }
