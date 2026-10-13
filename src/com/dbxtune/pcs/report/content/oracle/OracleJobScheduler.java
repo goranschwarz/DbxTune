@@ -239,6 +239,10 @@ extends OracleAbstract
 		//---------------------------------------------------------------
 		// Runs that did not succeed
 		//---------------------------------------------------------------
+		// What the job wrote (DBMS_OUTPUT, or stdout of an external job): not in a recording made by an earlier version
+		ResultSetTableModel runsColumns = executeQuery(conn, "select * from " + runs + " where 1 = 2", true, "OracleJobScheduler_metadata");
+		boolean hasOutput = runsColumns != null && runsColumns.hasColumn("OUTPUT");
+
 		String sql = ""
 			+ "select \n"
 			+ "     r.[START_TIME] \n"
@@ -252,6 +256,7 @@ extends OracleAbstract
 			+ "    ,(select count(*) from " + runs + " f where f.[CON_ID] = r.[CON_ID] and f.[OWNER] = r.[OWNER] and f.[JOB_NAME] = r.[JOB_NAME] and f.[STATUS] <> 'SUCCEEDED' and f." + beforePeriod + ") as [hist_failed] \n"
 			+ "    ,(select count(*) from " + runs + " f where f.[CON_ID] = r.[CON_ID] and f.[OWNER] = r.[OWNER] and f.[JOB_NAME] = r.[JOB_NAME] and f.[STATUS] =  'SUCCEEDED' and f." + beforePeriod + ") as [hist_succeeded] \n"
 			+ "    ,coalesce(r.[ERRORS], r.[RUN_INFO])    as [error_text] \n"
+			+ (hasOutput ? "    ,r.[OUTPUT]                            as [output] \n" : "")
 			+ "from " + runs + " r \n"
 			+ "where r.[STATUS] <> 'SUCCEEDED' and " + rInPeriod + " \n"
 			+ "order by r.[START_TIME] desc \n";
@@ -270,6 +275,7 @@ extends OracleAbstract
 		_failedRstm.setColumnDescription("hist_failed"   , "How many runs of the job that did not succeed in the days before the period: 0 = this is new");
 		_failedRstm.setColumnDescription("hist_succeeded", "How many runs of the job that succeeded in the days before the period");
 		_failedRstm.setColumnDescription("error_text"    , "What the Scheduler wrote about the run: the error message");
+		_failedRstm.setColumnDescription("output"        , "What the job itself wrote before it ended: DBMS_OUTPUT of a PL/SQL job, or stdout of an external job (Oracle 12.1 and above, the first 4000 characters)");
 
 		//---------------------------------------------------------------
 		// Runs that took longer than normal

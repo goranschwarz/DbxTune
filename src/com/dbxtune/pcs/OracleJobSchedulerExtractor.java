@@ -320,6 +320,7 @@ extends DbmsExtractorAbstract
 			+ "        ,CAST(d.JOB_NAME as VARCHAR2(128))                               as LOG_JOB_NAME \n"
 			+ "        ,CAST(substr(d.ADDITIONAL_INFO, 1, 4000) as VARCHAR2(4000))      as RUN_INFO \n"
 			+ "        ," + (hasErrors ? "CAST(substr(d.ERRORS, 1, 4000) as VARCHAR2(4000))" : "CAST(NULL as VARCHAR2(4000))") + " as ERRORS \n"
+			+ "        ," + (hasErrors ? "CAST(substr(d.OUTPUT, 1, 4000) as VARCHAR2(4000))" : "CAST(NULL as VARCHAR2(4000))") + " as OUTPUT \n"   // (12.1 and above, as ERRORS) what the job wrote: DBMS_OUTPUT, or stdout of an external job
 			+ "    from " + views(cdb) + "_SCHEDULER_JOB_RUN_DETAILS d \n"
 			+ joinContainers(cdb, "d")
 			+ "    where d.LOG_DATE > SYSTIMESTAMP - NUMTODSINTERVAL(" + days + ", 'DAY') \n"

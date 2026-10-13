@@ -28,6 +28,7 @@ import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +46,7 @@ import com.dbxtune.central.controllers.DbxCentralPageTemplate;
 import com.dbxtune.central.controllers.DbxTimelineRows;
 import com.dbxtune.central.controllers.HtmlStatic.PageSection;
 import com.dbxtune.pcs.OracleJobSchedulerExtractor;
+import com.dbxtune.pcs.report.content.sqlserver.SqlServerJobScheduler;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
@@ -113,13 +115,22 @@ extends DbxCentralPageTemplate
 	protected List<String> getJavaScriptList()
 	{
 		// Timeline chart: vis-timeline + dbxTimeline.js
-		return new ArrayList<>(DbxTimelineRows.JAVASCRIPT_LIST);
+		List<String> list = new ArrayList<>(DbxTimelineRows.JAVASCRIPT_LIST);
+
+		// The dialog with all the runs of a job as a graph (the same dialog as the SQL Server timeline has): Chart.js, and Prism for the text under the graph
+		list.add("/scripts/chartjs/4.5.1/dist/chart.umd.min.js");
+		list.add("/scripts/chartjs-plugin-annotation/3.1.0/chartjs-plugin-annotation.min.js");
+		list.add("/scripts/prism/prism-1.30.0.js");
+
+		return list;
 	}
 
 	@Override
 	protected List<String> getCssList()
 	{
-		return new ArrayList<>(DbxTimelineRows.CSS_LIST);
+		List<String> list = new ArrayList<>(DbxTimelineRows.CSS_LIST);
+		list.add("/scripts/prism/prism-1.30.0.css");
+		return list;
 	}
 
 	//-----------------------------------------------------------------------
@@ -257,7 +268,8 @@ extends DbxCentralPageTemplate
 		writer.println();
 		writer.println("<details>");
 		writer.println("    <summary>Show Parameters and what the colors mean. Page loaded: " + TimeUtils.toStringYmdHms(System.currentTimeMillis()) + "</summary>");
-		writer.println("    One row for each job, one bar for each run. Hover over a bar to see the run: status, how long it took and how long the job normally takes, the error message.<br>");
+		writer.println("    One row for each job, one bar for each run. Hover over a bar to see the run: status, how long it took and how long the job normally takes, what it runs, what it wrote and the error message.<br>");
+		writer.println("    Click a bar and choose <i>Show historical executions graph</i> to see all the runs of the job in the log as a graph (green = succeeded, red = failed). Click a point in that graph to open the graphs of DbxCentral at the time of that run.<br>");
 		writer.println("    The steps of a job that is a CHAIN are rows of their own under the job: click the name of the job to show them.<br>");
 		writer.println("    The times are the clock of the collector (the same as the database server has, when they are in the same time zone). Oracle keeps the log for 30 days by default.<br>");
 		writer.println("    <br>");
@@ -302,6 +314,23 @@ extends DbxCentralPageTemplate
 		return "<tr><td style='padding: 0 8px 0 4px;' nowrap><b>" + name + "</b></td><td style='padding: 0 4px 0 0;'>" + StringEscapeUtils.escapeHtml4(value.toString()) + "</td></tr>";
 	}
 
+	/** One row of a tooltip with a text of many lines, as code: what the job runs, and what it wrote (nothing when there is no value) */
+	private static String ttCode(String name, String value)
+	{
+		if (StringUtil.isNullOrBlank(value))
+			return "";
+
+		// Max 30 lines, the tooltip has to fit on the screen (the whole text is in the log of the Scheduler)
+		String[] lines = value.trim().replace("\r", "").split("\n");
+		String   text  = "";
+		for (int l = 0; l < lines.length && l < 30; l++)
+			text += (l == 0 ? "" : "<br>") + StringEscapeUtils.escapeHtml4(lines[l]).replace("\\", "&#92;");
+		if (lines.length > 30)
+			text += "<br>... (" + (lines.length - 30) + " more lines)";
+
+		return "<tr><td style='padding: 0 8px 0 4px;' nowrap><b>" + name + "</b></td><td style='padding: 0 4px 0 0;'><code>" + text + "</code></td></tr>";
+	}
+
 	/** Read the log of the Scheduler, and write the JavaScript that draws it */
 	private void createJsTimeline(PrintWriter writer, Timestamp startTime, Timestamp endTime)
 	throws Exception
@@ -325,19 +354,74 @@ extends DbxCentralPageTemplate
 		int daysBack = (int) Math.max(1, (System.currentTimeMillis() - startTime.getTime()) / (24 * 3600 * 1000L) + 1);
 		int histDays = Math.max(daysBack, Configuration.getCombinedConfiguration().getIntProperty(OracleJobSchedulerExtractor.PROPKEY_daysToCopy, OracleJobSchedulerExtractor.DEFAULT_daysToCopy));
 
+		// The dialog with all the runs of a job as a graph: the SAME dialog as the SQL Server timeline has (it knows nothing about SQL Server)
+		// A click on a point in that graph opens the graphs of DbxCentral for this server, at the time of that run
+		SqlServerJobScheduler.createStaticHtmlAndJavaScriptContent(writer, CounterController.getInstance().getServerName());
+
 		//-----------------------------------------------------------------
-		// What every job normally does: its runs that succeeded BEFORE the period. Key: CON_ID|OWNER|JOB_NAME, value: {runs, avg seconds, max seconds}
+		// All the runs in the log (the last 30 days, or as far back as the period goes). They are used for two things:
+		//   - what every job normally does: its runs that succeeded BEFORE the period. Key: CON_ID|OWNER|JOB_NAME, value: {runs, avg seconds, max seconds}
+		//   - the dialog with all the runs of a job (or of a step of a chain) as a graph. Key: the key of the row in the timeline, value: one line per run,
+		//     in the format that dialog reads: "ts=2026-10-13 22:00:01, wd=Tuesday  , HMS=00:01:02, sec=62, status=SUCCESS;"
 		//-----------------------------------------------------------------
-		Map<String, long[]> normal = new HashMap<>();
+		Map<String, long[]>        normal  = new HashMap<>();
+		Map<String, StringBuilder> history = new LinkedHashMap<>();
 		String sql = ""
-			+ "select h.CON_ID, h.OWNER, h.JOB_NAME, count(*), avg(h.DURATION_SEC), max(h.DURATION_SEC) \n"
+			+ "select h.CON_ID, h.CON_NAME, h.OWNER, h.JOB_NAME, h.JOB_SUBNAME, h.STATUS, h.START_TIME, h.DURATION_SEC \n"
 			+ "from (" + OracleJobSchedulerExtractor.getJobRunsSql(cdb, hasErrors, histDays) + ") h \n"
-			+ "where h.JOB_SUBNAME is null and h.STATUS = 'SUCCEEDED' and h.START_TIME < " + startDate + " \n"
-			+ "group by h.CON_ID, h.OWNER, h.JOB_NAME";
+			+ "order by h.START_TIME, h.LOG_ID";
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 		{
 			while (rs.next())
-				normal.put(rs.getLong(1) + "|" + rs.getString(2) + "|" + rs.getString(3), new long[] { rs.getLong(4), Math.round(rs.getDouble(5)), rs.getLong(6) });
+			{
+				String    conName = rs.getString   (2);
+				String    owner   = rs.getString   (3);
+				String    jobName = rs.getString   (4);
+				String    subName = rs.getString   (5);
+				String    status  = rs.getString   (6);
+				Timestamp startTs = rs.getTimestamp(7);
+				long      seconds = rs.getLong     (8);
+				boolean   isStep  = StringUtil.hasValue(subName);
+
+				if (startTs == null)
+					continue;
+
+				if ( ! isStep && "SUCCEEDED".equals(status) && startTs.before(startTime) )
+				{
+					long[] n = normal.computeIfAbsent(rs.getLong(1) + "|" + owner + "|" + jobName, k -> new long[3]);
+					n[0]++;
+					n[1] += seconds;                   // (the sum, made into the average below)
+					n[2]  = Math.max(n[2], seconds);
+				}
+
+				// In the graph: SUCCESS is green, WARNING yellow and FAILED red
+				String jobKey = (StringUtil.hasValue(conName) ? conName + "." : "") + owner + "." + jobName;
+				history.computeIfAbsent(isStep ? jobKey + ":" + subName : jobKey, k -> new StringBuilder())
+					.append("ts=")      .append(TimeUtils.toStringYmdHms(startTs))
+					.append(", wd=")    .append(StringUtil.left(TimeUtils.toWeekDay(startTs), 9))
+					.append(", HMS=")   .append(TimeUtils.secToTimeStrHMS(seconds))
+					.append(", sec=")   .append(seconds)
+					.append(", status=").append("SUCCEEDED".equals(status) ? "SUCCESS" : "STOPPED".equals(status) ? "WARNING" : "FAILED")
+					.append(";\n");
+			}
+		}
+		for (long[] n : normal.values())
+			n[1] = Math.round(n[1] / (double) n[0]);
+
+		//-----------------------------------------------------------------
+		// What every job runs: a PL/SQL block, a procedure, a program, a chain or a script. Key: CON_ID|OWNER|JOB_NAME
+		// (an automatic maintenance task is not there: its job only exists while it runs)
+		//-----------------------------------------------------------------
+		Map<String, String> commands = new HashMap<>();
+		sql = "select j.CON_ID, j.OWNER, j.JOB_NAME, j.JOB_TYPE, j.JOB_ACTION from (" + OracleJobSchedulerExtractor.getJobsSql(cdb) + ") j";
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while (rs.next())
+			{
+				// No JOB_TYPE: the job runs a PROGRAM (and the action is then the name of the program)
+				if (StringUtil.hasValue(rs.getString(5)))
+					commands.put(rs.getLong(1) + "|" + rs.getString(2) + "|" + rs.getString(3), StringUtil.nullToValue(rs.getString(4), "PROGRAM") + ": " + rs.getString(5));
+			}
 		}
 
 		List<Map<String, Object>> rows = new ArrayList<>();
@@ -408,6 +492,8 @@ extends DbxCentralPageTemplate
 					+ tt("Session"       , rs.getString("SESSION_ID"))
 					+ tt("Kind"          , "AUTOTASK".equals(jobKind) ? "automatic maintenance task (logged as " + rs.getString("LOG_JOB_NAME") + ")" : null)
 					+ tt("Message"       , succeeded ? null : errors)
+					+ ttCode("Command"   , isStep ? null : commands.get(rs.getLong("CON_ID") + "|" + owner + "|" + jobName))
+					+ ttCode("Output"    , rs.getString("OUTPUT"))
 					+ "</table>";
 
 				// A bar needs some width to be seen (and Oracle only has whole seconds): a run of 0 seconds is drawn as one second
@@ -416,6 +502,7 @@ extends DbxCentralPageTemplate
 
 				Map<String, Object> row = DbxTimelineRows.createRow(isStep ? jobKey + ":" + subName : jobKey, barText, color, tooltip, startTs, endTs);
 				row.put("label", isStep ? subName : jobKey);
+				row.put("startTs", TimeUtils.toStringYmdHms(rs.getTimestamp("START_TIME"))); // the marker "this run" in the graph of all the runs
 				if (isStep)
 					row.put("parentKey", jobKey);
 				if ( ! succeeded )
@@ -458,6 +545,7 @@ extends DbxCentralPageTemplate
 						+ tt("Normal"     , hist == null || isStep ? null : TimeUtils.secToTimeStrHMS(hist[1]) + " (the average of " + hist[0] + " runs before the period, the longest: " + TimeUtils.secToTimeStrHMS(hist[2]) + ")")
 						+ tt("CPU seconds", rs.getString("CPU_SEC"))
 						+ tt("Session"    , rs.getString("SESSION_ID"))
+						+ ttCode("Command", isStep ? null : commands.get(rs.getLong("CON_ID") + "|" + owner + "|" + jobName))
 						+ "</table>";
 
 					Map<String, Object> row = DbxTimelineRows.createRow(isStep ? jobKey + ":" + subName : jobKey, barText, COLOR_RUNNING, tooltip, startTs, new Timestamp(System.currentTimeMillis()));
@@ -470,9 +558,33 @@ extends DbxCentralPageTemplate
 			}
 		}
 
+		// All the runs of the jobs that are in the timeline, for the graph dialog (the jobs that did not run in the period are not needed)
+		Map<String, String> historyOfShownRows = new LinkedHashMap<>();
+		for (Map<String, Object> row : rows)
+		{
+			String key = (String) row.get("key");
+			if (history.containsKey(key))
+				historyOfShownRows.put(key, history.get(key).toString());
+		}
+
 		writer.println("<script>");
 		writer.println("    // One bar for each run, see /scripts/dbxtune/js/dbxTimeline.js");
 		writer.println("    const _dbxTimelineRows = " + toJs(rows) + ";");
+		writer.println();
+		writer.println("    // All the runs in the log, per row of the timeline: for the dialog with the graph (from SqlServerJobScheduler.createStaticHtmlAndJavaScriptContent)");
+		writer.println("    const _oraJobHistory = " + toJs(historyOfShownRows) + ";");
+		writer.println();
+		writer.println("    // Extra item in the click menu: all the runs of the job (or of the step of a chain) as a graph");
+		writer.println("    function oraJobTimelineMenuItems(row, ctx)");
+		writer.println("    {");
+		writer.println("        var hist = _oraJobHistory[row.key];");
+		writer.println("        if ( ! hist )");
+		writer.println("            return [];");
+		writer.println("        return [{");
+		writer.println("            text:   'Show historical executions graph',");
+		writer.println("            action: function() { openTimeLineChartDialog_byTsStr(hist, row.key, row.startTs); }");
+		writer.println("        }];");
+		writer.println("    }");
 		writer.println();
 		writer.println("    // createLater: it says \"Drawing N bars...\" while it draws (many thousands of bars take some seconds)");
 		writer.println("    DbxTimeline.createLater('timeline', _dbxTimelineRows, {");
@@ -492,7 +604,8 @@ extends DbxCentralPageTemplate
 		writer.println("        ],");
 		writer.println("        labelHeader:   'Job (" + jobKeys.size() + "), runs: " + rows.size() + (failedCount > 0 ? ", not succeeded: " + failedCount : "") + "',");
 		writer.println("        expandText:    'Show the steps of the chain',");
-		writer.println("        collapseText:  'Hide the steps of the chain'");
+		writer.println("        collapseText:  'Hide the steps of the chain',");
+		writer.println("        menuItems:     oraJobTimelineMenuItems");
 		writer.println("    });");
 		if (rows.isEmpty())
 			writer.println("    document.getElementById('dbx-job-scheduler-no-data').style.display = 'block';");
