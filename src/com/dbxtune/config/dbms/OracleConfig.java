@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -94,6 +95,13 @@ extends DbmsConfigAbstract
 	public static final String UPDATE_COMMENT = "UpdateComment";
 	public static final String CONFIG_ID      = "ConfigId";
 
+	/** Parameters that the installer (DBCA) must set: they are never NonDefault */
+	public static final Set<String> INSTALLATION_PARAMETERS = Set.of(
+		"db_name", "db_unique_name", "db_domain", "instance_name", "service_names",
+		"control_files", "compatible", "diagnostic_dest", "audit_file_dest",
+		"dispatchers", "local_listener", "undo_tablespace", "enable_pluggable_database",
+		"db_recovery_file_dest", "db_recovery_file_dest_size", "log_archive_dest_1");
+
 	public static final String SECTION_BASIC      = "Basic";
 	public static final String SECTION_ADVANCED   = "Advanced";
 	public static final String SECTION_DEPRECATED = "Deprecated";
@@ -110,7 +118,7 @@ extends DbmsConfigAbstract
 	{
 	//   ColumnName,      Editable, JTable type,   JDBC Type      JDBC Length JDBC Scale  Tooltip
 	//   ---------------- --------- -------------- -------------- ----------- ----------  --------------------------------------------
-		{NON_DEFAULT,     false,    Boolean.class, Types.BOOLEAN, -1,         -1,         "<html>The parameter has been set: it was in the spfile (or pfile) when the instance started, or it has been changed with ALTER SYSTEM after that.<br>Note: a parameter that is set to the same value as the default is also 'set'. <br><b>Source</b>: V$SYSTEM_PARAMETER: ISDEFAULT = 'FALSE' or ISMODIFIED is not 'FALSE'</html>"},
+		{NON_DEFAULT,     false,    Boolean.class, Types.BOOLEAN, -1,         -1,         "<html>The parameter has been set to another value than the default: it was in the spfile (or pfile) when the instance started, or it has been changed with ALTER SYSTEM after that.<br>Not NonDefault:<ul><li>a parameter that is set to the same value as 'DefaultValue' (Oracle 12.2 and above).</li><li>the parameters that the installer must set: " + String.join(", ", new TreeSet<>(INSTALLATION_PARAMETERS)) + "</li></ul><b>Source</b>: V$SYSTEM_PARAMETER: ISDEFAULT = 'FALSE' or ISMODIFIED is not 'FALSE', and VALUE is not DEFAULT_VALUE</html>"},
 		{SECTION_NAME,    true,     String .class, Types.VARCHAR, 30,         -1,         "<html>Oracle has no groups for the parameters, so this is: <ul><li><b>Basic</b> - the about 30 parameters that Oracle says you normally need to look at.</li><li><b>Advanced</b> - all the others.</li><li><b>Deprecated</b> - still works, but should not be used any more.</li><li><b>Hidden</b> - the name starts with an underscore. Only shown if it has been set. Only set them when Oracle Support tells you to.</li></ul></html>"},
 		{CONFIG_NAME,     true,     String .class, Types.VARCHAR, 80,         -1,         "Name of the initialization parameter."},
 		{CONFIG_VALUE,    true,     String .class, Types.VARCHAR, 4000,       -1,         "<html>The value the instance is running with.<br>A size is in bytes here, see 'DisplayValue' for the short form.<br>A parameter that is a list (like control_files) has the values separated with a comma.</html>"},
@@ -158,6 +166,7 @@ extends DbmsConfigAbstract
 		@Override public boolean isNonDefault()   { return isNonDefault; }
 
 		public boolean isNonDefault;
+		public boolean isSet;           // in the spfile or changed with ALTER SYSTEM, even if it's the default value (not stored, only for the checks)
 		public String  sectionName;
 		public String  configName;
 		public String  configValue;
@@ -310,14 +319,14 @@ extends DbmsConfigAbstract
 						+ "      ,p.DEFAULT_VALUE \n"
 						+ "from V$SYSTEM_PARAMETER p \n"
 						+ "where p.CON_ID in (0, sys_context('userenv', 'con_id')) \n"
-						+ "order by p.NAME",
+						+ "order by p.NAME, p.CON_ID desc", // the row of our own PDB first: it wins over CON_ID 0
 					// 12.1: containers
 					sqlColumns
 						+ "      ,p.ISPDB_MODIFIABLE \n"
 						+ "      ,CAST(NULL as VARCHAR2(255)) as DEFAULT_VALUE \n"
 						+ "from V$SYSTEM_PARAMETER p \n"
 						+ "where p.CON_ID in (0, sys_context('userenv', 'con_id')) \n"
-						+ "order by p.NAME",
+						+ "order by p.NAME, p.CON_ID desc", // the row of our own PDB first: it wins over CON_ID 0
 					// 11.2
 					sqlColumns
 						+ "      ,'FALSE' as ISPDB_MODIFIABLE \n"
@@ -372,7 +381,24 @@ extends DbmsConfigAbstract
 
 					// ISDEFAULT only says if it was in the parameter file when the instance STARTED: a change with ALTER SYSTEM after that leaves it at TRUE
 					// (seen on 23: 'alter system set plsql_debug = TRUE scope=memory' gave ISDEFAULT=TRUE, ISMODIFIED=MODIFIED)
-					entry.isNonDefault = ! isDefault || (entry.modified != null && ! "FALSE".equals(entry.modified));
+					entry.isSet        = ! isDefault || (entry.modified != null && ! "FALSE".equals(entry.modified));
+					entry.isNonDefault = entry.isSet;
+
+					// But a parameter that is set to the same value as the default is NOT NonDefault (the installer writes for example compatible, db_block_size and nls_language to the spfile)
+					// DEFAULT_VALUE is only there in 12.2 and above, and an empty value is the same as the default 'NONE'
+					if (entry.isNonDefault && entry.defaultValue != null)
+					{
+						String value        = entry.configValue  == null ? "" : entry.configValue .trim();
+						String displayValue = entry.displayValue == null ? "" : entry.displayValue.trim();
+						String defaultValue = entry.defaultValue.trim();
+
+						if (value.equalsIgnoreCase(defaultValue) || displayValue.equalsIgnoreCase(defaultValue) || (value.isEmpty() && "NONE".equalsIgnoreCase(defaultValue)))
+							entry.isNonDefault = false;
+					}
+
+					// The installer must set these (the name and files of the database etc), so they are not something a DBA has changed
+					if (INSTALLATION_PARAMETERS.contains(entry.configName))
+						entry.isNonDefault = false;
 
 					if      (type == 1) entry.dataType = "Boolean";
 					else if (type == 2) entry.dataType = "String";
@@ -638,8 +664,8 @@ extends DbmsConfigAbstract
 		List<String> pending       = new ArrayList<>();
 		for (OracleConfigEntry entry : _configList)
 		{
-			if (entry.isDeprecated && entry.isNonDefault)                   deprecatedSet.add(entry.configName);
-			if (entry.configName.startsWith("_") && entry.isNonDefault)     hiddenSet    .add(entry.configName);
+			if (entry.isDeprecated && entry.isSet)                          deprecatedSet.add(entry.configName);
+			if (entry.configName.startsWith("_") && entry.isSet)            hiddenSet    .add(entry.configName);
 			if (entry.isPending)                                            pending      .add(entry.configName + " (now: " + entry.configValue + ", spfile: " + entry.spfileValue + ")");
 		}
 
