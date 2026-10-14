@@ -48,6 +48,7 @@ import com.dbxtune.mgt.controllers.TableInfoServlet;
 import com.dbxtune.mgt.controllers.RecordingDatabasesServlet;
 import com.dbxtune.mgt.controllers.DeadlockServlet;
 import com.dbxtune.mgt.controllers.JobSchedulerServlet;
+import com.dbxtune.mgt.controllers.LogLevelServlet;
 import com.dbxtune.mgt.controllers.NoGuiConfigGetServlet;
 import com.dbxtune.mgt.controllers.NoGuiConfigSetServlet;
 import com.dbxtune.mgt.controllers.NoGuiRefreshServlet;
@@ -267,6 +268,7 @@ public class NoGuiManagementServer
 				context.addServlet(new ServletHolder(new RecordingDatabasesServlet()), "/mgt/recording-databases");
 				context.addServlet(new ServletHolder(new DeadlockServlet())          , "/mgt/deadlock");
 				context.addServlet(new ServletHolder(new JobSchedulerServlet())      , "/mgt/job-scheduler");
+				context.addServlet(new ServletHolder(new LogLevelServlet())          , "/mgt/log-level");
 
 				// I guess the URL would be '/api/mgt/reports/...' Can we change this to '/reports' with another context (or should we do it in another way???)
 				// AND: I guess the below implementations will just "stream" over HTML as the "end-result", or how should we do it ???
@@ -337,6 +339,7 @@ public class NoGuiManagementServer
 				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/recording-databases");
 				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/deadlock");
 				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/job-scheduler");
+				_logger.info("Adding servlet: http://" + listnerAddress + ":" + port + "/api/mgt/log-level");
 
 				// Get out of the "start on port number" loop
 				break;

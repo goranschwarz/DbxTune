@@ -69,6 +69,28 @@
 
     .tooltip-inner { max-width: 1000px; }
 
+    /* A tooltip with a longer text (data-bs-custom-class='dbx-tooltip-text'): normal width, and not the 1000px above (which is for the tables) */
+    .dbx-tooltip-text .tooltip-inner {
+      max-width: 340px;
+      text-align: left;
+    }
+
+    /* A table in a tooltip (the server buttons): use the colors of the tooltip, instead of a white table in a black tooltip */
+    .tooltip-inner .table {
+      --bs-table-bg: transparent;
+      --bs-table-color: var(--bs-tooltip-color);
+      margin-bottom: 0;
+      text-align: left;
+    }
+    /* Dark mode: the tooltip is then white with dark text, but dbxcentral.css gives every second table row a dark background (dark text on a dark row) */
+    [data-theme="dark"] .tooltip-inner tr:nth-child(even) {
+      background-color: transparent;
+    }
+    /* A tooltip with a table is not see-through (the page text behind it makes the table hard to read) */
+    .tooltip:has(.table) {
+      --bs-tooltip-opacity: 1;
+    }
+
     .jumbotron{ margin-top:-30px; }
 
 	/* selectize selected items */
@@ -81,6 +103,30 @@
 	.selectize-dropdown-content{
 		max-height: 100% !important;
 		height: 100% !important;
+	}
+
+	/* Table Of Contents: the short name (the link) has a fixed width, so the long names starts at the same position */
+	#dbx-toc-list a {
+		flex: 0 0 11em;
+	}
+
+	/* Foldable sections: a click on the card header folds/unfolds the card, a folded card only shows it's header (see: dbxFoldCard) */
+	.card-header.dbx-foldable {
+		cursor: pointer;
+	}
+	.dbx-fold-icon {
+		font-size: .75em;
+		transition: transform .15s;
+	}
+	.dbx-folded > .card-body {
+		display: none;
+	}
+	.dbx-folded > .card-header {
+		border-bottom: 0;
+		border-radius: var(--bs-card-inner-border-radius);
+	}
+	.dbx-folded > .card-header .dbx-fold-icon {
+		transform: rotate(-90deg);
 	}
 
 	/* extra small button */
@@ -159,9 +205,28 @@
       <p></p>
 -->
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <!-- Table Of Contents: the links are created from the "cards" below (see: "Table Of Contents" in the script) -->
+      <!--                    a card's short name in the list is it's attribute: data-toc='short name', the long name is the card header -->
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <div id='dbx-toc' class='card border-dark mb-3'>
+        <h5 class='card-header'>
+          Table Of Contents
+          <!-- fold/unfold all the sections below (a click on a section header folds/unfolds that section) -->
+          <span class='float-end small fw-normal'>
+            <a href='#' onclick='$(".jumbotron > .card").not("#dbx-toc").each(function() { dbxFoldCard($(this), false); }); return false;'>Expand all</a>
+            | <a href='#' onclick='$(".jumbotron > .card").not("#dbx-toc").each(function() { dbxFoldCard($(this), true); }); return false;'>Collapse all</a>
+          </span>
+        </h5>
+        <div class='card-body'>
+          <!-- a normal bullet list, one entry for each card: short name (the link) and the long name (the card header) -->
+          <ul id='dbx-toc-list' class='mb-0'></ul>
+        </div>  <!-- end: card-body -->
+      </div>  <!-- end: card -->
+
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
       <!-- DBMS Server Admin -->
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
-      <div id='server-admin' class='card border-dark mb-3'>
+      <div id='server-admin' class='card border-dark mb-3' data-toc='DBMS Servers'>
         <h5 class='card-header'>DBMS Server Administration</h5>
         <div class='card-body'>
 
@@ -193,7 +258,7 @@
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
       <!-- Graph Profiles -->
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
-      <div id='graph-profiles' class='card border-dark mb-3'>
+      <div id='graph-profiles' class='card border-dark mb-3' data-toc='Graph Profiles'>
         <h5 class='card-header'>Graph Profiles - What Graphs should be visible</h5>
         <div class='card-body'>
           <b>Change</b> any of System Profiles
@@ -234,7 +299,7 @@
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
       <!-- Counter Collector - REFRESH -->
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
-      <div id='dbx-cc-refresh' class='card border-dark mb-3'>
+      <div id='dbx-cc-refresh' class='card border-dark mb-3' data-toc='Collector Refresh'>
         <h5 class='card-header'>Counter Collector - Refresh (send a message the collector to go to work and refresh counters)</h5>
         <div class='card-body'>
 
@@ -249,7 +314,7 @@
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
       <!-- Counter Collector - RESTART -->
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
-      <div id='dbx-cc-restart' class='card border-dark mb-3'>
+      <div id='dbx-cc-restart' class='card border-dark mb-3' data-toc='Collector Restart'>
         <h5 class='card-header'>Counter Collector - Restart (send a message the collector to restart)</h5>
         <div class='card-body'>
 
@@ -262,9 +327,68 @@
       </div>  <!-- end: card -->
 
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <!-- Log Levels (Log4j) - DbxCentral and Collectors -->
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <div id='dbx-loglevel' class='card border-dark mb-3' data-toc='Log Levels'>
+        <h5 class='card-header'>Log Levels (Log4j) - DbxCentral and Counter Collectors (write DEBUG or TRACE messages to the log files)</h5>
+        <div class='card-body'>
+
+          <b>Show/Set</b> loggers and log levels for any of the below servers
+          <div id="dbx-loglevel-server-list">
+              <button type="button" class="btn btn-sm btn-primary mb-2 me-2" onclick='dbxLogLevelShow("DbxCentral")'>DbxCentral</button>
+          </div>
+
+          <div id="dbx-loglevel-view" style="display:none;">
+            <hr>
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+              <b id="dbx-loglevel-srvname"></b>
+              <button type="button" class="btn btn-sm btn-primary" onclick="dbxLogLevelLoad()">
+                <i class="fa fa-refresh"></i> Refresh
+              </button>
+              <input type="text" id="dbx-loglevel-filter" class="form-control form-control-sm" style="width:320px;"
+                     placeholder="Filter: regex, or 'where level = DEBUG'" oninput="dbxLogLevelRender()">
+              <div class="form-check mb-0">
+                <!-- NOT checked by default = show all loggers. autocomplete="off": so the browser do not restore a checked box when the page is reloaded -->
+                <input class="form-check-input" type="checkbox" id="dbx-loglevel-only-nondefault" autocomplete="off" onchange="dbxLogLevelRender()">
+                <label class="form-check-label" for="dbx-loglevel-only-nondefault" title="Only show ROOT and the loggers/packages that have their own level, or a saved level">Only Non-Default</label>
+              </div>
+              <div class="form-check mb-0">
+                <!-- checked by default = hide the loggers of other libraries (Jetty, H2, ...) -->
+                <input class="form-check-input" type="checkbox" id="dbx-loglevel-only-dbxtune" checked autocomplete="off" onchange="dbxLogLevelRender()">
+                <label class="form-check-label" for="dbx-loglevel-only-dbxtune" title="Only show ROOT and the DbxTune classes/packages (the names that starts with: com.dbxtune). Uncheck to also see the loggers of other libraries, like Jetty and H2">Only DbxTune Classes</label>
+              </div>
+              <span id="dbx-loglevel-count" class="small text-muted"></span>
+              <span id="dbx-loglevel-filter-err" class="text-danger small"></span>
+            </div>
+            <div id="dbx-loglevel-info" class="small text-muted mb-1"></div>
+            <div class="small text-muted mb-1">
+              <b>Non-Default</b> = has its own level (set here, saved, or set by the program itself). Everything else has the default level, which is inherited from its package, and in the end from <code>ROOT</code>.
+              <br>
+              <b>Saved</b> = the level that is used after a restart. <span id="dbx-loglevel-savefile"></span>
+            </div>
+            <div id="dbx-loglevel-msg" class="mb-2"></div>
+            <div style="width:100%; max-height:60vh; overflow:auto;">
+            <table class="table table-sm table-bordered table-hover" id="dbx-loglevel-table" style="display:none; width:100%; white-space:nowrap;">
+              <thead class="table-light">
+                <tr>
+                  <th>Logger (click a row to change it)</th>
+                  <th>Level</th>
+                  <th title="Yes = has its own level. Otherwise it has the default level, which is inherited from the parent package, and in the end from ROOT">Non-Default</th>
+                  <th title="The level that is saved, which will be used after a restart">Saved</th>
+                </tr>
+              </thead>
+              <tbody id="dbx-loglevel-tbody"></tbody>
+            </table>
+            </div>
+          </div>
+
+        </div>  <!-- end: card-body -->
+      </div>  <!-- end: card -->
+
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
       <!-- DBMS Alarm Admin -->
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
-      <div id='alarm-admin' class='card border-dark mb-3'>
+      <div id='alarm-admin' class='card border-dark mb-3' data-toc='Alarms'>
         <h5 class='card-header'>Alarm Administration (at DbxCentral)</h5>
         <div class='card-body'>
 
@@ -279,7 +403,7 @@
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
       <!-- DBX Central Admin -->
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
-      <div id='dbxc-admin' class='card border-dark mb-3'>
+      <div id='dbxc-admin' class='card border-dark mb-3' data-toc='DbxCentral'>
         <h5 class='card-header'>DbxCentral Administration</h5>
         <div class='card-body'>
           <b>Restart</b> DbxCentral
@@ -305,7 +429,7 @@
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
       <!-- DBX User(s) Admin -->
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
-      <div id='dbxc-user' class='card border-dark mb-3'>
+      <div id='dbxc-user' class='card border-dark mb-3' data-toc='Users'>
         <h5 class='card-header'>User Administration</h5>
         <div class='card-body'>
 
@@ -344,7 +468,7 @@
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
       <!-- Daily Summary Report - SKIP Entries -->
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
-      <div id='dbx-dsr-skip' class='card border-dark mb-3'>
+      <div id='dbx-dsr-skip' class='card border-dark mb-3' data-toc='DSR Skip Entries'>
         <h5 class='card-header'>Daily Summary Report - SKIP Entries (or exclude some SQL Statements from reports)</h5>
         <div class='card-body'>
 
@@ -363,7 +487,7 @@
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
       <!-- LLM Optimization Advice - Saved Requests -->
       <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
-      <div id='dbx-llm-log' class='card border-dark mb-3'>
+      <div id='dbx-llm-log' class='card border-dark mb-3' data-toc='LLM Advice Log'>
         <h5 class='card-header'>LLM Optimization Advice - Saved Requests</h5>
         <div class='card-body'>
 
@@ -656,12 +780,134 @@
 	</div>
 	<!-- END: DSR Daily Summary Report - SKIP Set dialog -->
 
+
+	<!-- Modal: Log Level - Set dialog -->
+	<div class='modal fade' id='dbx-loglevel-dialog' tabindex='-1' role='dialog' aria-labelledby='dbx-loglevel-dialog-title' aria-hidden='true'>
+		<div class='modal-dialog modal-dialog-centered modal-lg' role='document'>
+		<div class='modal-content'>
+			<div class='modal-header'>
+			<h5 class='modal-title' id='dbx-loglevel-dialog-title'>Set Log Level</h5>
+			<button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'>
+			</button>
+			</div>
+			<div class='modal-body'>
+				<div class='mb-3'>
+					<label for='dbx-loglevel-dlg-logger'>Logger: a class name, a package name (all classes in that package), or <code>ROOT</code> for everything</label>
+					<input  id='dbx-loglevel-dlg-logger' type='text' class='form-control' list='dbx-loglevel-dlg-logger-list' placeholder='Example: com.dbxtune.cm.ase.CmSummary' autocomplete='off' oninput='dbxLogLevelShowDefault()'>
+					<datalist id='dbx-loglevel-dlg-logger-list'></datalist>
+				</div>
+
+				<div class='mb-3'>
+					<label for='dbx-loglevel-dlg-level'>Level</label>
+					<div class='d-flex align-items-center gap-2'>
+						<select id='dbx-loglevel-dlg-level' class='form-select' style='width:auto;'>
+							<option value='TRACE'>TRACE</option>
+							<option value='DEBUG' selected>DEBUG</option>
+							<option value='INFO'>INFO</option>
+							<option value='WARN'>WARN</option>
+							<option value='ERROR'>ERROR</option>
+							<option value='FATAL'>FATAL</option>
+							<option value='OFF'>OFF</option>
+						</select>
+						<!-- "To Default" only selects the default level in the dropdown, nothing is sent until "Apply" or "Apply & Close" is pressed -->
+						<button type='button' class='btn btn-outline-secondary' id='dbx-loglevel-dlg-todefault' onclick='dbxLogLevelToDefault()' data-bs-toggle='tooltip' data-bs-trigger='hover' data-bs-placement='right' data-bs-custom-class='dbx-tooltip-text' title="Selects the default level for this logger in the Level list: the level it inherits from its package, and in the end from ROOT (normally INFO). Nothing is sent until you press 'Apply' or 'Apply & Close'. A logger that is set to its default level is not Non-Default any more, and with 'Save' selected its saved level is removed.">To Default</button>
+					</div>
+				</div>
+
+				<div class='mb-3'>
+					<label>Send it to the servers</label>
+					&emsp; <a href='#' onclick='$(".dbx-loglevel-srv-chk").prop("checked", true);  return false;'>All</a>
+					| <a href='#' onclick='$(".dbx-loglevel-srv-chk").prop("checked", false); return false;'>None</a>
+					<div id='dbx-loglevel-dlg-servers'>
+						<div class='form-check form-check-inline'>
+							<input class='form-check-input dbx-loglevel-srv-chk' type='checkbox' id='dbx-loglevel-srv-chk-dbxc' value='DbxCentral'>
+							<label class='form-check-label' for='dbx-loglevel-srv-chk-dbxc'>DbxCentral</label>
+						</div>
+					</div>
+				</div>
+
+				<div class='mb-3'>
+					<label>Save</label>
+					<div class='form-check'>
+						<input class='form-check-input' type='radio' name='dbx-loglevel-dlg-savetype' id='dbx-loglevel-dlg-save-mem' value='IN_MEMORY' checked>
+						<label class='form-check-label' for='dbx-loglevel-dlg-save-mem'>Only in-memory <small class='text-muted'>(used until the server is restarted)</small></label>
+					</div>
+					<div class='form-check'>
+						<input class='form-check-input' type='radio' name='dbx-loglevel-dlg-savetype' id='dbx-loglevel-dlg-save-file' value='THIS_SERVER'>
+						<label class='form-check-label' for='dbx-loglevel-dlg-save-file'>Save <small class='text-muted'>(also written to each server's "save" configuration file, so it is used after a restart)</small></label>
+					</div>
+				</div>
+
+				<div id='dbx-loglevel-dlg-result'></div>
+			</div>
+			<div class='modal-footer'>
+				<button type='button' class='btn btn-default' data-bs-dismiss='modal'>Close</button>
+				<button type='button' class='btn btn-success dbx-loglevel-dlg-apply' onclick='dbxLogLevelApply(false)'>Apply</button>
+				<button type='button' class='btn btn-success dbx-loglevel-dlg-apply' onclick='dbxLogLevelApply(true)' title='Closes the dialog if the level was set on ALL the selected servers, otherwise it stays open and shows what went wrong'>Apply &amp; Close</button>
+			</div>
+		</div>
+		</div>
+	</div>
+	<!-- END: Log Level - Set dialog -->
+
 <script>
   // Global variables
   var _graphDesc = [];
 
   // Hide spinner at start
   $('#dbx-server-restart-spinner').hide();
+
+  // Tooltips: Bootstrap 5 removes all HTML tags that are not in it's "allow list" from a tooltip, and table tags are not in that list.
+  // The tooltip for the server buttons is a table (see: get SERVERS), so without the below it's just an empty black dot.
+  var tooltipAllowList = bootstrap.Tooltip.Default.allowList;
+  tooltipAllowList.table = [];
+  tooltipAllowList.tbody = [];
+  tooltipAllowList.tr    = [];
+  tooltipAllowList.th    = ['colspan', 'nowrap'];
+  tooltipAllowList.td    = ['colspan', 'nowrap'];
+  tooltipAllowList.font  = ['color'];
+
+  // Table Of Contents: a bullet list with one entry for each "card" on the page, each entry has two parts
+  //  - short name: the link to the card, it's the card's attribute: data-toc='...' (or the card header if it has none)
+  //                it has a fixed width (see the CSS: #dbx-toc-list a), so the long names starts at the same position
+  //  - long name:  the card header
+  $('.jumbotron > .card').not('#dbx-toc').each(function() {
+    var header = $(this).children('.card-header').text();
+    var link   = $('<a>').attr('href', '#' + this.id).text( $(this).attr('data-toc') || header );
+    $('#dbx-toc-list').append( $('<li>').append( $('<div>').addClass('d-flex')
+        .append(link)
+        .append( $('<span>').addClass('text-muted').text(header) ) ) );
+  });
+
+  // Foldable sections: a click on a card header folds/unfolds the card (a folded card only shows it's header, see the CSS: .dbx-folded)
+  // It's remembered in the browser (localStorage: dbx-admin-folded-<card id>), so the page looks the same the next time
+  function dbxFoldCard(card, folded)
+  {
+    card.toggleClass('dbx-folded', folded);
+    try { localStorage.setItem('dbx-admin-folded-' + card.attr('id'), folded ? '1' : '0'); } catch(e) {}
+  }
+  $('.jumbotron > .card').not('#dbx-toc').each(function() {
+    var card = $(this);
+    card.children('.card-header')
+        .addClass('dbx-foldable')
+        .prepend('<i class="fa fa-chevron-down dbx-fold-icon me-2" title="Click on the header to fold/unfold this section"></i>')
+        .on('click', function() { dbxFoldCard(card, !card.hasClass('dbx-folded')); });
+
+    try { card.toggleClass('dbx-folded', localStorage.getItem('dbx-admin-folded-' + card.attr('id')) === '1'); } catch(e) {}
+  });
+
+  // A link in the Table Of Contents unfolds the card it goes to
+  $('#dbx-toc-list').on('click', 'a', function() { dbxFoldCard( $(this.getAttribute('href')), false ); });
+
+  // ... and so does a #card-id in the URL: when the page is opened, and when only the #card-id is changed
+  function dbxUnfoldCardInUrl()
+  {
+    var card = $( document.getElementById(location.hash.substring(1)) );
+    if (card.is('.jumbotron > .card'))
+      dbxFoldCard(card, false);
+  }
+  dbxUnfoldCardInUrl();
+  $(window).on('hashchange', dbxUnfoldCardInUrl);
 
   $('#dbx-confirm-delete-dialog').on('click', '.btn-ok', function(e) {
       var modalDiv = $(e.delegateTarget);
@@ -1489,6 +1735,53 @@
   }
 
   //-----------------------------------------------------------
+  // get SERVER "LAYOUT GROUPS": serverName -> group name
+  // The groups are in conf/SERVER_LIST (#FORMAT; GROUP; name), the same groups as on the main page
+  // Here they are only used to start a new line after each group, in the lists of server buttons (in: get SERVERS)
+  // async: false -- the groups has to be known when the server buttons are created
+  //-----------------------------------------------------------
+	var _srvLayoutGroup = {};
+	$.ajax(
+	{
+		url: "/api/server-layout",
+		type: 'get',
+		async: false,
+
+		success: function(data, status)
+		{
+			var jsonResp = JSON.parse(data);
+			for (var i=0; i<jsonResp.length; i++)
+			{
+				var group = jsonResp[i];
+				if (group.type !== "group" || !group.entries)
+					continue;
+
+				for (var j=0; j<group.entries.length; j++)
+				{
+					var entry = group.entries[j];
+					if (entry.type === "server")
+						_srvLayoutGroup[ entry.srvSession ? entry.srvSession.serverName : entry.text ] = group.text;
+				}
+			}
+		},
+		error: function(xhr, desc, err)
+		{
+			console.log(xhr);
+			console.log("Details: " + desc + "\nError: " + err);
+		}
+	}); // end: ajax call
+
+	// Returns '<br>' when a list of server buttons enters a new "layout group" (each list has it's own "last group")
+	var _srvLayoutLastGroup = {};
+	function newLineOnNewLayoutGroup(listName, serverName)
+	{
+		var group   = _srvLayoutGroup[serverName] || '';
+		var newLine = (_srvLayoutLastGroup.hasOwnProperty(listName) && _srvLayoutLastGroup[listName] !== group) ? '<br>' : '';
+		_srvLayoutLastGroup[listName] = group;
+		return newLine;
+	}
+
+  //-----------------------------------------------------------
   // get SERVERS
   //-----------------------------------------------------------
 	$.ajax(
@@ -1511,6 +1804,13 @@
 			var htmlRefreshCc = "";
 			var htmlRestartCc = "";
 			var htmlClearAlarm = "";
+			var htmlLogLevel    = "";
+			var htmlLogLevelChk = "";
+
+			// The Log Level lists already has "DbxCentral" (which is not in any layout group), so the first group starts on a new line
+			_srvLayoutLastGroup['logLevel']    = '';
+			_srvLayoutLastGroup['logLevelChk'] = '';
+
 			for (var i=0; i<jsonResp.length; i++)
 			{
 				var entry = jsonResp[i];
@@ -1540,16 +1840,20 @@
 				var btnClass="btn-danger";
 				var dbxButtonImage="dbx-button-image dbx-button-"+entry.productString.toLowerCase();
 
-				htmlRemove  += '<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-danger '+dbxButtonImage+'  mb-2 me-2" data-record-id="'+entry.serverName+'" data-record-title="'+entry.serverName+'" data-bs-toggle="modal" data-bs-target="#dbx-confirm-delete-dialog">'+entry.serverName+'</button></span>';
+				htmlRemove  += newLineOnNewLayoutGroup('remove', entry.serverName) + '<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-danger '+dbxButtonImage+'  mb-2 me-2" data-record-id="'+entry.serverName+'" data-record-title="'+entry.serverName+'" data-bs-toggle="modal" data-bs-target="#dbx-confirm-delete-dialog">'+entry.serverName+'</button></span>';
 				if ((parseInt(entry.status) & 1) === 1) // 1=DISABLED
-					htmlEnable  += '<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 me-2" onclick=\'setServerStatus("enable",  "'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
+					htmlEnable  += newLineOnNewLayoutGroup('enable', entry.serverName) + '<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 me-2" onclick=\'setServerStatus("enable",  "'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
 				else
-					htmlDisable += '<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 me-2" onclick=\'setServerStatus("disable", "'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
+					htmlDisable += newLineOnNewLayoutGroup('disable', entry.serverName) + '<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 me-2" onclick=\'setServerStatus("disable", "'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
 
-				htmlRefreshCc   += '<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 me-2" onclick=\'refreshCc("'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
-				htmlRestartCc   += '<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 me-2" onclick=\'restartCc("'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
+				htmlRefreshCc   += newLineOnNewLayoutGroup('refreshCc', entry.serverName) + '<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 me-2" onclick=\'refreshCc("'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
+				htmlRestartCc   += newLineOnNewLayoutGroup('restartCc', entry.serverName) + '<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 me-2" onclick=\'restartCc("'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
 
-				htmlClearAlarm  += '<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 me-2" onclick=\'clearActiveAlarms("'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
+				htmlClearAlarm  += newLineOnNewLayoutGroup('clearAlarm', entry.serverName) + '<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 me-2" onclick=\'clearActiveAlarms("'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
+
+				// Log Levels: one "show" button, and one check box in the "Set Log Level" dialog (DbxCentral is already there)
+				htmlLogLevel    += newLineOnNewLayoutGroup('logLevel', entry.serverName) + '<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 me-2" onclick=\'dbxLogLevelShow("'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
+				htmlLogLevelChk += newLineOnNewLayoutGroup('logLevelChk', entry.serverName) + '<div class="form-check form-check-inline"><input class="form-check-input dbx-loglevel-srv-chk" type="checkbox" id="dbx-loglevel-srv-chk-'+i+'" value="'+entry.serverName+'"><label class="form-check-label" for="dbx-loglevel-srv-chk-'+i+'">'+entry.serverName+'</label></div>';
 			}
 			if (htmlRemove  === "") htmlRemove  = '<button type="button" class="btn btn-sm btn-primary mb-2 me-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
 			if (htmlDisable === "") htmlDisable = '<button type="button" class="btn btn-sm btn-primary mb-2 me-2">No Servers Found</button>';
@@ -1563,6 +1867,9 @@
 			$('#dbx-cc-restart-server-list').html(htmlRestartCc);
 
 			$('#dbx-alarm-clear-server-list').html(htmlClearAlarm);
+
+			$('#dbx-loglevel-server-list').append(htmlLogLevel);
+			$('#dbx-loglevel-dlg-servers').append(htmlLogLevelChk);
 
 			// Enable bootstrap tooltip...
 			$('[data-bs-toggle="tooltip"]').tooltip();
@@ -2395,6 +2702,242 @@
 	}
 
 	dbxLoadLlmLog();
+
+	//-----------------------------------------------------------
+	// Log Levels (Log4j) - DbxCentral and Collectors (/admin/log-level, see LogLevelAdminServlet.java)
+	//-----------------------------------------------------------
+	var _dbxLogLevelSrv     = '';  // the server we show loggers for, '' = none
+	var _dbxLogLevelLoggers = [];  // [{name, level, nonDefault, saved}, ...] for that server
+	var DBX_LOGLEVEL_COLS   = ['logger', 'level', 'nonDefault', 'saved'];
+
+	/** Show the loggers for a server (the buttons in the card) */
+	function dbxLogLevelShow(srvName)
+	{
+		_dbxLogLevelSrv = srvName;
+		$('#dbx-loglevel-srvname').text(srvName);
+		$('#dbx-loglevel-view').show();
+		dbxLogLevelLoad();
+	}
+
+	/** Get the loggers for the server we look at, and show them. msgHtml (optional): a message to show above the table */
+	function dbxLogLevelLoad(msgHtml)
+	{
+		if (_dbxLogLevelSrv === '')
+			return;
+
+		var srvName = _dbxLogLevelSrv;
+		$.ajax({
+			url:      '/admin/log-level',
+			data:     { srv: srvName },
+			dataType: 'json',
+			success: function(data)
+			{
+				if (srvName !== _dbxLogLevelSrv) // another server was clicked while we waited
+					return;
+
+				_dbxLogLevelLoggers = data.loggers || [];
+
+				// Links (in "tail" mode) to the log file and the console file (stdout, the start scripts writes it to: <logname>.console)
+				var logFile     = (data.logFile || '').replace(/\\/g, '/').split('/').pop();
+				var consoleFile = logFile.replace(/\.log$/, '') + '.console';
+				var tailLink    = function(file) { return '<a href="/log?name=' + encodeURIComponent(file) + '&tail=5000" target="_blank">' + escHtml(file) + '</a>'; };
+				$('#dbx-loglevel-info').html(
+					escHtml(data.appName)
+					+ ', log file: '     + (logFile ? tailLink(logFile)     : '-unknown-')
+					+ ', console file: ' + (logFile ? tailLink(consoleFile) : '-unknown-'));
+
+				// Where the saved levels are stored, is shown after the explanation of "Saved"
+				$('#dbx-loglevel-savefile').html(data.saveFile
+					? 'Saved levels are stored in: <code>' + escHtml(data.saveFile) + '</code>'
+					: 'Levels can not be saved for this server.');
+				$('#dbx-loglevel-msg').html(msgHtml || '');
+				dbxLogLevelRender();
+			},
+			error: function(xhr)
+			{
+				if (srvName !== _dbxLogLevelSrv)
+					return;
+
+				_dbxLogLevelLoggers = [];
+				var msg = (xhr.responseJSON && xhr.responseJSON.message) || ('HTTP ' + xhr.status);
+				$('#dbx-loglevel-info').html('');
+				$('#dbx-loglevel-savefile').html('');
+				dbxShowMsg('dbx-loglevel-msg', 'Could not get the log levels for ' + escHtml(srvName) + ': ' + escHtml(msg), true);
+				dbxLogLevelRender();
+			}
+		});
+	}
+
+	function dbxLogLevelRender()
+	{
+		var onlyNonDefault = $('#dbx-loglevel-only-nondefault').is(':checked');
+		var onlyDbxTune    = $('#dbx-loglevel-only-dbxtune').is(':checked');
+
+		// rows as arrays, in DBX_LOGLEVEL_COLS order, so the shared applyRowFilter() can be used (regex or 'where ...')
+		var rows = [];
+		_dbxLogLevelLoggers.forEach(function(e) {
+			if (onlyNonDefault && !e.nonDefault && !e.saved && e.name !== 'ROOT')
+				return;
+			if (onlyDbxTune && e.name.indexOf('com.dbxtune') !== 0 && e.name !== 'ROOT')
+				return;
+			rows.push([e.name, e.level, e.nonDefault ? 'Yes' : '', e.saved]);
+		});
+		var res = applyRowFilter(rows, DBX_LOGLEVEL_COLS, $('#dbx-loglevel-filter').val());
+		$('#dbx-loglevel-filter-err').text(res.filterError);
+
+		var html = '';
+		res.filteredRows.forEach(function(r)
+		{
+			html += '<tr style="cursor:pointer;" data-logger="' + escHtml(r[0]) + '"' + (r[2] ? ' class="table-warning"' : '') + '>'
+				+ '<td>' + escHtml(r[0]) + '</td>'
+				+ '<td>' + escHtml(r[1]) + '</td>'
+				+ '<td>' + escHtml(r[2]) + '</td>'
+				+ '<td>' + escHtml(r[3]) + '</td>'
+				+ '</tr>';
+		});
+		$('#dbx-loglevel-tbody').html(html);
+		$('#dbx-loglevel-table').toggle(res.filteredRows.length > 0);
+		$('#dbx-loglevel-count').text(_dbxLogLevelLoggers.length === 0 ? '' : 'Showing ' + res.filteredRows.length + ' of ' + _dbxLogLevelLoggers.length + ' loggers');
+	}
+
+	// Click on a row: open the dialog for that logger
+	$('#dbx-loglevel-tbody').on('click', 'tr', function() {
+		dbxLogLevelOpenDialog($(this).attr('data-logger'));
+	});
+
+	/** Open the "Set Log Level" dialog, with the server we currently look at checked */
+	function dbxLogLevelOpenDialog(loggerName)
+	{
+		$('#dbx-loglevel-dlg-logger').val(loggerName);
+		$('#dbx-loglevel-dlg-level').val('DEBUG');
+		$('#dbx-loglevel-dlg-save-mem').prop('checked', true);
+		$('#dbx-loglevel-dlg-result').html('');
+		dbxLogLevelShowDefault();
+
+		$('.dbx-loglevel-srv-chk').each(function() {
+			$(this).prop('checked', $(this).val() === _dbxLogLevelSrv);
+		});
+
+		// Suggestions: the loggers of the server we currently look at
+		var options = '';
+		_dbxLogLevelLoggers.forEach(function(e) { options += '<option value="' + escHtml(e.name) + '">'; });
+		$('#dbx-loglevel-dlg-logger-list').html(options);
+
+		$('#dbx-loglevel-dialog').modal('show');
+	}
+
+	/**
+	 * The default level for the logger in the dialog: the level of the closest package that has it's own level, otherwise the level of ROOT.
+	 * For ROOT itself it's INFO. It's taken from the loggers of the server we look at (the table behind the dialog)
+	 */
+	function dbxLogLevelDefault()
+	{
+		var logger = $('#dbx-loglevel-dlg-logger').val().trim();
+		if (logger.toUpperCase() === 'ROOT')
+			return 'INFO';
+
+		var byName = {};
+		_dbxLogLevelLoggers.forEach(function(e) { byName[e.name] = e; });
+
+		for (var parent = logger; parent.lastIndexOf('.') > 0; )
+		{
+			parent = parent.substring(0, parent.lastIndexOf('.'));
+			if (byName[parent] && byName[parent].nonDefault)
+				return byName[parent].level;
+		}
+		return byName['ROOT'] ? byName['ROOT'].level : 'INFO';
+	}
+
+	/** Show the default level on the button: "To Default (INFO)". Called when the dialog is opened, and when the logger name is changed */
+	function dbxLogLevelShowDefault()
+	{
+		$('#dbx-loglevel-dlg-todefault').text('To Default (' + dbxLogLevelDefault() + ')');
+	}
+
+	/**
+	 * The "To Default (level)" button in the dialog: select the default level for the logger in the "Level" dropdown.
+	 * Nothing is sent, the user has to press "Apply" or "Apply & Close".
+	 * (when a logger is set to the level it inherits anyway, the server removes it's own level, so it's not "Non-Default" any more)
+	 */
+	function dbxLogLevelToDefault()
+	{
+		var level = dbxLogLevelDefault();
+
+		// The dropdown only has the normal levels, add the level if it's something else (like ALL)
+		if ($('#dbx-loglevel-dlg-level option[value="' + level + '"]').length === 0)
+			$('#dbx-loglevel-dlg-level').append( $('<option>').val(level).text(level) );
+
+		$('#dbx-loglevel-dlg-level').val(level);
+		$('#dbx-loglevel-dlg-result').html('<div class="small text-muted">Level <b>' + escHtml(level) + '</b> is the default for this logger on ' + escHtml(_dbxLogLevelSrv) + '. Press <b>Apply</b> or <b>Apply &amp; Close</b> to set it.</div>');
+	}
+
+	/**
+	 * The "Apply" and "Apply & Close" buttons in the dialog: send the change to the selected servers (DbxCentral sends it on to the Collectors)
+	 * closeOnSuccess: true = close the dialog, but ONLY if the level was set on ALL the selected servers (the result is then shown above the table)
+	 */
+	function dbxLogLevelApply(closeOnSuccess)
+	{
+		var logger   = $('#dbx-loglevel-dlg-logger').val().trim();
+		var level    = $('#dbx-loglevel-dlg-level').val();
+		var saveType = $('input[name="dbx-loglevel-dlg-savetype"]:checked').val();
+		var servers  = [];
+		$('.dbx-loglevel-srv-chk:checked').each(function() { servers.push($(this).val()); });
+
+		if (logger === '')        { dbxShowMsg('dbx-loglevel-dlg-result', 'Please specify a logger: a class name, a package name or ROOT.', true); return; }
+		if (servers.length === 0) { dbxShowMsg('dbx-loglevel-dlg-result', 'Please select at least one server.', true); return; }
+
+		$('.dbx-loglevel-dlg-apply').prop('disabled', true);
+		$('#dbx-loglevel-dlg-result').html('Sending to ' + servers.length + ' server(s) <i class="fa fa-spinner fa-spin"></i>');
+
+		$.ajax({
+			url:         '/admin/log-level?srv=' + encodeURIComponent(servers.join(',')),
+			type:        'POST',
+			contentType: 'application/json',
+			data:        JSON.stringify({ saveType: saveType, changes: [ { logger: logger, level: level } ] }),
+			dataType:    'json',
+			success: function(data)
+			{
+				// one line for each server: {"srvName": {status:"success", changed:[{logger, from, to}]} | {status:"FAILED", error, message}}
+				var html  = '';
+				var allOk = true;
+				servers.forEach(function(srvName)
+				{
+					var r  = data[srvName] || { status: 'FAILED', message: 'No answer for this server.' };
+					var ok = r.status === 'success';
+					if (!ok)
+						allOk = false;
+					var txt;
+					if (ok)
+						txt = (r.changed || []).map(function(c) { return c.logger + ': ' + c.from + ' -> ' + c.to; }).join(', ')
+							+ (r.saveType === 'THIS_SERVER' ? ' (saved)' : ' (in-memory)');
+					else
+						txt = r.message || r.error || 'FAILED';
+
+					html += '<div class="small ' + (ok ? 'text-success' : 'text-danger') + '"><b>' + escHtml(srvName) + ':</b> ' + escHtml(txt) + '</div>';
+				});
+				$('.dbx-loglevel-dlg-apply').prop('disabled', false);
+
+				if (closeOnSuccess && allOk)
+				{
+					// Close, refresh the table and show the result above it
+					$('#dbx-loglevel-dialog').modal('hide');
+					dbxLogLevelLoad(html);
+				}
+				else
+				{
+					// Stay open (always if something failed), show the result in the dialog and refresh the table behind it
+					$('#dbx-loglevel-dlg-result').html(html);
+					dbxLogLevelLoad();
+				}
+			},
+			error: function(xhr)
+			{
+				var msg = (xhr.responseJSON && xhr.responseJSON.message) || ('HTTP ' + xhr.status + (xhr.status === 200 ? ' (not a JSON answer, are you still logged in as admin?)' : ''));
+				dbxShowMsg('dbx-loglevel-dlg-result', 'The request failed: ' + escHtml(msg), true);
+				$('.dbx-loglevel-dlg-apply').prop('disabled', false);
+			}
+		});
+	}
 
 	//-----------------------------------------------------------
 	// Check for login and set props
