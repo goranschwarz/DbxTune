@@ -234,7 +234,9 @@ function cmDetailRenderGroups(groups)
 		var a  = $('<a class="nav-link' + (g.groupName === selGroup ? ' active' : '') + '" href="#"></a>');
 		if (g.groupIcon)
 			a.append(cmMakeIcon(g.groupIcon));
-		a.append(document.createTextNode(g.groupName));
+		// The CMs without a group end up in 'Other' (CmListServlet). That is only CmSummary: then call the tab 'Summary' (the name used in the code stays 'Other')
+		var isOnlySummary = g.groupName === 'Other' && g.cms.length > 0 && g.cms.every(function(c) { return c.cmName === 'CmSummary'; });
+		a.append(document.createTextNode(isOnlySummary ? 'Summary' : g.groupName));
 		a.on('click', (function(gn) { return function(e) { e.preventDefault(); cmDetailSelectGroup(gn); }; })(g.groupName));
 		li.append(a);
 		$gt.append(li);
@@ -659,7 +661,8 @@ function _cmUnpivotRender(r, filter)
 		else {
 			var formatted = isNumeric ? _cmFmtNum(v) : null;
 			var s = formatted !== null ? formatted : String(v);
-			cell = s.length > 300 ? '<span title="' + escHtml(s.substring(0, 2000)) + '">' + escHtml(s.substring(0, 300)) + '…</span>' : escHtml(s);
+			// A long value (SQL text, a path...) is truncated at 60 chars, so the Delta/Rate columns stay close; the full value is in the tooltip
+			cell = s.length > 60 ? '<span title="' + escHtml(s) + '" style="cursor:help;">' + escHtml(s.substring(0, 60)) + '…</span>' : escHtml(s);
 		}
 		return '<td style="' + style + '">' + cell + '</td>';
 	}

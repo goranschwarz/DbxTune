@@ -793,4 +793,47 @@ extends CmSummaryAbstract
 
 		return list;
 	}
+
+	/** What the columns are: tooltips in the GUI, and the 'Description' column in DbxCentral (Counter Details, the "unpivot" view). Texts mostly from CmSummaryPanel */
+	@Override
+	public void initLocalToolTipTextOnTableColumnHeader()
+	{
+		// Server Information
+		setLocalToolTipTextOnTableColumnHeader("instance_name",                 "<html>This is the Postgres internal instance/server name (ip:port of the server).</html>");
+		setLocalToolTipTextOnTableColumnHeader("host",                          "<html>This is the hostname where Postgres is running (ip:port of the server).</html>");
+		setLocalToolTipTextOnTableColumnHeader("version",                       "<html>This is the Postgres version. version()</html>");
+		setLocalToolTipTextOnTableColumnHeader("time_now",                      "<html>Time of the sample (clock_timestamp() on the server).</html>");
+		setLocalToolTipTextOnTableColumnHeader("utc_minute_diff",               "<html>UTC Time Difference in minutes (positive east of UK, negative west of UK).</html>");
+		setLocalToolTipTextOnTableColumnHeader("start_time",                    "<html>Date and time that the Postgres was started. pg_postmaster_start_time()</html>");
+		setLocalToolTipTextOnTableColumnHeader("in_recovery",                   "<html>If Postgres is in Recovery Mode or not... If it's TRUE, then it's probably in Standby Mode, and receiving/applying transactions from the ACTIVE Postgres instance.</html>");
+
+		// Transaction ID wraparound: what can stop VACUUM from freezing old transaction IDs
+		setLocalToolTipTextOnTableColumnHeader("oldest_prepared_xact_age",      "<html>Age (in transaction IDs) of the oldest prepared transaction. An orphaned one stops VACUUM from freezing, which can lead to TXID wraparound. -1 if none. SELECT max(age(transaction)) FROM pg_prepared_xacts</html>");
+		setLocalToolTipTextOnTableColumnHeader("oldest_replication_slot_age",   "<html>Age (in transaction IDs) of the oldest replication slot. An abandoned slot stops VACUUM from freezing, which can lead to TXID wraparound. -1 if none. SELECT max(age(xmin)) FROM pg_replication_slots</html>");
+		setLocalToolTipTextOnTableColumnHeader("oldest_replica_xact_age",       "<html>Age (in transaction IDs) of the oldest transaction on a replica (with hot_standby_feedback = on). It stops VACUUM from freezing, which can lead to TXID wraparound. -1 if none. SELECT max(age(backend_xmin)) FROM pg_stat_replication</html>");
+		setLocalToolTipTextOnTableColumnHeader("oldest_backend_xmin_age",       "<html>Age (in transaction IDs) of the oldest transaction's backend_xmin. A long running transaction stops VACUUM from freezing, which can lead to TXID wraparound. age(backend_xmin) in pg_stat_activity</html>");
+
+		// Blocking Locks
+		setLocalToolTipTextOnTableColumnHeader("blocking_lock_count",           "<html>Number concurrent of blocking locks (pg_locks where NOT granted)</html>");
+		setLocalToolTipTextOnTableColumnHeader("blocking_lock_wait_start",      "<html>Start Time for oldest blocking locks (Postgres 14 and above)</html>");
+		setLocalToolTipTextOnTableColumnHeader("blocking_lock_wait_in_sec",     "<html>Wait time in seconds for oldest blocking locks (Postgres 14 and above)</html>");
+
+		// Oldest Active or Idle-in-transaction Transaction -- pg_stat_activity
+		setLocalToolTipTextOnTableColumnHeader("oxact_state",                   "<html>In what 'state' do the oldest open transaction have. Probably: 'active', or 'idle in transaction' (meaning uncommitted transaction, Probably stay in AutoCommit=false for to long.)</html>");
+		setLocalToolTipTextOnTableColumnHeader("oxact_pid",                     "<html>Backend 'pid' of the oldest transaction</html>");
+		setLocalToolTipTextOnTableColumnHeader("oxact_dbname",                  "<html>In what 'database' context does the oldest transaction have</html>");
+		setLocalToolTipTextOnTableColumnHeader("oxact_username",                "<html>What 'username' holds the oldest transaction</html>");
+		setLocalToolTipTextOnTableColumnHeader("oxact_appname",                 "<html>What 'application name' holds the oldest transaction</html>");
+		setLocalToolTipTextOnTableColumnHeader("oxact_is_waiting",              "<html>If the 'pid' of the oldest transaction is waiting for something (possibly a blocking lock).</html>");
+		setLocalToolTipTextOnTableColumnHeader("oxact_is_waiting_type",         "<html>What the 'pid' of the oldest transaction is waiting on: wait_event_type (Postgres 10 and above)</html>");
+		setLocalToolTipTextOnTableColumnHeader("oxact_is_waiting_event",        "<html>What the 'pid' of the oldest transaction is waiting on: wait_event (Postgres 10 and above)</html>");
+		setLocalToolTipTextOnTableColumnHeader("oxact_xact_start_in_sec",       "<html>When did the oldest transaction start, in seconds ago.</html>");
+		setLocalToolTipTextOnTableColumnHeader("oxact_stmnt_start_in_sec",      "<html>When did the last SQL Statement start, in seconds ago.</html>");
+		setLocalToolTipTextOnTableColumnHeader("oxact_stmnt_last_exec_in_sec",  "<html>For how long did the last SQL Statement execute, in seconds. (if the 'state' is 'active' then it's the execution time for the currently executing SQL Statement)</html>");
+		setLocalToolTipTextOnTableColumnHeader("oxact_in_current_state_in_sec", "<html>When did the 'state' change, in seconds ago. Example from 'active' to 'idle in transaction'... which indicates that we might have a longer transaction than needed.</html>");
+		setLocalToolTipTextOnTableColumnHeader("oxact_xact_start_age",          "<html>When did the oldest transaction start, as an interval.</html>");
+		setLocalToolTipTextOnTableColumnHeader("oxact_stmnt_start_age",         "<html>When did the last SQL Statement start, as an interval.</html>");
+		setLocalToolTipTextOnTableColumnHeader("oxact_stmnt_last_exec_age",     "<html>For how long did the last SQL Statement execute, as an interval. (if the 'state' is 'active' then it's the execution time for the currently executing SQL Statement)</html>");
+		setLocalToolTipTextOnTableColumnHeader("oxact_in_current_state_age",    "<html>When did the 'state' change, as an interval. Example from 'active' to 'idle in transaction'... which indicates that we might have a longer transaction than needed.</html>");
+	}
 }

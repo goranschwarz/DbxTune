@@ -2325,4 +2325,109 @@ extends CmSummaryAbstract
 
 		return list;
 	}
+
+	/** What the columns are: tooltips in the GUI, and the 'Description' column in DbxCentral (Counter Details, the "unpivot" view). Texts mostly from CmSummaryPanel */
+	@Override
+	public void initLocalToolTipTextOnTableColumnHeader()
+	{
+		// Server Information
+		setLocalToolTipTextOnTableColumnHeader("srvVersion",                          "<html>The version string taken from @@version</html>");
+		setLocalToolTipTextOnTableColumnHeader("atAtServerName",                      "<html>This is the internal server name in the SQL-Server, taken from the global variable @@servername</html>");
+		setLocalToolTipTextOnTableColumnHeader("clusterInstanceId",                   "<html>Not used for SQL Server (always 'Not Enabled'). Kept for compatibility with the ASE Summary.</html>");
+		setLocalToolTipTextOnTableColumnHeader("clusterCoordId",                      "<html>Not used for SQL Server (always 'Not Enabled'). Kept for compatibility with the ASE Summary.</html>");
+		setLocalToolTipTextOnTableColumnHeader("timeIsNow",                           "<html>Time of the sample (getdate() on the server).</html>");
+		setLocalToolTipTextOnTableColumnHeader("utcTimeDiff",                         "<html>UTC Time Difference in minutes (positive east of UK, negative west of UK).</html>");
+		setLocalToolTipTextOnTableColumnHeader("OnHostName",                          "<html>Hostname that the SQL-Server server has listener services on, this makes it easier to see what physical machine we have connected to.</html>");
+		setLocalToolTipTextOnTableColumnHeader("NetworkAddressInfo",                  "<html>All ports that the SQL-Server has listener services on.</html>");
+		setLocalToolTipTextOnTableColumnHeader("srvPageSize",                         "<html>Page size in bytes (SQL Server always uses 8 KB pages).</html>");
+		setLocalToolTipTextOnTableColumnHeader("StartDate",                           "<html>Date and time that the SQL-Server was started.</html>");
+		setLocalToolTipTextOnTableColumnHeader("DaysRunning",                         "<html>Number of days that the SQL-Server has been running for.</html>");
+
+		// Connections, Locks, Deadlocks
+		setLocalToolTipTextOnTableColumnHeader("Connections",                         "<html>Number of active inbound connections.</html>");
+		setLocalToolTipTextOnTableColumnHeader("distinctLogins",                      "<html>Number of distinct User Names that is logged in to SQL-Server.</html>");
+		setLocalToolTipTextOnTableColumnHeader("aaConnections",                       "<html>Total Connections that was attempted to make to the SQL-Server Server, even those that fails. Global variable @@connections.</html>");
+		setLocalToolTipTextOnTableColumnHeader("LockWaits",                           "<html>Number of processes that have waited longer than LockWaitThreshold.</html>");
+		setLocalToolTipTextOnTableColumnHeader("LockWaitThreshold",                   "<html>Time (in milliseconds) that processes must have waited for locks in order to be reported.</html>");
+		setLocalToolTipTextOnTableColumnHeader("RootBlockerSpids",                    "<html>SPID's that are 'root blocker'... SPID's that are BLOCKING other SPID's, but at the same time not blocked by any other SPID.</html>");
+		setLocalToolTipTextOnTableColumnHeader("deadlockCount",                       "<html>Number Deadlocks on this instance.<br>"
+		                                                                            + "If you have a deadlock <i>problem</i>, please run 'sp_blitzLock' from Brent Ozar's package 'First Responder Kit'...<br>"
+		                                                                            + "It will give you <i>details</i> and <i>summary</i> of what tables/SQL/procs that is responsible for the deadlocks.</html>");
+
+		// Transaction log, suspect pages, tempdb
+		setLocalToolTipTextOnTableColumnHeader("fullTranslogCount",                   "<html>Number of databases that has a full transaction log, which probably means suspended SPID's.</html>");
+		setLocalToolTipTextOnTableColumnHeader("suspectPageCount",                    "<html>Number of rows in table: msdb.dbo.suspect_pages</html>");
+		setLocalToolTipTextOnTableColumnHeader("suspectPageErrors",                   "<html>Number of sum(error_count) in table: msdb.dbo.suspect_pages</html>");
+		setLocalToolTipTextOnTableColumnHeader("tempdbUsageMbAll",                    "<html>How many MB is used by all SPID's in tempdb. All tempdb space used (both 'user' and 'internal' objects).</html>");
+		setLocalToolTipTextOnTableColumnHeader("tempdbUsageMbUser",                   "<html>How many MB is used by all SPID's in tempdb. User Objects, most possibly temp tables.</html>");
+		setLocalToolTipTextOnTableColumnHeader("tempdbUsageMbInternal",               "<html>How many MB is used by all SPID's in tempdb. Internal Objects, most possibly work tables etc (implicitly used by the SQL Server engine).</html>");
+
+		// Oldest Open Transaction
+		setLocalToolTipTextOnTableColumnHeader("oldestOpenTranBeginTime",             "<html>Oldest Open Transaction Time (empty if no open transactions).</html>");
+		setLocalToolTipTextOnTableColumnHeader("oldestOpenTranId",                    "<html>Oldest Open Transaction ID (empty if no open transactions).</html>");
+		setLocalToolTipTextOnTableColumnHeader("oldestOpenTranSpid",                  "<html>Oldest Open Transaction SPID (empty if no open transactions).</html>");
+		setLocalToolTipTextOnTableColumnHeader("oldestOpenTranDbname",                "<html>Database name which has the oldest open transaction (empty if no open transactions).</html>");
+		setLocalToolTipTextOnTableColumnHeader("oldestOpenTranName",                  "<html>Oldest Open Transaction Name (empty if no open transactions).</html>");
+		setLocalToolTipTextOnTableColumnHeader("oldestOpenTranWaitType",              "<html>What the 'Oldest Open Tran SPID' is waiting for (empty if no open transactions).</html>");
+		setLocalToolTipTextOnTableColumnHeader("oldestOpenTranCmd",                   "<html>What the 'Oldest Open Tran SPID' status/command (empty if no open transactions).</html>");
+		setLocalToolTipTextOnTableColumnHeader("oldestOpenTranLoginName",             "<html>What the 'Oldest Open Tran SPID' Login Name (empty if no open transactions).</html>");
+		setLocalToolTipTextOnTableColumnHeader("oldestOpenTranTempdbUsageMbAll",      "<html>How many MB in tempdb does the 'Oldest Open Tran SPID' hold (empty if no open transactions). All tempdb space used (both 'user' and 'internal' objects).</html>");
+		setLocalToolTipTextOnTableColumnHeader("oldestOpenTranTempdbUsageMbUser",     "<html>How many MB in tempdb does the 'Oldest Open Tran SPID' hold (empty if no open transactions). User Objects, most possibly temp tables.</html>");
+		setLocalToolTipTextOnTableColumnHeader("oldestOpenTranTempdbUsageMbInternal", "<html>How many MB in tempdb does the 'Oldest Open Tran SPID' hold (empty if no open transactions). Internal Objects, most possibly work tables etc (implicitly used by the SQL Server engine).</html>");
+		setLocalToolTipTextOnTableColumnHeader("oldestOpenTranInSec",                 "<html>Oldest Open Transaction in any database, presented in seconds.</html>");
+		setLocalToolTipTextOnTableColumnHeader("oldestOpenTranInSecThreshold",        "<html>After this amount of seconds, and 'alarm' will be raised...</html>");
+		setLocalToolTipTextOnTableColumnHeader("maxSqlExecTimeInSec",                 "<html>Max Active SQL Execution Time In Seconds in this SQL-Server</html>");
+
+		// CPU, IO, Network, Errors (global variables)
+		setLocalToolTipTextOnTableColumnHeader("cpu_busy",                            "<html>CPU Busy. Global variable @@cpu_busy.</html>");
+		setLocalToolTipTextOnTableColumnHeader("cpu_io",                              "<html>CPU spent in IO. Global variable @@io_busy.</html>");
+		setLocalToolTipTextOnTableColumnHeader("cpu_idle",                            "<html>CPU Idle. Global variable @@idle.</html>");
+		setLocalToolTipTextOnTableColumnHeader("io_total_read",                       "<html>Total Read IO's. Global variable @@total_read.</html>");
+		setLocalToolTipTextOnTableColumnHeader("io_total_write",                      "<html>Total Write IO's. Global variable @@total_write.</html>");
+		setLocalToolTipTextOnTableColumnHeader("pack_received",                       "<html>Total Network Packets Received. Global variable @@pack_received.</html>");
+		setLocalToolTipTextOnTableColumnHeader("pack_sent",                           "<html>Total Network Packets Sent. Global variable @@pack_sent.</html>");
+		setLocalToolTipTextOnTableColumnHeader("packet_errors",                       "<html>Total Network Packets Errors. Global variable @@packet_errors.</html>");
+		setLocalToolTipTextOnTableColumnHeader("total_errors",                        "<html>Total Errors. Global variable @@total_errors.</html>");
+
+		// OS Memory -- dm_os_sys_memory
+		setLocalToolTipTextOnTableColumnHeader("total_os_memory_mb",                  "<html>Total size of physical memory available to the operating system (total memory on the machine). dm_os_sys_memory.total_physical_memory_kb</html>");
+		setLocalToolTipTextOnTableColumnHeader("available_physical_memory_mb",        "<html>Size of physical memory free/available in the operating system. dm_os_sys_memory.available_physical_memory_kb</html>");
+		setLocalToolTipTextOnTableColumnHeader("system_high_memory_signal_state",     "<html>State of the system high memory resource notification. A value of 1 indicates the high memory signal has been set by the OS</html>");
+		setLocalToolTipTextOnTableColumnHeader("system_low_memory_signal_state",      "<html>State of the system low memory resource notification. A value of 1 indicates the low memory signal has been set by the OS</html>");
+
+		// Server Memory -- dm_os_sys_info
+		setLocalToolTipTextOnTableColumnHeader("Total_Server_Memory_MB",              "<html><b>Total Server Memory MB</b> - Current amount of memory <b>currently</b> assigned/allocated to SQL Server</html>");
+		setLocalToolTipTextOnTableColumnHeader("Target_Server_Memory_MB",             "<html><b>Target Server Memory MB</b> - The amount of memory that SQL Server is willing (potential) to allocate to the SQL Server under its current load.</html>");
+		setLocalToolTipTextOnTableColumnHeader("TargetVsTotal_diff_MB",               "<html><b>Target - Total (not-yet-used) MB</b> - Basically how much memory until we reach the MAX Memory</html>");
+		setLocalToolTipTextOnTableColumnHeader("scheduler_count",                     "<html>Number of schedulers (one per visible CPU). dm_os_sys_info</html>");
+		setLocalToolTipTextOnTableColumnHeader("ms_ticks",                            "<html>Milliseconds since the computer started. dm_os_sys_info</html>");
+		setLocalToolTipTextOnTableColumnHeader("process_kernel_time_ms",              "<html>Total time in milliseconds that all SQL Server threads spent in kernel mode. dm_os_sys_info</html>");
+		setLocalToolTipTextOnTableColumnHeader("process_user_time_ms",                "<html>Total time in milliseconds that all SQL Server threads spent in user mode. dm_os_sys_info</html>");
+
+		// Process Memory -- dm_os_process_memory
+		setLocalToolTipTextOnTableColumnHeader("memory_used_by_sqlserver_MB",         "<html><b>Memory Used by SQL Server in MB</b> - dm_os_process_memory.physical_memory_in_use_kb</html>");
+		setLocalToolTipTextOnTableColumnHeader("locked_pages_used_by_sqlserver_MB",   "<html><b>Locked Pages Used by SQL Server in MB</b> - dm_os_process_memory.locked_page_allocations_kb</html>");
+		setLocalToolTipTextOnTableColumnHeader("process_memory_utilization_pct",      "<html><b>Memory Utilization Percentage</b> - Specifies the percentage of committed memory that is in the working set. dm_os_process_memory.memory_utilization_percentage</html>");
+		setLocalToolTipTextOnTableColumnHeader("process_physical_memory_low",         "<html><b>process_physical_memory_low</b> - Indicates that the process is responding to low physical memory notification (you are under memory pressure). dm_os_process_memory</html>");
+		setLocalToolTipTextOnTableColumnHeader("process_virtual_memory_low",          "<html><b>process_virtual_memory_low</b> - Indicates that low virtual memory condition has been detected (you are under memory pressure). dm_os_process_memory</html>");
+
+		// Memory -- dm_os_performance_counters
+		setLocalToolTipTextOnTableColumnHeader("databaseCacheMemoryMb",               "<html>MB used by the Buffer Pool (Data) Cache to hold data pages in memory. This is hopefully where most of the memory should be...<br>"
+		                                                                            + "<b>Origin</b>: SELECT cntr_value/1024.0 FROM sys.<b>dm_os_performance_counters</b> WHERE counter_name = '<b>Database Cache Memory (KB)</b>'</html>");
+		setLocalToolTipTextOnTableColumnHeader("grantedWorkspaceMemoryMb",            "<html>MB currently granted to executing processes, such as hash, sort, bulk copy, and index creation operations <i>(just another name for 'memory grants')</i><br>"
+		                                                                            + "<b>Origin</b>: SELECT cntr_value/1024.0 FROM sys.<b>dm_os_performance_counters</b> WHERE counter_name = '<b>Granted Workspace Memory (KB)</b>'</html>");
+		setLocalToolTipTextOnTableColumnHeader("stolenServerMemoryMb",                "<html>MB that are stolen/borrowed from the Buffer Pool/Data Cache to be used by something else... Typically 'Workspace Memory', which is another name for 'memory grants', which really is just 'work memory' for <i>sort</i>, <i>hash tables</i>, etc...)<br>"
+		                                                                            + "<b>Origin</b>: SELECT cntr_value/1024.0 FROM sys.<b>dm_os_performance_counters</b> WHERE counter_name = '<b>Stolen Server Memory (KB)</b>'</html>");
+
+		// Worker Threads -- dm_os_schedulers
+		setLocalToolTipTextOnTableColumnHeader("maxWorkers",                          "<html>Max Worker Threads that this SQL Server can use/schedule.</html>");
+		setLocalToolTipTextOnTableColumnHeader("usedWorkers",                         "<html>Currently Used Worker threads</html>");
+		setLocalToolTipTextOnTableColumnHeader("availableWorkers",                    "<html>Available Worker Threads. If this is LOW we will be in trouble... If zero then the Server will have serious issues scheduling ANY work.</html>");
+		setLocalToolTipTextOnTableColumnHeader("workersWaitingForCPU",                "<html>Number of Workers that wait for CPU resources (waiting to be scheduled, in status 'runnable')</html>");
+		setLocalToolTipTextOnTableColumnHeader("requestsWaitingForWorkers",           "<html>Tasks/Requests that are waiting for any worker to be available (Meaning: Thread Pool Starvation... wait_type 'THREADPOOL')</html>");
+		setLocalToolTipTextOnTableColumnHeader("allocatedWorkers",                    "<html>How many of the Worker Threads has been allocated and assigned to any scheduler. If this is lower than 'Max Worker Threads', it only means that the server has not yet allocated a OS Thread for that Worker...</html>");
+
+		// Services
+		setLocalToolTipTextOnTableColumnHeader("sql_agent_status",                    "<html>SQL Agent/Scheduler status (from sys.dm_server_services)</html>");
+	}
 }
