@@ -262,10 +262,14 @@ extends CountersModel
 				String currentVersionString = getAbsString(0, colName, true, "");
 				String tmpLastVersionString = _lastVersionString;
 
+				// Alarm when the version string is DIFFERENT from the previous sample (not on the first sample: there is nothing to compare with)
+				// NOTE: The old code only remembered the version when it already had one (so it never did), and it compared with equals() (which would alarm on every sample)
 				boolean doAlarm = false;
-				if (StringUtil.hasValue(currentVersionString) && StringUtil.hasValue(_lastVersionString))
+				if (StringUtil.hasValue(currentVersionString))
 				{
-					doAlarm = currentVersionString.equals(_lastVersionString);
+					if (StringUtil.hasValue(_lastVersionString) && ! currentVersionString.equals(_lastVersionString))
+						doAlarm = true;
+
 					_lastVersionString = currentVersionString;
 				}
 
