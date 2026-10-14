@@ -204,17 +204,55 @@ var DbxTimeline = (function () {
 		return dark;
 	}
 
+	// The tooltip as text: for the "Clicked" panel and the clipboard.
+	// A tooltip is mostly a table of "name | value" rows: they become aligned lines
+	//     Status:   FAILED, ORA-20001
+	//     Message:  ORA-20001: DbxTune test: this job always fails
+	//               ORA-06512: at line 1
+	// (a value of many lines is indented under the first line of it)
 	function htmlToPlainText(html)
 	{
-		return String(html || '')
-			.replace(/<br\s*\/?>/gi, '\n')
-			.replace(/<hr\s*\/?>/gi, '\n-------------------------------------------------------\n')
-			.replace(/<\/tr>/gi, '\n')
-			.replace(/<[^>]+>/g, '')
-			.replace(/&nbsp;/g, ' ')
-			.replace(/&emsp;/g, '\t')
-			.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#92;/g, '\\')
-			.replace(/&amp;/g, '&');
+		var doc  = new DOMParser().parseFromString('<body>' + String(html || '') + '</body>', 'text/html');
+		var body = doc.body;
+
+		Array.prototype.slice.call(body.querySelectorAll('br')).forEach(function (el) { el.replaceWith('\n'); });
+		Array.prototype.slice.call(body.querySelectorAll('hr')).forEach(function (el) { el.replaceWith('\n-------------------------------------------------------\n'); });
+
+		var cellText = function (cell) {
+			return (cell.textContent || '').replace(/ /g, ' ').replace(/[ \t]+$/gm, '').replace(/^\n+|\n+$/g, '').trim();
+		};
+
+		// Innermost tables first (a table in a cell is then already text)
+		var tables = Array.prototype.slice.call(body.querySelectorAll('table')).reverse();
+		tables.forEach(function (table) {
+			var rows = Array.prototype.slice.call(table.rows).map(function (tr) {
+				return Array.prototype.slice.call(tr.cells).map(cellText);
+			}).filter(function (cells) { return cells.some(function (c) { return c !== ''; }); });
+
+			// The width of the name column: the longest name of a "name | value" row (without its own ':')
+			var width = 0;
+			rows.forEach(function (cells) {
+				if (cells.length >= 2)
+					width = Math.max(width, cells[0].replace(/:\s*$/, '').length);
+			});
+
+			var lines = rows.map(function (cells) {
+				if (cells.length < 2)
+					return cells.join('');
+				var name   = cells[0].replace(/:\s*$/, '');
+				var value  = cells.slice(1).filter(function (c) { return c !== ''; }).join('  ');
+				var indent = new Array(width + 4).join(' ');
+				return (name === '' ? indent :(name + ':' + new Array(width - name.length + 3).join(' ')))
+					+ value.split('\n').map(function (l, i) { return i === 0 ? l.trim() : indent + l.trim(); }).join('\n');
+			});
+			table.replaceWith('\n' + lines.join('\n') + '\n');
+		});
+
+		return (body.textContent || '')
+			.replace(/ /g, ' ')
+			.replace(/[ \t]+$/gm, '')
+			.replace(/\n{3,}/g, '\n\n')
+			.trim();
 	}
 
 	// Remove everything from the HTML that is not in XSS_WHITELIST (elements and attributes).
