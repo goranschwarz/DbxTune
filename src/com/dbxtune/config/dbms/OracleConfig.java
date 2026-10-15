@@ -33,13 +33,13 @@ import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.TreeSet;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -95,12 +95,25 @@ extends DbmsConfigAbstract
 	public static final String UPDATE_COMMENT = "UpdateComment";
 	public static final String CONFIG_ID      = "ConfigId";
 
-	/** Parameters that the installer (DBCA) must set: they are never NonDefault */
-	public static final Set<String> INSTALLATION_PARAMETERS = Set.of(
-		"db_name", "db_unique_name", "db_domain", "instance_name", "service_names",
-		"control_files", "compatible", "diagnostic_dest", "audit_file_dest",
-		"dispatchers", "local_listener", "undo_tablespace", "enable_pluggable_database",
-		"db_recovery_file_dest", "db_recovery_file_dest_size", "log_archive_dest_1");
+	/** Parameters that the installer (DBCA) must set: they are never NonDefault (a comma separated list of parameter names) */
+	public static final String PROPKEY_installationParameters = "OracleConfig.nonDefault.installationParameters";
+	public static final String DEFAULT_installationParameters = ""
+//		+ "db_name, "
+//		+ "db_unique_name, "
+//		+ "db_domain, "
+//		+ "instance_name, "
+//		+ "service_names, "
+		+ "control_files, "
+		+ "compatible, "
+		+ "diagnostic_dest, "
+		+ "audit_file_dest, "
+		+ "dispatchers, "
+		+ "local_listener, "
+		+ "undo_tablespace, "
+		+ "enable_pluggable_database, "
+		+ "db_recovery_file_dest, "
+		+ "db_recovery_file_dest_size, "
+		+ "log_archive_dest_1";
 
 	public static final String SECTION_BASIC      = "Basic";
 	public static final String SECTION_ADVANCED   = "Advanced";
@@ -118,7 +131,7 @@ extends DbmsConfigAbstract
 	{
 	//   ColumnName,      Editable, JTable type,   JDBC Type      JDBC Length JDBC Scale  Tooltip
 	//   ---------------- --------- -------------- -------------- ----------- ----------  --------------------------------------------
-		{NON_DEFAULT,     false,    Boolean.class, Types.BOOLEAN, -1,         -1,         "<html>The parameter has been set to another value than the default: it was in the spfile (or pfile) when the instance started, or it has been changed with ALTER SYSTEM after that.<br>Not NonDefault:<ul><li>a parameter that is set to the same value as 'DefaultValue' (Oracle 12.2 and above).</li><li>the parameters that the installer must set: " + String.join(", ", new TreeSet<>(INSTALLATION_PARAMETERS)) + "</li></ul><b>Source</b>: V$SYSTEM_PARAMETER: ISDEFAULT = 'FALSE' or ISMODIFIED is not 'FALSE', and VALUE is not DEFAULT_VALUE</html>"},
+		{NON_DEFAULT,     false,    Boolean.class, Types.BOOLEAN, -1,         -1,         "<html>The parameter has been set to another value than the default: it was in the spfile (or pfile) when the instance started, or it has been changed with ALTER SYSTEM after that.<br>Not NonDefault:<ul><li>a parameter that is set to the same value as 'DefaultValue' (Oracle 12.2 and above).</li><li>the parameters that the installer must set, from the property <code>" + PROPKEY_installationParameters + "</code> (default: " + DEFAULT_installationParameters + ")</li></ul><b>Source</b>: V$SYSTEM_PARAMETER: ISDEFAULT = 'FALSE' or ISMODIFIED is not 'FALSE', and VALUE is not DEFAULT_VALUE</html>"},
 		{SECTION_NAME,    true,     String .class, Types.VARCHAR, 30,         -1,         "<html>Oracle has no groups for the parameters, so this is: <ul><li><b>Basic</b> - the about 30 parameters that Oracle says you normally need to look at.</li><li><b>Advanced</b> - all the others.</li><li><b>Deprecated</b> - still works, but should not be used any more.</li><li><b>Hidden</b> - the name starts with an underscore. Only shown if it has been set. Only set them when Oracle Support tells you to.</li></ul></html>"},
 		{CONFIG_NAME,     true,     String .class, Types.VARCHAR, 80,         -1,         "Name of the initialization parameter."},
 		{CONFIG_VALUE,    true,     String .class, Types.VARCHAR, 4000,       -1,         "<html>The value the instance is running with.<br>A size is in bytes here, see 'DisplayValue' for the short form.<br>A parameter that is a list (like control_files) has the values separated with a comma.</html>"},
@@ -351,12 +364,17 @@ extends DbmsConfigAbstract
 					}
 				}
 
+				// Parameters that are never NonDefault (Oracle has the names in lower case)
+				Set<String> installationParameters = new HashSet<>();
+				for (String name : StringUtil.commaStrToSet(Configuration.getCombinedConfiguration().getProperty(PROPKEY_installationParameters, DEFAULT_installationParameters), true))
+					installationParameters.add(name.trim().toLowerCase());
+
 				while ( rs.next() )
 				{
 					OracleConfigEntry entry = new OracleConfigEntry();
 
 					_timestamp                = rs.getTimestamp(1);
-					entry.configId            = rs.getInt      (2);
+					entry.configId           = rs.getInt      (2);
 					entry.configName          = rs.getString   (3);
 					int    type               = rs.getInt      (4);
 					entry.configValue         = rs.getString   (5);
@@ -397,7 +415,7 @@ extends DbmsConfigAbstract
 					}
 
 					// The installer must set these (the name and files of the database etc), so they are not something a DBA has changed
-					if (INSTALLATION_PARAMETERS.contains(entry.configName))
+					if (installationParameters.contains(entry.configName))
 						entry.isNonDefault = false;
 
 					if      (type == 1) entry.dataType = "Boolean";
