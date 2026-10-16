@@ -96,7 +96,8 @@ extends DbmsConfigAbstract
 	public static final String CONFIG_ID      = "ConfigId";
 
 	/** Parameters that the installer (DBCA) must set: they are never NonDefault (a comma separated list of parameter names) */
-	public static final String PROPKEY_installationParameters = "OracleConfig.nonDefault.installationParameters";
+//	public static final String PROPKEY_installationParameters = "OracleConfig.nonDefault.installationParameters";
+	public static final String PROPKEY_installationParameters = "OracleConfig.nonDefault.always";
 	public static final String DEFAULT_installationParameters = ""
 //		+ "db_name, "
 //		+ "db_unique_name, "
