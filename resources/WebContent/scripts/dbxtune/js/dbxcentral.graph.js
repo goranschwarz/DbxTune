@@ -2555,6 +2555,9 @@ function dbxTuneGraphSubscribe()
 						{
 							if (cellContent.startsWith("runn")) // "running" or "runnable"
 								td.style.backgroundColor = "green";
+
+							if (cellContent.startsWith("runnable")) // "running" or "runnable"
+								td.style.backgroundColor = "lightgreen";
 						}
 					}
 				}
