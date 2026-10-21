@@ -33,6 +33,7 @@ import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.mysql.CmGlobalStatus;
 import com.dbxtune.cm.mysql.CmInnoDbMetrics;
 import com.dbxtune.cm.mysql.CmInnodbBpStats;
+import com.dbxtune.cm.mysql.CmReplication;
 import com.dbxtune.cm.mysql.CmSummary;
 import com.dbxtune.cm.mysql.CmSysDiskIo;
 import com.dbxtune.cm.mysql.CmSysIndexStats;
@@ -51,6 +52,7 @@ import com.dbxtune.gui.MainFrame;
 import com.dbxtune.pcs.PersistContainer;
 import com.dbxtune.pcs.PersistContainer.HeaderInfo;
 import com.dbxtune.sql.conn.DbxConnection;
+import com.dbxtune.sql.conn.info.DbmsVersionInfoMySql;
 import com.dbxtune.utils.AseConnectionUtils;
 import com.dbxtune.utils.Ver;
 
@@ -102,6 +104,7 @@ extends CounterControllerAbstract
 		CmGlobalStatus      .create(counterController, guiController);
 		CmUserStatus        .create(counterController, guiController);
 		CmInnoDbMetrics     .create(counterController, guiController);
+		CmReplication       .create(counterController, guiController);
 
 		// Object Access
 		CmSysTableStats     .create(counterController, guiController);
@@ -158,7 +161,41 @@ extends CounterControllerAbstract
 			
 		if (! isCountersCreated())
 			createCounters(hasGui);
-		
+
+		// What can this login do? The CM's only need: PROCESS, REPLICATION CLIENT, SELECT on performance_schema, SELECT + EXECUTE on sys (see DbmsSetup/mysql.txt)
+		// Tested by doing it (not by reading SHOW GRANTS), so privileges that comes from a ROLE are also counted
+		DbmsVersionInfoMySql versionInfo = (conn.getDbmsVersionInfo() instanceof DbmsVersionInfoMySql) ? (DbmsVersionInfoMySql) conn.getDbmsVersionInfo() : new DbmsVersionInfoMySql(srvVersion);
+		if ( ! versionInfo.isMariaDb() )
+		{
+			String replicaStatusCmd = srvVersion >= Ver.ver(8,0,22) ? "SHOW REPLICA STATUS" : "SHOW SLAVE STATUS";
+
+			// NOTE: 'where 1=2' can NOT be used for the INNODB_* views: the PROCESS privilege is only checked when the view is filled
+			boolean hasProcess    = canExecute(conn, "select count(*) from information_schema.INNODB_TRX");
+			boolean hasReplClient = canExecute(conn, replicaStatusCmd);
+			boolean hasPerfSchema = canExecute(conn, "select 1 from performance_schema.threads where 1=2");
+			boolean hasSysSelect  = canExecute(conn, "select 1 from sys.version where 1=2");
+			boolean hasSysExecute = canExecute(conn, "select sys.format_bytes(0)");
+
+			String has = "PROCESS=" + hasProcess + ", REPLICATION CLIENT=" + hasReplClient + ", SELECT on performance_schema=" + hasPerfSchema + ", SELECT on sys=" + hasSysSelect + ", EXECUTE on sys=" + hasSysExecute + ".";
+			if (hasProcess && hasReplClient && hasPerfSchema && hasSysSelect && hasSysExecute)
+				_logger.info("The MySQL login has all it needs: " + has);
+			else
+				_logger.warn("The MySQL login is missing privileges, CM's that can't read their views will be DISABLED. The login has: " + has
+						+ " Fix: GRANT PROCESS, REPLICATION CLIENT ON *.* TO <user>; GRANT SELECT ON performance_schema.* TO <user>; GRANT SELECT, EXECUTE ON sys.* TO <user>;");
+
+			// The performance_schema consumers that the CM's depends on (they are ON by default)
+			String sql = "select NAME from performance_schema.setup_consumers where ENABLED = 'NO' and NAME in ('global_instrumentation', 'thread_instrumentation', 'statements_digest', 'events_statements_current', 'events_transactions_current')";
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while (rs.next())
+					_logger.warn("The performance_schema consumer '" + rs.getString(1) + "' is disabled, so some Counter Models will show less (or no) data. Fix: UPDATE performance_schema.setup_consumers SET ENABLED='YES' WHERE NAME='" + rs.getString(1) + "'; (and add 'performance-schema-consumer-" + rs.getString(1).replace('_', '-') + "=ON' to my.cnf, so it survives a restart)");
+			}
+			catch (SQLException ex)
+			{
+				_logger.info("Problems checking the performance_schema consumers. sql=|" + sql + "|, Caught: " + ex);
+			}
+		}
+
 		_logger.info("Initializing all CM objects, using MySQL version number " + srvVersion + ". (" + Ver.versionNumToStr(srvVersion) + ")");
 
 		// initialize all the CM's
@@ -196,6 +233,22 @@ extends CounterControllerAbstract
 		}
 
 		setInitialized(true);
+	}
+
+	/** Can the login execute this? (any error is a NO) */
+	private static boolean canExecute(DbxConnection conn, String sql)
+	{
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while (rs.next())
+				;
+			return true;
+		}
+		catch (SQLException ex)
+		{
+			_logger.debug("canExecute(): sql=|" + sql + "|, Caught: " + ex);
+			return false;
+		}
 	}
 
 	@Override
@@ -240,16 +293,13 @@ extends CounterControllerAbstract
 		}
 		catch (SQLException sqlex)
 		{
-			// Connection is already closed.
-			if ( "JZ0C0".equals(sqlex.getSQLState()) )
+			// Is the connection lost?
+			boolean forceConnectionCheck = true;
+			boolean closeConnOnFailure   = true;
+			if ( ! isMonConnected(forceConnectionCheck, closeConnOnFailure) )
 			{
-				boolean forceConnectionCheck = true;
-				boolean closeConnOnFailure   = true;
-				if ( ! isMonConnected(forceConnectionCheck, closeConnOnFailure) )
-				{
-					_logger.info("Problems getting basic status info in 'Counter get loop'. SQL State 'JZ0C0', which means 'Connection is already closed'. So lets start from the top." );
-					return null;
-				}
+				_logger.info("Problems getting basic status info in 'Counter get loop', the connection is lost. So lets start from the top. Caught: " + sqlex);
+				return null;
 			}
 			
 			_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '" + sql + "', Caught: " + sqlex.toString() );
@@ -303,7 +353,7 @@ extends CounterControllerAbstract
 		}
 		catch(SQLException e)
 		{
-			_logger.info("Problem when changing the IQ Connection autocommit mode.");
+			_logger.info("Problem when changing the MySQL Connection autocommit mode. Caught: " + e);
 		}
 
 		super.setInRefresh(enterRefreshMode);
@@ -313,10 +363,11 @@ extends CounterControllerAbstract
 	public void noGuiConnectErrorHandler(SQLException ex, String dbmsUsername, String dbmsPassword, String dbmsServer, String dbmsHostPortStr, String jdbcUrlOptions) 
 	throws Exception
 	{
-		// Error checking for "invalid password" or other "unrecoverable errors"
-		if (ex.getMessage().contains("access denied for user")) // NOT Sure if this is correct... need to be tested
+		// Wrong user or password: MySQL error 1045, SQLState 28000 -- "Access denied for user 'xxx'@'host' (using password: YES)"
+		// This is a non-recoverable error (do NOT print the password)
+		if (ex.getErrorCode() == 1045 || "28000".equals(ex.getSQLState()))
 		{
-			throw new Exception("The error message suggest that the wrong USER '" + dbmsUsername + "' or PASSWORD '" + dbmsPassword + "' to DBMS server '" + dbmsServer + "' was entered. This is a non-recovarable error. DBMS Error Message='" + ex.getMessage() + "'.", ex);
+			throw new Exception("The error message suggest that the wrong USER '" + dbmsUsername + "' or PASSWORD to DBMS server '" + dbmsServer + "' was entered. This is a non-recovarable error. DBMS Error Message='" + ex.getMessage() + "'.", ex);
 		}
 	}
 }
