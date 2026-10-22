@@ -31,9 +31,11 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import javax.naming.NameNotFoundException;
@@ -45,6 +47,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
@@ -57,6 +60,9 @@ import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.pcs.PcsColumnOptions;
 import com.dbxtune.pcs.PcsColumnOptions.ColumnType;
+import com.dbxtune.pcs.PersistentCounterHandler;
+import com.dbxtune.pcs.inspection.ObjectLookupInspectorMySql;
+import com.dbxtune.sql.SqlParserUtils;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.sql.conn.info.DbmsVersionInfoMySql;
@@ -161,6 +167,12 @@ extends CountersModel
 	public static final String  PROPKEY_sample_querySampleText   = CM_NAME + ".sample.querySampleText";
 	public static final boolean DEFAULT_sample_querySampleText   = true;
 
+	public static final String  PROPKEY_ddlStore_topRows         = CM_NAME + ".ddlStore.topRows";
+	public static final int     DEFAULT_ddlStore_topRows         = 20;
+
+	/** The digests whose tables are already sent to the DDL Storage (the text is only parsed once per recording): true if it has tables that are not MySQL's own */
+	private Map<String, Boolean> _ddlParsedDigests = new HashMap<>();
+
 	// One line per schema (as the "per database" graphs of PostgresTune and SqlServerTune): a line per statement would add a new graph column for every statement that is ever in the top
 	public static final String GRAPH_NAME_SCHEMA_TIME    = "StmntSchemaTime";
 	public static final String GRAPH_NAME_SCHEMA_EXEC    = "StmntSchemaExec";
@@ -180,6 +192,7 @@ extends CountersModel
 		Configuration.registerDefaultValue(PROPKEY_sample_lastXminutes   , DEFAULT_sample_lastXminutes);
 		Configuration.registerDefaultValue(PROPKEY_sample_topRows        , DEFAULT_sample_topRows);
 		Configuration.registerDefaultValue(PROPKEY_sample_querySampleText, DEFAULT_sample_querySampleText);
+		Configuration.registerDefaultValue(PROPKEY_ddlStore_topRows      , DEFAULT_ddlStore_topRows);
 	}
 
 	/** Used by the: Create 'Offline Session' Wizard */
@@ -192,6 +205,7 @@ extends CountersModel
 		list.add(new CmSettingsHelper("Only statements of the last ## minutes", PROPKEY_sample_lastXminutes   , Integer.class, conf.getIntProperty    (PROPKEY_sample_lastXminutes   , DEFAULT_sample_lastXminutes   ), DEFAULT_sample_lastXminutes   , "Only get the statements that has run in the last ## minutes (LAST_SEEN). 0 = all statements." ));
 		list.add(new CmSettingsHelper("Max Number of Rows"                    , PROPKEY_sample_topRows        , Integer.class, conf.getIntProperty    (PROPKEY_sample_topRows        , DEFAULT_sample_topRows        ), DEFAULT_sample_topRows        , "Only get the ## statements with most time (SUM_TIMER_WAIT since the server started, or since the digest table was truncated). 0 = all." ));
 		list.add(new CmSettingsHelper("Get Query Sample Text"                 , PROPKEY_sample_querySampleText, Boolean.class, conf.getBooleanProperty(PROPKEY_sample_querySampleText, DEFAULT_sample_querySampleText), DEFAULT_sample_querySampleText, "Get QUERY_SAMPLE_TEXT: an example of the statement, with the values (literals) it had. Set to false if the statements can have values that should not be stored." ));
+		list.add(new CmSettingsHelper("Store Table Info for Top Rows"         , PROPKEY_ddlStore_topRows      , Integer.class, conf.getIntProperty    (PROPKEY_ddlStore_topRows      , DEFAULT_ddlStore_topRows      ), DEFAULT_ddlStore_topRows      , "In every sample: store information about the tables (columns, indexes and how they are used, sizes) that the ## statements with most time since the previous sample uses (statements on MySQL's own tables are not counted). The Daily Summary Report shows it with the statement. 0 = do not store." ));
 
 		return list;
 	}
@@ -483,6 +497,111 @@ extends CountersModel
 	{
 		super.reset();
 		_warnedDigestTableFull = false;
+		_ddlParsedDigests = new HashMap<>();
+	}
+
+	/** A new recording: the tables are stored again in it */
+	@Override
+	public void prepareForPcsDatabaseRollover()
+	{
+		super.prepareForPcsDatabaseRollover();
+		_ddlParsedDigests = new HashMap<>();
+	}
+
+	/**
+	 * The tables of the statements with most time since the previous sample: send them to the "DDL Storage" (see ObjectLookupInspectorMySql),
+	 * the report shows them with the statement. The tables are found by parsing the normalized text (as PostgresTune CmPgStatements).<br>
+	 * A table without a schema is in the default schema of the statement (SchemaName). Every digest is only parsed once per recording.<br>
+	 * Only statements with tables that are not MySQL's own count in the top: otherwise the queries of the collector itself (on performance_schema) take the places.
+	 */
+	@Override
+	public void sendDdlDetailsRequest(CounterSample absData, CounterSample diffData, CounterSample rateData)
+	{
+		if ( ! PersistentCounterHandler.hasInstance() || diffData == null )
+			return;
+
+		int topRows = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_ddlStore_topRows, DEFAULT_ddlStore_topRows);
+		if (topRows <= 0)
+			return;
+
+		final int pos_TotalTimeMs = diffData.findColumn("TotalTimeMs");
+		final int pos_SchemaName  = diffData.findColumn("SchemaName");
+		final int pos_Digest      = diffData.findColumn("Digest");
+		final int pos_DigestText  = diffData.findColumn("DigestText");
+		if (pos_TotalTimeMs == -1 || pos_SchemaName == -1 || pos_Digest == -1 || pos_DigestText == -1)
+			return;
+
+		// Most time first
+		List<List<Object>> sorted = new ArrayList<>(diffData.getDataCollection());
+		sorted.sort((row1, row2) -> Double.compare(
+				row2.get(pos_TotalTimeMs) instanceof Number ? ((Number) row2.get(pos_TotalTimeMs)).doubleValue() : 0,
+				row1.get(pos_TotalTimeMs) instanceof Number ? ((Number) row1.get(pos_TotalTimeMs)).doubleValue() : 0));
+
+		PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
+
+		int count = 0;
+		for (int r = 0; r < sorted.size() && count < topRows; r++)
+		{
+			List<Object> row = sorted.get(r);
+
+			// The rest did nothing in this sample
+			if ( ! (row.get(pos_TotalTimeMs) instanceof Number) || ((Number) row.get(pos_TotalTimeMs)).doubleValue() <= 0 )
+				break;
+
+			String schema = row.get(pos_SchemaName) == null ? "" : row.get(pos_SchemaName).toString();
+			String digest = row.get(pos_Digest)     == null ? "" : row.get(pos_Digest)    .toString();
+			Object text   = row.get(pos_DigestText);
+			if (text == null || digest.isEmpty())
+				continue;
+
+			// Already parsed: its tables are stored
+			Boolean hasTables = _ddlParsedDigests.get(schema + ":" + digest);
+			if (hasTables != null)
+			{
+				if (hasTables)
+					count++;
+				continue;
+			}
+
+			hasTables = false;
+			for (String table : getTablesOfDigestText(text.toString()))
+			{
+				// 'schema.table' has its schema, otherwise it is in the default schema of the statement (none = we don't know where it is)
+				String[] schemaAndTable = ObjectLookupInspectorMySql.splitSchemaAndTable(schema, table);
+				if (StringUtil.isNullOrBlank(schemaAndTable[0]) || ObjectLookupInspectorMySql.isSystemObject(schemaAndTable[0], schemaAndTable[1]))
+					continue;
+
+				pch.addDdl(schemaAndTable[0], schemaAndTable[1], CM_NAME + ".diff.top.TotalTimeMs.parse");
+				hasTables = true;
+			}
+			_ddlParsedDigests.put(schema + ":" + digest, hasTables);
+			if (hasTables)
+				count++;
+		}
+	}
+
+	/**
+	 * The tables of a normalized statement (DIGEST_TEXT), as 'table' or 'schema.table'.<br>
+	 * The text has backticks and spaces around dots: <code>`dbx_test` . `orders`</code>, which the parser takes as 3 words. So they are removed first.
+	 */
+	public static Set<String> getTablesOfDigestText(String digestText)
+	{
+		if (StringUtil.isNullOrBlank(digestText))
+			return new HashSet<>();
+
+		String sql = digestText.replace("`", "").replaceAll("\\s*\\.\\s*", ".");
+
+		// The parser throws on some texts (ArrayIndexOutOfBoundsException when the text ends with FROM: a long text is cut at performance_schema_max_digest_length)
+		// One text must not make the sample fail
+		try
+		{
+			return SqlParserUtils.getTables(sql);
+		}
+		catch (RuntimeException ex)
+		{
+			_logger.debug("Could not get the tables of the digest text, skipping it. Caught: " + ex + ", text: " + digestText);
+			return new HashSet<>();
+		}
 	}
 
 	@Override
@@ -518,5 +637,25 @@ extends CountersModel
 
 		// Set the values
 		tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+	}
+
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		list.add(new CmChartDescriptor()
+			.id("time-by-schema")
+			.title("Statement Time by Schema")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("Digest")
+			.groupByColumn("SchemaName")
+			.valueColumns("TotalTimeMs", "ExecCount")
+			.seriesLabels("Time (ms)", "Executions")
+			.skipZeroRows(true)
+			.pieOtherLimit(0.05)
+			.splitRatio(0.6));
+
+		return list;
 	}
 }

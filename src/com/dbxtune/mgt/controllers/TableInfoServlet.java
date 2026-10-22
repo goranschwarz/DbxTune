@@ -44,7 +44,9 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.central.controllers.Helper;
 import com.dbxtune.pcs.PersistWriterJdbc;
 import com.dbxtune.pcs.PersistentCounterHandler;
+import com.dbxtune.cm.mysql.CmStatements;
 import com.dbxtune.pcs.report.content.ase.AseAbstract;
+import com.dbxtune.pcs.report.content.mysql.MySqlAbstract;
 import com.dbxtune.pcs.report.content.oracle.OracleAbstract;
 import com.dbxtune.pcs.report.content.postgres.PostgresAbstract;
 import com.dbxtune.pcs.report.content.sqlserver.SqlServerAbstract;
@@ -91,6 +93,7 @@ extends HttpServlet
 		String tablesParam = Helper.getParameter(req, "tables",  "");
 		String format     = Helper.getParameter(req, "format",   "html").trim().toLowerCase();
 		String tsParam    = Helper.getParameter(req, "ts",       null);
+		String sqlParam   = Helper.getParameter(req, "sql",      "");   // MySQL: the tables are also taken from the SQL text (a plan in JSON format 1 only names the aliases)
 
 		if (dbVendor.isBlank())
 		{
@@ -129,7 +132,7 @@ extends HttpServlet
 
 		try
 		{
-			om.writeValue(out, actionTableInfo(conn, dbVendor.trim(), dbname.trim(), tablesParam, format));
+			om.writeValue(out, actionTableInfo(conn, dbVendor.trim(), dbname.trim(), tablesParam, format, sqlParam));
 		}
 		catch (Exception ex)
 		{
@@ -149,7 +152,7 @@ extends HttpServlet
 	 * <p>format=json is implemented for ASE and SQL Server; Postgres still falls through to the
 	 * empty-map branch below - {@link PostgresAbstract} has no {@code getTableInfoFields()} yet.
 	 */
-	private Map<String, Object> actionTableInfo(DbxConnection conn, String dbVendor, String dbname, String tablesParam, String format)
+	private Map<String, Object> actionTableInfo(DbxConnection conn, String dbVendor, String dbname, String tablesParam, String format, String sqlText)
 	{
 		Map<String, Object> result = new LinkedHashMap<>();
 		boolean asText = "text".equals(format);
@@ -163,6 +166,10 @@ extends HttpServlet
 			if (!trimmed.isEmpty())
 				tableList.add(trimmed);
 		}
+
+		// MySQL: the tables of the SQL text too (it can be a normalized text: backticks and spaces around the dots, see CmStatements)
+		if (DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_MYSQL) && StringUtil.hasValue(sqlText))
+			tableList.addAll(CmStatements.getTablesOfDigestText(sqlText));
 
 		if (tableList.isEmpty())
 		{
@@ -214,6 +221,19 @@ extends HttpServlet
 					result.put(resultKey, asText
 							? OracleAbstract.getTableInfoPlainText(conn, dbname, tableList)
 							: fallbackIfBlank(OracleAbstract.getTableInfoHtml(conn, dbname, tableList, true, "qs-tableinfo"), tableList));
+			}
+			else if (DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_MYSQL))
+			{
+				// 'dbname' is the schema of the statement: a table without a schema is there. MySQL's own tables are skipped
+				if (asJson)
+				{
+					_logger.info("actionTableInfo(): format=json is only implemented for dbVendor='Sybase ASE' and 'Microsoft SQL Server', skipping for '{}'.", dbVendor);
+					result.put(resultKey, Collections.emptyMap());
+				}
+				else
+					result.put(resultKey, asText
+							? MySqlAbstract.getTableInfoPlainText(conn, dbname, tableList)
+							: fallbackIfBlank(MySqlAbstract.getTableInfoHtml(conn, dbname, tableList, true, "qs-tableinfo"), tableList));
 			}
 			else
 			{

@@ -32,13 +32,16 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.gui.MainFrame;
+import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.utils.Configuration;
@@ -202,15 +205,19 @@ extends CountersModel
 		return MySqlCmUtils.checkViewsAreReadable(this, conn, "sys.x$schema_table_statistics");
 	}
 
-	public static final String  PROPKEY_sample_topRows = CM_NAME + ".sample.topRows";
-	public static final int     DEFAULT_sample_topRows = 500;
+	public static final String  PROPKEY_sample_topRows   = CM_NAME + ".sample.topRows";
+	public static final int     DEFAULT_sample_topRows   = 500;
+
+	public static final String  PROPKEY_ddlStore_topRows = CM_NAME + ".ddlStore.topRows";
+	public static final int     DEFAULT_ddlStore_topRows = 10;
 
 	@Override
 	protected void registerDefaultValues()
 	{
 		super.registerDefaultValues();
 
-		Configuration.registerDefaultValue(PROPKEY_sample_topRows, DEFAULT_sample_topRows);
+		Configuration.registerDefaultValue(PROPKEY_sample_topRows,   DEFAULT_sample_topRows);
+		Configuration.registerDefaultValue(PROPKEY_ddlStore_topRows, DEFAULT_ddlStore_topRows);
 	}
 
 	/** Used by the: Create 'Offline Session' Wizard */
@@ -221,8 +228,61 @@ extends CountersModel
 		List<CmSettingsHelper> list = new ArrayList<>();
 
 		list.add(new CmSettingsHelper("Top Rows", PROPKEY_sample_topRows, Integer.class, conf.getIntProperty(PROPKEY_sample_topRows, DEFAULT_sample_topRows), DEFAULT_sample_topRows, "Only keep the ## most active tables (by total_latency since the server started). 0 = all tables." ));
+		list.add(new CmSettingsHelper("Store Table Info for Top Rows", PROPKEY_ddlStore_topRows, Integer.class, conf.getIntProperty(PROPKEY_ddlStore_topRows, DEFAULT_ddlStore_topRows), DEFAULT_ddlStore_topRows, "In every sample: store information about the ## tables with most total_latency, rows_fetched and io_read since the previous sample (columns, indexes and how they are used, sizes). A table is only stored once per recording. The Daily Summary Report shows it. 0 = do not store." ));
 
 		return list;
+	}
+
+	/**
+	 * The tables that were used most since the previous sample: send them to the "DDL Storage", which stores what each table looks like
+	 * (see ObjectLookupInspectorMySql). A table is only stored once per recording: PersistentCounterHandler.addDdl() knows what it already has.
+	 * (as OracleTune CmSegmentStats)
+	 */
+	@Override
+	public void sendDdlDetailsRequest(CounterSample absData, CounterSample diffData, CounterSample rateData)
+	{
+		if ( ! PersistentCounterHandler.hasInstance() || diffData == null )
+			return;
+
+		int topRows = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_ddlStore_topRows, DEFAULT_ddlStore_topRows);
+		if (topRows <= 0)
+			return;
+
+		final int pos_table_schema = diffData.findColumn("table_schema");
+		final int pos_table_name   = diffData.findColumn("table_name");
+		if (pos_table_schema == -1 || pos_table_name == -1)
+			return;
+
+		PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
+
+		for (String colName : new String[] { "total_latency", "rows_fetched", "io_read" })
+		{
+			final int pos = diffData.findColumn(colName);
+			if (pos == -1)
+				continue;
+
+			// Most first
+			List<List<Object>> sorted = new ArrayList<>(diffData.getDataCollection());
+			sorted.sort((row1, row2) -> Double.compare(
+					row2.get(pos) instanceof Number ? ((Number) row2.get(pos)).doubleValue() : 0,
+					row1.get(pos) instanceof Number ? ((Number) row1.get(pos)).doubleValue() : 0));
+
+			for (int r = 0; r < sorted.size() && r < topRows; r++)
+			{
+				List<Object> row = sorted.get(r);
+
+				// The rest did nothing in this sample
+				if ( ! (row.get(pos) instanceof Number) || ((Number) row.get(pos)).doubleValue() <= 0 )
+					break;
+
+				Object schema = row.get(pos_table_schema);
+				Object table  = row.get(pos_table_name);
+				if (schema == null || table == null)
+					continue;
+
+				pch.addDdl(schema.toString(), table.toString(), CM_NAME + ".diff.top." + colName);
+			}
+		}
 	}
 
 	@Override
@@ -261,5 +321,27 @@ extends CountersModel
 			+ "";
 
 		return sql;
+	}
+
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		// total_latency is in picoseconds: the chart shows the shares, so the unit does not matter
+		list.add(new CmChartDescriptor()
+			.id("table-io-time")
+			.title("Table I/O Time and Rows Read by Table")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("table_name")
+			.labelPrefixColumns("table_schema")
+			.valueColumns("total_latency", "rows_fetched")
+			.seriesLabels("I/O Time (picoseconds)", "Rows Read")
+			.skipZeroRows(true)
+			.maxItems(15)
+			.pieOtherLimit(0.02)
+			.splitRatio(0.6));
+
+		return list;
 	}
 }

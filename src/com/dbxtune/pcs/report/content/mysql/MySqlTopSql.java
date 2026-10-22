@@ -25,22 +25,33 @@ import java.io.IOException;
 import java.io.Writer;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Types;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
+import com.dbxtune.central.llm.LlmSqlContextBuilder;
 import com.dbxtune.cm.CountersModel;
+import com.dbxtune.cm.mysql.CmStatements;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.gui.ResultSetTableModel.TableStringRenderer;
 import com.dbxtune.pcs.DictCompression;
+import com.dbxtune.pcs.inspection.ObjectLookupInspectorMySql;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
+import com.dbxtune.pcs.report.content.ShowplanLinkBuilder;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.AggType;
 import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
@@ -67,6 +78,12 @@ extends MySqlAbstract
 	private ResultSetTableModel _shortRstm;
 	private ResultSetTableModel _sqlTextRstm;
 	private List<String>        _miniChartJsList = new ArrayList<>();
+
+	/** The execution plans of the statements in the report. Key: the id of the hidden HTML element that holds the plan, value: the JSON of EXPLAIN FORMAT=JSON */
+	private Map<String, String> _planTexts = new LinkedHashMap<>();
+
+	/** At most this many plans per statement (a statement that runs long can get a new plan for every execution: they are mostly the same) */
+	private static final int MAX_PLANS_PER_STATEMENT = 3;
 
 	public MySqlTopSql(DailySummaryReportAbstract reportingInstance)
 	{
@@ -143,7 +160,52 @@ extends MySqlAbstract
 			// Write JavaScript code for the mini charts
 			for (String str : _miniChartJsList)
 				w.append(str);
+
+			// The execution plans, each ONCE, as hidden blocks: "View Execution Plan" and "Get LLM Optimization Advice" read them when they are clicked
+			// (type 'text/xmldata' is what dsrOpenLink() expects, the content is the JSON as text: the browser does not parse it)
+			for (Entry<String, String> plan : _planTexts.entrySet())
+			{
+				w.append("\n<script id='").append(plan.getKey()).append("' type='text/xmldata'>\n");
+				w.append(plan.getValue().replace("</script", "<\\/script"));
+				w.append("\n</script>\n");
+			}
 		}
+	}
+
+	/**
+	 * The execution plans CmActiveStatements got for a statement while it was running (EXPLAIN FORMAT=JSON FOR CONNECTION), found by its digest.
+	 * Only there when the collector's login has the privileges for it (see CmActiveStatements). Each plan once, at most MAX_PLANS_PER_STATEMENT.
+	 */
+	private static List<String> getExecutionPlans(DbxConnection conn, String digest)
+	{
+		List<String> plans = new ArrayList<>();
+		if (StringUtil.isNullOrBlank(digest) || ! DbUtils.checkIfTableExistsNoThrow(conn, null, null, "CmActiveStatements_abs"))
+			return plans;
+
+		try
+		{
+			// The plan is normally stored "Dictionary Compressed": the column has a hash id, and the text is in a table of it's own (one row per different plan)
+			String sql = DictCompression.hasCompressedColumnNames(conn, null, "CmActiveStatements_abs")
+				? "select x.[colVal] from [CmActiveStatements$dcc$ExecPlan] x where x.[hashId] in (select a.[ExecPlan$dcc$] from [CmActiveStatements_abs] a where a.[Digest] = " + DbUtils.safeStr(digest) + ")"
+				: "select a.[ExecPlan] from [CmActiveStatements_abs] a where a.[Digest] = " + DbUtils.safeStr(digest) + " and a.[ExecPlan] is not null";
+
+			Set<String> distinct = new LinkedHashSet<>();
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(conn.quotifySqlString(sql)))
+			{
+				while (rs.next() && distinct.size() < MAX_PLANS_PER_STATEMENT)
+				{
+					String plan = rs.getString(1);
+					if (StringUtil.hasValue(plan))
+						distinct.add(plan);
+				}
+			}
+			plans.addAll(distinct);
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems getting the execution plans of digest '" + digest + "' from CmActiveStatements_abs. Caught: " + ex);
+		}
+		return plans;
 	}
 
 	/** What is shown when the "SqlText" cell of the first table is clicked: some numbers of the row, and the SQL Text. (double quotes must be avoided or escaped) */
@@ -234,6 +296,7 @@ extends MySqlAbstract
 			    + "        ,count(distinct [SchemaName])                                                           as [schema_count] \n"
 			    + "        ,max([" + col_DigestText + "])                                                          as [SqlText] \n"
 			    + "        ,max([" + col_QuerySampleText + "])                                                     as [SampleText] \n"
+			    + "        ,cast('' as varchar(512))                                                               as [ExecPlan] \n"
 			    + " \n"
 			    + "        ,row_number() over (order by sum([TotalTimeMs])  desc)                                  as [rank_time] \n"
 			    + "        ,row_number() over (order by sum([RowsExamined]) desc)                                  as [rank_rows] \n"
@@ -317,6 +380,7 @@ extends MySqlAbstract
 		_shortRstm.setColumnDescription("schema_count"          , "In how many schemas the statement ran (each schema has its own row in MySQL, they are summed here)");
 		_shortRstm.setColumnDescription("SqlText"               , "The normalized SQL Text: click to see it (it is also in the table below)");
 		_shortRstm.setColumnDescription("SampleText"            , "An example of the statement, with the values it had (QUERY_SAMPLE_TEXT)");
+		_shortRstm.setColumnDescription("ExecPlan"              , "The execution plan(s) the collector got while the statement was running (CmActiveStatements, only when the login has the privileges for it): click to see it in DbxCentral");
 		_shortRstm.setColumnDescription("rank_time"             , "Place in the list when it's sorted on time (1 = most)");
 		_shortRstm.setColumnDescription("rank_rows"             , "Place in the list when it's sorted on rows examined (1 = most)");
 		_shortRstm.setColumnDescription("rank_execs"            , "Place in the list when it's sorted on executions (1 = most)");
@@ -444,6 +508,10 @@ extends MySqlAbstract
 			}
 		});
 
+		String dbxCentralBaseUrl = getReportingInstance().getDbxCentralPublicBaseUrl();
+		String reportSrvName     = getReportingInstance().getServerName();
+		int    pos_ExecPlan      = _shortRstm.findColumn("ExecPlan");
+
 		for (int r=0; r<_shortRstm.getRowCount(); r++)
 		{
 			String digest     = _shortRstm.getValueAsString(r, "Digest");
@@ -454,6 +522,46 @@ extends MySqlAbstract
 			// The digest table was full: the statements that did not fit are counted in a row without a digest and without a text
 			if (StringUtil.isNullOrBlank(sqlText))
 				sqlText = "-- No SQL Text: this row is all the statements that did not fit in the digest table (performance_schema_digests_size)";
+
+			//--------------------------------------------------------------------------------
+			// The execution plan(s) CmActiveStatements got while the statement was running (EXPLAIN FORMAT=JSON FOR CONNECTION, by the same digest)
+			// The plan is written ONCE, in a hidden block (see writeMessageText): the links read it from there when they are clicked
+			//--------------------------------------------------------------------------------
+			List<String> plans = getExecutionPlans(conn, digest);
+
+			String planLinks      = ""; // for the "details" table: "View Execution Plan", or "View Execution Plan: plan 1, plan 2"
+			String shortPlanLinks = ""; // for the first table:     "view plan",           or "1, 2"
+			String firstPlanId    = null;
+			for (int p = 0; p < plans.size(); p++)
+			{
+				String planElementId = "myplan_" + digest + "_" + (p + 1);
+				_planTexts.put(planElementId, plans.get(p));
+				if (firstPlanId == null)
+					firstPlanId = planElementId;
+
+				// One plan: "View Execution Plan". Several: the icon and the text once, then a link per plan
+				String link = ShowplanLinkBuilder.buildViewPlanLinkHtml(dbxCentralBaseUrl, planElementId, sqlText, DbUtils.DB_PROD_NAME_MYSQL, reportSrvName, schemaName,
+						plans.size() == 1 ? "View Execution Plan" : "plan " + (p + 1), planLinks.isEmpty());
+				if (StringUtil.hasValue(link))
+					planLinks += (planLinks.isEmpty() ? "" : ", ") + (plans.size() > 1 && planLinks.isEmpty() ? link.replace("<a ", "View Execution Plan: <a ") : link);
+
+				String shortLink = ShowplanLinkBuilder.buildViewPlanLinkHtml(dbxCentralBaseUrl, planElementId, sqlText, DbUtils.DB_PROD_NAME_MYSQL, reportSrvName, schemaName,
+						plans.size() == 1 ? "view plan" : "" + (p + 1), false);
+				if (StringUtil.hasValue(shortLink))
+					shortPlanLinks += (shortPlanLinks.isEmpty() ? "" : ", ") + shortLink;
+			}
+
+			// No plan: SAY so (as the other DBMS vendors does), a missing link leaves the reader wondering why
+			if (plans.isEmpty())
+			{
+				planLinks      = "Execution Plan <b>NOT Available</b> <i>(MySqlTune gets the plans of statements while they are running, and only when the login has the privileges for it: see the tab 'Active Statements')</i>";
+				shortPlanLinks = "--not-found--";
+			}
+			_shortRstm.setValueAtWithOverride(shortPlanLinks, r, pos_ExecPlan);
+
+			// "Get LLM Optimization Advice": with the (first) plan. What the tables look like is looked up when the link is clicked,
+			// and the charts and numbers of the statement is read from the table in the "sparklines" cell (see SparklineHelper.getWorkloadHarvesterJs)
+			String llmAdviceLink = LlmSqlContextBuilder.buildAdviceLinkHtmlJs(dbxCentralBaseUrl, sqlText, firstPlanId, DbUtils.DB_PROD_NAME_MYSQL, reportSrvName, schemaName);
 
 			// Who and where: the schema it ran in, and the problems MySQL counted for it
 			String problems = "";
@@ -470,8 +578,19 @@ extends MySqlAbstract
 			if (StringUtil.hasValue(sampleText))
 				sample = "<details><summary>An example of the statement, with its values</summary><xmp>" + sampleText + "</xmp></details>\n";
 
-			// The formatted SQL Text (the table information comes when MySqlTune looks up DDL)
-			String formatted = "\n<br>\n" + getFormattedSqlAsTooltipDiv(sqlText, "Hover or Click to see formatted SQL Text...", DbUtils.DB_PROD_NAME_MYSQL) + "\n";
+			// The tables of the statement (as CmStatements found them, to store them in the DDL Storage): a table without a schema is in the statement's schema
+			Set<String> tableList = new LinkedHashSet<>();
+			for (String table : CmStatements.getTablesOfDigestText(sqlText))
+			{
+				String[] schemaAndTable = ObjectLookupInspectorMySql.splitSchemaAndTable(StringUtil.nullToValue(schemaName, ""), table);
+				if ( ! ObjectLookupInspectorMySql.isSystemObject(schemaAndTable[0], schemaAndTable[1]) )
+					tableList.add(StringUtil.hasValue(schemaAndTable[0]) ? schemaAndTable[0] + "." + schemaAndTable[1] : schemaAndTable[1]);
+			}
+
+			// The formatted SQL Text, and the table information (it has the formatted SQL Text too)
+			String formatted = tableList.isEmpty()
+					? "\n<br>\n" + getFormattedSqlAsTooltipDiv(sqlText, "Hover or Click to see formatted SQL Text...", DbUtils.DB_PROD_NAME_MYSQL) + "\n"
+					: getDbmsTableInformationForTables(conn, schemaName, sqlText, tableList, DbUtils.DB_PROD_NAME_MYSQL);
 
 			// Grab all the charts and numbers we defined in 'htp'
 			String sparklines = htp.getHtmlTextForRow(r);
@@ -482,6 +601,8 @@ extends MySqlAbstract
 					"<xmp>" + sqlText + "</xmp>\n"
 						+ executedIn + " <br>\n"
 						+ sample
+						+ "<br>\n" + planLinks
+						+ (StringUtil.hasValue(llmAdviceLink) ? "<br>\n" + llmAdviceLink : "")
 						+ formatted);
 		}
 

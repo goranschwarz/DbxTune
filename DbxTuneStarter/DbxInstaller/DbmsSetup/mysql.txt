@@ -51,9 +51,12 @@ ALTER USER 'dbxtune'@'%' PASSWORD EXPIRE NEVER;
 /*--------------------------------------------------------------------------------------------
 ** SECTION 2: OPTIONAL - see table and index definitions (never the rows)
 **
-** Without this, the login can't see YOUR tables in information_schema.TABLES / STATISTICS, and SHOW CREATE TABLE is denied.
-** With it, MySqlTune can show table and index definitions (for example for the top statements).
+** MySqlTune stores information about the tables of the top statements (the "DDL Storage"), and the Daily Summary Report shows it with each statement.
+** Without this, the login can't see YOUR tables in information_schema.TABLES / STATISTICS, and SHOW CREATE TABLE is denied:
+** then the columns (with approximate data types), the indexes and the sizes come from the InnoDB data dictionary.
+** With it, the real CREATE TABLE, the index columns of partitioned tables and the index cardinality are stored too.
 ** REFERENCES is the smallest privilege that makes the definitions visible: SELECT on the tables is still DENIED.
+** (The text of a VIEW is only shown to a login with SELECT on the view, so views are only named.)
 **--------------------------------------------------------------------------------------------
 */
 GRANT REFERENCES ON *.* TO 'dbxtune'@'%';

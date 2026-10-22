@@ -33,6 +33,7 @@ import com.dbxtune.config.dict.MonTablesDictionaryMySql;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.MainFrameMySql;
 import com.dbxtune.pcs.inspection.IObjectLookupInspector;
+import com.dbxtune.pcs.inspection.ObjectLookupInspectorMySql;
 import com.dbxtune.pcs.sqlcapture.ISqlCaptureBroker;
 import com.dbxtune.sql.DbmsVersionHelperSimple;
 import com.dbxtune.sql.IDbmsVersionHelper;
@@ -113,7 +114,7 @@ extends DbxTune
 	@Override
 	public IObjectLookupInspector createPcsObjectLookupInspector()
 	{
-		return null;
+		return new ObjectLookupInspectorMySql();
 	}
 
 	@Override

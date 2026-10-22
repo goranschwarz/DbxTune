@@ -2348,6 +2348,30 @@ function dbxTuneGraphSubscribe()
 
 		return div;
 	}
+	function createMySqlQueryPlanToolTipDiv(data, rowData, srvName)
+	{
+		// creates a div that will open the plan dialog (dbxShowplan.js, #dbx-view-oraShowplan-dialog: it draws MySQL's plans too, with dbxShowplanMySql.js).
+		// The plan is the JSON of EXPLAIN FORMAT=JSON FOR CONNECTION. 'dbname' is the schema: a table without a schema in the statement is there
+
+		const dataVal = data;
+		const sqlText = rowData.hasOwnProperty('SqlText') ? (rowData.SqlText || '') : '';
+		const srv     = srvName || (_serverList.length ? _serverList[0] : '');
+		const dbname  = rowData.hasOwnProperty('CurrentSchema') ? (rowData.CurrentSchema || '') : '';
+
+		const div = document.createElement("div");
+		div.innerHTML = "&nbsp;";
+		div.setAttribute("title"           , "Click to Open the Execution Plan... \n-------------------------------\n" + dataVal);
+		div.setAttribute("data-bs-toggle"  , 'modal');
+		div.setAttribute("data-bs-target"  , '#dbx-view-oraShowplan-dialog');
+		div.setAttribute("data-objectname" , rowData.Pid ? ('Pid ' + rowData.Pid) : '');
+		div.setAttribute("data-plan"       , dataVal);
+		div.setAttribute("data-sqltext"    , sqlText);
+		div.setAttribute("data-srv"        , srv);
+		div.setAttribute("data-dbname"     , dbname);
+		div.setAttribute("data-dbvendor"   , 'MySQL');
+
+		return div;
+	}
 	function createPostgresQueryPlanToolTipDiv(data)
 	{
 		// creates a div that will open a modal-div where we can VIEW a Postgres Execution Plan (using https://github.com/dalibo/pev2?tab=readme-ov-file)
@@ -2682,9 +2706,9 @@ function dbxTuneGraphSubscribe()
 				}
 				else if ("MySqlTune" === appName && metaData !== undefined && metaData.hasOwnProperty('columnName'))
 				{
-					// The tooltip goes on the CHECKBOX columns (as for the other collectors). The plan is the JSON of EXPLAIN FORMAT=JSON FOR CONNECTION (shown as text)
+					// The tooltip goes on the CHECKBOX columns (as for the other collectors). The plan is the JSON of EXPLAIN FORMAT=JSON FOR CONNECTION (drawn by the plan dialog)
 					if (metaData.columnName === "HasSqlText"          && rowData.hasOwnProperty('SqlText')          && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.SqlText          , 'mysql') ); }
-					if (metaData.columnName === "HasExecPlan"         && rowData.hasOwnProperty('ExecPlan')         && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.ExecPlan         , 'text' ) ); }
+					if (metaData.columnName === "HasExecPlan"         && rowData.hasOwnProperty('ExecPlan')         && cellContent === true) { td.appendChild( createMySqlQueryPlanToolTipDiv( rowData.ExecPlan         , rowData, srvName) ); }
 					if (metaData.columnName === "HasPidLocks"         && rowData.hasOwnProperty('PidLocks')         && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.PidLocks         , 'Lock Table'      ) ); }
 					if (metaData.columnName === "HasBlockedPidsInfo"  && rowData.hasOwnProperty('BlockedPidsInfo')  && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.BlockedPidsInfo  , 'Blocked Pid Info') ); }
 				}

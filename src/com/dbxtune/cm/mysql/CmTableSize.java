@@ -36,6 +36,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
@@ -286,5 +287,37 @@ extends CountersModel
 			if (dataMap.size() > 0)
 				tgdp.setData(this.getTimestamp(), dataMap);
 		}
+	}
+
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		list.add(new CmChartDescriptor()
+			.id("size-by-schema")
+			.title("Table Size by Schema (MB)")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("TableName")
+			.groupByColumn("SchemaName")
+			.valueColumns("FileSizeMb")
+			.seriesLabels("File Size (MB)")
+			.skipZeroRows(true)
+			.pieOtherLimit(0.05)
+			.splitRatio(0.6));
+
+		list.add(new CmChartDescriptor()
+			.id("biggest-tables")
+			.title("Biggest Tables (MB)")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("TableName")
+			.labelPrefixColumns("SchemaName")
+			.valueColumns("FileSizeMb")
+			.seriesLabels("File Size (MB)")
+			.skipZeroRows(true)
+			.maxItems(15)
+			.pieOtherLimit(0.02));
+
+		return list;
 	}
 }
