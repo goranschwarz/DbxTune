@@ -30,6 +30,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cm.CountersModel;
+import com.dbxtune.cm.mysql.CmActiveStatements;
 import com.dbxtune.cm.mysql.CmGlobalStatus;
 import com.dbxtune.cm.mysql.CmInnoDbMetrics;
 import com.dbxtune.cm.mysql.CmInnodbBpStats;
@@ -107,6 +108,7 @@ extends CounterControllerAbstract
 		CmReplication       .create(counterController, guiController);
 
 		// Object Access
+		CmActiveStatements  .create(counterController, guiController);
 		CmSysTableStats     .create(counterController, guiController);
 		CmSysIndexStats     .create(counterController, guiController);
 		
