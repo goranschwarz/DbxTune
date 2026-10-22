@@ -591,8 +591,8 @@ extends CountersModel
 
 		String sql = digestText.replace("`", "").replaceAll("\\s*\\.\\s*", ".");
 
-		// The parser throws on some texts (ArrayIndexOutOfBoundsException when the text ends with FROM: a long text is cut at performance_schema_max_digest_length)
-		// One text must not make the sample fail
+		// One odd text must not make the sample fail (the parser threw when a text ended with FROM: a long text is cut at performance_schema_max_digest_length.
+		// That is fixed in TableNameParser, this stays in case another text trips it)
 		try
 		{
 			return SqlParserUtils.getTables(sql);
