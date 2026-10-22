@@ -20,13 +20,19 @@
  ******************************************************************************/
 package com.dbxtune.cm.mysql;
 
+import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
 import javax.naming.NameNotFoundException;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
+import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
@@ -35,6 +41,7 @@ import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
+import com.dbxtune.utils.Configuration;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -42,14 +49,18 @@ import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 public class CmSysIndexStats
 extends CountersModel
 {
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmSysIndexStats.class.getSimpleName();
 	public static final String   SHORT_NAME       = "Index Stats";
-	public static final String   HTML_DESC        = 
+	public static final String   HTML_DESC        =
 		"<html>"
 		+ "<h4>Index Statistics</h4>"
-		+ "Simply select * from sys.`x$schema_index_statistics`"
+		+ "Rows read/inserted/updated/deleted per index (sys.x$schema_index_statistics), as Diff and Rate per sample.<br>"
+		+ "Index 'PRIMARY' is the table itself (InnoDB stores the rows in the primary key).<br>"
+		+ "Only the most active indexes (since the server started) are shown: the property '" + CM_NAME + ".sample.topRows' (default 1000).<br>"
+		+ "The *_latency columns are in <b>picoseconds</b>.<br>"
 		+ "</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
@@ -163,11 +174,40 @@ extends CountersModel
 			mtd.addColumn("x$schema_index_statistics", "delete_latency", "<html>The total wait time of timed deletes from the index.</html>");
 
 		}
-		catch (NameNotFoundException e) 
+		catch (NameNotFoundException e)
 		{
-		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
-			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e);
 		}
+	}
+
+	/** If we can't read the view: disable the CM, and tell what to do about it */
+	@Override
+	public boolean checkDependsOnOther(DbxConnection conn)
+	{
+		return MySqlCmUtils.checkViewsAreReadable(this, conn, "sys.x$schema_index_statistics");
+	}
+
+	public static final String  PROPKEY_sample_topRows = CM_NAME + ".sample.topRows";
+	public static final int     DEFAULT_sample_topRows = 1000;
+
+	@Override
+	protected void registerDefaultValues()
+	{
+		super.registerDefaultValues();
+
+		Configuration.registerDefaultValue(PROPKEY_sample_topRows, DEFAULT_sample_topRows);
+	}
+
+	/** Used by the: Create 'Offline Session' Wizard */
+	@Override
+	public List<CmSettingsHelper> getLocalSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+
+		list.add(new CmSettingsHelper("Top Rows", PROPKEY_sample_topRows, Integer.class, conf.getIntProperty(PROPKEY_sample_topRows, DEFAULT_sample_topRows), DEFAULT_sample_topRows, "Only keep the ## most active indexes (by select+insert+update+delete latency since the server started). 0 = all indexes." ));
+
+		return list;
 	}
 
 	@Override
@@ -185,7 +225,20 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
-		String sql = "select * from sys.`x$schema_index_statistics`";
+		// On a server with many tables, keep only the most active indexes (2000 tables: 4167 rows, 12 ms)
+		int topRows = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_sample_topRows, DEFAULT_sample_topRows);
+
+		String sql = ""
+			+ "select /* ${cmCollectorName} */ \n"
+			+ "     table_schema, table_name, index_name \n"
+			+ "    ,rows_selected, select_latency \n"
+			+ "    ,rows_inserted, insert_latency \n"
+			+ "    ,rows_updated,  update_latency \n"
+			+ "    ,rows_deleted,  delete_latency \n"
+			+ "from sys.`x$schema_index_statistics` \n"
+			+ "order by select_latency + insert_latency + update_latency + delete_latency desc \n"
+			+ (topRows > 0 ? "limit " + topRows + " \n" : "")
+			+ "";
 
 		return sql;
 	}
