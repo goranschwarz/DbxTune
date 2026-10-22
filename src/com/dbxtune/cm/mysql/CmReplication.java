@@ -171,9 +171,11 @@ extends CountersModel
 		//       (sorting or MIN/MAX on them gives warning 1292 'Incorrect datetime value', and a warning makes the sample fail)
 		//
 		// ApplyLagSec: how old (on the source) the oldest transaction is that a worker is applying right now.
-		//              If nothing is being applied, but there are received transactions that are not applied (the applier is stopped or waiting):
+		//              The applier is stopped: NULL, not known (as Seconds_Behind_Source). The alarm SqlThreadNotRunning tells about it.
+		//                (it was "the time since the last applied transaction was committed", but after a source that was idle for hours that said hours, for a stop of one minute)
+		//              If nothing is being applied, but there are received transactions that are not applied (the applier is waiting, for example a delayed replica):
 		//              the time since the last APPLIED transaction was committed on the source (an upper limit: we do not know when the next one was committed)
-		//              Tested (8.4): the same as Seconds_Behind_Source when the applier is blocked. When the applier is stopped Seconds_Behind_Source is NULL.
+		//              Tested (8.4): the same as Seconds_Behind_Source when the applier is blocked.
 		String sql = ""
 			+ "select /* ${cmCollectorName} */ \n"
 			+ "     IF(cc.CHANNEL_NAME = '', '(default)', cc.CHANNEL_NAME) as ChannelName \n"
@@ -185,6 +187,8 @@ extends CountersModel
 			+ "    ,CAST(CASE \n"
 			+ "        WHEN w.applyingAgeUs is not null \n"
 			+ "            THEN w.applyingAgeUs / 1000000.0 \n"
+			+ "        WHEN COALESCE(ap.SERVICE_STATE, 'OFF') <> 'ON' \n"
+			+ "            THEN NULL \n"
 			+ "        WHEN cs.LAST_QUEUED_TRANSACTION_ORIGINAL_COMMIT_TIMESTAMP > w.lastAppliedCommit \n"
 			+ "         AND w.lastAppliedCommit > '1971-01-01' \n"
 			+ "            THEN TIMESTAMPDIFF(MICROSECOND, w.lastAppliedCommit, NOW(6)) / 1000000.0 \n"
@@ -272,8 +276,9 @@ extends CountersModel
 			mtd.addColumn(CM_NAME, "SqlThread",                "<html>State of the <b>applier</b> (SQL thread), which applies the transactions from the relay log.<br>ON or OFF.<br><b>Alarm</b>: SqlThreadNotRunning</html>");
 			mtd.addColumn(CM_NAME, "ApplyLagSec",              "<html>How far behind the source this replica is, in seconds.<br>"
 			                                                 + "<b>Formula</b>: When a transaction is being applied: now - the time it was committed on the source (the oldest, if several workers are applying).<br>"
-			                                                 + "When nothing is being applied, but transactions are received and not yet applied (the applier is stopped or waiting): now - the time the <i>last applied</i> transaction was committed on the source. "
-			                                                 + "That is an upper limit (we do not know when the next one was committed), and it grows while the applier is stopped (Seconds_Behind_Source is NULL then).<br>"
+			                                                 + "When the applier is stopped: NULL, not known (as Seconds_Behind_Source). See the alarm SqlThreadNotRunning.<br>"
+			                                                 + "When nothing is being applied, but transactions are received and not yet applied (the applier waits, for example a delayed replica): now - the time the <i>last applied</i> transaction was committed on the source. "
+			                                                 + "That is an upper limit (we do not know when the next one was committed).<br>"
 			                                                 + "Otherwise 0.<br>"
 			                                                 + "<b>Note</b>: A delayed replica (DesiredDelaySec) is behind on purpose.<br>"
 			                                                 + "<b>Alarm</b>: ApplyLagInSec</html>");
