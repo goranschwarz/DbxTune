@@ -31,6 +31,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.mysql.CmActiveStatements;
+import com.dbxtune.cm.mysql.CmErrorLog;
 import com.dbxtune.cm.mysql.CmGlobalStatus;
 import com.dbxtune.cm.mysql.CmInnoDbMetrics;
 import com.dbxtune.cm.mysql.CmInnodbBpStats;
@@ -42,6 +43,7 @@ import com.dbxtune.cm.mysql.CmSysIndexStats;
 import com.dbxtune.cm.mysql.CmSysSession;
 import com.dbxtune.cm.mysql.CmSysTableStats;
 import com.dbxtune.cm.mysql.CmUserStatus;
+import com.dbxtune.cm.mysql.CmWaits;
 import com.dbxtune.cm.os.CmOsDiskSpace;
 import com.dbxtune.cm.os.CmOsIostat;
 import com.dbxtune.cm.os.CmOsMeminfo;
@@ -107,6 +109,8 @@ extends CounterControllerAbstract
 		CmUserStatus        .create(counterController, guiController);
 		CmInnoDbMetrics     .create(counterController, guiController);
 		CmReplication       .create(counterController, guiController);
+		CmWaits             .create(counterController, guiController);
+		CmErrorLog          .create(counterController, guiController);
 
 		// Object Access
 		CmActiveStatements  .create(counterController, guiController);

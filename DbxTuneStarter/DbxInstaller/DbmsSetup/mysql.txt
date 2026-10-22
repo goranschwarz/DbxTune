@@ -69,8 +69,10 @@ GRANT REFERENCES ON *.* TO 'dbxtune'@'%';
 [mysqld]
 performance_schema = ON                              # default ON. Changing it needs a restart
 
-# RECOMENDED: every deadlock is written to the error log (not only the last one), and MySqlTune reads the error log
+# RECOMENDED: every deadlock is written to the error log (not only the last one), and MySqlTune reads the error log (the tab 'Error Log', with an alarm)
+# InnoDB writes deadlocks as notes, so 'log_error_verbosity = 3' is also needed (it also writes other notes, for example aborted connections)
 innodb_print_all_deadlocks = ON                      # can also be done without a restart: SET PERSIST innodb_print_all_deadlocks = ON;
+log_error_verbosity        = 3                       # default 2 (errors and warnings). Without a restart: SET PERSIST log_error_verbosity = 3;
 
 # OPTIONAL: CPU time per statement (the column CpuTimeMs in the tab 'Statements'), MySQL 8.0.28 and above. OFF by default.
 # Without a restart: UPDATE performance_schema.setup_consumers SET ENABLED = 'YES' WHERE NAME = 'events_statements_cpu';
