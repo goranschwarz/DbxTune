@@ -282,4 +282,16 @@ extends CmSummaryAbstract
 	{
 		return addAlarmSettings_DbmsVersionStringChanged(null, "version");
 	}
+
+	/** What the columns are: tooltips in the GUI, and the 'Description' column in DbxCentral (Counter Details, the "unpivot" view) */
+	@Override
+	public void initLocalToolTipTextOnTableColumnHeader()
+	{
+		setLocalToolTipTextOnTableColumnHeader("version",         "<html>The MySQL version. version()</html>");
+		setLocalToolTipTextOnTableColumnHeader("time_now",        "<html>Time of the sample (CURRENT_TIMESTAMP() on the server).</html>");
+		setLocalToolTipTextOnTableColumnHeader("utc_minute_diff", "<html>UTC Time Difference in minutes (positive east of UK, negative west of UK).</html>");
+		setLocalToolTipTextOnTableColumnHeader("host",            "<html>The host that MySQL runs on. @@hostname</html>");
+		setLocalToolTipTextOnTableColumnHeader("database_name",   "<html>Not yet implemented (always 'FIXME').</html>");
+		setLocalToolTipTextOnTableColumnHeader("start_time",      "<html>Date and time that MySQL was started (now - status variable 'Uptime').</html>");
+	}
 }

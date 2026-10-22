@@ -1373,6 +1373,72 @@ public class DbUtils
 		}
 	}
 
+	public static String getOracleHostname(Connection conn)
+	{
+		final String UNKNOWN = "UNKNOWN";
+
+		// FIXME: move this to DbUtils
+		if ( ! AseConnectionUtils.isConnectionOk(conn) )
+			return UNKNOWN;
+
+		String retStr = UNKNOWN;
+		String sql    = "select sys_context('USERENV','SERVER_HOST') as server_host from dual";
+
+		try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql) )
+		{
+			while (rs.next())
+			{
+				retStr = rs.getString(1).trim();
+			}
+
+			return retStr;
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("When getting Oracle Host  Name. sql='" + sql + "', Caught exception.", e);
+
+			return UNKNOWN;
+		}
+	}
+
+	public static int getOraclePort(Connection conn)
+	{
+		final int UNKNOWN = -1;
+
+		// FIXME: move this to DbUtils
+		if ( ! AseConnectionUtils.isConnectionOk(conn) )
+			return UNKNOWN;
+
+		int    ret = UNKNOWN;
+//		String sql = ""
+//				+ "SELECT DISTINCT TO_NUMBER(REGEXP_SUBSTR(CLIENT_CONNECTION_STRING, '\\(PORT=([0-9]+)\\)', 1, 1, 'i', 1)) AS PORT \n"
+//				+ "FROM V$SESSION_CONNECT_INFO \n"
+//				+ "WHERE SID = TO_NUMBER(SYS_CONTEXT('USERENV', 'SID')) \n"
+//				+ "  AND CLIENT_CONNECTION_STRING IS NOT NULL \n"
+//				+ "";
+		String sql = ""
+				+ "SELECT DISTINCT TO_NUMBER(REGEXP_SUBSTR(value, '\\(PORT=([0-9]+)\\)', 1, 1, 'i', 1)) AS port \n"
+				+ "FROM v$listener_network \n"
+				+ "WHERE type = 'LOCAL LISTENER'"
+				+ "";
+
+		try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql) )
+		{
+			while (rs.next())
+			{
+				ret = rs.getInt(1);
+			}
+
+			return ret;
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("When getting Oracle Port Number. sql='" + sql + "', Caught exception.", e);
+
+			return UNKNOWN;
+		}
+	}
+
 	public static long getOracleVersionNumber(Connection conn)
 	{
 		final int UNKNOWN = -1;

@@ -45,6 +45,7 @@ import com.dbxtune.central.controllers.Helper;
 import com.dbxtune.pcs.PersistWriterJdbc;
 import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.report.content.ase.AseAbstract;
+import com.dbxtune.pcs.report.content.oracle.OracleAbstract;
 import com.dbxtune.pcs.report.content.postgres.PostgresAbstract;
 import com.dbxtune.pcs.report.content.sqlserver.SqlServerAbstract;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -200,6 +201,19 @@ extends HttpServlet
 					result.put(resultKey, asText
 							? PostgresAbstract.getTableInfoPlainText(conn, dbname, tableList)
 							: fallbackIfBlank(PostgresAbstract.getTableInfoHtml(conn, dbname, tableList, true, "qs-tableinfo"), tableList));
+			}
+			else if (DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_ORACLE))
+			{
+				// 'dbname' is the container (PDB), and can be empty. A name in 'tables' can also be an INDEX: an Oracle execution plan often names only the index
+				if (asJson)
+				{
+					_logger.info("actionTableInfo(): format=json is only implemented for dbVendor='Sybase ASE' and 'Microsoft SQL Server', skipping for '{}'.", dbVendor);
+					result.put(resultKey, Collections.emptyMap());
+				}
+				else
+					result.put(resultKey, asText
+							? OracleAbstract.getTableInfoPlainText(conn, dbname, tableList)
+							: fallbackIfBlank(OracleAbstract.getTableInfoHtml(conn, dbname, tableList, true, "qs-tableinfo"), tableList));
 			}
 			else
 			{

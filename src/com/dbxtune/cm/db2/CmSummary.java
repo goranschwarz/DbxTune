@@ -275,4 +275,16 @@ extends CmSummaryAbstract
 	{
 		return addAlarmSettings_DbmsVersionStringChanged(null, "version");
 	}
+
+	/** What the columns are: tooltips in the GUI, and the 'Description' column in DbxCentral (Counter Details, the "unpivot" view). DB2 returns the column names in upper case */
+	@Override
+	public void initLocalToolTipTextOnTableColumnHeader()
+	{
+		setLocalToolTipTextOnTableColumnHeader("VERSION",         "<html>The DB2 version (SERVICE_LEVEL). SYSIBMADM.ENV_INST_INFO</html>");
+		setLocalToolTipTextOnTableColumnHeader("TIME_NOW",        "<html>Time of the sample (CURRENT_TIMESTAMP on the server).</html>");
+		setLocalToolTipTextOnTableColumnHeader("UTC_MINUTE_DIFF", "<html>Difference to UTC (CURRENT_TIMEZONE).</html>");
+		setLocalToolTipTextOnTableColumnHeader("HOST",            "<html>The host that DB2 runs on. SYSPROC.ENV_GET_SYS_INFO()</html>");
+		setLocalToolTipTextOnTableColumnHeader("DATABASE_NAME",   "<html>The DB2 instance name (INST_NAME). SYSPROC.ENV_GET_SYS_INFO()</html>");
+		setLocalToolTipTextOnTableColumnHeader("START_TIME",      "<html>Not yet implemented (always 'FIXME').</html>");
+	}
 }

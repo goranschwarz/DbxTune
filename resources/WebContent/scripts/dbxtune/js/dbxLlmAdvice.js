@@ -275,6 +275,7 @@ var dbxLlmAdvice = (function () {
 		if (v.indexOf('sql server') >= 0) return 'tsql';
 		if (v.indexOf('sybase') >= 0 || v.indexOf('adaptive server') >= 0) return 'tsql'; // closest available dialect to Sybase T-SQL
 		if (v.indexOf('postgres') >= 0) return 'postgresql';
+		if (v.indexOf('oracle') >= 0) return 'plsql';
 		return 'sql';
 	}
 
@@ -926,7 +927,8 @@ var dbxLlmAdvice = (function () {
 	{
 		var isAse = (opts.dbVendor === 'Adaptive Server Enterprise');
 		var isMs  = (opts.dbVendor === 'Microsoft SQL Server');
-		if (!isAse && !isMs)
+		var isOra = (opts.dbVendor === 'Oracle');   // as ASE: /api/cc/mgt/table-info. 'dbname' is the container (PDB) and can be empty
+		if (!isAse && !isMs && !isOra)
 			return Promise.resolve('');
 
 		if (typeof DbxSqlTableNames === 'undefined' || !DbxSqlTableNames.extractTablesAsync)
@@ -944,13 +946,13 @@ var dbxLlmAdvice = (function () {
 
 				var qs = new URLSearchParams();
 				var url;
-				if (isAse)
+				if (isAse || isOra)
 				{
 					url = '/api/cc/mgt/table-info';
 					qs.set('srv', opts.srv);
 					qs.set('dbVendor', opts.dbVendor);
 					qs.set('format', 'text');
-					qs.set('dbname', opts.dbname);
+					qs.set('dbname', opts.dbname || '');
 					qs.set('tables', tables.join(','));
 				}
 				else
@@ -980,7 +982,8 @@ var dbxLlmAdvice = (function () {
 		if (opts.jdbcUrl)
 			return fetchDdlContextByJdbcUrl(opts);
 
-		if (opts.srv && opts.dbname)
+		// (Oracle has no "database name" to give: the container name is optional)
+		if (opts.srv && (opts.dbname || opts.dbVendor === 'Oracle'))
 			return fetchDdlContextBySrv(opts);
 
 		return Promise.resolve('');

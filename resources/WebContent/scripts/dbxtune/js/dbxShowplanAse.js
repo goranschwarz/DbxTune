@@ -778,7 +778,13 @@ window.AseShowplan = (function () {
 		+ '.ase-plan-tree.ase-plan-compact-v li > ul > li { display: table-cell; vertical-align: top; padding: 40px 6px 0 6px; }'
 		+ '.ase-plan-tree.ase-plan-compact-v li > ul > li:first-child { padding-left: 0; }'
 		+ '.ase-plan-tree.ase-plan-compact-v li > ul > li:last-child { padding-right: 0; }'
-		+ '.ase-plan-tree.ase-plan-compact-h li:only-child, .ase-plan-tree.ase-plan-compact-v li:only-child { padding: 0; }'
+		// compact-h only. This used to cover compact-v too, and there it took away the 40px TOP padding of
+		// an only child - the only thing that makes room for the arrow between an operator and its single
+		// child - so in Top-to-Bottom a chain that does not branch (EMIT - RESTRICT - SORT - SCAN) was
+		// stacked 6px apart, with just an arrowhead in between. An only child is :first-child and
+		// :last-child at the same time, so the two rules above already take its LEFT/RIGHT padding away.
+		// Same change, for the same reason, as in dbxShowplanSqlServer.js (see the longer comment there).
+		+ '.ase-plan-tree.ase-plan-compact-h li:only-child { padding: 0; }'
 		+ '.ase-plan-box { position: relative; border: 1px solid var(--sp-node-border); border-radius: 5px; background: var(--sp-bg); padding: 5px 9px; cursor: pointer; min-width: 120px; max-width: 220px; text-align: center; box-shadow: 0 1px 2px var(--sp-shadow); }'
 		+ '.ase-plan-box:hover { border-color: var(--sp-sel); }'
 		+ '.ase-plan-box.ase-plan-warn { border-color: var(--sp-warn-border); background: var(--sp-warn-bg); }'

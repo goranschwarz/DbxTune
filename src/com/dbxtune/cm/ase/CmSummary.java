@@ -1915,4 +1915,88 @@ extends CmSummaryAbstract
 
 		return list;
 	}
+
+	/** What the columns are: tooltips in the GUI, and the 'Description' column in DbxCentral (Counter Details, the "unpivot" view). Texts mostly from CmSummaryPanel */
+	@Override
+	public void initLocalToolTipTextOnTableColumnHeader()
+	{
+		// Server Information
+		setLocalToolTipTextOnTableColumnHeader("srvVersion",                   "<html>The version string taken from @@version</html>");
+		setLocalToolTipTextOnTableColumnHeader("atAtServerName",               "<html>This is the internal server name in the ASE, taken from the global variable @@servername</html>");
+		setLocalToolTipTextOnTableColumnHeader("clusterInstanceId",            "<html>The ASE Cluster Instance ID we are connected to (@@instanceid). 'Not Enabled' if it is not a Cluster Edition.</html>");
+		setLocalToolTipTextOnTableColumnHeader("clusterCoordId",               "<html>The ASE Cluster Coordinator ID (@@clustercoordid). 'Not Enabled' if it is not a Cluster Edition.</html>");
+		setLocalToolTipTextOnTableColumnHeader("hadrModeInt",                  "<html>HADR Mode as a number (@@hadr_mode). -1 if HADR is not supported (below ASE 16.0 SP2).</html>");
+		setLocalToolTipTextOnTableColumnHeader("hadrStateInt",                 "<html>HADR State as a number (@@hadr_state).</html>");
+		setLocalToolTipTextOnTableColumnHeader("hadrModeStr",                  "<html>HADR Mode as a text (hadr_mode()).</html>");
+		setLocalToolTipTextOnTableColumnHeader("hadrStateStr",                 "<html>HADR State as a text (hadr_state()).</html>");
+		setLocalToolTipTextOnTableColumnHeader("timeIsNow",                    "<html>Time of the sample (getdate() on the server).</html>");
+		setLocalToolTipTextOnTableColumnHeader("utcTimeDiff",                  "<html>UTC Time Difference in minutes (positive east of UK, negative west of UK).</html>");
+		setLocalToolTipTextOnTableColumnHeader("NetworkAddressInfo",           "<html>Hostname and ports that the ASE server has listener services on, this makes it easier to see what physical machine we have connected to. Needs sa_role.</html>");
+		setLocalToolTipTextOnTableColumnHeader("asePageSize",                  "<html>The PageSize is taken from @@maxpagesize, which is presented in bytes.</html>");
+		setLocalToolTipTextOnTableColumnHeader("bootcount",                    "<html>How many times has this ASE been rebooted. Global variable @@bootcount.</html>");
+		setLocalToolTipTextOnTableColumnHeader("recovery_state",               "<html>If the ASE is in-recovery, this would be the reason. Global variable @@recovery_state.</html>");
+		setLocalToolTipTextOnTableColumnHeader("dummyColumn",                  "<html>Only there when we do not have mon_role: then nothing is read from monState.</html>");
+
+		// monState
+		setLocalToolTipTextOnTableColumnHeader("StartDate",                    "<html>Date and time that the ASE was started.</html>");
+		setLocalToolTipTextOnTableColumnHeader("DaysRunning",                  "<html>Number of days that the ASE has been running for.</html>");
+		setLocalToolTipTextOnTableColumnHeader("CountersCleared",              "<html>Date and time at which the monitor counters were last cleared.</html>");
+		setLocalToolTipTextOnTableColumnHeader("CheckPoints",                  "<html>Whether any checkpoint is currently running.</html>");
+		setLocalToolTipTextOnTableColumnHeader("NumDeadlocks",                 "<html>Total number of deadlocks that have occurred.</html>");
+		setLocalToolTipTextOnTableColumnHeader("DiagnosticDumps",              "<html>Whether the Sybmon diagnostic utility is performing a shared memory dump.</html>");
+		setLocalToolTipTextOnTableColumnHeader("Connections",                  "<html>Number of active inbound connections.</html>");
+		setLocalToolTipTextOnTableColumnHeader("LockWaitThreshold",            "<html>Time (in seconds) that processes must have waited for locks in order to be reported.</html>");
+		setLocalToolTipTextOnTableColumnHeader("LockWaits",                    "<html>Number of processes that have waited longer than LockWaitThreshold seconds.</html>");
+		setLocalToolTipTextOnTableColumnHeader("MaxRecovery",                  "<html>The maximum time (in minutes), per database, that ASE uses to complete its recovery procedures in case of a system failure, the current 'Run Value' for the 'recovery interval in minutes' configuration option.</html>");
+		setLocalToolTipTextOnTableColumnHeader("Transactions",                 "<html>Number of transactions executed. Only available from 15.0.3 CE or 15.5 (not to be trusted in a Cluster Server).</html>");
+		setLocalToolTipTextOnTableColumnHeader("Rollbacks",                    "<html>Total number of transactions that have been rolled back on the server. Only available from ASE 15.7 SP100.</html>");
+		setLocalToolTipTextOnTableColumnHeader("Selects",                      "<html>Total number of select operations that have been executed on the server. Only available from ASE 15.7 SP100.</html>");
+		setLocalToolTipTextOnTableColumnHeader("Updates",                      "<html>Total number of update operations that have been executed on the server. Only available from ASE 15.7 SP100.</html>");
+		setLocalToolTipTextOnTableColumnHeader("Inserts",                      "<html>Total number of insert operations that have been executed on the server. Only available from ASE 15.7 SP100.</html>");
+		setLocalToolTipTextOnTableColumnHeader("Deletes",                      "<html>Total number of delete operations that have been executed on the server. Only available from ASE 15.7 SP100.</html>");
+		setLocalToolTipTextOnTableColumnHeader("Merges",                       "<html>Total number of merge operations that have been executed on the server. Only available from ASE 15.7 SP100.</html>");
+		setLocalToolTipTextOnTableColumnHeader("TableAccesses",                "<html>Number of pages where data was retrieved without an index on the server. Only available from ASE 15.7 SP100.</html>");
+		setLocalToolTipTextOnTableColumnHeader("IndexAccesses",                "<html>Number of pages where data was retrieved using an index on the server. Only available from ASE 15.7 SP100.</html>");
+		setLocalToolTipTextOnTableColumnHeader("TempDbObjects",                "<html>Total number of temporary tables created on the server. Only available from ASE 15.7 SP100.</html>");
+		setLocalToolTipTextOnTableColumnHeader("WorkTables",                   "<html>Total number of work tables created on the server. Only available from ASE 15.7 SP100.</html>");
+		setLocalToolTipTextOnTableColumnHeader("ULCFlushes",                   "<html>Total number of times the User Log Cache was flushed. Only available from ASE 15.7 SP100.</html>");
+		setLocalToolTipTextOnTableColumnHeader("ULCFlushFull",                 "<html>Number of times the User Log Cache was flushed because it was full. Only available from ASE 15.7 SP100.</html>");
+		setLocalToolTipTextOnTableColumnHeader("ULCKBWritten",                 "<html>Number of kilobytes written to the user log cache. Only available from ASE 15.7 SP100.</html>");
+		setLocalToolTipTextOnTableColumnHeader("PagesRead",                    "<html>Number of pages read on server wide. Only available from ASE 15.7 SP100.</html>");
+		setLocalToolTipTextOnTableColumnHeader("PagesWritten",                 "<html>Number of pages written on server wide. Only available from ASE 15.7 SP100.</html>");
+		setLocalToolTipTextOnTableColumnHeader("PhysicalReads",                "<html>Number of buffers read from the disk. Only available from ASE 15.7 SP100.</html>");
+		setLocalToolTipTextOnTableColumnHeader("PhysicalWrites",               "<html>Number of buffers written to the disk. Only available from ASE 15.7 SP100.</html>");
+		setLocalToolTipTextOnTableColumnHeader("LogicalReads",                 "<html>Number of buffers read from cache. Only available from ASE 15.7 SP100.</html>");
+		setLocalToolTipTextOnTableColumnHeader("TotalSyncCommitTime",          "<html>Time used to do Synchronous Commits to Replication Server. Only available from ASE 16.0 PL5.</html>");
+		setLocalToolTipTextOnTableColumnHeader("SnapsGenerated",               "<html>Total number of Simplified Native Access Plans compiled on the server. Only available from ASE 16.0 SP2.</html>");
+		setLocalToolTipTextOnTableColumnHeader("SnapsExecuted",                "<html>Total number of Simplified Native Access Plan Executions happened on the server. Only available from ASE 16.0 SP2.</html>");
+
+		// Logins, Locks, Transaction log
+		setLocalToolTipTextOnTableColumnHeader("distinctLogins",               "<html>Number of distinct User Names that is logged in to ASE.</html>");
+		setLocalToolTipTextOnTableColumnHeader("LockCount",                    "<html>Number of concurrent locks held by the server: select count(*) from master.dbo.syslocks. -1 when it is disabled.</html>");
+		setLocalToolTipTextOnTableColumnHeader("fullTranslogCount",            "<html>Number of databases that has a full transaction log, which probably means suspended SPID's.</html>");
+
+		// Oldest Open Transaction -- syslogshold
+		setLocalToolTipTextOnTableColumnHeader("oldestOpenTranInSec",          "<html>Oldest Open Transaction in any database, presented in seconds. Check Performance Counter '" + CmOpenDatabases.SHORT_NAME + "' for details.<br>"
+		                                                                     + "<b>Note</b>: if value is -99, this means that you did not have access to the 'master..syslogshold' table.</html>");
+		setLocalToolTipTextOnTableColumnHeader("oldestOpenTranInSecThreshold", "<html>After this amount of seconds, and 'alarm' will be raised...</html>");
+		setLocalToolTipTextOnTableColumnHeader("oldestOpenTranName",           "<html>Oldest Open Transaction in any database. This is the 'transaction name'.<br>"
+		                                                                     + "<b>Note</b>: if value is '-', this means that you did not have access to the 'master..syslogshold' table.</html>");
+		setLocalToolTipTextOnTableColumnHeader("oldestOpenTranDbName",         "<html>Oldest Open Transaction in any database. This is the 'database name'.<br>"
+		                                                                     + "<b>Note</b>: if value is '-', this means that you did not have access to the 'master..syslogshold' table.</html>");
+		setLocalToolTipTextOnTableColumnHeader("oldestOpenTranSpid",           "<html>Oldest Open Transaction in any database. This is the responsible 'spid'.<br>"
+		                                                                     + "<b>Note</b>: if value is -1, this means that you did not have access to the 'master..syslogshold' table.</html>");
+
+		// CPU, IO, Network, Errors (global variables)
+		setLocalToolTipTextOnTableColumnHeader("cpu_busy",                     "<html>CPU Busy. Global variable @@cpu_busy.</html>");
+		setLocalToolTipTextOnTableColumnHeader("cpu_io",                       "<html>CPU spent in IO. Global variable @@io_busy.</html>");
+		setLocalToolTipTextOnTableColumnHeader("cpu_idle",                     "<html>CPU Idle. Global variable @@idle.</html>");
+		setLocalToolTipTextOnTableColumnHeader("io_total_read",                "<html>Total Read IO's. Global variable @@total_read.</html>");
+		setLocalToolTipTextOnTableColumnHeader("io_total_write",               "<html>Total Write IO's. Global variable @@total_write.</html>");
+		setLocalToolTipTextOnTableColumnHeader("aaConnections",                "<html>Total Connections that was attempted to make to the ASE Server, even those that fails. Global variable @@connections.</html>");
+		setLocalToolTipTextOnTableColumnHeader("pack_received",                "<html>Total Network Packets Received. Global variable @@pack_received.</html>");
+		setLocalToolTipTextOnTableColumnHeader("pack_sent",                    "<html>Total Network Packets Sent. Global variable @@pack_sent.</html>");
+		setLocalToolTipTextOnTableColumnHeader("packet_errors",                "<html>Total Network Packets Errors. Global variable @@packet_errors.</html>");
+		setLocalToolTipTextOnTableColumnHeader("total_errors",                 "<html>Total Errors. Global variable @@total_errors.</html>");
+	}
 }

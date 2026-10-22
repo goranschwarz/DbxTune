@@ -54,6 +54,8 @@ import com.dbxtune.mgt.controllers.NoGuiConfigSetServlet;
 import com.dbxtune.mgt.controllers.NoGuiRefreshServlet;
 import com.dbxtune.mgt.controllers.NoGuiRestartServlet;
 import com.dbxtune.mgt.controllers.NoGuiShutdownServlet;
+import com.dbxtune.mgt.controllers.OracleJobSchedulerReport;
+import com.dbxtune.mgt.controllers.OracleJobSchedulerTimeline;
 import com.dbxtune.mgt.controllers.SqlServerJobSchedulerReport;
 import com.dbxtune.mgt.controllers.SqlServerJobSchedulerTimeline;
 import com.dbxtune.utils.Configuration;
@@ -274,6 +276,8 @@ public class NoGuiManagementServer
 				// I want the COLLECTORS doing the main work, since they have the "user/password" to the DBMS
 				context.addServlet(new ServletHolder(new SqlServerJobSchedulerReport())  , "/reports/sqlserver/job-scheduler-report");   // Like the DSR but just get midnight until now
 				context.addServlet(new ServletHolder(new SqlServerJobSchedulerTimeline()), "/reports/sqlserver/job-scheduler-timeline"); // This would replace the User Defined Chart - SqlServerAgentJobs
+				context.addServlet(new ServletHolder(new OracleJobSchedulerReport())     , "/reports/oracle/job-scheduler-report");      // The section 'OracleJobScheduler' of the DSR, made now: midnight until now
+				context.addServlet(new ServletHolder(new OracleJobSchedulerTimeline())   , "/reports/oracle/job-scheduler-timeline");    // The runs of the Oracle Scheduler jobs as a timeline
 				
 				_logger.info("Trying to start NO-GUI Management Server at address '" + listnerAddress + "', port " + port + ".");
 				server.start();

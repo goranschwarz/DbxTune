@@ -1,20 +1,20 @@
 /*******************************************************************************
  * Copyright (C) 2010-2027 Goran Schwarz
- * 
+ *
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
- * Here are some of the tools: AseTune, IqTune, RsTune, RaxTune, HanaTune, 
+ * Here are some of the tools: AseTune, IqTune, RsTune, RaxTune, HanaTune,
  *          SqlServerTune, PostgresTune, MySqlTune, MariaDbTune, Db2Tune, ...
- * 
+ *
  * DbxTune is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, version 3 of the License.
- * 
+ *
  * DbxTune is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with DbxTune.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
@@ -26,30 +26,43 @@ package com.dbxtune.config.dbms;
 
 import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.OracleTune;
+import com.dbxtune.config.dbms.DbmsConfigIssue.Severity;
 import com.dbxtune.pcs.MonRecordingInfo;
 import com.dbxtune.pcs.PersistWriterJdbc;
 import com.dbxtune.sql.conn.DbxConnection;
-import com.dbxtune.utils.NumberUtils;
+import com.dbxtune.sql.conn.info.DbmsVersionInfoOracle;
+import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.SwingUtils;
+import com.dbxtune.utils.Ver;
 
 
+/**
+ * The Oracle initialization parameters, as the INSTANCE has them (V$SYSTEM_PARAMETER), together with what the spfile says (V$SPPARAMETER).
+ * <p>
+ * Note: V$PARAMETER is NOT used: it has the values of our own SESSION (and the JDBC driver changes for example nls_territory to the locale of the client).
+ */
 public class OracleConfig
-extends DbmsConfigAbstract 
+extends DbmsConfigAbstract
 {
 	private static final long serialVersionUID = 1L;
 
@@ -61,227 +74,132 @@ extends DbmsConfigAbstract
 	private boolean   _hasGui    = false;
 	private Timestamp _timestamp = null;
 
-	public static final String NON_DEFAULT          = "NonDefault";
-	public static final String SECTION_NAME         = "SectionName";
-	public static final String CONFIG_NAME          = "ConfigName";
-	public static final String CONFIG_VALUE         = "ConfigValue";
-	public static final String PENDING              = "Pending";
-	public static final String PENDING_VALUE        = "PendingValue";
-	public static final String DEFAULT_VALUE        = "DefaultValue";
-	public static final String MEMORY_USED          = "UsedMemory";
-	public static final String CONFIG_UNIT          = "Unit";
-	public static final String RESTART_IS_REQ       = "RestartIsReq";
-	public static final String CFG_VAL_STR          = "CfgValStr";
-	public static final String CFG_VAL_STR_PENDNING = "CfgValStrPending";
-	public static final String READ_ONLY            = "ReadOnly";
-	public static final String TYPE                 = "Type";
-	public static final String MIN_VALUE            = "MinValue";
-	public static final String MAX_VALUE            = "MaxValue";
-	public static final String DESCRIPTION          = "Description";
-	public static final String CONFIG_ID            = "ConfigId";
-	public static final String SECTION_ID           = "SectionId";
-	public static final String DISPLAY_LEVEL        = "DisplayLevel";
-	public static final String DATA_TYPE            = "DataType";
+	public static final String NON_DEFAULT    = "NonDefault";
+	public static final String SECTION_NAME   = "Section";
+	public static final String CONFIG_NAME    = "ParameterName";
+	public static final String CONFIG_VALUE   = "Value";
+	public static final String DISPLAY_VALUE  = "DisplayValue";
+	public static final String PENDING        = "Pending";
+	public static final String SPFILE_VALUE   = "SpfileValue";
+	public static final String DEFAULT_VALUE  = "DefaultValue";
+	public static final String RESTART_IS_REQ = "RestartIsReq";
+	public static final String SYS_MODIFIABLE = "SystemModifiable";
+	public static final String SES_MODIFIABLE = "SessionModifiable";
+	public static final String PDB_MODIFIABLE = "PdbModifiable";
+	public static final String MODIFIED       = "Modified";
+	public static final String ADJUSTED       = "Adjusted";
+	public static final String DEPRECATED     = "Deprecated";
+	public static final String BASIC          = "Basic";
+	public static final String DATA_TYPE      = "DataType";
+	public static final String DESCRIPTION    = "Description";
+	public static final String UPDATE_COMMENT = "UpdateComment";
+	public static final String CONFIG_ID      = "ConfigId";
+
+	/** Parameters that the installer (DBCA) must set: they are never NonDefault (a comma separated list of parameter names) */
+//	public static final String PROPKEY_installationParameters = "OracleConfig.nonDefault.installationParameters";
+	public static final String PROPKEY_installationParameters = "OracleConfig.nonDefault.always";
+	public static final String DEFAULT_installationParameters = ""
+//		+ "db_name, "
+//		+ "db_unique_name, "
+//		+ "db_domain, "
+//		+ "instance_name, "
+//		+ "service_names, "
+		+ "control_files, "
+		+ "compatible, "
+		+ "diagnostic_dest, "
+		+ "audit_file_dest, "
+		+ "dispatchers, "
+		+ "local_listener, "
+		+ "undo_tablespace, "
+		+ "enable_pluggable_database, "
+		+ "db_recovery_file_dest, "
+		+ "db_recovery_file_dest_size, "
+		+ "log_archive_dest_1";
+
+	public static final String SECTION_BASIC      = "Basic";
+	public static final String SECTION_ADVANCED   = "Advanced";
+	public static final String SECTION_DEPRECATED = "Deprecated";
+	public static final String SECTION_HIDDEN     = "Hidden";
 
 	private static final int COL_NAME        = 0;
 	private static final int COL_EDITABLE    = 1;
 	private static final int COL_CLASS       = 2;
-//	private static final int COL_SQLTYPE     = 3;
 	private static final int COL_JDBC_TYPE   = 3;
 	private static final int COL_JDBC_LENGTH = 4;
 	private static final int COL_JDBC_SCALE  = 5;
 	private static final int COL_TOOLTIP     = 6;
-	private static Object[][] COLUMN_HEADERS = 
+	private static Object[][] COLUMN_HEADERS =
 	{
-	//   ColumnName,           Editable, JTable type,   JDBC Type      JDBC Length JDBC Scale /* SQL Datatype,    */ Tooltip
-	//   --------------------- --------- -------------- -------------- ----------- ---------- /* ---------------- */ --------------------------------------------
-		{NON_DEFAULT,          false,    Boolean.class, Types.BOOLEAN, -1,          -1,       /* "bit",           */ "True if the value is not configured to the default value. (same as for sp_configure 'nondefault')"},
-		{SECTION_NAME,         true,     String .class, Types.VARCHAR, 60,          -1,       /* "varchar(60)",   */ "Configuration Group"},
-		{CONFIG_NAME,          true,     String .class, Types.VARCHAR, 60,          -1,       /* "varchar(60)",   */ "Name of the configuration, same as the name in sp_configure."},
-		{CONFIG_VALUE,         true,     Integer.class, Types.BIGINT , -1,          -1,       /* "bigint",        */ "Value of the configuration."},
-		{PENDING,              false,    Boolean.class, Types.BOOLEAN, -1,          -1,       /* "bit",           */ "The Configuration has not yet taken effect, probably needs restart to take effect."},
-		{PENDING_VALUE,        true,     Integer.class, Types.BIGINT , -1,          -1,       /* "bigint",        */ "The value which will be configured on next restart, if PENDING is true."},
-		{DEFAULT_VALUE,        true,     Integer.class, Types.VARCHAR, 300,         -1,       /* "varchar(100)",  */ "The default configuration value."},            // it's a String but, RIGHT align it with Integer
-		{MEMORY_USED,          true,     Integer.class, Types.VARCHAR, 30,          -1,       /* "varchar(30)",   */ "Memory Used by this configuration parameter"}, // it's a String but, RIGHT align it with Integer
-		{CONFIG_UNIT,          true,     String .class, Types.VARCHAR, 30,          -1,       /* "varchar(30)",   */ "In what unit is this configuration"},
-		{RESTART_IS_REQ,       false,    Boolean.class, Types.BOOLEAN, -1,          -1,       /* "bit",           */ "ASE needs to be rebooted for the configuration to take effect."},
-		{CFG_VAL_STR,          true,     String .class, Types.VARCHAR, 100,         -1,       /* "varchar(100)",  */ "The char value of the configuration."},
-		{CFG_VAL_STR_PENDNING, true,     String .class, Types.VARCHAR, 100,         -1,       /* "varchar(100)",  */ "The pending char configuration."},
-		{READ_ONLY,            false,    Boolean.class, Types.BOOLEAN, -1,          -1,       /* "bit",           */ "This config is a read only value"},
-		{TYPE,                 true,     String .class, Types.VARCHAR, 30,          -1,       /* "varchar(30)",   */ "dynamic or static"},
-		{MIN_VALUE,            true,     Integer.class, Types.BIGINT , -1,          -1,       /* "bigint",        */ "integer minimum value of the configuration"},
-		{MAX_VALUE,            true,     Integer.class, Types.BIGINT , -1,          -1,       /* "bigint",        */ "integer maximum value of the configuration"},
-		{DESCRIPTION,          true,     String .class, Types.VARCHAR, 1024,        -1,       /* "varchar(1024)", */ "Description of the configuration."},
-		{CONFIG_ID,            true,     Integer.class, Types.INTEGER, -1,          -1,       /* "bigint",        */ "Internal ID number for this configuration."},
-		{SECTION_ID,           true,     Integer.class, Types.INTEGER, -1,          -1,       /* "bigint",        */ "Configuration Group ID"},
-		{DISPLAY_LEVEL,        true,     Integer.class, Types.INTEGER, -1,          -1,       /* "bigint",        */ ""},
-		{DATA_TYPE,            true,     Integer.class, Types.INTEGER, -1,          -1,       /* "bigint",        */ ""}
+	//   ColumnName,      Editable, JTable type,   JDBC Type      JDBC Length JDBC Scale  Tooltip
+	//   ---------------- --------- -------------- -------------- ----------- ----------  --------------------------------------------
+		{NON_DEFAULT,     false,    Boolean.class, Types.BOOLEAN, -1,         -1,         "<html>The parameter has been set to another value than the default: it was in the spfile (or pfile) when the instance started, or it has been changed with ALTER SYSTEM after that.<br>Not NonDefault:<ul><li>a parameter that is set to the same value as 'DefaultValue' (Oracle 12.2 and above).</li><li>the parameters that the installer must set, from the property <code>" + PROPKEY_installationParameters + "</code> (default: " + DEFAULT_installationParameters + ")</li></ul><b>Source</b>: V$SYSTEM_PARAMETER: ISDEFAULT = 'FALSE' or ISMODIFIED is not 'FALSE', and VALUE is not DEFAULT_VALUE</html>"},
+		{SECTION_NAME,    true,     String .class, Types.VARCHAR, 30,         -1,         "<html>Oracle has no groups for the parameters, so this is: <ul><li><b>Basic</b> - the about 30 parameters that Oracle says you normally need to look at.</li><li><b>Advanced</b> - all the others.</li><li><b>Deprecated</b> - still works, but should not be used any more.</li><li><b>Hidden</b> - the name starts with an underscore. Only shown if it has been set. Only set them when Oracle Support tells you to.</li></ul></html>"},
+		{CONFIG_NAME,     true,     String .class, Types.VARCHAR, 80,         -1,         "Name of the initialization parameter."},
+		{CONFIG_VALUE,    true,     String .class, Types.VARCHAR, 4000,       -1,         "<html>The value the instance is running with.<br>A size is in bytes here, see 'DisplayValue' for the short form.<br>A parameter that is a list (like control_files) has the values separated with a comma.</html>"},
+		{DISPLAY_VALUE,   true,     String .class, Types.VARCHAR, 4000,       -1,         "<html>The value in the form Oracle shows it with <code>show parameter</code>, for example <code>1536M</code> instead of 1610612736.</html>"},
+		{PENDING,         false,    Boolean.class, Types.BOOLEAN, -1,         -1,         "<html>The spfile has another value than the instance: it takes effect at the next restart.<br>For numbers, only when the spfile value is <b>higher</b>: Oracle raises and rounds numbers by itself (memory sizes, or 'sessions' from 'processes'), so a lower value in the spfile is normally not a pending change.<br>Compare 'Value' and 'SpfileValue' to see for yourself.</html>"},
+		{SPFILE_VALUE,    true,     String .class, Types.VARCHAR, 4000,       -1,         "<html>The value in the spfile, empty if the parameter is not in the spfile.<br><b>Source</b>: V$SPPARAMETER where ISSPECIFIED = 'TRUE'<br>Note: when connected to a PDB, this is what is set for that PDB only.</html>"},
+		{DEFAULT_VALUE,   true,     String .class, Types.VARCHAR, 255,        -1,         "<html>The default value of the parameter. Empty in Oracle 11.2 and 12.1 (the column does not exist there).</html>"},
+		{RESTART_IS_REQ,  false,    Boolean.class, Types.BOOLEAN, -1,         -1,         "<html>A <b>static</b> parameter: it can only be changed in the spfile (<code>ALTER SYSTEM SET ... SCOPE=SPFILE</code>), and the instance must be restarted.<br><b>Source</b>: V$SYSTEM_PARAMETER.ISSYS_MODIFIABLE = 'FALSE'</html>"},
+		{SYS_MODIFIABLE,  true,     String .class, Types.VARCHAR, 10,         -1,         "<html>Can it be changed with ALTER SYSTEM while the instance is running?<ul><li><b>IMMEDIATE</b> - yes, and it takes effect at once.</li><li><b>DEFERRED</b> - yes, but only for sessions that connect after the change.</li><li><b>FALSE</b> - no, a restart is needed.</li></ul></html>"},
+		{SES_MODIFIABLE,  false,    Boolean.class, Types.BOOLEAN, -1,         -1,         "Can be changed for one session with ALTER SESSION."},
+		{PDB_MODIFIABLE,  false,    Boolean.class, Types.BOOLEAN, -1,         -1,         "Can be set to another value in a Pluggable Database (Oracle 12.1 and above)."},
+		{MODIFIED,        true,     String .class, Types.VARCHAR, 10,         -1,         "<html>Has it been changed since the instance was started?<ul><li><b>FALSE</b> - no.</li><li><b>MODIFIED</b> or <b>SYSTEM_MOD</b> - yes, with ALTER SYSTEM.</li></ul></html>"},
+		{ADJUSTED,        false,    Boolean.class, Types.BOOLEAN, -1,         -1,         "Oracle adjusted the value that was given to something that fits better."},
+		{DEPRECATED,      false,    Boolean.class, Types.BOOLEAN, -1,         -1,         "The parameter is deprecated: it still works, but should not be used any more."},
+		{BASIC,           false,    Boolean.class, Types.BOOLEAN, -1,         -1,         "One of the about 30 'basic' parameters: the ones Oracle says you normally need to look at."},
+		{DATA_TYPE,       true,     String .class, Types.VARCHAR, 20,         -1,         "Boolean, String, Integer, File or Big integer."},
+		{DESCRIPTION,     true,     String .class, Types.VARCHAR, 255,        -1,         "Oracle's description of the parameter."},
+		{UPDATE_COMMENT,  true,     String .class, Types.VARCHAR, 255,        -1,         "The comment that was given when the parameter was last changed (ALTER SYSTEM ... COMMENT='...')."},
+		{CONFIG_ID,       true,     Integer.class, Types.INTEGER, -1,         -1,         "Oracle's number for the parameter (V$SYSTEM_PARAMETER.NUM)."}
 	};
 
-//
-//  select * from v$parameter
-//
-//	RS> Col# Label                 JDBC Type Name         Guessed DBMS type Source Table
-//	RS> ---- --------------------- ---------------------- ----------------- ------------
-//	RS> 1    NUM                   java.sql.Types.NUMERIC NUMBER(0,0)       -none-      
-//	RS> 2    NAME                  java.sql.Types.VARCHAR VARCHAR2(80)      -none-      
-//	RS> 3    TYPE                  java.sql.Types.NUMERIC NUMBER(0,-127)    -none-      
-//	RS> 4    VALUE                 java.sql.Types.VARCHAR VARCHAR2(4000)    -none-      
-//	RS> 5    DISPLAY_VALUE         java.sql.Types.VARCHAR VARCHAR2(4000)    -none-      
-//	RS> 6    ISDEFAULT             java.sql.Types.VARCHAR VARCHAR2(9)       -none-      
-//	RS> 7    ISSES_MODIFIABLE      java.sql.Types.VARCHAR VARCHAR2(5)       -none-      
-//	RS> 8    ISSYS_MODIFIABLE      java.sql.Types.VARCHAR VARCHAR2(9)       -none-      
-//	RS> 9    ISINSTANCE_MODIFIABLE java.sql.Types.VARCHAR VARCHAR2(5)       -none-      
-//	RS> 10   ISMODIFIED            java.sql.Types.VARCHAR VARCHAR2(10)      -none-      
-//	RS> 11   ISADJUSTED            java.sql.Types.VARCHAR VARCHAR2(5)       -none-      
-//	RS> 12   ISDEPRECATED          java.sql.Types.VARCHAR VARCHAR2(5)       -none-      
-//	RS> 13   ISBASIC               java.sql.Types.VARCHAR VARCHAR2(5)       -none-      
-//	RS> 14   DESCRIPTION           java.sql.Types.VARCHAR VARCHAR2(255)     -none-      
-//	RS> 15   UPDATE_COMMENT        java.sql.Types.VARCHAR VARCHAR2(255)     -none-      
-//	RS> 16   HASH                  java.sql.Types.NUMERIC NUMBER(0,-127)    -none-      
-
-	private static String GET_CONFIG_ONLINE_SQL =
-		"select current_timestamp as CONFIG_DATE \n"
-//		+ "     ,ISDEFAULT        as NON_DEFAULT \n"
-		+ "     ,CASE WHEN ISDEFAULT = 'TRUE' THEN 'FALSE' ELSE 'TRUE' END as NON_DEFAULT \n"
-		+ "     ,'Unknown'        as SECTION \n"
-		+ "     ,NAME             as NAME \n"
-//		+ "     ,VALUE            as VALUE \n"
-		+ "     ,CASE WHEN regexp_like(VALUE,'^[0-9]+$') THEN TO_NUMBER(VALUE) ELSE -1 END as VALUE \n"
-		+ "     ,'FALSE'          as PENDING \n"
-		+ "     ,0                as PENDING_VALUE \n"
-		+ "     ,''               as DEFAULT_VALUE \n"
-		+ "     ,''               as USED_MEMORY \n"
-		+ "     ,''               as CONFIG_UNIT \n"
-		+ "     ,'FALSE'          as RESTART_REQ \n"
-		+ "     ,VALUE            as CHAR_VALUE \n"
-		+ "     ,''               as CHAR_PENDING \n"
-		+ "     ,'FALSE'          as READONLY \n"
-		+ "     ,'xxx'            as TYPE \n"
-		+ "     ,0                as MIN_VALUE \n"
-		+ "     ,0                as MAX_VALUE \n"
-		+ "     ,DESCRIPTION      as DESCRIPTION \n"
-		+ "     ,NUM              as CONFIG_ID \n"
-		+ "     ,0                as PARENT_ID \n"
-		+ "     ,0                as DISP_LEVEL \n"
-		+ "     ,TYPE             as DATA_TYPE \n"
-		+ "from v$parameter";
-
-	private static String GET_CONFIG_OFFLINE_SQL = 
+	private static String GET_CONFIG_OFFLINE_SQL =
 		"select * " +
 		"from [" + PersistWriterJdbc.getTableName(null, null, PersistWriterJdbc.SESSION_DBMS_CONFIG, null, false) + "] \n" +
 		"where [SessionStartTime] = SESSION_START_TIME \n";
 
-	private static String GET_CONFIG_OFFLINE_MAX_SESSION_SQL = 
+	private static String GET_CONFIG_OFFLINE_MAX_SESSION_SQL =
 		" (select max([SessionStartTime]) " +
 		"  from [" + PersistWriterJdbc.getTableName(null, null, PersistWriterJdbc.SESSION_DBMS_CONFIG, null, false) + "]" +
 		" ) ";
 
-//	@Override
-//	public String getSqlForDiff(boolean isOffline)
-//	{
-//		if (isOffline)
-//		{
-//			String tabName = PersistWriterJdbc.getTableName(null, PersistWriterJdbc.SESSION_DBMS_CONFIG, null, false);
-//
-//			return 
-//					"select \n" +
-//					"     [NAME] \n" +
-//					"    ,[VALUE] \n" +
-//					"from [" + tabName + "] \n" +
-//					"where [SessionStartTime] = (select max([SessionStartTime]) from [" + tabName + "]) \n" +
-//					"order by 1 \n" +
-//					"";
-//		}
-//		else
-//		{
-//			return
-//					"select \n"
-//					+ "      NAME             as NAME \n"
-//					+ "     ,CASE WHEN regexp_like(VALUE,'^[0-9]+$') THEN TO_NUMBER(VALUE) ELSE -1 END as VALUE \n"
-//					+ "from v$parameter \n" +
-//					"order by 1 \n" +
-//					"";
-//		}
-//	}
-		
 	/** hashtable with MonTableEntry */
 	private HashMap<String,OracleConfigEntry> _configMap  = null;
 	private ArrayList<OracleConfigEntry>      _configList = null;
 
-	private ArrayList<String>              _configSectionList = null;
+	private ArrayList<String>                 _configSectionList = null;
 
 	public class OracleConfigEntry
 	implements IDbmsConfigEntry
 	{
-		@Override public String getConfigKey()    { return configName; }
-		@Override public String getConfigValue()  { return configValueString; }
+		@Override public String  getConfigKey()   { return configName; }
+		@Override public String  getConfigValue() { return configValue; }
 		@Override public String  getSectionName() { return sectionName; }
 		@Override public boolean isPending()      { return isPending; }
 		@Override public boolean isNonDefault()   { return isNonDefault; }
-		
-		/** configuration has been changed by any user (same as sp_configure 'nondefault')*/
+
 		public boolean isNonDefault;
-
-		/** Different sections in the configuration */
+		public boolean isSet;           // in the spfile or changed with ALTER SYSTEM, even if it's the default value (not stored, only for the checks)
 		public String  sectionName;
-
-		/** Name of the configuration */
 		public String  configName;
-
-		/** integer representation of the configuration */
-		public long    configValue;
-
-		/** true if the configuration value is set, but we need to restart the ASE server to enable the configuration */
+		public String  configValue;
+		public String  displayValue;
 		public boolean isPending;
-
-		/** integer representation of the pending configuration */
-		public long    pendingValue;
-
-		/** String representation of the default configuration */
+		public String  spfileValue;
 		public String  defaultValue;
-
-		/** how much memory does this config option consume. MB/KB */
-		public String  usedMemoryStr;
-
-		/** What is the unit this configuration is specified in */
-		public String  configUnit;
-
-		/** true if the server needs to be restarted to enable the configuration */
 		public boolean requiresRestart;
-
-		/** String representation of the configuration value */
-		public String  configValueString;
-
-		/** String representation of the pending configuration */
-		public String  pendingValueString;
-
-		/** The configuration is read only and can't be changed */
-		public boolean isReadOnly;
-
-		/** static or static */
-		public String  configType;
-
-		/** minimum value of a integer value */
-		public long    minValue;
-
-		/** maximum value of a integer value */
-		public long    maxValue;
-
-		/** description of the configuration option */
+		public String  sysModifiable;
+		public boolean isSessionModifiable;
+		public boolean isPdbModifiable;
+		public String  modified;
+		public boolean isAdjusted;
+		public boolean isDeprecated;
+		public boolean isBasic;
+		public String  dataType;
 		public String  description;
-
-		/** ID of the configuration option */
-		public long    configId;
-
-		/** ID of the sections in the configuration */
-		public long    parentId;
-
-		/** display level */
-		public long    displayLevel;
-
-		/** datatype ?, dont know if this is the ASE, JDBC or ODBC ID of the datatype */
-		public long    dataType;
+		public String  updateComment;
+		public int     configId;
 	}
 
 	public OracleConfig()
@@ -316,7 +234,7 @@ extends DbmsConfigAbstract
 	}
 
 	/**
-	 * Initialize 
+	 * Initialize
 	 * @param conn
 	 */
 	@Override
@@ -329,7 +247,7 @@ extends DbmsConfigAbstract
 	}
 
 	/**
-	 * refresh 
+	 * refresh
 	 * @param conn
 	 */
 	@Override
@@ -340,102 +258,289 @@ extends DbmsConfigAbstract
 			return;
 
 		reset();
-		
+
 		_configMap         = new HashMap<String,OracleConfigEntry>();
 		_configList        = new ArrayList<OracleConfigEntry>();
 		_configSectionList = new ArrayList<String>();
-		
+
 		try { setDbmsServerName(conn.getDbmsServerName()); } catch (SQLException ex) { setDbmsServerName(ex.getMessage()); };
 		try { setDbmsVersionStr(conn.getDbmsVersionStr()); } catch (SQLException ex) { setDbmsVersionStr(ex.getMessage()); };
 
 		try { setLastUsedUrl( conn.getMetaData().getURL() ); } catch(SQLException ignore) { }
 		setLastUsedConnProp(conn.getConnPropOrDefault());
 
-
-		String sql = GET_CONFIG_ONLINE_SQL;
-		if (_offline)
-		{
-			sql = GET_CONFIG_OFFLINE_SQL;
-
-			String tsStr = "";
-			if (ts == null)
-			{
-				tsStr = GET_CONFIG_OFFLINE_MAX_SESSION_SQL;
-			}
-			else
-			{
-				tsStr = "'" + ts + "'";
-			}
-			sql = sql.replace("SESSION_START_TIME", tsStr);
-			
-			// For OFFLINE mode: override some the values previously fetched the connection object, with values from the Recorded Database
-			MonRecordingInfo recordingInfo = new MonRecordingInfo(conn, null);
-			setOfflineRecordingInfo(recordingInfo);
-			setDbmsServerName(recordingInfo.getDbmsServerName());
-			setDbmsVersionStr(recordingInfo.getDbmsVersionStr());
-
-			// Check if this is correct TYPE
-			String expectedType = OracleTune.APP_NAME;
-			String readType     = recordingInfo.getRecDbxAppName();
-			if ( ! expectedType.equals(readType) )
-			{
-				throw new WrongRecordingVendorContent(expectedType, readType);
-			}
-		}
-
-		// replace all '[' and ']' into DBMS Vendor Specific Chars
-		sql = conn.quotifySqlString(sql);
-
+		String sql = "";
 		try
 		{
 			Statement stmt = conn.createStatement();
 			stmt.setQueryTimeout(10);
 
-			ResultSet rs = stmt.executeQuery(sql);
-			while ( rs.next() )
+			if ( ! _offline )
 			{
-				OracleConfigEntry entry = new OracleConfigEntry();
+				//-------------------------------------------------------
+				// ONLINE: 1 - What is in the spfile
+				//   - one row per value: a parameter that is a list has several rows, in ORDINAL order
+				//   - SID '*' is for all instances, otherwise it's for one instance (RAC): the entry for our instance wins
+				//   - if it can't be read we just get no spfile values
+				//-------------------------------------------------------
+				Map<String, String> spfileForAll      = new HashMap<>();
+				Map<String, String> spfileForInstance = new HashMap<>();
 
-				int pos = 2; 
-				// Skip first column
-				//   1: online  = CONFIG_DATE
-				//   2: offline = SessionStartTime
-				_timestamp               = rs.getTimestamp(1);
-				entry.isNonDefault       = rs.getBoolean(pos++);
-				entry.sectionName        = rs.getString (pos++);
-				entry.configName         = rs.getString (pos++);
-				entry.configValue        = rs.getLong   (pos++);
-				entry.isPending          = rs.getBoolean(pos++);
-				entry.pendingValue       = rs.getLong   (pos++);
-				entry.defaultValue       = rs.getString (pos++);
-				entry.usedMemoryStr      = rs.getString (pos++);
-				entry.configUnit         = rs.getString (pos++);
-				entry.requiresRestart    = rs.getBoolean(pos++);
-				entry.configValueString  = rs.getString (pos++);
-				entry.pendingValueString = rs.getString (pos++);
-				entry.isReadOnly         = rs.getBoolean(pos++);
-				entry.configType         = rs.getString (pos++);
-				entry.minValue           = rs.getLong   (pos++);
-				entry.maxValue           = rs.getLong   (pos++);
-				entry.description        = rs.getString (pos++);
-				entry.configId           = rs.getLong   (pos++);
-				entry.parentId           = rs.getLong   (pos++);
-				entry.displayLevel       = rs.getLong   (pos++);
-				entry.dataType           = rs.getLong   (pos++);
-
-				// fix 'used memory' column
-				if ( ! _offline )
+				sql = "select SID, NAME, VALUE from V$SPPARAMETER where ISSPECIFIED = 'TRUE' and SID in ('*', sys_context('userenv', 'instance_name')) order by NAME, SID, ORDINAL";
+				try (ResultSet rs = stmt.executeQuery(sql))
 				{
-				}
-				
-				_configMap .put(entry.configName, entry);
-				_configList.add(entry);
+					while ( rs.next() )
+					{
+						String sid   = rs.getString(1);
+						String name  = rs.getString(2);
+						String value = rs.getString(3) == null ? "" : rs.getString(3);
 
-				// Add it to the section list, if not already there
-				if ( ! _configSectionList.contains(entry.sectionName) )
-					_configSectionList.add(entry.sectionName);
+						Map<String, String> map = "*".equals(sid) ? spfileForAll : spfileForInstance;
+						map.put(name, map.containsKey(name) ? map.get(name) + ", " + value : value);
+					}
+				}
+				catch (SQLException ex)
+				{
+					_logger.info("OracleConfig: could not read the spfile values from V$SPPARAMETER, continuing without them. Caught: " + ex.getMessage().trim());
+				}
+
+				//-------------------------------------------------------
+				// ONLINE: 2 - The parameters of the INSTANCE
+				//   The newest SQL first: the first one that this Oracle version accepts is used
+				//   In a Container Database: CON_ID 0 is the value for the whole CDB, and a PDB has it's own rows for what can be set in a PDB
+				//-------------------------------------------------------
+				String sqlColumns = ""
+					+ "select SYSDATE as CONFIG_DATE \n"
+					+ "      ,p.NUM \n"
+					+ "      ,p.NAME \n"
+					+ "      ,p.TYPE \n"
+					+ "      ,p.VALUE \n"
+					+ "      ,p.DISPLAY_VALUE \n"
+					+ "      ,p.ISDEFAULT \n"
+					+ "      ,p.ISSES_MODIFIABLE \n"
+					+ "      ,p.ISSYS_MODIFIABLE \n"
+					+ "      ,p.ISMODIFIED \n"
+					+ "      ,p.ISADJUSTED \n"
+					+ "      ,p.ISDEPRECATED \n"
+					+ "      ,p.ISBASIC \n"
+					+ "      ,p.DESCRIPTION \n"
+					+ "      ,p.UPDATE_COMMENT \n";
+
+				String[] sqlCandidates = {
+					// 12.2 and above: DEFAULT_VALUE
+					sqlColumns
+						+ "      ,p.ISPDB_MODIFIABLE \n"
+						+ "      ,p.DEFAULT_VALUE \n"
+						+ "from V$SYSTEM_PARAMETER p \n"
+						+ "where p.CON_ID in (0, sys_context('userenv', 'con_id')) \n"
+						+ "order by p.NAME, p.CON_ID desc", // the row of our own PDB first: it wins over CON_ID 0
+					// 12.1: containers
+					sqlColumns
+						+ "      ,p.ISPDB_MODIFIABLE \n"
+						+ "      ,CAST(NULL as VARCHAR2(255)) as DEFAULT_VALUE \n"
+						+ "from V$SYSTEM_PARAMETER p \n"
+						+ "where p.CON_ID in (0, sys_context('userenv', 'con_id')) \n"
+						+ "order by p.NAME, p.CON_ID desc", // the row of our own PDB first: it wins over CON_ID 0
+					// 11.2
+					sqlColumns
+						+ "      ,'FALSE' as ISPDB_MODIFIABLE \n"
+						+ "      ,CAST(NULL as VARCHAR2(255)) as DEFAULT_VALUE \n"
+						+ "from V$SYSTEM_PARAMETER p \n"
+						+ "order by p.NAME"
+				};
+
+				ResultSet rs = null;
+				for (int i=0; i<sqlCandidates.length && rs == null; i++)
+				{
+					sql = sqlCandidates[i];
+					try
+					{
+						rs = stmt.executeQuery(sql);
+					}
+					catch (SQLException ex)
+					{
+						// The last one must work
+						if (i == sqlCandidates.length - 1)
+							throw ex;
+					}
+				}
+
+				// Parameters that are never NonDefault (Oracle has the names in lower case)
+				Set<String> installationParameters = new HashSet<>();
+				for (String name : StringUtil.commaStrToSet(Configuration.getCombinedConfiguration().getProperty(PROPKEY_installationParameters, DEFAULT_installationParameters), true))
+					installationParameters.add(name.trim().toLowerCase());
+
+				while ( rs.next() )
+				{
+					OracleConfigEntry entry = new OracleConfigEntry();
+
+					_timestamp                = rs.getTimestamp(1);
+					entry.configId           = rs.getInt      (2);
+					entry.configName          = rs.getString   (3);
+					int    type               = rs.getInt      (4);
+					entry.configValue         = rs.getString   (5);
+					entry.displayValue        = rs.getString   (6);
+					boolean isDefault         = "TRUE" .equals(rs.getString(7));
+					entry.isSessionModifiable = "TRUE" .equals(rs.getString(8));
+					entry.sysModifiable       = rs.getString   (9);
+					entry.modified            = rs.getString   (10);
+					entry.isAdjusted          = "TRUE" .equals(rs.getString(11));
+					entry.isDeprecated        = "TRUE" .equals(rs.getString(12));
+					entry.isBasic             = "TRUE" .equals(rs.getString(13));
+					entry.description         = rs.getString   (14);
+					entry.updateComment       = rs.getString   (15);
+					entry.isPdbModifiable     = "TRUE" .equals(rs.getString(16));
+					entry.defaultValue        = rs.getString   (17);
+
+					// Should not happen, but the name is our key
+					if (entry.configName == null || _configMap.containsKey(entry.configName))
+						continue;
+
+					entry.requiresRestart = "FALSE".equals(entry.sysModifiable);
+
+					// ISDEFAULT only says if it was in the parameter file when the instance STARTED: a change with ALTER SYSTEM after that leaves it at TRUE
+					// (seen on 23: 'alter system set plsql_debug = TRUE scope=memory' gave ISDEFAULT=TRUE, ISMODIFIED=MODIFIED)
+					entry.isSet        = ! isDefault || (entry.modified != null && ! "FALSE".equals(entry.modified));
+					entry.isNonDefault = entry.isSet;
+
+					// But a parameter that is set to the same value as the default is NOT NonDefault (the installer writes for example compatible, db_block_size and nls_language to the spfile)
+					// DEFAULT_VALUE is only there in 12.2 and above, and an empty value is the same as the default 'NONE'
+					if (entry.isNonDefault && entry.defaultValue != null)
+					{
+						String value        = entry.configValue  == null ? "" : entry.configValue .trim();
+						String displayValue = entry.displayValue == null ? "" : entry.displayValue.trim();
+						String defaultValue = entry.defaultValue.trim();
+
+						if (value.equalsIgnoreCase(defaultValue) || displayValue.equalsIgnoreCase(defaultValue) || (value.isEmpty() && "NONE".equalsIgnoreCase(defaultValue)))
+							entry.isNonDefault = false;
+					}
+
+					// The installer must set these (the name and files of the database etc), so they are not something a DBA has changed
+					if (installationParameters.contains(entry.configName))
+						entry.isNonDefault = false;
+
+					if      (type == 1) entry.dataType = "Boolean";
+					else if (type == 2) entry.dataType = "String";
+					else if (type == 3) entry.dataType = "Integer";
+					else if (type == 4) entry.dataType = "File";
+					else if (type == 6) entry.dataType = "Big integer";
+					else                entry.dataType = type + "";
+
+					// Oracle has no groups for the parameters, so make the 4 that it can tell us about
+					if      (entry.isDeprecated)               entry.sectionName = SECTION_DEPRECATED;
+					else if (entry.configName.startsWith("_")) entry.sectionName = SECTION_HIDDEN;
+					else if (entry.isBasic)                    entry.sectionName = SECTION_BASIC;
+					else                                       entry.sectionName = SECTION_ADVANCED;
+
+					// What the spfile says (the entry for our instance wins)
+					entry.spfileValue = spfileForInstance.containsKey(entry.configName) ? spfileForInstance.get(entry.configName) : spfileForAll.get(entry.configName);
+
+					// Pending: the spfile has another value than the instance, so it takes effect at the next restart
+					//   - text and boolean values: when they differ
+					//   - numbers: only when the spfile value is HIGHER. Oracle raises and rounds numbers by itself
+					//     (a memory size to the next granule, 'sessions' from 'processes'), so a lower value in the spfile is normally not a pending change
+					String value        = entry.configValue  == null ? "" : entry.configValue;
+					String displayValue = entry.displayValue == null ? "" : entry.displayValue;
+					if (entry.spfileValue != null && ! entry.spfileValue.equalsIgnoreCase(value) && ! entry.spfileValue.equalsIgnoreCase(displayValue))
+					{
+						Long spfileNumber = toNumberOrNull(entry.spfileValue);
+						Long valueNumber  = toNumberOrNull(value);
+
+						if (spfileNumber != null && valueNumber != null)
+							entry.isPending = spfileNumber > valueNumber;
+						else
+							entry.isPending = true;
+					}
+
+					_configMap .put(entry.configName, entry);
+					_configList.add(entry);
+
+					// Add it to the section list, if not already there
+					if ( ! _configSectionList.contains(entry.sectionName) )
+						_configSectionList.add(entry.sectionName);
+				}
+				rs.close();
 			}
-			rs.close();
+			else // OFFLINE GET CONFIG
+			{
+				// For OFFLINE mode: override some the values previously fetched the connection object, with values from the Recorded Database
+				MonRecordingInfo recordingInfo = new MonRecordingInfo(conn, null);
+				setOfflineRecordingInfo(recordingInfo);
+				setDbmsServerName(recordingInfo.getDbmsServerName());
+				setDbmsVersionStr(recordingInfo.getDbmsVersionStr());
+
+				// Check if this is correct TYPE
+				String expectedType = OracleTune.APP_NAME;
+				String readType     = recordingInfo.getRecDbxAppName();
+				if ( ! expectedType.equals(readType) )
+				{
+					throw new WrongRecordingVendorContent(expectedType, readType);
+				}
+
+				sql = GET_CONFIG_OFFLINE_SQL;
+				sql = sql.replace("SESSION_START_TIME", ts == null ? GET_CONFIG_OFFLINE_MAX_SESSION_SQL : "'" + ts + "'");
+
+				// replace all '[' and ']' into DBMS Vendor Specific Chars
+				sql = conn.quotifySqlString(sql);
+
+				ResultSet rs = stmt.executeQuery(sql);
+				ResultSetMetaData rsmd = rs.getMetaData();
+
+				// All columns may not be in the recording (an older version had other columns), so only read the ones that are there
+				// for DBMS portability use "lower-case" names
+				List<String> columns = new ArrayList<>();
+				for (int c=1; c<=rsmd.getColumnCount(); c++)
+					columns.add(rsmd.getColumnLabel(c).toLowerCase());
+
+				// Recordings made before the parameter table was redone has the name in 'ConfigName' and the value in 'CfgValStr'
+				String colName  = columns.contains(CONFIG_NAME .toLowerCase()) ? CONFIG_NAME  : "ConfigName";
+				String colValue = columns.contains(CONFIG_VALUE.toLowerCase()) ? CONFIG_VALUE : "CfgValStr";
+
+				while ( rs.next() )
+				{
+					OracleConfigEntry entry = new OracleConfigEntry();
+
+					_timestamp = rs.getTimestamp(1);
+
+					if (columns.contains(NON_DEFAULT   .toLowerCase())) entry.isNonDefault        = rs.getBoolean( 1 + columns.indexOf(NON_DEFAULT   .toLowerCase()) );
+					if (columns.contains(SECTION_NAME  .toLowerCase())) entry.sectionName         = rs.getString ( 1 + columns.indexOf(SECTION_NAME  .toLowerCase()) );
+					if (columns.contains(colName       .toLowerCase())) entry.configName          = rs.getString ( 1 + columns.indexOf(colName       .toLowerCase()) );
+					if (columns.contains(colValue      .toLowerCase())) entry.configValue         = rs.getString ( 1 + columns.indexOf(colValue      .toLowerCase()) );
+					if (columns.contains(DISPLAY_VALUE .toLowerCase())) entry.displayValue        = rs.getString ( 1 + columns.indexOf(DISPLAY_VALUE .toLowerCase()) );
+					if (columns.contains(PENDING       .toLowerCase())) entry.isPending           = rs.getBoolean( 1 + columns.indexOf(PENDING       .toLowerCase()) );
+					if (columns.contains(SPFILE_VALUE  .toLowerCase())) entry.spfileValue         = rs.getString ( 1 + columns.indexOf(SPFILE_VALUE  .toLowerCase()) );
+					if (columns.contains(DEFAULT_VALUE .toLowerCase())) entry.defaultValue        = rs.getString ( 1 + columns.indexOf(DEFAULT_VALUE .toLowerCase()) );
+					if (columns.contains(RESTART_IS_REQ.toLowerCase())) entry.requiresRestart     = rs.getBoolean( 1 + columns.indexOf(RESTART_IS_REQ.toLowerCase()) );
+					if (columns.contains(SYS_MODIFIABLE.toLowerCase())) entry.sysModifiable       = rs.getString ( 1 + columns.indexOf(SYS_MODIFIABLE.toLowerCase()) );
+					if (columns.contains(SES_MODIFIABLE.toLowerCase())) entry.isSessionModifiable = rs.getBoolean( 1 + columns.indexOf(SES_MODIFIABLE.toLowerCase()) );
+					if (columns.contains(PDB_MODIFIABLE.toLowerCase())) entry.isPdbModifiable     = rs.getBoolean( 1 + columns.indexOf(PDB_MODIFIABLE.toLowerCase()) );
+					if (columns.contains(MODIFIED      .toLowerCase())) entry.modified            = rs.getString ( 1 + columns.indexOf(MODIFIED      .toLowerCase()) );
+					if (columns.contains(ADJUSTED      .toLowerCase())) entry.isAdjusted          = rs.getBoolean( 1 + columns.indexOf(ADJUSTED      .toLowerCase()) );
+					if (columns.contains(DEPRECATED    .toLowerCase())) entry.isDeprecated        = rs.getBoolean( 1 + columns.indexOf(DEPRECATED    .toLowerCase()) );
+					if (columns.contains(BASIC         .toLowerCase())) entry.isBasic             = rs.getBoolean( 1 + columns.indexOf(BASIC         .toLowerCase()) );
+					if (columns.contains(DATA_TYPE     .toLowerCase())) entry.dataType            = rs.getString ( 1 + columns.indexOf(DATA_TYPE     .toLowerCase()) );
+					if (columns.contains(DESCRIPTION   .toLowerCase())) entry.description         = rs.getString ( 1 + columns.indexOf(DESCRIPTION   .toLowerCase()) );
+					if (columns.contains(UPDATE_COMMENT.toLowerCase())) entry.updateComment       = rs.getString ( 1 + columns.indexOf(UPDATE_COMMENT.toLowerCase()) );
+					if (columns.contains(CONFIG_ID     .toLowerCase())) entry.configId            = rs.getInt    ( 1 + columns.indexOf(CONFIG_ID     .toLowerCase()) );
+
+					if (entry.configName == null)
+						continue;
+
+					// An old recording has no section
+					if (entry.sectionName == null)
+						entry.sectionName = "";
+
+					_configMap .put(entry.configName, entry);
+					_configList.add(entry);
+
+					// Add it to the section list, if not already there
+					if ( ! _configSectionList.contains(entry.sectionName) )
+						_configSectionList.add(entry.sectionName);
+				}
+				rs.close();
+			}
+
+			stmt.close();
 		}
 		catch (SQLException ex)
 		{
@@ -445,23 +550,6 @@ extends DbmsConfigAbstract
 			_configMap = null;
 			_configList = null;
 			_configSectionList = null;
-
-			// JZ0C0: Connection is already closed.
-			// JZ006: Caught IOException: com.sybase.jdbc4.jdbc.SybConnectionDeadException: JZ0C0: Connection is already closed.
-			if ( "JZ0C0".equals(ex.getSQLState()) || "JZ006".equals(ex.getSQLState()) )
-			{
-				try
-				{
-					_logger.info("OracleConfig:initialize(): lost connection... try to reconnect...");
-					conn.reConnect(null);
-					_logger.info("OracleConfig:initialize(): Reconnect succeeded, but the configuration will not be visible");
-				}
-				catch(Exception reconnectEx)
-				{
-					_logger.warn("OracleConfig:initialize(): reconnect failed due to: " + reconnectEx);
-					throw ex; // Note throw the original exception and not reconnectEx
-				}
-			}
 
 			return;
 		}
@@ -477,10 +565,324 @@ extends DbmsConfigAbstract
 			// in case it does: report that...
 			checkConfig(conn);
 		}
-		
+
 		// notify change
 		fireTableDataChanged();
 	}
+
+	/**
+	 * '300' -> 300, '2G' -> 2147483648, anything that is not a number -> null<br>
+	 * In the spfile a size can be written with K, M, G or T at the end.
+	 */
+	private static Long toNumberOrNull(String str)
+	{
+		if (str == null || ! str.trim().matches("[0-9]+[kKmMgGtT]?"))
+			return null;
+
+		str = str.trim().toUpperCase();
+		long multiplier = 1;
+		if      (str.endsWith("K")) multiplier = 1024L;
+		else if (str.endsWith("M")) multiplier = 1024L * 1024;
+		else if (str.endsWith("G")) multiplier = 1024L * 1024 * 1024;
+		else if (str.endsWith("T")) multiplier = 1024L * 1024 * 1024 * 1024;
+
+		if (multiplier > 1)
+			str = str.substring(0, str.length() - 1);
+
+		try { return Long.parseLong(str) * multiplier; }
+		catch (NumberFormatException ex) { return null; }
+	}
+
+
+	/**
+	 * Look for things in the configuration that a DBA normally wants to know about.
+	 * <p>
+	 * Every check is on it's own: if one of them can't get it's data (a missing privilege, a standby that is only mounted...) the others are still done.
+	 */
+	@Override
+	public void checkConfig(DbxConnection conn)
+	{
+		if (_configMap == null)
+			return;
+
+		String srvName = "-UNKNOWN-";
+		try { srvName = conn.getDbmsServerName(); } catch (SQLException ex) { _logger.info("Problems getting Oracle instance name. ex=" + ex);}
+
+		String keyPrefix = "DbmsConfigIssue." + srvName + ".oracle.";
+
+		//-------------------------------------------------------
+		// Facts about the database: one row
+		//-------------------------------------------------------
+		Timestamp srvRestart     = null;
+		String    logMode        = null;
+		int       controlFiles   = -1;
+		int       redoGroups     = -1; // for the redo thread that has fewest
+		int       redoMinMembers = -1;
+
+		String sql = ""
+			+ "select (select STARTUP_TIME from V$INSTANCE)                       as STARTUP_TIME \n"
+			+ "      ,d.LOG_MODE \n"
+			+ "      ,(select count(*) from V$CONTROLFILE)                        as CONTROL_FILES \n"
+			+ "      ,(select min(count(*)) from V$LOG group by THREAD#)          as REDO_GROUPS \n"
+			+ "      ,(select min(MEMBERS) from V$LOG)                            as REDO_MIN_MEMBERS \n"
+			+ "from V$DATABASE d";
+
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while (rs.next())
+			{
+				srvRestart     = rs.getTimestamp(1);
+				logMode        = rs.getString   (2);
+				controlFiles   = rs.getInt      (3);
+				redoGroups     = rs.getInt      (4);
+				redoMinMembers = rs.getInt      (5);
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.info("OracleConfig.checkConfig(): Skipping the checks for archive log mode, control files and redo logs. Caught: " + ex.getMessage().trim());
+		}
+
+		//-------------------------------------------------------
+		if ("NOARCHIVELOG".equals(logMode))
+		{
+			DbmsConfigManager.getInstance().addConfigIssue(new DbmsConfigIssue(srvRestart, keyPrefix + "log_mode.noarchivelog", "LOG_MODE", Severity.WARNING,
+					"The database is in NOARCHIVELOG mode. It can only be restored to the time of the last backup (everything after that is lost), and a backup can only be taken when the database is closed.",
+					"If that is not what you want (for a test database it can be): SHUTDOWN IMMEDIATE; STARTUP MOUNT; ALTER DATABASE ARCHIVELOG; ALTER DATABASE OPEN; And then make sure the archived logs are backed up and removed (RMAN)."));
+		}
+
+		//-------------------------------------------------------
+		if (controlFiles == 1)
+		{
+			DbmsConfigManager.getInstance().addConfigIssue(new DbmsConfigIssue(srvRestart, keyPrefix + "control_files.only_one", "control_files", Severity.WARNING,
+					"The database has only ONE control file. If that file is lost or damaged the database can't be opened, and it has to be restored or re-created.",
+					"Add a second control file, on another disk: ALTER SYSTEM SET control_files = '<file1>','<file2>' SCOPE=SPFILE; shut down, copy the control file to <file2>, start."));
+		}
+
+		//-------------------------------------------------------
+		if (redoGroups > 0 && redoGroups < 3)
+		{
+			DbmsConfigManager.getInstance().addConfigIssue(new DbmsConfigIssue(srvRestart, keyPrefix + "redo.less_than_3_groups", "redo log groups", Severity.WARNING,
+					"The database has only " + redoGroups + " redo log groups. With 2 groups the database stops every time a log switch has to wait: for the checkpoint, or for the archiver.",
+					"Add a group (or more): ALTER DATABASE ADD LOGFILE GROUP <n> ('<file>') SIZE <same size as the others>;"));
+		}
+
+		//-------------------------------------------------------
+		if (redoMinMembers == 1)
+		{
+			DbmsConfigManager.getInstance().addConfigIssue(new DbmsConfigIssue(srvRestart, keyPrefix + "redo.one_member", "redo log members", Severity.INFO,
+					"There are redo log groups with only ONE member. If the file of the CURRENT group is lost, committed transactions are lost.",
+					"If the storage does not already mirror the files (ASM redundancy, a SAN): add a member on another disk: ALTER DATABASE ADD LOGFILE MEMBER '<file>' TO GROUP <n>;"));
+		}
+
+		//-------------------------------------------------------
+		// Parameters: go through them once and collect the names
+		//-------------------------------------------------------
+		List<String> deprecatedSet = new ArrayList<>();
+		List<String> hiddenSet     = new ArrayList<>();
+		List<String> pending       = new ArrayList<>();
+		for (OracleConfigEntry entry : _configList)
+		{
+			if (entry.isDeprecated && entry.isSet)                          deprecatedSet.add(entry.configName);
+			if (entry.configName.startsWith("_") && entry.isSet)            hiddenSet    .add(entry.configName);
+			if (entry.isPending)                                            pending      .add(entry.configName + " (now: " + entry.configValue + ", spfile: " + entry.spfileValue + ")");
+		}
+
+		//-------------------------------------------------------
+		if ( ! deprecatedSet.isEmpty() )
+		{
+			DbmsConfigManager.getInstance().addConfigIssue(new DbmsConfigIssue(srvRestart, keyPrefix + "parameters.deprecated", "deprecated parameters", Severity.INFO,
+					"Deprecated parameters are set: " + StringUtil.toCommaStr(deprecatedSet) + ". They still work, but Oracle can remove them in a later version.",
+					"Look up what replaces each of them, and remove it from the spfile: ALTER SYSTEM RESET <name> SCOPE=SPFILE SID='*';"));
+		}
+
+		//-------------------------------------------------------
+		if ( ! hiddenSet.isEmpty() )
+		{
+			DbmsConfigManager.getInstance().addConfigIssue(new DbmsConfigIssue(srvRestart, keyPrefix + "parameters.hidden", "hidden parameters", Severity.INFO,
+					"Hidden parameters (the name starts with an underscore) are set: " + StringUtil.toCommaStr(hiddenSet) + ". They are not documented, and should only be set when Oracle Support says so.",
+					"Check why each of them was set (see column 'UpdateComment'). If it's no longer needed: ALTER SYSTEM RESET \"<name>\" SCOPE=SPFILE SID='*';"));
+		}
+
+		//-------------------------------------------------------
+		if ( ! pending.isEmpty() )
+		{
+			DbmsConfigManager.getInstance().addConfigIssue(new DbmsConfigIssue(srvRestart, keyPrefix + "parameters.pending", "pending parameters", Severity.INFO,
+					"The spfile has other values than the running instance for: " + StringUtil.toCommaStr(pending) + ". The instance gets the spfile values at the next restart.",
+					"Nothing to fix if the restart is planned. Otherwise decide which value is the right one, and set it with ALTER SYSTEM SET <name> = <value> SCOPE=SPFILE (or BOTH)."));
+		}
+
+		//-------------------------------------------------------
+		OracleConfigEntry entry = _configMap.get("spfile");
+		if (entry != null && StringUtil.isNullOrBlank(entry.configValue))
+		{
+			DbmsConfigManager.getInstance().addConfigIssue(new DbmsConfigIssue(srvRestart, keyPrefix + "spfile.not_used", "spfile", Severity.INFO,
+					"The instance was started with a text parameter file (pfile), not a server parameter file (spfile). A change with ALTER SYSTEM is then lost at the next restart, unless the file is also edited by hand.",
+					"CREATE SPFILE FROM PFILE; and restart the instance."));
+		}
+
+		//-------------------------------------------------------
+		entry = _configMap.get("statistics_level");
+		if (entry != null && "BASIC".equalsIgnoreCase(entry.configValue))
+		{
+			DbmsConfigManager.getInstance().addConfigIssue(new DbmsConfigIssue(srvRestart, keyPrefix + "statistics_level.basic", "statistics_level", Severity.WARNING,
+					"The parameter 'statistics_level' is BASIC. That turns off, among other things: the tracking of table changes (so the automatic optimizer statistics job does not know what is stale), the memory advisors and the automatic memory tuning, and timed statistics.",
+					"ALTER SYSTEM SET statistics_level = TYPICAL SCOPE=BOTH;"));
+		}
+
+		//-------------------------------------------------------
+		entry = _configMap.get("db_block_checksum");
+		if (entry != null && ("OFF".equalsIgnoreCase(entry.configValue) || "FALSE".equalsIgnoreCase(entry.configValue)))
+		{
+			DbmsConfigManager.getInstance().addConfigIssue(new DbmsConfigIssue(srvRestart, keyPrefix + "db_block_checksum.off", "db_block_checksum", Severity.WARNING,
+					"The parameter 'db_block_checksum' is OFF. A block that is damaged by the disk or the storage is then not detected when it's read (and it gets into the backups).",
+					"ALTER SYSTEM SET db_block_checksum = TYPICAL SCOPE=BOTH;"));
+		}
+
+		//-------------------------------------------------------
+		// compatible lower than the software: '11.2.0.0.0' and version '11.2.0.2.0' is fine, '12.1.0' on a 19 is not
+		//-------------------------------------------------------
+		entry = _configMap.get("compatible");
+		long srvVersion = conn.getDbmsVersionNumber(); // 0 if we don't know
+		if (entry != null && entry.configValue != null && srvVersion > 0)
+		{
+			String[] parts = entry.configValue.split("\\.");
+			int compatMajor = StringUtil.parseInt(parts[0], -1);
+			int compatMinor = parts.length > 1 ? StringUtil.parseInt(parts[1], 0) : 0;
+
+			int srvMajor = Ver.versionNumPart(srvVersion, Ver.VERSION_MAJOR);
+			int srvMinor = Ver.versionNumPart(srvVersion, Ver.VERSION_MINOR);
+
+			// From 18 and up the second number is the Release Update, and 'compatible' only has the first
+			boolean isLower = compatMajor != -1 && (compatMajor < srvMajor || (srvMajor < 18 && compatMajor == srvMajor && compatMinor < srvMinor));
+			if (isLower)
+			{
+				DbmsConfigManager.getInstance().addConfigIssue(new DbmsConfigIssue(srvRestart, keyPrefix + "compatible.lower_than_version", "compatible", Severity.INFO,
+						"The parameter 'compatible' is " + entry.configValue + ", which is lower than the Oracle software version (" + srvMajor + "." + srvMinor + "). New features of this version are not available until it is raised.",
+						"When you are sure that you will not go back to the old version: ALTER SYSTEM SET compatible = '<version>' SCOPE=SPFILE; and restart. It can NOT be lowered again."));
+			}
+		}
+
+		//-------------------------------------------------------
+		// Components that are INVALID
+		//-------------------------------------------------------
+		sql = "select COMP_NAME, VERSION from DBA_REGISTRY where STATUS = 'INVALID' order by COMP_NAME";
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			List<String> invalid = new ArrayList<>();
+			while (rs.next())
+				invalid.add(rs.getString(1) + " (" + rs.getString(2) + ")");
+
+			if ( ! invalid.isEmpty() )
+			{
+				DbmsConfigManager.getInstance().addConfigIssue(new DbmsConfigIssue(srvRestart, keyPrefix + "registry.invalid", "DBA_REGISTRY", Severity.WARNING,
+						"Database components are INVALID: " + StringUtil.toCommaStr(invalid) + ". This is normally what is left after an upgrade or a patch that did not finish.",
+						"As SYS: @?/rdbms/admin/utlrp.sql (recompiles invalid objects), then look at DBA_REGISTRY again. If it is still INVALID: see the log of the upgrade or the patch."));
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.info("OracleConfig.checkConfig(): Skipping the check for invalid components. Caught: " + ex.getMessage().trim());
+		}
+
+		//-------------------------------------------------------
+		// Automatic optimizer statistics
+		//-------------------------------------------------------
+		sql = "select STATUS from DBA_AUTOTASK_CLIENT where CLIENT_NAME = 'auto optimizer stats collection'";
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while (rs.next())
+			{
+				String status = rs.getString(1);
+				if ( ! "ENABLED".equals(status) )
+				{
+					DbmsConfigManager.getInstance().addConfigIssue(new DbmsConfigIssue(srvRestart, keyPrefix + "autotask.optimizer_stats.disabled", "auto optimizer stats collection", Severity.WARNING,
+							"The automatic job that gathers optimizer statistics is " + status + ". Unless something else gathers the statistics, they get old, and the optimizer starts to choose bad execution plans.",
+							"If no other job does it: exec DBMS_AUTO_TASK_ADMIN.ENABLE(client_name => 'auto optimizer stats collection', operation => NULL, window_name => NULL);"));
+				}
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.info("OracleConfig.checkConfig(): Skipping the check for automatic optimizer statistics. Caught: " + ex.getMessage().trim());
+		}
+
+		//-------------------------------------------------------
+		// The audit trail: SYS.AUD$ + SYS.FGA_LOG$ + everything in AUDSYS (the unified audit trail)
+		//-------------------------------------------------------
+		int auditTrailLimitMb = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_check_auditTrailSizeInMb, DEFAULT_check_auditTrailSizeInMb);
+
+		sql = "select round(nvl(sum(BYTES), 0) / 1048576) from DBA_SEGMENTS where (OWNER = 'SYS' and SEGMENT_NAME in ('AUD$', 'FGA_LOG$')) or OWNER = 'AUDSYS'";
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while (rs.next())
+			{
+				int auditTrailMb = rs.getInt(1);
+				if (auditTrailMb > auditTrailLimitMb)
+				{
+					DbmsConfigManager.getInstance().addConfigIssue(new DbmsConfigIssue(srvRestart, keyPrefix + "audit_trail.size", "audit trail size", Severity.INFO,
+							"The audit trail is " + auditTrailMb + " MB (this check is at " + auditTrailLimitMb + " MB). Oracle never removes audit records by itself, so without a purge job it grows for ever (in the SYSTEM or SYSAUX tablespace, unless it has been moved).",
+							"Decide how long the audit records must be kept, then set up a purge job with the package DBMS_AUDIT_MGMT (SET_LAST_ARCHIVE_TIMESTAMP + CREATE_PURGE_JOB). See the 'Audit' tab for which trail it is. To change the limit of this check: " + PROPKEY_check_auditTrailSizeInMb + "=<MB>"));
+				}
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.info("OracleConfig.checkConfig(): Skipping the check for the size of the audit trail. Caught: " + ex.getMessage().trim());
+		}
+
+		//-------------------------------------------------------
+		// Features that need an extra-cost license (an Enterprise Edition option or a management pack), that Oracle has recorded the use of
+		// ONE issue per license: the ones you have can be discarded, and a new one still shows up
+		// Not on the Express and the Free edition: there is nothing extra to pay for
+		//-------------------------------------------------------
+		String edition = ((DbmsVersionInfoOracle) conn.getDbmsVersionInfo()).getEdition();
+		if ( ! OracleConfigText.isFreeEdition(edition) )
+		{
+			boolean isCdbRoot = ((DbmsVersionInfoOracle) conn.getDbmsVersionInfo()).isCdbRoot();
+
+			// Key: the license, value: the features (a feature has one row per container and Oracle version: say it once)
+			Map<String, Set<String>> usagePerLicense = new LinkedHashMap<>();
+
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(OracleConfigText.getExtraCostFeatureUsageSql(conn)))
+			{
+				while (rs.next())
+				{
+					String usage = "'" + rs.getString("FEATURE") + "' ("
+							+ (isCdbRoot ? "in " + rs.getString("CON_NAME") + ", " : "")
+							+ ("TRUE".equals(rs.getString("CURRENTLY_USED")) ? "in use at the last sample, " : "")
+							+ "last seen " + rs.getString("LAST_USED") + ")";
+
+					usagePerLicense.computeIfAbsent(rs.getString("LICENSE"), k -> new LinkedHashSet<>()).add(usage);
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.info("OracleConfig.checkConfig(): Skipping the check for features that need an extra-cost license. Caught: " + ex.getMessage().trim());
+			}
+
+			for (Entry<String, Set<String>> e : usagePerLicense.entrySet())
+			{
+				String license = e.getKey();
+
+				// Max 10 features in the text
+				List<String> usages = new ArrayList<>(e.getValue());
+				String usageList = StringUtil.toCommaStr(usages.subList(0, Math.min(10, usages.size()))) + (usages.size() > 10 ? " ... and " + (usages.size() - 10) + " more" : "");
+
+				DbmsConfigManager.getInstance().addConfigIssue(new DbmsConfigIssue(srvRestart, keyPrefix + "license." + license.toLowerCase().replaceAll("[^a-z0-9]+", "_"), license, Severity.WARNING,
+						"Oracle has recorded the use of features that need the extra-cost license '" + license + "': " + usageList + ". "
+						+ (OracleConfigText.isStandardEdition(edition)
+								? "This is Standard Edition (" + edition + "), where options and management packs can not be licensed at all: so this is a license problem."
+								: "That is fine if '" + license + "' is in your license agreement. If it is not, it is a license problem: this is what Oracle looks at in a license review."),
+						"Compare with your license agreement: Oracle only records what was used, it does not know what you have paid for. "
+						+ "Licensed: discard this issue. Not licensed: find out who or what uses it, and stop that (for the Diagnostics and the Tuning Pack: ALTER SYSTEM SET control_management_pack_access = 'NONE' turns the pack features off). "
+						+ "The list is in the DBMS Configuration tab 'Options and Feature Usage'. Oracle's own check is the script options_packs_usage_statistics.sql (My Oracle Support, Document ID KB143588): run that before a license review."));
+			}
+		}
+	}
+
+	public static final String PROPKEY_check_auditTrailSizeInMb = "OracleConfig.check.auditTrail.sizeInMb.gt";
+	public static final int    DEFAULT_check_auditTrailSizeInMb = 1024;
 
 	/**
 	 * Get description for the configuration name
@@ -494,7 +896,7 @@ extends DbmsConfigAbstract
 			return null;
 
 		OracleConfigEntry e = _configMap.get(configName);
-		
+
 		return e == null ? null : e.description;
 	}
 
@@ -508,10 +910,8 @@ extends DbmsConfigAbstract
 		return _configSectionList;
 	}
 
-
 	/**
-	 * Get Section list, which is a list of all config sections
-	 * @return List<String> of all sections
+	 * When was the configuration read
 	 */
 	@Override
 	public Timestamp getTimestamp()
@@ -554,29 +954,29 @@ extends DbmsConfigAbstract
 		if (e == null)
 			return null;
 
+		// NOTE: same order as in COLUMN_HEADERS
 		switch (columnIndex)
 		{
 		case 0:  return e.isNonDefault;
 		case 1:  return e.sectionName;
 		case 2:  return e.configName;
 		case 3:  return e.configValue;
-		case 4:  return e.isPending;
-		case 5:  return e.pendingValue;
-		case 6:  return e.defaultValue;
-		case 7:  return e.usedMemoryStr; 
-		case 8:  return e.configUnit; 
-		case 9:  return e.requiresRestart; 
-		case 10: return e.configValueString;
-		case 11: return e.pendingValueString;
-		case 12: return e.isReadOnly;
-		case 13: return e.configType;
-		case 14: return e.minValue;
-		case 15: return e.maxValue;
-		case 16: return e.description;
-		case 17: return e.configId;
-		case 18: return e.parentId;
-		case 19: return e.displayLevel;
-		case 20: return e.dataType;
+		case 4:  return e.displayValue;
+		case 5:  return e.isPending;
+		case 6:  return e.spfileValue;
+		case 7:  return e.defaultValue;
+		case 8:  return e.requiresRestart;
+		case 9:  return e.sysModifiable;
+		case 10: return e.isSessionModifiable;
+		case 11: return e.isPdbModifiable;
+		case 12: return e.modified;
+		case 13: return e.isAdjusted;
+		case 14: return e.isDeprecated;
+		case 15: return e.isBasic;
+		case 16: return e.dataType;
+		case 17: return e.description;
+		case 18: return e.updateComment;
+		case 19: return e.configId;
 		}
 		return null;
 	}
@@ -589,23 +989,15 @@ extends DbmsConfigAbstract
 	@Override
 	public boolean isCellEditable(int rowIndex, int columnIndex)
 	{
-//		switch (columnIndex)
-//		{
-//		case 1:  return true;
-//		case 2:  return true;
-//		case 16: return true;
-//		}
-//		return false;
 		return (Boolean) COLUMN_HEADERS[columnIndex][COL_EDITABLE];
 	}
 
-	
 	@Override
-	public int findColumn(String columnName) 
+	public int findColumn(String columnName)
 	{
-		for (int i=0; i<COLUMN_HEADERS.length; i++) 
+		for (int i=0; i<COLUMN_HEADERS.length; i++)
 		{
-			if (COLUMN_HEADERS[i][COL_NAME].equals(columnName)) 
+			if (COLUMN_HEADERS[i][COL_NAME].equals(columnName))
 			{
 				return i;
 			}
@@ -627,52 +1019,44 @@ extends DbmsConfigAbstract
 		return "";
 	}
 
-//	@Override
-//	public String getSqlDataType(String colName)
-//	{
-//		for (int i=0; i<COLUMN_HEADERS.length; i++)
-//		{
-//			if (COLUMN_HEADERS[i][COL_NAME].equals(colName))
-//				return (String)COLUMN_HEADERS[i][COL_SQLTYPE];
-//		}
-//		return "";
-//	}
-//	@Override
-//	public String getSqlDataType(int colIndex)
-//	{
-//		return (String)COLUMN_HEADERS[colIndex][COL_SQLTYPE];
-//	}
 	@Override
 	public String getSqlDataType(DbxConnection conn, int colIndex)
 	{
 		int jdbcType = (int)COLUMN_HEADERS[colIndex][COL_JDBC_TYPE];
 		int length   = (int)COLUMN_HEADERS[colIndex][COL_JDBC_LENGTH];
 		int scale    = (int)COLUMN_HEADERS[colIndex][COL_JDBC_SCALE];
-		
+
 		return conn.getDbmsDataTypeResolver().dataTypeResolverToTarget(jdbcType, length, scale);
 	}
 
 	@Override
 	public String getTabLabel()
 	{
-		return "Oracle Config";
+		return "Parameters";
 	}
 
 	@Override
 	public String getCellToolTip(int mrow, int mcol)
 	{
+		OracleConfigEntry e = _configList.get(mrow);
+		if (e == null)
+			return null;
+
 		StringBuilder sb = new StringBuilder();
 		sb.append("<html>");
-		sb.append("<b>Description:  </b>").append(getValueAt(mrow, findColumn(OracleConfig.DESCRIPTION))) .append("<br>");
-		sb.append("<b>Section Name: </b>").append(getValueAt(mrow, findColumn(OracleConfig.SECTION_NAME))).append("<br>");
-		sb.append("<b>Config Name:  </b>").append(getValueAt(mrow, findColumn(OracleConfig.CONFIG_NAME))) .append("<br>");
-		sb.append("<b>Run Value:    </b>").append(getValueAt(mrow, findColumn(OracleConfig.CONFIG_VALUE))).append("<br>");
-		sb.append("<b>Max Value:    </b>").append(getValueAt(mrow, findColumn(OracleConfig.MAX_VALUE)))   .append("<br>");
-		sb.append("<b>Min Value:    </b>").append(getValueAt(mrow, findColumn(OracleConfig.MIN_VALUE)))   .append("<br>");
-		if (Boolean.TRUE.equals(getValueAt(mrow, findColumn(OracleConfig.PENDING))))
+		sb.append("<b>Description:   </b>").append(e.description) .append("<br>");
+		sb.append("<b>Parameter:     </b>").append(e.configName)  .append("<br>");
+		sb.append("<b>Value:         </b>").append(e.configValue);
+		if (e.displayValue != null && ! e.displayValue.equals(e.configValue))
+			sb.append(" &nbsp; (").append(e.displayValue).append(")");
+		sb.append("<br>");
+		sb.append("<b>Spfile Value:  </b>").append(e.spfileValue  == null ? "<i>not in the spfile</i>" : e.spfileValue) .append("<br>");
+		sb.append("<b>Default Value: </b>").append(e.defaultValue == null ? ""                         : e.defaultValue).append("<br>");
+		sb.append("<b>Change it:     </b>").append(e.requiresRestart ? "static: in the spfile, and then a restart" : "DEFERRED".equals(e.sysModifiable) ? "dynamic, but only for new sessions (DEFERRED)" : "dynamic (ALTER SYSTEM)").append("<br>");
+		if (e.isPending)
 		{
 			sb.append("<br>");
-			sb.append("<b>NOTE: DBMS Needs to be rebooted for this option to take effect.</b>").append("<br>");
+			sb.append("<b>NOTE: The spfile has another value than the instance. It takes effect at the next restart.</b>").append("<br>");
 		}
 		sb.append("</html>");
 		return sb.toString();
@@ -708,6 +1092,50 @@ extends DbmsConfigAbstract
 		return true;
 	}
 
+	/**
+	 * One <code>ALTER SYSTEM SET</code> statement, with some comment lines above it.<br>
+	 * The statement ends with <code>go</code>: that is the terminator in the SQL Window. For SQL*Plus: replace it with <code>;</code>
+	 */
+	private String toAlterSystem(OracleConfigEntry e, String value, String prevValue)
+	{
+		StringBuilder sb = new StringBuilder();
+
+		sb.append("---------------------------------------------------------------------------\n");
+		sb.append("-- Parameter:     ").append(e.configName)  .append("\n");
+		sb.append("-- Description:   ").append(e.description) .append("\n");
+		sb.append("-- Default Value: ").append(e.defaultValue == null ? "" : e.defaultValue).append("\n");
+		if (prevValue != null)
+			sb.append("-- Prev Value:    ").append(prevValue).append("\n");
+
+		// Text values in quotes, numbers and booleans as they are
+		boolean isText = "String".equals(e.dataType) || "File".equals(e.dataType);
+		String  valStr = value == null ? "" : value;
+		if (isText)
+			valStr = "'" + valStr.replace("'", "''") + "'";
+
+		if (isText && value != null && value.contains(", "))
+			sb.append("-- NOTE: If this is a LIST of values (like control_files) write it as: 'value1','value2'\n");
+
+		// static: only in the spfile + restart.   DEFERRED: only for new sessions
+		String option = " SCOPE=BOTH";
+		if (e.requiresRestart)
+		{
+			option = " SCOPE=SPFILE";
+			sb.append("-- NOTE: This is a static parameter: it takes effect at the next restart of the instance.\n");
+		}
+		else if ("DEFERRED".equals(e.sysModifiable))
+		{
+			option = " DEFERRED SCOPE=BOTH";
+			sb.append("-- NOTE: This only takes effect for sessions that connects after the change.\n");
+		}
+
+		sb.append("ALTER SYSTEM SET ").append(e.configName.startsWith("_") ? "\"" + e.configName + "\"" : e.configName).append(" = ").append(valStr).append(option).append("\n");
+		sb.append("go\n");
+		sb.append("\n");
+
+		return sb.toString();
+	}
+
 	@Override
 	public String reverseEngineer(int[] modelRows)
 	{
@@ -715,50 +1143,24 @@ extends DbmsConfigAbstract
 		if (modelRows.length == 0) return null;
 
 		StringBuilder sb = new StringBuilder();
-		
+
 		// Build a header...
 		sb.append("/* \n");
 		sb.append("** Reverse engineering ").append(modelRows.length).append(" entries. \n");
 		sb.append("** At Date:            ").append(new Timestamp(System.currentTimeMillis())).append("\n");
 		sb.append("** Oracle Server name: ").append(getDbmsServerName()).append("\n");
-		sb.append("** Oracle Version:     ").append(getDbmsVersionStr()).append("\n");
+		sb.append("** Oracle Version:     ").append((getDbmsVersionStr() + "").replace('\n', ' ')).append("\n");
+		sb.append("** Note:               'go' ends a statement in the SQL Window. For SQL*Plus: replace it with ';'\n");
 		sb.append("*/ \n");
 		sb.append("\n");
+
 		for (int r=0; r<modelRows.length; r++)
 		{
-			int mrow = modelRows[r];
+			OracleConfigEntry e = _configList.get(modelRows[r]);
 
-			// SKIP: If it's a read only configuration 
-			if ("read-only".equals(getValueAt(mrow, findColumn(OracleConfig.TYPE))))
-				continue;
-
-			sb.append("---------------------------------------------------------------------------\n");
-			sb.append("-- Config Name:   ").append(getValueAt(mrow, findColumn(OracleConfig.CONFIG_NAME))) .append("\n");
-			sb.append("-- Description:   ").append(getValueAt(mrow, findColumn(OracleConfig.DESCRIPTION))) .append("\n");
-			sb.append("-- Section Name:  ").append(getValueAt(mrow, findColumn(OracleConfig.SECTION_NAME))).append("\n");
-			sb.append("-- Type:          ").append(getValueAt(mrow, findColumn(OracleConfig.TYPE))).append("\n");
-
-			String cfgValStr = getValueAt(mrow, findColumn(OracleConfig.CFG_VAL_STR)) + "";
-			if (NumberUtils.isNumber(cfgValStr))
-			{
-				sb.append("-- Default Value: ").append(getValueAt(mrow, findColumn(OracleConfig.DEFAULT_VALUE))).append("\n");
-				sb.append("-- Min Value:     ").append(getValueAt(mrow, findColumn(OracleConfig.MIN_VALUE))).append("\n");
-				sb.append("-- Max Value:     ").append(getValueAt(mrow, findColumn(OracleConfig.MAX_VALUE))).append("\n");
-				
-    			sb.append("ALTER SYSTEM SET ").append(getValueAt(mrow, findColumn(OracleConfig.CONFIG_NAME))).append(" = ");
-    			sb.append(getValueAt(mrow, findColumn(OracleConfig.CONFIG_VALUE))).append("");
-    			sb.append("\n");
-    			sb.append("go\n");
-			}
-			else
-			{
-    			sb.append("ALTER SYSTEM SET ").append(getValueAt(mrow, findColumn(OracleConfig.CONFIG_NAME))).append(" = '").append(cfgValStr).append("'");
-    			sb.append("\n");
-    			sb.append("go\n");
-			}
-			sb.append("\n");
+			sb.append(toAlterSystem(e, e.configValue, null));
 		}
-		
+
 		return sb.toString();
 	}
 
@@ -769,58 +1171,30 @@ extends DbmsConfigAbstract
 		if (keyValMap.size() == 0) return null;
 
 		StringBuilder sb = new StringBuilder();
-		
+
 		sb.append("/* \n");
 		sb.append("** Reverse engineering ").append(keyValMap.size()).append(" entries. \n");
 		sb.append("** At Date:            ").append(new Timestamp(System.currentTimeMillis())).append("\n");
 		sb.append("** Oracle Server name: ").append(getDbmsServerName()).append("\n");
-		sb.append("** Oracle Version:     ").append(getDbmsVersionStr()).append("\n");
+		sb.append("** Oracle Version:     ").append((getDbmsVersionStr() + "").replace('\n', ' ')).append("\n");
 		if (StringUtil.hasValue(comment))
 			sb.append("** Comment:            ").append(comment).append("\n");
+		sb.append("** Note:               'go' ends a statement in the SQL Window. For SQL*Plus: replace it with ';'\n");
 		sb.append("*/ \n");
 		sb.append("\n");
 
-		for (Entry<String, String> e : keyValMap.entrySet())
+		for (Entry<String, String> kv : keyValMap.entrySet())
 		{
-			String key = e.getKey();
-			String val = e.getValue();
-
-			OracleConfigEntry cfgEntry = _configMap.get(e.getKey());
-
-			sb.append("---------------------------------------------------------------------------\n");
-			sb.append("-- Config Name:   ").append(key)                  .append("\n");
-			sb.append("-- Description:   ").append(cfgEntry.description) .append("\n");
-			sb.append("-- Section Name:  ").append(cfgEntry.sectionName) .append("\n");
-			sb.append("-- Type:          ").append(cfgEntry.configType)  .append("\n");
-			sb.append("-- Default Value: ").append(cfgEntry.defaultValue).append("\n");
-
-			sb.append("-- Prev Value:    ").append(cfgEntry.getConfigValue()).append("\n");
-			sb.append("-- New Value:     ").append(val)                      .append("\n");
-
-			if (cfgEntry.isReadOnly)
+			OracleConfigEntry e = _configMap.get(kv.getKey());
+			if (e == null)
 			{
-				sb.append("-- NOTE -- This is a 'read-only' configuration... so nothing will be done here.\n");
-				sb.append("\n");
-				sb.append("go\n");
+				sb.append("-- The parameter '").append(kv.getKey()).append("' does not exist in this instance, so nothing is done for it.\n\n");
 				continue;
 			}
-			if (NumberUtils.isNumber(val))
-			{
-				sb.append("-- Min Value:     ").append(cfgEntry.minValue).append("\n");
-				sb.append("-- Max Value:     ").append(cfgEntry.maxValue).append("\n");
 
-				sb.append("ALTER SYSTEM SET ").append(key).append(" = ").append(e.getValue()).append("");
-    			sb.append("\n");
-    			sb.append("go\n");
-			}
-			else
-			{
-    			sb.append("ALTER SYSTEM SET ").append(key).append(" = '").append(val).append("'");
-    			sb.append("\n");
-    			sb.append("go\n");
-			}
+			sb.append(toAlterSystem(e, kv.getValue(), e.configValue));
 		}
-		
+
 		return sb.toString();
 	}
 }

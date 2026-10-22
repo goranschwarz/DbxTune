@@ -191,6 +191,14 @@ extends CmSummaryAbstract
 	{
 		return "ra_status";
 	}
+
+	/** What the columns are: tooltips in the GUI, and the 'Description' column in DbxCentral (Counter Details, the "unpivot" view) */
+	@Override
+	public void initLocalToolTipTextOnTableColumnHeader()
+	{
+		setLocalToolTipTextOnTableColumnHeader("State",  "<html>The state of the Replication Agent: for example ADMIN or REPLICATING. ra_status</html>");
+		setLocalToolTipTextOnTableColumnHeader("Action", "<html>What the Replication Agent is doing right now, in plain text. ra_status</html>");
+	}
 	
 //	@Override
 //	public void updateGraphData(TrendGraphDataPoint tgdp)

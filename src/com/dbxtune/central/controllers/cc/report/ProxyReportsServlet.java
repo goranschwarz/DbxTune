@@ -22,6 +22,8 @@
 package com.dbxtune.central.controllers.cc.report;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.invoke.MethodHandles;
 import java.net.URI;
 import java.net.http.HttpRequest;
@@ -70,6 +72,14 @@ extends ProxyHelper
 		{
 			urlStr = "sqlserver/job-scheduler-timeline";
 		}
+		else if ("oracle-job-scheduler-report".equals(reportName))
+		{
+			urlStr = "oracle/job-scheduler-report";
+		}
+		else if ("oracle-job-scheduler-timeline".equals(reportName))
+		{
+			urlStr = "oracle/job-scheduler-timeline";
+		}
 		else
 		{
 			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Report name '" + reportName + "' was NOT found.");
@@ -105,8 +115,24 @@ extends ProxyHelper
 
 		try
 		{
-			HttpResponse<byte[]> httpResponse = _httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofByteArray());
-			sendResult(httpResponse, response, TEXT_HTML);
+			// The page is passed on WHILE it arrives (not when all of it has arrived): a report over a long period takes time to make, and the
+			// collector first sends the start of the page with "I am reading from the database..." (see DbxTimelineRows.writeProgressStart).
+			// The browser shows that at once, if we do not sit on it.
+			HttpResponse<InputStream> httpResponse = _httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofInputStream());
+
+			response.setStatus(httpResponse.statusCode());
+			response.setContentType(TEXT_HTML);
+
+			try (InputStream in = httpResponse.body(); OutputStream out = response.getOutputStream())
+			{
+				byte[] buffer = new byte[8192];
+				int    bytesRead;
+				while ((bytesRead = in.read(buffer)) != -1)
+				{
+					out.write(buffer, 0, bytesRead);
+					out.flush();
+				}
+			}
 		}
 		catch (InterruptedException ex)
 		{

@@ -7,6 +7,10 @@
  * Usage:
  *     DbxTimeline.create('timeline', rows, { start: '2026-09-25T00:00:00', end: '2026-09-25T23:59:00', ... });
  *
+ *     DbxTimeline.createLater('timeline', rows, { ... });    the same, but it says "Drawing N bars..." while it draws.
+ *     DbxTimeline.progressStart('Reading from the database...') / progressText(text) / progressDone()
+ *                                                           a box that says that the page is being made, see "Progress" at the end of this file
+ *
  * Each row is one bar:
  *     key         Row key: bars with the same key are drawn on the same row                       (mandatory)
  *     text        Text on the bar
@@ -200,17 +204,55 @@ var DbxTimeline = (function () {
 		return dark;
 	}
 
+	// The tooltip as text: for the "Clicked" panel and the clipboard.
+	// A tooltip is mostly a table of "name | value" rows: they become aligned lines
+	//     Status:   FAILED, ORA-20001
+	//     Message:  ORA-20001: DbxTune test: this job always fails
+	//               ORA-06512: at line 1
+	// (a value of many lines is indented under the first line of it)
 	function htmlToPlainText(html)
 	{
-		return String(html || '')
-			.replace(/<br\s*\/?>/gi, '\n')
-			.replace(/<hr\s*\/?>/gi, '\n-------------------------------------------------------\n')
-			.replace(/<\/tr>/gi, '\n')
-			.replace(/<[^>]+>/g, '')
-			.replace(/&nbsp;/g, ' ')
-			.replace(/&emsp;/g, '\t')
-			.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#92;/g, '\\')
-			.replace(/&amp;/g, '&');
+		var doc  = new DOMParser().parseFromString('<body>' + String(html || '') + '</body>', 'text/html');
+		var body = doc.body;
+
+		Array.prototype.slice.call(body.querySelectorAll('br')).forEach(function (el) { el.replaceWith('\n'); });
+		Array.prototype.slice.call(body.querySelectorAll('hr')).forEach(function (el) { el.replaceWith('\n-------------------------------------------------------\n'); });
+
+		var cellText = function (cell) {
+			return (cell.textContent || '').replace(/ /g, ' ').replace(/[ \t]+$/gm, '').replace(/^\n+|\n+$/g, '').trim();
+		};
+
+		// Innermost tables first (a table in a cell is then already text)
+		var tables = Array.prototype.slice.call(body.querySelectorAll('table')).reverse();
+		tables.forEach(function (table) {
+			var rows = Array.prototype.slice.call(table.rows).map(function (tr) {
+				return Array.prototype.slice.call(tr.cells).map(cellText);
+			}).filter(function (cells) { return cells.some(function (c) { return c !== ''; }); });
+
+			// The width of the name column: the longest name of a "name | value" row (without its own ':')
+			var width = 0;
+			rows.forEach(function (cells) {
+				if (cells.length >= 2)
+					width = Math.max(width, cells[0].replace(/:\s*$/, '').length);
+			});
+
+			var lines = rows.map(function (cells) {
+				if (cells.length < 2)
+					return cells.join('');
+				var name   = cells[0].replace(/:\s*$/, '');
+				var value  = cells.slice(1).filter(function (c) { return c !== ''; }).join('  ');
+				var indent = new Array(width + 4).join(' ');
+				return (name === '' ? indent :(name + ':' + new Array(width - name.length + 3).join(' ')))
+					+ value.split('\n').map(function (l, i) { return i === 0 ? l.trim() : indent + l.trim(); }).join('\n');
+			});
+			table.replaceWith('\n' + lines.join('\n') + '\n');
+		});
+
+		return (body.textContent || '')
+			.replace(/ /g, ' ')
+			.replace(/[ \t]+$/gm, '')
+			.replace(/\n{3,}/g, '\n\n')
+			.trim();
 	}
 
 	// Remove everything from the HTML that is not in XSS_WHITELIST (elements and attributes).
@@ -758,10 +800,143 @@ var DbxTimeline = (function () {
 			return { id: g.id, content: groupLabelHtml(g), order: g.order, className: cls.join(' ') };
 		}
 
+		//-------------------------------------------------
+		// Level of detail, for a row with VERY many bars (months of a job that runs every few minutes)
+		//
+		// vis-timeline gets slower much faster than the number of bars in ONE row grows (measured: 2 000 bars in a row = 4 seconds,
+		// 4 000 = 13 seconds, 12 000 = more than a minute, with the browser frozen), and when a long period is shown most of
+		// those bars are less than a pixel wide anyway. So for such a row:
+		//   - bars that can not be told apart at the current zoom (narrow, and right next to each other) are drawn as ONE bar: "N runs".
+		//     It gets the color of a failed run if one of them failed (otherwise of the longest run), and a tooltip that says how many and when.
+		//   - only the bars in, and one screen before and after, the part of the period that is shown are given to vis.
+		// When the user zooms or moves in time, the bars of those rows are made again (see 'rangechanged' below): zoomed in, every run is a bar of its own.
+		// A row with fewer bars than LOD_MIN_ROWS is never touched.
+		var LOD_MIN_ROWS  = 300;  // a row with at least this many bars
+		var LOD_NARROW_PX = 4;    // a bar narrower than this...
+		var LOD_GAP_PX    = 2;    // ...that starts closer than this to the one before, is drawn together with it...
+		var LOD_MAX_PX    = 14;   // ...until they are this wide together (so a busy row is still many bars, each with its own color)
+		var lod = { msPerPx: 0, from: 0, to: 0, groups: {} }; // the zoom and the part of the period that the bars of the "many bars" rows were made for
+
+		// Where the chart is now: milliseconds per pixel, and what is shown plus one screen on each side
+		function lodScale()
+		{
+			var center  = chartDiv.querySelector('.vis-panel.vis-center');
+			var chartPx = (center && center.clientWidth > 100) ? center.clientWidth : 1200;
+			var w       = timeline.getWindow();
+			var from    = w.start.valueOf();
+			var to      = w.end.valueOf();
+			return { msPerPx: (to - from) / chartPx, from: from - (to - from), to: to + (to - from), viewFrom: from, viewTo: to };
+		}
+
+		// Many bars as one
+		function lodMergedRow(list, start, end)
+		{
+			var first   = list[0];
+			var failed  = list.filter(function (r) { return r.failed === true; });
+			var longest = list.reduce(function (a, b) { return (b._end - b._start) > (a._end - a._start) ? b : a; });
+			var text    = list.length + ' runs' + (failed.length > 0 ? ', ' + failed.length + ' failed' : '');
+
+			return {
+				key:        first.key,
+				label:      first.label,
+				laneKey:    first.laneKey,
+				laneSubKey: first.laneSubKey,
+				text:       text,
+				color:      failed.length > 0 ? failed[0].color : longest.color,
+				failed:     failed.length > 0,
+				_start:     start,
+				_end:       end,
+				_merged:    list,
+				tooltip:    '<div style="padding:10px;">'
+					+ '<b>' + escapeHtml(first.label || first.key) + '</b><hr><b>' + escapeHtml(text) + '</b><hr>'
+					+ '<table>'
+					+ '<tr><td nowrap><b>First start:</b></td><td nowrap>' + fmtTs(start) + '</td></tr>'
+					+ '<tr><td nowrap><b>Last end:</b></td><td nowrap>'    + fmtTs(end)   + '</td></tr>'
+					+ '<tr><td nowrap><b>Longest:</b></td><td nowrap>'     + fmtDuration(longest._end - longest._start) + ' (started ' + fmtTs(longest._start) + ')</td></tr>'
+					+ (failed.length > 0 ? '<tr><td nowrap><b>First failed:</b></td><td nowrap>' + fmtTs(failed[0]._start) + '</td></tr>' : '')
+					+ '</table>'
+					+ '<hr>They are too close to be drawn one by one at this zoom.<br>Zoom in (Ctrl + wheel, or click and choose <i>Zoom in</i>) to see each of them.</div>'
+			};
+		}
+
+		// The bars to draw for a row: the rows as they are, or (a row with very many bars) what there is room for at the current zoom
+		function lodRows(g)
+		{
+			if (g.rows.length < LOD_MIN_ROWS || !lod.msPerPx)
+				return g.rows;
+
+			lod.groups[g.id] = true;
+
+			var narrow = LOD_NARROW_PX * lod.msPerPx;
+			var gap    = LOD_GAP_PX    * lod.msPerPx;
+			var maxLen = LOD_MAX_PX    * lod.msPerPx;
+			var sorted = g.rows.slice().sort(function (a, b) { return a._start - b._start; });
+			var out    = [];
+			var cur    = null; // the bar that is being put together: { list, start, end }
+
+			sorted.forEach(function (r) {
+				if (r._end < lod.from || r._start > lod.to)
+					return; // not in (or near) what is shown
+
+				var isNarrow = (r._end - r._start) < narrow;
+				if (cur !== null && isNarrow && cur.narrow && (r._start - cur.end) < gap && (r._end - cur.start) < maxLen)
+				{
+					cur.list.push(r);
+					if (r._end > cur.end)
+						cur.end = r._end;
+					return;
+				}
+				if (cur !== null)
+					out.push(cur.list.length === 1 ? cur.list[0] : lodMergedRow(cur.list, cur.start, cur.end));
+				cur = { list: [r], start: r._start, end: r._end, narrow: isNarrow };
+			});
+			if (cur !== null)
+				out.push(cur.list.length === 1 ? cur.list[0] : lodMergedRow(cur.list, cur.start, cur.end));
+
+			return out;
+		}
+
+		// The user has zoomed or moved in time: make the bars of the "many bars" rows again, if the zoom changed enough to matter
+		// or if what is shown has come close to the edge of what the bars were made for
+		function lodRefresh()
+		{
+			var gids = Object.keys(lod.groups);
+			if (gids.length === 0)
+				return;
+
+			var now   = lodScale();
+			var ratio = lod.msPerPx > 0 ? now.msPerPx / lod.msPerPx : 99;
+			var edge  = (now.viewTo - now.viewFrom) * 0.25;
+			if (ratio < 1.3 && ratio > 0.77 && now.viewFrom - edge >= lod.from && now.viewTo + edge <= lod.to)
+				return;
+
+			hideTooltip(); // the bars under the mouse will change
+			lod.msPerPx = now.msPerPx;
+			lod.from    = now.from;
+			lod.to      = now.to;
+
+			// The rows with many bars that are shown now (a nested row can be hidden)
+			var isLod = {};
+			gids.forEach(function (gid) {
+				if (visGroups.get(gid) != null && model.groups[gid])
+					isLod[gid] = true;
+			});
+
+			var toRemove = visItems.getIds({ filter: function (it) { return isLod[it.group] === true; } });
+			var toAdd    = [];
+			Object.keys(isLod).forEach(function (gid) {
+				Array.prototype.push.apply(toAdd, toVisItems(model.groups[gid]));
+			});
+			toRemove.forEach(function (id) { delete itemRow[id]; });
+			visItems.remove(toRemove);
+			visItems.add(toAdd);
+		}
+
 		function toVisItems(g)
 		{
-			var clip = g.rows.length > 1;
-			return g.rows.map(function (r) {
+			var barRows = lodRows(g);
+			var clip    = barRows.length > 1;
+			return barRows.map(function (r) {
 				var id = ++itemSeq;
 				itemRow[id] = r;
 				var cls = [];
@@ -787,6 +962,10 @@ var DbxTimeline = (function () {
 			hideTooltip(); // rows under the mouse will change
 			model = buildModel(view);
 			itemSeq = 0; itemRow = {};
+
+			// Rows with very many bars: draw them for the zoom the chart has now (see lodRows)
+			var scale = lodScale();
+			lod = { msPerPx: scale.msPerPx, from: scale.from, to: scale.to, groups: {} };
 
 			var groupsToAdd = [];
 			var itemsToAdd  = [];
@@ -1041,6 +1220,13 @@ var DbxTimeline = (function () {
 		}
 		timeline.on('changed', updateCorner);
 		timeline.on('changed', fitClickDetails); // the chart height changes on expand/collapse, which moves the details panel
+
+		// Zoomed or moved in time: the rows with very many bars are drawn for the new zoom (a moment after the last change, not for every step of it)
+		var lodTimer = null;
+		timeline.on('rangechanged', function () {
+			clearTimeout(lodTimer);
+			lodTimer = setTimeout(lodRefresh, 150);
+		});
 		corner.addEventListener('click', function () {
 			// 3 states: A-Z -> Z-A -> original (start time) order -> A-Z ...
 			sortOrder = (sortOrder === 'name') ? 'name-d' : (sortOrder === 'name-d') ? 'start' : 'name';
@@ -1107,6 +1293,17 @@ var DbxTimeline = (function () {
 				items.push({
 					text:   expanded[g.id] ? opts.collapseText : opts.expandText,
 					action: function () { setExpanded(g.id, !expanded[g.id]); persist(); }
+				});
+			}
+			// A bar that is many runs drawn as one (see lodRows): zoom in so they can be seen one by one
+			if (row._merged)
+			{
+				items.push({
+					text:   'Zoom in on these ' + row._merged.length + ' runs',
+					action: function () {
+						var pad = Math.max(60 * 1000, (row._end - row._start) * 0.1);
+						timeline.setWindow(row._start - pad, row._end + pad, { animation: false });
+					}
 				});
 			}
 			if (opts.menuItems)
@@ -1257,8 +1454,124 @@ var DbxTimeline = (function () {
 		};
 	}
 
+	//---------------------------------------------------------------------------------------------
+	// Progress: say that something is happening
+	//
+	// A page with a long period (months of job history) takes its time in three places, and without this the browser
+	// shows nothing in any of them:
+	//   1: the server reads from the database   -> the server writes the start of the page with a call to progressStart(),
+	//                                               and FLUSHES it, before it reads (DbxTimelineRows.writeProgressStart() in the servlets).
+	//                                               While it reads it can say how far it is with progressText().
+	//   2: the browser draws thousands of bars  -> createLater() says "Drawing ..." and lets the browser paint that before it
+	//                                               starts (the drawing itself blocks the browser until it is done)
+	//   3: another period is asked for          -> 'beforeunload': the box is shown on the page that is being left, until the
+	//                                               first part of the next page arrives. Also for a reload and the auto-refresh.
+	// It is a box with a moving bar, the text, and for how long it has been going on: how much there is left is not known.
+	//---------------------------------------------------------------------------------------------
+	var PROGRESS_ID      = 'dbx-tl-progress';
+	var _progressStartMs = 0;
+	var _progressTimer   = null;
+	var _drawPending     = false;
+
+	function progressStart(text)
+	{
+		// (can be called before <body> has any content: the page is still arriving)
+		if ( ! document.body )
+			return;
+
+		var box = document.getElementById(PROGRESS_ID);
+		if ( ! box )
+		{
+			box = document.createElement('div');
+			box.id = PROGRESS_ID;
+			box.style.cssText = 'position:fixed; top:70px; left:50%; transform:translateX(-50%); z-index:1080; min-width:380px; max-width:90vw;'
+			                  + 'background:#fff; color:#212529; border:1px solid #adb5bd; border-radius:6px; box-shadow:0 4px 14px rgba(0,0,0,.25); padding:10px 14px; font-size:14px;';
+			box.innerHTML = '<div style="display:flex; justify-content:space-between; gap:16px; margin-bottom:6px;">'
+			              +     '<span data-dbx-tl-progress="text"></span>'
+			              +     '<span style="white-space:nowrap;"><span data-dbx-tl-progress="time" class="text-muted"></span>'
+			              // (a way out, if the page we wait for never comes: the user stopped the loading)
+			              +     '<span data-dbx-tl-progress="close" title="Hide this" style="cursor:pointer; margin-left:10px; color:#6c757d;">&times;</span></span>'
+			              + '</div>'
+			              + '<div class="progress" style="height:10px;"><div class="progress-bar progress-bar-striped progress-bar-animated" style="width:100%;"></div></div>';
+			document.body.appendChild(box);
+			box.querySelector('[data-dbx-tl-progress="close"]').addEventListener('click', progressDone);
+
+			_progressStartMs = Date.now();
+			_progressTimer   = setInterval(function () {
+				var el = document.querySelector('#' + PROGRESS_ID + ' [data-dbx-tl-progress="time"]');
+				if (el)
+					el.textContent = Math.round((Date.now() - _progressStartMs) / 1000) + ' s';
+			}, 1000);
+		}
+		progressText(text);
+	}
+
+	function progressText(text)
+	{
+		var el = document.querySelector('#' + PROGRESS_ID + ' [data-dbx-tl-progress="text"]');
+		if (el)
+			el.textContent = text || 'Working...';
+	}
+
+	function progressDone()
+	{
+		if (_progressTimer)
+			clearInterval(_progressTimer);
+		_progressTimer = null;
+
+		var box = document.getElementById(PROGRESS_ID);
+		if (box)
+			box.parentNode.removeChild(box);
+	}
+
+	/**
+	 * As create(), but first say "Drawing N bars..." and let the browser paint it: with many thousands of bars create() takes
+	 * seconds, and the browser shows nothing new while it runs.
+	 *
+	 * @param onDone  optional, called with what create() returned
+	 */
+	function createLater(containerId, rows, opts, onDone)
+	{
+		var count = (rows || []).length;
+		_drawPending = true;
+		progressStart('Drawing ' + count.toLocaleString() + ' bar' + (count !== 1 ? 's' : '') + '...');
+
+		setTimeout(function () {
+			var timeline = null;
+			try {
+				timeline = create(containerId, rows, opts);
+			} finally {
+				_drawPending = false;
+				progressDone();
+			}
+			if (onDone)
+				onDone(timeline);
+		}, 50);
+	}
+
+	// The page has arrived in full: a box that the server started and nobody closed (the page had nothing to draw) is closed
+	window.addEventListener('load', function () {
+		if ( ! _drawPending )
+			progressDone();
+	});
+
+	// The page is being left for another one (another period, a reload, the auto-refresh): say so until the next one arrives.
+	// 'pageshow' with 'persisted': we came BACK to this page with the Back button, and the box is still on it
+	window.addEventListener('beforeunload', function () {
+		if (document.querySelector('.dbx-tl'))
+			progressStart('Loading...');
+	});
+	window.addEventListener('pageshow', function (ev) {
+		if (ev.persisted)
+			progressDone();
+	});
+
 	return {
 		create:          create,
+		createLater:     createLater,
+		progressStart:   progressStart,
+		progressText:    progressText,
+		progressDone:    progressDone,
 		htmlToPlainText: htmlToPlainText,
 		copyToClipboard: copyToClipboard
 	};

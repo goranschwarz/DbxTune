@@ -241,6 +241,7 @@
                 <a class="dropdown-item" href="/showplan/sqlserver">SQL Server</a>
                 <a class="dropdown-item" href="/showplan/ase">SAP ASE (Sybase)</a>
                 <a class="dropdown-item" href="/showplan/postgres">Postgres</a>
+                <a class="dropdown-item" href="/showplan/oracle">Oracle</a>
               </div>
             </div>
             <div class="dropdown-divider"></div>
@@ -1471,6 +1472,13 @@ List of stuff that can be done
 						+ '    <a class="dropdown-item" onclick=\'return loadUrlWithProgressBarIntoNewTab("/api/cc/reports?srvName='+serverName+'&reportName=sqlserver-job-scheduler-report"                                     , "Job Scheduler Report for Today")\'>SQL Agent/Scheduler <b>Report</b> for <b>Today</b></a>'
 						+ '    <a class="dropdown-item" onclick=\'return loadUrlWithProgressBarIntoNewTab("/api/cc/reports?srvName='+serverName+'&reportName=sqlserver-job-scheduler-timeline&startTime=TODAY&onlyLevelZero=true", "Job Scheduler Activity View Today")\'>SQL Agent/Scheduler <b>Timeline</b> View for <b>Today</b></a>'
 						+ '    <a class="dropdown-item" href=\'/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+serverName+'&graphList=default&openQueryStore=1\'     onclick=\'window.open(this.href,"_blank");return false;\'>&#128202; <b>Query Store</b> Dialog</a>'
+						+ '    <div class="dropdown-divider"></div>';
+				}
+				if (srvSession.productString === 'OracleTune')
+				{
+					collectorMenuOptions = ''
+						+ '    <a class="dropdown-item" onclick=\'return loadUrlWithProgressBarIntoNewTab("/api/cc/reports?srvName='+serverName+'&reportName=oracle-job-scheduler-report"                   , "Job Scheduler Report for Today")\'>Oracle Scheduler <b>Report</b> for <b>Today</b></a>'
+						+ '    <a class="dropdown-item" onclick=\'return loadUrlWithProgressBarIntoNewTab("/api/cc/reports?srvName='+serverName+'&reportName=oracle-job-scheduler-timeline&startTime=TODAY", "Job Scheduler Timeline for Today")\'>Oracle Scheduler <b>Timeline</b> View for <b>Today</b></a>'
 						+ '    <div class="dropdown-divider"></div>';
 				}
 

@@ -309,9 +309,10 @@ public class SparklineHelper
 				int    colPos = rstm.findColumnMandatory(colName);
 				Object colVal = rstm.getValueAsObject(r, colPos);
 
-				if (colVal == null)
+				// A NULL key is OK: the SQL then says "is null" (see getSparclineData)
+				if (colVal == null && _logger.isDebugEnabled())
 				{
-					_logger.warn("Getting value from table '" + rstm.getName() + "', columnName='" + colName + "', row=" + r + ", colPos=" + colPos + ", was a NULL value.");
+					_logger.debug("Getting value from table '" + rstm.getName() + "', columnName='" + colName + "', row=" + r + ", colPos=" + colPos + ", was a NULL value.");
 				}
 
 				colValList.add(colVal);
@@ -1152,7 +1153,11 @@ public class SparklineHelper
 			sqlSb.append("       where s.[" + tabPeriodColName + "] between [tt].[bts] and [tt].[ets] \n");
 			for (int i=0; i<whereColNameList.size(); i++)
 			{
-				sqlSb.append("         and [" + whereColNameList.get(i) + "] = " + DbUtils.safeStrHexAsBinary(conn, whereColValList.get(i)) + " \n");
+				// A key that is NULL (for example the partition name of a table that is not partitioned): "= NULL" is never true, so the chart was always empty
+				if (whereColValList.get(i) == null)
+					sqlSb.append("         and [" + whereColNameList.get(i) + "] is null \n");
+				else
+					sqlSb.append("         and [" + whereColNameList.get(i) + "] = " + DbUtils.safeStrHexAsBinary(conn, whereColValList.get(i)) + " \n");
 			}
 			if (StringUtil.hasValue(extraWhereClause))
 			{

@@ -10,7 +10,7 @@ namespace DbxInstaller.Pages
     {
         public override string StepTitle => "Service Account";
 
-        private readonly TextBox _txtAccount = PageHelpers.TextBox("dbxtune");
+        private readonly TextBox _txtAccount = PageHelpers.TextBox(InstallerSettings.ServiceAccount ?? "dbxtune");   // last run's account
         private readonly PasswordBox _txtPassword = new() { Margin = new Thickness(0, 2, 0, 2) };
         private readonly Button _btnCheck = new() { Content = "Check" };
         private readonly TextBlock _lblCheckStatus = new() { Margin = new Thickness(0, 4, 0, 0), TextWrapping = TextWrapping.Wrap };
@@ -67,6 +67,7 @@ namespace DbxInstaller.Pages
         {
             ctx.Config.ServiceAccount = _txtAccount.Text.Trim();
             ctx.Config.Password       = _txtPassword.Password;
+            InstallerSettings.RememberServiceAccount(ctx.Config.ServiceAccount);   // never the password
         }
 
         public override Task<WizardValidationResult> ValidateBeforeNextAsync(WizardContext ctx)

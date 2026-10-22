@@ -262,10 +262,26 @@ extends CountersModel
 				String currentVersionString = getAbsString(0, colName, true, "");
 				String tmpLastVersionString = _lastVersionString;
 
-				boolean doAlarm = false;
-				if (StringUtil.hasValue(currentVersionString) && StringUtil.hasValue(_lastVersionString))
+				// SQL Server / Azure SQL... Only keep first line of @@version
+				if (currentVersionString != null)
 				{
-					doAlarm = currentVersionString.equals(_lastVersionString);
+					currentVersionString = currentVersionString.trim();
+					if (currentVersionString.startsWith("Microsoft SQL "))
+					{
+						int firstNewline = currentVersionString.indexOf('\n');
+						if (firstNewline != -1)
+							currentVersionString = currentVersionString.substring(0, firstNewline).trim();
+					}
+				}
+
+				// Alarm when the version string is DIFFERENT from the previous sample (not on the first sample: there is nothing to compare with)
+				// NOTE: The old code only remembered the version when it already had one (so it never did), and it compared with equals() (which would alarm on every sample)
+				boolean doAlarm = false;
+				if (StringUtil.hasValue(currentVersionString))
+				{
+					if (StringUtil.hasValue(_lastVersionString) && ! currentVersionString.equals(_lastVersionString))
+						doAlarm = true;
+
 					_lastVersionString = currentVersionString;
 				}
 

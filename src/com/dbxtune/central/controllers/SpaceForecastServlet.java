@@ -24,6 +24,7 @@ package com.dbxtune.central.controllers;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.invoke.MethodHandles;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,6 +37,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.AseTune;
+import com.dbxtune.OracleTune;
 import com.dbxtune.SqlServerTune;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.central.pcs.objects.DbxCentralSessions;
@@ -185,6 +187,17 @@ extends HttpServlet
 					if (type.equalsIgnoreCase("data")) { cmName = "CmDatabases";   graphName = "DbDataSizeLeftMbGraph"; }
 					if (type.equalsIgnoreCase("wal"))  { cmName = "CmDatabases";   graphName = "DbLogSizeLeftMbGraph"; }
 				}
+				else if (OracleTune.APP_NAME.equals(dbxCollector))
+				{
+					// Oracle: "data" is the tablespaces (free MB, of the size they can grow to). There is no "wal": the redo logs has a fixed size
+					if (type.equalsIgnoreCase("os"))   { cmName = "CmOsDiskSpace"; graphName = "FsAvailableMb"; }
+					if (type.equalsIgnoreCase("data")) { cmName = "CmTablespaces"; graphName = "TsFreeMb"; }
+					if (type.equalsIgnoreCase("wal"))
+					{
+						resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "type '" + type + "' is not supported for Collector '" + dbxCollector + "' (the redo logs of Oracle has a fixed size).");
+						return;
+					}
+				}
 				else
 				{
 					if (type.equalsIgnoreCase("os"))   { cmName = "CmOsDiskSpace"; graphName = "FsAvailableMb"; }
@@ -254,6 +267,11 @@ extends HttpServlet
 					execList.add("CmDatabases"     + ":" + "DbDataSizeLeftMbGraph");
 					execList.add("CmDatabases"     + ":" + "DbLogSizeLeftMbGraph");
 				}
+				else if (OracleTune.APP_NAME.equals(dbxCollector))
+				{
+					execList.add("CmOsDiskSpace"   + ":" + "FsAvailableMb");
+					execList.add("CmTablespaces"   + ":" + "TsFreeMb");
+				}
 				else
 				{
 					execList.add("CmOsDiskSpace"   + ":" + "FsAvailableMb");
@@ -282,17 +300,35 @@ extends HttpServlet
 								.setSparklineChartWidth( int_sparklineWidth )
 								;
 
+						String info = "-unknown-";
+						if (graphName.equals("DbDataSizeLeftMbGraph")) info = "DBMS Data Report";
+						if (graphName.equals("DbLogSizeLeftMbGraph" )) info = "DBMS Wal/Transaction Log Report";
+						if (graphName.equals("FsAvailableMb"        )) info = "OS Disk Report";
+						if (graphName.equals("TsFreeMb"             )) info = "DBMS Tablespace Report";
+
 						// Make the forecast (reads data and does predictions)
-						forecast.doForecast();
+						// One part without data must not stop the other parts: for example 'CmOsDiskSpace' has no table when the collector does no host monitoring
+						try
+						{
+							forecast.doForecast();
+						}
+						catch (SQLException ex)
+						{
+							_logger.info("Space Forecast for '" + srvName + "': skipping '" + cmName + "_" + graphName + "'. Caught: " + ex);
+
+							if (outType.toLowerCase().startsWith("html"))
+							{
+								out.println("<h3>" + info + "</h3>");
+								out.println("<p>No data for this part (graph '" + cmName + "_" + graphName + "'). Is the Counter '" + cmName + "' enabled in the collector?</p>");
+								out.println("<br>");
+								out.flush();
+							}
+							continue;
+						}
 
 						// Produce some output
 						if (outType.toLowerCase().startsWith("html"))
 						{
-							String info = "-unknown-";
-							if (graphName.equals("DbDataSizeLeftMbGraph")) info = "DBMS Data Report"; 
-							if (graphName.equals("DbLogSizeLeftMbGraph" )) info = "DBMS Wal/Transaction Log Report"; 
-							if (graphName.equals("FsAvailableMb"        )) info = "OS Disk Report"; 
-
 							out.println("<h3>");
 							out.println(info);
 							out.println("</h3>");

@@ -229,6 +229,15 @@ implements LlmClient
 			return "- This DBMS does not support CTEs (Common Table Expressions / \"WITH ... AS (...)\" syntax) - do not suggest rewrites that rely on them.\n"
 			     + "- Indexes in this DBMS cannot have INCLUDE columns - do not suggest CREATE INDEX ... INCLUDE (...).\n";
 		}
+		if (DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_ORACLE))
+		{
+			// The first one is about money: an LLM happily suggests the SQL Tuning Advisor, a SQL Profile or partitioning,
+			// and each of those needs a license that the customer may not have (using it is what makes them liable).
+			return "- Do not suggest anything that needs an extra-cost Oracle license, unless the execution plan shows that it is already in use: the Diagnostics Pack and the Tuning Pack (AWR, ASH, ADDM, SQL Tuning Advisor, SQL Profiles, SQL Monitor, DBMS_SQLTUNE), and the options Partitioning, Advanced Compression and Database In-Memory.\n"
+			     + "- The execution plan is the text of DBMS_XPLAN. 'Rows' / 'E-Rows' are the optimizer's estimates and 'A-Rows' the actual rows (only present when the plan has run-time statistics). 'E-Rows' is for ONE execution of the operation: multiply it with 'Starts' before comparing it with 'A-Rows'. 'Cost', 'A-Time' and 'Buffers' include the operation's children.\n"
+			     + "- If the execution plan starts with 'SQL Monitoring Report' it is a SQL Monitor report instead: ONE execution, possibly still running (Status EXECUTING: the numbers are those so far, '->' marks the operations at work, and fewer rows than estimated then only means 'not yet'). 'Rows (Estim)' is for one execution of the operation, 'Rows (Actual)' the sum over 'Execs'. 'Activity (%)' is the share of the statement's time spent in the operation itself, NOT including its children. It lists both alternatives of an adaptive join: the lines without 'Execs' were not executed.\n"
+			     + "- Indexes cannot have INCLUDE columns - add the extra columns to the index key instead.\n";
+		}
 		return null;
 	}
 

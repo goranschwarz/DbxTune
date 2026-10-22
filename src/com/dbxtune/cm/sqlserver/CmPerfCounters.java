@@ -2648,7 +2648,7 @@ extends CountersModel
 			+ "       object_name   = cast(substring(object_name, charindex(':', object_name),128) as varchar(128)), /* removing 'SQLServer' or 'MSSQL$@@servicename' for easier lookups */ \n"
 			+ "       counter_name  = cast(counter_name  as varchar(128)), \n"
 			+ "       instance_name = cast(instance_name as varchar(128)), \n"
-			+ "       calculated_value = convert(numeric(15,2), CASE WHEN cntr_type = 65792 THEN cntr_value ELSE null END), \n"
+			+ "       calculated_value = convert(numeric(21,2), CASE WHEN cntr_type = 65792 THEN cntr_value ELSE null END), \n"
 			+ "       CASE \n"
 			+ "          WHEN cntr_type = 65792      THEN convert(varchar(30), 'absolute counter')\n" 
 			+ "          WHEN cntr_type = 65536      THEN convert(varchar(30), 'absolute counter')\n" 

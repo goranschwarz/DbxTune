@@ -20,6 +20,18 @@
  ******************************************************************************/
 package com.dbxtune.pcs.report;
 
+import com.dbxtune.pcs.report.content.DbmsConfigIssues;
+import com.dbxtune.pcs.report.content.oracle.OracleAlertLogErrors;
+import com.dbxtune.pcs.report.content.oracle.OracleBackups;
+import com.dbxtune.pcs.report.content.oracle.OracleDataGuard;
+import com.dbxtune.pcs.report.content.oracle.OracleJobScheduler;
+import com.dbxtune.pcs.report.content.oracle.OracleLoadOverview;
+import com.dbxtune.pcs.report.content.oracle.OracleSegmentSize;
+import com.dbxtune.pcs.report.content.oracle.OracleSpaceOverview;
+import com.dbxtune.pcs.report.content.oracle.OracleTopSegments;
+import com.dbxtune.pcs.report.content.oracle.OracleTopSql;
+import com.dbxtune.pcs.report.content.oracle.OracleUnusedIndexes;
+import com.dbxtune.pcs.report.content.oracle.OracleWaitStats;
 import com.dbxtune.pcs.report.content.os.CmOsNwInfoOverview;
 import com.dbxtune.pcs.report.content.os.OsCpuUsageOverview;
 import com.dbxtune.pcs.report.content.os.OsIoStatOverview;
@@ -34,18 +46,33 @@ extends DailySummaryReportDefault
 		// Add the Alarms Active/History
 		super.addReportEntries();
 
-		// SQL
-		//FIXME: addReportEntry( new OracleTopSql(this)(this)   );
-
-		// CPU
+		// Load / CPU / Waits
+		addReportEntry( new OracleLoadOverview(this)   );
 		addReportEntry( new OsCpuUsageOverview(this)   );
+		addReportEntry( new OracleWaitStats(this)      );
 
-		// Disk IO Activity
+		// SQL, Tables and Indexes
+		addReportEntry( new OracleTopSql(this)         );
+		addReportEntry( new OracleTopSegments(this)    );
+
+		// Alert Log, Backups, Jobs and Data Guard
+		addReportEntry( new OracleAlertLogErrors(this) );
+		addReportEntry( new OracleBackups(this)        );
+		addReportEntry( new OracleJobScheduler(this)   );  // (a recording without the log of the Scheduler gets 'OracleJobFailures' from it)
+		addReportEntry( new OracleDataGuard(this)      );
+
+		// Space, Disk IO Activity
+		addReportEntry( new OracleSpaceOverview(this)  );
+		addReportEntry( new OracleSegmentSize(this)    );
+		addReportEntry( new OracleUnusedIndexes(this)  );
 //		addReportEntry( new OsSpaceUsageOverview(this) );
 		addReportEntry( new OsIoStatOverview(this)     );
 		addReportEntry( new OsIoStatSlowIo(this)       );
 
 		// Network Activity
 		addReportEntry( new CmOsNwInfoOverview(this)   );
+
+		// Configuration
+		addReportEntry( new DbmsConfigIssues(this)     );
 	}
 }

@@ -30,6 +30,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.pcs.report.content.ase.AseAbstract;
+import com.dbxtune.pcs.report.content.oracle.OracleAbstract;
 import com.dbxtune.pcs.report.content.postgres.PostgresAbstract;
 import com.dbxtune.pcs.report.content.sqlserver.SqlServerAbstract;
 import com.dbxtune.sql.SqlParserUtils;
@@ -98,6 +99,9 @@ public class LlmSqlContextBuilder
 
 			if (DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_POSTGRES))
 				return PostgresAbstract.getTableInfoPlainText(conn, dbname, tableList);
+
+			if (DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_ORACLE))
+				return OracleAbstract.getTableInfoPlainText(conn, dbname, tableList);
 
 			_logger.info("buildDdlContext(): no DDL Storage lookup implemented for dbVendor='{}', skipping DDL context.", dbVendor);
 			return "";

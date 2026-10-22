@@ -2324,6 +2324,30 @@ function dbxTuneGraphSubscribe()
 
 		return div;
 	}
+	function createOracleQueryPlanToolTipDiv(data, rowData, srvName, what)
+	{
+		// creates a div that will open the Oracle Execution Plan dialog (dbxShowplan.js, #dbx-view-oraShowplan-dialog) -
+		// same trigger pattern as createAseQueryPlanToolTipDiv() above. The plan is the text of DBMS_XPLAN.DISPLAY_CURSOR,
+		// or a SQL Monitor report (column 'SqlMonitorReport', which is only filled in when the Tuning Pack is licensed): the dialog draws both.
+
+		const dataVal = data;
+		const sqlText = rowData.hasOwnProperty('SqlText') ? (rowData.SqlText || '') : '';
+		const srv     = srvName || (_serverList.length ? _serverList[0] : '');
+		const dbname  = rowData.hasOwnProperty('CON_NAME') ? (rowData.CON_NAME || '') : '';   // the container (PDB), empty when it is not a Container Database
+
+		const div = document.createElement("div");
+		div.innerHTML = "&nbsp;";
+		div.setAttribute("title"           , "Click to Open the " + (what || "Execution Plan") + "... \n-------------------------------\n" + dataVal);
+		div.setAttribute("data-bs-toggle"     , 'modal');
+		div.setAttribute("data-bs-target"     , '#dbx-view-oraShowplan-dialog');
+		div.setAttribute("data-objectname" , rowData.EffectiveSqlId ? ('SQL_ID ' + rowData.EffectiveSqlId) : '');
+		div.setAttribute("data-plan"       , dataVal);
+		div.setAttribute("data-sqltext"    , sqlText);
+		div.setAttribute("data-srv"        , srv);
+		div.setAttribute("data-dbname"     , dbname);
+
+		return div;
+	}
 	function createPostgresQueryPlanToolTipDiv(data)
 	{
 		// creates a div that will open a modal-div where we can VIEW a Postgres Execution Plan (using https://github.com/dalibo/pev2?tab=readme-ov-file)
@@ -2366,8 +2390,8 @@ function dbxTuneGraphSubscribe()
 	var ACTIVE_STMT_DB_VENDOR = {
 		AseTune:       'Adaptive Server Enterprise',
 		SqlServerTune: 'Microsoft SQL Server',
-		PostgresTune:  'PostgreSQL'
-		// OracleTune intentionally omitted - not a supported dbVendor for DDL-context lookups
+		PostgresTune:  'PostgreSQL',
+		OracleTune:    'Oracle'   // (for Oracle dbxLlmAdvice.js looks up the tables of the SQL text also without a 'dbname': it has no database name to give)
 	};
 
 	function _activeStmtFirstNonEmpty(row, keys)
@@ -2454,7 +2478,7 @@ function dbxTuneGraphSubscribe()
 				if (adviceBtn)
 				{
 					adviceBtn.onclick = function() {
-						// 'srv' lets dbxLlmAdvice resolve the DBMS version from the Collector (no 'dbname', so no DDL lookup)
+						// 'srv' lets dbxLlmAdvice resolve the DBMS version from the Collector (no 'dbname', so no DDL lookup: except for Oracle, which needs none)
 						dbxLlmAdvice.open({ sql: llmSql, plan: llmPlan, dbVendor: ACTIVE_STMT_DB_VENDOR[appName], srv: srvName, origin: 'Active Statements' });
 					};
 				}
@@ -2531,6 +2555,9 @@ function dbxTuneGraphSubscribe()
 						{
 							if (cellContent.startsWith("runn")) // "running" or "runnable"
 								td.style.backgroundColor = "green";
+
+							if (cellContent.startsWith("runnable")) // "running" or "runnable"
+								td.style.backgroundColor = "lightgreen";
 						}
 					}
 				}
@@ -2642,8 +2669,13 @@ function dbxTuneGraphSubscribe()
 				}
 				else if ("OracleTune" === appName && metaData !== undefined && metaData.hasOwnProperty('columnName'))
 				{
-					if (metaData.columnName === "SqlText"   && rowData.hasOwnProperty('SqlText')  && rowData.SqlText)  { td.appendChild( createActiveStatementToolTipDiv(rowData.SqlText,  'text') ); }
-					if (metaData.columnName === "ExecPlan"  && rowData.hasOwnProperty('ExecPlan') && rowData.ExecPlan) { td.appendChild( createActiveStatementToolTipDiv(rowData.ExecPlan, 'text') ); }
+					// The tooltip goes on the CHECKBOX columns (as for the other collectors). On the text columns it made the row one line higher.
+					if (metaData.columnName === "HasSqlText"          && rowData.hasOwnProperty('SqlText')          && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.SqlText          , 'plsql') ); }
+					if (metaData.columnName === "HasExecPlan"         && rowData.hasOwnProperty('ExecPlan')         && cellContent === true) { td.appendChild( createOracleQueryPlanToolTipDiv(rowData.ExecPlan         , rowData, srvName) ); }
+					if (metaData.columnName === "HasSqlMonitorReport" && rowData.hasOwnProperty('SqlMonitorReport') && cellContent === true) { td.appendChild( createOracleQueryPlanToolTipDiv(rowData.SqlMonitorReport , rowData, srvName, 'SQL Monitor Report') ); }
+					if (metaData.columnName === "HasSidLocks"         && rowData.hasOwnProperty('SidLocks')         && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.SidLocks         , 'Lock Table'      ) ); }
+					if (metaData.columnName === "HasBlockedSidsInfo"  && rowData.hasOwnProperty('BlockedSidsInfo')  && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.BlockedSidsInfo  , 'Blocked SID Info') ); }
+					if (metaData.columnName === "HasSidWaitInfo"      && rowData.hasOwnProperty('SidWaitInfo')      && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.SidWaitInfo      , 'SID Wait Info'   ) ); }
 				}
 			} // end: metaData && columnName
 		};
@@ -2755,20 +2787,32 @@ function dbxTuneGraphSubscribe()
 		}
 		else if ("OracleTune" === appName)
 		{
+			// The same colors, with the same meaning, as for the other collectors (and as the GUI: CmActiveStatementsPanel). The last one that matches wins.
 			trCallback = function(tr, row)
 			{
+				// multiSampled
+				if (row.hasOwnProperty('MultiSampled') && row.MultiSampled !== null && row.MultiSampled !== '')
+					tr.className = "active-statement-row-multi-sampled";
+
 				// Holding open transaction while idle (STATUS != ACTIVE)
 				if (row.hasOwnProperty('HasOpenTxn') && row.HasOpenTxn === 'Y' &&
 				    row.hasOwnProperty('STATUS') && row.STATUS !== 'ACTIVE')
 					tr.className = "active-statement-row-holding-locks-while-idle";
 
-				// Background/system session
-				if (row.hasOwnProperty('USERNAME') && (row.USERNAME === null || row.USERNAME === ''))
-					tr.className = "active-statement-row-sys-process";
+				// Blocked by some other session ('BlockedBySid' is 0 when it is not blocked)
+				var isBlocked = row.hasOwnProperty('BlockedBySid') && row.BlockedBySid !== null && row.BlockedBySid > 0;
+				if (isBlocked)
+					tr.className = "active-statement-row-blocked";
+
+				// Blocking OTHER sessions, and not blocked itself (the root cause)
+				if (row.hasOwnProperty('BlockingOtherSids') && row.BlockingOtherSids !== null && row.BlockingOtherSids !== '' && ! isBlocked)
+					tr.className = "active-statement-row-blocking";
 			};
 			tooltip = "Background colors: \n"
-			        + " * YELLOW: Holds an open transaction while STATUS is not ACTIVE (idle in transaction).\n"
-			        + " * ORANGE: System/background session (no USERNAME).\n"
+			        + " * ORANGE: Multi Sampled Statement (has been running for more than 1 sample) \n"
+			        + " * YELLOW: Holds an open transaction while STATUS is not ACTIVE (waits for the client, and holds its locks) \n"
+			        + " * PINK:   Blocked by some other session \n"
+			        + " * RED:    BLOCKING other session(s) from working.\n"
 					+ "";
 		}
 		else

@@ -1,33 +1,41 @@
 /*******************************************************************************
  * Copyright (C) 2010-2027 Goran Schwarz
- * 
+ *
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
- * Here are some of the tools: AseTune, IqTune, RsTune, RaxTune, HanaTune, 
+ * Here are some of the tools: AseTune, IqTune, RsTune, RaxTune, HanaTune,
  *          SqlServerTune, PostgresTune, MySqlTune, MariaDbTune, Db2Tune, ...
- * 
+ *
  * DbxTune is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, version 3 of the License.
- * 
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
  * DbxTune is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with DbxTune.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
 package com.dbxtune.cm.oracle;
 
+import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
+import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
+import com.dbxtune.graph.TrendGraphDataPoint;
+import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
@@ -41,16 +49,18 @@ extends CountersModel
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmExecutionTime.class.getSimpleName();
-	public static final String   SHORT_NAME       = "Execution Time";
-	public static final String   HTML_DESC        = 
+	public static final String   SHORT_NAME       = "Time Model";
+	public static final String   HTML_DESC        =
 		"<html>" +
-		"Execution times for individual Oracle Modules<br>" +
-		"Where do we spend the CPU Cycles?<br>" +
-//		"<ul>" +
-//		"   <li><b>Compilation</b> - Maybe it's time to consider Statement Cache (if not already done), or increase the size of the statement cache</li>" +
-//		"   <li><b>Sorting    </b> - Find SQL Statement that does a lot of sorting and try to do that on the client side, if possible, or add index to support that order.</li>" +
-//		"   <li><b>Execution  </b> - Hopefully this is where most CPU Cycles is spent.</li>" +
-//		"</ul>" +
+		"Where is the time spent? The time (in microseconds) the instance has spent in different kind of operations.<br>" +
+		"<ul>" +
+		"   <li><b>DB time</b>             - Time spent in the database by all user sessions (using CPU or waiting for something, but not idle).</li>" +
+		"   <li><b>DB CPU</b>              - The part of 'DB time' that was spent using CPU. The rest of 'DB time' is waiting, see tab 'System Events' for what.</li>" +
+		"   <li><b>background ...</b>      - The same for the background processes (DBWR, LGWR...)</li>" +
+		"   <li><b>parse time elapsed</b>  - Parsing SQL. If 'hard parse elapsed time' is a big part of 'DB time', the application probably does not use bind variables.</li>" +
+		"   <li><b>sql execute elapsed time</b> - Hopefully this is where most of the time is spent.</li>" +
+		"</ul>" +
+		"<b>Tip</b>: The RATE value divided by 1 000 000 is <i>seconds per second</i>. For 'DB time' that is the same as <i>Average Active Sessions</i>.<br>" +
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
@@ -64,8 +74,6 @@ extends CountersModel
 	public static final String[] NEED_CONFIG      = new String[] {};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
-//	public static final String[] PCT_COLUMNS      = new String[] {"CpuUsagePct"};
-//	public static final String[] DIFF_COLUMNS     = new String[] {"ExecutionTimeDiff", "ExecutionCntDiff"};
 	public static final String[] DIFF_COLUMNS     = new String[] {"VALUE"};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
@@ -92,9 +100,9 @@ extends CountersModel
 	public CmExecutionTime(ICounterController counterController, IGuiController guiController)
 	{
 		super(counterController, guiController,
-				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
-				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
-				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
+				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null,
+				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES,
+				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION,
 				NEGATIVE_DIFF_COUNTERS_TO_ZERO, IS_SYSTEM_CM, DEFAULT_POSTPONE_TIME);
 
 		setDisplayName(SHORT_NAME);
@@ -102,11 +110,13 @@ extends CountersModel
 
 		setIconFile(GUI_ICON_FILE);
 
+		setShowClearTime(false);
+
 		setCounterController(counterController);
 		setGuiController(guiController);
-		
+
 		addTrendGraphs();
-		
+
 		CounterSetTemplates.register(this);
 	}
 
@@ -114,288 +124,137 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	public static final String GRAPH_NAME_TOTALS    = "TimeModelAas";
+	public static final String GRAPH_NAME_BREAKDOWN = "TimeModelBreakdown";
+
+	// The "totals" (STAT_NAME in V$SYS_TIME_MODEL): used both as the series label, and to find the row
+	private static final String[] STATS_TOTALS = new String[] {"DB time", "DB CPU", "background elapsed time", "background cpu time"};
+
 	private void addTrendGraphs()
 	{
-	}
-	
-//	public static final String GRAPH_NAME_EXECUTION_COUNT          = "CountGraph"; //String x=GetCounters.XXX;
-//	public static final String GRAPH_NAME_EXECUTION_TIME           = "TimeGraph"; //String x=GetCounters.XXX;
-//	public static final String GRAPH_NAME_EXECUTION_TIME_PER_COUNT = "TimePerCountGraph"; //String x=GetCounters.XXX;
-//	public static final String GRAPH_NAME_CPU_USAGE_PCT            = "CpuUsagePct";
-//
-//	private void addTrendGraphs()
-//	{
-//////		String[] labels = new String[] { "runtime-replaced" };
-////		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-////		
-////		addTrendGraphData(GRAPH_NAME_EXECUTION_COUNT,          new TrendGraphDataPoint(GRAPH_NAME_EXECUTION_COUNT,          labels, LabelType.Dynamic));
-////		addTrendGraphData(GRAPH_NAME_EXECUTION_TIME,           new TrendGraphDataPoint(GRAPH_NAME_EXECUTION_TIME,           labels, LabelType.Dynamic));
-////		addTrendGraphData(GRAPH_NAME_EXECUTION_TIME_PER_COUNT, new TrendGraphDataPoint(GRAPH_NAME_EXECUTION_TIME_PER_COUNT, labels, LabelType.Dynamic));
-//
-//		addTrendGraph(GRAPH_NAME_EXECUTION_COUNT,
-//			"ASE SubSystem Execution Count", 	                                 // Menu CheckBox text
-//			"ASE SubSystem Operations - Execution Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
-//			null, 
-//			LabelType.Dynamic,
-//			TrendGraphDataPoint.Category.CPU,
-//			false, // is Percent Graph
-//			false, // visible at start
-//			Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//			-1);  // minimum height
-//
-//		// GRAPH
-//		addTrendGraph(GRAPH_NAME_EXECUTION_TIME,
-//			"ASE SubSystem Execution MicroSeconds", 	                                 // Menu CheckBox text
-//			"ASE SubSystem Operations - Execution Time, in Micro Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MICROSEC,
-//			null, 
-//			LabelType.Dynamic,
-//			TrendGraphDataPoint.Category.CPU,
-//			false, // is Percent Graph
-//			false, // visible at start
-//			Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//			-1);  // minimum height
-//
-//		// GRAPH
-//		addTrendGraph(GRAPH_NAME_EXECUTION_TIME_PER_COUNT,
-//			"ASE SubSystem Execution MicroSeconds per Count", 	                                 // Menu CheckBox text
-//			"ASE SubSystem Operations - Execution Time, in Micro Seconds per Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MICROSEC,
-//			null, 
-//			LabelType.Dynamic,
-//			TrendGraphDataPoint.Category.CPU,
-//			false, // is Percent Graph
-//			false, // visible at start
-//			Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//			-1);  // minimum height
-//
-//		// GRAPH
-//		addTrendGraph(GRAPH_NAME_CPU_USAGE_PCT,
-//			"ASE SubSystem Execution CPU Usage Percent", 	                                 // Menu CheckBox text
-//			"ASE SubSystem Operations - CPU Usage Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
-//			null, 
-//			LabelType.Dynamic,
-//			TrendGraphDataPoint.Category.CPU,
-//			true, // is Percent Graph
-//			false, // visible at start
-//			Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//			-1);  // minimum height
-//	}
-//
-//	@Override
-//	protected TabularCntrPanel createGui()
-//	{
-//		return new CmExecutionTimePanel(this);
-//	}
+		addTrendGraph(GRAPH_NAME_TOTALS,
+			"DB Time and CPU, in Seconds per Second", 	                // Menu CheckBox text
+			"DB Time and CPU, in Seconds per Second [DB time = Average Active Sessions] (" + SHORT_NAME + ")", // Graph Label
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			STATS_TOTALS,
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CPU,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
+			-1);   // minimum height
 
-	@Override
-	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
-	{
-		return NEED_CONFIG;
+		addTrendGraph(GRAPH_NAME_BREAKDOWN,
+			"Time per Operation Type, in Seconds per Second", 	                // Menu CheckBox text
+			"Time per Operation Type (parse, execute, PL/SQL...), in Seconds per Second (" + SHORT_NAME + ")", // Graph Label
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			null,
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CPU,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
+			-1);   // minimum height
 	}
-
-//	@Override
-//	public void addMonTableDictForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
-//	{
-//		try 
-//		{
-//			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
-//			mtd.addColumn("monSysExecutionTime",  "ExecutionTimePerCnt",     "<html>" +
-//			                                                                     "ExecutionTime in Micro Seconds for each individual ExecutionCount<br>" +
-//			                                                                     "<b>Formula</b>: ExecutionTime / ExecutionCnt<br>" +
-//			                                                                 "</html>");
-//			mtd.addColumn("monSysExecutionTime",  "CpuUsagePct",             "<html>" +
-//			                                                                     "How much CPU Time (in Percent) does this 'operation category' consume of the total CPU Time/slots available.<br>" +
-//			                                                                     "<b>Formula ABS</b>:  ((abs.ExecutionTime/1000000) / (<i>srvRunningForSec*engCnt</i>)) * 100.0<br>" +
-//			                                                                     "<b>Formula RATE</b>: used_ExecuationTimeInMicroSeconds_inThisPeriod / total_MicroSecondsPossibleForScheduling_forAllEngines_inThisPeriod. or detailed: val = (rate_ExecutionTime / (1_000_000.0 * rate_EngineCount)) * 100.0<br>" +
-//			                                                                     "<b>Formula DIFF</b>: same as RATE<br>" +
-//			                                                                 "</html>");
-//			mtd.addColumn("monSysExecutionTime",  "EngineCount",             "<html>" +
-//			                                                                     "How many engines does the ASE has avilable<br>" +
-//			                                                                     "<b>Formula</b>: count(*) from master.dbo.monEngine where Status = 'online' <br>" +
-//			                                                                 "</html>");
-//		}
-//		catch (NameNotFoundException e) {/*ignore*/}
-//	}
 
 	@Override
 	public List<String> getPkForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
-		pkCols.add("STAT_ID");
-//		pkCols.add("STAT_NAME");
+		// The STAT_NAME is unique, and it is what we use to find the rows for the graphs
+		pkCols.add("STAT_NAME");
 
 		return pkCols;
+	}
+
+	/** If we can't read the views: disable the CM, and tell what to do about it */
+	@Override
+	public boolean checkDependsOnOther(DbxConnection conn)
+	{
+		return OracleCmUtils.checkViewsAreReadable(this, conn, "V$SYS_TIME_MODEL");
 	}
 
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
-		String sql = "select * from V$SYS_TIME_MODEL \n";
+		String sql = ""
+			+ "select \n"
+			+ "     t.STAT_NAME \n"
+			+ "    ,t.VALUE \n"
+			+ "    ,t.STAT_ID \n"
+			+ "from V$SYS_TIME_MODEL t \n"
+			+ "order by t.STAT_NAME \n"
+			+ "";
+
 		return sql;
 	}
 
-//	@Override
-//	public void updateGraphData(TrendGraphDataPoint tgdp)
-//	{
-//		if (GRAPH_NAME_EXECUTION_COUNT.equals(tgdp.getName()))
-//		{
-//			// Write 1 "line" for every rowInTable
-//			Double[] dArray = new Double[this.size()];
-//			String[] lArray = new String[dArray.length];
-//			for (int i = 0; i < dArray.length; i++)
-//			{
-//				lArray[i] = this.getRateString       (i, "OperationName");
-//				dArray[i] = this.getRateValueAsDouble(i, "ExecutionCnt");
-//			}
-//
-//			// Set the values
-//			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
-//		}
-//
-//		if (GRAPH_NAME_EXECUTION_TIME.equals(tgdp.getName()))
-//		{
-//			// Write 1 "line" for every rowInTable
-//			Double[] dArray = new Double[this.size()];
-//			String[] lArray = new String[dArray.length];
-//			for (int i = 0; i < dArray.length; i++)
-//			{
-//				lArray[i] = this.getRateString       (i, "OperationName");
-//				dArray[i] = this.getRateValueAsDouble(i, "ExecutionTime");
-//			}
-//
-//			// Set the values
-//			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
-//		}
-//
-//		if (GRAPH_NAME_EXECUTION_TIME_PER_COUNT.equals(tgdp.getName()))
-//		{
-//			// Write 1 "line" for every rowInTable
-//			Double[] dArray = new Double[this.size()];
-//			String[] lArray = new String[dArray.length];
-//			for (int i = 0; i < dArray.length; i++)
-//			{
-//				lArray[i] = this.getRateString       (i, "OperationName");
-//				dArray[i] = this.getRateValueAsDouble(i, "ExecutionTimePerCnt");
-//			}
-//
-//			// Set the values
-//			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
-//		}
-//
-//		if (GRAPH_NAME_CPU_USAGE_PCT.equals(tgdp.getName()))
-//		{
-//			// Summary of ALL CPU lines
-//			double sum = 0;
-//			
-//			// Write 1 "line" for every rowInTable
-//			Double[] dArray = new Double[this.size() + 1];
-//			String[] lArray = new String[dArray.length];
-//
-//			for (int ap = 0; ap < dArray.length; ap++)
-//			{
-//				// ArrayPos 0 holds: SUMMARY which will be added at the end
-//				if (ap == 0)
-//					continue;
-//
-//				int row = ap - 1;
-//				
-//				lArray[ap] = this.getRateString       (row, "OperationName");
-//				dArray[ap] = this.getRateValueAsDouble(row, "CpuUsagePct");
-//				
-//				sum += dArray[ap]; 
-//			}
-//			
-//			// Finally Write the SUMMARY
-//			lArray[0] = "SumAllCategories";
-//			dArray[0] = sum;
-//
-//			// Set the values
-//			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
-//		}
-//	}
-//
-//	@Override
-//	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
-//	{
-//		int  ExecutionTimePerCnt_pos = -1;
-//
-//		long ExecutionCnt,          ExecutionTime;
-//		int  ExecutionCnt_pos = -1, ExecutionTime_pos = -1;
-//
-//		// Find column Id's
-//		List<String> colNames = diffData.getColNames();
-//		if (colNames == null)
-//			return;
-//		for (int colId = 0; colId < colNames.size(); colId++)
-//		{
-//			String colName = (String) colNames.get(colId);
-//			if      (colName.equals("ExecutionCnt"))        ExecutionCnt_pos        = colId;
-//			else if (colName.equals("ExecutionTime"))       ExecutionTime_pos       = colId;
-//			else if (colName.equals("ExecutionTimePerCnt")) ExecutionTimePerCnt_pos = colId;
-//		}
-//
-//		// Loop on all diffData rows
-//		for (int rowId = 0; rowId < diffData.getRowCount(); rowId++)
-//		{
-//			ExecutionCnt  = ((Number) diffData.getValueAt(rowId, ExecutionCnt_pos )).longValue();
-//			ExecutionTime = ((Number) diffData.getValueAt(rowId, ExecutionTime_pos)).longValue();
-//
-//			if (ExecutionCnt > 0)
-//			{
-//				double calc = (ExecutionTime + 0.0) / (ExecutionCnt + 0.0);
-//
-//				BigDecimal newVal = new BigDecimal(calc).setScale(1, RoundingMode.HALF_EVEN);
-//				diffData.setValueAt(newVal, rowId, ExecutionTimePerCnt_pos);
-//			}
-//			else
-//				diffData.setValueAt(new BigDecimal(0), rowId, ExecutionTimePerCnt_pos);
-//		}
-//	}
-//	
-//	@Override
-//	public void localCalculationRatePerSec(CounterSample rateData, CounterSample diffData)
-//	{
-//		int  ExecutionTime_pos = -1;
-//		int  CpuUsagePct_pos   = -1;
-//		int  EngineCount_pos   = -1;
-//
-//		// Find column Id's
-//		List<String> colNames = diffData.getColNames();
-//		if (colNames == null)
-//			return;
-//		for (int colId = 0; colId < colNames.size(); colId++)
-//		{
-//			String colName = (String) colNames.get(colId);
-//			if      (colName.equals("ExecutionTime"))       ExecutionTime_pos       = colId;
-//			else if (colName.equals("EngineCount"))         EngineCount_pos         = colId;
-//			else if (colName.equals("CpuUsagePct"))         CpuUsagePct_pos         = colId;
-//		}
-//
-//		// Loop on all rate/diff Data rows
-//		for (int rowId = 0; rowId < diffData.getRowCount(); rowId++)
-//		{
-//			double rate_ExecutionTime = ((Number) rateData.getValueAt(rowId, ExecutionTime_pos)).doubleValue();
-//			int    rate_EngineCount   = ((Number) rateData.getValueAt(rowId, EngineCount_pos  )).intValue();
-//
-//			// CpuUsagePct
-//			if (rate_EngineCount > 0)
-//			{
-//				// Basic Algorithm: used_ExecuationTimeInMicroSeconds_inThisPeriod / total_MicroSecondsPossibleForScheduling_forAllEngines_inThisPeriod
-//
-//				// Should we filter out "out-of-bound" values here as well?
-//				// that would be: if (rate_ExecutionTime > 1_000_000.0 * rate_EngineCount) ...
-//				
-//				// ExecutionTime                  / allEngines*1000000 == PossibleExecutionSlotsInMicroSec
-//				double calc = (rate_ExecutionTime / (1_000_000.0 * rate_EngineCount)) * 100.0;
-//
-//				BigDecimal newVal = new BigDecimal(calc).setScale(1, RoundingMode.HALF_EVEN);
-//				diffData.setValueAt(newVal, rowId, CpuUsagePct_pos);
-//				rateData.setValueAt(newVal, rowId, CpuUsagePct_pos);
-//			}
-//		}
-//	}
+	@Override
+	public void updateGraphData(TrendGraphDataPoint tgdp)
+	{
+		//--------------------------------------------------------
+		// The totals: microseconds per second / 1 000 000 = seconds per second
+		//--------------------------------------------------------
+		if (GRAPH_NAME_TOTALS.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[STATS_TOTALS.length];
+			for (int i = 0; i < STATS_TOTALS.length; i++)
+			{
+				Double microsPerSec = this.getRateValueAsDouble(createPkStr(STATS_TOTALS[i]), "VALUE");
+
+				arr[i] = (microsPerSec == null) ? 0.0 : microsPerSec / 1_000_000.0;
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+
+		//--------------------------------------------------------
+		// All the other rows, that has ever been used (many of them are always 0, for example the In-Memory ones)
+		//--------------------------------------------------------
+		if (GRAPH_NAME_BREAKDOWN.equals(tgdp.getName()))
+		{
+			LinkedHashMap<String, Double> dataMap = new LinkedHashMap<String, Double>();
+
+			for (int r = 0; r < this.size(); r++)
+			{
+				String statName     = this.getAbsString        (r, "STAT_NAME");
+				Double absValue     = this.getAbsValueAsDouble (r, "VALUE");
+				Double microsPerSec = this.getRateValueAsDouble(r, "VALUE");
+
+				if (Arrays.asList(STATS_TOTALS).contains(statName))
+					continue;
+
+				if (absValue == null || absValue == 0)
+					continue;
+
+				dataMap.put(statName, (microsPerSec == null) ? 0.0 : microsPerSec / 1_000_000.0);
+			}
+
+			if (dataMap.size() > 0)
+				tgdp.setData(this.getTimestamp(), dataMap);
+		}
+	}
+
+	/** Local graph (beside the table): the biggest statistics of the time model */
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		// Bars, not a pie: the statistics are parts of each other ('DB time' holds 'sql execute elapsed time', which holds 'PL/SQL execution elapsed time'...)
+		list.add(new CmChartDescriptor()
+			.id("time-model")
+			.title("Time Model: where the time goes (microseconds)")
+			.chartType(CmChartDescriptor.CHART_TYPE_HORIZONTAL_BAR)
+			.labelColumn("STAT_NAME")
+			.valueColumns("VALUE")
+			.seriesLabels("Microseconds")
+			.skipZeroRows(true)
+			.maxItems(15)
+			.splitRatio(0.5));
+
+		return list;
+	}
 }

@@ -383,4 +383,12 @@ extends CmSummaryAbstract
 	{
 		return addAlarmSettings_DbmsVersionStringChanged(null, "rsVersion");
 	}
+
+	/** What the columns are: tooltips in the GUI, and the 'Description' column in DbxCentral (Counter Details, the "unpivot" view) */
+	@Override
+	public void initLocalToolTipTextOnTableColumnHeader()
+	{
+		setLocalToolTipTextOnTableColumnHeader("serverName",      "<html>Name of the Replication Server we are connected to.</html>");
+		setLocalToolTipTextOnTableColumnHeader("rsVersion",       "<html>The Replication Server version string (from the connection).</html>");
+	}
 }

@@ -477,4 +477,53 @@ extends CmSummaryAbstract
 	{
 		return addAlarmSettings_DbmsVersionStringChanged(null, "atAtVersion");
 	}
+
+	/** What the columns are: tooltips in the GUI, and the 'Description' column in DbxCentral (Counter Details, the "unpivot" view). Most are server properties: property('xxx') / db_property('xxx') */
+	@Override
+	public void initLocalToolTipTextOnTableColumnHeader()
+	{
+		// Server Information
+		setLocalToolTipTextOnTableColumnHeader("atAtServerName",            "<html>This is the internal server name in IQ, taken from the global variable @@servername</html>");
+		setLocalToolTipTextOnTableColumnHeader("atAtVersion",               "<html>The version string taken from @@version</html>");
+		setLocalToolTipTextOnTableColumnHeader("timeIsNow",                 "<html>Time of the sample (getdate() on the server).</html>");
+		setLocalToolTipTextOnTableColumnHeader("utcTimeDiff",               "<html>UTC Time Difference in minutes (positive east of UK, negative west of UK).</html>");
+		setLocalToolTipTextOnTableColumnHeader("srvListeners",              "<html>The TCP/IP addresses (and ports) the server listens on. property('TcpIpAddresses')</html>");
+		setLocalToolTipTextOnTableColumnHeader("ProcessID",                 "<html>The operating system process ID of the server. property('ProcessID')</html>");
+		setLocalToolTipTextOnTableColumnHeader("PageSize",                  "<html>The page size of the catalog store, in bytes. property('PageSize')</html>");
+		setLocalToolTipTextOnTableColumnHeader("ProductVersion",            "<html>The version of the software being run. property('ProductVersion')</html>");
+
+		// Requests, Connections, Threads
+		setLocalToolTipTextOnTableColumnHeader("ActiveReq",                 "<html>Number of server workers that are currently handling client-side requests. property('ActiveReq')</html>");
+		setLocalToolTipTextOnTableColumnHeader("UnschReq",                  "<html>Number of requests that are currently queued up, waiting for an available server worker. property('UnschReq')</html>");
+		setLocalToolTipTextOnTableColumnHeader("RequestsReceived",          "<html>Number of client/server communication requests or round trips received by the server. property('RequestsReceived')</html>");
+		setLocalToolTipTextOnTableColumnHeader("Commit",                    "<html>Number of Commit requests that have been handled by the server. property('Commit')</html>");
+		setLocalToolTipTextOnTableColumnHeader("ConnCount",                 "<html>Number of connections to the database. db_property('ConnCount')</html>");
+		setLocalToolTipTextOnTableColumnHeader("Chkpt",                     "<html>Number of checkpoints that have been performed. db_property('Chkpt')</html>");
+		setLocalToolTipTextOnTableColumnHeader("threads",                   "<html>Number of threads used by the server. property('threads')</html>");
+
+		// CPU
+		setLocalToolTipTextOnTableColumnHeader("ProcessCPU",                "<html>CPU usage for the server process, in seconds (user + system). property('ProcessCPU')</html>");
+		setLocalToolTipTextOnTableColumnHeader("ProcessCPUSystem",          "<html>System CPU usage for the server process, in seconds. property('ProcessCPUSystem')</html>");
+		setLocalToolTipTextOnTableColumnHeader("ProcessCPUUser",            "<html>User CPU usage for the server process, in seconds. property('ProcessCPUUser')</html>");
+		setLocalToolTipTextOnTableColumnHeader("NumProcessorsAvail",        "<html>Number of logical processors the server uses. property('NumLogicalProcessorsUsed')</html>");
+		setLocalToolTipTextOnTableColumnHeader("NumLogicalProcessorsUsed",  "<html>Number of logical processors the server uses. property('NumLogicalProcessorsUsed')</html>");
+		setLocalToolTipTextOnTableColumnHeader("NumPhysicalProcessorsUsed", "<html>Number of physical processors the server uses. property('NumPhysicalProcessorsUsed')</html>");
+
+		// Cache and Memory (of the catalog store)
+		setLocalToolTipTextOnTableColumnHeader("CurrentCacheSize_Kb",       "<html>The current cache size, in KB. property('CurrentCacheSize')</html>");
+		setLocalToolTipTextOnTableColumnHeader("MinCacheSize",              "<html>The minimum allowed cache size, in KB. property('MinCacheSize')</html>");
+		setLocalToolTipTextOnTableColumnHeader("MaxCacheSize",              "<html>The maximum allowed cache size, in KB. property('MaxCacheSize')</html>");
+		setLocalToolTipTextOnTableColumnHeader("PeakCacheSize",             "<html>The largest value the cache has reached in the current session, in KB. property('PeakCacheSize')</html>");
+		setLocalToolTipTextOnTableColumnHeader("LockedHeapPages",           "<html>Number of heap pages locked in the cache. property('LockedHeapPages')</html>");
+		setLocalToolTipTextOnTableColumnHeader("MainHeapBytes",             "<html>Number of bytes used for global server data structures. property('MainHeapBytes')</html>");
+		setLocalToolTipTextOnTableColumnHeader("MainHeapPages",             "<html>Number of pages used for global server data structures. property('MainHeapPages')</html>");
+
+		// Network
+		setLocalToolTipTextOnTableColumnHeader("BytesReceived",             "<html>Number of bytes received during client/server communications. property('BytesReceived')</html>");
+		setLocalToolTipTextOnTableColumnHeader("BytesSent",                 "<html>Number of bytes sent during client/server communications. property('BytesSent')</html>");
+		setLocalToolTipTextOnTableColumnHeader("PacketsReceived",           "<html>Number of client/server communication packets received. property('PacketsReceived')</html>");
+		setLocalToolTipTextOnTableColumnHeader("PacketsSent",               "<html>Number of client/server communication packets sent. property('PacketsSent')</html>");
+		setLocalToolTipTextOnTableColumnHeader("MultiPacketsReceived",      "<html>Number of multi-packet requests received during client/server communications. property('MultiPacketsReceived')</html>");
+		setLocalToolTipTextOnTableColumnHeader("MultiPacketsSent",          "<html>Number of multi-packet responses sent during client/server communications. property('MultiPacketsSent')</html>");
+	}
 }

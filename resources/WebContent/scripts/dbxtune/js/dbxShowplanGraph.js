@@ -17,9 +17,10 @@
  *     with a single arrowhead and no tooltips. Converging those is a deliberate behaviour change for
  *     ASE, not a refactor - so it is not forced into a shared implementation here.
  *
- * Loaded BEFORE dbxShowplanAse.js / dbxShowplanSqlServer.js (graph.html, ShowplanAseServlet,
- * ShowplanSqlServerServlet). Each renderer keeps thin same-named local wrappers that pass their own
- * prefix, so the (many) existing call sites inside those files stay untouched.
+ * Loaded BEFORE dbxShowplanAse.js / dbxShowplanSqlServer.js / dbxShowplanOracle.js (graph.html,
+ * ShowplanAseServlet, ShowplanSqlServerServlet, ShowplanOracleServlet). Each renderer keeps thin
+ * same-named local wrappers that pass their own prefix, so the (many) existing call sites inside
+ * those files stay untouched. (The Oracle renderer, the third one, calls these functions directly.)
  */
 
 /**
@@ -410,7 +411,21 @@ window.DbxShowplanGraph = (function () {
 			// Has to go on the CHAIN CELL, not the row (`ul`, display:table-row) - padding on a table-row
 			// isn't rendered at all per the CSS table model (unlike the horizontal version's equivalent,
 			// which targets a table-CELL where padding does apply).
-			if (offset > 0) chainLi.style.paddingLeft = offset + 'px';
+			if (offset > 0) {
+				// The chain cell was processed before this one (bottom-up), and may already have reserved a
+				// min-width for its OWN after-tucked leaves (see below). Under box-sizing:border-box - which
+				// Bootstrap sets on everything - min-width INCLUDES the padding, so the padding added here
+				// would be taken out of that reservation: the cell stays as wide as it was, its content gets
+				// narrower by `offset`, and the chain's tucked leaf ends up in the next branch's column
+				// (found on an Oracle plan: a full scan tucked beside a nested loop's first child, drawn on
+				// top of the index scan of the neighbouring branch). So the reservation grows with the padding.
+				var chainStyle = window.getComputedStyle(chainLi);
+				var padBefore  = parseFloat(chainStyle.paddingLeft) || 0;
+				var reserved   = parseFloat(chainLi.style.minWidth);
+				chainLi.style.paddingLeft = offset + 'px';
+				if (!isNaN(reserved) && chainStyle.boxSizing === 'border-box')
+					chainLi.style.minWidth = (reserved + offset - padBefore) + 'px';
+			}
 
 			// The chain's own box is CENTERED (a caption, ".<prefix>-compact-v li > .<prefix>-box-cell")
 			// over its own cell's FULL width - which is sized to fit its entire subtree, not just its own
@@ -435,8 +450,14 @@ window.DbxShowplanGraph = (function () {
 			// the user on the real dialog: two unrelated "Index Scan" boxes rendered stacked on top of
 			// each other. Force this node's own reported width to cover the true rightmost extent.
 			if (afterChain.length) {
-				var curMinWidth = parseFloat(window.getComputedStyle(li).minWidth) || 0;
-				li.style.minWidth = Math.max(curMinWidth, afterOffset) + 'px';
+				// afterOffset is measured from the left edge of the children row, which is the CONTENT of
+				// this cell. Under box-sizing:border-box min-width also has to cover the cell's own padding
+				// (6px on each side for a cell with siblings), or the last few pixels of the leaf stick out.
+				var liStyle = window.getComputedStyle(li);
+				var ownPad  = liStyle.boxSizing === 'border-box'
+					? (parseFloat(liStyle.paddingLeft) || 0) + (parseFloat(liStyle.paddingRight) || 0) : 0;
+				var curMinWidth = parseFloat(liStyle.minWidth) || 0;
+				li.style.minWidth = Math.max(curMinWidth, afterOffset + ownPad) + 'px';
 			}
 
 			// Mirrors the horizontal version's width-collision compensation, on the perpendicular axis:

@@ -659,6 +659,7 @@ extends DbxCentralPageTemplate
 			writer.println("");
 			writer.println("<!-- Run this code if the servlet had exceptions -->");
 			writer.println("<script>");
+			write(writer, "    DbxTimeline.progressDone(); ");
 			write(writer, "    document.getElementById('dbx-servlet-exception').style.display = 'block'; ");
 			write(writer, "    let tmpText  = 'Problems creating HTML Timeline content: Caught:<br>'; ");
 			write(writer, "        tmpText += '<code><pre>'; ");
@@ -1421,6 +1422,10 @@ extends DbxCentralPageTemplate
 			// Get Name of THIS server (Get the server name, which depends on dbms/aliasName and displayName)
 			String serverName = CounterController.getInstance().getServerName();
 
+			// A long period (months of job history) takes time: say that we are working, and send the start of the page to the browser before we read
+			// (the box is closed by DbxTimeline.createLater() below, when the timeline has been drawn)
+			DbxTimelineRows.writeProgressStart(writer, "Reading the job history from SQL Server...");
+
 			//-----------------------------------------
 			// Add modal popup for execution times of: (job_id, step_id)
 			SqlServerJobScheduler.createStaticHtmlAndJavaScriptContent(writer, serverName);
@@ -1435,6 +1440,7 @@ extends DbxCentralPageTemplate
 
 			//---------------------------------------------------------
 			// Execute the SQL - with AutoClose
+			DbxTimelineRows.writeProgressText(writer, "Reading the job executions of the period from SQL Server...");
 			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
 			{
 				ResultSetMetaData rsmd = rs.getMetaData();
@@ -1461,10 +1467,15 @@ extends DbxCentralPageTemplate
 				Timestamp prevRowEndTs   = null;
 
 				int addRecordCount = 0;
+				int readCount      = 0;
 
 				// Loop all rows in ResultSet
 				while(rs.next())
 				{
+					// How far we are, now and then (seen when there are many thousands of rows)
+					if (++readCount % 5000 == 0)
+						DbxTimelineRows.writeProgressText(writer, "Reading the job executions of the period from SQL Server: " + readCount + " rows so far...");
+
 					String labelKey     = rs.getString   (1);
 					String barText      = rs.getString   (2);
 					String barColor     = rs.getString   (3);
@@ -1740,7 +1751,8 @@ extends DbxCentralPageTemplate
 				write(writer, "        }];");
 				write(writer, "    }");
 				write(writer, "");
-				write(writer, "    DbxTimeline.create('timeline', _dbxTimelineRows, {");
+				write(writer, "    // createLater: it says \"Drawing N bars...\" while it draws (many thousands of bars take some seconds)");
+				write(writer, "    DbxTimeline.createLater('timeline', _dbxTimelineRows, {");
 				write(writer, "        start:          " + DbxTimelineRows.toJsTs(startTime) + ",");
 				write(writer, "        end:            " + DbxTimelineRows.toJsTs(endTime)   + ",");
 				write(writer, "        startExpanded:  " + (!onlyLevelZero) + ",");

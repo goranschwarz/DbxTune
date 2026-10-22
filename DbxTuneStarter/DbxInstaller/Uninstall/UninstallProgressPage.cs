@@ -66,6 +66,7 @@ namespace DbxInstaller.Uninstall
             var rowStop     = AddRow("Stop client + service");
             var rowSvc      = AddRow("Delete service registration");
             var rowFw       = AddRow("Remove firewall rules");
+            var rowRights   = ctx.DetectedServiceAccount != null ? AddRow("Remove user rights") : null;
             var rowUser     = ctx.RemoveAccount ? AddRow("Delete User Account and Profile") : null;
             var rowData     = ctx.RemoveData    ? AddRow("Delete user data directories") : null;
             var rowSw       = ctx.RemoveSoftware ? AddRow("Delete software directory") : null;
@@ -90,6 +91,10 @@ namespace DbxInstaller.Uninstall
                 });
 
                 RunStep(rowFw, "Remove firewall rules", () => { InstallActions.RemoveFirewallRules(msg => Log(msg)); return true; });
+
+                // Before the account is deleted — LookupAccountName needs the account to still exist.
+                if (rowRights != null)
+                    RunStep(rowRights, "Remove user rights", () => { UninstallActions.RemoveUserRights(ctx.DetectedServiceAccount!, msg => Log(msg)); return true; });
 
                 if (rowUser != null && ctx.DetectedServiceAccount != null)
                     if (!RunStep(rowUser, "Delete User Account and Profile",

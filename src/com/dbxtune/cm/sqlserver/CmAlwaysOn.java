@@ -2364,39 +2364,41 @@ extends CountersModel
 					{
 						Timestamp this_lct = (Timestamp) o_lct;
 						Timestamp prim_lct = (Timestamp) newSample.getValueAt(primaryRowId, pos_last_commit_time);
-						
-						long   msDiff  = prim_lct.getTime() - this_lct.getTime();
-						String diffStr = TimeUtils.msToTimeStr(msDiff);
 
-						// Set the DIFF at this REMOTE ROW
-						newSample.setValueAt(diffStr, rowId, pos_SecondaryCommitTimeLag);
-
-						// Get the PRIMARY local row
-						String PRIMARY_SecondaryCommitTimeLag = (String) newSample.getValueAt(primaryRowId, pos_SecondaryCommitTimeLag);
-						if (StringUtil.hasValue(PRIMARY_SecondaryCommitTimeLag))
+						if (this_lct != null && prim_lct != null)
 						{
-							// parse the entry: srvname=HH:MM:SS.ms
-							try
+							long   msDiff  = prim_lct.getTime() - this_lct.getTime();
+							String diffStr = TimeUtils.msToTimeStr(msDiff);
+
+							// Set the DIFF at this REMOTE ROW
+							newSample.setValueAt(diffStr, rowId, pos_SecondaryCommitTimeLag);
+
+							// Get the PRIMARY local row
+							String PRIMARY_SecondaryCommitTimeLag = (String) newSample.getValueAt(primaryRowId, pos_SecondaryCommitTimeLag);
+							if (StringUtil.hasValue(PRIMARY_SecondaryCommitTimeLag))
 							{
-								String[] sa = PRIMARY_SecondaryCommitTimeLag.split("=");
-								Timestamp prevTs = TimeUtils.parseToTimestamp(sa[0], "HH:mm:ss.SSS");
-//System.out.println("XXXXXXXXXXX: PRIMARY_SecondaryCommitTimeLag=|"+PRIMARY_SecondaryCommitTimeLag+"|, sa[0]=|"+sa[0]+"|, prevTs="+prevTs+", sa="+StringUtil.toCommaStr(sa));
-								
-								// Set the server name with the highest time diff
-								if (msDiff > prevTs.getTime())
+								// parse the entry: srvname=HH:MM:SS.ms
+								try
 								{
-									String val = server_name + "=" + diffStr;
-									newSample.setValueAt(val, primaryRowId, pos_SecondaryCommitTimeLag);
+									String[] sa = PRIMARY_SecondaryCommitTimeLag.split("=");
+									Timestamp prevTs = TimeUtils.parseToTimestamp(sa[0], "HH:mm:ss.SSS");
+	//System.out.println("XXXXXXXXXXX: PRIMARY_SecondaryCommitTimeLag=|"+PRIMARY_SecondaryCommitTimeLag+"|, sa[0]=|"+sa[0]+"|, prevTs="+prevTs+", sa="+StringUtil.toCommaStr(sa));
+									
+									// Set the server name with the highest time diff
+									if (msDiff > prevTs.getTime())
+									{
+										String val = server_name + "=" + diffStr;
+										newSample.setValueAt(val, primaryRowId, pos_SecondaryCommitTimeLag);
+									}
 								}
+								catch (ParseException ignore) {}
 							}
-							catch (ParseException ignore) {}
+							else
+							{
+								String val = server_name + "=" + diffStr;
+								newSample.setValueAt(val, primaryRowId, pos_SecondaryCommitTimeLag);
+							}
 						}
-						else
-						{
-							String val = server_name + "=" + diffStr;
-							newSample.setValueAt(val, primaryRowId, pos_SecondaryCommitTimeLag);
-						}
-						
 					}
 				}
 			}

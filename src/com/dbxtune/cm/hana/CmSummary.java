@@ -283,4 +283,18 @@ extends CmSummaryAbstract
 	{
 		return addAlarmSettings_DbmsVersionStringChanged(null, "VERSION");
 	}
+
+	/** What the columns are: tooltips in the GUI, and the 'Description' column in DbxCentral (Counter Details, the "unpivot" view). Other M_DATABASE columns fall back on the MonTables dictionary */
+	@Override
+	public void initLocalToolTipTextOnTableColumnHeader()
+	{
+		setLocalToolTipTextOnTableColumnHeader("SYSTEM_ID",       "<html>The SAP HANA system ID (SID). M_DATABASE</html>");
+		setLocalToolTipTextOnTableColumnHeader("DATABASE_NAME",   "<html>Name of the database. M_DATABASE</html>");
+		setLocalToolTipTextOnTableColumnHeader("HOST",            "<html>The host that the database runs on. M_DATABASE</html>");
+		setLocalToolTipTextOnTableColumnHeader("START_TIME",      "<html>When the database was started. M_DATABASE</html>");
+		setLocalToolTipTextOnTableColumnHeader("VERSION",         "<html>The SAP HANA version. M_DATABASE</html>");
+		setLocalToolTipTextOnTableColumnHeader("USAGE",           "<html>What the system is used for: PRODUCTION, TEST, DEVELOPMENT or CUSTOM. M_DATABASE</html>");
+		setLocalToolTipTextOnTableColumnHeader("TIME_NOW",        "<html>Time of the sample (CURRENT_TIMESTAMP on the server).</html>");
+		setLocalToolTipTextOnTableColumnHeader("UTC_MINUTE_DIFF", "<html>UTC Time Difference in minutes (positive east of UK, negative west of UK).</html>");
+	}
 }

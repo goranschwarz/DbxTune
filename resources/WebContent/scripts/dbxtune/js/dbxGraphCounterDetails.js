@@ -234,7 +234,9 @@ function cmDetailRenderGroups(groups)
 		var a  = $('<a class="nav-link' + (g.groupName === selGroup ? ' active' : '') + '" href="#"></a>');
 		if (g.groupIcon)
 			a.append(cmMakeIcon(g.groupIcon));
-		a.append(document.createTextNode(g.groupName));
+		// The CMs without a group end up in 'Other' (CmListServlet). That is only CmSummary: then call the tab 'Summary' (the name used in the code stays 'Other')
+		var isOnlySummary = g.groupName === 'Other' && g.cms.length > 0 && g.cms.every(function(c) { return c.cmName === 'CmSummary'; });
+		a.append(document.createTextNode(isOnlySummary ? 'Summary' : g.groupName));
 		a.on('click', (function(gn) { return function(e) { e.preventDefault(); cmDetailSelectGroup(gn); }; })(g.groupName));
 		li.append(a);
 		$gt.append(li);
@@ -531,6 +533,205 @@ function cmDetailTypeChanged(type)
 		cmDetailLoadData(_cmSrvName, _cmName, _cmTimestamp, _cmType);
 }
 
+//-----------------------------------------------------------
+// UNPIVOT
+//
+// A CM without a Primary Key holds ONE row (for example the Summary CM). As a normal table that is one very wide row:
+// you have to scroll sideways, and you only see ONE of Absolute / Delta / Rate at a time.
+// Unpivot shows that row "on its side": one line per column, with the Absolute, Delta and Rate value next to each other.
+//   Column       Absolute   Delta   Rate/s   Description
+//   USER_CALLS    382 652       3      0.3   ...
+//   EXECUTIONS  2 409 047     196     19.4   ...
+// It is a checkbox in the type bar (only shown for such a CM), remembered in the browser, default on.
+//-----------------------------------------------------------
+function _cmUnpivotIsCandidate(r)
+{
+	return (!r.pkColumns || r.pkColumns.length === 0) && !r.isAppend && r.rows && r.rows.length === 1;
+}
+
+function _cmUnpivotIsOn()
+{
+	var on = true;
+	try { on = localStorage.getItem('cmDetail-unpivot') !== '0'; } catch(e) {}
+	$('#cm-detail-unpivot').prop('checked', on);
+	return on;
+}
+
+function cmDetailUnpivotChanged()
+{
+	try { localStorage.setItem('cmDetail-unpivot', document.getElementById('cm-detail-unpivot').checked ? '1' : '0'); } catch(e) {}
+	if (_cmSrvName && _cmName && _cmTimestamp)
+		cmDetailLoadData(_cmSrvName, _cmName, _cmTimestamp, _cmType);
+}
+
+/**
+ * We have the row for ONE counter type (r): get the same sample for the two other types, then render.
+ * A type that has no data (no diff/rate table, or the first sample) is simply left empty.
+ */
+function _cmUnpivotLoad(srvName, cmName, timestamp, type, r, mySeq)
+{
+	var byType = { abs: null, diff: null, rate: null };
+	byType[type] = r;
+
+	var otherTypes = ['abs', 'diff', 'rate'].filter(function(t) { return t !== type; });
+	var pending    = otherTypes.length;
+	otherTypes.forEach(function(t) {
+		$.ajax({
+			url: '/api/cc/mgt/cm/data',
+			data: { srv: srvName, cm: cmName, time: timestamp, type: t, showAll: 'false' },
+			dataType: 'json',
+			success: function(o) {
+				if (o && !o.error && o.rows && o.rows.length === 1) byType[t] = o;
+			},
+			complete: function() {
+				if (--pending > 0) return;
+				if (mySeq !== _cmDataLoadSeq) return;   // a newer cmDetailLoadData() has started: drop this one
+				r._unpivot = byType;
+				cmDetailRenderTable(r);
+			}
+		});
+	});
+}
+
+function _cmUnpivotRender(r, filter)
+{
+	var u = r._unpivot;
+
+	// The value of a column in the ONE row of a response. Matched on the column NAME: 'r' may have got its columns reordered (preferredColumnOrder)
+	function valueOf(resp, colName) {
+		if (!resp || !resp.columns || !resp.rows || !resp.rows[0]) return undefined;
+		var idx = resp.columns.indexOf(colName);
+		return idx < 0 ? undefined : resp.rows[0][idx];
+	}
+
+	var diffSet = {};
+	if (r.diffColumns) r.diffColumns.forEach(function(dc) { diffSet[dc.toLowerCase()] = true; });
+	var pctSet = {};
+	if (r.pctColumns) r.pctColumns.forEach(function(pc) { pctSet[pc.toLowerCase()] = true; });
+
+	// One line per column. The same filter box as the normal table, on the columns: Column, Absolute, Delta, Rate
+	var lineColumns = ['Column', 'Absolute', 'Delta', 'Rate'];
+	var lineMeta    = new Map();   // line (the array that is filtered) -> what we need to render it
+	var hasDesc     = false;       // the 'Description' column is only there when at least one column has a description
+	var lines       = (r.columns || []).map(function(colName, i) {
+		var isDiff = !!diffSet[colName.toLowerCase()];
+		var line   = [colName, valueOf(u.abs, colName), isDiff ? valueOf(u.diff, colName) : null, isDiff ? valueOf(u.rate, colName) : null];
+		// The description is the column tooltip, as plain text (some are HTML)
+		var tt     = (r.tooltips && r.tooltips[i]) ? r.tooltips[i] : '';
+		var desc   = tt ? $('<div>').html(tt.replace(/<br\s*\/?>/gi, ' ')).text().replace(/\s+/g, ' ').trim() : '';
+		if (desc) hasDesc = true;
+		lineMeta.set(line, { isDiff: isDiff, isPct: !!pctSet[colName.toLowerCase()], isNumeric: !!(r.isNumeric && r.isNumeric[i]), desc: desc });
+		return line;
+	});
+
+	filter = (filter || '').trim();
+	var result      = applyRowFilter(lines, lineColumns, filter);
+	var shownLines  = result.filteredRows;
+	var filterError = result.filterError;
+
+	// Hide unchanged: only the counters (the Delta columns) that did change in this sample
+	_cmHideZero = document.getElementById('cm-detail-hide-zero') ? document.getElementById('cm-detail-hide-zero').checked : false;
+	if (_cmHideZero) {
+		shownLines = shownLines.filter(function(line) {
+			var nv = parseFloat(line[2]);
+			return lineMeta.get(line).isDiff && !isNaN(nv) && nv !== 0;
+		});
+	}
+
+	var countText = filterError
+		? filterError
+		: (filter || _cmHideZero)
+			? (shownLines.length + ' / ' + lines.length + ' columns')
+			: (lines.length + ' columns');
+	$('#cm-detail-filter-count').text(countText);
+	$('#cm-detail-row-count').text(countText);
+
+	var sampleInfo = '';
+	if (r.cmSampleTime) sampleInfo += '&nbsp; SampleTime: <b>' + escHtml(r.cmSampleTime) + '</b>';
+	if (r.cmSampleMs  ) sampleInfo += '&nbsp; SampleMs: <b>'   + escHtml(String(r.cmSampleMs)) + '</b>';
+
+	// One value cell. A number is right aligned and formatted, everything else is shown as it is.
+	function valueCell(v, isNumeric, extraStyle) {
+		var style = (isNumeric ? 'text-align:right;' : '') + (extraStyle || '');
+		var cell;
+		if (v === null || v === undefined)
+			cell = '<span style="color:#aaa">null</span>';
+		else if (v === true || v === false)
+			cell = '<input type="checkbox"' + (v ? ' checked' : '') + ' onclick="return false;" style="cursor:default;pointer-events:none;">';
+		else {
+			var formatted = isNumeric ? _cmFmtNum(v) : null;
+			var s = formatted !== null ? formatted : String(v);
+			// A long value (SQL text, a path...) is truncated at 60 chars, so the Delta/Rate columns stay close; the full value is in the tooltip
+			cell = s.length > 60 ? '<span title="' + escHtml(s) + '" style="cursor:help;">' + escHtml(s.substring(0, 60)) + '…</span>' : escHtml(s);
+		}
+		return '<td style="' + style + '">' + cell + '</td>';
+	}
+
+	// A Delta or Rate cell: blue, and bold when it is not zero (as in the normal table). Empty for a column that is not a counter.
+	function counterCell(v, isDiff) {
+		if (!isDiff) return '<td></td>';
+		var nv = parseFloat(v);
+		return valueCell(v, true, 'color:var(--cm-diff-fg,#0066cc);' + (!isNaN(nv) && nv !== 0 ? 'font-weight:bold;' : ''));
+	}
+
+	var h = '<div id="cm-detail-sticky-top"><p style="color:#6c757d;font-size:0.8em;margin:2px 0;">'
+		+ 'CM: <b>' + escHtml(r.cmName) + '</b>'
+		+ '&nbsp; Type: <b>abs + diff + rate</b> (unpivot: the one row of this Counter, one line per column)'
+		+ sampleInfo
+		+ '&nbsp; Columns: <b>' + lines.length + '</b></p></div>'
+		+ '<table class="table table-sm table-bordered table-hover" style="font-size:0.78em;white-space:nowrap;width:auto;">'
+		+ '<thead class="table-light"><tr>'
+		+ '<th>Column</th>'
+		+ '<th style="text-align:right;" title="Absolute value: the raw value as reported by the server">Absolute</th>'
+		+ '<th style="text-align:right;color:var(--cm-diff-fg,#0066cc);" title="Delta: the difference between this sample and the previous one. Only for the counter columns.">Delta</th>'
+		+ '<th style="text-align:right;color:var(--cm-diff-fg,#0066cc);" title="Rate per second: the delta divided by the time between the samples. Only for the counter columns.">Rate/s</th>'
+		+ (hasDesc ? '<th>Description</th>' : '')
+		+ '</tr></thead><tbody>';
+
+	if (shownLines.length === 0) {
+		h += '<tr><td colspan="' + (hasDesc ? 5 : 4) + '" style="text-align:center;color:#6c757d;">' + (filter ? 'No columns match filter' : 'No columns') + '</td></tr>';
+	} else {
+		shownLines.forEach(function(line) {
+			var meta = lineMeta.get(line);
+			var desc = meta.desc;
+			h += '<tr>'
+				+ '<td style="font-weight:600;"' + (desc ? ' title="' + escHtml(desc) + '"' : '') + '>' + escHtml(line[0]) + '</td>'
+				+ valueCell(line[1], meta.isNumeric, meta.isPct ? 'color:var(--cm-pct-fg,#cc0000);' : '')
+				+ counterCell(line[2], meta.isDiff)
+				+ counterCell(line[3], meta.isDiff)
+				+ (hasDesc ? '<td style="color:#6c757d;white-space:normal;min-width:260px;max-width:640px;">' + escHtml(desc.length > 220 ? desc.substring(0, 220) + '…' : desc) + '</td>' : '')
+				+ '</tr>';
+		});
+	}
+	h += '</tbody></table>';
+
+	// The scroll position, as for the normal table (see the end of cmDetailRenderFiltered): where the user scrolled to is
+	// kept per CM in localStorage by the scroll listener of #cm-detail-table-wrap. It has to be put back after EVERY render:
+	// each refresh first empties the table ("loading"), and that makes the browser snap the pane to the top.
+	var $scrollPane = $('#cm-detail-table-wrap');
+	var savedTop    = 0, savedLeft = 0;
+	try {
+		var saved = JSON.parse(localStorage.getItem(_scrPfx + 'cmDetail-scroll-' + (r.cmName || 'default')) || 'null');
+		if (saved) { savedTop = saved.top || 0; savedLeft = saved.left || 0; }
+	} catch(e) {}
+
+	// Destroy existing tooltip instances before replacing the DOM (prevents orphaned tooltip divs)
+	_cmDisposeTableTooltips();
+	_cmDetailClickRows = null;   // a click on a line does nothing here: the line already is the "detail"
+	$('#cm-detail-table').html(h);
+
+	// Sticky column headers sit just below the sticky info bar
+	var tblEl = document.getElementById('cm-detail-table');
+	if (tblEl) tblEl.style.setProperty('--cm-sticky-h', ($('#cm-detail-sticky-top').outerHeight() || 0) + 'px');
+
+	// Put the scroll position back. _cmRestoringScroll tells the scroll listener that the 'scroll' events this causes
+	// are ours and not the user's (a position that the browser has to clamp must not be saved as the new one).
+	_cmRestoringScroll = true;
+	$scrollPane.scrollTop(savedTop).scrollLeft(savedLeft);
+	setTimeout(function() { $scrollPane.scrollTop(savedTop).scrollLeft(savedLeft); }, 1);   // again, in case the browser resets it after the DOM update
+	setTimeout(function() { _cmRestoringScroll = false; }, 60);
+}
+
 // Helper: build a CM tab icon <img> element.
 // The server returns a default icon for missing files (no 404), so no
 // client-side fallback logic is needed. Browser caches for 24 hours.
@@ -814,6 +1015,16 @@ function cmDetailLoadData(srvName, cmName, timestamp, type)
 				$('#cm-detail-type-' + type).prop('checked', true);
 				// Update the CM tab tooltip with the confirmed description + legend from data response
 				_cmSetTabTooltip(cmName, r.description, r.highlighterDescriptors);
+
+				// UNPIVOT: a CM that holds ONE row can be shown one line per column, with Abs, Delta and Rate next to each other
+				// (that needs the two other counter types as well, so they are fetched first)
+				var isUnpivotCandidate = _cmUnpivotIsCandidate(r);
+				$('#cm-detail-unpivot-bar').css('display', isUnpivotCandidate ? 'flex' : 'none');
+				if (isUnpivotCandidate && _cmUnpivotIsOn()) {
+					_cmUnpivotLoad(srvName, cmName, timestamp, type, r, mySeq);
+					return;
+				}
+
 				_cmDbg('cmDetailLoadData: calling cmDetailRenderTable', 'cm=' + cmName, 'r.cmName=' + r.cmName, 'ts=' + timestamp, 'rowCount=' + r.rowCount);
 				cmDetailRenderTable(r);
 			} catch(ex) { cmDetailShowMsg('Parse error: ' + ex); }
@@ -998,6 +1209,9 @@ function cmDetailRenderFiltered(r, filter)
 	_cmRenderedRun = (r.isLatestSample && r.lastSampleMs > 0)
 		? { key: _cmSrvName + '|' + r.cmName + '|' + r.type, lastRunMs: r.lastSampleMs }
 		: null;
+
+	// UNPIVOT: the ONE row of this CM is shown one line per column (see _cmUnpivotLoad)
+	if (r._unpivot) { _cmUnpivotRender(r, filter); return; }
 
 	var rows = r.rows || [];
 	// Separate aggregate (footer) rows — they go to <tfoot> and bypass filter/sort
@@ -2702,6 +2916,11 @@ function _cmChartExtractData(desc, colIdx, rows) {
 	var groupByIdx = desc.groupByColumn ? colIdx[desc.groupByColumn] : undefined;
 	var barLabelIdx = desc.barLabelColumn ? colIdx[desc.barLabelColumn] : undefined;
 
+	// filterColumn/filterValue: only the rows of one kind (a CM with a 'ROW_TYPE' column). A column that is not there filters nothing.
+	var filterIdx = desc.filterColumn ? colIdx[desc.filterColumn] : undefined;
+	// labelPrefixColumns: "PDB1.HR.EMPLOYEES" instead of "EMPLOYEES" (the columns that are not there are left out)
+	var prefixIdxs = (desc.labelPrefixColumns || []).map(function(c) { return colIdx[c]; }).filter(function(i) { return i !== undefined; });
+
 	// Aggregate rows into: { label -> [agg_per_value_column] }
 	// groupAggFunc: "sum" (default), "avg", "max", "first"
 	var aggFunc    = desc.groupAggFunc || 'sum';
@@ -2717,6 +2936,19 @@ function _cmChartExtractData(desc, colIdx, rows) {
 
 		// skipValue filter
 		if (desc.skipValue && String(row[lIdx] || '') === desc.skipValue) return;
+
+		// filterColumn/filterValue
+		if (filterIdx !== undefined && String(row[filterIdx]) !== String(desc.filterValue)) return;
+
+		// labelPrefixColumns (not for a group)
+		if (gIdx === undefined) {
+			var prefix = '';
+			prefixIdxs.forEach(function(pi) {
+				var p = row[pi];
+				if (p !== null && p !== undefined && String(p) !== '') prefix += String(p) + '.';
+			});
+			label = prefix + label;
+		}
 
 		var vals = vIdxs.map(function(vi) {
 			var v = row[vi];

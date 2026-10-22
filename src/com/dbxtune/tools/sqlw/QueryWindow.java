@@ -3507,6 +3507,18 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 			if (StringUtil.hasValue(_connectedToServerName))
 				srvStr = _connectedToServerName;
 
+			// ORACLE: srvname (hostname)
+			if (DbUtils.isProductName(_connectedToProductName,  DbUtils.DB_PROD_NAME_ORACLE))
+			{
+				String dbmsHostname = DbUtils.getOracleHostname(_conn);
+				int    dbmsPortnum  = DbUtils.getOraclePort    (_conn);
+				
+				if (dbmsPortnum != -1)
+					dbmsHostname += ":" + dbmsPortnum;
+
+				srvStr += " (" + dbmsHostname + ")";
+			}
+			
 			if (StringUtil.hasValue(_connectedInitialCatalog))
 			{
 				// For DBMS Vendors that you can't "move" around from database to database (use dbname), lets print the initial connected catalog 

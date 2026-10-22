@@ -293,6 +293,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
         <li>Changed sqlserver-job-scheduler-timeline to use another component for visualization. (much better now and it can be used with no internet access)</li>
         <li>graph.html -- Shows what the collectors are refreshing when a sample takes long time (navbar chip, and a "Samples per server" dialog when clicking/hovering the count-clock)</li>
         <li>Admin Page: Log Levels (Log4j) -- View/Change the log level of any class or package at runtime, in DbxCentral and in the Collectors (in-memory or saved). DEBUG/TRACE messages are written to the normal log file</li>
+        <li>Counter Details -- "Unpivot" a Counter that holds one row (one line per column, with Absolute, Delta and Rate)</li>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -391,7 +392,17 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>OracleTune - Oracle Database</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>Added 'CmActiveStatements' -- NOT READY to release to public yet... A lot more is needed here (for now it's only added if the host name is 'gorans3')</LI>
+		<LI><b>Big rewrite of OracleTune</b> -- 33 new Counter Models, and the 7 existing ones redone (graphs, alarms). Oracle 11.2 and up, also CDB/PDB.<br>
+		    Tablespaces, Locks, Long Operations, Redo Log, Temp/Undo usage, Memory, Metrics, IO, Recovery Area, RMAN Backups, Alert Log, Accounts, Containers, Invalid Objects,
+		    Segment Activity/Size, Index Usage, Jobs, Data Files, Restore Points, Open Cursors, Latches/Mutexes, Memory Advice, Resource Manager, Services, Data Guard, ...</LI>
+		<LI>Monitoring user only needs <code>SELECT_CATALOG_ROLE</code> (or <code>SELECT ANY DICTIONARY</code>), see the grant script in 'DbmsSetup/oracle.txt'. A CM that can't read its views is disabled, with the GRANT needed</LI>
+		<LI>License flag (OFF by default) for anything that needs the Oracle Diagnostics Pack or Tuning Pack. DBMS Config tells which used features need an extra-cost license</LI>
+		<LI>Active Statements -- Works like in the other DbxTune's (SQL text, plan, locks, blocked sessions, wait info)</LI>
+		<LI>DBMS Config -- Redone (parameters, many new tabs, configuration checks)</LI>
+		<LI>Daily Summary Report -- New Oracle sections, sparklines, top statements with execution plans, table/index information</LI>
+		<LI>Job Scheduler -- Report section, "Scheduler Report for Today" and "Scheduler Timeline" (as SQL Server has)</LI>
+		<LI>DbxCentral -- Graphical Execution Plan viewer for Oracle (DBMS_XPLAN text and SQL Monitor reports), with "LLM Optimization Advice"</LI>
+		<LI>DbxCentral -- Local graphs (beside the table) for 17 tabs, and Oracle tablespaces in the Space Forecast Report</LI>
 		<LI>DBMS Configuration -- Has a small bug, which meant it couldn't be saved to the PCS</LI>
 		<LI>Get active Roles using: SELECT * FROM SESSION_ROLES</LI>
 		<LI>When storing values in PCS, Data Type "raw" (JDBC: Types.BINARY or Types.VARBINARY) the precision was at 0. Now using getColumnDisplaySize() or hard-code to 32 if DisplaySize was not available</LI>

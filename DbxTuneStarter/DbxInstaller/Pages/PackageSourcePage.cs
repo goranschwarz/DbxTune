@@ -37,6 +37,15 @@ namespace DbxInstaller.Pages
                 PageHelpers.Row("Local ZIP path", _txtLocal, _btnBrowse),
                 _lblStatus);
 
+            // Pre-fill from the last run (the URL always starts at the default). Both radio buttons
+            // are set explicitly: GroupName exclusivity isn't reliable before the page is shown.
+            if (InstallerSettings.ZipLocalPath is string lastZip) _txtLocal.Text = lastZip;
+            if (InstallerSettings.DownloadZip == false)
+            {
+                _rbDownload.IsChecked = false;
+                _rbLocal.IsChecked    = true;
+            }
+
             UpdateVisibility();
         }
 
@@ -54,6 +63,7 @@ namespace DbxInstaller.Pages
             ctx.Config.DownloadZip  = _rbDownload.IsChecked == true;
             ctx.Config.ZipUrl       = _txtUrl.Text.Trim();
             ctx.Config.ZipLocalPath = _txtLocal.Text.Trim();
+            InstallerSettings.RememberPackageSource(ctx.Config.DownloadZip, ctx.Config.ZipLocalPath);
         }
 
         public override Task<WizardValidationResult> ValidateBeforeNextAsync(WizardContext ctx)

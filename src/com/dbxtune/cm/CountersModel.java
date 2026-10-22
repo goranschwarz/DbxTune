@@ -98,6 +98,7 @@ import com.dbxtune.graph.TrendGraphDataPoint.Category;
 import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.ResultSetTableModel;
+import com.dbxtune.gui.TabularCntrChartPanel;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.gui.TrendGraph;
 import com.dbxtune.gui.swing.ColumnHeaderPropsEntry;
@@ -1136,11 +1137,15 @@ implements Cloneable, ITableTooltip
 
 	/**
 	 * Create a GUI panel, this one should be overridden by subclasses if you want to change behavior.
+	 * <p>
+	 * A CM that has "local graphs" ({@link #createChartDescriptors()}) and no panel of its own gets the panel that draws them:
+	 * the same graphs as the web UI makes of the descriptors.
 	 */
 //	protected TabularCntrPanel createGui()
 	protected JPanel createGui()
 	{
-		TabularCntrPanel tcp = new TabularCntrPanel(this);
+		List<CmChartDescriptor> chartDescriptors = getChartDescriptors();
+		TabularCntrPanel tcp = (chartDescriptors != null && ! chartDescriptors.isEmpty()) ? new TabularCntrChartPanel(this) : new TabularCntrPanel(this);
 
 //		if (getIconFile() != null)
 //		{

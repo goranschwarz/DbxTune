@@ -1150,6 +1150,7 @@ at pc:
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxShowplanGraph.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxShowplanAse.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxShowplanSqlServer.js"></script>
+	<script type="text/javascript" src="/scripts/dbxtune/js/dbxShowplanOracle.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxSqlTableNames.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxShowplan.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphPage.js"></script>
@@ -1291,6 +1292,7 @@ at pc:
 								<a class="dropdown-item" href="/showplan/sqlserver">SQL Server</a>
 								<a class="dropdown-item" href="/showplan/ase">SAP ASE (Sybase)</a>
 								<a class="dropdown-item" href="/showplan/postgres">Postgres</a>
+								<a class="dropdown-item" href="/showplan/oracle">Oracle</a>
 							</div>
 						</div>
 						<div class="dropdown-divider"></div>
@@ -1513,6 +1515,15 @@ at pc:
 					onchange="cmDetailApplyFilter(document.getElementById('cm-detail-filter-input').value);">
 				Hide&nbsp;unchanged
 			</label>
+			<!-- Only shown for a Counter that holds ONE row (it has no Primary Key). See "UNPIVOT" in dbxGraphCounterDetails.js -->
+			<span id="cm-detail-unpivot-bar" style="display:none;align-items:center;gap:8px;">
+				<span style="color:#ccc;">|</span>
+				<label style="margin:0;font-weight:normal;cursor:pointer;white-space:nowrap;flex-shrink:0;"
+					title="This Counter holds ONE row. Checked: show it 'on its side', one line per column, with the Absolute, Delta and Rate value next to each other.">
+					<input type="checkbox" id="cm-detail-unpivot" checked onchange="cmDetailUnpivotChanged();">
+					Unpivot&nbsp;(one&nbsp;line&nbsp;per&nbsp;column)
+				</label>
+			</span>
 			<span id="cm-detail-append-bar" style="display:none;align-items:center;gap:8px;">
 				<span style="color:#ccc;">|</span>
 				<label style="margin:0;font-weight:normal;cursor:pointer;white-space:nowrap;flex-shrink:0;"

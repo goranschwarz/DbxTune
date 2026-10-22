@@ -637,7 +637,7 @@ extends DbmsConfigAbstract
 				// Store all column names/labels in a List, for DBMS portability use "lower-case" name
 				List<String> columns = new ArrayList<>();
 				int colCount = rsmd.getColumnCount();
-				for (int c=0; c<colCount; c++)
+				for (int c=1; c<=colCount; c++) // JDBC columns starts at 1
 					columns.add(rsmd.getColumnLabel(c).toLowerCase());
 
 				while ( rs.next() )

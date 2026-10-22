@@ -31,15 +31,47 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cm.CountersModel;
+import com.dbxtune.cm.oracle.CmArchiveDest;
+import com.dbxtune.cm.oracle.CmBufferPool;
+import com.dbxtune.cm.oracle.CmDataFiles;
+import com.dbxtune.cm.oracle.CmDataGuard;
+import com.dbxtune.cm.oracle.CmIndexUsage;
+import com.dbxtune.cm.oracle.CmInvalidObjects;
+import com.dbxtune.cm.oracle.CmLatch;
+import com.dbxtune.cm.oracle.CmLibraryCache;
+import com.dbxtune.cm.oracle.CmMemoryAdvice;
+import com.dbxtune.cm.oracle.CmResourceManager;
+import com.dbxtune.cm.oracle.CmServiceStats;
+import com.dbxtune.cm.oracle.CmPdbs;
+import com.dbxtune.cm.oracle.CmUserAccounts;
+import com.dbxtune.cm.oracle.CmPgaStat;
+import com.dbxtune.cm.oracle.CmSgaStat;
+import com.dbxtune.cm.oracle.CmSysMetric;
+import com.dbxtune.cm.oracle.CmErrorLog;
 import com.dbxtune.cm.oracle.CmExecutionTime;
 import com.dbxtune.cm.oracle.CmIoStatFile;
 import com.dbxtune.cm.oracle.CmIoStatFunction;
 import com.dbxtune.cm.oracle.CmActiveStatements;
+import com.dbxtune.cm.oracle.CmLocks;
+import com.dbxtune.cm.oracle.CmLongOps;
+import com.dbxtune.cm.oracle.CmRecoveryArea;
+import com.dbxtune.cm.oracle.CmRedoLog;
+import com.dbxtune.cm.oracle.CmResourceLimit;
+import com.dbxtune.cm.oracle.CmRmanBackup;
+import com.dbxtune.cm.oracle.CmOpenCursors;
+import com.dbxtune.cm.oracle.CmRestorePoints;
+import com.dbxtune.cm.oracle.CmSchedulerJobs;
+import com.dbxtune.cm.oracle.CmSegmentSize;
+import com.dbxtune.cm.oracle.CmSegmentStats;
 import com.dbxtune.cm.oracle.CmSessions;
 import com.dbxtune.cm.oracle.CmSqlStats;
 import com.dbxtune.cm.oracle.CmSummary;
 import com.dbxtune.cm.oracle.CmSysStat;
 import com.dbxtune.cm.oracle.CmSystemEvent;
+import com.dbxtune.cm.oracle.CmTablespaces;
+import com.dbxtune.cm.oracle.CmTempSegUsage;
+import com.dbxtune.cm.oracle.CmUndoStat;
+import com.dbxtune.cm.oracle.OracleCmUtils;
 import com.dbxtune.cm.os.CmOsDiskSpace;
 import com.dbxtune.cm.os.CmOsIostat;
 import com.dbxtune.cm.os.CmOsMeminfo;
@@ -49,11 +81,12 @@ import com.dbxtune.cm.os.CmOsPs;
 import com.dbxtune.cm.os.CmOsUptime;
 import com.dbxtune.cm.os.CmOsVmstat;
 import com.dbxtune.gui.MainFrame;
+import com.dbxtune.pcs.OracleJobSchedulerExtractor;
 import com.dbxtune.pcs.PersistContainer;
 import com.dbxtune.pcs.PersistContainer.HeaderInfo;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.AseConnectionUtils;
-import com.dbxtune.utils.StringUtil;
+import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.Ver;
 
 
@@ -103,20 +136,45 @@ extends CounterControllerAbstract
 		CmSystemEvent       .create(counterController, guiController);
 		CmSysStat           .create(counterController, guiController);
 		CmExecutionTime     .create(counterController, guiController);
-		
+		CmSysMetric         .create(counterController, guiController);
+		CmResourceLimit     .create(counterController, guiController);
+		CmRmanBackup        .create(counterController, guiController);
+		CmErrorLog          .create(counterController, guiController);
+		CmUserAccounts      .create(counterController, guiController);
+		CmPdbs              .create(counterController, guiController);
+		CmSchedulerJobs     .create(counterController, guiController);
+		CmOpenCursors       .create(counterController, guiController);
+		CmServiceStats      .create(counterController, guiController);
+		CmResourceManager   .create(counterController, guiController);
+		CmLatch             .create(counterController, guiController);
+		CmDataGuard         .create(counterController, guiController);
+
 		// Object/Access
-		boolean initUnSupportedCms = "gorans3".equals(StringUtil.getHostname());
-		if (hasGui && initUnSupportedCms)
-		{
-			(new Exception("ONLY FOR HOSTNAME 'gorans2'... CmActiveStatements is NOT YET READY")).printStackTrace();
-			
-			CmActiveStatements  .create(counterController, guiController); // NOTE: THIS IS NO WAY NEAR PRODUCTIONS Friendly -- it needs MORE STUFF
-		}
+		CmActiveStatements  .create(counterController, guiController);
 		CmSqlStats          .create(counterController, guiController);
+		CmLocks             .create(counterController, guiController);
+		CmLongOps           .create(counterController, guiController);
+		CmInvalidObjects    .create(counterController, guiController);
+		CmSegmentStats      .create(counterController, guiController);
+		CmIndexUsage        .create(counterController, guiController);
 
 		// Cache
+		CmSgaStat           .create(counterController, guiController);
+		CmPgaStat           .create(counterController, guiController);
+		CmBufferPool        .create(counterController, guiController);
+		CmLibraryCache      .create(counterController, guiController);
+		CmMemoryAdvice      .create(counterController, guiController);
 
 		// Disk
+		CmTablespaces       .create(counterController, guiController);
+		CmSegmentSize       .create(counterController, guiController);
+		CmDataFiles         .create(counterController, guiController);
+		CmRestorePoints     .create(counterController, guiController);
+		CmRecoveryArea      .create(counterController, guiController);
+		CmArchiveDest       .create(counterController, guiController);
+		CmRedoLog           .create(counterController, guiController);
+		CmUndoStat          .create(counterController, guiController);
+		CmTempSegUsage      .create(counterController, guiController);
 		CmIoStatFunction    .create(counterController, guiController);
 		CmIoStatFile        .create(counterController, guiController);
 
@@ -199,7 +257,42 @@ extends CounterControllerAbstract
 		// Get active SQL Server Roles/Permissions
 		List<String> activeServerPermissionList = conn.getActiveServerRolesOrPermissions();
 
-		
+		// What can this login read in the Data Dictionary and the V$ views
+		//  - SELECT_CATALOG_ROLE   is a ROLE      (visible in SESSION_ROLES)
+		//  - SELECT ANY DICTIONARY is a PRIVILEGE (visible in SESSION_PRIVS)
+		// Any of them is enough, the CM's only reads documented V$, DBA_ and CDB_ views
+		boolean hasSelectCatalogRole   = activeServerPermissionList != null && activeServerPermissionList.contains("SELECT_CATALOG_ROLE");
+		boolean hasSelectAnyDictionary = false;
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery("select count(*) from SESSION_PRIVS where PRIVILEGE = 'SELECT ANY DICTIONARY'"))
+		{
+			while (rs.next())
+				hasSelectAnyDictionary = rs.getInt(1) > 0;
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems checking SESSION_PRIVS for 'SELECT ANY DICTIONARY'. Caught: " + ex);
+		}
+
+		if (hasSelectCatalogRole || hasSelectAnyDictionary)
+			_logger.info("The Oracle login has: SELECT_CATALOG_ROLE=" + hasSelectCatalogRole + ", SELECT ANY DICTIONARY=" + hasSelectAnyDictionary + ".");
+		else
+			_logger.warn("The Oracle login has neither 'SELECT_CATALOG_ROLE' nor 'SELECT ANY DICTIONARY'. CM's that can't read their views will be DISABLED. Fix: GRANT SELECT_CATALOG_ROLE TO <user>;");
+
+		// ORACLE LICENSE: say (in the log, at every connect) if we may use what needs an extra license from Oracle. See OracleCmUtils.getManagementPackFor()
+		String licensedPacks = Configuration.getCombinedConfiguration().getProperty(OracleCmUtils.PROPKEY_licensedManagementPacks, OracleCmUtils.DEFAULT_licensedManagementPacks).trim().toUpperCase();
+		if ( ! licensedPacks.equals("NONE") && ! licensedPacks.equals("DIAGNOSTIC") && ! licensedPacks.equals("DIAGNOSTIC+TUNING") )
+			_logger.warn("The property '" + OracleCmUtils.PROPKEY_licensedManagementPacks + "' is '" + licensedPacks + "', which is not one of: NONE, DIAGNOSTIC, DIAGNOSTIC+TUNING. It is read as NONE.");
+
+		for (String pack : new String[] { OracleCmUtils.PACK_DIAGNOSTIC, OracleCmUtils.PACK_TUNING })
+		{
+			String reason = OracleCmUtils.getManagementPackNotAllowedReason(conn, pack);
+			if (reason == null)
+				_logger.info("Oracle " + pack + " (needs an extra license from Oracle): ALLOWED, by the property '" + OracleCmUtils.PROPKEY_licensedManagementPacks + "=" + licensedPacks + "' and the database parameter 'control_management_pack_access'.");
+			else
+				_logger.info("Oracle " + pack + " (needs an extra license from Oracle): NOT used. " + reason);
+		}
+
+
 		_logger.info("Initializing all CM objects, using Oracle version number " + srvVersion + ". (" + Ver.versionNumToStr(srvVersion) + ")");
 
 		// initialize all the CM's
@@ -364,4 +457,61 @@ extends CounterControllerAbstract
 			throw new Exception("The error message suggest that the wrong USER '" + dbmsUsername + "' or PASSWORD '" + dbmsPassword + "' to DBMS server '" + dbmsServer + "' was entered. This is a non-recovarable error. DBMS Error Message='" + ex.getMessage() + "'.", ex);
 		}
 	}
+
+
+
+	//==================================================================
+	// BEGIN: Extract "things" on "Recording Database Rollover"
+	//==================================================================
+	public static final String  PROPKEY_onPcsDatabaseRollover_captureJobScheduler = "OracleTune.onPcsDatabaseRollover.captureJobScheduler";
+	public static final boolean DEFAULT_onPcsDatabaseRollover_captureJobScheduler = true;
+
+	/**
+	 * Before the recording database of the day is closed (and the Daily Summary Report is made of it):
+	 * copy the log of the Scheduler into it, which is what the report section 'OracleJobScheduler' is made of.
+	 */
+	@Override
+	public void doLastRecordingActionBeforeDatabaseRollover(DbxConnection pcsConn)
+	{
+		String srvName = getMonConnection().getDbmsServerNameNoThrow();
+
+		Configuration conf = Configuration.getCombinedConfiguration();
+		if ( ! conf.getBooleanProperty(PROPKEY_onPcsDatabaseRollover_captureJobScheduler, DEFAULT_onPcsDatabaseRollover_captureJobScheduler) )
+		{
+			_logger.info("On PCS Database Rollover: Skipping 'Capture Job Scheduler', due to Configuration '" + PROPKEY_onPcsDatabaseRollover_captureJobScheduler + "' is set to FALSE.");
+			return;
+		}
+
+		// A connection of its own: the collector goes on sampling with its connection meanwhile
+		DbxConnection conn = null;
+		try
+		{
+			_logger.info("On PCS Database Rollover: Creating a new connection to server '" + srvName + "' for extracting 'Job Scheduler' information.");
+			conn = DbxConnection.connect(null, getMonConnection().getConnPropOrDefault());
+		}
+		catch (Exception ex)
+		{
+			_logger.error("On PCS Database Rollover: Failed to establish a new connection to server '" + srvName + "'. SKIPPING 'Job Scheduler' extraction.", ex);
+			return;
+		}
+
+		try
+		{
+			int daysToCopy = conf.getIntProperty(OracleJobSchedulerExtractor.PROPKEY_daysToCopy, OracleJobSchedulerExtractor.DEFAULT_daysToCopy);
+
+			OracleJobSchedulerExtractor jse = new OracleJobSchedulerExtractor(daysToCopy, conn, pcsConn);
+			jse.transfer();
+		}
+		catch (Exception ex)
+		{
+			_logger.error("On PCS Database Rollover: Problems extracting 'Job Scheduler' information from server '" + srvName + "'.", ex);
+		}
+		finally
+		{
+			conn.closeNoThrow();
+		}
+	}
+	//==================================================================
+	// END: Extract "things" on "Recording Database Rollover"
+	//==================================================================
 }
