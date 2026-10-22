@@ -94,6 +94,24 @@ public class MySqlCmUtils
 		return true;
 	}
 
+	/**
+	 * For a CM whose view exists in MariaDB, but with other columns (so the readable check passes, and the SQL fails at every sample).
+	 * <pre>
+	 * if (MySqlCmUtils.disableOnMariaDb(this, conn, "its 'events_statements_summary_by_digest' does not have the MySQL 8.0 columns"))
+	 *     return false;
+	 * </pre>
+	 * @return true if this is MariaDB, and the CM was disabled
+	 */
+	public static boolean disableOnMariaDb(CountersModel cm, DbxConnection conn, String why)
+	{
+		DbmsVersionInfoMySql versionInfo = (conn.getDbmsVersionInfo() instanceof DbmsVersionInfoMySql) ? (DbmsVersionInfoMySql) conn.getDbmsVersionInfo() : null;
+		if (versionInfo == null || ! versionInfo.isMariaDb())
+			return false;
+
+		disable(cm, "This is MariaDB (" + versionInfo.getVersionString() + "), " + why + ". MySqlTune is made for MySQL 8.0 and above.", "none, this Counter Model is not available for MariaDB.");
+		return true;
+	}
+
 	/** Can we read (one row of) the view? Any error is a NO */
 	private static boolean canReadOneRow(DbxConnection conn, String viewName)
 	{

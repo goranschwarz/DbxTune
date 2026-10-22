@@ -35,6 +35,7 @@ import com.dbxtune.cm.mysql.CmGlobalStatus;
 import com.dbxtune.cm.mysql.CmInnoDbMetrics;
 import com.dbxtune.cm.mysql.CmInnodbBpStats;
 import com.dbxtune.cm.mysql.CmReplication;
+import com.dbxtune.cm.mysql.CmStatements;
 import com.dbxtune.cm.mysql.CmSummary;
 import com.dbxtune.cm.mysql.CmSysDiskIo;
 import com.dbxtune.cm.mysql.CmSysIndexStats;
@@ -109,6 +110,7 @@ extends CounterControllerAbstract
 
 		// Object Access
 		CmActiveStatements  .create(counterController, guiController);
+		CmStatements        .create(counterController, guiController);
 		CmSysTableStats     .create(counterController, guiController);
 		CmSysIndexStats     .create(counterController, guiController);
 		
