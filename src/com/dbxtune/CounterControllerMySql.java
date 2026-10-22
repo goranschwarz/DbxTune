@@ -35,6 +35,7 @@ import com.dbxtune.cm.mysql.CmErrorLog;
 import com.dbxtune.cm.mysql.CmGlobalStatus;
 import com.dbxtune.cm.mysql.CmInnoDbMetrics;
 import com.dbxtune.cm.mysql.CmInnodbBpStats;
+import com.dbxtune.cm.mysql.CmMemory;
 import com.dbxtune.cm.mysql.CmReplication;
 import com.dbxtune.cm.mysql.CmStatements;
 import com.dbxtune.cm.mysql.CmSummary;
@@ -42,6 +43,7 @@ import com.dbxtune.cm.mysql.CmSysDiskIo;
 import com.dbxtune.cm.mysql.CmSysIndexStats;
 import com.dbxtune.cm.mysql.CmSysSession;
 import com.dbxtune.cm.mysql.CmSysTableStats;
+import com.dbxtune.cm.mysql.CmTableSize;
 import com.dbxtune.cm.mysql.CmUserStatus;
 import com.dbxtune.cm.mysql.CmWaits;
 import com.dbxtune.cm.os.CmOsDiskSpace;
@@ -117,10 +119,11 @@ extends CounterControllerAbstract
 		CmStatements        .create(counterController, guiController);
 		CmSysTableStats     .create(counterController, guiController);
 		CmSysIndexStats     .create(counterController, guiController);
-		
+		CmTableSize         .create(counterController, guiController);
 
 		// Cache
 		CmInnodbBpStats     .create(counterController, guiController);
+		CmMemory            .create(counterController, guiController);
 
 		// Disk
 		CmSysDiskIo         .create(counterController, guiController);

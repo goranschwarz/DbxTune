@@ -242,6 +242,8 @@ extends CountersModel
 		// The view is sorted by total_latency (most active first). On a server with many tables, keep only the top rows (2000 tables: 55 ms, but 2000 rows per sample)
 		int topRows = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_sample_topRows, DEFAULT_sample_topRows);
 
+		// The io_* columns are DECIMAL in the view (a SUM), and the recording stores the Rate of a DECIMAL as NUMERIC(10,1): 1 ms of IO per second is 1 000 000 000 picoseconds, which does not fit
+		// As BIGINT the Rate is stored as NUMERIC(19,1)
 		String sql = ""
 			+ "select /* ${cmCollectorName} */ \n"
 			+ "     table_schema, table_name \n"
@@ -250,9 +252,9 @@ extends CountersModel
 			+ "    ,rows_inserted, insert_latency \n"
 			+ "    ,rows_updated,  update_latency \n"
 			+ "    ,rows_deleted,  delete_latency \n"
-			+ "    ,io_read_requests,  io_read,  io_read_latency \n"
-			+ "    ,io_write_requests, io_write, io_write_latency \n"
-			+ "    ,io_misc_requests,  io_misc_latency \n"
+			+ "    ,CAST(io_read_requests  as SIGNED) as io_read_requests,  CAST(io_read  as SIGNED) as io_read,  CAST(io_read_latency  as SIGNED) as io_read_latency \n"
+			+ "    ,CAST(io_write_requests as SIGNED) as io_write_requests, CAST(io_write as SIGNED) as io_write, CAST(io_write_latency as SIGNED) as io_write_latency \n"
+			+ "    ,CAST(io_misc_requests  as SIGNED) as io_misc_requests,  CAST(io_misc_latency as SIGNED) as io_misc_latency \n"
 			+ "from sys.`x$schema_table_statistics` \n"
 			+ "order by total_latency desc \n"
 			+ (topRows > 0 ? "limit " + topRows + " \n" : "")

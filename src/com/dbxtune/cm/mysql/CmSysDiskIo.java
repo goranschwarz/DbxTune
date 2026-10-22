@@ -196,6 +196,13 @@ extends CountersModel
 		return pkCols;
 	}
 
+	/** If we can't read the view: disable the CM, and tell what to do about it */
+	@Override
+	public boolean checkDependsOnOther(DbxConnection conn)
+	{
+		return MySqlCmUtils.checkViewsAreReadable(this, conn, "sys.x$io_global_by_file_by_latency");
+	}
+
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
