@@ -843,7 +843,7 @@ extends CmSummaryAbstract
 		setLocalToolTipTextOnTableColumnHeader("MAX_CONNECTIONS",            "<html>@@max_connections: the most connections that are allowed.</html>");
 		setLocalToolTipTextOnTableColumnHeader("MAX_USED_CONNECTIONS",       "<html>The most connections at the same time since the server started. Status 'Max_used_connections'</html>");
 		setLocalToolTipTextOnTableColumnHeader("THREADS_CONNECTED",          "<html>Connections right now. Status 'Threads_connected'</html>");
-		setLocalToolTipTextOnTableColumnHeader("THREADS_RUNNING",            "<html>Connections that are working (not sleeping) right now. Status 'Threads_running'</html>");
+		setLocalToolTipTextOnTableColumnHeader("THREADS_RUNNING",            "<html>Connections that are working (not sleeping) right now. Status 'Threads_running'<br>It also counts the server's own 'Daemon' threads (the event scheduler...), so it can be higher than THREADS_CONNECTED.</html>");
 		setLocalToolTipTextOnTableColumnHeader("QUESTIONS",                  "<html>Statements sent by the clients (not the ones in stored procedures). Status 'Questions'</html>");
 		setLocalToolTipTextOnTableColumnHeader("COM_SELECT",                 "<html>SELECT statements. performance_schema.events_statements_summary_global_by_event_name 'statement/sql/select' (in MySQL 8 the status variable Com_select is not in performance_schema.global_status)</html>");
 		setLocalToolTipTextOnTableColumnHeader("COM_INSERT",                 "<html>INSERT statements. 'statement/sql/insert'</html>");

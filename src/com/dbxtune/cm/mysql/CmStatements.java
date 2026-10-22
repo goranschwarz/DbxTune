@@ -381,7 +381,7 @@ extends CountersModel
 			mtd.addColumn(CM_NAME, "MaxTimeMs",           "<html>The longest execution, in milliseconds (since the server started).</html>");
 			mtd.addColumn(CM_NAME, "Quantile95Ms",        "<html>95% of the executions took less than this, in milliseconds (since the server started).</html>");
 			mtd.addColumn(CM_NAME, "Quantile99Ms",        "<html>99% of the executions took less than this, in milliseconds (since the server started).</html>");
-			mtd.addColumn(CM_NAME, "LockTimeMs",          "<html>Time waiting for table locks, in milliseconds.</html>");
+			mtd.addColumn(CM_NAME, "LockTimeMs",          "<html>Time waiting for locks, in milliseconds: table locks, and from MySQL 8.0.28 also InnoDB row locks (it is a part of TotalTimeMs).</html>");
 			mtd.addColumn(CM_NAME, "CpuTimeMs",           "<html>CPU time, in milliseconds. MySQL 8.0.28 and above.<br>NULL when the performance_schema consumer <code>events_statements_cpu</code> is OFF (the default). Turn it on: <code>UPDATE performance_schema.setup_consumers SET ENABLED = 'YES' WHERE NAME = 'events_statements_cpu'</code></html>");
 			mtd.addColumn(CM_NAME, "Errors",              "<html>Executions that ended with an error.</html>");
 			mtd.addColumn(CM_NAME, "Warnings",            "<html>Warnings of the executions.</html>");
