@@ -92,6 +92,7 @@ namespace DbxInstaller.Pages
             _log.Clear();
             ctx.Config.InitCommandHasWarnings = false;
             ctx.Config.InitCommandWarningDetail = "";
+            ctx.Config.PolicyWarningDetail = "";
 
             _cts = new CancellationTokenSource();
             ctx.Config.CancelToken = _cts.Token;
@@ -152,6 +153,10 @@ namespace DbxInstaller.Pages
                           "in this log). Click Next to continue anyway, or Retry to run the install again.", "RedBrush");
             }
 
+            // Not a reason for Retry: only the AD administrator can change the GPO.
+            if (allOk && !cancelled && ctx.Config.PolicyWarningDetail.Length > 0)
+                AppendPolicyWarning(ctx.Config.PolicyWarningDetail, AppendLog);
+
             _logFile?.Flush();
             _logFile?.Close();
             _logFile = null;
@@ -190,6 +195,19 @@ namespace DbxInstaller.Pages
             _log.AppendLine(text, brushKey);
             string normalized = text.Replace("\r\n", "\n").Replace("\r", "\n");
             foreach (var line in normalized.Split('\n')) _logFile?.WriteLine(line);
+        }
+
+        // The "Check logon rights" warning (InstallConfig.PolicyWarningDetail) as a big block after
+        // "Installation complete" / "Upgrade complete" — also used by UpgradeProgressPage.
+        internal static void AppendPolicyWarning(string detail, Action<string, string> appendLog)
+        {
+            string bar = new string('=', 70);
+            appendLog("\n" + bar, "OrangeBrush");
+            appendLog("  WARNING: Group Policy will undo part of the service account setup", "OrangeBrush");
+            appendLog(bar, "OrangeBrush");
+            foreach (var line in detail.Replace("\r\n", "\n").Split('\n'))
+                appendLog("  " + line, "OrangeBrush");
+            appendLog(bar, "OrangeBrush");
         }
 
         public override bool CanGoBack(WizardContext ctx) => !IsRunning;

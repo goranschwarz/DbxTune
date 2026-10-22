@@ -56,6 +56,33 @@ namespace DbxInstaller
             log($"  {svcName} stopped — OK.");
         }
 
+        // Removes the user rights the installer granted (LsaPrivileges.InstallerGrantedRights) from
+        // the account in the local security policy. Runs for every account type: a domain/gMSA
+        // account stays in AD after the uninstall, and a local account that is deleted next would
+        // otherwise leave its orphaned SID behind in the policy. A right that a domain GPO gives the
+        // account is removed here too, but comes back at the next policy refresh — harmless.
+        public static void RemoveUserRights(string account, InstallLog log)
+        {
+            List<string> current;
+            try { current = LsaPrivileges.GetAccountRights(account); }
+            catch (Exception ex)
+            {
+                log($"  Could not read the rights of '{account}' ({ex.Message}) — nothing removed.");
+                return;
+            }
+
+            foreach (string right in LsaPrivileges.InstallerGrantedRights)
+            {
+                if (!current.Contains(right, StringComparer.OrdinalIgnoreCase))
+                {
+                    log($"  {right}: not granted — nothing to remove.");
+                    continue;
+                }
+                LsaPrivileges.Revoke(account, right);
+                log($"  {right}: removed.");
+            }
+        }
+
         // Deletes the local account and its profile directory. Only called for local
         // accounts (domain/gMSA accounts are left alone — they're managed by AD).
         // Returns false if the profile directory could not be fully removed.

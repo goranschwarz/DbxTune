@@ -10,6 +10,8 @@ using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security;
+using System.Security.Principal;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
@@ -71,6 +73,12 @@ namespace DbxInstaller
         // warning after "Installation complete" so it isn't missed.
         public bool   InitCommandHasWarnings { get; set; }
         public string InitCommandWarningDetail { get; set; } = "";
+
+        // Set by CheckLogonRights ("Check logon rights") when a domain Group Policy sets one of the
+        // rights/local groups the installer set up, without this account — the local setting is
+        // replaced at the next policy refresh. Empty = nothing to warn about. Shown as a big
+        // warning after "Installation complete" / "Upgrade complete".
+        public string PolicyWarningDetail { get; set; } = "";
 
         // Set by the Progress page before running steps. Only the download in LocatePackage
         // actually observes this — it's the one step whose long-running work can be aborted
@@ -168,6 +176,12 @@ namespace DbxInstaller
                 "Writes to Local Security Policy via LsaAddAccountRights.\n" +
                 "Required for:  sc config DbxStarterService obj= \".\\<account>\"",
                 GrantServiceLogon),
+            new("Grant SeInteractiveLogonRight",       StepKind.Action,
+                "Writes to Local Security Policy via LsaAddAccountRights  (\"Allow log on locally\").\n" +
+                "Required because the installer runs 'Initialize DbxTune home' and the DBMS config\n" +
+                "wizard as the service account, and starts DbxStarterClient as that account.\n" +
+                "Skipped for gMSA accounts (they can't log on interactively).",
+                GrantInteractiveLogon),
             new("Add to local groups",                 StepKind.Action,
                 "net localgroup \"Performance Log Users\" <account> /add\n" +
                 "  → Enables typeperf, PDH data-collector sets, performance counter logging\n\n" +
@@ -182,6 +196,16 @@ namespace DbxInstaller
                 "Enables OpenProcess() on any PID including SYSTEM-owned processes.\n" +
                 "Needed when DbxTune reads performance counters directly from database process handles.",
                 GrantDebugPrivilege),
+            new("Check logon rights",                  StepKind.Action,
+                "1. Logs on as the service account (service logon + interactive logon) to prove that the\n" +
+                "   password and the rights granted above work NOW. Stops the install with the exact cause\n" +
+                "   (wrong password, 'Deny log on ...' policy, disabled/locked account, 'Log On To' list, …).\n" +
+                "   Skipped for gMSA accounts (no password).\n\n" +
+                "2. Domain-joined machines: reads the Group Policy result (RSoP, same data as rsop.msc).\n" +
+                "   A user right or local group that a domain GPO sets is REPLACED at every policy refresh,\n" +
+                "   so the local grants above are lost then. If a GPO sets one of them without this account,\n" +
+                "   a WARNING is shown after the install, listing what to ask the AD administrator for.",
+                CheckLogonRights),
 
             new("DbxTune Package",                     StepKind.Header),
             new("Stop service if running",             StepKind.Action,
@@ -710,6 +734,23 @@ namespace DbxInstaller
             return Task.FromResult(true);
         }
 
+        // "Allow log on locally". A domain account normally has it through the local Users group, but
+        // hardened servers (CIS baseline, or a GPO that lists only Administrators) don't — and then
+        // everything the installer runs AS the account fails with Win32 error 1385 (RunAs,
+        // impersonation), and DbxStarterClient can't be started as the account either.
+        private static Task<bool> GrantInteractiveLogon(InstallConfig c, InstallLog log)
+        {
+            if (IsGmsa(c.ServiceAccount))
+            {
+                log("gMSA account — can't log on interactively (AD manages the password), skipping.");
+                return Task.FromResult(true);
+            }
+            log($"Granting SeInteractiveLogonRight (\"Allow log on locally\") to '{c.ServiceAccount}'…");
+            LsaPrivileges.Grant(c.ServiceAccount, LsaPrivileges.SeInteractiveLogonRight);
+            log("Done.");
+            return Task.FromResult(true);
+        }
+
         private static Task<bool> AddPerformanceGroups(InstallConfig c, InstallLog log)
         {
             // "Performance Log Users"    — typeperf, PDH data-collector sets, performance counter logging
@@ -758,6 +799,242 @@ namespace DbxInstaller
             LsaPrivileges.Grant(c.ServiceAccount, LsaPrivileges.SeDebugPrivilege);
             log("  Done.");
             return Task.FromResult(true);
+        }
+
+        // What the installer sets up for the service account, and what breaks when a domain Group
+        // Policy takes it away again — used by "Check logon rights" (CheckLogonRights, BuildPolicyWarning).
+        // NotForGmsa: a gMSA can't log on interactively or with Remote Desktop, so those don't apply to it.
+        private static readonly (string Right, string Name, string Consequence, bool NotForGmsa)[] PolicyAllowRights =
+        {
+            (LsaPrivileges.SeServiceLogonRight,           "Log on as a service",   "DbxStarterService fails to start (error 1069)", false),
+            (LsaPrivileges.SeInteractiveLogonRight,       "Allow log on locally",  "the account can no longer log on to this machine (error 1385), e.g. to run DbxStarterClient as the account", true),
+            ("SeRemoteInteractiveLogonRight",             "Allow log on through Remote Desktop Services", "the account can't log on with Remote Desktop", true),
+            (LsaPrivileges.SeCreateSymbolicLinkPrivilege, "Create symbolic links", "the service account can no longer create symbolic links", false),
+            (LsaPrivileges.SeDebugPrivilege,              "Debug programs",        "DbxTune can no longer open other accounts' processes (direct process sampling)", false),
+        };
+        private static readonly (string Right, string Name, string Consequence, bool NotForGmsa)[] PolicyDenyRights =
+        {
+            ("SeDenyServiceLogonRight",           "Deny log on as a service",                    "DbxStarterService can't start (error 1069)", false),
+            ("SeDenyInteractiveLogonRight",       "Deny log on locally",                         "the account can't log on to this machine (error 1385)", true),
+            ("SeDenyRemoteInteractiveLogonRight", "Deny log on through Remote Desktop Services", "the account can't log on with Remote Desktop", true),
+        };
+        // The local groups AddPerformanceGroups puts the account in — by well-known SID, so the check
+        // doesn't depend on the OS language.
+        private static readonly (string Sid, string Name, string Consequence, bool NotForGmsa)[] PolicyLocalGroups =
+        {
+            ("S-1-5-32-559", "Performance Log Users",     "typeperf / performance counter logging may fail", false),
+            ("S-1-5-32-558", "Performance Monitor Users", "real-time WMI / PerfMon counter queries may fail", false),
+            ("S-1-5-32-555", "Remote Desktop Users",      "the account can't log on with Remote Desktop", true),
+        };
+
+        // "Check logon rights" — runs after all grants. 1) Logs on as the account to prove the password
+        // and the rights work NOW, and stops the install with the exact cause if not. 2) On a domain
+        // member, reads which user rights / local groups a domain GPO sets: a GPO setting REPLACES the
+        // local one at every policy refresh, so the grants above are lost later — that becomes the
+        // warning shown after the install (c.PolicyWarningDetail).
+        private static Task<bool> CheckLogonRights(InstallConfig c, InstallLog log)
+        {
+            string account = c.ServiceAccount;
+            bool   gmsa    = IsGmsa(account);
+            c.PolicyWarningDetail = "";
+
+            // ── 1. Group Policy result — best effort, only feeds the messages and the warning ──
+            List<GroupPolicy.Setting>? gpoRights = null, gpoGroups = null;
+            string rsopProblem = "";
+            try
+            {
+                if (!GroupPolicy.IsDomainJoined())
+                    log("This computer is not joined to a domain — no domain Group Policy can replace the local settings.");
+                else
+                {
+                    (gpoRights, gpoGroups) = GroupPolicy.ReadComputerSettings();
+                    log($"Group Policy result (RSoP): domain GPOs set {gpoRights.Count} user right(s) and {gpoGroups.Count} restricted group(s) on this computer.");
+                    var relevant = PolicyAllowRights.Select(r => r.Right).Concat(PolicyDenyRights.Select(r => r.Right)).ToList();
+                    foreach (var s in gpoRights.Where(s => relevant.Contains(s.Name, StringComparer.OrdinalIgnoreCase)))
+                        log($"  {s.Name}  (GPO \"{s.GpoName}\"): {string.Join(", ", s.Members)}");
+                    foreach (var s in gpoGroups)
+                        log($"  Restricted group '{s.Name}'  (GPO \"{s.GpoName}\"): {string.Join(", ", s.Members)}");
+                    log("  (Group Policy Preferences 'Local Users and Groups' can also change local group members — not checked.)");
+                }
+            }
+            catch (Exception ex)
+            {
+                rsopProblem = ex.Message;
+                log($"Warning: could not read the Group Policy result (RSoP): {ex.Message}");
+            }
+
+            // ── 2. Logon tests ──
+            // sids = the account + every group it is in, from the logon token. Used to tell whether a
+            // GPO's account list includes the account (directly or through a group).
+            var sids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try { sids.Add(LsaPrivileges.GetSidString(account)); } catch { /* the grant steps above already resolved it */ }
+            bool haveGroups = false;
+            var notes = new List<string>();
+
+            // Returns true when the logon worked; throws (stops the install) on a fatal logon error.
+            bool TestLogon(int logonType, string what, string allowRight, string allowName,
+                           string denyRight, string denyName, string neededFor)
+            {
+                int err = LogonAs(account, c.Password, logonType, sids);
+                if (err == 0) { log($"Logon test '{what}': OK"); return true; }
+
+                if (err == ERROR_LOGON_TYPE_NOT_GRANTED)
+                {
+                    // 1385 comes only after Windows accepted the password: a right is missing or denied.
+                    bool grantedLocally = false;
+                    try { grantedLocally = LsaPrivileges.GetAccountRights(account).Contains(allowRight, StringComparer.OrdinalIgnoreCase); }
+                    catch { /* message below covers both cases */ }
+
+                    var msg = new StringBuilder();
+                    msg.AppendLine($"'{account}' is not allowed to {what} on this computer (Win32 error 1385). {neededFor}");
+                    msg.AppendLine(grantedLocally
+                        ? $"'{allowName}' IS granted to the account in the local security policy, so a '{denyName}' setting applies to the account or to a group it is a member of."
+                        : $"'{allowName}' is not granted to the account in the local security policy (a domain GPO may have just replaced the local grant), or a '{denyName}' setting applies.");
+                    var gpoLines = (gpoRights ?? new List<GroupPolicy.Setting>())
+                        .Where(s => s.Name.Equals(denyRight, StringComparison.OrdinalIgnoreCase) || s.Name.Equals(allowRight, StringComparison.OrdinalIgnoreCase))
+                        .Select(s => $"  GPO \"{s.GpoName}\" sets '{(s.Name.Equals(denyRight, StringComparison.OrdinalIgnoreCase) ? denyName : allowName)}' to: {string.Join(", ", s.Members)}")
+                        .ToList();
+                    foreach (var line in gpoLines) msg.AppendLine(line);
+                    if (gpoLines.Count == 0)
+                        msg.AppendLine($"  To see which policy sets '{denyName}': rsop.msc > Computer Configuration > Windows Settings > " +
+                                       "Security Settings > Local Policies > User Rights Assignment (column 'Source GPO').");
+                    msg.Append($"Ask your AD administrator to allow it for '{account}' on this server (remove the account or its group " +
+                               $"from '{denyName}', and include it in '{allowName}' if a GPO sets that), then click Retry.");
+                    throw new Exception(msg.ToString());
+                }
+
+                if (FatalLogonErrors.Contains(err))
+                    throw new Exception($"Logon test '{what}' as '{account}' failed: {DescribeLogonError(err)}");
+
+                // Not a verdict on the account (no domain controller reachable, trust problem, …) —
+                // don't block the install on what may be temporary, but say so at the end.
+                string note = $"Could not test '{what}' as '{account}': {DescribeLogonError(err)}";
+                log("Warning: " + note + " Continuing.");
+                notes.Add(note);
+                return false;
+            }
+
+            if (gmsa)
+                log("gMSA account — no password, so the logon tests are skipped (DbxStarterService shows at start whether 'Log on as a service' works).");
+            else
+            {
+                // Service logon first: its token isn't filtered by UAC, so it has every group.
+                // A wrong password fails here — one bad attempt, not one per test.
+                haveGroups |= TestLogon(LOGON32_LOGON_SERVICE, "log on as a service",
+                    LsaPrivileges.SeServiceLogonRight, "Log on as a service",
+                    "SeDenyServiceLogonRight", "Deny log on as a service",
+                    "DbxStarterService runs as this account and can't start without it.");
+                haveGroups |= TestLogon(LOGON32_LOGON_INTERACTIVE, "log on locally",
+                    LsaPrivileges.SeInteractiveLogonRight, "Allow log on locally",
+                    "SeDenyInteractiveLogonRight", "Deny log on locally",
+                    "The installer runs 'Initialize DbxTune home' and the DBMS config wizard as this account, and starts DbxStarterClient as it.");
+            }
+
+            // ── 3. The warning: GPO settings that will undo (or block) the local setup ──
+            var sidCache = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+            string? LookupSid(string name)
+            {
+                if (sidCache.TryGetValue(name, out var cached)) return cached;
+                string? sid = null;
+                try { sid = LsaPrivileges.GetSidString(name); } catch { /* unresolvable — compared by name */ }
+                return sidCache[name] = sid;
+            }
+            c.PolicyWarningDetail = BuildPolicyWarning(account, gmsa, sids, haveGroups, gpoRights, gpoGroups, rsopProblem, notes, LookupSid);
+
+            if (c.PolicyWarningDetail.Length > 0)
+                log("WARNING: see the Group Policy warning at the end of this log.");
+            else if (gpoRights != null)
+                log("No domain Group Policy setting undoes the local setup — OK.");
+            return Task.FromResult(true);
+        }
+
+        // The text of the "Check logon rights" warning, or "" when there is nothing to warn about.
+        // No system calls except through lookupSid, so it can be tested with made-up GPO data.
+        //   sids       : the account's SID + the SIDs of every group it is in (from a logon token)
+        //   haveGroups : false when no logon token was available — sids then holds only the account
+        //   gpoRights/gpoGroups : the domain GPO settings, null when not read (not domain-joined, or rsopProblem)
+        //   lookupSid  : account/group name → SID string, null when it can't be resolved
+        internal static string BuildPolicyWarning(string account, bool gmsa, HashSet<string> sids, bool haveGroups,
+            List<GroupPolicy.Setting>? gpoRights, List<GroupPolicy.Setting>? gpoGroups, string rsopProblem,
+            List<string> notes, Func<string, string?> lookupSid)
+        {
+            var known = new HashSet<string>(sids, StringComparer.OrdinalIgnoreCase);
+            if (!haveGroups)
+            {
+                // Without a logon token only these are certain: they apply to every logged-on account.
+                known.Add("S-1-1-0");    // Everyone
+                known.Add("S-1-5-11");   // Authenticated Users
+            }
+
+            // A GPO lists accounts by name ("CORP\DbxTune Admins") or by SID ("*S-1-5-32-544").
+            string? SidOf(string member)
+            {
+                string m = member.Trim().TrimStart('*');
+                return m.StartsWith("S-1-", StringComparison.OrdinalIgnoreCase) ? m : lookupSid(m);
+            }
+            // The first member entry that is the account itself or a group it is in, or null.
+            string? FindAccount(string[] members) => members.FirstOrDefault(m =>
+                SidOf(m) is string sid ? known.Contains(sid) : m.Trim().Equals(account, StringComparison.OrdinalIgnoreCase));
+
+            var items = new List<string>();
+            bool anyDeny = false;
+            if (gpoRights != null && gpoGroups != null)
+            {
+                foreach (var r in PolicyAllowRights.Where(r => !(gmsa && r.NotForGmsa)))
+                {
+                    var s = gpoRights.FirstOrDefault(s => s.Name.Equals(r.Right, StringComparison.OrdinalIgnoreCase));
+                    if (s != null && FindAccount(s.Members) == null)
+                        items.Add($"- {r.Name}\n    GPO \"{s.GpoName}\" sets it to: {string.Join(", ", s.Members)}\n    -> {r.Consequence}");
+                }
+                foreach (var r in PolicyDenyRights.Where(r => !(gmsa && r.NotForGmsa)))
+                {
+                    var s = gpoRights.FirstOrDefault(s => s.Name.Equals(r.Right, StringComparison.OrdinalIgnoreCase));
+                    if (s != null && FindAccount(s.Members) is string match)
+                    {
+                        anyDeny = true;
+                        items.Add($"- {r.Name}\n    GPO \"{s.GpoName}\" includes '{match}'\n    -> {r.Consequence}");
+                    }
+                }
+                foreach (var g in PolicyLocalGroups.Where(g => !(gmsa && g.NotForGmsa)))
+                {
+                    var s = gpoGroups.FirstOrDefault(s => string.Equals(SidOf(s.Name), g.Sid, StringComparison.OrdinalIgnoreCase));
+                    if (s != null && FindAccount(s.Members) == null)
+                        items.Add($"- Local group '{g.Name}' (Restricted Groups)\n    GPO \"{s.GpoName}\" sets its members to: {string.Join(", ", s.Members)}\n" +
+                                  $"    -> Windows removes the account from the group: {g.Consequence}");
+                }
+            }
+
+            var warning = new StringBuilder();
+            if (items.Count > 0)
+            {
+                warning.AppendLine("A domain Group Policy sets the following for this computer, which undoes or blocks what the");
+                warning.AppendLine($"installer set up for '{account}'. Group Policy REPLACES the local setting at the next policy");
+                warning.AppendLine("refresh (reboot, gpupdate, or within 16 hours):");
+                warning.AppendLine();
+                foreach (var item in items) warning.AppendLine(item);
+                warning.AppendLine();
+                if (!haveGroups)
+                    warning.AppendLine("(The account's group memberships could not be read, so a GPO that includes it through a group is listed too.)");
+                warning.AppendLine($"Ask your AD administrator to include '{account}' (or a group it is a member of) in these settings" +
+                                   (anyDeny ? ",\nand to take it out of the 'Deny ...' ones," : "") + " for this server.");
+                warning.AppendLine("Group Policy editor: Computer Configuration > Policies > Windows Settings > Security Settings >");
+                warning.AppendLine("Local Policies > User Rights Assignment (and > Restricted Groups for the local groups).");
+            }
+            if (rsopProblem.Length > 0)
+            {
+                if (warning.Length > 0) warning.AppendLine();
+                warning.AppendLine($"Could not read the Group Policy result on this computer ({rsopProblem}).");
+                warning.AppendLine($"So it's unknown whether a domain GPO will replace the rights granted to '{account}'. Check with rsop.msc");
+                warning.AppendLine("(Computer Configuration > Windows Settings > Security Settings > Local Policies > User Rights Assignment)");
+                warning.AppendLine("that 'Log on as a service' and 'Allow log on locally' include the account, if a GPO sets them.");
+            }
+            if (notes.Count > 0)
+            {
+                if (warning.Length > 0) warning.AppendLine();
+                foreach (var note in notes) warning.AppendLine(note);
+                warning.AppendLine("Make sure DbxStarterService starts, once the cause is fixed.");
+            }
+            return warning.ToString().TrimEnd();
         }
 
         private static Task<bool> CreateDirectories(InstallConfig c, InstallLog log)
@@ -1099,6 +1376,11 @@ namespace DbxInstaller
                 string combined = (p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd()).Trim();
                 p.WaitForExit();
                 return (p.ExitCode == 0, combined);
+            }
+            catch (System.ComponentModel.Win32Exception ex)
+            {
+                // Process.Start with UserName/Password logs on as the account first — say why that failed
+                return (false, $"Could not start '{exe}' as '{c.ServiceAccount}': {DescribeLogonError(ex.NativeErrorCode)}");
             }
             catch (Exception ex)
             {
@@ -1700,8 +1982,8 @@ namespace DbxInstaller
                 if (File.Exists(clientExe))
                 {
                     log($"Launching DbxStarterClient as '{c.ServiceAccount}'…");
-                    LaunchAsUser(clientExe, "", c);
-                    log("  Client launched.");
+                    string? launchError = LaunchAsUser(clientExe, "", c);
+                    log(launchError == null ? "  Client launched." : $"  WARNING: could not start DbxStarterClient: {launchError}");
                 }
                 else
                 {
@@ -1863,24 +2145,28 @@ namespace DbxInstaller
                 p.WaitForExit();
                 return stdoutTask.Result + stderrTask.Result;
             }
+            catch (System.ComponentModel.Win32Exception ex) { log($"    Warning: could not start it as '{c.ServiceAccount}': {DescribeLogonError(ex.NativeErrorCode)}"); return ""; }
             catch (Exception ex) { log($"    Warning: {ex.Message}"); return ""; }
         }
 
-        // Launch a process as service user without waiting (fire-and-forget).
-        private static void LaunchAsUser(string exe, string args, InstallConfig c)
+        // Launch a process as service user without waiting (fire-and-forget). Best effort: returns
+        // null when it started, else why not (the caller logs it — the install goes on either way).
+        private static string? LaunchAsUser(string exe, string args, InstallConfig c)
         {
-            if (IsGmsa(c.ServiceAccount))
-            {
-                Process.Start(new ProcessStartInfo(exe, args) { UseShellExecute = true });
-                return;
-            }
             try
             {
+                if (IsGmsa(c.ServiceAccount))
+                {
+                    Process.Start(new ProcessStartInfo(exe, args) { UseShellExecute = true });
+                    return null;
+                }
                 var psi = BuildUserPsi(exe, args, c);
                 psi.UseShellExecute = false;
                 Process.Start(psi);
+                return null;
             }
-            catch { /* best effort */ }
+            catch (System.ComponentModel.Win32Exception ex) { return DescribeLogonError(ex.NativeErrorCode); }
+            catch (Exception ex) { return ex.Message; }
         }
 
         // Build a ProcessStartInfo with service-account credentials (no stdout redirect).
@@ -2207,11 +2493,12 @@ namespace DbxInstaller
             log($"  {message}");
         }
 
-        // Verified: the password is correct. Info: nothing was actually checked, but that's
-        // expected/not a problem (gMSA, or an account that doesn't exist yet and will be created
-        // during install) — the Service Account page shows this differently from a real failure.
-        // Failed: a genuine problem (wrong password for an existing account, or the logon check
-        // itself errored).
+        // Verified: the password is correct. Info: not a problem for the install — either nothing
+        // could be checked (gMSA, or a local account that doesn't exist yet and will be created
+        // during install), or the password is correct but the account may not log on locally yet
+        // (1385 — the install grants that right). The Service Account page shows this differently
+        // from a real failure. Failed: a genuine problem (wrong password, a domain account that
+        // can't be found, a disabled/locked account, or the logon check itself errored).
         public enum VerifyOutcome { Verified, Info, Failed }
 
         // Attempts an interactive logon with the given account/password to verify the password is
@@ -2227,55 +2514,146 @@ namespace DbxInstaller
             // same ERROR_LOGON_FAILURE from LogonUser (anti-enumeration behavior), so a missing
             // local account would otherwise show as "Incorrect password" — check existence
             // ourselves first via LookupAccountName (resolves local and domain accounts alike).
+            // The installer only creates LOCAL accounts (a plain name) — a DOMAIN\user or user@domain
+            // account that can't be found is a typo or an unreachable domain controller, and the
+            // install would fail on it later, so that one is an error, not "will be created".
+            bool domainAccount = IsDomain(account);
+            string notFound = domainAccount
+                ? $"Account '{account}' was not found — check the spelling (DOMAIN\\user or user@domain.com) and that a " +
+                  "domain controller is reachable. The installer creates only local accounts given as a plain name (e.g. dbxtune)."
+                : $"Account '{account}' does not exist yet — it will be created during install, so there's nothing to verify against.";
             try { LsaPrivileges.GetSidString(account); }
-            catch
-            {
-                return (VerifyOutcome.Info,
-                    $"Account '{account}' does not exist yet — it will be created during install, so there's nothing to verify against.");
-            }
+            catch { return (domainAccount ? VerifyOutcome.Failed : VerifyOutcome.Info, notFound); }
 
-            string domain, username;
-            if (account.Contains('\\'))
-            {
-                var parts = account.Split('\\', 2);
-                domain   = parts[0];
-                username = parts[1];
-            }
-            else if (account.Contains('@'))
-            {
-                // UPN form — pass full UPN as username, empty domain
-                domain   = "";
-                username = account;
-            }
-            else
-            {
-                domain   = ".";          // local machine
-                username = account;
-            }
-
-            bool ok = LogonUser(username, domain, password,
-                LOGON32_LOGON_INTERACTIVE, LOGON32_PROVIDER_DEFAULT, out IntPtr token);
-            if (ok)
-            {
-                CloseHandle(token);
-                return (VerifyOutcome.Verified, "Password verified — OK.");
-            }
-
-            int err = Marshal.GetLastWin32Error();
+            int err = LogonAs(account, password, LOGON32_LOGON_INTERACTIVE, sids: null);
             return err switch
             {
-                ERROR_LOGON_FAILURE => (VerifyOutcome.Failed, $"Incorrect password for '{account}'."),
+                0                            => (VerifyOutcome.Verified, "Password verified — OK."),
+                ERROR_LOGON_FAILURE          => (VerifyOutcome.Failed, $"Incorrect password for '{account}'."),
+                // Windows checks the logon TYPE only after it has accepted the password.
+                ERROR_LOGON_TYPE_NOT_GRANTED => (VerifyOutcome.Info,
+                    $"Password is correct, but '{account}' is not allowed to log on locally on this machine (Win32 error 1385, " +
+                    "usually set by a Group Policy). The installer grants 'Allow log on locally' in the local security policy " +
+                    "and tests again; if a 'Deny log on locally' policy applies, it stops and says which one."),
                 // Belt-and-suspenders: the existence pre-check above should already catch this,
                 // but a domain account can still hit this path (e.g. trust/connectivity quirks).
-                ERROR_NO_SUCH_USER  => (VerifyOutcome.Info, $"Account '{account}' does not exist yet — it will be created during install, so there's nothing to verify against."),
-                _                   => (VerifyOutcome.Failed, $"Logon check failed (Win32 error {err})."),
+                ERROR_NO_SUCH_USER           => (domainAccount ? VerifyOutcome.Failed : VerifyOutcome.Info, notFound),
+                _                            => (VerifyOutcome.Failed, $"Logon check failed: {DescribeLogonError(err)}"),
             };
         }
 
-        private const int LOGON32_LOGON_INTERACTIVE = 2;
-        private const int LOGON32_PROVIDER_DEFAULT  = 0;
-        private const int ERROR_LOGON_FAILURE       = 1326;
-        private const int ERROR_NO_SUCH_USER        = 1317;
+        // Logs on as the account with the given logon type and closes the token again. Returns 0 on
+        // success, else the Win32 error. When sids isn't null, the account's SID and every group SID
+        // in the logon token are added to it — the token holds the membership Windows itself uses
+        // for user rights: nested domain groups, local groups, and well-known ones (Authenticated Users).
+        private static int LogonAs(string account, string password, int logonType, HashSet<string>? sids)
+        {
+            var (domain, username) = SplitAccount(account);
+            if (!LogonUser(username, domain, password, logonType, LOGON32_PROVIDER_DEFAULT, out IntPtr token))
+                return Marshal.GetLastWin32Error();
+            try
+            {
+                if (sids != null)
+                {
+                    using var identity = new WindowsIdentity(token);
+                    if (identity.User != null) sids.Add(identity.User.Value);
+                    if (identity.Groups != null)
+                        foreach (var group in identity.Groups) sids.Add(group.Value);
+                }
+                return 0;
+            }
+            finally { CloseHandle(token); }
+        }
+
+        // LogonUser's (domain, username): "DOMAIN\user" → ("DOMAIN", "user"), UPN "user@domain" →
+        // ("", "user@domain") — the full UPN as username, empty domain —, plain "user" → (".", "user").
+        private static (string Domain, string Username) SplitAccount(string account)
+        {
+            if (account.Contains('\\'))
+            {
+                var parts = account.Split('\\', 2);
+                return (parts[0], parts[1]);
+            }
+            return account.Contains('@') ? ("", account) : (".", account);
+        }
+
+        private static string Win32Message(int err) => new System.ComponentModel.Win32Exception(err).Message;
+
+        // A logon error in words: "<Windows text> (<ERROR_NAME>, Win32 error N). <what it means for the
+        // service account, and what to do>". The errors listed are the ones LogonUser / RunAs give for
+        // an account that can't be used as configured; any other code gets the Windows text only.
+        internal static string DescribeLogonError(int err)
+        {
+            const string trustHint = "This computer's trust relationship with the domain (its computer account / secure channel) " +
+                                     "is broken. Ask the AD administrator; 'Test-ComputerSecureChannel -Repair' (PowerShell, " +
+                                     "run with domain admin credentials) usually fixes it.";
+            var (name, hint) = err switch
+            {
+                1317 => ("ERROR_NO_SUCH_USER", "The account doesn't exist — check the spelling of the account name."),
+                1326 => ("ERROR_LOGON_FAILURE", "Check the password (Caps Lock, keyboard layout). Note that every failed attempt counts " +
+                                                "toward the account's lockout threshold."),
+                1327 => ("ERROR_ACCOUNT_RESTRICTION", "A policy restriction blocks this logon — typically an empty password (Windows allows " +
+                                                      "blank passwords only at the console). Give the account a password."),
+                1328 => ("ERROR_INVALID_LOGON_HOURS", "The account's 'Logon Hours' in Active Directory don't allow a logon right now. " +
+                                                      "A service account must be allowed to log on at all hours."),
+                1329 => ("ERROR_INVALID_WORKSTATION", "The account's 'Log On To' list in Active Directory (Account tab) doesn't include " +
+                                                      $"this computer ({Environment.MachineName}). Ask the AD administrator to add it."),
+                1330 => ("ERROR_PASSWORD_EXPIRED", "The password you entered is correct, but too old. " +
+                                                   "Set a new password — in Active Directory Users and Computers, or with 'net user <name> *' " +
+                                                   "for a local account — and enter the new one here. For a service account, consider " +
+                                                   "'Password never expires'; otherwise DbxStarterService stops working every time it expires."),
+                1331 => ("ERROR_ACCOUNT_DISABLED", "The account is disabled. Enable it in Active Directory Users and Computers, or with " +
+                                                   "'net user <name> /active:yes' for a local account."),
+                1311 => ("ERROR_NO_LOGON_SERVERS", "No domain controller could be reached to check the account. Check the network and " +
+                                                   "DNS connection to the domain, then try again."),
+                1355 => ("ERROR_NO_SUCH_DOMAIN", "The domain part of the account name is unknown, or none of its domain controllers could " +
+                                                 "be contacted. Use the NetBIOS domain name (CORP\\svc_dbx) or the UPN (svc_dbx@corp.com)."),
+                1385 => ("ERROR_LOGON_TYPE_NOT_GRANTED", "The password is correct, but the account lacks the right for this kind of logon " +
+                                                         "('Log on as a service' / 'Allow log on locally'), or a 'Deny log on ...' policy applies."),
+                1398 => ("ERROR_TIME_SKEW", "This computer's clock differs too much from the domain controller's (Kerberos allows 5 " +
+                                            "minutes). Fix the time synchronization, e.g. 'w32tm /resync'."),
+                1787 => ("ERROR_NO_TRUST_SAM_ACCOUNT", trustHint),
+                1789 => ("ERROR_TRUSTED_RELATIONSHIP_FAILURE", trustHint),
+                1792 => ("ERROR_NETLOGON_NOT_STARTED", "The Netlogon service isn't running on this computer. Start it (services.msc), " +
+                                                       "then try again."),
+                1793 => ("ERROR_ACCOUNT_EXPIRED", "The account's 'Account expires' date in Active Directory has passed. Ask the AD " +
+                                                  "administrator to extend it."),
+                1907 => ("ERROR_PASSWORD_MUST_CHANGE", "'User must change password at next logon' is set for the account. Change the " +
+                                                       "password once (or ask the AD administrator to clear that flag), then enter the new one here."),
+                1909 => ("ERROR_ACCOUNT_LOCKED_OUT", "Too many wrong passwords were tried. Wait until the lockout ends, or ask the AD " +
+                                                     "administrator to unlock the account — and check that no other service or scheduled " +
+                                                     "task still uses an old password for it."),
+                _    => ((string?)null, (string?)null),
+            };
+            string text = Win32Message(err).TrimEnd(' ', '.');
+            return name == null
+                ? $"{text} (Win32 error {err})."
+                : $"{text} ({name}, Win32 error {err}). {hint}";
+        }
+
+        private const int LOGON32_LOGON_INTERACTIVE    = 2;
+        private const int LOGON32_LOGON_SERVICE        = 5;
+        private const int LOGON32_PROVIDER_DEFAULT     = 0;
+        private const int ERROR_LOGON_FAILURE          = 1326;
+        private const int ERROR_NO_SUCH_USER           = 1317;
+        private const int ERROR_INVALID_WORKSTATION    = 1329;
+        private const int ERROR_LOGON_TYPE_NOT_GRANTED = 1385;
+
+        // Logon errors that mean the account can't be used as configured — the install stops on
+        // these. Anything else (no domain controller reachable, trust problems, …) may be temporary.
+        private static readonly HashSet<int> FatalLogonErrors = new()
+        {
+            ERROR_LOGON_FAILURE,            // 1326 wrong password
+            1327,                           // ERROR_ACCOUNT_RESTRICTION (e.g. blank password not allowed)
+            1328,                           // ERROR_INVALID_LOGON_HOURS
+            ERROR_INVALID_WORKSTATION,      // 1329 "Log On To" list in AD doesn't include this computer
+            1330,                           // ERROR_PASSWORD_EXPIRED
+            1331,                           // ERROR_ACCOUNT_DISABLED
+            ERROR_LOGON_TYPE_NOT_GRANTED,   // 1385 missing right / Deny policy
+            1793,                           // ERROR_ACCOUNT_EXPIRED
+            1907,                           // ERROR_PASSWORD_MUST_CHANGE
+            1909,                           // ERROR_ACCOUNT_LOCKED_OUT
+        };
 
         [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         private static extern bool LogonUser(
@@ -2310,30 +2688,13 @@ namespace DbxInstaller
                     return null;
                 }
 
-                string domain, username;
-                if (c.ServiceAccount.Contains('\\'))
-                {
-                    var parts = c.ServiceAccount.Split('\\', 2);
-                    domain   = parts[0];
-                    username = parts[1];
-                }
-                else if (c.ServiceAccount.Contains('@'))
-                {
-                    domain   = "";
-                    username = c.ServiceAccount;
-                }
-                else
-                {
-                    domain   = ".";
-                    username = c.ServiceAccount;
-                }
-
+                var (domain, username) = SplitAccount(c.ServiceAccount);
                 bool ok = LogonUser(username, domain, c.Password,
                     LOGON32_LOGON_INTERACTIVE, LOGON32_PROVIDER_DEFAULT, out IntPtr token);
                 if (!ok)
                 {
                     int err = Marshal.GetLastWin32Error();
-                    log($"  Warning: LogonUser failed (Win32 error {err}) — files will be owned by admin, icacls will grant access.");
+                    log($"  Warning: LogonUser failed: {DescribeLogonError(err)} — files will be owned by admin, icacls will grant access.");
                     return null;
                 }
 

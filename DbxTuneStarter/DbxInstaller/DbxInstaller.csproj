@@ -22,6 +22,8 @@
 
   <ItemGroup>
     <PackageReference Include="Scintilla5.NET" Version="6.1.2" />
+    <!-- WMI: reads which user rights a domain Group Policy sets (RSoP), see GroupPolicy.cs -->
+    <PackageReference Include="System.Management" Version="10.0.0" />
   </ItemGroup>
 
   <ItemGroup>

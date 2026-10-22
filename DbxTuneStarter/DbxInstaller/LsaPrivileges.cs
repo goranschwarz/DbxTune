@@ -10,7 +10,14 @@ namespace DbxInstaller
     {
         public const string SeCreateSymbolicLinkPrivilege = "SeCreateSymbolicLinkPrivilege";
         public const string SeServiceLogonRight           = "SeServiceLogonRight";
+        public const string SeInteractiveLogonRight       = "SeInteractiveLogonRight";
         public const string SeDebugPrivilege              = "SeDebugPrivilege";
+
+        // The rights the installer grants to the service account — the uninstaller removes these again.
+        public static readonly string[] InstallerGrantedRights =
+        {
+            SeCreateSymbolicLinkPrivilege, SeServiceLogonRight, SeInteractiveLogonRight, SeDebugPrivilege,
+        };
 
         public static void Grant(string accountName, string privilege)
         {
@@ -44,6 +51,85 @@ namespace DbxInstaller
             {
                 if (sidPtr  != IntPtr.Zero) Marshal.FreeHGlobal(sidPtr);
                 if (privPtr != IntPtr.Zero) Marshal.FreeHGlobal(privPtr);
+                LsaClose(policy);
+            }
+        }
+
+        // Removes one right from the account in the local security policy (the opposite of Grant).
+        public static void Revoke(string accountName, string privilege)
+        {
+            byte[] sid     = LookupSid(accountName);
+            var    objAttr = new LSA_OBJECT_ATTRIBUTES
+                             { Length = (uint)Marshal.SizeOf<LSA_OBJECT_ATTRIBUTES>() };
+            var emptyName  = default(LSA_UNICODE_STRING);
+
+            uint status = LsaOpenPolicy(ref emptyName, ref objAttr, POLICY_ALL_ACCESS, out IntPtr policy);
+            ThrowOnError(status, "LsaOpenPolicy");
+
+            IntPtr sidPtr  = IntPtr.Zero;
+            IntPtr privPtr = IntPtr.Zero;
+            try
+            {
+                sidPtr  = Marshal.AllocHGlobal(sid.Length);
+                Marshal.Copy(sid, 0, sidPtr, sid.Length);
+
+                privPtr = Marshal.StringToHGlobalUni(privilege);
+                var right = new LSA_UNICODE_STRING
+                {
+                    Buffer        = privPtr,
+                    Length        = (ushort)(privilege.Length * 2),
+                    MaximumLength = (ushort)((privilege.Length + 1) * 2)
+                };
+
+                status = LsaRemoveAccountRights(policy, sidPtr, false, new[] { right }, 1);
+                ThrowOnError(status, "LsaRemoveAccountRights");
+            }
+            finally
+            {
+                if (sidPtr  != IntPtr.Zero) Marshal.FreeHGlobal(sidPtr);
+                if (privPtr != IntPtr.Zero) Marshal.FreeHGlobal(privPtr);
+                LsaClose(policy);
+            }
+        }
+
+        // The rights granted DIRECTLY to the account in the local security policy (not the ones it
+        // gets through a group). A domain GPO's User Rights Assignment is written into this same
+        // local policy, so rights a GPO gives the account by name are included too.
+        public static List<string> GetAccountRights(string accountName)
+        {
+            byte[] sid     = LookupSid(accountName);
+            var    objAttr = new LSA_OBJECT_ATTRIBUTES
+                             { Length = (uint)Marshal.SizeOf<LSA_OBJECT_ATTRIBUTES>() };
+            var emptyName  = default(LSA_UNICODE_STRING);
+
+            uint status = LsaOpenPolicy(ref emptyName, ref objAttr, POLICY_ALL_ACCESS, out IntPtr policy);
+            ThrowOnError(status, "LsaOpenPolicy");
+
+            IntPtr sidPtr    = IntPtr.Zero;
+            IntPtr rightsPtr = IntPtr.Zero;
+            try
+            {
+                sidPtr = Marshal.AllocHGlobal(sid.Length);
+                Marshal.Copy(sid, 0, sidPtr, sid.Length);
+
+                var result = new List<string>();
+                status = LsaEnumerateAccountRights(policy, sidPtr, out rightsPtr, out uint count);
+                if (status == STATUS_OBJECT_NAME_NOT_FOUND) return result;   // the account has no rights at all
+                ThrowOnError(status, "LsaEnumerateAccountRights");
+
+                int size = Marshal.SizeOf<LSA_UNICODE_STRING>();
+                for (int i = 0; i < count; i++)
+                {
+                    var right = Marshal.PtrToStructure<LSA_UNICODE_STRING>(rightsPtr + i * size);
+                    if (right.Buffer != IntPtr.Zero && right.Length > 0)
+                        result.Add(Marshal.PtrToStringUni(right.Buffer, right.Length / 2));
+                }
+                return result;
+            }
+            finally
+            {
+                if (rightsPtr != IntPtr.Zero) LsaFreeMemory(rightsPtr);
+                if (sidPtr    != IntPtr.Zero) Marshal.FreeHGlobal(sidPtr);
                 LsaClose(policy);
             }
         }
@@ -135,7 +221,8 @@ namespace DbxInstaller
 
         // ── P/Invoke ──────────────────────────────────────────────────────────
 
-        private const uint POLICY_ALL_ACCESS = 0x00F0FFF;
+        private const uint POLICY_ALL_ACCESS            = 0x00F0FFF;
+        private const uint STATUS_OBJECT_NAME_NOT_FOUND = 0xC0000034;
 
         [StructLayout(LayoutKind.Sequential)]
         private struct LSA_UNICODE_STRING
@@ -176,6 +263,21 @@ namespace DbxInstaller
             IntPtr accountSid,
             LSA_UNICODE_STRING[] userRights,
             int countOfRights);
+
+        [DllImport("advapi32.dll")]
+        private static extern uint LsaRemoveAccountRights(
+            IntPtr policyHandle,
+            IntPtr accountSid,
+            [MarshalAs(UnmanagedType.U1)] bool allRights,   // BOOLEAN = 1 byte
+            LSA_UNICODE_STRING[] userRights,
+            int countOfRights);
+
+        [DllImport("advapi32.dll")]
+        private static extern uint LsaEnumerateAccountRights(
+            IntPtr policyHandle,
+            IntPtr accountSid,
+            out IntPtr userRights,
+            out uint countOfRights);
 
         [DllImport("advapi32.dll")]
         private static extern uint LsaClose(IntPtr objectHandle);

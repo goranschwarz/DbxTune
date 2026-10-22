@@ -16,8 +16,12 @@ namespace DbxInstaller.Pages
         public override string StepTitle => "Upgrading";
         public bool IsRunning { get; private set; }
 
+        // Steps run in InstallActions.Steps order; keep this list in the same order (it's the rail).
+        // The grants + "Check logon rights" come first, so a GPO that took a right away again stops
+        // the upgrade with the cause before the service is stopped.
         private static readonly string[] UpgradeStepNames =
         {
+            "Grant SeServiceLogonRight", "Grant SeInteractiveLogonRight", "Check logon rights",
             "Stop service if running", "Locate package", "Create directory structure",
             "Extract package", "Set DbxTune directories", "Initialize DbxTune home",
             "Verify DbxTune directories", "Copy DbxStarter executables",
@@ -85,6 +89,7 @@ namespace DbxInstaller.Pages
             SetNextEnabled(false);
             foreach (var row in _rows.Values) row.Reset();
             _log.Clear();
+            ctx.Config.PolicyWarningDetail = "";
 
             _cts = new CancellationTokenSource();
             ctx.Config.CancelToken = _cts.Token;
@@ -137,6 +142,9 @@ namespace DbxInstaller.Pages
                 AppendLog("\nUpgrade cancelled — change settings below and click Retry when ready.", "OrangeBrush");
             else
                 AppendLog(allOk ? "\nUpgrade complete." : "\nUpgrade stopped — fix the error and retry.", allOk ? "GreenBrush" : "RedBrush");
+
+            if (allOk && !cancelled && ctx.Config.PolicyWarningDetail.Length > 0)
+                InstallProgressPage.AppendPolicyWarning(ctx.Config.PolicyWarningDetail, AppendLog);
 
             _logFile?.Flush();
             _logFile?.Close();
