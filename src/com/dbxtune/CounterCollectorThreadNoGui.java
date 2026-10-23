@@ -1335,7 +1335,7 @@ implements Memory.MemoryListener
 					catch (Exception ex2)
 					{
 						_logger.info("-----------------------------------------------------------------------------------------");
-						_logger.info("Problems connecting to DBMS, non-retryable error. Username='" + _dbmsUsername + "', Password='" + _dbmsPassword + "', Server='" + _dbmsServer + "', HostPortStr='" + _dbmsHostPortStr + "', UrlOptions='" + _jdbcUrlOptions + "'. Caught: " + ex);
+						_logger.info("Problems connecting to DBMS, non-retryable error. Username='" + _dbmsUsername + "', Password='" + "*secret*"    + "', Server='" + _dbmsServer + "', HostPortStr='" + _dbmsHostPortStr + "', UrlOptions='" + _jdbcUrlOptions + "'. Caught: " + ex);
 						_logger.info("-----------------------------------------------------------------------------------------");
 
 						// Disconnect, and get out of here...
