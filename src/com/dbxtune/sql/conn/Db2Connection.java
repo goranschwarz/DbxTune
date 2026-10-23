@@ -58,10 +58,11 @@ extends DbxConnection
 	public boolean isInTransaction()
 	throws SQLException
 	{
-		// Hopefully this works, but NOT certain
-		String sql = 
+		// Log space used by this connection's unit of work: > 0 means that something was changed and not yet committed
+		// NOTE: Needs EXECUTE on MON_GET_UNIT_OF_WORK (see DbmsSetup/db2.txt). SYSIBMADM.APPLICATIONS was used before, but it needs SYSMON authority
+		String sql =
 			  "select UOW_LOG_SPACE_USED "
-			+ "FROM TABLE(MON_GET_UNIT_OF_WORK((select agent_id from sysibmadm.applications where appl_id = application_id()), -1))";
+			+ "FROM TABLE(MON_GET_UNIT_OF_WORK(MON_GET_APPLICATION_HANDLE(), -1))";
 
 		boolean retVal = false;
 		

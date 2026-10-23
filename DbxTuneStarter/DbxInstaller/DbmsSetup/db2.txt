@@ -1,4 +1,164 @@
-/*
-** TODO: implement instructions how to setup a monitoring user
+/*--------------------------------------------------------------------------------------------
+** Db2Tune needs ONE thing in the database: a login that can use the monitoring functions.
+** (if you are lazy you could use the instance owner, for example 'db2inst1', but not recomended)
+**
+** IN A NUTSHELL
+**   1: Create the login (an operating system or LDAP user)     -> section 1
+**   2: Give it the monitoring functions                       -> section 2  (a role, or the one-line SQLADM alternative)
+**   3: Optionally: execution plans of running statements      -> section 3
+**   4: Test the login                                         -> section 5
+**
+** VERSIONS
+**   Db2 for Linux, UNIX and Windows (LUW) 11.5 and above (tested on 11.5.8). Db2 for z/OS is NOT supported.
+**   Db2Tune connects to ONE database: the server name is 'host:port/DBNAME', for example: prod-db2:50000/SAMPLE
+**   (start one Db2Tune per database you want to monitor)
+**
+** WHAT IT READS
+**   Only the monitoring table functions (MON_GET_...), the configuration (SYSIBMADM.DBCFG, DBMCFG, REG_VARIABLES),
+**   the backup history (SYSIBMADM.DB_HISTORY), the diagnostic log (PD_GET_DIAG_HIST) and the catalog (SYSCAT.*).
+**   It does NOT read any user data (no SELECT on your tables), and it creates NOTHING in the database.
+**
+** WHAT THE LOGIN NEEDS
+**   CONNECT on the database                    PUBLIC has it by default (not in a database created with RESTRICTIVE)
+**   EXECUTE on the monitoring functions        section 2: given to a role, DBXTUNE_MON
+**                                              or (simpler, but more than needed): SQLADM authority
+**   Neither of them gives access to the data in your tables (tested: SELECT on a user table is denied, SQL0551N).
+**
+** If a Performance Counter can't use a function it needs, it will be DISABLED.
+** The reason (and what GRANT to execute) is written in the log file, and as a tooltip on the tab.
+** At every connect the log file also says if the login has all it needs.
+**--------------------------------------------------------------------------------------------
 */
 
+
+/*--------------------------------------------------------------------------------------------
+** SECTION 1: the login
+**
+** Db2 does not have logins of its own: it checks the user and password with the operating system (or LDAP / Kerberos).
+** So the user is created on the Db2 server (or in your LDAP), not with SQL.
+**--------------------------------------------------------------------------------------------
+*/
+## Linux / UNIX, as root on the Db2 server (the user does NOT need a home directory, a shell or any group)
+useradd -M -s /sbin/nologin dbxtune
+passwd dbxtune
+
+## Windows, as an administrator on the Db2 server
+net user dbxtune the-long-and-arbitrary-password /add
+
+## In a database created with RESTRICTIVE (PUBLIC has nothing), the login also needs:
+##   GRANT CONNECT ON DATABASE TO USER DBXTUNE;
+
+
+/*--------------------------------------------------------------------------------------------
+** SECTION 2: the monitoring functions
+**
+** Connect to the database as a user with SECADM authority (needed to create a role and give it away),
+** for example the instance owner that created the database (it has SECADM by default):
+**     db2 connect to <DBNAME>
+**     db2 -tvf this-section.sql
+**
+** Option A (recomended): a role with EXECUTE on exactly the functions Db2Tune uses
+**--------------------------------------------------------------------------------------------
+*/
+CREATE ROLE DBXTUNE_MON;
+
+GRANT EXECUTE ON FUNCTION SYSPROC.MON_GET_DATABASE            TO ROLE DBXTUNE_MON;
+GRANT EXECUTE ON FUNCTION SYSPROC.MON_GET_DATABASE_DETAILS    TO ROLE DBXTUNE_MON;
+GRANT EXECUTE ON FUNCTION SYSPROC.MON_FORMAT_XML_TIMES_BY_ROW TO ROLE DBXTUNE_MON;
+GRANT EXECUTE ON FUNCTION SYSPROC.MON_GET_INSTANCE            TO ROLE DBXTUNE_MON;
+GRANT EXECUTE ON FUNCTION SYSPROC.MON_GET_TRANSACTION_LOG     TO ROLE DBXTUNE_MON;
+GRANT EXECUTE ON FUNCTION SYSPROC.MON_GET_UNIT_OF_WORK        TO ROLE DBXTUNE_MON;
+GRANT EXECUTE ON FUNCTION SYSPROC.MON_GET_CONNECTION          TO ROLE DBXTUNE_MON;
+GRANT EXECUTE ON FUNCTION SYSPROC.MON_GET_ACTIVITY            TO ROLE DBXTUNE_MON;
+GRANT EXECUTE ON FUNCTION SYSPROC.MON_GET_APPL_LOCKWAIT       TO ROLE DBXTUNE_MON;
+GRANT EXECUTE ON FUNCTION SYSPROC.MON_GET_LOCKS               TO ROLE DBXTUNE_MON;
+GRANT EXECUTE ON FUNCTION SYSPROC.MON_GET_PKG_CACHE_STMT      TO ROLE DBXTUNE_MON;
+GRANT EXECUTE ON FUNCTION SYSPROC.MON_GET_TABLESPACE          TO ROLE DBXTUNE_MON;
+GRANT EXECUTE ON FUNCTION SYSPROC.MON_GET_CONTAINER           TO ROLE DBXTUNE_MON;
+GRANT EXECUTE ON FUNCTION SYSPROC.MON_GET_BUFFERPOOL          TO ROLE DBXTUNE_MON;
+GRANT EXECUTE ON FUNCTION SYSPROC.MON_GET_TABLE               TO ROLE DBXTUNE_MON;
+GRANT EXECUTE ON FUNCTION SYSPROC.MON_GET_INDEX               TO ROLE DBXTUNE_MON;
+GRANT EXECUTE ON FUNCTION SYSPROC.MON_GET_MEMORY_POOL         TO ROLE DBXTUNE_MON;
+GRANT EXECUTE ON FUNCTION SYSPROC.MON_GET_MEMORY_SET          TO ROLE DBXTUNE_MON;
+GRANT EXECUTE ON FUNCTION SYSPROC.MON_GET_HADR                TO ROLE DBXTUNE_MON;
+GRANT EXECUTE ON FUNCTION SYSPROC.MON_GET_UTILITY             TO ROLE DBXTUNE_MON;
+GRANT EXECUTE ON FUNCTION SYSPROC.ENV_GET_SYSTEM_RESOURCES    TO ROLE DBXTUNE_MON;
+GRANT EXECUTE ON FUNCTION SYSPROC.ADMIN_GET_STORAGE_PATHS     TO ROLE DBXTUNE_MON;
+
+GRANT ROLE DBXTUNE_MON TO USER DBXTUNE;
+
+/*--------------------------------------------------------------------------------------------
+** Option B (simpler): one GRANT
+**   SQLADM can use all the monitoring functions (and the SYSIBMADM.MON_... views), but it can NOT read the data in your tables.
+**   It gives more than Db2Tune needs: it can also run RUNSTATS and REORG, FLUSH PACKAGE CACHE, and create event monitors.
+**--------------------------------------------------------------------------------------------
+*/
+-- GRANT SQLADM ON DATABASE TO USER DBXTUNE;
+
+
+/*--------------------------------------------------------------------------------------------
+** SECTION 3: OPTIONAL - execution plans of running statements
+**
+** For a statement that has run for a while, Db2Tune can show its execution plan (from the package cache, with EXPLAIN_FROM_SECTION).
+** That needs NO access to the data, and NOT the EXPLAIN authority, but it needs the "explain tables" in the login's own schema:
+** EXPLAIN_FROM_SECTION writes the plan into them, Db2Tune reads it, and deletes its own rows again.
+** Db2Tune never creates them itself: if they are not there, the plans are simply not captured (the log file says so at connect).
+**
+** a) As a user with SECADM (or the instance owner), in the database:
+**--------------------------------------------------------------------------------------------
+*/
+GRANT EXECUTE ON PROCEDURE SYSPROC.EXPLAIN_FROM_SECTION TO ROLE DBXTUNE_MON;
+
+-- Only needed in a database created with RESTRICTIVE (PUBLIC can create tables in a new schema by default):
+-- GRANT CREATETAB, IMPLICIT_SCHEMA ON DATABASE TO USER DBXTUNE;
+-- GRANT USE OF TABLESPACE USERSPACE1 TO USER DBXTUNE;
+
+/*--------------------------------------------------------------------------------------------
+** b) As the DBXTUNE login itself (then it owns the tables), create the 10 explain tables in its own schema:
+**        db2 connect to <DBNAME> user dbxtune
+**    NOTE: give a tablespace (USERSPACE1, or another one the login can use). With NULL, Db2 tries to create
+**          the tablespace SYSTOOLSPACE, and fails (SQL0552N) for a login that is not an administrator.
+**--------------------------------------------------------------------------------------------
+*/
+CALL SYSPROC.SYSINSTALLOBJECTS('EXPLAIN', 'C', 'USERSPACE1', 'DBXTUNE');
+
+
+/*--------------------------------------------------------------------------------------------
+** SECTION 4: RECOMENDED database settings (as the instance owner, from the shell)
+**
+** Activate the database explicitly. If not, Db2 deactivates it when the last connection leaves, and ALL monitor counters
+** (and the package cache, which is the "Statements" tab) start from zero again. Db2Tune's own connection keeps it active while it runs.
+** NOTE: run it when NOT connected to the database (else: SQL1493N), so first: db2 connect reset
+**
+** The monitor metrics must be collected (BASE is the default in a new database). With NONE most counters stay at 0, and the log file says so.
+**--------------------------------------------------------------------------------------------
+*/
+## db2 activate database <DBNAME>
+## db2 update db cfg for <DBNAME> using MON_REQ_METRICS BASE MON_ACT_METRICS BASE MON_OBJ_METRICS EXTENDED
+
+
+/*--------------------------------------------------------------------------------------------
+** NOT NEEDED, and NOT recomended
+**
+** DATAACCESS, DBADM          read (and change) all user data. Db2Tune does not need them.
+** SYSADM, SYSCTRL, SYSMAINT  instance level authorities. Db2Tune does not need them.
+** SYSMON                     only needed for the old snapshot views (SYSIBMADM.SNAP...), which Db2Tune does not use.
+**--------------------------------------------------------------------------------------------
+*/
+
+
+/*--------------------------------------------------------------------------------------------
+** SECTION 5: test the login
+**     db2 connect to <DBNAME> user dbxtune
+**--------------------------------------------------------------------------------------------
+*/
+-- the role (Option A)
+SELECT ROLENAME FROM SYSCAT.ROLEAUTH WHERE GRANTEE = 'DBXTUNE';
+
+-- EXECUTE on the monitoring functions
+SELECT DB_STATUS, DB_ACTIVATION_STATE FROM TABLE(MON_GET_DATABASE(-2)) AS t;
+SELECT TOTAL_LOG_USED, TOTAL_LOG_AVAILABLE FROM TABLE(MON_GET_TRANSACTION_LOG(-2)) AS t;
+SELECT count(*) FROM TABLE(MON_GET_PKG_CACHE_STMT(NULL, NULL, NULL, -2)) AS t;
+
+-- section 3: 10 explain tables
+SELECT TABSCHEMA, count(*) FROM SYSCAT.TABLES WHERE TABNAME LIKE 'EXPLAIN%' AND TABSCHEMA = 'DBXTUNE' GROUP BY TABSCHEMA;

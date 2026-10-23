@@ -268,6 +268,7 @@ public class AppDir
 						copyFileToDir(srcDir + "start_postgrestune.bat",     dbxcBin, ps, logList, "- Change this for customer specializations to PostgresTune Collectors.");
 						copyFileToDir(srcDir + "start_mysqltune.bat",        dbxcBin, ps, logList, "- Change this for customer specializations to MySqlTune Collectors.");
 						copyFileToDir(srcDir + "start_oracletune.bat",       dbxcBin, ps, logList, "- Change this for customer specializations to OracleTune Collectors.");
+						copyFileToDir(srcDir + "start_db2tune.bat",          dbxcBin, ps, logList, "- Change this for customer specializations to Db2Tune Collectors.");
 
 						// OR: should we create a LINK here instead?
 //						copyFileToDir(dbxHomeResourceBin + "nssm.exe",       dbxcBin, ps, logList, "- Non Sucking Service Manager, to create services.");
@@ -291,6 +292,7 @@ public class AppDir
 						copyFileToDir(srcDir + "start_postgrestune.sh",     dbxcBin, ps, logList, "- Change this for customer specializations to PostgresTune Collectors.");
 						copyFileToDir(srcDir + "start_mysqltune.sh",        dbxcBin, ps, logList, "- Change this for customer specializations to MySqlTune Collectors.");
 						copyFileToDir(srcDir + "start_oracletune.sh",       dbxcBin, ps, logList, "- Change this for customer specializations to OracleTune Collectors.");
+						copyFileToDir(srcDir + "start_db2tune.sh",          dbxcBin, ps, logList, "- Change this for customer specializations to Db2Tune Collectors.");
 					}
 				}
 
@@ -318,6 +320,7 @@ public class AppDir
 					copyFileToDir(srcDir + "postgres.GENERIC.conf",          dbxcConf, ps, logList, "- Example/template Config file for Postgres");
 					copyFileToDir(srcDir + "sqlserver.GENERIC.conf",         dbxcConf, ps, logList, "- Example/template Config file for Microsoft SQL-Server");
 					copyFileToDir(srcDir + "oracle.GENERIC.conf",            dbxcConf, ps, logList, "- Example/template Config file for Oracle");
+					copyFileToDir(srcDir + "db2.GENERIC.conf",               dbxcConf, ps, logList, "- Example/template Config file for Db2 LUW");
 				}
 
 				// Copy some files to ${DBXTUNE_HOME} if it has a '0' soft-link / pointer
