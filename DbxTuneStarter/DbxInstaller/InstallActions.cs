@@ -2505,7 +2505,8 @@ namespace DbxInstaller
         // correct. Works for local accounts, domain accounts (DOMAIN\user or user@domain), and
         // reports gMSA accounts as unverifiable (AD manages their password — no interactive logon
         // is possible, so this isn't a failure, just "nothing to check").
-        public static (VerifyOutcome Outcome, string Message) TryVerifyPassword(string account, string password)
+        // upgrade: called from the Upgrade flow (its 1385 text names what an upgrade grants).
+        public static (VerifyOutcome Outcome, string Message) TryVerifyPassword(string account, string password, bool upgrade = false)
         {
             if (IsGmsa(account))
                 return (VerifyOutcome.Info, "gMSA — password is managed by Active Directory; nothing to verify here.");
@@ -2531,15 +2532,36 @@ namespace DbxInstaller
                 0                            => (VerifyOutcome.Verified, "Password verified — OK."),
                 ERROR_LOGON_FAILURE          => (VerifyOutcome.Failed, $"Incorrect password for '{account}'."),
                 // Windows checks the logon TYPE only after it has accepted the password.
-                ERROR_LOGON_TYPE_NOT_GRANTED => (VerifyOutcome.Info,
-                    $"Password is correct, but '{account}' is not allowed to log on locally on this machine (Win32 error 1385, " +
-                    "usually set by a Group Policy). The installer grants 'Allow log on locally' in the local security policy " +
-                    "and tests again; if a 'Deny log on locally' policy applies, it stops and says which one."),
+                ERROR_LOGON_TYPE_NOT_GRANTED => (VerifyOutcome.Info, LogonTypeNotGrantedMessage(account, upgrade)),
                 // Belt-and-suspenders: the existence pre-check above should already catch this,
                 // but a domain account can still hit this path (e.g. trust/connectivity quirks).
                 ERROR_NO_SUCH_USER           => (domainAccount ? VerifyOutcome.Failed : VerifyOutcome.Info, notFound),
                 _                            => (VerifyOutcome.Failed, $"Logon check failed: {DescribeLogonError(err)}"),
             };
+        }
+
+        // The Check button's text for 1385 — an Info, not an error: the password is right, and the
+        // rights the logon still lacks are granted by the install/upgrade itself, AFTER this page.
+        // Keep the lists in line with the "Grant ..." / "Add to local groups" steps (and, for the
+        // upgrade, with UpgradeProgressPage.UpgradeStepNames).
+        internal static string LogonTypeNotGrantedMessage(string account, bool upgrade)
+        {
+            string intro =
+                $"Password is correct, but '{account}' is not allowed to log on locally on this computer yet " +
+                "(Win32 error 1385, ERROR_LOGON_TYPE_NOT_GRANTED — usually set by a Group Policy).\n\n";
+            string grants = upgrade
+                ? "This is OK — you can continue. The upgrade grants these user rights again, in the local security policy:\n" +
+                  "  •  Log on as a service,  Allow log on locally\n"
+                : "This is OK — you can continue. The install sets these up for the account, in the local security policy:\n" +
+                  "  •  User rights:  Log on as a service,  Allow log on locally,  Create symbolic links,  Debug programs\n" +
+                  "  •  Local groups:  Performance Log Users,  Performance Monitor Users,  Remote Desktop Users\n";
+            string retest =
+                "\nThen it tests the logon again. If a 'Deny log on locally' policy applies, it stops there and says which policy.\n\n";
+            string domainPush =
+                "Note: a domain Group Policy can overwrite these local settings at its next refresh (reboot, gpupdate, " +
+                "or within 16 hours). The installer checks for that, and if it will happen it shows a warning at the end " +
+                $"of the {(upgrade ? "upgrade" : "install")} with what to ask your AD administrator for.";
+            return intro + grants + retest + domainPush;
         }
 
         // Logs on as the account with the given logon type and closes the token again. Returns 0 on
