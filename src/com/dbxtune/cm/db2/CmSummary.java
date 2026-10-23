@@ -403,7 +403,7 @@ extends CmSummaryAbstract
 			+ "    ,d.DB_STATUS \n"
 			+ "    ,d.DB_ACTIVATION_STATE \n"
 			+ "    ,(select CAST(VALUE AS VARCHAR(20)) from SYSIBMADM.DBCFG where NAME = 'hadr_db_role' order by MEMBER fetch first 1 rows only) as HADR_ROLE \n"
-			+ "    ,d.LAST_BACKUP \n"
+			+ "    ,NULLIF(d.LAST_BACKUP, TIMESTAMP('0001-01-01-00.00.00'))                    as LAST_BACKUP \n"
 			+ "    ,d.APPLS_CUR_CONS \n"
 			+ "    ,d.APPLS_IN_DB2 \n"
 			+ "    ,d.CONNECTIONS_TOP \n"
@@ -453,7 +453,8 @@ extends CmSummaryAbstract
 			+ "    ,o.WORKLOAD_OCCURRENCE_STATE                                                as OLDEST_OPEN_TRAN_STATE \n"
 			+ "    ,o.UOW_START_TIME                                                           as OLDEST_OPEN_TRAN_TIME \n"
 			+ "    ,CAST(o.UOW_LOG_SPACE_USED / 1048576.0 AS DECIMAL(15,1))                    as OLDEST_OPEN_TRAN_LOG_MB \n"
-			+ "from (select min(DB_CONN_TIME) as DB_ACTIVATION_TIME, max(DB_STATUS) as DB_STATUS, max(DB_ACTIVATION_STATE) as DB_ACTIVATION_STATE, max(LAST_BACKUP) as LAST_BACKUP \n"
+			// NOTE: LAST_BACKUP is NULL for a database that has never been backed up: max() over a NULL gives the warning SQLSTATE 01003 (every sample), so it is COALESCE:d
+			+ "from (select min(DB_CONN_TIME) as DB_ACTIVATION_TIME, max(DB_STATUS) as DB_STATUS, max(DB_ACTIVATION_STATE) as DB_ACTIVATION_STATE, max(COALESCE(LAST_BACKUP, TIMESTAMP('0001-01-01-00.00.00'))) as LAST_BACKUP \n"
 			+ "            ,sum(APPLS_CUR_CONS) as APPLS_CUR_CONS, sum(APPLS_IN_DB2) as APPLS_IN_DB2, sum(CONNECTIONS_TOP) as CONNECTIONS_TOP, sum(TOTAL_CONS) as TOTAL_CONS \n"
 			+ "            ,sum(TOTAL_APP_COMMITS) as TOTAL_APP_COMMITS, sum(TOTAL_APP_ROLLBACKS) as TOTAL_APP_ROLLBACKS, sum(ACT_COMPLETED_TOTAL) as ACT_COMPLETED_TOTAL, sum(FAILED_SQL_STMTS) as FAILED_SQL_STMTS \n"
 			+ "            ,sum(ROWS_READ) as ROWS_READ, sum(ROWS_RETURNED) as ROWS_RETURNED, sum(ROWS_MODIFIED) as ROWS_MODIFIED \n"

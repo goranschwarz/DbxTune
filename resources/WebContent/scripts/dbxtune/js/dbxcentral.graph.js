@@ -2379,13 +2379,15 @@ function dbxTuneGraphSubscribe()
 		AseTune:      ['MonSqlText', 'DbccSqlText', 'LastKnownSqlText'],
 		SqlServerTune:['lastKnownSql', 'LastBufferSqlText'],
 		PostgresTune: ['last_known_sql_statement'],
-		OracleTune:   ['SqlText']
+		OracleTune:   ['SqlText'],
+		Db2Tune:      ['SQL_TEXT']
 	};
 	var ACTIVE_STMT_PLAN_KEYS = {
 		AseTune:      ['ShowPlanText', 'CachedPlanInXml'],
 		SqlServerTune:[],
 		PostgresTune: ['query_plan'],
-		OracleTune:   ['ExecPlan']
+		OracleTune:   ['ExecPlan'],
+		Db2Tune:      ['EXEC_PLAN']
 	};
 	var ACTIVE_STMT_DB_VENDOR = {
 		AseTune:       'Adaptive Server Enterprise',
@@ -2677,6 +2679,14 @@ function dbxTuneGraphSubscribe()
 					if (metaData.columnName === "HasBlockedSidsInfo"  && rowData.hasOwnProperty('BlockedSidsInfo')  && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.BlockedSidsInfo  , 'Blocked SID Info') ); }
 					if (metaData.columnName === "HasSidWaitInfo"      && rowData.hasOwnProperty('SidWaitInfo')      && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.SidWaitInfo      , 'SID Wait Info'   ) ); }
 				}
+				else if ("Db2Tune" === appName && metaData !== undefined && metaData.hasOwnProperty('columnName'))
+				{
+					// The tooltip goes on the CHECKBOX columns (as for the other collectors). EXEC_PLAN is JSON (from the explain tables)
+					if (metaData.columnName === "HAS_SQL_TEXT"        && rowData.hasOwnProperty('SQL_TEXT')           && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.SQL_TEXT          , 'sql' ) ); }
+					if (metaData.columnName === "HAS_EXEC_PLAN"       && rowData.hasOwnProperty('EXEC_PLAN')          && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.EXEC_PLAN         , 'json') ); }
+					if (metaData.columnName === "HAS_APPL_LOCKS"      && rowData.hasOwnProperty('APPL_LOCKS')         && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.APPL_LOCKS        , 'Lock Table') ); }
+					if (metaData.columnName === "HAS_BLOCKED_INFO"    && rowData.hasOwnProperty('BLOCKED_APPLS_INFO') && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.BLOCKED_APPLS_INFO, 'Blocked Application Info') ); }
+				}
 			} // end: metaData && columnName
 		};
 
@@ -2813,6 +2823,35 @@ function dbxTuneGraphSubscribe()
 			        + " * YELLOW: Holds an open transaction while STATUS is not ACTIVE (waits for the client, and holds its locks) \n"
 			        + " * PINK:   Blocked by some other session \n"
 			        + " * RED:    BLOCKING other session(s) from working.\n"
+					+ "";
+		}
+		else if ("Db2Tune" === appName)
+		{
+			// The same colors, with the same meaning, as for the other collectors (and as the GUI: db2/gui/CmActiveStatementsPanel). The last one that matches wins.
+			trCallback = function(tr, row)
+			{
+				// multiSampled
+				if (row.hasOwnProperty('MULTI_SAMPLED') && row.MULTI_SAMPLED !== null && row.MULTI_SAMPLED !== '')
+					tr.className = "active-statement-row-multi-sampled";
+
+				// An open unit of work, and the connection waits for the client (it holds its locks)
+				if (row.hasOwnProperty('UOW_STATE') && row.UOW_STATE === 'UOWWAIT')
+					tr.className = "active-statement-row-holding-locks-while-idle";
+
+				// Blocked by some other connection ('BLOCKED_BY_APPL_HANDLE' is 0 when it is not blocked)
+				var isBlocked = row.hasOwnProperty('BLOCKED_BY_APPL_HANDLE') && row.BLOCKED_BY_APPL_HANDLE !== null && row.BLOCKED_BY_APPL_HANDLE > 0;
+				if (isBlocked)
+					tr.className = "active-statement-row-blocked";
+
+				// Blocking OTHER connections, and not blocked itself (the root cause)
+				if (row.hasOwnProperty('BLOCKING_OTHER_APPL_HANDLES') && row.BLOCKING_OTHER_APPL_HANDLES !== null && row.BLOCKING_OTHER_APPL_HANDLES !== '' && ! isBlocked)
+					tr.className = "active-statement-row-blocking";
+			};
+			tooltip = "Background colors: \n"
+			        + " * ORANGE: Multi Sampled Statement (has been running for more than 1 sample) \n"
+			        + " * YELLOW: An open unit of work while the connection waits for the client (UOWWAIT, it holds its locks) \n"
+			        + " * PINK:   Blocked by some other connection \n"
+			        + " * RED:    BLOCKING other connection(s) from working.\n"
 					+ "";
 		}
 		else

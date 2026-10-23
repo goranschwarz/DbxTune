@@ -32,17 +32,26 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.cm.CountersModel;
+import com.dbxtune.cm.db2.CmActiveStatements;
+import com.dbxtune.cm.db2.CmBackups;
 import com.dbxtune.cm.db2.CmConnectionSummary;
 import com.dbxtune.cm.db2.CmErrorLog;
+import com.dbxtune.cm.db2.CmHadr;
+import com.dbxtune.cm.db2.CmMemory;
 import com.dbxtune.cm.db2.CmMonGetBufferPool;
 import com.dbxtune.cm.db2.CmMonGetConnection;
 import com.dbxtune.cm.db2.CmMonGetIndex;
 import com.dbxtune.cm.db2.CmMonGetTable;
+import com.dbxtune.cm.db2.CmStatements;
+import com.dbxtune.cm.db2.CmStoragePaths;
 import com.dbxtune.cm.db2.CmSummary;
 import com.dbxtune.cm.db2.CmSystemResourses;
 import com.dbxtune.cm.db2.CmTableSpace;
+import com.dbxtune.cm.db2.CmTableSize;
 import com.dbxtune.cm.db2.CmTableSpaceAll;
+import com.dbxtune.cm.db2.CmTimeSpent;
 import com.dbxtune.cm.db2.CmTransactionLog;
+import com.dbxtune.cm.db2.CmUtilities;
 import com.dbxtune.cm.db2.Db2CmUtils;
 import com.dbxtune.cm.os.CmOsDiskSpace;
 import com.dbxtune.cm.os.CmOsIostat;
@@ -76,6 +85,7 @@ extends CounterControllerAbstract
 	private static final String[] MONITOR_FUNCTIONS = new String[] {
 			"MON_GET_DATABASE(-2)",
 			"MON_GET_DATABASE_DETAILS(-2)",
+			"MON_FORMAT_XML_TIMES_BY_ROW(CAST(NULL AS BLOB(8M)))",
 			"MON_GET_INSTANCE(-2)",
 			"MON_GET_TRANSACTION_LOG(-2)",
 			"MON_GET_UNIT_OF_WORK(null, -2)",
@@ -137,16 +147,25 @@ extends CounterControllerAbstract
 		CmMonGetConnection  .create(counterController, guiController);
 		CmSystemResourses   .create(counterController, guiController);
 		CmTransactionLog    .create(counterController, guiController);
+		CmTimeSpent         .create(counterController, guiController);
 		CmTableSpace        .create(counterController, guiController);
 		CmTableSpaceAll     .create(counterController, guiController);
+		CmStoragePaths      .create(counterController, guiController);
+		CmHadr              .create(counterController, guiController);
+		CmBackups           .create(counterController, guiController);
+		CmUtilities         .create(counterController, guiController);
 		CmErrorLog          .create(counterController, guiController);
 
 		// Object Access
+		CmActiveStatements  .create(counterController, guiController);
+		CmStatements        .create(counterController, guiController);
 		CmMonGetTable       .create(counterController, guiController);
 		CmMonGetIndex       .create(counterController, guiController);
+		CmTableSize         .create(counterController, guiController);
 
 		// Cache
 		CmMonGetBufferPool  .create(counterController, guiController);
+		CmMemory            .create(counterController, guiController);
 
 		// OS HOST Monitoring
 		CmOsIostat          .create(counterController, guiController);
