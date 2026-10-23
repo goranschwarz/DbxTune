@@ -165,7 +165,9 @@ namespace DbxInstaller
                 CreateServiceAccount),
             new("Create user profile",                 StepKind.Action,
                 "Ensures C:\\Users\\<account>\\ and NTUSER.DAT exist (via CreateProfile API).\n" +
-                "Required so that RunAs, user environment variables and the registry hive work correctly.",
+                "Required so that RunAs, user environment variables and the registry hive work correctly.\n" +
+                "Checks first that C:\\Users\\<account> is free (or already this account's profile) — a left-over\n" +
+                "profile, local account or folder stops the step; 'Check' on the Service Account page can clean it up.",
                 CreateUserProfile),
             new("Grant SeCreateSymbolicLinkPrivilege", StepKind.Action,
                 "Writes to Local Security Policy via LsaAddAccountRights.\n" +
@@ -702,16 +704,36 @@ namespace DbxInstaller
 
         private static Task<bool> CreateUserProfile(InstallConfig c, InstallLog log)
         {
+            string expected = AccountHome(c.ServiceAccount);
+            const string howToFix =
+                "Click Back to the Service Account page, press Check and then 'Clean up…' (or use the PowerShell " +
+                "commands in this log), then click Next until the install runs again.";
+
+            // What is in the way of C:\Users\<name> — checked BEFORE creating the profile, which would
+            // otherwise land in another folder (C:\Users\<name>.000) and be one more leftover.
+            var findings = ProfileCheck.Analyze(c.ServiceAccount, expected, ProfileCheck.ReadSnapshot(c.ServiceAccount, expected));
+            if (findings.Any(f => f.Blocks))
+            {
+                foreach (var f in findings) log($"- {f.Text}");
+                log("PowerShell commands for the administrator:");
+                foreach (var line in ProfileCheck.PowerShellCommands(c.ServiceAccount, expected, findings).Split('\n'))
+                    log("    " + line.TrimEnd('\r'));
+                throw new Exception($"The profile folder {expected} can't be used for '{c.ServiceAccount}' (see above). {howToFix}");
+            }
+
             log($"Ensuring Windows profile exists for '{c.ServiceAccount}'…");
-            LsaPrivileges.EnsureUserProfile(c.ServiceAccount, out string path);
+            // The folder name only: CreateProfile takes it as a path piece ("DOMAIN\user" became C:\Users\DOMAIN\user)
+            LsaPrivileges.EnsureUserProfile(c.ServiceAccount, Path.GetFileName(expected), out string path);
             log($"Profile path: {path}");
 
-            string expected = AccountHome(c.ServiceAccount);
-            if (!path.Equals(expected, StringComparison.OrdinalIgnoreCase))
-                throw new Exception(
-                    $"Profile was created at '{path}' instead of the expected '{expected}'.\n" +
-                    $"This usually means a leftover account or profile directory is using that name.\n" +
-                    $"Delete the stale profile ('{path}') and the user account, then re-run the installer.");
+            if (!path.TrimEnd('\\').Equals(expected, StringComparison.OrdinalIgnoreCase))
+            {
+                log("PowerShell commands for the administrator:");
+                foreach (var line in ProfileCheck.PowerShellCommands(c.ServiceAccount, expected, new List<ProfileCheck.Finding>()).Split('\n'))
+                    log("    " + line.TrimEnd('\r'));
+                throw new Exception($"Windows created the profile of '{c.ServiceAccount}' at '{path}' instead of '{expected}': " +
+                                    $"something else uses that folder name. {howToFix}");
+            }
 
             c.ProfilePath = path;
             log("Profile path matches expected location — OK.");
@@ -2541,26 +2563,25 @@ namespace DbxInstaller
         }
 
         // The Check button's text for 1385 — an Info, not an error: the password is right, and the
-        // rights the logon still lacks are granted by the install/upgrade itself, AFTER this page.
-        // Keep the lists in line with the "Grant ..." / "Add to local groups" steps (and, for the
-        // upgrade, with UpgradeProgressPage.UpgradeStepNames).
+        // rights the logon still lacks are granted by the install / upgrade-repair itself, AFTER this
+        // page. Keep the lists in line with the "Grant ..." / "Add to local groups" steps (the upgrade
+        // runs all of them too: UpgradeProgressPage.UpgradeStepNames).
         internal static string LogonTypeNotGrantedMessage(string account, bool upgrade)
         {
             string intro =
                 $"Password is correct, but '{account}' is not allowed to log on locally on this computer yet " +
                 "(Win32 error 1385, ERROR_LOGON_TYPE_NOT_GRANTED — usually set by a Group Policy).\n\n";
-            string grants = upgrade
-                ? "This is OK — you can continue. The upgrade grants these user rights again, in the local security policy:\n" +
-                  "  •  Log on as a service,  Allow log on locally\n"
-                : "This is OK — you can continue. The install sets these up for the account, in the local security policy:\n" +
-                  "  •  User rights:  Log on as a service,  Allow log on locally,  Create symbolic links,  Debug programs\n" +
-                  "  •  Local groups:  Performance Log Users,  Performance Monitor Users,  Remote Desktop Users\n";
+            string grants =
+                $"This is OK — you can continue. The {(upgrade ? "upgrade / repair" : "install")} sets these up for the account, " +
+                "in the local security policy:\n" +
+                "  •  User rights:  Log on as a service,  Allow log on locally,  Create symbolic links,  Debug programs\n" +
+                "  •  Local groups:  Performance Log Users,  Performance Monitor Users,  Remote Desktop Users\n";
             string retest =
                 "\nThen it tests the logon again. If a 'Deny log on locally' policy applies, it stops there and says which policy.\n\n";
             string domainPush =
                 "Note: a domain Group Policy can overwrite these local settings at its next refresh (reboot, gpupdate, " +
                 "or within 16 hours). The installer checks for that, and if it will happen it shows a warning at the end " +
-                $"of the {(upgrade ? "upgrade" : "install")} with what to ask your AD administrator for.";
+                $"of the {(upgrade ? "upgrade / repair" : "install")} with what to ask your AD administrator for.";
             return intro + grants + retest + domainPush;
         }
 

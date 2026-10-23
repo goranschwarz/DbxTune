@@ -184,6 +184,32 @@ namespace DbxInstaller
             }
         }
 
+        // The SID of this computer's own account domain: a LOCAL account's SID is "<this>-<RID>".
+        // Tells a local account (or a deleted local account's left-over profile) from a domain one.
+        // Null when it can't be read. Needs no admin rights.
+        public static string? GetLocalAccountDomainSid()
+        {
+            var objAttr   = new LSA_OBJECT_ATTRIBUTES { Length = (uint)Marshal.SizeOf<LSA_OBJECT_ATTRIBUTES>() };
+            var emptyName = default(LSA_UNICODE_STRING);
+            if (LsaOpenPolicy(ref emptyName, ref objAttr, POLICY_VIEW_LOCAL_INFORMATION, out IntPtr policy) != 0)
+                return null;
+
+            IntPtr info = IntPtr.Zero;
+            try
+            {
+                if (LsaQueryInformationPolicy(policy, PolicyAccountDomainInformation, out info) != 0 || info == IntPtr.Zero)
+                    return null;
+                var domain = Marshal.PtrToStructure<POLICY_ACCOUNT_DOMAIN_INFO>(info);
+                return domain.DomainSid == IntPtr.Zero ? null : new System.Security.Principal.SecurityIdentifier(domain.DomainSid).Value;
+            }
+            catch { return null; }
+            finally
+            {
+                if (info != IntPtr.Zero) LsaFreeMemory(info);
+                LsaClose(policy);
+            }
+        }
+
         public static string GetSidString(string accountName)
         {
             byte[] sid = LookupSid(accountName);
@@ -221,8 +247,20 @@ namespace DbxInstaller
 
         // ── P/Invoke ──────────────────────────────────────────────────────────
 
-        private const uint POLICY_ALL_ACCESS            = 0x00F0FFF;
-        private const uint STATUS_OBJECT_NAME_NOT_FOUND = 0xC0000034;
+        private const uint POLICY_ALL_ACCESS             = 0x00F0FFF;
+        private const uint POLICY_VIEW_LOCAL_INFORMATION = 0x0000001;
+        private const int  PolicyAccountDomainInformation = 5;       // POLICY_INFORMATION_CLASS
+        private const uint STATUS_OBJECT_NAME_NOT_FOUND  = 0xC0000034;
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct POLICY_ACCOUNT_DOMAIN_INFO
+        {
+            public LSA_UNICODE_STRING DomainName;
+            public IntPtr             DomainSid;
+        }
+
+        [DllImport("advapi32.dll")]
+        private static extern uint LsaQueryInformationPolicy(IntPtr policyHandle, int informationClass, out IntPtr buffer);
 
         [StructLayout(LayoutKind.Sequential)]
         private struct LSA_UNICODE_STRING
@@ -312,13 +350,15 @@ namespace DbxInstaller
 
         // Creates the Windows user profile directory + NTUSER.DAT for the given account.
         // Safe to call when the profile already exists — returns true in both cases.
-        public static bool EnsureUserProfile(string accountName, out string profilePath)
+        // profileName = the folder name Windows should use under C:\Users ("s2dbxtuneq"): CreateProfile
+        // takes it as a path piece, so "DOMAIN\user" would become the folder C:\Users\DOMAIN\user.
+        public static bool EnsureUserProfile(string accountName, string profileName, out string profilePath)
         {
             profilePath = "";
             string sid = GetSidString(accountName);
 
             var path = new StringBuilder(260);
-            int  hr  = CreateProfile(sid, accountName, path, (uint)path.Capacity);
+            int  hr  = CreateProfile(sid, profileName, path, (uint)path.Capacity);
 
             const int S_OK                   = 0;
             const int ERROR_ALREADY_EXISTS   = unchecked((int)0x800700B7);
@@ -341,6 +381,21 @@ namespace DbxInstaller
         [DllImport("userenv.dll", CharSet = CharSet.Unicode)]
         private static extern int CreateProfile(string pszUserSid, string pszUserName,
             StringBuilder pszProfilePath, uint cchProfilePath);
+
+        // Deletes a user profile: its folder and its registration (ProfileList) — the same as
+        // System Properties > User Profiles > Delete. Works for a SID whose account no longer exists.
+        // Fails (exception) while the profile is in use. Returns nothing: throws on failure.
+        public static void DeleteUserProfile(string sid)
+        {
+            if (!DeleteProfile(sid, null, null))
+            {
+                int err = Marshal.GetLastWin32Error();
+                throw new Exception($"DeleteProfile failed for {sid}: {new System.ComponentModel.Win32Exception(err).Message} (Win32 error {err})");
+            }
+        }
+
+        [DllImport("userenv.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern bool DeleteProfile(string lpSidString, string? lpProfilePath, string? lpComputerName);
 
         // ── token privilege helpers ───────────────────────────────────────────
 

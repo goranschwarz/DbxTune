@@ -18,14 +18,20 @@ namespace DbxInstaller.Pages
         public WelcomePage()
         {
             _rbInstall.Content = "Install — set up DbxTune on this machine";
-            _rbUpgrade.Content = "Upgrade — update an existing DbxTune installation";
+            _rbUpgrade.Content = "Upgrade / Repair — update an existing DbxTune installation, or repair it";
             _rbRemove.Content  = "Remove — uninstall DbxTune from this machine";
+
+            var upgradeHint = PageHelpers.Dim(
+                "Sets up the service account again (profile folder, user rights, local groups, the account and password of the " +
+                "service), then installs the package you choose: a newer version, or the same one to repair the software. " +
+                "Your configuration and recordings are kept.");
+            upgradeHint.Margin = new Thickness(22, 0, 0, 4);
 
             var stack = PageHelpers.Stack(
                 PageHelpers.Title("DbxTune Setup Wizard"),
-                PageHelpers.Subtitle("This wizard installs, upgrades, or removes DbxTune and the DbxStarter service " +
+                PageHelpers.Subtitle("This wizard installs, upgrades / repairs, or removes DbxTune and the DbxStarter service " +
                                      "on this machine. Choose what you'd like to do, then click Next."),
-                _rbInstall, _rbUpgrade, _rbRemove);
+                _rbInstall, _rbUpgrade, upgradeHint, _rbRemove);
             Content = stack;
         }
 
