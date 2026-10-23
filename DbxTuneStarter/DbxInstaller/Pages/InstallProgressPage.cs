@@ -203,7 +203,7 @@ namespace DbxInstaller.Pages
         {
             string bar = new string('=', 70);
             appendLog("\n" + bar, "OrangeBrush");
-            appendLog("  WARNING: Group Policy will undo part of the service account setup", "OrangeBrush");
+            appendLog("  WARNING: Group Policy blocks or will undo part of the service account setup", "OrangeBrush");
             appendLog(bar, "OrangeBrush");
             foreach (var line in detail.Replace("\r\n", "\n").Split('\n'))
                 appendLog("  " + line, "OrangeBrush");
