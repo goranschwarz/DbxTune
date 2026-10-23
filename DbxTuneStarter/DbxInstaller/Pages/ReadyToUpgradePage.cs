@@ -38,7 +38,7 @@ namespace DbxInstaller.Pages
                 // "Checking…" text actually paint before the blocking call runs.
                 await Dispatcher.Yield(DispatcherPriority.Background);
 
-                var (outcome, message) = InstallActions.TryVerifyPassword(_account, _txtPassword.Password);
+                var (outcome, message) = InstallActions.TryVerifyPassword(_account, _txtPassword.Password, upgrade: true);
                 _lblPasswordStatus.Text = message;
                 string brush = outcome switch
                 {
