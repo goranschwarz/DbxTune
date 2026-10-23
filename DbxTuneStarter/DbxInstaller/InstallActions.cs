@@ -80,6 +80,13 @@ namespace DbxInstaller
         // warning after "Installation complete" / "Upgrade complete".
         public string PolicyWarningDetail { get; set; } = "";
 
+        // Set by CheckLogonRights when a 'Deny log on locally' policy blocks the account's interactive
+        // logon while 'Log on as a service' works: the steps that would run AS the account (init
+        // command, DBMS config wizard, impersonated file creation, launching the client) then run as
+        // the installing admin instead — with the account's folders, and icacls for the account —
+        // the same way as for a gMSA (RunAsAdmin).
+        public bool NoInteractiveLogon { get; set; }
+
         // Set by the Progress page before running steps. Only the download in LocatePackage
         // actually observes this — it's the one step whose long-running work can be aborted
         // mid-flight; everything else is a quick synchronous OS call that runs to completion
@@ -892,6 +899,16 @@ namespace DbxInstaller
             try { sids.Add(LsaPrivileges.GetSidString(account)); } catch { /* the grant steps above already resolved it */ }
             bool haveGroups = false;
             var notes = new List<string>();
+            c.NoInteractiveLogon = false;
+
+            var sidCache = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+            string? LookupSid(string name)
+            {
+                if (sidCache.TryGetValue(name, out var cached)) return cached;
+                string? sid = null;
+                try { sid = LsaPrivileges.GetSidString(name); } catch { /* unresolvable — compared by name */ }
+                return sidCache[name] = sid;
+            }
 
             // Returns true when the logon worked; throws (stops the install) on a fatal logon error.
             bool TestLogon(int logonType, string what, string allowRight, string allowName,
@@ -899,6 +916,18 @@ namespace DbxInstaller
             {
                 int err = LogonAs(account, c.Password, logonType, sids);
                 if (err == 0) { log($"Logon test '{what}': OK"); return true; }
+
+                // Interactive logon denied, but the service logon worked (haveGroups): the service is fine,
+                // so carry on and run the as-the-account steps as the admin (c.NoInteractiveLogon) — the
+                // warning at the end says what the AD administrator must change to allow it.
+                if (err == ERROR_LOGON_TYPE_NOT_GRANTED && logonType == LOGON32_LOGON_INTERACTIVE && haveGroups)
+                {
+                    c.NoInteractiveLogon = true;
+                    log($"Warning: '{account}' may not log on locally on this computer (Win32 error 1385) — a '{denyName}' policy " +
+                        "applies. Continuing: the steps that run as the account run as you instead, with the account's folders " +
+                        "(see the warning at the end for what to ask the AD administrator for).");
+                    return false;
+                }
 
                 if (err == ERROR_LOGON_TYPE_NOT_GRANTED)
                 {
@@ -953,15 +982,12 @@ namespace DbxInstaller
             }
 
             // ── 3. The warning: GPO settings that will undo (or block) the local setup ──
-            var sidCache = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-            string? LookupSid(string name)
-            {
-                if (sidCache.TryGetValue(name, out var cached)) return cached;
-                string? sid = null;
-                try { sid = LsaPrivileges.GetSidString(name); } catch { /* unresolvable — compared by name */ }
-                return sidCache[name] = sid;
-            }
-            c.PolicyWarningDetail = BuildPolicyWarning(account, gmsa, sids, haveGroups, gpoRights, gpoGroups, rsopProblem, notes, LookupSid);
+            string rest = BuildPolicyWarning(account, gmsa, sids, haveGroups, gpoRights, gpoGroups, rsopProblem, notes, LookupSid,
+                                             skipInteractive: c.NoInteractiveLogon);
+            string interactive = c.NoInteractiveLogon
+                ? InteractiveDeniedText(account, c.Mode == InstallMode.Upgrade ? "upgrade / repair" : "install", sids, gpoRights, LookupSid)
+                : "";
+            c.PolicyWarningDetail = string.Join("\n\n", new[] { interactive, rest }.Where(s => s.Length > 0));
 
             if (c.PolicyWarningDetail.Length > 0)
                 log("WARNING: see the Group Policy warning at the end of this log.");
@@ -970,15 +996,91 @@ namespace DbxInstaller
             return Task.FromResult(true);
         }
 
+        // The first entry of a GPO's account list that is the account itself or a group it is in (by
+        // SID, from the logon token: nested groups too), or null. A GPO lists accounts by name
+        // ("CORP\DbxTune Admins") or by SID ("*S-1-5-32-544"); a name that can't be resolved is
+        // compared with the account name.
+        internal static string? FindGpoMember(string[] members, HashSet<string> sids, string account, Func<string, string?> lookupSid) =>
+            members.FirstOrDefault(member =>
+            {
+                string m   = member.Trim().TrimStart('*');
+                string? sid = m.StartsWith("S-1-", StringComparison.OrdinalIgnoreCase) ? m : lookupSid(m);
+                return sid != null ? sids.Contains(sid) : m.Equals(account, StringComparison.OrdinalIgnoreCase);
+            });
+
+        // The warning when a 'Deny log on locally' policy blocks the account (c.NoInteractiveLogon): what
+        // the install did instead, and exactly what the AD administrator must change — the deny group the
+        // account is in (found through the logon token's groups) and the 'Allow log on locally' GPO.
+        internal static string InteractiveDeniedText(string account, string flow, HashSet<string> sids,
+            List<GroupPolicy.Setting>? gpoRights, Func<string, string?> lookupSid)
+        {
+            var deny  = gpoRights?.FirstOrDefault(s => s.Name.Equals("SeDenyInteractiveLogonRight", StringComparison.OrdinalIgnoreCase));
+            var allow = gpoRights?.FirstOrDefault(s => s.Name.Equals(LsaPrivileges.SeInteractiveLogonRight, StringComparison.OrdinalIgnoreCase));
+            string? group = deny == null ? null : FindGpoMember(deny.Members, sids, account, lookupSid);
+            string me = $"{Environment.UserDomainName}\\{Environment.UserName}";
+            const string where = "Computer Configuration > Policies > Windows Settings > Security Settings >\n" +
+                                 "     Local Policies > User Rights Assignment";
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"'{account}' may NOT log on locally on this computer:");
+            sb.AppendLine(deny != null && group != null ? $"it is in '{group}', which GPO \"{deny.GpoName}\" lists under 'Deny log on locally'."
+                        : deny != null ? $"GPO \"{deny.GpoName}\" denies it through one of the account's groups ('Deny log on locally')."
+                        : "a 'Deny log on locally' setting applies to it.");
+            sb.AppendLine($"The {flow} went on without that:");
+            sb.AppendLine($"  - 'Initialize DbxTune home' and the DBMS config wizard ran as you ({me}), with the account's folders,");
+            sb.AppendLine($"    and '{account}' got full control of them (icacls).");
+            sb.AppendLine($"  - DbxStarterClient can't run as '{account}': start it as yourself (it controls the service the same way),");
+            sb.AppendLine("    or use the DbxStarter Web UI.");
+            sb.AppendLine("  - DbxStarterService is not affected: 'Log on as a service' works.");
+            sb.AppendLine();
+            sb.AppendLine($"To let '{account}' log on locally (for DbxStarterClient or Remote Desktop as the account), ask your AD administrator:");
+            if (deny != null && group != null)
+                sb.AppendLine($"  1. Take '{account}' out of the group '{group}', or exclude this server ({Environment.MachineName}) from the");
+            else
+                sb.AppendLine($"  1. Find the group of '{account}' that 'Deny log on locally' lists (rsop.msc on this server, or 'whoami /groups'),");
+            if (deny != null && group == null)
+                sb.AppendLine($"     GPO \"{deny.GpoName}\" lists: {string.Join(", ", deny.Members)}. Take the account out of it, or exclude this server from the");
+            sb.AppendLine(deny != null ? $"     'Deny log on locally' setting of GPO \"{deny.GpoName}\"." : "     and take the account out of it.");
+            sb.AppendLine($"     In gpmc.msc: {where}");
+            if (allow != null && FindGpoMember(allow.Members, sids, account, lookupSid) == null)
+            {
+                sb.AppendLine($"  2. Add '{account}' (or a group it is in) to 'Allow log on locally' in GPO \"{allow.GpoName}\" (it lists only:");
+                sb.AppendLine($"     {string.Join(", ", allow.Members)}) — otherwise the installer's local grant is removed at the next policy refresh.");
+            }
+            sb.AppendLine("Then run this installer again and choose 'Upgrade / Repair'.");
+
+            // The same as PowerShell. Group membership: ActiveDirectory module (RSAT). A User Rights
+            // Assignment inside a GPO has no PowerShell cmdlet — that part stays in gpmc.msc.
+            string sam      = account.Contains('\\') ? account.Split('\\', 2)[1] : account.Split('@')[0];
+            string groupSam = group == null ? "<group>" : group.Contains('\\') ? group.Split('\\', 2)[1] : group;
+            sb.AppendLine();
+            sb.AppendLine("PowerShell for the AD administrator (ActiveDirectory module):");
+            sb.AppendLine($"    # The groups '{sam}' is in (look for the one 'Deny log on locally' lists)");
+            sb.AppendLine($"    Get-ADPrincipalGroupMembership '{sam}' | Select-Object Name | Sort-Object Name");
+            sb.AppendLine($"    # Take the account out of the deny group");
+            sb.AppendLine($"    Remove-ADGroupMember -Identity '{groupSam}' -Members '{sam}' -Confirm:$false");
+            if (deny != null)
+            {
+                sb.AppendLine("    # The GPO's settings (User Rights Assignment), to look at");
+                sb.AppendLine($"    Get-GPOReport -Name '{deny.GpoName}' -ReportType Html -Path $env:TEMP\\gpo.html");
+            }
+            sb.AppendLine("    # (Changing 'Allow/Deny log on locally' INSIDE a GPO has no cmdlet: use gpmc.msc, see above.)");
+            sb.AppendLine("PowerShell on this server, afterwards (as administrator):");
+            sb.AppendLine("    gpupdate /force");
+            sb.AppendLine("    gpresult /scope computer /h $env:TEMP\\rsop.html; Start-Process $env:TEMP\\rsop.html   # 'Source GPO' per user right");
+            return sb.ToString().TrimEnd();
+        }
+
         // The text of the "Check logon rights" warning, or "" when there is nothing to warn about.
         // No system calls except through lookupSid, so it can be tested with made-up GPO data.
         //   sids       : the account's SID + the SIDs of every group it is in (from a logon token)
         //   haveGroups : false when no logon token was available — sids then holds only the account
         //   gpoRights/gpoGroups : the domain GPO settings, null when not read (not domain-joined, or rsopProblem)
         //   lookupSid  : account/group name → SID string, null when it can't be resolved
+        //   skipInteractive : the interactive-logon rights are explained by InteractiveDeniedText already
         internal static string BuildPolicyWarning(string account, bool gmsa, HashSet<string> sids, bool haveGroups,
             List<GroupPolicy.Setting>? gpoRights, List<GroupPolicy.Setting>? gpoGroups, string rsopProblem,
-            List<string> notes, Func<string, string?> lookupSid)
+            List<string> notes, Func<string, string?> lookupSid, bool skipInteractive = false)
         {
             var known = new HashSet<string>(sids, StringComparer.OrdinalIgnoreCase);
             if (!haveGroups)
@@ -988,27 +1090,25 @@ namespace DbxInstaller
                 known.Add("S-1-5-11");   // Authenticated Users
             }
 
-            // A GPO lists accounts by name ("CORP\DbxTune Admins") or by SID ("*S-1-5-32-544").
             string? SidOf(string member)
             {
                 string m = member.Trim().TrimStart('*');
                 return m.StartsWith("S-1-", StringComparison.OrdinalIgnoreCase) ? m : lookupSid(m);
             }
-            // The first member entry that is the account itself or a group it is in, or null.
-            string? FindAccount(string[] members) => members.FirstOrDefault(m =>
-                SidOf(m) is string sid ? known.Contains(sid) : m.Trim().Equals(account, StringComparison.OrdinalIgnoreCase));
+            string? FindAccount(string[] members) => FindGpoMember(members, known, account, lookupSid);
+            bool Skip(string right) => skipInteractive && right is "SeInteractiveLogonRight" or "SeDenyInteractiveLogonRight";
 
             var items = new List<string>();
             bool anyDeny = false;
             if (gpoRights != null && gpoGroups != null)
             {
-                foreach (var r in PolicyAllowRights.Where(r => !(gmsa && r.NotForGmsa)))
+                foreach (var r in PolicyAllowRights.Where(r => !(gmsa && r.NotForGmsa) && !Skip(r.Right)))
                 {
                     var s = gpoRights.FirstOrDefault(s => s.Name.Equals(r.Right, StringComparison.OrdinalIgnoreCase));
                     if (s != null && FindAccount(s.Members) == null)
                         items.Add($"- {r.Name}\n    GPO \"{s.GpoName}\" sets it to: {string.Join(", ", s.Members)}\n    -> {r.Consequence}");
                 }
-                foreach (var r in PolicyDenyRights.Where(r => !(gmsa && r.NotForGmsa)))
+                foreach (var r in PolicyDenyRights.Where(r => !(gmsa && r.NotForGmsa) && !Skip(r.Right)))
                 {
                     var s = gpoRights.FirstOrDefault(s => s.Name.Equals(r.Right, StringComparison.OrdinalIgnoreCase));
                     if (s != null && FindAccount(s.Members) is string match)
@@ -1154,7 +1254,7 @@ namespace DbxInstaller
                 return Task.FromResult(true);
             }
 
-            log($"Running as '{c.ServiceAccount}': {c.InitCommand}");
+            log(RunAsAdmin(c) ? $"Running for '{c.ServiceAccount}': {c.InitCommand}" : $"Running as '{c.ServiceAccount}': {c.InitCommand}");
             var (ok, output) = RunAs("cmd.exe", $"/c {c.InitCommand}", c, log);
             log(output);
             if (!ok) throw new Exception("Init command failed.");
@@ -1356,14 +1456,76 @@ namespace DbxInstaller
             return null;
         }
 
-        // Run a process as the service account with its user profile loaded.
-        // gMSA accounts cannot be impersonated interactively — falls back to current user.
+        // The account can't run processes interactively: a gMSA (no password), or a 'Deny log on locally'
+        // policy (c.NoInteractiveLogon). Then the as-the-account steps run as the installing admin.
+        private static bool RunAsAdmin(InstallConfig c) => IsGmsa(c.ServiceAccount) || c.NoInteractiveLogon;
+
+        private static string RunAsAdminReason(InstallConfig c) => IsGmsa(c.ServiceAccount)
+            ? "gMSA account — no interactive logon"
+            : $"'{c.ServiceAccount}' may not log on locally (Group Policy)";
+
+        // A process started as the installing admin, but pointed at the SERVICE ACCOUNT's folders: its
+        // profile (USERPROFILE / HOMEDRIVE / HOMEPATH, read by dbxtune.bat), the DBXTUNE_* directories,
+        // and Java's user.home (JAVA_TOOL_OPTIONS — DbxTune's createAppDir writes to user.home). Without
+        // this, "Initialize DbxTune home" would fill the ADMIN's profile.
+        private static ProcessStartInfo AdminPsiForAccount(string exe, string args, InstallConfig c)
+        {
+            var psi = new ProcessStartInfo(exe, args) { UseShellExecute = false };
+            string profile = !string.IsNullOrEmpty(c.ProfilePath) ? c.ProfilePath : AccountHome(c.ServiceAccount);
+            string drive   = Path.GetPathRoot(profile)?.TrimEnd('\\') ?? "C:";
+            psi.Environment["USERPROFILE"] = profile;
+            psi.Environment["HOMEDRIVE"]   = drive;
+            psi.Environment["HOMEPATH"]    = profile.Substring(drive.Length);
+            psi.Environment["DBXTUNE_HOME"] = Path.Combine(c.InstallDir, "0");
+            foreach (var (name, value) in new[]
+            {
+                ("DBXTUNE_USER_HOME", c.DbxUserHome), ("DBXTUNE_CENTRAL_SAVE_DIR", c.DbxSaveDir), ("DBXTUNE_CENTRAL_REPORTS_DIR", c.DbxReportsDir),
+                ("DBXTUNE_CENTRAL_LOG_DIR", c.DbxLogDir), ("DBXTUNE_CENTRAL_CONF_DIR", c.DbxConfDir), ("DBXTUNE_CENTRAL_INFO_DIR", c.DbxInfoDir),
+            })
+                if (!string.IsNullOrWhiteSpace(value)) psi.Environment[name] = value;
+            string userHome = profile.Contains(' ') ? $"\"-Duser.home={profile}\"" : $"-Duser.home={profile}";
+            psi.Environment["JAVA_TOOL_OPTIONS"] = ((psi.Environment.TryGetValue("JAVA_TOOL_OPTIONS", out var jto) ? jto + " " : "") + userHome).Trim();
+            return psi;
+        }
+
+        // After something ran as the admin for the account: give the account full control of its DbxTune
+        // directories (the files are owned by the admin). Inside its profile it has that already through
+        // inheritance — this also covers directories elsewhere.
+        private static void GrantAccountDbxDirs(InstallConfig c, InstallLog log)
+        {
+            var dirs = new[] { c.DbxUserHome, c.DbxSaveDir, c.DbxReportsDir, c.DbxLogDir, c.DbxConfDir, c.DbxInfoDir }
+                .Where(d => !string.IsNullOrWhiteSpace(d) && Directory.Exists(d)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            // A directory inside another one in the list is covered by the inherited grant
+            foreach (var dir in dirs.Where(d => !dirs.Any(o => !o.Equals(d, StringComparison.OrdinalIgnoreCase) &&
+                                                                d.StartsWith(o.TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase))))
+            {
+                log($"  Granting '{c.ServiceAccount}' full control on: {dir}");
+                var (ok, output) = Run("icacls", $"\"{dir}\" /grant \"{c.ServiceAccount}:(OI)(CI)F\" /T /Q");
+                if (!ok) log($"  Warning: icacls failed: {output.Trim()}");
+            }
+        }
+
+        // Run a process as the service account with its user profile loaded — or, when the account
+        // can't log on interactively (RunAsAdmin), as the admin with the account's folders.
         private static (bool ok, string output) RunAs(string exe, string args, InstallConfig c, InstallLog log)
         {
-            if (IsGmsa(c.ServiceAccount))
+            if (RunAsAdmin(c))
             {
-                log("  (gMSA account — interactive impersonation not supported, running as current admin user)");
-                return Run(exe, args);
+                log($"  ({RunAsAdminReason(c)}: running as you, {Environment.UserDomainName}\\{Environment.UserName}, with the account's folders)");
+                try
+                {
+                    var psi = AdminPsiForAccount(exe, args, c);
+                    psi.RedirectStandardOutput = true;
+                    psi.RedirectStandardError  = true;
+                    psi.CreateNoWindow         = true;
+                    using var p = Process.Start(psi)!;
+                    var stdout = p.StandardOutput.ReadToEndAsync();
+                    var stderr = p.StandardError.ReadToEndAsync();
+                    p.WaitForExit();
+                    return (p.ExitCode == 0, (stdout.Result + stderr.Result).Trim());
+                }
+                catch (Exception ex) { return (false, ex.Message); }
+                finally { GrantAccountDbxDirs(c, log); }
             }
 
             try
@@ -2003,7 +2165,9 @@ namespace DbxInstaller
             {
                 if (File.Exists(clientExe))
                 {
-                    log($"Launching DbxStarterClient as '{c.ServiceAccount}'…");
+                    log(RunAsAdmin(c)
+                        ? $"Launching DbxStarterClient as you ({RunAsAdminReason(c)})…"
+                        : $"Launching DbxStarterClient as '{c.ServiceAccount}'…");
                     string? launchError = LaunchAsUser(clientExe, "", c);
                     log(launchError == null ? "  Client launched." : $"  WARNING: could not start DbxStarterClient: {launchError}");
                 }
@@ -2147,12 +2311,22 @@ namespace DbxInstaller
         // stdout is captured so we can parse wizard output (e.g. WIZARD_CONFIG_FILE); the GUI still appears normally.
         private static string RunInteractiveAsUser(string exe, string args, InstallConfig c, InstallLog log)
         {
-            if (IsGmsa(c.ServiceAccount))
+            if (RunAsAdmin(c))
             {
-                log("  (gMSA — running under current admin user)");
-                using var p = Process.Start(new ProcessStartInfo(exe, args) { UseShellExecute = true })!;
-                p.WaitForExit();
-                return "";
+                log($"  ({RunAsAdminReason(c)}: running as you, with the account's folders)");
+                try
+                {
+                    var psi = AdminPsiForAccount(exe, args, c);
+                    psi.RedirectStandardOutput = true;   // the wizard reports its config file on stdout
+                    psi.RedirectStandardError  = true;
+                    using var p = Process.Start(psi)!;
+                    var stdout = p.StandardOutput.ReadToEndAsync();
+                    var stderr = p.StandardError.ReadToEndAsync();
+                    p.WaitForExit();
+                    return stdout.Result + stderr.Result;
+                }
+                catch (Exception ex) { log($"    Warning: {ex.Message}"); return ""; }
+                finally { GrantAccountDbxDirs(c, log); }
             }
             try
             {
@@ -2177,7 +2351,7 @@ namespace DbxInstaller
         {
             try
             {
-                if (IsGmsa(c.ServiceAccount))
+                if (RunAsAdmin(c))   // the client talks to the service over its pipe, which allows any user
                 {
                     Process.Start(new ProcessStartInfo(exe, args) { UseShellExecute = true });
                     return null;
@@ -2577,7 +2751,8 @@ namespace DbxInstaller
                 "  •  User rights:  Log on as a service,  Allow log on locally,  Create symbolic links,  Debug programs\n" +
                 "  •  Local groups:  Performance Log Users,  Performance Monitor Users,  Remote Desktop Users\n";
             string retest =
-                "\nThen it tests the logon again. If a 'Deny log on locally' policy applies, it stops there and says which policy.\n\n";
+                "\nThen it tests the logon again. If a 'Deny log on locally' policy applies, it goes on without it (it runs those steps " +
+                "as you, for the account) and says at the end which group and policy to ask your AD administrator about.\n\n";
             string domainPush =
                 "Note: a domain Group Policy can overwrite these local settings at its next refresh (reboot, gpupdate, " +
                 "or within 16 hours). The installer checks for that, and if it will happen it shows a warning at the end " +
@@ -2725,9 +2900,9 @@ namespace DbxInstaller
 
             public static UserImpersonation? TryCreate(InstallConfig c, InstallLog log)
             {
-                if (IsGmsa(c.ServiceAccount))
+                if (RunAsAdmin(c))
                 {
-                    log("  (gMSA account — impersonation not possible; files owned by admin, icacls will grant access)");
+                    log($"  ({RunAsAdminReason(c)}: impersonation not possible; files owned by admin, icacls will grant access)");
                     return null;
                 }
 
