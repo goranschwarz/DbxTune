@@ -65,7 +65,7 @@ window.Db2Showplan = (function () {
 	// The arguments that say something worth a line in the box panel (EXPLAIN_ARGUMENT.ARGUMENT_TYPE)
 	var FLAG_ARGS = {
 		SCANDIR: 'Scan direction', PREFETCH: 'Prefetch', MAXPAGES: 'Max pages', TABLOCK: 'Table lock', ROWLOCK: 'Row lock',
-		JN_INPUT: 'Join input', EARLYOUT: 'Early out', FETCHMAX: 'Fetch max', SORTKEY: 'Sort key', GROUPBYC: 'Group by columns',
+		'JN INPUT': 'Join input', EARLYOUT: 'Early out', FETCHMAX: 'Fetch max', SORTKEY: 'Sort key', GROUPBYC: 'Group by columns',
 		GROUPBYN: 'Group by columns', UNIQUE: 'Unique', TEMPSIZE: 'Temp size', SPILLED: 'Spilled', OUTERJN: 'Outer join',
 		ISCANMAX: 'Index scan max', JN_TYPE: 'Join type', HASHCODE: 'Hash code', BITFLTR: 'Bit filter'
 	};
@@ -819,9 +819,11 @@ window.Db2Showplan = (function () {
 			}
 
 			// --- A nested loop join with a table scan on the inner side: the table is scanned once per row of the outer side
+			// (the argument 'JN INPUT' of the input says OUTER or INNER, db2exfmt draws the outer one to the left)
 			if (n.op === 'NLJOIN' && n.children.length >= 2) {
-				var inner = n.children[n.children.length - 1];
-				var outerRows = n.children[0].metrics.estRows;
+				var inner = n.children.filter(function (c) { return c.props.cells['JN INPUT'] === 'INNER'; })[0] || n.children[n.children.length - 1];
+				var outer = n.children.filter(function (c) { return c !== inner && !c.props.isLeaf; })[0] || n.children[0];
+				var outerRows = outer.metrics.estRows;
 				if (inner.op === 'TBSCAN' && tableLeafOf(inner) && outerRows > 1) {
 					add(n, 'warning', 'Join', 'Nested loop join with a table scan of ' + tableLeafOf(inner).props.objName + ' on the inner side',
 						'The table is scanned once for each of the about ' + fmtNum(outerRows) + ' rows of the outer input. An index on the join columns of ' + tableLeafOf(inner).props.objName + ' lets Db2 look the rows up instead.',
