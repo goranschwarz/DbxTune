@@ -13,18 +13,25 @@ namespace DbxInstaller.Pages
 {
     internal sealed class UpgradeProgressPage : WizardPage, IBusyPage
     {
-        public override string StepTitle => "Upgrading";
+        public override string StepTitle => "Upgrade / Repair";
         public bool IsRunning { get; private set; }
 
         // Steps run in InstallActions.Steps order; keep this list in the same order (it's the rail).
-        // The grants + "Check logon rights" come first, so a GPO that took a right away again stops
-        // the upgrade with the cause before the service is stopped.
-        private static readonly string[] UpgradeStepNames =
+        // Upgrade = Repair: first the whole service account setup again (each step is safe to repeat),
+        // ending with "Check logon rights" — a problem stops it with the cause BEFORE the service is
+        // stopped. Then the software, and "Configure service account" (sc config with the password,
+        // start/stop rights) before the restart.
+        // Left out on purpose: "Register Windows service" (deletes and re-creates the service: its
+        // settings would be lost), "Write service config" (would reset the web port/bind to the
+        // installer's defaults), "Check web UI port" (the service itself holds that port), firewall.
+        internal static readonly string[] UpgradeStepNames =
         {
-            "Grant SeServiceLogonRight", "Grant SeInteractiveLogonRight", "Check logon rights",
+            "Create / verify service account", "Create user profile", "Grant SeCreateSymbolicLinkPrivilege",
+            "Grant SeServiceLogonRight", "Grant SeInteractiveLogonRight", "Add to local groups", "Grant SeDebugPrivilege",
+            "Check logon rights",
             "Stop service if running", "Locate package", "Create directory structure",
             "Extract package", "Set DbxTune directories", "Initialize DbxTune home",
-            "Verify DbxTune directories", "Copy DbxStarter executables",
+            "Verify DbxTune directories", "Copy DbxStarter executables", "Configure service account",
         };
 
         private readonly StackPanel _railPanel = new();
@@ -59,7 +66,7 @@ namespace DbxInstaller.Pages
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
             var left = new StackPanel();
-            left.Children.Add(PageHelpers.Title("Upgrading"));
+            left.Children.Add(PageHelpers.Title("Upgrade / Repair"));
             left.Children.Add(_railPanel);
             left.Children.Add(_btnRetry);
             left.Children.Add(_btnCancelInstall);
@@ -139,9 +146,9 @@ namespace DbxInstaller.Pages
             }
 
             if (cancelled)
-                AppendLog("\nUpgrade cancelled — change settings below and click Retry when ready.", "OrangeBrush");
+                AppendLog("\nUpgrade / Repair cancelled — change settings below and click Retry when ready.", "OrangeBrush");
             else
-                AppendLog(allOk ? "\nUpgrade complete." : "\nUpgrade stopped — fix the error and retry.", allOk ? "GreenBrush" : "RedBrush");
+                AppendLog(allOk ? "\nUpgrade / Repair complete." : "\nUpgrade / Repair stopped — fix the error and retry.", allOk ? "GreenBrush" : "RedBrush");
 
             if (allOk && !cancelled && ctx.Config.PolicyWarningDetail.Length > 0)
                 InstallProgressPage.AppendPolicyWarning(ctx.Config.PolicyWarningDetail, AppendLog);

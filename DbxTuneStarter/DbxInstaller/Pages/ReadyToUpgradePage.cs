@@ -13,7 +13,7 @@ namespace DbxInstaller.Pages
     // DBMS Selection pages aren't part of the Upgrade flow).
     internal sealed class ReadyToUpgradePage : WizardPage
     {
-        public override string StepTitle => "Ready to Upgrade";
+        public override string StepTitle => "Ready to Upgrade / Repair";
 
         private readonly TextBox _summary = new()
         {
@@ -23,6 +23,9 @@ namespace DbxInstaller.Pages
         private readonly PasswordBox _txtPassword = new() { Margin = new Thickness(0, 4, 0, 4) };
         private readonly Button _btnCheck = new() { Content = "Check" };
         private readonly TextBlock _lblPasswordStatus = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12) };
+
+        // The profile folder of the account (checked when the page opens, and by Check), with "Clean up…".
+        private readonly ProfileCheckPanel _profile = new("upgrade / repair");
 
         private bool _isGmsa;
         private string _account = "dbxtune";
@@ -47,17 +50,40 @@ namespace DbxInstaller.Pages
                     _                                      => "RedBrush",
                 };
                 _lblPasswordStatus.SetResourceReference(TextBlock.ForegroundProperty, brush);
+
+                await _profile.CheckAsync(_account);
                 _btnCheck.IsEnabled = true;
             };
 
-            Content = PageHelpers.Stack(
-                PageHelpers.Title("Ready to Upgrade"),
-                PageHelpers.Subtitle("This will fetch a new package and update the existing DbxTune installation below. " +
-                                      "Service account, install location, and DBMS selection are unchanged."),
-                _summary,
-                PageHelpers.SectionHeader("Service Account Password"),
-                PageHelpers.Row("Password", _txtPassword, _btnCheck),
-                _lblPasswordStatus);
+            // What the steps on the next page do (UpgradeProgressPage.UpgradeStepNames) — keep in line.
+            var does = PageHelpers.Stack(
+                PageHelpers.Dim("1.  The service account, set up again: the account (a missing local account is created again), its profile " +
+                                "folder, the user rights Log on as a service, Allow log on locally, Create symbolic links and Debug programs, " +
+                                "the local groups Performance Log Users, Performance Monitor Users and Remote Desktop Users — then a logon " +
+                                "test and the Group Policy check. A problem stops it here, before the service is stopped."),
+                PageHelpers.Dim("2.  The software: stop the service, install the package from the previous page (a newer version, or the " +
+                                "same one to repair the files), the DBXTUNE_* variables, initialize the DbxTune home."),
+                PageHelpers.Dim("3.  The service: its account and password set again (sc config), start/stop rights, then restart."),
+                PageHelpers.Dim("Kept as they are: your configuration and recordings, the service's web settings, the firewall rules, " +
+                                "the DBMS configuration."));
+            foreach (TextBlock line in does.Children) line.Margin = new Thickness(0, 0, 0, 3);
+
+            Content = new ScrollViewer
+            {
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Content = PageHelpers.Stack(
+                    PageHelpers.Title("Ready to Upgrade / Repair"),
+                    PageHelpers.Subtitle("Updates the existing DbxTune installation below, or repairs it. Service account, install " +
+                                          "location and DBMS selection are unchanged."),
+                    _summary,
+                    PageHelpers.SectionHeader("What Upgrade / Repair does"),
+                    does,
+                    PageHelpers.SectionHeader("Service Account Password"),
+                    PageHelpers.Row("Password", _txtPassword, _btnCheck),
+                    _lblPasswordStatus,
+                    PageHelpers.SectionHeader("Service Account Profile"),
+                    _profile),
+            };
         }
 
         public override void OnEnter(WizardContext ctx)
@@ -82,6 +108,9 @@ namespace DbxInstaller.Pages
                 $"DbxUserHome       : {ctx.Config.DbxUserHome}\n" +
                 $"Package source    : {(ctx.Config.DownloadZip ? ctx.Config.ZipUrl : ctx.Config.ZipLocalPath)}\n\n" +
                 "Need to change the account, location, or DBMS selection instead? Cancel and choose Install.";
+
+            // Repair step 1 starts here: show right away whether the profile folder is in order (read only).
+            _ = _profile.CheckAsync(account);
 
             // Extraction/upgrade steps (extract package, init DbxTune home, etc.) run as the
             // service account, so we need its password. Rather than re-asking, try reading it

@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Management;
+using System.Net.NetworkInformation;
+using System.Runtime.InteropServices;
 
 namespace DbxInstaller
 {
@@ -18,14 +20,32 @@ namespace DbxInstaller
         // GpoName = the GPO's display name (what rsop.msc shows as "Source GPO")
         internal sealed record Setting(string Name, string[] Members, string GpoName);
 
-        public static bool IsDomainJoined()
+        public static bool IsDomainJoined() => JoinedDomain() != null;
+
+        // The NetBIOS name of the Active Directory domain this computer is joined to ("CORP", what
+        // goes before the '\' in CORP\user), or null when it isn't (workgroup, or Entra ID only).
+        // A local call — no domain controller is contacted — so it is fine on the UI thread.
+        public static string? JoinedDomain()
         {
-            using var searcher = new ManagementObjectSearcher("SELECT PartOfDomain FROM Win32_ComputerSystem");
-            using var results  = searcher.Get();
-            foreach (ManagementBaseObject o in results)
-                using (o) return o["PartOfDomain"] is bool b && b;
-            return false;
+            if (NetGetJoinInformation(null, out IntPtr name, out int status) != 0) return null;
+            try { return status == NetSetupDomainName ? Marshal.PtrToStringUni(name) : null; }
+            finally { NetApiBufferFree(name); }
         }
+
+        // The computer's DNS domain ("corp.example.com"), "" when it has none — for display only.
+        public static string DnsDomain()
+        {
+            try { return IPGlobalProperties.GetIPGlobalProperties().DomainName ?? ""; }
+            catch { return ""; }
+        }
+
+        private const int NetSetupDomainName = 3;   // NETSETUP_JOIN_STATUS
+
+        [DllImport("netapi32.dll", CharSet = CharSet.Unicode)]
+        private static extern int NetGetJoinInformation(string? server, out IntPtr nameBuffer, out int status);
+
+        [DllImport("netapi32.dll")]
+        private static extern int NetApiBufferFree(IntPtr buffer);
 
         // Only the winning setting (precedence 1) of each right/group, and only from domain GPOs.
         // Throws when the RSoP data can't be read (not elevated, RSoP logging turned off by policy, …).
