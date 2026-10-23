@@ -73,6 +73,8 @@ public class Db2CmUtils
 				_logger.debug("checkFunctionsAreExecutable(): cm='" + cm.getName() + "', sql='" + sql + "', Caught: " + ex);
 
 				String name = isFunction ? source.substring(0, source.indexOf('(')).trim() : source.trim();
+				if (isFunction && name.toUpperCase().startsWith("SYSPROC."))
+					name = name.substring("SYSPROC.".length());
 				String msg  = "The login can't use '" + name + "'. SQLCODE=" + ex.getErrorCode() + ", SQLSTATE=" + ex.getSQLState() + ".";
 				String fix;
 				if (isFunction)
