@@ -77,6 +77,9 @@ namespace DbxInstaller.Pages
             {
                 if (!File.Exists(_txtLocal.Text.Trim()))
                     return Task.FromResult(WizardValidationResult.Fail("Local ZIP file not found."));
+                // Not the DbxTuneStarter ZIP (this installer) or any other ZIP: stop here, before any install step runs
+                if (InstallActions.CheckDbxTunePackage(_txtLocal.Text.Trim()) is string notDbxTune)
+                    return Task.FromResult(WizardValidationResult.Fail(notDbxTune));
             }
             return Task.FromResult(WizardValidationResult.Ok());
         }
