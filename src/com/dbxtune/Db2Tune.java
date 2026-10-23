@@ -33,6 +33,7 @@ import com.dbxtune.config.dict.MonTablesDictionaryDb2;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.MainFrameDb2;
 import com.dbxtune.pcs.inspection.IObjectLookupInspector;
+import com.dbxtune.pcs.inspection.ObjectLookupInspectorDb2;
 import com.dbxtune.pcs.sqlcapture.ISqlCaptureBroker;
 import com.dbxtune.sql.DbmsVersionHelperSimple;
 import com.dbxtune.sql.IDbmsVersionHelper;
@@ -101,7 +102,7 @@ extends DbxTune
 	@Override
 	public IObjectLookupInspector createPcsObjectLookupInspector()
 	{
-		return null;
+		return new ObjectLookupInspectorDb2();
 	}
 
 	@Override

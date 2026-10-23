@@ -27,9 +27,13 @@ import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.naming.NameNotFoundException;
 
@@ -52,6 +56,9 @@ import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.pcs.PcsColumnOptions;
 import com.dbxtune.pcs.PcsColumnOptions.ColumnType;
+import com.dbxtune.pcs.PersistentCounterHandler;
+import com.dbxtune.pcs.inspection.ObjectLookupInspectorDb2;
+import com.dbxtune.sql.SqlParserUtils;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.utils.Configuration;
@@ -156,6 +163,12 @@ extends CountersModel
 	public static final String  PROPKEY_sample_stmtText          = CM_NAME + ".sample.stmtText";
 	public static final boolean DEFAULT_sample_stmtText          = true;
 
+	public static final String  PROPKEY_ddlStore_topRows         = CM_NAME + ".ddlStore.topRows";
+	public static final int     DEFAULT_ddlStore_topRows         = 20;
+
+	/** The statements whose tables are already sent to the DDL Storage (the text is only parsed once per recording): true if it has tables that are not Db2's own */
+	private Map<String, Boolean> _ddlParsedStmts = new HashMap<>();
+
 	public static final String GRAPH_NAME_TIME = "StmntTime";
 	public static final String GRAPH_NAME_EXEC = "StmntExec";
 
@@ -167,6 +180,7 @@ extends CountersModel
 		Configuration.registerDefaultValue(PROPKEY_sample_lastXminutes, DEFAULT_sample_lastXminutes);
 		Configuration.registerDefaultValue(PROPKEY_sample_topRows     , DEFAULT_sample_topRows);
 		Configuration.registerDefaultValue(PROPKEY_sample_stmtText    , DEFAULT_sample_stmtText);
+		Configuration.registerDefaultValue(PROPKEY_ddlStore_topRows   , DEFAULT_ddlStore_topRows);
 	}
 
 	/** Used by the: Create 'Offline Session' Wizard */
@@ -179,6 +193,7 @@ extends CountersModel
 		list.add(new CmSettingsHelper("Only statements of the last ## minutes", PROPKEY_sample_lastXminutes, Integer.class, conf.getIntProperty    (PROPKEY_sample_lastXminutes, DEFAULT_sample_lastXminutes), DEFAULT_sample_lastXminutes, "Only get the statements that has run in the last ## minutes (LAST_METRICS_UPDATE). 0 = all statements." ));
 		list.add(new CmSettingsHelper("Max Number of Rows"                    , PROPKEY_sample_topRows     , Integer.class, conf.getIntProperty    (PROPKEY_sample_topRows     , DEFAULT_sample_topRows     ), DEFAULT_sample_topRows     , "Only get the ## statements with most execution time (STMT_EXEC_TIME, since the statement came into the package cache). 0 = all." ));
 		list.add(new CmSettingsHelper("Get Statement Text"                    , PROPKEY_sample_stmtText    , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_stmtText    , DEFAULT_sample_stmtText    ), DEFAULT_sample_stmtText    , "Get STMT_TEXT. Static SQL and statements without parameter markers have the values in the text: set to false if they should not be stored." ));
+		list.add(new CmSettingsHelper("Store Table Info for Top Rows"         , PROPKEY_ddlStore_topRows   , Integer.class, conf.getIntProperty    (PROPKEY_ddlStore_topRows   , DEFAULT_ddlStore_topRows   ), DEFAULT_ddlStore_topRows   , "In every sample: store information about the tables (columns, indexes and how they are used, sizes) that the ## statements with most execution time since the previous sample uses (statements on Db2's own tables are not counted). The Daily Summary Report shows it with the statement. 0 = do not store." ));
 
 		return list;
 	}
@@ -417,6 +432,148 @@ extends CountersModel
 			}
 			diffData.setValueAt(avgTimeMs  , r, pos_AvgExecTimeMs);
 			diffData.setValueAt(rowsPerExec, r, pos_RowsPerExec);
+		}
+	}
+
+	@Override
+	public void reset()
+	{
+		super.reset();
+		_ddlParsedStmts = new HashMap<>();
+	}
+
+	/** A new recording: the tables are stored again in it */
+	@Override
+	public void prepareForPcsDatabaseRollover()
+	{
+		super.prepareForPcsDatabaseRollover();
+		_ddlParsedStmts = new HashMap<>();
+	}
+
+	/**
+	 * The tables of the statements with most execution time since the previous sample: send them to the "DDL Storage" (see ObjectLookupInspectorDb2),
+	 * the report shows them with the statement. The tables are found by parsing the statement text (as MySqlTune CmStatements).<br>
+	 * The package cache does not say the default schema of a statement, so a table without a schema is looked for in all schemas (ObjectLookupInspectorDb2.ANY_SCHEMA).<br>
+	 * Every statement (EXECUTABLE_ID) is only parsed once per recording. Only statements with tables that are not Db2's own count in the top:
+	 * otherwise the queries of the collector itself (on the catalog and the MON_GET functions) take the places.
+	 */
+	@Override
+	public void sendDdlDetailsRequest(CounterSample absData, CounterSample diffData, CounterSample rateData)
+	{
+		if ( ! PersistentCounterHandler.hasInstance() || diffData == null )
+			return;
+
+		int topRows = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_ddlStore_topRows, DEFAULT_ddlStore_topRows);
+		if (topRows <= 0)
+			return;
+
+		final int pos_ExecTimeMs = diffData.findColumn("STMT_EXEC_TIME_MS");
+		final int pos_ExecId     = diffData.findColumn("EXECUTABLE_ID");
+		final int pos_StmtText   = diffData.findColumn("STMT_TEXT");
+		if (pos_ExecTimeMs == -1 || pos_ExecId == -1 || pos_StmtText == -1)
+			return;
+
+		// Most time first
+		List<List<Object>> sorted = new ArrayList<>(diffData.getDataCollection());
+		sorted.sort((row1, row2) -> Double.compare(
+				row2.get(pos_ExecTimeMs) instanceof Number ? ((Number) row2.get(pos_ExecTimeMs)).doubleValue() : 0,
+				row1.get(pos_ExecTimeMs) instanceof Number ? ((Number) row1.get(pos_ExecTimeMs)).doubleValue() : 0));
+
+		PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
+
+		int count = 0;
+		for (int r = 0; r < sorted.size() && count < topRows; r++)
+		{
+			List<Object> row = sorted.get(r);
+
+			// The rest did nothing in this sample
+			if ( ! (row.get(pos_ExecTimeMs) instanceof Number) || ((Number) row.get(pos_ExecTimeMs)).doubleValue() <= 0 )
+				break;
+
+			String execId = row.get(pos_ExecId) == null ? "" : row.get(pos_ExecId).toString();
+			Object text   = row.get(pos_StmtText);
+			if (text == null || execId.isEmpty())
+				continue;
+
+			// Already parsed: its tables are stored
+			Boolean hasTables = _ddlParsedStmts.get(execId);
+			if (hasTables != null)
+			{
+				if (hasTables)
+					count++;
+				continue;
+			}
+
+			hasTables = false;
+			for (String table : getTablesOfStmtText(text.toString()))
+			{
+				// 'schema.table' has its schema, otherwise it can be in any schema
+				String[] schemaAndTable = ObjectLookupInspectorDb2.splitSchemaAndTable(ObjectLookupInspectorDb2.ANY_SCHEMA, table);
+				if (ObjectLookupInspectorDb2.isSystemObject(schemaAndTable[0], schemaAndTable[1]))
+					continue;
+
+				pch.addDdl(schemaAndTable[0], schemaAndTable[1], CM_NAME + ".diff.top.STMT_EXEC_TIME_MS.parse");
+				hasTables = true;
+			}
+			_ddlParsedStmts.put(execId, hasTables);
+			if (hasTables)
+				count++;
+		}
+	}
+
+	/** The start of a table function in a FROM clause: TABLE( LATERAL( XMLTABLE( UNNEST( */
+	private static final Pattern TABLE_FUNCTION = Pattern.compile("(?i)\\b(TABLE|LATERAL|XMLTABLE|UNNEST)\\s*\\(");
+
+	/** The name of a common table expression: 'WITH name AS (' or ', name (col, col) AS (' */
+	private static final Pattern CTE_NAME = Pattern.compile("(?i)(?:\\bWITH|,)\\s+(\"[^\"]+\"|[A-Za-z_][\\w$#@]*)\\s*(?:\\([^()]*\\))?\\s*AS\\s*\\(");
+
+	/**
+	 * The tables of a statement, as 'table' or 'schema.table' (as they were written, the case is not changed).<br>
+	 * A table function (<code>TABLE(MON_GET_TABLE(...)) t</code>, LATERAL, XMLTABLE, UNNEST) is replaced by SYSIBM.SYSDUMMY1 first:
+	 * the parser takes the word TABLE and the alias for tables (seen on the collector's own statements). SYSIBM is skipped as a system object.
+	 * The names of common table expressions (WITH x AS (...)) are left out too.<br>
+	 * One odd text must not make the sample fail, so a parser problem gives no tables.
+	 */
+	public static Set<String> getTablesOfStmtText(String stmtText)
+	{
+		if (StringUtil.isNullOrBlank(stmtText))
+			return new HashSet<>();
+
+		StringBuilder sql = new StringBuilder(stmtText);
+		Matcher m = TABLE_FUNCTION.matcher(sql);
+		while (m.find())
+		{
+			// The ')' that closes the '(' (strings with parentheses in them are rare enough here)
+			int depth = 0;
+			int end   = -1;
+			for (int i = m.end() - 1; i < sql.length() && end < 0; i++)
+			{
+				if      (sql.charAt(i) == '(') depth++;
+				else if (sql.charAt(i) == ')' && --depth == 0) end = i;
+			}
+			if (end < 0)
+				break;
+
+			sql.replace(m.start(), end + 1, "SYSIBM.SYSDUMMY1");
+			m.reset(sql);
+		}
+
+		// The names of common table expressions (WITH x AS (...), y (c1, c2) AS (...)): the parser returns them as tables too
+		Set<String> cteNames = new HashSet<>();
+		Matcher cte = CTE_NAME.matcher(sql);
+		while (cte.find())
+			cteNames.add(cte.group(1).replace("\"", "").toUpperCase());
+
+		try
+		{
+			Set<String> tables = SqlParserUtils.getTables(sql.toString());
+			tables.removeIf(t -> cteNames.contains(t.replace("\"", "").toUpperCase()));
+			return tables;
+		}
+		catch (RuntimeException ex)
+		{
+			_logger.debug("Could not get the tables of the statement text, skipping it. Caught: " + ex + ", text: " + stmtText);
+			return new HashSet<>();
 		}
 	}
 

@@ -970,8 +970,9 @@ extends DbmsConfigAbstract
 			{
 				while (rs.next())
 				{
-					boolean fail1 = ! "OFF".equalsIgnoreCase(logarchmeth1) && ! "LOGRETAIN".equalsIgnoreCase(logarchmeth1) && rs.getInt(1) == 0;
-					boolean fail2 = logarchmeth2 != null && ! "OFF".equalsIgnoreCase(logarchmeth2) && rs.getInt(3) == 0;
+					// 1 = the last attempt worked, 0 = it failed, NULL = no attempt since the database was activated (getInt() would make NULL a 0)
+					boolean fail1 = ! "OFF".equalsIgnoreCase(logarchmeth1) && ! "LOGRETAIN".equalsIgnoreCase(logarchmeth1) && rs.getObject(1) != null && rs.getInt(1) == 0;
+					boolean fail2 = logarchmeth2 != null && ! "OFF".equalsIgnoreCase(logarchmeth2) && rs.getObject(3) != null && rs.getInt(3) == 0;
 					if (fail1 || fail2)
 					{
 						addIssue(srvRestart, keyPrefix + "log_archive.failing", "logarchmeth" + (fail1 ? "1" : "2"), Severity.WARNING,
