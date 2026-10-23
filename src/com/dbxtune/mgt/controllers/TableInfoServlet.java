@@ -45,6 +45,7 @@ import com.dbxtune.central.controllers.Helper;
 import com.dbxtune.pcs.PersistWriterJdbc;
 import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.report.content.ase.AseAbstract;
+import com.dbxtune.pcs.report.content.db2.Db2Abstract;
 import com.dbxtune.pcs.report.content.oracle.OracleAbstract;
 import com.dbxtune.pcs.report.content.postgres.PostgresAbstract;
 import com.dbxtune.pcs.report.content.sqlserver.SqlServerAbstract;
@@ -214,6 +215,19 @@ extends HttpServlet
 					result.put(resultKey, asText
 							? OracleAbstract.getTableInfoPlainText(conn, dbname, tableList)
 							: fallbackIfBlank(OracleAbstract.getTableInfoHtml(conn, dbname, tableList, true, "qs-tableinfo"), tableList));
+			}
+			else if (DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_DB2_LUW))
+			{
+				// 'dbname' is the schema of the statement, and can be empty: then a table without a schema can be in any schema. Db2's own tables are skipped
+				if (asJson)
+				{
+					_logger.info("actionTableInfo(): format=json is only implemented for dbVendor='Sybase ASE' and 'Microsoft SQL Server', skipping for '{}'.", dbVendor);
+					result.put(resultKey, Collections.emptyMap());
+				}
+				else
+					result.put(resultKey, asText
+							? Db2Abstract.getTableInfoPlainText(conn, dbname, tableList)
+							: fallbackIfBlank(Db2Abstract.getTableInfoHtml(conn, dbname, tableList, true, "qs-tableinfo"), tableList));
 			}
 			else
 			{

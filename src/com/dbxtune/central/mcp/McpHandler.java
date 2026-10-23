@@ -729,16 +729,23 @@ public class McpHandler
 		CentralPersistReader reader = CentralPersistReader.getInstance();
 		List<DbxGraphProperties> props = reader.getGraphProperties(serverName, null);
 
-		ArrayNode combined = _om.createArrayNode();
-		if (topN > 0)
+		// The CMs are SQL Server's, Db2Tune has its own (CmTimeSpent: the request time, and the time per kind of wait)
+		String appName = "";
+		try
 		{
-			appendAllGraphsForCmAggregated(combined, reader, serverName, "CmWaitStats",      props, startTime, endTime, topN);
-			appendAllGraphsForCmAggregated(combined, reader, serverName, "CmWaitStatsPerDb", props, startTime, endTime, topN);
+			DbxCentralSessions srvInfo = reader.getLastSession(serverName);
+			if (srvInfo != null) appName = srvInfo.getProductString();
 		}
-		else
+		catch (Exception ignored) {}
+		String[] cmNames = "Db2Tune".equals(appName) ? new String[] { "CmTimeSpent" } : new String[] { "CmWaitStats", "CmWaitStatsPerDb" };
+
+		ArrayNode combined = _om.createArrayNode();
+		for (String cmName : cmNames)
 		{
-			appendAllGraphsForCm(combined, reader, serverName, "CmWaitStats",      props, startTime, endTime);
-			appendAllGraphsForCm(combined, reader, serverName, "CmWaitStatsPerDb", props, startTime, endTime);
+			if (topN > 0)
+				appendAllGraphsForCmAggregated(combined, reader, serverName, cmName, props, startTime, endTime, topN);
+			else
+				appendAllGraphsForCm(combined, reader, serverName, cmName, props, startTime, endTime);
 		}
 
 		return _om.writeValueAsString(combined);
@@ -783,21 +790,31 @@ public class McpHandler
 		CentralPersistReader reader = CentralPersistReader.getInstance();
 		List<DbxGraphProperties> props = reader.getGraphProperties(serverName, null);
 
-		ArrayNode combined = _om.createArrayNode();
-		if (topN > 0)
+		// The CMs are SQL Server's. Db2Tune has its own: CmStatements, whose graphs are the totals of all statements (time, executions), not per statement
+		String appName = "";
+		try
 		{
-			appendAllGraphsForCmAggregated(combined, reader, serverName, "CmExecQueryStats",     props, startTime, endTime, topN);
-			appendAllGraphsForCmAggregated(combined, reader, serverName, "CmExecQueryStatPerDb", props, startTime, endTime, topN);
+			DbxCentralSessions srvInfo = reader.getLastSession(serverName);
+			if (srvInfo != null) appName = srvInfo.getProductString();
 		}
-		else
+		catch (Exception ignored) {}
+		boolean  isDb2   = "Db2Tune".equals(appName);
+		String[] cmNames = isDb2 ? new String[] { "CmStatements" } : new String[] { "CmExecQueryStats", "CmExecQueryStatPerDb" };
+
+		ArrayNode combined = _om.createArrayNode();
+		for (String cmName : cmNames)
 		{
-			appendAllGraphsForCm(combined, reader, serverName, "CmExecQueryStats",     props, startTime, endTime);
-			appendAllGraphsForCm(combined, reader, serverName, "CmExecQueryStatPerDb", props, startTime, endTime);
+			if (topN > 0)
+				appendAllGraphsForCmAggregated(combined, reader, serverName, cmName, props, startTime, endTime, topN);
+			else
+				appendAllGraphsForCm(combined, reader, serverName, cmName, props, startTime, endTime);
 		}
 
 		ObjectNode meta = _om.createObjectNode();
 		meta.put("requestedRankBy", rankBy);
-		meta.put("hint", "Entries are pre-summed across the time range. The 'series' field is the query identifier. 'total' is the sum, 'avg' per sample, 'max' peak. Rank by '" + rankBy + "' using the graph whose name matches that metric.");
+		meta.put("hint", isDb2
+				? "Db2: entries are pre-summed across the time range, the 'series' field is a total of ALL statements (execution, CPU, wait and lock wait time; executions), not one statement. The single statements are in the Daily Summary Report section 'Top SQL Statements' (get_daily_report_section) and in get_active_statements."
+				: "Entries are pre-summed across the time range. The 'series' field is the query identifier. 'total' is the sum, 'avg' per sample, 'max' peak. Rank by '" + rankBy + "' using the graph whose name matches that metric.");
 
 		ObjectNode result = _om.createObjectNode();
 		result.set("meta", meta);
@@ -814,7 +831,8 @@ public class McpHandler
 	private static final Set<String> PLAN_COLUMNS = new java.util.HashSet<>(Arrays.asList(
 		"query_plan",       // SQL Server: estimated XML plan from dm_exec_query_plan
 		"LiveQueryPlan",    // SQL Server: actual plan captured at snapshot time (dm_exec_query_plan_stats)
-		"optdiag"           // Sybase ASE: text execution plan
+		"optdiag",          // Sybase ASE: text execution plan
+		"EXEC_PLAN"         // Db2: the explain tables after EXPLAIN_FROM_SECTION, as JSON
 	));
 
 	/**
@@ -824,6 +842,7 @@ public class McpHandler
 	private static final List<String> SQL_TEXT_COLUMN_CANDIDATES = Arrays.asList(
 		"lastKnownSql",   // SQL Server / ASE: SQL text captured by CmActiveStatements
 		"sql_text",       // PostgreSQL / MySQL style
+		"SQL_TEXT",       // Db2
 		"SqlText",
 		"query",
 		"statement"
@@ -3230,7 +3249,8 @@ public class McpHandler
 			+ "  - **SqlServerTune** → follow the `diagnose_sqlserver` prompt workflow\n"
 			+ "  - **AseTune**       → follow the `diagnose_ase` prompt workflow\n"
 			+ "  - **PostgresTune**  → follow the `diagnose_postgres` prompt workflow\n"
-			+ "  - **MySqlTune** / **MariaDbTune** → use get_wait_stats + get_top_queries + get_active_alarms + get_dbms_config\n\n"
+			+ "  - **MySqlTune** / **MariaDbTune** → use get_wait_stats + get_top_queries + get_active_alarms + get_dbms_config\n"
+			+ "  - **Db2Tune**       → use get_wait_stats (CmTimeSpent) + get_top_queries (CmStatements, totals) + get_active_statements (blocking, long statements, idle transactions with locks) + get_active_alarms + get_dbms_config (its config issues), and the Daily Summary Report section 'Top SQL Statements' for the single statements\n\n"
 			+ "## Step 2 — Always start with alarms\n"
 			+ "Call `get_active_alarms` (and `get_alarm_history` startTime='" + timeRange + "') "
 			+ "to see what thresholds have been breached — this often points directly to the problem area.\n\n"

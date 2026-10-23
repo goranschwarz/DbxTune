@@ -38,6 +38,7 @@ import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventLowDbFreeSpace;
 import com.dbxtune.alarm.events.db2.AlarmEventDb2TablespaceState;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSettingsHelper.IntegerInputValidator;
 import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
@@ -477,6 +478,39 @@ extends CountersModel
 
 		list.add(new CmSettingsHelper("LowFreeSpacePct", isAlarmSwitch, PROPKEY_alarm_LowFreeSpacePct    , Integer.class, conf.getIntProperty(PROPKEY_alarm_LowFreeSpacePct, DEFAULT_alarm_LowFreeSpacePct), DEFAULT_alarm_LowFreeSpacePct, "If a table space that can NOT grow (CAN_GROW is NO) has 'USED_PCT' above ## percent, or one that grows up to MAXSIZE has 'USED_PCT_OF_MAX' above ## percent, then send 'AlarmEventLowDbFreeSpace'. A table space with automatic storage or AUTORESIZE YES (CAN_GROW=YES) never raises this: see the tab 'Storage Paths'.", new IntegerInputValidator()));
 		list.add(new CmSettingsHelper("TbspState",       isAlarmSwitch, PROPKEY_alarm_TbspState_skipRegex, String .class, conf.getProperty   (PROPKEY_alarm_TbspState_skipRegex, DEFAULT_alarm_TbspState_skipRegex), DEFAULT_alarm_TbspState_skipRegex, "If 'TBSP_STATE' is not NORMAL, then send 'AlarmEventDb2TablespaceState'. States that match this regular expression are skipped (by default: things that are going on and end by themselves, like REORG_IN_PROGRESS).", new RegExpInputValidator()));
+
+		return list;
+	}
+
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		// USED_PCT is of the allocated size: it only matters for a table space that can NOT grow (CAN_GROW), the others allocate more when they need it
+		list.add(new CmChartDescriptor()
+			.id("tbsp-used-pct")
+			.title("Table Space Used in Percent of the Allocated Size (only a problem when CAN_GROW is NO)")
+			.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
+			.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
+			.labelColumn("TBSP_NAME")
+			.valueColumns("USED_PCT")
+			.seriesLabels("Used %")
+			.barLabelColumn("CAN_GROW")
+			.isPercent(true)
+			.thresholdWarn(80)
+			.thresholdCrit(90));
+
+		list.add(new CmChartDescriptor()
+			.id("tbsp-used-mb")
+			.title("Used Space per Table Space (MB)")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
+			.labelColumn("TBSP_NAME")
+			.valueColumns("USED_MB")
+			.seriesLabels("Used MB")
+			.skipZeroRows(true)
+			.pieOtherLimit(0.02));
 
 		return list;
 	}

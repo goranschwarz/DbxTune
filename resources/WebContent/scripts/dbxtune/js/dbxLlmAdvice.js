@@ -928,7 +928,8 @@ var dbxLlmAdvice = (function () {
 		var isAse = (opts.dbVendor === 'Adaptive Server Enterprise');
 		var isMs  = (opts.dbVendor === 'Microsoft SQL Server');
 		var isOra = (opts.dbVendor === 'Oracle');   // as ASE: /api/cc/mgt/table-info. 'dbname' is the container (PDB) and can be empty
-		if (!isAse && !isMs && !isOra)
+		var isDb2 = (opts.dbVendor === 'DB2/');     // as Oracle. 'dbname' is the schema and can be empty (then a table without a schema is looked for in all schemas)
+		if (!isAse && !isMs && !isOra && !isDb2)
 			return Promise.resolve('');
 
 		if (typeof DbxSqlTableNames === 'undefined' || !DbxSqlTableNames.extractTablesAsync)
@@ -946,7 +947,7 @@ var dbxLlmAdvice = (function () {
 
 				var qs = new URLSearchParams();
 				var url;
-				if (isAse || isOra)
+				if (isAse || isOra || isDb2)
 				{
 					url = '/api/cc/mgt/table-info';
 					qs.set('srv', opts.srv);
@@ -982,8 +983,8 @@ var dbxLlmAdvice = (function () {
 		if (opts.jdbcUrl)
 			return fetchDdlContextByJdbcUrl(opts);
 
-		// (Oracle has no "database name" to give: the container name is optional)
-		if (opts.srv && (opts.dbname || opts.dbVendor === 'Oracle'))
+		// (Oracle has no "database name" to give: the container name is optional. Db2: the schema is optional)
+		if (opts.srv && (opts.dbname || opts.dbVendor === 'Oracle' || opts.dbVendor === 'DB2/'))
 			return fetchDdlContextBySrv(opts);
 
 		return Promise.resolve('');

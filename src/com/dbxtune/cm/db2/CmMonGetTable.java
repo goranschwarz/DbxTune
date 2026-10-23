@@ -32,6 +32,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
@@ -284,5 +285,36 @@ extends CountersModel
 			+ "";
 
 		return sql;
+	}
+
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		list.add(new CmChartDescriptor()
+			.id("rows-read")
+			.title("Rows Read per Table (the most read tables)")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("TABNAME")
+			.labelPrefixColumns("TABSCHEMA")
+			.valueColumns("ROWS_READ")
+			.seriesLabels("Rows Read")
+			.skipZeroRows(true)
+			.maxItems(15)
+			.pieOtherLimit(0.02));
+
+		list.add(new CmChartDescriptor()
+			.id("rows-changed")
+			.title("Rows Inserted, Updated and Deleted per Table")
+			.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
+			.labelColumn("TABNAME")
+			.labelPrefixColumns("TABSCHEMA")
+			.valueColumns("ROWS_INSERTED", "ROWS_UPDATED", "ROWS_DELETED")
+			.seriesLabels("Inserted", "Updated", "Deleted")
+			.skipZeroRows(true)
+			.maxItems(15));
+
+		return list;
 	}
 }

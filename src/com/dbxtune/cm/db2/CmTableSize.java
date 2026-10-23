@@ -39,6 +39,7 @@ import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.db2.AlarmEventDb2TableNotUsable;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CounterSetTemplates;
@@ -379,6 +380,38 @@ extends CountersModel
 
 		list.add(new CmSettingsHelper("TableNotUsable", isAlarmSwitch, PROPKEY_alarm_TableNotUsable, Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_TableNotUsable, DEFAULT_alarm_TableNotUsable), DEFAULT_alarm_TableNotUsable, "If a table has a PROBLEM (REORG PENDING, SET INTEGRITY PENDING, LOAD PENDING, NOT AVAILABLE...) then send 'AlarmEventDb2TableNotUsable'." ));
 		list.add(new CmSettingsHelper("TableNotUsable Skip Regex", PROPKEY_alarm_TableNotUsableSkipRegex, String.class, conf.getProperty(PROPKEY_alarm_TableNotUsableSkipRegex, DEFAULT_alarm_TableNotUsableSkipRegex), DEFAULT_alarm_TableNotUsableSkipRegex, "A table with a PROBLEM (REORG PENDING, SET INTEGRITY PENDING, LOAD PENDING...) sends 'AlarmEventDb2TableNotUsable'. Skip the tables where 'schema.table' matches this regexp. Empty = skip nothing.", new RegExpInputValidator()));
+
+		return list;
+	}
+
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		list.add(new CmChartDescriptor()
+			.id("size-by-schema")
+			.title("Table Size by Schema (MB)")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("TABNAME")
+			.groupByColumn("TABSCHEMA")
+			.valueColumns("TOTAL_MB")
+			.seriesLabels("Total Size (MB)")
+			.skipZeroRows(true)
+			.pieOtherLimit(0.05)
+			.splitRatio(0.6));
+
+		list.add(new CmChartDescriptor()
+			.id("biggest-tables")
+			.title("Biggest Tables (MB)")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.labelColumn("TABNAME")
+			.labelPrefixColumns("TABSCHEMA")
+			.valueColumns("TOTAL_MB")
+			.seriesLabels("Total Size (MB)")
+			.skipZeroRows(true)
+			.maxItems(15)
+			.pieOtherLimit(0.02));
 
 		return list;
 	}

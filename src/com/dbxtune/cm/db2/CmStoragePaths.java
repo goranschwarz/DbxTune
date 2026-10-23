@@ -41,6 +41,7 @@ import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventLowOsDiskFreeSpace;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
@@ -364,6 +365,29 @@ extends CountersModel
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 
 		list.add(new CmSettingsHelper("LowFsFreeSpacePct", isAlarmSwitch, PROPKEY_alarm_LowFsFreeSpacePct, Double.class, conf.getDoubleProperty(PROPKEY_alarm_LowFsFreeSpacePct, DEFAULT_alarm_LowFsFreeSpacePct), DEFAULT_alarm_LowFsFreeSpacePct, "If 'FS_USED_PCT' (how full the file system of a storage path or a container is) is greater than ## percent then send 'AlarmEventLowOsDiskFreeSpace' (one per file system)." ));
+
+		return list;
+	}
+
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		// An automatic storage table space is full when the file system of its storage paths is
+		list.add(new CmChartDescriptor()
+			.id("fs-used-pct")
+			.title("File System Used in Percent, per Storage Path or Container")
+			.chartType(CmChartDescriptor.CHART_TYPE_STACKED_BAR)
+			.splitDir(CmChartDescriptor.SPLIT_VERTICAL)
+			.labelColumn("PATH")
+			.valueColumns("FS_USED_PCT")
+			.seriesLabels("Used %")
+			.barLabelColumn("FS_FREE_MB")
+			.barLabelPrefix("free MB: ")
+			.isPercent(true)
+			.thresholdWarn(80)
+			.thresholdCrit(90));
 
 		return list;
 	}

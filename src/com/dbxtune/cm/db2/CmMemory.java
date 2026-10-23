@@ -35,6 +35,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
@@ -339,5 +340,38 @@ extends CountersModel
 			}
 			tgdp.setDataPoint(this.getTimestamp(), new Double[] { max == null ? 0d : max });
 		}
+	}
+
+	@Override
+	public List<CmChartDescriptor> createChartDescriptors()
+	{
+		List<CmChartDescriptor> list = new ArrayList<>();
+
+		// The memory pools (the SET and LIMIT rows would count the same memory again)
+		list.add(new CmChartDescriptor()
+			.id("pool-used-mb")
+			.title("Memory Used per Memory Pool Type (MB)")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.filter("ROW_TYPE", "POOL")
+			.labelColumn("MEMORY_POOL_TYPE")
+			.groupByColumn("MEMORY_POOL_TYPE")
+			.valueColumns("USED_MB")
+			.seriesLabels("Used MB")
+			.skipZeroRows(true)
+			.maxItems(15)
+			.pieOtherLimit(0.02));
+
+		list.add(new CmChartDescriptor()
+			.id("set-committed-mb")
+			.title("Committed Memory per Memory Set (MB)")
+			.chartType(CmChartDescriptor.CHART_TYPE_DUAL_PIE_BAR)
+			.filter("ROW_TYPE", "SET")
+			.labelColumn("MEMORY_SET_TYPE")
+			.labelPrefixColumns("DB_NAME")
+			.valueColumns("COMMITTED_MB")
+			.seriesLabels("Committed MB")
+			.skipZeroRows(true));
+
+		return list;
 	}
 }
