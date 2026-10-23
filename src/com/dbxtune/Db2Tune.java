@@ -26,6 +26,7 @@ import org.apache.commons.cli.CommandLine;
 
 import com.dbxtune.check.CheckForUpdates;
 import com.dbxtune.check.CheckForUpdatesDb2;
+import com.dbxtune.config.dbms.Db2Config;
 import com.dbxtune.config.dbms.IDbmsConfig;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryDb2;
@@ -33,7 +34,7 @@ import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.MainFrameDb2;
 import com.dbxtune.pcs.inspection.IObjectLookupInspector;
 import com.dbxtune.pcs.sqlcapture.ISqlCaptureBroker;
-import com.dbxtune.sql.DbmsVersionHelperSybase;
+import com.dbxtune.sql.DbmsVersionHelperSimple;
 import com.dbxtune.sql.IDbmsVersionHelper;
 import com.dbxtune.utils.DbUtils;
 
@@ -118,14 +119,13 @@ extends DbxTune
 	@Override
 	public IDbmsVersionHelper createDbmsVersionHelper()
 	{
-		return new DbmsVersionHelperSybase();
+		return new DbmsVersionHelperSimple();
 	}
 
 	@Override
 	public IDbmsConfig createDbmsConfig()
 	{
-		return null; // null means it's not supported
-//		return new Db2Config();
+		return new Db2Config();
 	}
 
 	@Override
