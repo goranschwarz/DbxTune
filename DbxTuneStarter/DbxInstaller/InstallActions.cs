@@ -633,6 +633,46 @@ namespace DbxInstaller
             }
         }
 
+        // Files every DbxTune package has at the top level of its ZIP — ExtractPackage unpacks the ZIP
+        // into <InstallDir>\<version>, and the rest of the install uses <InstallDir>\0\bin\dbxcentral.bat.
+        private static readonly string[] DbxTunePackageFiles = { "bin/dbxcentral.bat", "bin/dbxtune.bat", "lib/dbxtune.jar" };
+
+        // null when the ZIP is a DbxTune package, else why not — e.g. the DbxTuneStarter ZIP (this
+        // installer, the service and the client), which does not contain the DbxTune software.
+        // Reads only the ZIP's directory (fast, also for a big ZIP).
+        public static string? CheckDbxTunePackage(string zipPath)
+        {
+            List<string> names;
+            try
+            {
+                using var zip = ZipFile.OpenRead(zipPath);
+                names = zip.Entries.Select(e => e.FullName.Replace('\\', '/')).ToList();
+            }
+            catch (Exception ex)
+            {
+                return $"'{Path.GetFileName(zipPath)}' is not a readable ZIP file ({ex.Message}) — a broken download, or a web page " +
+                       "saved instead of the ZIP?";
+            }
+
+            const string expectedName = "the DbxTune software package (dbxtune_<date>.zip, from https://sourceforge.net/projects/asetune/files/)";
+            bool Has(string name) => names.Any(n => n.Equals(name, StringComparison.OrdinalIgnoreCase));
+            if (DbxTunePackageFiles.All(Has)) return null;
+
+            if (names.Any(n => Path.GetFileName(n).Equals("DbxInstaller.exe", StringComparison.OrdinalIgnoreCase)))
+                return $"'{Path.GetFileName(zipPath)}' is the DbxTuneStarter package (DbxInstaller, DbxStarterService, DbxStarterClient) — " +
+                       $"it does not contain the DbxTune software. Choose {expectedName}.";
+
+            // The right files, but one folder down (a re-zipped package: "dbxtune/bin/dbxcentral.bat")
+            string? nested = names.Select(n => n.Split('/')[0]).Distinct(StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault(top => DbxTunePackageFiles.All(f => Has($"{top}/{f}")));
+            if (nested != null)
+                return $"'{Path.GetFileName(zipPath)}' has the DbxTune files inside the folder '{nested}/', but the installer needs them " +
+                       $"at the top of the ZIP (bin/, lib/, …). Use {expectedName} as downloaded, not re-zipped.";
+
+            return $"'{Path.GetFileName(zipPath)}' is not a DbxTune package: it doesn't have " +
+                   $"{string.Join(", ", DbxTunePackageFiles.Where(f => !Has(f)))}. Choose {expectedName}.";
+        }
+
         private static async Task<bool> LocatePackage(InstallConfig c, InstallLog log)
         {
             if (!c.DownloadZip)
@@ -642,6 +682,8 @@ namespace DbxInstaller
                 c.ResolvedZipPath = c.ZipLocalPath;
                 log($"Using local file: {c.ZipLocalPath}");
                 log($"  Size: {new FileInfo(c.ZipLocalPath).Length / 1024:N0} KB");
+                if (CheckDbxTunePackage(c.ZipLocalPath) is string notLocal) throw new Exception(notLocal);
+                log("  It is a DbxTune package (bin/dbxcentral.bat, bin/dbxtune.bat, lib/dbxtune.jar) — OK.");
                 return true;
             }
 
@@ -659,6 +701,10 @@ namespace DbxInstaller
 
             c.ResolvedZipPath = dest;
             log($"Download complete — {new FileInfo(dest).Length / 1024:N0} KB");
+            // A wrong URL can download an HTML page or another ZIP: check before anything is unpacked
+            if (CheckDbxTunePackage(dest) is string notDownloaded)
+                throw new Exception($"The download from {c.ZipUrl} is not usable: {notDownloaded}");
+            log("  It is a DbxTune package (bin/dbxcentral.bat, bin/dbxtune.bat, lib/dbxtune.jar) — OK.");
             return true;
         }
 
@@ -1228,6 +1274,13 @@ namespace DbxInstaller
                 log($"Extraction complete — {total} entries.");
             }   // RevertToSelf here — back to admin for junction creation
 
+            // Sanity check of what landed on disk, before the '0' junction points at it
+            var missing = DbxTunePackageFiles.Where(f => !File.Exists(Path.Combine(extractTo, f.Replace('/', '\\')))).ToList();
+            if (missing.Count > 0)
+                throw new Exception($"The unpacked package in {extractTo} is not complete — missing: {string.Join(", ", missing)}. " +
+                                    "The ZIP may be damaged, or a virus scanner removed files: download it again, then click Retry.");
+            log("Unpacked files checked (bin/dbxcentral.bat, bin/dbxtune.bat, lib/dbxtune.jar) — OK.");
+
             // Create / update the '0' junction pointing to the versioned directory.
             // Directory junctions (/J) don't require SeCreateSymbolicLinkPrivilege, so
             // the admin can create it even though the target is owned by the service account.
@@ -1315,6 +1368,7 @@ namespace DbxInstaller
 
             int maxNameLen = dirs.Max(d => d.Item1.Length);
 
+            bool created = false;
             foreach (var (name, path) in dirs)
             {
                 if (string.IsNullOrWhiteSpace(path)) continue;
@@ -1327,8 +1381,12 @@ namespace DbxInstaller
                 {
                     Directory.CreateDirectory(path);
                     log($"  Created  {padded} = {path}");
+                    created = true;
                 }
             }
+            // Created here as the admin: inside the account's profile it inherits the account's access,
+            // but a directory placed elsewhere (e.g. D:\dbxtune\data) would not — grant it explicitly.
+            if (created) GrantAccountDbxDirs(c, log);
 
             // Verify that DBXTUNE.env.bat's built-in fallback path matches the install dir.
             // When DBXTUNE_HOME is not set in the environment, the bat file auto-detects it

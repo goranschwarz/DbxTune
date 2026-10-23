@@ -35,18 +35,31 @@ namespace DbxInstaller.Pages
         // "Clean up…" and "PowerShell commands".
         private readonly ProfileCheckPanel _profile = new("install");
 
+        // Leaving "Account name" runs the checks that DON'T log on (does the account exist, the profile
+        // folder) — a logon with an empty or half-typed password would count toward the account's lockout.
+        // The password test stays on Check; until it ran for the current name + password, _lblUrge asks
+        // for it, and Next asks once more.
+        private readonly TextBlock _lblUrge = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0),
+            Text = "Press Check to test the password before you continue — it logs on once as the account." };
+        private string _autoCheckedAccount = "";
+        private (string Account, string Password, InstallActions.VerifyOutcome Outcome, string Message)? _lastCheck;
+
         public ServiceAccountPage()
         {
             _domainNotice.Child = _domainText;
             _domainNotice.SetResourceReference(Border.BackgroundProperty,  "Bg2Brush");
             _domainNotice.SetResourceReference(Border.BorderBrushProperty, "FgHdrBrush");
 
+            _lblUrge.SetResourceReference(TextBlock.ForegroundProperty, "OrangeBrush");
             _txtAccount.TextChanged += (_, _) =>
             {
                 UpdateGmsaNote();
                 UpdateDomainNotice();
                 _profile.Clear();   // its findings belong to the account that was checked
+                UpdateUrge();
             };
+            _txtPassword.PasswordChanged += (_, _) => UpdateUrge();
+            _txtAccount.LostFocus += async (_, _) => await AutoCheckAccountAsync();
             _btnCheck.Click += async (_, _) =>
             {
                 _lblCheckStatus.Text = "Checking…";
@@ -57,6 +70,9 @@ namespace DbxInstaller.Pages
                 await Dispatcher.Yield(DispatcherPriority.Background);
 
                 var (outcome, message) = InstallActions.TryVerifyPassword(_txtAccount.Text.Trim(), _txtPassword.Password);
+                _lastCheck = (_txtAccount.Text.Trim(), _txtPassword.Password, outcome, message);
+                _autoCheckedAccount = _txtAccount.Text.Trim();
+                UpdateUrge();
                 _lblCheckStatus.Text = message;
                 string brush = outcome switch
                 {
@@ -81,6 +97,7 @@ namespace DbxInstaller.Pages
                     _domainNotice,
                     PageHelpers.Row("Account name", _txtAccount),
                     PageHelpers.Row("Password", _txtPassword, _btnCheck),
+                    _lblUrge,
                     _lblCheckStatus,
                     _lblGmsaNote,
                     _profile),
@@ -88,9 +105,41 @@ namespace DbxInstaller.Pages
 
             UpdateGmsaNote();
             UpdateDomainNotice();
+            UpdateUrge();
         }
 
         private bool IsGmsa => _txtAccount.Text.Trim().EndsWith('$');
+
+        // Check ran for exactly what is in the fields now (a gMSA has no password to check).
+        private bool CheckedCurrent => IsGmsa || (_lastCheck is { } last && last.Account == _txtAccount.Text.Trim() && last.Password == _txtPassword.Password);
+
+        private void UpdateUrge() =>
+            _lblUrge.Visibility = CheckedCurrent || _txtAccount.Text.Trim().Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+
+        // Leaving "Account name": does the account exist, and the profile folder — no logon. Only when the
+        // name changed since the last check, so tabbing through the fields doesn't check again.
+        private async Task AutoCheckAccountAsync()
+        {
+            string account = _txtAccount.Text.Trim();
+            if (account.Length == 0 || account == _autoCheckedAccount) return;
+            _autoCheckedAccount = account;
+
+            _lblCheckStatus.Text = "Looking up the account…";
+            _lblCheckStatus.SetResourceReference(TextBlock.ForegroundProperty, "FgDimBrush");
+            bool exists = await Task.Run(() => { try { LsaPrivileges.GetSidString(account); return true; } catch { return false; } });
+            // Changed again meanwhile, or Check was pressed (clicking it also leaves this field): its result wins
+            if (_txtAccount.Text.Trim() != account || _lastCheck?.Account == account) return;
+
+            (string text, string brush) = exists
+                ? ($"Account '{account}' found.", "FgDimBrush")
+                : ProfileCheck.IsDomainName(account)
+                    ? ($"Account '{account}' was not found — check the spelling (DOMAIN\\user or user@domain.com) and that a domain " +
+                       "controller is reachable. The installer creates only local accounts given as a plain name (e.g. dbxtune).", "RedBrush")
+                    : ($"Account '{account}' doesn't exist yet — the install creates it as a local account.", "FgDimBrush");
+            _lblCheckStatus.Text = text;
+            _lblCheckStatus.SetResourceReference(TextBlock.ForegroundProperty, brush);
+            await _profile.CheckAsync(account);
+        }
 
         private void UpdateDomainNotice()
         {
@@ -153,6 +202,19 @@ namespace DbxInstaller.Pages
             if (!IsGmsa && string.IsNullOrWhiteSpace(_txtPassword.Password))
                 return Task.FromResult(WizardValidationResult.Fail(
                     "Password is required for local and domain accounts.\nLeave blank only for gMSA accounts (name ending with '$')."));
+
+            // Not checked (or the last Check failed): ask once — a wrong password or a blocked account would
+            // otherwise only show up during the install.
+            string? question = !CheckedCurrent
+                ? $"You haven't pressed Check for '{_txtAccount.Text.Trim()}' with this password.\n\n" +
+                  "A wrong password or a blocked account is then found only during the install."
+                : _lastCheck is { Outcome: InstallActions.VerifyOutcome.Failed } failed
+                    ? $"The last Check failed:\n\n{failed.Message}"
+                    : null;
+            if (question != null &&
+                MessageBox.Show(Window.GetWindow(this), question + "\n\nContinue anyway?", "DbxTune Setup — Service Account",
+                                MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes)
+                return Task.FromResult(WizardValidationResult.Fail("Press Check to test the account and the password."));
             return Task.FromResult(WizardValidationResult.Ok());
         }
     }
