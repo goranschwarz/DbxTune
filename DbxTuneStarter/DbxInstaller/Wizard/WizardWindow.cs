@@ -26,6 +26,7 @@ namespace DbxInstaller.Wizard
         private readonly StackPanel _railPanel;
         private readonly ContentControl _contentHost;
         private readonly TextBlock _errorBanner;
+        private readonly TextBlock _nextHint;
         private readonly Button _btnBack, _btnNext, _btnCancel;
 
         protected WizardWindow(InstallConfig config)
@@ -82,6 +83,9 @@ namespace DbxInstaller.Wizard
             buttonBar.SetResourceReference(Border.BorderBrushProperty, "Bg3Brush");
             buttonBar.BorderThickness = new Thickness(0, 1, 0, 0);
             var buttonRow = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+            // Left of the buttons: why Next is disabled (WizardPage.NextHint)
+            _nextHint = new TextBlock { TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 16, 0) };
+            _nextHint.SetResourceReference(TextBlock.ForegroundProperty, "OrangeBrush");
             _btnCancel = new Button { Content = "Cancel", Margin = new Thickness(0, 0, 8, 0) };
             _btnBack   = new Button { Content = "< Back", Margin = new Thickness(0, 0, 8, 0) };
             _btnNext   = new Button { Content = "Next >", Style = (Style)FindResource("PrimaryButton") };
@@ -91,7 +95,11 @@ namespace DbxInstaller.Wizard
             buttonRow.Children.Add(_btnCancel);
             buttonRow.Children.Add(_btnBack);
             buttonRow.Children.Add(_btnNext);
-            buttonBar.Child = buttonRow;
+            var bar = new DockPanel();
+            DockPanel.SetDock(buttonRow, Dock.Right);
+            bar.Children.Add(buttonRow);
+            bar.Children.Add(_nextHint);
+            buttonBar.Child = bar;
             Grid.SetRow(buttonBar, 2);
             rightPanel.Children.Add(buttonBar);
 
@@ -172,6 +180,7 @@ namespace DbxInstaller.Wizard
             _btnBack.IsEnabled   = _history.Count > 0 && page.CanGoBack(Context);
             _btnCancel.IsEnabled = page.CanCancel(Context);
             _btnNext.IsEnabled   = page.NextEnabled;
+            _nextHint.Text       = page.NextEnabled ? "" : page.NextHint;
             _btnNext.Content     = page.IsFinishPage ? "Finish" : "Next >";
             RebuildRail();
         }

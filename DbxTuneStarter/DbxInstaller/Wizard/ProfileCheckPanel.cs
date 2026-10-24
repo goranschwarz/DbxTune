@@ -58,9 +58,17 @@ namespace DbxInstaller.Wizard
             _findings = new();
             _lblProfile.Inlines.Clear();
             _btnCleanup.Visibility = _btnPowerShell.Visibility = _btnCopy.Visibility = _powerShellBox.Visibility = Visibility.Collapsed;
+            _account = "";
+            Changed?.Invoke(this, EventArgs.Empty);
         }
 
         public Task CheckAsync(string account) => CheckAsync(account, Array.Empty<string>());
+
+        // For the page's Next: the account last checked, and whether something blocks its profile folder.
+        // Changed is raised after every check / clean-up / Clear.
+        public string CheckedAccount => _account;
+        public bool   Blocks         => _findings.Any(f => f.Blocks);
+        public event EventHandler? Changed;
 
         // cleanupLog: the lines of a clean-up just done, shown first.
         private async Task CheckAsync(string account, IReadOnlyList<string> cleanupLog)
@@ -131,6 +139,7 @@ namespace DbxInstaller.Wizard
             _btnCleanup.Visibility    = _findings.Any(f => f.Kind != ProfileCheck.CleanupKind.None) ? Visibility.Visible : Visibility.Collapsed;
             _btnPowerShell.Visibility = Visibility.Visible;
             _txtPowerShell.Text       = ProfileCheck.PowerShellCommands(_account, _expected, _findings);
+            Changed?.Invoke(this, EventArgs.Empty);
         }
 
         // Asks with the exact list of what gets deleted, deletes it, then checks again.
