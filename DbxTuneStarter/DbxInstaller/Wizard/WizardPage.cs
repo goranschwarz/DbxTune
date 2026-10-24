@@ -44,7 +44,19 @@ namespace DbxInstaller.Wizard
         }
 
         // Pages call this to gate Next mid-page (e.g. while an async Java/port check is running).
-        protected void SetNextEnabled(bool enabled) => NextEnabled = enabled;
+        protected void SetNextEnabled(bool enabled) => SetNextEnabled(enabled, "");
+
+        // Shown beside the Next button while it is disabled: what has to be done before you can continue.
+        public string NextHint { get; private set; } = "";
+
+        protected void SetNextEnabled(bool enabled, string hint)
+        {
+            string newHint = enabled ? "" : hint;
+            bool hintChanged = newHint != NextHint;
+            NextHint = newHint;
+            if (_nextEnabled != enabled) NextEnabled = enabled;          // raises NextEnabledChanged
+            else if (hintChanged) NextEnabledChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     // Implemented by pages that run background work (Installing/Upgrading/Uninstalling progress
