@@ -205,7 +205,7 @@ extends CountersModel
 			mtd.addColumn(CM_NAME, "USABLE_MB",                "<html>Usable size (allocated minus overhead), in MB.</html>");
 			mtd.addColumn(CM_NAME, "USED_MB",                  "<html>Used size, in MB. The Diff column shows the growth since the last sample.</html>");
 			mtd.addColumn(CM_NAME, "FREE_MB",                  "<html>Free size of what is allocated, in MB (for an SMS table space always 0: the files grow with the data).</html>");
-			mtd.addColumn(CM_NAME, "USED_PCT",                 "<html>Used in percent of the usable (allocated) size.<br><b>Note</b>: For a table space that can grow (CAN_GROW = YES), this says nothing: it allocates more when it needs it.<br><b>Formula</b>: 100 * TBSP_USED_PAGES / TBSP_USABLE_PAGES<br><b>Alarm</b>: LowFreeSpacePct (only when CAN_GROW is NO)</html>");
+			mtd.addColumn(CM_NAME, "USED_PCT",                 "<html>Used in percent of the usable (allocated) size. NULL for an SMS table space (it allocates as it goes: it would always be 100).<br><b>Note</b>: For a table space that can grow (CAN_GROW = YES), this says nothing: it allocates more when it needs it.<br><b>Formula</b>: 100 * TBSP_USED_PAGES / TBSP_USABLE_PAGES<br><b>Alarm</b>: LowFreeSpacePct (only when CAN_GROW is NO)</html>");
 			mtd.addColumn(CM_NAME, "MAX_MB",                   "<html>MAXSIZE of the table space, in MB. NULL = no limit (it grows until the file system is full).</html>");
 			mtd.addColumn(CM_NAME, "USED_PCT_OF_MAX",          "<html>Used in percent of MAXSIZE (NULL if there is no MAXSIZE).<br><b>Alarm</b>: LowFreeSpacePct (when CAN_GROW is YES_TO_MAX)</html>");
 			mtd.addColumn(CM_NAME, "HWM_MB",                   "<html>High water mark: the highest page that is used, in MB (TBSP_PAGE_TOP). A DMS table space can not be reduced below it.</html>");
@@ -267,7 +267,7 @@ extends CountersModel
 			+ "    ,CAST(TBSP_USABLE_PAGES * TBSP_PAGE_SIZE / 1048576.0 AS DECIMAL(15,1)) as USABLE_MB \n"
 			+ "    ,CAST(TBSP_USED_PAGES   * TBSP_PAGE_SIZE / 1048576.0 AS DECIMAL(15,1)) as USED_MB \n"
 			+ "    ,CAST(TBSP_FREE_PAGES   * TBSP_PAGE_SIZE / 1048576.0 AS DECIMAL(15,1)) as FREE_MB \n"
-			+ "    ,CAST(CASE WHEN TBSP_USABLE_PAGES > 0 THEN 100.0 * TBSP_USED_PAGES / TBSP_USABLE_PAGES END AS DECIMAL(5,1)) as USED_PCT \n"
+			+ "    ,CAST(CASE WHEN TBSP_USABLE_PAGES > 0 AND TBSP_TYPE = 'DMS' THEN 100.0 * TBSP_USED_PAGES / TBSP_USABLE_PAGES END AS DECIMAL(5,1)) as USED_PCT \n"   // SMS: always 100 (it allocates as it goes)
 			+ "    ,CAST(CASE WHEN TBSP_MAX_SIZE > 0 THEN TBSP_MAX_SIZE / 1048576.0 END AS DECIMAL(15,1)) as MAX_MB \n"
 			+ "    ,CAST(CASE WHEN TBSP_MAX_SIZE > 0 THEN 100.0 * TBSP_USED_PAGES * TBSP_PAGE_SIZE / TBSP_MAX_SIZE END AS DECIMAL(5,1)) as USED_PCT_OF_MAX \n"
 			+ "    ,CAST(TBSP_PAGE_TOP     * TBSP_PAGE_SIZE / 1048576.0 AS DECIMAL(15,1)) as HWM_MB \n"
@@ -497,6 +497,8 @@ extends CountersModel
 			.valueColumns("USED_PCT")
 			.seriesLabels("Used %")
 			.barLabelColumn("CAN_GROW")
+			.barLabelPrefix("can grow: ")   // (the default prefix is 'FREE MB: ')
+			.skipZeroRows(true)             // (an SMS table space has no USED_PCT)
 			.isPercent(true)
 			.thresholdWarn(80)
 			.thresholdCrit(90));

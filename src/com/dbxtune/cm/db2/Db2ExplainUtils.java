@@ -339,8 +339,15 @@ public class Db2ExplainUtils
 	private static void appendOperator(StringBuilder sb, JsonNode plan, Map<Integer, JsonNode> ops, Map<String, JsonNode> objects, int id, int level, Set<Integer> visited)
 	{
 		JsonNode op = ops.get(id);
-		if (op == null || ! visited.add(id))
+		if (op == null)
 			return;
+
+		// A shared result (a TEMP that is read twice): its inputs are shown under the first reader only
+		if ( ! visited.add(id) )
+		{
+			sb.append("  ".repeat(level)).append(op.path("type").asText()).append(" (").append(id).append(")   (a shared result: see above)\n");
+			return;
+		}
 
 		// The rows that come out of this operator
 		Double rows = null;

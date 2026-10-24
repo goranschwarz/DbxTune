@@ -1,10 +1,14 @@
 /**
  * dbxShowplanDb2.js — Db2 (LUW) graphical execution plan renderer
  *
- * Parses the plan JSON that Db2Tune records (CmActiveStatements, column 'EXEC_PLAN': the explain tables after
- * EXPLAIN_FROM_SECTION, see Db2ExplainUtils.java, "planFormat": "db2-explain-tables-1") into the same tree model the
- * other renderers use, and renders it as the same CSS/DOM box-and-connector diagram (built on dbxShowplanMySql.js /
- * dbxShowplanOracle.js). It is shown by the /showplan/db2 page (ShowplanDb2Servlet).
+ * Parses a Db2 plan into the same tree model the other renderers use, and renders it as the same CSS/DOM box-and-connector
+ * diagram (built on dbxShowplanMySql.js / dbxShowplanOracle.js). It is shown by the /showplan/db2 page (ShowplanDb2Servlet).
+ * Two formats are read:
+ *   - The JSON that Db2Tune records (CmActiveStatements, column 'EXEC_PLAN': the explain tables after EXPLAIN_FROM_SECTION,
+ *     see Db2ExplainUtils.java, "planFormat": "db2-explain-tables-1").
+ *   - The text of db2exfmt (what a DBA has, and what is pasted into tickets): the 'Access Plan' tree, and when they are there
+ *     'Plan Details' (costs, arguments, predicates), 'Objects Used in Access Plan' (statistics), the statements and Db2's own
+ *     diagnostics (EXP0256I index advice...). Also with section actuals ('Rows Actual'). See parseExfmtPlan().
  *
  * The JSON holds the rows of the explain tables:
  *   operators[] (EXPLAIN_OPERATOR + its EXPLAIN_ARGUMENT and EXPLAIN_PREDICATE rows), streams[] (EXPLAIN_STREAM: what flows
@@ -58,6 +62,16 @@ window.Db2Showplan = (function () {
 		return { op: op, label: label || op, metrics: {}, props: { access: [], filter: [], flags: [], cells: {} }, children: [] };
 	}
 
+	/** A box for the second reader of a shared result: the operator, without its inputs (they are drawn under the first reader) */
+	function sharedRef(n) {
+		var r = newNode(n.op, n.label);
+		r.props.va      = n.props.va;
+		r.props.isRef   = true;
+		r.props.objName = n.props.objName;
+		r.metrics.cost  = n.metrics.cost;
+		return r;
+	}
+
 	// EXPLAIN_PREDICATE.HOW_APPLIED: START / STOP = the range of an index scan (the "seek"), JOIN = the join condition,
 	// SARG / RESID / PREDICATE... = a filter on the rows that are read
 	var ACCESS_HOW = { START: true, STOP: true, JOIN: true };
@@ -70,14 +84,48 @@ window.Db2Showplan = (function () {
 		ISCANMAX: 'Index scan max', JN_TYPE: 'Join type', HASHCODE: 'Hash code', BITFLTR: 'Bit filter'
 	};
 
+	/** The JSON of Db2Tune, or the text of db2exfmt: both become the same tree */
 	function parseText(planText) {
 		lastParseError = null;
 		if (!planText || !String(planText).trim()) { lastParseError = 'The plan is empty.'; return null; }
 
-		var text  = String(planText);
-		var start = text.indexOf('{'), end = text.lastIndexOf('}');
-		if (start === -1 || end <= start) { lastParseError = 'This is not a Db2Tune plan (no { ... } was found). It is the JSON that Db2Tune records, not the text of db2exfmt.'; return null; }
+		var text = String(planText).replace(/\r\n?/g, '\n');
+		var root = text.trim().charAt(0) === '{' ? parseJsonPlan(text) : parseExfmtPlan(text);
+		if (!root) return null;
 
+		finishTree(root);
+		return { format: root._planInfo.format, rawText: planText, statements: [ { label: 'Plan', meta: {}, steps: [ { label: '', root: root } ] } ] };
+	}
+
+	/**
+	 * What is computed the same way for both formats: the part of the cost that is each operator's own (Db2's cost includes
+	 * its inputs), its share of the statement, the number of operators, and a number for the tables and indexes
+	 * (they have no number of their own: it is what a finding's "[Node N]" jumps to)
+	 */
+	function finishTree(root) {
+		DbxShowplanGraph.walkPlanNodes(root, function (n) {
+			if (n.props.isLeaf || n.metrics.cost === undefined) return;
+			var childCost = 0;
+			n.children.forEach(function (c) { if (!c.props.isLeaf && c.metrics.cost !== undefined) childCost += c.metrics.cost; });
+			n.metrics.ownCost = Math.max(0, n.metrics.cost - childCost);
+		});
+		var total = root._planInfo.totalCost !== undefined ? root._planInfo.totalCost : root.metrics.cost;
+		var operations = 0, maxId = 0;
+		DbxShowplanGraph.walkPlanNodes(root, function (n) {
+			if (n.props.isLeaf) return;
+			operations++;
+			maxId = Math.max(maxId, n.props.va || 0);
+			if (n.metrics.ownCost !== undefined && total > 0 && n !== root) n.metrics.ownCostPct = n.metrics.ownCost * 100 / total;
+		});
+		DbxShowplanGraph.walkPlanNodes(root, function (n) { if (n.props.isLeaf) n.props.va = ++maxId; });
+		root._planInfo.totalCost  = total;
+		root._planInfo.operations = operations;
+	}
+
+	// ---- The JSON of Db2Tune ------------------------------------------------
+
+	function parseJsonPlan(text) {
+		var start = text.indexOf('{'), end = text.lastIndexOf('}');
 		var json;
 		try {
 			json = JSON.parse(text.substring(start, end + 1));
@@ -130,6 +178,8 @@ window.Db2Showplan = (function () {
 			if (s.sourceType === 'O') {
 				var child = nodes[s.sourceId];
 				if (!child) return;
+				// A second reader of a shared result (a TEMP that is read twice): its subtree is drawn once, this one is a reference box (as db2exfmt draws it)
+				if (feedsOther[s.sourceId]) child = sharedRef(child);
 				feedsOther[s.sourceId] = true;
 				child.metrics.estRows = num(s.rows);
 				parent.children.push(child);
@@ -168,43 +218,379 @@ window.Db2Showplan = (function () {
 		if (!tops.length) { lastParseError = 'The plan has no top operator (every operator feeds another one).'; return null; }
 		var root = tops[0];
 
-		// The part of the cost that is each operator's own: Db2's TOTAL_COST includes its inputs
-		DbxShowplanGraph.walkPlanNodes(root, function (n) {
-			if (n.props.isLeaf || n.metrics.cost === undefined) return;
-			var childCost = 0;
-			n.children.forEach(function (c) { if (!c.props.isLeaf && c.metrics.cost !== undefined) childCost += c.metrics.cost; });
-			n.metrics.ownCost = Math.max(0, n.metrics.cost - childCost);
-		});
-		var total = num(json.totalCost) !== undefined ? num(json.totalCost) : root.metrics.cost;
-		var operations = 0;
-		DbxShowplanGraph.walkPlanNodes(root, function (n) {
-			if (n.props.isLeaf) return;
-			operations++;
-			if (n.metrics.ownCost !== undefined && total > 0 && n !== root) n.metrics.ownCostPct = n.metrics.ownCost * 100 / total;
-		});
-		// A leaf has no Db2 number: it gets one after the operators (what a finding's "[Node N]" jumps to)
-		var maxId = 0;
-		Object.keys(nodes).forEach(function (id) { maxId = Math.max(maxId, parseInt(id, 10)); });
-		DbxShowplanGraph.walkPlanNodes(root, function (n) { if (n.props.isLeaf) n.props.va = ++maxId; });
-
 		var notes = [];
 		if (json.isolation === 'RR') notes.push('Isolation RR (repeatable read): every row that is read is locked until the end of the transaction, also the rows that do not qualify.');
 
 		root._planInfo = {
+			format:        'json',
 			sqlText:       json.statementText,
 			statementType: json.statementType,
-			totalCost:     total,
+			totalCost:     num(json.totalCost),
 			queryOpt:      json.queryOpt,
 			isolation:     json.isolation,
 			db2Version:    json.db2Version,
 			explainTime:   json.explainTime,
 			source:        json.source,
-			operations:    operations,
 			notes:         notes,
 			sections:      {}
 		};
+		return root;
+	}
 
-		return { format: 'json', rawText: planText, statements: [ { label: 'Plan', meta: {}, steps: [ { label: '', root: root } ] } ] };
+	// ---- The text of db2exfmt -------------------------------------------------
+	//
+	//                   Rows                       <- the legend (the first operator, RETURN, shows the names of the values)
+	//                  RETURN
+	//                  (   1)
+	//                   Cost
+	//                    I/O
+	//                    |
+	//                  1043.49                     <- rows out (with section actuals a second line: the actual rows)
+	//                  HSJOIN^                     <- the operator, with the join type marks of the "Operator Symbols" legend
+	//                  (   5)                      <- the operator number
+	//                  547399                      <- cumulative cost (timerons)
+	//                  490798                      <- cumulative I/O
+	//         /------------+------------\          <- the inputs: '|' one, '/--+--\' two or more (the outer input to the left)
+	//       25                          1043.49
+	//     TBSCAN                        HSJOIN^
+	//     (   6)  ...                   ...
+	//       |
+	//       25                                     <- a table or an index: its rows (statistics)
+	// TABLE: TPCH                                  <- the type and the schema
+	//     NATION                                   <- the name
+	//       Q7                                     <- the correlation name in the optimized statement
+	//
+	// The boxes are found by their position: an operator by its '(  N)', the values by the token straight above / below it.
+	// A box's parent is found by following the connector above it ('|', or the '/--+--\' line) to the box above it.
+	// "Plan Details", "Objects Used in Access Plan", the statements and the diagnostics add to that, when they are in the text.
+
+	// An operator, with the join type marks of db2exfmt: >JOIN left outer, JOIN< right outer, >JOIN< full outer,
+	// xJOIN / JOINx left / right antijoin, ^JOIN / JOIN^ left / right early out. They combine: x^NLJOIN = left antijoin with early out.
+	// And pGRPBY = a partial (early) aggregation
+	var EXFMT_OPERATOR = /^([>^a-z]*)([A-Z][A-Z0-9]*?)([<x^]*)$/;
+
+	function joinTypeText(pre, post) {
+		var t = [];
+		if (pre.indexOf('p') >= 0) t.push('Partial aggregation (an early step: the groups are completed further up)');
+		if (pre.indexOf('>') >= 0 && post.indexOf('<') >= 0) t.push('Full outer join');
+		else if (pre.indexOf('>') >= 0)                      t.push('Left outer join');
+		else if (post.indexOf('<') >= 0)                     t.push('Right outer join');
+		if (pre.indexOf('x') >= 0)  t.push('Left antijoin (NOT EXISTS / NOT IN)');
+		if (post.indexOf('x') >= 0) t.push('Right antijoin');
+		if (pre.indexOf('^') >= 0)  t.push('Left early out (the first match of a row is enough: EXISTS / IN / DISTINCT)');
+		if (post.indexOf('^') >= 0) t.push('Right early out');
+		return t.length ? t.join(', ') : undefined;
+	}
+
+	/** The whitespace delimited token of a line that is nearest to column 'c' (it must start or end within 'maxDist'), or null */
+	function tokenAt(line, c, maxDist) {
+		if (line === undefined) return null;
+		var best = null, re = /\S+/g, m;
+		while ((m = re.exec(line)) !== null) {
+			var s = m.index, e = m.index + m[0].length - 1;
+			var dist = c >= s && c <= e ? 0 : Math.min(Math.abs(c - s), Math.abs(c - e));
+			if (dist <= (maxDist === undefined ? 3 : maxDist) && (!best || dist < best.dist))
+				best = { text: m[0], start: s, end: e, center: (s + e) / 2, dist: dist };
+		}
+		return best;
+	}
+
+	/** "1043.49" / "2e+06" -> number, "NA" or not a number -> undefined (also for negative numbers: -1 = not known) */
+	function exfmtNum(token) {
+		if (!token || !/^[-+]?[0-9.]+(e[-+]?[0-9]+)?$/i.test(token.text)) return undefined;
+		return num(token.text);
+	}
+
+	/** The lines after a heading and its '-----' line, until the next heading (a line that ends with ':' and starts at column 0) */
+	function exfmtSection(text, heading) {
+		// NOTE: (?![\s\S]) = the end of the text ('$' is the end of every line with the flag 'm')
+		var m = new RegExp('^' + heading + ':?[ \\t]*\\n-+\\n([\\s\\S]*?)(?=\\n[A-Z][A-Za-z ]*:[ \\t]*\\n-+\\n|\\n\\*{5,}|\\n-{10,} STATEMENT|(?![\\s\\S]))', 'm').exec(text);
+		return m ? m[1].replace(/^\s*\n/, '').replace(/\s+$/, '') : undefined;
+	}
+
+	function parseExfmtPlan(text) {
+		var lines = text.split('\n');
+
+		// The tree: after 'Access Plan:' (a pasted tree can be without it) until the next section
+		var first = 0;
+		for (var i = 0; i < lines.length; i++) {
+			if (/^\s*Access Plan:/.test(lines[i])) { first = i + 1; break; }
+		}
+		var last = lines.length - 1;
+		for (var j = first; j < lines.length; j++) {
+			if (/^\s*(Operator Symbols|Extended Diagnostic Information|Plan Details|Objects Used in Access Plan)\s*:?/.test(lines[j])) { last = j - 1; break; }
+		}
+		var actuals = false;
+		for (var k = first; k <= last; k++) {
+			if (/Rows Actual/.test(lines[k])) actuals = true;
+		}
+
+		// The operators: '(  N)' with the operator name straight above it
+		var boxes = [];
+		for (var li = first; li <= last; li++) {
+			var re = /\(\s*(\d+)\)/g, m;
+			while ((m = re.exec(lines[li])) !== null) {
+				var c     = m.index + (m[0].length - 1) / 2;
+				var nameT = tokenAt(lines[li - 1], c, 2);
+				var opM   = nameT ? EXFMT_OPERATOR.exec(nameT.text) : null;
+				if (!opM) continue;
+				var rowsT = tokenAt(lines[li - (actuals ? 3 : 2)], c, 4);
+				boxes.push({
+					kind:     'op',
+					id:       parseInt(m[1], 10),
+					name:     nameT.text, op: opM[2], joinType: joinTypeText(opM[1], opM[3]),
+					center:   nameT.center,
+					top:      li - (actuals ? 3 : 2),
+					bottom:   li + 2,
+					rows:     exfmtNum(rowsT),
+					actRows:  actuals ? exfmtNum(tokenAt(lines[li - 2], c, 4)) : undefined,
+					cost:     exfmtNum(tokenAt(lines[li + 1], c, 4)),
+					io:       exfmtNum(tokenAt(lines[li + 2], c, 4)),
+					children: []
+				});
+			}
+			// The tables and indexes: 'TABLE: SCHEMA', the name below it, and the correlation name below that
+			var reO = /\b([A-Z][A-Z0-9]*(?:-[A-Z]+)?): +(\S+)/g, mo;
+			while ((mo = reO.exec(lines[li])) !== null) {
+				var oc    = mo.index + (mo[0].length - 1) / 2;
+				var nameO = tokenAt(lines[li + 1], oc, 6);
+				if (!nameO) continue;
+				var corr  = tokenAt(lines[li + 2], oc, 6);
+				var hasCorr = corr && /^Q\d+$/.test(corr.text);
+				boxes.push({
+					kind:     'obj',
+					objType:  mo[1],
+					schema:   mo[2],
+					name:     nameO.text,
+					corr:     hasCorr ? corr.text : undefined,
+					center:   oc,
+					top:      li - (actuals ? 2 : 1),
+					bottom:   li + (hasCorr ? 2 : 1),
+					rows:     exfmtNum(tokenAt(lines[li - (actuals ? 2 : 1)], oc, 6)),
+					children: []
+				});
+			}
+		}
+		var ops = boxes.filter(function (b) { return b.kind === 'op'; });
+		if (!ops.length) {
+			lastParseError = 'No plan was found: it is neither the JSON that Db2Tune records, nor the text of db2exfmt (the tree with "(   1)" under RETURN).';
+			return null;
+		}
+
+		// The parent of every box: follow the connector above it to the box above it
+		boxes.forEach(function (b) {
+			var conn = lines[b.top - 1];
+			if (conn === undefined) return;
+			var pos = -1;
+			for (var d = 0; d <= 3 && pos < 0; d++) {
+				[Math.round(b.center) - d, Math.round(b.center) + d].forEach(function (x) { if (pos < 0 && '|/\\+'.indexOf(conn.charAt(x)) >= 0) pos = x; });
+			}
+			if (pos < 0) return;
+
+			// '|' = straight up. '/', '\' or '+' = the '/---+---\' line: the parent is above the stretch of it
+			var from = pos, to = pos;
+			if (conn.charAt(pos) !== '|') {
+				while (from > 0 && '-+/\\'.indexOf(conn.charAt(from - 1)) >= 0) from--;
+				while (to < conn.length - 1 && '-+/\\'.indexOf(conn.charAt(to + 1)) >= 0) to++;
+			}
+			var plus = conn.indexOf('+', from);
+			var mid  = conn.charAt(pos) === '|' ? pos : (plus >= 0 && plus <= to ? plus : (from + to) / 2);
+
+			var parent = null;
+			ops.forEach(function (p) {
+				if (p === b || p.bottom !== b.top - 2) return;
+				if (p.center < from - 4 || p.center > to + 4) return;
+				if (!parent || Math.abs(p.center - mid) < Math.abs(parent.center - mid)) parent = p;
+			});
+			if (parent) {
+				parent.children.push(b);
+				b.hasParent = true;
+			}
+		});
+
+		// The details of the operators ("Plan Details") and of the tables and indexes ("Objects Used in Access Plan")
+		var details = parseExfmtPlanDetails(text);
+		var objects = parseExfmtObjects(text);
+
+		// NOTE: db2exfmt draws a shared result (a TEMP read twice) a second time with the same number, without its inputs: that box is a reference (isRef)
+		function toNode(b) {
+			var node;
+			if (b.kind === 'obj') {
+				var isIndex = /INDEX/.test(b.objType);
+				var full    = b.schema + '.' + b.name;
+				var od      = objects[full] || {};
+				node = newNode(isIndex ? 'INDEX' : 'TABLE', b.name);
+				node.props.objName    = full;
+				node.props.objType    = isIndex ? 'IX' : 'TA';
+				node.props.isLeaf     = true;
+				node.props.statsTime  = od.statsTime;
+				node.props.tablespace = od.tablespace;
+				node.props.noStats    = od.found && !isIndex && !od.statsTime;
+				node.metrics.objRows  = od.rows !== undefined ? od.rows : b.rows;   // the tree shows it rounded (5.99861e+07)
+				node.metrics.objPages = od.pages;
+				if (b.objType !== 'TABLE' && b.objType !== 'INDEX') node.props.cells['Object type'] = b.objType;   // CO-TABLE (column-organized), NNAME (nickname), TFUNC...
+				node.props.columnOrganized = /^CO-/.test(b.objType);
+				if (b.corr) node.props.cells['Correlation name'] = b.corr;
+				Object.keys(od.cells || {}).forEach(function (k) { node.props.cells[k] = od.cells[k]; });
+				return node;
+			}
+
+			var dt = details[b.id] || {};
+			node = newNode(b.op, b.name);
+			var p = node.props, m = node.metrics;
+			p.va           = b.id;
+			p.isRef        = !b.children.length && ops.some(function (o) { return o !== b && o.id === b.id && o.children.length; });
+			p.joinType     = b.joinType;
+			m.estRows      = b.rows;
+			m.actRows      = b.actRows;
+			m.cost         = b.cost !== undefined ? b.cost : dt.cost;
+			m.ioCost       = b.io !== undefined ? b.io : dt.ioCost;
+			m.cpuCost      = dt.cpuCost;
+			m.firstRowCost = dt.firstRowCost;
+			m.buffers      = dt.buffers;
+			if (b.joinType) p.flags.push('Join type: ' + b.joinType);
+			(dt.args || []).forEach(function (a) {
+				p.cells[a.key] = p.cells[a.key] ? p.cells[a.key] + ', ' + a.value : a.value;
+				if (FLAG_ARGS[a.key]) p.flags.push(FLAG_ARGS[a.key] + ': ' + a.value);
+			});
+			(dt.predicates || []).forEach(function (pr) { (pr.isAccess ? p.access : p.filter).push(pr.line); });
+
+			// The inputs from left to right (the outer input of a join is to the left)
+			b.children.sort(function (x, y) { return x.center - y.center; }).forEach(function (cb) {
+				var child = toNode(cb);
+				node.children.push(child);
+				if (child.props.isLeaf && child.props.objType === 'IX') p.keyName = child.props.objName;
+				else if (child.props.isLeaf)                           p.objName = child.props.objName;
+			});
+			return node;
+		}
+
+		var top = ops.filter(function (b) { return b.id === 1; })[0] || ops.filter(function (b) { return !b.hasParent; })[0];
+		var root = toNode(top);
+
+		// The rest of the text
+		var totalCost = /Total Cost:\s*([0-9.e+\-]+)/i.exec(text);
+		var degree    = /Query Degree:\s*(-?\d+)/i.exec(text);
+		var original  = exfmtSection(text, 'Original Statement');
+		var optimized = exfmtSection(text, 'Optimized Statement');
+		var version   = /DB2_VERSION:\s*(\S+)/.exec(text);
+		var explTime  = /EXPLAIN_TIME:\s*(\S+)/.exec(text);
+		var isolation = /Isolation Level:\s*(.+)/.exec(text);
+		var optLevel  = /Optimization Level:\s*(\d+)/.exec(text);
+		var level     = /Explain level:\s*(.+)/.exec(text);
+
+		// The advice of Db2 itself (EXP0256I: an index for a zigzag join, EXP0021W: no statistics...)
+		var notes = [];
+		var diagRe = /Diagnostic Details:\s*([\s\S]*?)(?=\n\s*\n|\nDiagnostic Identifier:|$)/g, dm;
+		while ((dm = diagRe.exec(text)) !== null)
+			notes.push(dm[1].replace(/\s+/g, ' ').trim());
+		if (isolation && /Repeatable Read/i.test(isolation[1]))
+			notes.push('Isolation RR (repeatable read): every row that is read is locked until the end of the transaction, also the rows that do not qualify.');
+
+		root._planInfo = {
+			format:        'db2exfmt',
+			sqlText:       original || optimized,
+			optimizedText: optimized,
+			totalCost:     totalCost ? num(totalCost[1]) : undefined,
+			queryDegree:   degree ? degree[1] : undefined,
+			queryOpt:      optLevel ? optLevel[1] : undefined,
+			isolation:     isolation ? isolation[1].trim() : undefined,
+			db2Version:    version ? version[1] : undefined,
+			explainTime:   explTime ? explTime[1] : undefined,
+			source:        level ? level[1].trim() : 'db2exfmt',
+			hasActuals:    actuals,
+			notes:         notes,
+			sections:      {}
+		};
+		return root;
+	}
+
+	/**
+	 * "Plan Details": per operator its costs, arguments and predicates. Key: the operator number
+	 *	5) HSJOIN: (Hash Join)
+	 *		Cumulative Total Cost: 		547399
+	 *		...
+	 *		Arguments:                       Predicates:
+	 *		---------                        ----------
+	 *		BITFLTR : (Hash Join Bit Filter used)      13) Predicate used in Join,
+	 *			FALSE                            ...
+	 *			                                 Predicate Text:
+	 *			                                 --------------
+	 *			                                 (Q4.O_ORDERKEY = Q3.L_ORDERKEY)
+	 */
+	function parseExfmtPlanDetails(text) {
+		var result = {};
+		var start = text.search(/^Plan Details:/m);
+		if (start < 0) return result;
+		var end = text.search(/^Objects Used in Access Plan:/m);
+		var body = text.substring(start, end > start ? end : text.length);
+
+		var heads = [], re = /^\s*(\d+)\)\s+([>^a-z]*[A-Z][A-Z0-9]*[<x^]*)\s*:\s*\((.*)\)\s*$/gm, m;
+		while ((m = re.exec(body)) !== null) heads.push({ id: parseInt(m[1], 10), at: m.index, after: re.lastIndex });
+		heads.forEach(function (h, i) {
+			var block = body.substring(h.after, i + 1 < heads.length ? heads[i + 1].at : body.length);
+			var d = { args: [], predicates: [] };
+			var v = function (label) { var x = new RegExp(label + ':\\s*([-0-9.e+]+)', 'i').exec(block); return x ? num(x[1]) : undefined; };
+			d.cost         = v('Cumulative Total Cost');
+			d.cpuCost      = v('Cumulative CPU Cost');
+			d.ioCost       = v('Cumulative I/O Cost');
+			d.firstRowCost = v('Cumulative First Row Cost');
+			d.buffers      = v('Estimated Bufferpool Buffers');
+
+			// Arguments: 'NAME : (description)' and the value on the lines below it
+			var argPart = /Arguments:\s*\n\s*-+\n([\s\S]*?)(?=\n\s*(Predicates|Input Streams|Output Streams):|$)/.exec(block);
+			if (argPart) {
+				var cur = null;
+				argPart[1].split('\n').forEach(function (l) {
+					var am = /^\s*([A-Z][A-Z0-9_ #]*?)\s*:\s*\((.*)\)\s*$/.exec(l);
+					if (am) { cur = { key: am[1].trim(), value: '' }; d.args.push(cur); }
+					else if (cur && l.trim()) cur.value += (cur.value ? ' ' : '') + l.trim();
+				});
+			}
+
+			// Predicates: 'N) <kind> Predicate,' ... 'Filter Factor:' ... 'Predicate Text:' '-----' <text until a blank line>
+			var predRe = /^\s*\d+\)\s+(.*?)\s*Predicate,?\s*$([\s\S]*?)Predicate Text:\s*\n\s*-+\n([\s\S]*?)(?=\n\s*\n|(?![\s\S]))/gm, pm;
+			while ((pm = predRe.exec(block)) !== null) {
+				var kind  = pm[1].replace(/\s+used in$/i, '').trim() || 'Predicate';
+				var ff    = /Filter Factor:\s*([-0-9.e+]+)/.exec(pm[2]);
+				var ptext = pm[3].replace(/\s+/g, ' ').trim();
+				d.predicates.push({
+					isAccess: /Start Key|Stop Key|Join/i.test(kind),
+					line:     kind + ': ' + ptext + (ff ? '   (filter factor ' + fmtNum(parseFloat(ff[1])) + ')' : '')
+				});
+			}
+			result[h.id] = d;
+		});
+		return result;
+	}
+
+	/** "Objects Used in Access Plan": the statistics of the tables and indexes. Key: schema.name */
+	function parseExfmtObjects(text) {
+		var result = {};
+		var start = text.search(/^Objects Used in Access Plan:/m);
+		if (start < 0) return result;
+		var body = text.substring(start);
+		var re = /^\s*Schema:\s*(\S+)\s*\n\s*Name:\s*(\S+)\s*\n\s*Type:\s*(.+)\n([\s\S]*?)(?=\n\s*Schema:|(?![\s\S]))/gm, m;
+		while ((m = re.exec(body)) !== null) {
+			var block = m[4];
+			var get = function (label) { var x = new RegExp('^\\s*' + label + ':[ \\t]*(.*)$', 'mi').exec(block); return x ? x[1].trim() : undefined; };
+			var o = { found: true, cells: {} };
+			o.statsTime  = get('Last statistics update') || undefined;
+			o.tablespace = get('Tablespace name');
+			o.pages      = num(get('Number of buffer pool pages'));
+			o.rows       = num(get('Number of rows'));
+			o.cells['Type'] = m[3].trim();
+			[['Number of rows', 'Rows (statistics)'], ['Index leaf pages', 'Leaf pages'], ['Index tree levels', 'Levels'],
+			 ['Index full key cardinality', 'Full key distinct'], ['Index clustering statistic', 'Cluster ratio'],
+			 ['Base Table Schema', 'Base table schema'], ['Base Table Name', 'Base table']].forEach(function (kv) {
+				var val = get(kv[0]);
+				if (val !== undefined && val !== '' && val !== '-1') o.cells[kv[1]] = val;
+			});
+			var cols = /Columns in index:\s*\n([\s\S]*?)(?=\n\s*[A-Z][a-z].*:|$)/.exec(block);
+			if (cols) o.cells['Index columns'] = cols[1].split('\n').map(function (s) { return s.trim(); }).filter(Boolean).join(', ');
+			result[m[1] + '.' + m[2]] = o;
+		}
+		return result;
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────
@@ -266,6 +652,8 @@ window.Db2Showplan = (function () {
 		+ '.db2-plan-box.db2-plan-warn { border-color: var(--sp-warn-border); background: var(--sp-warn-bg); }'
 		// A table or an index: a leaf, drawn lighter than the operators (as db2exfmt draws it apart)
 		+ '.db2-plan-box.db2-plan-object { border-style: dashed; min-width: 100px; background: var(--sp-bg-2); }'
+		// The second reader of a shared result: a reference to the box where it is computed
+		+ '.db2-plan-box.db2-plan-ref { border-style: dotted; opacity: 0.8; }'
 		+ '.db2-plan-va { position: absolute; top: 2px; right: 4px; font-size: 0.72em; color: var(--sp-text-7); line-height: 1; }'
 		+ '.db2-plan-icon { width: 32px; height: 32px; margin: 0 auto; background-repeat: no-repeat; }'
 		+ '.db2-plan-label { font-weight: 600; white-space: nowrap; }'
@@ -391,6 +779,7 @@ window.Db2Showplan = (function () {
 
 	function fmtNum(n) {
 		if (n === undefined || n === null || isNaN(n)) return undefined;
+		if (n > 0 && n < 0.01) return n.toPrecision(2);   // 2.08464e-05 rows is not 0 (an estimate below 1 row: the optimizer expects almost nothing)
 		if (n >= 1000) return Math.round(n).toLocaleString();
 		return (Math.round(n * 100) / 100).toString();
 	}
@@ -452,6 +841,7 @@ window.Db2Showplan = (function () {
 			var $op = propSection($c, 'Operator');
 			propRow($op, 'Operator number', p.va);
 			propRow($op, 'Operator',        node.label);
+			propRow($op, 'Join type',       p.joinType);
 			propRow($op, 'Table',           p.objName);
 			propRow($op, 'Index',           p.keyName);
 
@@ -463,6 +853,7 @@ window.Db2Showplan = (function () {
 
 			propSectionIfAny($c, 'Optimizer estimate (cost in timerons)', function ($s) {
 				propRow($s, 'Rows out',                 fmtNum(m.estRows));
+				propRow($s, 'Rows out (actual)',        fmtNum(m.actRows));
 				propRow($s, 'Cost (with its inputs)',   fmtNum(m.cost));
 				propRow($s, 'Cost (own)',               m.ownCost === undefined ? undefined : fmtNum(m.ownCost) + (m.ownCostPct === undefined ? '' : ' = ' + fmtPct(m.ownCostPct) + ' of the statement'));
 				propRow($s, 'CPU cost',                 fmtNum(m.cpuCost));
@@ -478,6 +869,8 @@ window.Db2Showplan = (function () {
 			var $pi = propSection($c, 'Plan information');
 			propRow($pi, 'Statement type',     pi.statementType);
 			propRow($pi, 'Total cost',         fmtNum(pi.totalCost));
+			propRow($pi, 'Plan format',        pi.format === 'db2exfmt' ? 'the text of db2exfmt' : 'Db2Tune (explain tables as JSON)');
+			propRow($pi, 'Query degree',       pi.queryDegree);
 			propRow($pi, 'Optimization class', pi.queryOpt);
 			propRow($pi, 'Isolation',          pi.isolation);
 			propRow($pi, 'Db2 version',        pi.db2Version);
@@ -526,9 +919,11 @@ window.Db2Showplan = (function () {
 			row('Statistics from', p.statsTime || 'never (no RUNSTATS)', p.noStats ? 'db2-plan-detail-pct-warn' : undefined);
 		} else {
 			row('Operator', node.label + ' (' + p.va + ')');
+			row('Join type', p.joinType);
 			row('Table',    p.objName);
 			row('Index',    p.keyName);
 			row('Rows out', fmtNum(m.estRows));
+			row('Actual rows', fmtNum(m.actRows));
 			row('Cost',     m.cost === undefined ? undefined : fmtNum(m.cost) + (m.ownCostPct === undefined ? '' : '  (own: ' + fmtNum(m.ownCost) + ' = ' + fmtPct(m.ownCostPct) + ')'), m.ownCostPct >= 50 ? 'db2-plan-detail-pct-warn' : undefined);
 		}
 		$panel.append($tbl);
@@ -574,6 +969,7 @@ window.Db2Showplan = (function () {
 		var $li  = $('<li></li>');
 		var $box = $('<div class="db2-plan-box"></div>');
 		if (p.isLeaf) $box.addClass('db2-plan-object');
+		if (p.isRef)  $box.addClass('db2-plan-ref').attr('title', 'A shared result: it is computed once, under the other box with number ' + p.va + ', and read here again');
 		if ((node._boxNotes || []).some(function (n) { return n.severity !== 'info'; })) $box.addClass('db2-plan-warn');
 		$box[0].__db2PlanNode = node;   // for drawConnectorLines(), which walks the DOM and not the model
 
@@ -592,7 +988,9 @@ window.Db2Showplan = (function () {
 			$box.append($('<div class="db2-plan-metric"></div>').toggleClass('db2-plan-warn-text', !!p.noStats)
 				.text(m.objRows === undefined ? 'No statistics' : 'Rows ' + fmtNum(m.objRows)));
 		} else {
-			if (m.estRows !== undefined) $box.append($('<div class="db2-plan-metric"></div>').text('Rows ' + fmtNum(m.estRows)));
+			// With section actuals (db2exfmt of EXPLAIN_FROM_ACTIVITY) also what really came out of the operator
+			if (m.actRows !== undefined)      $box.append($('<div class="db2-plan-metric"></div>').text('Rows ' + (m.estRows === undefined ? '?' : fmtNum(m.estRows)) + ' / act ' + fmtNum(m.actRows)));
+			else if (m.estRows !== undefined) $box.append($('<div class="db2-plan-metric"></div>').text('Rows ' + fmtNum(m.estRows)));
 			// The cost includes the inputs: the part that is the operator's own is shown too (in red when it is half of the statement or more)
 			if (m.cost !== undefined) {
 				var $cost = $('<div class="db2-plan-metric"></div>').text('Cost ' + fmtNum(m.cost));
@@ -604,6 +1002,9 @@ window.Db2Showplan = (function () {
 				$box.append($cost);
 			}
 		}
+
+		if (p.isRef)
+			$box.append($('<div class="db2-plan-metric db2-plan-note db2-plan-note-info"></div>').text('shared: see the other (' + p.va + ')'));
 
 		(node._boxNotes || []).forEach(function (n) {
 			$box.append($('<div class="db2-plan-metric db2-plan-note db2-plan-note-' + n.severity + '"></div>')
@@ -796,6 +1197,7 @@ window.Db2Showplan = (function () {
 
 		DbxShowplanGraph.walkPlanNodes(root, function (n) {
 			var p = n.props, m = n.metrics;
+			if (p.isRef) return;   // the second reader of a shared result: its findings are on the first one
 
 			// --- A table without statistics: the optimizer guesses its size
 			if (p.isLeaf && p.noStats) {
@@ -807,14 +1209,14 @@ window.Db2Showplan = (function () {
 			}
 			if (p.isLeaf) return;
 
-			// --- A table scan of many rows
+			// --- A table scan of many rows (not of a column-organized table, BLU: there a scan is the way it is read, only the columns that are needed)
 			var leaf = n.op === 'TBSCAN' ? tableLeafOf(n) : null;
+			if (leaf && leaf.props.columnOrganized) leaf = null;
 			var tableRows = leaf ? (leaf.metrics.objRows !== undefined ? leaf.metrics.objRows : leaf.metrics.estRows) : undefined;
 			if (leaf && tableRows >= MANY_ROWS) {
 				add(n, 'warning', 'Table scan', 'Table scan of ' + leaf.props.objName + ' (about ' + fmtNum(tableRows) + ' rows)',
 					'Every page of the table is read' + (p.filter.length ? ', and the predicate is applied to each row (' + p.filter[0] + ')' : '') + '. '
-					+ (m.estRows !== undefined && m.estRows < tableRows / 10 ? 'Only about ' + fmtNum(m.estRows) + ' rows are expected to qualify: an index on the columns of the predicate would read only those. ' : '')
-					+ 'See also the Table Information.',
+					+ (m.estRows !== undefined && m.estRows < tableRows / 10 ? 'Only about ' + fmtNum(m.estRows) + ' rows are expected to qualify: an index on the columns of the predicate would read only those.' : ''),
 					'table scan');
 			}
 
@@ -838,7 +1240,10 @@ window.Db2Showplan = (function () {
 			}
 
 			// --- A sort of many rows (it can overflow to the temporary table space)
-			if (n.op === 'SORT' && n.children.length && n.children[0].metrics.estRows >= 10 * MANY_ROWS) {
+			// (not the sort of row ids below a RIDSCN: that is list prefetch, it sorts the row ids to read the pages in order)
+			if (n.op === 'RIDSCN')
+				n.children.forEach(function (c) { if (c.op === 'SORT') c._isRidSort = true; });
+			if (n.op === 'SORT' && !n._isRidSort && n.children.length && n.children[0].metrics.estRows >= 10 * MANY_ROWS) {
 				add(n, 'info', 'Sort', 'Sort of about ' + fmtNum(n.children[0].metrics.estRows) + ' rows',
 					'Sorted in SORTHEAP when the rows fit, otherwise it overflows to the temporary table space. An index with the columns of the ORDER BY / GROUP BY (after the columns of an equality predicate) gives the rows in order without a sort.');
 			}

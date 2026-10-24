@@ -45,7 +45,7 @@ import com.dbxtune.utils.StringUtil;
  * The Db2 Execution Plan Viewer page: <code>/showplan/db2</code> (built on ShowplanOracleServlet / ShowplanMySqlServlet)
  * <p>
  * The plan is the JSON that Db2Tune records (CmActiveStatements, column EXEC_PLAN: the explain tables after EXPLAIN_FROM_SECTION,
- * see Db2ExplainUtils). It is parsed and drawn in the browser by <code>dbxShowplanDb2.js</code>, on this page.
+ * see Db2ExplainUtils), or the text of db2exfmt. It is parsed and drawn in the browser by <code>dbxShowplanDb2.js</code>, on this page.
  * <p>
  * NOTE: The plan dialog of dbxShowplan.js (the one the Active Statements panel opens) can not show a Db2 plan yet: on this branch
  * it has no vendor switch. So this page draws the plan itself; it is hooked into the dialog when the branches are merged.
@@ -89,7 +89,7 @@ extends HttpServlet
 
 		if (StringUtil.isNullOrBlank(plan))
 		{
-			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Expecting a Db2 execution plan (the JSON Db2Tune records) in the parameter 'plan', but it was empty.");
+			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Expecting a Db2 execution plan (the output of db2exfmt, or the JSON Db2Tune records) in the parameter 'plan', but it was empty.");
 			return;
 		}
 
@@ -138,10 +138,10 @@ extends HttpServlet
 
 				"    <div class='container-fluid px-4 py-3'> \n" +
 				"      <h2>Db2 Execution Plan Viewer</h2> \n" +
-				"      <p class='text-muted'>Paste the plan that Db2Tune recorded (the <code>EXEC_PLAN</code> column of the 'Active Statements' tab: the explain tables after <code>EXPLAIN_FROM_SECTION</code>, as JSON) and press <b>Show Plan</b>. The plan is drawn in your browser.</p> \n" +
+				"      <p class='text-muted'>Paste the output of <code>db2exfmt</code>, or the plan that Db2Tune recorded (the <code>EXEC_PLAN</code> column of the 'Active Statements' tab: the explain tables after <code>EXPLAIN_FROM_SECTION</code>, as JSON), and press <b>Show Plan</b>. The plan is drawn in your browser.</p> \n" +
 				"      <div class='card shadow-sm' style='max-width: 1100px;'> \n" +
 				"        <div class='card-body'> \n" +
-				"          <textarea class='form-control mb-3' id='plan' rows='10' wrap='off' spellcheck='false' style='font-family:monospace;font-size:0.8rem;' placeholder='Paste the plan JSON here ({\"planFormat\":\"db2-explain-tables-1\", ...})'></textarea> \n" +
+				"          <textarea class='form-control mb-3' id='plan' rows='10' wrap='off' spellcheck='false' style='font-family:monospace;font-size:0.8rem;' placeholder='Paste the output of db2exfmt (the whole file, or just the Access Plan tree), or the plan JSON of Db2Tune ({\"planFormat\":\"db2-explain-tables-1\", ...})'></textarea> \n" +
 				"          <details class='mb-3'> \n" +
 				"            <summary style='cursor:pointer;font-size:0.85em;color:#555;'>SQL Text (optional)</summary> \n" +
 				"            <p class='text-muted' style='font-size:0.8em;margin-top:6px;'>Only needed to show another text than the one in the plan (the plan has the statement Db2 explained).</p> \n" +
@@ -180,7 +180,7 @@ extends HttpServlet
 				"        </div> \n" +
 				"        <h5 class='mt-3'>Plan Analysis</h5> \n" +
 				"        <ul id='db2-findings' style='font-size:0.85em;'></ul> \n" +
-				(StringUtil.hasValue(plan)
+				(StringUtil.hasValue(plan) && plan.trim().startsWith("{")
 					? "        <details class='mt-2'><summary>The plan as text (as db2exfmt shows it)</summary><pre style='font-size:0.8em;'>" + StringEscapeUtils.escapeHtml4(Db2ExplainUtils.planJsonToText(plan)) + "</pre></details> \n"
 					: "") +
 				"      </div> \n" +
@@ -192,7 +192,9 @@ extends HttpServlet
 				"          <p class='mb-1'>Db2Tune gets the plan of a statement that has run for a while (5 seconds, the tab 'Active Statements', column <code>EXEC_PLAN</code>) with <code>EXPLAIN_FROM_SECTION</code>: the plan Db2 really uses, from the package cache. "
 				                     + "It needs the explain tables in the schema of the collector's login, and EXECUTE on the procedure (see <code>DbmsSetup/db2.txt</code>):</p> \n" +
 				"          <pre class='mb-2' style='background:var(--sp-bg-code);color:var(--sp-text);padding:6px 8px;border-radius:3px;'>CALL SYSPROC.SYSINSTALLOBJECTS('EXPLAIN', 'C', 'USERSPACE1', '&lt;collector login&gt;');\nGRANT EXECUTE ON PROCEDURE SYSPROC.EXPLAIN_FROM_SECTION TO ROLE DBXTUNE_MON;</pre> \n" +
-				"          <p class='mb-0'>The Daily Summary Report links its plans here (Top SQL: 'View Execution Plan').</p> \n" +
+				"          <p class='mb-1'>The Daily Summary Report links its plans here (Top SQL: 'View Execution Plan').</p> \n" +
+				"          <p class='mb-1'>Any plan can be formatted with <code>db2exfmt</code> (the whole output can be pasted: the Plan Details, the objects and the statements are read too):</p> \n" +
+				"          <pre class='mb-0' style='background:var(--sp-bg-code);color:var(--sp-text);padding:6px 8px;border-radius:3px;'>db2 \"explain plan for &lt;statement&gt;\"\ndb2exfmt -d &lt;database&gt; -1 -o plan.txt</pre> \n" +
 				"        </div> \n" +
 				"      </div> \n" +
 				"    </div> \n" +
