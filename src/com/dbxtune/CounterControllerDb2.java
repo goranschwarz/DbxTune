@@ -26,7 +26,9 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
+import java.util.TimeZone;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -322,9 +324,13 @@ extends CounterControllerAbstract
 		Timestamp counterClearTime = new Timestamp(0);
 
 		// NOTE: ENV_GET_INST_INFO() and ENV_GET_SYS_INFO() can be used by PUBLIC (tested on 11.5.8)
+		// NOTE: The sample time is Db2's clock in UTC, read as UTC: so it is the right time also when Db2 runs in another time zone than the collector.
+		//       CURRENT TIMESTAMP is Db2's local time without a zone, read as is it would be taken as the collector's local time (a Db2 in UTC and a
+		//       collector in UTC+2 put every sample 2 hours back, and DbxCentral could not find the samples at the browser's "now").
+		//       Only this "session sample time" is changed: the CMs' own sample time (getServerTimeCmd) stays Db2's local time, the same clock as the timestamps in the CMs.
 		String sql = ""
 				+ "select \n"
-				+ "    current_timestamp, \n"
+				+ "    current_timestamp - current timezone as UTC_TIME, \n"
 				+ "    (select INST_NAME from table(SYSPROC.ENV_GET_INST_INFO())) as Instance, \n"
 				+ "    (select HOST_NAME from table(SYSPROC.ENV_GET_SYS_INFO()) ) as onHost \n"
 				+ "from SYSIBM.SYSDUMMY1";
@@ -338,7 +344,7 @@ extends CounterControllerAbstract
 			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next())
 			{
-				mainSampleTime   = rs.getTimestamp(1);
+				mainSampleTime   = rs.getTimestamp(1, Calendar.getInstance(TimeZone.getTimeZone("UTC")));
 				dbmsServerName   = rs.getString(2);
 				dbmsHostname     = rs.getString(3);
 			}
