@@ -448,7 +448,8 @@ extends CmSummaryAbstract
 			+ "    ," + oldestOpenTranInSecThreshold + "                                       as OLDEST_OPEN_TRAN_IN_SEC_TH \n" // TH = THRESHOLD
 			+ "    ,o.APPLICATION_HANDLE                                                       as OLDEST_OPEN_TRAN_APPL_HANDLE \n"
 			+ "    ,o.SESSION_AUTH_ID                                                          as OLDEST_OPEN_TRAN_USER \n"
-			+ "    ,o.APPLICATION_NAME                                                         as OLDEST_OPEN_TRAN_APPL_NAME \n"
+			// NOTE: APPLICATION_NAME from MON_GET_CONNECTION: MON_GET_UNIT_OF_WORK has it first in 11.5 (the WHERE gives NULL when there is no open transaction)
+			+ "    ,(select c.APPLICATION_NAME from table(MON_GET_CONNECTION(o.APPLICATION_HANDLE, -2)) c where c.APPLICATION_HANDLE = o.APPLICATION_HANDLE fetch first 1 rows only) as OLDEST_OPEN_TRAN_APPL_NAME \n"
 			+ "    ,o.CLIENT_HOSTNAME                                                          as OLDEST_OPEN_TRAN_HOST \n"
 			+ "    ,o.WORKLOAD_OCCURRENCE_STATE                                                as OLDEST_OPEN_TRAN_STATE \n"
 			+ "    ,o.UOW_START_TIME                                                           as OLDEST_OPEN_TRAN_TIME \n"
@@ -477,7 +478,7 @@ extends CmSummaryAbstract
 			+ "cross join (select count(*) as OPEN_TRAN_COUNT \n"
 			+ "            from table(MON_GET_UNIT_OF_WORK(NULL, -2)) x \n"
 			+ "            where UOW_STOP_TIME is NULL and UOW_START_TIME is not NULL and APPLICATION_HANDLE <> MON_GET_APPLICATION_HANDLE()) t \n"
-			+ "left join (select APPLICATION_HANDLE, SESSION_AUTH_ID, APPLICATION_NAME, CLIENT_HOSTNAME, WORKLOAD_OCCURRENCE_STATE, UOW_START_TIME, UOW_LOG_SPACE_USED \n"
+			+ "left join (select APPLICATION_HANDLE, SESSION_AUTH_ID, CLIENT_HOSTNAME, WORKLOAD_OCCURRENCE_STATE, UOW_START_TIME, UOW_LOG_SPACE_USED \n"
 			+ "           from table(MON_GET_UNIT_OF_WORK(NULL, -2)) x \n"
 			+ "           where UOW_STOP_TIME is NULL and UOW_START_TIME is not NULL and APPLICATION_HANDLE <> MON_GET_APPLICATION_HANDLE() \n"
 			+ "           order by UOW_START_TIME \n"
@@ -491,7 +492,7 @@ extends CmSummaryAbstract
 	@Override
 	public boolean checkDependsOnOther(DbxConnection conn)
 	{
-		return Db2CmUtils.checkFunctionsAreExecutable(this, conn, "MON_GET_DATABASE(-2)", "MON_GET_INSTANCE(-2)", "MON_GET_TRANSACTION_LOG(-2)", "MON_GET_APPL_LOCKWAIT(NULL, -2)", "MON_GET_UNIT_OF_WORK(NULL, -2)");
+		return Db2CmUtils.checkFunctionsAreExecutable(this, conn, "MON_GET_DATABASE(-2)", "MON_GET_INSTANCE(-2)", "MON_GET_TRANSACTION_LOG(-2)", "MON_GET_APPL_LOCKWAIT(NULL, -2)", "MON_GET_UNIT_OF_WORK(NULL, -2)", "MON_GET_CONNECTION(NULL, -2)");
 	}
 
 	/**

@@ -63,6 +63,7 @@ import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
+import com.dbxtune.utils.Ver;
 
 /**
  * The statements in the package cache (MON_GET_PKG_CACHE_STMT): how many times they ran, the time, CPU, waits, rows and reads.
@@ -263,6 +264,9 @@ extends CountersModel
 		int     topRows      = conf.getIntProperty    (PROPKEY_sample_topRows     , DEFAULT_sample_topRows);
 		boolean stmtText     = conf.getBooleanProperty(PROPKEY_sample_stmtText    , DEFAULT_sample_stmtText);
 
+		// The error counters came in 11.5: NULL before that (the same columns in the recording)
+		boolean hasErrorCols = versionInfo.getLongVersion() >= Ver.ver(11,5);
+
 		// NOTE: The times are in milliseconds, except TOTAL_CPU_TIME (microseconds)
 		// NOTE: EXECUTABLE_ID as HEX: the same id as in 'Active Statements' (and what EXPLAIN_FROM_SECTION takes)
 		String sql = ""
@@ -297,9 +301,9 @@ extends CountersModel
 			+ "    ,POOL_DATA_P_READS + POOL_INDEX_P_READS + POOL_TEMP_DATA_P_READS + POOL_TEMP_INDEX_P_READS + POOL_XDA_P_READS + POOL_COL_P_READS as PHYSICAL_READS \n"
 			+ "    ,TOTAL_SORTS \n"
 			+ "    ,SORT_OVERFLOWS \n"
-			+ "    ,NUM_EXEC_WITH_ERROR \n"
-			+ "    ,LAST_EXEC_ERROR \n"
-			+ "    ,LAST_EXEC_ERROR_TIMESTAMP \n"
+			+ "    ," + (hasErrorCols ? "NUM_EXEC_WITH_ERROR"       : "CAST(NULL AS BIGINT)")    + " as NUM_EXEC_WITH_ERROR \n"
+			+ "    ," + (hasErrorCols ? "LAST_EXEC_ERROR"           : "CAST(NULL AS INTEGER)")   + " as LAST_EXEC_ERROR \n"
+			+ "    ," + (hasErrorCols ? "LAST_EXEC_ERROR_TIMESTAMP" : "CAST(NULL AS TIMESTAMP)") + " as LAST_EXEC_ERROR_TIMESTAMP \n"
 			+ "    ,QUERY_COST_ESTIMATE \n"
 			+ "    ,PREP_TIME                                                     as PREP_TIME_MS \n"
 			+ "    ,INSERT_TIMESTAMP \n"

@@ -56,6 +56,7 @@ import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.sql.conn.info.DbmsVersionInfoDb2;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.MathUtils;
+import com.dbxtune.utils.Ver;
 
 /**
  * HADR (High Availability Disaster Recovery): the state of the connection to each standby, and how far behind it is (MON_GET_HADR).
@@ -247,7 +248,7 @@ extends CountersModel
 			+ "    ,h.STANDBY_REPLAY_LOG_FILE \n"
 			+ "    ,h.STANDBY_REPLAY_LOG_TIME \n"
 			+ "    ,h.STANDBY_ERROR_TIME \n"
-			+ "    ,h.HADR_LAST_TAKEOVER_TIME \n"
+			+ "    ," + (versionInfo.getLongVersion() >= Ver.ver(11,5) ? "h.HADR_LAST_TAKEOVER_TIME" : "CAST(NULL AS TIMESTAMP) as HADR_LAST_TAKEOVER_TIME") + " \n" // came in 11.5
 			+ "from table(MON_GET_HADR(-2)) h \n"
 			+ "order by h.STANDBY_ID, h.LOG_STREAM_ID \n"
 			+ "";

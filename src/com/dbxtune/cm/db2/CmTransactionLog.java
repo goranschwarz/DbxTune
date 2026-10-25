@@ -226,7 +226,8 @@ extends CountersModel
 			+ "    ,l.SEC_LOGS_ALLOCATED \n"
 			+ "    ,l.APPLID_HOLDING_OLDEST_XACT                                                                     as OLDEST_XACT_APPL_HANDLE \n"
 			+ "    ,u.SESSION_AUTH_ID                                                                                as OLDEST_XACT_AUTH_ID \n"
-			+ "    ,u.APPLICATION_NAME                                                                               as OLDEST_XACT_APPL_NAME \n"
+			// NOTE: APPLICATION_NAME from MON_GET_CONNECTION: MON_GET_UNIT_OF_WORK has it first in 11.5 (the WHERE gives NULL when nobody holds the log)
+			+ "    ,(select c.APPLICATION_NAME from table(MON_GET_CONNECTION(u.APPLICATION_HANDLE, l.MEMBER)) c where c.APPLICATION_HANDLE = u.APPLICATION_HANDLE fetch first 1 rows only) as OLDEST_XACT_APPL_NAME \n"
 			+ "    ,u.CLIENT_HOSTNAME                                                                                as OLDEST_XACT_CLIENT_HOST \n"
 			+ "    ,u.WORKLOAD_OCCURRENCE_STATE                                                                      as OLDEST_XACT_STATE \n"
 			+ "    ,u.UOW_START_TIME                                                                                 as OLDEST_XACT_START_TIME \n"
@@ -269,7 +270,7 @@ extends CountersModel
 	@Override
 	public boolean checkDependsOnOther(DbxConnection conn)
 	{
-		return Db2CmUtils.checkFunctionsAreExecutable(this, conn, "MON_GET_TRANSACTION_LOG(-2)", "MON_GET_UNIT_OF_WORK(NULL, -2)");
+		return Db2CmUtils.checkFunctionsAreExecutable(this, conn, "MON_GET_TRANSACTION_LOG(-2)", "MON_GET_UNIT_OF_WORK(NULL, -2)", "MON_GET_CONNECTION(NULL, -2)");
 	}
 
 	@Override

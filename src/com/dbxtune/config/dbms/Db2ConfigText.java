@@ -26,6 +26,7 @@ import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.hostmon.HostMonitorConnection;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
+import com.dbxtune.utils.Ver;
 
 /**
  * The text tabs in the "DBMS Configuration" dialog for Db2.
@@ -289,7 +290,8 @@ public abstract class Db2ConfigText
 
 				+ textTable(conn, "HADR state (MON_GET_HADR): one row per standby\n--## No rows: the database has no HADR.",
 					"select HADR_ROLE, STANDBY_ID, HADR_SYNCMODE, HADR_STATE, HADR_CONNECT_STATUS, HADR_CONNECT_STATUS_TIME, PRIMARY_MEMBER_HOST, STANDBY_MEMBER_HOST, STANDBY_INSTANCE, "
-					+ "HADR_LOG_GAP, STANDBY_RECV_REPLAY_GAP, PEER_WINDOW, READS_ON_STANDBY_ENABLED, HADR_LAST_TAKEOVER_TIME "
+					+ "HADR_LOG_GAP, STANDBY_RECV_REPLAY_GAP, PEER_WINDOW, READS_ON_STANDBY_ENABLED"
+					+ (conn.getDbmsVersionInfo().getLongVersion() >= Ver.ver(11,5) ? ", HADR_LAST_TAKEOVER_TIME " : " ") // came in 11.5
 					+ "from table(MON_GET_HADR(-2)) t order by STANDBY_ID")
 				;
 		}
