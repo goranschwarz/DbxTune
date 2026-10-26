@@ -95,9 +95,15 @@ public class AppDir
 	public static List<String> checkCreateAppDir(String dbxUserHome, PrintStream ps, CommandLine cmd)
 //	throws Exception
 	{
+		// The DBXTUNE_* environment variables (like a custom DBXTUNE_USER_HOME, set by the Windows installer) are
+		// only copied to System Properties in init(), AFTER this is called — and '--createAppDir' never gets to
+		// init(). Without this, a custom DBXTUNE_USER_HOME was ignored here: '$HOME/.dbxtune' was set up instead.
+		// (Does NOT overwrite properties already set with -D, the same as init() does.)
+		StringUtil.setEnvironmentVariablesToSystemProperties(false, false);
+
 		if (dbxUserHome == null)
 			dbxUserHome = getDbxUserHomeDir();
-		
+
 		List<String> logList = new LinkedList<>();
 
 		// If it's "the new app directory" and the old exists...

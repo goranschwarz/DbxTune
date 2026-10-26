@@ -2795,7 +2795,15 @@ namespace DbxInstaller
                 // Belt-and-suspenders: the existence pre-check above should already catch this,
                 // but a domain account can still hit this path (e.g. trust/connectivity quirks).
                 ERROR_NO_SUCH_USER           => (domainAccount ? VerifyOutcome.Failed : VerifyOutcome.Info, notFound),
-                _                            => (VerifyOutcome.Failed, $"Logon check failed: {DescribeLogonError(err)}"),
+                // Something wrong with the ACCOUNT (disabled, locked, expired, 'Log On To', …): a real failure.
+                _ when FatalLogonErrors.Contains(err)
+                                             => (VerifyOutcome.Failed, $"Logon check failed: {DescribeLogonError(err)}"),
+                // Anything else is about the environment, not the account (no domain controller reachable, trust,
+                // clock difference, Netlogon): it can't be tested now — the install tests it again in "Check logon rights".
+                _                            => (VerifyOutcome.Info,
+                    $"The password couldn't be tested right now: {DescribeLogonError(err)}\n" +
+                    "You can continue — the install tests the logon again in 'Check logon rights' and stops there if the " +
+                    "account itself is the problem."),
             };
         }
 
