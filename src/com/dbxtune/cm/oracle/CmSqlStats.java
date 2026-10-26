@@ -266,7 +266,7 @@ extends CountersModel
 			mtd.addTable("V$SQLSTATS",  "V$SQLSTATS displays basic performance statistics for SQL cursors and contains one row per SQL statement (that is, one row per unique value of SQL_ID). The column definitions for columns in V$SQLSTATS are identical to those in the V$SQL and V$SQLAREA views. However, the V$SQLSTATS view differs from V$SQL and V$SQLAREA in that it is faster, more scalable, and has a greater data retention (the statistics may still appear in this view, even after the cursor has been aged out of the shared pool). Note that V$SQLSTATS contains a subset of columns that appear in V$SQL and V$SQLAREA. </html>");
 
 			mtd.addColumn("V$SQLSTATS", "SQL_TEXT",                                 "<html> First thousand characters of the SQL text for the current cursor </html>");
-			mtd.addColumn("V$SQLSTATS", "SQL_FULLTEXT",                             "<html> Full text for the SQL statement exposed as a CLOB column. THe full text of a SQL statement can be retrieved using this column instead of joining with the V$SQLTEXT view. </html>");
+			mtd.addColumn("V$SQLSTATS", "SQL_FULLTEXT",                             "<html> Full text for the SQL statement, as a CLOB.<br><b>Note</b>: V$SQLSTATS.SQL_FULLTEXT only has the first 1000 characters, so the text is taken from <code>V$SQL.SQL_FULLTEXT</code>. If the statement is no longer in the library cache, it is the first 1000 characters from V$SQLSTATS. </html>");
 			mtd.addColumn("V$SQLSTATS", "SQL_ID",                                   "<html> SQL identifier of the parent cursor in the library cache </html>");
 			mtd.addColumn("V$SQLSTATS", "LAST_ACTIVE_TIME",                         "<html> Last time the statistics of a contributing cursor were updated </html>");
 			mtd.addColumn("V$SQLSTATS", "LAST_ACTIVE_CHILD_ADDRESS",                "<html> Address of the contributing cursor that last updated these statistics </html>");
@@ -480,7 +480,9 @@ extends CountersModel
 			    + "    ,s.IO_CELL_UNCOMPRESSED_BYTES \n"
 			    + "    ,s.IO_CELL_OFFLOAD_RETURNED_BYTES \n"
 			    + " \n"
-			    + "    ,s.SQL_FULLTEXT \n"
+				// V$SQLSTATS.SQL_FULLTEXT is only the first 1000 characters (unless the query has a predicate on SQL_TEXT), so get the full text from V$SQL
+				// If the cursor is no longer in the library cache: use what V$SQLSTATS has
+			    + "    ,NVL((select q.SQL_FULLTEXT from V$SQL q where q.SQL_ID = s.SQL_ID and rownum = 1), s.SQL_FULLTEXT) as SQL_FULLTEXT \n"
 			    + "FROM V$SQLSTATS s \n"
 			    + joinContainers
 				+ "WHERE 1 = 1 -- to make extra where clauses easier \n"
