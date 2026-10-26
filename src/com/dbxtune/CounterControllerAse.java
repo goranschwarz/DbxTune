@@ -29,6 +29,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
@@ -37,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.JDialog;
@@ -497,10 +499,17 @@ public class CounterControllerAse extends CounterControllerAbstract
 		Timestamp mainSampleTime   = null;
 		Timestamp counterClearTime = null;
 
-		String sql = "select getdate(), @@servername, @@servername, CountersCleared='2000-01-01 00:00:00'";
+		// The sample time is ASE's clock in UTC (getutcdate(), from ASE 12.5.3), read as UTC: so it is the right time also when ASE runs in another time zone than the collector.
+		// getdate() is ASE's local time without a zone: read as is, it is taken as the collector's local time (an ASE in UTC and a collector in UTC+1
+		// put every sample 1 hour back, and DbxCentral can't find the samples at the browser's "now").
+		// Only this "session sample time" is changed: the CMs' own sample time (getServerTimeCmd) stays ASE's local time, the same clock as the timestamps in the CMs (and CountersCleared).
+		boolean utcSampleTime = MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionNum() >= Ver.ver(12,5,3);
+		String  sampleTimeSql = utcSampleTime ? "getutcdate()" : "getdate()";
+
+		String sql = "select " + sampleTimeSql + ", @@servername, @@servername, CountersCleared='2000-01-01 00:00:00'";
 		if (_activeRoleList != null && _activeRoleList.contains(AseConnectionUtils.MON_ROLE))
 		{
-			sql = "select getdate(), @@servername, @@servername, CountersCleared from master..monState";
+			sql = "select " + sampleTimeSql + ", @@servername, @@servername, CountersCleared from master..monState";
 			// If version is above 15.0.2 and you have 'sa_role' 
 			// then: use ASE function asehostname() to get on which OSHOST the ASE is running
 //			if (MonTablesDictionary.getInstance().getAseExecutableVersionNum() >= 15020)
@@ -508,7 +517,7 @@ public class CounterControllerAse extends CounterControllerAbstract
 			if (MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionNum() >= Ver.ver(15,0,2))
 			{
 				if (_activeRoleList != null && _activeRoleList.contains(AseConnectionUtils.SA_ROLE))
-					sql = "select getdate(), @@servername, asehostname(), CountersCleared from master..monState";
+					sql = "select " + sampleTimeSql + ", @@servername, asehostname(), CountersCleared from master..monState";
 			}
 		}
 
@@ -559,7 +568,7 @@ public class CounterControllerAse extends CounterControllerAbstract
 			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next())
 			{
-				mainSampleTime   = rs.getTimestamp(1);
+				mainSampleTime   = utcSampleTime ? rs.getTimestamp(1, Calendar.getInstance(TimeZone.getTimeZone("UTC"))) : rs.getTimestamp(1);
 				aseServerName    = rs.getString(2);
 				aseHostname      = rs.getString(3);
 				counterClearTime = rs.getTimestamp(4);
