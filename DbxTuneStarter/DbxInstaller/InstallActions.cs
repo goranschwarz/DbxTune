@@ -743,6 +743,11 @@ namespace DbxInstaller
                 "/comment:\"DbxTune user account\"");
             log(output);
             if (!ok) throw new Exception($"Failed to create account '{c.ServiceAccount}'.");
+
+            // Windows' default password policy expires a new password after 42 days — then the service
+            // would stop starting. A service account's password should not expire.
+            try { AccountProperties.SetLocalPasswordNeverExpires(c.ServiceAccount); log("  'Password never expires' set."); }
+            catch (Exception ex) { log($"  Warning: could not set 'Password never expires' ({ex.Message}) — set it in 'Local Users and Groups'."); }
             return Task.FromResult(true);
         }
 
