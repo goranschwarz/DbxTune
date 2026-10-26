@@ -15,6 +15,8 @@ namespace DbxInstaller.Pages
         private readonly TextBox _txtAccount = PageHelpers.TextBox(InstallerSettings.ServiceAccount ?? "dbxtune");   // last run's account
         private readonly PasswordBox _txtPassword = new() { Margin = new Thickness(0, 2, 0, 2) };
         private readonly Button _btnCheck = new() { Content = "Check" };
+        // The standard Windows "Select User" dialog — this computer, and the domain when joined
+        private readonly Button _btnBrowse = new() { Content = "Browse…" };
         private readonly TextBlock _lblCheckStatus = new() { Margin = new Thickness(0, 4, 0, 0), TextWrapping = TextWrapping.Wrap };
         private readonly TextBlock _lblGmsaNote = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0) };
 
@@ -63,6 +65,21 @@ namespace DbxInstaller.Pages
             _txtPassword.PasswordChanged += (_, _) => UpdateNext();
             _profile.Changed += (_, _) => UpdateNext();
             _txtAccount.LostFocus += async (_, _) => await AutoCheckAccountAsync();
+            _btnBrowse.Click += async (_, _) =>
+            {
+                string? picked;
+                try { picked = AccountPicker.Pick(new System.Windows.Interop.WindowInteropHelper(Window.GetWindow(this)).Handle, _domain != null); }
+                catch (Exception ex)
+                {
+                    _lblCheckStatus.Text = $"Could not open the 'Select User' dialog: {ex.Message}";
+                    _lblCheckStatus.SetResourceReference(TextBlock.ForegroundProperty, "RedBrush");
+                    return;
+                }
+                if (picked == null) return;   // cancelled
+                _txtAccount.Text = picked;     // TextChanged: account type, domain notice, Next
+                await AutoCheckAccountAsync(); // lookup, account properties, profile folder
+                _txtPassword.Focus();
+            };
             _btnCheck.Click += async (_, _) =>
             {
                 _lblCheckStatus.Text = "Checking…";
@@ -85,6 +102,7 @@ namespace DbxInstaller.Pages
                 };
                 _lblCheckStatus.SetResourceReference(TextBlock.ForegroundProperty, brush);
 
+                await AppendAccountPropertiesAsync(_txtAccount.Text.Trim());
                 await _profile.CheckAsync(_txtAccount.Text.Trim());
                 _btnCheck.IsEnabled = true;
             };
@@ -99,7 +117,7 @@ namespace DbxInstaller.Pages
                                           "the one that matches the name you enter is highlighted:"),
                     _accountTypes,
                     _domainNotice,
-                    PageHelpers.Row("Account name", _txtAccount),
+                    PageHelpers.Row("Account name", _txtAccount, _btnBrowse),
                     PageHelpers.Row("Password", _txtPassword, _btnCheck),
                     _lblCheckStatus,
                     _lblGmsaNote,
@@ -298,7 +316,23 @@ namespace DbxInstaller.Pages
                     : ($"Account '{account}' doesn't exist yet — the install creates it as a local account.", "FgDimBrush");
             _lblCheckStatus.Text = text;
             _lblCheckStatus.SetResourceReference(TextBlock.ForegroundProperty, brush);
+            if (exists) await AppendAccountPropertiesAsync(account);
             await _profile.CheckAsync(account);
+        }
+
+        // The account settings that would make it fail later (disabled, locked, expired, password expiry,
+        // 'Log On To', Protected Users), read without logging on — added under the status line.
+        private async Task AppendAccountPropertiesAsync(string account)
+        {
+            var findings = await Task.Run(() => { try { return AccountProperties.Read(account); } catch { return null; } });
+            if (findings == null || findings.Count == 0 || _txtAccount.Text.Trim() != account) return;
+            foreach (var f in findings)
+            {
+                _lblCheckStatus.Inlines.Add(new LineBreak());
+                var run = new Run("•  " + f.Text);
+                run.SetResourceReference(TextElement.ForegroundProperty, f.Serious ? "RedBrush" : "OrangeBrush");
+                _lblCheckStatus.Inlines.Add(run);
+            }
         }
 
         private void UpdateDomainNotice()
