@@ -3536,8 +3536,31 @@ _queryErrStrip.setShowMarkedOccurrences(false); // This is a *temporary* workaro
 					srvStr += "/" + _connectedInitialCatalog;
 				}
 			}
-			
-			
+
+			// POSTGRES: hostname:port/dbname  [cluster=name] -- if 'cluster_name' is set
+			if (DbUtils.isProductName(_connectedToProductName,  DbUtils.DB_PROD_NAME_POSTGRES))
+			{
+				// Read pg_settings instead of current_setting('cluster_name'), which throws if the parameter is unknown (below 9.5), and an error would abort an open transaction
+				String clusterName = null;
+				String sql = "select setting from pg_settings where name = 'cluster_name'";
+				try (Statement stmt = _conn.createStatement(); ResultSet rs = stmt.executeQuery(sql))
+				{
+					while (rs.next())
+						clusterName = rs.getString(1);
+				}
+				catch (SQLException ex)
+				{
+					_logger.debug("Problems getting Postgres 'cluster_name'. sql='" + sql + "', Caught: " + ex);
+				}
+
+				// Skip it if it's the same as the hostname without domain (_connectedToServerName is 'hostname:port')
+//				String shortHostname = StringUtil.hasValue(_connectedToServerName) ? _connectedToServerName.split("[.:]")[0] : "";
+
+//				if (StringUtil.hasValue(clusterName) && ! clusterName.trim().equalsIgnoreCase(shortHostname))
+				if (StringUtil.hasValue(clusterName))
+					srvStr += "  [cluster=" + clusterName.trim() + "]";
+			}
+
 			return srvStr;
 		}
 		else
