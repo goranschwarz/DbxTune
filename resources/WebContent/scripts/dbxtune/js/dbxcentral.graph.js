@@ -2381,34 +2381,24 @@ function dbxTuneGraphSubscribe()
 	}
 	function createDb2QueryPlanToolTipDiv(data, rowData, srvName)
 	{
-		// creates a div that opens the Db2 Execution Plan Viewer (/showplan/db2, ShowplanDb2Servlet) in a new tab, with the plan POSTed to it.
-		// The plan is the JSON of the explain tables (Db2ExplainUtils). The plan dialog of dbxShowplan.js can't show a Db2 plan yet (no vendor switch on this branch)
+		// creates a div that will open the plan dialog (dbxShowplan.js, #dbx-view-oraShowplan-dialog: it draws Db2's plans too, with dbxShowplanDb2.js).
+		// The plan is the JSON of the explain tables (Db2ExplainUtils). No 'dbname': a table without a schema in the statement is looked for in all schemas
 		const dataVal = data;
 		const sqlText = rowData.hasOwnProperty('SQL_TEXT') ? (rowData.SQL_TEXT || '') : '';
 		const srv     = srvName || (_serverList.length ? _serverList[0] : '');
 
 		const div = document.createElement("div");
 		div.innerHTML = "&nbsp;";
-		div.setAttribute("title", "Click to Open the Execution Plan in a new tab (Db2 Execution Plan Viewer)");
-		div.style.cursor = 'pointer';
-		div.addEventListener('click', function ()
-		{
-			const form = document.createElement('form');
-			form.method = 'post';
-			form.action = '/showplan/db2';
-			form.target = '_blank';
-			[['plan', dataVal], ['sql', sqlText], ['srv', srv]].forEach(function (kv)
-			{
-				const input = document.createElement('input');
-				input.type  = 'hidden';
-				input.name  = kv[0];
-				input.value = kv[1];
-				form.appendChild(input);
-			});
-			document.body.appendChild(form);
-			form.submit();
-			form.remove();
-		});
+		div.setAttribute("title"           , "Click to Open the Execution Plan... \n-------------------------------\n" + dataVal);
+		div.setAttribute("data-bs-toggle"  , 'modal');
+		div.setAttribute("data-bs-target"  , '#dbx-view-oraShowplan-dialog');
+		div.setAttribute("data-objectname" , rowData.APPLICATION_HANDLE ? ('Application ' + rowData.APPLICATION_HANDLE) : '');
+		div.setAttribute("data-plan"       , dataVal);
+		div.setAttribute("data-sqltext"    , sqlText);
+		div.setAttribute("data-srv"        , srv);
+		div.setAttribute("data-dbname"     , '');
+		div.setAttribute("data-dbvendor"   , 'DB2/');
+
 		return div;
 	}
 	function createPostgresQueryPlanToolTipDiv(data)
@@ -2756,7 +2746,7 @@ function dbxTuneGraphSubscribe()
 				}
 				else if ("Db2Tune" === appName && metaData !== undefined && metaData.hasOwnProperty('columnName'))
 				{
-					// The tooltip goes on the CHECKBOX columns (as for the other collectors). EXEC_PLAN is JSON (from the explain tables): it opens /showplan/db2
+					// The tooltip goes on the CHECKBOX columns (as for the other collectors). EXEC_PLAN is JSON (from the explain tables), drawn by the plan dialog
 					if (metaData.columnName === "HAS_SQL_TEXT"        && rowData.hasOwnProperty('SQL_TEXT')           && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.SQL_TEXT          , 'sql' ) ); }
 					if (metaData.columnName === "HAS_EXEC_PLAN"       && rowData.hasOwnProperty('EXEC_PLAN')          && cellContent === true) { td.appendChild( createDb2QueryPlanToolTipDiv(   rowData.EXEC_PLAN         , rowData, srvName) ); }
 					if (metaData.columnName === "HAS_APPL_LOCKS"      && rowData.hasOwnProperty('APPL_LOCKS')         && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.APPL_LOCKS        , 'Lock Table') ); }

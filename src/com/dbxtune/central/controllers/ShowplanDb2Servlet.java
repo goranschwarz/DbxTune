@@ -47,8 +47,8 @@ import com.dbxtune.utils.StringUtil;
  * The plan is the JSON that Db2Tune records (CmActiveStatements, column EXEC_PLAN: the explain tables after EXPLAIN_FROM_SECTION,
  * see Db2ExplainUtils), or the text of db2exfmt. It is parsed and drawn in the browser by <code>dbxShowplanDb2.js</code>, on this page.
  * <p>
- * NOTE: The plan dialog of dbxShowplan.js (the one the Active Statements panel opens) can not show a Db2 plan yet: on this branch
- * it has no vendor switch. So this page draws the plan itself; it is hooked into the dialog when the branches are merged.
+ * NOTE: The plan dialog of dbxShowplan.js (the one the Active Statements panel opens) draws Db2 plans too (dbVendor 'DB2/'), and its
+ * "Open in External Window" posts the plan here. This page draws the plan itself (with the plan as text, and the help for db2exfmt).
  * <ul>
  *   <li>GET: a form to paste a plan into. The button draws what was pasted, without a round trip to the server.</li>
  *   <li>POST (plan, sql): the same page, with the plan that was posted drawn, and the plan as text (as db2exfmt shows it).
