@@ -92,7 +92,7 @@ public final class TableNameParser {
 //System.out.println("----- currentToken["+index+"]='" + currentToken + "'");
 				if (isFromToken(currentToken)) {
 					processFromToken(tokens, index);
-				} else if (shouldProcess(currentToken)) {
+				} else if (shouldProcess(currentToken) && moreTokens(tokens, index)) { // the text can END with the keyword (a statement text that was cut)
 					String nextToken = tokens[index++];
 					considerInclusion(nextToken);
 
@@ -199,6 +199,10 @@ public final class TableNameParser {
 	}
 
 	private void processFromToken(final String[] tokens, int index) {
+		// The text can END with FROM (a statement text that was cut, for example a MySQL digest text at performance_schema_max_digest_length)
+		if (!moreTokens(tokens, index)) {
+			return;
+		}
 		String currentToken = tokens[index++];
 		considerInclusion(currentToken);
 
@@ -216,6 +220,9 @@ public final class TableNameParser {
 
 	private void processNonAliasedMultiTables(final String[] tokens, int index, String nextToken) {
 		while (nextToken.equals(TOKEN_COMMA)) {
+			if (!moreTokens(tokens, index)) { // the text can END with the comma
+				break;
+			}
 			String currentToken = tokens[index++];
 			considerInclusion(currentToken);
 			if (moreTokens(tokens, index)) {				

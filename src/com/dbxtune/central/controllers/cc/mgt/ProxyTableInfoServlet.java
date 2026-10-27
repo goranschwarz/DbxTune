@@ -91,6 +91,7 @@ extends ProxyHelper
 		String tables = Helper.getParameter(req, "tables", "");
 		String format = Helper.getParameter(req, "format", "");
 		String ts     = Helper.getParameter(req, "ts",     "");
+		String sql    = Helper.getParameter(req, "sql",    "");   // MySQL: the collector also takes the tables from the SQL text
 
 		HtmlQueryString qs = new HtmlQueryString(collectorBaseUrl + "/api/mgt/table-info");
 		qs.add          ("dbVendor", dbVendor);
@@ -98,6 +99,7 @@ extends ProxyHelper
 		qs.addIfNotEmpty("tables",   tables);
 		qs.addIfNotEmpty("format",   format);
 		qs.addIfNotEmpty("ts",       ts);
+		qs.addIfNotEmpty("sql",      sql);
 
 		String url = qs.toString();
 

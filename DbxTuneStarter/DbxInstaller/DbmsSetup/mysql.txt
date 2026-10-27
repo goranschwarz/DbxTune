@@ -1,5 +1,118 @@
-/*
-** TODO: implement instructions how to setup a monitoring user
+/*--------------------------------------------------------------------------------------------
+** MySqlTune needs ONE thing in the server: a login that can read the monitoring views.
+** (if you are lazy you could use 'root' but not recomended)
+**
+** IN A NUTSHELL
+**   1: Run section 1                   (copy and paste, change the password)
+**   2: Optionally section 2            (lets MySqlTune see table and index DEFINITIONS, never the rows)
+**   3: Test the login                  -> section 4
+**
+** VERSIONS
+**   MySQL 8.0 and above (tested on 8.0, 8.4 and 9.7). Newer versions gives some extra columns.
+**   MariaDB is NOT supported (it is detected, and what does not work is disabled, with the reason in the log).
+**
+** WHAT IT READS
+**   Only the monitoring views: performance_schema, sys, and the INNODB_* views in information_schema.
+**   It does NOT read any user data (no SELECT on your tables), and it creates NOTHING in the server.
+**
+** WHAT THE LOGIN NEEDS
+**   PROCESS                          all sessions and statements, the information_schema.INNODB_* views, SHOW ENGINE INNODB STATUS
+**   REPLICATION CLIENT               SHOW REPLICA STATUS, SHOW BINARY LOGS (it can NOT read the binary log itself)
+**   SELECT ON performance_schema.*   almost every Performance Counter
+**   SELECT, EXECUTE ON sys.*         the sys views (some of them call sys functions, so EXECUTE is needed too)
+**                                    EXECUTE is safe: the sys procedures that change settings also needs UPDATE on performance_schema, which the login does NOT have.
+**
+** If a Performance Counter can't read a view it needs, it will be DISABLED.
+** The reason (and what GRANT to execute) is written in the log file, and as a tooltip on the tab.
+** At every connect the log file also says which of the above the login has.
+**--------------------------------------------------------------------------------------------
 */
 
 
+/*--------------------------------------------------------------------------------------------
+** SECTION 1: the login
+**            MySQL 8.0, 8.4, 9.x (the same for all of them)
+**            The login: dbxtune
+**--------------------------------------------------------------------------------------------
+*/
+## as root (or another login that can create users)
+mysql -u root -p
+
+-- '%' = from any host. Better: the host (or IP) where MySqlTune runs, for example 'dbxtune'@'10.1.2.3'
+CREATE USER 'dbxtune'@'%' IDENTIFIED BY 'the-long-and-arbitrary-password';
+GRANT PROCESS, REPLICATION CLIENT ON *.* TO 'dbxtune'@'%';
+GRANT SELECT ON performance_schema.* TO 'dbxtune'@'%';
+GRANT SELECT, EXECUTE ON sys.* TO 'dbxtune'@'%';
+
+-- RECOMENDED: a password that does not expire (the default 'default_password_lifetime=0' is "never", but it may have been changed)
+ALTER USER 'dbxtune'@'%' PASSWORD EXPIRE NEVER;
+
+
+/*--------------------------------------------------------------------------------------------
+** SECTION 2: OPTIONAL - see table and index definitions (never the rows)
+**
+** MySqlTune stores information about the tables of the top statements (the "DDL Storage"), and the Daily Summary Report shows it with each statement.
+** Without this, the login can't see YOUR tables in information_schema.TABLES / STATISTICS, and SHOW CREATE TABLE is denied:
+** then the columns (with approximate data types), the indexes and the sizes come from the InnoDB data dictionary.
+** With it, the real CREATE TABLE, the index columns of partitioned tables and the index cardinality are stored too.
+** REFERENCES is the smallest privilege that makes the definitions visible: SELECT on the tables is still DENIED.
+** (The text of a VIEW is only shown to a login with SELECT on the view, so views are only named.)
+**--------------------------------------------------------------------------------------------
+*/
+GRANT REFERENCES ON *.* TO 'dbxtune'@'%';
+
+
+/*--------------------------------------------------------------------------------------------
+** SECTION 3: performance_schema settings (in the server's configuration file: my.cnf)
+**
+** performance_schema is ON by default in MySQL, and the consumers MySqlTune needs are ON by default.
+** MySqlTune writes a WARNING in the log file at connect, if any of them is OFF.
+**--------------------------------------------------------------------------------------------
+*/
+[mysqld]
+performance_schema = ON                              # default ON. Changing it needs a restart
+
+# RECOMENDED: every deadlock is written to the error log (not only the last one), and MySqlTune reads the error log (the tab 'Error Log', with an alarm)
+# InnoDB writes deadlocks as notes, so 'log_error_verbosity = 3' is also needed (it also writes other notes, for example aborted connections)
+innodb_print_all_deadlocks = ON                      # can also be done without a restart: SET PERSIST innodb_print_all_deadlocks = ON;
+log_error_verbosity        = 3                       # default 2 (errors and warnings). Without a restart: SET PERSIST log_error_verbosity = 3;
+
+# OPTIONAL: CPU time per statement (the column CpuTimeMs in the tab 'Statements'), MySQL 8.0.28 and above. OFF by default.
+# Without a restart: UPDATE performance_schema.setup_consumers SET ENABLED = 'YES' WHERE NAME = 'events_statements_cpu';
+performance-schema-consumer-events-statements-cpu = ON
+
+
+/*--------------------------------------------------------------------------------------------
+** NOT NEEDED, and NOT recomended
+**
+** SELECT ON *.*        reads all user data. MySqlTune does not need it.
+** SUPER, ALL           MySqlTune does not need them.
+**
+** Execution plans of RUNNING statements: 'EXPLAIN FOR CONNECTION <id>' of another login's statement needs ALL global privileges
+** (tested on MySQL 8.0, 8.4 and 9.7: PROCESS, SELECT ON *.* and even SUPER are not enough). So with the login above, MySqlTune
+** does NOT show plans of running statements.
+**--------------------------------------------------------------------------------------------
+*/
+
+
+/*--------------------------------------------------------------------------------------------
+** SECTION 4: test the login
+**--------------------------------------------------------------------------------------------
+*/
+mysql -u dbxtune -p -h <hostname>
+
+SHOW GRANTS;                                                  -- what the login has
+SELECT count(*) FROM performance_schema.threads;              -- SELECT ON performance_schema
+SELECT * FROM sys.version;                                    -- SELECT ON sys
+SELECT sys.format_bytes(1024);                                -- EXECUTE ON sys
+SELECT count(*) FROM information_schema.INNODB_TRX;           -- PROCESS
+SHOW REPLICA STATUS;                                          -- REPLICATION CLIENT   (MySQL 8.0.21 and below: SHOW SLAVE STATUS)
+
+
+/*--------------------------------------------------------------------------------------------
+** MANAGED SERVICES (Amazon RDS / Aurora, Azure Database for MySQL, Google Cloud SQL)
+**
+** The admin login of the service can run section 1 and 2 as they are.
+** There is no host monitoring (no SSH to the server), so only the database Performance Counters are collected.
+**--------------------------------------------------------------------------------------------
+*/

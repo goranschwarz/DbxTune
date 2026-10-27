@@ -57,7 +57,8 @@ extends CountersModel
 	public static final String   HTML_DESC        = 
 		"<html>"
 		+ "<h4>Disk IO</h4>"
-		+ "Simply: select * from sys.x$io_global_by_file_by_latency"
+		+ "IO per file (sys.x$io_global_by_file_by_latency): counts and wait time.<br>"
+		+ "NOTE: the *_latency and *_lpc columns are in <b>microseconds</b> (the view has picoseconds, they are divided by 1000000 although the property is named '.sample.latencyInMs')."
 		+ "</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_DISK;
@@ -195,6 +196,13 @@ extends CountersModel
 		return pkCols;
 	}
 
+	/** If we can't read the view: disable the CM, and tell what to do about it */
+	@Override
+	public boolean checkDependsOnOther(DbxConnection conn)
+	{
+		return MySqlCmUtils.checkViewsAreReadable(this, conn, "sys.x$io_global_by_file_by_latency");
+	}
+
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
@@ -227,7 +235,7 @@ extends CountersModel
 			    + "    count_misc, \n"
 			    + "    " + misc_latency  + " as misc_latency, \n"
 			    + "    CASE WHEN total        = 0 THEN 0 ELSE " + total_latency + " / total       END as total_lpc, \n"
-			    + "    CASE WHEN read_latency = 0 THEN 0 ELSE " + read_latency  + " / count_read  END as read_lpc, \n"
+			    + "    CASE WHEN count_read   = 0 THEN 0 ELSE " + read_latency  + " / count_read  END as read_lpc, \n"
 			    + "    CASE WHEN count_write  = 0 THEN 0 ELSE " + write_latency + " / count_write END as write_lpc, \n"
 			    + "    CASE WHEN count_misc   = 0 THEN 0 ELSE " + misc_latency  + " / count_misc  END as misc_lpc \n"
 			    + "from sys.`x$io_global_by_file_by_latency` \n"

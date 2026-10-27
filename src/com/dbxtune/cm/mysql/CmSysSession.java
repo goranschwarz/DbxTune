@@ -20,11 +20,15 @@
  ******************************************************************************/
 package com.dbxtune.cm.mysql;
 
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
 import javax.naming.NameNotFoundException;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -45,6 +49,7 @@ import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 public class CmSysSession
 extends CountersModel
 {
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmSysSession.class.getSimpleName();
@@ -52,7 +57,9 @@ extends CountersModel
 	public static final String   HTML_DESC        = 
 		"<html>"
 		+ "<h4>Sessions</h4>"
-		+ "Simply select * from sys.`x$session`"
+		+ "All user sessions (sys.x$session): what they run right now, for how long, rows examined, temp tables, memory, and their transaction.<br>"
+		+ "The values are for the <b>current</b> statement of the session. The *_latency columns are in <b>picoseconds</b>.<br>"
+		+ "See the tab 'Active Statements' for the sessions that are working, and who blocks who.<br>"
 		+ "</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
@@ -66,9 +73,9 @@ extends CountersModel
 	public static final String[] NEED_CONFIG      = new String[] {};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
+	// NOTE: no DIFF columns: the values of sys.x$session are for the CURRENT statement/transaction of the session (they start over for every statement), not counters that only grows
 	public static final String[] DIFF_COLUMNS     = new String[] {
-			"-dummy-culomn-that-will-never-exists-"
-//			, "time"                   // The time in seconds that the thread has been in its current state.
+//			  "time"                   // The time in seconds that the thread has been in its current state.
 //			, "statement_latency"      // How long the statement has been executing. <br> This column was added in MySQL 5.7.9.
 //			, "lock_latency"           // The time spent waiting for locks by the current statement.
 //			, "rows_examined"          // The number of rows read from storage engines by the current statement.
@@ -186,11 +193,17 @@ extends CountersModel
 			mtd.addColumn("x$session", "pid",                    "<html>The client process ID.<br> This column was added in MySQL 5.7.9.</html>");
 			mtd.addColumn("x$session", "program_name",           "<html>The client program name.</html>");
 		}
-		catch (NameNotFoundException e) 
+		catch (NameNotFoundException e)
 		{
-		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
-			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e);
 		}
+	}
+
+	/** If we can't read the view: disable the CM, and tell what to do about it */
+	@Override
+	public boolean checkDependsOnOther(DbxConnection conn)
+	{
+		return MySqlCmUtils.checkViewsAreReadable(this, conn, "sys.x$session");
 	}
 
 	@Override

@@ -31,7 +31,7 @@ import com.dbxtune.utils.StringUtil;
 
 /**
  * Builds a "View Execution Plan" link to DbxCentral's own graphical Showplan viewer
- * ({@code /showplan/ase}, {@code /showplan/sqlserver} or {@code /showplan/oracle}).
+ * ({@code /showplan/ase}, {@code /showplan/sqlserver}, {@code /showplan/oracle} or {@code /showplan/mysql}).
  * <p>
  * Unlike a plain {@code <a href='...#plan=...'>}, this does NOT embed the (potentially huge, up to
  * ~128KB) plan text in the link itself - that blew up report size, since the same plan text would
@@ -88,6 +88,7 @@ public class ShowplanLinkBuilder
 		String path = isAse ? "/showplan/ase"
 				: DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_MSSQL)  ? "/showplan/sqlserver"
 				: DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_ORACLE) ? "/showplan/oracle"    // the plan is the text of DBMS_XPLAN. 'dbname' is the container (PDB)
+				: DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_MYSQL)  ? "/showplan/mysql"     // the plan is the JSON of EXPLAIN FORMAT=JSON. 'dbname' is the schema
 				: null;
 		if (path == null)
 			return "";

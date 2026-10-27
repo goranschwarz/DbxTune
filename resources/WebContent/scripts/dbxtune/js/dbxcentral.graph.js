@@ -2355,6 +2355,30 @@ function dbxTuneGraphSubscribe()
 
 		return div;
 	}
+	function createMySqlQueryPlanToolTipDiv(data, rowData, srvName)
+	{
+		// creates a div that will open the plan dialog (dbxShowplan.js, #dbx-view-oraShowplan-dialog: it draws MySQL's plans too, with dbxShowplanMySql.js).
+		// The plan is the JSON of EXPLAIN FORMAT=JSON FOR CONNECTION. 'dbname' is the schema: a table without a schema in the statement is there
+
+		const dataVal = data;
+		const sqlText = rowData.hasOwnProperty('SqlText') ? (rowData.SqlText || '') : '';
+		const srv     = srvName || (_serverList.length ? _serverList[0] : '');
+		const dbname  = rowData.hasOwnProperty('CurrentSchema') ? (rowData.CurrentSchema || '') : '';
+
+		const div = document.createElement("div");
+		div.innerHTML = "&nbsp;";
+		div.setAttribute("title"           , "Click to Open the Execution Plan... \n-------------------------------\n" + dataVal);
+		div.setAttribute("data-bs-toggle"  , 'modal');
+		div.setAttribute("data-bs-target"  , '#dbx-view-oraShowplan-dialog');
+		div.setAttribute("data-objectname" , rowData.Pid ? ('Pid ' + rowData.Pid) : '');
+		div.setAttribute("data-plan"       , dataVal);
+		div.setAttribute("data-sqltext"    , sqlText);
+		div.setAttribute("data-srv"        , srv);
+		div.setAttribute("data-dbname"     , dbname);
+		div.setAttribute("data-dbvendor"   , 'MySQL');
+
+		return div;
+	}
 	function createPostgresQueryPlanToolTipDiv(data)
 	{
 		// creates a div that will open a modal-div where we can VIEW a Postgres Execution Plan (using https://github.com/dalibo/pev2?tab=readme-ov-file)
@@ -2386,19 +2410,22 @@ function dbxTuneGraphSubscribe()
 		AseTune:      ['MonSqlText', 'DbccSqlText', 'LastKnownSqlText'],
 		SqlServerTune:['lastKnownSql', 'LastBufferSqlText'],
 		PostgresTune: ['last_known_sql_statement'],
-		OracleTune:   ['SqlText']
+		OracleTune:   ['SqlText'],
+		MySqlTune:    ['SqlText']
 	};
 	var ACTIVE_STMT_PLAN_KEYS = {
 		AseTune:      ['ShowPlanText', 'CachedPlanInXml'],
 		SqlServerTune:[],
 		PostgresTune: ['query_plan'],
-		OracleTune:   ['ExecPlan']
+		OracleTune:   ['ExecPlan'],
+		MySqlTune:    ['ExecPlan']    // (only there when the collector's login has ALL global privileges: EXPLAIN FOR CONNECTION needs it)
 	};
 	var ACTIVE_STMT_DB_VENDOR = {
 		AseTune:       'Adaptive Server Enterprise',
 		SqlServerTune: 'Microsoft SQL Server',
 		PostgresTune:  'PostgreSQL',
-		OracleTune:    'Oracle'   // (for Oracle dbxLlmAdvice.js looks up the tables of the SQL text also without a 'dbname': it has no database name to give)
+		OracleTune:    'Oracle',  // (for Oracle dbxLlmAdvice.js looks up the tables of the SQL text also without a 'dbname': it has no database name to give)
+		MySqlTune:     'MySQL'
 	};
 
 	function _activeStmtFirstNonEmpty(row, keys)
@@ -2684,6 +2711,14 @@ function dbxTuneGraphSubscribe()
 					if (metaData.columnName === "HasBlockedSidsInfo"  && rowData.hasOwnProperty('BlockedSidsInfo')  && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.BlockedSidsInfo  , 'Blocked SID Info') ); }
 					if (metaData.columnName === "HasSidWaitInfo"      && rowData.hasOwnProperty('SidWaitInfo')      && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.SidWaitInfo      , 'SID Wait Info'   ) ); }
 				}
+				else if ("MySqlTune" === appName && metaData !== undefined && metaData.hasOwnProperty('columnName'))
+				{
+					// The tooltip goes on the CHECKBOX columns (as for the other collectors). The plan is the JSON of EXPLAIN FORMAT=JSON FOR CONNECTION (drawn by the plan dialog)
+					if (metaData.columnName === "HasSqlText"          && rowData.hasOwnProperty('SqlText')          && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.SqlText          , 'mysql') ); }
+					if (metaData.columnName === "HasExecPlan"         && rowData.hasOwnProperty('ExecPlan')         && cellContent === true) { td.appendChild( createMySqlQueryPlanToolTipDiv( rowData.ExecPlan         , rowData, srvName) ); }
+					if (metaData.columnName === "HasPidLocks"         && rowData.hasOwnProperty('PidLocks')         && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.PidLocks         , 'Lock Table'      ) ); }
+					if (metaData.columnName === "HasBlockedPidsInfo"  && rowData.hasOwnProperty('BlockedPidsInfo')  && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.BlockedPidsInfo  , 'Blocked Pid Info') ); }
+				}
 			} // end: metaData && columnName
 		};
 
@@ -2820,6 +2855,36 @@ function dbxTuneGraphSubscribe()
 			        + " * YELLOW: Holds an open transaction while STATUS is not ACTIVE (waits for the client, and holds its locks) \n"
 			        + " * PINK:   Blocked by some other session \n"
 			        + " * RED:    BLOCKING other session(s) from working.\n"
+					+ "";
+		}
+		else if ("MySqlTune" === appName)
+		{
+			// The same colors, with the same meaning, as for the other collectors (and as the GUI: CmActiveStatementsPanel). The last one that matches wins.
+			trCallback = function(tr, row)
+			{
+				// multiSampled
+				if (row.hasOwnProperty('MultiSampled') && row.MultiSampled !== null && row.MultiSampled !== '')
+					tr.className = "active-statement-row-multi-sampled";
+
+				// Holding open transaction while idle (Command is Sleep)
+				if (row.hasOwnProperty('HasOpenTxn') && row.HasOpenTxn === 'Y' &&
+				    row.hasOwnProperty('Command') && row.Command === 'Sleep')
+					tr.className = "active-statement-row-holding-locks-while-idle";
+
+				// Blocked by some other connection ('BlockedByPid' is 0 when it is not blocked)
+				var isBlocked = row.hasOwnProperty('BlockedByPid') && row.BlockedByPid !== null && row.BlockedByPid > 0;
+				if (isBlocked)
+					tr.className = "active-statement-row-blocked";
+
+				// Blocking OTHER connections, and not blocked itself (the root cause)
+				if (row.hasOwnProperty('BlockingOtherPids') && row.BlockingOtherPids !== null && row.BlockingOtherPids !== '' && ! isBlocked)
+					tr.className = "active-statement-row-blocking";
+			};
+			tooltip = "Background colors: \n"
+			        + " * ORANGE: Multi Sampled Statement (has been running for more than 1 sample) \n"
+			        + " * YELLOW: Holds an open transaction while Command is Sleep (waits for the client, and holds its locks) \n"
+			        + " * PINK:   Blocked by some other connection \n"
+			        + " * RED:    BLOCKING other connection(s) from working.\n"
 					+ "";
 		}
 		else

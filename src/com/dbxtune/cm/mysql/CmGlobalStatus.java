@@ -21,14 +21,21 @@
 package com.dbxtune.cm.mysql;
 
 import java.awt.event.MouseEvent;
+import java.lang.invoke.MethodHandles;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.LinkedList;
 import java.util.List;
 
 import javax.naming.NameNotFoundException;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
@@ -47,14 +54,37 @@ import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 public class CmGlobalStatus
 extends CountersModel
 {
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
+
+	/**
+	 * Status variables that are a value right now (a gauge), all the others only grows (a counter).<br>
+	 * Used in the SQL (MySQL REGEXP) of this CM and of CmUserStatus. The list is from MySQL 8.0, 8.4 and 9.7.
+	 */
+	public static final String   GAUGE_REGEX      = "^("
+		+ "Threads_(cached|connected|running)|Open_(files|streams|tables|table_definitions)|Max_used_connections|Uptime|Uptime_since_flush_status"
+		+ "|Innodb_buffer_pool_(pages_(data|dirty|free|misc|total)|bytes_(data|dirty)|resize_status_code|resize_status_progress)"
+		+ "|Innodb_(data|os_log)_pending_.*|Innodb_page_size|Innodb_row_lock_(current_waits|time_avg|time_max)|Innodb_num_open_files"
+		+ "|Innodb_undo_tablespaces_.*|Innodb_redo_log_(capacity_resized|logical_size|physical_size|uuid)"
+		+ "|Key_blocks_(not_flushed|unused|used)|Mysqlx_(sessions|worker_threads|worker_threads_active|port|ssl_ctx_verify_mode)"
+		+ "|Ongoing_.*|Prepared_stmt_count|(Slave|Replica)_open_temp_tables|Tc_log_(max_pages_used|page_size)|Global_connection_memory"
+		+ "|Error_log_(buffered_bytes|buffered_events|latest_write)|Acl_cache_items_count|Rpl_semi_sync_.*_(clients|status)"
+		+ "|Ssl_(ctx_verify_mode|verify_mode|default_timeout|session_cache_size|session_cache_timeout|used_session_cache_entries)"
+		+ "|Performance_schema_session_connect_attrs_longest_seen|Deprecated_use_.*_last_timestamp|Delayed_insert_threads|Not_flushed_delayed_rows"
+		+ ")$";
 
 	public static final String   CM_NAME          = CmGlobalStatus.class.getSimpleName();
 	public static final String   SHORT_NAME       = "Global Status";
-	public static final String   HTML_DESC        = 
+	public static final String   HTML_DESC        =
 		"<html>"
-		+ "<h4>Global Status</h4>"
-		+ "Simply select from performance_schema.global_status"
+		+ "The server's status variables (performance_schema.global_status, the numeric ones), and the statement counters 'Com_xxx'.<br>"
+		+ "<br>"
+		+ "<b>VALUE_TYPE</b> tells what <b>VARIABLE_VALUE</b> is:<br>"
+		+ "<ul>"
+		+ "  <li><b>counter</b> - it only grows, so Diff and Rate shows what happened in the sample (for example: Questions, Innodb_rows_read).</li>"
+		+ "  <li><b>gauge</b> - a value right now (for example: Threads_connected, Innodb_buffer_pool_pages_free). It is shown as it is in Abs, Diff and Rate.</li>"
+		+ "</ul>"
+		+ "In MySQL 8 the 'Com_xxx' variables are not in performance_schema.global_status: here they are made from performance_schema.events_statements_summary_global_by_event_name ('statement/sql/xxx').<br>"
 		+ "</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
@@ -63,7 +93,7 @@ extends CountersModel
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
 
-	public static final String[] MON_TABLES       = new String[] {"global_status"};
+	public static final String[] MON_TABLES       = new String[] {CM_NAME, "global_status"};
 	public static final String[] NEED_ROLES       = new String[] {};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
@@ -244,11 +274,13 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
+		// NOTE: until 2026-10 this graph showed the absolute value (the count since the server started). It is a counter, so it is now per second,
+		//       with a new series label (so the old values in DbxCentral are not mixed with the new ones)
 		addTrendGraph(GRAPH_NAME_INNODB_BP_WAIT_FREE,
-			"InnoDB BufferPool Wait Free Count", // Menu CheckBox text
-			"InnoDB BufferPool Wait Free Count (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label 
-			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
-			new String[] { "Innodb_buffer_pool_wait_free" }, 
+			"InnoDB BufferPool Wait Free per sec", // Menu CheckBox text
+			"InnoDB BufferPool Wait Free per sec, waits for a free page (" + GROUP_NAME + "->" + SHORT_NAME + ")", // Label
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			new String[] { "Innodb_buffer_pool_wait_free (per sec)" },
 			LabelType.Static,
 			TrendGraphDataPoint.Category.WAITS,
 			false, // is Percent Graph
@@ -436,7 +468,7 @@ extends CountersModel
 		{	
 			Double[] arr = new Double[1];
 
-			arr[0] = this.getAbsValueAsDouble("Innodb_buffer_pool_wait_free", "VARIABLE_VALUE");
+			arr[0] = this.getRateValueAsDouble("Innodb_buffer_pool_wait_free", "VARIABLE_VALUE");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -540,15 +572,69 @@ extends CountersModel
 		try 
 		{
 			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
-			mtd.addTable("global_status",  "Global status.");
+			mtd.addTable(CM_NAME,  "The server's status variables (the numeric ones), and the statement counters 'Com_xxx'.");
 
-			mtd.addColumn("global_status", "VARIABLE_NAME",  "<html>Name of the variable.</html>");
-			mtd.addColumn("global_status", "VARIABLE_VALUE", "<html>Value of the variable.</html>");
+			mtd.addColumn(CM_NAME, "VARIABLE_NAME",  "<html>Name of the status variable. (hover over a cell to see what it is)</html>");
+			mtd.addColumn(CM_NAME, "VARIABLE_VALUE", "<html>Value of the status variable.<br>"
+			                                       + "For a <b>counter</b> (VALUE_TYPE): Abs is the value since the server started (or FLUSH STATUS), Diff and Rate is what happened in the sample.<br>"
+			                                       + "For a <b>gauge</b> (VALUE_TYPE): the value right now, in Abs, Diff and Rate.</html>");
+			mtd.addColumn(CM_NAME, "VALUE_TYPE",     "<html><b>counter</b> = it only grows. <b>gauge</b> = a value right now (for example Threads_connected).<br>"
+			                                       + "<b>Formula</b>: gauge if the name matches the list in CmGlobalStatus.GAUGE_REGEX.</html>");
 		}
-		catch (NameNotFoundException e) 
+		catch (NameNotFoundException e)
 		{
-		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
-			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e);
+		}
+	}
+
+	/** If we can't read the views: disable the CM, and tell what to do about it */
+	@Override
+	public boolean checkDependsOnOther(DbxConnection conn)
+	{
+		return MySqlCmUtils.checkViewsAreReadable(this, conn, "performance_schema.global_status", "performance_schema.events_statements_summary_global_by_event_name");
+	}
+
+	/**
+	 * A gauge (VALUE_TYPE = 'gauge') is a value right now, not a counter that only grows.<br>
+	 * The framework makes a diff (and a rate) of EVERY row in a DIFF column, so for a gauge we put back the absolute value in diff.
+	 */
+	@Override
+	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
+	{
+		int pos_type  = diffData.findColumn("VALUE_TYPE");
+		int pos_value = diffData.findColumn("VARIABLE_VALUE");
+		if (pos_type == -1 || pos_value == -1)
+			return;
+
+		for (int r = 0; r < diffData.getRowCount(); r++)
+		{
+			if ( ! "gauge".equals(diffData.getValueAt(r, pos_type)) )
+				continue;
+
+			int absRow = newSample.getRowNumberForPkValue(diffData.getPkValue(r));
+			if (absRow != -1)
+				diffData.setValueAt(newSample.getValueAt(absRow, pos_value), r, pos_value);
+		}
+	}
+
+	/** Same as in localCalculation(): for a gauge the rate is the absolute value (which is in diff by now) */
+	@Override
+	public void localCalculationRatePerSec(CounterSample rateData, CounterSample diffData)
+	{
+		int pos_type  = rateData.findColumn("VALUE_TYPE");
+		int pos_value = rateData.findColumn("VARIABLE_VALUE");
+		if (pos_type == -1 || pos_value == -1)
+			return;
+
+		for (int r = 0; r < rateData.getRowCount(); r++)
+		{
+			if ( ! "gauge".equals(rateData.getValueAt(r, pos_type)) )
+				continue;
+
+			// The rate is a BigDecimal with 1 decimal (as computeRatePerSec() makes it)
+			int diffRow = diffData.getRowNumberForPkValue(rateData.getPkValue(r));
+			if (diffRow != -1 && diffData.getValueAt(diffRow, pos_value) instanceof Number)
+				rateData.setValueAt(new BigDecimal( ((Number)diffData.getValueAt(diffRow, pos_value)).doubleValue() ).setScale(1, RoundingMode.HALF_EVEN), r, pos_value);
 		}
 	}
 
@@ -565,12 +651,23 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
-		String sql = 
-			"select VARIABLE_NAME,cast(VARIABLE_VALUE as signed integer) as VARIABLE_VALUE \n" +
+		// In MySQL 8 the 'Com_xxx' status variables are NOT in performance_schema.global_status, so make them from the statement summary
+		// (a name that already exists in global_status, like Com_stmt_reprepare, is not added again)
+		String sql =
+			"select /* ${cmCollectorName} */ \n" +
+			"     VARIABLE_NAME \n" +
+			"    ,cast(VARIABLE_VALUE as signed integer) as VARIABLE_VALUE \n" +
+			"    ,CASE WHEN VARIABLE_NAME REGEXP '" + GAUGE_REGEX + "' THEN 'gauge' ELSE 'counter' END as VALUE_TYPE \n" +
 			"from performance_schema.global_status \n" +
 			"where VARIABLE_VALUE REGEXP '^[[:digit:]]+$' \n" +
-//			"  and length(VARIABLE_VALUE) <= 10  -- MaxInt=2,147,483,647 so discard numbers that are *big*... but it might still fail due to larger than 2b \n"
-			"  and length(VARIABLE_VALUE) <= 19  -- MaxBigInt=9,223,372,036,854,775,807 so discard numbers that are *big*... Note: the cast to signed int, becomes a bigint \n"
+			"  and length(VARIABLE_VALUE) <= 19  -- MaxBigInt=9,223,372,036,854,775,807 so discard numbers that are *big*... Note: the cast to signed int, becomes a bigint \n" +
+			"union all \n" +
+			"select concat('Com_', substring_index(EVENT_NAME, '/', -1)) \n" +
+			"    ,cast(COUNT_STAR as signed integer) \n" +
+			"    ,'counter' \n" +
+			"from performance_schema.events_statements_summary_global_by_event_name \n" +
+			"where EVENT_NAME like 'statement/sql/%' \n" +
+			"  and concat('Com_', substring_index(EVENT_NAME, '/', -1)) not in (select VARIABLE_NAME from performance_schema.global_status) \n"
 			;
 
 		return sql;

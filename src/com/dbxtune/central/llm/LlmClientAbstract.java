@@ -238,6 +238,17 @@ implements LlmClient
 			     + "- If the execution plan starts with 'SQL Monitoring Report' it is a SQL Monitor report instead: ONE execution, possibly still running (Status EXECUTING: the numbers are those so far, '->' marks the operations at work, and fewer rows than estimated then only means 'not yet'). 'Rows (Estim)' is for one execution of the operation, 'Rows (Actual)' the sum over 'Execs'. 'Activity (%)' is the share of the statement's time spent in the operation itself, NOT including its children. It lists both alternatives of an adaptive join: the lines without 'Execs' were not executed.\n"
 			     + "- Indexes cannot have INCLUDE columns - add the extra columns to the index key instead.\n";
 		}
+		if (DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_MYSQL))
+		{
+			// What an LLM gets wrong for MySQL: it mixes in MariaDB, SQL Server and old (5.x) MySQL, and it reads a normalized statement as the real one
+			return "- This is MySQL (Oracle's MySQL, the InnoDB storage engine), not MariaDB: do not suggest MariaDB-only syntax or features. Use the syntax of the server version.\n"
+			     + "- Indexes cannot have INCLUDE columns and there are no filtered/partial indexes: add the extra columns to the index key (a covering index) instead. A functional index (an index on an expression, 8.0.13 and above) and an invisible index (to test dropping one) are available.\n"
+			     + "- Every InnoDB secondary index has the primary key columns at its end: do not add them to an index to make it covering.\n"
+			     + "- A SQL text with '?' instead of the values (and backticks around the names) is a normalized statement (a digest of performance_schema): the '?' are values the application sent, not parameters to keep.\n"
+			     + "- The execution plan is the JSON of EXPLAIN FORMAT=JSON. Format 1 ('query_block'): a table is named by its alias in the statement; 'rows_examined_per_scan' is for ONE scan of the table (once per row of the tables before it in 'nested_loop'), 'filtered' is the percent of those rows that pass the conditions, 'prefix_cost' includes the tables before it, and 'using_join_buffer' (hash join, Block Nested Loop) means there is no index for the join on that table. Format 2 ('query_plan', 8.3 and above): the tree of iterators, 'estimated_total_cost' includes the inputs; with EXPLAIN ANALYZE, 'actual_rows' is the average per loop ('actual_loops').\n"
+			     + "- Optimizer hints are written as /*+ ... */ right after SELECT/UPDATE/DELETE (JOIN_ORDER, INDEX, NO_INDEX, ...). Index hints (USE INDEX / FORCE INDEX) still work, but suggest them only when an index or a rewrite cannot fix the plan.\n"
+			     + "- Histograms (ANALYZE TABLE ... UPDATE HISTOGRAM ON col) give the optimizer the distribution of a column WITHOUT an index: suggest it when the row estimate of a condition on such a column is wrong.\n";
+		}
 		return null;
 	}
 

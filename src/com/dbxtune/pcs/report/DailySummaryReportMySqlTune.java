@@ -20,13 +20,23 @@
  ******************************************************************************/
 package com.dbxtune.pcs.report;
 
+import com.dbxtune.pcs.report.content.DbmsConfigIssues;
+import com.dbxtune.pcs.report.content.mysql.MySqlErrorLog;
+import com.dbxtune.pcs.report.content.mysql.MySqlLoadOverview;
+import com.dbxtune.pcs.report.content.mysql.MySqlLongRunningStmnts;
+import com.dbxtune.pcs.report.content.mysql.MySqlMemory;
+import com.dbxtune.pcs.report.content.mysql.MySqlReplication;
+import com.dbxtune.pcs.report.content.mysql.MySqlTableSize;
+import com.dbxtune.pcs.report.content.mysql.MySqlTopSql;
+import com.dbxtune.pcs.report.content.mysql.MySqlTopTableAccess;
+import com.dbxtune.pcs.report.content.mysql.MySqlWaitStats;
 import com.dbxtune.pcs.report.content.os.CmOsNwInfoOverview;
 import com.dbxtune.pcs.report.content.os.OsCpuUsageOverview;
 import com.dbxtune.pcs.report.content.os.OsIoStatOverview;
 import com.dbxtune.pcs.report.content.os.OsIoStatSlowIo;
 import com.dbxtune.pcs.report.content.os.OsSpaceUsageOverview;
 
-public class DailySummaryReportMySqlTune 
+public class DailySummaryReportMySqlTune
 extends DailySummaryReportDefault
 {
 	@Override
@@ -35,18 +45,31 @@ extends DailySummaryReportDefault
 		// Add the Alarms Active/History
 		super.addReportEntries();
 
-		// SQL
-		//FIXME: addReportEntry( new MySqlTopSql(this)(this)   );
+		// Load / CPU / Waits
+		addReportEntry( new MySqlLoadOverview(this)      );
+		addReportEntry( new OsCpuUsageOverview(this)     );
+		addReportEntry( new MySqlWaitStats(this)         );
 
-		// CPU
-		addReportEntry( new OsCpuUsageOverview(this)   );
+		// SQL, Tables, Long Running and Blocking
+		addReportEntry( new MySqlTopSql(this)            );
+		addReportEntry( new MySqlTopTableAccess(this)    );
+		addReportEntry( new MySqlLongRunningStmnts(this) );
 
-		// Disk IO Activity
-		addReportEntry( new OsSpaceUsageOverview(this) );
-		addReportEntry( new OsIoStatOverview(this)     );
-		addReportEntry( new OsIoStatSlowIo(this)       );
+		// Error Log and Replication
+		addReportEntry( new MySqlErrorLog(this)          );
+		addReportEntry( new MySqlReplication(this)       );
+
+		// Space, Memory, Disk IO Activity
+		addReportEntry( new MySqlTableSize(this)         );
+		addReportEntry( new MySqlMemory(this)            );
+		addReportEntry( new OsSpaceUsageOverview(this)   );
+		addReportEntry( new OsIoStatOverview(this)       );
+		addReportEntry( new OsIoStatSlowIo(this)         );
 
 		// Network Activity
-		addReportEntry( new CmOsNwInfoOverview(this)   );
+		addReportEntry( new CmOsNwInfoOverview(this)     );
+
+		// Configuration
+		addReportEntry( new DbmsConfigIssues(this)       );
 	}
 }
