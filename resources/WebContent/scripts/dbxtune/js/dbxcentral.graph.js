@@ -1553,12 +1553,19 @@ function renderAlarmTimelineMarkers(oldestTsStr, newestTsStr, momentsArray)
 				alarms = alarms.filter(function(a) { return _serverList.indexOf(a.srvName) >= 0; });
 			if (alarms.length === 0) return;
 
-			// Match RAISE ↔ CANCEL by alarmId (primary) or class+svc+info (fallback)
-			var cancelById  = {}, cancelByKey = {};
+			// Match RAISE ↔ CANCEL by alarmId (primary) or the alarm's identity (fallback):
+			// srvName + the DbxAlarmActive primary key (class, type, svc, info, extraInfo, severity)
+			// The fallback skips CANCELs that have their own RAISE (by alarmId), see _histAlarmMatchEvents() in dbxHistAlarms.js
+			var cancelById  = {}, cancelByKey = {}, raiseById = {};
+			var alarmKey = function(a) {
+				return (a.srvName || '') + '|' + (a.alarmClass || '') + '|' + (a.serviceType || '') + '|' + (a.serviceName || '') + '|' + (a.serviceInfo || '') + '|' + (a.extraInfo || '') + '|' + (a.severity || '');
+			};
 			alarms.forEach(function(a) {
-				if ((a.action || '').toUpperCase() !== 'CANCEL') return;
+				var action = (a.action || '').toUpperCase();
+				if (action === 'RAISE' && a.alarmId) raiseById[a.alarmId] = true;
+				if (action !== 'CANCEL') return;
 				if (a.alarmId) cancelById[a.alarmId] = a;
-				var k = (a.alarmClass || '') + '|' + (a.serviceName || '') + '|' + (a.serviceInfo || '');
+				var k = alarmKey(a);
 				if (!cancelByKey[k]) cancelByKey[k] = [];
 				cancelByKey[k].push(a);
 			});
@@ -1571,8 +1578,8 @@ function renderAlarmTimelineMarkers(oldestTsStr, newestTsStr, momentsArray)
 					if (diff >= 0) { best = cancelById[a.alarmId]; bestDiff = diff; }
 				}
 				if (!best) {
-					var k = (a.alarmClass || '') + '|' + (a.serviceName || '') + '|' + (a.serviceInfo || '');
-					(cancelByKey[k] || []).forEach(function(c) {
+					(cancelByKey[alarmKey(a)] || []).forEach(function(c) {
+						if (c.alarmId && raiseById[c.alarmId]) return;
 						var diff = moment(c.eventTime).valueOf() - raiseMs;
 						if (diff >= 0 && diff < bestDiff) { bestDiff = diff; best = c; }
 					});
