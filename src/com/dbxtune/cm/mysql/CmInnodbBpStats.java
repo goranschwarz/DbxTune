@@ -20,10 +20,14 @@
  ******************************************************************************/
 package com.dbxtune.cm.mysql;
 
+import java.lang.invoke.MethodHandles;
 import java.util.LinkedList;
 import java.util.List;
 
 import javax.naming.NameNotFoundException;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -42,14 +46,17 @@ import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 public class CmInnodbBpStats
 extends CountersModel
 {
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmInnodbBpStats.class.getSimpleName();
 	public static final String   SHORT_NAME       = "InnoDB Buffer Pool Stat";
-	public static final String   HTML_DESC        = 
+	public static final String   HTML_DESC        =
 		"<html>"
-		+ "<h4>InnoDB Buffer Pool Stat</h4>"
-		+ "Simply select * from information_schema.INNODB_BUFFER_POOL_STATS"
+		+ "InnoDB buffer pool, one row per buffer pool instance (information_schema.INNODB_BUFFER_POOL_STATS).<br>"
+		+ "<br>"
+		+ "The counters (pages read, written, created, logical reads...) are shown as Diff and Rate.<br>"
+		+ "The values right now (free buffers, database pages, dirty pages, pending, hit rate, ...) are shown as they are.<br>"
 		+ "</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_CACHE;
@@ -63,23 +70,18 @@ extends CountersModel
 	public static final String[] NEED_CONFIG      = new String[] {};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
+	// Only the counters (they only grow). The gauges (a value right now: FREE_BUFFERS, DATABASE_PAGES, OLD_DATABASE_PAGES, MODIFIED_DATABASE_PAGES,
+	// PENDING_*, *_RATE, HIT_RATE, *_PER_THOUSAND_GETS) are shown as they are
 	public static final String[] DIFF_COLUMNS     = new String[] {
-			 "FREE_BUFFERS"                        // The number of free pages in the InnoDB buffer pool
-			,"DATABASE_PAGES"                      // The number of pages in the InnoDB buffer pool containing data. The number includes both dirty and clean pages.
-			,"OLD_DATABASE_PAGES"                  // The number of pages in the old buffer pool sublist.
-			,"MODIFIED_DATABASE_PAGES"             // The number of modified (dirty) database pages
-			,"PENDING_DECOMPRESS"                  // The number of pages pending decompression
-			,"PAGES_MADE_YOUNG"                    // The number of pages made young
+			 "PAGES_MADE_YOUNG"                    // The number of pages made young
 			,"PAGES_NOT_MADE_YOUNG"                // The number of pages not made young
 			,"NUMBER_PAGES_READ"                   // The number of pages read
 			,"NUMBER_PAGES_CREATED"                // The number of pages created
 			,"NUMBER_PAGES_WRITTEN"                // The number of pages written
 			,"NUMBER_PAGES_GET"                    // The number of logical read requests.
-			,"YOUNG_MAKE_PER_THOUSAND_GETS"        // The number of pages made young per thousand gets
-			,"NOT_YOUNG_MAKE_PER_THOUSAND_GETS"    // The number of pages not made young per thousand gets
 			,"NUMBER_PAGES_READ_AHEAD"             // The number of pages read ahead
 			,"NUMBER_READ_AHEAD_EVICTED"           // The number of pages read into the InnoDB buffer pool by the read-ahead background thread that were subsequently evicted without having been accessed by queries.
-			,"LRU_IO_TOTAL LRU"                    // IO total
+			,"LRU_IO_TOTAL"                        // LRU IO total
 			,"UNCOMPRESS_TOTAL"                    // Total number of pages decompressed
 			};
 
@@ -187,16 +189,22 @@ extends CountersModel
 			mtd.addColumn("INNODB_BUFFER_POOL_STATS", "NUMBER_READ_AHEAD_EVICTED"           , "<html>The number of pages read into the InnoDB buffer pool by the read-ahead background thread that were subsequently evicted without having been accessed by queries.</html>");
 			mtd.addColumn("INNODB_BUFFER_POOL_STATS", "READ_AHEAD_RATE"                     , "<html>The read ahead rate per second (pages read ahead since the last printout / time elapsed)</html>");
 			mtd.addColumn("INNODB_BUFFER_POOL_STATS", "READ_AHEAD_EVICTED_RATE"             , "<html>The number of read ahead pages evicted without access per second (read ahead pages not accessed since the last printout / time elapsed)</html>");
-			mtd.addColumn("INNODB_BUFFER_POOL_STATS", "LRU_IO_TOTAL LRU"                    , "<html>IO total</html>");
+			mtd.addColumn("INNODB_BUFFER_POOL_STATS", "LRU_IO_TOTAL"                        , "<html>LRU IO total</html>");
 			mtd.addColumn("INNODB_BUFFER_POOL_STATS", "LRU_IO_CURRENT"                      , "<html>LRU IO for the current interval</html>");
 			mtd.addColumn("INNODB_BUFFER_POOL_STATS", "UNCOMPRESS_TOTAL"                    , "<html>Total number of pages decompressed</html>");
 			mtd.addColumn("INNODB_BUFFER_POOL_STATS", "UNCOMPRESS_CURRENT"                  , "<html>The number of pages decompressed in the current interval</html>");
 		}
-		catch (NameNotFoundException e) 
+		catch (NameNotFoundException e)
 		{
-		//	_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
-			System.out.println("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e); 
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e);
 		}
+	}
+
+	/** If we can't read the view: disable the CM, and tell what to do about it */
+	@Override
+	public boolean checkDependsOnOther(DbxConnection conn)
+	{
+		return MySqlCmUtils.checkViewsAreReadable(this, conn, "information_schema.INNODB_BUFFER_POOL_STATS");
 	}
 
 	@Override

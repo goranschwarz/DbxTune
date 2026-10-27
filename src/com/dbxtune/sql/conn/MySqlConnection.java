@@ -42,6 +42,7 @@ import com.dbxtune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
 import com.dbxtune.ui.autocomplete.completions.TableExtraInfo;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.Ver;
+import com.dbxtune.utils.VersionShort;
 
 public class MySqlConnection extends DbxConnection
 {
@@ -58,6 +59,43 @@ public class MySqlConnection extends DbxConnection
 	public DbmsVersionInfo createDbmsVersionInfo()
 	{
 		return new DbmsVersionInfoMySql(this);
+	}
+
+	/**
+	 * The version from 'select @@version', for example: 8.0.46, 8.4.11, 9.7.2, 8.0.36-28 (Percona), 11.8.3-MariaDB-ubu2404
+	 * <p>
+	 * Older MariaDB versions sends '5.5.5-10.11.6-MariaDB' (so old MySQL clients would accept it), the '5.5.5-' is removed.
+	 */
+	@Override
+	public long getDbmsVersionNumber()
+	{
+		if (_dbmsVersionNumber != -1)
+			return _dbmsVersionNumber;
+
+		if (_conn == null)
+			return -1;
+
+		String sql = "select @@version";
+		String verStr = null;
+		try (Statement stmnt = _conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+				verStr = rs.getString(1);
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("getDbmsVersionNumber(): Problems getting the MySQL version, returning -1. sql=|" + sql + "|, caught: " + ex);
+			return -1;
+		}
+
+		if (verStr == null)
+			return -1;
+
+		if (verStr.startsWith("5.5.5-"))
+			verStr = verStr.substring("5.5.5-".length());
+
+		_dbmsVersionNumber = Ver.shortVersionStringToNumber( VersionShort.parse(verStr) );
+		return _dbmsVersionNumber;
 	}
 
 	@Override
@@ -210,31 +248,27 @@ public class MySqlConnection extends DbxConnection
 		}
 
 
-		sql = "SHOW SLAVE HOSTS";
-		// RS> Col# Label      JDBC Type Name         Guessed DBMS type Source Table
-		// RS> ---- ---------- ---------------------- ----------------- ------------
-		// RS> 1    Server_id  java.sql.Types.INTEGER INT UNSIGNED      -none-      
-		// RS> 2    Host       java.sql.Types.VARCHAR VARCHAR(20)       -none-      
-		// RS> 3    Port       java.sql.Types.INTEGER INT UNSIGNED      -none-      
-		// RS> 4    Master_id  java.sql.Types.INTEGER INT UNSIGNED      -none-      
-		// RS> 5    Slave_UUID java.sql.Types.VARCHAR VARCHAR(36)       -none-      
-		
+		// Replicas connected to this server, from their 'Binlog Dump' threads
+		// NOTE: 'SHOW SLAVE HOSTS' is removed in 8.4, and 'SHOW REPLICAS' needs the privilege REPLICATION SLAVE, which can read the binary log (user data)
+		sql = "select PROCESSLIST_HOST, PROCESSLIST_USER, PROCESSLIST_COMMAND, PROCESSLIST_TIME \n"
+		    + "from performance_schema.threads \n"
+		    + "where PROCESSLIST_COMMAND in ('Binlog Dump', 'Binlog Dump GTID')";
+
 		try (Statement stmnt = _conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql) )
 		{
 			int row = 0;
 			while (rs.next())
 			{
 				row++;
-				String key        = "<b>has-slave-" + row + "</b>";
-				
-				String Server_id  = rs.getString(1);
-				String Host       = rs.getString(2);
-				String Port       = rs.getString(3);
-				String Master_id  = rs.getString(4);
-				String Slave_UUID = rs.getString(5);
-				
-				String val = "</b>MasterId=<b>" + Master_id + "</b>, SlaveHost=<b>" + Host + "</b>, SlavePort=<b>" + Port + "</b>, SlaveId=<b>" + Server_id + "</b>, SlaveUUID=<b>" + Slave_UUID + "</b>";
-				
+				String key         = "<b>has-replica-" + row + "</b>";
+
+				String replicaHost = rs.getString(1);
+				String replicaUser = rs.getString(2);
+				String command     = rs.getString(3);
+				String timeSec     = rs.getString(4);
+
+				String val = "</b>ReplicaHost=<b>" + replicaHost + "</b>, ReplicationUser=<b>" + replicaUser + "</b>, Command=<b>" + command + "</b>, ConnectedSec=<b>" + timeSec + "</b>";
+
 				map.put(key, val);
 			}
 		}
@@ -247,7 +281,14 @@ public class MySqlConnection extends DbxConnection
 
 
 
-		sql = "SHOW SLAVE STATUS";
+		// The servers we replicate from
+		// 'SHOW REPLICA STATUS' exists from MySQL 8.0.22, and 'SHOW SLAVE STATUS' is removed in 8.4 (the columns Master_* are named Source_* in the new one)
+		// MariaDB still knows 'SHOW SLAVE STATUS' (and the Master_* names)
+		boolean isMariaDb      = (getDbmsVersionInfo() instanceof DbmsVersionInfoMySql) && ((DbmsVersionInfoMySql)getDbmsVersionInfo()).isMariaDb();
+		boolean useReplicaCmd  = !isMariaDb && getDbmsVersionNumber() >= Ver.ver(8,0,22);
+		String  srcColPrefix   = useReplicaCmd ? "Source" : "Master";
+		sql = useReplicaCmd ? "SHOW REPLICA STATUS" : "SHOW SLAVE STATUS";
+		// Below is the column list of the OLD 'SHOW SLAVE STATUS' (in 'SHOW REPLICA STATUS' Master->Source and Slave->Replica)
 		// RS> Col# Label                         JDBC Type Name         Guessed DBMS type Source Table
 		// RS> ---- ----------------------------- ---------------------- ----------------- ------------
 		// RS> 1    Slave_IO_State                java.sql.Types.VARCHAR VARCHAR(14)       -none-      
@@ -316,14 +357,14 @@ public class MySqlConnection extends DbxConnection
 			while (rs.next())
 			{
 				row++;
-				String key        = "<b>has-master-" + row + "</b>";
-				
-				String Master_id    = rs.getString("Master_Server_Id");
-				String Master_Host  = rs.getString("Master_Host");
-				String Master_Port  = rs.getString("Master_Port");
-				String Master_UUID  = rs.getString("Master_UUID");
-				
-				String val = "</b>MasterId=<b>" + Master_id + "</b>, MasterHost=<b>" + Master_Host + "</b>, MasterPort=<b>" + Master_Port + "</b>, MasterUUID=<b>" + Master_UUID + "</b>";
+				String key        = "<b>has-source-" + row + "</b>";
+
+				String sourceId   = rs.getString(srcColPrefix + "_Server_Id");
+				String sourceHost = rs.getString(srcColPrefix + "_Host");
+				String sourcePort = rs.getString(srcColPrefix + "_Port");
+				String sourceUuid = isMariaDb ? "-" : rs.getString(srcColPrefix + "_UUID");
+
+				String val = "</b>SourceId=<b>" + sourceId + "</b>, SourceHost=<b>" + sourceHost + "</b>, SourcePort=<b>" + sourcePort + "</b>, SourceUUID=<b>" + sourceUuid + "</b>";
 				
 				map.put(key, val);
 			}

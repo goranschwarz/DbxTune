@@ -30,6 +30,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
@@ -37,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.PatternSyntaxException;
@@ -829,9 +831,13 @@ extends CounterControllerAbstract
 		Timestamp counterClearTime = null;
 
 //		String sql = "select getdate(), @@servername, @@servername, CountersCleared='2000-01-01 00:00:00'";
+		// NOTE: The sample time is SQL Server's clock in UTC (getutcdate()), read as UTC: so it is the right time also when SQL Server runs in another
+		//       time zone than the collector (Azure SQL Database is always UTC). getdate() is SQL Server's local time without a zone: read as is, it is taken
+		//       as the collector's local time (a SQL Server in UTC and a collector in UTC+1 put every sample 1 hour back, and DbxCentral can't find the samples at the browser's "now").
+		//       Only this "session sample time" is changed: the CMs' own sample time (getServerTimeCmd) stays SQL Server's local time, the same clock as the timestamps in the CMs.
 		String sql = ""
 				+ "select \n"
-				+ "     getdate() \n"
+				+ "     getutcdate() \n"
 				+ "    ,convert(varchar(100),isnull(SERVERPROPERTY('InstanceName'), @@servername)) \n"
 				+ "    ,convert(varchar(100),SERVERPROPERTY('MachineName')) \n"
 				+ "    ,CountersCleared='2000-01-01 00:00:00' \n"
@@ -851,7 +857,7 @@ extends CounterControllerAbstract
 			{
 				sql = ""
 						+ "select \n"
-						+ "     getdate() \n"
+						+ "     getutcdate() \n"
 						+ "    ,convert(varchar(100),isnull(SERVERPROPERTY('InstanceName'), @@servername)) \n"
 						+ "    ,convert(varchar(100), @@servername + '__azure' ) \n"
 						+ "    ,CountersCleared='2000-01-01 00:00:00' \n"
@@ -862,7 +868,7 @@ extends CounterControllerAbstract
 			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next())
 			{
-				mainSampleTime   = rs.getTimestamp(1);
+				mainSampleTime   = rs.getTimestamp(1, Calendar.getInstance(TimeZone.getTimeZone("UTC")));
 				sqlServerName    = rs.getString(2);
 				sqlHostname      = rs.getString(3);
 				counterClearTime = rs.getTimestamp(4);

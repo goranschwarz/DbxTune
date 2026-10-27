@@ -722,12 +722,13 @@
 			// ---- Oracle Execution Plan dialog: the text of DBMS_XPLAN, drawn by dbxShowplanOracle.js ----
 			// The same frame as the ASE dialog above (see its comments for the layout): sections on the left, the Properties
 			// pane on the right. No Table Information section: there is no DDL lookup for Oracle.
+			// It also shows MySQL's plans (the JSON of EXPLAIN FORMAT=JSON, drawn by dbxShowplanMySql.js) and Db2's (drawn by dbxShowplanDb2.js): see _oraShowplanVendor
 			"<div class='modal fade' id='dbx-view-oraShowplan-dialog' tabindex='-1' role='dialog' aria-labelledby='dbx-view-oraShowplan-dialog' aria-hidden='true'>",
 			"	<div class='modal-dialog modal-dialog-centered mw-100' role='document'>",
 			"		<div class='modal-content'>",
 			"			<div class='modal-header' style='cursor:move;'>",
 			"				<span style='color:var(--sp-text-6);margin-right:6px;font-size:1.1em;' title='Drag to move'>&#x2630;</span>",
-			"				<h5 class='modal-title' style='flex:1;min-width:0;'><b>Oracle Execution Plan</b>: <span id='dbx-view-oraShowplan-objectName'></span></h5>",
+			"				<h5 class='modal-title' style='flex:1;min-width:0;'><b><span id='dbx-view-oraShowplan-vendor'>Oracle</span> Execution Plan</b>: <span id='dbx-view-oraShowplan-objectName'></span></h5>",
 			"				<div style='display:flex;align-items:center;flex-shrink:0;'>",
 			"					<span id='dbx-osp-theme' style='font-size:0.8rem;' title='Colours for the Showplan only (Auto = same as the page)'></span>",
 			"					<button type='button' class='btn border-0 p-0 lh-1 opacity-50' style='margin-left:8px;font-size:1.3rem;' title='Expand/restore dialog size' aria-label='Expand/restore dialog size' onclick='oraShowplanToggleExpand();'><span aria-hidden='true'>&#9974;</span></button>",
@@ -740,13 +741,13 @@
 
 			"				<!-- ▶ Graphical Plan -->",
 			"				<details open id='dbx-osp-sect-graph' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
-			"					<summary style='position:sticky;top:0;z-index:3;background:var(--sp-bg-2);cursor:pointer;padding:5px 10px;line-height:20px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128202; Graphical Plan (DBMS_XPLAN)</summary>",
+			"					<summary style='position:sticky;top:0;z-index:3;background:var(--sp-bg-2);cursor:pointer;padding:5px 10px;line-height:20px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128202; Graphical Plan <span id='dbx-view-oraShowplan-source'>(DBMS_XPLAN)</span></summary>",
 			"					<div style='padding:4px 8px 10px 8px;'>",
 			"						<div style='position:sticky;top:30px;z-index:2;background:var(--sp-bg-2);padding:4px 0;box-shadow:0 3px 4px -3px var(--sp-shadow-2);display:flex;align-items:center;flex-wrap:wrap;row-gap:4px;column-gap:6px;'>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' onclick='oraShowplanRedraw();'>&#8635; Redraw</button>",
 			"						<button type='button' id='dbx-view-oraShowplan-zoomBtn' class='btn btn-outline-secondary btn-sm' onclick='oraShowplanToggleZoom();'>&#128269; Enable Zoom</button>",
 			"						<button type='button' id='dbx-view-oraShowplan-zoomFitBtn' class='btn btn-outline-secondary btn-sm' style='display:none;' onclick='oraShowplanZoomToFit();'>&#8862; Zoom to Fit</button>",
-			"						<span style='font-size:0.8em;color:var(--sp-text-5);margin-left:6px;' title='The number in the corner of each box is the Id column of the plan text. An operation asks its children for rows, the first child first: so the plan STARTS at the first leaf (the box furthest in, with the lowest Id) and the rows flow along the arrows up to Id 0.'>Id = the line in the plan text. An operation runs its first child first.</span>",
+			"						<span id='dbx-view-oraShowplan-idHint' style='font-size:0.8em;color:var(--sp-text-5);margin-left:6px;' title='The number in the corner of each box is the Id column of the plan text. An operation asks its children for rows, the first child first: so the plan STARTS at the first leaf (the box furthest in, with the lowest Id) and the rows flow along the arrows up to Id 0.'>Id = the line in the plan text. An operation runs its first child first.</span>",
 			"						<span id='dbx-view-oraShowplan-analysis-link' style='display:none;font-size:0.85em;margin-left:14px;cursor:pointer;font-weight:600;' onclick='oraShowplanJumpToAnalysis();' title='Jump to the Plan Analysis section below'></span>",
 			"						<div style='display:flex;align-items:center;gap:6px;margin-left:auto;'>",
 			"						<button type='button' id='dbx-view-oraShowplan-propsBtn' class='btn btn-outline-secondary btn-sm' onclick='oraShowplanToggleProps();'>&#128203; Hide Properties</button>",
@@ -827,7 +828,7 @@
 
 			"					</div>",
 			"					<div id='dbx-view-oraShowplan-propsSplit' title='Drag to resize' style='flex:0 0 6px;align-self:stretch;cursor:col-resize;background:var(--sp-bg-3);border-radius:3px;margin:0 4px;'></div>",
-			"					<div id='dbx-view-oraShowplan-propsPane' class='ora-plan-props-scroll' style='flex:0 0 320px;align-self:flex-start;position:sticky;top:4px;overflow:auto;background:var(--sp-bg);max-height:calc(100vh - 260px);border:1px solid var(--sp-border);border-radius:3px;padding:6px 10px 8px 10px;'>",
+			"					<div id='dbx-view-oraShowplan-propsPane' class='ora-plan-props-scroll my-plan-props-scroll' style='flex:0 0 320px;align-self:flex-start;position:sticky;top:4px;overflow:auto;background:var(--sp-bg);max-height:calc(100vh - 260px);border:1px solid var(--sp-border);border-radius:3px;padding:6px 10px 8px 10px;'>",
 			"						<div style='display:flex;align-items:center;justify-content:space-between;gap:6px;border-bottom:1px solid var(--sp-border-2);margin-bottom:6px;padding-bottom:3px;'>",
 			"							<span style='font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--sp-text-5);'>Properties</span>",
 			"							<button type='button' title='Hide the Properties pane' aria-label='Hide the Properties pane' onclick='oraShowplanToggleProps();' style='border:0;background:none;cursor:pointer;color:var(--sp-text-6);font-size:15px;line-height:1;padding:0 2px;'>&times;</button>",
@@ -1823,6 +1824,29 @@
 	var _oraShowplanDbname       = '';
 	var _oraShowplanDbmsVersion  = '';
 	var _oraShowplanWorkloadData = '';
+	// The dialog also shows MySQL's plans: 'MySQL' = the JSON of EXPLAIN FORMAT=JSON, drawn by dbxShowplanMySql.js (MySqlShowplan, the same API
+	// as OracleShowplan), and Db2's: 'DB2/' (the product name of Db2 LUW, DbUtils.DB_PROD_NAME_DB2_LUW) = the JSON of the explain tables that
+	// Db2Tune records, or the text of db2exfmt, drawn by dbxShowplanDb2.js (Db2Showplan, the same API). Set by whoever opens the dialog
+	// (meta.dbVendor, or data-dbvendor), and used for the renderer, the texts, the SQL format, and what Table Information and the LLM are asked for (dbVendor)
+	var _oraShowplanVendor       = 'Oracle';
+
+	/** The vendor of the plan that is opened: the title, where the plan comes from, and what the number in the boxes is */
+	function _oraShowplanSetVendor(dbVendor) {
+		_oraShowplanVendor = dbVendor === 'MySQL' ? 'MySQL' : /^db2/i.test(dbVendor || '') ? 'DB2/' : 'Oracle';
+		var isMySql = _oraShowplanVendor === 'MySQL';
+		var isDb2   = _oraShowplanVendor === 'DB2/';
+		$('#dbx-view-oraShowplan-vendor').text(isDb2 ? 'Db2' : _oraShowplanVendor);
+		$('#dbx-view-oraShowplan-source').text(isMySql ? '(EXPLAIN FORMAT=JSON)' : isDb2 ? '(explain tables / db2exfmt)' : '(DBMS_XPLAN)');
+		$('#dbx-view-oraShowplan-idHint')
+			.text(isMySql ? 'The number = the box. An operation reads its first input first.'
+			    : isDb2   ? 'The number = Db2\'s operator number. A join reads its outer (first) input first.'
+			              : 'Id = the line in the plan text. An operation runs its first child first.')
+			.attr('title', isMySql
+				? 'The number in the corner of each box only numbers the boxes (MySQL\'s plan has no line numbers). An operation asks its inputs for rows, the first input first: in a join that is the outer side (MySQL joins the tables in the order of the plan), and for each of its rows the second input is read.'
+				: isDb2
+				? 'The number in the corner of each box is Db2\'s operator number (the same as in db2exfmt), RETURN is (1). The rows flow from the tables and indexes (the dashed boxes) up to RETURN. A join reads its outer (first) input first; a nested loop join reads its inner input once per outer row.'
+				: 'The number in the corner of each box is the Id column of the plan text. An operation asks its children for rows, the first child first: so the plan STARTS at the first leaf (the box furthest in, with the lowest Id) and the rows flow along the arrows up to Id 0.');
+	}
 
 	var _oraShowplanHorizontal = true;
 	try {
@@ -1909,16 +1933,17 @@
 		if (_oraShowplanZoom !== undefined) { try { _oraShowplanZoom.reset(); } catch (ex) {} }
 
 		var parsed = null, problem = null;
+		var renderer = _oraShowplanVendor === 'MySQL' ? window.MySqlShowplan : _oraShowplanVendor === 'DB2/' ? window.Db2Showplan : window.OracleShowplan;
 		try {
-			if (typeof OracleShowplan === 'undefined') {
-				problem = 'dbxShowplanOracle.js is not loaded on this page.';
+			if (!renderer) {
+				problem = (_oraShowplanVendor === 'MySQL' ? 'dbxShowplanMySql.js' : _oraShowplanVendor === 'DB2/' ? 'dbxShowplanDb2.js' : 'dbxShowplanOracle.js') + ' is not loaded on this page.';
 			} else {
-				parsed = OracleShowplan.parseText(planText);
-				if (!parsed) problem = OracleShowplan.getLastParseError();
+				parsed = renderer.parseText(planText);
+				if (!parsed) problem = renderer.getLastParseError();
 			}
 			_oraShowplanLastParsed = parsed;
 			if (parsed) {
-				// No SQL text came with the plan (a pasted plan): DBMS_XPLAN.DISPLAY_CURSOR prints the statement above the plan
+				// No SQL text came with the plan (a pasted plan): DBMS_XPLAN.DISPLAY_CURSOR prints the statement above the plan (and MySQL's format 2 has it)
 				var $sql   = $('#dbx-view-oraShowplan-sqlContent');
 				var inPlan = parsed.statements[0].steps[0].root._planInfo.sqlText;
 				if (!$sql.text() && inPlan) {
@@ -1927,7 +1952,7 @@
 					_autoFormatSql(oraShowplanFormatSql);
 				}
 
-				OracleShowplan.render(graphEl, parsed, {
+				renderer.render(graphEl, parsed, {
 					horizontal: _oraShowplanHorizontal,
 					connectorStyle: 'lines',
 					layout: 'compact',
@@ -1959,7 +1984,7 @@
 	}
 
 	window.oraShowplanFormatSql = function (silent) {
-		_formatSqlBlock('dbx-view-oraShowplan-sqlContent', 'plsql', silent === true);
+		_formatSqlBlock('dbx-view-oraShowplan-sqlContent', _oraShowplanVendor === 'MySQL' ? 'mysql' : _oraShowplanVendor === 'DB2/' ? 'db2' : 'plsql', silent === true);
 	};
 
 	window.oraShowplanCopySql = function () {
@@ -1971,7 +1996,7 @@
 	};
 
 	window.oraShowplanOpenExternal = function () {
-		var toUrl = '/showplan/oracle';
+		var toUrl = _oraShowplanVendor === 'MySQL' ? '/showplan/mysql' : _oraShowplanVendor === 'DB2/' ? '/showplan/db2' : '/showplan/oracle';
 		if (!window.location.toString().toLowerCase().startsWith('http')) toUrl = 'http://dbxtune.gorans.org' + toUrl;
 		submit_post_via_hidden_form(toUrl, {
 			plan:         _oraShowplanLastPlanText || '',
@@ -1987,6 +2012,9 @@
 	 * The names of the tables and indexes in the plan that is drawn: what "Table Information" asks the collector about.
 	 * Names that the optimizer made up are left out: ':BF0000' (a Bloom filter), 'SYS_TEMP_...' (a materialized WITH query),
 	 * 'VW_...' (a view it created), 'index$_join$_...' (an index join).
+	 * MySQL: the real name, schema.table, of format 2 (format 1 only has the alias: then the collector takes the tables from the SQL text,
+	 * see _oraShowplanLoadTableInfo), and not the tables MySQL made itself ('<derived2>', '<temporary>'...).
+	 * Db2: the tables the plan reads (the leaves that are not an index: an index is shown with its table).
 	 */
 	function _oraShowplanObjectNames() {
 		var names = [];
@@ -1994,8 +2022,10 @@
 		_oraShowplanLastParsed.statements.forEach(function (stmt) {
 			stmt.steps.forEach(function (step) {
 				DbxShowplanGraph.walkPlanNodes(step.root, function (node) {
-					var name = node.props && node.props.objName;
-					if (!name || /^(:|SYS_TEMP_|VW_|index\$_join\$)/i.test(name)) return;
+					var name = node.props && (_oraShowplanVendor === 'MySQL' ? node.props.tableName
+					                        : _oraShowplanVendor === 'DB2/'  ? (node.props.isLeaf && node.props.objType !== 'IX' ? node.props.objName : undefined)
+					                        :                                  node.props.objName);
+					if (!name || /^(:|SYS_TEMP_|VW_|index\$_join\$|<)/i.test(name)) return;
 					if (names.indexOf(name) === -1) names.push(name);
 				});
 			});
@@ -2011,11 +2041,13 @@
 		body.setAttribute('data-loaded', 'true');
 
 		var tables = _oraShowplanObjectNames();
+		// MySQL: the collector also takes the tables from the SQL text (a format 1 plan only has the aliases). Cut: it goes in the URL
+		var sqlForTables = _oraShowplanVendor === 'MySQL' ? (_oraShowplanSqlText || '').substring(0, 4000) : '';
 		if (!_oraShowplanSrv) {
 			body.innerHTML = '<em style="color:var(--sp-text-5);">Table information is not available: this plan did not come from a monitored server (it was pasted).</em>';
 			return;
 		}
-		if (!tables.length) {
+		if (!tables.length && !sqlForTables) {
 			body.innerHTML = '<em style="color:var(--sp-text-5);">The plan names no tables or indexes.</em>';
 			return;
 		}
@@ -2023,12 +2055,12 @@
 		body.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Loading table information…</span>';
 		$.ajax({
 			url:      '/api/cc/mgt/table-info',
-			data:     { srv: _oraShowplanSrv, dbVendor: 'Oracle', dbname: _oraShowplanDbname, tables: tables.join(',') },
+			data:     { srv: _oraShowplanSrv, dbVendor: _oraShowplanVendor, dbname: _oraShowplanDbname, tables: tables.join(','), sql: sqlForTables },
 			dataType: 'json',
 			success:  function(r) {
 				if (r && r.html) {
-					body.innerHTML = '<div style="font-size:0.8em;color:var(--sp-text-2);margin-bottom:6px;">Tables and indexes in the plan: '
-						+ tables.map(function(t) { return '<code>' + escapeHtml(t) + '</code>'; }).join(', ')
+					body.innerHTML = '<div style="font-size:0.8em;color:var(--sp-text-2);margin-bottom:6px;">'
+						+ (tables.length ? 'Tables and indexes in the plan: ' + tables.map(function(t) { return '<code>' + escapeHtml(t) + '</code>'; }).join(', ') : 'The tables of the SQL text')
 						+ '</div>' + r.html;
 				} else {
 					body.innerHTML = '<em style="color:var(--sp-text-5);">No table information found in the DDL Storage of the collector.</em>';
@@ -2048,12 +2080,13 @@
 	 */
 	function _oraShowplanFetchDdlContext() {
 		var tables = _oraShowplanObjectNames();
-		if (!_oraShowplanSrv || !tables.length) return Promise.resolve('');
+		var sqlForTables = _oraShowplanVendor === 'MySQL' ? (_oraShowplanSqlText || '').substring(0, 4000) : '';   // (see _oraShowplanLoadTableInfo)
+		if (!_oraShowplanSrv || (!tables.length && !sqlForTables)) return Promise.resolve('');
 
 		return new Promise(function (resolve) {
 			$.ajax({
 				url:      '/api/cc/mgt/table-info',
-				data:     { srv: _oraShowplanSrv, dbVendor: 'Oracle', dbname: _oraShowplanDbname, tables: tables.join(','), format: 'text' },
+				data:     { srv: _oraShowplanSrv, dbVendor: _oraShowplanVendor, dbname: _oraShowplanDbname, tables: tables.join(','), sql: sqlForTables, format: 'text' },
 				dataType: 'json',
 				success:  function(r) { resolve((r && r.text) || ''); },
 				error:    function()  { resolve(''); }
@@ -2078,7 +2111,7 @@
 			return;
 		}
 		_oraShowplanFetchDdlContext().then(function (ddlContext) {
-			_openLlmAdviceIfConfigured(body, { sql: _oraShowplanSqlText, plan: _oraShowplanLastPlanText || '', dbVendor: 'Oracle', srv: _oraShowplanSrv,
+			_openLlmAdviceIfConfigured(body, { sql: _oraShowplanSqlText, plan: _oraShowplanLastPlanText || '', dbVendor: _oraShowplanVendor, srv: _oraShowplanSrv,
 				dbmsVersion: _oraShowplanDbmsVersion, ddlContext: ddlContext, workloadData: _oraShowplanWorkloadData, target: body });
 		});
 	}
@@ -2111,7 +2144,7 @@
 				url:         '/api/llm/optimize-sql',
 				method:      'POST',
 				contentType: 'application/json',
-				data:        JSON.stringify({ sql: _oraShowplanSqlText, ddlContext: ddlContext || '', plan: _oraShowplanLastPlanText || '', dbVendor: 'Oracle', dbmsVersion: dbmsVersion, workloadProfile: wlProfile, preview: true }),
+				data:        JSON.stringify({ sql: _oraShowplanSqlText, ddlContext: ddlContext || '', plan: _oraShowplanLastPlanText || '', dbVendor: _oraShowplanVendor, dbmsVersion: dbmsVersion, workloadProfile: wlProfile, preview: true }),
 				dataType:    'json',
 				success: function(r) {
 					if (r && r.promptSent)
@@ -2157,9 +2190,10 @@
 	 * @param {string} planText     — what DBMS_XPLAN printed (DISPLAY_CURSOR, DISPLAY)
 	 * @param {string} [sqlText]    — the SQL text; when empty the one DBMS_XPLAN printed above the plan is used
 	 * @param {string} [objectName] — optional label for the header
-	 * @param {Object} [meta]       — optional: { srv, dbname, dbmsVersion, workloadData }. srv = the DbxTune server name the plan came from
+	 * @param {Object} [meta]       — optional: { srv, dbname, dbmsVersion, workloadData, dbVendor }. srv = the DbxTune server name the plan came from
 	 *                                 (Table Information and the LLM sections ask its collector), dbname = the container (PDB) of the statement,
-	 *                                 dbmsVersion and workloadData = what a Daily Summary Report recorded (see the ASE dialog)
+	 *                                 dbmsVersion and workloadData = what a Daily Summary Report recorded (see the ASE dialog),
+	 *                                 dbVendor = 'MySQL' for a MySQL plan (the JSON of EXPLAIN FORMAT=JSON; dbname is then the schema), otherwise Oracle
 	 */
 	window.showOracleShowplanDialog = function (planText, sqlText, objectName, meta) {
 		var $dlg = $('#dbx-view-oraShowplan-dialog');
@@ -2171,6 +2205,7 @@
 		}
 		if (!planText) return;
 
+		_oraShowplanSetVendor(meta && meta.dbVendor);
 		$('#dbx-view-oraShowplan-objectName', $dlg).text(objectName || '');
 		$('#dbx-view-oraShowplan-planContent', $dlg).text(planText);
 		$('#dbx-view-oraShowplan-sqlContent',  $dlg).text(sqlText || '');
@@ -2343,10 +2378,14 @@ function _initGlobalEscClose() {
 		var ss  = window.SqlServerShowplan;
 		var ase = window.AseShowplan;
 		var ora = window.OracleShowplan;
-		if (panelsOpenOn(ss) || panelsOpenOn(ase) || panelsOpenOn(ora)) {
+		var my  = window.MySqlShowplan;
+		var db2 = window.Db2Showplan;
+		if (panelsOpenOn(ss) || panelsOpenOn(ase) || panelsOpenOn(ora) || panelsOpenOn(my) || panelsOpenOn(db2)) {
 			if (panelsOpenOn(ss))  { try { ss.closePanels();  } catch (ex) {} }
 			if (panelsOpenOn(ase)) { try { ase.closePanels(); } catch (ex) {} }
 			if (panelsOpenOn(ora)) { try { ora.closePanels(); } catch (ex) {} }
+			if (panelsOpenOn(my))  { try { my.closePanels();  } catch (ex) {} }
+			if (panelsOpenOn(db2)) { try { db2.closePanels(); } catch (ex) {} }
 			e.preventDefault();
 			return;
 		}
@@ -2931,6 +2970,8 @@ function _initGlobalEscClose() {
 			$('#dbx-view-oraShowplan-planContent').text('');
 			$('#dbx-view-oraShowplan-graphContent').empty();
 			if (window.OracleShowplan) OracleShowplan.closePanels();
+			if (window.MySqlShowplan)  MySqlShowplan.closePanels();
+			if (window.Db2Showplan)    Db2Showplan.closePanels();
 		});
 
 		// Oracle: opened by an element with data-bs-toggle='modal' (the Active Statements panel): take the plan from its
@@ -2939,8 +2980,11 @@ function _initGlobalEscClose() {
 			_updateLlmSummaryInfo('dbx-osp-sect-llm');   // before the check below: for both ways of opening
 			if (!e.relatedTarget) return;   // opened by showOracleShowplanDialog(), which has filled the fields itself
 			var data = $(e.relatedTarget).data();
+			// The plan as the attribute text: jQuery's data() makes a JSON text (a MySQL plan) into an object
+			var plan = e.relatedTarget.getAttribute('data-plan') || '';
+			_oraShowplanSetVendor(data.dbvendor);
 			$('#dbx-view-oraShowplan-objectName', this).text(data.objectname || '');
-			$('#dbx-view-oraShowplan-planContent', this).text(data.plan || '');
+			$('#dbx-view-oraShowplan-planContent', this).text(plan);
 			$('#dbx-view-oraShowplan-sqlContent', this).text(data.sqltext || '');
 			_oraShowplanSqlText      = data.sqltext || '';
 			_oraShowplanSrv          = data.srv || '';
@@ -2949,7 +2993,7 @@ function _initGlobalEscClose() {
 			_oraShowplanWorkloadData = '';
 			_oraShowplanResetLlmSections();
 			_autoFormatSql(oraShowplanFormatSql);
-			_oraShowplanLastPlanText = data.plan;
+			_oraShowplanLastPlanText = plan;
 		});
 
 		// Oracle Table Information: loaded when the section is expanded for the first time
@@ -3823,6 +3867,7 @@ function _initGlobalEscClose() {
 		var num = function (n) { return Math.round(n).toLocaleString(); };
 
 		var rows = [];
+		if (pi.explainFormat)            rows.push(['EXPLAIN', pi.explainFormat]);   // MySQL
 		if (pi.sqlId)                    rows.push(['SQL_ID', pi.sqlId]);
 		if (pi.childNumber !== undefined) rows.push(['Child number', pi.childNumber]);
 		if (pi.planHash)                 rows.push(['Plan hash value', pi.planHash]);
@@ -3926,14 +3971,15 @@ function _initGlobalEscClose() {
 	window.oraShowplanJumpToNode = function(id) {
 		var graphSect = document.getElementById('dbx-osp-sect-graph');
 		if (graphSect) graphSect.open = true;
-		var box = document.querySelector('#dbx-view-oraShowplan-graphContent .ora-plan-box[data-va="' + id + '"]');
+		var prefix = _oraShowplanVendor === 'MySQL' ? 'my-plan' : _oraShowplanVendor === 'DB2/' ? 'db2-plan' : 'ora-plan';   // (dbxShowplanMySql.js and dbxShowplanDb2.js have their own class prefix)
+		var box = document.querySelector('#dbx-view-oraShowplan-graphContent .' + prefix + '-box[data-va="' + id + '"]');
 		if (!box) return;
 		box.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-		box.classList.remove('ora-plan-flash');
+		box.classList.remove(prefix + '-flash');
 		void box.offsetWidth;   // restart the animation when the same box is asked for again
-		box.classList.add('ora-plan-flash');
+		box.classList.add(prefix + '-flash');
 		box.addEventListener('animationend', function onEnd() {
-			box.classList.remove('ora-plan-flash');
+			box.classList.remove(prefix + '-flash');
 		}, { once: true });
 	};
 

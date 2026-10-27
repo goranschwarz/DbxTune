@@ -114,7 +114,7 @@ implements IDbmsConfig
 				+ "    ,[Resolution]       \n"
 				+ "    ,[PropertyName]     \n"
 				+ "from [" + tabName + "]  \n"
-				+ "where [SessionStartTime] = (select max(SessionStartTime) from [" + tabName + "] ) \n"
+				+ "where [SessionStartTime] = (select max([SessionStartTime]) from [" + tabName + "] ) \n"
 				+ "";
 		
 		// Translate '[' and ']' into real Quoted Identifier Character

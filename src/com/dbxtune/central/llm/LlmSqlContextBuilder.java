@@ -30,6 +30,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.pcs.report.content.ase.AseAbstract;
+import com.dbxtune.pcs.report.content.db2.Db2Abstract;
+import com.dbxtune.pcs.report.content.mysql.MySqlAbstract;
 import com.dbxtune.pcs.report.content.oracle.OracleAbstract;
 import com.dbxtune.pcs.report.content.postgres.PostgresAbstract;
 import com.dbxtune.pcs.report.content.sqlserver.SqlServerAbstract;
@@ -85,7 +87,12 @@ public class LlmSqlContextBuilder
 		if (conn == null || StringUtil.isNullOrBlank(sqlText) || StringUtil.isNullOrBlank(dbVendor))
 			return "";
 
-		Set<String> tableList = SqlParserUtils.getTables(sqlText);
+		// MySQL: the text can be a normalized one (DIGEST_TEXT: backticks, spaces around the dots), which the parser does not read as it is
+		// Db2:   a table function (TABLE(...) t) is taken out first, the parser reads it as tables (see CmStatements)
+		Set<String> tableList
+				= DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_MYSQL)   ? com.dbxtune.cm.mysql.CmStatements.getTablesOfDigestText(sqlText)
+				: DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_DB2_LUW) ? com.dbxtune.cm.db2.CmStatements.getTablesOfStmtText(sqlText)
+				: SqlParserUtils.getTables(sqlText);
 		if (tableList.isEmpty())
 			return "";
 
@@ -102,6 +109,14 @@ public class LlmSqlContextBuilder
 
 			if (DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_ORACLE))
 				return OracleAbstract.getTableInfoPlainText(conn, dbname, tableList);
+
+			// 'dbname' is the schema: a table without a schema in the statement is there
+			if (DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_MYSQL))
+				return MySqlAbstract.getTableInfoPlainText(conn, dbname, tableList);
+
+			// 'dbname' is the schema of the statement when it is known: otherwise a table without a schema can be in any schema
+			if (DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_DB2_LUW))
+				return Db2Abstract.getTableInfoPlainText(conn, dbname, tableList);
 
 			_logger.info("buildDdlContext(): no DDL Storage lookup implemented for dbVendor='{}', skipping DDL context.", dbVendor);
 			return "";

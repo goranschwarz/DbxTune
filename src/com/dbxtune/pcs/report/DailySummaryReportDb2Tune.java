@@ -20,13 +20,26 @@
  ******************************************************************************/
 package com.dbxtune.pcs.report;
 
+import com.dbxtune.pcs.report.content.DbmsConfigIssues;
+import com.dbxtune.pcs.report.content.db2.Db2Backups;
+import com.dbxtune.pcs.report.content.db2.Db2ErrorLog;
+import com.dbxtune.pcs.report.content.db2.Db2Hadr;
+import com.dbxtune.pcs.report.content.db2.Db2LoadOverview;
+import com.dbxtune.pcs.report.content.db2.Db2LongRunningStmnts;
+import com.dbxtune.pcs.report.content.db2.Db2Memory;
+import com.dbxtune.pcs.report.content.db2.Db2SpaceOverview;
+import com.dbxtune.pcs.report.content.db2.Db2TableSize;
+import com.dbxtune.pcs.report.content.db2.Db2TimeSpent;
+import com.dbxtune.pcs.report.content.db2.Db2TopSql;
+import com.dbxtune.pcs.report.content.db2.Db2TopTableAccess;
+import com.dbxtune.pcs.report.content.db2.Db2TransactionLog;
 import com.dbxtune.pcs.report.content.os.CmOsNwInfoOverview;
 import com.dbxtune.pcs.report.content.os.OsCpuUsageOverview;
 import com.dbxtune.pcs.report.content.os.OsIoStatOverview;
 import com.dbxtune.pcs.report.content.os.OsIoStatSlowIo;
 import com.dbxtune.pcs.report.content.os.OsSpaceUsageOverview;
 
-public class DailySummaryReportDb2Tune 
+public class DailySummaryReportDb2Tune
 extends DailySummaryReportDefault
 {
 	@Override
@@ -35,18 +48,34 @@ extends DailySummaryReportDefault
 		// Add the Alarms Active/History
 		super.addReportEntries();
 
-		// SQL
-		//FIXME: addReportEntry( new Db2TopSql(this)(this)   );
-
-		// CPU
+		// Load / CPU / Time Spent
+		addReportEntry( new Db2LoadOverview(this)      );
 		addReportEntry( new OsCpuUsageOverview(this)   );
+		addReportEntry( new Db2TimeSpent(this)         );
 
-		// Disk IO Activity
+		// SQL, Tables, Long Running and Blocking
+		addReportEntry( new Db2TopSql(this)            );
+		addReportEntry( new Db2TopTableAccess(this)    );
+		addReportEntry( new Db2LongRunningStmnts(this) );
+
+		// Transaction Log, Error Log, HADR and Backups
+		addReportEntry( new Db2TransactionLog(this)    );
+		addReportEntry( new Db2ErrorLog(this)          );
+		addReportEntry( new Db2Hadr(this)              );
+		addReportEntry( new Db2Backups(this)           );
+
+		// Space, Memory, Disk IO Activity
+		addReportEntry( new Db2SpaceOverview(this)     );
+		addReportEntry( new Db2TableSize(this)         );
+		addReportEntry( new Db2Memory(this)            );
 		addReportEntry( new OsSpaceUsageOverview(this) );
 		addReportEntry( new OsIoStatOverview(this)     );
 		addReportEntry( new OsIoStatSlowIo(this)       );
 
 		// Network Activity
 		addReportEntry( new CmOsNwInfoOverview(this)   );
+
+		// Configuration
+		addReportEntry( new DbmsConfigIssues(this)     );
 	}
 }
