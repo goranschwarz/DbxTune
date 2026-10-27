@@ -25,6 +25,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.util.Calendar;
+import java.util.TimeZone;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -279,7 +281,11 @@ extends CounterControllerAbstract
 //		String sql = "select current_timestamp, sys_context('USERENV','INSTANCE_NAME') as Instance, sys_context('USERENV','SERVER_HOST') as onHost from dual";
 //		String sql = "select current_timestamp, 'DUMMY_INSTANCE' as Instance, 'DUMMY_HOSTNAME' as onHost";
 //		String sql = "select current_timestamp, @@hostname as Instance, @@hostname as onHost";
-		String sql = "select current_timestamp, @@hostname as onHost, @@port as portNum";
+		// NOTE: The sample time is MySQL's clock in UTC (utc_timestamp()), read as UTC: so it is the right time also when MySQL runs in another time zone than the collector.
+		//       current_timestamp is MySQL's local time without a zone: read as is, it is taken as the collector's local time (a MySQL in UTC and a collector in UTC+1
+		//       put every sample 1 hour back, and DbxCentral can't find the samples at the browser's "now").
+		//       Only this "session sample time" is changed: the CMs' own sample time (getServerTimeCmd) stays MySQL's local time, the same clock as the timestamps in the CMs.
+		String sql = "select utc_timestamp(), @@hostname as onHost, @@port as portNum";
 
 		try
 		{
@@ -290,7 +296,7 @@ extends CounterControllerAbstract
 			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next())
 			{
-				Timestamp ts   = rs.getTimestamp(1);
+				Timestamp ts   = rs.getTimestamp(1, Calendar.getInstance(TimeZone.getTimeZone("UTC")));
 				String    host = rs.getString(2).trim();
 				String    port = rs.getString(3).trim();
 //				counterClearTime = rs.getTimestamp(4);

@@ -26,6 +26,7 @@ import java.net.http.HttpClient;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.dbxtune.cm.db2.Db2ExplainUtils;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.DbUtils;
 import com.dbxtune.utils.StringUtil;
@@ -132,6 +133,10 @@ implements LlmClient
 		if (dbVendor.startsWith("Microsoft SQL Server"))
 			dbVendor = "Microsoft SQL Server and Azure SQL DB";
 
+		// The product name of Db2 LUW is 'DB2/' + the platform (DB2/LINUXX8664)
+		if (DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_DB2_LUW))
+			dbVendor = "IBM Db2 for Linux, UNIX and Windows (Db2 LUW)";
+
 		// Build initial Prompt
 //		sb.append("You are an expert database performance tuner for ").append(dbVendor).append(".\n\n");
 		sb.append("You are a very senior database developer working with ").append(dbVendor).append(".\n");
@@ -206,6 +211,10 @@ implements LlmClient
 			if (DbUtils.isProductName(rawDbVendor, DbUtils.DB_PROD_NAME_MSSQL))
 				plan = SqlServerPlanXmlShrinker.shrink(plan);
 
+			// Db2: the JSON Db2Tune records (the explain tables) is long and hard to read: the tree as db2exfmt shows it says the same
+			if (DbUtils.isProductName(rawDbVendor, DbUtils.DB_PROD_NAME_DB2_LUW) && plan.trim().startsWith("{"))
+				plan = Db2ExplainUtils.planJsonToText(plan);
+
 			sb.append("Execution plan for the statement:\n").append(plan).append("\n");
 			sb.append("\n");
 		}
@@ -248,6 +257,16 @@ implements LlmClient
 			     + "- The execution plan is the JSON of EXPLAIN FORMAT=JSON. Format 1 ('query_block'): a table is named by its alias in the statement; 'rows_examined_per_scan' is for ONE scan of the table (once per row of the tables before it in 'nested_loop'), 'filtered' is the percent of those rows that pass the conditions, 'prefix_cost' includes the tables before it, and 'using_join_buffer' (hash join, Block Nested Loop) means there is no index for the join on that table. Format 2 ('query_plan', 8.3 and above): the tree of iterators, 'estimated_total_cost' includes the inputs; with EXPLAIN ANALYZE, 'actual_rows' is the average per loop ('actual_loops').\n"
 			     + "- Optimizer hints are written as /*+ ... */ right after SELECT/UPDATE/DELETE (JOIN_ORDER, INDEX, NO_INDEX, ...). Index hints (USE INDEX / FORCE INDEX) still work, but suggest them only when an index or a rewrite cannot fix the plan.\n"
 			     + "- Histograms (ANALYZE TABLE ... UPDATE HISTOGRAM ON col) give the optimizer the distribution of a column WITHOUT an index: suggest it when the row estimate of a condition on such a column is wrong.\n";
+		}
+		if (DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_DB2_LUW))
+		{
+			// What an LLM gets wrong for Db2: it mixes in Db2 for z/OS, Oracle and SQL Server syntax, and expects hints
+			return "- This is Db2 for Linux, UNIX and Windows (Db2 LUW), not Db2 for z/OS or IBM i: use Db2 LUW syntax for the server version. Use FETCH FIRST n ROWS ONLY (not LIMIT or TOP).\n"
+			     + "- Only a UNIQUE index can have INCLUDE columns (CREATE UNIQUE INDEX ... INCLUDE (...)): for a non-unique index add the extra columns to the key instead.\n"
+			     + "- The execution plan is either the output of db2exfmt, or Db2Tune's text of the plan Db2 really uses (EXPLAIN_FROM_SECTION of the statement in the package cache): one line per operator (RETURN, TBSCAN, IXSCAN, FETCH, NLJOIN, HSJOIN, MSJOIN, SORT, GRPBY, TEMP...) with its number in parentheses, 'rows' = the optimizer's ESTIMATE of the rows that come OUT of the operator, 'cost' in timerons including the operator's inputs, the lines in [ ] = its predicates (START / STOP = the range of an index scan, SARG = applied while the data is read, RESID = applied after, JOIN = the join predicate), and the tables and indexes it reads with their statistics. In db2exfmt the rows of an operator on the inner side of a nested loop join are per row of the outer side; marks on a join: ^ = early out, x = antijoin, > / < = outer join; 'Rows Actual' = section actuals (what really happened).\n"
+			     + "- A table with 'NO statistics' has never had RUNSTATS, so the optimizer guesses its size and the plan can be far off: that is not a frivolous point, say it in one line (RUNSTATS ON TABLE ... WITH DISTRIBUTION AND SAMPLED DETAILED INDEXES ALL), then go on with the query and index changes.\n"
+			     + "- Db2 has no optimizer hints in the SQL. The tools are statistics, indexes, statistical views, the optimization class (CURRENT QUERY OPTIMIZATION), REOPT for parameter markers, and as a last resort an optimization guideline (an optimization profile): do not suggest Oracle or SQL Server hint syntax.\n"
+			     + "- '?' in the SQL text are parameter markers. With the statement concentrator (STMT_CONC LITERALS) the literals of the application were replaced by markers too.\n";
 		}
 		return null;
 	}

@@ -2379,6 +2379,38 @@ function dbxTuneGraphSubscribe()
 
 		return div;
 	}
+	function createDb2QueryPlanToolTipDiv(data, rowData, srvName)
+	{
+		// creates a div that opens the Db2 Execution Plan Viewer (/showplan/db2, ShowplanDb2Servlet) in a new tab, with the plan POSTed to it.
+		// The plan is the JSON of the explain tables (Db2ExplainUtils). The plan dialog of dbxShowplan.js can't show a Db2 plan yet (no vendor switch on this branch)
+		const dataVal = data;
+		const sqlText = rowData.hasOwnProperty('SQL_TEXT') ? (rowData.SQL_TEXT || '') : '';
+		const srv     = srvName || (_serverList.length ? _serverList[0] : '');
+
+		const div = document.createElement("div");
+		div.innerHTML = "&nbsp;";
+		div.setAttribute("title", "Click to Open the Execution Plan in a new tab (Db2 Execution Plan Viewer)");
+		div.style.cursor = 'pointer';
+		div.addEventListener('click', function ()
+		{
+			const form = document.createElement('form');
+			form.method = 'post';
+			form.action = '/showplan/db2';
+			form.target = '_blank';
+			[['plan', dataVal], ['sql', sqlText], ['srv', srv]].forEach(function (kv)
+			{
+				const input = document.createElement('input');
+				input.type  = 'hidden';
+				input.name  = kv[0];
+				input.value = kv[1];
+				form.appendChild(input);
+			});
+			document.body.appendChild(form);
+			form.submit();
+			form.remove();
+		});
+		return div;
+	}
 	function createPostgresQueryPlanToolTipDiv(data)
 	{
 		// creates a div that will open a modal-div where we can VIEW a Postgres Execution Plan (using https://github.com/dalibo/pev2?tab=readme-ov-file)
@@ -2411,21 +2443,24 @@ function dbxTuneGraphSubscribe()
 		SqlServerTune:['lastKnownSql', 'LastBufferSqlText'],
 		PostgresTune: ['last_known_sql_statement'],
 		OracleTune:   ['SqlText'],
-		MySqlTune:    ['SqlText']
+		MySqlTune:    ['SqlText'],
+		Db2Tune:      ['SQL_TEXT']
 	};
 	var ACTIVE_STMT_PLAN_KEYS = {
 		AseTune:      ['ShowPlanText', 'CachedPlanInXml'],
 		SqlServerTune:[],
 		PostgresTune: ['query_plan'],
 		OracleTune:   ['ExecPlan'],
-		MySqlTune:    ['ExecPlan']    // (only there when the collector's login has ALL global privileges: EXPLAIN FOR CONNECTION needs it)
+		MySqlTune:    ['ExecPlan'],   // (only there when the collector's login has ALL global privileges: EXPLAIN FOR CONNECTION needs it)
+		Db2Tune:      ['EXEC_PLAN']
 	};
 	var ACTIVE_STMT_DB_VENDOR = {
 		AseTune:       'Adaptive Server Enterprise',
 		SqlServerTune: 'Microsoft SQL Server',
 		PostgresTune:  'PostgreSQL',
 		OracleTune:    'Oracle',  // (for Oracle dbxLlmAdvice.js looks up the tables of the SQL text also without a 'dbname': it has no database name to give)
-		MySqlTune:     'MySQL'
+		MySqlTune:     'MySQL',
+		Db2Tune:       'DB2/'     // DbUtils.DB_PROD_NAME_DB2_LUW (the product name is 'DB2/' + the platform). No 'dbname': a table without a schema is looked for in all schemas
 	};
 
 	function _activeStmtFirstNonEmpty(row, keys)
@@ -2719,6 +2754,14 @@ function dbxTuneGraphSubscribe()
 					if (metaData.columnName === "HasPidLocks"         && rowData.hasOwnProperty('PidLocks')         && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.PidLocks         , 'Lock Table'      ) ); }
 					if (metaData.columnName === "HasBlockedPidsInfo"  && rowData.hasOwnProperty('BlockedPidsInfo')  && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.BlockedPidsInfo  , 'Blocked Pid Info') ); }
 				}
+				else if ("Db2Tune" === appName && metaData !== undefined && metaData.hasOwnProperty('columnName'))
+				{
+					// The tooltip goes on the CHECKBOX columns (as for the other collectors). EXEC_PLAN is JSON (from the explain tables): it opens /showplan/db2
+					if (metaData.columnName === "HAS_SQL_TEXT"        && rowData.hasOwnProperty('SQL_TEXT')           && cellContent === true) { td.appendChild( createActiveStatementToolTipDiv(rowData.SQL_TEXT          , 'sql' ) ); }
+					if (metaData.columnName === "HAS_EXEC_PLAN"       && rowData.hasOwnProperty('EXEC_PLAN')          && cellContent === true) { td.appendChild( createDb2QueryPlanToolTipDiv(   rowData.EXEC_PLAN         , rowData, srvName) ); }
+					if (metaData.columnName === "HAS_APPL_LOCKS"      && rowData.hasOwnProperty('APPL_LOCKS')         && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.APPL_LOCKS        , 'Lock Table') ); }
+					if (metaData.columnName === "HAS_BLOCKED_INFO"    && rowData.hasOwnProperty('BLOCKED_APPLS_INFO') && cellContent === true) { td.appendChild( createLockTableToolTipDiv(      rowData.BLOCKED_APPLS_INFO, 'Blocked Application Info') ); }
+				}
 			} // end: metaData && columnName
 		};
 
@@ -2883,6 +2926,35 @@ function dbxTuneGraphSubscribe()
 			tooltip = "Background colors: \n"
 			        + " * ORANGE: Multi Sampled Statement (has been running for more than 1 sample) \n"
 			        + " * YELLOW: Holds an open transaction while Command is Sleep (waits for the client, and holds its locks) \n"
+			        + " * PINK:   Blocked by some other connection \n"
+			        + " * RED:    BLOCKING other connection(s) from working.\n"
+					+ "";
+		}
+		else if ("Db2Tune" === appName)
+		{
+			// The same colors, with the same meaning, as for the other collectors (and as the GUI: db2/gui/CmActiveStatementsPanel). The last one that matches wins.
+			trCallback = function(tr, row)
+			{
+				// multiSampled
+				if (row.hasOwnProperty('MULTI_SAMPLED') && row.MULTI_SAMPLED !== null && row.MULTI_SAMPLED !== '')
+					tr.className = "active-statement-row-multi-sampled";
+
+				// An open unit of work, and the connection waits for the client (it holds its locks)
+				if (row.hasOwnProperty('UOW_STATE') && row.UOW_STATE === 'UOWWAIT')
+					tr.className = "active-statement-row-holding-locks-while-idle";
+
+				// Blocked by some other connection ('BLOCKED_BY_APPL_HANDLE' is 0 when it is not blocked)
+				var isBlocked = row.hasOwnProperty('BLOCKED_BY_APPL_HANDLE') && row.BLOCKED_BY_APPL_HANDLE !== null && row.BLOCKED_BY_APPL_HANDLE > 0;
+				if (isBlocked)
+					tr.className = "active-statement-row-blocked";
+
+				// Blocking OTHER connections, and not blocked itself (the root cause)
+				if (row.hasOwnProperty('BLOCKING_OTHER_APPL_HANDLES') && row.BLOCKING_OTHER_APPL_HANDLES !== null && row.BLOCKING_OTHER_APPL_HANDLES !== '' && ! isBlocked)
+					tr.className = "active-statement-row-blocking";
+			};
+			tooltip = "Background colors: \n"
+			        + " * ORANGE: Multi Sampled Statement (has been running for more than 1 sample) \n"
+			        + " * YELLOW: An open unit of work while the connection waits for the client (UOWWAIT, it holds its locks) \n"
 			        + " * PINK:   Blocked by some other connection \n"
 			        + " * RED:    BLOCKING other connection(s) from working.\n"
 					+ "";

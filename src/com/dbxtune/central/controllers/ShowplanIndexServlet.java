@@ -112,6 +112,14 @@ extends HttpServlet
 				"          <a class='btn btn-primary' href='/showplan/mysql'>Open MySQL Execution Plan Viewer</a> \n" +
 				"        </div> \n" +
 				"      </div> \n" +
+				" \n" +
+				"      <div class='card shadow-sm mb-3'> \n" +
+				"        <div class='card-body'> \n" +
+				"          <h5 class='card-title'>Db2 (LUW)</h5> \n" +
+				"          <p class='card-text'>Paste the output of <code>db2exfmt</code>, or the plan that Db2Tune recorded (the explain tables after <code>EXPLAIN_FROM_SECTION</code>, as JSON). Rendered with DbxTune's own graphical plan viewer.</p> \n" +
+				"          <a class='btn btn-primary' href='/showplan/db2'>Open Db2 Execution Plan Viewer</a> \n" +
+				"        </div> \n" +
+				"      </div> \n" +
 				"    </div> \n" +
 				" \n" +
 				HtmlStatic.getJavaScriptAtEnd(true) +

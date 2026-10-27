@@ -1,52 +1,82 @@
 /*******************************************************************************
  * Copyright (C) 2010-2027 Goran Schwarz
- * 
+ *
  * This file is part of DbxTune
  * DbxTune is a family of sub-products *Tune, hence the Dbx
- * Here are some of the tools: AseTune, IqTune, RsTune, RaxTune, HanaTune, 
+ * Here are some of the tools: AseTune, IqTune, RsTune, RaxTune, HanaTune,
  *          SqlServerTune, PostgresTune, MySqlTune, MariaDbTune, Db2Tune, ...
- * 
+ *
  * DbxTune is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, version 3 of the License.
- * 
+ *
  * DbxTune is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with DbxTune.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
 package com.dbxtune.cm.db2;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Pattern;
+
+import javax.naming.NameNotFoundException;
+
+import org.apache.commons.text.StringEscapeUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
+import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmEvent;
+import com.dbxtune.alarm.events.AlarmEventErrorLogEntry;
+import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.CountersModelAppend;
 import com.dbxtune.cm.db2.gui.CmErrorLogPanel;
+import com.dbxtune.config.dict.MonTablesDictionary;
+import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
+import com.dbxtune.utils.Configuration;
+import com.dbxtune.utils.StringUtil;
 
 /**
+ * The Db2 administration notification log (the ADMxxxx messages): log full, table space full, backup failed, HADR, archive failures...
+ * <p>
+ * The first sample gets the last ## hours, after that only what is new since the last row we have seen (the time string of the server, never converted).
+ *
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
  */
 public class CmErrorLog
 extends CountersModelAppend
 {
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmErrorLog.class.getSimpleName();
 	public static final String   SHORT_NAME       = "Errorlog";
-	public static final String   HTML_DESC        = 
+	public static final String   HTML_DESC        =
 		"<html>" +
-		"Look at the DB2 Servers errorlog using: SYSIBMADM.PDLOGMSGS_LAST24HOURS." +
+		"The Db2 <b>administration notification log</b>: the ADMxxxx messages (log full, table space full, backup and archive failures, HADR, start/stop...).<br>" +
+		"It is the notification part of db2diag.log, read with PD_GET_LOG_MSGS().<br>" +
+		"<br>" +
+		"The first sample gets the last 24 hours, after that only what is new since the previous sample.<br>" +
+		"The log is per instance: messages for <i>other</i> databases in the same instance are shown, but they never raise an alarm here (only this database, and messages for the whole instance).<br>" +
+		"<br>" +
+		"<b>Note</b>: What is written depends on the instance configuration NOTIFYLEVEL (default 3: errors and warnings, plus some information).<br>" +
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
@@ -55,22 +85,17 @@ extends CountersModelAppend
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
 
-	public static final String[] MON_TABLES       = new String[] {"PDLOGMSGS_LAST24HOURS"};
+	public static final String[] MON_TABLES       = new String[] {"PDLOGMSGS_LAST24HOURS", CM_NAME};
 	public static final String[] NEED_ROLES       = new String[] {};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
-//	public static final String[] PCT_COLUMNS      = new String[] {};
-//	public static final String[] DIFF_COLUMNS     = new String[] {"XXXdiffCols"};
-
-//	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
-	public static final int      DEFAULT_POSTPONE_TIME          = 0;
-	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;
+	public static final int      DEFAULT_POSTPONE_TIME          = 60;
+	public static final int      DEFAULT_QUERY_TIMEOUT          = 30;
 
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
 	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
-//	@Override public boolean getDefaultIsNegativeDiffCountersToZero() { return NEGATIVE_DIFF_COUNTERS_TO_ZERO; }
-	@Override public Type    getTemplateLevel()                       { return Type.OFF; }
+	@Override public Type    getTemplateLevel()                       { return Type.SMALL; }
 
 	/**
 	 * FACTORY  method to create the object
@@ -94,9 +119,7 @@ extends CountersModelAppend
 
 		setCounterController(counterController);
 		setGuiController(guiController);
-		
-		addTrendGraphs();
-		
+
 		CounterSetTemplates.register(this);
 	}
 
@@ -104,9 +127,30 @@ extends CountersModelAppend
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	
-	private void addTrendGraphs()
+	public static final String  PROPKEY_sample_firstSampleHours = CM_NAME + ".sample.firstSample.hours";
+	public static final int     DEFAULT_sample_firstSampleHours = 24;
+
+	/** Where we are in the log (the time of the last row we have seen), the next sample gets what's after this. It's a string straight from Db2 (the server's local time), so it is never converted */
+	private String _lastLogTimeStr = null;
+
+	@Override
+	protected void registerDefaultValues()
 	{
+		super.registerDefaultValues();
+
+		Configuration.registerDefaultValue(PROPKEY_sample_firstSampleHours, DEFAULT_sample_firstSampleHours);
+	}
+
+	/** Used by the: Create 'Offline Session' Wizard */
+	@Override
+	public List<CmSettingsHelper> getLocalSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+
+		list.add(new CmSettingsHelper("First Sample, get last ## Hours", PROPKEY_sample_firstSampleHours, Integer.class, conf.getIntProperty(PROPKEY_sample_firstSampleHours, DEFAULT_sample_firstSampleHours), DEFAULT_sample_firstSampleHours, "The first sample (and the first after a reconnect) gets the notification log for the last ## hours. After that: only what is new since the previous sample." ));
+
+		return list;
 	}
 
 	@Override
@@ -116,35 +160,57 @@ extends CountersModelAppend
 	}
 
 	@Override
+	public void reset()
+	{
+		super.reset();
+
+		// Start over (get the last ## hours) at next sample
+		_lastLogTimeStr = null;
+	}
+
+	@Override
 	public String[] getDependsOnConfigForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		return NEED_CONFIG;
 	}
 
+	/** PD_GET_LOG_MSGS() can be used by PUBLIC (tested on 11.5.8), but check it anyway */
+	@Override
+	public boolean checkDependsOnOther(DbxConnection conn)
+	{
+		return Db2CmUtils.checkFunctionsAreExecutable(this, conn, "PD_GET_LOG_MSGS(CURRENT TIMESTAMP - 1 HOUR)");
+	}
+
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		// ${startTime} and ${afterLastLogTime} are replaced in getSql()
+		// NOTE: TIMESTAMP is the server's local time (TIMEZONE is the offset from UTC, in minutes). LOG_TIME_STR is the same as a string, so the next sample can continue exactly there
+		// NOTE: MSG is a CLOB with trailing blanks and line breaks
 		String sql = ""
-			    + "SELECT \n"
-			    + "       TIMESTAMP \n"
-			    + "     , TIMEZONE \n"
-			    + "     , INSTANCENAME \n"
-			    + "     , DBPARTITIONNUM \n"
-			    + "     , DBNAME \n"
-			    + "     , PID \n"
-			    + "     , PROCESSNAME \n"
-			    + "     , TID \n"
-			    + "     , APPL_ID \n"
-			    + "     , COMPONENT \n"
-			    + "     , FUNCTION \n"
-			    + "     , PROBE \n"
-			    + "     , MSGNUM \n"
-			    + "     , MSGTYPE \n"
-			    + "     , MSGSEVERITY \n"
-			    + "     , cast(MSG as varchar(4096)) AS MESSAGE_TEXT \n"
-			    + "FROM SYSIBMADM.PDLOGMSGS_LAST24HOURS \n"
-//			    + "WHERE TIMESTAMP > ? \n"
-			    + "";
+			+ "select /* ${cmCollectorName} */ \n"
+			+ "     TIMESTAMP \n"
+			+ "    ,TIMEZONE \n"
+			+ "    ,RTRIM(MSGTYPE) || CASE WHEN MSGNUM < 10000 THEN RIGHT('0000' || RTRIM(CHAR(MSGNUM)), 4) ELSE RTRIM(CHAR(MSGNUM)) END || MSGSEVERITY as MSG_ID \n"
+			+ "    ,MSGSEVERITY \n"
+			+ "    ,DBNAME \n"
+			+ "    ,CAST(RTRIM(CAST(MSG AS VARCHAR(4096))) AS VARCHAR(4096)) as MESSAGE_TEXT \n"
+			+ "    ,APPL_ID \n"
+			+ "    ,COMPONENT \n"
+			+ "    ,FUNCTION \n"
+			+ "    ,PROBE \n"
+			+ "    ,MSGNUM \n"
+			+ "    ,MSGTYPE \n"
+			+ "    ,INSTANCENAME \n"
+			+ "    ,DBPARTITIONNUM \n"
+			+ "    ,PID \n"
+			+ "    ,PROCESSNAME \n"
+			+ "    ,TID \n"
+			+ "    ,CHAR(TIMESTAMP) as LOG_TIME_STR \n"
+			+ "from table(PD_GET_LOG_MSGS(${startTime})) t \n"
+			+ "where ${afterLastLogTime} \n"
+			+ "order by TIMESTAMP \n"
+			+ "";
 
 		return sql;
 	}
@@ -152,428 +218,189 @@ extends CountersModelAppend
 	@Override
 	public String getSql()
 	{
-		// Sample only records we have not seen previously...
-		// But wait: The monErrorLog is a "state" table, so we would only get the last records anyway... or...
-		// True but: if the ASE Connection is lost, we will reconnect... and then we get all old records once again!
-		//           which means that we will report any errors *again*, which does happen!
-		//           So this is as "failsafe" to net report old records after a reconnect-on-communication-failure
-		Timestamp prevSample = getPreviousSampleTime();
-		if (prevSample == null)
+		String sqlText = super.getSql();
+		if (sqlText == null)
+			return null;
+
+		// First sample (or the first after a reconnect): the last ## hours
+		if (_lastLogTimeStr == null)
 		{
-			// get all rows for the first sample... 
-			// But the sendAlarmRequest() method will stop early... if isFirstTimeSample() is true
-			setSqlWhere(""); 
-		}
-		else
-		{
-			setSqlWhere("WHERE TIMESTAMP > '" + prevSample + "' "); 
+			int hours = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_sample_firstSampleHours, DEFAULT_sample_firstSampleHours);
+			return sqlText
+					.replace("${startTime}"       , "CURRENT TIMESTAMP - " + hours + " HOURS")
+					.replace("${afterLastLogTime}", "1 = 1");
 		}
 
-		// Now get the SQL from super method...
-		return super.getSql();
+		// After that: what comes after the last row we have seen (the function reads the log from the given time, so it is cheap)
+		// NOTE: There is no row number. Two messages with the same microsecond, where the second is written after we read the first, would be missed
+		return sqlText
+				.replace("${startTime}"       , "TIMESTAMP('" + _lastLogTimeStr + "') - 1 SECOND")
+				.replace("${afterLastLogTime}", "TIMESTAMP > '" + _lastLogTimeStr + "'");
 	}
 
-	
+	@Override
+	public void hookInNearEndOfRefreshGetData()
+	{
+		super.hookInNearEndOfRefreshGetData();
 
-//	/**
-//	 * Get one row vertically formated
-//	 * <pre>
-//	 * colName 1  : value
-//	 * colName 2  : value
-//	 * colName 99 : value
-//	 * </pre>
-//	 * @param lastRefreshRows
-//	 * @param rowNum
-//	 * @return
-//	 */
-//	private String getErrorRecordAsText(List<List<Object>> lastRefreshRows, int rowNum)
-//	{
-//		return getErrorRecordAsTextOrHtml(lastRefreshRows, rowNum, false);
-//	}
-//	
-//	private String getErrorRecordAsHtml(List<List<Object>> lastRefreshRows, int rowNum)
-//	{
-//		return getErrorRecordAsTextOrHtml(lastRefreshRows, rowNum, true);
-//	}
-//
-//	private String getErrorRecordAsTextOrHtml(List<List<Object>> lastRefreshRows, int rowNum, boolean asHtml)
-//	{
-//		List<Object> row = lastRefreshRows.get(rowNum);
-//
-//		// Get max Column name len
-//		int colNameMaxLen = 0;
-//		for (int c=0; c<row.size(); c++)
-//			colNameMaxLen = Math.max(colNameMaxLen, getColumnName(c).length());
-//
-//		StringBuilder sb = new StringBuilder();
-//		
-//		if (asHtml)
-//		{
-//			sb.append("<table class='errorlogTableVertical'>\n");
-////			sb.append("  <tr> <th>Column Name</th> <th>Value</th> </tr>\n");
-//			for (int c=0; c<row.size(); c++)
-//			{
-//				String name = getColumnName(c);
-//				Object val  = row.get(c);
-//				
-//				sb.append("  <tr> <td><b>").append(name).append("</b></td> <td>").append(val).append("</td> </tr>\n");
-//			}
-//			sb.append("</table>\n");
-//		}
-//		else
-//		{
-//			for (int c=0; c<row.size(); c++)
-//			{
-//				String name = getColumnName(c);
-//				Object val  = row.get(c);
-//
-//				sb.append(StringUtil.left(name, colNameMaxLen));
-//				sb.append(" : ");
-//				sb.append(val);
-//				sb.append("\n");
-//			}
-//		}
-//		
-//		return sb.toString();
-//	}
+		// Remember the last row in this sample (the rows are ordered by time)
+		List<List<Object>> lastRefreshRows = getDataCollectionForLastRefresh();
+		int pos_LogTimeStr = findColumn("LOG_TIME_STR");
+		if (lastRefreshRows != null && ! lastRefreshRows.isEmpty() && pos_LogTimeStr >= 0)
+		{
+			Object lastLogTimeStr = lastRefreshRows.get(lastRefreshRows.size() - 1).get(pos_LogTimeStr);
+			if (lastLogTimeStr != null)
+				_lastLogTimeStr = lastLogTimeStr.toString().trim();
+		}
+		// NOTE: If there was nothing, the start point stays where it was (it is only moved forward while connected, and reset() starts over)
+		//       The sample time is NOT used as a starting point: it's converted by the JDBC driver, and the JVM and the server may have different time zones
+	}
 
-//	@Override
-//	public void sendAlarmRequest()
-//	{
-////		if ( ! hasDiffData() )
-////			return;
-//		
-//		if ( ! AlarmHandler.hasInstance() )
-//			return;
-//
-//		// ABS Data from LAST refresh only
-//		List<List<Object>> lastRefreshRows = getDataCollectionForLastRefresh();
-//
-//		// DO NOTHING on FIRST refresh
-//		if ( isFirstTimeSample() )
-//		{
-//			String rowsInThisRefresh = " (Rows in first refresh was " + (lastRefreshRows == null ? "-null-" : lastRefreshRows.size()) + ")";
-//
-//			_logger.info("First time we check the errorlog, Alarms will NOT be checked, because it will include old error messages." + rowsInThisRefresh);
-//			return;
-//		}
-//		
-//		AlarmHandler alarmHandler = AlarmHandler.getInstance();
-//		
-////		CountersModel cm = this;
-////		String dbmsSrvName = this.getServerName();
-//
-//		// Exit early if NO ROWS
-//		if (lastRefreshRows == null)
-//			return;
-//		if (lastRefreshRows.size() == 0)
-//			return;
-//
-//		int col_ErrorNumber_pos  = findColumn("ErrorNumber");
-//		int col_Severity_pos     = findColumn("Severity");
-//		int col_ErrorMessage_pos = findColumn("ErrorMessage");
-//
-//		if (col_ErrorNumber_pos < 0 || col_Severity_pos < 0 || col_ErrorMessage_pos < 0)
-//		{
-//			_logger.error("When checking for alarms, could not find all columns. skipping this. [ErrorNumber_pos="+col_ErrorNumber_pos+", Severity_pos="+col_Severity_pos+", ErrorMessage_pos="+col_ErrorMessage_pos+"]");
-//			return;
-//		}
-//		
-////		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
-//
-//		List<String> errorNumberSkipList = null; // initiated later
-//		
-//		for (int r=0; r<lastRefreshRows.size(); r++)
-//		{
-//			List<Object> row = lastRefreshRows.get(r);
-//
-//			Object o_errorNumber  = (Integer) row.get(col_ErrorNumber_pos);
-//			Object o_severity     = (Integer) row.get(col_Severity_pos);
-//			Object o_ErrorMessage = (String)  row.get(col_ErrorMessage_pos);
-//
-//			if (o_errorNumber == null || !(o_errorNumber instanceof Integer) )
-//			{
-//				_logger.error("When checking for alarms, the column 'ErrorNumber' is NOT an integer, skipping this row. [ErrorNumber="+o_errorNumber+"]");
-//				continue;
-//			}
-//			if (o_severity == null || !(o_severity instanceof Integer) )
-//			{
-//				_logger.error("When checking for alarms, the column 'Severity' is NOT an integer, skipping this row. [Severity="+o_severity+"]");
-//				continue;
-//			}
-//
-//			int    errorNumber  = (Integer) o_errorNumber;
-//			int    severity     = (Integer) o_severity;
-//			String ErrorMessage = o_ErrorMessage == null ? "" : o_ErrorMessage.toString();
-//
-//			//-------------------------------------------------------
-//			// There are not enough 'user connections' available to start a new process
-//			//-------------------------------------------------------
-//			if (isSystemAlarmsForColumnEnabledAndInTimeRange("UserConnections"))
-//			{
-//				// ErrorNumber=1601, Severity=17, ErrorMessage=There are not enough 'user connections' available to start a new process...
-//				if (errorNumber == 1601 || ErrorMessage.indexOf("There are not enough 'user connections' available to start a new process") >= 0)
-//				{
-//					String extendedDescText = ErrorMessage;
-//					String extendedDescHtml = ErrorMessage;
-//
-//					AlarmEvent ae = new AlarmEventConfigResourceIsUsedUp(this, "number of user connections", 1601, ErrorMessage);
-//					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-//
-//					alarmHandler.addAlarm( ae );
-//				}
-//			}
-//
-//			
-//			//-------------------------------------------------------
-//			// Full transaction log
-//			//-------------------------------------------------------
-//			if (isSystemAlarmsForColumnEnabledAndInTimeRange("TransactionLogFull"))
-//			{
-//				// ### maybe: ErrorNumber=2812, Severity=16, ErrorMessage=Stored procedure 'sp_thresholdaction' not found. Specify owner.objectname or use sp_help to check whether the object exists (sp_help may produce lots of output).
-//
-//				// ErrorNumber=7412, Severity=10, ErrorMessage=Space available in segment 'logsegment' has fallen critically low in database 'master'. All future modifications to this database will be suspended until the transaction log is successfully dumped and space becomes available.
-//				// ErrorNumber=7413, Severity=10, ErrorMessage=1 task(s) are sleeping waiting for space to become available in the log segment for database GAS_prod.
-//				if (errorNumber == 7412 || errorNumber == 7413)
-//				{
-//					String extendedDescText = ErrorMessage;
-//					String extendedDescHtml = ErrorMessage;
-//						
-//					AlarmEvent ae = new AlarmEventFullTranLog(this, 0, "monErrorlog");
-//					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-//						
-//					alarmHandler.addAlarm( ae );
-//				}
-//			}
-//
-//
-//			//-------------------------------------------------------
-//			// Severity
-//			//-------------------------------------------------------
-//			if ( isSystemAlarmsForColumnEnabledAndInTimeRange("Severity"))
-//			{
-//				/*
-//				 * Level 10: Status Information
-//                 *           Messages with severity level 10 provide additional information after certain commands have been executed and, typically, do not display the message number or severity level.
-//                 *           
-//                 * Level 11: Specified Database Object Not Found
-//                 *           Messages with severity level 11 indicate that SAP ASE cannot find an object that is referenced in a command.
-//                 *           
-//                 * Level 12: Wrong Datatype Encountered
-//                 *           Messages with severity level 12 indicate a problem with datatypes. For example, the user may have tried to enter a value of the wrong datatype in a column or to compare columns of different and incompatible datatypes.
-//                 * 
-//                 * Level 13: User Transaction Syntax Error
-//                 *           Messages with severity level 13 indicate that something is wrong with the current user-defined transaction.
-//                 * 
-//                 * Level 14: Insufficient Permission to Execute Command
-//                 *           Messages with severity level 14 mean that the user does not have the necessary permission to execute the command or access the database object. Users can ask the owner of the database object, the owner of the database, or the system administrator to grant them permission to use the command or object in question.
-//                 * 
-//                 * Level 15: Syntax Error in SQL Statement
-//                 *           Messages with severity level 15 indicate that the user has made a mistake in the syntax of the command. The text of these error messages includes the line numbers on which the mistake occurs and the specific word near which it occurs.
-//                 * 
-//                 * Level 16: Miscellaneous User Error
-//                 *           Most error messages with severity level 16 reflect that the user has made a nonfatal mistake that does not fall into any of the other categories. Severity level 16 and higher might also indicate software or hardware errors.
-//                 * 
-//                 * Level 17: Insufficient Resources
-//                 *           Error messages with severity level 17 mean that the command has caused SAP ASE to run out of resources or to exceed some limit set by the system administrator. The user can continue, although he or she might not be able to execute a particular command
-//                 * 
-//                 * Level 18: Nonfatal Internal Error Detected
-//                 *           Error messages with severity level 18 indicate an internal software bug. However, the command runs to completion, and the connection to SAP ASE is maintained.
-//                 * 
-//                 * Level 19: SAP ASE Fatal Error in Resource
-//                 *           Error messages with severity level 19 indicate that some nonconfigurable internal limit has been exceeded and that SAP ASE cannot recover gracefully. You must reconnect to SAP ASE.
-//                 * 
-//                 * Level 20: SAP ASE Fatal Error in Current Process
-//                 *           Error messages with severity level 20 indicate that SAP ASE has encountered a bug in a command. The problem has affected only the current process, and the database is unlikely to have been damaged. Run dbcc diagnostics. The user must reconnect to SAP ASE.
-//                 * 
-//                 * Level 21: SAP ASE Fatal Error in Database Processes
-//                 *           Error messages with severity level 21 indicate that SAP ASE has encountered a bug that affects all the processes in the current database. However, it is unlikely that the database itself has been damaged. Restart SAP ASE and run dbcc diagnostics. The user must reconnect to SAP ASE.
-//                 * 
-//                 * Level 22: SAP ASE Fatal Error: Table Integrity Suspect
-//                 *           Error messages with severity level 22 indicate that the table or index specified in the message has been previously damaged by a software or hardware problem.
-//                 * 
-//                 * Level 23: Fatal Error: Database Integrity Suspect
-//                 *           Error messages with severity level 23 indicate that the integrity of the entire database is suspect due to previous damage caused by a software or hardware problem. Restart SAP ASE and run dbcc diagnostics.
-//                 * 
-//                 * Level 24: Hardware Error or System Table Corruption
-//                 *           Error messages with severity level 24 reflect a media failure or (in rare cases) the corruption of sysusages. The system administrator may have to reload the database. You may need to call your hardware vendor.
-//                 * 
-//                 * Level 25: SAP ASE Internal Error
-//                 *           Users do not see level 25 errors, as this level is used only for SAP ASE internal errors.
-//                 * 
-//                 * Level 26: Rule Error
-//                 *           Error messages with severity level 26 reflect that an internal locking or synchronization rule has been broken. You must shut down and restart SAP ASE.
-//                 *           
-//				 * severity 99 is used for stacktraces etc... at least in MDA Table monErrorlog
-//				 */
-//
-//				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_Severity, DEFAULT_alarm_Severity);
-//
-//				if (severity > threshold && severity < 99)
-//				{
-//					// Initilize the errorlist if not done earlier
-//					if (errorNumberSkipList == null)
-//					{
-//						String errorListStr = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_ErrorNumberSkipList, DEFAULT_alarm_ErrorNumberSkipList);
-//						errorNumberSkipList = StringUtil.parseCommaStrToList(errorListStr);
-//					}
-//					if (errorNumberSkipList.contains( Integer.toString(errorNumber)) )
-//					{
-//						// Skipping this error number
-//						if (_logger.isDebugEnabled())
-//							_logger.debug("ErrorNumber "+errorNumber+" is part of the 'error-number-skip-list', so it wont be raised. (num="+errorNumber+", severity="+severity+", text='"+ErrorMessage+"')");
-//					}
-//					else
-//					{
-//						String extendedDescText = getErrorRecordAsText(lastRefreshRows, r);
-//						String extendedDescHtml = getErrorRecordAsHtml(lastRefreshRows, r);
-//
-//						AlarmEvent.Severity alarmSeverity = AlarmEvent.Severity.WARNING;
-//						if (severity > 17)
-//							alarmSeverity = AlarmEvent.Severity.ERROR;
-//						
-//						AlarmEvent ae = new AlarmEventErrorLogEntry(this, alarmSeverity, errorNumber, severity, ErrorMessage, threshold);
-//						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-//
-//						alarmHandler.addAlarm( ae );
-//					}
-//				}
-//			}
-//
-//			
-//			//-------------------------------------------------------
-//			// ConfigChanges
-//			//-------------------------------------------------------
-//			if (isSystemAlarmsForColumnEnabledAndInTimeRange("ConfigChanges"))
-//			{
-//				// 00:0002:00000:00036:2019/03/26 01:41:39.17 server  The configuration option 'auditing' has been changed by 'sa' from '0' to '1'.
-//				// ErrorNumber=???, Severity=??, ErrorMessage=
-//				if (ErrorMessage.indexOf("The configuration option '") >= 0 && ErrorMessage.indexOf("' has been changed by ") >= 0)
-//				{
-//					String configName = "unknown";
-//					String extendedDescText = ErrorMessage;
-//					String extendedDescHtml = ErrorMessage;
-//
-//					// Get the configuration name
-//					int startPos = ErrorMessage.indexOf("'");
-//					if (startPos != -1)
-//					{
-//						startPos++;
-//						int endPos = ErrorMessage.indexOf("'", startPos);
-//						if (endPos != -1)
-//							configName = ErrorMessage.substring(startPos, endPos);
-//					}
-//					
-//					AlarmEvent ae = new AlarmEventConfigChanges(this, configName, ErrorMessage);
-//					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-//						
-//					alarmHandler.addAlarm( ae );
-//				}
-//			}
-//
-//
-//			//-------------------------------------------------------
-//			// ProcessInfected
-//			//-------------------------------------------------------
-//			if (isSystemAlarmsForColumnEnabledAndInTimeRange("ProcessInfected"))
-//			{
-//				// START ROW: 00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  Current process (0x2bad014c) infected with signal 11 (SIGSEGV)
-//				//            ... collect anything in between, as the message ...
-//				//   END ROW:          >>>> 00308: <<<< when SPID is changing into a new SPID, if we can't find SPID: fallback on below "end of stack trace,"
-//				//   END ROW: 00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  end of stack trace, spid 308, kpid 732758348, suid 1
-//				// ErrorNumber=???, Severity=??, ErrorMessage=
-//				if (ErrorMessage.indexOf("Current process (") >= 0 && ErrorMessage.indexOf(") infected with ") >= 0)
-//				{
-//					// Read messages until 'end of stack trace, ' and stuff it in the below StringBuilder
-//					StringBuilder sb = new StringBuilder();
-//
-//					// get SPID and capture entries until we see a new SPID...
-//					// below is a "start" for that
-//					int col_SPID_pos = findColumn("SPID");
-//
-//					// Get SPID for this record, so we can check/break when we see a new SPID
-//					Object o_firstSPID = col_SPID_pos == -1 ? null : row.get(col_SPID_pos);
-//					
-//					
-//					// Continue to read messages (but do not move the "original r", create a new "rr" to loop on
-//					for (int rr=r; rr<lastRefreshRows.size(); rr++)
-//					{
-//						List<Object> rrRow = lastRefreshRows.get(rr);
-//
-//						String ee_ErrorMessage = rrRow.get(col_ErrorMessage_pos) + "";
-//						sb.append( ee_ErrorMessage ).append("\n");
-//
-//						// look for SPID is changed, or: "end of stack trace, "
-//						// If 'SPID' is not found, lets fallback on "end of stack trace, ", or even at the very end, where we break after 300 rows
-//						Object o_SPID = col_SPID_pos == -1 ? null : rrRow.get(col_SPID_pos);
-//						if (o_SPID == null || !(o_SPID instanceof Integer) )
-//						{
-//							// STOP Looping when we find 'end of stack trace, '
-//							if (ee_ErrorMessage.startsWith("end of stack trace, "))
-//								break;
-//						}
-//						else
-//						{
-//							// STOP Looping when we find a new SPID
-//							if ( ! o_SPID.equals(o_firstSPID) )
-//								break;
-//						}
-//						
-//						// OK: something is probably wrong (we didn't find 'end of stack trace, ' or The same SPID just continues), break the loop after 300 rows...
-//						if (rr >= 300)
-//							break;
-//					}
-//					String fullErrorMessage = sb.toString();
-//						
-//					String extendedDescText = fullErrorMessage;
-//					String extendedDescHtml = "<pre>\n" + fullErrorMessage + "\n</pre>";
-//
-//					AlarmEvent ae = new AlarmEventProcessInfected(this, fullErrorMessage);
-//					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
-//						
-//					alarmHandler.addAlarm( ae );
-//				}
-//			}
-//		}
-//	}
-//
-//	public static final String  PROPKEY_alarm_UserConnections       = CM_NAME + ".alarm.system.on.UserConnections";
-//	public static final boolean DEFAULT_alarm_UserConnections       = true;
-//
-//	public static final String  PROPKEY_alarm_TransactionLogFull    = CM_NAME + ".alarm.system.on.TransactionLogFull";
-//	public static final boolean DEFAULT_alarm_TransactionLogFull    = true;
-//
-//	public static final String  PROPKEY_alarm_Severity              = CM_NAME + ".alarm.system.if.Severity.gt";
-//	public static final int     DEFAULT_alarm_Severity              = 16;
-//
-//	public static final String  PROPKEY_alarm_ErrorNumberSkipList   = CM_NAME + ".alarm.system.errorNumber.skip.list";
-//	public static final String  DEFAULT_alarm_ErrorNumberSkipList   = "";
-//
-//	public static final String  PROPKEY_alarm_ConfigChanges         = CM_NAME + ".alarm.system.on.ConfigChanges";
-//	public static final boolean DEFAULT_alarm_ConfigChanges         = true;
-//
-//	public static final String  PROPKEY_alarm_ProcessInfected       = CM_NAME + ".alarm.system.on.ProcessInfected";
-//	public static final boolean DEFAULT_alarm_ProcessInfected       = true;
-//
-//	@Override
-//	public List<CmSettingsHelper> getLocalAlarmSettings()
-//	{
-//		Configuration conf = Configuration.getCombinedConfiguration();
-//		List<CmSettingsHelper> list = new ArrayList<>();
-//
-//		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
-//		
-//		list.add(new CmSettingsHelper("UserConnections"        , isAlarmSwitch, PROPKEY_alarm_UserConnections    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_UserConnections    , DEFAULT_alarm_UserConnections    ), DEFAULT_alarm_UserConnections    , "On Error 1601, send 'AlarmEventConfigResourceIsUsedUp'." ));
-//		list.add(new CmSettingsHelper("TransactionLogFull"     , isAlarmSwitch, PROPKEY_alarm_TransactionLogFull , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_TransactionLogFull , DEFAULT_alarm_TransactionLogFull ), DEFAULT_alarm_TransactionLogFull , "On Error 7413, send 'AlarmEventFullTranLog'." ));
-//		list.add(new CmSettingsHelper("ConfigChanges"          , isAlarmSwitch, PROPKEY_alarm_ConfigChanges      , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ConfigChanges      , DEFAULT_alarm_ConfigChanges      ), DEFAULT_alarm_ConfigChanges      , "On error log message 'The configuration option '.*' has been changed', send 'AlarmEventConfigChanges'." ));
-//		list.add(new CmSettingsHelper("ProcessInfected"        , isAlarmSwitch, PROPKEY_alarm_ProcessInfected    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ProcessInfected    , DEFAULT_alarm_ProcessInfected    ), DEFAULT_alarm_ProcessInfected    , "On error log message 'Current process .* infected with signal', send 'AlarmEventProcessInfected'." ));
-//
-//		list.add(new CmSettingsHelper("Severity"               , isAlarmSwitch, PROPKEY_alarm_Severity           , Integer.class, conf.getIntProperty    (PROPKEY_alarm_Severity           , DEFAULT_alarm_Severity           ), DEFAULT_alarm_Severity           , "If 'Severity' is greater than ## then send 'AlarmEventErrorLogEntry'." ));
-//		list.add(new CmSettingsHelper("SkipList ErrorNumber(s)"               , PROPKEY_alarm_ErrorNumberSkipList, String .class, conf.getProperty       (PROPKEY_alarm_ErrorNumberSkipList, DEFAULT_alarm_ErrorNumberSkipList), DEFAULT_alarm_ErrorNumberSkipList, "Skip errors number in this list, that is if Severity is above that rule. format(comma separated list of numbers): 123, 321, 231" ));
-//
-//		return list;
-//	}
+	@Override
+	public void addMonTableDictForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
+	{
+		try
+		{
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+			mtd.addTable(CM_NAME, "The Db2 administration notification log (ADMxxxx messages).");
+
+			mtd.addColumn(CM_NAME, "TIMESTAMP",      "<html>When the message was written (the server's local time).</html>");
+			mtd.addColumn(CM_NAME, "TIMEZONE",       "<html>The difference from UTC, in minutes.</html>");
+			mtd.addColumn(CM_NAME, "MSG_ID",         "<html>The message id, for example <code>ADM1823E</code> (the active log is full). Look it up in the Db2 documentation, or with: <code>db2 ? ADM1823</code></html>");
+			mtd.addColumn(CM_NAME, "MSGSEVERITY",    "<html><b>C</b> = Critical, <b>E</b> = Error, <b>W</b> = Warning, <b>I</b> = Information.<br><b>Alarm</b>: Error (C and E)</html>");
+			mtd.addColumn(CM_NAME, "DBNAME",         "<html>The database the message is about. NULL = the whole instance.<br>Messages for other databases in the instance never raise an alarm here.</html>");
+			mtd.addColumn(CM_NAME, "MESSAGE_TEXT",   "<html>The message.</html>");
+			mtd.addColumn(CM_NAME, "APPL_ID",        "<html>The application that caused the message (if any).</html>");
+			mtd.addColumn(CM_NAME, "COMPONENT",      "<html>The Db2 component that wrote the message.</html>");
+			mtd.addColumn(CM_NAME, "FUNCTION",       "<html>The Db2 function that wrote the message.</html>");
+			mtd.addColumn(CM_NAME, "PROBE",          "<html>Probe point in the Db2 function.</html>");
+			mtd.addColumn(CM_NAME, "MSGNUM",         "<html>The message number.</html>");
+			mtd.addColumn(CM_NAME, "MSGTYPE",        "<html>The message type: ADM (administration), DIA (diagnostic)...</html>");
+			mtd.addColumn(CM_NAME, "INSTANCENAME",   "<html>The Db2 instance.</html>");
+			mtd.addColumn(CM_NAME, "DBPARTITIONNUM", "<html>The database partition (member).</html>");
+			mtd.addColumn(CM_NAME, "PID",            "<html>Operating system process id.</html>");
+			mtd.addColumn(CM_NAME, "PROCESSNAME",    "<html>Operating system process name.</html>");
+			mtd.addColumn(CM_NAME, "TID",            "<html>Operating system thread id.</html>");
+			mtd.addColumn(CM_NAME, "LOG_TIME_STR",   "<html>Same as TIMESTAMP, as a string. (DbxTune uses this to know where to continue at the next sample)</html>");
+		}
+		catch (NameNotFoundException e)
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e);
+		}
+	}
+
+	@Override
+	public void sendAlarmRequest()
+	{
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
+		Configuration conf = Configuration.getCombinedConfiguration();
+
+		// ABS Data from LAST refresh only
+		List<List<Object>> lastRefreshRows = getDataCollectionForLastRefresh();
+
+		// DO NOTHING on FIRST refresh
+		if ( isFirstTimeSample() )
+		{
+			_logger.info("First time we check the notification log, Alarms will NOT be checked, because it will include old messages. (Rows in first refresh was " + (lastRefreshRows == null ? "-null-" : lastRefreshRows.size()) + ")");
+			return;
+		}
+
+		// Exit early if NO ROWS
+		if (lastRefreshRows == null || lastRefreshRows.isEmpty())
+			return;
+
+		int pos_Timestamp   = findColumn("TIMESTAMP");
+		int pos_MsgId       = findColumn("MSG_ID");
+		int pos_MsgSeverity = findColumn("MSGSEVERITY");
+		int pos_DbName      = findColumn("DBNAME");
+		int pos_Message     = findColumn("MESSAGE_TEXT");
+
+		if (pos_Timestamp < 0 || pos_MsgId < 0 || pos_MsgSeverity < 0 || pos_DbName < 0 || pos_Message < 0)
+		{
+			_logger.error("When checking for alarms, could not find all columns. skipping this. [TIMESTAMP_pos=" + pos_Timestamp + ", MSG_ID_pos=" + pos_MsgId + ", MSGSEVERITY_pos=" + pos_MsgSeverity + ", DBNAME_pos=" + pos_DbName + ", MESSAGE_TEXT_pos=" + pos_Message + "]");
+			return;
+		}
+
+		boolean checkError = isSystemAlarmsForColumnEnabledAndInTimeRange("Error") && conf.getBooleanProperty(PROPKEY_alarm_Error, DEFAULT_alarm_Error);
+		if ( ! checkError )
+			return;
+
+		// An empty skip regex skips nothing (an empty Pattern would match everything)
+		String  errorSkipRegex   = conf.getProperty(PROPKEY_alarm_ErrorSkipRegex, DEFAULT_alarm_ErrorSkipRegex);
+		Pattern errorSkipPattern = StringUtil.hasValue(errorSkipRegex) ? Pattern.compile(errorSkipRegex) : null;
+
+		// Only this database (or the whole instance): the log is shared by all databases in the instance
+		String thisDbName = null;
+		if (getCounterController() != null && getCounterController().getMonConnection() != null && getCounterController().getMonConnection().getDbmsVersionInfo() instanceof com.dbxtune.sql.conn.info.DbmsVersionInfoDb2)
+			thisDbName = ((com.dbxtune.sql.conn.info.DbmsVersionInfoDb2) getCounterController().getMonConnection().getDbmsVersionInfo()).getDbName();
+
+		for (List<Object> row : lastRefreshRows)
+		{
+			Object o_Timestamp = row.get(pos_Timestamp);
+			Object o_Message   = row.get(pos_Message);
+
+			if ( ! (o_Timestamp instanceof Timestamp) || o_Message == null )
+				continue;
+
+			Timestamp logTime  = (Timestamp) o_Timestamp;
+			String    message  = o_Message.toString().trim();
+			String    msgId    = (row.get(pos_MsgId) + "").trim();
+			String    severity = (row.get(pos_MsgSeverity) + "").trim();
+			Object    o_dbname = row.get(pos_DbName);
+			String    dbname   = o_dbname == null ? null : o_dbname.toString().trim();
+
+			// C = Critical, E = Error
+			if ( ! ("C".equals(severity) || "E".equals(severity)) )
+				continue;
+
+			// Another database in the same instance: its own collector reports it
+			if (dbname != null && ! dbname.isEmpty() && thisDbName != null && ! thisDbName.equalsIgnoreCase(dbname))
+				continue;
+
+			boolean isSkipped = errorSkipPattern != null && (errorSkipPattern.matcher(msgId).find() || errorSkipPattern.matcher(message).find());
+
+			if (debugPrint || _logger.isDebugEnabled())
+				System.out.println("##### sendAlarmRequest(" + getName() + "): Error: isSkipped=" + isSkipped + ", msgId='" + msgId + "', dbname='" + dbname + "', Message='" + StringUtil.truncate(message.replace('\n', ' '), 120, true, null) + "'.");
+
+			if (isSkipped)
+				continue;
+
+			String extendedDescText = message;
+			String extendedDescHtml = "<pre>\n" + StringEscapeUtils.escapeHtml4(message) + "\n</pre>";
+			// The alarm description is stored in 512 characters (the full message is in the extended description)
+			String alarmText        = "Notification log entry at '" + logTime + "'" + (dbname == null ? "" : ", database " + dbname) + ": " + StringUtil.truncate(message.replace('\n', ' ').replaceAll(" +", " "), 380, true, null);
+
+			AlarmEvent ae = new AlarmEventErrorLogEntry(this, "C".equals(severity) ? AlarmEvent.Severity.ERROR : AlarmEvent.Severity.WARNING, msgId, alarmText);
+			ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+			// Information about how to disable this alarm
+			ae.createAlarmOptionsMessage(this, "Error");
+
+			AlarmHandler.getInstance().addAlarm(ae);
+		} // end: rows loop
+	}
+
+	public static final String  PROPKEY_alarm_Error          = CM_NAME + ".alarm.system.on.Error";
+	public static final boolean DEFAULT_alarm_Error          = true;
+
+	// The message id (ADM####x) or the message. Empty = skip nothing
+	public static final String  PROPKEY_alarm_ErrorSkipRegex = CM_NAME + ".alarm.system.on.Error.skip.regex";
+	public static final String  DEFAULT_alarm_ErrorSkipRegex = "";
+
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+
+		list.add(new CmSettingsHelper("Error"           , isAlarmSwitch, PROPKEY_alarm_Error         , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_Error         , DEFAULT_alarm_Error         ), DEFAULT_alarm_Error         , "On a message with severity C (Critical, severity ERROR) or E (Error, severity WARNING) for this database or the whole instance, send 'AlarmEventErrorLogEntry'." ));
+		list.add(new CmSettingsHelper("Error Skip Regex",                PROPKEY_alarm_ErrorSkipRegex, String .class, conf.getProperty       (PROPKEY_alarm_ErrorSkipRegex, DEFAULT_alarm_ErrorSkipRegex), DEFAULT_alarm_ErrorSkipRegex, "If 'Error' is true; Skip it if the message id (ADM####x) or the message matches this regexp. Empty = skip nothing.", new RegExpInputValidator()));
+
+		return list;
+	}
 }
-
-
-

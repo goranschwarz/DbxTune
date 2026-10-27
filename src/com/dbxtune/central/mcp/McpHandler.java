@@ -730,6 +730,7 @@ public class McpHandler
 		List<DbxGraphProperties> props = reader.getGraphProperties(serverName, null);
 
 		// The CMs are SQL Server's, MySqlTune has its own (CmWaits: per wait class and per wait event)
+		// and Db2Tune too (CmTimeSpent: the request time, and the time per kind of wait)
 		String appName = "";
 		try
 		{
@@ -737,7 +738,9 @@ public class McpHandler
 			if (srvInfo != null) appName = srvInfo.getProductString();
 		}
 		catch (Exception ignored) {}
-		String[] cmNames = "MySqlTune".equals(appName) ? new String[] { "CmWaits" } : new String[] { "CmWaitStats", "CmWaitStatsPerDb" };
+		String[] cmNames = "MySqlTune".equals(appName) ? new String[] { "CmWaits" }
+		                 : "Db2Tune"  .equals(appName) ? new String[] { "CmTimeSpent" }
+		                 :                               new String[] { "CmWaitStats", "CmWaitStatsPerDb" };
 
 		ArrayNode combined = _om.createArrayNode();
 		for (String cmName : cmNames)
@@ -791,6 +794,7 @@ public class McpHandler
 		List<DbxGraphProperties> props = reader.getGraphProperties(serverName, null);
 
 		// The CMs are SQL Server's. MySqlTune has its own: CmStatements, whose graphs are per SCHEMA (time, executions, rows examined), not per statement
+		// Db2Tune too: CmStatements, whose graphs are the totals of all statements (time, executions), not per statement
 		String appName = "";
 		try
 		{
@@ -798,8 +802,9 @@ public class McpHandler
 			if (srvInfo != null) appName = srvInfo.getProductString();
 		}
 		catch (Exception ignored) {}
-		boolean  isMySql  = "MySqlTune".equals(appName);
-		String[] cmNames  = isMySql ? new String[] { "CmStatements" } : new String[] { "CmExecQueryStats", "CmExecQueryStatPerDb" };
+		boolean  isMySql = "MySqlTune".equals(appName);
+		boolean  isDb2   = "Db2Tune".equals(appName);
+		String[] cmNames = (isMySql || isDb2) ? new String[] { "CmStatements" } : new String[] { "CmExecQueryStats", "CmExecQueryStatPerDb" };
 
 		ArrayNode combined = _om.createArrayNode();
 		for (String cmName : cmNames)
@@ -814,6 +819,8 @@ public class McpHandler
 		meta.put("requestedRankBy", rankBy);
 		meta.put("hint", isMySql
 				? "MySQL: entries are pre-summed across the time range, the 'series' field is the SCHEMA the statements ran in (not one statement). 'total' is the sum, 'avg' per sample, 'max' peak. The single statements are in the Daily Summary Report section 'Top SQL Statements' (get_daily_report_section) and in get_active_statements."
+				: isDb2
+				? "Db2: entries are pre-summed across the time range, the 'series' field is a total of ALL statements (execution, CPU, wait and lock wait time; executions), not one statement. The single statements are in the Daily Summary Report section 'Top SQL Statements' (get_daily_report_section) and in get_active_statements."
 				: "Entries are pre-summed across the time range. The 'series' field is the query identifier. 'total' is the sum, 'avg' per sample, 'max' peak. Rank by '" + rankBy + "' using the graph whose name matches that metric.");
 
 		ObjectNode result = _om.createObjectNode();
@@ -832,7 +839,8 @@ public class McpHandler
 		"query_plan",       // SQL Server: estimated XML plan from dm_exec_query_plan
 		"LiveQueryPlan",    // SQL Server: actual plan captured at snapshot time (dm_exec_query_plan_stats)
 		"optdiag",          // Sybase ASE: text execution plan
-		"ExecPlan"          // Oracle: the text of DBMS_XPLAN, MySQL: the JSON of EXPLAIN FORMAT=JSON FOR CONNECTION
+		"ExecPlan",         // Oracle: the text of DBMS_XPLAN, MySQL: the JSON of EXPLAIN FORMAT=JSON FOR CONNECTION
+		"EXEC_PLAN"         // Db2: the explain tables after EXPLAIN_FROM_SECTION, as JSON
 	));
 
 	/**
@@ -842,6 +850,7 @@ public class McpHandler
 	private static final List<String> SQL_TEXT_COLUMN_CANDIDATES = Arrays.asList(
 		"lastKnownSql",   // SQL Server / ASE: SQL text captured by CmActiveStatements
 		"sql_text",       // PostgreSQL / MySQL style
+		"SQL_TEXT",       // Db2
 		"SqlText",
 		"query",
 		"statement"
@@ -3248,7 +3257,8 @@ public class McpHandler
 			+ "  - **SqlServerTune** → follow the `diagnose_sqlserver` prompt workflow\n"
 			+ "  - **AseTune**       → follow the `diagnose_ase` prompt workflow\n"
 			+ "  - **PostgresTune**  → follow the `diagnose_postgres` prompt workflow\n"
-			+ "  - **MySqlTune** / **MariaDbTune** → use get_wait_stats (CmWaits) + get_top_queries (CmStatements, per schema) + get_active_statements (blocking, long statements) + get_active_alarms + get_dbms_config (its config issues), and the Daily Summary Report section 'Top SQL Statements' for the single statements\n\n"
+			+ "  - **MySqlTune** / **MariaDbTune** → use get_wait_stats (CmWaits) + get_top_queries (CmStatements, per schema) + get_active_statements (blocking, long statements) + get_active_alarms + get_dbms_config (its config issues), and the Daily Summary Report section 'Top SQL Statements' for the single statements\n"
+			+ "  - **Db2Tune**       → use get_wait_stats (CmTimeSpent) + get_top_queries (CmStatements, totals) + get_active_statements (blocking, long statements, idle transactions with locks) + get_active_alarms + get_dbms_config (its config issues), and the Daily Summary Report section 'Top SQL Statements' for the single statements\n\n"
 			+ "## Step 2 — Always start with alarms\n"
 			+ "Call `get_active_alarms` (and `get_alarm_history` startTime='" + timeRange + "') "
 			+ "to see what thresholds have been breached — this often points directly to the problem area.\n\n"

@@ -191,6 +191,7 @@ public class HtmlStatic
 		writer.println("                <a class='dropdown-item' href='/showplan/postgres'>Postgres</a> ");
 		writer.println("                <a class='dropdown-item' href='/showplan/oracle'>Oracle</a> ");
 		writer.println("                <a class='dropdown-item' href='/showplan/mysql'>MySQL</a> ");
+		writer.println("                <a class='dropdown-item' href='/showplan/db2'>Db2</a> ");
 		writer.println("              </div> ");
 		writer.println("            </div> ");
 		writer.println("            <div class='dropdown-divider'></div> ");
