@@ -256,7 +256,8 @@ function histAlarmOpen(srvName)
 							.map(function(s) {
 								return s.srvSession ? s.srvSession.serverName : (s.serverName || null);
 							})
-							.filter(function(n) { return n; });
+							.filter(function(n) { return n; })
+							.sort(function(a, b) { return a.localeCompare(b, undefined, { sensitivity: 'base' }); });
 					}
 				} catch(e) {}
 				_histAlarmPopulateSrvSel(_histAlarmSrv);
@@ -733,22 +734,16 @@ function histAlarmOpenGraph(idx)
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /**
- * Match each RAISE event to its CANCEL counterpart.
- * Primary key: alarmId (valid within same collector session).
- * Fallback key: alarmClass + serviceName + serviceInfo (for cross-restart cases).
- * Unmatched RAISEs are checked against activeAlarms:
- *   - found in active → _isActive = true
- *   - not found       → _closedByRestart = true (CANCEL probably lost at restart)
- */
-/**
- * Match each RAISE event to its nearest CANCEL counterpart.
- *
  * Match each RAISE to its CANCEL.
  *
- * Primary:  alarmId — same UUID on RAISE and CANCEL within the same collector
- *           session (no restart between the two events).
- * Fallback: alarmClass + serviceName + serviceInfo — used when a collector
- *           restart occurred between RAISE and CANCEL, causing new UUIDs.
+ * Primary:  alarmId — same UUID on RAISE and CANCEL (the collector keeps the UUID
+ *           of its active alarms over a restart).
+ * Fallback: the alarm's identity, see _histAlarmEventKey() — used when the CANCEL
+ *           got a new UUID (active alarms were not restored at collector restart).
+ *           Never for a RAISE that is still active by its alarmId, and never with a
+ *           CANCEL that has its own RAISE (by alarmId) in the data.
+ *           Several alarms of one class can be active at the same time, for example
+ *           JobSchedulerLastRunFailed (one per job, only extraInfo differs).
  *
  * Duration = cancelEvent.eventTime - raiseEvent.eventTime.
  * (alarmDuration on RAISE rows = check-cycle interval, not alarm duration.)
@@ -761,10 +756,13 @@ function _histAlarmMatchEvents(allData, activeAlarms)
 {
 	// Build cancel lookups
 	var cancelById  = {};   // alarmId  → cancel row
-	var cancelByKey = {};   // class|svc|info → list of cancel rows (fallback)
+	var cancelByKey = {};   // _histAlarmEventKey() → list of cancel rows (fallback)
+	var raiseById   = {};   // alarmId  → true, for every RAISE row
 
 	allData.forEach(function(row) {
-		if ((row.action || '').toUpperCase() !== 'CANCEL') return;
+		var action = (row.action || '').toUpperCase();
+		if (action === 'RAISE' && row.alarmId) raiseById[row.alarmId] = true;
+		if (action !== 'CANCEL') return;
 		if (row.alarmId) cancelById[row.alarmId] = row;
 		var key = _histAlarmEventKey(row);
 		if (!cancelByKey[key]) cancelByKey[key] = [];
@@ -784,6 +782,8 @@ function _histAlarmMatchEvents(allData, activeAlarms)
 	allData.forEach(function(row) {
 		if ((row.action || '').toUpperCase() !== 'RAISE') return;
 
+		var key        = _histAlarmEventKey(row);
+		var activeId   = !!(row.alarmId && activeById[row.alarmId]);
 		var raiseMs    = moment(row.eventTime).valueOf();
 		var bestCancel = null;
 		var bestDiff   = Infinity;
@@ -795,19 +795,19 @@ function _histAlarmMatchEvents(allData, activeAlarms)
 			if (diff >= 0) { bestCancel = c; bestDiff = diff; }
 		}
 
-		// Fallback: match by class+service key (nearest CANCEL after RAISE)
-		if (!bestCancel) {
-			var key = _histAlarmEventKey(row);
+		// Fallback: match by alarm identity key (nearest CANCEL after RAISE)
+		// Not when this alarmId is still active, and skip CANCELs that belong to another RAISE
+		if (!bestCancel && !activeId) {
 			(cancelByKey[key] || []).forEach(function(c) {
+				if (c.alarmId && raiseById[c.alarmId]) return;
 				var diff = moment(c.eventTime).valueOf() - raiseMs;
 				if (diff >= 0 && diff < bestDiff) { bestDiff = diff; bestCancel = c; }
 			});
 		}
 
-		var key = _histAlarmEventKey(row);
 		row._matchedCancel   = bestCancel;
 		row._durationMs      = bestCancel ? bestDiff : null;
-		row._isActive        = !bestCancel && (!!activeById[row.alarmId] || !!activeKeys[key]);
+		row._isActive        = !bestCancel && (activeId || !!activeKeys[key]);
 		row._closedByRestart = !bestCancel && !row._isActive;
 
 		// Back-link: let the CANCEL row know its RAISE
@@ -830,11 +830,16 @@ function _histAlarmCancelDesc(row)
 	return '';
 }
 
+// The alarm's identity: srvName + the primary key of the DbxAlarmActive table (extraInfo and severity are part of it)
 function _histAlarmEventKey(row)
 {
-	return (row.alarmClass  || '') + '|'
+	return (row.srvName     || '') + '|'
+	     + (row.alarmClass  || '') + '|'
+	     + (row.serviceType || '') + '|'
 	     + (row.serviceName || '') + '|'
-	     + (row.serviceInfo || '');
+	     + (row.serviceInfo || '') + '|'
+	     + (row.extraInfo   || '') + '|'
+	     + (row.severity    || '');
 }
 
 function _histAlarmDurationCell(row)
