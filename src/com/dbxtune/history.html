@@ -519,7 +519,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>MySqlTune - MySQL database</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to evolve</LI>
+		<LI><b>Big rewrite of MySqlTune</b> -- 7 new Counter Models, and the 9 existing ones redone (graphs, alarms). MySQL 8.0 and up, MariaDB is detected and explained.<br>
+		    Active Statements, Statements (Top SQL), Waits, Replication, Memory, Table Size, Error Log</LI>
+		<LI>Monitoring user needs no access to user data (PROCESS, REPLICATION CLIENT, SELECT on performance_schema and sys), see 'DbmsSetup/mysql.txt'</LI>
+		<LI>DBMS Config -- Redone (variables, text tabs, configuration checks)</LI>
+		<LI>Daily Summary Report -- New MySQL sections, sparklines, top statements with execution plans, table/index information</LI>
+		<LI>DbxCentral -- Graphical Execution Plan viewer for MySQL (EXPLAIN FORMAT=JSON), with "LLM Optimization Advice", and local graphs</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -528,7 +533,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>Db2Tune - IBM DB2 LWU</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to evolve</LI>
+		<LI><b>Big rewrite of Db2Tune</b> -- 10 new Counter Models, and the 10 existing ones redone (graphs, alarms). Db2 LUW 11.1 and up.<br>
+		    Active Statements, Statements (Top SQL), Time Spent, Transaction Log, Storage Paths, HADR, Backups, Utilities, Table Size, Memory</LI>
+		<LI>Monitoring user needs no access to user data (a role with EXECUTE on the MON_GET functions, or SQLADM), see 'DbmsSetup/db2.txt'</LI>
+		<LI>DBMS Config -- New (database, instance and registry configuration, text tabs, configuration checks)</LI>
+		<LI>Daily Summary Report -- New Db2 sections, sparklines, top statements with execution plans, table/index information</LI>
+		<LI>DbxCentral -- Graphical Execution Plan viewer for Db2 (explain tables and db2exfmt), with "LLM Optimization Advice", and local graphs</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
