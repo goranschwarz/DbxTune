@@ -816,8 +816,9 @@ extends DbxCentralPageTemplate
 		set.add(new UrlParameterDescription(
 				"minDurationInSeconds",
 				"If we want to 'skip' items in the chart which has a 'duration' of less than ## seconds<br>"
-						+ "<b>Default</b>: <code>0</code> (if not restricted by the executed SQL Statement",
-                10,
+						+ "A run that did not succeed (failed, retry or canceled) is always shown.<br>"
+						+ "<b>Default</b>: <code>0</code> (all runs)",
+                0,
                 Integer.class));
 
 		set.add(new UrlParameterDescription(
@@ -1060,7 +1061,9 @@ extends DbxCentralPageTemplate
 			    + "      AND convert(datetime, convert(varchar(8), h.run_date)) + ' ' + stuff(stuff(right(1000000+h.run_time,6),3,0,':'),6,0,':') BETWEEN '" + startTime + "' and '" + endTime + "' \n"
 			    + "      /* possibly rewrite this to use 'run_date, run_time' instead of a datetime... */ \n"
 			    + "      /* this so we can create/use a index on sysjobhistory(run_date, run_time)     */ \n"
-			    + "      AND (h.run_duration/10000*3600 + (h.run_duration/100)%100*60 + h.run_duration%100) >= @minimum_duration_in_seconds \n"
+			    + "      AND (   (h.run_duration/10000*3600 + (h.run_duration/100)%100*60 + h.run_duration%100) >= @minimum_duration_in_seconds \n"
+			    + "           OR h.run_status <> 1 /* always show runs that did not succeed */ \n"
+			    + "          ) \n"
 			    + jobNameOrId_where
 			    + " \n"
 			    + "    UNION ALL \n"
@@ -1541,8 +1544,8 @@ extends DbxCentralPageTemplate
 					prevRowStartTs = startTs;
 					prevRowEndTs   = endTs;
 
-					// If the "duration" is not long enough, skip this record!
-					if (minDurationInSeconds != -1 && startTs != null && endTs != null)
+					// If the "duration" is not long enough, skip this record! (but always show a step that did not succeed: red=failed/canceled, orange=retry)
+					if (minDurationInSeconds != -1 && startTs != null && endTs != null && ! "red".equals(barColor) && ! "orange".equals(barColor))
 					{
 						long durationInMs = endTs.getTime() - startTs.getTime();
 						if (durationInMs < minDurationInSeconds * 1000)
