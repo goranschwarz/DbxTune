@@ -269,6 +269,30 @@
 	</div>
 	</div>
 
+	<div id="/api/cc/mgt/writer/try" class="card border-dark">
+	<h5 class="card-header">
+		<span class="badge badge-post badge-method">POST</span>
+		<a href="#/api/cc/mgt/writer/try">/api/cc/mgt/writer/try</a>
+	</h5>
+	<div class="card-body">
+		Try an Alarm Writer setting at the collector WITHOUT saving it, with the collector's own code (used by the Configuration page).
+		No login needed, but only an admin can have rules or a template of his own checked/rendered (a template can call Java code, a rule is a regexp);
+		for anybody else the collector uses the SAVED value (<code>savedOnly</code>, for the mail rules of <code>propKey</code> = AlarmWriterToMail.to or ReportSenderToMail.to).<br>
+		Body <code>{"op":"mailRoutingInfo"}</code>: alarm names, categories, severities, states and actions for the mail rule editor.<br>
+		Body <code>{"op":"mailRouting", "value":"&lt;AlarmWriterToMail.to&gt;", "sample":{"serverName":"..", "serverGroup":"..", "alarmName":"FullTranLog", "category":"SPACE", "severity":"ERROR", "state":"AFFECTED", "action":"RAISE", "time":0}}</code>:
+		validates the mail rules (per rule errors/warnings), and if a <code>sample</code> is passed: who would get the mail (to, cc, matched rules).<br>
+		Body <code>{"op":"templateInfo", "writerName":"com.dbxtune.alarm.writers.AlarmWriterToMail", "propKey":"AlarmWriterToMail.msg.body.template"}</code>:
+		the variables a template can use, complete templates to start from (eg the HTML/Text default) and if the writer can give an Adaptive Card (<code>hasDesignerCard</code>).<br>
+		Body <code>{"op":"templatePreview", "writerName":"..", "propKey":"..", "template":"..", "action":"RAISE", "values":{"&lt;propKey&gt;":"&lt;unsaved value&gt;"}, "designerCard":false}</code>:
+		renders the template with an example alarm the way the writer renders it (<code>text</code>, or <code>error</code> with type/line/column),
+		<code>validationError</code> = why a save would be refused (null = OK), and with <code>designerCard</code> the Adaptive Card (<code>card</code>).
+		<table>
+			<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+			<tr><td>srvName</td><td class="mandatory">mandatory</td><td>Server name (the collector)</td></tr>
+		</table>
+	</div>
+	</div>
+
 
 	<!-- ===================================================================== -->
 	<h2 id="sessions">Sessions &amp; Servers</h2>

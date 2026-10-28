@@ -294,3 +294,61 @@ pre.c2-sql code { font-size: 12px; white-space: pre-wrap; }
 .c2-item:disabled:hover { background: none; }
 .c2-item small { display: block; font-size: 11px; color: var(--c2-faint); margin-top: 2px; overflow-wrap: anywhere; }
 .c2-err-i { color: var(--c2-err); }
+.c2-ok-i { color: var(--c2-ok); }
+.c2-warn-i { color: var(--c2-warn2); }
+
+/* ---- mail rules editor (field kind 'mailRouting', eg AlarmWriterToMail.to) */
+.c2-mr { border: 1px solid var(--c2-line); border-radius: 6px; padding: 4px 10px 10px; background: var(--c2-panel); overflow-x: auto; } /* narrow window: the rules table scrolls inside the box */
+.c2-mr-bar { display: flex; align-items: center; gap: 2px; border-bottom: 1px solid var(--c2-line2); margin-bottom: 8px; flex-wrap: wrap; }
+.c2-mr-bar .c2-tab { padding: 6px 10px; font-size: 13px; }
+.c2-mr-status { margin-left: auto; font-size: 12px; color: var(--c2-muted); padding: 6px 0; }
+.c2-mr-raw { font-size: 12.5px; resize: vertical; }
+.c2-mr-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.c2-mr-tbl th { text-align: left; font-weight: 600; font-size: 12px; color: var(--c2-muted); background: transparent; padding: 4px 6px; border-bottom: 1px solid var(--c2-line); }
+.c2-mr-tbl td { padding: 5px 6px; vertical-align: top; background: transparent; color: var(--c2-txt); border-top: 1px solid var(--c2-line2); }
+.c2-mr-tbl tr.c2-mr-sub td { border-top: none; padding-top: 0; }
+.c2-mr-tbl tr.c2-mr-rsel td { background: var(--c2-blue-bg); }
+.c2-mr-tbl tr.c2-mr-roff td { color: var(--c2-faint); }
+.c2-mr-tbl tr.c2-mr-rbad td:first-child { box-shadow: inset 3px 0 0 var(--c2-err); }
+.c2-mr-n { color: var(--c2-faint); width: 1%; }
+.c2-mr-who { overflow-wrap: anywhere; min-width: 7em; }
+.c2-mr-rowacts { white-space: nowrap; text-align: right; width: 1%; }
+.c2-mr-cond { display: inline-block; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; padding: 1px 7px; border-radius: 9px; margin: 0 4px 3px 0; background: var(--c2-line2); color: var(--c2-txt2); overflow-wrap: anywhere; }
+.c2-mr-cond b { font-weight: 600; color: var(--c2-muted); white-space: nowrap; }
+.c2-mr-fb  { background: var(--c2-info-bg); color: var(--c2-info); }
+.c2-mr-unk { background: var(--c2-err-bg); color: var(--c2-err); }
+.c2-mr-lbl { display: inline-block; min-width: 22px; font-size: 11px; color: var(--c2-faint); }
+.c2-mr-acts { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+.c2-mr-form { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 5px 10px; align-items: center; margin-top: 4px; }
+.c2-mr-form > label { font-size: 12.5px; color: var(--c2-txt2); margin: 0; }
+.c2-mr-test { margin-top: 8px; padding: 8px 10px; border: 1px dashed var(--c2-line); border-radius: 6px; }
+.c2-mr-res { margin-top: 8px; font-size: 13px; }
+.c2-mr-help { margin-top: 8px; }
+.c2-mr-help summary { font-size: 12px; color: var(--c2-blue); cursor: pointer; }
+/* A collector's longer help, with its structure (safeHtml) */
+.c2-richhelp { line-height: 1.5; }
+.c2-richhelp pre { margin: 6px 0 8px; padding: 6px 8px; font-size: 12px; background: var(--c2-line2); color: var(--c2-txt); border-radius: 4px; overflow-x: auto; white-space: pre; }
+.c2-richhelp code { font-size: 12px; padding: 0 3px; border-radius: 3px; background: var(--c2-line2); color: var(--c2-txt); }
+.c2-richhelp pre code { padding: 0; background: none; }
+.c2-richhelp ul { margin: 4px 0 6px; padding-left: 20px; }
+.c2-richhelp h2, .c2-richhelp h3, .c2-richhelp h4 { font-size: 13px; font-weight: 600; margin: 6px 0 4px; }
+.c2-richhelp p { margin: 0 0 6px; }
+.c2-btn.c2-on { background: var(--c2-blue-bg); border-color: var(--c2-blue); color: var(--c2-blue-dk); }
+@media (max-width: 640px) { .c2-mr-form { grid-template-columns: 1fr; } }
+
+/* Template editor (field kind 'template'): rendered by the collector */
+.c2-tpl { border: 1px solid var(--c2-line); border-radius: 6px; padding: 4px 10px 10px; background: var(--c2-panel); min-width: 0; }
+.c2-tpl-actlbl { font-size: 12px; color: var(--c2-muted); margin: 0 4px 0 10px; }
+.c2-in.c2-tpl-act { width: auto; padding: 1px 4px; font-size: 12px; }
+.c2-tpl-txt { font-size: 12.5px; line-height: 1.45; resize: vertical; white-space: pre; overflow: auto; tab-size: 4; }
+.c2-tpl-txt[readonly] { background: var(--c2-in-dis); color: var(--c2-txt2); }
+.c2-in.c2-tpl-txt.c2-bad { background: var(--c2-in-bg); } /* a big text: the red border is enough */
+.c2-tpl-vars { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
+.c2-tpl-var { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; padding: 1px 8px; border-radius: 9px; border: 1px solid var(--c2-line); background: var(--c2-line2); color: var(--c2-txt2); }
+button.c2-tpl-var { cursor: pointer; }
+button.c2-tpl-var:hover { border-color: var(--c2-blue); color: var(--c2-blue-dk); }
+span.c2-tpl-var { cursor: help; }
+.c2-tpl-prev { margin-top: 8px; border: 1px dashed var(--c2-line); border-radius: 6px; padding: 6px 8px 8px; }
+.c2-tpl-prevh { font-size: 12px; color: var(--c2-muted); margin-bottom: 6px; }
+.c2-tpl-frame { display: block; width: 100%; height: 420px; border: 1px solid var(--c2-line); border-radius: 4px; background: #fff; } /* a mail renders on white, also in dark mode */
+.c2-tpl-pre { margin: 0; max-height: 420px; overflow: auto; font-size: 12.5px; white-space: pre; /* like the real output: no wrapping, scroll sideways */ background: var(--c2-line2); color: var(--c2-txt); padding: 8px; border-radius: 4px; }

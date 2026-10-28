@@ -33,7 +33,13 @@ import java.util.regex.PatternSyntaxException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
+import org.apache.velocity.exception.MethodInvocationException;
+import org.apache.velocity.exception.ParseErrorException;
 
+import com.dbxtune.alarm.events.AlarmEvent;
+import com.dbxtune.alarm.writers.AlarmWriterAbstract;
+import com.dbxtune.alarm.writers.WriterUtils;
+import com.dbxtune.pcs.report.senders.MailHelper;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.CronUtils;
 import com.dbxtune.utils.StringUtil;
@@ -104,6 +110,70 @@ public class CmSettingsHelper
 			try { Gson gson = new Gson(); gson.fromJson(val, Object.class); }
 			catch(JsonSyntaxException ex) { throw new ValidationException("The JSON content seems to be faulty. Caught: " + ex.getMessage()); }
 			return true;
+		}
+	}
+
+	/**
+	 * Mail recipients ('to') - a comma separated list of addresses, or JSON rules, see {@link MailHelper}.<br>
+	 * The Web UI also uses this validator's name to show its rule editor for the property.
+	 */
+	public static class MailRoutingInputValidator
+	implements InputValidator
+	{
+		@Override
+		public boolean isValid(CmSettingsHelper sh, String val) throws ValidationException
+		{
+			MailHelper.Rules rules = MailHelper.parse(val);
+			if (rules.hasErrors())
+				throw new ValidationException(String.join("\n", rules.getErrors()));
+			return true;
+		}
+	}
+
+	/**
+	 * A writer's message template (Velocity). Valid when it renders the way the writer renders it ({@link AlarmWriterAbstract#createTemplatePreview}),
+	 * for RAISE, RE-RAISE and CANCEL: at runtime a template that does not render means the writer sends nothing for that alarm.<br>
+	 * The Web UI also uses this validator's name to show its template editor for the property.
+	 */
+	public static class TemplateInputValidator
+	implements InputValidator
+	{
+		private final AlarmWriterAbstract _writer;
+
+		public TemplateInputValidator(AlarmWriterAbstract writer)
+		{
+			_writer = writer;
+		}
+
+		@Override
+		public boolean isValid(CmSettingsHelper sh, String val) throws ValidationException
+		{
+			if (StringUtil.isNullOrBlank(val)) // empty: the writer uses its default (mandatory settings are checked by the caller)
+				return true;
+
+			AlarmEvent       example  = WriterUtils.createPreviewExampleEvent();
+			List<AlarmEvent> examples = WriterUtils.createPreviewExampleAlarms();
+			for (String action : new String[] { AlarmWriterAbstract.ACTION_RAISE, AlarmWriterAbstract.ACTION_RE_RAISE, AlarmWriterAbstract.ACTION_CANCEL })
+			{
+				try
+				{
+					_writer.createTemplatePreview(sh.getPropName(), val, action, example, examples, Configuration.getCombinedConfiguration());
+				}
+				catch (Exception ex)
+				{
+					throw new ValidationException(action + ": " + getErrorType(ex) + ": " + ex.getMessage());
+				}
+			}
+			return true;
+		}
+
+		/** What kind of problem a template preview threw, the same words as the Template Editor */
+		public static String getErrorType(Exception ex)
+		{
+			if (ex instanceof AlarmWriterAbstract.TemplatePreviewException) return "Invalid Output";
+			if (ex instanceof MethodInvocationException)                    return "Velocity Method Invocation Error";
+			if (ex instanceof ParseErrorException)                          return "Velocity Parser Error";
+			return ex.getClass().getSimpleName();
 		}
 	}
 

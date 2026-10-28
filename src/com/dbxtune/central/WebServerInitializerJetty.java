@@ -289,6 +289,7 @@ public class WebServerInitializerJetty
 		webapp.addServlet(CollectorRestartController.class,           "/api/collector-restart");            // Send request to restart a Collector
 		webapp.addServlet(ProxyConfigGetServlet.class,                "/api/cc/mgt/config/get");            // Get how a Collector is Configured
 		webapp.addServlet(ProxyConfigSetServlet.class,                "/api/cc/mgt/config/set");            // Set Configuration changes at the Collector
+		webapp.addServlet(ProxyAlarmWriterTryServlet.class,           "/api/cc/mgt/writer/try");            // Try an AlarmWriter setting at the Collector, without saving (eg: who would get this alarm mail)
 		webapp.addServlet(ProxyReportsServlet.class,                  "/api/cc/reports");                   // This is for example: sqlserver-job-scheduler-report, sqlserver-job-scheduler-timeline
 		webapp.addServlet(ProxyCmListServlet.class,                   "/api/cc/mgt/cm/list");               // Ask a collector What CM "Properties" it has for a specific time
 		webapp.addServlet(ProxyCmDataServlet.class,                   "/api/cc/mgt/cm/data");               // Get CM data for a specific CM at a time

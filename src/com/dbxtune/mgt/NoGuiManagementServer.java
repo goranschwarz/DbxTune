@@ -58,6 +58,7 @@ import com.dbxtune.mgt.controllers.OracleJobSchedulerReport;
 import com.dbxtune.mgt.controllers.OracleJobSchedulerTimeline;
 import com.dbxtune.mgt.controllers.SqlServerJobSchedulerReport;
 import com.dbxtune.mgt.controllers.SqlServerJobSchedulerTimeline;
+import com.dbxtune.mgt.controllers.AlarmWriterTryServlet;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 
@@ -269,6 +270,7 @@ public class NoGuiManagementServer
 				context.addServlet(new ServletHolder(new DeadlockServlet())          , "/mgt/deadlock");
 				context.addServlet(new ServletHolder(new JobSchedulerServlet())      , "/mgt/job-scheduler");
 				context.addServlet(new ServletHolder(new LogLevelServlet())          , "/mgt/log-level");
+				context.addServlet(new ServletHolder(new AlarmWriterTryServlet())    , "/mgt/writer/try");
 
 				// I guess the URL would be '/api/mgt/reports/...' Can we change this to '/reports' with another context (or should we do it in another way???)
 				// AND: I guess the below implementations will just "stream" over HTML as the "end-result", or how should we do it ???

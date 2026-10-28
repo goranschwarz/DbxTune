@@ -41,6 +41,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
+import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.ui.config.AlarmWritersTableModel;
 import com.dbxtune.central.controllers.Helper;
 import com.dbxtune.central.pcs.DbxTuneSample;
 import com.dbxtune.central.pcs.DbxTuneSample.MissingFieldException;
@@ -227,31 +229,33 @@ System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.PUT.HEADER: Authorization
 //			return;
 //		}
 
-		String sendType = null;
-		String saveType = null;
+		String sendType   = null;
+		String saveType   = null;
+		String writerName = null; // for type "writer"
 		Map<String, String> changeMap = Collections.emptyMap();
 		
 		try
 		{
 			String requestBody = IOUtils.toString(req.getReader());
-System.out.println("---- requestBody: " + requestBody);
+//System.out.println("---- requestBody: " + requestBody);
 			if (StringUtil.isNullOrBlank(requestBody))
 				throw new IOException("RequestBody is empty, expecting a JSON String to be passed.");
 
 			ObjectMapper reqMapper = new ObjectMapper();
 			JsonNode rootNode = reqMapper.readTree(requestBody);
 
-			sendType  = DbxTuneSample.getString(rootNode, "type");
-			saveType  = DbxTuneSample.getString(rootNode, "saveType");
-			cmName    = DbxTuneSample.getString(rootNode, "cmName");
+			sendType   = DbxTuneSample.getString(rootNode, "type");
+			saveType   = DbxTuneSample.getString(rootNode, "saveType");
+			writerName = DbxTuneSample.getString(rootNode, "writerName", null); // optional, so read before the mandatory fields below
+			cmName     = DbxTuneSample.getString(rootNode, "cmName");
 			optName   = DbxTuneSample.getString(rootNode, "optName");
 			changeMap = DbxTuneSample.getStringMap(rootNode, "change");
 
-System.out.println("---- json.sendType  = '" + sendType  + "'.");
-System.out.println("---- json.saveType  = '" + saveType  + "'.");
-System.out.println("---- json.cmName    = '" + cmName    + "'.");
-System.out.println("---- json.optName   = '" + optName + "'.");
-System.out.println("---- json.changeMap = '" + changeMap + "'.");
+//System.out.println("---- json.sendType  = '" + sendType  + "'.");
+//System.out.println("---- json.saveType  = '" + saveType  + "'.");
+//System.out.println("---- json.cmName    = '" + cmName    + "'.");
+//System.out.println("---- json.optName   = '" + optName + "'.");
+//System.out.println("---- json.changeMap = '" + changeMap + "'.");
 		}
 		catch (MissingFieldException e)
 		{
@@ -292,6 +296,90 @@ System.out.println("---- json.changeMap = '" + changeMap + "'.");
 
 			if (StringUtil.hasValue(sharedGfgFile))
 				infoMessage += "<br>Instead change the property in the file: " + sharedGfgFile;
+		}
+		else if ("writer".equals(sendType))
+		{
+			// "writer": change = { "value": "..." } for the property 'optName' of the AlarmWriter 'writerName' (one of its settings or filters)
+			// Found the same way as NoGuiConfigGetServlet lists them, and validated with the setting's own validator (eg the mail rules)
+			String newValue = changeMap.get("value");
+			if (newValue == null)
+				newValue = "";
+
+			AlarmWritersTableModel.AlarmWriterEntry writer = null;
+			AlarmWritersTableModel writersModel = new AlarmWritersTableModel();
+			writersModel.refreshTable();
+			for (int r = 0; r < writersModel.getRowCount(); r++)
+			{
+				AlarmWritersTableModel.AlarmWriterEntry awe = writersModel.getWriterEntryForRow(r);
+				if (awe.getClassName().equals(writerName) || awe.getName().equals(writerName))
+					writer = awe;
+			}
+
+			CmSettingsHelper cfgEntry = null;
+			if (writer != null)
+			{
+				List<CmSettingsHelper> all = new ArrayList<>();
+				if (writer.getSettings() != null) all.addAll(writer.getSettings());
+				if (writer.getFilters()  != null) all.addAll(writer.getFilters());
+				for (CmSettingsHelper sh : all)
+					if (sh.getPropName() != null && sh.getPropName().equals(optName))
+						cfgEntry = sh;
+			}
+
+			Configuration noguiConf = Configuration.getInstance(Configuration.NOGUI_SAVE);
+			if (writer == null || cfgEntry == null)
+			{
+				statusMessage = "FAILED";
+				infoMessage   = "Not found";
+				errorMessage  = writer == null ? "AlarmWriter '" + writerName + "' not found." : "Property '" + optName + "' not found in AlarmWriter '" + writerName + "'.";
+			}
+			else if (cfgEntry.getName() != null && cfgEntry.getName().toLowerCase().contains("password"))
+			{
+				statusMessage = "FAILED";
+				infoMessage   = "Not allowed";
+				errorMessage  = "Passwords can not be changed from here, change '" + optName + "' in the collector's configuration file.";
+			}
+			else if (cfgEntry.isMandatory() && StringUtil.isNullOrBlank(newValue))
+			{
+				statusMessage = "FAILED";
+				infoMessage   = "Validation failed";
+				errorMessage  = "'" + cfgEntry.getName() + "' is mandatory, it can not be empty.";
+			}
+			else if (noguiConf == null)
+			{
+				statusMessage = "FAILED";
+				infoMessage   = "No NOGUI_SAVE config instance available.";
+			}
+			else
+			{
+				try
+				{
+					if (StringUtil.hasValue(newValue))
+						cfgEntry.isValidInput(newValue);
+
+					saveConfigProperty(noguiConf, optName, newValue, cfgEntry.getDefaultValue(), saveToFile);
+					infoMessage = "AlarmWriter '" + writer.getName() + "': '" + cfgEntry.getName() + "' set to '" + newValue + "'.";
+
+					// Most writers read their settings in init(): re-create the writer (done by the collector thread before its next use)
+					String className = writer.getClassName();
+					if (AlarmHandler.hasInstance() && AlarmHandler.getInstance().getAlarmWritersClassNames().contains(className))
+					{
+						AlarmHandler.getInstance().requestWriterReInit(className);
+						infoMessage += " Used from the next alarm check.";
+					}
+					else
+					{
+						infoMessage += " (The writer is not active in this collector.)";
+					}
+				}
+				catch (ValidationException ex)
+				{
+					statusMessage = "FAILED";
+					infoMessage   = "Validation failed";
+					errorMessage  = ex.getMessage();
+					_logger.warn("Validation failed for AlarmWriter '{}' property '{}': {}", writerName, optName, ex.getMessage());
+				}
+			}
 		}
 		else if (cm == null)
 		{

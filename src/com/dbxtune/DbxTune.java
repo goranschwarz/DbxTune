@@ -1582,10 +1582,11 @@ if (_gui && startEvenIfGui_justToTestTheService)
 
 			try
 			{
+				// The COMBINED config also in NoGui mode, so the writers see values saved for THIS server (NOGUI_SAVE: '<srv>.save.conf',
+				// eg from DbxCentral's config page) on top of the shared GENERIC file (PCS). Before 2026-10-28 NoGui used PCS only.
+				// Note: in NoGui, USER_TEMP and USER_CONF are empty in-memory configs, and SYSTEM_CONF has no AlarmHandler/AlarmWriter keys.
 				Configuration conf = Configuration.getCombinedConfiguration();
-				if ( ! _gui )
-					conf = Configuration.getInstance(Configuration.PCS);
-				
+
 				String alarmWriters = conf.getProperty(AlarmHandler.PROPKEY_WriterClass);
 				if (StringUtil.hasValue(alarmWriters) || _gui)
 				{

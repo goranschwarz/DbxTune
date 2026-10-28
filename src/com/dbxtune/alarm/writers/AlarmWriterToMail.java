@@ -33,11 +33,12 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CmSettingsHelper.TemplateInputValidator;
+import com.dbxtune.cm.CmSettingsHelper.MailRoutingInputValidator;
 import com.dbxtune.cm.CmSettingsHelper.Type;
 import com.dbxtune.cm.CmSettingsHelper.UrlInputValidator;
 import com.dbxtune.pcs.report.senders.MailHelper;
 import com.dbxtune.utils.Configuration;
-import com.dbxtune.utils.JsonUtils;
 import com.dbxtune.utils.StringUtil;
 
 public class AlarmWriterToMail
@@ -108,10 +109,12 @@ extends AlarmWriterAbstract
 		// Get server name from the Alarm
 		String serverName = alarmEvent.getServiceName();
 
-		// Getting mail addresses to send the report to
-		List<String> toList = MailHelper.getMailToAddressForServerNameAsList(serverName, alarmEvent, PROPKEY_to, _to);
+		// Who gets the mail (the rules in PROPKEY_to are read on every send, so changes apply at the next alarm)
+		MailHelper.Recipients recipients = MailHelper.getRecipients(serverName, alarmEvent, action, PROPKEY_to, _to);
+		List<String> toList = recipients.getTo();
+		List<String> ccList = recipients.getCc();
 
-		if (toList.isEmpty())
+		if (recipients.isEmpty())
 		{
 			String toPropVal = ", property: " + PROPKEY_to + "=" + Configuration.getCombinedConfiguration().getProperty(PROPKEY_to, _to);
 
@@ -164,8 +167,8 @@ extends AlarmWriterAbstract
 				email.addTo(to);
 
 			// add CC
-//			for (String cc : _ccList)
-//				email.addCc(cc);
+			for (String cc : ccList)
+				email.addCc(cc);
 
 			// FROM
 //			email.setFrom(_from);
@@ -185,11 +188,11 @@ extends AlarmWriterAbstract
 			// SEND
 			email.send();
 
-			_logger.info("Sent mail message: msgBodySizeKb=" + msgBodySizeKb + ", host='" + _smtpHostname + "', to='" + toList + "', subject='" + msgSubject + "', for server name '" + serverName + "'.");
+			_logger.info("Sent mail message: msgBodySizeKb=" + msgBodySizeKb + ", host='" + _smtpHostname + "', to='" + toList + "'" + (ccList.isEmpty() ? "" : ", cc='" + ccList + "'") + ", subject='" + msgSubject + "', for server name '" + serverName + "'" + (recipients.getMatchedRules().isEmpty() ? "" : ", rules=" + recipients.getMatchedRules()) + ".");
 		}
 		catch (Exception ex)
 		{
-			_logger.error("Problems sending mail (msgBodySizeKb=" + msgBodySizeKb + ", host='" + _smtpHostname + "', to='" + toList + "', subject='" + msgSubject + "', for server name '" + serverName + "').", ex);
+			_logger.error("Problems sending mail (msgBodySizeKb=" + msgBodySizeKb + ", host='" + _smtpHostname + "', to='" + toList + "'" + (ccList.isEmpty() ? "" : ", cc='" + ccList + "'") + ", subject='" + msgSubject + "', for server name '" + serverName + "').", ex);
 		}
 	}
 
@@ -339,10 +342,10 @@ extends AlarmWriterAbstract
 		list.add( new CmSettingsHelper("hostname",         Type.MANDATORY, PROPKEY_smtpHostname,           String .class, conf.getProperty       (PROPKEY_smtpHostname          , DEFAULT_smtpHostname          ), DEFAULT_smtpHostname          , "Name of the host that holds the smtp server"));
 //		list.add( new CmSettingsHelper("to",               Type.MANDATORY, PROPKEY_to,                     String .class, conf.getProperty       (PROPKEY_to                    , DEFAULT_to                    ), DEFAULT_to                    , "To what mail adresses should we send the mail (if several ones, just comma separate them)"));
 //		list.add( new CmSettingsHelper("to",               Type.MANDATORY, PROPKEY_to,                     String .class, conf.getProperty       (PROPKEY_to                    , DEFAULT_to                    ), DEFAULT_to                    , "To what mail adresses should we send the mail (if several ones, just comma separate them). Note: this can be configured to filter on <i>serverName</i>, in the property <code>" + PROPKEY_to + "=[ {#serverName#:#xxx#, #to#:#user1@acme.com, user2@acme.com#}, {#serverName#:#yyy#, #to#:#user1@acme.com#}, {#serverName#:#zzz#, #to#:#user3@acme.com#} ]</code>".replace('#', '"') ));
-		list.add( new CmSettingsHelper("to",               Type.MANDATORY, PROPKEY_to,                     String .class, conf.getProperty       (PROPKEY_to                    , DEFAULT_to                    ), DEFAULT_to                    , "To what mail adresses should we send the mail (if several ones, just comma separate them). Note: this can be configured to filter on <i>serverName</i>, in the property <code>" + PROPKEY_to + "=[ {#serverName#:#xxx#, #to#:#user1@acme.com, user2@acme.com#}, {#serverName#:#yyy#, #to#:#user1@acme.com#, #alarmName#:#(Dummy1|Dummy2|Dummy)#}, {#serverName#:#zzz#, #to#:#user3@acme.com#}, {#fallback#:#true#, #to#:#user4@acme.com#} ]</code>".replace('#', '"') ));
+		list.add( new CmSettingsHelper("to",               Type.MANDATORY, PROPKEY_to,                     String .class, conf.getProperty       (PROPKEY_to                    , DEFAULT_to                    ), DEFAULT_to                    , MAIL_ROUTING_HELP, new MailRoutingInputValidator() ));
 		list.add( new CmSettingsHelper("from",             Type.MANDATORY, PROPKEY_from,                   String .class, conf.getProperty       (PROPKEY_from                  , DEFAULT_from                  ), DEFAULT_from                  , "What should be the senders email address"));
-		list.add( new CmSettingsHelper("Subject-Template",                 PROPKEY_subjectTemplate,        String .class, conf.getProperty       (PROPKEY_subjectTemplate       , DEFAULT_subjectTemplate       ), DEFAULT_subjectTemplate       , "What should be the subject (Note: this is a template)"));
-		list.add( new CmSettingsHelper("Msg-Template",                     PROPKEY_msgBodyTemplate,        String .class, conf.getProperty       (PROPKEY_msgBodyTemplate       , DEFAULT_msgBodyTemplate       ), DEFAULT_msgBodyTemplate       , "What content should we send (Note: this is a template, if the content starts with <html> then it will try to send the mail as a HTML mail.)"));
+		list.add( new CmSettingsHelper("Subject-Template",                 PROPKEY_subjectTemplate,        String .class, conf.getProperty       (PROPKEY_subjectTemplate       , DEFAULT_subjectTemplate       ), DEFAULT_subjectTemplate       , "What should be the subject (Note: this is a template)", new TemplateInputValidator(this)));
+		list.add( new CmSettingsHelper("Msg-Template",                     PROPKEY_msgBodyTemplate,        String .class, conf.getProperty       (PROPKEY_msgBodyTemplate       , DEFAULT_msgBodyTemplate       ), DEFAULT_msgBodyTemplate       , "What content should we send (Note: this is a template, if the content starts with <html> then it will try to send the mail as a HTML mail.)", new TemplateInputValidator(this)));
 		list.add( new CmSettingsHelper("Msg-Template-Use-HTML",            PROPKEY_msgBodyTemplateUseHtml, Boolean.class, conf.getBooleanProperty(PROPKEY_msgBodyTemplateUseHtml, DEFAULT_msgBodyTemplateUseHtml), DEFAULT_msgBodyTemplateUseHtml, "If '" + PROPKEY_msgBodyTemplate + "' is not specified, then use a HTML Template as the default."));
 
 		list.add( new CmSettingsHelper("username",                         PROPKEY_username,               String .class, conf.getProperty       (PROPKEY_username              , DEFAULT_username              ), DEFAULT_username              , "If the SMTP server reuires you to login (default: is not to logon)"));
@@ -395,8 +398,10 @@ extends AlarmWriterAbstract
 
 		_smtpHostname           = conf.getProperty       (PROPKEY_smtpHostname,           DEFAULT_smtpHostname);
 		_to                     = conf.getProperty       (PROPKEY_to,                     DEFAULT_to);
-		if (JsonUtils.isPossibleJson(_to))
-			_logger.info("    NOTE: the Above 'to' string look like JSON Content and will be evaluated at runtime, when the ServerName is known.");
+
+		// Faulty rules are not fatal (the others still work), but they should be seen
+		for (String err : MailHelper.parse(_to).getErrors())
+			_logger.error("AlarmWriter '" + getName() + "', property '" + PROPKEY_to + "': " + err);
 //		_cc                     = conf.getProperty       (PROPKEY_cc,                     DEFAULT_cc);
 		_from                   = conf.getProperty       (PROPKEY_from,                   DEFAULT_from);
 		_subjectTemplate        = conf.getProperty       (PROPKEY_subjectTemplate,        DEFAULT_subjectTemplate);
@@ -443,6 +448,11 @@ extends AlarmWriterAbstract
 		_logger.info("Configuration for Alarm Writer Module: " + getName());
 		_logger.info("    " + StringUtil.left(PROPKEY_smtpHostname          , spaces) + ": " + _smtpHostname);
 		_logger.info("    " + StringUtil.left(PROPKEY_to                    , spaces) + ": " + _to);
+		MailHelper.Rules rules = MailHelper.parse(_to);
+		if (rules.getJsonError() != null)
+			_logger.info("    " + StringUtil.left("", spaces) + "  <<-- " + rules.getJsonError());
+		for (MailHelper.Rule rule : rules.getRules())
+			_logger.info("    " + StringUtil.left("", spaces) + "  rule " + rule.describe());
 		_logger.info("    " + StringUtil.left(PROPKEY_from                  , spaces) + ": " + _from);
 		_logger.info("    " + StringUtil.left(PROPKEY_subjectTemplate       , spaces) + ": " + _subjectTemplate);
 		_logger.info("    " + StringUtil.left(PROPKEY_msgBodyTemplate       , spaces) + ": " + _msgBodyTemplate);
@@ -466,6 +476,41 @@ extends AlarmWriterAbstract
                                                                
 	public static final String  PROPKEY_to                     = "AlarmWriterToMail.to";
 	public static final String  DEFAULT_to                     = "";
+
+	/** Help text for a 'to' property that takes MailHelper rules (also used by ReportSenderToMail) */
+	public static final String  MAIL_ROUTING_HELP              = ("<html><b>Who gets the mail.</b> Either a comma separated list of mail addresses (everybody gets every alarm), or a JSON array of <i>rules</i>, for example:"
+			+ "<pre>"
+			+ "[\n"
+			+ "  {#name#:#DBA#,      #serverName#:#PROD_.*#,  #to#:#dba@acme.com#},\n"
+			+ "  {#name#:#ERP team#, #serverName#:#PROD_ERP#, #alarmName#:#(FullTranLog|SrvDown)#,\n"
+			+ "   #severity#:#ERROR#, #to#:#erp@acme.com#, #cc#:#erp-lead@acme.com#},\n"
+			+ "  {#fallback#:true,   #to#:#dba@acme.com#}\n"
+			+ "]"
+			+ "</pre>"
+			+ "<b>A rule matches</b> when ALL its conditions match (regexp, full match, same as the filters). The conditions:"
+			+ "<ul>"
+			+ "<li><code>serverName</code>, <code>alarmName</code>, <code>category</code>, <code>severity</code>, <code>state</code></li>"
+			+ "<li><code>serverGroup</code>: the DbxCentral group of the server</li>"
+			+ "<li><code>action</code>: RAISE or CANCEL</li>"
+			+ "<li><code>time</code>: a cron, checked on the time the alarm was raised (a leading <code>!</code> means NOT within)</li>"
+			+ "</ul>"
+			+ "Other keys: <code>to</code>, <code>cc</code>, <code>name</code>, <code>enabled</code> (true/false), <code>comment</code>.<br><br>"
+			+ "<b>Several rules match:</b> the recipients of ALL of them are combined. A <code>fallback</code> rule is only used when no other rule matched.<br><br>"
+			+ "<b>Skip alarms for some people</b> (the filters <code>AlarmWriterToMail.filter.*</code> are checked BEFORE the rules, and skip an alarm for everybody). "
+			+ "Example: the Analytics team gets all alarms of its servers, even INFO; everyone else gets all servers, but no INFO:"
+			+ "<pre>"
+			+ "[\n"
+			+ "  {#name#:#Analytics#, #serverName#:#ANALYTICS_.*#, #to#:#analytics@acme.com#},\n"
+			+ "  {#name#:#Everyone#,  #serverName#:#.*#, #severity#:#(?!INFO).*#, #to#:#everyone@acme.com#}\n"
+			+ "]"
+			+ "</pre>"
+			+ "Notes: a <code>fallback</code> rule gets the alarms that no rule matched (here the INFO alarms of other servers), so give it the same "
+			+ "<code>severity</code> or leave it out. <code>(?!INFO).*</code> means everything but INFO; <code>WARNING|ERROR</code> would also skip <code>UNKNOWN</code>. "
+			+ "For a DbxCentral group use <code>serverGroup</code> instead of <code>serverName</code>.<br><br>"
+			+ "<b>A faulty rule</b> (unknown key, bad regexp or cron) is ignored, and logged as an ERROR. The other rules still work.<br>"
+			+ "<b>Daily Summary Report:</b> rules with an alarm condition (alarmName, category, severity, state, action, time) are skipped.<br>"
+			+ "<b>Tip:</b> in a configuration file a long value can be split over several lines, end each line (except the last) with a backslash."
+			+ "</html>").replace('#', '"');
 	                                                           
 	public static final String  PROPKEY_from                   = "AlarmWriterToMail.from";
 	public static final String  DEFAULT_from                   = "";

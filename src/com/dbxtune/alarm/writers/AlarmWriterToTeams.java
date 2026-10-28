@@ -47,6 +47,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventDummy;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CmSettingsHelper.TemplateInputValidator;
 import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CmSettingsHelper.Type;
 import com.dbxtune.cm.CmSettingsHelper.UrlInputValidator;
@@ -703,8 +704,8 @@ extends AlarmWriterAbstract
 		Configuration conf = Configuration.getCombinedConfiguration();
 
 		list.add( new CmSettingsHelper("URL",             Type.MANDATORY, PROPKEY_url,             String .class, conf.getProperty       (PROPKEY_url,             DEFAULT_url),             DEFAULT_url,             "<html>URL to use when issuing the HTTP POST request. This is the URL you get when creating a Power Automate Workflow using the trigger 'When a Teams webhook request is received'.<br>Setting this up in Teams: In Teams, go to a Channel -> Workflows -> 'Post to a channel when a webhook request is received'<br>This is used as the <b>default/fallback</b> Channel URL if none of the 'route-N' rules below matches the ServerName.</html>", new UrlInputValidator()));
-		list.add( new CmSettingsHelper("title-template",  Type.MANDATORY, PROPKEY_titleTemplate,   String .class, conf.getProperty       (PROPKEY_titleTemplate,   DEFAULT_titleTemplate),   DEFAULT_titleTemplate,   "Title Template used at the top of the Card. Note: all ${somValue} will be replaced with runtime values."));
-		list.add( new CmSettingsHelper("desc-template",   Type.MANDATORY, PROPKEY_descTemplate,    String .class, conf.getProperty       (PROPKEY_descTemplate,    DEFAULT_descTemplate),    DEFAULT_descTemplate,    "Description Template used in the body of the Card. Note: all ${somValue} will be replaced with runtime values."));
+		list.add( new CmSettingsHelper("title-template",  Type.MANDATORY, PROPKEY_titleTemplate,   String .class, conf.getProperty       (PROPKEY_titleTemplate,   DEFAULT_titleTemplate),   DEFAULT_titleTemplate,   "Title Template used at the top of the Card. Note: all ${somValue} will be replaced with runtime values.", new TemplateInputValidator(this)));
+		list.add( new CmSettingsHelper("desc-template",   Type.MANDATORY, PROPKEY_descTemplate,    String .class, conf.getProperty       (PROPKEY_descTemplate,    DEFAULT_descTemplate),    DEFAULT_descTemplate,    "Description Template used in the body of the Card. Note: all ${somValue} will be replaced with runtime values.", new TemplateInputValidator(this)));
 		list.add( new CmSettingsHelper("card-template",                   PROPKEY_cardTemplate,     String .class, conf.getProperty       (PROPKEY_cardTemplate,     DEFAULT_cardTemplate),     DEFAULT_cardTemplate,     "<html>"
 				+ "Velocity template producing the complete Teams message: a <code>{\"type\":\"message\", \"attachments\":[...]}</code> envelope holding an Adaptive Card. "
 				+ "Change it to change the layout of the card. Tip: design the card at <code>https://adaptivecards.io/designer</code> (host app: Microsoft Teams) and paste it in.<br>"
@@ -725,7 +726,7 @@ extends AlarmWriterAbstract
 				+ "<br>"
 				+ "<b>Safety:</b> if the template fails or produces invalid JSON, the built-in default card is sent instead and an ERROR is written to the log - an alarm is never lost because of the template.<br>"
 				+ "NOTE: this is rendered by Velocity inside DbxTune, so the designer's own templating expressions (<code>${$root.xxx}</code>) are not supported - use the variables above."
-				+ "</html>"));
+				+ "</html>", new TemplateInputValidator(this)));
 		list.add( new CmSettingsHelper("isReRaiseEnabled",                PROPKEY_isReRaiseEnabled, Boolean.class, conf.getBooleanProperty(PROPKEY_isReRaiseEnabled, DEFAULT_isReRaiseEnabled), DEFAULT_isReRaiseEnabled, "If the Alarm Hander should send an event every time it receives an event. or if it should just be called on RAISE and CANCEL"));
 
 		list.add( new CmSettingsHelper("DbxCentralUrl",                   PROPKEY_dbxCentralUrl,    String .class, conf.getProperty       (PROPKEY_dbxCentralUrl   , DEFAULT_dbxCentralUrl   ), DEFAULT_dbxCentralUrl   , "Where is the DbxCentral located, if you want your template/messages to include it using ${dbxCentralUrl}", new UrlInputValidator()));

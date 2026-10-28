@@ -30,6 +30,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CmSettingsHelper.TemplateInputValidator;
 import com.dbxtune.cm.CmSettingsHelper.Type;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
@@ -185,7 +186,7 @@ extends AlarmWriterAbstract
 
 		list.add( new CmSettingsHelper("hostname",         Type.MANDATORY, PROPKEY_hostname,          String .class, conf.getProperty   (PROPKEY_hostname       , DEFAULT_hostname       ), DEFAULT_hostname        , "Name of the nagios host"));
 		list.add( new CmSettingsHelper("port",             Type.MANDATORY, PROPKEY_port,              Integer.class, conf.getIntProperty(PROPKEY_port           , DEFAULT_port           ), DEFAULT_port            , "port number"));
-		list.add( new CmSettingsHelper("Msg-Template",     Type.MANDATORY, PROPKEY_msgTemplate,       String .class, conf.getProperty   (PROPKEY_msgTemplate    , DEFAULT_msgTemplate    ), DEFAULT_msgTemplate     , "What content should we send (Note: this is a template)"));
+		list.add( new CmSettingsHelper("Msg-Template",     Type.MANDATORY, PROPKEY_msgTemplate,       String .class, conf.getProperty   (PROPKEY_msgTemplate    , DEFAULT_msgTemplate    ), DEFAULT_msgTemplate     , "What content should we send (Note: this is a template)", new TemplateInputValidator(this)));
                                                                                                                                                                                                                    
 //		list.add( new CmSettingsHelper("username",                         PROPKEY_username,          String .class, conf.getProperty   (PROPKEY_username       , DEFAULT_username       ), DEFAULT_username        , "Username if authentication is required"));
 		list.add( new CmSettingsHelper("password",                         PROPKEY_password,          String .class, conf.getProperty   (PROPKEY_password       , DEFAULT_password       ), DEFAULT_password        , "Username if authentication is required"));

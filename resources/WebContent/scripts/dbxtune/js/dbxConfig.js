@@ -41,6 +41,9 @@ var DbxConfig2 = (function()
 		ovFilter   : { q: '', eff: false, mod: false, pend: false },
 		selWriter  : null,
 		wsub       : 'settings',   // settings | filters
+		mr         : {},           // mail rules editor state, per field key: { view, edit, testOpen, test, testing, testRes }
+		mrInfo     : null,         // from the collector: alarm names, enum values, server group (op 'mailRoutingInfo')
+		tpl        : {},           // template editor state, per field key: { preview, vars, action, last, card }
 
 		reg        : {},   // key -> meta of every editable field drawn (type, cmName, alarm, name, orig, def, kind, label)
 		pend       : {},   // key -> meta + { value }
@@ -64,6 +67,15 @@ var DbxConfig2 = (function()
 	function toStr(v) { return (v === undefined || v === null) ? '' : Array.isArray(v) ? v.join(', ') : String(v); }
 	function baseName(p) { return String(p || '').split(/[\\/]/).pop(); }
 
+	/** A long or multi-line value (eg a template) in one short line: its first line + "... (N lines)" */
+	function shortVal(v)
+	{
+		v = String(v);
+		if (v.length <= 120 && v.indexOf('\n') === -1) return v;
+		var lines = v.split('\n'), first = lines[0].length > 80 ? lines[0].substring(0, 80) + '...' : lines[0];
+		return lines.length > 1 ? first + ' ... (' + lines.length + ' lines)' : first;
+	}
+
 	/** Config file with the given role ('server' | 'shared'), or null (older collectors do not send 'configFiles') */
 	function configFile(role)
 	{
@@ -79,6 +91,24 @@ var DbxConfig2 = (function()
 		if (s in _textCache) return _textCache[s];
 		var doc = new DOMParser().parseFromString(String(s).replace(/<br\s*\/?>/gi, ' '), 'text/html');
 		return (_textCache[s] = (doc.body.textContent || '').replace(/\s+/g, ' ').trim());
+	}
+
+	// A collector's longer help (the foldable "How ... work" sections): keep its structure, but only harmless tags,
+	// without any attributes (no links, styles or event handlers), and drop script/style content
+	var SAFE_TAGS = { B: 1, I: 1, CODE: 1, PRE: 1, BR: 1, UL: 1, OL: 1, LI: 1, P: 1, H2: 1, H3: 1, H4: 1 };
+	function safeHtml(s)
+	{
+		if (!s) return '';
+		var walk = function(n) {
+			return [].map.call(n.childNodes, function(c) {
+				if (c.nodeType === 3) return esc(c.nodeValue);
+				if (c.nodeType !== 1 || c.tagName === 'SCRIPT' || c.tagName === 'STYLE') return '';
+				var t = c.tagName.toLowerCase();
+				if (!SAFE_TAGS[c.tagName]) return walk(c);
+				return t === 'br' ? '<br>' : '<' + t + '>' + walk(c) + '</' + t + '>';
+			}).join('');
+		};
+		return walk(new DOMParser().parseFromString(String(s), 'text/html').body);
 	}
 
 	function cmList()      { return (S.cfg && S.cfg.cmList) || []; }
@@ -101,6 +131,8 @@ var DbxConfig2 = (function()
 		var vn = p.validatorName || '';
 		if (vn.indexOf('UrlInputValidator')  !== -1) kind = 'url';
 		if (vn.indexOf('JsonInputValidator') !== -1) kind = 'json';
+		if (vn.indexOf('MailRoutingInputValidator') !== -1) kind = 'mailRouting'; // mail recipients: CSV or JSON rules (MailHelper), validated by the collector
+		if (vn.indexOf('TemplateInputValidator')    !== -1) kind = 'template';    // a writer's message template, rendered by the collector
 		var val = (p.value === null || p.value === undefined) ? '' : String(p.value);
 		var def = (p.defaultValue === null || p.defaultValue === undefined) ? '' : String(p.defaultValue);
 		if (kind === 'bool') { val = String(val.toLowerCase() === 'true'); def = String(def.toLowerCase() === 'true'); }
@@ -111,8 +143,11 @@ var DbxConfig2 = (function()
 		};
 	}
 
+	/** f = { kind, value, meta } (meta: the S.reg / S.pend entry, needed by 'template') */
 	function validateField(f)
 	{
+		if (f.kind === 'mailRouting') return mrValidateField(f.value);
+		if (f.kind === 'template')    return tplValidateField(f.meta, f.value);
 		if (f.kind === 'url')
 		{
 			if (f.value === '') return {};
@@ -129,6 +164,12 @@ var DbxConfig2 = (function()
 	/** The server side field for a pending entry (after a reload the 'orig' may have changed) */
 	function lookupField(meta)
 	{
+		if (meta.type === 'writer')
+		{
+			var w = writerList().find(function(x) { return x.className === meta.writer; });
+			var wp = w ? ((meta.wsub === 'filters' ? w.filters : w.settings) || []).find(function(x) { return x.name === meta.name; }) : null;
+			return wp ? propField(wp) : null;
+		}
 		var cm = findCm(meta.cmName);
 		if (!cm) return null;
 		if (meta.type === 'alarm')
@@ -287,7 +328,7 @@ var DbxConfig2 = (function()
 	{
 		return Object.keys(S.pend).filter(function(k) {
 			var p = S.pend[k];
-			return validateField({ kind: p.kind, value: p.value }).error;
+			return validateField({ kind: p.kind, value: p.value, meta: p }).error;
 		}).length;
 	}
 
@@ -304,24 +345,609 @@ var DbxConfig2 = (function()
 	}
 
 	//------------------------------------------------------------------
+	// Mail rules editor, field kind 'mailRouting' (the setting has a MailRoutingInputValidator, eg AlarmWriterToMail.to)
+	// The value is a comma separated list of addresses, or a JSON array of rules (see the Java class MailHelper).
+	// Validation and the "who would get this alarm" tester run on the COLLECTOR (POST /api/cc/mgt/writer/try -> /api/mgt/writer/try),
+	// so there is only one rule engine: the collector's own.
+	//------------------------------------------------------------------
+	var MR_CONDS  = ['serverName', 'serverGroup', 'alarmName', 'category', 'severity', 'state', 'action', 'time'];
+	var MR_FIELDS = [ // the edit form, in order: [key, label, placeholder, suggestions (field in S.mrInfo)]
+		['name',        'Name',         'eg: DBA team',                                         null],
+		['serverName',  'Server name',  'regexp (full match), eg: PROD_.*',                     null],
+		['serverGroup', 'Server group', 'regexp, the DbxCentral group of the server',           null],
+		['alarmName',   'Alarm name',   'regexp, eg: (FullTranLog|SrvDown)',                    'alarmNames'],
+		['category',    'Category',     'regexp, eg: DOWN|SPACE',                               'categories'],
+		['severity',    'Severity',     'regexp, eg: ERROR  or  WARNING|ERROR  or  (?!INFO).* (all but INFO)', 'severities'],
+		['state',       'State',        'regexp, eg: DOWN|AFFECTED',                            'states'],
+		['action',      'Action',       'RAISE or CANCEL',                                      'actions'],
+		['time',        'Time',         'cron on the time the alarm was raised, eg: * 0-7,18-23 * * *  (a leading ! = NOT within)', null],
+		['to',          'To',           'a@acme.com, b@acme.com',                               null],
+		['cc',          'Cc',           '',                                                     null],
+		['comment',     'Comment',      '',                                                     null]
+	];
+	var _mrIds = {}, _mrSeq = 0;                          // field key -> id prefix (stable over re-renders, for the focus restore)
+	var _mrVal = {}, _mrValBusy = {}, _mrValTimer = null; // value -> the collector's validation of it
+
+	function mrId(key)    { if (!(key in _mrIds)) _mrIds[key] = 'c2mr' + (++_mrSeq); return _mrIds[key]; }
+	function mrState(key) { return S.mr[key] || (S.mr[key] = { view: 'rules', edit: null, testOpen: false, test: null, testing: false, testRes: null }); }
+	function mrIsJson(v)  { var t = String(v || '').trim(); return t.charAt(0) === '[' || t.charAt(0) === '{'; }
+
+	/** null for a plain address list, { rules: [...] } for JSON rules, or { error } for JSON that can't be used */
+	function mrParse(v)
+	{
+		if (!mrIsJson(v)) return null;
+		try
+		{
+			var a = JSON.parse(v);
+			return Array.isArray(a) ? { rules: a } : { error: 'The JSON must be an array of rules: [ {...}, {...} ]' };
+		}
+		catch (e) { return { error: 'Invalid JSON: ' + e.message }; }
+	}
+
+	function mrPost(body)
+	{
+		return fetch('/api/cc/mgt/writer/try?srvName=' + encodeURIComponent(S.srvName), {
+			method  : 'POST',
+			headers : { 'Content-Type': 'application/json' },
+			body    : JSON.stringify(body)
+		})
+		.then(function(r) { return r.text().then(function(txt) { var j = {}; try { j = JSON.parse(txt); } catch (e) {} return { status: r.status, json: j }; }); })
+		.catch(function(err) { return { status: 0, json: { message: String(err) } }; });
+	}
+	function mrFailText(res) { return res.json.message || res.json.error || ('HTTP ' + res.status); }
+
+	/** Ask the collector to validate this value (debounced, once per distinct value), then re-render */
+	function mrValidateLater(value, propKey)
+	{
+		if (value in _mrVal || _mrValBusy[value]) return;
+		clearTimeout(_mrValTimer);
+		_mrValTimer = setTimeout(function()
+		{
+			_mrValBusy[value] = true;
+			mrPost({ op: 'mailRouting', value: value, propKey: propKey }).then(function(res) // propKey: for a user that is not admin the collector checks the SAVED value
+			{
+				delete _mrValBusy[value];
+				_mrVal[value] = res.status === 200 ? res.json : { failed: mrFailText(res) };
+				render();
+			});
+		}, 400);
+	}
+
+	function mrLoadInfo()
+	{
+		if (S.mrInfo) return;
+		S.mrInfo = { loading: true };
+		mrPost({ op: 'mailRoutingInfo' }).then(function(res)
+		{
+			S.mrInfo = res.status === 200 ? res.json : { failed: mrFailText(res) };
+			render();
+		});
+	}
+
+	/** validateField() for 'mailRouting': the JSON syntax here, the rules by the collector (once it has answered for this value) */
+	function mrValidateField(value)
+	{
+		var p = mrParse(value);
+		if (p && p.error) return { error: p.error };
+		var v = _mrVal[value];
+		if (v && !v.failed && v.errors && v.errors.length)
+			return { error: v.errors.length + ' problem' + (v.errors.length === 1 ? '' : 's') + ' found by the collector, see the rules (the collector ignores rules with problems)' };
+		return {};
+	}
+
+	/** Change the rules: fn(rules) edits the array in place */
+	function mrChange(key, fn)
+	{
+		var p = mrParse(cur(key, S.reg[key].orig));
+		var rules = p && p.rules ? p.rules : [];
+		fn(rules);
+		setPend(key, JSON.stringify(rules));
+	}
+
+	/** 'YYYY-MM-DDTHH:MM' of now, for a datetime-local input */
+	function mrLocalNow()
+	{
+		var d = new Date();
+		return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().substring(0, 16);
+	}
+
+	function mrBtn(key, act, arg, html, title, cls)
+	{
+		return '<button type="button" class="' + (cls || 'c2-icon-btn') + '" data-mr-key="' + esc(key) + '" data-mr-act="' + act + '"'
+			+ (arg !== null && arg !== undefined ? ' data-mr-arg="' + esc(arg) + '"' : '') + (title ? ' title="' + esc(title) + '"' : '') + '>' + html + '</button>';
+	}
+
+	function mrEditor(key, f, val, ro)
+	{
+		mrLoadInfo();
+		var st = mrState(key), id = mrId(key), info = S.mrInfo || {};
+		var parsed = mrParse(val);
+		var v = _mrVal[val];
+		if (!v) mrValidateLater(val, S.reg[key].property);
+		var dis = ro ? ' disabled' : '';
+		var ka  = ' data-mr-key="' + esc(key) + '"';
+		var h = '<div class="c2-mr">';
+
+		// Suggestions for the edit form and the tester (free text is still allowed: they are regexps)
+		['alarmNames', 'categories', 'severities', 'states', 'actions'].forEach(function(n) {
+			var sugg = (info[n] || []).concat(n === 'severities' ? ['WARNING|ERROR', '(?!INFO).*'] : []); // + the usual "skip INFO" regexps
+			h += '<datalist id="' + id + '-dl-' + n + '">' + sugg.map(function(x) { return '<option value="' + esc(x) + '">'; }).join('') + '</datalist>';
+		});
+
+		var status = !v     ? '<i class="fa-solid fa-spinner fa-spin"></i> Checking with the collector...'
+		           : v.failed ? '<span class="c2-warn-i"><i class="fa-solid fa-triangle-exclamation"></i> Could not check with the collector: ' + esc(v.failed) + '</span>'
+		           : v.errors && v.errors.length ? '<span class="c2-err-i"><i class="fa-solid fa-circle-xmark"></i> ' + v.errors.length + ' problem' + (v.errors.length === 1 ? '' : 's') + ' (the collector ignores those rules)</span>'
+		           : '<span class="c2-ok-i"><i class="fa-solid fa-circle-check"></i> OK, checked by the collector</span>';
+		h += '<div class="c2-mr-bar">';
+		if (parsed && !parsed.error)
+			h += mrBtn(key, 'view', 'rules', 'Rules', null, 'c2-tab' + (st.view === 'rules' ? ' c2-on' : '')) + mrBtn(key, 'view', 'raw', 'Raw JSON', null, 'c2-tab' + (st.view === 'raw' ? ' c2-on' : ''));
+		h += '<span class="c2-mr-status">' + status + '</span></div>';
+
+		if (!parsed)
+		{
+			// A plain address list
+			h += '<input type="text" class="c2-in' + (key in S.pend ? ' c2-pend' : '') + '" data-k="' + esc(key) + '" value="' + esc(val) + '"' + dis + ' spellcheck="false" placeholder="a@acme.com, b@acme.com">';
+			h += '<div class="c2-help">A plain list of addresses: everybody gets every alarm.' + (ro ? '' : ' To send different alarms to different people, convert it to rules.') + '</div>';
+			if (!ro) h += '<div class="c2-mr-acts">' + mrBtn(key, 'convert', null, '<i class="fa-solid fa-list-check"></i> Convert to rules', null, 'c2-btn c2-btn-sm') + '</div>';
+		}
+		else if (parsed.error || st.view === 'raw')
+		{
+			h += '<textarea id="' + id + '-raw" class="c2-in c2-mr-raw' + (key in S.pend ? ' c2-pend' : '') + (parsed.error ? ' c2-bad' : '') + '" rows="8" spellcheck="false"' + ka + ' data-mr-raw="1"' + dis + '>' + esc(val) + '</textarea>';
+		}
+		else
+		{
+			var known = MR_CONDS.concat(['name', 'enabled', 'fallback', 'to', 'cc', 'comment']);
+			var vr = (v && v.rules) || [];
+			h += '<table class="c2-mr-tbl"><thead><tr><th>#</th><th title="Enabled">On</th><th>Name</th><th>When</th><th>Who gets it</th><th></th></tr></thead><tbody>';
+			parsed.rules.forEach(function(r, i)
+			{
+				var sv    = vr[i] || null; // the collector's verdict for this rule
+				var isObj = r !== null && typeof r === 'object' && !Array.isArray(r);
+				var rr    = isObj ? r : {};
+				var on    = String(rr.enabled).toLowerCase() !== 'false';
+				var conds = '';
+				if (String(rr.fallback).toLowerCase() === 'true') conds += '<span class="c2-mr-cond c2-mr-fb">fallback: when no other rule matched</span>';
+				MR_CONDS.forEach(function(k) { if (rr[k] !== undefined && rr[k] !== '') conds += '<span class="c2-mr-cond"><b>' + esc(k) + '</b> ' + esc(rr[k]) + '</span>'; });
+				Object.keys(rr).forEach(function(k) { if (known.indexOf(k) === -1 && k.charAt(0) !== '_') conds += '<span class="c2-mr-cond c2-mr-unk" title="Unknown key">' + esc(k) + '?</span>'; });
+				if (!isObj) conds += '<span class="c2-mr-cond c2-mr-unk">' + esc(JSON.stringify(r)) + '</span>';
+				var who = (rr.to ? '<div><span class="c2-mr-lbl">To</span> ' + esc(rr.to) + '</div>' : '') + (rr.cc ? '<div><span class="c2-mr-lbl">Cc</span> ' + esc(rr.cc) + '</div>' : '');
+
+				h += '<tr class="c2-mr-r' + (sv && !sv.valid ? ' c2-mr-rbad' : '') + (on ? '' : ' c2-mr-roff') + (st.edit === i ? ' c2-mr-rsel' : '') + '">'
+					+ '<td class="c2-mr-n">' + (i + 1) + '</td>'
+					+ '<td><input type="checkbox" id="' + id + '-' + i + '-enabled"' + ka + ' data-mr-idx="' + i + '" data-mr-field="enabled"' + (on ? ' checked' : '') + (ro || !isObj ? ' disabled' : '') + ' title="Enabled"></td>'
+					+ '<td>' + esc(rr.name || '') + '</td>'
+					+ '<td>' + conds + '</td>'
+					+ '<td class="c2-mr-who">' + who + '</td>'
+					+ '<td class="c2-mr-rowacts">'
+					+ (isObj ? mrBtn(key, 'edit', i, '<i class="fa-solid ' + (ro ? 'fa-eye' : 'fa-pen') + '"></i>', ro ? 'Show' : 'Edit') : '')
+					+ (ro ? '' : mrBtn(key, 'copy', i, '<i class="fa-regular fa-copy"></i>', 'Copy') + mrBtn(key, 'del', i, '<i class="fa-regular fa-trash-can"></i>', 'Delete'))
+					+ '</td></tr>';
+
+				if (sv && (sv.errors.length || sv.warnings.length))
+					h += '<tr class="c2-mr-sub"><td></td><td colspan="5">'
+						+ sv.errors  .map(function(m) { return '<div class="c2-err">' + esc(m) + ' (the collector ignores this rule)</div>'; }).join('')
+						+ sv.warnings.map(function(m) { return '<div class="c2-warn">' + esc(m) + '</div>'; }).join('') + '</td></tr>';
+
+				if (st.edit === i && isObj)
+				{
+					h += '<tr class="c2-mr-sub"><td></td><td colspan="5"><div class="c2-mr-form">';
+					MR_FIELDS.forEach(function(fd)
+					{
+						var fid = id + '-' + i + '-' + fd[0];
+						h += '<label for="' + fid + '">' + esc(fd[1]) + '</label>'
+							+ '<input type="text" class="c2-in" id="' + fid + '"' + ka + ' data-mr-idx="' + i + '" data-mr-field="' + fd[0] + '"'
+							+ ' value="' + esc(rr[fd[0]] === undefined ? '' : rr[fd[0]]) + '"' + (fd[3] ? ' list="' + id + '-dl-' + fd[3] + '"' : '')
+							+ ' placeholder="' + esc(fd[2]) + '" spellcheck="false"' + dis + '>';
+					});
+					var fb = String(rr.fallback).toLowerCase() === 'true';
+					h += '<span></span><label class="c2-sw' + (ro ? ' c2-ro' : '') + '"><input type="checkbox" id="' + id + '-' + i + '-fallback"' + ka + ' data-mr-idx="' + i + '" data-mr-field="fallback"' + (fb ? ' checked' : '') + dis + '><i></i>'
+						+ 'Fallback: only used when no other rule matched (then it has no conditions)</label>';
+					h += '</div><div class="c2-mr-acts">' + mrBtn(key, 'done', i, 'Done', null, 'c2-btn c2-btn-sm') + '</div></td></tr>';
+				}
+			});
+			h += '</tbody></table>';
+			if (!parsed.rules.length) h += '<div class="c2-empty">No rules: nobody gets any mail.</div>';
+			if (!ro)
+				h += '<div class="c2-mr-acts">' + mrBtn(key, 'add', null, '<i class="fa-solid fa-plus"></i> Add rule', null, 'c2-btn c2-btn-sm')
+					+ mrBtn(key, 'addfb', null, '<i class="fa-solid fa-plus"></i> Add fallback', 'Who gets the alarms that no other rule matched', 'c2-btn c2-btn-sm') + '</div>';
+		}
+		if (v && v.jsonError) h += '<div class="c2-err">Collector: ' + esc(v.jsonError) + '</div>';
+
+		// Tester: who would get this alarm?
+		h += '<div class="c2-mr-acts">' + mrBtn(key, 'testopen', null, '<i class="fa-solid fa-flask"></i> Who would get this alarm?', 'Try the rules as they are in the editor (unsaved), with the collector\'s own code', 'c2-btn c2-btn-sm' + (st.testOpen ? ' c2-on' : '')) + '</div>';
+		if (st.testOpen)
+		{
+			if (!st.test)
+				st.test = { serverName: (S.cfg && S.cfg.srvName) || S.srvName, serverGroup: info.serverGroup || '', alarmName: '', severity: 'ERROR', category: 'OTHER', state: 'AFFECTED', action: 'RAISE', time: mrLocalNow() };
+			var t = st.test;
+			var inp = function(k, lbl, list, type) {
+				return '<label for="' + id + '-t-' + k + '">' + lbl + '</label><input type="' + (type || 'text') + '" class="c2-in" id="' + id + '-t-' + k + '"' + ka + ' data-mr-test="' + k + '" value="' + esc(t[k]) + '"'
+					+ (list ? ' list="' + id + '-dl-' + list + '"' : '') + ' spellcheck="false">';
+			};
+			var sel = function(k, lbl, values) {
+				return '<label for="' + id + '-t-' + k + '">' + lbl + '</label><select class="c2-in" id="' + id + '-t-' + k + '"' + ka + ' data-mr-test="' + k + '">'
+					+ (values || []).map(function(x) { return '<option' + (x === t[k] ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select>';
+			};
+			h += '<div class="c2-mr-test"><div class="c2-mr-form">'
+				+ inp('serverName', 'Server name') + inp('serverGroup', 'Server group') + inp('alarmName', 'Alarm name', 'alarmNames')
+				+ sel('severity', 'Severity', info.severities || ['INFO', 'WARNING', 'ERROR'])
+				+ sel('category', 'Category', info.categories || ['OTHER'])
+				+ sel('state',    'State',    info.states     || ['UP', 'AFFECTED', 'DOWN'])
+				+ sel('action',   'Action',   (info.actions || ['RAISE', 'CANCEL']).filter(function(a) { return a !== 'RE-RAISE'; }))
+				+ inp('time', 'Raised at', null, 'datetime-local')
+				+ '</div><div class="c2-help">Server group empty = not in a group (a rule with a server group then never matches). The time is your browser\'s local time.</div>'
+				+ '<div class="c2-mr-acts">' + mrBtn(key, 'test', null, st.testing ? '<i class="fa-solid fa-spinner fa-spin"></i> Testing...' : '<i class="fa-solid fa-play"></i> Test', null, 'c2-btn c2-btn-sm c2-btn-pri') + '</div>';
+			if (st.testRes)
+			{
+				if (st.testRes.failed)
+					h += '<div class="c2-warn">Could not test: ' + esc(st.testRes.failed) + '</div>';
+				else
+				{
+					var rs = st.testRes.json.result || { to: [], cc: [], matchedRules: [] };
+					h += '<div class="c2-mr-res">'
+						+ (rs.to.length || rs.cc.length
+							? '<div><span class="c2-mr-lbl">To</span> ' + esc(rs.to.join(', ') || '-') + '</div>' + (rs.cc.length ? '<div><span class="c2-mr-lbl">Cc</span> ' + esc(rs.cc.join(', ')) + '</div>' : '')
+							  + '<div class="c2-help">Rule' + (rs.matchedRules.length === 1 ? '' : 's') + ': ' + esc(rs.matchedRules.join(', ')) + (rs.usedFallback ? ' (the fallback, no other rule matched)' : '') + '</div>'
+							: '<div class="c2-err-i">Nobody gets this mail: no rule matched, and there is no fallback rule.</div>')
+						+ (st.testRes.value !== val ? '<div class="c2-warn">The rules have changed since this test, press Test again.</div>' : '')
+						+ '</div>';
+				}
+			}
+			h += '</div>';
+		}
+
+		if (f.description)
+			h += '<details class="c2-mr-help"><summary>How the rules work</summary><div class="c2-help c2-richhelp">' + safeHtml(f.description) + '</div></details>';
+		return h + '</div>';
+	}
+
+	function mrOnInput(t, e)
+	{
+		var key = t.getAttribute('data-mr-key');
+		if (t.hasAttribute('data-mr-test')) // tester inputs: just remember them (no re-render while typing)
+		{
+			mrState(key).test[t.getAttribute('data-mr-test')] = t.value;
+			return;
+		}
+		var isChk = t.type === 'checkbox';
+		if (isChk !== (e.type === 'change')) return;
+		if (t.hasAttribute('data-mr-raw')) { setPend(key, t.value); render(); return; }
+
+		var idx = parseInt(t.getAttribute('data-mr-idx'), 10), field = t.getAttribute('data-mr-field');
+		mrChange(key, function(rules)
+		{
+			var r = rules[idx];
+			if (r === null || typeof r !== 'object') return;
+			if      (field === 'enabled')  { if (t.checked) delete r.enabled;  else r.enabled = false; }
+			else if (field === 'fallback') { if (t.checked) r.fallback = true; else delete r.fallback; }
+			else if (t.value === '')       delete r[field];
+			else                           r[field] = t.value;
+		});
+		render();
+	}
+
+	function mrOnClick(t)
+	{
+		var key = t.getAttribute('data-mr-key'), act = t.getAttribute('data-mr-act'), arg = t.getAttribute('data-mr-arg');
+		var st = mrState(key), i = parseInt(arg, 10);
+		switch (act)
+		{
+		case 'view':     st.view = arg; break;
+		case 'edit':     st.edit = st.edit === i ? null : i; break;
+		case 'done':     st.edit = null; break;
+		case 'add':      mrChange(key, function(rules) { rules.push({ name: '', serverName: '.*', to: '' }); st.edit = rules.length - 1; }); break;
+		case 'addfb':    mrChange(key, function(rules) { rules.push({ fallback: true, to: '' }); st.edit = rules.length - 1; }); break;
+		case 'copy':     mrChange(key, function(rules) { rules.splice(i + 1, 0, JSON.parse(JSON.stringify(rules[i]))); st.edit = i + 1; }); break;
+		case 'del':
+			if (!window.confirm('Delete rule #' + (i + 1) + '?')) return;
+			mrChange(key, function(rules) { rules.splice(i, 1); });
+			st.edit = null;
+			break;
+		case 'convert':
+			setPend(key, JSON.stringify([{ name: 'Everybody', serverName: '.*', to: String(cur(key, S.reg[key].orig)).trim() }]));
+			st.view = 'rules';
+			break;
+		case 'testopen': st.testOpen = !st.testOpen; break;
+		case 'test':
+			if (st.testing) return;
+			var tv = cur(key, S.reg[key].orig), tt = st.test, ms = tt.time ? new Date(tt.time).getTime() : 0;
+			st.testing = true;
+			mrPost({ op: 'mailRouting', value: tv, propKey: S.reg[key].property, sample: { serverName: tt.serverName, serverGroup: tt.serverGroup || null, alarmName: tt.alarmName || '',
+			                                                   category: tt.category, severity: tt.severity, state: tt.state, action: tt.action, time: isNaN(ms) ? 0 : ms } })
+			.then(function(res)
+			{
+				st.testing = false;
+				st.testRes = res.status === 200 ? { value: tv, json: res.json } : { failed: mrFailText(res) };
+				render();
+			});
+			break;
+		}
+		render();
+	}
+
+	//------------------------------------------------------------------
+	// Template editor, field kind 'template' (the setting has a TemplateInputValidator, eg AlarmWriterToMail.msg.body.template)
+	// The text is a Velocity template. The COLLECTOR renders it, through the writer's own createTemplatePreview() - the renderer the
+	// Swing Template Editor uses - so this page never re-implements a writer's variables or escaping. Same endpoint as the mail rules.
+	//------------------------------------------------------------------
+	var TPL_ACTIONS = ['RAISE', 'RE-RAISE', 'CANCEL'];
+	var _tplIds = {}, _tplSeq = 0;      // field key -> id prefix (stable over re-renders, for the focus restore)
+	var _tplInfo = {};                  // 'writer|propKey' -> answer of op 'templateInfo': variables, alternatives, hasDesignerCard
+	var _tplRes = {}, _tplBusy = {};    // JSON of the request -> answer of op 'templatePreview'
+	var _tplValid = {};                 // 'writer|propKey|value' -> the collector's save check: '' = OK, else why it would be refused
+	var _tplTimer = {};                 // field key -> debounce timer
+
+	function tplId(key)    { if (!(key in _tplIds)) _tplIds[key] = 'c2tp' + (++_tplSeq); return _tplIds[key]; }
+	function tplState(key) { return S.tpl[key] || (S.tpl[key] = { preview: false, vars: false, action: 'RAISE', last: null, card: null }); }
+	function tplRows(v)    { return Math.max(3, Math.min(24, String(v).split('\n').length + 1)); }
+
+	/** The request that renders this field's value: with this writer's other unsaved values (the Teams card shows the edited title) */
+	function tplRequest(key, value)
+	{
+		var m = S.reg[key], values = {};
+		Object.keys(S.pend).forEach(function(k) {
+			var p = S.pend[k];
+			if (k !== key && p.type === 'writer' && p.writer === m.writer && p.property) values[p.property] = p.value;
+		});
+		return { op: 'templatePreview', writerName: m.writer, propKey: m.property, template: value, action: tplState(key).action, values: values };
+	}
+
+	/** Render on the collector (debounced per field, once per distinct request), then re-render the page */
+	function tplRenderLater(key, req)
+	{
+		var rk = JSON.stringify(req);
+		if (rk in _tplRes || _tplBusy[rk]) return;
+		clearTimeout(_tplTimer[key]);
+		_tplTimer[key] = setTimeout(function()
+		{
+			_tplBusy[rk] = true;
+			mrPost(req).then(function(res)
+			{
+				delete _tplBusy[rk];
+				_tplRes[rk] = res.status === 200 ? res.json : { failed: mrFailText(res) };
+				if (res.status === 200) _tplValid[req.writerName + '|' + req.propKey + '|' + req.template] = res.json.validationError || '';
+				render();
+			});
+		}, 500);
+	}
+
+	function tplLoadInfo(m)
+	{
+		var ik = m.writer + '|' + m.property;
+		if (!_tplInfo[ik])
+		{
+			_tplInfo[ik] = { loading: true };
+			mrPost({ op: 'templateInfo', writerName: m.writer, propKey: m.property }).then(function(res)
+			{
+				_tplInfo[ik] = res.status === 200 ? res.json : { failed: mrFailText(res) };
+				render();
+			});
+		}
+		return _tplInfo[ik];
+	}
+
+	/** validateField() for 'template': blocking when the collector said it would refuse to save this value */
+	function tplValidateField(m, value)
+	{
+		var why = m ? _tplValid[m.writer + '|' + m.property + '|' + value] : '';
+		return why ? { error: 'The collector refuses to save a template that does not render. ' + why } : {};
+	}
+
+	function tplBtn(key, op, arg, html, title, cls)
+	{
+		return '<button type="button" class="' + (cls || 'c2-btn c2-btn-sm') + '" data-tpl-key="' + esc(key) + '" data-tpl-do="' + op + '"'
+			+ (arg !== null && arg !== undefined ? ' data-tpl-arg="' + esc(arg) + '"' : '') + (title ? ' title="' + esc(title) + '"' : '') + '>' + html + '</button>';
+	}
+
+	/** Copy to the clipboard: navigator.clipboard (https or localhost, and the browser may refuse it), else a selected textarea */
+	function copyText(text)
+	{
+		if (navigator.clipboard && window.isSecureContext)
+			return navigator.clipboard.writeText(text).then(function() { return true; }, function() { return copyTextOld(text); });
+		return Promise.resolve(copyTextOld(text));
+	}
+	function copyTextOld(text)
+	{
+		var ta = document.createElement('textarea');
+		ta.value = text;
+		ta.style.position = 'fixed';
+		ta.style.opacity = '0';
+		document.body.appendChild(ta);
+		ta.select();
+		var ok = false;
+		try { ok = document.execCommand('copy'); } catch (e) {}
+		document.body.removeChild(ta);
+		return ok;
+	}
+
+	function tplEditor(key, f, val, ro)
+	{
+		var st = tplState(key), id = tplId(key), m = S.reg[key], ka = ' data-tpl-key="' + esc(key) + '"';
+		var info = tplLoadInfo(m);
+
+		// Render when there is something to check (a changed value) or to show (the preview)
+		var req = (st.preview || key in S.pend) ? tplRequest(key, val) : null;
+		var res = req ? _tplRes[JSON.stringify(req)] : null;
+		if (req && !res) tplRenderLater(key, req);
+		if (res && !res.failed) st.last = res;
+		var err = res && !res.failed && res.error ? res.error : null;
+
+		var h = '<div class="c2-tpl"><div class="c2-mr-bar">'
+			+ tplBtn(key, 'preview', null, '<i class="fa-regular fa-eye"></i> Preview', 'Render it on the collector, with an example alarm, the way the writer renders it', 'c2-tab' + (st.preview ? ' c2-on' : ''))
+			+ tplBtn(key, 'vars', null, '<i class="fa-solid fa-code"></i> Variables', 'The variables a template can use', 'c2-tab' + (st.vars ? ' c2-on' : ''))
+			+ '<label class="c2-tpl-actlbl" for="' + id + '-act">as</label><select class="c2-in c2-tpl-act" id="' + id + '-act"' + ka + ' data-tpl-action="1" title="Render it for this alarm action">'
+			+ TPL_ACTIONS.map(function(a) { return '<option' + (a === st.action ? ' selected' : '') + '>' + a + '</option>'; }).join('') + '</select>';
+		if (req)
+		{
+			var status = !res      ? '<i class="fa-solid fa-spinner fa-spin"></i> Rendering on the collector...'
+			           : res.failed ? '<span class="c2-warn-i"><i class="fa-solid fa-triangle-exclamation"></i> Could not render it on the collector: ' + esc(res.failed) + '</span>'
+			           : err        ? '<span class="c2-err-i"><i class="fa-solid fa-circle-xmark"></i> ' + esc(err.type) + (err.line > 0 ? ' at line ' + err.line + ', column ' + err.column : '') + '</span>'
+			           : '<span class="c2-ok-i"><i class="fa-solid fa-circle-check"></i> OK, rendered by the collector</span>';
+			h += '<span class="c2-mr-status">' + status + (err && err.line > 0 ? ' ' + tplBtn(key, 'goto', err.line, 'Go to line', 'Select that line in the template') : '') + '</span>';
+		}
+		h += '</div>';
+
+		// A leading newline: the HTML parser drops the first newline after <textarea>, this keeps a template that starts with one
+		h += '<textarea id="' + id + '-txt" class="c2-in c2-tpl-txt' + (key in S.pend ? ' c2-pend' : '') + (err ? ' c2-bad' : '') + '" rows="' + tplRows(val) + '"'
+			+ ' spellcheck="false" wrap="off"' + ka + ' data-tpl-txt="1"' + (ro ? ' readonly' : '') + '>\n' + esc(val) + '</textarea>';
+
+		// Message details when the save check did not already say it (fieldRow shows that one)
+		if (err && !tplValidateField(m, val).error)
+			h += '<div class="c2-err">' + esc(err.message) + '</div>';
+
+		if (!ro && (info.alternatives || []).length || info.hasDesignerCard)
+		{
+			h += '<div class="c2-mr-acts">';
+			if (!ro)
+				(info.alternatives || []).forEach(function(a, i) {
+					h += tplBtn(key, 'alt', i, '<i class="fa-solid fa-file-import"></i> Use the ' + esc(a.label), 'Replace the text with the writer\'s ' + a.label + ' template');
+				});
+			if (info.hasDesignerCard)
+				h += tplBtn(key, 'card', null, '<i class="fa-regular fa-copy"></i> Copy card for Designer', 'Copy just the Adaptive Card (without the Teams message envelope) for https://adaptivecards.io/designer');
+			h += '</div>';
+		}
+		if (st.card)
+			h += '<div class="c2-tpl-prev"><div class="c2-tpl-prevh">The card for the Adaptive Card Designer - select it and copy it ' + tplBtn(key, 'cardclose', null, 'Close') + '</div>'
+				+ '<textarea id="' + id + '-card" class="c2-in c2-tpl-txt" rows="10" readonly spellcheck="false" wrap="off">\n' + esc(st.card) + '</textarea></div>';
+
+		if (st.vars)
+		{
+			if (!info.variables)
+				h += '<div class="c2-help">' + (info.failed ? 'Could not get the variables from the collector: ' + esc(info.failed) : '<i class="fa-solid fa-spinner fa-spin"></i> Loading the variables...') + '</div>';
+			else
+			{
+				h += '<div class="c2-tpl-vars">' + info.variables.map(function(v, i) {
+					var t = htmlToText(v.desc);
+					return ro ? '<span class="c2-tpl-var" title="' + esc(t) + '">' + esc(v.name) + '</span>'
+					          : tplBtn(key, 'var', i, esc(v.name), t + '  Inserts: ' + v.insert, 'c2-tpl-var');
+				}).join('') + '</div>';
+				h += '<div class="c2-help">' + (ro ? '' : 'Click one to insert it at the cursor. ') + 'Hover for a description. The ones marked "Teams card template only" work in the Teams card template only.</div>';
+				if (info.help)
+					h += '<details class="c2-mr-help"><summary>How templates work</summary><div class="c2-help c2-richhelp">' + safeHtml(info.help) + '</div></details>';
+			}
+		}
+
+		// The preview: the latest answer (the previous one while a new one is on its way, so it does not blink while typing)
+		var shown = st.preview ? (res && !res.failed ? res : st.last) : null;
+		if (shown)
+		{
+			var out = shown.text !== undefined ? shown.text : shown.previewText;
+			if (out !== undefined && out !== null)
+			{
+				var isHtml = /^\s*<html/i.test(out);
+				h += '<div class="c2-tpl-prev"><div class="c2-tpl-prevh">'
+					+ (shown.text === undefined ? '<span class="c2-err-i">What it renders - NOT usable, see the error</span>' : 'Preview: <b>' + esc(st.action) + '</b> of an example alarm' + (isHtml ? ', as an HTML mail' : ''))
+					+ (shown !== res ? ' <i class="fa-solid fa-spinner fa-spin" title="Updating"></i>' : '') + '</div>'
+					// sandbox="": no scripts, no same-origin access - nothing in the rendered mail can reach this page
+					+ (isHtml ? '<iframe class="c2-tpl-frame" sandbox="" title="Preview of the rendered mail" srcdoc="' + esc(out) + '"></iframe>'
+					          : '<pre class="c2-tpl-pre">' + esc(out) + '</pre>')
+					+ '</div>';
+			}
+		}
+		return h + '</div>';
+	}
+
+	function tplOnInput(t, e)
+	{
+		var key = t.getAttribute('data-tpl-key');
+		if (t.hasAttribute('data-tpl-action'))
+		{
+			if (e.type === 'change') { tplState(key).action = t.value; render(); }
+			return;
+		}
+		if (e.type !== 'input' || !S.reg[key]) return;
+
+		var wasPend = key in S.pend;
+		setPend(key, t.value);
+		if (wasPend && key in S.pend)
+		{
+			// Typing: no re-render on every key (it would rebuild the preview), just this field and the save bar. The collector's answer re-renders.
+			t.rows = tplRows(t.value);
+			renderSaveBar();
+			tplRenderLater(key, tplRequest(key, t.value));
+			return;
+		}
+		render();
+	}
+
+	function tplOnClick(t)
+	{
+		var key = t.getAttribute('data-tpl-key'), op = t.getAttribute('data-tpl-do'), i = parseInt(t.getAttribute('data-tpl-arg'), 10);
+		var st = tplState(key), m = S.reg[key], ta = el(tplId(key) + '-txt');
+		if (!m) return;
+		var info = _tplInfo[m.writer + '|' + m.property] || {};
+		switch (op)
+		{
+		case 'preview':   st.preview = !st.preview; break;
+		case 'vars':      st.vars    = !st.vars;    break;
+		case 'cardclose': st.card    = null;        break;
+		case 'goto':
+			if (!ta) return;
+			var lines = ta.value.split('\n'), from = 0;
+			for (var n = 0; n < i - 1 && n < lines.length; n++) from += lines[n].length + 1;
+			ta.focus();
+			ta.setSelectionRange(from, from + (lines[i - 1] || '').length);
+			ta.scrollTop = Math.max(0, (i - 3) * (ta.scrollHeight / Math.max(1, lines.length)));
+			return;
+		case 'var':
+			var v = (info.variables || [])[i];
+			if (!v || !ta || ta.readOnly) return;
+			var a = ta.selectionStart, b = ta.selectionEnd, top = ta.scrollTop;
+			setPend(key, ta.value.substring(0, a) + v.insert + ta.value.substring(b));
+			render();
+			// the click moved the focus to the button: back to the template, with the cursor after the insert
+			var nt = el(tplId(key) + '-txt');
+			if (nt) { nt.focus(); nt.setSelectionRange(a + v.insert.length, a + v.insert.length); nt.scrollTop = top; }
+			return;
+		case 'alt':
+			var alt = (info.alternatives || [])[i];
+			if (!alt) return;
+			if (String(cur(key, m.orig)).trim() !== '' && !window.confirm('Replace the template with the ' + alt.label + '?')) return;
+			setPend(key, alt.value);
+			break;
+		case 'card':
+			mrPost(Object.assign(tplRequest(key, cur(key, m.orig)), { designerCard: true })).then(function(res)
+			{
+				var j = res.json;
+				if (res.status !== 200 || !j.card)
+				{
+					S.message = { type: 'err', text: 'No card to copy: ' + (res.status !== 200 ? mrFailText(res) : j.cardError || (j.error && j.error.message) || 'the template does not render') };
+					render();
+					return;
+				}
+				copyText(j.card).then(function(ok)
+				{
+					// When the browser refuses, show the card so it can be copied by hand
+					st.card = ok ? null : j.card;
+					S.message = ok ? { type: 'ok', text: 'The card is on the clipboard. Paste it into the Adaptive Card Designer (https://adaptivecards.io/designer, host app: Microsoft Teams).' }
+					               : { type: 'warn', text: 'The browser did not allow copying to the clipboard: the card is shown below the template, select it and copy it.' };
+					render();
+				});
+			});
+			return;
+		}
+		render();
+	}
+
+	//------------------------------------------------------------------
 	// Rendering: one field row (same grammar as the Alarm Editor dialog)
 	//------------------------------------------------------------------
 	/**
 	 * @param key   pending/registry key
 	 * @param f     field (DbxAlarmEditor.model shape)
-	 * @param meta  { type, cmName, alarm?, readOnly?, timeRangeDescr?, extraLbl? }
+	 * @param meta  { type, cmName, alarm?, writer?, wsub?, readOnly?, timeRangeDescr?, extraLbl? }
 	 */
 	function fieldRow(key, f, meta)
 	{
 		var label = f.kind === 'enabled' ? 'Enabled' : f.kind === 'cron' ? 'Time range' : f.label;
-		S.reg[key] = { key: key, type: meta.type, cmName: meta.cmName, alarm: meta.alarm, name: f.name,
-		               orig: f.orig, def: f.def, kind: f.kind, label: label };
+		S.reg[key] = { key: key, type: meta.type, cmName: meta.cmName, alarm: meta.alarm, writer: meta.writer, wsub: meta.wsub, property: f.property,
+		               name: f.name, orig: f.orig, def: f.def, kind: f.kind, label: label };
 
 		var ro    = !S.isAdmin || f.secret || meta.readOnly;
 		var dis   = ro ? ' disabled' : '';
 		var pend  = key in S.pend;
 		var val   = cur(key, f.orig);
-		var v     = validateField({ kind: f.kind, value: val });
+		var v     = validateField({ kind: f.kind, value: val, meta: S.reg[key] });
 		var srvErr = S.errors[key];
 		var h = '';
 
@@ -349,6 +975,14 @@ var DbxConfig2 = (function()
 			var desc = preset ? preset.desc : (val === f.orig && meta.timeRangeDescr ? meta.timeRangeDescr : 'Custom (the collector describes it after saving)');
 			h += '<div class="c2-help">' + esc(desc) + ' &middot; cron: minute hour day-of-month month day-of-week, a leading <code>!</code> means NOT within</div>';
 		}
+		else if (f.kind === 'mailRouting')
+		{
+			h += mrEditor(key, f, val, ro);
+		}
+		else if (f.kind === 'template')
+		{
+			h += tplEditor(key, f, val, ro);
+		}
 		else
 		{
 			var num = f.kind === 'int' || f.kind === 'double';
@@ -368,7 +1002,7 @@ var DbxConfig2 = (function()
 		if (srvErr)  h += '<div class="c2-err">Collector: ' + esc(htmlToText(srvErr)) + '</div>';
 		if (v.warn)  h += '<div class="c2-warn">' + esc(v.warn) + '</div>';
 
-		if (f.kind !== 'cron' && f.kind !== 'enabled' && f.description)
+		if (f.kind !== 'cron' && f.kind !== 'enabled' && f.kind !== 'mailRouting' && f.description) // mailRouting: inside the editor (it's long)
 			h += '<div class="c2-help">' + esc(htmlToText(f.description)) + '</div>';
 
 		if (f.kind === 'enabled')
@@ -377,7 +1011,7 @@ var DbxConfig2 = (function()
 		}
 		else
 		{
-			h += '<div class="c2-def">' + sourceChips(f) + '<span>default: <code>' + esc(f.def === '' ? '(empty)' : f.def) + '</code></span>';
+			h += '<div class="c2-def">' + sourceChips(f) + '<span>default: <code>' + esc(f.def === '' ? '(empty)' : shortVal(f.def)) + '</code></span>';
 			if (val !== f.def && !ro)
 				h += '<button type="button" class="c2-btn c2-btn-sm" data-reset="' + esc(key) + '"><i class="fa-solid fa-rotate-left"></i> Reset to default</button>';
 			if (f.property)
@@ -698,13 +1332,16 @@ var DbxConfig2 = (function()
 			det += '<div class="c2-stabs">'
 				+ '<button type="button" class="c2-tab' + (S.wsub === 'settings' ? ' c2-on' : '') + '" data-wsub="settings">Settings<span class="c2-cnt">' + (w.settings || []).length + '</span></button>'
 				+ '<button type="button" class="c2-tab' + (S.wsub === 'filters' ? ' c2-on' : '') + '" data-wsub="filters">Filters<span class="c2-cnt">' + (w.filters || []).length + '</span></button></div>';
-			det += '<div class="c2-pane"><div class="c2-help c2-mb">Alarm writers are read only on this page (change them in the collector\'s configuration file).</div><div class="c2-rows">';
+			det += '<div class="c2-pane"><div class="c2-help c2-mb">'
+				+ (w.isActive ? 'Changes are validated by the collector, and the writer is re-created with them before its next use (no restart needed).'
+				              : 'This writer is not active in the collector (it is not in <code>AlarmHandler.WriterClass</code>), changes are only saved.')
+				+ ' Passwords can only be changed in the collector\'s configuration file.</div><div class="c2-rows">';
 			var entries = S.wsub === 'settings' ? (w.settings || []) : (w.filters || []);
 			if (!entries.length) det += '<div class="c2-empty">None.</div>';
 			entries.forEach(function(p) {
 				var extra = (p.isMandatory ? '<span class="c2-bdg" title="Mandatory">mandatory</span>' : '')
 					+ (p.isSelected === false ? '<span class="c2-bdg" title="Not activated">not activated</span>' : '');
-				det += fieldRow('W|' + w.name + '|' + S.wsub + '|' + p.name, propField(p), { type: 'writer', cmName: '', readOnly: true, extraLbl: extra ? '<div>' + extra + '</div>' : '' });
+				det += fieldRow('W|' + w.name + '|' + S.wsub + '|' + p.name, propField(p), { type: 'writer', cmName: '', writer: w.className, wsub: S.wsub, extraLbl: extra ? '<div>' + extra + '</div>' : '' });
 			});
 			det += '</div></div>';
 		}
@@ -746,9 +1383,10 @@ var DbxConfig2 = (function()
 			h += '<div class="c2-menu c2-menu-l"><div class="c2-menu-h">Unsaved changes (click to show)</div>';
 			Object.keys(S.pend).forEach(function(k) {
 				var p = S.pend[k], cm = findCm(p.cmName);
-				var where = (cm ? (cm.displayName || cm.cmName) : p.cmName) + (p.alarm ? ' › ' + p.alarm : '') + ' › ' + p.label;
+				var where = p.type === 'writer' ? String(p.writer).split('.').pop() + ' › ' + p.label
+				          : (cm ? (cm.displayName || cm.cmName) : p.cmName) + (p.alarm ? ' › ' + p.alarm : '') + ' › ' + p.label;
 				h += '<button type="button" class="c2-item" data-jump="' + esc(k) + '">' + esc(where)
-					+ '<small><code>' + esc(p.orig === '' ? '(empty)' : p.orig) + '</code> &rarr; <code>' + esc(p.value === '' ? '(empty)' : p.value) + '</code>'
+					+ '<small><code>' + esc(p.orig === '' ? '(empty)' : shortVal(p.orig)) + '</code> &rarr; <code>' + esc(p.value === '' ? '(empty)' : shortVal(p.value)) + '</code>'
 					+ (S.errors[k] ? ' &middot; <span class="c2-err-i">' + esc(htmlToText(S.errors[k])) + '</span>' : '') + '</small></button>';
 			});
 			h += '</div>';
@@ -761,9 +1399,13 @@ var DbxConfig2 = (function()
 		// keep focus, caret and list scroll over the re-render
 		var a = document.activeElement, focus = null;
 		if (a && (a.id || a.getAttribute('data-k')) && el('c2-main').contains(a))
-			focus = { id: a.id, k: a.getAttribute('data-k'), set: a.getAttribute('data-set'), caret: (a.type === 'text' || a.type === 'search') ? a.selectionStart : null };
+			focus = { id: a.id, k: a.getAttribute('data-k'), set: a.getAttribute('data-set'), caret: (a.type === 'text' || a.type === 'search' || a.type === 'textarea') ? a.selectionStart : null,
+			          end: a.selectionEnd, top: a.type === 'textarea' ? a.scrollTop : null };
 		var scroll = {};
 		['c2-cmlist', 'c2-wlist'].forEach(function(id) { if (el(id)) scroll[id] = el(id).scrollTop; });
+		// template editors: keep each one's cursor and scroll, also when not focused (a variable is inserted where the cursor was)
+		var tplSel = {};
+		document.querySelectorAll('#c2-main textarea[data-tpl-txt]').forEach(function(t) { tplSel[t.id] = [t.selectionStart, t.selectionEnd, t.scrollTop]; });
 
 		S.reg = {};
 		renderHeader();
@@ -780,6 +1422,12 @@ var DbxConfig2 = (function()
 		el('c2-main').innerHTML = h;
 
 		Object.keys(scroll).forEach(function(id) { if (el(id)) el(id).scrollTop = scroll[id]; });
+		Object.keys(tplSel).forEach(function(id) {
+			var t = el(id);
+			if (!t) return;
+			try { t.setSelectionRange(tplSel[id][0], tplSel[id][1]); } catch (e) {}
+			t.scrollTop = tplSel[id][2];
+		});
 		if (focus)
 		{
 			var t = focus.id ? el(focus.id)
@@ -787,7 +1435,8 @@ var DbxConfig2 = (function()
 			if (t)
 			{
 				t.focus();
-				if (focus.caret !== null) { try { t.setSelectionRange(focus.caret, focus.caret); } catch (e) {} }
+				if (focus.caret !== null) { try { t.setSelectionRange(focus.caret, Math.max(focus.caret, focus.end || 0)); } catch (e) {} }
+				if (focus.top !== null) t.scrollTop = focus.top; // a long template: stay where you were
 			}
 		}
 		if (window.Prism) document.querySelectorAll('#c2-main pre.c2-sql code').forEach(function(c) { Prism.highlightElement(c); });
@@ -913,6 +1562,17 @@ var DbxConfig2 = (function()
 		var p = S.pend[key];
 		if (!p) return;
 		S.listOpen = false;
+		if (p.type === 'writer')
+		{
+			var w = writerList().find(function(x) { return x.className === p.writer; });
+			S.tab = 'writers';
+			if (w) S.selWriter = w.name;
+			S.wsub = p.wsub || 'settings';
+			flash(key);
+			render();
+			scrollToKey('[data-row="' + CSS.escape(key) + '"]');
+			return;
+		}
 		S.tab = 'counters';
 		S.selCm = p.cmName;
 		S.sub = subOf(p.type);
@@ -934,6 +1594,10 @@ var DbxConfig2 = (function()
 
 		// Text fields on every keystroke ('input'), checkboxes on 'change' only.
 		// (NOT 'change' on text fields: it fires on mousedown of e.g. the Save button, and the re-render would swallow that click)
+		// The mail rules editor has its own fields (a rule field changes the whole JSON value)
+		if (t.hasAttribute && t.hasAttribute('data-mr-key')) { mrOnInput(t, e); return; }
+		if (t.hasAttribute && t.hasAttribute('data-tpl-key')) { tplOnInput(t, e); return; }
+
 		var key = t.getAttribute && t.getAttribute('data-k');
 		if (!key) return;
 		var isChk = t.type === 'checkbox';
@@ -954,6 +1618,8 @@ var DbxConfig2 = (function()
 		}
 		if (!t) return;
 
+		if (t.hasAttribute('data-mr-act')) { mrOnClick(t); return; }
+		if (t.hasAttribute('data-tpl-do')) { tplOnClick(t); return; }
 		if (t.hasAttribute('data-tab'))    { S.tab = t.getAttribute('data-tab'); render(); return; }
 		if (t.hasAttribute('data-sub'))    { S.sub = t.getAttribute('data-sub'); render(); return; }
 		if (t.hasAttribute('data-wsub'))   { S.wsub = t.getAttribute('data-wsub'); render(); return; }
@@ -1082,7 +1748,7 @@ var DbxConfig2 = (function()
 	}
 
 	/**
-	 * Save everything pending: one 'alarmBatch' per alarm, one request per option / setting / pre-check (sequential).
+	 * Save everything pending: one 'alarmBatch' per alarm, one request per option / setting / pre-check / writer property (sequential).
 	 * @param saveType 'IN_MEMORY' | 'THIS_SERVER'
 	 */
 	async function save(saveType)
@@ -1107,6 +1773,11 @@ var DbxConfig2 = (function()
 				}
 				batches[bk].body.change[p.name] = p.value;
 				batches[bk].keys.push(k);
+			}
+			else if (p.type === 'writer')
+			{
+				// cmName must be there (the collector reads it as a mandatory field), optName is the property key
+				reqs.push({ body: { type: 'writer', saveType: saveType, writerName: p.writer, cmName: '', optName: p.property, change: { value: p.value } }, keys: [k] });
 			}
 			else
 			{
