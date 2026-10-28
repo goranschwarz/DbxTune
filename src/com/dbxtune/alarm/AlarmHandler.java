@@ -35,6 +35,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -705,7 +706,62 @@ implements Runnable
 	 */
 	public void addAlarm(AlarmEvent alarmEvent)
 	{
+		doRequestedWriterReInit();
 		raise(alarmEvent);
+	}
+
+	/** Class names of AlarmWriters to re-create with the current configuration, see {@link #requestWriterReInit(String)} */
+	private final Set<String> _writerReInitRequests = ConcurrentHashMap.newKeySet();
+
+	/**
+	 * Re-create an AlarmWriter with the current configuration, eg after its settings were changed from DbxCentral's config page.
+	 * <p>
+	 * Most writers read their settings only in <code>init()</code>. This is done by the thread that calls {@link #addAlarm(AlarmEvent)}
+	 * or {@link #endOfScan()} (the collector thread), right before it uses the writers, so a writer is never re-created while it sends.
+	 *
+	 * @param writerClassName  full class name, eg 'com.dbxtune.alarm.writers.AlarmWriterToMail'
+	 */
+	public void requestWriterReInit(String writerClassName)
+	{
+		_writerReInitRequests.add(writerClassName);
+	}
+
+	private void doRequestedWriterReInit()
+	{
+		if (_writerReInitRequests.isEmpty())
+			return;
+
+		for (String className : new ArrayList<>(_writerReInitRequests))
+		{
+			_writerReInitRequests.remove(className);
+
+			for (int i = 0; i < _writerClasses.size(); i++)
+			{
+				IAlarmWriter oldWriter = _writerClasses.get(i);
+				if ( ! oldWriter.getClass().getName().equals(className) )
+					continue;
+
+				// A NEW instance (not init() again on the old one), so nothing from the old settings is left behind.
+				// If the new settings do not work, keep the old writer.
+				try
+				{
+					IAlarmWriter newWriter = oldWriter.getClass().getDeclaredConstructor().newInstance();
+					newWriter.init(_conf);
+					newWriter.printFilterConfig();
+					newWriter.printConfig();
+
+					oldWriter.stopService();
+					newWriter.startService();
+					_writerClasses.set(i, newWriter);
+
+					_logger.info("Alarm Handler Instance '" + getInstanceName() + "': Re-created the AlarmWriter '" + className + "' with the current configuration (requested, done by thread '" + Thread.currentThread().getName() + "').");
+				}
+				catch (Exception ex)
+				{
+					_logger.error("Alarm Handler Instance '" + getInstanceName() + "': Problems re-creating the AlarmWriter '" + className + "' with the current configuration. The writer with the previous settings is still used. Caught: " + ex, ex);
+				}
+			}
+		}
 	}
 
 	private void raise(AlarmEvent alarmEvent)
@@ -964,6 +1020,9 @@ implements Runnable
 	 */
 	public void endOfScan()
 	{
+		// Writers whose settings was changed (from DbxCentral's config page)
+		doRequestedWriterReInit();
+
 		// Remove any alarms in the "delayed alarms" when TimeToLive has expired and no "repeat" has been sent
 		checkForCancelationsDelayedAlarms();
 		

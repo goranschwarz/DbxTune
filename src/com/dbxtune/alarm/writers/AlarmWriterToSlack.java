@@ -39,6 +39,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CmSettingsHelper.TemplateInputValidator;
 import com.dbxtune.cm.CmSettingsHelper.JsonInputValidator;
 import com.dbxtune.cm.CmSettingsHelper.Type;
 import com.dbxtune.cm.CmSettingsHelper.UrlInputValidator;
@@ -238,7 +239,7 @@ extends AlarmWriterAbstract
 		// Put ${activeAlarmsSummaryText} in the msg-template below to place it.
 		list.addAll( getActiveAlarmSummarySettings() );
 
-		list.add( new CmSettingsHelper("msg-template",  Type.MANDATORY, PROPKEY_msgTemplate,      String .class, conf.getProperty       (PROPKEY_msgTemplate,      DEFAULT_msgTemplate),      DEFAULT_msgTemplate,      "Message Template to send to Slack. Note: all ${somValue} will be replaced with runtime values."));
+		list.add( new CmSettingsHelper("msg-template",  Type.MANDATORY, PROPKEY_msgTemplate,      String .class, conf.getProperty       (PROPKEY_msgTemplate,      DEFAULT_msgTemplate),      DEFAULT_msgTemplate,      "Message Template to send to Slack. Note: all ${somValue} will be replaced with runtime values.", new TemplateInputValidator(this)));
 		list.add( new CmSettingsHelper("isReRaiseEnabled",              PROPKEY_isReRaiseEnabled, Boolean.class, conf.getBooleanProperty(PROPKEY_isReRaiseEnabled, DEFAULT_isReRaiseEnabled), DEFAULT_isReRaiseEnabled, "If the Alarm Hander should send an event every time it receives an event. or if it should just be called on RAISE and CANCEL"));
 //		list.add( new CmSettingsHelper("slack-attachments",             PROPKEY_slackAttachments, String .class, conf.getProperty       (PROPKEY_slackAttachments, DEFAULT_slackAttachments), DEFAULT_slackAttachments, "<html>If you want to add Slack attachments... See: https://api.slack.com/incoming-webhooks<br>This will be the <i>raw</i> JSON text after <code>\"attachments\": </code><b><i>your-content-goes-here</i></b><br>Note: The input text is validated as a JSON text</html>", new JsonInputValidator()));
 		list.add( new CmSettingsHelper("slack-attachments",             PROPKEY_slackAttachments, String .class, conf.getProperty       (PROPKEY_slackAttachments, DEFAULT_slackAttachments), DEFAULT_slackAttachments, "<html>If you want to add Slack attachments... See: https://api.slack.com/incoming-webhooks<br>The value of this field will be <i>injected</i> in the following JSON <code>{\"text\": \"${msg-template}\", \"attachments\": </code><b><i>your-content-goes-here</i></b> <code>}</code><br>Note: The input text is validated as a JSON text</html>", new JsonInputValidator()));

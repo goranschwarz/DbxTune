@@ -39,6 +39,7 @@ import com.cloudbees.syslog.sender.TcpSyslogMessageSender;
 import com.cloudbees.syslog.sender.UdpSyslogMessageSender;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CmSettingsHelper.TemplateInputValidator;
 import com.dbxtune.cm.CmSettingsHelper.InputValidator;
 import com.dbxtune.cm.CmSettingsHelper.Type;
 import com.dbxtune.cm.CmSettingsHelper.ValidationException;
@@ -286,8 +287,8 @@ extends AlarmWriterAbstract
 		list.add( new CmSettingsHelper("port",             Type.MANDATORY, PROPKEY_port,             Integer.class, conf.getIntProperty    (PROPKEY_port,             DEFAULT_port             ), DEFAULT_port             , "port number for the syslog server"));
 		list.add( new CmSettingsHelper("RFC",              Type.MANDATORY, PROPKEY_rfc,              Integer.class, conf.getIntProperty    (PROPKEY_rfc,              DEFAULT_rfc              ), DEFAULT_rfc              , "What RFC (syslog message standard) do you want to use. (3164 or 5424)", new RfcInputValidator()));
 		list.add( new CmSettingsHelper("UDP-or-TCP",       Type.MANDATORY, PROPKEY_networkProtocol,  String .class, conf.getProperty       (PROPKEY_networkProtocol,  DEFAULT_networkProtocol  ), DEFAULT_networkProtocol  , "What network protocol should be used to send the message to the syslog server (TCP or UDP)", new TcpUdpInputValidator()));
-		list.add( new CmSettingsHelper("raiseMsgTemplate", Type.MANDATORY, PROPKEY_raiseMsgTemplate, String .class, conf.getProperty       (PROPKEY_raiseMsgTemplate, DEFAULT_raiseMsgTemplate ), DEFAULT_raiseMsgTemplate , "RAISE Message Template to POST. Note: all ${somValue} will be replaced with runtime values."));
-		list.add( new CmSettingsHelper("cancelMsgTemplate",Type.MANDATORY, PROPKEY_cancelMsgTemplate,String .class, conf.getProperty       (PROPKEY_cancelMsgTemplate,DEFAULT_cancelMsgTemplate), DEFAULT_cancelMsgTemplate, "CANCEL Message Template to POST. Note: all ${somValue} will be replaced with runtime values."));
+		list.add( new CmSettingsHelper("raiseMsgTemplate", Type.MANDATORY, PROPKEY_raiseMsgTemplate, String .class, conf.getProperty       (PROPKEY_raiseMsgTemplate, DEFAULT_raiseMsgTemplate ), DEFAULT_raiseMsgTemplate , "RAISE Message Template to POST. Note: all ${somValue} will be replaced with runtime values.", new TemplateInputValidator(this)));
+		list.add( new CmSettingsHelper("cancelMsgTemplate",Type.MANDATORY, PROPKEY_cancelMsgTemplate,String .class, conf.getProperty       (PROPKEY_cancelMsgTemplate,DEFAULT_cancelMsgTemplate), DEFAULT_cancelMsgTemplate, "CANCEL Message Template to POST. Note: all ${somValue} will be replaced with runtime values.", new TemplateInputValidator(this)));
 
 		list.add( new CmSettingsHelper("send-SD",                          PROPKEY_sendSd,           Boolean.class, conf.getBooleanProperty(PROPKEY_sendSd,           DEFAULT_sendSd           ), DEFAULT_sendSd           , "if RFC 5424: Send Structured Data to the syslog server"));
 		list.add( new CmSettingsHelper("tcpConnTimeout",                   PROPKEY_tcpConnTimeout,   Integer.class, conf.getIntProperty    (PROPKEY_tcpConnTimeout,   DEFAULT_tcpConnTimeout   ), DEFAULT_tcpConnTimeout   , "if TCP: Timeout value when connectiong to the syslog server"));

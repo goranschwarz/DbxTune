@@ -76,6 +76,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
             Can be changed with <code>HostMonitor.executeAndParse.timeout.seconds = ###</code> (0 = wait forever).
             Opening a SSH channel now has a timeout <code>SshConnection.channel.connect.timeout.seconds = 30</code>, and on failure the SSH session is reconnected and the command is retried once.</LI>
         <LI>NO-GUI Collectors: When a sample takes long time, tell DbxCentral what is being refreshed right now (<code>RefreshStatusNoGui.push.thresholdSec = 5</code>)</LI>
+        <LI>AlarmWriterToMail - Mail rules in <code>AlarmWriterToMail.to</code> can now route on server group, severity, category, state, RAISE/CANCEL and time of day, with Cc. Faulty rules are reported (no longer silently ignored), and DbxCentral's Configuration page can edit all Alarm Writer settings, with a rule editor and a "who would get this alarm?" tester, and a template editor with a live preview (rendered by the collector)</LI>
         <LI></LI>
 
 		<LI><b>Alarms Handling:</b>

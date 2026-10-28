@@ -30,6 +30,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.writers.snpp.Message;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CmSettingsHelper.TemplateInputValidator;
 import com.dbxtune.cm.CmSettingsHelper.Type;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
@@ -171,7 +172,7 @@ extends AlarmWriterAbstract
 
 		list.add( new CmSettingsHelper("hostname", Type.MANDATORY, PROPKEY_hostname,         String .class, conf.getProperty   (PROPKEY_hostname,         DEFAULT_hostname        ), DEFAULT_hostname        , "Hostname where the SNPP Service is located"));
 		list.add( new CmSettingsHelper("port",     Type.MANDATORY, PROPKEY_port,             Integer.class, conf.getIntProperty(PROPKEY_port,             DEFAULT_port            ), DEFAULT_port            , "Port number where the SNPP Service is located"));
-		list.add( new CmSettingsHelper("message",  Type.MANDATORY, PROPKEY_msgBodyTemplate,  String .class, conf.getProperty   (PROPKEY_msgBodyTemplate,  DEFAULT_msgBodyTemplate ), DEFAULT_msgBodyTemplate , "Content to send... Note: this is a template where variables will be filled in at runtime."));
+		list.add( new CmSettingsHelper("message",  Type.MANDATORY, PROPKEY_msgBodyTemplate,  String .class, conf.getProperty   (PROPKEY_msgBodyTemplate,  DEFAULT_msgBodyTemplate ), DEFAULT_msgBodyTemplate , "Content to send... Note: this is a template where variables will be filled in at runtime.", new TemplateInputValidator(this)));
 		list.add( new CmSettingsHelper("username",                 PROPKEY_username,         String .class, conf.getProperty   (PROPKEY_username,         DEFAULT_username        ), DEFAULT_username        , "If you need to login with a user/password to the SNPP Service"));
 		list.add( new CmSettingsHelper("password",                 PROPKEY_password,         String .class, conf.getPropertyRaw(PROPKEY_password,         DEFAULT_password        ), DEFAULT_password        , "If you need to login with a user/password to the SNPP Service"));
 

@@ -33,12 +33,13 @@ import org.apache.commons.mail.HtmlEmail;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.dbxtune.alarm.writers.AlarmWriterToMail;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CmSettingsHelper.MailRoutingInputValidator;
 import com.dbxtune.cm.CmSettingsHelper.Type;
 import com.dbxtune.pcs.report.content.DailySummaryReportContent;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.FileUtils;
-import com.dbxtune.utils.JsonUtils;
 import com.dbxtune.utils.NumberUtils;
 import com.dbxtune.utils.StringUtil;
 
@@ -132,8 +133,13 @@ extends ReportSenderAbstract
 		}
 
 		// Getting mail addresses to send the report to
-		List<String> toList = MailHelper.getMailToAddressForServerNameAsList(serverName, null, PROPKEY_to, _to);
-		
+		// The report is sent with To: only (it has several fallback send methods), so any 'cc' of a matching rule is added to To:
+		MailHelper.Recipients recipients = MailHelper.getRecipients(serverName, null, null, PROPKEY_to, _to);
+		List<String> toList = recipients.getTo();
+		for (String cc : recipients.getCc())
+			if ( ! toList.contains(cc) )
+				toList.add(cc);
+
 		if (toList.isEmpty())
 		{
 			String toPropVal = ", property: " + PROPKEY_to + "=" + Configuration.getCombinedConfiguration().getProperty(PROPKEY_to, _to);
@@ -681,7 +687,7 @@ extends ReportSenderAbstract
 
 		list.add( new CmSettingsHelper("from",             Type.MANDATORY, PROPKEY_from,                       String .class, conf.getProperty       (PROPKEY_from                      , DEFAULT_from                      ), DEFAULT_from                      , "What should be the senders email address"));
 		list.add( new CmSettingsHelper("hostname",         Type.MANDATORY, PROPKEY_smtpHostname,               String .class, conf.getProperty       (PROPKEY_smtpHostname              , DEFAULT_smtpHostname              ), DEFAULT_smtpHostname              , "Name of the host that holds the smtp server"));
-		list.add( new CmSettingsHelper("to",               Type.MANDATORY, PROPKEY_to,                         String .class, conf.getProperty       (PROPKEY_to                        , DEFAULT_to                        ), DEFAULT_to                        , "To what mail adresses should we send the mail (if several ones, just comma separate them). Note: this can be configured to filter on <i>serverName</i>, in the property <code>ReportSenderToMail.to=[ {#serverName#:#xxx#, #to#:#user1@acme.com, user2@acme.com#}, {#serverName#:#yyy#, #to#:#user1@acme.com#}, {#serverName#:#zzz#, #to#:#user3@acme.com#}, {#fallback#:#true#, #to#:#user4@acme.com#} ]</code>".replace('#', '"') ));
+		list.add( new CmSettingsHelper("to",               Type.MANDATORY, PROPKEY_to,                         String .class, conf.getProperty       (PROPKEY_to                        , DEFAULT_to                        ), DEFAULT_to                        , AlarmWriterToMail.MAIL_ROUTING_HELP, new MailRoutingInputValidator() ));
 //		list.add( new CmSettingsHelper("cc",                               PROPKEY_cc,                         String .class, conf.getProperty       (PROPKEY_cc                        , DEFAULT_cc                        ), DEFAULT_cc                        , "To what CC mail adresses should we send the mail (if several ones, just comma separate them)"));
 		list.add( new CmSettingsHelper("Subject-Template",                 PROPKEY_subjectTemplate,            String .class, conf.getProperty       (PROPKEY_subjectTemplate           , DEFAULT_subjectTemplate           ), DEFAULT_subjectTemplate           , "What should be the subject (Note: this is a template)"));
 		list.add( new CmSettingsHelper("Subject-NTR-Template",             PROPKEY_subjectNtrTemplate,         String .class, conf.getProperty       (PROPKEY_subjectNtrTemplate        , DEFAULT_subjectNtrTemplate        ), DEFAULT_subjectNtrTemplate        , "What should be the subject, when NTR=Nothing To Report (Note: this is a template)"));
@@ -744,7 +750,7 @@ extends ReportSenderAbstract
 	@Override
 	public boolean isEnabledForServer(String serverName)
 	{
-		return StringUtil.hasValue( MailHelper.getMailToAddressForServerName(serverName, null, PROPKEY_to, _to) );
+		return ! MailHelper.getRecipients(serverName, null, null, PROPKEY_to, _to).isEmpty();
 
 		// TODO: not yet implemented
 		//return true;
@@ -892,8 +898,11 @@ extends ReportSenderAbstract
 		_logger.info("Configuration for Report Sender Module: " + getName());
 		_logger.info("    " + StringUtil.left(PROPKEY_smtpHostname              , spaces) + ": " + _smtpHostname);
 		_logger.info("    " + StringUtil.left(PROPKEY_to                        , spaces) + ": " + _to);
-		if (JsonUtils.isPossibleJson(_to))
-			_logger.info("    NOTE: the Above 'to' string look like JSON Content and will be evaluated at runtime, when the ServerName is known.");
+		MailHelper.Rules rules = MailHelper.parse(_to);
+		if (rules.getJsonError() != null)
+			_logger.error("    " + StringUtil.left("", spaces) + "  <<-- " + rules.getJsonError());
+		for (MailHelper.Rule rule : rules.getRules())
+			_logger.info("    " + StringUtil.left("", spaces) + "  rule " + rule.describe() + (rule.isAlarmOnly() ? "  (has alarm conditions: never used for a report)" : ""));
 		_logger.info("    " + StringUtil.left(PROPKEY_from                      , spaces) + ": " + _from);
 		_logger.info("    " + StringUtil.left(PROPKEY_subjectTemplate           , spaces) + ": " + _subjectTemplate);
 		_logger.info("    " + StringUtil.left(PROPKEY_subjectNtrTemplate        , spaces) + ": " + _subjectNtrTemplate);

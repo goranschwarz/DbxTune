@@ -26,7 +26,10 @@ import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -35,6 +38,7 @@ import com.dbxtune.Version;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.central.DbxTuneCentral;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CmSettingsHelper.TemplateInputValidator;
 import com.dbxtune.cm.CmSettingsHelper.Type;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
@@ -63,10 +67,11 @@ extends AlarmWriterAbstract
 		// WRITE init message, jupp a little late, but I wanted to grab the _name
 		_logger.info("Initializing the AlarmWriter component named '" + getName() + "'.");
 
-		_activeAlarms_writeToFileName = conf.getProperty   (PROPKEY_activeFilename,   DEFAULT_activeFilename);
+		// parseProperty(): resolve ${HOME} and ${SERVERNAME:-unknown} also in the DEFAULT file names (the combined config does not do that for a default)
+		_activeAlarms_writeToFileName = conf.parseProperty(PROPKEY_activeFilename, conf.getProperty(PROPKEY_activeFilename, DEFAULT_activeFilename));
 		_activeAlarms_msgTemplate     = conf.getProperty   (PROPKEY_toActiveTemplate, DEFAULT_toActiveTemplate);
 
-		_alarmLog_writeToFileName     = conf.getProperty   (PROPKEY_logFilename,      DEFAULT_logFilename);
+		_alarmLog_writeToFileName     = conf.parseProperty(PROPKEY_logFilename,    conf.getProperty(PROPKEY_logFilename,    DEFAULT_logFilename));
 		_alarmLog_msgTemplate         = conf.getProperty   (PROPKEY_toLogTemplate,    DEFAULT_toLogTemplate);
 		_alarmLog_maxFileSizeInMb     = conf.getIntProperty(PROPKEY_maxFileSizeInMb,  DEFAULT_maxFileSizeInMb);
 		_alarmLog_maxBackupIndex      = conf.getIntProperty(PROPKEY_maxBackupIndex,   DEFAULT_maxBackupIndex);
@@ -133,8 +138,8 @@ extends AlarmWriterAbstract
 		if (conf == null)
 			return;
 
-		String new_activeAlarms_writeToFileName = conf.getProperty(PROPKEY_activeFilename,   DEFAULT_activeFilename);
-		String new_alarmLog_writeToFileName     = conf.getProperty(PROPKEY_logFilename,      DEFAULT_logFilename);
+		String new_activeAlarms_writeToFileName = conf.parseProperty(PROPKEY_activeFilename, conf.getProperty(PROPKEY_activeFilename, DEFAULT_activeFilename)); // as in init()
+		String new_alarmLog_writeToFileName     = conf.parseProperty(PROPKEY_logFilename,    conf.getProperty(PROPKEY_logFilename,    DEFAULT_logFilename));
 
 		if ( ! new_activeAlarms_writeToFileName.equals(_activeAlarms_writeToFileName) )
 		{
@@ -162,6 +167,7 @@ extends AlarmWriterAbstract
 	//-------------------------------------------------------
 	private String      _activeAlarms_writeToFileName = "";
 	private String      _activeAlarms_msgTemplate     = "";
+	private boolean     _oldActiveTemplateWarned      = false; // an old style ACTIVE template is logged once
 
 	private String      _alarmLog_writeToFileName     = "";
 	private String      _alarmLog_msgTemplate         = "";
@@ -190,9 +196,9 @@ extends AlarmWriterAbstract
 		Configuration conf = Configuration.getCombinedConfiguration();
 
 		list.add( new CmSettingsHelper("ActiveFileName",    Type.MANDATORY, PROPKEY_activeFilename,   String.class,  conf.getPropertyRaw(PROPKEY_activeFilename,   DEFAULT_activeFilename),   DEFAULT_activeFilename,   "A file where ACTIVE alarms are written to on every 'end-of-scan'. Note starting " + Version.getAppName() + " with -DKEYNAME1=xxx will enable you to use ${KEYNAME1} in the setting value. Note2: ${SERVERNAME} variable is set after a successfull DBMS Connection has been made."));
-		list.add( new CmSettingsHelper("ActiveMsgTemplate", Type.MANDATORY, PROPKEY_toActiveTemplate, String.class,  conf.getPropertyRaw(PROPKEY_toActiveTemplate, DEFAULT_toActiveTemplate), DEFAULT_toActiveTemplate, "Template for what should be written to the ACTIVE filename"));
+		list.add( new CmSettingsHelper("ActiveMsgTemplate", Type.MANDATORY, PROPKEY_toActiveTemplate, String.class,  conf.getPropertyRaw(PROPKEY_toActiveTemplate, DEFAULT_toActiveTemplate), DEFAULT_toActiveTemplate, "Template for what should be written to the ACTIVE filename", new TemplateInputValidator(this)));
 		list.add( new CmSettingsHelper("LogFileName",       Type.PROBABLY,  PROPKEY_logFilename,      String.class,  conf.getPropertyRaw(PROPKEY_logFilename,      DEFAULT_logFilename),      DEFAULT_logFilename,      "Write all alarms that is raised/canceled to this file.  Note starting " + Version.getAppName() + " with -DKEYNAME1=xxx will enable you to use ${KEYNAME1} in the setting value. Note2: ${SERVERNAME} variable is set after a successfull DBMS Connection has been made."));
-		list.add( new CmSettingsHelper("LogMsgTemplate",    Type.PROBABLY,  PROPKEY_toLogTemplate,    String.class,  conf.getPropertyRaw(PROPKEY_toLogTemplate,    DEFAULT_toLogTemplate),    DEFAULT_toLogTemplate,    "Template for what should be written to the LOG filename"));
+		list.add( new CmSettingsHelper("LogMsgTemplate",    Type.PROBABLY,  PROPKEY_toLogTemplate,    String.class,  conf.getPropertyRaw(PROPKEY_toLogTemplate,    DEFAULT_toLogTemplate),    DEFAULT_toLogTemplate,    "Template for what should be written to the LOG filename", new TemplateInputValidator(this)));
 		list.add( new CmSettingsHelper("LogMaxSize",                        PROPKEY_maxFileSizeInMb,  Integer.class, conf.getIntProperty(PROPKEY_maxFileSizeInMb,  DEFAULT_maxFileSizeInMb),  DEFAULT_maxFileSizeInMb,  "How many MB can the log file be."));
 		list.add( new CmSettingsHelper("LogRollover",                       PROPKEY_maxBackupIndex,   Integer.class, conf.getIntProperty(PROPKEY_maxBackupIndex,   DEFAULT_maxBackupIndex),   DEFAULT_maxBackupIndex,   "Log 'rollover' (when log file reaches #MB start a new log file). Save maximum # number of files."));
 
@@ -229,8 +235,8 @@ extends AlarmWriterAbstract
 			+ "${StringUtil.format('%-30s %-30s %-30s %-30s %-10s %-10s %-10s %8.8s %s', 'AlarmClassAbriviated', 'ServerName', 'CmName', 'ExtraInfo', 'Category', 'Severity', 'State', 'Duration', 'Description')}\n"
 			+ "${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 10)} ${StringUtils.repeat('-', 10)} ${StringUtils.repeat('-', 10)} ${StringUtils.repeat('-', 8)} ${StringUtils.repeat('-', 80)}\n"
 			+ "#foreach( $alarm in $activeAlarmList )\n"
-//			+ "${StringUtil.format('%-30s %-30s %-30s %-30s %-10s %-10s %-10s %8.8s %s', ${alarm.alarmClassAbriviated}, ${alarm.serviceName}, ${alarm.serviceInfo}, ${alarm.extraInfo}, ${alarm.category}, ${alarm.severity}, ${alarm.state}, ${alarm.duration}, ${alarm.description})}\n"
-			+ "${StringUtil.format('%-30s %-30s %-30s %-30s %-10s %-10s %-10s %8.8s %s', ${alarmClassAbriviated}, ${serviceName}, ${serviceInfo}, ${extraInfo}, ${category}, ${severity}, ${state}, ${duration}, ${description})}\n"
+			// ${alarm.xxx}: each alarm in the list (${duration} is getFullDuration(true), there is no getDuration())
+			+ "${StringUtil.format('%-30s %-30s %-30s %-30s %-10s %-10s %-10s %8.8s %s', ${alarm.alarmClassAbriviated}, ${alarm.serviceName}, ${alarm.serviceInfo}, ${alarm.extraInfo}, ${alarm.category}, ${alarm.severity}, ${alarm.state}, ${alarm.getFullDuration(true)}, ${alarm.description})}\n"
 			+ "#end"
 			;
 	}
@@ -426,10 +432,29 @@ extends AlarmWriterAbstract
 //		String writeText = WriterUtils.createMessageFromTemplate(getClass().getSimpleName(), activeAlarms, _activeAlarms_msgTemplate, true, null, "http://DUMMY-dbxtune:8080");
 //		writeToFile.println(writeText);
 
-		for (AlarmEvent alarmEvent : activeAlarms)
+		// - A template that loops $activeAlarmList and prints the loop variable (the default: a header + one row per ${alarm.xxx}): render it ONCE.
+		// - An older template (a copy of the old default) loops the list but prints the CURRENT alarm (${serviceName}, not ${alarm.serviceName}):
+		//   render it per alarm with only that alarm in the list, otherwise each alarm is written N times (N = number of active alarms).
+		// - A template without a loop: one render per alarm, as always.
+		String  dbxCentralUrl = "http://DUMMY-dbxtune:" + DbxTuneCentral.getWebHttpPort();
+		Matcher loop          = Pattern.compile("#\\{?foreach\\}?\\s*\\(\\s*\\$\\{?(\\w+)\\}?\\s+in\\s+\\$\\{?activeAlarmList\\b").matcher(_activeAlarms_msgTemplate);
+		boolean loopsTheList  = loop.find();
+		boolean usesLoopVar   = loopsTheList && Pattern.compile("\\$\\{?" + loop.group(1) + "\\.").matcher(_activeAlarms_msgTemplate).find();
+		if (loopsTheList && ! usesLoopVar && ! _oldActiveTemplateWarned)
 		{
-			String writeText = WriterUtils.createMessageFromTemplate(getClass().getSimpleName(), alarmEvent, _activeAlarms_msgTemplate, true, null, "http://DUMMY-dbxtune:" + DbxTuneCentral.getWebHttpPort());
-			writeToFile.println(writeText);
+			_oldActiveTemplateWarned = true;
+			_logger.warn("The AlarmWriter named '" + getName() + "': the template '" + PROPKEY_toActiveTemplate + "' loops $activeAlarmList but prints the current alarm "
+					+ "(eg ${serviceName} instead of ${" + loop.group(1) + ".serviceName}), so its header is written once per active alarm. Use ${" + loop.group(1) + ".xxx} in the loop, or remove the property to use the default.");
+		}
+
+		if (usesLoopVar)
+		{
+			writeToFile.println(WriterUtils.createMessageFromTemplate(getClass().getSimpleName(), activeAlarms.get(0), activeAlarms, _activeAlarms_msgTemplate, true, null, dbxCentralUrl));
+		}
+		else
+		{
+			for (AlarmEvent alarmEvent : activeAlarms)
+				writeToFile.println(WriterUtils.createMessageFromTemplate(getClass().getSimpleName(), alarmEvent, loopsTheList ? Collections.singletonList(alarmEvent) : activeAlarms, _activeAlarms_msgTemplate, true, null, dbxCentralUrl));
 		}
 
 		writeToFile.close();
