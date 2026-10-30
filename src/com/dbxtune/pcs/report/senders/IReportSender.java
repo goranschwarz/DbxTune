@@ -20,6 +20,10 @@
  ******************************************************************************/
 package com.dbxtune.pcs.report.senders;
 
+import java.util.Collections;
+import java.util.List;
+
+import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.pcs.report.content.DailySummaryReportContent;
 
 public interface IReportSender
@@ -51,8 +55,16 @@ public interface IReportSender
 
 	/**
 	 * Send the report to "whatever"
-	 * @param reportContent 
+	 * @param reportContent
 	 */
 	void send(DailySummaryReportContent reportContent);
+
+	/**
+	 * The settings of this sender (eg for the web config page). Default: none.
+	 */
+	default List<CmSettingsHelper> getAvailableSettings()
+	{
+		return Collections.emptyList();
+	}
 
 }

@@ -41,6 +41,7 @@ var DbxConfig2 = (function()
 		ovFilter   : { q: '', eff: false, mod: false, pend: false },
 		selWriter  : null,
 		wsub       : 'settings',   // settings | filters
+		dsub       : 'report',     // Daily Summary Report sub tab: report | mail | sections
 		mr         : {},           // mail rules editor state, per field key: { view, edit, testOpen, test, testing, testRes }
 		mrInfo     : null,         // from the collector: alarm names, enum values, server group (op 'mailRoutingInfo')
 		tpl        : {},           // template editor state, per field key: { preview, vars, action, last, card }
@@ -113,6 +114,20 @@ var DbxConfig2 = (function()
 
 	function cmList()      { return (S.cfg && S.cfg.cmList) || []; }
 	function writerList()  { return (S.cfg && S.cfg.alarmWriters) || []; }
+	function dsrCfg()      { return (S.cfg && S.cfg.dailySummaryReport && S.cfg.dailySummaryReport.settings) ? S.cfg.dailySummaryReport : null; } // null: a collector without it (older version)
+	/** The Daily Summary Report entries of a sub tab (report | mail | sections), in the shape propField() takes */
+	function dsrList(sub)
+	{
+		var d = dsrCfg();
+		if (!d) return [];
+		if (sub === 'mail') return (d.sender && d.sender.settings) || [];
+		if (sub === 'sections')
+			return (d.sections || []).map(function(s) {
+				return { name: s.subject, property: s.property, value: s.value, defaultValue: s.defaultValue, datatype: 'Boolean', description: '',
+				         canBeDisabled: s.canBeDisabled, className: s.className, source: s.source, sourceInMemoryOnly: s.sourceInMemoryOnly };
+			});
+		return d.settings || [];
+	}
 	function findCm(name)  { return cmList().find(function(c) { return c.cmName === name; }) || null; }
 	function alarmsOf(cm)  { return (cm && cm.alarmSettings && cm.alarmSettings.alarms) || []; }
 	function preChecksOf(cm) { return (cm && cm.alarmSettings && cm.alarmSettings.preChecks) || []; }
@@ -169,6 +184,11 @@ var DbxConfig2 = (function()
 			var w = writerList().find(function(x) { return x.className === meta.writer; });
 			var wp = w ? ((meta.wsub === 'filters' ? w.filters : w.settings) || []).find(function(x) { return x.name === meta.name; }) : null;
 			return wp ? propField(wp) : null;
+		}
+		if (meta.type === 'dsr')
+		{
+			var dp = dsrList(meta.wsub).find(function(x) { return x.property === meta.property; });
+			return dp ? propField(dp) : null;
 		}
 		var cm = findCm(meta.cmName);
 		if (!cm) return null;
@@ -351,6 +371,7 @@ var DbxConfig2 = (function()
 	// so there is only one rule engine: the collector's own.
 	//------------------------------------------------------------------
 	var MR_CONDS  = ['serverName', 'serverGroup', 'alarmName', 'category', 'severity', 'state', 'action', 'time'];
+	var MR_ALARM_CONDS = ['alarmName', 'category', 'severity', 'state', 'action', 'time']; // need an alarm: never match a Daily Summary Report (MailHelper.Rule.isAlarmOnly)
 	var MR_FIELDS = [ // the edit form, in order: [key, label, placeholder, suggestions (field in S.mrInfo)]
 		['name',        'Name',         'eg: DBA team',                                         null],
 		['serverName',  'Server name',  'regexp (full match), eg: PROD_.*',                     null],
@@ -507,7 +528,11 @@ var DbxConfig2 = (function()
 				var on    = String(rr.enabled).toLowerCase() !== 'false';
 				var conds = '';
 				if (String(rr.fallback).toLowerCase() === 'true') conds += '<span class="c2-mr-cond c2-mr-fb">fallback: when no other rule matched</span>';
-				MR_CONDS.forEach(function(k) { if (rr[k] !== undefined && rr[k] !== '') conds += '<span class="c2-mr-cond"><b>' + esc(k) + '</b> ' + esc(rr[k]) + '</span>'; });
+				MR_CONDS.forEach(function(k) {
+					if (rr[k] === undefined || rr[k] === '') return;
+					var skip = S.reg[key].type === 'dsr' && MR_ALARM_CONDS.indexOf(k) !== -1; // the report's recipients: an alarm condition never matches a report
+					conds += '<span class="c2-mr-cond' + (skip ? ' c2-mr-unk' : '') + '"' + (skip ? ' title="An alarm condition: this rule is skipped for reports"' : '') + '><b>' + esc(k) + '</b> ' + esc(rr[k]) + '</span>';
+				});
 				Object.keys(rr).forEach(function(k) { if (known.indexOf(k) === -1 && k.charAt(0) !== '_') conds += '<span class="c2-mr-cond c2-mr-unk" title="Unknown key">' + esc(k) + '?</span>'; });
 				if (!isObj) conds += '<span class="c2-mr-cond c2-mr-unk">' + esc(JSON.stringify(r)) + '</span>';
 				var who = (rr.to ? '<div><span class="c2-mr-lbl">To</span> ' + esc(rr.to) + '</div>' : '') + (rr.cc ? '<div><span class="c2-mr-lbl">Cc</span> ' + esc(rr.cc) + '</div>' : '');
@@ -531,10 +556,16 @@ var DbxConfig2 = (function()
 				if (st.edit === i && isObj)
 				{
 					h += '<tr class="c2-mr-sub"><td></td><td colspan="5"><div class="c2-mr-form">';
+					var isReport = S.reg[key].type === 'dsr';
 					MR_FIELDS.forEach(function(fd)
 					{
+						// The report's recipients: a report has no alarm, so a rule with an alarm condition never matches it.
+						// Do not offer those fields, but still show one that has a value (so it can be seen, and cleared).
+						var alarmOnly = MR_ALARM_CONDS.indexOf(fd[0]) !== -1;
+						if (isReport && alarmOnly && (rr[fd[0]] === undefined || rr[fd[0]] === ''))
+							return;
 						var fid = id + '-' + i + '-' + fd[0];
-						h += '<label for="' + fid + '">' + esc(fd[1]) + '</label>'
+						h += '<label for="' + fid + '">' + esc(fd[1]) + (isReport && alarmOnly ? '<div class="c2-err-i">skipped for reports</div>' : '') + '</label>'
 							+ '<input type="text" class="c2-in" id="' + fid + '"' + ka + ' data-mr-idx="' + i + '" data-mr-field="' + fd[0] + '"'
 							+ ' value="' + esc(rr[fd[0]] === undefined ? '' : rr[fd[0]]) + '"' + (fd[3] ? ' list="' + id + '-dl-' + fd[3] + '"' : '')
 							+ ' placeholder="' + esc(fd[2]) + '" spellcheck="false"' + dis + '>';
@@ -553,51 +584,102 @@ var DbxConfig2 = (function()
 		}
 		if (v && v.jsonError) h += '<div class="c2-err">Collector: ' + esc(v.jsonError) + '</div>';
 
-		// Tester: who would get this alarm?
-		h += '<div class="c2-mr-acts">' + mrBtn(key, 'testopen', null, '<i class="fa-solid fa-flask"></i> Who would get this alarm?', 'Try the rules as they are in the editor (unsaved), with the collector\'s own code', 'c2-btn c2-btn-sm' + (st.testOpen ? ' c2-on' : '')) + '</div>';
-		if (st.testOpen)
+		// Tester: for the Daily Summary Report who gets THIS server's report, else who would get an alarm
+		if (S.reg[key].type === 'dsr')
+			h += mrReportWho(key, val, info);
+		else
 		{
-			if (!st.test)
-				st.test = { serverName: (S.cfg && S.cfg.srvName) || S.srvName, serverGroup: info.serverGroup || '', alarmName: '', severity: 'ERROR', category: 'OTHER', state: 'AFFECTED', action: 'RAISE', time: mrLocalNow() };
-			var t = st.test;
-			var inp = function(k, lbl, list, type) {
-				return '<label for="' + id + '-t-' + k + '">' + lbl + '</label><input type="' + (type || 'text') + '" class="c2-in" id="' + id + '-t-' + k + '"' + ka + ' data-mr-test="' + k + '" value="' + esc(t[k]) + '"'
-					+ (list ? ' list="' + id + '-dl-' + list + '"' : '') + ' spellcheck="false">';
-			};
-			var sel = function(k, lbl, values) {
-				return '<label for="' + id + '-t-' + k + '">' + lbl + '</label><select class="c2-in" id="' + id + '-t-' + k + '"' + ka + ' data-mr-test="' + k + '">'
-					+ (values || []).map(function(x) { return '<option' + (x === t[k] ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select>';
-			};
-			h += '<div class="c2-mr-test"><div class="c2-mr-form">'
-				+ inp('serverName', 'Server name') + inp('serverGroup', 'Server group') + inp('alarmName', 'Alarm name', 'alarmNames')
-				+ sel('severity', 'Severity', info.severities || ['INFO', 'WARNING', 'ERROR'])
-				+ sel('category', 'Category', info.categories || ['OTHER'])
-				+ sel('state',    'State',    info.states     || ['UP', 'AFFECTED', 'DOWN'])
-				+ sel('action',   'Action',   (info.actions || ['RAISE', 'CANCEL']).filter(function(a) { return a !== 'RE-RAISE'; }))
-				+ inp('time', 'Raised at', null, 'datetime-local')
-				+ '</div><div class="c2-help">Server group empty = not in a group (a rule with a server group then never matches). The time is your browser\'s local time.</div>'
-				+ '<div class="c2-mr-acts">' + mrBtn(key, 'test', null, st.testing ? '<i class="fa-solid fa-spinner fa-spin"></i> Testing...' : '<i class="fa-solid fa-play"></i> Test', null, 'c2-btn c2-btn-sm c2-btn-pri') + '</div>';
-			if (st.testRes)
+			h += '<div class="c2-mr-acts">' + mrBtn(key, 'testopen', null, '<i class="fa-solid fa-flask"></i> Who would get this alarm?', 'Try the rules as they are in the editor (unsaved), with the collector\'s own code', 'c2-btn c2-btn-sm' + (st.testOpen ? ' c2-on' : '')) + '</div>';
+			if (st.testOpen)
 			{
-				if (st.testRes.failed)
-					h += '<div class="c2-warn">Could not test: ' + esc(st.testRes.failed) + '</div>';
-				else
+				if (!st.test)
+					st.test = { serverName: (S.cfg && S.cfg.srvName) || S.srvName, serverGroup: info.serverGroup || '', alarmName: '', severity: 'ERROR', category: 'OTHER', state: 'AFFECTED', action: 'RAISE', time: mrLocalNow() };
+				var t = st.test;
+				var inp = function(k, lbl, list, type) {
+					return '<label for="' + id + '-t-' + k + '">' + lbl + '</label><input type="' + (type || 'text') + '" class="c2-in" id="' + id + '-t-' + k + '"' + ka + ' data-mr-test="' + k + '" value="' + esc(t[k]) + '"'
+						+ (list ? ' list="' + id + '-dl-' + list + '"' : '') + ' spellcheck="false">';
+				};
+				var sel = function(k, lbl, values) {
+					return '<label for="' + id + '-t-' + k + '">' + lbl + '</label><select class="c2-in" id="' + id + '-t-' + k + '"' + ka + ' data-mr-test="' + k + '">'
+						+ (values || []).map(function(x) { return '<option' + (x === t[k] ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select>';
+				};
+				h += '<div class="c2-mr-test"><div class="c2-mr-form">'
+					+ inp('serverName', 'Server name') + inp('serverGroup', 'Server group') + inp('alarmName', 'Alarm name', 'alarmNames')
+					+ sel('severity', 'Severity', info.severities || ['INFO', 'WARNING', 'ERROR'])
+					+ sel('category', 'Category', info.categories || ['OTHER'])
+					+ sel('state',    'State',    info.states     || ['UP', 'AFFECTED', 'DOWN'])
+					+ sel('action',   'Action',   (info.actions || ['RAISE', 'CANCEL']).filter(function(a) { return a !== 'RE-RAISE'; }))
+					+ inp('time', 'Raised at', null, 'datetime-local')
+					+ '</div><div class="c2-help">Server group empty = not in a group (a rule with a server group then never matches). The time is your browser\'s local time.</div>'
+					+ '<div class="c2-mr-acts">' + mrBtn(key, 'test', null, st.testing ? '<i class="fa-solid fa-spinner fa-spin"></i> Testing...' : '<i class="fa-solid fa-play"></i> Test', null, 'c2-btn c2-btn-sm c2-btn-pri') + '</div>';
+				if (st.testRes)
 				{
-					var rs = st.testRes.json.result || { to: [], cc: [], matchedRules: [] };
-					h += '<div class="c2-mr-res">'
-						+ (rs.to.length || rs.cc.length
-							? '<div><span class="c2-mr-lbl">To</span> ' + esc(rs.to.join(', ') || '-') + '</div>' + (rs.cc.length ? '<div><span class="c2-mr-lbl">Cc</span> ' + esc(rs.cc.join(', ')) + '</div>' : '')
-							  + '<div class="c2-help">Rule' + (rs.matchedRules.length === 1 ? '' : 's') + ': ' + esc(rs.matchedRules.join(', ')) + (rs.usedFallback ? ' (the fallback, no other rule matched)' : '') + '</div>'
-							: '<div class="c2-err-i">Nobody gets this mail: no rule matched, and there is no fallback rule.</div>')
-						+ (st.testRes.value !== val ? '<div class="c2-warn">The rules have changed since this test, press Test again.</div>' : '')
-						+ '</div>';
+					if (st.testRes.failed)
+						h += '<div class="c2-warn">Could not test: ' + esc(st.testRes.failed) + '</div>';
+					else
+					{
+						var rs = st.testRes.json.result || { to: [], cc: [], matchedRules: [] };
+						h += '<div class="c2-mr-res">'
+							+ (rs.to.length || rs.cc.length
+								? '<div><span class="c2-mr-lbl">To</span> ' + esc(rs.to.join(', ') || '-') + '</div>' + (rs.cc.length ? '<div><span class="c2-mr-lbl">Cc</span> ' + esc(rs.cc.join(', ')) + '</div>' : '')
+								  + '<div class="c2-help">Rule' + (rs.matchedRules.length === 1 ? '' : 's') + ': ' + esc(rs.matchedRules.join(', ')) + (rs.usedFallback ? ' (the fallback, no other rule matched)' : '') + '</div>'
+								: '<div class="c2-err-i">Nobody gets this mail: no rule matched, and there is no fallback rule.</div>')
+							+ (st.testRes.value !== val ? '<div class="c2-warn">The rules have changed since this test, press Test again.</div>' : '')
+							+ '</div>';
+					}
 				}
+				h += '</div>';
 			}
-			h += '</div>';
 		}
 
 		if (f.description)
 			h += '<details class="c2-mr-help"><summary>How the rules work</summary><div class="c2-help c2-richhelp">' + safeHtml(f.description) + '</div></details>';
+		return h + '</div>';
+	}
+
+	var _mrRep = {}, _mrRepBusy = {}, _mrRepTimer = null; // 'server|value' -> the collector's answer for this server's report
+
+	/**
+	 * "Who gets this server's report?" for the Daily Summary Report's recipients: asked from the collector with the rules in the
+	 * editor, for THIS server and no alarm (so rules with an alarm condition are skipped, as when the report is sent). No inputs.
+	 */
+	function mrReportWho(key, val, info)
+	{
+		var srv = (S.cfg && S.cfg.srvName) || S.srvName;
+		var rk  = srv + '|' + val;
+		var res = _mrRep[rk];
+		if (!res && !_mrRepBusy[rk])
+		{
+			clearTimeout(_mrRepTimer);
+			_mrRepTimer = setTimeout(function()
+			{
+				_mrRepBusy[rk] = true;
+				mrPost({ op: 'mailRouting', value: val, propKey: S.reg[key] ? S.reg[key].property : '', sample: { serverName: srv, serverGroup: info.serverGroup || null } })
+				.then(function(r)
+				{
+					delete _mrRepBusy[rk];
+					_mrRep[rk] = r.status === 200 ? r.json : { failed: mrFailText(r) };
+					render();
+				});
+			}, 400);
+		}
+
+		var h = '<div class="c2-mr-test"><div><b>Who gets this server\'s report?</b> <span class="c2-help">(' + esc(srv) + ')</span></div>';
+		if (!res)       return h + '<div class="c2-help"><i class="fa-solid fa-spinner fa-spin"></i> Asking the collector...</div></div>';
+		if (res.failed) return h + '<div class="c2-warn">Could not ask the collector: ' + esc(res.failed) + '</div></div>';
+
+		var rs      = res.result || { to: [], cc: [], matchedRules: [] };
+		var all     = rs.to.concat(rs.cc.filter(function(a) { return rs.to.indexOf(a) === -1; })); // the report sender adds a rule's cc to To
+		var skipped = (res.rules || []).filter(function(r) { return r.alarmOnly; }).map(function(r) { return r.name || ('rule ' + (r.index + 1)); });
+		h += '<div class="c2-mr-res">'
+			+ (all.length
+				? '<div><span class="c2-mr-lbl">To</span> ' + esc(all.join(', ')) + '</div>'
+				  + '<div class="c2-help">Rule' + (rs.matchedRules.length === 1 ? '' : 's') + ': ' + esc(rs.matchedRules.join(', ')) + (rs.usedFallback ? ' (the fallback, no other rule matched)' : '')
+				  + (rs.cc.length ? '. A report has no Cc: the cc addresses of the rules are added to To.' : '') + '</div>'
+				: '<div class="c2-err-i">Nobody gets this server\'s report: no rule matched, and there is no fallback rule.</div>')
+			+ (skipped.length ? '<div class="c2-help">Skipped for reports (an alarm condition, eg severity, never matches a report): ' + esc(skipped.join(', ')) + '</div>' : '')
+			+ (res.savedOnly ? '<div class="c2-help">These are the SAVED rules (log in as admin to try changes before saving).</div>' : '')
+			+ '</div>';
 		return h + '</div>';
 	}
 
@@ -1350,6 +1432,51 @@ var DbxConfig2 = (function()
 			+ '<div class="c2-card c2-det">' + det + '</div></div>';
 	}
 
+	/** The Daily Summary Report tab: the report's settings, its sender's settings and the report sections (all read at every report run) */
+	function renderDsr()
+	{
+		var d = dsrCfg();
+		if (!d)
+			return '<div class="c2-wrap"><div class="c2-card c2-pane"><div class="c2-empty">This collector is too old to configure the Daily Summary Report from here (it needs a newer version).</div></div></div>';
+
+		var snd   = d.sender || {};
+		var secs  = dsrList('sections');
+		var subs  = [['report', 'Report', (d.settings || []).length], ['mail', snd.name || 'Sender', ((snd.settings) || []).length], ['sections', 'Sections', secs.length]];
+		var cKey  = 'D|report|DailySummaryReport.create';
+		var cRow  = (d.settings || []).find(function(s) { return s.property === 'DailySummaryReport.create'; });
+		var isOn  = cRow ? String(cur(cKey, cRow.value)).toLowerCase() === 'true' : false;
+
+		var h = '<div class="c2-det-h"><div class="c2-det-t"><h2>Daily Summary Report</h2><div class="c2-sub c2-mono">' + esc(d.reportClassName || '') + '</div>'
+			+ '<div class="c2-help">Created when the recording database rolls over to a new day (normally at midnight), then sent by <code>' + esc(snd.name || '?') + '</code>. '
+			+ 'Changes are used at the next report, no restart needed.</div></div>'
+			+ '<div class="c2-stats">' + statusChip(isOn, isOn ? 'Created' : 'Not created', 'Is the report created for this server (Report > Create report)') + '</div></div>';
+
+		h += '<div class="c2-stabs">' + subs.map(function(s) {
+			return '<button type="button" class="c2-tab' + (S.dsub === s[0] ? ' c2-on' : '') + '" data-dsub="' + s[0] + '">' + esc(s[1]) + '<span class="c2-cnt">' + s[2] + '</span></button>';
+		}).join('') + '</div><div class="c2-pane">';
+
+		if (S.dsub === 'sections')
+		{
+			h += '<div class="c2-help c2-mb">The parts of the report. A section that is switched off is not created (and its queries are not run).'
+				+ (S.isAdmin ? ' <button type="button" class="c2-btn c2-btn-sm" data-dsr-all="true">All on</button> <button type="button" class="c2-btn c2-btn-sm" data-dsr-all="false">All off</button>' : '') + '</div>';
+			if (d.sectionsError) h += '<div class="c2-warn">' + esc(d.sectionsError) + '</div>';
+		}
+		else if (S.dsub === 'mail')
+			h += '<div class="c2-help c2-mb">The settings of <code>' + esc(snd.className || '') + '</code>. Passwords can only be changed in the collector\'s configuration file.</div>';
+
+		h += '<div class="c2-rows">';
+		var entries = dsrList(S.dsub);
+		if (!entries.length) h += '<div class="c2-empty">None.</div>';
+		entries.forEach(function(p) {
+			var fixed = S.dsub === 'sections' && !p.canBeDisabled;
+			var extra = (p.isMandatory ? '<span class="c2-bdg" title="Mandatory">mandatory</span>' : '') + (fixed ? '<span class="c2-bdg" title="This section can not be switched off">always included</span>' : '');
+			h += fieldRow('D|' + S.dsub + '|' + p.property, propField(p), { type: 'dsr', cmName: '', wsub: S.dsub, readOnly: fixed, extraLbl: extra ? '<div>' + extra + '</div>' : '' });
+		});
+		h += '</div></div>';
+
+		return '<div class="c2-wrap"><div class="c2-card c2-det">' + h + '</div></div>';
+	}
+
 	function renderSaveBar()
 	{
 		var n = pendCount(), bar = el('c2-savebar');
@@ -1384,6 +1511,7 @@ var DbxConfig2 = (function()
 			Object.keys(S.pend).forEach(function(k) {
 				var p = S.pend[k], cm = findCm(p.cmName);
 				var where = p.type === 'writer' ? String(p.writer).split('.').pop() + ' › ' + p.label
+				          : p.type === 'dsr'    ? 'Daily Summary Report › ' + p.label
 				          : (cm ? (cm.displayName || cm.cmName) : p.cmName) + (p.alarm ? ' › ' + p.alarm : '') + ' › ' + p.label;
 				h += '<button type="button" class="c2-item" data-jump="' + esc(k) + '">' + esc(where)
 					+ '<small><code>' + esc(p.orig === '' ? '(empty)' : shortVal(p.orig)) + '</code> &rarr; <code>' + esc(p.value === '' ? '(empty)' : shortVal(p.value)) + '</code>'
@@ -1418,7 +1546,7 @@ var DbxConfig2 = (function()
 		else if (S.tab === 'counters') h += renderCounters();
 		else if (S.tab === 'overview') h += renderOverview();
 		else if (S.tab === 'writers')  h += renderWriters();
-		else h += '<div class="c2-wrap"><div class="c2-card c2-pane"><div class="c2-empty">Daily Summary Report configuration is not yet implemented.</div></div></div>';
+		else h += renderDsr();
 		el('c2-main').innerHTML = h;
 
 		Object.keys(scroll).forEach(function(id) { if (el(id)) el(id).scrollTop = scroll[id]; });
@@ -1573,6 +1701,15 @@ var DbxConfig2 = (function()
 			scrollToKey('[data-row="' + CSS.escape(key) + '"]');
 			return;
 		}
+		if (p.type === 'dsr')
+		{
+			S.tab  = 'dsr';
+			S.dsub = p.wsub || 'report';
+			flash(key);
+			render();
+			scrollToKey('[data-row="' + CSS.escape(key) + '"]');
+			return;
+		}
 		S.tab = 'counters';
 		S.selCm = p.cmName;
 		S.sub = subOf(p.type);
@@ -1623,6 +1760,15 @@ var DbxConfig2 = (function()
 		if (t.hasAttribute('data-tab'))    { S.tab = t.getAttribute('data-tab'); render(); return; }
 		if (t.hasAttribute('data-sub'))    { S.sub = t.getAttribute('data-sub'); render(); return; }
 		if (t.hasAttribute('data-wsub'))   { S.wsub = t.getAttribute('data-wsub'); render(); return; }
+		if (t.hasAttribute('data-dsub'))   { S.dsub = t.getAttribute('data-dsub'); render(); return; }
+		if (t.hasAttribute('data-dsr-all'))
+		{
+			// all report sections that can be switched off
+			var on = t.getAttribute('data-dsr-all');
+			dsrList('sections').forEach(function(s) { if (s.canBeDisabled && S.reg['D|sections|' + s.property]) setPend('D|sections|' + s.property, on); });
+			render();
+			return;
+		}
 		if (t.hasAttribute('data-modcm'))  { showModified(t.getAttribute('data-modcm')); return; }
 		if (t.hasAttribute('data-cm'))     { selectCm(t.getAttribute('data-cm')); return; }
 		if (t.hasAttribute('data-writer')) { S.selWriter = t.getAttribute('data-writer'); render(); return; }
@@ -1778,6 +1924,10 @@ var DbxConfig2 = (function()
 			{
 				// cmName must be there (the collector reads it as a mandatory field), optName is the property key
 				reqs.push({ body: { type: 'writer', saveType: saveType, writerName: p.writer, cmName: '', optName: p.property, change: { value: p.value } }, keys: [k] });
+			}
+			else if (p.type === 'dsr')
+			{
+				reqs.push({ body: { type: 'dsr', saveType: saveType, cmName: '', optName: p.property, change: { value: p.value } }, keys: [k] });
 			}
 			else
 			{
