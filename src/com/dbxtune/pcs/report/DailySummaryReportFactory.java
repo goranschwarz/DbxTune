@@ -21,12 +21,20 @@
 package com.dbxtune.pcs.report;
 
 import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
 import com.dbxtune.central.DbxTuneCentral;
+import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
+import com.dbxtune.pcs.report.content.IReportEntry;
+import com.dbxtune.pcs.report.content.ReportEntryAbstract;
 import com.dbxtune.pcs.report.senders.IReportSender;
 import com.dbxtune.pcs.report.senders.ReportSenderToMail;
 import com.dbxtune.utils.Configuration;
@@ -75,8 +83,81 @@ public class DailySummaryReportFactory
 
 	
 	/**
+	 * The report's own settings, for the web config page. All of them are read at every report run, so a change is used at the next report.
+	 * (The report and sender class names are not here: they are shown, but not changed, from the web.)
+	 */
+	public static List<CmSettingsHelper> getAvailableSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+
+		list.add(new CmSettingsHelper("Create report",          PROPKEY_create,                   Boolean.class, conf.getBooleanProperty(PROPKEY_create,                  DEFAULT_create),                  DEFAULT_create,                  "Create a Daily Summary Report when the recording database rolls over to a new day (normally at midnight)."));
+		list.add(new CmSettingsHelper("Servers to keep",        PROPKEY_filter_keep_servername,   String .class, conf.getProperty       (PROPKEY_filter_keep_servername,  DEFAULT_filter_keep_servername),  DEFAULT_filter_keep_servername,  "Only create the report for server names that match this regexp (empty = all servers).", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("Servers to skip",        PROPKEY_filter_skip_servername,   String .class, conf.getProperty       (PROPKEY_filter_skip_servername,  DEFAULT_filter_skip_servername),  DEFAULT_filter_skip_servername,  "Do NOT create the report for server names that match this regexp (empty = skip none).", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("Save report",            PROPKEY_save,                     Boolean.class, conf.getBooleanProperty(PROPKEY_save,                    DEFAULT_save),                    DEFAULT_save,                    "Save the report as a file (DbxCentral lists the saved reports)."));
+		list.add(new CmSettingsHelper("Save directory",         PROPKEY_saveDir,                  String .class, conf.getProperty       (PROPKEY_saveDir,                 DEFAULT_saveDir),                 DEFAULT_saveDir,                 "Where the report files are saved."));
+		list.add(new CmSettingsHelper("Remove after days",      PROPKEY_removeReportsAfterDays,   Integer.class, conf.getIntProperty    (PROPKEY_removeReportsAfterDays,  DEFAULT_removeReportsAfterDays),  DEFAULT_removeReportsAfterDays,  "Saved reports older than this number of days are removed."));
+		list.add(new CmSettingsHelper("Max table cell size KB", PROPKEY_maxTableCellSizeKb,       Integer.class, conf.getIntProperty    (PROPKEY_maxTableCellSizeKb,      DEFAULT_maxTableCellSizeKb),      DEFAULT_maxTableCellSizeKb,      "Longer table cells (eg SQL text) are truncated to this size."));
+		list.add(new CmSettingsHelper("Query timeout seconds",  ReportEntryAbstract.PROPKEY_DSR_QUERY_TIMEOUT_IN_SEC, Integer.class, conf.getIntProperty(ReportEntryAbstract.PROPKEY_DSR_QUERY_TIMEOUT_IN_SEC, ReportEntryAbstract.DEFAULT_DSR_QUERY_TIMEOUT_IN_SEC), ReportEntryAbstract.DEFAULT_DSR_QUERY_TIMEOUT_IN_SEC, "Timeout for each query against the recording database while creating the report."));
+		list.add(new CmSettingsHelper("Top SQL: current database objects only", ReportEntryAbstract.PROPKEY_TOP_STATEMENTS_ONLY_LIST_OBJECTS_IN_CURRENT_DATABASE, Boolean.class, conf.getBooleanProperty(ReportEntryAbstract.PROPKEY_TOP_STATEMENTS_ONLY_LIST_OBJECTS_IN_CURRENT_DATABASE, ReportEntryAbstract.DEFAULT_TOP_STATEMENTS_ONLY_LIST_OBJECTS_IN_CURRENT_DATABASE), ReportEntryAbstract.DEFAULT_TOP_STATEMENTS_ONLY_LIST_OBJECTS_IN_CURRENT_DATABASE, "In the Top SQL sections, only list the objects of the statement's current database."));
+		list.add(new CmSettingsHelper("Table info details open", ReportEntryAbstract.PROPKEY_TABLE_INFO_DETAILS_OPEN, Boolean.class, conf.getBooleanProperty(ReportEntryAbstract.PROPKEY_TABLE_INFO_DETAILS_OPEN, ReportEntryAbstract.DEFAULT_TABLE_INFO_DETAILS_OPEN), ReportEntryAbstract.DEFAULT_TABLE_INFO_DETAILS_OPEN, "Show the table information details open (true) or closed (false) in the report."));
+		list.add(new CmSettingsHelper("Priority: enabled",      DsrPriority.PROPKEY_priorityEnabled, Boolean.class, conf.getBooleanProperty(DsrPriority.PROPKEY_priorityEnabled, DsrPriority.DEFAULT_priorityEnabled), DsrPriority.DEFAULT_priorityEnabled, "Wait for a free slot before creating the report, so not all collectors on this host create their reports at the same time."));
+		list.add(new CmSettingsHelper("Priority: max wait minutes", DsrPriority.PROPKEY_priorityMaxWaitTimeMinutes, Integer.class, conf.getIntProperty(DsrPriority.PROPKEY_priorityMaxWaitTimeMinutes, DsrPriority.DEFAULT_priorityMaxWaitTimeMinutes), DsrPriority.DEFAULT_priorityMaxWaitTimeMinutes, "Create the report anyway after waiting this long for a free slot."));
+		list.add(new CmSettingsHelper("Priority: not for servers", DsrPriority.PROPKEY_priorityDisabledServernameRegex, String.class, conf.getProperty(DsrPriority.PROPKEY_priorityDisabledServernameRegex, DsrPriority.DEFAULT_priorityDisabledServernameRegex), DsrPriority.DEFAULT_priorityDisabledServernameRegex, "Server names (regexp) that do not wait for a slot.", new RegExpInputValidator()));
+
+		return list;
+	}
+
+	/** One section of the report: the property <code>DailySummaryReport.report.entry.enabled.&lt;Class&gt;</code> switches it on/off */
+	public static class Section
+	{
+		public final String  subject;
+		public final String  className;
+		public final String  propKey;
+		public final boolean enabled;
+		public final boolean canBeDisabled;
+
+		public Section(String subject, String className, String propKey, boolean enabled, boolean canBeDisabled)
+		{
+			this.subject       = subject;
+			this.className     = className;
+			this.propKey       = propKey;
+			this.enabled       = enabled;
+			this.canBeDisabled = canBeDisabled;
+		}
+	}
+
+	/**
+	 * The sections of the configured report class, WITHOUT creating a report: the class is only instantiated and asked to add its
+	 * entries (no init(), so no database and no sender is touched). A class that adds the same entry class twice gives one section.
+	 */
+	public static List<Section> getReportSections()
+	throws Exception
+	{
+		String reportClassname = Configuration.getCombinedConfiguration().getProperty(PROPKEY_reportClassname, DEFAULT_reportClassname);
+		IDailySummaryReport report = (IDailySummaryReport) Class.forName(reportClassname).getDeclaredConstructor().newInstance();
+		report.addReportEntriesTop();
+		report.addReportEntries();
+		report.addReportEntriesBottom();
+
+		Map<String, Section> sections = new LinkedHashMap<>();
+		for (IReportEntry entry : report.getReportEntries())
+		{
+			String propKey = entry.getIsEnabledConfigKeyName();
+			if (sections.containsKey(propKey))
+				continue;
+
+			String subject;
+			try { subject = entry.getSubject(); }
+			catch (RuntimeException ex) { subject = entry.getClass().getSimpleName(); } // a subject built from data that is not there yet
+			sections.put(propKey, new Section(subject, entry.getClass().getSimpleName(), propKey, entry.isEnabled(), entry.canBeDisabled()));
+		}
+		return new ArrayList<>(sections.values());
+	}
+
+	/**
 	 * Check if the daily summary report is enabled or disabled
-	 * 
+	 *
 	 * @return true if it's ENABLED, false if it's NOT Enabled
 	 */
 	public static boolean isCreateReportEnabled()
@@ -186,7 +267,8 @@ public class DailySummaryReportFactory
 	}
 
 
-	private static IReportSender loadReportSender()
+	/** The configured report sender (property 'DailySummaryReport.sender.classname'), a new instance, not init()'ed */
+	public static IReportSender loadReportSender()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 

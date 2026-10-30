@@ -47,6 +47,8 @@ import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterModelHostMonitor;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.hostmon.HostMonitor;
+import com.dbxtune.pcs.report.DailySummaryReportFactory;
+import com.dbxtune.pcs.report.senders.IReportSender;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.CronUtils;
 import com.dbxtune.utils.StringUtil;
@@ -682,14 +684,53 @@ if (auth != null)
 
 
 		//----------------------------------
+		// dailySummaryReport:
+		// {
+		//     reportClassName: "...",
+		//     settings: [ {same as an alarm writer's settings}, ... ],          // the report itself (create, filters, save, priority ...)
+		//     sender:   { name: "...", className: "...", settings: [ ... ] },  // the configured sender (eg ReportSenderToMail)
+		//     sections: [ {subject, className, property, value, defaultValue, canBeDisabled, source...}, ... ],
+		//     sectionsError: "..."                                            // only if the report class could not list its sections
+		// }
+		// Everything is read at every report run: a change is used at the next report.
 		gen.writeFieldName("dailySummaryReport");
-//		gen.writeStartArray(); // START: array: alarmWriters[]
-		gen.writeStartObject(); // BEGIN object
-		gen.writeStringField("xxx", "dummy x");
-		gen.writeStringField("yyy", "dummy y");
-		gen.writeStringField("zzz", "dummy z");
-		gen.writeEndObject(); // END object
-//		gen.writeEndArray(); // END: array: alarmWriters[]
+		gen.writeStartObject(); // BEGIN object: dailySummaryReport
+		gen.writeStringField("reportClassName", Configuration.getCombinedConfiguration().getProperty(DailySummaryReportFactory.PROPKEY_reportClassname, DailySummaryReportFactory.DEFAULT_reportClassname));
+
+		writeSettings(gen, src, "settings", DailySummaryReportFactory.getAvailableSettings());
+
+		IReportSender sender = DailySummaryReportFactory.loadReportSender();
+		gen.writeFieldName("sender");
+		gen.writeStartObject(); // BEGIN object: sender
+		gen.writeStringField("name"     , sender.getName());
+		gen.writeStringField("className", sender.getClass().getName());
+		writeSettings(gen, src, "settings", sender.getAvailableSettings());
+		gen.writeEndObject(); // END object: sender
+
+		gen.writeFieldName("sections");
+		gen.writeStartArray(); // START: array: sections[]
+		try
+		{
+			for (DailySummaryReportFactory.Section s : DailySummaryReportFactory.getReportSections())
+			{
+				gen.writeStartObject();
+				gen.writeStringField ("subject"      , s.subject);
+				gen.writeStringField ("className"    , s.className);
+				gen.writeStringField ("property"     , s.propKey);
+				gen.writeStringField ("value"        , String.valueOf(s.enabled));
+				gen.writeStringField ("defaultValue" , String.valueOf(DailySummaryReportFactory.DEFAULT_isReportEntryEnabled));
+				gen.writeBooleanField("canBeDisabled", s.canBeDisabled);
+				src.write(gen, s.propKey);
+				gen.writeEndObject();
+			}
+			gen.writeEndArray(); // END: array: sections[]
+		}
+		catch (Exception ex)
+		{
+			gen.writeEndArray(); // END: array: sections[] (empty)
+			gen.writeStringField("sectionsError", "Could not list the sections of the report class: " + ex);
+		}
+		gen.writeEndObject(); // END object: dailySummaryReport
 
 
 		//----------------------------------
@@ -762,5 +803,34 @@ if (auth != null)
 		gen.writeStringField ("validatorName" , entry.getInputValidatorClassName());
 		src.write(gen, entry.getPropName());
 		gen.writeEndObject();
+	}
+
+	/** A list of settings, with the same fields as an alarm writer's settings (so the web page shows them the same way) */
+	private static void writeSettings(JsonGenerator gen, ValueSource src, String fieldName, List<CmSettingsHelper> settings)
+	throws IOException
+	{
+		gen.writeFieldName(fieldName);
+		gen.writeStartArray();
+		for (CmSettingsHelper entry : settings)
+		{
+			String value = entry.getStringValue();
+			if (entry.getName() != null && entry.getName().toLowerCase().contains("password"))
+				value = "***secret***";
+
+			gen.writeStartObject();
+			gen.writeBooleanField("isSelected"    , entry.isSelected());
+			gen.writeBooleanField("isMandatory"   , entry.isMandatory());
+			gen.writeStringField ("name"          , entry.getName());
+			gen.writeStringField ("datatype"      , entry.getDataTypeString());
+			gen.writeStringField ("property"      , entry.getPropName());
+			gen.writeStringField ("value"         , value);
+			gen.writeStringField ("defaultValue"  , entry.getDefaultValue());
+			gen.writeBooleanField("isDefaultValue", entry.isDefaultValue());
+			gen.writeStringField ("description"   , StringUtil.stripHtmlStartEnd(entry.getDescription()));
+			gen.writeStringField ("validatorName" , entry.getInputValidatorClassName());
+			src.write(gen, entry.getPropName());
+			gen.writeEndObject();
+		}
+		gen.writeEndArray();
 	}
 }

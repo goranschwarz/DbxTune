@@ -679,6 +679,7 @@ extends ReportSenderAbstract
 	
 
 //	@Override
+	@Override
 	public List<CmSettingsHelper> getAvailableSettings()
 	{
 		ArrayList<CmSettingsHelper> list = new ArrayList<>();

@@ -50,6 +50,7 @@ import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSettingsHelper.ValidationException;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.mgt.NoGuiManagementServer;
+import com.dbxtune.pcs.report.DailySummaryReportFactory;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 import com.fasterxml.jackson.core.JsonFactory;
@@ -378,6 +379,94 @@ System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.PUT.HEADER: Authorization
 					infoMessage   = "Validation failed";
 					errorMessage  = ex.getMessage();
 					_logger.warn("Validation failed for AlarmWriter '{}' property '{}': {}", writerName, optName, ex.getMessage());
+				}
+			}
+		}
+		else if ("dsr".equals(sendType))
+		{
+			// "dsr": change = { "value": "..." } for the Daily Summary Report property 'optName': one of the report's settings,
+			// the configured sender's settings, or a section on/off (as NoGuiConfigGetServlet lists them).
+			// No re-init: the report and its sender read everything at every report run.
+			String newValue = changeMap.get("value");
+			if (newValue == null)
+				newValue = "";
+
+			CmSettingsHelper cfgEntry = null;
+			List<CmSettingsHelper> all = new ArrayList<>(DailySummaryReportFactory.getAvailableSettings());
+			all.addAll(DailySummaryReportFactory.loadReportSender().getAvailableSettings());
+			for (CmSettingsHelper sh : all)
+				if (optName.equals(sh.getPropName()))
+					cfgEntry = sh;
+
+			String sectionError = null;
+			if (cfgEntry == null && optName.startsWith(DailySummaryReportFactory.PROPKEY_isReportEntryEnabled.replace("<ENTRY-NAME>", "")))
+			{
+				try
+				{
+					for (DailySummaryReportFactory.Section s : DailySummaryReportFactory.getReportSections())
+					{
+						if ( ! s.propKey.equals(optName) )
+							continue;
+						if ( ! s.canBeDisabled )
+							sectionError = "The section '" + s.subject + "' is always included in the report, it can not be switched off.";
+						else if ( ! "true".equalsIgnoreCase(newValue) && ! "false".equalsIgnoreCase(newValue) )
+							sectionError = "A section is switched on or off: the value must be true or false.";
+						else
+							cfgEntry = new CmSettingsHelper(s.subject, optName, Boolean.class, String.valueOf(s.enabled), String.valueOf(DailySummaryReportFactory.DEFAULT_isReportEntryEnabled), "Include this section in the report.");
+					}
+				}
+				catch (Exception ex)
+				{
+					sectionError = "Could not list the sections of the report class: " + ex;
+				}
+			}
+
+			Configuration noguiConf = Configuration.getInstance(Configuration.NOGUI_SAVE);
+			if (sectionError != null)
+			{
+				statusMessage = "FAILED";
+				infoMessage   = "Not allowed";
+				errorMessage  = sectionError;
+			}
+			else if (cfgEntry == null)
+			{
+				statusMessage = "FAILED";
+				infoMessage   = "Not found";
+				errorMessage  = "Property '" + optName + "' is not a Daily Summary Report setting.";
+			}
+			else if (cfgEntry.getName() != null && cfgEntry.getName().toLowerCase().contains("password"))
+			{
+				statusMessage = "FAILED";
+				infoMessage   = "Not allowed";
+				errorMessage  = "Passwords can not be changed from here, change '" + optName + "' in the collector's configuration file.";
+			}
+			else if (cfgEntry.isMandatory() && StringUtil.isNullOrBlank(newValue))
+			{
+				statusMessage = "FAILED";
+				infoMessage   = "Validation failed";
+				errorMessage  = "'" + cfgEntry.getName() + "' is mandatory, it can not be empty.";
+			}
+			else if (noguiConf == null)
+			{
+				statusMessage = "FAILED";
+				infoMessage   = "No NOGUI_SAVE config instance available.";
+			}
+			else
+			{
+				try
+				{
+					if (StringUtil.hasValue(newValue))
+						cfgEntry.isValidInput(newValue);
+
+					saveConfigProperty(noguiConf, optName, newValue, cfgEntry.getDefaultValue(), saveToFile);
+					infoMessage = "Daily Summary Report: '" + cfgEntry.getName() + "' set to '" + newValue + "'. Used at the next report.";
+				}
+				catch (ValidationException ex)
+				{
+					statusMessage = "FAILED";
+					infoMessage   = "Validation failed";
+					errorMessage  = ex.getMessage();
+					_logger.warn("Validation failed for Daily Summary Report property '{}': {}", optName, ex.getMessage());
 				}
 			}
 		}
