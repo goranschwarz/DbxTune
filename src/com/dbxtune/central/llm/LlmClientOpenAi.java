@@ -101,7 +101,8 @@ extends LlmClientAbstract
 		}
 		applyExtraHeaders(builder, model);
 
-		HttpResponse<String> httpResponse = _httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+		// Not streamed: wait for the whole answer, at most 'timeout' in total, and stop the call when nobody waits any more
+		HttpResponse<String> httpResponse = sendAndWait(builder.build(), model, progress);
 		String rawResponse = httpResponse.body();
 
 		if (httpResponse.statusCode() != 200)

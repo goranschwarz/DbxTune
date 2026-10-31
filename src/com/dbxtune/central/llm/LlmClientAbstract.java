@@ -36,9 +36,11 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Flow;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -77,8 +79,11 @@ implements LlmClient
 	/** Output token cap for the formats that need one (Claude Messages API, Bedrock Converse). Thinking tokens count against it. */
 	public static final int DEFAULT_MAX_TOKENS = 16000;
 
-	/** Seconds to wait for an LLM answer (setting 'timeout'): high/max effort and big plans can take minutes */
+	/** Seconds to wait for a NOT streamed answer, in total (setting 'timeout'): high/max effort and big plans can take minutes */
 	public static final int DEFAULT_TIMEOUT_SECONDS = 600;
+
+	/** Seconds a STREAMED answer may be silent - no new content (setting 'timeout'): while the model reports, it is not stopped */
+	public static final int DEFAULT_SILENCE_TIMEOUT_SECONDS = 300;
 
 	/** Config-property prefix: every setting of a provider is {@code DbxCentral.llm.<providerId>.<setting>} */
 	public static final String PROPKEY_PREFIX = "DbxCentral.llm.";
@@ -197,7 +202,8 @@ implements LlmClient
 	 * <ul>
 	 *   <li>{@code label}        - text in the dropdown (default: the name)</li>
 	 *   <li>{@code maxTokens}    - output token cap for the Claude format and Bedrock Converse (default {@link #DEFAULT_MAX_TOKENS})</li>
-	 *   <li>{@code timeout}      - seconds to wait for the answer (default {@link #DEFAULT_TIMEOUT_SECONDS})</li>
+	 *   <li>{@code timeout}      - seconds: a streamed answer may be silent this long (default {@link #DEFAULT_SILENCE_TIMEOUT_SECONDS}),
+	 *                              a not streamed answer may take this long in total (default {@link #DEFAULT_TIMEOUT_SECONDS})</li>
 	 *   <li>{@code stream}       - ask for a streamed answer, for progress while waiting (default true; Claude format only, for now)</li>
 	 *   <li>{@code extraBody}    - JSON deep-merged into the request body (provider level first, then the model's)</li>
 	 *   <li>{@code extraHeaders} - JSON object with extra or replacing HTTP headers</li>
@@ -238,7 +244,7 @@ implements LlmClient
 		String modelId   = cfg(key(name + ".model"), name);
 		String label     = cfg(key(name + ".label"), name);
 		int    maxTokens = cfgInt(key(name + ".maxTokens"), cfgInt(key("maxTokens"), DEFAULT_MAX_TOKENS));
-		int    timeout   = cfgInt(key(name + ".timeout"),   cfgInt(key("timeout"),   DEFAULT_TIMEOUT_SECONDS));
+		int    timeout   = cfgInt(key(name + ".timeout"),   cfgInt(key("timeout"),   -1)); // not set: a default per meaning, below
 		boolean stream   = cfgBool(key(name + ".stream"),  cfgBool(key("stream"),  true));
 		String format    = cfg(key(name + ".format"), cfg(key("format"), "")).trim();
 
@@ -267,7 +273,7 @@ implements LlmClient
 				_logger.warn("LLM provider '{}', model '{}': {}", _providerId, name, configProblem);
 		}
 
-		return new LlmModelEntry(name, modelId, label, maxTokens, timeout, stream, StringUtil.hasValue(format) ? format : null, extraBodies, extraHeaders, configProblem);
+		return new LlmModelEntry(name, modelId, label, maxTokens, timeout > 0 ? timeout : DEFAULT_TIMEOUT_SECONDS, timeout > 0 ? timeout : DEFAULT_SILENCE_TIMEOUT_SECONDS, stream, StringUtil.hasValue(format) ? format : null, extraBodies, extraHeaders, configProblem);
 	}
 
 	/** A setting holding a JSON object, or null when not set. Throws with the property name in the message on bad JSON. */
@@ -514,18 +520,24 @@ implements LlmClient
 
 	/**
 	 * Send a streamed Messages API request ({@code "stream": true} in the body) and read the answer's events, telling
-	 * 'progress' what the model is doing: "thinking" (with the latest line of its thinking summary, when there is one,
-	 * at most once a second) and "writing the answer". A model seen thinking is remembered (see {@link #askThinkingSummary}).
+	 * 'progress' what the model is doing: the phase "thinking" / "writing the answer", and each paragraph of its thinking
+	 * summary (when there is one) as it grows - whole sentences only, the text streams in pieces that end mid-word.
+	 * A model seen thinking is remembered (see {@link #askThinkingSummary}).
 	 * <p>
 	 * Returns the plain (not streamed) Messages response, rebuilt from the events - for {@link #parseMessagesResponse} -
 	 * or, when the status is not 200, the error body as it came. A 200 answer that is not 'text/event-stream' (a gateway
-	 * or proxy that ignored "stream": true) is returned as it came too: it is then the plain response. The whole call is limited by the model's 'timeout':
-	 * then the download is cancelled (which also stops the model) and {@link HttpTimeoutException} is thrown.
+	 * or proxy that ignored "stream": true) is returned as it came too: it is then the plain response.
+	 * <p>
+	 * Stopped - the download cancelled, which also stops the model and its cost - when the answer is silent (no new content;
+	 * keep-alive pings do not count) for the model's silence timeout ({@link HttpTimeoutException}), or when nobody waits
+	 * any more ({@link LlmProgress#isCancelled()}, {@link LlmCancelledException}).
 	 */
 	protected MessagesStream sendMessagesStream(HttpRequest request, LlmModelEntry model, LlmProgress progress)
 	throws Exception
 	{
-		long deadline = System.currentTimeMillis() + model.getTimeoutSeconds() * 1000L;
+		long startTime = System.currentTimeMillis();
+		long silenceMs = model.getSilenceTimeoutSeconds() * 1000L;
+		long deadline  = startTime + silenceMs; // moved on by every piece of content
 
 		// The lines of the answer go to a queue that is read below with the time that is left: a blocked read can not be
 		// stopped at the deadline, a poll() can. END: the answer is complete, a Throwable: it failed.
@@ -554,18 +566,34 @@ implements LlmClient
 		ArrayNode     content   = message.putArray("content");
 		List<StringBuilder> blockTexts = new ArrayList<>(); // the text (or thinking) of each content block, by index
 		StringBuilder plainBody = new StringBuilder();     // not a stream: an error, or a gateway/proxy that ignored "stream": true
+		StringBuilder thinking  = new StringBuilder();     // all thinking text so far (all thinking blocks), for the paragraphs
+		List<String>  thinkingShown = new ArrayList<>();   // the paragraphs as last told to 'progress'
 		String        phase     = null;
-		long          lastThinkingUpdate = 0;
-		String        lastSentenceShown  = null;
+		long          lastCancelCheck = 0;
 		boolean       complete  = false;
 		try
 		{
 			while (true)
 			{
+				// Nobody waits any more (Stop, the browser went away)? Checked at most twice a second
+				if (System.currentTimeMillis() - lastCancelCheck >= 500)
+				{
+					lastCancelCheck = System.currentTimeMillis();
+					if (progress.isCancelled())
+						throw new LlmCancelledException("Stopped by the user after " + (System.currentTimeMillis() - startTime) / 1000 + " seconds.");
+				}
+
+				// At most a second at a time: to check the above also while the model is silent
 				long   timeLeft = deadline - System.currentTimeMillis();
-				Object item     = timeLeft > 0 ? lines.poll(timeLeft, TimeUnit.MILLISECONDS) : null;
+				Object item     = timeLeft > 0 ? lines.poll(Math.min(timeLeft, 1000), TimeUnit.MILLISECONDS) : null;
 				if (item == null)
-					throw new HttpTimeoutException("No answer within " + model.getTimeoutSeconds() + " seconds.");
+				{
+					if (System.currentTimeMillis() < deadline)
+						continue;
+					throw new HttpTimeoutException("No new content from the LLM for " + model.getSilenceTimeoutSeconds() + " seconds, so it was stopped. "
+							+ "If the model needs longer pauses, raise 'timeout' (seconds of silence) for it in DBX_CENTRAL.conf, for example: "
+							+ key(model.getName() + ".timeout") + "=" + model.getSilenceTimeoutSeconds() * 2);
+				}
 				if (item == END)
 					break;
 				if (item instanceof Throwable)
@@ -586,8 +614,14 @@ implements LlmClient
 				if ( ! line.startsWith("data:") )
 					continue;
 
-				JsonNode event = om.readTree(line.substring("data:".length()).trim());
-				switch (event.path("type").asText())
+				JsonNode event     = om.readTree(line.substring("data:".length()).trim());
+				String   eventType = event.path("type").asText();
+
+				// Content (not a keep-alive 'ping'): the model is working, the silence timeout starts over
+				if ( ! "ping".equals(eventType) )
+					deadline = System.currentTimeMillis() + silenceMs;
+
+				switch (eventType)
 				{
 				case "message_start":
 					event.path("message").fields().forEachRemaining(e -> { if ( ! "content".equals(e.getKey()) ) message.set(e.getKey(), e.getValue()); });
@@ -601,6 +635,8 @@ implements LlmClient
 					if ("thinking".equals(block.path("type").asText()))
 					{
 						_modelsSeenThinking.add(thinkingKey(model));
+						if (thinking.length() > 0)
+							thinking.append("\n\n"); // a new thinking block starts a new paragraph
 						if ( ! "thinking".equals(phase) )
 							progress.update(phase = "thinking", null);
 					}
@@ -623,14 +659,20 @@ implements LlmClient
 					}
 					else if ("thinking_delta".equals(deltaType))
 					{
-						// Only when there is a sentence to show: without a summary (not asked for) the deltas carry no text
-						text.append(delta.path("thinking").asText(""));
-						String sentence = lastSentence(text);
-						if (sentence != null && ! sentence.equals(lastSentenceShown) && System.currentTimeMillis() - lastThinkingUpdate >= 1000)
+						// Each paragraph that grew by a whole sentence (or was completed) is told to 'progress'.
+						// Without a summary (not asked for) the deltas carry no text: then nothing is told.
+						text    .append(delta.path("thinking").asText(""));
+						thinking.append(delta.path("thinking").asText(""));
+						List<String> paragraphs = thinkingParagraphs(thinking.toString());
+						for (int p = 0; p < paragraphs.size(); p++)
 						{
-							lastThinkingUpdate = System.currentTimeMillis();
-							lastSentenceShown  = sentence;
-							progress.update(phase = "thinking", sentence);
+							if (p < thinkingShown.size() && paragraphs.get(p).equals(thinkingShown.get(p)))
+								continue;
+							if (p < thinkingShown.size())
+								thinkingShown.set(p, paragraphs.get(p));
+							else
+								thinkingShown.add(paragraphs.get(p));
+							progress.thinking(p, paragraphs.get(p));
 						}
 					}
 					else if ("signature_delta".equals(deltaType))
@@ -691,33 +733,102 @@ implements LlmClient
 	}
 
 	/**
-	 * The last COMPLETE sentence (or heading line) of the thinking text so far, for the progress line: the text streams in
-	 * pieces that end mid-word, so the unfinished end is skipped. Without Markdown, at most 150 characters (cut at the end).
-	 * Null when no sentence is complete yet.
+	 * Send a NOT streamed request and wait for the whole answer, at most the model's 'timeout' in total
+	 * ({@link HttpTimeoutException}), and only while somebody waits for it ({@link LlmProgress#isCancelled()},
+	 * {@link LlmCancelledException}). Then the call is cancelled: closing the connection stops the model's work and its cost.
 	 */
-	private static String lastSentence(StringBuilder text)
+	protected HttpResponse<String> sendAndWait(HttpRequest request, LlmModelEntry model, LlmProgress progress)
+	throws Exception
 	{
-		// Complete = ended by . ! ? followed by white space, or by a line break; whatever comes after the last end is unfinished
-		String s   = text.toString();
-		int    end = -1;
-		for (int i = 0; i < s.length(); i++)
+		long startTime = System.currentTimeMillis();
+		long deadline  = startTime + model.getTimeoutSeconds() * 1000L;
+		CompletableFuture<HttpResponse<String>> call = _httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+		try
 		{
-			char ch = s.charAt(i);
-			if (ch == '\n' || ((ch == '.' || ch == '!' || ch == '?') && i + 1 < s.length() && Character.isWhitespace(s.charAt(i + 1))))
-				end = i;
+			// At most a second at a time: to notice Stop while we wait
+			while (true)
+			{
+				try
+				{
+					return call.get(1000, TimeUnit.MILLISECONDS);
+				}
+				catch (TimeoutException notYet)
+				{
+					if (progress.isCancelled())
+						throw new LlmCancelledException("Stopped by the user after " + (System.currentTimeMillis() - startTime) / 1000 + " seconds.");
+					if (System.currentTimeMillis() >= deadline)
+						throw new HttpTimeoutException("No answer from the LLM within " + model.getTimeoutSeconds() + " seconds, so it was stopped. "
+								+ "If the model needs longer (high/max effort, a big plan), raise 'timeout' (seconds) for it in DBX_CENTRAL.conf, for example: "
+								+ key(model.getName() + ".timeout") + "=" + model.getTimeoutSeconds() * 2);
+				}
+			}
 		}
-		if (end < 0)
-			return null;
+		catch (ExecutionException ex)
+		{
+			Throwable t = ex.getCause() != null ? ex.getCause() : ex;
+			// The request's own timeout (HttpRequest.Builder.timeout(), the same 'timeout') fired first: the same message as above
+			if (t instanceof HttpTimeoutException)
+				throw new HttpTimeoutException("No answer from the LLM within " + model.getTimeoutSeconds() + " seconds, so it was stopped. "
+						+ "If the model needs longer (high/max effort, a big plan), raise 'timeout' (seconds) for it in DBX_CENTRAL.conf, for example: "
+						+ key(model.getName() + ".timeout") + "=" + model.getTimeoutSeconds() * 2);
+			if (t instanceof Exception)
+				throw (Exception) t;
+			throw new Exception(t);
+		}
+		finally
+		{
+			if ( ! call.isDone() )
+				call.cancel(true);
+		}
+	}
 
-		// The sentences up to that end, last one first: the first that is not empty after removing Markdown
-		String[] sentences = s.substring(0, end + 1).split("(?<=[.!?])\\s+|\\n");
-		for (int i = sentences.length - 1; i >= 0; i--)
+	/**
+	 * The paragraphs (split at blank lines) of the thinking text so far, each with its COMPLETE sentences only: the text
+	 * streams in pieces that end mid-word, so an unfinished end is left out until it is complete. A sentence is complete
+	 * when it ends with . ! ? followed by white space, or with a line break. The last paragraph is left out while it has
+	 * no complete sentence yet. Markdown is kept (the browser shows **bold**). A heading-only paragraph
+	 * ('**Checking the joins**') is joined with the one after it, as one item - the same as dbxLlmAdvice.js thinkingParagraphs().
+	 */
+	static List<String> thinkingParagraphs(String text)
+	{
+		List<String> complete = new ArrayList<>();
+		String[] paragraphs = text.split("\\n\\s*\\n", -1);
+		for (int p = 0; p < paragraphs.length; p++)
 		{
-			String sentence = sentences[i].replace("**", "").replaceAll("^[#>*\\-\\s]+", "").trim();
-			if ( ! sentence.isEmpty() )
-				return sentence.length() <= 150 ? sentence : sentence.substring(0, 147) + "...";
+			String para = paragraphs[p];
+			if (p == paragraphs.length - 1)
+			{
+				// Still growing: up to the end of its last complete sentence
+				int end = -1;
+				for (int i = 0; i < para.length(); i++)
+				{
+					char ch = para.charAt(i);
+					if (ch == '\n' || ((ch == '.' || ch == '!' || ch == '?') && i + 1 < para.length() && Character.isWhitespace(para.charAt(i + 1))))
+						end = i;
+				}
+				para = end < 0 ? "" : para.substring(0, end + 1);
+			}
+			para = para.trim();
+			if ( ! para.isEmpty() )
+				complete.add(para);
 		}
-		return null;
+
+		// A heading-only paragraph goes with the paragraph after it (while that has not started: on its own, same index)
+		List<String> result  = new ArrayList<>();
+		String       heading = null;
+		for (String para : complete)
+		{
+			if (heading == null && para.matches("\\*\\*[^*]+\\*\\*"))
+			{
+				heading = para;
+				continue;
+			}
+			result.add(heading != null ? heading + "\n" + para : para);
+			heading = null;
+		}
+		if (heading != null)
+			result.add(heading);
+		return result;
 	}
 
 	// -----------------------------------------------------------------------

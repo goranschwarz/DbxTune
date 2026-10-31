@@ -23,7 +23,6 @@ package com.dbxtune.central.controllers;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.invoke.MethodHandles;
-import java.net.http.HttpTimeoutException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -42,6 +41,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.llm.LlmAdviceLog;
+import com.dbxtune.central.llm.LlmCancelledException;
 import com.dbxtune.central.llm.LlmClient;
 import com.dbxtune.central.llm.LlmClientRegistry;
 import com.dbxtune.central.llm.LlmModelEntry;
@@ -185,10 +185,11 @@ extends HttpServlet
 		// user clicks it. Saving takes milliseconds, never throws, and is done even if the browser has gone away.
 		//
 		// The browser asked for progress while it waits ('progress'): the answer then comes as Server-Sent Events, the same
-		// format as the Daily Summary Report progress: 'progress' events (what the model is doing), a ': ping' comment every
-		// 15 seconds (so a proxy does not close the connection as idle while a model thinks for minutes), and at the end ONE
-		// 'result' or 'error' event with the same fields as the plain JSON answer. A browser that went away stops nothing:
-		// the PrintWriter does not throw, the call finishes and is saved as always.
+		// format as the Daily Summary Report progress: 'progress' events (the phase), 'thinking' events (a paragraph of the
+		// model's thinking summary, as it grows), a ': ping' comment every 5 seconds (so a proxy does not close the connection
+		// as idle while a model thinks for minutes), and at the end ONE 'result' or 'error' event with the same fields as the
+		// plain JSON answer. A browser that went away (Stop, the page closed) is noticed when a write fails (the heartbeat:
+		// within 5 seconds): then the LLM call is cancelled - closing the connection stops the model's work and its cost.
 		boolean               sse       = llmRequest.isProgress();
 		LlmClient.LlmProgress progress  = LlmClient.LlmProgress.NONE;
 		ScheduledFuture<?>    heartbeat = null;
@@ -198,14 +199,34 @@ extends HttpServlet
 			response.setContentType("text/event-stream;charset=UTF-8");
 			response.setHeader("Cache-Control", "no-cache");
 			response.setHeader("X-Accel-Buffering", "no"); // nginx: pass the events on at once, do not buffer them
-			progress = (phase, text) ->
+			progress = new LlmClient.LlmProgress()
 			{
-				Map<String, String> p = new LinkedHashMap<>();
-				p.put("phase", phase);
-				p.put("text",  text);
-				writeSseEvent(om, out, "progress", p);
+				@Override
+				public void update(String phase, String text)
+				{
+					Map<String, String> p = new LinkedHashMap<>();
+					p.put("phase", phase);
+					p.put("text",  text);
+					writeSseEvent(om, out, "progress", p);
+				}
+
+				@Override
+				public void thinking(int index, String text)
+				{
+					Map<String, Object> t = new LinkedHashMap<>();
+					t.put("index", index);
+					t.put("text",  text);
+					writeSseEvent(om, out, "thinking", t);
+				}
+
+				/** A write to the browser failed: it has gone away (Stop, the page closed) */
+				@Override
+				public boolean isCancelled()
+				{
+					return out.checkError();
+				}
 			};
-			heartbeat = _heartbeatTimer.scheduleAtFixedRate(() -> writeSseComment(out, "ping"), 15, 15, TimeUnit.SECONDS);
+			heartbeat = _heartbeatTimer.scheduleAtFixedRate(() -> writeSseComment(out, "ping"), 5, 5, TimeUnit.SECONDS);
 		}
 
 		long startTime = System.currentTimeMillis();
@@ -220,7 +241,10 @@ extends HttpServlet
 				heartbeat.cancel(false);
 
 			long durationMs = System.currentTimeMillis() - startTime;
-			_logger.warn("LlmSqlOptimizeServlet: problem calling LLM provider '" + client.getProviderId() + "', model '" + model + "'.", ex);
+			if (ex instanceof LlmCancelledException)
+				_logger.info("LlmSqlOptimizeServlet: LLM provider '" + client.getProviderId() + "', model '" + model.getName() + "': " + ex.getMessage());
+			else
+				_logger.warn("LlmSqlOptimizeServlet: problem calling LLM provider '" + client.getProviderId() + "', model '" + model + "'.", ex);
 
 			// Best-effort: the prompt is a pure function of the request, so it can still be shown as
 			// "what we tried to send" even though the actual call to the provider failed.
@@ -241,11 +265,12 @@ extends HttpServlet
 				extra.put("savedForDays", String.valueOf(LlmAdviceLog.getKeepDays()));
 			}
 
+			// Stopped: nobody listens any more (the call is saved above)
+			if (ex instanceof LlmCancelledException)
+				return;
+
+			// A timeout's message says which timeout, and what to raise (see the LLM clients)
 			String msg = ex.getMessage();
-			if (ex instanceof HttpTimeoutException)
-				msg = "No answer from the LLM within " + model.getTimeoutSeconds() + " seconds - it gave up waiting. "
-						+ "If the model needs longer (high/max effort, a big plan), raise 'timeout' (seconds) for it in DBX_CENTRAL.conf, for example: "
-						+ "DbxCentral.llm." + client.getProviderId() + "." + model.getName() + ".timeout=1200";
 			if (sse)
 			{
 				Map<String, Object> err = new LinkedHashMap<>();

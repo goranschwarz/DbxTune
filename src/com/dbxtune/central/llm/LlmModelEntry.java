@@ -47,19 +47,21 @@ public class LlmModelEntry
 	private final String             _label;
 	private final int                _maxTokens;
 	private final int                _timeoutSeconds;
+	private final int                _silenceTimeoutSeconds;
 	private final boolean            _stream;
 	private final String             _format;
 	private final List<ObjectNode>   _extraBodies;
 	private final Map<String,String> _extraHeaders;
 	private final String             _configProblem;
 
-	public LlmModelEntry(String name, String modelId, String label, int maxTokens, int timeoutSeconds, boolean stream, String format, List<ObjectNode> extraBodies, Map<String,String> extraHeaders, String configProblem)
+	public LlmModelEntry(String name, String modelId, String label, int maxTokens, int timeoutSeconds, int silenceTimeoutSeconds, boolean stream, String format, List<ObjectNode> extraBodies, Map<String,String> extraHeaders, String configProblem)
 	{
 		_name          = name;
 		_modelId       = modelId;
 		_label         = label;
 		_maxTokens     = maxTokens;
 		_timeoutSeconds = timeoutSeconds;
+		_silenceTimeoutSeconds = silenceTimeoutSeconds;
 		_stream        = stream;
 		_format        = format;
 		_extraBodies   = extraBodies  == null ? Collections.emptyList() : extraBodies;
@@ -79,8 +81,11 @@ public class LlmModelEntry
 	/** Output token cap, used by the Claude (Messages API) format and Bedrock Converse. */
 	public int    getMaxTokens()     { return _maxTokens; }
 
-	/** How long to wait for the provider's answer, in seconds - the HTTP request timeout of the LLM call. */
+	/** How long to wait for a NOT streamed answer, in seconds, in total (nothing arrives until it is done). */
 	public int    getTimeoutSeconds() { return _timeoutSeconds; }
+
+	/** How long a streamed answer may be silent (no new content), in seconds: while the model reports, it is not stopped. */
+	public int    getSilenceTimeoutSeconds() { return _silenceTimeoutSeconds; }
 
 	/** {@link #getTimeoutSeconds()} as a Duration, for HttpRequest.Builder.timeout() */
 	public Duration getTimeout()     { return Duration.ofSeconds(_timeoutSeconds); }

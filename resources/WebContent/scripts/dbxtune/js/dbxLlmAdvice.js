@@ -107,6 +107,14 @@ var dbxLlmAdvice = (function () {
 			'.dbx-llm-progress { display:inline-block; max-width:min(110ch, 70vw); margin-left:0.4em; vertical-align:bottom; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#6c757d; font-style:italic; }' +
 			'.dbx-llm-progress:empty { display:none; }' +
 			'.dbx-llm-progress-sep { font-style:normal; margin-right:0.4em; }' +
+			// The Stop button after the clock, and the model's thinking while it works: a small box that scrolls (about 6 lines)
+			'.dbx-llm-stop-btn { margin-left:10px; font-size:0.75rem; padding:0 10px; cursor:pointer; border:1px solid #ced4da; border-radius:3px; background:#fff; color:#495057; }' +
+			'.dbx-llm-stop-btn:hover { background:#f8d7da; border-color:#f1aeb5; color:#842029; }' +
+			// (resizable: drag the bottom right corner; a fixed height to start with, as 'resize' can not go past a max-height)
+			'.dbx-llm-thinking-live { height:9em; min-height:3em; resize:vertical; overflow:auto; margin:-4px 0 10px 0; padding:4px 10px; border-left:3px solid #ced4da; background:#f8f9fa;' +
+			'  font-family:Arial, Helvetica, sans-serif; font-size:0.85rem; line-height:1.45; color:#495057; }' +
+			'.dbx-llm-thinking-live ul { margin:0; padding-left:18px; }' +
+			'.dbx-llm-thinking-live li { margin-bottom:3px; }' +
 			'.dbx-llm-spinner { display:inline-block; width:16px; height:16px; border:2px solid #ccc;' +
 			'  border-top-color:#454545; border-radius:50%; animation:dbx-llm-spin 0.8s linear infinite; margin-right:8px; vertical-align:middle; }' +
 			'@keyframes dbx-llm-spin { to { transform:rotate(360deg); } }' +
@@ -200,6 +208,9 @@ var dbxLlmAdvice = (function () {
 			'  --d2h-change-label-color:var(--d2h-dark-change-label-color); --d2h-moved-label-color:var(--d2h-dark-moved-label-color); }' +
 			'html.dbx-sp-dark .dbx-llm-size-btn, html[data-theme="dark"] .dbx-llm-size-btn { border-color:#555c63; background:#2b3035; color:#dee2e6; }' +
 			'html.dbx-sp-dark .dbx-llm-size-btn:hover, html[data-theme="dark"] .dbx-llm-size-btn:hover { background:#343a40; }' +
+			'html.dbx-sp-dark .dbx-llm-stop-btn, html[data-theme="dark"] .dbx-llm-stop-btn { border-color:#555c63; background:#2b3035; color:#dee2e6; }' +
+			'html.dbx-sp-dark .dbx-llm-stop-btn:hover, html[data-theme="dark"] .dbx-llm-stop-btn:hover { background:#4a1c1f; border-color:#842029; color:#f1aeb5; }' +
+			'html.dbx-sp-dark .dbx-llm-thinking-live, html[data-theme="dark"] .dbx-llm-thinking-live { background:#2b3035; border-left-color:#555c63; color:#ced4da; }' +
 			'html.dbx-sp-dark .dbx-llm-title-note, html[data-theme="dark"] .dbx-llm-title-note { color:#adb5bd; }' +
 			'.dbx-llm-version { font-family:Arial, Helvetica, sans-serif; font-size:0.85rem; color:#495057; margin-top:8px; word-break:break-word; }' +
 			'.dbx-llm-saved-note { font-family:Arial, Helvetica, sans-serif; font-size:0.85rem; line-height:1.6; color:#084298; background:#e7f1ff; border:1px solid #b6d4fe; border-radius:4px; padding:6px 10px; margin:0 0 10px 0; }' +
@@ -671,6 +682,38 @@ var dbxLlmAdvice = (function () {
 		{
 			host.innerHTML = '<div class="dbx-llm-status">The diff can not be shown: ' + escapeHtml(err.message) + '</div>';
 		});
+	}
+
+	/**
+	 * The model's thinking summary as paragraphs (split at blank lines), a heading-only paragraph ('**Checking the joins**')
+	 * joined with the one after it - the same as the server's LlmClientAbstract.thinkingParagraphs() does while streaming.
+	 */
+	function thinkingParagraphs(text)
+	{
+		var result  = [];
+		var heading = null;
+		String(text).split(/\n\s*\n/).forEach(function (p)
+		{
+			p = p.trim();
+			if (!p)
+				return;
+			if (/^\*\*[^*]+\*\*$/.test(p) && heading === null)
+			{
+				heading = p;
+				return;
+			}
+			result.push(heading !== null ? heading + '\n' + p : p);
+			heading = null;
+		});
+		if (heading !== null)
+			result.push(heading);
+		return result;
+	}
+
+	/** One paragraph of the thinking as HTML: inline Markdown (**bold**, `code`), line breaks kept */
+	function thinkingHtml(text)
+	{
+		return inlineMarkdown(escapeHtml(text)).replace(/\n/g, '<br>');
 	}
 
 	/** Apply inline Markdown (**bold**, `code`) to already-HTML-escaped text. */
@@ -1217,11 +1260,12 @@ var dbxLlmAdvice = (function () {
 			html += '<details class="dbx-llm-section-details" open><summary class="dbx-llm-section-title">Explanation</summary>';
 			html += '<div class="dbx-llm-prose">' + renderMarkdown(result.explanation) + '</div></details>';
 		}
-		// How the model got there: a summary of its thinking, when the provider sent one (folded: it can be long)
+		// How the model got there: a summary of its thinking, when the provider sent one - one bullet per paragraph, as
+		// while it was thinking (folded: it can be long)
 		if (result.thinkingSummary)
 		{
-			html += '<details class="dbx-llm-section-details"><summary class="dbx-llm-section-title">Model\'s thinking<span class="dbx-llm-title-note"> - a summary, by the LLM</span></summary>';
-			html += '<div class="dbx-llm-prose">' + renderMarkdown(result.thinkingSummary) + '</div></details>';
+			html += '<details class="dbx-llm-section-details"><summary class="dbx-llm-section-title">LLM\'s Thinking Process<span class="dbx-llm-title-note"> - a summary, by the LLM</span></summary>';
+			html += '<div class="dbx-llm-prose"><ul>' + thinkingParagraphs(result.thinkingSummary).map(function (p) { return '<li>' + thinkingHtml(p) + '</li>'; }).join('') + '</ul></div></details>';
 		}
 		if (!result.optimizedSql && !result.explanation)
 			html += '<div class="dbx-llm-status">The model did not return a usable answer.</div>';
@@ -1251,8 +1295,9 @@ var dbxLlmAdvice = (function () {
 	 * Read with fetch, not EventSource: the request is a POST (the SQL, the plan, the DDL), which EventSource can't send.
 	 * A plain JSON answer (a check that failed before the call, or an older DbxCentral) is handled like fetchJson().
 	 * @param onProgress  called with {phase, text} for each 'progress' event
+	 * @param onThinking  called with (index, text) for each 'thinking' event: paragraph 'index' of the model's thinking, as it grows
 	 */
-	function fetchEvents(url, options, onProgress)
+	function fetchEvents(url, options, onProgress, onThinking)
 	{
 		return fetch(url, options).then(function (resp)
 		{
@@ -1279,6 +1324,8 @@ var dbxLlmAdvice = (function () {
 				var obj = JSON.parse(data);
 				if (name === 'progress')
 					onProgress(obj);
+				else if (name === 'thinking' && onThinking)
+					onThinking(obj.index, obj.text);
 				else if (name === 'result' || name === 'error')
 					answer = { name: name, data: obj };
 			}
@@ -1549,26 +1596,67 @@ var dbxLlmAdvice = (function () {
 	{
 		renderStatus(container, opts.preview ? 'Building prompt preview...' : 'Asking the LLM for optimization advice...');
 
-		// A clock while we wait: some models think for minutes (high/max effort, big plans). After it, what the model
-		// is doing, when the provider streams its answer: "thinking: <the latest line of its thinking>", "writing the answer".
-		var clockTimer = null;
-		var progressEl = null;
+		// A clock while we wait: some models think for minutes (high/max effort, big plans). After it, what the model is
+		// doing, when the provider streams its answer ("thinking", "writing the answer"), and a Stop button. Under it, the
+		// model's thinking as a list that grows (one bullet per paragraph), when the provider sends it.
+		var started      = Date.now();
+		var clockTimer   = null;
+		var progressEl   = null;
+		var thinkingBox  = null;
+		var stoppedAfter = null; // set when the user pressed Stop
+		var abort        = window.AbortController ? new AbortController() : null;
+		function elapsed()
+		{
+			var s = Math.floor((Date.now() - started) / 1000);
+			return (s >= 60 ? Math.floor(s / 60) + 'm ' : '') + (s % 60) + 's';
+		}
 		if (!opts.preview)
 		{
-			var started = Date.now();
-			var clock   = document.createElement('span');
+			var status = container.querySelector('.dbx-llm-status');
+			var clock  = document.createElement('span');
 			clock.className = 'dbx-llm-clock';
 			clock.textContent = ' 0s';
 			progressEl = document.createElement('span');
 			progressEl.className = 'dbx-llm-progress';
-			container.querySelector('.dbx-llm-status').appendChild(clock);
-			container.querySelector('.dbx-llm-status').appendChild(progressEl);
+			status.appendChild(clock);
+			status.appendChild(progressEl);
 			clockTimer = setInterval(function ()
 			{
 				if (!clock.isConnected) { clearInterval(clockTimer); return; }
-				var s = Math.floor((Date.now() - started) / 1000);
-				clock.textContent = ' ' + (s >= 60 ? Math.floor(s / 60) + 'm ' : '') + (s % 60) + 's';
+				clock.textContent = ' ' + elapsed();
 			}, 1000);
+
+			// Stop: the browser stops waiting at once; DbxCentral notices within seconds and cancels the LLM call (and its cost)
+			if (abort)
+			{
+				var stopBtn = document.createElement('button');
+				stopBtn.type        = 'button';
+				stopBtn.className   = 'dbx-llm-stop-btn';
+				stopBtn.textContent = 'Stop';
+				stopBtn.title       = 'Stop waiting for this answer - the LLM call is cancelled too';
+				stopBtn.addEventListener('click', function () { stoppedAfter = elapsed(); abort.abort(); });
+				status.appendChild(stopBtn);
+			}
+
+			thinkingBox = document.createElement('div');
+			thinkingBox.className     = 'dbx-llm-thinking-live';
+			thinkingBox.style.display = 'none'; // until the first thought arrives
+			thinkingBox.innerHTML     = '<ul></ul>';
+			container.appendChild(thinkingBox);
+		}
+		/** Paragraph 'index' of the model's thinking, created or updated (it grows); the box follows the bottom unless the user scrolled up */
+		function showThinking(index, text)
+		{
+			if (!thinkingBox || index == null)
+				return;
+			var atBottom = thinkingBox.scrollHeight - thinkingBox.scrollTop - thinkingBox.clientHeight < 8;
+			var ul = thinkingBox.querySelector('ul');
+			while (ul.children.length <= index)
+				ul.appendChild(document.createElement('li'));
+			ul.children[index].innerHTML = thinkingHtml(text);
+			thinkingBox.style.display = '';
+			if (atBottom)
+				thinkingBox.scrollTop = thinkingBox.scrollHeight;
 		}
 		function showProgress(p)
 		{
@@ -1604,9 +1692,10 @@ var dbxLlmAdvice = (function () {
 		var request = {
 			method:  'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body:    JSON.stringify(body)
+			body:    JSON.stringify(body),
+			signal:  abort ? abort.signal : undefined
 		};
-		return (opts.preview ? fetchJson('/api/llm/optimize-sql', request) : fetchEvents('/api/llm/optimize-sql', request, showProgress))
+		return (opts.preview ? fetchJson('/api/llm/optimize-sql', request) : fetchEvents('/api/llm/optimize-sql', request, showProgress, showThinking))
 		.then(function (data)
 		{
 			clearInterval(clockTimer);
@@ -1617,6 +1706,15 @@ var dbxLlmAdvice = (function () {
 		.catch(function (err)
 		{
 			clearInterval(clockTimer);
+
+			// Stopped by the user: say so, and keep the thinking that was already shown
+			if (stoppedAfter !== null)
+			{
+				var st = container.querySelector('.dbx-llm-status');
+				if (st)
+					st.textContent = 'Stopped by you after ' + stoppedAfter + '.';
+				return null;
+			}
 			if (opts.preview)
 			{
 				container.innerHTML = '<div class="dbx-llm-error">Failed to build prompt preview: ' + escapeHtml(err.message) + '</div>';

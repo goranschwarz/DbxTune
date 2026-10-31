@@ -328,7 +328,7 @@ public class LlmAdviceLog
 			}
 			if (StringUtil.hasValue(llmResponse.getThinkingSummary()))
 			{
-				sb.append("<details>\n<summary><b>Model's thinking</b> (a summary, by the LLM)</summary>\n");
+				sb.append("<details>\n<summary><b>LLM's Thinking Process</b> (a summary, by the LLM)</summary>\n");
 				sb.append("<div id=\"dbx-llm-thinking\" class=\"dbx-llm-text\">").append(esc(llmResponse.getThinkingSummary())).append("</div>\n");
 				sb.append("</details>\n");
 			}

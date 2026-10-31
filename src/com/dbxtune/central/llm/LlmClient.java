@@ -59,6 +59,12 @@ public interface LlmClient
 	{
 		void update(String phase, String text);
 
+		/** Paragraph 'index' (0, 1, ...) of the model's thinking summary: its complete sentences so far (it grows) */
+		default void thinking(int index, String text) {}
+
+		/** True when nobody waits for the answer any more (the user pressed Stop, the browser went away): the call is then cancelled */
+		default boolean isCancelled() { return false; }
+
 		/** Nobody is listening */
 		LlmProgress NONE = (phase, text) -> {};
 	}

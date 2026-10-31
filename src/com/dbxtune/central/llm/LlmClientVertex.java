@@ -160,7 +160,8 @@ extends LlmClientAbstract
 
 			if ( ! stream )
 			{
-				HttpResponse<String> httpResponse = _httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+				// Not streamed: wait for the whole answer, at most 'timeout' in total, and stop the call when nobody waits any more
+				HttpResponse<String> httpResponse = sendAndWait(builder.build(), model, progress);
 				if (httpResponse.statusCode() != 200)
 					throw new Exception("Google Cloud returned HTTP " + httpResponse.statusCode() + " for " + url + ": " + httpResponse.body());
 				return FORMAT_ANTHROPIC.equals(format)
