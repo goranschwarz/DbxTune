@@ -27,6 +27,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -40,6 +43,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.DbxTuneCentral;
+import com.dbxtune.central.pcs.DbxCentralRealm;
+import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 
 public class DbxTuneConfServlet extends HttpServlet
@@ -49,8 +54,36 @@ public class DbxTuneConfServlet extends HttpServlet
 
 	private final String CONF_DIR  = DbxTuneCentral.getAppConfDir();
 
+	/** Show the real secret values to a logged in admin (everybody else always sees them masked) */
+	public static final String  PROPKEY_showSecretsToAdmin = "DbxTuneCentral.conf.showSecretsToAdmin";
+	public static final boolean DEFAULT_showSecretsToAdmin = true;
+
+	/** What a secret is replaced with */
+	public static final String SECRET_MASK = "********";
+
+	// The last part of a property key (after the last '.') that holds a secret. Only the END of it: 'maxTokens' and
+	// 'PasswordExpiresInDays' are not secrets.
+	private static final Pattern SECRET_KEY_END     = Pattern.compile("(?i).*(password|passwd|pwd|secret|apikey|api_key|apitoken|token|bearer|basic|privatekey|accesskey|authorization|extraheaders)");
+	private static final Pattern PASSWORD_KEY_END   = Pattern.compile("(?i).*(password|passwd|pwd)");
+	// A property line, also a commented out one ('#key=value'): leading space, comment, space, key, separator, value
+	private static final Pattern PROPERTY_LINE      = Pattern.compile("^(\\s*)(#+|!)?(\\s*)([^=:\\s#!]+)(\\s*[=:]\\s*)(.*)$");
+	// Secrets inside a value (or any other line), for any key: a URL's password ('https://user:pass@host'),
+	// URL/JDBC parameters ('?password=x', ';password=x', '&sig=x'), the secret path of webhook URLs
+	// (Slack, Teams, Discord), and a DbxTune command line password ('-P secret', '--password secret')
+	private static final Pattern URL_PASSWORD       = Pattern.compile("(://[^/:@\\s]+:)([^@/\\s]+)(@)");
+	private static final Pattern SECRET_PARAM       = Pattern.compile("(?i)([?&;](?:password|passwd|pwd|token|access_token|apikey|api_key|key|secret|client_secret|sig|signature|code)=)([^&;\\s]+)");
+	private static final Pattern WEBHOOK_PATH       = Pattern.compile("(?i)(https?://(?:hooks\\.slack\\.com|[\\w.-]*webhook\\.office\\.com|discord(?:app)?\\.com/api/webhooks))/[^\\s?\"']+");
+	private static final Pattern CMDLINE_PASSWORD   = Pattern.compile("(\\s-P\\s*|\\s--password[=\\s]\\s*)(\\S+)");
+
 	PrintWriter out = null;
 	HttpServletResponse _resp = null;
+
+	/** The real secret values are shown (an admin, and PROPKEY_showSecretsToAdmin is true) */
+	private boolean _showSecrets = false;
+	/** Secrets may be shown to an admin (PROPKEY_showSecretsToAdmin) */
+	private boolean _showSecretsToAdmin = DEFAULT_showSecretsToAdmin;
+	/** Lines in the file that hold a secret */
+	private int _secretLineCount = 0;
 	
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
@@ -102,6 +135,10 @@ public class DbxTuneConfServlet extends HttpServlet
 		}
 
 
+		_showSecretsToAdmin = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_showSecretsToAdmin, DEFAULT_showSecretsToAdmin);
+		boolean isAdmin     = req.isUserInRole(DbxCentralRealm.ROLE_ADMIN) || "admin".equals(req.getRemoteUser());
+		_showSecrets        = isAdmin && _showSecretsToAdmin;
+
 		if ("plain".equalsIgnoreCase(inputMethod))
 		{
 			resp.setContentType("text/html");
@@ -152,27 +189,18 @@ public class DbxTuneConfServlet extends HttpServlet
 		}
 		
 		
+		List<String> lines = readConfLines(f, pattern);
+		printSecretsNote(f);
+
 		out.println("<div id='log'>");
 ////		out.println("<textarea id='logtext' style='width:100%;height:100vw; overflow: hidden;'>");
 //		out.println("<textarea id='logtext'>");
 		out.println("<pre>");
 		out.println("<code class='language-properties line-numbers'>");
 
-		try ( FileInputStream in = new FileInputStream(f); 
-		      BufferedReader  br = new BufferedReader(new InputStreamReader(in)); )
 		{
-//			_resp.setContentLengthLong(f.length() * 2);
-			
-			String line;
-			while ((line = br.readLine()) != null)
+			for (String line : lines)
 			{
-				// Discard rows by the regexp
-				if (pattern != null)
-				{
-					if (pattern.matcher(line).find())
-						continue;
-				}
-				
 //				String prefix  = "";
 //				String postfix = "";
 //				if      (line.indexOf(" - INFO  - " ) >= 0) { prefix = "<span style='background-color:rgb(240, 240, 240);'>"; postfix = "</span>"; }
@@ -191,10 +219,6 @@ public class DbxTuneConfServlet extends HttpServlet
 				line = StringUtil.toHtmlStringExceptNl(line);
 				out.println(line);
 			}
-		}
-		catch (Exception ex)
-		{
-			throw new ServletException("Problems reading file '" + f + "'.", ex);
 		}
 
 		out.println("</code>");
@@ -265,6 +289,10 @@ public class DbxTuneConfServlet extends HttpServlet
 		}
 		
 		
+		File f = new File(CONF_DIR + "/" + inputName);
+		List<String> lines = readConfLines(f, pattern);
+		printSecretsNote(f);
+
 		out.println();
 		out.println("<table id='dbxTable' class='alarmTableClass tablesorter'>");
 		out.println("<thead> ");
@@ -275,46 +303,20 @@ public class DbxTuneConfServlet extends HttpServlet
 		out.println("</thead> ");
 
 		out.println("<tbody>");
-		File f = new File(CONF_DIR + "/" + inputName);
-		try
+		for (String line : lines)
 		{
-			FileInputStream in = new FileInputStream(f);
-			BufferedReader br = new BufferedReader(new InputStreamReader(in));
+			// Split at the FIRST '=': the value may have '=' in it (URLs, JDBC parameters)
+			int eq = line.indexOf('=');
+			if (eq < 0)
+				continue;
 
-			String line;
-			while ((line = br.readLine()) != null)
-			{
-				// Discard rows by the regexp
-				if (pattern != null)
-				{
-					if (pattern.matcher(line).find())
-						continue;
-				}
-				
-				String[] words = line.split("=");
-				if (words.length < 2)
-					continue;
-				
-				String key = words[0].trim();
-				String val = words[1].trim();
-				if (words.length > 2)
-				{
-					for (int i = 2; i < words.length; i++)
-					{
-						val +=  words[i];
-					}
-				}
+			String key = line.substring(0, eq).trim();
+			String val = line.substring(eq + 1).trim();
 
-				out.println("<tr>");
-				out.println("  <td nowrap>" + key + "</td>");
-				out.println("  <td nowrap>" + val + "</td>");
-				out.println("</tr>");
-			}
-			in.close();
-		}
-		catch (Exception ex)
-		{
-			throw new ServletException("Problems reading file '" + f + "'.", ex);
+			out.println("<tr>");
+			out.println("  <td nowrap>" + StringEscapeUtils.escapeHtml4(key) + "</td>");
+			out.println("  <td nowrap>" + StringEscapeUtils.escapeHtml4(val) + "</td>");
+			out.println("</tr>");
 		}
 
 //		out.println("<script>                                                                  ");
@@ -360,5 +362,119 @@ public class DbxTuneConfServlet extends HttpServlet
 
 		out.flush();
 		out.close();
+	}
+
+	/**
+	 * Read the file: each line with its secrets masked (unless _showSecrets), lines matching the 'discard' regexp left out.
+	 * Counts the lines that hold a secret in _secretLineCount.
+	 */
+	private List<String> readConfLines(File f, Pattern discard)
+	throws ServletException
+	{
+		List<String> lines = new ArrayList<>();
+		try ( FileInputStream in = new FileInputStream(f);
+		      BufferedReader  br = new BufferedReader(new InputStreamReader(in)); )
+		{
+			String line;
+			while ((line = br.readLine()) != null)
+			{
+				String masked = maskSecrets(line);
+				if ( ! masked.equals(line) )
+					_secretLineCount++;
+
+				// Discard on the MASKED line: a regexp tested on the real line would tell, one guess at a time, what a secret contains
+				if (discard != null && discard.matcher(masked).find())
+					continue;
+
+				lines.add(_showSecrets ? line : masked);
+			}
+		}
+		catch (Exception ex)
+		{
+			throw new ServletException("Problems reading file '" + f + "'.", ex);
+		}
+		return lines;
+	}
+
+	/** A note above the content when the file has secrets: they are masked (and where the real values are), or shown to an admin */
+	private void printSecretsNote(File f)
+	{
+		if (_secretLineCount == 0)
+			return;
+
+		String path = StringEscapeUtils.escapeHtml4(f.getAbsolutePath());
+		if (_showSecrets)
+		{
+			out.println("<div class='alert alert-warning py-2'><b>Secrets are shown</b>, because you are logged in as an admin. "
+					+ "Other users see the passwords, keys and tokens in this file masked. "
+					+ "To mask them for admins too, set <code>" + PROPKEY_showSecretsToAdmin + " = false</code> in DBX_CENTRAL.conf.</div>");
+		}
+		else
+		{
+			out.println("<div class='alert alert-info py-2'><b>Secrets are masked.</b> "
+					+ "Passwords, API keys, tokens and other secrets in this file are shown as <code>" + SECRET_MASK + "</code>. "
+					+ "Long keys and tokens keep their last 4 characters, so you can tell which one is in use.<br>"
+					+ "The real values can only be seen in the file itself, on the DbxCentral server (at OS level): <code>" + path + "</code>"
+					+ (_showSecretsToAdmin ? "<br>Admins see the real values here when they are logged in." : "")
+					+ "</div>");
+		}
+	}
+
+	/**
+	 * Is this property key a secret (password, API key, token, client secret, ...)? Only the end of the key's last
+	 * part is checked: 'mail.smtp.password' and 'DbxCentral.llm.foundry.clientSecret' are, 'maxTokens' is not.
+	 */
+	public static boolean isSecretPropertyKey(String key)
+	{
+		if (key == null)
+			return false;
+		return SECRET_KEY_END.matcher(key.substring(key.lastIndexOf('.') + 1)).matches();
+	}
+
+	/**
+	 * A line of a config file with its secrets masked: the value of a secret property (also when commented out), and
+	 * secrets inside any value or line (URL passwords, URL/JDBC parameters, webhook URLs, command line passwords).
+	 */
+	public static String maskSecrets(String line)
+	{
+		if (line == null)
+			return null;
+
+		Matcher m = PROPERTY_LINE.matcher(line);
+		// A commented out property is written 'key=value' - a comment like '# Note: ...' is not a property
+		if (m.matches() && (m.group(2) == null || m.group(5).trim().equals("=")) && isSecretPropertyKey(m.group(4)))
+			return m.group(1) + (m.group(2) == null ? "" : m.group(2)) + m.group(3) + m.group(4) + m.group(5) + maskSecretValue(m.group(4), m.group(6));
+
+		String masked = URL_PASSWORD    .matcher(line  ).replaceAll("$1" + SECRET_MASK + "$3");
+		masked        = SECRET_PARAM    .matcher(masked).replaceAll("$1" + SECRET_MASK);
+		masked        = WEBHOOK_PATH    .matcher(masked).replaceAll("$1/" + SECRET_MASK);
+		masked        = CMDLINE_PASSWORD.matcher(masked).replaceAll("$1" + SECRET_MASK);
+		return masked;
+	}
+
+	/**
+	 * The masked value of a secret property. Kept as is: an empty value that is not a password (not set), an environment variable reference
+	 * ('${MY_KEY}') and a placeholder ('<key>'). 'encrypted:' stays visible. Long API keys/tokens (20+ chars) keep their
+	 * last 4 characters, like the LLM providers' consoles do, so you can tell which key is in use - never for passwords.
+	 */
+	private static String maskSecretValue(String key, String value)
+	{
+		String  val        = value.trim();
+		boolean isPassword = PASSWORD_KEY_END.matcher(key.substring(key.lastIndexOf('.') + 1)).matches();
+
+		// An empty password is masked too: that a database or mail account has NO password is itself a secret.
+		// An empty API key/token/secret is kept: it only says that it is not configured.
+		if (val.isEmpty())
+			return isPassword ? SECRET_MASK : value;
+
+		if (val.startsWith("${") || val.matches("<[^>]*>"))
+			return value;
+
+		// In a properties file the ':' is often escaped: 'encrypted\:...'
+		if (val.replace("\\:", ":").startsWith(Configuration.ENCRYPTED_PREFIX))
+			return Configuration.ENCRYPTED_PREFIX + SECRET_MASK;
+
+		String  tail       = ( ! isPassword && val.length() >= 20 ) ? val.substring(val.length() - 4) : "";
+		return SECRET_MASK + tail;
 	}
 }

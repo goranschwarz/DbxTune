@@ -25,86 +25,73 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.dbxtune.utils.StringUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
- * LLM client for <b>Claude</b> (Anthropic Messages API).
+ * LLM client for <b>Claude</b> (Anthropic Messages API) - or any Anthropic-compatible endpoint (a company gateway) via 'url'.
  *
  * <h3>Configuration properties</h3>
  * <pre>
- * DbxCentral.llm.claude.apiKey    = &lt;Anthropic API key&gt;                (required)
- * DbxCentral.llm.claude.model     = claude-sonnet-4-5                    (optional, default shown)
- * DbxCentral.llm.claude.maxTokens = 8192                                 (optional, default shown)
+ * DbxCentral.llm.claude.apiKey    = &lt;Anthropic API key&gt;                (required, unless 'url' points at a gateway that needs none)
+ * DbxCentral.llm.claude.model     = claude-opus-5-5, claude-sonnet-5-5   (optional, default claude-opus-5-5; the first is the default)
+ * DbxCentral.llm.claude.url       = https://api.anthropic.com            (optional)
+ * DbxCentral.llm.claude.maxTokens = 16000                                (optional, default shown)
  * </pre>
- * Verify the model id against Anthropic's current documentation - model
- * names are versioned and get retired over time.
+ * Plus the per-model settings described in {@link LlmClientAbstract#getModels()} (label, extraBody, extraHeaders, ...).
  * <p>
- * {@code maxTokens} caps the model's output; Anthropic hard-truncates generation once it's hit,
- * wherever that lands - including mid-string inside the JSON answer this client asks for. Raise it
- * if {@link LlmClientAbstract#parseModelAnswer} logs truncated/malformed JSON for real-world queries
- * with substantial DDL/index context.
+ * {@code maxTokens} caps the model's output (thinking included); Anthropic hard-truncates generation once it's hit,
+ * wherever that lands - including mid-string inside the JSON answer this client asks for.
  */
 public class LlmClientClaude
 extends LlmClientAbstract
 {
-	public static final String PROPKEY_API_KEY    = "DbxCentral.llm.claude.apiKey";
-	public static final String PROPKEY_MODEL      = "DbxCentral.llm.claude.model";
-	public static final String DEFAULT_MODEL      = "claude-sonnet-4-5";
-	public static final String PROPKEY_MAX_TOKENS = "DbxCentral.llm.claude.maxTokens";
-	public static final int    DEFAULT_MAX_TOKENS = 8192;
+	public static final String TYPE              = "claude";
+	public static final String DEFAULT_MODEL     = "claude-opus-5-5";
+	public static final String DEFAULT_URL       = "https://api.anthropic.com";
+	public static final String ANTHROPIC_VERSION = "2023-06-01";
 
-	private static final String API_URL           = "https://api.anthropic.com/v1/messages";
-	private static final String ANTHROPIC_VERSION = "2023-06-01";
+	public LlmClientClaude(String providerId)
+	{
+		super(providerId);
+	}
 
-	@Override public String getProviderId()  { return "claude"; }
-	@Override public String getDisplayName() { return "Claude (Anthropic)"; }
+	@Override public    String getType()               { return TYPE; }
+	@Override protected String getDefaultDisplayName() { return "Claude (Anthropic)"; }
+	@Override protected String getDefaultModel()       { return DEFAULT_MODEL; }
 
-	@Override protected String getPropApiKey()   { return PROPKEY_API_KEY; }
-	@Override protected String getPropModel()    { return PROPKEY_MODEL; }
-	@Override protected String getDefaultModel() { return DEFAULT_MODEL; }
+	/** An API key, or a 'url' (an Anthropic-compatible gateway may not need a key). */
+	@Override
+	public boolean isEnabled()
+	{
+		return StringUtil.hasValue(getApiKey()) || StringUtil.hasValue(cfg(key("url")));
+	}
 
 	@Override
-	public LlmOptimizeResponse optimize(LlmOptimizeRequest request) throws Exception
+	public LlmOptimizeResponse optimize(LlmOptimizeRequest request, LlmModelEntry model) throws Exception
 	{
+		checkModelEntry(model);
 		String prompt = buildPrompt(request);
 
-		ObjectMapper om = new ObjectMapper();
-		ObjectNode body = om.createObjectNode();
-		body.put("model", getModel());
-		body.put("max_tokens", cfgInt(PROPKEY_MAX_TOKENS, DEFAULT_MAX_TOKENS));
+		ObjectNode body = buildMessagesBody(model.getModelId(), model.getMaxTokens(), prompt);
+		applyExtraBody(body, model);
 
-		ArrayNode messages = body.putArray("messages");
-		ObjectNode userMsg = messages.addObject();
-		userMsg.put("role", "user");
-		userMsg.put("content", prompt);
-
-		HttpRequest httpRequest = HttpRequest.newBuilder()
-				.uri(URI.create(API_URL))
-				.header("x-api-key", getApiKey())
+		HttpRequest.Builder builder = HttpRequest.newBuilder()
+				.uri(URI.create(getUrl(DEFAULT_URL) + "/v1/messages"))
 				.header("anthropic-version", ANTHROPIC_VERSION)
 				.header("content-type", "application/json")
-				.POST(HttpRequest.BodyPublishers.ofString(om.writeValueAsString(body), StandardCharsets.UTF_8))
-				.build();
+				.POST(HttpRequest.BodyPublishers.ofString(new ObjectMapper().writeValueAsString(body), StandardCharsets.UTF_8));
+		if (StringUtil.hasValue(getApiKey()))
+			builder.header("x-api-key", getApiKey());
+		applyExtraHeaders(builder, model);
 
-		HttpResponse<String> httpResponse = _httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+		HttpResponse<String> httpResponse = _httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 		String rawResponse = httpResponse.body();
 
 		if (httpResponse.statusCode() != 200)
 			throw new Exception("Claude API returned HTTP " + httpResponse.statusCode() + ": " + rawResponse);
 
-		JsonNode root = om.readTree(rawResponse);
-		JsonNode contentArr = root.get("content");
-		if (contentArr == null || !contentArr.isArray() || contentArr.isEmpty())
-			throw new Exception("Claude API response had no 'content': " + rawResponse);
-
-		String answerText = contentArr.get(0).path("text").asText("");
-
-		LlmOptimizeResponse response = parseModelAnswer(answerText, rawResponse, prompt);
-		response.setInputTokens (intOrNull(root.path("usage").path("input_tokens")));
-		response.setOutputTokens(intOrNull(root.path("usage").path("output_tokens")));
-		return response;
+		return parseMessagesResponse(rawResponse, prompt, model);
 	}
 }

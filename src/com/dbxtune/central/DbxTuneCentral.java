@@ -50,6 +50,7 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
+import com.dbxtune.central.controllers.DbxTuneConfServlet;
 import com.dbxtune.central.controllers.MandatoryLoginFilter;
 
 import org.apache.commons.cli.CommandLine;
@@ -580,8 +581,9 @@ public class DbxTuneCentral
 				Object newValue = evt.getNewValue();
 				Object oldValue = evt.getOldValue();
 				
-				// If "Password", don't print the passwords
-				if (propName != null && propName.indexOf("assword") >= 0)
+				// If "Password" or another secret (API keys/tokens, client secrets, LLM extraHeaders that may carry
+				// an Authorization header), don't print the value. Same check as the /conf page uses.
+				if (DbxTuneConfServlet.isSecretPropertyKey(propName))
 				{
 					newValue = "*secret*";
 					oldValue = "*secret*";

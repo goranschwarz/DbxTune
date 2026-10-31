@@ -16,7 +16,7 @@
  *   ssShowplanOpenExternal(), ssShowplanGetParameters(),
  *   ssShowplanSetParametersInSql()
  *   showAseShowplanDialog(), aseShowplanFormatSql(), aseShowplanCopySql(),
- *   aseShowplanCopyPlan(), aseShowplanRefreshLlmAdvice()
+ *   aseShowplanCopyPlan()
  *   showOracleShowplanDialog(), oraShowplanFormatSql(), oraShowplanCopySql(),
  *   oraShowplanCopyPlan(), oraShowplanOpenExternal()
  *   submit_post_via_hidden_form()
@@ -483,10 +483,7 @@
 			"				<details id='dbx-ssp-sect-llm' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
 			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#129302; LLM Optimization Advice<span class='dbx-llm-summary-info' style='font-weight:normal;color:var(--sp-text-5);'></span></summary>",
 			"					<div style='padding:4px 8px 8px 8px;'>",
-			// This button lives OUTSIDE #dbx-ssp-llm-body on purpose: dbxLlmAdvice.js's target-mode
-			// rendering replaces the whole innerHTML of its target element, so anything inside
-			// dbx-ssp-llm-body itself would be wiped out on every (re)load.
-			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='ssShowplanRefreshLlmAdvice();'>&#8635; Refresh Advice</button>",
+			// No "Refresh" button: dbxLlmAdvice.open() shows a model dropdown + "Get Advice" button in here, to ask (again, or another model)
 			"						<div id='dbx-ssp-llm-body'>",
 			"							<span style='color:var(--sp-text-5);font-size:0.85em;'>Expand to ask an LLM for optimization advice.</span>",
 			"						</div>",
@@ -662,10 +659,7 @@
 			"				<details id='dbx-asp-sect-llm' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
 			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#129302; LLM Optimization Advice<span class='dbx-llm-summary-info' style='font-weight:normal;color:var(--sp-text-5);'></span></summary>",
 			"					<div style='padding:4px 8px 8px 8px;'>",
-			// This button lives OUTSIDE #dbx-asp-llm-body on purpose: dbxLlmAdvice.js's target-mode
-			// rendering replaces the whole innerHTML of its target element, so anything inside
-			// dbx-asp-llm-body itself would be wiped out on every (re)load.
-			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='aseShowplanRefreshLlmAdvice();'>&#8635; Refresh Advice</button>",
+			// No "Refresh" button: dbxLlmAdvice.open() shows a model dropdown + "Get Advice" button in here, to ask (again, or another model)
 			"						<div id='dbx-asp-llm-body'>",
 			"							<span style='color:var(--sp-text-5);font-size:0.85em;'>Expand to ask an LLM for optimization advice.</span>",
 			"						</div>",
@@ -805,8 +799,7 @@
 			"				<details id='dbx-osp-sect-llm' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
 			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#129302; LLM Optimization Advice<span class='dbx-llm-summary-info' style='font-weight:normal;color:var(--sp-text-5);'></span></summary>",
 			"					<div style='padding:4px 8px 8px 8px;'>",
-			// The button is OUTSIDE #dbx-osp-llm-body: dbxLlmAdvice.js replaces the whole content of its target
-			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='oraShowplanRefreshLlmAdvice();'>&#8635; Refresh Advice</button>",
+			// No "Refresh" button: dbxLlmAdvice.open() shows a model dropdown + "Get Advice" button in here, to ask (again, or another model)
 			"						<div id='dbx-osp-llm-body'>",
 			"							<span style='color:var(--sp-text-5);font-size:0.85em;'>Expand to ask an LLM for optimization advice.</span>",
 			"						</div>",
@@ -1630,13 +1623,6 @@
 		_openLlmAdviceIfConfigured(body, { sql: sqlText, plan: planText, dbVendor: 'Adaptive Server Enterprise', dbmsVersion: dbmsVersion, srv: srv, dbname: dbname, workloadData: workloadData, target: body });
 	}
 
-	// Manual re-run - ignores the data-loaded guard (unlike the toggle handler) since this is an
-	// explicit user action.
-	window.aseShowplanRefreshLlmAdvice = function() {
-		var body = document.getElementById('dbx-asp-llm-body');
-		if (body) _aseShowplanLoadLlmAdvice(body);
-	};
-
 	/**
 	 * "No exec" counterpart to _aseShowplanLoadLlmAdvice() above - same DDL-context lookup, but
 	 * finishes with a POST ...&preview:true to /api/llm/optimize-sql (LlmSqlOptimizeServlet), which
@@ -1707,7 +1693,7 @@
 		});
 	}
 
-	// Manual re-run - ignores the data-loaded guard, same rationale as aseShowplanRefreshLlmAdvice.
+	// Manual re-run - ignores the data-loaded guard (unlike the toggle handler) since this is an explicit user action.
 	window.aseShowplanRefreshLlmPreview = function() {
 		var body = document.getElementById('dbx-asp-llmpreview-body');
 		if (body) _aseShowplanLoadLlmPreview(body);
@@ -2115,11 +2101,6 @@
 				dbmsVersion: _oraShowplanDbmsVersion, ddlContext: ddlContext, workloadData: _oraShowplanWorkloadData, target: body });
 		});
 	}
-
-	window.oraShowplanRefreshLlmAdvice = function() {
-		var body = document.getElementById('dbx-osp-llm-body');
-		if (body) _oraShowplanLoadLlmAdvice(body);
-	};
 
 	/**
 	 * The "LLM Prompt Preview" section: the exact prompt that would be sent, built by the server (preview:true)
@@ -3313,9 +3294,9 @@ function _initGlobalEscClose() {
 
 	/**
 	 * (Re)loads the LLM Optimization Advice section for whatever plan/SQL is currently shown in the
-	 * dialog. Called from: the "LLM Optimization Advice" details' toggle handler (first expand only,
-	 * guarded by data-loaded), window.ssShowplanRefreshLlmAdvice() (manual re-run, ignores the guard),
-	 * and showSqlServerShowplanDialog() (auto re-run when a new statement is selected while the
+	 * dialog (dbxLlmAdvice.open() shows the model dropdown + "Get Advice" button - nothing is asked before
+	 * that is pressed). Called from: the "LLM Optimization Advice" details' toggle handler (first expand only,
+	 * guarded by data-loaded), and showSqlServerShowplanDialog() (auto re-run when a new statement is selected while the
 	 * section is already open - since <details> only fires 'toggle' on an actual open/close
 	 * transition, simply resetting state wouldn't refresh an already-open section on its own).
 	 */
@@ -3349,13 +3330,6 @@ function _initGlobalEscClose() {
 		var dbmsVersion  = tiBody ? (tiBody.getAttribute('data-dbmsversion')  || '') : '';
 		_openLlmAdviceIfConfigured(body, { sql: sqlText, plan: xmlText, dbVendor: 'Microsoft SQL Server', dbmsVersion: dbmsVersion, srv: srv, dbname: dbname, ts: ts, workloadData: workloadData, target: body });
 	}
-
-	// Manual re-run, e.g. after the user notices the advice looks stale, or just wants to try again.
-	// Ignores the data-loaded guard (unlike the toggle handler) since this is an explicit user action.
-	window.ssShowplanRefreshLlmAdvice = function() {
-		var body = document.getElementById('dbx-ssp-llm-body');
-		if (body) _ssShowplanLoadLlmAdvice(body);
-	};
 
 	/**
 	 * "No exec" counterpart to _ssShowplanLoadLlmAdvice() above - same DDL-context lookup, but
@@ -3429,7 +3403,7 @@ function _initGlobalEscClose() {
 		});
 	}
 
-	// Manual re-run - ignores the data-loaded guard, same rationale as ssShowplanRefreshLlmAdvice.
+	// Manual re-run - ignores the data-loaded guard (unlike the toggle handler) since this is an explicit user action.
 	window.ssShowplanRefreshLlmPreview = function() {
 		var body = document.getElementById('dbx-ssp-llmpreview-body');
 		if (body) _ssShowplanLoadLlmPreview(body);

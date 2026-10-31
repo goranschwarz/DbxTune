@@ -23,7 +23,9 @@ package com.dbxtune.central.controllers;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.servlet.ServletException;
@@ -37,6 +39,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.central.llm.LlmAdviceLog;
 import com.dbxtune.central.llm.LlmClient;
 import com.dbxtune.central.llm.LlmClientRegistry;
+import com.dbxtune.central.llm.LlmModelEntry;
 import com.dbxtune.central.llm.LlmOptimizeRequest;
 import com.dbxtune.central.llm.LlmOptimizeResponse;
 import com.dbxtune.utils.StringUtil;
@@ -44,7 +47,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * <pre>POST /api/llm/optimize-sql</pre>
- * Body: {@code {"sql": "...", "ddlContext": "...", "plan": "...", "dbVendor": "...", "dbmsVersion": "...", "provider": "claude"}}
+ * Body: {@code {"sql": "...", "ddlContext": "...", "plan": "...", "dbVendor": "...", "dbmsVersion": "...", "provider": "claude", "model": "opus-max"}}
+ * <p>
+ * 'provider' and 'model' are what the user picked in the model dropdown (see {@code LlmConfigServlet}'s 'models');
+ * 'model' is the NAME of a configured entry, not a free model id.
  * <p>
  * Sends the SQL statement (plus whatever DDL/stats/plan context is supplied)
  * to the requested (or configured default) LLM provider and returns its
@@ -124,13 +130,26 @@ extends HttpServlet
 			String requestedProvider = StringUtil.hasValue(llmRequest.getProvider()) ? "'" + llmRequest.getProvider() + "'" : "(none requested)";
 			writeError(om, out, response, HttpServletResponse.SC_BAD_REQUEST, "unknown-provider",
 					"No usable LLM provider found. Requested provider: " + requestedProvider + ". "
-					+ "Either set 'DbxCentral.llm.provider=claude|openai|gemini|ollama' explicitly, or configure exactly one provider's apiKey/URL, in DBX_CENTRAL.conf.");
+					+ "Configure at least one provider (" + String.join("|", LlmClientRegistry.BUILT_IN_TYPES) + ") in DBX_CENTRAL.conf.");
 			return;
 		}
 		if ( ! client.isEnabled() )
 		{
 			writeError(om, out, response, HttpServletResponse.SC_SERVICE_UNAVAILABLE, "provider-not-configured",
-					"LLM provider '" + client.getProviderId() + "' is not configured (missing API key / URL) in DBX_CENTRAL.conf.");
+					"LLM provider '" + client.getProviderId() + "' is not configured (missing API key / URL / ...) in DBX_CENTRAL.conf.");
+			return;
+		}
+
+		// Only a configured model entry is accepted: everything that is sent to the provider (model id, extraBody,
+		// extraHeaders) comes from the configuration, never from the browser - a cost and safety guard.
+		LlmModelEntry model = client.getModelEntry(llmRequest.getModel());
+		if (model == null)
+		{
+			List<String> names = new ArrayList<>();
+			for (LlmModelEntry entry : client.getModels())
+				names.add(entry.getName());
+			writeError(om, out, response, HttpServletResponse.SC_BAD_REQUEST, "unknown-model",
+					"Model '" + llmRequest.getModel() + "' is not configured for LLM provider '" + client.getProviderId() + "'. Configured: " + String.join(", ", names));
 			return;
 		}
 
@@ -155,19 +174,19 @@ extends HttpServlet
 			return;
 		}
 
-		// Every real provider call (success or failure) is recorded by LlmAdviceLog - after the answer
-		// has been written, so the user does not wait for it, and in a 'finally' so it is recorded even
-		// when the browser has gone away (the provider call has already been made, and paid for).
+		// Every real provider call (success or failure) is recorded by LlmAdviceLog - BEFORE the answer is
+		// written: the answer carries the link to the saved page (savedUrl), so the file must exist when the
+		// user clicks it. Saving takes milliseconds, never throws, and is done even if the browser has gone away.
 		long startTime = System.currentTimeMillis();
 		LlmOptimizeResponse llmResponse;
 		try
 		{
-			llmResponse = client.optimize(llmRequest);
+			llmResponse = client.optimize(llmRequest, model);
 		}
 		catch (Exception ex)
 		{
 			long durationMs = System.currentTimeMillis() - startTime;
-			_logger.warn("LlmSqlOptimizeServlet: problem calling LLM provider '" + client.getProviderId() + "'.", ex);
+			_logger.warn("LlmSqlOptimizeServlet: problem calling LLM provider '" + client.getProviderId() + "', model '" + model + "'.", ex);
 
 			// Best-effort: the prompt is a pure function of the request, so it can still be shown as
 			// "what we tried to send" even though the actual call to the provider failed.
@@ -175,37 +194,33 @@ extends HttpServlet
 			try { promptSent = client.buildPrompt(llmRequest); }
 			catch (Exception buildEx) { _logger.warn("LlmSqlOptimizeServlet: also failed building the prompt preview for the error response.", buildEx); }
 
+			String savedFile = LlmAdviceLog.save(request, llmRequest, client, model, null, ex, promptSent, durationMs);
+
 			Map<String, String> extra = new LinkedHashMap<>();
 			extra.put("providerId", client.getProviderId());
+			extra.put("model",      model.getModelId());
 			if (promptSent != null)
 				extra.put("promptSent", promptSent);
-			Integer savedForDays = LlmAdviceLog.getSavedForDays();
-			if (savedForDays != null)
-				extra.put("savedForDays", savedForDays.toString());
+			if (savedFile != null)
+			{
+				extra.put("savedUrl",     LlmAdviceLog.getViewUrl(savedFile));
+				extra.put("savedForDays", String.valueOf(LlmAdviceLog.getKeepDays()));
+			}
 
-			try
-			{
-				writeError(om, out, response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "llm-call-failed", ex.getMessage(), extra);
-			}
-			finally
-			{
-				LlmAdviceLog.save(request, llmRequest, client, null, ex, promptSent, durationMs);
-			}
+			writeError(om, out, response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "llm-call-failed", ex.getMessage(), extra);
 			return;
 		}
 		long durationMs = System.currentTimeMillis() - startTime;
 
-		try
+		String savedFile = LlmAdviceLog.save(request, llmRequest, client, model, llmResponse, null, llmResponse.getPromptSent(), durationMs);
+		if (savedFile != null)
 		{
-			llmResponse.setSavedForDays(LlmAdviceLog.getSavedForDays());
-			om.writeValue(out, llmResponse);
-			out.flush();
-			out.close();
+			llmResponse.setSavedUrl(LlmAdviceLog.getViewUrl(savedFile));
+			llmResponse.setSavedForDays(LlmAdviceLog.getKeepDays());
 		}
-		finally
-		{
-			LlmAdviceLog.save(request, llmRequest, client, llmResponse, null, llmResponse.getPromptSent(), durationMs);
-		}
+		om.writeValue(out, llmResponse);
+		out.flush();
+		out.close();
 	}
 
 	private void writeError(ObjectMapper om, PrintWriter out, HttpServletResponse response, int statusCode, String error, String message)

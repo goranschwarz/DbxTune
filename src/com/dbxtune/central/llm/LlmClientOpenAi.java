@@ -25,45 +25,59 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 
+import com.dbxtune.utils.StringUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
- * LLM client for <b>ChatGPT</b> (OpenAI Chat Completions API).
+ * LLM client for <b>ChatGPT</b> (OpenAI Chat Completions API) - and every server that speaks the same API:
+ * company LLM gateways (LiteLLM, ...), Azure OpenAI (v1 API), vLLM, LM Studio, and many cloud services
+ * (Mistral, DeepSeek, Groq, OpenRouter, ... - add those as extra providers, see {@link LlmClientRegistry}).
  *
- * <h3>Required configuration properties</h3>
+ * <h3>Configuration properties</h3>
  * <pre>
- * DbxCentral.llm.openai.apiKey = &lt;OpenAI API key&gt;
- * DbxCentral.llm.openai.model  = gpt-4o   (optional, defaults shown)
+ * DbxCentral.llm.openai.apiKey     = &lt;API key&gt;                  (required, unless 'url' points at a server that needs none)
+ * DbxCentral.llm.openai.model      = gpt-4o                       (optional, default shown)
+ * DbxCentral.llm.openai.url        = https://api.openai.com/v1    (optional; '/chat/completions' is added)
+ * DbxCentral.llm.openai.authHeader = Authorization                (optional; 'Authorization' sends 'Bearer &lt;key&gt;', any other header the key as is - Azure OpenAI: api-key)
  * </pre>
- * Verify the model id against OpenAI's current documentation.
+ * The request asks for JSON mode ({@code response_format}); for a server that does not support it, remove it with
+ * {@code extraBody={"response_format":null}} (see {@link LlmClientAbstract#getModels()}).
  */
 public class LlmClientOpenAi
 extends LlmClientAbstract
 {
-	public static final String PROPKEY_API_KEY = "DbxCentral.llm.openai.apiKey";
-	public static final String PROPKEY_MODEL   = "DbxCentral.llm.openai.model";
-	public static final String DEFAULT_MODEL   = "gpt-4o";
+	public static final String TYPE          = "openai";
+	public static final String DEFAULT_MODEL = "gpt-4o";
+	public static final String DEFAULT_URL   = "https://api.openai.com/v1";
 
-	private static final String API_URL = "https://api.openai.com/v1/chat/completions";
+	public LlmClientOpenAi(String providerId)
+	{
+		super(providerId);
+	}
 
-	@Override public String getProviderId()  { return "openai"; }
-	@Override public String getDisplayName() { return "ChatGPT (OpenAI)"; }
+	@Override public    String getType()               { return TYPE; }
+	@Override protected String getDefaultDisplayName() { return "ChatGPT (OpenAI)"; }
+	@Override protected String getDefaultModel()       { return DEFAULT_MODEL; }
 
-	@Override protected String getPropApiKey()   { return PROPKEY_API_KEY; }
-	@Override protected String getPropModel()    { return PROPKEY_MODEL; }
-	@Override protected String getDefaultModel() { return DEFAULT_MODEL; }
+	/** An API key, or a 'url' (a local or company server may not need a key). */
+	@Override
+	public boolean isEnabled()
+	{
+		return StringUtil.hasValue(getApiKey()) || StringUtil.hasValue(cfg(key("url")));
+	}
 
 	@Override
-	public LlmOptimizeResponse optimize(LlmOptimizeRequest request) throws Exception
+	public LlmOptimizeResponse optimize(LlmOptimizeRequest request, LlmModelEntry model) throws Exception
 	{
+		checkModelEntry(model);
 		String prompt = buildPrompt(request);
 
 		ObjectMapper om = new ObjectMapper();
 		ObjectNode body = om.createObjectNode();
-		body.put("model", getModel());
+		body.put("model", model.getModelId());
 
 		ArrayNode messages = body.putArray("messages");
 		ObjectNode userMsg = messages.addObject();
@@ -73,14 +87,20 @@ extends LlmClientAbstract
 		ObjectNode responseFormat = body.putObject("response_format");
 		responseFormat.put("type", "json_object");
 
-		HttpRequest httpRequest = HttpRequest.newBuilder()
-				.uri(URI.create(API_URL))
-				.header("Authorization", "Bearer " + getApiKey())
-				.header("Content-Type", "application/json")
-				.POST(HttpRequest.BodyPublishers.ofString(om.writeValueAsString(body), StandardCharsets.UTF_8))
-				.build();
+		applyExtraBody(body, model);
 
-		HttpResponse<String> httpResponse = _httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+		HttpRequest.Builder builder = HttpRequest.newBuilder()
+				.uri(URI.create(getUrl(DEFAULT_URL) + "/chat/completions"))
+				.header("Content-Type", "application/json")
+				.POST(HttpRequest.BodyPublishers.ofString(om.writeValueAsString(body), StandardCharsets.UTF_8));
+		if (StringUtil.hasValue(getApiKey()))
+		{
+			String authHeader = cfg(key("authHeader"), "Authorization").trim();
+			builder.header(authHeader, "Authorization".equalsIgnoreCase(authHeader) ? "Bearer " + getApiKey() : getApiKey());
+		}
+		applyExtraHeaders(builder, model);
+
+		HttpResponse<String> httpResponse = _httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 		String rawResponse = httpResponse.body();
 
 		if (httpResponse.statusCode() != 200)
@@ -93,7 +113,7 @@ extends LlmClientAbstract
 
 		String answerText = choicesArr.get(0).path("message").path("content").asText("");
 
-		LlmOptimizeResponse response = parseModelAnswer(answerText, rawResponse, prompt);
+		LlmOptimizeResponse response = parseModelAnswer(answerText, rawResponse, prompt, model);
 		response.setInputTokens (intOrNull(root.path("usage").path("prompt_tokens")));
 		response.setOutputTokens(intOrNull(root.path("usage").path("completion_tokens")));
 		return response;

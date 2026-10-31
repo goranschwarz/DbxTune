@@ -33,6 +33,7 @@ public class LlmOptimizeResponse
 	private Integer inputTokens;
 	private Integer outputTokens;
 	private Integer savedForDays;
+	private String  savedUrl;
 
 	public LlmOptimizeResponse()
 	{
@@ -61,8 +62,10 @@ public class LlmOptimizeResponse
 	public Integer getInputTokens()  { return inputTokens; }
 	/** Answer tokens, as reported by the provider (null if it did not report it). */
 	public Integer getOutputTokens() { return outputTokens; }
-	/** Set when users should be told that requests are saved (see {@link LlmAdviceLog#getSavedForDays()}): the number of days they are kept. */
+	/** Set when this request was saved (see {@link LlmAdviceLog}): the number of days it is kept (0 or less = until an administrator removes it). */
 	public Integer getSavedForDays() { return savedForDays; }
+	/** Set when this request was saved: the link to the saved page, which any user can open (to share it). */
+	public String  getSavedUrl()     { return savedUrl; }
 
 	public void setOriginSql   (String originSql)    { this.originSql    = originSql; }
 	public void setOptimizedSql(String optimizedSql) { this.optimizedSql = optimizedSql; }
@@ -74,4 +77,5 @@ public class LlmOptimizeResponse
 	public void setInputTokens (Integer inputTokens) { this.inputTokens  = inputTokens; }
 	public void setOutputTokens(Integer outputTokens){ this.outputTokens = outputTokens; }
 	public void setSavedForDays(Integer days)        { this.savedForDays = days; }
+	public void setSavedUrl    (String savedUrl)     { this.savedUrl     = savedUrl; }
 }

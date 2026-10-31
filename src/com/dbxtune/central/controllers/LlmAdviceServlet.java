@@ -151,7 +151,7 @@ extends HttpServlet
 		out.println("  <meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' />");
 		out.println(HtmlStatic.getUserDefinedContentHead());
 		out.println("  <link rel='stylesheet' href='/scripts/prism/prism-1.30.0.css'>");
-		out.println("  <style> .dbx-llm-advice-container { max-width: 900px; margin: 20px auto; } </style>");
+		out.println("  <style> .dbx-llm-advice-container { max-width: 1600px; margin: 20px auto; } </style>"); // wide: the side by side SQL diff needs the room
 		out.println("</head>");
 		out.println();
 		out.println("<body>");

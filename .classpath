@@ -57,6 +57,47 @@
 	<classpathentry kind="lib" path="lib/jetty/geronimo-jaspi-2.0.0.jar"/>
 	<classpathentry kind="lib" path="lib/jetty/javax.security.auth.message-1.0.0.v201108011116.jar"/>
 	<classpathentry kind="lib" path="lib/jetty/javax.servlet-api-3.1.0.jar" sourcepath="C:/Users/goran/AppData/Local/Temp/.org.sf.feeling.decompiler1702070598402/source/javax.servlet-api-3.1.0-sources-1702158022404.jar"/>
+	<classpathentry kind="lib" path="lib/llm-gcp/api-common-2.70.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-gcp/failureaccess-1.0.3.jar"/>
+	<classpathentry kind="lib" path="lib/llm-gcp/google-auth-library-credentials-1.54.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-gcp/google-auth-library-oauth2-http-1.54.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-gcp/google-http-client-2.2.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-gcp/google-http-client-gson-2.2.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-gcp/grpc-api-1.70.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-gcp/grpc-context-1.70.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-gcp/opencensus-api-0.31.1.jar"/>
+	<classpathentry kind="lib" path="lib/llm-gcp/opencensus-contrib-http-util-0.31.1.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/annotations-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/auth-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/aws-core-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/aws-json-protocol-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/aws-query-protocol-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/checksums-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/checksums-spi-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/endpoints-spi-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/eventstream-1.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/http-auth-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/http-auth-aws-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/http-auth-aws-eventstream-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/http-auth-spi-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/http-client-spi-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/identity-spi-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/json-utils-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/metrics-spi-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/profiles-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/protocol-core-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/reactive-streams-1.0.4.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/regions-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/retries-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/retries-spi-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/sdk-core-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/sso-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/ssooidc-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/sts-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/third-party-jackson-core-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/url-connection-client-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/utils-2.56.0.jar"/>
+	<classpathentry kind="lib" path="lib/llm-aws/utils-lite-2.56.0.jar"/>
 	<classpathentry kind="lib" path="lib/jconn42.jar"/>
 	<classpathentry kind="lib" path="lib/simplemagic-1.17.jar" sourcepath="3pp/simplemagic-1.17-sources.jar"/>
 	<classpathentry kind="lib" path="lib/bcprov-jdk18on-1.86.jar"/>

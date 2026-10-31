@@ -23,7 +23,9 @@ package com.dbxtune.central.controllers;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.servlet.ServletException;
@@ -36,6 +38,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.llm.LlmClient;
 import com.dbxtune.central.llm.LlmClientRegistry;
+import com.dbxtune.central.llm.LlmModelEntry;
 import com.dbxtune.utils.StringUtil;
 
 /**
@@ -51,7 +54,9 @@ import com.dbxtune.utils.StringUtil;
  * order, but without calling anything:
  * <ul>
  *   <li>{@code configured}    - enabled AND a default provider resolves AND it has its API key/URL</li>
- *   <li>{@code provider}, {@code providerName}, {@code model} - only when {@code configured}</li>
+ *   <li>{@code provider}, {@code providerName}, {@code model} - the default, only when {@code configured}</li>
+ *   <li>{@code models}        - the model dropdown: {@code [{provider, providerName, model, modelId, label, isDefault}]},
+ *                               only when {@code configured} ({@code model} is the entry name to send back)</li>
  *   <li>{@code loginRequired} - {@code DbxCentral.llm.allowAnonymous} is off</li>
  *   <li>{@code loggedIn}      - the caller has a logged-in user</li>
  * </ul>
@@ -85,6 +90,27 @@ extends HttpServlet
 			result.put("provider",     client.getProviderId());
 			result.put("providerName", client.getDisplayName());
 			result.put("model",        client.getModel());
+
+			// The model dropdown: every model entry of every enabled provider, in dropdown order. Read from the
+			// configuration only (no network call). Never the extraBody/extraHeaders settings - they may hold secrets.
+			List<Map<String, Object>> models = new ArrayList<>();
+			for (LlmClient c : LlmClientRegistry.getInstance().getEnabledClients())
+			{
+				boolean first = true;
+				for (LlmModelEntry entry : c.getModels())
+				{
+					Map<String, Object> m = new LinkedHashMap<>();
+					m.put("provider",     c.getProviderId());
+					m.put("providerName", c.getDisplayName());
+					m.put("model",        entry.getName());
+					m.put("modelId",      entry.getModelId());
+					m.put("label",        entry.getLabel());
+					m.put("isDefault",    first && c == client);
+					models.add(m);
+					first = false;
+				}
+			}
+			result.put("models", models);
 		}
 		result.put("loginRequired", ! LlmClientRegistry.isAnonymousAccessAllowed());
 		result.put("loggedIn",      StringUtil.hasValue(request.getRemoteUser()));

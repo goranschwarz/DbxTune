@@ -26,6 +26,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -45,7 +46,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * <p>
  * Mirrors {@code com.dbxtune.central.oauth.OAuthProviderRegistry}.
  * <p>
- * To add a new provider, register it in {@link #buildAllClients()}.
+ * Holds one instance of each built-in type ({@link #BUILT_IN_TYPES}), plus the extra providers configured in
+ * {@link #PROPKEY_EXTRA_PROVIDERS}. To add a new type: add it to {@link #BUILT_IN_TYPES} and {@code createClient()}.
  */
 public class LlmClientRegistry
 {
@@ -152,14 +154,38 @@ public class LlmClientRegistry
 		return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_ALLOW_ANONYMOUS, DEFAULT_ALLOW_ANONYMOUS);
 	}
 
+	/**
+	 * More providers of a built-in type, for services that speak the same API as one of them (Mistral, DeepSeek, Groq,
+	 * OpenRouter, a company gateway, a second Azure resource, ...). A comma separated list of names of our own; each one
+	 * is configured like a built-in provider, under its own name, plus its type:
+	 * <pre>
+	 * DbxCentral.llm.extraProviders=mistral
+	 * DbxCentral.llm.mistral.type=openai
+	 * DbxCentral.llm.mistral.url=https://api.mistral.ai/v1
+	 * DbxCentral.llm.mistral.apiKey=...
+	 * DbxCentral.llm.mistral.model=mistral-large-latest
+	 * </pre>
+	 */
+	public static final String  PROPKEY_EXTRA_PROVIDERS = "DbxCentral.llm.extraProviders";
+
+	/** The built-in types, in dropdown order. Each has a built-in instance with the type name as its id. */
+	public static final List<String> BUILT_IN_TYPES = Collections.unmodifiableList(Arrays.asList(
+			LlmClientClaude .TYPE,
+			LlmClientOpenAi .TYPE,
+			LlmClientGemini .TYPE,
+			LlmClientVertex .TYPE,
+			LlmClientBedrock.TYPE,
+			LlmClientFoundry.TYPE,
+			LlmClientOllama .TYPE));
+
 	private static final LlmClientRegistry _instance = new LlmClientRegistry();
 
-	/** All known clients, keyed by provider id. Preserves registration order. */
-	private final Map<String, LlmClient> _all;
+	/** All known clients, keyed by provider id, in dropdown order. Rebuilt when the 'extraProviders' setting changes. */
+	private volatile Map<String, LlmClient> _all;
+	private volatile String                 _allBuiltForExtraProviders;
 
 	private LlmClientRegistry()
 	{
-		_all = buildAllClients();
 	}
 
 	public static LlmClientRegistry getInstance()
@@ -171,11 +197,11 @@ public class LlmClientRegistry
 	// Public API
 	// -----------------------------------------------------------------------
 
-	/** Returns all clients whose {@link LlmClient#isEnabled()} returns {@code true}. */
+	/** Returns all clients whose {@link LlmClient#isEnabled()} returns {@code true}, in dropdown order. */
 	public List<LlmClient> getEnabledClients()
 	{
 		List<LlmClient> result = new ArrayList<>();
-		for (LlmClient c : _all.values())
+		for (LlmClient c : getAll().values())
 		{
 			if (c.isEnabled())
 				result.add(c);
@@ -187,46 +213,80 @@ public class LlmClientRegistry
 	 * Returns the client for the given provider id. If {@code providerId} is blank, falls back to:
 	 * <ol>
 	 *   <li>the client configured as {@link #PROPKEY_DEFAULT_PROVIDER}, if set</li>
-	 *   <li>otherwise, if exactly one client is enabled (has a valid API key/URL configured), that one -
-	 *       so a single-provider setup works without also having to set {@link #PROPKEY_DEFAULT_PROVIDER}</li>
+	 *   <li>otherwise the first enabled client (has its API key / URL / ... configured), in dropdown order</li>
 	 * </ol>
-	 * Returns {@code null} if unknown, or if none/multiple providers are enabled and no default was set.
+	 * Returns {@code null} if unknown, or if no provider is enabled and no default was set.
 	 */
 	public LlmClient getProvider(String providerId)
 	{
 		if (StringUtil.hasValue(providerId))
-			return _all.get(providerId);
+			return getAll().get(providerId);
 
-		String defaultId = Configuration.getCombinedConfiguration().getProperty(PROPKEY_DEFAULT_PROVIDER, "");
+		String defaultId = Configuration.getCombinedConfiguration().getProperty(PROPKEY_DEFAULT_PROVIDER, "").trim();
 		if (StringUtil.hasValue(defaultId))
-			return _all.get(defaultId);
+			return getAll().get(defaultId);
 
 		List<LlmClient> enabled = getEnabledClients();
-		if (enabled.size() == 1)
-			return enabled.get(0);
-
-		return null;
+		return enabled.isEmpty() ? null : enabled.get(0);
 	}
 
 	// -----------------------------------------------------------------------
 	// Client registration
 	// -----------------------------------------------------------------------
 
-	private static Map<String, LlmClient> buildAllClients()
+	private Map<String, LlmClient> getAll()
+	{
+		String extraProviders = Configuration.getCombinedConfiguration().getProperty(PROPKEY_EXTRA_PROVIDERS, "").trim();
+		Map<String, LlmClient> all = _all;
+		if (all == null || ! extraProviders.equals(_allBuiltForExtraProviders))
+		{
+			synchronized (this)
+			{
+				all = buildAllClients(extraProviders);
+				_all = all;
+				_allBuiltForExtraProviders = extraProviders;
+			}
+		}
+		return all;
+	}
+
+	private static Map<String, LlmClient> buildAllClients(String extraProviders)
 	{
 		Map<String, LlmClient> map = new LinkedHashMap<>();
 
-		register(map, new LlmClientClaude());
-		register(map, new LlmClientOpenAi());
-		register(map, new LlmClientGemini());
-		register(map, new LlmClientOllama());
+		for (String type : BUILT_IN_TYPES)
+			map.put(type, createClient(type, type));
+
+		for (String id : StringUtil.parseCommaStrToList(extraProviders, true))
+		{
+			String type = Configuration.getCombinedConfiguration().getProperty(LlmClientAbstract.PROPKEY_PREFIX + id + ".type", "").trim();
+
+			if ( ! id.matches("[A-Za-z0-9_-]+") )
+				_logger.warn("LLM extra provider '{}' in '{}' is skipped: use only letters, digits, '-' and '_' in the name.", id, PROPKEY_EXTRA_PROVIDERS);
+			else if (map.containsKey(id))
+				_logger.warn("LLM extra provider '{}' in '{}' is skipped: the name is already used (by a built-in provider, or listed twice).", id, PROPKEY_EXTRA_PROVIDERS);
+			else if ( ! BUILT_IN_TYPES.contains(type) )
+				_logger.warn("LLM extra provider '{}' is skipped: '{}{}.type' must be one of {}, it is '{}'.", id, LlmClientAbstract.PROPKEY_PREFIX, id, BUILT_IN_TYPES, type);
+			else
+				map.put(id, createClient(type, id));
+		}
 
 		_logger.debug("LlmClientRegistry: registered {} client(s): {}", map.size(), map.keySet());
 		return Collections.unmodifiableMap(map);
 	}
 
-	private static void register(Map<String, LlmClient> map, LlmClient client)
+	private static LlmClient createClient(String type, String id)
 	{
-		map.put(client.getProviderId(), client);
+		switch (type)
+		{
+		case LlmClientClaude .TYPE: return new LlmClientClaude (id);
+		case LlmClientOpenAi .TYPE: return new LlmClientOpenAi (id);
+		case LlmClientGemini .TYPE: return new LlmClientGemini (id);
+		case LlmClientVertex .TYPE: return new LlmClientVertex (id);
+		case LlmClientBedrock.TYPE: return new LlmClientBedrock(id);
+		case LlmClientFoundry.TYPE: return new LlmClientFoundry(id);
+		case LlmClientOllama .TYPE: return new LlmClientOllama (id);
+		default: throw new IllegalArgumentException("Unknown LLM provider type '" + type + "'.");
+		}
 	}
 }

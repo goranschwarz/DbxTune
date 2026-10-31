@@ -39,6 +39,12 @@ public class LlmOptimizeRequest
 	private String provider;
 
 	/**
+	 * The name of the chosen entry in the provider's 'model' list (see {@link LlmClientAbstract#getModels()}), or null for
+	 * the provider's default. Only a configured name is accepted: what is sent to the provider comes from the configuration.
+	 */
+	private String model;
+
+	/**
 	 * Plain-text execution statistics / usage pattern for the statement over the reported period.
 	 * <p>
 	 * Built by 'dbxLlmAdvice.js' from the sparkline sub-table it harvests out of the Daily Summary
@@ -94,6 +100,7 @@ public class LlmOptimizeRequest
 	public String  getPlan()            { return plan; }
 	public String  getDbVendor()        { return dbVendor; }
 	public String  getProvider()        { return provider; }
+	public String  getModel()           { return model; }
 	public String  getWorkloadProfile() { return workloadProfile; }
 	public String  getDbmsVersion()     { return dbmsVersion; }
 	public String  getSrvName()         { return srvName; }
@@ -105,6 +112,7 @@ public class LlmOptimizeRequest
 	public void setPlan           (String plan)            { this.plan            = plan; }
 	public void setDbVendor       (String dbVendor)        { this.dbVendor        = dbVendor; }
 	public void setProvider       (String provider)        { this.provider        = provider; }
+	public void setModel          (String model)           { this.model           = model; }
 	public void setWorkloadProfile(String workloadProfile) { this.workloadProfile = workloadProfile; }
 	public void setDbmsVersion    (String dbmsVersion)     { this.dbmsVersion     = dbmsVersion; }
 	public void setSrvName        (String srvName)         { this.srvName         = srvName; }

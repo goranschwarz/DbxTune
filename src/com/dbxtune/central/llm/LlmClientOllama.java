@@ -25,6 +25,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 
+import com.dbxtune.utils.StringUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -38,49 +39,61 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
  * <h3>Configuration properties</h3>
  * <pre>
  * DbxCentral.llm.ollama.url   = http://localhost:11434   (optional, default shown)
- * DbxCentral.llm.ollama.model = llama3   (required - whatever model you've pulled locally)
+ * DbxCentral.llm.ollama.model = llama3                   (whatever model(s) you've pulled locally)
  * </pre>
+ * A model tag with ':' (like {@code qwen2.5-coder:14b}) can be listed as is; to give it settings
+ * (label, extraBody, ...) use a name of your own: {@code model=coder} + {@code coder.model=qwen2.5-coder:14b},
+ * since ':' can't be part of a property name.
  */
 public class LlmClientOllama
 extends LlmClientAbstract
 {
-	public static final String PROPKEY_URL   = "DbxCentral.llm.ollama.url";
+	public static final String TYPE          = "ollama";
 	public static final String DEFAULT_URL   = "http://localhost:11434";
-
-	public static final String PROPKEY_MODEL = "DbxCentral.llm.ollama.model";
 	public static final String DEFAULT_MODEL = "llama3";
 
-	@Override public String getProviderId()  { return "ollama"; }
-	@Override public String getDisplayName() { return "Ollama (local)"; }
-
-	@Override protected String getPropApiKey()   { return null; } // no API key needed
-	@Override protected String getPropModel()    { return PROPKEY_MODEL; }
-	@Override protected String getDefaultModel() { return DEFAULT_MODEL; }
-
-	protected String getBaseUrl()
+	public LlmClientOllama(String providerId)
 	{
-		return cfg(PROPKEY_URL, DEFAULT_URL);
+		super(providerId);
+	}
+
+	@Override public    String getType()               { return TYPE; }
+	@Override protected String getDefaultDisplayName() { return "Ollama (local)"; }
+	@Override protected String getDefaultModel()       { return DEFAULT_MODEL; }
+
+	/**
+	 * No API key: enabled when it is configured at all ('url' or 'model' set), or chosen as the default provider.
+	 * (It used to be always enabled - which would put it in every model dropdown, also where nobody runs Ollama.)
+	 */
+	@Override
+	public boolean isEnabled()
+	{
+		return StringUtil.hasValue(cfg(key("url")))
+			|| StringUtil.hasValue(cfg(key("model")))
+			|| getProviderId().equals(cfg(LlmClientRegistry.PROPKEY_DEFAULT_PROVIDER));
 	}
 
 	@Override
-	public LlmOptimizeResponse optimize(LlmOptimizeRequest request) throws Exception
+	public LlmOptimizeResponse optimize(LlmOptimizeRequest request, LlmModelEntry model) throws Exception
 	{
+		checkModelEntry(model);
 		String prompt = buildPrompt(request);
 
 		ObjectMapper om = new ObjectMapper();
 		ObjectNode body = om.createObjectNode();
-		body.put("model", getModel());
+		body.put("model", model.getModelId());
 		body.put("prompt", prompt);
 		body.put("stream", false);
 		body.put("format", "json");
+		applyExtraBody(body, model);
 
-		HttpRequest httpRequest = HttpRequest.newBuilder()
-				.uri(URI.create(getBaseUrl() + "/api/generate"))
+		HttpRequest.Builder builder = HttpRequest.newBuilder()
+				.uri(URI.create(getUrl(DEFAULT_URL) + "/api/generate"))
 				.header("Content-Type", "application/json")
-				.POST(HttpRequest.BodyPublishers.ofString(om.writeValueAsString(body), StandardCharsets.UTF_8))
-				.build();
+				.POST(HttpRequest.BodyPublishers.ofString(om.writeValueAsString(body), StandardCharsets.UTF_8));
+		applyExtraHeaders(builder, model);
 
-		HttpResponse<String> httpResponse = _httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+		HttpResponse<String> httpResponse = _httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 		String rawResponse = httpResponse.body();
 
 		if (httpResponse.statusCode() != 200)
@@ -89,7 +102,7 @@ extends LlmClientAbstract
 		JsonNode root = om.readTree(rawResponse);
 		String answerText = root.path("response").asText("");
 
-		LlmOptimizeResponse response = parseModelAnswer(answerText, rawResponse, prompt);
+		LlmOptimizeResponse response = parseModelAnswer(answerText, rawResponse, prompt, model);
 		response.setInputTokens (intOrNull(root.path("prompt_eval_count")));
 		response.setOutputTokens(intOrNull(root.path("eval_count")));
 		return response;

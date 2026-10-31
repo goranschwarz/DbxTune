@@ -24,6 +24,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.invoke.MethodHandles;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
@@ -65,8 +66,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  *   <li>Files older than {@link #PROPKEY_keepDays} are removed by {@link #removeOldFiles(boolean)},
  *       called from the daily {@code DataDirectoryCleaner}.</li>
  * </ul>
- * The directory is under the data directory, which only the admin servlet serves (the files are
- * reachable only through {@code /admin/llm-log}, protected by the {@code /admin/*} constraint).
+ * The directory is under the data directory. The admin page lists the files through {@code /admin/llm-log}
+ * (protected by the {@code /admin/*} constraint). ONE file can be opened by any user through {@link #VIEW_PATH}
+ * (the link under each answer, so users can share a request) - the same rule as asking: logged in, unless
+ * {@code DbxCentral.llm.allowAnonymous} is set.
  */
 public class LlmAdviceLog
 {
@@ -80,11 +83,10 @@ public class LlmAdviceLog
 	public static final String  PROPKEY_keepDays    = "DbxCentral.llm.log.keep.days";
 	public static final int     DEFAULT_keepDays    = 90;
 
-	/** Tell the users (one line under the advice) that requests are saved. */
-	public static final String  PROPKEY_notifyUsers = "DbxCentral.llm.log.notifyUsers";
-	public static final boolean DEFAULT_notifyUsers = false;
-
 	public static final String LOG_SUBDIR      = "llm-advice-log";
+
+	/** Where ANY user (not only admins) opens one saved request - the link shown under each answer, to share it. See LlmAdviceLogServlet. */
+	public static final String VIEW_PATH       = "/llm-log";
 	public static final String META_ELEMENT_ID = "dbx-llm-log-meta";
 
 	private static final String  META_START      = "<script type=\"application/json\" id=\"" + META_ELEMENT_ID + "\">";
@@ -93,12 +95,11 @@ public class LlmAdviceLog
 
 	public static boolean isSaveEnabled()   { return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_save,        DEFAULT_save); }
 	public static int     getKeepDays()     { return Configuration.getCombinedConfiguration().getIntProperty    (PROPKEY_keepDays,    DEFAULT_keepDays); }
-	public static boolean isNotifyUsers()   { return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_notifyUsers, DEFAULT_notifyUsers); }
 
-	/** Number of days to tell the user requests are kept, or null when users should not be told (not saving, or notice turned off). */
-	public static Integer getSavedForDays()
+	/** The link (path) to one saved request, which any user can open - see {@link #VIEW_PATH}. */
+	public static String getViewUrl(String fileName)
 	{
-		return (isSaveEnabled() && isNotifyUsers()) ? getKeepDays() : null;
+		return VIEW_PATH + "?op=view&name=" + URLEncoder.encode(fileName, StandardCharsets.UTF_8);
 	}
 
 	public static File getLogDir()
@@ -116,12 +117,14 @@ public class LlmAdviceLog
 	 * @param req          the HTTP request (user, client address)
 	 * @param llmRequest   what the browser asked for
 	 * @param client       the provider that was called
+	 * @param model        the model entry that was used
 	 * @param llmResponse  the answer, or null when the call failed
 	 * @param ex           the failure, or null when the call succeeded
 	 * @param promptSent   the prompt that was sent (or would have been sent), may be null
 	 * @param durationMs   time spent in the provider call
+	 * @return the name of the saved file (see {@link #getViewUrl(String)}), or null when it was not saved
 	 */
-	public static void save(HttpServletRequest req, LlmOptimizeRequest llmRequest, LlmClient client, LlmOptimizeResponse llmResponse, Exception ex, String promptSent, long durationMs)
+	public static String save(HttpServletRequest req, LlmOptimizeRequest llmRequest, LlmClient client, LlmModelEntry model, LlmOptimizeResponse llmResponse, Exception ex, String promptSent, long durationMs)
 	{
 		try
 		{
@@ -138,7 +141,8 @@ public class LlmAdviceLog
 			meta.put("dbVendor",     llmRequest.getDbVendor());
 			meta.put("dbmsVersion",  llmRequest.getDbmsVersion());
 			meta.put("providerId",   client == null ? null : client.getProviderId());
-			meta.put("model",        llmResponse != null && llmResponse.getModel() != null ? llmResponse.getModel() : (client == null ? null : client.getModel()));
+			meta.put("model",        model == null ? null : model.getModelId());
+			meta.put("modelEntry",   model == null || model.getName().equals(model.getModelId()) ? null : model.getName()); // only when it is a name of our own (with its own settings)
 			meta.put("status",       status);
 			meta.put("durationMs",   durationMs);
 			meta.put("inputTokens",  llmResponse == null ? null : llmResponse.getInputTokens());
@@ -155,13 +159,15 @@ public class LlmAdviceLog
 			}
 
 			_logger.info("LLM-ADVICE: user='" + meta.get("user") + "', from='" + meta.get("clientAddr") + "', srv='" + meta.get("srvName") + "', origin='" + meta.get("origin") + "'"
-					+ ", provider='" + meta.get("providerId") + "', model='" + meta.get("model") + "', status=" + status + ", durationMs=" + durationMs
+					+ ", provider='" + meta.get("providerId") + "', model='" + model + "', status=" + status + ", durationMs=" + durationMs
 					+ ", tokens(in/out)=" + meta.get("inputTokens") + "/" + meta.get("outputTokens") + ", promptChars=" + meta.get("promptChars")
 					+ (fileName == null ? ", file=(not saved)" : ", file='" + fileName + "'"));
+			return fileName;
 		}
 		catch (Throwable t)
 		{
 			_logger.warn("LLM-ADVICE: Problems saving the LLM Optimization Advice request. Continuing anyway.", t);
+			return null;
 		}
 	}
 
@@ -271,6 +277,7 @@ public class LlmAdviceLog
 			{ "DBMS Version",  "dbmsVersion"  },
 			{ "Provider",      "providerId"   },
 			{ "Model",         "model"        },
+			{ "Model Entry",   "modelEntry"   },
 			{ "Status",        "status"       },
 			{ "Duration (ms)", "durationMs"   },
 			{ "Input Tokens",  "inputTokens"  },
