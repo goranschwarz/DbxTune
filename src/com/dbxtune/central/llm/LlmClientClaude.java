@@ -105,7 +105,7 @@ extends LlmClientAbstract
 				return parseMessagesResponse(httpResponse.body(), prompt, model);
 			}
 
-			MessagesStream answer = sendMessagesStream(builder.build(), model, progress);
+			StreamedAnswer answer = sendMessagesStream(builder.build(), model, progress);
 			if (askThinkingSummary && isThinkingSummaryRejected(answer.statusCode, answer.body, model))
 			{
 				askThinkingSummary = false;

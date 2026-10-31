@@ -20,12 +20,15 @@
  ******************************************************************************/
 package com.dbxtune.central.llm;
 
+import java.io.File;
 import java.lang.invoke.MethodHandles;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -460,8 +463,59 @@ implements LlmClient
 	// The Claude format, streamed: progress while we wait (thinking, writing the answer)
 	// -----------------------------------------------------------------------
 
-	/** provider/modelId of the models seen thinking in a streamed answer: their thinking summary is asked for from then on */
-	private static final Set<String> _modelsSeenThinking = ConcurrentHashMap.newKeySet();
+	/**
+	 * provider/modelId of the models seen thinking in a streamed answer: their thinking summary is asked for from then on.
+	 * Kept in a file next to the saved requests ({@link #SEEN_THINKING_FILE}), so a restart does not forget them.
+	 * Loaded at first use (see {@link #modelsSeenThinking()}).
+	 */
+	private static Set<String> _modelsSeenThinking = null;
+
+	/** One provider/modelId per line, in {@link LlmAdviceLog#getLogDir()} */
+	public static final String SEEN_THINKING_FILE = "models-seen-thinking.txt";
+
+	/** The models seen thinking: read from {@link #SEEN_THINKING_FILE} the first time (a missing or unreadable file = none) */
+	private static synchronized Set<String> modelsSeenThinking()
+	{
+		if (_modelsSeenThinking == null)
+		{
+			_modelsSeenThinking = ConcurrentHashMap.newKeySet();
+			File file = new File(LlmAdviceLog.getLogDir(), SEEN_THINKING_FILE);
+			try
+			{
+				if (file.exists())
+				{
+					for (String line : Files.readAllLines(file.toPath(), StandardCharsets.UTF_8))
+					{
+						if (StringUtil.hasValue(line))
+							_modelsSeenThinking.add(line.trim());
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.warn("Could not read the LLM models seen thinking from '" + file + "' (they are asked for their thinking from the 2nd call on): " + ex);
+			}
+		}
+		return _modelsSeenThinking;
+	}
+
+	/** A model was seen thinking: remembered, also in {@link #SEEN_THINKING_FILE} (a line added; a write problem is only logged) */
+	private static void markSeenThinking(String key)
+	{
+		if ( ! modelsSeenThinking().add(key) )
+			return;
+
+		File dir = LlmAdviceLog.getLogDir();
+		try
+		{
+			dir.mkdirs();
+			Files.writeString(new File(dir, SEEN_THINKING_FILE).toPath(), key + "\n", StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+		}
+		catch (Exception ex)
+		{
+			_logger.warn("Could not add '" + key + "' to the LLM models seen thinking in '" + dir + "' (it is remembered until the next restart): " + ex);
+		}
+	}
 
 	/** provider/modelId of the models (or platforms) that rejected the request for a thinking summary */
 	private static final Set<String> _modelsWithoutThinkingSummary = ConcurrentHashMap.newKeySet();
@@ -479,7 +533,7 @@ implements LlmClient
 	 */
 	protected boolean askThinkingSummary(LlmModelEntry model)
 	{
-		if ( ! model.isStream() || ! _modelsSeenThinking.contains(thinkingKey(model)) || _modelsWithoutThinkingSummary.contains(thinkingKey(model)) )
+		if ( ! model.isStream() || ! modelsSeenThinking().contains(thinkingKey(model)) || _modelsWithoutThinkingSummary.contains(thinkingKey(model)) )
 			return false;
 
 		for (ObjectNode extraBody : model.getExtraBodies())
@@ -497,7 +551,9 @@ implements LlmClient
 	 */
 	protected boolean isThinkingSummaryRejected(int statusCode, String errorBody, LlmModelEntry model)
 	{
-		if (statusCode != 400 || errorBody == null || ! errorBody.contains("thinking"))
+		// Claude says 'thinking', Gemini 'thinking' or 'thoughts' (includeThoughts)
+		String lcBody = errorBody == null ? "" : errorBody.toLowerCase();
+		if (statusCode != 400 || ! (lcBody.contains("thinking") || lcBody.contains("thought")))
 			return false;
 
 		if (_modelsWithoutThinkingSummary.add(thinkingKey(model)))
@@ -505,34 +561,37 @@ implements LlmClient
 		return true;
 	}
 
-	/** What {@link #sendMessagesStream} returns: the HTTP status, and the Messages response rebuilt from the stream (200) or the error body. */
-	protected static class MessagesStream
+	/** What a streamed request returns: the HTTP status, and the answer rebuilt from the stream (200) - or the body as it came. */
+	protected static class StreamedAnswer
 	{
 		public final int    statusCode;
 		public final String body;
 
-		MessagesStream(int statusCode, String body)
+		StreamedAnswer(int statusCode, String body)
 		{
 			this.statusCode = statusCode;
 			this.body       = body;
 		}
 	}
 
+	/** One 'data:' event of a streamed answer, as JSON. Returns true for content (the silence timeout starts over), false for a keep-alive. */
+	protected interface StreamEvents
+	{
+		boolean onEvent(JsonNode event) throws Exception;
+	}
+
 	/**
-	 * Send a streamed Messages API request ({@code "stream": true} in the body) and read the answer's events, telling
-	 * 'progress' what the model is doing: the phase "thinking" / "writing the answer", and each paragraph of its thinking
-	 * summary (when there is one) as it grows - whole sentences only, the text streams in pieces that end mid-word.
-	 * A model seen thinking is remembered (see {@link #askThinkingSummary}).
+	 * Send a streamed request and hand each 'data:' event of the answer (Server-Sent Events) to 'events'. The same for
+	 * every streamed format (Claude Messages, Gemini generateContent) - what an event means is up to 'events'.
 	 * <p>
-	 * Returns the plain (not streamed) Messages response, rebuilt from the events - for {@link #parseMessagesResponse} -
-	 * or, when the status is not 200, the error body as it came. A 200 answer that is not 'text/event-stream' (a gateway
-	 * or proxy that ignored "stream": true) is returned as it came too: it is then the plain response.
+	 * Returns {@code (200, null)} when the events were read to the end. An error (not 200), or a 200 answer that is not
+	 * 'text/event-stream' (a gateway or proxy that ignored the stream request), is returned as it came.
 	 * <p>
 	 * Stopped - the download cancelled, which also stops the model and its cost - when the answer is silent (no new content;
-	 * keep-alive pings do not count) for the model's silence timeout ({@link HttpTimeoutException}), or when nobody waits
+	 * keep-alive events do not count) for the model's silence timeout ({@link HttpTimeoutException}), or when nobody waits
 	 * any more ({@link LlmProgress#isCancelled()}, {@link LlmCancelledException}).
 	 */
-	protected MessagesStream sendMessagesStream(HttpRequest request, LlmModelEntry model, LlmProgress progress)
+	private StreamedAnswer readEventStream(HttpRequest request, LlmModelEntry model, LlmProgress progress, StreamEvents events)
 	throws Exception
 	{
 		long startTime = System.currentTimeMillis();
@@ -562,13 +621,7 @@ implements LlmClient
 		call.whenComplete((response, ex) -> { if (ex != null) lines.add(ex); });
 
 		ObjectMapper  om        = new ObjectMapper();
-		ObjectNode    message   = om.createObjectNode(); // the plain Messages response, rebuilt from the events
-		ArrayNode     content   = message.putArray("content");
-		List<StringBuilder> blockTexts = new ArrayList<>(); // the text (or thinking) of each content block, by index
-		StringBuilder plainBody = new StringBuilder();     // not a stream: an error, or a gateway/proxy that ignored "stream": true
-		StringBuilder thinking  = new StringBuilder();     // all thinking text so far (all thinking blocks), for the paragraphs
-		List<String>  thinkingShown = new ArrayList<>();   // the paragraphs as last told to 'progress'
-		String        phase     = null;
+		StringBuilder plainBody = new StringBuilder(); // not a stream: an error, or a gateway/proxy that ignored the stream request
 		long          lastCancelCheck = 0;
 		boolean       complete  = false;
 		try
@@ -610,18 +663,80 @@ implements LlmClient
 					plainBody.append(line).append('\n');
 					continue;
 				}
-				// Each event is 'event: <type>' + 'data: <JSON with the same type>' + a blank line: the data line is enough
+				// An event is 'data: <JSON>' (Claude also sends 'event: <type>', the same type as in the JSON) + a blank line
 				if ( ! line.startsWith("data:") )
 					continue;
 
-				JsonNode event     = om.readTree(line.substring("data:".length()).trim());
-				String   eventType = event.path("type").asText();
+				if (events.onEvent(om.readTree(line.substring("data:".length()).trim())))
+					deadline = System.currentTimeMillis() + silenceMs; // content: the model is working, the silence timeout starts over
+			}
+			complete = true;
+		}
+		finally
+		{
+			// Not read to the end (timeout, Stop, error): stop the download and close the connection, which also stops the
+			// model's work (and its cost). Cancelling the subscription alone may leave the connection open; cancelling
+			// the call aborts the exchange (Java 16+).
+			if ( ! complete )
+			{
+				Flow.Subscription s = subscription.get();
+				if (s != null)
+					s.cancel();
+				call.cancel(true);
+			}
+		}
 
-				// Content (not a keep-alive 'ping'): the model is working, the silence timeout starts over
-				if ( ! "ping".equals(eventType) )
-					deadline = System.currentTimeMillis() + silenceMs;
+		if (statusCode.get() != 200 || ! contentType.get().startsWith("text/event-stream"))
+			return new StreamedAnswer(statusCode.get(), plainBody.toString().trim());
+		return new StreamedAnswer(200, null);
+	}
 
-				switch (eventType)
+	/**
+	 * The thinking text grew: each paragraph that grew by a whole sentence (or was completed) is told to 'progress'
+	 * ({@link LlmProgress#thinking}). 'shown' holds the paragraphs as last told.
+	 */
+	private static void reportThinking(StringBuilder thinking, List<String> shown, LlmProgress progress)
+	{
+		List<String> paragraphs = thinkingParagraphs(thinking.toString());
+		for (int p = 0; p < paragraphs.size(); p++)
+		{
+			if (p < shown.size() && paragraphs.get(p).equals(shown.get(p)))
+				continue;
+			if (p < shown.size())
+				shown.set(p, paragraphs.get(p));
+			else
+				shown.add(paragraphs.get(p));
+			progress.thinking(p, paragraphs.get(p));
+		}
+	}
+
+	/**
+	 * Send a streamed Messages API request ({@code "stream": true} in the body) and read the answer's events, telling
+	 * 'progress' what the model is doing: the phase "thinking" / "writing the answer", and each paragraph of its thinking
+	 * summary (when there is one) as it grows - whole sentences only, the text streams in pieces that end mid-word.
+	 * A model seen thinking is remembered (see {@link #askThinkingSummary}).
+	 * <p>
+	 * Returns the plain (not streamed) Messages response, rebuilt from the events - for {@link #parseMessagesResponse} -
+	 * or the body as it came (see {@link #readEventStream}, also for the timeout and Stop).
+	 */
+	protected StreamedAnswer sendMessagesStream(HttpRequest request, LlmModelEntry model, LlmProgress progress)
+	throws Exception
+	{
+		ObjectMapper        om         = new ObjectMapper();
+		ObjectNode          message    = om.createObjectNode(); // the plain Messages response, rebuilt from the events
+		ArrayNode           content    = message.putArray("content");
+		List<StringBuilder> blockTexts = new ArrayList<>();     // the text (or thinking) of each content block, by index
+
+		StreamedAnswer answer = readEventStream(request, model, progress, new StreamEvents()
+		{
+			StringBuilder thinking      = new StringBuilder(); // all thinking text so far (all thinking blocks), for the paragraphs
+			List<String>  thinkingShown = new ArrayList<>();   // the paragraphs as last told to 'progress'
+			String        phase         = null;
+
+			@Override
+			public boolean onEvent(JsonNode event) throws Exception
+			{
+				switch (event.path("type").asText())
 				{
 				case "message_start":
 					event.path("message").fields().forEachRemaining(e -> { if ( ! "content".equals(e.getKey()) ) message.set(e.getKey(), e.getValue()); });
@@ -634,7 +749,7 @@ implements LlmClient
 					blockTexts.add(new StringBuilder());
 					if ("thinking".equals(block.path("type").asText()))
 					{
-						_modelsSeenThinking.add(thinkingKey(model));
+						markSeenThinking(thinkingKey(model));
 						if (thinking.length() > 0)
 							thinking.append("\n\n"); // a new thinking block starts a new paragraph
 						if ( ! "thinking".equals(phase) )
@@ -655,25 +770,18 @@ implements LlmClient
 					{
 						text.append(delta.path("text").asText(""));
 						if ( ! "writing the answer".equals(phase) )
+						{
+							// The thinking is done: its last sentence is complete too (it may not end with a space)
+							reportThinking(new StringBuilder(thinking).append('\n'), thinkingShown, progress);
 							progress.update(phase = "writing the answer", null);
+						}
 					}
 					else if ("thinking_delta".equals(deltaType))
 					{
-						// Each paragraph that grew by a whole sentence (or was completed) is told to 'progress'.
-						// Without a summary (not asked for) the deltas carry no text: then nothing is told.
+						// Without a summary (not asked for) the deltas carry no text: then nothing is told
 						text    .append(delta.path("thinking").asText(""));
 						thinking.append(delta.path("thinking").asText(""));
-						List<String> paragraphs = thinkingParagraphs(thinking.toString());
-						for (int p = 0; p < paragraphs.size(); p++)
-						{
-							if (p < thinkingShown.size() && paragraphs.get(p).equals(thinkingShown.get(p)))
-								continue;
-							if (p < thinkingShown.size())
-								thinkingShown.set(p, paragraphs.get(p));
-							else
-								thinkingShown.add(paragraphs.get(p));
-							progress.thinking(p, paragraphs.get(p));
-						}
+						reportThinking(thinking, thinkingShown, progress);
 					}
 					else if ("signature_delta".equals(deltaType))
 					{
@@ -696,29 +804,17 @@ implements LlmClient
 					// For example 'overloaded_error' in the middle of the answer
 					throw new Exception("The LLM stopped with an error: " + event.path("error").path("type").asText("") + " - " + event.path("error").path("message").asText(""));
 
-				default:
-					// ping, content_block_stop, message_stop
-				}
-			}
-			complete = true;
-		}
-		finally
-		{
-			// Not read to the end (timeout, error): stop the download and close the connection, which also stops the
-			// model's work (and its cost). Cancelling the subscription alone may leave the connection open; cancelling
-			// the call aborts the exchange (Java 16+).
-			if ( ! complete )
-			{
-				Flow.Subscription s = subscription.get();
-				if (s != null)
-					s.cancel();
-				call.cancel(true);
-			}
-		}
+				case "ping":
+					return false; // a keep-alive, not content
 
-		// An error, or a plain (not streamed) answer: as it came
-		if (statusCode.get() != 200 || ! contentType.get().startsWith("text/event-stream"))
-			return new MessagesStream(statusCode.get(), plainBody.toString().trim());
+				default:
+					// content_block_stop, message_stop
+				}
+				return true;
+			}
+		});
+		if (answer.body != null)
+			return answer;
 
 		for (int i = 0; i < content.size(); i++)
 		{
@@ -729,7 +825,102 @@ implements LlmClient
 			else if ("thinking".equals(type))
 				block.put("thinking", blockTexts.get(i).toString());
 		}
-		return new MessagesStream(200, om.writeValueAsString(message));
+		return new StreamedAnswer(200, om.writeValueAsString(message));
+	}
+
+	/**
+	 * Ask a Gemini model for its thought summaries: {@code {"generationConfig":{"thinkingConfig":{"includeThoughts":true}}}}?
+	 * Unlike Claude's 'adaptive', this does not turn thinking on (a thinking model thinks anyway; it only adds the summaries),
+	 * so it is asked for from the first call. Only when the answer is streamed (nobody would see it otherwise), not after it
+	 * was rejected (see {@link #isThinkingSummaryRejected}), and not when 'extraBody' has its own 'thinkingConfig'.
+	 */
+	protected boolean askGeminiThoughts(LlmModelEntry model)
+	{
+		if ( ! model.isStream() || _modelsWithoutThinkingSummary.contains(thinkingKey(model)) )
+			return false;
+
+		for (ObjectNode extraBody : model.getExtraBodies())
+		{
+			if (extraBody.path("generationConfig").has("thinkingConfig"))
+				return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Send a streamed Gemini request ({@code :streamGenerateContent?alt=sse}) and read the answer's chunks, telling
+	 * 'progress' what the model is doing: the phase "thinking" / "writing the answer", and each paragraph of its thought
+	 * summaries (the 'thought' parts, when asked for) as it grows - whole sentences only.
+	 * <p>
+	 * Returns ONE generateContent response rebuilt from the chunks - the thoughts as one 'thought' part, the answer as one
+	 * text part, the last 'finishReason' and 'usageMetadata' - for {@link #parseGenerateContentResponse}, or the body as it
+	 * came (see {@link #readEventStream}, also for the timeout and Stop).
+	 */
+	protected StreamedAnswer sendGenerateContentStream(HttpRequest request, LlmModelEntry model, LlmProgress progress)
+	throws Exception
+	{
+		ObjectMapper  om       = new ObjectMapper();
+		StringBuilder thoughts = new StringBuilder();
+		StringBuilder text     = new StringBuilder();
+		ObjectNode    last     = om.createObjectNode(); // the last 'finishReason' and 'usageMetadata' seen
+
+		StreamedAnswer answer = readEventStream(request, model, progress, new StreamEvents()
+		{
+			List<String> thinkingShown = new ArrayList<>();
+			String       phase         = null;
+
+			@Override
+			public boolean onEvent(JsonNode chunk) throws Exception
+			{
+				if (chunk.has("error"))
+					throw new Exception("The LLM stopped with an error: " + chunk.path("error").path("status").asText("") + " - " + chunk.path("error").path("message").asText(""));
+
+				JsonNode candidate = chunk.path("candidates").path(0);
+				for (JsonNode part : candidate.path("content").path("parts"))
+				{
+					String partText = part.path("text").asText("");
+					if (part.path("thought").asBoolean(false))
+					{
+						// A new summary that starts with a heading is a new paragraph (they are not always ended by a blank line)
+						if (partText.startsWith("**") && thoughts.length() > 0 && ! thoughts.toString().endsWith("\n\n"))
+							thoughts.append("\n\n");
+						thoughts.append(partText);
+						if ( ! "thinking".equals(phase) )
+							progress.update(phase = "thinking", null);
+						reportThinking(thoughts, thinkingShown, progress);
+					}
+					else if ( ! partText.isEmpty() )
+					{
+						text.append(partText);
+						if ( ! "writing the answer".equals(phase) )
+						{
+							// The thinking is done: its last sentence is complete too (it may not end with a space)
+							reportThinking(new StringBuilder(thoughts).append('\n'), thinkingShown, progress);
+							progress.update(phase = "writing the answer", null);
+						}
+					}
+				}
+				if (candidate.has("finishReason"))
+					last.set("finishReason", candidate.get("finishReason"));
+				if (chunk.has("usageMetadata"))
+					last.set("usageMetadata", chunk.get("usageMetadata"));
+				return true;
+			}
+		});
+		if (answer.body != null)
+			return answer;
+
+		ObjectNode response  = om.createObjectNode();
+		ObjectNode candidate = response.putArray("candidates").addObject();
+		ArrayNode  parts     = candidate.putObject("content").put("role", "model").putArray("parts");
+		if (thoughts.length() > 0)
+			parts.addObject().put("text", thoughts.toString()).put("thought", true);
+		parts.addObject().put("text", text.toString());
+		if (last.has("finishReason"))
+			candidate.set("finishReason", last.get("finishReason"));
+		if (last.has("usageMetadata"))
+			response.set("usageMetadata", last.get("usageMetadata"));
+		return new StreamedAnswer(200, om.writeValueAsString(response));
 	}
 
 	/**
@@ -891,6 +1082,16 @@ implements LlmClient
 		LlmOptimizeResponse response = parseModelAnswer(answerText.toString(), rawResponse, promptSent, model);
 		response.setInputTokens (intOrNull(root.path("usageMetadata").path("promptTokenCount")));
 		response.setOutputTokens(intOrNull(root.path("usageMetadata").path("candidatesTokenCount")));
+
+		// The thought summaries: only there when they were asked for (see askGeminiThoughts())
+		StringBuilder thoughts = new StringBuilder();
+		for (JsonNode part : candidates.get(0).path("content").path("parts"))
+		{
+			if (part.path("thought").asBoolean(false) && StringUtil.hasValue(part.path("text").asText("")))
+				thoughts.append(part.path("text").asText()).append("\n\n");
+		}
+		if (thoughts.length() > 0)
+			response.setThinkingSummary(thoughts.toString().trim());
 		return response;
 	}
 

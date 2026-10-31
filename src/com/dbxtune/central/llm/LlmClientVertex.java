@@ -109,11 +109,11 @@ extends LlmClientAbstract
 		                  : ("us".equals(region) || "eu".equals(region)) ? "https://aiplatform." + region + ".rep.googleapis.com"
 		                  : "https://" + region + "-aiplatform.googleapis.com";
 
-		// The Claude format is streamed (the default): progress while we wait. The thinking summary only for a model seen
-		// thinking, and sent again without it if the model does not take it (see askThinkingSummary(), isThinkingSummaryRejected()).
-		// The Gemini format is not streamed (for now).
-		boolean stream             = FORMAT_ANTHROPIC.equals(format) && model.isStream();
-		boolean askThinkingSummary = FORMAT_ANTHROPIC.equals(format) && askThinkingSummary(model);
+		// Streamed (the default): progress while we wait, and the model's thinking - Claude: the thinking summary only for a
+		// model seen thinking (askThinkingSummary()); Gemini: its thought summaries (askGeminiThoughts()). Sent again without
+		// asking for it if the model does not take it (isThinkingSummaryRejected()).
+		boolean stream             = model.isStream();
+		boolean askThinkingSummary = FORMAT_ANTHROPIC.equals(format) ? askThinkingSummary(model) : askGeminiThoughts(model);
 		while (true)
 		{
 			ObjectNode body;
@@ -136,17 +136,19 @@ extends LlmClientAbstract
 			else if (FORMAT_GEMINI.equals(format))
 			{
 				body = buildGenerateContentBody(prompt);
-				url  = getUrl(vertexHost) + "/v1/projects/" + projectId + "/locations/" + region + "/publishers/google/models/" + modelId + ":generateContent";
+				url  = getUrl(vertexHost) + "/v1/projects/" + projectId + "/locations/" + region + "/publishers/google/models/" + modelId + (stream ? ":streamGenerateContent?alt=sse" : ":generateContent");
 			}
 			else
 			{
 				throw new Exception("Unknown 'format' '" + format + "' for model '" + model.getName() + "' of LLM provider '" + getProviderId() + "'. Use '" + FORMAT_ANTHROPIC + "' or '" + FORMAT_GEMINI + "'.");
 			}
-			if (askThinkingSummary)
+			if (askThinkingSummary && FORMAT_ANTHROPIC.equals(format))
 				body.putObject("thinking").put("type", "adaptive").put("display", "summarized");
+			if (askThinkingSummary && FORMAT_GEMINI.equals(format))
+				body.putObject("generationConfig").putObject("thinkingConfig").put("includeThoughts", true);
 			applyExtraBody(body, model);
-			if (stream)
-				body.put("stream", true);
+			if (stream && FORMAT_ANTHROPIC.equals(format))
+				body.put("stream", true); // (Gemini: the URL says it)
 
 			HttpRequest.Builder builder = HttpRequest.newBuilder()
 					.timeout(model.getTimeout())
@@ -169,7 +171,9 @@ extends LlmClientAbstract
 						: parseGenerateContentResponse(httpResponse.body(), prompt, model);
 			}
 
-			MessagesStream answer = sendMessagesStream(builder.build(), model, progress);
+			StreamedAnswer answer = FORMAT_ANTHROPIC.equals(format)
+					? sendMessagesStream       (builder.build(), model, progress)
+					: sendGenerateContentStream(builder.build(), model, progress);
 			if (askThinkingSummary && isThinkingSummaryRejected(answer.statusCode, answer.body, model))
 			{
 				askThinkingSummary = false;
@@ -177,7 +181,9 @@ extends LlmClientAbstract
 			}
 			if (answer.statusCode != 200)
 				throw new Exception("Google Cloud returned HTTP " + answer.statusCode + " for " + url + ": " + answer.body);
-			return parseMessagesResponse(answer.body, prompt, model);
+			return FORMAT_ANTHROPIC.equals(format)
+					? parseMessagesResponse       (answer.body, prompt, model)
+					: parseGenerateContentResponse(answer.body, prompt, model);
 		}
 	}
 
