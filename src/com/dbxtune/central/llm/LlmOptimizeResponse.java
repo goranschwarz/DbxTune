@@ -34,6 +34,7 @@ public class LlmOptimizeResponse
 	private Integer outputTokens;
 	private Integer savedForDays;
 	private String  savedUrl;
+	private String  thinkingSummary;
 
 	public LlmOptimizeResponse()
 	{
@@ -66,6 +67,8 @@ public class LlmOptimizeResponse
 	public Integer getSavedForDays() { return savedForDays; }
 	/** Set when this request was saved: the link to the saved page, which any user can open (to share it). */
 	public String  getSavedUrl()     { return savedUrl; }
+	/** The model's thinking, as a summary (only when it was asked for and streamed), or null */
+	public String  getThinkingSummary() { return thinkingSummary; }
 
 	public void setOriginSql   (String originSql)    { this.originSql    = originSql; }
 	public void setOptimizedSql(String optimizedSql) { this.optimizedSql = optimizedSql; }
@@ -78,4 +81,5 @@ public class LlmOptimizeResponse
 	public void setOutputTokens(Integer outputTokens){ this.outputTokens = outputTokens; }
 	public void setSavedForDays(Integer days)        { this.savedForDays = days; }
 	public void setSavedUrl    (String savedUrl)     { this.savedUrl     = savedUrl; }
+	public void setThinkingSummary(String thinking)  { this.thinkingSummary = thinking; }
 }

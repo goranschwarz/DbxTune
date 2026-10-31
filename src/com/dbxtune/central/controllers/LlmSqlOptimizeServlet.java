@@ -28,6 +28,10 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -45,6 +49,7 @@ import com.dbxtune.central.llm.LlmOptimizeRequest;
 import com.dbxtune.central.llm.LlmOptimizeResponse;
 import com.dbxtune.utils.StringUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 /**
  * <pre>POST /api/llm/optimize-sql</pre>
@@ -178,14 +183,42 @@ extends HttpServlet
 		// Every real provider call (success or failure) is recorded by LlmAdviceLog - BEFORE the answer is
 		// written: the answer carries the link to the saved page (savedUrl), so the file must exist when the
 		// user clicks it. Saving takes milliseconds, never throws, and is done even if the browser has gone away.
+		//
+		// The browser asked for progress while it waits ('progress'): the answer then comes as Server-Sent Events, the same
+		// format as the Daily Summary Report progress: 'progress' events (what the model is doing), a ': ping' comment every
+		// 15 seconds (so a proxy does not close the connection as idle while a model thinks for minutes), and at the end ONE
+		// 'result' or 'error' event with the same fields as the plain JSON answer. A browser that went away stops nothing:
+		// the PrintWriter does not throw, the call finishes and is saved as always.
+		boolean               sse       = llmRequest.isProgress();
+		LlmClient.LlmProgress progress  = LlmClient.LlmProgress.NONE;
+		ScheduledFuture<?>    heartbeat = null;
+		if (sse)
+		{
+			response.setStatus(HttpServletResponse.SC_OK);
+			response.setContentType("text/event-stream;charset=UTF-8");
+			response.setHeader("Cache-Control", "no-cache");
+			response.setHeader("X-Accel-Buffering", "no"); // nginx: pass the events on at once, do not buffer them
+			progress = (phase, text) ->
+			{
+				Map<String, String> p = new LinkedHashMap<>();
+				p.put("phase", phase);
+				p.put("text",  text);
+				writeSseEvent(om, out, "progress", p);
+			};
+			heartbeat = _heartbeatTimer.scheduleAtFixedRate(() -> writeSseComment(out, "ping"), 15, 15, TimeUnit.SECONDS);
+		}
+
 		long startTime = System.currentTimeMillis();
 		LlmOptimizeResponse llmResponse;
 		try
 		{
-			llmResponse = client.optimize(llmRequest, model);
+			llmResponse = client.optimize(llmRequest, model, progress);
 		}
 		catch (Exception ex)
 		{
+			if (heartbeat != null)
+				heartbeat.cancel(false);
+
 			long durationMs = System.currentTimeMillis() - startTime;
 			_logger.warn("LlmSqlOptimizeServlet: problem calling LLM provider '" + client.getProviderId() + "', model '" + model + "'.", ex);
 
@@ -213,9 +246,22 @@ extends HttpServlet
 				msg = "No answer from the LLM within " + model.getTimeoutSeconds() + " seconds - it gave up waiting. "
 						+ "If the model needs longer (high/max effort, a big plan), raise 'timeout' (seconds) for it in DBX_CENTRAL.conf, for example: "
 						+ "DbxCentral.llm." + client.getProviderId() + "." + model.getName() + ".timeout=1200";
+			if (sse)
+			{
+				Map<String, Object> err = new LinkedHashMap<>();
+				err.put("status",  HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+				err.put("error",   "llm-call-failed");
+				err.put("message", msg);
+				err.putAll(extra);
+				writeSseEvent(om, out, "error", err);
+				out.close();
+				return;
+			}
 			writeError(om, out, response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "llm-call-failed", msg, extra);
 			return;
 		}
+		if (heartbeat != null)
+			heartbeat.cancel(false);
 		long durationMs = System.currentTimeMillis() - startTime;
 
 		String savedFile = LlmAdviceLog.save(request, llmRequest, client, model, llmResponse, null, llmResponse.getPromptSent(), durationMs);
@@ -224,9 +270,52 @@ extends HttpServlet
 			llmResponse.setSavedUrl(LlmAdviceLog.getViewUrl(savedFile));
 			llmResponse.setSavedForDays(LlmAdviceLog.getKeepDays());
 		}
-		om.writeValue(out, llmResponse);
+		if (sse)
+			writeSseEvent(om, out, "result", llmResponse);
+		else
+			om.writeValue(out, llmResponse);
 		out.flush();
 		out.close();
+	}
+
+	/** Sends the ': ping' comments of all event-stream answers (see doPost) */
+	private static final ScheduledExecutorService _heartbeatTimer = Executors.newSingleThreadScheduledExecutor(r ->
+	{
+		Thread t = new Thread(r, "LlmSqlOptimizeServlet-heartbeat");
+		t.setDaemon(true);
+		return t;
+	});
+
+	/**
+	 * One Server-Sent Event: 'event: <name>' and the data as ONE line of JSON (not indented), then a blank line.
+	 * Synchronized on the writer: the heartbeat is written from another thread.
+	 */
+	private static void writeSseEvent(ObjectMapper om, PrintWriter out, String event, Object data)
+	{
+		try
+		{
+			String json = om.writer().without(SerializationFeature.INDENT_OUTPUT).writeValueAsString(data);
+			synchronized (out)
+			{
+				out.write("event: " + event + "\n");
+				out.write("data: " + json + "\n\n");
+				out.flush();
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.warn("LlmSqlOptimizeServlet: could not write the '" + event + "' event.", ex);
+		}
+	}
+
+	/** A Server-Sent Events comment line (ignored by the browser): keeps the connection busy */
+	private static void writeSseComment(PrintWriter out, String comment)
+	{
+		synchronized (out)
+		{
+			out.write(": " + comment + "\n\n");
+			out.flush();
+		}
 	}
 
 	private void writeError(ObjectMapper om, PrintWriter out, HttpServletResponse response, int statusCode, String error, String message)

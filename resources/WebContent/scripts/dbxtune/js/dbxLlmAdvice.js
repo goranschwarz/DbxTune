@@ -102,6 +102,11 @@ var dbxLlmAdvice = (function () {
 			'.dbx-llm-close { cursor:pointer; background:none; border:none; color:#fff; font-size:1.3rem; line-height:1; }' +
 			'.dbx-llm-body { padding:16px; font-family:Arial, Helvetica, sans-serif; }' +
 			'.dbx-llm-status { color:#495057; margin-bottom:10px; font-family:Arial, Helvetica, sans-serif; }' +
+			// What the model is doing, after the clock: one line, cut with "..." (the whole text is in the tooltip)
+			// (a margin, not a space in the text: an inline-block drops its leading space; italic: this part is the model, and it changes)
+			'.dbx-llm-progress { display:inline-block; max-width:min(110ch, 70vw); margin-left:0.4em; vertical-align:bottom; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#6c757d; font-style:italic; }' +
+			'.dbx-llm-progress:empty { display:none; }' +
+			'.dbx-llm-progress-sep { font-style:normal; margin-right:0.4em; }' +
 			'.dbx-llm-spinner { display:inline-block; width:16px; height:16px; border:2px solid #ccc;' +
 			'  border-top-color:#454545; border-radius:50%; animation:dbx-llm-spin 0.8s linear infinite; margin-right:8px; vertical-align:middle; }' +
 			'@keyframes dbx-llm-spin { to { transform:rotate(360deg); } }' +
@@ -216,6 +221,7 @@ var dbxLlmAdvice = (function () {
 			'html.dbx-sp-dark .dbx-llm-header, html[data-theme="dark"] .dbx-llm-header { background:#343a40; }' +
 			'html.dbx-sp-dark .dbx-llm-status, html[data-theme="dark"] .dbx-llm-status, html.dbx-sp-dark .dbx-llm-sent-field-label, html[data-theme="dark"] .dbx-llm-sent-field-label, html.dbx-sp-dark .dbx-llm-version, html[data-theme="dark"] .dbx-llm-version { color:#adb5bd; }' +
 			'html.dbx-sp-dark .dbx-llm-spinner, html[data-theme="dark"] .dbx-llm-spinner { border-color:#555c63; border-top-color:#dee2e6; }' +
+			'html.dbx-sp-dark .dbx-llm-progress, html[data-theme="dark"] .dbx-llm-progress { color:#adb5bd; }' +
 			'html.dbx-sp-dark .dbx-llm-pre, html[data-theme="dark"] .dbx-llm-pre { background:#1a1d21; color:#e9ecef; border-left-color:#3d8bfd; }' +
 			'html.dbx-sp-dark .dbx-llm-prose, html[data-theme="dark"] .dbx-llm-prose { background:#1c2025; color:#e9ecef; border-left-color:#6c757d; }' +
 			'html.dbx-sp-dark .dbx-llm-prose code, html[data-theme="dark"] .dbx-llm-prose code { background:#343a40; color:#e9ecef; }' +
@@ -1211,6 +1217,12 @@ var dbxLlmAdvice = (function () {
 			html += '<details class="dbx-llm-section-details" open><summary class="dbx-llm-section-title">Explanation</summary>';
 			html += '<div class="dbx-llm-prose">' + renderMarkdown(result.explanation) + '</div></details>';
 		}
+		// How the model got there: a summary of its thinking, when the provider sent one (folded: it can be long)
+		if (result.thinkingSummary)
+		{
+			html += '<details class="dbx-llm-section-details"><summary class="dbx-llm-section-title">Model\'s thinking<span class="dbx-llm-title-note"> - a summary, by the LLM</span></summary>';
+			html += '<div class="dbx-llm-prose">' + renderMarkdown(result.thinkingSummary) + '</div></details>';
+		}
 		if (!result.optimizedSql && !result.explanation)
 			html += '<div class="dbx-llm-status">The model did not return a usable answer.</div>';
 
@@ -1230,33 +1242,105 @@ var dbxLlmAdvice = (function () {
 	//--------------------------------------------------------------------------
 	function fetchJson(url, options)
 	{
+		return fetch(url, options).then(jsonFromResponse);
+	}
+
+	/**
+	 * Like fetchJson(), for /api/llm/optimize-sql with 'progress: true': the answer comes as Server-Sent Events
+	 * ('progress' while the model works, then ONE 'result' or 'error' with the same fields as the plain JSON answer).
+	 * Read with fetch, not EventSource: the request is a POST (the SQL, the plan, the DDL), which EventSource can't send.
+	 * A plain JSON answer (a check that failed before the call, or an older DbxCentral) is handled like fetchJson().
+	 * @param onProgress  called with {phase, text} for each 'progress' event
+	 */
+	function fetchEvents(url, options, onProgress)
+	{
 		return fetch(url, options).then(function (resp)
 		{
-			return resp.text().then(function (text)
-			{
-				var data;
-				try
-				{
-					data = text ? JSON.parse(text) : {};
-				}
-				catch (parseErr)
-				{
-					// Non-JSON response (e.g. a 404/500 from Jetty's default error page, most likely
-					// because DbxCentral hasn't been restarted yet with the endpoint registered).
-					throw new Error('Server returned a non-JSON response (HTTP ' + resp.status + '). '
-						+ 'Has DbxCentral been restarted since this feature was deployed?');
-				}
+			var contentType = resp.headers.get('Content-Type') || '';
+			if (contentType.indexOf('text/event-stream') < 0 || !resp.body || !resp.body.getReader)
+				return jsonFromResponse(resp);
 
-				if (!resp.ok)
+			var reader  = resp.body.getReader();
+			var decoder = new TextDecoder();
+			var buffer  = '';
+			var answer  = null;
+
+			// One event: 'event: <name>' and 'data: <JSON>' lines, ended by a blank line (': ping' comments are ignored)
+			function handleEvent(block)
+			{
+				var name = 'message', data = '';
+				block.split('\n').forEach(function (line)
 				{
-					var msg = (data && (data.message || data.error)) || ('HTTP ' + resp.status);
-					var httpErr = new Error(msg);
-					httpErr.responseData = data; // may carry 'promptSent' - see LlmSqlOptimizeServlet
+					if      (line.indexOf('event:') === 0) name = line.substring(6).trim();
+					else if (line.indexOf('data:')  === 0) data += line.substring(5).trim();
+				});
+				if (!data)
+					return;
+				var obj = JSON.parse(data);
+				if (name === 'progress')
+					onProgress(obj);
+				else if (name === 'result' || name === 'error')
+					answer = { name: name, data: obj };
+			}
+
+			function readMore()
+			{
+				return reader.read().then(function (chunk)
+				{
+					if (chunk.value)
+						buffer += decoder.decode(chunk.value, { stream: true });
+					var end;
+					while ((end = buffer.indexOf('\n\n')) >= 0)
+					{
+						handleEvent(buffer.substring(0, end));
+						buffer = buffer.substring(end + 2);
+					}
+					if (!chunk.done)
+						return readMore();
+
+					if (!answer)
+						throw new Error('The connection to DbxCentral ended before the answer arrived (a proxy time limit, or DbxCentral was restarted).');
+					if (answer.name === 'error')
+					{
+						var err = new Error(answer.data.message || answer.data.error || 'The LLM call failed.');
+						err.responseData = answer.data; // may carry 'promptSent' and 'savedUrl', as the plain JSON error
+						err.status       = answer.data.status;
+						throw err;
+					}
+					return answer.data;
+				});
+			}
+			return readMore();
+		});
+	}
+
+	/** The JSON body of a fetch() response; a non-2xx status is thrown as an Error (with 'responseData' and 'status'). */
+	function jsonFromResponse(resp)
+	{
+		return resp.text().then(function (text)
+		{
+			var data;
+			try
+			{
+				data = text ? JSON.parse(text) : {};
+			}
+			catch (parseErr)
+			{
+				// Non-JSON response (e.g. a 404/500 from Jetty's default error page, most likely
+				// because DbxCentral hasn't been restarted yet with the endpoint registered).
+				throw new Error('Server returned a non-JSON response (HTTP ' + resp.status + '). '
+					+ 'Has DbxCentral been restarted since this feature was deployed?');
+			}
+
+			if (!resp.ok)
+			{
+				var msg = (data && (data.message || data.error)) || ('HTTP ' + resp.status);
+				var httpErr = new Error(msg);
+				httpErr.responseData = data; // may carry 'promptSent' - see LlmSqlOptimizeServlet
 				httpErr.status       = resp.status;
-					throw httpErr;
-				}
-				return data;
-			});
+				throw httpErr;
+			}
+			return data;
 		});
 	}
 
@@ -1465,21 +1549,39 @@ var dbxLlmAdvice = (function () {
 	{
 		renderStatus(container, opts.preview ? 'Building prompt preview...' : 'Asking the LLM for optimization advice...');
 
-		// A clock while we wait: some models think for minutes (high/max effort, big plans)
+		// A clock while we wait: some models think for minutes (high/max effort, big plans). After it, what the model
+		// is doing, when the provider streams its answer: "thinking: <the latest line of its thinking>", "writing the answer".
 		var clockTimer = null;
+		var progressEl = null;
 		if (!opts.preview)
 		{
 			var started = Date.now();
 			var clock   = document.createElement('span');
 			clock.className = 'dbx-llm-clock';
 			clock.textContent = ' 0s';
+			progressEl = document.createElement('span');
+			progressEl.className = 'dbx-llm-progress';
 			container.querySelector('.dbx-llm-status').appendChild(clock);
+			container.querySelector('.dbx-llm-status').appendChild(progressEl);
 			clockTimer = setInterval(function ()
 			{
 				if (!clock.isConnected) { clearInterval(clockTimer); return; }
 				var s = Math.floor((Date.now() - started) / 1000);
 				clock.textContent = ' ' + (s >= 60 ? Math.floor(s / 60) + 'm ' : '') + (s % 60) + 's';
 			}, 1000);
+		}
+		function showProgress(p)
+		{
+			if (!progressEl || !p || !p.phase)
+				return;
+			// "· thinking: <sentence>" - the dot upright, the model's part in italic (see .dbx-llm-progress)
+			var sep = document.createElement('span');
+			sep.className   = 'dbx-llm-progress-sep';
+			sep.textContent = '·';
+			progressEl.textContent = '';
+			progressEl.appendChild(sep);
+			progressEl.appendChild(document.createTextNode(p.phase + (p.text ? ': ' + p.text : '')));
+			progressEl.title = p.text || '';
 		}
 
 		var body = {
@@ -1492,16 +1594,19 @@ var dbxLlmAdvice = (function () {
 			provider:        model ? model.provider : opts.provider,
 			model:           model ? model.model    : opts.model,
 			preview:         !!opts.preview,
+			// The answer as Server-Sent Events, with progress while the model works (see fetchEvents())
+			progress:        !opts.preview,
 			// Not part of the prompt - only recorded in the saved request log (LlmAdviceLog.java)
 			srvName:         opts.srv,
 			origin:          opts.origin || window.location.pathname
 		};
 
-		return fetchJson('/api/llm/optimize-sql', {
+		var request = {
 			method:  'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body:    JSON.stringify(body)
-		})
+		};
+		return (opts.preview ? fetchJson('/api/llm/optimize-sql', request) : fetchEvents('/api/llm/optimize-sql', request, showProgress))
 		.then(function (data)
 		{
 			clearInterval(clockTimer);
@@ -1630,6 +1735,7 @@ var dbxLlmAdvice = (function () {
 			renderResult(container, {
 				optimizedSql: text('dbx-llm-optimized-sql'),
 				explanation:  text('dbx-llm-explanation'),
+				thinkingSummary: text('dbx-llm-thinking'),
 				promptSent:   text('dbx-llm-prompt'),
 				providerId:   meta.providerId,
 				model:        meta.model

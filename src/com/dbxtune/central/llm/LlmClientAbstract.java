@@ -23,13 +23,24 @@ package com.dbxtune.central.llm;
 import java.lang.invoke.MethodHandles;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Flow;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -41,6 +52,7 @@ import com.dbxtune.utils.StringUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
@@ -123,6 +135,11 @@ implements LlmClient
 		return Configuration.getCombinedConfiguration().getIntProperty(key, defaultValue);
 	}
 
+	protected boolean cfgBool(String key, boolean defaultValue)
+	{
+		return Configuration.getCombinedConfiguration().getBooleanProperty(key, defaultValue);
+	}
+
 	protected String getApiKey()
 	{
 		return cfg(key("apiKey"));
@@ -181,6 +198,7 @@ implements LlmClient
 	 *   <li>{@code label}        - text in the dropdown (default: the name)</li>
 	 *   <li>{@code maxTokens}    - output token cap for the Claude format and Bedrock Converse (default {@link #DEFAULT_MAX_TOKENS})</li>
 	 *   <li>{@code timeout}      - seconds to wait for the answer (default {@link #DEFAULT_TIMEOUT_SECONDS})</li>
+	 *   <li>{@code stream}       - ask for a streamed answer, for progress while waiting (default true; Claude format only, for now)</li>
 	 *   <li>{@code extraBody}    - JSON deep-merged into the request body (provider level first, then the model's)</li>
 	 *   <li>{@code extraHeaders} - JSON object with extra or replacing HTTP headers</li>
 	 *   <li>{@code format}       - request format, where it can't be derived from the model id (Vertex, Bedrock)</li>
@@ -221,6 +239,7 @@ implements LlmClient
 		String label     = cfg(key(name + ".label"), name);
 		int    maxTokens = cfgInt(key(name + ".maxTokens"), cfgInt(key("maxTokens"), DEFAULT_MAX_TOKENS));
 		int    timeout   = cfgInt(key(name + ".timeout"),   cfgInt(key("timeout"),   DEFAULT_TIMEOUT_SECONDS));
+		boolean stream   = cfgBool(key(name + ".stream"),  cfgBool(key("stream"),  true));
 		String format    = cfg(key(name + ".format"), cfg(key("format"), "")).trim();
 
 		List<ObjectNode>    extraBodies  = new ArrayList<>();
@@ -248,7 +267,7 @@ implements LlmClient
 				_logger.warn("LLM provider '{}', model '{}': {}", _providerId, name, configProblem);
 		}
 
-		return new LlmModelEntry(name, modelId, label, maxTokens, timeout, StringUtil.hasValue(format) ? format : null, extraBodies, extraHeaders, configProblem);
+		return new LlmModelEntry(name, modelId, label, maxTokens, timeout, stream, StringUtil.hasValue(format) ? format : null, extraBodies, extraHeaders, configProblem);
 	}
 
 	/** A setting holding a JSON object, or null when not set. Throws with the property name in the message on bad JSON. */
@@ -367,26 +386,354 @@ implements LlmClient
 		if (StringUtil.isNullOrBlank(answerText.toString()))
 		{
 			if ("max_tokens".equals(stopReason))
-				throw new Exception("The model used all of its output tokens (maxTokens=" + model.getMaxTokens() + ", thinking included) before it wrote an answer. "
-						+ "Raise it in DBX_CENTRAL.conf, for example: " + key(model.getName() + ".maxTokens") + "=64000");
+				throw new Exception(maxTokensAdvice(model, false));
 			throw new Exception("The model returned no answer text (stop_reason '" + stopReason + "').");
+		}
+
+		// Cut off in the middle of the answer (its JSON is not complete): the same advice, based on what was sent
+		if ("max_tokens".equals(stopReason))
+		{
+			try { new ObjectMapper().readTree(stripMarkdownCodeFence(answerText.toString())); }
+			catch (JsonProcessingException ex) { throw new Exception(maxTokensAdvice(model, true)); }
 		}
 
 		LlmOptimizeResponse response = parseModelAnswer(answerText.toString(), rawResponse, promptSent, model);
 		response.setInputTokens (intOrNull(root.path("usage").path("input_tokens")));
 		response.setOutputTokens(intOrNull(root.path("usage").path("output_tokens")));
+
+		// The thinking text: only there when its summary was asked for (see askThinkingSummary())
+		StringBuilder thinkingText = new StringBuilder();
+		for (JsonNode block : contentArr)
+		{
+			if ("thinking".equals(block.path("type").asText()) && StringUtil.hasValue(block.path("thinking").asText("")))
+				thinkingText.append(block.path("thinking").asText()).append("\n\n");
+		}
+		if (thinkingText.length() > 0)
+			response.setThinkingSummary(thinkingText.toString().trim());
 		return response;
+	}
+
+	/**
+	 * What to do when the model used all of 'maxTokens' on thinking, before it wrote an answer - based on what was sent:
+	 * below 64000, raise it; at 64000 or more, more tokens alone may not help (the model can think until they are all
+	 * used), so: a lower 'effort' when it is 'max'/'xhigh', else ask again or send less.
+	 */
+	private String maxTokensAdvice(LlmModelEntry model, boolean cutInTheAnswer)
+	{
+		int    maxTokens = model.getMaxTokens();
+		String effort    = null; // as sent: from 'extraBody' (provider level first, then the model's - the last one wins)
+		for (ObjectNode extraBody : model.getExtraBodies())
+		{
+			if (extraBody.path("output_config").has("effort"))
+				effort = extraBody.path("output_config").path("effort").asText();
+		}
+		boolean highestEffort = "max".equals(effort) || "xhigh".equals(effort);
+
+		StringBuilder sb = new StringBuilder(cutInTheAnswer
+				? "The answer was cut off: the model used all of its output tokens (maxTokens=" + maxTokens + ", thinking included) before it finished. "
+				: "The model used all of its output tokens (maxTokens=" + maxTokens + ", thinking included) before it wrote an answer. ");
+		if (maxTokens < 64000)
+			sb.append("Raise it in DBX_CENTRAL.conf, for example: " + key(model.getName() + ".maxTokens") + "=64000");
+		else
+			sb.append("It is already " + maxTokens + ", so more tokens alone may not help: the model can keep thinking until they are all used.");
+
+		if (highestEffort)
+		{
+			sb.append(maxTokens < 64000 ? ". " : " ");
+			sb.append("The effort is '" + effort + "': a lower effort makes the model think less, for example "
+					+ key(model.getName() + ".extraBody") + "={\"output_config\":{\"effort\":\"high\"}}");
+		}
+		else if (maxTokens >= 64000)
+		{
+			sb.append(" Ask again (the thinking differs from one run to the next), or send less: a shorter plan, fewer tables.");
+		}
+		return sb.toString();
+	}
+
+	// -----------------------------------------------------------------------
+	// The Claude format, streamed: progress while we wait (thinking, writing the answer)
+	// -----------------------------------------------------------------------
+
+	/** provider/modelId of the models seen thinking in a streamed answer: their thinking summary is asked for from then on */
+	private static final Set<String> _modelsSeenThinking = ConcurrentHashMap.newKeySet();
+
+	/** provider/modelId of the models (or platforms) that rejected the request for a thinking summary */
+	private static final Set<String> _modelsWithoutThinkingSummary = ConcurrentHashMap.newKeySet();
+
+	private String thinkingKey(LlmModelEntry model)
+	{
+		return _providerId + "/" + model.getModelId();
+	}
+
+	/**
+	 * Ask for the model's thinking as a summary: {@code {"thinking":{"type":"adaptive","display":"summarized"}}}?
+	 * Only for a model that was seen thinking anyway: for it this is the same request plus the text, while for a model that
+	 * does NOT think by default, 'adaptive' would turn thinking on (slower and costlier). And only when the answer is
+	 * streamed (nobody would see it otherwise), not after it was rejected, and not when 'extraBody' has its own 'thinking'.
+	 */
+	protected boolean askThinkingSummary(LlmModelEntry model)
+	{
+		if ( ! model.isStream() || ! _modelsSeenThinking.contains(thinkingKey(model)) || _modelsWithoutThinkingSummary.contains(thinkingKey(model)) )
+			return false;
+
+		for (ObjectNode extraBody : model.getExtraBodies())
+		{
+			if (extraBody.has("thinking"))
+				return false;
+		}
+		return true;
+	}
+
+	/**
+	 * A HTTP 400 about 'thinking': the model (or the platform) does not take the request for a thinking summary. It is
+	 * remembered (until the next restart), and the caller sends the request again without it - a 400 is rejected before
+	 * the model does any work, so it costs nothing.
+	 */
+	protected boolean isThinkingSummaryRejected(int statusCode, String errorBody, LlmModelEntry model)
+	{
+		if (statusCode != 400 || errorBody == null || ! errorBody.contains("thinking"))
+			return false;
+
+		if (_modelsWithoutThinkingSummary.add(thinkingKey(model)))
+			_logger.info("LLM provider '{}', model '{}' does not take a request for its thinking summary (HTTP 400), asking without it from now on. The answer was: {}", _providerId, model.getModelId(), errorBody);
+		return true;
+	}
+
+	/** What {@link #sendMessagesStream} returns: the HTTP status, and the Messages response rebuilt from the stream (200) or the error body. */
+	protected static class MessagesStream
+	{
+		public final int    statusCode;
+		public final String body;
+
+		MessagesStream(int statusCode, String body)
+		{
+			this.statusCode = statusCode;
+			this.body       = body;
+		}
+	}
+
+	/**
+	 * Send a streamed Messages API request ({@code "stream": true} in the body) and read the answer's events, telling
+	 * 'progress' what the model is doing: "thinking" (with the latest line of its thinking summary, when there is one,
+	 * at most once a second) and "writing the answer". A model seen thinking is remembered (see {@link #askThinkingSummary}).
+	 * <p>
+	 * Returns the plain (not streamed) Messages response, rebuilt from the events - for {@link #parseMessagesResponse} -
+	 * or, when the status is not 200, the error body as it came. A 200 answer that is not 'text/event-stream' (a gateway
+	 * or proxy that ignored "stream": true) is returned as it came too: it is then the plain response. The whole call is limited by the model's 'timeout':
+	 * then the download is cancelled (which also stops the model) and {@link HttpTimeoutException} is thrown.
+	 */
+	protected MessagesStream sendMessagesStream(HttpRequest request, LlmModelEntry model, LlmProgress progress)
+	throws Exception
+	{
+		long deadline = System.currentTimeMillis() + model.getTimeoutSeconds() * 1000L;
+
+		// The lines of the answer go to a queue that is read below with the time that is left: a blocked read can not be
+		// stopped at the deadline, a poll() can. END: the answer is complete, a Throwable: it failed.
+		Object                               END          = new Object();
+		BlockingQueue<Object>                lines        = new LinkedBlockingQueue<>();
+		AtomicReference<Flow.Subscription>   subscription = new AtomicReference<>();
+		AtomicInteger                        statusCode   = new AtomicInteger();
+		AtomicReference<String>              contentType  = new AtomicReference<>("");
+		Flow.Subscriber<String> subscriber = new Flow.Subscriber<String>()
+		{
+			@Override public void onSubscribe(Flow.Subscription s) { subscription.set(s); s.request(Long.MAX_VALUE); }
+			@Override public void onNext(String line)              { lines.add(line); }
+			@Override public void onError(Throwable t)             { lines.add(t); }
+			@Override public void onComplete()                     { lines.add(END); }
+		};
+		CompletableFuture<HttpResponse<Void>> call = _httpClient.sendAsync(request, responseInfo ->
+				{
+					statusCode.set(responseInfo.statusCode());
+					contentType.set(responseInfo.headers().firstValue("Content-Type").orElse(""));
+					return HttpResponse.BodySubscribers.fromLineSubscriber(subscriber, s -> null, StandardCharsets.UTF_8, null);
+				});
+		call.whenComplete((response, ex) -> { if (ex != null) lines.add(ex); });
+
+		ObjectMapper  om        = new ObjectMapper();
+		ObjectNode    message   = om.createObjectNode(); // the plain Messages response, rebuilt from the events
+		ArrayNode     content   = message.putArray("content");
+		List<StringBuilder> blockTexts = new ArrayList<>(); // the text (or thinking) of each content block, by index
+		StringBuilder plainBody = new StringBuilder();     // not a stream: an error, or a gateway/proxy that ignored "stream": true
+		String        phase     = null;
+		long          lastThinkingUpdate = 0;
+		String        lastSentenceShown  = null;
+		boolean       complete  = false;
+		try
+		{
+			while (true)
+			{
+				long   timeLeft = deadline - System.currentTimeMillis();
+				Object item     = timeLeft > 0 ? lines.poll(timeLeft, TimeUnit.MILLISECONDS) : null;
+				if (item == null)
+					throw new HttpTimeoutException("No answer within " + model.getTimeoutSeconds() + " seconds.");
+				if (item == END)
+					break;
+				if (item instanceof Throwable)
+				{
+					Throwable t = (item instanceof CompletionException && ((Throwable) item).getCause() != null) ? ((Throwable) item).getCause() : (Throwable) item;
+					if (t instanceof Exception)
+						throw (Exception) t;
+					throw new Exception(t);
+				}
+
+				String line = (String) item;
+				if (statusCode.get() != 200 || ! contentType.get().startsWith("text/event-stream"))
+				{
+					plainBody.append(line).append('\n');
+					continue;
+				}
+				// Each event is 'event: <type>' + 'data: <JSON with the same type>' + a blank line: the data line is enough
+				if ( ! line.startsWith("data:") )
+					continue;
+
+				JsonNode event = om.readTree(line.substring("data:".length()).trim());
+				switch (event.path("type").asText())
+				{
+				case "message_start":
+					event.path("message").fields().forEachRemaining(e -> { if ( ! "content".equals(e.getKey()) ) message.set(e.getKey(), e.getValue()); });
+					break;
+
+				case "content_block_start":
+				{
+					ObjectNode block = event.path("content_block").isObject() ? event.path("content_block").deepCopy() : om.createObjectNode();
+					content.add(block);
+					blockTexts.add(new StringBuilder());
+					if ("thinking".equals(block.path("type").asText()))
+					{
+						_modelsSeenThinking.add(thinkingKey(model));
+						if ( ! "thinking".equals(phase) )
+							progress.update(phase = "thinking", null);
+					}
+					break;
+				}
+
+				case "content_block_delta":
+				{
+					int           index = event.path("index").asInt();
+					JsonNode      delta = event.path("delta");
+					StringBuilder text  = index < blockTexts.size() ? blockTexts.get(index) : null;
+					if (text == null)
+						break;
+					String deltaType = delta.path("type").asText();
+					if ("text_delta".equals(deltaType))
+					{
+						text.append(delta.path("text").asText(""));
+						if ( ! "writing the answer".equals(phase) )
+							progress.update(phase = "writing the answer", null);
+					}
+					else if ("thinking_delta".equals(deltaType))
+					{
+						// Only when there is a sentence to show: without a summary (not asked for) the deltas carry no text
+						text.append(delta.path("thinking").asText(""));
+						String sentence = lastSentence(text);
+						if (sentence != null && ! sentence.equals(lastSentenceShown) && System.currentTimeMillis() - lastThinkingUpdate >= 1000)
+						{
+							lastThinkingUpdate = System.currentTimeMillis();
+							lastSentenceShown  = sentence;
+							progress.update(phase = "thinking", sentence);
+						}
+					}
+					else if ("signature_delta".equals(deltaType))
+					{
+						((ObjectNode) content.get(index)).put("signature", delta.path("signature").asText(""));
+					}
+					break;
+				}
+
+				case "message_delta":
+					// stop_reason, stop_details, ... and the final output token count
+					event.path("delta").fields().forEachRemaining(e -> message.set(e.getKey(), e.getValue()));
+					if (event.has("usage"))
+					{
+						ObjectNode usage = message.has("usage") && message.get("usage").isObject() ? (ObjectNode) message.get("usage") : message.putObject("usage");
+						event.path("usage").fields().forEachRemaining(e -> usage.set(e.getKey(), e.getValue()));
+					}
+					break;
+
+				case "error":
+					// For example 'overloaded_error' in the middle of the answer
+					throw new Exception("The LLM stopped with an error: " + event.path("error").path("type").asText("") + " - " + event.path("error").path("message").asText(""));
+
+				default:
+					// ping, content_block_stop, message_stop
+				}
+			}
+			complete = true;
+		}
+		finally
+		{
+			// Not read to the end (timeout, error): stop the download and close the connection, which also stops the
+			// model's work (and its cost). Cancelling the subscription alone may leave the connection open; cancelling
+			// the call aborts the exchange (Java 16+).
+			if ( ! complete )
+			{
+				Flow.Subscription s = subscription.get();
+				if (s != null)
+					s.cancel();
+				call.cancel(true);
+			}
+		}
+
+		// An error, or a plain (not streamed) answer: as it came
+		if (statusCode.get() != 200 || ! contentType.get().startsWith("text/event-stream"))
+			return new MessagesStream(statusCode.get(), plainBody.toString().trim());
+
+		for (int i = 0; i < content.size(); i++)
+		{
+			ObjectNode block = (ObjectNode) content.get(i);
+			String     type  = block.path("type").asText();
+			if ("text".equals(type))
+				block.put("text", blockTexts.get(i).toString());
+			else if ("thinking".equals(type))
+				block.put("thinking", blockTexts.get(i).toString());
+		}
+		return new MessagesStream(200, om.writeValueAsString(message));
+	}
+
+	/**
+	 * The last COMPLETE sentence (or heading line) of the thinking text so far, for the progress line: the text streams in
+	 * pieces that end mid-word, so the unfinished end is skipped. Without Markdown, at most 150 characters (cut at the end).
+	 * Null when no sentence is complete yet.
+	 */
+	private static String lastSentence(StringBuilder text)
+	{
+		// Complete = ended by . ! ? followed by white space, or by a line break; whatever comes after the last end is unfinished
+		String s   = text.toString();
+		int    end = -1;
+		for (int i = 0; i < s.length(); i++)
+		{
+			char ch = s.charAt(i);
+			if (ch == '\n' || ((ch == '.' || ch == '!' || ch == '?') && i + 1 < s.length() && Character.isWhitespace(s.charAt(i + 1))))
+				end = i;
+		}
+		if (end < 0)
+			return null;
+
+		// The sentences up to that end, last one first: the first that is not empty after removing Markdown
+		String[] sentences = s.substring(0, end + 1).split("(?<=[.!?])\\s+|\\n");
+		for (int i = sentences.length - 1; i >= 0; i--)
+		{
+			String sentence = sentences[i].replace("**", "").replaceAll("^[#>*\\-\\s]+", "").trim();
+			if ( ! sentence.isEmpty() )
+				return sentence.length() <= 150 ? sentence : sentence.substring(0, 147) + "...";
+		}
+		return null;
 	}
 
 	// -----------------------------------------------------------------------
 	// The Gemini generateContent format - Google AI Studio and Google Cloud Vertex AI
 	// -----------------------------------------------------------------------
 
-	/** {@code {"contents": [{"parts": [{"text": prompt}]}]}} */
+	/**
+	 * {@code {"contents": [{"role": "user", "parts": [{"text": prompt}]}]}} - the 'role' is optional on Google AI Studio,
+	 * but Vertex AI requires it ("Please use a valid role: user, model").
+	 */
 	protected static ObjectNode buildGenerateContentBody(String prompt)
 	{
-		ObjectNode body = new ObjectMapper().createObjectNode();
-		body.putArray("contents").addObject().putArray("parts").addObject().put("text", prompt);
+		ObjectNode body    = new ObjectMapper().createObjectNode();
+		ObjectNode content = body.putArray("contents").addObject();
+		content.put("role", "user");
+		content.putArray("parts").addObject().put("text", prompt);
 		return body;
 	}
 
@@ -411,9 +758,22 @@ implements LlmClient
 		{
 			String finishReason = candidates.get(0).path("finishReason").asText("");
 			if ("MAX_TOKENS".equals(finishReason))
-				throw new Exception("The model used all of its output tokens (thinking included) before it wrote an answer. "
+			{
+				// What was sent: 'generationConfig.maxOutputTokens' from 'extraBody' (the last one wins), else the model's default
+				int sent = 0;
+				for (ObjectNode extraBody : model.getExtraBodies())
+				{
+					if (extraBody.path("generationConfig").has("maxOutputTokens"))
+						sent = extraBody.path("generationConfig").path("maxOutputTokens").asInt();
+				}
+				if (sent >= 65536)
+					throw new Exception("The model used all of its output tokens (maxOutputTokens=" + sent + ", thinking included) before it wrote an answer. "
+							+ "It is already " + sent + ", so more tokens alone may not help: the model can keep thinking until they are all used. "
+							+ "Lower the thinking with 'generationConfig.thinkingConfig' in 'extraBody', ask again, or send less: a shorter plan, fewer tables.");
+				throw new Exception("The model used all of its output tokens (" + (sent > 0 ? "maxOutputTokens=" + sent : "the model's default limit") + ", thinking included) before it wrote an answer. "
 						+ "Raise 'generationConfig.maxOutputTokens' with 'extraBody' in DBX_CENTRAL.conf, for example: "
 						+ key(model.getName() + ".extraBody") + "={\"generationConfig\":{\"maxOutputTokens\":65536}}");
+			}
 			throw new Exception("The model returned no answer text (finishReason '" + finishReason + "').");
 		}
 
@@ -484,8 +844,8 @@ implements LlmClient
 		}
 
 		// The strict "reply with ONLY a JSON object" contract only exists so the automated caller
-		// (LlmSqlOptimizeServlet's POST path) can parse the reply into {origin_sql, optimized_sql,
-		// explanation} - a human pasting a preview prompt into an LLM chat UI by hand wants the
+		// (LlmSqlOptimizeServlet's POST path) can parse the reply into {optimized_sql, explanation}
+		// - a human pasting a preview prompt into an LLM chat UI by hand wants the
 		// opposite: a normal, readable answer, not a raw JSON blob to squint at. request.isPreview()
 		// (only ever true for the "no exec" GET /api/llm/optimize-sql path) swaps one instruction
 		// block for the other; everything else in the prompt (context, DBMS specifics, SQL/DDL/plan)
@@ -497,7 +857,10 @@ implements LlmClient
 		}
 		else
 		{
-			sb.append("Respond with ONLY a single JSON object of the form: {\"origin_sql\": \"<original SQL>\", \"optimized_sql\": \"<rewritten SQL, empty if not optimized>\", \"explanation\": \"<your reasoning and any index/other recommendations>\"}\n");
+			// No "origin_sql" (the SQL written back): it cost as many output tokens as the SQL is long - the slowest and most
+			// expensive part - and a long statement could use up 'maxTokens' before the model got to the advice
+			sb.append("Respond with ONLY a single JSON object of the form: {\"optimized_sql\": \"<rewritten SQL, empty if not optimized>\", \"explanation\": \"<your reasoning and any index/other recommendations>\"}\n");
+			sb.append("Do not repeat the original SQL in your answer.\n");
 			sb.append("Leave 'optimized_sql' empty if the statement is already fine as-is - do not echo the original SQL back into it.\n");
 			sb.append("Format the 'explanation' field's text using simple Markdown for readability: bullet lists ('- item') or numbered lists for multiple recommendations, **bold** for emphasis, and `backticks` around identifiers/SQL fragments.\n");
 			sb.append("Keep it to plain Markdown text (no headings, tables or nested lists).\n");

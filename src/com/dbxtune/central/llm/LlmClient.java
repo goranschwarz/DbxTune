@@ -48,8 +48,20 @@ public interface LlmClient
 	/** The entry with this name, the default entry when the name is blank, or null when no such entry is configured. */
 	LlmModelEntry getModelEntry(String name);
 
-	/** Call the LLM with the given model entry and return its optimization suggestion. */
-	LlmOptimizeResponse optimize(LlmOptimizeRequest request, LlmModelEntry model) throws Exception;
+	/**
+	 * Call the LLM with the given model entry and return its optimization suggestion.
+	 * @param progress  told what the model is doing while we wait (when the provider streams its answer); never null
+	 */
+	LlmOptimizeResponse optimize(LlmOptimizeRequest request, LlmModelEntry model, LlmProgress progress) throws Exception;
+
+	/** What the model is doing while we wait for its answer: a phase ("thinking", "writing the answer") and an optional text. */
+	interface LlmProgress
+	{
+		void update(String phase, String text);
+
+		/** Nobody is listening */
+		LlmProgress NONE = (phase, text) -> {};
+	}
 
 	/**
 	 * Build the exact prompt text {@link #optimize} would send, without calling the LLM. Pure/no

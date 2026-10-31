@@ -47,18 +47,20 @@ public class LlmModelEntry
 	private final String             _label;
 	private final int                _maxTokens;
 	private final int                _timeoutSeconds;
+	private final boolean            _stream;
 	private final String             _format;
 	private final List<ObjectNode>   _extraBodies;
 	private final Map<String,String> _extraHeaders;
 	private final String             _configProblem;
 
-	public LlmModelEntry(String name, String modelId, String label, int maxTokens, int timeoutSeconds, String format, List<ObjectNode> extraBodies, Map<String,String> extraHeaders, String configProblem)
+	public LlmModelEntry(String name, String modelId, String label, int maxTokens, int timeoutSeconds, boolean stream, String format, List<ObjectNode> extraBodies, Map<String,String> extraHeaders, String configProblem)
 	{
 		_name          = name;
 		_modelId       = modelId;
 		_label         = label;
 		_maxTokens     = maxTokens;
 		_timeoutSeconds = timeoutSeconds;
+		_stream        = stream;
 		_format        = format;
 		_extraBodies   = extraBodies  == null ? Collections.emptyList() : extraBodies;
 		_extraHeaders  = extraHeaders == null ? Collections.emptyMap()  : extraHeaders;
@@ -82,6 +84,9 @@ public class LlmModelEntry
 
 	/** {@link #getTimeoutSeconds()} as a Duration, for HttpRequest.Builder.timeout() */
 	public Duration getTimeout()     { return Duration.ofSeconds(_timeoutSeconds); }
+
+	/** Ask the provider to stream its answer (setting 'stream', default true): progress while we wait. Claude format only, for now. */
+	public boolean isStream()        { return _stream; }
 
 	/** Request format when it can't be derived from the model id (Vertex: anthropic|gemini, Bedrock: messages|converse), or null. */
 	public String getFormat()        { return _format; }
