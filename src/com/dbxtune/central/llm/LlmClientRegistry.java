@@ -31,6 +31,8 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -212,23 +214,51 @@ public class LlmClientRegistry
 	/**
 	 * Returns the client for the given provider id. If {@code providerId} is blank, falls back to:
 	 * <ol>
-	 *   <li>the client configured as {@link #PROPKEY_DEFAULT_PROVIDER}, if set</li>
+	 *   <li>the first enabled client listed in {@link #PROPKEY_DEFAULT_PROVIDER} (one name, or a comma separated
+	 *       list in order of preference)</li>
 	 *   <li>otherwise the first enabled client (has its API key / URL / ... configured), in dropdown order</li>
 	 * </ol>
-	 * Returns {@code null} if unknown, or if no provider is enabled and no default was set.
+	 * A name that is not a provider, or a list where none is configured, is logged as a warning (once per value).
+	 * Returns {@code null} if unknown, or if no provider is enabled.
 	 */
 	public LlmClient getProvider(String providerId)
 	{
 		if (StringUtil.hasValue(providerId))
 			return getAll().get(providerId);
 
-		String defaultId = Configuration.getCombinedConfiguration().getProperty(PROPKEY_DEFAULT_PROVIDER, "").trim();
-		if (StringUtil.hasValue(defaultId))
-			return getAll().get(defaultId);
-
 		List<LlmClient> enabled = getEnabledClients();
-		return enabled.isEmpty() ? null : enabled.get(0);
+		LlmClient firstEnabled = enabled.isEmpty() ? null : enabled.get(0);
+
+		String defaultIds = Configuration.getCombinedConfiguration().getProperty(PROPKEY_DEFAULT_PROVIDER, "").trim();
+		if (StringUtil.isNullOrBlank(defaultIds))
+			return firstEnabled;
+
+		List<String> unknown = new ArrayList<>();
+		LlmClient    chosen  = null;
+		for (String id : StringUtil.commaStrToList(defaultIds))
+		{
+			LlmClient c = getAll().get(id);
+			if (c == null && ! id.isEmpty())
+				unknown.add(id);
+			else if (c != null && c.isEnabled() && chosen == null)
+				chosen = c;
+		}
+
+		// A typo, or none of them configured: say so in the log (once per value, this is called on every page load)
+		LlmClient result = chosen != null ? chosen : firstEnabled;
+		String    using  = result == null ? "none" : result.getProviderId();
+		if (( ! unknown.isEmpty() || chosen == null ) && _warnedDefaultProviders.add(defaultIds))
+		{
+			if ( ! unknown.isEmpty() )
+				_logger.warn("'{}={}': {} is not an LLM provider (known: {}). Using: {}.", PROPKEY_DEFAULT_PROVIDER, defaultIds, unknown, getAll().keySet(), using);
+			else
+				_logger.warn("'{}={}': not configured (API key, URL, ... missing). Using the first configured provider instead: {}.", PROPKEY_DEFAULT_PROVIDER, defaultIds, using);
+		}
+		return result;
 	}
+
+	/** Values of PROPKEY_DEFAULT_PROVIDER already warned about in getProvider() */
+	private static final Set<String> _warnedDefaultProviders = ConcurrentHashMap.newKeySet();
 
 	// -----------------------------------------------------------------------
 	// Client registration

@@ -95,6 +95,7 @@ extends LlmClientAbstract
 		applyExtraBody(body, model);
 
 		HttpRequest.Builder builder = HttpRequest.newBuilder()
+				.timeout(model.getTimeout())
 				.uri(URI.create(getUrl("https://" + cfg(key("resource")) + ".services.ai.azure.com/anthropic") + "/v1/messages"))
 				.header("anthropic-version", LlmClientClaude.ANTHROPIC_VERSION)
 				.header("content-type", "application/json")

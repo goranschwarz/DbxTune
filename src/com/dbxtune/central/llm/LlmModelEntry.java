@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.central.llm;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -45,17 +46,19 @@ public class LlmModelEntry
 	private final String             _modelId;
 	private final String             _label;
 	private final int                _maxTokens;
+	private final int                _timeoutSeconds;
 	private final String             _format;
 	private final List<ObjectNode>   _extraBodies;
 	private final Map<String,String> _extraHeaders;
 	private final String             _configProblem;
 
-	public LlmModelEntry(String name, String modelId, String label, int maxTokens, String format, List<ObjectNode> extraBodies, Map<String,String> extraHeaders, String configProblem)
+	public LlmModelEntry(String name, String modelId, String label, int maxTokens, int timeoutSeconds, String format, List<ObjectNode> extraBodies, Map<String,String> extraHeaders, String configProblem)
 	{
 		_name          = name;
 		_modelId       = modelId;
 		_label         = label;
 		_maxTokens     = maxTokens;
+		_timeoutSeconds = timeoutSeconds;
 		_format        = format;
 		_extraBodies   = extraBodies  == null ? Collections.emptyList() : extraBodies;
 		_extraHeaders  = extraHeaders == null ? Collections.emptyMap()  : extraHeaders;
@@ -73,6 +76,12 @@ public class LlmModelEntry
 
 	/** Output token cap, used by the Claude (Messages API) format and Bedrock Converse. */
 	public int    getMaxTokens()     { return _maxTokens; }
+
+	/** How long to wait for the provider's answer, in seconds - the HTTP request timeout of the LLM call. */
+	public int    getTimeoutSeconds() { return _timeoutSeconds; }
+
+	/** {@link #getTimeoutSeconds()} as a Duration, for HttpRequest.Builder.timeout() */
+	public Duration getTimeout()     { return Duration.ofSeconds(_timeoutSeconds); }
 
 	/** Request format when it can't be derived from the model id (Vertex: anthropic|gemini, Bedrock: messages|converse), or null. */
 	public String getFormat()        { return _format; }

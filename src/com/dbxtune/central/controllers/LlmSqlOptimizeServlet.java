@@ -23,6 +23,7 @@ package com.dbxtune.central.controllers;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.invoke.MethodHandles;
+import java.net.http.HttpTimeoutException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -207,7 +208,12 @@ extends HttpServlet
 				extra.put("savedForDays", String.valueOf(LlmAdviceLog.getKeepDays()));
 			}
 
-			writeError(om, out, response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "llm-call-failed", ex.getMessage(), extra);
+			String msg = ex.getMessage();
+			if (ex instanceof HttpTimeoutException)
+				msg = "No answer from the LLM within " + model.getTimeoutSeconds() + " seconds - it gave up waiting. "
+						+ "If the model needs longer (high/max effort, a big plan), raise 'timeout' (seconds) for it in DBX_CENTRAL.conf, for example: "
+						+ "DbxCentral.llm." + client.getProviderId() + "." + model.getName() + ".timeout=1200";
+			writeError(om, out, response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "llm-call-failed", msg, extra);
 			return;
 		}
 		long durationMs = System.currentTimeMillis() - startTime;

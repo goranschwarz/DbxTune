@@ -90,6 +90,7 @@ extends LlmClientAbstract
 		applyExtraBody(body, model);
 
 		HttpRequest.Builder builder = HttpRequest.newBuilder()
+				.timeout(model.getTimeout())
 				.uri(URI.create(getUrl(DEFAULT_URL) + "/chat/completions"))
 				.header("Content-Type", "application/json")
 				.POST(HttpRequest.BodyPublishers.ofString(om.writeValueAsString(body), StandardCharsets.UTF_8));

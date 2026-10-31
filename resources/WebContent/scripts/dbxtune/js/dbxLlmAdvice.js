@@ -1465,6 +1465,23 @@ var dbxLlmAdvice = (function () {
 	{
 		renderStatus(container, opts.preview ? 'Building prompt preview...' : 'Asking the LLM for optimization advice...');
 
+		// A clock while we wait: some models think for minutes (high/max effort, big plans)
+		var clockTimer = null;
+		if (!opts.preview)
+		{
+			var started = Date.now();
+			var clock   = document.createElement('span');
+			clock.className = 'dbx-llm-clock';
+			clock.textContent = ' 0s';
+			container.querySelector('.dbx-llm-status').appendChild(clock);
+			clockTimer = setInterval(function ()
+			{
+				if (!clock.isConnected) { clearInterval(clockTimer); return; }
+				var s = Math.floor((Date.now() - started) / 1000);
+				clock.textContent = ' ' + (s >= 60 ? Math.floor(s / 60) + 'm ' : '') + (s % 60) + 's';
+			}, 1000);
+		}
+
 		var body = {
 			sql:             opts.sql,
 			ddlContext:      ddlContext,
@@ -1487,12 +1504,14 @@ var dbxLlmAdvice = (function () {
 		})
 		.then(function (data)
 		{
+			clearInterval(clockTimer);
 			if (opts.preview) renderPromptPreview(container, data && data.promptSent);
 			else              renderResult(container, data, opts, ddlContext);
 			return data;
 		})
 		.catch(function (err)
 		{
+			clearInterval(clockTimer);
 			if (opts.preview)
 			{
 				container.innerHTML = '<div class="dbx-llm-error">Failed to build prompt preview: ' + escapeHtml(err.message) + '</div>';
@@ -1710,9 +1729,15 @@ var dbxLlmAdvice = (function () {
 		if (models.length === 0)
 			models = [{ provider: opts.provider, providerName: 'Default', model: opts.model, label: 'The default model', isDefault: true }];
 
-		// Preselect: the last choice on this browser (if still configured), else the caller's provider, else the default
+		// Preselect: the last choice on this browser (if still configured), else the caller's provider, else the default.
+		// The last choice is remembered together with the default of that moment: when the admin changes the default
+		// (DbxCentral.llm.provider / the order of a 'model' list), everybody starts from the new default once.
+		var defModel = models.filter(function (m) { return m.isDefault; })[0];
+		var defKey   = defModel ? defModel.provider + '/' + defModel.model : '';
 		var last = null;
 		try { last = JSON.parse(window.localStorage.getItem(LAST_MODEL_STORAGE_KEY) || 'null'); } catch (e) { /* private mode etc: no memory */ }
+		if (last && last.defaultModel !== defKey)
+			last = null;
 
 		var selected = -1;
 		models.forEach(function (m, i) { if (selected < 0 && last && m.provider === last.provider && m.model === last.model) selected = i; });
@@ -1751,7 +1776,7 @@ var dbxLlmAdvice = (function () {
 		askBtn.addEventListener('click', function ()
 		{
 			var model = models[parseInt(select.value, 10)] || models[0];
-			try { window.localStorage.setItem(LAST_MODEL_STORAGE_KEY, JSON.stringify({ provider: model.provider, model: model.model })); } catch (e) { /* no memory */ }
+			try { window.localStorage.setItem(LAST_MODEL_STORAGE_KEY, JSON.stringify({ provider: model.provider, model: model.model, defaultModel: defKey })); } catch (e) { /* no memory */ }
 
 			// One request at a time: a double click must not pay twice
 			askBtn.disabled = true;

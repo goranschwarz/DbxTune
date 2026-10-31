@@ -65,6 +65,9 @@ implements LlmClient
 	/** Output token cap for the formats that need one (Claude Messages API, Bedrock Converse). Thinking tokens count against it. */
 	public static final int DEFAULT_MAX_TOKENS = 16000;
 
+	/** Seconds to wait for an LLM answer (setting 'timeout'): high/max effort and big plans can take minutes */
+	public static final int DEFAULT_TIMEOUT_SECONDS = 600;
+
 	/** Config-property prefix: every setting of a provider is {@code DbxCentral.llm.<providerId>.<setting>} */
 	public static final String PROPKEY_PREFIX = "DbxCentral.llm.";
 
@@ -177,6 +180,7 @@ implements LlmClient
 	 * <ul>
 	 *   <li>{@code label}        - text in the dropdown (default: the name)</li>
 	 *   <li>{@code maxTokens}    - output token cap for the Claude format and Bedrock Converse (default {@link #DEFAULT_MAX_TOKENS})</li>
+	 *   <li>{@code timeout}      - seconds to wait for the answer (default {@link #DEFAULT_TIMEOUT_SECONDS})</li>
 	 *   <li>{@code extraBody}    - JSON deep-merged into the request body (provider level first, then the model's)</li>
 	 *   <li>{@code extraHeaders} - JSON object with extra or replacing HTTP headers</li>
 	 *   <li>{@code format}       - request format, where it can't be derived from the model id (Vertex, Bedrock)</li>
@@ -216,6 +220,7 @@ implements LlmClient
 		String modelId   = cfg(key(name + ".model"), name);
 		String label     = cfg(key(name + ".label"), name);
 		int    maxTokens = cfgInt(key(name + ".maxTokens"), cfgInt(key("maxTokens"), DEFAULT_MAX_TOKENS));
+		int    timeout   = cfgInt(key(name + ".timeout"),   cfgInt(key("timeout"),   DEFAULT_TIMEOUT_SECONDS));
 		String format    = cfg(key(name + ".format"), cfg(key("format"), "")).trim();
 
 		List<ObjectNode>    extraBodies  = new ArrayList<>();
@@ -243,7 +248,7 @@ implements LlmClient
 				_logger.warn("LLM provider '{}', model '{}': {}", _providerId, name, configProblem);
 		}
 
-		return new LlmModelEntry(name, modelId, label, maxTokens, StringUtil.hasValue(format) ? format : null, extraBodies, extraHeaders, configProblem);
+		return new LlmModelEntry(name, modelId, label, maxTokens, timeout, StringUtil.hasValue(format) ? format : null, extraBodies, extraHeaders, configProblem);
 	}
 
 	/** A setting holding a JSON object, or null when not set. Throws with the property name in the message on bad JSON. */
@@ -357,6 +362,16 @@ implements LlmClient
 				answerText.append(block.path("text").asText(""));
 		}
 
+		// No text at all: with high/max effort the model can spend all of 'maxTokens' on thinking, before it writes the answer
+		String stopReason = root.path("stop_reason").asText("");
+		if (StringUtil.isNullOrBlank(answerText.toString()))
+		{
+			if ("max_tokens".equals(stopReason))
+				throw new Exception("The model used all of its output tokens (maxTokens=" + model.getMaxTokens() + ", thinking included) before it wrote an answer. "
+						+ "Raise it in DBX_CENTRAL.conf, for example: " + key(model.getName() + ".maxTokens") + "=64000");
+			throw new Exception("The model returned no answer text (stop_reason '" + stopReason + "').");
+		}
+
 		LlmOptimizeResponse response = parseModelAnswer(answerText.toString(), rawResponse, promptSent, model);
 		response.setInputTokens (intOrNull(root.path("usage").path("input_tokens")));
 		response.setOutputTokens(intOrNull(root.path("usage").path("output_tokens")));
@@ -389,6 +404,17 @@ implements LlmClient
 		{
 			if ( ! part.path("thought").asBoolean(false) )
 				answerText.append(part.path("text").asText(""));
+		}
+
+		// No text at all: cut off (MAX_TOKENS: thinking counts too), blocked (SAFETY, ...), ...
+		if (StringUtil.isNullOrBlank(answerText.toString()))
+		{
+			String finishReason = candidates.get(0).path("finishReason").asText("");
+			if ("MAX_TOKENS".equals(finishReason))
+				throw new Exception("The model used all of its output tokens (thinking included) before it wrote an answer. "
+						+ "Raise 'generationConfig.maxOutputTokens' with 'extraBody' in DBX_CENTRAL.conf, for example: "
+						+ key(model.getName() + ".extraBody") + "={\"generationConfig\":{\"maxOutputTokens\":65536}}");
+			throw new Exception("The model returned no answer text (finishReason '" + finishReason + "').");
 		}
 
 		LlmOptimizeResponse response = parseModelAnswer(answerText.toString(), rawResponse, promptSent, model);
@@ -573,6 +599,9 @@ implements LlmClient
 	 */
 	protected LlmOptimizeResponse parseModelAnswer(String answerText, String rawResponse, String promptSent, LlmModelEntry model) throws Exception
 	{
+		if (StringUtil.isNullOrBlank(answerText))
+			throw new Exception("The model returned an empty answer.");
+
 		String json = stripMarkdownCodeFence(answerText);
 
 		String originSql;

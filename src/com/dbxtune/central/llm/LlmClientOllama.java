@@ -70,7 +70,7 @@ extends LlmClientAbstract
 	{
 		return StringUtil.hasValue(cfg(key("url")))
 			|| StringUtil.hasValue(cfg(key("model")))
-			|| getProviderId().equals(cfg(LlmClientRegistry.PROPKEY_DEFAULT_PROVIDER));
+			|| StringUtil.commaStrToList(cfg(LlmClientRegistry.PROPKEY_DEFAULT_PROVIDER)).contains(getProviderId());
 	}
 
 	@Override
@@ -88,6 +88,7 @@ extends LlmClientAbstract
 		applyExtraBody(body, model);
 
 		HttpRequest.Builder builder = HttpRequest.newBuilder()
+				.timeout(model.getTimeout())
 				.uri(URI.create(getUrl(DEFAULT_URL) + "/api/generate"))
 				.header("Content-Type", "application/json")
 				.POST(HttpRequest.BodyPublishers.ofString(om.writeValueAsString(body), StandardCharsets.UTF_8));

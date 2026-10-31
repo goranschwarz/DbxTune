@@ -138,6 +138,7 @@ extends LlmClientAbstract
 		applyExtraBody(body, model);
 
 		HttpRequest.Builder builder = HttpRequest.newBuilder()
+				.timeout(model.getTimeout())
 				.uri(URI.create(url))
 				.header("Authorization", "Bearer " + getAccessToken())
 				.header("Content-Type", "application/json")

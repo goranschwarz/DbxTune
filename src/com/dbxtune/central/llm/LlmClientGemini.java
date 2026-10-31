@@ -65,6 +65,7 @@ extends LlmClientAbstract
 		applyExtraBody(body, model);
 
 		HttpRequest.Builder builder = HttpRequest.newBuilder()
+				.timeout(model.getTimeout())
 				.uri(URI.create(getUrl(DEFAULT_URL) + "/models/" + model.getModelId() + ":generateContent"))
 				.header("x-goog-api-key", getApiKey())
 				.header("Content-Type", "application/json")

@@ -158,6 +158,7 @@ extends LlmClientAbstract
 		}
 
 		HttpRequest.Builder builder = HttpRequest.newBuilder()
+				.timeout(model.getTimeout())
 				.uri(URI.create(url))
 				.POST(HttpRequest.BodyPublishers.ofByteArray(bodyBytes));
 		for (Map.Entry<String, String> e : headers.entrySet())
