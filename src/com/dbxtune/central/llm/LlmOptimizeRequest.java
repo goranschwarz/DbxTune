@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.central.llm;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
@@ -86,6 +87,9 @@ public class LlmOptimizeRequest
 	// The browser wants progress while it waits: the answer then comes as Server-Sent Events (LlmSqlOptimizeServlet)
 	private boolean progress;
 
+	// Set by the LLM client, not by the browser (@JsonIgnore): the request body as sent, without the prompt - for the saved request
+	private String settingsSent;
+
 	public LlmOptimizeRequest()
 	{
 	}
@@ -110,6 +114,7 @@ public class LlmOptimizeRequest
 	public String  getOrigin()          { return origin; }
 	public boolean isPreview()          { return preview; }
 	public boolean isProgress()         { return progress; }
+	@JsonIgnore public String getSettingsSent() { return settingsSent; }
 
 	public void setSql            (String sql)             { this.sql             = sql; }
 	public void setDdlContext     (String ddlContext)      { this.ddlContext      = ddlContext; }
@@ -123,4 +128,5 @@ public class LlmOptimizeRequest
 	public void setOrigin         (String origin)          { this.origin          = origin; }
 	public void setPreview        (boolean preview)        { this.preview         = preview; }
 	public void setProgress       (boolean progress)       { this.progress        = progress; }
+	@JsonIgnore public void setSettingsSent(String settings) { this.settingsSent = settings; }
 }

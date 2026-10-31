@@ -91,6 +91,18 @@ implements LlmClient
 	/** Config-property prefix: every setting of a provider is {@code DbxCentral.llm.<providerId>.<setting>} */
 	public static final String PROPKEY_PREFIX = "DbxCentral.llm.";
 
+	/**
+	 * The request body without the prompt ('messages', 'contents', 'prompt', 'system'): the settings as sent to the LLM -
+	 * model, max_tokens, effort, thinking, extraBody, ... - for the saved request (see {@link LlmOptimizeRequest#getSettingsSent()}).
+	 * Headers are never part of it (extraHeaders can carry credentials).
+	 */
+	protected static String requestSettings(ObjectNode body)
+	{
+		ObjectNode settings = body.deepCopy();
+		settings.remove(List.of("messages", "contents", "prompt", "system"));
+		return settings.toString();
+	}
+
 	/** Bad extraBody/extraHeaders JSON is logged once per property (getModels() runs on every /api/llm/config call). */
 	private static final Set<String> _warnedConfigProblems = ConcurrentHashMap.newKeySet();
 

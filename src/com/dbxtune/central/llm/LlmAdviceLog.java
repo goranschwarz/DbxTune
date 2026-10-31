@@ -48,6 +48,7 @@ import com.dbxtune.central.DbxTuneCentral;
 import com.dbxtune.central.controllers.DbxTimelineRows;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -130,7 +131,7 @@ public class LlmAdviceLog
 		{
 			Date   now      = new Date();
 			String userName = req == null ? null : req.getRemoteUser();
-			String status   = (ex == null && llmResponse != null) ? "OK" : "FAILED";
+			String status   = (ex == null && llmResponse != null) ? "OK" : (ex instanceof LlmCancelledException ? "STOPPED" : "FAILED");
 
 			Map<String, Object> meta = new LinkedHashMap<>();
 			meta.put("time",         new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(now));
@@ -143,6 +144,9 @@ public class LlmAdviceLog
 			meta.put("providerId",   client == null ? null : client.getProviderId());
 			meta.put("model",        model == null ? null : model.getModelId());
 			meta.put("modelEntry",   model == null || model.getName().equals(model.getModelId()) ? null : model.getName()); // only when it is a name of our own (with its own settings)
+			meta.put("modelLabel",   model == null || model.getLabel().equals(model.getName()) ? null : model.getLabel());  // the text in the dropdown, when it is not the name
+			meta.put("settingsSent", llmRequest.getSettingsSent());
+			meta.put("effort",       effortSent(llmRequest.getSettingsSent()));
 			meta.put("status",       status);
 			meta.put("durationMs",   durationMs);
 			meta.put("inputTokens",  llmResponse == null ? null : llmResponse.getInputTokens());
@@ -228,6 +232,27 @@ public class LlmAdviceLog
 	}
 
 	/**
+	 * The 'effort' in the settings as sent, or null: Claude 'output_config.effort', OpenAI 'reasoning_effort', Gemini
+	 * 'generationConfig.thinkingConfig.thinkingLevel' - so the Admin list can show (and filter on) it.
+	 */
+	static String effortSent(String settingsSent)
+	{
+		if (StringUtil.isNullOrBlank(settingsSent))
+			return null;
+		try
+		{
+			JsonNode s = new ObjectMapper().readTree(settingsSent);
+			for (JsonNode e : new JsonNode[] { s.path("output_config").path("effort"), s.path("reasoning_effort"), s.path("generationConfig").path("thinkingConfig").path("thinkingLevel") })
+			{
+				if (e.isTextual())
+					return e.asText();
+			}
+		}
+		catch (Exception ignore) { /* not JSON: no effort */ }
+		return null;
+	}
+
+	/**
 	 * The saved page. The values that {@code dbxLlmAdvice.renderSavedRequest()} reads back live in fixed
 	 * element ids: {@code dbx-llm-sql}, {@code dbx-llm-optimized-sql}, {@code dbx-llm-explanation}, {@code dbx-llm-thinking},
 	 * {@code dbx-llm-error}, {@code dbx-llm-prompt}, inside {@code dbx-llm-advice}.
@@ -278,6 +303,8 @@ public class LlmAdviceLog
 			{ "Provider",      "providerId"   },
 			{ "Model",         "model"        },
 			{ "Model Entry",   "modelEntry"   },
+			{ "Model Label",   "modelLabel"   },
+			{ "Settings Sent", "settingsSent" },
 			{ "Status",        "status"       },
 			{ "Duration (ms)", "durationMs"   },
 			{ "Input Tokens",  "inputTokens"  },

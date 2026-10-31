@@ -102,6 +102,7 @@ extends LlmClientAbstract
 			applyExtraBody(body, model);
 			if (model.isStream())
 				body.put("stream", true);
+			request.setSettingsSent(requestSettings(body)); // for the saved request: what was sent, without the prompt
 
 			HttpRequest.Builder builder = HttpRequest.newBuilder()
 					.timeout(model.getTimeout())

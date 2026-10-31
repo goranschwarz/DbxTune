@@ -70,6 +70,7 @@ extends LlmClientAbstract
 			if (askThoughts)
 				body.putObject("generationConfig").putObject("thinkingConfig").put("includeThoughts", true);
 			applyExtraBody(body, model);
+			request.setSettingsSent(requestSettings(body)); // for the saved request: what was sent, without the prompt
 
 			HttpRequest.Builder builder = HttpRequest.newBuilder()
 					.timeout(model.getTimeout())

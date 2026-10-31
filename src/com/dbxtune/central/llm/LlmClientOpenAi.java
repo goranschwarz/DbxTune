@@ -88,6 +88,7 @@ extends LlmClientAbstract
 		responseFormat.put("type", "json_object");
 
 		applyExtraBody(body, model);
+		request.setSettingsSent(requestSettings(body)); // for the saved request: what was sent, without the prompt
 
 		HttpRequest.Builder builder = HttpRequest.newBuilder()
 				.timeout(model.getTimeout())

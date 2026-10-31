@@ -151,6 +151,7 @@ extends LlmClientAbstract
 			applyExtraBody(body, model);
 			if (stream)
 				body.put("stream", true); // before signing: the signature covers the body bytes
+			request.setSettingsSent(requestSettings(body)); // for the saved request: what was sent, without the prompt
 			headers.putAll(model.getExtraHeaders()); // before signing: a signed request must not get headers changed afterwards
 
 			byte[] bodyBytes = new ObjectMapper().writeValueAsBytes(body);

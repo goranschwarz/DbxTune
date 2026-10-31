@@ -2627,7 +2627,7 @@
 	// LLM Optimization Advice - Saved Requests (/admin/llm-log, see LlmAdviceLog.java)
 	//-----------------------------------------------------------
 	var _dbxLlmLogEntries = [];
-	var DBX_LLM_LOG_COLS  = ['time', 'user', 'server', 'origin', 'provider', 'model', 'status', 'durationMs', 'inputTokens', 'outputTokens', 'sql'];
+	var DBX_LLM_LOG_COLS  = ['time', 'user', 'server', 'origin', 'provider', 'model', 'status', 'durationMs', 'inputTokens', 'outputTokens', 'sql', 'label', 'effort'];
 
 	function dbxLlmLogEsc(v)
 	{
@@ -2662,31 +2662,37 @@
 	{
 		// rows as arrays, in DBX_LLM_LOG_COLS order, so the shared applyRowFilter() can be used (regex or 'where ...')
 		var rows = _dbxLlmLogEntries.map(function(e) {
-			var row = [e.time, e.user, e.srvName, e.origin, e.providerId, e.model, e.status, e.durationMs, e.inputTokens, e.outputTokens, e.sqlPreview];
+			var row = [e.time, e.user, e.srvName, e.origin, e.providerId, e.model, e.status, e.durationMs, e.inputTokens, e.outputTokens, e.sqlPreview, e.modelLabel || e.modelEntry, e.effort];
 			row.entry = e; // not an array element, so the filter does not search it
 			return row;
 		});
 		var res = applyRowFilter(rows, DBX_LLM_LOG_COLS, $('#dbx-llm-log-filter').val());
 		$('#dbx-llm-log-filter-err').text(res.filterError);
 
-		var users = {}, failed = 0, tokIn = 0, tokOut = 0;
+		var users = {}, failed = 0, stopped = 0, tokIn = 0, tokOut = 0;
 		var html = '';
 		res.filteredRows.forEach(function(r)
 		{
 			var e    = r.entry;
 			var view = '/admin/llm-log?op=view&name=' + encodeURIComponent(e.name);
 			users[e.user] = true;
-			if (e.status !== 'OK') failed++;
+			if (e.status === 'FAILED')  failed++;
+			if (e.status === 'STOPPED') stopped++;
 			tokIn  += e.inputTokens  || 0;
 			tokOut += e.outputTokens || 0;
 
-			html += '<tr' + (e.status !== 'OK' ? ' class="table-danger"' : '') + ' style="cursor:pointer;" onclick="window.open(\'' + view + '\', \'_blank\')"'
+			// Stopped by the user (the Stop button): not an error, but not an answer either
+			var rowClass = e.status === 'FAILED' ? ' class="table-danger"' : e.status === 'STOPPED' ? ' class="table-warning"' : '';
+			// Under the model: the dropdown label (or our own entry name) and the effort sent, when there are
+			var modelNote = [e.modelLabel || e.modelEntry, e.effort ? 'effort=' + e.effort : null].filter(Boolean).join(' · ');
+			html += '<tr' + rowClass + ' style="cursor:pointer;" onclick="window.open(\'' + view + '\', \'_blank\')"'
 				+ ' title="' + dbxLlmLogEsc(e.status !== 'OK' && e.errorMessage ? e.errorMessage : 'Click to open') + '">'
 				+ '<td>' + dbxLlmLogEsc(e.time) + '</td>'
 				+ '<td>' + dbxLlmLogEsc(e.user) + '</td>'
 				+ '<td>' + dbxLlmLogEsc(e.srvName) + '</td>'
 				+ '<td>' + dbxLlmLogEsc(e.origin) + '</td>'
-				+ '<td>' + dbxLlmLogEsc(e.providerId) + ' / ' + dbxLlmLogEsc(e.model) + '</td>'
+				+ '<td>' + dbxLlmLogEsc(e.providerId) + ' / ' + dbxLlmLogEsc(e.model)
+				+ (modelNote ? '<br><small class="text-muted">' + dbxLlmLogEsc(modelNote) + '</small>' : '') + '</td>'
 				+ '<td>' + dbxLlmLogEsc(e.status) + '</td>'
 				+ '<td class="text-end">' + (e.durationMs != null ? (e.durationMs / 1000).toFixed(1) + 's' : '') + '</td>'
 				+ '<td class="text-end">' + dbxLlmLogEsc(e.inputTokens != null ? e.inputTokens.toLocaleString() : '') + ' / ' + dbxLlmLogEsc(e.outputTokens != null ? e.outputTokens.toLocaleString() : '') + '</td>'
@@ -2699,7 +2705,7 @@
 		$('#dbx-llm-log-summary').html(
 			'<b>' + res.filteredRows.length + '</b> requests'
 			+ (res.filteredRows.length !== _dbxLlmLogEntries.length ? ' (of ' + _dbxLlmLogEntries.length + ')' : '')
-			+ ', <b>' + failed + '</b> failed, by <b>' + Object.keys(users).length + '</b> users'
+			+ ', <b>' + failed + '</b> failed' + (stopped ? ', <b>' + stopped + '</b> stopped' : '') + ', by <b>' + Object.keys(users).length + '</b> users'
 			+ ', tokens in / out: <b>' + tokIn.toLocaleString() + '</b> / <b>' + tokOut.toLocaleString() + '</b>');
 	}
 
