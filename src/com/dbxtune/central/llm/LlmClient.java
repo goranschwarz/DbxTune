@@ -20,6 +20,8 @@
  ******************************************************************************/
 package com.dbxtune.central.llm;
 
+import java.util.List;
+
 /**
  * A single LLM backend (Claude, OpenAI, Gemini, Ollama, ...) that can turn a
  * SQL statement plus its DDL/stats/plan context into an optimization suggestion.
@@ -37,11 +39,17 @@ public interface LlmClient
 	/** True if this provider is fully configured (API key / URL present) and can be used. */
 	boolean isEnabled();
 
-	/** The model name {@link #optimize} will ask for, e.g. {@code "claude-sonnet-4-5"} (configured or default). */
+	/** The model id of the default (first) entry in {@link #getModels()}, e.g. {@code "claude-opus-5-5"}. */
 	String getModel();
 
-	/** Call the LLM and return its optimization suggestion. */
-	LlmOptimizeResponse optimize(LlmOptimizeRequest request) throws Exception;
+	/** The models this provider offers in the dropdown, in configured order; the first one is the default. */
+	List<LlmModelEntry> getModels();
+
+	/** The entry with this name, the default entry when the name is blank, or null when no such entry is configured. */
+	LlmModelEntry getModelEntry(String name);
+
+	/** Call the LLM with the given model entry and return its optimization suggestion. */
+	LlmOptimizeResponse optimize(LlmOptimizeRequest request, LlmModelEntry model) throws Exception;
 
 	/**
 	 * Build the exact prompt text {@link #optimize} would send, without calling the LLM. Pure/no

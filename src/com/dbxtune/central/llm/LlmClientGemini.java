@@ -25,74 +25,58 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
- * LLM client for <b>Gemini</b> (Google Generative Language API).
+ * LLM client for <b>Gemini</b> (Google AI Studio, Generative Language API).
+ * For Gemini on Google Cloud (Vertex AI), see {@link LlmClientVertex}.
  *
- * <h3>Required configuration properties</h3>
+ * <h3>Configuration properties</h3>
  * <pre>
  * DbxCentral.llm.gemini.apiKey = &lt;Google AI Studio API key&gt;
- * DbxCentral.llm.gemini.model  = gemini-2.0-flash   (optional, defaults shown)
+ * DbxCentral.llm.gemini.model  = gemini-2.0-flash                                      (optional, default shown)
+ * DbxCentral.llm.gemini.url    = https://generativelanguage.googleapis.com/v1beta     (optional)
  * </pre>
- * Verify the model id against Google's current documentation.
  */
 public class LlmClientGemini
 extends LlmClientAbstract
 {
-	public static final String PROPKEY_API_KEY = "DbxCentral.llm.gemini.apiKey";
-	public static final String PROPKEY_MODEL   = "DbxCentral.llm.gemini.model";
-	public static final String DEFAULT_MODEL   = "gemini-2.0-flash";
+	public static final String TYPE          = "gemini";
+	public static final String DEFAULT_MODEL = "gemini-2.0-flash";
+	public static final String DEFAULT_URL   = "https://generativelanguage.googleapis.com/v1beta";
 
-	private static final String API_URL_TEMPLATE = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent";
+	public LlmClientGemini(String providerId)
+	{
+		super(providerId);
+	}
 
-	@Override public String getProviderId()  { return "gemini"; }
-	@Override public String getDisplayName() { return "Gemini (Google)"; }
-
-	@Override protected String getPropApiKey()   { return PROPKEY_API_KEY; }
-	@Override protected String getPropModel()    { return PROPKEY_MODEL; }
-	@Override protected String getDefaultModel() { return DEFAULT_MODEL; }
+	@Override public    String getType()               { return TYPE; }
+	@Override protected String getDefaultDisplayName() { return "Gemini (Google AI Studio)"; }
+	@Override protected String getDefaultModel()       { return DEFAULT_MODEL; }
 
 	@Override
-	public LlmOptimizeResponse optimize(LlmOptimizeRequest request) throws Exception
+	public LlmOptimizeResponse optimize(LlmOptimizeRequest request, LlmModelEntry model) throws Exception
 	{
+		checkModelEntry(model);
 		String prompt = buildPrompt(request);
 
-		ObjectMapper om = new ObjectMapper();
-		ObjectNode body = om.createObjectNode();
-		ArrayNode contents = body.putArray("contents");
-		ObjectNode content = contents.addObject();
-		ArrayNode parts = content.putArray("parts");
-		parts.addObject().put("text", prompt);
+		ObjectNode body = buildGenerateContentBody(prompt);
+		applyExtraBody(body, model);
 
-		String url = String.format(API_URL_TEMPLATE, getModel());
-
-		HttpRequest httpRequest = HttpRequest.newBuilder()
-				.uri(URI.create(url))
+		HttpRequest.Builder builder = HttpRequest.newBuilder()
+				.uri(URI.create(getUrl(DEFAULT_URL) + "/models/" + model.getModelId() + ":generateContent"))
 				.header("x-goog-api-key", getApiKey())
 				.header("Content-Type", "application/json")
-				.POST(HttpRequest.BodyPublishers.ofString(om.writeValueAsString(body), StandardCharsets.UTF_8))
-				.build();
+				.POST(HttpRequest.BodyPublishers.ofString(new ObjectMapper().writeValueAsString(body), StandardCharsets.UTF_8));
+		applyExtraHeaders(builder, model);
 
-		HttpResponse<String> httpResponse = _httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+		HttpResponse<String> httpResponse = _httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 		String rawResponse = httpResponse.body();
 
 		if (httpResponse.statusCode() != 200)
 			throw new Exception("Gemini API returned HTTP " + httpResponse.statusCode() + ": " + rawResponse);
 
-		JsonNode root = om.readTree(rawResponse);
-		JsonNode candidates = root.get("candidates");
-		if (candidates == null || !candidates.isArray() || candidates.isEmpty())
-			throw new Exception("Gemini API response had no 'candidates': " + rawResponse);
-
-		String answerText = candidates.get(0).path("content").path("parts").path(0).path("text").asText("");
-
-		LlmOptimizeResponse response = parseModelAnswer(answerText, rawResponse, prompt);
-		response.setInputTokens (intOrNull(root.path("usageMetadata").path("promptTokenCount")));
-		response.setOutputTokens(intOrNull(root.path("usageMetadata").path("candidatesTokenCount")));
-		return response;
+		return parseGenerateContentResponse(rawResponse, prompt, model);
 	}
 }

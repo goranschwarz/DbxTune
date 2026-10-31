@@ -22,6 +22,14 @@ package com.dbxtune.central.llm;
 
 import java.lang.invoke.MethodHandles;
 import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -33,6 +41,7 @@ import com.dbxtune.utils.StringUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * Base class for {@link LlmClient} implementations.
@@ -53,22 +62,48 @@ implements LlmClient
 
 	protected static final HttpClient _httpClient = HttpClient.newHttpClient();
 
+	/** Output token cap for the formats that need one (Claude Messages API, Bedrock Converse). Thinking tokens count against it. */
+	public static final int DEFAULT_MAX_TOKENS = 16000;
+
+	/** Config-property prefix: every setting of a provider is {@code DbxCentral.llm.<providerId>.<setting>} */
+	public static final String PROPKEY_PREFIX = "DbxCentral.llm.";
+
+	/** Bad extraBody/extraHeaders JSON is logged once per property (getModels() runs on every /api/llm/config call). */
+	private static final Set<String> _warnedConfigProblems = ConcurrentHashMap.newKeySet();
+
+	private final String _providerId;
+
+	/**
+	 * @param providerId  the instance id: the type name for the built-in providers ("claude", "openai", ...),
+	 *                    or the name given in {@code DbxCentral.llm.extraProviders} (see {@link LlmClientRegistry})
+	 */
+	protected LlmClientAbstract(String providerId)
+	{
+		_providerId = providerId;
+	}
+
 	// -----------------------------------------------------------------------
 	// Abstract template methods - implemented by each provider subclass
 	// -----------------------------------------------------------------------
 
-	/** Config-property key for the API key. Return {@code null} if this provider has no API key (e.g. local Ollama). */
-	protected abstract String getPropApiKey();
+	/** The provider type, e.g. "claude" - also the id of the built-in instance of this type. */
+	public abstract String getType();
 
-	/** Config-property key for which model to use. */
-	protected abstract String getPropModel();
+	/** Display name of the built-in instance, e.g. "Claude (Anthropic)". */
+	protected abstract String getDefaultDisplayName();
 
-	/** Model name to use if {@link #getPropModel()} isn't set in the configuration. */
+	/** Model to use if the 'model' setting isn't set in the configuration. */
 	protected abstract String getDefaultModel();
 
 	// -----------------------------------------------------------------------
 	// Config helpers
 	// -----------------------------------------------------------------------
+
+	/** Full property name of a setting of THIS provider instance: {@code DbxCentral.llm.<providerId>.<name>} */
+	protected String key(String name)
+	{
+		return PROPKEY_PREFIX + _providerId + "." + name;
+	}
 
 	protected String cfg(String key)
 	{
@@ -87,24 +122,279 @@ implements LlmClient
 
 	protected String getApiKey()
 	{
-		String propKey = getPropApiKey();
-		return propKey == null ? "" : cfg(propKey);
+		return cfg(key("apiKey"));
 	}
+
+	/** The 'url' setting (an endpoint override: gateway, proxy, private endpoint), or the default - without a trailing '/'. */
+	protected String getUrl(String defaultUrl)
+	{
+		String url = cfg(key("url"));
+		if (StringUtil.isNullOrBlank(url))
+			url = defaultUrl;
+		while (url.endsWith("/"))
+			url = url.substring(0, url.length() - 1);
+		return url;
+	}
+
+	@Override
+	public String getProviderId()
+	{
+		return _providerId;
+	}
+
+	@Override
+	public String getDisplayName()
+	{
+		// An extra provider (see LlmClientRegistry) is shown by its own name unless 'displayName' is set
+		String defaultName = _providerId.equals(getType()) ? getDefaultDisplayName() : _providerId;
+		return cfg(key("displayName"), defaultName);
+	}
+
+	/** Default: enabled when the API key is set. Providers without an API key, or with other ways to log in, override this. */
+	@Override
+	public boolean isEnabled()
+	{
+		return StringUtil.hasValue(getApiKey());
+	}
+
+	// -----------------------------------------------------------------------
+	// Models: the dropdown entries and their settings
+	// -----------------------------------------------------------------------
 
 	@Override
 	public String getModel()
 	{
-		return cfg(getPropModel(), getDefaultModel());
+		return getModels().get(0).getModelId();
+	}
+
+	/**
+	 * The entries of the comma separated 'model' setting (the default model if it is not set). A name in the list is
+	 * the model id, unless {@code <name>.model} is set - then the name is one of our own, and that setting holds the
+	 * model id. This way the same model can be offered twice with different settings (for example two 'effort' levels).
+	 * <p>
+	 * Settings for a name: {@code DbxCentral.llm.<providerId>.<name>.<setting>}; the same settings without the name
+	 * apply to all models of the provider:
+	 * <ul>
+	 *   <li>{@code label}        - text in the dropdown (default: the name)</li>
+	 *   <li>{@code maxTokens}    - output token cap for the Claude format and Bedrock Converse (default {@link #DEFAULT_MAX_TOKENS})</li>
+	 *   <li>{@code extraBody}    - JSON deep-merged into the request body (provider level first, then the model's)</li>
+	 *   <li>{@code extraHeaders} - JSON object with extra or replacing HTTP headers</li>
+	 *   <li>{@code format}       - request format, where it can't be derived from the model id (Vertex, Bedrock)</li>
+	 * </ul>
+	 * Everything is read from the configuration on each call, so a changed setting needs no restart.
+	 */
+	@Override
+	public List<LlmModelEntry> getModels()
+	{
+		List<String> names = StringUtil.parseCommaStrToList(cfg(key("model"), getDefaultModel()), true);
+		if (names.isEmpty())
+			names = Collections.singletonList(getDefaultModel());
+
+		List<LlmModelEntry> entries = new ArrayList<>();
+		for (String name : names)
+			entries.add(createModelEntry(name));
+		return entries;
 	}
 
 	@Override
-	public boolean isEnabled()
+	public LlmModelEntry getModelEntry(String name)
 	{
-		String propKey = getPropApiKey();
-		if (propKey == null)
-			return true; // no API key required (e.g. local Ollama) - subclass can override for extra checks
+		List<LlmModelEntry> entries = getModels();
+		if (StringUtil.isNullOrBlank(name))
+			return entries.get(0);
 
-		return StringUtil.hasValue(getApiKey());
+		for (LlmModelEntry entry : entries)
+		{
+			if (entry.getName().equals(name))
+				return entry;
+		}
+		return null;
+	}
+
+	private LlmModelEntry createModelEntry(String name)
+	{
+		String modelId   = cfg(key(name + ".model"), name);
+		String label     = cfg(key(name + ".label"), name);
+		int    maxTokens = cfgInt(key(name + ".maxTokens"), cfgInt(key("maxTokens"), DEFAULT_MAX_TOKENS));
+		String format    = cfg(key(name + ".format"), cfg(key("format"), "")).trim();
+
+		List<ObjectNode>    extraBodies  = new ArrayList<>();
+		Map<String, String> extraHeaders = new LinkedHashMap<>();
+		String configProblem = null;
+		try
+		{
+			for (String propName : new String[] { key("extraBody"), key(name + ".extraBody") })
+			{
+				ObjectNode node = readJsonObjectSetting(propName);
+				if (node != null)
+					extraBodies.add(node);
+			}
+			for (String propName : new String[] { key("extraHeaders"), key(name + ".extraHeaders") })
+			{
+				ObjectNode node = readJsonObjectSetting(propName);
+				if (node != null)
+					node.fields().forEachRemaining(e -> extraHeaders.put(e.getKey(), e.getValue().asText()));
+			}
+		}
+		catch (Exception ex)
+		{
+			configProblem = ex.getMessage();
+			if (_warnedConfigProblems.add(configProblem))
+				_logger.warn("LLM provider '{}', model '{}': {}", _providerId, name, configProblem);
+		}
+
+		return new LlmModelEntry(name, modelId, label, maxTokens, StringUtil.hasValue(format) ? format : null, extraBodies, extraHeaders, configProblem);
+	}
+
+	/** A setting holding a JSON object, or null when not set. Throws with the property name in the message on bad JSON. */
+	private ObjectNode readJsonObjectSetting(String propName)
+	throws Exception
+	{
+		String json = cfg(propName);
+		if (StringUtil.isNullOrBlank(json))
+			return null;
+
+		JsonNode node;
+		try
+		{
+			node = new ObjectMapper().readTree(json);
+		}
+		catch (JsonProcessingException ex)
+		{
+			throw new Exception("'" + propName + "' is not valid JSON: " + ex.getOriginalMessage());
+		}
+		if ( ! (node instanceof ObjectNode) )
+			throw new Exception("'" + propName + "' must be a JSON object, like {\"name\": \"value\"}");
+		return (ObjectNode) node;
+	}
+
+	/**
+	 * Throws when the entry has a configuration problem - called first thing in every optimize(), so the user sees why.
+	 */
+	protected void checkModelEntry(LlmModelEntry model)
+	throws Exception
+	{
+		if (model.getConfigProblem() != null)
+			throw new Exception("Configuration problem for model '" + model.getName() + "' of LLM provider '" + _providerId + "': " + model.getConfigProblem());
+	}
+
+	/** Deep-merge the entry's extraBody settings into the request body: objects merge, other values replace, JSON null removes. */
+	protected void applyExtraBody(ObjectNode body, LlmModelEntry model)
+	{
+		for (ObjectNode extra : model.getExtraBodies())
+			deepMerge(body, extra);
+	}
+
+	private static void deepMerge(ObjectNode target, ObjectNode source)
+	{
+		source.fields().forEachRemaining(e ->
+		{
+			String   field = e.getKey();
+			JsonNode value = e.getValue();
+			JsonNode old   = target.get(field);
+
+			if (value.isNull())
+				target.remove(field);
+			else if (value.isObject() && old != null && old.isObject())
+				deepMerge((ObjectNode) old, (ObjectNode) value);
+			else
+				target.set(field, value.deepCopy());
+		});
+	}
+
+	/** Set the entry's extraHeaders on the request (replacing headers with the same name). */
+	protected void applyExtraHeaders(HttpRequest.Builder builder, LlmModelEntry model)
+	{
+		for (Map.Entry<String, String> e : model.getExtraHeaders().entrySet())
+			builder.setHeader(e.getKey(), e.getValue());
+	}
+
+	// -----------------------------------------------------------------------
+	// The Claude Messages API format - used by every provider that serves Claude
+	// (Anthropic, Google Cloud, Amazon Bedrock, Microsoft Foundry, Anthropic-compatible gateways)
+	// -----------------------------------------------------------------------
+
+	/** {@code {"model": ..., "max_tokens": ..., "messages": [{"role": "user", "content": prompt}]}} - modelId null leaves out 'model' (Vertex has it in the URL). */
+	protected static ObjectNode buildMessagesBody(String modelId, int maxTokens, String prompt)
+	{
+		ObjectNode body = new ObjectMapper().createObjectNode();
+		if (modelId != null)
+			body.put("model", modelId);
+		body.put("max_tokens", maxTokens);
+
+		ObjectNode userMsg = body.putArray("messages").addObject();
+		userMsg.put("role", "user");
+		userMsg.put("content", prompt);
+		return body;
+	}
+
+	/**
+	 * Parse a Messages API answer. The text is in the "text" content blocks - NOT necessarily the first block:
+	 * current models think by default, and then the answer starts with a "thinking" block.
+	 * A refusal (stop_reason "refusal") is thrown, with the model's explanation.
+	 */
+	protected LlmOptimizeResponse parseMessagesResponse(String rawResponse, String promptSent, LlmModelEntry model)
+	throws Exception
+	{
+		JsonNode root = new ObjectMapper().readTree(rawResponse);
+
+		if ("refusal".equals(root.path("stop_reason").asText()))
+		{
+			JsonNode details = root.path("stop_details");
+			String why = details.path("explanation").asText("");
+			String category = details.path("category").asText("");
+			throw new Exception("The model declined to answer" + (StringUtil.hasValue(category) ? " (category '" + category + "')" : "") + (StringUtil.hasValue(why) ? ": " + why : "."));
+		}
+
+		JsonNode contentArr = root.get("content");
+		if (contentArr == null || !contentArr.isArray())
+			throw new Exception("The response had no 'content': " + rawResponse);
+
+		StringBuilder answerText = new StringBuilder();
+		for (JsonNode block : contentArr)
+		{
+			if ("text".equals(block.path("type").asText()))
+				answerText.append(block.path("text").asText(""));
+		}
+
+		LlmOptimizeResponse response = parseModelAnswer(answerText.toString(), rawResponse, promptSent, model);
+		response.setInputTokens (intOrNull(root.path("usage").path("input_tokens")));
+		response.setOutputTokens(intOrNull(root.path("usage").path("output_tokens")));
+		return response;
+	}
+
+	// -----------------------------------------------------------------------
+	// The Gemini generateContent format - Google AI Studio and Google Cloud Vertex AI
+	// -----------------------------------------------------------------------
+
+	/** {@code {"contents": [{"parts": [{"text": prompt}]}]}} */
+	protected static ObjectNode buildGenerateContentBody(String prompt)
+	{
+		ObjectNode body = new ObjectMapper().createObjectNode();
+		body.putArray("contents").addObject().putArray("parts").addObject().put("text", prompt);
+		return body;
+	}
+
+	/** Parse a generateContent answer: the text parts of the first candidate, skipping 'thought' parts (thinking summaries). */
+	protected LlmOptimizeResponse parseGenerateContentResponse(String rawResponse, String promptSent, LlmModelEntry model)
+	throws Exception
+	{
+		JsonNode root = new ObjectMapper().readTree(rawResponse);
+		JsonNode candidates = root.get("candidates");
+		if (candidates == null || !candidates.isArray() || candidates.isEmpty())
+			throw new Exception("The response had no 'candidates': " + rawResponse);
+
+		StringBuilder answerText = new StringBuilder();
+		for (JsonNode part : candidates.get(0).path("content").path("parts"))
+		{
+			if ( ! part.path("thought").asBoolean(false) )
+				answerText.append(part.path("text").asText(""));
+		}
+
+		LlmOptimizeResponse response = parseModelAnswer(answerText.toString(), rawResponse, promptSent, model);
+		response.setInputTokens (intOrNull(root.path("usageMetadata").path("promptTokenCount")));
+		response.setOutputTokens(intOrNull(root.path("usageMetadata").path("candidatesTokenCount")));
+		return response;
 	}
 
 	// -----------------------------------------------------------------------
@@ -281,7 +571,7 @@ implements LlmClient
 	 * surrounding markdown code fence, which some models add despite being
 	 * asked not to.
 	 */
-	protected LlmOptimizeResponse parseModelAnswer(String answerText, String rawResponse, String promptSent) throws Exception
+	protected LlmOptimizeResponse parseModelAnswer(String answerText, String rawResponse, String promptSent, LlmModelEntry model) throws Exception
 	{
 		String json = stripMarkdownCodeFence(answerText);
 
@@ -323,7 +613,7 @@ implements LlmClient
 		LlmOptimizeResponse response = new LlmOptimizeResponse(optimizedSql, explanation, rawResponse, getProviderId());
 		response.setOriginSql(originSql);
 		response.setPromptSent(promptSent);
-		response.setModel(getModel());
+		response.setModel(model.getModelId());
 		return response;
 	}
 

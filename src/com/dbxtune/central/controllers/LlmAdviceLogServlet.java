@@ -23,6 +23,7 @@ package com.dbxtune.central.controllers;
 import java.io.File;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.LinkedHashMap;
@@ -37,16 +38,21 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.central.llm.LlmAdviceLog;
+import com.dbxtune.central.llm.LlmClientRegistry;
 import com.dbxtune.utils.StringUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * Admin-only servlet for the saved "LLM Optimization Advice" requests (see {@link LlmAdviceLog}).
- * Mapped to {@code /admin/llm-log}, protected by the existing {@code /admin/*} security constraint.
+ * Servlet for the saved "LLM Optimization Advice" requests (see {@link LlmAdviceLog}). Mapped twice:
+ * <ul>
+ *   <li>{@code /admin/llm-log} - the Admin page: all operations, protected by the {@code /admin/*} security constraint</li>
+ *   <li>{@code /llm-log} ({@link LlmAdviceLog#VIEW_PATH}) - ONLY {@code view}, for any user: the link under each answer, so
+ *       users can share a request. Same rule as asking for advice: logged in, unless {@code DbxCentral.llm.allowAnonymous}.</li>
+ * </ul>
  *
  * <p>Operations via query parameter {@code op}:
  * <ul>
- *   <li>{@code list}  - {@code days=N} (0 or missing = all): JSON {@code {saveEnabled, keepDays, notifyUsers, dir, entries:[...]}}, newest first</li>
+ *   <li>{@code list}  - {@code days=N} (0 or missing = all): JSON {@code {saveEnabled, keepDays, dir, entries:[...]}}, newest first (admin only)</li>
  *   <li>{@code view}  - {@code name=<file>}: the saved page, re-rendered with the advice dialog's renderer</li>
  *   <li>{@code view}  - {@code name=<file>&raw=true}: the saved file as-is, as a download (plain, self-contained)</li>
  * </ul>
@@ -61,6 +67,23 @@ public class LlmAdviceLogServlet extends HttpServlet
 	throws ServletException, IOException
 	{
 		String op = StringUtil.nullToValue(req.getParameter("op"), "").trim();
+
+		// Outside /admin (the link under each answer): only 'view', for anyone who may ask for advice
+		if ( ! req.getServletPath().startsWith("/admin/") )
+		{
+			if ( ! "view".equals(op) )
+			{
+				writeJsonError(resp, HttpServletResponse.SC_FORBIDDEN, "Only 'view' is allowed here. The list of saved requests is on the Admin page.");
+				return;
+			}
+			if (StringUtil.isNullOrBlank(req.getRemoteUser()) && ! LlmClientRegistry.isAnonymousAccessAllowed())
+			{
+				// Log in, then come back to this very page
+				String here = req.getRequestURI() + (req.getQueryString() == null ? "" : "?" + req.getQueryString());
+				resp.sendRedirect("/index.html?login=open&returnUrl=" + URLEncoder.encode(here, StandardCharsets.UTF_8));
+				return;
+			}
+		}
 
 		if ("list".equals(op))
 		{
@@ -84,7 +107,6 @@ public class LlmAdviceLogServlet extends HttpServlet
 		Map<String, Object> result = new LinkedHashMap<>();
 		result.put("saveEnabled", LlmAdviceLog.isSaveEnabled());
 		result.put("keepDays",    LlmAdviceLog.getKeepDays());
-		result.put("notifyUsers", LlmAdviceLog.isNotifyUsers());
 		result.put("dir",         LlmAdviceLog.getLogDir().getAbsolutePath());
 		result.put("entries",     LlmAdviceLog.list(days));
 
@@ -104,7 +126,7 @@ public class LlmAdviceLogServlet extends HttpServlet
 			return;
 		}
 
-		_logger.info("LLM-ADVICE: Admin user '" + req.getRemoteUser() + "' viewed saved request '" + file.getName() + "'.");
+		_logger.info("LLM-ADVICE: User '" + req.getRemoteUser() + "' viewed saved request '" + file.getName() + "' (" + req.getServletPath() + ").");
 
 		if ("true".equalsIgnoreCase(req.getParameter("raw")))
 		{

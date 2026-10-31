@@ -78,6 +78,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
         <LI>NO-GUI Collectors: When a sample takes long time, tell DbxCentral what is being refreshed right now (<code>RefreshStatusNoGui.push.thresholdSec = 5</code>)</LI>
         <LI>AlarmWriterToMail - Mail rules in <code>AlarmWriterToMail.to</code> can now route on server group, severity, category, state, RAISE/CANCEL and time of day, with Cc. Faulty rules are reported (no longer silently ignored), and DbxCentral's Configuration page can edit all Alarm Writer settings, with a rule editor and a "who would get this alarm?" tester, and a template editor with a live preview (rendered by the collector)</LI>
         <LI>DbxCentral Configuration page: the Daily Summary Report can now be configured (report settings, the mail sender incl. mail rules with "who gets this server's report?", and each report section on/off)</LI>
+        <LI>LLM Optimization Advice: choose the model before asking (several models per provider, each with its own settings like <code>effort</code>), and new ways to reach an LLM: Google Cloud (Vertex AI / Anthropic managed), Amazon Bedrock, Microsoft Foundry, OpenAI-compatible gateways and extra providers (see <code>DBX_CENTRAL.conf</code>)</LI>
         <LI></LI>
 
 		<LI><b>Alarms Handling:</b>

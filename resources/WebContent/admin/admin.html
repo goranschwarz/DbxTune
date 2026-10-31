@@ -2646,7 +2646,7 @@
 				$('#dbx-llm-log-info').text(
 					(data.saveEnabled ? 'Saving is ON' : 'Saving is OFF (DbxCentral.llm.log.save=false)')
 					+ ', kept ' + (data.keepDays > 0 ? data.keepDays + ' days' : 'forever') + ' (DbxCentral.llm.log.keep.days)'
-					+ ', users are ' + (data.notifyUsers ? '' : 'NOT ') + 'told (DbxCentral.llm.log.notifyUsers)'
+					+ ', each answer shows a link to its saved request (any user can open it: /llm-log)'
 					+ '. Folder: ' + data.dir);
 				dbxRenderLlmLog();
 			},

@@ -580,8 +580,10 @@ public class DbxTuneCentral
 				Object newValue = evt.getNewValue();
 				Object oldValue = evt.getOldValue();
 				
-				// If "Password", don't print the passwords
-				if (propName != null && propName.indexOf("assword") >= 0)
+				// If "Password" or another secret (API keys/tokens, client secrets, LLM extraHeaders that may carry
+				// an Authorization header), don't print the value. ('token' alone would also hide 'maxTokens')
+				String lcPropName = propName == null ? "" : propName.toLowerCase();
+				if (lcPropName.contains("password") || lcPropName.contains("apikey") || lcPropName.contains("apitoken") || lcPropName.contains("secret") || lcPropName.endsWith("extraheaders"))
 				{
 					newValue = "*secret*";
 					oldValue = "*secret*";

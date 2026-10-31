@@ -41,7 +41,8 @@
  *       ts:         '',                             // optional - SQL Server Query Store snapshot timestamp, ignored for ASE
  *
  *       dbname:     'mydb',                        // current database name - required for the srv-based lookup above
- *       provider:   'claude',                      // optional - defaults to the server-configured default provider
+ *       provider:   'claude',                      // optional - preselects this provider in the model dropdown
+ *       model:      'opus-max',                    // optional - preselects this model entry (of 'provider')
  *       origin:     'Active Statements',           // optional - where the request was made; only recorded in the
  *                                                   // saved request log (LlmAdviceLog.java). Default: the page path.
  *       preview:    false,                          // optional - if true, build and show the exact prompt that
@@ -54,6 +55,10 @@
  *                                                   // directly instead of a floating modal. Use this on pages
  *                                                   // dedicated to showing the advice (e.g. /llm-advice).
  *   });
+ *
+ * open() does NOT call the LLM: it shows a model dropdown (every model configured in DBX_CENTRAL.conf, see
+ * /api/llm/config 'models') and a "Get Advice" button. Each press asks the chosen model and adds its answer
+ * on top of the earlier ones (so models can be compared). Only 'preview: true' builds its result at once.
  *
  * If sql-formatter (window.sqlFormatter) and Prism (window.Prism, with the
  * sql component) are loaded on the host page, the suggested SQL is pretty-
@@ -89,7 +94,7 @@ var dbxLlmAdvice = (function () {
 			'.dbx-llm-backdrop { position:fixed; top:0; left:0; width:100%; height:100%;' +
 			'  background:rgba(0,0,0,0.5); z-index:10000; }' +
 			'.dbx-llm-dialog { position:fixed; top:5%; left:50%; transform:translateX(-50%);' +
-			'  width:min(760px, 92vw); max-height:88vh; overflow:auto; background:#fff; z-index:10001;' +
+			'  width:min(1400px, 94vw); max-height:88vh; overflow:auto; background:#fff; z-index:10001;' + // wide: the side by side SQL diff
 			'  border-radius:6px; box-shadow:0 4px 24px rgba(0,0,0,0.35); }' +
 			'.dbx-llm-header { background:#454545; color:#fff; padding:12px 16px; border-radius:6px 6px 0 0;' +
 			'  display:flex; justify-content:space-between; align-items:center; }' +
@@ -104,7 +109,7 @@ var dbxLlmAdvice = (function () {
 			'.dbx-llm-section-details { margin-top:16px; }' +
 			'.dbx-llm-section-details > .dbx-llm-section-title { margin-top:0; margin-bottom:4px; cursor:pointer; }' +
 			// font-size needs !important: renderSqlBlock()'s <pre> holds a <code class="language-sql">
-			// that Prism.highlightElement() (see highlightAllSqlBlocks()) auto-copies its "language-sql"
+			// that Prism.highlightElement() (see initCodeBlocks()) auto-copies its "language-sql"
 			// class onto once highlighted - after that, Prism's own "pre[class*=language-] { font-size:1em }"
 			// (specificity 0,1,1) outranks this plain class selector (0,1,0) and silently wins, so SQL
 			// blocks render at the browser default (~16px) regardless of what's set here.
@@ -139,9 +144,63 @@ var dbxLlmAdvice = (function () {
 			'.dbx-llm-copy-btn { margin-left:8px; font-size:0.78rem; padding:1px 8px; cursor:pointer;' +
 			'  border:1px solid #ced4da; border-radius:3px; background:#fff; color:#495057; }' +
 			'.dbx-llm-copy-btn:hover { background:#e9ecef; }' +
-			'.dbx-llm-pre-compact { font-size:0.78rem !important; max-height:220px; overflow:auto; }' +
+			'.dbx-llm-pre-compact { font-size:0.78rem !important; }' +
+			// Code blocks and the diff: small and scrollable by default, "Expand" shows all of it (renderCodeBlock())
+			'.dbx-llm-capped { max-height:300px; overflow:auto; }' +
+			'.dbx-llm-capped.dbx-llm-expanded { max-height:none; }' +
+			'.dbx-llm-size-bar { text-align:right; }' +
+			'.dbx-llm-size-btn { font-size:0.75rem; padding:0 10px; margin-top:2px; cursor:pointer; border:1px solid #ced4da; border-radius:3px; background:#fff; color:#495057; }' +
+			'.dbx-llm-size-btn:hover { background:#e9ecef; }' +
+			// Small grey text after a section title: the diff counts, "By the LLM"
+			'.dbx-llm-title-note { font-weight:normal; font-size:0.85rem; color:#6c757d; }' +
+			'.dbx-llm-diff-modes { text-align:right; margin-bottom:3px; }' +
+			'.dbx-llm-diff-modes button { font-size:0.75rem; padding:0 10px; cursor:pointer; border:1px solid #ced4da; background:#fff; color:#495057; }' +
+			'.dbx-llm-diff-modes button:first-child { border-radius:3px 0 0 3px; }' +
+			'.dbx-llm-diff-modes button:last-child { border-radius:0 3px 3px 0; border-left:none; }' +
+			'.dbx-llm-diff-modes button.dbx-llm-active { background:#0d6efd; border-color:#0d6efd; color:#fff; }' +
+			'html.dbx-sp-dark .dbx-llm-diff-modes button:not(.dbx-llm-active), html[data-theme="dark"] .dbx-llm-diff-modes button:not(.dbx-llm-active) { border-color:#555c63; background:#2b3035; color:#dee2e6; }' +
+			// The SQL diff (renderSqlDiff(), drawn by diff2html): no file header bar, our fonts/colours, the dark theme via its own variables
+			// position: diff2html's line numbers are position:absolute - without it they are not clipped by the 300px scroll box
+			'.dbx-llm-diff { border:1px solid #dee2e6; border-radius:4px; position:relative; }' +
+			'.dbx-llm-diff .d2h-file-header { display:none; }' +
+			'.dbx-llm-diff .d2h-file-wrapper { border:none; border-radius:0; margin-bottom:0; }' +
+			'.dbx-llm-diff .d2h-diff-table { font-family:"Courier New", monospace; font-size:0.82rem; line-height:1.45; }' +
+			// Global table rules (dark: striped even rows) must not show through
+			'.dbx-llm-diff tr { background-color:transparent !important; }' +
+			// Unified: a changed line pair in red/green like GitHub, not diff2html's yellow 'changed' colours
+			'.dbx-llm-diff { --d2h-change-del-color:var(--d2h-del-bg-color); --d2h-change-ins-color:var(--d2h-ins-bg-color); }' +
+			// Prism's theme has light grey punctuation and a half-white background on operators: unreadable on red/green rows
+			'.dbx-llm-diff .token { background:none !important; }' +
+			'.dbx-llm-diff .token.punctuation, .dbx-llm-diff .token.operator { color:#24292f; }' +
+			'.dbx-llm-diff .token.keyword { color:#0550ae; }' +
+			'.dbx-llm-diff .token.function { color:#8250df; }' +
+			'.dbx-llm-diff .token.string { color:#0a3069; }' +
+			'.dbx-llm-diff .token.number, .dbx-llm-diff .token.boolean { color:#953800; }' +
+			'html.dbx-sp-dark .dbx-llm-diff .token.keyword, html[data-theme="dark"] .dbx-llm-diff .token.keyword { color:#79c0ff; }' +
+			'html.dbx-sp-dark .dbx-llm-diff .token.function, html[data-theme="dark"] .dbx-llm-diff .token.function { color:#d2a8ff; }' +
+			'html.dbx-sp-dark .dbx-llm-diff .token.string, html[data-theme="dark"] .dbx-llm-diff .token.string { color:#a5d6ff; }' +
+			'html.dbx-sp-dark .dbx-llm-diff .token.number, html[data-theme="dark"] .dbx-llm-diff .token.number, html.dbx-sp-dark .dbx-llm-diff .token.boolean, html[data-theme="dark"] .dbx-llm-diff .token.boolean { color:#ffa657; }' +
+			'html.dbx-sp-dark .dbx-llm-diff .token.punctuation, html[data-theme="dark"] .dbx-llm-diff .token.punctuation, html.dbx-sp-dark .dbx-llm-diff .token.operator, html[data-theme="dark"] .dbx-llm-diff .token.operator { color:#e6edf3; }' +
+			// Dark: diff2html's light scheme drawn with its dark colours, so it follows the page's theme switch without a re-render
+			'html.dbx-sp-dark .dbx-llm-diff, html[data-theme="dark"] .dbx-llm-diff { border-color:#30363d; color:#e6edf3; background:#0d1117;' +
+			'  --d2h-bg-color:var(--d2h-dark-bg-color); --d2h-border-color:var(--d2h-dark-border-color); --d2h-dim-color:var(--d2h-dark-dim-color);' +
+			'  --d2h-line-border-color:var(--d2h-dark-line-border-color); --d2h-file-header-bg-color:var(--d2h-dark-file-header-bg-color);' +
+			'  --d2h-file-header-border-color:var(--d2h-dark-file-header-border-color); --d2h-empty-placeholder-bg-color:var(--d2h-dark-empty-placeholder-bg-color);' +
+			'  --d2h-empty-placeholder-border-color:var(--d2h-dark-empty-placeholder-border-color); --d2h-selected-color:var(--d2h-dark-selected-color);' +
+			'  --d2h-ins-bg-color:var(--d2h-dark-ins-bg-color); --d2h-ins-border-color:var(--d2h-dark-ins-border-color); --d2h-ins-highlight-bg-color:var(--d2h-dark-ins-highlight-bg-color);' +
+			'  --d2h-ins-label-color:var(--d2h-dark-ins-label-color); --d2h-del-bg-color:var(--d2h-dark-del-bg-color); --d2h-del-border-color:var(--d2h-dark-del-border-color);' +
+			'  --d2h-del-highlight-bg-color:var(--d2h-dark-del-highlight-bg-color); --d2h-del-label-color:var(--d2h-dark-del-label-color);' +
+			'  --d2h-change-del-color:var(--d2h-dark-del-bg-color); --d2h-change-ins-color:var(--d2h-dark-ins-bg-color);' +
+			'  --d2h-info-bg-color:var(--d2h-dark-info-bg-color); --d2h-info-border-color:var(--d2h-dark-info-border-color);' +
+			'  --d2h-change-label-color:var(--d2h-dark-change-label-color); --d2h-moved-label-color:var(--d2h-dark-moved-label-color); }' +
+			'html.dbx-sp-dark .dbx-llm-size-btn, html[data-theme="dark"] .dbx-llm-size-btn { border-color:#555c63; background:#2b3035; color:#dee2e6; }' +
+			'html.dbx-sp-dark .dbx-llm-size-btn:hover, html[data-theme="dark"] .dbx-llm-size-btn:hover { background:#343a40; }' +
+			'html.dbx-sp-dark .dbx-llm-title-note, html[data-theme="dark"] .dbx-llm-title-note { color:#adb5bd; }' +
 			'.dbx-llm-version { font-family:Arial, Helvetica, sans-serif; font-size:0.85rem; color:#495057; margin-top:8px; word-break:break-word; }' +
-			'.dbx-llm-saved-note { font-family:Arial, Helvetica, sans-serif; font-size:0.8rem; color:#6c757d; margin-top:10px; font-style:italic; }' +
+			'.dbx-llm-saved-note { font-family:Arial, Helvetica, sans-serif; font-size:0.85rem; line-height:1.6; color:#084298; background:#e7f1ff; border:1px solid #b6d4fe; border-radius:4px; padding:6px 10px; margin:0 0 10px 0; }' +
+			'.dbx-llm-saved-note a { color:#0a58ca; font-weight:bold; }' +
+			'html.dbx-sp-dark .dbx-llm-saved-note, html[data-theme="dark"] .dbx-llm-saved-note { color:#9ec5fe; background:#031633; border-color:#084298; }' +
+			'html.dbx-sp-dark .dbx-llm-saved-note a, html[data-theme="dark"] .dbx-llm-saved-note a { color:#6ea8fe; }' +
 			'.dbx-llm-login { font-family:Arial, Helvetica, sans-serif; margin:8px 0; }' +
 			'.dbx-llm-login-btn { background:#0d6efd; color:#fff; border:1px solid #0d6efd; border-radius:4px; padding:3px 12px; cursor:pointer; margin-right:6px; }' +
 			// "Continue to login / Skip" popup (askForLogin) - above an open Bootstrap dialog and our own floating dialog (10000/10001)
@@ -164,7 +223,24 @@ var dbxLlmAdvice = (function () {
 			'html.dbx-sp-dark .dbx-llm-sql-changed, html[data-theme="dark"] .dbx-llm-sql-changed { color:#ffda6a; background:#332701; border-color:#997404; }' +
 			'html.dbx-sp-dark .dbx-llm-sql-unchanged, html[data-theme="dark"] .dbx-llm-sql-unchanged { color:#75b798; background:#051b11; border-color:#0f5132; }' +
 			'html.dbx-sp-dark .dbx-llm-copy-btn, html[data-theme="dark"] .dbx-llm-copy-btn { border-color:#555c63; background:#2b3035; color:#dee2e6; }' +
-			'html.dbx-sp-dark .dbx-llm-copy-btn:hover, html[data-theme="dark"] .dbx-llm-copy-btn:hover { background:#343a40; }';
+			'html.dbx-sp-dark .dbx-llm-copy-btn:hover, html[data-theme="dark"] .dbx-llm-copy-btn:hover { background:#343a40; }' +
+			// The model dropdown + "Get Advice" button, and one block per answer (newest on top). Own classes, no
+			// Bootstrap: this also runs on pages without it. max-width: see .dbx-llm-prose (the 3000px showplan wrapper).
+			'.dbx-llm-picker { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:12px; font-family:Arial, Helvetica, sans-serif; }' +
+			'.dbx-llm-picker-label { font-weight:bold; }' +
+			'.dbx-llm-model-select { font-size:0.9rem; padding:3px 6px; border:1px solid #ced4da; border-radius:4px; background:#fff; color:#212529; max-width:100%; }' +
+			'.dbx-llm-ask-btn { background:#0d6efd; color:#fff; border:1px solid #0d6efd; border-radius:4px; padding:3px 12px; cursor:pointer; }' +
+			'.dbx-llm-ask-btn:disabled { opacity:0.6; cursor:default; }' +
+			'.dbx-llm-picker-hint { font-size:0.8rem; color:#6c757d; }' +
+			'.dbx-llm-run { border:1px solid #dee2e6; border-radius:6px; margin-bottom:12px; max-width:min(1600px, 96vw); box-sizing:border-box; }' +
+			'.dbx-llm-run-header { background:#f1f3f5; color:#212529; padding:6px 10px; font-family:Arial, Helvetica, sans-serif; font-weight:bold; border-bottom:1px solid #dee2e6; border-radius:6px 6px 0 0; cursor:pointer; }' +
+			'.dbx-llm-run:not([open]) > .dbx-llm-run-header { border-bottom:none; border-radius:6px; }' +
+			'.dbx-llm-run-info { font-weight:normal; color:#6c757d; }' +
+			'.dbx-llm-run-body { padding:10px; }' +
+			'html.dbx-sp-dark .dbx-llm-model-select, html[data-theme="dark"] .dbx-llm-model-select { background:#2b3035; color:#e9ecef; border-color:#495057; }' +
+			'html.dbx-sp-dark .dbx-llm-picker-hint, html[data-theme="dark"] .dbx-llm-picker-hint, html.dbx-sp-dark .dbx-llm-run-info, html[data-theme="dark"] .dbx-llm-run-info { color:#adb5bd; }' +
+			'html.dbx-sp-dark .dbx-llm-run, html[data-theme="dark"] .dbx-llm-run { border-color:#495057; }' +
+			'html.dbx-sp-dark .dbx-llm-run-header, html[data-theme="dark"] .dbx-llm-run-header { background:#2b3035; color:#e9ecef; border-bottom-color:#495057; }';
 		document.head.appendChild(style);
 	}
 
@@ -259,13 +335,14 @@ var dbxLlmAdvice = (function () {
 	 */
 	function renderError(container, msg, opts, ddlContext, serverData)
 	{
-		var html = '<div class="dbx-llm-error">' + escapeHtml(msg) + '</div>';
+		// The link to the saved request first (the user wants it on top), then the error
+		var html = renderSavedNote(serverData && serverData.savedUrl, serverData && serverData.savedForDays);
+		html += '<div class="dbx-llm-error">' + escapeHtml(msg) + '</div>';
 		html += opts ? renderInputContext(opts) : '';
 		if (opts)
-			html += renderSentDetails(opts, ddlContext, serverData && serverData.promptSent, serverData && serverData.providerId);
-		html += renderSavedNote(serverData && serverData.savedForDays);
+			html += renderSentDetails(opts, ddlContext, serverData && serverData.promptSent, serverData && serverData.providerId, serverData && serverData.model);
 		container.innerHTML = html;
-		highlightAllSqlBlocks(container);
+		initCodeBlocks(container);
 	}
 
 	/** Guess a reasonable sql-formatter "language" dialect from a DBMS product name. */
@@ -279,36 +356,315 @@ var dbxLlmAdvice = (function () {
 		return 'sql';
 	}
 
-	/**
-	 * Render a block of SQL, pretty-printed + syntax highlighted when sql-formatter/Prism are available.
-	 * @param compact  when true, renders smaller and height-capped (scrollable) - for reference/input
-	 *                 material (the original SQL Text, alongside the Execution Plan) as opposed to the
-	 *                 LLM's actual answer (Suggested SQL), which stays full-size since it's the point.
-	 */
-	function renderSqlBlock(sql, dbVendor, compact)
+	/** Pretty-print SQL when sql-formatter is on the page (as-is otherwise). Used for the SQL blocks AND the diff, so both look the same. */
+	function formatSql(sql, dbVendor)
 	{
-		var formatted = sql;
 		if (typeof window.sqlFormatter !== 'undefined' && typeof window.sqlFormatter.format === 'function')
 		{
 			try {
 				// Same user SQL Format options as the Format SQL buttons, when dbxSqlFormat.js is on the page
-				formatted = window.dbxSqlFormat
+				return window.dbxSqlFormat
 					? window.dbxSqlFormat.format(sql, sqlFormatterDialect(dbVendor))
 					: window.sqlFormatter.format(sql, { language: sqlFormatterDialect(dbVendor), keywordCase: 'upper', functionCase: 'upper', dataTypeCase: 'upper' });
 			}
 			catch (e) { console.warn('dbxLlmAdvice: sqlFormatter.format() failed, showing SQL as-is: ' + e.message); }
 		}
+		return sql;
+	}
 
-		var preClass = compact ? 'dbx-llm-pre dbx-llm-pre-compact' : 'dbx-llm-pre';
+	/**
+	 * Render a block of SQL, pretty-printed + syntax highlighted (with line numbers) when sql-formatter/Prism are available.
+	 * @param smallFont  smaller text - for reference/input material (the original SQL Text, the Execution Plan)
+	 *                   as opposed to the LLM's actual answer (Suggested SQL)
+	 */
+	function renderSqlBlock(sql, dbVendor, smallFont)
+	{
+		return renderCodeBlock(escapeHtml(formatSql(sql, dbVendor)), 'sql', smallFont);
+	}
 
+	/**
+	 * A code block: line numbers (Prism's Line Numbers plugin, when Prism is on the page), small and scrollable by
+	 * default, with an "Expand" button to show all of it (and "Collapse" back) - the button only shows when the
+	 * content does not fit, see refreshCodeBlocks(). Highlighted after insertion (initCodeBlocks()): Prism needs the DOM.
+	 * @param codeHtml   already HTML-escaped text
+	 * @param language   Prism language: 'sql', or 'plaintext' (plan text, workload profile)
+	 */
+	function renderCodeBlock(codeHtml, language, smallFont)
+	{
+		var preClass = 'dbx-llm-pre dbx-llm-capped' + (smallFont ? ' dbx-llm-pre-compact' : '') + (typeof window.Prism !== 'undefined' ? ' line-numbers' : '');
+		return '<div class="dbx-llm-code">'
+			+ '<pre class="' + preClass + '"><code class="language-' + language + '">' + codeHtml + '</code></pre>'
+			+ '<div class="dbx-llm-size-bar"><button type="button" class="dbx-llm-size-btn" style="display:none">Expand</button></div>'
+			+ '</div>';
+	}
+
+	/**
+	 * What an execution plan is, so it gets the right highlighting: XML (SQL Server showplan), JSON (MySQL EXPLAIN
+	 * FORMAT=JSON, Postgres) or text (ASE, Oracle, Db2, ...). XML and JSON are indented when they come as one long line.
+	 * Very large plans stay plain text: highlighting megabytes of XML would freeze the page.
+	 * @return {language, label, text}
+	 */
+	function describePlan(plan)
+	{
+		var t = String(plan).trim();
+		if (t.length > 2 * 1024 * 1024)
+			return { language: 'plaintext', label: 'text (too large to highlight)', text: plan };
+
+		if (t.charAt(0) === '<')
+			return { language: 'xml', label: 'XML', text: (t.split('\n').length < 5) ? formatXml(t) : plan };
+
+		if (t.charAt(0) === '{' || t.charAt(0) === '[')
+		{
+			try { return { language: 'json', label: 'JSON', text: JSON.stringify(JSON.parse(t), null, 2) }; }
+			catch (e) { /* not JSON after all: text */ }
+		}
+		return { language: 'plaintext', label: 'text', text: plan };
+	}
+
+	/** Indent XML that comes as one line: one tag per line, 2 spaces per level (text-only elements stay on one line). */
+	function formatXml(xml)
+	{
+		var out = [], level = 0;
+		xml.replace(/>\s*</g, '>\n<').split('\n').forEach(function (line)
+		{
+			line = line.trim();
+			if (!line) return;
+			if (/^<\//.test(line))
+				level = Math.max(level - 1, 0);
+			out.push(new Array(level + 1).join('  ') + line);
+			// An opening tag that is not closed on the same line (not '</x>', '<x/>', '<?..?>', '<!..>', '<x>text</x>')
+			if (/^<[^\/?!]/.test(line) && !/\/>$/.test(line) && line.indexOf('</') < 0)
+				level++;
+		});
+		return out.join('\n');
+	}
+
+	/**
+	 * Prism languages that are not in our Prism bundle (prism-1.30.0.js), loaded from its components when a block needs one.
+	 */
+	var PRISM_COMPONENTS_URL = '/scripts/prism/1.30.0/components/';
+	var _prismComponentPromises = {};
+	function loadPrismLanguage(language)
+	{
+		if (!window.Prism || window.Prism.languages[language])
+			return Promise.resolve();
+		if (!_prismComponentPromises[language])
+		{
+			_prismComponentPromises[language] = new Promise(function (resolve, reject)
+			{
+				var script = document.createElement('script');
+				script.src = PRISM_COMPONENTS_URL + 'prism-' + language + '.min.js';
+				script.onload  = function () { resolve(); };
+				script.onerror = function () { delete _prismComponentPromises[language]; reject(new Error('could not load ' + script.src)); };
+				document.head.appendChild(script);
+			});
+		}
+		return _prismComponentPromises[language];
+	}
+
+	/**
+	 * After the blocks are in the DOM: highlight them (line numbers come with it), then show the "Expand" button where
+	 * the content does not fit. A block in a closed <details> has no size yet: done again when it is opened.
+	 */
+	function initCodeBlocks(container)
+	{
 		if (typeof window.Prism !== 'undefined')
 		{
-			var id = 'dbx-llm-sql-' + Math.random().toString(36).slice(2);
-			// Highlight after insertion (see highlightAllSqlBlocks()) since Prism needs the element in the DOM.
-			return { html: '<pre class="' + preClass + '"><code id="' + id + '" class="language-sql">' + escapeHtml(formatted) + '</code></pre>', highlightId: id };
+			var codeEls = container.querySelectorAll('.dbx-llm-code code[class*="language-"]');
+			for (var i = 0; i < codeEls.length; i++)
+			{
+				var codeEl   = codeEls[i];
+				var language = (codeEl.className.match(/language-(\S+)/) || [])[1];
+				if (language && language !== 'plaintext' && !window.Prism.languages[language])
+				{
+					// Not in our bundle (JSON): load it, then highlight (plain text with line numbers until then, or if it fails)
+					window.Prism.highlightElement(codeEl);
+					loadPrismLanguage(language).then(
+						(function (el) { return function () { window.Prism.highlightElement(el); refreshCodeBlocks(container); }; })(codeEl),
+						function (err) { console.warn('dbxLlmAdvice: ' + err.message); });
+					continue;
+				}
+				window.Prism.highlightElement(codeEl);
+			}
 		}
 
-		return { html: '<pre class="' + preClass + '">' + escapeHtml(formatted) + '</pre>', highlightId: null };
+		if (!container.getAttribute('data-dbx-llm-toggle'))
+		{
+			container.setAttribute('data-dbx-llm-toggle', 'true');
+			// 'toggle' does not bubble, but it can be caught on the way down (capture)
+			container.addEventListener('toggle', function () { refreshCodeBlocks(container); }, true);
+		}
+
+		if (!_sizeBtnHandlerInstalled)
+		{
+			_sizeBtnHandlerInstalled = true;
+			document.addEventListener('click', function (e)
+			{
+				var btn = e.target.closest && e.target.closest('.dbx-llm-size-btn');
+				if (!btn) return;
+				var box = btn.closest('.dbx-llm-code').querySelector('.dbx-llm-capped');
+				var expanded = box.classList.toggle('dbx-llm-expanded');
+				btn.textContent = expanded ? 'Collapse' : 'Expand';
+			});
+		}
+
+		refreshCodeBlocks(container);
+	}
+	var _sizeBtnHandlerInstalled = false;
+
+	/** For the visible blocks: re-measure the line numbers (they depend on line wrapping) and show "Expand" only when needed. */
+	function refreshCodeBlocks(container)
+	{
+		var blocks = container.querySelectorAll('.dbx-llm-code');
+		for (var i = 0; i < blocks.length; i++)
+		{
+			var box = blocks[i].querySelector('.dbx-llm-capped');
+			var btn = blocks[i].querySelector('.dbx-llm-size-btn');
+			if (!box || !btn || box.offsetParent === null)
+				continue; // not visible (a closed <details>): measured when it is opened
+
+			if (box.tagName === 'PRE' && box.classList.contains('line-numbers') && window.Prism && window.Prism.plugins && window.Prism.plugins.lineNumbers)
+				window.Prism.plugins.lineNumbers.resize(box);
+
+			var expanded = box.classList.contains('dbx-llm-expanded');
+			btn.style.display = (expanded || box.scrollHeight > box.clientHeight + 2) ? '' : 'none';
+		}
+	}
+
+	//--------------------------------------------------------------------------
+	// SQL diff: the original SQL vs the LLM's rewrite (jsdiff makes the patch, diff2html draws it; loaded when needed)
+	//--------------------------------------------------------------------------
+	var JSDIFF_URL        = '/scripts/jsdiff/9.0.0/diff.min.js';
+	var DIFF2HTML_JS_URL  = '/scripts/diff2html/3.4.56/diff2html.min.js';
+	var DIFF2HTML_CSS_URL = '/scripts/diff2html/3.4.56/diff2html.min.css';
+	var _diffLibsPromise = null;
+
+	/**
+	 * jsdiff (global 'Diff') and diff2html (global 'Diff2Html') are only needed when an answer has a SQL rewrite:
+	 * load them then, once - instead of adding them to every page that includes this file.
+	 */
+	function loadDiffLibs()
+	{
+		function loadScript(url, isLoaded)
+		{
+			if (isLoaded())
+				return Promise.resolve();
+			return new Promise(function (resolve, reject)
+			{
+				var script = document.createElement('script');
+				script.src = url;
+				script.onload  = function () { if (isLoaded()) resolve(); else reject(new Error('no library in ' + url)); };
+				script.onerror = function () { reject(new Error('could not load ' + url)); };
+				document.head.appendChild(script);
+			});
+		}
+
+		if (!_diffLibsPromise)
+		{
+			if (!document.querySelector('link[href="' + DIFF2HTML_CSS_URL + '"]'))
+			{
+				var link = document.createElement('link');
+				link.rel  = 'stylesheet';
+				link.href = DIFF2HTML_CSS_URL;
+				document.head.appendChild(link);
+			}
+			_diffLibsPromise = Promise.all([
+				loadScript(JSDIFF_URL,       function () { return window.Diff      && typeof window.Diff.createTwoFilesPatch === 'function'; }),
+				loadScript(DIFF2HTML_JS_URL, function () { return window.Diff2Html && typeof window.Diff2Html.html === 'function'; })
+			]).catch(function (err) { _diffLibsPromise = null; throw err; });
+		}
+		return _diffLibsPromise;
+	}
+
+	/** SQL text as highlighted HTML (Prism, when on the page), for one line or a part of a line of the diff. */
+	function highlightSqlFragment(text)
+	{
+		if (window.Prism && window.Prism.languages && window.Prism.languages.sql)
+			return window.Prism.highlight(text, window.Prism.languages.sql, 'sql');
+		return escapeHtml(text);
+	}
+
+	var DIFF_MODE_STORAGE_KEY = 'dbxLlmAdvice.diffMode';
+
+	/**
+	 * Render the diff of the original SQL vs the suggested SQL into 'host', like GitHub: side by side (the default) or
+	 * unified, switched with two buttons (the choice is remembered in the browser). diff2html pairs a changed line with
+	 * the most similar line on the other side and marks the changed words in it. Both are formatted the same way
+	 * first, and whitespace is ignored, so only real changes show. The counts go into 'statEl'.
+	 */
+	function renderSqlDiff(host, statEl, oldSql, newSql, dbVendor)
+	{
+		loadDiffLibs().then(function ()
+		{
+			var oldText = formatSql(oldSql, dbVendor).replace(/\s+$/, '') + '\n';
+			var newText = formatSql(newSql, dbVendor).replace(/\s+$/, '') + '\n';
+			// The whole SQL as context (not GitHub's 3 lines around a change): it is short, and read as a whole.
+			// ignoreWhitespace: the SQL formatter re-aligns operators ('o.status    <>') when the lines around them change.
+			var patch = window.Diff.createTwoFilesPatch('SQL', 'SQL', oldText, newText, '', '', { context: 100000, ignoreWhitespace: true });
+
+			var mode = 'split';
+			try { mode = window.localStorage.getItem(DIFF_MODE_STORAGE_KEY) || 'split'; } catch (e) { /* no memory */ }
+
+			host.innerHTML = '<div class="dbx-llm-diff-modes">'
+				+ '<button type="button" data-mode="split">Side by side</button><button type="button" data-mode="unified">Unified</button></div>'
+				+ '<div class="dbx-llm-code">'
+				+ '<div class="dbx-llm-diff dbx-llm-capped"></div>'
+				+ '<div class="dbx-llm-size-bar"><button type="button" class="dbx-llm-size-btn" style="display:none">Expand</button></div>'
+				+ '</div>';
+
+			function show(newMode)
+			{
+				mode = (newMode === 'unified') ? 'unified' : 'split';
+				var box = host.querySelector('.dbx-llm-diff');
+				// Always the light scheme: the dark theme is applied by our CSS (injectStyle()), so it follows the page's theme switch
+				box.innerHTML = window.Diff2Html.html(patch, {
+					drawFileList: false, outputFormat: (mode === 'unified') ? 'line-by-line' : 'side-by-side',
+					matching: 'lines', diffStyle: 'word', colorScheme: 'light' });
+				// SQL colours: highlight each text piece of a line, keeping diff2html's <ins>/<del> word marks
+				box.querySelectorAll('.d2h-code-line-ctn').forEach(function (ctn)
+				{
+					Array.prototype.slice.call(ctn.childNodes).forEach(function (n)
+					{
+						if (n.nodeType === 1)
+							n.innerHTML = highlightSqlFragment(n.textContent);
+						else if (n.nodeType === 3)
+						{
+							var span = document.createElement('span');
+							span.innerHTML = highlightSqlFragment(n.textContent);
+							ctn.replaceChild(span, n);
+						}
+					});
+				});
+				// Side by side: scrolling one side sideways scrolls the other one too (both halves stay on the same columns)
+				var sides = box.querySelectorAll('.d2h-file-side-diff');
+				if (sides.length === 2)
+				{
+					sides[0].addEventListener('scroll', function () { if (sides[1].scrollLeft !== sides[0].scrollLeft) sides[1].scrollLeft = sides[0].scrollLeft; });
+					sides[1].addEventListener('scroll', function () { if (sides[0].scrollLeft !== sides[1].scrollLeft) sides[0].scrollLeft = sides[1].scrollLeft; });
+				}
+				host.querySelectorAll('.dbx-llm-diff-modes button').forEach(function (btn) { btn.classList.toggle('dbx-llm-active', btn.getAttribute('data-mode') === mode); });
+				refreshCodeBlocks(host);
+			}
+			host.querySelector('.dbx-llm-diff-modes').addEventListener('click', function (e)
+			{
+				var btn = e.target.closest('button[data-mode]');
+				if (!btn) return;
+				try { window.localStorage.setItem(DIFF_MODE_STORAGE_KEY, btn.getAttribute('data-mode')); } catch (ex) { /* no memory */ }
+				show(btn.getAttribute('data-mode'));
+			});
+			show(mode);
+
+			if (statEl)
+			{
+				var file = window.Diff2Html.parse(patch)[0] || { deletedLines: 0, addedLines: 0 };
+				var removed = file.deletedLines, added = file.addedLines;
+				statEl.textContent = ' - ' + removed + ' line' + (removed === 1 ? '' : 's') + ' removed, ' + added + ' added';
+			}
+		})
+		.catch(function (err)
+		{
+			host.innerHTML = '<div class="dbx-llm-status">The diff can not be shown: ' + escapeHtml(err.message) + '</div>';
+		});
 	}
 
 	/** Apply inline Markdown (**bold**, `code`) to already-HTML-escaped text. */
@@ -444,15 +800,15 @@ var dbxLlmAdvice = (function () {
 		});
 	}
 
-	/** A "Copy" button wired to _copyRegistry; '' if there's nothing to copy. */
-	function makeCopyButtonHtml(text)
+	/** A "Copy" button (or another label) wired to _copyRegistry; '' if there's nothing to copy. */
+	function makeCopyButtonHtml(text, label)
 	{
 		if (!text) return '';
 
 		ensureCopyButtonHandler();
 		var copyId = 'dbx-llm-copy-' + Math.random().toString(36).slice(2);
 		_copyRegistry[copyId] = text;
-		return ' <button type="button" class="dbx-llm-copy-btn" data-copy-id="' + copyId + '">Copy</button>';
+		return ' <button type="button" class="dbx-llm-copy-btn" data-copy-id="' + copyId + '">' + escapeHtml(label || 'Copy') + '</button>';
 	}
 
 	function renderSentField(label, value, copyable)
@@ -716,11 +1072,8 @@ var dbxLlmAdvice = (function () {
 	 */
 	function renderSentDetails(opts, ddlContext, promptSent, providerId, model)
 	{
-		// Each render replaces the previous one's DOM, so its "Copy" button(s) can never be clicked
-		// again; reset here rather than growing _copyRegistry across repeated dbxLlmAdvice.open()
-		// calls in a long-lived page session.
-		_copyRegistry = {};
-
+		// NOTE: _copyRegistry is reset in open()/renderSavedRequest() (a new view), not here: the answers of
+		//       several models are kept below each other, and their "Copy" buttons must all keep working.
 		var providerLabel = escapeHtml(providerId || opts.provider || '(default)');
 		if (model) providerLabel += ' / ' + escapeHtml(model);
 
@@ -757,11 +1110,11 @@ var dbxLlmAdvice = (function () {
 	/**
 	 * The original SQL Text (and, if supplied, the Execution Plan) that was analyzed - shown
 	 * up-front, compact, on both success and error, so the reader has that context without having
-	 * to open "Show what was sent to the LLM" and pick it out of the full prompt text. Kept
-	 * noticeably smaller than the "Suggested SQL" block below it (see renderSqlBlock's compact
-	 * flag / .dbx-llm-pre-compact) since this is reference material, not the answer. Each is its
-	 * own <details>, CLOSED by default (only the Explanation is open), so the answer is what the
-	 * reader sees first - these can get long (a full showplan especially).
+	 * to open "Show what was sent to the LLM" and pick it out of the full prompt text. Smaller text
+	 * than the "Suggested SQL" block below it (renderSqlBlock's smallFont / .dbx-llm-pre-compact)
+	 * since this is reference material, not the answer. Each is its own <details>, CLOSED by default
+	 * (only the Explanation is open), so the answer is what the reader sees first. Every block starts
+	 * small and scrollable, with an "Expand" button when it does not fit (renderCodeBlock()).
 	 */
 	function renderInputContext(opts)
 	{
@@ -775,49 +1128,50 @@ var dbxLlmAdvice = (function () {
 
 		if (opts.sql)
 		{
-			var sqlTextBlock = renderSqlBlock(opts.sql, opts.dbVendor, /*compact*/ true);
 			html += '<details class="dbx-llm-section-details">'
-				+ '<summary class="dbx-llm-section-title">SQL Text</summary>' + sqlTextBlock.html + '</details>';
+				+ '<summary class="dbx-llm-section-title">SQL Text</summary>' + renderSqlBlock(opts.sql, opts.dbVendor, /*smallFont*/ true) + '</details>';
 		}
 		if (opts.plan)
 		{
+			var plan = describePlan(opts.plan);
 			html += '<details class="dbx-llm-section-details">'
-				+ '<summary class="dbx-llm-section-title">Execution Plan</summary>'
-				+ '<pre class="dbx-llm-pre dbx-llm-pre-compact">' + escapeHtml(opts.plan) + '</pre></details>';
+				+ '<summary class="dbx-llm-section-title">Execution Plan<span class="dbx-llm-title-note"> - ' + plan.label + '</span></summary>'
+				+ renderCodeBlock(escapeHtml(plan.text), plan.language, /*smallFont*/ true) + '</details>';
 		}
 		if (opts.workloadProfile)
 		{
 			// Plain text (see buildWorkloadProfile), so NOT renderSqlBlock()
 			html += '<details class="dbx-llm-section-details">'
 				+ '<summary class="dbx-llm-section-title">Workload Profile</summary>'
-				+ '<pre class="dbx-llm-pre dbx-llm-pre-compact">' + escapeHtml(opts.workloadProfile) + '</pre></details>';
+				+ renderCodeBlock(escapeHtml(opts.workloadProfile), 'plaintext', /*smallFont*/ true) + '</details>';
 		}
 
 		return html;
 	}
 
-	/** Prism-highlight every SQL code block in container - there can now be more than one (SQL Text + Suggested SQL). */
-	function highlightAllSqlBlocks(container)
-	{
-		if (typeof window.Prism === 'undefined') return;
-		var codeEls = container.querySelectorAll('code.language-sql');
-		for (var i = 0; i < codeEls.length; i++)
-			window.Prism.highlightElement(codeEls[i]);
-	}
-
 	/**
-	 * One line telling the user that requests are saved - only when the server says so
-	 * (DbxCentral.llm.log.notifyUsers, see LlmAdviceLog.getSavedForDays()).
+	 * When the request was saved (DbxCentral.llm.log.save, see LlmAdviceLog.java): a link to the saved page, which any
+	 * DbxCentral user can open (/llm-log) - so it can be shared - a "Copy link" button, and how long it is kept.
+	 * @param savedUrl      the server's link (a path), or empty when the request was not saved
+	 * @param savedForDays  days the saved page is kept (0 or less = until an administrator removes it)
 	 */
-	function renderSavedNote(savedForDays)
+	function renderSavedNote(savedUrl, savedForDays)
 	{
-		if (!savedForDays) return '';
-		return '<div class="dbx-llm-saved-note">Requests are saved for DbxCentral administrators (kept ' + escapeHtml(savedForDays) + ' days).</div>';
+		if (!savedUrl) return '';
+		var days = parseInt(savedForDays, 10);
+		var kept = days > 0 ? 'Kept for ' + days + ' days' : 'Kept until an administrator removes it';
+		return '<div class="dbx-llm-saved-note">'
+			+ '&#128279; This request is saved: <a href="' + escapeHtml(savedUrl) + '" target="_blank" rel="noopener">Open saved request</a>'
+			+ makeCopyButtonHtml(window.location.origin + savedUrl, 'Copy link')
+			+ '<br>' + kept + '. Anyone with a DbxCentral login can open the link, so you can share it.'
+			+ '</div>';
 	}
 
 	function renderResult(container, result, opts, ddlContext)
 	{
-		var html = renderInputContext(opts);
+		// The link to the saved request first (the user wants it on top), then the answer
+		var html = renderSavedNote(result.savedUrl, result.savedForDays);
+		html += renderInputContext(opts);
 
 		if (result.optimizedSql)
 		{
@@ -828,18 +1182,25 @@ var dbxLlmAdvice = (function () {
 			// just catches the case where it returns identical SQL anyway.
 			var baselineSql = result.originSql || opts.sql;
 			var sqlChanged  = normalizeSqlForCompare(result.optimizedSql) !== normalizeSqlForCompare(baselineSql);
-			var sqlBlock    = renderSqlBlock(result.optimizedSql, opts.dbVendor);
-			html += '<details class="dbx-llm-section-details"><summary class="dbx-llm-section-title">Suggested SQL</summary>';
+			html += '<details class="dbx-llm-section-details"><summary class="dbx-llm-section-title">Suggested SQL<span class="dbx-llm-title-note"> - By the LLM</span></summary>';
 			html += sqlChanged
 				? '<div class="dbx-llm-sql-changed">SQL was changed by the LLM.</div>'
 				: '<div class="dbx-llm-sql-unchanged">SQL was <b>not</b> changed - the LLM returned the same statement.</div>';
-			html += sqlBlock.html + '</details>';
+			html += renderSqlBlock(result.optimizedSql, opts.dbVendor) + '</details>';
+
+			// What the LLM changed, line by line: the SQL we sent vs its rewrite (filled in by renderSqlDiff() below)
+			if (sqlChanged)
+			{
+				html += '<details class="dbx-llm-section-details dbx-llm-diff-section" open><summary class="dbx-llm-section-title">SQL Changes (diff)'
+					+ '<span class="dbx-llm-title-note dbx-llm-diff-stat"></span></summary>'
+					+ '<div class="dbx-llm-diff-host"><div class="dbx-llm-status">Building the diff...</div></div></details>';
+			}
 		}
 		else if (result.explanation)
 		{
 			// The model is asked to leave 'optimized_sql' empty (not echo the original back) when
 			// it has no rewrite to suggest - a real, expected outcome, not a missing answer.
-			html += '<details class="dbx-llm-section-details"><summary class="dbx-llm-section-title">Suggested SQL</summary>';
+			html += '<details class="dbx-llm-section-details"><summary class="dbx-llm-section-title">Suggested SQL<span class="dbx-llm-title-note"> - By the LLM</span></summary>';
 			html += '<div class="dbx-llm-sql-unchanged">No SQL changes suggested - the LLM found the statement fine as-is.</div></details>';
 		}
 
@@ -855,10 +1216,13 @@ var dbxLlmAdvice = (function () {
 
 		// "What was sent" - so the user can see exactly what context/prompt/model was used.
 		html += renderSentDetails(opts, ddlContext, result.promptSent, result.providerId, result.model);
-		html += renderSavedNote(result.savedForDays);
 
 		container.innerHTML = html;
-		highlightAllSqlBlocks(container);
+		initCodeBlocks(container);
+
+		var diffHost = container.querySelector('.dbx-llm-diff-host');
+		if (diffHost)
+			renderSqlDiff(diffHost, container.querySelector('.dbx-llm-diff-stat'), opts.sql, result.optimizedSql, opts.dbVendor);
 	}
 
 	//--------------------------------------------------------------------------
@@ -1092,7 +1456,12 @@ var dbxLlmAdvice = (function () {
 			+ '<pre class="dbx-llm-pre">' + escapeHtml(promptSent) + '</pre>';
 	}
 
-	function callOptimize(container, opts, ddlContext)
+	/**
+	 * Ask /api/llm/optimize-sql and render the answer (or the prompt preview) into container.
+	 * @param model  the entry chosen in the model dropdown ({provider, model}), or null for the server default / opts.provider
+	 * @return a Promise of the answer (null on failure) - never rejects
+	 */
+	function callOptimize(container, opts, ddlContext, model)
 	{
 		renderStatus(container, opts.preview ? 'Building prompt preview...' : 'Asking the LLM for optimization advice...');
 
@@ -1103,14 +1472,15 @@ var dbxLlmAdvice = (function () {
 			workloadProfile: opts.workloadProfile,
 			dbVendor:        opts.dbVendor,
 			dbmsVersion:     opts.dbmsVersion,
-			provider:        opts.provider,
+			provider:        model ? model.provider : opts.provider,
+			model:           model ? model.model    : opts.model,
 			preview:         !!opts.preview,
 			// Not part of the prompt - only recorded in the saved request log (LlmAdviceLog.java)
 			srvName:         opts.srv,
 			origin:          opts.origin || window.location.pathname
 		};
 
-		fetchJson('/api/llm/optimize-sql', {
+		return fetchJson('/api/llm/optimize-sql', {
 			method:  'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body:    JSON.stringify(body)
@@ -1119,13 +1489,14 @@ var dbxLlmAdvice = (function () {
 		{
 			if (opts.preview) renderPromptPreview(container, data && data.promptSent);
 			else              renderResult(container, data, opts, ddlContext);
+			return data;
 		})
 		.catch(function (err)
 		{
 			if (opts.preview)
 			{
 				container.innerHTML = '<div class="dbx-llm-error">Failed to build prompt preview: ' + escapeHtml(err.message) + '</div>';
-				return;
+				return null;
 			}
 			renderError(container, 'Failed to get LLM advice: ' + err.message, opts, ddlContext, err.responseData);
 
@@ -1141,6 +1512,7 @@ var dbxLlmAdvice = (function () {
 				container.insertBefore(loginDiv, container.firstChild ? container.firstChild.nextSibling : null);
 				askForLogin(retry);
 			}
+			return null;
 		});
 	}
 
@@ -1233,6 +1605,7 @@ var dbxLlmAdvice = (function () {
 
 		injectStyle();
 		var container = resolveContainer(opts);
+		_copyRegistry = {};
 		if (meta.status === 'OK')
 		{
 			renderResult(container, {
@@ -1272,28 +1645,141 @@ var dbxLlmAdvice = (function () {
 		var container = resolveContainer(opts);
 		renderStatus(container, 'Preparing request...');
 
-		// A login is required but we are not logged in: say so (and go to the login) BEFORE the DDL/index/stats
-		// lookup below, which can take a long time with many tables - the answer would be "not logged in" anyway.
-		// The prompt preview needs no login. A failing config call (null) just continues as before.
-		var loginCheck = opts.preview ? Promise.resolve(null) : getConfig();
-		loginCheck.then(function (cfg)
+		// A new view: the "Copy" buttons of whatever was shown here before are gone
+		_copyRegistry = {};
+
+		// The prompt preview needs no login and no model: build it right away
+		if (opts.preview)
+		{
+			lookupContext(container, opts).then(function (ddlContext) { callOptimize(container, opts, ddlContext, null); });
+			return;
+		}
+
+		// A login is required but we are not logged in: say so (and go to the login) first - nothing can be asked anyway.
+		// Otherwise show the model dropdown and the "Get Advice" button: NOTHING is sent to an LLM (nothing costs money)
+		// before the user presses it. A failing config call (null) still shows the button, for the server's default model.
+		getConfig().then(function (cfg)
 		{
 			if (cfg && cfg.loginRequired && !cfg.loggedIn)
 			{
 				renderLoginRequired(container, 'Not logged in! A login is required to ask for LLM advice.', function () { open(opts); });
 				return;
 			}
+			if (cfg && cfg.configured === false)
+			{
+				container.innerHTML = '<div class="dbx-llm-error">LLM Optimization Advice is not configured: no LLM provider is set up in DBX_CENTRAL.conf.</div>';
+				return;
+			}
+			renderModelPicker(container, opts, (cfg && cfg.models) || []);
+		});
+	}
 
+	/**
+	 * The table DDL/index/stats and the DBMS version - looked up ONCE per open() (the promise is kept on opts), so
+	 * asking a second model does not repeat a lookup that can take long with many tables.
+	 * Resolves (never rejects) to the DDL context ('' when there is none); sets opts.dbmsVersion.
+	 */
+	function lookupContext(container, opts)
+	{
+		if (!opts._contextPromise)
+		{
 			if (!opts.ddlContext)
 				renderStatus(container, 'Looking up table DDL/index/stats...');
 
 			// Both lookups resolve (never reject) to '' on failure, so the advice is still asked for without them
 			var ddlPromise = opts.ddlContext ? Promise.resolve(opts.ddlContext) : fetchDdlContext(opts);
-			Promise.all([ddlPromise, fetchDbmsVersion(opts)]).then(function (res)
+			opts._contextPromise = Promise.all([ddlPromise, fetchDbmsVersion(opts)]).then(function (res)
 			{
 				opts.dbmsVersion = res[1] || '';
-				callOptimize(container, opts, res[0]);
+				return res[0];
 			});
+		}
+		return opts._contextPromise;
+	}
+
+	var LAST_MODEL_STORAGE_KEY = 'dbxLlmAdvice.lastModel';
+
+	/**
+	 * The model dropdown (grouped by provider) + "Get Advice" button, and the results area under it. Every press asks
+	 * the chosen model and adds its answer on TOP, keeping the earlier ones - so the answers of models can be compared.
+	 * @param models  /api/llm/config 'models': [{provider, providerName, model, modelId, label, isDefault}]
+	 */
+	function renderModelPicker(container, opts, models)
+	{
+		// No list (an older DbxCentral, or the config call failed): one entry, the server's default model
+		if (models.length === 0)
+			models = [{ provider: opts.provider, providerName: 'Default', model: opts.model, label: 'The default model', isDefault: true }];
+
+		// Preselect: the last choice on this browser (if still configured), else the caller's provider, else the default
+		var last = null;
+		try { last = JSON.parse(window.localStorage.getItem(LAST_MODEL_STORAGE_KEY) || 'null'); } catch (e) { /* private mode etc: no memory */ }
+
+		var selected = -1;
+		models.forEach(function (m, i) { if (selected < 0 && last && m.provider === last.provider && m.model === last.model) selected = i; });
+		models.forEach(function (m, i) { if (selected < 0 && opts.provider && m.provider === opts.provider && (!opts.model || m.model === opts.model)) selected = i; });
+		models.forEach(function (m, i) { if (selected < 0 && m.isDefault) selected = i; });
+		if (selected < 0) selected = 0;
+
+		var optionsHtml = '';
+		var groupProvider = null;
+		models.forEach(function (m, i)
+		{
+			if (m.provider !== groupProvider)
+			{
+				optionsHtml += (groupProvider !== null ? '</optgroup>' : '') + '<optgroup label="' + escapeHtml(m.providerName || m.provider) + '">';
+				groupProvider = m.provider;
+			}
+			var title = (m.modelId && m.modelId !== m.label) ? ' title="' + escapeHtml(m.modelId) + '"' : '';
+			optionsHtml += '<option value="' + i + '"' + (i === selected ? ' selected' : '') + title + '>'
+				+ escapeHtml(m.label || m.model || '') + (m.isDefault ? ' (default)' : '') + '</option>';
+		});
+		optionsHtml += '</optgroup>';
+
+		container.innerHTML = '<div class="dbx-llm-picker">'
+			+ '<span class="dbx-llm-picker-label">Model</span>'
+			+ '<select class="dbx-llm-model-select" aria-label="LLM model">' + optionsHtml + '</select>'
+			+ '<button type="button" class="dbx-llm-ask-btn">Get Advice</button>'
+			+ '<span class="dbx-llm-picker-hint">Nothing is sent to the LLM before you press the button.</span>'
+			+ '</div>'
+			+ '<div class="dbx-llm-results"></div>';
+
+		var select  = container.querySelector('.dbx-llm-model-select');
+		var askBtn  = container.querySelector('.dbx-llm-ask-btn');
+		var hint    = container.querySelector('.dbx-llm-picker-hint');
+		var results = container.querySelector('.dbx-llm-results');
+
+		askBtn.addEventListener('click', function ()
+		{
+			var model = models[parseInt(select.value, 10)] || models[0];
+			try { window.localStorage.setItem(LAST_MODEL_STORAGE_KEY, JSON.stringify({ provider: model.provider, model: model.model })); } catch (e) { /* no memory */ }
+
+			// One request at a time: a double click must not pay twice
+			askBtn.disabled = true;
+			hint.textContent = '';
+
+			// A <details>: click the header to fold/unfold this answer (handy with several answers)
+			var run = document.createElement('details');
+			run.className = 'dbx-llm-run';
+			run.open = true;
+			run.innerHTML = '<summary class="dbx-llm-run-header">' + escapeHtml((model.providerName || model.provider || '') + ' / ' + (model.label || model.model || ''))
+				+ '<span class="dbx-llm-run-info"></span></summary>'
+				+ '<div class="dbx-llm-run-body"></div>';
+			results.insertBefore(run, results.firstChild);
+
+			var body    = run.querySelector('.dbx-llm-run-body');
+			var info    = run.querySelector('.dbx-llm-run-info');
+			var startMs = Date.now();
+
+			lookupContext(body, opts)
+				.then(function (ddlContext) { return callOptimize(body, opts, ddlContext, model); })
+				.then(function (data)
+				{
+					var txt = ' - ' + ((Date.now() - startMs) / 1000).toFixed(1) + ' s';
+					if (data && data.inputTokens != null && data.outputTokens != null)
+						txt += ', ' + data.inputTokens.toLocaleString() + ' in / ' + data.outputTokens.toLocaleString() + ' out tokens';
+					info.textContent = txt;
+					askBtn.disabled = false;
+				});
 		});
 	}
 
@@ -1336,7 +1822,7 @@ var dbxLlmAdvice = (function () {
 
 	/**
 	 * Short status text for next to an "LLM Optimization Advice" heading, from a getConfig() result:
-	 * the model that will be used, or why it can't be used right now.
+	 * the default model (and how many more can be chosen), or why it can't be used right now.
 	 */
 	function getStatusText(cfg)
 	{
@@ -1344,6 +1830,13 @@ var dbxLlmAdvice = (function () {
 		if (cfg.configured === false) return 'Needs to be configured';
 
 		var txt = cfg.model || cfg.providerName || cfg.provider || '';
+		if (cfg.models && cfg.models.length > 0)
+		{
+			var def = cfg.models.filter(function (m) { return m.isDefault; })[0] || cfg.models[0];
+			txt = def.label || def.model;
+			if (cfg.models.length > 1)
+				txt += ' (+' + (cfg.models.length - 1) + ' more)';
+		}
 		if (cfg.loginRequired && !cfg.loggedIn)
 			txt += (txt ? ' - ' : '') + 'Needs Login';
 		return txt;

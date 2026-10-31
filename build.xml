@@ -20,6 +20,8 @@
 	<path id="project.class.path">
 		<fileset dir="lib"              includes="*.jar"/>
 		<fileset dir="lib/jetty"        includes="*.jar"/>
+		<fileset dir="lib/llm-gcp"      includes="*.jar"/>
+		<fileset dir="lib/llm-aws"      includes="*.jar"/>
 		<fileset dir="lib/jdbc_drivers" includes="jconn4.jar"/>
 		<fileset dir="lib/jdbc_drivers" includes="mssql-jdbc-13.6.0.jre11.jar"/>
 <!--
@@ -195,6 +197,14 @@
 
 		<copy todir="${dist}/lib/jetty">
 			<fileset dir="lib/jetty"/>
+		</copy>
+
+		<!-- DbxCentral LLM Optimization Advice: Google Cloud and Amazon Bedrock credentials (see LlmClientVertex, LlmClientBedrock) -->
+		<copy todir="${dist}/lib/llm-gcp">
+			<fileset dir="lib/llm-gcp"/>
+		</copy>
+		<copy todir="${dist}/lib/llm-aws">
+			<fileset dir="lib/llm-aws"/>
 		</copy>
 
 		<copy todir="${dist}/lib/jdbc_drivers">
