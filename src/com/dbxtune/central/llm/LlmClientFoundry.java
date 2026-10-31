@@ -86,32 +86,54 @@ extends LlmClientAbstract
 	}
 
 	@Override
-	public LlmOptimizeResponse optimize(LlmOptimizeRequest request, LlmModelEntry model) throws Exception
+	public LlmOptimizeResponse optimize(LlmOptimizeRequest request, LlmModelEntry model, LlmProgress progress) throws Exception
 	{
 		checkModelEntry(model);
 		String prompt = buildPrompt(request);
 
-		ObjectNode body = buildMessagesBody(model.getModelId(), model.getMaxTokens(), prompt);
-		applyExtraBody(body, model);
+		// Streamed (the default): progress while we wait. The thinking summary only for a model seen thinking, and
+		// sent again without it if the model does not take it (see askThinkingSummary(), isThinkingSummaryRejected()).
+		boolean askThinkingSummary = askThinkingSummary(model);
+		while (true)
+		{
+			ObjectNode body = buildMessagesBody(model.getModelId(), model.getMaxTokens(), prompt);
+			if (askThinkingSummary)
+				body.putObject("thinking").put("type", "adaptive").put("display", "summarized");
+			applyExtraBody(body, model);
+			if (model.isStream())
+				body.put("stream", true);
 
-		HttpRequest.Builder builder = HttpRequest.newBuilder()
-				.uri(URI.create(getUrl("https://" + cfg(key("resource")) + ".services.ai.azure.com/anthropic") + "/v1/messages"))
-				.header("anthropic-version", LlmClientClaude.ANTHROPIC_VERSION)
-				.header("content-type", "application/json")
-				.POST(HttpRequest.BodyPublishers.ofString(new ObjectMapper().writeValueAsString(body), StandardCharsets.UTF_8));
-		if (StringUtil.hasValue(getApiKey()))
-			builder.header("api-key", getApiKey());
-		else
-			builder.header("Authorization", "Bearer " + getEntraToken());
-		applyExtraHeaders(builder, model);
+			HttpRequest.Builder builder = HttpRequest.newBuilder()
+					.timeout(model.getTimeout())
+					.uri(URI.create(getUrl("https://" + cfg(key("resource")) + ".services.ai.azure.com/anthropic") + "/v1/messages"))
+					.header("anthropic-version", LlmClientClaude.ANTHROPIC_VERSION)
+					.header("content-type", "application/json")
+					.POST(HttpRequest.BodyPublishers.ofString(new ObjectMapper().writeValueAsString(body), StandardCharsets.UTF_8));
+			if (StringUtil.hasValue(getApiKey()))
+				builder.header("api-key", getApiKey());
+			else
+				builder.header("Authorization", "Bearer " + getEntraToken());
+			applyExtraHeaders(builder, model);
 
-		HttpResponse<String> httpResponse = _httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-		String rawResponse = httpResponse.body();
+			if ( ! model.isStream() )
+			{
+				// Not streamed: wait for the whole answer, at most 'timeout' in total, and stop the call when nobody waits any more
+				HttpResponse<String> httpResponse = sendAndWait(builder.build(), model, progress);
+				if (httpResponse.statusCode() != 200)
+					throw new Exception("Microsoft Foundry returned HTTP " + httpResponse.statusCode() + ": " + httpResponse.body());
+				return parseMessagesResponse(httpResponse.body(), prompt, model);
+			}
 
-		if (httpResponse.statusCode() != 200)
-			throw new Exception("Microsoft Foundry returned HTTP " + httpResponse.statusCode() + ": " + rawResponse);
-
-		return parseMessagesResponse(rawResponse, prompt, model);
+			StreamedAnswer answer = sendMessagesStream(builder.build(), model, progress);
+			if (askThinkingSummary && isThinkingSummaryRejected(answer.statusCode, answer.body, model))
+			{
+				askThinkingSummary = false;
+				continue;
+			}
+			if (answer.statusCode != 200)
+				throw new Exception("Microsoft Foundry returned HTTP " + answer.statusCode + ": " + answer.body);
+			return parseMessagesResponse(answer.body, prompt, model);
+		}
 	}
 
 	/** A setting, or the environment variable when the setting is not there. */

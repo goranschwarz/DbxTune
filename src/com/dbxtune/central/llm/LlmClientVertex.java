@@ -93,7 +93,7 @@ extends LlmClientAbstract
 	}
 
 	@Override
-	public LlmOptimizeResponse optimize(LlmOptimizeRequest request, LlmModelEntry model) throws Exception
+	public LlmOptimizeResponse optimize(LlmOptimizeRequest request, LlmModelEntry model, LlmProgress progress) throws Exception
 	{
 		checkModelEntry(model);
 		String prompt = buildPrompt(request);
@@ -109,52 +109,82 @@ extends LlmClientAbstract
 		                  : ("us".equals(region) || "eu".equals(region)) ? "https://aiplatform." + region + ".rep.googleapis.com"
 		                  : "https://" + region + "-aiplatform.googleapis.com";
 
-		ObjectNode body;
-		String     url;
-		boolean    anthropicManaged = false;
-		if (FORMAT_ANTHROPIC.equals(format) && StringUtil.hasValue(workspace))
+		// Streamed (the default): progress while we wait, and the model's thinking - Claude: the thinking summary only for a
+		// model seen thinking (askThinkingSummary()); Gemini: its thought summaries (askGeminiThoughts()). Sent again without
+		// asking for it if the model does not take it (isThinkingSummaryRejected()).
+		boolean stream             = model.isStream();
+		boolean askThinkingSummary = FORMAT_ANTHROPIC.equals(format) ? askThinkingSummary(model) : askGeminiThoughts(model);
+		while (true)
 		{
-			// "Claude Models on Google Cloud (Anthropic managed)": the plain Claude API, under the project's workspace
-			anthropicManaged = true;
-			body = buildMessagesBody(modelId, model.getMaxTokens(), prompt);
-			url  = getUrl("https://claude.googleapis.com") + "/v1/projects/" + projectId + "/locations/global/workspaces/" + workspace + "/invoke/v1/messages";
-		}
-		else if (FORMAT_ANTHROPIC.equals(format))
-		{
-			// Vertex AI (Google managed): the model is in the URL, the API version in the body
-			body = buildMessagesBody(null, model.getMaxTokens(), prompt);
-			body.put("anthropic_version", VERTEX_ANTHROPIC_VERSION);
-			url  = getUrl(vertexHost) + "/v1/projects/" + projectId + "/locations/" + region + "/publishers/anthropic/models/" + modelId + ":rawPredict";
-		}
-		else if (FORMAT_GEMINI.equals(format))
-		{
-			body = buildGenerateContentBody(prompt);
-			url  = getUrl(vertexHost) + "/v1/projects/" + projectId + "/locations/" + region + "/publishers/google/models/" + modelId + ":generateContent";
-		}
-		else
-		{
-			throw new Exception("Unknown 'format' '" + format + "' for model '" + model.getName() + "' of LLM provider '" + getProviderId() + "'. Use '" + FORMAT_ANTHROPIC + "' or '" + FORMAT_GEMINI + "'.");
-		}
-		applyExtraBody(body, model);
+			ObjectNode body;
+			String     url;
+			boolean    anthropicManaged = false;
+			if (FORMAT_ANTHROPIC.equals(format) && StringUtil.hasValue(workspace))
+			{
+				// "Claude Models on Google Cloud (Anthropic managed)": the plain Claude API, under the project's workspace
+				anthropicManaged = true;
+				body = buildMessagesBody(modelId, model.getMaxTokens(), prompt);
+				url  = getUrl("https://claude.googleapis.com") + "/v1/projects/" + projectId + "/locations/global/workspaces/" + workspace + "/invoke/v1/messages";
+			}
+			else if (FORMAT_ANTHROPIC.equals(format))
+			{
+				// Vertex AI (Google managed): the model is in the URL, the API version in the body; streamed: ':streamRawPredict'
+				body = buildMessagesBody(null, model.getMaxTokens(), prompt);
+				body.put("anthropic_version", VERTEX_ANTHROPIC_VERSION);
+				url  = getUrl(vertexHost) + "/v1/projects/" + projectId + "/locations/" + region + "/publishers/anthropic/models/" + modelId + (stream ? ":streamRawPredict" : ":rawPredict");
+			}
+			else if (FORMAT_GEMINI.equals(format))
+			{
+				body = buildGenerateContentBody(prompt);
+				url  = getUrl(vertexHost) + "/v1/projects/" + projectId + "/locations/" + region + "/publishers/google/models/" + modelId + (stream ? ":streamGenerateContent?alt=sse" : ":generateContent");
+			}
+			else
+			{
+				throw new Exception("Unknown 'format' '" + format + "' for model '" + model.getName() + "' of LLM provider '" + getProviderId() + "'. Use '" + FORMAT_ANTHROPIC + "' or '" + FORMAT_GEMINI + "'.");
+			}
+			if (askThinkingSummary && FORMAT_ANTHROPIC.equals(format))
+				body.putObject("thinking").put("type", "adaptive").put("display", "summarized");
+			if (askThinkingSummary && FORMAT_GEMINI.equals(format))
+				body.putObject("generationConfig").putObject("thinkingConfig").put("includeThoughts", true);
+			applyExtraBody(body, model);
+			if (stream && FORMAT_ANTHROPIC.equals(format))
+				body.put("stream", true); // (Gemini: the URL says it)
 
-		HttpRequest.Builder builder = HttpRequest.newBuilder()
-				.uri(URI.create(url))
-				.header("Authorization", "Bearer " + getAccessToken())
-				.header("Content-Type", "application/json")
-				.POST(HttpRequest.BodyPublishers.ofString(new ObjectMapper().writeValueAsString(body), StandardCharsets.UTF_8));
-		if (anthropicManaged)
-			builder.header("anthropic-version", LlmClientClaude.ANTHROPIC_VERSION);
-		applyExtraHeaders(builder, model);
+			HttpRequest.Builder builder = HttpRequest.newBuilder()
+					.timeout(model.getTimeout())
+					.uri(URI.create(url))
+					.header("Authorization", "Bearer " + getAccessToken())
+					.header("Content-Type", "application/json")
+					.POST(HttpRequest.BodyPublishers.ofString(new ObjectMapper().writeValueAsString(body), StandardCharsets.UTF_8));
+			if (anthropicManaged)
+				builder.header("anthropic-version", LlmClientClaude.ANTHROPIC_VERSION);
+			applyExtraHeaders(builder, model);
 
-		HttpResponse<String> httpResponse = _httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-		String rawResponse = httpResponse.body();
+			if ( ! stream )
+			{
+				// Not streamed: wait for the whole answer, at most 'timeout' in total, and stop the call when nobody waits any more
+				HttpResponse<String> httpResponse = sendAndWait(builder.build(), model, progress);
+				if (httpResponse.statusCode() != 200)
+					throw new Exception("Google Cloud returned HTTP " + httpResponse.statusCode() + " for " + url + ": " + httpResponse.body());
+				return FORMAT_ANTHROPIC.equals(format)
+						? parseMessagesResponse(httpResponse.body(), prompt, model)
+						: parseGenerateContentResponse(httpResponse.body(), prompt, model);
+			}
 
-		if (httpResponse.statusCode() != 200)
-			throw new Exception("Google Cloud returned HTTP " + httpResponse.statusCode() + " for " + url + ": " + rawResponse);
-
-		return FORMAT_ANTHROPIC.equals(format)
-				? parseMessagesResponse(rawResponse, prompt, model)
-				: parseGenerateContentResponse(rawResponse, prompt, model);
+			StreamedAnswer answer = FORMAT_ANTHROPIC.equals(format)
+					? sendMessagesStream       (builder.build(), model, progress)
+					: sendGenerateContentStream(builder.build(), model, progress);
+			if (askThinkingSummary && isThinkingSummaryRejected(answer.statusCode, answer.body, model))
+			{
+				askThinkingSummary = false;
+				continue;
+			}
+			if (answer.statusCode != 200)
+				throw new Exception("Google Cloud returned HTTP " + answer.statusCode + " for " + url + ": " + answer.body);
+			return FORMAT_ANTHROPIC.equals(format)
+					? parseMessagesResponse       (answer.body, prompt, model)
+					: parseGenerateContentResponse(answer.body, prompt, model);
+		}
 	}
 
 	/**

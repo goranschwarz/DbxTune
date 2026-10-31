@@ -83,6 +83,9 @@ public class LlmOptimizeRequest
 	// into an LLM chat UI by hand wants a normal readable answer, not raw JSON.
 	private boolean preview;
 
+	// The browser wants progress while it waits: the answer then comes as Server-Sent Events (LlmSqlOptimizeServlet)
+	private boolean progress;
+
 	public LlmOptimizeRequest()
 	{
 	}
@@ -106,6 +109,7 @@ public class LlmOptimizeRequest
 	public String  getSrvName()         { return srvName; }
 	public String  getOrigin()          { return origin; }
 	public boolean isPreview()          { return preview; }
+	public boolean isProgress()         { return progress; }
 
 	public void setSql            (String sql)             { this.sql             = sql; }
 	public void setDdlContext     (String ddlContext)      { this.ddlContext      = ddlContext; }
@@ -118,4 +122,5 @@ public class LlmOptimizeRequest
 	public void setSrvName        (String srvName)         { this.srvName         = srvName; }
 	public void setOrigin         (String origin)          { this.origin          = origin; }
 	public void setPreview        (boolean preview)        { this.preview         = preview; }
+	public void setProgress       (boolean progress)       { this.progress        = progress; }
 }

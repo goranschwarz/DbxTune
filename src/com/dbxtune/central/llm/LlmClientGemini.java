@@ -56,27 +56,47 @@ extends LlmClientAbstract
 	@Override protected String getDefaultModel()       { return DEFAULT_MODEL; }
 
 	@Override
-	public LlmOptimizeResponse optimize(LlmOptimizeRequest request, LlmModelEntry model) throws Exception
+	public LlmOptimizeResponse optimize(LlmOptimizeRequest request, LlmModelEntry model, LlmProgress progress) throws Exception
 	{
 		checkModelEntry(model);
 		String prompt = buildPrompt(request);
 
-		ObjectNode body = buildGenerateContentBody(prompt);
-		applyExtraBody(body, model);
+		// Streamed (the default): progress while we wait, and the model's thought summaries; sent again without asking for
+		// them if the model does not take it (see askGeminiThoughts(), isThinkingSummaryRejected())
+		boolean askThoughts = askGeminiThoughts(model);
+		while (true)
+		{
+			ObjectNode body = buildGenerateContentBody(prompt);
+			if (askThoughts)
+				body.putObject("generationConfig").putObject("thinkingConfig").put("includeThoughts", true);
+			applyExtraBody(body, model);
 
-		HttpRequest.Builder builder = HttpRequest.newBuilder()
-				.uri(URI.create(getUrl(DEFAULT_URL) + "/models/" + model.getModelId() + ":generateContent"))
-				.header("x-goog-api-key", getApiKey())
-				.header("Content-Type", "application/json")
-				.POST(HttpRequest.BodyPublishers.ofString(new ObjectMapper().writeValueAsString(body), StandardCharsets.UTF_8));
-		applyExtraHeaders(builder, model);
+			HttpRequest.Builder builder = HttpRequest.newBuilder()
+					.timeout(model.getTimeout())
+					.uri(URI.create(getUrl(DEFAULT_URL) + "/models/" + model.getModelId() + (model.isStream() ? ":streamGenerateContent?alt=sse" : ":generateContent")))
+					.header("x-goog-api-key", getApiKey())
+					.header("Content-Type", "application/json")
+					.POST(HttpRequest.BodyPublishers.ofString(new ObjectMapper().writeValueAsString(body), StandardCharsets.UTF_8));
+			applyExtraHeaders(builder, model);
 
-		HttpResponse<String> httpResponse = _httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-		String rawResponse = httpResponse.body();
+			if ( ! model.isStream() )
+			{
+				// Not streamed: wait for the whole answer, at most 'timeout' in total, and stop the call when nobody waits any more
+				HttpResponse<String> httpResponse = sendAndWait(builder.build(), model, progress);
+				if (httpResponse.statusCode() != 200)
+					throw new Exception("Gemini API returned HTTP " + httpResponse.statusCode() + ": " + httpResponse.body());
+				return parseGenerateContentResponse(httpResponse.body(), prompt, model);
+			}
 
-		if (httpResponse.statusCode() != 200)
-			throw new Exception("Gemini API returned HTTP " + httpResponse.statusCode() + ": " + rawResponse);
-
-		return parseGenerateContentResponse(rawResponse, prompt, model);
+			StreamedAnswer answer = sendGenerateContentStream(builder.build(), model, progress);
+			if (askThoughts && isThinkingSummaryRejected(answer.statusCode, answer.body, model))
+			{
+				askThoughts = false;
+				continue;
+			}
+			if (answer.statusCode != 200)
+				throw new Exception("Gemini API returned HTTP " + answer.statusCode + ": " + answer.body);
+			return parseGenerateContentResponse(answer.body, prompt, model);
+		}
 	}
 }

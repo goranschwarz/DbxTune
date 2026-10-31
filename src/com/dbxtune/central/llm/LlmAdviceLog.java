@@ -229,7 +229,7 @@ public class LlmAdviceLog
 
 	/**
 	 * The saved page. The values that {@code dbxLlmAdvice.renderSavedRequest()} reads back live in fixed
-	 * element ids: {@code dbx-llm-sql}, {@code dbx-llm-optimized-sql}, {@code dbx-llm-explanation},
+	 * element ids: {@code dbx-llm-sql}, {@code dbx-llm-optimized-sql}, {@code dbx-llm-explanation}, {@code dbx-llm-thinking},
 	 * {@code dbx-llm-error}, {@code dbx-llm-prompt}, inside {@code dbx-llm-advice}.
 	 */
 	static String createHtml(Map<String, Object> meta, LlmOptimizeRequest llmRequest, LlmOptimizeResponse llmResponse, Exception ex, String promptSent)
@@ -324,6 +324,12 @@ public class LlmAdviceLog
 			{
 				sb.append("<details open>\n<summary><b>Explanation</b></summary>\n");
 				sb.append("<div id=\"dbx-llm-explanation\" class=\"dbx-llm-text\">").append(esc(llmResponse.getExplanation())).append("</div>\n");
+				sb.append("</details>\n");
+			}
+			if (StringUtil.hasValue(llmResponse.getThinkingSummary()))
+			{
+				sb.append("<details>\n<summary><b>LLM's Thinking Process</b> (a summary, by the LLM)</summary>\n");
+				sb.append("<div id=\"dbx-llm-thinking\" class=\"dbx-llm-text\">").append(esc(llmResponse.getThinkingSummary())).append("</div>\n");
 				sb.append("</details>\n");
 			}
 		}

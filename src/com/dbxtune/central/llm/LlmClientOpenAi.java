@@ -70,7 +70,7 @@ extends LlmClientAbstract
 	}
 
 	@Override
-	public LlmOptimizeResponse optimize(LlmOptimizeRequest request, LlmModelEntry model) throws Exception
+	public LlmOptimizeResponse optimize(LlmOptimizeRequest request, LlmModelEntry model, LlmProgress progress) throws Exception
 	{
 		checkModelEntry(model);
 		String prompt = buildPrompt(request);
@@ -90,6 +90,7 @@ extends LlmClientAbstract
 		applyExtraBody(body, model);
 
 		HttpRequest.Builder builder = HttpRequest.newBuilder()
+				.timeout(model.getTimeout())
 				.uri(URI.create(getUrl(DEFAULT_URL) + "/chat/completions"))
 				.header("Content-Type", "application/json")
 				.POST(HttpRequest.BodyPublishers.ofString(om.writeValueAsString(body), StandardCharsets.UTF_8));
@@ -100,7 +101,8 @@ extends LlmClientAbstract
 		}
 		applyExtraHeaders(builder, model);
 
-		HttpResponse<String> httpResponse = _httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+		// Not streamed: wait for the whole answer, at most 'timeout' in total, and stop the call when nobody waits any more
+		HttpResponse<String> httpResponse = sendAndWait(builder.build(), model, progress);
 		String rawResponse = httpResponse.body();
 
 		if (httpResponse.statusCode() != 200)

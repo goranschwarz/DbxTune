@@ -102,7 +102,7 @@ extends LlmClientAbstract
 	}
 
 	@Override
-	public LlmOptimizeResponse optimize(LlmOptimizeRequest request, LlmModelEntry model) throws Exception
+	public LlmOptimizeResponse optimize(LlmOptimizeRequest request, LlmModelEntry model, LlmProgress progress) throws Exception
 	{
 		checkModelEntry(model);
 		String prompt = buildPrompt(request);
@@ -111,83 +111,110 @@ extends LlmClientAbstract
 		String format  = model.getFormat() != null ? model.getFormat() : (modelId.startsWith("anthropic.") ? FORMAT_MESSAGES : FORMAT_CONVERSE);
 		String region  = cfg(key("region"));
 
-		ObjectNode body;
-		String     url;
-		String     signingName;
-		Map<String, String> headers = new LinkedHashMap<>();
-		headers.put("Content-Type", "application/json");
-		if (FORMAT_MESSAGES.equals(format))
+		// The Messages format (anthropic.*) is streamed (the default): progress while we wait. The thinking summary only for a
+		// model seen thinking, and sent again without it if the model does not take it (see askThinkingSummary(),
+		// isThinkingSummaryRejected()). The Converse format is not streamed (for now).
+		boolean stream             = FORMAT_MESSAGES.equals(format) && model.isStream();
+		boolean askThinkingSummary = FORMAT_MESSAGES.equals(format) && askThinkingSummary(model);
+		while (true)
 		{
-			body        = buildMessagesBody(modelId, model.getMaxTokens(), prompt);
-			url         = getUrl("https://bedrock-mantle." + region + ".api.aws") + "/anthropic/v1/messages";
-			signingName = "bedrock-mantle";
-			headers.put("anthropic-version", LlmClientClaude.ANTHROPIC_VERSION);
-		}
-		else if (FORMAT_CONVERSE.equals(format))
-		{
-			body = new ObjectMapper().createObjectNode();
-			ObjectNode userMsg = body.putArray("messages").addObject();
-			userMsg.put("role", "user");
-			userMsg.putArray("content").addObject().put("text", prompt);
-			body.putObject("inferenceConfig").put("maxTokens", model.getMaxTokens());
-
-			// The model id goes in the path: an ARN or a 'model:version' id has ':' and '/' that must be encoded
-			url         = getUrl("https://bedrock-runtime." + region + ".amazonaws.com") + "/model/" + URLEncoder.encode(modelId, StandardCharsets.UTF_8) + "/converse";
-			signingName = "bedrock";
-		}
-		else
-		{
-			throw new Exception("Unknown 'format' '" + format + "' for model '" + model.getName() + "' of LLM provider '" + getProviderId() + "'. Use '" + FORMAT_MESSAGES + "' or '" + FORMAT_CONVERSE + "'.");
-		}
-		applyExtraBody(body, model);
-		headers.putAll(model.getExtraHeaders()); // before signing: a signed request must not get headers changed afterwards
-
-		byte[] bodyBytes = new ObjectMapper().writeValueAsBytes(body);
-
-		String apiKey = getApiKey();
-		if (StringUtil.hasValue(apiKey))
-		{
+			ObjectNode body;
+			String     url;
+			String     signingName;
+			Map<String, String> headers = new LinkedHashMap<>();
+			headers.put("Content-Type", "application/json");
 			if (FORMAT_MESSAGES.equals(format))
-				headers.put("x-api-key", apiKey);
+			{
+				body        = buildMessagesBody(modelId, model.getMaxTokens(), prompt);
+				url         = getUrl("https://bedrock-mantle." + region + ".api.aws") + "/anthropic/v1/messages";
+				signingName = "bedrock-mantle";
+				headers.put("anthropic-version", LlmClientClaude.ANTHROPIC_VERSION);
+			}
+			else if (FORMAT_CONVERSE.equals(format))
+			{
+				body = new ObjectMapper().createObjectNode();
+				ObjectNode userMsg = body.putArray("messages").addObject();
+				userMsg.put("role", "user");
+				userMsg.putArray("content").addObject().put("text", prompt);
+				body.putObject("inferenceConfig").put("maxTokens", model.getMaxTokens());
+
+				// The model id goes in the path: an ARN or a 'model:version' id has ':' and '/' that must be encoded
+				url         = getUrl("https://bedrock-runtime." + region + ".amazonaws.com") + "/model/" + URLEncoder.encode(modelId, StandardCharsets.UTF_8) + "/converse";
+				signingName = "bedrock";
+			}
 			else
-				headers.put("Authorization", "Bearer " + apiKey);
+			{
+				throw new Exception("Unknown 'format' '" + format + "' for model '" + model.getName() + "' of LLM provider '" + getProviderId() + "'. Use '" + FORMAT_MESSAGES + "' or '" + FORMAT_CONVERSE + "'.");
+			}
+			if (askThinkingSummary)
+				body.putObject("thinking").put("type", "adaptive").put("display", "summarized");
+			applyExtraBody(body, model);
+			if (stream)
+				body.put("stream", true); // before signing: the signature covers the body bytes
+			headers.putAll(model.getExtraHeaders()); // before signing: a signed request must not get headers changed afterwards
+
+			byte[] bodyBytes = new ObjectMapper().writeValueAsBytes(body);
+
+			String apiKey = getApiKey();
+			if (StringUtil.hasValue(apiKey))
+			{
+				if (FORMAT_MESSAGES.equals(format))
+					headers.put("x-api-key", apiKey);
+				else
+					headers.put("Authorization", "Bearer " + apiKey);
+			}
+			else
+			{
+				headers = signRequest(url, headers, bodyBytes, signingName, region);
+			}
+
+			HttpRequest.Builder builder = HttpRequest.newBuilder()
+					.timeout(model.getTimeout())
+					.uri(URI.create(url))
+					.POST(HttpRequest.BodyPublishers.ofByteArray(bodyBytes));
+			for (Map.Entry<String, String> e : headers.entrySet())
+			{
+				// Set by the Java HTTP client itself (and not allowed to set): the same values as signed
+				if ( ! "host".equalsIgnoreCase(e.getKey()) && ! "content-length".equalsIgnoreCase(e.getKey()) )
+					builder.setHeader(e.getKey(), e.getValue());
+			}
+
+			if ( ! stream )
+			{
+				// Not streamed: wait for the whole answer, at most 'timeout' in total, and stop the call when nobody waits any more
+				HttpResponse<String> httpResponse = sendAndWait(builder.build(), model, progress);
+				String rawResponse = httpResponse.body();
+
+				if (httpResponse.statusCode() != 200)
+					throw new Exception("Amazon Bedrock returned HTTP " + httpResponse.statusCode() + " for " + url + ": " + rawResponse);
+
+				if (FORMAT_MESSAGES.equals(format))
+					return parseMessagesResponse(rawResponse, prompt, model);
+
+				// Converse: the text blocks of the answer (a reasoning block, if any, is skipped)
+				JsonNode root = new ObjectMapper().readTree(rawResponse);
+				StringBuilder answerText = new StringBuilder();
+				for (JsonNode block : root.path("output").path("message").path("content"))
+				{
+					if (block.has("text"))
+						answerText.append(block.path("text").asText(""));
+				}
+				LlmOptimizeResponse response = parseModelAnswer(answerText.toString(), rawResponse, prompt, model);
+				response.setInputTokens (intOrNull(root.path("usage").path("inputTokens")));
+				response.setOutputTokens(intOrNull(root.path("usage").path("outputTokens")));
+				return response;
+			}
+
+			StreamedAnswer answer = sendMessagesStream(builder.build(), model, progress);
+			if (askThinkingSummary && isThinkingSummaryRejected(answer.statusCode, answer.body, model))
+			{
+				askThinkingSummary = false;
+				continue;
+			}
+			if (answer.statusCode != 200)
+				throw new Exception("Amazon Bedrock returned HTTP " + answer.statusCode + " for " + url + ": " + answer.body);
+			return parseMessagesResponse(answer.body, prompt, model);
 		}
-		else
-		{
-			headers = signRequest(url, headers, bodyBytes, signingName, region);
-		}
-
-		HttpRequest.Builder builder = HttpRequest.newBuilder()
-				.uri(URI.create(url))
-				.POST(HttpRequest.BodyPublishers.ofByteArray(bodyBytes));
-		for (Map.Entry<String, String> e : headers.entrySet())
-		{
-			// Set by the Java HTTP client itself (and not allowed to set): the same values as signed
-			if ( ! "host".equalsIgnoreCase(e.getKey()) && ! "content-length".equalsIgnoreCase(e.getKey()) )
-				builder.setHeader(e.getKey(), e.getValue());
-		}
-
-		HttpResponse<String> httpResponse = _httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-		String rawResponse = httpResponse.body();
-
-		if (httpResponse.statusCode() != 200)
-			throw new Exception("Amazon Bedrock returned HTTP " + httpResponse.statusCode() + " for " + url + ": " + rawResponse);
-
-		if (FORMAT_MESSAGES.equals(format))
-			return parseMessagesResponse(rawResponse, prompt, model);
-
-		// Converse: the text blocks of the answer (a reasoning block, if any, is skipped)
-		JsonNode root = new ObjectMapper().readTree(rawResponse);
-		StringBuilder answerText = new StringBuilder();
-		for (JsonNode block : root.path("output").path("message").path("content"))
-		{
-			if (block.has("text"))
-				answerText.append(block.path("text").asText(""));
-		}
-		LlmOptimizeResponse response = parseModelAnswer(answerText.toString(), rawResponse, prompt, model);
-		response.setInputTokens (intOrNull(root.path("usage").path("inputTokens")));
-		response.setOutputTokens(intOrNull(root.path("usage").path("outputTokens")));
-		return response;
 	}
 
 	/**

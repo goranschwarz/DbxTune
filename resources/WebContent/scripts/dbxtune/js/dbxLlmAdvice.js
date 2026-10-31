@@ -102,6 +102,19 @@ var dbxLlmAdvice = (function () {
 			'.dbx-llm-close { cursor:pointer; background:none; border:none; color:#fff; font-size:1.3rem; line-height:1; }' +
 			'.dbx-llm-body { padding:16px; font-family:Arial, Helvetica, sans-serif; }' +
 			'.dbx-llm-status { color:#495057; margin-bottom:10px; font-family:Arial, Helvetica, sans-serif; }' +
+			// What the model is doing, after the clock: one line, cut with "..." (the whole text is in the tooltip)
+			// (a margin, not a space in the text: an inline-block drops its leading space; italic: this part is the model, and it changes)
+			'.dbx-llm-progress { display:inline-block; max-width:min(110ch, 70vw); margin-left:0.4em; vertical-align:bottom; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#6c757d; font-style:italic; }' +
+			'.dbx-llm-progress:empty { display:none; }' +
+			'.dbx-llm-progress-sep { font-style:normal; margin-right:0.4em; }' +
+			// The Stop button after the clock, and the model's thinking while it works: a small box that scrolls (about 6 lines)
+			'.dbx-llm-stop-btn { margin-left:10px; font-size:0.75rem; padding:0 10px; cursor:pointer; border:1px solid #ced4da; border-radius:3px; background:#fff; color:#495057; }' +
+			'.dbx-llm-stop-btn:hover { background:#f8d7da; border-color:#f1aeb5; color:#842029; }' +
+			// (resizable: drag the bottom right corner; a fixed height to start with, as 'resize' can not go past a max-height)
+			'.dbx-llm-thinking-live { height:9em; min-height:3em; resize:vertical; overflow:auto; margin:-4px 0 10px 0; padding:4px 10px; border-left:3px solid #ced4da; background:#f8f9fa;' +
+			'  font-family:Arial, Helvetica, sans-serif; font-size:0.85rem; line-height:1.45; color:#495057; }' +
+			'.dbx-llm-thinking-live ul { margin:0; padding-left:18px; }' +
+			'.dbx-llm-thinking-live li { margin-bottom:3px; }' +
 			'.dbx-llm-spinner { display:inline-block; width:16px; height:16px; border:2px solid #ccc;' +
 			'  border-top-color:#454545; border-radius:50%; animation:dbx-llm-spin 0.8s linear infinite; margin-right:8px; vertical-align:middle; }' +
 			'@keyframes dbx-llm-spin { to { transform:rotate(360deg); } }' +
@@ -195,6 +208,9 @@ var dbxLlmAdvice = (function () {
 			'  --d2h-change-label-color:var(--d2h-dark-change-label-color); --d2h-moved-label-color:var(--d2h-dark-moved-label-color); }' +
 			'html.dbx-sp-dark .dbx-llm-size-btn, html[data-theme="dark"] .dbx-llm-size-btn { border-color:#555c63; background:#2b3035; color:#dee2e6; }' +
 			'html.dbx-sp-dark .dbx-llm-size-btn:hover, html[data-theme="dark"] .dbx-llm-size-btn:hover { background:#343a40; }' +
+			'html.dbx-sp-dark .dbx-llm-stop-btn, html[data-theme="dark"] .dbx-llm-stop-btn { border-color:#555c63; background:#2b3035; color:#dee2e6; }' +
+			'html.dbx-sp-dark .dbx-llm-stop-btn:hover, html[data-theme="dark"] .dbx-llm-stop-btn:hover { background:#4a1c1f; border-color:#842029; color:#f1aeb5; }' +
+			'html.dbx-sp-dark .dbx-llm-thinking-live, html[data-theme="dark"] .dbx-llm-thinking-live { background:#2b3035; border-left-color:#555c63; color:#ced4da; }' +
 			'html.dbx-sp-dark .dbx-llm-title-note, html[data-theme="dark"] .dbx-llm-title-note { color:#adb5bd; }' +
 			'.dbx-llm-version { font-family:Arial, Helvetica, sans-serif; font-size:0.85rem; color:#495057; margin-top:8px; word-break:break-word; }' +
 			'.dbx-llm-saved-note { font-family:Arial, Helvetica, sans-serif; font-size:0.85rem; line-height:1.6; color:#084298; background:#e7f1ff; border:1px solid #b6d4fe; border-radius:4px; padding:6px 10px; margin:0 0 10px 0; }' +
@@ -216,6 +232,7 @@ var dbxLlmAdvice = (function () {
 			'html.dbx-sp-dark .dbx-llm-header, html[data-theme="dark"] .dbx-llm-header { background:#343a40; }' +
 			'html.dbx-sp-dark .dbx-llm-status, html[data-theme="dark"] .dbx-llm-status, html.dbx-sp-dark .dbx-llm-sent-field-label, html[data-theme="dark"] .dbx-llm-sent-field-label, html.dbx-sp-dark .dbx-llm-version, html[data-theme="dark"] .dbx-llm-version { color:#adb5bd; }' +
 			'html.dbx-sp-dark .dbx-llm-spinner, html[data-theme="dark"] .dbx-llm-spinner { border-color:#555c63; border-top-color:#dee2e6; }' +
+			'html.dbx-sp-dark .dbx-llm-progress, html[data-theme="dark"] .dbx-llm-progress { color:#adb5bd; }' +
 			'html.dbx-sp-dark .dbx-llm-pre, html[data-theme="dark"] .dbx-llm-pre { background:#1a1d21; color:#e9ecef; border-left-color:#3d8bfd; }' +
 			'html.dbx-sp-dark .dbx-llm-prose, html[data-theme="dark"] .dbx-llm-prose { background:#1c2025; color:#e9ecef; border-left-color:#6c757d; }' +
 			'html.dbx-sp-dark .dbx-llm-prose code, html[data-theme="dark"] .dbx-llm-prose code { background:#343a40; color:#e9ecef; }' +
@@ -665,6 +682,38 @@ var dbxLlmAdvice = (function () {
 		{
 			host.innerHTML = '<div class="dbx-llm-status">The diff can not be shown: ' + escapeHtml(err.message) + '</div>';
 		});
+	}
+
+	/**
+	 * The model's thinking summary as paragraphs (split at blank lines), a heading-only paragraph ('**Checking the joins**')
+	 * joined with the one after it - the same as the server's LlmClientAbstract.thinkingParagraphs() does while streaming.
+	 */
+	function thinkingParagraphs(text)
+	{
+		var result  = [];
+		var heading = null;
+		String(text).split(/\n\s*\n/).forEach(function (p)
+		{
+			p = p.trim();
+			if (!p)
+				return;
+			if (/^\*\*[^*]+\*\*$/.test(p) && heading === null)
+			{
+				heading = p;
+				return;
+			}
+			result.push(heading !== null ? heading + '\n' + p : p);
+			heading = null;
+		});
+		if (heading !== null)
+			result.push(heading);
+		return result;
+	}
+
+	/** One paragraph of the thinking as HTML: inline Markdown (**bold**, `code`), line breaks kept */
+	function thinkingHtml(text)
+	{
+		return inlineMarkdown(escapeHtml(text)).replace(/\n/g, '<br>');
 	}
 
 	/** Apply inline Markdown (**bold**, `code`) to already-HTML-escaped text. */
@@ -1211,6 +1260,13 @@ var dbxLlmAdvice = (function () {
 			html += '<details class="dbx-llm-section-details" open><summary class="dbx-llm-section-title">Explanation</summary>';
 			html += '<div class="dbx-llm-prose">' + renderMarkdown(result.explanation) + '</div></details>';
 		}
+		// How the model got there: a summary of its thinking, when the provider sent one - one bullet per paragraph, as
+		// while it was thinking (folded: it can be long)
+		if (result.thinkingSummary)
+		{
+			html += '<details class="dbx-llm-section-details"><summary class="dbx-llm-section-title">LLM\'s Thinking Process<span class="dbx-llm-title-note"> - a summary, by the LLM</span></summary>';
+			html += '<div class="dbx-llm-prose"><ul>' + thinkingParagraphs(result.thinkingSummary).map(function (p) { return '<li>' + thinkingHtml(p) + '</li>'; }).join('') + '</ul></div></details>';
+		}
 		if (!result.optimizedSql && !result.explanation)
 			html += '<div class="dbx-llm-status">The model did not return a usable answer.</div>';
 
@@ -1230,33 +1286,108 @@ var dbxLlmAdvice = (function () {
 	//--------------------------------------------------------------------------
 	function fetchJson(url, options)
 	{
+		return fetch(url, options).then(jsonFromResponse);
+	}
+
+	/**
+	 * Like fetchJson(), for /api/llm/optimize-sql with 'progress: true': the answer comes as Server-Sent Events
+	 * ('progress' while the model works, then ONE 'result' or 'error' with the same fields as the plain JSON answer).
+	 * Read with fetch, not EventSource: the request is a POST (the SQL, the plan, the DDL), which EventSource can't send.
+	 * A plain JSON answer (a check that failed before the call, or an older DbxCentral) is handled like fetchJson().
+	 * @param onProgress  called with {phase, text} for each 'progress' event
+	 * @param onThinking  called with (index, text) for each 'thinking' event: paragraph 'index' of the model's thinking, as it grows
+	 */
+	function fetchEvents(url, options, onProgress, onThinking)
+	{
 		return fetch(url, options).then(function (resp)
 		{
-			return resp.text().then(function (text)
-			{
-				var data;
-				try
-				{
-					data = text ? JSON.parse(text) : {};
-				}
-				catch (parseErr)
-				{
-					// Non-JSON response (e.g. a 404/500 from Jetty's default error page, most likely
-					// because DbxCentral hasn't been restarted yet with the endpoint registered).
-					throw new Error('Server returned a non-JSON response (HTTP ' + resp.status + '). '
-						+ 'Has DbxCentral been restarted since this feature was deployed?');
-				}
+			var contentType = resp.headers.get('Content-Type') || '';
+			if (contentType.indexOf('text/event-stream') < 0 || !resp.body || !resp.body.getReader)
+				return jsonFromResponse(resp);
 
-				if (!resp.ok)
+			var reader  = resp.body.getReader();
+			var decoder = new TextDecoder();
+			var buffer  = '';
+			var answer  = null;
+
+			// One event: 'event: <name>' and 'data: <JSON>' lines, ended by a blank line (': ping' comments are ignored)
+			function handleEvent(block)
+			{
+				var name = 'message', data = '';
+				block.split('\n').forEach(function (line)
 				{
-					var msg = (data && (data.message || data.error)) || ('HTTP ' + resp.status);
-					var httpErr = new Error(msg);
-					httpErr.responseData = data; // may carry 'promptSent' - see LlmSqlOptimizeServlet
+					if      (line.indexOf('event:') === 0) name = line.substring(6).trim();
+					else if (line.indexOf('data:')  === 0) data += line.substring(5).trim();
+				});
+				if (!data)
+					return;
+				var obj = JSON.parse(data);
+				if (name === 'progress')
+					onProgress(obj);
+				else if (name === 'thinking' && onThinking)
+					onThinking(obj.index, obj.text);
+				else if (name === 'result' || name === 'error')
+					answer = { name: name, data: obj };
+			}
+
+			function readMore()
+			{
+				return reader.read().then(function (chunk)
+				{
+					if (chunk.value)
+						buffer += decoder.decode(chunk.value, { stream: true });
+					var end;
+					while ((end = buffer.indexOf('\n\n')) >= 0)
+					{
+						handleEvent(buffer.substring(0, end));
+						buffer = buffer.substring(end + 2);
+					}
+					if (!chunk.done)
+						return readMore();
+
+					if (!answer)
+						throw new Error('The connection to DbxCentral ended before the answer arrived (a proxy time limit, or DbxCentral was restarted).');
+					if (answer.name === 'error')
+					{
+						var err = new Error(answer.data.message || answer.data.error || 'The LLM call failed.');
+						err.responseData = answer.data; // may carry 'promptSent' and 'savedUrl', as the plain JSON error
+						err.status       = answer.data.status;
+						throw err;
+					}
+					return answer.data;
+				});
+			}
+			return readMore();
+		});
+	}
+
+	/** The JSON body of a fetch() response; a non-2xx status is thrown as an Error (with 'responseData' and 'status'). */
+	function jsonFromResponse(resp)
+	{
+		return resp.text().then(function (text)
+		{
+			var data;
+			try
+			{
+				data = text ? JSON.parse(text) : {};
+			}
+			catch (parseErr)
+			{
+				// Non-JSON response (e.g. a 404/500 from Jetty's default error page, most likely
+				// because DbxCentral hasn't been restarted yet with the endpoint registered).
+				throw new Error('Server returned a non-JSON response (HTTP ' + resp.status + '). '
+					+ 'Has DbxCentral been restarted since this feature was deployed?');
+			}
+
+			if (!resp.ok)
+			{
+				var msg = (data && (data.message || data.error)) || ('HTTP ' + resp.status);
+				var httpErr = new Error(msg);
+				httpErr.responseData = data; // may carry 'promptSent' - see LlmSqlOptimizeServlet
 				httpErr.status       = resp.status;
-					throw httpErr;
-				}
-				return data;
-			});
+				throw httpErr;
+			}
+			return data;
 		});
 	}
 
@@ -1465,6 +1596,82 @@ var dbxLlmAdvice = (function () {
 	{
 		renderStatus(container, opts.preview ? 'Building prompt preview...' : 'Asking the LLM for optimization advice...');
 
+		// A clock while we wait: some models think for minutes (high/max effort, big plans). After it, what the model is
+		// doing, when the provider streams its answer ("thinking", "writing the answer"), and a Stop button. Under it, the
+		// model's thinking as a list that grows (one bullet per paragraph), when the provider sends it.
+		var started      = Date.now();
+		var clockTimer   = null;
+		var progressEl   = null;
+		var thinkingBox  = null;
+		var stoppedAfter = null; // set when the user pressed Stop
+		var abort        = window.AbortController ? new AbortController() : null;
+		function elapsed()
+		{
+			var s = Math.floor((Date.now() - started) / 1000);
+			return (s >= 60 ? Math.floor(s / 60) + 'm ' : '') + (s % 60) + 's';
+		}
+		if (!opts.preview)
+		{
+			var status = container.querySelector('.dbx-llm-status');
+			var clock  = document.createElement('span');
+			clock.className = 'dbx-llm-clock';
+			clock.textContent = ' 0s';
+			progressEl = document.createElement('span');
+			progressEl.className = 'dbx-llm-progress';
+			status.appendChild(clock);
+			status.appendChild(progressEl);
+			clockTimer = setInterval(function ()
+			{
+				if (!clock.isConnected) { clearInterval(clockTimer); return; }
+				clock.textContent = ' ' + elapsed();
+			}, 1000);
+
+			// Stop: the browser stops waiting at once; DbxCentral notices within seconds and cancels the LLM call (and its cost)
+			if (abort)
+			{
+				var stopBtn = document.createElement('button');
+				stopBtn.type        = 'button';
+				stopBtn.className   = 'dbx-llm-stop-btn';
+				stopBtn.textContent = 'Stop';
+				stopBtn.title       = 'Stop waiting for this answer - the LLM call is cancelled too';
+				stopBtn.addEventListener('click', function () { stoppedAfter = elapsed(); abort.abort(); });
+				status.appendChild(stopBtn);
+			}
+
+			thinkingBox = document.createElement('div');
+			thinkingBox.className     = 'dbx-llm-thinking-live';
+			thinkingBox.style.display = 'none'; // until the first thought arrives
+			thinkingBox.innerHTML     = '<ul></ul>';
+			container.appendChild(thinkingBox);
+		}
+		/** Paragraph 'index' of the model's thinking, created or updated (it grows); the box follows the bottom unless the user scrolled up */
+		function showThinking(index, text)
+		{
+			if (!thinkingBox || index == null)
+				return;
+			var atBottom = thinkingBox.scrollHeight - thinkingBox.scrollTop - thinkingBox.clientHeight < 8;
+			var ul = thinkingBox.querySelector('ul');
+			while (ul.children.length <= index)
+				ul.appendChild(document.createElement('li'));
+			ul.children[index].innerHTML = thinkingHtml(text);
+			thinkingBox.style.display = '';
+			if (atBottom)
+				thinkingBox.scrollTop = thinkingBox.scrollHeight;
+		}
+		function showProgress(p)
+		{
+			if (!progressEl || !p || !p.phase)
+				return;
+			// "· thinking: <sentence>" - the dot upright, the model's part in italic (see .dbx-llm-progress)
+			var sep = document.createElement('span');
+			sep.className   = 'dbx-llm-progress-sep';
+			sep.textContent = '·';
+			progressEl.textContent = '';
+			progressEl.appendChild(sep);
+			progressEl.appendChild(document.createTextNode(p.phase + (p.text ? ': ' + p.text : '')));
+			progressEl.title = p.text || '';
+		}
+
 		var body = {
 			sql:             opts.sql,
 			ddlContext:      ddlContext,
@@ -1475,24 +1682,39 @@ var dbxLlmAdvice = (function () {
 			provider:        model ? model.provider : opts.provider,
 			model:           model ? model.model    : opts.model,
 			preview:         !!opts.preview,
+			// The answer as Server-Sent Events, with progress while the model works (see fetchEvents())
+			progress:        !opts.preview,
 			// Not part of the prompt - only recorded in the saved request log (LlmAdviceLog.java)
 			srvName:         opts.srv,
 			origin:          opts.origin || window.location.pathname
 		};
 
-		return fetchJson('/api/llm/optimize-sql', {
+		var request = {
 			method:  'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body:    JSON.stringify(body)
-		})
+			body:    JSON.stringify(body),
+			signal:  abort ? abort.signal : undefined
+		};
+		return (opts.preview ? fetchJson('/api/llm/optimize-sql', request) : fetchEvents('/api/llm/optimize-sql', request, showProgress, showThinking))
 		.then(function (data)
 		{
+			clearInterval(clockTimer);
 			if (opts.preview) renderPromptPreview(container, data && data.promptSent);
 			else              renderResult(container, data, opts, ddlContext);
 			return data;
 		})
 		.catch(function (err)
 		{
+			clearInterval(clockTimer);
+
+			// Stopped by the user: say so, and keep the thinking that was already shown
+			if (stoppedAfter !== null)
+			{
+				var st = container.querySelector('.dbx-llm-status');
+				if (st)
+					st.textContent = 'Stopped by you after ' + stoppedAfter + '.';
+				return null;
+			}
 			if (opts.preview)
 			{
 				container.innerHTML = '<div class="dbx-llm-error">Failed to build prompt preview: ' + escapeHtml(err.message) + '</div>';
@@ -1611,6 +1833,7 @@ var dbxLlmAdvice = (function () {
 			renderResult(container, {
 				optimizedSql: text('dbx-llm-optimized-sql'),
 				explanation:  text('dbx-llm-explanation'),
+				thinkingSummary: text('dbx-llm-thinking'),
 				promptSent:   text('dbx-llm-prompt'),
 				providerId:   meta.providerId,
 				model:        meta.model
@@ -1710,9 +1933,15 @@ var dbxLlmAdvice = (function () {
 		if (models.length === 0)
 			models = [{ provider: opts.provider, providerName: 'Default', model: opts.model, label: 'The default model', isDefault: true }];
 
-		// Preselect: the last choice on this browser (if still configured), else the caller's provider, else the default
+		// Preselect: the last choice on this browser (if still configured), else the caller's provider, else the default.
+		// The last choice is remembered together with the default of that moment: when the admin changes the default
+		// (DbxCentral.llm.provider / the order of a 'model' list), everybody starts from the new default once.
+		var defModel = models.filter(function (m) { return m.isDefault; })[0];
+		var defKey   = defModel ? defModel.provider + '/' + defModel.model : '';
 		var last = null;
 		try { last = JSON.parse(window.localStorage.getItem(LAST_MODEL_STORAGE_KEY) || 'null'); } catch (e) { /* private mode etc: no memory */ }
+		if (last && last.defaultModel !== defKey)
+			last = null;
 
 		var selected = -1;
 		models.forEach(function (m, i) { if (selected < 0 && last && m.provider === last.provider && m.model === last.model) selected = i; });
@@ -1751,7 +1980,7 @@ var dbxLlmAdvice = (function () {
 		askBtn.addEventListener('click', function ()
 		{
 			var model = models[parseInt(select.value, 10)] || models[0];
-			try { window.localStorage.setItem(LAST_MODEL_STORAGE_KEY, JSON.stringify({ provider: model.provider, model: model.model })); } catch (e) { /* no memory */ }
+			try { window.localStorage.setItem(LAST_MODEL_STORAGE_KEY, JSON.stringify({ provider: model.provider, model: model.model, defaultModel: defKey })); } catch (e) { /* no memory */ }
 
 			// One request at a time: a double click must not pay twice
 			askBtn.disabled = true;
