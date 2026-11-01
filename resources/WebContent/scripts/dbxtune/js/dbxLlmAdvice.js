@@ -40,6 +40,10 @@
  *                                                   // and the caller doesn't need to know/carry an H2 file path).
  *       ts:         '',                             // optional - SQL Server Query Store snapshot timestamp, ignored for ASE
  *
+ *       // SQL Server + 'srv': the server's configuration and hardware (non-default config, host/system info, the
+ *       // database's options), as its Collector stored them - via /api/llm/server-context, see fetchServerContext()
+ *       serverContext: '<plain text>',              // optional - if already known, skips that lookup
+ *
  *       dbname:     'mydb',                        // current database name - required for the srv-based lookup above
  *       provider:   'claude',                      // optional - preselects this provider in the model dropdown
  *       model:      'opus-max',                    // optional - preselects this model entry (of 'provider')
@@ -886,6 +890,7 @@ var dbxLlmAdvice = (function () {
 		if (ddlContext)           parts.push('DDL / index / stats context:\n' + ddlContext);
 		if (opts.plan)            parts.push('Execution plan:\n' + opts.plan);
 		if (opts.workloadProfile) parts.push('Workload profile:\n' + opts.workloadProfile);
+		if (opts.serverContext)   parts.push('Server configuration and hardware:\n' + opts.serverContext);
 		return parts.join('\n\n');
 	}
 
@@ -1138,6 +1143,7 @@ var dbxLlmAdvice = (function () {
 			html += renderSentField('DDL / index / stats context', ddlContext);
 			html += renderSentField('Execution plan', opts.plan);
 			html += renderSentField('Workload profile', opts.workloadProfile);
+			html += renderSentField('Server configuration and hardware', opts.serverContext);
 			html += renderSentField('DBMS vendor', opts.dbVendor);
 			html += renderSentField('DBMS version', opts.dbmsVersion);
 		}
@@ -1193,6 +1199,12 @@ var dbxLlmAdvice = (function () {
 			html += '<details class="dbx-llm-section-details">'
 				+ '<summary class="dbx-llm-section-title">Workload Profile</summary>'
 				+ renderCodeBlock(escapeHtml(opts.workloadProfile), 'plaintext', /*smallFont*/ true) + '</details>';
+		}
+		if (opts.serverContext)
+		{
+			html += '<details class="dbx-llm-section-details">'
+				+ '<summary class="dbx-llm-section-title">Server Configuration and Hardware</summary>'
+				+ renderCodeBlock(escapeHtml(opts.serverContext), 'plaintext', /*smallFont*/ true) + '</details>';
 		}
 
 		return html;
@@ -1571,6 +1583,37 @@ var dbxLlmAdvice = (function () {
 	}
 
 	/**
+	 * SQL Server: the server's configuration and hardware for the prompt (the non-default configuration, host/system info,
+	 * and the options of 'dbname'), from what srv's Collector stored at its start - see LlmServerContextBuilder.java.
+	 * Resolves (never rejects) to '' when there is none: another vendor, no 'srv', turned off, Collector not reachable.
+	 */
+	function fetchServerContext(opts)
+	{
+		if (opts.serverContext)
+			return Promise.resolve(String(opts.serverContext));
+		if (!opts.srv || opts.dbVendor !== 'Microsoft SQL Server')
+			return Promise.resolve('');
+
+		var qs = new URLSearchParams();
+		qs.set('srv', opts.srv);
+		if (opts.dbname) qs.set('dbname', opts.dbname);
+		qs.set('ts', opts.sampleTime || opts.ts || '');
+
+		return fetchJson('/api/llm/server-context?' + qs.toString())
+			.then(function (data)
+			{
+				if (data && data.message)
+					console.info('dbxLlmAdvice: no server configuration for srv=' + opts.srv + ': ' + data.message);
+				return (data && data.serverContext) || '';
+			})
+			.catch(function (err)
+			{
+				console.warn('dbxLlmAdvice: /api/llm/server-context failed, continuing without the server configuration: ' + err.message);
+				return '';
+			});
+	}
+
+	/**
 	 * opts.preview true: render the exact prompt text that would be sent, via /api/llm/optimize-sql's
 	 * preview mode - no provider is called, so this works even when the LLM feature itself is off.
 	 */
@@ -1679,6 +1722,7 @@ var dbxLlmAdvice = (function () {
 			workloadProfile: opts.workloadProfile,
 			dbVendor:        opts.dbVendor,
 			dbmsVersion:     opts.dbmsVersion,
+			serverContext:   opts.serverContext,
 			provider:        model ? model.provider : opts.provider,
 			model:           model ? model.model    : opts.model,
 			preview:         !!opts.preview,
@@ -1820,6 +1864,7 @@ var dbxLlmAdvice = (function () {
 			sql:             text('dbx-llm-sql'),
 			plan:            text('dbx-llm-plan'),
 			workloadProfile: text('dbx-llm-workload'),
+			serverContext:   text('dbx-llm-server-context'),
 			dbVendor:        meta.dbVendor,
 			provider:        meta.providerId,
 			target:          target
@@ -1898,9 +1943,9 @@ var dbxLlmAdvice = (function () {
 	}
 
 	/**
-	 * The table DDL/index/stats and the DBMS version - looked up ONCE per open() (the promise is kept on opts), so
-	 * asking a second model does not repeat a lookup that can take long with many tables.
-	 * Resolves (never rejects) to the DDL context ('' when there is none); sets opts.dbmsVersion.
+	 * The table DDL/index/stats, the DBMS version and the server configuration - looked up ONCE per open() (the promise is
+	 * kept on opts), so asking a second model does not repeat a lookup that can take long with many tables.
+	 * Resolves (never rejects) to the DDL context ('' when there is none); sets opts.dbmsVersion and opts.serverContext.
 	 */
 	function lookupContext(container, opts)
 	{
@@ -1909,11 +1954,12 @@ var dbxLlmAdvice = (function () {
 			if (!opts.ddlContext)
 				renderStatus(container, 'Looking up table DDL/index/stats...');
 
-			// Both lookups resolve (never reject) to '' on failure, so the advice is still asked for without them
+			// All lookups resolve (never reject) to '' on failure, so the advice is still asked for without them
 			var ddlPromise = opts.ddlContext ? Promise.resolve(opts.ddlContext) : fetchDdlContext(opts);
-			opts._contextPromise = Promise.all([ddlPromise, fetchDbmsVersion(opts)]).then(function (res)
+			opts._contextPromise = Promise.all([ddlPromise, fetchDbmsVersion(opts), fetchServerContext(opts)]).then(function (res)
 			{
-				opts.dbmsVersion = res[1] || '';
+				opts.dbmsVersion   = res[1] || '';
+				opts.serverContext = res[2] || '';
 				return res[0];
 			});
 		}

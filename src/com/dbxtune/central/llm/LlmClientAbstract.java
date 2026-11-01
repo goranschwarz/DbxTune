@@ -1506,6 +1506,8 @@ implements LlmClient
 		sb.append("You have been tasked with making serious improvements to it, quickly.\n");
 		sb.append("You are not allowed to change server-level settings or make frivolous suggestions like updating statistics.\n");
 		sb.append("Instead, you need to focus on query changes or index changes.\n");
+		if (StringUtil.hasValue(request.getServerContext()))
+			sb.append("The server's configuration and hardware are supplied for context only: use them to judge your query and index advice (parallelism, memory grants, cardinality estimation, isolation level), do not suggest changing them.\n");
 		sb.append("If execution statistics are supplied, weigh your advice by how often and at what time of day the statement actually runs: a statement executed thousands of times, or one that concentrates its whole load into a short window, deserves different advice from one that runs occasionally and evenly.\n");
 		sb.append("\n");
 		sb.append("Do not offer followup options: the customer can only contact you once, so include all necessary information, tasks, and scripts in your initial reply.\n");
@@ -1556,6 +1558,12 @@ implements LlmClient
 		if (StringUtil.hasValue(request.getDdlContext()))
 		{
 			sb.append("Table/index DDL and statistics referenced by the statement:\n").append(request.getDdlContext()).append("\n");
+			sb.append("\n");
+		}
+
+		if (StringUtil.hasValue(request.getServerContext()))
+		{
+			sb.append("Server configuration and hardware (for context):\n").append(request.getServerContext()).append("\n");
 			sb.append("\n");
 		}
 

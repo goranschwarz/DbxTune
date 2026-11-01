@@ -336,6 +336,12 @@ public class LlmAdviceLog
 			sb.append(pre("dbx-llm-workload", llmRequest.getWorkloadProfile()));
 			sb.append("</details>\n");
 		}
+		if (StringUtil.hasValue(llmRequest.getServerContext()))
+		{
+			sb.append("<details>\n<summary><b>Server Configuration and Hardware</b></summary>\n");
+			sb.append(pre("dbx-llm-server-context", llmRequest.getServerContext()));
+			sb.append("</details>\n");
+		}
 
 		if (llmResponse != null)
 		{
