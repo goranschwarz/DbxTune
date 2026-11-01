@@ -170,6 +170,8 @@ extends HttpServlet
 					  "            <input type='hidden' name='dbname'       value='" + StringEscapeUtils.escapeHtml4(StringUtil.nullToValue(dbname      , "")) + "'> \n" +
 					  "            <input type='hidden' name='dbmsVersion'  value='" + StringEscapeUtils.escapeHtml4(StringUtil.nullToValue(dbmsVersion , "")) + "'> \n" +
 					  "            <input type='hidden' name='workloadData' value='" + StringEscapeUtils.escapeHtml4(StringUtil.nullToValue(workloadData, "")) + "'> \n" +
+					  "            <input type='hidden' name='origin'       value='Showplan (Db2)'> \n" + // recorded in the saved LLM request
+
 					  "            <button type='submit' class='btn btn-sm btn-outline-primary'>Get LLM Optimization Advice</button> \n" +
 					  "          </form> \n"
 					: "") +

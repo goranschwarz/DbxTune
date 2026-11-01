@@ -80,34 +80,64 @@ extends LlmClientAbstract
 		String prompt = buildPrompt(request);
 
 		ObjectMapper om = new ObjectMapper();
-		ObjectNode body = om.createObjectNode();
-		body.put("model", model.getModelId());
-		body.put("prompt", prompt);
-		body.put("stream", false);
-		body.put("format", "json");
-		applyExtraBody(body, model);
-		request.setSettingsSent(requestSettings(body)); // for the saved request: what was sent, without the prompt
 
-		HttpRequest.Builder builder = HttpRequest.newBuilder()
-				.timeout(model.getTimeout())
-				.uri(URI.create(getUrl(DEFAULT_URL) + "/api/generate"))
-				.header("Content-Type", "application/json")
-				.POST(HttpRequest.BodyPublishers.ofString(om.writeValueAsString(body), StandardCharsets.UTF_8));
-		applyExtraHeaders(builder, model);
+		// Streamed (the default): progress while we wait, and the model's thinking - the 'thinking' field ('think' asked for
+		// only from a model seen thinking, see askOllamaThink()), or a <think>...</think> it writes first in its answer.
+		// Sent again without 'think' if the model does not take it.
+		boolean askThink = askOllamaThink(model);
+		String  rawResponse;
+		while (true)
+		{
+			ObjectNode body = om.createObjectNode();
+			body.put("model", model.getModelId());
+			body.put("prompt", prompt);
+			body.put("stream", model.isStream());
+			body.put("format", "json");
+			if (askThink)
+				body.put("think", true);
+			applyExtraBody(body, model);
+			request.setSettingsSent(requestSettings(body)); // for the saved request: what was sent, without the prompt
 
-		// Not streamed: wait for the whole answer, at most 'timeout' in total, and stop the call when nobody waits any more
-		HttpResponse<String> httpResponse = sendAndWait(builder.build(), model, progress);
-		String rawResponse = httpResponse.body();
+			HttpRequest.Builder builder = HttpRequest.newBuilder()
+					.timeout(model.getTimeout())
+					.uri(URI.create(getUrl(DEFAULT_URL) + "/api/generate"))
+					.header("Content-Type", "application/json")
+					.POST(HttpRequest.BodyPublishers.ofString(om.writeValueAsString(body), StandardCharsets.UTF_8));
+			applyExtraHeaders(builder, model);
 
-		if (httpResponse.statusCode() != 200)
-			throw new Exception("Ollama API returned HTTP " + httpResponse.statusCode() + ": " + rawResponse);
+			if ( ! model.isStream() )
+			{
+				// Not streamed: wait for the whole answer, at most 'timeout' in total, and stop the call when nobody waits any more
+				HttpResponse<String> httpResponse = sendAndWait(builder.build(), model, progress);
+				if (httpResponse.statusCode() != 200)
+					throw new Exception("Ollama API returned HTTP " + httpResponse.statusCode() + ": " + httpResponse.body());
+				rawResponse = httpResponse.body();
+				break;
+			}
+
+			StreamedAnswer answer = sendOllamaStream(builder.build(), model, progress);
+			if (askThink && isThinkingSummaryRejected(answer.statusCode, answer.body, model))
+			{
+				askThink = false;
+				continue;
+			}
+			if (answer.statusCode != 200)
+				throw new Exception("Ollama API returned HTTP " + answer.statusCode + ": " + answer.body);
+			rawResponse = answer.body;
+			break;
+		}
 
 		JsonNode root = om.readTree(rawResponse);
-		String answerText = root.path("response").asText("");
 
-		LlmOptimizeResponse response = parseModelAnswer(answerText, rawResponse, prompt, model);
+		// A <think>...</think> written first in the answer is the model's thinking, not part of the answer
+		String[] split    = splitThinkTag(root.path("response").asText(""));
+		String   thinking = root.path("thinking").asText("") + (split[0] == null ? "" : split[0]);
+
+		LlmOptimizeResponse response = parseModelAnswer(split[1], rawResponse, prompt, model);
 		response.setInputTokens (intOrNull(root.path("prompt_eval_count")));
 		response.setOutputTokens(intOrNull(root.path("eval_count")));
+		if (StringUtil.hasValue(thinking))
+			response.setThinkingSummary(thinking.trim());
 		return response;
 	}
 }

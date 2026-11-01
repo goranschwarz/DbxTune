@@ -111,10 +111,10 @@ extends LlmClientAbstract
 		String format  = model.getFormat() != null ? model.getFormat() : (modelId.startsWith("anthropic.") ? FORMAT_MESSAGES : FORMAT_CONVERSE);
 		String region  = cfg(key("region"));
 
-		// The Messages format (anthropic.*) is streamed (the default): progress while we wait. The thinking summary only for a
-		// model seen thinking, and sent again without it if the model does not take it (see askThinkingSummary(),
-		// isThinkingSummaryRejected()). The Converse format is not streamed (for now).
-		boolean stream             = FORMAT_MESSAGES.equals(format) && model.isStream();
+		// Streamed (the default): progress while we wait. Messages (anthropic.*): the thinking summary only for a model seen
+		// thinking, and sent again without it if the model does not take it (see askThinkingSummary(), isThinkingSummaryRejected()).
+		// Converse ('/converse-stream'): the reasoning text when the model sends it.
+		boolean stream             = model.isStream();
 		boolean askThinkingSummary = FORMAT_MESSAGES.equals(format) && askThinkingSummary(model);
 		while (true)
 		{
@@ -139,7 +139,7 @@ extends LlmClientAbstract
 				body.putObject("inferenceConfig").put("maxTokens", model.getMaxTokens());
 
 				// The model id goes in the path: an ARN or a 'model:version' id has ':' and '/' that must be encoded
-				url         = getUrl("https://bedrock-runtime." + region + ".amazonaws.com") + "/model/" + URLEncoder.encode(modelId, StandardCharsets.UTF_8) + "/converse";
+				url         = getUrl("https://bedrock-runtime." + region + ".amazonaws.com") + "/model/" + URLEncoder.encode(modelId, StandardCharsets.UTF_8) + (stream ? "/converse-stream" : "/converse");
 				signingName = "bedrock";
 			}
 			else
@@ -149,8 +149,8 @@ extends LlmClientAbstract
 			if (askThinkingSummary)
 				body.putObject("thinking").put("type", "adaptive").put("display", "summarized");
 			applyExtraBody(body, model);
-			if (stream)
-				body.put("stream", true); // before signing: the signature covers the body bytes
+			if (stream && FORMAT_MESSAGES.equals(format))
+				body.put("stream", true); // before signing: the signature covers the body bytes (Converse: the URL says it)
 			request.setSettingsSent(requestSettings(body)); // for the saved request: what was sent, without the prompt
 			headers.putAll(model.getExtraHeaders()); // before signing: a signed request must not get headers changed afterwards
 
@@ -180,41 +180,53 @@ extends LlmClientAbstract
 					builder.setHeader(e.getKey(), e.getValue());
 			}
 
+			String rawResponse;
 			if ( ! stream )
 			{
 				// Not streamed: wait for the whole answer, at most 'timeout' in total, and stop the call when nobody waits any more
 				HttpResponse<String> httpResponse = sendAndWait(builder.build(), model, progress);
-				String rawResponse = httpResponse.body();
+				rawResponse = httpResponse.body();
 
 				if (httpResponse.statusCode() != 200)
 					throw new Exception("Amazon Bedrock returned HTTP " + httpResponse.statusCode() + " for " + url + ": " + rawResponse);
 
 				if (FORMAT_MESSAGES.equals(format))
 					return parseMessagesResponse(rawResponse, prompt, model);
-
-				// Converse: the text blocks of the answer (a reasoning block, if any, is skipped)
-				JsonNode root = new ObjectMapper().readTree(rawResponse);
-				StringBuilder answerText = new StringBuilder();
-				for (JsonNode block : root.path("output").path("message").path("content"))
-				{
-					if (block.has("text"))
-						answerText.append(block.path("text").asText(""));
-				}
-				LlmOptimizeResponse response = parseModelAnswer(answerText.toString(), rawResponse, prompt, model);
-				response.setInputTokens (intOrNull(root.path("usage").path("inputTokens")));
-				response.setOutputTokens(intOrNull(root.path("usage").path("outputTokens")));
-				return response;
 			}
-
-			StreamedAnswer answer = sendMessagesStream(builder.build(), model, progress);
-			if (askThinkingSummary && isThinkingSummaryRejected(answer.statusCode, answer.body, model))
+			else
 			{
-				askThinkingSummary = false;
-				continue;
+				StreamedAnswer answer = FORMAT_MESSAGES.equals(format)
+						? sendMessagesStream(builder.build(), model, progress)
+						: sendConverseStream(builder.build(), model, progress);
+				if (askThinkingSummary && isThinkingSummaryRejected(answer.statusCode, answer.body, model))
+				{
+					askThinkingSummary = false;
+					continue;
+				}
+				if (answer.statusCode != 200)
+					throw new Exception("Amazon Bedrock returned HTTP " + answer.statusCode + " for " + url + ": " + answer.body);
+
+				if (FORMAT_MESSAGES.equals(format))
+					return parseMessagesResponse(answer.body, prompt, model);
+				rawResponse = answer.body;
 			}
-			if (answer.statusCode != 200)
-				throw new Exception("Amazon Bedrock returned HTTP " + answer.statusCode + " for " + url + ": " + answer.body);
-			return parseMessagesResponse(answer.body, prompt, model);
+
+			// Converse: the text blocks of the answer; a reasoning block is the model's thinking
+			JsonNode root = new ObjectMapper().readTree(rawResponse);
+			StringBuilder answerText = new StringBuilder();
+			StringBuilder reasoning  = new StringBuilder();
+			for (JsonNode block : root.path("output").path("message").path("content"))
+			{
+				if (block.has("text"))
+					answerText.append(block.path("text").asText(""));
+				reasoning.append(block.path("reasoningContent").path("reasoningText").path("text").asText(""));
+			}
+			LlmOptimizeResponse response = parseModelAnswer(answerText.toString(), rawResponse, prompt, model);
+			response.setInputTokens (intOrNull(root.path("usage").path("inputTokens")));
+			response.setOutputTokens(intOrNull(root.path("usage").path("outputTokens")));
+			if (reasoning.length() > 0)
+				response.setThinkingSummary(reasoning.toString().trim());
+			return response;
 		}
 	}
 

@@ -195,8 +195,9 @@ public class LlmSqlContextBuilder
 			qs.add("ddlContext", ddlContext);
 		if (StringUtil.hasValue(plan))
 			qs.add("plan", plan);
+		qs.add("origin", "Daily Summary Report"); // recorded in the saved LLM request
 
-		String href = StringUtil.nullToValue(dbxCentralBaseUrl, "") + "/llm-advice#" + qs.getQuery();
+		String href =StringUtil.nullToValue(dbxCentralBaseUrl, "") + "/llm-advice#" + qs.getQuery();
 
 		// Best-effort hostname for the tooltip - fall back to the raw base URL if it doesn't parse
 		String host = dbxCentralBaseUrl;

@@ -55,6 +55,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  *   <li>{@code list}  - {@code days=N} (0 or missing = all): JSON {@code {saveEnabled, keepDays, dir, entries:[...]}}, newest first (admin only)</li>
  *   <li>{@code view}  - {@code name=<file>}: the saved page, re-rendered with the advice dialog's renderer</li>
  *   <li>{@code view}  - {@code name=<file>&raw=true}: the saved file as-is, as a download (plain, self-contained)</li>
+ *   <li>{@code delete} (POST) - {@code name=<file>} (one or more): delete saved requests (admin only)</li>
  * </ul>
  */
 public class LlmAdviceLogServlet extends HttpServlet
@@ -97,6 +98,48 @@ public class LlmAdviceLogServlet extends HttpServlet
 		{
 			writeJsonError(resp, HttpServletResponse.SC_BAD_REQUEST, "Unknown or missing operation 'op': '" + op + "'. Use 'list' or 'view'.");
 		}
+	}
+
+	/**
+	 * {@code POST op=delete&name=<file>&name=<file>...}: delete saved requests (the Admin page's delete buttons). Admin
+	 * only - refused outside {@code /admin/}. Each name is checked the same way as for 'view' (a saved file in the folder).
+	 * Answers JSON {@code {deleted, notFound}}.
+	 */
+	@Override
+	protected void doPost(HttpServletRequest req, HttpServletResponse resp)
+	throws ServletException, IOException
+	{
+		String op = StringUtil.nullToValue(req.getParameter("op"), "").trim();
+		if ( ! req.getServletPath().startsWith("/admin/") )
+		{
+			writeJsonError(resp, HttpServletResponse.SC_FORBIDDEN, "Deleting saved requests is done on the Admin page.");
+			return;
+		}
+		if ( ! "delete".equals(op) )
+		{
+			writeJsonError(resp, HttpServletResponse.SC_BAD_REQUEST, "Unknown or missing operation 'op': '" + op + "'. Use 'delete'.");
+			return;
+		}
+
+		String[] names    = req.getParameterValues("name");
+		int      deleted  = 0;
+		int      notFound = 0;
+		for (String name : names == null ? new String[0] : names)
+		{
+			File file = LlmAdviceLog.getFile(name);
+			if (file != null && file.delete())
+				deleted++;
+			else
+				notFound++;
+		}
+		_logger.info("LLM-ADVICE: User '" + req.getRemoteUser() + "' deleted " + deleted + " saved request(s)" + (notFound > 0 ? " (" + notFound + " not found)" : "") + ".");
+
+		Map<String, Object> result = new LinkedHashMap<>();
+		result.put("deleted",  deleted);
+		result.put("notFound", notFound);
+		resp.setContentType("application/json");
+		resp.setCharacterEncoding("UTF-8");
+		Helper.createObjectMapper().writeValue(resp.getWriter(), result);
 	}
 
 	private void handleList(HttpServletRequest req, HttpServletResponse resp)

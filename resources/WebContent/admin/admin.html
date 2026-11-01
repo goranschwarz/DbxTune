@@ -506,6 +506,10 @@
             <input type="text" id="dbx-llm-log-filter" class="form-control form-control-sm" style="width:320px;"
                    placeholder="Filter: regex, or 'where user = x and status = FAILED'" oninput="dbxRenderLlmLog()">
             <span id="dbx-llm-log-filter-err" class="text-danger small"></span>
+            <button type="button" class="btn btn-sm btn-outline-danger ms-auto" id="dbx-llm-log-delete-shown" onclick="dbxDeleteLlmLogShown()"
+                    title="Delete all saved requests shown in the list below (narrow it with the period and the filter first)">
+              <i class="fa fa-trash"></i> Delete shown
+            </button>
           </div>
           <div id="dbx-llm-log-info" class="small text-muted mb-1"></div>
           <div id="dbx-llm-log-summary" class="mb-2"></div>
@@ -2658,6 +2662,35 @@
 		});
 	}
 
+	/** The file names of the rows the list shows now (after the period and the filter) - for "Delete shown" */
+	var _dbxLlmLogShownNames = [];
+
+	function dbxDeleteLlmLogShown()
+	{
+		dbxDeleteLlmLog(_dbxLlmLogShownNames, 'the ' + _dbxLlmLogShownNames.length + ' saved requests shown in the list');
+	}
+
+	/** Delete saved requests (after a confirmation), then reload the list */
+	function dbxDeleteLlmLog(names, what)
+	{
+		if (!names || names.length === 0)
+			return;
+		if (!confirm('Delete ' + what + '?\n\nThe saved file(s) are removed from DbxCentral - this can not be undone.'))
+			return;
+		$.ajax({
+			url: '/admin/llm-log',
+			method: 'POST',
+			data: { op: 'delete', name: names },
+			traditional: true, // name=a&name=b (not name[]=a)
+			dataType: 'json',
+			success: function(r) { dbxLoadLlmLog(); }, // the list (and its summary) show the result
+			error: function(xhr)
+			{
+				dbxShowMsg('dbx-llm-log-summary', 'Could not delete: ' + dbxLlmLogEsc((xhr.responseJSON && xhr.responseJSON.message) || ('HTTP ' + xhr.status)), true);
+			}
+		});
+	}
+
 	function dbxRenderLlmLog()
 	{
 		// rows as arrays, in DBX_LLM_LOG_COLS order, so the shared applyRowFilter() can be used (regex or 'where ...')
@@ -2697,10 +2730,13 @@
 				+ '<td class="text-end">' + (e.durationMs != null ? (e.durationMs / 1000).toFixed(1) + 's' : '') + '</td>'
 				+ '<td class="text-end">' + dbxLlmLogEsc(e.inputTokens != null ? e.inputTokens.toLocaleString() : '') + ' / ' + dbxLlmLogEsc(e.outputTokens != null ? e.outputTokens.toLocaleString() : '') + '</td>'
 				+ '<td style="max-width:420px; overflow:hidden; text-overflow:ellipsis;">' + dbxLlmLogEsc(e.sqlPreview ? e.sqlPreview.substring(0, 100) : '') + '</td>'
-				+ '<td><a href="' + view + '&raw=true" onclick="event.stopPropagation();" title="Download the saved file (plain, self-contained)"><i class="fa fa-download"></i></a></td>'
+				+ '<td><a href="' + view + '&raw=true" onclick="event.stopPropagation();" title="Download the saved file (plain, self-contained)"><i class="fa fa-download"></i></a>'
+				+ '&nbsp;&nbsp;<a href="javascript:void(0)" class="text-danger" data-name="' + dbxLlmLogEsc(e.name) + '" data-time="' + dbxLlmLogEsc(e.time) + '" onclick="event.stopPropagation(); dbxDeleteLlmLog([this.dataset.name], \'this saved request (\' + this.dataset.time + \')\');" title="Delete this saved request"><i class="fa fa-trash"></i></a></td>'
 				+ '</tr>';
 		});
 		$('#dbx-llm-log-tbody').html(html);
+		_dbxLlmLogShownNames = res.filteredRows.map(function(r) { return r.entry.name; });
+		$('#dbx-llm-log-delete-shown').toggle(res.filteredRows.length > 0).html('<i class="fa fa-trash"></i> Delete shown (' + res.filteredRows.length + ')');
 		$('#dbx-llm-log-table').toggle(res.filteredRows.length > 0);
 		$('#dbx-llm-log-summary').html(
 			'<b>' + res.filteredRows.length + '</b> requests'
