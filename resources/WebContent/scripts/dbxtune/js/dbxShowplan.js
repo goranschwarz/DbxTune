@@ -1654,12 +1654,16 @@
 			var dbmsVerRecorded = tiBody ? (tiBody.getAttribute('data-dbmsversion') || '') : '';
 			var dbmsVerPromise = (window.dbxLlmAdvice && dbxLlmAdvice.fetchDbmsVersion)
 					? dbxLlmAdvice.fetchDbmsVersion({ srv: srv, dbmsVersion: dbmsVerRecorded }) : Promise.resolve(dbmsVerRecorded);
-			dbmsVerPromise.then(function(dbmsVersion) {
+			// Same SQL open() would send (formatted when "Format SQL Text before send" is on)
+			var sqlPromise = (window.dbxLlmAdvice && dbxLlmAdvice.prepareSql)
+					? dbxLlmAdvice.prepareSql(sqlText, 'Adaptive Server Enterprise') : Promise.resolve(sqlText);
+			Promise.all([dbmsVerPromise, sqlPromise]).then(function(res) {
+				var dbmsVersion = res[0], sentSql = res[1];
 				$.ajax({
 					url:         '/api/llm/optimize-sql',
 					method:      'POST',
 					contentType: 'application/json',
-					data:        JSON.stringify({ sql: sqlText, ddlContext: ddlContext || '', plan: planText, dbVendor: 'Adaptive Server Enterprise', dbmsVersion: dbmsVersion, workloadProfile: wlProfile, preview: true }),
+					data:        JSON.stringify({ sql: sentSql, ddlContext: ddlContext || '', plan: planText, dbVendor: 'Adaptive Server Enterprise', dbmsVersion: dbmsVersion, workloadProfile: wlProfile, preview: true }),
 					dataType:    'json',
 					success: function(r) {
 						if (r && r.promptSent) {
@@ -2118,14 +2122,17 @@
 		// server's Collector ('' for a pasted plan). And the same table information.
 		var dbmsVerPromise = (window.dbxLlmAdvice && dbxLlmAdvice.fetchDbmsVersion)
 				? dbxLlmAdvice.fetchDbmsVersion({ srv: _oraShowplanSrv, dbmsVersion: _oraShowplanDbmsVersion }) : Promise.resolve(_oraShowplanDbmsVersion);
-		Promise.all([dbmsVerPromise, _oraShowplanFetchDdlContext()]).then(function(res) {
-			var dbmsVersion = res[0], ddlContext = res[1];
+		// Same SQL open() would send (formatted when "Format SQL Text before send" is on)
+		var sqlPromise = (window.dbxLlmAdvice && dbxLlmAdvice.prepareSql)
+				? dbxLlmAdvice.prepareSql(_oraShowplanSqlText, _oraShowplanVendor) : Promise.resolve(_oraShowplanSqlText);
+		Promise.all([dbmsVerPromise, _oraShowplanFetchDdlContext(), sqlPromise]).then(function(res) {
+			var dbmsVersion = res[0], ddlContext = res[1], sentSql = res[2];
 			var wlProfile   = (window.dbxLlmAdvice && dbxLlmAdvice.buildWorkloadProfile && _oraShowplanWorkloadData) ? dbxLlmAdvice.buildWorkloadProfile(_oraShowplanWorkloadData) : '';
 			$.ajax({
 				url:         '/api/llm/optimize-sql',
 				method:      'POST',
 				contentType: 'application/json',
-				data:        JSON.stringify({ sql: _oraShowplanSqlText, ddlContext: ddlContext || '', plan: _oraShowplanLastPlanText || '', dbVendor: _oraShowplanVendor, dbmsVersion: dbmsVersion, workloadProfile: wlProfile, preview: true }),
+				data:        JSON.stringify({ sql: sentSql, ddlContext: ddlContext || '', plan: _oraShowplanLastPlanText || '', dbVendor: _oraShowplanVendor, dbmsVersion: dbmsVersion, workloadProfile: wlProfile, preview: true }),
 				dataType:    'json',
 				success: function(r) {
 					if (r && r.promptSent)
@@ -3367,13 +3374,16 @@ function _initGlobalEscClose() {
 			// Same server configuration and hardware open() would send
 			var srvCtxPromise = (window.dbxLlmAdvice && dbxLlmAdvice.fetchServerContext)
 					? dbxLlmAdvice.fetchServerContext({ srv: srv, dbname: dbname, ts: ts, dbVendor: 'Microsoft SQL Server' }) : Promise.resolve('');
-			Promise.all([dbmsVerPromise, srvCtxPromise]).then(function(res) {
-				var dbmsVersion = res[0], serverContext = res[1];
+			// Same SQL open() would send (formatted when "Format SQL Text before send" is on)
+			var sqlPromise = (window.dbxLlmAdvice && dbxLlmAdvice.prepareSql)
+					? dbxLlmAdvice.prepareSql(sqlText, 'Microsoft SQL Server') : Promise.resolve(sqlText);
+			Promise.all([dbmsVerPromise, srvCtxPromise, sqlPromise]).then(function(res) {
+				var dbmsVersion = res[0], serverContext = res[1], sentSql = res[2];
 				$.ajax({
 					url:         '/api/llm/optimize-sql',
 					method:      'POST',
 					contentType: 'application/json',
-					data:        JSON.stringify({ sql: sqlText, ddlContext: ddlContext || '', plan: xmlText, dbVendor: 'Microsoft SQL Server', dbmsVersion: dbmsVersion, serverContext: serverContext, workloadProfile: wlProfile, preview: true }),
+					data:        JSON.stringify({ sql: sentSql, ddlContext: ddlContext || '', plan: xmlText, dbVendor: 'Microsoft SQL Server', dbmsVersion: dbmsVersion, serverContext: serverContext, workloadProfile: wlProfile, preview: true }),
 					dataType:    'json',
 					success: function(r) {
 						if (r && r.promptSent) {

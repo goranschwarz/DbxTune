@@ -253,6 +253,7 @@ var dbxLlmAdvice = (function () {
 			'.dbx-llm-ask-btn { background:#0d6efd; color:#fff; border:1px solid #0d6efd; border-radius:4px; padding:3px 12px; cursor:pointer; }' +
 			'.dbx-llm-ask-btn:disabled { opacity:0.6; cursor:default; }' +
 			'.dbx-llm-picker-hint { font-size:0.8rem; color:#6c757d; }' +
+			'.dbx-llm-picker-opt { font-size:0.85rem; display:inline-flex; align-items:center; gap:4px; margin:0; cursor:pointer; white-space:nowrap; }' +
 			'.dbx-llm-run { border:1px solid #dee2e6; border-radius:6px; margin-bottom:12px; max-width:min(1600px, 96vw); box-sizing:border-box; }' +
 			'.dbx-llm-run-header { background:#f1f3f5; color:#212529; padding:6px 10px; font-family:Arial, Helvetica, sans-serif; font-weight:bold; border-bottom:1px solid #dee2e6; border-radius:6px 6px 0 0; cursor:pointer; }' +
 			'.dbx-llm-run:not([open]) > .dbx-llm-run-header { border-bottom:none; border-radius:6px; }' +
@@ -553,6 +554,36 @@ var dbxLlmAdvice = (function () {
 	}
 
 	//--------------------------------------------------------------------------
+	// "Format SQL Text before send" (the checkbox next to Get Advice): when the LLM rewrites a formatted SQL, its rewrite
+	// keeps the layout, so the changes are easy to see. On by default, the choice is remembered in the browser.
+	//--------------------------------------------------------------------------
+	var FORMAT_SQL_STORAGE_KEY = 'dbxLlmAdvice.formatSql';
+	var SQL_FORMATTER_URL      = '/scripts/sql-formatter/15.9.0/sql-formatter.min.js';
+
+	function isFormatSqlOn()
+	{
+		try { return window.localStorage.getItem(FORMAT_SQL_STORAGE_KEY) !== 'false'; } catch (e) { return true; }
+	}
+
+	/**
+	 * The SQL to send: formatted with formatSql() (the same as the answer's SQL blocks and diff) when "Format SQL Text
+	 * before send" is on, as-is otherwise. Also used by the Showplan dialogs' Prompt Previews, so they show the same.
+	 * sql-formatter is loaded when the page does not have it. Resolves (never rejects) to the SQL.
+	 */
+	function prepareSql(sql, dbVendor)
+	{
+		if (!sql || !isFormatSqlOn())
+			return Promise.resolve(sql);
+		return loadScript(SQL_FORMATTER_URL, function () { return window.sqlFormatter && typeof window.sqlFormatter.format === 'function'; })
+			.then(function () { return formatSql(sql, dbVendor); })
+			.catch(function (err)
+			{
+				console.warn('dbxLlmAdvice: could not format the SQL, sending it as-is: ' + err.message);
+				return sql;
+			});
+	}
+
+	//--------------------------------------------------------------------------
 	// SQL diff: the original SQL vs the LLM's rewrite (jsdiff makes the patch, diff2html draws it; loaded when needed)
 	//--------------------------------------------------------------------------
 	var JSDIFF_URL        = '/scripts/jsdiff/9.0.0/diff.min.js';
@@ -560,26 +591,27 @@ var dbxLlmAdvice = (function () {
 	var DIFF2HTML_CSS_URL = '/scripts/diff2html/3.4.56/diff2html.min.css';
 	var _diffLibsPromise = null;
 
+	/** Load a script once (resolves at once when isLoaded() already says so) */
+	function loadScript(url, isLoaded)
+	{
+		if (isLoaded())
+			return Promise.resolve();
+		return new Promise(function (resolve, reject)
+		{
+			var script = document.createElement('script');
+			script.src = url;
+			script.onload  = function () { if (isLoaded()) resolve(); else reject(new Error('no library in ' + url)); };
+			script.onerror = function () { reject(new Error('could not load ' + url)); };
+			document.head.appendChild(script);
+		});
+	}
+
 	/**
 	 * jsdiff (global 'Diff') and diff2html (global 'Diff2Html') are only needed when an answer has a SQL rewrite:
 	 * load them then, once - instead of adding them to every page that includes this file.
 	 */
 	function loadDiffLibs()
 	{
-		function loadScript(url, isLoaded)
-		{
-			if (isLoaded())
-				return Promise.resolve();
-			return new Promise(function (resolve, reject)
-			{
-				var script = document.createElement('script');
-				script.src = url;
-				script.onload  = function () { if (isLoaded()) resolve(); else reject(new Error('no library in ' + url)); };
-				script.onerror = function () { reject(new Error('could not load ' + url)); };
-				document.head.appendChild(script);
-			});
-		}
-
 		if (!_diffLibsPromise)
 		{
 			if (!document.querySelector('link[href="' + DIFF2HTML_CSS_URL + '"]'))
@@ -1919,7 +1951,10 @@ var dbxLlmAdvice = (function () {
 		// The prompt preview needs no login and no model: build it right away
 		if (opts.preview)
 		{
-			lookupContext(container, opts).then(function (ddlContext) { callOptimize(container, opts, ddlContext, null); });
+			lookupContext(container, opts).then(function (ddlContext)
+			{
+				prepareSql(opts.sql, opts.dbVendor).then(function (sql) { callOptimize(container, Object.assign({}, opts, { sql: sql }), ddlContext, null); });
+			});
 			return;
 		}
 
@@ -2014,6 +2049,8 @@ var dbxLlmAdvice = (function () {
 			+ '<span class="dbx-llm-picker-label">Model</span>'
 			+ '<select class="dbx-llm-model-select" aria-label="LLM model">' + optionsHtml + '</select>'
 			+ '<button type="button" class="dbx-llm-ask-btn">Get Advice</button>'
+			+ '<label class="dbx-llm-picker-opt" title="If the LLM rewrites the SQL, it is easier to see the changes (the diff) when the SQL it got is formatted: the rewrite keeps the same layout.">'
+			+ '<input type="checkbox" class="dbx-llm-format-sql"' + (isFormatSqlOn() ? ' checked' : '') + '> Format SQL Text before send</label>'
 			+ '<span class="dbx-llm-picker-hint">Nothing is sent to the LLM before you press the button.</span>'
 			+ '</div>'
 			+ '<div class="dbx-llm-results"></div>';
@@ -2022,6 +2059,11 @@ var dbxLlmAdvice = (function () {
 		var askBtn  = container.querySelector('.dbx-llm-ask-btn');
 		var hint    = container.querySelector('.dbx-llm-picker-hint');
 		var results = container.querySelector('.dbx-llm-results');
+
+		container.querySelector('.dbx-llm-format-sql').addEventListener('change', function ()
+		{
+			try { window.localStorage.setItem(FORMAT_SQL_STORAGE_KEY, String(this.checked)); } catch (e) { /* no memory */ }
+		});
 
 		askBtn.addEventListener('click', function ()
 		{
@@ -2045,8 +2087,15 @@ var dbxLlmAdvice = (function () {
 			var info    = run.querySelector('.dbx-llm-run-info');
 			var startMs = Date.now();
 
+			// The SQL as sent (formatted or not) is what this answer shows: what was sent, the saved request, the diff
 			lookupContext(body, opts)
-				.then(function (ddlContext) { return callOptimize(body, opts, ddlContext, model); })
+				.then(function (ddlContext)
+				{
+					return prepareSql(opts.sql, opts.dbVendor).then(function (sql)
+					{
+						return callOptimize(body, Object.assign({}, opts, { sql: sql }), ddlContext, model);
+					});
+				})
 				.then(function (data)
 				{
 					var txt = ' - ' + ((Date.now() - startMs) / 1000).toFixed(1) + ' s';
@@ -2131,6 +2180,8 @@ var dbxLlmAdvice = (function () {
 		fetchDbmsVersion: fetchDbmsVersion,
 		// ... and the server configuration and hardware (SQL Server)
 		fetchServerContext: fetchServerContext,
+		// ... and format the SQL the same way ("Format SQL Text before send")
+		prepareSql: prepareSql,
 		// Admin page: show a saved request (see LlmAdviceLog.java / LlmAdviceLogServlet.java)
 		renderSavedRequest: renderSavedRequest
 	};
