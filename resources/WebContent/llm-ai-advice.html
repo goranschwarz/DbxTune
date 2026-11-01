@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>DbxTune - LLM/AI Advice</title>
+
+	<!-- Tools -> LLM/AI Advice: how to get LLM advice (all the places it is asked from), and the user's own saved advice -->
+
+	<!-- Light/dark theme: FIRST, so the page is never drawn in the wrong theme (follows the OS, user override in localStorage) -->
+	<script type="text/javascript"  src="/scripts/dbxtune/js/dbxTheme.js"></script>
+
+	<script type="text/javascript"  src="/scripts/jquery/jquery-3.7.1.min.js"></script>
+
+	<link    rel="stylesheet"       href="/scripts/bootstrap/5.3.8/css/bootstrap.min.css" />
+	<script type="text/javascript"  src="/scripts/bootstrap/5.3.8/js/bootstrap.bundle.js"></script> <!-- bundle has popper.js built-in -->
+	<link    rel="stylesheet"       href="/scripts/dbxtune/css/dbxNavbar.css">
+
+	<link    rel="stylesheet"       href="/scripts/font-awesome/7.3.1/css/all.min.css" />
+	<link    rel="stylesheet"       href="/scripts/font-awesome/7.3.1/css/v4-shims.min.css">
+
+	<!-- DbxCentral -->
+	<script type="text/javascript"  src="/scripts/dbxtune/js/dbxcentral.utils.js"></script>
+	<script type="text/javascript"  src="/scripts/dbxtune/js/dbxLoginModal.js"></script>
+	<script type="text/javascript"  src="/scripts/dbxtune/js/dbxLlmAdviceLog.js"></script>
+
+	<style>
+		.dbx-ep-card .card-header { font-weight: 600; }
+		.dbx-ep-card .badge       { font-weight: normal; }
+		.dbx-ep-steps             { padding-left: 1.2em; margin-bottom: 0.4em; }
+		.dbx-ep-steps li          { margin-bottom: 2px; }
+		.dbx-ep-path              { font-family: var(--bs-font-monospace); font-size: 0.85em; background: var(--bs-tertiary-bg); padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
+	</style>
+</head>
+
+<body>
+	<nav class="navbar navbar-expand-md navbar-dark sticky-top bg-dark mb-0 px-3">
+	<a class="navbar-brand" href="/">DbxCentral</a>
+	<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+		<span class="navbar-toggler-icon"></span>
+	</button>
+	<div class="collapse navbar-collapse" id="navbarCollapse">
+		<ul class="navbar-nav me-auto">
+			<li class="nav-item">
+				<a class="nav-link" href="/overview">Servers</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="/admin/admin.html">Admin</a>
+			</li>
+			<li class="nav-item dropdown">
+				<a class="nav-link dropdown-toggle active" href="#" id="dbx-tools-menu" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Tools</a>
+				<div class="dropdown-menu" aria-labelledby="dbx-tools-menu">
+					<div class="dbx-dropdown-submenu">
+						<a class="dropdown-item" href="#">&#128202; Showplan</a>
+						<div class="dropdown-menu">
+							<a class="dropdown-item" href="/showplan/sqlserver">SQL Server</a>
+							<a class="dropdown-item" href="/showplan/ase">SAP ASE (Sybase)</a>
+							<a class="dropdown-item" href="/showplan/postgres">Postgres</a>
+							<a class="dropdown-item" href="/showplan/oracle">Oracle</a>
+							<a class="dropdown-item" href="/showplan/mysql">MySQL</a>
+							<a class="dropdown-item" href="/showplan/db2">Db2</a>
+						</div>
+					</div>
+					<a class="dropdown-item active" href="/llm-ai-advice.html">&#129302; LLM/AI Advice</a>
+					<div class="dropdown-divider"></div>
+					<a class="dropdown-item" href="/desktop_app.html">Desktop App</a>
+				</div>
+			</li>
+		</ul>
+		<!-- the right hand side (login / user) is added by dbxLoginModal.js -->
+	</div>
+	</nav>
+
+	<main class="container-fluid mt-3">
+
+		<div class="px-4 py-4 mb-3 bg-body-secondary rounded-2">
+			<h1 class="h2 mb-1">&#129302; LLM/AI Advice</h1>
+			<div class="text-body-secondary">Ask an LLM (Claude, Gemini, ChatGPT, Ollama, ...) how to make a slow SQL statement faster: query rewrites and index changes, based on the statement, its execution plan and the tables it uses.</div>
+			<div class="mt-2 small" id="dbx-llm-status">&nbsp;</div>
+		</div>
+
+		<!-- ============ How to get LLM Advice ============ -->
+		<div class="card border-dark mb-3">
+			<h5 class="card-header">How to get LLM Advice</h5>
+			<div class="card-body">
+				<p class="mb-2">There is no "ask" box on this page: the advice is always asked <b>for one SQL statement</b>, from the place where you find it.
+					Every place below shows a <span class="btn btn-sm btn-outline-primary py-0" style="pointer-events:none;">Get LLM Optimization Advice</span> button,
+					an <b>LLM Optimization Advice</b> section or an <b>LLM Advice</b> link, that opens the advice dialog.</p>
+
+				<div class="row row-cols-1 row-cols-lg-2 row-cols-xxl-3 g-3">
+
+					<div class="col"><div class="card h-100 dbx-ep-card">
+						<div class="card-header">&#128231; 1. Daily Summary Report <span class="badge text-bg-secondary">all DBMS types</span></div>
+						<div class="card-body small">
+							<ol class="dbx-ep-steps">
+								<li>Open a report: the mail, or <span class="dbx-ep-path">Servers &rarr; (server) &rarr; Daily Summary Report</span></li>
+								<li>In the Top SQL / Query Store / slow statement tables, click <b>LLM Advice</b> next to a statement</li>
+								<li>The advice page opens in a new tab: pick a model, press <b>Get Advice</b></li>
+							</ol>
+							The report already holds the statement, its plan and the workload numbers (executions, CPU, reads): they are sent along.
+						</div>
+					</div></div>
+
+					<div class="col"><div class="card h-100 dbx-ep-card">
+						<div class="card-header">&#128202; 2. Execution Plan (Showplan) <span class="badge text-bg-secondary">SQL Server, ASE, Oracle, MySQL, Db2</span></div>
+						<div class="card-body small">
+							<ol class="dbx-ep-steps">
+								<li>Open a plan: click a plan in a report or in Active Statements, or <span class="dbx-ep-path">Tools &rarr; Showplan &rarr; (DBMS)</span> and paste one</li>
+								<li>Expand the <b>LLM Optimization Advice</b> section under the plan</li>
+								<li>Pick a model, press <b>Get Advice</b></li>
+							</ol>
+							Pasting a plan yourself: fill in <b>Server</b> and <b>Database</b> too, so the table DDL, indexes and statistics can be looked up.
+							Postgres: the plan page has a <b>Get LLM Optimization Advice</b> button.
+						</div>
+					</div></div>
+
+					<div class="col"><div class="card h-100 dbx-ep-card">
+						<div class="card-header">&#9889; 3. Active Statements <span class="badge text-bg-secondary">live and history</span></div>
+						<div class="card-body small">
+							<span class="dbx-ep-path">Servers &rarr; (server)</span>, open the <b>Active Statements</b> panel (the <i class="fa fa-bolt"></i> button). Then, on a statement's row:
+							<ul class="dbx-ep-steps mt-1">
+								<li><b>Its plan</b> (best): click the checked <b>plan column</b> of the row (for example <b>HasLiveQueryplan</b> on SQL Server)
+									&rarr; the Execution Plan dialog opens &rarr; expand <b>LLM Optimization Advice</b> (see 2).
+									The column's name depends on the DBMS: see <a href="#dbx-plan-cols">the table below</a>.</li>
+								<li><b>The row</b>: click anywhere else on the row &rarr; the row's details &rarr; <b>Get LLM Optimization Advice</b></li>
+							</ul>
+							<b>Statements from earlier</b> ("go back in time"): see <a href="#dbx-history-steps">History View</a> below.
+						</div>
+					</div></div>
+
+					<div class="col"><div class="card h-100 dbx-ep-card">
+						<div class="card-header">&#128200; 4. Counter Details <span class="badge text-bg-secondary">live and history</span></div>
+						<div class="card-body small">
+							<ol class="dbx-ep-steps">
+								<li><span class="dbx-ep-path">Servers &rarr; (server)</span>, open the Counter Details of a counter (for example Top SQL, Statement Cache)</li>
+								<li>Click a row that has a SQL text</li>
+								<li>Press <b>Get LLM Optimization Advice</b></li>
+							</ol>
+							The DBMS version of that very sample is sent along.
+						</div>
+					</div></div>
+
+					<div class="col"><div class="card h-100 dbx-ep-card">
+						<div class="card-header">&#128203; 5. LLM Prompt Preview <span class="badge text-bg-info">no LLM needed</span></div>
+						<div class="card-body small">
+							Next to each <b>LLM Optimization Advice</b> section there is an <b>LLM Prompt Preview</b>: the exact prompt DbxCentral would send.
+							<ul class="dbx-ep-steps mt-1">
+								<li>See what is sent, before anything is sent</li>
+								<li><b>Copy</b> it into your own LLM chat (ChatGPT, Claude.ai, Copilot, ...) - this also works when no LLM is configured here</li>
+							</ul>
+						</div>
+					</div></div>
+
+					<div class="col"><div class="card h-100 dbx-ep-card">
+						<div class="card-header">&#128279; 6. Share or look again</div>
+						<div class="card-body small">
+							Every answer is saved. The link under an answer opens it again: send it to a colleague.
+							Your own saved advice is listed below, under <a href="#dbx-my-saved"><b>My Saved Advice</b></a>.
+						</div>
+					</div></div>
+				</div>
+
+				<div class="row g-3 mt-1">
+					<div class="col-xl-6" id="dbx-plan-cols">
+						<h6 class="mt-2">Active Statements: the plan column, per DBMS</h6>
+						<table class="table table-sm table-bordered small mb-1" style="width:auto;">
+							<thead class="table-light"><tr><th>Collector</th><th>Plan column(s): click the checkbox</th><th>Opens</th></tr></thead>
+							<tbody>
+								<tr><td>SqlServerTune</td><td><b>HasLiveQueryplan</b> (the running plan, with the rows so far), <b>HasQueryplan</b> (the estimated/cached plan)</td><td>SQL Server Showplan + LLM sections</td></tr>
+								<tr><td>AseTune</td><td><b>HasShowPlan</b>, <b>HasCachedPlanInXml</b></td><td>ASE Showplan + LLM sections</td></tr>
+								<tr><td>OracleTune</td><td><b>HasExecPlan</b>, <b>HasSqlMonitorReport</b></td><td>Oracle Execution Plan + LLM sections</td></tr>
+								<tr><td>MySqlTune</td><td><b>HasExecPlan</b></td><td>MySQL Execution Plan + LLM sections</td></tr>
+								<tr><td>Db2Tune</td><td><b>HAS_EXEC_PLAN</b></td><td>Db2 Execution Plan + LLM sections</td></tr>
+								<tr><td>PostgresTune</td><td><b>has_query_plan</b></td><td>the plan (PEV2), <b>no</b> LLM section: click the row instead (its plan is sent along)</td></tr>
+							</tbody>
+						</table>
+						<div class="small text-body-secondary">SQL Server: the row's <b>Get LLM Optimization Advice</b> sends the SQL text only - use the plan column to send the plan too.</div>
+					</div>
+					<div class="col-xl-6" id="dbx-history-steps">
+						<h6 class="mt-2">Active Statements from earlier: History View</h6>
+						<ol class="small dbx-ep-steps mb-1">
+							<li>Pick the day and hours: the <i class="fa fa-backward"></i> <i class="fa fa-arrow-circle-left"></i> <b>2h</b> <i class="fa fa-arrow-circle-right"></i> <i class="fa fa-forward"></i>
+								buttons on the server page's menu bar (previous/next day, previous/next hours)</li>
+							<li>Go to the time: <b>click on a graph</b> at that time (for example a CPU peak) - the page switches to <b>History View</b> at that very sample.
+								Or press <i class="fa fa-history"></i> (History View) and drag the <b>timeline slider</b> that shows under the menu bar</li>
+							<li>The Active Statements panel now shows the statements of that sample: click the plan column (or the row) as above</li>
+							<li>Back to live: press <i class="fa fa-line-chart"></i> (Normal View)</li>
+						</ol>
+						<div class="small text-body-secondary">The table information sent to the LLM then describes the tables as they were at that time (the Collector's DDL Storage).</div>
+					</div>
+				</div>
+
+				<div class="row g-3 mt-1">
+					<div class="col-lg-6">
+						<h6 class="mt-2">What is sent to the LLM</h6>
+						<ul class="small mb-0">
+							<li>The SQL statement, and its execution plan when there is one</li>
+							<li>The tables it uses: DDL, indexes and statistics (from the Collector's DDL Storage)</li>
+							<li>The DBMS type and version</li>
+							<li>The workload numbers (executions, CPU, reads, ...) when they are known</li>
+							<li>SQL Server: the server configuration (the non-default settings), the host/hardware and the database's options</li>
+						</ul>
+						<div class="small text-body-secondary">The <b>What was sent</b> section under each answer, or the Prompt Preview, shows all of it.</div>
+					</div>
+					<div class="col-lg-6">
+						<h6 class="mt-2">Good to know</h6>
+						<ul class="small mb-0">
+							<li>Nothing is executed in your database: it is advice, test it before you change anything</li>
+							<li>Ask again with another model: the answers are listed on top of each other, to compare</li>
+							<li>Long answers: the model's thinking is shown while it works, <b>Stop</b> cancels the call</li>
+							<li>Each answer costs tokens (shown with each answer, and in the list below)</li>
+						</ul>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- ============ My Saved Advice ============ -->
+		<div class="card border-dark mb-3" id="dbx-my-saved">
+			<h5 class="card-header">My Saved Advice <small class="text-body-secondary fw-normal">- the LLM requests you made (admins see everyone's on the Admin page)</small></h5>
+			<div class="card-body">
+				<div id="dbx-my-llm-log"></div>  <!-- dbxLlmAdviceLog.js -->
+			</div>
+		</div>
+
+	</main>
+
+	<script>
+	(function()
+	{
+		function esc(v) { return $('<span>').text(v === null || v === undefined ? '' : String(v)).html(); }
+
+		// The status line: is the feature on, the default model, who is logged in
+		function showStatus(cfg, loggedIn, userName)
+		{
+			var parts = [];
+			if (!cfg || cfg.enabled === false)
+				parts.push('<span class="badge text-bg-secondary">Not enabled</span> LLM advice is not enabled on this DbxCentral (DbxCentral.llm.enabled) - the <b>LLM Prompt Preview</b> still works: copy the prompt into your own LLM chat');
+			else if (cfg.configured === false)
+				parts.push('<span class="badge text-bg-warning">Not configured</span> No LLM provider is set up in DBX_CENTRAL.conf - the <b>LLM Prompt Preview</b> still works');
+			else
+			{
+				var models = cfg.models || [];
+				var def    = models.filter(function(m) { return m.isDefault; })[0];
+				parts.push('<span class="badge text-bg-success">Enabled</span> Default model: <b>' + esc(def && def.label ? def.label : cfg.model) + '</b>'
+					+ (cfg.providerName ? ' (' + esc(cfg.providerName) + ')' : '')
+					+ (models.length > 1 ? ' &middot; ' + models.length + ' models to choose from' : ''));
+			}
+			parts.push(loggedIn ? 'Logged in as <b>' + esc(userName) + '</b>'
+			                    : '<a href="#" onclick="dbxOpenLogin(); return false;">Log in</a>' + (cfg && cfg.loginRequired ? ' to ask for advice, and' : '') + ' to see your saved advice');
+			$('#dbx-llm-status').html(parts.join(' &middot; '));
+		}
+
+		$(function()
+		{
+			isLoggedIn(function(loggedIn, userName)
+			{
+				$.ajax({ url: '/api/llm/config', dataType: 'json', cache: false })
+					.done(function(cfg) { showStatus(cfg, loggedIn, userName); })
+					.fail(function()    { showStatus(null, loggedIn, userName); });
+
+				if (loggedIn)
+					dbxLlmAdviceLog.init('dbx-my-llm-log', { admin: false });
+				else
+					$('#dbx-my-llm-log').html('<a href="#" onclick="dbxOpenLogin(); return false;">Log in</a> to see the LLM advice you asked for.');
+			});
+		});
+	})();
+	</script>
+</body>
+</html>

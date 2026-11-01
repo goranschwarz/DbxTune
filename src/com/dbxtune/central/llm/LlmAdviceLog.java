@@ -430,6 +430,22 @@ public class LlmAdviceLog
 		return result;
 	}
 
+	/** The user who made a saved request (from its metadata), or null when it can not be read. */
+	@SuppressWarnings("unchecked")
+	public static String getUser(File f)
+	{
+		try
+		{
+			String json = readMetaJson(f);
+			return json == null ? null : (String) new ObjectMapper().readValue(json, Map.class).get("user");
+		}
+		catch (Exception ex)
+		{
+			_logger.warn("LLM-ADVICE: Problems reading the metadata of '" + f + "'. Caught: " + ex);
+			return null;
+		}
+	}
+
 	/** The metadata JSON from the top of a saved file, or null when not found. */
 	private static String readMetaJson(File f)
 	throws IOException
