@@ -70,7 +70,7 @@ extends HttpServlet
 
 	/**
 	 * <pre>POST /api/llm/optimize-sql</pre>
-	 * Body: {@code {"sql": "...", "ddlContext": "...", "plan": "...", "dbVendor": "...", "dbmsVersion": "...", "workloadProfile": "...", "provider": "claude", "preview": false}}
+	 * Body: {@code {"sql": "...", "ddlContext": "...", "plan": "...", "dbVendor": "...", "dbmsVersion": "...", "serverContext": "...", "workloadProfile": "...", "provider": "claude", "preview": false}}
 	 * <p>
 	 * When {@code preview} is {@code true}, returns {@code {"promptSent": "..."}} only - the prompt
 	 * text that would be sent to an LLM, built entirely locally with no network call and no cost -

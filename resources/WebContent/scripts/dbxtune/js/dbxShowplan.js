@@ -3364,12 +3364,16 @@ function _initGlobalEscClose() {
 			var dbmsVerRecorded = tiBody ? (tiBody.getAttribute('data-dbmsversion') || '') : '';
 			var dbmsVerPromise = (window.dbxLlmAdvice && dbxLlmAdvice.fetchDbmsVersion)
 					? dbxLlmAdvice.fetchDbmsVersion({ srv: srv, dbmsVersion: dbmsVerRecorded }) : Promise.resolve(dbmsVerRecorded);
-			dbmsVerPromise.then(function(dbmsVersion) {
+			// Same server configuration and hardware open() would send
+			var srvCtxPromise = (window.dbxLlmAdvice && dbxLlmAdvice.fetchServerContext)
+					? dbxLlmAdvice.fetchServerContext({ srv: srv, dbname: dbname, ts: ts, dbVendor: 'Microsoft SQL Server' }) : Promise.resolve('');
+			Promise.all([dbmsVerPromise, srvCtxPromise]).then(function(res) {
+				var dbmsVersion = res[0], serverContext = res[1];
 				$.ajax({
 					url:         '/api/llm/optimize-sql',
 					method:      'POST',
 					contentType: 'application/json',
-					data:        JSON.stringify({ sql: sqlText, ddlContext: ddlContext || '', plan: xmlText, dbVendor: 'Microsoft SQL Server', dbmsVersion: dbmsVersion, workloadProfile: wlProfile, preview: true }),
+					data:        JSON.stringify({ sql: sqlText, ddlContext: ddlContext || '', plan: xmlText, dbVendor: 'Microsoft SQL Server', dbmsVersion: dbmsVersion, serverContext: serverContext, workloadProfile: wlProfile, preview: true }),
 					dataType:    'json',
 					success: function(r) {
 						if (r && r.promptSent) {

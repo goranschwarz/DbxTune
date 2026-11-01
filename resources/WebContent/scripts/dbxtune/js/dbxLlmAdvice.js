@@ -2129,6 +2129,8 @@ var dbxLlmAdvice = (function () {
 		buildWorkloadProfile: buildWorkloadProfile,
 		// Same reason: previews resolve the DBMS version exactly the way open() does.
 		fetchDbmsVersion: fetchDbmsVersion,
+		// ... and the server configuration and hardware (SQL Server)
+		fetchServerContext: fetchServerContext,
 		// Admin page: show a saved request (see LlmAdviceLog.java / LlmAdviceLogServlet.java)
 		renderSavedRequest: renderSavedRequest
 	};
