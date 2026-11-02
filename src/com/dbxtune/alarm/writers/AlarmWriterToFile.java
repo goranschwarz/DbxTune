@@ -232,11 +232,11 @@ extends AlarmWriterAbstract
 	public static String createActiveTemplate()
 	{
 		return ""
-			+ "${StringUtil.format('%-30s %-30s %-30s %-30s %-10s %-10s %-10s %8.8s %s', 'AlarmClassAbriviated', 'ServerName', 'CmName', 'ExtraInfo', 'Category', 'Severity', 'State', 'Duration', 'Description')}\n"
-			+ "${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 10)} ${StringUtils.repeat('-', 10)} ${StringUtils.repeat('-', 10)} ${StringUtils.repeat('-', 8)} ${StringUtils.repeat('-', 80)}\n"
+			+ "${StringUtil.format('%-30s %-30s %-30s %-60s %-10s %-10s %-10s %8.8s %s', 'AlarmClassAbriviated', 'ServerName', 'CmName', 'ExtraInfo', 'Category', 'Severity', 'State', 'Duration', 'Description')}\n"
+			+ "${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 60)} ${StringUtils.repeat('-', 10)} ${StringUtils.repeat('-', 10)} ${StringUtils.repeat('-', 10)} ${StringUtils.repeat('-', 8)} ${StringUtils.repeat('-', 80)}\n"
 			+ "#foreach( $alarm in $activeAlarmList )\n"
 			// ${alarm.xxx}: each alarm in the list (${duration} is getFullDuration(true), there is no getDuration())
-			+ "${StringUtil.format('%-30s %-30s %-30s %-30s %-10s %-10s %-10s %8.8s %s', ${alarm.alarmClassAbriviated}, ${alarm.serviceName}, ${alarm.serviceInfo}, ${alarm.extraInfo}, ${alarm.category}, ${alarm.severity}, ${alarm.state}, ${alarm.getFullDuration(true)}, ${alarm.description})}\n"
+			+ "${StringUtil.format('%-30s %-30s %-30s %-60s %-10s %-10s %-10s %8.8s %s', ${alarm.alarmClassAbriviated}, ${alarm.serviceName}, ${alarm.serviceInfo}, ${alarm.extraInfo}, ${alarm.category}, ${alarm.severity}, ${alarm.state}, ${alarm.getFullDuration(true)}, ${alarm.description})}\n"
 			+ "#end"
 			;
 	}
