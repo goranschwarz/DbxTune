@@ -25,8 +25,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.lang.invoke.MethodHandles;
-import java.util.Base64;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
@@ -170,34 +168,6 @@ extends HttpServlet
 //		String endTime        = Helper.getParameter(req, "endTime");
 //		String sampleTypeStr  = Helper.getParameter(req, "sampleType");
 //		String sampleValueStr = Helper.getParameter(req, "sampleValue");
-
-System.out.println();
-System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX: getContextPath()=" + req.getContextPath());
-System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX: getPathInfo   ()=" + req.getPathInfo());
-System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX: getQueryString()=" + req.getQueryString());
-System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX: getParameterMap()=" + req.getParameterMap());
-
-for(String header : Collections.list(req.getHeaderNames()))
-	System.out.println("HEADER |" + header + "| = |" + req.getHeader(header) + "|.");
-
-final String auth = req.getHeader("Authorization");
-System.out.println(">>>>>>>>>>>> NoGuiConfigGetServlet.GET.HEADER: Authorization = |" + auth + "|.");
-if (auth != null)
-{
-	int firstSpace = auth.indexOf(" ");
-	String authMethod = auth.substring(0, firstSpace).trim();
-	String authToken  = auth.substring(firstSpace).trim();
-	
-	if ("Basic".equals(authMethod))
-	{
-		byte[] decodedBytes = Base64.getDecoder().decode(authToken);
-		authToken = new String(decodedBytes);
-	}
-	
-//	String decoded = new String( Base64.getDecoder().decode( auth.substring(firstSpace) ), StandardCharsets.UTF_8 );
-	System.out.println(">>>>>>>>>>>> NoGuiConfigGetServlet.GET.HEADER: Authorization.method = |" + authMethod + "|.");
-	System.out.println(">>>>>>>>>>>> NoGuiConfigGetServlet.GET.HEADER: Authorization.token  = |" + authToken  + "|.");
-}
 
 		String payload = "";
 

@@ -195,19 +195,7 @@ extends HttpServlet
 		String propertyValue  = Helper.getParameter(req, "val");
 //		String validatorName  = Helper.getParameter(req, "validator");
 
-System.out.println();
-System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.PUT: getContextPath()=" + req.getContextPath());
-System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.PUT: getPathInfo   ()=" + req.getPathInfo());
-System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.PUT: getQueryString()=" + req.getQueryString());
-System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.PUT: getParameterMap()=" + req.getParameterMap());
-
-System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.PUT.PARAMS: cmName   = |" + cmName        + "|.");
-System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.PUT.PARAMS: alarmName= |" + optName     + "|.");
-System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.PUT.PARAMS: key      = |" + propertyName  + "|.");
-System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.PUT.PARAMS: val      = |" + propertyValue + "|.");
-
 		final String auth = req.getHeader( "Authorization" );
-System.out.println(">>>>>>>>>>>> NoGuiConfigSetServlet.PUT.HEADER: Authorization = |" + auth + "|.");
 
 		String expectedBasic  = System.getProperty(NoGuiManagementServer.PROPKEY_NOGUI_MANAGEMENT_http_auth_Basic);
 		String expectedBearer = System.getProperty(NoGuiManagementServer.PROPKEY_NOGUI_MANAGEMENT_http_auth_Bearer);
