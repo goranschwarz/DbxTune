@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.central.llm;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
@@ -64,6 +65,13 @@ public class LlmOptimizeRequest
 	private String dbmsVersion;
 
 	/**
+	 * Plain-text server configuration and hardware: the non-default configuration, host and system info, and the
+	 * statement's database options - see {@link LlmServerContextBuilder}. Fetched by 'dbxLlmAdvice.js' from
+	 * /api/llm/server-context (SQL Server, when the Collector is known).
+	 */
+	private String serverContext;
+
+	/**
 	 * Name of the monitored server the statement came from (the Web UI's 'srv'), or null when unknown.
 	 * Not part of the prompt - only recorded by {@link LlmAdviceLog}.
 	 */
@@ -86,6 +94,9 @@ public class LlmOptimizeRequest
 	// The browser wants progress while it waits: the answer then comes as Server-Sent Events (LlmSqlOptimizeServlet)
 	private boolean progress;
 
+	// Set by the LLM client, not by the browser (@JsonIgnore): the request body as sent, without the prompt - for the saved request
+	private String settingsSent;
+
 	public LlmOptimizeRequest()
 	{
 	}
@@ -106,10 +117,12 @@ public class LlmOptimizeRequest
 	public String  getModel()           { return model; }
 	public String  getWorkloadProfile() { return workloadProfile; }
 	public String  getDbmsVersion()     { return dbmsVersion; }
-	public String  getSrvName()         { return srvName; }
+	public String  getServerContext()   { return serverContext; }
+	public String  getSrvName()        { return srvName; }
 	public String  getOrigin()          { return origin; }
 	public boolean isPreview()          { return preview; }
 	public boolean isProgress()         { return progress; }
+	@JsonIgnore public String getSettingsSent() { return settingsSent; }
 
 	public void setSql            (String sql)             { this.sql             = sql; }
 	public void setDdlContext     (String ddlContext)      { this.ddlContext      = ddlContext; }
@@ -119,8 +132,10 @@ public class LlmOptimizeRequest
 	public void setModel          (String model)           { this.model           = model; }
 	public void setWorkloadProfile(String workloadProfile) { this.workloadProfile = workloadProfile; }
 	public void setDbmsVersion    (String dbmsVersion)     { this.dbmsVersion     = dbmsVersion; }
+	public void setServerContext  (String serverContext)   { this.serverContext   = serverContext; }
 	public void setSrvName        (String srvName)         { this.srvName         = srvName; }
 	public void setOrigin         (String origin)          { this.origin          = origin; }
 	public void setPreview        (boolean preview)        { this.preview         = preview; }
 	public void setProgress       (boolean progress)       { this.progress        = progress; }
+	@JsonIgnore public void setSettingsSent(String settings) { this.settingsSent = settings; }
 }

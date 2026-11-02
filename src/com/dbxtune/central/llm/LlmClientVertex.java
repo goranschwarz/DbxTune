@@ -149,6 +149,7 @@ extends LlmClientAbstract
 			applyExtraBody(body, model);
 			if (stream && FORMAT_ANTHROPIC.equals(format))
 				body.put("stream", true); // (Gemini: the URL says it)
+			request.setSettingsSent(requestSettings(body)); // for the saved request: what was sent, without the prompt
 
 			HttpRequest.Builder builder = HttpRequest.newBuilder()
 					.timeout(model.getTimeout())

@@ -182,6 +182,7 @@ public class ShowplanLinkBuilder
 		sb.append("            add('dbname', d.dbname); \n");
 		sb.append("            add('workloadData', dsrHarvestWorkload(a)); \n"); // execution statistics, read out of the page
 		sb.append("            add('dbmsVersion', dsrDbmsVersion()); \n");         // recorded DBMS version, see 'dsr-dbms-info'
+		sb.append("            add('origin', 'Daily Summary Report'); \n");       // recorded in the saved LLM request
 		sb.append("        } \n");
 		sb.append("        dsrPostToNewTab(d.path, params); \n");
 		sb.append("    } \n");

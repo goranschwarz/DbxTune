@@ -40,6 +40,10 @@
  *                                                   // and the caller doesn't need to know/carry an H2 file path).
  *       ts:         '',                             // optional - SQL Server Query Store snapshot timestamp, ignored for ASE
  *
+ *       // SQL Server + 'srv': the server's configuration and hardware (non-default config, host/system info, the
+ *       // database's options), as its Collector stored them - via /api/llm/server-context, see fetchServerContext()
+ *       serverContext: '<plain text>',              // optional - if already known, skips that lookup
+ *
  *       dbname:     'mydb',                        // current database name - required for the srv-based lookup above
  *       provider:   'claude',                      // optional - preselects this provider in the model dropdown
  *       model:      'opus-max',                    // optional - preselects this model entry (of 'provider')
@@ -249,6 +253,8 @@ var dbxLlmAdvice = (function () {
 			'.dbx-llm-ask-btn { background:#0d6efd; color:#fff; border:1px solid #0d6efd; border-radius:4px; padding:3px 12px; cursor:pointer; }' +
 			'.dbx-llm-ask-btn:disabled { opacity:0.6; cursor:default; }' +
 			'.dbx-llm-picker-hint { font-size:0.8rem; color:#6c757d; }' +
+			'.dbx-llm-picker-opt { font-size:0.85rem; display:inline-flex; align-items:center; gap:4px; margin:0; cursor:pointer; white-space:nowrap; }' +
+			'.dbx-llm-format-note { font-size:0.85rem; color:#b45309; }' +
 			'.dbx-llm-run { border:1px solid #dee2e6; border-radius:6px; margin-bottom:12px; max-width:min(1600px, 96vw); box-sizing:border-box; }' +
 			'.dbx-llm-run-header { background:#f1f3f5; color:#212529; padding:6px 10px; font-family:Arial, Helvetica, sans-serif; font-weight:bold; border-bottom:1px solid #dee2e6; border-radius:6px 6px 0 0; cursor:pointer; }' +
 			'.dbx-llm-run:not([open]) > .dbx-llm-run-header { border-bottom:none; border-radius:6px; }' +
@@ -370,23 +376,70 @@ var dbxLlmAdvice = (function () {
 		if (v.indexOf('sybase') >= 0 || v.indexOf('adaptive server') >= 0) return 'tsql'; // closest available dialect to Sybase T-SQL
 		if (v.indexOf('postgres') >= 0) return 'postgresql';
 		if (v.indexOf('oracle') >= 0) return 'plsql';
+		if (v.indexOf('mysql') >= 0) return 'mysql';
+		if (v.indexOf('mariadb') >= 0) return 'mariadb';
+		if (v.indexOf('db2') >= 0) return 'db2';
 		return 'sql';
 	}
 
-	/** Pretty-print SQL when sql-formatter is on the page (as-is otherwise). Used for the SQL blocks AND the diff, so both look the same. */
-	function formatSql(sql, dbVendor)
+	/**
+	 * Simple line breaks for SQL that sql-formatter cannot parse (for example cut off in the middle): before the clauses
+	 * and at the commas outside parentheses, never inside quotes or comments.
+	 */
+	function roughFormatSql(sql)
+	{
+		if (!sql)
+			return sql;
+
+		var depth = 0;
+		var tokens = /'(?:[^']|'')*'?|"(?:[^"]|"")*"?|\[[^\]]*\]?|--[^\n]*|\/\*[\s\S]*?(?:\*\/|$)|[(),]|\b(?:SELECT|FROM|WHERE|GROUP\s+BY|ORDER\s+BY|HAVING|UNION(?:\s+ALL)?|SET|VALUES|(?:(?:LEFT|RIGHT|FULL|INNER|CROSS|OUTER)\s+)*JOIN|ON|AND|OR)\b/gi;
+		// \u0001 = a new line with this indent: the whitespace around it is removed at the end
+		function newLine(extra) { return '\u0001' + new Array(depth + extra + 1).join('  ') + '\u0002'; }
+
+		var out = sql.replace(tokens, function (tok, pos)
+		{
+			var first = tok.charAt(0);
+			if (first === "'" || first === '"' || first === '[' || tok.indexOf('--') === 0 || tok.indexOf('/*') === 0)
+				return tok;
+			if (tok === '(') { depth++; return tok; }
+			if (tok === ')') { depth = Math.max(0, depth - 1); return tok; }
+			if (tok === ',') return depth === 0 ? ',' + newLine(1) : tok;
+			if (/[.@#$\w]/.test(sql.charAt(pos - 1)))  // t.on, @and: a name, not a keyword
+				return tok;
+			return newLine(/^(ON|AND|OR)$/i.test(tok) ? 1 : 0) + tok.toUpperCase().replace(/\s+/g, ' ');
+		});
+		return out.replace(/\s*\u0001( *)\u0002\s*/g, '\n$1').replace(/^\s+/, '');
+	}
+
+	/**
+	 * Pretty-print SQL when sql-formatter is on the page (as-is otherwise).
+	 * @return {sql, error}  error = why sql-formatter could not parse it (sql then has roughFormatSql()'s line breaks), else null
+	 */
+	function formatSqlChecked(sql, dbVendor)
 	{
 		if (typeof window.sqlFormatter !== 'undefined' && typeof window.sqlFormatter.format === 'function')
 		{
 			try {
+				// A bare "?" (ASE plan text, Oracle) is a parse error unless it is allowed; the dialect's own parameters still work
+				var paramTypes = { positional: true };
 				// Same user SQL Format options as the Format SQL buttons, when dbxSqlFormat.js is on the page
-				return window.dbxSqlFormat
-					? window.dbxSqlFormat.format(sql, sqlFormatterDialect(dbVendor))
-					: window.sqlFormatter.format(sql, { language: sqlFormatterDialect(dbVendor), keywordCase: 'upper', functionCase: 'upper', dataTypeCase: 'upper' });
+				return { sql: window.dbxSqlFormat
+					? window.dbxSqlFormat.format(sql, sqlFormatterDialect(dbVendor), { paramTypes: paramTypes })
+					: window.sqlFormatter.format(sql, { language: sqlFormatterDialect(dbVendor), keywordCase: 'upper', functionCase: 'upper', dataTypeCase: 'upper', paramTypes: paramTypes }), error: null };
 			}
-			catch (e) { console.warn('dbxLlmAdvice: sqlFormatter.format() failed, showing SQL as-is: ' + e.message); }
+			catch (e)
+			{
+				console.warn('dbxLlmAdvice: sqlFormatter.format() failed, using simple line breaks: ' + e.message);
+				return { sql: roughFormatSql(sql), error: String(e.message).split('\n')[0] };
+			}
 		}
-		return sql;
+		return { sql: sql, error: null };
+	}
+
+	/** Used for the SQL blocks AND the diff, so both look the same. */
+	function formatSql(sql, dbVendor)
+	{
+		return formatSqlChecked(sql, dbVendor).sql;
 	}
 
 	/**
@@ -549,6 +602,41 @@ var dbxLlmAdvice = (function () {
 	}
 
 	//--------------------------------------------------------------------------
+	// "Format SQL Text before send" (the checkbox next to Get Advice): when the LLM rewrites a formatted SQL, its rewrite
+	// keeps the layout, so the changes are easy to see. On by default, the choice is remembered in the browser.
+	//--------------------------------------------------------------------------
+	var FORMAT_SQL_STORAGE_KEY = 'dbxLlmAdvice.formatSql';
+	var SQL_FORMATTER_URL      = '/scripts/sql-formatter/15.9.0/sql-formatter.min.js';
+
+	function isFormatSqlOn()
+	{
+		try { return window.localStorage.getItem(FORMAT_SQL_STORAGE_KEY) !== 'false'; } catch (e) { return true; }
+	}
+
+	function loadSqlFormatter()
+	{
+		return loadScript(SQL_FORMATTER_URL, function () { return window.sqlFormatter && typeof window.sqlFormatter.format === 'function'; });
+	}
+
+	/**
+	 * The SQL to send: formatted with formatSql() (the same as the answer's SQL blocks and diff) when "Format SQL Text
+	 * before send" is on, as-is otherwise. Also used by the Showplan dialogs' Prompt Previews, so they show the same.
+	 * sql-formatter is loaded when the page does not have it. Resolves (never rejects) to the SQL.
+	 */
+	function prepareSql(sql, dbVendor)
+	{
+		if (!sql || !isFormatSqlOn())
+			return Promise.resolve(sql);
+		return loadSqlFormatter()
+			.then(function () { return formatSql(sql, dbVendor); })
+			.catch(function (err)
+			{
+				console.warn('dbxLlmAdvice: could not format the SQL, sending it as-is: ' + err.message);
+				return sql;
+			});
+	}
+
+	//--------------------------------------------------------------------------
 	// SQL diff: the original SQL vs the LLM's rewrite (jsdiff makes the patch, diff2html draws it; loaded when needed)
 	//--------------------------------------------------------------------------
 	var JSDIFF_URL        = '/scripts/jsdiff/9.0.0/diff.min.js';
@@ -556,26 +644,27 @@ var dbxLlmAdvice = (function () {
 	var DIFF2HTML_CSS_URL = '/scripts/diff2html/3.4.56/diff2html.min.css';
 	var _diffLibsPromise = null;
 
+	/** Load a script once (resolves at once when isLoaded() already says so) */
+	function loadScript(url, isLoaded)
+	{
+		if (isLoaded())
+			return Promise.resolve();
+		return new Promise(function (resolve, reject)
+		{
+			var script = document.createElement('script');
+			script.src = url;
+			script.onload  = function () { if (isLoaded()) resolve(); else reject(new Error('no library in ' + url)); };
+			script.onerror = function () { reject(new Error('could not load ' + url)); };
+			document.head.appendChild(script);
+		});
+	}
+
 	/**
 	 * jsdiff (global 'Diff') and diff2html (global 'Diff2Html') are only needed when an answer has a SQL rewrite:
 	 * load them then, once - instead of adding them to every page that includes this file.
 	 */
 	function loadDiffLibs()
 	{
-		function loadScript(url, isLoaded)
-		{
-			if (isLoaded())
-				return Promise.resolve();
-			return new Promise(function (resolve, reject)
-			{
-				var script = document.createElement('script');
-				script.src = url;
-				script.onload  = function () { if (isLoaded()) resolve(); else reject(new Error('no library in ' + url)); };
-				script.onerror = function () { reject(new Error('could not load ' + url)); };
-				document.head.appendChild(script);
-			});
-		}
-
 		if (!_diffLibsPromise)
 		{
 			if (!document.querySelector('link[href="' + DIFF2HTML_CSS_URL + '"]'))
@@ -613,8 +702,12 @@ var dbxLlmAdvice = (function () {
 	{
 		loadDiffLibs().then(function ()
 		{
-			var oldText = formatSql(oldSql, dbVendor).replace(/\s+$/, '') + '\n';
-			var newText = formatSql(newSql, dbVendor).replace(/\s+$/, '') + '\n';
+			var oldFmt = formatSqlChecked(oldSql, dbVendor);
+			var newFmt = formatSqlChecked(newSql, dbVendor);
+			// One side could not be parsed: the simple line breaks on both, or every line would differ
+			var rough = oldFmt.error || newFmt.error;
+			var oldText = (rough ? roughFormatSql(oldSql) : oldFmt.sql).replace(/\s+$/, '') + '\n';
+			var newText = (rough ? roughFormatSql(newSql) : newFmt.sql).replace(/\s+$/, '') + '\n';
 			// The whole SQL as context (not GitHub's 3 lines around a change): it is short, and read as a whole.
 			// ignoreWhitespace: the SQL formatter re-aligns operators ('o.status    <>') when the lines around them change.
 			var patch = window.Diff.createTwoFilesPatch('SQL', 'SQL', oldText, newText, '', '', { context: 100000, ignoreWhitespace: true });
@@ -886,6 +979,7 @@ var dbxLlmAdvice = (function () {
 		if (ddlContext)           parts.push('DDL / index / stats context:\n' + ddlContext);
 		if (opts.plan)            parts.push('Execution plan:\n' + opts.plan);
 		if (opts.workloadProfile) parts.push('Workload profile:\n' + opts.workloadProfile);
+		if (opts.serverContext)   parts.push('Server configuration and hardware:\n' + opts.serverContext);
 		return parts.join('\n\n');
 	}
 
@@ -1138,6 +1232,7 @@ var dbxLlmAdvice = (function () {
 			html += renderSentField('DDL / index / stats context', ddlContext);
 			html += renderSentField('Execution plan', opts.plan);
 			html += renderSentField('Workload profile', opts.workloadProfile);
+			html += renderSentField('Server configuration and hardware', opts.serverContext);
 			html += renderSentField('DBMS vendor', opts.dbVendor);
 			html += renderSentField('DBMS version', opts.dbmsVersion);
 		}
@@ -1193,6 +1288,12 @@ var dbxLlmAdvice = (function () {
 			html += '<details class="dbx-llm-section-details">'
 				+ '<summary class="dbx-llm-section-title">Workload Profile</summary>'
 				+ renderCodeBlock(escapeHtml(opts.workloadProfile), 'plaintext', /*smallFont*/ true) + '</details>';
+		}
+		if (opts.serverContext)
+		{
+			html += '<details class="dbx-llm-section-details">'
+				+ '<summary class="dbx-llm-section-title">Server Configuration and Hardware</summary>'
+				+ renderCodeBlock(escapeHtml(opts.serverContext), 'plaintext', /*smallFont*/ true) + '</details>';
 		}
 
 		return html;
@@ -1571,6 +1672,37 @@ var dbxLlmAdvice = (function () {
 	}
 
 	/**
+	 * SQL Server: the server's configuration and hardware for the prompt (the non-default configuration, host/system info,
+	 * and the options of 'dbname'), from what srv's Collector stored at its start - see LlmServerContextBuilder.java.
+	 * Resolves (never rejects) to '' when there is none: another vendor, no 'srv', turned off, Collector not reachable.
+	 */
+	function fetchServerContext(opts)
+	{
+		if (opts.serverContext)
+			return Promise.resolve(String(opts.serverContext));
+		if (!opts.srv || opts.dbVendor !== 'Microsoft SQL Server')
+			return Promise.resolve('');
+
+		var qs = new URLSearchParams();
+		qs.set('srv', opts.srv);
+		if (opts.dbname) qs.set('dbname', opts.dbname);
+		qs.set('ts', opts.sampleTime || opts.ts || '');
+
+		return fetchJson('/api/llm/server-context?' + qs.toString())
+			.then(function (data)
+			{
+				if (data && data.message)
+					console.info('dbxLlmAdvice: no server configuration for srv=' + opts.srv + ': ' + data.message);
+				return (data && data.serverContext) || '';
+			})
+			.catch(function (err)
+			{
+				console.warn('dbxLlmAdvice: /api/llm/server-context failed, continuing without the server configuration: ' + err.message);
+				return '';
+			});
+	}
+
+	/**
 	 * opts.preview true: render the exact prompt text that would be sent, via /api/llm/optimize-sql's
 	 * preview mode - no provider is called, so this works even when the LLM feature itself is off.
 	 */
@@ -1679,6 +1811,7 @@ var dbxLlmAdvice = (function () {
 			workloadProfile: opts.workloadProfile,
 			dbVendor:        opts.dbVendor,
 			dbmsVersion:     opts.dbmsVersion,
+			serverContext:   opts.serverContext,
 			provider:        model ? model.provider : opts.provider,
 			model:           model ? model.model    : opts.model,
 			preview:         !!opts.preview,
@@ -1820,6 +1953,7 @@ var dbxLlmAdvice = (function () {
 			sql:             text('dbx-llm-sql'),
 			plan:            text('dbx-llm-plan'),
 			workloadProfile: text('dbx-llm-workload'),
+			serverContext:   text('dbx-llm-server-context'),
 			dbVendor:        meta.dbVendor,
 			provider:        meta.providerId,
 			target:          target
@@ -1874,7 +2008,10 @@ var dbxLlmAdvice = (function () {
 		// The prompt preview needs no login and no model: build it right away
 		if (opts.preview)
 		{
-			lookupContext(container, opts).then(function (ddlContext) { callOptimize(container, opts, ddlContext, null); });
+			lookupContext(container, opts).then(function (ddlContext)
+			{
+				prepareSql(opts.sql, opts.dbVendor).then(function (sql) { callOptimize(container, Object.assign({}, opts, { sql: sql }), ddlContext, null); });
+			});
 			return;
 		}
 
@@ -1898,9 +2035,9 @@ var dbxLlmAdvice = (function () {
 	}
 
 	/**
-	 * The table DDL/index/stats and the DBMS version - looked up ONCE per open() (the promise is kept on opts), so
-	 * asking a second model does not repeat a lookup that can take long with many tables.
-	 * Resolves (never rejects) to the DDL context ('' when there is none); sets opts.dbmsVersion.
+	 * The table DDL/index/stats, the DBMS version and the server configuration - looked up ONCE per open() (the promise is
+	 * kept on opts), so asking a second model does not repeat a lookup that can take long with many tables.
+	 * Resolves (never rejects) to the DDL context ('' when there is none); sets opts.dbmsVersion and opts.serverContext.
 	 */
 	function lookupContext(container, opts)
 	{
@@ -1909,11 +2046,12 @@ var dbxLlmAdvice = (function () {
 			if (!opts.ddlContext)
 				renderStatus(container, 'Looking up table DDL/index/stats...');
 
-			// Both lookups resolve (never reject) to '' on failure, so the advice is still asked for without them
+			// All lookups resolve (never reject) to '' on failure, so the advice is still asked for without them
 			var ddlPromise = opts.ddlContext ? Promise.resolve(opts.ddlContext) : fetchDdlContext(opts);
-			opts._contextPromise = Promise.all([ddlPromise, fetchDbmsVersion(opts)]).then(function (res)
+			opts._contextPromise = Promise.all([ddlPromise, fetchDbmsVersion(opts), fetchServerContext(opts)]).then(function (res)
 			{
-				opts.dbmsVersion = res[1] || '';
+				opts.dbmsVersion   = res[1] || '';
+				opts.serverContext = res[2] || '';
 				return res[0];
 			});
 		}
@@ -1968,6 +2106,9 @@ var dbxLlmAdvice = (function () {
 			+ '<span class="dbx-llm-picker-label">Model</span>'
 			+ '<select class="dbx-llm-model-select" aria-label="LLM model">' + optionsHtml + '</select>'
 			+ '<button type="button" class="dbx-llm-ask-btn">Get Advice</button>'
+			+ '<label class="dbx-llm-picker-opt" title="If the LLM rewrites the SQL, it is easier to see the changes (the diff) when the SQL it got is formatted: the rewrite keeps the same layout.">'
+			+ '<input type="checkbox" class="dbx-llm-format-sql"' + (isFormatSqlOn() ? ' checked' : '') + '> Format SQL Text before send</label>'
+			+ '<span class="dbx-llm-format-note"></span>'
 			+ '<span class="dbx-llm-picker-hint">Nothing is sent to the LLM before you press the button.</span>'
 			+ '</div>'
 			+ '<div class="dbx-llm-results"></div>';
@@ -1976,6 +2117,32 @@ var dbxLlmAdvice = (function () {
 		var askBtn  = container.querySelector('.dbx-llm-ask-btn');
 		var hint    = container.querySelector('.dbx-llm-picker-hint');
 		var results = container.querySelector('.dbx-llm-results');
+
+		// Say it BEFORE anything is sent when the SQL cannot be parsed (cut off, for example)
+		var formatNote = container.querySelector('.dbx-llm-format-note');
+		function updateFormatNote()
+		{
+			formatNote.textContent = '';
+			formatNote.title = '';
+			if (!opts.sql || !isFormatSqlOn())
+				return;
+			loadSqlFormatter().then(function ()
+			{
+				var error = isFormatSqlOn() ? formatSqlChecked(opts.sql, opts.dbVendor).error : null;
+				if (error)
+				{
+					formatNote.textContent = 'Could not parse the SQL: only simple line breaks are used';
+					formatNote.title = error;
+				}
+			}).catch(function () { /* the library did not load: prepareSql() sends the SQL as-is */ });
+		}
+		updateFormatNote();
+
+		container.querySelector('.dbx-llm-format-sql').addEventListener('change', function ()
+		{
+			try { window.localStorage.setItem(FORMAT_SQL_STORAGE_KEY, String(this.checked)); } catch (e) { /* no memory */ }
+			updateFormatNote();
+		});
 
 		askBtn.addEventListener('click', function ()
 		{
@@ -1999,8 +2166,15 @@ var dbxLlmAdvice = (function () {
 			var info    = run.querySelector('.dbx-llm-run-info');
 			var startMs = Date.now();
 
+			// The SQL as sent (formatted or not) is what this answer shows: what was sent, the saved request, the diff
 			lookupContext(body, opts)
-				.then(function (ddlContext) { return callOptimize(body, opts, ddlContext, model); })
+				.then(function (ddlContext)
+				{
+					return prepareSql(opts.sql, opts.dbVendor).then(function (sql)
+					{
+						return callOptimize(body, Object.assign({}, opts, { sql: sql }), ddlContext, model);
+					});
+				})
 				.then(function (data)
 				{
 					var txt = ' - ' + ((Date.now() - startMs) / 1000).toFixed(1) + ' s';
@@ -2083,6 +2257,10 @@ var dbxLlmAdvice = (function () {
 		buildWorkloadProfile: buildWorkloadProfile,
 		// Same reason: previews resolve the DBMS version exactly the way open() does.
 		fetchDbmsVersion: fetchDbmsVersion,
+		// ... and the server configuration and hardware (SQL Server)
+		fetchServerContext: fetchServerContext,
+		// ... and format the SQL the same way ("Format SQL Text before send")
+		prepareSql: prepareSql,
 		// Admin page: show a saved request (see LlmAdviceLog.java / LlmAdviceLogServlet.java)
 		renderSavedRequest: renderSavedRequest
 	};

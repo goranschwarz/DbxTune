@@ -25,7 +25,6 @@ import java.lang.invoke.MethodHandles;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.Base64;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -74,31 +73,6 @@ extends ProxyHelper
 //		String endTime        = Helper.getParameter(req, "endTime");
 //		String sampleTypeStr  = Helper.getParameter(req, "sampleType");
 //		String sampleValueStr = Helper.getParameter(req, "sampleValue");
-
-System.out.println();
-System.out.println("PROXY-ConfigGetServlet --- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX: getContextPath()=" + req.getContextPath());
-System.out.println("PROXY-ConfigGetServlet --- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX: getPathInfo   ()=" + req.getPathInfo());
-System.out.println("PROXY-ConfigGetServlet --- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX: getQueryString()=" + req.getQueryString());
-System.out.println("PROXY-ConfigGetServlet --- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX: getParameterMap()=" + req.getParameterMap());
-
-final String auth = req.getHeader("Authorization");
-System.out.println(">>>>>>>>>>>> NoGuiConfigGetServlet.GET.HEADER: Authorization = |" + auth + "|.");
-if (auth != null)
-{
-	int firstSpace = auth.indexOf(" ");
-	String authMethod = auth.substring(0, firstSpace).trim();
-	String authToken  = auth.substring(firstSpace).trim();
-	
-	if ("Basic".equals(authMethod))
-	{
-		byte[] decodedBytes = Base64.getDecoder().decode(authToken);
-		authToken = new String(decodedBytes);
-	}
-	
-//	String decoded = new String( Base64.getDecoder().decode( auth.substring(firstSpace) ), StandardCharsets.UTF_8 );
-	System.out.println(">>>>>>>>>>>> NoGuiConfigGetServlet.GET.HEADER: Authorization.method = |" + authMethod + "|.");
-	System.out.println(">>>>>>>>>>>> NoGuiConfigGetServlet.GET.HEADER: Authorization.token  = |" + authToken  + "|.");
-}
 
 		// Get "stuff" from the PCS or LOCAL-INFO-FILE (based on the Server Name)
 

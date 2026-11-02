@@ -15,6 +15,13 @@
  * Not logged in as admin: everything is read-only. The login is re-checked when the browser tab gets focus,
  * so logging in on another tab unlocks the page without losing what is selected or pending.
  *
+ * URL parameters: srvName, tab=counters|alarmOverview|alarmWriters|dsr, cm, section, param
+ *   counters      : section = alarm name of the 'cm', param = one of its parameters
+ *   alarmOverview : section = alarm name (with 'cm': only the one in that CM)
+ *   alarmWriters  : section = alarm writer (name or class name), param = one of its settings/filters
+ *   dsr           : section = report|sender|sections, param = one of its entries
+ *   ('alarm' is the older name of 'section' for the two alarm tabs)
+ *
  * Requires: dbxcentral.utils.js (getParameter, isLoggedIn), dbxAlarmEditor.js, dbxAlarmOverview.js, jQuery (for isLoggedIn), Prism (optional).
  */
 var DbxConfig2 = (function()
@@ -1572,7 +1579,7 @@ var DbxConfig2 = (function()
 		updateUrl();
 	}
 
-	/** Keep tab + counter in the URL, so a reload (or a copied link) shows the same thing */
+	/** Keep tab + counter + selected writer/report part in the URL, so a reload (or a copied link) shows the same thing */
 	function updateUrl()
 	{
 		try
@@ -1580,8 +1587,14 @@ var DbxConfig2 = (function()
 			var u = new URL(window.location.href);
 			u.searchParams.set('tab', S.tab === 'counters' ? 'counters' : S.tab === 'overview' ? 'alarmOverview' : S.tab === 'writers' ? 'alarmWriters' : 'dsr');
 			if (S.tab === 'counters' && S.selCm) u.searchParams.set('cm', S.selCm);
-			u.searchParams.delete('alarm');
-			u.searchParams.delete('param');
+			if (S.cfg) // not loaded (yet): leave them, so a reload after a failed load still goes there
+			{
+				u.searchParams.delete('alarm');
+				u.searchParams.delete('param');
+				if      (S.tab === 'writers' && S.selWriter) u.searchParams.set('section', S.selWriter);
+				else if (S.tab === 'dsr')                    u.searchParams.set('section', S.dsub === 'mail' ? 'sender' : S.dsub);
+				else                                         u.searchParams.delete('section'); // alarms: several can be open
+			}
 			if (u.href !== window.location.href) window.history.replaceState(null, '', u.href);
 		}
 		catch (e) {}
@@ -1683,6 +1696,40 @@ var DbxConfig2 = (function()
 		render();
 		if (key) scrollToKey('[data-row="' + CSS.escape(key) + '"]');
 		else     scrollToKey('[data-al="' + CSS.escape(cmName + '|' + alarmName) + '"]');
+	}
+
+	/** Link to an alarm writer (section: its name or class) or a part of the Daily Summary Report (section: report|sender|sections), and optionally one of its entries */
+	function showSection(section, paramName)
+	{
+		var isParam = function(p) { return p.property === paramName || p.name === paramName; };
+		var key = null;
+		if (S.tab === 'writers')
+		{
+			var w = writerList().find(function(x) { return x.name === section || x.className === section || String(x.className).split('.').pop() === section; });
+			if (w)
+			{
+				S.selWriter = w.name;
+				var inSettings = (w.settings || []).find(isParam), inFilters = (w.filters || []).find(isParam);
+				if (paramName && (inSettings || inFilters))
+				{
+					S.wsub = inSettings ? 'settings' : 'filters';
+					key = 'W|' + w.name + '|' + S.wsub + '|' + (inSettings || inFilters).name;
+				}
+			}
+		}
+		else
+		{
+			var dsub = section === 'sender' ? 'mail' : (section === 'report' || section === 'sections') ? section : null;
+			if (dsub)
+			{
+				S.dsub = dsub;
+				var entry = paramName ? dsrList(dsub).find(isParam) : null;
+				if (entry) key = 'D|' + dsub + '|' + entry.property;
+			}
+		}
+		if (key) flash(key);
+		render();
+		if (key) scrollToKey('[data-row="' + CSS.escape(key) + '"]');
 	}
 
 	function jumpTo(key)
@@ -1995,7 +2042,7 @@ var DbxConfig2 = (function()
 		S.srvName = getParameter('srvName', '');
 		var tab = getParameter('tab', '');
 		S.tab = tab === 'alarmOverview' ? 'overview' : tab === 'alarmWriters' ? 'writers' : tab === 'dsr' ? 'dsr' : 'counters';
-		var pCm = getParameter('cm', ''), pAlarm = getParameter('alarm', ''), pParam = getParameter('param', '');
+		var pCm = getParameter('cm', ''), pSection = getParameter('section', '') || getParameter('alarm', ''), pParam = getParameter('param', '');
 		if (pCm) S.selCm = pCm;
 
 		document.addEventListener('input',   onInput);
@@ -2023,8 +2070,18 @@ var DbxConfig2 = (function()
 			.then(function()
 			{
 				render();
-				if (pCm && pAlarm && S.tab === 'counters') showAlarm(pCm, pAlarm, pParam);
-				else if (pCm && pAlarm && S.tab === 'overview') { S.open[pCm + '|' + pAlarm] = true; render(); scrollToKey('[data-al="' + CSS.escape(pCm + '|' + pAlarm) + '"]'); }
+				if (pCm && pSection && S.tab === 'counters') showAlarm(pCm, pSection, pParam);
+				else if (pSection && S.tab === 'overview')
+				{
+					// without a 'cm': the alarm in every counter that has it
+					cmList().forEach(function(cm) {
+						if ((!pCm || cm.cmName === pCm) && alarmsOf(cm).some(function(a) { return a.name === pSection; }))
+							S.open[cm.cmName + '|' + pSection] = true;
+					});
+					render();
+					scrollToKey('.c2-al.c2-open');
+				}
+				else if (pSection && (S.tab === 'writers' || S.tab === 'dsr')) showSection(pSection, pParam);
 				else if (S.selCm) { var r = document.querySelector('.c2-cm.c2-on'); if (r) r.scrollIntoView({ block: 'nearest' }); }
 			});
 	}

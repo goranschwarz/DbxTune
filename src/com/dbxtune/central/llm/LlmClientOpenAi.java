@@ -76,37 +76,64 @@ extends LlmClientAbstract
 		String prompt = buildPrompt(request);
 
 		ObjectMapper om = new ObjectMapper();
-		ObjectNode body = om.createObjectNode();
-		body.put("model", model.getModelId());
 
-		ArrayNode messages = body.putArray("messages");
-		ObjectNode userMsg = messages.addObject();
-		userMsg.put("role", "user");
-		userMsg.put("content", prompt);
-
-		ObjectNode responseFormat = body.putObject("response_format");
-		responseFormat.put("type", "json_object");
-
-		applyExtraBody(body, model);
-
-		HttpRequest.Builder builder = HttpRequest.newBuilder()
-				.timeout(model.getTimeout())
-				.uri(URI.create(getUrl(DEFAULT_URL) + "/chat/completions"))
-				.header("Content-Type", "application/json")
-				.POST(HttpRequest.BodyPublishers.ofString(om.writeValueAsString(body), StandardCharsets.UTF_8));
-		if (StringUtil.hasValue(getApiKey()))
+		// Streamed (the default): progress while we wait, and the reasoning text when the server sends it. The token
+		// counts of a streamed answer need 'stream_options' - sent again without it if the server does not take it.
+		boolean askUsage = askStreamOption(model);
+		String  rawResponse;
+		while (true)
 		{
-			String authHeader = cfg(key("authHeader"), "Authorization").trim();
-			builder.header(authHeader, "Authorization".equalsIgnoreCase(authHeader) ? "Bearer " + getApiKey() : getApiKey());
+			ObjectNode body = om.createObjectNode();
+			body.put("model", model.getModelId());
+
+			ArrayNode messages = body.putArray("messages");
+			ObjectNode userMsg = messages.addObject();
+			userMsg.put("role", "user");
+			userMsg.put("content", prompt);
+
+			ObjectNode responseFormat = body.putObject("response_format");
+			responseFormat.put("type", "json_object");
+
+			applyExtraBody(body, model);
+			if (model.isStream())
+				body.put("stream", true);
+			if (askUsage)
+				body.putObject("stream_options").put("include_usage", true);
+			request.setSettingsSent(requestSettings(body)); // for the saved request: what was sent, without the prompt
+
+			HttpRequest.Builder builder = HttpRequest.newBuilder()
+					.timeout(model.getTimeout())
+					.uri(URI.create(getUrl(DEFAULT_URL) + "/chat/completions"))
+					.header("Content-Type", "application/json")
+					.POST(HttpRequest.BodyPublishers.ofString(om.writeValueAsString(body), StandardCharsets.UTF_8));
+			if (StringUtil.hasValue(getApiKey()))
+			{
+				String authHeader = cfg(key("authHeader"), "Authorization").trim();
+				builder.header(authHeader, "Authorization".equalsIgnoreCase(authHeader) ? "Bearer " + getApiKey() : getApiKey());
+			}
+			applyExtraHeaders(builder, model);
+
+			if ( ! model.isStream() )
+			{
+				// Not streamed: wait for the whole answer, at most 'timeout' in total, and stop the call when nobody waits any more
+				HttpResponse<String> httpResponse = sendAndWait(builder.build(), model, progress);
+				if (httpResponse.statusCode() != 200)
+					throw new Exception("OpenAI API returned HTTP " + httpResponse.statusCode() + ": " + httpResponse.body());
+				rawResponse = httpResponse.body();
+				break;
+			}
+
+			StreamedAnswer answer = sendChatCompletionsStream(builder.build(), model, progress);
+			if (askUsage && isThinkingSummaryRejected(answer.statusCode, answer.body, model))
+			{
+				askUsage = false;
+				continue;
+			}
+			if (answer.statusCode != 200)
+				throw new Exception("OpenAI API returned HTTP " + answer.statusCode + ": " + answer.body);
+			rawResponse = answer.body;
+			break;
 		}
-		applyExtraHeaders(builder, model);
-
-		// Not streamed: wait for the whole answer, at most 'timeout' in total, and stop the call when nobody waits any more
-		HttpResponse<String> httpResponse = sendAndWait(builder.build(), model, progress);
-		String rawResponse = httpResponse.body();
-
-		if (httpResponse.statusCode() != 200)
-			throw new Exception("OpenAI API returned HTTP " + httpResponse.statusCode() + ": " + rawResponse);
 
 		JsonNode root = om.readTree(rawResponse);
 		JsonNode choicesArr = root.get("choices");
@@ -118,6 +145,12 @@ extends LlmClientAbstract
 		LlmOptimizeResponse response = parseModelAnswer(answerText, rawResponse, prompt, model);
 		response.setInputTokens (intOrNull(root.path("usage").path("prompt_tokens")));
 		response.setOutputTokens(intOrNull(root.path("usage").path("completion_tokens")));
+
+		// The reasoning text, when the server sends it (DeepSeek, vLLM: 'reasoning_content', OpenRouter: 'reasoning')
+		JsonNode message   = choicesArr.get(0).path("message");
+		String   reasoning = message.path("reasoning_content").asText(message.path("reasoning").asText(""));
+		if (StringUtil.hasValue(reasoning))
+			response.setThinkingSummary(reasoning.trim());
 		return response;
 	}
 }

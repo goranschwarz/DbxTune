@@ -26,6 +26,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
@@ -60,6 +61,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import software.amazon.eventstream.HeaderValue;
+import software.amazon.eventstream.MessageDecoder;
+
 /**
  * Base class for {@link LlmClient} implementations.
  * <p>
@@ -90,6 +94,18 @@ implements LlmClient
 
 	/** Config-property prefix: every setting of a provider is {@code DbxCentral.llm.<providerId>.<setting>} */
 	public static final String PROPKEY_PREFIX = "DbxCentral.llm.";
+
+	/**
+	 * The request body without the prompt ('messages', 'contents', 'prompt', 'system'): the settings as sent to the LLM -
+	 * model, max_tokens, effort, thinking, extraBody, ... - for the saved request (see {@link LlmOptimizeRequest#getSettingsSent()}).
+	 * Headers are never part of it (extraHeaders can carry credentials).
+	 */
+	protected static String requestSettings(ObjectNode body)
+	{
+		ObjectNode settings = body.deepCopy();
+		settings.remove(List.of("messages", "contents", "prompt", "system"));
+		return settings.toString();
+	}
 
 	/** Bad extraBody/extraHeaders JSON is logged once per property (getModels() runs on every /api/llm/config call). */
 	private static final Set<String> _warnedConfigProblems = ConcurrentHashMap.newKeySet();
@@ -551,9 +567,10 @@ implements LlmClient
 	 */
 	protected boolean isThinkingSummaryRejected(int statusCode, String errorBody, LlmModelEntry model)
 	{
-		// Claude says 'thinking', Gemini 'thinking' or 'thoughts' (includeThoughts)
+		// Claude says 'thinking', Gemini 'thinking' or 'thoughts' (includeThoughts), Ollama 'think(ing)', OpenAI-compatible
+		// servers 'stream_options' (see askStreamOption())
 		String lcBody = errorBody == null ? "" : errorBody.toLowerCase();
-		if (statusCode != 400 || ! (lcBody.contains("thinking") || lcBody.contains("thought")))
+		if (statusCode != 400 || ! (lcBody.contains("think") || lcBody.contains("thought") || lcBody.contains("stream_options")))
 			return false;
 
 		if (_modelsWithoutThinkingSummary.add(thinkingKey(model)))
@@ -616,6 +633,9 @@ implements LlmClient
 				{
 					statusCode.set(responseInfo.statusCode());
 					contentType.set(responseInfo.headers().firstValue("Content-Type").orElse(""));
+					// Amazon Bedrock streams binary frames: decoded here, each one handed on as a 'data:' line (see awsEventFrames())
+					if (responseInfo.statusCode() == 200 && contentType.get().startsWith(AWS_EVENT_STREAM))
+						return HttpResponse.BodySubscribers.fromSubscriber(awsEventFrames(lines, subscription, END));
 					return HttpResponse.BodySubscribers.fromLineSubscriber(subscriber, s -> null, StandardCharsets.UTF_8, null);
 				});
 		call.whenComplete((response, ex) -> { if (ex != null) lines.add(ex); });
@@ -658,16 +678,25 @@ implements LlmClient
 				}
 
 				String line = (String) item;
-				if (statusCode.get() != 200 || ! contentType.get().startsWith("text/event-stream"))
+				if (statusCode.get() != 200 || ! isEventStream(contentType.get()))
 				{
 					plainBody.append(line).append('\n');
 					continue;
 				}
-				// An event is 'data: <JSON>' (Claude also sends 'event: <type>', the same type as in the JSON) + a blank line
-				if ( ! line.startsWith("data:") )
+
+				// Server-Sent Events (and the decoded Bedrock frames): 'data: <JSON>' (Claude also sends 'event: <type>', the same
+				// type as in the JSON) + a blank line; OpenAI ends with 'data: [DONE]'. NDJSON (Ollama): each line is one JSON.
+				String json;
+				if (contentType.get().startsWith(NDJSON))
+					json = line.trim();
+				else if (line.startsWith("data:"))
+					json = line.substring("data:".length()).trim();
+				else
+					continue;
+				if (json.isEmpty() || json.equals("[DONE]"))
 					continue;
 
-				if (events.onEvent(om.readTree(line.substring("data:".length()).trim())))
+				if (events.onEvent(om.readTree(json)))
 					deadline = System.currentTimeMillis() + silenceMs; // content: the model is working, the silence timeout starts over
 			}
 			complete = true;
@@ -686,9 +715,63 @@ implements LlmClient
 			}
 		}
 
-		if (statusCode.get() != 200 || ! contentType.get().startsWith("text/event-stream"))
+		if (statusCode.get() != 200 || ! isEventStream(contentType.get()))
 			return new StreamedAnswer(statusCode.get(), plainBody.toString().trim());
 		return new StreamedAnswer(200, null);
+	}
+
+	/** Content types of a streamed answer: Server-Sent Events, NDJSON (Ollama), the AWS binary event stream (Bedrock) */
+	private static final String SSE              = "text/event-stream";
+	private static final String NDJSON           = "application/x-ndjson";
+	private static final String AWS_EVENT_STREAM = "application/vnd.amazon.eventstream";
+
+	private static boolean isEventStream(String contentType)
+	{
+		return contentType.startsWith(SSE) || contentType.startsWith(NDJSON) || contentType.startsWith(AWS_EVENT_STREAM);
+	}
+
+	/**
+	 * The body subscriber for Amazon Bedrock's binary event stream: the frames are decoded with the AWS event stream
+	 * library and each one goes to 'lines' as {@code data: {"type": <:event-type>, "event": <the payload JSON>}}, so
+	 * {@link #readEventStream} reads them like Server-Sent Events. An exception frame becomes
+	 * {@code {"type":"exception", "exception": <:exception-type>, "event": <payload>}}.
+	 */
+	private static Flow.Subscriber<List<ByteBuffer>> awsEventFrames(BlockingQueue<Object> lines, AtomicReference<Flow.Subscription> subscription, Object end)
+	{
+		ObjectMapper om = new ObjectMapper();
+		MessageDecoder decoder = new MessageDecoder(message ->
+		{
+			try
+			{
+				Map<String, HeaderValue> h = message.getHeaders();
+				String messageType = h.containsKey(":message-type") ? h.get(":message-type").getString() : "event";
+				ObjectNode frame = om.createObjectNode();
+				if ("event".equals(messageType))
+				{
+					frame.put("type", h.containsKey(":event-type") ? h.get(":event-type").getString() : "");
+				}
+				else
+				{
+					frame.put("type", "exception");
+					frame.put("exception", h.containsKey(":exception-type") ? h.get(":exception-type").getString() : (h.containsKey(":error-code") ? h.get(":error-code").getString() : messageType));
+				}
+				byte[] payload = message.getPayload();
+				frame.set("event", payload.length == 0 ? om.createObjectNode() : om.readTree(new String(payload, StandardCharsets.UTF_8)));
+				lines.add("data: " + om.writeValueAsString(frame));
+			}
+			catch (Exception ex)
+			{
+				lines.add(ex);
+			}
+		});
+
+		return new Flow.Subscriber<List<ByteBuffer>>()
+		{
+			@Override public void onSubscribe(Flow.Subscription s) { subscription.set(s); s.request(Long.MAX_VALUE); }
+			@Override public void onNext(List<ByteBuffer> buffers)  { try { for (ByteBuffer b : buffers) decoder.feed(b); } catch (Exception ex) { lines.add(ex); } }
+			@Override public void onError(Throwable t)             { lines.add(t); }
+			@Override public void onComplete()                     { lines.add(end); }
+		};
 	}
 
 	/**
@@ -924,6 +1007,286 @@ implements LlmClient
 	}
 
 	/**
+	 * Ask for a stream option that a server may not know - OpenAI's {@code stream_options.include_usage} (token counts in
+	 * a streamed answer)? Only when streamed, and not after it was rejected (see {@link #isThinkingSummaryRejected}).
+	 */
+	protected boolean askStreamOption(LlmModelEntry model)
+	{
+		return model.isStream() && ! _modelsWithoutThinkingSummary.contains(thinkingKey(model));
+	}
+
+	/**
+	 * Ask an Ollama model for its thinking as a separate 'thinking' field: {@code "think": true}? Only for a model seen
+	 * thinking (as for Claude: for some models 'think' would turn thinking ON), when streamed, not after it was rejected,
+	 * and not when 'extraBody' has its own 'think'.
+	 */
+	protected boolean askOllamaThink(LlmModelEntry model)
+	{
+		if ( ! model.isStream() || ! modelsSeenThinking().contains(thinkingKey(model)) || _modelsWithoutThinkingSummary.contains(thinkingKey(model)) )
+			return false;
+
+		for (ObjectNode extraBody : model.getExtraBodies())
+		{
+			if (extraBody.has("think"))
+				return false;
+		}
+		return true;
+	}
+
+	/**
+	 * A model that writes its thinking INTO the answer, as {@code <think>...</think>} first (older Ollama versions, and
+	 * models like DeepSeek R1 when 'think' is not asked for): returns {thinking, answer}. The thinking is null when the
+	 * text does not start with {@code <think>}; while {@code </think>} has not come yet, all of it is thinking.
+	 */
+	protected static String[] splitThinkTag(String text)
+	{
+		String t = text == null ? "" : text;
+		String trimmed = t.stripLeading();
+		if ( ! trimmed.startsWith("<think>") )
+			return new String[] { null, t };
+
+		int end = trimmed.indexOf("</think>");
+		if (end < 0)
+			return new String[] { trimmed.substring("<think>".length()), "" };
+		return new String[] { trimmed.substring("<think>".length(), end), trimmed.substring(end + "</think>".length()) };
+	}
+
+	/**
+	 * Send a streamed OpenAI chat completions request ({@code "stream": true}) and read the answer's chunks (SSE, ending
+	 * with {@code data: [DONE]}), telling 'progress' the phase and the reasoning text when the server sends it:
+	 * {@code delta.reasoning_content} (DeepSeek, vLLM, ...) or {@code delta.reasoning} (OpenRouter, ...). OpenAI itself does
+	 * not send its reasoning in chat completions: there it is the phase only.
+	 * <p>
+	 * Returns ONE chat completions response rebuilt from the chunks -
+	 * {@code {"choices":[{"message":{"content","reasoning_content"},"finish_reason"}],"usage"}} - or the body as it came
+	 * (see {@link #readEventStream}, also for the timeout and Stop).
+	 */
+	protected StreamedAnswer sendChatCompletionsStream(HttpRequest request, LlmModelEntry model, LlmProgress progress)
+	throws Exception
+	{
+		ObjectMapper  om       = new ObjectMapper();
+		StringBuilder thoughts = new StringBuilder();
+		StringBuilder text     = new StringBuilder();
+		ObjectNode    last     = om.createObjectNode(); // the last 'finish_reason' and 'usage' seen
+
+		StreamedAnswer answer = readEventStream(request, model, progress, new StreamEvents()
+		{
+			List<String> thinkingShown = new ArrayList<>();
+			String       phase         = null;
+
+			@Override
+			public boolean onEvent(JsonNode chunk) throws Exception
+			{
+				if (chunk.has("error"))
+					throw new Exception("The LLM stopped with an error: " + chunk.path("error").path("message").asText(chunk.path("error").toString()));
+
+				JsonNode choice = chunk.path("choices").path(0);
+				JsonNode delta  = choice.path("delta");
+				String reasoning = delta.path("reasoning_content").asText(delta.path("reasoning").asText(""));
+				if ( ! reasoning.isEmpty() )
+				{
+					thoughts.append(reasoning);
+					if ( ! "thinking".equals(phase) )
+						progress.update(phase = "thinking", null);
+					reportThinking(thoughts, thinkingShown, progress);
+				}
+				String content = delta.path("content").asText("");
+				if ( ! content.isEmpty() )
+				{
+					text.append(content);
+					if ( ! "writing the answer".equals(phase) )
+					{
+						// The thinking is done: its last sentence is complete too (it may not end with a space)
+						reportThinking(new StringBuilder(thoughts).append('\n'), thinkingShown, progress);
+						progress.update(phase = "writing the answer", null);
+					}
+				}
+				if (choice.hasNonNull("finish_reason"))
+					last.set("finish_reason", choice.get("finish_reason"));
+				if (chunk.hasNonNull("usage"))
+					last.set("usage", chunk.get("usage"));
+				return true;
+			}
+		});
+		if (answer.body != null)
+			return answer;
+
+		ObjectNode response = om.createObjectNode();
+		ObjectNode choice   = response.putArray("choices").addObject();
+		ObjectNode message  = choice.putObject("message");
+		message.put("role", "assistant");
+		message.put("content", text.toString());
+		if (thoughts.length() > 0)
+			message.put("reasoning_content", thoughts.toString());
+		if (last.has("finish_reason"))
+			choice.set("finish_reason", last.get("finish_reason"));
+		if (last.has("usage"))
+			response.set("usage", last.get("usage"));
+		return new StreamedAnswer(200, om.writeValueAsString(response));
+	}
+
+	/**
+	 * Send a streamed Ollama request ({@code "stream": true}: one JSON object per line) and read it, telling 'progress' the
+	 * phase and the thinking: the 'thinking' field (when 'think' was asked for), or a {@code <think>...</think>} the model
+	 * writes first in its answer. Either way the model is remembered as thinking (see {@link #askOllamaThink}).
+	 * <p>
+	 * Returns ONE response rebuilt from the lines - {@code {"response","thinking","done_reason","prompt_eval_count","eval_count"}},
+	 * the answer without any {@code <think>} part - or the body as it came (see {@link #readEventStream}).
+	 */
+	protected StreamedAnswer sendOllamaStream(HttpRequest request, LlmModelEntry model, LlmProgress progress)
+	throws Exception
+	{
+		ObjectMapper  om       = new ObjectMapper();
+		StringBuilder thoughts = new StringBuilder(); // the 'thinking' field
+		StringBuilder text     = new StringBuilder(); // the 'response' field (may start with <think>...</think>)
+		ObjectNode    last     = om.createObjectNode(); // the final line's counts
+
+		StreamedAnswer answer = readEventStream(request, model, progress, new StreamEvents()
+		{
+			List<String> thinkingShown = new ArrayList<>();
+			String       phase         = null;
+			boolean      seenThinking  = false;
+
+			@Override
+			public boolean onEvent(JsonNode line) throws Exception
+			{
+				if (line.has("error"))
+					throw new Exception("The LLM stopped with an error: " + line.path("error").asText());
+
+				thoughts.append(line.path("thinking").asText(""));
+				text    .append(line.path("response").asText(""));
+
+				String[] split   = splitThinkTag(text.toString());
+				String   allThinking = thoughts + (split[0] == null ? "" : split[0]);
+				if ( ! allThinking.isEmpty() )
+				{
+					if ( ! seenThinking )
+					{
+						seenThinking = true;
+						markSeenThinking(thinkingKey(model));
+					}
+					if ( split[1].isEmpty() && ! "thinking".equals(phase) )
+						progress.update(phase = "thinking", null);
+					reportThinking(new StringBuilder(allThinking), thinkingShown, progress);
+				}
+				if ( ! split[1].trim().isEmpty() && ! "writing the answer".equals(phase) )
+				{
+					// The thinking is done: its last sentence is complete too (it may not end with a space)
+					if ( ! allThinking.isEmpty() )
+						reportThinking(new StringBuilder(allThinking).append('\n'), thinkingShown, progress);
+					progress.update(phase = "writing the answer", null);
+				}
+
+				if (line.path("done").asBoolean(false))
+				{
+					for (String f : new String[] { "done_reason", "prompt_eval_count", "eval_count" })
+						if (line.has(f))
+							last.set(f, line.get(f));
+				}
+				return true;
+			}
+		});
+		if (answer.body != null)
+			return answer;
+
+		String[]   split    = splitThinkTag(text.toString());
+		String     thinking = thoughts + (split[0] == null ? "" : split[0]);
+		ObjectNode response = om.createObjectNode();
+		response.put("response", split[1]);
+		if ( ! thinking.isEmpty() )
+			response.put("thinking", thinking);
+		response.setAll(last);
+		return new StreamedAnswer(200, om.writeValueAsString(response));
+	}
+
+	/**
+	 * Send a streamed Amazon Bedrock Converse request ({@code /converse-stream}: the AWS binary event stream, decoded by
+	 * {@link #readEventStream}) and read its events, telling 'progress' the phase and the reasoning text when the model
+	 * sends it ({@code contentBlockDelta.delta.reasoningContent.text}).
+	 * <p>
+	 * Returns ONE Converse response rebuilt from the events -
+	 * {@code {"output":{"message":{"content":[{"reasoningContent":...},{"text":...}]}},"stopReason","usage"}} - or the body
+	 * as it came (see {@link #readEventStream}).
+	 */
+	protected StreamedAnswer sendConverseStream(HttpRequest request, LlmModelEntry model, LlmProgress progress)
+	throws Exception
+	{
+		ObjectMapper  om       = new ObjectMapper();
+		StringBuilder thoughts = new StringBuilder();
+		StringBuilder text     = new StringBuilder();
+		ObjectNode    last     = om.createObjectNode(); // 'stopReason' and 'usage'
+
+		StreamedAnswer answer = readEventStream(request, model, progress, new StreamEvents()
+		{
+			List<String> thinkingShown = new ArrayList<>();
+			String       phase         = null;
+
+			@Override
+			public boolean onEvent(JsonNode frame) throws Exception
+			{
+				String   type  = frame.path("type").asText();
+				JsonNode event = frame.path("event");
+				switch (type)
+				{
+				case "exception":
+					// For example 'throttlingException' or 'modelStreamErrorException' in the middle of the answer
+					throw new Exception("The LLM stopped with an error: " + frame.path("exception").asText("") + " - " + event.path("message").asText(event.toString()));
+
+				case "contentBlockDelta":
+				{
+					JsonNode delta     = event.path("delta");
+					String   reasoning = delta.path("reasoningContent").path("text").asText("");
+					if ( ! reasoning.isEmpty() )
+					{
+						thoughts.append(reasoning);
+						if ( ! "thinking".equals(phase) )
+							progress.update(phase = "thinking", null);
+						reportThinking(thoughts, thinkingShown, progress);
+					}
+					String content = delta.path("text").asText("");
+					if ( ! content.isEmpty() )
+					{
+						text.append(content);
+						if ( ! "writing the answer".equals(phase) )
+						{
+							// The thinking is done: its last sentence is complete too (it may not end with a space)
+							reportThinking(new StringBuilder(thoughts).append('\n'), thinkingShown, progress);
+							progress.update(phase = "writing the answer", null);
+						}
+					}
+					break;
+				}
+
+				case "messageStop":
+					last.set("stopReason", event.path("stopReason"));
+					break;
+
+				case "metadata":
+					last.set("usage", event.path("usage"));
+					break;
+
+				default:
+					// messageStart, contentBlockStart, contentBlockStop
+				}
+				return true;
+			}
+		});
+		if (answer.body != null)
+			return answer;
+
+		ObjectNode response = om.createObjectNode();
+		ArrayNode  content  = response.putObject("output").putObject("message").put("role", "assistant").putArray("content");
+		if (thoughts.length() > 0)
+			content.addObject().putObject("reasoningContent").putObject("reasoningText").put("text", thoughts.toString());
+		content.addObject().put("text", text.toString());
+		if (last.has("stopReason"))
+			response.set("stopReason", last.get("stopReason"));
+		if (last.has("usage"))
+			response.set("usage", last.get("usage"));
+		return new StreamedAnswer(200, om.writeValueAsString(response));
+	}
+
+	/**
 	 * Send a NOT streamed request and wait for the whole answer, at most the model's 'timeout' in total
 	 * ({@link HttpTimeoutException}), and only while somebody waits for it ({@link LlmProgress#isCancelled()},
 	 * {@link LlmCancelledException}). Then the call is cancelled: closing the connection stops the model's work and its cost.
@@ -1143,6 +1506,8 @@ implements LlmClient
 		sb.append("You have been tasked with making serious improvements to it, quickly.\n");
 		sb.append("You are not allowed to change server-level settings or make frivolous suggestions like updating statistics.\n");
 		sb.append("Instead, you need to focus on query changes or index changes.\n");
+		if (StringUtil.hasValue(request.getServerContext()))
+			sb.append("The server's configuration and hardware are supplied for context only: use them to judge your query and index advice (parallelism, memory grants, cardinality estimation, isolation level), do not suggest changing them.\n");
 		sb.append("If execution statistics are supplied, weigh your advice by how often and at what time of day the statement actually runs: a statement executed thousands of times, or one that concentrates its whole load into a short window, deserves different advice from one that runs occasionally and evenly.\n");
 		sb.append("\n");
 		sb.append("Do not offer followup options: the customer can only contact you once, so include all necessary information, tasks, and scripts in your initial reply.\n");
@@ -1193,6 +1558,12 @@ implements LlmClient
 		if (StringUtil.hasValue(request.getDdlContext()))
 		{
 			sb.append("Table/index DDL and statistics referenced by the statement:\n").append(request.getDdlContext()).append("\n");
+			sb.append("\n");
+		}
+
+		if (StringUtil.hasValue(request.getServerContext()))
+		{
+			sb.append("Server configuration and hardware (for context):\n").append(request.getServerContext()).append("\n");
 			sb.append("\n");
 		}
 

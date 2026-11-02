@@ -27,6 +27,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.servlet.ServletException;
@@ -46,15 +47,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * Servlet for the saved "LLM Optimization Advice" requests (see {@link LlmAdviceLog}). Mapped twice:
  * <ul>
  *   <li>{@code /admin/llm-log} - the Admin page: all operations, protected by the {@code /admin/*} security constraint</li>
- *   <li>{@code /llm-log} ({@link LlmAdviceLog#VIEW_PATH}) - ONLY {@code view}, for any user: the link under each answer, so
- *       users can share a request. Same rule as asking for advice: logged in, unless {@code DbxCentral.llm.allowAnonymous}.</li>
+ *   <li>{@code /llm-log} ({@link LlmAdviceLog#VIEW_PATH}) - {@code view} for any user: the link under each answer, so
+ *       users can share a request. Same rule as asking for advice: logged in, unless {@code DbxCentral.llm.allowAnonymous}.
+ *       And {@code list} / {@code delete} of the logged-in user's OWN saved requests (the "LLM/AI Advice" page,
+ *       llm-ai-advice.html) - a login is required for those, also with allowAnonymous (every anonymous request has the
+ *       same user, "(anonymous)").</li>
  * </ul>
  *
  * <p>Operations via query parameter {@code op}:
  * <ul>
- *   <li>{@code list}  - {@code days=N} (0 or missing = all): JSON {@code {saveEnabled, keepDays, dir, entries:[...]}}, newest first (admin only)</li>
+ *   <li>{@code list}  - {@code days=N} (0 or missing = all): JSON {@code {saveEnabled, keepDays, dir, entries:[...]}}, newest first
+ *       (admin: all; {@code /llm-log}: only the user's own, without 'dir')</li>
  *   <li>{@code view}  - {@code name=<file>}: the saved page, re-rendered with the advice dialog's renderer</li>
  *   <li>{@code view}  - {@code name=<file>&raw=true}: the saved file as-is, as a download (plain, self-contained)</li>
+ *   <li>{@code delete} (POST) - {@code name=<file>} (one or more): delete saved requests (admin: any; {@code /llm-log}: only the user's own)</li>
  * </ul>
  */
 public class LlmAdviceLogServlet extends HttpServlet
@@ -68,12 +74,22 @@ public class LlmAdviceLogServlet extends HttpServlet
 	{
 		String op = StringUtil.nullToValue(req.getParameter("op"), "").trim();
 
-		// Outside /admin (the link under each answer): only 'view', for anyone who may ask for advice
-		if ( ! req.getServletPath().startsWith("/admin/") )
+		// Outside /admin: 'list' of the user's own saved requests (the LLM/AI Advice page) - a login is required
+		boolean isAdminPath = req.getServletPath().startsWith("/admin/");
+		if ( ! isAdminPath && "list".equals(op) )
+		{
+			if (StringUtil.isNullOrBlank(req.getRemoteUser()))
+			{
+				writeJsonError(resp, HttpServletResponse.SC_UNAUTHORIZED, "Log in to see your saved LLM requests.");
+				return;
+			}
+		}
+		// Outside /admin, 'view' (the link under each answer): for anyone who may ask for advice
+		else if ( ! isAdminPath )
 		{
 			if ( ! "view".equals(op) )
 			{
-				writeJsonError(resp, HttpServletResponse.SC_FORBIDDEN, "Only 'view' is allowed here. The list of saved requests is on the Admin page.");
+				writeJsonError(resp, HttpServletResponse.SC_FORBIDDEN, "Only 'view' and 'list' are allowed here.");
 				return;
 			}
 			if (StringUtil.isNullOrBlank(req.getRemoteUser()) && ! LlmClientRegistry.isAnonymousAccessAllowed())
@@ -87,7 +103,7 @@ public class LlmAdviceLogServlet extends HttpServlet
 
 		if ("list".equals(op))
 		{
-			handleList(req, resp);
+			handleList(req, resp, isAdminPath ? null : req.getRemoteUser());
 		}
 		else if ("view".equals(op))
 		{
@@ -99,16 +115,68 @@ public class LlmAdviceLogServlet extends HttpServlet
 		}
 	}
 
-	private void handleList(HttpServletRequest req, HttpServletResponse resp)
+	/**
+	 * {@code POST op=delete&name=<file>&name=<file>...}: delete saved requests (the delete buttons). On {@code /admin/}
+	 * any saved request; on {@code /llm-log} only the logged-in user's own (another user's counts as 'notFound').
+	 * Each name is checked the same way as for 'view' (a saved file in the folder). Answers JSON {@code {deleted, notFound}}.
+	 */
+	@Override
+	protected void doPost(HttpServletRequest req, HttpServletResponse resp)
+	throws ServletException, IOException
+	{
+		String  op          = StringUtil.nullToValue(req.getParameter("op"), "").trim();
+		boolean isAdminPath = req.getServletPath().startsWith("/admin/");
+		String  user        = req.getRemoteUser();
+		if ( ! isAdminPath && StringUtil.isNullOrBlank(user) )
+		{
+			writeJsonError(resp, HttpServletResponse.SC_UNAUTHORIZED, "Log in to delete your saved LLM requests.");
+			return;
+		}
+		if ( ! "delete".equals(op) )
+		{
+			writeJsonError(resp, HttpServletResponse.SC_BAD_REQUEST, "Unknown or missing operation 'op': '" + op + "'. Use 'delete'.");
+			return;
+		}
+
+		String[] names    = req.getParameterValues("name");
+		int      deleted  = 0;
+		int      notFound = 0;
+		for (String name : names == null ? new String[0] : names)
+		{
+			File file = LlmAdviceLog.getFile(name);
+			if (file != null && ! isAdminPath && ! user.equals(LlmAdviceLog.getUser(file)))
+				file = null; // not this user's
+			if (file != null && file.delete())
+				deleted++;
+			else
+				notFound++;
+		}
+		_logger.info("LLM-ADVICE: User '" + req.getRemoteUser() + "' deleted " + deleted + " saved request(s)" + (notFound > 0 ? " (" + notFound + " not found)" : "") + ".");
+
+		Map<String, Object> result = new LinkedHashMap<>();
+		result.put("deleted",  deleted);
+		result.put("notFound", notFound);
+		resp.setContentType("application/json");
+		resp.setCharacterEncoding("UTF-8");
+		Helper.createObjectMapper().writeValue(resp.getWriter(), result);
+	}
+
+	/** @param onlyUser null = all saved requests (admin), else only this user's (without the folder) */
+	private void handleList(HttpServletRequest req, HttpServletResponse resp, String onlyUser)
 	throws IOException
 	{
 		int days = StringUtil.parseInt(req.getParameter("days"), 0);
 
+		List<Map<String, Object>> entries = LlmAdviceLog.list(days);
+		if (onlyUser != null)
+			entries.removeIf(e -> ! onlyUser.equals(e.get("user")));
+
 		Map<String, Object> result = new LinkedHashMap<>();
 		result.put("saveEnabled", LlmAdviceLog.isSaveEnabled());
 		result.put("keepDays",    LlmAdviceLog.getKeepDays());
-		result.put("dir",         LlmAdviceLog.getLogDir().getAbsolutePath());
-		result.put("entries",     LlmAdviceLog.list(days));
+		if (onlyUser == null)
+			result.put("dir",     LlmAdviceLog.getLogDir().getAbsolutePath());
+		result.put("entries",     entries);
 
 		resp.setContentType("application/json");
 		resp.setCharacterEncoding("UTF-8");
