@@ -254,6 +254,7 @@ var dbxLlmAdvice = (function () {
 			'.dbx-llm-ask-btn:disabled { opacity:0.6; cursor:default; }' +
 			'.dbx-llm-picker-hint { font-size:0.8rem; color:#6c757d; }' +
 			'.dbx-llm-picker-opt { font-size:0.85rem; display:inline-flex; align-items:center; gap:4px; margin:0; cursor:pointer; white-space:nowrap; }' +
+			'.dbx-llm-format-note { font-size:0.85rem; color:#b45309; }' +
 			'.dbx-llm-run { border:1px solid #dee2e6; border-radius:6px; margin-bottom:12px; max-width:min(1600px, 96vw); box-sizing:border-box; }' +
 			'.dbx-llm-run-header { background:#f1f3f5; color:#212529; padding:6px 10px; font-family:Arial, Helvetica, sans-serif; font-weight:bold; border-bottom:1px solid #dee2e6; border-radius:6px 6px 0 0; cursor:pointer; }' +
 			'.dbx-llm-run:not([open]) > .dbx-llm-run-header { border-bottom:none; border-radius:6px; }' +
@@ -375,23 +376,70 @@ var dbxLlmAdvice = (function () {
 		if (v.indexOf('sybase') >= 0 || v.indexOf('adaptive server') >= 0) return 'tsql'; // closest available dialect to Sybase T-SQL
 		if (v.indexOf('postgres') >= 0) return 'postgresql';
 		if (v.indexOf('oracle') >= 0) return 'plsql';
+		if (v.indexOf('mysql') >= 0) return 'mysql';
+		if (v.indexOf('mariadb') >= 0) return 'mariadb';
+		if (v.indexOf('db2') >= 0) return 'db2';
 		return 'sql';
 	}
 
-	/** Pretty-print SQL when sql-formatter is on the page (as-is otherwise). Used for the SQL blocks AND the diff, so both look the same. */
-	function formatSql(sql, dbVendor)
+	/**
+	 * Simple line breaks for SQL that sql-formatter cannot parse (for example cut off in the middle): before the clauses
+	 * and at the commas outside parentheses, never inside quotes or comments.
+	 */
+	function roughFormatSql(sql)
+	{
+		if (!sql)
+			return sql;
+
+		var depth = 0;
+		var tokens = /'(?:[^']|'')*'?|"(?:[^"]|"")*"?|\[[^\]]*\]?|--[^\n]*|\/\*[\s\S]*?(?:\*\/|$)|[(),]|\b(?:SELECT|FROM|WHERE|GROUP\s+BY|ORDER\s+BY|HAVING|UNION(?:\s+ALL)?|SET|VALUES|(?:(?:LEFT|RIGHT|FULL|INNER|CROSS|OUTER)\s+)*JOIN|ON|AND|OR)\b/gi;
+		// \u0001 = a new line with this indent: the whitespace around it is removed at the end
+		function newLine(extra) { return '\u0001' + new Array(depth + extra + 1).join('  ') + '\u0002'; }
+
+		var out = sql.replace(tokens, function (tok, pos)
+		{
+			var first = tok.charAt(0);
+			if (first === "'" || first === '"' || first === '[' || tok.indexOf('--') === 0 || tok.indexOf('/*') === 0)
+				return tok;
+			if (tok === '(') { depth++; return tok; }
+			if (tok === ')') { depth = Math.max(0, depth - 1); return tok; }
+			if (tok === ',') return depth === 0 ? ',' + newLine(1) : tok;
+			if (/[.@#$\w]/.test(sql.charAt(pos - 1)))  // t.on, @and: a name, not a keyword
+				return tok;
+			return newLine(/^(ON|AND|OR)$/i.test(tok) ? 1 : 0) + tok.toUpperCase().replace(/\s+/g, ' ');
+		});
+		return out.replace(/\s*\u0001( *)\u0002\s*/g, '\n$1').replace(/^\s+/, '');
+	}
+
+	/**
+	 * Pretty-print SQL when sql-formatter is on the page (as-is otherwise).
+	 * @return {sql, error}  error = why sql-formatter could not parse it (sql then has roughFormatSql()'s line breaks), else null
+	 */
+	function formatSqlChecked(sql, dbVendor)
 	{
 		if (typeof window.sqlFormatter !== 'undefined' && typeof window.sqlFormatter.format === 'function')
 		{
 			try {
+				// A bare "?" (ASE plan text, Oracle) is a parse error unless it is allowed; the dialect's own parameters still work
+				var paramTypes = { positional: true };
 				// Same user SQL Format options as the Format SQL buttons, when dbxSqlFormat.js is on the page
-				return window.dbxSqlFormat
-					? window.dbxSqlFormat.format(sql, sqlFormatterDialect(dbVendor))
-					: window.sqlFormatter.format(sql, { language: sqlFormatterDialect(dbVendor), keywordCase: 'upper', functionCase: 'upper', dataTypeCase: 'upper' });
+				return { sql: window.dbxSqlFormat
+					? window.dbxSqlFormat.format(sql, sqlFormatterDialect(dbVendor), { paramTypes: paramTypes })
+					: window.sqlFormatter.format(sql, { language: sqlFormatterDialect(dbVendor), keywordCase: 'upper', functionCase: 'upper', dataTypeCase: 'upper', paramTypes: paramTypes }), error: null };
 			}
-			catch (e) { console.warn('dbxLlmAdvice: sqlFormatter.format() failed, showing SQL as-is: ' + e.message); }
+			catch (e)
+			{
+				console.warn('dbxLlmAdvice: sqlFormatter.format() failed, using simple line breaks: ' + e.message);
+				return { sql: roughFormatSql(sql), error: String(e.message).split('\n')[0] };
+			}
 		}
-		return sql;
+		return { sql: sql, error: null };
+	}
+
+	/** Used for the SQL blocks AND the diff, so both look the same. */
+	function formatSql(sql, dbVendor)
+	{
+		return formatSqlChecked(sql, dbVendor).sql;
 	}
 
 	/**
@@ -565,6 +613,11 @@ var dbxLlmAdvice = (function () {
 		try { return window.localStorage.getItem(FORMAT_SQL_STORAGE_KEY) !== 'false'; } catch (e) { return true; }
 	}
 
+	function loadSqlFormatter()
+	{
+		return loadScript(SQL_FORMATTER_URL, function () { return window.sqlFormatter && typeof window.sqlFormatter.format === 'function'; });
+	}
+
 	/**
 	 * The SQL to send: formatted with formatSql() (the same as the answer's SQL blocks and diff) when "Format SQL Text
 	 * before send" is on, as-is otherwise. Also used by the Showplan dialogs' Prompt Previews, so they show the same.
@@ -574,7 +627,7 @@ var dbxLlmAdvice = (function () {
 	{
 		if (!sql || !isFormatSqlOn())
 			return Promise.resolve(sql);
-		return loadScript(SQL_FORMATTER_URL, function () { return window.sqlFormatter && typeof window.sqlFormatter.format === 'function'; })
+		return loadSqlFormatter()
 			.then(function () { return formatSql(sql, dbVendor); })
 			.catch(function (err)
 			{
@@ -649,8 +702,12 @@ var dbxLlmAdvice = (function () {
 	{
 		loadDiffLibs().then(function ()
 		{
-			var oldText = formatSql(oldSql, dbVendor).replace(/\s+$/, '') + '\n';
-			var newText = formatSql(newSql, dbVendor).replace(/\s+$/, '') + '\n';
+			var oldFmt = formatSqlChecked(oldSql, dbVendor);
+			var newFmt = formatSqlChecked(newSql, dbVendor);
+			// One side could not be parsed: the simple line breaks on both, or every line would differ
+			var rough = oldFmt.error || newFmt.error;
+			var oldText = (rough ? roughFormatSql(oldSql) : oldFmt.sql).replace(/\s+$/, '') + '\n';
+			var newText = (rough ? roughFormatSql(newSql) : newFmt.sql).replace(/\s+$/, '') + '\n';
 			// The whole SQL as context (not GitHub's 3 lines around a change): it is short, and read as a whole.
 			// ignoreWhitespace: the SQL formatter re-aligns operators ('o.status    <>') when the lines around them change.
 			var patch = window.Diff.createTwoFilesPatch('SQL', 'SQL', oldText, newText, '', '', { context: 100000, ignoreWhitespace: true });
@@ -2051,6 +2108,7 @@ var dbxLlmAdvice = (function () {
 			+ '<button type="button" class="dbx-llm-ask-btn">Get Advice</button>'
 			+ '<label class="dbx-llm-picker-opt" title="If the LLM rewrites the SQL, it is easier to see the changes (the diff) when the SQL it got is formatted: the rewrite keeps the same layout.">'
 			+ '<input type="checkbox" class="dbx-llm-format-sql"' + (isFormatSqlOn() ? ' checked' : '') + '> Format SQL Text before send</label>'
+			+ '<span class="dbx-llm-format-note"></span>'
 			+ '<span class="dbx-llm-picker-hint">Nothing is sent to the LLM before you press the button.</span>'
 			+ '</div>'
 			+ '<div class="dbx-llm-results"></div>';
@@ -2060,9 +2118,30 @@ var dbxLlmAdvice = (function () {
 		var hint    = container.querySelector('.dbx-llm-picker-hint');
 		var results = container.querySelector('.dbx-llm-results');
 
+		// Say it BEFORE anything is sent when the SQL cannot be parsed (cut off, for example)
+		var formatNote = container.querySelector('.dbx-llm-format-note');
+		function updateFormatNote()
+		{
+			formatNote.textContent = '';
+			formatNote.title = '';
+			if (!opts.sql || !isFormatSqlOn())
+				return;
+			loadSqlFormatter().then(function ()
+			{
+				var error = isFormatSqlOn() ? formatSqlChecked(opts.sql, opts.dbVendor).error : null;
+				if (error)
+				{
+					formatNote.textContent = 'Could not parse the SQL: only simple line breaks are used';
+					formatNote.title = error;
+				}
+			}).catch(function () { /* the library did not load: prepareSql() sends the SQL as-is */ });
+		}
+		updateFormatNote();
+
 		container.querySelector('.dbx-llm-format-sql').addEventListener('change', function ()
 		{
 			try { window.localStorage.setItem(FORMAT_SQL_STORAGE_KEY, String(this.checked)); } catch (e) { /* no memory */ }
+			updateFormatNote();
 		});
 
 		askBtn.addEventListener('click', function ()
