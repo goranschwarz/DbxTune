@@ -520,6 +520,13 @@ public abstract class CheckForUpdates
 					String retryAfter = response.headers().firstValue("Retry-After").orElse(null);
 					int waitTime = (retryAfter != null) ? StringUtil.parseInt(retryAfter, 5) * 1000 : backoffMs;
 
+					// Last attempt: No retry will be done, so do not sleep (at shutdown, the caller is blocked by this)
+					if (attempt >= maxRetries)
+					{
+						_logger.info("HTTP GET -- Server responded with " + status + " '" + HttpUtils.httpResponceCodeToText(status) + "'. No more retries (attempt " + attempt + "/" + maxRetries + "). Retry-After='" + retryAfter + "'.");
+						break;
+					}
+
 					_logger.info("HTTP GET -- Server responded with " + status + " '" + HttpUtils.httpResponceCodeToText(status) + "'. Retrying in " + waitTime + " ms... Retry-After='" + retryAfter + "'.");
 					try { Thread.sleep(waitTime); } catch (InterruptedException ignore) { _logger.info("Sleep was interrupted. Caught: " + ignore); }
 
@@ -662,6 +669,13 @@ public abstract class CheckForUpdates
 				{
 					String retryAfter = response.headers().firstValue("Retry-After").orElse(null);
 					int waitMs = (retryAfter != null) ? StringUtil.parseInt(retryAfter, 5) * 1000 : backoffMs;
+
+					// Last attempt: No retry will be done, so do not sleep (at shutdown, the caller is blocked by this)
+					if (attempt >= maxRetries)
+					{
+						_logger.info("HTTP POST " + urlStr + " Server responded with " + status + " '" + HttpUtils.httpResponceCodeToText(status) + "'. No more retries (attempt " + attempt + "/" + maxRetries + "). Retry-After='" + retryAfter + "'.");
+						break;
+					}
 
 					_logger.info("HTTP POST " + urlStr + " Server responded with " + status + " '" + HttpUtils.httpResponceCodeToText(status) + "'. Retrying in " + waitMs + " ms (attempt " + attempt + "/" + maxRetries + "). Retry-After='" + retryAfter + "'.");
 
