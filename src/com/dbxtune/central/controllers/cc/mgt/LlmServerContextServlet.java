@@ -42,15 +42,17 @@ import com.dbxtune.central.controllers.Helper;
 import com.dbxtune.central.controllers.cc.ProxyHelper;
 import com.dbxtune.central.llm.LlmClientRegistry;
 import com.dbxtune.central.llm.LlmServerContextBuilder;
+import com.dbxtune.utils.DbUtils;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.HtmlQueryString;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * {@code GET /api/llm/server-context?srv=<name>&dbname=<db>&ts=<yyyy-MM-dd HH:mm:ss>}: the "Server configuration and
- * hardware" block of the LLM prompt (see {@link LlmServerContextBuilder}), from the DBMS configuration the server's
- * Collector stored at its start ({@code /api/mgt/dbms-config}). SQL Server only, for now.
+ * {@code GET /api/llm/server-context?srv=<name>&dbVendor=<vendor>&dbname=<db>&ts=<yyyy-MM-dd HH:mm:ss>}: the "Server
+ * configuration and hardware" block of the LLM prompt (see {@link LlmServerContextBuilder}), from the DBMS configuration the
+ * server's Collector stored at its start ({@code /api/mgt/dbms-config}). ASE also reads CmSummary (the page size) and the host
+ * monitoring CMs (cores, memory) from the Collector. SQL Server and ASE, for now.
  * <p>
  * Answers JSON {@code {serverContext, resolvedTs}}, or {@code {serverContext:"", message}} when there is none (turned
  * off, Collector not reachable, nothing stored): the advice is then asked for without it - never an error for the caller.
@@ -93,6 +95,15 @@ extends ProxyHelper
 			return;
 		}
 
+		String  dbVendor    = Helper.getParameter(req, "dbVendor", "");
+		boolean isAse       = DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_SYBASE_ASE);
+		boolean isSqlServer = DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_MSSQL);
+		if ( ! isAse && ! isSqlServer )
+		{
+			sendResult(resp, result, "Not available for the DBMS vendor '" + dbVendor + "'.");
+			return;
+		}
+
 		try
 		{
 			getSrvInfo(req);
@@ -131,7 +142,9 @@ extends ProxyHelper
 				return;
 			}
 
-			result.put("serverContext", LlmServerContextBuilder.buildSqlServer(config, dbname));
+			result.put("serverContext", isAse
+					? LlmServerContextBuilder.buildAse(config, readCm("CmSummary", ts), readCm("CmOsMpstat", ts), readCm("CmOsMeminfo", ts), dbname)
+					: LlmServerContextBuilder.buildSqlServer(config, dbname));
 			result.put("resolvedTs",    config.path("resolvedTs").asText(""));
 			sendResult(resp, result, null);
 		}
@@ -145,6 +158,49 @@ extends ProxyHelper
 			_logger.info("LlmServerContextServlet: could not get the DBMS configuration of '" + getSrvName() + "' from its Collector: " + ex);
 			sendResult(resp, result, "The Collector of '" + getSrvName() + "' could not be reached: " + ex.getMessage());
 		}
+	}
+
+	/**
+	 * The Collector's latest sample of a CM at or before 'ts': {columns, rows}.
+	 * @return null when there is none (the CM is not on, no host monitoring, the Collector does not answer): that part is left out
+	 */
+	private JsonNode readCm(String cmName, String ts)
+	throws InterruptedException
+	{
+		try
+		{
+			HtmlQueryString navQs = new HtmlQueryString(getCollectorBaseUrl() + "/api/mgt/cm/navSample");
+			navQs.add("cm",   cmName);
+			navQs.add("time", ts);
+			navQs.add("dir",  "prev");
+			JsonNode nav = getJsonFromCollector(navQs);
+			if (nav == null || ! nav.path("found").asBoolean(false))
+				return null;
+
+			HtmlQueryString dataQs = new HtmlQueryString(getCollectorBaseUrl() + "/api/mgt/cm/data");
+			dataQs.add("cm",   cmName);
+			dataQs.add("time", nav.path("sampleTime").asText(""));
+			dataQs.add("type", "abs");
+			JsonNode data = getJsonFromCollector(dataQs);
+			return (data == null || data.path("rows").size() == 0) ? null : data;
+		}
+		catch (IOException ex)
+		{
+			_logger.debug("LlmServerContextServlet: could not read " + cmName + " of '" + getSrvName() + "' from its Collector: " + ex);
+			return null;
+		}
+	}
+
+	/** @return the answer, or null when it is not a 200 */
+	private JsonNode getJsonFromCollector(HtmlQueryString qs)
+	throws IOException, InterruptedException
+	{
+		HttpRequest.Builder rb = HttpRequest.newBuilder().uri(URI.create(qs.toString())).timeout(Duration.ofSeconds(10)).GET();
+		if (StringUtil.hasValue(getMgtAuthentication()))
+			rb.header("Authorization", getMgtAuthentication());
+
+		HttpResponse<String> collectorResp = _httpClient.send(rb.build(), HttpResponse.BodyHandlers.ofString());
+		return collectorResp.statusCode() == 200 ? new ObjectMapper().readTree(collectorResp.body()) : null;
 	}
 
 	private void sendResult(HttpServletResponse resp, Map<String, Object> result, String message)

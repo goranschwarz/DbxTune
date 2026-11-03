@@ -1656,16 +1656,19 @@
 			var dbmsVerRecorded = tiBody ? (tiBody.getAttribute('data-dbmsversion') || '') : '';
 			var dbmsVerPromise = (window.dbxLlmAdvice && dbxLlmAdvice.fetchDbmsVersion)
 					? dbxLlmAdvice.fetchDbmsVersion({ srv: srv, dbmsVersion: dbmsVerRecorded }) : Promise.resolve(dbmsVerRecorded);
+			// Same server configuration and hardware open() would send
+			var srvCtxPromise = (window.dbxLlmAdvice && dbxLlmAdvice.fetchServerContext)
+					? dbxLlmAdvice.fetchServerContext({ srv: srv, dbname: dbname, dbVendor: 'Adaptive Server Enterprise', serverContext: saved.serverContext }) : Promise.resolve('');
 			// Same SQL open() would send (formatted when "Format SQL Text before send" is on)
 			var sqlPromise = (window.dbxLlmAdvice && dbxLlmAdvice.prepareSql)
 					? dbxLlmAdvice.prepareSql(sqlText, 'Adaptive Server Enterprise') : Promise.resolve(sqlText);
-			Promise.all([dbmsVerPromise, sqlPromise]).then(function(res) {
-				var dbmsVersion = res[0], sentSql = res[1];
+			Promise.all([dbmsVerPromise, srvCtxPromise, sqlPromise]).then(function(res) {
+				var dbmsVersion = res[0], serverContext = res[1], sentSql = res[2];
 				$.ajax({
 					url:         '/api/llm/optimize-sql',
 					method:      'POST',
 					contentType: 'application/json',
-					data:        JSON.stringify({ sql: sentSql, ddlContext: ddlContext || '', plan: planText, dbVendor: 'Adaptive Server Enterprise', dbmsVersion: dbmsVersion, serverContext: saved.serverContext, workloadProfile: wlProfile, preview: true }),
+					data:        JSON.stringify({ sql: sentSql, ddlContext: ddlContext || '', plan: planText, dbVendor: 'Adaptive Server Enterprise', dbmsVersion: dbmsVersion, serverContext: serverContext, workloadProfile: wlProfile, preview: true }),
 					dataType:    'json',
 					success: function(r) {
 						if (r && r.promptSent) {

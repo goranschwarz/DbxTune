@@ -1682,19 +1682,20 @@ var dbxLlmAdvice = (function () {
 	}
 
 	/**
-	 * SQL Server: the server's configuration and hardware for the prompt (the non-default configuration, host/system info,
-	 * and the options of 'dbname'), from what srv's Collector stored at its start - see LlmServerContextBuilder.java.
+	 * SQL Server and ASE: the server's configuration and hardware for the prompt (the non-default configuration, host/system
+	 * info, and the options of 'dbname'), from srv's Collector - see LlmServerContextBuilder.java.
 	 * Resolves (never rejects) to '' when there is none: another vendor, no 'srv', turned off, Collector not reachable.
 	 */
 	function fetchServerContext(opts)
 	{
 		if (opts.serverContext)
 			return Promise.resolve(String(opts.serverContext));
-		if (!opts.srv || opts.dbVendor !== 'Microsoft SQL Server')
+		if (!opts.srv || (opts.dbVendor !== 'Microsoft SQL Server' && opts.dbVendor !== 'Adaptive Server Enterprise'))
 			return Promise.resolve('');
 
 		var qs = new URLSearchParams();
 		qs.set('srv', opts.srv);
+		qs.set('dbVendor', opts.dbVendor);
 		if (opts.dbname) qs.set('dbname', opts.dbname);
 		qs.set('ts', opts.sampleTime || opts.ts || '');
 

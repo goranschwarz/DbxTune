@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import com.dbxtune.utils.Configuration;
@@ -40,12 +41,13 @@ import com.fasterxml.jackson.databind.JsonNode;
  *   <li>for the statement's database: its {@code sp_helpdb} row, its options from {@code sys.databases}, and its non-default
  *       database scoped configurations</li>
  * </ul>
+ * ASE: see {@link #buildAse(JsonNode, JsonNode, JsonNode, JsonNode, String)}.
  * The texts are stored as the Collector printed the result sets: ASCII tables (see {@link #parseTables(String)}).
  * Kept small on purpose: it is sent with every request.
  */
 public class LlmServerContextBuilder
 {
-	/** Send the server configuration and hardware with the prompt (SQL Server, when the Collector is known). */
+	/** Send the server configuration and hardware with the prompt (SQL Server and ASE, when the Collector is known). */
 	public static final String  PROPKEY_ENABLED = "DbxCentral.llm.serverContext";
 	public static final boolean DEFAULT_ENABLED = true;
 
@@ -74,6 +76,221 @@ public class LlmServerContextBuilder
 			"delayed_durability_desc", "is_memory_optimized_elevate_to_snapshot_on", "is_memory_optimized_enabled",
 			"is_accelerated_database_recovery_on", "is_result_set_caching_on", "is_encrypted", "is_cdc_enabled", "is_published",
 			"containment_desc", "page_verify_option_desc");
+
+	/** ASE sp_configure sections that say nothing about how one statement runs (Monitoring alone is a quarter of the non-default rows), or should not leave the server (Security Related) */
+	private static final List<String> ASE_SKIP_SECTIONS = Arrays.asList(
+			"Monitoring", "Rep Agent Thread Administration", "DTM Administration", "Backup/Recovery", "Component Integration Services", "Security Related");
+
+	/** ASE settings that are always shown, also at their default: without them the size of the server is unknown */
+	private static final List<String> ASE_ALWAYS_SHOW = Arrays.asList(
+			"max online engines", "number of engines at startup", "max memory", "total logical memory");
+
+	/** ASE units that add nothing after the value */
+	private static final List<String> ASE_NO_UNIT = Arrays.asList("name", "not applicable", "number", "switch");
+
+	private static final List<String> ASE_HELPCACHE_COLUMNS = Arrays.asList("Cache Name", "Config Size", "Run Size", "Cache Type");
+	private static final List<String> ASE_THREADPOOL_COLUMNS = Arrays.asList("ThreadPoolName", "Size", "Type");
+	private static final List<String> ASE_HELPDB_COLUMNS = Arrays.asList("db_size", "durability", "status");
+
+	/**
+	 * ASE: from what the Collector stored at its start: the configuration (not at its default, or in {@link #ASE_ALWAYS_SHOW}),
+	 * the caches, thread pools, server wide trace flags and the row of the statement's database. And from its Counter Models:
+	 * the page size (not a configuration setting), and the cores and memory when host monitoring is on.
+	 *
+	 * @param dbmsConfig  the Collector's /api/mgt/dbms-config answer, see {@link #buildSqlServer(JsonNode, String)}
+	 * @param cmSummary   the Collector's /api/mgt/cm/data answer for CmSummary {columns, rows}, or null
+	 * @param cmMpstat    same for CmOsMpstat, or null (no host monitoring)
+	 * @param cmMeminfo   same for CmOsMeminfo, or null (no host monitoring)
+	 * @param dbname      the statement's database, may be blank
+	 * @return the block, or "" when there is nothing
+	 */
+	public static String buildAse(JsonNode dbmsConfig, JsonNode cmSummary, JsonNode cmMpstat, JsonNode cmMeminfo, String dbname)
+	{
+		if (dbmsConfig == null)
+			return "";
+
+		dbname = StringUtil.nullToValue(dbname, "").trim().replaceAll("^\\[|\\]$", "");
+
+		Map<String, String> texts = new LinkedHashMap<>();
+		for (JsonNode t : dbmsConfig.path("texts"))
+			texts.put(t.path("configName").asText(""), t.path("configText").asText(""));
+
+		StringBuilder sb = new StringBuilder();
+
+		String pageSize = firstRowValue(cmSummary, "asePageSize");
+		if (StringUtil.hasValue(pageSize))
+			sb.append("Page size (@@maxpagesize): ").append(pageSize).append(" bytes\n\n");
+
+		String host = aseHostLine(cmMpstat, cmMeminfo);
+		if (StringUtil.hasValue(host))
+			sb.append("Host, from host monitoring (a VM or container may give the DBMS less): ").append(host).append("\n\n");
+
+		// Configuration. 'CfgValStr' is the value: 'ConfigValue' is 0 for settings with a name (optimization goal = allrows_oltp).
+		// 'PendingValue' is 0 when nothing is pending, so only look at it when 'Pending' says so.
+		JsonNode params = dbmsConfig.path("params");
+		List<String> pCols = new ArrayList<>();
+		for (JsonNode c : params.path("columns"))
+			pCols.add(c.asText());
+		int nonDefault = pCols.indexOf("NonDefault");
+		int section    = pCols.indexOf("SectionName");
+		int name       = pCols.indexOf("ConfigName");
+		int value      = pCols.indexOf("CfgValStr");
+		int defValue   = pCols.indexOf("DefaultValue");
+		int unit       = pCols.indexOf("Unit");
+		int pending    = pCols.indexOf("Pending");
+		int pendValue  = pCols.indexOf("PendingValue");
+		int pendStr    = pCols.indexOf("CfgValStrPending");
+		if (nonDefault >= 0 && name >= 0 && value >= 0 && params.path("rows").size() > 0)
+		{
+			// With thread pools, their sizes tell the engines: 'number of engines at startup' only means something on an older ASE, without them
+			boolean hasThreadPools = false;
+			for (Table t : parseTables(texts.get("AseThreadPool")))
+				hasThreadPools |= t.columns.contains("ThreadPoolName") && ! t.rows.isEmpty();
+
+			StringBuilder cfg = new StringBuilder();
+			for (JsonNode row : params.path("rows"))
+			{
+				String cfgName = row.path(name).asText("");
+				if (hasThreadPools && "number of engines at startup".equals(cfgName))
+					continue;
+
+				boolean isNonDefault = row.path(nonDefault).asBoolean(false) && ! (section >= 0 && ASE_SKIP_SECTIONS.contains(row.path(section).asText("")));
+				if ( ! isNonDefault && ! ASE_ALWAYS_SHOW.contains(cfgName) )
+					continue;
+
+				String unitStr = unit >= 0 ? row.path(unit).asText("") : "";
+				cfg.append("- ").append(cfgName).append(" = ").append(row.path(value).asText(""));
+				if (StringUtil.hasValue(unitStr) && ! ASE_NO_UNIT.contains(unitStr))
+					cfg.append(" ").append(unitStr);
+				if (defValue >= 0)
+					cfg.append(" (default ").append(row.path(defValue).asText("")).append(")");
+				if (pending >= 0 && row.path(pending).asBoolean(false))
+				{
+					String pendingStr = pendStr >= 0 ? row.path(pendStr).asText("") : "";
+					if (StringUtil.isNullOrBlank(pendingStr) && pendValue >= 0)
+						pendingStr = row.path(pendValue).asText("");
+					cfg.append(" (configured ").append(pendingStr).append(", pending a restart)");
+				}
+				cfg.append("\n");
+			}
+			sb.append("Server configuration, the settings that are not at their default and the size of the server (sp_configure):\n");
+			sb.append(cfg);
+			sb.append("\n");
+		}
+
+		appendAllRows(sb, "Data caches (sp_helpcache)", texts.get("AseCacheConfig"), "Cache Name",     ASE_HELPCACHE_COLUMNS);
+		appendAllRows(sb, "Thread pools",               texts.get("AseThreadPool"),  "ThreadPoolName", ASE_THREADPOOL_COLUMNS);
+
+		String traceFlags = aseServerWideTraceFlags(texts.get("AseTraceflags"));
+		if (StringUtil.hasValue(traceFlags))
+			sb.append("Trace flags, server wide: ").append(traceFlags).append("\n\n");
+
+		if (StringUtil.hasValue(dbname))
+			appendDatabaseRow(sb, "Database '" + dbname + "' (sp_helpdb)", texts.get("AseHelpDb"), dbname, ASE_HELPDB_COLUMNS);
+
+		return sb.toString().trim();
+	}
+
+	/** "cores=4, memTotal=125.2 GB", what is known of it, from the host monitoring CMs. Windows has no total memory in its counters. */
+	private static String aseHostLine(JsonNode cmMpstat, JsonNode cmMeminfo)
+	{
+		List<String> parts = new ArrayList<>();
+
+		// One row per core, plus a total: 'all' in the column CPU (cpu on AIX), '_Total' in the column Instance on Windows
+		if (cmMpstat != null)
+		{
+			int cores = 0;
+			int col   = columnIndex(cmMpstat, "CPU", "cpu", "Instance");
+			if (col >= 0)
+			{
+				for (JsonNode row : cmMpstat.path("rows"))
+				{
+					String cpu = row.path(col).asText("");
+					if ( ! "all".equalsIgnoreCase(cpu) && ! "_Total".equalsIgnoreCase(cpu) )
+						cores++;
+				}
+			}
+			if (cores > 0)
+				parts.add("cores=" + cores);
+		}
+
+		if (cmMeminfo != null)
+		{
+			int type = columnIndex(cmMeminfo, "memoryType");
+			int used = columnIndex(cmMeminfo, "used");
+			int unit = columnIndex(cmMeminfo, "unit");
+			if (type >= 0 && used >= 0)
+			{
+				for (JsonNode row : cmMeminfo.path("rows"))
+				{
+					if ( ! "MemTotal".equals(row.path(type).asText("")) )
+						continue;
+					double val = row.path(used).asDouble(0);
+					if (val > 0)
+					{
+						boolean isKb = unit >= 0 && "kB".equalsIgnoreCase(row.path(unit).asText(""));
+						parts.add("memTotal=" + (isKb ? String.format(Locale.ROOT, "%.1f GB", val / 1024 / 1024) : row.path(used).asText("") + (unit >= 0 ? " " + row.path(unit).asText("") : "")));
+					}
+					break;
+				}
+			}
+		}
+		return String.join(", ", parts);
+	}
+
+	/** The switches of the line "Serverwide switches set :  3604 (print_output_to_client).", or "" when none */
+	private static String aseServerWideTraceFlags(String text)
+	{
+		if (StringUtil.isNullOrBlank(text))
+			return "";
+		for (String line : text.split("\\r?\\n"))
+		{
+			if (line.startsWith("Serverwide switches set"))
+			{
+				String flags = line.substring(line.indexOf(':') + 1).trim().replaceAll("\\.$", "");
+				return "none".equalsIgnoreCase(flags) ? "" : flags;
+			}
+		}
+		return "";
+	}
+
+	/** One line per row, of the first table that has the column 'mustHaveColumn' */
+	private static void appendAllRows(StringBuilder sb, String label, String text, String mustHaveColumn, List<String> onlyColumns)
+	{
+		for (Table t : parseTables(text))
+		{
+			if ( ! t.columns.contains(mustHaveColumn) || t.rows.isEmpty() )
+				continue;
+			sb.append(label).append(":\n");
+			for (List<String> row : t.rows)
+				sb.append("- ").append(toNameValues(t, row, onlyColumns)).append("\n");
+			sb.append("\n");
+			return;
+		}
+	}
+
+	/** Position of the first of these columns in a /api/mgt/cm/data answer, or -1 */
+	private static int columnIndex(JsonNode cm, String... names)
+	{
+		List<String> cols = new ArrayList<>();
+		for (JsonNode c : cm.path("columns"))
+			cols.add(c.asText());
+		for (String name : names)
+		{
+			if (cols.contains(name))
+				return cols.indexOf(name);
+		}
+		return -1;
+	}
+
+	/** The value of a column in the first row of a /api/mgt/cm/data answer (null = no answer), or "" */
+	private static String firstRowValue(JsonNode cm, String column)
+	{
+		if (cm == null)
+			return "";
+		int col = columnIndex(cm, column);
+		return col < 0 ? "" : cm.path("rows").path(0).path(col).asText("");
+	}
 
 	/**
 	 * @param dbmsConfig  the Collector's /api/mgt/dbms-config answer: {params:{columns,rows}, texts:[{configName, configText}]}
