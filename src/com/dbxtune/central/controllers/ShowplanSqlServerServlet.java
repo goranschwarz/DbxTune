@@ -316,6 +316,7 @@ extends HttpServlet
 		// "Get LLM Optimization Advice" section, which would otherwise lose the workload profile.
 		String workloadData = request.getParameter("workloadData");
 		String dbmsVersion  = request.getParameter("dbmsVersion"); // recorded by the Daily Summary Report, for the same section
+		String savedContext = request.getParameter("savedContext"); // from a saved LLM request, for the same section
 
 		if (_logger.isDebugEnabled())
 			_logger.debug("/showplan/sqlserver: received request from: remoteHost='" + remoteHost + "', remoteAddr='" + remoteAddr + "', remotePort='" + remotePort + "', remoteUser='" + remoteUser + "'.");
@@ -327,7 +328,7 @@ extends HttpServlet
 			return;
 		}
 
-		String formattedOutput = createShowplanOutput(payload, sql, dbVendor, srv, dbname, workloadData, dbmsVersion);
+		String formattedOutput = createShowplanOutput(payload, sql, dbVendor, srv, dbname, workloadData, dbmsVersion, savedContext);
 
 		response.setContentType("text/html; charset=UTF-8");
 		response.setCharacterEncoding("UTF-8");
@@ -357,14 +358,15 @@ extends HttpServlet
 	 */
 	public static String createShowplanOutput(String payload, String sql, String dbVendor, String srv, String dbname)
 	{
-		return createShowplanOutput(payload, sql, dbVendor, srv, dbname, null, null);
+		return createShowplanOutput(payload, sql, dbVendor, srv, dbname, null, null, null);
 	}
 
 	/**
 	 * @param workloadData raw execution statistics JSON, forwarded to the dialog's LLM advice section (may be null)
 	 * @param dbmsVersion  recorded DBMS version string, forwarded to the same section (may be null - then it is resolved live from {@code srv})
+	 * @param savedContext what a saved LLM request sent (JSON), forwarded to the same section (may be null)
 	 */
-	public static String createShowplanOutput(String payload, String sql, String dbVendor, String srv, String dbname, String workloadData, String dbmsVersion)
+	public static String createShowplanOutput(String payload, String sql, String dbVendor, String srv, String dbname, String workloadData, String dbmsVersion, String savedContext)
 	{
 		// Both required together - a table-info lookup needs to know both which server and which
 		// database to ask. Gates dbxSqlTableNames.js/dbxTableInfo.css (only needed once the dialog's
@@ -467,7 +469,8 @@ extends HttpServlet
 				// Execution statistics from the Daily Summary Report - see the GET path above.
 				"        const ssShowplanWorkload = '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(workloadData, "")) + "'; \n" +
 				"        const ssShowplanDbmsVersion = '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(dbmsVersion, "")) + "'; \n" +
-				"        showSqlServerShowplanDialog(plan, ssShowplanSql, '', { srv: ssShowplanSrv, dbname: ssShowplanDbname, workloadData: ssShowplanWorkload, dbmsVersion: ssShowplanDbmsVersion }); \n" +
+				"        const ssShowplanSavedContext = '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(savedContext, "")) + "'; \n" +
+				"        showSqlServerShowplanDialog(plan, ssShowplanSql, '', { srv: ssShowplanSrv, dbname: ssShowplanDbname, workloadData: ssShowplanWorkload, dbmsVersion: ssShowplanDbmsVersion, savedContext: ssShowplanSavedContext }); \n" +
 				"    </script> \n" +
 				HtmlStatic.getJavaScriptAtEnd(true) +
 				"</body> \n" +

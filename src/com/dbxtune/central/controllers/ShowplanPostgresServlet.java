@@ -68,6 +68,8 @@ extends HttpServlet
 		String plan     = request.getParameter("plan");
 		String sql      = request.getParameter("sql");
 		String dbVendor = request.getParameter("dbVendor");
+		String dbmsVersion  = request.getParameter("dbmsVersion");  // from a saved LLM request, for the advice button
+		String savedContext = request.getParameter("savedContext"); // from a saved LLM request, for the advice button
 
 //System.out.println("PLAN=|" + plan + "|");
 
@@ -93,7 +95,7 @@ extends HttpServlet
 
 		// Parse the JSON String and return a formatted message
 		String formattedOutput = "";
-		formattedOutput = createShowplanOutput( payload, sql, dbVendor );
+		formattedOutput = createShowplanOutput( payload, sql, dbVendor, dbmsVersion, savedContext );
 
 
 		response.setContentType("text/html; charset=UTF-8");
@@ -111,7 +113,7 @@ extends HttpServlet
 	
 	public static String createShowplanOutput(String payload)
 	{
-		return createShowplanOutput(payload, null, null);
+		return createShowplanOutput(payload, null, null, null, null);
 	}
 
 	/**
@@ -119,8 +121,10 @@ extends HttpServlet
 	 * @param sql      the SQL statement this plan belongs to, or null if unknown - when present,
 	 *                 a "Get LLM Optimization Advice" button is shown
 	 * @param dbVendor DBMS product name for {@code sql}, or null
+	 * @param dbmsVersion  the DBMS version a saved LLM request sent, or null
+	 * @param savedContext what a saved LLM request sent (JSON), or null
 	 */
-	public static String createShowplanOutput(String payload, String sql, String dbVendor)
+	public static String createShowplanOutput(String payload, String sql, String dbVendor, String dbmsVersion, String savedContext)
 	{
 		boolean hasSql = StringUtil.hasValue(sql) && LlmClientRegistry.isFeatureEnabled();
 
@@ -162,7 +166,7 @@ extends HttpServlet
 				" \n" +
 				"<body> \n" +
 				(hasSql
-					? "    <button type='button' onclick='dbxLlmAdvice.open({sql: dbxLlmSql, plan: dbxLlmPlan, dbVendor: dbxLlmDbVendor, origin: \"Showplan\"});'>Get LLM Optimization Advice</button> \n"
+					? "    <button type='button' onclick='dbxLlmAdvice.open({sql: dbxLlmSql, plan: dbxLlmPlan, dbVendor: dbxLlmDbVendor, dbmsVersion: dbxLlmDbmsVersion, savedContext: dbxLlmSavedContext, origin: \"Showplan\"});'>Get LLM Optimization Advice</button> \n"
 					: "") +
 				"    <div id='app'>                                     \n" +
 				"      <pev2 style='min-height: 100vh;' :plan-source='plan' plan-query='' /> \n" +
@@ -176,6 +180,8 @@ extends HttpServlet
 					? "        const dbxLlmSql = '"      + StringEscapeUtils.escapeEcmaScript(sql) + "'; \n"
 					+ "        const dbxLlmPlan = '"     + StringEscapeUtils.escapeEcmaScript(payload) + "'; \n"
 					+ "        const dbxLlmDbVendor = '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(dbVendor, "")) + "'; \n"
+					+ "        const dbxLlmDbmsVersion = '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(dbmsVersion, "")) + "'; \n"
+					+ "        const dbxLlmSavedContext = '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(savedContext, "")) + "'; \n"
 					: "") +
 				"                                                       \n" +
 				"        const app = createApp({                        \n" +

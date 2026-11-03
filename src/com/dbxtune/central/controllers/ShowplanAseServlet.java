@@ -304,6 +304,7 @@ extends HttpServlet
 		// "Get LLM Optimization Advice" section, which would otherwise lose the workload profile.
 		String workloadData = request.getParameter("workloadData");
 		String dbmsVersion  = request.getParameter("dbmsVersion"); // recorded by the Daily Summary Report, for the same section
+		String savedContext = request.getParameter("savedContext"); // from a saved LLM request, for the same section
 
 		if (_logger.isDebugEnabled())
 			_logger.debug("/showplan/ase: received request from: remoteHost='" + remoteHost + "', remoteAddr='" + remoteAddr + "', remotePort='" + remotePort + "', remoteUser='" + remoteUser + "'.");
@@ -315,7 +316,7 @@ extends HttpServlet
 			return;
 		}
 
-		String formattedOutput = createShowplanOutput(payload, sql, dbVendor, isXml, srv, dbname, workloadData, dbmsVersion);
+		String formattedOutput = createShowplanOutput(payload, sql, dbVendor, isXml, srv, dbname, workloadData, dbmsVersion, savedContext);
 
 		response.setContentType("text/html; charset=UTF-8");
 		response.setCharacterEncoding("UTF-8");
@@ -346,14 +347,15 @@ extends HttpServlet
 	 */
 	public static String createShowplanOutput(String payload, String sql, String dbVendor, String isXml, String srv, String dbname)
 	{
-		return createShowplanOutput(payload, sql, dbVendor, isXml, srv, dbname, null, null);
+		return createShowplanOutput(payload, sql, dbVendor, isXml, srv, dbname, null, null, null);
 	}
 
 	/**
 	 * @param workloadData raw execution statistics JSON, forwarded to the dialog's LLM advice section (may be null)
 	 * @param dbmsVersion  recorded DBMS version string, forwarded to the same section (may be null - then it is resolved live from {@code srv})
+	 * @param savedContext what a saved LLM request sent (JSON), forwarded to the same section (may be null)
 	 */
-	public static String createShowplanOutput(String payload, String sql, String dbVendor, String isXml, String srv, String dbname, String workloadData, String dbmsVersion)
+	public static String createShowplanOutput(String payload, String sql, String dbVendor, String isXml, String srv, String dbname, String workloadData, String dbmsVersion, String savedContext)
 	{
 		// A leading blank line/whitespace before "<?xml ...?>" (common in pasted/captured plans) is
 		// otherwise a fatal error to any XML parser - the spec only allows the declaration as the
@@ -469,11 +471,12 @@ extends HttpServlet
 				// Optimization Advice" section would otherwise lose the workload profile.
 				"        const aseShowplanWorkload = '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(workloadData, "")) + "'; \n" +
 				"        const aseShowplanDbmsVersion = '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(dbmsVersion, "")) + "'; \n" +
+				"        const aseShowplanSavedContext = '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(savedContext, "")) + "'; \n" +
 				"        var isXml; \n" +
 				"        if (explicitIsXml === 'true') isXml = true; \n" +
 				"        else if (explicitIsXml === 'false') isXml = false; \n" +
 				"        else isXml = /^\\s*<\\?xml|^\\s*<query>/i.test(plan.replace(/^[\\s\\S]*?<pre>/i, '')); \n" +
-				"        showAseShowplanDialog(plan, aseShowplanSql, isXml, '', { srv: aseShowplanSrv, dbname: aseShowplanDbname, workloadData: aseShowplanWorkload, dbmsVersion: aseShowplanDbmsVersion }); \n" +
+				"        showAseShowplanDialog(plan, aseShowplanSql, isXml, '', { srv: aseShowplanSrv, dbname: aseShowplanDbname, workloadData: aseShowplanWorkload, dbmsVersion: aseShowplanDbmsVersion, savedContext: aseShowplanSavedContext }); \n" +
 				"    </script> \n" +
 				HtmlStatic.getJavaScriptAtEnd(true) +
 				"</body> \n" +
