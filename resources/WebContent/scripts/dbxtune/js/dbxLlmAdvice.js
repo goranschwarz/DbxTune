@@ -111,11 +111,11 @@ var dbxLlmAdvice = (function () {
 			'.dbx-llm-progress { display:inline-block; max-width:min(110ch, 70vw); margin-left:0.4em; vertical-align:bottom; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#6c757d; font-style:italic; }' +
 			'.dbx-llm-progress:empty { display:none; }' +
 			'.dbx-llm-progress-sep { font-style:normal; margin-right:0.4em; }' +
-			// The Stop button after the clock, and the model's thinking while it works: a small box that scrolls (about 6 lines)
+			// The Stop button after the clock, and the model's thinking while it works: a box that scrolls (about 18 lines)
 			'.dbx-llm-stop-btn { margin-left:10px; font-size:0.75rem; padding:0 10px; cursor:pointer; border:1px solid #ced4da; border-radius:3px; background:#fff; color:#495057; }' +
 			'.dbx-llm-stop-btn:hover { background:#f8d7da; border-color:#f1aeb5; color:#842029; }' +
 			// (resizable: drag the bottom right corner; a fixed height to start with, as 'resize' can not go past a max-height)
-			'.dbx-llm-thinking-live { height:9em; min-height:3em; resize:vertical; overflow:auto; margin:-4px 0 10px 0; padding:4px 10px; border-left:3px solid #ced4da; background:#f8f9fa;' +
+			'.dbx-llm-thinking-live { height:27em; min-height:3em; resize:vertical; overflow:auto; margin:-4px 0 10px 0; padding:4px 10px; border-left:3px solid #ced4da; background:#f8f9fa;' +
 			'  font-family:Arial, Helvetica, sans-serif; font-size:0.85rem; line-height:1.45; color:#495057; }' +
 			'.dbx-llm-thinking-live ul { margin:0; padding-left:18px; }' +
 			'.dbx-llm-thinking-live li { margin-bottom:3px; }' +

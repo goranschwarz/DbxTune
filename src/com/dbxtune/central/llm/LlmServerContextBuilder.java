@@ -26,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.dbxtune.utils.Configuration;
@@ -39,6 +40,7 @@ import com.fasterxml.jackson.databind.JsonNode;
  * <ul>
  *   <li>the configuration ({@code params}): only the settings that are NOT at their default</li>
  *   <li>Host Info ({@code sys.dm_os_host_info}) and System Info ({@code sys.dm_os_sys_info}, the columns about CPU and memory)</li>
+ *   <li>the server's collation, and the Resource Governor: its workload groups and resource pools when it is enabled</li>
  *   <li>for the statement's database: its {@code sp_helpdb} row, its options from {@code sys.databases}, and its non-default
  *       database scoped configurations</li>
  * </ul>
@@ -63,6 +65,15 @@ public class LlmServerContextBuilder
 			"cpu_count", "hyperthread_ratio", "socket_count", "cores_per_socket", "numa_node_count",
 			"physical_memory_kb", "committed_target_kb", "visible_target_kb", "max_workers_count", "scheduler_count",
 			"affinity_type_desc", "virtual_machine_type_desc", "softnuma_configuration_desc", "sql_memory_model_desc", "container_type_desc");
+
+	/** sys.resource_governor_workload_groups, when it is enabled */
+	private static final List<String> RG_GROUP_COLUMNS = Arrays.asList(
+			"name", "importance", "request_max_memory_grant_percent", "request_max_cpu_time_sec", "request_memory_grant_timeout_sec",
+			"max_dop", "group_max_requests", "pool_id", "group_max_tempdb_data_mb", "group_max_tempdb_data_percent");
+
+	/** sys.resource_governor_resource_pools, when it is enabled */
+	private static final List<String> RG_POOL_COLUMNS = Arrays.asList(
+			"pool_id", "name", "min_cpu_percent", "max_cpu_percent", "min_memory_percent", "max_memory_percent", "cap_cpu_percent", "min_iops_per_volume", "max_iops_per_volume");
 
 	/** sp_helpdb: the database row, without what sys.databases says better (dbid, owner) */
 	private static final List<String> HELPDB_COLUMNS = Arrays.asList("db_size", "created", "status", "compatibility_level");
@@ -90,13 +101,35 @@ public class LlmServerContextBuilder
 	/** ASE units that add nothing after the value */
 	private static final List<String> ASE_NO_UNIT = Arrays.asList("name", "not applicable", "number", "switch", "id");
 
+	/** The lines before a cache's pools in the sp_cacheconfig output: name, type, config size, run size, run replacement, run partitions */
+	private static final Pattern ASE_CACHECONFIG_HEADER = Pattern.compile(
+			"Cache: (.+?),\\s+Status: .*?,\\s+Type: (.+?)\\s*\\R" +
+			"\\s*Config Size: (.+?),\\s+Run Size: (.+?)\\s*\\R" +
+			"\\s*Config Replacement: .*?,\\s+Run Replacement: (.+?)\\s*\\R" +
+			"\\s*Config Partition: .*?,\\s+Run Partition:\\s+(\\d+)");
+
+	/** "1344.1 MB available for reconfiguration." */
+	private static final Pattern ASE_FREE_MEMORY = Pattern.compile("([\\d.,]+) MB available for reconfiguration");
+
+	/** A line of sp_helpcache's Cache Binding Information: cache (may hold spaces), entity, type, index name (for an index), status */
+	private static final Pattern ASE_CACHE_BINDING = Pattern.compile("(\\S.*?)\\s+(\\S+)\\s+(table|index|database|text\\S*)(?:\\s+(\\S+))?\\s+(\\S)\\s*");
+
+	/** Not more than this many cache bindings in the prompt */
+	private static final int ASE_MAX_CACHE_BINDINGS = 50;
+
+	/** sp_helpsort's description: character set id and name, sort order id and name, the sort order's description */
+	private static final Pattern ASE_HELPSORT = Pattern.compile("Character Set = (\\d+), (\\S+).*?Sort Order = (\\d+), (\\S+)\\s*(.*)", Pattern.DOTALL);
+
+	private static final List<String> ASE_RESOURCE_LIMIT_COLUMNS = Arrays.asList("appname", "rangename", "limitid", "limitvalue", "enforced", "action", "scope");
+
 	private static final List<String> ASE_HELPCACHE_COLUMNS = Arrays.asList("Cache Name", "Config Size", "Run Size", "Cache Type");
 	private static final List<String> ASE_THREADPOOL_COLUMNS = Arrays.asList("ThreadPoolName", "Size", "Type");
 	private static final List<String> ASE_HELPDB_COLUMNS = Arrays.asList("db_size", "durability", "status");
 
 	/**
 	 * ASE: from what the Collector stored at its start: the configuration (not at its default, or in {@link #ASE_ALWAYS_SHOW}),
-	 * the caches, thread pools, server wide trace flags and the row of the statement's database. And from its Counter Models:
+	 * the memory left, the caches with their buffer pools and bindings, thread pools, resource limits, character set and sort order, server wide trace flags
+	 * and the row of the statement's database. And from its Counter Models:
 	 * the page size (not a configuration setting), and the cores and memory when host monitoring is on.
 	 *
 	 * @param dbmsConfig  the Collector's /api/mgt/dbms-config answer, see {@link #buildSqlServer(JsonNode, String)}
@@ -159,8 +192,98 @@ public class LlmServerContextBuilder
 			sb.append("\n");
 		}
 
-		appendAllRows(sb, "Data caches (sp_helpcache)", texts.get("AseCacheConfig"), "Cache Name",     ASE_HELPCACHE_COLUMNS);
-		appendAllRows(sb, "Thread pools",               texts.get("AseThreadPool"),  "ThreadPoolName", ASE_THREADPOOL_COLUMNS);
+		String cacheText = StringUtil.nullToValue(texts.get("AseCacheConfig"), "");
+
+		Matcher freeMem = ASE_FREE_MEMORY.matcher(cacheText);
+		if (freeMem.find())
+			sb.append("Memory available for reconfiguration: ").append(freeMem.group(1)).append(" MB\n\n");
+
+		// One cache at a time, with its pools. Each "Cache: ..." part of the sp_cacheconfig output (the same on all ASE versions) ends at the next one
+		StringBuilder caches = new StringBuilder();
+		for (String part : cacheText.split("(?m)^(?=Cache: )"))
+		{
+			Matcher m = ASE_CACHECONFIG_HEADER.matcher(part);
+			if ( ! m.lookingAt() )
+				continue;
+			caches.append("- ").append(m.group(1)).append(": Type=").append(m.group(2)).append(", Config Size=").append(m.group(3)).append(", Run Size=").append(m.group(4))
+				.append(", Replacement=").append(m.group(5)).append(", Partitions=").append(m.group(6)).append("\n");
+			for (Table t : parseTables(part))
+			{
+				if ( ! t.columns.contains("IO Size") )
+					continue;
+				for (List<String> row : t.rows)
+					caches.append("  - pool: ").append(toNameValues(t, row, null)).append("\n");
+				break;
+			}
+		}
+		if (caches.length() > 0)
+			sb.append("Data caches and their buffer pools (sp_cacheconfig):\n").append(caches).append("\n");
+		else
+			appendAllRows(sb, "Data caches (sp_helpcache)", cacheText, "Cache Name", ASE_HELPCACHE_COLUMNS);
+
+		// The bindings are print output, not a table. With a statement's database: only its objects (a big server can have hundreds), and what is bound as a whole database (tempdb)
+		int bindingsAt = cacheText.indexOf("Cache Binding Information");
+		if (bindingsAt >= 0)
+		{
+			int bindingsEnd = cacheText.indexOf("####", bindingsAt);
+			StringBuilder bindings = new StringBuilder();
+			int count = 0;
+			for (String line : cacheText.substring(bindingsAt, bindingsEnd < 0 ? cacheText.length() : bindingsEnd).split("\\r?\\n"))
+			{
+				Matcher m = ASE_CACHE_BINDING.matcher(line);
+				if ( ! m.matches() )
+					continue;
+				if (StringUtil.hasValue(dbname) && ! "database".equals(m.group(3)) && ! m.group(2).startsWith(dbname + "."))
+					continue;
+				if (++count > ASE_MAX_CACHE_BINDINGS)
+					continue;
+				bindings.append("- ").append(m.group(1)).append(": ").append(m.group(2)).append(" (").append(m.group(3));
+				if (m.group(4) != null)
+					bindings.append(" ").append(m.group(4));
+				bindings.append("V".equals(m.group(5)) ? ")" : ", status " + m.group(5) + ")").append("\n");
+			}
+			if (count > ASE_MAX_CACHE_BINDINGS)
+				bindings.append("- ... and ").append(count - ASE_MAX_CACHE_BINDINGS).append(" more\n");
+			if (count > 0)
+				sb.append("Cache bindings (sp_helpcache)").append(StringUtil.hasValue(dbname) ? ", whole databases and the objects in '" + dbname + "'" : "").append(":\n").append(bindings).append("\n");
+		}
+
+		appendAllRows(sb, "Thread pools", texts.get("AseThreadPool"), "ThreadPoolName", ASE_THREADPOOL_COLUMNS);
+
+		// sp_help_resource_limit: no 'name', it is a login. No rows: say so, then the model does not have to wonder
+		for (Table t : parseTables(texts.get("AseResourceGovernor")))
+		{
+			if ( ! t.columns.contains("limitid") )
+				continue;
+			if (t.rows.isEmpty())
+				sb.append("Resource limits (sp_help_resource_limit): none\n\n");
+			else
+				appendAllRows(sb, "Resource limits (sp_help_resource_limit)", texts.get("AseResourceGovernor"), "limitid", ASE_RESOURCE_LIMIT_COLUMNS);
+			break;
+		}
+
+		// The "Sort Order Description" table. Its descriptions are cut at the width of the table, also inside a word, and go on after a 4 space indent: put them together again
+		String sortText = StringUtil.nullToValue(texts.get("AseHelpSort"), "");
+		int sortAt = sortText.indexOf("Sort Order Description");
+		if (sortAt >= 0)
+		{
+			StringBuilder desc = new StringBuilder();
+			for (String line : sortText.substring(sortAt).split("\\r?\\n"))
+			{
+				if (line.startsWith("Rows "))
+					break;
+				if (line.startsWith("|") && line.endsWith("|"))
+					desc.append(line.substring(1, line.length() - 1).replaceFirst("^ {4}", ""));
+			}
+			Matcher m = ASE_HELPSORT.matcher(desc);
+			if (m.find())
+			{
+				boolean caseInsensitive = m.group(4).contains("nocase") || m.group(4).contains("nocs") || m.group(5).matches("(?is).*case[ -]*(and accent[ -]*)?insensitive.*");
+				sb.append("Character set and sort order (sp_helpsort): ").append(m.group(2)).append(" (id ").append(m.group(1)).append("), ")
+					.append(m.group(4)).append(" (id ").append(m.group(3)).append("), case ").append(caseInsensitive ? "insensitive" : "sensitive")
+					.append(": ").append(m.group(5).trim()).append("\n\n");
+			}
+		}
 
 		String traceFlags = aseServerWideTraceFlags(texts.get("AseTraceflags"));
 		if (StringUtil.hasValue(traceFlags))
@@ -683,6 +806,47 @@ public class LlmServerContextBuilder
 
 		appendFirstRow(sb, "Host (sys.dm_os_host_info)",   texts.get("SqlServerHostInfo"), null);
 		appendFirstRow(sb, "System (sys.dm_os_sys_info)",  texts.get("SqlServerSysInfo"),  SYS_INFO_COLUMNS);
+
+		// sp_helpsort's description, and SERVERPROPERTY('Collation')
+		String collationDesc = "";
+		String collationName = "";
+		for (Table t : parseTables(texts.get("SqlServerHelpSort")))
+		{
+			if (t.columns.contains("Server default collation") && ! t.rows.isEmpty())
+				collationDesc = t.rows.get(0).get(t.columns.indexOf("Server default collation"));
+			if (t.columns.contains("SERVERPROPERTY_Collation") && ! t.rows.isEmpty())
+				collationName = t.rows.get(0).get(t.columns.indexOf("SERVERPROPERTY_Collation"));
+		}
+		if (StringUtil.hasValue(collationName))
+			sb.append("Server collation: ").append(collationName).append(StringUtil.hasValue(collationDesc) ? " - " + collationDesc : "").append("\n\n");
+
+		// Resource Governor: when disabled one line, its groups and pools are not in use. 'internal' can not be changed
+		for (Table t : parseTables(texts.get("SqlServerResourceGovernor")))
+		{
+			int enabled = t.columns.indexOf("is_enabled");
+			if (enabled < 0 || t.rows.isEmpty())
+				continue;
+			String isEnabled = t.rows.get(0).get(enabled);
+			if ( ! "true".equalsIgnoreCase(isEnabled) && ! "1".equals(isEnabled) )
+			{
+				sb.append("Resource Governor: not enabled\n\n");
+				break;
+			}
+			sb.append("Resource Governor: enabled, ").append(toNameValues(t, t.rows.get(0), Arrays.asList("active_classifier_function_name", "max_outstanding_io_per_volume"))).append("\n");
+			for (Table g : parseTables(texts.get("SqlServerResourceGovernor")))
+			{
+				boolean isGroups = g.columns.contains("group_max_requests");
+				if ( ! isGroups && ! g.columns.contains("min_cpu_percent") )
+					continue;
+				for (List<String> row : g.rows)
+				{
+					if ( ! "internal".equals(row.get(g.columns.indexOf("name"))) )
+						sb.append(isGroups ? "- workload group: " : "- resource pool: ").append(toNameValues(g, row, isGroups ? RG_GROUP_COLUMNS : RG_POOL_COLUMNS)).append("\n");
+				}
+			}
+			sb.append("\n");
+			break;
+		}
 
 		if (StringUtil.hasValue(dbname))
 		{

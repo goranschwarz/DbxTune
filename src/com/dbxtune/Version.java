@@ -31,8 +31,8 @@ public class Version
 {
 	public static       String PRODUCT_STRING     = "DbxTune";      // Do not have spaces etc in this one
 //	public static final String VERSION_STRING     = "4.6.0";        // Use this for public releases
-	public static final String VERSION_STRING     = "4.6.0.109.dev"; // Use this for early releases
-	public static final String BUILD_STRING       = "2026-11-03/build 661";
+	public static final String VERSION_STRING     = "4.6.0.110.dev"; // Use this for early releases
+	public static final String BUILD_STRING       = "2026-11-03/build 662";
 
 	public static final String GIT_DATE_STRING    = "2026-11-03";  // try to update this
 	public static final String GIT_REVISION_STR   = "612";     // used by CheckForUpdates --- update this on every check-in (emulates Subversion "Revision:" tag)
