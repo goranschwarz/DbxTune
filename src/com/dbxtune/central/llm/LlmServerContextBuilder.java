@@ -121,26 +121,12 @@ public class LlmServerContextBuilder
 		if (StringUtil.hasValue(pageSize))
 			sb.append("Page size (@@maxpagesize): ").append(pageSize).append(" bytes\n\n");
 
-		String host = aseHostLine(cmMpstat, cmMeminfo);
-		if (StringUtil.hasValue(host))
-			sb.append("Host, from host monitoring (a VM or container may give the DBMS less): ").append(host).append("\n\n");
+		appendHostFromMonitoring(sb, cmMpstat, cmMeminfo);
 
 		// Configuration. 'CfgValStr' is the value: 'ConfigValue' is 0 for settings with a name (optimization goal = allrows_oltp).
 		// 'PendingValue' is 0 when nothing is pending, so only look at it when 'Pending' says so.
-		JsonNode params = dbmsConfig.path("params");
-		List<String> pCols = new ArrayList<>();
-		for (JsonNode c : params.path("columns"))
-			pCols.add(c.asText());
-		int nonDefault = pCols.indexOf("NonDefault");
-		int section    = pCols.indexOf("SectionName");
-		int name       = pCols.indexOf("ConfigName");
-		int value      = pCols.indexOf("CfgValStr");
-		int defValue   = pCols.indexOf("DefaultValue");
-		int unit       = pCols.indexOf("Unit");
-		int pending    = pCols.indexOf("Pending");
-		int pendValue  = pCols.indexOf("PendingValue");
-		int pendStr    = pCols.indexOf("CfgValStrPending");
-		if (nonDefault >= 0 && name >= 0 && value >= 0 && params.path("rows").size() > 0)
+		Params p = new Params(dbmsConfig);
+		if (p.has("NonDefault") && p.has("ConfigName") && p.has("CfgValStr") && p.rows.size() > 0)
 		{
 			// With thread pools, their sizes tell the engines: 'number of engines at startup' only means something on an older ASE, without them
 			boolean hasThreadPools = false;
@@ -148,30 +134,23 @@ public class LlmServerContextBuilder
 				hasThreadPools |= t.columns.contains("ThreadPoolName") && ! t.rows.isEmpty();
 
 			StringBuilder cfg = new StringBuilder();
-			for (JsonNode row : params.path("rows"))
+			for (JsonNode row : p.rows)
 			{
-				String cfgName = row.path(name).asText("");
+				String cfgName = p.str(row, "ConfigName");
 				if (hasThreadPools && "number of engines at startup".equals(cfgName))
 					continue;
 
-				boolean isNonDefault = row.path(nonDefault).asBoolean(false) && ! (section >= 0 && ASE_SKIP_SECTIONS.contains(row.path(section).asText("")));
+				boolean isNonDefault = p.bool(row, "NonDefault") && ! ASE_SKIP_SECTIONS.contains(p.str(row, "SectionName"));
 				if ( ! isNonDefault && ! ASE_ALWAYS_SHOW.contains(cfgName) )
 					continue;
 
-				String unitStr = unit >= 0 ? row.path(unit).asText("") : "";
-				cfg.append("- ").append(cfgName).append(" = ").append(row.path(value).asText(""));
-				if (StringUtil.hasValue(unitStr) && ! ASE_NO_UNIT.contains(unitStr))
-					cfg.append(" ").append(unitStr);
-				if (defValue >= 0)
-					cfg.append(" (default ").append(row.path(defValue).asText("")).append(")");
-				if (pending >= 0 && row.path(pending).asBoolean(false))
-				{
-					String pendingStr = pendStr >= 0 ? row.path(pendStr).asText("") : "";
-					if (StringUtil.isNullOrBlank(pendingStr) && pendValue >= 0)
-						pendingStr = row.path(pendValue).asText("");
-					cfg.append(" (configured ").append(pendingStr).append(", pending a restart)");
-				}
-				cfg.append("\n");
+				String unitStr = p.str(row, "Unit");
+				String pending = null;
+				if (p.bool(row, "Pending"))
+					pending = StringUtil.hasValue(p.str(row, "CfgValStrPending")) ? p.str(row, "CfgValStrPending") : p.str(row, "PendingValue");
+				appendSetting(cfg, cfgName,
+						p.str(row, "CfgValStr") + (StringUtil.hasValue(unitStr) && ! ASE_NO_UNIT.contains(unitStr) ? " " + unitStr : ""),
+						p.str(row, "DefaultValue"), pending);
 			}
 			sb.append("Server configuration, the settings that are not at their default and the size of the server (sp_configure):\n");
 			sb.append(cfg);
@@ -191,8 +170,156 @@ public class LlmServerContextBuilder
 		return sb.toString().trim();
 	}
 
+	/** Postgres categories (the start of it) that can change how a statement runs. An allow list: the others hold paths, commands, addresses and logging. */
+	private static final List<String> PG_KEEP_CATEGORIES = Arrays.asList(
+			"Query Tuning", "Resource Usage", "Autovacuum", "Client Connection Defaults / Statement Behavior", "Client Connection Defaults / Shared Library Preloading");
+
+	/** Postgres settings that are always shown, also at their default: the memory and the planner's view of the server */
+	private static final List<String> PG_ALWAYS_SHOW = Arrays.asList(
+			"shared_buffers", "work_mem", "effective_cache_size", "maintenance_work_mem", "random_page_cost", "seq_page_cost",
+			"max_parallel_workers_per_gather", "max_parallel_workers", "jit", "default_statistics_target", "effective_io_concurrency", "max_connections");
+
+	private static final List<String> PG_DATABASE_COLUMNS = Arrays.asList("datcollate", "datctype", "daticulocale", "datconnlimit");
+
+	/**
+	 * Postgres: from what the Collector stored at its start: the configuration (see {@link #PG_KEEP_CATEGORIES},
+	 * {@link #PG_ALWAYS_SHOW}), the installed extensions and the row of the statement's database. Cores and memory are
+	 * only known from host monitoring.
+	 * <p>
+	 * 'CurrentValue' is what the Collector's OWN connection sees, and it sets some for itself (work_mem, Source 'session').
+	 * So for those 'ResetVal' is the server's value, and 'NonDefault' (false for them) says nothing.
+	 *
+	 * @param dbmsConfig  the Collector's /api/mgt/dbms-config answer, see {@link #buildSqlServer(JsonNode, String)}
+	 * @param cmMpstat    the Collector's /api/mgt/cm/data answer for CmOsMpstat {columns, rows}, or null (no host monitoring)
+	 * @param cmMeminfo   same for CmOsMeminfo, or null (no host monitoring)
+	 * @param dbname      the statement's database, may be blank
+	 * @return the block, or "" when there is nothing
+	 */
+	public static String buildPostgres(JsonNode dbmsConfig, JsonNode cmMpstat, JsonNode cmMeminfo, String dbname)
+	{
+		if (dbmsConfig == null)
+			return "";
+
+		dbname = StringUtil.nullToValue(dbname, "").trim();
+
+		Map<String, String> texts = new LinkedHashMap<>();
+		for (JsonNode t : dbmsConfig.path("texts"))
+			texts.put(t.path("configName").asText(""), t.path("configText").asText(""));
+
+		StringBuilder sb = new StringBuilder();
+
+		appendHostFromMonitoring(sb, cmMpstat, cmMeminfo);
+
+		Params p = new Params(dbmsConfig);
+		if (p.has("NonDefault") && p.has("ParameterName") && p.has("CurrentValue") && p.rows.size() > 0)
+		{
+			StringBuilder cfg = new StringBuilder();
+			for (JsonNode row : p.rows)
+			{
+				String  cfgName   = p.str(row, "ParameterName");
+				boolean isSession = "session".equals(p.str(row, "Source"));
+				String  value     = isSession ? p.str(row, "ResetVal") : p.str(row, "CurrentValue");
+				boolean isNonDefault = isSession ? ! value.equals(p.str(row, "BootVal")) : p.bool(row, "NonDefault");
+
+				boolean keepCategory = false;
+				for (String category : PG_KEEP_CATEGORIES)
+					keepCategory |= p.str(row, "Category").startsWith(category);
+
+				if ( ! (isNonDefault && keepCategory) && ! PG_ALWAYS_SHOW.contains(cfgName) )
+					continue;
+
+				String unit = p.str(row, "ParameterType");
+				appendSetting(cfg, cfgName, pgValue(value, unit), pgValue(p.str(row, "BootVal"), unit), null);
+			}
+			sb.append("Server configuration, the settings that are not at their default and the memory and planner settings (pg_settings):\n");
+			sb.append(cfg);
+			sb.append("\n");
+		}
+
+		for (Table t : parseTables(texts.get("PostgresExtentions")))
+		{
+			int name    = t.columns.indexOf("Name");
+			int version = t.columns.indexOf("Version");
+			if (name < 0 || version < 0 || t.rows.isEmpty())
+				continue;
+			List<String> extensions = new ArrayList<>();
+			for (List<String> row : t.rows)
+				extensions.add(row.get(name) + " " + row.get(version));
+			sb.append("Installed extensions: ").append(String.join(", ", extensions)).append("\n\n");
+			break;
+		}
+
+		if (StringUtil.hasValue(dbname))
+			appendDatabaseRow(sb, "Database '" + dbname + "' (pg_database)", texts.get("PostgresDbInfo"), "datname", dbname, PG_DATABASE_COLUMNS);
+
+		return sb.toString().trim();
+	}
+
+	/** A Postgres value in its unit (pg_settings.unit), memory as MB: "632704", "8kB" gives "4943 MB". Anything else is left as it is. */
+	private static String pgValue(String value, String unit)
+	{
+		if (StringUtil.isNullOrBlank(unit) || ! value.matches("\\d+(\\.\\d+)?"))
+			return value; // also -1: "not set, use another setting"
+
+		double kb = Double.parseDouble(value);
+		switch (unit)
+		{
+			case "B":   kb = kb / 1024; break;
+			case "kB":  break;
+			case "8kB": kb = kb * 8; break;
+			case "MB":  kb = kb * 1024; break;
+			default:    return value + " " + unit;
+		}
+		return kb >= 1024 ? Math.round(kb / 1024) + " MB" : Math.round(kb) + " kB";
+	}
+
+	/** The settings of a /api/mgt/dbms-config answer: its columns differ per DBMS */
+	private static class Params
+	{
+		final List<String> columns = new ArrayList<>();
+		final JsonNode     rows;
+
+		Params(JsonNode dbmsConfig)
+		{
+			JsonNode params = dbmsConfig.path("params");
+			for (JsonNode c : params.path("columns"))
+				columns.add(c.asText());
+			rows = params.path("rows");
+		}
+		boolean has (String column)                { return columns.contains(column); }
+		/** "" for a null or a column that is not there */
+		String  str (JsonNode row, String column)  { int i = columns.indexOf(column); return i < 0 ? "" : row.path(i).asText(""); }
+		boolean bool(JsonNode row, String column)  { int i = columns.indexOf(column); return i >= 0 && row.path(i).asBoolean(false); }
+	}
+
+	/**
+	 * "- name = value (default x) (configured y, pending a restart)". A value that is a path is left out: it says nothing
+	 * about a statement, and the layout of the server should not leave it.
+	 * @param defaultValue  blank: no default is known
+	 * @param pending       the value after the next restart, or null
+	 */
+	private static void appendSetting(StringBuilder cfg, String name, String value, String defaultValue, String pending)
+	{
+		if (value.matches("^(/|\\\\\\\\|[A-Za-z]:[\\\\/]|\\+[A-Z]).*"))
+			return;
+
+		cfg.append("- ").append(name).append(" = ").append(value);
+		if (StringUtil.hasValue(defaultValue))
+			cfg.append(" (default ").append(defaultValue).append(")");
+		if (pending != null)
+			cfg.append(" (configured ").append(pending).append(", pending a restart)");
+		cfg.append("\n");
+	}
+
+	private static void appendHostFromMonitoring(StringBuilder sb, JsonNode cmMpstat, JsonNode cmMeminfo)
+	{
+		String host = hostLine(cmMpstat, cmMeminfo);
+		if (StringUtil.hasValue(host))
+			sb.append("Host, from host monitoring (a VM or container may give the DBMS less): ").append(host).append("\n\n");
+	}
+
 	/** "cores=4, memTotal=125.2 GB", what is known of it, from the host monitoring CMs. Windows has no total memory in its counters. */
-	private static String aseHostLine(JsonNode cmMpstat, JsonNode cmMeminfo)
+	private static String hostLine(JsonNode cmMpstat, JsonNode cmMeminfo)
 	{
 		List<String> parts = new ArrayList<>();
 
@@ -366,9 +493,15 @@ public class LlmServerContextBuilder
 	/** One line from the first table (with a 'name' column) that has the database */
 	private static void appendDatabaseRow(StringBuilder sb, String label, String text, String dbname, List<String> onlyColumns)
 	{
+		appendDatabaseRow(sb, label, text, "name", dbname, onlyColumns);
+	}
+
+	/** One line from the first table with the column 'nameColumn' that has the database */
+	private static void appendDatabaseRow(StringBuilder sb, String label, String text, String nameColumn, String dbname, List<String> onlyColumns)
+	{
 		for (Table t : parseTables(text))
 		{
-			int nameCol = t.columns.indexOf("name");
+			int nameCol = t.columns.indexOf(nameColumn);
 			if (nameCol < 0)
 				continue;
 			for (List<String> row : t.rows)

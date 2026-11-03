@@ -51,8 +51,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /**
  * {@code GET /api/llm/server-context?srv=<name>&dbVendor=<vendor>&dbname=<db>&ts=<yyyy-MM-dd HH:mm:ss>}: the "Server
  * configuration and hardware" block of the LLM prompt (see {@link LlmServerContextBuilder}), from the DBMS configuration the
- * server's Collector stored at its start ({@code /api/mgt/dbms-config}). ASE also reads CmSummary (the page size) and the host
- * monitoring CMs (cores, memory) from the Collector. SQL Server and ASE, for now.
+ * server's Collector stored at its start ({@code /api/mgt/dbms-config}). ASE also reads CmSummary (the page size), and ASE and
+ * Postgres the host monitoring CMs (cores, memory), from the Collector. An unknown vendor gets an empty answer.
  * <p>
  * Answers JSON {@code {serverContext, resolvedTs}}, or {@code {serverContext:"", message}} when there is none (turned
  * off, Collector not reachable, nothing stored): the advice is then asked for without it - never an error for the caller.
@@ -98,7 +98,8 @@ extends ProxyHelper
 		String  dbVendor    = Helper.getParameter(req, "dbVendor", "");
 		boolean isAse       = DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_SYBASE_ASE);
 		boolean isSqlServer = DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_MSSQL);
-		if ( ! isAse && ! isSqlServer )
+		boolean isPostgres  = DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_POSTGRES);
+		if ( ! isAse && ! isSqlServer && ! isPostgres )
 		{
 			sendResult(resp, result, "Not available for the DBMS vendor '" + dbVendor + "'.");
 			return;
@@ -142,9 +143,14 @@ extends ProxyHelper
 				return;
 			}
 
-			result.put("serverContext", isAse
-					? LlmServerContextBuilder.buildAse(config, readCm("CmSummary", ts), readCm("CmOsMpstat", ts), readCm("CmOsMeminfo", ts), dbname)
-					: LlmServerContextBuilder.buildSqlServer(config, dbname));
+			String serverContext;
+			if (isAse)
+				serverContext = LlmServerContextBuilder.buildAse(config, readCm("CmSummary", ts), readCm("CmOsMpstat", ts), readCm("CmOsMeminfo", ts), dbname);
+			else if (isPostgres)
+				serverContext = LlmServerContextBuilder.buildPostgres(config, readCm("CmOsMpstat", ts), readCm("CmOsMeminfo", ts), dbname);
+			else
+				serverContext = LlmServerContextBuilder.buildSqlServer(config, dbname);
+			result.put("serverContext", serverContext);
 			result.put("resolvedTs",    config.path("resolvedTs").asText(""));
 			sendResult(resp, result, null);
 		}
