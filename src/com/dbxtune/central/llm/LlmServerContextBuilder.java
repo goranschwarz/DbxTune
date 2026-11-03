@@ -88,7 +88,7 @@ public class LlmServerContextBuilder
 			"max online engines", "number of engines at startup", "max memory", "total logical memory");
 
 	/** ASE units that add nothing after the value */
-	private static final List<String> ASE_NO_UNIT = Arrays.asList("name", "not applicable", "number", "switch");
+	private static final List<String> ASE_NO_UNIT = Arrays.asList("name", "not applicable", "number", "switch", "id");
 
 	private static final List<String> ASE_HELPCACHE_COLUMNS = Arrays.asList("Cache Name", "Config Size", "Run Size", "Cache Type");
 	private static final List<String> ASE_THREADPOOL_COLUMNS = Arrays.asList("ThreadPoolName", "Size", "Type");
