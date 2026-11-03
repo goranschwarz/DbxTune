@@ -524,11 +524,23 @@ extends ReportEntryAbstract
 				String ddlText = formatObjectTextAsDdl(entry.getFullTableName(), entry._objectText);
 				sb.append("DDL:\n").append(StringUtil.nullToValue(ddlText, StringUtil.nullToValue(entry._objectText, "-not-found-"))).append("\n");
 
+				// TABLE is the default
+				if (hasSpHelpValue(entry._lockEscalation) && ! "TABLE".equalsIgnoreCase(entry._lockEscalation))
+					sb.append("-- Lock escalation: ").append(entry._lockEscalation).append("\n");
+
 				for (SqlServerIndexInfo idx : entry.getIndexList())
 				{
-					sb.append("Index: ").append(idx.getIndexName())
-					  .append(", keys=(").append(idx.getKeysStr()).append(")")
-					  .append(", size=").append(idx.getIndexSizeMb()).append(" MB\n");
+					// index_id 0 is the data of a HEAP table, which is not an index
+					if (idx.getIndexID() == 0)
+					{
+						if (hasSpHelpValue(idx._compression) && ! "NONE".equalsIgnoreCase(idx._compression))
+							sb.append("-- Heap data compression: ").append(idx._compression).append("\n");
+						if (idx._partitionCount > 1)
+							sb.append("-- Heap partitions: ").append(idx._partitionCount).append("\n");
+						continue;
+					}
+
+					sb.append(formatIndexAsDdl(entry.getTableName(), idx.getIndexName(), idx.getDescription(), idx.getKeysStr(), idx.getIncludeStr(), idx.getFilterExpression(), idx.getFillFactor(), idx._compression, idx._partitionCount, idx.getDdlText(), idx._isDisabled, idx.getIndexSizeKb())).append("\n");
 				}
 
 				if (StringUtil.hasValue(entry._triggersText))
@@ -549,8 +561,9 @@ extends ReportEntryAbstract
 	 * <p>
 	 * Reuses the same {@link ResultSetTableModel#parseTextTables(String)} parser that
 	 * {@link #getTableAndIndexInfo(SqlServerTableInfo)} already uses in production to pull the
-	 * index-key sub-table back out of this same field - only the "columns" and "identity"
-	 * result-sets are needed here.
+	 * index-key sub-table back out of this same field. Besides the columns and identity, this also
+	 * adds what matters for query tuning: collations, filegroup, foreign keys and check constraints.
+	 * PRIMARY KEY and UNIQUE are seen on the indexes, and DEFAULT doesn't affect a query plan.
 	 * <p>
 	 * This is only ever used to build the LLM prompt context; {@code objectText}/{@code MonDdlStorage}
 	 * themselves and every other consumer of {@code _objectText} (the Daily Summary Report's HTML
@@ -559,7 +572,7 @@ extends ReportEntryAbstract
 	 * @return a "CREATE TABLE ... (...)" -like column list, or {@code null} if {@code objectText}
 	 *         didn't parse into the expected shape (caller falls back to the raw text in that case)
 	 */
-	private String formatObjectTextAsDdl(String fullTableName, String objectText)
+	static String formatObjectTextAsDdl(String fullTableName, String objectText)
 	{
 		if (StringUtil.isNullOrBlank(objectText))
 			return null;
@@ -587,7 +600,29 @@ extends ReportEntryAbstract
 			}
 		}
 
+		// RowGuidCol column (if any)
+		ResultSetTableModel rowGuidTbl = ResultSetTableModel.getTableWithColumnNames(tables, false, "RowGuidCol");
+		String rowGuidCol = rowGuidTbl == null || rowGuidTbl.isEmpty() ? null : rowGuidTbl.getValueAsString(0, "RowGuidCol");
+
+		// The collation most text columns have: is written once, and only the ones that differ on the column
+		// (joining columns with different collations is a common reason for bad plans)
+		Map<String, Integer> collationCount = new HashMap<>();
+		String tableCollation = null;
+		for (int r=0; r<colsTbl.getRowCount(); r++)
+		{
+			String collation = colsTbl.getValueAsString(r, "Collation");
+			if (hasSpHelpValue(collation))
+			{
+				collationCount.merge(collation, 1, Integer::sum);
+				if (tableCollation == null || collationCount.get(collation) > collationCount.get(tableCollation))
+					tableCollation = collation;
+			}
+		}
+
 		StringBuilder sb = new StringBuilder();
+		if (tableCollation != null)
+			sb.append("-- Collation of text columns: ").append(tableCollation).append("\n");
+
 		sb.append("CREATE TABLE ").append(fullTableName).append(" (\n");
 		for (int r=0; r<colsTbl.getRowCount(); r++)
 		{
@@ -595,21 +630,174 @@ extends ReportEntryAbstract
 			if (StringUtil.isNullOrBlank(colName))
 				continue;
 
-			String type     = colsTbl.getValueAsString(r, "Type");
-			String length   = colsTbl.getValueAsString(r, "Length");
-			String prec     = colsTbl.getValueAsString(r, "Prec");
-			String scale    = colsTbl.getValueAsString(r, "Scale");
-			String nullable = colsTbl.getValueAsString(r, "Nullable");
+			String type      = colsTbl.getValueAsString(r, "Type");
+			String length    = colsTbl.getValueAsString(r, "Length");
+			String prec      = colsTbl.getValueAsString(r, "Prec");
+			String scale     = colsTbl.getValueAsString(r, "Scale");
+			String nullable  = colsTbl.getValueAsString(r, "Nullable");
+			String collation = colsTbl.getValueAsString(r, "Collation");
 
 			sb.append("  ").append(colName).append(" ").append(formatSqlType(type, length, prec, scale));
+
+			if (hasSpHelpValue(collation) && ! collation.equals(tableCollation))
+				sb.append(" COLLATE ").append(collation);
+
 			sb.append(" ").append("no".equalsIgnoreCase(nullable) ? "NOT NULL" : "NULL");
 
 			if (colName.equals(identityCol))
 				sb.append(" ").append(identityClause);
 
+			if (colName.equals(rowGuidCol))
+				sb.append(" ROWGUIDCOL");
+
+			// The expression isn't in what was stored when the Collector used sp_help
+			String computedDefinition = colsTbl.getValueAsString(r, "Computed_definition");
+			if ("yes".equalsIgnoreCase(colsTbl.getValueAsString(r, "Computed")))
+				sb.append(hasSpHelpValue(computedDefinition) ? " /*computed: " + computedDefinition + "*/" : " /*computed*/");
+
 			sb.append(r < colsTbl.getRowCount() - 1 ? ",\n" : "\n");
 		}
 		sb.append(")");
+
+		// Filegroup: PRIMARY is what nearly everything is on
+		ResultSetTableModel filegroupTbl = ResultSetTableModel.getTableWithColumnNames(tables, false, "Data_located_on_filegroup");
+		String filegroup = filegroupTbl == null || filegroupTbl.isEmpty() ? null : filegroupTbl.getValueAsString(0, "Data_located_on_filegroup");
+		if (hasSpHelpValue(filegroup) && ! "PRIMARY".equalsIgnoreCase(filegroup))
+			sb.append(" ON ").append(filegroup);
+
+		// Foreign keys and check constraints: a row with an empty 'constraint_type' continues the row before (FOREIGN KEY has its REFERENCES there)
+		ResultSetTableModel constraintTbl = ResultSetTableModel.getTableWithColumnNames(tables, false, "constraint_type", "constraint_keys");
+		if (constraintTbl != null)
+		{
+			constraintTbl.setHandleColumnNotFoundAsNullValueInGetValues(true);
+			for (int r=0; r<constraintTbl.getRowCount(); r++)
+			{
+				String constraintType = StringUtil.nullToValue(constraintTbl.getValueAsString(r, "constraint_type"), "");
+				String keys           = StringUtil.nullToValue(constraintTbl.getValueAsString(r, "constraint_keys"), "");
+				String deleteAction   = constraintTbl.getValueAsString(r, "delete_action");
+				String updateAction   = constraintTbl.getValueAsString(r, "update_action");
+				String disabled       = "Disabled".equalsIgnoreCase(constraintTbl.getValueAsString(r, "status_enabled")) ? " /*disabled*/" : "";
+
+				// The rows that continues this one
+				for (int n=r+1; n<constraintTbl.getRowCount() && StringUtil.isNullOrBlank(constraintTbl.getValueAsString(n, "constraint_type")); n++, r++)
+					keys += " " + StringUtil.nullToValue(constraintTbl.getValueAsString(n, "constraint_keys"), "");
+
+				if ("FOREIGN KEY".equals(constraintType))
+				{
+					int refPos = keys.indexOf(" REFERENCES ");
+					sb.append("\nFOREIGN KEY (").append(refPos < 0 ? keys : keys.substring(0, refPos)).append(")");
+					if (refPos >= 0)
+						sb.append(keys.substring(refPos));
+					if (hasSpHelpValue(deleteAction) && ! "No Action".equalsIgnoreCase(deleteAction)) sb.append(" ON DELETE ").append(deleteAction.toUpperCase());
+					if (hasSpHelpValue(updateAction) && ! "No Action".equalsIgnoreCase(updateAction)) sb.append(" ON UPDATE ").append(updateAction.toUpperCase());
+					sb.append(disabled);
+				}
+				else if (constraintType.startsWith("CHECK"))
+				{
+					sb.append("\nCHECK ").append(keys).append(disabled);
+				}
+			}
+		}
+
+		// Other tables that have foreign keys to this table, row looks like: db.schema.table: fkName
+		ResultSetTableModel refByTbl = ResultSetTableModel.getTableWithColumnNames(tables, false, "Table is referenced by foreign key");
+		if (refByTbl != null && ! refByTbl.isEmpty())
+		{
+			Set<String> refByTables = new LinkedHashSet<>();
+			for (int r=0; r<refByTbl.getRowCount(); r++)
+			{
+				String row = StringUtil.nullToValue(refByTbl.getValueAsString(r, "Table is referenced by foreign key"), "");
+				int colonPos = row.indexOf(':');
+				if (colonPos > 0)
+					refByTables.add(row.substring(0, colonPos));
+			}
+			if ( ! refByTables.isEmpty() )
+				sb.append("\n-- Referenced by foreign keys in: ").append(String.join(", ", refByTables));
+		}
+
+		return sb.toString();
+	}
+
+	/** @return true if there is a value: the text tables show "nothing" as a blank, (NULL), or (n/a) */
+	private static boolean hasSpHelpValue(String value)
+	{
+		return StringUtil.hasValue(value) && ! "(NULL)".equals(value) && ! "NULL".equals(value) && ! "(n/a)".equals(value) && ! value.startsWith("No rowguidcol");
+	}
+
+	/**
+	 * Render an index as a "CREATE INDEX" for the LLM prompt, with what's needed to judge if it's usable: INCLUDE columns, filter, options and size.
+	 * <p>
+	 * The description looks like: {@code clustered, unique, primary key located on PRIMARY}
+	 *
+	 * @param compression  from a newer Collector, null for what was stored by an older one
+	 * @param ddlText      the Collector's own "CREATE INDEX" text: the only place that has the options that are only written when not default
+	 */
+	static String formatIndexAsDdl(String tableName, String indexName, String description, String keys, String include, String filter, int fillFactor, String compression, int partitionCount, String ddlText, boolean isDisabled, long sizeKb)
+	{
+		// Lower case: when sp_help has no row for the index, this is the Collector's IndexType, for example: CLUSTERED COLUMNSTORE
+		String desc      = StringUtil.nullToValue(description, "");
+		int    locatedOn = desc.indexOf(" located on ");
+		String filegroup = locatedOn < 0 ? null : desc.substring(locatedOn + " located on ".length()).trim();
+		if (locatedOn >= 0)
+			desc = desc.substring(0, locatedOn);
+		desc = desc.toLowerCase();
+
+		boolean isColumnstore = desc.contains("columnstore");
+
+		StringBuilder sb = new StringBuilder("CREATE ");
+		if (desc.contains("unique"))       sb.append("UNIQUE ");
+		if (desc.startsWith("clustered"))  sb.append("CLUSTERED ");
+		else                               sb.append("NONCLUSTERED ");
+		if (isColumnstore)                 sb.append("COLUMNSTORE ");
+		sb.append("INDEX ").append(indexName).append(" ON ").append(tableName);
+
+		// A clustered columnstore has no keys, and all columns as "include"
+		boolean isClusteredColumnstore = isColumnstore && desc.startsWith("clustered");
+		if (isClusteredColumnstore)
+		{
+			// nothing more to tell
+		}
+		else if (isColumnstore)
+		{
+			sb.append(" (").append(hasSpHelpValue(include) && ! "-".equals(include) ? include : keys).append(")");
+		}
+		else
+		{
+			sb.append(" (").append(keys).append(")");
+			if (hasSpHelpValue(include) && ! "-".equals(include))
+				sb.append(" INCLUDE (").append(include).append(")");
+		}
+
+		if (hasSpHelpValue(filter) && ! "-".equals(filter))
+			sb.append(" WHERE ").append(filter);
+
+		List<String> withList = new ArrayList<>();
+		if (fillFactor > 0)
+			withList.add("FILLFACTOR = " + fillFactor);
+
+		for (String option : new String[] { "PAD_INDEX = ON", "IGNORE_DUP_KEY = ON", "ALLOW_ROW_LOCKS = OFF", "ALLOW_PAGE_LOCKS = OFF" })
+		{
+			if (ddlText != null && ddlText.contains(option))
+				withList.add(option);
+		}
+
+		// A columnstore index is always compressed, so COLUMNSTORE says nothing (but COLUMNSTORE_ARCHIVE does)
+		if (hasSpHelpValue(compression) && ! "NONE".equalsIgnoreCase(compression) && ! "COLUMNSTORE".equalsIgnoreCase(compression))
+			withList.add("DATA_COMPRESSION = " + compression);
+
+		if ( ! withList.isEmpty() )
+			sb.append(" WITH (").append(String.join(", ", withList)).append(")");
+
+		if (filegroup != null && ! "PRIMARY".equalsIgnoreCase(filegroup))
+			sb.append(" ON ").append(filegroup);
+
+		if (partitionCount > 1)           sb.append(" /*partitions=").append(partitionCount).append("*/");
+		if (desc.contains("primary key")) sb.append(" /*primary key*/");
+		if (desc.contains("unique key"))  sb.append(" /*unique constraint*/");
+		if (isDisabled)                   sb.append(" /*disabled*/");
+
+		double mb = MathUtils.round(sizeKb / 1024.0, 1);
+		sb.append(" -- ").append(mb > 0 ? mb + " MB" : "<0.1 MB");
 
 		return sb.toString();
 	}
@@ -618,21 +806,29 @@ extends ReportEntryAbstract
 	 * Render a SQL Server type name + length/precision/scale (as strings straight out of the
 	 * {@code sp_help} "Column_name/Type/Length/Prec/Scale" result set) as a compact SQL type,
 	 * e.g. {@code varchar(50)}, {@code varchar(max)}, {@code numeric(15,7)}, {@code int}.
+	 * Note: sp_help's Length is in bytes, so nvarchar(50) has Length 100.
 	 */
-	private String formatSqlType(String type, String length, String prec, String scale)
+	private static String formatSqlType(String type, String length, String prec, String scale)
 	{
 		if (type == null)
 			return "?";
 
 		switch (type.toLowerCase())
 		{
-			case "varchar": case "nvarchar": case "char": case "nchar": case "binary": case "varbinary":
+			case "varchar": case "char": case "binary": case "varbinary":
 			{
 				int len = StringUtil.parseInt(length, -1);
 				return type + "(" + (len < 0 ? "max" : String.valueOf(len)) + ")";
 			}
+			case "nvarchar": case "nchar":
+			{
+				int len = StringUtil.parseInt(length, -1);
+				return type + "(" + (len < 0 ? "max" : String.valueOf(len / 2)) + ")";
+			}
 			case "decimal": case "numeric":
 				return type + "(" + StringUtil.nullToValue(prec, "?") + "," + StringUtil.nullToValue(scale, "?") + ")";
+			case "datetime2": case "datetimeoffset": case "time":
+				return hasSpHelpValue(scale) ? type + "(" + scale + ")" : type;
 			default:
 				return type;
 		}
@@ -1458,6 +1654,9 @@ extends ReportEntryAbstract
 					ii._desc        = rstmIndexInfo.getValueAsString (r, "IndexType"             , true, null);
 					ii._fillFactor  = rstmIndexInfo.getValueAsInteger(r, "IndexFillFactor"       , true, -1);
 					ii._rowsPerPage = rstmIndexInfo.getValueAsDouble (r, "RowsPerPage"           , true, -1D);
+					ii._compression    = rstmIndexInfo.getValueAsString (r, "IndexCompression", true, null); // Not in what an older Collector stored
+					ii._partitionCount = rstmIndexInfo.getValueAsInteger(r, "PartitionCount"  , true, 1);
+					ti._lockEscalation = rstmIndexInfo.getValueAsString (r, "TableLockEscalation", true, null); // Not in what an older Collector stored
 
 					// For everything else than HEAP
 					if (indexId != 0)
@@ -1472,6 +1671,7 @@ extends ReportEntryAbstract
 						ii._keysStr          = rstmIndexInfo.getValueAsString (r, "IndexKeys"   , true, ii._keysStr);
 						ii._includeColsStr   = rstmIndexInfo.getValueAsString (r, "IndexInclude", true, null);
 						ii._filterExpression = rstmIndexInfo.getValueAsString (r, "IndexFilter" , true, null);
+						ii._isDisabled       = "true".equalsIgnoreCase(rstmIndexInfo.getValueAsString(r, "IndexIsDisabled", true, null));
 						ii._ddlTxt           = rstmIndexInfo.getValueAsString (r, "DDL"         , true, null);
 
 						ii._keys             = StringUtil.commaStrToList(ii._keysStr, true);
@@ -2145,6 +2345,9 @@ extends ReportEntryAbstract
 		private String       _includeColsStr;
 		private List<String> _includeCols;
 		private String       _filterExpression;
+		private boolean      _isDisabled;
+		private String       _compression;
+		private int          _partitionCount    = 1;
 		private String       _desc;
 		private String       _ddlTxt;
 		private int          _indexID           = -1;
@@ -2300,6 +2503,7 @@ extends ReportEntryAbstract
 //		private int      _unusedKb;
 //		private String   _lockSchema;
 		private int      _indexCount;
+		private String   _lockEscalation;
 		private List<SqlServerIndexInfo> _indexList = new ArrayList<>();
 
 		public List<String> _viewReferences; // if _type == "V", this this will hold; table/views this view references

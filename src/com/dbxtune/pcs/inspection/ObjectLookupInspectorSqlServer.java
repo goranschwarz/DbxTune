@@ -21,6 +21,8 @@
 package com.dbxtune.pcs.inspection;
 
 import java.lang.invoke.MethodHandles;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -37,6 +39,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.Version;
+import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.DdlDetails;
 import com.dbxtune.pcs.ObjectLookupQueueEntry;
 import com.dbxtune.pcs.PersistentCounterHandler;
@@ -53,6 +56,53 @@ public class ObjectLookupInspectorSqlServer
 extends ObjectLookupInspectorAbstract
 {
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+
+	/**
+	 * Prepare SQL which uses the parameter @name, to be executed in the database 'dbname'.
+	 * <p>
+	 * This is for what we do for every object in the DDL Storage, which should be as cheap as possible on the monitored server:
+	 * <ul>
+	 *   <li>With a parameter the plan is reused. With the object id as a literal every object compiles a new plan, which then fills the plan cache (measured: 50-70 ms and 0.6-1 MB per object)</li>
+	 *   <li>In the object's database, so functions like COLUMNPROPERTY and STATS_DATE look in the correct database, and the SQL text doesn't need the database name</li>
+	 * </ul>
+	 */
+	private static PreparedStatement prepareInDatabase(Connection conn, String dbname, String sql, String name)
+	throws SQLException
+	{
+		PreparedStatement pstmt = conn.prepareStatement("exec [" + dbname + "].sys.sp_executesql N'" + sql.replace("'", "''") + "', N'@name sysname', @name = ?");
+		pstmt.setString(1, name);
+		return pstmt;
+	}
+
+	/** See the comment above: For SQL that uses the parameter @objectId, returns all result sets that have rows as text tables */
+	private static String executeInDatabase(Connection conn, String dbname, String sql, int objectId)
+	throws SQLException
+	{
+		String execSql = "exec [" + dbname + "].sys.sp_executesql N'" + sql.replace("'", "''") + "', N'@objectId int', @objectId = ?";
+
+		StringBuilder sb = new StringBuilder();
+		try (PreparedStatement pstmt = conn.prepareStatement(execSql))
+		{
+			pstmt.setQueryTimeout(10);
+			pstmt.setInt(1, objectId);
+
+			boolean hasRs = pstmt.execute();
+			while (hasRs || pstmt.getUpdateCount() != -1)
+			{
+				if (hasRs)
+				{
+					try (ResultSet rs = pstmt.getResultSet())
+					{
+						ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, sql);
+						if (tm.getRowCount() > 0)
+							sb.append(tm.toAsciiTableString()).append("\n");
+					}
+				}
+				hasRs = pstmt.getMoreResults();
+			}
+		}
+		return sb.toString();
+	}
 
 //	private long _parserExceptionCount = 0;
 //	private ConcurrentHashMap<String, Integer> _parserFailCache = new ConcurrentHashMap<>();
@@ -510,20 +560,148 @@ extends ObjectLookupInspectorAbstract
 					returnList.add(storeEntry);
 
 					//--------------------------------------------
-					// Just do sp_help to get info (which will include index key information)
-					String sql = "exec [" + storeEntry.getDbname() + "]..sp_help '" + storeEntry.getSchemaAndObjectName() + "' ";
+					// Same result sets (names and columns) as 'sp_help' which was used before, since the stored text is parsed and shown in several places
+					// But cheaper: and 'Computed_definition' is added, which sp_help doesn't have. Empty result sets are not stored.
+					// NOTE: '|' can't be in the text, since it separates the columns when the text is parsed (see: ResultSetTableModel.parseTextTables)
+					String sql = ""
+						    + "/* " + Version.getAppName() + ":" + this.getClass().getSimpleName() + " */ \n"
+						    + "SELECT Name = o.name, Owner = SCHEMA_NAME(o.schema_id), Type = CASE o.type WHEN 'U' THEN 'user table' WHEN 'S' THEN 'system table' ELSE o.type_desc END, Created_datetime = o.create_date \n"
+						    + "FROM sys.all_objects o \n"
+						    + "WHERE o.object_id = @objectId \n"
+						    + " \n"
+						    + "SELECT \n"
+						    + "     Column_name          = c.name \n"
+						    + "    ,Type                 = t.name \n"
+						    + "    ,Computed             = CASE c.is_computed WHEN 1 THEN 'yes' ELSE 'no' END \n"
+						    + "    ,Length               = c.max_length \n"
+						    + "    ,Prec                 = CASE WHEN b.name IN ('tinyint','smallint','int','bigint','decimal','numeric','money','smallmoney','real','float','date','time','datetime2','datetimeoffset') THEN CONVERT(varchar(5), c.precision) ELSE '' END \n"
+						    + "    ,Scale                = CASE WHEN b.name IN ('tinyint','smallint','int','bigint','decimal','numeric','money','smallmoney','date','time','datetime2','datetimeoffset')                THEN CONVERT(varchar(5), c.scale)     ELSE '' END \n"
+						    + "    ,Nullable             = CASE c.is_nullable WHEN 1 THEN 'yes' ELSE 'no' END \n"
+						    + "    ,TrimTrailingBlanks   = CASE COLUMNPROPERTY(c.object_id, c.name, 'UsesAnsiTrim')         WHEN 1 THEN 'no'  WHEN 0 THEN 'yes' ELSE '(n/a)' END \n"
+						    + "    ,FixedLenNullInSource = CASE WHEN COLUMNPROPERTY(c.object_id, c.name, 'UsesAnsiTrim') IS NULL THEN '(n/a)' WHEN c.is_nullable = 1 THEN 'yes' ELSE 'no' END \n"
+						    + "    ,Collation            = c.collation_name \n"
+						    + "    ,Computed_definition  = REPLACE(REPLACE(REPLACE(cc.definition, CHAR(13), ' '), CHAR(10), ' '), '|', NCHAR(166)) \n"
+						    + "FROM sys.all_columns c \n"
+						    + "JOIN sys.types t ON t.user_type_id = c.user_type_id \n"
+						    + "JOIN sys.types b ON b.user_type_id = c.system_type_id \n"
+						    + "LEFT OUTER JOIN sys.computed_columns cc ON cc.object_id = c.object_id AND cc.column_id = c.column_id \n"
+						    + "WHERE c.object_id = @objectId \n"
+						    + "ORDER BY c.column_id \n"
+						    + " \n"
+						    + "SELECT [Identity] = name, Seed = CONVERT(varchar(40), seed_value), Increment = CONVERT(varchar(40), increment_value), [Not For Replication] = CONVERT(int, is_not_for_replication) \n"
+						    + "FROM sys.identity_columns \n"
+						    + "WHERE object_id = @objectId \n"
+						    + " \n"
+						    + "SELECT [RowGuidCol] = name FROM sys.all_columns WHERE object_id = @objectId AND is_rowguidcol = 1 \n"
+						    + " \n"
+						    + "SELECT Data_located_on_filegroup = ds.name \n"
+						    + "FROM sys.indexes i \n"
+						    + "JOIN sys.data_spaces ds ON ds.data_space_id = i.data_space_id \n"
+						    + "WHERE i.object_id = @objectId AND i.index_id < 2 \n"
+						    + " \n"
+						    + "SELECT \n"
+						    + "     index_name        = i.name \n"
+						    + "    ,index_description = CASE WHEN i.type IN (1, 5) THEN 'clustered' ELSE 'nonclustered' END \n"
+						    + "                       + CASE WHEN i.type IN (5, 6) THEN ', columnstore' ELSE '' END \n"
+						    + "                       + CASE WHEN i.ignore_dup_key = 1 THEN ', ignore duplicate keys' ELSE '' END \n"
+						    + "                       + CASE WHEN i.is_unique = 1 THEN ', unique' ELSE '' END \n"
+						    + "                       + CASE WHEN i.is_primary_key = 1 THEN ', primary key' ELSE '' END \n"
+						    + "                       + CASE WHEN i.is_unique_constraint = 1 THEN ', unique key' ELSE '' END \n"
+						    + "                       + ' located on ' + ds.name COLLATE DATABASE_DEFAULT \n"
+						    + "    ,index_keys        = STUFF(( \n"
+						    + "                            SELECT ', ' + c.name + CASE WHEN ic.is_descending_key = 1 THEN '(-)' ELSE '' END \n"
+						    + "                            FROM sys.index_columns ic \n"
+						    + "                            JOIN sys.all_columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id \n"
+						    + "                            WHERE ic.object_id = @objectId AND ic.index_id = i.index_id AND ic.is_included_column = 0 AND ic.key_ordinal > 0\n"
+						    + "                            ORDER BY ic.key_ordinal \n"
+						    + "                            FOR XML PATH(''), TYPE).value('.', 'nvarchar(max)'), 1, 2, '') \n"
+						    + "FROM sys.indexes i \n"
+						    + "JOIN sys.data_spaces ds ON ds.data_space_id = i.data_space_id \n"
+						    + "WHERE i.object_id = @objectId AND i.index_id > 0 AND i.is_hypothetical = 0 \n"
+						    + "ORDER BY i.name \n"
+						    + " \n"
+						    + "SELECT constraint_type, constraint_name, delete_action, update_action, status_enabled, status_for_replication, constraint_keys \n"
+						    + "FROM ( \n"
+						    + "    SELECT sortName = i.name COLLATE DATABASE_DEFAULT, sortRow = 0 \n"
+						    + "        ,constraint_type = CASE WHEN i.is_primary_key = 1 THEN 'PRIMARY KEY' ELSE 'UNIQUE' END + CASE WHEN i.type = 1 THEN ' (clustered)' ELSE ' (non-clustered)' END COLLATE DATABASE_DEFAULT \n"
+						    + "        ,constraint_name = i.name COLLATE DATABASE_DEFAULT, delete_action = '(n/a)', update_action = '(n/a)', status_enabled = '(n/a)', status_for_replication = '(n/a)' \n"
+						    + "        ,constraint_keys = STUFF(( \n"
+						    + "                            SELECT ', ' + c.name \n"
+						    + "                            FROM sys.index_columns ic \n"
+						    + "                            JOIN sys.all_columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id \n"
+						    + "                            WHERE ic.object_id = @objectId AND ic.index_id = i.index_id AND ic.is_included_column = 0 \n"
+						    + "                            ORDER BY ic.key_ordinal \n"
+						    + "                            FOR XML PATH(''), TYPE).value('.', 'nvarchar(max)'), 1, 2, '') COLLATE DATABASE_DEFAULT \n"
+						    + "    FROM sys.indexes i \n" // The index of a PRIMARY KEY or UNIQUE constraint has the same name as the constraint. Is cheaper than: sys.key_constraints
+						    + "    WHERE i.object_id = @objectId AND (i.is_primary_key = 1 OR i.is_unique_constraint = 1) \n"
+						    + "  UNION ALL \n"
+						    + "    SELECT dc.name COLLATE DATABASE_DEFAULT, 0, 'DEFAULT on column ' + c.name COLLATE DATABASE_DEFAULT, dc.name COLLATE DATABASE_DEFAULT, '(n/a)', '(n/a)', '(n/a)', '(n/a)' \n"
+						    + "        ,REPLACE(REPLACE(REPLACE(dc.definition, CHAR(13), ' '), CHAR(10), ' '), '|', NCHAR(166)) COLLATE DATABASE_DEFAULT \n"
+						    + "    FROM sys.default_constraints dc \n"
+						    + "    JOIN sys.all_columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id \n"
+						    + "    WHERE dc.parent_object_id = @objectId \n"
+						    + "  UNION ALL \n"
+						    + "    SELECT cc.name COLLATE DATABASE_DEFAULT, 0, CASE WHEN c.name IS NULL THEN 'CHECK Table Level' ELSE 'CHECK on column ' + c.name END COLLATE DATABASE_DEFAULT, cc.name COLLATE DATABASE_DEFAULT, '(n/a)', '(n/a)' \n"
+						    + "        ,CASE cc.is_disabled WHEN 1 THEN 'Disabled' ELSE 'Enabled' END, CASE cc.is_not_for_replication WHEN 1 THEN 'Not_For_Replication' ELSE 'Is_For_Replication' END \n"
+						    + "        ,REPLACE(REPLACE(REPLACE(cc.definition, CHAR(13), ' '), CHAR(10), ' '), '|', NCHAR(166)) COLLATE DATABASE_DEFAULT \n"
+						    + "    FROM sys.check_constraints cc \n"
+						    + "    LEFT OUTER JOIN sys.all_columns c ON c.object_id = cc.parent_object_id AND c.column_id = cc.parent_column_id \n"
+						    + "    WHERE cc.parent_object_id = @objectId \n"
+						    + "  UNION ALL \n"
+						    + "    SELECT fk.name COLLATE DATABASE_DEFAULT, 0, 'FOREIGN KEY', fk.name COLLATE DATABASE_DEFAULT \n"
+						    + "        ,CASE fk.delete_referential_action WHEN 0 THEN 'No Action' WHEN 1 THEN 'Cascade' WHEN 2 THEN 'Set Null' WHEN 3 THEN 'Set Default' END \n"
+						    + "        ,CASE fk.update_referential_action WHEN 0 THEN 'No Action' WHEN 1 THEN 'Cascade' WHEN 2 THEN 'Set Null' WHEN 3 THEN 'Set Default' END \n"
+						    + "        ,CASE fk.is_disabled WHEN 1 THEN 'Disabled' ELSE 'Enabled' END, CASE fk.is_not_for_replication WHEN 1 THEN 'Not_For_Replication' ELSE 'Is_For_Replication' END \n"
+						    + "        ,STUFF(( \n"
+						    + "            SELECT ', ' + c.name \n"
+						    + "            FROM sys.foreign_key_columns fc \n"
+						    + "            JOIN sys.all_columns c ON c.object_id = fc.parent_object_id AND c.column_id = fc.parent_column_id \n"
+						    + "            WHERE fc.constraint_object_id = fk.object_id \n"
+						    + "            ORDER BY fc.constraint_column_id \n"
+						    + "            FOR XML PATH(''), TYPE).value('.', 'nvarchar(max)'), 1, 2, '') COLLATE DATABASE_DEFAULT \n"
+						    + "    FROM sys.foreign_keys fk \n"
+						    + "    WHERE fk.parent_object_id = @objectId \n"
+						    + "  UNION ALL \n"
+						    + "    SELECT fk.name COLLATE DATABASE_DEFAULT, 1, '', '', '', '', '', '' \n"
+						    + "        ,'REFERENCES ' + DB_NAME() + '.' + SCHEMA_NAME(ro.schema_id) + '.' + ro.name + ' (' + STUFF(( \n"
+						    + "            SELECT ', ' + c.name \n"
+						    + "            FROM sys.foreign_key_columns fc \n"
+						    + "            JOIN sys.all_columns c ON c.object_id = fc.referenced_object_id AND c.column_id = fc.referenced_column_id \n"
+						    + "            WHERE fc.constraint_object_id = fk.object_id \n"
+						    + "            ORDER BY fc.constraint_column_id \n"
+						    + "            FOR XML PATH(''), TYPE).value('.', 'nvarchar(max)'), 1, 2, '') + ')' COLLATE DATABASE_DEFAULT \n"
+						    + "    FROM sys.foreign_keys fk \n"
+						    + "    JOIN sys.objects ro ON ro.object_id = fk.referenced_object_id \n"
+						    + "    WHERE fk.parent_object_id = @objectId \n"
+						    + ") x \n"
+						    + "ORDER BY sortName, sortRow \n"
+						    + " \n"
+						    + "SELECT [Table is referenced by foreign key] = DB_NAME() + '.' + SCHEMA_NAME(o.schema_id) + '.' + o.name + ': ' + fk.name \n"
+						    + "FROM sys.foreign_keys fk \n"
+						    + "JOIN sys.objects o ON o.object_id = fk.parent_object_id \n"
+						    + "WHERE fk.referenced_object_id = @objectId \n"
+						    + "";
 
-					try	(AseSqlScript ss = new AseSqlScript(conn, 10)) 
+					try
 					{
-						ss.setRsAsAsciiTable(true);
-						storeEntry.setObjectText( ss.executeSqlStr(sql, true) ); 
-					} 
-					catch (SQLException e) 
-					{ 
-						storeEntry.setObjectText( e.toString() ); 
-						_logger.warn("DDL Lookup. Problems Getting TABLE BASIC information for: TableName='" + storeEntry.getObjectName() + "', dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Caught: " + e);
+						storeEntry.setObjectText( executeInDatabase(conn, storeEntry.getDbname(), sql, storeEntry.getObjectId()) );
 					}
-	
+					catch (SQLException ex)
+					{
+						_logger.warn("DDL Lookup. Problems Getting TABLE BASIC information using SQL, trying with 'sp_help' instead, for: TableName='" + storeEntry.getObjectName() + "', dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Caught: " + ex);
+
+						try	(AseSqlScript ss = new AseSqlScript(conn, 10))
+						{
+							ss.setRsAsAsciiTable(true);
+							storeEntry.setObjectText( ss.executeSqlStr("exec [" + storeEntry.getDbname() + "]..sp_help '" + storeEntry.getSchemaAndObjectName() + "' ", true) );
+						}
+						catch (SQLException e)
+						{
+							storeEntry.setObjectText( e.toString() );
+							_logger.warn("DDL Lookup. Problems Getting TABLE BASIC information for: TableName='" + storeEntry.getObjectName() + "', dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Caught: " + e);
+						}
+					}
+
 					//--------------------------------------------
 					// GET sp__optdiag
 					if (pch.getConfig_doGetStatistics())
@@ -637,8 +815,8 @@ extends ObjectLookupInspectorAbstract
 						    + "        ,row_overflow_used_page_count     = SUM(s.row_overflow_used_page_count) \n"
 						    + "        ,row_overflow_reserved_page_count = SUM(s.row_overflow_reserved_page_count) \n"
 						    + " \n"
-						    + "    FROM [" + storeEntry.getDbname() + "].sys.dm_db_partition_stats s \n"
-//						    + "--    WHERE s.object_id = " + storeEntry.getObjectId() + " \n"
+						    + "    FROM sys.dm_db_partition_stats s \n"
+						    + "    WHERE s.object_id = @objectId \n"
 						    + "    GROUP BY s.object_id, s.index_id \n"
 						    + "), \n"
 						    + "key_cols AS \n"
@@ -647,16 +825,16 @@ extends ObjectLookupInspectorAbstract
 						    + "              IC2.index_id, \n"
 						    + "              STUFF( ( \n"
 						    + "                      SELECT ', [' + C.name + ']' + CASE WHEN MAX(CONVERT(INT, IC1.is_descending_key)) = 1 THEN ' DESC' ELSE '' END \n"
-						    + "                      FROM [" + storeEntry.getDbname() + "].sys.index_columns IC1 \n"
-						    + "                      JOIN [" + storeEntry.getDbname() + "].sys.columns C ON  C.object_id = IC1.object_id AND C.column_id = IC1.column_id AND IC1.is_included_column = 0 \n"
+						    + "                      FROM sys.index_columns IC1 \n"
+						    + "                      JOIN sys.columns C ON  C.object_id = IC1.object_id AND C.column_id = IC1.column_id AND IC1.is_included_column = 0 \n"
 						    + "                      WHERE  IC1.object_id = IC2.object_id \n"
 						    + "                        AND IC1.index_id = IC2.index_id \n"
 						    + "                      GROUP BY IC1.object_id, C.name, index_id \n"
 						    + "                      ORDER BY MAX(IC1.key_ordinal) \n"
 						    + "                      FOR XML PATH('') \n"
 						    + "                  ), 1, 2, '') AS KeyColumns \n"
-						    + "       FROM [" + storeEntry.getDbname() + "].sys.index_columns IC2 \n"
-//						    + "--       WHERE IC2.object_id = " + storeEntry.getObjectId() + " \n"
+						    + "       FROM sys.index_columns IC2 \n"
+						    + "       WHERE IC2.object_id = @objectId \n"
 						    + "       GROUP BY IC2.object_id, IC2.index_id \n"
 						    + "), \n"
 						    + "include_cols AS \n"
@@ -665,20 +843,30 @@ extends ObjectLookupInspectorAbstract
 						    + "              IC2.index_id, \n"
 						    + "              STUFF( ( \n"
 						    + "                      SELECT ', [' + C.name + ']' \n"
-						    + "                      FROM [" + storeEntry.getDbname() + "].sys.index_columns IC1 \n"
-						    + "                      JOIN [" + storeEntry.getDbname() + "].sys.columns C ON  C.object_id = IC1.object_id AND C.column_id = IC1.column_id AND IC1.is_included_column = 1 \n"
+						    + "                      FROM sys.index_columns IC1 \n"
+						    + "                      JOIN sys.columns C ON  C.object_id = IC1.object_id AND C.column_id = IC1.column_id AND IC1.is_included_column = 1 \n"
 						    + "                      WHERE  IC1.object_id = IC2.object_id \n"
 						    + "                        AND IC1.index_id = IC2.index_id \n"
 						    + "                      GROUP BY IC1.object_id, C.name, index_id \n"
 						    + "                      FOR XML PATH('') \n"
 						    + "                  ), 1, 2, '') AS IncludedColumns \n"
-						    + "       FROM [" + storeEntry.getDbname() + "].sys.index_columns IC2 \n"
-//						    + "--       WHERE IC2.Object_id = " + storeEntry.getObjectId() + " \n"
+						    + "       FROM sys.index_columns IC2 \n"
+						    + "       WHERE IC2.object_id = @objectId \n"
 						    + "       GROUP BY IC2.object_id, IC2.index_id \n"
+						    + "), \n"
+						    + "part_comp AS \n"
+						    + "( \n"
+						    + "    SELECT \n"
+						    + "         p.object_id \n"
+						    + "        ,p.index_id \n"
+						    + "        ,IndexCompression = CASE WHEN MIN(p.data_compression_desc) = MAX(p.data_compression_desc) THEN MIN(p.data_compression_desc) ELSE 'MIXED' END \n"
+						    + "    FROM sys.partitions p \n"
+						    + "    WHERE p.object_id = @objectId \n"
+						    + "    GROUP BY p.object_id, p.index_id \n"
 						    + ") \n"
 						    + "SELECT \n"
 //						    + "     dbname          = db_name() \n"
-						    + "     dbname          = cast('" + storeEntry.getDbname() + "' as varchar(128)) \n"
+						    + "     dbname          = cast(DB_NAME() as varchar(128)) \n"
 						    + "    ,schema_name     = sc.name \n"
 						    + "    ,object_name     = o.name \n"
 						    + "    ,index_name      = ISNULL(i.name, 'HEAP') \n"
@@ -690,6 +878,8 @@ extends ObjectLookupInspectorAbstract
 						    + "    ,IndexFillFactor = i.fill_factor \n"
 						    + "    ,IndexIsDisabled = i.is_disabled \n"
 						    + "    ,IndexIsFiltered = i.has_filter \n"
+						    + "    ,IndexCompression = pc.IndexCompression \n"
+						    + "    ,TableLockEscalation = t.lock_escalation_desc \n"
 						    + "    ,StatsUpdated    = STATS_DATE(s.object_id, s.index_id) \n"
 						    + "    ,s.PartitionCount \n"
 						    + "    ,s.row_count \n"
@@ -713,9 +903,9 @@ extends ObjectLookupInspectorAbstract
 						    + "    ,s.row_overflow_used_page_count \n"
 						    + "    ,s.row_overflow_reserved_page_count \n"
 						    + " \n"
-						    + "    ,DropIndex = 'DROP INDEX [' + i.name + '] ON [" + storeEntry.getDbname() + "].[' + sc.name + '].[' + o.name + ']'\n"
+						    + "    ,DropIndex = 'DROP INDEX [' + i.name + '] ON [' + DB_NAME() + '].[' + sc.name + '].[' + o.name + ']'\n"
 						    + "    ,DDL = 'CREATE ' + CASE WHEN i.is_unique = 1 THEN ' UNIQUE ' ELSE '' END + i.type_desc COLLATE DATABASE_DEFAULT + ' INDEX ' \n"
-						    + "         + '[' + i.name + '] ON [" + storeEntry.getDbname() + "].[' + sc.name + '].[' + o.name + '](' + kc.KeyColumns + ')' \n"
+						    + "         + '[' + i.name + '] ON [' + DB_NAME() + '].[' + sc.name + '].[' + o.name + '](' + kc.KeyColumns + ')' \n"
 						    + "         + ISNULL(' INCLUDE (' + ic.IncludedColumns + ' ) ', '') \n"
 						    + "         + ISNULL(' WHERE ' + i.filter_definition, '') \n"
 						    + "         + ' WITH (' \n"
@@ -726,30 +916,31 @@ extends ObjectLookupInspectorAbstract
 						    + "         + CASE WHEN i.allow_row_locks             = 1 THEN '' ELSE 'ALLOW_ROW_LOCKS = OFF, '  END \n"
 						    + "         + CASE WHEN i.allow_page_locks            = 1 THEN '' ELSE 'ALLOW_PAGE_LOCKS = OFF, ' END \n"
 //						    + "         + CASE WHEN i.optimize_for_sequential_key = 0 THEN '' ELSE 'OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF, ' END \n" // NOTE: this is new in 2019
-						    + "         + 'DATA_COMPRESSION = ?, ' \n"
+						    + "         + 'DATA_COMPRESSION = ' + ISNULL(pc.IndexCompression COLLATE DATABASE_DEFAULT, '?') + ', ' \n"
 						    + "         + 'MAXDOP = 0, ' \n"
 						    + "         + 'ONLINE = OFF' \n"
 						    + "         + ')' \n"
 						    + " \n"
 						    + "FROM part_stat s \n"
-						    + "LEFT OUTER JOIN [" + storeEntry.getDbname() + "].sys.indexes   i ON s.object_id = i.object_id AND s.index_id = i.index_id \n"
-						    + "LEFT OUTER JOIN [" + storeEntry.getDbname() + "].sys.objects   o ON s.object_id = o.object_id \n"
-						    + "LEFT OUTER JOIN [" + storeEntry.getDbname() + "].sys.schemas  sc ON o.schema_id = sc.schema_id \n"
+						    + "LEFT OUTER JOIN sys.indexes   i ON s.object_id = i.object_id AND s.index_id = i.index_id \n"
+						    + "LEFT OUTER JOIN sys.objects   o ON s.object_id = o.object_id \n"
+						    + "LEFT OUTER JOIN sys.schemas  sc ON o.schema_id = sc.schema_id \n"
 						    + "LEFT OUTER JOIN key_cols     kc ON o.object_id = kc.object_id and i.index_id = kc.index_id \n"
 						    + "LEFT OUTER JOIN include_cols ic ON o.object_id = ic.object_id and i.index_id = ic.index_id \n"
+						    + "LEFT OUTER JOIN part_comp    pc ON s.object_id = pc.object_id and s.index_id = pc.index_id \n"
+						    + "LEFT OUTER JOIN sys.tables    t ON s.object_id = t.object_id \n"
 						    + "WHERE 1=1 \n"
-						    + "  AND o.object_id = " + storeEntry.getObjectId() + " \n"
+						    + "  AND o.object_id = @objectId \n"
 						    + "  AND o.is_ms_shipped = 0 \n"
 						    + "ORDER BY s.index_id \n"
 						    + "";
 					
 					
-					try	(AseSqlScript ss = new AseSqlScript(conn, 10)) 
+					try
 					{
-						ss.setRsAsAsciiTable(true);
-						storeEntry.setExtraInfoText( ss.executeSqlStr(sql, true) ); 
+						storeEntry.setExtraInfoText( executeInDatabase(conn, storeEntry.getDbname(), sql, storeEntry.getObjectId()) );
 					}
-					catch (SQLException e) 
+					catch (SQLException e)
 					{ 
 						storeEntry.setExtraInfoText( e.toString() ); 
 						_logger.warn("DDL Lookup. Problems Getting TABLE SIZE information for: TableName='" + storeEntry.getObjectName() + "', dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Caught: " + e);
@@ -972,28 +1163,24 @@ extends ObjectLookupInspectorAbstract
 		// Same as ABOVE, but this one also gets: Triggers, PK, Defaults, etc (for this table)
 		// Note: We can't just have a variable for object_id, because there might be many tables under different schemas (hence the table variable)
 		//       and if we just get the table name we can't be sure of what table it is (so grab all tables from different schemas)
+		// With a parameter: this is done for every object name that is looked up, which otherwise compiles a new plan for every name (see: executeInDatabase)
 		String sql = ""
-			    + "DECLARE @obj_ids TABLE (object_id INT) \n"
-			    + "INSERT INTO @obj_ids \n"
-			    + "    SELECT object_id \n"
-			    + "    FROM [" + dbname + "].sys.objects \n"
-			    + "    WHERE name = '" + objectName.replace("'", "''") + "' \n"
-			    + "      AND is_ms_shipped = 0 \n"
-			    + " \n"
-			    + "SELECT o.object_id, \n"
-			    + "       o.parent_object_id, \n"
-			    + "       o.type, \n"
-			    + "       s.name, \n"
-			    + "       o.name, \n"
-			    + "       o.create_date \n"
-			    + "FROM [" + dbname + "].sys.objects o \n"
-			    + "INNER JOIN [" + dbname + "].sys.schemas s ON o.schema_id = s.schema_id \n"
-			    + "WHERE o.object_id        IN (SELECT object_id FROM @obj_ids) -- get object \n"
-			    + "   or o.parent_object_id IN (SELECT object_id FROM @obj_ids) -- and all: triggers, PK, Defaults, etc (for this table) \n"
-			    + "ORDER BY o.parent_object_id DESC, o.type"
+			    + "SELECT o.object_id, o.parent_object_id, o.type, s.name, o.name, o.create_date -- get object \n"
+			    + "FROM sys.objects o \n"
+			    + "INNER JOIN sys.schemas s ON o.schema_id = s.schema_id \n"
+			    + "WHERE o.name = @name \n"
+			    + "  AND o.is_ms_shipped = 0 \n"
+			    + "UNION \n"
+			    + "SELECT o.object_id, o.parent_object_id, o.type, s.name, o.name, o.create_date -- and all: triggers, PK, Defaults, etc (for this table) \n"
+			    + "FROM sys.objects p \n"
+			    + "INNER JOIN sys.objects o ON o.parent_object_id = p.object_id \n"
+			    + "INNER JOIN sys.schemas s ON o.schema_id = s.schema_id \n"
+			    + "WHERE p.name = @name \n"
+			    + "  AND p.is_ms_shipped = 0 \n"
+			    + "ORDER BY 2 DESC, 3"
 			    + "";
-		
-		try ( Statement statement = conn.createStatement(); ResultSet rs = statement.executeQuery(sql) )
+
+		try ( PreparedStatement statement = prepareInDatabase(conn, dbname, sql, objectName); ResultSet rs = statement.executeQuery() )
 		{
 			// Hold "child" objects in a map to tie in to the 'U' User-table. 
 			HashMap<Integer, List<String>> childObjects = null;
