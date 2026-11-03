@@ -5352,6 +5352,15 @@ public class PersistWriterJdbc
 	private long _lastSaveDdlDetailMessageTime = 0;
 	private long _lastSaveDdlDetailMessageLimit = 5000;
 
+	/** Mark all the names this object can be asked for, so that the next request for any of them doesn't do a new lookup */
+	private void markDdlDetailsAsStored(DdlDetails ddlDetails)
+	{
+		markDdlDetailsAsStored(ddlDetails.getSearchDbname(), ddlDetails.getObjectName());           // The objectName stripped of any schema
+		markDdlDetailsAsStored(ddlDetails.getDbname(),       ddlDetails.getObjectName());           // The objectName stripped of any schema
+		markDdlDetailsAsStored(ddlDetails.getSearchDbname(), ddlDetails.getSearchObjectName());     // The objectName *passed* to the DDL Lookup (may or may not have schemaName)
+		markDdlDetailsAsStored(ddlDetails.getDbname(),       ddlDetails.getSchemaAndObjectName());  // The schema and object name (schemaName.objectName)
+	}
+
 	/** save DDL into "any" storage */
 	@Override
 	public void saveDdlDetails(DdlDetails ddlDetails)
@@ -5400,6 +5409,9 @@ public class PersistWriterJdbc
 			
 //System.out.println("saveDdlDetails(): The DDL for dbname '" + ddlDetails.getDbname() + "', objectName '" + ddlDetails.getSchemaAndObjectName() + "' has already been stored by all the writers.");
 			_logger.debug("saveDdlDetails(): The DDL for dbname '" + ddlDetails.getDbname() + "', objectName '" + ddlDetails.getSchemaAndObjectName() + "' has already been stored by all the writers.");
+
+			// This lookup may have been done under another name (other 'dbname' or with/without schema), which otherwise would be looked up again and again
+			markDdlDetailsAsStored(ddlDetails);
 			return;
 		}
 //		if ( isDdlDetailsStored(ddlDetails.getSearchDbname(), ddlDetails.getObjectName()) )
@@ -5410,6 +5422,8 @@ public class PersistWriterJdbc
 			
 //System.out.println("saveDdlDetails(): The DDL for searchDbname '" + ddlDetails.getSearchDbname() + "', objectName '" + ddlDetails.getSchemaAndObjectName() + "' has already been stored by all the writers.");
 			_logger.debug("saveDdlDetails(): The DDL for searchDbname '" + ddlDetails.getSearchDbname() + "', objectName '" + ddlDetails.getSchemaAndObjectName() + "' has already been stored by all the writers.");
+
+			markDdlDetailsAsStored(ddlDetails);
 			return;
 		}
 
@@ -5464,10 +5478,7 @@ public class PersistWriterJdbc
 			getStatistics().incDdlSaveCount();
 
 			// ADD IT TO HE CACHE AS SAVED, no need to save again.
-			markDdlDetailsAsStored(ddlDetails.getSearchDbname(), ddlDetails.getObjectName());           // The objectName stripped of any schema
-			markDdlDetailsAsStored(ddlDetails.getDbname(),       ddlDetails.getObjectName());           // The objectName stripped of any schema
-			markDdlDetailsAsStored(ddlDetails.getSearchDbname(), ddlDetails.getSearchObjectName());     // The objectName *passed* to the DDL Lookup (may or may not have schemaName)
-			markDdlDetailsAsStored(ddlDetails.getDbname(),       ddlDetails.getSchemaAndObjectName());  // The schema and object name (schemaName.objectName)
+			markDdlDetailsAsStored(ddlDetails);
 
 //			return rowsCount;
 		}
