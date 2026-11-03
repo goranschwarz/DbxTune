@@ -40,7 +40,8 @@ import com.fasterxml.jackson.databind.JsonNode;
  * <ul>
  *   <li>the configuration ({@code params}): only the settings that are NOT at their default</li>
  *   <li>Host Info ({@code sys.dm_os_host_info}) and System Info ({@code sys.dm_os_sys_info}, the columns about CPU and memory)</li>
- *   <li>the server's collation, server wide trace flags, and the Resource Governor: its workload groups and resource pools when it is enabled</li>
+ *   <li>the server's collation, tempdb's when it differs from the statement's database, server wide trace flags,
+ *       and the Resource Governor: its workload groups and resource pools when it is enabled</li>
  *   <li>for the statement's database: its {@code sp_helpdb} row, its options from {@code sys.databases}, and its non-default
  *       database scoped configurations</li>
  * </ul>
@@ -820,7 +821,7 @@ public class LlmServerContextBuilder
 		if (StringUtil.hasValue(collationName))
 			sb.append("Server collation: ").append(collationName).append(StringUtil.hasValue(collationDesc) ? " - " + collationDesc : "").append("\n\n");
 
-		// DBCC TRACESTATUS(-1): only the numbers (the stored text also has long descriptions). Global=0 is only set in the Collector's own session
+		// DBCC TRACESTATUS(-1): only the numbers (the stored text also has long descriptions), stored with digit groups (1,222). Global=0 is only set in the Collector's own session
 		for (Table t : parseTables(texts.get("SqlServerTraceflags")))
 		{
 			int flag   = t.columns.indexOf("TraceFlag");
@@ -831,7 +832,7 @@ public class LlmServerContextBuilder
 			for (List<String> row : t.rows)
 			{
 				if ( ! "0".equals(row.get(global)) )
-					flags.add(row.get(flag));
+					flags.add(row.get(flag).replaceAll("\\D", ""));
 			}
 			if ( ! flags.isEmpty() )
 				sb.append("Trace flags, server wide (DBCC TRACESTATUS): ").append(String.join(", ", flags)).append("\n\n");
@@ -870,6 +871,29 @@ public class LlmServerContextBuilder
 		{
 			appendDatabaseRow(sb, "Database '" + dbname + "' (sp_helpdb)",           texts.get("SqlServerHelpDb"),       dbname, HELPDB_COLUMNS);
 			appendDatabaseRow(sb, "Database '" + dbname + "' options (sys.databases)", texts.get("SqlServerSysDatabases"), dbname, SYS_DATABASES_COLUMNS);
+
+			// Only when they differ: it is easy to miss in the options line, and #temp tables get tempdb's collation
+			for (Table t : parseTables(texts.get("SqlServerSysDatabases")))
+			{
+				int nameCol = t.columns.indexOf("name");
+				int collCol = t.columns.indexOf("collation_name");
+				if (nameCol < 0 || collCol < 0)
+					continue;
+				String dbCollation     = "";
+				String tempdbCollation = "";
+				for (List<String> row : t.rows)
+				{
+					if (dbname.equalsIgnoreCase(row.get(nameCol)))
+						dbCollation = row.get(collCol);
+					if ("tempdb".equalsIgnoreCase(row.get(nameCol)))
+						tempdbCollation = row.get(collCol);
+				}
+				if (StringUtil.hasValue(dbCollation) && StringUtil.hasValue(tempdbCollation) && ! dbCollation.equalsIgnoreCase(tempdbCollation))
+					sb.append("tempdb collation: ").append(tempdbCollation).append(" - differs from the database '").append(dbname).append("' (").append(dbCollation)
+						.append("): #temp table columns without COLLATE DATABASE_DEFAULT can conflict or stop an index being used\n\n");
+				break;
+			}
+
 			appendScopedConfig(sb, texts.get("SqlServerSysDatabases"), dbname);
 		}
 
