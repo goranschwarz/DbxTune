@@ -64,7 +64,7 @@ extends HttpServlet
 
 	/** Parameters this page understands, whether they arrive in the URL fragment (GET) or as POST fields. */
 	private static final String[] PARAM_NAMES = { "sql", "ddlContext", "plan", "dbVendor", "dbmsVersion", "jdbcUrl",
-			"jdbcUser", "srv", "ts", "dbname", "workloadData", "provider", "origin" };
+			"jdbcUser", "srv", "ts", "dbname", "workloadData", "savedContext", "provider", "origin" };
 
 	/**
 	 * The libraries 'dbxLlmAdvice.js' uses to render an answer (SQL formatting/highlighting, Markdown) plus
@@ -223,6 +223,7 @@ extends HttpServlet
 		// time (see SparklineHelper.getWorkloadHarvesterJs()). dbxLlmAdvice.js turns this into the
 		// 'workloadProfile' text that is sent to the LLM.
 		out.println("        workloadData: P('workloadData'),");
+		out.println("        savedContext: P('savedContext'),"); // from a saved LLM request, see dbxLlmAdvice.js parseSavedContext()
 		// Where the user came from, recorded by LlmAdviceLog: sent by the caller ('Daily Summary Report', 'Showplan (Db2)').
 		// Without it: a POST is a Daily Summary Report made before 'origin' was sent (its links always POST), a GET a direct visit.
 		out.println("        origin:     P('origin') || (posted ? 'Daily Summary Report' : 'LLM Advice page')");

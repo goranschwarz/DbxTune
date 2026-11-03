@@ -138,6 +138,7 @@ public class LlmAdviceLog
 			meta.put("user",         StringUtil.hasValue(userName) ? userName : "(anonymous)");
 			meta.put("clientAddr",   req == null ? null : req.getRemoteAddr());
 			meta.put("srvName",      llmRequest.getSrvName());
+			meta.put("dbname",       llmRequest.getDbname());
 			meta.put("origin",       llmRequest.getOrigin());
 			meta.put("dbVendor",     llmRequest.getDbVendor());
 			meta.put("dbmsVersion",  llmRequest.getDbmsVersion());
@@ -254,7 +255,7 @@ public class LlmAdviceLog
 
 	/**
 	 * The saved page. The values that {@code dbxLlmAdvice.renderSavedRequest()} reads back live in fixed
-	 * element ids: {@code dbx-llm-sql}, {@code dbx-llm-optimized-sql}, {@code dbx-llm-explanation}, {@code dbx-llm-thinking},
+	 * element ids: {@code dbx-llm-sql}, {@code dbx-llm-ddl}, {@code dbx-llm-optimized-sql}, {@code dbx-llm-explanation}, {@code dbx-llm-thinking},
 	 * {@code dbx-llm-error}, {@code dbx-llm-prompt}, inside {@code dbx-llm-advice}.
 	 */
 	static String createHtml(Map<String, Object> meta, LlmOptimizeRequest llmRequest, LlmOptimizeResponse llmResponse, Exception ex, String promptSent)
@@ -297,6 +298,7 @@ public class LlmAdviceLog
 			{ "User",          "user"         },
 			{ "Client Address","clientAddr"   },
 			{ "Server",        "srvName"      },
+			{ "Database",      "dbname"       },
 			{ "Origin",        "origin"       },
 			{ "DBMS Vendor",   "dbVendor"     },
 			{ "DBMS Version",  "dbmsVersion"  },
@@ -328,6 +330,12 @@ public class LlmAdviceLog
 		{
 			sb.append("<details>\n<summary><b>Execution Plan</b></summary>\n");
 			sb.append(pre("dbx-llm-plan", llmRequest.getPlan()));
+			sb.append("</details>\n");
+		}
+		if (StringUtil.hasValue(llmRequest.getDdlContext()))
+		{
+			sb.append("<details>\n<summary><b>Table DDL, Indexes and Statistics</b></summary>\n");
+			sb.append(pre("dbx-llm-ddl", llmRequest.getDdlContext()));
 			sb.append("</details>\n");
 		}
 		if (StringUtil.hasValue(llmRequest.getWorkloadProfile()))

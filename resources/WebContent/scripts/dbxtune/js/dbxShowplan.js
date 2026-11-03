@@ -1620,7 +1620,8 @@
 		// and ddlContext isn't - no need to duplicate that here.
 		var workloadData = tiBody ? (tiBody.getAttribute('data-workloaddata') || '') : '';
 		var dbmsVersion  = tiBody ? (tiBody.getAttribute('data-dbmsversion')  || '') : '';
-		_openLlmAdviceIfConfigured(body, { sql: sqlText, plan: planText, dbVendor: 'Adaptive Server Enterprise', dbmsVersion: dbmsVersion, srv: srv, dbname: dbname, workloadData: workloadData, target: body });
+		var savedContext = tiBody ? (tiBody.getAttribute('data-savedcontext') || '') : '';
+		_openLlmAdviceIfConfigured(body, { sql: sqlText, plan: planText, dbVendor: 'Adaptive Server Enterprise', dbmsVersion: dbmsVersion, srv: srv, dbname: dbname, workloadData: workloadData, savedContext: savedContext, target: body });
 	}
 
 	/**
@@ -1638,6 +1639,7 @@
 		var dbname  = tiBody ? (tiBody.getAttribute('data-dbname')  || '') : '';
 		var sqlText = tiBody ? (tiBody.getAttribute('data-sqltext') || '') : '';
 		var planText = $('#dbx-view-aseShowplan-planContent').text();
+		var saved = window.dbxLlmAdvice ? dbxLlmAdvice.parseSavedContext(tiBody && tiBody.getAttribute('data-savedcontext')) : {};
 
 		if (!sqlText) {
 			body.innerHTML = '<em style="color:var(--sp-text-5);">No SQL text is available for this plan.</em>';
@@ -1648,8 +1650,8 @@
 			body.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Building prompt…</span>';
 			// Same workload profile open() would send, so the PREVIEW matches what actually gets sent.
 			var wlRaw = tiBody ? (tiBody.getAttribute('data-workloaddata') || '') : '';
-			var wlProfile = (wlRaw && window.dbxLlmAdvice && dbxLlmAdvice.buildWorkloadProfile)
-					? dbxLlmAdvice.buildWorkloadProfile(wlRaw) : '';
+			var wlProfile = saved.workloadProfile || ((wlRaw && window.dbxLlmAdvice && dbxLlmAdvice.buildWorkloadProfile)
+					? dbxLlmAdvice.buildWorkloadProfile(wlRaw) : '');
 			// Same DBMS version open() would send (recorded one from the report, or live from srv)
 			var dbmsVerRecorded = tiBody ? (tiBody.getAttribute('data-dbmsversion') || '') : '';
 			var dbmsVerPromise = (window.dbxLlmAdvice && dbxLlmAdvice.fetchDbmsVersion)
@@ -1663,7 +1665,7 @@
 					url:         '/api/llm/optimize-sql',
 					method:      'POST',
 					contentType: 'application/json',
-					data:        JSON.stringify({ sql: sentSql, ddlContext: ddlContext || '', plan: planText, dbVendor: 'Adaptive Server Enterprise', dbmsVersion: dbmsVersion, workloadProfile: wlProfile, preview: true }),
+					data:        JSON.stringify({ sql: sentSql, ddlContext: ddlContext || '', plan: planText, dbVendor: 'Adaptive Server Enterprise', dbmsVersion: dbmsVersion, serverContext: saved.serverContext, workloadProfile: wlProfile, preview: true }),
 					dataType:    'json',
 					success: function(r) {
 						if (r && r.promptSent) {
@@ -1678,8 +1680,8 @@
 			});
 		}
 
-		if (!srv || !dbname) {
-			buildPreview('');
+		if (saved.ddlContext || !srv || !dbname) {
+			buildPreview(saved.ddlContext || '');
 			return;
 		}
 
@@ -1760,6 +1762,8 @@
 			// RECORDED DBMS version, forwarded from the Daily Summary Report (see ShowplanAseServlet). When
 			// empty, dbxLlmAdvice.fetchDbmsVersion() resolves it live from data-srv instead.
 			tiBody.setAttribute('data-dbmsversion', (meta && meta.dbmsVersion) ? meta.dbmsVersion : '');
+			// What a saved LLM request sent, see dbxLlmAdvice.parseSavedContext()
+			tiBody.setAttribute('data-savedcontext', (meta && meta.savedContext) ? meta.savedContext : '');
 			tiBody.setAttribute('data-loaded',  'false');
 			tiBody.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Loading table information…</span>';
 			tiSect.style.display = (tiSrv && tiDb) ? '' : 'none';
@@ -1814,6 +1818,7 @@
 	var _oraShowplanDbname       = '';
 	var _oraShowplanDbmsVersion  = '';
 	var _oraShowplanWorkloadData = '';
+	var _oraShowplanSavedContext = '';   // what a saved LLM request sent, see dbxLlmAdvice.parseSavedContext()
 	// The dialog also shows MySQL's plans: 'MySQL' = the JSON of EXPLAIN FORMAT=JSON, drawn by dbxShowplanMySql.js (MySqlShowplan, the same API
 	// as OracleShowplan), and Db2's: 'DB2/' (the product name of Db2 LUW, DbUtils.DB_PROD_NAME_DB2_LUW) = the JSON of the explain tables that
 	// Db2Tune records, or the text of db2exfmt, drawn by dbxShowplanDb2.js (Db2Showplan, the same API). Set by whoever opens the dialog
@@ -1994,7 +1999,8 @@
 			srv:          _oraShowplanSrv,
 			dbname:       _oraShowplanDbname,
 			dbmsVersion:  _oraShowplanDbmsVersion,
-			workloadData: _oraShowplanWorkloadData
+			workloadData: _oraShowplanWorkloadData,
+			savedContext: _oraShowplanSavedContext
 		});
 	};
 
@@ -2069,6 +2075,9 @@
 	 * (a pasted plan, no tables, the collector does not answer): the LLM is then asked without it.
 	 */
 	function _oraShowplanFetchDdlContext() {
+		var savedDdl = window.dbxLlmAdvice ? dbxLlmAdvice.parseSavedContext(_oraShowplanSavedContext).ddlContext : '';
+		if (savedDdl) return Promise.resolve(savedDdl);
+
 		var tables = _oraShowplanObjectNames();
 		var sqlForTables = _oraShowplanVendor === 'MySQL' ? (_oraShowplanSqlText || '').substring(0, 4000) : '';   // (see _oraShowplanLoadTableInfo)
 		if (!_oraShowplanSrv || (!tables.length && !sqlForTables)) return Promise.resolve('');
@@ -2101,8 +2110,8 @@
 			return;
 		}
 		_oraShowplanFetchDdlContext().then(function (ddlContext) {
-			_openLlmAdviceIfConfigured(body, { sql: _oraShowplanSqlText, plan: _oraShowplanLastPlanText || '', dbVendor: _oraShowplanVendor, srv: _oraShowplanSrv,
-				dbmsVersion: _oraShowplanDbmsVersion, ddlContext: ddlContext, workloadData: _oraShowplanWorkloadData, target: body });
+			_openLlmAdviceIfConfigured(body, { sql: _oraShowplanSqlText, plan: _oraShowplanLastPlanText || '', dbVendor: _oraShowplanVendor, srv: _oraShowplanSrv, dbname: _oraShowplanDbname,
+				dbmsVersion: _oraShowplanDbmsVersion, ddlContext: ddlContext, workloadData: _oraShowplanWorkloadData, savedContext: _oraShowplanSavedContext, target: body });
 		});
 	}
 
@@ -2127,12 +2136,13 @@
 				? dbxLlmAdvice.prepareSql(_oraShowplanSqlText, _oraShowplanVendor) : Promise.resolve(_oraShowplanSqlText);
 		Promise.all([dbmsVerPromise, _oraShowplanFetchDdlContext(), sqlPromise]).then(function(res) {
 			var dbmsVersion = res[0], ddlContext = res[1], sentSql = res[2];
-			var wlProfile   = (window.dbxLlmAdvice && dbxLlmAdvice.buildWorkloadProfile && _oraShowplanWorkloadData) ? dbxLlmAdvice.buildWorkloadProfile(_oraShowplanWorkloadData) : '';
+			var saved       = window.dbxLlmAdvice ? dbxLlmAdvice.parseSavedContext(_oraShowplanSavedContext) : {};
+			var wlProfile   = saved.workloadProfile || ((window.dbxLlmAdvice && dbxLlmAdvice.buildWorkloadProfile && _oraShowplanWorkloadData) ? dbxLlmAdvice.buildWorkloadProfile(_oraShowplanWorkloadData) : '');
 			$.ajax({
 				url:         '/api/llm/optimize-sql',
 				method:      'POST',
 				contentType: 'application/json',
-				data:        JSON.stringify({ sql: sentSql, ddlContext: ddlContext || '', plan: _oraShowplanLastPlanText || '', dbVendor: _oraShowplanVendor, dbmsVersion: dbmsVersion, workloadProfile: wlProfile, preview: true }),
+				data:        JSON.stringify({ sql: sentSql, ddlContext: ddlContext || '', plan: _oraShowplanLastPlanText || '', dbVendor: _oraShowplanVendor, dbmsVersion: dbmsVersion, serverContext: saved.serverContext, workloadProfile: wlProfile, preview: true }),
 				dataType:    'json',
 				success: function(r) {
 					if (r && r.promptSent)
@@ -2202,6 +2212,7 @@
 		_oraShowplanDbname       = (meta && meta.dbname)       ? meta.dbname       : '';
 		_oraShowplanDbmsVersion  = (meta && meta.dbmsVersion)  ? meta.dbmsVersion  : '';
 		_oraShowplanWorkloadData = (meta && meta.workloadData) ? meta.workloadData : '';
+		_oraShowplanSavedContext = (meta && meta.savedContext) ? meta.savedContext : '';
 		_oraShowplanResetLlmSections();
 		_autoFormatSql(oraShowplanFormatSql);
 
@@ -2621,6 +2632,7 @@ function _initGlobalEscClose() {
 				// so the LLM sections never pick up another statement's (or server's) values
 				tiBody.setAttribute('data-workloaddata', '');
 				tiBody.setAttribute('data-dbmsversion',  '');
+				tiBody.setAttribute('data-savedcontext', '');
 				tiBody.setAttribute('data-loaded',  'false');
 				tiBody.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Loading table information…</span>';
 				if (tiSrv && tiDb) {
@@ -2831,6 +2843,7 @@ function _initGlobalEscClose() {
 				// so the LLM sections never pick up another statement's (or server's) values
 				tiBody.setAttribute('data-workloaddata', '');
 				tiBody.setAttribute('data-dbmsversion',  '');
+				tiBody.setAttribute('data-savedcontext', '');
 				tiBody.setAttribute('data-loaded',  'false');
 				tiBody.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Loading table information…</span>';
 				tiSect.style.display = (tiSrv && tiDb) ? '' : 'none';
@@ -2979,6 +2992,7 @@ function _initGlobalEscClose() {
 			_oraShowplanDbname       = data.dbname || '';
 			_oraShowplanDbmsVersion  = '';   // (read live from the collector of 'srv')
 			_oraShowplanWorkloadData = '';
+			_oraShowplanSavedContext = '';
 			_oraShowplanResetLlmSections();
 			_autoFormatSql(oraShowplanFormatSql);
 			_oraShowplanLastPlanText = plan;
@@ -3335,7 +3349,8 @@ function _initGlobalEscClose() {
 		// and ddlContext isn't - no need to duplicate that here.
 		var workloadData = tiBody ? (tiBody.getAttribute('data-workloaddata') || '') : '';
 		var dbmsVersion  = tiBody ? (tiBody.getAttribute('data-dbmsversion')  || '') : '';
-		_openLlmAdviceIfConfigured(body, { sql: sqlText, plan: xmlText, dbVendor: 'Microsoft SQL Server', dbmsVersion: dbmsVersion, srv: srv, dbname: dbname, ts: ts, workloadData: workloadData, target: body });
+		var savedContext = tiBody ? (tiBody.getAttribute('data-savedcontext') || '') : '';
+		_openLlmAdviceIfConfigured(body, { sql: sqlText, plan: xmlText, dbVendor: 'Microsoft SQL Server', dbmsVersion: dbmsVersion, srv: srv, dbname: dbname, ts: ts, workloadData: workloadData, savedContext: savedContext, target: body });
 	}
 
 	/**
@@ -3355,6 +3370,7 @@ function _initGlobalEscClose() {
 		var ts      = tiBody ? (tiBody.getAttribute('data-ts')      || '') : '';
 		var sqlText = tiBody ? (tiBody.getAttribute('data-sqltext') || '') : '';
 		var xmlText = $('#dbx-view-ssShowplan-xmlContent').text();
+		var saved = window.dbxLlmAdvice ? dbxLlmAdvice.parseSavedContext(tiBody && tiBody.getAttribute('data-savedcontext')) : {};
 
 		if (!sqlText) {
 			body.innerHTML = '<em style="color:var(--sp-text-5);">No SQL text is available for this plan.</em>';
@@ -3365,15 +3381,15 @@ function _initGlobalEscClose() {
 			body.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Building prompt…</span>';
 			// Same workload profile open() would send, so the PREVIEW matches what actually gets sent.
 			var wlRaw = tiBody ? (tiBody.getAttribute('data-workloaddata') || '') : '';
-			var wlProfile = (wlRaw && window.dbxLlmAdvice && dbxLlmAdvice.buildWorkloadProfile)
-					? dbxLlmAdvice.buildWorkloadProfile(wlRaw) : '';
+			var wlProfile = saved.workloadProfile || ((wlRaw && window.dbxLlmAdvice && dbxLlmAdvice.buildWorkloadProfile)
+					? dbxLlmAdvice.buildWorkloadProfile(wlRaw) : '');
 			// Same DBMS version open() would send (recorded one from the report, or live from srv)
 			var dbmsVerRecorded = tiBody ? (tiBody.getAttribute('data-dbmsversion') || '') : '';
 			var dbmsVerPromise = (window.dbxLlmAdvice && dbxLlmAdvice.fetchDbmsVersion)
 					? dbxLlmAdvice.fetchDbmsVersion({ srv: srv, dbmsVersion: dbmsVerRecorded }) : Promise.resolve(dbmsVerRecorded);
 			// Same server configuration and hardware open() would send
 			var srvCtxPromise = (window.dbxLlmAdvice && dbxLlmAdvice.fetchServerContext)
-					? dbxLlmAdvice.fetchServerContext({ srv: srv, dbname: dbname, ts: ts, dbVendor: 'Microsoft SQL Server' }) : Promise.resolve('');
+					? dbxLlmAdvice.fetchServerContext({ srv: srv, dbname: dbname, ts: ts, dbVendor: 'Microsoft SQL Server', serverContext: saved.serverContext }) : Promise.resolve('');
 			// Same SQL open() would send (formatted when "Format SQL Text before send" is on)
 			var sqlPromise = (window.dbxLlmAdvice && dbxLlmAdvice.prepareSql)
 					? dbxLlmAdvice.prepareSql(sqlText, 'Microsoft SQL Server') : Promise.resolve(sqlText);
@@ -3398,8 +3414,8 @@ function _initGlobalEscClose() {
 			});
 		}
 
-		if (!srv || !dbname) {
-			buildPreview('');
+		if (saved.ddlContext || !srv || !dbname) {
+			buildPreview(saved.ddlContext || '');
 			return;
 		}
 
@@ -3496,6 +3512,8 @@ function _initGlobalEscClose() {
 			// RECORDED DBMS version, forwarded from the Daily Summary Report (see ShowplanSqlServerServlet). When
 			// empty, dbxLlmAdvice.fetchDbmsVersion() resolves it live from data-srv instead.
 			tiBody.setAttribute('data-dbmsversion', (meta && meta.dbmsVersion) ? meta.dbmsVersion : '');
+			// What a saved LLM request sent, see dbxLlmAdvice.parseSavedContext()
+			tiBody.setAttribute('data-savedcontext', (meta && meta.savedContext) ? meta.savedContext : '');
 			tiBody.setAttribute('data-loaded',  'false');
 			tiBody.innerHTML = '<span style="color:var(--sp-text-5);font-size:0.85em;">&#9203; Loading table information…</span>';
 			// Show or hide the section depending on whether we have a server context

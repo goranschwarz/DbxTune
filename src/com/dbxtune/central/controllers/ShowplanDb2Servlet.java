@@ -67,7 +67,7 @@ extends HttpServlet
 		resp.setContentType("text/html; charset=UTF-8");
 		resp.setCharacterEncoding("UTF-8");
 		PrintWriter out = resp.getWriter();
-		out.print(createPage(null, null, null, null, null, null));
+		out.print(createPage(null, null, null, null, null, null, null));
 		out.flush();
 		out.close();
 	}
@@ -83,6 +83,7 @@ extends HttpServlet
 		String dbname       = request.getParameter("dbname");
 		String dbmsVersion  = request.getParameter("dbmsVersion");  // recorded by the Daily Summary Report
 		String workloadData = request.getParameter("workloadData"); // execution statistics of the statement, from the same report
+		String savedContext = request.getParameter("savedContext"); // from a saved LLM request
 
 		if (_logger.isDebugEnabled())
 			_logger.debug("/showplan/db2: received request from: remoteHost='" + request.getRemoteHost() + "', remoteAddr='" + request.getRemoteAddr() + "', remoteUser='" + request.getRemoteUser() + "'.");
@@ -96,7 +97,7 @@ extends HttpServlet
 		response.setContentType("text/html; charset=UTF-8");
 		response.setCharacterEncoding("UTF-8");
 		PrintWriter out = response.getWriter();
-		out.print(createPage(plan, sql, srv, dbname, dbmsVersion, workloadData));
+		out.print(createPage(plan, sql, srv, dbname, dbmsVersion, workloadData, savedContext));
 		out.flush();
 		out.close();
 	}
@@ -108,8 +109,9 @@ extends HttpServlet
 	 * @param dbname        the schema of the statement, or null
 	 * @param dbmsVersion   the Db2 version a report recorded, or null
 	 * @param workloadData  execution statistics of the statement as a report sends them (JSON), or null
+	 * @param savedContext  what a saved LLM request sent (JSON), or null
 	 */
-	public static String createPage(String plan, String sql, String srv, String dbname, String dbmsVersion, String workloadData)
+	public static String createPage(String plan, String sql, String srv, String dbname, String dbmsVersion, String workloadData, String savedContext)
 	{
 		boolean llmEnabled = LlmClientRegistry.isFeatureEnabled();
 
@@ -170,6 +172,7 @@ extends HttpServlet
 					  "            <input type='hidden' name='dbname'       value='" + StringEscapeUtils.escapeHtml4(StringUtil.nullToValue(dbname      , "")) + "'> \n" +
 					  "            <input type='hidden' name='dbmsVersion'  value='" + StringEscapeUtils.escapeHtml4(StringUtil.nullToValue(dbmsVersion , "")) + "'> \n" +
 					  "            <input type='hidden' name='workloadData' value='" + StringEscapeUtils.escapeHtml4(StringUtil.nullToValue(workloadData, "")) + "'> \n" +
+					  "            <input type='hidden' name='savedContext' value='" + StringEscapeUtils.escapeHtml4(StringUtil.nullToValue(savedContext, "")).replace("'", "&#39;") + "'> \n" +
 					  "            <input type='hidden' name='origin'       value='Showplan (Db2)'> \n" + // recorded in the saved LLM request
 
 					  "            <button type='submit' class='btn btn-sm btn-outline-primary'>Get LLM Optimization Advice</button> \n" +

@@ -158,6 +158,8 @@ var dbxLlmAdvice = (function () {
 			'  padding:6px 10px; margin-bottom:6px; font-family:Arial, Helvetica, sans-serif; font-size:0.85rem; }' +
 			'.dbx-llm-sql-unchanged { color:#0f5132; background:#d1e7dd; border:1px solid #badbcc; border-radius:4px;' +
 			'  padding:6px 10px; margin-bottom:6px; font-family:Arial, Helvetica, sans-serif; font-size:0.85rem; }' +
+			// The same, small, in the "Suggested SQL" title
+			'.dbx-llm-sql-status { display:inline-block; padding:0 8px; margin:0 0 0 4px; font-weight:normal; }' +
 			'.dbx-llm-copy-btn { margin-left:8px; font-size:0.78rem; padding:1px 8px; cursor:pointer;' +
 			'  border:1px solid #ced4da; border-radius:3px; background:#fff; color:#495057; }' +
 			'.dbx-llm-copy-btn:hover { background:#e9ecef; }' +
@@ -361,7 +363,7 @@ var dbxLlmAdvice = (function () {
 		// The link to the saved request first (the user wants it on top), then the error
 		var html = renderSavedNote(serverData && serverData.savedUrl, serverData && serverData.savedForDays);
 		html += '<div class="dbx-llm-error">' + escapeHtml(msg) + '</div>';
-		html += opts ? renderInputContext(opts) : '';
+		html += opts ? renderInputContext(opts, ddlContext) : '';
 		if (opts)
 			html += renderSentDetails(opts, ddlContext, serverData && serverData.promptSent, serverData && serverData.providerId, serverData && serverData.model);
 		container.innerHTML = html;
@@ -1260,7 +1262,7 @@ var dbxLlmAdvice = (function () {
 	 * (only the Explanation is open), so the answer is what the reader sees first. Every block starts
 	 * small and scrollable, with an "Expand" button when it does not fit (renderCodeBlock()).
 	 */
-	function renderInputContext(opts)
+	function renderInputContext(opts, ddlContext)
 	{
 		var html = '';
 
@@ -1279,8 +1281,16 @@ var dbxLlmAdvice = (function () {
 		{
 			var plan = describePlan(opts.plan);
 			html += '<details class="dbx-llm-section-details">'
-				+ '<summary class="dbx-llm-section-title">Execution Plan<span class="dbx-llm-title-note"> - ' + plan.label + '</span></summary>'
+				+ '<summary class="dbx-llm-section-title">Execution Plan<span class="dbx-llm-title-note"> - ' + plan.label + '</span>'
+				+ (opts.showplanPath ? ' <button type="button" class="dbx-llm-copy-btn dbx-llm-view-plan-btn" title="Opens the plan in the graphical viewer, in a new tab. The viewer can also ask the LLM, for example another model for a second opinion.">View Execution Plan</button>' : '')
+				+ '</summary>'
 				+ renderCodeBlock(escapeHtml(plan.text), plan.language, /*smallFont*/ true) + '</details>';
+		}
+		if (ddlContext)
+		{
+			html += '<details class="dbx-llm-section-details">'
+				+ '<summary class="dbx-llm-section-title">Table DDL, Indexes and Statistics</summary>'
+				+ renderCodeBlock(escapeHtml(ddlContext), 'plaintext', /*smallFont*/ true) + '</details>';
 		}
 		if (opts.workloadProfile)
 		{
@@ -1321,7 +1331,7 @@ var dbxLlmAdvice = (function () {
 	{
 		// The link to the saved request first (the user wants it on top), then the answer
 		var html = renderSavedNote(result.savedUrl, result.savedForDays);
-		html += renderInputContext(opts);
+		html += renderInputContext(opts, ddlContext);
 
 		if (result.optimizedSql)
 		{
@@ -1332,7 +1342,7 @@ var dbxLlmAdvice = (function () {
 			// just catches the case where it returns identical SQL anyway.
 			var baselineSql = result.originSql || opts.sql;
 			var sqlChanged  = normalizeSqlForCompare(result.optimizedSql) !== normalizeSqlForCompare(baselineSql);
-			html += '<details class="dbx-llm-section-details"><summary class="dbx-llm-section-title">Suggested SQL<span class="dbx-llm-title-note"> - By the LLM</span></summary>';
+			html += '<details class="dbx-llm-section-details"><summary class="dbx-llm-section-title">Suggested SQL<span class="dbx-llm-title-note"> - By the LLM</span> ' + (sqlChanged ? '<span class="dbx-llm-sql-changed dbx-llm-sql-status">SQL was changed by the LLM</span>' : '<span class="dbx-llm-sql-unchanged dbx-llm-sql-status">Not changed</span>') + '</summary>';
 			html += sqlChanged
 				? '<div class="dbx-llm-sql-changed">SQL was changed by the LLM.</div>'
 				: '<div class="dbx-llm-sql-unchanged">SQL was <b>not</b> changed - the LLM returned the same statement.</div>';
@@ -1350,7 +1360,7 @@ var dbxLlmAdvice = (function () {
 		{
 			// The model is asked to leave 'optimized_sql' empty (not echo the original back) when
 			// it has no rewrite to suggest - a real, expected outcome, not a missing answer.
-			html += '<details class="dbx-llm-section-details"><summary class="dbx-llm-section-title">Suggested SQL<span class="dbx-llm-title-note"> - By the LLM</span></summary>';
+			html += '<details class="dbx-llm-section-details"><summary class="dbx-llm-section-title">Suggested SQL<span class="dbx-llm-title-note"> - By the LLM</span> <span class="dbx-llm-sql-unchanged dbx-llm-sql-status">Not changed</span></summary>';
 			html += '<div class="dbx-llm-sql-unchanged">No SQL changes suggested - the LLM found the statement fine as-is.</div></details>';
 		}
 
@@ -1819,7 +1829,8 @@ var dbxLlmAdvice = (function () {
 			progress:        !opts.preview,
 			// Not part of the prompt - only recorded in the saved request log (LlmAdviceLog.java)
 			srvName:         opts.srv,
-			origin:          opts.origin || window.location.pathname
+			dbname:          opts.dbname,
+			origin:         opts.origin || window.location.pathname
 		};
 
 		var request = {
@@ -1935,6 +1946,68 @@ var dbxLlmAdvice = (function () {
 	}
 
 	/**
+	 * The texts a saved request sent, handed to a plan viewer by viewSavedPlan() as JSON: used instead of looking them up
+	 * again, so a second opinion gets the same input (also when the Collector is gone).
+	 * @return {ddlContext, serverContext, workloadProfile}, each '' when the request had none (then the lookup is done as usual)
+	 */
+	function parseSavedContext(json)
+	{
+		var saved = {};
+		try { saved = (json && JSON.parse(json)) || {}; }
+		catch (e) { console.log('dbxLlmAdvice: could not parse savedContext: ' + e); }
+		return { ddlContext: saved.ddlContext || '', serverContext: saved.serverContext || '', workloadProfile: saved.workloadProfile || '' };
+	}
+
+	/** The plan viewer page of a DBMS (see WebServerInitializerJetty), or null when it has none. */
+	function showplanPath(dbVendor)
+	{
+		var v = (dbVendor || '').toLowerCase();
+		if (v.indexOf('sql server') >= 0) return '/showplan/sqlserver';
+		if (v.indexOf('adaptive server') >= 0) return '/showplan/ase';
+		if (v.indexOf('postgres') >= 0) return '/showplan/postgres';
+		if (v.indexOf('oracle') >= 0) return '/showplan/oracle';
+		if (v.indexOf('mysql') >= 0 || v.indexOf('mariadb') >= 0) return '/showplan/mysql';
+		if (v.indexOf('db2') >= 0) return '/showplan/db2';
+		return null;
+	}
+
+	/**
+	 * "View Execution Plan" of a saved request: POST it to the plan viewer in a new tab (a plan is too big for
+	 * a URL, see ShowplanLinkBuilder.getDsrLinkSupportJs()), with what the viewer's own LLM section needs to send the
+	 * same thing again: 'savedContext', see parseSavedContext().
+	 */
+	function viewSavedPlan(opts, meta)
+	{
+		var params = {
+			plan:         opts.plan,
+			sql:          opts.sql,
+			dbVendor:     opts.dbVendor,
+			srv:          meta.srvName,
+			dbname:       meta.dbname,
+			dbmsVersion:  meta.dbmsVersion,
+			savedContext: JSON.stringify({ ddlContext: opts.ddlContext, serverContext: opts.serverContext, workloadProfile: opts.workloadProfile })
+		};
+		var form = document.createElement('form');
+		form.method        = 'POST';
+		form.action        = opts.showplanPath;
+		form.target        = '_blank';
+		form.acceptCharset = 'UTF-8';
+		form.style.display = 'none';
+		Object.keys(params).forEach(function (name)
+		{
+			if (!params[name]) return;
+			var input = document.createElement('input');
+			input.type  = 'hidden';
+			input.name  = name;
+			input.value = params[name];
+			form.appendChild(input);
+		});
+		document.body.appendChild(form);
+		form.submit();
+		document.body.removeChild(form);
+	}
+
+	/**
 	 * Re-render a saved request (a page written by LlmAdviceLog.java and served by /admin/llm-log?op=view)
 	 * with the same renderer as the live dialog. The saved page is plain - no scripts - and holds the values
 	 * as text in fixed element ids, plus the metadata as JSON in 'dbx-llm-log-meta'.
@@ -1952,10 +2025,12 @@ var dbxLlmAdvice = (function () {
 		var opts = {
 			sql:             text('dbx-llm-sql'),
 			plan:            text('dbx-llm-plan'),
+			ddlContext:      text('dbx-llm-ddl'),
 			workloadProfile: text('dbx-llm-workload'),
 			serverContext:   text('dbx-llm-server-context'),
 			dbVendor:        meta.dbVendor,
 			provider:        meta.providerId,
+			showplanPath:    showplanPath(meta.dbVendor),
 			target:          target
 		};
 
@@ -1971,12 +2046,24 @@ var dbxLlmAdvice = (function () {
 				promptSent:   text('dbx-llm-prompt'),
 				providerId:   meta.providerId,
 				model:        meta.model
-			}, opts, '');
+			}, opts, opts.ddlContext);
 		}
 		else
 		{
-			renderError(container, 'The LLM call failed: ' + (text('dbx-llm-error') || meta.errorMessage || 'unknown error'), opts, '',
+			renderError(container, 'The LLM call failed: ' + (text('dbx-llm-error') || meta.errorMessage || 'unknown error'), opts, opts.ddlContext,
 				{ promptSent: text('dbx-llm-prompt'), providerId: meta.providerId });
+		}
+
+		var viewPlanBtn = container.querySelector('.dbx-llm-view-plan-btn');
+		if (viewPlanBtn)
+		{
+			viewPlanBtn.addEventListener('click', function (e)
+			{
+				// It sits inside a <summary>: do not also open/close the <details>, and not the Copy buttons' handler (shared style)
+				e.preventDefault();
+				e.stopPropagation();
+				viewSavedPlan(opts, meta);
+			});
 		}
 	}
 
@@ -1991,6 +2078,11 @@ var dbxLlmAdvice = (function () {
 			console.error('dbxLlmAdvice.open(): a "sql" field is required.');
 			return;
 		}
+
+		var saved = parseSavedContext(opts.savedContext);
+		if (saved.ddlContext)      opts.ddlContext      = saved.ddlContext;
+		if (saved.serverContext)   opts.serverContext   = saved.serverContext;
+		if (saved.workloadProfile) opts.workloadProfile = saved.workloadProfile;
 
 		// Turn the raw datapoints harvested from the Daily Summary Report into prose, ONCE, here - so
 		// every caller gets it, and every renderer below can just look at opts.workloadProfile.
@@ -2259,6 +2351,7 @@ var dbxLlmAdvice = (function () {
 		fetchDbmsVersion: fetchDbmsVersion,
 		// ... and the server configuration and hardware (SQL Server)
 		fetchServerContext: fetchServerContext,
+		parseSavedContext: parseSavedContext,
 		// ... and format the SQL the same way ("Format SQL Text before send")
 		prepareSql: prepareSql,
 		// Admin page: show a saved request (see LlmAdviceLog.java / LlmAdviceLogServlet.java)

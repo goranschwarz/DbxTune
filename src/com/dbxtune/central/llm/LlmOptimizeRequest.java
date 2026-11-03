@@ -78,6 +78,12 @@ public class LlmOptimizeRequest
 	private String srvName;
 
 	/**
+	 * Name of the statement's database (the Web UI's 'dbname'), or null when unknown.
+	 * Not part of the prompt - only recorded by {@link LlmAdviceLog}, so the saved request's plan viewer gets it back.
+	 */
+	private String dbname;
+
+	/**
 	 * Where in DbxCentral the request was made, for example 'Active Statements', 'Showplan',
 	 * 'Daily Summary Report' (falls back to the page path in 'dbxLlmAdvice.js').
 	 * Not part of the prompt - only recorded by {@link LlmAdviceLog}.
@@ -119,6 +125,7 @@ public class LlmOptimizeRequest
 	public String  getDbmsVersion()     { return dbmsVersion; }
 	public String  getServerContext()   { return serverContext; }
 	public String  getSrvName()        { return srvName; }
+	public String  getDbname()          { return dbname; }
 	public String  getOrigin()          { return origin; }
 	public boolean isPreview()          { return preview; }
 	public boolean isProgress()         { return progress; }
@@ -134,6 +141,7 @@ public class LlmOptimizeRequest
 	public void setDbmsVersion    (String dbmsVersion)     { this.dbmsVersion     = dbmsVersion; }
 	public void setServerContext  (String serverContext)   { this.serverContext   = serverContext; }
 	public void setSrvName        (String srvName)         { this.srvName         = srvName; }
+	public void setDbname         (String dbname)          { this.dbname          = dbname; }
 	public void setOrigin         (String origin)          { this.origin          = origin; }
 	public void setPreview        (boolean preview)        { this.preview         = preview; }
 	public void setProgress       (boolean progress)       { this.progress        = progress; }

@@ -63,7 +63,7 @@ extends HttpServlet
 		resp.setContentType("text/html; charset=UTF-8");
 		resp.setCharacterEncoding("UTF-8");
 		PrintWriter out = resp.getWriter();
-		out.print(createPage(null, null, null, null, null, null));
+		out.print(createPage(null, null, null, null, null, null, null));
 		out.flush();
 		out.close();
 	}
@@ -80,6 +80,7 @@ extends HttpServlet
 		String dbname       = request.getParameter("dbname");       // the schema of the statement, can be empty
 		String dbmsVersion  = request.getParameter("dbmsVersion");  // recorded by the Daily Summary Report
 		String workloadData = request.getParameter("workloadData"); // execution statistics of the statement, from the same report
+		String savedContext = request.getParameter("savedContext"); // from a saved LLM request
 
 		if (_logger.isDebugEnabled())
 			_logger.debug("/showplan/mysql: received request from: remoteHost='" + request.getRemoteHost() + "', remoteAddr='" + request.getRemoteAddr() + "', remoteUser='" + request.getRemoteUser() + "'.");
@@ -93,7 +94,7 @@ extends HttpServlet
 		response.setContentType("text/html; charset=UTF-8");
 		response.setCharacterEncoding("UTF-8");
 		PrintWriter out = response.getWriter();
-		out.print(createPage(plan, sql, srv, dbname, dbmsVersion, workloadData));
+		out.print(createPage(plan, sql, srv, dbname, dbmsVersion, workloadData, savedContext));
 		out.flush();
 		out.close();
 	}
@@ -105,8 +106,9 @@ extends HttpServlet
 	 * @param dbname        the schema the statement ran in, or null
 	 * @param dbmsVersion   the MySQL version a report recorded, or null (then the dialog reads it from the collector of 'srv')
 	 * @param workloadData  execution statistics of the statement as a report sends them (JSON), or null
+	 * @param savedContext  what a saved LLM request sent (JSON), or null
 	 */
-	public static String createPage(String plan, String sql, String srv, String dbname, String dbmsVersion, String workloadData)
+	public static String createPage(String plan, String sql, String srv, String dbname, String dbmsVersion, String workloadData, String savedContext)
 	{
 		String str = "" +
 				"<!DOCTYPE html> \n" +
@@ -229,7 +231,8 @@ extends HttpServlet
 				"            srv:          '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(srv         , "")) + "', \n" +
 				"            dbname:       '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(dbname      , "")) + "', \n" +
 				"            dbmsVersion:  '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(dbmsVersion , "")) + "', \n" +
-				"            workloadData: '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(workloadData, "")) + "' \n" +
+				"            workloadData: '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(workloadData, "")) + "', \n" +
+				"            savedContext: '" + StringEscapeUtils.escapeEcmaScript(StringUtil.nullToValue(savedContext, "")) + "' \n" +
 				"        }); \n" +
 				"    </script> \n";
 		}
