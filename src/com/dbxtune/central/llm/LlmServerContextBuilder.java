@@ -40,7 +40,7 @@ import com.fasterxml.jackson.databind.JsonNode;
  * <ul>
  *   <li>the configuration ({@code params}): only the settings that are NOT at their default</li>
  *   <li>Host Info ({@code sys.dm_os_host_info}) and System Info ({@code sys.dm_os_sys_info}, the columns about CPU and memory)</li>
- *   <li>the server's collation, and the Resource Governor: its workload groups and resource pools when it is enabled</li>
+ *   <li>the server's collation, server wide trace flags, and the Resource Governor: its workload groups and resource pools when it is enabled</li>
  *   <li>for the statement's database: its {@code sp_helpdb} row, its options from {@code sys.databases}, and its non-default
  *       database scoped configurations</li>
  * </ul>
@@ -819,6 +819,24 @@ public class LlmServerContextBuilder
 		}
 		if (StringUtil.hasValue(collationName))
 			sb.append("Server collation: ").append(collationName).append(StringUtil.hasValue(collationDesc) ? " - " + collationDesc : "").append("\n\n");
+
+		// DBCC TRACESTATUS(-1): only the numbers (the stored text also has long descriptions). Global=0 is only set in the Collector's own session
+		for (Table t : parseTables(texts.get("SqlServerTraceflags")))
+		{
+			int flag   = t.columns.indexOf("TraceFlag");
+			int global = t.columns.indexOf("Global");
+			if (flag < 0 || global < 0)
+				continue;
+			List<String> flags = new ArrayList<>();
+			for (List<String> row : t.rows)
+			{
+				if ( ! "0".equals(row.get(global)) )
+					flags.add(row.get(flag));
+			}
+			if ( ! flags.isEmpty() )
+				sb.append("Trace flags, server wide (DBCC TRACESTATUS): ").append(String.join(", ", flags)).append("\n\n");
+			break;
+		}
 
 		// Resource Governor: when disabled one line, its groups and pools are not in use. 'internal' can not be changed
 		for (Table t : parseTables(texts.get("SqlServerResourceGovernor")))

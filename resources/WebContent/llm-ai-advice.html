@@ -94,7 +94,7 @@
 						<div class="card-header">&#128231; 1. Daily Summary Report <span class="badge text-bg-secondary">all DBMS types</span></div>
 						<div class="card-body small">
 							<ol class="dbx-ep-steps">
-								<li>Open a report: the mail, or <span class="dbx-ep-path">Servers &rarr; (server) &rarr; Daily Summary Report</span></li>
+								<li>Open a report: the mail, or <span class="dbx-ep-path">Landing Page &rarr; (server) &rarr; Daily Summary Report</span></li>
 								<li>In the Top SQL / Query Store / slow statement tables, click <b>LLM Advice</b> next to a statement</li>
 								<li>The advice page opens in a new tab: pick a model, press <b>Get Advice</b></li>
 							</ol>
@@ -118,7 +118,7 @@
 					<div class="col"><div class="card h-100 dbx-ep-card">
 						<div class="card-header">&#9889; 3. Active Statements <span class="badge text-bg-secondary">live and history</span></div>
 						<div class="card-body small">
-							<span class="dbx-ep-path">Servers &rarr; (server)</span>, open the <b>Active Statements</b> panel (the <i class="fa fa-bolt"></i> button). Then, on a statement's row:
+							<span class="dbx-ep-path">Landing Page &rarr; (server)</span>, open the <b>Active Statements</b> panel (the <i class="fa fa-bolt"></i> button). Then, on a statement's row:
 							<ul class="dbx-ep-steps mt-1">
 								<li><b>Its plan</b> (best): click the checked <b>plan column</b> of the row (for example <b>HasLiveQueryplan</b> on SQL Server)
 									&rarr; the Execution Plan dialog opens &rarr; expand <b>LLM Optimization Advice</b> (see 2).
@@ -133,7 +133,7 @@
 						<div class="card-header">&#128200; 4. Counter Details <span class="badge text-bg-secondary">live and history</span></div>
 						<div class="card-body small">
 							<ol class="dbx-ep-steps">
-								<li><span class="dbx-ep-path">Servers &rarr; (server)</span>, open the Counter Details of a counter (for example Top SQL, Statement Cache)</li>
+								<li><span class="dbx-ep-path">Landing Page &rarr; (server)</span>, open the Counter Details of a counter (for example Top SQL, Statement Cache)</li>
 								<li>Click a row that has a SQL text</li>
 								<li>Press <b>Get LLM Optimization Advice</b></li>
 							</ol>
@@ -180,8 +180,13 @@
 					<div class="col-xl-6" id="dbx-history-steps">
 						<h6 class="mt-2">Active Statements from earlier: History View</h6>
 						<ol class="small dbx-ep-steps mb-1">
-							<li>Pick the day and hours: the <i class="fa fa-backward"></i> <i class="fa fa-arrow-circle-left"></i> <b>2h</b> <i class="fa fa-arrow-circle-right"></i> <i class="fa fa-forward"></i>
-								buttons on the server page's menu bar (previous/next day, previous/next hours)</li>
+							<li>Pick the day and hours, on the server page's menu bar:
+								<ul class="dbx-ep-steps mb-0">
+									<li>the <i class="fa fa-calendar"></i> <b>calendar</b> button: choose any period</li>
+									<li>or the <i class="fa fa-backward"></i> <i class="fa fa-arrow-circle-left"></i> <b>2h</b> <i class="fa fa-arrow-circle-right"></i> <i class="fa fa-forward"></i>
+										buttons: step to the previous/next day or the previous/next hours</li>
+								</ul>
+							</li>
 							<li>Go to the time: <b>click on a graph</b> at that time (for example a CPU peak) - the page switches to <b>History View</b> at that very sample.
 								Or press <i class="fa fa-history"></i> (History View) and drag the <b>timeline slider</b> that shows under the menu bar</li>
 							<li>The Active Statements panel now shows the statements of that sample: click the plan column (or the row) as above</li>
@@ -199,9 +204,20 @@
 							<li>The tables it uses: DDL, indexes and statistics (from the Collector's DDL Storage)</li>
 							<li>The DBMS type and version</li>
 							<li>The workload numbers (executions, CPU, reads, ...) when they are known</li>
-							<li>SQL Server: the server configuration (the non-default settings), the host/hardware and the database's options</li>
+							<li>The server's configuration and hardware, when the Collector can be reached:
+								<ul class="mb-0">
+									<li>All: the settings that are not at their default, the memory and optimizer settings, the CPU cores and memory (host monitoring gives these where the DBMS can't), and the statement's database (not on Oracle and Db2)</li>
+									<li>SQL Server: also the collation, trace flags and the Resource Governor</li>
+									<li>ASE: also the page size, the memory left to configure, data caches with their buffer pools and bindings, thread pools, resource limits, character set and sort order, trace flags</li>
+									<li>Postgres: also the extensions</li>
+									<li>Oracle: also the block size and character set</li>
+									<li>MySQL: also the SQL mode</li>
+									<li>Db2: also the page size, registry variables, buffer pools and table spaces</li>
+								</ul>
+							</li>
 						</ul>
-						<div class="small text-body-secondary">The <b>What was sent</b> section under each answer, or the Prompt Preview, shows all of it.</div>
+						<div class="small text-body-secondary">The <b>What was sent</b> section under each answer, or the Prompt Preview, shows all of it.
+							The configuration part leaves out paths, addresses and security settings, and an admin can turn it off: <span class="dbx-ep-path">DbxCentral.llm.serverContext</span>.</div>
 					</div>
 					<div class="col-lg-6">
 						<h6 class="mt-2">Good to know</h6>
