@@ -26,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
@@ -251,6 +252,134 @@ public class LlmServerContextBuilder
 
 		if (StringUtil.hasValue(dbname))
 			appendDatabaseRow(sb, "Database '" + dbname + "' (pg_database)", texts.get("PostgresDbInfo"), "datname", dbname, PG_DATABASE_COLUMNS);
+
+		return sb.toString().trim();
+	}
+
+	/** Oracle has no categories to allow: settings about the layout of the server, its names and its security are left out by name */
+	private static final Pattern ORA_SKIP_SETTINGS = Pattern.compile("(?i).*(dest|file|audit|_name|name_|domain|listener|dispatcher|diag|wallet|encrypt|log_archive|remote_|fal_|dg_|service|sec_|os_|utl_|dump).*");
+
+	/** Oracle settings that are always shown, also at their default: the block size, the memory, and what steers the optimizer */
+	private static final List<String> ORA_ALWAYS_SHOW = Arrays.asList(
+			"db_block_size", "cpu_count", "memory_target", "sga_target", "pga_aggregate_target", "db_cache_size", "inmemory_size",
+			"compatible", "optimizer_features_enable", "optimizer_mode", "optimizer_index_cost_adj", "optimizer_index_caching", "optimizer_dynamic_sampling",
+			"cursor_sharing", "statistics_level", "parallel_degree_policy", "parallel_max_servers", "result_cache_mode");
+
+	/**
+	 * Oracle: from what the Collector stored at its start: the configuration (not at its default, unless {@link #ORA_SKIP_SETTINGS},
+	 * or in {@link #ORA_ALWAYS_SHOW}), the host (V$OSSTAT) and the character set. No new queries: nothing here needs an extra-cost licence.
+	 *
+	 * @param dbmsConfig  the Collector's /api/mgt/dbms-config answer, see {@link #buildSqlServer(JsonNode, String)}
+	 * @return the block, or "" when there is nothing
+	 */
+	public static String buildOracle(JsonNode dbmsConfig)
+	{
+		if (dbmsConfig == null)
+			return "";
+
+		Map<String, String> texts = new LinkedHashMap<>();
+		for (JsonNode t : dbmsConfig.path("texts"))
+			texts.put(t.path("configName").asText(""), t.path("configText").asText(""));
+
+		StringBuilder sb = new StringBuilder();
+
+		// STAT_NAME, VALUE rows into one line. And the character set, from the same text
+		for (Table t : parseTables(texts.get("OraDatabaseInfo")))
+		{
+			int stat  = t.columns.indexOf("STAT_NAME");
+			int value = t.columns.indexOf("VALUE");
+			if (stat >= 0 && value >= 0)
+			{
+				List<String> parts = new ArrayList<>();
+				for (List<String> row : t.rows)
+					parts.add(row.get(stat) + "=" + row.get(value));
+				sb.append("Host (V$OSSTAT): ").append(String.join(", ", parts)).append("\n\n");
+			}
+			if (t.columns.contains("CHARACTERSET") && ! t.rows.isEmpty())
+				sb.append("Character set: ").append(toNameValues(t, t.rows.get(0), Arrays.asList("CHARACTERSET", "NCHAR_CHARACTERSET"))).append("\n\n");
+		}
+
+		Params p = new Params(dbmsConfig);
+		if (p.has("NonDefault") && p.has("ParameterName") && p.has("DisplayValue") && p.rows.size() > 0)
+		{
+			StringBuilder cfg = new StringBuilder();
+			for (JsonNode row : p.rows)
+			{
+				String cfgName = p.str(row, "ParameterName");
+				boolean isNonDefault = p.bool(row, "NonDefault") && ! ORA_SKIP_SETTINGS.matcher(cfgName).matches();
+				if ( ! isNonDefault && ! ORA_ALWAYS_SHOW.contains(cfgName) )
+					continue;
+
+				appendSetting(cfg, cfgName, p.str(row, "DisplayValue"), p.str(row, "DefaultValue"), p.bool(row, "Pending") ? p.str(row, "SpfileValue") : null);
+			}
+			sb.append("Server configuration, the settings that are not at their default and the memory and optimizer settings (V$SYSTEM_PARAMETER):\n");
+			sb.append(cfg);
+			sb.append("\n");
+		}
+
+		return sb.toString().trim();
+	}
+
+	/** MySQL sections that can change how a statement runs. An allow list: the others hold addresses, paths, logging and replication. */
+	private static final List<String> MY_KEEP_SECTIONS = Arrays.asList("Optimizer", "InnoDB", "Memory and Caches");
+
+	/** MySQL variables that are always shown, also when not changed: the memory, and what changes the meaning of a statement */
+	private static final List<String> MY_ALWAYS_SHOW = Arrays.asList(
+			"innodb_buffer_pool_size", "innodb_buffer_pool_instances", "innodb_page_size", "sort_buffer_size", "join_buffer_size", "read_rnd_buffer_size",
+			"tmp_table_size", "max_heap_table_size", "max_connections", "sql_mode", "transaction_isolation", "character_set_server", "collation_server");
+
+	private static final List<String> MY_SCHEMA_COLUMNS = Arrays.asList("TABLES", "FILE_MB");
+
+	/**
+	 * MySQL: from what the Collector stored at its start: the configuration (changed, in {@link #MY_KEEP_SECTIONS}, or in
+	 * {@link #MY_ALWAYS_SHOW}) and the row of the statement's schema. Cores and memory are only known from host monitoring.
+	 * MySQL can not tell a default value, so none is shown ('NonDefault' is from where the value came from).
+	 *
+	 * @param dbmsConfig  the Collector's /api/mgt/dbms-config answer, see {@link #buildSqlServer(JsonNode, String)}
+	 * @param cmMpstat    the Collector's /api/mgt/cm/data answer for CmOsMpstat {columns, rows}, or null (no host monitoring)
+	 * @param cmMeminfo   same for CmOsMeminfo, or null (no host monitoring)
+	 * @param dbname      the statement's schema, may be blank
+	 * @return the block, or "" when there is nothing
+	 */
+	public static String buildMySql(JsonNode dbmsConfig, JsonNode cmMpstat, JsonNode cmMeminfo, String dbname)
+	{
+		if (dbmsConfig == null)
+			return "";
+
+		dbname = StringUtil.nullToValue(dbname, "").trim();
+
+		Map<String, String> texts = new LinkedHashMap<>();
+		for (JsonNode t : dbmsConfig.path("texts"))
+			texts.put(t.path("configName").asText(""), t.path("configText").asText(""));
+
+		StringBuilder sb = new StringBuilder();
+
+		appendHostFromMonitoring(sb, cmMpstat, cmMeminfo);
+
+		Params p = new Params(dbmsConfig);
+		if (p.has("NonDefault") && p.has("VariableName") && p.has("Value") && p.rows.size() > 0)
+		{
+			StringBuilder cfg = new StringBuilder();
+			for (JsonNode row : p.rows)
+			{
+				String cfgName = p.str(row, "VariableName");
+				boolean isChanged = p.bool(row, "NonDefault") && MY_KEEP_SECTIONS.contains(p.str(row, "Section"));
+				if ( ! isChanged && ! MY_ALWAYS_SHOW.contains(cfgName) )
+					continue;
+
+				String value = p.str(row, "Value");
+				// Sizes are in bytes
+				if (cfgName.endsWith("_size") && value.matches("\\d{7,}"))
+					value = value + " (" + Math.round(Double.parseDouble(value) / 1024 / 1024) + " MB)";
+				appendSetting(cfg, cfgName, value, "", p.bool(row, "Pending") ? p.str(row, "PersistedValue") : null);
+			}
+			sb.append("Server configuration, the settings that were changed and the memory and SQL mode settings (performance_schema.global_variables):\n");
+			sb.append(cfg);
+			sb.append("\n");
+		}
+
+		if (StringUtil.hasValue(dbname))
+			appendDatabaseRow(sb, "Schema '" + dbname + "', its InnoDB tables", texts.get("HelpDb"), "SCHEMA_NAME", dbname, MY_SCHEMA_COLUMNS);
 
 		return sb.toString().trim();
 	}

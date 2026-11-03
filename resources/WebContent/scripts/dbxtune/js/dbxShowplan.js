@@ -2137,15 +2137,18 @@
 		// Same SQL open() would send (formatted when "Format SQL Text before send" is on)
 		var sqlPromise = (window.dbxLlmAdvice && dbxLlmAdvice.prepareSql)
 				? dbxLlmAdvice.prepareSql(_oraShowplanSqlText, _oraShowplanVendor) : Promise.resolve(_oraShowplanSqlText);
-		Promise.all([dbmsVerPromise, _oraShowplanFetchDdlContext(), sqlPromise]).then(function(res) {
-			var dbmsVersion = res[0], ddlContext = res[1], sentSql = res[2];
-			var saved       = window.dbxLlmAdvice ? dbxLlmAdvice.parseSavedContext(_oraShowplanSavedContext) : {};
-			var wlProfile   = saved.workloadProfile || ((window.dbxLlmAdvice && dbxLlmAdvice.buildWorkloadProfile && _oraShowplanWorkloadData) ? dbxLlmAdvice.buildWorkloadProfile(_oraShowplanWorkloadData) : '');
+		var saved = window.dbxLlmAdvice ? dbxLlmAdvice.parseSavedContext(_oraShowplanSavedContext) : {};
+		// Same server configuration and hardware open() would send
+		var srvCtxPromise = (window.dbxLlmAdvice && dbxLlmAdvice.fetchServerContext)
+				? dbxLlmAdvice.fetchServerContext({ srv: _oraShowplanSrv, dbname: _oraShowplanDbname, dbVendor: _oraShowplanVendor, serverContext: saved.serverContext }) : Promise.resolve('');
+		Promise.all([dbmsVerPromise, _oraShowplanFetchDdlContext(), sqlPromise, srvCtxPromise]).then(function(res) {
+			var dbmsVersion = res[0], ddlContext = res[1], sentSql = res[2], serverContext = res[3];
+			var wlProfile  = saved.workloadProfile || ((window.dbxLlmAdvice && dbxLlmAdvice.buildWorkloadProfile && _oraShowplanWorkloadData) ? dbxLlmAdvice.buildWorkloadProfile(_oraShowplanWorkloadData) : '');
 			$.ajax({
 				url:         '/api/llm/optimize-sql',
 				method:      'POST',
 				contentType: 'application/json',
-				data:        JSON.stringify({ sql: sentSql, ddlContext: ddlContext || '', plan: _oraShowplanLastPlanText || '', dbVendor: _oraShowplanVendor, dbmsVersion: dbmsVersion, serverContext: saved.serverContext, workloadProfile: wlProfile, preview: true }),
+				data:        JSON.stringify({ sql: sentSql, ddlContext: ddlContext || '', plan: _oraShowplanLastPlanText || '', dbVendor: _oraShowplanVendor, dbmsVersion: dbmsVersion, serverContext: serverContext, workloadProfile: wlProfile, preview: true }),
 				dataType:    'json',
 				success: function(r) {
 					if (r && r.promptSent)

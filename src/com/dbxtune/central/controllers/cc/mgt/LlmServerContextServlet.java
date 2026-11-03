@@ -51,8 +51,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /**
  * {@code GET /api/llm/server-context?srv=<name>&dbVendor=<vendor>&dbname=<db>&ts=<yyyy-MM-dd HH:mm:ss>}: the "Server
  * configuration and hardware" block of the LLM prompt (see {@link LlmServerContextBuilder}), from the DBMS configuration the
- * server's Collector stored at its start ({@code /api/mgt/dbms-config}). ASE also reads CmSummary (the page size), and ASE and
- * Postgres the host monitoring CMs (cores, memory), from the Collector. An unknown vendor gets an empty answer.
+ * server's Collector stored at its start ({@code /api/mgt/dbms-config}). ASE also reads CmSummary (the page size), and ASE,
+ * Postgres and MySQL the host monitoring CMs (cores, memory), from the Collector. An unknown vendor gets an empty answer.
  * <p>
  * Answers JSON {@code {serverContext, resolvedTs}}, or {@code {serverContext:"", message}} when there is none (turned
  * off, Collector not reachable, nothing stored): the advice is then asked for without it - never an error for the caller.
@@ -99,7 +99,9 @@ extends ProxyHelper
 		boolean isAse       = DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_SYBASE_ASE);
 		boolean isSqlServer = DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_MSSQL);
 		boolean isPostgres  = DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_POSTGRES);
-		if ( ! isAse && ! isSqlServer && ! isPostgres )
+		boolean isOracle    = DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_ORACLE);
+		boolean isMySql     = DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_MYSQL) || "MariaDB".equalsIgnoreCase(dbVendor);
+		if ( ! isAse && ! isSqlServer && ! isPostgres && ! isOracle && ! isMySql )
 		{
 			sendResult(resp, result, "Not available for the DBMS vendor '" + dbVendor + "'.");
 			return;
@@ -148,6 +150,10 @@ extends ProxyHelper
 				serverContext = LlmServerContextBuilder.buildAse(config, readCm("CmSummary", ts), readCm("CmOsMpstat", ts), readCm("CmOsMeminfo", ts), dbname);
 			else if (isPostgres)
 				serverContext = LlmServerContextBuilder.buildPostgres(config, readCm("CmOsMpstat", ts), readCm("CmOsMeminfo", ts), dbname);
+			else if (isOracle)
+				serverContext = LlmServerContextBuilder.buildOracle(config);
+			else if (isMySql)
+				serverContext = LlmServerContextBuilder.buildMySql(config, readCm("CmOsMpstat", ts), readCm("CmOsMeminfo", ts), dbname);
 			else
 				serverContext = LlmServerContextBuilder.buildSqlServer(config, dbname);
 			result.put("serverContext", serverContext);
