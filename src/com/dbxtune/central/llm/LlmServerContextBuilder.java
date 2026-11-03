@@ -42,13 +42,14 @@ import com.fasterxml.jackson.databind.JsonNode;
  *   <li>for the statement's database: its {@code sp_helpdb} row, its options from {@code sys.databases}, and its non-default
  *       database scoped configurations</li>
  * </ul>
- * ASE: see {@link #buildAse(JsonNode, JsonNode, JsonNode, JsonNode, String)}.
+ * That is SQL Server. The others have their own method, as their columns and what is worth sending differ: {@link #buildAse(JsonNode, JsonNode, JsonNode, JsonNode, String)},
+ * {@link #buildPostgres(JsonNode, JsonNode, JsonNode, String)}, {@link #buildOracle(JsonNode)}, {@link #buildMySql(JsonNode, JsonNode, JsonNode, String)}, {@link #buildDb2(JsonNode)}.
  * The texts are stored as the Collector printed the result sets: ASCII tables (see {@link #parseTables(String)}).
  * Kept small on purpose: it is sent with every request.
  */
 public class LlmServerContextBuilder
 {
-	/** Send the server configuration and hardware with the prompt (SQL Server and ASE, when the Collector is known). */
+	/** Send the server configuration and hardware with the prompt (when the Collector is known, and the vendor has a build method here). */
 	public static final String  PROPKEY_ENABLED = "DbxCentral.llm.serverContext";
 	public static final boolean DEFAULT_ENABLED = true;
 
@@ -380,6 +381,89 @@ public class LlmServerContextBuilder
 
 		if (StringUtil.hasValue(dbname))
 			appendDatabaseRow(sb, "Schema '" + dbname + "', its InnoDB tables", texts.get("HelpDb"), "SCHEMA_NAME", dbname, MY_SCHEMA_COLUMNS);
+
+		return sb.toString().trim();
+	}
+
+	/** Db2 sections that can change how a statement runs. An allow list: the others hold hosts, paths, HADR, logging and backup. */
+	private static final List<String> DB2_KEEP_SECTIONS = Arrays.asList("DB: Optimizer", "DB: Memory", "DB: Locking", "DB: I/O", "Instance: Memory");
+
+	/** Db2 parameters that are always shown, also at their default: the page size, the memory, and what steers the optimizer */
+	private static final List<String> DB2_ALWAYS_SHOW = Arrays.asList(
+			"pagesize", "dft_queryopt", "dft_degree", "avg_appls", "cur_commit", "intra_parallel", "max_querydegree",
+			"self_tuning_mem", "instance_memory", "database_memory", "sortheap", "sheapthres_shr", "locklist", "maxlocks", "stmtheap");
+
+	private static final List<String> DB2_HOST_COLUMNS       = Arrays.asList("OS_NAME", "TOTAL_CPUS", "CONFIGURED_CPUS", "TOTAL_MEMORY");
+	private static final List<String> DB2_BUFFERPOOL_COLUMNS = Arrays.asList("BP_NAME", "PAGES_NOW", "AUTOMATIC");
+	private static final List<String> DB2_TABLESPACE_COLUMNS = Arrays.asList("TBSP_NAME", "TBSP_CONTENT_TYPE", "TBSP_PAGE_SIZE", "TBSP_EXTENT_SIZE", "TBSP_PREFETCH_SIZE");
+
+	/**
+	 * Db2: from what the Collector stored at its start: the host, the configuration (not at its default, in {@link #DB2_KEEP_SECTIONS},
+	 * or in {@link #DB2_ALWAYS_SHOW}), the registry variables (DB2_*), the buffer pools and table spaces.
+	 * 'NonDefault' compares with a new 11.5.8 database, since Db2 can not tell a default value.
+	 *
+	 * @param dbmsConfig  the Collector's /api/mgt/dbms-config answer, see {@link #buildSqlServer(JsonNode, String)}
+	 * @return the block, or "" when there is nothing
+	 */
+	public static String buildDb2(JsonNode dbmsConfig)
+	{
+		if (dbmsConfig == null)
+			return "";
+
+		Map<String, String> texts = new LinkedHashMap<>();
+		for (JsonNode t : dbmsConfig.path("texts"))
+			texts.put(t.path("configName").asText(""), t.path("configText").asText(""));
+
+		StringBuilder sb = new StringBuilder();
+
+		for (Table t : parseTables(texts.get("Db2Server")))
+		{
+			if (t.columns.contains("TOTAL_CPUS") && ! t.rows.isEmpty())
+				sb.append("Host (ENV_GET_SYS_INFO, TOTAL_MEMORY in MB): ").append(toNameValues(t, t.rows.get(0), DB2_HOST_COLUMNS)).append("\n\n");
+		}
+
+		Params p = new Params(dbmsConfig);
+		if (p.has("NonDefault") && p.has("ParameterName") && p.has("Value") && p.rows.size() > 0)
+		{
+			StringBuilder cfg = new StringBuilder();
+			for (JsonNode row : p.rows)
+			{
+				String cfgName = p.str(row, "ParameterName");
+				boolean isNonDefault = p.bool(row, "NonDefault") && DB2_KEEP_SECTIONS.contains(p.str(row, "Section"));
+				if ( ! isNonDefault && ! DB2_ALWAYS_SHOW.contains(cfgName) )
+					continue;
+
+				String flags = p.str(row, "ValueFlags");
+				appendSetting(cfg, cfgName,
+						p.str(row, "Value") + ("AUTOMATIC".equals(flags) ? " (AUTOMATIC)" : ""),
+						p.str(row, "DefaultValue"),
+						p.bool(row, "Pending") ? p.str(row, "DeferredValue") : null);
+			}
+			sb.append("Server configuration, the settings that are not at their default of a new database and the memory and optimizer settings (DBCFG, DBMCFG; memory in 4 KB pages):\n");
+			sb.append(cfg);
+			sb.append("\n");
+		}
+
+		// Only DB2_*: DB2SYSTEM, DB2COMM and the like are the host and how to reach it
+		for (Table t : parseTables(texts.get("Db2Registry")))
+		{
+			int name  = t.columns.indexOf("REG_VAR_NAME");
+			int value = t.columns.indexOf("REG_VAR_VALUE");
+			if (name < 0 || value < 0)
+				continue;
+			StringBuilder reg = new StringBuilder();
+			for (List<String> row : t.rows)
+			{
+				if (row.get(name).startsWith("DB2_"))
+					appendSetting(reg, row.get(name), row.get(value), "", null);
+			}
+			if (reg.length() > 0)
+				sb.append("Registry variables (db2set):\n").append(reg).append("\n");
+			break;
+		}
+
+		appendAllRows(sb, "Buffer pools now (MON_GET_BUFFERPOOL), in pages", texts.get("Db2BufferPools"), "PAGES_NOW", DB2_BUFFERPOOL_COLUMNS);
+		appendAllRows(sb, "Table spaces (MON_GET_TABLESPACE)",               texts.get("Db2TableSpaces"), "TBSP_NAME", DB2_TABLESPACE_COLUMNS);
 
 		return sb.toString().trim();
 	}

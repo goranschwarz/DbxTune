@@ -101,7 +101,8 @@ extends ProxyHelper
 		boolean isPostgres  = DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_POSTGRES);
 		boolean isOracle    = DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_ORACLE);
 		boolean isMySql     = DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_MYSQL) || "MariaDB".equalsIgnoreCase(dbVendor);
-		if ( ! isAse && ! isSqlServer && ! isPostgres && ! isOracle && ! isMySql )
+		boolean isDb2       = DbUtils.isProductName(dbVendor, DbUtils.DB_PROD_NAME_DB2_LUW);
+		if ( ! isAse && ! isSqlServer && ! isPostgres && ! isOracle && ! isMySql && ! isDb2 )
 		{
 			sendResult(resp, result, "Not available for the DBMS vendor '" + dbVendor + "'.");
 			return;
@@ -154,6 +155,8 @@ extends ProxyHelper
 				serverContext = LlmServerContextBuilder.buildOracle(config);
 			else if (isMySql)
 				serverContext = LlmServerContextBuilder.buildMySql(config, readCm("CmOsMpstat", ts), readCm("CmOsMeminfo", ts), dbname);
+			else if (isDb2)
+				serverContext = LlmServerContextBuilder.buildDb2(config);
 			else
 				serverContext = LlmServerContextBuilder.buildSqlServer(config, dbname);
 			result.put("serverContext", serverContext);
