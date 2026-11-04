@@ -48,6 +48,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
@@ -96,6 +97,10 @@ public class OverviewServlet extends HttpServlet
 
 	public static final String PROPKEY_LogfilesShortcuts = "logfiles.shortcuts";
 	public static final String DEFAULT_LogfilesShortcuts = "*.console";
+
+	/** Hostname or IP that H2 clients use to reach this machine, for JDBC URLs in the Overview page. Not set: the hostname reported by the collector. */
+	public static final String PROPKEY_h2Hostname = "DbxCentral.h2.hostname";
+	public static final String DEFAULT_h2Hostname = null;
 
 //	public static final String  PROPKEY_enableDownloadRecordings = "OverviewServlet.enable.download.recordings";
 	public static final String  PROPKEY_enableDownloadRecordings = "download.recordings.enabled";
@@ -347,6 +352,15 @@ public class OverviewServlet extends HttpServlet
 		return fileNames;
 	}
 	
+	/** Replace the host in <code>jdbc:h2:tcp://host:port/dbname</code>, the port is kept. Nothing is changed if we do not have a hostname, or it's another type of URL. */
+	private static String replaceH2UrlHostname(String url, String hostname)
+	{
+		if (url == null || StringUtil.isNullOrBlank(hostname))
+			return url;
+
+		return url.replaceFirst("^(jdbc:h2:tcp://)[^:/]+", "$1" + Matcher.quoteReplacement(hostname));
+	}
+
 	private String getDayOfWeek(String input, String format)
 	{
 		try
@@ -562,7 +576,8 @@ public class OverviewServlet extends HttpServlet
 
 		String username = System.getProperty("user.name");
 		String hostname = InetAddress.getLocalHost().getHostName();
-		
+		String h2Hostname = Configuration.getCombinedConfiguration().getProperty(PROPKEY_h2Hostname, DEFAULT_h2Hostname);
+
 		out.println("<html>");
 		out.println("<head>");
 
@@ -1353,6 +1368,9 @@ public class OverviewServlet extends HttpServlet
 
 				if (StringUtil.hasValue(collectUrl))
 					url = collectUrl;
+
+				if (isLocalCollector)
+					url = replaceH2UrlHostname(url, h2Hostname);
 
 				// set the correct link where to reach the H2 DB
 				String dbxTuneUrl  = dbxTuneGuiUrl.replace(":PORT/", ":" + DbxTune.getGuiWebPort(appName) + "/") + url;
@@ -2206,7 +2224,9 @@ public class OverviewServlet extends HttpServlet
 				String collectorHostname = hostname;
 				DbxCentralSessions session = centralSessionMap.get(srvName);
 				if (session != null)
-					collectorHostname = session.getCollectorHostname(); 
+					collectorHostname = session.getCollectorHostname();
+				if (StringUtil.hasValue(h2Hostname))
+					collectorHostname = h2Hostname;
 
 				String jdbcUrl  = "jdbc:h2:tcp://" + collectorHostname + "/" + dbName + ";IFEXISTS=TRUE;DB_CLOSE_ON_EXIT=FALSE";
 				String webUrl   = "http://" + collectorHostname + ":8082" + "/login.jsp?url=" + jdbcUrl + "&driver=org.h2.Driver&user=sa";
@@ -2545,6 +2565,9 @@ public class OverviewServlet extends HttpServlet
 					collectorHostname = session.getCollectorHostname(); 
 					dbxTuneName       = session.getProductString();
 				}
+				// The file is on this machine, and is served by the H2 server in DbxCentral
+				if (StringUtil.hasValue(h2Hostname))
+					collectorHostname = h2Hostname;
 
 				String url        = "jdbc:h2:tcp://" + collectorHostname + "/" + dbName + ";IFEXISTS=TRUE;DB_CLOSE_ON_EXIT=FALSE";
 //				String dbxTuneUrl = dbxTuneGuiUrl + url;
@@ -2557,6 +2580,9 @@ public class OverviewServlet extends HttpServlet
 				if ( ! isDownloadRecordingEnabled )
 					downloadH2File = dbName; // 
 				
+				// The DSR is created by DbxCentral itself, so this is NOT the URL that the clients use (the file is on this machine, and is served by the H2 server in DbxCentral)
+				String dsrJdbcUrl = "jdbc:h2:tcp://localhost/" + dbName + ";IFEXISTS=TRUE";
+
 				String style = "";
 				if (isTodayH2DbTimestamp(f.getName()))
 				{
@@ -2567,14 +2593,18 @@ public class OverviewServlet extends HttpServlet
 					if (session != null)
 					{
 						if (session.getCollectorCurrentUrl() != null)
+						{
 							url = session.getCollectorCurrentUrl();
+							dsrJdbcUrl = url;
+						}
+						if (session.getCollectorIsLocal())
+							url = replaceH2UrlHostname(url, h2Hostname);
 						dbxTuneUrl = dbxTuneGuiUrl.replace(":PORT/", ":" + DbxTune.getGuiWebPort(dbxTuneName) + "/") + url;
 					}
 				}
 				
 //				String dsrUrl = "/api/dsr?op=xxx&dbname="+dbName+"&onHost="+collectorHostname;
 //				String dsrJdbcUrl = dbName;
-				String dsrJdbcUrl = url.replace(";DB_CLOSE_ON_EXIT=FALSE", "");
 				String dsrUrl = "'javascript:void(0);' onclick='return dbxOpenDsrDialog(\"" + dsrJdbcUrl + "\");'";
 				String dsrTxt = dbName;
 

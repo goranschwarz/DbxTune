@@ -2266,6 +2266,33 @@ extends CentralPersistWriterBase
 			}
 		}
 
+		if (fromDbVersion <= 20)
+		{
+			// Widen columns in 'DbxCentralSessions' to the same length as in a new database (DB version 21)
+			// In older databases 'CollectorHostname' is varchar(30), so long hostnames were truncated into 'some.long.host...', which ended up in the JDBC URLs in the Overview page
+			step = 23;
+			String onlyTabName = getTableName(conn, null, Table.CENTRAL_SESSIONS, null, false);
+
+			// H2, Postgres:    ALTER TABLE tabname ALTER COLUMN colname SET DATA TYPE datatype   (keeps NOT NULL)
+			// SqlServer:       ALTER TABLE tabname ALTER COLUMN colname datatype
+			// ASE, MySql, Oracle: ALTER TABLE tabname MODIFY colname datatype
+			String beforeColName = " alter column ";
+			String beforeType    = " set data type ";
+			if (DbUtils.isProductName(conn.getDatabaseProductName(), DbUtils.DB_PROD_NAME_MSSQL))
+				beforeType = " ";
+			if (DbUtils.isProductName(conn.getDatabaseProductName(), DbUtils.DB_PROD_NAME_SYBASE_ASE, DbUtils.DB_PROD_NAME_MYSQL, DbUtils.DB_PROD_NAME_ORACLE))
+			{
+				beforeColName = " modify ";
+				beforeType    = " ";
+			}
+
+			sql = "alter table " + lq+onlyTabName+rq + beforeColName + lq + "CollectorHostname" + rq + beforeType + "varchar(128)";
+			internalDbUpgradeDdlExec(conn, step, sql);
+
+			sql = "alter table " + lq+onlyTabName+rq + beforeColName + lq + "CollectorCurrentUrl" + rq + beforeType + "varchar(255)";
+			internalDbUpgradeDdlExec(conn, step, sql);
+		}
+
 		_logger.info("End - Internal Upgrade of Dbx Central database tables from version '" + fromDbVersion + "' to version '" + toDbVersion + "'.");
 		return toDbVersion;
 	}
