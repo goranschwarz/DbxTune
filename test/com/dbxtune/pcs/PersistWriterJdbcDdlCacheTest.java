@@ -21,11 +21,15 @@
  ******************************************************************************/
 package com.dbxtune.pcs;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.sql.Timestamp;
 
 import org.junit.After;
 import org.junit.Before;
@@ -91,5 +95,49 @@ public class PersistWriterJdbcDdlCacheTest
 		_pw.saveDdlDetails(lookup("shop", "shop..orders"));
 
 		assertTrue(_pw.isDdlDetailsStored("shop", "shop..orders"));
+	}
+
+	@Test
+	public void testSaveReturnsFalseWhenAlreadyStored()
+	{
+		assertFalse(_pw.saveDdlDetails(lookup("tempdb", "orders")));
+	}
+
+	@Test
+	public void testSaveReturnsTrueOnlyWhenWritten() throws Exception
+	{
+		try (Statement stmt = _conn.createStatement())
+		{
+			for (String ddl : PersistWriterBase.getTableDdlString(_pw._mainConn, null, PersistWriterBase.DDL_STORAGE, null))
+				stmt.executeUpdate(ddl);
+		}
+
+		DdlDetails entry = new DdlDetails();
+		entry.setDbname          ("shop");
+		entry.setOwner           ("dbo");
+		entry.setObjectName      ("customers");
+		entry.setSearchDbname    ("shop");
+		entry.setSearchObjectName("customers");
+		entry.setType            ("U");
+		entry.setObjectText      ("some text");
+		entry.setSampleTime      (new Timestamp(System.currentTimeMillis()));
+
+		assertTrue (_pw.saveDdlDetails(entry));
+		assertFalse(_pw.saveDdlDetails(entry));
+
+		try (Statement stmt = _conn.createStatement(); ResultSet rs = stmt.executeQuery("select count(*) from \"MonDdlStorage\""))
+		{
+			rs.next();
+			assertEquals(1, rs.getInt(1));
+		}
+	}
+
+	@Test
+	public void testSaveReturnsFalseOnWriteError()
+	{
+		// The table does not exist in this test
+		DdlDetails entry = lookup("shop", "customers");
+		entry.setObjectName("customers");
+		assertFalse(_pw.saveDdlDetails(entry));
 	}
 }

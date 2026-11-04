@@ -308,8 +308,9 @@ public abstract class PersistWriterBase
 
 	/** Empty implementation */
 	@Override
-	public void saveDdlDetails(DdlDetails ddlDetails)
+	public boolean saveDdlDetails(DdlDetails ddlDetails)
 	{
+		return false;
 	}
 
 	/** 

@@ -5363,7 +5363,7 @@ public class PersistWriterJdbc
 
 	/** save DDL into "any" storage */
 	@Override
-	public void saveDdlDetails(DdlDetails ddlDetails)
+	public boolean saveDdlDetails(DdlDetails ddlDetails)
 	{
 		if (ddlDetails == null)
 			throw new RuntimeException("saveDdl(), input 'ddlDetails', can't be null.");
@@ -5376,7 +5376,7 @@ public class PersistWriterJdbc
 				_logger.info("DDL Lookup Storage: No database connection to Persistent Storage DB.");
 				_lastSaveDdlDetailMessageTime = System.currentTimeMillis();
 			}
-			return;
+			return false;
 		}
 
 		if (isShutdownWithNoWait())
@@ -5386,7 +5386,7 @@ public class PersistWriterJdbc
 				_logger.info("DDL Lookup Storage: Discard entry due to 'ShutdownWithNoWait'.");
 				_lastSaveDdlDetailMessageTime = System.currentTimeMillis();
 			}
-			return;
+			return false;
 		}
 
 		// Check that we have started and all table has been created...
@@ -5397,7 +5397,7 @@ public class PersistWriterJdbc
 				_logger.warn("DDL Lookup Storage: Discard entry due to PCS '" + getName() + "' has not yet been fully started'. (Storage tables might not be there yet).");
 				_lastSaveDdlDetailMessageTime = System.currentTimeMillis();
 			}
-			return;
+			return false;
 		}
 
 		// check AGAIN if DDL has NOT been saved in any writer class
@@ -5412,7 +5412,7 @@ public class PersistWriterJdbc
 
 			// This lookup may have been done under another name (other 'dbname' or with/without schema), which otherwise would be looked up again and again
 			markDdlDetailsAsStored(ddlDetails);
-			return;
+			return false;
 		}
 //		if ( isDdlDetailsStored(ddlDetails.getSearchDbname(), ddlDetails.getObjectName()) )
 		if ( isDdlDetailsStored(ddlDetails.getSearchDbname(), ddlDetails.getSchemaAndObjectName()) )
@@ -5424,7 +5424,7 @@ public class PersistWriterJdbc
 			_logger.debug("saveDdlDetails(): The DDL for searchDbname '" + ddlDetails.getSearchDbname() + "', objectName '" + ddlDetails.getSchemaAndObjectName() + "' has already been stored by all the writers.");
 
 			markDdlDetailsAsStored(ddlDetails);
-			return;
+			return false;
 		}
 
 		String schemaName = getSchemaName();
@@ -5480,13 +5480,13 @@ public class PersistWriterJdbc
 			// ADD IT TO HE CACHE AS SAVED, no need to save again.
 			markDdlDetailsAsStored(ddlDetails);
 
-//			return rowsCount;
+			return true;
 		}
 		catch (SQLException e)
 		{
 			_logger.warn("Error writing DDL Information to Persistent Counter Store. for table dbname='" + ddlDetails.getDbname() + "', objectName='" + ddlDetails.getObjectName() + "'.", e);
 			isSevereProblem(conn, e);
-//			return -1;
+			return false;
 		}
 	}
 	//---------------------------------------------

@@ -112,8 +112,11 @@ public interface IPersistWriter
 	/** save counters for this cm */
 	public void saveCounters(CountersModel cm);
 
-	/** save DDL into "any" storage */
-	public void saveDdlDetails(DdlDetails ddlDetails);
+	/**
+	 * save DDL into "any" storage
+	 * @return true if it was written to the storage, false if not (for example: it was already there)
+	 */
+	public boolean saveDdlDetails(DdlDetails ddlDetails);
 
 	/** check if this DDL is stored in the DDL storage, implementer should hold all stored DDL's in a cache */
 	public boolean isDdlDetailsStored(String dbname, String objectName);
