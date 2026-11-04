@@ -293,7 +293,16 @@
 			   inherited from it), so shrinking just the <pre> is enough - the <code> inside scales with it. */
 			'pre:has(> code.dbx-view-sqltext-content) {',
 			'  font-size: 0.8em !important;',
-			'}'
+			'}',
+			/* Inline, each line of the <code> is as high as the (larger) font of the <pre> dictates, while Prism's line numbers
+			   use the line height of the <code>: on a long text the numbers drift away from their lines. */
+			'code.dbx-view-sqltext-content { display: block; }',
+			/* The long text sections: small and scrollable, with an Expand button below (see data-sp-cap in _injectHtml()) */
+			'[data-sp-cap] { overflow: auto; }',
+			'pre[data-sp-cap] { margin-bottom: 0 !important; }',
+			'.dbx-sp-size-bar { text-align: right; }',
+			'.dbx-sp-size-btn { font-size: 0.75rem; padding: 0 10px; margin-top: 2px; cursor: pointer; border: 1px solid var(--sp-border-btn); border-radius: 3px; background: var(--sp-bg-btn); color: var(--sp-text); }',
+			'.dbx-sp-size-btn:hover { background: var(--sp-bg-3); }'
 		].join('\n');
 		document.head.appendChild(style);
 
@@ -442,7 +451,7 @@
 			"						<div id='dbx-view-ssShowplan-sqlFmtPanel'></div>",
 			"						<div style='position:relative;'>",
 			"							<button onclick='dbxCopyCodeBlock(\"dbx-view-ssShowplan-sqlContent\");' style='position:absolute;right:6px;top:6px;z-index:10;font-size:0.75em;padding:1px 8px;cursor:pointer;background:var(--sp-bg-btn);border:1px solid var(--sp-border-btn);border-radius:3px;opacity:0.85;'>Copy</button>",
-			"							<pre><code id='dbx-view-ssShowplan-sqlContent' class='language-sql line-numbers dbx-view-sqltext-content'></code></pre>",
+			"							<pre data-sp-cap='sql'><code id='dbx-view-ssShowplan-sqlContent' class='language-sql line-numbers dbx-view-sqltext-content'></code></pre>",
 			"						</div>",
 			"					</div>",
 			"				</details>",
@@ -474,7 +483,7 @@
 			"				<!-- ▶ Table Information (lazy-loaded on first expand) -->",
 			"				<details id='dbx-ssp-sect-tableinfo' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
 			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128220; Table Information</summary>",
-			"					<div id='dbx-ssp-tableinfo-body' style='padding:4px 8px 8px 8px;overflow-x:auto;'>",
+			"					<div id='dbx-ssp-tableinfo-body' data-sp-cap='tableinfo' style='padding:4px 8px 8px 8px;overflow-x:auto;'>",
 			"						<span style='color:var(--sp-text-5);font-size:0.85em;'>&#9203; Loading table information…</span>",
 			"					</div>",
 			"				</details>",
@@ -504,7 +513,7 @@
 			"						<p class='text-muted' id='dbx-ssp-llmpreview-note' style='font-size:0.8em;'>This DbxCentral instance doesn't have LLM Optimization Advice turned on, so nothing gets sent anywhere - but here's the exact prompt it would send. Copy it into any LLM chat (claude.ai, chatgpt.com, ...) yourself for a quick manual shortcut into the same advice.</p>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='ssShowplanRefreshLlmPreview();'>&#8635; Build Prompt</button>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='ssShowplanCopyLlmPreview();'>&#128203; Copy Prompt</button>",
-			"						<div id='dbx-ssp-llmpreview-body'>",
+			"						<div id='dbx-ssp-llmpreview-body' data-sp-cap='llmpreview'>",
 			"							<span style='color:var(--sp-text-5);font-size:0.85em;'>Expand to build the prompt.</span>",
 			"						</div>",
 			"					</div>",
@@ -516,7 +525,7 @@
 			"					<div style='padding:4px 8px 8px 8px;'>",
 			"						<div style='position:relative;'>",
 			"							<button onclick='dbxCopyCodeBlock(\"dbx-view-ssShowplan-xmlContent\");' style='position:absolute;right:6px;top:6px;z-index:10;font-size:0.75em;padding:1px 8px;cursor:pointer;background:var(--sp-bg-btn);border:1px solid var(--sp-border-btn);border-radius:3px;opacity:0.85;'>Copy</button>",
-			"							<pre><code id='dbx-view-ssShowplan-xmlContent' class='language-xml line-numbers dbx-view-sqltext-content'></code></pre>",
+			"							<pre data-sp-cap='plan'><code id='dbx-view-ssShowplan-xmlContent' class='language-xml line-numbers dbx-view-sqltext-content'></code></pre>",
 			"						</div>",
 			"					</div>",
 			"				</details>",
@@ -631,7 +640,7 @@
 			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128196; Raw Plan Text</summary>",
 			"					<div style='padding:4px 8px 8px 8px;'>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='dbxCopyCodeBlock(\"dbx-view-aseShowplan-planContent\");'>Copy Plan Text</button>",
-			"						<pre><code id='dbx-view-aseShowplan-planContent' class='line-numbers dbx-view-sqltext-content'></code></pre>",
+			"						<pre data-sp-cap='plan'><code id='dbx-view-aseShowplan-planContent' class='line-numbers dbx-view-sqltext-content'></code></pre>",
 			"					</div>",
 			"				</details>",
 
@@ -643,14 +652,14 @@
 			_sqlFmtBtn('dbx-view-aseShowplan-sqlFmtPanel', 'aseShowplanFormatSql', 'margin-bottom:4px;'),
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='dbxCopyCodeBlock(\"dbx-view-aseShowplan-sqlContent\");'>Copy SQL</button>",
 			"						<div id='dbx-view-aseShowplan-sqlFmtPanel'></div>",
-			"						<pre><code id='dbx-view-aseShowplan-sqlContent' class='language-sql line-numbers dbx-view-sqltext-content'></code></pre>",
+			"						<pre data-sp-cap='sql'><code id='dbx-view-aseShowplan-sqlContent' class='language-sql line-numbers dbx-view-sqltext-content'></code></pre>",
 			"					</div>",
 			"				</details>",
 
 			"				<!-- ▶ Table Information (lazy-loaded on first expand) -->",
 			"				<details id='dbx-asp-sect-tableinfo' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
 			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128220; Table Information</summary>",
-			"					<div id='dbx-asp-tableinfo-body' style='padding:4px 8px 8px 8px;'>",
+			"					<div id='dbx-asp-tableinfo-body' data-sp-cap='tableinfo' style='padding:4px 8px 8px 8px;'>",
 			"						<span style='color:var(--sp-text-5);font-size:0.85em;'>&#9203; Loading table information…</span>",
 			"					</div>",
 			"				</details>",
@@ -679,7 +688,7 @@
 			"						<p class='text-muted' id='dbx-asp-llmpreview-note' style='font-size:0.8em;'>This DbxCentral instance doesn't have LLM Optimization Advice turned on, so nothing gets sent anywhere - but here's the exact prompt it would send. Copy it into any LLM chat (claude.ai, chatgpt.com, ...) yourself for a quick manual shortcut into the same advice.</p>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='aseShowplanRefreshLlmPreview();'>&#8635; Build Prompt</button>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='aseShowplanCopyLlmPreview();'>&#128203; Copy Prompt</button>",
-			"						<div id='dbx-asp-llmpreview-body'>",
+			"						<div id='dbx-asp-llmpreview-body' data-sp-cap='llmpreview'>",
 			"							<span style='color:var(--sp-text-5);font-size:0.85em;'>Expand to build the prompt.</span>",
 			"						</div>",
 			"					</div>",
@@ -767,7 +776,7 @@
 			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128196; Raw Plan Text</summary>",
 			"					<div style='padding:4px 8px 8px 8px;'>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='oraShowplanCopyPlan();'>Copy Plan Text</button>",
-			"						<pre style='overflow:auto;margin:0;'><code id='dbx-view-oraShowplan-planContent' style='white-space:pre;font-size:0.8rem;'></code></pre>",
+			"						<pre data-sp-cap='plan' style='overflow:auto;margin:0;'><code id='dbx-view-oraShowplan-planContent' style='white-space:pre;font-size:0.8rem;'></code></pre>",
 			"					</div>",
 			"				</details>",
 
@@ -779,7 +788,7 @@
 			_sqlFmtBtn('dbx-view-oraShowplan-sqlFmtPanel', 'oraShowplanFormatSql', 'margin-bottom:4px;'),
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='dbxCopyCodeBlock(\"dbx-view-oraShowplan-sqlContent\");'>Copy SQL</button>",
 			"						<div id='dbx-view-oraShowplan-sqlFmtPanel'></div>",
-			"						<pre><code id='dbx-view-oraShowplan-sqlContent' class='language-sql line-numbers dbx-view-sqltext-content'></code></pre>",
+			"						<pre data-sp-cap='sql'><code id='dbx-view-oraShowplan-sqlContent' class='language-sql line-numbers dbx-view-sqltext-content'></code></pre>",
 			"					</div>",
 			"				</details>",
 
@@ -788,7 +797,7 @@
 			"				<!-- ▶ Table Information (lazy-loaded on first expand) -->",
 			"				<details id='dbx-osp-sect-tableinfo' style='border:1px solid var(--sp-border);border-radius:3px;background:var(--sp-bg-2);margin-bottom:4px;'>",
 			"					<summary style='cursor:pointer;padding:5px 10px;font-size:0.85em;font-weight:600;list-style:none;user-select:none;'>&#128220; Table Information</summary>",
-			"					<div id='dbx-osp-tableinfo-body' style='padding:4px 8px 8px 8px;overflow-x:auto;'>",
+			"					<div id='dbx-osp-tableinfo-body' data-sp-cap='tableinfo' style='padding:4px 8px 8px 8px;overflow-x:auto;'>",
 			"						<span style='color:var(--sp-text-5);font-size:0.85em;'>Expand to load table and index information.</span>",
 			"					</div>",
 			"				</details>",
@@ -813,7 +822,7 @@
 			"						<p class='text-muted' id='dbx-osp-llmpreview-note' style='font-size:0.8em;'>This DbxCentral instance doesn't have LLM Optimization Advice turned on, so nothing gets sent anywhere - but here's the exact prompt it would send. Copy it into any LLM chat (claude.ai, chatgpt.com, ...) yourself for a quick manual shortcut into the same advice.</p>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='oraShowplanRefreshLlmPreview();'>&#8635; Build Prompt</button>",
 			"						<button type='button' class='btn btn-outline-secondary btn-sm' style='margin-bottom:4px;' onclick='oraShowplanCopyLlmPreview();'>&#128203; Copy Prompt</button>",
-			"						<div id='dbx-osp-llmpreview-body'>",
+			"						<div id='dbx-osp-llmpreview-body' data-sp-cap='llmpreview'>",
 			"							<span style='color:var(--sp-text-5);font-size:0.85em;'>Expand to build the prompt.</span>",
 			"						</div>",
 			"					</div>",
@@ -850,6 +859,31 @@
 		DbxShowplanTheme.mountSwitch('#dbx-ssp-theme');
 		DbxShowplanTheme.mountSwitch('#dbx-asp-theme');
 		DbxShowplanTheme.mountSwitch('#dbx-osp-theme');
+
+		// The long text sections (data-sp-cap='sql|plan|tableinfo|llmpreview'): 300px and scrollable, as the LLM output's code blocks,
+		// with an "Expand" button below when the content does not fit. The choice is remembered per kind, so it holds in all the dialogs.
+		// Measured again when the section is opened (nothing to measure in a closed <details>), the box is resized (dialog shown, its width changed) and on new content.
+		document.querySelectorAll('[data-sp-cap]').forEach(function (box) {
+			var CAP_PX = 300;
+			var key = 'dbxtune_showplan_expanded_' + box.getAttribute('data-sp-cap');
+			box.insertAdjacentHTML('afterend', "<div class='dbx-sp-size-bar'><button type='button' class='dbx-sp-size-btn' style='display:none;'></button></div>");
+			var btn = box.nextElementSibling.firstChild;
+
+			function refresh() {
+				var expanded = localStorage.getItem(key) === 'true';
+				box.style.maxHeight = expanded ? '' : CAP_PX + 'px';
+				btn.textContent = expanded ? 'Collapse' : 'Expand';
+				btn.style.display = (box.scrollHeight > (expanded ? CAP_PX : box.clientHeight) + 2) ? '' : 'none';
+			}
+			btn.addEventListener('click', function () {
+				try { localStorage.setItem(key, localStorage.getItem(key) === 'true' ? 'false' : 'true'); } catch (ex) {}
+				refresh();
+			});
+			box.closest('details').addEventListener('toggle', refresh);
+			new ResizeObserver(refresh).observe(box);
+			new MutationObserver(refresh).observe(box, { childList: true, subtree: true, characterData: true });
+			refresh();
+		});
 
 		// ── Showplan Loader input dialog ──────────────────────────────────────────
 		document.body.insertAdjacentHTML('beforeend',
@@ -1673,7 +1707,7 @@
 					success: function(r) {
 						if (r && r.promptSent) {
 							var esc = function(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-							body.innerHTML = '<pre id="dbx-asp-llmpreview-text" class="mb-0" style="white-space:pre-wrap;max-height:400px;overflow:auto;">' + esc(r.promptSent) + '</pre>';
+							body.innerHTML = '<pre id="dbx-asp-llmpreview-text" class="mb-0" style="white-space:pre-wrap;">' + esc(r.promptSent) + '</pre>';
 						} else {
 							body.innerHTML = '<em style="color:var(--sp-text-5);">Could not build a prompt preview.</em>';
 						}
@@ -2152,7 +2186,7 @@
 				dataType:    'json',
 				success: function(r) {
 					if (r && r.promptSent)
-						body.innerHTML = '<pre id="dbx-osp-llmpreview-text" class="mb-0" style="white-space:pre-wrap;max-height:400px;overflow:auto;">' + escapeHtml(r.promptSent) + '</pre>';
+						body.innerHTML = '<pre id="dbx-osp-llmpreview-text" class="mb-0" style="white-space:pre-wrap;">' + escapeHtml(r.promptSent) + '</pre>';
 					else
 						body.innerHTML = '<em style="color:var(--sp-text-5);">Could not build a prompt preview.</em>';
 				},
@@ -3410,7 +3444,7 @@ function _initGlobalEscClose() {
 					success: function(r) {
 						if (r && r.promptSent) {
 							var esc = function(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-							body.innerHTML = '<pre id="dbx-ssp-llmpreview-text" class="mb-0" style="white-space:pre-wrap;max-height:400px;overflow:auto;">' + esc(r.promptSent) + '</pre>';
+							body.innerHTML = '<pre id="dbx-ssp-llmpreview-text" class="mb-0" style="white-space:pre-wrap;">' + esc(r.promptSent) + '</pre>';
 						} else {
 							body.innerHTML = '<em style="color:var(--sp-text-5);">Could not build a prompt preview.</em>';
 						}

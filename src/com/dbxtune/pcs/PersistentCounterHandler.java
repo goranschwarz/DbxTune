@@ -27,6 +27,7 @@ package com.dbxtune.pcs;
 import java.lang.invoke.MethodHandles;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -87,6 +88,12 @@ implements Runnable
                                                                                  
 	public static final String  PROPKEY_ddl_doGetStatistics                      = "PersistentCounterHandler.ddl.doGetStatistics";
 	public static final boolean DEFAULT_ddl_doGetStatistics                      = false;
+
+	public static final String  PROPKEY_ddl_statistics_printHourly               = "PersistentCounterHandler.ddl.statistics.print.hourly";
+	public static final boolean DEFAULT_ddl_statistics_printHourly               = true;
+
+	public static final String  PROPKEY_ddl_statistics_printDaily                = "PersistentCounterHandler.ddl.statistics.print.daily";
+	public static final boolean DEFAULT_ddl_statistics_printDaily                = true;
 
 	public static final String  PROPKEY_ddl_doSpDepends                          = "PersistentCounterHandler.ddl.doSpDepends";
 	public static final boolean DEFAULT_ddl_doSpDepends                          = false;
@@ -173,6 +180,8 @@ implements Runnable
 		Configuration.registerDefaultValue(PROPKEY_ddl_warnDdlStoreQueueSizeThresh,          DEFAULT_ddl_warnDdlStoreQueueSizeThresh);
 		Configuration.registerDefaultValue(PROPKEY_ddl_afterDdlLookupSleepTimeInMs,          DEFAULT_ddl_afterDdlLookupSleepTimeInMs);
 		Configuration.registerDefaultValue(PROPKEY_ddl_doGetStatistics,                      DEFAULT_ddl_doGetStatistics);
+		Configuration.registerDefaultValue(PROPKEY_ddl_statistics_printHourly,               DEFAULT_ddl_statistics_printHourly);
+		Configuration.registerDefaultValue(PROPKEY_ddl_statistics_printDaily,                DEFAULT_ddl_statistics_printDaily);
 		Configuration.registerDefaultValue(PROPKEY_ddl_doSpDepends,                          DEFAULT_ddl_doSpDepends);
 		Configuration.registerDefaultValue(PROPKEY_ddl_addDependantObjectsToDdlInQueue,      DEFAULT_ddl_addDependantObjectsToDdlInQueue);
 		Configuration.registerDefaultValue(PROPKEY_warnQueueSizeThresh,                      DEFAULT_warnQueueSizeThresh);
@@ -278,6 +287,9 @@ implements Runnable
 
 	/** */
 	private BlockingQueue<ObjectLookupQueueEntry> _ddlInputQueue = new LinkedBlockingQueue<ObjectLookupQueueEntry>();
+
+	/** How many DDL Lookups was requested, discarded, executed and saved. One line in the errorlog every hour and every day */
+	final DdlLookupStatistics _ddlLookupStatistics = new DdlLookupStatistics(LocalDateTime.now());
 	private int	_warnDdlInputQueueSizeThresh = DEFAULT_ddl_warnDdlInputQueueSizeThresh;
 
 	/** */
@@ -736,7 +748,9 @@ implements Runnable
 		// Don't do empty ones...
 		if (StringUtil.isNullOrBlank(dbname) || StringUtil.isNullOrBlank(objectName))
 			return;
-		
+
+		_ddlLookupStatistics.inc(DdlLookupStatistics.Counter.requests);
+
 //		boolean doPrintInfo = false;
 		boolean doPrintInfo = Configuration.getCombinedConfiguration().getBooleanProperty("PersistentCounterHandler.addDdl.doPrintInfo", false);
 		if ("PcsAddDdlObjectDialog".equals(source))
@@ -753,6 +767,7 @@ implements Runnable
 //System.out.println("-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<- Already in the 'DDL Input Queue', addDdl() exiting early. dbname='" + dbname + "', objectName='" + objectName + "'.");
 				if (_logger.isDebugEnabled())
 					_logger.debug("-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<- Already in the 'DDL Input Queue', addDdl() exiting early. dbname='" + dbname + "', objectName='" + objectName + "'.");
+				_ddlLookupStatistics.inc(DdlLookupStatistics.Counter.alreadyQueued);
 				return;
 			}
 		}
@@ -772,6 +787,7 @@ implements Runnable
 				if (doPrintInfo)
 					_logger.info("DEBUG: addDdl(): <<<<<<<<<<----- _objectLookupInspector.allowInspection(entry) returned: " + allowLookup);
 //System.out.println("addDdl(): <<<<<<<<<<----- _objectLookupInspector.allowInspection(entry) returned: " + allowLookup);
+				_ddlLookupStatistics.inc(DdlLookupStatistics.Counter.notAllowed);
 				return;
 			}
 
@@ -796,7 +812,10 @@ implements Runnable
 //	System.out.println("addDdl(): <<<<<<<<<----- allowLookup-2=" + allowLookup + ", entry._dbname=" + entry._dbname + ", _ddlLookup_enabledForStatementCache=" + _ddlLookup_enabledForStatementCache + ", _ddlLookup_enabledForDatabaseObjects=" + _ddlLookup_enabledForDatabaseObjects);
 			// exit if we do NOT allow lookup
 			if ( ! allowLookup )
+			{
+				_ddlLookupStatistics.inc(DdlLookupStatistics.Counter.notAllowed);
 				return;
+			}
 		}
 		dbname     = entry._dbname;
 		objectName = entry._objectName;
@@ -836,6 +855,7 @@ implements Runnable
 			// DEBUG
 			if (_logger.isDebugEnabled())
 				_logger.debug("-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#- The DDL for dbname '" + dbname + "', objectName '" + objectName + "', isStatementCacheEntry=" + entry.isStatementCacheEntry() + ". has already been stored by all the writers.");
+			_ddlLookupStatistics.inc(DdlLookupStatistics.Counter.alreadyStored);
 			return;
 		}
 
@@ -1012,6 +1032,7 @@ implements Runnable
 //System.out.println("doObjectInfoLookup(): <<<<<<< ---return---- The DDL for dbname '" + dbname + "', objectName '" + objectName + "' has already been stored/discarded by all the writers.");
 			if (_logger.isDebugEnabled())
 				_logger.debug("doObjectInfoLookup(): The DDL for dbname '" + dbname + "', objectName '" + objectName + "' has already been stored/discarded by all the writers.");
+			_ddlLookupStatistics.inc(DdlLookupStatistics.Counter.alreadyStored);
 			return false;
 		}
 
@@ -1047,7 +1068,9 @@ implements Runnable
 		//-----------------------------------------------------------------------------------
 		// Do object lookup
 		//-----------------------------------------------------------------------------------
+		long lookupStartTime = System.currentTimeMillis();
 		List<DdlDetails> lookupEntryList = _objectLookupInspector.doObjectInfoLookup(conn, qe, this);
+		_ddlLookupStatistics.addLookup(System.currentTimeMillis() - lookupStartTime, lookupEntryList == null ? 0 : lookupEntryList.size());
 
 		if (qe.isPrintInfo())
 			_logger.info("DEBUG: ######################################################## DO LOOKUP <<<<: " + lookupEntryList);
@@ -1129,6 +1152,8 @@ implements Runnable
 	 */
 	private void saveDdl(DdlDetails ddlDetails, long prevConsumeTimeMs)
 	{
+		boolean saved = false;
+
 		// loop all writer classes
 		for (IPersistWriter pw : _writerClasses)
 		{
@@ -1139,13 +1164,15 @@ implements Runnable
 				// SAVE-SAMPLE
 				// In here we can "do it all" 
 				// or use: beginOfSample(), saveDdl(), saveCounters(), endOfSample()
-				pw.saveDdlDetails(ddlDetails);
+				if (pw.saveDdlDetails(ddlDetails))
+					saved = true;
 			}
 			catch (Throwable t)
 			{
 				_logger.error("The Persistent Writer got runtime error in consumeDdl() in Persistent Writer named '" + pw.getName() + "'. Continuing with next Writer...", t);
 			}
 		}
+		_ddlLookupStatistics.inc(saved ? DdlLookupStatistics.Counter.saved : DdlLookupStatistics.Counter.notSaved);
 	}
 
 	/**
@@ -1423,6 +1450,9 @@ implements Runnable
 					if ( ! _doDdlLookupAndStore )
 						continue;
 
+					// Reached a new hour or a new day: one line in the errorlog
+					printDdlLookupStatistics(false);
+
 					// Make sure the container isn't empty.
 					if (qe == null)
 						continue;
@@ -1475,13 +1505,28 @@ implements Runnable
 
 			// Close the Lookup Connection
 			closeDdlLookupConnection();
-			
+
+			// The last part of the hour and the day
+			printDdlLookupStatistics(true);
+
 			_logger.info("Thread '" + threadName + "' was stopped.");
+		}
+
+		private void printDdlLookupStatistics(boolean isShutdown)
+		{
+			if ( ! _doDdlLookupAndStore )
+				return;
+
+			boolean printHour = _props.getBooleanProperty(PROPKEY_ddl_statistics_printHourly, DEFAULT_ddl_statistics_printHourly);
+			boolean printDay  = _props.getBooleanProperty(PROPKEY_ddl_statistics_printDaily,  DEFAULT_ddl_statistics_printDaily);
+
+			for (String line : _ddlLookupStatistics.rollOver(LocalDateTime.now(), printHour, printDay, isShutdown))
+				_logger.info(line);
 		}
 	}
 
 	/**
-	 * Read from the Storage Queue, and send use all Writers to save DDL 
+	 * Read from the Storage Queue, and send use all Writers to save DDL
 	 */
 	private class DdlStorageConsumer
 	implements Runnable
@@ -1523,6 +1568,7 @@ implements Runnable
 					if (ddlDetails.isEmpty())
 					{
 						_logger.info("Skipping DDL Storage, it seems to be 'empty' (nothing to store). ddlDetails=" + ddlDetails);
+						_ddlLookupStatistics.inc(DdlLookupStatistics.Counter.notSaved);
 						continue;
 					}
 					

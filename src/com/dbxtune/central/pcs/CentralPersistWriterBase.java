@@ -71,9 +71,10 @@ implements ICentralPersistWriter
 	 *   <li> 18 - Add column 'LoginFailCount' to table 'DbxCentralUsers'</li>
 	 *   <li> 19 - Add column 'LoginCount' to table 'DbxCentralUsers'</li>
 	 *   <li> 20 - Add column 'cancelDescription'                                in tables *schema*.'ALARM_ACTIVE,ALARM_HISTORY'</li>
+	 *   <li> 21 - Widen columns 'CollectorHostname' to varchar(128) and 'CollectorCurrentUrl' to varchar(255) in table 'DbxCentralSessions' (same as a new database)</li>
 	 * </ul>
 	 */
-	public static int DBX_CENTRAL_DB_VERSION = 20;
+	public static int DBX_CENTRAL_DB_VERSION = 21;
 	
 	
 	public enum Table

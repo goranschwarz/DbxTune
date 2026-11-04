@@ -212,7 +212,9 @@ extends ReportEntryAbstract
 //				{
 //					srvName = dbName.substring(0, dbName.length()-"_yyyy-MM-dd".length());
 //				}
-				String collectorHostname = StringUtil.getHostnameWithDomain();
+				String collectorHostname = Configuration.getCombinedConfiguration().getProperty(OverviewServlet.PROPKEY_h2Hostname, OverviewServlet.DEFAULT_h2Hostname);
+				if (StringUtil.isNullOrBlank(collectorHostname))
+					collectorHostname = StringUtil.getHostnameWithDomain();
 //				String collectorHostname = hostname;
 //				DbxCentralSessions session = centralSessionMap.get(srvName);
 //				if (session != null)

@@ -98,7 +98,8 @@ public class DbxCentralSessions
 			if (collectorHostname.endsWith("..."))
 			{
 				int len = collectorHostname.length() - 3;
-				thisHostname = thisHostname.substring(0, len) + "...";
+				if (thisHostname.length() > len) // A shorter name can't match, and substring() would throw an exception
+					thisHostname = thisHostname.substring(0, len) + "...";
 			}
 		}
 

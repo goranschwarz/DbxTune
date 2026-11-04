@@ -577,16 +577,25 @@ extends ReportEntryAbstract
 			{
 				sb.append("Table: ").append(entry.getFullTableName())
 				  .append(" (rows=").append(entry.getRowTotal())
-				  .append(", size=").append(entry.getSizeMb()).append(" MB")
+				  .append(", size=").append(formatSizeMb(entry.getSizeKb()))
 				  .append(", indexCount=").append(entry.getIndexCount())
 				  .append(")\n");
-				sb.append("DDL:\n").append(StringUtil.nullToValue(entry._objectText, "-not-found-")).append("\n");
 
-				for (AseIndexInfo idx : entry.getIndexList())
+				String ddlText = formatObjectTextAsDdl(entry.getFullTableName(), entry._objectText, entry.getIndexList());
+				if (ddlText != null)
 				{
-					sb.append("Index: ").append(idx.getIndexName())
-					  .append(", keys=(").append(idx.getKeysStr()).append(")")
-					  .append(", size=").append(idx.getSizeMb()).append(" MB\n");
+					sb.append("DDL:\n").append(ddlText).append("\n");
+				}
+				else
+				{
+					sb.append("DDL:\n").append(StringUtil.nullToValue(entry._objectText, "-not-found-")).append("\n");
+
+					for (AseIndexInfo idx : entry.getIndexList())
+					{
+						sb.append("Index: ").append(idx.getIndexName())
+						  .append(", keys=(").append(idx.getKeysStr()).append(")")
+						  .append(", size=").append(idx.getSizeMb()).append(" MB\n");
+					}
 				}
 
 				if (StringUtil.hasValue(entry._triggersText))
@@ -594,7 +603,512 @@ extends ReportEntryAbstract
 			}
 			sb.append("---\n");
 		}
+
+		if (sb.indexOf("/*guess: ") != -1)
+			sb.insert(0, "Note: /*guess: ...*/ is a base type guessed from the name and length of the user datatype, it may be wrong.\n");
+
 		return sb.toString();
+	}
+
+	/** Whole MB is all that sp_spaceused gives on newer ASE versions, so 0 means "less than 1 MB" and not empty */
+	private static String formatSizeMb(int sizeKb)
+	{
+		if (sizeKb <= 0)
+			return "<1 MB";
+
+		double mb = MathUtils.round(sizeKb / 1024.0, 1);
+		return (mb == Math.rint(mb) ? String.valueOf((long) mb) : String.valueOf(mb)) + " MB";
+	}
+
+	/** One result set from the stored fixed-width {@code sp_help} text */
+	private static class SpHelpTable
+	{
+		List<String>              _cols     = new ArrayList<>();
+		List<Map<String, String>> _rows     = new ArrayList<>();
+		List<String>              _rawLines = new ArrayList<>();
+		boolean                   _used     = false;
+	}
+
+	/** Get (and mark as used) the first result set with the column name */
+	private static SpHelpTable getSpHelpTable(List<SpHelpTable> tables, String colName)
+	{
+		for (SpHelpTable t : tables)
+		{
+			if (t._cols.contains(colName))
+			{
+				t._used = true;
+				return t;
+			}
+		}
+		return null;
+	}
+
+	/** @return true if the value is something else than the "nothing here" values: empty, NULL and the passed default */
+	private static boolean spHelpHasValue(String value, String defaultValue)
+	{
+		return StringUtil.hasValue(value) && ! "NULL".equals(value) && ! value.equals(defaultValue);
+	}
+
+	/**
+	 * Build compact DDL out of the {@code sp_help} text in {@code objectText}, for use as LLM prompt input instead of the
+	 * full text (which is mostly padding, and sections that only say that nothing special is set).
+	 * <p>
+	 * ASE stores this as fixed-width text, where the "---- ---" line gives the column positions, so
+	 * {@link ResultSetTableModel#parseTextTables(String)} can't read it.
+	 * Only options that differ from the default are written. Output that we don't know about is passed on as it is.
+	 * <p>
+	 * This is only used for the LLM prompt: {@code objectText}/{@code MonDdlStorage} and its other consumers are unaffected.
+	 *
+	 * @return the DDL, or {@code null} if {@code objectText} didn't have the expected shape (caller falls back to the raw text)
+	 */
+	static String formatObjectTextAsDdl(String fullTableName, String objectText, List<AseIndexInfo> indexList)
+	{
+		if (StringUtil.isNullOrBlank(objectText))
+			return null;
+
+		//----------------------------------------------------------
+		// Split the text into: result sets + messages
+		//----------------------------------------------------------
+		List<SpHelpTable> tables   = new ArrayList<>();
+		List<String>      messages = new ArrayList<>();
+
+		String[] lines = objectText.split("\r?\n");
+		for (int l = 0; l < lines.length; l++)
+		{
+			String nextLine = l + 1 < lines.length ? lines[l + 1] : "";
+
+			if (StringUtil.isNullOrBlank(lines[l]))
+				continue;
+
+			if ( ! nextLine.matches("^\\s*-+( +-+)*\\s*$") )
+			{
+				messages.add(lines[l].trim());
+				continue;
+			}
+
+			// The "---- ---" line: gives start/end position of each column
+			List<int[]> spans = new ArrayList<>();
+			java.util.regex.Matcher m = java.util.regex.Pattern.compile("-+").matcher(nextLine);
+			while (m.find())
+				spans.add(new int[] { m.start(), m.end() });
+
+			SpHelpTable table = new SpHelpTable();
+			for (int[] span : spans)
+				table._cols.add(lines[l].substring(Math.min(span[0], lines[l].length()), Math.min(span[1], lines[l].length())).trim());
+			table._rawLines.add(lines[l]);
+			table._rawLines.add(nextLine);
+
+			// Data rows: starts with a space, and ends at: a blank line, a message or the header of next result set
+			l += 2;
+			for (; l < lines.length; l++)
+			{
+				String row = lines[l];
+				String rowNext = l + 1 < lines.length ? lines[l + 1] : "";
+				if (StringUtil.isNullOrBlank(row) || ! row.startsWith(" ") || rowNext.matches("^\\s*-+( +-+)*\\s*$"))
+					break;
+
+				Map<String, String> rowMap = new LinkedHashMap<>();
+				for (int c = 0; c < spans.size(); c++)
+				{
+					int[] span = spans.get(c);
+					rowMap.put(table._cols.get(c), row.substring(Math.min(span[0], row.length()), Math.min(span[1], row.length())).trim());
+				}
+				table._rows.add(rowMap);
+				table._rawLines.add(row);
+			}
+			l--; // the outer loop should look at the line that ended this result set
+
+			tables.add(table);
+		}
+
+		SpHelpTable colsTbl = getSpHelpTable(tables, "Column_name");
+		if (colsTbl == null || colsTbl._rows.isEmpty())
+			return null;
+
+		StringBuilder sb = new StringBuilder();
+
+		//----------------------------------------------------------
+		// Header: Object status and data pages
+		//----------------------------------------------------------
+		SpHelpTable nameTbl = getSpHelpTable(tables, "Object_status");
+		if (nameTbl != null && ! nameTbl._rows.isEmpty() && spHelpHasValue(nameTbl._rows.get(0).get("Object_status"), "-- none --"))
+			sb.append("-- Object status: ").append(nameTbl._rows.get(0).get("Object_status")).append("\n");
+
+		SpHelpTable ptnTbl = getSpHelpTable(tables, "partition_name");
+		if (ptnTbl != null)
+		{
+			long pages = 0;
+			for (Map<String, String> row : ptnTbl._rows)
+				pages += StringUtil.parseInt(row.get("pages"), 0);
+			sb.append("-- Data pages: ").append(pages).append("\n");
+		}
+
+		//----------------------------------------------------------
+		// Columns
+		//----------------------------------------------------------
+		// Computed columns and function-based index keys: a result set with the name, followed by one with the expression
+		Map<String, String> computedColumns = new HashMap<>();
+		Map<String, String> indexKeyExpr    = new HashMap<>();
+		for (int t = 0; t < tables.size() - 1; t++)
+		{
+			SpHelpTable nameList = tables.get(t);
+			SpHelpTable exprList = tables.get(t + 1);
+			if (nameList._rows.isEmpty())
+				continue;
+
+			boolean isComputed = nameList._cols.contains("Property")                && exprList._cols.contains("Text");
+			boolean isIndexKey = nameList._cols.contains("Internal_Index_Key_Name") && exprList._cols.contains("Expression");
+			if ( ! isComputed && ! isIndexKey )
+				continue;
+
+			StringBuilder expr = new StringBuilder();
+			for (Map<String, String> row : exprList._rows)
+				expr.append(row.get(isComputed ? "Text" : "Expression")).append(" ");
+			String exprStr = expr.toString().trim().replaceAll("\\s+", " ");
+
+			if (isComputed) computedColumns.put(nameList._rows.get(0).get("Column_Name"), exprStr.replaceFirst("^AS ", ""));
+			else            indexKeyExpr   .put(nameList._rows.get(0).get("Internal_Index_Key_Name"), exprStr);
+
+			nameList._used = true;
+			exprList._used = true;
+		}
+
+		// The key of a function-based index is a hidden column, which isn't part of the table for the reader
+		List<Map<String, String>> colRows = new ArrayList<>();
+		for (Map<String, String> row : colsTbl._rows)
+		{
+			if ( ! StringUtil.nullToValue(row.get("Computed_Column_object"), "").endsWith("(functional index key)") )
+				colRows.add(row);
+		}
+
+		sb.append("CREATE TABLE ").append(fullTableName).append(" (\n");
+		for (int r = 0; r < colRows.size(); r++)
+		{
+			Map<String, String> row = colRows.get(r);
+
+			sb.append("  ").append(row.get("Column_name")).append(" ").append(formatSpHelpType(row.get("Type"), row.get("Length"), row.get("Prec"), row.get("Scale")));
+
+			if      ("1".equals(row.get("Identity"))) sb.append(" IDENTITY");
+			else if ("1".equals(row.get("Nulls")))    sb.append(" NULL");
+			else                                      sb.append(" NOT NULL");
+
+			if (spHelpHasValue(row.get("Rule_name")             , null)) sb.append(" /*rule: ")       .append(row.get("Rule_name"))             .append("*/");
+			if (spHelpHasValue(row.get("Access_Rule_name")      , null)) sb.append(" /*access rule: ").append(row.get("Access_Rule_name"))      .append("*/");
+			if (computedColumns.containsKey(row.get("Column_name")))     sb.append(" /*computed: ")   .append(computedColumns.get(row.get("Column_name"))).append("*/");
+			else if (spHelpHasValue(row.get("Computed_Column_object"), null)) sb.append(" /*computed: ").append(row.get("Computed_Column_object")).append("*/");
+			if (spHelpHasValue(row.get("In_row_Len")            , "0" )) sb.append(" IN ROW (")       .append(row.get("In_row_Len"))            .append(")");
+			else if (spHelpHasValue(row.get("Object_storage")   , null)) sb.append(" /*storage: ")    .append(row.get("Object_storage"))        .append("*/");
+			if (spHelpHasValue(row.get("Not_compressed")        , "0" )) sb.append(" NOT COMPRESSED");
+			if (spHelpHasValue(row.get("Encrypted")             , "0" )) sb.append(" /*encrypted*/");
+
+			sb.append(r < colRows.size() - 1 ? ",\n" : "\n");
+		}
+		sb.append(")");
+
+		//----------------------------------------------------------
+		// Table options: Lock scheme and what's not default
+		//----------------------------------------------------------
+		String lockScheme = null;
+		String lobCompr   = null;
+		List<String> otherMessages = new ArrayList<>();
+		for (String msg : messages)
+		{
+			if      (msg.startsWith("Lock scheme "))                { lockScheme = msg.substring("Lock scheme ".length()).trim(); }
+			else if (msg.startsWith("Table LOB compression level ")) { lobCompr   = msg.substring("Table LOB compression level ".length()).trim(); }
+			else if (msg.equals("No defined keys for this object.")) { }
+			else if (msg.equals("Object has the following indexes")) { }
+			else if (msg.equals("Object does not have any indexes.")) { }
+			else if (msg.equals("Object has the following computed columns")) { }
+			else if (msg.equals("Object has the following functional index keys")) { }
+			else if (msg.matches("^The (attribute )?'\\w+' (attribute )?is not applicable to .*")) { }
+			else if (msg.matches("^\\(\\d+ rows? affected\\)$"))    { }
+			else if (msg.matches("^\\(return status = \\d+\\)$"))   { }
+			else                                                    { otherMessages.add(msg); }
+		}
+
+		if (lockScheme != null)
+			sb.append(" LOCK ").append(lockScheme.toUpperCase());
+
+		Map<String, String> tabOpts = new LinkedHashMap<>();
+		SpHelpTable opt1Tbl = getSpHelpTable(tables, "exp_row_size");
+		SpHelpTable opt2Tbl = getSpHelpTable(tables, "concurrency_opt_threshold");
+		if (opt1Tbl != null && ! opt1Tbl._rows.isEmpty()) tabOpts.putAll(opt1Tbl._rows.get(0));
+		if (opt2Tbl != null && ! opt2Tbl._rows.isEmpty()) tabOpts.putAll(opt2Tbl._rows.get(0));
+
+		String concurrencyDefault = "Allpages".equalsIgnoreCase(lockScheme) ? "0" : "15";
+
+		List<String> withList = new ArrayList<>();
+		for (String opt : tabOpts.keySet())
+		{
+			String defaultValue = "concurrency_opt_threshold".equals(opt) ? concurrencyDefault : "0";
+
+			// A table where nothing was set can report 1 here, so it says nothing
+			if ("exp_row_size".equals(opt) && "1".equals(tabOpts.get(opt)))
+				continue;
+
+			if (spHelpHasValue(tabOpts.get(opt), defaultValue))
+				withList.add(opt + "=" + tabOpts.get(opt));
+		}
+		if (spHelpHasValue(lobCompr, "0"))
+			withList.add("lob_compression=" + lobCompr);
+
+		//----------------------------------------------------------
+		// Partitions: every normal table has one 'roundrobin' partition, which isn't worth mentioning
+		//----------------------------------------------------------
+		SpHelpTable ptnTypeTbl = getSpHelpTable(tables, "partition_type");
+		SpHelpTable ptnCondTbl = getSpHelpTable(tables, "Partition_Conditions");
+		getSpHelpTable(tables, "Avg_pages");
+
+		String  ptnType       = ptnTypeTbl != null && ! ptnTypeTbl._rows.isEmpty() ? ptnTypeTbl._rows.get(0).get("partition_type") : null;
+		String  ptnKeys       = ptnTypeTbl != null && ! ptnTypeTbl._rows.isEmpty() ? ptnTypeTbl._rows.get(0).get("partition_keys") : null;
+		int     ptnCount      = ptnTypeTbl != null && ! ptnTypeTbl._rows.isEmpty() ? StringUtil.parseInt(ptnTypeTbl._rows.get(0).get("partitions"), 1) : 1;
+		boolean isPartitioned = ptnCount > 1 || (ptnType != null && ! "roundrobin".equalsIgnoreCase(ptnType));
+
+		if ( ! isPartitioned && ptnTbl != null && ! ptnTbl._rows.isEmpty() && spHelpHasValue(ptnTbl._rows.get(0).get("compression_level"), "none"))
+			withList.add("compression=" + ptnTbl._rows.get(0).get("compression_level"));
+
+		if ( ! withList.isEmpty() )
+			sb.append(" WITH ").append(String.join(", ", withList));
+
+		if ( ! isPartitioned && ptnTbl != null && ! ptnTbl._rows.isEmpty() && spHelpHasValue(ptnTbl._rows.get(0).get("segment"), "default"))
+			sb.append(" ON ").append(ptnTbl._rows.get(0).get("segment"));
+
+		sb.append("\n");
+
+		if (isPartitioned)
+		{
+			sb.append("PARTITION BY ").append(ptnType.toUpperCase());
+			if (spHelpHasValue(ptnKeys, null))
+				sb.append(" (").append(ptnKeys).append(")");
+			sb.append(" (\n");
+
+			int ptnRows = ptnTbl == null ? 0 : ptnTbl._rows.size();
+			for (int p = 0; p < ptnRows; p++)
+			{
+				Map<String, String> row = ptnTbl._rows.get(p);
+				String condition = ptnCondTbl != null && p < ptnCondTbl._rows.size() ? ptnCondTbl._rows.get(p).get("Partition_Conditions") : null;
+
+				sb.append("  ").append(row.get("partition_name"));
+				if (spHelpHasValue(condition, null))
+					sb.append(" ").append(condition);
+				if (spHelpHasValue(row.get("segment"), "default"))
+					sb.append(" ON ").append(row.get("segment"));
+				sb.append(" /*pages=").append(row.get("pages"));
+				if (spHelpHasValue(row.get("compression_level"), "none"))
+					sb.append(", compression=").append(row.get("compression_level"));
+				sb.append("*/").append(p < ptnRows - 1 ? ",\n" : "\n");
+			}
+			sb.append(")\n");
+		}
+
+		//----------------------------------------------------------
+		// Indexes
+		//----------------------------------------------------------
+		String shortTableName = fullTableName.substring(fullTableName.lastIndexOf('.') + 1);
+
+		SpHelpTable indexTbl    = getSpHelpTable(tables, "index_name");
+		SpHelpTable indexPtnTbl = getSpHelpTable(tables, "index_ptn_name");
+		if (indexTbl != null)
+		{
+			for (Map<String, String> row : indexTbl._rows)
+			{
+				String indexName = row.get("index_name");
+
+				String typeStr = "";
+				List<String> indexWith = new ArrayList<>();
+				for (String part : StringUtil.parseCommaStrToList(row.get("index_description")))
+				{
+					switch (part.trim())
+					{
+						case "unique":               typeStr = "UNIQUE " + typeStr;        break;
+						case "clustered":            typeStr += "CLUSTERED ";              break;
+						case "nonclustered":         typeStr += "NONCLUSTERED ";           break;
+						case "allow duplicate rows": indexWith.add("allow_dup_row");       break;
+						case "ignore duplicate rows":indexWith.add("ignore_dup_row");      break;
+						case "ignore duplicate keys":indexWith.add("ignore_dup_key");      break;
+						default:                     indexWith.add("/*" + part.trim() + "*/"); break;
+					}
+				}
+				if (spHelpHasValue(row.get("index_max_rows_per_page"), "0")) indexWith.add("max_rows_per_page=" + row.get("index_max_rows_per_page"));
+				if (spHelpHasValue(row.get("index_fillfactor")       , "0")) indexWith.add("fillfactor="        + row.get("index_fillfactor"));
+				if (spHelpHasValue(row.get("index_reservepagegap")   , "0")) indexWith.add("reservepagegap="    + row.get("index_reservepagegap"));
+				if (spHelpHasValue(row.get("plldegree")              , "0")) indexWith.add("plldegree="         + row.get("plldegree"));
+
+				String indexKeys = row.get("index_keys");
+				for (Entry<String, String> keyExpr : indexKeyExpr.entrySet())
+					indexKeys = indexKeys.replaceAll("\\b" + java.util.regex.Pattern.quote(keyExpr.getKey()) + "\\b", java.util.regex.Matcher.quoteReplacement(keyExpr.getValue()));
+
+				sb.append("CREATE ").append(typeStr).append("INDEX ").append(indexName).append(" ON ").append(shortTableName).append(" (").append(indexKeys).append(")");
+
+				if ( ! indexWith.isEmpty() )
+					sb.append(" WITH ").append(String.join(", ", indexWith));
+
+				if ("Local Index".equals(row.get("index_local")))
+					sb.append(" LOCAL INDEX");
+
+				// Index partitions are named: indexName_id, a global index has one and a local index one per table partition (so write each value once)
+				if (indexPtnTbl != null)
+				{
+					Set<String> ptnOptions = new LinkedHashSet<>();
+					for (Map<String, String> ptnRow : indexPtnTbl._rows)
+					{
+						if (StringUtil.hasValue(ptnRow.get("index_ptn_name")) && ptnRow.get("index_ptn_name").matches(java.util.regex.Pattern.quote(indexName) + "_\\d+"))
+						{
+							if (spHelpHasValue(ptnRow.get("index_ptn_seg"), "default"))
+								ptnOptions.add(" ON " + ptnRow.get("index_ptn_seg"));
+							if (spHelpHasValue(ptnRow.get("index_ptn_comp"), "inherit from index"))
+								ptnOptions.add(" /*compression=" + ptnRow.get("index_ptn_comp") + "*/");
+						}
+					}
+					sb.append(String.join("", ptnOptions));
+				}
+
+				if (spHelpHasValue(row.get("disabled"), "0"))
+					sb.append(" /*disabled*/");
+
+				if (indexList != null)
+				{
+					for (AseIndexInfo idx : indexList)
+					{
+						if (indexName.equals(idx.getIndexName()))
+							sb.append(" -- ").append(formatSizeMb(idx.getSizeKb()));
+					}
+				}
+				sb.append("\n");
+			}
+		}
+
+		// The LOB data is listed as an "index" named: t<tableName>
+		if (indexList != null)
+		{
+			for (AseIndexInfo idx : indexList)
+			{
+				if (("t" + shortTableName).equals(idx.getIndexName()))
+					sb.append("-- LOB data size: ").append(formatSizeMb(idx.getSizeKb())).append("\n");
+			}
+		}
+
+		//----------------------------------------------------------
+		// Keys added with sp_primarykey/sp_foreignkey/sp_commonkey
+		//----------------------------------------------------------
+		SpHelpTable keysTbl = getSpHelpTable(tables, "keytype");
+		if (keysTbl != null)
+		{
+			for (Map<String, String> row : keysTbl._rows)
+			{
+				String relatedObj = row.containsKey("related_object") ? row.get("related_object") : row.get("related_objs");
+				String objKeys    = StringUtil.nullToValue(row.get("object_keys") , "").replaceAll("[,\\s*]+$", "");
+				String relKeys    = StringUtil.nullToValue(row.get("related_keys"), "").replaceAll("[,\\s*]+$", "");
+
+				sb.append("-- ").append(row.get("keytype")).append(" key: ").append(row.get("object")).append(" (").append(objKeys).append(")");
+				if (spHelpHasValue(relatedObj, "-- none --"))
+					sb.append(" -> ").append(relatedObj).append(" (").append(relKeys).append(")");
+				sb.append("\n");
+			}
+		}
+
+		//----------------------------------------------------------
+		// Whatever we don't know about: pass it on, so nothing is silently lost
+		//----------------------------------------------------------
+		for (String msg : otherMessages)
+			sb.append(msg).append("\n");
+
+		for (SpHelpTable t : tables)
+		{
+			if ( ! t._used )
+				sb.append(String.join("\n", t._rawLines)).append("\n");
+		}
+
+		return sb.toString().trim();
+	}
+
+	/**
+	 * Render an {@code sp_help} type + length/precision/scale as a compact SQL type, e.g. {@code varchar(50)}, {@code numeric(15,7)}, {@code int}.
+	 * A user datatype keeps its name, followed by a comment with the guessed base type: {@code pmlt_id /*guess: int*}{@code /}
+	 */
+	private static String formatSpHelpType(String type, String length, String prec, String scale)
+	{
+		if (type == null)
+			return "?";
+
+		switch (type.toLowerCase())
+		{
+			case "char": case "varchar": case "nchar": case "nvarchar": case "unichar": case "univarchar": case "binary": case "varbinary":
+				return type + "(" + length + ")";
+
+			case "numeric": case "decimal":
+				return type + "(" + prec + "," + scale + ")";
+
+			case "tinyint": case "smallint": case "int": case "bigint": case "unsigned tinyint": case "unsigned smallint": case "unsigned int": case "unsigned bigint":
+			case "float": case "real": case "double precision": case "money": case "smallmoney": case "bit": case "timestamp":
+			case "date": case "time": case "datetime": case "smalldatetime": case "bigdatetime": case "bigtime":
+			case "text": case "unitext": case "image": case "sysname": case "longsysname":
+				return type;
+
+			default:
+				return type + " /*guess: " + guessBaseTypeOfUserType(type, length, prec, scale) + "*/";
+		}
+	}
+
+	/**
+	 * sp_help doesn't show the base type of a user datatype, so make a guess from what it does show.
+	 * A word in the name only counts if the length fits that type (a 'date' type with length 10 can't be a date).
+	 * When nothing decides it: varchar, since a string can have any length.
+	 */
+	private static String guessBaseTypeOfUserType(String userType, String length, String prec, String scale)
+	{
+		if (spHelpHasValue(prec, null))
+			return "numeric(" + prec + "," + (spHelpHasValue(scale, null) ? scale : "0") + ")";
+
+		int len = StringUtil.parseInt(length, -1);
+
+		// Split the name into words: pmlt_longInt04 -> pmlt, long, int, 04
+		List<String> words = new ArrayList<>();
+		java.util.regex.Matcher m = java.util.regex.Pattern.compile("[A-Z]+(?![a-z])|[A-Z]?[a-z]+|\\d+").matcher(userType);
+		while (m.find())
+			words.add(m.group().toLowerCase());
+
+		for (String word : words)
+		{
+			switch (word)
+			{
+				case "str": case "string": case "char": case "varchar": case "name":
+					return "varchar(" + len + ")";
+
+				case "tinyint":       if (len == 1)  return word;   break;
+				case "smallint":      if (len == 2)  return word;   break;
+				case "bigint":        if (len == 8)  return word;   break;
+				case "real":          if (len == 4)  return word;   break;
+				case "float":         if (len == 8)  return word;   break;
+				case "double":        if (len == 8)  return "float";break;
+				case "money":         if (len == 8)  return word;   break;
+				case "smallmoney":    if (len == 4)  return word;   break;
+				case "bit":           if (len == 1)  return word;   break;
+				case "bool":
+				case "boolean":       if (len == 1)  return "bit";  break;
+				case "date":          if (len == 4)  return word;   break;
+				case "time":          if (len == 4)  return word;   break;
+				case "datetime":      if (len == 8)  return word;   break;
+				case "smalldatetime": if (len == 4)  return word;   break;
+				case "bigdatetime":   if (len == 8)  return word;   break;
+				case "bigtime":       if (len == 8)  return word;   break;
+				case "text":          if (len == 16) return word;   break;
+				case "unitext":       if (len == 16) return word;   break;
+				case "image":         if (len == 16) return word;   break;
+
+				case "int": case "integer": case "longint": case "id":
+					if (len == 1) return "tinyint";
+					if (len == 2) return "smallint";
+					if (len == 4) return "int";
+					if (len == 8) return "bigint";
+					break;
+
+				default:
+					break;
+			}
+		}
+
+		return "varchar(" + len + ")";
 	}
 
 	public String getIndexInfoAsHtmlTable(AseTableInfo tableEntry, String classname)

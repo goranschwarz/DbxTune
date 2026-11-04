@@ -1268,9 +1268,9 @@ public class SwingUtils
 //		int maxCellStrLen = 1*1024*1024; // 1MB
 		int maxCellStrLen = 20*1024; // 20KB
 
-		System.gc();
-		try { Thread.sleep(15); } catch(InterruptedException ignore) {} // Sleep a while for Garbage Collector can work...
-		long maxStrBufLen  = Runtime.getRuntime().freeMemory() / 3;
+		// NOTE: No System.gc() here, this is called for every ResultSet in DDL Lookups... The heap can still grow up to maxMemory, so count that as free as well
+		Runtime runtime = Runtime.getRuntime();
+		long maxStrBufLen  = (runtime.maxMemory() - runtime.totalMemory() + runtime.freeMemory()) / 3;
 //		long maxStrBufLen  = Runtime.getRuntime().maxMemory() / 8;
 //		long maxStrBufLen  = 500*1024*1024; // 500MB   or grab free memory / 3
 		
