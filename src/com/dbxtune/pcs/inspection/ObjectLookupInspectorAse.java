@@ -612,9 +612,11 @@ extends ObjectLookupInspectorAbstract
 						ss.setMsgPrefix("dbcc prsqlcache:" + dbname + "." + objectName + ": ");
 						
 						entry.setObjectText( ss.executeSqlStr(sql, true) ); 
+						pch.incDdlLookupIssue(ss.getLastSqlException());
 					}
 					catch (SQLException e) 
 					{ 
+						pch.incDdlLookupIssue(e);
 						entry.setObjectText( e.toString() ); 
 					}
 			}
@@ -702,6 +704,7 @@ extends ObjectLookupInspectorAbstract
 				}
 				catch(SQLException e)
 				{
+					pch.incDdlLookupIssue(e);
 					String msg = "Problems getting text from Statement Cache about '" + objectName + "'. Msg=" + e.getErrorCode() + ", Text='" + e.getMessage() + "'. Caught: " + e;
 					_logger.warn(msg); 
 					entry.setExtraInfoText( msg );
@@ -795,7 +798,7 @@ extends ObjectLookupInspectorAbstract
 //			}
 
 			// Get a list of DBMS Object we want to get information for!
-			List<DdlDetails> objectList = getDbmsObjectList(conn, dbname, objectName, source, dependParent, dependLevel);
+			List<DdlDetails> objectList = getDbmsObjectList(conn, pch, dbname, objectName, source, dependParent, dependLevel);
 			
 			// The object was NOT found
 			if (objectList.isEmpty())
@@ -811,13 +814,14 @@ extends ObjectLookupInspectorAbstract
 						List<String> dbList = AseConnectionUtils.getDatabaseList(conn);
 						for (String db : dbList)
 						{
-							objectList = getDbmsObjectList(conn, db, objectName, source, dependParent, dependLevel);
+							objectList = getDbmsObjectList(conn, pch, db, objectName, source, dependParent, dependLevel);
 							if ( ! objectList.isEmpty() )
 								break;
 						}
 					}
 					catch (SQLException ex)
 					{
+						pch.incDdlLookupIssue(ex);
 						_logger.error("Problems getting database list from DBMS. Caught: " + ex, ex);
 						return Collections.emptyList();   // <<<<<<<<<<------------<<<<<<<<<<------------<<<<<<<<<<------------
 					}
@@ -882,6 +886,7 @@ extends ObjectLookupInspectorAbstract
 						{
 							sqlFailed = true;
 							pch.incDdlMetadataFallback();
+							pch.incDdlLookupIssue(ex);
 							_logger.warn("DDL Lookup. Problems Getting TABLE information using SQL, trying with 'sp_help' instead, for: " + entry.getFullObjectName() + ". Caught: " + ex);
 						}
 					}
@@ -905,9 +910,11 @@ extends ObjectLookupInspectorAbstract
 							ss.setMsgPrefix("sp_help:" + entry.getFullObjectName() + ": ");
 
 							entry.setObjectText( ss.executeSqlStr(sql, true) );
+							pch.incDdlLookupIssue(ss.getLastSqlException());
 						}
 						catch (SQLException e)
 						{
+							pch.incDdlLookupIssue(e);
 							entry.setObjectText( e.toString() );
 						}
 					}
@@ -941,6 +948,7 @@ extends ObjectLookupInspectorAbstract
 							}
 							catch(SQLException e)
 							{
+								pch.incDdlLookupIssue(e);
 								String msg = "Problems getting sp_showoptstats, using sql '" + sql + "'. Msg=" + e.getErrorCode() + ", Text='" + e.getMessage() + "'. Caught: " + e;
 								//_logger.warn(msg); 
 								entry.setOptdiagText( msg );
@@ -970,9 +978,11 @@ extends ObjectLookupInspectorAbstract
 								ss.setMsgPrefix("sp__optdiag:" + entry.getFullObjectName() + ": ");
 
 								entry.setOptdiagText( ss.executeSqlStr(sql, true) ); 
+								pch.incDdlLookupIssue(ss.getLastSqlException());
 							} 
 							catch (SQLException e) 
 							{ 
+								pch.incDdlLookupIssue(e);
 								entry.setOptdiagText( e.toString() ); 
 							}
 						}
@@ -988,9 +998,11 @@ extends ObjectLookupInspectorAbstract
 						ss.setMsgPrefix("sp_spaceused:" + entry.getFullObjectName() + ": ");
 
 						entry.setExtraInfoText( ss.executeSqlStr(sql, true) ); 
+						pch.incDdlLookupIssue(ss.getLastSqlException());
 					} 
 					catch (SQLException e) 
 					{ 
+						pch.incDdlLookupIssue(e);
 						entry.setExtraInfoText( e.toString() ); 
 					}
 
@@ -1052,9 +1064,10 @@ extends ObjectLookupInspectorAbstract
 					}
 					catch (SQLException e)
 					{
+						pch.incDdlLookupIssue(e);
 						entry.setObjectText( e.toString() );
 					}
-						
+
 					//--------------------------------------------
 					// if VIEW: Possibly parse the SQL statement and extract Tables, send those tables to 'DDL Storage'...
 					// This so we can lookup size etc of those tables...
@@ -1106,9 +1119,11 @@ extends ObjectLookupInspectorAbstract
 						//ss.setSybMessageNumberDebug(true);
 
 						entry.addDependsText( ss.executeSqlStr(sql, true) ); 
+						pch.incDdlLookupIssue(ss.getLastSqlException());
 					} 
 					catch (SQLException e) 
 					{ 
+						pch.incDdlLookupIssue(e);
 						entry.addDependsText( e.toString() ); 
 					}
 		
@@ -1169,6 +1184,7 @@ extends ObjectLookupInspectorAbstract
 							// java.sql.SQLException: JZ0R2: No result set for this query.
 							if ( ! "JZ0R2".equals(e.getSQLState()) )
 							{
+								pch.incDdlLookupIssue(e);
 								_logger.warn("Problems getting 'sp_depends' for table '" + entry.getFullObjectName() + "'. SqlState='" + e.getSQLState() + "', Caught: " + e);
 							}
 						}
@@ -1185,7 +1201,7 @@ extends ObjectLookupInspectorAbstract
 		} // end: other objects than Statement Cache
 	}
 
-	private List<DdlDetails> getDbmsObjectList(DbxConnection conn, String dbname, String objectName, String source, String dependParent, int dependLevel)
+	private List<DdlDetails> getDbmsObjectList(DbxConnection conn, PersistentCounterHandler pch, String dbname, String objectName, String source, String dependParent, int dependLevel)
 	{
 		String originObjectName = objectName;
 
@@ -1208,7 +1224,7 @@ extends ObjectLookupInspectorAbstract
 		// get TYPE, OWNER CREATION_TIME and DBNAME where the record(s) was found 
 		String sql = ""
 				+ "declare @objectname varchar(255) \n"
-				+ "select @objectname = '" + objectName + "' \n"   // Trust that the DBMS will handle Case Sensitivity
+				+ "select @objectname = '" + objectName.replace("'", "''") + "' \n"   // Trust that the DBMS will handle Case Sensitivity
 				+ "if exists (select 1 from " + dbname + ".dbo.sysobjects o, " + dbname + ".dbo.sysusers u where o.name = @objectname and o.uid = u.uid) \n"
 				+ "begin \n"
 				+ "    select o.type \n"           // Type
@@ -1266,6 +1282,7 @@ extends ObjectLookupInspectorAbstract
 		}
 		catch (SQLException e)
 		{
+			pch.incDdlLookupIssue(e);
 			_logger.error("Problems Getting basic information about DDL for dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Skipping DDL Storage of this object. Caught: " + e);
 			return Collections.emptyList();
 			//return null;
@@ -1326,6 +1343,7 @@ extends ObjectLookupInspectorAbstract
 				}
 				catch (SQLException e)
 				{
+					pch.incDdlLookupIssue(e);
 					_logger.error("Problems Getting Table TRIGGER information about DDL for dbname='" + dbname + "', objectName='" + lookupEntry.getObjectName() + "'. Skipping TRIGGER information. Caught: " + e);
 				}
 				

@@ -511,4 +511,27 @@ public final class TableNameParserTest {
 		return result;
 	}
 
+	private static void assertTables(String sql, String... expected) {
+		org.junit.Assert.assertEquals(sql, new HashSet<String>(java.util.Arrays.asList(expected)), new HashSet<String>(new TableNameParser(sql).tables()));
+	}
+
+	@Test
+	public void testStringLiteralsAreNotTables() {
+		// The text that made a lookup of the table: index'
+		assertTables("select 'c' = case when p.indid = 1 then 'inherit from index' when p.status & 512 = 512 then 'index compressed' else 'inherit from index' end from db1..syspartitions p where p.id = ?", "db1..syspartitions");
+
+		assertTables("select 'it''s from nope' from t1", "t1");
+		assertTables("select a from t1 where b = 'x, join nope'", "t1");
+		assertTables("select 'a--b' from t1", "t1");
+		assertTables("select 'c:\\' from t1 where b = 'from nope'", "t1");
+		assertTables("select 'a text that was cut from nope");
+	}
+
+	@Test
+	public void testApostropheThatDoesNotStartALiteral() {
+		assertTables("select a -- don't\n from t1 where b = 'from nope'", "t1");
+		assertTables("select a /* don't */ from t1 where b = 'from nope'", "t1");
+		assertTables("select a from [it's] where b = 'from nope'", "[it's]");
+		assertTables("select a from \"it's\" where b = 'from nope'", "\"it's\"");
+	}
 }

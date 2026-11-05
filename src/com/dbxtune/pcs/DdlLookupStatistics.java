@@ -21,6 +21,8 @@
  ******************************************************************************/
 package com.dbxtune.pcs;
 
+import java.sql.SQLException;
+import java.sql.SQLTimeoutException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -78,7 +80,13 @@ class DdlLookupStatistics
 		metadataSpHelp,
 
 		/** Table metadata was fetched with sp_help, since plain SQL failed */
-		metadataFallback;
+		metadataFallback,
+
+		/** A query in a lookup timed out. Counted per query: one lookup runs several */
+		lookupTimeouts,
+
+		/** A query in a lookup failed for another reason than a timeout. Counted per query: one lookup runs several */
+		lookupErrors;
 	}
 
 	private static final DateTimeFormatter FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -114,6 +122,29 @@ class DdlLookupStatistics
 		if (objectCount == 0)
 			inc(Counter.lookupsNoResult);
 		_hour.accumulateAndGet(Counter.lookupMaxMs.ordinal(), timeMs, Math::max);
+	}
+
+	/** A query in a lookup failed. null = nothing failed */
+	void addIssue(SQLException ex)
+	{
+		if (ex != null)
+			inc(isTimeout(ex) ? Counter.lookupTimeouts : Counter.lookupErrors);
+	}
+
+	/** Same checks as CountersModel: not all drivers use SQLTimeoutException */
+	static boolean isTimeout(SQLException ex)
+	{
+		if (ex instanceof SQLTimeoutException)
+			return true;
+
+		String msg = ex.toString();
+
+		// jConnect, the text is translated, but the codes are not: JZ006: Caught IOException: java.io.IOException: JZ0T3: Read operation timed out.
+		if ("JZ006".equals(ex.getSQLState()) && (msg.contains("JZ0T3") || msg.contains("SocketTimeoutException")))
+			return true;
+
+		// SQL Server: The query has timed out.
+		return "HY008".equals(ex.getSQLState());
 	}
 
 	/**

@@ -297,6 +297,8 @@ implements Runnable
 	public void incDdlMetadataSpHelp()   { _ddlLookupStatistics.inc(DdlLookupStatistics.Counter.metadataSpHelp); }
 	/** For the inspectors: Table metadata was fetched with sp_help, since plain SQL failed */
 	public void incDdlMetadataFallback() { _ddlLookupStatistics.inc(DdlLookupStatistics.Counter.metadataFallback); }
+	/** For the inspectors: A query in the lookup failed, counted as a timeout or as an error. null = nothing failed */
+	public void incDdlLookupIssue(SQLException ex) { _ddlLookupStatistics.addIssue(ex); }
 
 	private int	_warnDdlInputQueueSizeThresh = DEFAULT_ddl_warnDdlInputQueueSizeThresh;
 
