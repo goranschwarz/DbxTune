@@ -59,9 +59,15 @@ public class PersistentCounterHandlerDdlStatisticsTest
 			List<DdlDetails> list = new ArrayList<>();
 			if ("missing".equals(qe._objectName))
 			{
+				pch.incDdlMetadataSpHelp();
 				pch.markDdlDetailsAsDiscarded(qe._dbname, qe._objectName);
 				return list;
 			}
+			if ("orders".equals(qe._objectName))
+				pch.incDdlMetadataSql();
+			else
+				pch.incDdlMetadataFallback();
+
 			DdlDetails entry = new DdlDetails();
 			entry.setDbname          ("shop");
 			entry.setOwner           ("dbo");
@@ -135,6 +141,7 @@ public class PersistentCounterHandlerDdlStatisticsTest
 			assertEquals(1, lines.size());
 			assertTrue(lines.get(0), lines.get(0).contains(
 					" requests=6, alreadyQueued=0, alreadyStored=2, notAllowed=1, lookups=3, lookupsNoResult=1, objectsReturned=2, saved=1, notSaved=1,"));
+			assertTrue(lines.get(0), lines.get(0).contains(", metadataSql=1, metadataSpHelp=1, metadataFallback=1,"));
 		}
 	}
 

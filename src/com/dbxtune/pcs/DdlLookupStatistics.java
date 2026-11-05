@@ -69,7 +69,16 @@ class DdlLookupStatistics
 		lookupTimeMs,
 
 		/** Slowest lookup */
-		lookupMaxMs;
+		lookupMaxMs,
+
+		/** Table metadata was fetched with plain SQL */
+		metadataSql,
+
+		/** Table metadata was fetched with sp_help, since plain SQL isn't used for this server or table */
+		metadataSpHelp,
+
+		/** Table metadata was fetched with sp_help, since plain SQL failed */
+		metadataFallback;
 	}
 
 	private static final DateTimeFormatter FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");

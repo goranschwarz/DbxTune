@@ -786,7 +786,7 @@ extends ReportEntryAbstract
 		{
 			Map<String, String> row = colRows.get(r);
 
-			sb.append("  ").append(row.get("Column_name")).append(" ").append(formatSpHelpType(row.get("Type"), row.get("Length"), row.get("Prec"), row.get("Scale")));
+			sb.append("  ").append(row.get("Column_name")).append(" ").append(formatSpHelpType(row.get("Type"), row.get("Length"), row.get("Prec"), row.get("Scale"), row.get("Base_type")));
 
 			if      ("1".equals(row.get("Identity"))) sb.append(" IDENTITY");
 			else if ("1".equals(row.get("Nulls")))    sb.append(" NULL");
@@ -1024,9 +1024,12 @@ extends ReportEntryAbstract
 
 	/**
 	 * Render an {@code sp_help} type + length/precision/scale as a compact SQL type, e.g. {@code varchar(50)}, {@code numeric(15,7)}, {@code int}.
-	 * A user datatype keeps its name, followed by a comment with the guessed base type: {@code pmlt_id /*guess: int*}{@code /}
+	 * A user datatype keeps its name, followed by a comment with the base type: {@code pmlt_id /*int*}{@code /}
+	 * Text from {@code sp_help} doesn't have the base type, so there it's a guess: {@code pmlt_id /*guess: int*}{@code /}
+	 *
+	 * @param baseType The base type of a user datatype, from the column 'Base_type', which sp_help doesn't have
 	 */
-	private static String formatSpHelpType(String type, String length, String prec, String scale)
+	private static String formatSpHelpType(String type, String length, String prec, String scale, String baseType)
 	{
 		if (type == null)
 			return "?";
@@ -1043,9 +1046,12 @@ extends ReportEntryAbstract
 			case "float": case "real": case "double precision": case "money": case "smallmoney": case "bit": case "timestamp":
 			case "date": case "time": case "datetime": case "smalldatetime": case "bigdatetime": case "bigtime":
 			case "text": case "unitext": case "image": case "sysname": case "longsysname":
+			case "usmallint": case "uint": case "ubigint":
 				return type;
 
 			default:
+				if (spHelpHasValue(baseType, null))
+					return type + " /*" + formatSpHelpType(baseType, length, prec, scale, null) + "*/";
 				return type + " /*guess: " + guessBaseTypeOfUserType(type, length, prec, scale) + "*/";
 		}
 	}

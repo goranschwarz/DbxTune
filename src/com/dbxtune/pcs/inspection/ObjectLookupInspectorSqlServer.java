@@ -685,9 +685,11 @@ extends ObjectLookupInspectorAbstract
 					try
 					{
 						storeEntry.setObjectText( executeInDatabase(conn, storeEntry.getDbname(), sql, storeEntry.getObjectId()) );
+						pch.incDdlMetadataSql();
 					}
 					catch (SQLException ex)
 					{
+						pch.incDdlMetadataFallback();
 						_logger.warn("DDL Lookup. Problems Getting TABLE BASIC information using SQL, trying with 'sp_help' instead, for: TableName='" + storeEntry.getObjectName() + "', dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Caught: " + ex);
 
 						try	(AseSqlScript ss = new AseSqlScript(conn, 10))

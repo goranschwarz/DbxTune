@@ -21,11 +21,14 @@
 package com.dbxtune.pcs.inspection;
 
 import java.lang.invoke.MethodHandles;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -40,6 +43,7 @@ import com.dbxtune.cache.XmlPlanAseUtils;
 import com.dbxtune.cache.XmlPlanCache;
 import com.dbxtune.cache.XmlPlanCacheAse;
 import com.dbxtune.cm.sql.VersionInfo;
+import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.DdlDetails;
 import com.dbxtune.pcs.ObjectLookupQueueEntry;
 import com.dbxtune.pcs.PersistentCounterHandler;
@@ -64,8 +68,365 @@ extends ObjectLookupInspectorAbstract
 	public static final String  PROPKEY_view_parseAndSendTables    = Version.getAppName() + "." + ObjectLookupInspectorAse.class.getSimpleName() + ".view.parse.send.tables";
 	public static final boolean DEFAULT_view_parseAndSendTables    = true;
 
-	
+	/** Get information about tables with plain SQL (from ASE 16.0), false = always use sp_help */
+	public static final String  PROPKEY_table_useSql               = Version.getAppName() + "." + ObjectLookupInspectorAse.class.getSimpleName() + ".ddl.table.useSql";
+	public static final boolean DEFAULT_table_useSql               = true;
+
+
 	private long    _dbmsVersion = 0;
+
+	/** Execute SQL with parameters, add the rows as a text table. No rows: nothing is added */
+	private static void addSqlAsText(StringBuilder sb, Connection conn, String sql, Object... params)
+	throws SQLException
+	{
+		try (PreparedStatement pstmt = conn.prepareStatement(sql))
+		{
+			pstmt.setQueryTimeout(10);
+			for (int p = 0; p < params.length; p++)
+			{
+				if      (params[p] == null)            pstmt.setNull(p + 1, Types.VARCHAR);
+				else if (params[p] instanceof Integer) pstmt.setInt(p + 1, (Integer) params[p]);
+				else                                   pstmt.setString(p + 1, params[p].toString());
+			}
+
+			try (ResultSet rs = pstmt.executeQuery())
+			{
+				ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, sql);
+				if (tm.getRowCount() > 0)
+					sb.append(tm.toTableString()).append("\n");
+			}
+			pstmt.clearWarnings();
+		}
+	}
+
+	/** One row as a text table: The position of the columns comes from the "---- ---" line, so it has to be as wide as the longest value */
+	private static void addTextTable(StringBuilder sb, String[] cols, String[] values)
+	{
+		StringBuilder head = new StringBuilder();
+		StringBuilder sep  = new StringBuilder();
+		StringBuilder row  = new StringBuilder();
+		for (int c = 0; c < cols.length; c++)
+		{
+			int width = Math.max(cols[c].length(), values[c].length());
+			head.append(" ").append(StringUtil.left(cols[c], width));
+			row .append(" ").append(StringUtil.left(values[c], width));
+			sep .append(" ");
+			for (int w = 0; w < width; w++)
+				sep.append("-");
+		}
+		sb.append(head).append("\n").append(sep).append("\n").append(row).append("\n \n");
+	}
+
+	/**
+	 * Same text as {@code sp_help} produces for a table on ASE 16.0, since the stored text is parsed and shown in several places, but with much less work for the server:
+	 * Measured on 16.0 SP04: 98 ms against about 10 ms, no temporary tables (sp_help creates 19 per object, and calls sp_autoformat for every section)
+	 * <p>
+	 * All numbers are converted to varchar, since ResultSetTableModel.toTableString() writes a Number with digit groups, and the text is parsed.
+	 * <p>
+	 * Added compared to sp_help: column 'Base_type', the base type of a user datatype. A type based on nchar/nvarchar shows as char/varchar, since nothing separates them in systypes.
+	 * <p>
+	 * Note: Keys of an index are limited by 'keycnt', calling index_col() for all 31 possible keys was 90% of the cost. 'keycnt' is the number of keys, or one more if it includes the row id.
+	 *
+	 * @return The text, null if sp_help should be used: For other partition types than 'roundrobin', since the partition conditions needs licences to test. For proxy and external tables, which has their own sections in sp_help.
+	 */
+	public static String getTableTextUsingSql(Connection conn, String dbname, int objectId)
+	throws SQLException
+	{
+		String D     = dbname + "..";
+		String DBID  = "db_id('" + dbname + "')";
+		String RR    = "(select number from master.dbo.spt_values where type = 'PN' and name = 'roundrobin')";
+		String NAME  = "'" + dbname + ".' + u.name + '.' + o.name";
+
+		//----- Things needed to decide what to write
+		int    baseIndid;
+		String partitionType;
+		int    lockBits;
+		int    lobComprLevel;
+		boolean isRemote;
+		boolean hasDroppedCols;
+		try (PreparedStatement pstmt = conn.prepareStatement(""
+				+ "select i.indid, v.name, o.sysstat2 & 57344, o.lobcomp_lvl, case when o.sysstat2 & 1024 = 1024 or o.sysstat & 2063 = 2051 then 1 else 0 end, \n"
+				+ "    (select count(*) from " + D + "sysattributes a where a.object_type = 'TI' and a.object_info1 & 4096 = 4096 and a.object = o.id) \n"
+				+ "from " + D + "sysobjects o, " + D + "sysindexes i, master.dbo.spt_values v \n"
+				+ "where o.id = ? and i.id = o.id and i.indid <= 1 and v.type = 'PN' and v.number = isnull(i.partitiontype, " + RR + ") \n"))
+		{
+			pstmt.setQueryTimeout(10);
+			pstmt.setInt(1, objectId);
+			try (ResultSet rs = pstmt.executeQuery())
+			{
+				if ( ! rs.next() )
+					throw new SQLException("Table with id " + objectId + " was not found in database '" + dbname + "'.");
+
+				baseIndid      = rs.getInt(1);
+				partitionType  = rs.getString(2);
+				lockBits       = rs.getInt(3);
+				lobComprLevel  = rs.getInt(4);
+				isRemote       = rs.getInt(5) == 1;
+				hasDroppedCols = rs.getInt(6) > 0;
+			}
+		}
+		if ( ! "roundrobin".equals(partitionType) || isRemote )
+			return null;
+
+		StringBuilder sb = new StringBuilder();
+
+		//----- Object_status: from the status bits, in the same order as sp_help
+		List<String> statusList = new ArrayList<>();
+		try (PreparedStatement pstmt = conn.prepareStatement(""
+				+ "select isnull((select min(m.description) from master.dbo.sysmessages m where m.error = v.msgnum and isnull(m.langid, 0) = 0), v.name) \n"
+				+ "from " + D + "sysobjects o, master.dbo.spt_values v, master.dbo.sysdatabases d \n"
+				+ "where o.id = ? \n"
+				+ "  and d.dbid = " + DBID + " \n"
+				+ "  and isnull(v.msgnum, 0) != 17119 \n"
+				+ "  and (   (v.type = 'O3' and v.number > 0 and v.number & o.sysstat3 = v.number) \n"
+				+ "       or (v.type = 'O4' and v.number > 0 and v.number & o.sysstat4 = v.number) \n"
+				+ "       or (v.type = 'O5' and v.number > 0 and v.number & o.sysstat5 = v.number) \n"
+				+ "       or (v.type = 'O2' and o.type = 'U' and o.sysstat & 8192 != 0 and v.number = \n"
+				+ "             case when o.sysstat2 & hextoint('0x20000000') != 0 or (o.sysstat2 & hextoint('0x80000000') = 0 and d.status4 & hextoint('0x80000000') != 0) \n"
+				+ "                  then hextoint('0x20000000') else hextoint('0x80000000') end)) \n"
+				+ "order by v.type, v.number \n"))
+		{
+			pstmt.setQueryTimeout(10);
+			pstmt.setInt(1, objectId);
+			try (ResultSet rs = pstmt.executeQuery())
+			{
+				while (rs.next())
+					statusList.add(rs.getString(1));
+			}
+		}
+
+		//----- Object
+		addSqlAsText(sb, conn, ""
+				+ "select 'Name' = o.name, 'Owner' = u.name, 'Object_type' = case o.type when 'U' then 'user table' else 'system table' end, \n"
+				+ "    'Object_status' = convert(varchar(255), ?), 'Create_date' = convert(varchar(19), o.crdate, 0) \n"
+				+ "from " + D + "sysobjects o, " + D + "sysusers u \n"
+				+ "where o.id = ? and o.uid = u.uid \n"
+				, statusList.isEmpty() ? "-- none --" : String.join(", ", statusList), objectId);
+
+		//----- Columns
+		addSqlAsText(sb, conn, ""
+				+ "select 'Column_name' = c.name, \n"
+				+ "    'Type' = isnull(convert(varchar(30), x.xtname), case t.usertype when 44 then 'unsigned smallint' when 45 then 'unsigned int' when 46 then 'unsigned bigint' else t.name end), \n"
+				+ "    'Length' = convert(varchar(20), case when t.usertype in (24, 25) then c.length / @@ncharsize when t.type in (135, 155) then c.length / @@unicharsize else c.length end), \n"
+				+ "    'In_row_Len' = convert(varchar(20), case when t.type = 174 then c.inrowlen / @@unicharsize else c.inrowlen end), \n"
+				+ "    'Prec' = convert(varchar(20), c.prec), 'Scale' = convert(varchar(20), c.scale), 'Nulls' = convert(varchar(20), convert(int, c.status & 8) / 8), \n"
+				+ "    'Not_compressed' = case when isnull(c.status2, 0) & 131072 != 0 then '1' else '0' end, \n"
+				+ "    'Default_name' = object_name(c.cdefault, " + DBID + "), 'Rule_name' = object_name(c.domain, " + DBID + "), 'Access_Rule_name' = object_name(c.accessrule, " + DBID + "), \n"
+				+ "    'Computed_Column_object' = object_name(c.computedcol, " + DBID + ") + case when c.status3 & 1 = 1 then ' (functional index key)' when c.status2 & 32 = 32 then ' (materialized)' when c.status2 & 16 = 16 then ' (virtual)' end, \n"
+				+ "    'Identity' = convert(varchar(20), convert(int, c.status & 128) / 128), \n"
+				+ "    'Object_storage' = case when isnull(c.status2, 0) & 262144 != 0 then 'in row' when c.xstatus is null then null when c.xstatus & 1 = 1 then 'off row' else 'in row' end, \n"
+				+ "    'Encrypted' = case when isnull(c.status2, 0) & 128 != 0 then '1' else '0' end, \n"
+				+ "    'Decrypt_Default_name' = case when isnull(c.status2, 0) & 4096 != 0 then (select object_name(a.object, " + DBID + ") from " + D + "sysattributes a where a.class = 25 and a.attribute = 1 and a.object_info1 = c.id and a.object_info2 = c.colid) end, \n"
+				+ "    'Lob_compression_level' = convert(varchar(20), c.lobcomp_lvl), \n"
+				+ "    'Base_type' = case when t.usertype >= 100 then (select b.name from " + D + "systypes b where b.usertype = (select min(b2.usertype) from " + D + "systypes b2 where b2.hierarchy = t.hierarchy and b2.usertype > 0)) end \n"
+				+ "from " + D + "syscolumns c, " + D + "systypes t, " + D + "sysxtypes x \n"
+				+ "where c.id = ? and c.usertype *= t.usertype and c.xtype *= x.xtid \n"
+				+ "order by c.colid \n"
+				, objectId);
+
+		//----- Computed columns and function-based index keys: read here, written where sp_help writes them
+		StringBuilder computedText = new StringBuilder();
+		StringBuilder indexKeyText = new StringBuilder();
+		try (PreparedStatement pstmt = conn.prepareStatement(""
+				+ "select c.name, c.status2, c.status3, m.text, m.status \n"
+				+ "from " + D + "syscolumns c, " + D + "syscomments m \n"
+				+ "where c.id = ? and c.computedcol is not null and m.id = c.computedcol \n"
+				+ "order by c.colid, m.colid2, m.colid \n"))
+		{
+			pstmt.setQueryTimeout(10);
+			pstmt.setInt(1, objectId);
+			try (ResultSet rs = pstmt.executeQuery())
+			{
+				String        lastName = null;
+				boolean       isIndexKey = false;
+				StringBuilder expr = new StringBuilder();
+				String        property = null;
+				boolean       more = rs.next();
+				while (more)
+				{
+					lastName   = rs.getString(1);
+					isIndexKey = (rs.getInt(3) & 1) == 1;
+					property   = (rs.getInt(2) & 32) == 32 ? "materialized" : "virtual";
+					expr.setLength(0);
+					do
+					{
+						expr.append(rs.getString(4));
+						more = rs.next();
+					}
+					while (more && lastName.equals(rs.getString(1)));
+
+					// sp_help cuts the start and end of a function-based index key
+					String text = expr.toString();
+					if (isIndexKey)
+						text = text.length() > 17 ? text.substring(4, text.length() - 13) : text;
+
+					text = text.replaceAll("\\s*\\R\\s*", " ");
+					if (isIndexKey)
+					{
+						addTextTable(indexKeyText, new String[] {"Internal_Index_Key_Name"}, new String[] {lastName});
+						addTextTable(indexKeyText, new String[] {"Expression"}, new String[] {text});
+					}
+					else
+					{
+						addTextTable(computedText, new String[] {"Column_Name", "Property"}, new String[] {lastName, property});
+						addTextTable(computedText, new String[] {"Text"}, new String[] {text});
+					}
+				}
+			}
+		}
+		if (computedText.length() > 0)
+			sb.append("Object has the following computed columns\n \n").append(computedText);
+
+		//----- Attributes
+		addSqlAsText(sb, conn, ""
+				+ "select 'attribute_class' = convert(varchar(255), c.char_value), 'attribute' = convert(varchar(255), a.char_value), 'int_value' = convert(varchar(20), t.int_value), 'char_value' = convert(varchar(255), t.char_value), t.comments \n"
+				+ "from " + D + "sysattributes t, master.dbo.sysattributes c, master.dbo.sysattributes a \n"
+				+ "where t.object_type = 'T' and t.object = ? \n"
+				+ "  and c.class = 0 and c.attribute = 0 and a.class = 0 and a.attribute = 1 \n"
+				+ "  and t.class = c.object and t.class = a.object and t.attribute = a.object_info1 \n"
+				+ "  and not (t.class = 3 and t.attribute = 0 and t.int_value = 0) \n"
+				, objectId);
+
+		//----- Indexes
+		StringBuilder keys = new StringBuilder();
+		for (int k = 1; k <= 31; k++)
+		{
+			String col = "index_col(" + NAME + ", i.indid, " + k + ")";
+			String ord = "case when index_colorder(" + NAME + ", i.indid, " + k + ") = 'DESC' then ' DESC' end";
+			if (k == 1) keys.append(col).append(" + ").append(ord);
+			else        keys.append(" \n        + case when i.keycnt >= ").append(k).append(" and ").append(col).append(" is not null then ', ' + ").append(col).append(" + ").append(ord).append(" end");
+		}
+
+		StringBuilder indexes = new StringBuilder();
+		addSqlAsText(indexes, conn, ""
+				+ "select 'index_name' = i.name, \n"
+				+ "    'index_keys' = convert(varchar(1024), " + keys + "), \n"
+				+ "    'index_description' = case when i.indid = 1 or i.status2 & 512 = 512 then 'clustered' else 'nonclustered' end \n"
+				+ "        + case when i.status & 2 = 2 then ', unique' end \n"
+				+ "        + case when i.status & 64 = 64 or (i.status2 & 512 = 512 and i.status & 2 = 0) then ', allow duplicate rows' end \n"
+				+ "        + case when i.status & 1 = 1 then ', ignore duplicate keys' end \n"
+				+ "        + case when i.status & 4 = 4 then ', ignore duplicate rows' end \n"
+				+ "        + case when i.status3 & 16384 = 16384  then ', ' + (select v.name from master.dbo.spt_values v where v.type = 'I3' and v.number = 16384) \n"
+				+ "               when i.status3 & -32768 = -32768 then ', ' + (select v.name from master.dbo.spt_values v where v.type = 'I3' and v.number = -32768) \n"
+				+ "               when i.status & 16384 = 16384    then ', ' + (select v.name from master.dbo.spt_values v where v.type = 'I' and v.number = 16384) end \n"
+				+ "        + case when i.status3 & 512  = 512  then ', ' + (select v.name from master.dbo.spt_values v where v.type = 'I3' and v.number = 512)  end \n"
+				+ "        + case when i.status3 & 1024 = 1024 then ', ' + (select v.name from master.dbo.spt_values v where v.type = 'I3' and v.number = 1024) end \n"
+				+ "        + case when i.status4 & 1  = 1  then ', ' + (select v.name from master.dbo.spt_values v where v.type = 'I4' and v.number = 1)  end \n"
+				+ "        + case when i.status4 & 2  = 2  then ', ' + (select v.name from master.dbo.spt_values v where v.type = 'I4' and v.number = 2)  end \n"
+				+ "        + case when i.status4 & 16 = 16 then ', ' + (select v.name from master.dbo.spt_values v where v.type = 'I4' and v.number = 16) end, \n"
+				+ "    'index_max_rows_per_page' = convert(varchar(20), i.maxrowsperpage), 'index_fillfactor' = convert(varchar(20), isnull(i.fill_factor, 0)), 'index_reservepagegap' = convert(varchar(20), isnull(i.res_page_gap, 0)), \n"
+				+ "    'index_created' = convert(varchar(19), i.crdate, 0), \n"
+				+ "    'index_local' = case when i.status3 & 256 = 256 then 'Partial Index' when i.status3 & 8 = 8 then 'Local Index' else 'Global Index' end, \n"
+				+ "    'plldegree' = convert(varchar(20), isnull((select max(s.plldegree) from " + D + "systabstats s where s.id = i.id and s.indid = i.indid), 0)), \n"
+				+ "    'disabled' = case when i.status4 & 512 = 512 then '1' else '0' end \n"
+				+ "from " + D + "sysindexes i, " + D + "sysobjects o, " + D + "sysusers u \n"
+				+ "where i.id = ? and i.indid > 0 and i.indid < 255 and o.id = i.id and u.uid = o.uid \n"
+				+ "order by i.indid \n"
+				, objectId);
+		if (indexes.length() == 0)
+		{
+			sb.append("Object does not have any indexes.\n");
+		}
+		else
+		{
+			sb.append("Object has the following indexes\n \n").append(indexes);
+			addSqlAsText(sb, conn, ""
+					+ "select 'index_ptn_name' = p.name, 'index_ptn_seg' = s.name, \n"
+					+ "    'index_ptn_comp' = case when p.indid = 1 then 'inherit from index' when p.status & 512 = 512 then 'index compressed' when p.status & 128 = 128 then 'none' else 'inherit from index' end \n"
+					+ "from " + D + "syspartitions p, " + D + "syssegments s \n"
+					+ "where p.id = ? and p.indid > 0 and p.indid < 255 and s.segment = p.segment \n"
+					+ "order by p.indid, p.partitionid \n"
+					, objectId);
+		}
+		if (indexKeyText.length() > 0)
+			sb.append("Object has the following functional index keys\n \n").append(indexKeyText);
+
+		//----- Keys added with sp_primarykey/sp_foreignkey/sp_commonkey
+		StringBuilder keyColsObj = new StringBuilder("convert(varchar(80), col_name(k.id, k.key1, " + DBID + "))");
+		StringBuilder keyColsRel = new StringBuilder("convert(varchar(80), isnull(col_name(k.depid, k.depkey1, " + DBID + "), '*'))");
+		for (int k = 2; k <= 8; k++)
+		{
+			keyColsObj.append(" + ', ' + convert(varchar(80), isnull(col_name(k.id, k.key").append(k).append(", ").append(DBID).append("), '*'))");
+			keyColsRel.append(" + ', ' + convert(varchar(80), isnull(col_name(k.depid, k.depkey").append(k).append(", ").append(DBID).append("), '*'))");
+		}
+		StringBuilder keysText = new StringBuilder();
+		addSqlAsText(keysText, conn, ""
+				+ "select 'keytype' = v.name, 'object' = object_name(k.id, " + DBID + "), 'related_object' = isnull(object_name(k.depid, " + DBID + "), '-- none --'), \n"
+				+ "    'object_keys' = " + keyColsObj + ", 'related_keys' = " + keyColsRel + " \n"
+				+ "from " + D + "syskeys k, master.dbo.spt_values v \n"
+				+ "where (k.id = ? or k.depid = ?) and k.type = v.number and v.type = 'K' \n"
+				+ "order by 2, 1, 3 \n"
+				, objectId, objectId);
+		sb.append(keysText.length() == 0 ? "No defined keys for this object.\n" : keysText.toString());
+
+		//----- Partitions, always 'roundrobin' here
+		addSqlAsText(sb, conn, ""
+				+ "select 'name' = u.name + '.' + o.name, 'type' = 'base table', 'partition_type' = 'roundrobin', \n"
+				+ "    'partitions' = convert(varchar(20), (select count(*) from " + D + "syspartitions p where p.id = o.id and p.indid = ?)), 'partition_keys' = convert(varchar(10), null) \n"
+				+ "from " + D + "sysobjects o, " + D + "sysusers u \n"
+				+ "where o.id = ? and u.uid = o.uid \n"
+				, baseIndid, objectId);
+		sb.append(" \n");
+		addSqlAsText(sb, conn, ""
+				+ "select 'partition_name' = case when p.indid = 1 then p.cdataptnname else p.name end, 'partition_id' = convert(varchar(20), p.partitionid), \n"
+				+ "    'compression_level' = case when isnull(p.status, 0) & 128 > 0 then 'none' when isnull(p.status, 0) & 32 > 0 then 'page' when isnull(p.status, 0) & 16 > 0 then 'row' \n"
+				+ "                             when o.sysstat3 & 4096 > 0 or o.sysstat3 & 8192 > 0 then 'inherit from table' else 'none' end, \n"
+				+ "    'pages' = convert(varchar(20), data_pages(" + DBID + ", p.id, 0, p.partitionid)), 'row_count' = convert(varchar(20), row_count(" + DBID + ", p.id, p.partitionid)), \n"
+				+ "    'segment' = (select s.name from " + D + "syssegments s where s.segment = p.segment), 'create_date' = convert(varchar(19), p.crdate, 0) \n"
+				+ "from " + D + "syspartitions p, " + D + "sysobjects o \n"
+				+ "where p.id = ? and p.indid = ? and o.id = p.id \n"
+				+ "order by p.partitionid \n"
+				, objectId, baseIndid);
+		sb.append(" \n");
+		sb.append(" Partition_Conditions\n --------------------\n NULL                \n \n");
+		addSqlAsText(sb, conn, ""
+				+ "select 'Avg_pages' = convert(varchar(20), avg(data_pages(" + DBID + ", p.id, 0, p.partitionid))), 'Max_pages' = convert(varchar(20), max(data_pages(" + DBID + ", p.id, 0, p.partitionid))), 'Min_pages' = convert(varchar(20), min(data_pages(" + DBID + ", p.id, 0, p.partitionid))), \n"
+				+ "    'Ratio(Max/Avg)' = convert(varchar(20), case when avg(data_pages(" + DBID + ", p.id, 0, p.partitionid)) = 0 then 0 else convert(float, max(data_pages(" + DBID + ", p.id, 0, p.partitionid))) / avg(data_pages(" + DBID + ", p.id, 0, p.partitionid)) end), \n"
+				+ "    'Ratio(Min/Avg)' = convert(varchar(20), case when avg(data_pages(" + DBID + ", p.id, 0, p.partitionid)) = 0 then 0 else convert(float, min(data_pages(" + DBID + ", p.id, 0, p.partitionid))) / avg(data_pages(" + DBID + ", p.id, 0, p.partitionid)) end) \n"
+				+ "from " + D + "syspartitions p \n"
+				+ "where p.id = ? and p.indid = ? \n"
+				, objectId, baseIndid);
+
+		//----- Lock scheme and table options
+		sb.append("Table LOB compression level ").append(lobComprLevel).append("\n");
+		if (hasDroppedCols)
+			sb.append("Table has columns dropped by no datacopy method.\n");
+		if (lockBits == 16384 || lockBits == 32768)
+		{
+			sb.append(lockBits == 16384 ? "Lock scheme Datapages\n" : "Lock scheme Datarows\n");
+			sb.append("The 'ascinserts' attribute is not applicable to tables with datarow or datapage lock schemes.\n");
+		}
+		else if (lockBits == 0 || lockBits == 8192)
+		{
+			sb.append("Lock scheme Allpages\n");
+			sb.append("The attribute 'exp_row_size' is not applicable to tables with allpages lock scheme.\n");
+			sb.append("The attribute 'concurrency_opt_threshold' is not applicable to tables with allpages lock scheme.\n");
+		}
+		else
+		{
+			sb.append("Lock scheme Unknown or Corrupted\n");
+		}
+		sb.append(" \n");
+		addSqlAsText(sb, conn, ""
+				+ "select 'exp_row_size' = convert(varchar(20), i.exp_rowsize), 'reservepagegap' = convert(varchar(20), i.res_page_gap), 'fillfactor' = convert(varchar(20), i.fill_factor), 'max_rows_per_page' = convert(varchar(20), i.maxrowsperpage), \n"
+				+ "    'identity_gap' = convert(varchar(20), isnull(i.identitygap, 0)), 'ascinserts' = case when i.status2 & 64 > 0 then '1' else '0' end \n"
+				+ "from " + D + "sysindexes i \n"
+				+ "where i.id = ? and i.indid <= 1 \n"
+				, objectId);
+		addSqlAsText(sb, conn, ""
+				+ "select 'concurrency_opt_threshold' = convert(varchar(20), (select max(s.conopt_thld) from " + D + "systabstats s where s.id = o.id and s.indid <= 1)), \n"
+				+ "    'optimistic_index_lock' = case when o.sysstat2 & 268435456 != 0 then '1' else '0' end, \n"
+				+ "    'dealloc_first_txtpg' = case when o.sysstat2 & hextoint('0x20000000') != 0 or (o.sysstat2 & (hextoint('0x20000000') | hextoint('0x80000000')) = 0 and d.status4 & hextoint('0x80000000') != 0) then '1' \n"
+				+ "                               when o.sysstat2 & hextoint('0x80000000') != 0 then '2' else '0' end, \n"
+				+ "    'cached_index_root_page' = case when isnull(o.sysstat4, 0) & 64 != 0 then '1' else '0' end, \n"
+				+ "    'recompile_factor' = (select a.object_cinfo from " + D + "sysattributes a where a.object = o.id and a.class = 26 and a.attribute = 4), \n"
+				+ "    'plldegree' = convert(varchar(20), (select max(s.plldegree) from " + D + "systabstats s where s.id = o.id and s.indid <= 1)) \n"
+				+ "from " + D + "sysobjects o, master.dbo.sysdatabases d \n"
+				+ "where o.id = ? and d.dbid = " + DBID + " \n"
+				, objectId);
+
+		return sb.toString();
+	}
 
 	private static final List<Integer> skipSpDependsMessages = null;
 //	private static final List<Integer> skipSpDependsMessages = Arrays.asList(0, 17462, 17463, 17464, 17465, 17466, 17467, 17468, 17469);
@@ -506,19 +867,49 @@ extends ObjectLookupInspectorAbstract
 					returnList.add(entry);
 					
 					//--------------------------------------------
-					// Just do sp_help, or use ddlgen.jar to get info
-					String sql = "exec " + entry.getDbname() + "..sp_help '" + entry.getSchemaAndObjectName() + "' ";
-	
-					try	(AseSqlScript ss = new AseSqlScript(conn, 10, false)) 
+					// Plain SQL if we can: much cheaper for the server, and has the real base type of user datatypes
+					String objectText = null;
+					boolean sqlFailed = false;
+					if (_dbmsVersion >= Ver.ver(16,0) && Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_table_useSql, DEFAULT_table_useSql))
 					{
-						ss.setUseGlobalMsgHandler(false);
-						ss.setMsgPrefix("sp_help:" + entry.getFullObjectName() + ": ");
-						
-						entry.setObjectText( ss.executeSqlStr(sql, true) ); 
+						try
+						{
+							objectText = getTableTextUsingSql(conn, entry.getDbname(), entry.getObjectId());
+							if (objectText != null)
+								pch.incDdlMetadataSql();
+						}
+						catch (SQLException ex)
+						{
+							sqlFailed = true;
+							pch.incDdlMetadataFallback();
+							_logger.warn("DDL Lookup. Problems Getting TABLE information using SQL, trying with 'sp_help' instead, for: " + entry.getFullObjectName() + ". Caught: " + ex);
+						}
 					}
-					catch (SQLException e)
+
+					String sql;
+					if (objectText != null)
 					{
-						entry.setObjectText( e.toString() ); 
+						entry.setObjectText( objectText );
+					}
+					else
+					{
+						if ( ! sqlFailed )
+							pch.incDdlMetadataSpHelp();
+
+						// Just do sp_help, or use ddlgen.jar to get info
+						sql = "exec " + entry.getDbname() + "..sp_help '" + entry.getSchemaAndObjectName() + "' ";
+
+						try	(AseSqlScript ss = new AseSqlScript(conn, 10, false))
+						{
+							ss.setUseGlobalMsgHandler(false);
+							ss.setMsgPrefix("sp_help:" + entry.getFullObjectName() + ": ");
+
+							entry.setObjectText( ss.executeSqlStr(sql, true) );
+						}
+						catch (SQLException e)
+						{
+							entry.setObjectText( e.toString() );
+						}
 					}
 
 					//--------------------------------------------

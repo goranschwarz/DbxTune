@@ -290,6 +290,14 @@ implements Runnable
 
 	/** How many DDL Lookups was requested, discarded, executed and saved. One line in the errorlog every hour and every day */
 	final DdlLookupStatistics _ddlLookupStatistics = new DdlLookupStatistics(LocalDateTime.now());
+
+	/** For the inspectors: Table metadata was fetched with plain SQL */
+	public void incDdlMetadataSql()      { _ddlLookupStatistics.inc(DdlLookupStatistics.Counter.metadataSql); }
+	/** For the inspectors: Table metadata was fetched with sp_help, since plain SQL isn't used for this server or table */
+	public void incDdlMetadataSpHelp()   { _ddlLookupStatistics.inc(DdlLookupStatistics.Counter.metadataSpHelp); }
+	/** For the inspectors: Table metadata was fetched with sp_help, since plain SQL failed */
+	public void incDdlMetadataFallback() { _ddlLookupStatistics.inc(DdlLookupStatistics.Counter.metadataFallback); }
+
 	private int	_warnDdlInputQueueSizeThresh = DEFAULT_ddl_warnDdlInputQueueSizeThresh;
 
 	/** */
