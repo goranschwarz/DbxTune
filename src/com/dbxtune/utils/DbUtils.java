@@ -22,11 +22,13 @@ package com.dbxtune.utils;
 
 import java.awt.Component;
 import java.lang.invoke.MethodHandles;
+import java.net.SocketTimeoutException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.SQLTimeoutException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -47,6 +49,54 @@ import com.dbxtune.sql.conn.info.DbxConnectionStateInfoAse;
 
 public class DbUtils
 {
+	/**
+	 * Did the query fail since it took longer than Statement.setQueryTimeout()?
+	 * <p>
+	 * Codes only, not the message text, since the messages are translated.
+	 * Checked with real timeouts on ASE, SQL Server, Postgres, Oracle, MySQL and Db2. Only Oracle, MySQL and SQL Server throws a SQLTimeoutException.
+	 * Note: The same codes are used when someone cancels the query. On a connection of our own, it should be our timeout.
+	 */
+	public static boolean isQueryTimeout(SQLException ex)
+	{
+		return isQueryTimeout(ex, 0);
+	}
+
+	private static boolean isQueryTimeout(Throwable t, int depth)
+	{
+		if (t == null || depth > 10)
+			return false;
+
+		// The JDBC standard, and a socket that timed out
+		if (t instanceof SQLTimeoutException || t instanceof SocketTimeoutException)
+			return true;
+
+		if (t instanceof SQLException)
+		{
+			SQLException ex    = (SQLException) t;
+			String       state = ex.getSQLState();
+			int          code  = ex.getErrorCode();
+			String       text  = String.valueOf(ex.getMessage());
+
+			if ("57014".equals(state)) return true; // Postgres: query_canceled, Db2: SQLCODE -952
+			if ("HY008".equals(state)) return true; // SQL Server, jTDS: operation canceled
+			if ("HYT00".equals(state)) return true; // jTDS: timeout expired
+			if ("70100".equals(state)) return true; // MySQL: 1317, query execution was interrupted
+			if ("JZ0T3".equals(state) || "JZ0T4".equals(state) || "JZ0TO".equals(state)) return true; // jConnect: read or write operation timed out
+
+			// jConnect: JZ006: Caught IOException: java.io.IOException: JZ0T3: Read operation timed out.
+			if ("JZ006".equals(state) && (text.contains("JZ0T3") || text.contains("JZ0T4") || text.contains("JZ0TO") || text.contains("SocketTimeoutException")))
+				return true;
+
+			// The error numbers mean other things on other vendors, so check that it's the right one
+			if (code == 1013 && text.startsWith("ORA-01013")) return true; // Oracle: user requested cancel of current operation
+			if (code == 3024 && "HY000".equals(state))        return true; // MySQL: maximum statement execution time exceeded
+
+			if (isQueryTimeout(ex.getNextException(), depth + 1))
+				return true;
+		}
+		return isQueryTimeout(t.getCause(), depth + 1);
+	}
+
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	
 	public static final String DB_PROD_NAME_SYBASE_ASE   = "Adaptive Server Enterprise";

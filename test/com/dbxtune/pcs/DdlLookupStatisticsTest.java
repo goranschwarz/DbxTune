@@ -53,7 +53,35 @@ public class DdlLookupStatisticsTest
 		stat.addIssue(null);
 
 		String line = stat.rollOver(time(4, 15, 0), true, false, false).get(0);
-		assertTrue(line, line.contains(", lookupTimeouts=4, lookupErrors=2,"));
+		assertTrue(line, line.contains(", queryTimeouts=4, queryErrors=2"));
+	}
+
+	@Test
+	public void testTimeOfALookupGoesToTheWorstThatHappenedInIt()
+	{
+		DdlLookupStatistics stat = new DdlLookupStatistics(time(4, 14, 23));
+
+		stat.beginLookup();
+		stat.addLookup(30, 1);
+
+		stat.beginLookup();
+		stat.addIssue(new SQLException("Some error"));
+		stat.addLookup(5, 1);
+
+		stat.beginLookup();
+		stat.addIssue(new SQLException("Some error"));
+		stat.addIssue(new SQLException("The query has timed out.", "HY008"));
+		stat.addIssue(new SQLException("Some error"));
+		stat.addLookup(10000, 1);
+
+		// Nothing left from the lookup before
+		stat.beginLookup();
+		stat.addLookup(50, 1);
+
+		String line = stat.rollOver(time(4, 15, 0), true, false, false).get(0);
+		assertTrue(line, line.contains(", lookups=4,"));
+		assertTrue(line, line.contains(", lookupsOk=2, okTimeMs=80, okMaxMs=50, okAvgMs=40, lookupsTimeout=1, timeoutTimeMs=10000, lookupsError=1, errorTimeMs=5,"));
+		assertTrue(line, line.endsWith(", queryTimeouts=1, queryErrors=3"));
 	}
 
 	@Test
@@ -80,13 +108,13 @@ public class DdlLookupStatisticsTest
 		assertEquals(1, lines.size());
 		assertEquals("DDL Lookup Statistics HOUR [2026-11-04 14:23:00 - 2026-11-04 15:00:00]:"
 				+ " requests=2, alreadyQueued=0, alreadyStored=1, notAllowed=0, lookups=2, lookupsNoResult=1, objectsReturned=1"
-				+ ", saved=1, notSaved=0, lookupTimeMs=40, lookupMaxMs=30, metadataSql=0, metadataSpHelp=0, metadataFallback=0, lookupTimeouts=0, lookupErrors=0, lookupAvgMs=20", lines.get(0));
+				+ ", saved=1, notSaved=0, lookupsOk=2, okTimeMs=40, okMaxMs=30, okAvgMs=20, lookupsTimeout=0, timeoutTimeMs=0, lookupsError=0, errorTimeMs=0, metadataSql=0, metadataSpHelp=0, metadataFallback=0, queryTimeouts=0, queryErrors=0", lines.get(0));
 
 		lines = stat.rollOver(time(4, 16, 0), true, true, false);
 		assertEquals(1, lines.size());
 		assertEquals("DDL Lookup Statistics HOUR [2026-11-04 15:00:00 - 2026-11-04 16:00:00]:"
 				+ " requests=0, alreadyQueued=0, alreadyStored=0, notAllowed=0, lookups=0, lookupsNoResult=0, objectsReturned=0"
-				+ ", saved=0, notSaved=0, lookupTimeMs=0, lookupMaxMs=0, metadataSql=0, metadataSpHelp=0, metadataFallback=0, lookupTimeouts=0, lookupErrors=0, lookupAvgMs=0", lines.get(0));
+				+ ", saved=0, notSaved=0, lookupsOk=0, okTimeMs=0, okMaxMs=0, okAvgMs=0, lookupsTimeout=0, timeoutTimeMs=0, lookupsError=0, errorTimeMs=0, metadataSql=0, metadataSpHelp=0, metadataFallback=0, queryTimeouts=0, queryErrors=0", lines.get(0));
 	}
 
 	@Test
@@ -106,7 +134,7 @@ public class DdlLookupStatisticsTest
 		assertTrue(lines.get(0), lines.get(0).startsWith("DDL Lookup Statistics HOUR [2026-11-04 23:00:00 - 2026-11-05 00:00:00]: requests=2,"));
 		assertEquals("DDL Lookup Statistics DAY [2026-11-04 22:10:00 - 2026-11-05 00:00:00]:"
 				+ " requests=3, alreadyQueued=0, alreadyStored=0, notAllowed=0, lookups=2, lookupsNoResult=0, objectsReturned=3"
-				+ ", saved=0, notSaved=0, lookupTimeMs=70, lookupMaxMs=50, metadataSql=0, metadataSpHelp=0, metadataFallback=0, lookupTimeouts=0, lookupErrors=0, lookupAvgMs=35", lines.get(1));
+				+ ", saved=0, notSaved=0, lookupsOk=2, okTimeMs=70, okMaxMs=50, okAvgMs=35, lookupsTimeout=0, timeoutTimeMs=0, lookupsError=0, errorTimeMs=0, metadataSql=0, metadataSpHelp=0, metadataFallback=0, queryTimeouts=0, queryErrors=0", lines.get(1));
 
 		// The new day starts from zero
 		stat.inc(Counter.requests);

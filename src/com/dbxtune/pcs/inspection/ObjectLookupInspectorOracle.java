@@ -149,6 +149,7 @@ extends ObjectLookupInspectorAbstract
 		}
 		catch (SQLException ex)
 		{
+			pch.incDdlLookupIssue(ex);
 			_logger.warn("DDL Lookup: Problems with dbname='" + qe._dbname + "', objectName='" + qe._objectName + "', source='" + qe._source + "'. Skipping this object. Caught: " + ex.getMessage().trim());
 			return Collections.emptyList();
 		}
@@ -307,6 +308,7 @@ extends ObjectLookupInspectorAbstract
 			}
 			catch (SQLException ex)
 			{
+				pch.incDdlLookupIssue(ex);
 				_logger.warn("DDL Lookup: Problems getting the tables of the indexes in the plan of SQL_ID='" + sqlId + "'. The tables that are only read via an index are not looked up. Caught: " + ex.getMessage().trim());
 			}
 		}
@@ -335,6 +337,7 @@ extends ObjectLookupInspectorAbstract
 			}
 			catch (SQLException ex)
 			{
+				pch.incDdlLookupIssue(ex);
 				_logger.warn("DDL Lookup: Problems getting the PL/SQL unit (PROGRAM_ID=" + programId + ") of SQL_ID='" + sqlId + "'. It is stored without it. Caught: " + ex.getMessage().trim());
 			}
 		}
@@ -534,6 +537,7 @@ extends ObjectLookupInspectorAbstract
 				}
 				catch (SQLException ex)
 				{
+					pch.incDdlLookupIssue(ex);
 					entry.setObjectText( ex.toString() );
 					_logger.warn("DDL Lookup. Problems getting the COLUMNS of table " + entry.getSchemaAndObjectName() + " in '" + dbname + "', source='" + qe._source + "'. Caught: " + ex.getMessage().trim());
 				}
@@ -722,6 +726,7 @@ extends ObjectLookupInspectorAbstract
 								}
 								catch (SQLException ex2)
 								{
+									pch.incDdlLookupIssue(ex2);
 									_logger.info("DDL Lookup. Could not read the expressions of the function-based indexes of table " + entry.getSchemaAndObjectName() + " in '" + dbname + "': the keys are stored with the names of the hidden columns. Caught: " + ex2.getMessage().trim());
 								}
 							}
@@ -758,6 +763,7 @@ extends ObjectLookupInspectorAbstract
 					}
 					catch (SQLException ex)
 					{
+						pch.incDdlLookupIssue(ex);
 						extraInfo += "Could not get the " + part[0] + ": " + ex.getMessage().trim() + "\n\n";
 						_logger.warn("DDL Lookup. Problems getting the " + part[0].toUpperCase() + " of table " + entry.getSchemaAndObjectName() + " in '" + dbname + "', source='" + qe._source + "'. Caught: " + ex.getMessage().trim());
 					}
@@ -789,6 +795,7 @@ extends ObjectLookupInspectorAbstract
 				}
 				catch (SQLException ex)
 				{
+					pch.incDdlLookupIssue(ex);
 					_logger.warn("DDL Lookup. Problems getting the source of the TRIGGERS of table " + entry.getSchemaAndObjectName() + " in '" + dbname + "', source='" + qe._source + "'. Caught: " + ex.getMessage().trim());
 				}
 				if (triggerSource.length() > 0)
@@ -814,6 +821,7 @@ extends ObjectLookupInspectorAbstract
 				}
 				catch (SQLException ex)
 				{
+					pch.incDdlLookupIssue(ex);
 					entry.setObjectText( ex.toString() );
 					_logger.warn("DDL Lookup. Problems getting the TEXT of " + type + " " + entry.getSchemaAndObjectName() + " in '" + dbname + "', source='" + qe._source + "'. Caught: " + ex.getMessage().trim());
 				}
@@ -870,6 +878,7 @@ extends ObjectLookupInspectorAbstract
 		}
 		catch (SQLException ex)
 		{
+			pch.incDdlLookupIssue(ex);
 			_logger.warn("DDL Lookup. Problems getting what " + entry.getType() + " " + entry.getSchemaAndObjectName() + " in '" + entry.getDbname() + "' refers to. Caught: " + ex.getMessage().trim());
 		}
 
