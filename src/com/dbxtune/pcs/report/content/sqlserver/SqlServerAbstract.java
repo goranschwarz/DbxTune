@@ -1435,9 +1435,9 @@ extends ReportEntryAbstract
 				sb.append("<p><b>" + (++nr) + ". " + (f.isMerge() ? "MERGE" : "DROP") + " " + String.join(", ", droppedHtml) + (f.isMerge() ? " into " : ", keep ") + "<code>" + esc(f.kept.name) + "</code></b></p> \n");
 
 				sb.append("<ul> \n");
-				sb.append("<li>Keep: " + redundantIndexLine(infoMap.get(f.kept)) + "</li> \n");
+				sb.append("<li>Keep: " + redundantIndexLine(infoMap.get(f.kept), ti._indexUsageRecordedForDb) + "</li> \n");
 				for (IndexRedundancy.Idx d : f.dropped)
-					sb.append("<li>Drop: " + redundantIndexLine(infoMap.get(d)) + "</li> \n");
+					sb.append("<li>Drop: " + redundantIndexLine(infoMap.get(d), ti._indexUsageRecordedForDb) + "</li> \n");
 				sb.append("</ul> \n");
 
 				StringBuilder why = new StringBuilder();
@@ -1526,12 +1526,21 @@ extends ReportEntryAbstract
 		return o == null ? "" : StringEscapeUtils.escapeHtml4(o.toString());
 	}
 
-	/** HTML: the index definition in &lt;code&gt;, then size and usage as plain text */
-	private static String redundantIndexLine(SqlServerIndexInfo ii)
+	/**
+	 * HTML: the index definition in &lt;code&gt;, then size and usage as plain text.
+	 * @param usageRecordedForDb true if the database has usage rows: then an index without a row has not been touched since the start (0), else it is unknown
+	 */
+	private static String redundantIndexLine(SqlServerIndexInfo ii, boolean usageRecordedForDb)
 	{
 		String def = ii._indexName + " (" + ii._keysStr + ")" + (StringUtil.hasValue(ii._includeColsStr) ? " INCLUDE (" + ii._includeColsStr + ")" : "");
-		return "<code>" + esc(def) + "</code>"
-				+ ", " + ii.getIndexSizeMb() + " MB, reads " + (ii._abs_READS < 0 ? "unknown" : ii._abs_READS) + ", writes " + (ii._abs_WRITES < 0 ? "unknown" : ii._abs_WRITES);
+		String usage;
+		if (ii._usageRowFound)
+			usage = "reads " + ii._abs_READS + ", writes " + ii._abs_WRITES;
+		else if (usageRecordedForDb)
+			usage = "reads 0, writes 0 (not touched at all since SQL Server was started)";
+		else
+			usage = "reads unknown, writes unknown";
+		return "<code>" + esc(def) + "</code>, " + ii.getIndexSizeMb() + " MB, " + usage;
 	}
 
 	private static boolean hasValidColumnNames(List<String> cols)
