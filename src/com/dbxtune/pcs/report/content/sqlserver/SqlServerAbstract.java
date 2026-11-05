@@ -48,6 +48,7 @@ import com.dbxtune.gui.ModelMissmatchException;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportEntry;
+import com.dbxtune.pcs.report.content.IndexAnalysisHtml;
 import com.dbxtune.pcs.report.content.IndexRedundancy;
 import com.dbxtune.pcs.report.content.ReportEntryAbstract;
 import com.dbxtune.sql.SqlObjectName;
@@ -1377,148 +1378,71 @@ extends ReportEntryAbstract
 			});
 		}
 
-		if (scripts.isEmpty() && notChecked.isEmpty() && unused.isEmpty())
-			return "";
+		// ---- The texts and findings, laid out by IndexAnalysisHtml (the same for all vendors)
+		IndexAnalysisHtml ia = new IndexAnalysisHtml();
+		ia.capturedTime = String.valueOf(ti.getSampleTime());
 
-		// Build the HTML
-		StringBuilder sb = new StringBuilder();
-		sb.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-		sb.append("<br> \n");
-		sb.append("<details class='dbx-redundant-index' style='max-width: 1200px;'> \n"); // The index table above is very wide: keep this readable
-		// "Index Analysis": room for more than redundant indexes later (unused indexes, ...). Collapsed by default, the count in bold so it stands out.
-		String candidates = scripts.size() + " Redundant Index candidates";
-		String unusedTxt  = unused.size() + " Unused Indexes";
-		sb.append("<summary>Show/Hide: Index Analysis - " + (scripts.isEmpty() ? candidates : "<b>" + candidates + "</b>")
-				+ ", " + (unused.isEmpty() ? unusedTxt : "<b>" + unusedTxt + "</b>")
-				+ (notChecked.isEmpty() ? "" : ", " + notChecked.size() + " not checked") + "</summary> \n");
+		String since = _srvStartDate == null
+				? "the last restart of SQL Server (the start time was not found in the recording)"
+				: "SQL Server was started " + esc(new SimpleDateFormat("yyyy-MM-dd HH:mm").format(_srvStartDate)) + ", <b>" + _srvDaysRunning + " day" + (_srvDaysRunning == 1 ? "" : "s") + " ago</b>";
+		ia.notesHtml.add("Usage numbers only cover the time since " + since + ", so check that the index isn't needed for something that runs rarely (month end, year end).");
+		ia.notesHtml.add("A statement that names a dropped index in a hint will fail. That is not detected here.");
+		ia.notesHtml.add("Dropping an index also drops its statistics, so other plans can change.");
+		ia.notesHtml.add("A FOREIGN KEY can depend on a unique index: then the DROP fails and nothing is changed.");
+		ia.notesHtml.add("The scripts use ONLINE = OFF: creating an index can block users on a large table.");
 
-		if ( ! scripts.isEmpty() || ! unused.isEmpty() )
+		// Index De-duplication
+		for (Map.Entry<IndexRedundancy.Finding, String> entry : scripts.entrySet())
 		{
-			sb.append("<p>From the index definitions captured " + esc(ti.getSampleTime()) + ". These are candidates: nothing has been changed.</p> \n");
-			sb.append("<ul> \n");
-			String since = _srvStartDate == null
-					? "the last restart of SQL Server (the start time was not found in the recording)"
-					: "SQL Server was started " + esc(new SimpleDateFormat("yyyy-MM-dd HH:mm").format(_srvStartDate)) + ", <b>" + _srvDaysRunning + " day" + (_srvDaysRunning == 1 ? "" : "s") + " ago</b>";
-			sb.append("<li>Usage numbers only cover the time since " + since + ", so check that the index isn't needed for something that runs rarely (month end, year end).</li> \n");
-			sb.append("<li>A statement that names a dropped index in a hint will fail. That is not detected here.</li> \n");
-			sb.append("<li>Dropping an index also drops its statistics, so other plans can change.</li> \n");
-			sb.append("<li>A FOREIGN KEY can depend on a unique index: then the DROP fails and nothing is changed.</li> \n");
-			sb.append("<li>The scripts use ONLINE = OFF: creating an index can block users on a large table.</li> \n");
-			sb.append("</ul> \n");
+			IndexRedundancy.Finding f = entry.getKey();
+
+			IndexAnalysisHtml.Finding hf = new IndexAnalysisHtml.Finding();
+			hf.action = f.isMerge() ? "MERGE" : "DROP";
+			hf.kept   = f.kept.name;
+			for (IndexRedundancy.Idx d : f.dropped)
+				hf.dropped.add(d.name);
+
+			hf.lines.add(redundantIndexLine("Keep", infoMap.get(f.kept), ti._indexUsageRecordedForDb));
+			for (IndexRedundancy.Idx d : f.dropped)
+				hf.lines.add(redundantIndexLine("Drop", infoMap.get(d), ti._indexUsageRecordedForDb));
+
+			StringBuilder why = new StringBuilder();
+			for (String w : f.why)
+				why.append(w).append(" ");
+			if (f.isMerge())
+				why.append("Adding " + IndexRedundancy.str(f.addIncludes) + " to " + f.kept.name + " lets it answer their queries too, but it makes that index wider. ");
+			for (String n : hf.dropped)
+				if (unusedDedup.contains(n))
+					why.append(n + " has had no reads since SQL Server was started. ");
+			if (unusedDedup.contains(f.kept.name))
+				why.append(f.kept.name + " has had no reads since SQL Server was started either: check if it is needed at all. ");
+			hf.why    = why.toString();
+			hf.script = entry.getValue();
+			ia.dedup.add(hf);
+		}
+		ia.dedupNotChecked = notChecked;
+
+		// Unused Indexes
+		ia.unusedNotChecked = unusedNotChecked;
+		ia.unusedIntro = "No reads (seeks, scans or lookups) since SQL Server was started, but they still cost writes and space. "
+				+ "Not listed: primary keys, unique indexes, the clustered index, and the indexes in Index De-duplication above.";
+		ia.unusedNotes.add("An index created after SQL Server was started has had less time to be used.");
+		ia.unusedNotes.add("The numbers are also reset when the database is taken offline, detached or restored.");
+		ia.unusedNotes.add("Check if the index supports a FOREIGN KEY on its columns before you drop it.");
+		for (SqlServerIndexInfo ii : unused)
+		{
+			long writes = ii._usageRowFound ? ii._abs_user_updates : 0;
+
+			IndexAnalysisHtml.Finding hf = new IndexAnalysisHtml.Finding();
+			hf.action = "DROP";
+			hf.dropped.add(ii._indexName);
+			hf.lines.add(new IndexAnalysisHtml.IndexLine("Index", redundantIndexDefinition(ii), ", " + ii.getIndexSizeMb() + " MB, reads 0, writes " + writes
+					+ (ii._usageRowFound ? "" : " (not touched at all since SQL Server was started)")));
+			hf.script = createUnusedIndexScript(ti, ii);
+			ia.unused.add(hf);
 		}
 
-		// ---- Subsection: Index De-duplication (open: the outer section is already collapsed)
-		// More subsections (unused indexes, ...) go next to this one, each with its own <details>, and an <hr> in front
-		sb.append("<hr style='border-top: 1px solid #888;'> \n");
-		sb.append("<details open class='dbx-index-analysis-dedup'> \n");
-		sb.append("<summary><b>Index De-duplication</b> - " + scripts.size() + " candidates" + (notChecked.isEmpty() ? "" : ", " + notChecked.size() + " not checked") + "</summary> \n");
-
-		if ( ! scripts.isEmpty() )
-		{
-			int nr = 0;
-			for (Map.Entry<IndexRedundancy.Finding, String> entry : scripts.entrySet())
-			{
-				IndexRedundancy.Finding f = entry.getKey();
-				String script = entry.getValue();
-
-				List<String> droppedNames = new ArrayList<>();
-				for (IndexRedundancy.Idx d : f.dropped)
-					droppedNames.add(d.name);
-
-				// Index names and column lists in <code>, so they stand out from the text
-				// A line in front of every finding, so it's clear where one starts and ends
-				sb.append("<hr style='border-top: 1px dashed #bbb;'> \n");
-
-				List<String> droppedHtml = new ArrayList<>();
-				for (String n : droppedNames)
-					droppedHtml.add("<code>" + esc(n) + "</code>");
-				sb.append("<p><b>" + (++nr) + ". " + (f.isMerge() ? "MERGE" : "DROP") + " " + String.join(", ", droppedHtml) + (f.isMerge() ? " into " : ", keep ") + "<code>" + esc(f.kept.name) + "</code></b></p> \n");
-
-				sb.append("<ul> \n");
-				sb.append("<li>Keep: " + redundantIndexLine(infoMap.get(f.kept), ti._indexUsageRecordedForDb) + "</li> \n");
-				for (IndexRedundancy.Idx d : f.dropped)
-					sb.append("<li>Drop: " + redundantIndexLine(infoMap.get(d), ti._indexUsageRecordedForDb) + "</li> \n");
-				sb.append("</ul> \n");
-
-				StringBuilder why = new StringBuilder();
-				for (String w : f.why)
-					why.append(w).append(" ");
-				if (f.isMerge())
-					why.append("Adding " + IndexRedundancy.str(f.addIncludes) + " to " + f.kept.name + " lets it answer their queries too, but it makes that index wider. ");
-				for (String n : droppedNames)
-					if (unusedDedup.contains(n))
-						why.append(n + " has had no reads since SQL Server was started. ");
-				if (unusedDedup.contains(f.kept.name))
-					why.append(f.kept.name + " has had no reads since SQL Server was started either: check if it is needed at all. ");
-
-				// The column lists, like ([c1], [c2] DESC), in <code>. Index names: the ones of this finding.
-				String whyHtml = esc(why.toString()).replaceAll("\\((\\[[^()]*)\\)", "<code>($1)</code>");
-				List<String> names = new ArrayList<>(droppedNames);
-				names.add(f.kept.name);
-				names.sort((a, b) -> b.length() - a.length()); // longest first, so 'ix_a' doesn't hit inside 'ix_a2'
-				for (String n : names)
-					whyHtml = whyHtml.replaceAll("(?<![\\w>])" + java.util.regex.Pattern.quote(esc(n)) + "(?![\\w<])", java.util.regex.Matcher.quoteReplacement("<code>" + esc(n) + "</code>"));
-				sb.append("<p>Why: ").append(whyHtml).append("</p> \n");
-
-				sb.append("<details class='dbx-redundant-index-script'><summary>Show/Hide: DDL Changes and Rollback</summary> \n");
-				sb.append("<pre style='white-space: pre-wrap;'><code class='language-sql'>").append(esc(script)).append("</code></pre> \n"); // Prism highlights it where it's loaded, plain in mail
-				sb.append("</details> \n");
-			}
-		}
-
-		if ( ! notChecked.isEmpty() )
-		{
-			if ( ! scripts.isEmpty() ) // ends the last finding
-				sb.append("<hr style='border-top: 1px dashed #bbb;'> \n");
-			sb.append("<p>Not checked:</p> \n<ul> \n");
-			for (Map.Entry<String, String> e : notChecked.entrySet())
-				sb.append("<li>" + esc(e.getKey()) + ": " + esc(e.getValue()) + "</li> \n");
-			sb.append("</ul> \n");
-		}
-		sb.append("</details> \n"); // END: Index De-duplication
-
-		// ---- Subsection: Unused Indexes
-		sb.append("<hr style='border-top: 1px solid #888;'> \n");
-		sb.append("<details open class='dbx-index-analysis-unused'> \n");
-		sb.append("<summary><b>Unused Indexes</b> - " + (unusedNotChecked != null ? "not checked" : unused.size() + " candidates") + "</summary> \n");
-		if (unusedNotChecked != null)
-		{
-			sb.append("<p>Not checked: " + esc(unusedNotChecked) + "</p> \n");
-		}
-		else if ( ! unused.isEmpty() )
-		{
-			sb.append("<p>No reads (seeks, scans or lookups) since SQL Server was started, but they still cost writes and space. "
-					+ "Not listed: primary keys, unique indexes, the clustered index, and the indexes in Index De-duplication above.</p> \n");
-			sb.append("<ul> \n");
-			sb.append("<li>An index created after SQL Server was started has had less time to be used.</li> \n");
-			sb.append("<li>The numbers are also reset when the database is taken offline, detached or restored.</li> \n");
-			sb.append("<li>Check if the index supports a FOREIGN KEY on its columns before you drop it.</li> \n");
-			sb.append("</ul> \n");
-
-			int nr = 0;
-			for (SqlServerIndexInfo ii : unused)
-			{
-				sb.append("<hr style='border-top: 1px dashed #bbb;'> \n"); // in front of every finding
-
-				long writes = ii._usageRowFound ? ii._abs_user_updates : 0;
-				String def = ii._indexName + " (" + ii._keysStr + ")" + (StringUtil.hasValue(ii._includeColsStr) ? " INCLUDE (" + ii._includeColsStr + ")" : "");
-
-				sb.append("<p><b>" + (++nr) + ". DROP <code>" + esc(ii._indexName) + "</code></b></p> \n");
-				sb.append("<ul> \n");
-				sb.append("<li>Index: <code>" + esc(def) + "</code>, " + ii.getIndexSizeMb() + " MB, reads 0, writes " + writes
-						+ (ii._usageRowFound ? "" : " (not touched at all since SQL Server was started)") + "</li> \n");
-				sb.append("</ul> \n");
-
-				sb.append("<details class='dbx-unused-index-script'><summary>Show/Hide: DDL Changes and Rollback</summary> \n");
-				sb.append("<pre style='white-space: pre-wrap;'><code class='language-sql'>").append(esc(createUnusedIndexScript(ti, ii))).append("</code></pre> \n");
-				sb.append("</details> \n");
-			}
-		}
-		sb.append("</details> \n"); // END: Unused Indexes
-
-		sb.append("</details> \n"); // END: Index Analysis
-		sb.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
-		return sb.toString();
+		return ia.toHtml();
 	}
 
 	private static String esc(Object o)
@@ -1526,13 +1450,18 @@ extends ReportEntryAbstract
 		return o == null ? "" : StringEscapeUtils.escapeHtml4(o.toString());
 	}
 
+	/** "ix_name ([c1], [c2]) INCLUDE ([c3])" */
+	private static String redundantIndexDefinition(SqlServerIndexInfo ii)
+	{
+		return ii._indexName + " (" + ii._keysStr + ")" + (StringUtil.hasValue(ii._includeColsStr) ? " INCLUDE (" + ii._includeColsStr + ")" : "");
+	}
+
 	/**
-	 * HTML: the index definition in &lt;code&gt;, then size and usage as plain text.
+	 * The index definition, then size and usage.
 	 * @param usageRecordedForDb true if the database has usage rows: then an index without a row has not been touched since the start (0), else it is unknown
 	 */
-	private static String redundantIndexLine(SqlServerIndexInfo ii, boolean usageRecordedForDb)
+	private static IndexAnalysisHtml.IndexLine redundantIndexLine(String label, SqlServerIndexInfo ii, boolean usageRecordedForDb)
 	{
-		String def = ii._indexName + " (" + ii._keysStr + ")" + (StringUtil.hasValue(ii._includeColsStr) ? " INCLUDE (" + ii._includeColsStr + ")" : "");
 		String usage;
 		if (ii._usageRowFound)
 			usage = "reads " + ii._abs_READS + ", writes " + ii._abs_WRITES;
@@ -1540,7 +1469,7 @@ extends ReportEntryAbstract
 			usage = "reads 0, writes 0 (not touched at all since SQL Server was started)";
 		else
 			usage = "reads unknown, writes unknown";
-		return "<code>" + esc(def) + "</code>, " + ii.getIndexSizeMb() + " MB, " + usage;
+		return new IndexAnalysisHtml.IndexLine(label, redundantIndexDefinition(ii), ", " + ii.getIndexSizeMb() + " MB, " + usage);
 	}
 
 	private static boolean hasValidColumnNames(List<String> cols)
