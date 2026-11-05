@@ -228,6 +228,18 @@ extends CountersModel
 	}
 
 	/**
+	 * row_count in percent of estimate_row_count.
+	 * <p>
+	 * The estimate can be far too low, which gives values like 1080269500.0, and the _diff and _rate tables stores a percent column as NUMERIC(10,1).
+	 * One value that doesn't fit fails the whole insert for the sample, so stop at the largest value that fits.
+	 */
+	public static BigDecimal getCompletedPct(long rowCount, long estimateRowCount)
+	{
+		double pct = (rowCount*1.0) / (estimateRowCount*1.0) * 100.0;
+		return new BigDecimal( Math.min(pct, 999_999_999.9) ).setScale(1, RoundingMode.HALF_EVEN);
+	}
+
+	/**
 	 * Fill in database, schema, object and index NAMES
 	 */
 	@Override
@@ -252,7 +264,7 @@ extends CountersModel
 
 					if (estimate_row_count > 0 && row_count > 0)
 					{
-						BigDecimal val = new BigDecimal( (row_count*1.0) / (estimate_row_count*1.0) * 100.0 ).setScale(1, RoundingMode.HALF_EVEN);
+						BigDecimal val = getCompletedPct(row_count, estimate_row_count);
 						newSample.setValueAt(val, rowId, completed_pct_pos);
 					}
 				} // end: loop rows
