@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -45,6 +46,7 @@ import com.dbxtune.gui.ModelMissmatchException;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportEntry;
+import com.dbxtune.pcs.report.content.IndexRedundancy;
 import com.dbxtune.pcs.report.content.ReportEntryAbstract;
 import com.dbxtune.sql.SqlObjectName;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -988,9 +990,12 @@ extends ReportEntryAbstract
 
 				// Get missing index information
 				missingIndexInfo = getMissingIndexInfoAsHtmlTable(entry, classname);
+
+				// Indexes that can be dropped or merged
+				missingIndexInfo += getRedundantIndexInfoAsHtml(entry);
 			}
-			
-			
+
+
 			sb.append("<tr> \n");
 			sb.append("  <td>").append( tableInfo ).append("</td> \n");
 
@@ -1209,7 +1214,292 @@ extends ReportEntryAbstract
 
 		return sb.toString();
 	}
-	
+
+	/**
+	 * Indexes on this table that can be dropped or merged, with DDL and ROLLBACK scripts.<br>
+	 * An index we can't script safely is listed as "not checked" with the reason, it's never guessed on.
+	 *
+	 * @return HTML, or "" if there is nothing to tell. No JavaScript: this also goes into the Daily Summary Report mail.
+	 */
+	public String getRedundantIndexInfoAsHtml(SqlServerTableInfo ti)
+	{
+		if (ti == null || ti.isView() || ti._indexList == null)
+			return "";
+
+		// Pick out the indexes we can trust, and the clustering key
+		Map<IndexRedundancy.Idx, SqlServerIndexInfo> infoMap = new LinkedHashMap<>();
+		Map<String, String> notChecked = new LinkedHashMap<>();
+		List<String> clusterKeys = new ArrayList<>();
+		boolean clusterKeysKnown = true;
+
+		for (SqlServerIndexInfo ii : ti._indexList)
+		{
+			if (ii._indexID == 0) // HEAP
+				continue;
+
+			String  desc      = ii._desc == null ? "" : ii._desc;
+			boolean clustered = desc.startsWith("clustered");
+			boolean validKeys = hasValidColumnNames(ii._keys);
+
+			if (clustered && ! desc.contains("columnstore"))
+			{
+				if (validKeys)
+					clusterKeys.addAll(ii._keys);
+				else
+					clusterKeysKnown = false;
+			}
+
+			String reason = null;
+			if      ( ! desc.contains(" located on ") )                    reason = "no index description was stored";
+			else if (desc.contains("columnstore"))                         reason = "columnstore index";
+			else if (ii._ddlTxt == null || ! ii._ddlTxt.matches("(?s)CREATE\\s+(UNIQUE\\s+)?(NON)?CLUSTERED INDEX .*")) reason = "no stored DDL, or not a plain clustered/nonclustered index";
+			else if (StringUtil.hasValue(ii._filterExpression))            reason = "filtered index";
+			else if (ii._isDisabled)                                       reason = "disabled index";
+			else if (ii._partitionCount > 1)                               reason = "partitioned, the stored DDL can't recreate it";
+			else if (desc.contains("ignore duplicate keys"))               reason = "IGNORE_DUP_KEY changes how it works";
+			else if (ii._ddlTxt.contains("DATA_COMPRESSION = MIXED") || ii._ddlTxt.contains("DATA_COMPRESSION = ?")) reason = "the stored DDL has no usable DATA_COMPRESSION";
+			else if ( ! validKeys || ! hasValidColumnNames(ii._includeCols, true) || ii._indexName.contains("]") ) reason = "the names can't be read safely";
+
+			if (reason != null)
+			{
+				notChecked.put(ii._indexName, reason);
+				continue;
+			}
+
+			IndexRedundancy.Idx idx = new IndexRedundancy.Idx(ii._indexName, ii._keys, ii._includeCols);
+			idx.primaryKey       = desc.contains(", primary key");
+			idx.uniqueConstraint = desc.contains(", unique key");
+			idx.unique           = desc.contains(", unique");
+			idx.clustered        = clustered;
+			idx.reads            = ii._abs_READS;
+			idx.id               = ii._indexID;
+			infoMap.put(idx, ii);
+		}
+
+		// Without the clustering key the rules would be wrong, and a ']' in a name would break the scripts
+		if ( ! clusterKeysKnown || ti._tableName.contains("]") || ti._schemaName.contains("]") || ti._dbName.contains("]") )
+		{
+			infoMap.clear();
+			notChecked.clear();
+			notChecked.put(ti._tableName, "the clustered index or the table names can't be read safely");
+		}
+
+		List<IndexRedundancy.Finding> findings = IndexRedundancy.analyze(new ArrayList<>(infoMap.keySet()), clusterKeys);
+
+		// The scripts first: a finding without a script is not shown
+		Map<IndexRedundancy.Finding, String> scripts = new LinkedHashMap<>();
+		for (IndexRedundancy.Finding f : findings)
+		{
+			String script = createRedundantIndexScript(ti, f, infoMap);
+			if (script != null)
+				scripts.put(f, script);
+			else
+				notChecked.put(f.kept.name, "could not build a safe script for the merge");
+		}
+
+		if (scripts.isEmpty() && notChecked.isEmpty())
+			return "";
+
+		// Build the HTML
+		StringBuilder sb = new StringBuilder();
+		sb.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+		sb.append("<br> \n");
+		sb.append("<details class='dbx-redundant-index' style='max-width: 1200px;'> \n"); // The index table above is very wide: keep this readable
+		sb.append("<summary>Show/Hide: " + scripts.size() + " Redundant Index candidates" + (notChecked.isEmpty() ? "" : ", " + notChecked.size() + " not checked") + "</summary> \n");
+
+		if ( ! scripts.isEmpty() )
+		{
+			sb.append("<p>From the index definitions captured " + esc(ti.getSampleTime()) + ". These are candidates: nothing has been changed.</p> \n");
+			sb.append("<ul> \n");
+			sb.append("<li>Usage numbers only cover the time since the last restart, so check that the index isn't needed for something that runs rarely.</li> \n");
+			sb.append("<li>A statement that names a dropped index in a hint will fail. That is not detected here.</li> \n");
+			sb.append("<li>Dropping an index also drops its statistics, so other plans can change.</li> \n");
+			sb.append("<li>A FOREIGN KEY can depend on a unique index: then the DROP fails and nothing is changed.</li> \n");
+			sb.append("<li>The scripts use ONLINE = OFF: creating an index can block users on a large table.</li> \n");
+			sb.append("</ul> \n");
+
+			int nr = 0;
+			for (Map.Entry<IndexRedundancy.Finding, String> entry : scripts.entrySet())
+			{
+				IndexRedundancy.Finding f = entry.getKey();
+				String script = entry.getValue();
+
+				List<String> droppedNames = new ArrayList<>();
+				for (IndexRedundancy.Idx d : f.dropped)
+					droppedNames.add(d.name);
+
+				sb.append("<p><b>" + (++nr) + ". " + (f.isMerge() ? "MERGE" : "DROP") + " " + esc(String.join(", ", droppedNames)) + (f.isMerge() ? " into " : ", keep ") + esc(f.kept.name) + "</b></p> \n");
+
+				sb.append("<ul> \n");
+				sb.append("<li>Keep: " + esc(redundantIndexLine(infoMap.get(f.kept))) + "</li> \n");
+				for (IndexRedundancy.Idx d : f.dropped)
+					sb.append("<li>Drop: " + esc(redundantIndexLine(infoMap.get(d))) + "</li> \n");
+				sb.append("</ul> \n");
+
+				sb.append("<p>Why: ");
+				for (String why : f.why)
+					sb.append(esc(why)).append(" ");
+				if (f.isMerge())
+					sb.append(esc("Adding " + IndexRedundancy.str(f.addIncludes) + " to " + f.kept.name + " lets it answer their queries too, but it makes that index wider."));
+				sb.append("</p> \n");
+
+				sb.append("<details class='dbx-redundant-index-script'><summary>Show/Hide: DDL Changes and Rollback</summary> \n");
+				sb.append("<pre style='white-space: pre-wrap;'>").append(esc(script)).append("</pre> \n");
+				sb.append("</details> \n");
+			}
+		}
+
+		if ( ! notChecked.isEmpty() )
+		{
+			sb.append("<p>Not checked:</p> \n<ul> \n");
+			for (Map.Entry<String, String> e : notChecked.entrySet())
+				sb.append("<li>" + esc(e.getKey()) + ": " + esc(e.getValue()) + "</li> \n");
+			sb.append("</ul> \n");
+		}
+
+		sb.append("</details> \n");
+		sb.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
+		return sb.toString();
+	}
+
+	private static String esc(Object o)
+	{
+		return o == null ? "" : StringEscapeUtils.escapeHtml4(o.toString());
+	}
+
+	private static String redundantIndexLine(SqlServerIndexInfo ii)
+	{
+		return ii._indexName + " (" + ii._keysStr + ")" + (StringUtil.hasValue(ii._includeColsStr) ? " INCLUDE (" + ii._includeColsStr + ")" : "")
+				+ ", " + ii.getIndexSizeMb() + " MB, reads " + (ii._abs_READS < 0 ? "unknown" : ii._abs_READS) + ", writes " + (ii._abs_WRITES < 0 ? "unknown" : ii._abs_WRITES);
+	}
+
+	private static boolean hasValidColumnNames(List<String> cols)
+	{
+		return cols != null && ! cols.isEmpty() && hasValidColumnNames(cols, false);
+	}
+
+	/** A key column like [c1] or [c1] DESC, anything else (a name with a comma, or changed by the FOR XML in the Collector's query) we can't compare safely. */
+	private static boolean hasValidColumnNames(List<String> cols, boolean includeCols)
+	{
+		if (cols == null)
+			return true;
+		for (String c : cols)
+		{
+			if ( ! c.matches(includeCols ? "\\[[^\\[\\]]+\\]" : "\\[[^\\[\\]]+\\]( DESC)?") || c.matches(".*&(amp|lt|gt|#\\d+);.*") )
+				return false;
+		}
+		return true;
+	}
+
+	/**
+	 * The script for one finding: DDL CHANGES and ROLLBACK.<br>
+	 * Each runs in one transaction with XACT_ABORT ON: if the index we keep can't be changed, the other index will not be dropped.
+	 * The order means that the table always has an index for these queries.
+	 *
+	 * @return null if the kept index DDL can't be changed in a safe way
+	 */
+	private static String createRedundantIndexScript(SqlServerTableInfo ti, IndexRedundancy.Finding f, Map<IndexRedundancy.Idx, SqlServerIndexInfo> infoMap)
+	{
+		String tabName = "[" + ti._dbName + "].[" + ti._schemaName + "].[" + ti._tableName + "]";
+
+		SqlServerIndexInfo kept = infoMap.get(f.kept);
+
+		String keptNewDdl     = null;
+		String keptRestoreDdl = null;
+		if (f.isMerge())
+		{
+			String keptDdl = restorableDdl(kept);
+			String adds    = String.join(", ", f.addIncludes);
+
+			String oldInclude = " INCLUDE (" + kept._includeColsStr + " ) ";
+			if (StringUtil.hasValue(kept._includeColsStr))
+			{
+				if ( ! keptDdl.contains(oldInclude) )
+					return null;
+				keptNewDdl = keptDdl.replace(oldInclude, " INCLUDE (" + kept._includeColsStr + ", " + adds + " ) ");
+			}
+			else
+			{
+				if (keptDdl.lastIndexOf(" WITH (") < 0)
+					return null;
+				keptNewDdl = keptDdl.substring(0, keptDdl.lastIndexOf(" WITH (")) + " INCLUDE (" + adds + " ) " + keptDdl.substring(keptDdl.lastIndexOf(" WITH ("));
+			}
+			keptNewDdl     = withDropExisting(keptNewDdl) + filegroupClause(kept);
+			keptRestoreDdl = withDropExisting(keptDdl)    + filegroupClause(kept);
+		}
+
+		boolean oldDdl = false;
+
+		StringBuilder sb = new StringBuilder();
+
+		// ---- DDL CHANGES
+		sb.append("-- DDL CHANGES: ").append(tabName).append("\n");
+		sb.append("-- Captured ").append(ti.getSampleTime()).append(": check that the indexes still look like this before running.\n");
+		sb.append("SET XACT_ABORT ON;\n");
+		sb.append("BEGIN TRANSACTION;\n");
+		appendIndexCheck(sb, ti, tabName, f.kept.name, true);
+		for (IndexRedundancy.Idx d : f.dropped)
+			appendIndexCheck(sb, ti, tabName, d.name, true);
+		if (f.isMerge())
+			sb.append(keptNewDdl).append(";\n");
+		for (IndexRedundancy.Idx d : f.dropped)
+			sb.append("DROP INDEX [").append(d.name).append("] ON ").append(tabName).append(";\n");
+		sb.append("COMMIT TRANSACTION;\n");
+
+		// ---- ROLLBACK
+		sb.append("\n");
+		sb.append("-- ROLLBACK: puts back what the DDL CHANGES did\n");
+		sb.append("SET XACT_ABORT ON;\n");
+		sb.append("BEGIN TRANSACTION;\n");
+		appendIndexCheck(sb, ti, tabName, f.kept.name, true);
+		for (IndexRedundancy.Idx d : f.dropped)
+			appendIndexCheck(sb, ti, tabName, d.name, false);
+		for (IndexRedundancy.Idx d : f.dropped)
+		{
+			SqlServerIndexInfo di = infoMap.get(d);
+			sb.append(restorableDdl(di)).append(filegroupClause(di)).append(";\n");
+			oldDdl |= ! di._ddlTxt.contains("STATISTICS_NORECOMPUTE");
+		}
+		if (f.isMerge())
+		{
+			sb.append(keptRestoreDdl).append(";\n");
+			oldDdl |= ! kept._ddlTxt.contains("STATISTICS_NORECOMPUTE");
+		}
+		sb.append("COMMIT TRANSACTION;\n");
+
+		if (oldDdl)
+			sb.append("-- NOTE: This DDL is from an older Collector: STATISTICS_NORECOMPUTE and OPTIMIZE_FOR_SEQUENTIAL_KEY are not restored.\n");
+
+		return sb.toString();
+	}
+
+	/** The stored DDL writes FILLFACTOR = 100 for an index that has none (0). Same behaviour, but then the rollback does not give back the same index. */
+	private static String restorableDdl(SqlServerIndexInfo ii)
+	{
+		return ii._fillFactor == 0 ? ii._ddlTxt.replace("FILLFACTOR = 100, ", "") : ii._ddlTxt;
+	}
+
+	private static String withDropExisting(String ddl)
+	{
+		int pos = ddl.lastIndexOf(" WITH (");
+		return ddl.substring(0, pos) + " WITH (DROP_EXISTING = ON, " + ddl.substring(pos + " WITH (".length());
+	}
+
+	/** The stored DDL has no filegroup, but the description has: "nonclustered, unique located on PRIMARY" */
+	private static String filegroupClause(SqlServerIndexInfo ii)
+	{
+		String desc = ii._desc;
+		return " ON [" + desc.substring(desc.lastIndexOf(" located on ") + " located on ".length()).trim() + "]";
+	}
+
+	private static void appendIndexCheck(StringBuilder sb, SqlServerTableInfo ti, String tabName, String indexName, boolean shouldExist)
+	{
+		String safeIndexName = indexName.replace("'", "''");
+		sb.append("IF ").append(shouldExist ? "NOT EXISTS" : "EXISTS")
+		  .append(" (SELECT 1 FROM [").append(ti._dbName).append("].sys.indexes WHERE object_id = OBJECT_ID(N'").append(tabName.replace("'", "''")).append("') AND name = N'").append(safeIndexName).append("')")
+		  .append(" THROW 50000, N'Index ").append(safeIndexName).append(shouldExist ? " does not exist" : " already exists").append(": nothing was changed.', 1;\n");
+	}
+
 	/**
 	 * FIXME
 	 */
