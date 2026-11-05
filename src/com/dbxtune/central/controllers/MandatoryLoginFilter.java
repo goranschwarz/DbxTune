@@ -133,10 +133,13 @@ public class MandatoryLoginFilter implements Filter
 		HttpServletRequest  req  = (HttpServletRequest)  request;
 		HttpServletResponse resp = (HttpServletResponse) response;
 
-		String path = req.getRequestURI();
 		String contextPath = req.getContextPath();
-		if (path.startsWith(contextPath))
-			path = path.substring(contextPath.length());
+
+		// Do NOT use getRequestURI() here, it's the raw path: '/css/../log' would match the whitelisted '/css/', and Jetty then executes '/log'
+		// getServletPath() + getPathInfo() is the normalized path (without context path), which is what actually will be executed
+		String path = req.getServletPath();
+		if (req.getPathInfo() != null)
+			path += req.getPathInfo();
 
 		if (isWhitelisted(path))
 		{
