@@ -1246,8 +1246,8 @@ extends ReportEntryAbstract
 	 * @return HTML, or "" if there is nothing to tell. No JavaScript: this also goes into the Daily Summary Report mail.
 	 */
 	/** Index Analysis, Unused Indexes: SQL Server must have been running at least this many days, else the usage numbers say too little */
-	public static final String PROPKEY_indexAnalysis_unused_minDays = "DailySummaryReport.IndexAnalysis.unused.minDays";
-	public static final int    DEFAULT_indexAnalysis_unused_minDays = 7;
+	public static final String PROPKEY_indexAnalysis_unused_minDays = IndexAnalysisHtml.PROPKEY_unused_minDays;
+	public static final int    DEFAULT_indexAnalysis_unused_minDays = IndexAnalysisHtml.DEFAULT_unused_minDays;
 
 	/** When SQL Server was started, and how many days ago, from CmSummary. Read in getDbmsTableInfoAsHtmlTable(), null/-1 if not known. */
 	private Timestamp _srvStartDate;

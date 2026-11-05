@@ -113,6 +113,17 @@ public class IndexRedundancyTest
 		assertTrue(allWhy(f.get(0)), allWhy(f.get(0)).contains("clustered index"));
 	}
 
+	@Test public void r1_placementClustered_noEveryColumnText()
+	{
+		// ASE datarows/datapages: the clustered index doesn't hold the rows
+		Idx cl = clustered(ix("cl", "c1"));
+		cl.clusteredHoldsRows = false;
+		List<Finding> f = run(cl, ix("a", "c1"));
+		assertOne(f, "cl", "a", "");
+		assertTrue(allWhy(f.get(0)), allWhy(f.get(0)).contains("placement index"));
+		assertFalse(allWhy(f.get(0)), allWhy(f.get(0)).contains("every column"));
+	}
+
 	// ---------------- R2: covered prefix
 	@Test public void r2_prefix()
 	{

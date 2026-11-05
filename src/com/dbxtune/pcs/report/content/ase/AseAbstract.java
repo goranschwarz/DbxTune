@@ -39,6 +39,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -57,6 +58,8 @@ import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportEntry;
+import com.dbxtune.pcs.report.content.IndexAnalysisHtml;
+import com.dbxtune.pcs.report.content.IndexRedundancy;
 import com.dbxtune.pcs.report.content.ReportEntryAbstract;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.sql.SqlObjectName;
@@ -210,6 +213,22 @@ extends ReportEntryAbstract
 		if (tableInfoSet.isEmpty())
 			return "";
 
+		// The newest CmObjectActivity sample: the usage counters are from it (used by getRedundantIndexInfoAsHtml)
+		_activityNewestSample = null;
+		if (DbUtils.checkIfTableExistsNoThrow(conn, null, null, "CmObjectActivity_abs"))
+		{
+			String sql = conn.quotifySqlString("select max([SessionSampleTime]) from [CmObjectActivity_abs]");
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				if (rs.next())
+					_activityNewestSample = rs.getTimestamp(1);
+			}
+			catch (SQLException ex)
+			{
+				_logger.info("Could not read the newest sample time from CmObjectActivity_abs, continuing without it. Caught: " + ex);
+			}
+		}
+
 		// And make it into a HTML table with various information about the table and indexes 
 		return getTableInfoAsHtmlTable(currentDbname, tableInfoSet, tableList, includeIndexInfo, classname);
 	}
@@ -296,18 +315,18 @@ extends ReportEntryAbstract
 			if (entry.isView())
 			{
 				tableInfoMap.put("Type"       ,                 "<b>VIEW</b>"              );
-				tableInfoMap.put("DBName"     , markIfDifferent(entry.getDbName(), currentDbname));
-				tableInfoMap.put("Schema"     ,                 entry.getSchemaName()      );
-				tableInfoMap.put("View"       ,                 entry.getTableName()       );
+				tableInfoMap.put("DBName"     , markIfDifferent(IndexAnalysisHtml.esc(entry.getDbName()), IndexAnalysisHtml.esc(currentDbname)));
+				tableInfoMap.put("Schema"     , IndexAnalysisHtml.esc(entry.getSchemaName()) );
+				tableInfoMap.put("View"       , IndexAnalysisHtml.esc(entry.getTableName())  );
 				tableInfoMap.put("Created"    ,                 entry.getCrDate() + ""       );
 //				tableInfoMap.put("References" ,                 entry.getViewReferences()+""); // instead show this in the: Index Info section
 				tableInfoMap.put("DDL"        ,                 getFormattedSqlAsTooltipDiv(entry._objectText, "View DDL", DbUtils.DB_PROD_NAME_SYBASE_ASE));
 			}
 			else // Any table
 			{
-				tableInfoMap.put("DBName"     , markIfDifferent(entry.getDbName(), currentDbname));
-				tableInfoMap.put("Schema"     ,                 entry.getSchemaName() );
-				tableInfoMap.put("Table"      ,                 entry.getTableName()  );
+				tableInfoMap.put("DBName"     , markIfDifferent(IndexAnalysisHtml.esc(entry.getDbName()), IndexAnalysisHtml.esc(currentDbname)));
+				tableInfoMap.put("Schema"     , IndexAnalysisHtml.esc(entry.getSchemaName()) );
+				tableInfoMap.put("Table"      , IndexAnalysisHtml.esc(entry.getTableName())  );
 				tableInfoMap.put("Rowcount"   , nf.format(      entry.getRowTotal()  ));
 				tableInfoMap.put("Total MB"   , nf.format(      entry.getSizeMb()    ));
 				tableInfoMap.put("Data MB"    , nf.format(      entry.getDataMb()    ));
@@ -354,6 +373,9 @@ extends ReportEntryAbstract
 			{
 				// Get index information in a separate table
 				indexInfo = getIndexInfoAsHtmlTable(entry, classname);
+
+				// Indexes that can be dropped
+				indexInfo += getRedundantIndexInfoAsHtml(entry);
 			}
 			
 			
@@ -661,16 +683,358 @@ extends ReportEntryAbstract
 	 *
 	 * @return the DDL, or {@code null} if {@code objectText} didn't have the expected shape (caller falls back to the raw text)
 	 */
-	static String formatObjectTextAsDdl(String fullTableName, String objectText, List<AseIndexInfo> indexList)
-	{
-		if (StringUtil.isNullOrBlank(objectText))
-			return null;
+	/** The newest CmObjectActivity_abs sample time: the usage counters are from it. Read in getDbmsTableInfoAsHtmlTable(), null if not known. */
+	private Timestamp _activityNewestSample;
 
-		//----------------------------------------------------------
-		// Split the text into: result sets + messages
-		//----------------------------------------------------------
-		List<SpHelpTable> tables   = new ArrayList<>();
-		List<String>      messages = new ArrayList<>();
+	/** A plain ASE name: no quoting is needed in the scripts */
+	private static final String ASE_PLAIN_NAME = "[A-Za-z_#@$][A-Za-z0-9_#@$]*";
+
+	/**
+	 * Index Analysis for ASE: indexes that can be dropped (De-duplication) and Unused Indexes, with DDL and ROLLBACK scripts.
+	 * <p>
+	 * ASE differs from SQL Server:
+	 * <ul>
+	 *   <li>No INCLUDE columns: De-duplication only drops.</li>
+	 *   <li>A nonclustered index has a RID at the leaf, never the clustered index key: there is no "hidden clustering key", for any lock scheme.</li>
+	 *   <li>allpages: the clustered index holds the data rows. datarows/datapages: it's a placement index, like a nonclustered one.</li>
+	 *   <li>We don't store if an index belongs to a constraint, so a unique index is never dropped.</li>
+	 *   <li>The usage counters (monOpenObjectActivity) are lost when the object leaves the metadata cache: no counters means unknown, not unused.</li>
+	 * </ul>
+	 * @return HTML, or "" if there is nothing to tell
+	 */
+	public String getRedundantIndexInfoAsHtml(AseTableInfo ti)
+	{
+		if (ti == null || ti.isView() || ti._indexList == null || StringUtil.isNullOrBlank(ti._objectText))
+			return "";
+
+		// The sp_help-like text: one row per index, the index partitions (segment, compression), and the function-based index keys
+		List<String>      messages    = new ArrayList<>();
+		List<SpHelpTable> spHelp      = parseSpHelpText(ti._objectText, messages);
+		SpHelpTable       indexTbl    = getSpHelpTable(spHelp, "index_name");
+		SpHelpTable       indexPtnTbl = getSpHelpTable(spHelp, "index_ptn_name");
+		if (indexTbl == null)
+			return "";
+
+		Set<String> functionalKeyNames = new HashSet<>();
+		for (SpHelpTable tbl : spHelp)
+			if (tbl._cols.contains("Internal_Index_Key_Name"))
+				for (Map<String, String> row : tbl._rows)
+					functionalKeyNames.add(row.get("Internal_Index_Key_Name"));
+
+		Map<String, Map<String, String>> rowByName = new HashMap<>();
+		for (Map<String, String> row : indexTbl._rows)
+			rowByName.put(row.get("index_name"), row);
+
+		boolean holdsRows = ti._lockSchema == null || ti._lockSchema.toLowerCase().contains("allpages");
+		String  tabName   = ti._schemaName + "." + ti._tableName;
+		boolean namesOk   = ti._dbName.matches(ASE_PLAIN_NAME) && ti._schemaName.matches(ASE_PLAIN_NAME) && ti._tableName.matches(ASE_PLAIN_NAME);
+
+		// Pick out the indexes we can trust
+		Map<IndexRedundancy.Idx, AseIndexInfo> infoMap  = new LinkedHashMap<>();
+		Map<String, String>                    ddlMap   = new HashMap<>();
+		Map<String, String>                    notChecked = new LinkedHashMap<>();
+
+		for (AseIndexInfo ii : ti._indexList)
+		{
+			Map<String, String> row = rowByName.get(ii._indexName);
+			if (row == null || ii._keys == null)
+				continue; // the LOB "index", the DATA row, or something not in the stored text
+
+			String  desc      = StringUtil.nullToValue(row.get("index_description"), "");
+			boolean clustered = desc.startsWith("clustered");
+			boolean unique    = desc.contains("unique");
+
+			List<String> keys = new ArrayList<>();
+			boolean keysOk = true;
+			for (String k : ii._keys)
+			{
+				String key = k.trim();
+				keys.add(key);
+				String name = key.endsWith(" DESC") ? key.substring(0, key.length() - 5).trim() : key;
+				keysOk &= name.matches(ASE_PLAIN_NAME) && ! functionalKeyNames.contains(name);
+			}
+
+			String ddl = spHelpIndexDdl(row, tabName, Collections.emptyMap(), indexPtnTbl);
+
+			// A clustered or unique index is never dropped, but it can still be the index that is kept
+			String reason = null;
+			if      ( ! namesOk || ! ii._indexName.matches(ASE_PLAIN_NAME) )        reason = "the names can't be used in a script without quoting";
+			else if ( ! keysOk )                                                   reason = "function-based index, or key names that can't be read safely";
+			else if ( ! "Global Index".equals(row.get("index_local")) )            reason = "local or partial index";
+			else if ( "1".equals(row.get("disabled")) )                            reason = "disabled index";
+			else if ( ! clustered && (desc.contains("ignore duplicate") || desc.contains("allow duplicate")) ) reason = "IGNORE_DUP_KEY / IGNORE_DUP_ROW / ALLOW_DUP_ROW changes how it works";
+			else if ( ! clustered && (ddl.contains("/*") || ddl.contains("plldegree=")) ) reason = "the stored definition has options the scripts can't write back: " + ddl.replaceAll(".*?(/\\*[^*]*\\*/|plldegree=\\d+).*", "$1");
+
+			if (reason != null)
+			{
+				notChecked.put(ii._indexName, reason);
+				continue;
+			}
+
+			IndexRedundancy.Idx idx = new IndexRedundancy.Idx(ii._indexName, keys, null);
+			idx.unique             = unique;
+			idx.primaryKey         = unique;    // Not stored if it's a constraint: a unique index is never dropped (the "primary key" rule)
+			idx.clustered          = clustered;
+			idx.clusteredHoldsRows = holdsRows;
+			idx.reads              = ii._usageAbsRowFound ? ii._AbsUsedCount : -1;
+			idx.id                 = ii._IndexID;
+			infoMap.put(idx, ii);
+			ddlMap.put(ii._indexName, ddl);
+		}
+
+		// No clustering key: a nonclustered index has a RID at the leaf, never the clustered key
+		List<IndexRedundancy.Finding> findings = IndexRedundancy.analyze(new ArrayList<>(infoMap.keySet()), Collections.emptyList());
+
+		// ---- Unused: UsedCount = 0 and OptSelectCount = 0, and the counters cover enough days
+		int minDays = Configuration.getCombinedConfiguration().getIntProperty(IndexAnalysisHtml.PROPKEY_unused_minDays, IndexAnalysisHtml.DEFAULT_unused_minDays);
+
+		Set<String> inDedup = new HashSet<>();
+		for (IndexRedundancy.Finding f : findings)
+		{
+			inDedup.add(f.kept.name);
+			for (IndexRedundancy.Idx d : f.dropped)
+				inDedup.add(d.name);
+		}
+
+		String             unusedNotChecked = null;
+		List<AseIndexInfo> unused           = new ArrayList<>();
+		Set<String>        unusedDedup      = new HashSet<>();
+		int                noCounters       = 0;
+		int                tooYoung         = 0;
+		if (_activityNewestSample == null)
+		{
+			unusedNotChecked = "no object activity (CmObjectActivity) was recorded.";
+		}
+		else
+		{
+			for (Map.Entry<IndexRedundancy.Idx, AseIndexInfo> e : infoMap.entrySet())
+			{
+				IndexRedundancy.Idx idx = e.getKey();
+				AseIndexInfo        ii  = e.getValue();
+				if (idx.unique || idx.clustered)
+					continue;
+				if ( ! ii._usageAbsRowFound || ii._ObjectCacheDate == null )
+				{
+					noCounters++;
+					continue;
+				}
+				if (counterDays(ii) < minDays)
+				{
+					tooYoung++;
+					continue;
+				}
+				if (ii._AbsUsedCount != 0 || ii._AbsOptSelectCount != 0)
+					continue;
+
+				if (inDedup.contains(ii._indexName))
+					unusedDedup.add(ii._indexName);
+				else
+					unused.add(ii);
+			}
+			// The ones that cost the most writes first, then the biggest
+			unused.sort((a, b) -> a._AbsRowsInsUpdDel != b._AbsRowsInsUpdDel ? Long.compare(b._AbsRowsInsUpdDel, a._AbsRowsInsUpdDel) : Integer.compare(b._sizeKb, a._sizeKb));
+		}
+
+		// ---- The texts and findings, laid out by IndexAnalysisHtml (the same for all vendors)
+		IndexAnalysisHtml ia = new IndexAnalysisHtml();
+		ia.capturedTime = String.valueOf(ti.getSampleTime());
+		ia.notesHtml.add("Usage numbers only cover the time since the index came into ASE's metadata cache (shown per index), so check that the index isn't needed for something that runs rarely (month end, year end).");
+		ia.notesHtml.add("A statement or abstract plan that names a dropped index gets a different plan, or fails. That is not detected here.");
+		ia.notesHtml.add("The scripts have no transaction: <code>create index</code> in a transaction needs the database option 'ddl in tran'. Each index is checked on its own, so a half-done run can still be rolled back.");
+		ia.notesHtml.add("Creating an index locks the table: it can block users on a large table.");
+
+		for (IndexRedundancy.Finding f : findings)
+		{
+			IndexAnalysisHtml.Finding hf = new IndexAnalysisHtml.Finding();
+			hf.action = "DROP";
+			hf.kept   = f.kept.name;
+			for (IndexRedundancy.Idx d : f.dropped)
+				hf.dropped.add(d.name);
+
+			hf.lines.add(aseIndexLine("Keep", infoMap.get(f.kept)));
+			for (IndexRedundancy.Idx d : f.dropped)
+				hf.lines.add(aseIndexLine("Drop", infoMap.get(d)));
+
+			StringBuilder why = new StringBuilder();
+			for (String w : f.why)
+				why.append(w).append(" ");
+			for (String n : hf.dropped)
+				if (unusedDedup.contains(n))
+					why.append(n + " has not been used, or chosen by the optimizer, since it came into the cache. ");
+			if (unusedDedup.contains(f.kept.name))
+				why.append(f.kept.name + " has not been used since it came into the cache either: check if it is needed at all. ");
+			hf.why = why.toString();
+
+			List<String> dropNames = new ArrayList<>(hf.dropped);
+			hf.script = createAseDropScript(ti, f.kept.name, dropNames, ddlMap);
+			ia.dedup.add(hf);
+		}
+		ia.dedupNotChecked = notChecked;
+
+		ia.unusedNotChecked = unusedNotChecked;
+		ia.unusedIntro = "Not used by any plan (UsedCount = 0) and never chosen by the optimizer (OptSelectCount = 0) since the index came into the metadata cache, at least " + minDays + " days ago. "
+				+ "Not listed: unique indexes, the clustered index, and the indexes in Index De-duplication above.";
+		ia.unusedNotes.add("ASE loses these counters when the object leaves the metadata cache: an index without counters in the recording is not listed (" + noCounters + " on this table).");
+		if (tooYoung > 0)
+			ia.unusedNotes.add(tooYoung + " index(es) on this table have counters younger than " + minDays + " days (property " + IndexAnalysisHtml.PROPKEY_unused_minDays + "): not listed.");
+		ia.unusedNotes.add("Check if the index supports a FOREIGN KEY on its columns before you drop it.");
+		for (AseIndexInfo ii : unused)
+		{
+			IndexAnalysisHtml.Finding hf = new IndexAnalysisHtml.Finding();
+			hf.action = "DROP";
+			hf.dropped.add(ii._indexName);
+			hf.lines.add(aseIndexLine("Index", ii));
+			hf.script = createAseDropScript(ti, null, hf.dropped, ddlMap);
+			ia.unused.add(hf);
+		}
+
+		return ia.toHtml();
+	}
+
+	/** Days the usage counters cover: from when the index came into the metadata cache to the newest sample */
+	private long counterDays(AseIndexInfo ii)
+	{
+		if (ii._ObjectCacheDate == null || _activityNewestSample == null)
+			return -1;
+		return (_activityNewestSample.getTime() - ii._ObjectCacheDate.getTime()) / (24L * 3600 * 1000);
+	}
+
+	private IndexAnalysisHtml.IndexLine aseIndexLine(String label, AseIndexInfo ii)
+	{
+		String def = ii._indexName + " (" + ii._keysStr + ")";
+		String usage = ii._usageAbsRowFound
+				? "used " + ii._AbsUsedCount + ", optimizer selected " + ii._AbsOptSelectCount + ", rows ins/upd/del " + ii._AbsRowsInsUpdDel
+						+ (ii._ObjectCacheDate == null ? "" : " (counters since " + new SimpleDateFormat("yyyy-MM-dd HH:mm").format(ii._ObjectCacheDate) + ", " + counterDays(ii) + " days)")
+				: "usage unknown (no counters in the recording)";
+		return new IndexAnalysisHtml.IndexLine(label, def, ", " + ii.getSizeMb() + " MB, " + usage);
+	}
+
+	/**
+	 * DDL CHANGES drops the indexes, ROLLBACK creates them again from the stored definition.<br>
+	 * No transaction (create index in a transaction needs 'ddl in tran'): every index is checked first, and the batch stops with 'return' if one is missing.
+	 *
+	 * @param kept  the index that stays (checked to exist), null for unused indexes
+	 */
+	private static String createAseDropScript(AseTableInfo ti, String kept, List<String> dropped, Map<String, String> ddlMap)
+	{
+		String tabName = ti._schemaName + "." + ti._tableName;
+
+		StringBuilder sb = new StringBuilder();
+		sb.append("-- DDL CHANGES: ").append(ti._dbName).append(".").append(tabName).append("\n");
+		sb.append("-- Captured ").append(ti.getSampleTime()).append(": check that the indexes still look like this before running.\n");
+		sb.append("use ").append(ti._dbName).append("\n");
+		sb.append("go\n");
+		if (kept != null)
+			appendAseIndexCheck(sb, tabName, kept, true);
+		for (String d : dropped)
+			appendAseIndexCheck(sb, tabName, d, true);
+		// 'drop index' takes table.index only: three parts are read as database.table.index. For another owner than dbo: setuser
+		boolean otherOwner = ! "dbo".equals(ti._schemaName);
+		if (otherOwner)
+			sb.append("setuser '").append(ti._schemaName).append("'\n");
+		for (String d : dropped)
+			sb.append("drop index ").append(ti._tableName).append(".").append(d).append("\n");
+		if (otherOwner)
+			sb.append("setuser\n");
+		sb.append("go\n");
+
+		sb.append("\n");
+		sb.append("-- ROLLBACK: puts back what the DDL CHANGES did\n");
+		sb.append("use ").append(ti._dbName).append("\n");
+		sb.append("go\n");
+		if (kept != null)
+			appendAseIndexCheck(sb, tabName, kept, true);
+		for (String d : dropped)
+			appendAseIndexCheck(sb, tabName, d, false);
+		for (String d : dropped)
+			sb.append(ddlMap.get(d)).append("\n");
+		sb.append("go\n");
+		return sb.toString();
+	}
+
+	private static void appendAseIndexCheck(StringBuilder sb, String tabName, String indexName, boolean shouldExist)
+	{
+		sb.append("if ").append(shouldExist ? "not exists" : "exists")
+		  .append(" (select 1 from sysindexes where id = object_id('").append(tabName).append("') and name = '").append(indexName).append("')\n");
+		sb.append("begin\n");
+		sb.append("    print 'Index ").append(indexName).append(shouldExist ? " does not exist" : " already exists").append(": nothing was changed.'\n");
+		sb.append("    return\n");
+		sb.append("end\n");
+	}
+
+	/**
+	 * CREATE INDEX for one row of the sp_help-like index result set: keys, options (WITH), LOCAL INDEX, segment (ON).<br>
+	 * Used by the DDL for the LLM, and by Index Analysis for its ROLLBACK script, so the two can't drift apart.<br>
+	 * Parts we don't know how to write are added as comments: <code>/*...*&#47;</code>
+	 *
+	 * @param tableName     the table name to write, as is
+	 * @param indexKeyExpr  internal key name -&gt; expression, for function-based indexes (can be empty)
+	 * @param indexPtnTbl   the index partitions result set (segment, compression), can be null
+	 */
+	static String spHelpIndexDdl(Map<String, String> row, String tableName, Map<String, String> indexKeyExpr, SpHelpTable indexPtnTbl)
+	{
+		String indexName = row.get("index_name");
+
+		String typeStr = "";
+		List<String> indexWith = new ArrayList<>();
+		for (String part : StringUtil.parseCommaStrToList(row.get("index_description")))
+		{
+			switch (part.trim())
+			{
+				case "unique":               typeStr = "UNIQUE " + typeStr;        break;
+				case "clustered":            typeStr += "CLUSTERED ";              break;
+				case "nonclustered":         typeStr += "NONCLUSTERED ";           break;
+				case "allow duplicate rows": indexWith.add("allow_dup_row");       break;
+				case "ignore duplicate rows":indexWith.add("ignore_dup_row");      break;
+				case "ignore duplicate keys":indexWith.add("ignore_dup_key");      break;
+				default:                     indexWith.add("/*" + part.trim() + "*/"); break;
+			}
+		}
+		if (spHelpHasValue(row.get("index_max_rows_per_page"), "0")) indexWith.add("max_rows_per_page=" + row.get("index_max_rows_per_page"));
+		if (spHelpHasValue(row.get("index_fillfactor")       , "0")) indexWith.add("fillfactor="        + row.get("index_fillfactor"));
+		if (spHelpHasValue(row.get("index_reservepagegap")   , "0")) indexWith.add("reservepagegap="    + row.get("index_reservepagegap"));
+		if (spHelpHasValue(row.get("plldegree")              , "0")) indexWith.add("plldegree="         + row.get("plldegree"));
+
+		String indexKeys = row.get("index_keys");
+		for (Entry<String, String> keyExpr : indexKeyExpr.entrySet())
+			indexKeys = indexKeys.replaceAll("\\b" + java.util.regex.Pattern.quote(keyExpr.getKey()) + "\\b", java.util.regex.Matcher.quoteReplacement(keyExpr.getValue()));
+
+		StringBuilder sb = new StringBuilder();
+		sb.append("CREATE ").append(typeStr).append("INDEX ").append(indexName).append(" ON ").append(tableName).append(" (").append(indexKeys).append(")");
+
+		if ( ! indexWith.isEmpty() )
+			sb.append(" WITH ").append(String.join(", ", indexWith));
+
+		if ("Local Index".equals(row.get("index_local")))
+			sb.append(" LOCAL INDEX");
+
+		// Index partitions are named: indexName_id, a global index has one and a local index one per table partition (so write each value once)
+		if (indexPtnTbl != null)
+		{
+			Set<String> ptnOptions = new LinkedHashSet<>();
+			for (Map<String, String> ptnRow : indexPtnTbl._rows)
+			{
+				if (StringUtil.hasValue(ptnRow.get("index_ptn_name")) && ptnRow.get("index_ptn_name").matches(java.util.regex.Pattern.quote(indexName) + "_\\d+"))
+				{
+					if (spHelpHasValue(ptnRow.get("index_ptn_seg"), "default"))
+						ptnOptions.add(" ON " + ptnRow.get("index_ptn_seg"));
+					if (spHelpHasValue(ptnRow.get("index_ptn_comp"), "inherit from index"))
+						ptnOptions.add(" /*compression=" + ptnRow.get("index_ptn_comp") + "*/");
+				}
+			}
+			sb.append(String.join("", ptnOptions));
+		}
+		return sb.toString();
+	}
+
+	/**
+	 * Split the stored sp_help-like text into its result sets (columns + rows) and its messages (lines that are not part of a result set)
+	 */
+	static List<SpHelpTable> parseSpHelpText(String objectText, List<String> messages)
+	{
+		List<SpHelpTable> tables = new ArrayList<>();
+		if (StringUtil.isNullOrBlank(objectText))
+			return tables;
 
 		String[] lines = objectText.split("\r?\n");
 		for (int l = 0; l < lines.length; l++)
@@ -720,6 +1084,19 @@ extends ReportEntryAbstract
 
 			tables.add(table);
 		}
+		return tables;
+	}
+
+	static String formatObjectTextAsDdl(String fullTableName, String objectText, List<AseIndexInfo> indexList)
+	{
+		if (StringUtil.isNullOrBlank(objectText))
+			return null;
+
+		//----------------------------------------------------------
+		// Split the text into: result sets + messages
+		//----------------------------------------------------------
+		List<String>      messages = new ArrayList<>();
+		List<SpHelpTable> tables   = parseSpHelpText(objectText, messages);
 
 		SpHelpTable colsTbl = getSpHelpTable(tables, "Column_name");
 		if (colsTbl == null || colsTbl._rows.isEmpty())
@@ -914,54 +1291,7 @@ extends ReportEntryAbstract
 			{
 				String indexName = row.get("index_name");
 
-				String typeStr = "";
-				List<String> indexWith = new ArrayList<>();
-				for (String part : StringUtil.parseCommaStrToList(row.get("index_description")))
-				{
-					switch (part.trim())
-					{
-						case "unique":               typeStr = "UNIQUE " + typeStr;        break;
-						case "clustered":            typeStr += "CLUSTERED ";              break;
-						case "nonclustered":         typeStr += "NONCLUSTERED ";           break;
-						case "allow duplicate rows": indexWith.add("allow_dup_row");       break;
-						case "ignore duplicate rows":indexWith.add("ignore_dup_row");      break;
-						case "ignore duplicate keys":indexWith.add("ignore_dup_key");      break;
-						default:                     indexWith.add("/*" + part.trim() + "*/"); break;
-					}
-				}
-				if (spHelpHasValue(row.get("index_max_rows_per_page"), "0")) indexWith.add("max_rows_per_page=" + row.get("index_max_rows_per_page"));
-				if (spHelpHasValue(row.get("index_fillfactor")       , "0")) indexWith.add("fillfactor="        + row.get("index_fillfactor"));
-				if (spHelpHasValue(row.get("index_reservepagegap")   , "0")) indexWith.add("reservepagegap="    + row.get("index_reservepagegap"));
-				if (spHelpHasValue(row.get("plldegree")              , "0")) indexWith.add("plldegree="         + row.get("plldegree"));
-
-				String indexKeys = row.get("index_keys");
-				for (Entry<String, String> keyExpr : indexKeyExpr.entrySet())
-					indexKeys = indexKeys.replaceAll("\\b" + java.util.regex.Pattern.quote(keyExpr.getKey()) + "\\b", java.util.regex.Matcher.quoteReplacement(keyExpr.getValue()));
-
-				sb.append("CREATE ").append(typeStr).append("INDEX ").append(indexName).append(" ON ").append(shortTableName).append(" (").append(indexKeys).append(")");
-
-				if ( ! indexWith.isEmpty() )
-					sb.append(" WITH ").append(String.join(", ", indexWith));
-
-				if ("Local Index".equals(row.get("index_local")))
-					sb.append(" LOCAL INDEX");
-
-				// Index partitions are named: indexName_id, a global index has one and a local index one per table partition (so write each value once)
-				if (indexPtnTbl != null)
-				{
-					Set<String> ptnOptions = new LinkedHashSet<>();
-					for (Map<String, String> ptnRow : indexPtnTbl._rows)
-					{
-						if (StringUtil.hasValue(ptnRow.get("index_ptn_name")) && ptnRow.get("index_ptn_name").matches(java.util.regex.Pattern.quote(indexName) + "_\\d+"))
-						{
-							if (spHelpHasValue(ptnRow.get("index_ptn_seg"), "default"))
-								ptnOptions.add(" ON " + ptnRow.get("index_ptn_seg"));
-							if (spHelpHasValue(ptnRow.get("index_ptn_comp"), "inherit from index"))
-								ptnOptions.add(" /*compression=" + ptnRow.get("index_ptn_comp") + "*/");
-						}
-					}
-					sb.append(String.join("", ptnOptions));
-				}
+				sb.append(spHelpIndexDdl(row, shortTableName, indexKeyExpr, indexPtnTbl));
 
 				if (spHelpHasValue(row.get("disabled"), "0"))
 					sb.append(" /*disabled*/");
@@ -1224,10 +1554,10 @@ extends ReportEntryAbstract
 			long avgBytesPerRow = tableEntry.getRowTotal() == 0 ? -1 : (entry.getSizeKb() * 1024L) / tableEntry.getRowTotal();
 
 			sb.append("<tr> \n");
-			sb.append("  <td>").append(            entry.getIndexName()          ).append("</td> \n");
-			sb.append("  <td>").append(            entry.getKeysStr()            ).append("</td> \n");
+			sb.append("  <td>").append( IndexAnalysisHtml.esc( entry.getIndexName()   )).append("</td> \n");
+			sb.append("  <td>").append( IndexAnalysisHtml.esc( entry.getKeysStr()     )).append("</td> \n");
 			sb.append("  <td>").append(            entry.getIndexID()            ).append("</td> \n");
-			sb.append("  <td>").append(            entry.getDescription()        ).append("</td> \n");
+			sb.append("  <td>").append( IndexAnalysisHtml.esc( entry.getDescription() )).append("</td> \n");
 			sb.append("  <td>").append( nf.format( entry.getSizeMb()            )).append("</td> \n");
 			sb.append("  <td>").append( nf.format( entry.getSizePages()         )).append("</td> \n");
 			sb.append("  <td>").append( nf.format( avgBytesPerRow               )).append("</td> \n");
@@ -1897,13 +2227,15 @@ extends ReportEntryAbstract
 					long      ExclusiveLockWaitTime    = rs.getLong     (19);
 					long      UpdateLockWaitTime       = rs.getLong     (20);
 
-					long      AbsRowsInsUpdDel         = rs.getLong     (21);
-					long      AbsRowsInserted          = rs.getLong     (22);
-					long      AbsRowsUpdated           = rs.getLong     (23);
-					long      AbsRowsDeleted           = rs.getLong     (24);
-					long      AbsOptSelectCount        = rs.getLong     (25);
-					long      AbsUsedCount             = rs.getLong     (26);
-					long      AbsOperations            = rs.getLong     (27);
+					// No abs row (left outer join) gives NULL: unknown (-1), not 0
+					boolean   hasAbsRow                = rs.getObject   (21) != null;
+					long      AbsRowsInsUpdDel         = hasAbsRow ? rs.getLong(21) : -1;
+					long      AbsRowsInserted          = hasAbsRow ? rs.getLong(22) : -1;
+					long      AbsRowsUpdated           = hasAbsRow ? rs.getLong(23) : -1;
+					long      AbsRowsDeleted           = hasAbsRow ? rs.getLong(24) : -1;
+					long      AbsOptSelectCount        = hasAbsRow ? rs.getLong(25) : -1;
+					long      AbsUsedCount             = hasAbsRow ? rs.getLong(26) : -1;
+					long      AbsOperations            = hasAbsRow ? rs.getLong(27) : -1;
 					long      AbsScans                 = rs.getLong     (28);
 					long      AbsLogicalReads          = rs.getLong     (29);
 					long      AbsPhysicalReads         = rs.getLong     (30);
@@ -1941,6 +2273,7 @@ extends ReportEntryAbstract
 						indexEntry._AbsRowsDeleted           = AbsRowsDeleted;
 						indexEntry._AbsOptSelectCount        = AbsOptSelectCount;
 						indexEntry._AbsUsedCount             = AbsUsedCount;
+						indexEntry._usageAbsRowFound         = hasAbsRow;
 						indexEntry._AbsOperations            = AbsOperations;
 						indexEntry._AbsScans                 = AbsScans;
 						indexEntry._AbsLogicalReads          = AbsLogicalReads         ;
@@ -2521,6 +2854,9 @@ extends ReportEntryAbstract
 		private long         _AbsSharedLockWaitTime    = -1;
 		private long         _AbsExclusiveLockWaitTime = -1;
 		private long         _AbsUpdateLockWaitTime    = -1;
+
+		/** true if the newest CmObjectActivity_abs sample has a row for this index */
+		private boolean      _usageAbsRowFound         = false;
 
 		public String       getIndexName             () { return _indexName; }
 		public int          getSizeKb                () { return _sizeKb; }

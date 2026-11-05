@@ -52,6 +52,8 @@ public class IndexRedundancy
 		public boolean uniqueConstraint;
 		public boolean unique;
 		public boolean clustered;
+		/** For a clustered index: true if it holds the data rows (SQL Server, ASE allpages). false for a placement index (ASE datarows/datapages) */
+		public boolean clusteredHoldsRows = true;
 		public long    reads = -1;
 		public int     id    = Integer.MAX_VALUE;
 
@@ -213,8 +215,10 @@ public class IndexRedundancy
 		else
 			why.add("The key columns of " + a.name + " " + str(a.keys) + " are the first key columns of " + b.name + " " + str(b.keys) + ", so " + b.name + " can do the same seeks.");
 
-		if (b.clustered)
+		if (b.clustered && b.clusteredHoldsRows)
 			why.add(b.name + " is the clustered index, so it has every column. But it is wider than " + a.name + ", so a scan that used " + a.name + " reads more pages.");
+		else if (b.clustered)
+			why.add(b.name + " is the clustered index, but on this table it is a placement index: it does not hold the data rows, it has the same keys as a nonclustered index.");
 
 		// The clustering key at the end of a non-unique nonclustered index
 		if ( ! ck.isEmpty() && ! a.unique && ! a.clustered && a.keys.size() != b.keys.size())

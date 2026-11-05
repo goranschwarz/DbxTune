@@ -39,6 +39,10 @@ import org.apache.commons.text.StringEscapeUtils;
  */
 public class IndexAnalysisHtml
 {
+	/** Unused Indexes: the usage counters must cover at least this many days, else they say too little. The same for all vendors. */
+	public static final String PROPKEY_unused_minDays = "DailySummaryReport.IndexAnalysis.unused.minDays";
+	public static final int    DEFAULT_unused_minDays = 7;
+
 	/** One finding: what to do with which indexes, why, and the script */
 	public static class Finding
 	{
