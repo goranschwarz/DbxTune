@@ -22,6 +22,7 @@
 package com.dbxtune.pcs.inspection;
 
 import java.lang.invoke.MethodHandles;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -596,6 +597,10 @@ extends ObjectLookupInspectorAbstract
 					+ "    ,i.COMPRESSION \n"
 					+ "    ,TO_CHAR(i.LAST_ANALYZED, 'YYYY-MM-DD HH24:MI')  as LAST_ANALYZED \n"
 					+ "    ,i.TABLESPACE_NAME \n"
+					// For Index Analysis: how old the index is (a new index has not been used either), and the COMPRESS n of a rollback
+					+ "    ,TO_CHAR(i.PREFIX_LENGTH)                        as PREFIX_LENGTH \n"
+					+ "    ,CAST(NULL AS VARCHAR2(16))                      as CREATED \n" // filled in below, one index at a time: DBA_OBJECTS in this SQL costs 100+ ms
+
 					+ "/*USAGE*/"
 					+ "from DBA_INDEXES i \n"
 					+ "where i.TABLE_OWNER = " + qOwner + " \n"
@@ -661,9 +666,30 @@ extends ObjectLookupInspectorAbstract
 					+ "group by s.OWNER, s.SEGMENT_NAME, s.SEGMENT_TYPE \n"
 					+ "order by s.SEGMENT_TYPE desc, s.SEGMENT_NAME", conId);
 
-				// Each of the four on its own: if one fails, the others are still stored
+				// For Index Analysis. Both with bind variables: the same cursor for every table (with literals the parse of the DBA_ views is 100-500 ms per table)
+				// The FOREIGN KEYs of the table: the index that serves one is needed even when no query uses it
+				String sqlForeignKeys = forContainer(""
+					+ "select \n"
+					+ "     c.CONSTRAINT_NAME as FK_NAME \n"
+					+ "    ,(select listagg(cc.COLUMN_NAME, ', ') within group (order by cc.POSITION) \n"
+					+ "      from DBA_CONS_COLUMNS cc where cc.OWNER = c.OWNER and cc.CONSTRAINT_NAME = c.CONSTRAINT_NAME and cc.TABLE_NAME = c.TABLE_NAME /*CON:cc*/) as FK_COLUMNS \n"
+					+ "from DBA_CONSTRAINTS c \n"
+					+ "where c.OWNER           = ? \n"
+					+ "  and c.TABLE_NAME      = ? \n"
+					+ "  and c.CONSTRAINT_TYPE = 'R' /*CON:c*/ \n"
+					+ "order by c.CONSTRAINT_NAME", conId);
+
+				// When each index was made: a new index has not been used either
+				String sqlIndexCreated = forContainer(""
+					+ "select TO_CHAR(o.CREATED, 'YYYY-MM-DD HH24:MI') \n"
+					+ "from DBA_OBJECTS o \n"
+					+ "where o.OWNER       = ? \n"
+					+ "  and o.OBJECT_NAME = ? \n"
+					+ "  and o.OBJECT_TYPE = 'INDEX' /*CON:o*/", conId);
+
+				// Each part on its own: if one fails, the others are still stored
 				String extraInfo = "";
-				for (String[] part : new String[][] { {"table", sqlTable}, {"indexes", sqlIndexes}, {"segments", sqlSegments}, {"triggers", sqlTriggers} })
+				for (String[] part : new String[][] { {"table", sqlTable}, {"indexes", sqlIndexes}, {"segments", sqlSegments}, {"triggers", sqlTriggers}, {"foreign keys", sqlForeignKeys} })
 				{
 					try
 					{
@@ -752,6 +778,40 @@ extends ObjectLookupInspectorAbstract
 									keys[k] = expression + (keys[k].endsWith(" DESC") ? " DESC" : "");
 								}
 								rstm.setValueAtWithOverride(String.join(", ", keys), r, pos_INDEX_KEYS);
+							}
+
+							// When each index was made (if that can't be read: it stays NULL, Index Analysis then treats the age as unknown)
+							int pos_CREATED = rstm.findColumn("CREATED");
+							try (PreparedStatement pstmt = conn.prepareStatement(sqlIndexCreated))
+							{
+								pstmt.setQueryTimeout(QUERY_TIMEOUT_SEC);
+								for (int r = 0; r < rstm.getRowCount() && pos_CREATED >= 0; r++)
+								{
+									pstmt.setString(1, rstm.getValueAsString(r, "INDEX_OWNER"));
+									pstmt.setString(2, rstm.getValueAsString(r, "INDEX_NAME"));
+									try (ResultSet rs = pstmt.executeQuery())
+									{
+										while (rs.next())
+											rstm.setValueAtWithOverride(rs.getString(1), r, pos_CREATED);
+									}
+								}
+							}
+							catch (SQLException ex)
+							{
+								_logger.info("DDL Lookup. Could not read when the indexes of table " + entry.getSchemaAndObjectName() + " in '" + dbname + "' were created: they are stored without it. Caught: " + ex.getMessage().trim());
+							}
+						}
+						else if ("foreign keys".equals(part[0]))
+						{
+							try (PreparedStatement pstmt = conn.prepareStatement(part[1]))
+							{
+								pstmt.setQueryTimeout(QUERY_TIMEOUT_SEC);
+								pstmt.setString(1, entry.getOwner());
+								pstmt.setString(2, entry.getObjectName());
+								try (ResultSet rs = pstmt.executeQuery())
+								{
+									rstm = new ResultSetTableModel(rs, part[0]);
+								}
 							}
 						}
 						else
