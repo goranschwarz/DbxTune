@@ -23,17 +23,24 @@ package com.dbxtune.pcs.report.content.mysql;
 
 import java.io.Writer;
 import java.lang.invoke.MethodHandles;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
@@ -44,6 +51,8 @@ import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.inspection.ObjectLookupInspectorMySql;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportEntry;
+import com.dbxtune.pcs.report.content.IndexAnalysisHtml;
+import com.dbxtune.pcs.report.content.IndexRedundancy;
 import com.dbxtune.pcs.report.content.ReportEntryAbstract;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
@@ -119,6 +128,7 @@ extends ReportEntryAbstract
 		public String    createTime;
 		public String    updateTime;
 		public long      rowsReadNoIndex = -1; // since the server started, when the table was looked up
+		public Timestamp serverStartTime;      // when MySQL was started, as of the lookup (CmSummary), null = not known
 
 		public MyActivity diff = new MyActivity();
 		public MyActivity abs  = new MyActivity();
@@ -359,6 +369,25 @@ extends ReportEntryAbstract
 				_logger.warn("Problems getting the activity (" + query[0] + "_" + query[1] + ") of table '" + ti.getFullName() + "'. Skipping and continuing. Caught: " + ex);
 			}
 		}
+
+		// When the server was started, as of the lookup: the usage numbers (ROWS_READ) are since then. The newest start before the lookup (a later restart is not it)
+		if (ti.sampleTime != null && DbUtils.checkIfTableExistsNoThrow(conn, null, null, "CmSummary_abs"))
+		{
+			try (PreparedStatement pstmnt = conn.prepareStatement(conn.quotifySqlString("select max([start_time]) from [CmSummary_abs] where [start_time] <= ?")))
+			{
+				pstmnt.setQueryTimeout(10);
+				pstmnt.setTimestamp(1, ti.sampleTime);
+				try (ResultSet rs = pstmnt.executeQuery())
+				{
+					if (rs.next())
+						ti.serverStartTime = rs.getTimestamp(1);
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.info("Could not read the server start time (CmSummary_abs) for table '" + ti.getFullName() + "', the Unused Indexes are not checked. Caught: " + ex);
+			}
+		}
 	}
 
 	/** @return -1 when there is no value (the text table has "(NULL)" for a NULL: for example a table whose statistics are not loaded) */
@@ -596,7 +625,7 @@ extends ReportEntryAbstract
 				if (StringUtil.hasValue(ti.dependsText))
 					map.put("Triggers", getTextAsTooltipDiv(ti.dependsText, "Triggers", getDdlMaxLengthTrigger()));
 
-				indexInfo = getIndexInfoAsHtmlTable(ti, classname);
+				indexInfo = getIndexInfoAsHtmlTable(ti, classname) + getRedundantIndexInfoAsHtml(ti);
 			}
 
 			sb.append("<tr> \n");
@@ -671,6 +700,440 @@ extends ReportEntryAbstract
 		sb.append("</tbody> \n");
 		sb.append("</table> \n");
 
+		return sb.toString();
+	}
+
+	//--------------------------------------------------------------------------------------------
+	// Index Analysis
+	//--------------------------------------------------------------------------------------------
+
+	/** One index line of SHOW CREATE TABLE */
+	static class MyKeyDdl
+	{
+		String       kind;          // PRIMARY, UNIQUE, KEY, FULLTEXT, SPATIAL
+		String       name;          // without backticks, PRIMARY for the primary key
+		List<String> keys = new ArrayList<>(); // as written: `a`, `b`(10), `c` DESC, (lower(`d`))
+		boolean      functional;    // a key part is an expression
+		boolean      invisible;
+		String       line;          // the line without the comma at the end, like: KEY `ix` (`a`) COMMENT 'x'
+		int          pos;           // the order in SHOW CREATE TABLE
+	}
+
+	/** The parts of SHOW CREATE TABLE the Index Analysis needs */
+	static class MyCreateTable
+	{
+		String             engine;
+		boolean            partitioned;
+		List<MyKeyDdl>     keys        = new ArrayList<>();
+		List<List<String>> foreignKeys = new ArrayList<>(); // the columns of each FOREIGN KEY, as written: `a`
+
+		MyKeyDdl get(String name)
+		{
+			for (MyKeyDdl k : keys)
+				if (k.name.equalsIgnoreCase(name)) // index names are not case sensitive in MySQL
+					return k;
+			return null;
+		}
+	}
+
+	private static final String  MY_IDENT    = "(`(?:[^`]|``)+`|[^\\s`(]+)";
+	private static final Pattern MY_KEY_LINE = Pattern.compile("^(PRIMARY KEY|UNIQUE KEY|KEY|FULLTEXT KEY|SPATIAL KEY)(?: " + MY_IDENT + ")? \\(");
+	private static final Pattern MY_FK_LINE  = Pattern.compile("^CONSTRAINT " + MY_IDENT + " FOREIGN KEY \\(");
+	private static final Pattern MY_ENGINE   = Pattern.compile("\\) ENGINE=(\\w+)");
+
+	/**
+	 * Parse the index, FOREIGN KEY, ENGINE and PARTITION BY lines of SHOW CREATE TABLE (one item per line, as MySQL writes it)
+	 * @return null if it is not a SHOW CREATE TABLE text, or an index line can't be read
+	 */
+	static MyCreateTable parseShowCreateTable(String ddl)
+	{
+		if (ddl == null || ! ddl.startsWith("CREATE TABLE"))
+			return null;
+
+		MyCreateTable ct = new MyCreateTable();
+		for (String rawLine : ddl.split("\r?\n"))
+		{
+			String line = rawLine.trim();
+			if (line.endsWith(","))
+				line = line.substring(0, line.length() - 1);
+
+			// A column (always quoted) can have any text in its COMMENT
+			if (line.startsWith("`"))
+				continue;
+
+			if (line.contains("PARTITION BY"))
+				ct.partitioned = true;
+
+			Matcher e = MY_ENGINE.matcher(line);
+			if (line.startsWith(")") && e.find())
+				ct.engine = e.group(1);
+
+			Matcher m = MY_KEY_LINE.matcher(line);
+			if (m.find())
+			{
+				MyKeyDdl k = new MyKeyDdl();
+				k.kind = m.group(1).equals("KEY") ? "KEY" : m.group(1).replace(" KEY", "");
+				k.name = "PRIMARY".equals(k.kind) ? "PRIMARY" : myUnquote(m.group(2));
+				int[] pos = { m.end() };
+				String content = myParenContent(line, pos);
+				if (k.name == null || content == null)
+					return null;
+				k.keys = mySplitTopLevel(content);
+				for (String key : k.keys)
+					k.functional |= key.startsWith("(");
+				k.invisible = line.substring(pos[0]).contains("INVISIBLE");
+				k.line      = line;
+				k.pos       = ct.keys.size();
+				ct.keys.add(k);
+				continue;
+			}
+
+			m = MY_FK_LINE.matcher(line);
+			if (m.find())
+			{
+				int[] pos = { m.end() };
+				String content = myParenContent(line, pos);
+				if (content != null)
+					ct.foreignKeys.add(mySplitTopLevel(content));
+			}
+		}
+		return ct;
+	}
+
+	/** `a``b` -&gt; a`b, a plain name as it is */
+	private static String myUnquote(String name)
+	{
+		if (name == null)
+			return null;
+		if (name.length() >= 2 && name.startsWith("`") && name.endsWith("`"))
+			return name.substring(1, name.length() - 1).replace("``", "`");
+		return name;
+	}
+
+	/** a`b -&gt; `a``b` */
+	private static String bq(String name)
+	{
+		return "`" + name.replace("`", "``") + "`";
+	}
+
+	/** The text up to the ')' that closes the '(' just before pos, pos is moved past that ')'. Nothing inside `...` or '...' counts. */
+	private static String myParenContent(String s, int[] pos)
+	{
+		int  depth = 1;
+		char quote = 0;
+		for (int i = pos[0]; i < s.length(); i++)
+		{
+			char c = s.charAt(i);
+			if (quote != 0)               { if (c == quote) quote = 0; }
+			else if (c == '`' || c == '\'') quote = c;
+			else if (c == '(')            depth++;
+			else if (c == ')' && --depth == 0)
+			{
+				String content = s.substring(pos[0], i);
+				pos[0] = i + 1;
+				return content;
+			}
+		}
+		return null;
+	}
+
+	private static List<String> mySplitTopLevel(String s)
+	{
+		List<String> list = new ArrayList<>();
+		int  depth = 0, start = 0;
+		char quote = 0;
+		for (int i = 0; i < s.length(); i++)
+		{
+			char c = s.charAt(i);
+			if (quote != 0)                 { if (c == quote) quote = 0; }
+			else if (c == '`' || c == '\'') quote = c;
+			else if (c == '(')              depth++;
+			else if (c == ')')              depth--;
+			else if (c == ',' && depth == 0)
+			{
+				list.add(s.substring(start, i).trim());
+				start = i + 1;
+			}
+		}
+		if ( ! s.trim().isEmpty() )
+			list.add(s.substring(start).trim());
+		return list;
+	}
+
+	/** `a` DESC -&gt; `a` */
+	private static String myColName(String key)
+	{
+		return key.trim().replaceAll("(?i) (ASC|DESC)$", "");
+	}
+
+	/**
+	 * Index Analysis for MySQL: indexes that can be dropped (De-duplication) and Unused Indexes, with DDL and ROLLBACK scripts.
+	 * <ul>
+	 *   <li>The definitions come from the stored SHOW CREATE TABLE (it has DESC, prefix lengths, functional keys, INVISIBLE, FOREIGN KEYs).</li>
+	 *   <li>InnoDB: the clustered index is the primary key (or the first UNIQUE NOT NULL index), and every secondary index ends with its columns.</li>
+	 *   <li>No INCLUDE in MySQL: only drops, no merges. A PRIMARY KEY or UNIQUE index is never dropped.</li>
+	 *   <li>Every script is ONE ALTER TABLE: MySQL does all or nothing of it.</li>
+	 * </ul>
+	 * @return HTML, or "" if there is nothing to tell
+	 */
+	public String getRedundantIndexInfoAsHtml(MyTableInfo ti)
+	{
+		if (ti == null || ! ti.isTable() || ti.indexes.isEmpty())
+			return "";
+
+		IndexAnalysisHtml ia = new IndexAnalysisHtml();
+		ia.capturedTime = String.valueOf(ti.sampleTime);
+
+		// ---- The whole table can't be checked
+		MyCreateTable ct = parseShowCreateTable(ti.objectText);
+		String tableReason = null;
+		if      ( ! ti.hasRealDdl() )                                          tableReason = "the index definitions are not known: the monitoring login can't run SHOW CREATE TABLE (GRANT REFERENCES gives it, see DbmsSetup/mysql.txt)";
+		else if (ct == null)                                                   tableReason = "the stored SHOW CREATE TABLE could not be read";
+		else if (ct.engine != null && ! "InnoDB".equalsIgnoreCase(ct.engine)) tableReason = "engine " + ct.engine + ", only InnoDB tables are checked";
+		else if (ct.partitioned || ti.partitions > 1)                          tableReason = "a partitioned table";
+		if (tableReason != null)
+		{
+			for (MyIndexInfo ii : ti.indexes)
+				if ( ! "GEN_CLUST_INDEX".equals(ii.name) )
+					ia.dedupNotChecked.put(ii.name, tableReason);
+			ia.unusedNotChecked = tableReason;
+			return ia.toHtml();
+		}
+
+		// The clustered index: the primary key, or the first UNIQUE NOT NULL index (the collector calls it PRIMARY KEY too). None = GEN_CLUST_INDEX, a hidden row id
+		MyKeyDdl clustered = null;
+		for (MyIndexInfo ii : ti.indexes)
+			if ("PRIMARY KEY".equals(ii.type) && ct.get(ii.name) != null)
+				clustered = ct.get(ii.name);
+		List<String> clusterKeys = clustered == null ? Collections.emptyList() : clustered.keys;
+
+		// ---- The indexes we can compare
+		Map<IndexRedundancy.Idx, MyKeyDdl> ddlMap     = new LinkedHashMap<>();
+		Map<String, MyIndexInfo>           usageMap   = new HashMap<>();
+		Map<String, String>                notChecked = new LinkedHashMap<>();
+		for (MyIndexInfo ii : ti.indexes)
+			usageMap.put(ii.name.toLowerCase(), ii);
+
+		for (MyKeyDdl k : ct.keys)
+		{
+			String reason = null;
+			if      ("FULLTEXT".equals(k.kind) || "SPATIAL".equals(k.kind)) reason = k.kind + " index, only BTREE indexes are compared";
+			else if (k.functional)                                         reason = "functional key part (an expression)";
+			else if (k.invisible)                                          reason = "INVISIBLE index: the optimizer already ignores it";
+
+			if (reason != null)
+			{
+				notChecked.put(k.name, reason);
+				continue;
+			}
+
+			MyIndexInfo ii = usageMap.get(k.name.toLowerCase());
+			IndexRedundancy.Idx idx = new IndexRedundancy.Idx(k.name, k.keys, null);
+			idx.primaryKey       = "PRIMARY".equals(k.kind);
+			idx.unique           = idx.primaryKey || "UNIQUE".equals(k.kind);
+			idx.uniqueConstraint = idx.unique; // In MySQL the unique index IS the constraint: never dropped
+			idx.clustered        = k == clustered;
+			idx.reads            = ii == null ? -1 : myRowsReadSinceStart(ii);
+			idx.id               = k.pos;
+			ddlMap.put(idx, k);
+		}
+
+		List<IndexRedundancy.Finding> findings = IndexRedundancy.analyze(new ArrayList<>(ddlMap.keySet()), clusterKeys);
+
+		Set<String> inDedup = new HashSet<>();
+		for (IndexRedundancy.Finding f : findings)
+		{
+			inDedup.add(f.kept.name);
+			for (IndexRedundancy.Idx dr : f.dropped)
+				inDedup.add(dr.name);
+		}
+
+		// ---- Unused: no rows read using the index since the server started, when it had been up at least minDays at the lookup
+		int  minDays = Configuration.getCombinedConfiguration().getIntProperty(IndexAnalysisHtml.PROPKEY_unused_minDays, IndexAnalysisHtml.DEFAULT_unused_minDays);
+		long days    = ti.serverStartTime == null || ti.sampleTime == null ? -1 : (ti.sampleTime.getTime() - ti.serverStartTime.getTime()) / (24L * 3600 * 1000);
+
+		String         unusedNotChecked = null;
+		List<MyKeyDdl> unused           = new ArrayList<>();
+		Set<String>    unusedDedup      = new HashSet<>();
+		int            noCounters       = 0;
+		int            forFk            = 0;
+		if (days < 0)
+			unusedNotChecked = "the server start time (CmSummary) is not in the recording, so the age of the usage numbers is not known.";
+		else if (days < minDays)
+			unusedNotChecked = "the server had only been running " + days + " days when the table was looked up, at least " + minDays + " are needed (property " + IndexAnalysisHtml.PROPKEY_unused_minDays + ").";
+		else
+		{
+			for (Map.Entry<IndexRedundancy.Idx, MyKeyDdl> e : ddlMap.entrySet())
+			{
+				IndexRedundancy.Idx idx = e.getKey();
+				MyKeyDdl            k   = e.getValue();
+				if (idx.unique)
+					continue;
+				if (idx.reads < 0)
+				{
+					noCounters++;
+					continue;
+				}
+				if (idx.reads != 0)
+					continue;
+
+				if (inDedup.contains(k.name))
+				{
+					unusedDedup.add(k.name);
+					continue;
+				}
+
+				// MySQL refuses to drop the only index that a FOREIGN KEY can use (its first columns are the FOREIGN KEY columns)
+				if (myOnlyIndexForForeignKey(ct, k))
+				{
+					forFk++;
+					continue;
+				}
+				unused.add(k);
+			}
+		}
+
+		// ---- The texts and findings, laid out by IndexAnalysisHtml (the same for all vendors)
+		String since = ti.serverStartTime == null
+				? "the server started (the time is not in the recording)"
+				: "the server started " + IndexAnalysisHtml.esc(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm").format(ti.serverStartTime)) + ", <b>" + days + " day" + (days == 1 ? "" : "s") + " before the lookup</b>";
+
+		ia.notesHtml.add("Usage numbers (rows read using the index, performance_schema) only cover the time since " + since + ", so check that the index isn't needed for something that runs rarely (month end, year end).");
+		ia.notesHtml.add("<b>Reads on a replica are not counted on the source</b>: an index used only by queries on a replica looks unused here.");
+		ia.notesHtml.add("Dropping an index can change the plans of other statements. To try it first, make it invisible: <code>ALTER TABLE ... ALTER INDEX name INVISIBLE</code> (and <code>VISIBLE</code> to undo).");
+		ia.notesHtml.add("Each script is ONE <code>ALTER TABLE</code>: if an index is missing (or already there), nothing is changed. <code>RENAME INDEX x TO x</code> changes nothing, it only checks that the kept index is still there. "
+				+ "<code>ALGORITHM=INPLACE, LOCK=NONE</code>: reads and writes can go on while it runs, and if MySQL can't do it that way, it fails instead of blocking the table.");
+
+		for (IndexRedundancy.Finding f : findings)
+		{
+			IndexAnalysisHtml.Finding hf = new IndexAnalysisHtml.Finding();
+			hf.action = "DROP";
+			hf.kept   = f.kept.name;
+
+			List<MyKeyDdl> dropped = new ArrayList<>();
+			hf.lines.add(myIndexLine("Keep", ddlMap.get(f.kept), usageMap));
+			for (IndexRedundancy.Idx dr : f.dropped)
+			{
+				hf.dropped.add(dr.name);
+				dropped.add(ddlMap.get(dr));
+				hf.lines.add(myIndexLine("Drop", ddlMap.get(dr), usageMap));
+			}
+
+			StringBuilder why = new StringBuilder();
+			for (String w : f.why)
+				why.append(w.replace("is the clustering key,", "is the primary key (the clustered index),")).append(" ");
+			for (String n : hf.dropped)
+				if (unusedDedup.contains(n))
+					why.append(n + " has had no rows read since the server started. ");
+			if (unusedDedup.contains(f.kept.name))
+				why.append(f.kept.name + " has had no rows read since the server started either: check if it is needed at all. ");
+			hf.why    = why.toString();
+			hf.script = createMyIndexScript(ti, ddlMap.get(f.kept), dropped);
+			ia.dedup.add(hf);
+		}
+		ia.dedupNotChecked = notChecked;
+
+		ia.unusedNotChecked = unusedNotChecked;
+		ia.unusedIntro = "No rows read using the index since the server started, " + days + " days before the table was looked up. "
+				+ "Not listed: the primary key, unique indexes, and the indexes in Index De-duplication above.";
+		ia.unusedNotes.add("Reads on a replica are not counted on the source: check the replicas before you drop an index.");
+		ia.unusedNotes.add("An index created after the server started has had less time to be used.");
+		ia.unusedNotes.add("An index without usage numbers (performance_schema off, or the table not used since the start) is not listed (" + noCounters + " on this table).");
+		ia.unusedNotes.add("The only index a FOREIGN KEY can use is not listed, MySQL needs it (" + forFk + " on this table). An index used by a FOREIGN KEY in another table that points to this one can't be seen here: then MySQL refuses the DROP, and nothing is changed.");
+		for (MyKeyDdl k : unused)
+		{
+			IndexAnalysisHtml.Finding hf = new IndexAnalysisHtml.Finding();
+			hf.action = "DROP";
+			hf.dropped.add(k.name);
+			hf.lines.add(myIndexLine("Index", k, usageMap));
+			hf.script = createMyIndexScript(ti, null, Collections.singletonList(k));
+			ia.unused.add(hf);
+		}
+
+		return ia.toHtml();
+	}
+
+	/** Rows read using the index since the server started: the last recorded sample if there is one (newer), else at the lookup. -1 = not known */
+	private static long myRowsReadSinceStart(MyIndexInfo ii)
+	{
+		long sinceStart = ii.abs.isRecorded() ? Math.max(ii.abs.rowsRead, ii.rowsReadAtLookup) : ii.rowsReadAtLookup;
+		if (ii.diff.rowsRead > 0) // read during the recording
+			return Math.max(sinceStart, ii.diff.rowsRead);
+		return sinceStart;
+	}
+
+	/** Is this the only index whose first columns are the columns of a FOREIGN KEY? */
+	private static boolean myOnlyIndexForForeignKey(MyCreateTable ct, MyKeyDdl index)
+	{
+		for (List<String> fk : ct.foreignKeys)
+		{
+			if ( ! myStartsWith(index.keys, fk) )
+				continue;
+			boolean other = false;
+			for (MyKeyDdl k : ct.keys)
+				if (k != index && ! k.functional && ! "FULLTEXT".equals(k.kind) && ! "SPATIAL".equals(k.kind) && myStartsWith(k.keys, fk))
+					other = true;
+			if ( ! other )
+				return true;
+		}
+		return false;
+	}
+
+	/** Do the keys start with these columns (any order of the FOREIGN KEY columns is not enough: MySQL wants them first, in that order) */
+	private static boolean myStartsWith(List<String> keys, List<String> cols)
+	{
+		if (cols.size() > keys.size())
+			return false;
+		for (int i = 0; i < cols.size(); i++)
+			if ( ! myColName(keys.get(i)).equalsIgnoreCase(myColName(cols.get(i))) )
+				return false;
+		return true;
+	}
+
+	private static IndexAnalysisHtml.IndexLine myIndexLine(String label, MyKeyDdl k, Map<String, MyIndexInfo> usageMap)
+	{
+		MyIndexInfo ii    = usageMap.get(k.name.toLowerCase());
+		long        reads = ii == null ? -1 : myRowsReadSinceStart(ii);
+		String      name  = "PRIMARY".equals(k.kind) ? "PRIMARY KEY" : "UNIQUE".equals(k.kind) ? "UNIQUE " + k.name : k.name;
+		String      usage = reads < 0 ? "usage unknown (no numbers from performance_schema)" : "rows read since the server started " + reads;
+		return new IndexAnalysisHtml.IndexLine(label, name + " (" + String.join(", ", k.keys) + ")", ", " + usage);
+	}
+
+	/**
+	 * DDL CHANGES and ROLLBACK, each ONE ALTER TABLE (all or nothing).<br>
+	 * <code>RENAME INDEX kept TO kept</code> changes nothing: it fails if the kept index is gone. It can't be used for the primary key.<br>
+	 * The ROLLBACK adds the index lines of SHOW CREATE TABLE as they were.
+	 *
+	 * @param kept  the index that stays, null for unused indexes
+	 */
+	private static String createMyIndexScript(MyTableInfo ti, MyKeyDdl kept, List<MyKeyDdl> dropped)
+	{
+		String table = bq(ti.schema) + "." + bq(ti.name);
+		String check = kept == null || "PRIMARY".equals(kept.kind) ? null : "    RENAME INDEX " + bq(kept.name) + " TO " + bq(kept.name) + ",\n";
+
+		List<MyKeyDdl> inOrder = new ArrayList<>(dropped);
+		inOrder.sort((a, b) -> Integer.compare(a.pos, b.pos));
+
+		StringBuilder sb = new StringBuilder();
+		sb.append("-- DDL CHANGES: ").append(ti.getFullName()).append("\n");
+		sb.append("-- Captured ").append(ti.sampleTime).append(": check that the indexes still look like this before running.\n");
+		if (kept != null && check == null)
+			sb.append("-- The kept index is the PRIMARY KEY: MySQL can't check it in the statement.\n");
+		sb.append("ALTER TABLE ").append(table).append("\n");
+		if (check != null)
+			sb.append(check);
+		for (MyKeyDdl d : inOrder)
+			sb.append("    DROP INDEX ").append(bq(d.name)).append(",\n");
+		sb.append("    ALGORITHM=INPLACE, LOCK=NONE;\n");
+
+		sb.append("\n");
+		sb.append("-- ROLLBACK: puts back what the DDL CHANGES did\n");
+		sb.append("ALTER TABLE ").append(table).append("\n");
+		if (check != null)
+			sb.append(check);
+		for (MyKeyDdl d : inOrder)
+			sb.append("    ADD ").append(d.line).append(",\n");
+		sb.append("    ALGORITHM=INPLACE, LOCK=NONE;\n");
 		return sb.toString();
 	}
 }
