@@ -1,0 +1,76 @@
+/*******************************************************************************
+ * Copyright (C) 2010-2025 Goran Schwarz
+ *
+ * This file is part of DbxTune
+ * DbxTune is a family of sub-products *Tune, hence the Dbx
+ * Here are some of the tools: AseTune, IqTune, RsTune, RaxTune, HanaTune,
+ *          SqlServerTune, PostgresTune, MySqlTune, MariaDbTune, Db2Tune, ...
+ *
+ * DbxTune is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3 of the License.
+ *
+ * DbxTune is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with DbxTune.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
+package com.dbxtune.loadgen.scenario;
+
+import java.util.Arrays;
+import java.util.Map;
+
+import com.dbxtune.loadgen.LgSession;
+import com.dbxtune.loadgen.Vendor;
+
+/**
+ * For 60 s: call p_temp_report (temp table + index created after the insert) twice a second.
+ */
+public class ProblemTempRecompile extends Scenario
+{
+	public ProblemTempRecompile()
+	{
+		super("temp_recompile", Kind.PROBLEM, 8, "60 s of a procedure that creates a temp table + index after DML (recompiles / catalog churn)");
+	}
+
+	@Override
+	public Map<String, Object> getExpected(Vendor v)
+	{
+		switch (v)
+		{
+		case SQLSERVER: return expected(Arrays.asList("CmPerfCounters", "CmExecProcedureStats", "CmTempdbUsage"), Arrays.asList(),
+				"SQL Re-Compilations/sec up; tempdb object create/drop.");
+		case ASE:       return expected(Arrays.asList("CmSysmon", "CmCachedProcs", "CmTempdbActivity", "CmProcCacheLoad"), Arrays.asList(),
+				"Procedure recompiles (temp table created inside the procedure).");
+		case POSTGRES:  return expected(Arrays.asList("CmPgStatements", "CmPgTables", "CmPgFunctions"), Arrays.asList(),
+				"Temp table create/drop on every call: catalog churn (pg_class/pg_attribute bloat).");
+		}
+		return null;
+	}
+
+	@Override
+	public void runProblem(RunContext ctx, ProblemEvent ev)
+	throws Exception
+	{
+		String sql = pick(ctx.getVendor(), "{call p_temp_report(?)}", "{call p_temp_report(?)}", "select p_temp_report(?)");
+		ev.put("sql", sql);
+
+		int durationSec = ctx.getLoadGen().getScenarioIntProp(this, "durationSeconds", 60);
+		long end = System.currentTimeMillis() + durationSec * 1000L;
+		int calls = 0;
+		try (LgSession s = ctx.openSession(this))
+		{
+			ev.addSession(s, "procedure calls");
+			while (System.currentTimeMillis() < end && !ctx.isStopping())
+			{
+				s.call(sql, 2 + ctx.rnd().nextInt(ctx.getCustomers() - 1));
+				calls++;
+				ctx.sleep(500);
+			}
+		}
+		ev.put("calls", calls).put("durationSeconds", durationSec);
+	}
+}

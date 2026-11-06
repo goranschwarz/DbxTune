@@ -1,0 +1,936 @@
+/*******************************************************************************
+ * Copyright (C) 2010-2025 Goran Schwarz
+ *
+ * This file is part of DbxTune
+ * DbxTune is a family of sub-products *Tune, hence the Dbx
+ * Here are some of the tools: AseTune, IqTune, RsTune, RaxTune, HanaTune,
+ *          SqlServerTune, PostgresTune, MySqlTune, MariaDbTune, Db2Tune, ...
+ *
+ * DbxTune is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3 of the License.
+ *
+ * DbxTune is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with DbxTune.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
+package com.dbxtune.loadgen;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Random;
+import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import com.dbxtune.Version;
+import com.dbxtune.loadgen.scenario.EtlFactSales;
+import com.dbxtune.sql.SqlScriptExecutor;
+
+/**
+ * install / uninstall / status
+ */
+public class Installer
+{
+	private static final Logger _logger = LogManager.getLogger();
+
+	public static final String PG_SCHEMA = "dbxt";
+	public static final String PG_ROLE   = "dbxt_loadgen_role";
+
+	/** ASE devices created with --ase-device-dir */
+	public static final String ASE_DATA_DEV = "dbxt_loadgen_data";
+	public static final String ASE_LOG_DEV  = "dbxt_loadgen_log";
+
+	private static final Pattern LOGIN_NAME_PATTERN = Pattern.compile("^" + LoadGen.LOGIN_PREFIX + "[0-9]+$");
+
+	private final LoadGen _lg;
+	private final Vendor  _v;
+
+	public Installer(LoadGen lg)
+	{
+		_lg = lg;
+		_v  = lg.getVendor();
+	}
+
+	//------------------------------------------------------------------
+	// Size profiles
+	//------------------------------------------------------------------
+	/** Row counts for one size */
+	public static class Size
+	{
+		public final String name;
+		public final int    factor;
+		public final int    customers, products, warehouses, categories, orders, auditRows, events;
+
+		Size(String name, int factor)
+		{
+			this.name       = name;
+			this.factor     = factor;
+			this.customers  =  20_000 * factor;
+			this.products   =   2_000 * factor;
+			this.warehouses =      10;
+			this.categories =      50;
+			this.orders     = 200_000 * factor;
+			this.auditRows  = 100_000 * factor;
+			this.events     =   5_000 * factor;
+		}
+
+		/** Rough data + index size in MB */
+		public long estimateMb()
+		{
+			double lines = orders * 3.0;
+			double bytes = customers * 200.0 + products * 250.0 + warehouses * products * 40.0
+					+ orders * 100.0 + lines * 40.0 + orders * 0.9 * 50.0 + orders * 0.85 * 50.0
+					+ auditRows * 150.0 + events * 2_100.0 + lines * 0.9 * 50.0;
+			return (long) (bytes * 1.5 / 1024 / 1024) + 10;
+		}
+
+		public static Size fromString(String str)
+		{
+			switch (str == null ? "small" : str.toLowerCase())
+			{
+			case "small":  return new Size("small",  1);
+			case "medium": return new Size("medium", 10);
+			case "large":  return new Size("large",  50);
+			case "xl":     return new Size("xl",     200);
+			case "xxl":    return new Size("xxl",    1000);
+			}
+			throw new IllegalArgumentException("Unknown size '" + str + "', use: small, medium, large, xl, xxl");
+		}
+	}
+
+	//------------------------------------------------------------------
+	// INSTALL
+	//------------------------------------------------------------------
+	public int install()
+	throws Exception
+	{
+		Size   size      = Size.fromString(_lg.getCmd().getOptionValue("size", "small"));
+		int    loginCnt  = Integer.parseInt(_lg.getCmd().getOptionValue("logins", "10"));
+		long   seed      = Long.parseLong(_lg.getCmd().getOptionValue("seed", "42"));
+		String db        = _lg.getDbname();
+
+		String runId = UUID.randomUUID().toString().substring(0, 8);
+		Journal journal = new Journal(_lg.getSrvName(), "install", runId);
+		_lg.setJournal(journal);
+
+		try (LgSession admin = _lg.connectAdmin(null))
+		{
+			admin.setQueryTimeout(0);
+			String dbmsVersion = admin.getConnection().getMetaData().getDatabaseProductVersion();
+
+			journal.event("header", "kind", "install", "runId", runId, "server", _lg.getSrvName(), "vendor", _v.getName(),
+					"host", _lg.getHost(), "port", _lg.getPort(), "dbmsVersion", dbmsVersion, "dbname", db,
+					"size", size.name, "seed", seed, "logins", loginCnt, "toolVersion", Version.getVersionStr(),
+					"estimatedMb", size.estimateMb());
+
+			if (databaseExists(admin, db))
+			{
+				String msg = "Database '" + db + "' already exists on '" + _lg.getSrvName() + "'. Run 'uninstall' first.";
+				System.out.println("ERROR: " + msg);
+				journal.event("error", "msg", msg);
+				return LoadGen.EXIT_NOT_AVAILABLE;
+			}
+
+			String estMsg = "Size '" + size.name + "': about " + size.estimateMb() + " MB (data + indexes). "
+					+ "Rows: customers=" + size.customers + ", products=" + size.products + ", orders=" + size.orders
+					+ " (~" + (size.orders * 3) + " order lines), audit=" + size.auditRows + ", events=" + size.events;
+			_logger.info(estMsg);
+			System.out.println(estMsg);
+
+			//--- Database
+			createDatabase(admin, db, size);
+
+			//--- Logins (+ passwords to the load generator's own password file)
+			List<String> logins = new ArrayList<>();
+			Random pwRnd = new java.security.SecureRandom();
+			for (int i=1; i<=loginCnt; i++)
+			{
+				String login = LoadGen.LOGIN_PREFIX + i;
+				String pw    = generatePassword(pwRnd);
+				createLogin(admin, login, pw, db);
+				_lg.writePassword(login, pw);
+				logins.add(login);
+				journal.event("object", "action", "create", "objectType", "login", "name", login);
+			}
+			_logger.info("Created " + loginCnt + " logins, passwords stored in '" + _lg.getPasswdFile() + "' (server key '" + _lg.getSrvName() + "').");
+		}
+
+		//--- Tables, data, indexes - in the new database
+		try (LgSession s = _lg.connectAdmin(db))
+		{
+			s.setQueryTimeout(0);
+			if (_v == Vendor.POSTGRES)
+				s.exec("set role " + PG_ROLE);
+
+			runScript(s, "tables.sql");
+
+			Map<String, String> info = new LinkedHashMap<>();
+			info.put("product",        LoadGen.PRODUCT_MARKER);
+			info.put("installVersion", String.valueOf(LoadGen.INSTALL_VERSION));
+			info.put("toolVersion",    Version.getVersionStr());
+			info.put("status",         "FILLING");
+			info.put("size",           size.name);
+			info.put("seed",           String.valueOf(seed));
+			info.put("logins",         String.valueOf(loginCnt));
+			info.put("customers",      String.valueOf(size.customers));
+			info.put("products",       String.valueOf(size.products));
+			info.put("warehouses",     String.valueOf(size.warehouses));
+			info.put("categories",     String.valueOf(size.categories));
+			info.put("orders",         String.valueOf(size.orders));
+			info.put("events",         String.valueOf(size.events));
+			info.put("installTs",      Journal.now());
+			info.put("installBy",      System.getProperty("user.name"));
+			for (int i=1; i<=loginCnt; i++)
+				info.put("login." + i, LoadGen.LOGIN_PREFIX + i);
+			for (Map.Entry<String, String> e : info.entrySet())
+				s.update("insert into dbxt_loadgen_info (k, v) values (?, ?)", e.getKey(), e.getValue());
+
+			long start = System.currentTimeMillis();
+			new DataFiller(s, size, seed, loginCnt).fill();
+
+			runScript(s, "indexes.sql");
+			updateStatistics(s);
+
+			s.update("update dbxt_loadgen_info set v = ? where k = 'status'", "INSTALLED");
+			String msg = "Install finished in " + ((System.currentTimeMillis() - start) / 1000) + " s (data, indexes, statistics).";
+			_logger.info(msg);
+			System.out.println(msg);
+			journal.event("info", "msg", msg);
+		}
+
+		// The users need their own grants/aliases in the database (done after the objects exist)
+		try (LgSession s = _lg.connectAdmin(db))
+		{
+			for (int i=1; i<=loginCnt; i++)
+				createDbUser(s, LoadGen.LOGIN_PREFIX + i);
+		}
+
+		journal.event("summary", "result", "INSTALLED");
+		System.out.println("Installed '" + db + "' on '" + _lg.getSrvName() + "'. Journal: " + journal.getFile());
+		return LoadGen.EXIT_OK;
+	}
+
+	private static String generatePassword(Random rnd)
+	{
+		String letters = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ";
+		String chars   = letters + "23456789";
+		StringBuilder sb = new StringBuilder();
+		sb.append(letters.charAt(rnd.nextInt(letters.length())));
+		for (int i=0; i<15; i++)
+			sb.append(chars.charAt(rnd.nextInt(chars.length())));
+		sb.append(rnd.nextInt(10)); // at least one digit
+		return sb.toString();
+	}
+
+	private boolean databaseExists(LgSession admin, String db)
+	throws SQLException
+	{
+		switch (_v)
+		{
+		case SQLSERVER: return admin.queryInt("select count(*) from sys.databases where name = ?", db) > 0;
+		case ASE:       return admin.queryInt("select count(*) from master..sysdatabases where name = ?", db) > 0;
+		case POSTGRES:  return admin.queryInt("select count(*) from pg_database where datname = ?", db) > 0;
+		}
+		return false;
+	}
+
+	private void createDatabase(LgSession admin, String db, Size size)
+	throws SQLException
+	{
+		_logger.info("Creating database '" + db + "'...");
+		switch (_v)
+		{
+		case SQLSERVER:
+			admin.exec("create database [" + db + "]");
+			admin.exec("alter database [" + db + "] set recovery simple");
+			try { admin.exec("alter database [" + db + "] set query_store = on"); }
+			catch (SQLException ex) { _logger.info("Query Store not enabled (needs 2016 or later): " + ex.getMessage()); }
+			break;
+
+		case ASE:
+			{
+				String dataDev = _lg.getCmd().getOptionValue("ase-data-dev", "default");
+				String logDev  = _lg.getCmd().getOptionValue("ase-log-dev");
+				long   sizeMb  = Long.parseLong(_lg.getCmd().getOptionValue("ase-db-size-mb", String.valueOf(Math.max(300, size.estimateMb() * 2))));
+				long   logMb   = Math.max(200, sizeMb / 2); // the fill and the insert-select chunks need room between checkpoints
+
+				// Own devices: 'disk init' in the given directory on the ASE host (dropped again by uninstall)
+				String devDir = _lg.getCmd().getOptionValue("ase-device-dir");
+				if (devDir != null)
+				{
+					String suffix = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+					dataDev = ASE_DATA_DEV;
+					logDev  = ASE_LOG_DEV;
+					createAseDevice(admin, dataDev, devDir + "/" + dataDev + "_" + suffix + ".dev", sizeMb);
+					createAseDevice(admin, logDev,  devDir + "/" + logDev  + "_" + suffix + ".dev", logMb);
+				}
+
+				String sql = "create database " + db + " on " + dataDev + " = '" + sizeMb + "M'";
+				if (logDev != null)
+					sql += " log on " + logDev + " = '" + logMb + "M'";
+				_logger.info("ASE: " + sql);
+				admin.exec(sql);
+				admin.exec("exec master..sp_dboption " + db + ", 'trunc log on chkpt', true");
+				admin.exec("exec master..sp_dboption " + db + ", 'select into/bulkcopy/pllsort', true");
+				admin.exec("use " + db);
+				admin.exec("checkpoint");
+				admin.exec("use master");
+			}
+			break;
+
+		case POSTGRES:
+			admin.exec("create database " + db);
+			if (admin.queryInt("select count(*) from pg_roles where rolname = ?", PG_ROLE) == 0)
+				admin.exec("create role " + PG_ROLE + " nologin");
+			admin.exec("grant connect, temporary on database " + db + " to " + PG_ROLE);
+			try (LgSession s = _lg.connectAdmin(db))
+			{
+				s.exec("create schema " + PG_SCHEMA + " authorization " + PG_ROLE);
+				s.exec("alter database " + db + " set search_path = " + PG_SCHEMA + ", public");
+			}
+			catch (Exception ex)
+			{
+				throw new SQLException("Problems creating schema '" + PG_SCHEMA + "' in '" + db + "'. Caught: " + ex, ex);
+			}
+			break;
+		}
+		_lg.getJournal().event("object", "action", "create", "objectType", "database", "name", db);
+	}
+
+	/** ASE: disk init (the device name must not exist) */
+	private void createAseDevice(LgSession admin, String name, String physName, long sizeMb)
+	throws SQLException
+	{
+		if (admin.queryInt("select count(*) from master..sysdevices where name = ?", name) > 0)
+			throw new SQLException("ASE device '" + name + "' already exists. Run 'uninstall --force' (it drops the load generator devices), or drop it by hand.");
+		String sql = "disk init name = '" + name + "', physname = '" + physName + "', size = '" + sizeMb + "M'";
+		_logger.info("ASE: " + sql);
+		admin.exec(sql);
+		_lg.getJournal().event("object", "action", "create", "objectType", "device", "name", name, "physname", physName, "sizeMb", sizeMb);
+	}
+
+	/** ASE: drop the load generator devices (if they exist and are not used). The device FILE is left on disk. */
+	private void dropAseDevices(LgSession admin)
+	throws SQLException
+	{
+		for (String name : new String[] {ASE_DATA_DEV, ASE_LOG_DEV})
+		{
+			List<Object[]> rows = admin.query("select phyname from master..sysdevices where name = ?", name);
+			if (rows.isEmpty())
+				continue;
+			String physName = String.valueOf(rows.get(0)[0]).trim();
+			admin.exec("exec master..sp_dropdevice '" + name + "'");
+			String msg = "Dropped ASE device '" + name + "'. The file is still on the ASE host, remove it by hand: " + physName;
+			_logger.info(msg);
+			System.out.println(msg);
+			_lg.getJournal().event("object", "action", "drop", "objectType", "device", "name", name, "physname", physName);
+		}
+	}
+
+	private void createLogin(LgSession admin, String login, String pw, String db)
+	throws SQLException
+	{
+		switch (_v)
+		{
+		case SQLSERVER: admin.exec("create login [" + login + "] with password = '" + pw + "', check_policy = off, default_database = [" + db + "]"); break;
+		case ASE:       admin.exec("exec master..sp_addlogin '" + login + "', '" + pw + "', '" + db + "'"); break;
+		case POSTGRES:  admin.exec("create role " + login + " login password '" + pw + "' in role " + PG_ROLE); break;
+		}
+	}
+
+	/** Make the login a user in the load generator database, with owner rights (maintenance scenarios need it) */
+	private void createDbUser(LgSession s, String login)
+	throws SQLException
+	{
+		switch (_v)
+		{
+		case SQLSERVER:
+			s.exec("create user [" + login + "] for login [" + login + "]");
+			s.exec("alter role db_owner add member [" + login + "]");
+			break;
+		case ASE:
+			s.exec("exec sp_addalias '" + login + "', 'dbo'");
+			break;
+		case POSTGRES:
+			// Member of PG_ROLE, which owns the schema and every object in it
+			break;
+		}
+	}
+
+	/** Update statistics on all tables (right after the fill) */
+	private void updateStatistics(LgSession s)
+	throws SQLException
+	{
+		_logger.info("Updating statistics...");
+		if (_v == Vendor.POSTGRES)
+		{
+			s.exec("analyze");
+			return;
+		}
+		for (String tab : new String[] {"category", "customer", "product", "warehouse", "stock", "orders", "order_line", "payment", "shipment",
+				"audit_log", "counter_table", "session_event", "dim_date", "dim_customer", "dim_product", "fact_sales", "etl_watermark"})
+		{
+			s.exec(_v == Vendor.ASE ? "update index statistics " + tab : "update statistics " + tab);
+		}
+	}
+
+	/**
+	 * Run a resource script sql/{vendor}_{name}, batch by batch ('go').
+	 * Created objects and the '-- FLAW:' comments are written to the journal.
+	 */
+	private void runScript(LgSession s, String name)
+	throws Exception
+	{
+		String resource = _v.getSqlResourcePrefix() + name;
+		_logger.info("Running script '" + resource + "'...");
+
+		Pattern createPat = Pattern.compile("^\\s*create\\s+(table|index|procedure|function)\\s+(\\w+)(\\s+on\\s+(\\w+))?", Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
+		Pattern flawPat   = Pattern.compile("^\\s*--\\s*FLAW:\\s*(.*)$", Pattern.MULTILINE);
+
+		try (InputStream in = Installer.class.getResourceAsStream(resource))
+		{
+			if (in == null)
+				throw new Exception("Can't find resource '" + resource + "' (next to " + Installer.class.getName() + ")");
+
+			BufferedReader br = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
+			for (String batch = SqlScriptExecutor.readCommand(br); batch != null; batch = SqlScriptExecutor.readCommand(br))
+			{
+				// Only comments in the batch: skip
+				if (batch.replaceAll("(?m)^\\s*--.*$", "").isBlank())
+					continue;
+
+				try
+				{
+					s.exec(batch);
+				}
+				catch (SQLException ex)
+				{
+					throw new SQLException("Problems in '" + resource + "' executing:\n" + batch + "\nCaught: " + ex.getMessage(), ex);
+				}
+
+				Matcher cm = createPat.matcher(batch);
+				if (cm.find())
+				{
+					Matcher fm = flawPat.matcher(batch);
+					_lg.getJournal().event("object", "action", "create", "objectType", cm.group(1).toLowerCase(), "name", cm.group(2),
+							"table", cm.group(4), "flaw", fm.find() ? fm.group(1).trim() : null);
+				}
+			}
+		}
+	}
+
+	//------------------------------------------------------------------
+	// Data fill
+	//------------------------------------------------------------------
+	/**
+	 * Fills the tables with generated data. The same seed gives the same data.
+	 * <ul>
+	 *   <li>customer 1 owns ~30% of the orders, product 1 is on ~20% of the order lines (skew)</li>
+	 *   <li>orders are spread over the last 730 days, order_ts grows with order_id</li>
+	 * </ul>
+	 */
+	private class DataFiller
+	{
+		private final LgSession _s;
+		private final Size      _size;
+		private final Random    _rnd;
+		private final int       _loginCnt;
+		private final double[]  _price;
+		private final LocalDateTime _end   = LocalDateTime.now().withNano(0);
+		private final LocalDateTime _start = _end.minusDays(730);
+		private static final int BATCH = 2000;
+		/** a NULL in an INT column (a plain null is sent as a VARCHAR NULL) */
+		private final Object NULL_INT = new Object();
+
+		final String[] FIRST   = {"Anna","Erik","Maria","Lars","Karin","Johan","Eva","Per","Sara","Anders","Emma","Nils","Ida","Olof","Lena","Peter","Sofia","Jonas","Elin","Mikael","John","Mary","James","Linda","Robert","Susan","David","Laura","Paul","Kate"};
+		final String[] LAST    = {"Smith","Andersson","Johansson","Karlsson","Nilsson","Eriksson","Larsson","Olsson","Persson","Svensson","Gustafsson","Pettersson","Jonsson","Jansson","Hansson","Bengtsson","Lindberg","Jakobsson","Magnusson","Lindstrom","Brown","Jones","Miller","Davis","Wilson","Taylor","Moore","Clark","Lewis","Walker"};
+		final String[] CITY    = {"Stockholm","Goteborg","Malmo","Uppsala","Vasteras","Orebro","Linkoping","Helsingborg","Jonkoping","Norrkoping","Lund","Umea","Gavle","Boras","Oslo","Bergen","Copenhagen","Aarhus","Helsinki","Tampere","Berlin","Hamburg","London","Manchester","New York","Boston","Chicago","Paris","Madrid","Rome"};
+		final String[] COUNTRY = {"SE","SE","SE","SE","SE","NO","DK","FI","DE","UK","US"};
+		final String[] WORDS   = {"red","blue","green","small","large","fast","slow","smart","basic","premium","eco","pro","mini","max","ultra","classic","modern","steel","wood","glass"};
+
+		DataFiller(LgSession s, Size size, long seed, int loginCnt)
+		{
+			_s        = s;
+			_size     = size;
+			_rnd      = new Random(seed);
+			_loginCnt = loginCnt;
+			_price    = new double[size.products + 1];
+		}
+
+		private Timestamp ts(LocalDateTime ldt)       { return Timestamp.valueOf(ldt); }
+		private Timestamp randomTs()                  { return ts(_start.plusSeconds((long) (_rnd.nextDouble() * 730L * 86400L))); }
+		private String    pick(String[] arr)          { return arr[_rnd.nextInt(arr.length)]; }
+		private String    text(int minLen, int maxLen)
+		{
+			int len = minLen + _rnd.nextInt(maxLen - minLen + 1);
+			StringBuilder sb = new StringBuilder(len + 10);
+			while (sb.length() < len)
+				sb.append(pick(WORDS)).append(' ');
+			return sb.substring(0, len);
+		}
+
+		/** A batched insert: add rows with add(...), it flushes and commits every BATCH rows */
+		private class Inserter
+		implements AutoCloseable
+		{
+			final String _table;
+			final PreparedStatement _ps;
+			final long _total;
+			long _rows, _nextLog;
+
+			Inserter(String table, String cols, long expectedRows)
+			throws SQLException
+			{
+				_table = table;
+				_total = expectedRows;
+				int colCnt = cols.split(",").length;
+				String q = "?" + ",?".repeat(colCnt - 1);
+				_ps = _s.getConnection().prepareStatement("insert into " + table + " (" + cols + ") values (" + q + ")");
+				_nextLog = logStep();
+			}
+
+			/** progress every 10% (or every 100000 rows when the total is not known) */
+			private long logStep()
+			{
+				return _total > 0 ? Math.max(_total / 10, BATCH) : 100_000;
+			}
+
+			void add(Object... vals)
+			throws SQLException
+			{
+				for (int i=0; i<vals.length; i++)
+				{
+					if      (vals[i] == null)     _ps.setNull  (i+1, java.sql.Types.VARCHAR);
+					else if (vals[i] == NULL_INT) _ps.setNull  (i+1, java.sql.Types.INTEGER);
+					else                          _ps.setObject(i+1, vals[i]);
+				}
+				_ps.addBatch();
+				_rows++;
+				if (_rows % BATCH == 0)
+					flush();
+				if (_rows >= _nextLog)
+				{
+					_logger.info("   " + _table + ": " + _rows + (_total > 0 ? " of " + _total : "") + " rows");
+					_nextLog += logStep();
+				}
+			}
+
+			void flush()
+			throws SQLException
+			{
+				_ps.executeBatch();
+				_s.getConnection().commit();
+			}
+
+			@Override
+			public void close()
+			throws SQLException
+			{
+				flush();
+				_ps.close();
+			}
+		}
+
+		void fill()
+		throws SQLException
+		{
+			_s.getConnection().setAutoCommit(false);
+			try
+			{
+				fillBase();
+				fillOrders();
+				fillAuditAndEvents();
+				_s.getConnection().setAutoCommit(true);
+				fillDw();
+				fillCounters();
+			}
+			finally
+			{
+				_s.rollbackQuietly();
+			}
+		}
+
+		private void fillBase()
+		throws SQLException
+		{
+			_logger.info("Filling category, warehouse, customer, product, stock...");
+			try (Inserter ins = new Inserter("category", "category_id, name, parent_id", _size.categories))
+			{
+				for (int i=1; i<=_size.categories; i++)
+					ins.add(i, "Category " + i, i <= 10 ? NULL_INT : (Object) (1 + (i % 10)));
+			}
+			try (Inserter ins = new Inserter("warehouse", "warehouse_id, name, city", _size.warehouses))
+			{
+				for (int i=1; i<=_size.warehouses; i++)
+					ins.add(i, "Warehouse " + i, CITY[i % CITY.length]);
+			}
+			try (Inserter ins = new Inserter("customer", "customer_id, first_name, last_name, email, phone, city, country_code, segment, vip_flag, created_ts, notes", _size.customers))
+			{
+				for (int i=1; i<=_size.customers; i++)
+				{
+					String fn = pick(FIRST), ln = (_rnd.nextInt(10) == 0) ? "Smith" : pick(LAST);
+					int    seg = _rnd.nextInt(100);
+					ins.add(i, fn, ln, (fn + "." + ln + "." + i + "@example.com").toLowerCase(),
+							"07" + (10_000_000 + _rnd.nextInt(90_000_000)), pick(CITY), pick(COUNTRY),
+							seg < 80 ? "RETAIL" : seg < 95 ? "BUSINESS" : "PARTNER",
+							_rnd.nextInt(100) == 0 ? "Y" : null,
+							randomTs(), _rnd.nextInt(10) == 0 ? text(20, 200) : null);
+				}
+			}
+			try (Inserter ins = new Inserter("product", "product_id, category_id, name, description, price, status, created_ts", _size.products))
+			{
+				for (int i=1; i<=_size.products; i++)
+				{
+					_price[i] = Math.round((1 + _rnd.nextDouble() * 1999) * 100) / 100.0;
+					int st = _rnd.nextInt(100);
+					ins.add(i, 1 + _rnd.nextInt(_size.categories), "Product " + i + " " + pick(WORDS) + " " + pick(WORDS),
+							text(50, 300), BigDecimal.valueOf(_price[i]), st < 99 ? "ACTIVE" : (st == 99 && _rnd.nextBoolean()) ? "RETIRED" : "DRAFT", randomTs());
+				}
+			}
+			try (Inserter ins = new Inserter("stock", "warehouse_id, product_id, qty, reserved, last_upd_ts", (long) _size.warehouses * _size.products))
+			{
+				Timestamp now = ts(_end);
+				for (int w=1; w<=_size.warehouses; w++)
+					for (int p=1; p<=_size.products; p++)
+						ins.add(w, p, 100_000 + _rnd.nextInt(1000), 0, now);
+			}
+		}
+
+		private void fillOrders()
+		throws SQLException
+		{
+			_logger.info("Filling orders, order_line, payment, shipment...");
+			long spanSec = 730L * 86400L;
+			try (Inserter ord  = new Inserter("orders",     "order_id, customer_id, order_ts, status, total_amount, warehouse_id, ship_city, comment_txt", _size.orders);
+			     Inserter line = new Inserter("order_line", "order_id, line_no, product_id, qty, price", 0);
+			     Inserter pay  = new Inserter("payment",    "payment_id, order_id, pay_ts, amount, method", 0);
+			     Inserter shp  = new Inserter("shipment",   "order_id, ship_ts, carrier, status", 0))
+			{
+				for (int o=1; o<=_size.orders; o++)
+				{
+					LocalDateTime orderTs = _start.plusSeconds((long) ((double) o / _size.orders * spanSec) - _rnd.nextInt(600));
+					int customer = _rnd.nextInt(100) < 30 ? 1 : 2 + _rnd.nextInt(_size.customers - 1);
+
+					double pos = (double) o / _size.orders;   // 0..1, newest last
+					String status = pos > 0.98 ? "NEW" : pos > 0.95 ? "PAID" : (_rnd.nextInt(100) < 5 ? "CANCELLED" : "SHIPPED");
+
+					int lines = 1 + _rnd.nextInt(5);
+					double total = 0;
+					for (int l=1; l<=lines; l++)
+					{
+						int product = _rnd.nextInt(100) < 20 ? 1 : 1 + _rnd.nextInt(_size.products);
+						int qty     = 1 + _rnd.nextInt(5);
+						total += qty * _price[product];
+						line.add(o, l, product, qty, BigDecimal.valueOf(_price[product]));
+					}
+					BigDecimal amount = BigDecimal.valueOf(Math.round(total * 100) / 100.0);
+					ord.add(o, customer, ts(orderTs), status, amount, 1 + _rnd.nextInt(_size.warehouses), pick(CITY),
+							_rnd.nextInt(5) == 0 ? text(10, 150) : null);
+
+					if (!status.equals("NEW") && !status.equals("CANCELLED"))
+						pay.add(o, o, ts(orderTs.plusMinutes(1 + _rnd.nextInt(120))), amount, _rnd.nextBoolean() ? "CARD" : _rnd.nextBoolean() ? "INVOICE" : "SWISH");
+					if (status.equals("SHIPPED"))
+						shp.add(o, ts(orderTs.plusHours(4 + _rnd.nextInt(72))), _rnd.nextBoolean() ? "PostNord" : "DHL", "DELIVERED");
+				}
+			}
+		}
+
+		private void fillAuditAndEvents()
+		throws SQLException
+		{
+			_logger.info("Filling audit_log, session_event...");
+			String[] actions = {"NEW_ORDER", "PAYMENT", "LOGIN", "LOGOUT", "SEARCH", "UPDATE_PROFILE"};
+			try (Inserter ins = new Inserter("audit_log", "log_ts, login_name, action, object_id, details", _size.auditRows))
+			{
+				for (int i=1; i<=_size.auditRows; i++)
+					ins.add(randomTs(), LoadGen.LOGIN_PREFIX + (1 + _rnd.nextInt(_loginCnt)), pick(actions), _rnd.nextInt(_size.orders), text(30, 200));
+			}
+			String[] types = {"PAGE_VIEW", "SEARCH", "CART_ADD", "CART_REMOVE", "CHECKOUT"};
+			try (Inserter ins = new Inserter("session_event", "event_id, customer_id, event_ts, event_type, payload", _size.events))
+			{
+				for (int i=1; i<=_size.events; i++)
+					ins.add((long) i, 1 + _rnd.nextInt(_size.customers), randomTs(), pick(types), text(1000, 3000));
+			}
+		}
+
+		private void fillDw()
+		throws SQLException
+		{
+			_logger.info("Filling dim_date, dim_customer, dim_product, fact_sales...");
+			_s.getConnection().setAutoCommit(false);
+			try (Inserter ins = new Inserter("dim_date", "date_key, cal_date, cal_year, cal_quarter, cal_month, month_name, weekday", 1200))
+			{
+				String[] months = {"January","February","March","April","May","June","July","August","September","October","November","December"};
+				for (LocalDate d = _start.toLocalDate().minusDays(30); d.isBefore(_end.toLocalDate().plusDays(400)); d = d.plusDays(1))
+				{
+					ins.add(d.getYear() * 10000 + d.getMonthValue() * 100 + d.getDayOfMonth(), Date.valueOf(d), d.getYear(),
+							(d.getMonthValue() - 1) / 3 + 1, d.getMonthValue(), months[d.getMonthValue() - 1], d.getDayOfWeek().getValue());
+				}
+			}
+			_s.getConnection().setAutoCommit(true);
+
+			_s.exec("insert into dim_customer (customer_key, segment, country_code, city) select customer_id, segment, country_code, city from customer");
+			_s.exec("insert into dim_product (product_key, category_name, product_name) select p.product_id, c.name, p.name from product p join category c on c.category_id = p.category_id");
+
+			// 90% of the orders are already in the fact table, the ETL scenario loads the rest (and new orders)
+			int loadTo = (int) (_size.orders * 0.9);
+			int chunk  = 100_000;
+			for (int from = 0; from < loadTo; from += chunk)
+			{
+				int to = Math.min(from + chunk, loadTo);
+				_s.exec(EtlFactSales.insertSql(_v, from, to));
+			}
+			_s.update("insert into etl_watermark (name, last_order_id) values ('fact_sales', ?)", loadTo);
+		}
+
+		private void fillCounters()
+		throws SQLException
+		{
+			_s.update("insert into counter_table (name, next_val) values ('order',   ?)", (long) _size.orders + 1);
+			_s.update("insert into counter_table (name, next_val) values ('payment', ?)", (long) _size.orders + 1);
+			_s.update("insert into counter_table (name, next_val) values ('event',   ?)", (long) _size.events + 1);
+			_s.update("insert into counter_table (name, next_val) values ('hotspot', 0)");
+		}
+	}
+
+	//------------------------------------------------------------------
+	// UNINSTALL
+	//------------------------------------------------------------------
+	public int uninstall()
+	throws Exception
+	{
+		boolean force = _lg.getCmd().hasOption("force");
+		String  db    = _lg.getDbname();
+
+		String runId = UUID.randomUUID().toString().substring(0, 8);
+		Journal journal = new Journal(_lg.getSrvName(), "uninstall", runId);
+		_lg.setJournal(journal);
+
+		try (LgSession admin = _lg.connectAdmin(null))
+		{
+			admin.setQueryTimeout(0);
+			journal.event("header", "kind", "uninstall", "runId", runId, "server", _lg.getSrvName(), "vendor", _v.getName(),
+					"dbmsVersion", admin.getConnection().getMetaData().getDatabaseProductVersion(), "dbname", db, "force", force);
+
+			// Which logins: from the marker table, or (--force) all logins named dbxt_user_#
+			List<String> logins = new ArrayList<>();
+			boolean dbExists = databaseExists(admin, db);
+			boolean marker   = false;
+			if (dbExists)
+			{
+				try (LgSession s = _lg.connectAdmin(db))
+				{
+					if (_v == Vendor.POSTGRES)
+						s.exec("set search_path = " + PG_SCHEMA);
+					Object prod = s.queryValue("select v from dbxt_loadgen_info where k = 'product'");
+					marker = LoadGen.PRODUCT_MARKER.equals(prod);
+					if (marker)
+						for (Object[] row : s.query("select v from dbxt_loadgen_info where k like 'login.%'"))
+							logins.add((String) row[0]);
+				}
+				catch (SQLException ex)
+				{
+					_logger.info("No marker table in '" + db + "': " + ex.getMessage());
+				}
+			}
+
+			if (!marker && !force)
+			{
+				String msg = dbExists
+						? "Database '" + db + "' exists but has no " + LoadGen.PRODUCT_MARKER + " marker table. Not touching it. Use --force if it really is a broken load generator install."
+						: "Database '" + db + "' does not exist (nothing to uninstall). Use --force to remove left-over " + LoadGen.LOGIN_PREFIX + "# logins.";
+				System.out.println("ERROR: " + msg);
+				journal.event("error", "msg", msg);
+				return LoadGen.EXIT_NOT_AVAILABLE;
+			}
+			if (force)
+			{
+				for (String login : listLoadGenLogins(admin))
+					if (!logins.contains(login))
+						logins.add(login);
+			}
+
+			// Drop the database
+			if (dbExists)
+			{
+				dropDatabase(admin, db);
+				journal.event("object", "action", "drop", "objectType", "database", "name", db);
+				_logger.info("Dropped database '" + db + "'.");
+			}
+			if (_v == Vendor.ASE)
+				dropAseDevices(admin);
+
+			// Drop the logins (only names that look like ours)
+			for (String login : logins)
+			{
+				if (!LOGIN_NAME_PATTERN.matcher(login).matches())
+				{
+					_logger.warn("Skipping login '" + login + "', it does not look like a load generator login.");
+					continue;
+				}
+				try
+				{
+					dropLogin(admin, login);
+					_lg.removePassword(login);
+					journal.event("object", "action", "drop", "objectType", "login", "name", login);
+				}
+				catch (SQLException ex)
+				{
+					_logger.warn("Problems dropping login '" + login + "'. Caught: " + ex.getMessage());
+					journal.event("error", "msg", "Problems dropping login '" + login + "': " + ex.getMessage());
+				}
+			}
+			if (_v == Vendor.POSTGRES && admin.queryInt("select count(*) from pg_roles where rolname = ?", PG_ROLE) > 0)
+			{
+				admin.exec("drop role " + PG_ROLE);
+				journal.event("object", "action", "drop", "objectType", "role", "name", PG_ROLE);
+			}
+			_logger.info("Dropped " + logins.size() + " logins.");
+		}
+
+		journal.event("summary", "result", "UNINSTALLED");
+		System.out.println("Uninstalled '" + db + "' from '" + _lg.getSrvName() + "'. Journal: " + journal.getFile());
+		return LoadGen.EXIT_OK;
+	}
+
+	private List<String> listLoadGenLogins(LgSession admin)
+	throws SQLException
+	{
+		String sql;
+		switch (_v)
+		{
+		case SQLSERVER: sql = "select name    from sys.server_principals where type = 'S' and name like 'dbxt[_]user[_]%'"; break;
+		case ASE:       sql = "select name    from master..syslogins where name like 'dbxt[_]user[_]%'"; break;
+		default:        sql = "select rolname from pg_roles where rolname like 'dbxt\\_user\\_%'"; break;
+		}
+		List<String> list = new ArrayList<>();
+		for (Object[] row : admin.query(sql))
+			if (LOGIN_NAME_PATTERN.matcher((String) row[0]).matches())
+				list.add((String) row[0]);
+		return list;
+	}
+
+	private void dropDatabase(LgSession admin, String db)
+	throws SQLException
+	{
+		switch (_v)
+		{
+		case SQLSERVER:
+			admin.exec("alter database [" + db + "] set single_user with rollback immediate");
+			admin.exec("drop database [" + db + "]");
+			break;
+		case ASE:
+			for (Object[] row : admin.query("select spid from master..sysprocesses where dbid = db_id(?) and spid != @@spid", db))
+				admin.exec("kill " + row[0]);
+			admin.exec("drop database " + db);
+			break;
+		case POSTGRES:
+			admin.query("select pg_terminate_backend(pid) from pg_stat_activity where datname = ? and pid <> pg_backend_pid()", db);
+			admin.exec("drop database " + db);
+			break;
+		}
+	}
+
+	private void dropLogin(LgSession admin, String login)
+	throws SQLException
+	{
+		switch (_v)
+		{
+		case SQLSERVER:
+			for (Object[] row : admin.query("select session_id from sys.dm_exec_sessions where login_name = ?", login))
+				admin.exec("kill " + row[0]);
+			admin.exec("drop login [" + login + "]");
+			break;
+		case ASE:
+			for (Object[] row : admin.query("select spid from master..sysprocesses where suid = suser_id(?)", login))
+				admin.exec("kill " + row[0]);
+			admin.exec("exec master..sp_droplogin '" + login + "'");
+			break;
+		case POSTGRES:
+			admin.query("select pg_terminate_backend(pid) from pg_stat_activity where usename = ?", login);
+			admin.exec("drop role " + login);
+			break;
+		}
+	}
+
+	//------------------------------------------------------------------
+	// STATUS
+	//------------------------------------------------------------------
+	public int status()
+	throws Exception
+	{
+		LgSession s;
+		try
+		{
+			s = _lg.connectAdmin(_lg.getDbname());
+		}
+		catch (Exception ex)
+		{
+			try
+			{
+				s = _lg.connectUser(LoadGen.LOGIN_PREFIX + "1", LoadGen.APPNAME_PREFIX + ":status", null);
+			}
+			catch (Exception ex2)
+			{
+				System.out.println("Can't connect to '" + _lg.getDbname() + "' on '" + _lg.getSrvName() + "' (not installed?).");
+				System.out.println("   as admin:           " + ex.getMessage());
+				System.out.println("   as " + LoadGen.LOGIN_PREFIX + "1:        " + ex2.getMessage());
+				return LoadGen.EXIT_NOT_AVAILABLE;
+			}
+		}
+
+		try (LgSession ss = s)
+		{
+			if (_v == Vendor.POSTGRES)
+				ss.exec("set search_path = " + PG_SCHEMA);
+
+			System.out.println();
+			System.out.println("Server '" + _lg.getSrvName() + "' (" + _v.getName() + " " + ss.getConnection().getMetaData().getDatabaseProductVersion().replace('\n', ' ') + "), database '" + _lg.getDbname() + "'");
+			System.out.println();
+			System.out.println("Install info:");
+			for (Object[] row : ss.query("select k, v from dbxt_loadgen_info where k not like 'login.%' order by k"))
+				System.out.println(String.format("   %-16s %s", row[0], row[1]));
+
+			System.out.println();
+			System.out.println("Row counts:");
+			for (String tab : new String[] {"customer", "product", "stock", "orders", "order_line", "payment", "shipment", "audit_log", "session_event", "fact_sales"})
+				System.out.println(String.format(Locale.US, "   %-16s %,d", tab, ((Number) ss.queryValue("select count(*) from " + tab)).longValue()));
+
+			long cust1 = ((Number) ss.queryValue("select count(*) from orders where customer_id = 1")).longValue();
+			long all   = ((Number) ss.queryValue("select count(*) from orders")).longValue();
+			System.out.println();
+			System.out.println(String.format(Locale.US, "Skew: customer 1 has %,d of %,d orders (%.1f%%)", cust1, all, all == 0 ? 0.0 : cust1 * 100.0 / all));
+
+			System.out.println();
+			System.out.println("Last runs:");
+			String top = _v == Vendor.POSTGRES ? "" : "top 10 ";
+			String lim = _v == Vendor.POSTGRES ? " limit 10" : "";
+			for (Object[] row : ss.query("select " + top + "run_id, start_ts, end_ts, intensity, threads, exec_count, error_count from dbxt_loadgen_runlog order by start_ts desc" + lim))
+				System.out.println(String.format("   %s  %s - %s  intensity=%s threads=%s execs=%s errors=%s", row[0], row[1], row[2], row[3], row[4], row[5], row[6]));
+			System.out.println();
+		}
+		return LoadGen.EXIT_OK;
+	}
+}
