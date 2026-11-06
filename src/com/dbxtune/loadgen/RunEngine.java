@@ -195,7 +195,7 @@ implements RunContext
 		}
 		catch (Exception ex)
 		{
-			String msg = "Can't read the install info as " + LoadGen.LOGIN_PREFIX + "1 in '" + _lg.getDbname() + "' on '" + _lg.getSrvName() + "'. Is it installed? Caught: " + ex.getMessage();
+			String msg = "Can't read the install info as " + LoadGen.LOGIN_PREFIX + "1 in '" + _lg.getDbname() + "' on '" + _lg.getSrvName() + "'. Is it installed? (After 'uninstall --keep-database' get the logins back with 'install --logins-only'.) Caught: " + ex.getMessage();
 			_logger.error(msg);
 			System.out.println("ERROR: " + msg);
 			return LoadGen.EXIT_NOT_AVAILABLE;

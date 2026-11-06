@@ -62,6 +62,12 @@ public class Installer
 	public static final String ASE_DATA_DEV = "dbxt_loadgen_data";
 	public static final String ASE_LOG_DEV  = "dbxt_loadgen_log";
 
+	/** Every table and procedure the install creates (used when the database was NOT created by us and only our objects are dropped) */
+	public static final String[] TABLES = {"dbxt_loadgen_info", "dbxt_loadgen_runlog", "category", "customer", "product", "warehouse", "stock",
+			"orders", "order_line", "payment", "shipment", "audit_log", "counter_table", "session_event",
+			"dim_date", "dim_customer", "dim_product", "fact_sales", "etl_watermark"};
+	public static final String[] PROCEDURES = {"p_order_status", "p_rbar_price_adjust", "p_temp_report"};
+
 	private static final Pattern LOGIN_NAME_PATTERN = Pattern.compile("^" + LoadGen.LOGIN_PREFIX + "[0-9]+$");
 
 	private final LoadGen _lg;
@@ -126,10 +132,14 @@ public class Installer
 	public int install()
 	throws Exception
 	{
-		Size   size      = Size.fromString(_lg.getCmd().getOptionValue("size", "small"));
-		int    loginCnt  = Integer.parseInt(_lg.getCmd().getOptionValue("logins", "10"));
-		long   seed      = Long.parseLong(_lg.getCmd().getOptionValue("seed", "42"));
-		String db        = _lg.getDbname();
+		if (_lg.getCmd().hasOption("logins-only"))
+			return installLoginsOnly();
+
+		Size    size        = Size.fromString(_lg.getCmd().getOptionValue("size", "small"));
+		int     loginCnt    = Integer.parseInt(_lg.getCmd().getOptionValue("logins", "10"));
+		long    seed        = Long.parseLong(_lg.getCmd().getOptionValue("seed", "42"));
+		String  db          = _lg.getDbname();
+		boolean useExisting = _lg.getCmd().hasOption("use-existing-db");
 
 		String runId = UUID.randomUUID().toString().substring(0, 8);
 		Journal journal = new Journal(_lg.getSrvName(), "install", runId);
@@ -143,13 +153,20 @@ public class Installer
 			journal.event("header", "kind", "install", "runId", runId, "server", _lg.getSrvName(), "vendor", _v.getName(),
 					"host", _lg.getHost(), "port", _lg.getPort(), "dbmsVersion", dbmsVersion, "dbname", db,
 					"size", size.name, "seed", seed, "logins", loginCnt, "toolVersion", Version.getVersionStr(),
-					"estimatedMb", size.estimateMb());
+					"estimatedMb", size.estimateMb(), "useExistingDb", useExisting);
 
-			if (databaseExists(admin, db))
+			boolean dbExists = databaseExists(admin, db);
+			String  errMsg   = null;
+			if (dbExists && !useExisting)
+				errMsg = "Database '" + db + "' already exists on '" + _lg.getSrvName() + "'. Run 'uninstall' first, or use --use-existing-db to install into it.";
+			else if (!dbExists && useExisting)
+				errMsg = "Database '" + db + "' does not exist on '" + _lg.getSrvName() + "' (--use-existing-db). Create it first, or skip --use-existing-db.";
+			else if (useExisting)
+				errMsg = checkExistingDatabase(db);
+			if (errMsg != null)
 			{
-				String msg = "Database '" + db + "' already exists on '" + _lg.getSrvName() + "'. Run 'uninstall' first.";
-				System.out.println("ERROR: " + msg);
-				journal.event("error", "msg", msg);
+				System.out.println("ERROR: " + errMsg);
+				journal.event("error", "msg", errMsg);
 				return LoadGen.EXIT_NOT_AVAILABLE;
 			}
 
@@ -160,21 +177,13 @@ public class Installer
 			System.out.println(estMsg);
 
 			//--- Database
-			createDatabase(admin, db, size);
+			if (useExisting)
+				prepareExistingDatabase(admin, db);
+			else
+				createDatabase(admin, db, size);
 
 			//--- Logins (+ passwords to the load generator's own password file)
-			List<String> logins = new ArrayList<>();
-			Random pwRnd = new java.security.SecureRandom();
-			for (int i=1; i<=loginCnt; i++)
-			{
-				String login = LoadGen.LOGIN_PREFIX + i;
-				String pw    = generatePassword(pwRnd);
-				createLogin(admin, login, pw, db);
-				_lg.writePassword(login, pw);
-				logins.add(login);
-				journal.event("object", "action", "create", "objectType", "login", "name", login);
-			}
-			_logger.info("Created " + loginCnt + " logins, passwords stored in '" + _lg.getPasswdFile() + "' (server key '" + _lg.getSrvName() + "').");
+			createLogins(admin, loginCnt, db);
 		}
 
 		//--- Tables, data, indexes - in the new database
@@ -182,7 +191,10 @@ public class Installer
 		{
 			s.setQueryTimeout(0);
 			if (_v == Vendor.POSTGRES)
+			{
 				s.exec("set role " + PG_ROLE);
+				s.exec("set search_path = " + PG_SCHEMA);
+			}
 
 			runScript(s, "tables.sql");
 
@@ -202,6 +214,7 @@ public class Installer
 			info.put("events",         String.valueOf(size.events));
 			info.put("installTs",      Journal.now());
 			info.put("installBy",      System.getProperty("user.name"));
+			info.put("databaseCreated", String.valueOf(!useExisting)); // false: uninstall drops only our objects, never the database
 			for (int i=1; i<=loginCnt; i++)
 				info.put("login." + i, LoadGen.LOGIN_PREFIX + i);
 			for (Map.Entry<String, String> e : info.entrySet())
@@ -230,6 +243,158 @@ public class Installer
 		journal.event("summary", "result", "INSTALLED");
 		System.out.println("Installed '" + db + "' on '" + _lg.getSrvName() + "'. Journal: " + journal.getFile());
 		return LoadGen.EXIT_OK;
+	}
+
+	/** Create (or, if they exist, reset) logins dbxt_user_1..N; passwords go to the load generator's own password file */
+	private void createLogins(LgSession admin, int loginCnt, String db)
+	throws Exception
+	{
+		Random pwRnd = new java.security.SecureRandom();
+		for (int i=1; i<=loginCnt; i++)
+		{
+			String  login  = LoadGen.LOGIN_PREFIX + i;
+			String  pw     = generatePassword(pwRnd);
+			boolean exists = loginExists(admin, login);
+			if (exists)
+				resetLogin(admin, login, pw, db);
+			else
+				createLogin(admin, login, pw, db);
+			_lg.writePassword(login, pw);
+			_lg.getJournal().event("object", "action", exists ? "reset" : "create", "objectType", "login", "name", login);
+		}
+		_logger.info("Created/reset " + loginCnt + " logins, passwords stored in '" + _lg.getPasswdFile() + "' (server key '" + _lg.getSrvName() + "').");
+	}
+
+	/**
+	 * install --logins-only: (re)create the logins of an existing install, for example after 'uninstall --keep-database'.
+	 * The number of logins comes from the install info (or -L).
+	 */
+	private int installLoginsOnly()
+	throws Exception
+	{
+		String db = _lg.getDbname();
+		String runId = UUID.randomUUID().toString().substring(0, 8);
+		Journal journal = new Journal(_lg.getSrvName(), "install", runId);
+		_lg.setJournal(journal);
+		journal.event("header", "kind", "install --logins-only", "runId", runId, "server", _lg.getSrvName(), "vendor", _v.getName(), "dbname", db);
+
+		Map<String, String> info = readInstallInfo(db);
+		if (info == null)
+		{
+			String msg = "No " + LoadGen.PRODUCT_MARKER + " install found in '" + db + "' on '" + _lg.getSrvName() + "'. Do a full install first.";
+			System.out.println("ERROR: " + msg);
+			journal.event("error", "msg", msg);
+			return LoadGen.EXIT_NOT_AVAILABLE;
+		}
+		int loginCnt = Integer.parseInt(_lg.getCmd().getOptionValue("logins", info.getOrDefault("logins", "10")));
+
+		try (LgSession admin = _lg.connectAdmin(null))
+		{
+			admin.setQueryTimeout(0);
+			createLogins(admin, loginCnt, db);
+		}
+		try (LgSession s = _lg.connectAdmin(db))
+		{
+			if (_v == Vendor.POSTGRES)
+				s.exec("set search_path = " + PG_SCHEMA);
+			for (int i=1; i<=loginCnt; i++)
+				createDbUser(s, LoadGen.LOGIN_PREFIX + i);
+			s.update("delete from dbxt_loadgen_info where k like 'login.%' or k in ('logins', 'loginsDropped')");
+			s.update("insert into dbxt_loadgen_info (k, v) values ('logins', ?)", String.valueOf(loginCnt));
+			for (int i=1; i<=loginCnt; i++)
+				s.update("insert into dbxt_loadgen_info (k, v) values (?, ?)", "login." + i, LoadGen.LOGIN_PREFIX + i);
+		}
+		journal.event("summary", "result", "LOGINS_CREATED", "logins", loginCnt);
+		System.out.println("Created/reset " + loginCnt + " logins for '" + db + "' on '" + _lg.getSrvName() + "'. Journal: " + journal.getFile());
+		return LoadGen.EXIT_OK;
+	}
+
+	/** @return the install info (dbxt_loadgen_info) of the database, null if the database or the marker is missing */
+	private Map<String, String> readInstallInfo(String db)
+	{
+		try (LgSession s = _lg.connectAdmin(db))
+		{
+			if (_v == Vendor.POSTGRES)
+				s.exec("set search_path = " + PG_SCHEMA);
+			Map<String, String> info = new LinkedHashMap<>();
+			for (Object[] row : s.query("select k, v from dbxt_loadgen_info"))
+				info.put((String) row[0], (String) row[1]);
+			return LoadGen.PRODUCT_MARKER.equals(info.get("product")) ? info : null;
+		}
+		catch (Exception ex)
+		{
+			_logger.info("No install info in '" + db + "': " + ex.getMessage());
+			return null;
+		}
+	}
+
+	/**
+	 * --use-existing-db: the database must not hold a load generator install, nor tables/procedures with our names.
+	 * @return an error message, null if OK
+	 */
+	private String checkExistingDatabase(String db)
+	{
+		try (LgSession s = _lg.connectAdmin(db))
+		{
+			if (_v == Vendor.POSTGRES)
+			{
+				if (s.queryInt("select count(*) from pg_namespace where nspname = ?", PG_SCHEMA) > 0)
+					return "Schema '" + PG_SCHEMA + "' already exists in '" + db + "'. The load generator needs its own schema: drop it, or use another database.";
+				return null;
+			}
+			List<String> found = new ArrayList<>();
+			for (String name : TABLES)
+				if (s.queryInt("select count(*) from sysobjects where name = ?", name) > 0)
+					found.add(name);
+			for (String name : PROCEDURES)
+				if (s.queryInt("select count(*) from sysobjects where name = ?", name) > 0)
+					found.add(name);
+			if (!found.isEmpty())
+				return "Database '" + db + "' already has objects with load generator names: " + found + ". Uninstall the old install, or use another database.";
+
+			// Show the options it runs with (we do not change them in a database we did not create)
+			if (_v == Vendor.SQLSERVER)
+				for (Object[] row : s.query("select recovery_model_desc, is_query_store_on from sys.databases where name = ?", db))
+					System.out.println("Existing database '" + db + "': recovery model " + row[0] + ", Query Store " + (Boolean.TRUE.equals(row[1]) ? "on" : "off") + " (not changed).");
+			if (_v == Vendor.ASE)
+			{
+				int truncLog = s.queryInt("select count(*) from master..sysdatabases where name = ? and status & 8 = 8", db);
+				System.out.println("Existing database '" + db + "': 'trunc log on chkpt' is " + (truncLog > 0 ? "on" : "OFF - the transaction log fills up unless you dump it") + " (not changed).");
+			}
+			return null;
+		}
+		catch (Exception ex)
+		{
+			return "Problems checking the existing database '" + db + "': " + ex.getMessage();
+		}
+	}
+
+	/** --use-existing-db: what the database needs besides the tables (Postgres: the owner role and the schema) */
+	private void prepareExistingDatabase(LgSession admin, String db)
+	throws SQLException
+	{
+		_logger.info("Using the existing database '" + db + "' (its options are not changed).");
+		if (_v == Vendor.POSTGRES)
+			createPgRoleAndSchema(admin, db);
+		_lg.getJournal().event("object", "action", "use-existing", "objectType", "database", "name", db);
+	}
+
+	/** Postgres: the role that owns everything, and the schema dbxt */
+	private void createPgRoleAndSchema(LgSession admin, String db)
+	throws SQLException
+	{
+		if (admin.queryInt("select count(*) from pg_roles where rolname = ?", PG_ROLE) == 0)
+			admin.exec("create role " + PG_ROLE + " nologin");
+		admin.exec("grant connect, temporary on database " + db + " to " + PG_ROLE);
+		try (LgSession s = _lg.connectAdmin(db))
+		{
+			s.exec("create schema " + PG_SCHEMA + " authorization " + PG_ROLE);
+		}
+		catch (Exception ex)
+		{
+			throw new SQLException("Problems creating schema '" + PG_SCHEMA + "' in '" + db + "'. Caught: " + ex, ex);
+		}
+		_lg.getJournal().event("object", "action", "create", "objectType", "schema", "name", PG_SCHEMA);
 	}
 
 	private static String generatePassword(Random rnd)
@@ -302,18 +467,7 @@ public class Installer
 
 		case POSTGRES:
 			admin.exec("create database " + db);
-			if (admin.queryInt("select count(*) from pg_roles where rolname = ?", PG_ROLE) == 0)
-				admin.exec("create role " + PG_ROLE + " nologin");
-			admin.exec("grant connect, temporary on database " + db + " to " + PG_ROLE);
-			try (LgSession s = _lg.connectAdmin(db))
-			{
-				s.exec("create schema " + PG_SCHEMA + " authorization " + PG_ROLE);
-				s.exec("alter database " + db + " set search_path = " + PG_SCHEMA + ", public");
-			}
-			catch (Exception ex)
-			{
-				throw new SQLException("Problems creating schema '" + PG_SCHEMA + "' in '" + db + "'. Caught: " + ex, ex);
-			}
+			createPgRoleAndSchema(admin, db);
 			break;
 		}
 		_lg.getJournal().event("object", "action", "create", "objectType", "database", "name", db);
@@ -356,7 +510,43 @@ public class Installer
 		{
 		case SQLSERVER: admin.exec("create login [" + login + "] with password = '" + pw + "', check_policy = off, default_database = [" + db + "]"); break;
 		case ASE:       admin.exec("exec master..sp_addlogin '" + login + "', '" + pw + "', '" + db + "'"); break;
-		case POSTGRES:  admin.exec("create role " + login + " login password '" + pw + "' in role " + PG_ROLE); break;
+		case POSTGRES:
+			admin.exec("create role " + login + " login password '" + pw + "' in role " + PG_ROLE);
+			admin.exec("alter role " + login + " set search_path = " + PG_SCHEMA + ", public");
+			break;
+		}
+	}
+
+	private boolean loginExists(LgSession admin, String login)
+	throws SQLException
+	{
+		switch (_v)
+		{
+		case SQLSERVER: return admin.queryInt("select count(*) from sys.server_principals where name = ?", login) > 0;
+		case ASE:       return admin.queryInt("select count(*) from master..syslogins where name = ?", login) > 0;
+		case POSTGRES:  return admin.queryInt("select count(*) from pg_roles where rolname = ?", login) > 0;
+		}
+		return false;
+	}
+
+	/** A login with our name is left from earlier (uninstall --keep-logins): new password, default database, role membership */
+	private void resetLogin(LgSession admin, String login, String pw, String db)
+	throws Exception
+	{
+		switch (_v)
+		{
+		case SQLSERVER:
+			admin.exec("alter login [" + login + "] with password = '" + pw + "', check_policy = off, default_database = [" + db + "]");
+			break;
+		case ASE:
+			admin.exec("exec master..sp_password '" + _lg.getAdminPassword() + "', '" + pw + "', '" + login + "'");
+			admin.exec("exec master..sp_modifylogin '" + login + "', 'defdb', '" + db + "'");
+			break;
+		case POSTGRES:
+			admin.exec("alter role " + login + " login password '" + pw + "'");
+			admin.exec("grant " + PG_ROLE + " to " + login);
+			admin.exec("alter role " + login + " set search_path = " + PG_SCHEMA + ", public");
+			break;
 		}
 	}
 
@@ -367,11 +557,13 @@ public class Installer
 		switch (_v)
 		{
 		case SQLSERVER:
-			s.exec("create user [" + login + "] for login [" + login + "]");
+			if (s.queryInt("select count(*) from sys.database_principals where name = ?", login) == 0)
+				s.exec("create user [" + login + "] for login [" + login + "]");
 			s.exec("alter role db_owner add member [" + login + "]");
 			break;
 		case ASE:
-			s.exec("exec sp_addalias '" + login + "', 'dbo'");
+			if (s.queryInt("select count(*) from sysalternates where suid = suser_id(?)", login) == 0)
+				s.exec("exec sp_addalias '" + login + "', 'dbo'");
 			break;
 		case POSTGRES:
 			// Member of PG_ROLE, which owns the schema and every object in it
@@ -389,8 +581,7 @@ public class Installer
 			s.exec("analyze");
 			return;
 		}
-		for (String tab : new String[] {"category", "customer", "product", "warehouse", "stock", "orders", "order_line", "payment", "shipment",
-				"audit_log", "counter_table", "session_event", "dim_date", "dim_customer", "dim_product", "fact_sales", "etl_watermark"})
+		for (String tab : TABLES)
 		{
 			s.exec(_v == Vendor.ASE ? "update index statistics " + tab : "update statistics " + tab);
 		}
@@ -721,40 +912,38 @@ public class Installer
 	public int uninstall()
 	throws Exception
 	{
-		boolean force = _lg.getCmd().hasOption("force");
-		String  db    = _lg.getDbname();
+		boolean force      = _lg.getCmd().hasOption("force");
+		boolean keepDb     = _lg.getCmd().hasOption("keep-database");
+		boolean keepLogins = _lg.getCmd().hasOption("keep-logins");
+		String  db         = _lg.getDbname();
+
+		if (keepDb && keepLogins)
+		{
+			System.out.println("ERROR: --keep-database and --keep-logins together would drop nothing.");
+			return LoadGen.EXIT_USAGE;
+		}
 
 		String runId = UUID.randomUUID().toString().substring(0, 8);
 		Journal journal = new Journal(_lg.getSrvName(), "uninstall", runId);
 		_lg.setJournal(journal);
+		boolean dbCreatedByUs = true;
 
 		try (LgSession admin = _lg.connectAdmin(null))
 		{
 			admin.setQueryTimeout(0);
 			journal.event("header", "kind", "uninstall", "runId", runId, "server", _lg.getSrvName(), "vendor", _v.getName(),
-					"dbmsVersion", admin.getConnection().getMetaData().getDatabaseProductVersion(), "dbname", db, "force", force);
+					"dbmsVersion", admin.getConnection().getMetaData().getDatabaseProductVersion(), "dbname", db,
+					"force", force, "keepDatabase", keepDb, "keepLogins", keepLogins);
 
 			// Which logins: from the marker table, or (--force) all logins named dbxt_user_#
-			List<String> logins = new ArrayList<>();
 			boolean dbExists = databaseExists(admin, db);
-			boolean marker   = false;
-			if (dbExists)
-			{
-				try (LgSession s = _lg.connectAdmin(db))
-				{
-					if (_v == Vendor.POSTGRES)
-						s.exec("set search_path = " + PG_SCHEMA);
-					Object prod = s.queryValue("select v from dbxt_loadgen_info where k = 'product'");
-					marker = LoadGen.PRODUCT_MARKER.equals(prod);
-					if (marker)
-						for (Object[] row : s.query("select v from dbxt_loadgen_info where k like 'login.%'"))
-							logins.add((String) row[0]);
-				}
-				catch (SQLException ex)
-				{
-					_logger.info("No marker table in '" + db + "': " + ex.getMessage());
-				}
-			}
+			Map<String, String> info = dbExists ? readInstallInfo(db) : null;
+			boolean marker   = info != null;
+			List<String> logins = new ArrayList<>();
+			if (marker)
+				for (Map.Entry<String, String> e : info.entrySet())
+					if (e.getKey().startsWith("login."))
+						logins.add(e.getValue());
 
 			if (!marker && !force)
 			{
@@ -772,47 +961,182 @@ public class Installer
 						logins.add(login);
 			}
 
-			// Drop the database
-			if (dbExists)
-			{
-				dropDatabase(admin, db);
-				journal.event("object", "action", "drop", "objectType", "database", "name", db);
-				_logger.info("Dropped database '" + db + "'.");
-			}
-			if (_v == Vendor.ASE)
-				dropAseDevices(admin);
+			// Did WE create the database? Without a marker (--force) only a database with the default name counts as ours.
+			dbCreatedByUs = marker ? !"false".equals(info.get("databaseCreated")) : LoadGen.DEFAULT_DBNAME.equals(db);
 
-			// Drop the logins (only names that look like ours)
-			for (String login : logins)
+			//--- The database (or, in a database we did not create, only our objects)
+			if (!keepDb && dbExists)
 			{
-				if (!LOGIN_NAME_PATTERN.matcher(login).matches())
+				if (dbCreatedByUs)
 				{
-					_logger.warn("Skipping login '" + login + "', it does not look like a load generator login.");
-					continue;
+					dropDatabase(admin, db);
+					journal.event("object", "action", "drop", "objectType", "database", "name", db);
+					_logger.info("Dropped database '" + db + "'.");
+					if (_v == Vendor.ASE)
+						dropAseDevices(admin);
 				}
-				try
+				else if (marker)
 				{
-					dropLogin(admin, login);
-					_lg.removePassword(login);
-					journal.event("object", "action", "drop", "objectType", "login", "name", login);
+					dropOwnObjects(admin, db, logins);
 				}
-				catch (SQLException ex)
+				else
 				{
-					_logger.warn("Problems dropping login '" + login + "'. Caught: " + ex.getMessage());
-					journal.event("error", "msg", "Problems dropping login '" + login + "': " + ex.getMessage());
+					_logger.warn("Database '" + db + "' has no marker and is not named '" + LoadGen.DEFAULT_DBNAME + "': not dropping anything in it.");
 				}
 			}
-			if (_v == Vendor.POSTGRES && admin.queryInt("select count(*) from pg_roles where rolname = ?", PG_ROLE) > 0)
+			else if (!keepDb && _v == Vendor.ASE && force)
 			{
+				dropAseDevices(admin);
+			}
+
+			//--- The logins
+			if (!keepLogins)
+			{
+				// The database stays: remove the users/aliases of the logins first, and note it in the install info
+				if (keepDb && marker)
+				{
+					try (LgSession s = _lg.connectAdmin(db))
+					{
+						for (String login : logins)
+							dropDbUser(s, login);
+						if (_v == Vendor.POSTGRES)
+							s.exec("set search_path = " + PG_SCHEMA);
+						s.update("delete from dbxt_loadgen_info where k like 'login.%' or k = 'loginsDropped'");
+						s.update("insert into dbxt_loadgen_info (k, v) values ('loginsDropped', ?)", Journal.now());
+					}
+				}
+				for (String login : logins)
+				{
+					if (!LOGIN_NAME_PATTERN.matcher(login).matches())
+					{
+						_logger.warn("Skipping login '" + login + "', it does not look like a load generator login.");
+						continue;
+					}
+					try
+					{
+						dropLogin(admin, login);
+						_lg.removePassword(login);
+						journal.event("object", "action", "drop", "objectType", "login", "name", login);
+					}
+					catch (SQLException ex)
+					{
+						_logger.warn("Problems dropping login '" + login + "'. Caught: " + ex.getMessage());
+						journal.event("error", "msg", "Problems dropping login '" + login + "': " + ex.getMessage());
+					}
+				}
+				_logger.info("Dropped " + logins.size() + " logins.");
+			}
+			else if (dbCreatedByUs && dbExists && !keepDb)
+			{
+				// The logins stay, their default database is gone
+				for (String login : logins)
+				{
+					if (_v == Vendor.SQLSERVER) admin.exec("alter login [" + login + "] with default_database = [master]");
+					if (_v == Vendor.ASE)       admin.exec("exec master..sp_modifylogin '" + login + "', 'defdb', 'master'");
+				}
+				_logger.info("Kept " + logins.size() + " logins (default database set to master), their passwords stay in '" + _lg.getPasswdFile() + "'.");
+			}
+
+			//--- Postgres: the role that owned the objects
+			if (_v == Vendor.POSTGRES && !keepDb && admin.queryInt("select count(*) from pg_roles where rolname = ?", PG_ROLE) > 0)
+			{
+				if (databaseExists(admin, db))
+					admin.exec("revoke connect, temporary on database " + db + " from " + PG_ROLE);
 				admin.exec("drop role " + PG_ROLE);
 				journal.event("object", "action", "drop", "objectType", "role", "name", PG_ROLE);
 			}
-			_logger.info("Dropped " + logins.size() + " logins.");
 		}
 
-		journal.event("summary", "result", "UNINSTALLED");
-		System.out.println("Uninstalled '" + db + "' from '" + _lg.getSrvName() + "'. Journal: " + journal.getFile());
+		String what = keepDb     ? "the logins (the database is kept)"
+		            : keepLogins ? "the database/objects (the logins are kept)"
+		            : !dbCreatedByUs ? "the load generator objects and logins (the database was not created by the load generator and is kept)"
+		            : "everything";
+		journal.event("summary", "result", "UNINSTALLED", "dropped", what);
+		System.out.println("Uninstalled " + what + " for '" + db + "' on '" + _lg.getSrvName() + "'. Journal: " + journal.getFile());
 		return LoadGen.EXIT_OK;
+	}
+
+	/** In a database we did NOT create: drop only our tables, procedures (Postgres: the schema) and the users of our logins */
+	private void dropOwnObjects(LgSession admin, String db, List<String> logins)
+	throws SQLException
+	{
+		// Sessions of our logins may hold locks on the tables
+		for (String login : logins)
+			killSessions(admin, login);
+
+		try (LgSession s = _lg.connectAdmin(db))
+		{
+			s.setQueryTimeout(0);
+			if (_v == Vendor.POSTGRES)
+			{
+				s.exec("drop schema " + PG_SCHEMA + " cascade");
+				_lg.getJournal().event("object", "action", "drop", "objectType", "schema", "name", PG_SCHEMA);
+			}
+			else
+			{
+				for (String name : PROCEDURES)
+					if (s.queryInt("select count(*) from sysobjects where name = ? and type = 'P'", name) > 0)
+					{
+						s.exec("drop procedure " + name);
+						_lg.getJournal().event("object", "action", "drop", "objectType", "procedure", "name", name);
+					}
+				for (String name : TABLES)
+					if (s.queryInt("select count(*) from sysobjects where name = ? and type = 'U'", name) > 0)
+					{
+						s.exec("drop table " + name);
+						_lg.getJournal().event("object", "action", "drop", "objectType", "table", "name", name);
+					}
+				for (String login : logins)
+					dropDbUser(s, login);
+			}
+		}
+		catch (SQLException ex)
+		{
+			throw ex;
+		}
+		catch (Exception ex)
+		{
+			throw new SQLException("Problems dropping the load generator objects in '" + db + "'. Caught: " + ex, ex);
+		}
+		_logger.info("Dropped the load generator objects in '" + db + "' (the database itself was not created by the load generator and is kept).");
+	}
+
+	/** Remove the database user / alias of a login (SQL Server, ASE). Postgres: nothing, the login is only a member of the owner role */
+	private void dropDbUser(LgSession s, String login)
+	throws SQLException
+	{
+		switch (_v)
+		{
+		case SQLSERVER:
+			if (s.queryInt("select count(*) from sys.database_principals where name = ?", login) > 0)
+				s.exec("drop user [" + login + "]");
+			break;
+		case ASE:
+			if (s.queryInt("select count(*) from sysalternates where suid = suser_id(?)", login) > 0)
+				s.exec("exec sp_dropalias '" + login + "'");
+			break;
+		case POSTGRES:
+			break;
+		}
+	}
+
+	private void killSessions(LgSession admin, String login)
+	throws SQLException
+	{
+		switch (_v)
+		{
+		case SQLSERVER:
+			for (Object[] row : admin.query("select session_id from sys.dm_exec_sessions where login_name = ?", login))
+				admin.exec("kill " + row[0]);
+			break;
+		case ASE:
+			for (Object[] row : admin.query("select spid from master..sysprocesses where suid = suser_id(?)", login))
+				admin.exec("kill " + row[0]);
+			break;
+		case POSTGRES:
+			admin.query("select pg_terminate_backend(pid) from pg_stat_activity where usename = ?", login);
+			break;
+		}
 	}
 
 	private List<String> listLoadGenLogins(LgSession admin)
@@ -856,22 +1180,12 @@ public class Installer
 	private void dropLogin(LgSession admin, String login)
 	throws SQLException
 	{
+		killSessions(admin, login);
 		switch (_v)
 		{
-		case SQLSERVER:
-			for (Object[] row : admin.query("select session_id from sys.dm_exec_sessions where login_name = ?", login))
-				admin.exec("kill " + row[0]);
-			admin.exec("drop login [" + login + "]");
-			break;
-		case ASE:
-			for (Object[] row : admin.query("select spid from master..sysprocesses where suid = suser_id(?)", login))
-				admin.exec("kill " + row[0]);
-			admin.exec("exec master..sp_droplogin '" + login + "'");
-			break;
-		case POSTGRES:
-			admin.query("select pg_terminate_backend(pid) from pg_stat_activity where usename = ?", login);
-			admin.exec("drop role " + login);
-			break;
+		case SQLSERVER: admin.exec("drop login [" + login + "]"); break;
+		case ASE:       admin.exec("exec master..sp_droplogin '" + login + "'"); break;
+		case POSTGRES:  admin.exec("drop role " + login); break;
 		}
 	}
 

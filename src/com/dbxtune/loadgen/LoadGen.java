@@ -290,6 +290,10 @@ public class LoadGen
 		o.addOption(Option.builder( ).longOpt("ase-db-size-mb"     ).hasArg(true ).build());
 		o.addOption(Option.builder( ).longOpt("ase-device-dir"     ).hasArg(true ).build());
 		o.addOption(Option.builder( ).longOpt("force"              ).hasArg(false).build());
+		o.addOption(Option.builder( ).longOpt("use-existing-db"    ).hasArg(false).build());
+		o.addOption(Option.builder( ).longOpt("logins-only"        ).hasArg(false).build());
+		o.addOption(Option.builder( ).longOpt("keep-database"      ).hasArg(false).build());
+		o.addOption(Option.builder( ).longOpt("keep-logins"        ).hasArg(false).build());
 
 		o.addOption(Option.builder("d").longOpt("duration"         ).hasArg(true ).build());
 		o.addOption(Option.builder("i").longOpt("intensity"        ).hasArg(true ).build());
@@ -342,6 +346,11 @@ public class LoadGen
 		pw.println("  --ase-db-size-mb <mb>               ASE database size (default: from --size)");
 		pw.println("  --ase-device-dir <dir>              ASE: create own devices in this directory ON THE ASE HOST (disk init),");
 		pw.println("                                      uninstall drops them (the files stay on disk)");
+		pw.println("  --use-existing-db                   install: into a database you created (-D name); its options are not changed,");
+		pw.println("                                      and uninstall then drops only the load generator objects, not the database");
+		pw.println("  --logins-only                       install: (re)create the " + LOGIN_PREFIX + "# logins of an existing install");
+		pw.println("  --keep-database                     uninstall: drop only the logins (get them back with install --logins-only)");
+		pw.println("  --keep-logins                       uninstall: drop only the database (or our objects), keep the logins + passwords");
 		pw.println("  --force                             uninstall: also without the marker table (only " + DEFAULT_DBNAME + " / " + LOGIN_PREFIX + "#)");
 		pw.println();
 		pw.println("run:");
