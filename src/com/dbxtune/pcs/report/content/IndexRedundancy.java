@@ -26,7 +26,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -289,8 +288,8 @@ public class IndexRedundancy
 	/** [c1] DESC -> [c1] */
 	private static String colName(String col)
 	{
-		String s = col.trim();
-		return s.toUpperCase(Locale.ROOT).endsWith(" DESC") ? s.substring(0, s.length() - 5).trim() : s;
+		// Also Postgres: "a DESC NULLS LAST", "a NULLS FIRST"
+		return col.trim().replaceAll("(?i)( (ASC|DESC))?( NULLS (FIRST|LAST))?$", "").trim();
 	}
 
 	/** The lower, the more reason to keep it. Primary key, unique constraint, unique, clustered, most reads, lowest id */

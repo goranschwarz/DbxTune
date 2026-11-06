@@ -30,6 +30,8 @@ import java.sql.Timestamp;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -45,6 +47,8 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportEntry;
+import com.dbxtune.pcs.report.content.IndexAnalysisHtml;
+import com.dbxtune.pcs.report.content.IndexRedundancy;
 import com.dbxtune.pcs.report.content.ReportEntryAbstract;
 import com.dbxtune.sql.SqlObjectName;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -192,6 +196,35 @@ extends ReportEntryAbstract
 		Set<PgTableInfo> tableInfoSet = getTableInformationFromMonDdlStorage(conn, tableList);
 		if (tableInfoSet.isEmpty())
 			return "";
+
+		// For Index Analysis: when the usage counters started (server start, or a statistics reset), and the newest usage sample
+		_pgIndexesNewestSample = null;
+		_pgStartTime           = null;
+		_pgStatsReset.clear();
+		try (Statement stmnt = conn.createStatement())
+		{
+			if (DbUtils.checkIfTableExistsNoThrow(conn, null, null, "CmPgIndexes_abs"))
+				try (ResultSet rs = stmnt.executeQuery(conn.quotifySqlString("select max([SessionSampleTime]) from [CmPgIndexes_abs]")))
+				{
+					if (rs.next()) _pgIndexesNewestSample = rs.getTimestamp(1);
+				}
+			if (DbUtils.checkIfTableExistsNoThrow(conn, null, null, "CmSummary_abs"))
+				try (ResultSet rs = stmnt.executeQuery(conn.quotifySqlString("select max([start_time]) from [CmSummary_abs]")))
+				{
+					if (rs.next()) _pgStartTime = rs.getTimestamp(1);
+				}
+			if (DbUtils.checkIfTableExistsNoThrow(conn, null, null, "CmPgDatabase_abs"))
+				try (ResultSet rs = stmnt.executeQuery(conn.quotifySqlString("select [datname], max([stats_reset]) from [CmPgDatabase_abs] group by [datname]")))
+				{
+					while (rs.next())
+						if (rs.getTimestamp(2) != null)
+							_pgStatsReset.put(rs.getString(1), rs.getTimestamp(2));
+				}
+		}
+		catch (SQLException ex)
+		{
+			_logger.info("Could not read the server start, statistics reset or index usage sample time, continuing without them. Caught: " + ex);
+		}
 
 		// And make it into a HTML table with various information about the table and indexes
 		return getTableInfoAsHtmlTable(currentDbname, tableInfoSet, tableList, includeIndexInfo, classname);
@@ -394,9 +427,9 @@ extends ReportEntryAbstract
 			if (entry.isView())
 			{
 				tableInfoMap.put("Type"       ,            "<b>VIEW</b>"              );
-				tableInfoMap.put("DBName"     ,            markIfDifferent(entry.getDbName(), firstEntryDbname));
-				tableInfoMap.put("Schema"     ,            entry.getSchemaName()      );
-				tableInfoMap.put("View"       ,            entry.getTableName()       );
+				tableInfoMap.put("DBName"     ,            markIfDifferent(IndexAnalysisHtml.esc(entry.getDbName()), IndexAnalysisHtml.esc(firstEntryDbname)));
+				tableInfoMap.put("Schema"     ,            IndexAnalysisHtml.esc(entry.getSchemaName()) );
+				tableInfoMap.put("View"       ,            IndexAnalysisHtml.esc(entry.getTableName())  );
 //				tableInfoMap.put("Created"    ,            entry.getCrDate()+""       );
 //				tableInfoMap.put("References" ,            entry.getViewReferences()+""); // instead show this in the: Index Info section
 				tableInfoMap.put("DDL"        ,            getFormattedSqlAsTooltipDiv(entry._objectText, "View DDL", DbUtils.DB_PROD_NAME_POSTGRES));
@@ -404,8 +437,8 @@ extends ReportEntryAbstract
 			else if (entry.isFunction())
 			{
 				tableInfoMap.put("Type"       ,            "<b>FUNCTION</b>"          );
-				tableInfoMap.put("DBName"     ,            markIfDifferent(entry.getDbName(), firstEntryDbname));
-				tableInfoMap.put("Schema"     ,            entry.getSchemaName()      );
+				tableInfoMap.put("DBName"     ,            markIfDifferent(IndexAnalysisHtml.esc(entry.getDbName()), IndexAnalysisHtml.esc(firstEntryDbname)));
+				tableInfoMap.put("Schema"     ,            IndexAnalysisHtml.esc(entry.getSchemaName()) );
 				tableInfoMap.put("Function"   ,            entry.getTableName()       );
 //				tableInfoMap.put("Created"    ,            entry.getCrDate()+""       );
 //				tableInfoMap.put("References" ,            entry.getFunctionReferences()+""); // instead show this in the: Index Info section
@@ -414,8 +447,8 @@ extends ReportEntryAbstract
 			else if (entry.isProcedure())
 			{
 				tableInfoMap.put("Type"       ,            "<b>PROCEDURE</b>"          );
-				tableInfoMap.put("DBName"     ,            markIfDifferent(entry.getDbName(), firstEntryDbname));
-				tableInfoMap.put("Schema"     ,            entry.getSchemaName()      );
+				tableInfoMap.put("DBName"     ,            markIfDifferent(IndexAnalysisHtml.esc(entry.getDbName()), IndexAnalysisHtml.esc(firstEntryDbname)));
+				tableInfoMap.put("Schema"     ,            IndexAnalysisHtml.esc(entry.getSchemaName()) );
 				tableInfoMap.put("Function"   ,            entry.getTableName()       );
 //				tableInfoMap.put("Created"    ,            entry.getCrDate()+""       );
 //				tableInfoMap.put("References" ,            entry.getFunctionReferences()+""); // instead show this in the: Index Info section
@@ -424,8 +457,8 @@ extends ReportEntryAbstract
 			else if (entry.isCursor())
 			{
 				tableInfoMap.put("Type"       ,            "<b>CURSOR</b>"          );
-				tableInfoMap.put("DBName"     ,            markIfDifferent(entry.getDbName(), firstEntryDbname));
-//				tableInfoMap.put("Schema"     ,            entry.getSchemaName()      );
+				tableInfoMap.put("DBName"     ,            markIfDifferent(IndexAnalysisHtml.esc(entry.getDbName()), IndexAnalysisHtml.esc(firstEntryDbname)));
+//				tableInfoMap.put("Schema"     ,            IndexAnalysisHtml.esc(entry.getSchemaName()) );
 //				tableInfoMap.put("Function"   ,            entry.getTableName()       );
 				tableInfoMap.put("Created"    ,            entry.getCrDate() + ""       );
 //				tableInfoMap.put("References" ,            entry.getCursorReferences()+""); // instead show this in the: Index Info section
@@ -434,9 +467,9 @@ extends ReportEntryAbstract
 			else if (entry.isRemoteTable())
 			{
 				tableInfoMap.put("Type"       ,            "<b>REMOTE TABLE</b>"      );
-				tableInfoMap.put("DBName"     ,            markIfDifferent(entry.getDbName(), firstEntryDbname));
-				tableInfoMap.put("Schema"     ,            entry.getSchemaName()      );
-				tableInfoMap.put("Table"      ,            entry.getTableName()       );
+				tableInfoMap.put("DBName"     ,            markIfDifferent(IndexAnalysisHtml.esc(entry.getDbName()), IndexAnalysisHtml.esc(firstEntryDbname)));
+				tableInfoMap.put("Schema"     ,            IndexAnalysisHtml.esc(entry.getSchemaName()) );
+				tableInfoMap.put("Table"      ,            IndexAnalysisHtml.esc(entry.getTableName())  );
 				tableInfoMap.put("Remote SRV" ,            entry.getRemoteServerName());
 				tableInfoMap.put("Remote DB"  ,            entry.getRemoteDBName()    );
 				tableInfoMap.put("Remote TBL" ,            entry.getRemoteTableName() );
@@ -445,9 +478,9 @@ extends ReportEntryAbstract
 			}
 			else // Any table
 			{
-				tableInfoMap.put("DBName"     ,             markIfDifferent(entry.getDbName(), firstEntryDbname));
-				tableInfoMap.put("Schema"      ,            entry.getSchemaName() );
-				tableInfoMap.put("Table"       ,            entry.getTableName()  );
+				tableInfoMap.put("DBName"     ,             markIfDifferent(IndexAnalysisHtml.esc(entry.getDbName()), IndexAnalysisHtml.esc(firstEntryDbname)));
+				tableInfoMap.put("Schema"      ,            IndexAnalysisHtml.esc(entry.getSchemaName()) );
+				tableInfoMap.put("Table"       ,            IndexAnalysisHtml.esc(entry.getTableName())  );
 				tableInfoMap.put("Rowcount"    , nf.format( entry.getRowTotal()  ));
 				
 				if (entry.getPartitionCount() != -1)
@@ -577,6 +610,9 @@ extends ReportEntryAbstract
 			{
 				// Get index information in a separate table
 				indexInfo = getIndexInfoAsHtmlTable(entry, classname);
+
+				// Indexes that can be dropped or merged, and unused indexes
+				indexInfo += getRedundantIndexInfoAsHtml(entry);
 			}
 			
 			
@@ -680,10 +716,10 @@ extends ReportEntryAbstract
 					avgBytesPerRow = entry.getSizePages() * 8192L / entry.getRowCount();
 
 				sb.append("<tr> \n");
-				sb.append("  <td>").append(            entry.getIndexName()          ).append("</td> \n");
-				sb.append("  <td>").append(            entry.getKeysStr()            ).append("</td> \n");
-				sb.append("  <td>").append(            entry.getIncludeStr()         ).append("</td> \n");
-				sb.append("  <td>").append(            entry.getDescription()        ).append("</td> \n");
+				sb.append("  <td>").append( IndexAnalysisHtml.esc( entry.getIndexName()   )).append("</td> \n");
+				sb.append("  <td>").append( IndexAnalysisHtml.esc( entry.getKeysStr()     )).append("</td> \n");
+				sb.append("  <td>").append( IndexAnalysisHtml.esc( entry.getIncludeStr()  )).append("</td> \n");
+				sb.append("  <td>").append( IndexAnalysisHtml.esc( entry.getDescription() )).append("</td> \n");
 				sb.append("  <td>").append( nf.format( entry.getRowCount()          )).append("</td> \n");
 				sb.append("  <td>").append( nf.format( entry.getSizePages()         )).append("</td> \n");
 				sb.append("  <td>").append( nf.format( entry.getSizeMb()            )).append("</td> \n");
@@ -699,7 +735,7 @@ extends ReportEntryAbstract
 				sb.append("  <td>").append( diffAbsValues(entry._idx_cacheHitPct          , entry._abs_idx_cacheHitPct           )).append("</td> \n");
 				
 				sb.append("  <td>").append( entry.getTableSpace() == null ? "default" : entry.getTableSpace() ).append("</td> \n");
-				sb.append("  <td>").append(            entry.getDdlText()            ).append("</td> \n");
+				sb.append("  <td>").append( IndexAnalysisHtml.esc( entry.getDdlText()     )).append("</td> \n");
 				sb.append("</tr> \n");
 			}
 			sb.append("</tbody> \n");
@@ -1481,6 +1517,413 @@ extends ReportEntryAbstract
 	}
 
 	
+	//------------------------------------------------------------------------------------
+	// Index Analysis
+	//------------------------------------------------------------------------------------
+
+	/** Newest CmPgIndexes_abs sample: the usage counters are from it. Read in getDbmsTableInfoAsHtmlTable(), null if not known. */
+	private Timestamp           _pgIndexesNewestSample;
+	/** When Postgres was started (CmSummary start_time), null if not known */
+	private Timestamp           _pgStartTime;
+	/** dbname -&gt; stats_reset of pg_stat_database (CmPgDatabase), only the databases where it was ever reset */
+	private Map<String, Timestamp> _pgStatsReset = new HashMap<>();
+
+	/** One index definition, parsed from pg_get_indexdef() */
+	static class PgIndexDdl
+	{
+		String       raw;         // the text as stored
+		boolean      unique;
+		String       name;
+		boolean      only;        // ON ONLY: the index of a partitioned table
+		String       table;       // as written by pg_get_indexdef(): quoted where needed
+		String       method;
+		List<String> keys     = new ArrayList<>();
+		List<String> includes = new ArrayList<>();
+		String       with;        // the text inside WITH (...), or null
+		String       tablespace;
+		String       where;
+	}
+
+	/**
+	 * Parse the text from pg_get_indexdef(), like: <code>CREATE UNIQUE INDEX ix ON s.t USING btree (a, b DESC) INCLUDE (c) WITH (fillfactor='80') TABLESPACE ts WHERE (a > 0)</code>
+	 * @return null if the text doesn't look like that
+	 */
+	static PgIndexDdl parsePgIndexDdl(String ddl)
+	{
+		if (ddl == null)
+			return null;
+		// An identifier: "quoted, maybe with ""double"" quotes" or plain. The table can have a schema.
+		String ident = "(?:\"(?:[^\"]|\"\")+\"|[^\\s.\"]+)";
+		java.util.regex.Matcher m = java.util.regex.Pattern.compile("^CREATE (UNIQUE )?INDEX (" + ident + ") ON (ONLY )?(" + ident + "(?:\\." + ident + ")?) USING (\\w+) \\(").matcher(ddl);
+		if ( ! m.find() )
+			return null;
+
+		PgIndexDdl d = new PgIndexDdl();
+		d.raw    = ddl;
+		d.unique = m.group(1) != null;
+		d.name   = m.group(2);
+		d.only   = m.group(3) != null;
+		d.table  = m.group(4);
+		d.method = m.group(5);
+
+		int[] pos = { m.end() };
+		String keys = pgParenContent(ddl, pos);
+		if (keys == null)
+			return null;
+		d.keys = pgSplitTopLevel(keys);
+
+		String rest = ddl.substring(pos[0]);
+		if (rest.startsWith(" INCLUDE ("))
+		{
+			pos[0] = pos[0] + " INCLUDE (".length();
+			String inc = pgParenContent(ddl, pos);
+			if (inc == null)
+				return null;
+			d.includes = pgSplitTopLevel(inc);
+			rest = ddl.substring(pos[0]);
+		}
+		if (rest.startsWith(" WITH ("))
+		{
+			pos[0] = pos[0] + " WITH (".length();
+			d.with = pgParenContent(ddl, pos);
+			if (d.with == null)
+				return null;
+			rest = ddl.substring(pos[0]);
+		}
+		java.util.regex.Matcher t = java.util.regex.Pattern.compile("^ TABLESPACE (\\S+)").matcher(rest);
+		if (t.find())
+		{
+			d.tablespace = t.group(1);
+			rest = rest.substring(t.end());
+		}
+		if (rest.startsWith(" WHERE "))
+		{
+			d.where = rest.substring(" WHERE ".length());
+			rest = "";
+		}
+		return rest.trim().isEmpty() ? d : null;
+	}
+
+	/** The text up to the ')' that closes the '(' just before pos, pos is moved past that ')' */
+	private static String pgParenContent(String s, int[] pos)
+	{
+		int depth = 1;
+		boolean inQuote = false;
+		for (int i = pos[0]; i < s.length(); i++)
+		{
+			char c = s.charAt(i);
+			if (c == '"' || c == '\'')                 inQuote = ! inQuote;
+			else if ( ! inQuote && c == '(' )          depth++;
+			else if ( ! inQuote && c == ')' && --depth == 0)
+			{
+				String content = s.substring(pos[0], i);
+				pos[0] = i + 1;
+				return content;
+			}
+		}
+		return null;
+	}
+
+	private static List<String> pgSplitTopLevel(String s)
+	{
+		List<String> list = new ArrayList<>();
+		int depth = 0, start = 0;
+		boolean inQuote = false;
+		for (int i = 0; i < s.length(); i++)
+		{
+			char c = s.charAt(i);
+			if (c == '"' || c == '\'')                  inQuote = ! inQuote;
+			else if ( ! inQuote && c == '(' )           depth++;
+			else if ( ! inQuote && c == ')' )           depth--;
+			else if ( ! inQuote && depth == 0 && c == ',' )
+			{
+				list.add(s.substring(start, i).trim());
+				start = i + 1;
+			}
+		}
+		if ( ! s.trim().isEmpty() )
+			list.add(s.substring(start).trim());
+		return list;
+	}
+
+	/** A key we can compare: a column, maybe quoted, with ASC/DESC and NULLS FIRST/LAST. Not an expression, operator class or COLLATE. */
+	private static final String PG_PLAIN_KEY = "^(\"[^\"]+\"|[a-z_][a-z0-9_$]*)( (ASC|DESC))?( NULLS (FIRST|LAST))?$";
+
+	private static String pgQuote(String name)
+	{
+		return "\"" + name.replace("\"", "\"\"") + "\"";
+	}
+
+	/** Days the usage counters cover: from the stats reset of the database (or the server start) to the newest sample. -1 if not known */
+	private long pgCounterDays(String dbname)
+	{
+		Timestamp from = pgCountersFrom(dbname);
+		if (from == null || _pgIndexesNewestSample == null)
+			return -1;
+		return (_pgIndexesNewestSample.getTime() - from.getTime()) / (24L * 3600 * 1000);
+	}
+
+	private Timestamp pgCountersFrom(String dbname)
+	{
+		Timestamp reset = _pgStatsReset.get(dbname);
+		if (reset == null)
+			return _pgStartTime;
+		if (_pgStartTime == null)
+			return reset;
+		return reset.after(_pgStartTime) ? reset : _pgStartTime;
+	}
+
+	/**
+	 * Index Analysis for Postgres: indexes that can be dropped or merged (De-duplication) and Unused Indexes, with DDL and ROLLBACK scripts.
+	 * <ul>
+	 *   <li>The definition comes from pg_get_indexdef(): the stored 'index_keys' also lists the INCLUDE columns.</li>
+	 *   <li>No clustered index (a table is a heap): no clustering key.</li>
+	 *   <li>A unique constraint is not marked in the stored data: a unique index is never dropped, and gets no INCLUDE columns.</li>
+	 *   <li>The scripts are one transaction (Postgres DDL is transactional).</li>
+	 * </ul>
+	 * @return HTML, or "" if there is nothing to tell
+	 */
+	public String getRedundantIndexInfoAsHtml(PgTableInfo ti)
+	{
+		if (ti == null || ti.isView() || ti._indexList == null || ti._indexList.isEmpty())
+			return "";
+
+		Map<IndexRedundancy.Idx, PgIndexInfo> infoMap    = new LinkedHashMap<>();
+		Map<String, PgIndexDdl>               ddlMap     = new HashMap<>();
+		Map<String, String>                   notChecked = new LinkedHashMap<>();
+
+		for (PgIndexInfo ii : ti._indexList)
+		{
+			String     desc = StringUtil.nullToValue(ii._desc, "");
+			PgIndexDdl d    = parsePgIndexDdl(ii._ddlTxt);
+
+			boolean keysOk = d != null && ! d.keys.isEmpty();
+			if (d != null)
+			{
+				for (String k : d.keys)     keysOk &= k.matches(PG_PLAIN_KEY);
+				for (String k : d.includes) keysOk &= k.matches("^(\"[^\"]+\"|[a-z_][a-z0-9_$]*)$");
+			}
+
+			String reason = null;
+			if      (d == null)                          reason = "the stored definition (pg_get_indexdef) could not be read";
+			else if ( ! "btree".equals(d.method) )       reason = "index method " + d.method + ", only btree indexes are compared";
+			else if (d.where != null)                    reason = "partial index (WHERE " + d.where + ")";
+			else if (d.only || ti._partitionCount > 0)   reason = "index of a partitioned table";
+			else if (desc.contains("partition=true"))     reason = "index of a partition: it belongs to the index of the partitioned table, and can't be dropped on its own";
+			else if (desc.contains("excl=true"))         reason = "exclusion constraint";
+			else if ( ! keysOk )                         reason = "expression, operator class or COLLATE in the keys";
+
+			if (reason != null)
+			{
+				notChecked.put(ii._indexName, reason);
+				continue;
+			}
+
+			IndexRedundancy.Idx idx = new IndexRedundancy.Idx(ii._indexName, d.keys, d.includes);
+			idx.primaryKey       = desc.contains("PK=true");
+			idx.unique           = d.unique;
+			idx.uniqueConstraint = d.unique; // A unique constraint is not marked: never drop or widen a unique index
+			idx.reads            = ii._usageAbsRowFound ? ii._abs_idx_scan : -1;
+			idx.id               = (int) Math.min(Integer.MAX_VALUE, ii._IndexID);
+			infoMap.put(idx, ii);
+			ddlMap.put(ii._indexName, d);
+		}
+
+		List<IndexRedundancy.Finding> findings = IndexRedundancy.analyze(new ArrayList<>(infoMap.keySet()), Collections.emptyList());
+
+		// ---- Unused: idx_scan = 0 since the counters were reset (or the server started), at least minDays ago
+		int  minDays = Configuration.getCombinedConfiguration().getIntProperty(IndexAnalysisHtml.PROPKEY_unused_minDays, IndexAnalysisHtml.DEFAULT_unused_minDays);
+		long days    = pgCounterDays(ti._dbName);
+
+		Set<String> inDedup = new HashSet<>();
+		for (IndexRedundancy.Finding f : findings)
+		{
+			inDedup.add(f.kept.name);
+			for (IndexRedundancy.Idx dr : f.dropped)
+				inDedup.add(dr.name);
+		}
+
+		String            unusedNotChecked = null;
+		List<PgIndexInfo> unused           = new ArrayList<>();
+		Set<String>       unusedDedup      = new HashSet<>();
+		int               noCounters       = 0;
+		if (_pgIndexesNewestSample == null)
+			unusedNotChecked = "no index usage (CmPgIndexes) was recorded.";
+		else if (days < 0)
+			unusedNotChecked = "the server start time and the statistics reset time are not in the recording, so the age of the usage numbers is not known.";
+		else if (days < minDays)
+			unusedNotChecked = "the usage numbers only cover " + days + " days (since the statistics reset or the server start), at least " + minDays + " are needed (property " + IndexAnalysisHtml.PROPKEY_unused_minDays + ").";
+		else
+		{
+			for (Map.Entry<IndexRedundancy.Idx, PgIndexInfo> e : infoMap.entrySet())
+			{
+				IndexRedundancy.Idx idx = e.getKey();
+				PgIndexInfo         ii  = e.getValue();
+				if (idx.primaryKey || idx.unique)
+					continue;
+				if ( ! ii._usageAbsRowFound )
+				{
+					noCounters++;
+					continue;
+				}
+				if (ii._abs_idx_scan != 0)
+					continue;
+
+				if (inDedup.contains(ii._indexName))
+					unusedDedup.add(ii._indexName);
+				else
+					unused.add(ii);
+			}
+			unused.sort((a, b) -> Double.compare(b._sizeMb, a._sizeMb)); // the biggest first: Postgres has no write counter per index
+		}
+
+		// ---- The texts and findings, laid out by IndexAnalysisHtml (the same for all vendors)
+		Timestamp from = pgCountersFrom(ti._dbName);
+		String since = from == null
+				? "the last statistics reset or server start (the time is not in the recording)"
+				: "the statistics reset or server start " + IndexAnalysisHtml.esc(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm").format(from)) + ", <b>" + days + " day" + (days == 1 ? "" : "s") + " ago</b>";
+
+		IndexAnalysisHtml ia = new IndexAnalysisHtml();
+		ia.capturedTime = String.valueOf(ti.getSampleTime());
+		ia.notesHtml.add("Usage numbers (idx_scan) only cover the time since " + since + ", so check that the index isn't needed for something that runs rarely (month end, year end).");
+		ia.notesHtml.add("<b>Reads on a standby (read replica) are not counted on the primary</b>: an index used only by queries on a replica looks unused here.");
+		ia.notesHtml.add("Dropping an index can change the plans of other statements.");
+		ia.notesHtml.add("Each script is one transaction: if anything fails, nothing is changed. <code>CREATE INDEX</code> blocks writes to the table while it runs, and <code>DROP INDEX</code> needs a short exclusive lock. CONCURRENTLY can't be used in a transaction.");
+
+		for (IndexRedundancy.Finding f : findings)
+		{
+			IndexAnalysisHtml.Finding hf = new IndexAnalysisHtml.Finding();
+			hf.action = f.isMerge() ? "MERGE" : "DROP";
+			hf.kept   = f.kept.name;
+			for (IndexRedundancy.Idx dr : f.dropped)
+				hf.dropped.add(dr.name);
+
+			hf.lines.add(pgIndexLine("Keep", infoMap.get(f.kept), ddlMap.get(f.kept.name), ti._dbName));
+			for (IndexRedundancy.Idx dr : f.dropped)
+				hf.lines.add(pgIndexLine("Drop", infoMap.get(dr), ddlMap.get(dr.name), ti._dbName));
+
+			StringBuilder why = new StringBuilder();
+			for (String w : f.why)
+				why.append(w).append(" ");
+			if (f.isMerge())
+				why.append("Adding " + IndexRedundancy.str(f.addIncludes) + " to " + f.kept.name + " lets it answer their queries too, but it makes that index wider. ");
+			for (String n : hf.dropped)
+				if (unusedDedup.contains(n))
+					why.append(n + " has had no scans since the statistics were reset. ");
+			if (unusedDedup.contains(f.kept.name))
+				why.append(f.kept.name + " has had no scans since the statistics were reset either: check if it is needed at all. ");
+			hf.why    = why.toString();
+			hf.script = createPgIndexScript(ti, f.kept.name, hf.dropped, f.addIncludes, ddlMap, infoMap.get(f.kept));
+			ia.dedup.add(hf);
+		}
+		ia.dedupNotChecked = notChecked;
+
+		ia.unusedNotChecked = unusedNotChecked;
+		ia.unusedIntro = "No scans (idx_scan = 0) since the statistics were reset or the server started, " + days + " days ago. "
+				+ "Not listed: primary keys, unique indexes, and the indexes in Index De-duplication above.";
+		ia.unusedNotes.add("Reads on a standby (read replica) are not counted on the primary: check the replicas before you drop an index.");
+		ia.unusedNotes.add("An index created after the statistics reset has had less time to be used.");
+		ia.unusedNotes.add("An index without counters in the recording is not listed (" + noCounters + " on this table).");
+		ia.unusedNotes.add("Check if the index supports a FOREIGN KEY on its columns before you drop it.");
+		for (PgIndexInfo ii : unused)
+		{
+			IndexAnalysisHtml.Finding hf = new IndexAnalysisHtml.Finding();
+			hf.action = "DROP";
+			hf.dropped.add(ii._indexName);
+			hf.lines.add(pgIndexLine("Index", ii, ddlMap.get(ii._indexName), ti._dbName));
+			hf.script = createPgIndexScript(ti, null, hf.dropped, Collections.emptyList(), ddlMap, null);
+			ia.unused.add(hf);
+		}
+
+		return ia.toHtml();
+	}
+
+	private IndexAnalysisHtml.IndexLine pgIndexLine(String label, PgIndexInfo ii, PgIndexDdl d, String dbname)
+	{
+		String def = ii._indexName + " (" + String.join(", ", d.keys) + ")" + (d.includes.isEmpty() ? "" : " INCLUDE (" + String.join(", ", d.includes) + ")");
+		String usage = ii._usageAbsRowFound
+				? "scans " + ii._abs_idx_scan + ", tuples read " + ii._abs_idx_tup_read
+				: "usage unknown (no counters in the recording)";
+		return new IndexAnalysisHtml.IndexLine(label, def, ", " + ii.getSizeMb() + " MB, " + usage);
+	}
+
+	/**
+	 * DDL CHANGES and ROLLBACK, each one transaction.<br>
+	 * DROP: drops the indexes. MERGE: creates the wider index under a temporary name, drops the old ones, renames it to the kept name.<br>
+	 * ROLLBACK: drops the merged index (if any) and creates every original index again from its pg_get_indexdef().
+	 *
+	 * @param kept         the index that stays (checked to exist), null for unused indexes
+	 * @param addIncludes  columns to add to the kept index: a merge if not empty
+	 */
+	private static String createPgIndexScript(PgTableInfo ti, String kept, List<String> dropped, List<String> addIncludes, Map<String, PgIndexDdl> ddlMap, PgIndexInfo keptInfo)
+	{
+		String schema = pgQuote(ti._schemaName);
+		boolean merge = kept != null && ! addIncludes.isEmpty();
+
+		StringBuilder sb = new StringBuilder();
+		sb.append("-- DDL CHANGES: ").append(ti._dbName).append(".").append(ti._schemaName).append(".").append(ti._tableName).append(" (connect to database ").append(ti._dbName).append(")\n");
+		sb.append("-- Captured ").append(ti.getSampleTime()).append(": check that the indexes still look like this before running.\n");
+		sb.append("BEGIN;\n");
+		if (kept != null)
+			appendPgIndexCheck(sb, ti, kept, true);
+		for (String d : dropped)
+			appendPgIndexCheck(sb, ti, d, true);
+		if (merge)
+		{
+			PgIndexDdl k = ddlMap.get(kept);
+			String tmp = pgTmpName(kept);
+			List<String> inc = new ArrayList<>(k.includes);
+			inc.addAll(addIncludes);
+			sb.append("CREATE ").append(k.unique ? "UNIQUE " : "").append("INDEX ").append(pgQuote(tmp)).append(" ON ").append(k.table)
+			  .append(" USING ").append(k.method).append(" (").append(String.join(", ", k.keys)).append(") INCLUDE (").append(String.join(", ", inc)).append(")")
+			  .append(k.with == null ? "" : " WITH (" + k.with + ")").append(k.tablespace == null ? "" : " TABLESPACE " + k.tablespace).append(";\n");
+			sb.append("DROP INDEX ").append(schema).append(".").append(pgQuote(kept)).append(";\n");
+		}
+		for (String d : dropped)
+			sb.append("DROP INDEX ").append(schema).append(".").append(pgQuote(d)).append(";\n");
+		if (merge)
+			sb.append("ALTER INDEX ").append(schema).append(".").append(pgQuote(pgTmpName(kept))).append(" RENAME TO ").append(pgQuote(kept)).append(";\n");
+		sb.append("COMMIT;\n");
+
+		sb.append("\n");
+		sb.append("-- ROLLBACK: puts back what the DDL CHANGES did\n");
+		sb.append("BEGIN;\n");
+		if (kept != null)
+			appendPgIndexCheck(sb, ti, kept, true);
+		for (String d : dropped)
+			appendPgIndexCheck(sb, ti, d, false);
+		if (merge)
+			sb.append("DROP INDEX ").append(schema).append(".").append(pgQuote(kept)).append(";\n");
+		for (String d : dropped)
+			sb.append(keptDdl(ddlMap, d)).append(";\n");
+		if (merge)
+			sb.append(keptDdl(ddlMap, kept)).append(";\n");
+		sb.append("COMMIT;\n");
+		return sb.toString();
+	}
+
+	/** The original definition of an index, from pg_get_indexdef() as stored */
+	private static String keptDdl(Map<String, PgIndexDdl> ddlMap, String name)
+	{
+		return ddlMap.get(name).raw;
+	}
+
+	/** A temporary name for the merged index, at most 63 characters (the Postgres limit) */
+	private static String pgTmpName(String kept)
+	{
+		String tmp = kept + "_dbxtmp";
+		return tmp.length() <= 63 ? tmp : kept.substring(0, 63 - "_dbxtmp".length()) + "_dbxtmp";
+	}
+
+	private static void appendPgIndexCheck(StringBuilder sb, PgTableInfo ti, String indexName, boolean shouldExist)
+	{
+		String lit = indexName.replace("'", "''");
+		sb.append("DO $$ BEGIN IF ").append(shouldExist ? "NOT EXISTS" : "EXISTS")
+		  .append(" (SELECT 1 FROM pg_indexes WHERE schemaname = '").append(ti._schemaName.replace("'", "''")).append("' AND tablename = '").append(ti._tableName.replace("'", "''"))
+		  .append("' AND indexname = '").append(lit).append("') THEN RAISE EXCEPTION 'Index ").append(lit.replace("%", "%%")).append(shouldExist ? " does not exist" : " already exists")
+		  .append(": nothing was changed.'; END IF; END $$;\n");
+	}
+
 	private void getPgIndexes(DbxConnection conn, PgTableInfo ti)
 	{
 		String dbname     = ti._dbName;
@@ -1585,7 +2028,9 @@ extends ReportEntryAbstract
 					long      idx_tup_read                  = rs.getLong     (7);
 					double    idx_fetch_read_efficiency     = rs.getDouble   (8);
 					
-					long      abs_idx_scan                  = rs.getLong     (9);
+					// No abs row (left outer join) gives NULL: unknown, not 0
+					boolean   hasAbsRow                     = rs.getObject   (9) != null;
+					long      abs_idx_scan                  = hasAbsRow ? rs.getLong(9) : -1;
 					long      abs_idx_tup_fetch             = rs.getLong     (10);
 					long      abs_idx_tup_read              = rs.getLong     (11);
 					double    abs_idx_fetch_read_efficiency = rs.getDouble   (12);
@@ -1602,6 +2047,7 @@ extends ReportEntryAbstract
 						indexEntry._abs_idx_tup_fetch             = abs_idx_tup_fetch;
 						indexEntry._abs_idx_tup_read              = abs_idx_tup_read;
 						indexEntry._abs_idx_fetch_read_efficiency = abs_idx_fetch_read_efficiency;
+						indexEntry._usageAbsRowFound              = hasAbsRow;
 					}
 				}
 			}
@@ -2369,6 +2815,9 @@ extends ReportEntryAbstract
 		private long         _abs_idx_physical_read;
 		private double       _abs_idx_cacheHitPct;
 
+		/** true if the newest CmPgIndexes_abs sample has a row for this index */
+		private boolean      _usageAbsRowFound;
+
 		public long         getIndexID           () { return _IndexID; }
 		public String       getIndexName         () { return _indexName; }
 		public String       getTableSpace        () { return _tablespace; }
@@ -2395,6 +2844,7 @@ extends ReportEntryAbstract
 			if (_desc.contains("PK=true"             )) list.add("PK");
 			if (_desc.contains("excl=true"           )) list.add("exclusion");
 			if (_desc.contains("clustered=true"      )) list.add("clustered");
+			if (_desc.contains("partition=true"      )) list.add("partition");
 			if (getDdlText().contains(" WHERE "      )) list.add("partialIndex");
 			if (getDdlText().contains(" USING btree ")) list.add("btree");
 

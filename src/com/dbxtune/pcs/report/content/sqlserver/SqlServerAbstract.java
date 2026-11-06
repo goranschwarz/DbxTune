@@ -1217,7 +1217,11 @@ extends ReportEntryAbstract
 		// Exit early: if no data
 		if (tableEntry == null)                   return "";
 		if (tableEntry._missingIndexInfo == null) return "";
-			
+
+		// No Missing Index Recommendations -- Print nothing
+		if (tableEntry._missingIndexInfo.isEmpty())
+			return "";
+		
 		StringBuilder sb = new StringBuilder();
 
 		sb.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
@@ -1225,10 +1229,10 @@ extends ReportEntryAbstract
 		sb.append("<br> \n");
 //		sb.append("<details open> \n");
 		sb.append("<details> \n");
-		sb.append("<summary>Show/Hide: " + tableEntry._missingIndexInfo.getRowCount() + " Missing Index Recomendations from SQL Server: sys.dm_db_missing_index_*</summary> \n");
+		sb.append("<summary>Show/Hide: " + tableEntry._missingIndexInfo.getRowCount() + " Missing Index Recommendations from SQL Server: sys.dm_db_missing_index_*</summary> \n");
 
 		if ( tableEntry._missingIndexInfo.isEmpty() )
-			sb.append("&emsp; &bull; <b>No</b> Missing Index Recomendations was found.");
+			sb.append("&emsp; &bull; <b>No</b> Missing Index Recommendations was found.");
 		else
 			sb.append(toHtmlTable(tableEntry._missingIndexInfo, "dsr-missing-index-table"));
 

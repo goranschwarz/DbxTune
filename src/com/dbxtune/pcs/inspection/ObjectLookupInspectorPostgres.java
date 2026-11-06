@@ -320,7 +320,10 @@ extends ObjectLookupInspectorAbstract
 					+ "    ,i.relpages::bigint         AS size_pages \n"
 					+ "    ,i.relpages::bigint / 128.0 AS size_mb \n"
 					+ "    ,t.spcname                  AS tablespace \n"
-					+ "    ,'unique=' || x.indisunique || ', PK=' || x.indisprimary || ', excl=' || x.indisexclusion || ', clustered=' || x.indisclustered as description \n"
+					+ "    ,'unique=' || x.indisunique || ', PK=' || x.indisprimary || ', excl=' || x.indisexclusion || ', clustered=' || x.indisclustered \n"
+					// From 11: an index of a partition is attached to the index of the partitioned table, and can't be dropped on its own (used by Index Analysis)
+					+ (conn.getDbmsVersionInfo().getLongVersion() >= Ver.ver(11) ? "        || ', partition=' || i.relispartition \n" : "")
+					+ "        as description \n"
 					+ "    ,array_to_string(array(select a.attname from pg_attribute a where a.attrelid = x.indexrelid order by attnum), ', ') AS index_keys \n"
 					+ "    ,pg_get_indexdef(i.oid)     AS ddl \n"
 					+ "FROM pg_index x \n"
