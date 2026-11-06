@@ -833,7 +833,7 @@ extends ObjectLookupInspectorAbstract
 					// If the future, do NOT do lookup of this table.
 					pch.markDdlDetailsAsDiscarded(dbname, originObjectName);
 
-					_logger.info("DDL Lookup: Can't find any information for dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Skipping DDL Storage of this object. Also adding it to the 'discard' list.");
+					_logger.info("DDL Lookup: Can't find any information (or it's a disabled trigger) for dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Skipping DDL Storage of this object. Also adding it to the 'discard' list.");
 					return Collections.emptyList();   // <<<<<<<<<<------------<<<<<<<<<<------------<<<<<<<<<<------------
 				}
 			}
@@ -1201,6 +1201,29 @@ extends ObjectLookupInspectorAbstract
 		} // end: other objects than Statement Cache
 	}
 
+	/**
+	 * SQL condition: the trigger 'o' (a sysobjects row with type 'TR') is enabled, same as sp_helptrigger (12.5 to 16.0).
+	 * <ul>
+	 *   <li>A trigger referenced by the table's instrig/updtrig/deltrig is disabled per action in the TABLE's sysstat2:
+	 *       0x100000 = insert, 0x400000 = update, 0x200000 = delete</li>
+	 *   <li>From 16.0, more triggers per action ("create trigger ... order N") are in sysconstraints:
+	 *       status 0x400 = insert, 0x800 = update, 0x200 = delete, 0x1000 = disabled</li>
+	 * </ul>
+	 * "Enabled" = the trigger fires for at least one action. A trigger that isn't referenced from either place doesn't fire, so it's not enabled.
+	 */
+	private static String sqlTriggerIsEnabled(String dbname)
+	{
+		return ""
+			+ "(   exists (select 1 from " + dbname + ".dbo.sysobjects t \n"
+			+ "            where t.id = o.deltrig \n"
+			+ "              and (   (t.instrig = o.id and t.sysstat2 & 1048576 = 0) \n"
+			+ "                   or (t.updtrig = o.id and t.sysstat2 & 4194304 = 0) \n"
+			+ "                   or (t.deltrig = o.id and t.sysstat2 & 2097152 = 0))) \n"
+			+ "    or exists (select 1 from " + dbname + ".dbo.sysconstraints c \n"
+			+ "               where c.constrid = o.id and c.status & 3584 != 0 and c.status & 4096 = 0) \n"
+			+ ")";
+	}
+
 	private List<DdlDetails> getDbmsObjectList(DbxConnection conn, PersistentCounterHandler pch, String dbname, String objectName, String source, String dependParent, int dependLevel)
 	{
 		String originObjectName = objectName;
@@ -1236,6 +1259,7 @@ extends ObjectLookupInspectorAbstract
 				+ "    from " + dbname + ".dbo.sysobjects o, " + dbname + ".dbo.sysusers u \n"
 				+ "    where o.name = @objectname \n"
 				+ "      and o.uid = u.uid \n"
+				+ "      and (o.type != 'TR' or " + sqlTriggerIsEnabled(dbname) + ") \n" // disabled triggers (for example from sp_depends) are not looked up
 				+ "end \n"
 				+ "else if ( substring(@objectname, 1, 3) = 'sp_' ) \n"
 				+ "begin \n"
@@ -1297,19 +1321,21 @@ extends ObjectLookupInspectorAbstract
 		{
 			if ("U".equals(lookupEntry.getType()))
 			{
-				// Get TRIGGERS
+				// Get ENABLED TRIGGERS (disabled triggers are not looked up)
 				sql = ""
 						+ "    select o.name \n"           // Object Name
 						+ "          ,o.id \n"             // ID
 						+ "          ,o.crdate \n"         // Creation Date
 						+ "    from " + dbname + ".dbo.sysobjects o \n"
-						+ "    where 1 = 1 \n"
+						+ "    where o.deltrig = ? \n"     // "deltrig" holds "parent-objectid" for triggers (from version 16.0, we can have multiple ins/upd/del triggers)
 						+ "      and o.type    = 'TR' \n"
-						+ "      and o.deltrig = " + lookupEntry.getObjectId() + " \n" // "deltrig" holds "parent-objectid" for triggers (from version 15.7, we can have multiple ins/upd/del triggers)
+						+ "      and " + sqlTriggerIsEnabled(dbname) + " \n"
 						+ "";
-				
-				try ( Statement statement = conn.createStatement(); ResultSet rs = statement.executeQuery(sql) )
+
+				try ( PreparedStatement pstmt = conn.prepareStatement(sql) )
 				{
+					pstmt.setInt(1, lookupEntry.getObjectId());
+					ResultSet rs = pstmt.executeQuery();
 					while(rs.next())
 					{
 						DdlDetails addEntry = new DdlDetails();
