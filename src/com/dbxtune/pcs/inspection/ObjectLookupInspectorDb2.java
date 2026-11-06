@@ -301,6 +301,11 @@ extends ObjectLookupInspectorAbstract
 
 			+ "    ,VARCHAR(x.LASTUSED)                                      as LASTUSED \n"
 			+ "    ,RTRIM(x.INDSCHEMA)                                       as INDEX_SCHEMA \n"
+			// For Index Analysis: how old the index is, and what a CREATE INDEX needs to give the same index back
+			+ "    ,VARCHAR(x.CREATE_TIME)                                   as CREATE_TIME \n"
+			+ "    ,x.REVERSE_SCANS \n"
+			+ "    ,VARCHAR(x.PCTFREE)                                       as PCTFREE \n"
+			+ "    ,x.COMPRESSION \n"
 			+ "from SYSCAT.INDEXES x \n"
 			+ where + " \n"
 			+ "order by CASE x.UNIQUERULE WHEN 'P' THEN 0 WHEN 'U' THEN 1 ELSE 2 END, x.INDNAME";

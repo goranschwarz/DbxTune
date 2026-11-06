@@ -28,11 +28,17 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
@@ -43,6 +49,8 @@ import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.inspection.ObjectLookupInspectorDb2;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportEntry;
+import com.dbxtune.pcs.report.content.IndexAnalysisHtml;
+import com.dbxtune.pcs.report.content.IndexRedundancy;
 import com.dbxtune.pcs.report.content.ReportEntryAbstract;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
@@ -95,6 +103,10 @@ extends ReportEntryAbstract
 		public long   levels         = -1;
 		public String clusterPct;
 		public String lastUsed;
+		public String createTime;    // null = the recording was made by a version that did not store it
+		public String reverseScans;  // Y / N: what the CREATE INDEX of a rollback needs to give the same index back
+		public String pctFree;
+		public String compression;
 
 		public Db2Activity diff  = new Db2Activity(); // rowsRead = index scans, rowsInserted = index only scans, rowsUpdated = key updates
 		public Db2Activity abs   = new Db2Activity();
@@ -320,6 +332,13 @@ extends ReportEntryAbstract
 				ii.levels      = toLong(        indexes.getValueAsString(r, "NLEVELS"));
 				ii.clusterPct  = nullIfNullText(indexes.getValueAsString(r, "CLUSTER_PCT"));
 				ii.lastUsed    = nullIfNullText(indexes.getValueAsString(r, "LASTUSED"));
+				if (indexes.hasColumn("CREATE_TIME"))
+				{
+					ii.createTime   = nullIfNullText(indexes.getValueAsString(r, "CREATE_TIME"));
+					ii.reverseScans = nullIfNullText(indexes.getValueAsString(r, "REVERSE_SCANS"));
+					ii.pctFree      = nullIfNullText(indexes.getValueAsString(r, "PCTFREE"));
+					ii.compression  = nullIfNullText(indexes.getValueAsString(r, "COMPRESSION"));
+				}
 
 				for (int u = 0; indexUsage != null && u < indexUsage.getRowCount(); u++)
 				{
@@ -678,7 +697,7 @@ extends ReportEntryAbstract
 				if (StringUtil.hasValue(ti.dependsText))
 					map.put("Triggers", getTextAsTooltipDiv(ti.dependsText, "Triggers", getDdlMaxLengthTrigger()));
 
-				indexInfo = getIndexInfoAsHtmlTable(ti, classname);
+				indexInfo = getIndexInfoAsHtmlTable(ti, classname) + getRedundantIndexInfoAsHtml(ti);
 			}
 
 			sb.append("<tr> \n");
@@ -753,5 +772,365 @@ extends ReportEntryAbstract
 		sb.append("</table> \n");
 
 		return sb.toString();
+	}
+
+	//--------------------------------------------------------------------------------------------
+	// Index Analysis
+	//--------------------------------------------------------------------------------------------
+	/** A FOREIGN KEY in the CREATE TABLE text the lookup put together: ALTER TABLE ... FOREIGN KEY (C1, C2) REFERENCES ... */
+	private static final Pattern DB2_FK = Pattern.compile("FOREIGN KEY \\(([^)]*)\\) REFERENCES");
+
+	/** A key column of an expression-based index: Db2 stores a generated name (K00, K01...) instead of the expression */
+	private static final Pattern DB2_GENERATED_KEY = Pattern.compile("K\\d{2,}");
+
+	/**
+	 * Index Analysis for Db2: indexes that can be dropped (De-duplication) and Unused Indexes, with DDL and ROLLBACK scripts.
+	 * <ul>
+	 *   <li>No hidden key: an index points at the row by its RID. A CLUSTER index only decides where new rows go (a placement index).</li>
+	 *   <li>Only drops, no merges: INCLUDE is only for unique indexes. A PRIMARY KEY or UNIQUE index, and the CLUSTER index, are never dropped.</li>
+	 *   <li>Every script is ONE compound statement with a savepoint: a failing script changes nothing.</li>
+	 * </ul>
+	 * @return HTML, or "" if there is nothing to tell
+	 */
+	public static String getRedundantIndexInfoAsHtml(Db2TableInfo ti)
+	{
+		if (ti == null || ! ti.isTable() || ti.indexes.isEmpty())
+			return "";
+
+		IndexAnalysisHtml ia = new IndexAnalysisHtml();
+		ia.capturedTime = String.valueOf(ti.sampleTime);
+
+		// ---- The whole table can't be checked
+		String tableReason = null;
+		if      ("C".equals(ti.tableOrg))                        tableReason = "a column-organized table: Db2 makes and uses its own indexes";
+		else if (ti.db2Type != null && ! "T".equals(ti.db2Type)) tableReason = "not a regular table (type " + ti.db2Type + ")";
+		else if (ti.partitions > 1)                              tableReason = "a partitioned table";
+		if (tableReason != null)
+		{
+			for (Db2IndexInfo ii : ti.indexes)
+				ia.dedupNotChecked.put(ii.name, tableReason);
+			ia.unusedNotChecked = tableReason;
+			return ia.toHtml();
+		}
+
+		// The FOREIGN KEYs, from the CREATE TABLE text
+		List<List<String>> foreignKeys = new ArrayList<>();
+		Matcher fkm = DB2_FK.matcher(StringUtil.nullToValue(ti.objectText, ""));
+		while (fkm.find())
+			foreignKeys.add(StringUtil.parseCommaStrToList(fkm.group(1), true));
+
+		// ---- The indexes we can compare
+		Map<IndexRedundancy.Idx, Db2IndexInfo> infoMap    = new LinkedHashMap<>();
+		Map<String, String>                    notChecked = new LinkedHashMap<>();
+		int pos = 0;
+		for (Db2IndexInfo ii : ti.indexes)
+		{
+			List<String> keys = db2Keys(ii.keys);
+			String reason = null;
+			if      ( ! "REG".equals(ii.indexType) && ! "CLUS".equals(ii.indexType) ) reason = "index type " + ii.indexType + ", only regular and clustering indexes are compared";
+			else if (keys.isEmpty())                                                 reason = "the key columns are not known";
+			else if (db2HasExpressionKey(ti, keys))                                  reason = "a key is an expression";
+
+			if (reason != null)
+			{
+				notChecked.put(ii.name, reason);
+				continue;
+			}
+
+			IndexRedundancy.Idx idx = new IndexRedundancy.Idx(ii.name, keys, StringUtil.parseCommaStrToList(ii.includeCols, true));
+			idx.primaryKey         = "PRIMARY KEY".equals(ii.type);
+			idx.unique             = ii.isUniqueOrPk();
+			idx.uniqueConstraint   = idx.unique; // never dropped: it enforces a rule (and may be the index of a constraint)
+			idx.clustered          = "CLUS".equals(ii.indexType);
+			idx.clusteredHoldsRows = false;      // a placement index
+			idx.canGetIncludes     = false;      // INCLUDE only on a unique index, and only by a new CREATE INDEX: no merges
+			idx.reads              = db2ScansSinceActivation(ii);
+			idx.id                 = pos++;
+			infoMap.put(idx, ii);
+		}
+
+		List<IndexRedundancy.Finding> findings = IndexRedundancy.analyze(new ArrayList<>(infoMap.keySet()), Collections.emptyList());
+
+		Set<String> inDedup = new HashSet<>();
+		for (IndexRedundancy.Finding f : findings)
+		{
+			inDedup.add(f.kept.name);
+			for (IndexRedundancy.Idx dr : f.dropped)
+				inDedup.add(dr.name);
+		}
+
+		// ---- Unused: LASTUSED never (or older than minDays) at the lookup, no scans since the database was activated, and the index is at least minDays old
+		int    minDays    = Configuration.getCombinedConfiguration().getIntProperty(IndexAnalysisHtml.PROPKEY_unused_minDays, IndexAnalysisHtml.DEFAULT_unused_minDays);
+		String lookupDate = ti.sampleTime == null ? null : new java.text.SimpleDateFormat("yyyy-MM-dd").format(ti.sampleTime);
+		String minDate    = ti.sampleTime == null ? null : new java.text.SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date(ti.sampleTime.getTime() - minDays * 24L * 3600 * 1000));
+
+		List<Db2IndexInfo> unused      = new ArrayList<>();
+		Set<String>        unusedDedup = new HashSet<>();
+		int                tooNew      = 0;
+		int                ageUnknown  = 0;
+		int                forFk       = 0;
+		for (Map.Entry<IndexRedundancy.Idx, Db2IndexInfo> e : infoMap.entrySet())
+		{
+			IndexRedundancy.Idx idx = e.getKey();
+			Db2IndexInfo        ii  = e.getValue();
+			if (idx.unique || idx.clustered || minDate == null)
+				continue;
+			if (idx.reads > 0 || StringUtil.isNullOrBlank(ii.lastUsed))
+				continue;
+
+			boolean never = ii.isLastUsedNever();
+			if ( ! never && ii.lastUsed.compareTo(minDate) > 0 ) // used the last minDays
+				continue;
+
+			// How old is it: an index made yesterday has not been used either
+			if (ii.createTime == null)
+			{
+				if (never) // the recording has no CREATE_TIME (an older version): never used can be just made
+				{
+					ageUnknown++;
+					continue;
+				}
+			}
+			else if (ii.createTime.compareTo(minDate) > 0)
+			{
+				tooNew++;
+				continue;
+			}
+
+			if (inDedup.contains(ii.name))
+			{
+				unusedDedup.add(ii.name);
+				continue;
+			}
+
+			if (db2OnlyIndexForForeignKey(infoMap, foreignKeys, idx))
+			{
+				forFk++;
+				continue;
+			}
+			unused.add(ii);
+		}
+
+		// ---- The texts and findings, laid out by IndexAnalysisHtml (the same for all vendors)
+		ia.notesHtml.add("<b>Last Used</b> (<code>SYSCAT.INDEXES.LASTUSED</code>) is kept over restarts, but Db2 writes it down at most once a day: check that the index isn't needed for something that runs rarely (month end, year end).");
+		ia.notesHtml.add("<b>Use on an HADR standby (reads on standby) is not counted on the primary</b>: an index used only there looks unused here.");
+		ia.notesHtml.add("Dropping an index can change the plans of other statements, and packages that use it are invalidated (rebound at the next use).");
+		ia.notesHtml.add("Each script is ONE compound statement: it first checks that the indexes are there, then changes them. If anything fails, nothing is changed. "
+				+ "It ends with <code>@</code>: <code>db2 -td@ -f file.sql</code>. With autocommit off, <code>COMMIT</code> after it.");
+
+		for (IndexRedundancy.Finding f : findings)
+		{
+			IndexAnalysisHtml.Finding hf = new IndexAnalysisHtml.Finding();
+			hf.action = "DROP";
+			hf.kept   = f.kept.name;
+
+			List<Db2IndexInfo> dropped = new ArrayList<>();
+			hf.lines.add(db2IndexLine("Keep", infoMap.get(f.kept)));
+			for (IndexRedundancy.Idx dr : f.dropped)
+			{
+				hf.dropped.add(dr.name);
+				dropped.add(infoMap.get(dr));
+				hf.lines.add(db2IndexLine("Drop", infoMap.get(dr)));
+			}
+
+			StringBuilder why = new StringBuilder();
+			for (String w : f.why)
+				why.append(w.replace("is the clustered index, but on this table it is a placement index: it does not hold the data rows, it has the same keys as a nonclustered index.",
+				                     "is the CLUSTER index: it only decides where new rows go, it is an index like the others.")).append(" ");
+			for (String n : hf.dropped)
+				if (unusedDedup.contains(n))
+					why.append(n + " has not been used for at least " + minDays + " days. ");
+			if (unusedDedup.contains(f.kept.name))
+				why.append(f.kept.name + " has not been used for at least " + minDays + " days either: check if it is needed at all. ");
+			hf.why    = why.toString();
+			hf.script = createDb2IndexScript(ti, infoMap.get(f.kept), dropped);
+			ia.dedup.add(hf);
+		}
+		ia.dedupNotChecked = notChecked;
+
+		ia.unusedIntro = "Not used for at least " + minDays + " days when the table was looked up (" + lookupDate + "): Last Used is never or before " + minDate
+				+ ", the index is older than that, and no scans since the database was activated. "
+				+ "Not listed: the primary key, unique indexes, the CLUSTER index, and the indexes in Index De-duplication above.";
+		ia.unusedNotes.add("Last Used is the date Db2 last used the index for a query (also for an index-only scan). It is not updated when the index is only maintained by INSERT, UPDATE and DELETE.");
+		ia.unusedNotes.add("An index made less than " + minDays + " days before the lookup is not listed (" + tooNew + " on this table)."
+				+ (ageUnknown == 0 ? "" : " Never used, but the age is not known (recorded by an older version): " + ageUnknown + " not listed."));
+		ia.unusedNotes.add("The only index whose first columns are a FOREIGN KEY is not listed (" + forFk + " on this table): without it, a DELETE or key UPDATE in the parent table scans this table.");
+		for (Db2IndexInfo ii : unused)
+		{
+			IndexAnalysisHtml.Finding hf = new IndexAnalysisHtml.Finding();
+			hf.action = "DROP";
+			hf.dropped.add(ii.name);
+			hf.lines.add(db2IndexLine("Index", ii));
+			hf.script = createDb2IndexScript(ti, null, Collections.singletonList(ii));
+			ia.unused.add(hf);
+		}
+
+		return ia.toHtml();
+	}
+
+	/** "C1, C2 DESC" -> [C1, C2 DESC] */
+	private static List<String> db2Keys(String keys)
+	{
+		List<String> result = new ArrayList<>();
+		if (StringUtil.isNullOrBlank(keys))
+			return result;
+		for (String k : keys.split(", "))
+			if (StringUtil.hasValue(k))
+				result.add(k.trim());
+		return result;
+	}
+
+	/** A key named K00, K01... that is not a column of the table: Db2 made it for an expression */
+	private static boolean db2HasExpressionKey(Db2TableInfo ti, List<String> keys)
+	{
+		for (String k : keys)
+		{
+			String col = db2ColName(k);
+			if (DB2_GENERATED_KEY.matcher(col).matches() && ! StringUtil.nullToValue(ti.objectText, "").contains("\"" + col + "\" "))
+				return true;
+		}
+		return false;
+	}
+
+	/** C1 DESC -> C1 */
+	private static String db2ColName(String key)
+	{
+		return key.endsWith(" DESC") ? key.substring(0, key.length() - " DESC".length()) : key;
+	}
+
+	/** Index scans (incl. index-only scans) since the database was activated: the newest number there is (at the lookup, the last sample, or during the recording). -1 = not known */
+	private static long db2ScansSinceActivation(Db2IndexInfo ii)
+	{
+		long result = -1;
+		for (Db2Activity a : new Db2Activity[] { ii.atLookup, ii.abs, ii.diff })
+		{
+			result = Math.max(result, a.rowsRead);
+			result = Math.max(result, a.rowsInserted); // index-only scans
+		}
+		return result;
+	}
+
+	/** Is this the only (compared) index whose first columns are the columns of a FOREIGN KEY, in any order? */
+	private static boolean db2OnlyIndexForForeignKey(Map<IndexRedundancy.Idx, Db2IndexInfo> infoMap, List<List<String>> foreignKeys, IndexRedundancy.Idx index)
+	{
+		for (List<String> fk : foreignKeys)
+		{
+			if ( ! db2LeadsWith(index.keys, fk) )
+				continue;
+			boolean other = false;
+			for (IndexRedundancy.Idx i : infoMap.keySet())
+				if (i != index && db2LeadsWith(i.keys, fk))
+					other = true;
+			if ( ! other )
+				return true;
+		}
+		return false;
+	}
+
+	private static boolean db2LeadsWith(List<String> keys, List<String> cols)
+	{
+		if (cols.isEmpty() || cols.size() > keys.size())
+			return false;
+		Set<String> first = new HashSet<>();
+		for (int i = 0; i < cols.size(); i++)
+			first.add(db2ColName(keys.get(i)));
+		return first.containsAll(cols);
+	}
+
+	private static IndexAnalysisHtml.IndexLine db2IndexLine(String label, Db2IndexInfo ii)
+	{
+		long   scans = db2ScansSinceActivation(ii);
+		String name  = ("PRIMARY KEY".equals(ii.type) ? "PRIMARY KEY " : "UNIQUE".equals(ii.type) ? "UNIQUE " : "") + ii.name + ("CLUS".equals(ii.indexType) ? " (CLUSTER)" : "");
+		String def   = name + " (" + ii.keys + ")" + (StringUtil.hasValue(ii.includeCols) ? " INCLUDE (" + ii.includeCols + ")" : "");
+		String last  = "Last Used " + (ii.isLastUsedNever() ? "never" : ii.lastUsed); // the catalog date: Db2 writes it down later than the scans are counted
+		return new IndexAnalysisHtml.IndexLine(label, def, ", " + last + ", scans since activation " + (scans < 0 ? "unknown" : scans));
+	}
+
+	/** "name" with any " doubled */
+	private static String db2Qi(String name)
+	{
+		return "\"" + StringUtil.nullToValue(name, "").trim().replace("\"", "\"\"") + "\"";
+	}
+
+	/** The CREATE INDEX that gives the (non-unique) index back as it was */
+	private static String db2CreateIndex(Db2TableInfo ti, Db2IndexInfo ii)
+	{
+		List<String> cols = new ArrayList<>();
+		for (String k : db2Keys(ii.keys))
+			cols.add(db2Qi(db2ColName(k)) + (k.endsWith(" DESC") ? " DESC" : ""));
+
+		StringBuilder sb = new StringBuilder();
+		sb.append("CREATE INDEX ").append(db2Qi(ii.schema == null ? ti.schema : ii.schema)).append(".").append(db2Qi(ii.name))
+		  .append(" ON ").append(db2Qi(ti.schema)).append(".").append(db2Qi(ti.name)).append(" (").append(String.join(", ", cols)).append(")");
+		if (ii.pctFree != null && ! "-1".equals(ii.pctFree))
+			sb.append(" PCTFREE ").append(ii.pctFree);
+		if ("Y".equals(ii.reverseScans)) sb.append(" ALLOW REVERSE SCANS");
+		if ("N".equals(ii.reverseScans)) sb.append(" DISALLOW REVERSE SCANS");
+		if ("Y".equals(ii.compression))  sb.append(" COMPRESS YES");
+		if ("N".equals(ii.compression))  sb.append(" COMPRESS NO");
+		return sb.toString();
+	}
+
+	/**
+	 * A compound statement that does all or nothing: a savepoint first, and any error rolls back to it.<br>
+	 * (Without it, a failing block is undone by the CLP with autocommit, but JDBC with autocommit keeps what was done before the error: tested on Db2 11.5)
+	 */
+	private static final String DB2_BLOCK_BEGIN = ""
+			+ "BEGIN\n"
+			+ "    DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK TO SAVEPOINT DBX_INDEX_ANALYSIS; RESIGNAL; END;\n"
+			+ "    SAVEPOINT DBX_INDEX_ANALYSIS ON ROLLBACK RETAIN CURSORS;\n";
+	private static final String DB2_BLOCK_END = ""
+			+ "    RELEASE SAVEPOINT DBX_INDEX_ANALYSIS;\n"
+			+ "END@\n";
+
+	/**
+	 * DDL CHANGES and ROLLBACK, each ONE compound statement: first the checks (SIGNAL = nothing changed), then the changes, all or nothing.
+	 *
+	 * @param kept  the index that stays (checked to exist), null for unused indexes
+	 */
+	private static String createDb2IndexScript(Db2TableInfo ti, Db2IndexInfo kept, List<Db2IndexInfo> dropped)
+	{
+		boolean oldRecording = false;
+		for (Db2IndexInfo d : dropped)
+			if (d.createTime == null)
+				oldRecording = true;
+
+		StringBuilder sb = new StringBuilder();
+		sb.append("-- DDL CHANGES: ").append(ti.getFullName()).append("\n");
+		sb.append("-- Captured ").append(ti.sampleTime).append(": check that the indexes still look like this before running.\n");
+		sb.append("-- One statement (it ends with the at sign): if anything in it fails, nothing is changed\n");
+		sb.append(DB2_BLOCK_BEGIN);
+		if (kept != null)
+			appendDb2IndexCheck(sb, ti, kept, true);
+		for (Db2IndexInfo d : dropped)
+			appendDb2IndexCheck(sb, ti, d, true);
+		for (Db2IndexInfo d : dropped)
+			sb.append("    EXECUTE IMMEDIATE '").append(("DROP INDEX " + db2Qi(d.schema == null ? ti.schema : d.schema) + "." + db2Qi(d.name)).replace("'", "''")).append("';\n");
+		sb.append(DB2_BLOCK_END);
+
+		sb.append("\n");
+		sb.append("-- ROLLBACK: puts back what the DDL CHANGES did\n");
+		if (oldRecording)
+			sb.append("-- Recorded by an older version: PCTFREE, REVERSE SCANS and COMPRESS are not known, Db2's defaults are used\n");
+		sb.append(DB2_BLOCK_BEGIN);
+		if (kept != null)
+			appendDb2IndexCheck(sb, ti, kept, true);
+		for (Db2IndexInfo d : dropped)
+			appendDb2IndexCheck(sb, ti, d, false);
+		for (Db2IndexInfo d : dropped)
+			sb.append("    EXECUTE IMMEDIATE '").append(db2CreateIndex(ti, d).replace("'", "''")).append("';\n");
+		sb.append(DB2_BLOCK_END);
+		return sb.toString();
+	}
+
+	private static void appendDb2IndexCheck(StringBuilder sb, Db2TableInfo ti, Db2IndexInfo ii, boolean shouldExist)
+	{
+		String schema = ii.schema == null ? ti.schema : ii.schema;
+		String msg    = "Index " + ii.name + (shouldExist ? " does not exist" : " already exists") + ": nothing was changed.";
+		if (msg.length() > 70) // the most SIGNAL takes
+			msg = (shouldExist ? "An index does not exist" : "An index already exists") + ": nothing was changed.";
+		sb.append("    IF ").append(shouldExist ? "NOT EXISTS" : "EXISTS")
+		  .append(" (SELECT 1 FROM SYSCAT.INDEXES WHERE INDSCHEMA = '").append(schema.replace("'", "''")).append("' AND INDNAME = '").append(ii.name.replace("'", "''"))
+		  .append("') THEN SIGNAL SQLSTATE '75001' SET MESSAGE_TEXT = '").append(msg.replace("'", "''")).append("'; END IF;\n");
 	}
 }

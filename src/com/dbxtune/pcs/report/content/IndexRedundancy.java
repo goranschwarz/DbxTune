@@ -53,6 +53,8 @@ public class IndexRedundancy
 		public boolean clustered;
 		/** For a clustered index: true if it holds the data rows (SQL Server, ASE allpages). false for a placement index (ASE datarows/datapages) */
 		public boolean clusteredHoldsRows = true;
+		/** false if the DBMS can't add INCLUDE columns to this index (Db2: only a unique index has them, and only by a new CREATE INDEX) */
+		public boolean canGetIncludes = true;
 		public long    reads = -1;
 		public int     id    = Integer.MAX_VALUE;
 
@@ -178,7 +180,7 @@ public class IndexRedundancy
 	/** A primary key, a unique constraint and a clustered index can't get INCLUDE columns */
 	private static boolean canGetIncludes(Idx i)
 	{
-		return ! (i.primaryKey || i.uniqueConstraint || i.clustered);
+		return i.canGetIncludes && ! (i.primaryKey || i.uniqueConstraint || i.clustered);
 	}
 
 	/** The columns of 'a' (and of what was moved to it), that the target does not have */
