@@ -150,14 +150,23 @@ public class LoadGen
 		return AppDir.getDbxUserHomeDir(true) + "loadgen" + File.separator + ".loadgen_passwd.enc";
 	}
 
+	/** Passwords already read from the file (user -> password): the file is read once per user, not at every connect */
+	private final java.util.Map<String, String> _passwdCache = new java.util.concurrent.ConcurrentHashMap<>();
+
 	/** @return the password from the load generator's password file, null if not found */
 	public String readPassword(String user)
 	{
+		String cached = _passwdCache.get(user);
+		if (cached != null)
+			return cached;
 		try
 		{
 			if (!new File(_passwdFile).exists())
 				return null;
-			return OpenSslAesUtil.readPasswdFromFile(user, _srvName, _passwdFile);
+			String pw = OpenSslAesUtil.readPasswdFromFile(user, _srvName, _passwdFile);
+			if (pw != null)
+				_passwdCache.put(user, pw);
+			return pw;
 		}
 		catch (Exception ex)
 		{
@@ -174,10 +183,12 @@ public class LoadGen
 		if (!f.exists())
 			f.createNewFile();
 		OpenSslAesUtil.writePasswdToFile(password, user, _srvName, _passwdFile);
+		_passwdCache.put(user, password);
 	}
 
 	public void removePassword(String user)
 	{
+		_passwdCache.remove(user);
 		try
 		{
 			if (new File(_passwdFile).exists())
@@ -239,6 +250,7 @@ public class LoadGen
 		case SQLSERVER:
 			cp.setUrlOption("sendStringParametersAsUnicode", "false"); // VARCHAR parameters; NVARCHAR only where a scenario asks for it (LgSession.NString)
 			cp.setUrlOption("useBulkCopyForBatchInsert", "true");
+			cp.setUrlOption("trustServerCertificate", "true");
 			break;
 		case ASE:
 			cp.setUrlOption("ENCRYPT_PASSWORD", "true");
@@ -339,7 +351,8 @@ public class LoadGen
 		pw.println("  -c,--config <file>                  Extra properties (scenario weights etc, see conf/loadgen.properties)");
 		pw.println();
 		pw.println("install/uninstall:");
-		pw.println("  -s,--size <small|medium|large|xl|xxl>  Data size, default small (~100 MB, then x10, x50, x200, x1000)");
+		pw.println("  -s,--size <small|medium|large|xl|xxl|xxxl>  Data size, approx: small ~180 MB (default), medium ~1700 MB, large ~8500 MB,");
+		pw.println("                                      xl ~34000 MB, xxl ~170000 MB, xxxl ~850000 MB");
 		pw.println("  -L,--logins <n>                     Number of " + LOGIN_PREFIX + "# logins (default 10)");
 		pw.println("  --seed <n>                          Random seed for the data (default 42)");
 		pw.println("  --ase-data-dev / --ase-log-dev <dev>  ASE devices for the database (default: the default device)");

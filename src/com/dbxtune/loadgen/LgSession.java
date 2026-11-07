@@ -94,7 +94,8 @@ implements AutoCloseable
 	public String        getScenario()     { return _scenario; }
 	public boolean       isCancelled()     { return _cancelled; }
 
-	public LgSession setScenario(String name)       { _scenario     = name; return this; }
+	/** The scenario the next statements belong to (statistics), also shown to the DBMS with {@link #setOperation(String)} */
+	public LgSession setScenario(String name)       { _scenario     = name; setOperation(name); return this; }
 	public LgSession setQueryTimeout(int seconds)   { _queryTimeout = seconds; return this; }
 
 	/** "login/spid", used in log messages and the journal */
@@ -212,6 +213,71 @@ implements AutoCloseable
 			_current = null;
 		}
 	}
+
+	private String _operation;      // the last operation set
+	private String _operationShown; // the value the DBMS shows for it
+
+	/**
+	 * Tell the DBMS what this session is doing now, in a field a monitor (DbxTune) can see for every session:
+	 * <ul>
+	 *   <li>SQL Server: <code>set context_info</code> (sys.dm_exec_sessions/requests.context_info, SqlServerTune column context_info_str)</li>
+	 *   <li>ASE: <code>set clientname</code> (sysprocesses.clientname, monProcessLookup.ClientName; max 30 chars)</li>
+	 *   <li>Postgres: <code>application_name</code> = appName:operation (pg_stat_activity.application_name; max 63 chars)</li>
+	 * </ul>
+	 * The value is "dbxt:&lt;operation&gt;" (Postgres: the app name + ":&lt;operation&gt;"). Only sent when it changes;
+	 * it is not counted in the statistics, and a failure is only logged (debug).
+	 */
+	public void setOperation(String operation)
+	{
+		if (operation == null || operation.equals(_operation) || _closed)
+			return;
+		String sql, shown;
+		switch (_lg.getVendor())
+		{
+		case SQLSERVER:
+		{
+			shown = ("dbxt:" + operation);
+			byte[] b = shown.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+			StringBuilder hex = new StringBuilder("set context_info 0x");
+			for (int i=0; i<Math.min(b.length, 128); i++)
+				hex.append(String.format("%02x", b[i]));
+			sql = hex.toString();
+			break;
+		}
+		case ASE:
+		{
+			String v = ("dbxt:" + operation).replace("'", "");
+			shown = v.length() > 30 ? v.substring(0, 30) : v;
+			sql = "set clientname '" + shown + "'";
+			break;
+		}
+		case POSTGRES:
+		{
+			// The app name may already end with the scenario (problem sessions: dbxt-loadgen:blocking), don't repeat it
+			String last = _appName.substring(_appName.lastIndexOf(':') + 1);
+			String v = (operation.equals(last)             ? _appName
+			         :  operation.startsWith(last + ":")   ? _appName + operation.substring(last.length())
+			         :                                       _appName + ":" + operation).replace("'", "");
+			shown = v.length() > 63 ? v.substring(0, 63) : v;
+			sql = "set application_name = '" + shown + "'";
+			break;
+		}
+		default:
+			return;
+		}
+		try (Statement stmt = _conn.createStatement())
+		{
+			stmt.execute(sql);
+			_operation      = operation;
+			_operationShown = shown;
+		}
+		catch (SQLException ex)
+		{
+			_logger.debug("setOperation('" + operation + "') failed on " + getId() + ": " + ex.getMessage());
+		}
+	}
+	/** The value the DBMS shows for the current operation (context_info, clientname, application_name), null if none */
+	public String getOperationShown() { return _operationShown; }
 
 	/** A plain statement without parameters (literal SQL, set options, DDL), all results are read and thrown away */
 	public int exec(String sql)

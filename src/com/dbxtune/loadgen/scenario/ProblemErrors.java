@@ -30,13 +30,13 @@ import com.dbxtune.loadgen.LgSession;
 import com.dbxtune.loadgen.Vendor;
 
 /**
- * Statements that fail: duplicate key, divide by zero, query timeout, missing table. Five rounds.
+ * Statements that fail: duplicate key, divide by zero, query timeout, missing table. One round every ~4 s for ~100 s (60 s + extra, see Scenario.activeSeconds).
  */
 public class ProblemErrors extends Scenario
 {
 	public ProblemErrors()
 	{
-		super("errors", Kind.PROBLEM, 5, "Failing statements: duplicate key, divide by zero, query timeout, missing table (5 rounds)");
+		super("errors", Kind.PROBLEM, 5, "Failing statements: duplicate key, divide by zero, query timeout, missing table (a round every ~4 s for ~100 s)");
 	}
 
 	@Override
@@ -65,13 +65,16 @@ public class ProblemErrors extends Scenario
 				tag() + pick(v, "waitfor delay '00:00:05'", "waitfor delay '00:00:05'", "select pg_sleep(5)"),
 				tag() + "select * from dbxt_no_such_table"
 		};
-		ev.put("sql", Arrays.asList(sqls));
+		int  durationSec = activeSeconds(ctx, "durationSeconds", 60);
+		long end = System.currentTimeMillis() + durationSec * 1000L;
+		ev.put("sql", Arrays.asList(sqls)).put("durationSeconds", durationSec);
 
 		List<String> results = new ArrayList<>();
 		try (LgSession s = ctx.openSession(this))
 		{
 			ev.addSession(s, "failing statements");
-			for (int round=0; round<5 && !ctx.isStopping(); round++)
+			int round = 0;
+			for (; System.currentTimeMillis() < end && !ctx.isStopping(); round++)
 			{
 				for (int i=0; i<sqls.length; i++)
 				{
@@ -90,6 +93,7 @@ public class ProblemErrors extends Scenario
 				}
 				ctx.sleep(2000);
 			}
+			ev.put("rounds", round);
 		}
 		ev.put("firstRoundResults", results);
 	}

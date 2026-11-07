@@ -27,13 +27,13 @@ import com.dbxtune.loadgen.LgSession;
 import com.dbxtune.loadgen.Vendor;
 
 /**
- * For 60 s: connect, run one query, disconnect - about 4 times a second (an application without a connection pool).
+ * For ~100 s (60 s + extra, see Scenario.activeSeconds): connect, run one query, disconnect - about 4 times a second (an application without a connection pool).
  */
 public class ProblemConnChurn extends Scenario
 {
 	public ProblemConnChurn()
 	{
-		super("conn_churn", Kind.PROBLEM, 10, "60 s of connect / one query / disconnect, ~4 per second (no connection pool)");
+		super("conn_churn", Kind.PROBLEM, 10, "~100 s of connect / one query / disconnect, ~4 per second (no connection pool)");
 	}
 
 	@Override
@@ -52,7 +52,7 @@ public class ProblemConnChurn extends Scenario
 	public void runProblem(RunContext ctx, ProblemEvent ev)
 	throws Exception
 	{
-		int durationSec = ctx.getLoadGen().getScenarioIntProp(this, "durationSeconds", 60);
+		int durationSec = activeSeconds(ctx, "durationSeconds", 60);
 		long end = System.currentTimeMillis() + durationSec * 1000L;
 		String sql = tag() + "select count(*) from warehouse";
 		int conns = 0, errors = 0;

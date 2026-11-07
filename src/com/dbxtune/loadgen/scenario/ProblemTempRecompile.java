@@ -27,13 +27,13 @@ import com.dbxtune.loadgen.LgSession;
 import com.dbxtune.loadgen.Vendor;
 
 /**
- * For 60 s: call p_temp_report (temp table + index created after the insert) twice a second.
+ * For ~100 s (60 s + extra, see Scenario.activeSeconds): call p_temp_report (temp table + index created after the insert) twice a second.
  */
 public class ProblemTempRecompile extends Scenario
 {
 	public ProblemTempRecompile()
 	{
-		super("temp_recompile", Kind.PROBLEM, 8, "60 s of a procedure that creates a temp table + index after DML (recompiles / catalog churn)");
+		super("temp_recompile", Kind.PROBLEM, 8, "~100 s of a procedure that creates a temp table + index after DML (recompiles / catalog churn)");
 	}
 
 	@Override
@@ -58,7 +58,7 @@ public class ProblemTempRecompile extends Scenario
 		String sql = pick(ctx.getVendor(), "{call p_temp_report(?)}", "{call p_temp_report(?)}", "select p_temp_report(?)");
 		ev.put("sql", sql);
 
-		int durationSec = ctx.getLoadGen().getScenarioIntProp(this, "durationSeconds", 60);
+		int durationSec = activeSeconds(ctx, "durationSeconds", 60);
 		long end = System.currentTimeMillis() + durationSec * 1000L;
 		int calls = 0;
 		try (LgSession s = ctx.openSession(this))

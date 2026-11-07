@@ -68,6 +68,18 @@ public abstract class Scenario
 	/** The comment every statement of this scenario starts with */
 	protected String tag() { return "/* dbxt:" + _name + " */ "; }
 
+	/**
+	 * How long a problem stays active: the setting <code>scenario.&lt;name&gt;.&lt;key&gt;</code> (default <code>defaultSec</code>)
+	 * + <code>problem.extraSeconds</code> (default 35: one more DbxTune sample of 30 s + ~5 s to take the sample) + 0-9 s random.
+	 * So a problem never stops at a round number, and it is still active in the DbxTune sample after the one that first saw it.
+	 */
+	protected int activeSeconds(RunContext ctx, String key, int defaultSec)
+	{
+		return ctx.getLoadGen().getScenarioIntProp(this, key, defaultSec)
+				+ ctx.getLoadGen().getIntProp("problem.extraSeconds", 35)
+				+ ctx.rnd().nextInt(10);
+	}
+
 	/** OLTP/OLAP/BATCH: one unit of work on the worker's session */
 	public void execute(RunContext ctx, LgSession s)
 	throws Exception

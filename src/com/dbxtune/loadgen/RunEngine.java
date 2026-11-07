@@ -197,14 +197,12 @@ implements RunContext
 		{
 			String msg = "Can't read the install info as " + LoadGen.LOGIN_PREFIX + "1 in '" + _lg.getDbname() + "' on '" + _lg.getSrvName() + "'. Is it installed? (After 'uninstall --keep-database' get the logins back with 'install --logins-only'.) Caught: " + ex.getMessage();
 			_logger.error(msg);
-			System.out.println("ERROR: " + msg);
 			return LoadGen.EXIT_NOT_AVAILABLE;
 		}
 		if (!"INSTALLED".equals(info.get("status")))
 		{
 			String msg = "The install status is '" + info.get("status") + "', not INSTALLED. Re-install (uninstall + install).";
 			_logger.error(msg);
-			System.out.println("ERROR: " + msg);
 			return LoadGen.EXIT_NOT_AVAILABLE;
 		}
 		_customers  = Integer.parseInt(info.get("customers"));
@@ -212,6 +210,11 @@ implements RunContext
 		_warehouses = Integer.parseInt(info.get("warehouses"));
 		_categories = Integer.parseInt(info.get("categories"));
 		_loginCnt   = Integer.parseInt(info.get("logins"));
+
+		//--- Read all login passwords now (once), not at every connect during the run
+		for (int i = 1; i <= _loginCnt; i++)
+			if (_lg.readPassword(LoadGen.LOGIN_PREFIX + i) == null)
+				_logger.warn("No password for '" + LoadGen.LOGIN_PREFIX + i + "' on server '" + _lg.getSrvName() + "' in '" + _lg.getPasswdFile() + "'. Sessions using that login will fail.");
 
 		//--- Scenarios
 		List<Scenario> oltp = new ArrayList<>(), olap = new ArrayList<>(), problems = new ArrayList<>();
@@ -277,7 +280,6 @@ implements RunContext
 		String startMsg = "Run " + runId + " on '" + _lg.getSrvName() + "': " + durationSec + " s, intensity=" + intensity + ", oltpThreads=" + oltpThreads + ", olapThreads=" + olapThreads
 				+ ", problems=" + every.keySet() + ". Journal: " + _journal.getFile();
 		_logger.info(startMsg);
-		System.out.println(startMsg);
 
 		Thread hook = new Thread(() -> {
 			if (_finished)
@@ -354,8 +356,7 @@ implements RunContext
 		for (Map<String, Object> m : summary)
 			sb.append(String.format("%n   %-18s count=%-7s errors=%-5s avgMs=%-6s p95Ms=%-6s maxMs=%-7s%s", m.get("scenario"), m.get("count"), m.get("errors"), m.get("avgMs"), m.get("p95Ms"), m.get("maxMs"),
 					m.get("lastError") == null ? "" : " lastError=" + m.get("lastError")));
-		_logger.info(sb.toString());
-		System.out.println(sb);
+		_logger.info(sb.toString()); // the log also goes to the console, so no System.out here (that printed the summary twice)
 
 		saveRunlog(runId, intensity, oltpThreads + olapThreads, summary);
 

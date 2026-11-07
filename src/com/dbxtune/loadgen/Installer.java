@@ -121,8 +121,9 @@ public class Installer
 			case "large":  return new Size("large",  50);
 			case "xl":     return new Size("xl",     200);
 			case "xxl":    return new Size("xxl",    1000);
+			case "xxxl":   return new Size("xxxl",   5000); // 1 000 000 000 orders: ids are still int (max 2 147 483 647)
 			}
-			throw new IllegalArgumentException("Unknown size '" + str + "', use: small, medium, large, xl, xxl");
+			throw new IllegalArgumentException("Unknown size '" + str + "', use: small, medium, large, xl, xxl, xxxl");
 		}
 	}
 
@@ -172,9 +173,8 @@ public class Installer
 
 			String estMsg = "Size '" + size.name + "': about " + size.estimateMb() + " MB (data + indexes). "
 					+ "Rows: customers=" + size.customers + ", products=" + size.products + ", orders=" + size.orders
-					+ " (~" + (size.orders * 3) + " order lines), audit=" + size.auditRows + ", events=" + size.events;
+					+ " (~" + (size.orders * 3L) + " order lines), audit=" + size.auditRows + ", events=" + size.events;
 			_logger.info(estMsg);
-			System.out.println(estMsg);
 
 			//--- Database
 			if (useExisting)
@@ -229,7 +229,6 @@ public class Installer
 			s.update("update dbxt_loadgen_info set v = ? where k = 'status'", "INSTALLED");
 			String msg = "Install finished in " + ((System.currentTimeMillis() - start) / 1000) + " s (data, indexes, statistics).";
 			_logger.info(msg);
-			System.out.println(msg);
 			journal.event("info", "msg", msg);
 		}
 
@@ -498,7 +497,6 @@ public class Installer
 			admin.exec("exec master..sp_dropdevice '" + name + "'");
 			String msg = "Dropped ASE device '" + name + "'. The file is still on the ASE host, remove it by hand: " + physName;
 			_logger.info(msg);
-			System.out.println(msg);
 			_lg.getJournal().event("object", "action", "drop", "objectType", "device", "name", name, "physname", physName);
 		}
 	}

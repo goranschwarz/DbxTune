@@ -28,7 +28,7 @@ import com.dbxtune.loadgen.LgSession;
 import com.dbxtune.loadgen.Vendor;
 
 /**
- * A long running open transaction: insert one row, then keep the transaction open (idle) for 300 s.
+ * A long running open transaction: insert one row, then keep the transaction open (idle) for ~340 s (300 s + extra, see Scenario.activeSeconds).
  * <p>
  * Settings: scenario.long_tran.holdSeconds (default 300)
  */
@@ -36,7 +36,7 @@ public class ProblemLongTran extends Scenario
 {
 	public ProblemLongTran()
 	{
-		super("long_tran", Kind.PROBLEM, 15, "Insert a row and keep the transaction open (idle) for 300 s");
+		super("long_tran", Kind.PROBLEM, 15, "Insert a row and keep the transaction open (idle) for ~340 s");
 	}
 
 	@Override
@@ -61,7 +61,7 @@ public class ProblemLongTran extends Scenario
 	public void runProblem(RunContext ctx, ProblemEvent ev)
 	throws Exception
 	{
-		long holdSec = Math.min(ctx.getLoadGen().getScenarioIntProp(this, "holdSeconds", 300), ctx.getRemainingMs() / 1000 - 15);
+		long holdSec = Math.min(activeSeconds(ctx, "holdSeconds", 300), ctx.getRemainingMs() / 1000 - 15);
 		if (holdSec < 60)
 		{
 			ev.setNote("Skipped: less than 60 s of the run left");

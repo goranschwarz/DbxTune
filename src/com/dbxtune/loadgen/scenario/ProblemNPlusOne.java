@@ -28,13 +28,13 @@ import com.dbxtune.loadgen.LgSession;
 import com.dbxtune.loadgen.Vendor;
 
 /**
- * For 60 s: an "ORM style" page: orders for a customer, then one query per order for its lines, then one query per line for the product name.
+ * For ~100 s (60 s + extra, see Scenario.activeSeconds): an "ORM style" page: orders for a customer, then one query per order for its lines, then one query per line for the product name.
  */
 public class ProblemNPlusOne extends Scenario
 {
 	public ProblemNPlusOne()
 	{
-		super("n_plus_one", Kind.PROBLEM, 5, "60 s of N+1 queries: one query per order, then one per order line");
+		super("n_plus_one", Kind.PROBLEM, 5, "~100 s of N+1 queries: one query per order, then one per order line");
 	}
 
 	@Override
@@ -59,7 +59,7 @@ public class ProblemNPlusOne extends Scenario
 		String prodSql   = tag() + "select name from product where product_id = ?";
 		ev.put("sql", Arrays.asList(ordersSql, linesSql, prodSql));
 
-		int durationSec = ctx.getLoadGen().getScenarioIntProp(this, "durationSeconds", 60);
+		int durationSec = activeSeconds(ctx, "durationSeconds", 60);
 		long end = System.currentTimeMillis() + durationSec * 1000L;
 		int pages = 0, stmts = 0;
 		try (LgSession s = ctx.openSession(this))

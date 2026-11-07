@@ -27,13 +27,13 @@ import com.dbxtune.loadgen.LgSession;
 import com.dbxtune.loadgen.Vendor;
 
 /**
- * For 60 s: ~20 statements per second with literals instead of parameters (a new statement text every time).
+ * For ~100 s (60 s + extra, see Scenario.activeSeconds): ~20 statements per second with literals instead of parameters (a new statement text every time).
  */
 public class ProblemLiteralSql extends Scenario
 {
 	public ProblemLiteralSql()
 	{
-		super("literal_sql", Kind.PROBLEM, 6, "60 s of SQL with literals instead of parameters (plan cache / statement cache pollution, compiles)");
+		super("literal_sql", Kind.PROBLEM, 6, "~100 s of SQL with literals instead of parameters (plan cache / statement cache pollution, compiles)");
 	}
 
 	@Override
@@ -55,7 +55,7 @@ public class ProblemLiteralSql extends Scenario
 	public void runProblem(RunContext ctx, ProblemEvent ev)
 	throws Exception
 	{
-		int durationSec = ctx.getLoadGen().getScenarioIntProp(this, "durationSeconds", 60);
+		int durationSec = activeSeconds(ctx, "durationSeconds", 60);
 		long end = System.currentTimeMillis() + durationSec * 1000L;
 		int cnt = 0;
 

@@ -30,13 +30,13 @@ import com.dbxtune.loadgen.LgSession;
 import com.dbxtune.loadgen.Vendor;
 
 /**
- * For 60 s: 6 sessions update the same counter row in a loop (each holds the lock ~20 ms): lock contention on one row.
+ * For ~100 s (60 s + extra, see Scenario.activeSeconds): 6 sessions update the same counter row in a loop (each holds the lock ~20 ms): lock contention on one row.
  */
 public class ProblemHotSpot extends Scenario
 {
 	public ProblemHotSpot()
 	{
-		super("hot_spot", Kind.PROBLEM, 12, "60 s: 6 sessions increment the same counter row (lock contention on one row)");
+		super("hot_spot", Kind.PROBLEM, 12, "~100 s: 6 sessions increment the same counter row (lock contention on one row)");
 	}
 
 	@Override
@@ -59,7 +59,7 @@ public class ProblemHotSpot extends Scenario
 	throws Exception
 	{
 		int threadCnt   = ctx.getLoadGen().getScenarioIntProp(this, "sessions", 6);
-		int durationSec = ctx.getLoadGen().getScenarioIntProp(this, "durationSeconds", 60);
+		int durationSec = activeSeconds(ctx, "durationSeconds", 60);
 		long end = System.currentTimeMillis() + durationSec * 1000L;
 		String sql = tag() + "update counter_table set next_val = next_val + 1 where name = 'hotspot'";
 		ev.put("sql", sql).put("sessions", threadCnt).put("durationSeconds", durationSec);

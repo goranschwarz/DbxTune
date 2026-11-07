@@ -29,14 +29,14 @@ import com.dbxtune.loadgen.LgSession;
 import com.dbxtune.loadgen.Vendor;
 
 /**
- * For 60 s: queries that can't use an index because of the predicate (function on the column, implicit conversion,
+ * For ~100 s (60 s + extra, see Scenario.activeSeconds): queries that can't use an index because of the predicate (function on the column, implicit conversion,
  * leading wildcard).
  */
 public class ProblemNonSargable extends Scenario
 {
 	public ProblemNonSargable()
 	{
-		super("non_sargable", Kind.PROBLEM, 4, "60 s of predicates that can't use an index: function on column, implicit conversion, leading wildcard");
+		super("non_sargable", Kind.PROBLEM, 4, "~100 s of predicates that can't use an index: function on column, implicit conversion, leading wildcard");
 	}
 
 	@Override
@@ -71,7 +71,7 @@ public class ProblemNonSargable extends Scenario
 		String likeSql  = tag() + "select count(*) from customer where email like ?";
 		ev.put("sql", Arrays.asList(phoneSql, upperSql, yearSql, likeSql));
 
-		int durationSec = ctx.getLoadGen().getScenarioIntProp(this, "durationSeconds", 60);
+		int durationSec = activeSeconds(ctx, "durationSeconds", 60);
 		long end = System.currentTimeMillis() + durationSec * 1000L;
 		int cnt = 0;
 		List<String> lastNames = new ArrayList<>(Arrays.asList("SMITH", "ANDERSSON", "JOHANSSON", "BROWN", "WILSON"));

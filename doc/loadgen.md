@@ -92,7 +92,7 @@ For the DbxTune side it helps (not required):
 ## 2. Install
 
 ```bash
-loadgen.sh install -t <dbms> -S <host[:port]> [-U admin] [--size small|medium|large|xl|xxl] [--logins 10] [--seed 42]
+loadgen.sh install -t <dbms> -S <host[:port]> [-U admin] [--size small|medium|large|xl|xxl|xxxl] [--logins 10] [--seed 42]
 ```
 
 What it does, in order:
@@ -114,6 +114,7 @@ What it does, in order:
 | `large` | 1 000 000 | 100 000 | 10 000 000 | ~8.5 GB |
 | `xl` | 4 000 000 | 400 000 | 40 000 000 | ~34 GB |
 | `xxl` | 20 000 000 | 2 000 000 | 200 000 000 | ~170 GB |
+| `xxxl` | 100 000 000 | 10 000 000 | 1 000 000 000 | ~850 GB |
 
 Plus `audit_log` (100 000 x factor rows), `session_event` (5 000 x factor rows of 1-3 KB) and `fact_sales`
 (90% of the order lines). Only `small` has been tested so far.
@@ -226,6 +227,59 @@ loadgen.sh run -t <dbms> -S <host[:port]> [--duration 15m|15m-45m|1h|90s] [--int
 - Runs of 15 minutes or more get one busier 5 minute **wave** at a random time (think time x 0.3), so the graphs are not flat.
 - Numbers seen on Docker (`small`): low about 4 units of work/s, medium about 30/s.
 
+### How a run uses its time (scheduling)
+
+A run does **not** go through the scenarios in order (#1, #2, #3, then start over), and `--duration` is **not**
+divided between them. The duration only says when the run stops. Two things run side by side for the whole time:
+
+**1. Worker threads: random pick by weight (OLTP, OLAP, BATCH)**
+- The OLTP threads pick from the OLTP scenarios; the OLAP threads pick from the OLAP **and** BATCH scenarios.
+- Each thread loops: pick a scenario at random by weight -> run it -> wait the think time -> pick again, until the run ends.
+- A weight is a share: in the OLTP pool `new_order` (30) is picked about 30 % of the time, `delivery` (5) about 5 %
+  (the default OLTP weights add up to 95). So the **mix is the same** for a 5 minute and a 45 minute run; a longer run
+  just does more of it.
+- Each run is different (the run is not seeded; `--seed` only applies to the data at `install`).
+
+**2. Problem scheduler: on a clock, every N minutes**
+- Each problem scenario has `everyMinutes`. Its first start is at a **random time within its first interval** (after the
+  ramp-up), then every N minutes after that. So the problems don't all fire at the same time, and a cron run every day
+  gets them at different times.
+- A problem runs in its own thread with its own connections, **next to** the normal traffic.
+- It is skipped when the same problem is still running from last time, and nothing new starts in the last 30 seconds.
+  A problem that is still running at the end of the run is cut short (the journal has its real start/end).
+- How long a problem lasts: see [Problems run a bit longer than the setting](#problem-scenarios-each-runs-every-n-minutes).
+
+**3. Shape over time**
+- **Ramp-up**: the threads start one by one over the first `min(60 s, duration / 5)`.
+- **Wave** (runs of 15 minutes or more): one busier 5 minute period at a random time, think time x 0.3.
+- **End**: workers stop at the end of the duration; anything still running gets 60 more seconds, then the watchdog
+  cancels it.
+
+**What that means for different `--duration` values** (default settings):
+
+| `--duration` | OLTP/OLAP traffic | Problems |
+|---|---|---|
+| `1m`-`5m` | Ramp-up is 12-60 s, then the normal mix. No wave. | **Few or none**: a problem every 10 min has its first start anywhere in 1:00-11:00, so it is often after the end. Use `--scenarios` + a low `everyMinutes` to test one problem (see below). |
+| `15m` | Normal mix, one wave. | Every problem with `everyMinutes` up to ~13 fires at least once; the ones every 4-7 min fire 2-4 times. `long_tran` (every 15) fires in most runs, but not all. |
+| `15m-45m` (cron) | Normal mix, one wave at a random time. | Each problem fires about `duration / everyMinutes` times (e.g. 30 min: `n_plus_one` ~6, `blocking` ~3, `long_tran` 1-2), at different times every day. |
+| `1h` and longer | Normal mix, still **one** wave. | Every problem fires about `60 / everyMinutes` times. |
+
+**What you can change** (on the command line, or in a properties file: `-c my.properties`,
+`~/.dbxtune/loadgen/loadgen.properties`, `${DBXTUNE_HOME}/conf/loadgen.properties`):
+
+| You want | Setting |
+|---|---|
+| more or less load | `--intensity low\|medium\|high`, `--threads N` (OLTP threads), `intensity.<level>.oltpThreads` / `olapThreads` / `thinkMinMs` / `thinkMaxMs` |
+| a different mix | `scenario.<name>.weight=N` (`0` = never) |
+| only some scenarios | `--scenarios a,b`, `--exclude a,b`, `scenario.<name>.enabled=false` |
+| problems more or less often | `scenario.<name>.everyMinutes=N` (`0` = never), `--no-problems` |
+| problems longer/shorter | `scenario.<name>.holdSeconds` / `durationSeconds`, `problem.extraSeconds` |
+| test one problem in a short run | e.g. `--duration 5m --scenarios new_order,blocking` with `scenario.blocking.everyMinutes=1` in a `-c` file: it starts within the first ~2 minutes and then again every minute (when the last one is done) |
+
+Fixed today (no setting): the ramp-up time, the wave (one, 5 minutes, x 0.3, only for runs of 15 minutes or more),
+the OLAP think time (`think x 5 + 2 s`), the 30 second "no new problem" window at the end, and the random first start
+of the problems.
+
 ### Choosing scenarios
 
 - `--scenarios new_order,payment,blocking` runs only those.
@@ -295,6 +349,157 @@ A small web shop, used in two ways:
 
 **DW star schema** - `dim_date`, `dim_customer`, `dim_product`, `fact_sales` (loaded from the OLTP tables by an ETL scenario).
 
+### The tables (ER diagrams)
+
+There are **no foreign key constraints** in the database; the lines below are the logical relations the workload
+joins on. `PK` = primary key, `FK` = logical foreign key (no constraint). Types are shown as on Postgres
+(`text` is `varchar(max)` on SQL Server and `text` on ASE).
+
+**OLTP "shop"**
+
+```mermaid
+erDiagram
+    category      ||--o{ category      : "parent_id"
+    category      ||--o{ product       : "category_id"
+    customer      ||--o{ orders        : "customer_id"
+    customer      ||--o{ session_event : "customer_id"
+    warehouse     ||--o{ orders        : "warehouse_id"
+    warehouse     ||--o{ stock         : "warehouse_id"
+    product       ||--o{ stock         : "product_id"
+    product       ||--o{ order_line    : "product_id (no index)"
+    orders        ||--|{ order_line    : "order_id"
+    orders        ||--o{ payment       : "order_id"
+    orders        ||--o| shipment      : "order_id"
+
+    category {
+        int     category_id PK
+        varchar name
+        int     parent_id   FK
+    }
+    customer {
+        int       customer_id  PK
+        varchar   first_name
+        varchar   last_name
+        varchar   email        "no index"
+        varchar   phone
+        varchar   city
+        char      country_code
+        varchar   segment
+        char      vip_flag     "99% NULL"
+        timestamp created_ts
+        varchar   notes
+    }
+    product {
+        int       product_id  PK
+        int       category_id FK
+        varchar   name
+        varchar   description
+        decimal   price
+        varchar   status      "99% ACTIVE"
+        timestamp created_ts
+    }
+    warehouse {
+        int     warehouse_id PK
+        varchar name
+        varchar city
+    }
+    stock {
+        int       warehouse_id PK,FK
+        int       product_id   PK,FK
+        int       qty
+        int       reserved
+        timestamp last_upd_ts
+    }
+    orders {
+        int       order_id     PK
+        int       customer_id  FK "customer 1 has ~30%"
+        timestamp order_ts
+        varchar   status
+        decimal   total_amount
+        int       warehouse_id FK
+        varchar   ship_city
+        varchar   comment_txt
+    }
+    order_line {
+        int     order_id   PK,FK
+        int     line_no    PK
+        int     product_id FK "product 1 on ~20%"
+        int     qty
+        decimal price
+    }
+    payment {
+        int       payment_id PK
+        int       order_id   FK
+        timestamp pay_ts
+        decimal   amount
+        varchar   method
+    }
+    shipment {
+        int       order_id PK,FK
+        timestamp ship_ts
+        varchar   carrier
+        varchar   status
+    }
+    session_event {
+        bigint    event_id    PK
+        int       customer_id FK
+        timestamp event_ts
+        varchar   event_type
+        text      payload     "LOB, 1-3 KB"
+    }
+```
+
+**DW star schema** (`fact_sales` is filled from `orders` + `order_line` by `etl_fact_sales`)
+
+```mermaid
+erDiagram
+    dim_date     ||--o{ fact_sales : "date_key"
+    dim_customer ||--o{ fact_sales : "customer_key"
+    dim_product  ||--o{ fact_sales : "product_key"
+
+    dim_date {
+        int     date_key PK "yyyymmdd"
+        date    cal_date
+        int     cal_year
+        int     cal_quarter
+        int     cal_month
+        varchar month_name
+        int     weekday
+    }
+    dim_customer {
+        int     customer_key PK "= customer_id"
+        varchar segment
+        char    country_code
+        varchar city
+    }
+    dim_product {
+        int     product_key PK "= product_id"
+        varchar category_name
+        varchar product_name
+    }
+    fact_sales {
+        int     order_id     "no primary key"
+        int     line_no
+        int     date_key     FK
+        int     customer_key FK
+        int     product_key  FK
+        int     qty
+        decimal amount
+    }
+```
+
+**Tables without relations**
+
+| Table | What it is |
+|---|---|
+| `audit_log` | Append only, **no primary key** (`log_ts`, `login_name`, `action`, `object_id`, `details`); purged by `purge_audit`. |
+| `counter_table` | One row per counter (`name` PK, `next_val`): the next order/payment/event id. Every new order updates the same row (hot spot). |
+| `etl_watermark` | The last `order_id` loaded into `fact_sales`. |
+| `dbxt_loadgen_info` | The install marker (`k`, `v`): version, size, seed, install time, logins. `uninstall` refuses without it. |
+| `dbxt_loadgen_runlog` | One row per run: start/end, intensity, threads, executions, errors, summary (`status` shows the last 10). |
+
+The indexes (and the duplicate/overlapping/unused ones on purpose) are in [section 7](#7-the-deliberate-design-flaws).
+
 The data is skewed on purpose: customer 1 owns ~30% of all orders, product 1 is on ~20% of the order lines,
 ~99% of the products are `ACTIVE`, ~99% of `customer.vip_flag` is NULL. Orders are spread over the last 730 days,
 and the order id grows with the order time.
@@ -324,6 +529,27 @@ On this data the load generator runs:
   - every statement starts with a comment `/* dbxt:<scenario> */`, so the scenario is visible in the SQL text
     (the program name can't change per scenario on a connection). Exceptions: procedure calls (`{call p_...}`),
     and the id allocation, which is tagged `/* dbxt:next_val */`.
+- **The current operation** is also set in a session field that every monitor can see, so a DbxTune row
+  (active statement, blocking, open transaction...) tells which scenario, and for problems which role, the session has
+  right now. It is set when the scenario changes (one extra short round trip, not counted in the statistics):
+
+  | DBMS | How | Where you see it | Value |
+  |---|---|---|---|
+  | SQL Server | `set context_info 0x...` | `sys.dm_exec_sessions` / `sys.dm_exec_requests` `.context_info`; SqlServerTune column `context_info_str` (CmActiveStatements, CmWho, CmSessions...) | `dbxt:new_order`, `dbxt:blocking:holder` |
+  | ASE | `set clientname '...'` (max 30 chars) | `sysprocesses.clientname`, `monProcessLookup.ClientName`; AseTune column `ClientName` (CmActiveStatements, CmProcessActivity) | `dbxt:new_order`, `dbxt:blocking:waiter` |
+  | Postgres | `set application_name = '...'` (max 63 chars) | `pg_stat_activity.application_name`; PostgresTune CmActiveStatements | `dbxt-loadgen:oltp:new_order`, `dbxt-loadgen:blocking:holder` |
+
+  Problem sessions get the role after the scenario: `holder`/`waiter` (blocking), `A_1_then_2` (deadlock),
+  `open_transaction` (long_tran)... The journal's `problem` events have the exact value per session (`operation`),
+  so it can be matched with what DbxTune recorded. Install/uninstall don't set it.
+
+  For the vendors that come later (checked, not built yet):
+
+  | DBMS | Field (visible to a monitor) | How to set it |
+  |---|---|---|
+  | Oracle | `V$SESSION.MODULE` / `ACTION` / `CLIENT_INFO` (OracleTune shows them in CmActiveStatements, CmSessions) | JDBC `conn.setClientInfo("OCSID.MODULE"/"OCSID.ACTION", ...)` (sent with the next call, no extra round trip), or `DBMS_APPLICATION_INFO.SET_MODULE` / `SET_ACTION` / `SET_CLIENT_INFO` |
+  | DB2 LUW | `CLIENT_APPLNAME`, `CLIENT_ACCTNG`, `CLIENT_USERID`, `CLIENT_WRKSTNNAME` in `MON_GET_CONNECTION` (Db2Tune CmMonGetConnection, CmActiveStatements) | JDBC `conn.setClientInfo("ApplicationName"/"ClientAccountingInformation", ...)` (sent with the next statement), or `call SYSPROC.WLM_SET_CLIENT_INFO(...)` |
+  | MySQL | No field that can be changed after login and is shown in the process list. `program_name` (`performance_schema.session_connect_attrs`) is fixed at connect. A user variable (`set @dbxt_op = '...'`) is visible in `performance_schema.user_variables_by_thread` (8.0+, needs SELECT on performance_schema); MySqlTune doesn't read that table today. The `/* dbxt:<scenario> */` SQL comment (in `PROCESSLIST_INFO`) is the practical way. | `set @dbxt_op = '...'` |
 - **Ids**: new orders/payments get their id from `counter_table` in a short transaction of their own.
 - **Statement timeouts**: 60 s for OLTP, 600 s for OLAP/batch.
 - **Journal + statistics**: every statement is timed and counted per scenario and minute; see [section 9](#9-the-journal-comparing-with-dbxtune).
@@ -390,12 +616,17 @@ Over time the data also drifts on purpose: `bulk_events` adds rows without updat
 For each one the journal has a `problem` event with the sessions involved, the SQL, the result, and an **expected**
 block (which CMs and alarms should show it). The expected lists are hints for the comparison, not promises.
 
+**Problems run a bit longer than the setting.** Every `holdSeconds` / `durationSeconds` gets `problem.extraSeconds`
+(default 35 = one more DbxTune sample of 30 s + ~5 s to take it) plus 0-9 s random on top. So a problem never stops at
+a round number, and it is still active in the sample after the one that first saw it. The times below include this
+(60 s -> ~100 s, 120 s -> ~160 s, 300 s -> ~340 s); the journal has the real value. `problem.extraSeconds=0` turns it off.
+
 #### `blocking` - every 10 min
-A holder updates one `stock` row and keeps the transaction open, **idle**, for `holdSeconds` (default 120);
+A holder updates one `stock` row and keeps the transaction open, **idle**, for `holdSeconds` (default 120, ~160 s with the extra time);
 3 waiters (`waiters`) try to update the same row and wait. OLTP statements that scan `stock` or touch the same row
 also wait, so the real chain is longer than the 3 waiters.
 - SQL Server: CmActiveStatements, CmWaitingTasks, CmSummary, CmWho; `AlarmEventBlockingLockAlarm` (60 s by default),
-  `AlarmEventHoldingLocksWhileWaitForClientInput` (180 s by default, so not with the default 120 s).
+  `AlarmEventHoldingLocksWhileWaitForClientInput` (180 s by default, so not with the default ~160 s).
 - ASE: CmBlocking, CmActiveStatements, CmSummary, CmLocks; `AlarmEventBlockingLockAlarm`.
 - Postgres: CmPgBlockingLocks, CmActiveStatements, CmPgLocks, CmSummary; the holder is `idle in transaction`.
 - With 30 s samples, a hold under ~90 s can be over before the alarm threshold is seen; keep `holdSeconds` at 120 or more.
@@ -408,7 +639,7 @@ Session A updates stock row 1 then row 2; session B updates row 2 then row 1. On
 - Postgres: CmPgDatabase `deadlocks` (no deadlock alarm known).
 
 #### `long_tran` - every 15 min
-Inserts one `audit_log` row and keeps the transaction open, idle, for `holdSeconds` (default 300; skipped when less
+Inserts one `audit_log` row and keeps the transaction open, idle, for `holdSeconds` (default 300, ~340 s with the extra time; skipped when less
 than 60 s of the run is left). The log can't be truncated past it.
 - SQL Server: CmOpenTransactions, CmDatabases, CmSummary; `AlarmEventLongRunningTransaction` (60 s), holding locks while waiting for client (180 s).
 - ASE: CmOpenDatabases, CmSummary; `AlarmEventLongRunningTransaction` (60 s).
@@ -421,19 +652,19 @@ SQL Server `option (max_grant_percent = 0)`, Postgres `set local work_mem = '64k
 - ASE: CmTempdbActivity, CmActiveStatements, CmSqlStatement.
 - Postgres: CmPgDatabase `temp_files/temp_bytes`, CmPgStatements `temp_blks_written`.
 
-#### `literal_sql` - every 6 min, 60 s
+#### `literal_sql` - every 6 min, ~100 s
 About 20 statements per second with literals instead of parameters (joins, so SQL Server can't auto-parameterize them).
 - SQL Server: CmPlanCacheHistory, CmPerfCounters (compilations/sec), CmExecQueryStats, CmMemoryClerks.
 - ASE: CmStatementCache, CmStmntCacheDetails, CmSqlStatement (unless `enable literal autoparam` is on).
 - Postgres: CmPgStatements shows ONE normalized entry with a high call count.
 
-#### `non_sargable` - every 4 min, 60 s
+#### `non_sargable` - every 4 min, ~100 s
 Two queries per second whose predicate can't use an index:
 `phone = N'...'` on a VARCHAR column (SQL Server, implicit conversion), `substring(phone,...)` (ASE), `cast(phone as bigint)` (Postgres);
 `upper(last_name) = ?`; `year(order_ts) = ?`; `email like '%...'` (leading wildcard).
 - SQL Server: CmExecQueryStats, CmIndexMissing, CmIndexUsage. ASE: CmSqlStatement, CmObjectActivity. Postgres: CmPgStatements, CmPgTables (`seq_scan`).
 
-#### `hot_spot` - every 12 min, 60 s
+#### `hot_spot` - every 12 min, ~100 s
 6 sessions (`sessions`) increment the same `counter_table` row in a loop, each holding the lock ~20 ms:
 many short lock waits on one row. The journal has the number of updates and how many waited over 10 ms.
 - SQL Server: CmWaitStats (LCK_M_*), CmWaitingTasks. ASE: CmSpidWait, CmSysWaits, CmLocks. Postgres: CmPgPidWait, CmPgLocks.
@@ -444,30 +675,30 @@ and of its stock rows (a scan, no index on `stock.product_id`). One long call wi
 - SQL Server: CmExecProcedureStats, CmExecQueryStats, CmExecCursors. ASE: CmActiveStatements, CmProcCallStack, CmCachedProcs.
   Postgres: CmPgFunctions (needs `track_functions`), CmPgStatements.
 
-#### `n_plus_one` - every 5 min, 60 s
+#### `n_plus_one` - every 5 min, ~100 s
 An "ORM style" page: the orders of a customer, then one query per order for its lines, then one query per line for
 the product name. Very many tiny statements from one session.
 - SQL Server: CmExecQueryStats, CmPerfCounters (batch requests/sec). ASE: CmSqlStatement, CmStmntCacheDetails. Postgres: CmPgStatements.
 
-#### `temp_recompile` - every 8 min, 60 s
+#### `temp_recompile` - every 8 min, ~100 s
 Calls `p_temp_report` twice a second: a temp table with an index created after the insert.
 - SQL Server: CmPerfCounters (re-compilations/sec), CmExecProcedureStats. ASE: CmSysmon, CmCachedProcs.
   Postgres: temp table create/drop on every call (catalog churn).
 
-#### `conn_churn` - every 10 min, 60 s
+#### `conn_churn` - every 10 min, ~100 s
 Connect, one query, disconnect - about 4 times a second (an application without a connection pool). Each connection
 is also a `session` event in the journal.
 - SQL Server: CmPerfCounters (logins/sec). ASE: CmSummary, CmSysmon. Postgres: CmSummary, CmPgActivity.
 
-#### `errors` - every 5 min
-Five rounds of failing statements: duplicate key, divide by zero, a query timeout (2 s timeout on a 5 s wait), a missing table.
+#### `errors` - every 5 min, ~100 s
+A round of failing statements every ~4 s: duplicate key, divide by zero, a query timeout (2 s timeout on a 5 s wait), a missing table.
 The journal has the error codes of the first round.
 - SQL Server: client errors are not in the error log - check what SqlServerTune shows at all.
 - ASE: CmSqlStatement (errors per statement); `AlarmEventClientErrorMsg`.
 - Postgres: CmPgDatabase `xact_rollback`; the server log only if `log_min_error_statement` allows it.
 
 Settings for each problem (`scenario.<name>.<setting>`): `everyMinutes`, and where it applies `holdSeconds`,
-`waiters`, `sessions`, `durationSeconds`. See `conf/loadgen.properties`.
+`waiters`, `sessions`, `durationSeconds` (+ `problem.extraSeconds`, see above). See `conf/loadgen.properties`.
 
 ---
 
@@ -510,7 +741,7 @@ connection:
   -U,--user <admin>    -P,--password <pw>    -D,--dbname <db>    --passwd-file <file>    -c,--config <file>
 
 install:
-  -s,--size <small|medium|large|xl|xxl>    -L,--logins <n>    --seed <n>
+  -s,--size <small|medium|large|xl|xxl|xxxl>    -L,--logins <n>    --seed <n>
   --use-existing-db    --logins-only
   --ase-device-dir <dir>    --ase-data-dev <dev>    --ase-log-dev <dev>    --ase-db-size-mb <mb>
 

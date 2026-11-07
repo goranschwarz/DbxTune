@@ -49,6 +49,8 @@ public class ProblemEvent
 		m.put("appName", s.getAppName());
 		m.put("role",    role);
 		_sessions.add(m);
+		s.setOperation(s.getScenario() + ":" + role.replaceAll("[^A-Za-z0-9]+", "_")); // e.g. dbxt:blocking:holder
+		m.put("operation", s.getOperationShown()); // what DbxTune should show for this session
 	}
 
 	/** Free form details: the SQL, table, rows, durations... */

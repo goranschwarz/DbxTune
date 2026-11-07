@@ -40,7 +40,7 @@ public class ProblemBlocking extends Scenario
 {
 	public ProblemBlocking()
 	{
-		super("blocking", Kind.PROBLEM, 10, "A transaction holds a row lock for 120 s (idle in transaction), 3 sessions wait for it");
+		super("blocking", Kind.PROBLEM, 10, "A transaction holds a row lock for ~160 s (idle in transaction), 3 sessions wait for it");
 	}
 
 	@Override
@@ -65,7 +65,7 @@ public class ProblemBlocking extends Scenario
 	public void runProblem(RunContext ctx, ProblemEvent ev)
 	throws Exception
 	{
-		int holdSec = (int) Math.min(ctx.getLoadGen().getScenarioIntProp(this, "holdSeconds", 120), Math.max(10, ctx.getRemainingMs() / 1000 - 10));
+		int holdSec = (int) Math.min(activeSeconds(ctx, "holdSeconds", 120), Math.max(10, ctx.getRemainingMs() / 1000 - 10));
 		int waiters = ctx.getLoadGen().getScenarioIntProp(this, "waiters", 3);
 		int product = ctx.getProducts() > 200 ? 100 + ctx.rnd().nextInt(ctx.getProducts() - 100) : 2 + ctx.rnd().nextInt(ctx.getProducts() - 1);
 		int wh      = 1 + ctx.rnd().nextInt(ctx.getWarehouses());
