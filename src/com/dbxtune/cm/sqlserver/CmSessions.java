@@ -1259,10 +1259,20 @@ extends CountersModel
 
 								// Should we go and get EXTRA INFO (the data in the table that is locked???)
 								boolean getLockedTableData = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_ON_WAIT_RESOURCE__KEY__GET_LOCKED_TABLE_DATA, DEFAULT_ON_WAIT_RESOURCE__KEY__GET_LOCKED_TABLE_DATA);
+								String fullTableName = "[" + wi._dbname + "].[" + wi._schemaName + "].[" + wi._objectName + "]";
+
+								// The monitor login had no SELECT permission on this table lately: don't ask again (and don't log again) until the retry time
+								Long deniedTime = _lockedTableDataDenied.get(fullTableName);
+								if (getLockedTableData && deniedTime != null && System.currentTimeMillis() - deniedTime < LOCKED_TABLE_DATA_DENIED_RETRY_MS)
+								{
+									getLockedTableData = false;
+									wi._extraInfo = "The monitor login has no SELECT permission on " + fullTableName + " (checked at " + new java.sql.Timestamp(deniedTime) + ", next try after "
+											+ (LOCKED_TABLE_DATA_DENIED_RETRY_MS / 60_000) + " minutes). Grant SELECT to see the locked row, or disable this with property '" + PROPKEY_ON_WAIT_RESOURCE__KEY__GET_LOCKED_TABLE_DATA + "=false'.";
+								}
+
 								if (getLockedTableData)
 								{
-									String fullTableName = "[" + wi._dbname + "].[" + wi._schemaName + "].[" + wi._objectName + "]";
-									String sql = "SELECT '" + lockres + "' AS [%%lockres%%], * FROM " + fullTableName + " (NOLOCK) WHERE %%lockres%% = '" + lockres + "'";
+									String sql ="SELECT '" + lockres + "' AS [%%lockres%%], * FROM " + fullTableName + " (NOLOCK) WHERE %%lockres%% = '" + lockres + "'";
 
 									// Example: SELECT '(ce52f92a058c)' AS [%%lockres%%], * FROM [dbname].[schema].[table] (NOLOCK) WHERE %%lockres%% = '(ce52f92a058c)'
 
@@ -1290,7 +1300,18 @@ extends CountersModel
 										wi._extraInfo = ex.getMessage()
 												+  "\nNOTE: This can be disabled with property '" + PROPKEY_ON_WAIT_RESOURCE__KEY__GET_LOCKED_TABLE_DATA + "=false' if it takes to much time/resources or causes any errors.";
 
-										_logger.warn("Problems getting Locked Resource using SQL=|" + sql + "|, skipping this and continuing... This can be disabled with property '" + PROPKEY_ON_WAIT_RESOURCE__KEY__GET_LOCKED_TABLE_DATA + "=false'. Caught: " + ex);
+										if (ex.getErrorCode() == 229) // The SELECT permission was denied on the object...
+										{
+											// Remember it: skip this table, and log it ONCE, until the retry time (a GRANT is then picked up without a restart)
+											_lockedTableDataDenied.put(fullTableName, System.currentTimeMillis());
+											_logger.warn("No SELECT permission on " + fullTableName + " for the monitor login, so the locked row can't be shown for sessions waiting on it. "
+													+ "Not trying this table again for " + (LOCKED_TABLE_DATA_DENIED_RETRY_MS / 60_000) + " minutes (and not logging it again). "
+													+ "Grant SELECT, or disable the lookup with property '" + PROPKEY_ON_WAIT_RESOURCE__KEY__GET_LOCKED_TABLE_DATA + "=false'. Caught: " + ex.getMessage());
+										}
+										else
+										{
+											_logger.warn("Problems getting Locked Resource using SQL=|" + sql + "|, skipping this and continuing... This can be disabled with property '" + PROPKEY_ON_WAIT_RESOURCE__KEY__GET_LOCKED_TABLE_DATA + "=false'. Caught: " + ex);
+										}
 									}
 								}
 							}
@@ -1876,6 +1897,10 @@ extends CountersModel
 		}
 	}
 	
+	/** Tables where the locked-row lookup got "SELECT permission denied" (229): [db].[schema].[table] -> when. Skipped (and not logged) until the retry time. */
+	private static final Map<String, Long> _lockedTableDataDenied = new java.util.concurrent.ConcurrentHashMap<>();
+	private static final long LOCKED_TABLE_DATA_DENIED_RETRY_MS = 60 * 60_000; // 1 hour
+
 	public static final String  PROPKEY_ON_WAIT_RESOURCE__KEY__GET_LOCKED_TABLE_DATA = "CmSessions.onWaitResource.KEY.getLockedTableData";
 	public static final boolean DEFAULT_ON_WAIT_RESOURCE__KEY__GET_LOCKED_TABLE_DATA = true;
 
