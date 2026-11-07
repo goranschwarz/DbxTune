@@ -42,7 +42,7 @@ public class ProblemLiteralSql extends Scenario
 		switch (v)
 		{
 		case SQLSERVER: return expected(Arrays.asList("CmPlanCacheHistory", "CmPerfCounters", "CmExecQueryStats", "CmMemoryClerks"), Arrays.asList(),
-				"Many single-use ad hoc plans; SQL Compilations/sec up (joins prevent simple parameterization).");
+				"Many single-use ad hoc plans; SQL Compilations/sec up (joins prevent simple parameterization). Seen 2026-11-07: compilations 4 -> 15-19/s, ~250 distinct statements per run with the same query_hash in CmExecQueryStats.");
 		case ASE:       return expected(Arrays.asList("CmStatementCache", "CmStmntCacheDetails", "CmSqlStatement", "CmSysmon"), Arrays.asList(),
 				"Statement cache churn, unless 'enable literal autoparam' is on.");
 		case POSTGRES:  return expected(Arrays.asList("CmPgStatements"), Arrays.asList(),

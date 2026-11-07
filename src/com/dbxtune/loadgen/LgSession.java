@@ -119,6 +119,7 @@ implements AutoCloseable
 	public List<Object[]> query(String sql, Object... params)
 	throws SQLException
 	{
+		sql = tagInside(sql);
 		long start = System.currentTimeMillis();
 		List<Object[]> rows = new ArrayList<>();
 		try (PreparedStatement ps = _conn.prepareStatement(sql))
@@ -169,6 +170,7 @@ implements AutoCloseable
 	public int update(String sql, Object... params)
 	throws SQLException
 	{
+		sql = tagInside(sql);
 		long start = System.currentTimeMillis();
 		try (PreparedStatement ps = _conn.prepareStatement(sql))
 		{
@@ -195,6 +197,7 @@ implements AutoCloseable
 	public int call(String sql, Object... params)
 	throws SQLException
 	{
+		sql = tagInside(sql);
 		long start = System.currentTimeMillis();
 		try (CallableStatement cs = _conn.prepareCall(sql))
 		{
@@ -279,10 +282,33 @@ implements AutoCloseable
 	/** The value the DBMS shows for the current operation (context_info, clientname, application_name), null if none */
 	public String getOperationShown() { return _operationShown; }
 
+	/**
+	 * Move a leading scenario tag (<code>/&#42; dbxt:x &#42;/ select ...</code>) to after the first word (<code>select /&#42; dbxt:x &#42;/ ...</code>).
+	 * SQL Server keeps only the statement text in dm_exec_query_stats / Query Store, which starts AFTER a leading comment,
+	 * so a tag in front is lost there (seen 2026-11-07). Inside the statement it is kept on all vendors.
+	 */
+	static String tagInside(String sql)
+	{
+		if (sql == null || !sql.startsWith("/* dbxt:"))
+			return sql;
+		int end = sql.indexOf("*/");
+		if (end < 0)
+			return sql;
+		String tag  = sql.substring(0, end + 2);
+		String rest = sql.substring(end + 2).stripLeading();
+		int    sp   = 0;
+		while (sp < rest.length() && Character.isLetter(rest.charAt(sp)))
+			sp++;
+		if (sp == 0) // not a keyword first (e.g. "{call ...}"): leave it as it is
+			return sql;
+		return rest.substring(0, sp) + " " + tag + rest.substring(sp);
+	}
+
 	/** A plain statement without parameters (literal SQL, set options, DDL), all results are read and thrown away */
 	public int exec(String sql)
 	throws SQLException
 	{
+		sql = tagInside(sql);
 		long start = System.currentTimeMillis();
 		try (Statement stmt = _conn.createStatement())
 		{

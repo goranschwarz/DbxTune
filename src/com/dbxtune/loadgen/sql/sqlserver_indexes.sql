@@ -14,7 +14,9 @@ go
 -- FLAW: never used by the workload
 create index ix_orders_ship_city on orders(ship_city)
 go
-create index ix_orders_status   on orders(status)
+-- (status, order_ts): delivery reads the oldest PAID orders (3% of all, all recent). With only (status) the optimizer walked
+-- ix_orders_ts from the oldest order: ~10 M logical reads per call at size medium (seen 2026-11-07)
+create index ix_orders_status   on orders(status, order_ts)
 go
 create index ix_orders_ts       on orders(order_ts)
 go
@@ -58,20 +60,22 @@ go
 
 -- FLAW: row by row processing with a cursor (and a stock lookup by product_id that has no index)
 create procedure p_rbar_price_adjust
-    @category_id int
+    @category_id int,
+    @max_rows    int = 100   -- each row scans stock: limit the work (the scenario scales it with the size)
 as
 begin
     set nocount on
-    declare @product_id int
+    declare @product_id int, @cnt int = 0
     declare c_prod cursor local fast_forward for
         select product_id from product where category_id = @category_id
 
     open c_prod
     fetch next from c_prod into @product_id
-    while @@fetch_status = 0
+    while @@fetch_status = 0 and @cnt < @max_rows
     begin
         update product set price = price * 1.0001 where product_id = @product_id
         update stock   set last_upd_ts = sysdatetime() where product_id = @product_id
+        set @cnt = @cnt + 1
         fetch next from c_prod into @product_id
     end
     close c_prod
@@ -85,10 +89,19 @@ create procedure p_temp_report
 as
 begin
     set nocount on
+    -- The select runs, THEN the temp table gets an index, then the same select runs again: the schema changed
+    -- since it was compiled, so it is recompiled (2 re-compilations per call; an index created before the first use gave 0 on 2022/2025)
+    declare @i int = 0, @cnt int, @sum decimal(14,2)
     create table #o (order_id int not null primary key, total_amount decimal(12,2) not null)
     insert into #o select order_id, total_amount from orders where customer_id = @customer_id
-    create index ix_tmp_amount on #o(total_amount)
-    select count(*), sum(total_amount) from #o where total_amount > 100
+    while @i < 2
+    begin
+        select @cnt = count(*), @sum = sum(total_amount) from #o where total_amount > 100
+        if @i = 0
+            create index ix_tmp_amount on #o(total_amount)
+        set @i = @i + 1
+    end
+    select @cnt, @sum
     drop table #o
 end
 go

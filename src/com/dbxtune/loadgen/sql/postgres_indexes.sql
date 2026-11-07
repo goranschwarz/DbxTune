@@ -14,7 +14,9 @@ go
 -- FLAW: never used by the workload
 create index ix_orders_ship_city on orders(ship_city)
 go
-create index ix_orders_status   on orders(status)
+-- (status, order_ts): delivery reads the oldest PAID orders (3% of all, all recent). With only (status) the optimizer walked
+-- ix_orders_ts from the oldest order: ~10 M logical reads per call at size medium (seen 2026-11-07)
+create index ix_orders_status   on orders(status, order_ts)
 go
 create index ix_orders_ts       on orders(order_ts)
 go
@@ -59,7 +61,8 @@ $$
 go
 
 -- FLAW: row by row processing in a loop (and a stock lookup by product_id that has no index)
-create function p_rbar_price_adjust(p_category_id int)
+-- each row scans stock: p_max_rows limits the work (the scenario scales it with the size)
+create function p_rbar_price_adjust(p_category_id int, p_max_rows int default 100)
 returns int
 language plpgsql
 as $$
@@ -71,6 +74,7 @@ begin
         update product set price = price * 1.0001 where product_id = r.product_id;
         update stock   set last_upd_ts = now()     where product_id = r.product_id;
         cnt := cnt + 1;
+        exit when cnt >= p_max_rows;
     end loop;
     return cnt;
 end

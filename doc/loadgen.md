@@ -176,6 +176,13 @@ loadgen.sh install -t ase -S asehost -D my_test_db --use-existing-db
   the load generator tables and procedures (Postgres: the schema `dbxt`), the database users, and the logins.
 - Remember `-D my_test_db` on every later command (`run`, `status`, `uninstall`).
 
+### After an upgrade of the load generator
+
+Tables, indexes and procedures are created at `install` only. When a new version changes them (e.g. 2026-11-07:
+`ix_orders_status` on `(status, order_ts)`, `p_rbar_price_adjust` with `@max_rows`, `p_temp_report` that recompiles),
+an existing install keeps the old ones until `uninstall` + `install`. `run` still works on an old install
+(`rbar_cursor` then calls the procedure without a limit and says so in the journal).
+
 ### Getting the logins back (`--logins-only`)
 
 ```bash
@@ -226,6 +233,8 @@ loadgen.sh run -t <dbms> -S <host[:port]> [--duration 15m|15m-45m|1h|90s] [--int
 - Threads start spread over the first minute (ramp-up).
 - Runs of 15 minutes or more get one busier 5 minute **wave** at a random time (think time x 0.3), so the graphs are not flat.
 - Numbers seen on Docker (`small`): low about 4 units of work/s, medium about 30/s.
+- `medium` on size `medium` kept a 2-core SQL Server VM at ~100% CPU (seen 2026-11-07); DbxTune samples then took up to
+  30 s instead of under 1 s. On small test servers use `low`, or expect slow samples.
 
 ### How a run uses its time (scheduling)
 
@@ -526,9 +535,11 @@ On this data the load generator runs:
 - **Names you see in DbxTune**:
   - login: `dbxt_user_1..N`;
   - program/application name: `dbxt-loadgen:oltp`, `dbxt-loadgen:olap`, or `dbxt-loadgen:<problem>` (e.g. `dbxt-loadgen:blocking`);
-  - every statement starts with a comment `/* dbxt:<scenario> */`, so the scenario is visible in the SQL text
-    (the program name can't change per scenario on a connection). Exceptions: procedure calls (`{call p_...}`),
-    and the id allocation, which is tagged `/* dbxt:next_val */`.
+  - every statement has a comment `/* dbxt:<scenario> */` right after its first word (`select /* dbxt:payment */ ...`),
+    so the scenario is visible in the SQL text (the program name can't change per scenario on a connection).
+    Not first in the text: SQL Server keeps only the statement in `dm_exec_query_stats` / Query Store, which starts
+    after a leading comment. Exceptions: procedure calls (`{call p_...}`), and the id allocation, which is tagged
+    `/* dbxt:next_val */`.
 - **The current operation** is also set in a session field that every monitor can see, so a DbxTune row
   (active statement, blocking, open transaction...) tells which scenario, and for problems which role, the session has
   right now. It is set when the scenario changes (one extra short round trip, not counted in the statistics):
@@ -575,8 +586,8 @@ The install journal lists these as `object` events with a `flaw` text (the "answ
 | `ix_customer_vip` | 99% NULL | - |
 | `ix_product_status` | 99% the same value | - |
 | `p_order_status` | Parameter sniffing: customer 1 has ~30% of the orders, everyone else a few | order_status |
-| `p_rbar_price_adjust` | Row by row with a cursor, plus a `stock` scan per row | rbar_cursor |
-| `p_temp_report` | Temp table + index created after DML inside the procedure (recompiles / catalog churn) | temp_recompile |
+| `p_rbar_price_adjust` | Row by row with a cursor, plus a `stock` scan per row (at most `@max_rows` rows) | rbar_cursor |
+| `p_temp_report` | A select on a temp table, then an index on it, then the same select again (SQL Server/ASE: a recompile; Postgres: catalog churn) | temp_recompile |
 
 Over time the data also drifts on purpose: `bulk_events` adds rows without updating statistics (stale statistics),
 `purge_audit` deletes in big chunks, and `fact_sales` grows with the ETL.
@@ -672,6 +683,8 @@ many short lock waits on one row. The journal has the number of updates and how 
 #### `rbar_cursor` - every 10 min
 Calls `p_rbar_price_adjust` for one category: a cursor over its products, and per product an update of the product
 and of its stock rows (a scan, no index on `stock.product_id`). One long call with a very high statement count inside.
+Each row scans `stock`, so the rows are limited to `maxRows` = 20 000 000 / stock rows (10-500): about 20 million stock
+rows read per call at any size (without a limit one call ran 15 minutes at size `medium`). Setting `scenario.rbar_cursor.maxRows`.
 - SQL Server: CmExecProcedureStats, CmExecQueryStats, CmExecCursors. ASE: CmActiveStatements, CmProcCallStack, CmCachedProcs.
   Postgres: CmPgFunctions (needs `track_functions`), CmPgStatements.
 
@@ -681,7 +694,9 @@ the product name. Very many tiny statements from one session.
 - SQL Server: CmExecQueryStats, CmPerfCounters (batch requests/sec). ASE: CmSqlStatement, CmStmntCacheDetails. Postgres: CmPgStatements.
 
 #### `temp_recompile` - every 8 min, ~100 s
-Calls `p_temp_report` twice a second: a temp table with an index created after the insert.
+Calls `p_temp_report` twice a second: it fills a temp table, runs a select on it, creates an index on it, and runs the
+same select again. The schema changed since the select was compiled, so SQL Server and ASE recompile it
+(SQL Server 2022: 2 re-compilations per call; the earlier version, index before the first select, gave none).
 - SQL Server: CmPerfCounters (re-compilations/sec), CmExecProcedureStats. ASE: CmSysmon, CmCachedProcs.
   Postgres: temp table create/drop on every call (catalog churn).
 

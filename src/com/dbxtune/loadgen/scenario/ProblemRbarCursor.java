@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.dbxtune.loadgen.scenario;
 
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Map;
 
@@ -29,6 +30,10 @@ import com.dbxtune.loadgen.Vendor;
 /**
  * Row by row: the procedure p_rbar_price_adjust loops over the products in a category with a cursor and updates
  * one product + its stock rows (no index on stock.product_id) per row.
+ * <p>
+ * Each row scans stock, so the rows are limited: <code>max_rows</code> = 20 000 000 / stock rows (10-500),
+ * about 20 million stock rows read per call whatever the size (one call ran 15 minutes at size medium before the limit).
+ * Setting: scenario.rbar_cursor.maxRows
  */
 public class ProblemRbarCursor extends Scenario
 {
@@ -57,15 +62,28 @@ public class ProblemRbarCursor extends Scenario
 	throws Exception
 	{
 		int category = 1 + ctx.rnd().nextInt(ctx.getCategories());
-		String sql = pick(ctx.getVendor(), "{call p_rbar_price_adjust(?)}", "{call p_rbar_price_adjust(?)}", "select p_rbar_price_adjust(?)");
-		ev.put("category_id", category).put("sql", sql);
+		long stockRows = (long) ctx.getWarehouses() * ctx.getProducts();
+		int  maxRows   = ctx.getLoadGen().getScenarioIntProp(this, "maxRows", (int) Math.max(10, Math.min(500, 20_000_000L / Math.max(1, stockRows))));
+		String sql = pick(ctx.getVendor(), "{call p_rbar_price_adjust(?, ?)}", "{call p_rbar_price_adjust(?, ?)}", "select p_rbar_price_adjust(?, ?)");
+		ev.put("category_id", category).put("maxRows", maxRows).put("sql", sql);
 
 		try (LgSession s = ctx.openSession(this))
 		{
 			ev.addSession(s, "cursor procedure");
 			s.setQueryTimeout(900);
 			long start = System.currentTimeMillis();
-			s.call(sql, category);
+			try
+			{
+				s.call(sql, category, maxRows);
+			}
+			catch (SQLException ex)
+			{
+				// Installed before max_rows was added (2026-11-07): the old one-argument procedure, all rows of the category
+				if (ctx.isStopping() || s.isCancelled() || ex instanceof java.sql.SQLTimeoutException)
+					throw ex;
+				ev.setNote("The procedure has no max_rows parameter (installed before 2026-11-07, re-install to get it): called without a limit. First try: " + ex.getMessage());
+				s.call(pick(ctx.getVendor(), "{call p_rbar_price_adjust(?)}", "{call p_rbar_price_adjust(?)}", "select p_rbar_price_adjust(?)"), category);
+			}
 			ev.put("durationMs", System.currentTimeMillis() - start);
 		}
 	}
