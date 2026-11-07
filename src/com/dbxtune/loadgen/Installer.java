@@ -32,6 +32,7 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -164,6 +165,8 @@ public class Installer
 				errMsg = "Database '" + db + "' does not exist on '" + _lg.getSrvName() + "' (--use-existing-db). Create it first, or skip --use-existing-db.";
 			else if (useExisting)
 				errMsg = checkExistingDatabase(db);
+			else if (_v == Vendor.ASE)
+				errMsg = chooseAseDeviceDir(admin, db, size);
 			if (errMsg != null)
 			{
 				System.out.println("ERROR: " + errMsg);
@@ -440,15 +443,14 @@ public class Installer
 				long   sizeMb  = Long.parseLong(_lg.getCmd().getOptionValue("ase-db-size-mb", String.valueOf(Math.max(300, size.estimateMb() * 2))));
 				long   logMb   = Math.max(200, sizeMb / 2); // the fill and the insert-select chunks need room between checkpoints
 
-				// Own devices: 'disk init' in the given directory on the ASE host (dropped again by uninstall)
-				String devDir = _lg.getCmd().getOptionValue("ase-device-dir");
-				if (devDir != null)
+				// Own devices: 'disk init' in --ase-device-dir, or in the directories chooseAseDeviceDir() found (dropped again by uninstall)
+				if (_aseDataDir != null)
 				{
 					String suffix = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
 					dataDev = ASE_DATA_DEV;
 					logDev  = ASE_LOG_DEV;
-					createAseDevice(admin, dataDev, devDir + "/" + dataDev + "_" + suffix + ".dev", sizeMb);
-					createAseDevice(admin, logDev,  devDir + "/" + logDev  + "_" + suffix + ".dev", logMb);
+					createAseDevice(admin, dataDev, _aseDataDir + _aseDataSep + dataDev + "_" + suffix + _aseDevExt, sizeMb);
+					createAseDevice(admin, logDev,  _aseLogDir  + _aseLogSep  + logDev  + "_" + suffix + _aseDevExt, logMb);
 				}
 
 				String sql = "create database " + db + " on " + dataDev + " = '" + sizeMb + "M'";
@@ -470,6 +472,114 @@ public class Installer
 			break;
 		}
 		_lg.getJournal().event("object", "action", "create", "objectType", "database", "name", db);
+	}
+
+	/** ASE: where createDatabase() puts its own data and log device (null = on --ase-data-dev / --ase-log-dev, or the 'default' device) */
+	private String _aseDataDir, _aseLogDir, _aseDataSep = "/", _aseLogSep = "/", _aseDevExt = ".dev";
+
+	/** ASE: a device name (or file name) that says "log": log, logs, xlog, tlog, wal (+ optional dev/device) as a separate word part (pml_log_1, tlog01, sales_xlog, logdev; not syslogs, catalog) */
+	private static final Pattern ASE_LOG_DEVICE_NAME = Pattern.compile("(?i)(^|[^a-z])(x|t)?(logs?|wal)(dev(ice)?)?([^a-z]|$)");
+
+	/**
+	 * ASE: decide where the database goes, BEFORE anything is created.
+	 * <ul>
+	 *   <li>--ase-data-dev / --ase-log-dev: on those existing devices (--ase-data-dev default = the default device)</li>
+	 *   <li>--ase-device-dir: own devices in that directory</li>
+	 *   <li>none of them: own devices next to the existing ones, read from master..sysdevices (disk devices with a file, not raw partitions):
+	 *       the data device in the directory that holds most data devices, the log device in the directory that holds most
+	 *       log devices (a name with log/logs/xlog/tlog/wal; none: next to the data device). User devices count first;
+	 *       master, sysprocsdev, systemdbdev, sybsysdb, sybmgmtdev, sybsecurity and tempdb devices only when there are no others.
+	 *       File extension: the most common one among the data devices used.</li>
+	 * </ul>
+	 * @return null if OK, else what is wrong and what to do (install stops before creating anything)
+	 */
+	private String chooseAseDeviceDir(LgSession admin, String db, Size size)
+	throws SQLException
+	{
+		if (_lg.getCmd().hasOption("ase-data-dev") || _lg.getCmd().hasOption("ase-log-dev"))
+			return null;
+
+		String devDir = _lg.getCmd().getOptionValue("ase-device-dir");
+		if (devDir != null)
+		{
+			_aseDataDir = _aseLogDir = devDir.replaceAll("[/\\\\]+$", "");
+			_aseDataSep = _aseLogSep = (devDir.contains("\\") && !devDir.contains("/")) ? "\\" : "/";
+			return null;
+		}
+
+		// Read the disk devices (cntrltype 0, not dump devices), skip raw partitions: [name, dir, separator, extension, isLog, isSystem]
+		List<String>   all     = new ArrayList<>();
+		List<Object[]> devices = new ArrayList<>();
+		for (Object[] row : admin.query("select name, phyname from master..sysdevices where cntrltype = 0 order by vdevno"))
+		{
+			String name = String.valueOf(row[0]).trim();
+			String phys = String.valueOf(row[1]).trim();
+			all.add(name + " = " + phys);
+			if (phys.startsWith("/dev/") || phys.startsWith("\\\\.\\")) // raw partition (Unix /dev/..., Windows \\.\...)
+				continue;
+			int p = Math.max(phys.lastIndexOf('/'), phys.lastIndexOf('\\'));
+			if (p <= 0)
+				continue;
+			String  file     = phys.substring(p + 1);
+			String  ext      = file.lastIndexOf('.') > 0 ? file.substring(file.lastIndexOf('.')) : "";
+			boolean isLog    = ASE_LOG_DEVICE_NAME.matcher(name).find() || ASE_LOG_DEVICE_NAME.matcher(file).find();
+			boolean isSystem = name.matches("(?i)master|sysprocsdev|systemdbdev|sybsysdb|sybmgmtdev|sybsecurity") || name.toLowerCase().contains("tempdb");
+			devices.add(new Object[] {name, phys.substring(0, p), String.valueOf(phys.charAt(p)), ext, isLog, isSystem});
+		}
+
+		// Data devices: user devices first, then also the system devices, then anything with a file
+		List<Object[]> dataDevs = new ArrayList<>();
+		for (Object[] d : devices) if (!(Boolean) d[4] && !(Boolean) d[5]) dataDevs.add(d);
+		if (dataDevs.isEmpty()) for (Object[] d : devices) if (!(Boolean) d[4]) dataDevs.add(d);
+		if (dataDevs.isEmpty()) dataDevs.addAll(devices);
+
+		List<Object[]> logDevs = new ArrayList<>();
+		for (Object[] d : devices) if ((Boolean) d[4]) logDevs.add(d);
+
+		if (dataDevs.isEmpty())
+		{
+			long sizeMb = Math.max(300, size.estimateMb() * 2);
+			return "Can't decide where to put the ASE database '" + db + "': no file-based disk devices found in master..sysdevices "
+					+ "(only raw partitions or none), so there is no directory to put new devices next to.\n"
+					+ "   Devices found: " + (all.isEmpty() ? "(none)" : String.join(", ", all)) + "\n"
+					+ "   Do one of these:\n"
+					+ "   - give a directory ON THE ASE HOST where the load generator may create its own devices (disk init, dropped again by uninstall):\n"
+					+ "        --ase-device-dir /path/on/the/ase/host\n"
+					+ "   - or create devices yourself (data ~" + sizeMb + " MB, log ~" + Math.max(200, sizeMb / 2) + " MB for size '" + size.name + "') and name them:\n"
+					+ "        --ase-data-dev <data device> --ase-log-dev <log device>\n"
+					+ "   - or put it on the default device(s):  --ase-data-dev default\n"
+					+ "   - or create the database yourself and use:  --use-existing-db\n"
+					+ "   See doc/loadgen.md, 'Sybase ASE: where the database goes'.";
+		}
+
+		// The directory that holds most of the devices (ties: the first in vdevno order); the extension most used by the data devices
+		Map<String, Integer> dataDirCount = new LinkedHashMap<>(), logDirCount = new LinkedHashMap<>(), extCount = new LinkedHashMap<>();
+		for (Object[] d : dataDevs) { dataDirCount.merge((String) d[1], 1, Integer::sum); extCount.merge((String) d[3], 1, Integer::sum); }
+		for (Object[] d : logDevs)  { logDirCount .merge((String) d[1], 1, Integer::sum); }
+		String dataDir = null, logDir = null, ext = null;
+		for (Map.Entry<String, Integer> e : dataDirCount.entrySet()) if (dataDir == null || e.getValue() > dataDirCount.get(dataDir)) dataDir = e.getKey();
+		for (Map.Entry<String, Integer> e : logDirCount .entrySet()) if (logDir  == null || e.getValue() > logDirCount .get(logDir))  logDir  = e.getKey();
+		for (Map.Entry<String, Integer> e : extCount    .entrySet()) if (ext     == null || e.getValue() > extCount    .get(ext))     ext     = e.getKey();
+		if (logDir == null)
+			logDir = dataDir;
+
+		_aseDataDir = dataDir;
+		_aseLogDir  = logDir;
+		_aseDevExt  = ext;
+		for (Object[] d : devices)
+		{
+			if (d[1].equals(dataDir)) _aseDataSep = (String) d[2];
+			if (d[1].equals(logDir))  _aseLogSep  = (String) d[2];
+		}
+
+		String msg = "ASE: no device option given, so the load generator creates its own devices next to the existing ones: "
+				+ "data in '" + dataDir + "' (" + dataDirCount.get(dataDir) + " data devices there), "
+				+ "log in '" + logDir + "' (" + (logDirCount.isEmpty() ? "no log devices found, next to the data" : logDirCount.get(logDir) + " log devices there") + "), "
+				+ "file extension '" + ext + "'. 'uninstall' drops them again (sp_dropdevice ..., dropfile: the files too). "
+				+ "To choose yourself: --ase-device-dir <dir>, or --ase-data-dev/--ase-log-dev <existing devices>.";
+		_logger.info(msg);
+		_lg.getJournal().event("info", "msg", msg, "dataDirs", dataDirCount, "logDirs", logDirCount);
+		return null;
 	}
 
 	/** ASE: disk init (the device name must not exist) */
@@ -494,10 +604,26 @@ public class Installer
 			if (rows.isEmpty())
 				continue;
 			String physName = String.valueOf(rows.get(0)[0]).trim();
-			admin.exec("exec master..sp_dropdevice '" + name + "'");
-			String msg = "Dropped ASE device '" + name + "'. The file is still on the ASE host, remove it by hand: " + physName;
-			_logger.info(msg);
-			_lg.getJournal().event("object", "action", "drop", "objectType", "device", "name", name, "physname", physName);
+
+			// First let ASE remove the file too ('dropfile', ASE 15.7 and later); if that fails, drop only the device
+			boolean fileDropped;
+			try
+			{
+				admin.exec("exec master..sp_dropdevice '" + name + "', 'dropfile'");
+				fileDropped = true;
+			}
+			catch (SQLException ex)
+			{
+				_logger.info("ASE: sp_dropdevice '" + name + "', 'dropfile' failed (" + ex.getMessage().trim() + "), dropping only the device.");
+				admin.exec("exec master..sp_dropdevice '" + name + "'");
+				fileDropped = false;
+			}
+
+			if (fileDropped)
+				_logger.info("Dropped ASE device '" + name + "' and its file: " + physName);
+			else
+				_logger.warn("Dropped ASE device '" + name + "', but ASE did not remove its file. It is still on the ASE host (normally not this machine), remove it by hand: " + physName);
+			_lg.getJournal().event("object", "action", "drop", "objectType", "device", "name", name, "physname", physName, "fileDropped", fileDropped);
 		}
 	}
 

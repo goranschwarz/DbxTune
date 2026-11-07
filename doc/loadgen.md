@@ -150,17 +150,31 @@ SQL Server 30 s, ASE 3 minutes.
 
 `CREATE DATABASE` on ASE needs device space. Pick one:
 
-1. **Let the load generator create its own devices** (simplest on a test server):
+1. **No option: the load generator creates its own devices next to the existing ones** (the default):
    ```bash
-   loadgen.sh install -t ase -S asehost --ase-device-dir /sybase/devices
+   loadgen.sh install -t ase -S asehost
    ```
-   The directory is **on the ASE host**. It runs `disk init` for `dbxt_loadgen_data` and `dbxt_loadgen_log`
-   (file names get a timestamp). `uninstall` drops the devices, but ASE leaves the files on disk: the uninstall
-   prints the paths to remove by hand.
+   It reads `master..sysdevices` (disk devices with a file; dump devices and raw partitions such as `/dev/...` are skipped):
+   - the **data** device goes to the directory that holds most data devices,
+   - the **log** device goes to the directory that holds most log devices: a device or file name with `log`, `logs`,
+     `xlog`, `tlog` or `wal` as its own word part, optionally followed by `dev`/`device` (`pubs_log_1`, `tlog01`,
+     `sales_xlog`, `logdev`; not `syslogs` or `catalog`). No log devices: next to the data device.
+   - User devices count first; `master`, `sysprocsdev`, `systemdbdev`, `sybsysdb`, `sybmgmtdev`, `sybsecurity` and
+     tempdb devices are only used when there are no others.
+   - The file extension is the one most used by those data devices (`.dat`, `.dev`...).
+
+   The choice is printed and written to the journal. If there is **no** file-based device (only raw partitions),
+   the install stops before creating anything, lists the devices it found and what to do (options 2-5).
+   It runs `disk init` for `dbxt_loadgen_data` and `dbxt_loadgen_log` (file names get a timestamp). `uninstall` drops
+   the devices with `sp_dropdevice <name>, dropfile`, so ASE deletes the files too. If that fails (an older ASE),
+   it drops only the device and warns that the file is still on the ASE host, with the path to remove by hand.
+   It does not check the free space in that directory: `disk init` fails (and the install stops) if it is too small.
+2. **Own devices in a directory you choose** (both data and log there): `--ase-device-dir /sybase/devices`.
+   The directory is **on the ASE host**.
    (From Git Bash on Windows use `MSYS_NO_PATHCONV=1`, otherwise `/sybase/...` is turned into a Windows path.)
-2. **Use devices that already have free space**: `--ase-data-dev <dev> [--ase-log-dev <dev>]`.
-3. **Use the default device(s)**: no option (`create database ... on default`). Often too small on a test box.
-4. **Create the database yourself** and install into it (next section). Good when the DBA wants control over devices and sizes.
+3. **Use devices that already have free space**: `--ase-data-dev <dev> [--ase-log-dev <dev>]`.
+4. **Use the default device(s)**: `--ase-data-dev default` (`create database ... on default`). Often too small on a test box.
+5. **Create the database yourself** and install into it (next section). Good when the DBA wants control over devices and sizes.
 
 ### Installing into a database you created (`--use-existing-db`)
 
@@ -334,7 +348,7 @@ loadgen.sh uninstall -t <dbms> -S <host[:port]> [-U admin] [--keep-database | --
 
 | Command | Drops | Keeps |
 |---|---|---|
-| `uninstall` | the database (or, if it was a `--use-existing-db` install, only our tables/procedures/schema), the database users, the logins, their passwords in the password file, ASE devices made by `--ase-device-dir` | a database we did not create |
+| `uninstall` | the database (or, if it was a `--use-existing-db` install, only our tables/procedures/schema), the database users, the logins, their passwords in the password file, ASE devices the load generator made (`dbxt_loadgen_data`, `dbxt_loadgen_log`) | a database we did not create |
 | `uninstall --keep-database` | the logins (and their users/aliases in the database, and their passwords) | the database with all data. `run` refuses until `install --logins-only` |
 | `uninstall --keep-logins` | the database / our objects | the logins and their passwords (SQL Server/ASE: default database set to `master`). A later `install` reuses them |
 | `uninstall --force` | also without the marker table: logins named `dbxt_user_<number>`, and the database only if it is named `dbxt_loadgen` | anything else |
@@ -344,7 +358,7 @@ Safety rules:
 - Only logins named `dbxt_user_<number>` are ever dropped.
 - A database that the load generator did not create is never dropped.
 - A second `uninstall` says there is nothing to uninstall (exit code 2).
-- ASE: device files stay on the ASE host; the paths are printed.
+- ASE: the device files are deleted with `sp_dropdevice ..., dropfile`; if ASE can't do that, a warning gives the paths to remove by hand on the ASE host.
 - Sessions of the load generator logins are killed before their database/logins are dropped.
 
 ---

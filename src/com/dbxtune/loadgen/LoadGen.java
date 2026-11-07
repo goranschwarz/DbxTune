@@ -355,10 +355,12 @@ public class LoadGen
 		pw.println("                                      xl ~34000 MB, xxl ~170000 MB, xxxl ~850000 MB");
 		pw.println("  -L,--logins <n>                     Number of " + LOGIN_PREFIX + "# logins (default 10)");
 		pw.println("  --seed <n>                          Random seed for the data (default 42)");
-		pw.println("  --ase-data-dev / --ase-log-dev <dev>  ASE devices for the database (default: the default device)");
+		pw.println("  --ase-data-dev / --ase-log-dev <dev>  ASE: existing devices for the database ('--ase-data-dev default' = the default device)");
+		pw.println("                                      none of the --ase-*-dev/dir options: own devices next to the existing ones");
+		pw.println("                                      (data where most data devices are, log where most log devices are)");
 		pw.println("  --ase-db-size-mb <mb>               ASE database size (default: from --size)");
 		pw.println("  --ase-device-dir <dir>              ASE: create own devices in this directory ON THE ASE HOST (disk init),");
-		pw.println("                                      uninstall drops them (the files stay on disk)");
+		pw.println("                                      uninstall drops them and their files (sp_dropdevice ..., dropfile)");
 		pw.println("  --use-existing-db                   install: into a database you created (-D name); its options are not changed,");
 		pw.println("                                      and uninstall then drops only the load generator objects, not the database");
 		pw.println("  --logins-only                       install: (re)create the " + LOGIN_PREFIX + "# logins of an existing install");
