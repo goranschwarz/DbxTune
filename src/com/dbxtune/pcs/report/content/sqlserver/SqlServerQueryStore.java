@@ -197,6 +197,9 @@ extends SqlServerAbstract
 			if (_qsSummaryDbReport != null)
 				_qsSummaryDbReport.writeMessageText(w);
 
+			// Possible N+1 (all databases)
+			writeNPlusOne(w);
+
 			// Write a report for each of the databases
 			if (_dbMap.size() > 1)
 			{
@@ -285,7 +288,232 @@ extends SqlServerAbstract
 			_qsSummaryDbReport.setTopRows(getTopRows()); // Keep only the ## top rows.
 			_qsSummaryDbReport.postMerge(); // Fixes links etc to ShowPlans... NOT YET IMPLEMENTED
 			_qsSummaryDbReport.createSqlTextTable(conn);
+
+			createNPlusOne(conn);
 		}
+	}
+
+	//----------------------------------------------------------------------------------------------
+	//-- Possible N+1 (same rules as SqlServerChattyStatements, but per Query Store interval)
+	//----------------------------------------------------------------------------------------------
+	private ResultSetTableModel _nPlusOneRstm;
+	private int _nPlusOneCount = 0;
+
+	/**
+	 * Statements with most executions (all databases with Query Store), and the parent statement whose rows follow
+	 * the executions per Query Store interval. See {@link SqlServerChattyStatements#findParent(String, Map, List)}
+	 */
+	private void createNPlusOne(DbxConnection conn)
+	{
+		Map<String, SqlServerChattyStatements.Series> seriesMap = new LinkedHashMap<>(); // key = dbname:query_hash
+		java.util.TreeSet<java.sql.Timestamp> allIntervals = new java.util.TreeSet<>();
+		Map<String, long[]>  totals    = new HashMap<>(); // key -> [execs, rows, durationUs, intervals]
+		Map<String, Long>    textIdMap = new HashMap<>(); // key -> query_text_id
+
+		for (String dbname : _dbMap.keySet())
+		{
+			String schema = "qs:" + dbname;
+			String sql = conn.quotifySqlString(""
+				+ "select i.[start_time], i.[end_time] \n"
+				+ "      ,q.[query_hash] \n"
+				+ "      ,sum(rs.[count_executions])                                 as [execs] \n"
+				+ "      ,sum(rs.[count_executions] * rs.[avg_rowcount])             as [rowcnt] \n"
+				+ "      ,sum(rs.[count_executions] * rs.[avg_duration])             as [durationUs] \n"
+				+ "      ,min(q.[query_text_id])                                     as [query_text_id] \n"
+				+ "from [" + schema + "].[query_store_runtime_stats] rs \n"
+				+ "join [" + schema + "].[query_store_runtime_stats_interval] i on i.[runtime_stats_interval_id] = rs.[runtime_stats_interval_id] \n"
+				+ "join [" + schema + "].[query_store_plan]  p on p.[plan_id]  = rs.[plan_id] \n"
+				+ "join [" + schema + "].[query_store_query] q on q.[query_id] = p.[query_id] \n"
+				+ "group by i.[start_time], i.[end_time], q.[query_hash] \n"
+				);
+
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while (rs.next())
+				{
+					java.sql.Timestamp ts    = rs.getTimestamp(1);
+					java.sql.Timestamp tsEnd = rs.getTimestamp(2);
+					String key   = dbname + ":" + rs.getString(3);
+					long   execs = rs.getLong(4);
+					long   rows  = Math.round(rs.getDouble(5));
+					long   durUs = Math.round(rs.getDouble(6));
+					long   txtId = rs.getLong(7);
+
+					// The parent matching uses executions/rows PER HOUR, so intervals with different length can be compared (if INTERVAL_LENGTH_MINUTES was changed)
+					double lenSec = (ts == null || tsEnd == null) ? 3600 : Math.max(1, (tsEnd.getTime() - ts.getTime()) / 1000.0);
+					long execsPerHour = Math.round(execs * 3600.0 / lenSec);
+					long rowsPerHour  = Math.round(rows  * 3600.0 / lenSec);
+
+					SqlServerChattyStatements.Series s = seriesMap.get(key);
+					if (s == null)
+					{
+						s = new SqlServerChattyStatements.Series();
+						s.dbname = dbname;
+						seriesMap.put(key, s);
+					}
+					s.perSample.put(ts, new long[] {execsPerHour, rowsPerHour});
+					allIntervals.add(ts);
+
+					long[] t = totals.computeIfAbsent(key, k -> new long[4]);
+					t[0] += execs;
+					t[1] += rows;
+					t[2] += durUs;
+					t[3] ++;
+					textIdMap.putIfAbsent(key, txtId);
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.warn("Problems reading Query Store runtime stats per interval for database '" + dbname + "'. Skipping 'Possible N+1' for this database.", ex);
+			}
+		}
+
+		if (totals.isEmpty())
+			return;
+
+		// Top ## by executions
+		List<String> keys = new ArrayList<>(totals.keySet());
+		keys.sort((a, b) -> Long.compare(totals.get(b)[0], totals.get(a)[0]));
+		if (keys.size() > getTopRows())
+			keys = keys.subList(0, getTopRows());
+
+		List<java.sql.Timestamp> intervals = new ArrayList<>(allIntervals);
+
+		// Find parents (the parent can be any statement, not only the top ones)
+		Map<String, SqlServerChattyStatements.ParentMatch> parentMap = new HashMap<>();
+		for (String key : keys)
+		{
+			SqlServerChattyStatements.ParentMatch pm = SqlServerChattyStatements.findParent(key, seriesMap, intervals);
+			if (pm != null)
+			{
+				parentMap.put(key, pm);
+				textIdMap.putIfAbsent(pm.parentKey, textIdMap.get(pm.parentKey));
+			}
+		}
+		_nPlusOneCount = parentMap.size();
+
+		// Get SQL Text (per database: query_text_id -> text)
+		Map<String, String> textMap = new HashMap<>(); // key -> text
+		for (String dbname : _dbMap.keySet())
+		{
+			List<String> neededKeys = new ArrayList<>();
+			for (String key : keys)
+				neededKeys.add(key);
+			for (SqlServerChattyStatements.ParentMatch pm : parentMap.values())
+				neededKeys.add(pm.parentKey);
+
+			Map<Long, List<String>> idToKeys = new HashMap<>();
+			for (String key : neededKeys)
+			{
+				if ( ! key.startsWith(dbname + ":") || textIdMap.get(key) == null )
+					continue;
+				idToKeys.computeIfAbsent(textIdMap.get(key), k -> new ArrayList<>()).add(key);
+			}
+			if (idToKeys.isEmpty())
+				continue;
+
+			String sql = conn.quotifySqlString("select [query_text_id], [query_sql_text] from [qs:" + dbname + "].[query_store_query_text] where [query_text_id] in (" + StringUtil.toCommaStr(idToKeys.keySet()) + ")");
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while (rs.next())
+				{
+					List<String> list = idToKeys.get(rs.getLong(1));
+					if (list != null)
+						for (String key : list)
+							textMap.put(key, rs.getString(2));
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.warn("Problems reading Query Store SQL Text for database '" + dbname + "'.", ex);
+			}
+		}
+
+		// Build the table
+		SimpleResultSet srs = new SimpleResultSet();
+		srs.addColumn("dbname",            Types.VARCHAR, 128, 0);
+		srs.addColumn("query_hash",        Types.VARCHAR, 200, 0);
+		srs.addColumn("NPlusOne",          Types.VARCHAR,  10, 0);
+		srs.addColumn("ExecCount",         Types.BIGINT,    0, 0);
+		srs.addColumn("RowCount",          Types.BIGINT,    0, 0);
+		srs.addColumn("RowsPerExec",       Types.NUMERIC,  12, 2);
+		srs.addColumn("AvgDurationUs",     Types.NUMERIC,  14, 1);
+		srs.addColumn("IntervalCount",     Types.INTEGER,   0, 0);
+		srs.addColumn("SqlText",           Types.VARCHAR, Integer.MAX_VALUE, 0);
+		srs.addColumn("ParentCorrelation", Types.NUMERIC,   5, 3);
+		srs.addColumn("ExecPerParentRow",  Types.NUMERIC,  12, 2);
+		srs.addColumn("ExecPerParentExec", Types.NUMERIC,  12, 1);
+		srs.addColumn("ParentQueryHash",   Types.VARCHAR, 200, 0);
+		srs.addColumn("ParentSqlText",     Types.VARCHAR, Integer.MAX_VALUE, 0);
+
+		for (String key : keys)
+		{
+			long[] t = totals.get(key);
+			SqlServerChattyStatements.ParentMatch pm = parentMap.get(key);
+			int sep = key.indexOf(':');
+
+			srs.addRow(
+				key.substring(0, sep),
+				key.substring(sep + 1),
+				pm == null ? "" : "YES",
+				t[0],
+				t[1],
+				t[0] == 0 ? null : new java.math.BigDecimal(t[1] * 1.0 / t[0]).setScale(2, java.math.RoundingMode.HALF_UP),
+				t[0] == 0 ? null : new java.math.BigDecimal(t[2] * 1.0 / t[0]).setScale(1, java.math.RoundingMode.HALF_UP),
+				(int) t[3],
+				textMap.get(key),
+				pm == null ? null : new java.math.BigDecimal(pm.corr).setScale(3, java.math.RoundingMode.HALF_UP),
+				pm == null ? null : new java.math.BigDecimal(pm.execPerParentRow ).setScale(2, java.math.RoundingMode.HALF_UP),
+				pm == null ? null : new java.math.BigDecimal(pm.execPerParentExec).setScale(1, java.math.RoundingMode.HALF_UP),
+				pm == null ? null : pm.parentKey.substring(pm.parentKey.indexOf(':') + 1),
+				pm == null ? null : textMap.get(pm.parentKey)
+			);
+		}
+
+		try
+		{
+			_nPlusOneRstm = new ResultSetTableModel(srs, "QsNPlusOne");
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems creating the 'Possible N+1' table for Query Store.", ex);
+		}
+	}
+
+	private void writeNPlusOne(Writer w)
+	throws IOException
+	{
+		if (_nPlusOneRstm == null)
+			return;
+
+		w.append("<br>\n");
+		w.append("<h4>Possible N+1 / Chatty Statements (from Query Store)</h4>\n");
+		w.append("Statements with the most executions in Query Store, and for each one the <i>parent</i> statement (if found): ");
+		w.append("a statement whose rows follow this statement's executions per Query Store interval, with about one execution per parent row, ");
+		w.append("and several executions per parent execution (the parent returns many rows). <br>\n");
+		w.append("A parent is only searched for when the statement was executed in at least " + Configuration.getCombinedConfiguration().getIntProperty(SqlServerChattyStatements.PROPKEY_minSamples, SqlServerChattyStatements.DEFAULT_minSamples) + " intervals (the correlation needs them). ");
+		w.append("Same rules as the section <i>Possible N+1 / Chatty Statements</i> (from CmChattyStatements), but with the Query Store interval length as resolution. <br>\n");
+		w.append("Note: with <code>QUERY_CAPTURE_MODE = AUTO</code>, a parent that is executed seldom and is cheap may not be captured. <br>\n");
+		w.append(_nPlusOneCount > 0 ? ("<b>Found " + _nPlusOneCount + " statement(s) that look like N+1.</b><br>\n") : "No N+1 pattern found.<br>\n");
+
+		w.append(_nPlusOneRstm.toHtmlTableString("sortable", true, true, null, new ReportEntryTableStringRenderer()
+		{
+			@Override
+			public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+			{
+				if ("SqlText".equals(colName) || "ParentSqlText".equals(colName))
+				{
+					String text = rstm.getValueAsString(row, colName);
+					if (StringUtil.isNullOrBlank(text))
+						return "";
+					String shortText = text.length() > 120 ? text.substring(0, 120) + "..." : text;
+					return "<code title=\"" + StringEscapeUtils.escapeHtml4(text) + "\">" + StringEscapeUtils.escapeHtml4(shortText) + "</code>";
+				}
+				if ("NPlusOne".equals(colName) && "YES".equals(strVal))
+					return "<b><font color='red'>YES</font></b>";
+				return strVal;
+			}
+		}));
 	}
 
 

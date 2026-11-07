@@ -72,6 +72,7 @@ import com.dbxtune.cm.sqlserver.CmExecCursors;
 import com.dbxtune.cm.sqlserver.CmExecFunctionStats;
 import com.dbxtune.cm.sqlserver.CmExecProcedureStats;
 import com.dbxtune.cm.sqlserver.CmExecQueryStatPerDb;
+import com.dbxtune.cm.sqlserver.CmChattyStatements;
 import com.dbxtune.cm.sqlserver.CmExecQueryStats;
 import com.dbxtune.cm.sqlserver.CmExecTriggerStats;
 import com.dbxtune.cm.sqlserver.CmIndexMissing;
@@ -276,6 +277,7 @@ extends CounterControllerAbstract
 		CmPlanCacheHistory   .create(counterController, guiController);
 		CmExecQueryStatPerDb .create(counterController, guiController);
 		CmExecQueryStats     .create(counterController, guiController);
+		CmChattyStatements   .create(counterController, guiController);
 		CmExecProcedureStats .create(counterController, guiController);
 		CmExecFunctionStats  .create(counterController, guiController);
 		CmExecTriggerStats   .create(counterController, guiController);
