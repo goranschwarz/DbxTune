@@ -32,7 +32,7 @@ import com.dbxtune.loadgen.Vendor;
  * one product + its stock rows (no index on stock.product_id) per row.
  * <p>
  * Each row scans stock, so the rows are limited: <code>max_rows</code> = 20 000 000 / stock rows (10-500),
- * about 20 million stock rows read per call whatever the size (one call ran 15 minutes at size medium before the limit).
+ * about 20 million stock rows read per call whatever the size (one call ran 15 minutes at size large before the limit).
  * Setting: scenario.rbar_cursor.maxRows
  */
 public class ProblemRbarCursor extends Scenario

@@ -15,7 +15,7 @@ go
 create index ix_orders_ship_city on orders(ship_city)
 go
 -- (status, order_ts): delivery reads the oldest PAID orders (3% of all, all recent). With only (status) the optimizer walked
--- ix_orders_ts from the oldest order: ~10 M logical reads per call at size medium (seen 2026-11-07)
+-- ix_orders_ts from the oldest order: ~10 M logical reads per call at size large (seen 2026-11-07)
 create index ix_orders_status   on orders(status, order_ts)
 go
 create index ix_orders_ts       on orders(order_ts)

@@ -243,12 +243,18 @@ loadgen.sh run -t <dbms> -S <host[:port]> [--duration 15m|15m-45m|1h|90s] [--int
 | `high` | 25 | 4 | 0-100 ms |
 
 - OLAP threads wait `think x 5 + 2 s` between queries.
-- `--threads N` overrides the number of OLTP threads.
+- The intensity changes **only** the normal traffic (threads + think time). The **problem scenarios are the same** at
+  every intensity (same scenarios, `everyMinutes`, durations; they open their own sessions), and so are the logins:
+  all sessions share the `dbxt_user_1..N` pool made at `install` (`-L`), round robin.
+- `--threads N` overrides the number of OLTP threads. Every value can be set in a properties file:
+  `intensity.<low|medium|high>.oltpThreads`, `.olapThreads`, `.thinkMinMs`, `.thinkMaxMs`.
 - Threads start spread over the first minute (ramp-up).
 - Runs of 15 minutes or more get one busier 5 minute **wave** at a random time (think time x 0.3), so the graphs are not flat.
 - Numbers seen on Docker (`small`): low about 4 units of work/s, medium about 30/s.
-- `medium` on size `medium` kept a 2-core SQL Server VM at ~100% CPU (seen 2026-11-07); DbxTune samples then took up to
-  30 s instead of under 1 s. On small test servers use `low`, or expect slow samples.
+- Seen on a 2-core SQL Server 2025 VM, size `large`, 30 minutes (2026-11-07): `low` ~7 800 units of work, DbxTune
+  samples median 1.6 s (max 9 s); `medium` ~14 900 units, CPU at ~100%, samples median 11.6 s (max 37 s, so ~60 s
+  between samples). The CPU then goes to the deliberate flaws (`stock_check` scans `stock`) and the OLAP queries.
+  On small test servers use `low`, or expect slow samples.
 
 ### How a run uses its time (scheduling)
 
@@ -698,7 +704,7 @@ many short lock waits on one row. The journal has the number of updates and how 
 Calls `p_rbar_price_adjust` for one category: a cursor over its products, and per product an update of the product
 and of its stock rows (a scan, no index on `stock.product_id`). One long call with a very high statement count inside.
 Each row scans `stock`, so the rows are limited to `maxRows` = 20 000 000 / stock rows (10-500): about 20 million stock
-rows read per call at any size (without a limit one call ran 15 minutes at size `medium`). Setting `scenario.rbar_cursor.maxRows`.
+rows read per call at any size (without a limit one call ran 15 minutes at size `large`). Setting `scenario.rbar_cursor.maxRows`.
 - SQL Server: CmExecProcedureStats, CmExecQueryStats, CmExecCursors. ASE: CmActiveStatements, CmProcCallStack, CmCachedProcs.
   Postgres: CmPgFunctions (needs `track_functions`), CmPgStatements.
 
