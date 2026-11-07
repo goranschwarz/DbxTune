@@ -24,6 +24,9 @@ import java.awt.event.MouseEvent;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,6 +37,7 @@ import java.util.Map;
 import javax.naming.NameNotFoundException;
 
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -44,6 +48,7 @@ import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEvent.Severity;
+import com.dbxtune.alarm.events.sqlserver.AlarmEventLiteralSql;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventPerfCounter;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
@@ -2928,7 +2933,130 @@ extends CountersModel
 		// Sort the dblist
 		Collections.sort(_dbnames, String.CASE_INSENSITIVE_ORDER);
 //System.out.println("DBNAME-LIST#"+_dbnames.size()+": "+_dbnames);
-	} // end: method 
+
+		//-------------------------------------------------------
+		// Literal SQL: many plans with the same 'query_hash' created since the previous sample
+		// The plan cache is only scanned when 'SQL Compilations/sec' is above the gate (so a healthy server pays nothing)
+		// The result is used in sendAlarmRequest()
+		//-------------------------------------------------------
+		_literalSqlRows = null;
+		_literalSqlCompilationsPerSec = null;
+		if (prevSample != null && prevSample.getSampleTime() != null && AlarmHandler.hasInstance() && isSystemAlarmsForColumnEnabledAndInTimeRange("LiteralSql"))
+		{
+			int rowId = newSample.getRowNumberForPkValue(createPkStr(":SQL Statistics", "SQL Compilations/sec", ""));
+			Double compilationsPerSec = (rowId == -1) ? null : ((Number) newSample.getValueAt(rowId, calculated_value_pos)).doubleValue();
+			_literalSqlCompilationsPerSec = compilationsPerSec;
+
+			double compilationsThreshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_LiteralSqlCompilations, DEFAULT_alarm_LiteralSqlCompilations);
+			int    planCountThreshold    = Configuration.getCombinedConfiguration().getIntProperty   (PROPKEY_alarm_LiteralSqlPlanCount,    DEFAULT_alarm_LiteralSqlPlanCount);
+
+			DbxConnection conn = getCounterController().getMonConnection();
+			if (compilationsPerSec != null && compilationsPerSec > compilationsThreshold && conn != null && ! _literalSqlLookupDisabled)
+			{
+				// NOTE: Parameters (not literals), so this statement does not pollute the plan cache itself
+				String sql = ""
+					+ "WITH x AS ( /* " + getName() + ": LiteralSql */ \n"
+					+ "    SELECT qs.query_hash, qs.sql_handle, qs.plan_handle, qs.statement_start_offset, qs.statement_end_offset \n"
+					+ "          ,plan_count = COUNT(*)                OVER (PARTITION BY qs.query_hash) \n"
+					+ "          ,exec_count = SUM(qs.execution_count) OVER (PARTITION BY qs.query_hash) \n"
+					+ "          ,rn         = ROW_NUMBER()            OVER (PARTITION BY qs.query_hash ORDER BY qs.creation_time DESC) \n"
+					+ "    FROM sys.dm_exec_query_stats qs \n"
+					+ "    WHERE qs.creation_time > ? \n"
+					+ ") \n"
+					+ "SELECT TOP 5 \n"
+					+ "     query_hash = CONVERT(varchar(20), x.query_hash, 1) \n"
+					+ "    ,x.plan_count \n"
+					+ "    ,x.exec_count \n"
+					+ "    ,dbname     = (SELECT ISNULL(db_name(CONVERT(int, pa.value)), CONVERT(nvarchar(10), pa.value)) FROM sys.dm_exec_plan_attributes(x.plan_handle) pa WHERE pa.attribute = N'dbid') \n"
+					+ "    ,SqlText    = LEFT(SUBSTRING(t.text, (x.statement_start_offset/2)+1, ((CASE WHEN x.statement_end_offset = -1 THEN DATALENGTH(t.text) ELSE x.statement_end_offset END - x.statement_start_offset)/2) + 1), 500) \n"
+					+ "FROM x \n"
+					+ "OUTER APPLY sys.dm_exec_sql_text(x.sql_handle) t \n"
+					+ "WHERE x.rn = 1 \n"
+					+ "  AND x.plan_count > ? \n"
+					+ "ORDER BY x.plan_count DESC \n"
+					+ "";
+
+				// The lookup scans the whole plan cache: time it, and stop doing it if it is too expensive on this server
+				int warnTimeMs    = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_LiteralSqlLookupWarnTimeMs,    DEFAULT_LiteralSqlLookupWarnTimeMs);
+				int disableTimeMs = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_LiteralSqlLookupDisableTimeMs, DEFAULT_LiteralSqlLookupDisableTimeMs);
+				String disableMsg = "The 'LiteralSql' check is DISABLED until " + Version.getAppName() + " is restarted. "
+					+ "To allow a slower lookup, set '" + PROPKEY_LiteralSqlLookupDisableTimeMs + "' (now " + disableTimeMs + " ms). "
+					+ "To skip the check: '" + replaceCmAndColName(PROPKEY_ALARM_isSystemAlarmsForColumnEnabled, "LiteralSql") + "=false'.";
+
+				long startTime = System.currentTimeMillis();
+				List<LiteralSqlRow> rows = new ArrayList<>();
+				try (PreparedStatement pstmnt = conn.prepareStatement(sql))
+				{
+					pstmnt.setQueryTimeout( Math.max(1, (disableTimeMs + 999) / 1000) ); // do not wait longer than the disable time (in seconds)
+					pstmnt.setTimestamp(1, prevSample.getSampleTime());
+					pstmnt.setInt      (2, planCountThreshold);
+
+					try (ResultSet rs = pstmnt.executeQuery())
+					{
+						while(rs.next())
+							rows.add(new LiteralSqlRow(rs.getString(1), rs.getInt(2), rs.getLong(3), rs.getString(4), rs.getString(5)));
+					}
+					_literalSqlRows = rows;
+
+					long execTimeMs = System.currentTimeMillis() - startTime;
+					if (execTimeMs > disableTimeMs)
+					{
+						_literalSqlLookupDisabled = true;
+						_logger.warn("The 'LiteralSql' lookup (scan of the plan cache, sys.dm_exec_query_stats, grouped by query_hash) took " + execTimeMs + " ms, which is more than " + disableTimeMs + " ms. " + disableMsg);
+					}
+					else if (execTimeMs > warnTimeMs)
+					{
+						_logger.info("The 'LiteralSql' lookup (scan of the plan cache, sys.dm_exec_query_stats, grouped by query_hash) took " + execTimeMs + " ms (SQL Compilations/sec=" + compilationsPerSec + ", found " + rows.size() + " query_hash over the threshold). "
+							+ "Note: it is disabled if it takes more than " + disableTimeMs + " ms, '" + PROPKEY_LiteralSqlLookupDisableTimeMs + "'.");
+					}
+				}
+				catch(SQLException ex)
+				{
+					long execTimeMs = System.currentTimeMillis() - startTime;
+					if (execTimeMs >= disableTimeMs || "HY008".equals(ex.getSQLState())) // HY008 = Query timeout
+					{
+						_literalSqlLookupDisabled = true;
+						_logger.warn("The 'LiteralSql' lookup (scan of the plan cache, sys.dm_exec_query_stats, grouped by query_hash) timed out or failed after " + execTimeMs + " ms (limit " + disableTimeMs + " ms). Msg=|" + ex.getMessage() + "|. " + disableMsg);
+					}
+					else
+					{
+						_logger.warn("Problems getting 'LiteralSql' information (plans with the same query_hash), after " + execTimeMs + " ms. Error=" + ex.getErrorCode() + ", SqlState=" + ex.getSQLState() + ", Msg=|" + ex.getMessage() + "|. sql=|" + sql + "|.");
+					}
+				}
+			}
+		}
+	} // end: method
+
+	/** One 'query_hash' with many plans (created since previous sample), and one example of the statements */
+	private static class LiteralSqlRow
+	{
+		final String queryHash;
+		final int    planCount;
+		final long   execCount;
+		final String dbname;
+		final String sqlText;
+
+		LiteralSqlRow(String queryHash, int planCount, long execCount, String dbname, String sqlText)
+		{
+			this.queryHash = queryHash;
+			this.planCount = planCount;
+			this.execCount = execCount;
+			this.dbname    = dbname;
+			this.sqlText   = sqlText;
+		}
+	}
+
+	public static final String  PROPKEY_LiteralSqlLookupWarnTimeMs    = CM_NAME + ".LiteralSql.lookup.warn.timeMs";
+	public static final int     DEFAULT_LiteralSqlLookupWarnTimeMs    = 500;
+	public static final String  PROPKEY_LiteralSqlLookupDisableTimeMs = CM_NAME + ".LiteralSql.lookup.disable.timeMs";
+	public static final int     DEFAULT_LiteralSqlLookupDisableTimeMs = 5000;
+
+	/** Set to true if the 'LiteralSql' lookup took to long (it is not done again until restart) */
+	private boolean _literalSqlLookupDisabled = false;
+
+	/** Set in localCalculation(), null if not checked (or nothing found) */
+	private List<LiteralSqlRow> _literalSqlRows;
+	private Double              _literalSqlCompilationsPerSec;
 
 	@Override
 	public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol) 
@@ -3131,7 +3259,87 @@ extends CountersModel
 				}
 			}
 		}
+
+		//-------------------------------------------------------
+		// Literal SQL (non-parameterized): many plans with the same 'query_hash' (found in localCalculation)
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("LiteralSql"))
+		{
+			List<LiteralSqlRow> rows = _literalSqlRows;
+			int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LiteralSqlPlanCount, DEFAULT_alarm_LiteralSqlPlanCount);
+
+			if (debugPrint || _logger.isDebugEnabled())
+				System.out.println("##### sendAlarmRequest(" + cm.getName() + "): LiteralSql -- threshold=" + threshold + ", compilationsPerSec=" + _literalSqlCompilationsPerSec + ", rows=" + (rows == null ? "not-checked" : rows.size()) + ".");
+
+			if (rows != null && ! rows.isEmpty())
+			{
+				LiteralSqlRow top = rows.get(0);
+				double compilationsPerSec = _literalSqlCompilationsPerSec == null ? -1 : _literalSqlCompilationsPerSec;
+				String exampleSql = StringUtil.truncate(StringUtil.removeAllNewLines(top.sqlText, " "), 200, true, null);
+
+				// Extended description: all 'query_hash' over the threshold (top 5), from when the alarm was (re)raised
+				StringBuilder txt  = new StringBuilder();
+				StringBuilder html = new StringBuilder();
+				txt .append("Plans with the same query_hash, created since the previous sample (SQL Compilations/sec=").append(compilationsPerSec).append("):\n");
+				html.append("<b>Plans with the same query_hash, created since the previous sample</b> (SQL Compilations/sec=").append(compilationsPerSec).append(")<br>\n");
+				html.append("<table border='1' cellspacing='0' cellpadding='2'>\n");
+				html.append("<tr><th>query_hash</th><th>plan_count</th><th>exec_count</th><th>dbname</th><th>Example SQL</th></tr>\n");
+				for (LiteralSqlRow row : rows)
+				{
+					txt .append("  query_hash=").append(row.queryHash).append(", plan_count=").append(row.planCount).append(", exec_count=").append(row.execCount).append(", dbname='").append(row.dbname).append("', sql: ").append(StringUtil.removeAllNewLines(row.sqlText, " ")).append("\n");
+					html.append("<tr>")
+						.append("<td>").append(row.queryHash).append("</td>")
+						.append("<td>").append(row.planCount).append("</td>")
+						.append("<td>").append(row.execCount).append("</td>")
+						.append("<td>").append(StringEscapeUtils.escapeHtml4(row.dbname)).append("</td>")
+						.append("<td><code>").append(StringEscapeUtils.escapeHtml4(row.sqlText)).append("</code></td>")
+						.append("</tr>\n");
+				}
+				html.append("</table>\n");
+				String advice = "Each statement only differs in its literals, so every execution is compiled and cached as its own plan: "
+					+ "this drives up 'SQL Compilations/sec' (CPU) and fills the plan cache with single-use plans. "
+					+ "Fix: use parameters in the application (prepared statements, sp_executesql), "
+					+ "or 'ALTER DATABASE ... SET PARAMETERIZATION FORCED' for that database. "
+					+ "'optimize for ad hoc workloads' only reduces the memory used by the single-use plans (and hides them from this check), not the compilations.";
+				txt .append("\n").append(advice).append("\n");
+				html.append("<br>").append(advice).append("<br>\n");
+
+				AlarmEvent ae = new AlarmEventLiteralSql(cm, threshold, top.planCount, top.queryHash, top.dbname, compilationsPerSec, exampleSql);
+
+				final String raiseText = txt.toString();
+				final String raiseHtml = html.toString();
+
+				// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+				ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+				{
+					// Called on RAISE/RE-RAISE/CANCEL: the extended description is from when it was (re)raised
+					@Override
+					public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+					{
+						alarmEvent.setExtendedDescription(raiseText, raiseHtml);
+
+						// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+						if (AlarmPhase.CANCEL.equals(phase))
+						{
+							List<LiteralSqlRow> rowsNow = _literalSqlRows;
+							Integer planCountNow = (rowsNow == null || rowsNow.isEmpty()) ? 0 : rowsNow.get(0).planCount;
+							alarmEvent.setCancelDescription(getAlarmCancelText("Max plans with the same query_hash", planCountNow));
+						}
+					}
+				});
+
+				// Information about how to disable this alarm
+				ae.createAlarmOptionsMessage(this, "LiteralSql");
+
+				alarmHandler.addAlarm( ae );
+			}
+		}
 	}
+
+	public static final String  PROPKEY_alarm_LiteralSqlPlanCount    = CM_NAME + ".alarm.system.if.LiteralSql.planCount.gt";
+	public static final int     DEFAULT_alarm_LiteralSqlPlanCount    = 50;
+	public static final String  PROPKEY_alarm_LiteralSqlCompilations = CM_NAME + ".alarm.system.if.LiteralSql.compilations.gt";
+	public static final double  DEFAULT_alarm_LiteralSqlCompilations = 5;
 
 	public static final String  PROPKEY_alarm_FreeListStalls       = CM_NAME + ".alarm.system.if.FreeListStalls.gt";
 	public static final double  DEFAULT_alarm_FreeListStalls       = 0.5;
@@ -3155,6 +3363,8 @@ extends CountersModel
 		list.add(new CmSettingsHelper("FreeListStalls RaiseDelay",                PROPKEY_alarm_FreeListStalls_delay, Integer.class, conf.getIntProperty   (PROPKEY_alarm_FreeListStalls_delay, DEFAULT_alarm_FreeListStalls_delay), DEFAULT_alarm_FreeListStalls_delay, "If 'Free list stalls/sec' is true and has been so for 2 minutes then proceed with the Alarm Raise." ));
 		list.add(new CmSettingsHelper("LazyWrites",                isAlarmSwitch, PROPKEY_alarm_LazyWrites          , Double.class , conf.getDoubleProperty(PROPKEY_alarm_LazyWrites          , DEFAULT_alarm_LazyWrites          ), DEFAULT_alarm_LazyWrites          , "If 'Lazy writes/sec' is greater than 20 then send 'AlarmEventPerfCounterWarning'." ));
 		list.add(new CmSettingsHelper("LazyWrites RaiseDelay",                    PROPKEY_alarm_LazyWrites_delay    , Integer.class, conf.getIntProperty   (PROPKEY_alarm_LazyWrites_delay    , DEFAULT_alarm_LazyWrites_delay    ), DEFAULT_alarm_LazyWrites_delay    , "If 'Lazy writes/sec' is true and has been so for 3 minutes then proceed with the Alarm Raise." ));
+		list.add(new CmSettingsHelper("LiteralSql",                isAlarmSwitch, PROPKEY_alarm_LiteralSqlPlanCount   , Integer.class, conf.getIntProperty   (PROPKEY_alarm_LiteralSqlPlanCount   , DEFAULT_alarm_LiteralSqlPlanCount   ), DEFAULT_alarm_LiteralSqlPlanCount   , "If more than ## plans with the same 'query_hash' (statements that only differ in their literals) was created since the previous sample then send 'AlarmEventLiteralSql'." ));
+		list.add(new CmSettingsHelper("LiteralSql Compilations",                  PROPKEY_alarm_LiteralSqlCompilations, Double .class, conf.getDoubleProperty(PROPKEY_alarm_LiteralSqlCompilations, DEFAULT_alarm_LiteralSqlCompilations), DEFAULT_alarm_LiteralSqlCompilations, "Only look for 'LiteralSql' (scan the plan cache) when 'SQL Compilations/sec' is greater than ##." ));
 
 		return list;
 	}
