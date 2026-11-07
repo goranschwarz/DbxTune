@@ -1938,7 +1938,8 @@ extends CmSummaryAbstract
 			double movingAvgDeadlockCount = -1;
 			if (movingAverageInMinutes > 0)
 			{
-				movingAvgDeadlockCount = MovingAverageCounterManager.getInstance(CM_NAME, "deadlockCount", movingAverageInMinutes).add(deadlockCount).getAvg(-1, true);
+				// NOTE: Do NOT wait for the whole period (getAvg(-1, true) returned -1 for the first ## minutes after start/reset, so no deadlock alarm in that time)
+				movingAvgDeadlockCount = MovingAverageCounterManager.getInstance(CM_NAME, "deadlockCount", movingAverageInMinutes).add(deadlockCount).getAvg(0, false);
 				movingAvgDeadlockCount = NumberUtils.round(movingAvgDeadlockCount, 3);
 			}
 
@@ -1963,7 +1964,7 @@ extends CmSummaryAbstract
 							// Do NOT add() to the moving average here (that is done once per sample, above), just read it
 							String movingAvgStr = "";
 							if (movingAverageInMinutes > 0)
-								movingAvgStr = ", moving average over " + movingAverageInMinutes + " minutes is " + NumberUtils.round(MovingAverageCounterManager.getInstance(CM_NAME, "deadlockCount", movingAverageInMinutes).getAvg(-1, true), 3);
+								movingAvgStr = ", moving average over " + movingAverageInMinutes + " minutes is " + NumberUtils.round(MovingAverageCounterManager.getInstance(CM_NAME, "deadlockCount", movingAverageInMinutes).getAvg(0, false), 3);
 							alarmEvent.setCancelDescription("Deadlock Count in the last sample is " + cm.getDiffValueAsInteger(0, "deadlockCount", false, -1) + movingAvgStr + " (threshold " + threshold + ")");
 						}
 
