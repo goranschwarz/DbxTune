@@ -26,9 +26,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import javax.naming.NameNotFoundException;
 
@@ -37,9 +39,15 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
+import com.dbxtune.Version;
+import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.AlarmHelper;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
+import com.dbxtune.alarm.events.AlarmEvent;
+import com.dbxtune.alarm.events.AlarmEventChattySession;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
@@ -51,6 +59,8 @@ import com.dbxtune.gui.MainFrame;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.sql.conn.info.DbmsVersionInfoOracle;
+import com.dbxtune.utils.Configuration;
+import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.Ver;
 
 /**
@@ -447,12 +457,174 @@ extends CountersModel
 		AlarmHelper.sendAlarmRequestForColumn(this, "PROGRAM");
 		AlarmHelper.sendAlarmRequestForColumn(this, "USERNAME");
 		AlarmHelper.sendAlarmRequestForColumn(this, "OSUSER");
+		sendAlarmRequestLocal();
 	}
+
+	public void sendAlarmRequestLocal()
+	{
+		if ( ! hasRateData() )
+			return;
+
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		if ( ! isSystemAlarmsForColumnEnabledAndInTimeRange("ChattySession") )
+		{
+			_chattySessionSamples.clear();
+			return;
+		}
+
+		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
+
+		AlarmHandler alarmHandler = AlarmHandler.getInstance();
+
+		CountersModel cm = this;
+
+		//-------------------------------------------------------
+		// ChattySession: one session sends very many tiny requests (possible N+1)
+		// Requests = 'SQL*Net roundtrips to/from client' (ROUNDTRIPS): what the client sends. 'execute count' (EXECUTIONS) also counts
+		// recursive SQL (PL/SQL, triggers, dictionary lookups), so a PL/SQL loop in the server is not taken as a chatty client.
+		// Above the threshold for ## samples in a row, and few logical reads per request
+		//-------------------------------------------------------
+		Configuration conf = Configuration.getCombinedConfiguration();
+		double threshold          = conf.getDoubleProperty(PROPKEY_alarm_ChattySession,                   DEFAULT_alarm_ChattySession);
+		double maxReadsPerRequest = conf.getDoubleProperty(PROPKEY_alarm_ChattySessionMaxReadsPerRequest, DEFAULT_alarm_ChattySessionMaxReadsPerRequest);
+		int    minSamples         = conf.getIntProperty   (PROPKEY_alarm_ChattySessionSamples,            DEFAULT_alarm_ChattySessionSamples);
+		String skipUsernameRegExp = conf.getProperty      (PROPKEY_alarm_ChattySessionSkipUsername,       DEFAULT_alarm_ChattySessionSkipUsername);
+		String skipProgramRegExp  = conf.getProperty      (PROPKEY_alarm_ChattySessionSkipProgram,        DEFAULT_alarm_ChattySessionSkipProgram);
+
+		// SID:SERIAL# -> samples in a row above the threshold (sessions that are below now are forgotten)
+		Map<String, Integer> samplesAbove = new HashMap<>();
+
+		for (int r=0; r<cm.getRateRowCount(); r++)
+		{
+			Double requestsPerSec = cm.getRateValueAsDouble(r, "ROUNDTRIPS");
+			if (requestsPerSec == null || requestsPerSec <= threshold)
+				continue;
+
+			// The values as they are (getRateString() formats numbers with digit grouping: '25 943')
+			String sid      = String.valueOf(cm.getRateValue(r, "SID"));
+			String serial   = String.valueOf(cm.getRateValue(r, "SERIAL#"));
+			String username = cm.getRateString(r, "USERNAME");
+			String program  = cm.getRateString(r, "PROGRAM");
+
+			// Background processes and DbxTune's own connections
+			if ( ! "USER".equals(cm.getRateString(r, "TYPE")) || StringUtil.isNullOrBlank(username) )
+				continue;
+			if ("Y".equals(cm.getRateString(r, "IS_OWN_SESSION")))
+				continue;
+			if (program != null && program.startsWith(Version.getAppName()))
+				continue;
+			if (StringUtil.hasValue(skipUsernameRegExp) && username.matches(skipUsernameRegExp))
+				continue;
+			if (StringUtil.hasValue(skipProgramRegExp) && program != null && program.matches(skipProgramRegExp))
+				continue;
+
+			// Cheap requests only: a session with many requests that each do real work is a batch job, not N+1
+			Double logicalReadsPerSec = cm.getRateValueAsDouble(r, "LOGICAL_READS");
+			double readsPerRequest = logicalReadsPerSec == null ? 0 : logicalReadsPerSec / requestsPerSec;
+			if (readsPerRequest >= maxReadsPerRequest)
+				continue;
+
+			String  key   = sid + ":" + serial;
+			Integer prev  = _chattySessionSamples.get(key);
+			int     count = (prev == null ? 0 : prev) + 1;
+			samplesAbove.put(key, count);
+
+			if (debugPrint || _logger.isDebugEnabled())
+				System.out.println("##### sendAlarmRequest(" + cm.getName() + "): ChattySession: SID=" + sid + ", ROUNDTRIPS/s=" + requestsPerSec + ", EXECUTIONS/s=" + cm.getRateValueAsDouble(r, "EXECUTIONS") + ", readsPerRequest=" + readsPerRequest + ", samplesAbove=" + count + " (threshold=" + threshold + ", maxReadsPerRequest=" + maxReadsPerRequest + ", minSamples=" + minSamples + ").");
+
+			if (count < minSamples)
+				continue;
+
+			String module   = cm.getRateString(r, "MODULE");
+			String machine  = cm.getRateString(r, "MACHINE");
+			String osuser   = cm.getRateString(r, "OSUSER");
+			String conName  = cm.getRateString(r, "CON_NAME");
+
+			String sessionDesc = "sid=" + sid + ", serial#=" + serial + ", username='" + username + "', program='" + StringUtil.trim(program) + "'"
+					+ (StringUtil.hasValue(module) && ! module.equals(program) ? ", module='" + StringUtil.trim(module) + "'" : "")
+					+ ", machine='" + StringUtil.trim(machine) + "', osuser='" + StringUtil.trim(osuser) + "'"
+					+ (StringUtil.hasValue(conName) ? ", container='" + conName + "'" : "");
+
+			AlarmEvent ae = new AlarmEventChattySession(cm, "sid=" + sid, sessionDesc, requestsPerSec, readsPerRequest, count, threshold, maxReadsPerRequest);
+			final String alarmSid    = sid;
+			final String alarmSerial = serial;
+
+			String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+			String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
+			// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+			ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+			{
+				@Override
+				public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+				{
+					// Always: (RAISE, RE-RAISE, CANCEL) - the session row from when it was (re)raised
+					alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+					// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+					if (AlarmPhase.CANCEL.equals(phase))
+					{
+						// The same session = SID and SERIAL# (a SID is reused by a new session)
+						int rowId = -1;
+						for (int cr=0; cr<cm.getRateRowCount(); cr++)
+						{
+							if (alarmSid.equals(String.valueOf(cm.getRateValue(cr, "SID"))) && alarmSerial.equals(String.valueOf(cm.getRateValue(cr, "SERIAL#"))))
+							{
+								rowId = cr;
+								break;
+							}
+						}
+						String label = "SID " + alarmSid;
+
+						if (rowId == -1)
+							alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+						else
+							alarmEvent.setCancelDescription(getAlarmCancelText(label + ": SQL*Net roundtrips per second", toAlarmCancelValue(cm.getRateValueAsDouble(rowId, "ROUNDTRIPS")), "/s"));
+					}
+				}
+			});
+
+			// Information about how to disable this alarm
+			ae.createAlarmOptionsMessage(this, "ChattySession");
+
+			alarmHandler.addAlarm( ae );
+		}
+		_chattySessionSamples = samplesAbove;
+	}
+
+	/** ChattySession alarm: SID:SERIAL# -> number of samples in a row above the threshold */
+	private Map<String, Integer> _chattySessionSamples = new HashMap<>();
+
+	public static final String  PROPKEY_alarm_ChattySession                    = CM_NAME + ".alarm.system.if.ChattySession.gt";
+	public static final double  DEFAULT_alarm_ChattySession                    = 200;
+
+	public static final String  PROPKEY_alarm_ChattySessionMaxReadsPerRequest  = CM_NAME + ".alarm.system.if.ChattySession.maxReadsPerRequest";
+	public static final double  DEFAULT_alarm_ChattySessionMaxReadsPerRequest  = 10;
+
+	public static final String  PROPKEY_alarm_ChattySessionSamples             = CM_NAME + ".alarm.system.if.ChattySession.samples";
+	public static final int     DEFAULT_alarm_ChattySessionSamples             = 2;
+
+	public static final String  PROPKEY_alarm_ChattySessionSkipUsername        = CM_NAME + ".alarm.system.if.ChattySession.skip.username";
+	public static final String  DEFAULT_alarm_ChattySessionSkipUsername        = "";
+
+	public static final String  PROPKEY_alarm_ChattySessionSkipProgram         = CM_NAME + ".alarm.system.if.ChattySession.skip.program";
+	public static final String  DEFAULT_alarm_ChattySessionSkipProgram         = "";
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+
 		List<CmSettingsHelper> list = new ArrayList<>();
+
+		list.add(new CmSettingsHelper("ChattySession",                isAlarmSwitch, PROPKEY_alarm_ChattySession                   , Double .class, conf.getDoubleProperty(PROPKEY_alarm_ChattySession                  , DEFAULT_alarm_ChattySession                  ), DEFAULT_alarm_ChattySession                  , "If any session sends more than ## requests per second (column 'ROUNDTRIPS': SQL*Net roundtrips to/from client) with few logical reads each, for several samples in a row, then send alarm 'AlarmEventChattySession'. This is often an application doing N+1 (one tiny query per row of another query)." ));
+		list.add(new CmSettingsHelper("ChattySession MaxReadsPerRequest",            PROPKEY_alarm_ChattySessionMaxReadsPerRequest , Double .class, conf.getDoubleProperty(PROPKEY_alarm_ChattySessionMaxReadsPerRequest, DEFAULT_alarm_ChattySessionMaxReadsPerRequest), DEFAULT_alarm_ChattySessionMaxReadsPerRequest, "If 'ChattySession' is true; Only if the session does fewer than ## logical reads per request (many cheap requests, not a batch job doing real work)." ));
+		list.add(new CmSettingsHelper("ChattySession Samples",                       PROPKEY_alarm_ChattySessionSamples            , Integer.class, conf.getIntProperty   (PROPKEY_alarm_ChattySessionSamples           , DEFAULT_alarm_ChattySessionSamples           ), DEFAULT_alarm_ChattySessionSamples           , "If 'ChattySession' is true; The session must be above the threshold in ## samples in a row." ));
+		list.add(new CmSettingsHelper("ChattySession SkipUsernames",                 PROPKEY_alarm_ChattySessionSkipUsername       , String .class, conf.getProperty      (PROPKEY_alarm_ChattySessionSkipUsername      , DEFAULT_alarm_ChattySessionSkipUsername      ), DEFAULT_alarm_ChattySessionSkipUsername      , "If 'ChattySession' is true; Discard USERNAMEs listed (regexp is used)." , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("ChattySession SkipPrograms",                  PROPKEY_alarm_ChattySessionSkipProgram        , String .class, conf.getProperty      (PROPKEY_alarm_ChattySessionSkipProgram       , DEFAULT_alarm_ChattySessionSkipProgram       ), DEFAULT_alarm_ChattySessionSkipProgram       , "If 'ChattySession' is true; Discard PROGRAMs listed (regexp is used). DbxTune's own connections are always discarded." , new RegExpInputValidator()));
 
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "PROGRAM") );
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "USERNAME") );
