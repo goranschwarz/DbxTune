@@ -36,6 +36,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.db2.CmActiveStatements;
 import com.dbxtune.cm.db2.CmBackups;
+import com.dbxtune.cm.db2.CmChattyStatements;
 import com.dbxtune.cm.db2.CmConnectionSummary;
 import com.dbxtune.cm.db2.CmErrorLog;
 import com.dbxtune.cm.db2.CmHadr;
@@ -161,6 +162,7 @@ extends CounterControllerAbstract
 		// Object Access
 		CmActiveStatements  .create(counterController, guiController);
 		CmStatements        .create(counterController, guiController);
+		CmChattyStatements  .create(counterController, guiController);
 		CmMonGetTable       .create(counterController, guiController);
 		CmMonGetIndex       .create(counterController, guiController);
 		CmTableSize         .create(counterController, guiController);
