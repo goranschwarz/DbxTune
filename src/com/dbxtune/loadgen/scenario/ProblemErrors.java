@@ -46,8 +46,10 @@ public class ProblemErrors extends Scenario
 		{
 		case SQLSERVER: return expected(Arrays.asList("CmPerfCounters", "CmErrorLog"), Arrays.asList(), Arrays.asList("CmPerfCounters.SqlErrors:User Errors"),
 				"Client errors (2627, 8134, 208) and an attention/cancel; these are not in the SQL Server error log. Errors/sec (CmPerfCounters, instance User Errors) up.");
-		case ASE:       return expected(Arrays.asList("CmSqlStatement", "CmSqlStatementPerDb", "CmErrorLog"), Arrays.asList("AlarmEventClientErrorMsg"),
-				"Client errors (2601, 3607, 208) and a cancel; CmSqlStatement counts errors per statement.");
+		case ASE:       return expected(Arrays.asList("CmSqlStatement", "CmSqlStatementPerDb", "CmErrorLog"), Arrays.asList(),
+				"Client errors (2601, 3607, 208) and a cancel; CmSqlStatement counts errors per statement. No alarm: AseTune's ClientErrorMsg alarm"
+				+ " is only for the error numbers in CmSqlStatement.alarm.system.if.ErrorNumbers (default 701, 713, 971, 1105, 1204, 1205),"
+				+ " ClientErrorMsgRate only above 20 errors/s.");
 		case POSTGRES:  return expected(Arrays.asList("CmPgDatabase", "CmErrorLog", "CmPgStatements"), Arrays.asList(),
 				"Errors (23505, 22012, 57014, 42P01): xact_rollback grows; in the server log only if log_min_error_statement allows.");
 		}

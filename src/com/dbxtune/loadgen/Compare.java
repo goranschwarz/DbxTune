@@ -254,11 +254,14 @@ public class Compare
 			for (String alarm : listOf(exp.get("alarms")))
 			{
 				anyCheck = true;
-				String cls = alarm.startsWith("AlarmEvent") ? alarm.substring("AlarmEvent".length()) : alarm;
+				// "AlarmEventX" or "AlarmEventX:extraInfo" (only alarms about that object; @db = the run's database)
+				String name = alarm.contains(":") ? alarm.substring(0, alarm.indexOf(':')) : alarm;
+				String cls  = name.startsWith("AlarmEvent") ? name.substring("AlarmEvent".length()) : name;
+				String only = alarm.contains(":") ? alarm.substring(alarm.indexOf(':') + 1).replace("@db", String.valueOf(header.get("dbname"))) : null;
 				AlarmSpan inWindow = null, already = null, late = null, rightSession = null;
 				for (AlarmSpan a : alarms) // in start order
 				{
-					if (!a.alarmClass.equals(cls))
+					if (!a.alarmClass.equals(cls) || (only != null && !only.equalsIgnoreCase(a.extraInfo)))
 						continue;
 					// An alarm about one session (extraInfo = spid) belongs to this problem only if it is one of its sessions
 					if (isSpid(a) && !spidRoles.isEmpty() && sessionMatch(a, spidRoles) == null)
@@ -301,10 +304,10 @@ public class Compare
 				else
 				{
 					result = "MISSED";
-					detail = "no " + cls + " alarm from " + hhmmss(start) + " to " + hhmmss(winEnd.plusMillis(LATE_MS));
+					detail = "no " + cls + " alarm" + (only == null ? "" : " for '" + only + "'") + " from " + hhmmss(start) + " to " + hhmmss(winEnd.plusMillis(LATE_MS));
 				}
 				count(cnt, result);
-				rows.add(new String[] {hhmmss(start), scenario, sessions, "alarm " + cls, result, detail});
+				rows.add(new String[] {hhmmss(start), scenario, sessions, "alarm " + cls + (only == null ? "" : " (" + only + ")"), result, detail});
 			}
 
 			// Graphs

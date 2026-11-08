@@ -56,6 +56,7 @@ public class ProblemConnChurn extends Scenario
 		long end = System.currentTimeMillis() + durationSec * 1000L;
 		String sql = tag() + "select count(*) from warehouse";
 		int conns = 0, errors = 0;
+		String firstError = null;
 		while (System.currentTimeMillis() < end && !ctx.isStopping())
 		{
 			try (LgSession s = ctx.openSession(this))
@@ -66,10 +67,14 @@ public class ProblemConnChurn extends Scenario
 			catch (Exception ex)
 			{
 				errors++;
+				if (firstError == null)
+					firstError = ex.getMessage();
 			}
 			ctx.sleep(250);
 		}
 		ev.put("sql", sql).put("connections", conns).put("connectErrors", errors).put("durationSeconds", durationSec);
 		ev.setNote("Each connection is also a 'session' event in the journal (connect + disconnect).");
+		if (errors > 0) // shown in the log, the journal and the summary (an error for this unit)
+			ev.setError(errors + " of " + (conns + errors) + " connections failed, first: " + firstError);
 	}
 }

@@ -53,8 +53,9 @@ public class ProblemBlocking extends Scenario
 				"Waiters blocked for holdSeconds (blocking alarm at 60 s by default). The holder is idle in an open transaction (long running transaction alarm at 60 s); "
 				+ "AlarmEventHoldingLocksWhileWaitForClientInput needs 180 s by default, more than the default ~160 s hold, so it is not expected."), "CmActiveStatements:session_id=@sessions", "CmWaitingTasks:session_id=@sessions");
 		case ASE:       return expected(Arrays.asList("CmBlocking", "CmActiveStatements", "CmSummary", "CmLocks"),
-				Arrays.asList("AlarmEventBlockingLockAlarm"),
-				"Waiters blocked for holdSeconds (blocking alarm at 60 s by default). The holder is AWAITING COMMAND with an open transaction.");
+				Arrays.asList("AlarmEventBlockingLockAlarm", "AlarmEventLongRunningTransaction:@db"),
+				"Waiters blocked for holdSeconds (blocking alarm at 60 s by default). The holder is AWAITING COMMAND with an open transaction,"
+				+ " so LongRunningTransaction (in the load database) is raised too.");
 		case POSTGRES:  return expected(Arrays.asList("CmPgBlockingLocks", "CmActiveStatements", "CmPgLocks", "CmSummary"),
 				Arrays.asList("AlarmEventBlockingLockAlarm", "AlarmEventHoldingLocksWhileWaitForClientInput"),
 				"Waiters blocked for holdSeconds (blocking alarm at 60 s by default). The holder is 'idle in transaction'.");

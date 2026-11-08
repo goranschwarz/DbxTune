@@ -679,7 +679,8 @@ A holder updates one `stock` row and keeps the transaction open, **idle**, for `
 also wait, so the real chain is longer than the 3 waiters.
 - SQL Server: CmActiveStatements, CmWaitingTasks, CmSummary, CmWho; `AlarmEventBlockingLockAlarm` (60 s by default),
   `AlarmEventHoldingLocksWhileWaitForClientInput` (180 s by default, so not with the default ~160 s).
-- ASE: CmBlocking, CmActiveStatements, CmSummary, CmLocks; `AlarmEventBlockingLockAlarm`.
+- ASE: CmBlocking, CmActiveStatements, CmSummary, CmLocks; `AlarmEventBlockingLockAlarm`, and `AlarmEventLongRunningTransaction`
+  in the load database (the holder's open transaction).
 - Postgres: CmPgBlockingLocks, CmActiveStatements, CmPgLocks, CmSummary; the holder is `idle in transaction`.
 - With 30 s samples, a hold under ~90 s can be over before the alarm threshold is seen; keep `holdSeconds` at 120 or more.
 
@@ -701,7 +702,8 @@ than 60 s of the run is left). The log can't be truncated past it.
 A big `DISTINCT` over `orders x order_line` with too little memory:
 SQL Server `option (max_grant_percent = 0)`, Postgres `set local work_mem = '64kB'`, ASE a work table in tempdb.
 - SQL Server: CmTempdbUsage, CmTempdbSpidUsage, CmMemoryGrants, CmExecQueryStats.
-- ASE: CmTempdbActivity, CmActiveStatements, CmSqlStatement.
+- ASE: CmTempdbActivity, CmActiveStatements, CmSqlStatement; `AlarmEventLongRunningTransaction` in tempdb (the sort is an
+  open transaction `$sort_local`) when the sort runs over 60 s (size large).
 - Postgres: CmPgDatabase `temp_files/temp_bytes`, CmPgStatements `temp_blks_written`.
 
 #### `literal_sql` - every 6 min, ~100 s
@@ -743,14 +745,16 @@ same select again. The schema changed since the select was compiled, so SQL Serv
 
 #### `conn_churn` - every 10 min, ~100 s
 Connect, one query, disconnect - about 4 times a second (an application without a connection pool). Each connection
-is also a `session` event in the journal.
+is also a `session` event in the journal. Failed connects (e.g. ASE error 1601, out of user connections) make the event an
+error: "54 of 175 connections failed, first: ..." in the log, the journal and the summary.
 - SQL Server: CmPerfCounters (logins/sec). ASE: CmSummary, CmSysmon. Postgres: CmSummary, CmPgActivity.
 
 #### `errors` - every 5 min, ~100 s
 A round of failing statements every ~4 s: duplicate key, divide by zero, a query timeout (2 s timeout on a 5 s wait), a missing table.
 The journal has the error codes of the first round.
 - SQL Server: client errors are not in the error log - check what SqlServerTune shows at all.
-- ASE: CmSqlStatement (errors per statement); `AlarmEventClientErrorMsg`.
+- ASE: CmSqlStatement (errors per statement). No alarm: AseTune's `ClientErrorMsg` alarm is only for the error numbers in
+  `CmSqlStatement.alarm.system.if.ErrorNumbers` (default 701, 713, 971, 1105, 1204, 1205), `ClientErrorMsgRate` only above 20 errors/s.
 - Postgres: CmPgDatabase `xact_rollback`; the server log only if `log_min_error_statement` allows it.
 
 Settings for each problem (`scenario.<name>.<setting>`): `everyMinutes`, and where it applies `holdSeconds`,
@@ -808,6 +812,8 @@ How each `problem` event is judged (its `expected` block):
   average). LATE if raised up to 5 minutes after that, but before the same scenario's next event. MISSED otherwise.
   When the alarm names a session (`spid=57`), it must be one of the event's own sessions, and the report says
   "right session (holder 57)". The journal's `"spid": 54, "role": "holder"` is what joins the two.
+  `AlarmEventX:object` counts only alarms about that object (the alarm's extra info), `@db` = the run's database:
+  ASE `sort_spill` expects `AlarmEventLongRunningTransaction:tempdb`, `blocking` `AlarmEventLongRunningTransaction:@db`.
 - **graphs** (`CmName.graphName`, `:series` for one series, `:*` for the sum): SEEN if the peak during the event is at
   least 2 x the run's normal level (the median outside that scenario's events) and at least normal + 0.5.
   Example: `CmPerfCounters.Compile: normal 5.0 -> peak 18.9`.
