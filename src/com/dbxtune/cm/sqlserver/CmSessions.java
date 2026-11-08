@@ -1899,7 +1899,7 @@ extends CountersModel
 	
 	/** Tables where the locked-row lookup got "SELECT permission denied" (229): [db].[schema].[table] -> when. Skipped (and not logged) until the retry time. */
 	private static final Map<String, Long> _lockedTableDataDenied = new java.util.concurrent.ConcurrentHashMap<>();
-	private static final long LOCKED_TABLE_DATA_DENIED_RETRY_MS = 60 * 60_000; // 1 hour
+	private static final long LOCKED_TABLE_DATA_DENIED_RETRY_MS = 4 * 60 * 60_000; // 4 hour
 
 	public static final String  PROPKEY_ON_WAIT_RESOURCE__KEY__GET_LOCKED_TABLE_DATA = "CmSessions.onWaitResource.KEY.getLockedTableData";
 	public static final boolean DEFAULT_ON_WAIT_RESOURCE__KEY__GET_LOCKED_TABLE_DATA = true;
