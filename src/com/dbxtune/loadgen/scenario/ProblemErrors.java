@@ -44,7 +44,7 @@ public class ProblemErrors extends Scenario
 	{
 		switch (v)
 		{
-		case SQLSERVER: return expected(Arrays.asList("CmPerfCounters", "CmErrorLog"), Arrays.asList(),
+		case SQLSERVER: return expected(Arrays.asList("CmPerfCounters", "CmErrorLog"), Arrays.asList(), Arrays.asList("CmPerfCounters.SqlErrors:User Errors"),
 				"Client errors (2627, 8134, 208) and an attention/cancel; these are not in the SQL Server error log. Errors/sec (CmPerfCounters, instance User Errors) up.");
 		case ASE:       return expected(Arrays.asList("CmSqlStatement", "CmSqlStatementPerDb", "CmErrorLog"), Arrays.asList("AlarmEventClientErrorMsg"),
 				"Client errors (2601, 3607, 208) and a cancel; CmSqlStatement counts errors per statement.");

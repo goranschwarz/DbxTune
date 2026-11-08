@@ -41,7 +41,7 @@ public class ProblemConnChurn extends Scenario
 	{
 		switch (v)
 		{
-		case SQLSERVER: return expected(Arrays.asList("CmPerfCounters", "CmSummary", "CmExecSessions"), Arrays.asList(), "Logins/sec and Logouts/sec up. Errors/sec (_Total) also goes up: every login gives informational messages (database/language context changed).");
+		case SQLSERVER: return expected(Arrays.asList("CmPerfCounters", "CmSummary", "CmExecSessions"), Arrays.asList(), Arrays.asList("CmSummary.ConnRateGraph"), "Logins/sec and Logouts/sec up. Errors/sec (_Total) also goes up: every login gives informational messages (database/language context changed).");
 		case ASE:       return expected(Arrays.asList("CmSummary", "CmSysmon", "CmProcessActivity"), Arrays.asList(), "Connections per second up (many short spids).");
 		case POSTGRES:  return expected(Arrays.asList("CmSummary", "CmPgActivity", "CmPgDatabase"), Arrays.asList(), "Many short backends (sessions per second up).");
 		}

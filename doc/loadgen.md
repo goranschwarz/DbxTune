@@ -226,6 +226,7 @@ loadgen.sh run -t <dbms> -S <host[:port]> [--duration 15m|15m-45m|1h|90s] [--int
 | `uninstall` | Drops the database and/or the logins (see below) | admin |
 | `journal` | Prints a journal file in readable form (default: the newest; `--name` for one server, `--file` for a given file) | none |
 | `scenarios` | Lists all scenarios with their weight / interval | none |
+| `compare` | What did DbxTune see of a run: journal vs DbxCentral alarms + graphs, writes `<journal>.compare.md` (see section 9) | none (reads DbxCentral) |
 
 ### Duration
 
@@ -755,12 +756,54 @@ One JSON object per line; all times are local time with the offset (`2026-11-06T
 
 Print it readable: `loadgen.sh journal --name myhost` (the newest file) or `--file <path>`.
 
-How to compare: take the time window from the header, open the DbxTune recording (or DbxCentral) for the same window,
-and for each `problem` event check its `expected` CMs and alarms. The session ids join the two: the journal's
-`"spid": 54, "role": "holder"` is the `spid=54` in the collector's blocking alarm. The first comparison
-(SQL Server, 2026-11-06) found: blocking and long transaction alarms OK, **but no `AlarmEventDeadlock` for 5 real deadlocks**.
+### `compare`: what did DbxTune see?
 
-A `compare` mode that reads the DbxCentral REST API and writes an "expected vs seen" report is planned.
+```bash
+loadgen.sh compare --name gs-2-win --central http://dbxc-host:8080 --central-srv GS-2-WIN__SS_2025   # the newest run of gs-2-win
+loadgen.sh compare --run-id 789051f2 ...      # or --file <journal>
+```
+
+It reads the run's journal and asks DbxCentral (REST, only GET requests) what it recorded in the same time window:
+the **alarm history** (`/api/alarm/history`) and **counter graphs** (`/api/graph/data`). Nothing is needed on the
+collector side. It writes `<journal>.compare.md` next to the journal (Markdown: for a person, or as input for an LLM)
+and prints a summary:
+
+```
+Run 979fba8d on gs-2-win (medium) vs DbxCentral GS-2-WIN__SS_2025:
+   scenario         events  SEEN  LATE  MISSED  other
+   blocking              3     9     0       0      0
+   deadlock              4     4     0       0      0
+   literal_sql           5     8     0       2      0
+   temp_recompile        4     0     0       4      0
+   ...
+   Alarms nobody expected:
+      2 x BlockingLockAlarm (CmSummary)
+      3 x ToxicWait (CmWaitStats)
+   Samples: 41 samples, seconds between them: median 42.5, p90 61.7, max 76.2 (from CmSummary.aaCpuGraph)
+```
+
+How each `problem` event is judged (its `expected` block):
+- **alarms**: SEEN if the alarm was raised from the problem start to its end + `--grace` (default 120 s: under load
+  samples can be 60 s apart), or was already active then (e.g. the deadlock alarm stays up for its 10-minute moving
+  average). LATE if raised up to 5 minutes after that, but before the same scenario's next event. MISSED otherwise.
+  When the alarm names a session (`spid=57`), it must be one of the event's own sessions, and the report says
+  "right session (holder 57)". The journal's `"spid": 54, "role": "holder"` is what joins the two.
+- **graphs** (`CmName.graphName`, `:series` for one series, `:*` for the sum): SEEN if the peak during the event is at
+  least 2 x the run's normal level (the median outside that scenario's events) and at least normal + 0.5.
+  Example: `CmPerfCounters.Compile: normal 5.0 -> peak 18.9`.
+- **Alarms nobody expected**: everything raised during the run that no event explains - what else DbxTune noticed
+  (RESOURCE_SEMAPHORE waits, memory grant waits, background blocking...).
+- **Samples**: the real time between samples (from a CmSummary graph): the "CMs get slow under load" signal.
+- **Not checked**: the expected CMs that have no alarm or graph check; look at them in the recording.
+  Row-level checks (e.g. CmIndexMissing rows, `context_info` per session) are not done yet.
+
+Journals written before the expected graphs existed (before 2026-11-08) are judged with the current scenario
+definitions; the report says so.
+
+Settings (loadgen.properties): `central.url`, `central.srv.<name>` (DbxCentral's server name for a `--name`), `central.token`
+(only if DbxCentral has `DbxTuneCentral.login.mandatory=true`: the `DbxTune.central.registration.token`),
+`compare.grace`, `compare.graph.factor` (2), `compare.graph.minDelta` (0.5).
+The graphs to check are only set for SQL Server so far; ASE and Postgres get theirs from their first compared runs.
 
 ---
 
@@ -769,7 +812,7 @@ A `compare` mode that reads the DbxCentral REST API and writes an "expected vs s
 ```
 loadgen <mode> [options]
 
-modes: install | run | status | uninstall | journal | scenarios
+modes: install | run | status | uninstall | journal | compare | scenarios
 
 connection:
   -t,--dbms <sqlserver|ase|postgres>    -S,--server <host[:port]>    --name <name>
@@ -789,6 +832,10 @@ uninstall:
 
 journal:
   --file <file>    (or --name <name> for the newest of one server)
+
+compare:
+  --central <url>    --central-srv <name>    --central-token <token>    --grace <time>
+  --file <journal> | --run-id <id>    (or --name / -S for the newest run of one server)
 
   -x,--debug    -h,--help
 ```

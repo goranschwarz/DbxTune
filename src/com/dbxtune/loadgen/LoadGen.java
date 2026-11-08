@@ -315,6 +315,11 @@ public class LoadGen
 		o.addOption(Option.builder( ).longOpt("no-problems"        ).hasArg(false).build());
 		o.addOption(Option.builder( ).longOpt("journal-keep-days"  ).hasArg(true ).build());
 		o.addOption(Option.builder( ).longOpt("file"               ).hasArg(true ).build());
+		o.addOption(Option.builder( ).longOpt("run-id"             ).hasArg(true ).build());
+		o.addOption(Option.builder( ).longOpt("central"            ).hasArg(true ).build());
+		o.addOption(Option.builder( ).longOpt("central-srv"        ).hasArg(true ).build());
+		o.addOption(Option.builder( ).longOpt("central-token"      ).hasArg(true ).build());
+		o.addOption(Option.builder( ).longOpt("grace"              ).hasArg(true ).build());
 
 		o.addOption(Option.builder("x").longOpt("debug"            ).hasArg(false).build());
 		return o;
@@ -337,6 +342,7 @@ public class LoadGen
 		pw.println("  status      Is it installed? Sizes, row counts, last runs");
 		pw.println("  uninstall   Drop the database and the logins (needs sa/sysadmin/superuser)");
 		pw.println("  journal     Print a journal file (default: the last one)");
+		pw.println("  compare     What did DbxTune see of a run? Journal vs DbxCentral alarms + graphs -> <journal>.compare.md");
 		pw.println("  scenarios   List the scenarios");
 		pw.println();
 		pw.println("connection:");
@@ -380,9 +386,17 @@ public class LoadGen
 		pw.println("journal:");
 		pw.println("  --file <file>                       The journal file to print (default: the last one, for --name if given)");
 		pw.println();
+		pw.println("compare:");
+		pw.println("  --central <url>                     DbxCentral, e.g. http://dbxc-host:8080 (or central.url in loadgen.properties)");
+		pw.println("  --central-srv <name>                DbxCentral's name for the server, e.g. GS-2-WIN__SS_2025 (or central.srv.<--name>)");
+		pw.println("  --central-token <token>             Only if DbxCentral requires a login: DbxTune.central.registration.token");
+		pw.println("  --file <journal> | --run-id <id>    Which run (default: the newest run journal, for --name / -S if given)");
+		pw.println("  --grace <time>                      How long after a problem an alarm still counts as SEEN (default 120s)");
+		pw.println();
 		pw.println("examples (cron):");
 		pw.println("  loadgen.sh install -t sqlserver -S gs-1-mssql -U sa --size small");
 		pw.println("  loadgen.sh run     -t sqlserver -S gs-1-mssql --duration 15m-45m --intensity low");
+		pw.println("  loadgen.sh compare --name gs-1-mssql --central http://localhost:8080 --central-srv GS-1-MSSQL");
 		pw.println();
 		pw.flush();
 	}
@@ -436,6 +450,13 @@ public class LoadGen
 		_dbname        = cmd.getOptionValue("dbname", DEFAULT_DBNAME);
 		_passwdFile    = cmd.getOptionValue("passwd-file", getDefaultPasswdFile());
 
+		loadAllProps(cmd);
+	}
+
+	/** ${DBXTUNE_HOME}/conf/loadgen.properties < ~/.dbxtune/loadgen/loadgen.properties < -c file */
+	private void loadAllProps(CommandLine cmd)
+	throws Exception
+	{
 		String dbxHome = System.getProperty("DBXTUNE_HOME", System.getenv("DBXTUNE_HOME"));
 		if (dbxHome != null)
 			loadProps(dbxHome + File.separator + "conf" + File.separator + "loadgen.properties", false);
@@ -500,6 +521,45 @@ public class LoadGen
 			catch (Exception ex)
 			{
 				System.out.println("ERROR: " + ex);
+				return EXIT_FAILED;
+			}
+		}
+
+		if (mode.equals("compare"))
+		{
+			try
+			{
+				// No DBMS connection: the journal + DbxCentral. Server dir: --name, else from -S like the other modes, else all servers
+				LoadGen lg = new LoadGen();
+				lg._cmd = cmd;
+				lg.loadAllProps(cmd);
+				String server = cmd.getOptionValue("server");
+				String name   = cmd.getOptionValue("name", server == null ? null : server.replace(':', '_'));
+				File f = null;
+				if (cmd.hasOption("file"))
+					f = new File(cmd.getOptionValue("file"));
+				else if (cmd.hasOption("run-id"))
+				{
+					File[] dirs = Journal.getJournalDir().listFiles(File::isDirectory);
+					for (File d : dirs == null ? new File[0] : dirs)
+					{
+						File[] hit = d.listFiles((dd, n) -> n.endsWith("_run_" + cmd.getOptionValue("run-id") + ".jsonl"));
+						if (hit != null && hit.length > 0) f = hit[0];
+					}
+				}
+				else
+					f = Journal.findLast(name, "run");
+				if (f == null || !f.exists())
+				{
+					System.out.println("ERROR: no run journal found (" + (cmd.hasOption("file") ? cmd.getOptionValue("file") : cmd.hasOption("run-id") ? "run id " + cmd.getOptionValue("run-id") : "newest for " + (name == null ? "any server" : name)) + ") in " + Journal.getJournalDir());
+					return EXIT_NOT_AVAILABLE;
+				}
+				return new Compare(lg).compare(f);
+			}
+			catch (Exception ex)
+			{
+				System.out.println("ERROR: " + ex);
+				ex.printStackTrace();
 				return EXIT_FAILED;
 			}
 		}

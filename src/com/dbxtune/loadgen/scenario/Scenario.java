@@ -103,9 +103,19 @@ public abstract class Scenario
 	/** Helper for {@link #getExpected} */
 	protected static Map<String, Object> expected(List<String> cms, List<String> alarms, String note)
 	{
+		return expected(cms, alarms, null, note);
+	}
+
+	/**
+	 * @param graphs DbxCentral graphs that should go up during the problem, checked by 'compare':
+	 *               "CmName.graphName" (its first series), "CmName.graphName:series label", or "CmName.graphName:*" (sum of all series)
+	 */
+	protected static Map<String, Object> expected(List<String> cms, List<String> alarms, List<String> graphs, String note)
+	{
 		Map<String, Object> m = new LinkedHashMap<>();
 		m.put("cms",    cms);
 		m.put("alarms", alarms);
+		m.put("graphs", graphs != null ? graphs : List.of()); // always there: 'compare' treats a journal without it as written by an older version
 		m.put("note",   note);
 		return m;
 	}
