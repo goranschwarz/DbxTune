@@ -44,7 +44,7 @@ public class ProblemNPlusOne extends Scenario
 		switch (v)
 		{
 		case SQLSERVER: return withRows(expected(Arrays.asList("CmExecQueryStats", "CmExecSessions", "CmPerfCounters"), Arrays.asList(), Arrays.asList("CmPerfCounters.SqlBatch"), note + " Batch Requests/sec up."), "CmExecQueryStats:SqlText~@tag", "CmChattyStatements:SqlText~@tag");
-		case ASE:       return expected(Arrays.asList("CmSqlStatement", "CmStmntCacheDetails", "CmProcessActivity"), Arrays.asList(), note);
+		case ASE:       return withRows(expected(Arrays.asList("CmChattyStatements", "CmProcessActivity", "CmStmntCacheDetails"), Arrays.asList("AlarmEventChattySession"), note + " CmProcessActivity: the session's BatchIdDiff very high."), "CmChattyStatements:SqlText~@tag");
 		case POSTGRES:  return expected(Arrays.asList("CmPgStatements", "CmPgDatabase"), Arrays.asList(), note);
 		}
 		return null;

@@ -48,6 +48,7 @@ import com.dbxtune.pcs.report.content.ase.AseStmntCacheHistory;
 import com.dbxtune.pcs.report.content.ase.AseTopCmActiveStatements;
 import com.dbxtune.pcs.report.content.ase.AseTopCmCachedProcs;
 import com.dbxtune.pcs.report.content.ase.AseTopCmObjectActivity;
+import com.dbxtune.pcs.report.content.ase.AseChattyStatements;
 import com.dbxtune.pcs.report.content.ase.AseTopCmStmntCacheDetails;
 import com.dbxtune.pcs.report.content.ase.AseTopSlowDynAndStmnt;
 import com.dbxtune.pcs.report.content.ase.AseTopSlowNormalizedSql;
@@ -99,6 +100,7 @@ extends DailySummaryReportDefault
 		addReportEntry( new AseTopCmStmntCacheDetails(this, AseTopCmStmntCacheDetails.ReportType.CPU_TIME_BELOW_NORMALIZED_SQL_THRESHOLD) );
 		addReportEntry( new AseTopCmStmntCacheDetails(this, AseTopCmStmntCacheDetails.ReportType.USE_COUNT) );
 		addReportEntry( new AseTopCmStmntCacheDetails(this, AseTopCmStmntCacheDetails.ReportType.WAIT_TIME) );
+		addReportEntry( new AseChattyStatements(this) );
 		addReportEntry( new AseTopCmCachedProcs(this)       );
 		addReportEntry( new AseTopCmActiveStatements(this)  );
 
