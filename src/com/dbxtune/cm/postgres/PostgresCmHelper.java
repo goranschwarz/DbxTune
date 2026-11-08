@@ -25,6 +25,7 @@ import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Savepoint;
 import java.sql.Statement;
 import java.util.concurrent.TimeoutException;
 
@@ -229,6 +230,9 @@ public class PostgresCmHelper
 			{
 				_logger.info("AUTO-FIX: The table 'pg_stat_statements' did not exists... Trying to create it, this will simply work if you are authorized. to DISABLE the 'CREATE EXTENSION pg_stat_statements' set config '" + PROPKEY_pgStatements_createExtension + "=false'.");
 
+				// We are often inside the refresh transaction (AutoCommit=false): a failing statement aborts the whole transaction,
+				// and every following SQL in this refresh fails with "current transaction is aborted". So: rollback to a savepoint on failure.
+				Savepoint savepoint = conn.getAutoCommit() ? null : conn.setSavepoint();
 				try (Statement stmnt = conn.createStatement())
 				{
 					_logger.info("AUTO-FIX: Executing: CREATE EXTENSION pg_stat_statements");
@@ -248,6 +252,8 @@ public class PostgresCmHelper
 					{
 						exists = false;
 						_logger.warn("AUTO-FIX: FAILED when checking table 'pg_stat_statements' after 'CREATE EXTENSION pg_stat_statements'. Caught: " + exSelChk);
+						if (savepoint != null)
+							conn.rollback(savepoint);
 						
 						// Possibly turn off 'AUTO-FIX' since it failed... until next restart (hence the System.setProperty())
 						//System.setProperty(PROPKEY_pgStatements_createExtension, "false"); 
@@ -257,6 +263,8 @@ public class PostgresCmHelper
 				{
 					exists = false;
 					_logger.warn("AUTO-FIX: FAILED when executing 'CREATE EXTENSION pg_stat_statements'. Caught: " + exCrExt);
+					if (savepoint != null)
+						conn.rollback(savepoint);
 
 					// Possibly turn off 'AUTO-FIX' since it failed... until next restart (hence the System.setProperty())
 					//System.setProperty(PROPKEY_pgStatements_createExtension, "false"); 
@@ -359,6 +367,9 @@ public class PostgresCmHelper
 			{
 				_logger.info("AUTO-FIX: The table 'pg_wait_sampling_profile' did not exists... Trying to create it, this will simply work if you are authorized. to DISABLE the 'CREATE EXTENSION pg_wait_sampling' set config '" + PROPKEY_pgWaitSampling_createExtension + "=false'.");
 
+				// We are often inside the refresh transaction (AutoCommit=false): a failing statement aborts the whole transaction,
+				// and every following SQL in this refresh fails with "current transaction is aborted". So: rollback to a savepoint on failure.
+				Savepoint savepoint = conn.getAutoCommit() ? null : conn.setSavepoint();
 				try (Statement stmnt = conn.createStatement())
 				{
 					_logger.info("AUTO-FIX: Executing: CREATE EXTENSION pg_wait_sampling");
@@ -378,6 +389,8 @@ public class PostgresCmHelper
 					{
 						exists = false;
 						_logger.warn("AUTO-FIX: FAILED when checking table 'pg_wait_sampling_profile' after 'CREATE EXTENSION pg_wait_sampling'. Caught: " + exSelChk);
+						if (savepoint != null)
+							conn.rollback(savepoint);
 						
 						// Possibly turn off 'AUTO-FIX' since it failed... until next restart (hence the System.setProperty())
 						//System.setProperty(PROPKEY_pgWaitSampling_createExtension, "false"); 
@@ -387,6 +400,8 @@ public class PostgresCmHelper
 				{
 					exists = false;
 					_logger.warn("AUTO-FIX: FAILED when executing 'CREATE EXTENSION pg_wait_sampling'. Caught: " + exCrExt);
+					if (savepoint != null)
+						conn.rollback(savepoint);
 
 					// Possibly turn off 'AUTO-FIX' since it failed... until next restart (hence the System.setProperty())
 					//System.setProperty(PROPKEY_pgWaitSampling_createExtension, "false"); 
