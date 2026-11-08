@@ -40,6 +40,7 @@ import com.dbxtune.Version;
 import com.dbxtune.loadgen.scenario.Scenario;
 import com.dbxtune.sql.conn.ConnectionProp;
 import com.dbxtune.sql.conn.DbxConnection;
+import com.dbxtune.utils.AseConnectionFactory;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.Logging;
 import com.dbxtune.utils.OpenSslAesUtil;
@@ -348,7 +349,7 @@ public class LoadGen
 		pw.println();
 		pw.println("connection:");
 		pw.println("  -t,--dbms <sqlserver|ase|postgres>  DBMS vendor");
-		pw.println("  -S,--server <host[:port]>           Server (default port per vendor)");
+		pw.println("  -S,--server <host[:port]>           Server (default port per vendor). ASE: also a server name from the interfaces file");
 		pw.println("  --name <name>                       Logical server name: password file key, journal dir");
 		pw.println("                                      (default: host, or host_port when a port is given)");
 		pw.println("  -U,--user <admin>                   Admin user for install/uninstall/status (default: sa / postgres)");
@@ -434,7 +435,7 @@ public class LoadGen
 
 		String server = cmd.getOptionValue("server");
 		if (StringUtil.isNullOrBlank(server))
-			throw new ParseException("-S/--server is required: host[:port]");
+			throw new ParseException("-S/--server is required: host[:port] (ASE: or a server name in the interfaces file)");
 
 		_host = server;
 		_port = _vendor.getDefaultPort();
@@ -443,9 +444,22 @@ public class LoadGen
 			_host = server.substring(0, server.indexOf(':'));
 			_port = Integer.parseInt(server.substring(server.indexOf(':') + 1));
 		}
+		else if (_vendor == Vendor.ASE)
+		{
+			// An ASE server name (GORAN_UB3_DS): host:port from the interfaces file ($SYBASE/interfaces or %SYBASE%\ini\sql.ini, else the DbxTune private one).
+			// Not found: use it as a host name with the default port.
+			String hostPort = AseConnectionFactory.getIFirstPort(server) > 0 ? AseConnectionFactory.getIHostPortStr(server) : null; // host1:port1[,host2:port2]: use the first
+			if (StringUtil.hasValue(hostPort))
+			{
+				String first = hostPort.split(",")[0].trim();
+				_host = first.substring(0, first.lastIndexOf(':'));
+				_port = Integer.parseInt(first.substring(first.lastIndexOf(':') + 1));
+				_logger.info("ASE server '" + server + "' resolved to " + _host + ":" + _port + " from the interfaces file '" + AseConnectionFactory.getIFileName() + "'.");
+			}
+		}
 
 		// ':' can't be in the password file's server field
-		_srvName = cmd.getOptionValue("name", server.contains(":") ? _host + "_" + _port : _host);
+		_srvName = cmd.getOptionValue("name", server.contains(":") ? _host + "_" + _port : server); // ASE: the server name, not the resolved host
 
 		_adminUser     = cmd.getOptionValue("user", _vendor.getDefaultAdminUser());
 		_adminPassword = cmd.getOptionValue("password");

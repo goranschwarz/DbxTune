@@ -95,6 +95,10 @@ For the DbxTune side it helps (not required):
 loadgen.sh install -t <dbms> -S <host[:port]> [-U admin] [--size small|medium|large|xl|xxl|xxxl] [--logins 10] [--seed 42]
 ```
 
+For ASE, `-S` can also be a server name from the interfaces file (`$SYBASE/interfaces`, `%SYBASE%\ini\sql.ini`,
+else DbxTune's own), for example `-S GORAN_UB3_DS`. Its first query entry gives host:port, and the name is used as the server name.
+A name that is not in the interfaces file is used as a host name with port 5000.
+
 What it does, in order:
 1. Creates the database (or uses an existing one, see `--use-existing-db`).
 2. Creates the logins `dbxt_user_1..N` (default 10) with random passwords, saved in the load generator's password file.
@@ -829,7 +833,7 @@ loadgen <mode> [options]
 modes: install | run | status | uninstall | journal | compare | scenarios
 
 connection:
-  -t,--dbms <sqlserver|ase|postgres>    -S,--server <host[:port]>    --name <name>
+  -t,--dbms <sqlserver|ase|postgres>    -S,--server <host[:port] | ASE server name>    --name <name>
   -U,--user <admin>    -P,--password <pw>    -D,--dbname <db>    --passwd-file <file>    -c,--config <file>
 
 install:
