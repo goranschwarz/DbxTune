@@ -2672,7 +2672,7 @@ function _cmChartIsHorizontal(orient, rowCount) {
  * and the charts pane scrolls -- then the % axis moves to the top so it stays visible.
  * 'wrapEl' is the canvas wrapper with data-fit-rows / data-fit-extra / data-fit-n.
  */
-var _CM_CHART_ROW_PX = 20;
+var _CM_CHART_ROW_PX = 14; // with the 0.86 bar fill in _cmChartCreateBar: ~12px bars (room for the 10px "FREE MB" text), ~2px gap
 function _cmChartFitHeight(wrapEl) {
 	var rows = +wrapEl.getAttribute('data-fit-rows');
 	var cont = document.getElementById('cm-detail-charts');
@@ -2864,10 +2864,10 @@ function cmChartRender(r, filteredRows) {
 		}
 		var $wrap = $('<div id="' + chartId + '-wrap" style="' + wrapStyle + '"></div>');
 
-		// Title
+		// Header: the title with the toolbar buttons on the same line (more room for the chart); wraps below in a narrow chart
+		var $header = $('<div style="text-align:center;margin-bottom:4px;"></div>');
 		if (desc.title) {
-			$wrap.append('<div style="font-size:0.82em;font-weight:600;margin-bottom:4px;text-align:center;">'
-				+ escHtml(desc.title) + '</div>');
+			$header.append('<span style="font-size:0.82em;font-weight:600;">' + escHtml(desc.title) + '</span>');
 		}
 
 		// Resolve chart type and orientation
@@ -2887,7 +2887,7 @@ function cmChartRender(r, filteredRows) {
 		}
 
 		// Build toolbar row
-		var $toolbar = $('<div style="text-align:center;margin-bottom:4px;"></div>');
+		var $toolbar = $('<span style="display:inline-block;white-space:nowrap;margin-left:10px;vertical-align:middle;"></span>');
 		var btnStyle = 'font-size:0.72em;padding:1px 6px;margin:0 2px;';
 		var hasToolbar = false;
 
@@ -2930,7 +2930,8 @@ function cmChartRender(r, filteredRows) {
 			hasToolbar = true;
 		}
 
-		if (hasToolbar) $wrap.append($toolbar);
+		if (hasToolbar) $header.append($toolbar);
+		if (desc.title || hasToolbar) $wrap.append($header);
 
 		// Extract data from filtered rows
 		var data = _cmChartExtractData(desc, colIdx, filteredRows);
@@ -3228,7 +3229,10 @@ function _cmChartCreateBar(ctx, desc, data, stacked, orientOverride) {
 			data: ds.data,
 			backgroundColor: bgColors,
 			borderWidth: 1,
-			maxBarThickness: 18   // a few rows in a tall pane: slim bars, not blocks
+			maxBarThickness: 18,  // a few rows in a tall pane: slim bars, not blocks
+			// Horizontal: the rows are sized by _cmChartFitHeight, so the bar fills most of its row -- a small gap (default 0.8 * 0.9)
+			categoryPercentage: horizontal ? 0.86 : 0.8,
+			barPercentage:      horizontal ? 1.0  : 0.9
 		};
 	});
 
@@ -3256,6 +3260,8 @@ function _cmChartCreateBar(ctx, desc, data, stacked, orientOverride) {
 	if (!horizontal) {
 		categoryScale.ticks.autoSkip = true;
 		categoryScale.ticks.maxRotation = 45;
+	} else {
+		categoryScale.ticks.autoSkip = false; // every row has room for its name (_cmChartFitHeight), never drop a database name
 	}
 
 	// Horizontal: labels on Y-axis, values on X-axis -- Vertical: labels on X-axis, values on Y-axis
