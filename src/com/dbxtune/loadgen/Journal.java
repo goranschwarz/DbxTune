@@ -233,6 +233,7 @@ implements Closeable
 
 			case "info":
 			case "error":
+			case "warning":
 				out.println(hhmmss + "  " + type.toUpperCase() + ": " + n.path("msg").asText());
 				break;
 

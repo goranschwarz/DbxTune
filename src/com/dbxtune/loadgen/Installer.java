@@ -229,10 +229,10 @@ public class Installer
 			new DataFiller(s, size, seed, loginCnt).fill();
 
 			runScript(s, "indexes.sql");
-			updateStatistics(s);
+			List<String> statsFailed = updateStatistics(s);
 
 			s.update("update dbxt_loadgen_info set v = ? where k = 'status'", "INSTALLED");
-			String msg = "Install finished in " + ((System.currentTimeMillis() - start) / 1000) + " s (data, indexes, statistics).";
+			String msg = "Install finished in " + ((System.currentTimeMillis() - start) / 1000) + " s (data, indexes" + (statsFailed.isEmpty() ? ", statistics)." : "; statistics FAILED for " + statsFailed.size() + " table(s), see the warning above).");
 			_logger.info(msg);
 			journal.event("info", "msg", msg);
 		}
@@ -746,20 +746,46 @@ public class Installer
 		}
 	}
 
-	/** Update statistics on all tables (right after the fill) */
-	private void updateStatistics(LgSession s)
-	throws SQLException
+	/**
+	 * Update statistics on all tables (right after the fill).
+	 * A failure (for example tempdb too small for the sort) does not stop the install: the run works without them.
+	 * It is logged as a warning, with the SQL to run later, and written to the journal.
+	 * @return the commands that failed (empty if all went fine)
+	 */
+	private List<String> updateStatistics(LgSession s)
 	{
 		_logger.info("Updating statistics...");
+		List<String> cmds = new ArrayList<>(), failed = new ArrayList<>(), errors = new ArrayList<>();
 		if (_v == Vendor.POSTGRES)
+			cmds.add("analyze");
+		else
+			for (String tab : TABLES)
+				cmds.add(_v == Vendor.ASE ? "update index statistics " + tab : "update statistics " + tab);
+
+		for (String sql : cmds)
 		{
-			s.exec("analyze");
-			return;
+			try
+			{
+				s.exec(sql);
+			}
+			catch (SQLException ex)
+			{
+				failed.add(sql);
+				errors.add(sql + ": " + ex.getMessage());
+				_logger.warn("Statistics failed, continuing: '" + sql + "'. Caught: " + ex.getMessage());
+			}
 		}
-		for (String tab : TABLES)
+		if (!failed.isEmpty())
 		{
-			s.exec(_v == Vendor.ASE ? "update index statistics " + tab : "update statistics " + tab);
+			String go  = _v == Vendor.POSTGRES ? ";" : "\n    go";
+			String use = _v == Vendor.POSTGRES ? "-- connect to database " + _lg.getDbname() : "use " + _lg.getDbname() + go;
+			String msg = "Update statistics FAILED for " + failed.size() + " of " + cmds.size() + " command(s) (tempdb too small? see the errors above)."
+					+ " The install is still marked INSTALLED: the load runs without the statistics, but the plans may differ."
+					+ " To complete it later, run as an admin:\n    " + use + "\n    " + String.join(go + "\n    ", failed) + go;
+			_logger.warn(msg);
+			_lg.getJournal().event("warning", "msg", msg, "errors", errors);
 		}
+		return failed;
 	}
 
 	/**

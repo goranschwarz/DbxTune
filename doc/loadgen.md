@@ -113,6 +113,10 @@ During the data fill it prints every 30 s how far it is and when the fill and th
 (`Install progress: data fill ~43% done, fill ready ~17:03:36, install ready ~17:04:38`). The estimate is the time so far
 extrapolated over the estimated bytes per table; indexes and statistics are counted as ~15% of the fill time.
 
+If `update statistics` fails for a table (for example tempdb too small for the sort), the install does not stop: it
+warns, continues with the other tables, still ends INSTALLED (the load runs without the statistics) and prints the SQL
+to run later as an admin (`use <db>` + the failed `update [index] statistics <table>`). The warning is in the journal too.
+
 ### Sizes
 
 | Size | Customers | Products | Orders (~3 lines each) | Rough size (data + indexes) |
@@ -248,6 +252,8 @@ loadgen.sh run -t <dbms> -S <host[:port]> [--duration 15m|15m-45m|1h|90s] [--int
 - `15m-45m`: a random time in that range (each cron run gets a different length).
 - The run **always ends**: at the end the workers stop; anything still running gets 60 more seconds, then a watchdog
   cancels the statements and closes the connections. Ctrl-C / SIGTERM stops the same way.
+- The start line shows the planned end, and every minute it prints how far it is
+  (`Run progress: 40% done, 9 min 00 s left, ends ~17:42:10; 1234 executions, 3 errors`). The stop can take up to 60 s more.
 
 ### Intensity
 

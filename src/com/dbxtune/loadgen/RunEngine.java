@@ -277,7 +277,7 @@ implements RunContext
 				"sqlTag", "every statement starts with /* dbxt:<scenario> */",
 				"appNames", LoadGen.APPNAME_PREFIX + ":oltp, " + LoadGen.APPNAME_PREFIX + ":olap, " + LoadGen.APPNAME_PREFIX + ":<problem scenario>");
 
-		String startMsg = "Run " + runId + " on '" + _lg.getSrvName() + "': " + durationSec + " s, intensity=" + intensity + ", oltpThreads=" + oltpThreads + ", olapThreads=" + olapThreads
+		String startMsg = "Run " + runId + " on '" + _lg.getSrvName() + "': " + durationSec + " s (ends ~" + new java.text.SimpleDateFormat("HH:mm:ss").format(new java.util.Date(_endTime)) + "), intensity=" + intensity + ", oltpThreads=" + oltpThreads + ", olapThreads=" + olapThreads
 				+ ", problems=" + every.keySet() + ". Journal: " + _journal.getFile();
 		_logger.info(startMsg);
 
@@ -314,7 +314,10 @@ implements RunContext
 			{
 				_stats.flushMinute();
 				nextFlush += 60_000;
-				_logger.info("Progress: " + _stats.getTotalCount() + " executions, " + _stats.getTotalErrors() + " errors, " + (getRemainingMs() / 1000) + " s left");
+				long left = Math.max(0, getRemainingMs()) / 1000;
+				_logger.info(String.format("Run progress: %d%% done, %d min %02d s left, ends ~%s; %d executions, %d errors",
+						(int) ((System.currentTimeMillis() - _startTime) * 100 / Math.max(1, _endTime - _startTime)), left / 60, left % 60,
+						new java.text.SimpleDateFormat("HH:mm:ss").format(new java.util.Date(_endTime)), _stats.getTotalCount(), _stats.getTotalErrors()));
 			}
 		}
 
