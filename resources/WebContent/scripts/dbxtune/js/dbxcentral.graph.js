@@ -2592,11 +2592,13 @@ function dbxTuneGraphSubscribe()
 		var tdCallback = function(td, metaData, cellContent, rowData)
 		{
 			// Truncate long string cells up-front — full content accessible via row-click modal
+			// Cells holding HTML (for example ASE MonSqlText: "<html><pre>...</pre></html>") are shown as plain text on ONE line,
+			// otherwise the <pre> (monospace + margin) makes the row taller than the others.
 			var AS_TRUNC = 120;
-			if (typeof cellContent === 'string' && cellContent.length > AS_TRUNC)
+			if (typeof cellContent === 'string' && (cellContent.length > AS_TRUNC || /<[a-z!\/][^>]*>/i.test(cellContent)))
 			{
-				var plain = cellContent.replace(/<[^>]+>/g, '').trim();
-				td.textContent = plain.substring(0, AS_TRUNC) + '\u2026';
+				var plain = stripHtml(cellContent).replace(/\s+/g, ' ').trim();
+				td.textContent = plain.length > AS_TRUNC ? plain.substring(0, AS_TRUNC) + '\u2026' : plain;
 				td.title = plain.substring(0, 300);
 			}
 
