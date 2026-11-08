@@ -52,6 +52,7 @@ import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.gui.ResultSetTableModel.TableStringRenderer;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.DailySummaryReportDefault;
+import com.dbxtune.pcs.report.content.NPlusOneParent;
 import com.dbxtune.pcs.report.content.ShowplanLinkBuilder;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.AggType;
@@ -301,11 +302,11 @@ extends SqlServerAbstract
 
 	/**
 	 * Statements with most executions (all databases with Query Store), and the parent statement whose rows follow
-	 * the executions per Query Store interval. See {@link SqlServerChattyStatements#findParent(String, Map, List)}
+	 * the executions per Query Store interval. See {@link NPlusOneParent#findParent(String, Map, List)}
 	 */
 	private void createNPlusOne(DbxConnection conn)
 	{
-		Map<String, SqlServerChattyStatements.Series> seriesMap = new LinkedHashMap<>(); // key = dbname:query_hash
+		Map<String, NPlusOneParent.Series> seriesMap = new LinkedHashMap<>(); // key = dbname:query_hash
 		java.util.TreeSet<java.sql.Timestamp> allIntervals = new java.util.TreeSet<>();
 		Map<String, long[]>  totals    = new HashMap<>(); // key -> [execs, rows, durationUs, intervals]
 		Map<String, Long>    textIdMap = new HashMap<>(); // key -> query_text_id
@@ -344,10 +345,10 @@ extends SqlServerAbstract
 					long execsPerHour = Math.round(execs * 3600.0 / lenSec);
 					long rowsPerHour  = Math.round(rows  * 3600.0 / lenSec);
 
-					SqlServerChattyStatements.Series s = seriesMap.get(key);
+					NPlusOneParent.Series s = seriesMap.get(key);
 					if (s == null)
 					{
-						s = new SqlServerChattyStatements.Series();
+						s = new NPlusOneParent.Series();
 						s.dbname = dbname;
 						seriesMap.put(key, s);
 					}
@@ -380,10 +381,10 @@ extends SqlServerAbstract
 		List<java.sql.Timestamp> intervals = new ArrayList<>(allIntervals);
 
 		// Find parents (the parent can be any statement, not only the top ones)
-		Map<String, SqlServerChattyStatements.ParentMatch> parentMap = new HashMap<>();
+		Map<String, NPlusOneParent.ParentMatch> parentMap = new HashMap<>();
 		for (String key : keys)
 		{
-			SqlServerChattyStatements.ParentMatch pm = SqlServerChattyStatements.findParent(key, seriesMap, intervals);
+			NPlusOneParent.ParentMatch pm = NPlusOneParent.findParent(key, seriesMap, intervals);
 			if (pm != null)
 			{
 				parentMap.put(key, pm);
@@ -399,7 +400,7 @@ extends SqlServerAbstract
 			List<String> neededKeys = new ArrayList<>();
 			for (String key : keys)
 				neededKeys.add(key);
-			for (SqlServerChattyStatements.ParentMatch pm : parentMap.values())
+			for (NPlusOneParent.ParentMatch pm : parentMap.values())
 				neededKeys.add(pm.parentKey);
 
 			Map<Long, List<String>> idToKeys = new HashMap<>();
@@ -449,7 +450,7 @@ extends SqlServerAbstract
 		for (String key : keys)
 		{
 			long[] t = totals.get(key);
-			SqlServerChattyStatements.ParentMatch pm = parentMap.get(key);
+			NPlusOneParent.ParentMatch pm = parentMap.get(key);
 			int sep = key.indexOf(':');
 
 			srs.addRow(
@@ -491,7 +492,7 @@ extends SqlServerAbstract
 		w.append("Statements with the most executions in Query Store, and for each one the <i>parent</i> statement (if found): ");
 		w.append("a statement whose rows follow this statement's executions per Query Store interval, with about one execution per parent row, ");
 		w.append("and several executions per parent execution (the parent returns many rows). <br>\n");
-		w.append("A parent is only searched for when the statement was executed in at least " + Configuration.getCombinedConfiguration().getIntProperty(SqlServerChattyStatements.PROPKEY_minSamples, SqlServerChattyStatements.DEFAULT_minSamples) + " intervals (the correlation needs them). ");
+		w.append("A parent is only searched for when the statement was executed in at least " + Configuration.getCombinedConfiguration().getIntProperty(NPlusOneParent.PROPKEY_minSamples, NPlusOneParent.DEFAULT_minSamples) + " intervals (the correlation needs them). ");
 		w.append("Same rules as the section <i>Possible N+1 / Chatty Statements</i> (from CmChattyStatements), but with the Query Store interval length as resolution. <br>\n");
 		w.append("Note: with <code>QUERY_CAPTURE_MODE = AUTO</code>, a parent that is executed seldom and is cheap may not be captured. <br>\n");
 		w.append(_nPlusOneCount > 0 ? ("<b>Found " + _nPlusOneCount + " statement(s) that look like N+1.</b><br>\n") : "No N+1 pattern found.<br>\n");
