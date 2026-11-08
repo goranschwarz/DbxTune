@@ -47,8 +47,8 @@ public class ProblemRbarCursor extends Scenario
 	{
 		switch (v)
 		{
-		case SQLSERVER: return expected(Arrays.asList("CmExecProcedureStats", "CmExecQueryStats", "CmExecCursors", "CmActiveStatements"), Arrays.asList(),
-				"One long procedure call; the statements inside execute once per product (high execution count).");
+		case SQLSERVER: return withRows(expected(Arrays.asList("CmExecProcedureStats", "CmExecQueryStats", "CmExecCursors", "CmActiveStatements"), Arrays.asList(),
+				"One long procedure call; the statements inside execute once per product (high execution count)."), "CmActiveStatements:session_id=@sessions");
 		case ASE:       return expected(Arrays.asList("CmActiveStatements", "CmProcCallStack", "CmCachedProcs", "CmSqlStatement", "CmObjectActivity"), Arrays.asList(),
 				"One long procedure call with a cursor; table scans of stock per row.");
 		case POSTGRES:  return expected(Arrays.asList("CmPgFunctions", "CmPgStatements", "CmActiveStatements", "CmPgTables"), Arrays.asList(),

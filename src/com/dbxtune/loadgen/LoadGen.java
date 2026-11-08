@@ -320,6 +320,7 @@ public class LoadGen
 		o.addOption(Option.builder( ).longOpt("central-srv"        ).hasArg(true ).build());
 		o.addOption(Option.builder( ).longOpt("central-token"      ).hasArg(true ).build());
 		o.addOption(Option.builder( ).longOpt("grace"              ).hasArg(true ).build());
+		o.addOption(Option.builder( ).longOpt("no-rows"            ).hasArg(false).build());
 
 		o.addOption(Option.builder("x").longOpt("debug"            ).hasArg(false).build());
 		return o;
@@ -392,6 +393,7 @@ public class LoadGen
 		pw.println("  --central-token <token>             Only if DbxCentral requires a login: DbxTune.central.registration.token");
 		pw.println("  --file <journal> | --run-id <id>    Which run (default: the newest run journal, for --name / -S if given)");
 		pw.println("  --grace <time>                      How long after a problem an alarm still counts as SEEN (default 120s)");
+		pw.println("  --no-rows                           Skip the row checks (CM rows per sample): only alarms + graphs, faster");
 		pw.println();
 		pw.println("examples (cron):");
 		pw.println("  loadgen.sh install -t sqlserver -S gs-1-mssql -U sa --size small");

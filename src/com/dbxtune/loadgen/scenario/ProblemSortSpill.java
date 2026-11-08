@@ -41,8 +41,8 @@ public class ProblemSortSpill extends Scenario
 	{
 		switch (v)
 		{
-		case SQLSERVER: return expected(Arrays.asList("CmTempdbUsage", "CmTempdbSpidUsage", "CmMemoryGrants", "CmExecQueryStats", "CmActiveStatements"), Arrays.asList(), Arrays.asList("CmTempdbUsage.TempdbUsageSmall:*"),
-				"Hash/sort spill to tempdb (query hint max_grant_percent = 0): Workfiles Created/sec (CmPerfCounters) up. Together with the OLAP traffic it can also give RESOURCE_SEMAPHORE waits (AlarmEventToxicWait, AlarmEventMemoryGrantWait).");
+		case SQLSERVER: return withRows(expected(Arrays.asList("CmTempdbUsage", "CmTempdbSpidUsage", "CmMemoryGrants", "CmExecQueryStats", "CmActiveStatements"), Arrays.asList(), Arrays.asList("CmTempdbUsage.TempdbUsageSmall:*"),
+				"Hash/sort spill to tempdb (query hint max_grant_percent = 0): Workfiles Created/sec (CmPerfCounters) up. Together with the OLAP traffic it can also give RESOURCE_SEMAPHORE waits (AlarmEventToxicWait, AlarmEventMemoryGrantWait)."), "CmTempdbSpidUsage:session_id=@sessions", "CmActiveStatements:session_id=@sessions");
 		case ASE:       return expected(Arrays.asList("CmTempdbActivity", "CmActiveStatements", "CmSqlStatement", "CmStmntCacheDetails"), Arrays.asList(),
 				"Work table in tempdb for the DISTINCT.");
 		case POSTGRES:  return expected(Arrays.asList("CmPgDatabase", "CmPgStatements", "CmActiveStatements"), Arrays.asList(),

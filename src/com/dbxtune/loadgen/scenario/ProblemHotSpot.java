@@ -44,8 +44,8 @@ public class ProblemHotSpot extends Scenario
 	{
 		switch (v)
 		{
-		case SQLSERVER: return expected(Arrays.asList("CmWaitStats", "CmWaitingTasks", "CmActiveStatements", "CmSpidWait"), Arrays.asList(), Arrays.asList("CmWaitStats.LockCount:*"),
-				"Many short LCK_M_U / LCK_M_X waits on counter_table; Lock Waits/sec (CmPerfCounters) up. Seen 2026-11-07: 0 -> 40/s.");
+		case SQLSERVER: return withRows(expected(Arrays.asList("CmWaitStats", "CmWaitingTasks", "CmActiveStatements", "CmSpidWait"), Arrays.asList(), Arrays.asList("CmWaitStats.LockCount:*"),
+				"Many short LCK_M_U / LCK_M_X waits on counter_table; Lock Waits/sec (CmPerfCounters) up. Seen 2026-11-07: 0 -> 40/s."), "CmActiveStatements:session_id=@sessions");
 		case ASE:       return expected(Arrays.asList("CmSpidWait", "CmSysWaits", "CmLocks", "CmActiveStatements", "CmObjectActivity"), Arrays.asList(),
 				"Many short lock waits on counter_table.");
 		case POSTGRES:  return expected(Arrays.asList("CmPgPidWait", "CmPgSrvWait", "CmPgLocks", "CmPgBlockingLocks"), Arrays.asList(),

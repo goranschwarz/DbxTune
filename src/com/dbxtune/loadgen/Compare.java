@@ -127,23 +127,33 @@ public class Compare
 		}
 		// Journals written before 'graphs' existed in the expected lists: take alarms + graphs from the scenario's current definition
 		Vendor vendor = Vendor.fromString(String.valueOf(header.get("vendor")));
-		int graphsFromCode = 0;
+		int graphsFromCode = 0, rowsFromCode = 0;
 		for (Map<String, Object> p : problems)
 		{
 			Map<String, Object> exp = expected(p);
-			if (exp.containsKey("graphs") || vendor == null || !(p.get("expected") instanceof Map))
+			boolean noGraphs = !exp.containsKey("graphs"), noRows = !exp.containsKey("rows");
+			if (!(noGraphs || noRows) || vendor == null || !(p.get("expected") instanceof Map))
 				continue;
 			for (com.dbxtune.loadgen.scenario.Scenario sc : com.dbxtune.loadgen.scenario.Scenario.all())
 			{
 				Map<String, Object> now = sc.getName().equals(p.get("scenario")) ? sc.getExpected(vendor) : null;
-				if (now != null)
+				if (now == null)
+					continue;
+				if (noGraphs)
 				{
 					exp.put("alarms", now.get("alarms"));
 					exp.put("graphs", now.get("graphs") == null ? Collections.emptyList() : now.get("graphs"));
 					graphsFromCode++;
 				}
+				if (noRows)
+				{
+					exp.put("rows", now.get("rows") == null ? Collections.emptyList() : now.get("rows"));
+					rowsFromCode++;
+				}
 			}
 		}
+		boolean doRows     = !_lg.getCmd().hasOption("no-rows");
+		int     maxSamples = Integer.parseInt(prop("compare.rows.maxSamples", "8"));
 
 		OffsetDateTime runStartOdt = OffsetDateTime.parse(String.valueOf(header.get("ts")));
 		_zone = runStartOdt.getOffset();
@@ -349,6 +359,17 @@ public class Compare
 				rows.add(new String[] {hhmmss(start), scenario, sessions, "graph " + key.substring(key.indexOf('.') + 1) + (series != null ? ":" + series : ""), result, detail});
 			}
 
+			// Rows: did the CM have a row for this problem (its sessions, its SQL tag, a table)?
+			for (String spec : doRows ? listOf(exp.get("rows")) : Collections.<String>emptyList())
+			{
+				anyCheck = true;
+				String[] res = checkRows(spec, scenario, start, end, winEnd, spidRoles, maxSamples);
+				if (!res[0].equals("NOT RECORDED"))
+					covered.add(spec.substring(0, spec.indexOf(':')));
+				count(cnt, res[0]);
+				rows.add(new String[] {hhmmss(start), scenario, sessions, "rows " + spec.replace("@", ""), res[0], res[1]});
+			}
+
 			// The expected CMs that no check above covers
 			for (String spec : listOf(exp.get("graphs")))
 				covered.add(spec.substring(0, spec.indexOf('.')));
@@ -406,6 +427,10 @@ public class Compare
 			w.println("| Samples | " + spacing + " |");
 			if (graphsFromCode > 0)
 				w.println("| Note | the journal was written by an older version (no expected graphs): " + graphsFromCode + " problem events use the expected alarms and graphs of the current scenario definitions |");
+			if (rowsFromCode > 0 && doRows)
+				w.println("| Note | the journal has no expected rows (older version): " + rowsFromCode + " problem events use the row checks of the current scenario definitions |");
+			if (!doRows)
+				w.println("| Note | row checks are off (--no-rows) |");
 			w.println();
 			w.println("## Summary per scenario");
 			w.println();
@@ -503,6 +528,111 @@ public class Compare
 		return spans;
 	}
 
+	private static final DateTimeFormatter SAMPLE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss[.SSS]");
+	private static final Pattern           ROWS_SPEC   = Pattern.compile("^(\\w+):([\\w ]+)([=~])(.*)$");
+
+	/**
+	 * One row check, e.g. "CmOpenTransactions:session_id=@sessions": walk the CM's recorded samples from the problem start
+	 * to the end of its window (at most maxSamples), stop at the first sample with a matching row.
+	 * @return {result, detail}: SEEN / MISSED / NOT RECORDED / COLUMN NOT FOUND
+	 */
+	private String[] checkRows(String spec, String scenario, Instant start, Instant end, Instant winEnd, Map<String, String> spidRoles, int maxSamples)
+	{
+		Matcher m = ROWS_SPEC.matcher(spec);
+		if (!m.matches())
+			return new String[] {"BAD SPEC", "can't parse '" + spec + "', expected CmName:column=value or CmName:column~value"};
+		String  cm = m.group(1), col = m.group(2), op = m.group(3), val = m.group(4);
+		boolean bySession = val.equals("@sessions");
+		String  want = val.equals("@tag") ? "dbxt:" + scenario : val;
+		if (bySession && spidRoles.isEmpty())
+			return new String[] {"NO SESSIONS", "the journal has no sessions for this event"};
+
+		// Sessions: only until shortly after the problem ended (a spid is reused soon after).
+		// Statements / tables: CMs like CmExecQueryStats are refreshed every few minutes and their content is cumulative,
+		// so the first sample up to 'compare.rows.lookAheadMinutes' after the window still counts.
+		long    lookAheadMs = Long.parseLong(prop("compare.rows.lookAheadMinutes", "60")) * 60_000L;
+		Instant limit = bySession ? end.plusSeconds(60) : winEnd.plusMillis(lookAheadMs);
+		String  from = central(start);
+		int     checked = 0;
+		Instant first = null, last = null;
+		try
+		{
+			for (int i = 0; i < maxSamples; i++)
+			{
+				Map<String, Object> nav = getObject("/api/cc/mgt/cm/navSample", "srv", _centralSrv, "cm", cm, "time", from, "dir", "next");
+				if (!Boolean.TRUE.equals(nav.get("found")))
+					break;
+				String  sampleTime = String.valueOf(nav.get("sampleTime"));
+				Instant t = java.time.LocalDateTime.parse(sampleTime, SAMPLE_TIME).atZone(_zone).toInstant();
+				if (t.isAfter(limit) || (!bySession && t.isAfter(winEnd) && checked > 0))
+					break; // statements/tables: at most one sample after the window
+				from = sampleTime;
+				checked++;
+				if (first == null) first = t;
+				last = t;
+
+				Map<String, Object> data = getObject("/api/cc/mgt/cm/data", "srv", _centralSrv, "cm", cm, "time", sampleTime, "type", "abs");
+				List<String> cols = listOf(data.get("columns"));
+				if (cols.isEmpty())
+					continue; // no rows in this sample
+				int ci = cols.indexOf(col);
+				if (ci < 0)
+					return new String[] {"COLUMN NOT FOUND", cm + " has no column '" + col + "'. Columns: " + String.join(", ", cols)};
+				int ctxi = cols.indexOf("context_info_str"), waiti = cols.indexOf("wait_type");
+
+				List<String> hits = new ArrayList<>();
+				Set<String>  ctx  = new java.util.TreeSet<>();
+				int matches = 0;
+				for (Object r : data.get("rows") instanceof List ? (List<?>) data.get("rows") : Collections.emptyList())
+				{
+					if (!(r instanceof List) || ((List<?>) r).size() <= ci)
+						continue;
+					List<?> row  = (List<?>) r;
+					String  cell = String.valueOf(row.get(ci)).trim().replaceAll("\\.0$", "");
+					boolean hit  = bySession ? spidRoles.containsKey(cell)
+					             : op.equals("=") ? cell.equalsIgnoreCase(want) : cell.toLowerCase().contains(want.toLowerCase());
+					// A reused spid: the session now does another scenario (context_info dbxt:<other>), not this problem's session
+					if (hit && bySession && ctxi >= 0)
+					{
+						String c = String.valueOf(row.get(ctxi)).trim();
+						if (c.startsWith("dbxt:") && !c.startsWith("dbxt:" + scenario))
+							hit = false;
+					}
+					if (!hit)
+						continue;
+					matches++;
+					if (bySession)
+					{
+						String role = spidRoles.get(cell);
+						Object wait = waiti >= 0 ? row.get(waiti) : null;
+						hits.add((role.length() <= 12 ? role + " " : "") + cell + (wait != null && !String.valueOf(wait).isBlank() && !"null".equals(String.valueOf(wait)) ? " (" + wait + ")" : ""));
+					}
+					else if (hits.isEmpty())
+					{
+						String one = cell.replaceAll("\\s+", " ");
+						hits.add("'" + one.substring(0, Math.min(90, one.length())) + "'");
+					}
+					if (ctxi >= 0 && row.get(ctxi) != null && !String.valueOf(row.get(ctxi)).isBlank() && !"null".equals(String.valueOf(row.get(ctxi))))
+						ctx.add(String.valueOf(row.get(ctxi)).trim());
+				}
+				if (matches > 0)
+					return new String[] {"SEEN", cm + " at " + hhmmss(t) + (t.isAfter(winEnd) ? " (first sample after the window)" : " (sample " + checked + ")") + ": "
+							+ (bySession ? String.join(", ", hits) : matches + " row(s) with " + col + (op.equals("=") ? " = " : " containing ") + "'" + want + "', e.g. " + hits.get(0))
+							+ (ctx.isEmpty() ? "" : "; context_info " + String.join(", ", ctx))};
+			}
+		}
+		catch (IOException ex)
+		{
+			return new String[] {"NOT RECORDED", cm + ": " + ex.getMessage()};
+		}
+		if (checked == 0)
+			return new String[] {"NOT RECORDED", cm + " has no sample from " + hhmmss(start) + " to " + hhmmss(limit) + (bySession ? " (the problem was shorter than the time between samples, or the CM is postponed)" : " (not in this collector, or postponed longer)")};
+		if (bySession && first != null && first.isAfter(end))
+			return new String[] {"TOO SHORT", "the problem (" + hhmmss(start) + "-" + hhmmss(end) + ") ended before the next " + cm + " sample (" + hhmmss(first) + "): it can't be in any sample"};
+		return new String[] {"MISSED", "no " + cm + " row with " + col + (op.equals("=") ? " = " : " containing ") + (bySession ? "one of " + spidRoles.keySet() : "'" + want + "'")
+				+ " in " + checked + " sample(s) " + hhmmss(first) + "-" + hhmmss(last)};
+	}
+
 	private Graph readGraph(String key, Instant from, Instant to)
 	throws IOException
 	{
@@ -524,6 +654,27 @@ public class Compare
 	private List<Map<String, Object>> getList(String path, String... params)
 	throws IOException
 	{
+		String body = getBody(path, params);
+		if (!body.startsWith("["))
+			throw new IOException("Unexpected answer from " + path + ": " + body.substring(0, Math.min(300, body.length())));
+		return _om.readValue(body, new TypeReference<List<Map<String, Object>>>() {});
+	}
+
+	private Map<String, Object> getObject(String path, String... params)
+	throws IOException
+	{
+		String body = getBody(path, params);
+		if (!body.startsWith("{"))
+			throw new IOException("Unexpected answer from " + path + ": " + body.substring(0, Math.min(300, body.length())));
+		Map<String, Object> m = _om.readValue(body, new TypeReference<Map<String, Object>>() {});
+		if (m.get("error") != null && !"no-data-in-window".equals(m.get("error")))
+			throw new IOException(m.get("error") + ": " + m.get("message"));
+		return m;
+	}
+
+	private String getBody(String path, String... params)
+	throws IOException
+	{
 		StringBuilder url = new StringBuilder(_centralUrl).append(path);
 		for (int i = 0; i < params.length; i += 2)
 			url.append(i == 0 ? '?' : '&').append(params[i]).append('=').append(URLEncoder.encode(params[i + 1], StandardCharsets.UTF_8));
@@ -542,10 +693,7 @@ public class Compare
 				throw new IOException("HTTP " + resp.statusCode() + " from " + path + ": " + msg
 						+ (resp.statusCode() == 401 ? " (DbxCentral wants a login: use --central-token <DbxTune.central.registration.token>)" : ""));
 			}
-			String body = resp.body().trim();
-			if (!body.startsWith("["))
-				throw new IOException("Unexpected answer from " + url + ": " + body.substring(0, Math.min(300, body.length())));
-			return _om.readValue(body, new TypeReference<List<Map<String, Object>>>() {});
+			return resp.body().trim();
 		}
 		catch (java.net.ConnectException ex)
 		{

@@ -794,16 +794,30 @@ How each `problem` event is judged (its `expected` block):
 - **Alarms nobody expected**: everything raised during the run that no event explains - what else DbxTune noticed
   (RESOURCE_SEMAPHORE waits, memory grant waits, background blocking...).
 - **Samples**: the real time between samples (from a CmSummary graph): the "CMs get slow under load" signal.
-- **Not checked**: the expected CMs that have no alarm or graph check; look at them in the recording.
-  Row-level checks (e.g. CmIndexMissing rows, `context_info` per session) are not done yet.
+- **rows** (`CmName:column=value` or `column~value`, value `@sessions` = the event's session ids, `@tag` = `dbxt:<scenario>`,
+  or a literal): did the CM have such a row? `compare` walks the CM's recorded samples (`/api/cc/mgt/cm/navSample` +
+  `/api/cc/mgt/cm/data`) and stops at the first match. Examples and what the report says:
+  - `CmWaitingTasks:session_id=@sessions` -> `waiter 63 (LCK_M_X); context_info dbxt:blocking:waiter`
+  - `CmOpenTransactions:session_id=@sessions`, `CmTempdbSpidUsage:session_id=@sessions`, `CmIndexMissing:TableName=customer`
+  - `CmExecQueryStats:SqlText~@tag` -> `793 row(s) with SqlText containing 'dbxt:literal_sql'`
+  Session checks look until 60 s after the event (spids are reused, and a row whose `context_info` names another scenario
+  doesn't count). A problem that ended before the next sample is **TOO SHORT** (it can't be in any sample), not MISSED.
+  Statement/table checks may use the first sample up to 60 minutes after the window: CMs like CmExecQueryStats and
+  CmIndexMissing are refreshed every few minutes and their content is cumulative. **NOT RECORDED**: the CM has no sample
+  (not in this collector, or not deployed yet).
+  Found this way (2026-11-08): at `medium` the literal SQL plans were already gone from the plan cache when
+  CmExecQueryStats sampled again 10 minutes later (memory pressure) - only the literal SQL alarm sees them reliably.
+  `--no-rows` skips these checks (a run takes ~5 s instead of ~10 s).
+- **Not checked**: the expected CMs that no alarm, graph or row check covers; look at them in the recording.
 
-Journals written before the expected graphs existed (before 2026-11-08) are judged with the current scenario
+Journals written before the expected graphs and rows existed (before 2026-11-08) are judged with the current scenario
 definitions; the report says so.
 
 Settings (loadgen.properties): `central.url`, `central.srv.<name>` (DbxCentral's server name for a `--name`), `central.token`
 (only if DbxCentral has `DbxTuneCentral.login.mandatory=true`: the `DbxTune.central.registration.token`),
-`compare.grace`, `compare.graph.factor` (2), `compare.graph.minDelta` (0.5).
-The graphs to check are only set for SQL Server so far; ASE and Postgres get theirs from their first compared runs.
+`compare.grace`, `compare.graph.factor` (2), `compare.graph.minDelta` (0.5), `compare.rows.maxSamples` (8),
+`compare.rows.lookAheadMinutes` (60).
+The graphs and rows to check are only set for SQL Server so far; ASE and Postgres get theirs from their first compared runs.
 
 ---
 
@@ -834,7 +848,7 @@ journal:
   --file <file>    (or --name <name> for the newest of one server)
 
 compare:
-  --central <url>    --central-srv <name>    --central-token <token>    --grace <time>
+  --central <url>    --central-srv <name>    --central-token <token>    --grace <time>    --no-rows
   --file <journal> | --run-id <id>    (or --name / -S for the newest run of one server)
 
   -x,--debug    -h,--help

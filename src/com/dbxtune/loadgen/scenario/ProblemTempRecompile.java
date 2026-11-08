@@ -41,8 +41,8 @@ public class ProblemTempRecompile extends Scenario
 	{
 		switch (v)
 		{
-		case SQLSERVER: return expected(Arrays.asList("CmPerfCounters", "CmExecProcedureStats", "CmTempdbUsage"), Arrays.asList(), Arrays.asList("CmPerfCounters.ReCompile"),
-				"SQL Re-Compilations/sec up (2 per call: the temp table gets an index between two runs of the same select); tempdb object create/drop.");
+		case SQLSERVER: return withRows(expected(Arrays.asList("CmPerfCounters", "CmExecProcedureStats", "CmTempdbUsage"), Arrays.asList(), Arrays.asList("CmPerfCounters.ReCompile"),
+				"SQL Re-Compilations/sec up (2 per call: the temp table gets an index between two runs of the same select); tempdb object create/drop."), "CmExecQueryStats:object_name=p_temp_report");
 		case ASE:       return expected(Arrays.asList("CmSysmon", "CmCachedProcs", "CmTempdbActivity", "CmProcCacheLoad"), Arrays.asList(),
 				"Procedure recompiles (temp table created inside the procedure).");
 		case POSTGRES:  return expected(Arrays.asList("CmPgStatements", "CmPgTables", "CmPgFunctions"), Arrays.asList(),

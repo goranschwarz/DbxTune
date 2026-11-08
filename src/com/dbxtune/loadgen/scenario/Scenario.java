@@ -110,12 +110,24 @@ public abstract class Scenario
 	 * @param graphs DbxCentral graphs that should go up during the problem, checked by 'compare':
 	 *               "CmName.graphName" (its first series), "CmName.graphName:series label", or "CmName.graphName:*" (sum of all series)
 	 */
+	/**
+	 * Add row checks to an expected block: during the problem, a CM should have a row like this (checked by 'compare').
+	 * "CmName:column=value" (equal) or "CmName:column~value" (contains); value = a literal,
+	 * "@sessions" (one of the problem's session ids) or "@tag" ("dbxt:&lt;scenario&gt;", the SQL comment / context_info prefix).
+	 */
+	protected static Map<String, Object> withRows(Map<String, Object> expected, String... rows)
+	{
+		expected.put("rows", List.of(rows));
+		return expected;
+	}
+
 	protected static Map<String, Object> expected(List<String> cms, List<String> alarms, List<String> graphs, String note)
 	{
 		Map<String, Object> m = new LinkedHashMap<>();
 		m.put("cms",    cms);
 		m.put("alarms", alarms);
 		m.put("graphs", graphs != null ? graphs : List.of()); // always there: 'compare' treats a journal without it as written by an older version
+		m.put("rows",   List.of());
 		m.put("note",   note);
 		return m;
 	}

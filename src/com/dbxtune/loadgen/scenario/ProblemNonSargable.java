@@ -44,8 +44,8 @@ public class ProblemNonSargable extends Scenario
 	{
 		switch (v)
 		{
-		case SQLSERVER: return expected(Arrays.asList("CmExecQueryStats", "CmIndexMissing", "CmIndexUsage", "CmActiveStatements"), Arrays.asList(),
-				"Index scans instead of seeks; phone = NVARCHAR parameter against a VARCHAR column (CONVERT_IMPLICIT).");
+		case SQLSERVER: return withRows(expected(Arrays.asList("CmExecQueryStats", "CmIndexMissing", "CmIndexUsage", "CmActiveStatements"), Arrays.asList(),
+				"Index scans instead of seeks; phone = NVARCHAR parameter against a VARCHAR column (CONVERT_IMPLICIT)."), "CmExecQueryStats:SqlText~@tag", "CmIndexMissing:TableName=customer");
 		case ASE:       return expected(Arrays.asList("CmSqlStatement", "CmStmntCacheDetails", "CmObjectActivity", "CmActiveStatements"), Arrays.asList(),
 				"Table scans on customer and orders (high logical reads per execution).");
 		case POSTGRES:  return expected(Arrays.asList("CmPgStatements", "CmPgTables", "CmPgIndexes"), Arrays.asList(),

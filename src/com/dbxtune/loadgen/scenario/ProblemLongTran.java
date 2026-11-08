@@ -44,9 +44,9 @@ public class ProblemLongTran extends Scenario
 	{
 		switch (v)
 		{
-		case SQLSERVER: return expected(Arrays.asList("CmOpenTransactions", "CmDatabases", "CmSummary", "CmActiveStatements"),
+		case SQLSERVER: return withRows(expected(Arrays.asList("CmOpenTransactions", "CmDatabases", "CmSummary", "CmActiveStatements"),
 				Arrays.asList("AlarmEventLongRunningTransaction", "AlarmEventHoldingLocksWhileWaitForClientInput"),
-				"Oldest open transaction grows to holdSeconds (alarm at 60 s by default; holding locks while waiting for client at 180 s).");
+				"Oldest open transaction grows to holdSeconds (alarm at 60 s by default; holding locks while waiting for client at 180 s)."), "CmOpenTransactions:session_id=@sessions");
 		case ASE:       return expected(Arrays.asList("CmOpenDatabases", "CmSummary", "CmActiveStatements"),
 				Arrays.asList("AlarmEventLongRunningTransaction"),
 				"Oldest open transaction grows to holdSeconds (alarm at 60 s by default); the log can't be truncated past it.");

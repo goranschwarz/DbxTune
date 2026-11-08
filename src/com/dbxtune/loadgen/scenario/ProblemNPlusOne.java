@@ -43,7 +43,7 @@ public class ProblemNPlusOne extends Scenario
 		String note = "Very many executions of three tiny statements from one session.";
 		switch (v)
 		{
-		case SQLSERVER: return expected(Arrays.asList("CmExecQueryStats", "CmExecSessions", "CmPerfCounters"), Arrays.asList(), Arrays.asList("CmPerfCounters.SqlBatch"), note + " Batch Requests/sec up.");
+		case SQLSERVER: return withRows(expected(Arrays.asList("CmExecQueryStats", "CmExecSessions", "CmPerfCounters"), Arrays.asList(), Arrays.asList("CmPerfCounters.SqlBatch"), note + " Batch Requests/sec up."), "CmExecQueryStats:SqlText~@tag", "CmChattyStatements:SqlText~@tag");
 		case ASE:       return expected(Arrays.asList("CmSqlStatement", "CmStmntCacheDetails", "CmProcessActivity"), Arrays.asList(), note);
 		case POSTGRES:  return expected(Arrays.asList("CmPgStatements", "CmPgDatabase"), Arrays.asList(), note);
 		}
