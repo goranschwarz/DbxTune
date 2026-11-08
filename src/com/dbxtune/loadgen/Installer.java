@@ -28,6 +28,7 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.SQLWarning;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -48,6 +49,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.Version;
 import com.dbxtune.loadgen.scenario.EtlFactSales;
 import com.dbxtune.sql.SqlScriptExecutor;
+import com.dbxtune.sql.conn.TdsConnection;
 
 /**
  * install / uninstall / status
@@ -441,23 +443,64 @@ public class Installer
 				String dataDev = _lg.getCmd().getOptionValue("ase-data-dev", "default");
 				String logDev  = _lg.getCmd().getOptionValue("ase-log-dev");
 				long   sizeMb  = Long.parseLong(_lg.getCmd().getOptionValue("ase-db-size-mb", String.valueOf(Math.max(300, size.estimateMb() * 2))));
-				long   logMb   = Math.max(200, sizeMb / 2); // the fill and the insert-select chunks need room between checkpoints
+				// Log: measured on ASE 16 (medium): ~56 MB peak during a 15 min high run (long_tran pins the log ~340 s),
+				// the fill is kept low by a checkpoint every 10 s (DataFiller). So a fixed size, not one that grows with the data.
+				long   logMb   = Long.parseLong(_lg.getCmd().getOptionValue("ase-log-size-mb", "500"));
 
 				// Own devices: 'disk init' in --ase-device-dir, or in the directories chooseAseDeviceDir() found (dropped again by uninstall)
 				if (_aseDataDir != null)
 				{
-					String suffix = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
 					dataDev = ASE_DATA_DEV;
 					logDev  = ASE_LOG_DEV;
-					createAseDevice(admin, dataDev, _aseDataDir + _aseDataSep + dataDev + "_" + suffix + _aseDevExt, sizeMb);
-					createAseDevice(admin, logDev,  _aseLogDir  + _aseLogSep  + logDev  + "_" + suffix + _aseDevExt, logMb);
+
+					// If the other device files are named after the server (SYBASE.pml_data_1.dev, GORAN_UB3_DS_data1.dat), do the same: "<@@servername><char after it>"
+					String filePrefix = "";
+					String srvName    = String.valueOf(admin.queryValue("select @@servername")).trim();
+					if (!srvName.isEmpty() && !"null".equals(srvName))
+					{
+						for (Object[] row : admin.query("select phyname from master..sysdevices where cntrltype = 0"))
+						{
+							String phys = String.valueOf(row[0]).trim();
+							String file = phys.substring(Math.max(phys.lastIndexOf('/'), phys.lastIndexOf('\\')) + 1);
+							int    p    = file.toLowerCase().indexOf(srvName.toLowerCase());
+							if (p >= 0)
+							{
+								char next = p + srvName.length() < file.length() ? file.charAt(p + srvName.length()) : '.';
+								filePrefix = srvName + (next == '.' || next == '_' || next == '-' ? String.valueOf(next) : ".");
+								break;
+							}
+						}
+					}
+
+					createAseDevice(admin, dataDev, _aseDataDir + _aseDataSep + filePrefix + dataDev + _aseDevExt, sizeMb);
+					createAseDevice(admin, logDev,  _aseLogDir  + _aseLogSep  + filePrefix + logDev  + _aseDevExt, logMb);
 				}
 
 				String sql = "create database " + db + " on " + dataDev + " = '" + sizeMb + "M'";
 				if (logDev != null)
 					sql += " log on " + logDev + " = '" + logMb + "M'";
 				_logger.info("ASE: " + sql);
-				admin.exec(sql);
+				// Show the server's progress messages while it runs ("CREATE DATABASE: allocating ...", "Processed N allocation unit(s) out of M units ... nn% completed")
+				TdsConnection tds = admin.getConnection() instanceof TdsConnection ? (TdsConnection) admin.getConnection() : null;
+				if (tds != null)
+					tds.setSybMessageHandler(sqle ->
+					{
+						if (!(sqle instanceof SQLWarning)) // errors: thrown by exec() as usual
+							return sqle;
+						String msg = sqle.getMessage() == null ? "" : sqle.getMessage().trim();
+						if (!msg.isEmpty())
+							_logger.info("ASE: " + msg);
+						return null;
+					});
+				try
+				{
+					admin.exec(sql);
+				}
+				finally
+				{
+					if (tds != null)
+						tds.restoreSybMessageHandler();
+				}
 				admin.exec("exec master..sp_dboption " + db + ", 'trunc log on chkpt', true");
 				admin.exec("exec master..sp_dboption " + db + ", 'select into/bulkcopy/pllsort', true");
 				admin.exec("use " + db);
@@ -545,7 +588,7 @@ public class Installer
 					+ "   Do one of these:\n"
 					+ "   - give a directory ON THE ASE HOST where the load generator may create its own devices (disk init, dropped again by uninstall):\n"
 					+ "        --ase-device-dir /path/on/the/ase/host\n"
-					+ "   - or create devices yourself (data ~" + sizeMb + " MB, log ~" + Math.max(200, sizeMb / 2) + " MB for size '" + size.name + "') and name them:\n"
+					+ "   - or create devices yourself (data ~" + sizeMb + " MB, log ~" + _lg.getCmd().getOptionValue("ase-log-size-mb", "500") + " MB for size '" + size.name + "') and name them:\n"
 					+ "        --ase-data-dev <data device> --ase-log-dev <log device>\n"
 					+ "   - or put it on the default device(s):  --ase-data-dev default\n"
 					+ "   - or create the database yourself and use:  --use-existing-db\n"
@@ -588,9 +631,17 @@ public class Installer
 	{
 		if (admin.queryInt("select count(*) from master..sysdevices where name = ?", name) > 0)
 			throw new SQLException("ASE device '" + name + "' already exists. Run 'uninstall --force' (it drops the load generator devices), or drop it by hand.");
-		String sql = "disk init name = '" + name + "', physname = '" + physName + "', size = '" + sizeMb + "M'";
+		// directio: like a production device (not via the file system cache); skip_alloc=false: the file is allocated now, not on first write
+		String sql = "disk init name = '" + name + "', physname = '" + physName + "', size = '" + sizeMb + "M', skip_alloc = false, directio = true, dsync = false";
 		_logger.info("ASE: " + sql);
-		admin.exec(sql);
+		try
+		{
+			admin.exec(sql);
+		}
+		catch (SQLException ex)
+		{
+			throw new SQLException(ex.getMessage().trim() + "\n   If the file '" + physName + "' is left from an earlier install (uninstall could not delete it), remove it on the ASE host.", ex.getSQLState(), ex.getErrorCode(), ex);
+		}
 		_lg.getJournal().event("object", "action", "create", "objectType", "device", "name", name, "physname", physName, "sizeMb", sizeMb);
 	}
 
@@ -792,6 +843,54 @@ public class Installer
 			_rnd      = new Random(seed);
 			_loginCnt = loginCnt;
 			_price    = new double[size.products + 1];
+
+			// Progress: the work is the estimated bytes per table (as in Size.estimateMb), rows x bytes per row
+			double lines = size.orders * 3.0;
+			_workTotal = size.customers * 200.0 + size.products * 250.0 + size.warehouses * size.products * 40.0
+					+ size.orders * 100.0 + lines * 40.0 + size.orders * 0.9 * 50.0 + size.orders * 0.85 * 50.0
+					+ size.auditRows * 150.0 + size.events * 2_100.0 + lines * 0.9 * 50.0;
+		}
+
+		private final double _workTotal;
+		private double       _workDone;
+		private final long   _fillStartMs = System.currentTimeMillis();
+		private long         _nextProgressMs = _fillStartMs + 30_000;
+
+		private long _nextLogTruncMs = System.currentTimeMillis() + 10_000;
+
+		/**
+		 * ASE: truncate the log every 10 s during the fill. 'trunc log on chkpt' truncates only on the server's own checkpoint
+		 * (every ~60-70 s; a manual 'checkpoint' does not truncate), and the fill writes ~9 MB/s (ASE 16, medium: ~490 MB peak without this).
+		 */
+		private void truncateLogAse(boolean now)
+		throws SQLException
+		{
+			// Only in a database the install created: an existing one may have log dumps, that a truncate would break
+			if (_v != Vendor.ASE || _lg.getCmd().hasOption("use-existing-db") || (!now && System.currentTimeMillis() < _nextLogTruncMs))
+				return;
+			boolean autoCommit = _s.getConnection().getAutoCommit();
+			if (!autoCommit)
+				_s.getConnection().setAutoCommit(true); // dump transaction is not allowed in a transaction
+			_s.exec("dump transaction " + _lg.getDbname() + " with truncate_only");
+			if (!autoCommit)
+				_s.getConnection().setAutoCommit(false);
+			_nextLogTruncMs = System.currentTimeMillis() + 10_000;
+		}
+
+		/** Every 30 s: how far the data fill is, and when it (and the install) should be done, extrapolated from the time so far */
+		private void progress(double work)
+		{
+			_workDone += work;
+			long now = System.currentTimeMillis();
+			if (now < _nextProgressMs || _workDone <= 0)
+				return;
+			_nextProgressMs = now + 30_000;
+			double pct    = Math.min(0.99, _workDone / _workTotal);
+			long   fillMs = (long) ((now - _fillStartMs) / pct);
+			java.time.format.DateTimeFormatter hms = java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss");
+			LocalDateTime fillEnd    = LocalDateTime.now().plusNanos((fillMs - (now - _fillStartMs)) * 1_000_000L);
+			LocalDateTime installEnd = fillEnd.plusNanos(fillMs * 15 / 100 * 1_000_000L); // indexes + statistics: ~15% of the fill time (measured on ASE medium)
+			_logger.info(String.format("Install progress: data fill ~%d%% done, fill ready ~%s, install ready ~%s", (int) (pct * 100), fillEnd.format(hms), installEnd.format(hms)));
 		}
 
 		private Timestamp ts(LocalDateTime ldt)       { return Timestamp.valueOf(ldt); }
@@ -813,6 +912,7 @@ public class Installer
 			final String _table;
 			final PreparedStatement _ps;
 			final long _total;
+			final int  _rowBytes;
 			long _rows, _nextLog;
 
 			Inserter(String table, String cols, long expectedRows)
@@ -820,6 +920,17 @@ public class Installer
 			{
 				_table = table;
 				_total = expectedRows;
+				switch (table)
+				{
+				case "customer":      _rowBytes = 200;   break;
+				case "product":       _rowBytes = 250;   break;
+				case "orders":        _rowBytes = 100;   break;
+				case "payment":       _rowBytes = 50;    break;
+				case "shipment":      _rowBytes = 50;    break;
+				case "audit_log":     _rowBytes = 150;   break;
+				case "session_event": _rowBytes = 2_100; break;
+				default:              _rowBytes = 40;    break; // stock, order_line, small tables
+				}
 				int colCnt = cols.split(",").length;
 				String q = "?" + ",?".repeat(colCnt - 1);
 				_ps = _s.getConnection().prepareStatement("insert into " + table + " (" + cols + ") values (" + q + ")");
@@ -843,6 +954,7 @@ public class Installer
 				}
 				_ps.addBatch();
 				_rows++;
+				progress(_rowBytes);
 				if (_rows % BATCH == 0)
 					flush();
 				if (_rows >= _nextLog)
@@ -857,6 +969,7 @@ public class Installer
 			{
 				_ps.executeBatch();
 				_s.getConnection().commit();
+				truncateLogAse(false);
 			}
 
 			@Override
@@ -1016,6 +1129,8 @@ public class Installer
 			{
 				int to = Math.min(from + chunk, loadTo);
 				_s.exec(EtlFactSales.insertSql(_v, from, to));
+				progress((to - from) * 3.0 * 0.9 * 50.0);
+				truncateLogAse(true); // each chunk is one statement of ~100 MB log: truncate after every one
 			}
 			_s.update("insert into etl_watermark (name, last_order_id) values ('fact_sales', ?)", loadTo);
 		}

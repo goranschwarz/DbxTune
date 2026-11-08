@@ -109,6 +109,10 @@ What it does, in order:
 5. Writes the marker table `dbxt_loadgen_info` (version, size, seed, logins, status). `run` and `uninstall` check it.
 6. Writes an install journal, including the list of deliberate design flaws ("the answer key").
 
+During the data fill it prints every 30 s how far it is and when the fill and the whole install should be ready
+(`Install progress: data fill ~43% done, fill ready ~17:03:36, install ready ~17:04:38`). The estimate is the time so far
+extrapolated over the estimated bytes per table; indexes and statistics are counted as ~15% of the fill time.
+
 ### Sizes
 
 | Size | Customers | Products | Orders (~3 lines each) | Rough size (data + indexes) |
@@ -135,8 +139,13 @@ SQL Server 30 s, ASE 3 minutes.
 - Logins: `CHECK_POLICY = OFF`, default database = the load generator database; users are in `db_owner`.
 
 **Sybase ASE** (database created by the install):
-- Size: 2 x the size estimate (at least 300 MB) for data, plus a log of half that (at least 200 MB) when there is a separate log device.
-  Override with `--ase-db-size-mb`.
+- Size: 2 x the size estimate (at least 300 MB) for data, plus a 500 MB log when there is a separate log device (the same for
+  all sizes). Override with `--ase-db-size-mb` and `--ase-log-size-mb`.
+  Why 500 MB is enough (measured on ASE 16, size medium): during a 15 minute `high` run the log peaked at 56 MB; the most is
+  pinned by `long_tran` (its ~340 s open transaction stops log truncation). During the fill the install runs `dump transaction ... with truncate_only`
+  every 10 s (without it the log reached ~490 MB: `trunc log on chkpt` truncates only on ASE's own checkpoint, every ~60-70 s;
+  a manual `checkpoint` does not truncate). `purge_audit` deletes at most
+  200 000 rows (~60 MB of log) per transaction. If the log still fills up, ASE suspends the writers (LOG SUSPEND).
 - `trunc log on chkpt` and `select into/bulkcopy/pllsort` are turned on.
 - Every table is `lock datarows`.
 - Logins via `sp_addlogin`; in the database they are aliased to `dbo` (`sp_addalias`), so they can update statistics.
@@ -169,7 +178,7 @@ SQL Server 30 s, ASE 3 minutes.
 
    The choice is printed and written to the journal. If there is **no** file-based device (only raw partitions),
    the install stops before creating anything, lists the devices it found and what to do (options 2-5).
-   It runs `disk init` for `dbxt_loadgen_data` and `dbxt_loadgen_log` (file names get a timestamp). `uninstall` drops
+   It runs `disk init` for `dbxt_loadgen_data` and `dbxt_loadgen_log` (files `dbxt_loadgen_data.dev` and `dbxt_loadgen_log.dev`; when the other device files contain `@@servername`, like `SYBASE.pml_data_1.dev`, the server name goes first: `SYBASE.dbxt_loadgen_data.dev`). `uninstall` drops
    the devices with `sp_dropdevice <name>, dropfile`, so ASE deletes the files too. If that fails (an older ASE),
    it drops only the device and warns that the file is still on the ASE host, with the path to remove by hand.
    It does not check the free space in that directory: `disk init` fails (and the install stops) if it is too small.
@@ -643,7 +652,7 @@ Over time the data also drifts on purpose: `bulk_events` adds rows without updat
 | `rolling_window` | OLAP | 20 | Daily sales with a 7 day moving average for one quarter. SQL Server/Postgres: a window function; ASE (no window functions): a correlated subquery. |
 | `order_report` | OLAP | 15 | Reporting on the OLTP tables (mixed workload): last 30 days per status and warehouse, and the 10 best selling products. |
 | `etl_fact_sales` | OLAP | 10 | Loads orders above the watermark into `fact_sales` (insert-select of up to 5000 orders), moves the watermark in the same transaction. |
-| `purge_audit` | BATCH | 3 | Deletes the oldest 30 days of `audit_log` in ONE statement (big transaction, log growth). Keeps at least one year. |
+| `purge_audit` | BATCH | 3 | Deletes the oldest 30 days of `audit_log` in ONE statement (big transaction, log growth). Keeps at least one year. At most `scenario.purge_audit.maxRowsPerDelete` (200 000) rows per delete: from size xl it deletes in chunks. |
 | `update_stats` | BATCH | 2 | Updates statistics on one busy table (`update statistics` / `analyze`). |
 | `bulk_events` | BATCH | 3 | Inserts 500 `session_event` rows in one transaction, no statistics update (stale statistics over time). |
 
@@ -839,7 +848,7 @@ connection:
 install:
   -s,--size <small|medium|large|xl|xxl|xxxl>    -L,--logins <n>    --seed <n>
   --use-existing-db    --logins-only
-  --ase-device-dir <dir>    --ase-data-dev <dev>    --ase-log-dev <dev>    --ase-db-size-mb <mb>
+  --ase-device-dir <dir>    --ase-data-dev <dev>    --ase-log-dev <dev>    --ase-db-size-mb <mb>    --ase-log-size-mb <mb>
 
 run:
   -d,--duration <15m|15m-45m|1h|90s>    -i,--intensity <low|medium|high>    -T,--threads <n>
