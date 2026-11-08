@@ -222,7 +222,7 @@ public class LoadGen
 	public LgSession connectAdmin(String dbname)
 	throws Exception
 	{
-		return connect(_adminUser, getAdminPassword(), dbname, APPNAME_PREFIX + ":admin", null);
+		return connect(_adminUser, getAdminPassword(), dbname, APPNAME_PREFIX + ":admin", null, true);
 	}
 
 	/** Connect as one of the dbxt_user_# logins, the password comes from the load generator's password file */
@@ -232,10 +232,16 @@ public class LoadGen
 		String pw = readPassword(login);
 		if (pw == null)
 			throw new Exception("No password for '" + login + "' on server '" + _srvName + "' in '" + _passwdFile + "'. Was 'install' done from this machine/user?");
-		return connect(login, pw, _dbname, appName, stats);
+		return connect(login, pw, _dbname, appName, stats, false);
 	}
 
-	public LgSession connect(String user, String password, String dbname, String appName, Stats stats)
+	/**
+	 * @param bulkLoad ASE: a batched insert is sent as one array insert (jConnect ENABLE_BULK_LOAD), not one execution per row.
+	 *                 For the install (admin connection), not for the run's sessions. Without it every row of a batch is its own
+	 *                 execution of the prepared statement: audited when auditing is on (the audit queue fills: wait event 157)
+	 *                 and captured in monSysStatement. Size small on ASE 16: install 19 s instead of 29 s, the same data.
+	 */
+	public LgSession connect(String user, String password, String dbname, String appName, Stats stats, boolean bulkLoad)
 	throws SQLException
 	{
 		ConnectionProp cp = new ConnectionProp();
@@ -257,6 +263,8 @@ public class LoadGen
 			cp.setUrlOption("ENCRYPT_PASSWORD", "true");
 			cp.setUrlOption("APPLICATIONNAME", appName);
 			cp.setUrlOption("DYNAMIC_PREPARE", "true");
+			if (bulkLoad)
+				cp.setUrlOption("ENABLE_BULK_LOAD", "ARRAYINSERT_WITH_MIXED_STATEMENTS"); // works in a transaction and with several open batches (fillOrders); BCP/LOG_BCP need auto commit and one batch at a time
 			break;
 		case POSTGRES:
 			cp.setUrlOption("ApplicationName", appName);
