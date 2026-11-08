@@ -376,7 +376,7 @@ public class LoadGen
 		pw.println("                                      none of the --ase-*-dev/dir options: own devices next to the existing ones");
 		pw.println("                                      (data where most data devices are, log where most log devices are)");
 		pw.println("  --ase-db-size-mb <mb>               ASE database size (default: from --size)");
-		pw.println("  --ase-log-size-mb <mb>              ASE log size, on a separate log device (default 500, the same for all sizes)");
+		pw.println("  --ase-log-size-mb <mb>              ASE log size, on a separate log device (default 1024, the same for all sizes)");
 		pw.println("  --ase-device-dir <dir>              ASE: create own devices in this directory ON THE ASE HOST (disk init),");
 		pw.println("                                      uninstall drops them and their files (sp_dropdevice ..., dropfile)");
 		pw.println("  --use-existing-db                   install: into a database you created (-D name); its options are not changed,");

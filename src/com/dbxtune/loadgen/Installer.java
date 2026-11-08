@@ -445,7 +445,7 @@ public class Installer
 				long   sizeMb  = Long.parseLong(_lg.getCmd().getOptionValue("ase-db-size-mb", String.valueOf(Math.max(300, size.estimateMb() * 2))));
 				// Log: measured on ASE 16 (medium): ~56 MB peak during a 15 min high run (long_tran pins the log ~340 s),
 				// the fill is kept low by a checkpoint every 10 s (DataFiller). So a fixed size, not one that grows with the data.
-				long   logMb   = Long.parseLong(_lg.getCmd().getOptionValue("ase-log-size-mb", "500"));
+				long   logMb   = Long.parseLong(_lg.getCmd().getOptionValue("ase-log-size-mb", "1024"));
 
 				// Own devices: 'disk init' in --ase-device-dir, or in the directories chooseAseDeviceDir() found (dropped again by uninstall)
 				if (_aseDataDir != null)
@@ -588,7 +588,7 @@ public class Installer
 					+ "   Do one of these:\n"
 					+ "   - give a directory ON THE ASE HOST where the load generator may create its own devices (disk init, dropped again by uninstall):\n"
 					+ "        --ase-device-dir /path/on/the/ase/host\n"
-					+ "   - or create devices yourself (data ~" + sizeMb + " MB, log ~" + _lg.getCmd().getOptionValue("ase-log-size-mb", "500") + " MB for size '" + size.name + "') and name them:\n"
+					+ "   - or create devices yourself (data ~" + sizeMb + " MB, log ~" + _lg.getCmd().getOptionValue("ase-log-size-mb", "1024") + " MB for size '" + size.name + "') and name them:\n"
 					+ "        --ase-data-dev <data device> --ase-log-dev <log device>\n"
 					+ "   - or put it on the default device(s):  --ase-data-dev default\n"
 					+ "   - or create the database yourself and use:  --use-existing-db\n"

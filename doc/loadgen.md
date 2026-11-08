@@ -139,13 +139,14 @@ SQL Server 30 s, ASE 3 minutes.
 - Logins: `CHECK_POLICY = OFF`, default database = the load generator database; users are in `db_owner`.
 
 **Sybase ASE** (database created by the install):
-- Size: 2 x the size estimate (at least 300 MB) for data, plus a 500 MB log when there is a separate log device (the same for
+- Size: 2 x the size estimate (at least 300 MB) for data, plus a 1 GB log when there is a separate log device (the same for
   all sizes). Override with `--ase-db-size-mb` and `--ase-log-size-mb`.
-  Why 500 MB is enough (measured on ASE 16, size medium): during a 15 minute `high` run the log peaked at 56 MB; the most is
+  Log sizing (measured on ASE 16, size medium): during a 15 minute `high` run the log peaked at 56 MB, but a 500 MB log still
+  filled up (error 1105) in a `low` run, hence 1 GB. The most is
   pinned by `long_tran` (its ~340 s open transaction stops log truncation). During the fill the install runs `dump transaction ... with truncate_only`
   every 10 s (without it the log reached ~490 MB: `trunc log on chkpt` truncates only on ASE's own checkpoint, every ~60-70 s;
   a manual `checkpoint` does not truncate). `purge_audit` deletes at most
-  200 000 rows (~60 MB of log) per transaction. If the log still fills up, ASE suspends the writers (LOG SUSPEND).
+  200 000 rows (~60 MB of log) per transaction. If the log still fills up, ASE suspends the writers (LOG SUSPEND) or fails them with error 1105.
 - `trunc log on chkpt` and `select into/bulkcopy/pllsort` are turned on.
 - Every table is `lock datarows`.
 - Logins via `sp_addlogin`; in the database they are aliased to `dbo` (`sp_addalias`), so they can update statistics.
