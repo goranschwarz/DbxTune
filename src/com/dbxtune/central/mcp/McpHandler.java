@@ -231,8 +231,10 @@ public class McpHandler
 
 		// -- Wait & Blocking --------------------------------------------------
 		tools.add(buildTool("get_wait_stats",
-				"Get wait statistics ranked by total wait time. This is the primary starting point for SQL Server performance root-cause analysis. "
-				+ "Key wait types: PAGEIOLATCH (I/O), CXPACKET/CXCONSUMER (parallelism), LCK_M_* (locking/blocking), "
+				"Get wait statistics ranked by total wait time. This is the primary starting point for performance root-cause analysis. "
+				+ "Source per DBMS: SQL Server CmWaitStats + CmWaitStatsPerDb, Sybase ASE CmSysWaits (per wait event and wait class), "
+				+ "PostgreSQL CmPgSrvWait, Oracle CmSystemEvent, MySQL/MariaDB CmWaits, Db2 CmTimeSpent. "
+				+ "Key SQL Server wait types: PAGEIOLATCH (I/O), CXPACKET/CXCONSUMER (parallelism), LCK_M_* (locking/blocking), "
 				+ "SOS_SCHEDULER_YIELD (CPU pressure), RESOURCE_SEMAPHORE (memory grants). "
 				+ "Returns an aggregated summary by default (total/avg/max per wait type). Set topN=0 for raw time-series.",
 				buildSchema(
@@ -310,15 +312,16 @@ public class McpHandler
 				)));
 
 		tools.add(buildTool("get_spid_waits",
-				"Get the current per-session (SPID) wait breakdown live from the collector via CmSpidWait. "
+				"Get the per-session (SPID) wait breakdown from the collector's latest CmSpidWait sample (SQL Server and Sybase ASE). "
 				+ "Drill-down companion to get_wait_stats: once you know the dominant instance-level wait type, "
 				+ "use this to see which sessions are contributing. "
-				+ "Data comes from sys.dm_exec_session_wait_stats (SQL Server) or equivalent. "
-				+ "Optionally filter to a specific SPID.",
+				+ "Data comes from sys.dm_exec_session_wait_stats (SQL Server) or monProcessWaits (ASE). "
+				+ "Optionally filter to a specific SPID. 'resolvedTime' in the answer is the sample used.",
 				buildSchema(
 					"serverName",  "string", "Name of the monitored server",                                  true,
 					"spid",        "number", "Filter to a specific session ID (SPID). Omit for all sessions.", false,
-					"type",        "string", "Sample type: abs, diff, or rate. Default: abs",                  false
+					"type",        "string", "Sample type: abs, diff, or rate. Default: abs",                  false,
+					"time",        "string", "Use the last sample at or before this time 'yyyy-MM-dd HH:mm:ss'. Omit for the latest sample.", false
 				)));
 
 		tools.add(buildTool("get_query_context",
@@ -729,8 +732,7 @@ public class McpHandler
 		CentralPersistReader reader = CentralPersistReader.getInstance();
 		List<DbxGraphProperties> props = reader.getGraphProperties(serverName, null);
 
-		// The CMs are SQL Server's, MySqlTune has its own (CmWaits: per wait class and per wait event)
-		// and Db2Tune too (CmTimeSpent: the request time, and the time per kind of wait)
+		// The wait CMs of each DBMS (default: SQL Server's)
 		String appName = "";
 		try
 		{
@@ -738,9 +740,12 @@ public class McpHandler
 			if (srvInfo != null) appName = srvInfo.getProductString();
 		}
 		catch (Exception ignored) {}
-		String[] cmNames = "MySqlTune".equals(appName) ? new String[] { "CmWaits" }
-		                 : "Db2Tune"  .equals(appName) ? new String[] { "CmTimeSpent" }
-		                 :                               new String[] { "CmWaitStats", "CmWaitStatsPerDb" };
+		String[] cmNames = "AseTune"     .equals(appName) ? new String[] { "CmSysWaits" }     // per wait event, per wait class, lock waits
+		                 : "PostgresTune".equals(appName) ? new String[] { "CmPgSrvWait" }    // per wait event type
+		                 : "OracleTune"  .equals(appName) ? new String[] { "CmSystemEvent" }  // AAS per wait class, time per wait event
+		                 : "MySqlTune"   .equals(appName) ? new String[] { "CmWaits" }        // per wait class and per wait event
+		                 : "Db2Tune"     .equals(appName) ? new String[] { "CmTimeSpent" }    // the request time, and the time per kind of wait
+		                 :                                  new String[] { "CmWaitStats", "CmWaitStatsPerDb" };
 
 		ArrayNode combined = _om.createArrayNode();
 		for (String cmName : cmNames)
@@ -1257,6 +1262,7 @@ public class McpHandler
 		String serverName = getRequiredString(args, "serverName");
 		String type       = getOptionalString(args, "type", "abs");
 		String spidStr    = getOptionalString(args, "spid", null);
+		String timeStr    = getOptionalString(args, "time", null); // null = latest sample
 
 		requireServerSession(serverName);
 
@@ -1264,19 +1270,44 @@ public class McpHandler
 		String baseUrl = collectorInfo[0];
 		String auth    = collectorInfo[1];
 
-		HtmlQueryString qs1 = new HtmlQueryString(baseUrl + "/api/mgt/cm/data");
-		qs1.add("cm",   "CmSpidWait");
-		qs1.add("type", type);
-		String url = qs1.toString();
-
-		_logger.debug("MCP get_spid_waits: proxying to '{}'", url);
-
-		HttpRequest.Builder reqBuilder = HttpRequest.newBuilder().uri(URI.create(url)).GET();
-		if (auth != null && !auth.isEmpty())
-			reqBuilder.header("Authorization", auth);
-
 		try
 		{
+			// /api/mgt/cm/data only returns a sample within 1 second of 'time', so first ask navSample
+			// for the latest CmSpidWait sample that has rows (before 'time', or before now when it's not given)
+			Timestamp before = new Timestamp(System.currentTimeMillis() + 1000);
+			if (timeStr != null && !timeStr.isEmpty())
+				before = new Timestamp(TimeUtils.parseToTimestampX(timeStr).getTime() + 1000);
+
+			HtmlQueryString nqs = new HtmlQueryString(baseUrl + "/api/mgt/cm/navSample");
+			nqs.add("cm",   "CmSpidWait");
+			nqs.add("dir",  "prev");
+			nqs.add("time", TimeUtils.toStringYmdHms(before));
+			HttpRequest.Builder navReqBuilder = HttpRequest.newBuilder().uri(URI.create(nqs.toString())).GET();
+			if (auth != null && !auth.isEmpty())
+				navReqBuilder.header("Authorization", auth);
+
+			HttpResponse<String> navResp = _httpClient.send(navReqBuilder.build(), HttpResponse.BodyHandlers.ofString());
+			JsonNode navRoot = navResp.statusCode() == 200 ? _om.readTree(navResp.body()) : null;
+			if (navRoot == null || !navRoot.path("found").asBoolean(false))
+			{
+				ObjectNode err = _om.createObjectNode();
+				err.put("error",   "no-data");
+				err.put("message", "The collector has no CmSpidWait sample" + (timeStr != null ? " before '" + timeStr + "'" : "") + ". " + (navRoot != null ? navRoot.toString() : "HTTP " + navResp.statusCode()));
+				return _om.writeValueAsString(err);
+			}
+
+			HtmlQueryString qs1 = new HtmlQueryString(baseUrl + "/api/mgt/cm/data");
+			qs1.add("cm",   "CmSpidWait");
+			qs1.add("time", navRoot.get("sampleTime").asText());
+			qs1.add("type", type);
+			String url = qs1.toString();
+
+			_logger.debug("MCP get_spid_waits: proxying to '{}'", url);
+
+			HttpRequest.Builder reqBuilder = HttpRequest.newBuilder().uri(URI.create(url)).GET();
+			if (auth != null && !auth.isEmpty())
+				reqBuilder.header("Authorization", auth);
+
 			HttpResponse<String> resp = _httpClient.send(reqBuilder.build(), HttpResponse.BodyHandlers.ofString());
 			if (resp.statusCode() != 200)
 			{
@@ -1298,11 +1329,12 @@ public class McpHandler
 					JsonNode columns = root.get("columns");
 					JsonNode rows    = root.get("rows");
 
-					// Find spid column index (case-insensitive)
+					// Find spid column index (case-insensitive): ASE 'SPID', SQL Server 'session_id'
 					int spidCol = -1;
 					for (int c = 0; c < columns.size(); c++)
 					{
-						if ("spid".equalsIgnoreCase(columns.get(c).asText()))
+						String colName = columns.get(c).asText();
+						if ("spid".equalsIgnoreCase(colName) || "session_id".equalsIgnoreCase(colName))
 						{
 							spidCol = c;
 							break;
