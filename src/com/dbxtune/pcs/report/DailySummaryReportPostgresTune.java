@@ -40,6 +40,7 @@ import com.dbxtune.pcs.report.content.os.OsCpuUsageOverview;
 import com.dbxtune.pcs.report.content.os.OsIoStatOverview;
 import com.dbxtune.pcs.report.content.os.OsIoStatSlowIo;
 import com.dbxtune.pcs.report.content.os.OsSpaceUsageOverview;
+import com.dbxtune.pcs.report.content.postgres.PostgresChattyStatements;
 import com.dbxtune.pcs.report.content.postgres.PostgresConfig;
 import com.dbxtune.pcs.report.content.postgres.PostgresConfiguration;
 import com.dbxtune.pcs.report.content.postgres.PostgresDbSize;
@@ -75,6 +76,7 @@ extends DailySummaryReportDefault
 		// SQL
 		addReportEntry( new PostgresStatementsPerDb(this) );
 		addReportEntry( new PostgresTopSql         (this) );
+		addReportEntry( new PostgresChattyStatements(this) );   // Possible N+1 / chatty statements (CmPgStatements)
 		addReportEntry( new PostgresTopDeadRows    (this) );
 		addReportEntry( new PostgresTopTableAccess (this) );
 // TODO; // Implement 'UnusedIndexes' using: (CmPgIndexes)pg_stat_user_indexes.idx_scan == 0, and to get "score" we can use (CmPgTables)pg_stat_user_tables.n_tup_{ins|del|upd} to get an idea how often the table (but not the index) is maintained...

@@ -30,7 +30,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +43,7 @@ import com.dbxtune.cm.sqlserver.CmChattyStatements;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.DictCompression;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
+import com.dbxtune.pcs.report.content.NPlusOneParent;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
@@ -59,27 +59,6 @@ public class SqlServerChattyStatements
 extends SqlServerAbstract
 {
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
-
-	public static final String  PROPKEY_minCorrelation = "SqlServerChattyStatements.parent.minCorrelation";
-	public static final double  DEFAULT_minCorrelation = 0.9;
-
-	public static final String  PROPKEY_minExecPerRow  = "SqlServerChattyStatements.parent.minExecPerParentRow";
-	public static final double  DEFAULT_minExecPerRow  = 0.5;
-
-	public static final String  PROPKEY_maxExecPerRow  = "SqlServerChattyStatements.parent.maxExecPerParentRow";
-	public static final double  DEFAULT_maxExecPerRow  = 1.5;
-
-	// The "N" in N+1: child executions per parent EXECUTION. Statements executed in lockstep (same transaction, 1 row each) have 1.0
-	public static final String  PROPKEY_minFanOut      = "SqlServerChattyStatements.parent.minExecPerParentExec";
-	public static final double  DEFAULT_minFanOut      = 2.0;
-
-	// Samples (or Query Store intervals) where BOTH the child executed and the parent returned rows
-	public static final String  PROPKEY_minSamples     = "SqlServerChattyStatements.parent.minSamples";
-	public static final int     DEFAULT_minSamples     = 4;
-
-	// sum(|childExec - ratio * parentRows|) / sum(childExec) over all samples: 0 = exactly proportional
-	public static final String  PROPKEY_maxFitError    = "SqlServerChattyStatements.parent.maxFitError";
-	public static final double  DEFAULT_maxFitError    = 0.15;
 
 	private ResultSetTableModel _shortRstm;
 	private int _nPlusOneCount = 0;
@@ -234,125 +213,8 @@ extends SqlServerAbstract
 		setSectionDescription(_shortRstm);
 	}
 
-	/** Executions and rows for one statement, per sample (or per Query Store interval) */
-	public static class Series
-	{
-		public String dbname;
-		public Map<Timestamp, long[]> perSample = new HashMap<>(); // [ExecCount, RowCount]
-	}
-
-	/** The parent found for a child statement */
-	public static class ParentMatch
-	{
-		public String  parentKey;
-		public double  corr;
-		public double  execPerParentRow;   // child executions / parent rows        (about 1.0)
-		public double  execPerParentExec;  // child executions / parent executions  (the "N")
-	}
-
 	/**
-	 * Find the statement whose rows follow the child's executions:
-	 * <ul>
-	 *   <li>same database</li>
-	 *   <li>child executions / parent rows about 1.0</li>
-	 *   <li>child executions / parent executions at least 2 (the parent returns many rows; statements that just run together in one transaction have 1.0)</li>
-	 *   <li>at least ## samples where both the child executed and the parent returned rows</li>
-	 *   <li>the parent's rows per sample must follow the child's executions per sample: Pearson correlation, and proportional (small fit error)</li>
-	 * </ul>
-	 * Used by this section (per CmChattyStatements sample) and by the Query Store section (per Query Store interval).
-	 *
-	 * @return null if no parent was found
-	 */
-	public static ParentMatch findParent(String childKey, Map<String, Series> seriesMap, List<Timestamp> samples)
-	{
-		Configuration conf = Configuration.getCombinedConfiguration();
-		double minCorrelation = conf.getDoubleProperty(PROPKEY_minCorrelation, DEFAULT_minCorrelation);
-		double minExecPerRow  = conf.getDoubleProperty(PROPKEY_minExecPerRow,  DEFAULT_minExecPerRow);
-		double maxExecPerRow  = conf.getDoubleProperty(PROPKEY_maxExecPerRow,  DEFAULT_maxExecPerRow);
-		double minFanOut      = conf.getDoubleProperty(PROPKEY_minFanOut,      DEFAULT_minFanOut);
-		int    minSamples     = conf.getIntProperty   (PROPKEY_minSamples,     DEFAULT_minSamples);
-		double maxFitError    = conf.getDoubleProperty(PROPKEY_maxFitError,    DEFAULT_maxFitError);
-
-		Series child = seriesMap.get(childKey);
-		if (child == null)
-			return null;
-
-		double[] x = new double[samples.size()];
-		int childSamples = 0;
-		for (int i = 0; i < samples.size(); i++)
-		{
-			long[] v = child.perSample.get(samples.get(i));
-			x[i] = v == null ? 0 : v[0];
-			if (v != null && v[0] > 0)
-				childSamples++;
-		}
-		// Too few samples: a match on the totals alone is too often a coincidence (tested: 8 of 10 were wrong with 1-2 Query Store intervals)
-		if (childSamples < minSamples)
-			return null;
-		if (sumOf(x) <= 0)
-			return null;
-
-		ParentMatch best = null;
-		for (Map.Entry<String, Series> e : seriesMap.entrySet())
-		{
-			String parentKey = e.getKey();
-			Series parent    = e.getValue();
-			if (parentKey.equals(childKey))
-				continue;
-			if (child.dbname != null && parent.dbname != null && ! child.dbname.equals(parent.dbname))
-				continue;
-
-			double[] y = new double[samples.size()];
-			double sumX = 0, sumY = 0, sumParentExec = 0;
-			int commonSamples = 0;
-			for (int i = 0; i < samples.size(); i++)
-			{
-				long[] v = parent.perSample.get(samples.get(i));
-				y[i] = v == null ? 0 : v[1];
-				sumX += x[i];
-				sumY += y[i];
-				sumParentExec += v == null ? 0 : v[0];
-				if (x[i] > 0 && y[i] > 0)
-					commonSamples++;
-			}
-			if (sumY <= 0 || sumParentExec <= 0)
-				continue;
-
-			// Both must be active in the same samples (a correlation on 2-3 points is a coincidence)
-			if (commonSamples < minSamples)
-				continue;
-
-			double ratio = sumX / sumY; // child executions per parent row
-			if (ratio < minExecPerRow || ratio > maxExecPerRow)
-				continue;
-
-			double fanOut = sumX / sumParentExec; // child executions per parent execution
-			if (fanOut < minFanOut)
-				continue;
-
-			// Proportional, not just correlated: child executions = ratio * parent rows, in every sample
-			double absErr = 0;
-			for (int i = 0; i < samples.size(); i++)
-				absErr += Math.abs(x[i] - ratio * y[i]);
-			double fitError = absErr / sumX;
-			if (fitError > maxFitError)
-				continue;
-
-			double corr = pearson(x, y);
-			if (corr < minCorrelation || (best != null && corr <= best.corr))
-				continue;
-
-			best = new ParentMatch();
-			best.parentKey         = parentKey;
-			best.corr              = corr;
-			best.execPerParentRow  = ratio;
-			best.execPerParentExec = fanOut;
-		}
-		return best;
-	}
-
-	/**
-	 * For every row in _shortRstm (the child candidate): find the parent statement, see {@link #findParent(String, Map, List)}
+	 * For every row in _shortRstm (the child candidate): find the parent statement, see {@link NPlusOneParent#findParent(String, Map, List)}
 	 */
 	private void findParents(DbxConnection conn, String tabName, String col_SqlText, boolean hasDictCompCols)
 	{
@@ -364,7 +226,7 @@ extends SqlServerAbstract
 			+ getReportPeriodSqlWhere()
 			);
 
-		Map<String, Series> seriesMap = new LinkedHashMap<>();
+		Map<String, NPlusOneParent.Series> seriesMap = new LinkedHashMap<>();
 		TreeSet<Timestamp> allSamples = new TreeSet<>();
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 		{
@@ -376,10 +238,10 @@ extends SqlServerAbstract
 				long      execCount = rs.getLong     (4);
 				long      rowCount  = rs.getLong     (5);
 
-				Series s = seriesMap.get(queryHash);
+				NPlusOneParent.Series s = seriesMap.get(queryHash);
 				if (s == null)
 				{
-					s = new Series();
+					s = new NPlusOneParent.Series();
 					s.dbname = dbname;
 					seriesMap.put(queryHash, s);
 				}
@@ -406,7 +268,7 @@ extends SqlServerAbstract
 		for (int r = 0; r < _shortRstm.getRowCount(); r++)
 		{
 			String childHash = _shortRstm.getValueAsString(r, "query_hash");
-			ParentMatch pm = findParent(childHash, seriesMap, samples);
+			NPlusOneParent.ParentMatch pm = NPlusOneParent.findParent(childHash, seriesMap, samples);
 			if (pm != null)
 			{
 				_nPlusOneCount++;
@@ -473,39 +335,6 @@ extends SqlServerAbstract
 		}
 	}
 
-	private static double sumOf(double[] x)
-	{
-		double s = 0;
-		for (double d : x)
-			s += d;
-		return s;
-	}
-
-	private static double pearson(double[] x, double[] y)
-	{
-		int n = x.length;
-		if (n < 2)
-			return 0;
-
-		double mx = 0, my = 0;
-		for (int i = 0; i < n; i++) { mx += x[i]; my += y[i]; }
-		mx /= n; my /= n;
-
-		double sxy = 0, sxx = 0, syy = 0;
-		for (int i = 0; i < n; i++)
-		{
-			double dx = x[i] - mx;
-			double dy = y[i] - my;
-			sxy += dx * dy;
-			sxx += dx * dx;
-			syy += dy * dy;
-		}
-		if (sxx == 0 || syy == 0)
-			return 0;
-
-		return sxy / Math.sqrt(sxx * syy);
-	}
-
 	private void setSectionDescription(ResultSetTableModel rstm)
 	{
 		if (rstm == null)
@@ -518,7 +347,7 @@ extends SqlServerAbstract
 				"Each child call is fast inside SQL Server, but the application pays one network round trip per call (see <code>EstRoundTripMs</code>). <br>" +
 				"<br>" +
 				"<code>NPlusOne = YES</code> means: another statement's rows per sample follow this statement's executions per sample " +
-				"(correlation at or above " + Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_minCorrelation, DEFAULT_minCorrelation) + "), " +
+				"(correlation at or above " + Configuration.getCombinedConfiguration().getDoubleProperty(NPlusOneParent.PROPKEY_minCorrelation, NPlusOneParent.DEFAULT_minCorrelation) + "), " +
 				"with about one execution per parent row, and several executions per parent execution (the parent returns many rows). That statement is shown as the <i>parent</i>. <br>" +
 				"A child can be the parent of the next level (for example: orders -&gt; order lines -&gt; product names). <br>" +
 				"<br>" +
@@ -539,7 +368,7 @@ extends SqlServerAbstract
 		rstm.setColumnDescription("SampleCount"       , "Number of samples where this statement was in the top list.");
 		rstm.setColumnDescription("ParentCorrelation" , "Correlation between this statement's executions per sample and the parent's rows per sample (1.0 = moves exactly together).");
 		rstm.setColumnDescription("ExecPerParentRow"  , "This statement's executions divided by the parent's rows (about 1.0 for N+1).");
-		rstm.setColumnDescription("ExecPerParentExec" , "This statement's executions divided by the parent's executions: the 'N' in N+1 (at least " + Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_minFanOut, DEFAULT_minFanOut) + " to be reported; statements that just run together in the same transaction have 1.0).");
+		rstm.setColumnDescription("ExecPerParentExec" , "This statement's executions divided by the parent's executions: the 'N' in N+1 (at least " + Configuration.getCombinedConfiguration().getDoubleProperty(NPlusOneParent.PROPKEY_minFanOut, NPlusOneParent.DEFAULT_minFanOut) + " to be reported; statements that just run together in the same transaction have 1.0).");
 		rstm.setColumnDescription("ParentQueryHash"   , "query_hash of the parent statement.");
 		rstm.setColumnDescription("ParentSqlText"     , "SQL Text of the parent statement.");
 

@@ -725,8 +725,8 @@ extends CountersModel
 			    + "        ,cast(sum(s.local_blks_written)  as bigint) as local_blks_written \n"
 			    + "        ,cast(sum(s.temp_blks_read)      as bigint) as temp_blks_read \n"
 			    + "        ,cast(sum(s.temp_blks_written)   as bigint) as temp_blks_written \n"
-			    + "        ,cast(sum(s.blk_read_time)       as bigint) as blk_read_time \n"
-			    + "        ,cast(sum(s.blk_write_time)      as bigint) as blk_write_time \n"
+			    + "        ,cast(sum(s." + (srvVersion >= Ver.ver(17) ? "shared_" : "") + "blk_read_time)  as bigint) as blk_read_time \n"   // 17: renamed to 'shared_blk_read_time'  (we keep the old name in here)
+			    + "        ,cast(sum(s." + (srvVersion >= Ver.ver(17) ? "shared_" : "") + "blk_write_time) as bigint) as blk_write_time \n"  // 17: renamed to 'shared_blk_write_time' (we keep the old name in here)
 			    + wal_records1
 			    + wal_bytes1
 			    + "        ,cast(100.0 * sum(s.shared_blks_hit) / nullif(sum(s.shared_blks_hit) + sum(s.shared_blks_read), 0) as numeric(5,1)) AS cache_hit_pct \n"

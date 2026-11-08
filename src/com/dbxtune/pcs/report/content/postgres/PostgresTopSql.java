@@ -356,6 +356,17 @@ extends PostgresAbstract
 		if (hasDictCompCols)
 			col_query = "query$dcc$";
 
+		// Postgres 17 renamed 'blk_read_time' -> 'shared_blk_read_time' and 'blk_write_time' -> 'shared_blk_write_time'
+		// CmPgStatements saves the columns with the names from pg_stat_statements, so use the one the table has
+		String col_blk_read_time  = "blk_read_time";
+		String col_blk_write_time = "blk_write_time";
+		ResultSetTableModel dummyRstm = executeQuery(conn, "select * from [CmPgStatements_diff] where 1 = 2", false, "metadata");
+		if (dummyRstm != null && ! dummyRstm.hasColumn("blk_read_time") && dummyRstm.hasColumn("shared_blk_read_time"))
+		{
+			col_blk_read_time  = "shared_blk_read_time";
+			col_blk_write_time = "shared_blk_write_time";
+		}
+
 
 		// Skip DB name(s)
 		String skip_dbname   = "";
@@ -433,13 +444,13 @@ extends PostgresAbstract
 			    + "    ,cast('' as varchar(512))                                                             as [logical_reads_per_row__chart] \n"
 			    + "    ,CAST( sum([shared_blks_hit] + [shared_blks_read]) * 1.0 / nullif(sum([rows]), 0) AS DECIMAL(19,1) )      as [logical_reads__per_row] \n"
 			    
-			    + "    ,sum([blk_read_time])                                                                 as [blks_read_time__chart] \n"
-			    + "    ,sum([blk_read_time])                                                                 as [blks_read_time__sum] \n"
-			    + "    ,CAST( sum([blk_read_time])       * 1.0 / nullif(sum([calls]), 0) AS DECIMAL(19,1) )  as [blk_read_time__per_call] \n"
+			    + "    ,sum([" + col_blk_read_time + "])                                                                 as [blks_read_time__chart] \n"
+			    + "    ,sum([" + col_blk_read_time + "])                                                                 as [blks_read_time__sum] \n"
+			    + "    ,CAST( sum([" + col_blk_read_time + "])       * 1.0 / nullif(sum([calls]), 0) AS DECIMAL(19,1) )  as [blk_read_time__per_call] \n"
 			    
-			    + "    ,sum([blk_write_time])                                                                as [blks_write_time__chart] \n"
-			    + "    ,sum([blk_write_time])                                                                as [blks_write_time__sum] \n"
-			    + "    ,CAST( sum([blk_write_time])      * 1.0 / nullif(sum([calls]), 0) AS DECIMAL(19,1) )  as [blk_write_time__per_call] \n"
+			    + "    ,sum([" + col_blk_write_time + "])                                                                as [blks_write_time__chart] \n"
+			    + "    ,sum([" + col_blk_write_time + "])                                                                as [blks_write_time__sum] \n"
+			    + "    ,CAST( sum([" + col_blk_write_time + "])      * 1.0 / nullif(sum([calls]), 0) AS DECIMAL(19,1) )  as [blk_write_time__per_call] \n"
 			    + " \n"
 			    + "    ,count(*)                                                                             as [samples_count] \n"
 			    + "    ,min([SessionSampleTime])                                                             as [SessionSampleTime__min] \n"
@@ -651,7 +662,7 @@ extends PostgresAbstract
 					.setDbmsTableName            ("CmPgStatements_diff")
 					.setDbmsSampleTimeColumnName ("SessionSampleTime")
 //					.setDbmsDataValueColumnName  ("blk_read_time")
-					.setDbmsDataValueColumnName  ("sum(1.0*[blk_read_time]) / nullif(sum([calls]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsDataValueColumnName  ("sum(1.0*[" + col_blk_read_time + "]) / nullif(sum([calls]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
 //					.setDecimalScale(0) // just use whole numbers for this
 					.setDecimalScale(1)
@@ -665,7 +676,7 @@ extends PostgresAbstract
 					.setDbmsTableName            ("CmPgStatements_diff")
 					.setDbmsSampleTimeColumnName ("SessionSampleTime")
 //					.setDbmsDataValueColumnName  ("blk_write_time")
-					.setDbmsDataValueColumnName  ("sum(1.0*[blk_write_time]) / nullif(sum([calls]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsDataValueColumnName  ("sum(1.0*[" + col_blk_write_time + "]) / nullif(sum([calls]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
 //					.setDecimalScale(0) // just use whole numbers for this
 					.setDecimalScale(1)
