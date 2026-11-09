@@ -57,6 +57,6 @@ public class RollingWindow extends Scenario
 				+ "order by d1.cal_date";
 
 		s.setQueryTimeout(600);
-		s.query(tag() + pick(ctx.getVendor(), windowSql, aseSql, windowSql), year, quarter);
+		s.query(tag() + pick(ctx.getVendor(), windowSql, aseSql, windowSql, windowSql), year, quarter);
 	}
 }

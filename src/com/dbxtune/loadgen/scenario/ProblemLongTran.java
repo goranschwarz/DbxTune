@@ -53,6 +53,10 @@ public class ProblemLongTran extends Scenario
 		case POSTGRES:  return expected(Arrays.asList("CmActiveStatements", "CmPgActivity", "CmSummary"),
 				Arrays.asList(),
 				"'idle in transaction' for holdSeconds. The open transaction alarm defaults to 30 minutes in PostgresTune, so no alarm is expected with the default 300 s.");
+		case ORACLE:    return withRows(expected(Arrays.asList("CmActiveStatements", "CmSummary"),
+				Arrays.asList("AlarmEventHoldingLocksWhileWaitForClientInput"), Arrays.asList("CmSummary.OldestTranInSecGraph"),
+				"An INACTIVE session with an open transaction (HasOpenTxn) for holdSeconds: HoldingLocksWhileWaitForClientInput at 180 s. The LongRunningTransaction alarm (CmSummary oldestOpenTranInSec) defaults to 30 minutes, so it is not expected. "
+				+ "Seen 2026-11-09 on 23ai Free (size small, run low): oldest open transaction 337 s, the alarm raised after ~190 s."), "CmActiveStatements:SID=@sessions");
 		}
 		return null;
 	}

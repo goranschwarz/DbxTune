@@ -59,6 +59,10 @@ public class ProblemBlocking extends Scenario
 		case POSTGRES:  return expected(Arrays.asList("CmPgBlockingLocks", "CmActiveStatements", "CmPgLocks", "CmSummary"),
 				Arrays.asList("AlarmEventBlockingLockAlarm", "AlarmEventHoldingLocksWhileWaitForClientInput"),
 				"Waiters blocked for holdSeconds (blocking alarm at 60 s by default). The holder is 'idle in transaction'.");
+		case ORACLE:    return withRows(expected(Arrays.asList("CmActiveStatements", "CmLocks", "CmSummary", "CmSessions"),
+				Arrays.asList("AlarmEventBlockingLockAlarm", "AlarmEventOraBlockingSession"), Arrays.asList("CmSummary.BlockingLocksGraph"),
+				"Waiters wait on 'enq: TX - row lock contention' for holdSeconds (BlockingLockAlarm at 60 s; OraBlockingSession when the holder blocks others > 60 s). The holder is INACTIVE with an open transaction;"
+				+ " AlarmEventHoldingLocksWhileWaitForClientInput needs 180 s by default, more than the default ~160 s hold, so it is not expected. " + "Seen 2026-11-09 on 23ai Free (size small, run low): both alarms raised ~70 s after the start, blocking locks 3-8."), "CmActiveStatements:SID=@sessions", "CmLocks:SID=@sessions");
 		}
 		return null;
 	}

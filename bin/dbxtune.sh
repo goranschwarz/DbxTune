@@ -49,7 +49,7 @@ function printUsage
 	echo " dbxPasswordUpgrade - Upgrade the encrypted password file from v1 to v2"
 	echo "               Property/Configuration encryption utility"
 	echo " configUtil  - Encrypt a password that you can insert into a config file"
-	echo " loadgen     - Load generator for test servers (SQL Server, ASE, Postgres)"
+	echo " loadgen     - Load generator for test servers (SQL Server, ASE, Postgres, Oracle)"
 	echo ""
 
 	exit 1

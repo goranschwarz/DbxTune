@@ -50,6 +50,8 @@ public class ProblemNonSargable extends Scenario
 				"Table scans on customer and orders (high logical reads per execution).");
 		case POSTGRES:  return expected(Arrays.asList("CmPgStatements", "CmPgTables", "CmPgIndexes"), Arrays.asList(),
 				"Sequential scans on customer and orders (seq_scan / seq_tup_read grow).");
+		case ORACLE:    return withRows(expected(Arrays.asList("CmSqlStats", "CmSegmentStats", "CmSysStat"), Arrays.asList(),
+				"Full scans of CUSTOMER and ORDERS: phone = a NUMBER bind (TO_NUMBER(phone), implicit conversion of the column), UPPER(last_name), EXTRACT(YEAR ...), a leading wildcard. High BUFFER_GETS per execution in CmSqlStats."), "CmSqlStats:SQL_FULLTEXT~@tag");
 		}
 		return null;
 	}
@@ -62,11 +64,13 @@ public class ProblemNonSargable extends Scenario
 		String phoneSql = tag() + pick(v,
 				"select count(*) from customer where phone = ?",                       // NVARCHAR parameter -> implicit conversion
 				"select count(*) from customer where substring(phone, 1, 10) = ?",
-				"select count(*) from customer where cast(phone as bigint) = ?");
+				"select count(*) from customer where cast(phone as bigint) = ?",
+				"select count(*) from customer where phone = ?");                      // NUMBER bind -> TO_NUMBER(phone) = :1 (implicit conversion of the column)
 		String upperSql = tag() + "select count(*) from customer where upper(last_name) = ?";
 		String yearSql  = tag() + pick(v,
 				"select count(*), sum(total_amount) from orders where year(order_ts) = ? and status = 'NEW'",
 				"select count(*), sum(total_amount) from orders where datepart(yy, order_ts) = ? and status = 'NEW'",
+				"select count(*), sum(total_amount) from orders where extract(year from order_ts) = ? and status = 'NEW'",
 				"select count(*), sum(total_amount) from orders where extract(year from order_ts) = ? and status = 'NEW'");
 		String likeSql  = tag() + "select count(*) from customer where email like ?";
 		ev.put("sql", Arrays.asList(phoneSql, upperSql, yearSql, likeSql));
@@ -84,7 +88,7 @@ public class ProblemNonSargable extends Scenario
 				String phone = "07" + (10_000_000 + ctx.rnd().nextInt(90_000_000));
 				switch (cnt % 4)
 				{
-				case 0: s.query(phoneSql, v == Vendor.SQLSERVER ? new LgSession.NString(phone) : v == Vendor.POSTGRES ? (Object) Long.parseLong(phone) : phone); break;
+				case 0: s.query(phoneSql, v == Vendor.SQLSERVER ? new LgSession.NString(phone) : v == Vendor.POSTGRES || v == Vendor.ORACLE ? (Object) Long.parseLong(phone) : phone); break;
 				case 1: s.query(upperSql, lastNames.get(ctx.rnd().nextInt(lastNames.size()))); break;
 				case 2: s.query(yearSql, java.time.LocalDate.now().getYear() - ctx.rnd().nextInt(2)); break;
 				case 3: s.query(likeSql, "%." + (2 + ctx.rnd().nextInt(ctx.getCustomers() - 1)) + "@example.com"); break;

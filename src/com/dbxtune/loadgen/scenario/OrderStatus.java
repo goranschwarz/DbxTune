@@ -45,14 +45,16 @@ public class OrderStatus extends Scenario
 			s.call(pick(ctx.getVendor(),
 					"{call p_order_status(?)}",
 					"{call p_order_status(?)}",
-					"select * from p_order_status(?)"), customer);
+					"select * from p_order_status(?)",
+					"{call p_order_status(?)}"), customer); // Oracle: the rows come back as an implicit result (DBMS_SQL.RETURN_RESULT)
 			return;
 		}
 
 		List<Object[]> orders = s.query(tag() + pick(ctx.getVendor(),
 				"select top 10 order_id, order_ts, status, total_amount from orders where customer_id = ? order by order_ts desc",
 				"select top 10 order_id, order_ts, status, total_amount from orders where customer_id = ? order by order_ts desc",
-				"select order_id, order_ts, status, total_amount from orders where customer_id = ? order by order_ts desc limit 10"), customer);
+				"select order_id, order_ts, status, total_amount from orders where customer_id = ? order by order_ts desc limit 10",
+				"select order_id, order_ts, status, total_amount from orders where customer_id = ? order by order_ts desc fetch first 10 rows only"), customer);
 		if (!orders.isEmpty())
 		{
 			s.query(tag() + "select ol.line_no, p.name, ol.qty, ol.price from order_line ol join product p on p.product_id = ol.product_id where ol.order_id = ? order by ol.line_no",

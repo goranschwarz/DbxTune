@@ -204,7 +204,7 @@ rem	set JAVA_START_CLASS=com.dbxtune.central.pcs.H2CentralDbCopy2
 	echo " h2upgrade   - Upgrade H2 database files (recordings/Central DB) written by an older H2 version"
 	echo " dbxPassword - Manage Encrypted Passwords"
 	echo " dbxPasswordUpgrade - Upgrade the encrypted password file from v1 to v2"
-	echo " loadgen     - Load generator for test servers (SQL Server, ASE, Postgres)"
+	echo " loadgen     - Load generator for test servers (SQL Server, ASE, Postgres, Oracle)"
 	echo ""
 
 	pause

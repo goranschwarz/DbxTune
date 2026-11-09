@@ -29,7 +29,8 @@ public enum Vendor
 {
 	SQLSERVER("sqlserver", 1433, "sa",       "com.microsoft.sqlserver.jdbc.SQLServerDriver"),
 	ASE      ("ase",       5000, "sa",       "com.sybase.jdbc42.jdbc.SybDriver"),
-	POSTGRES ("postgres",  5432, "postgres", "org.postgresql.Driver");
+	POSTGRES ("postgres",  5432, "postgres", "org.postgresql.Driver"),
+	ORACLE   ("oracle",    1521, "system",   "oracle.jdbc.OracleDriver");
 
 	private final String _name;
 	private final int    _defaultPort;
@@ -56,7 +57,7 @@ public enum Vendor
 	 * Build a JDBC URL
 	 * @param host
 	 * @param port
-	 * @param dbname  null = the server's default database (postgres: the 'postgres' database)
+	 * @param dbname  null = the server's default database (postgres: the 'postgres' database). Oracle: the SERVICE name (the PDB), not the schema
 	 */
 	public String getUrl(String host, int port, String dbname)
 	{
@@ -65,14 +66,20 @@ public enum Vendor
 		case SQLSERVER: return "jdbc:sqlserver://" + host + ":" + port + (dbname == null ? "" : ";databaseName=" + dbname) + ";encrypt=true;trustServerCertificate=true";
 		case ASE:       return "jdbc:sybase:Tds:"  + host + ":" + port + (dbname == null ? "" : "/" + dbname);
 		case POSTGRES:  return "jdbc:postgresql://" + host + ":" + port + "/" + (dbname == null ? "postgres" : dbname);
+		case ORACLE:    return "jdbc:oracle:thin:@//" + host + ":" + port + "/" + dbname;
 		}
 		throw new IllegalStateException("Unknown vendor " + this);
 	}
 
-	/** SQL that returns the server's id for this session (spid / backend pid) */
+	/** SQL that returns the server's id for this session (spid / backend pid / SID) */
 	public String getSessionIdSql()
 	{
-		return this == POSTGRES ? "select pg_backend_pid()" : "select @@spid";
+		switch (this)
+		{
+		case POSTGRES: return "select pg_backend_pid()";
+		case ORACLE:   return "select to_number(sys_context('USERENV', 'SID')) from dual";
+		default:       return "select @@spid";
+		}
 	}
 
 	public static Vendor fromString(String str)
@@ -86,6 +93,7 @@ public enum Vendor
 		if (s.equals("mssql") || s.equals("sqlsrv"))        return SQLSERVER;
 		if (s.equals("sybase") || s.equals("syb"))          return ASE;
 		if (s.equals("pg") || s.equals("postgresql"))       return POSTGRES;
+		if (s.equals("ora"))                                return ORACLE;
 		return null;
 	}
 }

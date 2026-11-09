@@ -52,6 +52,9 @@ public class ProblemErrors extends Scenario
 				+ " ClientErrorMsgRate only above 20 errors/s.");
 		case POSTGRES:  return expected(Arrays.asList("CmPgDatabase", "CmErrorLog", "CmPgStatements"), Arrays.asList(),
 				"Errors (23505, 22012, 57014, 42P01): xact_rollback grows; in the server log only if log_min_error_statement allows.");
+		case ORACLE:    return withRows(expected(Arrays.asList("CmSysStat", "CmSqlStats"), Arrays.asList(),
+				"Client errors ORA-00001, ORA-01476, ORA-01013 (the cancel), ORA-00942: none of them goes to the alert log, so CmErrorLog shows nothing and no alarm is expected."
+				+ " ORA-00942 is a failed parse: CmSysStat 'parse count (failures)' ~0.25/s (too small for a graph check). The statements that parse are in CmSqlStats."), "CmSqlStats:SQL_FULLTEXT~@tag");
 		}
 		return null;
 	}
@@ -64,7 +67,7 @@ public class ProblemErrors extends Scenario
 		String[] sqls = {
 				tag() + "insert into counter_table (name, next_val) values ('order', 0)",
 				tag() + "select count(*) / 0 from warehouse",
-				tag() + pick(v, "waitfor delay '00:00:05'", "waitfor delay '00:00:05'", "select pg_sleep(5)"),
+				tag() + pick(v, "waitfor delay '00:00:05'", "waitfor delay '00:00:05'", "select pg_sleep(5)", "begin dbms_session.sleep(5); end;"), // Oracle: dbms_session.sleep is 18c+
 				tag() + "select * from dbxt_no_such_table"
 		};
 		int  durationSec = activeSeconds(ctx, "durationSeconds", 60);

@@ -226,6 +226,8 @@ implements AutoCloseable
 	 *   <li>SQL Server: <code>set context_info</code> (sys.dm_exec_sessions/requests.context_info, SqlServerTune column context_info_str)</li>
 	 *   <li>ASE: <code>set clientname</code> (sysprocesses.clientname, monProcessLookup.ClientName; max 30 chars)</li>
 	 *   <li>Postgres: <code>application_name</code> = appName:operation (pg_stat_activity.application_name; max 63 chars)</li>
+	 *   <li>Oracle: <code>DBMS_APPLICATION_INFO</code>: MODULE = the app name, ACTION = the operation, CLIENT_INFO = "dbxt:&lt;operation&gt;"
+	 *       (V$SESSION.MODULE/ACTION/CLIENT_INFO; max 48/32/64 chars). PROGRAM is the app name (JDBC property v$session.program at connect).</li>
 	 * </ul>
 	 * The value is "dbxt:&lt;operation&gt;" (Postgres: the app name + ":&lt;operation&gt;"). Only sent when it changes;
 	 * it is not counted in the statistics, and a failure is only logged (debug).
@@ -265,6 +267,26 @@ implements AutoCloseable
 			sql = "set application_name = '" + shown + "'";
 			break;
 		}
+		case ORACLE:
+		{
+			// Binds, not literals: one cursor for all values (literals would be a hard parse per new operation)
+			String v = "dbxt:" + operation;
+			shown = v.length() > 64 ? v.substring(0, 64) : v;
+			try (CallableStatement cs = _conn.prepareCall("begin dbms_application_info.set_module(?, ?); dbms_application_info.set_client_info(?); end;"))
+			{
+				cs.setString(1, _appName.length() > 48 ? _appName.substring(0, 48) : _appName);
+				cs.setString(2, operation.length() > 32 ? operation.substring(0, 32) : operation);
+				cs.setString(3, shown);
+				cs.execute();
+				_operation      = operation;
+				_operationShown = shown;
+			}
+			catch (SQLException ex)
+			{
+				_logger.debug("setOperation('" + operation + "') failed on " + getId() + ": " + ex.getMessage());
+			}
+			return;
+		}
 		default:
 			return;
 		}
@@ -279,7 +301,7 @@ implements AutoCloseable
 			_logger.debug("setOperation('" + operation + "') failed on " + getId() + ": " + ex.getMessage());
 		}
 	}
-	/** The value the DBMS shows for the current operation (context_info, clientname, application_name), null if none */
+	/** The value the DBMS shows for the current operation (context_info, clientname, application_name, client_info), null if none */
 	public String getOperationShown() { return _operationShown; }
 
 	/**

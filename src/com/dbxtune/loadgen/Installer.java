@@ -61,6 +61,9 @@ public class Installer
 	public static final String PG_SCHEMA = "dbxt";
 	public static final String PG_ROLE   = "dbxt_loadgen_role";
 
+	/** Oracle: the role the dbxt_user_# users get (DML on the tables, EXECUTE on the procedures) */
+	public static final String ORA_ROLE  = "dbxt_loadgen_role";
+
 	/** ASE devices created with --ase-device-dir */
 	public static final String ASE_DATA_DEV = "dbxt_loadgen_data";
 	public static final String ASE_LOG_DEV  = "dbxt_loadgen_log";
@@ -69,7 +72,7 @@ public class Installer
 	public static final String[] TABLES = {"dbxt_loadgen_info", "dbxt_loadgen_runlog", "category", "customer", "product", "warehouse", "stock",
 			"orders", "order_line", "payment", "shipment", "audit_log", "counter_table", "session_event",
 			"dim_date", "dim_customer", "dim_product", "fact_sales", "etl_watermark"};
-	public static final String[] PROCEDURES = {"p_order_status", "p_rbar_price_adjust", "p_temp_report"};
+	public static final String[] PROCEDURES = {"p_order_status", "p_rbar_price_adjust", "p_temp_report", "p_gather_stats"}; // p_gather_stats: Oracle only
 
 	private static final Pattern LOGIN_NAME_PATTERN = Pattern.compile("^" + LoadGen.LOGIN_PREFIX + "[0-9]+$");
 
@@ -229,6 +232,25 @@ public class Installer
 			new DataFiller(s, size, seed, loginCnt).fill();
 
 			runScript(s, "indexes.sql");
+			if (_v == Vendor.ORACLE)
+			{
+				// A PL/SQL compile error does not fail 'create procedure' (it is created INVALID): check ours (an existing schema may have others), and show the errors
+				String ours = "('" + String.join("', '", PROCEDURES).toUpperCase() + "')";
+				List<Object[]> invalid = s.query("select object_type, object_name from all_objects where owner = upper(?) and object_name in " + ours + " and status <> 'VALID'", db);
+				if (!invalid.isEmpty())
+				{
+					StringBuilder sb = new StringBuilder("Oracle: procedures with compile errors in schema '" + db + "':");
+					for (Object[] row : s.query("select name, type, line, position, text from all_errors where owner = upper(?) and name in " + ours + " order by name, sequence", db))
+						sb.append("\n   ").append(row[1]).append(" ").append(row[0]).append(" line ").append(row[2]).append("/").append(row[3]).append(": ").append(row[4]);
+					throw new SQLException(sb.toString());
+				}
+				// The users get everything through the role
+				for (String tab : TABLES)
+					s.exec("grant select, insert, update, delete on " + tab + " to " + ORA_ROLE);
+				for (String proc : PROCEDURES)
+					s.exec("grant execute on " + proc + " to " + ORA_ROLE);
+				_lg.getJournal().event("object", "action", "grant", "objectType", "role", "name", ORA_ROLE, "privileges", "select/insert/update/delete on the tables, execute on the procedures");
+			}
 			List<String> statsFailed = updateStatistics(s);
 
 			s.update("update dbxt_loadgen_info set v = ? where k = 'status'", "INSTALLED");
@@ -346,6 +368,22 @@ public class Installer
 					return "Schema '" + PG_SCHEMA + "' already exists in '" + db + "'. The load generator needs its own schema: drop it, or use another database.";
 				return null;
 			}
+			if (_v == Vendor.ORACLE)
+			{
+				// The "database" is a schema (user) you created; our tables go to its default tablespace (it needs a quota there)
+				List<String> found = new ArrayList<>();
+				for (String name : TABLES)
+					if (s.queryInt("select count(*) from all_objects where owner = upper(?) and object_name = upper(?)", db, name) > 0)
+						found.add(name);
+				for (String name : PROCEDURES)
+					if (s.queryInt("select count(*) from all_objects where owner = upper(?) and object_name = upper(?)", db, name) > 0)
+						found.add(name);
+				if (!found.isEmpty())
+					return "Schema '" + db + "' already has objects with load generator names: " + found + ". Uninstall the old install, or use another schema.";
+				for (Object[] row : s.query("select default_tablespace, account_status from dba_users where username = upper(?)", db))
+					System.out.println("Existing schema '" + db + "': default tablespace " + row[0] + ", account " + row[1] + " (not changed). It needs a quota on " + row[0] + " for the tables (~" + Size.fromString(_lg.getCmd().getOptionValue("size", "small")).estimateMb() + " MB).");
+				return null;
+			}
 			List<String> found = new ArrayList<>();
 			for (String name : TABLES)
 				if (s.queryInt("select count(*) from sysobjects where name = ?", name) > 0)
@@ -380,6 +418,11 @@ public class Installer
 		_logger.info("Using the existing database '" + db + "' (its options are not changed).");
 		if (_v == Vendor.POSTGRES)
 			createPgRoleAndSchema(admin, db);
+		if (_v == Vendor.ORACLE && admin.queryInt("select count(*) from dba_roles where role = upper(?)", ORA_ROLE) == 0)
+		{
+			admin.exec("create role " + ORA_ROLE);
+			_lg.getJournal().event("object", "action", "create", "objectType", "role", "name", ORA_ROLE);
+		}
 		_lg.getJournal().event("object", "action", "use-existing", "objectType", "database", "name", db);
 	}
 
@@ -421,6 +464,7 @@ public class Installer
 		case SQLSERVER: return admin.queryInt("select count(*) from sys.databases where name = ?", db) > 0;
 		case ASE:       return admin.queryInt("select count(*) from master..sysdatabases where name = ?", db) > 0;
 		case POSTGRES:  return admin.queryInt("select count(*) from pg_database where datname = ?", db) > 0;
+		case ORACLE:    return admin.queryInt("select count(*) from dba_users where username = upper(?)", db) > 0; // the schema owner
 		}
 		return false;
 	}
@@ -513,8 +557,57 @@ public class Installer
 			admin.exec("create database " + db);
 			createPgRoleAndSchema(admin, db);
 			break;
+
+		case ORACLE:
+			{
+				// Its own tablespace (same name as the schema), so uninstall can drop it with its datafile.
+				// OMF (db_create_file_dest set): Oracle names and places the file; else next to the PDB's existing datafiles
+				// (the directory most of them are in; the PDB has its own directory, not the CDB root's).
+				long   sizeMb = Math.max(100, size.estimateMb());
+				String omf    = (String) admin.queryValue("select value from v$parameter where name = 'db_create_file_dest'");
+				String file   = null;
+				if (omf == null || omf.isBlank())
+				{
+					Map<String, Integer> dirs = new LinkedHashMap<>();
+					for (Object[] row : admin.query("select file_name from dba_data_files order by file_id"))
+					{
+						String f = String.valueOf(row[0]);
+						int    p = Math.max(f.lastIndexOf('/'), f.lastIndexOf('\\'));
+						if (p > 0)
+							dirs.merge(f.substring(0, p + 1), 1, Integer::sum);
+					}
+					String dir = null;
+					for (Map.Entry<String, Integer> e : dirs.entrySet()) if (dir == null || e.getValue() > dirs.get(dir)) dir = e.getKey();
+					if (dir == null)
+						throw new SQLException("Oracle: can't decide where to put the datafile of tablespace '" + db + "': db_create_file_dest is not set and no datafile directory was found in dba_data_files.");
+					file = dir + db.toLowerCase() + "01.dbf";
+				}
+				String sql = "create bigfile tablespace " + db + " datafile " + (file == null ? "" : "'" + file + "' ") + "size " + sizeMb + "M autoextend on next 64M maxsize unlimited";
+				_logger.info("Oracle: " + sql);
+				try
+				{
+					admin.exec(sql);
+				}
+				catch (SQLException ex)
+				{
+					throw new SQLException(ex.getMessage().trim() + (file == null ? "" : "\n   If the file '" + file + "' is left from an earlier install, remove it on the database host."), ex.getSQLState(), ex.getErrorCode(), ex);
+				}
+				_lg.getJournal().event("object", "action", "create", "objectType", "tablespace", "name", db, "datafile", file == null ? "(OMF in " + omf + ")" : file, "sizeMb", sizeMb);
+
+				// The schema owner: never logs in (locked, a random password nobody knows), owns the tables and the definer's rights procedures.
+				// CREATE TABLE: p_temp_report creates a private temporary table (a definer's rights procedure needs it granted directly).
+				admin.exec("create user " + db + " identified by \"" + generatePassword(new java.security.SecureRandom()) + "\" account lock default tablespace " + db + " quota unlimited on " + db);
+				admin.exec("grant create table to " + db);
+
+				if (admin.queryInt("select count(*) from dba_roles where role = upper(?)", ORA_ROLE) == 0)
+				{
+					admin.exec("create role " + ORA_ROLE);
+					_lg.getJournal().event("object", "action", "create", "objectType", "role", "name", ORA_ROLE);
+				}
+			}
+			break;
 		}
-		_lg.getJournal().event("object", "action", "create", "objectType", "database", "name", db);
+		_lg.getJournal().event("object", "action", "create", "objectType", _v == Vendor.ORACLE ? "schema" : "database", "name", db);
 	}
 
 	/** ASE: where createDatabase() puts its own data and log device (null = on --ase-data-dev / --ase-log-dev, or the 'default' device) */
@@ -689,6 +782,11 @@ public class Installer
 			admin.exec("create role " + login + " login password '" + pw + "' in role " + PG_ROLE);
 			admin.exec("alter role " + login + " set search_path = " + PG_SCHEMA + ", public");
 			break;
+		case ORACLE:
+			// No objects of its own: LoadGen.connect() sets current_schema to the load generator schema
+			admin.exec("create user " + login + " identified by \"" + pw + "\"");
+			admin.exec("grant create session, " + ORA_ROLE + " to " + login);
+			break;
 		}
 	}
 
@@ -700,6 +798,7 @@ public class Installer
 		case SQLSERVER: return admin.queryInt("select count(*) from sys.server_principals where name = ?", login) > 0;
 		case ASE:       return admin.queryInt("select count(*) from master..syslogins where name = ?", login) > 0;
 		case POSTGRES:  return admin.queryInt("select count(*) from pg_roles where rolname = ?", login) > 0;
+		case ORACLE:    return admin.queryInt("select count(*) from dba_users where username = upper(?)", login) > 0;
 		}
 		return false;
 	}
@@ -722,6 +821,10 @@ public class Installer
 			admin.exec("grant " + PG_ROLE + " to " + login);
 			admin.exec("alter role " + login + " set search_path = " + PG_SCHEMA + ", public");
 			break;
+		case ORACLE:
+			admin.exec("alter user " + login + " identified by \"" + pw + "\" account unlock");
+			admin.exec("grant create session, " + ORA_ROLE + " to " + login);
+			break;
 		}
 	}
 
@@ -743,6 +846,9 @@ public class Installer
 		case POSTGRES:
 			// Member of PG_ROLE, which owns the schema and every object in it
 			break;
+		case ORACLE:
+			// Has ORA_ROLE (granted in createLogin), which has the object privileges (granted in install, after the objects exist)
+			break;
 		}
 	}
 
@@ -758,6 +864,9 @@ public class Installer
 		List<String> cmds = new ArrayList<>(), failed = new ArrayList<>(), errors = new ArrayList<>();
 		if (_v == Vendor.POSTGRES)
 			cmds.add("analyze");
+		else if (_v == Vendor.ORACLE)
+			for (String tab : TABLES)
+				cmds.add("begin dbms_stats.gather_table_stats(ownname => '" + _lg.getDbname().toUpperCase() + "', tabname => '" + tab.toUpperCase() + "'); end;");
 		else
 			for (String tab : TABLES)
 				cmds.add(_v == Vendor.ASE ? "update index statistics " + tab : "update statistics " + tab);
@@ -777,8 +886,10 @@ public class Installer
 		}
 		if (!failed.isEmpty())
 		{
-			String go  = _v == Vendor.POSTGRES ? ";" : "\n    go";
-			String use = _v == Vendor.POSTGRES ? "-- connect to database " + _lg.getDbname() : "use " + _lg.getDbname() + go;
+			String go  = _v == Vendor.POSTGRES ? ";" : _v == Vendor.ORACLE ? "\n    /" : "\n    go";
+			String use = _v == Vendor.POSTGRES ? "-- connect to database " + _lg.getDbname()
+			           : _v == Vendor.ORACLE   ? "-- connect to the PDB (service " + _lg.getService() + "), for example with sqlplus"
+			           :                         "use " + _lg.getDbname() + go;
 			String msg = "Update statistics FAILED for " + failed.size() + " of " + cmds.size() + " command(s) (tempdb too small? see the errors above)."
 					+ " The install is still marked INSTALLED: the load runs without the statistics, but the plans may differ."
 					+ " To complete it later, run as an admin:\n    " + use + "\n    " + String.join(go + "\n    ", failed) + go;
@@ -1235,8 +1346,8 @@ public class Installer
 				if (dbCreatedByUs)
 				{
 					dropDatabase(admin, db);
-					journal.event("object", "action", "drop", "objectType", "database", "name", db);
-					_logger.info("Dropped database '" + db + "'.");
+					journal.event("object", "action", "drop", "objectType", _v == Vendor.ORACLE ? "schema" : "database", "name", db);
+					_logger.info("Dropped " + (_v == Vendor.ORACLE ? "schema (user cascade)" : "database") + " '" + db + "'.");
 					if (_v == Vendor.ASE)
 						dropAseDevices(admin);
 				}
@@ -1310,6 +1421,12 @@ public class Installer
 				admin.exec("drop role " + PG_ROLE);
 				journal.event("object", "action", "drop", "objectType", "role", "name", PG_ROLE);
 			}
+			//--- Oracle: the role the users had
+			if (_v == Vendor.ORACLE && !keepDb && admin.queryInt("select count(*) from dba_roles where role = upper(?)", ORA_ROLE) > 0)
+			{
+				admin.exec("drop role " + ORA_ROLE);
+				journal.event("object", "action", "drop", "objectType", "role", "name", ORA_ROLE);
+			}
 		}
 
 		String what = keepDb     ? "the logins (the database is kept)"
@@ -1336,6 +1453,22 @@ public class Installer
 			{
 				s.exec("drop schema " + PG_SCHEMA + " cascade");
 				_lg.getJournal().event("object", "action", "drop", "objectType", "schema", "name", PG_SCHEMA);
+			}
+			else if (_v == Vendor.ORACLE)
+			{
+				// The schema (user) is yours: only our procedures and tables ('purge': not to the recycle bin)
+				for (String name : PROCEDURES)
+					if (s.queryInt("select count(*) from all_objects where owner = upper(?) and object_name = upper(?) and object_type = 'PROCEDURE'", db, name) > 0)
+					{
+						s.exec("drop procedure " + db + "." + name);
+						_lg.getJournal().event("object", "action", "drop", "objectType", "procedure", "name", name);
+					}
+				for (String name : TABLES)
+					if (s.queryInt("select count(*) from all_objects where owner = upper(?) and object_name = upper(?) and object_type = 'TABLE'", db, name) > 0)
+					{
+						s.exec("drop table " + db + "." + name + " cascade constraints purge");
+						_lg.getJournal().event("object", "action", "drop", "objectType", "table", "name", name);
+					}
 			}
 			else
 			{
@@ -1381,6 +1514,7 @@ public class Installer
 				s.exec("exec sp_dropalias '" + login + "'");
 			break;
 		case POSTGRES:
+		case ORACLE:
 			break;
 		}
 	}
@@ -1401,6 +1535,25 @@ public class Installer
 		case POSTGRES:
 			admin.query("select pg_terminate_backend(pid) from pg_stat_activity where usename = ?", login);
 			break;
+		case ORACLE:
+			for (Object[] row : admin.query("select sid, serial# from v$session where username = upper(?)", login))
+				killOracleSession(admin, row[0], row[1]);
+			break;
+		}
+	}
+
+	/** Oracle: kill a session (it may already be gone: ORA-00030 is ignored) */
+	private void killOracleSession(LgSession admin, Object sid, Object serial)
+	throws SQLException
+	{
+		try
+		{
+			admin.exec("alter system kill session '" + sid + "," + serial + "' immediate");
+		}
+		catch (SQLException ex)
+		{
+			if (ex.getErrorCode() != 30) // ORA-00030: User session ID does not exist
+				throw ex;
 		}
 	}
 
@@ -1412,6 +1565,7 @@ public class Installer
 		{
 		case SQLSERVER: sql = "select name    from sys.server_principals where type = 'S' and name like 'dbxt[_]user[_]%'"; break;
 		case ASE:       sql = "select name    from master..syslogins where name like 'dbxt[_]user[_]%'"; break;
+		case ORACLE:    sql = "select lower(username) from dba_users where username like 'DBXT\\_USER\\_%' escape '\\'"; break;
 		default:        sql = "select rolname from pg_roles where rolname like 'dbxt\\_user\\_%'"; break;
 		}
 		List<String> list = new ArrayList<>();
@@ -1439,6 +1593,20 @@ public class Installer
 			admin.query("select pg_terminate_backend(pid) from pg_stat_activity where datname = ? and pid <> pg_backend_pid()", db);
 			admin.exec("drop database " + db);
 			break;
+		case ORACLE:
+			// Sessions using the schema (current_schema) hold locks on its tables: kill them, then the schema owner with all
+			// its objects, then the tablespace with its datafile (only if it is ours: named like the schema)
+			for (Object[] row : admin.query("select sid, serial# from v$session where (schemaname = upper(?) or username = upper(?)) and sid <> sys_context('USERENV', 'SID')", db, db))
+				killOracleSession(admin, row[0], row[1]);
+			admin.exec("drop user " + db + " cascade");
+			if (admin.queryInt("select count(*) from dba_tablespaces where tablespace_name = upper(?)", db) > 0)
+			{
+				List<Object[]> files = admin.query("select file_name from dba_data_files where tablespace_name = upper(?)", db);
+				admin.exec("drop tablespace " + db + " including contents and datafiles");
+				_lg.getJournal().event("object", "action", "drop", "objectType", "tablespace", "name", db, "datafiles", files.stream().map(r -> String.valueOf(r[0])).collect(java.util.stream.Collectors.toList()));
+				_logger.info("Dropped tablespace '" + db + "' and its datafile(s).");
+			}
+			break;
 		}
 	}
 
@@ -1451,6 +1619,7 @@ public class Installer
 		case SQLSERVER: admin.exec("drop login [" + login + "]"); break;
 		case ASE:       admin.exec("exec master..sp_droplogin '" + login + "'"); break;
 		case POSTGRES:  admin.exec("drop role " + login); break;
+		case ORACLE:    admin.exec("drop user " + login + " cascade"); break;
 		}
 	}
 
@@ -1504,8 +1673,8 @@ public class Installer
 
 			System.out.println();
 			System.out.println("Last runs:");
-			String top = _v == Vendor.POSTGRES ? "" : "top 10 ";
-			String lim = _v == Vendor.POSTGRES ? " limit 10" : "";
+			String top = _v == Vendor.POSTGRES || _v == Vendor.ORACLE ? "" : "top 10 ";
+			String lim = _v == Vendor.POSTGRES ? " limit 10" : _v == Vendor.ORACLE ? " fetch first 10 rows only" : "";
 			for (Object[] row : ss.query("select " + top + "run_id, start_ts, end_ts, intensity, threads, exec_count, error_count from dbxt_loadgen_runlog order by start_ts desc" + lim))
 				System.out.println(String.format("   %s  %s - %s  intensity=%s threads=%s execs=%s errors=%s", row[0], row[1], row[2], row[3], row[4], row[5], row[6]));
 			System.out.println();

@@ -127,9 +127,17 @@ public class Compare
 		}
 		// Journals written before 'graphs' existed in the expected lists: take alarms + graphs from the scenario's current definition
 		Vendor vendor = Vendor.fromString(String.valueOf(header.get("vendor")));
-		int graphsFromCode = 0, rowsFromCode = 0;
+		int graphsFromCode = 0, rowsFromCode = 0, allFromCode = 0;
 		for (Map<String, Object> p : problems)
 		{
+			// Written before the vendor had any expectations (expected = null, e.g. the first Oracle runs): take all of them from the scenario's current definition
+			if (vendor != null && p.get("expected") == null)
+				for (com.dbxtune.loadgen.scenario.Scenario sc : com.dbxtune.loadgen.scenario.Scenario.all())
+					if (sc.getName().equals(p.get("scenario")) && sc.getExpected(vendor) != null)
+					{
+						p.put("expected", sc.getExpected(vendor));
+						allFromCode++;
+					}
 			Map<String, Object> exp = expected(p);
 			boolean noGraphs = !exp.containsKey("graphs"), noRows = !exp.containsKey("rows");
 			if (!(noGraphs || noRows) || vendor == null || !(p.get("expected") instanceof Map))
@@ -428,6 +436,8 @@ public class Compare
 			w.println("| DbxCentral | " + _centralUrl + ", server " + _centralSrv + " |");
 			w.println("| Rules | alarm SEEN if raised from the problem start to its end + " + (graceMs / 1000) + " s (or already active), LATE if up to 5 min after that; graph SEEN if peak >= " + fmt(factor) + " x the run's normal level and >= normal + " + fmt(minDelta) + " |");
 			w.println("| Samples | " + spacing + " |");
+			if (allFromCode > 0)
+				w.println("| Note | the journal has no expectations for " + header.get("vendor") + " (written before they existed): " + allFromCode + " problem events use the current scenario definitions |");
 			if (graphsFromCode > 0)
 				w.println("| Note | the journal was written by an older version (no expected graphs): " + graphsFromCode + " problem events use the expected alarms and graphs of the current scenario definitions |");
 			if (rowsFromCode > 0 && doRows)
@@ -569,7 +579,9 @@ public class Compare
 				Instant t = java.time.LocalDateTime.parse(sampleTime, SAMPLE_TIME).atZone(_zone).toInstant();
 				if (t.isAfter(limit) || (!bySession && t.isAfter(winEnd) && checked > 0))
 					break; // statements/tables: at most one sample after the window
-				from = sampleTime;
+				// The next one from 1 ms later: navSample returns the time cut to ms, the recording has microseconds (02:51:54.269 < 02:51:54.269486),
+				// so 'next after sampleTime' was this same sample again, and only the first sample was ever checked (seen 2026-11-09)
+				from = java.time.LocalDateTime.parse(sampleTime, SAMPLE_TIME).plusNanos(1_000_000).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));
 				checked++;
 				if (first == null) first = t;
 				last = t;
@@ -582,6 +594,8 @@ public class Compare
 				if (ci < 0)
 					return new String[] {"COLUMN NOT FOUND", cm + " has no column '" + col + "'. Columns: " + String.join(", ", cols)};
 				int ctxi = cols.indexOf("context_info_str"), waiti = cols.indexOf("wait_type");
+				if (ctxi  < 0) ctxi  = cols.indexOf("CLIENT_INFO"); // Oracle (OracleTune CmActiveStatements): dbxt:<operation>, see LgSession.setOperation()
+				if (waiti < 0) waiti = cols.indexOf("EVENT");       // Oracle: the wait event
 
 				List<String> hits = new ArrayList<>();
 				Set<String>  ctx  = new java.util.TreeSet<>();

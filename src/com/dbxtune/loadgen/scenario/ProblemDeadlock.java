@@ -51,6 +51,9 @@ public class ProblemDeadlock extends Scenario
 				"One deadlock (error 1205 for the victim). Note: no deadlock alarm is known in AseTune, check what CmDeadlock shows.");
 		case POSTGRES:  return expected(Arrays.asList("CmPgDatabase"), Arrays.asList(),
 				"One deadlock (SQLState 40P01 for the victim) - pg_stat_database.deadlocks. Note: no deadlock alarm is known in PostgresTune.");
+		case ORACLE:    return expected(Arrays.asList("CmErrorLog", "CmSysStat"), Arrays.asList("AlarmEventErrorLogEntry:ORA-00060"),
+				"One deadlock (ORA-00060 for the victim; only its statement is rolled back, the scenario then rolls back its transaction). Oracle writes 'ORA-00060: Deadlock detected' to the alert log:"
+				+ " CmErrorLog raises ErrorLogEntry (extraInfo ORA-00060). CmSysStat 'enqueue deadlocks' +1 (too small for a graph check). " + "Seen 2026-11-09 on 23ai Free (size small, run low): the alarm was raised for the first deadlock and stayed active for the next ones.");
 		}
 		return null;
 	}
@@ -64,6 +67,7 @@ public class ProblemDeadlock extends Scenario
 		int wh = 1 + ctx.rnd().nextInt(ctx.getWarehouses());
 		String sql = tag() + "update stock set last_upd_ts = last_upd_ts where warehouse_id = ? and product_id = ?";
 		ev.put("table", "stock").put("warehouse_id", wh).put("product_ids", Arrays.asList(p1, p2)).put("sql", sql);
+		// Oracle: ORA-00060 rolls back only the victim's STATEMENT; its transaction (and first row lock) stays until it rolls back, which twoUpdates() does
 
 		List<String> results = new CopyOnWriteArrayList<>();
 		CountDownLatch bothHaveFirstLock = new CountDownLatch(2);
@@ -103,7 +107,7 @@ public class ProblemDeadlock extends Scenario
 		catch (SQLException ex)
 		{
 			s.rollbackQuietly();
-			boolean victim = ex.getErrorCode() == 1205 || "40P01".equals(ex.getSQLState());
+			boolean victim = ex.getErrorCode() == 1205 || "40P01".equals(ex.getSQLState()) || (s.getVendor() == Vendor.ORACLE && ex.getErrorCode() == 60); // ORA-00060
 			results.add("spid " + s.getSpid() + (victim ? " VICTIM" : " error") + ": " + ex.getErrorCode() + "/" + ex.getSQLState() + " " + ex.getMessage());
 		}
 		catch (InterruptedException ex)

@@ -52,6 +52,7 @@ public class TopCustomers extends Scenario
 		s.query(tag() + pick(ctx.getVendor(),
 				"select top 20 " + body,
 				"select top 20 " + body,
-				"select " + body + " limit 20"), fromKey, toKey);
+				"select " + body + " limit 20",
+				"select " + body + " fetch first 20 rows only"), fromKey, toKey);
 	}
 }

@@ -40,6 +40,6 @@ public class UpdateStats extends Scenario
 	{
 		String tab = TABLES[ctx.rnd().nextInt(TABLES.length)];
 		s.setQueryTimeout(600);
-		s.exec(tag() + pick(ctx.getVendor(), "update statistics " + tab, "update statistics " + tab, "analyze " + tab));
+		s.exec(tag() + pick(ctx.getVendor(), "update statistics " + tab, "update statistics " + tab, "analyze " + tab, "begin p_gather_stats('" + tab.toUpperCase() + "'); end;")); // Oracle: DBMS_STATS in a definer's rights procedure of the schema owner
 	}
 }

@@ -46,6 +46,8 @@ public class ProblemNPlusOne extends Scenario
 		case SQLSERVER: return withRows(expected(Arrays.asList("CmExecQueryStats", "CmExecSessions", "CmPerfCounters"), Arrays.asList(), Arrays.asList("CmPerfCounters.SqlBatch"), note + " Batch Requests/sec up."), "CmExecQueryStats:SqlText~@tag", "CmChattyStatements:SqlText~@tag");
 		case ASE:       return withRows(expected(Arrays.asList("CmChattyStatements", "CmProcessActivity", "CmStmntCacheDetails"), Arrays.asList("AlarmEventChattySession"), note + " CmProcessActivity: the session's BatchIdDiff very high."), "CmChattyStatements:SqlText~@tag");
 		case POSTGRES:  return expected(Arrays.asList("CmPgStatements", "CmPgDatabase"), Arrays.asList(), note);
+		case ORACLE:    return withRows(expected(Arrays.asList("CmChattyStatements", "CmSessions", "CmSqlStats"), Arrays.asList("AlarmEventChattySession"), note
+				+ " CmSessions: the session's round trips/s (ROUNDTRIPS) raise ChattySession. Seen 2026-11-09 on 23ai Free (size small, run low): ChattySession raised for every event, ~45 s after the start."), "CmChattyStatements:SqlText~@tag");
 		}
 		return null;
 	}

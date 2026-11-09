@@ -50,6 +50,9 @@ public class ProblemHotSpot extends Scenario
 				"Many short lock waits on counter_table.");
 		case POSTGRES:  return expected(Arrays.asList("CmPgPidWait", "CmPgSrvWait", "CmPgLocks", "CmPgBlockingLocks"), Arrays.asList(),
 				"Many short Lock/transactionid or tuple waits on counter_table.");
+		case ORACLE:    return withRows(expected(Arrays.asList("CmSystemEvent", "CmActiveStatements", "CmLocks", "CmSysStat"), Arrays.asList(), Arrays.asList("CmSysStat.Enqueue:enqueue waits"),
+				"Many short 'enq: TX - row lock contention' waits on COUNTER_TABLE (wait class Application). "
+				+ "Seen 2026-11-09 on 23ai Free (size small, run low): enqueue waits 0 -> ~225/s."), "CmActiveStatements:SID=@sessions");
 		}
 		return null;
 	}

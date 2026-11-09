@@ -52,7 +52,8 @@ public class PurgeAudit extends Scenario
 		String sql = pick(ctx.getVendor(),
 				"delete top (" + chunk + ") from audit_log where log_ts < ?",
 				"delete from audit_log where log_ts < ?", // 'set rowcount' below
-				"delete from audit_log where ctid in (select ctid from audit_log where log_ts < ? limit " + chunk + ")");
+				"delete from audit_log where ctid in (select ctid from audit_log where log_ts < ? limit " + chunk + ")",
+				"delete from audit_log where log_ts < ? and rownum <= " + chunk);
 
 		s.setQueryTimeout(600);
 		if (ctx.getVendor() == Vendor.ASE)

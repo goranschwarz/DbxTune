@@ -49,6 +49,9 @@ public class ProblemSortSpill extends Scenario
 				+ " when it runs longer than 60 s (seen at size large 2026-11-08, ~70 s after the start; a small size may sort faster -> MISSED).");
 		case POSTGRES:  return expected(Arrays.asList("CmPgDatabase", "CmPgStatements", "CmActiveStatements"), Arrays.asList(),
 				"Temp files (work_mem = 64kB): pg_stat_database temp_files/temp_bytes, pg_stat_statements temp_blks_written.");
+		case ORACLE:    return withRows(expected(Arrays.asList("CmTempSegUsage", "CmActiveStatements", "CmSysStat"), Arrays.asList(), Arrays.asList("CmTempSegUsage.TempInUseMb:*"),
+				"workarea_size_policy = manual + sort_area_size/hash_area_size = 64 KB for the session: the DISTINCT spills to TEMP (direct path write/read temp; CmSysStat 'sorts (disk)', 'workarea executions - multipass'). "
+				+ "Seen 2026-11-09 on 23ai Free (size small, run low): TEMP in use 1 -> 44-53 MB, the query runs ~20 s."), "CmTempSegUsage:SID=@sessions", "CmActiveStatements:SID=@sessions");
 		}
 		return null;
 	}
@@ -59,7 +62,7 @@ public class ProblemSortSpill extends Scenario
 	{
 		String body = "select count(*) from (select distinct o.customer_id, o.ship_city, ol.product_id, ol.qty, o.order_ts "
 				+ "from orders o join order_line ol on ol.order_id = o.order_id) t";
-		String sql = tag() + pick(ctx.getVendor(), body + " option (max_grant_percent = 0)", body, body);
+		String sql = tag() + pick(ctx.getVendor(), body + " option (max_grant_percent = 0)", body, body, body);
 		ev.put("sql", sql);
 
 		try (LgSession s = ctx.openSession(this))
@@ -73,6 +76,14 @@ public class ProblemSortSpill extends Scenario
 				s.exec("set local work_mem = '64kB'");
 				s.exec(sql);
 				s.commit();
+			}
+			else if (ctx.getVendor() == Vendor.ORACLE)
+			{
+				// Fixed, tiny work areas for this session (instead of the PGA target): the sort/hash for the DISTINCT goes to TEMP
+				s.exec("alter session set workarea_size_policy = manual");
+				s.exec("alter session set sort_area_size = 65536");
+				s.exec("alter session set hash_area_size = 65536");
+				s.exec(sql);
 			}
 			else
 			{

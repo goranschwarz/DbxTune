@@ -47,6 +47,9 @@ public class ProblemTempRecompile extends Scenario
 				"Procedure recompiles (temp table created inside the procedure).");
 		case POSTGRES:  return expected(Arrays.asList("CmPgStatements", "CmPgTables", "CmPgFunctions"), Arrays.asList(),
 				"Temp table create/drop on every call: catalog churn (pg_class/pg_attribute bloat).");
+		case ORACLE:    return withRows(expected(Arrays.asList("CmSysStat", "CmLibraryCache", "CmSqlStats"), Arrays.asList(), Arrays.asList("CmSysStat.Parse:parse count (hard)", "CmLibraryCache.LibCacheReloads:Invalidations"),
+				"No temp tables in procedures in Oracle: p_temp_report creates a private temporary table (18c+) with dynamic SQL on every call (a T-SQL habit) -> ~4 hard parses and library cache invalidations per call. "
+				+ "Seen 2026-11-09 on 23ai Free (size small, run low): 67 calls: +270 hard parses; Invalidations 0 -> ~8/s."), "CmSqlStats:SQL_FULLTEXT~p_temp_report");
 		}
 		return null;
 	}
@@ -55,7 +58,7 @@ public class ProblemTempRecompile extends Scenario
 	public void runProblem(RunContext ctx, ProblemEvent ev)
 	throws Exception
 	{
-		String sql = pick(ctx.getVendor(), "{call p_temp_report(?)}", "{call p_temp_report(?)}", "select p_temp_report(?)");
+		String sql = pick(ctx.getVendor(), "{call p_temp_report(?)}", "{call p_temp_report(?)}", "select p_temp_report(?)", "{call p_temp_report(?)}");
 		ev.put("sql", sql);
 
 		int durationSec = activeSeconds(ctx, "durationSeconds", 60);

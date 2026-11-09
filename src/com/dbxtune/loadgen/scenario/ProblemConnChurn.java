@@ -44,6 +44,8 @@ public class ProblemConnChurn extends Scenario
 		case SQLSERVER: return expected(Arrays.asList("CmPerfCounters", "CmSummary", "CmExecSessions"), Arrays.asList(), Arrays.asList("CmSummary.ConnRateGraph"), "Logins/sec and Logouts/sec up. Errors/sec (_Total) also goes up: every login gives informational messages (database/language context changed).");
 		case ASE:       return expected(Arrays.asList("CmSummary", "CmSysmon", "CmProcessActivity"), Arrays.asList(), "Connections per second up (many short spids).");
 		case POSTGRES:  return expected(Arrays.asList("CmSummary", "CmPgActivity", "CmPgDatabase"), Arrays.asList(), "Many short backends (sessions per second up).");
+		case ORACLE:    return expected(Arrays.asList("CmSysStat", "CmSessions", "CmSummary"), Arrays.asList(),
+				"Logons/s up: CmSysStat 'logons cumulative' (no graph of it in OracleTune). The sessions live ~50 ms, so CmSessions and the ConnectionsGraph (sessions at sample time) hardly show them.");
 		}
 		return null;
 	}

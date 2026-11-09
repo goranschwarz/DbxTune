@@ -53,6 +53,10 @@ public class ProblemRbarCursor extends Scenario
 				"One long procedure call with a cursor; table scans of stock per row.");
 		case POSTGRES:  return expected(Arrays.asList("CmPgFunctions", "CmPgStatements", "CmActiveStatements", "CmPgTables"), Arrays.asList(),
 				"One long function call (track_functions must be on for CmPgFunctions); seq scans of stock per row.");
+		case ORACLE:    return expected(Arrays.asList("CmSqlStats", "CmActiveStatements"), Arrays.asList(),
+				"One procedure call with a cursor loop; the two UPDATEs inside execute once per product (high EXECUTIONS in CmSqlStats when it runs longer)."
+				+ " Seen 2026-11-09 on 23ai Free (size small): a call takes < 0.1 s (~40 products per category), too short for a session sample, and the call + its UPDATEs"
+				+ " were aged out of V$SQLSTATS before CmSqlStats' next sample (small shared pool, literal_sql churn). So nothing to check at size small.");
 		}
 		return null;
 	}
@@ -64,7 +68,7 @@ public class ProblemRbarCursor extends Scenario
 		int category = 1 + ctx.rnd().nextInt(ctx.getCategories());
 		long stockRows = (long) ctx.getWarehouses() * ctx.getProducts();
 		int  maxRows   = ctx.getLoadGen().getScenarioIntProp(this, "maxRows", (int) Math.max(10, Math.min(500, 20_000_000L / Math.max(1, stockRows))));
-		String sql = pick(ctx.getVendor(), "{call p_rbar_price_adjust(?, ?)}", "{call p_rbar_price_adjust(?, ?)}", "select p_rbar_price_adjust(?, ?)");
+		String sql = pick(ctx.getVendor(), "{call p_rbar_price_adjust(?, ?)}", "{call p_rbar_price_adjust(?, ?)}", "select p_rbar_price_adjust(?, ?)", "{call p_rbar_price_adjust(?, ?)}");
 		ev.put("category_id", category).put("maxRows", maxRows).put("sql", sql);
 
 		try (LgSession s = ctx.openSession(this))
@@ -82,7 +86,7 @@ public class ProblemRbarCursor extends Scenario
 				if (ctx.isStopping() || s.isCancelled() || ex instanceof java.sql.SQLTimeoutException)
 					throw ex;
 				ev.setNote("The procedure has no max_rows parameter (installed before 2026-11-07, re-install to get it): called without a limit. First try: " + ex.getMessage());
-				s.call(pick(ctx.getVendor(), "{call p_rbar_price_adjust(?)}", "{call p_rbar_price_adjust(?)}", "select p_rbar_price_adjust(?)"), category);
+				s.call(pick(ctx.getVendor(), "{call p_rbar_price_adjust(?)}", "{call p_rbar_price_adjust(?)}", "select p_rbar_price_adjust(?)", "{call p_rbar_price_adjust(?)}"), category);
 			}
 			ev.put("durationMs", System.currentTimeMillis() - start);
 		}

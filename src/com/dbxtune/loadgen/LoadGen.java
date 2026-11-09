@@ -47,7 +47,7 @@ import com.dbxtune.utils.OpenSslAesUtil;
 import com.dbxtune.utils.StringUtil;
 
 /**
- * DbxLoadGen - a load generator for SQL Server, Sybase ASE and Postgres (more vendors later).
+ * DbxLoadGen - a load generator for SQL Server, Sybase ASE, Postgres and Oracle (more vendors later).
  * <p>
  * Used to put "dummy traffic" on test servers, so the DbxTune collectors and DbxCentral have something to show,
  * and to find bugs. Every run writes a journal of what was done (see {@link Journal}).
@@ -79,6 +79,7 @@ public class LoadGen
 	private Vendor     _vendor;
 	private String     _host;
 	private int        _port;
+	private String     _service;  // Oracle: the service name (PDB) from -S host[:port]/service
 	private String     _srvName;
 	private String     _adminUser;
 	private String     _adminPassword;
@@ -92,6 +93,7 @@ public class LoadGen
 	public String      getSrvName()    { return _srvName; }
 	public String      getHost()       { return _host; }
 	public int         getPort()       { return _port; }
+	public String      getService()    { return _service; }
 	public String      getDbname()     { return _dbname; }
 	public String      getAdminUser()  { return _adminUser; }
 	public String      getPasswdFile() { return _passwdFile; }
@@ -218,7 +220,7 @@ public class LoadGen
 	//------------------------------------------------------------------
 	// Connections
 	//------------------------------------------------------------------
-	/** Connect as the admin user (sa/postgres) */
+	/** Connect as the admin user (sa/postgres/system). Oracle: dbname = the schema (current_schema), null = none */
 	public LgSession connectAdmin(String dbname)
 	throws Exception
 	{
@@ -246,7 +248,7 @@ public class LoadGen
 	{
 		ConnectionProp cp = new ConnectionProp();
 		cp.setDriverClass(_vendor.getDriverClass());
-		cp.setUrl(_vendor.getUrl(_host, _port, dbname));
+		cp.setUrl(_vendor.getUrl(_host, _port, _vendor == Vendor.ORACLE ? _service : dbname)); // Oracle: the "database" is a schema in the service's PDB
 		cp.setUsername(user);
 		cp.setPassword(password);
 		cp.setAppName(appName);
@@ -270,11 +272,28 @@ public class LoadGen
 			cp.setUrlOption("ApplicationName", appName);
 			cp.setUrlOption("reWriteBatchedInserts", "true");
 			break;
+		case ORACLE:
+			cp.setUrlOption("v$session.program", appName.length() > 48 ? appName.substring(0, 48) : appName); // V$SESSION.PROGRAM (48 chars)
+			cp.setUrlOption("oracle.jdbc.J2EE13Compliant", "true"); // getObject(): java.sql.Timestamp for TIMESTAMP/DATE, not oracle.sql.TIMESTAMP
+			break;
 		}
 
 		try
 		{
 			DbxConnection conn = DbxConnection.connect(null, cp);
+			// Oracle: the "database" is the schema owner; unqualified names resolve there (the users have no objects of their own)
+			if (_vendor == Vendor.ORACLE && dbname != null)
+			{
+				try (java.sql.Statement stmt = conn.createStatement())
+				{
+					stmt.execute("alter session set current_schema = " + dbname);
+				}
+				catch (SQLException ex)
+				{
+					conn.close();
+					throw ex;
+				}
+			}
 			return new LgSession(this, conn, user, appName, stats);
 		}
 		catch (SQLException ex)
@@ -357,13 +376,14 @@ public class LoadGen
 		pw.println("  scenarios   List the scenarios");
 		pw.println();
 		pw.println("connection:");
-		pw.println("  -t,--dbms <sqlserver|ase|postgres>  DBMS vendor");
+		pw.println("  -t,--dbms <sqlserver|ase|postgres|oracle>  DBMS vendor");
 		pw.println("  -S,--server <host[:port]>           Server (default port per vendor). ASE: also a server name from the interfaces file");
+		pw.println("                                      Oracle: host[:port]/service, the service of the PDB (e.g. dbhost:1521/FREEPDB1)");
 		pw.println("  --name <name>                       Logical server name: password file key, journal dir");
-		pw.println("                                      (default: host, or host_port when a port is given)");
-		pw.println("  -U,--user <admin>                   Admin user for install/uninstall/status (default: sa / postgres)");
+		pw.println("                                      (default: -S with ':' and '/' as '_', e.g. host, host_port, host_port_service)");
+		pw.println("  -U,--user <admin>                   Admin user for install/uninstall/status (default: sa / postgres / system)");
 		pw.println("  -P,--password <pw>                  Admin password (default: from the load generator's password file)");
-		pw.println("  -D,--dbname <name>                  Database (default: " + DEFAULT_DBNAME + ")");
+		pw.println("  -D,--dbname <name>                  Database (default: " + DEFAULT_DBNAME + "). Oracle: the schema owner (+ its tablespace)");
 		pw.println("  --passwd-file <file>                Password file (default: " + getDefaultPasswdFile() + ")");
 		pw.println("  -c,--config <file>                  Extra properties (scenario weights etc, see conf/loadgen.properties)");
 		pw.println();
@@ -410,6 +430,7 @@ public class LoadGen
 		pw.println("  loadgen.sh install -t sqlserver -S gs-1-mssql -U sa --size small");
 		pw.println("  loadgen.sh run     -t sqlserver -S gs-1-mssql --duration 15m-45m --intensity low");
 		pw.println("  loadgen.sh compare --name gs-1-mssql --central http://localhost:8080 --central-srv GS-1-MSSQL");
+		pw.println("  loadgen.sh install -t oracle    -S orahost:1521/FREEPDB1 -U system --size small");
 		pw.println();
 		pw.flush();
 	}
@@ -441,7 +462,7 @@ public class LoadGen
 
 		_vendor = Vendor.fromString(cmd.getOptionValue("dbms"));
 		if (_vendor == null)
-			throw new ParseException("-t/--dbms is required: sqlserver, ase or postgres");
+			throw new ParseException("-t/--dbms is required: sqlserver, ase, postgres or oracle");
 
 		String server = cmd.getOptionValue("server");
 		if (StringUtil.isNullOrBlank(server))
@@ -449,7 +470,20 @@ public class LoadGen
 
 		_host = server;
 		_port = _vendor.getDefaultPort();
-		if (server.contains(":"))
+		if (_vendor == Vendor.ORACLE)
+		{
+			// host[:port]/service
+			if (!server.contains("/") || server.endsWith("/"))
+				throw new ParseException("-S/--server for Oracle is host[:port]/service, the service name of the PDB, e.g. dbhost:1521/FREEPDB1");
+			_service = server.substring(server.indexOf('/') + 1);
+			_host    = server.substring(0, server.indexOf('/'));
+			if (_host.contains(":"))
+			{
+				_port = Integer.parseInt(_host.substring(_host.indexOf(':') + 1));
+				_host = _host.substring(0, _host.indexOf(':'));
+			}
+		}
+		else if (server.contains(":"))
 		{
 			_host = server.substring(0, server.indexOf(':'));
 			_port = Integer.parseInt(server.substring(server.indexOf(':') + 1));
@@ -468,8 +502,8 @@ public class LoadGen
 			}
 		}
 
-		// ':' can't be in the password file's server field
-		_srvName = cmd.getOptionValue("name", server.contains(":") ? _host + "_" + _port : server); // ASE: the server name, not the resolved host
+		// ':' can't be in the password file's server field, '/' (Oracle service) not in the journal dir name
+		_srvName = cmd.getOptionValue("name", server.replaceAll("[:/]", "_")); // ASE: the server name, not the resolved host
 
 		_adminUser     = cmd.getOptionValue("user", _vendor.getDefaultAdminUser());
 		_adminPassword = cmd.getOptionValue("password");
@@ -560,7 +594,7 @@ public class LoadGen
 				lg._cmd = cmd;
 				lg.loadAllProps(cmd);
 				String server = cmd.getOptionValue("server");
-				String name   = cmd.getOptionValue("name", server == null ? null : server.replace(':', '_'));
+				String name   = cmd.getOptionValue("name", server == null ? null : server.replaceAll("[:/]", "_"));
 				File f = null;
 				if (cmd.hasOption("file"))
 					f = new File(cmd.getOptionValue("file"));
@@ -617,7 +651,7 @@ public class LoadGen
 			if (!Configuration.hasInstance(confName))
 				Configuration.setInstance(confName, new Configuration());
 
-		_logger.info("Starting " + APP_NAME + " (DbxTune " + Version.getVersionStr() + "), mode=" + mode + ", vendor=" + lg._vendor.getName() + ", server=" + lg._host + ":" + lg._port + ", name=" + lg._srvName + ", dbname=" + lg._dbname);
+		_logger.info("Starting " + APP_NAME + " (DbxTune " + Version.getVersionStr() + "), mode=" + mode + ", vendor=" + lg._vendor.getName() + ", server=" + lg._host + ":" + lg._port + (lg._service == null ? "" : "/" + lg._service) + ", name=" + lg._srvName + ", dbname=" + lg._dbname);
 
 		try
 		{

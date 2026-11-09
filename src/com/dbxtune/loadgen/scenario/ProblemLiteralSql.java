@@ -47,6 +47,9 @@ public class ProblemLiteralSql extends Scenario
 				"Statement cache churn, unless 'enable literal autoparam' is on.");
 		case POSTGRES:  return expected(Arrays.asList("CmPgStatements"), Arrays.asList(),
 				"pg_stat_statements normalizes literals, so expect ONE entry with a high call count (each call is parsed + planned).");
+		case ORACLE:    return withRows(expected(Arrays.asList("CmSysStat", "CmSqlStats", "CmChattyStatements", "CmLibraryCache"), Arrays.asList(), Arrays.asList("CmSysStat.Parse:parse count (hard)"),
+				"cursor_sharing = EXACT: every statement is a hard parse and a new SQL_ID (one FORCE_MATCHING_SIGNATURE). "
+				+ "Seen 2026-11-09 on 23ai Free (size small, run low): parse count (hard) ~0.5 -> 25-30/s."), "CmSqlStats:SQL_FULLTEXT~@tag");
 		}
 		return null;
 	}

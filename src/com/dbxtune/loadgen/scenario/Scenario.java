@@ -133,13 +133,14 @@ public abstract class Scenario
 	}
 
 	/** Pick the SQL for a vendor */
-	protected static String pick(Vendor v, String sqlServer, String ase, String postgres)
+	protected static String pick(Vendor v, String sqlServer, String ase, String postgres, String oracle)
 	{
 		switch (v)
 		{
 		case SQLSERVER: return sqlServer;
 		case ASE:       return ase;
 		case POSTGRES:  return postgres;
+		case ORACLE:    return oracle;
 		}
 		throw new IllegalStateException("Unknown vendor " + v);
 	}
