@@ -30,7 +30,7 @@ import com.dbxtune.utils.Configuration;
 /**
  * Finds the <b>parent</b> of a possible N+1 <i>child</i> statement: the statement whose rows per sample follow the child's executions per sample.
  * <p>
- * Used by the "Possible N+1 / Chatty Statements" sections of the Daily Summary Report (SQL Server: CmChattyStatements and Query Store, Postgres: CmPgStatements, ASE, Oracle and Db2: CmChattyStatements).
+ * Used by the "Possible N+1 / Chatty Statements" sections of the Daily Summary Report (SQL Server: CmChattyStatements and Query Store, Postgres: CmPgStatements, ASE, Oracle, Db2 and MySQL: CmChattyStatements).
  */
 public class NPlusOneParent
 {
