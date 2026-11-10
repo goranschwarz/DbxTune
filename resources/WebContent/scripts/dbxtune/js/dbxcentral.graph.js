@@ -4251,6 +4251,7 @@ class DbxGraph
 				yScaleID: 'y',
 				xMin: this._markStartTime,
 				xMax: this._markEndTime,
+				adjustScaleRange: false, // annotation plugin 2.x+ would otherwise widen the x-scale (breaks mdc: one day per chart)
 				backgroundColor: 'rgba(128, 128, 128, 0.2)', // Light gray transparent background
 				borderColor: 'gray',
 				borderWidth: 0
@@ -4306,6 +4307,7 @@ class DbxGraph
 			type: 'line',
 			scaleID: 'x',
 			value: ts,
+			adjustScaleRange: false, // annotation plugin 2.x+ would otherwise widen the x-scale (breaks mdc: one day per chart)
 			borderColor: 'gray',
 			borderWidth: 2,
 			borderDash: [2, 2],
