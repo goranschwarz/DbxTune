@@ -64,6 +64,13 @@ public class Installer
 	/** Oracle: the role the dbxt_user_# users get (DML on the tables, EXECUTE on the procedures) */
 	public static final String ORA_ROLE  = "dbxt_loadgen_role";
 
+	/** Editions with a data limit (Oracle Free/Express: 12 GB user data, SQL Server Express: 10 GB per database): the largest size */
+	public static final String LIMITED_EDITION_MAX_SIZE  = "medium";
+	/** Oracle Free/Express: MAXSIZE of our tablespace, so a long run can't grow the data past the 12 GB (that can keep the database from opening after a restart) */
+	public static final int    ORA_LIMITED_TABLESPACE_MB = 4096;
+	/** Set in install(): the Oracle server is a Free or Express Edition */
+	private boolean _oraLimitedEdition;
+
 	/** ASE devices created with --ase-device-dir */
 	public static final String ASE_DATA_DEV = "dbxt_loadgen_data";
 	public static final String ASE_LOG_DEV  = "dbxt_loadgen_log";
@@ -172,6 +179,26 @@ public class Installer
 				errMsg = checkExistingDatabase(db);
 			else if (_v == Vendor.ASE)
 				errMsg = chooseAseDeviceDir(admin, db, size);
+
+			// Free editions with a data limit: refuse the big sizes (Oracle: also cap our tablespace, in createDatabase)
+			String limitedEdition = null;
+			if (_v == Vendor.ORACLE)
+			{
+				String banner = String.valueOf(admin.queryValue("select banner from v$version where rownum = 1")).trim();
+				_oraLimitedEdition = banner.contains("Express Edition") || banner.contains(" Free");
+				if (_oraLimitedEdition)
+					limitedEdition = "'" + banner + "' (Free/Express Edition: 12 GB user data for the whole database, going over it can keep the database from opening after a restart)";
+			}
+			else if (_v == Vendor.SQLSERVER && admin.queryInt("select convert(int, serverproperty('EngineEdition'))") == 4)
+				limitedEdition = "SQL Server Express Edition (10 GB per database)";
+
+			if (limitedEdition != null)
+			{
+				_logger.info("Limited edition " + limitedEdition + ": max size '" + LIMITED_EDITION_MAX_SIZE + "'.");
+				if (errMsg == null && size.factor > Size.fromString(LIMITED_EDITION_MAX_SIZE).factor)
+					errMsg = "Size '" + size.name + "' (~" + size.estimateMb() + " MB) is too big for " + limitedEdition + ". Use --size small or " + LIMITED_EDITION_MAX_SIZE + ".";
+			}
+
 			if (errMsg != null)
 			{
 				System.out.println("ERROR: " + errMsg);
@@ -582,7 +609,7 @@ public class Installer
 						throw new SQLException("Oracle: can't decide where to put the datafile of tablespace '" + db + "': db_create_file_dest is not set and no datafile directory was found in dba_data_files.");
 					file = dir + db.toLowerCase() + "01.dbf";
 				}
-				String sql = "create bigfile tablespace " + db + " datafile " + (file == null ? "" : "'" + file + "' ") + "size " + sizeMb + "M autoextend on next 64M maxsize unlimited";
+				String sql = "create bigfile tablespace " + db + " datafile " + (file == null ? "" : "'" + file + "' ") + "size " + sizeMb + "M autoextend on next 64M maxsize " + (_oraLimitedEdition ? ORA_LIMITED_TABLESPACE_MB + "M" : "unlimited");
 				_logger.info("Oracle: " + sql);
 				try
 				{
@@ -592,7 +619,7 @@ public class Installer
 				{
 					throw new SQLException(ex.getMessage().trim() + (file == null ? "" : "\n   If the file '" + file + "' is left from an earlier install, remove it on the database host."), ex.getSQLState(), ex.getErrorCode(), ex);
 				}
-				_lg.getJournal().event("object", "action", "create", "objectType", "tablespace", "name", db, "datafile", file == null ? "(OMF in " + omf + ")" : file, "sizeMb", sizeMb);
+				_lg.getJournal().event("object", "action", "create", "objectType", "tablespace", "name", db, "datafile", file == null ? "(OMF in " + omf + ")" : file, "sizeMb", sizeMb, "maxsizeMb", _oraLimitedEdition ? ORA_LIMITED_TABLESPACE_MB : "unlimited");
 
 				// The schema owner: never logs in (locked, a random password nobody knows), owns the tables and the definer's rights procedures.
 				// CREATE TABLE: p_temp_report creates a private temporary table (a definer's rights procedure needs it granted directly).

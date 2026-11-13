@@ -136,6 +136,11 @@ Plus `audit_log` (100 000 x factor rows), `session_event` (5 000 x factor rows o
 The estimate is printed before anything is filled. Install times seen for `small` on Docker: Postgres 10 s,
 Oracle 15-20 s, SQL Server 30 s, ASE 3 minutes.
 
+**Free editions with a data limit:** on Oracle Free / Express Edition (12 GB user data for the whole database; going over
+it can keep the database from opening after a restart) and SQL Server Express (10 GB per database), sizes above `medium`
+are refused. On Oracle Free/Express the tablespace also gets `MAXSIZE 4096M` instead of `unlimited`, so a long run can't
+grow the data past it (with `--use-existing-db` the tablespace is not ours and is not changed).
+
 ### Database options used
 
 **SQL Server** (database created by the install):
