@@ -44,9 +44,9 @@ public class ProblemNPlusOne extends Scenario
 		switch (v)
 		{
 		case DB2:      return withRows(expected(Arrays.asList("CmChattyStatements", "CmMonGetConnection", "CmStatements"), Arrays.asList("AlarmEventChattySession"), note
-				+ " CmMonGetConnection: the connection's requests/s (APP_RQSTS_COMPLETED_TOTAL) raise ChattySession (over 100/s for 2 samples)."
-				+ " Seen 2026-11-13 on DB2 11.5.8 (size small, run low): ChattySession for every event on the right application_handle - and also on normal OLTP workers"
-				+ " (JCC sends several requests per statement: ~128 requests/s at ~10 logical reads each), so the threshold of 100 is low for DB2."), "CmMonGetConnection:APPLICATION_HANDLE=@sessions");
+				+ " CmMonGetConnection: the connection's statements/s (DYNAMIC_SQL_STMTS) raise ChattySession (over 100/s for 2 samples)."
+				+ " Seen 2026-11-13 on DB2 11.5.8 (size small, run low): ChattySession for every event on the right application_handle; the N+1 session ~190 statements/s,"
+				+ " the busiest OLTP worker ~17/s, so no false positives (with the earlier counter APP_RQSTS_COMPLETED_TOTAL, ~3.5-4 requests per statement, they had them)."), "CmMonGetConnection:APPLICATION_HANDLE=@sessions");
 		case MYSQL:   return withRows(expected(Arrays.asList("CmChattyStatements", "CmSessionActivity", "CmStatements"), Arrays.asList("AlarmEventChattySession"), note
 				+ " CmSessionActivity: the session's Questions/s raise ChattySession (over 100/s for 2 samples)."
 				+ " Seen 2026-11-13 on MySQL 8.4 (size small, run low): ChattySession raised for every event, on the right connection_id."), "CmSessionActivity:PROCESSLIST_ID=@sessions");

@@ -810,6 +810,22 @@ the product name. Very many tiny statements from one session.
 - Postgres: CmPgStatements.
 - Oracle (seen 2026-11-09, 23ai Free + 21c XE, size small): `AlarmEventChattySession` for every event (CmSessions: round trips/s of the session),
   CmChattyStatements (rows tagged `dbxt:n_plus_one`).
+- MySQL / DB2: see [the table below](#mysql-and-db2-what-mysqltune--db2tune-showed).
+
+**`AlarmEventChattySession` and N+1.** The alarm has the same default on every vendor: a session sends more than 100
+statements per second, with fewer than 10 logical reads (MySQL: rows read) each, for 2 samples in a row. The counter is
+"statements from the client" everywhere: ASE SQL batches (CmProcessActivity), Oracle SQL\*Net round trips (CmSessions),
+MySQL `Questions` (CmSessionActivity), DB2 `DYNAMIC_SQL_STMTS` (CmMonGetConnection). On DB2, measured on 11.5 with JDBC
+(2026-11-13), `DYNAMIC_SQL_STMTS` is exactly 1 per client statement (also a CALL; the SQL inside a procedure is not counted), while
+`APP_RQSTS_COMPLETED_TOTAL` is 1-4 requests per statement (the autocommit commit, the prepare of a literal statement, client info are
+requests of their own) - with that counter, normal OLTP workers went over 100. Not counted on DB2: precompiled (static SQL) clients.
+
+The alarm only says "many cheap statements from one session": a busy normal session (a connection pool, a queue consumer)
+looks the same, so it is a **possible** N+1. What makes it N+1 is the statement pattern: a child statement that runs once per
+row of a parent statement. The Daily Summary Report section "Possible N+1 / Chatty Statements" checks exactly that
+(child executions per parent row ~1, at least 2 child executions per parent execution, the parent's rows per sample follow
+the child's executions per sample: correlation >= 0.9 over at least 4 samples) and names the pair, e.g. `product <- order_line`.
+Known pooled applications can be left out with the alarm's `skip` settings (user / program / application name).
 
 #### `temp_recompile` - every 8 min, ~100 s
 Calls `p_temp_report` twice a second: it fills a temp table, runs a select on it, creates an index on it, and runs the
@@ -854,7 +870,7 @@ and graphs only where the problem is the main cause.
 | non_sargable | the session's SelectScan, CmStatements NoIndexUsed | CmStatements ROWS_READ_PER_EXEC |
 | hot_spot | CmGlobalStatus Innodb_row_lock_waits ~0.8 -> ~40/s | CmSummary LocksGraph `Lock Waits` ~0.3 -> ~43/s |
 | rbar_cursor | 0.6-0.8 s per call; a lock wait timeout (1205 after 50 s) when it overlaps `blocking` | ~30 ms per call: TOO SHORT |
-| n_plus_one | `ChattySession` for every event, on the right connection | `ChattySession` for every event, on the right application handle - **and on normal OLTP workers** (JCC sends several requests per statement: ~128 requests/s at ~10 logical reads each, over the threshold of 100) |
+| n_plus_one | `ChattySession` for every event, on the right connection | `ChattySession` for every event, on the right application handle (~190 statements/s; the busiest OLTP worker ~17/s). Counted on `DYNAMIC_SQL_STMTS` since 2026-11-13: the earlier `APP_RQSTS_COMPLETED_TOTAL` is 1-4 requests per statement, and normal OLTP workers went over 100 |
 | temp_recompile | temporary table created/dropped per call (no plan cache to recompile) | declared temporary table per call: run-time compiles |
 | conn_churn | no connections-per-second graph: nothing checked | no connections-per-second graph: nothing checked |
 | errors | 1062, 1242, a cancelled `SLEEP()`, 1146: not in the error log, no alarm; per digest in CmStatements | SQL0803N, SQL0801N, SQL0952N (cancelled `DBMS_ALERT.SLEEP`), SQL0204N: no alarm; FAILED_SQL_STMTS per connection |

@@ -56,7 +56,8 @@ extends AlarmEvent
 				// Note: max length for the below message is 512
 				"Chatty session (possible N+1) in '" + cm.getServerName() + "': " + sessionDesc + " sends " + Math.round(requestsPerSec) + " requests/s"
 					+ " with " + (Math.round(readsPerRequest * 10) / 10.0) + " logical reads each, for " + samples + " samples."
-					+ " (threshold: > " + toStr(thresholdPerSec) + " requests/s and < " + toStr(maxReadsPerRequest) + " reads/request)",
+					+ " (threshold: > " + toStr(thresholdPerSec) + " requests/s and < " + toStr(maxReadsPerRequest) + " reads/request)"
+					+ " Can also be a busy normal session: confirm in the Daily Summary Report, 'Possible N+1'.",
 				thresholdPerSec);
 
 		// Set: Time To Live if postpone is enabled

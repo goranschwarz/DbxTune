@@ -92,6 +92,7 @@ extends CountersModel
 		"ACT_COMPLETED_TOTAL",
 		"ACT_ABORTED_TOTAL",
 		"APP_RQSTS_COMPLETED_TOTAL",
+		"DYNAMIC_SQL_STMTS",
 		"FAILED_SQL_STMTS",
 		"ROWS_READ",
 		"ROWS_RETURNED",
@@ -222,8 +223,9 @@ extends CountersModel
 			mtd.addColumn(CM_NAME, "TOTAL_APP_ROLLBACKS",       "<html>Rollbacks.</html>");
 			mtd.addColumn(CM_NAME, "ACT_COMPLETED_TOTAL",       "<html>Activities (statements) that completed.</html>");
 			mtd.addColumn(CM_NAME, "ACT_ABORTED_TOTAL",         "<html>Activities (statements) that failed or were interrupted.</html>");
-			mtd.addColumn(CM_NAME, "APP_RQSTS_COMPLETED_TOTAL", "<html>Requests from the application that completed (open, fetch, execute, commit...). <br>This is what the client sends: SQL run by a procedure is not counted here, but in ACT_COMPLETED_TOTAL.</html>");
-			mtd.addColumn(CM_NAME, "FAILED_SQL_STMTS",          "<html>Statements that failed (negative SQLCODE).</html>");
+			mtd.addColumn(CM_NAME, "APP_RQSTS_COMPLETED_TOTAL", "<html>Requests from the application that completed (open, fetch, execute, commit...). <br>This is what the client sends: SQL run by a procedure is not counted here, but in ACT_COMPLETED_TOTAL. <br>A statement can be 1-4 requests (measured on 11.5 with JDBC: 2 with autocommit, 3 for a literal statement or with client info set first).</html>");
+			mtd.addColumn(CM_NAME, "DYNAMIC_SQL_STMTS",         "<html>Dynamic SQL statements the client sent (JDBC/ODBC/CLI): exactly 1 per statement, also a CALL (the SQL a procedure runs is not counted). <br>Commits are not counted. <br>Used for the alarm <b>ChattySession</b>: the same unit as MySQL's Questions and ASE's SQL batches.</html>");
+			mtd.addColumn(CM_NAME, "FAILED_SQL_STMTS",         "<html>Statements that failed (negative SQLCODE).</html>");
 			mtd.addColumn(CM_NAME, "ROWS_READ",                 "<html>Rows read.</html>");
 			mtd.addColumn(CM_NAME, "ROWS_RETURNED",             "<html>Rows returned to the application.</html>");
 			mtd.addColumn(CM_NAME, "ROWS_MODIFIED",             "<html>Rows inserted, updated or deleted.</html>");
@@ -311,6 +313,7 @@ extends CountersModel
 			+ "    ,ACT_COMPLETED_TOTAL \n"
 			+ "    ,ACT_ABORTED_TOTAL \n"
 			+ "    ,APP_RQSTS_COMPLETED_TOTAL \n"
+			+ "    ,DYNAMIC_SQL_STMTS \n"
 			+ "    ,FAILED_SQL_STMTS \n"
 			+ "    ,ROWS_READ \n"
 			+ "    ,ROWS_RETURNED \n"
@@ -371,11 +374,14 @@ extends CountersModel
 		CountersModel cm = this;
 
 		//-------------------------------------------------------
-		// ChattySession: one connection sends very many tiny requests (possible N+1)
-		// Requests = APP_RQSTS_COMPLETED_TOTAL: what the client sends (open, fetch, execute, commit). ACT_COMPLETED_TOTAL also counts
-		// the SQL that a procedure runs (measured on 11.5: one CALL of a procedure doing 1000 SELECTs = 4 requests, 1001 activities),
-		// so a loop in a procedure is not taken as a chatty client.
-		// Above the threshold for ## samples in a row, and few logical reads per request
+		// ChattySession: one connection sends very many tiny statements (possible N+1)
+		// Statements = DYNAMIC_SQL_STMTS: the statements the client sent, the same unit as the other vendors (MySQL Questions, ASE SQL batches),
+		// so one threshold means the same everywhere. Measured on 11.5 with JDBC (2026-11-13), per client statement:
+		//   DYNAMIC_SQL_STMTS         exactly 1 (prepared or literal, autocommit on/off, a CALL = 1)
+		//   APP_RQSTS_COMPLETED_TOTAL 1-4 (2 with autocommit: the commit is a request; 3 for a literal statement or with setClientInfo first; a CALL = 4)
+		//   ACT_COMPLETED_TOTAL       1, but also the SQL a procedure runs (one CALL of a procedure doing 1000 SELECTs = 1001)
+		// So a loop in a procedure is not taken as a chatty client. Not counted: precompiled (static SQL) clients, C/COBOL embedded SQL, SQLJ.
+		// Above the threshold for ## samples in a row, and few logical reads per statement
 		//-------------------------------------------------------
 		Configuration conf = Configuration.getCombinedConfiguration();
 		double threshold          = conf.getDoubleProperty(PROPKEY_alarm_ChattySession,                   DEFAULT_alarm_ChattySession);
@@ -389,7 +395,7 @@ extends CountersModel
 
 		for (int r=0; r<cm.getRateRowCount(); r++)
 		{
-			Double requestsPerSec = cm.getRateValueAsDouble(r, "APP_RQSTS_COMPLETED_TOTAL");
+			Double requestsPerSec = cm.getRateValueAsDouble(r, "DYNAMIC_SQL_STMTS");
 			if (requestsPerSec == null || requestsPerSec <= threshold)
 				continue;
 
@@ -412,7 +418,7 @@ extends CountersModel
 			if (StringUtil.hasValue(skipApplNameRegExp) && applName != null && applName.matches(skipApplNameRegExp))
 				continue;
 
-			// Cheap requests only: a connection with many requests that each do real work is a batch job, not N+1
+			// Cheap statements only: a connection with many statements that each do real work is a batch job, not N+1
 			Double logicalReadsPerSec = cm.getRateValueAsDouble(r, "BP_LOGICAL_READS");
 			double readsPerRequest = logicalReadsPerSec == null ? 0 : logicalReadsPerSec / requestsPerSec;
 			if (readsPerRequest >= maxReadsPerRequest)
@@ -424,7 +430,7 @@ extends CountersModel
 			samplesAbove.put(key, count);
 
 			if (debugPrint || _logger.isDebugEnabled())
-				System.out.println("##### sendAlarmRequest(" + cm.getName() + "): ChattySession: APPLICATION_HANDLE=" + applHandle + ", APP_RQSTS_COMPLETED_TOTAL/s=" + requestsPerSec + ", ACT_COMPLETED_TOTAL/s=" + cm.getRateValueAsDouble(r, "ACT_COMPLETED_TOTAL") + ", readsPerRequest=" + readsPerRequest + ", samplesAbove=" + count + " (threshold=" + threshold + ", maxReadsPerRequest=" + maxReadsPerRequest + ", minSamples=" + minSamples + ").");
+				System.out.println("##### sendAlarmRequest(" + cm.getName() + "): ChattySession: APPLICATION_HANDLE=" + applHandle + ", DYNAMIC_SQL_STMTS/s=" + requestsPerSec + ", APP_RQSTS_COMPLETED_TOTAL/s=" + cm.getRateValueAsDouble(r, "APP_RQSTS_COMPLETED_TOTAL") + ", ACT_COMPLETED_TOTAL/s=" + cm.getRateValueAsDouble(r, "ACT_COMPLETED_TOTAL") + ", readsPerRequest=" + readsPerRequest + ", samplesAbove=" + count + " (threshold=" + threshold + ", maxReadsPerRequest=" + maxReadsPerRequest + ", minSamples=" + minSamples + ").");
 
 			if (count < minSamples)
 				continue;
@@ -466,7 +472,7 @@ extends CountersModel
 						if (rowId == -1)
 							alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
 						else
-							alarmEvent.setCancelDescription(getAlarmCancelText(label + ": requests per second", toAlarmCancelValue(cm.getRateValueAsDouble(rowId, "APP_RQSTS_COMPLETED_TOTAL")), "/s"));
+							alarmEvent.setCancelDescription(getAlarmCancelText(label + ": statements per second", toAlarmCancelValue(cm.getRateValueAsDouble(rowId, "DYNAMIC_SQL_STMTS")), "/s"));
 					}
 				}
 			});
@@ -505,8 +511,8 @@ extends CountersModel
 
 		List<CmSettingsHelper> list = new ArrayList<>();
 
-		list.add(new CmSettingsHelper("ChattySession",                isAlarmSwitch, PROPKEY_alarm_ChattySession                   , Double .class, conf.getDoubleProperty(PROPKEY_alarm_ChattySession                  , DEFAULT_alarm_ChattySession                  ), DEFAULT_alarm_ChattySession                  , "If any connection sends more than ## requests per second (column 'APP_RQSTS_COMPLETED_TOTAL') with few logical reads each, for several samples in a row, then send alarm 'AlarmEventChattySession'. This is often an application doing N+1 (one tiny query per row of another query)." ));
-		list.add(new CmSettingsHelper("ChattySession MaxReadsPerRequest",            PROPKEY_alarm_ChattySessionMaxReadsPerRequest , Double .class, conf.getDoubleProperty(PROPKEY_alarm_ChattySessionMaxReadsPerRequest, DEFAULT_alarm_ChattySessionMaxReadsPerRequest), DEFAULT_alarm_ChattySessionMaxReadsPerRequest, "If 'ChattySession' is true; Only if the connection does fewer than ## logical reads (BP_LOGICAL_READS) per request (many cheap requests, not a batch job doing real work)." ));
+		list.add(new CmSettingsHelper("ChattySession",                isAlarmSwitch, PROPKEY_alarm_ChattySession                   , Double .class, conf.getDoubleProperty(PROPKEY_alarm_ChattySession                  , DEFAULT_alarm_ChattySession                  ), DEFAULT_alarm_ChattySession                  , "If any connection sends more than ## statements per second (column 'DYNAMIC_SQL_STMTS', the same unit as the other vendors) with few logical reads each, for several samples in a row, then send alarm 'AlarmEventChattySession'. This is often an application doing N+1 (one tiny query per row of another query). It can also be a busy normal session (a connection pool, a queue consumer): confirm N+1 in the Daily Summary Report section 'Possible N+1 / Chatty Statements', which matches the repeated statement to the statement whose rows drive it." ));
+		list.add(new CmSettingsHelper("ChattySession MaxReadsPerRequest",            PROPKEY_alarm_ChattySessionMaxReadsPerRequest , Double .class, conf.getDoubleProperty(PROPKEY_alarm_ChattySessionMaxReadsPerRequest, DEFAULT_alarm_ChattySessionMaxReadsPerRequest), DEFAULT_alarm_ChattySessionMaxReadsPerRequest, "If 'ChattySession' is true; Only if the connection does fewer than ## logical reads (BP_LOGICAL_READS) per statement (many cheap statements, not a batch job doing real work)." ));
 		list.add(new CmSettingsHelper("ChattySession Samples",                       PROPKEY_alarm_ChattySessionSamples            , Integer.class, conf.getIntProperty   (PROPKEY_alarm_ChattySessionSamples           , DEFAULT_alarm_ChattySessionSamples           ), DEFAULT_alarm_ChattySessionSamples           , "If 'ChattySession' is true; The connection must be above the threshold in ## samples in a row." ));
 		list.add(new CmSettingsHelper("ChattySession SkipAuthIds",                   PROPKEY_alarm_ChattySessionSkipAuthId         , String .class, conf.getProperty      (PROPKEY_alarm_ChattySessionSkipAuthId        , DEFAULT_alarm_ChattySessionSkipAuthId        ), DEFAULT_alarm_ChattySessionSkipAuthId        , "If 'ChattySession' is true; Discard SESSION_AUTH_IDs listed (regexp is used)." , new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("ChattySession SkipApplNames",                 PROPKEY_alarm_ChattySessionSkipApplName       , String .class, conf.getProperty      (PROPKEY_alarm_ChattySessionSkipApplName      , DEFAULT_alarm_ChattySessionSkipApplName      ), DEFAULT_alarm_ChattySessionSkipApplName      , "If 'ChattySession' is true; Discard APPLICATION_NAMEs listed (regexp is used). DbxTune's own connections are always discarded." , new RegExpInputValidator()));
