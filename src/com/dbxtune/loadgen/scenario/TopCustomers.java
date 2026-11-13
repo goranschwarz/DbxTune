@@ -53,6 +53,8 @@ public class TopCustomers extends Scenario
 				"select top 20 " + body,
 				"select top 20 " + body,
 				"select " + body + " limit 20",
+				"select " + body + " fetch first 20 rows only",
+				"select " + body + " limit 20",
 				"select " + body + " fetch first 20 rows only"), fromKey, toKey);
 	}
 }

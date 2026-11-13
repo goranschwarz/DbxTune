@@ -228,6 +228,8 @@ implements AutoCloseable
 	 *   <li>Postgres: <code>application_name</code> = appName:operation (pg_stat_activity.application_name; max 63 chars)</li>
 	 *   <li>Oracle: <code>DBMS_APPLICATION_INFO</code>: MODULE = the app name, ACTION = the operation, CLIENT_INFO = "dbxt:&lt;operation&gt;"
 	 *       (V$SESSION.MODULE/ACTION/CLIENT_INFO; max 48/32/64 chars). PROGRAM is the app name (JDBC property v$session.program at connect).</li>
+	 *   <li>MySQL: the user variable <code>@dbxt_operation</code> (performance_schema.user_variables_by_thread). program_name is the app name (connectionAttributes at connect).</li>
+	 *   <li>DB2: client accounting info (MON_GET_CONNECTION.CLIENT_ACCTNG). CLIENT_APPLNAME is the app name, CLIENT_USERID the login (JCC properties at connect).</li>
 	 * </ul>
 	 * The value is "dbxt:&lt;operation&gt;" (Postgres: the app name + ":&lt;operation&gt;"). Only sent when it changes;
 	 * it is not counted in the statistics, and a failure is only logged (debug).
@@ -278,6 +280,29 @@ implements AutoCloseable
 				cs.setString(2, operation.length() > 32 ? operation.substring(0, 32) : operation);
 				cs.setString(3, shown);
 				cs.execute();
+				_operation      = operation;
+				_operationShown = shown;
+			}
+			catch (SQLException ex)
+			{
+				_logger.debug("setOperation('" + operation + "') failed on " + getId() + ": " + ex.getMessage());
+			}
+			return;
+		}
+		case MYSQL:
+		{
+			// No settable "client info" field: a user variable, visible to a monitor in performance_schema.user_variables_by_thread
+			shown = ("dbxt:" + operation).replace("'", "");
+			sql = "set @dbxt_operation = '" + shown + "'";
+			break;
+		}
+		case DB2:
+		{
+			// JCC sends client info with the next request (no round trip of its own): MON_GET_CONNECTION.CLIENT_ACCTNG
+			shown = "dbxt:" + operation;
+			try
+			{
+				_conn.setClientInfo("ClientAccountingInformation", shown);
 				_operation      = operation;
 				_operationShown = shown;
 			}

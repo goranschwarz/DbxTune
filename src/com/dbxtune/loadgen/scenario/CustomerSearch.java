@@ -45,6 +45,8 @@ public class CustomerSearch extends Scenario
 					"select top 20 customer_id, first_name, last_name, email, city from customer where last_name like ? order by last_name, first_name",
 					"select top 20 customer_id, first_name, last_name, email, city from customer where last_name like ? order by last_name, first_name",
 					"select customer_id, first_name, last_name, email, city from customer where last_name like ? order by last_name, first_name limit 20",
+					"select customer_id, first_name, last_name, email, city from customer where last_name like ? order by last_name, first_name fetch first 20 rows only",
+					"select customer_id, first_name, last_name, email, city from customer where last_name like ? order by last_name, first_name limit 20",
 					"select customer_id, first_name, last_name, email, city from customer where last_name like ? order by last_name, first_name fetch first 20 rows only"),
 					PREFIX[ctx.rnd().nextInt(PREFIX.length)] + "%");
 		}

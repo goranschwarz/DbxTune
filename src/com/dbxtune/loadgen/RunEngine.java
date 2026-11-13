@@ -211,8 +211,8 @@ implements RunContext
 		_categories = Integer.parseInt(info.get("categories"));
 		_loginCnt   = Integer.parseInt(info.get("logins"));
 
-		//--- Read all login passwords now (once), not at every connect during the run
-		for (int i = 1; i <= _loginCnt; i++)
+		//--- Read all login passwords now (once), not at every connect during the run (DB2: no logins of our own, the sessions use the admin user)
+		for (int i = 1; i <= _loginCnt && _lg.getVendor() != Vendor.DB2; i++)
 			if (_lg.readPassword(LoadGen.LOGIN_PREFIX + i) == null)
 				_logger.warn("No password for '" + LoadGen.LOGIN_PREFIX + i + "' on server '" + _lg.getSrvName() + "' in '" + _lg.getPasswdFile() + "'. Sessions using that login will fail.");
 

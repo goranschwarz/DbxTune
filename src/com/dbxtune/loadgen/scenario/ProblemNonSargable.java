@@ -65,13 +65,17 @@ public class ProblemNonSargable extends Scenario
 				"select count(*) from customer where phone = ?",                       // NVARCHAR parameter -> implicit conversion
 				"select count(*) from customer where substring(phone, 1, 10) = ?",
 				"select count(*) from customer where cast(phone as bigint) = ?",
-				"select count(*) from customer where phone = ?");                      // NUMBER bind -> TO_NUMBER(phone) = :1 (implicit conversion of the column)
+				"select count(*) from customer where phone = ?",                       // NUMBER bind -> TO_NUMBER(phone) = :1 (implicit conversion of the column)
+				"select count(*) from customer where phone = ?",                       // MySQL: number bind -> the VARCHAR column is converted to a number, no index use
+				"select count(*) from customer where phone = ?");                      // DB2: BIGINT bind -> the VARCHAR column is cast (implicit casting), no index use
 		String upperSql = tag() + "select count(*) from customer where upper(last_name) = ?";
 		String yearSql  = tag() + pick(v,
 				"select count(*), sum(total_amount) from orders where year(order_ts) = ? and status = 'NEW'",
 				"select count(*), sum(total_amount) from orders where datepart(yy, order_ts) = ? and status = 'NEW'",
 				"select count(*), sum(total_amount) from orders where extract(year from order_ts) = ? and status = 'NEW'",
-				"select count(*), sum(total_amount) from orders where extract(year from order_ts) = ? and status = 'NEW'");
+				"select count(*), sum(total_amount) from orders where extract(year from order_ts) = ? and status = 'NEW'",
+				"select count(*), sum(total_amount) from orders where year(order_ts) = ? and status = 'NEW'",
+				"select count(*), sum(total_amount) from orders where year(order_ts) = ? and status = 'NEW'");
 		String likeSql  = tag() + "select count(*) from customer where email like ?";
 		ev.put("sql", Arrays.asList(phoneSql, upperSql, yearSql, likeSql));
 
@@ -88,7 +92,7 @@ public class ProblemNonSargable extends Scenario
 				String phone = "07" + (10_000_000 + ctx.rnd().nextInt(90_000_000));
 				switch (cnt % 4)
 				{
-				case 0: s.query(phoneSql, v == Vendor.SQLSERVER ? new LgSession.NString(phone) : v == Vendor.POSTGRES || v == Vendor.ORACLE ? (Object) Long.parseLong(phone) : phone); break;
+				case 0: s.query(phoneSql, v == Vendor.SQLSERVER ? new LgSession.NString(phone) : v == Vendor.POSTGRES || v == Vendor.ORACLE || v == Vendor.MYSQL || v == Vendor.DB2 ? (Object) Long.parseLong(phone) : phone); break;
 				case 1: s.query(upperSql, lastNames.get(ctx.rnd().nextInt(lastNames.size()))); break;
 				case 2: s.query(yearSql, java.time.LocalDate.now().getYear() - ctx.rnd().nextInt(2)); break;
 				case 3: s.query(likeSql, "%." + (2 + ctx.rnd().nextInt(ctx.getCustomers() - 1)) + "@example.com"); break;

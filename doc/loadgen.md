@@ -4,7 +4,8 @@ DbxLoadGen puts realistic "dummy traffic" on a test DBMS, so the DbxTune collect
 to show, and so we find bugs. It is our own tool (not HammerDB), so we can add a scenario whenever we want to
 test something new.
 
-- **Vendors:** SQL Server, Sybase ASE, Postgres, Oracle (12.2+; tested on 21c XE and 23ai/26ai Free). (MySQL and DB2 are planned.)
+- **Vendors:** SQL Server, Sybase ASE, Postgres, Oracle (12.2+; tested on 21c XE and 23ai/26ai Free), MySQL (8.0+; tested on 8.0, 8.4, 9.7;
+  MariaDB is not targeted) and DB2 LUW (11.5; tested on 11.5.8).
 - **Modes:** `install`, `run`, `status`, `uninstall`, `journal`, `scenarios`.
 - **Traffic:** OLTP, OLAP/DW, batch jobs, and **problem scenarios** (blocking, deadlocks, long transactions,
   spills, literal SQL, ...) that should make DbxTune show something or raise an alarm.
@@ -43,11 +44,11 @@ Contents:
 | Option | Meaning |
 |---|---|
 | `-t, --dbms` | `sqlserver`, `ase`, `postgres` or `oracle` |
-| `-S, --server` | `host` or `host:port`. Default ports: SQL Server 1433, ASE 5000, Postgres 5432, Oracle 1521. **Oracle:** `host[:port]/service`, the service name of the PDB (e.g. `dbhost:1521/FREEPDB1`) |
+| `-S, --server` | `host` or `host:port`. Default ports: SQL Server 1433, ASE 5000, Postgres 5432, Oracle 1521, MySQL 3306, DB2 50000. **Oracle:** `host[:port]/service`, the service name of the PDB (e.g. `dbhost:1521/FREEPDB1`). **DB2:** `host[:port]/database`, the database the schema goes into (e.g. `dbhost:50000/TESTDB`) |
 | `--name` | Logical server name: the key in the password file and the journal folder name. Default: `-S` with `:` and `/` replaced by `_`: `host`, `host_port`, Oracle `host_port_service` (a `:` can't be used in the password file). |
-| `-U, --user` | Admin user for install/uninstall/status. Default `sa` (SQL Server, ASE), `postgres` or `system` (Oracle) |
+| `-U, --user` | Admin user for install/uninstall/status. Default `sa` (SQL Server, ASE), `postgres`, `system` (Oracle), `root` (MySQL) or `db2inst1` (DB2; on DB2 the run's sessions also connect as this user, see below) |
 | `-P, --password` | Admin password. Default: taken from the load generator's own password file (below) |
-| `-D, --dbname` | Database. Default `dbxt_loadgen`. Oracle: the schema owner (and the name of its tablespace) |
+| `-D, --dbname` | Database. Default `dbxt_loadgen`. Oracle: the schema owner (and the name of its tablespace). DB2: the schema (and the name of its tablespace) |
 
 There is no `-n` short option on purpose: the DbxTune start scripts treat `-n` as "start a collector without GUI".
 
@@ -83,6 +84,9 @@ because that is where the passwords were written.
 | Sybase ASE | `sa_role` + `sso_role` (create logins), and room for the database: see [Sybase ASE: where the database goes](#sybase-ase-where-the-database-goes). jConnect connects with `ENCRYPT_PASSWORD=true`. |
 | Postgres | A superuser (or a role with `CREATEDB` + `CREATEROLE`). `pg_hba.conf` must allow password logins for the `dbxt_user_*` roles from the machine the load generator runs on. |
 | Oracle | `system` (or a user with the `DBA` role) in the PDB: create tablespace/user/role, grant any object privilege, `alter system kill session`, read `V$PARAMETER`, `DBA_*`. 18c or later for `temp_recompile` (private temporary tables) and the query-timeout statement of `errors` (`DBMS_SESSION.SLEEP`). No extra-cost option is used. |
+
+| MySQL | `root` (or a user with `CREATE`, `CREATE USER`, `CREATE ROLE`, `DROP ROLE`, `GRANT OPTION`, `PROCESS`, `CONNECTION_ADMIN`/`SUPER` for `KILL`). 8.0 or later (roles). The logins are created as `'dbxt_user_N'@'%'`. |
+| DB2 LUW | A user with `SYSADM` or `SYSCTRL` (create tablespace, `FORCE APPLICATION`) and `DBADM` in the database; the instance owner `db2inst1` works. Automatic storage in the database. **No logins are created**: DB2 users are OS users, so every session of a run connects as the `-U` user and the "login" `dbxt_user_N` is its client user (JCC `clientUser` = `MON_GET_CONNECTION.CLIENT_USERID`). |
 
 For the DbxTune side it helps (not required):
 - Postgres: `pg_stat_statements` loaded, `track_functions = pl` (so the cursor/temp table functions show up in CmPgFunctions).
@@ -133,8 +137,8 @@ to run later as an admin (`use <db>` + the failed `update [index] statistics <ta
 Plus `audit_log` (100 000 x factor rows), `session_event` (5 000 x factor rows of 1-3 KB) and `fact_sales`
 (90% of the order lines). Only `small` has been tested so far.
 
-The estimate is printed before anything is filled. Install times seen for `small` on Docker: Postgres 10 s,
-Oracle 15-20 s, SQL Server 30 s, ASE 3 minutes.
+The estimate is printed before anything is filled. Install times seen for `small` on Docker: Postgres 10-17 s,
+Oracle 15-20 s, SQL Server 30 s, MySQL 30-50 s, DB2 60 s, ASE 3 minutes.
 
 **Free editions with a data limit:** on Oracle Free / Express Edition (12 GB user data for the whole database; going over
 it can keep the database from opening after a restart) and SQL Server Express (10 GB per database), sizes above `medium`
@@ -180,11 +184,30 @@ grow the data past it (with `--use-existing-db` the tablespace is not ours and i
 - `PROGRAM` = the app name (JDBC property `v$session.program`); `MODULE`/`ACTION`/`CLIENT_INFO` are set with `DBMS_APPLICATION_INFO`
   (see [How it works](#6-how-it-works)).
 
+**MySQL** (database created by the install):
+- `CREATE DATABASE dbxt_loadgen CHARACTER SET utf8mb4`, InnoDB tables, `datetime(6)` timestamps.
+- The role `dbxt_loadgen_role` has all privileges on the database (like `db_owner`); the logins `'dbxt_user_N'@'%'` get
+  the role as their default role.
+- Statistics: `ANALYZE TABLE` per table (also the `update_stats` scenario).
+- Connections: `connectionAttributes=program_name:<app name>` (`performance_schema.session_connect_attrs`),
+  `rewriteBatchedStatements=true` (the fill), `allowPublicKeyRetrieval=true`.
+
+**DB2 LUW** (schema created by the install), in the database of `-S host:port/database`:
+- `CREATE DATABASE` is an instance command, not SQL, so a "database" is a **schema** `DBXT_LOADGEN` with its own tablespace
+  `DBXT_LOADGEN` (automatic storage, autoresize). Every table is created `in DBXT_LOADGEN`.
+- If the database has no USER temporary tablespace (a new database has none), `DBXT_LOADGEN_TMP` is created: the
+  declared global temporary table of `p_temp_report` needs one.
+- Connections set `currentSchema` and `currentFunctionPath` (JCC properties), so unqualified tables and procedure calls
+  resolve to the schema.
+- Statistics: `RUNSTATS ... WITH DISTRIBUTION AND INDEXES ALL` through `SYSPROC.ADMIN_CMD`.
+- No logins, no role (see [What the DBMS must allow](#what-the-dbms-must-allow)).
+
 **Existing database (`--use-existing-db`)**: no options are changed. The install prints what it found:
 - SQL Server: the recovery model and whether Query Store is on. With `FULL` recovery the log grows unless you take log backups.
 - ASE: whether `trunc log on chkpt` is on. If it is off, the log fills up unless you dump it.
 - Oracle: the "database" is a schema (user) you created (`-D MY_SCHEMA`); the tables go to its default tablespace, so it needs
   a quota there. The default tablespace and account status are printed.
+- DB2: the "database" is a schema you created (`-D MY_SCHEMA`); the tables go to the tablespace DB2 picks (no `IN` clause).
 
 ### Sybase ASE: where the database goes
 
@@ -397,7 +420,7 @@ loadgen.sh uninstall -t <dbms> -S <host[:port]> [-U admin] [--keep-database | --
 
 | Command | Drops | Keeps |
 |---|---|---|
-| `uninstall` | the database (or, if it was a `--use-existing-db` install, only our tables/procedures/schema), the database users, the logins, their passwords in the password file, ASE devices the load generator made (`dbxt_loadgen_data`, `dbxt_loadgen_log`). Oracle: the schema owner (`drop user ... cascade`), the tablespace `including contents and datafiles`, the users `DBXT_USER_N` and the role `DBXT_LOADGEN_ROLE` | a database we did not create |
+| `uninstall` | the database (or, if it was a `--use-existing-db` install, only our tables/procedures/schema), the database users, the logins, their passwords in the password file, ASE devices the load generator made (`dbxt_loadgen_data`, `dbxt_loadgen_log`). Oracle: the schema owner (`drop user ... cascade`), the tablespace `including contents and datafiles`, the users `DBXT_USER_N` and the role `DBXT_LOADGEN_ROLE`. MySQL: the database, the users `'dbxt_user_N'@'%'` and the role `dbxt_loadgen_role`. DB2: every procedure and table of the schema, the schema, the tablespaces `DBXT_LOADGEN` and `DBXT_LOADGEN_TMP` (if the install made it); the run's sessions (client user `dbxt_user_N`) are forced off first | a database we did not create |
 | `uninstall --keep-database` | the logins (and their users/aliases in the database, and their passwords) | the database with all data. `run` refuses until `install --logins-only` |
 | `uninstall --keep-logins` | the database / our objects | the logins and their passwords (SQL Server/ASE: default database set to `master`). A later `install` reuses them |
 | `uninstall --force` | also without the marker table: logins named `dbxt_user_<number>`, and the database only if it is named `dbxt_loadgen` | anything else |
@@ -411,6 +434,7 @@ Safety rules:
 - Sessions of the load generator logins are killed before their database/logins are dropped (Oracle: `alter system kill session ... immediate`,
   also sessions whose `current_schema` is the load generator schema).
 - Oracle: checked after `uninstall` on 21c XE and 23ai Free: no `DBXT%` user, role, tablespace, datafile (also not on disk) or recycle bin entry is left.
+- MySQL (8.0, 8.4, 9.7) and DB2 11.5: checked after `uninstall`: no `dbxt%` database/schema, user, role or tablespace is left.
 
 ---
 
@@ -616,19 +640,19 @@ On this data the load generator runs:
   | Postgres | `set application_name = '...'` (max 63 chars) | `pg_stat_activity.application_name`; PostgresTune CmActiveStatements | `dbxt-loadgen:oltp:new_order`, `dbxt-loadgen:blocking:holder` |
   | Oracle | `begin dbms_application_info.set_module(?, ?); dbms_application_info.set_client_info(?); end;` (binds: one cursor for all values) | `V$SESSION.MODULE` = the app name, `ACTION` = the operation (max 32 chars), `CLIENT_INFO` = `dbxt:<operation>` (max 64); OracleTune CmActiveStatements (MODULE, ACTION, CLIENT_INFO), CmSessions (MODULE, ACTION). `PROGRAM` is the app name (JDBC property `v$session.program`) | `dbxt:new_order`, `dbxt:blocking:holder` |
 
+  | MySQL | `set @dbxt_operation = '...'` (no field that can be changed after login is shown in the process list) | `performance_schema.user_variables_by_thread` (MySqlTune doesn't read it today); `program_name` = the app name in `performance_schema.session_connect_attrs` (fixed at connect). The `/* dbxt:<scenario> */` SQL comment (`PROCESSLIST_INFO`) is the practical way | `dbxt:new_order` |
+  | DB2 LUW | `conn.setClientInfo("ClientAccountingInformation", ...)` (sent with the next statement, no round trip of its own) | `MON_GET_CONNECTION.CLIENT_ACCTNG`; `CLIENT_APPLNAME` = the app name, `CLIENT_USERID` = the login `dbxt_user_N` (JCC properties at connect) | `dbxt:new_order` |
+
   Problem sessions get the role after the scenario: `holder`/`waiter` (blocking), `A_1_then_2` (deadlock),
   `open_transaction` (long_tran)... The journal's `problem` events have the exact value per session (`operation`),
   so it can be matched with what DbxTune recorded. Install/uninstall don't set it.
-
-  For the vendors that come later (checked, not built yet):
-
-  | DBMS | Field (visible to a monitor) | How to set it |
-  |---|---|---|
-  | DB2 LUW | `CLIENT_APPLNAME`, `CLIENT_ACCTNG`, `CLIENT_USERID`, `CLIENT_WRKSTNNAME` in `MON_GET_CONNECTION` (Db2Tune CmMonGetConnection, CmActiveStatements) | JDBC `conn.setClientInfo("ApplicationName"/"ClientAccountingInformation", ...)` (sent with the next statement), or `call SYSPROC.WLM_SET_CLIENT_INFO(...)` |
-  | MySQL | No field that can be changed after login and is shown in the process list. `program_name` (`performance_schema.session_connect_attrs`) is fixed at connect. A user variable (`set @dbxt_op = '...'`) is visible in `performance_schema.user_variables_by_thread` (8.0+, needs SELECT on performance_schema); MySqlTune doesn't read that table today. The `/* dbxt:<scenario> */` SQL comment (in `PROCESSLIST_INFO`) is the practical way. | `set @dbxt_op = '...'` |
 - **Oracle connections**: `jdbc:oracle:thin:@//host:port/service`; `oracle.jdbc.J2EE13Compliant=true` (TIMESTAMP columns come back as
   `java.sql.Timestamp`); the session id in the journal is `SYS_CONTEXT('USERENV','SID')` (OracleTune's `SID` column).
   The `p_order_status` rows come back as an implicit result set (`DBMS_SQL.RETURN_RESULT`), like a T-SQL procedure's.
+- **MySQL connections**: `jdbc:mysql://host:port/db`; the session id in the journal is `CONNECTION_ID()` (= `PROCESSLIST_ID`).
+  Prepared statements are client side (the Connector/J default), so the server sees the values as literals; digests normalize them.
+- **DB2 connections**: `jdbc:db2://host:port/database` with `currentSchema` / `currentFunctionPath` set to the schema; the session id
+  in the journal is `MON_GET_APPLICATION_HANDLE()` (= `APPLICATION_HANDLE`).
 - **Ids**: new orders/payments get their id from `counter_table` in a short transaction of their own.
 - **Statement timeouts**: 60 s for OLTP, 600 s for OLAP/batch.
 - **Journal + statistics**: every statement is timed and counted per scenario and minute; see [section 9](#9-the-journal-comparing-with-dbxtune).
@@ -647,15 +671,15 @@ The install journal lists these as `object` events with a `flaw` text (the "answ
 | `audit_log` | Heap, no primary key, append only, big deletes | new_order, payment, purge_audit, long_tran |
 | `counter_table` | One row per counter that every transaction updates | all inserts, hot_spot |
 | `fact_sales` | Heap without a primary key | etl_fact_sales, the OLAP queries |
-| `ix_orders_cust_dup` | Exact duplicate of `ix_orders_cust` (Oracle refuses an exact duplicate, ORA-01408: `(customer_id, order_id)`, still redundant) | Index Analysis |
+| `ix_orders_cust_dup` | Exact duplicate of `ix_orders_cust` (Oracle and DB2 refuse an exact duplicate: `(customer_id, order_id)`, still redundant) | Index Analysis |
 | `ix_orders_cust_ts` | Overlapping: `ix_orders_cust` is its left prefix | Index Analysis |
 | `ix_orders_ship_city` | Never used by the workload | Index Analysis (unused index) |
-| `ix_customer_phone` | VARCHAR column searched with NVARCHAR (SQL Server) / a cast (Postgres) / a function (ASE) / a NUMBER bind (Oracle: `TO_NUMBER(phone) = :1`) | non_sargable |
+| `ix_customer_phone` | VARCHAR column searched with NVARCHAR (SQL Server) / a cast (Postgres) / a function (ASE) / a NUMBER bind (Oracle: `TO_NUMBER(phone) = :1`) / a number (MySQL, DB2: the column is converted) | non_sargable |
 | `ix_customer_vip` | 99% NULL | - |
 | `ix_product_status` | 99% the same value | - |
 | `p_order_status` | Parameter sniffing: customer 1 has ~30% of the orders, everyone else a few | order_status |
 | `p_rbar_price_adjust` | Row by row with a cursor, plus a `stock` scan per row (at most `@max_rows` rows) | rbar_cursor |
-| `p_temp_report` | A select on a temp table, then an index on it, then the same select again (SQL Server/ASE: a recompile; Postgres: catalog churn). Oracle: a private temporary table created per call with dynamic SQL (a T-SQL habit): ~4 hard parses per call | temp_recompile |
+| `p_temp_report` | A select on a temp table, then an index on it, then the same select again (SQL Server/ASE: a recompile; Postgres: catalog churn). Oracle: a private temporary table created per call with dynamic SQL (a T-SQL habit): ~4 hard parses per call. MySQL: `create temporary table` per call. DB2: a declared global temporary table per call (statements on it are compiled at run time) | temp_recompile |
 
 Over time the data also drifts on purpose: `bulk_events` adds rows without updating statistics (stale statistics),
 `purge_audit` deletes in big chunks, and `fact_sales` grows with the ETL.
@@ -716,7 +740,7 @@ also wait, so the real chain is longer than the 3 waiters.
 #### `deadlock` - every 7 min
 Session A updates stock row 1 then row 2; session B updates row 2 then row 1. One of them is the deadlock victim
 (SQL Server/ASE error 1205, Postgres SQLState 40P01, Oracle ORA-00060: only the victim's statement is rolled back, the
-scenario then rolls back its transaction). The journal says which spid was the victim.
+scenario then rolls back its transaction; MySQL error 1213, DB2 SQL0911N reason code 2). The journal says which spid was the victim.
 - SQL Server: CmSummary, CmPerfCounters; `AlarmEventDeadlock`.
 - ASE: CmDeadlock, CmSummary, CmSysmon (no deadlock alarm known).
 - Postgres: CmPgDatabase `deadlocks` (no deadlock alarm known).
@@ -735,7 +759,9 @@ than 60 s of the run is left). The log can't be truncated past it.
 #### `sort_spill` - every 10 min
 A big `DISTINCT` over `orders x order_line` with too little memory:
 SQL Server `option (max_grant_percent = 0)`, Postgres `set local work_mem = '64kB'`, ASE a work table in tempdb,
-Oracle `alter session set workarea_size_policy = manual` + `sort_area_size`/`hash_area_size` = 64 KB.
+Oracle `alter session set workarea_size_policy = manual` + `sort_area_size`/`hash_area_size` = 64 KB,
+MySQL session `tmp_table_size` = 1 KB, `max_heap_table_size` = 16 KB, `sort_buffer_size` = 32 KB (seen on 8.4: `Created_tmp_disk_tables`,
+`Sort_merge_passes` up), DB2 the plain query (`SORTHEAP` is a database setting, there is no session one).
 - SQL Server: CmTempdbUsage, CmTempdbSpidUsage, CmMemoryGrants, CmExecQueryStats.
 - ASE: CmTempdbActivity, CmActiveStatements, CmSqlStatement; `AlarmEventLongRunningTransaction` in tempdb (the sort is an
   open transaction `$sort_local`) when the sort runs over 60 s (size large).

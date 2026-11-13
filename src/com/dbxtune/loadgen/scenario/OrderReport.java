@@ -43,6 +43,6 @@ public class OrderReport extends Scenario
 		s.query(tag() + "select o.status, o.warehouse_id, count(*), sum(o.total_amount) from orders o where o.order_ts >= ? group by o.status, o.warehouse_id order by 1, 2", from);
 
 		String body = "ol.product_id, sum(ol.qty) as qty from order_line ol join orders o on o.order_id = ol.order_id where o.order_ts >= ? group by ol.product_id order by 2 desc";
-		s.query(tag() + pick(ctx.getVendor(), "select top 10 " + body, "select top 10 " + body, "select " + body + " limit 10", "select " + body + " fetch first 10 rows only"), from);
+		s.query(tag() + pick(ctx.getVendor(), "select top 10 " + body, "select top 10 " + body, "select " + body + " limit 10", "select " + body + " fetch first 10 rows only", "select " + body + " limit 10", "select " + body + " fetch first 10 rows only"), from);
 	}
 }

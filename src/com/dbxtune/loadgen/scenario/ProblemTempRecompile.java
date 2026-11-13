@@ -58,7 +58,7 @@ public class ProblemTempRecompile extends Scenario
 	public void runProblem(RunContext ctx, ProblemEvent ev)
 	throws Exception
 	{
-		String sql = pick(ctx.getVendor(), "{call p_temp_report(?)}", "{call p_temp_report(?)}", "select p_temp_report(?)", "{call p_temp_report(?)}");
+		String sql = pick(ctx.getVendor(), "{call p_temp_report(?)}", "{call p_temp_report(?)}", "select p_temp_report(?)", "{call p_temp_report(?)}", "{call p_temp_report(?)}", "{call p_temp_report(?)}");
 		ev.put("sql", sql);
 
 		int durationSec = activeSeconds(ctx, "durationSeconds", 60);

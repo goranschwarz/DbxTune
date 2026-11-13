@@ -47,7 +47,7 @@ import com.dbxtune.utils.OpenSslAesUtil;
 import com.dbxtune.utils.StringUtil;
 
 /**
- * DbxLoadGen - a load generator for SQL Server, Sybase ASE, Postgres and Oracle (more vendors later).
+ * DbxLoadGen - a load generator for SQL Server, Sybase ASE, Postgres, Oracle, MySQL and DB2 LUW.
  * <p>
  * Used to put "dummy traffic" on test servers, so the DbxTune collectors and DbxCentral have something to show,
  * and to find bugs. Every run writes a journal of what was done (see {@link Journal}).
@@ -79,7 +79,7 @@ public class LoadGen
 	private Vendor     _vendor;
 	private String     _host;
 	private int        _port;
-	private String     _service;  // Oracle: the service name (PDB) from -S host[:port]/service
+	private String     _service;  // Oracle: the service name (PDB), DB2: the database, from -S host[:port]/service
 	private String     _srvName;
 	private String     _adminUser;
 	private String     _adminPassword;
@@ -224,17 +224,22 @@ public class LoadGen
 	public LgSession connectAdmin(String dbname)
 	throws Exception
 	{
-		return connect(_adminUser, getAdminPassword(), dbname, APPNAME_PREFIX + ":admin", null, true);
+		return connect(_adminUser, getAdminPassword(), dbname, APPNAME_PREFIX + ":admin", null, true, _adminUser);
 	}
 
 	/** Connect as one of the dbxt_user_# logins, the password comes from the load generator's password file */
 	public LgSession connectUser(String login, String appName, Stats stats)
 	throws Exception
 	{
+		// DB2 logins are OS users (not created with SQL): every session connects as the admin user (-U),
+		// and the "login" is its client user (JCC clientUser -> MON_GET_CONNECTION.CLIENT_USERID), set in connect()
+		if (_vendor == Vendor.DB2)
+			return connect(_adminUser, getAdminPassword(), _dbname, appName, stats, false, login);
+
 		String pw = readPassword(login);
 		if (pw == null)
 			throw new Exception("No password for '" + login + "' on server '" + _srvName + "' in '" + _passwdFile + "'. Was 'install' done from this machine/user?");
-		return connect(login, pw, _dbname, appName, stats, false);
+		return connect(login, pw, _dbname, appName, stats, false, login);
 	}
 
 	/**
@@ -243,12 +248,13 @@ public class LoadGen
 	 *                 execution of the prepared statement: audited when auditing is on (the audit queue fills: wait event 157)
 	 *                 and captured in monSysStatement. Size small on ASE 16: install 19 s instead of 29 s, the same data.
 	 */
-	public LgSession connect(String user, String password, String dbname, String appName, Stats stats, boolean bulkLoad)
+	/** @param login the session's login name (the journal, audit rows); DB2: the client user, the connection itself is made as 'user' */
+	public LgSession connect(String user, String password, String dbname, String appName, Stats stats, boolean bulkLoad, String login)
 	throws SQLException
 	{
 		ConnectionProp cp = new ConnectionProp();
 		cp.setDriverClass(_vendor.getDriverClass());
-		cp.setUrl(_vendor.getUrl(_host, _port, _vendor == Vendor.ORACLE ? _service : dbname)); // Oracle: the "database" is a schema in the service's PDB
+		cp.setUrl(_vendor.getUrl(_host, _port, _vendor == Vendor.ORACLE || _vendor == Vendor.DB2 ? _service : dbname)); // Oracle/DB2: the "database" is a schema in the service/database
 		cp.setUsername(user);
 		cp.setPassword(password);
 		cp.setAppName(appName);
@@ -276,6 +282,22 @@ public class LoadGen
 			cp.setUrlOption("v$session.program", appName.length() > 48 ? appName.substring(0, 48) : appName); // V$SESSION.PROGRAM (48 chars)
 			cp.setUrlOption("oracle.jdbc.J2EE13Compliant", "true"); // getObject(): java.sql.Timestamp for TIMESTAMP/DATE, not oracle.sql.TIMESTAMP
 			break;
+		case MYSQL:
+			cp.setUrlOption("connectionAttributes", "program_name:" + appName.replace(",", "").replace(":", "-")); // performance_schema.session_connect_attrs
+			cp.setUrlOption("rewriteBatchedStatements", "true"); // the install's batched inserts as multi-row inserts
+			cp.setUrlOption("allowPublicKeyRetrieval", "true");  // caching_sha2_password without TLS
+			break;
+		case DB2:
+			// MON_GET_CONNECTION: CLIENT_APPLNAME, CLIENT_USERID (the "login"); the operation goes to CLIENT_ACCTNG (LgSession.setOperation)
+			cp.setUrlOption("clientProgramName",  appName.length() > 20 ? appName.substring(0, 20) : appName);
+			cp.setUrlOption("clientApplicationInformation", appName);
+			cp.setUrlOption("clientUser",         login);
+			if (dbname != null)
+			{
+				cp.setUrlOption("currentSchema",       dbname.toUpperCase());                                              // unqualified tables
+				cp.setUrlOption("currentFunctionPath", "SYSIBM,SYSFUN,SYSPROC,SYSIBMADM," + dbname.toUpperCase());        // unqualified procedure calls
+			}
+			break;
 		}
 
 		try
@@ -294,7 +316,7 @@ public class LoadGen
 					throw ex;
 				}
 			}
-			return new LgSession(this, conn, user, appName, stats);
+			return new LgSession(this, conn, login, appName, stats);
 		}
 		catch (SQLException ex)
 		{
@@ -376,14 +398,16 @@ public class LoadGen
 		pw.println("  scenarios   List the scenarios");
 		pw.println();
 		pw.println("connection:");
-		pw.println("  -t,--dbms <sqlserver|ase|postgres|oracle>  DBMS vendor");
+		pw.println("  -t,--dbms <sqlserver|ase|postgres|oracle|mysql|db2>  DBMS vendor");
 		pw.println("  -S,--server <host[:port]>           Server (default port per vendor). ASE: also a server name from the interfaces file");
 		pw.println("                                      Oracle: host[:port]/service, the service of the PDB (e.g. dbhost:1521/FREEPDB1)");
+		pw.println("                                      DB2: host[:port]/database, the database for the schema (e.g. dbhost:50000/TESTDB)");
 		pw.println("  --name <name>                       Logical server name: password file key, journal dir");
 		pw.println("                                      (default: -S with ':' and '/' as '_', e.g. host, host_port, host_port_service)");
-		pw.println("  -U,--user <admin>                   Admin user for install/uninstall/status (default: sa / postgres / system)");
+		pw.println("  -U,--user <admin>                   Admin user for install/uninstall/status (default: sa / postgres / system / root / db2inst1)");
+		pw.println("                                      DB2: the run's sessions also connect as this user (client user = dbxt_user_#)");
 		pw.println("  -P,--password <pw>                  Admin password (default: from the load generator's password file)");
-		pw.println("  -D,--dbname <name>                  Database (default: " + DEFAULT_DBNAME + "). Oracle: the schema owner (+ its tablespace)");
+		pw.println("  -D,--dbname <name>                  Database (default: " + DEFAULT_DBNAME + "). Oracle: the schema owner (+ its tablespace), DB2: the schema (+ its tablespace)");
 		pw.println("  --passwd-file <file>                Password file (default: " + getDefaultPasswdFile() + ")");
 		pw.println("  -c,--config <file>                  Extra properties (scenario weights etc, see conf/loadgen.properties)");
 		pw.println();
@@ -431,6 +455,8 @@ public class LoadGen
 		pw.println("  loadgen.sh run     -t sqlserver -S gs-1-mssql --duration 15m-45m --intensity low");
 		pw.println("  loadgen.sh compare --name gs-1-mssql --central http://localhost:8080 --central-srv GS-1-MSSQL");
 		pw.println("  loadgen.sh install -t oracle    -S orahost:1521/FREEPDB1 -U system --size small");
+		pw.println("  loadgen.sh install -t mysql     -S myhost:3306 -U root --size small");
+		pw.println("  loadgen.sh install -t db2       -S db2host:50000/TESTDB -U db2inst1 --size small");
 		pw.println();
 		pw.flush();
 	}
@@ -462,7 +488,7 @@ public class LoadGen
 
 		_vendor = Vendor.fromString(cmd.getOptionValue("dbms"));
 		if (_vendor == null)
-			throw new ParseException("-t/--dbms is required: sqlserver, ase, postgres or oracle");
+			throw new ParseException("-t/--dbms is required: sqlserver, ase, postgres, oracle, mysql or db2");
 
 		String server = cmd.getOptionValue("server");
 		if (StringUtil.isNullOrBlank(server))
@@ -470,11 +496,13 @@ public class LoadGen
 
 		_host = server;
 		_port = _vendor.getDefaultPort();
-		if (_vendor == Vendor.ORACLE)
+		if (_vendor == Vendor.ORACLE || _vendor == Vendor.DB2)
 		{
-			// host[:port]/service
+			// host[:port]/service (Oracle: the PDB's service, DB2: the database; the load generator's "database" is a schema in it)
 			if (!server.contains("/") || server.endsWith("/"))
-				throw new ParseException("-S/--server for Oracle is host[:port]/service, the service name of the PDB, e.g. dbhost:1521/FREEPDB1");
+				throw new ParseException(_vendor == Vendor.ORACLE
+						? "-S/--server for Oracle is host[:port]/service, the service name of the PDB, e.g. dbhost:1521/FREEPDB1"
+						: "-S/--server for DB2 is host[:port]/database, the database to install the schema in, e.g. dbhost:50000/TESTDB");
 			_service = server.substring(server.indexOf('/') + 1);
 			_host    = server.substring(0, server.indexOf('/'));
 			if (_host.contains(":"))

@@ -40,6 +40,9 @@ public class UpdateStats extends Scenario
 	{
 		String tab = TABLES[ctx.rnd().nextInt(TABLES.length)];
 		s.setQueryTimeout(600);
-		s.exec(tag() + pick(ctx.getVendor(), "update statistics " + tab, "update statistics " + tab, "analyze " + tab, "begin p_gather_stats('" + tab.toUpperCase() + "'); end;")); // Oracle: DBMS_STATS in a definer's rights procedure of the schema owner
+		s.exec(tag() + pick(ctx.getVendor(), "update statistics " + tab, "update statistics " + tab, "analyze " + tab, "begin p_gather_stats('" + tab.toUpperCase() + "'); end;",
+				"analyze table " + tab,
+				"call sysproc.admin_cmd('runstats on table " + ctx.getLoadGen().getDbname().toUpperCase() + "." + tab.toUpperCase() + " with distribution and indexes all')"));
+				// Oracle: DBMS_STATS in a definer's rights procedure of the schema owner. DB2: RUNSTATS is a CLP command, through ADMIN_CMD
 	}
 }

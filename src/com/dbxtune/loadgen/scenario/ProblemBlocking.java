@@ -98,6 +98,9 @@ public class ProblemBlocking extends Scenario
 				sessions.add(w);
 				ev.addSession(w, "waiter");
 				w.setQueryTimeout(holdSec + 60);
+				// The server's own lock wait limit would end the wait first (MySQL innodb_lock_wait_timeout 50 s, DB2 LOCKTIMEOUT if set)
+				if (ctx.getVendor() == Vendor.MYSQL) w.exec("set session innodb_lock_wait_timeout = " + (holdSec + 60));
+				if (ctx.getVendor() == Vendor.DB2)   w.exec("set current lock timeout " + (holdSec + 60));
 				Thread t = new Thread(() -> {
 					long start = System.currentTimeMillis();
 					try

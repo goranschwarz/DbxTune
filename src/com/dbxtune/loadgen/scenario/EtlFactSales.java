@@ -40,7 +40,9 @@ public class EtlFactSales extends Scenario
 				"convert(int, convert(char(8), o.order_ts, 112))",
 				"convert(int, convert(char(8), o.order_ts, 112))",
 				"cast(to_char(o.order_ts, 'YYYYMMDD') as int)",
-				"to_number(to_char(o.order_ts, 'YYYYMMDD'))");
+				"to_number(to_char(o.order_ts, 'YYYYMMDD'))",
+				"year(o.order_ts) * 10000 + month(o.order_ts) * 100 + day(o.order_ts)",
+				"year(o.order_ts) * 10000 + month(o.order_ts) * 100 + day(o.order_ts)");
 
 		return "insert into fact_sales (order_id, line_no, date_key, customer_key, product_key, qty, amount) "
 				+ "select ol.order_id, ol.line_no, " + dateKey + ", o.customer_id, ol.product_id, ol.qty, ol.qty * ol.price "

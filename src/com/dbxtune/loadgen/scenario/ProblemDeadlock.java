@@ -107,7 +107,10 @@ public class ProblemDeadlock extends Scenario
 		catch (SQLException ex)
 		{
 			s.rollbackQuietly();
-			boolean victim = ex.getErrorCode() == 1205 || "40P01".equals(ex.getSQLState()) || (s.getVendor() == Vendor.ORACLE && ex.getErrorCode() == 60); // ORA-00060
+			boolean victim = (ex.getErrorCode() == 1205 && s.getVendor() != Vendor.MYSQL) || "40P01".equals(ex.getSQLState())
+					|| (s.getVendor() == Vendor.ORACLE && ex.getErrorCode() == 60)     // ORA-00060
+					|| (s.getVendor() == Vendor.MYSQL  && ex.getErrorCode() == 1213)   // ER_LOCK_DEADLOCK (1205 is a lock wait timeout there)
+					|| (s.getVendor() == Vendor.DB2    && ex.getErrorCode() == -911 && "40001".equals(ex.getSQLState())); // SQL0911N reason code 2
 			results.add("spid " + s.getSpid() + (victim ? " VICTIM" : " error") + ": " + ex.getErrorCode() + "/" + ex.getSQLState() + " " + ex.getMessage());
 		}
 		catch (InterruptedException ex)

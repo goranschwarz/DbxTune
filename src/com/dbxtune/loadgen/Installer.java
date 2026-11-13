@@ -64,6 +64,12 @@ public class Installer
 	/** Oracle: the role the dbxt_user_# users get (DML on the tables, EXECUTE on the procedures) */
 	public static final String ORA_ROLE  = "dbxt_loadgen_role";
 
+	/** MySQL: the role the dbxt_user_# users get (all privileges on the load generator database, like db_owner) */
+	public static final String MY_ROLE   = "dbxt_loadgen_role";
+
+	/** DB2: the user temporary tablespace the install creates when the database has none (p_temp_report's declared temporary table needs one): {schema}_TMP */
+	public static final String DB2_TMP_TS_SUFFIX = "_tmp";
+
 	/** Editions with a data limit (Oracle Free/Express: 12 GB user data, SQL Server Express: 10 GB per database): the largest size */
 	public static final String LIMITED_EDITION_MAX_SIZE  = "medium";
 	/** Oracle Free/Express: MAXSIZE of our tablespace, so a long run can't grow the data past the 12 GB (that can keep the database from opening after a restart) */
@@ -302,6 +308,12 @@ public class Installer
 	private void createLogins(LgSession admin, int loginCnt, String db)
 	throws Exception
 	{
+		if (_v == Vendor.DB2)
+		{
+			// OS users, not created with SQL: the sessions connect as the admin user, the "login" is the client user (see LoadGen.connectUser)
+			_logger.info("DB2: no logins are created (DB2 users are OS users). The sessions connect as '" + _lg.getAdminUser() + "' with client user " + LoadGen.LOGIN_PREFIX + "1.." + loginCnt + " (MON_GET_CONNECTION.CLIENT_USERID).");
+			return;
+		}
 		Random pwRnd = new java.security.SecureRandom();
 		for (int i=1; i<=loginCnt; i++)
 		{
@@ -411,6 +423,25 @@ public class Installer
 					System.out.println("Existing schema '" + db + "': default tablespace " + row[0] + ", account " + row[1] + " (not changed). It needs a quota on " + row[0] + " for the tables (~" + Size.fromString(_lg.getCmd().getOptionValue("size", "small")).estimateMb() + " MB).");
 				return null;
 			}
+			if (_v == Vendor.MYSQL || _v == Vendor.DB2)
+			{
+				String tabSql  = _v == Vendor.MYSQL ? "select count(*) from information_schema.tables   where table_schema   = ? and table_name   = ?"
+				                                    : "select count(*) from syscat.tables              where tabschema      = upper(?) and tabname     = upper(?)";
+				String procSql = _v == Vendor.MYSQL ? "select count(*) from information_schema.routines where routine_schema = ? and routine_name = ?"
+				                                    : "select count(*) from syscat.routines            where routineschema  = upper(?) and routinename = upper(?)";
+				List<String> found = new ArrayList<>();
+				for (String name : TABLES)
+					if (s.queryInt(tabSql, db, name) > 0)
+						found.add(name);
+				for (String name : PROCEDURES)
+					if (s.queryInt(procSql, db, name) > 0)
+						found.add(name);
+				if (!found.isEmpty())
+					return (_v == Vendor.DB2 ? "Schema '" : "Database '") + db + "' already has objects with load generator names: " + found + ". Uninstall the old install, or use another " + (_v == Vendor.DB2 ? "schema." : "database.");
+				if (_v == Vendor.DB2)
+					System.out.println("Existing schema '" + db + "': the tables go to the default tablespace (DB2 picks it), not to a tablespace of their own.");
+				return null;
+			}
 			List<String> found = new ArrayList<>();
 			for (String name : TABLES)
 				if (s.queryInt("select count(*) from sysobjects where name = ?", name) > 0)
@@ -450,7 +481,21 @@ public class Installer
 			admin.exec("create role " + ORA_ROLE);
 			_lg.getJournal().event("object", "action", "create", "objectType", "role", "name", ORA_ROLE);
 		}
+		if (_v == Vendor.MYSQL)
+			createMySqlRole(admin, db);
 		_lg.getJournal().event("object", "action", "use-existing", "objectType", "database", "name", db);
+	}
+
+	/** MySQL: the role the users get, with all privileges on the database (a database-level grant also covers the objects created later) */
+	private void createMySqlRole(LgSession admin, String db)
+	throws SQLException
+	{
+		if (admin.queryInt("select count(*) from mysql.user where user = ?", MY_ROLE) == 0) // a role is a (locked) row in mysql.user
+		{
+			admin.exec("create role " + MY_ROLE);
+			_lg.getJournal().event("object", "action", "create", "objectType", "role", "name", MY_ROLE);
+		}
+		admin.exec("grant all privileges on `" + db + "`.* to " + MY_ROLE);
 	}
 
 	/** Postgres: the role that owns everything, and the schema dbxt */
@@ -492,6 +537,8 @@ public class Installer
 		case ASE:       return admin.queryInt("select count(*) from master..sysdatabases where name = ?", db) > 0;
 		case POSTGRES:  return admin.queryInt("select count(*) from pg_database where datname = ?", db) > 0;
 		case ORACLE:    return admin.queryInt("select count(*) from dba_users where username = upper(?)", db) > 0; // the schema owner
+		case MYSQL:     return admin.queryInt("select count(*) from information_schema.schemata where schema_name = ?", db) > 0;
+		case DB2:       return admin.queryInt("select count(*) from syscat.schemata where schemaname = upper(?)", db) > 0;
 		}
 		return false;
 	}
@@ -633,8 +680,30 @@ public class Installer
 				}
 			}
 			break;
+
+		case MYSQL:
+			admin.exec("create database `" + db + "` character set utf8mb4");
+			createMySqlRole(admin, db);
+			break;
+
+		case DB2:
+			{
+				// CREATE DATABASE is an instance command, not SQL: a schema in the database of -S host:port/DBNAME, with its own
+				// tablespace (same name as the schema; automatic storage), so uninstall can drop it with its containers
+				admin.exec("create tablespace " + db + " managed by automatic storage autoresize yes");
+				_lg.getJournal().event("object", "action", "create", "objectType", "tablespace", "name", db);
+				admin.exec("create schema " + db);
+
+				// p_temp_report declares a global temporary table: that needs a USER temporary tablespace, which a new database does not have
+				if (admin.queryInt("select count(*) from syscat.tablespaces where datatype = 'U'") == 0)
+				{
+					admin.exec("create user temporary tablespace " + db + DB2_TMP_TS_SUFFIX + " managed by automatic storage");
+					_lg.getJournal().event("object", "action", "create", "objectType", "tablespace", "name", db + DB2_TMP_TS_SUFFIX, "type", "user temporary");
+				}
+			}
+			break;
 		}
-		_lg.getJournal().event("object", "action", "create", "objectType", _v == Vendor.ORACLE ? "schema" : "database", "name", db);
+		_lg.getJournal().event("object", "action", "create", "objectType", _v == Vendor.ORACLE || _v == Vendor.DB2 ? "schema" : "database", "name", db);
 	}
 
 	/** ASE: where createDatabase() puts its own data and log device (null = on --ase-data-dev / --ase-log-dev, or the 'default' device) */
@@ -814,6 +883,13 @@ public class Installer
 			admin.exec("create user " + login + " identified by \"" + pw + "\"");
 			admin.exec("grant create session, " + ORA_ROLE + " to " + login);
 			break;
+		case MYSQL:
+			admin.exec("create user '" + login + "'@'%' identified by '" + pw + "'");
+			admin.exec("grant " + MY_ROLE + " to '" + login + "'@'%'");
+			admin.exec("set default role all to '" + login + "'@'%'");
+			break;
+		case DB2:
+			break; // no logins (OS users), see createLogins()
 		}
 	}
 
@@ -826,6 +902,8 @@ public class Installer
 		case ASE:       return admin.queryInt("select count(*) from master..syslogins where name = ?", login) > 0;
 		case POSTGRES:  return admin.queryInt("select count(*) from pg_roles where rolname = ?", login) > 0;
 		case ORACLE:    return admin.queryInt("select count(*) from dba_users where username = upper(?)", login) > 0;
+		case MYSQL:     return admin.queryInt("select count(*) from mysql.user where user = ?", login) > 0;
+		case DB2:       return false;
 		}
 		return false;
 	}
@@ -852,6 +930,13 @@ public class Installer
 			admin.exec("alter user " + login + " identified by \"" + pw + "\" account unlock");
 			admin.exec("grant create session, " + ORA_ROLE + " to " + login);
 			break;
+		case MYSQL:
+			admin.exec("alter user '" + login + "'@'%' identified by '" + pw + "' account unlock");
+			admin.exec("grant " + MY_ROLE + " to '" + login + "'@'%'");
+			admin.exec("set default role all to '" + login + "'@'%'");
+			break;
+		case DB2:
+			break;
 		}
 	}
 
@@ -876,6 +961,12 @@ public class Installer
 		case ORACLE:
 			// Has ORA_ROLE (granted in createLogin), which has the object privileges (granted in install, after the objects exist)
 			break;
+		case MYSQL:
+			// Has MY_ROLE (granted in createLogin): all privileges on the database
+			break;
+		case DB2:
+			// Connects as the admin user (see LoadGen.connectUser)
+			break;
 		}
 	}
 
@@ -894,6 +985,12 @@ public class Installer
 		else if (_v == Vendor.ORACLE)
 			for (String tab : TABLES)
 				cmds.add("begin dbms_stats.gather_table_stats(ownname => '" + _lg.getDbname().toUpperCase() + "', tabname => '" + tab.toUpperCase() + "'); end;");
+		else if (_v == Vendor.MYSQL)
+			for (String tab : TABLES)
+				cmds.add("analyze table " + tab);
+		else if (_v == Vendor.DB2)
+			for (String tab : TABLES)
+				cmds.add("call sysproc.admin_cmd('runstats on table " + _lg.getDbname().toUpperCase() + "." + tab.toUpperCase() + " with distribution and indexes all')");
 		else
 			for (String tab : TABLES)
 				cmds.add(_v == Vendor.ASE ? "update index statistics " + tab : "update statistics " + tab);
@@ -913,9 +1010,10 @@ public class Installer
 		}
 		if (!failed.isEmpty())
 		{
-			String go  = _v == Vendor.POSTGRES ? ";" : _v == Vendor.ORACLE ? "\n    /" : "\n    go";
+			String go  = _v == Vendor.POSTGRES || _v == Vendor.MYSQL || _v == Vendor.DB2 ? ";" : _v == Vendor.ORACLE ? "\n    /" : "\n    go";
 			String use = _v == Vendor.POSTGRES ? "-- connect to database " + _lg.getDbname()
 			           : _v == Vendor.ORACLE   ? "-- connect to the PDB (service " + _lg.getService() + "), for example with sqlplus"
+			           : _v == Vendor.DB2      ? "-- connect to database " + _lg.getService()
 			           :                         "use " + _lg.getDbname() + go;
 			String msg = "Update statistics FAILED for " + failed.size() + " of " + cmds.size() + " command(s) (tempdb too small? see the errors above)."
 					+ " The install is still marked INSTALLED: the load runs without the statistics, but the plans may differ."
@@ -951,9 +1049,14 @@ public class Installer
 				if (batch.replaceAll("(?m)^\\s*--.*$", "").isBlank())
 					continue;
 
+				// DB2: the tables go to our own tablespace (named like the schema), not to one DB2 picks; with --use-existing-db there is none of ours
+				if (_v == Vendor.DB2)
+					batch = batch.replace("${in_tablespace}", _lg.getCmd().hasOption("use-existing-db") ? "" : "in " + _lg.getDbname());
+
 				try
 				{
-					s.exec(batch);
+					// MySQL: '--' starts a comment only when a space follows ('-----' lines are a syntax error): send it without the comment lines
+					s.exec(_v == Vendor.MYSQL ? batch.replaceAll("(?m)^\\s*--.*$", "") : batch);
 				}
 				catch (SQLException ex)
 				{
@@ -1373,8 +1476,8 @@ public class Installer
 				if (dbCreatedByUs)
 				{
 					dropDatabase(admin, db);
-					journal.event("object", "action", "drop", "objectType", _v == Vendor.ORACLE ? "schema" : "database", "name", db);
-					_logger.info("Dropped " + (_v == Vendor.ORACLE ? "schema (user cascade)" : "database") + " '" + db + "'.");
+					journal.event("object", "action", "drop", "objectType", _v == Vendor.ORACLE || _v == Vendor.DB2 ? "schema" : "database", "name", db);
+					_logger.info("Dropped " + (_v == Vendor.ORACLE ? "schema (user cascade)" : _v == Vendor.DB2 ? "schema (its objects and tablespace)" : "database") + " '" + db + "'.");
 					if (_v == Vendor.ASE)
 						dropAseDevices(admin);
 				}
@@ -1427,7 +1530,7 @@ public class Installer
 						journal.event("error", "msg", "Problems dropping login '" + login + "': " + ex.getMessage());
 					}
 				}
-				_logger.info("Dropped " + logins.size() + " logins.");
+				_logger.info(_v == Vendor.DB2 ? "DB2: no logins to drop (the sessions used the admin user); their sessions were ended." : "Dropped " + logins.size() + " logins.");
 			}
 			else if (dbCreatedByUs && dbExists && !keepDb)
 			{
@@ -1453,6 +1556,12 @@ public class Installer
 			{
 				admin.exec("drop role " + ORA_ROLE);
 				journal.event("object", "action", "drop", "objectType", "role", "name", ORA_ROLE);
+			}
+			//--- MySQL: the role the users had
+			if (_v == Vendor.MYSQL && !keepDb && admin.queryInt("select count(*) from mysql.user where user = ?", MY_ROLE) > 0)
+			{
+				admin.exec("drop role " + MY_ROLE);
+				journal.event("object", "action", "drop", "objectType", "role", "name", MY_ROLE);
 			}
 		}
 
@@ -1494,6 +1603,25 @@ public class Installer
 					if (s.queryInt("select count(*) from all_objects where owner = upper(?) and object_name = upper(?) and object_type = 'TABLE'", db, name) > 0)
 					{
 						s.exec("drop table " + db + "." + name + " cascade constraints purge");
+						_lg.getJournal().event("object", "action", "drop", "objectType", "table", "name", name);
+					}
+			}
+			else if (_v == Vendor.MYSQL || _v == Vendor.DB2)
+			{
+				String procSql = _v == Vendor.MYSQL ? "select count(*) from information_schema.routines where routine_schema = ? and routine_name = ?"
+				                                    : "select count(*) from syscat.routines where routineschema = upper(?) and routinename = upper(?)";
+				String tabSql  = _v == Vendor.MYSQL ? "select count(*) from information_schema.tables where table_schema = ? and table_name = ?"
+				                                    : "select count(*) from syscat.tables where tabschema = upper(?) and tabname = upper(?) and type = 'T'";
+				for (String name : PROCEDURES)
+					if (s.queryInt(procSql, db, name) > 0)
+					{
+						s.exec("drop procedure " + db + "." + name);
+						_lg.getJournal().event("object", "action", "drop", "objectType", "procedure", "name", name);
+					}
+				for (String name : TABLES)
+					if (s.queryInt(tabSql, db, name) > 0)
+					{
+						s.exec("drop table " + db + "." + name);
 						_lg.getJournal().event("object", "action", "drop", "objectType", "table", "name", name);
 					}
 			}
@@ -1542,6 +1670,8 @@ public class Installer
 			break;
 		case POSTGRES:
 		case ORACLE:
+		case MYSQL:
+		case DB2:
 			break;
 		}
 	}
@@ -1566,6 +1696,28 @@ public class Installer
 			for (Object[] row : admin.query("select sid, serial# from v$session where username = upper(?)", login))
 				killOracleSession(admin, row[0], row[1]);
 			break;
+		case MYSQL:
+			for (Object[] row : admin.query("select id from information_schema.processlist where user = ?", login))
+				killQuietly(admin, "kill " + row[0]);
+			break;
+		case DB2:
+			// All sessions are the admin user: the "login" is the client user
+			for (Object[] row : admin.query("select application_handle from table(mon_get_connection(null, -2)) where client_userid = ? and application_handle <> mon_get_application_handle()", login))
+				killQuietly(admin, "call sysproc.admin_cmd('force application (" + row[0] + ")')");
+			break;
+		}
+	}
+
+	/** MySQL / DB2: kill a session that may already be gone (the error is only logged) */
+	private void killQuietly(LgSession admin, String sql)
+	{
+		try
+		{
+			admin.exec(sql);
+		}
+		catch (SQLException ex)
+		{
+			_logger.debug("'" + sql + "' failed (the session may be gone already): " + ex.getMessage());
 		}
 	}
 
@@ -1593,6 +1745,8 @@ public class Installer
 		case SQLSERVER: sql = "select name    from sys.server_principals where type = 'S' and name like 'dbxt[_]user[_]%'"; break;
 		case ASE:       sql = "select name    from master..syslogins where name like 'dbxt[_]user[_]%'"; break;
 		case ORACLE:    sql = "select lower(username) from dba_users where username like 'DBXT\\_USER\\_%' escape '\\'"; break;
+		case MYSQL:     sql = "select distinct user from mysql.user where user like 'dbxt\\_user\\_%'"; break;
+		case DB2:       return new ArrayList<>(); // no logins of our own (OS users)
 		default:        sql = "select rolname from pg_roles where rolname like 'dbxt\\_user\\_%'"; break;
 		}
 		List<String> list = new ArrayList<>();
@@ -1634,6 +1788,31 @@ public class Installer
 				_logger.info("Dropped tablespace '" + db + "' and its datafile(s).");
 			}
 			break;
+		case MYSQL:
+			for (Object[] row : admin.query("select id from information_schema.processlist where db = ? and id <> connection_id()", db))
+				killQuietly(admin, "kill " + row[0]);
+			admin.exec("drop database `" + db + "`");
+			break;
+		case DB2:
+			{
+				// Sessions of the run (client user dbxt_user_#) hold locks on the tables
+				for (Object[] row : admin.query("select application_handle from table(mon_get_connection(null, -2)) where client_userid like 'dbxt\\_user\\_%' escape '\\' and application_handle <> mon_get_application_handle()"))
+					killQuietly(admin, "call sysproc.admin_cmd('force application (" + row[0] + ")')");
+				// No "drop schema cascade": every procedure and table of the schema, then the schema and our tablespaces
+				for (Object[] row : admin.query("select specificname from syscat.routines where routineschema = upper(?) and routinetype = 'P'", db))
+					admin.exec("drop specific procedure " + db + "." + row[0]);
+				for (Object[] row : admin.query("select tabname, type from syscat.tables where tabschema = upper(?)", db))
+					admin.exec(("V".equals(row[1]) ? "drop view " : "drop table ") + db + "." + row[0]);
+				admin.exec("drop schema " + db + " restrict");
+				for (String ts : new String[] {db, db + DB2_TMP_TS_SUFFIX})
+					if (admin.queryInt("select count(*) from syscat.tablespaces where tbspace = upper(?)", ts) > 0)
+					{
+						admin.exec("drop tablespace " + ts);
+						_lg.getJournal().event("object", "action", "drop", "objectType", "tablespace", "name", ts);
+						_logger.info("Dropped tablespace '" + ts + "'.");
+					}
+			}
+			break;
 		}
 	}
 
@@ -1647,6 +1826,8 @@ public class Installer
 		case ASE:       admin.exec("exec master..sp_droplogin '" + login + "'"); break;
 		case POSTGRES:  admin.exec("drop role " + login); break;
 		case ORACLE:    admin.exec("drop user " + login + " cascade"); break;
+		case MYSQL:     admin.exec("drop user '" + login + "'@'%'"); break;
+		case DB2:       break; // not a login of ours (the client user name of the admin's sessions)
 		}
 	}
 
@@ -1700,8 +1881,8 @@ public class Installer
 
 			System.out.println();
 			System.out.println("Last runs:");
-			String top = _v == Vendor.POSTGRES || _v == Vendor.ORACLE ? "" : "top 10 ";
-			String lim = _v == Vendor.POSTGRES ? " limit 10" : _v == Vendor.ORACLE ? " fetch first 10 rows only" : "";
+			String top = _v == Vendor.SQLSERVER || _v == Vendor.ASE ? "top 10 " : "";
+			String lim = _v == Vendor.POSTGRES || _v == Vendor.MYSQL ? " limit 10" : _v == Vendor.ORACLE || _v == Vendor.DB2 ? " fetch first 10 rows only" : "";
 			for (Object[] row : ss.query("select " + top + "run_id, start_ts, end_ts, intensity, threads, exec_count, error_count from dbxt_loadgen_runlog order by start_ts desc" + lim))
 				System.out.println(String.format("   %s  %s - %s  intensity=%s threads=%s execs=%s errors=%s", row[0], row[1], row[2], row[3], row[4], row[5], row[6]));
 			System.out.println();

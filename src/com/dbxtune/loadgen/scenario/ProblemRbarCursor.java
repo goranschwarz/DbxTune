@@ -68,7 +68,7 @@ public class ProblemRbarCursor extends Scenario
 		int category = 1 + ctx.rnd().nextInt(ctx.getCategories());
 		long stockRows = (long) ctx.getWarehouses() * ctx.getProducts();
 		int  maxRows   = ctx.getLoadGen().getScenarioIntProp(this, "maxRows", (int) Math.max(10, Math.min(500, 20_000_000L / Math.max(1, stockRows))));
-		String sql = pick(ctx.getVendor(), "{call p_rbar_price_adjust(?, ?)}", "{call p_rbar_price_adjust(?, ?)}", "select p_rbar_price_adjust(?, ?)", "{call p_rbar_price_adjust(?, ?)}");
+		String sql = pick(ctx.getVendor(), "{call p_rbar_price_adjust(?, ?)}", "{call p_rbar_price_adjust(?, ?)}", "select p_rbar_price_adjust(?, ?)", "{call p_rbar_price_adjust(?, ?)}", "{call p_rbar_price_adjust(?, ?)}", "{call p_rbar_price_adjust(?, ?)}");
 		ev.put("category_id", category).put("maxRows", maxRows).put("sql", sql);
 
 		try (LgSession s = ctx.openSession(this))
@@ -86,7 +86,7 @@ public class ProblemRbarCursor extends Scenario
 				if (ctx.isStopping() || s.isCancelled() || ex instanceof java.sql.SQLTimeoutException)
 					throw ex;
 				ev.setNote("The procedure has no max_rows parameter (installed before 2026-11-07, re-install to get it): called without a limit. First try: " + ex.getMessage());
-				s.call(pick(ctx.getVendor(), "{call p_rbar_price_adjust(?)}", "{call p_rbar_price_adjust(?)}", "select p_rbar_price_adjust(?)", "{call p_rbar_price_adjust(?)}"), category);
+				s.call(pick(ctx.getVendor(), "{call p_rbar_price_adjust(?)}", "{call p_rbar_price_adjust(?)}", "select p_rbar_price_adjust(?)", "{call p_rbar_price_adjust(?)}", "{call p_rbar_price_adjust(?)}", "{call p_rbar_price_adjust(?)}"), category);
 			}
 			ev.put("durationMs", System.currentTimeMillis() - start);
 		}

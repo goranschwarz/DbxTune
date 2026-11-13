@@ -66,8 +66,11 @@ public class ProblemErrors extends Scenario
 		Vendor v = ctx.getVendor();
 		String[] sqls = {
 				tag() + "insert into counter_table (name, next_val) values ('order', 0)",
-				tag() + "select count(*) / 0 from warehouse",
-				tag() + pick(v, "waitfor delay '00:00:05'", "waitfor delay '00:00:05'", "select pg_sleep(5)", "begin dbms_session.sleep(5); end;"), // Oracle: dbms_session.sleep is 18c+
+				// MySQL: a division by zero in a SELECT is NULL (no error): a scalar subquery with 2 rows instead (error 1242)
+				tag() + pick(v, "select count(*) / 0 from warehouse", "select count(*) / 0 from warehouse", "select count(*) / 0 from warehouse", "select count(*) / 0 from warehouse",
+				                "select count(*) from warehouse where warehouse_id = (select warehouse_id from warehouse)", "select count(*) / 0 from warehouse"),
+				tag() + pick(v, "waitfor delay '00:00:05'", "waitfor delay '00:00:05'", "select pg_sleep(5)", "begin dbms_session.sleep(5); end;", // Oracle: dbms_session.sleep is 18c+
+				                "select sleep(5)", "call dbms_alert.sleep(5)"),
 				tag() + "select * from dbxt_no_such_table"
 		};
 		int  durationSec = activeSeconds(ctx, "durationSeconds", 60);

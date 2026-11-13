@@ -62,7 +62,7 @@ public class ProblemSortSpill extends Scenario
 	{
 		String body = "select count(*) from (select distinct o.customer_id, o.ship_city, ol.product_id, ol.qty, o.order_ts "
 				+ "from orders o join order_line ol on ol.order_id = o.order_id) t";
-		String sql = tag() + pick(ctx.getVendor(), body + " option (max_grant_percent = 0)", body, body, body);
+		String sql = tag() + pick(ctx.getVendor(), body + " option (max_grant_percent = 0)", body, body, body, body, body);
 		ev.put("sql", sql);
 
 		try (LgSession s = ctx.openSession(this))
@@ -83,6 +83,12 @@ public class ProblemSortSpill extends Scenario
 				s.exec("alter session set workarea_size_policy = manual");
 				s.exec("alter session set sort_area_size = 65536");
 				s.exec("alter session set hash_area_size = 65536");
+				s.exec(sql);
+			}
+			else if (ctx.getVendor() == Vendor.MYSQL)
+			{
+				// Tiny in-memory temp tables for this session: the DISTINCT's internal temporary table goes to disk (Created_tmp_disk_tables)
+				s.exec("set session tmp_table_size = 1024, session max_heap_table_size = 16384, session sort_buffer_size = 32768");
 				s.exec(sql);
 			}
 			else

@@ -43,6 +43,8 @@ public class Delivery extends Scenario
 				"select top 10 order_id from orders where status = 'PAID' order by order_ts",
 				"select top 10 order_id from orders where status = 'PAID' order by order_ts",
 				"select order_id from orders where status = 'PAID' order by order_ts limit 10",
+				"select order_id from orders where status = 'PAID' order by order_ts fetch first 10 rows only",
+				"select order_id from orders where status = 'PAID' order by order_ts limit 10",
 				"select order_id from orders where status = 'PAID' order by order_ts fetch first 10 rows only"));
 
 		String[] carriers = {"PostNord", "DHL", "UPS", "Bring"};
