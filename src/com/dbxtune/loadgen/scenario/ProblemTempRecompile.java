@@ -41,6 +41,12 @@ public class ProblemTempRecompile extends Scenario
 	{
 		switch (v)
 		{
+		case DB2:      return withRows(expected(Arrays.asList("CmMonGetConnection", "CmStatements", "CmTimeSpent"), Arrays.asList(),
+				"p_temp_report declares a global temporary table on every call: the statements on it are compiled at run time (incremental bind), so compile time goes up (CmTimeSpent RqstTime 'Compile')."
+				+ " Seen 2026-11-13 on DB2 11.5.8."), "CmMonGetConnection:APPLICATION_HANDLE=@sessions");
+		case MYSQL:    return withRows(expected(Arrays.asList("CmSessionActivity", "CmStatements", "CmGlobalStatus"), Arrays.asList(),
+				"p_temp_report creates, fills, reads and drops a temporary table on every call (Created_tmp_tables). MySQL has no plan cache to recompile: the cost is the DDL per call."
+				+ " The OLTP mix creates internal temporary tables all the time, so the global rate is no graph check. Seen 2026-11-13 on MySQL 8.4."), "CmSessionActivity:PROCESSLIST_ID=@sessions");
 		case SQLSERVER: return withRows(expected(Arrays.asList("CmPerfCounters", "CmExecProcedureStats", "CmTempdbUsage"), Arrays.asList(), Arrays.asList("CmPerfCounters.ReCompile"),
 				"SQL Re-Compilations/sec up (2 per call: the temp table gets an index between two runs of the same select); tempdb object create/drop."), "CmExecQueryStats:object_name=p_temp_report");
 		case ASE:       return expected(Arrays.asList("CmSysmon", "CmCachedProcs", "CmTempdbActivity", "CmProcCacheLoad"), Arrays.asList(),

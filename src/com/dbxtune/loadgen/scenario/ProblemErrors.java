@@ -44,6 +44,11 @@ public class ProblemErrors extends Scenario
 	{
 		switch (v)
 		{
+		case DB2:      return withRows(expected(Arrays.asList("CmMonGetConnection", "CmStatements", "CmSummary"), Arrays.asList(),
+				"Client errors SQL0803N, SQL0801N, a cancelled DBMS_ALERT.SLEEP (SQL0952N) and SQL0204N: not in db2diag.log, so no alarm. The session's FAILED_SQL_STMTS in CmMonGetConnection, NUM_EXEC_WITH_ERROR in CmStatements."
+				+ " Seen 2026-11-13 on DB2 11.5.8."), "CmMonGetConnection:APPLICATION_HANDLE=@sessions");
+		case MYSQL:    return withRows(expected(Arrays.asList("CmSessionActivity", "CmStatements"), Arrays.asList(),
+				"Client errors 1062, 1242, a cancelled SLEEP() and 1146: they are not written to the error log, so no alarm. CmStatements counts them per digest (Errors). Seen 2026-11-13 on MySQL 8.4."), "CmSessionActivity:PROCESSLIST_ID=@sessions");
 		case SQLSERVER: return expected(Arrays.asList("CmPerfCounters", "CmErrorLog"), Arrays.asList(), Arrays.asList("CmPerfCounters.SqlErrors:User Errors"),
 				"Client errors (2627, 8134, 208) and an attention/cancel; these are not in the SQL Server error log. Errors/sec (CmPerfCounters, instance User Errors) up.");
 		case ASE:       return expected(Arrays.asList("CmSqlStatement", "CmSqlStatementPerDb", "CmErrorLog"), Arrays.asList(),

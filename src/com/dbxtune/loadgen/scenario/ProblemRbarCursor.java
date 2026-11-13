@@ -47,6 +47,12 @@ public class ProblemRbarCursor extends Scenario
 	{
 		switch (v)
 		{
+		case DB2:      return withRows(expected(Arrays.asList("CmMonGetConnection", "CmStatements", "CmActiveStatements"), Arrays.asList(),
+				"One procedure call with a cursor loop; the two UPDATEs inside run once per product (CmStatements, the procedure's package). Seen 2026-11-13 on DB2 11.5.8 (size small): ~30 ms per call,"
+				+ " or a long lock wait when it overlaps 'blocking' (both update stock)."), "CmMonGetConnection:APPLICATION_HANDLE=@sessions");
+		case MYSQL:    return withRows(expected(Arrays.asList("CmSessionActivity", "CmStatements", "CmActiveStatements"), Arrays.asList(),
+				"One procedure call with a cursor loop; the two UPDATEs inside run once per product (CmStatements, nested statements). Seen 2026-11-13 on MySQL 8.4 (size small): 0.6-0.8 s per call,"
+				+ " or a lock wait timeout (error 1205 after 50 s) when it overlaps 'blocking' (both update stock)."), "CmSessionActivity:PROCESSLIST_ID=@sessions");
 		case SQLSERVER: return withRows(expected(Arrays.asList("CmExecProcedureStats", "CmExecQueryStats", "CmExecCursors", "CmActiveStatements"), Arrays.asList(),
 				"One long procedure call; the statements inside execute once per product (high execution count)."), "CmActiveStatements:session_id=@sessions");
 		case ASE:       return expected(Arrays.asList("CmActiveStatements", "CmProcCallStack", "CmCachedProcs", "CmSqlStatement", "CmObjectActivity"), Arrays.asList(),
@@ -83,7 +89,8 @@ public class ProblemRbarCursor extends Scenario
 			catch (SQLException ex)
 			{
 				// Installed before max_rows was added (2026-11-07): the old one-argument procedure, all rows of the category
-				if (ctx.isStopping() || s.isCancelled() || ex instanceof java.sql.SQLTimeoutException)
+				// MySQL / DB2 never had the old procedure: their error is a real one (for example a lock wait timeout behind 'blocking')
+				if (ctx.isStopping() || s.isCancelled() || ex instanceof java.sql.SQLTimeoutException || ctx.getVendor() == Vendor.MYSQL || ctx.getVendor() == Vendor.DB2)
 					throw ex;
 				ev.setNote("The procedure has no max_rows parameter (installed before 2026-11-07, re-install to get it): called without a limit. First try: " + ex.getMessage());
 				s.call(pick(ctx.getVendor(), "{call p_rbar_price_adjust(?)}", "{call p_rbar_price_adjust(?)}", "select p_rbar_price_adjust(?)", "{call p_rbar_price_adjust(?)}", "{call p_rbar_price_adjust(?)}", "{call p_rbar_price_adjust(?)}"), category);

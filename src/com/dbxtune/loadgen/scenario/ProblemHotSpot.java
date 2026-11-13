@@ -44,6 +44,10 @@ public class ProblemHotSpot extends Scenario
 	{
 		switch (v)
 		{
+		case DB2:      return withRows(expected(Arrays.asList("CmActiveStatements", "CmSummary", "CmMonGetConnection"), Arrays.asList(), Arrays.asList("CmSummary.LocksGraph:Lock Waits"),
+				"6 sessions update one counter row: lock waits (CmSummary LocksGraph). Seen 2026-11-13 on DB2 11.5.8 (size small): Lock Waits ~0.3 -> ~43/s."), "CmActiveStatements:APPLICATION_HANDLE=@sessions");
+		case MYSQL:    return withRows(expected(Arrays.asList("CmActiveStatements", "CmGlobalStatus", "CmSummary"), Arrays.asList(), Arrays.asList("CmGlobalStatus.IdbRowsLWait"),
+				"6 sessions update one counter row: InnoDB row lock waits (CmGlobalStatus Innodb_row_lock_waits). Seen 2026-11-13 on MySQL 8.4 (size small): Innodb_row_lock_waits ~0.8 -> ~40/s."), "CmActiveStatements:Pid=@sessions");
 		case SQLSERVER: return withRows(expected(Arrays.asList("CmWaitStats", "CmWaitingTasks", "CmActiveStatements", "CmSpidWait"), Arrays.asList(), Arrays.asList("CmWaitStats.LockCount:*"),
 				"Many short LCK_M_U / LCK_M_X waits on counter_table; Lock Waits/sec (CmPerfCounters) up. Seen 2026-11-07: 0 -> 40/s."), "CmActiveStatements:session_id=@sessions");
 		case ASE:       return expected(Arrays.asList("CmSpidWait", "CmSysWaits", "CmLocks", "CmActiveStatements", "CmObjectActivity"), Arrays.asList(),

@@ -41,6 +41,10 @@ public class ProblemConnChurn extends Scenario
 	{
 		switch (v)
 		{
+		case DB2:      return expected(Arrays.asList("CmMonGetConnection", "CmSummary"), Arrays.asList(),
+				"Many short connections (~3-4 per second); Db2Tune has no connections-per-second graph, so nothing is checked. Seen 2026-11-13 on DB2 11.5.8.");
+		case MYSQL:    return expected(Arrays.asList("CmGlobalStatus", "CmSummary"), Arrays.asList(),
+				"Many short connections (Connections, Threads_created in CmGlobalStatus). MySqlTune has no connections-per-second graph, so nothing is checked. Seen 2026-11-13 on MySQL 8.4.");
 		case SQLSERVER: return expected(Arrays.asList("CmPerfCounters", "CmSummary", "CmExecSessions"), Arrays.asList(), Arrays.asList("CmSummary.ConnRateGraph"), "Logins/sec and Logouts/sec up. Errors/sec (_Total) also goes up: every login gives informational messages (database/language context changed).");
 		case ASE:       return expected(Arrays.asList("CmSummary", "CmSysmon", "CmProcessActivity"), Arrays.asList(), "Connections per second up (many short spids).");
 		case POSTGRES:  return expected(Arrays.asList("CmSummary", "CmPgActivity", "CmPgDatabase"), Arrays.asList(), "Many short backends (sessions per second up).");

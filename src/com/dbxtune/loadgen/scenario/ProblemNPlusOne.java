@@ -43,6 +43,13 @@ public class ProblemNPlusOne extends Scenario
 		String note = "Very many executions of three tiny statements from one session.";
 		switch (v)
 		{
+		case DB2:      return withRows(expected(Arrays.asList("CmChattyStatements", "CmMonGetConnection", "CmStatements"), Arrays.asList("AlarmEventChattySession"), note
+				+ " CmMonGetConnection: the connection's requests/s (APP_RQSTS_COMPLETED_TOTAL) raise ChattySession (over 100/s for 2 samples)."
+				+ " Seen 2026-11-13 on DB2 11.5.8 (size small, run low): ChattySession for every event on the right application_handle - and also on normal OLTP workers"
+				+ " (JCC sends several requests per statement: ~128 requests/s at ~10 logical reads each), so the threshold of 100 is low for DB2."), "CmMonGetConnection:APPLICATION_HANDLE=@sessions");
+		case MYSQL:   return withRows(expected(Arrays.asList("CmChattyStatements", "CmSessionActivity", "CmStatements"), Arrays.asList("AlarmEventChattySession"), note
+				+ " CmSessionActivity: the session's Questions/s raise ChattySession (over 100/s for 2 samples)."
+				+ " Seen 2026-11-13 on MySQL 8.4 (size small, run low): ChattySession raised for every event, on the right connection_id."), "CmSessionActivity:PROCESSLIST_ID=@sessions");
 		case SQLSERVER: return withRows(expected(Arrays.asList("CmExecQueryStats", "CmExecSessions", "CmPerfCounters"), Arrays.asList(), Arrays.asList("CmPerfCounters.SqlBatch"), note + " Batch Requests/sec up."), "CmExecQueryStats:SqlText~@tag", "CmChattyStatements:SqlText~@tag");
 		case ASE:       return withRows(expected(Arrays.asList("CmChattyStatements", "CmProcessActivity", "CmStmntCacheDetails"), Arrays.asList("AlarmEventChattySession"), note + " CmProcessActivity: the session's BatchIdDiff very high."), "CmChattyStatements:SqlText~@tag");
 		case POSTGRES:  return expected(Arrays.asList("CmPgStatements", "CmPgDatabase"), Arrays.asList(), note);

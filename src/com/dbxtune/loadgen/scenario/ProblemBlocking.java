@@ -48,6 +48,14 @@ public class ProblemBlocking extends Scenario
 	{
 		switch (v)
 		{
+		case DB2:      return withRows(expected(Arrays.asList("CmActiveStatements", "CmSummary", "CmMonGetConnection"),
+				Arrays.asList("AlarmEventBlockingLockAlarm", "AlarmEventDb2BlockingSession"), Arrays.asList("CmSummary.LocksGraph:Lock Waits"),
+				"Waiters wait for the row lock for holdSeconds (the load generator sets their CURRENT LOCK TIMEOUT); the holder has an open unit of work and is idle. BlockingLockAlarm (CmSummary) and Db2BlockingSession (CmActiveStatements, on the holder) at 60 s."
+				+ " Seen 2026-11-13 on DB2 11.5.8 (size small, run low, hold ~80 s): both alarms for every event, ~70 s after the start."), "CmActiveStatements:APPLICATION_HANDLE=@sessions");
+		case MYSQL:    return withRows(expected(Arrays.asList("CmActiveStatements", "CmSummary", "CmGlobalStatus"),
+				Arrays.asList("AlarmEventBlockingLockAlarm", "AlarmEventMyBlockingSession"), Arrays.asList("CmSummary.BlockingLocksGraph"),
+				"Waiters wait for the row lock for holdSeconds (the load generator raises their innodb_lock_wait_timeout); the holder is 'Sleep' with an open transaction. BlockingLockAlarm (CmSummary) and MyBlockingSession (CmActiveStatements, on the holder) at 60 s."
+				+ " Seen 2026-11-13 on MySQL 8.4 (size small, run low, hold ~80 s): both alarms ~70 s after the start, Row Lock Waits up to 13, CmGlobalStatus Innodb_row_lock_waits up."), "CmActiveStatements:Pid=@sessions");
 		case SQLSERVER: return withRows(expected(Arrays.asList("CmActiveStatements", "CmWaitingTasks", "CmSummary", "CmWho"),
 				Arrays.asList("AlarmEventBlockingLockAlarm", "AlarmEventLongRunningTransaction"), Arrays.asList("CmPerfCounters.BlockedProcs"),
 				"Waiters blocked for holdSeconds (blocking alarm at 60 s by default). The holder is idle in an open transaction (long running transaction alarm at 60 s); "

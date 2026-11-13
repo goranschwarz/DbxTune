@@ -838,6 +838,27 @@ The journal has the error codes of the first round.
 - Oracle: ORA-00001, ORA-01476, ORA-01013 (cancel of `dbms_session.sleep(5)`, 18c+), ORA-00942. None goes to the alert log,
   so no CmErrorLog row and no alarm; ORA-00942 is a failed parse (CmSysStat `parse count (failures)` ~0.25/s); the statements are in CmSqlStats.
 
+#### MySQL and DB2: what MySqlTune / Db2Tune showed
+Seen 2026-11-13 (MySQL 8.4, DB2 11.5.8; size small, 16 min `low` run with every problem every 4 min, no-GUI collector with 15 s samples,
+`compare` against DbxCentral). The problems overlapped, so the checks are on the problem's own sessions (`@sessions`: the
+connection id `CmActiveStatements.Pid` / `CmSessionActivity.PROCESSLIST_ID` on MySQL, `APPLICATION_HANDLE` on DB2) plus alarms,
+and graphs only where the problem is the main cause.
+
+| Problem | MySQL (MySqlTune) | DB2 (Db2Tune) |
+|---|---|---|
+| blocking | `BlockingLockAlarm` + `MyBlockingSession` (on the holder) at 60 s, CmSummary BlockingLocksGraph | `BlockingLockAlarm` + `Db2BlockingSession` (on the holder) for every event, CmSummary LocksGraph `Lock Waits` |
+| deadlock | error 1213; no alarm (InnoDB logs deadlocks only with `innodb_print_all_deadlocks = ON`); nothing checked | SQL0911N rc 2; not in db2diag.log, ~0.07 deadlocks/s is too little for a graph: nothing checked |
+| long_tran | CmActiveStatements (Sleep, HasOpenTxn), CmSummary OldestTranInSecGraph | CmActiveStatements (UOW_CLIENT_IDLE_SEC), CmSummary OldestTranInSecGraph |
+| sort_spill | on disk (Created_tmp_disk_tables, Sort_merge_passes), but a ~2 s query: TOO SHORT for a session sample | ~0.3 s query (no session SORTHEAP setting): TOO SHORT |
+| literal_sql | the digests normalize the literals: two digests with high ExecCount, no plan cache to flood | a new package cache entry per statement, compile time up |
+| non_sargable | the session's SelectScan, CmStatements NoIndexUsed | CmStatements ROWS_READ_PER_EXEC |
+| hot_spot | CmGlobalStatus Innodb_row_lock_waits ~0.8 -> ~40/s | CmSummary LocksGraph `Lock Waits` ~0.3 -> ~43/s |
+| rbar_cursor | 0.6-0.8 s per call; a lock wait timeout (1205 after 50 s) when it overlaps `blocking` | ~30 ms per call: TOO SHORT |
+| n_plus_one | `ChattySession` for every event, on the right connection | `ChattySession` for every event, on the right application handle - **and on normal OLTP workers** (JCC sends several requests per statement: ~128 requests/s at ~10 logical reads each, over the threshold of 100) |
+| temp_recompile | temporary table created/dropped per call (no plan cache to recompile) | declared temporary table per call: run-time compiles |
+| conn_churn | no connections-per-second graph: nothing checked | no connections-per-second graph: nothing checked |
+| errors | 1062, 1242, a cancelled `SLEEP()`, 1146: not in the error log, no alarm; per digest in CmStatements | SQL0803N, SQL0801N, SQL0952N (cancelled `DBMS_ALERT.SLEEP`), SQL0204N: no alarm; FAILED_SQL_STMTS per connection |
+
 Settings for each problem (`scenario.<name>.<setting>`): `everyMinutes`, and where it applies `holdSeconds`,
 `waiters`, `sessions`, `durationSeconds` (+ `problem.extraSeconds`, see above). See `conf/loadgen.properties`.
 

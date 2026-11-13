@@ -44,6 +44,12 @@ public class ProblemNonSargable extends Scenario
 	{
 		switch (v)
 		{
+		case DB2:      return withRows(expected(Arrays.asList("CmMonGetConnection", "CmStatements", "CmMonGetTable"), Arrays.asList(),
+				"Table scans of customer and orders: phone = a BIGINT (the VARCHAR column is cast), YEAR(order_ts), a leading wildcard. CmStatements: high ROWS_READ_PER_EXEC. Seen 2026-11-13 on DB2 11.5.8."),
+				"CmMonGetConnection:APPLICATION_HANDLE=@sessions");
+		case MYSQL:    return withRows(expected(Arrays.asList("CmSessionActivity", "CmStatements", "CmSysTableStats"), Arrays.asList(),
+				"Full scans of customer and orders: phone = a number (the VARCHAR column is converted), YEAR(order_ts), a leading wildcard. CmStatements: NoIndexUsed / high RowsExaminedPerExec; the session's SelectScan in CmSessionActivity. Seen 2026-11-13 on MySQL 8.4."),
+				"CmSessionActivity:PROCESSLIST_ID=@sessions");
 		case SQLSERVER: return withRows(expected(Arrays.asList("CmExecQueryStats", "CmIndexMissing", "CmIndexUsage", "CmActiveStatements"), Arrays.asList(),
 				"Index scans instead of seeks; phone = NVARCHAR parameter against a VARCHAR column (CONVERT_IMPLICIT)."), "CmExecQueryStats:SqlText~@tag", "CmIndexMissing:TableName=customer");
 		case ASE:       return expected(Arrays.asList("CmSqlStatement", "CmStmntCacheDetails", "CmObjectActivity", "CmActiveStatements"), Arrays.asList(),

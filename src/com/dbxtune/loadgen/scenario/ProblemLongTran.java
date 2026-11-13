@@ -44,6 +44,10 @@ public class ProblemLongTran extends Scenario
 	{
 		switch (v)
 		{
+		case DB2:      return withRows(expected(Arrays.asList("CmActiveStatements", "CmSummary", "CmMonGetConnection"), Arrays.asList(), Arrays.asList("CmSummary.OldestTranInSecGraph"),
+				"An idle connection with an open unit of work (CmActiveStatements UOW_AGE_SEC, UOW_CLIENT_IDLE_SEC) for holdSeconds; CmSummary OldestTranInSecGraph grows. Seen 2026-11-13 on DB2 11.5.8 (size small, run low)."), "CmActiveStatements:APPLICATION_HANDLE=@sessions");
+		case MYSQL:    return withRows(expected(Arrays.asList("CmActiveStatements", "CmSummary"), Arrays.asList(), Arrays.asList("CmSummary.OldestTranInSecGraph"),
+				"A 'Sleep' session with an open transaction (CmActiveStatements HasOpenTxn, TxnAgeInSec) for holdSeconds; CmSummary OldestTranInSecGraph grows. Seen 2026-11-13 on MySQL 8.4 (size small, run low)."), "CmActiveStatements:Pid=@sessions");
 		case SQLSERVER: return withRows(expected(Arrays.asList("CmOpenTransactions", "CmDatabases", "CmSummary", "CmActiveStatements"),
 				Arrays.asList("AlarmEventLongRunningTransaction", "AlarmEventHoldingLocksWhileWaitForClientInput"),
 				"Oldest open transaction grows to holdSeconds (alarm at 60 s by default; holding locks while waiting for client at 180 s)."), "CmOpenTransactions:session_id=@sessions");

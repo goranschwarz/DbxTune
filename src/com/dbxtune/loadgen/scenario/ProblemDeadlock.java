@@ -45,6 +45,12 @@ public class ProblemDeadlock extends Scenario
 	{
 		switch (v)
 		{
+		case DB2:      return expected(Arrays.asList("CmMonGetConnection", "CmSummary", "CmStatements"), Arrays.asList(),
+				"SQL0911N reason code 2 for the victim; DB2 does not write deadlocks to db2diag.log by default, so no alarm. One deadlock per event is ~0.07/s at 15 s samples: too small for the LocksGraph 'Deadlocks' check,"
+				+ " and the two sessions live < 1 s. Seen 2026-11-13 on DB2 11.5.8: nothing to check with the default settings.");
+		case MYSQL:    return expected(Arrays.asList("CmInnoDbMetrics", "CmStatements"), Arrays.asList(),
+				"MySQL error 1213 for the victim. InnoDB writes deadlocks to the error log only with innodb_print_all_deadlocks = ON (default OFF), so no alarm is expected;"
+				+ " the deadlock counter is CmInnoDbMetrics 'lock_deadlocks' (no graph). The two sessions live < 1 s: too short for a session sample. Seen 2026-11-13 on MySQL 8.4: nothing to check with the default settings.");
 		case SQLSERVER: return expected(Arrays.asList("CmSummary", "CmPerfCounters"), Arrays.asList("AlarmEventDeadlock"),
 				"One deadlock (error 1205 for the victim).");
 		case ASE:       return expected(Arrays.asList("CmDeadlock", "CmSummary", "CmSysmon"), Arrays.asList(),

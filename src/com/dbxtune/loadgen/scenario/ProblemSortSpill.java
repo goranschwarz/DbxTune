@@ -41,6 +41,12 @@ public class ProblemSortSpill extends Scenario
 	{
 		switch (v)
 		{
+		case DB2:      return withRows(expected(Arrays.asList("CmMonGetConnection", "CmStatements", "CmSummary"), Arrays.asList(),
+				"DB2 has no session sort memory setting (SORTHEAP is a database setting): the plain DISTINCT query runs; a sort overflow shows in CmStatements SORT_OVERFLOWS and CmSummary SortsGraph, but one query is too little for a graph check."
+				+ " Seen 2026-11-13 on DB2 11.5.8 (size small): ~0.3 s per query."), "CmMonGetConnection:APPLICATION_HANDLE=@sessions");
+		case MYSQL:    return withRows(expected(Arrays.asList("CmSessionActivity", "CmStatements", "CmGlobalStatus"), Arrays.asList(),
+				"Session tmp_table_size 1 KB, max_heap_table_size 16 KB, sort_buffer_size 32 KB: the DISTINCT's internal temporary table goes to disk (Created_tmp_disk_tables, Sort_merge_passes; the session's TmpDiskTables / SortMergePasses in CmSessionActivity)."
+				+ " One query of ~2 s at size small: the global rates stay too small for a graph check. Seen 2026-11-13 on MySQL 8.4."), "CmSessionActivity:PROCESSLIST_ID=@sessions");
 		case SQLSERVER: return withRows(expected(Arrays.asList("CmTempdbUsage", "CmTempdbSpidUsage", "CmMemoryGrants", "CmExecQueryStats", "CmActiveStatements"), Arrays.asList(), Arrays.asList("CmTempdbUsage.TempdbUsageSmall:*"),
 				"Hash/sort spill to tempdb (query hint max_grant_percent = 0): Workfiles Created/sec (CmPerfCounters) up. Together with the OLAP traffic it can also give RESOURCE_SEMAPHORE waits (AlarmEventToxicWait, AlarmEventMemoryGrantWait)."), "CmTempdbSpidUsage:session_id=@sessions", "CmActiveStatements:session_id=@sessions");
 		case ASE:       return expected(Arrays.asList("CmTempdbActivity", "CmActiveStatements", "CmSqlStatement", "CmStmntCacheDetails", "CmOpenDatabases"),

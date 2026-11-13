@@ -41,6 +41,12 @@ public class ProblemLiteralSql extends Scenario
 	{
 		switch (v)
 		{
+		case DB2:      return withRows(expected(Arrays.asList("CmMonGetConnection", "CmStatements", "CmTimeSpent"), Arrays.asList(), Arrays.asList(),
+				"Literals in every statement: every statement is a new entry in the package cache (CmStatements, NUM_EXECUTIONS 1) and compile time goes up (CmTimeSpent RqstTime 'Compile')."
+				+ " Seen 2026-11-13 on DB2 11.5.8."), "CmMonGetConnection:APPLICATION_HANDLE=@sessions");
+		case MYSQL:    return withRows(expected(Arrays.asList("CmSessionActivity", "CmStatements"), Arrays.asList(),
+				"Literals in every statement: MySQL's digests normalize them, so CmStatements shows TWO digests with high ExecCount (not many statements), and there is no plan cache to flood. The session is in CmSessionActivity (Questions)."
+				+ " Seen 2026-11-13 on MySQL 8.4."), "CmSessionActivity:PROCESSLIST_ID=@sessions");
 		case SQLSERVER: return withRows(expected(Arrays.asList("CmPlanCacheHistory", "CmPerfCounters", "CmExecQueryStats", "CmMemoryClerks"), Arrays.asList("AlarmEventLiteralSql"), Arrays.asList("CmPerfCounters.Compile"),
 				"Many single-use ad hoc plans; SQL Compilations/sec up (joins prevent simple parameterization). Seen 2026-11-07: compilations 4 -> 15-19/s, ~250 distinct statements per run with the same query_hash in CmExecQueryStats."), "CmExecQueryStats:SqlText~@tag");
 		case ASE:       return expected(Arrays.asList("CmStatementCache", "CmStmntCacheDetails", "CmSqlStatement", "CmSysmon"), Arrays.asList(),
