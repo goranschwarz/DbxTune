@@ -37,6 +37,7 @@ import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventBlockingLockAlarm;
+import com.dbxtune.alarm.events.AlarmEventLongRunningStatement;
 import com.dbxtune.alarm.events.AlarmEventLongRunningTransaction;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
@@ -76,7 +77,7 @@ extends CmSummaryAbstract
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
 
-	public static final String[] MON_TABLES       = new String[] {"pg_stat_bgwriter"};
+	public static final String[] MON_TABLES       = new String[] {"pg_stat_activity", "pg_locks", "pg_prepared_xacts", "pg_replication_slots", "pg_stat_replication"};
 	public static final String[] NEED_ROLES       = new String[] {};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
@@ -364,7 +365,8 @@ extends CmSummaryAbstract
 		String oxact_is_waiting_event = "        ,CAST('-unknown-' as varchar(60))    AS oxact_is_waiting_event \n";
 		if (srvVersion >= Ver.ver(10))
 		{
-			oxact_is_waiting       = "        ,CASE WHEN wait_event_type IS NULL THEN true ELSE false END  AS oxact_is_waiting \n";
+			// Same meaning as the 9.x column 'waiting' (waiting for a lock). It was inverted (true when NOT waiting, and 'idle in transaction' with wait_event 'ClientRead' was "waiting")
+			oxact_is_waiting       = "        ,CASE WHEN wait_event_type = 'Lock' THEN true ELSE false END  AS oxact_is_waiting \n";
 			oxact_is_waiting_type  = "        ,CAST(wait_event_type as varchar(60))  AS oxact_is_waiting_type \n";
 			oxact_is_waiting_event = "        ,CAST(wait_event      as varchar(60))  AS oxact_is_waiting_event \n";
 		}
@@ -674,17 +676,20 @@ extends CmSummaryAbstract
 		//-------------------------------------------------------
 		if (isSystemAlarmsForColumnEnabledAndInTimeRange("oldestOpenTranInSec"))
 		{
-			Integer oldest_xact_start_in_sec = cm.getAbsValueAsInteger(0, "oldest_xact_start_in_sec");
+			// NOTE: the column is 'oxact_xact_start_in_sec' (it was read as 'oldest_xact_start_in_sec', which do not exist, so this alarm never fired)
+			Integer oldest_xact_start_in_sec = cm.getAbsValueAsInteger(0, "oxact_xact_start_in_sec");
 			if (oldest_xact_start_in_sec != null)
 			{
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_oldestOpenTranInSec, DEFAULT_alarm_oldestOpenTranInSec);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", oldest_xact_start_in_sec='" + oldest_xact_start_in_sec + "'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", oxact_xact_start_in_sec='" + oldest_xact_start_in_sec + "'.");
 
 				if (oldest_xact_start_in_sec > threshold)
 				{
-					AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, "-unknown-", oldest_xact_start_in_sec, "-unknown-");
+					String dbname   = cm.getAbsString(0, "oxact_dbname");
+					String tranInfo = "pid=" + cm.getAbsString(0, "oxact_pid") + ", user=" + cm.getAbsString(0, "oxact_username") + ", app=" + cm.getAbsString(0, "oxact_appname") + ", state=" + cm.getAbsString(0, "oxact_state");
+					AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, dbname, oldest_xact_start_in_sec, tranInfo);
 
 					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
 					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
@@ -696,7 +701,7 @@ extends CmSummaryAbstract
 							// Set CANCEL message (values that was found AFTER last raise/re-raise event)
 							if (AlarmPhase.CANCEL.equals(phase))
 							{
-								Integer oldest_xact_start_in_sec = cm.getAbsValueAsInteger(0, "oldest_xact_start_in_sec");
+								Integer oldest_xact_start_in_sec = cm.getAbsValueAsInteger(0, "oxact_xact_start_in_sec");
 
 								String cancelMsg = getAlarmCancelText("The oldest open transaction", oldest_xact_start_in_sec + " seconds", " seconds");
 								alarmEvent.setCancelDescription(cancelMsg);
@@ -717,17 +722,22 @@ extends CmSummaryAbstract
 		//-------------------------------------------------------
 		if (isSystemAlarmsForColumnEnabledAndInTimeRange("oldestStatementInSec"))
 		{
-			Integer oldest_stmnt_start_in_sec = cm.getAbsValueAsInteger(0, "oldest_stmnt_start_in_sec");
-			if (oldest_stmnt_start_in_sec != null)
+			// NOTE: the column is 'oxact_stmnt_start_in_sec' (it was read as 'oldest_stmnt_start_in_sec', which do not exist, so this alarm never fired)
+			//       It is the statement of the OLDEST TRANSACTION, and only a statement that is running ('active') counts:
+			//       for 'idle in transaction' it is the time since the last statement started (that is the transaction alarm above)
+			Integer oldest_stmnt_start_in_sec = cm.getAbsValueAsInteger(0, "oxact_stmnt_start_in_sec");
+			String  oxact_state               = cm.getAbsString(0, "oxact_state");
+			if (oldest_stmnt_start_in_sec != null && "active".equals(oxact_state))
 			{
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_oldestStatementInSec, DEFAULT_alarm_oldestStatementInSec);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", oldest_xact_start_in_sec='" + oldest_stmnt_start_in_sec + "'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", oxact_stmnt_start_in_sec='" + oldest_stmnt_start_in_sec + "'.");
 
 				if (oldest_stmnt_start_in_sec > threshold)
 				{
-					AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, "-unknown-", oldest_stmnt_start_in_sec, "-unknown-");
+					// The settings text always said 'AlarmEventLongRunningStatement' (it raised AlarmEventLongRunningTransaction)
+					AlarmEvent ae = new AlarmEventLongRunningStatement(cm, threshold, oldest_stmnt_start_in_sec, "-unknown-", cm.getAbsString(0, "oxact_dbname"), cm.getAbsString(0, "oxact_username"), "pid=" + cm.getAbsString(0, "oxact_pid"), cm.getAbsString(0, "oxact_appname"));
 
 					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
 					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
@@ -739,7 +749,7 @@ extends CmSummaryAbstract
 							// Set CANCEL message (values that was found AFTER last raise/re-raise event)
 							if (AlarmPhase.CANCEL.equals(phase))
 							{
-								Integer oldest_stmnt_start_in_sec = cm.getAbsValueAsInteger(0, "oldest_stmnt_start_in_sec");
+								Integer oldest_stmnt_start_in_sec = cm.getAbsValueAsInteger(0, "oxact_stmnt_start_in_sec");
 
 								String cancelMsg = getAlarmCancelText("The oldest statement", oldest_stmnt_start_in_sec + " seconds", " seconds");
 								alarmEvent.setCancelDescription(cancelMsg);

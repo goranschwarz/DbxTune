@@ -271,14 +271,15 @@ extends CountersModel
 			+ "    ,(SELECT setting::int FROM pg_settings WHERE name = 'max_connections') AS srv_cfg_max_connections \n"
 			+ "    ,d.datconnlimit                 AS db_conn_limit \n"
 //			+ "    ,a.rolname                      AS db_owner \n"
-			+ "    ,a.usename                      AS db_owner \n"
+			+ "    ,a.rolname                      AS db_owner \n"
 			+ checksum_failures_diff
 			+ "    ,d.datcollate                   AS db_collation \n" 
 			+ "    ,CAST(d.datacl as varchar(512)) AS db_access_privileges \n" 
 			+ "FROM pg_stat_database sd \n"
 			+ "INNER JOIN pg_database d ON sd.datid = d.oid \n"
 //			+ "INNER JOIN pg_authid   a ON d.datdba = a.oid \n"  // Possibly use >>> 'pg_user' <<< or 'pg_roles' instead of pg_authid
-			+ "INNER JOIN pg_user     a ON d.datdba = a.usesysid \n"
+			// pg_roles (LEFT JOIN): 'pg_user' only has roles with LOGIN, so a database owned by a NOLOGIN role was not shown at all
+			+ "LEFT  JOIN pg_roles    a ON d.datdba = a.oid \n"
 //			+ "WHERE sd.datname NOT LIKE 'template%' \n"
 			+ "WHERE NOT d.datistemplate \n"
 			+ "";

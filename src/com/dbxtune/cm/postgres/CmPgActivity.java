@@ -394,7 +394,7 @@ extends CountersModel
 
 		// ----- 14
 		String query_id = "";
-		if (versionInfo.getLongVersion() >= Ver.ver(13))
+		if (versionInfo.getLongVersion() >= Ver.ver(14)) // pg_stat_activity.query_id was added in 14 (was 13 here, which failed every sample on 13)
 		{
 			query_id  = "    ,a.query_id \n";
 		}

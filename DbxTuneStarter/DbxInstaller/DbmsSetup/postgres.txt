@@ -1,96 +1,171 @@
 /*--------------------------------------------------------------------------------------------
-** The below information (and more) can also be found at:
-** https://github.com/goranschwarz/DbxTune/blob/master/README_dbxcentral_3_add_postgres.md
+** PostgresTune needs ONE thing in the server: a login with the role 'pg_monitor'.
+** (if you are lazy you could use 'postgres' but not recomended)
+**
+** IN A NUTSHELL
+**   1: Run section 1                   (copy and paste, change the password)
+**   2: RECOMENDED: section 3           (pg_stat_statements, needs a restart) and the 'track_*' settings
+**   3: Optionally section 2            (the error log)
+**   4: Test the login                  -> section 5
+**
+** VERSIONS
+**   Postgres 10 and above (tested on 10, 13, 14, 16, 17, 18 and 19). Newer versions gives some extra columns.
+**   Postgres 9.4 - 9.6 has no 'pg_monitor' role: use a superuser login there (not tested any more).
+**
+** WHAT IT READS
+**   Only the statistics views (pg_stat_*), the catalog (pg_class, pg_attribute, pg_index...) and the settings.
+**   It does NOT read any user data (no SELECT on your tables). Table and index DEFINITIONS (the "DDL Storage" shown
+**   with the top statements in the Daily Summary Report) are read from the catalog, which every login can read.
+**
+** WHAT THE LOGIN NEEDS
+**   pg_monitor              all sessions and their SQL text (pg_read_all_stats), all settings (pg_read_all_settings),
+**                           pg_ls_waldir(), and the pg_buffercache/pg_stat_statements/pg_wait_sampling views
+**   pg_read_server_files    OPTIONAL: only to read the server's error log (section 2)
+**
+** If a Performance Counter can't read what it needs, it will be DISABLED.
+** The reason (and what to do about it) is written in the log file, and as a tooltip on the tab.
+** At every connect the log file also says which of the above the login has.
+**
+** WHAT POSTGRESTUNE MAY CREATE IN THE SERVER (and how to turn it off)
+**   - CREATE EXTENSION pg_stat_statements, if it is missing (only works if the login may create it)
+**         turn off with: CmPgStatements.if.missing.pg_stat_statements.createExtension=false
+**   - CREATE EXTENSION pg_wait_sampling, if it is missing (and installed in the server)
+**         turn off with: CmPgWaitSampling.if.missing.pg_wait_sampling_profile.createExtension=false
+**   - CREATE EXTENSION pg_buffercache, when a 'Buffer Cache' Performance Counter is enabled (needs a superuser)
+**   - CREATE EXTENSION file_fdw + the foreign table 'pg_srv_errorlog', when the error log is read from a CSV log (needs a superuser)
+**   - On a primary with standbys: the table 'postgrestune_ha_dummy_update' is created and updated every 5 minutes,
+**     so the standby's replay lag can be measured (the login needs CREATE on the 'public' schema, or create it yourself, see section 4)
+**         turn off with: CmPgReplication.update.primary=false
+**   With only 'pg_monitor' NONE of the above can be created: then create the extensions yourself (section 3), as a superuser.
+**--------------------------------------------------------------------------------------------
 */
 
+
 /*--------------------------------------------------------------------------------------------
-** Create a separate user for monitoring (if you are lazy you could use 'postgres' but not recomended
+** SECTION 1: the login
+**            Postgres 10 and above (the same for all of them)
+**            The login: dbxtune
 **--------------------------------------------------------------------------------------------
 */
 ## as the postgres user (or any other admin account)
-psql 
-CREATE USER dbxtune WITH PASSWORD 'the-long-and-arbitrary-password';
+psql
+
+CREATE ROLE dbxtune LOGIN PASSWORD 'the-long-and-arbitrary-password';
 GRANT pg_monitor TO dbxtune;
-GRANT pg_read_all_data TO dbxtune;
--- ALTER USER dbxtune WITH SUPERUSER; -- This is probably NOT needed, but it can be used as a temporary workaround
 
-## Test that we can login to Postgres with the 'dbxtune' user
-psql --username dbxtune --host $(hostname) --port 5432 
-
-
-/*--------------------------------------------------------------------------------------------
-** Prepare, step 3: RECOMENDED - pg_stat_statements
-**--------------------------------------------------------------------------------------------
-*/
-psql --username dbxtune --host $(hostname) --port 5432 
-select * from pg_stat_statements;
-## If the above works, no need to continue!
-
-## If 'pg_stat_statements' is NOT enabled... Lets enable it:
-
-## Check current config
-psql 
-select name, setting, sourcefile from pg_settings where name = 'shared_preload_libraries'
-
-## Change the configuration file (column 'sourcefile' from above SQL)
-vi ...postgresInstallDir.../postgres.conf
-shared_preload_libraries = 'pg_stat_statements'
-#-- Other pg_stat_statistics config parameters can possibly be found here: https://docs.yugabyte.com/preview/explore/query-1-performance/pg-stat-statements/
-
-## Or change the config via:
-ALTER SYSTEM SET shared_preload_libraries TO 'pg_stat_statements'
-
-
-## Restart Postgres
-pg_ctl restart
-
-## as the postgres admin user
-psql 
-CREATE EXTENSION pg_stat_statements;
-
-## Now test with dbxtune user
-psql --username dbxtune --host $(hostname) --port 5432 
-select * from pg_stat_statements;
-
+## pg_hba.conf: the login must be allowed to connect from the host where PostgresTune runs, for example:
+##   host    all    dbxtune    10.1.2.3/32    scram-sha-256
+## and then: SELECT pg_reload_conf();
 
 
 /*--------------------------------------------------------------------------------------------
-** Prepare, step 4: RECOMENDED - pg_wait_sampling
-**--------------------------------------------------------------------------------------------
-*/
-psql --username dbxtune --host $(hostname) --port 5432 
-select * from pg_wait_sampling_profile;
-## If the above works, no need to continue!
-
-## Check current config
-psql 
-select name, setting, sourcefile from pg_settings where name = 'shared_preload_libraries'
-## 'pg_wait_sampling' should be in there
-## If not fix the config (edit config file or)
-## ALTER SYSTEM SET shared_preload_libraries TO 'pg_stat_statements, pg_wait_sampling'
-## Then restart Postgres
-
-## as the postgres admin user
-psql 
-CREATE EXTENSION pg_wait_sampling;
-
-## Now test with dbxtune user
-psql --username dbxtune --host $(hostname) --port 5432 
-select * from pg_wait_sampling_profile;
-
-
-/*--------------------------------------------------------------------------------------------
-** Prepare, step 5: RECOMENDED - Postgres errorlog
+** SECTION 2: OPTIONAL - the error log (the tab 'Errorlog', with alarms for deadlocks, internal errors, ALTER SYSTEM...)
 **
-** If you want to monitor the error log (needs Version 15)
-** And JSON Logging https://www.cybertec-postgresql.com/en/json-logs-in-postgresql-15/
+** Postgres must write a CSV or JSON log (JSON from Postgres 15, and it is the easiest: it needs nothing more).
+** With CSV, PostgresTune reads the log through a 'file_fdw' foreign table, that a superuser must create the first time.
+**
+** VERSIONS: 'jsonlog' needs Postgres 15 (before 15 use 'stderr,csvlog').
+**           'pg_read_server_files' needs Postgres 11. On Postgres 10 only a superuser can read the log (the GRANTs below do not help there).
 **--------------------------------------------------------------------------------------------
 */
-## We need access to some system functions from user 'dbxtune'
-GRANT EXECUTE ON FUNCTION pg_current_logfile()     TO dbxtune
-GRANT EXECUTE ON FUNCTION pg_current_logfile(text) TO dbxtune
-GRANT EXECUTE ON FUNCTION pg_read_file(text)       TO dbxtune
+ALTER SYSTEM SET logging_collector = on;                       -- needs a restart if it was off
+ALTER SYSTEM SET log_destination   = 'stderr,jsonlog';         -- Postgres 15 and above. Before 15: 'stderr,csvlog'
+SELECT pg_reload_conf();
+
+GRANT pg_read_server_files TO dbxtune;                         -- Postgres 11 and above
+
+## Instead of pg_read_server_files, only the functions that are used can be granted (JSON log):
+## GRANT EXECUTE ON FUNCTION pg_current_logfile(text)            TO dbxtune;
+## GRANT EXECUTE ON FUNCTION pg_read_file(text, bigint, bigint)  TO dbxtune;
 
 
+/*--------------------------------------------------------------------------------------------
+** SECTION 3: RECOMENDED - settings (postgresql.conf, or ALTER SYSTEM)
+**--------------------------------------------------------------------------------------------
+*/
+## Check the current value first: the extensions are a LIST, add to it (do NOT replace it)
+SHOW shared_preload_libraries;
+
+## pg_stat_statements: the SQL statements (the tabs 'Statements', the Top SQL in the Daily Summary Report)
+## For example, if the current value is 'auto_explain':
+## CAUTION: with ALTER SYSTEM every library is its OWN quoted string. 'auto_explain, pg_stat_statements' (one string) is ONE library
+##          name with a comma in it, and then Postgres does NOT START after the restart ("could not access file ...").
+##          (In postgresql.conf it is the other way around: shared_preload_libraries = 'auto_explain, pg_stat_statements')
+ALTER SYSTEM SET shared_preload_libraries = 'auto_explain', 'pg_stat_statements';
+ALTER SYSTEM SET pg_stat_statements.max   = 10000;             -- default 5000
+ALTER SYSTEM SET pg_stat_statements.track = 'top';             -- default 'top' ('all' also counts statements inside functions)
+
+## Restart Postgres (shared_preload_libraries needs a restart)
+pg_ctl restart -D <data directory>                             -- or: systemctl restart postgresql...
+
+## as a superuser, in the database 'postgres' (the database PostgresTune connects to)
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+
+## OPTIONAL: pg_buffercache (the tabs 'Buffer Cache ...'). It comes with Postgres, no restart.
+CREATE EXTENSION IF NOT EXISTS pg_buffercache;
+
+## OPTIONAL: pg_wait_sampling (the tabs 'Server Wait' and 'PID Wait'). A third party extension, it must be installed first
+## (for example: apt install postgresql-17-pg-wait-sampling, or: dnf install pg_wait_sampling_17), add 'pg_wait_sampling'
+## to shared_preload_libraries (as above), restart, and: CREATE EXTENSION IF NOT EXISTS pg_wait_sampling;
+##
+## pg_wait_sampling keeps a row for EVERY session that ever existed (until it is reset), and every read of it copies all the rows:
+## on a server with many short connections that costs more and more server CPU (measured: 0.5 ms per 1000 rows, 68000 rows after
+## 2 minutes of short connections). PostgresTune resets it when it has more than 10000 rows (CmPgSrvWait.reset.profile.above.rows),
+## if the login may do that:
+## GRANT EXECUTE ON FUNCTION pg_wait_sampling_reset_profile() TO dbxtune;
+## PostgresTune does not use the query id of the profile: without it, the profile has fewer rows (no restart needed):
+## ALTER SYSTEM SET pg_wait_sampling.profile_queries = 'none';  SELECT pg_reload_conf();
+
+## RECOMENDED: statistics that are OFF by default (no restart). Without them some columns are always 0.
+ALTER SYSTEM SET track_io_timing     = on;                     -- read/write times (databases, IO, statements). Check the cost first with: pg_test_timing
+ALTER SYSTEM SET track_wal_io_timing = on;                     -- Postgres 14 and above: WAL write/sync times
+ALTER SYSTEM SET track_functions     = 'pl';                   -- the tab 'Function Info'
+ALTER SYSTEM SET track_activity_query_size = 4096;             -- default 1024: longer SQL text in the active statements (needs a restart)
+SELECT pg_reload_conf();
 
 
+/*--------------------------------------------------------------------------------------------
+** SECTION 4: OPTIONAL - the replay lag of the standbys (on the PRIMARY, only if there are standbys)
+**
+** PostgresTune updates this table every 5 minutes, so the standbys can tell how old their data is.
+** The login with only 'pg_monitor' can't create it: create it once, as the owner of the 'public' schema.
+**--------------------------------------------------------------------------------------------
+*/
+CREATE TABLE IF NOT EXISTS postgrestune_ha_dummy_update(id varchar(36), primaryServerName varchar(80), ts timestamptz, primary key(id));
+GRANT SELECT, INSERT, UPDATE, DELETE ON postgrestune_ha_dummy_update TO dbxtune;
+
+
+/*--------------------------------------------------------------------------------------------
+** NOT NEEDED, and NOT recomended
+**
+** pg_read_all_data       reads ALL user data. PostgresTune does not need it (it was in this script before 2026-11).
+** SUPERUSER              PostgresTune does not need it (except to create the extensions, which can be done once, as above).
+** pg_signal_backend      PostgresTune never cancels or terminates sessions.
+**--------------------------------------------------------------------------------------------
+*/
+
+
+/*--------------------------------------------------------------------------------------------
+** SECTION 5: test the login
+**--------------------------------------------------------------------------------------------
+*/
+psql --username dbxtune --host <hostname> --port 5432 --dbname postgres
+
+SELECT pg_has_role('pg_monitor', 'member');                               -- t
+SELECT count(*) FROM pg_stat_activity WHERE query = '<insufficient privilege>';  -- 0 (all SQL text is visible)
+SELECT count(*) FROM pg_ls_waldir();                                     -- works
+SELECT count(*) FROM pg_stat_statements;                                 -- works if section 3 was done
+SELECT pg_current_logfile();                                             -- works if section 2 was done
+
+
+/*--------------------------------------------------------------------------------------------
+** MANAGED SERVICES (Amazon RDS / Aurora, Azure Database for PostgreSQL, Google Cloud SQL / AlloyDB)
+**
+** Section 1 works as it is, with the admin login of the service (rds_superuser, azure_pg_admin, cloudsqlsuperuser...).
+** shared_preload_libraries and the track_* settings are changed in the service (RDS/Aurora: the DB parameter group,
+** Azure: Server parameters, Cloud SQL: database flags), not with ALTER SYSTEM.
+** Some functions are not allowed by some services (pg_ls_waldir(), reading the error log): those Performance Counters are
+** DISABLED, with the reason in the log file. The error log is in the service's own console/API.
+** There is no host monitoring (no SSH to the server), so only the database Performance Counters are collected.
+**--------------------------------------------------------------------------------------------
+*/

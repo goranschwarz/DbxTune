@@ -183,21 +183,23 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
-		String pg_wal_lsn_diff           = "pg_xlog_location_diff";
-		String pg_current_wal_insert_lsn = "pg_current_xlog_insert_location";
-		if (versionInfo.getLongVersion() > Ver.ver(10))
+		// The current WAL position. On a standby (it can have slots: cascading replication, or 17 failover slots) pg_current_wal_*() fails during recovery: use the last received position there
+		String pg_wal_lsn_diff = "pg_xlog_location_diff";
+		String currentLsn      = "pg_current_xlog_insert_location()";
+		if (versionInfo.getLongVersion() >= Ver.ver(10)) // was '> 10', so exactly 10.0 got the functions that was renamed in 10
 		{
-			pg_wal_lsn_diff           = "pg_wal_lsn_diff";
-			pg_current_wal_insert_lsn = "pg_current_wal_insert_lsn";
+			pg_wal_lsn_diff = "pg_wal_lsn_diff";
+			currentLsn      = "CASE WHEN pg_is_in_recovery() THEN pg_last_wal_receive_lsn() ELSE pg_current_wal_insert_lsn() END";
 		}
-		
+
 		String sql = ""
 			    + "SELECT \n"
-			    + "     CAST(" + pg_wal_lsn_diff + "(" + pg_current_wal_insert_lsn + "(), restart_lsn)/1024.0        as numeric(12,1)) AS lag_kb \n"
-			    + "    ,CAST(" + pg_wal_lsn_diff + "(" + pg_current_wal_insert_lsn + "(), restart_lsn)/1024.0        as numeric(12,1)) AS lag_kb_diff \n"
-			    + "    ,CAST(" + pg_wal_lsn_diff + "(" + pg_current_wal_insert_lsn + "(), restart_lsn)/1024.0/1024.0 as numeric(12,1)) AS lag_mb \n"
-			    + "    ,* \n"
-			    + "FROM pg_replication_slots; \n"
+			    + "     CAST(" + pg_wal_lsn_diff + "(cur.lsn, restart_lsn)/1024.0        as numeric(12,1)) AS lag_kb \n"
+			    + "    ,CAST(" + pg_wal_lsn_diff + "(cur.lsn, restart_lsn)/1024.0        as numeric(12,1)) AS lag_kb_diff \n"
+			    + "    ,CAST(" + pg_wal_lsn_diff + "(cur.lsn, restart_lsn)/1024.0/1024.0 as numeric(12,1)) AS lag_mb \n"
+			    + "    ,s.* \n"
+			    + "FROM pg_replication_slots s \n"
+			    + "CROSS JOIN (SELECT " + currentLsn + " AS lsn) cur \n"
 			    + "";
 
 		return sql;

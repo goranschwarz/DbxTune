@@ -348,7 +348,8 @@ extends CountersModel
 			wait_event_type = "    ,CAST(wait_event_type as varchar(128)) AS wait_event_type \n";
 			wait_event      = "    ,CAST(wait_event      as varchar(128)) AS wait_event \n";
 
-			where__wait_event = "  AND wait_event not like '%Main' \n"; // or: WalSenderMain
+			// or: WalSenderMain. NOTE: wait_event is NULL for a statement that runs on CPU, and 'NULL not like ...' is NULL (= the row was removed): keep those rows
+			where__wait_event = "  AND (wait_event IS NULL OR wait_event not like '%Main') \n";
 		}
 
 		// ----- 10
@@ -444,12 +445,13 @@ extends CountersModel
 				+ "    ,CAST(null as text)                     AS pid_lock_info \n"
 				+ "    ,CAST(null as text)                     AS blocked_pids_info \n"
 
+				// bigint: an int overflows after 24.8 days (and then the whole sample fails with 'integer out of range')
 				+ "    ,CASE WHEN state != 'active' OR state IS NULL THEN -1 \n"
-				+ "          ELSE cast(((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from query_start)) * 1000) as int) \n"
+				+ "          ELSE cast(((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from query_start)) * 1000) as bigint) \n"
 				+ "     END as \"execTimeInMs\" \n"
 
 				+ "    ,CASE WHEN xact_start IS NULL THEN -1 \n"
-				+ "          ELSE cast(((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from xact_start)) * 1000) as int) \n"
+				+ "          ELSE cast(((EXTRACT('epoch' from CLOCK_TIMESTAMP()) - EXTRACT('epoch' from xact_start)) * 1000) as bigint) \n"
 				+ "     END as \"xactTimeInMs\" \n"
 
 				+ "FROM pg_stat_activity \n"
@@ -1074,9 +1076,13 @@ extends CountersModel
 			return;
 		
 		// EXIT EARLY if no alarm properties has been specified (since there can be *many* logins)
+		// NOTE: ALL the alarms below must be in here (it was only StatementExecInSec, so turning that one off also turned off the other 4)
 		boolean isAnyAlarmEnabled = false;
-		if (isSystemAlarmsForColumnEnabledAndInTimeRange("StatementExecInSec")) isAnyAlarmEnabled = true;
-//		if (isSystemAlarmsForColumnEnabledAndInTimeRange("xxxxxxxxxxx"      )) isAnyAlarmEnabled = true;
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("ImBlockingOthersMaxTimeInSec"))                     isAnyAlarmEnabled = true;
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("HoldingXLocksWhileWaitForClientInputInSec"))        isAnyAlarmEnabled = true;
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("HoldingAdvisoryLocksWhileWaitForClientInputInSec")) isAnyAlarmEnabled = true;
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("StatementExecInSec"))                               isAnyAlarmEnabled = true;
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("OpenXactInSec"))                                    isAnyAlarmEnabled = true;
 
 		if (isAnyAlarmEnabled == false)
 			return;

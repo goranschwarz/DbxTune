@@ -346,8 +346,9 @@ extends CountersModel
 			tabName = "pg_catalog.pg_statio_all_tables";
 		}
 
-		String all_read   = "(heap_blks_read + idx_blks_read + toast_blks_read + tidx_blks_read)";
-		String all_hit    = "(heap_blks_hit  + idx_blks_hit  + toast_blks_hit  + tidx_blks_hit )";
+		// idx_* is NULL for a table without indexes, toast_*/tidx_* is NULL for a table without a TOAST table: then the totals was NULL (COALESCE)
+		String all_read   = "(coalesce(heap_blks_read,0) + coalesce(idx_blks_read,0) + coalesce(toast_blks_read,0) + coalesce(tidx_blks_read,0))";
+		String all_hit    = "(coalesce(heap_blks_hit ,0) + coalesce(idx_blks_hit ,0) + coalesce(toast_blks_hit ,0) + coalesce(tidx_blks_hit ,0))";
 		String total_read = "(" + all_read + " + " + all_hit + ")";
 		return ""
 				+ "select \n"

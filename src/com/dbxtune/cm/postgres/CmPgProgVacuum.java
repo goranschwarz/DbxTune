@@ -20,8 +20,12 @@
  ******************************************************************************/
 package com.dbxtune.cm.postgres;
 
+import java.lang.invoke.MethodHandles;
 import java.util.LinkedList;
 import java.util.List;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -40,6 +44,7 @@ import com.dbxtune.utils.Ver;
 public class CmPgProgVacuum
 extends CountersModel
 {
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmPgProgVacuum.class.getSimpleName();
@@ -151,6 +156,45 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		long srvVersion = versionInfo == null ? 0 : versionInfo.getLongVersion();
+		String sql = getSql(srvVersion);
+
+		// Dry-run the newer SQL (a fork may report a version, but not have the columns): fall back to the SQL before 17
+		if (srvVersion >= Ver.ver(17) && conn != null && ! PostgresCmUtils.canExecute(conn, "select * from (" + sql + ") x where 1=2"))
+		{
+			_logger.warn(CM_NAME + ": The SQL for version " + Ver.versionNumToStr(srvVersion) + " failed, the SQL for Postgres 16 is used (and it may fail at every sample).");
+			sql = getSql(Ver.ver(16));
+		}
+		return sql;
+	}
+
+	/**
+	 * 17: max_dead_tuples / num_dead_tuples was replaced by max_dead_tuple_bytes / dead_tuple_bytes / num_dead_item_ids, indexes_total / indexes_processed was added<br>
+	 * 18: delay_time (needs 'track_cost_delay_timing')<br>
+	 * 19: mode, started_by<br>
+	 * The old columns stay (history): num_dead_tuples is num_dead_item_ids (each dead item is a dead tuple), max_dead_tuples is NULL (17 has a memory limit in bytes instead).
+	 */
+	private String getSql(long srvVersion)
+	{
+		String deadTuples = ""
+				+ "    ,     max_dead_tuples      \n"
+				+ "    ,     num_dead_tuples      \n";
+		if (srvVersion >= Ver.ver(17))
+		{
+			deadTuples = ""
+				+ "    ,cast(NULL as bigint)              AS max_dead_tuples       \n"
+				+ "    ,     num_dead_item_ids            AS num_dead_tuples       \n"
+				+ "    ,     max_dead_tuple_bytes         \n"
+				+ "    ,     dead_tuple_bytes             \n"
+				+ "    ,     indexes_total                \n"
+				+ "    ,     indexes_processed            \n";
+		}
+		if (srvVersion >= Ver.ver(18))
+			deadTuples += "    ,cast(delay_time as numeric(15,1)) AS delay_time_ms         \n";
+		if (srvVersion >= Ver.ver(19))
+			deadTuples += "    ,cast(mode       as varchar(30))   AS mode                  \n"
+			            + "    ,cast(started_by as varchar(30))   AS started_by            \n";
+
 		return ""
 				+ "select \n"
 				+ "          pid \n"
@@ -169,8 +213,7 @@ extends CountersModel
 				+ "    ,     heap_blks_scanned    \n"
 				+ "    ,cast(heap_blks_scanned * 1.0 / nullif(heap_blks_total, 0) * 100.0 as numeric(9,1))  AS heap_blks_pct \n"
 				+ "    ,     heap_blks_vacuumed   \n"
-				+ "    ,     max_dead_tuples      \n"
-				+ "    ,     num_dead_tuples      \n"
+				+ deadTuples
 
 				+ "from pg_stat_progress_vacuum";
 

@@ -42,6 +42,7 @@ import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
+import com.dbxtune.sql.conn.info.DbmsVersionInfoPostgres;
 import com.dbxtune.utils.Ver;
 
 /**
@@ -182,11 +183,33 @@ extends CountersModel
 			    + "DO $$ BEGIN \n"
 			    + "    IF NOT EXISTS (SELECT * FROM pg_extension WHERE extname = 'pg_buffercache') \n"
 			    + "    THEN \n"
-			    + "        CREATE EXTENSION pg_buffercache; \n"
+			    + "        BEGIN \n"
+			    + "            CREATE EXTENSION pg_buffercache; \n"
+			    + "        EXCEPTION WHEN OTHERS THEN \n" // never abort the refresh transaction (the error is in checkDependsOnOther)
+			    + "            RAISE NOTICE 'PostgresTune: could not CREATE EXTENSION pg_buffercache: %', SQLERRM; \n"
+			    + "        END; \n"
 			    + "    END IF; \n"
 			    + "END; $$; \n"
 			    + "";
 		return sql;
+	}
+
+	@Override
+	public boolean checkDependsOnOther(DbxConnection conn)
+	{
+		DbmsVersionInfoPostgres versionInfo = (conn.getDbmsVersionInfo() instanceof DbmsVersionInfoPostgres) ? (DbmsVersionInfoPostgres) conn.getDbmsVersionInfo() : null;
+		if (versionInfo == null)
+			return true;
+
+		// Already installed: can the login use it? (EXECUTE is granted to pg_monitor)
+		if (versionInfo.hasExtension("pg_buffercache"))
+			return PostgresCmUtils.checkViewsAreReadable(this, conn, "pg_buffercache_usage_counts()");
+
+		// Not installed: it is not a "trusted" extension, so only a superuser can create it (the init SQL above does it at the first refresh)
+		if ( ! versionInfo.isSuperuser() )
+			return PostgresCmUtils.disable(this, "The extension 'pg_buffercache' is not installed in this database, and only a superuser can create it.", "as a superuser, in this database: CREATE EXTENSION pg_buffercache; (pg_monitor can then read it)");
+
+		return true;
 	}
 	
 	@Override

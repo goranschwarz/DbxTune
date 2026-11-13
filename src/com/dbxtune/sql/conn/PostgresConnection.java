@@ -75,6 +75,46 @@ public class PostgresConnection extends DbxConnection
 		return new DbmsVersionInfoPostgres(this);
 	}
 
+	/**
+	 * The version from 'server_version_num' (for example 170011 or 90624), not from the version string.
+	 * <p>
+	 * The version string can't always be parsed: a release candidate is '19rc2', a beta '19beta1' (both was -1 before).<br>
+	 * NOTE: current_setting() can't fail, so this is safe also inside a transaction (where a failing statement aborts the transaction).
+	 */
+	@Override
+	public long getDbmsVersionNumber()
+	{
+		if (_dbmsVersionNumber != -1)
+			return _dbmsVersionNumber;
+
+		if (_conn == null)
+			return -1;
+
+		String sql = "select current_setting('server_version_num')";
+		long num = -1;
+		try (Statement stmnt = _conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+				num = Long.parseLong(rs.getString(1).trim());
+		}
+		catch (SQLException | RuntimeException ex)
+		{
+			_logger.warn("getDbmsVersionNumber(): Problems getting 'server_version_num', parsing the version string instead. sql=|" + sql + "|, caught: " + ex);
+			return super.getDbmsVersionNumber();
+		}
+
+		// 10 and above: major * 10000 + minor (170011 = 17.11)   Before 10: major * 10000 + minor * 100 + patch (90624 = 9.6.24)
+		// Same numbers as when the version string was parsed: 17.11 -> Ver.ver(17,11), 9.6.24 -> Ver.ver(9,6,24)
+		if (num >= 100000)
+			_dbmsVersionNumber = Ver.ver((int) (num / 10000), (int) (num % 10000));
+		else if (num > 0)
+			_dbmsVersionNumber = Ver.ver((int) (num / 10000), (int) ((num / 100) % 100), (int) (num % 100));
+		else
+			return super.getDbmsVersionNumber();
+
+		return _dbmsVersionNumber;
+	}
+
 	@Override
 	public DbxConnectionStateInfo refreshConnectionStateInfo()
 	{

@@ -82,6 +82,7 @@ extends CountersModel
 			"cache_hit_pct"
 	};
 	public static final String[] DIFF_COLUMNS     = new String[] {
+			"read_bytes", "write_bytes", "extend_bytes",  // 18 and above
 			"hits",
 			"evictions",
 			"reuses",
@@ -420,6 +421,19 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		// 18: 'op_bytes' was removed (the WAL rows that came in 18 has other sizes), the counters in bytes was added instead.
+		//     The column 'op_bytes' stays (history) as NULL.
+		long srvVersion = versionInfo == null ? 0 : versionInfo.getLongVersion();
+		String op_bytes = "    ,op_bytes \n";
+		if (srvVersion >= Ver.ver(18))
+		{
+			op_bytes = ""
+				    + "    ,CAST(NULL           as bigint)                              AS op_bytes \n"
+				    + "    ,CAST(read_bytes     as bigint)                              AS read_bytes \n"
+				    + "    ,CAST(write_bytes    as bigint)                              AS write_bytes \n"
+				    + "    ,CAST(extend_bytes   as bigint)                              AS extend_bytes \n";
+		}
+
 		// Build SQL
 		String sql = ""
 			    + "select \n"
@@ -452,12 +466,19 @@ extends CountersModel
 			    + "    ,CAST(fsync_time     as bigint)                              AS fsync_time_ms \n"
 			    + "    ,CAST(fsync_time     / nullif(fsyncs    ,0) as numeric(8,1)) AS  fsync_time_avg_ms \n"
 
-			    + "    ,op_bytes \n"
+			    + op_bytes
 			    + "    ,stats_reset \n"
 			    + "from pg_stat_io \n"
 			    + "order by context, backend_type, object \n"
 			    + "";
-		
+
+		// Dry-run the newer SQL (a fork may report a version, but not have the columns): fall back to the SQL for 16/17
+		if (srvVersion >= Ver.ver(18) && conn != null && ! PostgresCmUtils.canExecute(conn, "select * from (" + sql + ") x where 1=2"))
+		{
+			_logger.warn(CM_NAME + ": The SQL for version " + Ver.versionNumToStr(srvVersion) + " failed, the SQL for Postgres 17 is used (and it may fail at every sample).");
+			sql = sql.replace(op_bytes, "    ,op_bytes \n");
+		}
+
 		return sql;
 	}
 

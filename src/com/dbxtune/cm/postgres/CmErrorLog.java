@@ -396,16 +396,13 @@ extends CountersModelAppend
 			if ( UseLogType.JSON.equals(_useLogType) )
 				sql = "select pg_current_logfile('jsonlog')";
 
-			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			// NOTE: This is called BEFORE checkDependsOnOther() (which disables the CM if the login can't read the log), and inside a transaction:
+			//       a "permission denied" must not abort the transaction (then every CM that is initialized after this one fails), so: in a savepoint.
+			if (conn != null)
 			{
-				while(rs.next())
-				{
-					_pg_current_logfile = rs.getString(1); // pg_current_logfile('csvlog')
-				}
-			}
-			catch (SQLException ex)
-			{
-				_logger.error("Problems getting current logfile name using SQL=|" + sql + "|.");
+				_pg_current_logfile = PostgresCmUtils.getFirstString(conn, sql); // pg_current_logfile('csvlog')
+				if (_pg_current_logfile == null)
+					_logger.debug("Problems getting current logfile name using SQL=|" + sql + "| (no permission, or no such log). The check of the requirements tells why.");
 			}
 
 			// Get current filename for table 'pg_srv_errorlog'
@@ -1016,18 +1013,9 @@ extends CountersModelAppend
 		// NO GOOD Log Type was found
 		if ( UseLogType.NOT_YET_DECIDED.equals(_useLogType) )
 		{
-			_logger.error("To read the errorlog, this CM depends on CSV or JSON logging. Fix: ALTER SYSTEM SET log_destination = 'csvlog' --or 'jsonlog'. See 'https://www.postgresql.org/docs/current/runtime-config-logging.html'");
-
-			setActive(false, "Postgres is not configgured for CSV or JSON logging. \n" +
-					"Fix: ALTER SYSTEM SET log_destination = 'csvlog'  -- or 'stderr,csvlog'  \n" +
-					"or:  ALTER SYSTEM SET log_destination = 'jsonlog' -- or 'stderr,jsonlog' \n" +
-					"\n" +
-					"See 'https://www.postgresql.org/docs/current/runtime-config-logging.html' \n" +
-					"See 'https://betterstack.com/community/guides/logging/how-to-start-logging-with-postgresql/' \n" +
-					"See 'https://www.cybertec-postgresql.com/en/json-logs-in-postgresql-15/' for more info. \n" +
-					""); 
-			
-			return false; // <<<<<------ GET OUT OF HERE
+			return PostgresCmUtils.disable(this,
+					"To read the error log, this Counter Model needs CSV or JSON logging, but log_destination='" + _log_destination + "'.",
+					"ALTER SYSTEM SET log_destination = 'stderr,csvlog'; (or 'stderr,jsonlog' on Postgres 15 and above) and SELECT pg_reload_conf(); See https://www.postgresql.org/docs/current/runtime-config-logging.html"); // <<<<<------ GET OUT OF HERE
 		}
 		
 		//-----------------------------------------------------------
@@ -1051,10 +1039,9 @@ extends CountersModelAppend
 			}
 			catch(SQLException ex)
 			{
-				_logger.error("Problems executing SQL=|" + sql + "|", ex);
-
-				setActive(false, "Sorry can't get current log file: pg_current_logfile('csvlog')."); 
-				return false; // <<<<<------ GET OUT OF HERE
+				return PostgresCmUtils.disable(this,
+						"The login can't get the current log file: " + ex.getMessage().trim(),
+						"GRANT pg_read_server_files TO <user>; (or a superuser)"); // <<<<<------ GET OUT OF HERE
 			}
 
 			// Check if the 'pg_srv_errorlog' table exists

@@ -256,21 +256,30 @@ extends ObjectLookupInspectorAbstract
 
 				//--------------------------------------------
 				// get Table definition (DDL or column specification)
+				// NOTE: From pg_catalog, NOT from INFORMATION_SCHEMA.COLUMNS: that view only shows the columns of tables the login has a privilege on,
+				//       so the monitoring login (only 'pg_monitor', no access to user data) got NO columns at all.
+				//       Same column names and values as INFORMATION_SCHEMA.COLUMNS (it uses the same information_schema._pg_*() functions),
+				//       except 'data_type', which is format_type() (for example 'integer[]' instead of 'ARRAY', the type name instead of 'USER-DEFINED').
 				String sql_tableColumnInfo = ""
 				    + "select \n"
-				    + "     ordinal_position \n"
-				    + "    ,column_name \n"
-				    + "    ,data_type \n"
-				    + "    ,character_maximum_length \n"
-				    + "    ,numeric_precision \n"
-				    + "    ,numeric_scale \n"
-				    + "    ,datetime_precision \n"
-				    + "    ,column_default \n"
-				    + "    ,is_nullable \n"
-				    + "from INFORMATION_SCHEMA.COLUMNS \n"
-				    + "where 1=1 \n"
-				    + "  and table_schema = '" + storeEntry.getSchemaName() + "' \n"   // the *real* identifier (Lower or Mixed case) is fetched in getDbmsObjectList(...)
-				    + "  and table_name   = '" + storeEntry.getObjectName() + "' \n"   // the *real* identifier (Lower or Mixed case) is fetched in getDbmsObjectList(...)
+				    + "     a.attnum                                                         AS ordinal_position \n"
+				    + "    ,a.attname                                                        AS column_name \n"
+				    + "    ,format_type(a.atttypid, NULL)                                    AS data_type \n"
+				    + "    ,information_schema._pg_char_max_length (a.atttypid, a.atttypmod) AS character_maximum_length \n"
+				    + "    ,information_schema._pg_numeric_precision(a.atttypid, a.atttypmod) AS numeric_precision \n"
+				    + "    ,information_schema._pg_numeric_scale    (a.atttypid, a.atttypmod) AS numeric_scale \n"
+				    + "    ,information_schema._pg_datetime_precision(a.atttypid, a.atttypmod) AS datetime_precision \n"
+				    + "    ,pg_get_expr(d.adbin, d.adrelid)                                  AS column_default \n"
+				    + "    ,CASE WHEN a.attnotnull THEN 'NO' ELSE 'YES' END                  AS is_nullable \n"
+				    + "from pg_attribute a \n"
+				    + "join pg_class     c on c.oid = a.attrelid \n"
+				    + "join pg_namespace n on n.oid = c.relnamespace \n"
+				    + "left join pg_attrdef d on d.adrelid = a.attrelid and d.adnum = a.attnum \n"
+				    + "where a.attnum > 0 \n"
+				    + "  and not a.attisdropped \n"
+				    + "  and n.nspname = '" + storeEntry.getSchemaName() + "' \n"   // the *real* identifier (Lower or Mixed case) is fetched in getDbmsObjectList(...)
+				    + "  and c.relname = '" + storeEntry.getObjectName() + "' \n"   // the *real* identifier (Lower or Mixed case) is fetched in getDbmsObjectList(...)
+				    + "order by a.attnum \n"
 				    + "";
 
 				try	(AseSqlScript ss = new AseSqlScript(conn, 10)) 

@@ -400,7 +400,7 @@ extends PostgresAbstract
 				+ "    ,[ExtraDescription] \n"
 				+ "from [MonSessionDbmsConfig] \n"
 				+ "where [SessionStartTime] = (select max([SessionStartTime]) from [MonSessionDbmsConfig]) \n"
-				+ "  and [Category] = 'Autovacuum' \n"
+				+ "  and [ParameterName] like 'autovacuum%' \n" // Was: [Category] = 'Autovacuum'. Postgres 19 renamed the category to 'Vacuuming / Automatic Vacuuming' (the same settings)
 //				+ "order by [Category], [ParameterName] \n"
 				+ "order by [ParameterName] \n"
 				+ "";

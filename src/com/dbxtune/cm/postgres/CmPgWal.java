@@ -86,7 +86,8 @@ extends CountersModel
 			"wal_write",
 			"wal_sync",
 			"wal_write_time",
-			"wal_sync_time"
+			"wal_sync_time",
+			"wal_fpi_bytes"     // 19 and above
 	};
 	
 	// RS> Col# Label            JDBC Type Name           Guessed DBMS type Source Table
@@ -344,7 +345,49 @@ extends CountersModel
 			    + "select ws.*, waldir.* \n"
 			    + "from pg_stat_wal ws, waldir \n"
 			    + "";
+
+		// 18: wal_write, wal_sync, wal_write_time, wal_sync_time was removed from 'pg_stat_wal', the data is in 'pg_stat_io' (object = 'wal').
+		//     Same column names as before 18, so the graphs 'WCount' and 'WTime' (and the recorded history) continue to work.
+		//     The times needs 'track_wal_io_timing' (as before 18).
+		long srvVersion = versionInfo == null ? 0 : versionInfo.getLongVersion();
+		if (srvVersion >= Ver.ver(18))
+		{
+			String sql18 = ""
+				    + "with waldir as ( \n"
+				    + "    select \n"
+				    + "         cast(sum(size) / 1024 / 1024 as numeric(15,1)) AS pg_waldir_total_size_mb \n"
+				    + "        ,min(modification) AS oldest_wal_file_ts \n"
+				    + "        ,max(modification) AS latest_wal_file_ts \n"
+				    + "        ,cast(age(max(modification), min(modification)) as varchar(60)) AS latest_vs_oldest_wal_file_ts_diff \n"
+				    + "    from pg_ls_waldir() \n"
+				    + "    where name not like '%.backup' \n"
+				    + "), walio as ( \n"
+				    + "    select \n"
+				    + "         cast(coalesce(sum(writes)    , 0) as bigint)           AS wal_write \n"
+				    + "        ,cast(coalesce(sum(fsyncs)    , 0) as bigint)           AS wal_sync \n"
+				    + "        ,cast(coalesce(sum(write_time), 0) as double precision) AS wal_write_time \n"
+				    + "        ,cast(coalesce(sum(fsync_time), 0) as double precision) AS wal_sync_time \n"
+				    + "    from pg_stat_io \n"
+				    + "    where object = 'wal' \n"
+				    + ") \n"
+				    + "select ws.*, walio.*, waldir.* \n"
+				    + "from pg_stat_wal ws, walio, waldir \n"
+				    + "";
+
+			// Dry-run the newer SQL (a fork may report a version, but not have the columns): fall back to the SQL before 18
+			if (conn == null || PostgresCmUtils.canExecute(conn, "select * from (" + sql18 + ") x where 1=2"))
+				sql = sql18;
+			else
+				_logger.warn(CM_NAME + ": The SQL for version " + Ver.versionNumToStr(srvVersion) + " (WAL writes from pg_stat_io) failed, the SQL before 18 is used (no WAL write/sync counters).");
+		}
 		return sql;
+	}
+
+	@Override
+	public boolean checkDependsOnOther(DbxConnection conn)
+	{
+		// pg_ls_waldir() needs 'pg_monitor' (or superuser), and a managed service may not allow it at all
+		return PostgresCmUtils.checkViewsAreReadable(this, conn, "pg_ls_waldir()");
 	}
 
 	@Override
@@ -352,7 +395,7 @@ extends CountersModel
 	{
 		for (Entry entry : rsmdc.getEntries())
 		{
-			if (    "wal_bytes".equals(entry.getColumnLabel()) 
+			if (    ("wal_bytes".equals(entry.getColumnLabel()) || "wal_fpi_bytes".equals(entry.getColumnLabel())) // wal_fpi_bytes: 19 and above
 			     && entry.getColumnType() == Types.NUMERIC 
 			     && entry.getPrecision() == 0 
 			     && entry.getScale() == 0
@@ -396,7 +439,7 @@ extends CountersModel
 			
 			if (pg_waldir_total_size_mb != null)
 			{
-				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_pgWaldirTotalSizeMb, DEFAULT_alarm_pgWaldirTotalSizeMb);
+				int threshold = getAlarmThresholdPgWaldirTotalSizeMb();
 
 				if (debugPrint || _logger.isDebugEnabled())
 					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): pg_waldir_total_size_mb: threshold=" + threshold + ", pg_waldir_total_size_mb='" + pg_waldir_total_size_mb + "'.");
@@ -455,18 +498,25 @@ extends CountersModel
 		return 60 * 4;
 	}
 
-	public static final String  PROPKEY_alarm_pgWaldirTotalSizeMb = CM_NAME + ".alarm.system.if.pg_waldir_total_size_mb.lt";
-	public static final int     DEFAULT_alarm_pgWaldirTotalSizeMb = 32 * 1024; // 32 GB
+	public static final String  PROPKEY_alarm_pgWaldirTotalSizeMb     = CM_NAME + ".alarm.system.if.pg_waldir_total_size_mb.gt";
+	public static final String  PROPKEY_alarm_pgWaldirTotalSizeMb_old = CM_NAME + ".alarm.system.if.pg_waldir_total_size_mb.lt"; // the old (wrong) name, still read so existing configurations keep working
+	public static final int     DEFAULT_alarm_pgWaldirTotalSizeMb     = 32 * 1024; // 32 GB
+
+	/** The new key, if not set: the old key, if not set: the default */
+	private static int getAlarmThresholdPgWaldirTotalSizeMb()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		return conf.getIntProperty(PROPKEY_alarm_pgWaldirTotalSizeMb, conf.getIntProperty(PROPKEY_alarm_pgWaldirTotalSizeMb_old, DEFAULT_alarm_pgWaldirTotalSizeMb));
+	}
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
-		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
-		
+
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
-		
-		list.add(new CmSettingsHelper("pg_waldir_total_size_mb" , isAlarmSwitch, PROPKEY_alarm_pgWaldirTotalSizeMb , Integer.class, conf.getIntProperty(PROPKEY_alarm_pgWaldirTotalSizeMb , DEFAULT_alarm_pgWaldirTotalSizeMb ), DEFAULT_alarm_pgWaldirTotalSizeMb , "If 'pg_waldir_total_size_mb' is less than this value, send 'AlarmEventWalSizeHigh'." ));
+
+		list.add(new CmSettingsHelper("pg_waldir_total_size_mb" , isAlarmSwitch, PROPKEY_alarm_pgWaldirTotalSizeMb , Integer.class, getAlarmThresholdPgWaldirTotalSizeMb(), DEFAULT_alarm_pgWaldirTotalSizeMb , "If 'pg_waldir_total_size_mb' is greater than or equal to this value (MB), send 'AlarmEventPgWalSizeHigh'. (The old name '...pg_waldir_total_size_mb.lt' is also read)" ));
 
 		return list;
 	}

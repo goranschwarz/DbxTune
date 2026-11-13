@@ -778,8 +778,8 @@ extends ReportEntryAbstract
 		sb.append( createHtmlTh("n_tup_crud"               ,"CRUD = CRreate Update Delete, so a summary of: n_tup_ins, n_tup_upd, n_tup_del"  ) );
 		sb.append( createHtmlTh("n_tup_ins"                ,"Number of rows inserted"                                                         ) );
 		sb.append( createHtmlTh("n_tup_upd"                ,"Number of rows updated"                                                          ) );
-		sb.append( createHtmlTh("n_tup_hot_upd"            ,"Number of rows deleted"                                                          ) );
-		sb.append( createHtmlTh("n_tup_del"                ,"Number of rows HOT updated (i.e., with no separate index update required)"       ) );
+		sb.append( createHtmlTh("n_tup_hot_upd"            ,"Number of rows HOT updated (i.e., with no separate index update required)"       ) );
+		sb.append( createHtmlTh("n_tup_del"                ,"Number of rows deleted"                                                          ) );
 		sb.append( createHtmlTh("n_live_tup"               ,"Estimated number of live rows"                                                   ) );
 		sb.append( createHtmlTh("n_dead_tup"               ,"Estimated number of dead rows"                                                   ) );
 		sb.append( createHtmlTh("n_mod_since_analyze"      ,"Estimated number of rows modified since this table was last analyzed"            ) );

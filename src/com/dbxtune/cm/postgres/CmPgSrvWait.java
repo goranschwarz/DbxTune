@@ -39,6 +39,7 @@ import org.apache.logging.log4j.Logger;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmChartDescriptor;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
@@ -54,6 +55,7 @@ import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
+import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.MathUtils;
 import com.dbxtune.utils.Ver;
 
@@ -179,15 +181,16 @@ extends CountersModel
 	// pg_wait_sampling configuration
 	private int  _pgWaitSampling_profilePeriod = -1;
 	
-	// If we should "reset" counters in the DBMS every now and then
-	// This so we don't get to many "slots" (when a clients disconnects DBMS, the slot in 'pg_wait_sampling' is not automatically cleaned-up/removed...
-	// So every now and then lets call 'select pg_wait_sampling_reset_profile()'
-	private long _lastRefreshTime = -1;
-	private long _lastResetTime = -1;
-	private long _resetAfterMinutes = 60 * 24; // Or should we just RESET at midnight... (but that is not good to)
-	// NOTE: We can't call pg_wait_sampling_reset_profile(), because then we will "remove" data entries for SrvWait level
-	//       In CmPgPidWait we instead need to check for pg_stat_activity, and remove entries that are not in there!
-//TODO; // Implement the above
+	// The profile in pg_wait_sampling keeps a row per (pid, event[, queryid]) for EVERY session that ever existed (nothing removes them).
+	// Every read copies the whole profile, so on a server with many short connections the cost (server CPU) grows without limit.
+	// Measured on Postgres 17 (2026-11-13): ~0.5 ms per 1000 rows, 68000 rows after 2 minutes of 'pgbench -C' (99.99% of them were gone pids).
+	// So: when the profile has more than N rows, reset it (at the start of the next refresh). One sample is lost (the negative diff is made 0).
+	// The reset needs EXECUTE on pg_wait_sampling_reset_profile() (not part of pg_monitor): without it, one INFO and no reset.
+	public static final String  PROPKEY_resetProfileAboveRows = CM_NAME + ".reset.profile.above.rows";
+	public static final long    DEFAULT_resetProfileAboveRows = 10_000; // 0 = never reset
+
+	private long    _profileRows       = 0;     // from the last sample: number of rows in pg_wait_sampling_profile
+	private Boolean _canResetProfile   = null;  // null = not yet checked
 
 //TODO; // Implement GUI Panel
 //TODO; // ADD Graphs
@@ -248,19 +251,31 @@ extends CountersModel
 			}
 		}
 		
+		// 'profile_rows' = how many rows the profile has (all of them, before the filter), from the SAME read of the profile (the window function),
+		// it decides when the profile is reset (see PROPKEY_resetProfileAboveRows). The filter is the same as before (and on the same rows: a NULL event_type is also removed).
 		String sql = ""
 			    + "SELECT \n"
-			    + "     CAST(event_type as varchar(128)) AS event_type \n"
-			    + "    ,CAST(event      as varchar(128)) AS event \n"
-			    + "    ,CAST(SUM(count) as BIGINT)       AS wait_count \n"
-			    + "    ,CAST(SUM(count) as BIGINT) * " + tmp_pgWaitSampling_profilePeriod + " AS est_wait_time_ms /* pg_wait_sampling.profile_period = " + _pgWaitSampling_profilePeriod + " */\n"
-			    + "    ,CAST(-1 as NUMERIC(6,1))         AS wait_count_pct \n"
-			    + "FROM pg_wait_sampling_profile \n"
+			    + "     event_type \n"
+			    + "    ,event \n"
+			    + "    ,wait_count \n"
+			    + "    ,est_wait_time_ms \n"
+			    + "    ,wait_count_pct \n"
+			    + "    ,profile_rows \n"
+			    + "FROM ( \n"
+			    + "    SELECT \n"
+			    + "         CAST(event_type as varchar(128)) AS event_type \n"
+			    + "        ,CAST(event      as varchar(128)) AS event \n"
+			    + "        ,CAST(SUM(count) as BIGINT)       AS wait_count \n"
+			    + "        ,CAST(SUM(count) as BIGINT) * " + tmp_pgWaitSampling_profilePeriod + " AS est_wait_time_ms /* pg_wait_sampling.profile_period = " + _pgWaitSampling_profilePeriod + " */\n"
+			    + "        ,CAST(-1 as NUMERIC(6,1))         AS wait_count_pct \n"
+			    + "        ,CAST(SUM(COUNT(*)) OVER () as BIGINT) AS profile_rows \n"
+			    + "    FROM pg_wait_sampling_profile \n"
+			    + "    GROUP BY event_type, event \n"
+			    + ") x \n"
 			    + "WHERE 1 = 1 \n"
 			    + "  AND event_type != 'Activity' \n"   // DBMS process waiting for activity in its main processing loop
 			    + "  AND event      != 'ClientRead' \n" // Server is waiting for Commands from Client
-			    + "  AND event      != 'CheckpointWriteDelay' \n" 
-			    + "GROUP BY event_type, event \n"
+			    + "  AND event      != 'CheckpointWriteDelay' \n"
 			    + "ORDER BY event_type, event \n"
 			    + "";
 
@@ -356,6 +371,53 @@ extends CountersModel
 	public void localCalculation(CounterSample newSample)
 	{
 		calcWaitCountPct(newSample);
+
+		// Remember the size of the profile (the same value on every row), the next refresh resets it if it is too big
+		int pos_profile_rows = newSample.findColumn("profile_rows");
+		if (pos_profile_rows != -1 && newSample.getRowCount() > 0)
+			_profileRows = newSample.getValueAsLong(0, pos_profile_rows);
+	}
+
+	/**
+	 * Reset the profile of pg_wait_sampling when it has grown too big (it keeps the rows of every session that ever existed). See PROPKEY_resetProfileAboveRows
+	 */
+	@Override
+	protected int refreshGetData(DbxConnection conn) throws Exception
+	{
+		long aboveRows = Configuration.getCombinedConfiguration().getLongProperty(PROPKEY_resetProfileAboveRows, DEFAULT_resetProfileAboveRows);
+		if (aboveRows > 0 && _profileRows > aboveRows)
+		{
+			if (_canResetProfile == null)
+			{
+				_canResetProfile = "t".equals(PostgresCmUtils.getFirstString(conn, "select has_function_privilege('pg_wait_sampling_reset_profile()', 'EXECUTE')"));
+				if ( ! _canResetProfile )
+					_logger.info(CM_NAME + ": The pg_wait_sampling profile has " + _profileRows + " rows (it keeps every session that ever existed, and reading it costs more and more server CPU), "
+							+ "but the login can't reset it. Fix: GRANT EXECUTE ON FUNCTION pg_wait_sampling_reset_profile() TO <user>; (or set '" + PROPKEY_resetProfileAboveRows + "=0' to not try)");
+			}
+
+			if (_canResetProfile)
+			{
+				if (PostgresCmUtils.canExecute(conn, "select pg_wait_sampling_reset_profile()"))
+					_logger.info(CM_NAME + ": The pg_wait_sampling profile had " + _profileRows + " rows (above " + PROPKEY_resetProfileAboveRows + "=" + aboveRows + "), it was RESET. The wait counts of this sample are 0.");
+				else
+					_logger.warn(CM_NAME + ": Problems resetting the pg_wait_sampling profile with 'select pg_wait_sampling_reset_profile()'.");
+			}
+			_profileRows = 0; // do not try again until the next sample says it is too big
+		}
+
+		return super.refreshGetData(conn);
+	}
+
+	@Override
+	public List<CmSettingsHelper> getLocalSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+
+		list.add(new CmSettingsHelper("Reset profile above rows", PROPKEY_resetProfileAboveRows, Long.class, conf.getLongProperty(PROPKEY_resetProfileAboveRows, DEFAULT_resetProfileAboveRows), DEFAULT_resetProfileAboveRows,
+				"When the pg_wait_sampling profile has more rows than this, reset it (it keeps every session that ever existed, and reading it costs more and more server CPU). Needs: GRANT EXECUTE ON FUNCTION pg_wait_sampling_reset_profile(). 0 = never reset." ));
+
+		return list;
 	}
 
 	/**

@@ -274,6 +274,9 @@ extends CountersModel
 			    + "        ,CAST(SUM(count) as BIGINT) * " + tmp_pgWaitSampling_profilePeriod + " AS est_wait_time_ms /* pg_wait_sampling.profile_period = " + _pgWaitSampling_profilePeriod + " */\n"
 			    + "    FROM pg_wait_sampling_profile \n"
 			    + "    WHERE 1 = 1 \n"
+			    // Only sessions that still exist: the profile keeps the rows of EVERY session that ever existed (measured: 66739 rows, 10 of them live),
+			    // and all of them was returned, diffed and stored at every sample. The server totals (with the gone sessions) are in CmPgSrvWait.
+			    + "      AND pid IN (SELECT pid FROM pg_stat_activity) \n"
 //			    + "      AND event_type != 'Activity' \n"   // DBMS process waiting for activity in its main processing loop
 //			    + "      AND event      != 'ClientRead' \n" // Server is waiting for Commands from Client
 //			    + "      AND event      != 'CheckpointWriteDelay' \n" 
