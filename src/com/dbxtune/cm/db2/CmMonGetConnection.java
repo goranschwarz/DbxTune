@@ -483,7 +483,7 @@ extends CountersModel
 	private Map<String, Integer> _chattySessionSamples = new HashMap<>();
 
 	public static final String  PROPKEY_alarm_ChattySession                    = CM_NAME + ".alarm.system.if.ChattySession.gt";
-	public static final double  DEFAULT_alarm_ChattySession                    = 200;
+	public static final double  DEFAULT_alarm_ChattySession                    = 100;
 
 	public static final String  PROPKEY_alarm_ChattySessionMaxReadsPerRequest  = CM_NAME + ".alarm.system.if.ChattySession.maxReadsPerRequest";
 	public static final double  DEFAULT_alarm_ChattySessionMaxReadsPerRequest  = 10;

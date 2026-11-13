@@ -773,7 +773,7 @@ rows read per call at any size (without a limit one call ran 15 minutes at size 
 An "ORM style" page: the orders of a customer, then one query per order for its lines, then one query per line for
 the product name. Very many tiny statements from one session.
 - SQL Server: CmExecQueryStats, CmPerfCounters (batch requests/sec), CmChattyStatements (rows tagged `dbxt:n_plus_one`).
-- ASE: alarm `AlarmEventChattySession` for the session (CmProcessActivity: more than 200 SQL batches/s for 2 samples, under
+- ASE: alarm `AlarmEventChattySession` for the session (CmProcessActivity: more than 100 SQL batches/s for 2 samples, under
   10 logical reads per batch), CmChattyStatements (rows tagged `dbxt:n_plus_one`; needs `enable stmt cache monitoring`, and `streamlined dynamic SQL` = 1
   because the load generator's statements are prepared statements), CmStmntCacheDetails.
 - Postgres: CmPgStatements.
