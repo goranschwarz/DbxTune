@@ -2104,7 +2104,7 @@ extends CountersModel
 			
 			if (val1 != null && val2 != null && val3 != null && val4 != null && val5 != null)
 			{
-				arr[0] = val1 / 128; // divide by 128 to get MB from 8K Pages (512 = 1024*1024/8192)
+				arr[0] = val1 / 128; // divide by 128 to get MB from 8K Pages (128 = 1024*1024/8192)
 				arr[1] = val2 / 128;
 				arr[2] = val3 / 128;
 				arr[3] = val4 / 128;

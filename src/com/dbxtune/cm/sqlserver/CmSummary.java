@@ -840,7 +840,7 @@ extends CmSummaryAbstract
 				"    , utcTimeDiff                         = datediff(mi, getutcdate(), getdate())  \n" +
 				"    , OnHostName                          = convert(varchar(100), SERVERPROPERTY('MachineName')) \n" +
 				"    , NetworkAddressInfo                  = @listeners \n" +
-				"    , srvPageSize                         = convert(int, 8196)--@@maxpagesize  \n" +
+				"    , srvPageSize                         = convert(int, 8192) /* @@maxpagesize */ \n" +
 				"    , LockWaits                           = @LockWaits                    \n" +
 				"    , LockWaitThreshold                   = @LockWaitThreshold            \n" +
 				"    , RootBlockerSpids                    = convert(varchar(128), '')     \n" +
