@@ -40,6 +40,7 @@ extends PostgresAbstract
 	private int _naCount    = -1;           // of them without a bloat number (not measured, and is_na)
 	private boolean _hasSource  = false;    // the recording has bloat_source (measured bloat, 2026-11)
 	private boolean _hasTableMb = false;    // the recording has approx_table_mb
+	private long    _srvVersionNum = 0;     // server_version_num (from the recorded settings), 0 = unknown
 
 	public PostgresTableBloat(DailySummaryReportAbstract reportingInstance)
 	{
@@ -158,6 +159,7 @@ extends PostgresAbstract
 			    + "    ,t.[approx_free_pct] \n"
 			    + "    ,t.[approx_scanned_pct] \n" : "")
 			    + "    ,t.[fillfactor] \n"
+			    + "    ,cast('' as varchar(600)) as [fix_sql] \n" // filled below: the command for the server's version
 			    + "    ,t.[SessionSampleTime] as [last_sample] \n"
 			    + "from [CmPgTableBloat_abs] t \n"
 			    + "join (select [dbname], [schemaname], [tablename], max([SessionSampleTime]) as [last_ts], max(" + mbExpr + ") as [bloat_mb__max] \n"
@@ -187,6 +189,21 @@ extends PostgresAbstract
 		_shortRstm = executeQuery(conn, sql, true, "PostgresTableBloat");
 		_shortRstm.setHighlightSortColumns("bloat_mb");
 
+		// The command to get the space back, for the server's version.
+		// Postgres 19: REPACK (CONCURRENTLY) rewrites the table without blocking reads and writes (measured on 19rc2, 2026-11-14: a 721 MB table -> 241 MB,
+		// the slowest single-row update meanwhile 54 ms; plain REPACK / VACUUM FULL: 1303 ms, blocked the whole time). It needs an identity index (a primary key or a replica identity index).
+		// The CLUSTER variant 'REPACK (CONCURRENTLY) t USING INDEX i' also sorts the rows (2M rows: correlation -0.003 -> 1.000, 6.3 s, slowest update 102 ms; plain: 5964 ms, blocked).
+		_srvVersionNum = getServerSettingLong(conn, "server_version_num", 0);
+		boolean hasRepack = _srvVersionNum >= 190000;
+		for (int r = 0; r < _shortRstm.getRowCount(); r++)
+		{
+			String tab = PostgresAutovacuumAdvice.quoteIdent(_shortRstm.getValueAsString(r, "schemaname")) + "." + PostgresAutovacuumAdvice.quoteIdent(_shortRstm.getValueAsString(r, "tablename"));
+			String fix = hasRepack
+					? "REPACK (CONCURRENTLY) " + tab + ";  -- needs a primary key or replica identity index, else: REPACK " + tab + "; (locks the table)"
+					: "VACUUM FULL " + tab + ";  -- locks the table while it runs (or: pg_repack -t " + tab + ", only a short lock)";
+			_shortRstm.setValueAtWithOverride(fix, r, "fix_sql");
+		}
+
 		_shortRstm.setDescription(
 				"The tables with the most <b>bloat</b>: space in the table that holds no live rows (from the table <code>CmPgTableBloat_abs</code>, each table at its last sample).<br>" +
 				"<code>bloat_source</code> tells how it was found: <b>pgstattuple_approx</b> = <i>measured</i> (the extension pgstattuple in the database; tables of " +
@@ -196,8 +213,13 @@ extends PostgresAbstract
 				"<b>What to do</b>:" +
 				"<ul>" +
 				"  <li>First fix <i>why</i>: the autovacuum advice in 'Dead Rows/Tuples', and what held vacuum back in 'Vacuum Health'. Otherwise the bloat comes back.</li>" +
-				"  <li>To get the space back: <code>VACUUM FULL schema.table;</code> rewrites the table, but locks it (no reads or writes) while it runs, and needs space for a copy. " +
-				"      <code>pg_repack</code> (an extension) does the same with a short lock only.</li>" +
+				(hasRepack
+				? "  <li>To get the space back (Postgres 19): <code>REPACK (CONCURRENTLY) schema.table;</code> rewrites the table <b>without blocking reads and writes</b> (only a short lock at the end), and needs space for a copy. " +
+				  "      It needs a primary key or a replica identity index; without one, plain <code>REPACK schema.table;</code> (as VACUUM FULL) locks the table while it runs. The column <code>fix_sql</code> has the command.<br>" +
+				  "      To also <b>sort the rows</b> by an index (as CLUSTER), also without blocking: <code>REPACK (CONCURRENTLY) schema.table USING INDEX index_name;</code> - " +
+				  "      worth it when the queries read ranges of that index (fewer pages to read); the order is not kept for new and updated rows.</li>"
+				: "  <li>To get the space back: <code>VACUUM FULL schema.table;</code> rewrites the table, but locks it (no reads or writes) while it runs, and needs space for a copy. " +
+				  "      <code>pg_repack</code> (an extension) does the same with a short lock only. From Postgres 19: <code>REPACK (CONCURRENTLY)</code>, built in. The column <code>fix_sql</code> has the command.</li>") +
 				"  <li>Some free space is fine (and wanted with a fillfactor below 100: room for updates on the same page).</li>" +
 				"</ul>" +
 				"");
@@ -214,5 +236,6 @@ extends PostgresAbstract
 		_shortRstm.setColumnDescription("approx_scanned_pct", "How much of the table pgstattuple_approx had to read (the pages vacuum has not marked all-visible)");
 		_shortRstm.setColumnDescription("fillfactor"        , "The table's fillfactor (free space left on purpose in each page)");
 		_shortRstm.setColumnDescription("last_sample"       , "When the table was last sampled (CmPgTableBloat samples every 10 minutes)");
+		_shortRstm.setColumnDescription("fix_sql"           , "The command that gives the space back, for the server's version (Postgres 19: REPACK (CONCURRENTLY), without blocking; before 19: VACUUM FULL, which locks the table). Fix the cause first (autovacuum).");
 	}
 }

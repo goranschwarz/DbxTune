@@ -24,6 +24,7 @@ package com.dbxtune.alarm.events.postgres;
 import com.dbxtune.Version;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.cm.CountersModel;
+import com.dbxtune.utils.Ver;
 
 /**
  * A table has a lot of unused space (bloat), from the estimate in CmPgTableBloat
@@ -43,9 +44,12 @@ extends AlarmEvent
 				AlarmEvent.Category.SPACE,
 				AlarmEvent.Severity.INFO,
 				AlarmEvent.ServiceState.UP,
-				"Table '" + schemaName + "." + tableName + "' in database '" + dbname + "' at Server '" + cm.getServerName() + "' is estimated to be " + Math.round(bloatPct) + "% unused space ("
-				  + Math.round(bloatMb) + " MB). Scans read the empty space too. Vacuum makes the space reusable, but does not give it back: that needs a rewrite of the table "
-				  + "(pg_repack, VACUUM FULL or CLUSTER, which lock it). Check the autovacuum settings of the table first. (thresholdPct=" + thresholdPct + ", an estimate)",
+				"Table '" + schemaName + "." + tableName + "' in database '" + dbname + "' at Server '" + cm.getServerName() + "' is " + Math.round(bloatPct) + "% unused space ("
+				  + Math.round(bloatMb) + " MB). Scans read the empty space too. Vacuum makes the space reusable, but does not give it back: that needs a rewrite of the table, "
+				  + (cm.getServerVersion() >= Ver.ver(19)
+				      ? "without blocking reads and writes: REPACK (CONCURRENTLY) " + schemaName + "." + tableName + "; (Postgres 19; it needs a primary key or a replica identity index, else plain REPACK, which locks the table). "
+				      : "with VACUUM FULL or CLUSTER (they lock the table while they run), or the extension pg_repack (only a short lock). ")
+				  + "Check the autovacuum settings of the table first. (thresholdPct=" + thresholdPct + ")",
 				thresholdPct
 				);
 
