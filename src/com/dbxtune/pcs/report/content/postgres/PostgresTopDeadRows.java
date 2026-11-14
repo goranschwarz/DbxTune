@@ -31,6 +31,7 @@ import com.dbxtune.cm.postgres.CmPgTables;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
+import com.dbxtune.pcs.report.content.IndexAnalysisHtml;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
 import com.dbxtune.pcs.report.content.SparklineHelper.SparkLineParams;
@@ -80,7 +81,27 @@ extends PostgresAbstract
 		// Last sample Database Size info
 		sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
 		sb.append(toHtmlTable(_shortRstm));
-		
+
+		// The full advice (with the ALTER TABLE ... SET and its rollback) for the tables whose autovacuum_verdict is not OK
+		// (the same box as in Top SQL > Table Information, where only the tables used by a top statement get it)
+		if ( ! _autovacuumBoxes.isEmpty() )
+		{
+			// NOTE: The boxes are left out in Outlook (collapsible <details>), so are the texts that belong to them. One guard per piece: the box has its own (they can't be nested)
+			String ifNotMso = "<!--[if !mso]><!--> \n";
+			String endIf    = "<!--<![endif]-->    \n";
+			sb.append(ifNotMso);
+			sb.append("<br>\n");
+			sb.append("<b>Autovacuum advice for the " + _autovacuumBoxes.size() + " table(s) above that are not vacuumed (or analyzed) often enough.</b> ");
+			sb.append("Open a box for the numbers of the day, the settings, why, and the <i>Change and Rollback</i> script. Nothing has been changed.<br>\n");
+			sb.append(endIf);
+			for (Map.Entry<String, String> e : _autovacuumBoxes.entrySet())
+			{
+				sb.append(ifNotMso).append("<br><b>").append(IndexAnalysisHtml.esc(e.getKey())).append("</b>\n").append(endIf);
+				sb.append(e.getValue());
+			}
+			sb.append("<br>\n");
+		}
+
 		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are 'Dead Rows' of each Database during the day.",
 				"CmPgTables_DeadRows"
 				));
@@ -115,6 +136,9 @@ extends PostgresAbstract
 		return _tablesWithAutovacuumFindings > 0;
 	}
 	private int _tablesWithAutovacuumFindings = 0;
+
+	/** The full Autovacuum box (numbers, settings, findings, Change and Rollback) of each table with a finding: "db.schema.table" -> html */
+	private Map<String, String> _autovacuumBoxes = new java.util.LinkedHashMap<>();
 
 
 	@Override
@@ -331,7 +355,10 @@ extends PostgresAbstract
 						_shortRstm.getValueAsString(r, "dbname"), _shortRstm.getValueAsString(r, "schemaname"), _shortRstm.getValueAsString(r, "relname"));
 				_shortRstm.setValueAtWithOverride(advice.getShortVerdict(), r, "autovacuum_verdict");
 				if (advice.hasFindings())
+				{
 					_tablesWithAutovacuumFindings++;
+					_autovacuumBoxes.put(_shortRstm.getValueAsString(r, "dbname") + "." + _shortRstm.getValueAsString(r, "schemaname") + "." + _shortRstm.getValueAsString(r, "relname"), advice.toHtml());
+				}
 			}
 
 			// Highlight sort column
