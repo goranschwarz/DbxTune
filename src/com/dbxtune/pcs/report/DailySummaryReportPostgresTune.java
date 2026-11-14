@@ -49,6 +49,9 @@ import com.dbxtune.pcs.report.content.postgres.PostgresSrvIoStats;
 import com.dbxtune.pcs.report.content.postgres.PostgresSrvWaitStats;
 import com.dbxtune.pcs.report.content.postgres.PostgresStatementsPerDb;
 import com.dbxtune.pcs.report.content.postgres.PostgresTopDeadRows;
+import com.dbxtune.pcs.report.content.postgres.PostgresReplication;
+import com.dbxtune.pcs.report.content.postgres.PostgresVacuumHealth;
+import com.dbxtune.pcs.report.content.postgres.PostgresWalCheckpoints;
 import com.dbxtune.pcs.report.content.postgres.PostgresTopSql;
 import com.dbxtune.pcs.report.content.postgres.PostgresTopTableAccess;
 import com.dbxtune.pcs.report.content.postgres.PostgresTopTableSize;
@@ -78,6 +81,7 @@ extends DailySummaryReportDefault
 		addReportEntry( new PostgresTopSql         (this) );
 		addReportEntry( new PostgresChattyStatements(this) );   // Possible N+1 / chatty statements (CmPgStatements)
 		addReportEntry( new PostgresTopDeadRows    (this) );
+		addReportEntry( new PostgresVacuumHealth   (this) );   // Transaction id wraparound: database/table ages, what held vacuum back, 19: autovacuum scores
 		addReportEntry( new PostgresTopTableAccess (this) );
 // TODO; // Implement 'UnusedIndexes' using: (CmPgIndexes)pg_stat_user_indexes.idx_scan == 0, and to get "score" we can use (CmPgTables)pg_stat_user_tables.n_tup_{ins|del|upd} to get an idea how often the table (but not the index) is maintained...
 //		addReportEntry( new PostgresTopUnusedIndexes(this) );
@@ -93,6 +97,10 @@ extends DailySummaryReportDefault
 
 		// Network Activity
 		addReportEntry( new CmOsNwInfoOverview    (this) );
+
+		// WAL / Checkpoints / Archiving, and Replication / HA
+		addReportEntry( new PostgresWalCheckpoints(this) );
+		addReportEntry( new PostgresReplication   (this) );
 
 		// Configuration
 		addReportEntry( new PostgresConfiguration(this) );

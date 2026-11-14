@@ -68,6 +68,56 @@ extends ReportEntryAbstract
 		super(reportingInstance);
 	}
 
+	/**
+	 * The column names (lower case) of a recorded table, or an empty set if the table does not exist.<br>
+	 * Columns are added in newer PostgresTune versions: an older recording does not have them.
+	 */
+	public static Set<String> getRecordedColumns(DbxConnection conn, String tabName)
+	{
+		Set<String> cols = new HashSet<>();
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(conn.quotifySqlString("select * from [" + tabName + "] where 1 = 2")))
+		{
+			java.sql.ResultSetMetaData md = rs.getMetaData();
+			for (int c = 1; c <= md.getColumnCount(); c++)
+				cols.add(md.getColumnLabel(c).toLowerCase());
+		}
+		catch (SQLException ex)
+		{
+			_logger.debug("getRecordedColumns(): table '" + tabName + "' was not found. Caught: " + ex);
+		}
+		return cols;
+	}
+
+	/**
+	 * One server setting from the recording (the newest MonSessionDbmsConfig), as pg_settings.setting (in its base unit, for example MB for max_wal_size), or null when missing
+	 */
+	public static String getServerSetting(DbxConnection conn, String name)
+	{
+		String sql = conn.quotifySqlString(""
+				+ "select [CurrentValue] \n"
+				+ "from [MonSessionDbmsConfig] \n"
+				+ "where [SessionStartTime] = (select max([SessionStartTime]) from [MonSessionDbmsConfig]) \n"
+				+ "  and [ParameterName] = '" + name.replace("'", "''") + "' \n");
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			if (rs.next())
+				return rs.getString(1);
+		}
+		catch (SQLException ex)
+		{
+			_logger.debug("getServerSetting('" + name + "'): problems reading MonSessionDbmsConfig. Caught: " + ex);
+		}
+		return null;
+	}
+
+	/** getServerSetting() as a long, or the default when missing or not a number */
+	public static long getServerSettingLong(DbxConnection conn, String name, long defaultValue)
+	{
+		String val = getServerSetting(conn, name);
+		try { return val == null ? defaultValue : Long.parseLong(val.trim()); }
+		catch (NumberFormatException ex) { return defaultValue; }
+	}
+
 	/** The server's autovacuum settings (from the recording), read once per report */
 	private Map<String, String> _autovacuumServerSettings;
 
