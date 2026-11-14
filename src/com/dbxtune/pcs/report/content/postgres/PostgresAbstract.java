@@ -68,6 +68,9 @@ extends ReportEntryAbstract
 		super(reportingInstance);
 	}
 
+	/** The server's autovacuum settings (from the recording), read once per report */
+	private Map<String, String> _autovacuumServerSettings;
+
 
 //	/**
 //	 * Parse the passed SQL Text and extract table names<br>
@@ -309,6 +312,9 @@ extends ReportEntryAbstract
 
 				if (StringUtil.hasValue(entry._triggersText))
 					sb.append("Triggers:\n").append(entry._triggersText).append("\n");
+
+				if (entry._autovacuumAdvice != null && entry._autovacuumAdvice.notAnalyzed == null)
+					sb.append("Autovacuum: ").append(entry._autovacuumAdvice.getShortVerdict()).append("\n");
 			}
 			sb.append("---\n");
 		}
@@ -613,6 +619,10 @@ extends ReportEntryAbstract
 
 				// Indexes that can be dropped or merged, and unused indexes
 				indexInfo += getRedundantIndexInfoAsHtml(entry);
+
+				// Is the table vacuumed (and analyzed) often enough?
+				if (entry._autovacuumAdvice != null)
+					indexInfo += entry._autovacuumAdvice.toHtml();
 			}
 			
 			
@@ -1239,6 +1249,11 @@ extends ReportEntryAbstract
 						
 						// get TRIGGER information for this table
 						getTriggerInfo(conn, ti);
+
+						// Is the table vacuumed (and analyzed) often enough? (the server settings are read once per report)
+						if (_autovacuumServerSettings == null)
+							_autovacuumServerSettings = PostgresAutovacuumAdvice.readServerSettings(conn);
+						ti._autovacuumAdvice = PostgresAutovacuumAdvice.create(conn, _autovacuumServerSettings, ti._dbName, ti._schemaName, ti._tableName);
 					}
 
 				} // end: has: _objectText && _extraInfoText 
@@ -2855,6 +2870,8 @@ extends ReportEntryAbstract
 	public static class PgTableInfo
 //	extends GenericTableInfo
 	{
+		private PostgresAutovacuumAdvice _autovacuumAdvice; // null = not a user table / not analyzed
+
 		private String    _dbName;
 		private String    _schemaName;
 		private String    _tableName;

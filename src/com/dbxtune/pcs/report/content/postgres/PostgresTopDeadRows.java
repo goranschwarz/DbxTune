@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import com.dbxtune.cm.postgres.CmPgTables;
 import com.dbxtune.gui.ResultSetTableModel;
@@ -110,8 +111,10 @@ extends PostgresAbstract
 	@Override
 	public boolean hasIssueToReport()
 	{
-		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
+		// Dead rows in themselves are not a problem. A table that is not vacuumed (or analyzed) often enough is (column 'autovacuum_verdict')
+		return _tablesWithAutovacuumFindings > 0;
 	}
+	private int _tablesWithAutovacuumFindings = 0;
 
 
 	@Override
@@ -159,7 +162,8 @@ extends PostgresAbstract
 			    + "     [dbname] \n"
 			    + "    ,[schemaname] \n"
 			    + "    ,[relname] \n"
-			    
+			    + "    ,cast('' as varchar(1024)) as [autovacuum_verdict] \n" // filled below (PostgresAutovacuumAdvice)
+
 			    // total_kb
 			    + "    ,(select max([total_kb]) \n"
 			    + "          from [CmPgTables_abs] abs \n"
@@ -308,6 +312,17 @@ extends PostgresAbstract
 
 		if (_shortRstm != null)
 		{
+			// Is each table vacuumed (and analyzed) often enough? The same analysis as the 'Autovacuum' box in Table Information
+			Map<String, String> serverSettings = PostgresAutovacuumAdvice.readServerSettings(conn);
+			for (int r = 0; r < _shortRstm.getRowCount(); r++)
+			{
+				PostgresAutovacuumAdvice advice = PostgresAutovacuumAdvice.create(conn, serverSettings,
+						_shortRstm.getValueAsString(r, "dbname"), _shortRstm.getValueAsString(r, "schemaname"), _shortRstm.getValueAsString(r, "relname"));
+				_shortRstm.setValueAtWithOverride(advice.getShortVerdict(), r, "autovacuum_verdict");
+				if (advice.hasFindings())
+					_tablesWithAutovacuumFindings++;
+			}
+
 			// Highlight sort column
 			_shortRstm.setHighlightSortColumns("n_dead_tup__LAST_ABS");
 
@@ -421,6 +436,8 @@ extends PostgresAbstract
 		// Section description
 		rstm.setDescription(
 				"Information from last collector sample from the table <code>CmPgTables_abs</code><br>" +
+				"The column <code>autovacuum_verdict</code> tells if the table is vacuumed (and analyzed) often enough over the whole day, from its own and the server's autovacuum settings. " +
+				"The details, and the suggested <code>ALTER TABLE ... SET (...)</code> with its rollback, are in the 'Autovacuum' part of the Table Information (for the tables in the Top SQL statements).<br>" +
 				"");
 	}
 }
