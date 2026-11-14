@@ -176,7 +176,10 @@ extends CountersModel
 			mtd.addColumn(name, "fillfactor",     "<html>the fillfactor of the table</html>");
 			mtd.addColumn(name, "bloat_size_mb",  "<html>estimated size in MB of the bloat without the extra space kept for the fillfactor</html>");
 			mtd.addColumn(name, "bloat_pct",      "<html>estimated percentage of the real size used by bloat_size</html>");
-			mtd.addColumn(name, "is_na",          "<html>is the estimation 'Not Applicable' ? If true, do not trust the stats</html>");
+			mtd.addColumn(name, "is_na",          "<html>is the estimation 'Not Applicable' ? If true, do not trust the stats<br>"
+			                                    + "(some columns have no statistics in <code>pg_stats</code>. <b>Note</b>: pg_stats only shows the columns the login may SELECT: "
+			                                    + "with a <code>pg_monitor</code> login every table is <code>true</code> and bloat_pct is meaningless. "
+			                                    + "Fix: a login that can read the tables, for example <code>GRANT pg_read_all_data TO &lt;user&gt;;</code> (Postgres 14 and above))</html>");
 		}
 		catch (NameNotFoundException e) 
 		{
@@ -310,6 +313,12 @@ extends CountersModel
 				Double bloatMb    = getAbsValueAsDouble(r, "bloat_size_mb");
 				Double realSizeMb = getAbsValueAsDouble(r, "real_size_mb");
 				if (bloatPct == null || bloatMb == null || realSizeMb == null)
+					continue;
+
+				// No estimate: some columns have no statistics in pg_stats. NOTE: pg_stats only shows the columns the login may SELECT,
+				// so with a 'pg_monitor' login ALL rows are is_na, and bloat_pct is close to 100 for every table (measured 2026-11-14: a false alarm per big table)
+				String isNa = getAbsString(r, "is_na");
+				if ("true".equalsIgnoreCase(isNa) || "t".equalsIgnoreCase(isNa) || "1".equals(isNa))
 					continue;
 
 				if (bloatPct > thresholdPct && realSizeMb > thresholdSizeMb)

@@ -20,10 +20,16 @@
  ******************************************************************************/
 package com.dbxtune.cm.postgres;
 
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+
+import javax.naming.NameNotFoundException;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
@@ -34,6 +40,8 @@ import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.postgres.gui.CmPgIndexesPanel;
+import com.dbxtune.config.dict.MonTablesDictionary;
+import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -46,6 +54,7 @@ import com.dbxtune.utils.Configuration;
 public class CmPgIndexes
 extends CountersModel
 {
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmPgIndexes.class.getSimpleName();
@@ -199,6 +208,49 @@ extends CountersModel
 			tabName = "pg_catalog.pg_stat_all_indexes";
 		}
 
-		return "select current_database() as dbname, * from " + tabName;
+		String sqlOld = "select current_database() as dbname, * from " + tabName;
+
+		// The index size, and if it is unique / a primary key / backs a constraint: for the DSR 'Indexes that are Not Used'
+		// (a unique index stops duplicates also when no query uses it). Only columns are added (as gauges: not in DIFF_COLUMNS).
+		// pg_relation_size() is a file size lookup (as pg_total_relation_size() in CmPgTables), it returns NULL for an index that was just dropped.
+		String sql = ""
+			    + "select \n"
+			    + "     current_database() as dbname \n"
+			    + "    ,s.* \n"
+			    + "    ,pg_relation_size(s.indexrelid) / 1024 as size_kb \n"
+			    + "    ,x.indisunique  as is_unique \n"
+			    + "    ,x.indisprimary as is_primary \n"
+			    + "    ,exists (select 1 from pg_catalog.pg_constraint c where c.conindid = s.indexrelid and c.contype in ('p', 'u', 'x')) as is_constraint \n"
+			    + "from " + tabName + " s \n"
+			    + "join pg_catalog.pg_index x on x.indexrelid = s.indexrelid \n"
+			    + "";
+
+		// Dry-run the new SQL (a fork may not have the catalog columns): fall back to the old SQL
+		if (conn != null && ! PostgresCmUtils.canExecute(conn, "select * from (" + sql + ") x where 1=2"))
+		{
+			_logger.warn(CM_NAME + ": The SQL with index size and uniqueness failed, the SQL without them is used.");
+			return sqlOld;
+		}
+		return sql;
+	}
+
+	@Override
+	public void addMonTableDictForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
+	{
+		try
+		{
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+			for (String tabname : new String[] {"pg_stat_user_indexes", "pg_stat_all_indexes"})
+			{
+				mtd.addColumn(tabname, "size_kb"      , "<html>Size of the index, in KB: <code>pg_relation_size(indexrelid) / 1024</code></html>");
+				mtd.addColumn(tabname, "is_unique"    , "<html>A unique index (pg_index.indisunique): it stops duplicates, also when no query uses it.</html>");
+				mtd.addColumn(tabname, "is_primary"   , "<html>The index of the primary key (pg_index.indisprimary).</html>");
+				mtd.addColumn(tabname, "is_constraint", "<html>The index backs a constraint: primary key, unique or exclusion (pg_constraint.conindid). Drop the constraint, not the index.</html>");
+			}
+		}
+		catch (NameNotFoundException e)
+		{
+			_logger.warn("Problems in cm='" + CM_NAME + "', adding addMonTableDictForVersion. Caught: " + e);
+		}
 	}
 }
