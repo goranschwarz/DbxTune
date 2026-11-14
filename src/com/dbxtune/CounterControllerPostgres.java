@@ -271,13 +271,7 @@ extends CounterControllerAbstract
 		if (versionInfo.isInRecovery())
 			_logger.info("This server is a standby (in recovery). Replication is shown from the standby's side (CmPgWalReceiver), and nothing is written to it.");
 
-		// Postgres has a few "track_*" settings that are OFF by default. Without them some columns are always 0 (but nothing fails).
-		List<String> trackOff = new ArrayList<>();
-		if ("off" .equalsIgnoreCase(versionInfo.getTrackIoTiming()))    trackOff.add("track_io_timing=on (read/write times in CmPgDatabase, CmPgIo, CmPgStatements)");
-		if ("off" .equalsIgnoreCase(versionInfo.getTrackWalIoTiming())) trackOff.add("track_wal_io_timing=on (WAL write/sync times in CmPgWal)");
-		if ("none".equalsIgnoreCase(versionInfo.getTrackFunctions()))   trackOff.add("track_functions=pl (CmPgFunctions is empty without it)");
-		if ( ! trackOff.isEmpty() )
-			_logger.info("Some statistics are OFF in this server, so some columns are always 0 (or empty). Optional fix: ALTER SYSTEM SET " + String.join("; ALTER SYSTEM SET ", trackOff) + "; and SELECT pg_reload_conf();");
+		// NOTE: The "track_*" settings that are OFF by default (track_io_timing, track_wal_io_timing, track_functions...) are reported as DBMS Configuration Issues (PostgresConfig.checkConfig)
 
 		// Postgres 17 and above: the wait event descriptions from the server itself (pg_wait_events), instead of the built-in list
 		PostgresWaitTypeDictionary.loadFromServer(conn, srvVersion);
