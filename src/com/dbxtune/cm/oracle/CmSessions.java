@@ -481,10 +481,14 @@ extends CountersModel
 		CountersModel cm = this;
 
 		//-------------------------------------------------------
-		// ChattySession: one session sends very many tiny requests (possible N+1)
-		// Requests = 'SQL*Net roundtrips to/from client' (ROUNDTRIPS): what the client sends. 'execute count' (EXECUTIONS) also counts
-		// recursive SQL (PL/SQL, triggers, dictionary lookups), so a PL/SQL loop in the server is not taken as a chatty client.
-		// Above the threshold for ## samples in a row, and few logical reads per request
+		// ChattySession: one session sends very many tiny statements (possible N+1)
+		// Statements from the client = the SMALLER of ROUNDTRIPS and EXECUTIONS per second. Measured on 23ai with JDBC (2026-11-13), per client statement:
+		//   'SQL*Net roundtrips to/from client' 1 (prepared or literal, autocommit on/off, a commit, client info: piggybacked) - BUT one per FETCH:
+		//                                       a 1000-row SELECT with the default fetch size of 10 = 101 round trips (at ~1 logical read each)
+		//   'execute count'                     1 - BUT also the SQL a procedure runs (one call of a PL/SQL loop of 1000 SELECTs = 1003)
+		// N+1 has both high and about equal; a session fetching many rows has few executions, a PL/SQL loop has few round trips.
+		// The smaller of the two is the same unit as the other vendors (ASE SQL batches, MySQL Questions, DB2 DYNAMIC_SQL_STMTS).
+		// Above the threshold for ## samples in a row, and few logical reads per statement
 		//-------------------------------------------------------
 		Configuration conf = Configuration.getCombinedConfiguration();
 		double threshold          = conf.getDoubleProperty(PROPKEY_alarm_ChattySession,                   DEFAULT_alarm_ChattySession);
@@ -498,8 +502,12 @@ extends CountersModel
 
 		for (int r=0; r<cm.getRateRowCount(); r++)
 		{
-			Double requestsPerSec = cm.getRateValueAsDouble(r, "ROUNDTRIPS");
-			if (requestsPerSec == null || requestsPerSec <= threshold)
+			Double roundtripsPerSec = cm.getRateValueAsDouble(r, "ROUNDTRIPS");
+			Double executionsPerSec = cm.getRateValueAsDouble(r, "EXECUTIONS");
+			if (roundtripsPerSec == null || executionsPerSec == null)
+				continue;
+			double requestsPerSec = Math.min(roundtripsPerSec, executionsPerSec);
+			if (requestsPerSec <= threshold)
 				continue;
 
 			// The values as they are (getRateString() formats numbers with digit grouping: '25 943')
@@ -520,7 +528,7 @@ extends CountersModel
 			if (StringUtil.hasValue(skipProgramRegExp) && program != null && program.matches(skipProgramRegExp))
 				continue;
 
-			// Cheap requests only: a session with many requests that each do real work is a batch job, not N+1
+			// Cheap statements only: a session with many statements that each do real work is a batch job, not N+1
 			Double logicalReadsPerSec = cm.getRateValueAsDouble(r, "LOGICAL_READS");
 			double readsPerRequest = logicalReadsPerSec == null ? 0 : logicalReadsPerSec / requestsPerSec;
 			if (readsPerRequest >= maxReadsPerRequest)
@@ -532,7 +540,7 @@ extends CountersModel
 			samplesAbove.put(key, count);
 
 			if (debugPrint || _logger.isDebugEnabled())
-				System.out.println("##### sendAlarmRequest(" + cm.getName() + "): ChattySession: SID=" + sid + ", ROUNDTRIPS/s=" + requestsPerSec + ", EXECUTIONS/s=" + cm.getRateValueAsDouble(r, "EXECUTIONS") + ", readsPerRequest=" + readsPerRequest + ", samplesAbove=" + count + " (threshold=" + threshold + ", maxReadsPerRequest=" + maxReadsPerRequest + ", minSamples=" + minSamples + ").");
+				System.out.println("##### sendAlarmRequest(" + cm.getName() + "): ChattySession: SID=" + sid + ", statements/s=" + requestsPerSec + " (ROUNDTRIPS/s=" + roundtripsPerSec + ", EXECUTIONS/s=" + executionsPerSec + "), readsPerRequest=" + readsPerRequest + ", samplesAbove=" + count + " (threshold=" + threshold + ", maxReadsPerRequest=" + maxReadsPerRequest + ", minSamples=" + minSamples + ").");
 
 			if (count < minSamples)
 				continue;
@@ -581,7 +589,10 @@ extends CountersModel
 						if (rowId == -1)
 							alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
 						else
-							alarmEvent.setCancelDescription(getAlarmCancelText(label + ": SQL*Net roundtrips per second", toAlarmCancelValue(cm.getRateValueAsDouble(rowId, "ROUNDTRIPS")), "/s"));
+						{
+							Double rt = cm.getRateValueAsDouble(rowId, "ROUNDTRIPS"), ex = cm.getRateValueAsDouble(rowId, "EXECUTIONS");
+							alarmEvent.setCancelDescription(getAlarmCancelText(label + ": statements per second (smaller of round trips and executions)", toAlarmCancelValue(rt == null || ex == null ? null : Math.min(rt, ex)), "/s"));
+						}
 					}
 				}
 			});
@@ -620,8 +631,8 @@ extends CountersModel
 
 		List<CmSettingsHelper> list = new ArrayList<>();
 
-		list.add(new CmSettingsHelper("ChattySession",                isAlarmSwitch, PROPKEY_alarm_ChattySession                   , Double .class, conf.getDoubleProperty(PROPKEY_alarm_ChattySession                  , DEFAULT_alarm_ChattySession                  ), DEFAULT_alarm_ChattySession                  , "If any session sends more than ## requests per second (column 'ROUNDTRIPS': SQL*Net roundtrips to/from client) with few logical reads each, for several samples in a row, then send alarm 'AlarmEventChattySession'. This is often an application doing N+1 (one tiny query per row of another query). It can also be a busy normal session (a connection pool, a queue consumer): confirm N+1 in the Daily Summary Report section 'Possible N+1 / Chatty Statements', which matches the repeated statement to the statement whose rows drive it." ));
-		list.add(new CmSettingsHelper("ChattySession MaxReadsPerRequest",            PROPKEY_alarm_ChattySessionMaxReadsPerRequest , Double .class, conf.getDoubleProperty(PROPKEY_alarm_ChattySessionMaxReadsPerRequest, DEFAULT_alarm_ChattySessionMaxReadsPerRequest), DEFAULT_alarm_ChattySessionMaxReadsPerRequest, "If 'ChattySession' is true; Only if the session does fewer than ## logical reads per request (many cheap requests, not a batch job doing real work)." ));
+		list.add(new CmSettingsHelper("ChattySession",                isAlarmSwitch, PROPKEY_alarm_ChattySession                   , Double .class, conf.getDoubleProperty(PROPKEY_alarm_ChattySession                  , DEFAULT_alarm_ChattySession                  ), DEFAULT_alarm_ChattySession                  , "If any session sends more than ## statements per second (the smaller of the columns 'ROUNDTRIPS' and 'EXECUTIONS': a session fetching many rows has many round trips, a PL/SQL loop many executions; the same unit as the other vendors) with few logical reads each, for several samples in a row, then send alarm 'AlarmEventChattySession'. This is often an application doing N+1 (one tiny query per row of another query). It can also be a busy normal session (a connection pool, a queue consumer): confirm N+1 in the Daily Summary Report section 'Possible N+1 / Chatty Statements', which matches the repeated statement to the statement whose rows drive it." ));
+		list.add(new CmSettingsHelper("ChattySession MaxReadsPerRequest",            PROPKEY_alarm_ChattySessionMaxReadsPerRequest , Double .class, conf.getDoubleProperty(PROPKEY_alarm_ChattySessionMaxReadsPerRequest, DEFAULT_alarm_ChattySessionMaxReadsPerRequest), DEFAULT_alarm_ChattySessionMaxReadsPerRequest, "If 'ChattySession' is true; Only if the session does fewer than ## logical reads per statement (many cheap statements, not a batch job doing real work)." ));
 		list.add(new CmSettingsHelper("ChattySession Samples",                       PROPKEY_alarm_ChattySessionSamples            , Integer.class, conf.getIntProperty   (PROPKEY_alarm_ChattySessionSamples           , DEFAULT_alarm_ChattySessionSamples           ), DEFAULT_alarm_ChattySessionSamples           , "If 'ChattySession' is true; The session must be above the threshold in ## samples in a row." ));
 		list.add(new CmSettingsHelper("ChattySession SkipUsernames",                 PROPKEY_alarm_ChattySessionSkipUsername       , String .class, conf.getProperty      (PROPKEY_alarm_ChattySessionSkipUsername      , DEFAULT_alarm_ChattySessionSkipUsername      ), DEFAULT_alarm_ChattySessionSkipUsername      , "If 'ChattySession' is true; Discard USERNAMEs listed (regexp is used)." , new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("ChattySession SkipPrograms",                  PROPKEY_alarm_ChattySessionSkipProgram        , String .class, conf.getProperty      (PROPKEY_alarm_ChattySessionSkipProgram       , DEFAULT_alarm_ChattySessionSkipProgram       ), DEFAULT_alarm_ChattySessionSkipProgram       , "If 'ChattySession' is true; Discard PROGRAMs listed (regexp is used). DbxTune's own connections are always discarded." , new RegExpInputValidator()));

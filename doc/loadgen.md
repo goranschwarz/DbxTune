@@ -814,11 +814,18 @@ the product name. Very many tiny statements from one session.
 
 **`AlarmEventChattySession` and N+1.** The alarm has the same default on every vendor: a session sends more than 100
 statements per second, with fewer than 10 logical reads (MySQL: rows read) each, for 2 samples in a row. The counter is
-"statements from the client" everywhere: ASE SQL batches (CmProcessActivity), Oracle SQL\*Net round trips (CmSessions),
-MySQL `Questions` (CmSessionActivity), DB2 `DYNAMIC_SQL_STMTS` (CmMonGetConnection). On DB2, measured on 11.5 with JDBC
-(2026-11-13), `DYNAMIC_SQL_STMTS` is exactly 1 per client statement (also a CALL; the SQL inside a procedure is not counted), while
-`APP_RQSTS_COMPLETED_TOTAL` is 1-4 requests per statement (the autocommit commit, the prepare of a literal statement, client info are
-requests of their own) - with that counter, normal OLTP workers went over 100. Not counted on DB2: precompiled (static SQL) clients.
+"statements from the client" everywhere, measured with JDBC on 2026-11-13 (prepared and literal statements, autocommit on and
+off, commits, client info, a 1000-row SELECT, a CALL of a procedure that runs 1000 SELECTs):
+
+| DBMS | Counter (CM) | Per client statement |
+|---|---|---|
+| ASE 16 | SQL batches, `monProcess.BatchID` (CmProcessActivity) | exactly 1, also a 1000-row SELECT (rows are streamed) and a CALL |
+| Oracle 23ai | the **smaller** of `SQL*Net roundtrips to/from client` and `execute count` (CmSessions) | round trips are 1, but one per **fetch** (a 1000-row SELECT with the default fetch size 10 = 101); executions are 1, but also the SQL a procedure runs (1003 for the CALL). N+1 has both about equal (~250/s seen), a session fetching many rows has few executions, a PL/SQL loop few round trips |
+| MySQL | `Questions` (CmSessionActivity) | 1 (statements from the client, not those in stored programs) - from the MySQL documentation, not measured |
+| DB2 11.5 | `DYNAMIC_SQL_STMTS` (CmMonGetConnection) | exactly 1, also a CALL (its SQL is not counted). `APP_RQSTS_COMPLETED_TOTAL` is 1-4 (the autocommit commit, the prepare of a literal statement, client info are requests of their own): with it, normal OLTP workers went over 100. Not counted: precompiled (static SQL) clients |
+
+With these, the load generator's OLTP workers do ~15-18 statements/s at intensity `low` and the N+1 session ~190-250/s
+(DB2 and Oracle, seen 2026-11-13): ChattySession only for the N+1 sessions.
 
 The alarm only says "many cheap statements from one session": a busy normal session (a connection pool, a queue consumer)
 looks the same, so it is a **possible** N+1. What makes it N+1 is the statement pattern: a child statement that runs once per
