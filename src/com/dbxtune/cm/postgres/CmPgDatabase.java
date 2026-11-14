@@ -40,7 +40,11 @@ import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventConfigResourceIsLow;
+import com.dbxtune.alarm.events.AlarmEventDeadlock;
 import com.dbxtune.alarm.events.postgres.AlarmEventPgChecksumFailure;
+import com.dbxtune.alarm.events.postgres.AlarmEventPgIdleInTransaction;
+import com.dbxtune.alarm.events.postgres.AlarmEventPgTempUsage;
+import com.dbxtune.alarm.events.postgres.AlarmEventPgXidWraparound;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSample;
@@ -58,6 +62,7 @@ import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.MathUtils;
+import com.dbxtune.utils.MovingAverageCounterManager;
 import com.dbxtune.utils.TimeUtils;
 import com.dbxtune.cm.CmHighlighterDescriptor;
 import com.dbxtune.utils.Ver;
@@ -233,6 +238,7 @@ extends CountersModel
 	public static final String GRAPH_NAME_READ_TIME                 = "ReadTime";
 	public static final String GRAPH_NAME_WRITE_TIME                = "WriteTime";
 	public static final String GRAPH_NAME_DBSIZE_MB                 = "DbSizeMb";
+	public static final String GRAPH_NAME_XID_AGE                   = "XidAge";
 	
 	@Override
 	protected TabularCntrPanel createGui()
@@ -256,7 +262,12 @@ extends CountersModel
 		String checksum_failures_diff = "";
 		if (versionInfo.getLongVersion() >= Ver.ver(12))
 			checksum_failures_diff = "    ,checksum_failures              AS checksum_failures_diff \n";
-		
+
+		// Transaction id wraparound: the age of the database's oldest unfrozen transaction id / multixact id (mxid_age() is 9.5+)
+		String datminmxid_age = versionInfo.getLongVersion() >= Ver.ver(9,5)
+				? "    ,mxid_age(d.datminmxid)         AS datminmxid_age \n"
+				: "    ,CAST(NULL as int)              AS datminmxid_age \n";
+
 		return ""
 			+ "SELECT \n"
 			+ "     sd.* \n"
@@ -273,7 +284,11 @@ extends CountersModel
 //			+ "    ,a.rolname                      AS db_owner \n"
 			+ "    ,a.rolname                      AS db_owner \n"
 			+ checksum_failures_diff
-			+ "    ,d.datcollate                   AS db_collation \n" 
+			+ "    ,age(d.datfrozenxid)            AS datfrozenxid_age \n"
+			// Sessions 'idle in transaction' NOW, for more than 60 seconds (pg_stat_database.idle_in_transaction_time can't tell: it is only added when the session LEAVES that state)
+			+ "    ,(SELECT count(*) FROM pg_stat_activity a WHERE a.datid = sd.datid AND a.state = 'idle in transaction' AND a.state_change < clock_timestamp() - interval '60 seconds') AS idle_in_xact_sessions \n"
+			+ datminmxid_age
+			+ "    ,d.datcollate                   AS db_collation \n"
 			+ "    ,CAST(d.datacl as varchar(512)) AS db_access_privileges \n" 
 			+ "FROM pg_stat_database sd \n"
 			+ "INNER JOIN pg_database d ON sd.datid = d.oid \n"
@@ -345,6 +360,11 @@ extends CountersModel
 			mtd.addColumn("pg_stat_database",  "tup_returned_in_slide", "<html>" +
 			                                                                 "Summary of all <i>diff</i> values for the column <code>tup_returned</code> within the <i>slide window</i>.<br> " +
 			                                                                 "<b>Formula</b>: summary of all the <code>tup_returned</code> within the <i>slide window</i><br>" +
+			                                                            "</html>");
+			mtd.addColumn("pg_stat_database",  "idle_in_xact_sessions", "<html>" +
+			                                                                 "Number of sessions in this database that are 'idle in transaction' <b>right now</b>, for more than 60 seconds.<br>" +
+			                                                                 "An open transaction keeps its locks and stops vacuum from removing dead rows.<br>" +
+			                                                                 "<b>Formula</b>: select count(*) from pg_stat_activity where datid = ... and state = 'idle in transaction' and state_change &lt; clock_timestamp() - interval '60 seconds'<br>" +
 			                                                            "</html>");
 			mtd.addColumn("pg_stat_database",  "srv_cfg_max_connections", "<html>" +
 			                                                                 "How many connections can we make to this Postgres server.<br> " +
@@ -769,6 +789,17 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
+		addTrendGraph(GRAPH_NAME_XID_AGE,
+			"Transaction ID Age per DB", 	                         // Menu CheckBox text
+			"Transaction ID Age (age of datfrozenxid) per DB, wraparound at ~2.1 billion (" + SHORT_NAME + ")", // Graph Label
+			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+			null, LabelType.Dynamic,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
+			-1);   // minimum height
+
 		addTrendGraph(GRAPH_NAME_DEADLOCKS,
 			"Deadlocks", 	                         // Menu CheckBox text
 			"Deadlocks per second (" + SHORT_NAME + ")", // Graph Label 
@@ -895,6 +926,7 @@ extends CountersModel
 		if (GRAPH_NAME_TEMP_FILES               .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false, "temp_files");
 		if (GRAPH_NAME_TEMP_BYTES               .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false, "temp_bytes");
 		if (GRAPH_NAME_DEADLOCKS                .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false, "deadlocks");
+		if (GRAPH_NAME_XID_AGE                  .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_ABS,  false, false, "datfrozenxid_age");
 		if (GRAPH_NAME_READ_TIME                .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false, "blk_read_time");
 		if (GRAPH_NAME_WRITE_TIME               .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_RATE, true , false, "blk_write_time");
 		if (GRAPH_NAME_DBSIZE_MB                .equals(tgdp.getName())) localUpdateGraphData(tgdp, CountersModel.DATA_ABS,  true , false, "dbsize_mb");
@@ -1037,6 +1069,35 @@ extends CountersModel
 		}
 
 		//-------------------------------------------------------
+		// Deadlocks: for the whole server, from pg_stat_database (works without the error log, which CmErrorLog needs)
+		//-------------------------------------------------------
+		Double deadlocksDiff = cm.getDiffValueSum("deadlocks");
+		if (deadlocksDiff != null)
+		{
+			double movingAvg = MovingAverageCounterManager.getInstance(CM_NAME, "deadlocks", 60).add(deadlocksDiff).getAvg(0, false);
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("Deadlocks"))
+			{
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_Deadlocks, DEFAULT_alarm_Deadlocks);
+				if (deadlocksDiff > threshold)
+				{
+					AlarmEvent ae = new AlarmEventDeadlock(cm, threshold, 60, deadlocksDiff.intValue(), movingAvg);
+					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+					{
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+						{
+							alarmEvent.setExtendedDescription("", cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DEADLOCKS));
+							if (AlarmPhase.CANCEL.equals(phase))
+								alarmEvent.setCancelDescription(getAlarmCancelText("Deadlocks (in the last sample, all databases)", cm.getDiffValueSum("deadlocks")));
+						}
+					});
+					ae.createAlarmOptionsMessage(this, "Deadlocks");
+					AlarmHandler.getInstance().addAlarm(ae);
+				}
+			}
+		}
+
+		//-------------------------------------------------------
 		// Get needed column positions, but do not "fail/skip" if they don't exists (they are not present in some versions)
 		int pos__checksum_failures_diff = cm.findColumn("checksum_failures_diff");
 
@@ -1071,9 +1132,92 @@ extends CountersModel
 				}
 			} // end: ChecksumFailures
 
+			String dbname = cm.getDiffString(r, "datname");
+			Configuration conf = Configuration.getCombinedConfiguration();
+
+			//-------------------------------------------------------
+			// XidWraparound: age of the oldest unfrozen transaction id / multixact id (abs values)
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("XidWraparound"))
+			{
+				long threshold = conf.getLongProperty(PROPKEY_alarm_XidWraparound, DEFAULT_alarm_XidWraparound);
+				for (String[] w : new String[][] { {"datfrozenxid_age", "transaction id"}, {"datminmxid_age", "multixact id"} })
+				{
+					Double age = cm.getAbsValueAsDouble(r, w[0]);
+					if (age != null && age > threshold)
+					{
+						AlarmEvent ae = new AlarmEventPgXidWraparound(cm, dbname, w[1], age.longValue(), threshold);
+						setRowCancelText(ae, r, "The oldest " + w[1] + " age in database '" + dbname + "'", w[0], CountersModel.DATA_ABS, "", threshold);
+						ae.createAlarmOptionsMessage(this, "XidWraparound");
+						AlarmHandler.getInstance().addAlarm(ae);
+					}
+				}
+			}
+
+			//-------------------------------------------------------
+			// TempUsage: MB of temporary files per minute (temp_bytes per second * 60)
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("TempUsage"))
+			{
+				double threshold = conf.getDoubleProperty(PROPKEY_alarm_TempUsage, DEFAULT_alarm_TempUsage);
+				Double bytesPerSec = cm.getRateValueAsDouble(r, "temp_bytes");
+				if (bytesPerSec != null && bytesPerSec * 60 / 1024 / 1024 > threshold)
+				{
+					AlarmEvent ae = new AlarmEventPgTempUsage(cm, dbname, bytesPerSec * 60 / 1024 / 1024, cm.getDiffValueAsInteger(r, "temp_files", 0), threshold);
+					setRowCancelText(ae, r, "Temporary files in database '" + dbname + "' (MB per minute)", "temp_bytes", -1, " MB per minute", threshold);
+					ae.createAlarmOptionsMessage(this, "TempUsage");
+					AlarmHandler.getInstance().addAlarm(ae);
+				}
+			}
+
+			//-------------------------------------------------------
+			// IdleInTransaction: sessions that are 'idle in transaction' NOW, for more than 60 seconds (column idle_in_xact_sessions)
+			// NOTE: Not from pg_stat_database.idle_in_transaction_time: it is only added when a session LEAVES the state (measured: 6 sessions idle for 70 s showed up as 420 s in ONE sample)
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("IdleInTransaction"))
+			{
+				double threshold = conf.getDoubleProperty(PROPKEY_alarm_IdleInTransaction, DEFAULT_alarm_IdleInTransaction);
+				Double sessions = cm.getAbsValueAsDouble(r, "idle_in_xact_sessions");
+				if (sessions != null && sessions >= threshold)
+				{
+					AlarmEvent ae = new AlarmEventPgIdleInTransaction(cm, dbname, sessions, threshold);
+					setRowCancelText(ae, r, "Sessions 'idle in transaction' for more than 60 seconds in database '" + dbname + "'", "idle_in_xact_sessions", CountersModel.DATA_ABS, "", threshold);
+					ae.createAlarmOptionsMessage(this, "IdleInTransaction");
+					AlarmHandler.getInstance().addAlarm(ae);
+				}
+			}
+
 		} // end: loop-rows
 
 	} // end: method
+
+	/**
+	 * The CANCEL text of a per-database alarm: the value NOW (or "is no longer present" when the database is gone)
+	 * @param dataType DATA_ABS / DATA_DIFF, -1 = rate as MB per minute (temp_bytes)
+	 */
+	private void setRowCancelText(AlarmEvent ae, int r, String label, String colName, int dataType, String unit, Number threshold)
+	{
+		ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(getPk(), getAbsPkValue(r), threshold)
+		{
+			@Override
+			public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+			{
+				if ( ! AlarmPhase.CANCEL.equals(phase) )
+					return;
+				int rowId = cm.getAbsRowIdForPkValue(getRowPk());
+				if (rowId == -1)
+				{
+					alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+					return;
+				}
+				Double val;
+				if      (dataType == CountersModel.DATA_ABS ) val = cm.getAbsValueAsDouble (rowId, colName);
+				else if (dataType == CountersModel.DATA_DIFF) val = cm.getDiffValueAsDouble(rowId, colName);
+				else                     { Double v = cm.getRateValueAsDouble(rowId, colName); val = v == null ? null : Math.round(v * 60 / 1024 / 1024 * 10) / 10.0; }
+				alarmEvent.setCancelDescription(getAlarmCancelText(label, val, unit));
+			}
+		});
+	}
 
 	@Override
 	public boolean isGraphDataHistoryEnabled(String name)
@@ -1081,6 +1225,7 @@ extends CountersModel
 		// ENABLED for the following graphs
 		if (GRAPH_NAME_CONNECTIONS    .equals(name)) return true;
 		if (GRAPH_NAME_CONNECTIONS_SUM.equals(name)) return true;
+		if (GRAPH_NAME_DEADLOCKS      .equals(name)) return true; // shown in the 'Deadlocks' alarm
 
 		// default: DISABLED
 		return false;
@@ -1099,6 +1244,18 @@ extends CountersModel
 	public static final String  PROPKEY_alarm_ChecksumFailures = CM_NAME + ".alarm.system.if.checksum_failures_diff.gt";
 	public static final int     DEFAULT_alarm_ChecksumFailures = 0;
 
+	public static final String  PROPKEY_alarm_XidWraparound      = CM_NAME + ".alarm.system.if.XidWraparound.gt";
+	public static final long    DEFAULT_alarm_XidWraparound      = 1_000_000_000L; // about half way to the ~2.1 billion limit
+
+	public static final String  PROPKEY_alarm_TempUsage          = CM_NAME + ".alarm.system.if.TempUsage.mbPerMinute.gt";
+	public static final double  DEFAULT_alarm_TempUsage          = 1024;
+
+	public static final String  PROPKEY_alarm_Deadlocks          = CM_NAME + ".alarm.system.if.Deadlocks.gt";
+	public static final int     DEFAULT_alarm_Deadlocks          = 0;
+
+	public static final String  PROPKEY_alarm_IdleInTransaction  = CM_NAME + ".alarm.system.if.IdleInTransaction.sessions.gte";
+	public static final double  DEFAULT_alarm_IdleInTransaction  = 5;
+
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
@@ -1109,6 +1266,10 @@ extends CountersModel
 		
 		list.add(new CmSettingsHelper("free_connections" , isAlarmSwitch, PROPKEY_alarm_FreeConnections , Integer.class, conf.getIntProperty(PROPKEY_alarm_FreeConnections , DEFAULT_alarm_FreeConnections ), DEFAULT_alarm_FreeConnections , "If 'free_connections' is less than this value, send 'AlarmEventConfigResourceIsLow'." ));
 		list.add(new CmSettingsHelper("checksum_failures", isAlarmSwitch, PROPKEY_alarm_ChecksumFailures, Integer.class, conf.getIntProperty(PROPKEY_alarm_ChecksumFailures, DEFAULT_alarm_ChecksumFailures), DEFAULT_alarm_ChecksumFailures, "If 'checksum_failures_diff' is greater than this value, send 'AlarmEventPgChecksumFailure'." ));
+		list.add(new CmSettingsHelper("XidWraparound"    , isAlarmSwitch, PROPKEY_alarm_XidWraparound    , Long.class   , conf.getLongProperty(PROPKEY_alarm_XidWraparound      , DEFAULT_alarm_XidWraparound    ), DEFAULT_alarm_XidWraparound    , "If 'datfrozenxid_age' or 'datminmxid_age' of a database is greater than this value, send 'AlarmEventPgXidWraparound' (Postgres stops accepting writes at about 2.1 billion)." ));
+		list.add(new CmSettingsHelper("TempUsage"        , isAlarmSwitch, PROPKEY_alarm_TempUsage        , Double.class , conf.getDoubleProperty(PROPKEY_alarm_TempUsage        , DEFAULT_alarm_TempUsage        ), DEFAULT_alarm_TempUsage        , "If a database writes more MB of temporary files per minute than this value, send 'AlarmEventPgTempUsage'." ));
+		list.add(new CmSettingsHelper("Deadlocks"        , isAlarmSwitch, PROPKEY_alarm_Deadlocks        , Integer.class, conf.getIntProperty(PROPKEY_alarm_Deadlocks           , DEFAULT_alarm_Deadlocks        ), DEFAULT_alarm_Deadlocks        , "If 'deadlocks' of a database in a sample is greater than this value, send 'AlarmEventDeadlock'." ));
+		list.add(new CmSettingsHelper("IdleInTransaction", isAlarmSwitch, PROPKEY_alarm_IdleInTransaction, Double.class , conf.getDoubleProperty(PROPKEY_alarm_IdleInTransaction, DEFAULT_alarm_IdleInTransaction), DEFAULT_alarm_IdleInTransaction, "If this many sessions (or more) in a database are 'idle in transaction' for more than 60 seconds right now (column idle_in_xact_sessions), send 'AlarmEventPgIdleInTransaction'." ));
 
 		return list;
 	}

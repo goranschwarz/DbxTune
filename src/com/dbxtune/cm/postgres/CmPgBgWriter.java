@@ -21,6 +21,7 @@
 package com.dbxtune.cm.postgres;
 
 import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -29,7 +30,12 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
+import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
+import com.dbxtune.alarm.events.AlarmEvent;
+import com.dbxtune.alarm.events.postgres.AlarmEventPgCheckpointsRequested;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
@@ -38,6 +44,8 @@ import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
+import com.dbxtune.utils.Configuration;
+import com.dbxtune.utils.MovingAverageCounterManager;
 import com.dbxtune.utils.Ver;
 
 /**
@@ -315,5 +323,84 @@ extends CountersModel
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
+	}
+
+	/** The window for the 'CheckpointsRequested' alarm */
+	private static final int CHECKPOINT_WINDOW_MINUTES = 60;
+
+	@Override
+	public void sendAlarmRequest()
+	{
+		if ( ! hasDiffData() || getDiffRowCount() == 0 )
+			return;
+
+		// Requested and timed checkpoints over the last hour (a moving window, filled at every sample, also when the alarm is off)
+		Double reqDiff   = getDiffValueAsDouble(0, "checkpoints_req");
+		Double timedDiff = getDiffValueAsDouble(0, "checkpoints_timed");
+		if (reqDiff == null || timedDiff == null) // the columns are missing (a fork, or the fallback SQL on 17+)
+			return;
+
+		double req   = MovingAverageCounterManager.getInstance(CM_NAME, "checkpoints_req",   CHECKPOINT_WINDOW_MINUTES).add(reqDiff  ).getSum(0);
+		double timed = MovingAverageCounterManager.getInstance(CM_NAME, "checkpoints_timed", CHECKPOINT_WINDOW_MINUTES).add(timedDiff).getSum(0);
+
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		//-------------------------------------------------------
+		// CheckpointsRequested: many checkpoints started because the WAL reached max_wal_size (not by checkpoint_timeout)
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("CheckpointsRequested"))
+		{
+			Configuration conf = Configuration.getCombinedConfiguration();
+			double thresholdPct = conf.getDoubleProperty(PROPKEY_alarm_CheckpointsRequestedPct, DEFAULT_alarm_CheckpointsRequestedPct);
+			int    minCount     = conf.getIntProperty   (PROPKEY_alarm_CheckpointsRequestedMin, DEFAULT_alarm_CheckpointsRequestedMin);
+
+			double pct = (req + timed) > 0 ? req * 100.0 / (req + timed) : 0;
+			if (req >= minCount && pct > thresholdPct)
+			{
+				AlarmEvent ae = new AlarmEventPgCheckpointsRequested(this, Math.round(req), Math.round(timed), CHECKPOINT_WINDOW_MINUTES, thresholdPct);
+				ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, thresholdPct)
+				{
+					@Override
+					public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+					{
+						alarmEvent.setExtendedDescription("", cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_CHECKPOINT_COUNT));
+						if (AlarmPhase.CANCEL.equals(phase))
+						{
+							double r = MovingAverageCounterManager.getInstance(CM_NAME, "checkpoints_req",   CHECKPOINT_WINDOW_MINUTES).getSum(0);
+							double t = MovingAverageCounterManager.getInstance(CM_NAME, "checkpoints_timed", CHECKPOINT_WINDOW_MINUTES).getSum(0);
+							alarmEvent.setCancelDescription(getAlarmCancelText("Requested checkpoints in the last " + CHECKPOINT_WINDOW_MINUTES + " minutes (percent of all)",
+									(r + t) > 0 ? Math.round(r * 100.0 / (r + t)) : 0, "%"));
+						}
+					}
+				});
+				ae.createAlarmOptionsMessage(this, "CheckpointsRequested");
+				AlarmHandler.getInstance().addAlarm(ae);
+			}
+		}
+	}
+
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		return GRAPH_NAME_CHECKPOINT_COUNT.equals(name); // shown in the 'CheckpointsRequested' alarm
+	}
+
+	public static final String  PROPKEY_alarm_CheckpointsRequestedPct = CM_NAME + ".alarm.system.if.CheckpointsRequested.pct.gt";
+	public static final double  DEFAULT_alarm_CheckpointsRequestedPct = 20;
+
+	public static final String  PROPKEY_alarm_CheckpointsRequestedMin = CM_NAME + ".alarm.system.if.CheckpointsRequested.minCount";
+	public static final int     DEFAULT_alarm_CheckpointsRequestedMin = 3;
+
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		list.add(new CmSettingsHelper("CheckpointsRequested", CmSettingsHelper.Type.IS_ALARM_SWITCH, PROPKEY_alarm_CheckpointsRequestedPct, Double.class, conf.getDoubleProperty(PROPKEY_alarm_CheckpointsRequestedPct, DEFAULT_alarm_CheckpointsRequestedPct), DEFAULT_alarm_CheckpointsRequestedPct,
+				"If more than this percent of the checkpoints in the last hour were requested (the WAL reached max_wal_size), send 'AlarmEventPgCheckpointsRequested'." ));
+		list.add(new CmSettingsHelper("CheckpointsRequested MinCount", PROPKEY_alarm_CheckpointsRequestedMin, Integer.class, conf.getIntProperty(PROPKEY_alarm_CheckpointsRequestedMin, DEFAULT_alarm_CheckpointsRequestedMin), DEFAULT_alarm_CheckpointsRequestedMin,
+				"... and at least this many requested checkpoints in the last hour." ));
+		return list;
 	}
 }

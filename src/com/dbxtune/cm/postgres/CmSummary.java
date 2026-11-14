@@ -39,6 +39,7 @@ import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventBlockingLockAlarm;
 import com.dbxtune.alarm.events.AlarmEventLongRunningStatement;
 import com.dbxtune.alarm.events.AlarmEventLongRunningTransaction;
+import com.dbxtune.alarm.events.postgres.AlarmEventPgRoleChange;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSummaryAbstract;
@@ -600,6 +601,9 @@ extends CmSummaryAbstract
 	// ALARMS
 	//----------------------------------------------------------------
 
+	/** pg_is_in_recovery() of the previous sample (null = no sample yet). For the 'RoleChange' alarm */
+	private Boolean _lastInRecovery = null;
+
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -617,6 +621,25 @@ extends CmSummaryAbstract
 		// DbmsVersionStringChanged
 		//-------------------------------------------------------
 		doAlarmIfDbmsVersionStringWasChanged("version");
+
+		//-------------------------------------------------------
+		// RoleChange: primary <-> standby (pg_is_in_recovery() changed since the previous sample)
+		// NOTE: _lastInRecovery is kept over a reconnect (it is NOT cleared in reset()): a failover usually means a reconnect
+		//-------------------------------------------------------
+		String inRecoveryStr = cm.getAbsString(0, "in_recovery");
+		if (inRecoveryStr != null && ! inRecoveryStr.isEmpty())
+		{
+			boolean inRecovery = "true".equalsIgnoreCase(inRecoveryStr) || "t".equalsIgnoreCase(inRecoveryStr) || "1".equals(inRecoveryStr);
+			if (_lastInRecovery != null && _lastInRecovery != inRecovery && isSystemAlarmsForColumnEnabledAndInTimeRange("RoleChange"))
+			{
+				String prevRole = _lastInRecovery ? "STANDBY" : "PRIMARY";
+				String newRole  = inRecovery      ? "STANDBY" : "PRIMARY";
+				AlarmEvent ae = new AlarmEventPgRoleChange(cm, prevRole, newRole);
+				ae.createAlarmOptionsMessage(this, "RoleChange");
+				AlarmHandler.getInstance().addAlarm(ae);
+			}
+			_lastInRecovery = inRecovery;
+		}
 
 		//-------------------------------------------------------
 		// BlockingLockCount
@@ -768,6 +791,9 @@ extends CmSummaryAbstract
 
 	
 	
+	public static final String  PROPKEY_alarm_RoleChange                       = CM_NAME + ".alarm.system.if.RoleChange";
+	public static final boolean DEFAULT_alarm_RoleChange                       = true;
+
 	public static final String  PROPKEY_alarm_BlockingLockCount                = CM_NAME + ".alarm.system.if.blocking_lock_count.gt";
 	public static final int     DEFAULT_alarm_BlockingLockCount                = 0;
 
@@ -795,6 +821,7 @@ extends CmSummaryAbstract
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 
 		addAlarmSettings_DbmsVersionStringChanged(list, "version");
+		list.add(new CmSettingsHelper("RoleChange",                       isAlarmSwitch, PROPKEY_alarm_RoleChange                      , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_RoleChange                      , DEFAULT_alarm_RoleChange                      ), DEFAULT_alarm_RoleChange                      , "If the server switched between primary and standby since the previous sample (pg_is_in_recovery() changed), send 'AlarmEventPgRoleChange'." ));
 		list.add(new CmSettingsHelper("BlockingLockCount",                isAlarmSwitch, PROPKEY_alarm_BlockingLockCount               , Integer.class, conf.getIntProperty    (PROPKEY_alarm_BlockingLockCount               , DEFAULT_alarm_BlockingLockCount               ), DEFAULT_alarm_BlockingLockCount               , "If 'BlockingLockCount' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
 		list.add(new CmSettingsHelper("BlockingLockCount MinWaitTime",                   PROPKEY_alarm_BlockingLockCount_minWaitTimeSec, Double .class, conf.getDoubleProperty (PROPKEY_alarm_BlockingLockCount_minWaitTimeSec, DEFAULT_alarm_BlockingLockCount_minWaitTimeSec), DEFAULT_alarm_BlockingLockCount_minWaitTimeSec, "If 'BlockingLockCount' is true; then we can filter on 'blocking_lock_wait_in_sec' (only if Postgres is version 14 or above)"));
 		list.add(new CmSettingsHelper("oldestOpenTranInSec",              isAlarmSwitch, PROPKEY_alarm_oldestOpenTranInSec             , Integer.class, conf.getIntProperty    (PROPKEY_alarm_oldestOpenTranInSec             , DEFAULT_alarm_oldestOpenTranInSec             ), DEFAULT_alarm_oldestOpenTranInSec             , "If 'oldestOpenTranInSec' is greater than ## then send 'AlarmEventLongRunningTransaction'." ));

@@ -21,6 +21,7 @@
 package com.dbxtune.cm.postgres;
 
 import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -32,6 +33,11 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
+import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
+import com.dbxtune.alarm.events.AlarmEvent;
+import com.dbxtune.alarm.events.postgres.AlarmEventPgTableBloat;
+import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSampleCatalogIteratorPostgres;
 import com.dbxtune.cm.CounterSetTemplates;
@@ -42,6 +48,7 @@ import com.dbxtune.cm.CountersModel;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
+import com.dbxtune.utils.Configuration;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -277,5 +284,75 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
+	}
+
+	@Override
+	public void sendAlarmRequest()
+	{
+		if ( ! hasAbsData() )
+			return;
+
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		//-------------------------------------------------------
+		// TableBloat: a big table with a lot of unused space (an estimate)
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("TableBloat"))
+		{
+			Configuration conf = Configuration.getCombinedConfiguration();
+			double thresholdPct    = conf.getDoubleProperty(PROPKEY_alarm_TableBloatPct   , DEFAULT_alarm_TableBloatPct);
+			double thresholdSizeMb = conf.getDoubleProperty(PROPKEY_alarm_TableBloatSizeMb, DEFAULT_alarm_TableBloatSizeMb);
+
+			for (int r = 0; r < getAbsRowCount(); r++)
+			{
+				Double bloatPct   = getAbsValueAsDouble(r, "bloat_pct");
+				Double bloatMb    = getAbsValueAsDouble(r, "bloat_size_mb");
+				Double realSizeMb = getAbsValueAsDouble(r, "real_size_mb");
+				if (bloatPct == null || bloatMb == null || realSizeMb == null)
+					continue;
+
+				if (bloatPct > thresholdPct && realSizeMb > thresholdSizeMb)
+				{
+					String dbname = getAbsString(r, "dbname");
+					String schema = getAbsString(r, "schemaname");
+					String table  = getAbsString(r, "tablename");
+
+					AlarmEvent ae = new AlarmEventPgTableBloat(this, dbname, schema, table, bloatPct, bloatMb, thresholdPct);
+					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(getPk(), getAbsPkValue(r), thresholdPct)
+					{
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+						{
+							if ( ! AlarmPhase.CANCEL.equals(phase) )
+								return;
+							String label = "The estimated bloat of table '" + schema + "." + table + "' in database '" + dbname + "'";
+							int rowId = cm.getAbsRowIdForPkValue(getRowPk());
+							alarmEvent.setCancelDescription(rowId == -1 ? getAlarmCancelTextGone(label) : getAlarmCancelText(label, cm.getAbsValueAsDouble(rowId, "bloat_pct"), "%"));
+						}
+					});
+					ae.createAlarmOptionsMessage(this, "TableBloat");
+					AlarmHandler.getInstance().addAlarm(ae);
+				}
+			}
+		}
+	}
+
+	public static final String  PROPKEY_alarm_TableBloatPct    = CM_NAME + ".alarm.system.if.TableBloat.pct.gt";
+	public static final double  DEFAULT_alarm_TableBloatPct    = 50;
+
+	public static final String  PROPKEY_alarm_TableBloatSizeMb = CM_NAME + ".alarm.system.if.TableBloat.tableSizeMb.gt";
+	public static final double  DEFAULT_alarm_TableBloatSizeMb = 1024;
+
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		list.add(new CmSettingsHelper("TableBloat", CmSettingsHelper.Type.IS_ALARM_SWITCH, PROPKEY_alarm_TableBloatPct, Double.class, conf.getDoubleProperty(PROPKEY_alarm_TableBloatPct, DEFAULT_alarm_TableBloatPct), DEFAULT_alarm_TableBloatPct,
+				"If the estimated bloat ('bloat_pct') of a table is above this percent (and the table is bigger than 'TableBloat TableSizeMb'), send 'AlarmEventPgTableBloat'." ));
+		list.add(new CmSettingsHelper("TableBloat TableSizeMb", PROPKEY_alarm_TableBloatSizeMb, Double.class, conf.getDoubleProperty(PROPKEY_alarm_TableBloatSizeMb, DEFAULT_alarm_TableBloatSizeMb), DEFAULT_alarm_TableBloatSizeMb,
+				"Only tables bigger than this (MB, 'real_size_mb') are checked for 'TableBloat'." ));
+		return list;
 	}
 }

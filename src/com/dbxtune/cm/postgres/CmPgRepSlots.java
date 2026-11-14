@@ -39,6 +39,7 @@ import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.postgres.AlarmEventPgReplicationLag;
+import com.dbxtune.alarm.events.postgres.AlarmEventPgReplicationSlot;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSetTemplates;
@@ -335,6 +336,90 @@ extends CountersModel
 		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 
 		CountersModel cm = this;
+		Configuration conf = Configuration.getCombinedConfiguration();
+
+		//-------------------------------------------------------
+		// SlotWalStatus (13+): the WAL the slot needs is about to be removed ('unreserved') or was removed ('lost': the slot can't be used any more)
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("SlotWalStatus") && findColumn("wal_status") != -1)
+		{
+			for (int r = 0; r < getAbsRowCount(); r++)
+			{
+				String slotName  = getAbsString(r, "slot_name");
+				String walStatus = getAbsString(r, "wal_status");
+				if ("unreserved".equalsIgnoreCase(walStatus) || "lost".equalsIgnoreCase(walStatus))
+				{
+					boolean lost   = "lost".equalsIgnoreCase(walStatus);
+					String  reason = findColumn("invalidation_reason") == -1 ? null : getAbsString(r, "invalidation_reason");
+					String  problem = lost
+							? "its WAL was removed (wal_status='lost'" + (StringUtil.hasValue(reason) ? ", invalidation_reason='" + reason + "'" : "") + "): the slot can't be used any more, the replica/subscriber must be rebuilt (and the slot dropped)."
+							: "its WAL is beyond max_slot_wal_keep_size (wal_status='unreserved'): it will be removed at the next checkpoint unless the slot catches up.";
+					AlarmEvent ae = new AlarmEventPgReplicationSlot(cm, "SlotWalStatus", slotName, problem, lost, null);
+					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(getPk(), getAbsPkValue(r), null)
+					{
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+						{
+							if ( ! AlarmPhase.CANCEL.equals(phase) )
+								return;
+							String label = "The wal_status of replication slot '" + slotName + "'";
+							int rowId = cm.getAbsRowIdForPkValue(getRowPk());
+							alarmEvent.setCancelDescription(rowId == -1 ? getAlarmCancelTextGone("Replication slot '" + slotName + "'") : getAlarmCancelText(label, cm.getAbsString(rowId, "wal_status")));
+						}
+					});
+					ae.createAlarmOptionsMessage(this, "SlotWalStatus");
+					AlarmHandler.getInstance().addAlarm(ae);
+				}
+			}
+		}
+
+		//-------------------------------------------------------
+		// SlotInactive: nobody uses the slot, it keeps WAL (and dead rows, for logical slots) until the disk is full
+		// 17+: inactive_since. Before 17: the time this CM first saw the slot inactive (lost at a restart of the collector)
+		//-------------------------------------------------------
+		long now = System.currentTimeMillis();
+		Map<String, Long> seenInactiveNow = new LinkedHashMap<>();
+		for (int r = 0; r < getAbsRowCount(); r++)
+		{
+			String  slotName = getAbsString(r, "slot_name");
+			String  activeStr = getAbsString(r, "active");
+			boolean active   = "true".equalsIgnoreCase(activeStr) || "t".equalsIgnoreCase(activeStr) || "1".equals(activeStr);
+			if (active)
+				continue;
+
+			Long since = null;
+			if (findColumn("inactive_since") != -1 && getAbsValue(r, "inactive_since") instanceof java.util.Date)
+				since = ((java.util.Date) getAbsValue(r, "inactive_since")).getTime();
+			if (since == null)
+				since = _slotFirstSeenInactive.getOrDefault(slotName, now);
+			seenInactiveNow.put(slotName, since);
+
+			long inactiveMin = (now - since) / 60_000;
+			int  threshold   = conf.getIntProperty(PROPKEY_alarm_SlotInactiveMinutes, DEFAULT_alarm_SlotInactiveMinutes);
+			if (inactiveMin > threshold && isSystemAlarmsForColumnEnabledAndInTimeRange("SlotInactive"))
+			{
+				Double lagMb = getAbsValueAsDouble(r, "lag_mb");
+				String problem = "it has been inactive for " + inactiveMin + " minutes (nobody reads from it), and keeps " + (lagMb == null ? "?" : Math.round(lagMb)) + " MB of WAL "
+						+ "(a logical slot also stops vacuum from removing dead catalog rows). Drop it if it is not needed: SELECT pg_drop_replication_slot('" + slotName + "');";
+				AlarmEvent ae = new AlarmEventPgReplicationSlot(cm, "SlotInactive", slotName, problem, false, threshold);
+				ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(getPk(), getAbsPkValue(r), threshold)
+				{
+					@Override
+					public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+					{
+						if ( ! AlarmPhase.CANCEL.equals(phase) )
+							return;
+						int rowId = cm.getAbsRowIdForPkValue(getRowPk());
+						alarmEvent.setCancelDescription(rowId == -1
+								? getAlarmCancelTextGone("Replication slot '" + slotName + "'")
+								: getAlarmCancelText("Replication slot '" + slotName + "' active", cm.getAbsString(rowId, "active")));
+					}
+				});
+				ae.createAlarmOptionsMessage(this, "SlotInactive");
+				AlarmHandler.getInstance().addAlarm(ae);
+			}
+		}
+		_slotFirstSeenInactive = seenInactiveNow; // slots that became active (or were dropped) are forgotten
 
 		//-------------------------------------------------------
 		// lag_kb
@@ -425,6 +510,15 @@ extends CountersModel
 	}
 
 	
+	/** slot name -> when it was first seen inactive (before 17, which has pg_replication_slots.inactive_since) */
+	private Map<String, Long> _slotFirstSeenInactive = new LinkedHashMap<>();
+
+	public static final String  PROPKEY_alarm_SlotWalStatus       = CM_NAME + ".alarm.system.if.SlotWalStatus";
+	public static final boolean DEFAULT_alarm_SlotWalStatus       = true;
+
+	public static final String  PROPKEY_alarm_SlotInactiveMinutes = CM_NAME + ".alarm.system.if.SlotInactive.minutes.gt";
+	public static final int     DEFAULT_alarm_SlotInactiveMinutes = 60;
+
 	public static final String  PROPKEY_alarm_LagKb              = CM_NAME + ".alarm.system.if.lag_kb.gt";
 	public static final int     DEFAULT_alarm_LagKb              = 1024 * 100; // 100 MB
 
@@ -437,6 +531,8 @@ extends CountersModel
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
 		list.add(new CmSettingsHelper("lag_kb"            , isAlarmSwitch, PROPKEY_alarm_LagKb        , Integer.class, conf.getIntProperty(PROPKEY_alarm_LagKb        , DEFAULT_alarm_LagKb)        , DEFAULT_alarm_LagKb        , "If 'lag_kb' is greater than this value, send 'AlarmEventPgReplicationLag'." ));
+		list.add(new CmSettingsHelper("SlotWalStatus"     , isAlarmSwitch, PROPKEY_alarm_SlotWalStatus, Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_SlotWalStatus, DEFAULT_alarm_SlotWalStatus), DEFAULT_alarm_SlotWalStatus, "If 'wal_status' of a slot is 'unreserved' or 'lost' (Postgres 13 and above), send 'AlarmEventPgReplicationSlot'." ));
+		list.add(new CmSettingsHelper("SlotInactive"      , isAlarmSwitch, PROPKEY_alarm_SlotInactiveMinutes, Integer.class, conf.getIntProperty(PROPKEY_alarm_SlotInactiveMinutes, DEFAULT_alarm_SlotInactiveMinutes), DEFAULT_alarm_SlotInactiveMinutes, "If a slot has been inactive for more than this many minutes, send 'AlarmEventPgReplicationSlot' (17: from inactive_since, before 17: since this collector first saw it inactive)." ));
 
 		return list;
 	}
