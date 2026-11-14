@@ -1035,6 +1035,25 @@ extends DbmsConfigAbstract
 						"ALTER SYSTEM SET jit = off; SELECT pg_reload_conf(); (or raise jit_above_cost, for example to 500000). Check the statements with the most jit_*_time in pg_stat_statements first." + managed);
 		}
 
+		// Table bloat: the estimate needs pg_stats, which only shows the columns the login may SELECT (with 'pg_monitor': none).
+		// pgstattuple_approx() measures it instead (pg_monitor may use it), but the extension must be created in each database (CmPgTableBloat).
+		// Only the database we are connected to is checked here.
+		if (srvVersion >= Ver.ver(9,5))
+		{
+			String r = PostgresCmUtils.getFirstString(conn, ""
+					+ "select ((select rolsuper from pg_roles where rolname = current_user) "
+					+ (srvVersion >= Ver.ver(14) ? "or pg_has_role(current_user, 'pg_read_all_data', 'member')" : "")
+					+ ")::text || ';' || (exists (select 1 from pg_extension where extname = 'pgstattuple'))::text || ';' || current_database()"); // the parentheses: || binds tighter than OR
+			String[] p = StringUtil.nullToValue(r, "").split(";");
+			if (p.length == 3 && "false".equals(p[0]) && "false".equals(p[1]))
+				addIssue(srvRestart, keyPrefix + "pgstattuple.missing", "pgstattuple", Severity.INFO,
+						"Table bloat can't be measured or estimated: the extension pgstattuple is not in the database '" + p[2] + "' (it is needed in each database with tables to check), "
+						+ "and the login can't see the column statistics (pg_stats only shows the columns the login may SELECT, and 'pg_monitor' may not). "
+						+ "So the Performance Counter 'Table Bloat', the TableBloat alarm and the DSR section 'Table Bloat' have no numbers.",
+						"As a superuser, in each database: CREATE EXTENSION pgstattuple; (it comes with Postgres, no restart). pg_monitor may then measure the bloat cheaply, without reading any data. "
+						+ "(Not recommended: GRANT pg_read_all_data, which gives the login read access to all data.)" + managed);
+		}
+
 		//-------------------------------------------------------
 		// Performance: by value
 		//-------------------------------------------------------

@@ -22,6 +22,7 @@ package com.dbxtune.pcs.report.content.postgres;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Set;
 
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
@@ -36,7 +37,9 @@ extends PostgresAbstract
 {
 	private ResultSetTableModel _shortRstm; // null = not recorded
 	private int _tableCount = -1;           // tables in the recording
-	private int _naCount    = -1;           // of them without an estimate (is_na)
+	private int _naCount    = -1;           // of them without a bloat number (not measured, and is_na)
+	private boolean _hasSource  = false;    // the recording has bloat_source (measured bloat, 2026-11)
+	private boolean _hasTableMb = false;    // the recording has approx_table_mb
 
 	public PostgresTableBloat(DailySummaryReportAbstract reportingInstance)
 	{
@@ -69,19 +72,21 @@ extends PostgresAbstract
 		String naText = "";
 		if (_naCount > 0)
 		{
-			naText = "<b>" + _naCount + " of " + _tableCount + " tables had no bloat estimate</b> (is_na): some of their columns have no statistics in <code>pg_stats</code>. "
+			naText = "<b>" + _naCount + " of " + _tableCount + " tables had no bloat number</b>: not measured (the extension pgstattuple is not in the database, or the table is small), "
+					+ "and not estimated (some of their columns have no statistics in <code>pg_stats</code>). "
 					+ (_naCount >= _tableCount * 0.9 // (nearly) all: a table whose columns the login may read (or with no columns) still gets an estimate
 						? "When it is (nearly) <i>all</i> tables, the login can't see the statistics: pg_stats only shows the columns the login may SELECT, and a <code>pg_monitor</code> login may not. "
-						+ "Fix: <code>GRANT pg_read_all_data TO &lt;user&gt;;</code> (Postgres 14 and above, read access to all data), or a login with SELECT on the tables. "
-						: "Run ANALYZE on them (or the columns have a type without statistics). ")
-					+ "Tables without an estimate are not listed (the estimate would be close to 100% for all of them).<br>\n";
+						+ "<b>Recommended fix</b>: <code>CREATE EXTENSION pgstattuple;</code> in each database (as a superuser): pg_monitor may then measure the bloat, without reading any data. "
+						+ "(The alternative, <code>GRANT pg_read_all_data</code>, gives the login read access to all data: not recommended.) "
+						: "Run ANALYZE on them (or the columns have a type without statistics), or create the extension pgstattuple in the database. ")
+					+ "Tables without a number are not listed.<br>\n";
 		}
 
 		if (_shortRstm.getRowCount() == 0)
 		{
 			w.append(naText);
 			if (_naCount < _tableCount * 0.9 || _tableCount <= 0)
-				w.append("<b>No table had more than " + getMinBloatMb() + " MB of estimated bloat</b> (property <code>" + getClass().getSimpleName() + ".minBloatMb</code>).<br>\n");
+				w.append("<b>No table had more than " + getMinBloatMb() + " MB of bloat</b> (property <code>" + getClass().getSimpleName() + ".minBloatMb</code>).<br>\n");
 			return;
 		}
 		w.append(naText);
@@ -94,7 +99,7 @@ extends PostgresAbstract
 	@Override
 	public String getSubject()
 	{
-		return "Table Bloat, estimated (order by: bloat_size_mb, origin: CmPgTableBloat)";
+		return "Table Bloat (order by: bloat_mb, origin: CmPgTableBloat / pgstattuple_approx or pg_stats)";
 	}
 
 	@Override
@@ -124,32 +129,48 @@ extends PostgresAbstract
 		if ( ! doTableExist(conn, schema, "CmPgTableBloat_abs") )
 			return;
 
+		// The bloat of a row: MEASURED (pgstattuple_approx, the columns approx_*) when there, else the ESTIMATE from pg_stats when it could be made (not is_na).
+		// is_na: some columns have no statistics in pg_stats, and with a 'pg_monitor' login that is all tables (pg_stats only shows the columns the login may SELECT)
+		Set<String> cols = getRecordedColumns(conn, "CmPgTableBloat_abs");
+		_hasSource  = cols.contains("bloat_source");    // added 2026-11 (older recordings: the estimate only)
+		_hasTableMb = cols.contains("approx_table_mb"); // added 2026-11, a little later
+		String mbExpr  = _hasSource
+				? "case when [bloat_source] = 'pgstattuple_approx' then [approx_bloat_mb] when [is_na] = false then [bloat_size_mb] end"
+				: "case when [is_na] = false then [bloat_size_mb] end";
+		String pctExpr = _hasSource
+				? "case when t.[bloat_source] = 'pgstattuple_approx' then t.[approx_bloat_pct] when t.[is_na] = false then t.[bloat_pct] end"
+				: "case when t.[is_na] = false then t.[bloat_pct] end";
+		String tMbExpr = mbExpr.replace("[", "t.[");
+
 		// Each table at its last sample in the period (the CM samples every 10 minutes)
 		String sql = ""
 			    + "select top " + getTopRows() + " \n"
 			    + "     t.[dbname] \n"
 			    + "    ,t.[schemaname] \n"
 			    + "    ,t.[tablename] \n"
-			    + "    ,t.[real_size_mb] \n"
-			    + "    ,t.[bloat_size_mb] \n"
-			    + "    ,t.[bloat_pct] \n"
-			    + "    ,m.[bloat_size_mb__max] \n"
+			    + "    ," + (_hasTableMb ? "coalesce(t.[approx_table_mb], t.[real_size_mb])" : "t.[real_size_mb]") + " as [table_mb] \n" // measured when there (relpages is only updated by VACUUM/ANALYZE)
+			    + "    ," + tMbExpr  + " as [bloat_mb] \n"
+			    + "    ," + pctExpr  + " as [bloat_pct] \n"
+			    + "    ,m.[bloat_mb__max] \n"
+			    + (_hasSource ? ""
+			    + "    ,t.[bloat_source] \n"
+			    + "    ,t.[approx_dead_pct] \n"
+			    + "    ,t.[approx_free_pct] \n"
+			    + "    ,t.[approx_scanned_pct] \n" : "")
 			    + "    ,t.[fillfactor] \n"
-			    + "    ,t.[is_na] \n"
 			    + "    ,t.[SessionSampleTime] as [last_sample] \n"
 			    + "from [CmPgTableBloat_abs] t \n"
-			    + "join (select [dbname], [schemaname], [tablename], max([SessionSampleTime]) as [last_ts], max([bloat_size_mb]) as [bloat_size_mb__max] \n"
+			    + "join (select [dbname], [schemaname], [tablename], max([SessionSampleTime]) as [last_ts], max(" + mbExpr + ") as [bloat_mb__max] \n"
 			    + "      from [CmPgTableBloat_abs] \n"
 			    + "      " + where + " \n"
 			    + "      group by [dbname], [schemaname], [tablename] \n"
 			    + "     ) m on m.[dbname] = t.[dbname] and m.[schemaname] = t.[schemaname] and m.[tablename] = t.[tablename] and m.[last_ts] = t.[SessionSampleTime] \n"
-			    + "where t.[bloat_size_mb] > " + getMinBloatMb() + " \n"
-			    + "  and t.[is_na] = false \n" // no estimate (some columns without statistics): bloat_pct is close to 100 and meaningless
-			    + "order by t.[bloat_size_mb] desc \n"
+			    + "where " + tMbExpr + " > " + getMinBloatMb() + " \n"
+			    + "order by " + tMbExpr + " desc \n"
 			    + "";
 
-		// How many tables had no estimate (with a 'pg_monitor' login: all of them, pg_stats only shows the columns the login may SELECT)
-		String cntSql = conn.quotifySqlString("select count(distinct [dbname] || '.' || [schemaname] || '.' || [tablename]), count(distinct case when [is_na] = true then [dbname] || '.' || [schemaname] || '.' || [tablename] end) from [CmPgTableBloat_abs] " + where);
+		// How many tables had no bloat number (neither measured nor estimated)
+		String cntSql = conn.quotifySqlString("select count(distinct [dbname] || '.' || [schemaname] || '.' || [tablename]), count(distinct case when (" + mbExpr + ") is null then [dbname] || '.' || [schemaname] || '.' || [tablename] end) from [CmPgTableBloat_abs] " + where);
 		try (java.sql.Statement stmnt = conn.createStatement(); java.sql.ResultSet rs = stmnt.executeQuery(cntSql))
 		{
 			if (rs.next())
@@ -164,12 +185,13 @@ extends PostgresAbstract
 		}
 
 		_shortRstm = executeQuery(conn, sql, true, "PostgresTableBloat");
-		_shortRstm.setHighlightSortColumns("bloat_size_mb");
+		_shortRstm.setHighlightSortColumns("bloat_mb");
 
 		_shortRstm.setDescription(
 				"The tables with the most <b>bloat</b>: space in the table that holds no live rows (from the table <code>CmPgTableBloat_abs</code>, each table at its last sample).<br>" +
-				"It is an <b>estimate</b> from the planner statistics (row width and row count), not a measurement: <code>is_na</code> = true means no estimate could be made (for example a column type without statistics). " +
-				"Run ANALYZE first if the statistics are old.<br>" +
+				"<code>bloat_source</code> tells how it was found: <b>pgstattuple_approx</b> = <i>measured</i> (the extension pgstattuple in the database; tables of " +
+				Configuration.getCombinedConfiguration().getLongProperty("CmPgTableBloat.approx.minTableMb", 100) + " MB or more), " +
+				"<b>pg_stats</b> = <i>estimated</i> from the planner statistics (row width and row count: run ANALYZE first if they are old).<br>" +
 				"Bloat comes from updates and deletes that vacuum did not clean up in time. Vacuum makes the space reusable, but does not give it back to the OS.<br>" +
 				"<b>What to do</b>:" +
 				"<ul>" +
@@ -182,12 +204,15 @@ extends PostgresAbstract
 		_shortRstm.setColumnDescription("dbname"            , "The database");
 		_shortRstm.setColumnDescription("schemaname"        , "The schema");
 		_shortRstm.setColumnDescription("tablename"         , "The table");
-		_shortRstm.setColumnDescription("real_size_mb"      , "The size of the table, in MB");
-		_shortRstm.setColumnDescription("bloat_size_mb"     , "Estimated space without live rows, in MB, at the last sample");
-		_shortRstm.setColumnDescription("bloat_pct"         , "Estimated bloat in percent of the table size");
-		_shortRstm.setColumnDescription("bloat_size_mb__max", "The most estimated bloat during the period, in MB");
+		_shortRstm.setColumnDescription("table_mb"          , "The size of the table, in MB: measured by pgstattuple_approx when the bloat was measured, else from pg_class.relpages (only updated by VACUUM and ANALYZE: too small on a growing table)");
+		_shortRstm.setColumnDescription("bloat_mb"          , "Space without live rows, in MB, at the last sample (measured or estimated: see bloat_source). The free space a fillfactor below 100 keeps on purpose is not counted.");
+		_shortRstm.setColumnDescription("bloat_pct"         , "Bloat in percent of the table size");
+		_shortRstm.setColumnDescription("bloat_mb__max"     , "The most bloat during the period, in MB");
+		_shortRstm.setColumnDescription("bloat_source"      , "pgstattuple_approx = measured, pg_stats = estimated from the statistics");
+		_shortRstm.setColumnDescription("approx_dead_pct"   , "Measured: dead rows in percent of the table (vacuum removes them)");
+		_shortRstm.setColumnDescription("approx_free_pct"   , "Measured: free space in percent of the table (reusable, but not given back to the OS)");
+		_shortRstm.setColumnDescription("approx_scanned_pct", "How much of the table pgstattuple_approx had to read (the pages vacuum has not marked all-visible)");
 		_shortRstm.setColumnDescription("fillfactor"        , "The table's fillfactor (free space left on purpose in each page)");
-		_shortRstm.setColumnDescription("is_na"             , "true = the estimate could not be made for this table");
 		_shortRstm.setColumnDescription("last_sample"       , "When the table was last sampled (CmPgTableBloat samples every 10 minutes)");
 	}
 }

@@ -1,12 +1,39 @@
 /*--------------------------------------------------------------------------------------------
 ** PostgresTune needs ONE thing in the server: a login with the role 'pg_monitor'.
-** (if you are lazy you could use 'postgres' but not recomended)
+**
+** THE RECOMMENDED SETUP, AND WHY
+**   A login with ONLY 'pg_monitor' (section 1) + the extensions and settings in section 3, created once by a DBA (superuser).
+**   Why: pg_monitor sees everything PostgresTune needs (all sessions and their SQL, all statistics and settings), but it can't
+**   read any user data and can't change anything. A superuser login (for example 'postgres') also works and needs no setup,
+**   but then the monitoring tool can read and change everything: NOT recommended.
 **
 ** IN A NUTSHELL
-**   1: Run section 1                   (copy and paste, change the password)
-**   2: RECOMENDED: section 3           (pg_stat_statements, needs a restart) and the 'track_*' settings
-**   3: Optionally section 2            (the error log)
-**   4: Test the login                  -> section 5
+**   1: Section 1 (the login)                                   REQUIRED      copy and paste, change the password
+**   2: Section 3 (extensions + settings, as a superuser)       RECOMMENDED   pg_stat_statements needs a restart
+**   3: Section 2 (the error log)                               OPTIONAL
+**   4: Section 4 (only on a primary with standbys)             OPTIONAL
+**   5: Test the login                                          -> section 5
+**
+** WHAT YOU GET - AND WHAT IS MISSED WITHOUT IT
+**   Step                                  Gives                                                    Missed without it
+**   ------------------------------------  -------------------------------------------------------  ---------------------------------------------------------
+**   pg_monitor (section 1)                everything below that is not listed here                 nothing works (the Performance Counters are disabled)
+**   pg_stat_statements (section 3)        which SQL statements cost the most: the tab               the most important part: no Top SQL, no 'Possible N+1',
+**     + restart + CREATE EXTENSION        'Statements', DSR 'Top SQL' + Table Information            no Table Information / index analysis in the DSR
+**   track_io_timing / track_wal_io_timing  how long reads, writes and WAL writes took               the I/O times are always 0 (in the tabs and the DSR)
+**   track_functions = 'pl'                function calls                                           the tab 'Function Info' is empty
+**   track_activity_query_size            the full SQL text of running statements                  the SQL text of active / long running statements is cut at 1 KB
+**   pgstattuple (section 3, EVERY db)     measured table bloat (cheap: it skips the pages that      the tab 'Table Bloat', the TableBloat alarm and the DSR
+**                                        vacuum marked all-visible)                               'Table Bloat' have no numbers (see pg_read_all_data below)
+**   pg_buffercache (section 3)            what is in the buffer cache, per table                   the tabs 'Buffer Cache ...'
+**   pg_wait_sampling (section 3)          what the sessions wait for, sampled (third party)         the tabs 'Server Wait' / 'PID Wait', the DSR wait statistics
+**   error log (section 2)                 the tab 'Errorlog', alarms (deadlock, internal errors,    the DSR 'Error Log' and those alarms
+**                                        ALTER SYSTEM...), the DSR 'Error Log'
+**   postgrestune_ha_dummy_update (sect 4) a write every 5 minutes, so the standbys can tell how old   on a primary without writes, the standbys can't tell
+**                                        their data is                                            how old their data is
+**
+**   Most of what is missing is also reported as 'DBMS Configuration Issues' (in the tool and in the Daily Summary Report),
+**   and a Performance Counter that can't read what it needs is disabled, with the reason in the log file and as a tooltip.
 **
 ** VERSIONS
 **   Postgres 10 and above (tested on 10, 13, 14, 16, 17, 18 and 19). Newer versions gives some extra columns.
@@ -16,10 +43,11 @@
 **   Only the statistics views (pg_stat_*), the catalog (pg_class, pg_attribute, pg_index...) and the settings.
 **   It does NOT read any user data (no SELECT on your tables). Table and index DEFINITIONS (the "DDL Storage" shown
 **   with the top statements in the Daily Summary Report) are read from the catalog, which every login can read.
+**   pgstattuple reads the PAGES of big tables to count free and dead space (not the values in them).
 **
 ** WHAT THE LOGIN NEEDS
 **   pg_monitor              all sessions and their SQL text (pg_read_all_stats), all settings (pg_read_all_settings),
-**                           pg_ls_waldir(), and the pg_buffercache/pg_stat_statements/pg_wait_sampling views
+**                           pg_ls_waldir(), and the pg_buffercache/pg_stat_statements/pg_wait_sampling/pgstattuple functions
 **   pg_read_server_files    OPTIONAL: only to read the server's error log (section 2)
 **
 ** If a Performance Counter can't read what it needs, it will be DISABLED.
@@ -101,6 +129,17 @@ pg_ctl restart -D <data directory>                             -- or: systemctl 
 ## as a superuser, in the database 'postgres' (the database PostgresTune connects to)
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 
+## RECOMENDED: pgstattuple (measured table bloat: the tab 'Table Bloat', the TableBloat alarm, the DSR 'Table Bloat').
+## It comes with Postgres, no restart. Create it in EVERY database with tables to check (the bloat is read per database),
+## and in new databases too. pg_monitor may then use it (it is granted to pg_stat_scan_tables, a part of pg_monitor).
+## The cost is limited: only tables of 100 MB or more (CmPgTableBloat.approx.minTableMb), every 10 minutes, and only the pages
+## vacuum has not marked all-visible are read (a table with more than 1 GB of such pages is skipped: CmPgTableBloat.approx.maxScanMb).
+## Measured: 6-9 ms for a 550 MB table after VACUUM, 45-69 ms with 39% of it changed.
+## Without it, the bloat can only be ESTIMATED from pg_stats, and pg_stats only shows the columns the login may SELECT:
+## with a pg_monitor login that is none, so there is no bloat information at all.
+\c your_database
+CREATE EXTENSION IF NOT EXISTS pgstattuple;
+
 ## OPTIONAL: pg_buffercache (the tabs 'Buffer Cache ...'). It comes with Postgres, no restart.
 CREATE EXTENSION IF NOT EXISTS pg_buffercache;
 
@@ -139,6 +178,9 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON postgrestune_ha_dummy_update TO dbxtune;
 ** NOT NEEDED, and NOT recomended
 **
 ** pg_read_all_data       reads ALL user data. PostgresTune does not need it (it was in this script before 2026-11).
+**                        It would only add the ESTIMATED table bloat (pg_stats becomes visible): use pgstattuple instead (section 3),
+**                        it measures the bloat without reading any data. Only if pgstattuple can't be installed, and reading all data
+**                        is acceptable: GRANT pg_read_all_data TO dbxtune; (Postgres 14 and above)
 ** SUPERUSER              PostgresTune does not need it (except to create the extensions, which can be done once, as above).
 ** pg_signal_backend      PostgresTune never cancels or terminates sessions.
 **--------------------------------------------------------------------------------------------
@@ -156,6 +198,7 @@ SELECT count(*) FROM pg_stat_activity WHERE query = '<insufficient privilege>'; 
 SELECT count(*) FROM pg_ls_waldir();                                     -- works
 SELECT count(*) FROM pg_stat_statements;                                 -- works if section 3 was done
 SELECT pg_current_logfile();                                             -- works if section 2 was done
+SELECT count(*) FROM pg_extension WHERE extname = 'pgstattuple';         -- 1 if section 3 was done (run it in each database)
 
 
 /*--------------------------------------------------------------------------------------------
