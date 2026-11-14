@@ -24,6 +24,7 @@ import java.awt.event.MouseEvent;
 import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Savepoint;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -1027,42 +1028,41 @@ extends CountersModelAppend
 				_logger.info("Both CSV and JSON logger was found. The decision to use CSV over JSON was made, you can override this by setting property: " + PROPKEY_sample_JsonOverCsv + "=true");
 			}
 			
+			// NOTE: The initialization runs in ONE transaction (AutoCommit off): a failing statement aborts it, and then every CM initialized after this one fails
+			//       (seen: CmPgReplication fell back to the pre-10 SQL). So everything that can fail is done in a SAVEPOINT.
+
 			// Get CSV log name
-			sql = "select pg_current_logfile('csvlog'), current_setting('data_directory')";
-			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
-			{
-				while(rs.next())
-				{
-					_pg_current_logfile = rs.getString(1); // pg_current_logfile('csvlog')
-					_pg_data_directory  = rs.getString(2); // current_setting('data_directory')
-				}
-			}
-			catch(SQLException ex)
+			_pg_current_logfile = PostgresCmUtils.getFirstString(conn, "select pg_current_logfile('csvlog')");
+			_pg_data_directory  = PostgresCmUtils.getFirstString(conn, "select current_setting('data_directory')");
+			if (StringUtil.isNullOrBlank(_pg_current_logfile))
 			{
 				return PostgresCmUtils.disable(this,
-						"The login can't get the current log file: " + ex.getMessage().trim(),
+						"The login can't get the current CSV log file (pg_current_logfile('csvlog') failed or returned nothing).",
 						"GRANT pg_read_server_files TO <user>; (or a superuser)"); // <<<<<------ GET OUT OF HERE
 			}
 
 			// Check if the 'pg_srv_errorlog' table exists
 			sql = "select * from pg_srv_errorlog where 1=2";
-			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			if ( ! PostgresCmUtils.canExecute(conn, sql) )
 			{
-				while(rs.next())
+				_logger.info("The table 'pg_srv_errorlog' does not exist (or can't be read): SQL=|" + sql + "|. Lets try to create the table...");
+
+				Savepoint savepoint = null;
+				try
 				{
-				}
-			}
-			catch(SQLException ex)
-			{
-				_logger.error("Problems checking for table 'pg_srv_errorlog' executing SQL=|" + sql + "|");
-				
-				try 
-				{
-					_logger.info("Lets try to create the table...");
+					if ( ! conn.getAutoCommit() )
+						savepoint = conn.setSavepoint();
 					createPgSrvErrorlog(conn);
+					if (savepoint != null)
+						conn.releaseSavepoint(savepoint);
 				}
 				catch (SQLException ex2)
 				{
+					if (savepoint != null)
+					{
+						try { conn.rollback(savepoint); }
+						catch (SQLException ex3) { _logger.warn("Problems rolling back to the savepoint after failing to create 'pg_srv_errorlog'. Caught: " + ex3); }
+					}
 					_logger.error("Problems creating table 'pg_srv_errorlog'.", ex2);
 					_logger.info("Here is an example of how you can create the table 'pg_srv_errorlog'. " + pg_srv_errorlog("to_errorlog", "", "", ""));
 
@@ -1082,8 +1082,12 @@ extends CountersModelAppend
 		if ( UseLogType.JSON.equals(_useLogType) )
 		{
 			sql = "select pg_read_file('postmaster.pid'), pg_current_logfile('jsonlog'), current_setting('data_directory')";
+			Savepoint savepoint = null; // a failure must not abort the initialization transaction (see the CSV part)
 			try (Statement stmnt = conn.createStatement())
 			{
+				if ( ! conn.getAutoCommit() )
+					savepoint = conn.setSavepoint();
+
 				boolean hasRs = stmnt.execute(sql);
 				if (hasRs)
 				{
@@ -1096,9 +1100,17 @@ extends CountersModelAppend
 					}
 					rs.close();
 				}
+				if (savepoint != null)
+					conn.releaseSavepoint(savepoint);
 			}
 			catch (SQLException ex)
 			{
+				if (savepoint != null)
+				{
+					try { conn.rollback(savepoint); }
+					catch (SQLException ex3) { _logger.warn("Problems rolling back to the savepoint. Caught: " + ex3); }
+				}
+
 				// PostgreSQL: ErrorCode 0, SQLState 42501, ExceptionClass: org.postgresql.util.PSQLException
 				// ERROR: permission denied for function pg_read_file
 				if ( "42501".equals(ex.getSQLState()) )
