@@ -61,12 +61,10 @@ extends CountersModel
 	public static final String[] NEED_CONFIG      = new String[] {};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
+	// NOTE: total_kb, data_kb, index_kb, toast_kb are sizes right now (gauges), not counters: they are NOT diffed
+	//       (they were: the diff/rate views showed the growth, and a shrink became 0)
 	public static final String[] DIFF_COLUMNS     = new String[] {
-			"row_estimate_diff",
-			"total_kb",
-			"data_kb",
-			"index_kb",
-			"toast_kb"
+			"row_estimate_diff"
 	};
 	
 //	RS> Col# Label             JDBC Type Name         Guessed DBMS type Source Table

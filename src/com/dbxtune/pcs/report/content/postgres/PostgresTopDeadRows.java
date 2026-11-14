@@ -228,7 +228,13 @@ extends PostgresAbstract
 			    + "            and abs.[schemaname] = diff.[schemaname] \n"
 			    + "            and abs.[relname]    = diff.[relname] \n"
 			    + "          ) AS [n_dead_tup__LAST_ABS] \n"
-			    + "    ,sum([n_dead_tup]) AS [n_dead_tup__SUM_TODAY] \n"
+			    // n_dead_tup / n_live_tup are gauges: the highest value of the day (from _abs; a sum of the diff values meant nothing)
+			    + "    ,(select max([n_dead_tup]) \n"
+			    + "          from [CmPgTables_abs] abs \n"
+			    + "          where abs.[dbname]     = diff.[dbname] \n"
+			    + "            and abs.[schemaname] = diff.[schemaname] \n"
+			    + "            and abs.[relname]    = diff.[relname] \n"
+			    + "          ) AS [n_dead_tup__MAX_TODAY] \n"
 			    + "    ,cast('' as varchar(512))      as [n_dead_tup__chart] \n"
 			    
 			    + "    ,cast('>>>>>>>>>' as varchar(30)) as [extra_info] \n"
@@ -252,7 +258,12 @@ extends PostgresAbstract
 //			    + "            and abs.[schemaname] = diff.[schemaname] \n"
 //			    + "            and abs.[relname]    = diff.[relname] \n"
 //			    + "          ) AS [n_live_tup__LAST_ABS] \n"
-			    + "    ,sum([n_live_tup]) AS [n_live_tup__SUM_TODAY] \n"
+			    + "    ,(select max([n_live_tup]) \n"
+			    + "          from [CmPgTables_abs] abs \n"
+			    + "          where abs.[dbname]     = diff.[dbname] \n"
+			    + "            and abs.[schemaname] = diff.[schemaname] \n"
+			    + "            and abs.[relname]    = diff.[relname] \n"
+			    + "          ) AS [n_live_tup__MAX_TODAY] \n"
 			    + "    ,cast('' as varchar(512))      as [n_live_tup__chart] \n"
 
 			    + "    ,max([last_autovacuum])        as [last_autovacuum__MAX] \n"
@@ -336,11 +347,12 @@ extends PostgresAbstract
 					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("n_dead_tup__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
-					.setDbmsTableName            ("CmPgTables_diff")
+					.setDbmsTableName            ("CmPgTables_abs" )                // a gauge: the value of each sample, the highest in each period
+					.setGroupDataAggregationType (SparklineHelper.AggType.MAX)
 					.setDbmsSampleTimeColumnName ("SessionSampleTime")
 					.setDbmsDataValueColumnName  ("n_dead_tup")
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
-					.setSparklineTooltipPostfix  ("Number of 'n_dead_tup' in below period")
+					.setSparklineTooltipPostfix  ("Highest 'n_dead_tup' in below period")
 					.validate()));
 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
@@ -391,11 +403,12 @@ extends PostgresAbstract
 					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("n_live_tup__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
-					.setDbmsTableName            ("CmPgTables_diff")
+					.setDbmsTableName            ("CmPgTables_abs" )                // a gauge: the value of each sample, the highest in each period
+					.setGroupDataAggregationType (SparklineHelper.AggType.MAX)
 					.setDbmsSampleTimeColumnName ("SessionSampleTime")
 					.setDbmsDataValueColumnName  ("n_live_tup")
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
-					.setSparklineTooltipPostfix  ("Number of 'n_live_tup' in below period")
+					.setSparklineTooltipPostfix  ("Highest 'n_live_tup' in below period")
 					.validate()));
 		}
 		

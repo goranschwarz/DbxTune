@@ -337,9 +337,11 @@ extends CountersModel
 		CountersModel cm = this;
 
 		//-------------------------------------------------------
-		// total_lag_kb
+		// lag_kb
 		//-------------------------------------------------------
-		if (isSystemAlarmsForColumnEnabledAndInTimeRange("total_lag_kb"))
+		// NOTE: The switch was named 'total_lag_kb' (the column and the threshold are 'lag_kb'): '...alarm.system.enabled.total_lag_kb=false' is still respected
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("lag_kb")
+				&& Configuration.getCombinedConfiguration().getBooleanProperty(CM_NAME + ".alarm.system.enabled.total_lag_kb", true))
 		{
 			for (int r=0; r<cm.getAbsRowCount(); r++)
 			{
@@ -396,7 +398,7 @@ extends CountersModel
 						});
 
 						// Information about how to disable this alarm
-						ae.createAlarmOptionsMessage(this, "total_lag_kb");
+						ae.createAlarmOptionsMessage(this, "lag_kb");
 
 						AlarmHandler.getInstance().addAlarm(ae);
 					}
@@ -434,7 +436,7 @@ extends CountersModel
 		
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
-		list.add(new CmSettingsHelper("total_lag_kb"      , isAlarmSwitch, PROPKEY_alarm_LagKb        , Integer.class, conf.getIntProperty(PROPKEY_alarm_LagKb        , DEFAULT_alarm_LagKb)        , DEFAULT_alarm_LagKb        , "If 'lag_kb' is greater than this value, send 'AlarmEventPgReplicationLag'." ));
+		list.add(new CmSettingsHelper("lag_kb"            , isAlarmSwitch, PROPKEY_alarm_LagKb        , Integer.class, conf.getIntProperty(PROPKEY_alarm_LagKb        , DEFAULT_alarm_LagKb)        , DEFAULT_alarm_LagKb        , "If 'lag_kb' is greater than this value, send 'AlarmEventPgReplicationLag'." ));
 
 		return list;
 	}

@@ -97,8 +97,8 @@ extends CountersModel
 			"fetch_efficency_slide_pct",
 			"cache_hit_pct"
 	};
+	// NOTE: numbackends is the number of connections right now (a gauge), it is NOT diffed (it was)
 	public static final String[] DIFF_COLUMNS     = new String[] {
-			"numbackends",
 			"xact_commit",
 			"xact_rollback",
 			"total_reads",

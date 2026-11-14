@@ -94,10 +94,8 @@ extends CountersModel
 			"n_tup_del",
 			"n_tup_hot_upd",
 			"n_tup_newpage_upd",
-			"n_live_tup",
-			"n_dead_tup",
-			"n_mod_since_analyze",
-			"n_ins_since_vacuum",
+			// NOTE: n_live_tup, n_dead_tup, n_mod_since_analyze, n_ins_since_vacuum are values right now (gauges), not counters: they are NOT diffed
+			//       (they were: the diff/rate views showed nonsense, for example a vacuum made n_dead_tup 0 = a negative diff = 0)
 			"vacuum_count",
 			"autovacuum_count",
 			"analyze_count",

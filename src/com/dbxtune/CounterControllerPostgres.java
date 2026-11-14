@@ -84,6 +84,7 @@ import com.dbxtune.cm.postgres.CmPgWalReceiver;
 import com.dbxtune.cm.postgres.CmSummary;
 import com.dbxtune.cm.postgres.PostgresCmHelper;
 import com.dbxtune.cm.postgres.PostgresCmUtils;
+import com.dbxtune.config.dict.PostgresWaitTypeDictionary;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.pcs.PersistContainer;
 import com.dbxtune.pcs.PersistContainer.HeaderInfo;
@@ -269,6 +270,9 @@ extends CounterControllerAbstract
 		if ("none".equalsIgnoreCase(versionInfo.getTrackFunctions()))   trackOff.add("track_functions=pl (CmPgFunctions is empty without it)");
 		if ( ! trackOff.isEmpty() )
 			_logger.info("Some statistics are OFF in this server, so some columns are always 0 (or empty). Optional fix: ALTER SYSTEM SET " + String.join("; ALTER SYSTEM SET ", trackOff) + "; and SELECT pg_reload_conf();");
+
+		// Postgres 17 and above: the wait event descriptions from the server itself (pg_wait_events), instead of the built-in list
+		PostgresWaitTypeDictionary.loadFromServer(conn, srvVersion);
 
 		// pg_wait_sampling: the query id makes the profile bigger (and every read costs server CPU per row). The CM's do not use it.
 		if (versionInfo.hasExtension("pg_wait_sampling"))
