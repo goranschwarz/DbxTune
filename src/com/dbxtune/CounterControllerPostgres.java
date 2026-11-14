@@ -69,6 +69,10 @@ import com.dbxtune.cm.postgres.CmPgProgCopy;
 import com.dbxtune.cm.postgres.CmPgProgIndex;
 import com.dbxtune.cm.postgres.CmPgProgVacuum;
 import com.dbxtune.cm.postgres.CmPgRepSlots;
+import com.dbxtune.cm.postgres.CmPgSubscription;
+import com.dbxtune.cm.postgres.CmPgRepSlotStats;
+import com.dbxtune.cm.postgres.CmPgAutovacuumScores;
+import com.dbxtune.cm.postgres.CmPgLockStats;
 import com.dbxtune.cm.postgres.CmPgReplication;
 import com.dbxtune.cm.postgres.CmPgSequencesIo;
 import com.dbxtune.cm.postgres.CmPgSlru;
@@ -143,6 +147,7 @@ extends CounterControllerAbstract
 		CmPgPidWait         .create(counterController, guiController);
 		CmPgDatabase        .create(counterController, guiController);
 		CmPgSrvWait         .create(counterController, guiController);
+		CmPgLockStats       .create(counterController, guiController); // 19 and above
 		CmPgBgWriter        .create(counterController, guiController);
 		CmPgIo              .create(counterController, guiController);
 		CmPgWal             .create(counterController, guiController);
@@ -155,6 +160,7 @@ extends CounterControllerAbstract
 		CmPgTables          .create(counterController, guiController);
 		CmPgTablesIo        .create(counterController, guiController);
 		CmPgTableBloat      .create(counterController, guiController);
+		CmPgAutovacuumScores.create(counterController, guiController); // 19 and above
 		CmPgIndexes         .create(counterController, guiController);
 		CmPgIndexesIo       .create(counterController, guiController);
 		CmPgFunctions       .create(counterController, guiController);
@@ -186,7 +192,9 @@ extends CounterControllerAbstract
 		// Replication
 		CmPgReplication     .create(counterController, guiController);
 		CmPgRepSlots        .create(counterController, guiController);
+		CmPgRepSlotStats    .create(counterController, guiController); // 14 and above
 		CmPgWalReceiver     .create(counterController, guiController);
+		CmPgSubscription    .create(counterController, guiController); // 15 and above
 
 		// OS HOST Monitoring
 		CmOsIostat          .create(counterController, guiController);
