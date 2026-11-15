@@ -73,6 +73,7 @@ import com.dbxtune.cm.sqlserver.CmExecFunctionStats;
 import com.dbxtune.cm.sqlserver.CmExecProcedureStats;
 import com.dbxtune.cm.sqlserver.CmExecQueryStatPerDb;
 import com.dbxtune.cm.sqlserver.CmChattyStatements;
+import com.dbxtune.cm.sqlserver.CmDeadlocks;
 import com.dbxtune.cm.sqlserver.CmExecQueryStats;
 import com.dbxtune.cm.sqlserver.CmExecTriggerStats;
 import com.dbxtune.cm.sqlserver.CmIndexMissing;
@@ -200,6 +201,10 @@ extends CounterControllerAbstract
 	public static final String  PCS_KEY_VALUE_deadlockCountOverRecordingPeriod = "deadlock.count.over.recording.period";
 	public static final String  PCS_KEY_VALUE_deadlockReport_blitzLock         = "deadlock.report.blitzLock";
 	public static final String  PCS_KEY_VALUE_deadlockReport_xxx               = "deadlock.report.xxx";
+
+	/** Run sp_BlitzLock at PCS rollover even if CmDeadlocks saves the deadlocks */
+	public static final String  PROPKEY_deadlock_blitzLock_force               = "CounterControllerSqlServer.deadlock.blitzLock.force";
+	public static final boolean DEFAULT_deadlock_blitzLock_force               = false;
 	
 	/**
 	 * The default constructor
@@ -255,6 +260,7 @@ extends CounterControllerAbstract
 		CmMemoryGrants       .create(counterController, guiController);
 		CmJobScheduler       .create(counterController, guiController);
 		CmErrorLog           .create(counterController, guiController);
+		CmDeadlocks          .create(counterController, guiController);
 		CmOsLatchStats       .create(counterController, guiController);
 		CmPerfCounters       .create(counterController, guiController);
 		CmWorkers            .create(counterController, guiController);
@@ -1507,8 +1513,16 @@ extends CounterControllerAbstract
 					_logger.error("Problems saving 'Deadlock Count Over Recording Period', continuing anyway...", ex);
 				}
 				
+				// CmDeadlocks saves each deadlock (with the XML) in the recording, the Daily Summary Report uses that: no need for sp_BlitzLock
+				CountersModel cmDeadlocks = getCmByName(CmDeadlocks.CM_NAME);
+				boolean cmDeadlocksSaves = cmDeadlocks != null && cmDeadlocks.isActive() && cmDeadlocks.isPersistCountersEnabled();
+				boolean forceBlitzLock   = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_deadlock_blitzLock_force, DEFAULT_deadlock_blitzLock_force);
+				if (deadlockCountOverRecordingPeriod > 0 && cmDeadlocksSaves && !forceBlitzLock)
+				{
+					_logger.info("On PCS Database Rollover: Found " + deadlockCountOverRecordingPeriod + " DEADLOCKS in the period on server '" + srvName + "'. Skipping 'sp_BlitzLock', the deadlocks are saved by '" + CmDeadlocks.CM_NAME + "'. (to run it anyway, set " + PROPKEY_deadlock_blitzLock_force + "=true)");
+				}
 				// Create some kind of report
-				if (deadlockCountOverRecordingPeriod > 0)
+				else if (deadlockCountOverRecordingPeriod > 0)
 				{
 					_logger.info("On PCS Database Rollover: Found " + deadlockCountOverRecordingPeriod + " DEADLOCKS was found in the period on server '" + srvName + "'. I will try to get more information about those DEADLOCKS using procedure 'sp_blitzLock'.");
 					// Get DEADLOCK info using: sp_blitzLock

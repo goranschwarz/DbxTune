@@ -1,0 +1,91 @@
+<event name="xml_deadlock_report" package="sqlserver" timestamp="2026-11-15T20:51:15.491Z"><data name="xml_report"><value><deadlock>
+ <victim-list>
+  <victimProcess id="processe05fc0108"/>
+ </victim-list>
+ <process-list>
+  <process id="processe05fc0108" taskpriority="0" logused="240" waitresource="KEY: 6:72057594046119936 (8194443284a0)" waittime="306" ownerId="6567" transactionname="user_transaction" lasttranstarted="2026-11-15T20:51:13.180" XDES="0xe15800470" lockMode="X" schedulerid="20" kpid="1360" status="suspended" spid="95" sbid="0" ecid="0" priority="0" trancount="2" lastbatchstarted="2026-11-15T20:51:13.173" lastbatchcompleted="2026-11-15T20:51:13.173" lastattention="1900-01-01T00:00:00.173" clientapp="SQLCMD" hostname="1574bb333561" hostpid="387" loginname="sa" isolationlevel="read committed (2)" xactid="6567" currentdb="1" currentdbname="master" lockTimeout="4294967295" clientoption1="673185824" clientoption2="128056">
+   
+   <executionStack>
+    <frame procname="adhoc" line="6" stmtstart="38" stmtend="146" sqlhandle="0x020000009fbd610ebbe949531164a2b6f20e82951c87e6690000000000000000000000000000000000000000">
+unknown    </frame>
+    <frame procname="adhoc" line="6" stmtstart="212" stmtend="286" sqlhandle="0x02000000c8e79a3775e1446ec2117f867e8672461c4278e90000000000000000000000000000000000000000">
+unknown    </frame>
+   </executionStack>
+   <inputbuf>
+set nocount on
+begin try
+begin tran
+  update dlk.dbo.tb set v=v+1 where id=1
+  waitfor delay &apos;00:00:02&apos;
+  update dlk.dbo.tc set v=v+1 where id=1
+commit
+end try begin catch if @@trancount&gt;0 rollback; print error_number() end catch
+   </inputbuf>
+  </process>
+  <process id="processe0005f088" taskpriority="0" logused="240" waitresource="KEY: 6:72057594045988864 (8194443284a0)" waittime="304" ownerId="6569" transactionname="user_transaction" lasttranstarted="2026-11-15T20:51:13.180" XDES="0xe19c8c470" lockMode="X" schedulerid="4" kpid="1016" status="suspended" spid="96" sbid="0" ecid="0" priority="0" trancount="2" lastbatchstarted="2026-11-15T20:51:13.177" lastbatchcompleted="2026-11-15T20:51:13.173" lastattention="1900-01-01T00:00:00.173" clientapp="SQLCMD" hostname="1574bb333561" hostpid="388" loginname="sa" isolationlevel="read committed (2)" xactid="6569" currentdb="1" currentdbname="master" lockTimeout="4294967295" clientoption1="673185824" clientoption2="128056">
+   
+   <executionStack>
+    <frame procname="adhoc" line="6" stmtstart="38" stmtend="146" sqlhandle="0x020000006103b93083d948cbfca205f0427df68a682c7f110000000000000000000000000000000000000000">
+unknown    </frame>
+    <frame procname="adhoc" line="6" stmtstart="212" stmtend="286" sqlhandle="0x02000000c8f98406b8c6e4f28e6590d852f300744b4e402d0000000000000000000000000000000000000000">
+unknown    </frame>
+   </executionStack>
+   <inputbuf>
+set nocount on
+begin try
+begin tran
+  update dlk.dbo.tc set v=v+1 where id=1
+  waitfor delay &apos;00:00:02&apos;
+  update dlk.dbo.ta set v=v+1 where id=1
+commit
+end try begin catch if @@trancount&gt;0 rollback; print error_number() end catch
+   </inputbuf>
+  </process>
+  <process id="processe0005f468" taskpriority="0" logused="240" waitresource="KEY: 6:72057594046054400 (8194443284a0)" waittime="309" ownerId="6565" transactionname="user_transaction" lasttranstarted="2026-11-15T20:51:13.180" XDES="0xe19c80470" lockMode="X" schedulerid="4" kpid="1152" status="suspended" spid="93" sbid="0" ecid="0" priority="0" trancount="2" lastbatchstarted="2026-11-15T20:51:13.170" lastbatchcompleted="2026-11-15T20:51:13.170" lastattention="1900-01-01T00:00:00.170" clientapp="SQLCMD" hostname="1574bb333561" hostpid="386" loginname="sa" isolationlevel="read committed (2)" xactid="6565" currentdb="1" currentdbname="master" lockTimeout="4294967295" clientoption1="673185824" clientoption2="128056">
+   
+   <executionStack>
+    <frame procname="adhoc" line="6" stmtstart="38" stmtend="146" sqlhandle="0x020000009f0454351c7388207a181144d854fbb5c8c2704d0000000000000000000000000000000000000000">
+unknown    </frame>
+    <frame procname="adhoc" line="6" stmtstart="212" stmtend="286" sqlhandle="0x0200000038cc3b316418786da25a75073b9d489a39266ef80000000000000000000000000000000000000000">
+unknown    </frame>
+   </executionStack>
+   <inputbuf>
+set nocount on
+begin try
+begin tran
+  update dlk.dbo.ta set v=v+1 where id=1
+  waitfor delay &apos;00:00:02&apos;
+  update dlk.dbo.tb set v=v+1 where id=1
+commit
+end try begin catch if @@trancount&gt;0 rollback; print error_number() end catch
+   </inputbuf>
+  </process>
+ </process-list>
+ <resource-list>
+  <keylock hobtid="72057594046119936" dbid="6" objectname="dlk.dbo.tc" indexname="PK__tc__3213E83FAF80752C" id="locke005ee580" mode="X" associatedObjectId="72057594046119936">
+   <owner-list>
+    <owner id="processe0005f088" mode="X"/>
+   </owner-list>
+   <waiter-list>
+    <waiter id="processe05fc0108" mode="X" requestType="wait"/>
+   </waiter-list>
+  </keylock>
+  <keylock hobtid="72057594045988864" dbid="6" objectname="dlk.dbo.ta" indexname="PK__ta__3213E83F8DCEA6C0" id="locke005ee980" mode="X" associatedObjectId="72057594045988864">
+   <owner-list>
+    <owner id="processe0005f468" mode="X"/>
+   </owner-list>
+   <waiter-list>
+    <waiter id="processe0005f088" mode="X" requestType="wait"/>
+   </waiter-list>
+  </keylock>
+  <keylock hobtid="72057594046054400" dbid="6" objectname="dlk.dbo.tb" indexname="PK__tb__3213E83FCBF2CDBF" id="locke05a54080" mode="X" associatedObjectId="72057594046054400">
+   <owner-list>
+    <owner id="processe05fc0108" mode="X"/>
+   </owner-list>
+   <waiter-list>
+    <waiter id="processe0005f468" mode="X" requestType="wait"/>
+   </waiter-list>
+  </keylock>
+ </resource-list>
+</deadlock>
+</value></data></event>

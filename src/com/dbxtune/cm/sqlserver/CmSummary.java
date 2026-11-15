@@ -24,14 +24,19 @@ import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.swing.JPanel;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -56,6 +61,8 @@ import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
+import com.dbxtune.cm.sqlserver.CmDeadlocks.Deadlock;
+import com.dbxtune.cm.sqlserver.CmDeadlocks.DlProcess;
 import com.dbxtune.cm.sqlserver.gui.CmSummaryPanel;
 import com.dbxtune.graph.TrendGraphDataPoint;
 import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
@@ -1950,9 +1957,36 @@ extends CmSummaryAbstract
 			if (debugPrint || _logger.isDebugEnabled())
 				System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", dataVal=" + dataVal + ", deadlockCount=" + deadlockCount + ", movingAvgDeadlockCount=" + movingAvgDeadlockCount + ", movingAverageInMinutes=" + movingAverageInMinutes + ".");
 
+			// Deadlocks read by CmDeadlocks in this sample (the XE events come up to 2 minutes after the counter, so they are collected while the alarm is active)
+			CountersModel cmDeadlocks = getCounterController().getCmByName(CmDeadlocks.CM_NAME);
+			if (cmDeadlocks instanceof CmDeadlocks && cmDeadlocks.isActive())
+			{
+				List<List<Object>> rows = ((CmDeadlocks) cmDeadlocks).getDataCollectionForLastRefresh();
+				int pos_EventTime   = cmDeadlocks.findColumn("EventTime");
+				int pos_DeadlockXml = cmDeadlocks.findColumn("DeadlockXml");
+				if (rows != null && pos_EventTime >= 0 && pos_DeadlockXml >= 0)
+				{
+					for (List<Object> row : rows)
+					{
+						try
+						{
+							Object ts = row.get(pos_EventTime);
+							_deadlockAlarmDetails.add(Deadlock.parseDeadlock(String.valueOf(row.get(pos_DeadlockXml)), ts instanceof Timestamp ? (Timestamp) ts : null));
+						}
+						catch (Exception ex)
+						{
+							_logger.debug("Problems parsing a deadlock from CmDeadlocks for the alarm. Skipping it. Caught: " + ex);
+						}
+					}
+				}
+			}
+
 			if (dataVal > threshold)
 			{
 				AlarmEvent ae = new AlarmEventDeadlock(cm, threshold, movingAverageInMinutes, deadlockCount, movingAvgDeadlockCount);
+				final DeadlockAlarmDetails details  = _deadlockAlarmDetails;
+				final String               baseDesc = ae.getDescription();
+				final boolean              cmDeadlocksActive = cmDeadlocks != null && cmDeadlocks.isActive();
 				ae.setAlarmDescriptionProvider(cm, new AlarmDescriptionProvider()
 				{
 					// Called on RAISE/RE-RAISE/CANCEL, so the graphs (and on CANCEL the counters) are from the CURRENT data
@@ -1968,8 +2002,12 @@ extends CmSummaryAbstract
 							alarmEvent.setCancelDescription("Deadlock Count in the last sample is " + cm.getDiffValueAsInteger(0, "deadlockCount", false, -1) + movingAvgStr + " (threshold " + threshold + ")");
 						}
 
-						String extendedDescText = "";
-						String extendedDescHtml = StringUtil.toStr(cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DEADLOCK_COUNT_SUM)); // null if no graph history
+						// What deadlocked (from CmDeadlocks)
+						alarmEvent.setDescription(baseDesc + details.getMostCommonText());
+
+						String extendedDescText = details.toText(cmDeadlocksActive);
+						String extendedDescHtml = details.toHtml(cmDeadlocksActive) + "<br><br>";
+						extendedDescHtml += StringUtil.toStr(cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_DEADLOCK_COUNT_SUM)); // null if no graph history
 
 						CountersModel cmPerfCounters = cm.getCounterController().getCmByName(CmPerfCounters.CM_NAME);
 						if (cmPerfCounters != null)
@@ -1985,6 +2023,11 @@ extends CmSummaryAbstract
 				ae.createAlarmOptionsMessage(this, "DeadlockCount");
 
 				alarmHandler.addAlarm( ae );
+			}
+			else
+			{
+				// The alarm will be cancelled: its provider keeps the old list, the next alarm starts with a new one
+				_deadlockAlarmDetails = new DeadlockAlarmDetails();
 			}
 		}
 
@@ -2251,6 +2294,170 @@ extends CmSummaryAbstract
 		}
 
 		alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+	}
+
+	/** Deadlocks (read by CmDeadlocks) collected while a deadlock alarm is active. A new object when the alarm condition is false, so a cancelled alarm keeps its own. */
+	private DeadlockAlarmDetails _deadlockAlarmDetails = new DeadlockAlarmDetails();
+
+	/**
+	 * The deadlocks of one deadlock alarm, and how they are shown in the alarm:
+	 * the most common deadlock in the description, and a summary per "shape" (same objects and procedures/statements),
+	 * timeline pictures, the latest deadlocks and the XML of the newest in the extended description.
+	 */
+	private static class DeadlockAlarmDetails
+	{
+		private static final int MAX_KEEP     = 1000;
+		private static final int MAX_SHAPES   = 10;
+		private static final int MAX_PICTURES = 3;
+		private static final int MAX_LATEST   = 10;
+		private static final int MAX_HTML_LEN = 500_000;
+
+		private final List<Deadlock> _list = new ArrayList<>(); // newest last
+		private int _total;
+
+		synchronized void add(Deadlock d)
+		{
+			_total++;
+			_list.add(d);
+			if (_list.size() > MAX_KEEP)
+				_list.remove(0);
+		}
+
+		/** Deadlocks grouped by shape, most deadlocks first. Each list: newest last */
+		private List<List<Deadlock>> getShapes()
+		{
+			Map<String, List<Deadlock>> map = new LinkedHashMap<>();
+			for (Deadlock d : _list)
+				map.computeIfAbsent(d.getShapeKey(), k -> new ArrayList<>()).add(d);
+			List<List<Deadlock>> shapes = new ArrayList<>(map.values());
+			shapes.sort((a, b) -> Integer.compare(b.size(), a.size()));
+			return shapes;
+		}
+
+		/** "procA / procB" or the start of the statements for ad hoc SQL */
+		private static String who(Deadlock d)
+		{
+			Set<String> set = new LinkedHashSet<>();
+			for (DlProcess p : d.processes)
+			{
+				if (p.procName != null)
+					set.add(p.procName);
+				else if (p.getStatement() != null)
+					set.add(StringUtil.truncate(p.getStatement().replaceAll("\\s+", " ").trim(), 60, true, null));
+			}
+			return String.join(" / ", set);
+		}
+
+		/** Text for the end of the alarm description */
+		synchronized String getMostCommonText()
+		{
+			if (_total == 0)
+				return "";
+			List<List<Deadlock>> shapes = getShapes();
+			Deadlock d = shapes.get(0).get(shapes.get(0).size() - 1);
+			return ". Details for " + _total + " deadlock" + (_total == 1 ? "" : "s") + ", most common (" + shapes.get(0).size() + "): "
+					+ nvl(d.getObjects(), "?") + " (" + who(d) + ")";
+		}
+
+		synchronized String toText(boolean cmDeadlocksActive)
+		{
+			if ( ! cmDeadlocksActive )
+				return "Enable the collector '" + CmDeadlocks.CM_NAME + "' (Deadlocks) to see which objects and statements deadlocked.";
+			if (_total == 0)
+				return "No deadlock details yet: SQL Server writes them to the 'system_health' files up to 2 minutes after the deadlock. They are added when the alarm is raised again, and listed when it is cancelled.";
+
+			StringBuilder sb = new StringBuilder();
+			sb.append("Deadlocks with details: ").append(_total).append("\n\n");
+			for (List<Deadlock> shape : getShapes())
+			{
+				Deadlock d = shape.get(shape.size() - 1);
+				sb.append(shape.size()).append(" x ").append(nvl(d.getObjects(), "?")).append("  (").append(who(d)).append("), last at ").append(d.eventTime).append("\n");
+			}
+			return sb.toString();
+		}
+
+		synchronized String toHtml(boolean cmDeadlocksActive)
+		{
+			if ( ! cmDeadlocksActive || _total == 0 )
+				return "<p>" + escapeHtml4(toText(cmDeadlocksActive)) + "</p>";
+
+			List<List<Deadlock>> shapes = getShapes();
+
+			// Summary per shape
+			StringBuilder sb = new StringBuilder();
+			sb.append("<p><b>Deadlocks with details: ").append(_total).append("</b>")
+			  .append(_total > _list.size() ? " (the latest " + _list.size() + " are grouped below)" : "").append("</p>\n");
+			sb.append("<table border='1' cellspacing='0' cellpadding='3' style='border-collapse:collapse'>\n");
+			sb.append("<tr><th>Count</th><th>Last</th><th>Database</th><th>Objects</th><th>Locks</th><th>Victim (last)</th><th>Procedures / Statements</th></tr>\n");
+			for (int i = 0; i < shapes.size() && i < MAX_SHAPES; i++)
+			{
+				List<Deadlock> shape = shapes.get(i);
+				Deadlock d = shape.get(shape.size() - 1);
+				DlProcess v = d.getVictim();
+				sb.append("<tr>")
+				  .append("<td align='right'>").append(shape.size()).append("</td>")
+				  .append("<td>").append(d.eventTime).append("</td>")
+				  .append("<td>").append(escapeHtml4(nvl(d.getVictimDbName(), ""))).append("</td>")
+				  .append("<td>").append(escapeHtml4(nvl(d.getObjects(), ""))).append("</td>")
+				  .append("<td>").append(escapeHtml4(nvl(d.getLockTypes(), ""))).append("</td>")
+				  .append("<td>").append(v == null ? "" : "spid " + v.spid + " " + escapeHtml4(nvl(v.app, "")) + " " + escapeHtml4(nvl(v.login, ""))).append("</td>")
+				  .append("<td>").append(escapeHtml4(who(d))).append("</td>")
+				  .append("</tr>\n");
+			}
+			if (shapes.size() > MAX_SHAPES)
+				sb.append("<tr><td colspan='7'>... and ").append(shapes.size() - MAX_SHAPES).append(" more kinds of deadlocks</td></tr>\n");
+			sb.append("</table>\n");
+
+			// Timeline pictures for the most common shapes (the newest deadlock of each), if they fit
+			StringBuilder pics = new StringBuilder();
+			for (int i = 0; i < shapes.size() && i < MAX_PICTURES; i++)
+			{
+				List<Deadlock> shape = shapes.get(i);
+				pics.append("<br>\n").append(SqlServerDeadlockTimelinePainter.toHtmlImg(shape.get(shape.size() - 1), shape.size())).append("\n");
+			}
+			if (sb.length() + pics.length() < MAX_HTML_LEN)
+				sb.append(pics);
+			else
+				sb.append("<p><i>The deadlock pictures are left out (too large for the alarm).</i></p>\n");
+
+			// The latest deadlocks
+			sb.append("<p><b>Latest deadlocks</b></p>\n");
+			sb.append("<table border='1' cellspacing='0' cellpadding='3' style='border-collapse:collapse'>\n");
+			sb.append("<tr><th>Time</th><th>Victim</th><th>Victim statement</th><th>Other statements</th></tr>\n");
+			for (int i = _list.size() - 1; i >= 0 && i >= _list.size() - MAX_LATEST; i--)
+			{
+				Deadlock d = _list.get(i);
+				DlProcess v = d.getVictim();
+				sb.append("<tr>")
+				  .append("<td>").append(d.eventTime).append("</td>")
+				  .append("<td>").append(v == null ? "" : "spid " + v.spid + " " + escapeHtml4(nvl(v.app, ""))).append("</td>")
+				  .append("<td>").append(v == null ? "" : escapeHtml4(StringUtil.truncate(nvl(v.getProcNameAndLine(), "") + " " + nvl(v.getStatement(), ""), 300, true, null))).append("</td>")
+				  .append("<td>").append(escapeHtml4(StringUtil.truncate(nvl(d.getOtherStatements(), ""), 300, true, null))).append("</td>")
+				  .append("</tr>\n");
+			}
+			sb.append("</table>\n");
+
+			// XML of the newest, so it can be saved as .xdl and opened in SSMS
+			Deadlock newest = _list.get(_list.size() - 1);
+			if (sb.length() + newest.xml.length() < MAX_HTML_LEN)
+			{
+				sb.append("<details><summary>Deadlock XML of the newest deadlock (save as a .xdl file to open it in SSMS)</summary><pre>")
+				  .append(escapeHtml4(newest.xml))
+				  .append("</pre></details>\n");
+			}
+
+			return sb.toString();
+		}
+
+		private static String nvl(String str, String def)
+		{
+			return str == null ? def : str;
+		}
+
+		private static String escapeHtml4(String str)
+		{
+			return StringEscapeUtils.escapeHtml4(str);
+		}
 	}
 
 	public static final String  PROPKEY_alarm_LockWaits                         = CM_NAME + ".alarm.system.if.LockWaits.gt";

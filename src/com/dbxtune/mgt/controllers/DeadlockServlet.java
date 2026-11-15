@@ -23,6 +23,7 @@ package com.dbxtune.mgt.controllers;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.invoke.MethodHandles;
+import java.sql.Clob;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
@@ -48,9 +49,11 @@ import com.dbxtune.CounterControllerSqlServer;
 import com.dbxtune.ExtractionType;
 import com.dbxtune.ICounterController;
 import com.dbxtune.central.controllers.Helper;
+import com.dbxtune.cm.sqlserver.CmDeadlocks;
 import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.PersistWriterJdbc;
 import com.dbxtune.sql.conn.DbxConnection;
+import com.dbxtune.utils.DbUtils;
 import com.dbxtune.utils.StringUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -64,6 +67,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  *   <li>{@code deadlock.report.blitzLock} — sp_BlitzLock JSON output (multi-resultset)</li>
  * </ul>
  * in the collector's PCS key-value store.
+ * <p>If the collector {@code CmDeadlocks} saves the deadlocks (one row per deadlock), {@code summary} also has
+ * {@code deadlockKinds} (grouped by objects and procedures/statements) and {@code report} has {@code deadlocks} (the latest 200, without the XML).
  *
  * <pre>GET /api/mgt/deadlock?action=summary[&amp;ts=YYYY-MM-DD+HH:mm:ss]</pre>
  * <pre>GET /api/mgt/deadlock?action=report[&amp;ts=YYYY-MM-DD+HH:mm:ss]</pre>
@@ -267,7 +272,55 @@ extends HttpServlet
 			result.put("reportError", reportError);
 		if (!timeline.isEmpty())
 			result.put("timeline", timeline);
+
+		// Deadlocks saved by CmDeadlocks, grouped by kind (same objects and procedures/statements)
+		List<Map<String, Object>> kinds = queryCmDeadlocks(conn, ""
+				+ "SELECT \"ShapeKey\", COUNT(*) AS \"Count\", MIN(\"EventTime\") AS \"First\", MAX(\"EventTime\") AS \"Last\", "
+				+ "       MAX(\"DbName\") AS \"DbName\", MAX(\"Objects\") AS \"Objects\", MAX(\"LockTypes\") AS \"LockTypes\", "
+				+ "       MAX(\"VictimProc\") AS \"VictimProc\", MAX(\"OtherProcs\") AS \"OtherProcs\", MAX(\"VictimApp\") AS \"VictimApp\" "
+				+ "FROM \"" + CmDeadlocks.CM_NAME + "_abs\" "
+				+ "GROUP BY \"ShapeKey\" "
+				+ "ORDER BY 2 DESC");
+		if (kinds != null)
+			result.put("deadlockKinds", kinds);
+
 		return result;
+	}
+
+	/**
+	 * Run a query on the CmDeadlocks table (the table only exists if CmDeadlocks has saved anything)
+	 * @return rows as maps, or null if the table does not exist
+	 */
+	private List<Map<String, Object>> queryCmDeadlocks(DbxConnection conn, String sql)
+	{
+		if ( ! DbUtils.checkIfTableExistsNoThrow(conn, null, null, CmDeadlocks.CM_NAME + "_abs") )
+			return null;
+
+		List<Map<String, Object>> rows = new ArrayList<>();
+		try (PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery())
+		{
+			int cols = rs.getMetaData().getColumnCount();
+			while (rs.next())
+			{
+				Map<String, Object> row = new LinkedHashMap<>();
+				for (int c = 1; c <= cols; c++)
+				{
+					Object val = rs.getObject(c);
+					if (val instanceof Timestamp)
+						val = val.toString();
+					else if (val instanceof Clob)
+						val = ((Clob) val).getSubString(1, (int) Math.min(((Clob) val).length(), Integer.MAX_VALUE));
+					row.put(rs.getMetaData().getColumnLabel(c), val);
+				}
+				rows.add(row);
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.warn("Problems reading '" + CmDeadlocks.CM_NAME + "_abs'. Caught: " + ex);
+			return null;
+		}
+		return rows;
 	}
 
 	// =========================================================================
@@ -300,6 +353,23 @@ extends HttpServlet
 			// The raw value is multi-resultset JSON as produced by ResultSetTableModel.toJson()
 			// Return it as a raw JSON string — the caller can parse the sections
 			result.put("blitzLockJson", blitzReport);
+		}
+
+		// Deadlocks saved by CmDeadlocks: the latest 200 (without the XML)
+		List<Map<String, Object>> deadlocks = queryCmDeadlocks(conn, ""
+				+ "SELECT \"EventTime\", \"DbName\", \"VictimSpid\", \"VictimLogin\", \"VictimHost\", \"VictimApp\", \"VictimProc\", \"VictimStatement\", "
+				+ "       \"OtherSpids\", \"OtherProcs\", \"OtherStatements\", \"Objects\", \"LockTypes\", \"IsolationLevels\", \"MaxWaitTimeMs\", \"ShapeKey\" "
+				+ "FROM \"" + CmDeadlocks.CM_NAME + "_abs\" "
+				+ "ORDER BY \"EventTime\" DESC "
+				+ "LIMIT 200");
+		if (deadlocks != null)
+		{
+			result.put("deadlocks", deadlocks);
+			if (deadlocks.size() > 0)
+			{
+				result.put("hasReport", true);
+				result.remove("note");
+			}
 		}
 		return result;
 	}

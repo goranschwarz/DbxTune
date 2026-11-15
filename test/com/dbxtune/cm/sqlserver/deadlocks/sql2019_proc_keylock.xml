@@ -1,0 +1,60 @@
+<event name="xml_deadlock_report" package="sqlserver" timestamp="2026-11-15T20:51:37.139Z"><data name="xml_report"><value><deadlock>
+ <victim-list>
+  <victimProcess id="processa8b9128c8"/>
+ </victim-list>
+ <process-list>
+  <process id="processa8b9128c8" taskpriority="0" logused="240" waitresource="KEY: 6:72057594043170816 (40fd182c0dd9)" waittime="2431" ownerId="4350" transactionname="user_transaction" lasttranstarted="2026-11-15T20:51:34.653" XDES="0xe10200460" lockMode="X" schedulerid="20" kpid="632" status="suspended" spid="51" sbid="0" ecid="0" priority="0" trancount="2" lastbatchstarted="2026-11-15T20:51:34.653" lastbatchcompleted="2026-11-15T20:51:34.653" lastattention="1900-01-01T00:00:00.653" clientapp="SQLCMD" hostname="bc88d442e49c" hostpid="338" loginname="sa" isolationlevel="read committed (2)" xactid="4350" currentdb="6" currentdbname="dlk" lockTimeout="4294967295" clientoption1="673185824" clientoption2="128056">
+   <executionStack>
+    <frame procname="dlk.dbo.p_order_then_customer" line="6" stmtstart="342" stmtend="458" sqlhandle="0x030006007aba7a2606b7570103b5000001000000000000000000000000000000000000000000000000000000">
+update dbo.customers set balance = balance+1 where id = @i    </frame>
+    <frame procname="adhoc" line="4" stmtstart="130" stmtend="212" sqlhandle="0x0200000068e0a8089ef3adeaae987f3e6dfbf9b9f4d39e0c0000000000000000000000000000000000000000">
+unknown    </frame>
+   </executionStack>
+   <inputbuf>
+set nocount on
+declare @i int = 0
+while @i &lt; 3 begin
+  begin try exec dlk.dbo.p_order_then_customer @id = 7 end try
+  begin catch if @@trancount &gt; 0 rollback end catch
+  set @i += 1
+end
+   </inputbuf>
+  </process>
+  <process id="processa8b83d088" taskpriority="0" logused="240" waitresource="KEY: 6:72057594043236352 (40fd182c0dd9)" waittime="2431" ownerId="4351" transactionname="user_transaction" lasttranstarted="2026-11-15T20:51:34.653" XDES="0xe08704460" lockMode="X" schedulerid="4" kpid="940" status="suspended" spid="52" sbid="0" ecid="0" priority="0" trancount="2" lastbatchstarted="2026-11-15T20:51:34.653" lastbatchcompleted="2026-11-15T20:51:34.653" lastattention="1900-01-01T00:00:00.653" clientapp="SQLCMD" hostname="bc88d442e49c" hostpid="339" loginname="sa" isolationlevel="read committed (2)" xactid="4351" currentdb="6" currentdbname="dlk" lockTimeout="4294967295" clientoption1="673185824" clientoption2="128056">
+   <executionStack>
+    <frame procname="dlk.dbo.p_customer_then_order" line="6" stmtstart="342" stmtend="458" sqlhandle="0x03000600b3de6e2708b7570103b5000001000000000000000000000000000000000000000000000000000000">
+update dbo.orders    set amount  = amount-1  where id = @i    </frame>
+    <frame procname="adhoc" line="4" stmtstart="130" stmtend="212" sqlhandle="0x0200000027a8aa389319e4d6059ae5e6c13b07d041e01b790000000000000000000000000000000000000000">
+unknown    </frame>
+   </executionStack>
+   <inputbuf>
+set nocount on
+declare @i int = 0
+while @i &lt; 3 begin
+  begin try exec dlk.dbo.p_customer_then_order @id = 7 end try
+  begin catch if @@trancount &gt; 0 rollback end catch
+  set @i += 1
+end
+   </inputbuf>
+  </process>
+ </process-list>
+ <resource-list>
+  <keylock hobtid="72057594043170816" dbid="6" objectname="dlk.dbo.customers" indexname="PK__customer__3213E83FA43EB4CC" id="locke1078b100" mode="X" associatedObjectId="72057594043170816">
+   <owner-list>
+    <owner id="processa8b83d088" mode="X"/>
+   </owner-list>
+   <waiter-list>
+    <waiter id="processa8b9128c8" mode="X" requestType="wait"/>
+   </waiter-list>
+  </keylock>
+  <keylock hobtid="72057594043236352" dbid="6" objectname="dlk.dbo.orders" indexname="PK__orders__3213E83F34DC7B8C" id="locke03560300" mode="X" associatedObjectId="72057594043236352">
+   <owner-list>
+    <owner id="processa8b9128c8" mode="X"/>
+   </owner-list>
+   <waiter-list>
+    <waiter id="processa8b83d088" mode="X" requestType="wait"/>
+   </waiter-list>
+  </keylock>
+ </resource-list>
+</deadlock>
+</value></data></event>
