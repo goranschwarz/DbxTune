@@ -432,10 +432,12 @@ extends CountersModel
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
-		list.add(new CmSettingsHelper("TableBloat", CmSettingsHelper.Type.IS_ALARM_SWITCH, PROPKEY_alarm_TableBloatPct, Double.class, conf.getDoubleProperty(PROPKEY_alarm_TableBloatPct, DEFAULT_alarm_TableBloatPct), DEFAULT_alarm_TableBloatPct,
-				"If the estimated bloat ('bloat_pct') of a table is above this percent (and the table is bigger than 'TableBloat TableSizeMb'), send 'AlarmEventPgTableBloat'." ));
-		list.add(new CmSettingsHelper("TableBloat TableSizeMb", PROPKEY_alarm_TableBloatSizeMb, Double.class, conf.getDoubleProperty(PROPKEY_alarm_TableBloatSizeMb, DEFAULT_alarm_TableBloatSizeMb), DEFAULT_alarm_TableBloatSizeMb,
-				"Only tables bigger than this (MB, 'real_size_mb') are checked for 'TableBloat'." ));
+		
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+		list.add(new CmSettingsHelper("TableBloat", isAlarmSwitch, PROPKEY_alarm_TableBloatPct   , Double.class, conf.getDoubleProperty(PROPKEY_alarm_TableBloatPct   , DEFAULT_alarm_TableBloatPct   ), DEFAULT_alarm_TableBloatPct,    "If the estimated bloat ('bloat_pct') of a table is above this percent (and the table is bigger than 'TableBloat TableSizeMb'), send 'AlarmEventPgTableBloat'." ));
+		list.add(new CmSettingsHelper("TableBloat TableSizeMb"   , PROPKEY_alarm_TableBloatSizeMb, Double.class, conf.getDoubleProperty(PROPKEY_alarm_TableBloatSizeMb, DEFAULT_alarm_TableBloatSizeMb), DEFAULT_alarm_TableBloatSizeMb, "Only tables bigger than this (MB, 'real_size_mb') are checked for 'TableBloat'." ));
+
 		return list;
 	}
 }

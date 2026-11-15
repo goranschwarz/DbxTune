@@ -397,10 +397,12 @@ extends CountersModel
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
-		list.add(new CmSettingsHelper("CheckpointsRequested", CmSettingsHelper.Type.IS_ALARM_SWITCH, PROPKEY_alarm_CheckpointsRequestedPct, Double.class, conf.getDoubleProperty(PROPKEY_alarm_CheckpointsRequestedPct, DEFAULT_alarm_CheckpointsRequestedPct), DEFAULT_alarm_CheckpointsRequestedPct,
-				"If more than this percent of the checkpoints in the last hour were requested (the WAL reached max_wal_size), send 'AlarmEventPgCheckpointsRequested'." ));
-		list.add(new CmSettingsHelper("CheckpointsRequested MinCount", PROPKEY_alarm_CheckpointsRequestedMin, Integer.class, conf.getIntProperty(PROPKEY_alarm_CheckpointsRequestedMin, DEFAULT_alarm_CheckpointsRequestedMin), DEFAULT_alarm_CheckpointsRequestedMin,
-				"... and at least this many requested checkpoints in the last hour." ));
+
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+
+		list.add(new CmSettingsHelper("CheckpointsRequested",          isAlarmSwitch, PROPKEY_alarm_CheckpointsRequestedPct, Double.class , conf.getDoubleProperty(PROPKEY_alarm_CheckpointsRequestedPct, DEFAULT_alarm_CheckpointsRequestedPct), DEFAULT_alarm_CheckpointsRequestedPct, "If more than this percent of the checkpoints in the last hour were requested (the WAL reached max_wal_size), send 'AlarmEventPgCheckpointsRequested'." ));
+		list.add(new CmSettingsHelper("CheckpointsRequested MinCount"               , PROPKEY_alarm_CheckpointsRequestedMin, Integer.class, conf.getIntProperty   (PROPKEY_alarm_CheckpointsRequestedMin, DEFAULT_alarm_CheckpointsRequestedMin), DEFAULT_alarm_CheckpointsRequestedMin, "... and at least this many requested checkpoints in the last hour." ));
+
 		return list;
 	}
 }

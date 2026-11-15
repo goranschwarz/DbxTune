@@ -61,10 +61,15 @@ extends CountersModel
 	public static final String[] NEED_CONFIG      = new String[] {};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
-	// NOTE: total_kb, data_kb, index_kb, toast_kb are sizes right now (gauges), not counters: they are NOT diffed
-	//       (they were: the diff/rate views showed the growth, and a shrink became 0)
+	// NOTE: total_kb, data_kb, index_kb, toast_kb are sizes (gauges), but they ARE diffed on purpose: the diff/rate views show the GROWTH per sample/second.
+	//       NEGATIVE_DIFF_COUNTERS_TO_ZERO is false for this CM, so a shrink (VACUUM FULL, REPACK, TRUNCATE) shows as a NEGATIVE growth
+	//       (all diffed columns here are sizes: none is a counter that resets). The size itself is in the abs values (the DSR 'Largest Tables' reads CmPgTableSize_abs).
 	public static final String[] DIFF_COLUMNS     = new String[] {
-			"row_estimate_diff"
+			"row_estimate_diff",
+			"total_kb",
+			"data_kb",
+			"index_kb",
+			"toast_kb"
 	};
 	
 //	RS> Col# Label             JDBC Type Name         Guessed DBMS type Source Table
@@ -83,7 +88,7 @@ extends CountersModel
 //	RS> 12   index_mb          java.sql.Types.BIGINT  int8              -none-      
 //	RS> 13   toast_mb          java.sql.Types.BIGINT  int8              -none-      
 
-	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
+	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
 	public static final boolean  IS_SYSTEM_CM                   = true;
 	public static final int      DEFAULT_POSTPONE_TIME          = 600; // evert 10 minute
 	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;

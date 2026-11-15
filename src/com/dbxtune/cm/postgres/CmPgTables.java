@@ -94,8 +94,15 @@ extends CountersModel
 			"n_tup_del",
 			"n_tup_hot_upd",
 			"n_tup_newpage_upd",
-			// NOTE: n_live_tup, n_dead_tup, n_mod_since_analyze, n_ins_since_vacuum are values right now (gauges), not counters: they are NOT diffed
-			//       (they were: the diff/rate views showed nonsense, for example a vacuum made n_dead_tup 0 = a negative diff = 0)
+			// NOTE: n_live_tup, n_dead_tup, n_mod_since_analyze, n_ins_since_vacuum are values right now (gauges), but they ARE diffed on purpose:
+			//       the diff/rate views show how fast they change, and the DSR 'Top Table Access' sums the diffs (the increase during the period).
+			//       A drop (a vacuum makes n_dead_tup 0, an analyze n_mod_since_analyze 0) is a negative diff = 0 here (NEGATIVE_DIFF_COUNTERS_TO_ZERO).
+			//       The value itself: the abs values (the DSR 'Dead Rows', the Autovacuum box and 'Vacuum Health' read CmPgTables_abs).
+			//       (They were not diffed between 2026-11-14 Phase 1A and this: recordings from that code have the abs values in _diff for these 4.)
+			"n_live_tup",
+			"n_dead_tup",
+			"n_mod_since_analyze",
+			"n_ins_since_vacuum",
 			"vacuum_count",
 			"autovacuum_count",
 			"analyze_count",

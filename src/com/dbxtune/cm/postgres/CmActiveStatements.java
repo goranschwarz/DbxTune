@@ -1703,7 +1703,7 @@ extends CountersModel
 		list.add(new CmHighlighterDescriptor()
 			.name("Blocking Others")
 			.notEmpty("im_blocking_other_pids")
-			.bgColor("#FF9999")
+			.bgColor("#ff4040")
 			.priority(110));
 
 		return list;

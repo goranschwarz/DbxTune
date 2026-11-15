@@ -530,8 +530,8 @@ extends CountersModel
 		
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
-		list.add(new CmSettingsHelper("lag_kb"            , isAlarmSwitch, PROPKEY_alarm_LagKb        , Integer.class, conf.getIntProperty(PROPKEY_alarm_LagKb        , DEFAULT_alarm_LagKb)        , DEFAULT_alarm_LagKb        , "If 'lag_kb' is greater than this value, send 'AlarmEventPgReplicationLag'." ));
-		list.add(new CmSettingsHelper("SlotWalStatus"     , isAlarmSwitch, PROPKEY_alarm_SlotWalStatus, Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_SlotWalStatus, DEFAULT_alarm_SlotWalStatus), DEFAULT_alarm_SlotWalStatus, "If 'wal_status' of a slot is 'unreserved' or 'lost' (Postgres 13 and above), send 'AlarmEventPgReplicationSlot'." ));
+		list.add(new CmSettingsHelper("lag_kb"            , isAlarmSwitch, PROPKEY_alarm_LagKb              , Integer.class, conf.getIntProperty(PROPKEY_alarm_LagKb              , DEFAULT_alarm_LagKb)              , DEFAULT_alarm_LagKb              , "If 'lag_kb' is greater than this value, send 'AlarmEventPgReplicationLag'." ));
+		list.add(new CmSettingsHelper("SlotWalStatus"     , isAlarmSwitch, PROPKEY_alarm_SlotWalStatus      , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_SlotWalStatus  , DEFAULT_alarm_SlotWalStatus)      , DEFAULT_alarm_SlotWalStatus      , "If 'wal_status' of a slot is 'unreserved' or 'lost' (Postgres 13 and above), send 'AlarmEventPgReplicationSlot'." ));
 		list.add(new CmSettingsHelper("SlotInactive"      , isAlarmSwitch, PROPKEY_alarm_SlotInactiveMinutes, Integer.class, conf.getIntProperty(PROPKEY_alarm_SlotInactiveMinutes, DEFAULT_alarm_SlotInactiveMinutes), DEFAULT_alarm_SlotInactiveMinutes, "If a slot has been inactive for more than this many minutes, send 'AlarmEventPgReplicationSlot' (17: from inactive_since, before 17: since this collector first saw it inactive)." ));
 
 		return list;
