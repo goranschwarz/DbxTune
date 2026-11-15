@@ -65,6 +65,7 @@ implements SybMessageHandler, AutoCloseable
 
 	@SuppressWarnings("unused")
 	private String             _sqlMessage                 = null;
+	private SQLException       _lastSqlException           = null;
 
 	private SybMessageHandler  _saveMsgHandler             = null;
 	private boolean            _saveAutoCommit             = false;
@@ -507,9 +508,16 @@ implements SybMessageHandler, AutoCloseable
 		return null;
 	}
 
+	/** The last error from executeSqlStr(sql, true), where errors are written to the text instead of thrown. null if there was none. */
+	public SQLException getLastSqlException()
+	{
+		return _lastSqlException;
+	}
+
 	public String executeSqlStr(String sql, final boolean aseExceptionsToWarnings)
 	throws SQLException
 	{
+		_lastSqlException = null;
 		try
 		{
 			StringReader sr = new StringReader(sql);
@@ -684,6 +692,7 @@ implements SybMessageHandler, AutoCloseable
 				{
 					if (aseExceptionsToWarnings)
 					{
+						_lastSqlException = ex;
 //						String msg = getSqlWarningMsgs(ex);
 						String msg = _resultTransformer.sqlWarningToString(getSqlWarningMsgs(ex));
 						if (StringUtil.hasValue(msg))

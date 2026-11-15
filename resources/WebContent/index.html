@@ -79,7 +79,8 @@
     .btn-muted-alarm:hover { background-color: #a8546a; border-color: #8f435a; color: #fff; }
 
     details.dbx-srv-group { margin: 0 0 2px 0; padding: 0; }
-    details.dbx-srv-group > summary { cursor: pointer; user-select: none; list-style: none; padding: 1px 0; margin: 0; }
+    details.dbx-srv-group > summary { cursor: pointer; user-select: none; list-style: none; padding: 1px 0; margin: 0; width: fit-content; } /* click area = the text, not the whole row */
+    details.dbx-srv-group:not([open]) > summary > .dbx-grp-title { display: inline-block; min-width: 14em; } /* align the stats badges only when collapsed */
     details.dbx-srv-group > summary::-webkit-details-marker { display: none; }
     details.dbx-srv-group > summary::before { content: '▶ '; font-size: 0.75em; }
     details.dbx-srv-group[open] > summary::before { content: '▼ '; }
@@ -1330,7 +1331,7 @@ List of stuff that can be done
 			if (entry.hasOwnProperty('options') && entry.options.hasOwnProperty('border') && entry.options.border === "true")
 			{
 				html += "<details id='" + grpId + "' class='dbx-srv-group' open" + grpDataAttr + ">";
-				html += "  <summary class='dbx-srv-group-summary'><b style='display:inline-block;min-width:14em;'>" + entry.text + "</b>" + grpStatsHtml + "</summary>";
+				html += "  <summary class='dbx-srv-group-summary'><b class='dbx-grp-title'>" + entry.text + "</b>" + grpStatsHtml + "</summary>";
 				html += "  <div class='card border-dark'>";
 				html += "    <div class='card-header' style='padding: .25rem .75rem; background-color: #e2e2e2;'><b>" + entry.text + "</b></div>";
 				html += "    <div class='card-body' style='padding: .75rem .75rem .25rem .75rem; background-color: #e9ecef;'>";
@@ -1352,7 +1353,7 @@ List of stuff that can be done
 			else
 			{
 				html += "<details id='" + grpId + "' class='dbx-srv-group' open" + grpDataAttr + ">";
-				html += "  <summary class='dbx-srv-group-summary'><b style='display:inline-block;min-width:14em;'>" + entry.text + "</b>" + grpStatsHtml + "</summary>";
+				html += "  <summary class='dbx-srv-group-summary'><b class='dbx-grp-title'>" + entry.text + "</b>" + grpStatsHtml + "</summary>";
 
 				// CONTENT GOES HERE
 				if (entry.hasOwnProperty('entries'))

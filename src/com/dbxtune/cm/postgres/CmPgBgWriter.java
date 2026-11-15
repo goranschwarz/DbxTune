@@ -20,12 +20,22 @@
  ******************************************************************************/
 package com.dbxtune.cm.postgres;
 
+import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
+import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
+import com.dbxtune.alarm.events.AlarmEvent;
+import com.dbxtune.alarm.events.postgres.AlarmEventPgCheckpointsRequested;
 import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
 import com.dbxtune.cm.CountersModel;
@@ -34,6 +44,9 @@ import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
+import com.dbxtune.utils.Configuration;
+import com.dbxtune.utils.MovingAverageCounterManager;
+import com.dbxtune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -41,6 +54,7 @@ import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 public class CmPgBgWriter
 extends CountersModel
 {
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmPgBgWriter.class.getSimpleName();
@@ -56,7 +70,7 @@ extends CountersModel
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
 
-	public static final String[] MON_TABLES       = new String[] {"pg_stat_bgwriter"};
+	public static final String[] MON_TABLES       = new String[] {"pg_stat_bgwriter", "pg_stat_checkpointer", "pg_stat_io"};
 	public static final String[] NEED_ROLES       = new String[] {};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
@@ -71,7 +85,12 @@ extends CountersModel
 			"maxwritten_clean",
 			"buffers_backend",
 			"buffers_backend_fsync",
-			"buffers_alloc"
+			"buffers_alloc",
+			"restartpoints_timed",  // 17 and above
+			"restartpoints_req",    // 17 and above
+			"restartpoints_done",   // 17 and above
+			"num_done",             // 18 and above
+			"slru_written"          // 18 and above
 	};
 	
 //	RS> Col# Label                 JDBC Type Name           Guessed DBMS type Source Table    
@@ -160,8 +179,49 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
-//		return "select *, 1 as PK from pg_catalog.pg_stat_bgwriter";
-		return "select * from pg_stat_bgwriter";
+		long srvVersion = versionInfo == null ? 0 : versionInfo.getLongVersion();
+		if (srvVersion < Ver.ver(17))
+			return "select * from pg_stat_bgwriter";
+
+		// 17: The checkpoint columns moved to 'pg_stat_checkpointer', and 'buffers_backend*' was removed (that data is in 'pg_stat_io').
+		//     Same column names and order as before 17 (the graphs and the recorded history use them), new columns are added at the end.
+		//     buffers_backend[_fsync] = writes/fsyncs of relation data by everyone except the checkpointer and the background writer (as before 17)
+		String sql = ""
+			    + "select \n"
+			    + "     c.num_timed                   AS checkpoints_timed \n"
+			    + "    ,c.num_requested               AS checkpoints_req \n"
+			    + "    ,c.write_time                  AS checkpoint_write_time \n"
+			    + "    ,c.sync_time                   AS checkpoint_sync_time \n"
+			    + "    ,c.buffers_written             AS buffers_checkpoint \n"
+			    + "    ,b.buffers_clean \n"
+			    + "    ,b.maxwritten_clean \n"
+			    + "    ,io.buffers_backend \n"
+			    + "    ,io.buffers_backend_fsync \n"
+			    + "    ,b.buffers_alloc \n"
+			    + "    ,b.stats_reset \n"
+			    + "    ,c.restartpoints_timed \n"   // 17: restart points are the "checkpoints" on a standby
+			    + "    ,c.restartpoints_req \n"
+			    + "    ,c.restartpoints_done \n"
+			    + (srvVersion >= Ver.ver(18) ? "    ,c.num_done \n    ,c.slru_written \n" : "")
+			    + "    ,c.stats_reset                 AS checkpointer_stats_reset \n"
+			    + "from pg_stat_bgwriter b \n"
+			    + "cross join pg_stat_checkpointer c \n"
+			    + "cross join ( \n"
+			    + "    select cast(coalesce(sum(writes), 0) as bigint) AS buffers_backend \n"
+			    + "          ,cast(coalesce(sum(fsyncs), 0) as bigint) AS buffers_backend_fsync \n"
+			    + "    from pg_stat_io \n"
+			    + "    where object = 'relation' \n"
+			    + "      and backend_type not in ('checkpointer', 'background writer') \n"
+			    + ") io \n"
+			    + "";
+
+		// Dry-run the newer SQL (a fork may report a version, but not have the views): fall back to the SQL before 17
+		if (conn != null && ! PostgresCmUtils.canExecute(conn, "select * from (" + sql + ") x where 1=2"))
+		{
+			_logger.warn(CM_NAME + ": The SQL for version " + Ver.versionNumToStr(srvVersion) + " (pg_stat_checkpointer) failed, 'select * from pg_stat_bgwriter' is used (the checkpoint columns may be missing).");
+			sql = "select * from pg_stat_bgwriter";
+		}
+		return sql;
 	}
 
 	private void addTrendGraphs()
@@ -263,5 +323,86 @@ extends CountersModel
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
+	}
+
+	/** The window for the 'CheckpointsRequested' alarm */
+	private static final int CHECKPOINT_WINDOW_MINUTES = 60;
+
+	@Override
+	public void sendAlarmRequest()
+	{
+		if ( ! hasDiffData() || getDiffRowCount() == 0 )
+			return;
+
+		// Requested and timed checkpoints over the last hour (a moving window, filled at every sample, also when the alarm is off)
+		Double reqDiff   = getDiffValueAsDouble(0, "checkpoints_req");
+		Double timedDiff = getDiffValueAsDouble(0, "checkpoints_timed");
+		if (reqDiff == null || timedDiff == null) // the columns are missing (a fork, or the fallback SQL on 17+)
+			return;
+
+		double req   = MovingAverageCounterManager.getInstance(CM_NAME, "checkpoints_req",   CHECKPOINT_WINDOW_MINUTES).add(reqDiff  ).getSum(0);
+		double timed = MovingAverageCounterManager.getInstance(CM_NAME, "checkpoints_timed", CHECKPOINT_WINDOW_MINUTES).add(timedDiff).getSum(0);
+
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		//-------------------------------------------------------
+		// CheckpointsRequested: many checkpoints started because the WAL reached max_wal_size (not by checkpoint_timeout)
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("CheckpointsRequested"))
+		{
+			Configuration conf = Configuration.getCombinedConfiguration();
+			double thresholdPct = conf.getDoubleProperty(PROPKEY_alarm_CheckpointsRequestedPct, DEFAULT_alarm_CheckpointsRequestedPct);
+			int    minCount     = conf.getIntProperty   (PROPKEY_alarm_CheckpointsRequestedMin, DEFAULT_alarm_CheckpointsRequestedMin);
+
+			double pct = (req + timed) > 0 ? req * 100.0 / (req + timed) : 0;
+			if (req >= minCount && pct > thresholdPct)
+			{
+				AlarmEvent ae = new AlarmEventPgCheckpointsRequested(this, Math.round(req), Math.round(timed), CHECKPOINT_WINDOW_MINUTES, thresholdPct);
+				ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, thresholdPct)
+				{
+					@Override
+					public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+					{
+						alarmEvent.setExtendedDescription("", cm.getGraphDataHistoryAsHtmlImage(GRAPH_NAME_CHECKPOINT_COUNT));
+						if (AlarmPhase.CANCEL.equals(phase))
+						{
+							double r = MovingAverageCounterManager.getInstance(CM_NAME, "checkpoints_req",   CHECKPOINT_WINDOW_MINUTES).getSum(0);
+							double t = MovingAverageCounterManager.getInstance(CM_NAME, "checkpoints_timed", CHECKPOINT_WINDOW_MINUTES).getSum(0);
+							alarmEvent.setCancelDescription(getAlarmCancelText("Requested checkpoints in the last " + CHECKPOINT_WINDOW_MINUTES + " minutes (percent of all)",
+									(r + t) > 0 ? Math.round(r * 100.0 / (r + t)) : 0, "%"));
+						}
+					}
+				});
+				ae.createAlarmOptionsMessage(this, "CheckpointsRequested");
+				AlarmHandler.getInstance().addAlarm(ae);
+			}
+		}
+	}
+
+	@Override
+	public boolean isGraphDataHistoryEnabled(String name)
+	{
+		return GRAPH_NAME_CHECKPOINT_COUNT.equals(name); // shown in the 'CheckpointsRequested' alarm
+	}
+
+	public static final String  PROPKEY_alarm_CheckpointsRequestedPct = CM_NAME + ".alarm.system.if.CheckpointsRequested.pct.gt";
+	public static final double  DEFAULT_alarm_CheckpointsRequestedPct = 20;
+
+	public static final String  PROPKEY_alarm_CheckpointsRequestedMin = CM_NAME + ".alarm.system.if.CheckpointsRequested.minCount";
+	public static final int     DEFAULT_alarm_CheckpointsRequestedMin = 3;
+
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+
+		list.add(new CmSettingsHelper("CheckpointsRequested",          isAlarmSwitch, PROPKEY_alarm_CheckpointsRequestedPct, Double.class , conf.getDoubleProperty(PROPKEY_alarm_CheckpointsRequestedPct, DEFAULT_alarm_CheckpointsRequestedPct), DEFAULT_alarm_CheckpointsRequestedPct, "If more than this percent of the checkpoints in the last hour were requested (the WAL reached max_wal_size), send 'AlarmEventPgCheckpointsRequested'." ));
+		list.add(new CmSettingsHelper("CheckpointsRequested MinCount"               , PROPKEY_alarm_CheckpointsRequestedMin, Integer.class, conf.getIntProperty   (PROPKEY_alarm_CheckpointsRequestedMin, DEFAULT_alarm_CheckpointsRequestedMin), DEFAULT_alarm_CheckpointsRequestedMin, "... and at least this many requested checkpoints in the last hour." ));
+
+		return list;
 	}
 }

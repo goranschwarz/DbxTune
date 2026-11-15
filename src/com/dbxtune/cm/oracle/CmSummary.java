@@ -198,7 +198,7 @@ extends CmSummaryAbstract
 			"Host CPU Usage in Percent",    // Menu CheckBox text
 			"Host CPU Usage in Percent, for ALL processes on the host (" + SHORT_NAME + ")",    // Label
 			TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
-			new String[] { "User", "System", "IO Wait" },
+			new String[] { "Total (User + System + IO Wait)", "User", "System", "IO Wait" },
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
 			true,  // is Percent Graph
@@ -560,13 +560,14 @@ extends CmSummaryAbstract
 		//---------------------------------
 		if (GRAPH_NAME_HOST_CPU.equals(tgdp.getName()))
 		{
-			Double[] arr = new Double[3];
+			Double[] arr = new Double[4];
 
 			double total = getCounterDiff("OS_BUSY_TIME") + getCounterDiff("OS_IDLE_TIME");
 
-			arr[0] = (total <= 0) ? 0.0 : getCounterDiff("OS_USER_TIME")   / total * 100.0;
-			arr[1] = (total <= 0) ? 0.0 : getCounterDiff("OS_SYS_TIME")    / total * 100.0;
-			arr[2] = (total <= 0) ? 0.0 : getCounterDiff("OS_IOWAIT_TIME") / total * 100.0;
+			arr[1] = (total <= 0) ? 0.0 : getCounterDiff("OS_USER_TIME")   / total * 100.0;
+			arr[2] = (total <= 0) ? 0.0 : getCounterDiff("OS_SYS_TIME")    / total * 100.0;
+			arr[3] = (total <= 0) ? 0.0 : getCounterDiff("OS_IOWAIT_TIME") / total * 100.0;
+			arr[0] = Math.min(100.0, arr[1] + arr[2] + arr[3]);
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);

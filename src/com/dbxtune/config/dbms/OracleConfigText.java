@@ -72,6 +72,7 @@ public abstract class OracleConfigText
 		DbmsConfigTextManager.addInstance(new OracleConfigText.Containers());
 		DbmsConfigTextManager.addInstance(new OracleConfigText.DbLinks());
 		DbmsConfigTextManager.addInstance(new OracleConfigText.NlsParams());
+		DbmsConfigTextManager.addInstance(new HostMonOsInfoConfigText()); // Same for all DBMS vendors: exact OS info from Host Monitoring
 	}
 
 	/**

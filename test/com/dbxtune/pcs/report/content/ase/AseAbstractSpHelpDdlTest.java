@@ -79,6 +79,24 @@ public class AseAbstractSpHelpDdlTest
 		+ " PK_SETTING_924527296 default       inherit from index\n"
 		+ " mkl_Name_924527296   system        inherit from index\n";
 
+	@Test
+	public void testBaseTypeColumnIsUsedInsteadOfTheGuess()
+	{
+		String out = AseAbstract.formatObjectTextAsDdl("db.dbo.t", ""
+				+ " Column_name Type      Length Prec Scale Nulls Identity Base_type\n"
+				+ " ----------- --------- ------ ---- ----- ----- -------- ---------\n"
+				+ " id          my_id          4 NULL NULL      0        0 int      \n"
+				+ " name        my_name       30 NULL NULL      1        0 varchar  \n"
+				+ " amount      my_amount      8   12     2     1        0 numeric  \n"
+				+ " plain       int            4 NULL NULL      1        0 NULL     \n"
+				, null);
+
+		assertTrue(out, out.contains("id my_id /*int*/ NOT NULL"));
+		assertTrue(out, out.contains("name my_name /*varchar(30)*/ NULL"));
+		assertTrue(out, out.contains("amount my_amount /*numeric(12,2)*/ NULL"));
+		assertTrue(out, out.contains("plain int NULL"));
+	}
+
 	private static String ddl(String text)
 	{
 		return AseAbstract.formatObjectTextAsDdl("PML.dbo.Setting", text, null);

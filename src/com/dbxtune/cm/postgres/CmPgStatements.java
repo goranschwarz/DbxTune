@@ -58,6 +58,7 @@ import com.dbxtune.sql.ResultSetMetaDataCached.Entry;
 import com.dbxtune.sql.SqlParserUtils;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
+import com.dbxtune.sql.conn.info.DbmsVersionInfoPostgres;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.NumberUtils;
 import com.dbxtune.utils.StringUtil;
@@ -713,10 +714,23 @@ extends CountersModel
 		return PostgresCmHelper.pgStatements_beforeRefreshGetData(this, conn);
 	}
 
-//	@Override
-//	public boolean checkDependsOnOther(DbxConnection conn)
-//	{
-//		return CmPgStatementsUtils.checkDependsOnOther(this, conn);
-//	}
+	/**
+	 * A missing extension is NOT a reason to disable this CM (beforeRefreshGetData() checks/creates it before every refresh, the server may be recreated).
+	 * <p>
+	 * But when the view exists and the library is NOT loaded, every refresh fails with: pg_stat_statements must be loaded via "shared_preload_libraries".<br>
+	 * That needs a restart of Postgres (so a reconnect, and this check is done again).
+	 */
+	@Override
+	public boolean checkDependsOnOther(DbxConnection conn)
+	{
+		boolean viewExists = (conn.getDbmsVersionInfo() instanceof DbmsVersionInfoPostgres) && ((DbmsVersionInfoPostgres) conn.getDbmsVersionInfo()).hasExtension("pg_stat_statements");
+		if (viewExists && ! PostgresCmUtils.canExecute(conn, "select 1 from pg_stat_statements limit 1"))
+		{
+			return PostgresCmUtils.disable(this,
+					"The extension 'pg_stat_statements' is installed, but it can't be read (the library is probably not in 'shared_preload_libraries').",
+					"add 'pg_stat_statements' to the setting 'shared_preload_libraries' (append it to the current list) and restart Postgres. See DbmsSetup/postgres.txt");
+		}
+		return true;
+	}
 
 }

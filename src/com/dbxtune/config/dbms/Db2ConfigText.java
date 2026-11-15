@@ -61,6 +61,7 @@ public abstract class Db2ConfigText
 		DbmsConfigTextManager.addInstance(new Db2ConfigText.EventMonitors());
 		DbmsConfigTextManager.addInstance(new Db2ConfigText.Wlm());
 		DbmsConfigTextManager.addInstance(new Db2ConfigText.AutoMaint());
+		DbmsConfigTextManager.addInstance(new HostMonOsInfoConfigText()); // Same for all DBMS vendors: exact OS info from Host Monitoring
 	}
 
 	/**

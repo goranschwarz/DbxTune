@@ -126,6 +126,7 @@ public abstract class AseConfigText
 		DbmsConfigTextManager.addInstance(new AseConfigText.ClusterInfo());        // ConfigType.AseClusterInfo);
 		DbmsConfigTextManager.addInstance(new AseConfigText.ConfigFile());         // ConfigType.AseConfigFile);
 //		DbmsConfigTextManager.addInstance(new AseConfigText.ConfigMonitoring());   // ConfigType.AseConfigMonitoring);
+		DbmsConfigTextManager.addInstance(new HostMonOsInfoConfigText()); // Same for all DBMS vendors: exact OS info from Host Monitoring
 	}
 
 //	private static void createInstance(ConfigType type)

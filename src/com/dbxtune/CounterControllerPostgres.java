@@ -27,7 +27,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -67,6 +69,10 @@ import com.dbxtune.cm.postgres.CmPgProgCopy;
 import com.dbxtune.cm.postgres.CmPgProgIndex;
 import com.dbxtune.cm.postgres.CmPgProgVacuum;
 import com.dbxtune.cm.postgres.CmPgRepSlots;
+import com.dbxtune.cm.postgres.CmPgSubscription;
+import com.dbxtune.cm.postgres.CmPgRepSlotStats;
+import com.dbxtune.cm.postgres.CmPgAutovacuumScores;
+import com.dbxtune.cm.postgres.CmPgLockStats;
 import com.dbxtune.cm.postgres.CmPgReplication;
 import com.dbxtune.cm.postgres.CmPgSequencesIo;
 import com.dbxtune.cm.postgres.CmPgSlru;
@@ -80,10 +86,14 @@ import com.dbxtune.cm.postgres.CmPgTablesIo;
 import com.dbxtune.cm.postgres.CmPgWal;
 import com.dbxtune.cm.postgres.CmPgWalReceiver;
 import com.dbxtune.cm.postgres.CmSummary;
+import com.dbxtune.cm.postgres.PostgresCmHelper;
+import com.dbxtune.cm.postgres.PostgresCmUtils;
+import com.dbxtune.config.dict.PostgresWaitTypeDictionary;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.pcs.PersistContainer;
 import com.dbxtune.pcs.PersistContainer.HeaderInfo;
 import com.dbxtune.sql.conn.DbxConnection;
+import com.dbxtune.sql.conn.info.DbmsVersionInfoPostgres;
 import com.dbxtune.utils.AseConnectionUtils;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.ConnectionProvider;
@@ -137,6 +147,7 @@ extends CounterControllerAbstract
 		CmPgPidWait         .create(counterController, guiController);
 		CmPgDatabase        .create(counterController, guiController);
 		CmPgSrvWait         .create(counterController, guiController);
+		CmPgLockStats       .create(counterController, guiController); // 19 and above
 		CmPgBgWriter        .create(counterController, guiController);
 		CmPgIo              .create(counterController, guiController);
 		CmPgWal             .create(counterController, guiController);
@@ -149,6 +160,7 @@ extends CounterControllerAbstract
 		CmPgTables          .create(counterController, guiController);
 		CmPgTablesIo        .create(counterController, guiController);
 		CmPgTableBloat      .create(counterController, guiController);
+		CmPgAutovacuumScores.create(counterController, guiController); // 19 and above
 		CmPgIndexes         .create(counterController, guiController);
 		CmPgIndexesIo       .create(counterController, guiController);
 		CmPgFunctions       .create(counterController, guiController);
@@ -180,7 +192,9 @@ extends CounterControllerAbstract
 		// Replication
 		CmPgReplication     .create(counterController, guiController);
 		CmPgRepSlots        .create(counterController, guiController);
+		CmPgRepSlotStats    .create(counterController, guiController); // 14 and above
 		CmPgWalReceiver     .create(counterController, guiController);
+		CmPgSubscription    .create(counterController, guiController); // 15 and above
 
 		// OS HOST Monitoring
 		CmOsIostat          .create(counterController, guiController);
@@ -226,7 +240,57 @@ extends CounterControllerAbstract
 			
 		if (! isCountersCreated())
 			createCounters(hasGui);
-		
+
+		// What kind of server is this, and what can this login do? The CM's only need 'pg_monitor' (see DbmsSetup/postgres.txt)
+		// The roles are read recursively (so roles granted through other roles are counted), the server files are tested by doing it.
+		DbmsVersionInfoPostgres versionInfo = (conn.getDbmsVersionInfo() instanceof DbmsVersionInfoPostgres) ? (DbmsVersionInfoPostgres) conn.getDbmsVersionInfo() : new DbmsVersionInfoPostgres(srvVersion);
+
+		boolean hasMonitor     = versionInfo.hasMonitorRole();
+		boolean hasWalDir      = srvVersion < Ver.ver(10) ? versionInfo.isSuperuser() : PostgresCmUtils.canExecute(conn, "select 1 from pg_ls_waldir() limit 1");
+		boolean hasServerFiles = srvVersion < Ver.ver(10) ? versionInfo.isSuperuser() : PostgresCmUtils.canExecute(conn, "select pg_read_file('PG_VERSION', 0, 1), pg_current_logfile()");
+
+		String has = "superuser=" + versionInfo.isSuperuser() + ", pg_monitor (or pg_read_all_stats + pg_read_all_settings)=" + hasMonitor + ", pg_ls_waldir()=" + hasWalDir
+				+ ", read the error log (pg_read_server_files)=" + hasServerFiles + ". Roles: " + versionInfo.getRoles();
+
+		if (srvVersion < Ver.ver(10) && ! versionInfo.isSuperuser())
+			_logger.warn("The Postgres login is not a superuser, and Postgres " + Ver.versionNumToStr(srvVersion) + " has no 'pg_monitor' role: other sessions' SQL text and some views are not visible, CM's that can't read their views will be DISABLED. The login has: " + has + " Fix: use a superuser login (or upgrade to Postgres 10 or above).");
+		else if (hasMonitor && hasWalDir)
+			_logger.info("The Postgres login has all it needs: " + has);
+		else
+			_logger.warn("The Postgres login is missing privileges: other sessions' SQL text, wait events and some views are not visible, CM's that can't read their views will be DISABLED. The login has: " + has
+					+ " Fix: GRANT pg_monitor TO <user>; See DbmsSetup/postgres.txt");
+
+		if ( ! hasServerFiles )
+			_logger.info("The Postgres login can't read the server's error log, so the Counter Model 'CmErrorLog' (if enabled) is DISABLED. Optional fix: GRANT pg_read_server_files TO <user>; (and log_destination 'csvlog' or 'jsonlog')");
+
+		if (versionInfo.isCloudManagedDbms())
+			_logger.info("This is " + versionInfo.getFlavor() + ". A managed service may not allow some functions (pg_ls_waldir(), reading the error log, CREATE EXTENSION...): the Counter Models that can't read their data are DISABLED with the reason, the rest works as usual.");
+		else if (versionInfo.isYugabyte())
+			_logger.warn("This is YugabyteDB. PostgresTune is made for PostgreSQL: YugabyteDB has its own storage engine, so many pg_stat_* views are empty or missing. Counter Models that can't read their views are DISABLED, and some may show less data.");
+
+		if (versionInfo.isInRecovery())
+			_logger.info("This server is a standby (in recovery). Replication is shown from the standby's side (CmPgWalReceiver), and nothing is written to it.");
+
+		// NOTE: The "track_*" settings that are OFF by default (track_io_timing, track_wal_io_timing, track_functions...) are reported as DBMS Configuration Issues (PostgresConfig.checkConfig)
+
+		// Postgres 17 and above: the wait event descriptions from the server itself (pg_wait_events), instead of the built-in list
+		PostgresWaitTypeDictionary.loadFromServer(conn, srvVersion);
+
+		// pg_wait_sampling: the query id makes the profile bigger (and every read costs server CPU per row). The CM's do not use it.
+		if (versionInfo.hasExtension("pg_wait_sampling"))
+		{
+			String profileQueries = PostgresCmUtils.getFirstString(conn, "select setting from pg_settings where name = 'pg_wait_sampling.profile_queries'");
+			if (profileQueries != null && ! "none".equalsIgnoreCase(profileQueries) && ! "off".equalsIgnoreCase(profileQueries))
+				_logger.info("pg_wait_sampling.profile_queries='" + profileQueries + "': the profile has a row per query id too, which PostgresTune does not use (more rows = more server CPU at every read). "
+						+ "Optional fix: ALTER SYSTEM SET pg_wait_sampling.profile_queries = 'none'; SELECT pg_reload_conf();");
+		}
+
+		// PostgresTune may write to the monitored server: tell what, and how to turn it off.
+		_logger.info("PostgresTune may CREATE some EXTENSIONs in the monitored server if they are missing: pg_stat_statements (turn off with '" + PostgresCmHelper.PROPKEY_pgStatements_createExtension + "=false'), "
+				+ "pg_wait_sampling (turn off with '" + PostgresCmHelper.PROPKEY_pgWaitSampling_createExtension + "=false'), pg_buffercache (only when a CmPgBufferCache* Counter Model is enabled), "
+				+ "file_fdw with the foreign table 'pg_srv_errorlog' (only when CmErrorLog is enabled and the log is CSV). "
+				+ "On a primary with standbys, CmPgReplication creates and updates the table 'postgrestune_ha_dummy_update', so the standby's replay lag can be measured (turn off with '" + CmPgReplication.PROPKEY_update_primary + "=false').");
+
 		_logger.info("Initializing all CM objects, using Postgres version number " + srvVersion + ". (" + Ver.versionNumToStr(srvVersion) + ")");
 
 		// initialize all the CM's
@@ -585,9 +649,11 @@ extends CounterControllerAbstract
 	throws Exception
 	{
 		// Error checking for "invalid password" or other "unrecoverable errors"
-		if (ex.getMessage().contains("password authentication failed for user"))
+		// SqlState 28P01 = invalid_password, 28000 = invalid_authorization_specification (for example: no pg_hba.conf entry)
+		// NOTE: Never put the password in the message (it ends up in the log)
+		if ("28P01".equals(ex.getSQLState()) || ex.getMessage().contains("password authentication failed for user"))
 		{
-			throw new Exception("The error message suggest that the wrong USER '" + dbmsUsername + "' or PASSWORD '" + dbmsPassword + "' to DBMS server '" + dbmsServer + "' was entered. This is a non-recovarable error. DBMS Error Message='" + ex.getMessage() + "'.", ex);
+			throw new Exception("The error message suggest that the wrong USER '" + dbmsUsername + "' or PASSWORD to DBMS server '" + dbmsServer + "' was entered. This is a non-recovarable error. DBMS Error Message='" + ex.getMessage() + "'.", ex);
 		}
 	}
 }

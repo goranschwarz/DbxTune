@@ -3191,6 +3191,9 @@ function _initGlobalEscClose() {
 								+ tables.map(function(t) { return '<code>' + escapeHtml(t) + '</code>'; }).join(', ')
 								+ '</div>';
 							body.innerHTML = parsedMsg + r.html;
+							// The Index Analysis scripts are <code class='language-sql'>: added after the page loaded, so highlight them here
+							if (typeof Prism !== 'undefined')
+								Prism.highlightAllUnder(body);
 						} else {
 							body.innerHTML = '<em style="color:var(--sp-text-5);">No table information found in DDL Storage.</em>';
 						}
@@ -3299,6 +3302,9 @@ function _initGlobalEscClose() {
 								+ tables.map(function(t) { return '<code>' + escapeHtml(t) + '</code>'; }).join(', ')
 								+ '</div>';
 							body.innerHTML = parsedMsg + r.html;
+							// The Index Analysis scripts are <code class='language-sql'>: added after the page loaded, so highlight them here
+							if (typeof Prism !== 'undefined')
+								Prism.highlightAllUnder(body);
 						} else {
 							body.innerHTML = '<em style="color:var(--sp-text-5);">No table information found in DDL Storage.</em>';
 						}

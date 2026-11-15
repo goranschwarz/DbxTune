@@ -1,0 +1,1009 @@
+# DbxLoadGen - load generator for test servers
+
+DbxLoadGen puts realistic "dummy traffic" on a test DBMS, so the DbxTune collectors and DbxCentral have something
+to show, and so we find bugs. It is our own tool (not HammerDB), so we can add a scenario whenever we want to
+test something new.
+
+- **Vendors:** SQL Server, Sybase ASE, Postgres, Oracle (12.2+; tested on 21c XE and 23ai/26ai Free), MySQL (8.0+; tested on 8.0, 8.4, 9.7;
+  MariaDB is not targeted) and DB2 LUW (11.5; tested on 11.5.8).
+- **Modes:** `install`, `run`, `status`, `uninstall`, `journal`, `scenarios`.
+- **Traffic:** OLTP, OLAP/DW, batch jobs, and **problem scenarios** (blocking, deadlocks, long transactions,
+  spills, literal SQL, ...) that should make DbxTune show something or raise an alarm.
+- **Journal:** every run writes a JSON Lines file saying what was done, when, by which session, and what
+  DbxTune *should* have seen. Put it next to the DbxTune recording of the same time window to find what the
+  collectors miss.
+- **Safe for cron:** always time limited, gentle by default, its own logins, database and password file.
+
+```
+loadgen.sh install   -t sqlserver -S myhost -U sa --size small
+loadgen.sh run       -t sqlserver -S myhost --duration 15m-45m --intensity low
+loadgen.sh status    -t sqlserver -S myhost
+loadgen.sh uninstall -t sqlserver -S myhost -U sa
+```
+
+On Windows use `loadgen.bat`. Both call `dbxtune.sh loadgen` / `dbxtune.bat loadgen`.
+
+Contents:
+1. [Before you start](#1-before-you-start)
+2. [Install](#2-install)
+3. [Running it](#3-running-it)
+4. [Uninstall](#4-uninstall)
+5. [What it does](#5-what-it-does)
+6. [How it works](#6-how-it-works)
+7. [The deliberate design flaws](#7-the-deliberate-design-flaws)
+8. [The scenarios](#8-the-scenarios)
+9. [The journal: comparing with DbxTune](#9-the-journal-comparing-with-dbxtune)
+10. [Command line reference](#10-command-line-reference)
+
+---
+
+## 1. Before you start
+
+### Connection options (all modes)
+
+| Option | Meaning |
+|---|---|
+| `-t, --dbms` | `sqlserver`, `ase`, `postgres` or `oracle` |
+| `-S, --server` | `host` or `host:port`. Default ports: SQL Server 1433, ASE 5000, Postgres 5432, Oracle 1521, MySQL 3306, DB2 50000. **Oracle:** `host[:port]/service`, the service name of the PDB (e.g. `dbhost:1521/FREEPDB1`). **DB2:** `host[:port]/database`, the database the schema goes into (e.g. `dbhost:50000/TESTDB`) |
+| `--name` | Logical server name: the key in the password file and the journal folder name. Default: `-S` with `:` and `/` replaced by `_`: `host`, `host_port`, Oracle `host_port_service` (a `:` can't be used in the password file). |
+| `-U, --user` | Admin user for install/uninstall/status. Default `sa` (SQL Server, ASE), `postgres`, `system` (Oracle), `root` (MySQL) or `db2inst1` (DB2; on DB2 the run's sessions also connect as this user, see below) |
+| `-P, --password` | Admin password. Default: taken from the load generator's own password file (below) |
+| `-D, --dbname` | Database. Default `dbxt_loadgen`. Oracle: the schema owner (and the name of its tablespace). DB2: the schema (and the name of its tablespace) |
+
+There is no `-n` short option on purpose: the DbxTune start scripts treat `-n` as "start a collector without GUI".
+
+### Passwords: the load generator's own password file
+
+The load generator does **not** use DbxTune's `~/.passwd.enc`. It has its own file:
+
+```
+~/.dbxtune/loadgen/.loadgen_passwd.enc        (change with --passwd-file)
+```
+
+Same encrypted format as `~/.passwd.enc`. It holds:
+- the admin password (you add it once), so cron lines never contain a password;
+- the passwords of the generated logins `dbxt_user_1..N` (written by `install`, removed by `uninstall`).
+
+Add the admin password (the server name is the `--name` value, e.g. `myhost` or `myhost_14330`):
+
+```bash
+dbxPassword.sh set -U sa -S myhost -P secret -f ~/.dbxtune/loadgen/.loadgen_passwd.enc
+```
+
+On Windows: `dbxPassword.bat set -U sa -S myhost -P secret -F %USERPROFILE%\.dbxtune\loadgen\.loadgen_passwd.enc`
+(the Linux script uses `-f`, the Windows/Java tool `-F`). The file must exist on Windows first (an empty file is fine).
+
+`run` uses the generated logins only. Run it as the same OS user, on the same machine where `install` was done,
+because that is where the passwords were written.
+
+### What the DBMS must allow
+
+| DBMS | Needed |
+|---|---|
+| SQL Server | A `sysadmin` login for install/uninstall. **SQL Server authentication (mixed mode) must be on**: the generated logins are SQL logins. |
+| Sybase ASE | `sa_role` + `sso_role` (create logins), and room for the database: see [Sybase ASE: where the database goes](#sybase-ase-where-the-database-goes). jConnect connects with `ENCRYPT_PASSWORD=true`. |
+| Postgres | A superuser (or a role with `CREATEDB` + `CREATEROLE`). `pg_hba.conf` must allow password logins for the `dbxt_user_*` roles from the machine the load generator runs on. |
+| Oracle | `system` (or a user with the `DBA` role) in the PDB: create tablespace/user/role, grant any object privilege, `alter system kill session`, read `V$PARAMETER`, `DBA_*`. 18c or later for `temp_recompile` (private temporary tables) and the query-timeout statement of `errors` (`DBMS_SESSION.SLEEP`). No extra-cost option is used. |
+
+| MySQL | `root` (or a user with `CREATE`, `CREATE USER`, `CREATE ROLE`, `DROP ROLE`, `GRANT OPTION`, `PROCESS`, `CONNECTION_ADMIN`/`SUPER` for `KILL`). 8.0 or later (roles). The logins are created as `'dbxt_user_N'@'%'`. |
+| DB2 LUW | A user with `SYSADM` or `SYSCTRL` (create tablespace, `FORCE APPLICATION`) and `DBADM` in the database; the instance owner `db2inst1` works. Automatic storage in the database. **No logins are created**: DB2 users are OS users, so every session of a run connects as the `-U` user and the "login" `dbxt_user_N` is its client user (JCC `clientUser` = `MON_GET_CONNECTION.CLIENT_USERID`). |
+
+For the DbxTune side it helps (not required):
+- Postgres: `pg_stat_statements` loaded, `track_functions = pl` (so the cursor/temp table functions show up in CmPgFunctions).
+- SQL Server: Query Store (the install turns it on in a database it creates, SQL Server 2016+).
+- Oracle: nothing; OracleTune reads only V$ views that need no Diagnostics/Tuning Pack (no ASH/AWR).
+
+---
+
+## 2. Install
+
+```bash
+loadgen.sh install -t <dbms> -S <host[:port]> [-U admin] [--size small|medium|large|xl|xxl|xxxl] [--logins 10] [--seed 42]
+```
+
+For ASE, `-S` can also be a server name from the interfaces file (`$SYBASE/interfaces`, `%SYBASE%\ini\sql.ini`,
+else DbxTune's own), for example `-S GORAN_UB3_DS`. Its first query entry gives host:port, and the name is used as the server name.
+A name that is not in the interfaces file is used as a host name with port 5000.
+
+What it does, in order:
+1. Creates the database (or uses an existing one, see `--use-existing-db`).
+2. Creates the logins `dbxt_user_1..N` (default 10) with random passwords, saved in the load generator's password file.
+   If a login with that name already exists (for example kept with `uninstall --keep-logins`) it gets a new password instead.
+3. Creates the tables, fills them with generated data (same `--seed` = same data), creates the indexes and procedures,
+   and updates statistics.
+4. Makes the logins users in the database with owner rights (the maintenance scenarios need that).
+5. Writes the marker table `dbxt_loadgen_info` (version, size, seed, logins, status). `run` and `uninstall` check it.
+6. Writes an install journal, including the list of deliberate design flaws ("the answer key").
+
+During the data fill it prints every 30 s how far it is and when the fill and the whole install should be ready
+(`Install progress: data fill ~43% done, fill ready ~17:03:36, install ready ~17:04:38`). The estimate is the time so far
+extrapolated over the estimated bytes per table; indexes and statistics are counted as ~15% of the fill time.
+
+If `update statistics` fails for a table (for example tempdb too small for the sort), the install does not stop: it
+warns, continues with the other tables, still ends INSTALLED (the load runs without the statistics) and prints the SQL
+to run later as an admin (`use <db>` + the failed `update [index] statistics <table>`). The warning is in the journal too.
+
+### Sizes
+
+| Size | Customers | Products | Orders (~3 lines each) | Rough size (data + indexes) |
+|---|---|---|---|---|
+| `small` (default) | 20 000 | 2 000 | 200 000 | ~180 MB |
+| `medium` | 200 000 | 20 000 | 2 000 000 | ~1.7 GB |
+| `large` | 1 000 000 | 100 000 | 10 000 000 | ~8.5 GB |
+| `xl` | 4 000 000 | 400 000 | 40 000 000 | ~34 GB |
+| `xxl` | 20 000 000 | 2 000 000 | 200 000 000 | ~170 GB |
+| `xxxl` | 100 000 000 | 10 000 000 | 1 000 000 000 | ~850 GB |
+
+Plus `audit_log` (100 000 x factor rows), `session_event` (5 000 x factor rows of 1-3 KB) and `fact_sales`
+(90% of the order lines). Only `small` has been tested so far.
+
+The estimate is printed before anything is filled. Install times seen for `small` on Docker: Postgres 10-17 s,
+Oracle 15-20 s, SQL Server 30 s, MySQL 30-50 s, DB2 60 s, ASE 3 minutes.
+
+**Free editions with a data limit:** on Oracle Free / Express Edition (12 GB user data for the whole database; going over
+it can keep the database from opening after a restart) and SQL Server Express (10 GB per database), sizes above `medium`
+are refused. On Oracle Free/Express the tablespace also gets `MAXSIZE 4096M` instead of `unlimited`, so a long run can't
+grow the data past it (with `--use-existing-db` the tablespace is not ours and is not changed).
+
+### Database options used
+
+**SQL Server** (database created by the install):
+- `CREATE DATABASE` with the `model` defaults (size, file growth).
+- Recovery model `SIMPLE`, so the log does not grow without log backups.
+- `QUERY_STORE = ON` (skipped, with a log line, before SQL Server 2016).
+- Logins: `CHECK_POLICY = OFF`, default database = the load generator database; users are in `db_owner`.
+
+**Sybase ASE** (database created by the install):
+- Size: 2 x the size estimate (at least 300 MB) for data, plus a 1 GB log when there is a separate log device (the same for
+  all sizes). Override with `--ase-db-size-mb` and `--ase-log-size-mb`.
+  Log sizing (measured on ASE 16, size medium): during a 15 minute `high` run the log peaked at 56 MB, but a 500 MB log still
+  filled up (error 1105) in a `low` run, hence 1 GB. The most is
+  pinned by `long_tran` (its ~340 s open transaction stops log truncation). During the fill the install runs `dump transaction ... with truncate_only`
+  every 10 s (without it the log reached ~490 MB: `trunc log on chkpt` truncates only on ASE's own checkpoint, every ~60-70 s;
+  a manual `checkpoint` does not truncate). `purge_audit` deletes at most
+  200 000 rows (~60 MB of log) per transaction. If the log still fills up, ASE suspends the writers (LOG SUSPEND) or fails them with error 1105.
+- `trunc log on chkpt` and `select into/bulkcopy/pllsort` are turned on.
+- Every table is `lock datarows`.
+- Logins via `sp_addlogin`; in the database they are aliased to `dbo` (`sp_addalias`), so they can update statistics.
+
+**Postgres** (database created by the install):
+- `CREATE DATABASE` with the server defaults.
+- The role `dbxt_loadgen_role` (NOLOGIN) owns the schema `dbxt` and every object in it. The logins are members of
+  that role, and each login has `search_path = dbxt, public` set on the role (not on the database).
+
+**Oracle** (schema created by the install), in the PDB of the `-S` service:
+- A "database" is a **schema**: the user `DBXT_LOADGEN` (locked, a random password nobody knows) owns the tables and the
+  procedures (definer's rights). It gets `CREATE TABLE` (for the private temporary table of `p_temp_report`) and a quota on:
+- its own bigfile tablespace `DBXT_LOADGEN` (size estimate, at least 100 MB, `autoextend on next 64M`). Datafile:
+  Oracle-managed when `db_create_file_dest` is set, else `<dir>/dbxt_loadgen01.dbf` in the directory that holds most of
+  the PDB's datafiles.
+- The logins `DBXT_USER_1..N` are users with `CREATE SESSION` and the role `DBXT_LOADGEN_ROLE` (select/insert/update/delete
+  on the tables, execute on the procedures). They own nothing: every connection does `alter session set current_schema = DBXT_LOADGEN`.
+- Statistics: `DBMS_STATS.GATHER_TABLE_STATS` per table. The `update_stats` scenario calls the schema's own `p_gather_stats`
+  (so the users need no `ANALYZE ANY`).
+- `PROGRAM` = the app name (JDBC property `v$session.program`); `MODULE`/`ACTION`/`CLIENT_INFO` are set with `DBMS_APPLICATION_INFO`
+  (see [How it works](#6-how-it-works)).
+
+**MySQL** (database created by the install):
+- `CREATE DATABASE dbxt_loadgen CHARACTER SET utf8mb4`, InnoDB tables, `datetime(6)` timestamps.
+- The role `dbxt_loadgen_role` has all privileges on the database (like `db_owner`); the logins `'dbxt_user_N'@'%'` get
+  the role as their default role.
+- Statistics: `ANALYZE TABLE` per table (also the `update_stats` scenario).
+- Connections: `connectionAttributes=program_name:<app name>` (`performance_schema.session_connect_attrs`),
+  `rewriteBatchedStatements=true` (the fill), `allowPublicKeyRetrieval=true`.
+
+**DB2 LUW** (schema created by the install), in the database of `-S host:port/database`:
+- `CREATE DATABASE` is an instance command, not SQL, so a "database" is a **schema** `DBXT_LOADGEN` with its own tablespace
+  `DBXT_LOADGEN` (automatic storage, autoresize). Every table is created `in DBXT_LOADGEN`.
+- If the database has no USER temporary tablespace (a new database has none), `DBXT_LOADGEN_TMP` is created: the
+  declared global temporary table of `p_temp_report` needs one.
+- Connections set `currentSchema` and `currentFunctionPath` (JCC properties), so unqualified tables and procedure calls
+  resolve to the schema.
+- Statistics: `RUNSTATS ... WITH DISTRIBUTION AND INDEXES ALL` through `SYSPROC.ADMIN_CMD`.
+- No logins, no role (see [What the DBMS must allow](#what-the-dbms-must-allow)).
+
+**Existing database (`--use-existing-db`)**: no options are changed. The install prints what it found:
+- SQL Server: the recovery model and whether Query Store is on. With `FULL` recovery the log grows unless you take log backups.
+- ASE: whether `trunc log on chkpt` is on. If it is off, the log fills up unless you dump it.
+- Oracle: the "database" is a schema (user) you created (`-D MY_SCHEMA`); the tables go to its default tablespace, so it needs
+  a quota there. The default tablespace and account status are printed.
+- DB2: the "database" is a schema you created (`-D MY_SCHEMA`); the tables go to the tablespace DB2 picks (no `IN` clause).
+
+### Sybase ASE: where the database goes
+
+`CREATE DATABASE` on ASE needs device space. Pick one:
+
+1. **No option: the load generator creates its own devices next to the existing ones** (the default):
+   ```bash
+   loadgen.sh install -t ase -S asehost
+   ```
+   It reads `master..sysdevices` (disk devices with a file; dump devices and raw partitions such as `/dev/...` are skipped):
+   - the **data** device goes to the directory that holds most data devices,
+   - the **log** device goes to the directory that holds most log devices: a device or file name with `log`, `logs`,
+     `xlog`, `tlog` or `wal` as its own word part, optionally followed by `dev`/`device` (`pubs_log_1`, `tlog01`,
+     `sales_xlog`, `logdev`; not `syslogs` or `catalog`). No log devices: next to the data device.
+   - User devices count first; `master`, `sysprocsdev`, `systemdbdev`, `sybsysdb`, `sybmgmtdev`, `sybsecurity` and
+     tempdb devices are only used when there are no others.
+   - The file extension is the one most used by those data devices (`.dat`, `.dev`...).
+
+   The choice is printed and written to the journal. If there is **no** file-based device (only raw partitions),
+   the install stops before creating anything, lists the devices it found and what to do (options 2-5).
+   It runs `disk init` for `dbxt_loadgen_data` and `dbxt_loadgen_log` (files `dbxt_loadgen_data.dev` and `dbxt_loadgen_log.dev`; when the other device files contain `@@servername`, like `SYBASE.pml_data_1.dev`, the server name goes first: `SYBASE.dbxt_loadgen_data.dev`). `uninstall` drops
+   the devices with `sp_dropdevice <name>, dropfile`, so ASE deletes the files too. If that fails (an older ASE),
+   it drops only the device and warns that the file is still on the ASE host, with the path to remove by hand.
+   It does not check the free space in that directory: `disk init` fails (and the install stops) if it is too small.
+2. **Own devices in a directory you choose** (both data and log there): `--ase-device-dir /sybase/devices`.
+   The directory is **on the ASE host**.
+   (From Git Bash on Windows use `MSYS_NO_PATHCONV=1`, otherwise `/sybase/...` is turned into a Windows path.)
+3. **Use devices that already have free space**: `--ase-data-dev <dev> [--ase-log-dev <dev>]`.
+4. **Use the default device(s)**: `--ase-data-dev default` (`create database ... on default`). Often too small on a test box.
+5. **Create the database yourself** and install into it (next section). Good when the DBA wants control over devices and sizes.
+
+### Installing into a database you created (`--use-existing-db`)
+
+```bash
+# you create the database first, then:
+loadgen.sh install -t ase -S asehost -D my_test_db --use-existing-db
+```
+
+- The database must exist, and must not already have tables/procedures with the load generator names
+  (Postgres: must not have a schema `dbxt`). Otherwise the install stops before changing anything.
+- Its options are not changed (see above).
+- The marker table records `databaseCreated = false`, so **`uninstall` will never drop that database**: it drops only
+  the load generator tables and procedures (Postgres: the schema `dbxt`; Oracle: the tables with `purge`), the database users, and the logins.
+- Remember `-D my_test_db` on every later command (`run`, `status`, `uninstall`).
+
+### After an upgrade of the load generator
+
+Tables, indexes and procedures are created at `install` only. When a new version changes them (e.g. 2026-11-07:
+`ix_orders_status` on `(status, order_ts)`, `p_rbar_price_adjust` with `@max_rows`, `p_temp_report` that recompiles),
+an existing install keeps the old ones until `uninstall` + `install`. `run` still works on an old install
+(`rbar_cursor` then calls the procedure without a limit and says so in the journal).
+
+### Getting the logins back (`--logins-only`)
+
+```bash
+loadgen.sh install -t sqlserver -S myhost --logins-only
+```
+
+Creates (or resets the passwords of) the logins of an existing install, and makes them users in the database again.
+Use it after `uninstall --keep-database`, or when the password file was lost. The number of logins comes from the
+install info (`-L` overrides).
+
+---
+
+## 3. Running it
+
+```bash
+loadgen.sh run -t <dbms> -S <host[:port]> [--duration 15m|15m-45m|1h|90s] [--intensity low|medium|high]
+               [--threads N] [--scenarios a,b] [--exclude a,b] [--no-problems] [-c my.properties]
+```
+
+### Modes
+
+| Mode | What it does | Rights |
+|---|---|---|
+| `install` | Logins, database, tables, data (see above) | admin |
+| `run` | Runs the workload for the duration, then stops by itself | the `dbxt_user_#` logins |
+| `status` | Install info, row counts, the skew, the last 10 runs | admin, else `dbxt_user_1` |
+| `uninstall` | Drops the database and/or the logins (see below) | admin |
+| `journal` | Prints a journal file in readable form (default: the newest; `--name` for one server, `--file` for a given file) | none |
+| `scenarios` | Lists all scenarios with their weight / interval | none |
+| `compare` | What did DbxTune see of a run: journal vs DbxCentral alarms + graphs, writes `<journal>.compare.md` (see section 9) | none (reads DbxCentral) |
+
+### Duration
+
+- `15m`, `90s`, `1h`: a fixed time.
+- `15m-45m`: a random time in that range (each cron run gets a different length).
+- The run **always ends**: at the end the workers stop; anything still running gets 60 more seconds, then a watchdog
+  cancels the statements and closes the connections. Ctrl-C / SIGTERM stops the same way.
+- The start line shows the planned end, and every minute it prints how far it is
+  (`Run progress: 40% done, 9 min 00 s left, ends ~17:42:10; 1234 executions, 3 errors`). The stop can take up to 60 s more.
+
+### Intensity
+
+| Intensity | OLTP threads | OLAP threads | Think time between units of work |
+|---|---|---|---|
+| `low` (default) | 4 | 1 | 200-1000 ms |
+| `medium` | 10 | 2 | 50-500 ms |
+| `high` | 25 | 4 | 0-100 ms |
+
+- OLAP threads wait `think x 5 + 2 s` between queries.
+- The intensity changes **only** the normal traffic (threads + think time). The **problem scenarios are the same** at
+  every intensity (same scenarios, `everyMinutes`, durations; they open their own sessions), and so are the logins:
+  all sessions share the `dbxt_user_1..N` pool made at `install` (`-L`), round robin.
+- `--threads N` overrides the number of OLTP threads. Every value can be set in a properties file:
+  `intensity.<low|medium|high>.oltpThreads`, `.olapThreads`, `.thinkMinMs`, `.thinkMaxMs`.
+- Threads start spread over the first minute (ramp-up).
+- Runs of 15 minutes or more get one busier 5 minute **wave** at a random time (think time x 0.3), so the graphs are not flat.
+- Numbers seen on Docker (`small`): low about 4 units of work/s, medium about 30/s.
+- Seen on a 2-core SQL Server 2025 VM, size `large`, 30 minutes (2026-11-07): `low` ~7 800 units of work, DbxTune
+  samples median 1.6 s (max 9 s); `medium` ~14 900 units, CPU at ~100%, samples median 11.6 s (max 37 s, so ~60 s
+  between samples). The CPU then goes to the deliberate flaws (`stock_check` scans `stock`) and the OLAP queries.
+  On small test servers use `low`, or expect slow samples.
+
+### How a run uses its time (scheduling)
+
+A run does **not** go through the scenarios in order (#1, #2, #3, then start over), and `--duration` is **not**
+divided between them. The duration only says when the run stops. Two things run side by side for the whole time:
+
+**1. Worker threads: random pick by weight (OLTP, OLAP, BATCH)**
+- The OLTP threads pick from the OLTP scenarios; the OLAP threads pick from the OLAP **and** BATCH scenarios.
+- Each thread loops: pick a scenario at random by weight -> run it -> wait the think time -> pick again, until the run ends.
+- A weight is a share: in the OLTP pool `new_order` (30) is picked about 30 % of the time, `delivery` (5) about 5 %
+  (the default OLTP weights add up to 95). So the **mix is the same** for a 5 minute and a 45 minute run; a longer run
+  just does more of it.
+- Each run is different (the run is not seeded; `--seed` only applies to the data at `install`).
+
+**2. Problem scheduler: on a clock, every N minutes**
+- Each problem scenario has `everyMinutes`. Its first start is at a **random time within its first interval** (after the
+  ramp-up), then every N minutes after that. So the problems don't all fire at the same time, and a cron run every day
+  gets them at different times.
+- A problem runs in its own thread with its own connections, **next to** the normal traffic.
+- It is skipped when the same problem is still running from last time, and nothing new starts in the last 30 seconds.
+  A problem that is still running at the end of the run is cut short (the journal has its real start/end).
+- How long a problem lasts: see [Problems run a bit longer than the setting](#problem-scenarios-each-runs-every-n-minutes).
+
+**3. Shape over time**
+- **Ramp-up**: the threads start one by one over the first `min(60 s, duration / 5)`.
+- **Wave** (runs of 15 minutes or more): one busier 5 minute period at a random time, think time x 0.3.
+- **End**: workers stop at the end of the duration; anything still running gets 60 more seconds, then the watchdog
+  cancels it.
+
+**What that means for different `--duration` values** (default settings):
+
+| `--duration` | OLTP/OLAP traffic | Problems |
+|---|---|---|
+| `1m`-`5m` | Ramp-up is 12-60 s, then the normal mix. No wave. | **Few or none**: a problem every 10 min has its first start anywhere in 1:00-11:00, so it is often after the end. Use `--scenarios` + a low `everyMinutes` to test one problem (see below). |
+| `15m` | Normal mix, one wave. | Every problem with `everyMinutes` up to ~13 fires at least once; the ones every 4-7 min fire 2-4 times. `long_tran` (every 15) fires in most runs, but not all. |
+| `15m-45m` (cron) | Normal mix, one wave at a random time. | Each problem fires about `duration / everyMinutes` times (e.g. 30 min: `n_plus_one` ~6, `blocking` ~3, `long_tran` 1-2), at different times every day. |
+| `1h` and longer | Normal mix, still **one** wave. | Every problem fires about `60 / everyMinutes` times. |
+
+**What you can change** (on the command line, or in a properties file: `-c my.properties`,
+`~/.dbxtune/loadgen/loadgen.properties`, `${DBXTUNE_HOME}/conf/loadgen.properties`):
+
+| You want | Setting |
+|---|---|
+| more or less load | `--intensity low\|medium\|high`, `--threads N` (OLTP threads), `intensity.<level>.oltpThreads` / `olapThreads` / `thinkMinMs` / `thinkMaxMs` |
+| a different mix | `scenario.<name>.weight=N` (`0` = never) |
+| only some scenarios | `--scenarios a,b`, `--exclude a,b`, `scenario.<name>.enabled=false` |
+| problems more or less often | `scenario.<name>.everyMinutes=N` (`0` = never), `--no-problems` |
+| problems longer/shorter | `scenario.<name>.holdSeconds` / `durationSeconds`, `problem.extraSeconds` |
+| test one problem in a short run | e.g. `--duration 5m --scenarios new_order,blocking` with `scenario.blocking.everyMinutes=1` in a `-c` file: it starts within the first ~2 minutes and then again every minute (when the last one is done) |
+
+Fixed today (no setting): the ramp-up time, the wave (one, 5 minutes, x 0.3, only for runs of 15 minutes or more),
+the OLAP think time (`think x 5 + 2 s`), the 30 second "no new problem" window at the end, and the random first start
+of the problems.
+
+### Choosing scenarios
+
+- `--scenarios new_order,payment,blocking` runs only those.
+- `--exclude rbar_cursor,conn_churn` skips those.
+- `--no-problems` runs no problem scenarios (only "clean" traffic).
+- In a properties file (`-c`, or `~/.dbxtune/loadgen/loadgen.properties`, or `${DBXTUNE_HOME}/conf/loadgen.properties`):
+  ```properties
+  scenario.blocking.enabled=false
+  scenario.new_order.weight=50
+  scenario.deadlock.everyMinutes=3
+  scenario.blocking.holdSeconds=180
+  intensity.low.oltpThreads=6
+  ```
+  `conf/loadgen.properties` lists every setting with its default.
+
+### Cron examples
+
+```cron
+# Every day 02:10: 15-45 minutes of gentle traffic on three servers (one after another)
+10 1 * * * /opt/dbxtune/0/bin/loadgen.sh run -t sqlserver -S sqlhost      --duration 15m-45m --intensity low    >> /tmp/loadgen_sqlhost.out 2>&1
+10 2 * * * /opt/dbxtune/0/bin/loadgen.sh run -t ase       -S asehost:5000 --duration 15m-45m --intensity low    >> /tmp/loadgen_asehost.out 2>&1
+10 3 * * * /opt/dbxtune/0/bin/loadgen.sh run -t postgres  -S pghost       --duration 30m     --intensity medium >> /tmp/loadgen_pghost.out  2>&1
+```
+
+Avoid 04:00-06:00 if DbxCentral runs its nightly H2 compaction then.
+
+### Output
+
+- A summary per scenario at the end (count, errors, avg/p95/max ms, the last error), on stdout and in the log.
+- Log file: `~/.dbxtune/log/DbxLoadGen.<name>.log`.
+- Journal: `~/.dbxtune/loadgen/journal/<name>/<time>_run_<runId>.jsonl` (removed after `--journal-keep-days`, default 30).
+- The run is also saved in the table `dbxt_loadgen_runlog` (`status` shows the last 10).
+- Exit code: `0` OK (also when single statements failed), `1` usage error, `2` not installed / can't connect /
+  already installed, `3` failed.
+
+---
+
+## 4. Uninstall
+
+```bash
+loadgen.sh uninstall -t <dbms> -S <host[:port]> [-U admin] [--keep-database | --keep-logins] [--force]
+```
+
+| Command | Drops | Keeps |
+|---|---|---|
+| `uninstall` | the database (or, if it was a `--use-existing-db` install, only our tables/procedures/schema), the database users, the logins, their passwords in the password file, ASE devices the load generator made (`dbxt_loadgen_data`, `dbxt_loadgen_log`). Oracle: the schema owner (`drop user ... cascade`), the tablespace `including contents and datafiles`, the users `DBXT_USER_N` and the role `DBXT_LOADGEN_ROLE`. MySQL: the database, the users `'dbxt_user_N'@'%'` and the role `dbxt_loadgen_role`. DB2: every procedure and table of the schema, the schema, the tablespaces `DBXT_LOADGEN` and `DBXT_LOADGEN_TMP` (if the install made it); the run's sessions (client user `dbxt_user_N`) are forced off first | a database we did not create |
+| `uninstall --keep-database` | the logins (and their users/aliases in the database, and their passwords) | the database with all data. `run` refuses until `install --logins-only` |
+| `uninstall --keep-logins` | the database / our objects | the logins and their passwords (SQL Server/ASE: default database set to `master`). A later `install` reuses them |
+| `uninstall --force` | also without the marker table: logins named `dbxt_user_<number>`, and the database only if it is named `dbxt_loadgen` | anything else |
+
+Safety rules:
+- Without `--force`, nothing is dropped unless the database has the marker table `dbxt_loadgen_info`.
+- Only logins named `dbxt_user_<number>` are ever dropped.
+- A database that the load generator did not create is never dropped.
+- A second `uninstall` says there is nothing to uninstall (exit code 2).
+- ASE: the device files are deleted with `sp_dropdevice ..., dropfile`; if ASE can't do that, a warning gives the paths to remove by hand on the ASE host.
+- Sessions of the load generator logins are killed before their database/logins are dropped (Oracle: `alter system kill session ... immediate`,
+  also sessions whose `current_schema` is the load generator schema).
+- Oracle: checked after `uninstall` on 21c XE and 23ai Free: no `DBXT%` user, role, tablespace, datafile (also not on disk) or recycle bin entry is left.
+- MySQL (8.0, 8.4, 9.7) and DB2 11.5: checked after `uninstall`: no `dbxt%` database/schema, user, role or tablespace is left.
+
+---
+
+## 5. What it does
+
+A small web shop, used in two ways:
+
+**OLTP "shop"** - `customer`, `product`, `category`, `warehouse`, `stock`, `orders`, `order_line`, `payment`,
+`shipment`, `audit_log` (append only), `counter_table` (next-id counters), `session_event` (wide rows with a LOB).
+
+**DW star schema** - `dim_date`, `dim_customer`, `dim_product`, `fact_sales` (loaded from the OLTP tables by an ETL scenario).
+
+### The tables (ER diagrams)
+
+There are **no foreign key constraints** in the database; the lines below are the logical relations the workload
+joins on. `PK` = primary key, `FK` = logical foreign key (no constraint). Types are shown as on Postgres
+(`text` is `varchar(max)` on SQL Server and `text` on ASE).
+
+**OLTP "shop"**
+
+```mermaid
+erDiagram
+    category      ||--o{ category      : "parent_id"
+    category      ||--o{ product       : "category_id"
+    customer      ||--o{ orders        : "customer_id"
+    customer      ||--o{ session_event : "customer_id"
+    warehouse     ||--o{ orders        : "warehouse_id"
+    warehouse     ||--o{ stock         : "warehouse_id"
+    product       ||--o{ stock         : "product_id"
+    product       ||--o{ order_line    : "product_id (no index)"
+    orders        ||--|{ order_line    : "order_id"
+    orders        ||--o{ payment       : "order_id"
+    orders        ||--o| shipment      : "order_id"
+
+    category {
+        int     category_id PK
+        varchar name
+        int     parent_id   FK
+    }
+    customer {
+        int       customer_id  PK
+        varchar   first_name
+        varchar   last_name
+        varchar   email        "no index"
+        varchar   phone
+        varchar   city
+        char      country_code
+        varchar   segment
+        char      vip_flag     "99% NULL"
+        timestamp created_ts
+        varchar   notes
+    }
+    product {
+        int       product_id  PK
+        int       category_id FK
+        varchar   name
+        varchar   description
+        decimal   price
+        varchar   status      "99% ACTIVE"
+        timestamp created_ts
+    }
+    warehouse {
+        int     warehouse_id PK
+        varchar name
+        varchar city
+    }
+    stock {
+        int       warehouse_id PK,FK
+        int       product_id   PK,FK
+        int       qty
+        int       reserved
+        timestamp last_upd_ts
+    }
+    orders {
+        int       order_id     PK
+        int       customer_id  FK "customer 1 has ~30%"
+        timestamp order_ts
+        varchar   status
+        decimal   total_amount
+        int       warehouse_id FK
+        varchar   ship_city
+        varchar   comment_txt
+    }
+    order_line {
+        int     order_id   PK,FK
+        int     line_no    PK
+        int     product_id FK "product 1 on ~20%"
+        int     qty
+        decimal price
+    }
+    payment {
+        int       payment_id PK
+        int       order_id   FK
+        timestamp pay_ts
+        decimal   amount
+        varchar   method
+    }
+    shipment {
+        int       order_id PK,FK
+        timestamp ship_ts
+        varchar   carrier
+        varchar   status
+    }
+    session_event {
+        bigint    event_id    PK
+        int       customer_id FK
+        timestamp event_ts
+        varchar   event_type
+        text      payload     "LOB, 1-3 KB"
+    }
+```
+
+**DW star schema** (`fact_sales` is filled from `orders` + `order_line` by `etl_fact_sales`)
+
+```mermaid
+erDiagram
+    dim_date     ||--o{ fact_sales : "date_key"
+    dim_customer ||--o{ fact_sales : "customer_key"
+    dim_product  ||--o{ fact_sales : "product_key"
+
+    dim_date {
+        int     date_key PK "yyyymmdd"
+        date    cal_date
+        int     cal_year
+        int     cal_quarter
+        int     cal_month
+        varchar month_name
+        int     weekday
+    }
+    dim_customer {
+        int     customer_key PK "= customer_id"
+        varchar segment
+        char    country_code
+        varchar city
+    }
+    dim_product {
+        int     product_key PK "= product_id"
+        varchar category_name
+        varchar product_name
+    }
+    fact_sales {
+        int     order_id     "no primary key"
+        int     line_no
+        int     date_key     FK
+        int     customer_key FK
+        int     product_key  FK
+        int     qty
+        decimal amount
+    }
+```
+
+**Tables without relations**
+
+| Table | What it is |
+|---|---|
+| `audit_log` | Append only, **no primary key** (`log_ts`, `login_name`, `action`, `object_id`, `details`); purged by `purge_audit`. |
+| `counter_table` | One row per counter (`name` PK, `next_val`): the next order/payment/event id. Every new order updates the same row (hot spot). |
+| `etl_watermark` | The last `order_id` loaded into `fact_sales`. |
+| `dbxt_loadgen_info` | The install marker (`k`, `v`): version, size, seed, install time, logins. `uninstall` refuses without it. |
+| `dbxt_loadgen_runlog` | One row per run: start/end, intensity, threads, executions, errors, summary (`status` shows the last 10). |
+
+The indexes (and the duplicate/overlapping/unused ones on purpose) are in [section 7](#7-the-deliberate-design-flaws).
+
+The data is skewed on purpose: customer 1 owns ~30% of all orders, product 1 is on ~20% of the order lines,
+~99% of the products are `ACTIVE`, ~99% of `customer.vip_flag` is NULL. Orders are spread over the last 730 days,
+and the order id grows with the order time.
+
+On this data the load generator runs:
+- **OLTP**: short transactions (new orders, payments, lookups) - most of the load.
+- **OLAP**: star joins, top-N, window functions, a report straight on the OLTP tables, and an ETL load.
+- **BATCH**: a big purge, statistics updates, a bulk load.
+- **PROBLEMS**: every N minutes something that a DBA would want to be told about.
+
+---
+
+## 6. How it works
+
+- **Java**, in the DbxTune code base (`com.dbxtune.loadgen`). It uses the JDBC drivers and the connection code
+  (`DbxConnection`) DbxTune already has. The install SQL is in `loadgen/sql/<vendor>_tables.sql` and `<vendor>_indexes.sql`;
+  the workload SQL is written in each scenario class (`loadgen/scenario/*.java`), with the vendor differences in-line.
+- **Workers**: OLTP and OLAP threads each keep one connection, as `dbxt_user_N` (the logins are used round robin).
+  Each picks the next scenario by weight, runs it, and waits the think time. A lost connection is reconnected after 5 s,
+  so a server restart does not end the run.
+- **Problem scheduler**: each problem scenario runs every N minutes, starting at a random offset in its first interval.
+  It opens its own connections and runs in its own thread. The same problem never runs twice at the same time,
+  and nothing new starts in the last 30 seconds.
+- **Names you see in DbxTune**:
+  - login: `dbxt_user_1..N`;
+  - program/application name: `dbxt-loadgen:oltp`, `dbxt-loadgen:olap`, or `dbxt-loadgen:<problem>` (e.g. `dbxt-loadgen:blocking`);
+  - every statement has a comment `/* dbxt:<scenario> */` right after its first word (`select /* dbxt:payment */ ...`),
+    so the scenario is visible in the SQL text (the program name can't change per scenario on a connection).
+    Not first in the text: SQL Server keeps only the statement in `dm_exec_query_stats` / Query Store, which starts
+    after a leading comment. Exceptions: procedure calls (`{call p_...}`), and the id allocation, which is tagged
+    `/* dbxt:next_val */`.
+- **The current operation** is also set in a session field that every monitor can see, so a DbxTune row
+  (active statement, blocking, open transaction...) tells which scenario, and for problems which role, the session has
+  right now. It is set when the scenario changes (one extra short round trip, not counted in the statistics):
+
+  | DBMS | How | Where you see it | Value |
+  |---|---|---|---|
+  | SQL Server | `set context_info 0x...` | `sys.dm_exec_sessions` / `sys.dm_exec_requests` `.context_info`; SqlServerTune column `context_info_str` (CmActiveStatements, CmWho, CmSessions...) | `dbxt:new_order`, `dbxt:blocking:holder` |
+  | ASE | `set clientname '...'` (max 30 chars) | `sysprocesses.clientname`, `monProcessLookup.ClientName`; AseTune column `ClientName` (CmActiveStatements, CmProcessActivity) | `dbxt:new_order`, `dbxt:blocking:waiter` |
+  | Postgres | `set application_name = '...'` (max 63 chars) | `pg_stat_activity.application_name`; PostgresTune CmActiveStatements | `dbxt-loadgen:oltp:new_order`, `dbxt-loadgen:blocking:holder` |
+  | Oracle | `begin dbms_application_info.set_module(?, ?); dbms_application_info.set_client_info(?); end;` (binds: one cursor for all values) | `V$SESSION.MODULE` = the app name, `ACTION` = the operation (max 32 chars), `CLIENT_INFO` = `dbxt:<operation>` (max 64); OracleTune CmActiveStatements (MODULE, ACTION, CLIENT_INFO), CmSessions (MODULE, ACTION). `PROGRAM` is the app name (JDBC property `v$session.program`) | `dbxt:new_order`, `dbxt:blocking:holder` |
+
+  | MySQL | `set @dbxt_operation = '...'` (no field that can be changed after login is shown in the process list) | `performance_schema.user_variables_by_thread` (MySqlTune doesn't read it today); `program_name` = the app name in `performance_schema.session_connect_attrs` (fixed at connect). The `/* dbxt:<scenario> */` SQL comment (`PROCESSLIST_INFO`) is the practical way | `dbxt:new_order` |
+  | DB2 LUW | `conn.setClientInfo("ClientAccountingInformation", ...)` (sent with the next statement, no round trip of its own) | `MON_GET_CONNECTION.CLIENT_ACCTNG`; `CLIENT_APPLNAME` = the app name, `CLIENT_USERID` = the login `dbxt_user_N` (JCC properties at connect) | `dbxt:new_order` |
+
+  Problem sessions get the role after the scenario: `holder`/`waiter` (blocking), `A_1_then_2` (deadlock),
+  `open_transaction` (long_tran)... The journal's `problem` events have the exact value per session (`operation`),
+  so it can be matched with what DbxTune recorded. Install/uninstall don't set it.
+- **Oracle connections**: `jdbc:oracle:thin:@//host:port/service`; `oracle.jdbc.J2EE13Compliant=true` (TIMESTAMP columns come back as
+  `java.sql.Timestamp`); the session id in the journal is `SYS_CONTEXT('USERENV','SID')` (OracleTune's `SID` column).
+  The `p_order_status` rows come back as an implicit result set (`DBMS_SQL.RETURN_RESULT`), like a T-SQL procedure's.
+- **MySQL connections**: `jdbc:mysql://host:port/db`; the session id in the journal is `CONNECTION_ID()` (= `PROCESSLIST_ID`).
+  Prepared statements are client side (the Connector/J default), so the server sees the values as literals; digests normalize them.
+- **DB2 connections**: `jdbc:db2://host:port/database` with `currentSchema` / `currentFunctionPath` set to the schema; the session id
+  in the journal is `MON_GET_APPLICATION_HANDLE()` (= `APPLICATION_HANDLE`).
+- **Ids**: new orders/payments get their id from `counter_table` in a short transaction of their own.
+- **Statement timeouts**: 60 s for OLTP, 600 s for OLAP/batch.
+- **Journal + statistics**: every statement is timed and counted per scenario and minute; see [section 9](#9-the-journal-comparing-with-dbxtune).
+
+---
+
+## 7. The deliberate design flaws
+
+The install journal lists these as `object` events with a `flaw` text (the "answer key", e.g. for Index Analysis):
+
+| Object | Flaw | Who hits it |
+|---|---|---|
+| `stock` | Primary key `(warehouse_id, product_id)`: lookups by product only scan the table | stock_check, rbar_cursor |
+| `order_line` | No index on `product_id` (a foreign key column) | stock_check, order_report |
+| `customer` | No index on `email` | customer_search, non_sargable |
+| `audit_log` | Heap, no primary key, append only, big deletes | new_order, payment, purge_audit, long_tran |
+| `counter_table` | One row per counter that every transaction updates | all inserts, hot_spot |
+| `fact_sales` | Heap without a primary key | etl_fact_sales, the OLAP queries |
+| `ix_orders_cust_dup` | Exact duplicate of `ix_orders_cust` (Oracle and DB2 refuse an exact duplicate: `(customer_id, order_id)`, still redundant) | Index Analysis |
+| `ix_orders_cust_ts` | Overlapping: `ix_orders_cust` is its left prefix | Index Analysis |
+| `ix_orders_ship_city` | Never used by the workload | Index Analysis (unused index) |
+| `ix_customer_phone` | VARCHAR column searched with NVARCHAR (SQL Server) / a cast (Postgres) / a function (ASE) / a NUMBER bind (Oracle: `TO_NUMBER(phone) = :1`) / a number (MySQL, DB2: the column is converted) | non_sargable |
+| `ix_customer_vip` | 99% NULL | - |
+| `ix_product_status` | 99% the same value | - |
+| `p_order_status` | Parameter sniffing: customer 1 has ~30% of the orders, everyone else a few | order_status |
+| `p_rbar_price_adjust` | Row by row with a cursor, plus a `stock` scan per row (at most `@max_rows` rows) | rbar_cursor |
+| `p_temp_report` | A select on a temp table, then an index on it, then the same select again (SQL Server/ASE: a recompile; Postgres: catalog churn). Oracle: a private temporary table created per call with dynamic SQL (a T-SQL habit): ~4 hard parses per call. MySQL: `create temporary table` per call. DB2: a declared global temporary table per call (statements on it are compiled at run time) | temp_recompile |
+
+Over time the data also drifts on purpose: `bulk_events` adds rows without updating statistics (stale statistics),
+`purge_audit` deletes in big chunks, and `fact_sales` grows with the ETL.
+
+---
+
+## 8. The scenarios
+
+`loadgen.sh scenarios` prints this list with the current defaults.
+
+### OLTP (run by the OLTP threads, picked by weight)
+
+| Scenario | Weight | What it does |
+|---|---|---|
+| `new_order` | 30 | One transaction: insert an order with 1-5 lines, read each price, update stock (products in id order, so these never deadlock each other), update the total, insert an audit row; every 20th also inserts a ~2 KB `session_event` (LOB). 5% of orders are for customer 1, 20% of lines are product 1. |
+| `payment` | 20 | Pay one of the newest orders: `NEW -> PAID`, insert payment + audit row. |
+| `order_status` | 20 | A customer's order history: half through the procedure `p_order_status` (parameter sniffing), half with plain SQL (top 10 orders + the lines of the newest). |
+| `stock_check` | 10 | Stock for a product in all warehouses (a scan: the PK starts with warehouse_id); every 5th also the sold quantity of the product (a scan of `order_line`). |
+| `customer_search` | 10 | 70%: last name prefix search (index); 30%: e-mail lookup (no index: a scan). |
+| `delivery` | 5 | Ship the 10 oldest PAID orders, one transaction per order (`PAID -> SHIPPED` + shipment row); every 10th run refills low stock in a warehouse. |
+
+### OLAP and BATCH (run by the OLAP threads, picked by weight)
+
+| Scenario | Kind | Weight | What it does |
+|---|---|---|---|
+| `sales_by_month` | OLAP | 30 | Star join `fact_sales` x `dim_date` x `dim_product` for one year, grouped per month and category. |
+| `top_customers` | OLAP | 25 | Top 20 customers by amount in a random 90 day window (`count(distinct)`, order by the sum). |
+| `rolling_window` | OLAP | 20 | Daily sales with a 7 day moving average for one quarter. SQL Server/Postgres: a window function; ASE (no window functions): a correlated subquery. |
+| `order_report` | OLAP | 15 | Reporting on the OLTP tables (mixed workload): last 30 days per status and warehouse, and the 10 best selling products. |
+| `etl_fact_sales` | OLAP | 10 | Loads orders above the watermark into `fact_sales` (insert-select of up to 5000 orders), moves the watermark in the same transaction. |
+| `purge_audit` | BATCH | 3 | Deletes the oldest 30 days of `audit_log` in ONE statement (big transaction, log growth). Keeps at least one year. At most `scenario.purge_audit.maxRowsPerDelete` (200 000) rows per delete: from size xl it deletes in chunks. |
+| `update_stats` | BATCH | 2 | Updates statistics on one busy table (`update statistics` / `analyze`). |
+| `bulk_events` | BATCH | 3 | Inserts 500 `session_event` rows in one transaction, no statistics update (stale statistics over time). |
+
+### PROBLEM scenarios (each runs every N minutes)
+
+For each one the journal has a `problem` event with the sessions involved, the SQL, the result, and an **expected**
+block (which CMs and alarms should show it). The expected lists are hints for the comparison, not promises.
+
+**Problems run a bit longer than the setting.** Every `holdSeconds` / `durationSeconds` gets `problem.extraSeconds`
+(default 35 = one more DbxTune sample of 30 s + ~5 s to take it) plus 0-9 s random on top. So a problem never stops at
+a round number, and it is still active in the sample after the one that first saw it. The times below include this
+(60 s -> ~100 s, 120 s -> ~160 s, 300 s -> ~340 s); the journal has the real value. `problem.extraSeconds=0` turns it off.
+
+#### `blocking` - every 10 min
+A holder updates one `stock` row and keeps the transaction open, **idle**, for `holdSeconds` (default 120, ~160 s with the extra time);
+3 waiters (`waiters`) try to update the same row and wait. OLTP statements that scan `stock` or touch the same row
+also wait, so the real chain is longer than the 3 waiters.
+- SQL Server: CmActiveStatements, CmWaitingTasks, CmSummary, CmWho; `AlarmEventBlockingLockAlarm` (60 s by default),
+  `AlarmEventHoldingLocksWhileWaitForClientInput` (180 s by default, so not with the default ~160 s).
+- ASE: CmBlocking, CmActiveStatements, CmSummary, CmLocks; `AlarmEventBlockingLockAlarm`, and `AlarmEventLongRunningTransaction`
+  in the load database (the holder's open transaction).
+- Postgres: CmPgBlockingLocks, CmActiveStatements, CmPgLocks, CmSummary; the holder is `idle in transaction`.
+- Oracle (seen 2026-11-09, 23ai Free + 21c XE, size small): CmActiveStatements, CmLocks, CmSummary (BlockingLocksGraph), waits on `enq: TX - row lock contention`;
+  `AlarmEventBlockingLockAlarm` and `AlarmEventOraBlockingSession` (~70 s after the start). Holding locks while waiting for client: 180 s, so not expected.
+- With 30 s samples, a hold under ~90 s can be over before the alarm threshold is seen; keep `holdSeconds` at 120 or more.
+
+#### `deadlock` - every 7 min
+Session A updates stock row 1 then row 2; session B updates row 2 then row 1. One of them is the deadlock victim
+(SQL Server/ASE error 1205, Postgres SQLState 40P01, Oracle ORA-00060: only the victim's statement is rolled back, the
+scenario then rolls back its transaction; MySQL error 1213, DB2 SQL0911N reason code 2). The journal says which spid was the victim.
+- SQL Server: CmSummary, CmPerfCounters; `AlarmEventDeadlock`.
+- ASE: CmDeadlock, CmSummary, CmSysmon (no deadlock alarm known).
+- Postgres: CmPgDatabase `deadlocks` (no deadlock alarm known).
+- Oracle (seen 2026-11-09, 23ai Free + 21c XE, size small): Oracle writes `ORA-00060: Deadlock detected` to the alert log: CmErrorLog raises
+  `AlarmEventErrorLogEntry` (extraInfo `ORA-00060`), for the first deadlock; it stays active for the next ones.
+
+#### `long_tran` - every 15 min
+Inserts one `audit_log` row and keeps the transaction open, idle, for `holdSeconds` (default 300, ~340 s with the extra time; skipped when less
+than 60 s of the run is left). The log can't be truncated past it.
+- SQL Server: CmOpenTransactions, CmDatabases, CmSummary; `AlarmEventLongRunningTransaction` (60 s), holding locks while waiting for client (180 s).
+- ASE: CmOpenDatabases, CmSummary; `AlarmEventLongRunningTransaction` (60 s).
+- Postgres: CmActiveStatements, CmPgActivity; the open transaction alarm defaults to 30 minutes, so none is expected.
+- Oracle (seen 2026-11-09, 23ai Free + 21c XE, size small): CmActiveStatements (INACTIVE, HasOpenTxn), CmSummary OldestTranInSecGraph (337 s);
+  `AlarmEventHoldingLocksWhileWaitForClientInput` (180 s). LongRunningTransaction defaults to 30 minutes on Oracle, so none.
+
+#### `sort_spill` - every 10 min
+A big `DISTINCT` over `orders x order_line` with too little memory:
+SQL Server `option (max_grant_percent = 0)`, Postgres `set local work_mem = '64kB'`, ASE a work table in tempdb,
+Oracle `alter session set workarea_size_policy = manual` + `sort_area_size`/`hash_area_size` = 64 KB,
+MySQL session `tmp_table_size` = 1 KB, `max_heap_table_size` = 16 KB, `sort_buffer_size` = 32 KB (seen on 8.4: `Created_tmp_disk_tables`,
+`Sort_merge_passes` up), DB2 the plain query (`SORTHEAP` is a database setting, there is no session one).
+- SQL Server: CmTempdbUsage, CmTempdbSpidUsage, CmMemoryGrants, CmExecQueryStats.
+- ASE: CmTempdbActivity, CmActiveStatements, CmSqlStatement; `AlarmEventLongRunningTransaction` in tempdb (the sort is an
+  open transaction `$sort_local`) when the sort runs over 60 s (size large).
+- Postgres: CmPgDatabase `temp_files/temp_bytes`, CmPgStatements `temp_blks_written`.
+- Oracle (seen 2026-11-09, 23ai Free + 21c XE, size small): CmTempSegUsage (TEMP in use 1 -> 44-53 MB, the session's row), CmActiveStatements; ~20 s per query.
+
+#### `literal_sql` - every 6 min, ~100 s
+About 20 statements per second with literals instead of parameters (joins, so SQL Server can't auto-parameterize them).
+- SQL Server: CmPlanCacheHistory, CmPerfCounters (compilations/sec), CmExecQueryStats, CmMemoryClerks.
+- ASE: CmStatementCache, CmStmntCacheDetails, CmSqlStatement (unless `enable literal autoparam` is on).
+- Postgres: CmPgStatements shows ONE normalized entry with a high call count.
+- Oracle (seen 2026-11-09, 23ai Free + 21c XE, size small): `cursor_sharing` stays EXACT: CmSysStat `parse count (hard)` ~0.5 -> 25-30/s,
+  a new SQL_ID per statement in CmSqlStats (one FORCE_MATCHING_SIGNATURE).
+
+#### `non_sargable` - every 4 min, ~100 s
+Two queries per second whose predicate can't use an index:
+`phone = N'...'` on a VARCHAR column (SQL Server, implicit conversion), `substring(phone,...)` (ASE), `cast(phone as bigint)` (Postgres),
+`phone = :1` with a NUMBER bind (Oracle: `TO_NUMBER(phone)`, implicit conversion of the column);
+`upper(last_name) = ?`; `year(order_ts) = ?`; `email like '%...'` (leading wildcard).
+- SQL Server: CmExecQueryStats, CmIndexMissing, CmIndexUsage. ASE: CmSqlStatement, CmObjectActivity. Postgres: CmPgStatements, CmPgTables (`seq_scan`).
+  Oracle: CmSqlStats (high BUFFER_GETS per execution, rows tagged `dbxt:non_sargable`), CmSegmentStats, CmSysStat logical reads.
+
+#### `hot_spot` - every 12 min, ~100 s
+6 sessions (`sessions`) increment the same `counter_table` row in a loop, each holding the lock ~20 ms:
+many short lock waits on one row. The journal has the number of updates and how many waited over 10 ms.
+- SQL Server: CmWaitStats (LCK_M_*), CmWaitingTasks. ASE: CmSpidWait, CmSysWaits, CmLocks. Postgres: CmPgPidWait, CmPgLocks.
+  Oracle: CmSysStat `enqueue waits` 0 -> ~225/s, CmSystemEvent (`enq: TX - row lock contention`, wait class Application), CmActiveStatements, CmLocks.
+
+#### `rbar_cursor` - every 10 min
+Calls `p_rbar_price_adjust` for one category: a cursor over its products, and per product an update of the product
+and of its stock rows (a scan, no index on `stock.product_id`). One long call with a very high statement count inside.
+Each row scans `stock`, so the rows are limited to `maxRows` = 20 000 000 / stock rows (10-500): about 20 million stock
+rows read per call at any size (without a limit one call ran 15 minutes at size `large`). Setting `scenario.rbar_cursor.maxRows`.
+- SQL Server: CmExecProcedureStats, CmExecQueryStats, CmExecCursors. ASE: CmActiveStatements, CmProcCallStack, CmCachedProcs.
+  Postgres: CmPgFunctions (needs `track_functions`), CmPgStatements.
+  Oracle: at size small one call takes < 0.1 s (~40 products per category) and the call and its UPDATEs were aged out of
+  V$SQLSTATS before CmSqlStats' next sample: nothing to check (no expectation).
+
+#### `n_plus_one` - every 5 min, ~100 s
+An "ORM style" page: the orders of a customer, then one query per order for its lines, then one query per line for
+the product name. Very many tiny statements from one session.
+- SQL Server: CmExecQueryStats, CmPerfCounters (batch requests/sec), CmChattyStatements (rows tagged `dbxt:n_plus_one`).
+- ASE: alarm `AlarmEventChattySession` for the session (CmProcessActivity: more than 100 SQL batches/s for 2 samples, under
+  10 logical reads per batch), CmChattyStatements (rows tagged `dbxt:n_plus_one`; needs `enable stmt cache monitoring`, and `streamlined dynamic SQL` = 1
+  because the load generator's statements are prepared statements), CmStmntCacheDetails.
+- Postgres: CmPgStatements.
+- Oracle (seen 2026-11-09, 23ai Free + 21c XE, size small): `AlarmEventChattySession` for every event (CmSessions: round trips/s of the session),
+  CmChattyStatements (rows tagged `dbxt:n_plus_one`).
+- MySQL / DB2: see [the table below](#mysql-and-db2-what-mysqltune--db2tune-showed).
+
+**`AlarmEventChattySession` and N+1.** The alarm has the same default on every vendor: a session sends more than 100
+statements per second, with fewer than 10 logical reads (MySQL: rows read) each, for 2 samples in a row. The counter is
+"statements from the client" everywhere, measured with JDBC on 2026-11-13 (prepared and literal statements, autocommit on and
+off, commits, client info, a 1000-row SELECT, a CALL of a procedure that runs 1000 SELECTs):
+
+| DBMS | Counter (CM) | Per client statement |
+|---|---|---|
+| ASE 16 | SQL batches, `monProcess.BatchID` (CmProcessActivity) | exactly 1, also a 1000-row SELECT (rows are streamed) and a CALL |
+| Oracle 23ai | the **smaller** of `SQL*Net roundtrips to/from client` and `execute count` (CmSessions) | round trips are 1, but one per **fetch** (a 1000-row SELECT with the default fetch size 10 = 101); executions are 1, but also the SQL a procedure runs (1003 for the CALL). N+1 has both about equal (~250/s seen), a session fetching many rows has few executions, a PL/SQL loop few round trips |
+| MySQL | `Questions` (CmSessionActivity) | 1 (statements from the client, not those in stored programs) - from the MySQL documentation, not measured |
+| DB2 11.5 | `DYNAMIC_SQL_STMTS` (CmMonGetConnection) | exactly 1, also a CALL (its SQL is not counted). `APP_RQSTS_COMPLETED_TOTAL` is 1-4 (the autocommit commit, the prepare of a literal statement, client info are requests of their own): with it, normal OLTP workers went over 100. Not counted: precompiled (static SQL) clients |
+
+With these, the load generator's OLTP workers do ~15-18 statements/s at intensity `low` and the N+1 session ~190-250/s
+(DB2 and Oracle, seen 2026-11-13): ChattySession only for the N+1 sessions.
+
+The alarm only says "many cheap statements from one session": a busy normal session (a connection pool, a queue consumer)
+looks the same, so it is a **possible** N+1. What makes it N+1 is the statement pattern: a child statement that runs once per
+row of a parent statement. The Daily Summary Report section "Possible N+1 / Chatty Statements" checks exactly that
+(child executions per parent row ~1, at least 2 child executions per parent execution, the parent's rows per sample follow
+the child's executions per sample: correlation >= 0.9 over at least 4 samples) and names the pair, e.g. `product <- order_line`.
+Known pooled applications can be left out with the alarm's `skip` settings (user / program / application name).
+
+#### `temp_recompile` - every 8 min, ~100 s
+Calls `p_temp_report` twice a second: it fills a temp table, runs a select on it, creates an index on it, and runs the
+same select again. The schema changed since the select was compiled, so SQL Server and ASE recompile it
+(SQL Server 2022: 2 re-compilations per call; the earlier version, index before the first select, gave none).
+- SQL Server: CmPerfCounters (re-compilations/sec), CmExecProcedureStats. ASE: CmSysmon, CmCachedProcs.
+  Postgres: temp table create/drop on every call (catalog churn).
+  Oracle has no temp tables created in procedures: `p_temp_report` creates a **private temporary table** (18c+) with dynamic SQL on
+  every call and drops it at commit (a T-SQL habit). Measured: 67 calls -> +270 hard parses (~4 per call), +826 enqueue requests;
+  OracleTune: CmSysStat `parse count (hard)`, CmLibraryCache Invalidations 0 -> ~8/s, CmSqlStats (`p_temp_report`).
+
+#### `conn_churn` - every 10 min, ~100 s
+Connect, one query, disconnect - about 4 times a second (an application without a connection pool). Each connection
+is also a `session` event in the journal. Failed connects (e.g. ASE error 1601, out of user connections) make the event an
+error: "54 of 175 connections failed, first: ..." in the log, the journal and the summary.
+- SQL Server: CmPerfCounters (logins/sec). ASE: CmSummary, CmSysmon. Postgres: CmSummary, CmPgActivity.
+  Oracle: CmSysStat `logons cumulative` (no graph of it); the sessions live ~50 ms, so CmSessions/ConnectionsGraph hardly show them (no check).
+
+#### `errors` - every 5 min, ~100 s
+A round of failing statements every ~4 s: duplicate key, divide by zero, a query timeout (2 s timeout on a 5 s wait), a missing table.
+The journal has the error codes of the first round.
+- SQL Server: client errors are not in the error log - check what SqlServerTune shows at all.
+- ASE: CmSqlStatement (errors per statement). No alarm: AseTune's `ClientErrorMsg` alarm is only for the error numbers in
+  `CmSqlStatement.alarm.system.if.ErrorNumbers` (default 701, 713, 971, 1105, 1204, 1205), `ClientErrorMsgRate` only above 20 errors/s.
+- Postgres: CmPgDatabase `xact_rollback`; the server log only if `log_min_error_statement` allows it.
+- Oracle: ORA-00001, ORA-01476, ORA-01013 (cancel of `dbms_session.sleep(5)`, 18c+), ORA-00942. None goes to the alert log,
+  so no CmErrorLog row and no alarm; ORA-00942 is a failed parse (CmSysStat `parse count (failures)` ~0.25/s); the statements are in CmSqlStats.
+
+#### MySQL and DB2: what MySqlTune / Db2Tune showed
+Seen 2026-11-13 (MySQL 8.4, DB2 11.5.8; size small, 16 min `low` run with every problem every 4 min, no-GUI collector with 15 s samples,
+`compare` against DbxCentral). The problems overlapped, so the checks are on the problem's own sessions (`@sessions`: the
+connection id `CmActiveStatements.Pid` / `CmSessionActivity.PROCESSLIST_ID` on MySQL, `APPLICATION_HANDLE` on DB2) plus alarms,
+and graphs only where the problem is the main cause.
+
+| Problem | MySQL (MySqlTune) | DB2 (Db2Tune) |
+|---|---|---|
+| blocking | `BlockingLockAlarm` + `MyBlockingSession` (on the holder) at 60 s, CmSummary BlockingLocksGraph | `BlockingLockAlarm` + `Db2BlockingSession` (on the holder) for every event, CmSummary LocksGraph `Lock Waits` |
+| deadlock | error 1213; no alarm (InnoDB logs deadlocks only with `innodb_print_all_deadlocks = ON`); nothing checked | SQL0911N rc 2; not in db2diag.log, ~0.07 deadlocks/s is too little for a graph: nothing checked |
+| long_tran | CmActiveStatements (Sleep, HasOpenTxn), CmSummary OldestTranInSecGraph | CmActiveStatements (UOW_CLIENT_IDLE_SEC), CmSummary OldestTranInSecGraph |
+| sort_spill | on disk (Created_tmp_disk_tables, Sort_merge_passes), but a ~2 s query: TOO SHORT for a session sample | ~0.3 s query (no session SORTHEAP setting): TOO SHORT |
+| literal_sql | the digests normalize the literals: two digests with high ExecCount, no plan cache to flood | a new package cache entry per statement, compile time up |
+| non_sargable | the session's SelectScan, CmStatements NoIndexUsed | CmStatements ROWS_READ_PER_EXEC |
+| hot_spot | CmGlobalStatus Innodb_row_lock_waits ~0.8 -> ~40/s | CmSummary LocksGraph `Lock Waits` ~0.3 -> ~43/s |
+| rbar_cursor | 0.6-0.8 s per call; a lock wait timeout (1205 after 50 s) when it overlaps `blocking` | ~30 ms per call: TOO SHORT |
+| n_plus_one | `ChattySession` for every event, on the right connection | `ChattySession` for every event, on the right application handle (~190 statements/s; the busiest OLTP worker ~17/s). Counted on `DYNAMIC_SQL_STMTS` since 2026-11-13: the earlier `APP_RQSTS_COMPLETED_TOTAL` is 1-4 requests per statement, and normal OLTP workers went over 100 |
+| temp_recompile | temporary table created/dropped per call (no plan cache to recompile) | declared temporary table per call: run-time compiles |
+| conn_churn | no connections-per-second graph: nothing checked | no connections-per-second graph: nothing checked |
+| errors | 1062, 1242, a cancelled `SLEEP()`, 1146: not in the error log, no alarm; per digest in CmStatements | SQL0803N, SQL0801N, SQL0952N (cancelled `DBMS_ALERT.SLEEP`), SQL0204N: no alarm; FAILED_SQL_STMTS per connection |
+
+Settings for each problem (`scenario.<name>.<setting>`): `everyMinutes`, and where it applies `holdSeconds`,
+`waiters`, `sessions`, `durationSeconds` (+ `problem.extraSeconds`, see above). See `conf/loadgen.properties`.
+
+---
+
+## 9. The journal: comparing with DbxTune
+
+One file per run (and per install/uninstall): `~/.dbxtune/loadgen/journal/<name>/<yyyy-MM-dd_HHmmss>_<kind>_<id>.jsonl`.
+One JSON object per line; all times are local time with the offset (`2026-11-06T21:30:44.123+01:00`).
+
+| `type` | Content |
+|---|---|
+| `header` | Run parameters: server, DBMS version, size, intensity, threads, weights, problem intervals, planned end, wave |
+| `session` | `connect` / `disconnect` of every connection: login, program name, **the server's session id** (spid / pid) |
+| `sql` | The text of each statement once (literals replaced by `?`), with a hash (`sqlHash`) |
+| `minute` | Per minute and scenario + statement: count, errors, avg/max ms, rows, the session ids, error codes |
+| `problem` | One per problem event: start/end, the sessions and their role (holder, waiter, victim...), details, and the `expected` block |
+| `object` | Install/uninstall: created/dropped objects, with the `flaw` text |
+| `info` / `error` | Free text (for example "watchdog closed 2 sessions") |
+| `summary` | The end totals per scenario |
+
+Print it readable: `loadgen.sh journal --name myhost` (the newest file) or `--file <path>`.
+
+### `compare`: what did DbxTune see?
+
+```bash
+loadgen.sh compare --name gs-2-win --central http://dbxc-host:8080 --central-srv GS-2-WIN__SS_2025   # the newest run of gs-2-win
+loadgen.sh compare --run-id 789051f2 ...      # or --file <journal>
+```
+
+It reads the run's journal and asks DbxCentral (REST, only GET requests) what it recorded in the same time window:
+the **alarm history** (`/api/alarm/history`) and **counter graphs** (`/api/graph/data`). Nothing is needed on the
+collector side. It writes `<journal>.compare.md` next to the journal (Markdown: for a person, or as input for an LLM)
+and prints a summary:
+
+```
+Run 979fba8d on gs-2-win (medium) vs DbxCentral GS-2-WIN__SS_2025:
+   scenario         events  SEEN  LATE  MISSED  other
+   blocking              3     9     0       0      0
+   deadlock              4     4     0       0      0
+   literal_sql           5     8     0       2      0
+   temp_recompile        4     0     0       4      0
+   ...
+   Alarms nobody expected:
+      2 x BlockingLockAlarm (CmSummary)
+      3 x ToxicWait (CmWaitStats)
+   Samples: 41 samples, seconds between them: median 42.5, p90 61.7, max 76.2 (from CmSummary.aaCpuGraph)
+```
+
+How each `problem` event is judged (its `expected` block):
+- **alarms**: SEEN if the alarm was raised from the problem start to its end + `--grace` (default 120 s: under load
+  samples can be 60 s apart), or was already active then (e.g. the deadlock alarm stays up for its 10-minute moving
+  average). LATE if raised up to 5 minutes after that, but before the same scenario's next event. MISSED otherwise.
+  When the alarm names a session (`spid=57`), it must be one of the event's own sessions, and the report says
+  "right session (holder 57)". The journal's `"spid": 54, "role": "holder"` is what joins the two.
+  `AlarmEventX:object` counts only alarms about that object (the alarm's extra info), `@db` = the run's database:
+  ASE `sort_spill` expects `AlarmEventLongRunningTransaction:tempdb`, `blocking` `AlarmEventLongRunningTransaction:@db`.
+- **graphs** (`CmName.graphName`, `:series` for one series, `:*` for the sum): SEEN if the peak during the event is at
+  least 2 x the run's normal level (the median outside that scenario's events) and at least normal + 0.5.
+  Example: `CmPerfCounters.Compile: normal 5.0 -> peak 18.9`.
+- **Alarms nobody expected**: everything raised during the run that no event explains - what else DbxTune noticed
+  (RESOURCE_SEMAPHORE waits, memory grant waits, background blocking...).
+- **Samples**: the real time between samples (from a CmSummary graph): the "CMs get slow under load" signal.
+- **rows** (`CmName:column=value` or `column~value`, value `@sessions` = the event's session ids, `@tag` = `dbxt:<scenario>`,
+  or a literal): did the CM have such a row? `compare` walks the CM's recorded samples (`/api/cc/mgt/cm/navSample` +
+  `/api/cc/mgt/cm/data`) and stops at the first match. Examples and what the report says:
+  - `CmWaitingTasks:session_id=@sessions` -> `waiter 63 (LCK_M_X); context_info dbxt:blocking:waiter`
+  - `CmOpenTransactions:session_id=@sessions`, `CmTempdbSpidUsage:session_id=@sessions`, `CmIndexMissing:TableName=customer`
+  - `CmExecQueryStats:SqlText~@tag` -> `793 row(s) with SqlText containing 'dbxt:literal_sql'`
+  Session checks look until 60 s after the event (spids are reused, and a row whose `context_info` names another scenario
+  doesn't count). A problem that ended before the next sample is **TOO SHORT** (it can't be in any sample), not MISSED.
+  Statement/table checks may use the first sample up to 60 minutes after the window: CMs like CmExecQueryStats and
+  CmIndexMissing are refreshed every few minutes and their content is cumulative. **NOT RECORDED**: the CM has no sample
+  (not in this collector, or not deployed yet).
+  Found this way (2026-11-08): at `medium` the literal SQL plans were already gone from the plan cache when
+  CmExecQueryStats sampled again 10 minutes later (memory pressure) - only the literal SQL alarm sees them reliably.
+  `--no-rows` skips these checks (a run takes ~5 s instead of ~10 s).
+- **Not checked**: the expected CMs that no alarm, graph or row check covers; look at them in the recording.
+
+Journals written before the expected graphs and rows existed (before 2026-11-08) are judged with the current scenario
+definitions; the report says so.
+
+Settings (loadgen.properties): `central.url`, `central.srv.<name>` (DbxCentral's server name for a `--name`), `central.token`
+(only if DbxCentral has `DbxTuneCentral.login.mandatory=true`: the `DbxTune.central.registration.token`),
+`compare.grace`, `compare.graph.factor` (2), `compare.graph.minDelta` (0.5), `compare.rows.maxSamples` (8),
+`compare.rows.lookAheadMinutes` (60).
+Graphs and rows to check are set for SQL Server and Oracle (Oracle from a compared 20 minute run on 23ai Free and a 10 minute
+run on 21c XE: every check SEEN, except events cut short by the end of the run and CmSqlStats samples not taken yet);
+ASE and Postgres get theirs from their first compared runs. A journal written before its vendor had expectations
+(`expected` = null) is judged with the current scenario definitions; the report says so.
+
+---
+
+## 10. Command line reference
+
+```
+loadgen <mode> [options]
+
+modes: install | run | status | uninstall | journal | compare | scenarios
+
+connection:
+  -t,--dbms <sqlserver|ase|postgres|oracle>    -S,--server <host[:port] | ASE server name | Oracle host[:port]/service>    --name <name>
+  -U,--user <admin>    -P,--password <pw>    -D,--dbname <db>    --passwd-file <file>    -c,--config <file>
+
+install:
+  -s,--size <small|medium|large|xl|xxl|xxxl>    -L,--logins <n>    --seed <n>
+  --use-existing-db    --logins-only
+  --ase-device-dir <dir>    --ase-data-dev <dev>    --ase-log-dev <dev>    --ase-db-size-mb <mb>    --ase-log-size-mb <mb>
+
+run:
+  -d,--duration <15m|15m-45m|1h|90s>    -i,--intensity <low|medium|high>    -T,--threads <n>
+  --scenarios <a,b>    --exclude <a,b>    --no-problems    --journal-keep-days <n>
+
+uninstall:
+  --keep-database    --keep-logins    --force
+
+journal:
+  --file <file>    (or --name <name> for the newest of one server)
+
+compare:
+  --central <url>    --central-srv <name>    --central-token <token>    --grace <time>    --no-rows
+  --file <journal> | --run-id <id>    (or --name / -S for the newest run of one server)
+
+  -x,--debug    -h,--help
+```

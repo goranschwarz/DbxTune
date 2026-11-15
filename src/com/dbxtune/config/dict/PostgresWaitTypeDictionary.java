@@ -20,12 +20,26 @@
  ******************************************************************************/
 package com.dbxtune.config.dict;
 
+import java.lang.invoke.MethodHandles;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
+import org.apache.commons.text.StringEscapeUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.StringUtil;
+import com.dbxtune.utils.Ver;
 
 public class PostgresWaitTypeDictionary
 {
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+
 	/** Instance variable */
 	private static PostgresWaitTypeDictionary _instance = null;
 
@@ -393,6 +407,48 @@ public class PostgresWaitTypeDictionary
 	}
 	
 	
+
+	/**
+	 * Postgres 17 and above has the view pg_wait_events (type, name, description): the server's own texts, for its version.
+	 * They replace (or add to) the hand-written list above, which stops at about Postgres 16.
+	 * <p>
+	 * A name that exists in more than one type (for example 'SyncRep' in IPC and LWLock) gets both descriptions.<br>
+	 * NOTE: The view can't fail on 17+ (it is readable by everyone), and the version is checked first.
+	 * @return the number of wait events read (0 before 17, or on problems)
+	 */
+	public static int loadFromServer(DbxConnection conn, long srvVersion)
+	{
+		if (conn == null || srvVersion < Ver.ver(17))
+			return 0;
+
+		Map<String, StringBuilder> map = new LinkedHashMap<>();
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery("select type, name, description from pg_wait_events order by type, name"))
+		{
+			while (rs.next())
+			{
+				String type = rs.getString(1);
+				String name = rs.getString(2);
+				String desc = rs.getString(3);
+				StringBuilder sb = map.get(name);
+				if (sb == null)
+					map.put(name, new StringBuilder("<html><b>[ID]</b> - " + (desc == null ? "" : StringEscapeUtils.escapeHtml4(desc)) + " <i>(" + type + ")</i>"));
+				else
+					sb.append("<br><b>[ID]</b> - " + (desc == null ? "" : StringEscapeUtils.escapeHtml4(desc)) + " <i>(" + type + ")</i>");
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.info("Problems reading the wait event descriptions from pg_wait_events, the built-in list is used. Caught: " + ex);
+			return 0;
+		}
+
+		PostgresWaitTypeDictionary dict = getInstance();
+		for (Map.Entry<String, StringBuilder> e : map.entrySet())
+			dict._waitTypes.put(e.getKey(), dict.new WaitTypeRecord(e.getKey(), e.getValue().append("</html>").toString()));
+
+		_logger.info("Read " + map.size() + " wait event descriptions from pg_wait_events (the server's own texts).");
+		return map.size();
+	}
 
 	public static String getWaitEventDescriptionPlain(String name, boolean doPrefix)
 	{

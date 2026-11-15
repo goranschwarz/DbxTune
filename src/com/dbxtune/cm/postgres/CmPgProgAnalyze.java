@@ -153,6 +153,16 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		// 18: delay_time (needs 'track_cost_delay_timing'),   19: started_by
+		long srvVersion = versionInfo == null ? 0 : versionInfo.getLongVersion();
+		String newer = "";
+		if (srvVersion >= Ver.ver(18)) newer += "    ,cast(delay_time as numeric(15,1))   AS delay_time_ms \n";
+		if (srvVersion >= Ver.ver(19)) newer += "    ,cast(started_by as varchar(30))     AS started_by    \n";
+
+		// Dry-run the newer columns (a fork may report a version, but not have the columns)
+		if ( ! newer.isEmpty() && conn != null && ! PostgresCmUtils.canExecute(conn, "select 1 as dummy \n" + newer + "from pg_stat_progress_analyze where 1=2"))
+			newer = "";
+
 		return ""
 				+ "select \n"
 				+ "          pid \n"
@@ -176,6 +186,7 @@ extends CountersModel
 				+ "    ,     child_tables_total   \n"
 				+ "    ,     child_tables_done    \n"
 				+ "    ,cast(child_tables_done   * 1.0 / nullif(child_tables_total ,0) * 100.0 as numeric(9,1))  AS child_tables_pct \n"
+				+ newer
 
 				+ "from pg_stat_progress_analyze";
 	}

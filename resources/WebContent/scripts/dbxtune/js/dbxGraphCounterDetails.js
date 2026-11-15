@@ -2659,6 +2659,59 @@ var _cmChartModeMap = {};
 /** Per-descriptor bar orientation override: 'auto' (default), 'horizontal', 'vertical' */
 var _cmChartOrientMap = {};
 
+/** Bar orientation: 'auto' = horizontal (laying) bars up to 30 rows, vertical (standing) above that */
+function _cmChartIsHorizontal(orient, rowCount) {
+	if (orient === 'horizontal') return true;
+	if (orient === 'vertical')   return false;
+	return rowCount <= 30;
+}
+
+/**
+ * Horizontal bar charts: the canvas height follows both the pane and the row count.
+ * A few rows fill the pane (the bars stay slim via maxBarThickness), many rows get ~20px each
+ * and the charts pane scrolls -- then the % axis moves to the top so it stays visible.
+ * 'wrapEl' is the canvas wrapper with data-fit-rows / data-fit-extra / data-fit-n.
+ */
+var _CM_CHART_ROW_PX = 14; // with the 0.86 bar fill in _cmChartCreateBar: ~12px bars (room for the 10px "FREE MB" text), ~2px gap
+function _cmChartFitHeight(wrapEl) {
+	var rows = +wrapEl.getAttribute('data-fit-rows');
+	var cont = document.getElementById('cm-detail-charts');
+	if (!rows || !cont || !wrapEl.parentNode) return;
+
+	// Charts beside the table are stacked (share the height); charts above the table sit side by side
+	var perPane = (_cmSplitDir === 'vertical') ? 1 : (+wrapEl.getAttribute('data-fit-n') || 1);
+	// Title, toolbar, margin, padding, border -- summed from the parts (the card itself is stretched to the pane by flex)
+	var $card  = $(wrapEl.parentNode);
+	var chrome = $card.outerHeight(true) - $card.height();
+	$card.children().not(wrapEl).each(function() { chrome += $(this).outerHeight(true); });
+	var avail   = Math.floor((cont.clientHeight - 8) / perPane) - chrome;     // 8 = the pane's top+bottom padding
+	var need    = rows * _CM_CHART_ROW_PX + (+wrapEl.getAttribute('data-fit-extra') || 40);
+	var scrolls = need > avail;
+
+	wrapEl.style.height = Math.max(avail, need, 100) + 'px';
+	wrapEl.setAttribute('data-fit-scrolls', scrolls ? '1' : '0');
+
+	// An existing chart: move the value axis when the scroll state changed (Chart.js resizes itself to the new height)
+	var chart = (typeof Chart !== 'undefined' && Chart.getChart) ? Chart.getChart(wrapEl.querySelector('canvas')) : null;
+	var pos   = scrolls ? 'top' : 'bottom';
+	if (chart && chart.options.scales.x && chart.options.scales.x.position !== pos) {
+		chart.options.scales.x.position = pos;
+		chart.update('none');
+	}
+}
+
+/** Re-fit all horizontal bar charts when the charts pane changes size (divider drag, panel or window resize) */
+var _cmChartPaneObserver = null;
+function _cmChartObservePane() {
+	if (_cmChartPaneObserver || typeof ResizeObserver === 'undefined') return;
+	var cont = document.getElementById('cm-detail-charts');
+	if (!cont) return;
+	_cmChartPaneObserver = new ResizeObserver(function() {
+		$('#cm-detail-charts [data-fit-rows]').each(function() { _cmChartFitHeight(this); });
+	});
+	_cmChartPaneObserver.observe(cont);
+}
+
 /**
  * Color palette for chart series — 20 distinct, visually pleasant colors.
  * Cycles if more items are needed.
@@ -2811,10 +2864,10 @@ function cmChartRender(r, filteredRows) {
 		}
 		var $wrap = $('<div id="' + chartId + '-wrap" style="' + wrapStyle + '"></div>');
 
-		// Title
+		// Header: the title with the toolbar buttons on the same line (more room for the chart); wraps below in a narrow chart
+		var $header = $('<div style="text-align:center;margin-bottom:4px;"></div>');
 		if (desc.title) {
-			$wrap.append('<div style="font-size:0.82em;font-weight:600;margin-bottom:4px;text-align:center;">'
-				+ escHtml(desc.title) + '</div>');
+			$header.append('<span style="font-size:0.82em;font-weight:600;">' + escHtml(desc.title) + '</span>');
 		}
 
 		// Resolve chart type and orientation
@@ -2834,7 +2887,7 @@ function cmChartRender(r, filteredRows) {
 		}
 
 		// Build toolbar row
-		var $toolbar = $('<div style="text-align:center;margin-bottom:4px;"></div>');
+		var $toolbar = $('<span style="display:inline-block;white-space:nowrap;margin-left:10px;vertical-align:middle;"></span>');
 		var btnStyle = 'font-size:0.72em;padding:1px 6px;margin:0 2px;';
 		var hasToolbar = false;
 
@@ -2877,27 +2930,37 @@ function cmChartRender(r, filteredRows) {
 			hasToolbar = true;
 		}
 
-		if (hasToolbar) $wrap.append($toolbar);
+		if (hasToolbar) $header.append($toolbar);
+		if (desc.title || hasToolbar) $wrap.append($header);
+
+		// Extract data from filtered rows
+		var data = _cmChartExtractData(desc, colIdx, filteredRows);
+		var orientOverride = isBarMode ? (_cmChartOrientMap[desc.id] || 'auto') : null;
 
 		// Canvas -- in a dedicated wrapper with explicit height (Chart.js responsive sizing takes the size from the parent)
+		// Horizontal bars: the height is fitted to the pane and the row count (see _cmChartFitHeight)
 		var $canvasWrap = $('<div style="position:relative;height:280px;"></div>');
 		var $canvas = $('<canvas id="' + chartId + '"></canvas>');
 		$canvasWrap.append($canvas);
 		$wrap.append($canvasWrap);
 		$container.append($wrap);
 
-		// Extract data from filtered rows
-		var data = _cmChartExtractData(desc, colIdx, filteredRows);
 		if (!data || data.labels.length === 0) {
 			$canvasWrap.replaceWith('<div style="color:#999;font-size:0.8em;text-align:center;padding:20px;">No data</div>');
 			return;
 		}
 
+		if (isBarMode && _cmChartIsHorizontal(orientOverride, data.labels.length)) {
+			$canvasWrap.attr({ 'data-fit-rows': data.labels.length, 'data-fit-n': chartCount,
+			                   'data-fit-extra': data.datasets.length > 1 ? 60 : 40 }); // value axis (+ legend)
+			_cmChartFitHeight($canvasWrap[0]);
+		}
+
 		// Create chart — pass orientation override for bar charts
-		var orientOverride = isBarMode ? (_cmChartOrientMap[desc.id] || 'auto') : null;
 		var chart = _cmChartCreate($canvas[0], effectiveType, desc, data, orientOverride);
 		if (chart) _cmChartInstances.push(chart);
 	});
+	_cmChartObservePane();
 }
 
 /**
@@ -3149,10 +3212,7 @@ function _cmChartCreatePie(ctx, desc, data) {
 function _cmChartCreateBar(ctx, desc, data, stacked, orientOverride) {
 	// Orientation: 'auto' (default) uses native-GUI threshold (≤10 → horizontal, >10 → vertical)
 	// User can override via toggle buttons: 'horizontal' or 'vertical'
-	var horizontal;
-	if (orientOverride === 'horizontal')    horizontal = true;
-	else if (orientOverride === 'vertical') horizontal = false;
-	else /* 'auto' */                       horizontal = (data.labels.length <= 30);
+	var horizontal = _cmChartIsHorizontal(orientOverride, data.labels.length);
 
 	var datasets = data.datasets.map(function(ds, di) {
 		var bgColors;
@@ -3168,7 +3228,11 @@ function _cmChartCreateBar(ctx, desc, data, stacked, orientOverride) {
 			label: ds.label,
 			data: ds.data,
 			backgroundColor: bgColors,
-			borderWidth: 1
+			borderWidth: 1,
+			maxBarThickness: 18,  // a few rows in a tall pane: slim bars, not blocks
+			// Horizontal: the rows are sized by _cmChartFitHeight, so the bar fills most of its row -- a small gap (default 0.8 * 0.9)
+			categoryPercentage: horizontal ? 0.86 : 0.8,
+			barPercentage:      horizontal ? 1.0  : 0.9
 		};
 	});
 
@@ -3187,12 +3251,17 @@ function _cmChartCreateBar(ctx, desc, data, stacked, orientOverride) {
 		valueScale.max = 100;
 		valueScale.min = 0;
 	}
+	// A horizontal chart taller than the pane (scrolls): the value axis on top, where it stays visible
+	if (horizontal && ctx.canvas.parentNode && ctx.canvas.parentNode.getAttribute('data-fit-scrolls') === '1')
+		valueScale.position = 'top';
 
 	// The "category axis" shows labels (X for vertical, Y for horizontal)
 	var categoryScale = { stacked: stacked, grid: { color: _cmChartGridColor }, ticks: { font: { size: 9 }, color: _cmChartTextColor } };
 	if (!horizontal) {
 		categoryScale.ticks.autoSkip = true;
 		categoryScale.ticks.maxRotation = 45;
+	} else {
+		categoryScale.ticks.autoSkip = false; // every row has room for its name (_cmChartFitHeight), never drop a database name
 	}
 
 	// Horizontal: labels on Y-axis, values on X-axis -- Vertical: labels on X-axis, values on Y-axis

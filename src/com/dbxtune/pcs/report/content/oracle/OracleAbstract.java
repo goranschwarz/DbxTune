@@ -29,6 +29,8 @@ import java.sql.Timestamp;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -45,6 +47,8 @@ import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportEntry;
+import com.dbxtune.pcs.report.content.IndexAnalysisHtml;
+import com.dbxtune.pcs.report.content.IndexRedundancy;
 import com.dbxtune.pcs.report.content.ReportEntryAbstract;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
@@ -111,6 +115,9 @@ extends ReportEntryAbstract
 		public String partitioned;
 		public String lastAnalyzed;
 		public String tablespace;
+		public String compression;      // DISABLED, ENABLED (with prefixLength), ADVANCED LOW, ADVANCED HIGH
+		public long   prefixLength     = -1;
+		public String created;          // 'YYYY-MM-DD HH24:MI'. null = the recording was made by a version that did not store it
 
 		// How the index is used (DBA_INDEX_USAGE, 12.2 and above). 'abs' is since Oracle started to track it, 'diff' is during the recording (from CmIndexUsage)
 		public boolean usageTracked     = false; // false = the version is below 12.2 (or the view could not be read): we do not know
@@ -177,6 +184,9 @@ extends ReportEntryAbstract
 
 		public List<OraIndexInfo> indexes    = new ArrayList<>();
 		public List<String>       references = new ArrayList<>(); // VIEW / SYNONYM: what it reads from, as OWNER.NAME
+
+		public boolean            foreignKeysLookedUp = false;           // false = the recording was made by a version that did not look for them
+		public List<List<String>> foreignKeys         = new ArrayList<>(); // the columns of each FOREIGN KEY
 
 		public boolean isTable()        { return "TABLE".equals(type); }
 		public String  getFullName()    { return owner + "." + name; }
@@ -433,6 +443,11 @@ extends ReportEntryAbstract
 		ResultSetTableModel indexes  = ResultSetTableModel.getTableWithColumnNames(rstmList, false, "INDEX_OWNER", "INDEX_NAME", "INDEX_KEYS");
 		ResultSetTableModel segments = ResultSetTableModel.getTableWithColumnNames(rstmList, false, "SEGMENT_OWNER", "SEGMENT_NAME", "SIZE_KB");
 		ResultSetTableModel triggers = ResultSetTableModel.getTableWithColumnNames(rstmList, false, "TRIGGER_OWNER", "TRIGGER_NAME", "TRIGGERING_EVENT");
+		ResultSetTableModel fks      = ResultSetTableModel.getTableWithColumnNames(rstmList, false, "FK_NAME", "FK_COLUMNS");
+
+		ti.foreignKeysLookedUp = fks != null;
+		for (int r = 0; fks != null && r < fks.getRowCount(); r++)
+			ti.foreignKeys.add(StringUtil.parseCommaStrToList(fks.getValueAsString(r, "FK_COLUMNS"), true));
 
 		ti.triggersLookedUp = triggers != null;
 		if (triggers != null && triggers.getRowCount() > 0)
@@ -492,6 +507,12 @@ extends ReportEntryAbstract
 				ii.partitioned      =        indexes.getValueAsString(r, "PARTITIONED");
 				ii.lastAnalyzed     =        indexes.getValueAsString(r, "LAST_ANALYZED");
 				ii.tablespace       =        indexes.getValueAsString(r, "TABLESPACE_NAME");
+				ii.compression      =        indexes.getValueAsString(r, "COMPRESSION");
+				if (indexes.hasColumn("CREATED"))
+				{
+					ii.prefixLength = toLong(indexes.getValueAsString(r, "PREFIX_LENGTH"));
+					ii.created      =        indexes.getValueAsString(r, "CREATED");
+				}
 
 				// 12.2 and above: how the index has been used. (NULL) = Oracle has no row for it = never used since the tracking started
 				if (indexes.hasColumn("TOTAL_ACCESS_COUNT"))
@@ -992,7 +1013,7 @@ extends ReportEntryAbstract
 							: getTextAsTooltipDiv(ti.triggersText, ti.triggerCount + " trigger(s), " + ti.triggerEnabledCount + " enabled", getDdlMaxLengthTrigger()));
 				}
 
-				indexInfo = getIndexInfoAsHtmlTable(ti, classname);
+				indexInfo = getIndexInfoAsHtmlTable(ti, classname) + getRedundantIndexInfoAsHtml(ti);
 			}
 
 			sb.append("<tr> \n");
@@ -1099,5 +1120,360 @@ extends ReportEntryAbstract
 		sb.append("</table> \n");
 
 		return sb.toString();
+	}
+
+	//--------------------------------------------------------------------------------------------
+	// Index Analysis
+	//--------------------------------------------------------------------------------------------
+	/**
+	 * Index Analysis for Oracle: indexes that can be dropped (De-duplication) and Unused Indexes, with DDL and ROLLBACK scripts.
+	 * <ul>
+	 *   <li>No hidden key: an index on a heap table points at the row by its ROWID. Index-organized tables are not checked.</li>
+	 *   <li>Only drops, no merges (no INCLUDE). A PRIMARY KEY, a UNIQUE constraint and a UNIQUE index are never dropped.</li>
+	 *   <li>Oracle DDL commits at once: step 1 makes the index INVISIBLE (undone by VISIBLE), step 2 drops it (undone by the CREATE INDEX of the rollback).</li>
+	 * </ul>
+	 * @return HTML, or "" if there is nothing to tell
+	 */
+	public static String getRedundantIndexInfoAsHtml(OraTableInfo ti)
+	{
+		if (ti == null || ! ti.isTable() || ti.indexes.isEmpty())
+			return "";
+
+		IndexAnalysisHtml ia = new IndexAnalysisHtml();
+		ia.capturedTime = String.valueOf(ti.sampleTime);
+
+		// ---- The whole table can't be checked
+		String tableReason = null;
+		if      (oraValue(ti.iotType) != null)  tableReason = "an index-organized table (" + ti.iotType + ")";
+		else if ("Y".equals(ti.temporary))      tableReason = "a temporary table";
+		if (tableReason != null)
+		{
+			for (OraIndexInfo ii : ti.indexes)
+				ia.dedupNotChecked.put(ii.name, tableReason);
+			ia.unusedNotChecked = tableReason;
+			return ia.toHtml();
+		}
+
+		// ---- The indexes we can compare
+		Map<IndexRedundancy.Idx, OraIndexInfo> infoMap    = new LinkedHashMap<>();
+		Map<String, String>                    notChecked = new LinkedHashMap<>();
+		int pos = 0;
+		for (OraIndexInfo ii : ti.indexes)
+		{
+			List<String> keys = oraKeys(ii.keys);
+			String reason = null;
+			if      ( ! "NORMAL".equals(ii.type) && ! "FUNCTION-BASED NORMAL".equals(ii.type) ) reason = ii.type + " index, only B-tree indexes are compared";
+			else if ("YES".equals(ii.partitioned))                                           reason = "a partitioned index";
+			else if ("UNUSABLE".equals(ii.status))                                           reason = "UNUSABLE: the optimizer already ignores it";
+			else if ("INVISIBLE".equals(ii.visibility))                                      reason = "INVISIBLE: the optimizer already ignores it";
+			else if (keys.isEmpty())                                                         reason = "the key columns are not known";
+
+			if (reason != null)
+			{
+				notChecked.put(ii.name, reason);
+				continue;
+			}
+
+			IndexRedundancy.Idx idx = new IndexRedundancy.Idx(ii.name, keys, null);
+			idx.primaryKey       = "P".equals(ii.constraintType);
+			idx.uniqueConstraint = idx.primaryKey || "U".equals(ii.constraintType);
+			idx.unique           = idx.uniqueConstraint || "UNIQUE".equals(ii.uniqueness);
+			idx.canGetIncludes   = false; // no INCLUDE in Oracle
+			idx.reads            = oraAccessCount(ii);
+			idx.id               = pos++;
+			infoMap.put(idx, ii);
+		}
+
+		List<IndexRedundancy.Finding> findings = IndexRedundancy.analyze(new ArrayList<>(infoMap.keySet()), null);
+
+		Set<String> inDedup = new HashSet<>();
+		for (IndexRedundancy.Finding f : findings)
+		{
+			inDedup.add(f.kept.name);
+			for (IndexRedundancy.Idx dr : f.dropped)
+				inDedup.add(dr.name);
+		}
+
+		// ---- Unused: not used (DBA_INDEX_USAGE) for at least minDays at the lookup, not during the recording, and the index is at least minDays old
+		int    minDays = Configuration.getCombinedConfiguration().getIntProperty(IndexAnalysisHtml.PROPKEY_unused_minDays, IndexAnalysisHtml.DEFAULT_unused_minDays);
+		String minDate = ti.sampleTime == null ? null : new SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date(ti.sampleTime.getTime() - minDays * 24L * 3600 * 1000));
+
+		boolean tracked = false;
+		for (OraIndexInfo ii : ti.indexes)
+			if (ii.usageTracked)
+				tracked = true;
+
+		String             unusedNotChecked = null;
+		List<OraIndexInfo> unused           = new ArrayList<>();
+		Set<String>        unusedDedup      = new HashSet<>();
+		int                tooNew           = 0;
+		int                ageUnknown       = 0;
+		int                forFk            = 0;
+		if ( ! tracked )
+			unusedNotChecked = "Oracle tracks how indexes are used from version 12.2 (DBA_INDEX_USAGE): this recording has no usage numbers (an older version, or the view could not be read).";
+		else if ( ! ti.foreignKeysLookedUp )
+			unusedNotChecked = "recorded by an older version, which did not store the FOREIGN KEYs (an index that serves one is needed even when no query uses it): the next lookup of the table has them.";
+		else if (minDate == null)
+			unusedNotChecked = "the time of the lookup is not known.";
+		else
+		{
+			for (Map.Entry<IndexRedundancy.Idx, OraIndexInfo> e : infoMap.entrySet())
+			{
+				IndexRedundancy.Idx idx = e.getKey();
+				OraIndexInfo        ii  = e.getValue();
+				if (idx.unique || ii.diffAccessCount > 0)
+					continue;
+
+				String  lastUsed = oraValue(ii.lastUsed);
+				boolean never    = ii.absAccessCount <= 0 && lastUsed == null;
+				if ( ! never && (lastUsed == null || lastUsed.compareTo(minDate) > 0) ) // used the last minDays
+					continue;
+
+				// How old is it: an index made yesterday has not been used either
+				String created = oraValue(ii.created);
+				if (created == null)
+				{
+					if (never) // the recording has no CREATED (an older version): never used can be just made
+					{
+						ageUnknown++;
+						continue;
+					}
+				}
+				else if (created.compareTo(minDate) > 0)
+				{
+					tooNew++;
+					continue;
+				}
+
+				if (inDedup.contains(ii.name))
+				{
+					unusedDedup.add(ii.name);
+					continue;
+				}
+
+				// Without an index on the FOREIGN KEY columns, a DELETE (or key UPDATE) in the parent table locks this whole table
+				if (oraOnlyIndexForForeignKey(ti, infoMap, idx))
+				{
+					forFk++;
+					continue;
+				}
+				unused.add(ii);
+			}
+		}
+
+		// ---- The texts and findings, laid out by IndexAnalysisHtml (the same for all vendors)
+		ia.notesHtml.add("Usage comes from <code>DBA_INDEX_USAGE</code> (12.2 and above), which is kept over restarts. By default Oracle <b>samples</b> the executions, "
+				+ "and writes it down every 15 minutes: an index used very seldom can be missed. Check that the index isn't needed for something that runs rarely (month end, year end).");
+		ia.notesHtml.add("<b>Use on an Active Data Guard standby is not counted on the primary</b>: an index used only there looks unused here.");
+		ia.notesHtml.add("Oracle DDL commits at once, it can't be rolled back. So each script has two steps: <b>step 1</b> makes the index <code>INVISIBLE</code> "
+				+ "(the optimizer stops using it, it is still maintained, <code>VISIBLE</code> undoes it at once). <b>Step 2</b>, when nothing got slower for a while, drops it: "
+				+ "the block checks the indexes first, and the rollback is a <code>CREATE INDEX</code>.");
+		ia.notesHtml.add("The <code>CREATE INDEX</code> of a rollback has the keys, the tablespace and the compression of the index: not its storage settings (<code>PCTFREE</code>, <code>INITRANS</code>, ...), "
+				+ "<code>DBMS_METADATA.GET_DDL('INDEX', name, owner)</code> before step 2 gives all of it. Without Enterprise Edition (<code>ONLINE</code>) the CREATE blocks writes to the table while it runs.");
+
+		for (IndexRedundancy.Finding f : findings)
+		{
+			IndexAnalysisHtml.Finding hf = new IndexAnalysisHtml.Finding();
+			hf.action = "DROP";
+			hf.kept   = f.kept.name;
+
+			List<OraIndexInfo> dropped = new ArrayList<>();
+			hf.lines.add(oraIndexLine("Keep", infoMap.get(f.kept)));
+			for (IndexRedundancy.Idx dr : f.dropped)
+			{
+				hf.dropped.add(dr.name);
+				dropped.add(infoMap.get(dr));
+				hf.lines.add(oraIndexLine("Drop", infoMap.get(dr)));
+			}
+
+			StringBuilder why = new StringBuilder();
+			for (String w : f.why)
+				why.append(w).append(" ");
+			for (String n : hf.dropped)
+				if (unusedDedup.contains(n))
+					why.append(n + " has not been used for at least " + minDays + " days. ");
+			if (unusedDedup.contains(f.kept.name))
+				why.append(f.kept.name + " has not been used for at least " + minDays + " days either: check if it is needed at all. ");
+			hf.why    = why.toString();
+			hf.script = createOraIndexScript(ti, infoMap.get(f.kept), dropped);
+			ia.dedup.add(hf);
+		}
+		ia.dedupNotChecked = notChecked;
+
+		ia.unusedNotChecked = unusedNotChecked;
+		ia.unusedIntro = "Not used for at least " + minDays + " days when the table was looked up: never used, or last used before " + minDate + " (DBA_INDEX_USAGE), "
+				+ "not used during the recording, and the index is older than that. "
+				+ "Not listed: the primary key, unique indexes, and the indexes in Index De-duplication above.";
+		ia.unusedNotes.add("An index made less than " + minDays + " days before the lookup is not listed (" + tooNew + " on this table)."
+				+ (ageUnknown == 0 ? "" : " Never used, but the age is not known (recorded by an older version): " + ageUnknown + " not listed."));
+		ia.unusedNotes.add("The only index whose first columns are a FOREIGN KEY is not listed (" + forFk + " on this table): without it, a DELETE or key UPDATE in the parent table locks this whole table.");
+		for (OraIndexInfo ii : unused)
+		{
+			IndexAnalysisHtml.Finding hf = new IndexAnalysisHtml.Finding();
+			hf.action = "DROP";
+			hf.dropped.add(ii.name);
+			hf.lines.add(oraIndexLine("Index", ii));
+			hf.script = createOraIndexScript(ti, null, Collections.singletonList(ii));
+			ia.unused.add(hf);
+		}
+
+		return ia.toHtml();
+	}
+
+	/** null for null, "" and "(NULL)" (how the text tables of the DDL Storage write a NULL) */
+	private static String oraValue(String str)
+	{
+		return str == null || str.trim().isEmpty() || "(NULL)".equals(str.trim()) ? null : str.trim();
+	}
+
+	/** "C1, C2 DESC" -> [C1, C2 DESC]. A function-based key is the expression, as Oracle has it: UPPER("NAME") */
+	private static List<String> oraKeys(String keys)
+	{
+		List<String> result = new ArrayList<>();
+		if (oraValue(keys) == null)
+			return result;
+		for (String k : keys.split(", "))
+			if (StringUtil.hasValue(k))
+				result.add(k.trim());
+		return result;
+	}
+
+	/** C1 DESC -> C1 */
+	private static String oraColName(String key)
+	{
+		return key.endsWith(" DESC") ? key.substring(0, key.length() - " DESC".length()) : key;
+	}
+
+	/** Accesses since Oracle started to track (or during the recording, if more). -1 = not tracked */
+	private static long oraAccessCount(OraIndexInfo ii)
+	{
+		if ( ! ii.usageTracked )
+			return -1;
+		return Math.max(Math.max(ii.absAccessCount, ii.diffAccessCount), 0);
+	}
+
+	/** Is this the only (compared) index whose first columns are the columns of a FOREIGN KEY, in any order? (that is what Oracle needs to not lock the table) */
+	private static boolean oraOnlyIndexForForeignKey(OraTableInfo ti, Map<IndexRedundancy.Idx, OraIndexInfo> infoMap, IndexRedundancy.Idx index)
+	{
+		for (List<String> fk : ti.foreignKeys)
+		{
+			if ( ! oraLeadsWith(index.keys, fk) )
+				continue;
+			boolean other = false;
+			for (IndexRedundancy.Idx i : infoMap.keySet())
+				if (i != index && oraLeadsWith(i.keys, fk))
+					other = true;
+			if ( ! other )
+				return true;
+		}
+		return false;
+	}
+
+	private static boolean oraLeadsWith(List<String> keys, List<String> cols)
+	{
+		if (cols.isEmpty() || cols.size() > keys.size())
+			return false;
+		Set<String> first = new HashSet<>();
+		for (int i = 0; i < cols.size(); i++)
+			first.add(oraColName(keys.get(i)));
+		return first.containsAll(cols);
+	}
+
+	private static IndexAnalysisHtml.IndexLine oraIndexLine(String label, OraIndexInfo ii)
+	{
+		String kind  = "P".equals(ii.constraintType) ? "PRIMARY KEY " : "U".equals(ii.constraintType) ? "UNIQUE constraint " : "UNIQUE".equals(ii.uniqueness) ? "UNIQUE " : "";
+		String usage;
+		if ( ! ii.usageTracked )
+			usage = "usage unknown (below 12.2)";
+		else if (oraValue(ii.lastUsed) == null && ii.absAccessCount <= 0 && ii.diffAccessCount <= 0)
+			usage = "never used";
+		else
+			usage = "used " + oraAccessCount(ii) + " times, last " + StringUtil.nullToValue(oraValue(ii.lastUsed), "during the recording");
+		String created = oraValue(ii.created) == null ? "" : ", created " + ii.created;
+		return new IndexAnalysisHtml.IndexLine(label, kind + ii.name + " (" + ii.keys + ")", ", " + usage + created);
+	}
+
+	/** "NAME" (Oracle names can't hold a ") */
+	private static String oraQi(String name)
+	{
+		return "\"" + StringUtil.nullToValue(name, "").trim() + "\"";
+	}
+
+	/** A key in a CREATE INDEX: a column in quotes, an expression (it has quotes or parentheses) as Oracle wrote it */
+	private static String oraKeyDdl(String key)
+	{
+		String col  = oraColName(key);
+		String desc = key.endsWith(" DESC") ? " DESC" : "";
+		return (col.contains("(") || col.contains("\"") ? col : oraQi(col)) + desc;
+	}
+
+	/** The CREATE INDEX that gives the (non-unique, not partitioned, B-tree) index back: keys, tablespace and compression */
+	private static String oraCreateIndex(OraTableInfo ti, OraIndexInfo ii)
+	{
+		List<String> cols = new ArrayList<>();
+		for (String k : oraKeys(ii.keys))
+			cols.add(oraKeyDdl(k));
+
+		StringBuilder sb = new StringBuilder();
+		sb.append("CREATE INDEX ").append(oraQi(ii.owner)).append(".").append(oraQi(ii.name))
+		  .append(" ON ").append(oraQi(ti.owner)).append(".").append(oraQi(ti.name)).append(" (").append(String.join(", ", cols)).append(")");
+		if (oraValue(ii.tablespace) != null)
+			sb.append(" TABLESPACE ").append(oraQi(ii.tablespace));
+
+		String compression = StringUtil.nullToValue(oraValue(ii.compression), "DISABLED");
+		if ("ENABLED".equals(compression))
+			sb.append(" COMPRESS").append(ii.prefixLength > 0 ? " " + ii.prefixLength : "");
+		else if (compression.startsWith("ADVANCED"))
+			sb.append(" COMPRESS ").append(compression);
+		return sb.toString();
+	}
+
+	/**
+	 * DDL CHANGES and ROLLBACK. Oracle DDL commits at once, so:<br>
+	 * Step 1: ALTER INDEX ... INVISIBLE (rollback: VISIBLE).<br>
+	 * Step 2: a PL/SQL block that checks the indexes, then drops them (rollback: CREATE INDEX).
+	 *
+	 * @param kept  the index that stays (checked: there, VALID and VISIBLE), null for unused indexes
+	 */
+	private static String createOraIndexScript(OraTableInfo ti, OraIndexInfo kept, List<OraIndexInfo> dropped)
+	{
+		StringBuilder sb = new StringBuilder();
+		sb.append("-- DDL CHANGES: ").append(ti.getFullName()).append(StringUtil.hasValue(ti.dbname) ? " (in " + ti.dbname + ")" : "").append("\n");
+		sb.append("-- Captured ").append(ti.sampleTime).append(": check that the indexes still look like this before running.\n");
+		sb.append("-- Step 1: make it INVISIBLE. The optimizer stops using it, it is still maintained. Watch for slower statements.\n");
+		for (OraIndexInfo d : dropped)
+			sb.append("ALTER INDEX ").append(oraQi(d.owner)).append(".").append(oraQi(d.name)).append(" INVISIBLE;\n");
+
+		sb.append("\n");
+		sb.append("-- Step 2, when nothing got slower for a while: drop it. The block checks the indexes first, if one is not as expected nothing is changed.\n");
+		sb.append("DECLARE\n");
+		sb.append("    n NUMBER;\n");
+		sb.append("BEGIN\n");
+		if (kept != null)
+			appendOraIndexCheck(sb, kept, "AND STATUS IN ('VALID', 'N/A') AND VISIBILITY = 'VISIBLE'", "is not there, or not VALID and VISIBLE");
+		for (OraIndexInfo d : dropped)
+			appendOraIndexCheck(sb, d, "", "is not there");
+		for (OraIndexInfo d : dropped)
+			sb.append("    EXECUTE IMMEDIATE 'DROP INDEX ").append(oraQi(d.owner).replace("'", "''")).append(".").append(oraQi(d.name).replace("'", "''")).append("';\n");
+		sb.append("END;\n");
+		sb.append("/\n");
+
+		sb.append("\n");
+		sb.append("-- ROLLBACK of step 1 (the index is still there)\n");
+		for (OraIndexInfo d : dropped)
+			sb.append("ALTER INDEX ").append(oraQi(d.owner)).append(".").append(oraQi(d.name)).append(" VISIBLE;\n");
+		sb.append("\n");
+		sb.append("-- ROLLBACK of step 2 (the index was dropped)\n");
+		for (OraIndexInfo d : dropped)
+			sb.append(oraCreateIndex(ti, d)).append(";\n");
+		return sb.toString();
+	}
+
+	private static void appendOraIndexCheck(StringBuilder sb, OraIndexInfo ii, String andWhere, String problem)
+	{
+		String owner = ii.owner.replace("'", "''");
+		String name  = ii.name .replace("'", "''");
+		sb.append("    SELECT count(*) INTO n FROM ALL_INDEXES WHERE OWNER = '").append(owner).append("' AND INDEX_NAME = '").append(name).append("'").append(andWhere.isEmpty() ? "" : " " + andWhere).append(";\n");
+		sb.append("    IF n = 0 THEN RAISE_APPLICATION_ERROR(-20001, 'Index ").append(owner).append(".").append(name).append(" ").append(problem).append(": nothing was changed.'); END IF;\n");
 	}
 }

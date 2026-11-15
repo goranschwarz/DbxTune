@@ -51,6 +51,7 @@ import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.DbUtils;
 import com.dbxtune.utils.SqlServerUtils;
 import com.dbxtune.utils.StringUtil;
+import com.dbxtune.utils.Ver;
 
 public class ObjectLookupInspectorSqlServer
 extends ObjectLookupInspectorAbstract
@@ -473,6 +474,7 @@ extends ObjectLookupInspectorAbstract
 			}
 			catch(SQLException e)
 			{
+				pch.incDdlLookupIssue(e);
 				String msg = "Problems getting text from sys.dm_exec_query_plan, about '" + objectName + "'. Msg=" + e.getErrorCode() + ", SQLState='" + e.getSQLState() + "', Text='" + e.getMessage() + "'. Caught: " + e;
 				_logger.warn(msg); 
 				storeEntry.setObjectText( msg );
@@ -492,7 +494,7 @@ extends ObjectLookupInspectorAbstract
 		else // all other "objects"
 		{
 			// Get a list of DBMS Object we want to get information for!
-			List<DdlDetails> objectList = getDbmsObjectList(conn, dbname, objectName, source, dependParent, dependLevel);
+			List<DdlDetails> objectList = getDbmsObjectList(conn, pch, dbname, objectName, source, dependParent, dependLevel);
 			
 			// The object was NOT found
 			if (objectList.isEmpty())
@@ -685,18 +687,23 @@ extends ObjectLookupInspectorAbstract
 					try
 					{
 						storeEntry.setObjectText( executeInDatabase(conn, storeEntry.getDbname(), sql, storeEntry.getObjectId()) );
+						pch.incDdlMetadataSql();
 					}
 					catch (SQLException ex)
 					{
+						pch.incDdlMetadataFallback();
+						pch.incDdlLookupIssue(ex);
 						_logger.warn("DDL Lookup. Problems Getting TABLE BASIC information using SQL, trying with 'sp_help' instead, for: TableName='" + storeEntry.getObjectName() + "', dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Caught: " + ex);
 
 						try	(AseSqlScript ss = new AseSqlScript(conn, 10))
 						{
 							ss.setRsAsAsciiTable(true);
 							storeEntry.setObjectText( ss.executeSqlStr("exec [" + storeEntry.getDbname() + "]..sp_help '" + storeEntry.getSchemaAndObjectName() + "' ", true) );
+							pch.incDdlLookupIssue(ss.getLastSqlException());
 						}
 						catch (SQLException e)
 						{
+							pch.incDdlLookupIssue(e);
 							storeEntry.setObjectText( e.toString() );
 							_logger.warn("DDL Lookup. Problems Getting TABLE BASIC information for: TableName='" + storeEntry.getObjectName() + "', dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Caught: " + e);
 						}
@@ -915,7 +922,8 @@ extends ObjectLookupInspectorAbstract
 						    + "         + CASE WHEN i.ignore_dup_key              = 0 THEN '' ELSE 'IGNORE_DUP_KEY = ON, ' END \n"
 						    + "         + CASE WHEN i.allow_row_locks             = 1 THEN '' ELSE 'ALLOW_ROW_LOCKS = OFF, '  END \n"
 						    + "         + CASE WHEN i.allow_page_locks            = 1 THEN '' ELSE 'ALLOW_PAGE_LOCKS = OFF, ' END \n"
-//						    + "         + CASE WHEN i.optimize_for_sequential_key = 0 THEN '' ELSE 'OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF, ' END \n" // NOTE: this is new in 2019
+						    + (conn.getDbmsVersionNumber() >= Ver.ver(2019) ? "         + CASE WHEN i.optimize_for_sequential_key = 1 THEN 'OPTIMIZE_FOR_SEQUENTIAL_KEY = ON, ' ELSE '' END \n" : "") // the column is new in 2019
+						    + "         + 'STATISTICS_NORECOMPUTE = ' + CASE WHEN st.no_recompute = 1 THEN 'ON, ' ELSE 'OFF, ' END \n" // ALWAYS written: SqlServerAbstract can see that the DDL has it, or if it's from an older Collector
 						    + "         + 'DATA_COMPRESSION = ' + ISNULL(pc.IndexCompression COLLATE DATABASE_DEFAULT, '?') + ', ' \n"
 						    + "         + 'MAXDOP = 0, ' \n"
 						    + "         + 'ONLINE = OFF' \n"
@@ -929,6 +937,7 @@ extends ObjectLookupInspectorAbstract
 						    + "LEFT OUTER JOIN include_cols ic ON o.object_id = ic.object_id and i.index_id = ic.index_id \n"
 						    + "LEFT OUTER JOIN part_comp    pc ON s.object_id = pc.object_id and s.index_id = pc.index_id \n"
 						    + "LEFT OUTER JOIN sys.tables    t ON s.object_id = t.object_id \n"
+						    + "LEFT OUTER JOIN sys.stats    st ON i.object_id = st.object_id AND i.index_id = st.stats_id \n"
 						    + "WHERE 1=1 \n"
 						    + "  AND o.object_id = @objectId \n"
 						    + "  AND o.is_ms_shipped = 0 \n"
@@ -942,6 +951,7 @@ extends ObjectLookupInspectorAbstract
 					}
 					catch (SQLException e)
 					{ 
+						pch.incDdlLookupIssue(e);
 						storeEntry.setExtraInfoText( e.toString() ); 
 						_logger.warn("DDL Lookup. Problems Getting TABLE SIZE information for: TableName='" + storeEntry.getObjectName() + "', dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Caught: " + e);
 					}
@@ -986,6 +996,7 @@ extends ObjectLookupInspectorAbstract
 					}
 					catch (SQLException e)
 					{
+						pch.incDdlLookupIssue(e);
 						storeEntry.setObjectText( e.toString() );
 						_logger.warn("DDL Lookup. Problems Getting OBJECT TEXT information for: Type='" + storeEntry.getType() + "', dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Caught: " + e);
 					}
@@ -1042,9 +1053,11 @@ extends ObjectLookupInspectorAbstract
 					{
 						ss.setRsAsAsciiTable(true);
 						storeEntry.addDependsText( ss.executeSqlStr(sql, true) ); 
+						pch.incDdlLookupIssue(ss.getLastSqlException());
 					} 
 					catch (SQLException e) 
 					{ 
+						pch.incDdlLookupIssue(e);
 						storeEntry.addDependsText( e.toString() ); 
 					}
 		
@@ -1115,6 +1128,7 @@ extends ObjectLookupInspectorAbstract
 							// java.sql.SQLException: JZ0R2: No result set for this query.
 							if ( ! "JZ0R2".equals(e.getSQLState()) )
 							{
+								pch.incDdlLookupIssue(e);
 								_logger.warn("Problems getting 'sp_depends' for table '" + storeEntry.getFullObjectName() + "'. SqlState='" + e.getSQLState() + "', Caught: " + e);
 							}
 						}
@@ -1132,7 +1146,7 @@ extends ObjectLookupInspectorAbstract
 	}
 
 
-	private List<DdlDetails> getDbmsObjectList(DbxConnection conn, String dbname, String objectName, String source, String dependParent, int dependLevel)
+	private List<DdlDetails> getDbmsObjectList(DbxConnection conn, PersistentCounterHandler pch, String dbname, String objectName, String source, String dependParent, int dependLevel)
 	{
 		String originObjectName = objectName;
 
@@ -1256,6 +1270,7 @@ extends ObjectLookupInspectorAbstract
 		}
 		catch (SQLException e)
 		{
+			pch.incDdlLookupIssue(e);
 			_logger.error("Problems Getting basic information about DDL for dbname='" + dbname + "', objectName='" + objectName + "', source='" + source + "', dependLevel=" + dependLevel + ". Skipping DDL Storage of this object. Msg=" + e.getErrorCode() + ", SQLState='" + e.getSQLState() + "', Text='" + e.getMessage() + "'. Caught: " + e);
 
 			if (e.getMessage().contains("The connection is broken and recovery is not possible"))

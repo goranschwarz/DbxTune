@@ -42,13 +42,16 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.PostgresTune;
+import com.dbxtune.cm.postgres.PostgresCmUtils;
 import com.dbxtune.config.dbms.DbmsConfigIssue.Severity;
 import com.dbxtune.pcs.MonRecordingInfo;
 import com.dbxtune.pcs.PersistWriterJdbc;
 import com.dbxtune.sql.conn.DbxConnection;
+import com.dbxtune.sql.conn.info.DbmsVersionInfoPostgres;
 import com.dbxtune.utils.PostgresUtils;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.SwingUtils;
+import com.dbxtune.utils.Ver;
 
 
 public class PostgresConfig
@@ -833,9 +836,9 @@ extends DbmsConfigAbstract
 			{
 				String key = "DbmsConfigIssue." + srvName + ".pg_settings." + cfgToPropName(cfgName) + ".not_available";
 
-				DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, cfgName, Severity.INFO, 
-						"The Server Level Configuration '" + cfgName + "' does NOT contain 'pg_stat_statements'. This is an important option for PostgresTune, it's used to see what SQL Statements are expensive.", 
-						"Fix this using: 'CREATE EXTENSION pg_stat_statements', for more details check: https://www.postgresql.org/docs/current/static/pgstatstatements.html");
+				DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, cfgName, Severity.INFO,
+						"The Server Level Configuration '" + cfgName + "' does NOT contain 'pg_stat_statements'. This is an important option for PostgresTune, it's used to see what SQL Statements are expensive.",
+						"Fix this using: add pg_stat_statements to shared_preload_libraries (ALTER SYSTEM SET shared_preload_libraries = 'the_current_list, pg_stat_statements'), RESTART the server, then 'CREATE EXTENSION pg_stat_statements;' (CREATE EXTENSION alone is not enough). See https://www.postgresql.org/docs/current/pgstatstatements.html");
 
 				DbmsConfigManager.getInstance().addConfigIssue(issue);
 			}
@@ -880,15 +883,231 @@ extends DbmsConfigAbstract
 			}
 		}
 
+		//=======================================================
+		// The checks below were added 2026-11 (survey section F). Inline, one block per check, as MySqlConfig.checkConfig().
+		// Values: pg_settings.setting in its base unit (memory in kB or 8kB pages, times in ms or s).
+		// Evidence queries run through PostgresCmUtils (in a SAVEPOINT: checkConfig runs inside the collector's init transaction, a failing query would abort it)
+		//=======================================================
+		String keyPrefix = "DbmsConfigIssue." + srvName + ".pg_settings.";
+		long   srvVersion = conn.getDbmsVersionNumber(); // 0 if we don't know
+		DbmsVersionInfoPostgres versionInfo = (conn.getDbmsVersionInfo() instanceof DbmsVersionInfoPostgres) ? (DbmsVersionInfoPostgres) conn.getDbmsVersionInfo() : null;
+		String managed = (versionInfo != null && versionInfo.isCloudManagedDbms()) ? " (On a managed service (" + versionInfo.getFlavor() + "): change it in the service's parameter group / server parameters, not with ALTER SYSTEM.)" : "";
+		boolean hasPgss = value("shared_preload_libraries") != null && value("shared_preload_libraries").contains("pg_stat_statements");
+
 		//-------------------------------------------------------
-		// TODO in the future
-		cfgName = "min_parallel_table_scan_size"; // is probably set to low  
-		cfgName = "min_parallel_index_scan_size"; // is probably set to low  
+		// Statistics that are off: some columns in PostgresTune are always 0 (was a line in the collector log)
+		//-------------------------------------------------------
+		if ("off".equalsIgnoreCase(value("track_io_timing")))
+			addIssue(srvRestart, keyPrefix + "track_io_timing.off", "track_io_timing", Severity.INFO,
+					"track_io_timing is off: the read and write times (blk_read_time / shared_blk_read_time...) in pg_stat_database, pg_stat_io and pg_stat_statements are always 0, so PostgresTune can't show how long the statements waited for the disk.",
+					"ALTER SYSTEM SET track_io_timing = on; SELECT pg_reload_conf(); (the cost is a clock read per I/O: cheap on most systems, check with the pg_test_timing tool)" + managed);
 
-		//check: 'maintenance_work_mem'   DEfault: 64MB, could be much higher (used for create index, vacuum etc)
-		//check: 'work_mem' should not be to high (per sort, not per connection) 
-		//check: 'checkpoint_completion_target' Default=0.5 ...For dedicated systems, with good I/O: 0.8
+		if (srvVersion >= Ver.ver(14) && "off".equalsIgnoreCase(value("track_wal_io_timing")))
+			addIssue(srvRestart, keyPrefix + "track_wal_io_timing.off", "track_wal_io_timing", Severity.INFO,
+					"track_wal_io_timing is off: the WAL write and sync times (pg_stat_wal, 18+: pg_stat_io) are always 0.",
+					"ALTER SYSTEM SET track_wal_io_timing = on; SELECT pg_reload_conf();" + managed);
 
+		if ("none".equalsIgnoreCase(value("track_functions")))
+			addIssue(srvRestart, keyPrefix + "track_functions.none", "track_functions", Severity.INFO,
+					"track_functions is none: function calls are not counted, so the Performance Counter 'Functions' (CmPgFunctions) is empty.",
+					"ALTER SYSTEM SET track_functions = 'pl'; SELECT pg_reload_conf(); ('pl' = the functions written in PL/pgSQL and other procedural languages; 'all' also counts C and SQL functions)" + managed);
+
+		if (num("track_activity_query_size", 1024) <= 1024)
+			addIssue(srvRestart, keyPrefix + "track_activity_query_size.small", "track_activity_query_size", Severity.INFO,
+					"track_activity_query_size is " + value("track_activity_query_size") + " bytes: the SQL text of the running statements (pg_stat_activity.query, 'Active Statements', 'Long Running Statements') is cut after that. A long statement can't be seen in full.",
+					"ALTER SYSTEM SET track_activity_query_size = 8192; and RESTART the server (it is shared memory: 8 KB per connection)." + managed);
+
+		if (srvVersion >= Ver.ver(14) && hasPgss && "off".equalsIgnoreCase(value("compute_query_id")))
+			addIssue(srvRestart, keyPrefix + "compute_query_id.off", "compute_query_id", Severity.WARNING,
+					"compute_query_id is off while pg_stat_statements is loaded: the statements get no query id, so pg_stat_statements collects nothing (unless another module computes it), and 'Top SQL' is empty.",
+					"ALTER SYSTEM SET compute_query_id = auto; SELECT pg_reload_conf(); ('auto' lets pg_stat_statements turn it on)" + managed);
+
+		// pg_stat_statements.max too small: statements were thrown out (deallocated) to make room (14+: pg_stat_statements_info)
+		if (srvVersion >= Ver.ver(14) && hasPgss)
+		{
+			long dealloc = StringUtil.parseLong(PostgresCmUtils.getFirstString(conn, "select dealloc from pg_stat_statements_info"), -1);
+			if (dealloc > 0)
+				addIssue(srvRestart, keyPrefix + "pg_stat_statements.max.dealloc", "pg_stat_statements.max", Severity.INFO,
+						"pg_stat_statements.max is " + value("pg_stat_statements.max") + ", and pg_stat_statements has thrown out the least used statements " + dealloc + " times to make room (pg_stat_statements_info.dealloc). "
+						+ "The statistics of the thrown-out statements start from 0 again: 'Top SQL' and the other statement reports are not complete.",
+						"ALTER SYSTEM SET pg_stat_statements.max = 10000; and RESTART the server (shared memory). Many statements that differ only in literal values (not using bind variables) also fill it." + managed);
+		}
+
+		//-------------------------------------------------------
+		// Logging that the DBA needs (and the DSR 'Error Log' section): the defaults changed in Postgres 15
+		//-------------------------------------------------------
+		if (num("log_autovacuum_min_duration", 0) < 0)
+			addIssue(srvRestart, keyPrefix + "log_autovacuum_min_duration.off", "log_autovacuum_min_duration", Severity.INFO,
+					"log_autovacuum_min_duration is -1: autovacuum runs are never written to the server log, so it is hard to see what autovacuum does (and when it can't keep up).",
+					"ALTER SYSTEM SET log_autovacuum_min_duration = '10min'; SELECT pg_reload_conf(); (the default from Postgres 15)" + managed);
+
+		if ("off".equalsIgnoreCase(value("log_checkpoints")))
+			addIssue(srvRestart, keyPrefix + "log_checkpoints.off", "log_checkpoints", Severity.INFO,
+					"log_checkpoints is off: the checkpoints (and why they started, how long they took) are not written to the server log.",
+					"ALTER SYSTEM SET log_checkpoints = on; SELECT pg_reload_conf(); (the default from Postgres 15)" + managed);
+
+		if ("off".equalsIgnoreCase(value("log_lock_waits")))
+			addIssue(srvRestart, keyPrefix + "log_lock_waits.off", "log_lock_waits", Severity.INFO,
+					"log_lock_waits is off: a session that waits for a lock longer than deadlock_timeout (" + value("deadlock_timeout") + " ms) is not written to the server log, with who blocked it.",
+					"ALTER SYSTEM SET log_lock_waits = on; SELECT pg_reload_conf();" + managed);
+
+		if (num("log_temp_files", 0) < 0)
+			addIssue(srvRestart, keyPrefix + "log_temp_files.off", "log_temp_files", Severity.INFO,
+					"log_temp_files is -1: the temp files (sorts and hashes that did not fit in work_mem) are not written to the server log, with the statement that made them.",
+					"ALTER SYSTEM SET log_temp_files = '10MB'; SELECT pg_reload_conf(); (only the temp files of 10 MB or more)" + managed);
+
+		//-------------------------------------------------------
+		// Safety
+		//-------------------------------------------------------
+		// A replication slot keeps all WAL its consumer has not read: without a limit a lost consumer fills the disk (13+)
+		if (srvVersion >= Ver.ver(13) && num("max_slot_wal_keep_size", 0) < 0)
+		{
+			long slots = StringUtil.parseLong(PostgresCmUtils.getFirstString(conn, "select count(*) from pg_replication_slots"), 0);
+			if (slots > 0)
+				addIssue(srvRestart, keyPrefix + "max_slot_wal_keep_size.unlimited", "max_slot_wal_keep_size", Severity.WARNING,
+						"There are " + slots + " replication slot(s), and max_slot_wal_keep_size is -1 (no limit): a slot keeps all the WAL its consumer has not read yet. "
+						+ "If the standby / subscriber is gone (or far behind), pg_wal grows until the disk is full, and the server stops.",
+						"ALTER SYSTEM SET max_slot_wal_keep_size = '10GB'; SELECT pg_reload_conf(); (choose it from the free disk space: a slot that passes the limit is invalidated, and its consumer must be rebuilt)"
+						+ (srvVersion >= Ver.ver(18) && num("idle_replication_slot_timeout", 0) == 0 ? ". Postgres 18: also idle_replication_slot_timeout (for example '1d') invalidates a slot nobody used for that long." : "")
+						+ managed);
+		}
+
+		if (num("idle_in_transaction_session_timeout", 0) == 0)
+			addIssue(srvRestart, keyPrefix + "idle_in_transaction_session_timeout.off", "idle_in_transaction_session_timeout", Severity.INFO,
+					"idle_in_transaction_session_timeout is 0 (off): a session that opened a transaction and then waits for the application keeps its locks, and stops vacuum from removing dead rows, for as long as it wants.",
+					"ALTER SYSTEM SET idle_in_transaction_session_timeout = '10min'; SELECT pg_reload_conf(); (such a session is then ended; it can also be set per role or database)" + managed);
+
+		if ("off".equalsIgnoreCase(value("full_page_writes")))
+			addIssue(srvRestart, keyPrefix + "full_page_writes.off", "full_page_writes", Severity.WARNING,
+					"full_page_writes is off: after a crash (or a power failure) a page that was only partly written can't be repaired from the WAL, and the data can be corrupt. "
+					+ "Only safe on a file system that can't write half a page (for example ZFS).",
+					"ALTER SYSTEM SET full_page_writes = on; SELECT pg_reload_conf();" + managed);
+
+		// Settings changed in the configuration, but they only take effect at the next restart (9.5+: pg_settings.pending_restart)
+		String pending = PostgresCmUtils.getFirstString(conn, "select string_agg(name, ', ' order by name) from pg_settings where pending_restart");
+		if (StringUtil.hasValue(pending))
+			addIssue(srvRestart, keyPrefix + "pending_restart", "pending_restart", Severity.INFO,
+					"These settings were changed, but they only take effect when the server is restarted: " + pending + ". Until then the server runs with the old values.",
+					"Restart the server when it suits you. (Undoing the change with ALTER SYSTEM RESET name_of_the_setting does not remove this flag: only a restart does.)" + managed);
+
+		//-------------------------------------------------------
+		// Performance: with evidence since the statistics were reset (or the server started). At least 1 hour of statistics.
+		//-------------------------------------------------------
+		final long MIN_STATS_SECONDS = 3600;
+
+		// Requested checkpoints: forced by the WAL volume when max_wal_size is too small (as the DSR 'WAL, Checkpoints and Archiving' and the CheckpointsRequested alarm)
+		String ckptSql = srvVersion >= Ver.ver(17)
+				? "select num_requested || ';' || num_timed || ';' || extract(epoch from now() - coalesce(stats_reset, pg_postmaster_start_time()))::bigint from pg_stat_checkpointer"
+				: "select checkpoints_req || ';' || checkpoints_timed || ';' || extract(epoch from now() - coalesce(stats_reset, pg_postmaster_start_time()))::bigint from pg_stat_bgwriter";
+		String[] ckpt = StringUtil.nullToValue(PostgresCmUtils.getFirstString(conn, ckptSql), "").split(";");
+		if (ckpt.length == 3)
+		{
+			long req = StringUtil.parseLong(ckpt[0], 0), timed = StringUtil.parseLong(ckpt[1], 0), sec = StringUtil.parseLong(ckpt[2], 0);
+			if (sec >= MIN_STATS_SECONDS && req >= 10 && req * 100.0 / (req + timed) > 20.0) // the same 20% as the CheckpointsRequested alarm
+				addIssue(srvRestart, keyPrefix + "max_wal_size.requested_checkpoints", "max_wal_size", Severity.INFO,
+						String.format("%.1f", req * 100.0 / (req + timed)) + "% of the checkpoints (" + req + " of " + (req + timed) + ", in " + Math.round(sec / 3600.0) + " hours) were requested, not timed: "
+						+ "most likely forced by the WAL volume, because max_wal_size (" + value("max_wal_size") + " MB) is reached before checkpoint_timeout (" + value("checkpoint_timeout") + " s). Each checkpoint writes all changed pages, and the next changes write full pages to the WAL again.",
+						"ALTER SYSTEM SET max_wal_size = '" + Math.max(2048, num("max_wal_size", 1024) * 2) + "MB'; SELECT pg_reload_conf(); (pg_wal needs room for it; the DSR section 'WAL, Checkpoints and Archiving' shows the WAL per hour. Requested checkpoints also come from CHECKPOINT commands and base backups.)" + managed);
+		}
+
+		// Temp files: sorts and hashes that did not fit in work_mem
+		String[] temp = StringUtil.nullToValue(PostgresCmUtils.getFirstString(conn,
+				"select coalesce(sum(temp_bytes), 0) || ';' || extract(epoch from now() - coalesce(min(stats_reset), pg_postmaster_start_time()))::bigint from pg_stat_database"), "").split(";");
+		if (temp.length == 2)
+		{
+			long bytes = StringUtil.parseLong(temp[0], 0), sec = StringUtil.parseLong(temp[1], 0);
+			double gbPerDay = sec <= 0 ? 0 : bytes / 1024.0 / 1024.0 / 1024.0 * 86400.0 / sec;
+			if (sec >= MIN_STATS_SECONDS && gbPerDay > 10.0)
+				addIssue(srvRestart, keyPrefix + "work_mem.temp_files", "work_mem", Severity.INFO,
+						String.format("The server writes about %.0f GB of temp files per day (pg_stat_database.temp_bytes, %d hours of statistics): sorts and hashes that did not fit in work_mem (%s kB) go to disk.", gbPerDay, sec / 3600, value("work_mem")),
+						"Find the statements in the DSR 'Top SQL' (rank_temp, temp_blks_written). Raise work_mem for them (SET work_mem in the session, or ALTER ROLE ... SET work_mem) rather than for the whole server: it is per sort / hash, and a statement can use it many times." + managed);
+		}
+
+		// JIT: compiling the statement can take longer than it saves (short OLTP statements). 15+: pg_stat_statements has the JIT times
+		if (srvVersion >= Ver.ver(15) && hasPgss && "on".equalsIgnoreCase(value("jit")))
+		{
+			double jitPct = StringUtil.parseDouble(PostgresCmUtils.getFirstString(conn,
+					"select round((100.0 * sum(jit_generation_time + jit_inlining_time + jit_optimization_time + jit_emission_time) / nullif(sum(total_exec_time), 0))::numeric, 1) from pg_stat_statements"), 0);
+			if (jitPct > 5.0)
+				addIssue(srvRestart, keyPrefix + "jit.time", "jit", Severity.INFO,
+						"JIT compilation is " + jitPct + "% of all statement execution time (pg_stat_statements): it is used for statements the planner thinks are expensive (jit_above_cost " + value("jit_above_cost") + "), "
+						+ "and for many short statements the compiling takes longer than it saves.",
+						"ALTER SYSTEM SET jit = off; SELECT pg_reload_conf(); (or raise jit_above_cost, for example to 500000). Check the statements with the most jit_*_time in pg_stat_statements first." + managed);
+		}
+
+		// Table bloat: the estimate needs pg_stats, which only shows the columns the login may SELECT (with 'pg_monitor': none).
+		// pgstattuple_approx() measures it instead (pg_monitor may use it), but the extension must be created in each database (CmPgTableBloat).
+		// Only the database we are connected to is checked here.
+		if (srvVersion >= Ver.ver(9,5))
+		{
+			String r = PostgresCmUtils.getFirstString(conn, ""
+					+ "select ((select rolsuper from pg_roles where rolname = current_user) "
+					+ (srvVersion >= Ver.ver(14) ? "or pg_has_role(current_user, 'pg_read_all_data', 'member')" : "")
+					+ ")::text || ';' || (exists (select 1 from pg_extension where extname = 'pgstattuple'))::text || ';' || current_database()"); // the parentheses: || binds tighter than OR
+			String[] p = StringUtil.nullToValue(r, "").split(";");
+			if (p.length == 3 && "false".equals(p[0]) && "false".equals(p[1]))
+				addIssue(srvRestart, keyPrefix + "pgstattuple.missing", "pgstattuple", Severity.INFO,
+						"Table bloat can't be measured or estimated: the extension pgstattuple is not in the database '" + p[2] + "' (it is needed in each database with tables to check), "
+						+ "and the login can't see the column statistics (pg_stats only shows the columns the login may SELECT, and 'pg_monitor' may not). "
+						+ "So the Performance Counter 'Table Bloat', the TableBloat alarm and the DSR section 'Table Bloat' have no numbers.",
+						"As a superuser, in each database: CREATE EXTENSION pgstattuple; (it comes with Postgres, no restart). pg_monitor may then measure the bloat cheaply, without reading any data. "
+						+ "(Not recommended: GRANT pg_read_all_data, which gives the login read access to all data.)" + managed);
+		}
+
+		//-------------------------------------------------------
+		// Performance: by value
+		//-------------------------------------------------------
+		double cct = StringUtil.parseDouble(value("checkpoint_completion_target"), -1);
+		if (cct >= 0 && cct < 0.9)
+			addIssue(srvRestart, keyPrefix + "checkpoint_completion_target.low", "checkpoint_completion_target", Severity.INFO,
+					"checkpoint_completion_target is " + cct + ": a checkpoint writes its pages in that part of checkpoint_timeout, so a low value makes the writes come in bursts.",
+					"ALTER SYSTEM SET checkpoint_completion_target = 0.9; SELECT pg_reload_conf(); (the default from Postgres 14)" + managed);
+
+		long mwmKb = num("maintenance_work_mem", -1);
+		if (mwmKb > 0 && mwmKb <= 64 * 1024)
+			addIssue(srvRestart, keyPrefix + "maintenance_work_mem.small", "maintenance_work_mem", Severity.INFO,
+					"maintenance_work_mem is " + (mwmKb / 1024) + " MB (the default). VACUUM (and autovacuum, unless autovacuum_work_mem is set) can only keep that many dead rows in memory at a time: "
+					+ "a big table needs several passes over all its indexes. CREATE INDEX also sorts in it.",
+					"ALTER SYSTEM SET maintenance_work_mem = '1GB'; SELECT pg_reload_conf(); (it is used by each autovacuum worker: autovacuum_max_workers x the value, or set autovacuum_work_mem lower)" + managed);
+
+		// The autovacuum cost limit: -1 = vacuum_cost_limit (200, the old default). With a cost delay of 2 ms (12+) or 20 ms (before 12) autovacuum is throttled to a few MB/s
+		long avCostLimit = num("autovacuum_vacuum_cost_limit", -1);
+		long effCostLimit = avCostLimit > 0 ? avCostLimit : num("vacuum_cost_limit", 200);
+		if (effCostLimit > 0 && effCostLimit <= 200)
+			addIssue(srvRestart, keyPrefix + "autovacuum_vacuum_cost_limit.low", "autovacuum_vacuum_cost_limit", Severity.INFO,
+					"Autovacuum is throttled: its cost limit is " + effCostLimit + " (autovacuum_vacuum_cost_limit " + avCostLimit + (avCostLimit < 0 ? " = vacuum_cost_limit" : "") + "), with a delay of " + value("autovacuum_vacuum_cost_delay") + " ms. "
+					+ "That is shared by all the autovacuum workers: on fast disks (SSD) a big table can take hours, and dead rows pile up meanwhile (see the DSR 'Dead Rows/Tuples').",
+					"ALTER SYSTEM SET autovacuum_vacuum_cost_limit = 2000; SELECT pg_reload_conf(); (1000-2000 is common on SSD)" + managed);
+
+		if ("off".equalsIgnoreCase(value("wal_compression")))
+			addIssue(srvRestart, keyPrefix + "wal_compression.off", "wal_compression", Severity.INFO,
+					"wal_compression is off: the full-page images in the WAL (the first change of a page after a checkpoint) are not compressed. They are often most of the WAL.",
+					"ALTER SYSTEM SET wal_compression = " + (srvVersion >= Ver.ver(15) ? "lz4" : "on") + "; SELECT pg_reload_conf(); (less WAL to write, archive and send to standbys, for some CPU)" + managed);
+
+		// huge_pages: with a big shared_buffers the page tables of every connection take memory, and TLB misses cost CPU. 17+: huge_pages_status says if it is used
+		double sbMb = StringUtil.parseDouble(_configMap.get("shared_buffers") == null ? null : _configMap.get("shared_buffers").configValueMb, -1);
+		if (sbMb >= 8 * 1024 && "off".equalsIgnoreCase(value("huge_pages_status")))
+			addIssue(srvRestart, keyPrefix + "huge_pages.not_used", "huge_pages", Severity.INFO,
+					"shared_buffers is " + Math.round(sbMb / 1024) + " GB, but huge pages are not used (huge_pages_status = off, huge_pages = " + value("huge_pages") + "). With normal 4 KB pages every connection needs its own page table for all of shared_buffers.",
+					"Reserve huge pages in the OS (vm.nr_hugepages, the size from: postgres -C shared_memory_size_in_huge_pages), and set huge_pages = on (restart)." + managed);
+	}
+
+	/** pg_settings.setting of a configuration, or null when it does not exist (in this version) */
+	private String value(String name)
+	{
+		PostgresConfigEntry entry = _configMap.get(name);
+		return entry == null ? null : entry.configValue;
+	}
+
+	/** pg_settings.setting as a number, or the default when it is missing or not a number */
+	private long num(String name, long defaultValue)
+	{
+		return StringUtil.parseLong(value(name), defaultValue);
+	}
+
+	private void addIssue(Timestamp srvRestart, String key, String cfgName, Severity severity, String description, String fix)
+	{
+		DbmsConfigManager.getInstance().addConfigIssue(new DbmsConfigIssue(srvRestart, key, cfgName, severity, description, fix));
 	}
 
 

@@ -145,6 +145,11 @@
 -->
 		<copy file="bin/dbxPassword.bat"                                 toFile="${dist}/bin/dbxPassword.bat"/>
 
+		<copy file="bin/loadgen.sh"                                     toFile="${dist}/bin/loadgen.sh"/>
+		<copy file="bin/loadgen.bat"                                    toFile="${dist}/bin/loadgen.bat"/>
+		<copy file="conf/loadgen.properties"                            toFile="${dist}/conf/loadgen.properties"/>
+		<copy file="doc/loadgen.md"                                     toFile="${dist}/doc/loadgen.md"/>
+
 		<!-- - - - - - - - - - - - - - -->
 		<!-- And the rest of the tools... but put them in the bin directory -->
 		<!-- - - - - - - - - - - - - - -->

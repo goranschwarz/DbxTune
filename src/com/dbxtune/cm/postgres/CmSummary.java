@@ -37,7 +37,9 @@ import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventBlockingLockAlarm;
+import com.dbxtune.alarm.events.AlarmEventLongRunningStatement;
 import com.dbxtune.alarm.events.AlarmEventLongRunningTransaction;
+import com.dbxtune.alarm.events.postgres.AlarmEventPgRoleChange;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSummaryAbstract;
@@ -76,7 +78,7 @@ extends CmSummaryAbstract
 	public static final long     NEED_SRV_VERSION = 0;
 	public static final long     NEED_CE_VERSION  = 0;
 
-	public static final String[] MON_TABLES       = new String[] {"pg_stat_bgwriter"};
+	public static final String[] MON_TABLES       = new String[] {"pg_stat_activity", "pg_locks", "pg_prepared_xacts", "pg_replication_slots", "pg_stat_replication"};
 	public static final String[] NEED_ROLES       = new String[] {};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
@@ -364,7 +366,8 @@ extends CmSummaryAbstract
 		String oxact_is_waiting_event = "        ,CAST('-unknown-' as varchar(60))    AS oxact_is_waiting_event \n";
 		if (srvVersion >= Ver.ver(10))
 		{
-			oxact_is_waiting       = "        ,CASE WHEN wait_event_type IS NULL THEN true ELSE false END  AS oxact_is_waiting \n";
+			// Same meaning as the 9.x column 'waiting' (waiting for a lock). It was inverted (true when NOT waiting, and 'idle in transaction' with wait_event 'ClientRead' was "waiting")
+			oxact_is_waiting       = "        ,CASE WHEN wait_event_type = 'Lock' THEN true ELSE false END  AS oxact_is_waiting \n";
 			oxact_is_waiting_type  = "        ,CAST(wait_event_type as varchar(60))  AS oxact_is_waiting_type \n";
 			oxact_is_waiting_event = "        ,CAST(wait_event      as varchar(60))  AS oxact_is_waiting_event \n";
 		}
@@ -598,6 +601,9 @@ extends CmSummaryAbstract
 	// ALARMS
 	//----------------------------------------------------------------
 
+	/** pg_is_in_recovery() of the previous sample (null = no sample yet). For the 'RoleChange' alarm */
+	private Boolean _lastInRecovery = null;
+
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -615,6 +621,25 @@ extends CmSummaryAbstract
 		// DbmsVersionStringChanged
 		//-------------------------------------------------------
 		doAlarmIfDbmsVersionStringWasChanged("version");
+
+		//-------------------------------------------------------
+		// RoleChange: primary <-> standby (pg_is_in_recovery() changed since the previous sample)
+		// NOTE: _lastInRecovery is kept over a reconnect (it is NOT cleared in reset()): a failover usually means a reconnect
+		//-------------------------------------------------------
+		String inRecoveryStr = cm.getAbsString(0, "in_recovery");
+		if (inRecoveryStr != null && ! inRecoveryStr.isEmpty())
+		{
+			boolean inRecovery = "true".equalsIgnoreCase(inRecoveryStr) || "t".equalsIgnoreCase(inRecoveryStr) || "1".equals(inRecoveryStr);
+			if (_lastInRecovery != null && _lastInRecovery != inRecovery && isSystemAlarmsForColumnEnabledAndInTimeRange("RoleChange"))
+			{
+				String prevRole = _lastInRecovery ? "STANDBY" : "PRIMARY";
+				String newRole  = inRecovery      ? "STANDBY" : "PRIMARY";
+				AlarmEvent ae = new AlarmEventPgRoleChange(cm, prevRole, newRole);
+				ae.createAlarmOptionsMessage(this, "RoleChange");
+				AlarmHandler.getInstance().addAlarm(ae);
+			}
+			_lastInRecovery = inRecovery;
+		}
 
 		//-------------------------------------------------------
 		// BlockingLockCount
@@ -674,17 +699,20 @@ extends CmSummaryAbstract
 		//-------------------------------------------------------
 		if (isSystemAlarmsForColumnEnabledAndInTimeRange("oldestOpenTranInSec"))
 		{
-			Integer oldest_xact_start_in_sec = cm.getAbsValueAsInteger(0, "oldest_xact_start_in_sec");
+			// NOTE: the column is 'oxact_xact_start_in_sec' (it was read as 'oldest_xact_start_in_sec', which do not exist, so this alarm never fired)
+			Integer oldest_xact_start_in_sec = cm.getAbsValueAsInteger(0, "oxact_xact_start_in_sec");
 			if (oldest_xact_start_in_sec != null)
 			{
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_oldestOpenTranInSec, DEFAULT_alarm_oldestOpenTranInSec);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", oldest_xact_start_in_sec='" + oldest_xact_start_in_sec + "'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", oxact_xact_start_in_sec='" + oldest_xact_start_in_sec + "'.");
 
 				if (oldest_xact_start_in_sec > threshold)
 				{
-					AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, "-unknown-", oldest_xact_start_in_sec, "-unknown-");
+					String dbname   = cm.getAbsString(0, "oxact_dbname");
+					String tranInfo = "pid=" + cm.getAbsString(0, "oxact_pid") + ", user=" + cm.getAbsString(0, "oxact_username") + ", app=" + cm.getAbsString(0, "oxact_appname") + ", state=" + cm.getAbsString(0, "oxact_state");
+					AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, dbname, oldest_xact_start_in_sec, tranInfo);
 
 					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
 					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
@@ -696,7 +724,7 @@ extends CmSummaryAbstract
 							// Set CANCEL message (values that was found AFTER last raise/re-raise event)
 							if (AlarmPhase.CANCEL.equals(phase))
 							{
-								Integer oldest_xact_start_in_sec = cm.getAbsValueAsInteger(0, "oldest_xact_start_in_sec");
+								Integer oldest_xact_start_in_sec = cm.getAbsValueAsInteger(0, "oxact_xact_start_in_sec");
 
 								String cancelMsg = getAlarmCancelText("The oldest open transaction", oldest_xact_start_in_sec + " seconds", " seconds");
 								alarmEvent.setCancelDescription(cancelMsg);
@@ -717,17 +745,22 @@ extends CmSummaryAbstract
 		//-------------------------------------------------------
 		if (isSystemAlarmsForColumnEnabledAndInTimeRange("oldestStatementInSec"))
 		{
-			Integer oldest_stmnt_start_in_sec = cm.getAbsValueAsInteger(0, "oldest_stmnt_start_in_sec");
-			if (oldest_stmnt_start_in_sec != null)
+			// NOTE: the column is 'oxact_stmnt_start_in_sec' (it was read as 'oldest_stmnt_start_in_sec', which do not exist, so this alarm never fired)
+			//       It is the statement of the OLDEST TRANSACTION, and only a statement that is running ('active') counts:
+			//       for 'idle in transaction' it is the time since the last statement started (that is the transaction alarm above)
+			Integer oldest_stmnt_start_in_sec = cm.getAbsValueAsInteger(0, "oxact_stmnt_start_in_sec");
+			String  oxact_state               = cm.getAbsString(0, "oxact_state");
+			if (oldest_stmnt_start_in_sec != null && "active".equals(oxact_state))
 			{
 				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_oldestStatementInSec, DEFAULT_alarm_oldestStatementInSec);
 
 				if (debugPrint || _logger.isDebugEnabled())
-					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", oldest_xact_start_in_sec='" + oldest_stmnt_start_in_sec + "'.");
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): threshold=" + threshold + ", oxact_stmnt_start_in_sec='" + oldest_stmnt_start_in_sec + "'.");
 
 				if (oldest_stmnt_start_in_sec > threshold)
 				{
-					AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, "-unknown-", oldest_stmnt_start_in_sec, "-unknown-");
+					// The settings text always said 'AlarmEventLongRunningStatement' (it raised AlarmEventLongRunningTransaction)
+					AlarmEvent ae = new AlarmEventLongRunningStatement(cm, threshold, oldest_stmnt_start_in_sec, "-unknown-", cm.getAbsString(0, "oxact_dbname"), cm.getAbsString(0, "oxact_username"), "pid=" + cm.getAbsString(0, "oxact_pid"), cm.getAbsString(0, "oxact_appname"));
 
 					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
 					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
@@ -739,7 +772,7 @@ extends CmSummaryAbstract
 							// Set CANCEL message (values that was found AFTER last raise/re-raise event)
 							if (AlarmPhase.CANCEL.equals(phase))
 							{
-								Integer oldest_stmnt_start_in_sec = cm.getAbsValueAsInteger(0, "oldest_stmnt_start_in_sec");
+								Integer oldest_stmnt_start_in_sec = cm.getAbsValueAsInteger(0, "oxact_stmnt_start_in_sec");
 
 								String cancelMsg = getAlarmCancelText("The oldest statement", oldest_stmnt_start_in_sec + " seconds", " seconds");
 								alarmEvent.setCancelDescription(cancelMsg);
@@ -758,6 +791,9 @@ extends CmSummaryAbstract
 
 	
 	
+	public static final String  PROPKEY_alarm_RoleChange                       = CM_NAME + ".alarm.system.if.RoleChange";
+	public static final boolean DEFAULT_alarm_RoleChange                       = true;
+
 	public static final String  PROPKEY_alarm_BlockingLockCount                = CM_NAME + ".alarm.system.if.blocking_lock_count.gt";
 	public static final int     DEFAULT_alarm_BlockingLockCount                = 0;
 
@@ -785,6 +821,7 @@ extends CmSummaryAbstract
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 
 		addAlarmSettings_DbmsVersionStringChanged(list, "version");
+		list.add(new CmSettingsHelper("RoleChange",                       isAlarmSwitch, PROPKEY_alarm_RoleChange                      , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_RoleChange                      , DEFAULT_alarm_RoleChange                      ), DEFAULT_alarm_RoleChange                      , "If the server switched between primary and standby since the previous sample (pg_is_in_recovery() changed), send 'AlarmEventPgRoleChange'." ));
 		list.add(new CmSettingsHelper("BlockingLockCount",                isAlarmSwitch, PROPKEY_alarm_BlockingLockCount               , Integer.class, conf.getIntProperty    (PROPKEY_alarm_BlockingLockCount               , DEFAULT_alarm_BlockingLockCount               ), DEFAULT_alarm_BlockingLockCount               , "If 'BlockingLockCount' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
 		list.add(new CmSettingsHelper("BlockingLockCount MinWaitTime",                   PROPKEY_alarm_BlockingLockCount_minWaitTimeSec, Double .class, conf.getDoubleProperty (PROPKEY_alarm_BlockingLockCount_minWaitTimeSec, DEFAULT_alarm_BlockingLockCount_minWaitTimeSec), DEFAULT_alarm_BlockingLockCount_minWaitTimeSec, "If 'BlockingLockCount' is true; then we can filter on 'blocking_lock_wait_in_sec' (only if Postgres is version 14 or above)"));
 		list.add(new CmSettingsHelper("oldestOpenTranInSec",              isAlarmSwitch, PROPKEY_alarm_oldestOpenTranInSec             , Integer.class, conf.getIntProperty    (PROPKEY_alarm_oldestOpenTranInSec             , DEFAULT_alarm_oldestOpenTranInSec             ), DEFAULT_alarm_oldestOpenTranInSec             , "If 'oldestOpenTranInSec' is greater than ## then send 'AlarmEventLongRunningTransaction'." ));

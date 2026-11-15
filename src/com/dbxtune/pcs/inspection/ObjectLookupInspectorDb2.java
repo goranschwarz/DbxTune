@@ -108,6 +108,7 @@ extends ObjectLookupInspectorAbstract
 		}
 		catch (SQLException ex)
 		{
+			pch.incDdlLookupIssue(ex);
 			_logger.warn("DDL Lookup: Problems with dbname='" + qe._dbname + "', objectName='" + qe._objectName + "', source='" + qe._source + "'. Skipping this object. Caught: " + ex.getMessage().trim());
 			return Collections.emptyList();
 		}
@@ -177,7 +178,7 @@ extends ObjectLookupInspectorAbstract
 			if (type == null || "A".equals(type) || isSystemObject(schema, table))
 				continue;
 
-			objectList.add(createEntry(conn, qe, schema, table, type));
+			objectList.add(createEntry(conn, pch, qe, schema, table, type));
 		}
 
 		if (objectList.isEmpty())
@@ -192,7 +193,7 @@ extends ObjectLookupInspectorAbstract
 	/**
 	 * @param db2Type  SYSCAT.TABLES.TYPE: T = table, V = view, S = materialized query table, G = created temporary table, N = nickname, U / H = typed table...
 	 */
-	private DdlDetails createEntry(DbxConnection conn, ObjectLookupQueueEntry qe, String schema, String table, String db2Type)
+	private DdlDetails createEntry(DbxConnection conn, PersistentCounterHandler pch, ObjectLookupQueueEntry qe, String schema, String table, String db2Type)
 	throws SQLException
 	{
 		boolean isView = "V".equals(db2Type) || "W".equals(db2Type);
@@ -230,6 +231,7 @@ extends ObjectLookupInspectorAbstract
 			}
 			catch (SQLException ex)
 			{
+				pch.incDdlLookupIssue(ex);
 				viewText = "-- Could not read the text from SYSCAT.VIEWS: " + ex.getMessage().trim();
 			}
 		}
@@ -247,6 +249,7 @@ extends ObjectLookupInspectorAbstract
 		}
 		catch (SQLException ex)
 		{
+			pch.incDdlLookupIssue(ex);
 			entry.setObjectText( "-- Could not read the columns of the table from SYSCAT.COLUMNS: " + ex.getMessage().trim() );
 			_logger.warn("DDL Lookup. Problems getting the COLUMNS of table " + entry.getSchemaAndObjectName() + ", source='" + qe._source + "'. Caught: " + ex.getMessage().trim());
 		}
@@ -298,6 +301,11 @@ extends ObjectLookupInspectorAbstract
 
 			+ "    ,VARCHAR(x.LASTUSED)                                      as LASTUSED \n"
 			+ "    ,RTRIM(x.INDSCHEMA)                                       as INDEX_SCHEMA \n"
+			// For Index Analysis: how old the index is, and what a CREATE INDEX needs to give the same index back
+			+ "    ,VARCHAR(x.CREATE_TIME)                                   as CREATE_TIME \n"
+			+ "    ,x.REVERSE_SCANS \n"
+			+ "    ,VARCHAR(x.PCTFREE)                                       as PCTFREE \n"
+			+ "    ,x.COMPRESSION \n"
 			+ "from SYSCAT.INDEXES x \n"
 			+ where + " \n"
 			+ "order by CASE x.UNIQUERULE WHEN 'P' THEN 0 WHEN 'U' THEN 1 ELSE 2 END, x.INDNAME";
@@ -333,6 +341,7 @@ extends ObjectLookupInspectorAbstract
 			}
 			catch (SQLException ex)
 			{
+				pch.incDdlLookupIssue(ex);
 				extraInfo += "Could not get the " + part[0] + ": " + ex.getMessage().trim() + "\n\n";
 				_logger.warn("DDL Lookup. Problems getting the " + part[0].toUpperCase() + " of table " + entry.getSchemaAndObjectName() + ", source='" + qe._source + "'. Caught: " + ex.getMessage().trim());
 			}
@@ -354,6 +363,7 @@ extends ObjectLookupInspectorAbstract
 		}
 		catch (SQLException ex)
 		{
+			pch.incDdlLookupIssue(ex);
 			_logger.info("DDL Lookup. Could not read the TRIGGERS of table " + entry.getSchemaAndObjectName() + ", source='" + qe._source + "'. Caught: " + ex.getMessage().trim());
 		}
 		if (triggers.length() > 0)

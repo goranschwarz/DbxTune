@@ -21,6 +21,7 @@
 package com.dbxtune.pcs.report;
 
 import com.dbxtune.pcs.report.content.DbmsConfigIssues;
+import com.dbxtune.pcs.report.content.mysql.MySqlChattyStatements;
 import com.dbxtune.pcs.report.content.mysql.MySqlErrorLog;
 import com.dbxtune.pcs.report.content.mysql.MySqlLoadOverview;
 import com.dbxtune.pcs.report.content.mysql.MySqlLongRunningStmnts;
@@ -52,6 +53,7 @@ extends DailySummaryReportDefault
 
 		// SQL, Tables, Long Running and Blocking
 		addReportEntry( new MySqlTopSql(this)            );
+		addReportEntry( new MySqlChattyStatements(this)  );
 		addReportEntry( new MySqlTopTableAccess(this)    );
 		addReportEntry( new MySqlLongRunningStmnts(this) );
 

@@ -35,7 +35,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.SQLTimeoutException;
 import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
@@ -119,6 +118,7 @@ import com.dbxtune.utils.AseConnectionUtils;
 import com.dbxtune.utils.AseSqlScript;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.CronUtils;
+import com.dbxtune.utils.DbUtils;
 import com.dbxtune.utils.NumberUtils;
 import com.dbxtune.utils.StringUtil;
 import com.dbxtune.utils.SwingUtils;
@@ -5599,52 +5599,7 @@ implements Cloneable, ITableTooltip
 			
 			
 			// Look for Timeout exception
-			boolean isTimeoutException = false;
-			
-			if (e instanceof SQLTimeoutException) // Not sure in what JDBC Version this was introduced, but not all JDBC Drivers are using this.
-				isTimeoutException = true;
-			
-			if ("JZ006".equals(e.getSQLState()))
-			{
-				String msg = e.toString();
-				if (msg != null)
-				{
-					// Below is a couple of timeout examples 
-					//--------------------------------------------------------
-					// JZ006: Caught IOException: java.io.IOException: JZ0T3: Read operation timed out.
-					// JZ006: Se ha detectado IOException: java.io.IOException: JZ0T3: Ha finalizado el tiempo de espera para la operaci?n de lectura.
-					// JZ006: IOException: java.io.IOException: JZ0T3: Lesevorgang dauerte zu lange (time out) wurde abgefangen.
-					// JZ006: IOException ??: java.io.IOException: JZ0T3: ?? ?? ??? ???????.
-					//
-					// JZ006: Caught IOException: java.net.SocketTimeoutException: Read timed out.
-					// JZ006: Se ha detectado IOException: java.net.SocketTimeoutException: Read timed out.
-					//--------------------------------------------------------
-
-					if (msg.indexOf("JZ0T3") > 0)
-						isTimeoutException = true;
-
-					if (msg.indexOf("SocketTimeoutException") > 0)
-						isTimeoutException = true;
-				}
-			}
-			if ("HY008".equals(e.getSQLState())) // MS SQL Server
-			{
-				// ErrorCode=0, SqlState=HY008, Message=|The query has timed out.|. execTimeInMs=10002, SQL: ...
-				//    com.microsoft.sqlserver.jdbc.SQLServerException: The query has timed out.
-				//            at com.microsoft.sqlserver.jdbc.TDSCommand.checkForInterrupt(IOBuffer.java:7819)
-				//            at com.microsoft.sqlserver.jdbc.TDSParser.parse(tdsparser.java:98)
-				//            at com.microsoft.sqlserver.jdbc.TDSParser.parse(tdsparser.java:37)
-				//            at com.microsoft.sqlserver.jdbc.SQLServerResultSet$FetchBuffer.nextRow(SQLServerResultSet.java:5473)
-				//            at com.microsoft.sqlserver.jdbc.SQLServerResultSet.fetchBufferNext(SQLServerResultSet.java:1790)
-				//            at com.microsoft.sqlserver.jdbc.SQLServerResultSet.next(SQLServerResultSet.java:1048)
-				//            at com.dbxtune.cm.CounterSample.getSample(CounterSample.java:1117)
-				//            at com.dbxtune.cm.CountersModel.refreshGetData(CountersModel.java:5069)
-				//            at com.dbxtune.cm.CountersModel.refresh(CountersModel.java:4901)
-				//            at com.dbxtune.cm.CountersModel.refresh(CountersModel.java:4837)
-				//            at com.dbxtune.CounterCollectorThreadNoGui.run(CounterCollectorThreadNoGui.java:1525)
-				isTimeoutException = true;
-			}
-			if (isTimeoutException)
+			if (DbUtils.isQueryTimeout(e))
 			{
 				// Simply increment the counter (which is set to 0 on every success... or 'no-timeout')
 				_sequentialTimeoutExceptionCount++;

@@ -40,14 +40,22 @@ import com.dbxtune.pcs.report.content.os.OsCpuUsageOverview;
 import com.dbxtune.pcs.report.content.os.OsIoStatOverview;
 import com.dbxtune.pcs.report.content.os.OsIoStatSlowIo;
 import com.dbxtune.pcs.report.content.os.OsSpaceUsageOverview;
+import com.dbxtune.pcs.report.content.postgres.PostgresChattyStatements;
 import com.dbxtune.pcs.report.content.postgres.PostgresConfig;
 import com.dbxtune.pcs.report.content.postgres.PostgresConfiguration;
 import com.dbxtune.pcs.report.content.postgres.PostgresDbSize;
+import com.dbxtune.pcs.report.content.postgres.PostgresErrorLog;
+import com.dbxtune.pcs.report.content.postgres.PostgresLoadOverview;
 import com.dbxtune.pcs.report.content.postgres.PostgresLongRunningStmnts;
+import com.dbxtune.pcs.report.content.postgres.PostgresTableBloat;
+import com.dbxtune.pcs.report.content.postgres.PostgresUnusedIndexes;
 import com.dbxtune.pcs.report.content.postgres.PostgresSrvIoStats;
 import com.dbxtune.pcs.report.content.postgres.PostgresSrvWaitStats;
 import com.dbxtune.pcs.report.content.postgres.PostgresStatementsPerDb;
 import com.dbxtune.pcs.report.content.postgres.PostgresTopDeadRows;
+import com.dbxtune.pcs.report.content.postgres.PostgresReplication;
+import com.dbxtune.pcs.report.content.postgres.PostgresVacuumHealth;
+import com.dbxtune.pcs.report.content.postgres.PostgresWalCheckpoints;
 import com.dbxtune.pcs.report.content.postgres.PostgresTopSql;
 import com.dbxtune.pcs.report.content.postgres.PostgresTopTableAccess;
 import com.dbxtune.pcs.report.content.postgres.PostgresTopTableSize;
@@ -64,6 +72,9 @@ extends DailySummaryReportDefault
 		// Add the Alarms Active/History
 		super.addReportEntries();
 
+		// Load
+		addReportEntry( new PostgresLoadOverview  (this) );   // commits, rollbacks, rows written, temp, connections, cache hit (CmPgDatabase)
+
 		// CPU / Waits
 		addReportEntry( new OsCpuUsageOverview    (this) );
 		addReportEntry( new PostgresSrvIoStats    (this) );
@@ -71,14 +82,17 @@ extends DailySummaryReportDefault
 
 		// Statements
 		addReportEntry( new PostgresLongRunningStmnts(this) );
+		addReportEntry( new PostgresErrorLog      (this) );   // errors and warnings in the server log (CmErrorLog)
 
 		// SQL
 		addReportEntry( new PostgresStatementsPerDb(this) );
 		addReportEntry( new PostgresTopSql         (this) );
+		addReportEntry( new PostgresChattyStatements(this) );   // Possible N+1 / chatty statements (CmPgStatements)
 		addReportEntry( new PostgresTopDeadRows    (this) );
+		addReportEntry( new PostgresVacuumHealth   (this) );   // Transaction id wraparound: database/table ages, what held vacuum back, 19: autovacuum scores
+		addReportEntry( new PostgresTableBloat     (this) );   // estimated bloat (CmPgTableBloat)
 		addReportEntry( new PostgresTopTableAccess (this) );
-// TODO; // Implement 'UnusedIndexes' using: (CmPgIndexes)pg_stat_user_indexes.idx_scan == 0, and to get "score" we can use (CmPgTables)pg_stat_user_tables.n_tup_{ins|del|upd} to get an idea how often the table (but not the index) is maintained...
-//		addReportEntry( new PostgresTopUnusedIndexes(this) );
+		addReportEntry( new PostgresUnusedIndexes  (this) );   // no index scans in the period, the table written to (CmPgIndexes, CmPgTables)
 
 		
 		// Disk IO Activity
@@ -91,6 +105,10 @@ extends DailySummaryReportDefault
 
 		// Network Activity
 		addReportEntry( new CmOsNwInfoOverview    (this) );
+
+		// WAL / Checkpoints / Archiving, and Replication / HA
+		addReportEntry( new PostgresWalCheckpoints(this) );
+		addReportEntry( new PostgresReplication   (this) );
 
 		// Configuration
 		addReportEntry( new PostgresConfiguration(this) );

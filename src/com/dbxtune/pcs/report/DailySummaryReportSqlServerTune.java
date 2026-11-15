@@ -42,6 +42,7 @@ import com.dbxtune.pcs.report.content.os.OsIoStatOverview;
 import com.dbxtune.pcs.report.content.os.OsIoStatSlowIo;
 import com.dbxtune.pcs.report.content.os.OsSpaceUsageOverview;
 import com.dbxtune.pcs.report.content.sqlserver.SqlServerBackupHistory;
+import com.dbxtune.pcs.report.content.sqlserver.SqlServerChattyStatements;
 import com.dbxtune.pcs.report.content.sqlserver.SqlServerCmDeviceIo;
 import com.dbxtune.pcs.report.content.sqlserver.SqlServerConfiguration;
 import com.dbxtune.pcs.report.content.sqlserver.SqlServerCpuUsageOverview;
@@ -102,6 +103,7 @@ extends DailySummaryReportDefault
 		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.EXECUTION_COUNT));
 //		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.RECENTLY_COMPILED));
 		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.MEMORY_GRANTS));
+		addReportEntry( new SqlServerChattyStatements       (this));        // Possible N+1 / chatty statements (CmChattyStatements)
 		addReportEntry( new SqlServerTopCmExecProcedureStats(this));	// Part of mail-message
 		addReportEntry( new SqlServerTopCmExecFunctionStats (this));
 		addReportEntry( new SqlServerTopCmExecTriggerStats  (this));

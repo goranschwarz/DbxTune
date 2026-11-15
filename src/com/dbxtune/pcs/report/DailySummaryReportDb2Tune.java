@@ -22,6 +22,7 @@ package com.dbxtune.pcs.report;
 
 import com.dbxtune.pcs.report.content.DbmsConfigIssues;
 import com.dbxtune.pcs.report.content.db2.Db2Backups;
+import com.dbxtune.pcs.report.content.db2.Db2ChattyStatements;
 import com.dbxtune.pcs.report.content.db2.Db2ErrorLog;
 import com.dbxtune.pcs.report.content.db2.Db2Hadr;
 import com.dbxtune.pcs.report.content.db2.Db2LoadOverview;
@@ -55,6 +56,7 @@ extends DailySummaryReportDefault
 
 		// SQL, Tables, Long Running and Blocking
 		addReportEntry( new Db2TopSql(this)            );
+		addReportEntry( new Db2ChattyStatements(this)  );
 		addReportEntry( new Db2TopTableAccess(this)    );
 		addReportEntry( new Db2LongRunningStmnts(this) );
 

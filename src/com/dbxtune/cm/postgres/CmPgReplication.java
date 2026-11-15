@@ -23,6 +23,7 @@ package com.dbxtune.cm.postgres;
 import java.lang.invoke.MethodHandles;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Savepoint;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -209,6 +210,7 @@ extends CountersModel
 		List <String> pkCols = new LinkedList<String>();
 
 		pkCols.add("client_addr");
+		pkCols.add("application_name"); // two standbys on the same host has the same 'client_addr' (they usually have different application_name/cluster_name)
 
 		return pkCols;
 	}
@@ -222,19 +224,10 @@ extends CountersModel
 		
 		if (conn != null)
 		{
-			try 
-			{
-				String checkSql = "select * from pg_stat_replication where 1=2";
-				ResultSetTableModel dummyRstm = ResultSetTableModel.executeQuery(conn, checkSql, "dummy");
-				
-				has_backend_xmin       = dummyRstm.hasColumn("backend_xmin");
-				has_column__sent_lsn   = dummyRstm.hasColumn("sent_lsn");
-				has_column__reply_time = dummyRstm.hasColumn("reply_time");
-			}
-			catch (SQLException ex)
-			{
-				_logger.error("Problems checking for column name 'sent_lsn' on table 'pg_stat_replication'. ErrorNum=" + ex.getErrorCode(), ex);
-			}
+			// In a SAVEPOINT (canExecute): the initialization runs in a transaction, and a failing statement would abort it (then this CM, and the following CM's, would fail)
+			has_backend_xmin       = PostgresCmUtils.canExecute(conn, "select backend_xmin from pg_stat_replication where 1=2");
+			has_column__sent_lsn   = PostgresCmUtils.canExecute(conn, "select sent_lsn     from pg_stat_replication where 1=2");
+			has_column__reply_time = PostgresCmUtils.canExecute(conn, "select reply_time   from pg_stat_replication where 1=2");
 		}
 		else
 		{
@@ -303,17 +296,20 @@ extends CountersModel
 			    + "    ,cast(backend_xmin     as varchar(30)) AS backend_xmin \n"
 			    + "    ,cast(state            as varchar(80)) AS state \n"
 			    + "    ,cast(sync_state       as varchar(80)) AS sync_state \n"
-			    + "    ,(pg_wal_lsn_diff(pg_current_wal_lsn() ,sent_lsn   ) / 1024)::bigint AS pending_kb \n"
+			    + "    ,(pg_wal_lsn_diff(cur.lsn              ,sent_lsn   ) / 1024)::bigint AS pending_kb \n"
 			    + "    ,(pg_wal_lsn_diff(sent_lsn             ,write_lsn  ) / 1024)::bigint AS write_kb \n"
 			    + "    ,(pg_wal_lsn_diff(write_lsn            ,flush_lsn  ) / 1024)::bigint AS flush_kb \n"
 			    + "    ,(pg_wal_lsn_diff(flush_lsn            ,replay_lsn ) / 1024)::bigint AS replay_kb \n"
-			    + "    ,(pg_wal_lsn_diff(pg_current_wal_lsn() ,replay_lsn))::bigint / 1024  AS total_lag_kb \n"
-	    	    + "    ,EXTRACT(EPOCH FROM (clock_timestamp() - write_lag ))::int AS write_lag \n"
-	    	    + "    ,EXTRACT(EPOCH FROM (clock_timestamp() - flush_lag ))::int AS flush_lag \n"
-	    	    + "    ,EXTRACT(EPOCH FROM (clock_timestamp() - replay_lag))::int AS replay_lag \n"
+			    + "    ,(pg_wal_lsn_diff(cur.lsn              ,replay_lsn))::bigint / 1024  AS total_lag_kb \n"
+			    // write_lag/flush_lag/replay_lag are intervals (the lag), NOT timestamps (it was: clock_timestamp() - write_lag = ~1.7 billion seconds)
+	    	    + "    ,EXTRACT(EPOCH FROM write_lag )::int AS write_lag \n"
+	    	    + "    ,EXTRACT(EPOCH FROM flush_lag )::int AS flush_lag \n"
+	    	    + "    ,EXTRACT(EPOCH FROM replay_lag)::int AS replay_lag \n"
 			    +       reply_time
 			    +       reply_time_seconds
 			    + "FROM pg_stat_replication \n"
+			    // A cascading standby also has WAL senders (rows in here), but pg_current_wal_lsn() fails during recovery: use the last received LSN there
+			    + "CROSS JOIN (SELECT CASE WHEN pg_is_in_recovery() THEN pg_last_wal_receive_lsn() ELSE pg_current_wal_lsn() END AS lsn) cur \n"
 			    + "";
 
 		if (has_column__sent_lsn)
@@ -465,7 +461,20 @@ extends CountersModel
 				client_addr = "local:" + application_name + ":" + state;
 			}
 		}
-		
+
+		// Two standbys on the same host: add the application_name, so they get one graph line each (the label is the same as before when the address is unique)
+		if (StringUtil.hasValue(client_addr))
+		{
+			for (int r = 0; r < this.size(); r++)
+			{
+				if (r != rowId && client_addr.equals(this.getAbsString(r, "client_addr")))
+				{
+					client_addr = client_addr + ":" + this.getAbsString(rowId, "application_name", true, "");
+					break;
+				}
+			}
+		}
+
 //		if (StringUtil.hasValue(client_addr) && itLooksLikeAnIp)
 //		{
 //			// TODO: Lookup the IP and resolve it into a hostname
@@ -557,25 +566,35 @@ extends CountersModel
 			String createTableSql = "CREATE TABLE IF NOT EXISTS postgrestune_ha_dummy_update(id varchar(36), primaryServerName varchar(80), ts timestamptz, primary key(id)); \n";
 			String grantTableSql  = "GRANT SELECT, INSERT, UPDATE, DELETE ON postgrestune_ha_dummy_update to public; \n";
 
+			// NOTE: This runs inside the refresh transaction: a failing CREATE/UPDATE must not abort it (then this CM, and the CM's after it, fails), so: SAVEPOINT
 			if ( ! tableExists )
 			{
 				sql = createTableSql + grantTableSql;
+				Savepoint savepoint = null;
 				try ( Statement stmnt = conn.createStatement() )
 				{
 					_logger.info("updatePrimaryInstance: Table 'postgrestune_ha_dummy_update' did NOT exist, createing the table.");
+					savepoint = conn.getAutoCommit() ? null : conn.setSavepoint();
 					stmnt.executeUpdate(sql);
+					if (savepoint != null)
+						conn.releaseSavepoint(savepoint);
 				}
 				catch (SQLException ex)
 				{
-					_logger.warn("Problems creating/granting table 'postgrestune_ha_dummy_update'. Skipping 'updatePrimaryInstance'. Caught: Error=" + ex.getErrorCode() + ", Msg='" + ex.getMessage().trim() + "', SQL=" + sql);
+					try { if (savepoint != null) conn.rollback(savepoint); } catch (SQLException ignore) {}
 
-					ConnectionProp connProps = conn.getConnProp();
-					String curentUsername = connProps == null ? "-unknown-" : connProps.getUsername();
+					// A login with only 'pg_monitor' can never create it: tell it ONCE (it was an ERROR every 5 minutes)
+					if ( ! _hasLoggedNotAuthorized )
+					{
+						_hasLoggedNotAuthorized = true;
 
-					_logger.error("Current user '" + curentUsername + "' may not be authorized to create the table 'postgrestune_ha_dummy_update' at server '" + conn.getDbmsServerNameNoThrow() + "'. To woraround this issue create the table manually using the following SQL Statements: \n"
-							+ createTableSql + " \n"
-							+ grantTableSql  + " \n"
-							);
+						ConnectionProp connProps = conn.getConnProp();
+						String curentUsername = connProps == null ? "-unknown-" : connProps.getUsername();
+
+						_logger.warn("Current user '" + curentUsername + "' can not create the table 'postgrestune_ha_dummy_update' at server '" + conn.getDbmsServerNameNoThrow() + "' (it is used to measure the standby's replay lag, the rest of '" + CM_NAME + "' works without it). "
+								+ "Caught: " + ex.getMessage().trim() + ". Fix: create the table manually (as the owner of the 'public' schema): " + createTableSql.trim() + " " + grantTableSql.trim()
+								+ " Or turn this off with: " + PROPKEY_update_primary + "=false");
+					}
 					return;
 					// <<<<<<<<<<<<<<<<<< return <<<<<<<<<<<<<<<<<<<<<
 				}
@@ -593,13 +612,19 @@ extends CountersModel
 					selectData +
 					"";
 
+			Savepoint savepoint = null;
 			try ( Statement stmnt = conn.createStatement() )
 			{
 				_logger.debug("updating 'postgrestune_ha_dummy_update'.");
+				savepoint = conn.getAutoCommit() ? null : conn.setSavepoint();
 				stmnt.executeUpdate(updateTable);
+				if (savepoint != null)
+					conn.releaseSavepoint(savepoint);
 			}
 			catch (SQLException ex)
 			{
+				try { if (savepoint != null) conn.rollback(savepoint); } catch (SQLException ignore) {}
+
 				_logger.warn("Problems updating dummy table 'postgrestune_ha_dummy_update'. But continuing with next step. Caught: Error=" + ex.getErrorCode() + ", Msg='" + ex.getMessage().trim() + "', SQL=" + updateTable);
 				
 				// Msg 42501 -- "Error 42501" or "Permission Denied"
@@ -617,6 +642,7 @@ extends CountersModel
 		} // end: updateActive
 	}
 	private long _lastUpdateOfActive = 0;
+	private boolean _hasLoggedNotAuthorized = false;
 
 
 

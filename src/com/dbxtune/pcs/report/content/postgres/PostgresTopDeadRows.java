@@ -25,11 +25,13 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import com.dbxtune.cm.postgres.CmPgTables;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
+import com.dbxtune.pcs.report.content.IndexAnalysisHtml;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
 import com.dbxtune.pcs.report.content.SparklineHelper.SparkLineParams;
@@ -79,7 +81,27 @@ extends PostgresAbstract
 		// Last sample Database Size info
 		sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
 		sb.append(toHtmlTable(_shortRstm));
-		
+
+		// The full advice (with the ALTER TABLE ... SET and its rollback) for the tables whose autovacuum_verdict is not OK
+		// (the same box as in Top SQL > Table Information, where only the tables used by a top statement get it)
+		if ( ! _autovacuumBoxes.isEmpty() )
+		{
+			// NOTE: The boxes are left out in Outlook (collapsible <details>), so are the texts that belong to them. One guard per piece: the box has its own (they can't be nested)
+			String ifNotMso = "<!--[if !mso]><!--> \n";
+			String endIf    = "<!--<![endif]-->    \n";
+			sb.append(ifNotMso);
+			sb.append("<br>\n");
+			sb.append("<b>Autovacuum advice for the " + _autovacuumBoxes.size() + " table(s) above that are not vacuumed (or analyzed) often enough.</b> ");
+			sb.append("Open a box for the numbers of the day, the settings, why, and the <i>Change and Rollback</i> script. Nothing has been changed.<br>\n");
+			sb.append(endIf);
+			for (Map.Entry<String, String> e : _autovacuumBoxes.entrySet())
+			{
+				sb.append(ifNotMso).append("<br><b>").append(IndexAnalysisHtml.esc(e.getKey())).append("</b>\n").append(endIf);
+				sb.append(e.getValue());
+			}
+			sb.append("<br>\n");
+		}
+
 		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are 'Dead Rows' of each Database during the day.",
 				"CmPgTables_DeadRows"
 				));
@@ -110,8 +132,13 @@ extends PostgresAbstract
 	@Override
 	public boolean hasIssueToReport()
 	{
-		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
+		// Dead rows in themselves are not a problem. A table that is not vacuumed (or analyzed) often enough is (column 'autovacuum_verdict')
+		return _tablesWithAutovacuumFindings > 0;
 	}
+	private int _tablesWithAutovacuumFindings = 0;
+
+	/** The full Autovacuum box (numbers, settings, findings, Change and Rollback) of each table with a finding: "db.schema.table" -> html */
+	private Map<String, String> _autovacuumBoxes = new java.util.LinkedHashMap<>();
 
 
 	@Override
@@ -159,7 +186,8 @@ extends PostgresAbstract
 			    + "     [dbname] \n"
 			    + "    ,[schemaname] \n"
 			    + "    ,[relname] \n"
-			    
+			    + "    ,cast('' as varchar(1024)) as [autovacuum_verdict] \n" // filled below (PostgresAutovacuumAdvice)
+
 			    // total_kb
 			    + "    ,(select max([total_kb]) \n"
 			    + "          from [CmPgTables_abs] abs \n"
@@ -224,7 +252,13 @@ extends PostgresAbstract
 			    + "            and abs.[schemaname] = diff.[schemaname] \n"
 			    + "            and abs.[relname]    = diff.[relname] \n"
 			    + "          ) AS [n_dead_tup__LAST_ABS] \n"
-			    + "    ,sum([n_dead_tup]) AS [n_dead_tup__SUM_TODAY] \n"
+			    // n_dead_tup / n_live_tup are gauges: the highest value of the day (from _abs; a sum of the diff values meant nothing)
+			    + "    ,(select max([n_dead_tup]) \n"
+			    + "          from [CmPgTables_abs] abs \n"
+			    + "          where abs.[dbname]     = diff.[dbname] \n"
+			    + "            and abs.[schemaname] = diff.[schemaname] \n"
+			    + "            and abs.[relname]    = diff.[relname] \n"
+			    + "          ) AS [n_dead_tup__MAX_TODAY] \n"
 			    + "    ,cast('' as varchar(512))      as [n_dead_tup__chart] \n"
 			    
 			    + "    ,cast('>>>>>>>>>' as varchar(30)) as [extra_info] \n"
@@ -248,7 +282,12 @@ extends PostgresAbstract
 //			    + "            and abs.[schemaname] = diff.[schemaname] \n"
 //			    + "            and abs.[relname]    = diff.[relname] \n"
 //			    + "          ) AS [n_live_tup__LAST_ABS] \n"
-			    + "    ,sum([n_live_tup]) AS [n_live_tup__SUM_TODAY] \n"
+			    + "    ,(select max([n_live_tup]) \n"
+			    + "          from [CmPgTables_abs] abs \n"
+			    + "          where abs.[dbname]     = diff.[dbname] \n"
+			    + "            and abs.[schemaname] = diff.[schemaname] \n"
+			    + "            and abs.[relname]    = diff.[relname] \n"
+			    + "          ) AS [n_live_tup__MAX_TODAY] \n"
 			    + "    ,cast('' as varchar(512))      as [n_live_tup__chart] \n"
 
 			    + "    ,max([last_autovacuum])        as [last_autovacuum__MAX] \n"
@@ -308,6 +347,20 @@ extends PostgresAbstract
 
 		if (_shortRstm != null)
 		{
+			// Is each table vacuumed (and analyzed) often enough? The same analysis as the 'Autovacuum' box in Table Information
+			Map<String, String> serverSettings = PostgresAutovacuumAdvice.readServerSettings(conn);
+			for (int r = 0; r < _shortRstm.getRowCount(); r++)
+			{
+				PostgresAutovacuumAdvice advice = PostgresAutovacuumAdvice.create(conn, serverSettings,
+						_shortRstm.getValueAsString(r, "dbname"), _shortRstm.getValueAsString(r, "schemaname"), _shortRstm.getValueAsString(r, "relname"));
+				_shortRstm.setValueAtWithOverride(advice.getShortVerdict(), r, "autovacuum_verdict");
+				if (advice.hasFindings())
+				{
+					_tablesWithAutovacuumFindings++;
+					_autovacuumBoxes.put(_shortRstm.getValueAsString(r, "dbname") + "." + _shortRstm.getValueAsString(r, "schemaname") + "." + _shortRstm.getValueAsString(r, "relname"), advice.toHtml());
+				}
+			}
+
 			// Highlight sort column
 			_shortRstm.setHighlightSortColumns("n_dead_tup__LAST_ABS");
 
@@ -321,11 +374,12 @@ extends PostgresAbstract
 					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("n_dead_tup__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
-					.setDbmsTableName            ("CmPgTables_diff")
+					.setDbmsTableName            ("CmPgTables_abs" )                // a gauge: the value of each sample, the highest in each period
+					.setGroupDataAggregationType (SparklineHelper.AggType.MAX)
 					.setDbmsSampleTimeColumnName ("SessionSampleTime")
 					.setDbmsDataValueColumnName  ("n_dead_tup")
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
-					.setSparklineTooltipPostfix  ("Number of 'n_dead_tup' in below period")
+					.setSparklineTooltipPostfix  ("Highest 'n_dead_tup' in below period")
 					.validate()));
 
 			_miniChartJsList.add(SparklineHelper.createSparkline(conn, this, _shortRstm, 
@@ -376,11 +430,12 @@ extends PostgresAbstract
 					SparkLineParams.create       (DataSource.CounterModel)
 					.setHtmlChartColumnName      ("n_live_tup__chart")
 					.setHtmlWhereKeyColumnName   (whereKeyColumn)
-					.setDbmsTableName            ("CmPgTables_diff")
+					.setDbmsTableName            ("CmPgTables_abs" )                // a gauge: the value of each sample, the highest in each period
+					.setGroupDataAggregationType (SparklineHelper.AggType.MAX)
 					.setDbmsSampleTimeColumnName ("SessionSampleTime")
 					.setDbmsDataValueColumnName  ("n_live_tup")
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
-					.setSparklineTooltipPostfix  ("Number of 'n_live_tup' in below period")
+					.setSparklineTooltipPostfix  ("Highest 'n_live_tup' in below period")
 					.validate()));
 		}
 		
@@ -400,7 +455,7 @@ extends PostgresAbstract
 				+ "    ,[ExtraDescription] \n"
 				+ "from [MonSessionDbmsConfig] \n"
 				+ "where [SessionStartTime] = (select max([SessionStartTime]) from [MonSessionDbmsConfig]) \n"
-				+ "  and [Category] = 'Autovacuum' \n"
+				+ "  and [ParameterName] like 'autovacuum%' \n" // Was: [Category] = 'Autovacuum'. Postgres 19 renamed the category to 'Vacuuming / Automatic Vacuuming' (the same settings)
 //				+ "order by [Category], [ParameterName] \n"
 				+ "order by [ParameterName] \n"
 				+ "";
@@ -421,6 +476,8 @@ extends PostgresAbstract
 		// Section description
 		rstm.setDescription(
 				"Information from last collector sample from the table <code>CmPgTables_abs</code><br>" +
+				"The column <code>autovacuum_verdict</code> tells if the table is vacuumed (and analyzed) often enough over the whole day, from its own and the server's autovacuum settings. " +
+				"The details, and the suggested <code>ALTER TABLE ... SET (...)</code> with its rollback, are in the 'Autovacuum' part of the Table Information (for the tables in the Top SQL statements).<br>" +
 				"");
 	}
 }

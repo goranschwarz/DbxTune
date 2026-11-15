@@ -28,9 +28,11 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -38,6 +40,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -45,6 +48,8 @@ import com.dbxtune.gui.ModelMissmatchException;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportEntry;
+import com.dbxtune.pcs.report.content.IndexAnalysisHtml;
+import com.dbxtune.pcs.report.content.IndexRedundancy;
 import com.dbxtune.pcs.report.content.ReportEntryAbstract;
 import com.dbxtune.sql.SqlObjectName;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -300,6 +305,26 @@ extends ReportEntryAbstract
 		Set<SqlServerTableInfo> tableInfoSet = getTableInformationFromMonDdlStorage(conn, tableList);
 		if (tableInfoSet.isEmpty())
 			return "";
+
+		// When SQL Server was started: the index usage numbers are only since then (used by getRedundantIndexInfoAsHtml)
+		_srvStartDate   = null;
+		_srvDaysRunning = -1;
+		if (DbUtils.checkIfTableExistsNoThrow(conn, null, null, "CmSummary_abs"))
+		{
+			String sql = conn.quotifySqlString("select [StartDate], [DaysRunning] from [CmSummary_abs] where [SessionSampleTime] = (select max([SessionSampleTime]) from [CmSummary_abs])");
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				if (rs.next())
+				{
+					_srvStartDate   = rs.getTimestamp(1);
+					_srvDaysRunning = rs.getObject(2) == null ? -1 : rs.getInt(2);
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.info("Could not read the SQL Server start time from CmSummary_abs, continuing without it. Caught: " + ex);
+			}
+		}
 
 		// And make it into a HTML table with various information about the table and indexes
 		return getTableInfoAsHtmlTable(currentDbname, tableInfoSet, tableList, includeIndexInfo, classname);
@@ -925,18 +950,18 @@ extends ReportEntryAbstract
 			if (entry.isView())
 			{
 				tableInfoMap.put("Type"       ,                 "<b>VIEW</b>"              );
-				tableInfoMap.put("DBName"     , markIfDifferent(entry.getDbName(), currentDbname));
-				tableInfoMap.put("Schema"     ,                 entry.getSchemaName()      );
-				tableInfoMap.put("View"       ,                 entry.getTableName()       );
+				tableInfoMap.put("DBName"     , markIfDifferent(esc(entry.getDbName()), esc(currentDbname)));
+				tableInfoMap.put("Schema"     ,             esc(entry.getSchemaName())     );
+				tableInfoMap.put("View"       ,             esc(entry.getTableName())      );
 				tableInfoMap.put("Created"    ,                 entry.getCrDate() + ""       );
 //				tableInfoMap.put("References" ,                 entry.getViewReferences()+""); // instead show this in the: Index Info section
 				tableInfoMap.put("DDL"        ,                 getFormattedSqlAsTooltipDiv(entry._objectText, "View DDL", DbUtils.DB_PROD_NAME_MSSQL));
 			}
 			else // Any table
 			{
-				tableInfoMap.put("DBName"     , markIfDifferent(entry.getDbName(), currentDbname));
-				tableInfoMap.put("Schema"     ,                 entry.getSchemaName()      );
-				tableInfoMap.put("Table"      ,                 entry.getTableName()       );
+				tableInfoMap.put("DBName"     , markIfDifferent(esc(entry.getDbName()), esc(currentDbname)));
+				tableInfoMap.put("Schema"     ,             esc(entry.getSchemaName())     );
+				tableInfoMap.put("Table"      ,             esc(entry.getTableName())      );
 				tableInfoMap.put("Created"    ,                 entry.getCrDate() + ""       );
 				tableInfoMap.put("Rowcount"   , nf.format(      entry.getRowTotal()       ));
 				tableInfoMap.put("Partitions" , nf.format(      entry.getPartitionCount() ));
@@ -988,9 +1013,12 @@ extends ReportEntryAbstract
 
 				// Get missing index information
 				missingIndexInfo = getMissingIndexInfoAsHtmlTable(entry, classname);
+
+				// Indexes that can be dropped or merged
+				missingIndexInfo += getRedundantIndexInfoAsHtml(entry);
 			}
-			
-			
+
+
 			sb.append("<tr> \n");
 			sb.append("  <td>").append( tableInfo ).append("</td> \n");
 
@@ -1108,7 +1136,8 @@ extends ReportEntryAbstract
 		{
 //			long avgBytesPerRow = (entry.getSizeKb() * 1024L) / tableEntry.getRowTotal();
 
-			String description = entry.getDescription();
+			// Names, keys, filter, description and DDL come from the monitored database: escape them, a name can contain '<' or '&'
+			String description = esc(entry.getDescription());
 			if (StringUtil.hasValue(description))
 			{
 				if (description.startsWith("clustered, "))
@@ -1116,13 +1145,13 @@ extends ReportEntryAbstract
 
 				description = description.replace("unique, ", "<b>unique</b>, ");
 			}
-			
+
 			sb.append("<tr> \n");
-			sb.append("  <td>").append(            entry.getIndexName()            ).append("</td> \n");
+			sb.append("  <td>").append( esc(       entry.getIndexName()           )).append("</td> \n");
 			sb.append("  <td>").append(            entry.getIndexID()              ).append("</td> \n");
-			sb.append("  <td>").append(            entry.getKeysStr()              ).append("</td> \n");
-			sb.append("  <td>").append(            entry.getIncludeStr()           ).append("</td> \n");
-			sb.append("  <td>").append(            entry.getFilterExpression()     ).append("</td> \n");
+			sb.append("  <td>").append( esc(       entry.getKeysStr()             )).append("</td> \n");
+			sb.append("  <td>").append( esc(       entry.getIncludeStr()          )).append("</td> \n");
+			sb.append("  <td>").append( esc(       entry.getFilterExpression()    )).append("</td> \n");
 			sb.append("  <td>").append(            description                     ).append("</td> \n");
 			sb.append("  <td>").append( nf.format( entry.getIndexSizeMb()         )).append("</td> \n");
 			sb.append("  <td>").append( nf.format( entry.getIndexPages()          )).append("</td> \n");
@@ -1162,7 +1191,7 @@ extends ReportEntryAbstract
 			sb.append("  <td>").append( diffAbsValues(entry._index_lock_promotion_attempt_count, entry._abs_index_lock_promotion_attempt_count )).append("</td> \n");
 			sb.append("  <td>").append( diffAbsValues(entry._index_lock_promotion_count        , entry._abs_index_lock_promotion_count         )).append("</td> \n");
 			
-			sb.append("  <td>").append( entry.getDdlText() ).append("</td> \n");
+			sb.append("  <td>").append( esc(entry.getDdlText()) ).append("</td> \n");
 
 			sb.append("</tr> \n");
 		}
@@ -1188,7 +1217,11 @@ extends ReportEntryAbstract
 		// Exit early: if no data
 		if (tableEntry == null)                   return "";
 		if (tableEntry._missingIndexInfo == null) return "";
-			
+
+		// No Missing Index Recommendations -- Print nothing
+		if (tableEntry._missingIndexInfo.isEmpty())
+			return "";
+		
 		StringBuilder sb = new StringBuilder();
 
 		sb.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
@@ -1196,10 +1229,10 @@ extends ReportEntryAbstract
 		sb.append("<br> \n");
 //		sb.append("<details open> \n");
 		sb.append("<details> \n");
-		sb.append("<summary>Show/Hide: " + tableEntry._missingIndexInfo.getRowCount() + " Missing Index Recomendations from SQL Server: sys.dm_db_missing_index_*</summary> \n");
+		sb.append("<summary>Show/Hide: " + tableEntry._missingIndexInfo.getRowCount() + " Missing Index Recommendations from SQL Server: sys.dm_db_missing_index_*</summary> \n");
 
 		if ( tableEntry._missingIndexInfo.isEmpty() )
-			sb.append("&emsp; &bull; <b>No</b> Missing Index Recomendations was found.");
+			sb.append("&emsp; &bull; <b>No</b> Missing Index Recommendations was found.");
 		else
 			sb.append(toHtmlTable(tableEntry._missingIndexInfo, "dsr-missing-index-table"));
 
@@ -1209,7 +1242,395 @@ extends ReportEntryAbstract
 
 		return sb.toString();
 	}
-	
+
+	/**
+	 * Indexes on this table that can be dropped or merged, with DDL and ROLLBACK scripts.<br>
+	 * An index we can't script safely is listed as "not checked" with the reason, it's never guessed on.
+	 *
+	 * @return HTML, or "" if there is nothing to tell. No JavaScript: this also goes into the Daily Summary Report mail.
+	 */
+	/** Index Analysis, Unused Indexes: SQL Server must have been running at least this many days, else the usage numbers say too little */
+	public static final String PROPKEY_indexAnalysis_unused_minDays = IndexAnalysisHtml.PROPKEY_unused_minDays;
+	public static final int    DEFAULT_indexAnalysis_unused_minDays = IndexAnalysisHtml.DEFAULT_unused_minDays;
+
+	/** When SQL Server was started, and how many days ago, from CmSummary. Read in getDbmsTableInfoAsHtmlTable(), null/-1 if not known. */
+	private Timestamp _srvStartDate;
+	private int       _srvDaysRunning = -1;
+
+	public String getRedundantIndexInfoAsHtml(SqlServerTableInfo ti)
+	{
+		if (ti == null || ti.isView() || ti._indexList == null)
+			return "";
+
+		// Pick out the indexes we can trust, and the clustering key
+		Map<IndexRedundancy.Idx, SqlServerIndexInfo> infoMap = new LinkedHashMap<>();
+		Map<String, String> notChecked = new LinkedHashMap<>();
+		List<String> clusterKeys = new ArrayList<>();
+		boolean clusterKeysKnown = true;
+
+		for (SqlServerIndexInfo ii : ti._indexList)
+		{
+			if (ii._indexID == 0) // HEAP
+				continue;
+
+			String  desc      = ii._desc == null ? "" : ii._desc;
+			boolean clustered = desc.startsWith("clustered");
+			boolean validKeys = hasValidColumnNames(ii._keys);
+
+			if (clustered && ! desc.contains("columnstore"))
+			{
+				if (validKeys)
+					clusterKeys.addAll(ii._keys);
+				else
+					clusterKeysKnown = false;
+			}
+
+			String reason = null;
+			if      ( ! desc.contains(" located on ") )                    reason = "no index description was stored";
+			else if (desc.contains("columnstore"))                         reason = "columnstore index";
+			else if (ii._ddlTxt == null || ! ii._ddlTxt.matches("(?s)CREATE\\s+(UNIQUE\\s+)?(NON)?CLUSTERED INDEX .*")) reason = "no stored DDL, or not a plain clustered/nonclustered index";
+			else if (StringUtil.hasValue(ii._filterExpression))            reason = "filtered index";
+			else if (ii._isDisabled)                                       reason = "disabled index";
+			else if (ii._partitionCount > 1)                               reason = "partitioned, the stored DDL can't recreate it";
+			else if (desc.contains("ignore duplicate keys"))               reason = "IGNORE_DUP_KEY changes how it works";
+			else if (ii._ddlTxt.contains("DATA_COMPRESSION = MIXED") || ii._ddlTxt.contains("DATA_COMPRESSION = ?")) reason = "the stored DDL has no usable DATA_COMPRESSION";
+			else if ( ! validKeys || ! hasValidColumnNames(ii._includeCols, true) || ii._indexName.contains("]") ) reason = "the names can't be read safely";
+
+			if (reason != null)
+			{
+				notChecked.put(ii._indexName, reason);
+				continue;
+			}
+
+			IndexRedundancy.Idx idx = new IndexRedundancy.Idx(ii._indexName, ii._keys, ii._includeCols);
+			idx.primaryKey       = desc.contains(", primary key");
+			idx.uniqueConstraint = desc.contains(", unique key");
+			idx.unique           = desc.contains(", unique");
+			idx.clustered        = clustered;
+			idx.reads            = ii._abs_READS;
+			idx.id               = ii._indexID;
+			infoMap.put(idx, ii);
+		}
+
+		// Without the clustering key the rules would be wrong, and a ']' in a name would break the scripts
+		if ( ! clusterKeysKnown || ti._tableName.contains("]") || ti._schemaName.contains("]") || ti._dbName.contains("]") )
+		{
+			infoMap.clear();
+			notChecked.clear();
+			notChecked.put(ti._tableName, "the clustered index or the table names can't be read safely");
+		}
+
+		List<IndexRedundancy.Finding> findings = IndexRedundancy.analyze(new ArrayList<>(infoMap.keySet()), clusterKeys);
+
+		// The scripts first: a finding without a script is not shown
+		Map<IndexRedundancy.Finding, String> scripts = new LinkedHashMap<>();
+		for (IndexRedundancy.Finding f : findings)
+		{
+			String script = createRedundantIndexScript(ti, f, infoMap);
+			if (script != null)
+				scripts.put(f, script);
+			else
+				notChecked.put(f.kept.name, "could not build a safe script for the merge");
+		}
+
+		// ---- Unused indexes: no reads (seeks, scans, lookups) since SQL Server was started
+		// Only the indexes we can script safely (infoMap), and not the ones that enforce something
+		Set<String> inDedup = new HashSet<>();
+		for (IndexRedundancy.Finding f : scripts.keySet())
+		{
+			inDedup.add(f.kept.name);
+			for (IndexRedundancy.Idx d : f.dropped)
+				inDedup.add(d.name);
+		}
+
+		int minDays = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_indexAnalysis_unused_minDays, DEFAULT_indexAnalysis_unused_minDays);
+		boolean anyUsageRow = false;
+		for (SqlServerIndexInfo ii : infoMap.values())
+			anyUsageRow |= ii._usageRowFound;
+
+		String unusedNotChecked = null;
+		if      (_srvStartDate == null)                                 unusedNotChecked = "the SQL Server start time is not in the recording, so the age of the usage numbers is not known.";
+		else if (_srvDaysRunning < minDays)                             unusedNotChecked = "SQL Server has only been running for " + _srvDaysRunning + " days, at least " + minDays + " are needed (property " + PROPKEY_indexAnalysis_unused_minDays + ").";
+		else if ( ! ti._indexUsageRecordedForDb && ! anyUsageRow )      unusedNotChecked = "no index usage (CmIndexUsage) was recorded for this database.";
+
+		List<SqlServerIndexInfo> unused       = new ArrayList<>();
+		Set<String>              unusedDedup  = new HashSet<>(); // unused, but already in Index De-duplication
+		if (unusedNotChecked == null)
+		{
+			for (Map.Entry<IndexRedundancy.Idx, SqlServerIndexInfo> e : infoMap.entrySet())
+			{
+				IndexRedundancy.Idx idx = e.getKey();
+				SqlServerIndexInfo  ii  = e.getValue();
+				if (idx.primaryKey || idx.uniqueConstraint || idx.unique || idx.clustered)
+					continue;
+
+				// No row in the usage DMV = not touched at all since the start
+				long reads = ii._usageRowFound ? ii._abs_user_seeks + ii._abs_user_scans + ii._abs_user_lookups : 0;
+				if (reads != 0)
+					continue;
+
+				if (inDedup.contains(ii._indexName))
+					unusedDedup.add(ii._indexName);
+				else
+					unused.add(ii);
+			}
+			// The ones that cost the most writes first, then the biggest
+			unused.sort((a, b) -> {
+				long wa = a._usageRowFound ? a._abs_user_updates : 0;
+				long wb = b._usageRowFound ? b._abs_user_updates : 0;
+				return wa != wb ? Long.compare(wb, wa) : Long.compare(b._indexPages, a._indexPages);
+			});
+		}
+
+		// ---- The texts and findings, laid out by IndexAnalysisHtml (the same for all vendors)
+		IndexAnalysisHtml ia = new IndexAnalysisHtml();
+		ia.capturedTime = String.valueOf(ti.getSampleTime());
+
+		String since = _srvStartDate == null
+				? "the last restart of SQL Server (the start time was not found in the recording)"
+				: "SQL Server was started " + esc(new SimpleDateFormat("yyyy-MM-dd HH:mm").format(_srvStartDate)) + ", <b>" + _srvDaysRunning + " day" + (_srvDaysRunning == 1 ? "" : "s") + " ago</b>";
+		ia.notesHtml.add("Usage numbers only cover the time since " + since + ", so check that the index isn't needed for something that runs rarely (month end, year end).");
+		ia.notesHtml.add("A statement that names a dropped index in a hint will fail. That is not detected here.");
+		ia.notesHtml.add("Dropping an index also drops its statistics, so other plans can change.");
+		ia.notesHtml.add("A FOREIGN KEY can depend on a unique index: then the DROP fails and nothing is changed.");
+		ia.notesHtml.add("The scripts use ONLINE = OFF: creating an index can block users on a large table.");
+
+		// Index De-duplication
+		for (Map.Entry<IndexRedundancy.Finding, String> entry : scripts.entrySet())
+		{
+			IndexRedundancy.Finding f = entry.getKey();
+
+			IndexAnalysisHtml.Finding hf = new IndexAnalysisHtml.Finding();
+			hf.action = f.isMerge() ? "MERGE" : "DROP";
+			hf.kept   = f.kept.name;
+			for (IndexRedundancy.Idx d : f.dropped)
+				hf.dropped.add(d.name);
+
+			hf.lines.add(redundantIndexLine("Keep", infoMap.get(f.kept), ti._indexUsageRecordedForDb));
+			for (IndexRedundancy.Idx d : f.dropped)
+				hf.lines.add(redundantIndexLine("Drop", infoMap.get(d), ti._indexUsageRecordedForDb));
+
+			StringBuilder why = new StringBuilder();
+			for (String w : f.why)
+				why.append(w).append(" ");
+			if (f.isMerge())
+				why.append("Adding " + IndexRedundancy.str(f.addIncludes) + " to " + f.kept.name + " lets it answer their queries too, but it makes that index wider. ");
+			for (String n : hf.dropped)
+				if (unusedDedup.contains(n))
+					why.append(n + " has had no reads since SQL Server was started. ");
+			if (unusedDedup.contains(f.kept.name))
+				why.append(f.kept.name + " has had no reads since SQL Server was started either: check if it is needed at all. ");
+			hf.why    = why.toString();
+			hf.script = entry.getValue();
+			ia.dedup.add(hf);
+		}
+		ia.dedupNotChecked = notChecked;
+
+		// Unused Indexes
+		ia.unusedNotChecked = unusedNotChecked;
+		ia.unusedIntro = "No reads (seeks, scans or lookups) since SQL Server was started, but they still cost writes and space. "
+				+ "Not listed: primary keys, unique indexes, the clustered index, and the indexes in Index De-duplication above.";
+		ia.unusedNotes.add("An index created after SQL Server was started has had less time to be used.");
+		ia.unusedNotes.add("The numbers are also reset when the database is taken offline, detached or restored.");
+		ia.unusedNotes.add("Check if the index supports a FOREIGN KEY on its columns before you drop it.");
+		for (SqlServerIndexInfo ii : unused)
+		{
+			long writes = ii._usageRowFound ? ii._abs_user_updates : 0;
+
+			IndexAnalysisHtml.Finding hf = new IndexAnalysisHtml.Finding();
+			hf.action = "DROP";
+			hf.dropped.add(ii._indexName);
+			hf.lines.add(new IndexAnalysisHtml.IndexLine("Index", redundantIndexDefinition(ii), ", " + ii.getIndexSizeMb() + " MB, reads 0, writes " + writes
+					+ (ii._usageRowFound ? "" : " (not touched at all since SQL Server was started)")));
+			hf.script = createUnusedIndexScript(ti, ii);
+			ia.unused.add(hf);
+		}
+
+		return ia.toHtml();
+	}
+
+	private static String esc(Object o)
+	{
+		return o == null ? "" : StringEscapeUtils.escapeHtml4(o.toString());
+	}
+
+	/** "ix_name ([c1], [c2]) INCLUDE ([c3])" */
+	private static String redundantIndexDefinition(SqlServerIndexInfo ii)
+	{
+		return ii._indexName + " (" + ii._keysStr + ")" + (StringUtil.hasValue(ii._includeColsStr) ? " INCLUDE (" + ii._includeColsStr + ")" : "");
+	}
+
+	/**
+	 * The index definition, then size and usage.
+	 * @param usageRecordedForDb true if the database has usage rows: then an index without a row has not been touched since the start (0), else it is unknown
+	 */
+	private static IndexAnalysisHtml.IndexLine redundantIndexLine(String label, SqlServerIndexInfo ii, boolean usageRecordedForDb)
+	{
+		String usage;
+		if (ii._usageRowFound)
+			usage = "reads " + ii._abs_READS + ", writes " + ii._abs_WRITES;
+		else if (usageRecordedForDb)
+			usage = "reads 0, writes 0 (not touched at all since SQL Server was started)";
+		else
+			usage = "reads unknown, writes unknown";
+		return new IndexAnalysisHtml.IndexLine(label, redundantIndexDefinition(ii), ", " + ii.getIndexSizeMb() + " MB, " + usage);
+	}
+
+	private static boolean hasValidColumnNames(List<String> cols)
+	{
+		return cols != null && ! cols.isEmpty() && hasValidColumnNames(cols, false);
+	}
+
+	/** A key column like [c1] or [c1] DESC, anything else (a name with a comma, or changed by the FOR XML in the Collector's query) we can't compare safely. */
+	private static boolean hasValidColumnNames(List<String> cols, boolean includeCols)
+	{
+		if (cols == null)
+			return true;
+		for (String c : cols)
+		{
+			if ( ! c.matches(includeCols ? "\\[[^\\[\\]]+\\]" : "\\[[^\\[\\]]+\\]( DESC)?") || c.matches(".*&(amp|lt|gt|#\\d+);.*") )
+				return false;
+		}
+		return true;
+	}
+
+	/**
+	 * The script for one finding: DDL CHANGES and ROLLBACK.<br>
+	 * Each runs in one transaction with XACT_ABORT ON: if the index we keep can't be changed, the other index will not be dropped.
+	 * The order means that the table always has an index for these queries.
+	 *
+	 * @return null if the kept index DDL can't be changed in a safe way
+	 */
+	private static String createRedundantIndexScript(SqlServerTableInfo ti, IndexRedundancy.Finding f, Map<IndexRedundancy.Idx, SqlServerIndexInfo> infoMap)
+	{
+		String tabName = "[" + ti._dbName + "].[" + ti._schemaName + "].[" + ti._tableName + "]";
+
+		SqlServerIndexInfo kept = infoMap.get(f.kept);
+
+		String keptNewDdl     = null;
+		String keptRestoreDdl = null;
+		if (f.isMerge())
+		{
+			String keptDdl = restorableDdl(kept);
+			String adds    = String.join(", ", f.addIncludes);
+
+			String oldInclude = " INCLUDE (" + kept._includeColsStr + " ) ";
+			if (StringUtil.hasValue(kept._includeColsStr))
+			{
+				if ( ! keptDdl.contains(oldInclude) )
+					return null;
+				keptNewDdl = keptDdl.replace(oldInclude, " INCLUDE (" + kept._includeColsStr + ", " + adds + " ) ");
+			}
+			else
+			{
+				if (keptDdl.lastIndexOf(" WITH (") < 0)
+					return null;
+				keptNewDdl = keptDdl.substring(0, keptDdl.lastIndexOf(" WITH (")) + " INCLUDE (" + adds + " ) " + keptDdl.substring(keptDdl.lastIndexOf(" WITH ("));
+			}
+			keptNewDdl     = withDropExisting(keptNewDdl) + filegroupClause(kept);
+			keptRestoreDdl = withDropExisting(keptDdl)    + filegroupClause(kept);
+		}
+
+		boolean oldDdl = false;
+
+		StringBuilder sb = new StringBuilder();
+
+		// ---- DDL CHANGES
+		sb.append("-- DDL CHANGES: ").append(tabName).append("\n");
+		sb.append("-- Captured ").append(ti.getSampleTime()).append(": check that the indexes still look like this before running.\n");
+		sb.append("SET XACT_ABORT ON;\n");
+		sb.append("BEGIN TRANSACTION;\n");
+		appendIndexCheck(sb, ti, tabName, f.kept.name, true);
+		for (IndexRedundancy.Idx d : f.dropped)
+			appendIndexCheck(sb, ti, tabName, d.name, true);
+		if (f.isMerge())
+			sb.append(keptNewDdl).append(";\n");
+		for (IndexRedundancy.Idx d : f.dropped)
+			sb.append("DROP INDEX [").append(d.name).append("] ON ").append(tabName).append(";\n");
+		sb.append("COMMIT TRANSACTION;\n");
+
+		// ---- ROLLBACK
+		sb.append("\n");
+		sb.append("-- ROLLBACK: puts back what the DDL CHANGES did\n");
+		sb.append("SET XACT_ABORT ON;\n");
+		sb.append("BEGIN TRANSACTION;\n");
+		appendIndexCheck(sb, ti, tabName, f.kept.name, true);
+		for (IndexRedundancy.Idx d : f.dropped)
+			appendIndexCheck(sb, ti, tabName, d.name, false);
+		for (IndexRedundancy.Idx d : f.dropped)
+		{
+			SqlServerIndexInfo di = infoMap.get(d);
+			sb.append(restorableDdl(di)).append(filegroupClause(di)).append(";\n");
+			oldDdl |= ! di._ddlTxt.contains("STATISTICS_NORECOMPUTE");
+		}
+		if (f.isMerge())
+		{
+			sb.append(keptRestoreDdl).append(";\n");
+			oldDdl |= ! kept._ddlTxt.contains("STATISTICS_NORECOMPUTE");
+		}
+		sb.append("COMMIT TRANSACTION;\n");
+
+		if (oldDdl)
+			sb.append("-- NOTE: This DDL is from an older Collector: STATISTICS_NORECOMPUTE and OPTIMIZE_FOR_SEQUENTIAL_KEY are not restored.\n");
+
+		return sb.toString();
+	}
+
+	/** DDL CHANGES drops the unused index, ROLLBACK creates it again from the stored DDL. Same checks and transaction as the de-duplication scripts. */
+	private static String createUnusedIndexScript(SqlServerTableInfo ti, SqlServerIndexInfo ii)
+	{
+		String tabName = "[" + ti._dbName + "].[" + ti._schemaName + "].[" + ti._tableName + "]";
+
+		StringBuilder sb = new StringBuilder();
+		sb.append("-- DDL CHANGES: ").append(tabName).append("\n");
+		sb.append("-- Captured ").append(ti.getSampleTime()).append(": check that the index still looks like this before running.\n");
+		sb.append("SET XACT_ABORT ON;\n");
+		sb.append("BEGIN TRANSACTION;\n");
+		appendIndexCheck(sb, ti, tabName, ii._indexName, true);
+		sb.append("DROP INDEX [").append(ii._indexName).append("] ON ").append(tabName).append(";\n");
+		sb.append("COMMIT TRANSACTION;\n");
+
+		sb.append("\n");
+		sb.append("-- ROLLBACK: puts back what the DDL CHANGES did\n");
+		sb.append("SET XACT_ABORT ON;\n");
+		sb.append("BEGIN TRANSACTION;\n");
+		appendIndexCheck(sb, ti, tabName, ii._indexName, false);
+		sb.append(restorableDdl(ii)).append(filegroupClause(ii)).append(";\n");
+		sb.append("COMMIT TRANSACTION;\n");
+
+		if ( ! ii._ddlTxt.contains("STATISTICS_NORECOMPUTE") )
+			sb.append("-- NOTE: This DDL is from an older Collector: STATISTICS_NORECOMPUTE and OPTIMIZE_FOR_SEQUENTIAL_KEY are not restored.\n");
+
+		return sb.toString();
+	}
+
+	/** The stored DDL writes FILLFACTOR = 100 for an index that has none (0). Same behaviour, but then the rollback does not give back the same index. */
+	private static String restorableDdl(SqlServerIndexInfo ii)
+	{
+		return ii._fillFactor == 0 ? ii._ddlTxt.replace("FILLFACTOR = 100, ", "") : ii._ddlTxt;
+	}
+
+	private static String withDropExisting(String ddl)
+	{
+		int pos = ddl.lastIndexOf(" WITH (");
+		return ddl.substring(0, pos) + " WITH (DROP_EXISTING = ON, " + ddl.substring(pos + " WITH (".length());
+	}
+
+	/** The stored DDL has no filegroup, but the description has: "nonclustered, unique located on PRIMARY" */
+	private static String filegroupClause(SqlServerIndexInfo ii)
+	{
+		String desc = ii._desc;
+		return " ON [" + desc.substring(desc.lastIndexOf(" located on ") + " located on ".length()).trim() + "]";
+	}
+
+	private static void appendIndexCheck(StringBuilder sb, SqlServerTableInfo ti, String tabName, String indexName, boolean shouldExist)
+	{
+		String safeIndexName = indexName.replace("'", "''");
+		sb.append("IF ").append(shouldExist ? "NOT EXISTS" : "EXISTS")
+		  .append(" (SELECT 1 FROM [").append(ti._dbName).append("].sys.indexes WHERE object_id = OBJECT_ID(N'").append(tabName.replace("'", "''")).append("') AND name = N'").append(safeIndexName).append("')")
+		  .append(" THROW 50000, N'Index ").append(safeIndexName).append(shouldExist ? " does not exist" : " already exists").append(": nothing was changed.', 1;\n");
+	}
+
 	/**
 	 * FIXME
 	 */
@@ -1732,7 +2153,7 @@ extends ReportEntryAbstract
 			+ "        ,[TableName] \n"
 			+ "        ,[IndexName] \n"
 			+ "        ,[index_id] \n"
-			+ "        ,sum([user_seeks]) + sum([user_seeks]) + sum([user_scans]) as [READS] \n"
+			+ "        ,sum([user_seeks]) + sum([user_scans]) + sum([user_lookups]) as [READS] \n"
 			+ "        ,sum([user_updates])  as [WRITES] \n"
 			+ "        ,sum([user_seeks])    as [user_seeks] \n"
 			+ "        ,sum([user_scans])    as [user_scans] \n"
@@ -1753,7 +2174,7 @@ extends ReportEntryAbstract
 			+ "        ,[TableName] \n"
 			+ "        ,[IndexName] \n"
 			+ "        ,[index_id] \n"
-			+ "        ,[user_seeks] + [user_seeks] + [user_scans] as [abs_READS] \n"
+			+ "        ,[user_seeks] + [user_scans] + [user_lookups] as [abs_READS] \n"
 			+ "        ,[user_updates]  as [abs_WRITES] \n"
 			+ "        ,[user_seeks]    as [abs_user_seeks] \n"
 			+ "        ,[user_scans]    as [abs_user_scans] \n"
@@ -1816,12 +2237,14 @@ extends ReportEntryAbstract
 					long      user_lookups       = rs.getLong     (10);
 					long      user_updates       = rs.getLong     (11);
 					
-					long      abs_READS          = rs.getLong     (12);
-					long      abs_WRITES         = rs.getLong     (13);
-					long      abs_user_seeks     = rs.getLong     (14);
-					long      abs_user_scans     = rs.getLong     (15);
-					long      abs_user_lookups   = rs.getLong     (16);
-					long      abs_user_updates   = rs.getLong     (17);
+					// No abs row (left outer join) gives NULL: unknown (-1), not 0
+					boolean   hasAbsRow          = rs.getObject   (12) != null;
+					long      abs_READS          = hasAbsRow ? rs.getLong(12) : -1;
+					long      abs_WRITES         = hasAbsRow ? rs.getLong(13) : -1;
+					long      abs_user_seeks     = hasAbsRow ? rs.getLong(14) : -1;
+					long      abs_user_scans     = hasAbsRow ? rs.getLong(15) : -1;
+					long      abs_user_lookups   = hasAbsRow ? rs.getLong(16) : -1;
+					long      abs_user_updates   = hasAbsRow ? rs.getLong(17) : -1;
 					
 					SqlServerIndexInfo indexEntry = ti.getIndexInfoForName(IndexName);
 					if (indexEntry != null)
@@ -1839,8 +2262,18 @@ extends ReportEntryAbstract
 						indexEntry._abs_user_scans   = abs_user_scans;
 						indexEntry._abs_user_lookups = abs_user_lookups;
 						indexEntry._abs_user_updates = abs_user_updates;
+						indexEntry._usageRowFound    = hasAbsRow;
 					}
 				}
+			}
+
+			// dm_db_index_usage_stats has NO row for an index that has not been touched since SQL Server was started.
+			// So: if the newest sample has rows for this database, an index without a row has 0 reads and 0 writes.
+			String sqlDb = conn.quotifySqlString("select count(*) from [CmIndexUsage_abs] where [SessionSampleTime] = (select max([SessionSampleTime]) from [CmIndexUsage_abs]) and [DbName] = " + DbUtils.safeStr(dbname));
+			try ( ResultSet rs = stmnt.executeQuery(sqlDb) )
+			{
+				if (rs.next())
+					ti._indexUsageRecordedForDb = rs.getInt(1) > 0;
 			}
 		}
 		catch(SQLException ex)
@@ -2429,6 +2862,9 @@ extends ReportEntryAbstract
 		private long _abs_index_lock_promotion_attempt_count = -1;
 		private long _abs_index_lock_promotion_count         = -1;
 
+		/** true if CmIndexUsage_abs has a row for this index (dm_db_index_usage_stats has no row for an index not touched since the start) */
+		private boolean _usageRowFound = false;
+
 
 		public String       getIndexName         () { return _indexName; }
 		public long         getIndexPages        () { return _indexPages; }
@@ -2509,6 +2945,9 @@ extends ReportEntryAbstract
 		public List<String> _viewReferences; // if _type == "V", this this will hold; table/views this view references
 
 		public ResultSetTableModel _missingIndexInfo;
+
+		/** true if the newest CmIndexUsage_abs sample has rows for this database: then an index without a row has not been touched since the start */
+		private boolean _indexUsageRecordedForDb = false;
 		
 		public SqlServerIndexInfo getIndexInfoForName(String indexName)
 		{

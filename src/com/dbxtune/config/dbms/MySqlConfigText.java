@@ -66,6 +66,7 @@ public abstract class MySqlConfigText
 		DbmsConfigTextManager.addInstance(new MySqlConfigText.Plugins());
 		DbmsConfigTextManager.addInstance(new MySqlConfigText.PfsSetup());
 		DbmsConfigTextManager.addInstance(new MySqlConfigText.InnodbStatus());
+		DbmsConfigTextManager.addInstance(new HostMonOsInfoConfigText()); // Same for all DBMS vendors: exact OS info from Host Monitoring
 	}
 
 	/**

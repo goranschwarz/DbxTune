@@ -290,6 +290,19 @@ implements Runnable
 
 	/** How many DDL Lookups was requested, discarded, executed and saved. One line in the errorlog every hour and every day */
 	final DdlLookupStatistics _ddlLookupStatistics = new DdlLookupStatistics(LocalDateTime.now());
+
+	/** For the inspectors: Table metadata was fetched with plain SQL */
+	public void incDdlMetadataSql()      { _ddlLookupStatistics.inc(DdlLookupStatistics.Counter.metadataSql); }
+
+	/** For the inspectors: Table metadata was fetched with sp_help, since plain SQL isn't used for this server or table */
+	public void incDdlMetadataSpHelp()   { _ddlLookupStatistics.inc(DdlLookupStatistics.Counter.metadataSpHelp); }
+
+	/** For the inspectors: Table metadata was fetched with sp_help, since plain SQL failed */
+	public void incDdlMetadataFallback() { _ddlLookupStatistics.inc(DdlLookupStatistics.Counter.metadataFallback); }
+
+	/** For the inspectors: A query in the lookup failed, counted as a timeout or as an error. null = nothing failed */
+	public void incDdlLookupIssue(SQLException ex) { _ddlLookupStatistics.addIssue(ex); }
+
 	private int	_warnDdlInputQueueSizeThresh = DEFAULT_ddl_warnDdlInputQueueSizeThresh;
 
 	/** */
@@ -1069,6 +1082,7 @@ implements Runnable
 		// Do object lookup
 		//-----------------------------------------------------------------------------------
 		long lookupStartTime = System.currentTimeMillis();
+		_ddlLookupStatistics.beginLookup();
 		List<DdlDetails> lookupEntryList = _objectLookupInspector.doObjectInfoLookup(conn, qe, this);
 		_ddlLookupStatistics.addLookup(System.currentTimeMillis() - lookupStartTime, lookupEntryList == null ? 0 : lookupEntryList.size());
 

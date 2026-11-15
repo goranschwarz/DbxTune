@@ -29,6 +29,7 @@ import java.sql.Types;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
@@ -264,6 +265,8 @@ extends PostgresAbstract
 		// Section description
 		rstm.setDescription(
 				"Top Slow SQL Statements are presented here (ordered by: total_time__sum) <br>" +
+				"A statement is listed if it is in the top " + getTopRows() + " on any of: <b>time</b>, <b>disk reads</b> (shared_blks_read), <b>temp written</b>, <b>WAL</b> (Postgres 13 and above), <b>calls</b> " +
+				"or <b>planning time</b> (Postgres 13 and above, when <code>pg_stat_statements.track_planning = on</code>). The <code>rank_</code> columns say where it is placed in each.<br>" +
 				"<br>" +
 				"Postgres Source table is 'pg_stat_statements'. <br>" +
 				"PCS Source table is 'CmPgStatements_diff'. (PCS = Persistent Counter Store) <br>" +
@@ -307,6 +310,15 @@ extends PostgresAbstract
 		rstm.setColumnDescription("blks_write_time__sum"        , "Total time the statement spent writing blocks, in milliseconds (if track_io_timing is enabled, otherwise zero)");
 
 		rstm.setColumnDescription("query"                       , "Text of a representative statement");
+
+		rstm.setColumnDescription("rank_time"                   , "The statement's place when sorted on total time (1 = the most)");
+		rstm.setColumnDescription("rank_disk_reads"             , "The place on blocks read outside shared_buffers (shared_blks_read)");
+		rstm.setColumnDescription("rank_temp"                   , "The place on temp blocks written (sorts and hashes that did not fit in work_mem)");
+		rstm.setColumnDescription("rank_wal"                    , "The place on WAL written (Postgres 13 and above)");
+		rstm.setColumnDescription("rank_calls"                  , "The place on the number of calls");
+		rstm.setColumnDescription("rank_plan_time"              , "The place on planning time (Postgres 13 and above, needs pg_stat_statements.track_planning = on)");
+		rstm.setColumnDescription("wal_mb__sum"                 , "WAL written by the statement, in MB (Postgres 13 and above)");
+		rstm.setColumnDescription("plan_time__sum"              , "Time spent planning the statement, in milliseconds (0 when pg_stat_statements.track_planning is off)");
 	}
 
 	@Override
@@ -356,6 +368,17 @@ extends PostgresAbstract
 		if (hasDictCompCols)
 			col_query = "query$dcc$";
 
+		// Postgres 17 renamed 'blk_read_time' -> 'shared_blk_read_time' and 'blk_write_time' -> 'shared_blk_write_time'
+		// CmPgStatements saves the columns with the names from pg_stat_statements, so use the one the table has
+		String col_blk_read_time  = "blk_read_time";
+		String col_blk_write_time = "blk_write_time";
+		ResultSetTableModel dummyRstm = executeQuery(conn, "select * from [CmPgStatements_diff] where 1 = 2", false, "metadata");
+		if (dummyRstm != null && ! dummyRstm.hasColumn("blk_read_time") && dummyRstm.hasColumn("shared_blk_read_time"))
+		{
+			col_blk_read_time  = "shared_blk_read_time";
+			col_blk_write_time = "shared_blk_write_time";
+		}
+
 
 		// Skip DB name(s)
 		String skip_dbname   = "";
@@ -369,14 +392,32 @@ extends PostgresAbstract
 		if ( ! skipUsernameList.isEmpty() )
 			skip_username = "  and [usename] not in(" + StringUtil.toCommaStrQuoted("'", skipUsernameList) + ") \n";
 
+		// The statements in the top ## on any of: time, physical reads, temp written, WAL (13+), calls, planning time (13+, pg_stat_statements.track_planning)
+		// (the rank_ columns say where each statement is placed, as MySqlTopSql / OracleTopSql)
+		Set<String> stmtCols = getRecordedColumns(conn, "CmPgStatements_diff");
+		boolean hasWal  = stmtCols.contains("wal_bytes");
+		boolean hasPlan = stmtCols.contains("total_plan_time");
+
 		// GET ALL INFO
 		String sql = getCmDiffColumnsAsSqlComment("CmPgStatements")
-			    + "select top " + topRows + " \n"
+			    + "select * \n"
+			    + "from ( \n"
+			    + "select \n"
 			    + "     [datname] \n"
 			    + "    ,[usename] \n"
 			    + "    ,[queryid] \n"
 			    + "    ,min([" + col_query + "])                                                             as [query] \n"
-			    + " \n"                                                                                      
+			    + " \n"
+			    + "    ,row_number() over (order by sum([total_time])        desc)                           as [rank_time] \n"
+			    + "    ,row_number() over (order by sum([shared_blks_read])  desc)                           as [rank_disk_reads] \n"
+			    + "    ,row_number() over (order by sum([temp_blks_written]) desc)                           as [rank_temp] \n"
+			    + (hasWal  ? "    ,row_number() over (order by sum([wal_bytes])         desc)                           as [rank_wal] \n" : "")
+			    + "    ,row_number() over (order by sum([calls])             desc)                           as [rank_calls] \n"
+			    + (hasPlan ? "    ,row_number() over (order by sum([total_plan_time])   desc)                           as [rank_plan_time] \n" : "")
+			    + " \n"
+			    + (hasWal  ? "    ,CAST( sum([wal_bytes]) / 1048576.0 AS DECIMAL(19,1) )                                as [wal_mb__sum] \n" : "")
+			    + (hasPlan ? "    ,CAST( sum([total_plan_time]) AS DECIMAL(20,0) )                                      as [plan_time__sum] \n" : "")
+			    + " \n"
 			    + "    ,cast('' as varchar(512))                                                             as [calls__chart] \n"
 			    + "    ,sum([calls])                                                                         as [calls__sum] \n"
 
@@ -433,13 +474,13 @@ extends PostgresAbstract
 			    + "    ,cast('' as varchar(512))                                                             as [logical_reads_per_row__chart] \n"
 			    + "    ,CAST( sum([shared_blks_hit] + [shared_blks_read]) * 1.0 / nullif(sum([rows]), 0) AS DECIMAL(19,1) )      as [logical_reads__per_row] \n"
 			    
-			    + "    ,sum([blk_read_time])                                                                 as [blks_read_time__chart] \n"
-			    + "    ,sum([blk_read_time])                                                                 as [blks_read_time__sum] \n"
-			    + "    ,CAST( sum([blk_read_time])       * 1.0 / nullif(sum([calls]), 0) AS DECIMAL(19,1) )  as [blk_read_time__per_call] \n"
+			    + "    ,sum([" + col_blk_read_time + "])                                                                 as [blks_read_time__chart] \n"
+			    + "    ,sum([" + col_blk_read_time + "])                                                                 as [blks_read_time__sum] \n"
+			    + "    ,CAST( sum([" + col_blk_read_time + "])       * 1.0 / nullif(sum([calls]), 0) AS DECIMAL(19,1) )  as [blk_read_time__per_call] \n"
 			    
-			    + "    ,sum([blk_write_time])                                                                as [blks_write_time__chart] \n"
-			    + "    ,sum([blk_write_time])                                                                as [blks_write_time__sum] \n"
-			    + "    ,CAST( sum([blk_write_time])      * 1.0 / nullif(sum([calls]), 0) AS DECIMAL(19,1) )  as [blk_write_time__per_call] \n"
+			    + "    ,sum([" + col_blk_write_time + "])                                                                as [blks_write_time__chart] \n"
+			    + "    ,sum([" + col_blk_write_time + "])                                                                as [blks_write_time__sum] \n"
+			    + "    ,CAST( sum([" + col_blk_write_time + "])      * 1.0 / nullif(sum([calls]), 0) AS DECIMAL(19,1) )  as [blk_write_time__per_call] \n"
 			    + " \n"
 			    + "    ,count(*)                                                                             as [samples_count] \n"
 			    + "    ,min([SessionSampleTime])                                                             as [SessionSampleTime__min] \n"
@@ -453,7 +494,14 @@ extends PostgresAbstract
 			    + skip_username
 				+ getReportPeriodSqlWhere()
 			    + "group by [datname], [usename], [queryid] \n"
-			    + "order by [total_time__sum] desc \n"
+			    + ") x \n"
+			    + "where [rank_time]       <= " + topRows + " \n"
+			    + "   or [rank_disk_reads] <= " + topRows + " and [shared_blks_read__sum]  > 0 \n"
+			    + "   or [rank_temp]       <= " + topRows + " and [temp_blks_written__sum] > 0 \n"
+			    + (hasWal  ? "   or [rank_wal]        <= " + topRows + " and [wal_mb__sum]            > 0 \n" : "")
+			    + "   or [rank_calls]      <= " + topRows + " \n"
+			    + (hasPlan ? "   or [rank_plan_time]  <= " + topRows + " and [plan_time__sum]         > 0 \n" : "")
+			    + "order by [rank_time] \n"
 			    + "";
 
 		_shortRstm = executeQuery(conn, sql, false, "Top SQL");
@@ -651,7 +699,7 @@ extends PostgresAbstract
 					.setDbmsTableName            ("CmPgStatements_diff")
 					.setDbmsSampleTimeColumnName ("SessionSampleTime")
 //					.setDbmsDataValueColumnName  ("blk_read_time")
-					.setDbmsDataValueColumnName  ("sum(1.0*[blk_read_time]) / nullif(sum([calls]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsDataValueColumnName  ("sum(1.0*[" + col_blk_read_time + "]) / nullif(sum([calls]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
 //					.setDecimalScale(0) // just use whole numbers for this
 					.setDecimalScale(1)
@@ -665,7 +713,7 @@ extends PostgresAbstract
 					.setDbmsTableName            ("CmPgStatements_diff")
 					.setDbmsSampleTimeColumnName ("SessionSampleTime")
 //					.setDbmsDataValueColumnName  ("blk_write_time")
-					.setDbmsDataValueColumnName  ("sum(1.0*[blk_write_time]) / nullif(sum([calls]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
+					.setDbmsDataValueColumnName  ("sum(1.0*[" + col_blk_write_time + "]) / nullif(sum([calls]), 0)").setGroupDataAggregationType(AggType.USER_PROVIDED)
 					.setDbmsWhereKeyColumnName   (whereKeyColumn)
 //					.setDecimalScale(0) // just use whole numbers for this
 					.setDecimalScale(1)

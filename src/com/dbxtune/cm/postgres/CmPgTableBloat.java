@@ -21,6 +21,7 @@
 package com.dbxtune.cm.postgres;
 
 import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -32,6 +33,11 @@ import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
+import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
+import com.dbxtune.alarm.events.AlarmEvent;
+import com.dbxtune.alarm.events.postgres.AlarmEventPgTableBloat;
+import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSampleCatalogIteratorPostgres;
 import com.dbxtune.cm.CounterSetTemplates;
@@ -42,6 +48,8 @@ import com.dbxtune.cm.CountersModel;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
+import com.dbxtune.utils.Configuration;
+import com.dbxtune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -169,7 +177,22 @@ extends CountersModel
 			mtd.addColumn(name, "fillfactor",     "<html>the fillfactor of the table</html>");
 			mtd.addColumn(name, "bloat_size_mb",  "<html>estimated size in MB of the bloat without the extra space kept for the fillfactor</html>");
 			mtd.addColumn(name, "bloat_pct",      "<html>estimated percentage of the real size used by bloat_size</html>");
-			mtd.addColumn(name, "is_na",          "<html>is the estimation 'Not Applicable' ? If true, do not trust the stats</html>");
+			mtd.addColumn(name, "approx_bloat_pct",   "<html>MEASURED bloat in percent of the table (heap): dead rows + free space, minus the free space a fillfactor below 100 keeps on purpose.<br>From <code>pgstattuple_approx()</code> (extension pgstattuple, in this database). Empty: not measured (see bloat_source).</html>");
+			mtd.addColumn(name, "approx_bloat_mb",    "<html>MEASURED bloat in MB (as approx_bloat_pct)</html>");
+			mtd.addColumn(name, "approx_dead_pct",    "<html>Dead rows in percent of the table (pgstattuple_approx: dead_tuple_len)</html>");
+			mtd.addColumn(name, "approx_free_pct",    "<html>Free space in percent of the table (pgstattuple_approx: approx_free_space, from the free space map for the all-visible pages)</html>");
+			mtd.addColumn(name, "approx_scanned_pct", "<html>How much of the table pgstattuple_approx had to read: the pages vacuum has not marked all-visible (the rest comes from the visibility and free space maps)</html>");
+			mtd.addColumn(name, "approx_table_mb",    "<html>The size of the table (heap) in MB, measured by pgstattuple_approx. <code>real_size_mb</code> is from pg_class.relpages, which only VACUUM and ANALYZE update: it can be far too small on a growing table.</html>");
+			mtd.addColumn(name, "bloat_source",       "<html>Where the bloat number comes from:<ul>"
+			                                        + "<li><b>pgstattuple_approx</b> - measured (use the approx_* columns)</li>"
+			                                        + "<li><b>pg_stats</b> - estimated from the statistics (bloat_pct / bloat_size_mb)</li>"
+			                                        + "<li><b>none</b> - neither: no pgstattuple extension (or the table is below " + Configuration.getCombinedConfiguration().getLongProperty(PROPKEY_approx_minTableMb, DEFAULT_approx_minTableMb) + " MB, or more than "
+			                                        + Configuration.getCombinedConfiguration().getLongProperty(PROPKEY_approx_maxScanMb, DEFAULT_approx_maxScanMb) + " MB would have to be read), and pg_stats can't be read</li></ul>"
+			                                        + "Properties: <code>" + PROPKEY_approx_minTableMb + "</code>, <code>" + PROPKEY_approx_maxScanMb + "</code></html>");
+			mtd.addColumn(name, "is_na",          "<html>is the estimation 'Not Applicable' ? If true, do not trust the stats<br>"
+			                                    + "(some columns have no statistics in <code>pg_stats</code>. <b>Note</b>: pg_stats only shows the columns the login may SELECT: "
+			                                    + "with a <code>pg_monitor</code> login every table is <code>true</code> and bloat_pct is meaningless. "
+			                                    + "Fix: a login that can read the tables, for example <code>GRANT pg_read_all_data TO &lt;user&gt;;</code> (Postgres 14 and above))</html>");
 		}
 		catch (NameNotFoundException e) 
 		{
@@ -190,6 +213,46 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		//-----------------------------------------------------------------------------------------------------
+		// Measured bloat: pgstattuple_approx() (extension pgstattuple, 9.5+), where the estimate below can't be made.
+		// The estimate reads pg_stats, which only shows the columns the login may SELECT: with a 'pg_monitor' login every table is 'is_na'.
+		// pgstattuple_approx() may be executed by pg_stat_scan_tables (a part of pg_monitor) and reads only the pages the visibility map
+		// does not mark all-visible (measured 2026-11-14, a 550 MB table: 6-9 ms after VACUUM, 45-69 ms with 39% of it changed, within 0.1% of pgstattuple()).
+		//
+		// The same SQL runs in every database, and the extension is only in some of them: the function is called through query_to_xml(),
+		// so its name is resolved when it runs, and only when it exists (pg_proc, by oid: has_function_privilege() by name would fail when it is missing).
+		// Limits: tables >= minTableMb, and the pages it would read ((relpages - relallvisible) * block size) <= maxScanMb; not other sessions' temp tables.
+		//-----------------------------------------------------------------------------------------------------
+		Configuration conf = Configuration.getCombinedConfiguration();
+		long minTableMb = conf.getLongProperty(PROPKEY_approx_minTableMb, DEFAULT_approx_minTableMb);
+		long maxScanMb  = conf.getLongProperty(PROPKEY_approx_maxScanMb,  DEFAULT_approx_maxScanMb);
+		boolean hasApprox = versionInfo == null || versionInfo.getLongVersion() >= Ver.ver(9,5);
+
+		String APPROX_COLUMNS = ! hasApprox ? "" : ""
+			    + "    ,CAST(100.0 * greatest(p.a_dead + p.a_free - p.a_len * (100 - fillfactor) / 100.0, 0) / nullif(p.a_len, 0) as numeric(10,1)) AS approx_bloat_pct \n"
+			    + "    ,CAST(CASE WHEN p.a_len IS NOT NULL THEN greatest(p.a_dead + p.a_free - p.a_len * (100 - fillfactor) / 100.0, 0) / 1024.0 / 1024.0 END as numeric(15,1)) AS approx_bloat_mb \n" // greatest() ignores NULL: not measured would be 0
+			    + "    ,CAST(100.0 * p.a_dead / nullif(p.a_len, 0) as numeric(10,1))                                                        AS approx_dead_pct \n"
+			    + "    ,CAST(100.0 * p.a_free / nullif(p.a_len, 0) as numeric(10,1))                                                        AS approx_free_pct \n"
+			    + "    ,CAST(p.a_scanned as numeric(10,1))                                                                                   AS approx_scanned_pct \n"
+			    + "    ,CAST(p.a_len / 1024.0 / 1024.0 as numeric(15,1))                                                                    AS approx_table_mb \n" // the real size: real_size_mb is from relpages, which only VACUUM/ANALYZE update
+			    + "    ,CAST(CASE WHEN p.a_len IS NOT NULL THEN 'pgstattuple_approx' WHEN NOT is_na THEN 'pg_stats' ELSE 'none' END as varchar(30)) AS bloat_source \n";
+
+		String APPROX_JOIN = ! hasApprox ? "" : ""
+			    + "LEFT JOIN LATERAL ( \n"
+			    + "    SELECT \n"
+			    + "         (xpath('//table_len/text()',         q.x))[1]::text::numeric AS a_len \n"
+			    + "        ,(xpath('//dead_tuple_len/text()',    q.x))[1]::text::numeric AS a_dead \n"
+			    + "        ,(xpath('//approx_free_space/text()', q.x))[1]::text::numeric AS a_free \n"
+			    + "        ,(xpath('//scanned_percent/text()',   q.x))[1]::text::numeric AS a_scanned \n"
+			    + "    FROM ( \n"
+			    + "        SELECT query_to_xml('select table_len, dead_tuple_len, approx_free_space, scanned_percent from pgstattuple_approx(' || s3.tblid || ')', false, true, '') AS x \n"
+			    + "        WHERE EXISTS (SELECT 1 FROM pg_proc pr WHERE pr.proname = 'pgstattuple_approx' AND has_function_privilege(pr.oid, 'EXECUTE')) \n"
+			    + "          AND s3.heappages * s3.bs >= " + (minTableMb * 1024 * 1024) + " \n"
+			    + "          AND EXISTS (SELECT 1 FROM pg_class c WHERE c.oid = s3.tblid AND c.relpersistence <> 't' \n"
+			    + "                      AND greatest(c.relpages - c.relallvisible, 0)::numeric * s3.bs <= " + (maxScanMb * 1024 * 1024) + ") \n"
+			    + "    ) q \n"
+			    + ") p ON true \n";
+
 		/* from: https://github.com/ioguix/pgsql-bloat-estimation */
 		/* WARNING: executed with a non-superuser role, the query inspect only tables and materialized view (9.3+) you are granted to read.
 		 * This query is compatible with PostgreSQL 9.0 and more
@@ -221,7 +284,8 @@ extends CountersModel
 			    + "        END \n"
 			    + "     as numeric(10,1)) AS bloat_pct \n"
 			    + "    ,is_na \n"
-			    + "  -- ,(SELECT cast(array_to_string(reloptions, ', ') as varchar(1024)) FROM pg_class c WHERE c.oid = s3.tblid) AS reloptions -- Get relation options like 'autovacuum' settings \n" 
+			    + APPROX_COLUMNS
+			    + "  -- ,(SELECT cast(array_to_string(reloptions, ', ') as varchar(1024)) FROM pg_class c WHERE c.oid = s3.tblid) AS reloptions -- Get relation options like 'autovacuum' settings \n"
 			    + "  -- , tpl_hdr_size, tpl_data_size, (pst).free_percent + (pst).dead_tuple_percent AS real_frag -- (DEBUG INFO) \n"
 			    + "FROM ( \n"
 			    + "  SELECT ceil( reltuples / ( (bs-page_hdr)/tpl_size ) ) + ceil( toasttuples / 4 ) AS est_tblpages, \n"
@@ -265,6 +329,7 @@ extends CountersModel
 			    + "    ) AS s \n"
 			    + "  ) AS s2 \n"
 			    + ") AS s3 \n"
+			    + APPROX_JOIN
 //			    + "-- WHERE NOT is_na \n"
 //			    + "--   AND tblpages*((pst).free_percent + (pst).dead_tuple_percent)::float4/100 >= 1 \n"
 			    + "WHERE schemaname not in('pg_catalog', 'information_schema') \n"
@@ -277,5 +342,102 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
+	}
+
+	@Override
+	public void sendAlarmRequest()
+	{
+		if ( ! hasAbsData() )
+			return;
+
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		//-------------------------------------------------------
+		// TableBloat: a big table with a lot of unused space (an estimate)
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("TableBloat"))
+		{
+			Configuration conf = Configuration.getCombinedConfiguration();
+			double thresholdPct    = conf.getDoubleProperty(PROPKEY_alarm_TableBloatPct   , DEFAULT_alarm_TableBloatPct);
+			double thresholdSizeMb = conf.getDoubleProperty(PROPKEY_alarm_TableBloatSizeMb, DEFAULT_alarm_TableBloatSizeMb);
+
+			for (int r = 0; r < getAbsRowCount(); r++)
+			{
+				Double bloatPct   = getAbsValueAsDouble(r, "bloat_pct");
+				Double bloatMb    = getAbsValueAsDouble(r, "bloat_size_mb");
+				Double realSizeMb = getAbsValueAsDouble(r, "real_size_mb");
+
+				// The measured bloat (pgstattuple_approx) when it is there, else the estimate from pg_stats
+				if ("pgstattuple_approx".equals(findColumn("bloat_source") == -1 ? null : getAbsString(r, "bloat_source")))
+				{
+					bloatPct = getAbsValueAsDouble(r, "approx_bloat_pct");
+					bloatMb  = getAbsValueAsDouble(r, "approx_bloat_mb");
+				}
+				else
+				{
+					// No estimate: some columns have no statistics in pg_stats. NOTE: pg_stats only shows the columns the login may SELECT,
+					// so with a 'pg_monitor' login ALL rows are is_na, and bloat_pct is close to 100 for every table (measured 2026-11-14: a false alarm per big table)
+					String isNa = getAbsString(r, "is_na");
+					if ("true".equalsIgnoreCase(isNa) || "t".equalsIgnoreCase(isNa) || "1".equals(isNa))
+						continue;
+				}
+				if (bloatPct == null || bloatMb == null || realSizeMb == null)
+					continue;
+
+				if (bloatPct > thresholdPct && realSizeMb > thresholdSizeMb)
+				{
+					String dbname = getAbsString(r, "dbname");
+					String schema = getAbsString(r, "schemaname");
+					String table  = getAbsString(r, "tablename");
+					boolean measured = "pgstattuple_approx".equals(findColumn("bloat_source") == -1 ? null : getAbsString(r, "bloat_source"));
+					String pctCol = measured ? "approx_bloat_pct" : "bloat_pct";
+
+					AlarmEvent ae = new AlarmEventPgTableBloat(this, dbname, schema, table, bloatPct, bloatMb, thresholdPct);
+					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(getPk(), getAbsPkValue(r), thresholdPct)
+					{
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+						{
+							if ( ! AlarmPhase.CANCEL.equals(phase) )
+								return;
+							String label = "The " + (measured ? "measured (pgstattuple_approx)" : "estimated") + " bloat of table '" + schema + "." + table + "' in database '" + dbname + "'";
+							int rowId = cm.getAbsRowIdForPkValue(getRowPk());
+							alarmEvent.setCancelDescription(rowId == -1 ? getAlarmCancelTextGone(label) : getAlarmCancelText(label, cm.getAbsValueAsDouble(rowId, pctCol), "%"));
+						}
+					});
+					ae.createAlarmOptionsMessage(this, "TableBloat");
+					AlarmHandler.getInstance().addAlarm(ae);
+				}
+			}
+		}
+	}
+
+	/** Measured bloat (pgstattuple_approx): only tables of at least this size (MB). Bloat in small tables does not matter, and it bounds the cost */
+	public static final String  PROPKEY_approx_minTableMb      = CM_NAME + ".approx.minTableMb";
+	public static final long    DEFAULT_approx_minTableMb      = 100;
+
+	/** Measured bloat: skip a table (this sample) when it would read more than this (MB): the pages the visibility map does not mark all-visible */
+	public static final String  PROPKEY_approx_maxScanMb       = CM_NAME + ".approx.maxScanMb";
+	public static final long    DEFAULT_approx_maxScanMb       = 1024;
+
+	public static final String  PROPKEY_alarm_TableBloatPct    = CM_NAME + ".alarm.system.if.TableBloat.pct.gt";
+	public static final double  DEFAULT_alarm_TableBloatPct    = 50;
+
+	public static final String  PROPKEY_alarm_TableBloatSizeMb = CM_NAME + ".alarm.system.if.TableBloat.tableSizeMb.gt";
+	public static final double  DEFAULT_alarm_TableBloatSizeMb = 1024;
+
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+		list.add(new CmSettingsHelper("TableBloat", isAlarmSwitch, PROPKEY_alarm_TableBloatPct   , Double.class, conf.getDoubleProperty(PROPKEY_alarm_TableBloatPct   , DEFAULT_alarm_TableBloatPct   ), DEFAULT_alarm_TableBloatPct,    "If the estimated bloat ('bloat_pct') of a table is above this percent (and the table is bigger than 'TableBloat TableSizeMb'), send 'AlarmEventPgTableBloat'." ));
+		list.add(new CmSettingsHelper("TableBloat TableSizeMb"   , PROPKEY_alarm_TableBloatSizeMb, Double.class, conf.getDoubleProperty(PROPKEY_alarm_TableBloatSizeMb, DEFAULT_alarm_TableBloatSizeMb), DEFAULT_alarm_TableBloatSizeMb, "Only tables bigger than this (MB, 'real_size_mb') are checked for 'TableBloat'." ));
+
+		return list;
 	}
 }

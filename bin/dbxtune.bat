@@ -127,6 +127,11 @@ rem	set JAVA_START_CLASS=com.dbxtune.central.pcs.H2CentralDbCopy2
 	set DBXTUNE_JVM_MEMORY_PARAMS=-Xmx4096m -Xms64m
 	set useDbxCentralEnv=1
 
+) ELSE IF /I "%APP_NAME%" == "loadgen" (
+	set JAVA_START_CLASS=com.dbxtune.loadgen.LoadGen
+	set JAVA_START_PARAMS=
+	set SPLASH=
+
 ) ELSE IF /I "%APP_NAME%" == "dbxPassword" (
 	set JAVA_START_CLASS=com.dbxtune.utils.DbxPassword
 	set JAVA_START_PARAMS=
@@ -199,6 +204,7 @@ rem	set JAVA_START_CLASS=com.dbxtune.central.pcs.H2CentralDbCopy2
 	echo " h2upgrade   - Upgrade H2 database files (recordings/Central DB) written by an older H2 version"
 	echo " dbxPassword - Manage Encrypted Passwords"
 	echo " dbxPasswordUpgrade - Upgrade the encrypted password file from v1 to v2"
+	echo " loadgen     - Load generator for test servers (SQL Server, ASE, Postgres, Oracle)"
 	echo ""
 
 	pause

@@ -26,6 +26,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -59,9 +60,18 @@ public class PersistentCounterHandlerDdlStatisticsTest
 			List<DdlDetails> list = new ArrayList<>();
 			if ("missing".equals(qe._objectName))
 			{
+				pch.incDdlMetadataSpHelp();
+				pch.incDdlLookupIssue(new SQLException("JZ006: JZ0T3: Read operation timed out.", "JZ006"));
+				pch.incDdlLookupIssue(new SQLException("Some error"));
+				pch.incDdlLookupIssue(null);
 				pch.markDdlDetailsAsDiscarded(qe._dbname, qe._objectName);
 				return list;
 			}
+			if ("orders".equals(qe._objectName))
+				pch.incDdlMetadataSql();
+			else
+				pch.incDdlMetadataFallback();
+
 			DdlDetails entry = new DdlDetails();
 			entry.setDbname          ("shop");
 			entry.setOwner           ("dbo");
@@ -134,7 +144,10 @@ public class PersistentCounterHandlerDdlStatisticsTest
 
 			assertEquals(1, lines.size());
 			assertTrue(lines.get(0), lines.get(0).contains(
-					" requests=6, alreadyQueued=0, alreadyStored=2, notAllowed=1, lookups=3, lookupsNoResult=1, objectsReturned=2, saved=1, notSaved=1,"));
+					" requests=6, alreadyQueued=0, alreadyStored=2, notAllowed=1, lookups=3, lookupsNoResult=1, objectsReturned=2, saved=1, notSaved=1, lookupsOk=2,"));
+			assertTrue(lines.get(0), lines.get(0).contains(", lookupsTimeout=1,"));
+			assertTrue(lines.get(0), lines.get(0).contains(", lookupsError=0,"));
+			assertTrue(lines.get(0), lines.get(0).contains(", metadataSql=1, metadataSpHelp=1, metadataFallback=1, queryTimeouts=1, queryErrors=1"));
 		}
 	}
 

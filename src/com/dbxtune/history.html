@@ -81,6 +81,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
         <LI>DbxCentral config file pages (<code>/conf</code>): passwords, API keys, tokens and other secrets are masked (admins see them, see <code>DbxTuneCentral.conf.showSecretsToAdmin</code>)</LI>
         <LI>LLM Optimization Advice: choose the model before asking (several models per provider, each with its own settings like <code>effort</code>), and new ways to reach an LLM: Google Cloud (Vertex AI / Anthropic managed), Amazon Bedrock, Microsoft Foundry, OpenAI-compatible gateways and extra providers (see <code>DBX_CENTRAL.conf</code>)</LI>
         <LI>DbxCentral: new page Tools -&gt; LLM/AI Advice: how to get LLM advice (all the places), and your own saved advice</LI>
+		<LI><b>N+1 / Chatty Sessions</b> -- New alarm <code>AlarmEventChattySession</code>, new CM <code>CmChattyStatements</code> and Daily Summary Report section "Possible N+1 / Chatty Statements" (SQL Server, ASE, Oracle, Db2, MySQL, Postgres)</LI>
+		<LI><b>Index Analysis</b> -- Table Information shows duplicate and unused indexes, with DDL and rollback scripts (SQL Server, ASE, Postgres, MySQL, Db2, Oracle)</LI>
+		<LI><b>DbxLoadGen</b> -- New load generator for test servers (OLTP/OLAP/problem scenarios), and a compare mode that checks the alarms and graphs DbxCentral got</LI>
+		<LI><b>Host Monitoring</b> -- New ConfigText "OS Info": exact OS (distribution/version/build), hardware, CPU and memory; also shown in the Daily Summary Report header</LI>
+		<LI><b>DDL Lookup</b> -- Statistics count lookups that worked, timed out or failed (all vendors); string literals are no longer parsed as table names</LI>
+		<LI><b>Counter Models</b> -- Query timeouts are detected on all vendors (also Postgres and Db2): no alarm checks for a sample that timed out</LI>
         <LI></LI>
 
 		<LI><b>Alarms Handling:</b>
@@ -299,6 +305,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
         <li>graph.html -- Shows what the collectors are refreshing when a sample takes long time (navbar chip, and a "Samples per server" dialog when clicking/hovering the count-clock)</li>
         <li>Admin Page: Log Levels (Log4j) -- View/Change the log level of any class or package at runtime, in DbxCentral and in the Collectors (in-memory or saved). DEBUG/TRACE messages are written to the normal log file</li>
         <li>Counter Details -- "Unpivot" a Counter that holds one row (one line per column, with Absolute, Delta and Rate)</li>
+        <li>Security: the mandatory login could be bypassed with paths like <code>/css/../log</code>, fixed</li>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -314,6 +321,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		    It can be configured with: <code>AseTune.onPcsDatabaseRollover.captureBackupHistory={true|false}</code>, and <code>AseTune.onPcsDatabaseRollover.captureBackupHistory.daysToCopy=##</code>, where default is 14 days
 		</LI>
 		<LI>In SqlCaptureBrokerAse: added 'RewrittenSqlText', 'ParseEx1', 'ParseEx2' to troble shoot why/what SQL Statements is not handled by the JSqlParser, so we can write "normalizers" for them.</LI>
+		<LI>DDL Storage -- Plain SQL with parameters instead of 'sp_help' (from 16.0), the real base type of user datatypes; disabled triggers are skipped</LI>
 
 		<!-- ~~~ CM Changes ~~~ -->
 		<LI><b>CmCachePools       </b> -- Added Graph 'Cache Pools Physical Writes'</LI>
@@ -410,6 +418,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>DbxCentral -- Local graphs (beside the table) for 17 tabs, and Oracle tablespaces in the Space Forecast Report</LI>
 		<LI>DBMS Configuration -- Has a small bug, which meant it couldn't be saved to the PCS</LI>
 		<LI>Get active Roles using: SELECT * FROM SESSION_ROLES</LI>
+		<LI>DDL Lookup -- Bind variables instead of literals: one cursor for every table, about 2 s -&gt; under 0.1 s per table</LI>
 		<LI>When storing values in PCS, Data Type "raw" (JDBC: Types.BINARY or Types.VARBINARY) the precision was at 0. Now using getColumnDisplaySize() or hard-code to 32 if DisplaySize was not available</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
@@ -444,6 +453,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		</LI>
 		<LI><b>CmActiveStatements  </b> -- Added option to distinguish between 'User' and 'Internal' TempdbUsageMb</LI>
 
+		<LI><b>CmActiveStPlanStats </b> -- A far too low row estimate made 'completed_pct' too large, and the whole sample was lost, fixed</LI>
+
 		<LI><b>CmDatabases         </b> -- Cleaned up SQL Statements for 'most_recent_sql_text' that starts with ')' and simply removed that.</LI>
 		<LI><b>CmDatabases         </b> -- Added new graphs: DbLogSizeMbGraph & DbDataSizeMbGraph -- mainly used for: DbxCentral Space Prediction Report</LI>
 		<LI><b>CmDatabases         </b> -- Only get "Database Scoped Configuration (Only Non Defaults)" for databases with higher compatibility_level than 130 (or higher) </LI>
@@ -458,9 +469,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<LI><b>CmMemoryClerks      </b> -- In graph "All Memory Clerks vs Target & Total Memory, in MB" -- added one line "All Other Memory Clerks" -- So we can see "memory steals" easier</LI>
 
+		<LI><b>CmPerfCounters      </b> -- New alarm <code>AlarmEventLiteralSql</code>: many plans with the same query_hash = non-parameterized SQL (lookup only when SQL Compilations/sec &gt; 5, disabled if it takes &gt; 5 s)</LI>
+
 		<LI><b>CmSchedulers        </b> -- Added diff calculations for some columns: "total_signal_time", "total_waits_completed", "total_enqueued_tasks", "total_completed_tasks", "spinlock_wait_time_ms", "spinlock_wait_count"</LI>
 
+		<LI><b>CmSessions          </b> -- 'SELECT permission denied' on the locked-row lookup is logged once per table, and the table is retried after 4 hours</LI>
+
 		<LI><b>CmSummary           </b> -- In alarm 'LockWaits' -- Added "Server LCK_M_* Wait -- Lock Information", so we easier can see what type of blocks we had</LI>
+		<LI><b>CmSummary           </b> -- Deadlock alarm did not fire during the first 10 minutes after start/reconnect, fixed</LI>
 
 		<LI><b>CmWaitStats         </b> -- Added new graphs: LockTime, LockCount & LockTpw -- To view "Server LCK_M_* Wait Types, by 'wait_time_ms/waiting_tasks_count/WaitTimePerCount'.</LI>
 		<LI><b>CmWaitStats         </b> -- In the skip list added wait_types: 'AZURE_IMDS_VERSIONS', 'PREEMPTIVE_OS_DELETESECURITYCONTEXT', 'PREEMPTIVE_OS_REPORTEVENT', 'POPULATE_LOCK_ORDINALS', 'SOS_WORKER_MIGRATION' from Glenn Berry: SQL-Server-2025-Diagnostic-Information-Queries.sql</LI>
@@ -484,6 +500,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li><b>Query Store                     </b> -- Fixed some calculation bug (previously it calculated to high values from Elapsed and CPU Time etc...)</li>
 			<li><b>Query Store                     </b> -- Show if the statement originates from a procedure... "Executed By: name"</li>
 			<li><b>SqlServerJobScheduler           </b> -- Added column 'scheduledLast24hChart', which is a "gantt" that tries to visualize when a job was executed during the day.</li>
+			<li><b>Query Store                     </b> -- Added a "Possible N+1" table</li>
 			
 		</ul>
 		</LI>
@@ -495,25 +512,51 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>PostgresTune - PostgreSQL</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
+		<LI><b>Modernization</b> -- Postgres 10-19, works with a <code>pg_monitor</code>-only login, new alarms (XID wraparound, replication slots, standby delay, bloat, ...), new CMs, many new Daily Summary Report sections, 23 configuration checks</LI>
+		<LI>Privilege check at connect: tells what a <code>pg_monitor</code>-only login can't see; 'DbmsSetup' install recommendations say what each step gives and what is missed without it</LI>
+		<LI>New alarms: XID wraparound, role change (primary/standby), standby replay delay, requested checkpoints, temp usage, deadlocks, idle in transaction, table bloat, replication slot health</LI>
+		<LI>DBMS Config -- 23 configuration checks (statistics, logging, slots without a WAL limit, pending restart, checkpoints/temp/JIT, autovacuum cost limit, ...)</LI>
+		<LI>Gauge counters are no longer diffed; wait event descriptions from <code>pg_wait_events</code> (17+)</LI>
 
 		<!-- ~~~ CM Changes ~~~ -->
-		<LI><b>CmTableBloat  </b> -- New CM to estimate table bloats from statistics</LI>
+		<LI><b>CmPgAutovacuumScores</b> -- New CM: autovacuum priority scores (19)</LI>
 
-		<LI><b>CmPgStatements</b> -- Added columns 'pgss_dealloc', 'pgss_stats_reset' from pg_stat_statements_info - To get "re-structure" changes in pg_stat_statements (if pg_stat_statements.max is exceeded, and possibly needs to be raised)</LI>
+		<LI><b>CmPgIndexes         </b> -- Added index size and unique/PK/constraint columns (used by Unused Indexes)</LI>
 
-		<LI><b>CmPgTables    </b> -- Added column 'est_bloat_pct' -- algo: n_dead_tup / n_live_tup * 100  (Skipping tables with 'n_dead_tup' less than 100)</LI>
-		<LI><b>CmPgTables    </b> -- Added column 'reloptions' -- So we for example can see table specififc autovacuum settings</LI>
+		<LI><b>CmPgLockStats       </b> -- New CM: lock statistics (19)</LI>
 
-		<LI><b>CmPgTableBloat </b> -- Do not show bloat for schema 'information_schema'</LI>
-		<LI><b>CmPgTableBloat </b> -- Added a comment to SQL -- reloptions -- Get relation options like 'autovacuum' settings</LI>
+		<LI><b>CmPgRepSlotStats    </b> -- New CM: logical replication slot statistics, spill/stream (14+)</LI>
 
-		<LI><b>CmPgTableSize </b> -- Added column 'reloptions' -- So we for example can see table specififc autovacuum settings</LI>
+		<LI><b>CmPgStatements      </b> -- Added columns 'pgss_dealloc', 'pgss_stats_reset' from pg_stat_statements_info - To get "re-structure" changes in pg_stat_statements (if pg_stat_statements.max is exceeded, and possibly needs to be raised)</LI>
+
+		<LI><b>CmPgStatementsSumDb </b> -- Postgres 17 renamed blk_read_time/blk_write_time to shared_blk_*, fixed</LI>
+
+		<LI><b>CmPgSubscription    </b> -- New CM: logical replication subscriptions (15+), alarm on apply/sync errors</LI>
+
+		<LI><b>CmPgTables          </b> -- Added column 'est_bloat_pct' -- algo: n_dead_tup / n_live_tup * 100  (Skipping tables with 'n_dead_tup' less than 100)</LI>
+		<LI><b>CmPgTables          </b> -- Added column 'reloptions' -- So we for example can see table specififc autovacuum settings</LI>
+
+		<LI><b>CmPgTableBloat      </b> -- Do not show bloat for schema 'information_schema'</LI>
+		<LI><b>CmPgTableBloat      </b> -- Added a comment to SQL -- reloptions -- Get relation options like 'autovacuum' settings</LI>
+		<LI><b>CmPgTableBloat      </b> -- Bloat measured with <code>pgstattuple_approx</code> (works with <code>pg_monitor</code>, where pg_stats is not visible); TableBloat alarm skips tables without an estimate</LI>
+
+		<LI><b>CmPgTableSize       </b> -- Added column 'reloptions' -- So we for example can see table specififc autovacuum settings</LI>
 
 		<!-- ~~~~~ Daily Report ~~~~~ -->
 		<LI>
 		<b>Daily Summary Report</b><br>
 		<ul>
 			<li><b>PostgresLongRunningStmnts</b> -- Added Graph: CmPgDatabase_Deadlocks</li>
+			<li><b>Load Overview                   </b> -- New section</li>
+			<li><b>Vacuum Health                   </b> -- New section: XID wraparound, xmin holders, autovacuum scores (19)</li>
+			<li><b>WAL / Checkpoints / Archiving   </b> -- New section</li>
+			<li><b>Replication / HA                </b> -- New section: standbys, slots, standby replay delay, subscriptions, logical decoding spill</li>
+			<li><b>Top SQL                         </b> -- Ranked on time, disk reads, temp, WAL, calls and plan time</li>
+			<li><b>Unused Indexes                  </b> -- New section</li>
+			<li><b>Table Bloat                     </b> -- New section, with fix SQL: Postgres 19 <code>REPACK (CONCURRENTLY)</code> without blocking, else VACUUM FULL / pg_repack</li>
+			<li><b>Error Log                       </b> -- New section</li>
+			<li><b>Dead Rows                       </b> -- Autovacuum analysis per table (Table Information box, with Change and Rollback)</li>
+			<li><b>Possible N+1 / Chatty Statements</b> -- New section (from CmPgStatements)</li>
 		</ul>
 		</LI>
 	</UL>
@@ -576,6 +619,17 @@ print-template  -- NOte this is just to debug what the template has produced
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
 		<LI>No changes, please request some if you want this tool to evolve</LI>
+	</UL>
+	<!-- ~~~end-of-this-tool~~~ -->
+
+
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<H3>LoadGen - New Tool</H3>
+	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<UL>
+		<LI>Load generator for test servers (OLTP/OLAP/problem scenarios) so we can create some dummy load and test the various tools<br>
+	Probably mostly used by <i>me</i> to generate some background load in my home-lab/test-env
+		</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 </UL>

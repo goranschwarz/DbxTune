@@ -41,6 +41,7 @@ import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.AlarmHelper;
 import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
+import com.dbxtune.alarm.events.AlarmEventChattySession;
 import com.dbxtune.alarm.events.AlarmEventLongRunningStatement;
 import com.dbxtune.central.pcs.CentralPersistReader;
 import com.dbxtune.cm.CmSettingsHelper;
@@ -1423,10 +1424,13 @@ extends CountersModel
 		// EXIT EARLY if no alarm properties has been specified (since there can be *many* logins)
 		boolean isAnyAlarmEnabled = false;
 		if (isSystemAlarmsForColumnEnabledAndInTimeRange("StatementExecInSec")) isAnyAlarmEnabled = true;
-//		if (isSystemAlarmsForColumnEnabledAndInTimeRange("xxxxxxxxxxx"      )) isAnyAlarmEnabled = true;
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("ChattySession"     )) isAnyAlarmEnabled = true;
 
 		if (isAnyAlarmEnabled == false)
+		{
+			_chattySessionSamples.clear();
 			return;
+		}
 
 		boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
 
@@ -1538,7 +1542,124 @@ extends CountersModel
 				} // end: is number
 			} // end: StatementExecInSec
 		} // end: loop rows
+
+		//-------------------------------------------------------
+		// ChattySession: one session sends very many tiny SQL Batches (possible N+1)
+		// Above the threshold for ## samples in a row, and few logical reads per batch
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("ChattySession") && cm.hasRateData())
+		{
+			Configuration conf = Configuration.getCombinedConfiguration();
+			double threshold          = conf.getDoubleProperty(PROPKEY_alarm_ChattySession,                  DEFAULT_alarm_ChattySession);
+			double maxReadsPerBatch   = conf.getDoubleProperty(PROPKEY_alarm_ChattySessionMaxReadsPerBatch,  DEFAULT_alarm_ChattySessionMaxReadsPerBatch);
+			int    minSamples         = conf.getIntProperty   (PROPKEY_alarm_ChattySessionSamples,           DEFAULT_alarm_ChattySessionSamples);
+			String skipLoginRegExp    = conf.getProperty      (PROPKEY_alarm_ChattySessionSkipLogin,         DEFAULT_alarm_ChattySessionSkipLogin);
+			String skipAppRegExp      = conf.getProperty      (PROPKEY_alarm_ChattySessionSkipApplication,   DEFAULT_alarm_ChattySessionSkipApplication);
+
+			// SPID:KPID -> samples in a row above the threshold (sessions that are below now are forgotten)
+			Map<String, Integer> samplesAbove = new HashMap<>();
+
+			for (int r=0; r<cm.getRateRowCount(); r++)
+			{
+				Double batchPerSec = cm.getRateValueAsDouble(r, "BatchIdDiff");
+				if (batchPerSec == null || batchPerSec <= threshold)
+					continue;
+
+				String spid        = cm.getRateString(r, "SPID");
+				String kpid        = cm.getRateString(r, "KPID");
+				String login       = cm.getRateString(r, "Login");
+				String application = cm.getRateString(r, "Application");
+
+				// System processes and DbxTune's own connections
+				if (StringUtil.isNullOrBlank(login))
+					continue;
+				if (application != null && application.startsWith(Version.getAppName()))
+					continue;
+				if (StringUtil.hasValue(skipLoginRegExp) && login.matches(skipLoginRegExp))
+					continue;
+				if (StringUtil.hasValue(skipAppRegExp) && application != null && application.matches(skipAppRegExp))
+					continue;
+
+				// Cheap requests only: a session with many batches that each do real work is a batch job, not N+1
+				Double logicalReadsPerSec = cm.getRateValueAsDouble(r, "LogicalReads");
+				double readsPerBatch = logicalReadsPerSec == null ? 0 : logicalReadsPerSec / batchPerSec;
+				if (readsPerBatch >= maxReadsPerBatch)
+					continue;
+
+				String  key   = spid + ":" + kpid;
+				Integer prev  = _chattySessionSamples.get(key);
+				int     count = (prev == null ? 0 : prev) + 1;
+				samplesAbove.put(key, count);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest(" + cm.getName() + "): ChattySession: SPID=" + spid + ", BatchIdDiff/s=" + batchPerSec + ", readsPerBatch=" + readsPerBatch + ", samplesAbove=" + count + " (threshold=" + threshold + ", maxReadsPerBatch=" + maxReadsPerBatch + ", minSamples=" + minSamples + ").");
+
+				if (count < minSamples)
+					continue;
+
+				String clientapplname = cm.getRateString(r, "clientapplname");
+				String hostname       = StringUtil.hasValue(cm.getRateString(r, "clienthostname")) ? cm.getRateString(r, "clienthostname") : cm.getRateString(r, "hostname");
+				String dbname         = cm.getRateString(r, "DBName");
+
+				String sessionDesc = "spid=" + spid + ", login='" + login + "', application='" + StringUtil.trim(application) + "'"
+						+ (StringUtil.hasValue(clientapplname) ? ", clientapplname='" + StringUtil.trim(clientapplname) + "'" : "")
+						+ ", host='" + StringUtil.trim(hostname) + "', db='" + dbname + "'";
+
+				AlarmEvent ae = new AlarmEventChattySession(cm, "spid=" + spid, sessionDesc, batchPerSec, readsPerBatch, count, threshold, maxReadsPerBatch);
+				final Object alarmSpid = cm.getRateValue(r, "SPID");
+
+				String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+				String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
+				// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+				ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+				{
+					@Override
+					public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+					{
+						// Always: (RAISE, RE-RAISE, CANCEL) - the session row from when it was (re)raised
+						alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+						if (AlarmPhase.CANCEL.equals(phase))
+						{
+							int    rowId = cm.getRowIdWhere(DATA_RATE, "SPID", alarmSpid);
+							String label = "SPID " + alarmSpid;
+
+							if (rowId == -1)
+								alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+							else
+								alarmEvent.setCancelDescription(getAlarmCancelText(label + ": SQL Batches per second", toAlarmCancelValue(cm.getRateValueAsDouble(rowId, "BatchIdDiff")), "/s"));
+						}
+					}
+				});
+
+				// Information about how to disable this alarm
+				ae.createAlarmOptionsMessage(this, "ChattySession");
+
+				alarmHandler.addAlarm( ae );
+			}
+			_chattySessionSamples = samplesAbove;
+		}
 	}
+
+	/** ChattySession alarm: SPID:KPID -> number of samples in a row above the threshold */
+	private Map<String, Integer> _chattySessionSamples = new HashMap<>();
+
+	public static final String  PROPKEY_alarm_ChattySession                  = CM_NAME + ".alarm.system.if.ChattySession.gt";
+	public static final double  DEFAULT_alarm_ChattySession                  = 100;
+
+	public static final String  PROPKEY_alarm_ChattySessionMaxReadsPerBatch  = CM_NAME + ".alarm.system.if.ChattySession.maxReadsPerBatch";
+	public static final double  DEFAULT_alarm_ChattySessionMaxReadsPerBatch  = 10;
+
+	public static final String  PROPKEY_alarm_ChattySessionSamples           = CM_NAME + ".alarm.system.if.ChattySession.samples";
+	public static final int     DEFAULT_alarm_ChattySessionSamples           = 2;
+
+	public static final String  PROPKEY_alarm_ChattySessionSkipLogin         = CM_NAME + ".alarm.system.if.ChattySession.skip.login";
+	public static final String  DEFAULT_alarm_ChattySessionSkipLogin         = "";
+
+	public static final String  PROPKEY_alarm_ChattySessionSkipApplication   = CM_NAME + ".alarm.system.if.ChattySession.skip.application";
+	public static final String  DEFAULT_alarm_ChattySessionSkipApplication   = "";
 
 	public static final String  PROPKEY_alarm_StatementExecInSec             = CM_NAME + ".alarm.system.if.StatementExecInSec.gt";
 	public static final int     DEFAULT_alarm_StatementExecInSec             = 3 * 60 * 60; // 3 hours
@@ -1570,6 +1691,12 @@ extends CountersModel
 		list.add(new CmSettingsHelper("StatementExecInSec SkipCommands",             PROPKEY_alarm_StatementExecInSecSkipCmd     , String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipCmd     , DEFAULT_alarm_StatementExecInSecSkipCmd     ), DEFAULT_alarm_StatementExecInSecSkipCmd     , "If 'StatementExecInSec' is true; Discard Commands listed (regexp is used)." , new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("StatementExecInSec SkipTranNames",            PROPKEY_alarm_StatementExecInSecSkipTranName, String .class, conf.getProperty   (PROPKEY_alarm_StatementExecInSecSkipTranName, DEFAULT_alarm_StatementExecInSecSkipTranName), DEFAULT_alarm_StatementExecInSecSkipTranName, "If 'StatementExecInSec' is true; Discard TranName listed (regexp is used)." , new RegExpInputValidator()));
 		
+		list.add(new CmSettingsHelper("ChattySession",                isAlarmSwitch, PROPKEY_alarm_ChattySession                 , Double .class, conf.getDoubleProperty(PROPKEY_alarm_ChattySession                , DEFAULT_alarm_ChattySession                ), DEFAULT_alarm_ChattySession                , "If any SPID sends more than ## SQL Batches per second (column 'BatchIdDiff') with few logical reads each, for several samples in a row, then send alarm 'AlarmEventChattySession'. This is often an application doing N+1 (one tiny query per row of another query). It can also be a busy normal session (a connection pool, a queue consumer): confirm N+1 in the Daily Summary Report section 'Possible N+1 / Chatty Statements', which matches the repeated statement to the statement whose rows drive it." ));
+		list.add(new CmSettingsHelper("ChattySession MaxReadsPerBatch",              PROPKEY_alarm_ChattySessionMaxReadsPerBatch , Double .class, conf.getDoubleProperty(PROPKEY_alarm_ChattySessionMaxReadsPerBatch, DEFAULT_alarm_ChattySessionMaxReadsPerBatch), DEFAULT_alarm_ChattySessionMaxReadsPerBatch, "If 'ChattySession' is true; Only if the session does fewer than ## logical reads per SQL Batch (many cheap requests, not a batch job doing real work)." ));
+		list.add(new CmSettingsHelper("ChattySession Samples",                       PROPKEY_alarm_ChattySessionSamples          , Integer.class, conf.getIntProperty   (PROPKEY_alarm_ChattySessionSamples         , DEFAULT_alarm_ChattySessionSamples         ), DEFAULT_alarm_ChattySessionSamples         , "If 'ChattySession' is true; The session must be above the threshold in ## samples in a row." ));
+		list.add(new CmSettingsHelper("ChattySession SkipLogins",                    PROPKEY_alarm_ChattySessionSkipLogin        , String .class, conf.getProperty      (PROPKEY_alarm_ChattySessionSkipLogin       , DEFAULT_alarm_ChattySessionSkipLogin       ), DEFAULT_alarm_ChattySessionSkipLogin       , "If 'ChattySession' is true; Discard Logins listed (regexp is used)."      , new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("ChattySession SkipApplications",              PROPKEY_alarm_ChattySessionSkipApplication  , String .class, conf.getProperty      (PROPKEY_alarm_ChattySessionSkipApplication , DEFAULT_alarm_ChattySessionSkipApplication ), DEFAULT_alarm_ChattySessionSkipApplication , "If 'ChattySession' is true; Discard Applications listed (regexp is used). DbxTune's own connections are always discarded." , new RegExpInputValidator()));
+
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "Application") );
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "Login") );
 

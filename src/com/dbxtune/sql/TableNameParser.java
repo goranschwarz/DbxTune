@@ -75,7 +75,7 @@ public final class TableNameParser {
 	 * @param sql
 	 */
 	public TableNameParser(final String sql) {
-		String nocomments = removeComments(sql);
+		String nocomments = removeComments(removeStringLiterals(sql));
 		String normalized = normalized(nocomments);
 		String cleansed = clean(normalized);
 		String[] tokens = cleansed.split(REGEX_SPACE);
@@ -102,6 +102,45 @@ public final class TableNameParser {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Empty all string literals, so a text like 'inherit from index' isn't read as the table <code>index'</code>.
+	 * Comments and quoted identifiers are copied as they are, since an apostrophe in those doesn't start a literal.
+	 * Note: A backslash isn't an escape character, since 'c:\' is a complete literal in ASE and SQL Server.
+	 */
+	private String removeStringLiterals(final String sql) {
+		StringBuilder sb = new StringBuilder(sql.length());
+		int len = sql.length();
+		int pos = 0;
+		while (pos < len) {
+			char c = sql.charAt(pos);
+			int end;
+			if (c == '\'') {
+				end = pos + 1;
+				while (end < len && (sql.charAt(end) != '\'' || (end + 1 < len && sql.charAt(end + 1) == '\''))) {
+					end += sql.charAt(end) == '\'' ? 2 : 1;
+				}
+				sb.append("''");
+				pos = end + 1;
+				continue;
+			}
+			if (sql.startsWith(TOKEN_SINGLE_LINE_COMMENT, pos)) {
+				int newline = indexOfRegex(TOKEN_NEWLINE, sql.substring(pos));
+				end = newline == -1 ? len : pos + newline;
+			} else if (sql.startsWith("/*", pos)) {
+				int close = sql.indexOf("*/", pos + 2);
+				end = close == -1 ? len : close + 2;
+			} else if (c == '"' || c == '`' || c == '[') {
+				int close = sql.indexOf(c == '[' ? ']' : c, pos + 1);
+				end = close == -1 ? pos + 1 : close + 1;
+			} else {
+				end = pos + 1;
+			}
+			sb.append(sql, pos, end);
+			pos = end;
+		}
+		return sb.toString();
 	}
 
 	private String removeComments(final String sql) {

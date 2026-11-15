@@ -64,6 +64,7 @@ import com.dbxtune.cm.oracle.CmSchedulerJobs;
 import com.dbxtune.cm.oracle.CmSegmentSize;
 import com.dbxtune.cm.oracle.CmSegmentStats;
 import com.dbxtune.cm.oracle.CmSessions;
+import com.dbxtune.cm.oracle.CmChattyStatements;
 import com.dbxtune.cm.oracle.CmSqlStats;
 import com.dbxtune.cm.oracle.CmSummary;
 import com.dbxtune.cm.oracle.CmSysStat;
@@ -152,6 +153,7 @@ extends CounterControllerAbstract
 		// Object/Access
 		CmActiveStatements  .create(counterController, guiController);
 		CmSqlStats          .create(counterController, guiController);
+		CmChattyStatements  .create(counterController, guiController);
 		CmLocks             .create(counterController, guiController);
 		CmLongOps           .create(counterController, guiController);
 		CmInvalidObjects    .create(counterController, guiController);

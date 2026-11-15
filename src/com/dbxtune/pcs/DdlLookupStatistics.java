@@ -21,6 +21,7 @@
  ******************************************************************************/
 package com.dbxtune.pcs;
 
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -28,6 +29,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLongArray;
+
+import com.dbxtune.utils.DbUtils;
 
 /**
  * Counters for the DDL Lookup in PersistentCounterHandler, printed as one line in the errorlog for every hour and every day.
@@ -65,11 +68,41 @@ class DdlLookupStatistics
 		/** An object was NOT written to the DDL Storage: already there under another name, no connection, or an error */
 		notSaved,
 
-		/** Time in the lookups, at the client side */
-		lookupTimeMs,
+		/** A lookup where all queries worked */
+		lookupsOk,
 
-		/** Slowest lookup */
-		lookupMaxMs;
+		/** Time in the lookups that worked, at the client side */
+		okTimeMs,
+
+		/** Slowest lookup that worked */
+		okMaxMs,
+
+		/** A lookup where at least one query timed out */
+		lookupsTimeout,
+
+		/** Time in the lookups with a timeout, the whole lookup */
+		timeoutTimeMs,
+
+		/** A lookup where at least one query failed, and none timed out */
+		lookupsError,
+
+		/** Time in the lookups with an error, the whole lookup */
+		errorTimeMs,
+
+		/** Table metadata was fetched with plain SQL */
+		metadataSql,
+
+		/** Table metadata was fetched with sp_help, since plain SQL isn't used for this server or table */
+		metadataSpHelp,
+
+		/** Table metadata was fetched with sp_help, since plain SQL failed */
+		metadataFallback,
+
+		/** A query in a lookup timed out. Counted per query: one lookup runs several */
+		queryTimeouts,
+
+		/** A query in a lookup failed for another reason than a timeout. Counted per query: one lookup runs several */
+		queryErrors;
 	}
 
 	private static final DateTimeFormatter FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -79,6 +112,10 @@ class DdlLookupStatistics
 
 	private LocalDateTime _hourStart;
 	private LocalDateTime _dayStart;
+
+	// What happened in the current lookup. Only touched by the DDL Lookup thread
+	private boolean _lookupHasTimeout;
+	private boolean _lookupHasError;
 
 	DdlLookupStatistics(LocalDateTime now)
 	{
@@ -96,15 +133,55 @@ class DdlLookupStatistics
 		_hour.addAndGet(counter.ordinal(), value);
 	}
 
-	/** A lookup was executed, and found this number of objects */
+	/** A lookup starts */
+	void beginLookup()
+	{
+		_lookupHasTimeout = false;
+		_lookupHasError   = false;
+	}
+
+	/** A lookup was executed, and found this number of objects. The time goes to the worst thing that happened in it, so a timeout doesn't change the average of those that worked */
 	void addLookup(long timeMs, int objectCount)
 	{
 		inc(Counter.lookups);
-		add(Counter.lookupTimeMs, timeMs);
 		add(Counter.objectsReturned, objectCount);
 		if (objectCount == 0)
 			inc(Counter.lookupsNoResult);
-		_hour.accumulateAndGet(Counter.lookupMaxMs.ordinal(), timeMs, Math::max);
+
+		if (_lookupHasTimeout)
+		{
+			inc(Counter.lookupsTimeout);
+			add(Counter.timeoutTimeMs, timeMs);
+		}
+		else if (_lookupHasError)
+		{
+			inc(Counter.lookupsError);
+			add(Counter.errorTimeMs, timeMs);
+		}
+		else
+		{
+			inc(Counter.lookupsOk);
+			add(Counter.okTimeMs, timeMs);
+			_hour.accumulateAndGet(Counter.okMaxMs.ordinal(), timeMs, Math::max);
+		}
+	}
+
+	/** A query in a lookup failed. null = nothing failed */
+	void addIssue(SQLException ex)
+	{
+		if (ex == null)
+			return;
+
+		if (DbUtils.isQueryTimeout(ex))
+		{
+			inc(Counter.queryTimeouts);
+			_lookupHasTimeout = true;
+		}
+		else
+		{
+			inc(Counter.queryErrors);
+			_lookupHasError = true;
+		}
 	}
 
 	/**
@@ -130,7 +207,7 @@ class DdlLookupStatistics
 		for (int i = 0; i < hour.length; i++)
 		{
 			hour[i] = _hour.getAndSet(i, 0);
-			_day[i] = i == Counter.lookupMaxMs.ordinal() ? Math.max(_day[i], hour[i]) : _day[i] + hour[i];
+			_day[i] = i == Counter.okMaxMs.ordinal() ? Math.max(_day[i], hour[i]) : _day[i] + hour[i];
 		}
 
 		if (printHour)
@@ -157,10 +234,13 @@ class DdlLookupStatistics
 		{
 			sb.append(comma).append(counter).append("=").append(values[counter.ordinal()]);
 			comma = ", ";
-		}
 
-		long lookups = values[Counter.lookups.ordinal()];
-		sb.append(", lookupAvgMs=").append(lookups == 0 ? 0 : values[Counter.lookupTimeMs.ordinal()] / lookups);
+			if (counter == Counter.okMaxMs)
+			{
+				long lookupsOk = values[Counter.lookupsOk.ordinal()];
+				sb.append(", okAvgMs=").append(lookupsOk == 0 ? 0 : values[Counter.okTimeMs.ordinal()] / lookupsOk);
+			}
+		}
 		return sb.toString();
 	}
 }

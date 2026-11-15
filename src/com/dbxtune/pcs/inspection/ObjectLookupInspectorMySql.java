@@ -112,6 +112,7 @@ extends ObjectLookupInspectorAbstract
 		}
 		catch (SQLException ex)
 		{
+			pch.incDdlLookupIssue(ex);
 			_logger.warn("DDL Lookup: Problems with dbname='" + qe._dbname + "', objectName='" + qe._objectName + "', source='" + qe._source + "'. Skipping this object. Caught: " + ex.getMessage().trim());
 			return Collections.emptyList();
 		}
@@ -232,6 +233,7 @@ extends ObjectLookupInspectorAbstract
 		}
 		catch (SQLException ex)
 		{
+			pch.incDdlLookupIssue(ex);
 			showCreateError = ex.getMessage().trim();
 		}
 
@@ -274,6 +276,7 @@ extends ObjectLookupInspectorAbstract
 			}
 			catch (SQLException ex)
 			{
+				pch.incDdlLookupIssue(ex);
 				entry.setObjectText( ex.toString() );
 				_logger.warn("DDL Lookup. Problems getting the COLUMNS of table " + entry.getSchemaAndObjectName() + ", source='" + qe._source + "'. Caught: " + ex.getMessage().trim());
 			}
@@ -368,6 +371,7 @@ extends ObjectLookupInspectorAbstract
 				}
 				catch (SQLException ex)
 				{
+					pch.incDdlLookupIssue(ex);
 					extraInfo += "Could not get the " + part[0] + ": " + ex.getMessage().trim() + "\n\n";
 					_logger.warn("DDL Lookup. Problems getting the " + part[0].toUpperCase() + " of table " + entry.getSchemaAndObjectName() + ", source='" + qe._source + "'. Caught: " + ex.getMessage().trim());
 				}
@@ -400,6 +404,7 @@ extends ObjectLookupInspectorAbstract
 			}
 			catch (SQLException ex)
 			{
+				pch.incDdlLookupIssue(ex);
 				_logger.info("DDL Lookup. Could not read the TRIGGERS of table " + entry.getSchemaAndObjectName() + ", source='" + qe._source + "'. Caught: " + ex.getMessage().trim());
 			}
 			if (triggers.length() > 0)

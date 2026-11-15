@@ -366,7 +366,9 @@ extends CountersModel
 		//-------------------------------------------------------
 		// archived_mb_last_hour
 		//-------------------------------------------------------
-		if (isSystemAlarmsForColumnEnabledAndInTimeRange("archived_mb_last_hour"))
+		// NOTE: The setting was named 'archive_mb_last_hour' (without the 'd'), so '...alarm.system.enabled.archive_mb_last_hour=false' did not turn it off: that old key is still respected
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("archived_mb_last_hour")
+				&& Configuration.getCombinedConfiguration().getBooleanProperty(CM_NAME + ".alarm.system.enabled.archive_mb_last_hour", true))
 		{
 			int row = 0; // We only have 1 row in this CM, so rowId=0
 
@@ -487,7 +489,7 @@ extends CountersModel
 
 		list.add(new CmSettingsHelper("failed_count"            , isAlarmSwitch, PROPKEY_alarm_failed_count            , Integer.class, conf.getIntProperty(PROPKEY_alarm_failed_count            , DEFAULT_alarm_failed_count            ), DEFAULT_alarm_failed_count            , "If 'diff.failed_count' is greater than ## then send 'AlarmEventPgArchiveError'." ));
 		list.add(new CmSettingsHelper("last_archived_in_seconds", isAlarmSwitch, PROPKEY_alarm_last_archived_in_seconds, Integer.class, conf.getIntProperty(PROPKEY_alarm_last_archived_in_seconds, DEFAULT_alarm_last_archived_in_seconds), DEFAULT_alarm_last_archived_in_seconds, "If 'last_archived_in_seconds' is greater than ## then send 'AlarmEventPgArchiveError'." ));
-		list.add(new CmSettingsHelper("archive_mb_last_hour"    , isAlarmSwitch, PROPKEY_alarm_archived_mb_last_hour   , Integer.class, conf.getIntProperty(PROPKEY_alarm_archived_mb_last_hour   , DEFAULT_alarm_archived_mb_last_hour   ), DEFAULT_alarm_archived_mb_last_hour   , "If 'archived_mb_last_hour' is greater than ## MB then send 'AlarmEventPgArchiveRate'." ));
+		list.add(new CmSettingsHelper("archived_mb_last_hour"   , isAlarmSwitch, PROPKEY_alarm_archived_mb_last_hour   , Double.class , conf.getDoubleProperty(PROPKEY_alarm_archived_mb_last_hour, DEFAULT_alarm_archived_mb_last_hour   ), DEFAULT_alarm_archived_mb_last_hour   , "If 'archived_mb_last_hour' is greater than ## MB then send 'AlarmEventPgArchiveRate'." ));
 
 		return list;
 	}

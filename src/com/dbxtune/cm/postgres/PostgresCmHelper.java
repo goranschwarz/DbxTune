@@ -25,6 +25,7 @@ import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Savepoint;
 import java.sql.Statement;
 import java.util.concurrent.TimeoutException;
 
@@ -35,7 +36,6 @@ import com.dbxtune.cache.DbmsObjectIdCache;
 import com.dbxtune.cache.DbmsObjectIdCache.ObjectInfo;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CountersModel;
-import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.MathUtils;
@@ -196,7 +196,10 @@ public class PostgresCmHelper
 
 
 	public static final String  PROPKEY_pgStatements_createExtension     = "CmPgStatements.if.missing.pg_stat_statements.createExtension";
-	public static final boolean DEFAULT_pgStatements_createExtension     = true; 
+	public static final boolean DEFAULT_pgStatements_createExtension     = true;
+
+	/** When the last AUTO-FIX found that 'pg_stat_statements' is not in 'shared_preload_libraries' (0 = never) */
+	private static long _pgStatements_notLoadedTime = 0;
 
 	/**
 	 * Called before <code>refreshGetData(conn)</code> where we can make various checks
@@ -218,6 +221,10 @@ public class PostgresCmHelper
 				exists = true;
 		}
 		
+		// The last AUTO-FIX found that the library is not loaded: that needs a restart of Postgres, so do not try (and log) again at every refresh, only once an hour
+		if ( ! exists && System.currentTimeMillis() - _pgStatements_notLoadedTime < 3_600_000 )
+			return false;
+
 		if ( ! exists )
 		{
 			_logger.warn("When checking Counters Model '" + cm.getName() + "', named '" + cm.getDisplayName() + "' The table 'pg_stat_statements' do not exists.");
@@ -229,6 +236,9 @@ public class PostgresCmHelper
 			{
 				_logger.info("AUTO-FIX: The table 'pg_stat_statements' did not exists... Trying to create it, this will simply work if you are authorized. to DISABLE the 'CREATE EXTENSION pg_stat_statements' set config '" + PROPKEY_pgStatements_createExtension + "=false'.");
 
+				// We are often inside the refresh transaction (AutoCommit=false): a failing statement aborts the whole transaction,
+				// and every following SQL in this refresh fails with "current transaction is aborted". So: rollback to a savepoint on failure.
+				Savepoint savepoint = conn.getAutoCommit() ? null : conn.setSavepoint();
 				try (Statement stmnt = conn.createStatement())
 				{
 					_logger.info("AUTO-FIX: Executing: CREATE EXTENSION pg_stat_statements");
@@ -238,17 +248,27 @@ public class PostgresCmHelper
 					_logger.info("AUTO-FIX: Success executing: CREATE EXTENSION pg_stat_statements");
 
 					// Check if the table is accessible after 'CREATE EXTENSION pg_stat_statements'
-					try( Statement stmnt2 = conn.createStatement(); ResultSet rs = stmnt.executeQuery("SELECT * FROM pg_stat_statements where 1=2"); )
+					// NOTE: read a row ('where 1=2' never calls the view's function, so it works even when the library is NOT in 'shared_preload_libraries')
+					try( Statement stmnt2 = conn.createStatement(); ResultSet rs = stmnt2.executeQuery("SELECT 1 FROM pg_stat_statements limit 1"); )
 					{
 						while(rs.next())
-							; // just loop the RS, no rows will be found...
+							;
 						exists = true;
 					}
 					catch (SQLException exSelChk)
 					{
 						exists = false;
-						_logger.warn("AUTO-FIX: FAILED when checking table 'pg_stat_statements' after 'CREATE EXTENSION pg_stat_statements'. Caught: " + exSelChk);
-						
+						_logger.warn("AUTO-FIX: FAILED when checking table 'pg_stat_statements' after 'CREATE EXTENSION pg_stat_statements' (is 'pg_stat_statements' in 'shared_preload_libraries'?). The extension is removed again, and the next try is in 1 hour. Caught: " + exSelChk);
+					_pgStatements_notLoadedTime = System.currentTimeMillis();
+						// Remove the extension we just created (it can't be used): rollback to the savepoint, or DROP it when AutoCommit is on
+						if (savepoint != null)
+							conn.rollback(savepoint);
+						else
+						{
+							try (Statement stmnt3 = conn.createStatement()) { stmnt3.executeUpdate("DROP EXTENSION IF EXISTS pg_stat_statements"); }
+							catch (SQLException exDrop) { _logger.warn("AUTO-FIX: Problems removing the extension 'pg_stat_statements' again. Caught: " + exDrop); }
+						}
+
 						// Possibly turn off 'AUTO-FIX' since it failed... until next restart (hence the System.setProperty())
 						//System.setProperty(PROPKEY_pgStatements_createExtension, "false"); 
 					}
@@ -257,6 +277,8 @@ public class PostgresCmHelper
 				{
 					exists = false;
 					_logger.warn("AUTO-FIX: FAILED when executing 'CREATE EXTENSION pg_stat_statements'. Caught: " + exCrExt);
+					if (savepoint != null)
+						conn.rollback(savepoint);
 
 					// Possibly turn off 'AUTO-FIX' since it failed... until next restart (hence the System.setProperty())
 					//System.setProperty(PROPKEY_pgStatements_createExtension, "false"); 
@@ -284,34 +306,24 @@ public class PostgresCmHelper
 			message = ex.getMessage();
 		}
 
+		// The view can exist while the library is NOT loaded (CREATE EXTENSION works without 'shared_preload_libraries'),
+		// then every read fails with: ERROR: pg_stat_statements must be loaded via "shared_preload_libraries" (SqlState 55000)
+		if (isOk && ! PostgresCmUtils.canExecute(conn, "select 1 from pg_stat_statements limit 1"))
+		{
+			isOk = false;
+			message = "The view 'pg_stat_statements' exists, but it can't be read (the library is probably not in 'shared_preload_libraries').";
+		}
+
 		if (isOk)
 		{
 			_logger.info("Check dependencies SUCCESS: Table 'pg_stat_statements' exists when checking Counters Model '" + cm.getName() + "'.");
 			return true;
 		}
-		
-		cm.setActive(false, 
-				"The table 'pg_stat_statements' do not exists.\n"
-				+ "To enable this see: https://www.postgresql.org/docs/current/static/pgstatstatements.html\n"
-				+ "\n"
-				+ "Or possibly issue: CREATE EXTENSION pg_stat_statements \n"
-				+ "\n"
-				+ message);
 
-		TabularCntrPanel tcp = cm.getTabPanel();
-		if (tcp != null)
-		{
-			tcp.setUseFocusableTips(true);
-			tcp.setToolTipText("<html>"
-					+ "The table 'pg_stat_statements' do not exists.<br>"
-					+ "To enable this see: https://www.postgresql.org/docs/current/static/pgstatstatements.html<br>"
-					+ "<br>"
-					+ "Or possibly issue: CREATE EXTENSION pg_stat_statements <br>"
-					+ "<br>"
-					+ message + "</html>");
-		}
-		
-		return false;
+		return PostgresCmUtils.disable(cm,
+				"The extension 'pg_stat_statements' is not installed (or not loaded)." + (StringUtil.hasValue(message) ? " " + message : ""),
+				"add 'pg_stat_statements' to the setting 'shared_preload_libraries' (append it to the current list) and restart Postgres, then: CREATE EXTENSION pg_stat_statements; "
+				+ "See DbmsSetup/postgres.txt and https://www.postgresql.org/docs/current/pgstatstatements.html");
 	}
 
 
@@ -348,17 +360,20 @@ public class PostgresCmHelper
 
 			_logger.warn("Possible solution for 'pg_wait_sampling_profile': "
 					+ "(1: check that file 'PG_INST_DIR/lib/pg_wait_sampling.so' exists, if not install postgres package 'pg_wait_sampling_##' where ## is Postgres version, example: dnf/yum install -y pg_wait_sampling_16), "
-					+ "(2: check that config 'shared_preload_libraries' contains 'pg_wait_sampling_profile'), "
-					+ "(3: optional: configure 'https://github.com/postgrespro/pg_wait_sampling' in the config file and restart postgres), "
+					+ "(2: check that config 'shared_preload_libraries' contains 'pg_wait_sampling' (append it to the current list), and restart postgres), "
+					+ "(3: optional: the 'pg_wait_sampling.*' settings, see https://github.com/postgrespro/pg_wait_sampling), "
 					+ "(4: execute: CREATE EXTENSION pg_wait_sampling), "
 					+ "(5: verify with: SELECT * FROM pg_wait_sampling_profile). "
-					+ "or look at https://FIXME");
+					+ "or look at https://github.com/postgrespro/pg_wait_sampling and DbmsSetup/postgres.txt");
 
 			boolean createExtension = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_pgWaitSampling_createExtension, DEFAULT_pgWaitSampling_createExtension);
 			if (createExtension)
 			{
 				_logger.info("AUTO-FIX: The table 'pg_wait_sampling_profile' did not exists... Trying to create it, this will simply work if you are authorized. to DISABLE the 'CREATE EXTENSION pg_wait_sampling' set config '" + PROPKEY_pgWaitSampling_createExtension + "=false'.");
 
+				// We are often inside the refresh transaction (AutoCommit=false): a failing statement aborts the whole transaction,
+				// and every following SQL in this refresh fails with "current transaction is aborted". So: rollback to a savepoint on failure.
+				Savepoint savepoint = conn.getAutoCommit() ? null : conn.setSavepoint();
 				try (Statement stmnt = conn.createStatement())
 				{
 					_logger.info("AUTO-FIX: Executing: CREATE EXTENSION pg_wait_sampling");
@@ -368,16 +383,25 @@ public class PostgresCmHelper
 					_logger.info("AUTO-FIX: Success executing: CREATE EXTENSION pg_wait_sampling");
 
 					// Check if the table is accessible after 'CREATE EXTENSION pg_wait_sampling'
-					try( Statement stmnt2 = conn.createStatement(); ResultSet rs = stmnt.executeQuery("SELECT * FROM pg_wait_sampling_profile where 1=2"); )
+					// NOTE: read a row ('where 1=2' never calls the view's function, so it works even when the library is NOT in 'shared_preload_libraries')
+					try( Statement stmnt2 = conn.createStatement(); ResultSet rs = stmnt2.executeQuery("SELECT 1 FROM pg_wait_sampling_profile limit 1"); )
 					{
 						while(rs.next())
-							; // just loop the RS, no rows will be found...
+							;
 						exists = true;
 					}
 					catch (SQLException exSelChk)
 					{
 						exists = false;
-						_logger.warn("AUTO-FIX: FAILED when checking table 'pg_wait_sampling_profile' after 'CREATE EXTENSION pg_wait_sampling'. Caught: " + exSelChk);
+						_logger.warn("AUTO-FIX: FAILED when checking table 'pg_wait_sampling_profile' after 'CREATE EXTENSION pg_wait_sampling' (is 'pg_wait_sampling' in 'shared_preload_libraries'?). The extension is removed again. Caught: " + exSelChk);
+						// Remove the extension we just created (it can't be used): rollback to the savepoint, or DROP it when AutoCommit is on
+						if (savepoint != null)
+							conn.rollback(savepoint);
+						else
+						{
+							try (Statement stmnt3 = conn.createStatement()) { stmnt3.executeUpdate("DROP EXTENSION IF EXISTS pg_wait_sampling"); }
+							catch (SQLException exDrop) { _logger.warn("AUTO-FIX: Problems removing the extension 'pg_wait_sampling' again. Caught: " + exDrop); }
+						}
 						
 						// Possibly turn off 'AUTO-FIX' since it failed... until next restart (hence the System.setProperty())
 						//System.setProperty(PROPKEY_pgWaitSampling_createExtension, "false"); 
@@ -387,6 +411,8 @@ public class PostgresCmHelper
 				{
 					exists = false;
 					_logger.warn("AUTO-FIX: FAILED when executing 'CREATE EXTENSION pg_wait_sampling'. Caught: " + exCrExt);
+					if (savepoint != null)
+						conn.rollback(savepoint);
 
 					// Possibly turn off 'AUTO-FIX' since it failed... until next restart (hence the System.setProperty())
 					//System.setProperty(PROPKEY_pgWaitSampling_createExtension, "false"); 
@@ -420,30 +446,11 @@ public class PostgresCmHelper
 			return true;
 		}
 		
-		cm.setActive(false, 
-				"The table 'pg_wait_sampling_profile' do not exists.\n"
-				+ "To enable this see: https://github.com/postgrespro/pg_wait_sampling \n"
-				+ "Possibly: dnf/yum install -y pg_wait_sampling_## (where ## is Postgres Major Version)\n"
-				+ "\n"
-				+ "And issue: CREATE EXTENSION pg_wait_sampling \n"
-				+ "\n"
-				+ message);
-
-		TabularCntrPanel tcp = cm.getTabPanel();
-		if (tcp != null)
-		{
-			tcp.setUseFocusableTips(true);
-			tcp.setToolTipText("<html>"
-					+ "The table 'pg_wait_sampling_profile' do not exists.<br>"
-					+ "To enable this see: https://github.com/postgrespro/pg_wait_sampling \n"
-					+ "Possibly: dnf/yum install -y pg_wait_sampling_## (where ## is Postgres Major Version)\n"
-					+ "<br>"
-					+ "And issue: CREATE EXTENSION pg_wait_sampling <br>"
-					+ "<br>"
-					+ message + "</html>");
-		}
-		
-		return false;
+		return PostgresCmUtils.disable(cm,
+				"The extension 'pg_wait_sampling' is not installed (or not loaded). It is an optional third party extension." + (StringUtil.hasValue(message) ? " " + message : ""),
+				"install the package (for example: dnf install pg_wait_sampling_## or apt install postgresql-##-pg-wait-sampling, where ## is the Postgres major version), "
+				+ "add 'pg_wait_sampling' to the setting 'shared_preload_libraries' (append it to the current list) and restart Postgres, then: CREATE EXTENSION pg_wait_sampling; "
+				+ "See DbmsSetup/postgres.txt and https://github.com/postgrespro/pg_wait_sampling");
 	}
 
 }

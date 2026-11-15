@@ -49,6 +49,7 @@ function printUsage
 	echo " dbxPasswordUpgrade - Upgrade the encrypted password file from v1 to v2"
 	echo "               Property/Configuration encryption utility"
 	echo " configUtil  - Encrypt a password that you can insert into a config file"
+	echo " loadgen     - Load generator for test servers (SQL Server, ASE, Postgres, Oracle)"
 	echo ""
 
 	exit 1
@@ -211,6 +212,14 @@ case "${toolset}" in
 		javaSplashScreen=""
 		DBXTUNE_JVM_MEMORY_PARAMS="-Xmx4096m -Xms64m"
 		useDbxCentralEnv=1
+		;;
+
+	loadgen|loadGen)
+		shortAppName="loadgen"
+		longAppName="DbxLoadGen"
+		javaMainClass="com.dbxtune.loadgen.LoadGen"
+		javaMainParams=""
+		javaSplashScreen=""
 		;;
 
 	dbxpassword|dbxPassword)

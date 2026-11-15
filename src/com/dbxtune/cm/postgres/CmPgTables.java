@@ -55,6 +55,7 @@ import com.dbxtune.gui.swing.ColumnHeaderPropsEntry;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.utils.Configuration;
+import com.dbxtune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -93,6 +94,11 @@ extends CountersModel
 			"n_tup_del",
 			"n_tup_hot_upd",
 			"n_tup_newpage_upd",
+			// NOTE: n_live_tup, n_dead_tup, n_mod_since_analyze, n_ins_since_vacuum are values right now (gauges), but they ARE diffed on purpose:
+			//       the diff/rate views show how fast they change, and the DSR 'Top Table Access' sums the diffs (the increase during the period).
+			//       A drop (a vacuum makes n_dead_tup 0, an analyze n_mod_since_analyze 0) is a negative diff = 0 here (NEGATIVE_DIFF_COUNTERS_TO_ZERO).
+			//       The value itself: the abs values (the DSR 'Dead Rows', the Autovacuum box and 'Vacuum Health' read CmPgTables_abs).
+			//       (They were not diffed between 2026-11-14 Phase 1A and this: recordings from that code have the abs values in _diff for these 4.)
 			"n_live_tup",
 			"n_dead_tup",
 			"n_mod_since_analyze",
@@ -327,28 +333,38 @@ extends CountersModel
 			tabName = "pg_catalog.pg_stat_all_tables";
 		}
 
-		return 
+		// mxid_age() was added in 9.5
+		String minmxid_age = versionInfo != null && versionInfo.getLongVersion() >= Ver.ver(9,5)
+				? "    ,mxid_age(c.relminmxid) AS minmxid_age \n"
+				: "    ,cast(NULL as int)      AS minmxid_age \n";
+
+		return
 			"select \n" +
 			"     current_database() AS dbname \n" +
-			"    ,cast(100.0 * coalesce(seq_scan, 0) / (coalesce(seq_scan, 0) + coalesce(idx_scan, 0)) as numeric(5,1)) AS table_scan_pct \n" + 
-			"    ,cast(100.0 * coalesce(idx_scan, 0) / (coalesce(seq_scan, 0) + coalesce(idx_scan, 0)) as numeric(5,1)) AS index_usage_pct \n" +
-			"    ,(SELECT cast(c.reltuples as int8) FROM pg_class c WHERE c.oid = ut.relid) AS row_estimate \n" +
-			"    ,pg_total_relation_size(relid)/1024 AS total_kb \n" +
-			"    ,pg_table_size         (relid)/1024 AS data_kb \n" +
-			"    ,pg_indexes_size       (relid)/1024 AS index_kb \n" +
-			"    ,cast(CASE WHEN seq_scan > 0 THEN (seq_tup_read  * 1.0) / seq_scan ELSE 0 END as numeric(15,1)) AS seq_tup_read_per_scan \n" +
-			"    ,cast(CASE WHEN idx_scan > 0 THEN (idx_tup_fetch * 1.0) / idx_scan ELSE 0 END as numeric(15,1)) AS idx_tup_fetch_per_scan \n" +
-			"    ,(SELECT cast(array_to_string(reloptions, ', ') as varchar(1024)) FROM pg_class c WHERE c.oid = ut.relid) AS reloptions \n" +
+			"    ,cast(100.0 * coalesce(ut.seq_scan, 0) / nullif(coalesce(ut.seq_scan, 0) + coalesce(ut.idx_scan, 0), 0) as numeric(5,1)) AS table_scan_pct \n" +
+			"    ,cast(100.0 * coalesce(ut.idx_scan, 0) / nullif(coalesce(ut.seq_scan, 0) + coalesce(ut.idx_scan, 0), 0) as numeric(5,1)) AS index_usage_pct \n" +
+			"    ,cast(c.reltuples as int8) AS row_estimate \n" +
+			"    ,pg_total_relation_size(ut.relid)/1024 AS total_kb \n" +
+			"    ,pg_table_size         (ut.relid)/1024 AS data_kb \n" +
+			"    ,pg_indexes_size       (ut.relid)/1024 AS index_kb \n" +
+			"    ,cast(CASE WHEN ut.seq_scan > 0 THEN (ut.seq_tup_read  * 1.0) / ut.seq_scan ELSE 0 END as numeric(15,1)) AS seq_tup_read_per_scan \n" +
+			"    ,cast(CASE WHEN ut.idx_scan > 0 THEN (ut.idx_tup_fetch * 1.0) / ut.idx_scan ELSE 0 END as numeric(15,1)) AS idx_tup_fetch_per_scan \n" +
+			"    ,cast(array_to_string(c.reloptions, ', ') as varchar(1024)) AS reloptions \n" +
 			"    ,CAST( \n" +
 			"        CASE \n" +
-			"            WHEN n_dead_tup > 100 AND n_live_tup > 0 THEN (n_dead_tup::float / n_live_tup::float) * 100.0 \n" +
+			"            WHEN ut.n_dead_tup > 100 AND ut.n_live_tup > 0 THEN (ut.n_dead_tup::float / ut.n_live_tup::float) * 100.0 \n" +
 			"            ELSE 0 \n" +
 			"        END \n" +
 			"     as numeric(10,1)) AS est_bloat_pct \n" +
-			"    ,* \n" +
+			// How close the table is to a forced (anti-wraparound) vacuum: compared with autovacuum_freeze_max_age / autovacuum_multixact_freeze_max_age
+			"    ,age(c.relfrozenxid)   AS frozenxid_age \n" +
+			minmxid_age +
+			"    ,ut.* \n" +
 //			"    ,pg_relation_filepath(relid) as table_file_path \n" +
 			"from " + tabName + " ut \n" +
-			"where (coalesce(seq_scan, 0) + coalesce(idx_scan, 0)) > 0"
+			"left join pg_catalog.pg_class c on c.oid = ut.relid \n" +
+			// Tables that are READ or WRITTEN (was: only read, so an insert-only/log table was never sampled, and had no autovacuum information)
+			"where (coalesce(ut.seq_scan, 0) + coalesce(ut.idx_scan, 0) + coalesce(ut.n_tup_ins, 0) + coalesce(ut.n_tup_upd, 0) + coalesce(ut.n_tup_del, 0)) > 0"
 			;
 	}
 	
@@ -372,6 +388,10 @@ extends CountersModel
 			mtd.addColumn(name, "seq_tup_read_per_scan",  "<html>Rows read per table scan <br><b>Formula</b>: seq_tup_read  / seq_scan</html>");
 			mtd.addColumn(name, "idx_tup_fetch_per_scan", "<html>Rows read per Index scan <br><b>Formula</b>: idx_tup_fetch / idx_scan</html>");
 			mtd.addColumn(name, "reloptions",             "<html>Table level options... for example: ALTER TABLE my_table SET (autovacuum_vacuum_scale_factor = 0.01) -- Set to 1% changes</html>");
+			mtd.addColumn(name, "frozenxid_age",          "<html>Age (in transactions) of the table's oldest unfrozen transaction id: <code>age(pg_class.relfrozenxid)</code>.<br>"
+			                                                    + "When it reaches <code>autovacuum_freeze_max_age</code> (default 200 million) a forced (anti-wraparound) autovacuum runs on the table, even if autovacuum is off.</html>");
+			mtd.addColumn(name, "minmxid_age",            "<html>Age of the table's oldest multixact id: <code>mxid_age(pg_class.relminmxid)</code> (Postgres 9.5 and above).<br>"
+			                                                    + "Compared with <code>autovacuum_multixact_freeze_max_age</code> (default 400 million).</html>");
 			mtd.addColumn(name, "est_bloat_pct",          "<html><b>Simple</b> Estimation of BLOAT Percent. <br><b>Formula</b>: n_dead_tup / n_live_tup * 100"
 					+ "<br><b>Note</b>: Skipping tables with 'n_dead_tup' less than 100."
 					+ "<br><b>Note</b>: Real BLOAT calculation (when it's time to do VACUUM FULL or pg_repack) must also include space usage on page level, possibly using pgstattuple('tabname')"

@@ -54,6 +54,7 @@ import com.dbxtune.cm.ase.CmActiveObjects;
 import com.dbxtune.cm.ase.CmActiveStatements;
 import com.dbxtune.cm.ase.CmBlocking;
 import com.dbxtune.cm.ase.CmCachePools;
+import com.dbxtune.cm.ase.CmChattyStatements;
 import com.dbxtune.cm.ase.CmCachedObjects;
 import com.dbxtune.cm.ase.CmCachedProcs;
 import com.dbxtune.cm.ase.CmCachedProcsSum;
@@ -448,6 +449,7 @@ public class CounterControllerAse extends CounterControllerAbstract
 		CmPCacheMemoryUsage.create(counterController, guiController);
 		CmStatementCache   .create(counterController, guiController);
 		CmStmntCacheDetails.create(counterController, guiController);
+		CmChattyStatements .create(counterController, guiController);
 		CmStmntCacheHistory.create(counterController, guiController);
 
 		// tab: Disk

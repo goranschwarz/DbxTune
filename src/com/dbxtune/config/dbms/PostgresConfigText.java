@@ -63,6 +63,7 @@ public abstract class PostgresConfigText
 		DbmsConfigTextManager.addInstance(new PostgresConfigText.PgConfig());
 		DbmsConfigTextManager.addInstance(new PostgresConfigText.Extentions());
 		DbmsConfigTextManager.addInstance(new PostgresConfigText.Servers());
+		DbmsConfigTextManager.addInstance(new HostMonOsInfoConfigText()); // Same for all DBMS vendors: exact OS info from Host Monitoring
 	}
 
 	/*-----------------------------------------------------------
