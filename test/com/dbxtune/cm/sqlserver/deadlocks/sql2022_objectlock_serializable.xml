@@ -1,0 +1,62 @@
+<event name="xml_deadlock_report" package="sqlserver" timestamp="2026-11-15T20:51:20.497Z"><data name="xml_report"><value><deadlock>
+ <victim-list>
+  <victimProcess id="processe00795848"/>
+ </victim-list>
+ <process-list>
+  <process id="processe00795848" taskpriority="0" logused="0" waitresource="OBJECT: 6:1365579903:0 " waittime="2977" ownerId="6604" transactionname="user_transaction" lasttranstarted="2026-11-15T20:51:15.513" XDES="0xe13500470" lockMode="S" schedulerid="23" kpid="1028" status="suspended" spid="95" sbid="0" ecid="0" priority="0" trancount="1" lastbatchstarted="2026-11-15T20:51:15.513" lastbatchcompleted="2026-11-15T20:51:15.513" lastattention="1900-01-01T00:00:00.513" clientapp="SQLCMD" hostname="1574bb333561" hostpid="403" loginname="sa" isolationlevel="serializable (4)" xactid="6604" currentdb="1" currentdbname="master" lockTimeout="4294967295" clientoption1="673185824" clientoption2="128056">
+   
+   <executionStack>
+    <frame procname="adhoc" line="7" stmtstart="346" stmtend="462" sqlhandle="0x020000007aacd933b96d1bb2ccad4968df9cbf082d15a2bd0000000000000000000000000000000000000000">
+unknown    </frame>
+   </executionStack>
+   <inputbuf>
+set nocount on
+set transaction isolation level serializable
+begin try
+begin tran
+  select count(*) from dlk.dbo.heap2 with (tablockx, holdlock)
+  waitfor delay &apos;00:00:02&apos;
+  select count(*) from dlk.dbo.heap1 with (tablock, holdlock)
+commit
+end try begin catch if @@trancount&gt;0 rollback; print error_number() end catch
+   </inputbuf>
+  </process>
+  <process id="processe0005f088" taskpriority="0" logused="0" waitresource="OBJECT: 6:1381579960:0 " waittime="2977" ownerId="6606" transactionname="user_transaction" lasttranstarted="2026-11-15T20:51:15.513" XDES="0xe19c8c470" lockMode="S" schedulerid="4" kpid="1016" status="suspended" spid="93" sbid="0" ecid="0" priority="0" trancount="1" lastbatchstarted="2026-11-15T20:51:15.513" lastbatchcompleted="2026-11-15T20:51:15.513" lastattention="1900-01-01T00:00:00.513" clientapp="SQLCMD" hostname="1574bb333561" hostpid="402" loginname="sa" isolationlevel="serializable (4)" xactid="6606" currentdb="1" currentdbname="master" lockTimeout="4294967295" clientoption1="673185824" clientoption2="128056">
+   
+   <executionStack>
+    <frame procname="adhoc" line="7" stmtstart="346" stmtend="462" sqlhandle="0x0200000078596d1ce2353844ab094dea6de6152c7d15441a0000000000000000000000000000000000000000">
+unknown    </frame>
+   </executionStack>
+   <inputbuf>
+set nocount on
+set transaction isolation level serializable
+begin try
+begin tran
+  select count(*) from dlk.dbo.heap1 with (tablockx, holdlock)
+  waitfor delay &apos;00:00:02&apos;
+  select count(*) from dlk.dbo.heap2 with (tablock, holdlock)
+commit
+end try begin catch if @@trancount&gt;0 rollback; print error_number() end catch
+   </inputbuf>
+  </process>
+ </process-list>
+ <resource-list>
+  <objectlock lockPartition="0" objid="1365579903" subresource="FULL" dbid="6" objectname="dlk.dbo.heap1" id="locke058e8c80" mode="X" associatedObjectId="1365579903">
+   <owner-list>
+    <owner id="processe0005f088" mode="X"/>
+   </owner-list>
+   <waiter-list>
+    <waiter id="processe00795848" mode="S" requestType="wait"/>
+   </waiter-list>
+  </objectlock>
+  <objectlock lockPartition="0" objid="1381579960" subresource="FULL" dbid="6" objectname="dlk.dbo.heap2" id="locke05a55c00" mode="X" associatedObjectId="1381579960">
+   <owner-list>
+    <owner id="processe00795848" mode="X"/>
+   </owner-list>
+   <waiter-list>
+    <waiter id="processe0005f088" mode="S" requestType="wait"/>
+   </waiter-list>
+  </objectlock>
+ </resource-list>
+</deadlock>
+</value></data></event>

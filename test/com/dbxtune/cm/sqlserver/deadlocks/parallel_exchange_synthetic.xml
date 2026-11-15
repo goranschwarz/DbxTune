@@ -1,0 +1,42 @@
+<event name="xml_deadlock_report" package="sqlserver" timestamp="2026-11-15T10:00:00.500Z"><data name="xml_report"><value><deadlock>
+ <victim-list>
+  <victimProcess id="process10"/>
+ </victim-list>
+ <process-list>
+  <process id="process10" waittime="400" lasttranstarted="2026-11-15T10:00:00.000" spid="60" ecid="0" loginname="app" hostname="h1" clientapp="ReportApp" currentdbname="sales" isolationlevel="read committed (2)" lockMode="S" waitresource="OBJECT: 5:12345:0">
+   <executionStack>
+    <frame procname="adhoc" line="1" sqlhandle="0x02">
+select o.cust_id, sum(o.amount) from dbo.orders o group by o.cust_id    </frame>
+   </executionStack>
+   <inputbuf>
+select o.cust_id, sum(o.amount) from dbo.orders o group by o.cust_id   </inputbuf>
+  </process>
+  <process id="process11" waittime="300" lasttranstarted="2026-11-15T10:00:00.000" spid="60" ecid="3" loginname="app" hostname="h1" clientapp="ReportApp" currentdbname="sales" isolationlevel="read committed (2)">
+   <executionStack/>
+   <inputbuf/>
+  </process>
+  <process id="process12" waittime="300" lasttranstarted="2026-11-15T10:00:00.000" spid="60" ecid="4" loginname="app" hostname="h1" clientapp="ReportApp" currentdbname="sales" isolationlevel="read committed (2)">
+   <executionStack/>
+   <inputbuf/>
+  </process>
+ </process-list>
+ <resource-list>
+  <exchangeEvent id="Pipe1" WaitType="e_waitPipeGetRow" nodeId="2">
+   <owner-list>
+    <owner id="process11"/>
+   </owner-list>
+   <waiter-list>
+    <waiter id="process10"/>
+   </waiter-list>
+  </exchangeEvent>
+  <exchangeEvent id="Pipe2" WaitType="e_waitPipeNewRow" nodeId="4">
+   <owner-list>
+    <owner id="process10"/>
+   </owner-list>
+   <waiter-list>
+    <waiter id="process12"/>
+   </waiter-list>
+  </exchangeEvent>
+ </resource-list>
+</deadlock>
+</value></data></event>

@@ -521,10 +521,10 @@ public class McpHandler
 		tools.add(buildTool("get_deadlocks",
 				"Get SQL Server deadlock information captured by the collector.\n"
 				+ "Returns the total deadlock count over the recording period, a timeline of when deadlocks occurred,\n"
-				+ "and optionally the full sp_BlitzLock JSON report.\n"
-				+ "Deadlock data is extracted once per day during the nightly database rollover (or on-demand via trigger_query_store_extract with type=DEADLOCK).\n"
-				+ "  • action=summary  — count + hasReport flag + per-sample timeline from CmSummary\n"
-				+ "  • action=report   — full sp_BlitzLock JSON (can be large; process/parse as needed)\n"
+				+ "and the deadlock details: from the collector CmDeadlocks (saved per sample: objects, victim, procedures, statements),\n"
+				+ "or for older recordings the sp_BlitzLock JSON report (extracted during the nightly database rollover, or on-demand via trigger_query_store_extract with type=DEADLOCK).\n"
+				+ "  • action=summary  — count + hasReport flag + per-sample timeline from CmSummary + deadlockKinds (grouped by objects and procedures)\n"
+				+ "  • action=report   — deadlocks (the latest 200 from CmDeadlocks), or the full sp_BlitzLock JSON (can be large; process/parse as needed)\n"
 				+ "Data is read from the collector's H2 database (collector must be online).",
 				buildSchema(
 					"serverName",  "string", "Name of the monitored SQL Server (collector must be online)",                      true,
