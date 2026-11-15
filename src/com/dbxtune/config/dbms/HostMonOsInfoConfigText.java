@@ -20,10 +20,13 @@
  ******************************************************************************/
 package com.dbxtune.config.dbms;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.zip.GZIPOutputStream;
 
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 
@@ -83,35 +86,85 @@ extends DbmsConfigTextAbstract
 		//-------------------------------------------------
 		// Windows (CMD or PowerShell as login shell)
 		// Sent as -EncodedCommand (Base64 of UTF-16LE), so there are no quoting issues with: cmd.exe, PowerShell or sshd's 'cmd /c "..."'
+		//
+		// WMI/CIM is often denied for a non-admin HostMon user over SSH (an SSH logon is a network logon, which needs WMI 'Remote Enable').
+		// Then fall back to what needs no WMI: registry (OS name/build, BIOS hardware, CPU name), .NET (thread count, total memory)
+		// and the 'System Up Time' performance counter (the HostMon user already reads counters with typeperf).
+		// CPU sockets/cores are only available from WMI. The WMI error is written in the output, so it can be seen why.
 		//-------------------------------------------------
 		if (osName.startsWith("Windows"))
 		{
 			String ps = ""
 				+ "$ProgressPreference = 'SilentlyContinue' \n"
-				+ "$o  = Get-CimInstance Win32_OperatingSystem \n"
-				+ "$cs = Get-CimInstance Win32_ComputerSystem \n"
-				+ "$c  = @(Get-CimInstance Win32_Processor) \n"
-				+ "$r  = Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion' \n"
-				+ "$rel = if ($r.DisplayVersion) { $r.DisplayVersion } else { $r.ReleaseId } \n"
-				+ "'" + KEY_OS_NAME        + ":        ' + $o.Caption \n"
+				+ "$cimErr = $null; $o = $null; $cs = $null; $c = @() \n"
+				+ "try { $o  = Get-CimInstance Win32_OperatingSystem -ErrorAction Stop; "
+				+       "$cs = Get-CimInstance Win32_ComputerSystem  -ErrorAction Stop; "
+				+       "$c  = @(Get-CimInstance Win32_Processor     -ErrorAction Stop) } "
+				+ "catch { $cimErr = $_.Exception.Message; $o = $null; $cs = $null; $c = @() } \n"
+				+ "$r    = Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion' \n"
+				+ "$bios = Get-ItemProperty 'HKLM:\\HARDWARE\\DESCRIPTION\\System\\BIOS' -ErrorAction SilentlyContinue \n"
+				+ "$cpu0 = Get-ItemProperty 'HKLM:\\HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0' -ErrorAction SilentlyContinue \n"
+				+ "$rel  = if ($r.DisplayVersion) { $r.DisplayVersion } else { $r.ReleaseId } \n"
+				// The registry 'ProductName' still says 'Windows 10' on Windows 11 (build 22000 and above)
+				+ "$name = if ($o) { $o.Caption } else { $r.ProductName } \n"
+				+ "if (-not $o -and [int]$r.CurrentBuild -ge 22000 -and $name -like 'Windows 10*') { $name = $name -replace '^Windows 10', 'Windows 11' } \n"
+				+ "if (-not $o -and $name -notlike 'Microsoft*') { $name = 'Microsoft ' + $name } \n" // same as WMI Caption: 'Microsoft Windows Server 2025 Datacenter'
+				+ "$ver  = if ($o) { $o.Version } else { '' + $r.CurrentMajorVersionNumber + '.' + $r.CurrentMinorVersionNumber + '.' + $r.CurrentBuild } \n"
+				+ "$arch = if ($o) { $o.OSArchitecture } elseif ([Environment]::Is64BitOperatingSystem) { '64-bit' } else { '32-bit' } \n"
+				+ "$hw   = if ($cs) { $cs.Manufacturer + ' ' + $cs.Model } else { '' + $bios.SystemManufacturer + ' ' + $bios.SystemProductName } \n"
+				+ "$cpuName = if ($c.Count -gt 0) { $c[0].Name } else { $cpu0.ProcessorNameString } \n"
+				+ "$sockets = if ($c.Count -gt 0) { $c.Count } else { '' } \n"
+				+ "$cores   = if ($c.Count -gt 0) { ($c | Measure-Object -Property NumberOfCores             -Sum).Sum } else { '' } \n"
+				+ "$threads = if ($c.Count -gt 0) { ($c | Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum } else { [Environment]::ProcessorCount } \n"
+				+ "$memBytes = if ($cs) { $cs.TotalPhysicalMemory } else { try { Add-Type -AssemblyName Microsoft.VisualBasic; (New-Object Microsoft.VisualBasic.Devices.ComputerInfo).TotalPhysicalMemory } catch { 0 } } \n"
+				+ "$mem  = if ($memBytes -gt 0) { '' + [math]::Round($memBytes / 1GB, 1) + ' GB' } else { '' } \n"
+				+ "$boot = if ($o) { $o.LastBootUpTime } else { try { (Get-Date).AddSeconds(-(Get-Counter '\\System\\System Up Time' -ErrorAction Stop).CounterSamples[0].CookedValue) } catch { $null } } \n"
+				+ "$bootStr = if ($boot) { $boot.ToString('yyyy-MM-dd HH:mm:ss') } else { '' } \n"
+				+ "'" + KEY_OS_NAME        + ":        ' + $name \n"
 				+ "'" + KEY_OS_VERSION     + ":     ' + $rel \n"
-				+ "'" + KEY_KERNEL_BUILD   + ":   ' + $o.Version + '.' + $r.UBR \n"
-				+ "'" + KEY_ARCHITECTURE   + ":   ' + $o.OSArchitecture \n"
-				+ "'" + KEY_HARDWARE       + ":       ' + $cs.Manufacturer + ' ' + $cs.Model \n"
-				+ "'" + KEY_CPU_MODEL      + ":      ' + $c[0].Name.Trim() \n"
-				+ "'" + KEY_CPU_SOCKETS    + ":    ' + $c.Count \n"
-				+ "'" + KEY_CPU_CORES      + ":      ' + ($c | Measure-Object -Property NumberOfCores             -Sum).Sum \n"
-				+ "'" + KEY_CPU_THREADS    + ":    ' + ($c | Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum \n"
-				+ "'" + KEY_MEMORY_TOTAL   + ":   ' + [math]::Round($cs.TotalPhysicalMemory / 1GB, 1) + ' GB' \n"
-				+ "'" + KEY_LAST_BOOT      + ":      ' + $o.LastBootUpTime.ToString('yyyy-MM-dd HH:mm:ss') \n"
+				+ "'" + KEY_KERNEL_BUILD   + ":   ' + $ver + '.' + $r.UBR \n"
+				+ "'" + KEY_ARCHITECTURE   + ":   ' + $arch \n"
+				+ "'" + KEY_HARDWARE       + ":       ' + $hw \n"
+				+ "'" + KEY_CPU_MODEL      + ":      ' + ('' + $cpuName).Trim() \n"
+				+ "'" + KEY_CPU_SOCKETS    + ":    ' + $sockets \n"
+				+ "'" + KEY_CPU_CORES      + ":      ' + $cores \n"
+				+ "'" + KEY_CPU_THREADS    + ":    ' + $threads \n"
+				+ "'" + KEY_MEMORY_TOTAL   + ":   ' + $mem \n"
+				+ "'" + KEY_LAST_BOOT      + ":      ' + $bootStr \n"
 				+ "'' \n"
-				+ "'----- Win32_OperatingSystem' \n"
-				+ "($o | Format-List Caption, Version, BuildNumber, OSArchitecture, OSLanguage, InstallDate, LastBootUpTime | Out-String -Width 200).Trim() \n"
-				+ "'----- Win32_Processor' \n"
-				+ "($c | Format-List Name, NumberOfCores, NumberOfLogicalProcessors, MaxClockSpeed | Out-String -Width 200).Trim() \n"
+				+ "if ($cimErr) { \n"
+				+ "  '----- WMI/CIM is not available, values above are from the registry/.NET (CPU sockets/cores need WMI)' \n"
+				+ "  'WMI/CIM error: ' + $cimErr \n"
+				+ "} else { \n"
+				+ "  '----- Win32_OperatingSystem' \n"
+				+ "  ($o | Format-List Caption, Version, BuildNumber, OSArchitecture, OSLanguage, InstallDate, LastBootUpTime | Out-String -Width 200).Trim() \n"
+				+ "  '----- Win32_Processor' \n"
+				+ "  ($c | Format-List Name, NumberOfCores, NumberOfLogicalProcessors, MaxClockSpeed | Out-String -Width 200).Trim() \n"
+				+ "} \n"
 				+ "";
 
-			String encoded = Base64.getEncoder().encodeToString(ps.getBytes(StandardCharsets.UTF_16LE));
+			// The command line is limited to 8191 chars (cmd.exe, also over SSH: sshd runs 'cmd /c ...'), and -EncodedCommand makes it ~2.7 times the script length.
+			// So: gzip the script, and -EncodedCommand only a small bootstrap that unzips and runs it.
+			byte[] gzipped;
+			try (ByteArrayOutputStream bos = new ByteArrayOutputStream())
+			{
+				try (GZIPOutputStream gz = new GZIPOutputStream(bos))
+				{
+					gz.write(ps.getBytes(StandardCharsets.UTF_8));
+				}
+				gzipped = bos.toByteArray();
+			}
+			catch (IOException ex) // can't happen with a ByteArrayOutputStream
+			{
+				throw new RuntimeException(ex);
+			}
+			String bootstrap = ""
+				+ "$ProgressPreference = 'SilentlyContinue'; " // no '#< CLIXML' progress records on stderr
+				+ "$ms = New-Object IO.MemoryStream(,[Convert]::FromBase64String('" + Base64.getEncoder().encodeToString(gzipped) + "')); "
+				+ "$sr = New-Object IO.StreamReader((New-Object IO.Compression.GZipStream($ms, [IO.Compression.CompressionMode]::Decompress)), [Text.Encoding]::UTF8); "
+				+ "Invoke-Expression $sr.ReadToEnd()";
+
+			String encoded = Base64.getEncoder().encodeToString(bootstrap.getBytes(StandardCharsets.UTF_16LE));
 			return "powershell -NoProfile -NonInteractive -EncodedCommand " + encoded;
 		}
 

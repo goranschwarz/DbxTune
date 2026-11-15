@@ -40,7 +40,6 @@ public abstract class RsConfigText
 
 	public static void createAndRegisterAllInstances()
 	{
-		DbmsConfigTextManager.addInstance(new HostMonOsInfoConfigText()); // Same for all DBMS vendors: exact OS info from Host Monitoring
 		DbmsConfigTextManager.addInstance(new RsConfigText.RsConfigAsText());
 		DbmsConfigTextManager.addInstance(new RsConfigText.RsConfigAsTextNonDefault());
 		DbmsConfigTextManager.addInstance(new RsConfigText.RsConfig());
@@ -57,6 +56,7 @@ public abstract class RsConfigText
 		_discardRsMsgNumbers.add(32);    // Msg=32:    Unknown rpc received., SqlState='null', State=0, Severity=12, ServerName=GORAN_1_RS, ProcName=null, LineNum=0.
 		_discardRsMsgNumbers.add(15539); // Msg=15539: Gateway connection to 'GORAN_1_ERSSD.GORAN_1_ERSSD' is created., SqlState='null', State=0, Severity=0, ServerName=GORAN_1_RS, ProcName=null, LineNum=0.
 		_discardRsMsgNumbers.add(15540); // Msg=15540: Gateway connection to 'GORAN_1_ERSSD.GORAN_1_ERSSD' is dropped., SqlState='null', State=0, Severity=0, ServerName=GORAN_1_RS, ProcName=null, LineNum=0.
+		DbmsConfigTextManager.addInstance(new HostMonOsInfoConfigText()); // Same for all DBMS vendors: exact OS info from Host Monitoring
 	}
 	private static List<Integer> _discardRsMsgNumbers = null;
 

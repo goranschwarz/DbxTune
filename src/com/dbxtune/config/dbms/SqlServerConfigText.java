@@ -82,7 +82,6 @@ public abstract class SqlServerConfigText
 
 	public static void createAndRegisterAllInstances()
 	{
-		DbmsConfigTextManager.addInstance(new HostMonOsInfoConfigText()); // Same for all DBMS vendors: exact OS info from Host Monitoring
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.HelpDb());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.SysDatabases());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.SysMasterFiles());
@@ -101,6 +100,7 @@ public abstract class SqlServerConfigText
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.AgentJobs());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.WindowsPowerPlan());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.SpBlitz());
+		DbmsConfigTextManager.addInstance(new HostMonOsInfoConfigText()); // Same for all DBMS vendors: exact OS info from Host Monitoring
 	}
 
 	/*-----------------------------------------------------------

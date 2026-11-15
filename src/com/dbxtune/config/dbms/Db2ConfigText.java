@@ -52,7 +52,6 @@ public abstract class Db2ConfigText
 
 	public static void createAndRegisterAllInstances()
 	{
-		DbmsConfigTextManager.addInstance(new HostMonOsInfoConfigText()); // Same for all DBMS vendors: exact OS info from Host Monitoring
 		DbmsConfigTextManager.addInstance(new Db2ConfigText.Server());
 		DbmsConfigTextManager.addInstance(new Db2ConfigText.Registry());
 		DbmsConfigTextManager.addInstance(new Db2ConfigText.BufferPools());
@@ -62,6 +61,7 @@ public abstract class Db2ConfigText
 		DbmsConfigTextManager.addInstance(new Db2ConfigText.EventMonitors());
 		DbmsConfigTextManager.addInstance(new Db2ConfigText.Wlm());
 		DbmsConfigTextManager.addInstance(new Db2ConfigText.AutoMaint());
+		DbmsConfigTextManager.addInstance(new HostMonOsInfoConfigText()); // Same for all DBMS vendors: exact OS info from Host Monitoring
 	}
 
 	/**
