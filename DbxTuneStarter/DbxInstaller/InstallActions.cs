@@ -2614,6 +2614,11 @@ namespace DbxInstaller
 
                     string val = body[(eq + 1)..].Trim();
                     if (val.Length == 0) continue;
+
+                    // Skip the placeholders written by "<tune> --cfgWizardNoGui" (fixme@fixme.com,
+                    // smtp.fixme.com) — they are not real settings, so don't copy them to DBX_CENTRAL.conf.
+                    if (val.Contains("fixme.com", StringComparison.OrdinalIgnoreCase)) continue;
+
                     if (!isComment) return val;
                     commentedFallback ??= val;
                 }

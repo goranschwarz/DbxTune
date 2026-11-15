@@ -2213,6 +2213,19 @@ extends Properties
 	 */
 	public static String saveConvert(String theString, boolean escapeSpace, boolean escapeUnicode)
 	{
+		return saveConvert(theString, escapeSpace, escapeUnicode, true);
+	}
+
+	/**
+	 * Same as saveConvert(theString, escapeSpace, escapeUnicode), but '=', ':', '#' and '!' are only escaped if <code>escapeSeparators</code> is true
+	 * <p>
+	 * In a <b>value</b> they do not need to be escaped: load() takes everything after the first key/value separator as the value,
+	 * and the value never starts the line (so '#' and '!' can't make it a comment). In a <b>key</b> they must be escaped.
+	 *
+	 * @param escapeSeparators  escape '=', ':', '#' and '!' (needed for keys, not for values)
+	 */
+	public static String saveConvert(String theString, boolean escapeSpace, boolean escapeUnicode, boolean escapeSeparators)
+	{
 		int len = theString.length();
 		int bufLen = len * 2;
 		if ( bufLen < 0 )
@@ -2261,10 +2274,11 @@ extends Properties
 				outBuffer.append('f');
 				break;
 			case '=': // Fall through
-			case ':': // Fall through  -- POSSIBLY: do we need this ???  possibly just comment it out... BUT: We need to test load() so we don't break that
+			case ':': // Fall through
 			case '#': // Fall through
 			case '!':
-				outBuffer.append('\\');
+				if ( escapeSeparators )
+					outBuffer.append('\\');
 				outBuffer.append(aChar);
 				break;
 			default:

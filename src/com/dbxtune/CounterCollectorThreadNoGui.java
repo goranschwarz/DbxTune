@@ -184,10 +184,10 @@ implements Memory.MemoryListener
 			if (options.indexOf(',') >= 0)
 				return true;
 
-			if (    options.equals("small")
-				 || options.equals("medium")
-				 || options.equals("large")
-				 || options.equals("all")
+			if (    options.equalsIgnoreCase("small")
+				 || options.equalsIgnoreCase("medium")
+				 || options.equalsIgnoreCase("large")
+				 || options.equalsIgnoreCase("all")
 			   )
 			{
 				return true;
@@ -649,18 +649,23 @@ implements Memory.MemoryListener
 					
 					// if the CM does NOT exists in the NO-GUI PCS File (it might be a NEW CM that was introduced AFTER the NO-GUI file was created)
 					//  - Then use any "template level"... and if the CM is above the "template level", add it anyway!
-					boolean cmHasPersistKey = _storeProps.hasProperty(persistCountersKey);
+					// NOTE: Not hasProperty(), it also returns true for "registered default values" (which all CMs has for 'persistCounters')
+					boolean cmHasPersistKey = _storeProps.containsKey(persistCountersKey);
 					if ( ! cmHasPersistKey )
 					{
 						Type cmTemplate = cm.getTemplateLevel();
 						if (cmTemplate.ordinal() <= cfgTemplateLevel.ordinal())
 						{
 							persistCm = true;
-							if (cfgTemplateLevelStr != null)
-								extraDescription = " >>>> NOTE: This CM was NOT part of the CFG file, but it was enabled due to cfgTemplateLevel=" + cfgTemplateLevel + " and cmTemplateLevel()=" + cmTemplate + " (cfgTemplateLevelStr='" + cfgTemplateLevelStr + "'), Default template level can be set with: " + CounterSetTemplates.PROPKEY_templateDefaultName + " = SMALL|MEDIUM|LARGE|ALL";
-							else
-								extraDescription = " >>>> NOTE: This CM was NOT part of the CFG file, but it was enabled due to cfgTemplateLevel=" + cfgTemplateLevel + " and cmTemplateLevel()=" + cmTemplate + " Default template level can be set with: " + CounterSetTemplates.PROPKEY_templateDefaultName + " = SMALL|MEDIUM|LARGE|ALL";
+							extraDescription = " >>>> NOTE: This CM was NOT part of the CFG file, but it was enabled due to cfgTemplateLevel=" + cfgTemplateLevel + " and cmTemplateLevel()=" + cmTemplate;
 						}
+
+						String levelSource = cfgTemplateLevelStr != null
+								? "from '" + CounterSetTemplates.PROPKEY_templateDefaultName + " = " + cfgTemplateLevelStr + "' in the file"
+								: "the built-in default, since '" + CounterSetTemplates.PROPKEY_templateDefaultName + "' is not in the file";
+						_logger.warn("CM '" + cm.getName() + "' has no '" + persistCountersKey + "' in the config file '" + _storeProps.getFilename() + "'. "
+								+ "Template level " + cfgTemplateLevel + " was used (" + levelSource + "), the CM's level is " + cmTemplate + ", so the CM is " + (persistCm ? "RECORDED" : "NOT recorded") + ". "
+								+ "Add '" + persistCountersKey + " = true|false' or '" + CounterSetTemplates.PROPKEY_templateDefaultName + " = SMALL|MEDIUM|LARGE|ALL' to the file to decide this.");
 					}
 
 					if ( ! persistCm )
@@ -1006,7 +1011,7 @@ implements Memory.MemoryListener
 		if      (cmOptions.equalsIgnoreCase("small"))  ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_SMALL;
 		else if (cmOptions.equalsIgnoreCase("medium")) ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_MEDIUM;
 		else if (cmOptions.equalsIgnoreCase("large"))  ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_LARGE;
-		else if (cmOptions.equalsIgnoreCase("all,"))   ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_ALL;
+		else if (cmOptions.equalsIgnoreCase("all"))    ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_ALL;
 //		else if (cmOptions.equalsIgnoreCase("all"))
 //		{
 //			ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_ALL;
@@ -1025,10 +1030,11 @@ implements Memory.MemoryListener
 
 		// template AND add/remove individual CM's from the template
 		PropPropEntry ppe2 = null;
-		if      (cmOptions.startsWith("small,"))  ppe2 = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_SMALL;
-		else if (cmOptions.startsWith("medium,")) ppe2 = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_MEDIUM;
-		else if (cmOptions.startsWith("large,"))  ppe2 = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_LARGE;
-		else if (cmOptions.startsWith("all,"))    ppe2 = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_ALL;
+		String cmOptionsLc = cmOptions.toLowerCase();
+		if      (cmOptionsLc.startsWith("small,"))  ppe2 = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_SMALL;
+		else if (cmOptionsLc.startsWith("medium,")) ppe2 = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_MEDIUM;
+		else if (cmOptionsLc.startsWith("large,"))  ppe2 = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_LARGE;
+		else if (cmOptionsLc.startsWith("all,"))    ppe2 = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_ALL;
 
 		
 		//----------------------------------------
@@ -1061,7 +1067,7 @@ implements Memory.MemoryListener
 			for (String str : sa)
 			{
 				str = str.trim();
-				if (str.equals("small") || str.equals("medium") || str.equals("large") || str.equals("all"))
+				if (str.equalsIgnoreCase("small") || str.equalsIgnoreCase("medium") || str.equalsIgnoreCase("large") || str.equalsIgnoreCase("all"))
 				{
 					templateName = str;
 					continue;
