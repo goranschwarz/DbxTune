@@ -82,6 +82,7 @@ public abstract class SqlServerConfigText
 
 	public static void createAndRegisterAllInstances()
 	{
+		DbmsConfigTextManager.addInstance(new HostMonOsInfoConfigText()); // Same for all DBMS vendors: exact OS info from Host Monitoring
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.HelpDb());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.SysDatabases());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.SysMasterFiles());

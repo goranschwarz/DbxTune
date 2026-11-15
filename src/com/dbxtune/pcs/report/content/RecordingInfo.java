@@ -36,6 +36,8 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -45,6 +47,7 @@ import com.dbxtune.Version;
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.events.AlarmEventDbmsVersionString;
+import com.dbxtune.config.dbms.HostMonOsInfoConfigText;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.PersistWriterBase;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
@@ -86,6 +89,9 @@ extends ReportEntryAbstract
 
 	private String _osCoreInfo   = "";
 	private String _osMemoryInfo = "";
+
+	/** Normalized 'Key: value' pairs from ConfigText 'HostMonOsInfo' (empty if not recorded) */
+	private Map<String, String> _hostMonOsInfo = new LinkedHashMap<>();
 
 	private boolean _isHostMonitoringEnabled = false;
 	private String  _hostMonitorHostname;
@@ -233,6 +239,41 @@ extends ReportEntryAbstract
 				{
 		   			sb.append("  <tr> " + tdBullet + " <td><b>" + entry.getKey() + ":  </b></td> <td>" + entry.getValue()   + "</td> </tr>\n");
 				}
+			}
+
+			// Exact OS info from Host Monitoring (ConfigText 'HostMonOsInfo')
+			if ( ! _hostMonOsInfo.isEmpty() )
+			{
+				String osName  = _hostMonOsInfo.getOrDefault(HostMonOsInfoConfigText.KEY_OS_NAME       , "");
+				String osVer   = _hostMonOsInfo.getOrDefault(HostMonOsInfoConfigText.KEY_OS_VERSION    , "");
+				String kernel  = _hostMonOsInfo.getOrDefault(HostMonOsInfoConfigText.KEY_KERNEL_BUILD  , "");
+				String arch    = _hostMonOsInfo.getOrDefault(HostMonOsInfoConfigText.KEY_ARCHITECTURE  , "");
+				String hw      = _hostMonOsInfo.getOrDefault(HostMonOsInfoConfigText.KEY_HARDWARE      , "");
+				String virt    = _hostMonOsInfo.getOrDefault(HostMonOsInfoConfigText.KEY_VIRTUALIZATION, "");
+				String cpu     = _hostMonOsInfo.getOrDefault(HostMonOsInfoConfigText.KEY_CPU_MODEL     , "");
+				String sockets = _hostMonOsInfo.getOrDefault(HostMonOsInfoConfigText.KEY_CPU_SOCKETS   , "");
+				String cores   = _hostMonOsInfo.getOrDefault(HostMonOsInfoConfigText.KEY_CPU_CORES     , "");
+				String threads = _hostMonOsInfo.getOrDefault(HostMonOsInfoConfigText.KEY_CPU_THREADS   , "");
+				String memory  = _hostMonOsInfo.getOrDefault(HostMonOsInfoConfigText.KEY_MEMORY_TOTAL  , "");
+				String boot    = _hostMonOsInfo.getOrDefault(HostMonOsInfoConfigText.KEY_LAST_BOOT     , "");
+
+				// 'Ubuntu 22.04.4 LTS' already holds '22.04', so only add the version when it's not part of the name
+				String osStr  = Stream.of(osName, osName.contains(osVer) ? "" : osVer, kernel.isEmpty() ? "" : "kernel/build " + kernel, arch)
+						.filter(StringUtil::hasValue).collect(Collectors.joining(", "));
+				String hwStr  = Stream.of(hw, virt.isEmpty() || "none".equals(virt) ? "" : "virtualization: " + virt)
+						.filter(StringUtil::hasValue).collect(Collectors.joining(", "));
+				String cpuStr = Stream.of(cpu,
+						sockets.isEmpty() ? "" : "sockets=" + sockets,
+						cores  .isEmpty() ? "" : "cores="   + cores,
+						threads.isEmpty() ? "" : "threads=" + threads)
+						.filter(StringUtil::hasValue).collect(Collectors.joining(", "));
+
+				sb.append(blankTableRow);
+				sb.append("  <tr> " + tdBullet + " <td><b>Operating System:         </b></td> <td>" + osStr  + "</td> </tr>\n");
+				if (StringUtil.hasValue(hwStr))         sb.append("  <tr> " + tdBullet + " <td><b>OS Hardware:              </b></td> <td>" + hwStr  + "</td> </tr>\n");
+				if (StringUtil.hasValue(cpuStr))        sb.append("  <tr> " + tdBullet + " <td><b>OS CPU:                   </b></td> <td>" + cpuStr + "</td> </tr>\n");
+				if (StringUtil.hasValue(memory))        sb.append("  <tr> " + tdBullet + " <td><b>OS Memory:                </b></td> <td>" + memory + "</td> </tr>\n");
+				if (StringUtil.hasValue(boot))          sb.append("  <tr> " + tdBullet + " <td><b>OS Last Boot:             </b></td> <td>" + boot   + "</td> </tr>\n");
 			}
 
 			// OS info: CORE Count, MEMORY ...
@@ -419,6 +460,11 @@ extends ReportEntryAbstract
 		//-----------------------------------------
 		_osCoreInfo   = getOsCoreInfo(conn);
 		_osMemoryInfo = getOsMemoryInfo(conn);
+
+		//-----------------------------------------
+		// Exact OS info (distribution/version/build, hardware, CPU, memory) from Host Monitoring
+		//-----------------------------------------
+		_hostMonOsInfo = getHostMonOsInfo(conn);
 
 		//-----------------------------------------
 		// Get/Check if Host Monitoring was enabled
@@ -675,6 +721,37 @@ extends ReportEntryAbstract
 		return output;
 	}
 	
+	/**
+	 * Get the exact OS information, stored by ConfigText 'HostMonOsInfo' (latest recording session that has it)
+	 * @param conn A Connection the the PCS Storage
+	 * @return A Map with the normalized 'Key: value' pairs, empty if not recorded (Host Monitoring not enabled, or an older recording)
+	 */
+	private Map<String, String> getHostMonOsInfo(DbxConnection conn)
+	{
+		String schemaNamePrefix = getReportingInstance().getDbmsSchemaNameSqlPrefix();
+
+		String sql = ""
+			+ "select [configText] \n"
+			+ "from " + schemaNamePrefix + "[MonSessionDbmsConfigText] \n"
+			+ "where [configName] = '" + HostMonOsInfoConfigText.CONFIG_NAME + "' \n"
+		    + "  and [SessionStartTime] = (select max([SessionStartTime]) from " + schemaNamePrefix + "[MonSessionDbmsConfigText] where [configName] = '" + HostMonOsInfoConfigText.CONFIG_NAME + "') \n"
+			+ "";
+
+		String configText = null;
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while (rs.next())
+				configText = rs.getString(1);
+		}
+		catch(SQLException ex)
+		{
+			_logger.warn("Problems getting: 'getHostMonOsInfo()', Caught: " + ex);
+		}
+
+		return HostMonOsInfoConfigText.parseKeyValues(configText);
+	}
+
 	/**
 	 * Get SQL Server information from the PCS Config subsystem (all available columns as a Map from sys.dm_os_sys_info)
 	 * @param conn A Connection the the PCS Storage

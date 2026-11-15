@@ -58,6 +58,7 @@ public abstract class PostgresConfigText
 
 	public static void createAndRegisterAllInstances()
 	{
+		DbmsConfigTextManager.addInstance(new HostMonOsInfoConfigText()); // Same for all DBMS vendors: exact OS info from Host Monitoring
 		DbmsConfigTextManager.addInstance(new PostgresConfigText.DbInfo());
 		DbmsConfigTextManager.addInstance(new PostgresConfigText.HbaConf());
 		DbmsConfigTextManager.addInstance(new PostgresConfigText.PgConfig());

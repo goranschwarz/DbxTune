@@ -108,6 +108,7 @@ public abstract class AseConfigText
 
 	public static void createAndRegisterAllInstances()
 	{
+		DbmsConfigTextManager.addInstance(new HostMonOsInfoConfigText()); // Same for all DBMS vendors: exact OS info from Host Monitoring
 		DbmsConfigTextManager.addInstance(new AseConfigText.Cache());              // ConfigType.AseCacheConfig);
 		DbmsConfigTextManager.addInstance(new AseConfigText.ConfigHistory());
 		DbmsConfigTextManager.addInstance(new AseConfigText.ThreadPool());         // ConfigType.AseThreadPool);

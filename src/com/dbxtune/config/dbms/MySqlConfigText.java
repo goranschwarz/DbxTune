@@ -57,6 +57,7 @@ public abstract class MySqlConfigText
 
 	public static void createAndRegisterAllInstances()
 	{
+		DbmsConfigTextManager.addInstance(new HostMonOsInfoConfigText()); // Same for all DBMS vendors: exact OS info from Host Monitoring
 		DbmsConfigTextManager.addInstance(new MySqlConfigText.Server());
 		DbmsConfigTextManager.addInstance(new MySqlConfigText.SqlMode());
 		DbmsConfigTextManager.addInstance(new MySqlConfigText.ChangedVariables());

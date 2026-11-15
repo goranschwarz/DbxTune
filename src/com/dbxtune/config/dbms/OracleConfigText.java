@@ -58,6 +58,7 @@ public abstract class OracleConfigText
 
 	public static void createAndRegisterAllInstances()
 	{
+		DbmsConfigTextManager.addInstance(new HostMonOsInfoConfigText()); // Same for all DBMS vendors: exact OS info from Host Monitoring
 		DbmsConfigTextManager.addInstance(new OracleConfigText.DatabaseInfo());
 		DbmsConfigTextManager.addInstance(new OracleConfigText.Spfile());
 		DbmsConfigTextManager.addInstance(new OracleConfigText.Patches());

@@ -40,6 +40,7 @@ public abstract class RsConfigText
 
 	public static void createAndRegisterAllInstances()
 	{
+		DbmsConfigTextManager.addInstance(new HostMonOsInfoConfigText()); // Same for all DBMS vendors: exact OS info from Host Monitoring
 		DbmsConfigTextManager.addInstance(new RsConfigText.RsConfigAsText());
 		DbmsConfigTextManager.addInstance(new RsConfigText.RsConfigAsTextNonDefault());
 		DbmsConfigTextManager.addInstance(new RsConfigText.RsConfig());
