@@ -521,6 +521,7 @@ extends CountersModel
 			boolean isInRwMode     = false;
 			boolean hasSubscribers = false;
 			boolean tableExists    = false;
+			int     srvNameWidth   = 80; // width of 'primaryServerName' (tables created by older versions has varchar(30))
 
 			// Check if this instance is in RW mode
 			// Check if We have any subscribers (or replication destinations)
@@ -530,6 +531,7 @@ extends CountersModel
 			    + "      pg_is_in_recovery() as pg_is_in_recovery \n"
 			    + "    , (select count(*) from pg_stat_replication) as repl_dest_count \n"
 			    + "    , (select count(*) from pg_class where relname = 'postgrestune_ha_dummy_update' and relkind in('r', 'v') ) as do_table_exist \n"
+			    + "    , (select min(character_maximum_length) from information_schema.columns where table_name = 'postgrestune_ha_dummy_update' and column_name = 'primaryservername') as srv_name_width \n"
 			    + "";
 
 			try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql) )
@@ -539,6 +541,9 @@ extends CountersModel
 					isInRwMode     = rs.getBoolean(1) == false;
 					hasSubscribers = rs.getInt    (2) > 0;
 					tableExists    = rs.getInt    (3) > 0;
+					int width      = rs.getInt    (4); // NULL (table not created) = 0
+					if (width > 0)
+						srvNameWidth = width;
 				}
 			}
 			catch (SQLException ex)
@@ -601,9 +606,10 @@ extends CountersModel
 			}
 			
 			// Finally: update the table 'postgrestune_ha_dummy_update'
-			String selectData = "SELECT CAST(md5(random()::text) AS varchar(36)), inet_server_addr()||':'||inet_server_port(), now(); \n";
+			// The server name is cut to the column width (a table created by an older version has a narrower column)
+			String selectData = "SELECT CAST(md5(random()::text) AS varchar(36)), left(inet_server_addr()||':'||inet_server_port(), " + srvNameWidth + "), now(); \n";
 			if (conn.getDbmsVersionNumber() >= Ver.ver(13))
-				selectData = "SELECT CAST(gen_random_uuid() AS varchar(36)), inet_server_addr()||':'||inet_server_port()||', cluster_name='''||current_setting('cluster_name')||'''', now(); \n";
+				selectData = "SELECT CAST(gen_random_uuid() AS varchar(36)), left(inet_server_addr()||':'||inet_server_port()||', cluster_name='''||current_setting('cluster_name')||'''', " + srvNameWidth + "), now(); \n";
 
 			String updateTable = 
 					"DELETE FROM postgrestune_ha_dummy_update; \n" +
