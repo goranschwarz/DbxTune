@@ -41,7 +41,7 @@ public class CounterSetTemplates
 		SMALL, 
 		MEDIUM, 
 		LARGE, 
-		ALL, 
+		ALL, // Everything except OFF (Possibly rename to MAX in the future, but then we need to have backward compatibility for ALL
 		OFF;
 
 		/** parse the value */

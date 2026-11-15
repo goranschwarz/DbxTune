@@ -361,7 +361,7 @@ public abstract class DbxTune
 
 		// Are we in GUI mode or not
 		_gui = true;
-		if (cmd.hasOption("noGui"))
+		if (cmd.hasOption("noGui") || cmd.hasOption("cfgWizardNoGui"))
 //		if ( ! hasGui() )
 		{
 			_gui = false;
@@ -519,12 +519,8 @@ public abstract class DbxTune
 		//-------------------------------
 		if (cmd.hasOption('l'))
 		{
-			// Create a dummy Counter Controller...
-//			GetCountersNoOp counters = new GetCountersNoOp();
-//			CounterController.setInstance(counters);
-			CounterControllerNoOp counters = new CounterControllerNoOp(_gui);
-			CounterController.setInstance(counters);
-			counters.init();
+			// Create the CMs (a CounterControllerNoOp creates no CMs, so nothing was listed)
+			createCountersWithoutConnection();
 
 			Map<String,String> shortToLongCmMap = CounterSetTemplates.getShortToLongMap();
 
@@ -547,10 +543,25 @@ public abstract class DbxTune
 			printTemplate("large");
 			printTemplate("all");
 
-			// drop the dummy controller
-			CounterController.setInstance(null);
-
 			throw new NormalExitException("Done after -l switch.");
+		}
+
+		//-------------------------------
+		// --cfgWizardNoGui <filename>: Create the PCS Configuration file (same as -w|--cfgWizard) without a GUI, and exit
+		//-------------------------------
+		if (cmd.hasOption("cfgWizardNoGui"))
+		{
+			String levelStr = cmd.getOptionValue("cfgTemplate", CounterSetTemplates.Type.LARGE.toString());
+			CounterSetTemplates.Type level = CounterSetTemplates.Type.fromString(levelStr, null);
+			if (level == null || level == CounterSetTemplates.Type.OFF)
+				throw new Exception("Unknown --cfgTemplate '" + levelStr + "'. Valid values: SMALL|MEDIUM|LARGE|ALL");
+
+			createCountersWithoutConnection();
+
+			String cfgFile = WizardOffline.createFileNoGui(cmd.getOptionValue("cfgWizardNoGui"), level, cmd.hasOption("cfgNoHostMon"));
+			System.out.println("WIZARD_CONFIG_FILE: " + cfgFile); // same output as the GUI wizard (read by DbxInstaller)
+
+			throw new NormalExitException("Done after --cfgWizardNoGui switch.");
 		}
 
 		//-------------------------------
@@ -2052,6 +2063,10 @@ if (_gui && startEvenIfGui_justToTestTheService)
 		pw.println("                               To get available option, do -x list");
 		pw.println("  -a,--createAppDir            Create application dir (~/.dbxtune) and exit.");
 		pw.println("  -w,--cfgWizard               Open The Create PCS Configuration Wizard and exit.");
+		pw.println("  --cfgWizardNoGui <filename>  Create the PCS Configuration file without a GUI, with the same presets as");
+		pw.println("                               --cfgWizard from DbxInstaller and the CM defaults, and exit.");
+		pw.println("  --cfgTemplate <level>        Template level for --cfgWizardNoGui: SMALL|MEDIUM|LARGE|ALL (default LARGE)");
+		pw.println("  --cfgNoHostMon               For --cfgWizardNoGui: do not record any Host Monitoring CM (CmOsXxx).");
 		pw.println("  ");                          
 		pw.println("  -U,--user <user>             Username when connecting to server.");
 		pw.println("  -P,--passwd <passwd>         Password when connecting to server. null=noPasswd");
@@ -2168,6 +2183,9 @@ if (_gui && startEvenIfGui_justToTestTheService)
 
 		options.addOption( Option.builder("a").longOpt("createAppDir"  ).hasArg(false).build() );
 		options.addOption( Option.builder("w").longOpt("cfgWizard"     ).hasArg(false).build() );
+		options.addOption( Option.builder().longOpt("cfgWizardNoGui"   ).hasArg(true ).build() );
+		options.addOption( Option.builder().longOpt("cfgTemplate"      ).hasArg(true ).build() );
+		options.addOption( Option.builder().longOpt("cfgNoHostMon"     ).hasArg(false).build() );
 
 		options.addOption( Option.builder("U").longOpt("user"          ).hasArg(true ).build() );
 		options.addOption( Option.builder("P").longOpt("passwd"        ).hasArg(true ).build() );
@@ -2223,6 +2241,20 @@ if (_gui && startEvenIfGui_justToTestTheService)
 		}
 
 		return cmd;
+	}
+
+	/**
+	 * Create this tool's Counter Controller and all its CMs, without connecting to any DBMS<br>
+	 * Used by switches that need the CMs, and then exits (-l, --cfgWizardNoGui)
+	 */
+	private void createCountersWithoutConnection()
+	throws Exception
+	{
+		Ver.setDbmsVersionHelper(createDbmsVersionHelper());
+		ICounterController counterController = createCounterController(false);
+		CounterController.setInstance(counterController);
+		counterController.setSupportedProductName(getSupportedProductName());
+		counterController.createCounters(false);
 	}
 
 	public static void printTemplate(String templateName)
@@ -2404,8 +2436,9 @@ if (_gui && startEvenIfGui_justToTestTheService)
 		}
 		catch (NormalExitException e)
 		{
-			// This was probably throws when checking command line parameters
-			// do normal exit
+			// This was probably throws when checking command line parameters (-l, -x list, --cfgWizardNoGui)
+			// do normal exit (do not wait for a shutdown that never comes)
+			System.exit(0);
 		}
 		catch (Exception e)
 		{

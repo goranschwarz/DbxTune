@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -74,12 +75,23 @@ import org.reflections.Reflections;
 import com.dbxtune.AseTune;
 import com.dbxtune.CounterController;
 import com.dbxtune.Version;
+import com.dbxtune.alarm.AlarmHandler;
+import com.dbxtune.central.DbxTuneCentral;
+import com.dbxtune.alarm.writers.AlarmWriterToFile;
+import com.dbxtune.alarm.writers.AlarmWriterToMail;
+import com.dbxtune.alarm.writers.IAlarmWriter;
+import com.dbxtune.cm.CmSettingsHelper;
+import com.dbxtune.cm.CounterModelHostMonitor;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.os.CmOsUtils;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.pcs.PersistWriterJdbc;
+import com.dbxtune.pcs.PersistWriterToDbxCentral;
+import com.dbxtune.pcs.PersistWriterToHttpJson;
 import com.dbxtune.pcs.PersistentCounterHandler;
+import com.dbxtune.pcs.report.DailySummaryReportFactory;
+import com.dbxtune.pcs.report.senders.ReportSenderToMail;
 import com.dbxtune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.dbxtune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.dbxtune.utils.Configuration;
@@ -157,6 +169,173 @@ public class WizardOffline
 			WindowEvent closingEvent = new WindowEvent(MainFrame.getInstance(), WindowEvent.WINDOW_CLOSING);
 			Toolkit.getDefaultToolkit().getSystemEventQueue().postEvent(closingEvent);
 		}
+	}
+
+	/** Used by createFileNoGui(): no wizard is shown, just write the file from the passed settings */
+	private WizardOffline(Map<String,String> settings)
+	throws WizardException
+	{
+		finish(settings);
+	}
+
+	/** Mail address written in files from createFileNoGui(), to be changed by the person installing */
+	public static final String NOGUI_DUMMY_MAIL_ADDRESS  = "fixme@fixme.com";
+	public static final String NOGUI_DUMMY_SMTP_HOSTNAME = "smtp.fixme.com";
+
+	/**
+	 * Create a 'Recording Session - Template file' without a GUI.
+	 * <p>
+	 * Uses the same presets as when the wizard is started with <code>--cfgWizard</code> (from DbxInstaller), and the CM defaults:
+	 * <ul>
+	 *   <li>DBMS and SSH connection information: from command line switches (not in the file)</li>
+	 *   <li>H2 recording database, with the H2 network server started</li>
+	 *   <li>CMs recorded: those with a template level at or below <code>templateLevel</code> (also written as <code>CounterSet.template.default</code>)</li>
+	 *   <li>Sample time 30 seconds</li>
+	 *   <li>Alarm writers: AlarmWriterToFile and AlarmWriterToMail (mail addresses: {@link #NOGUI_DUMMY_MAIL_ADDRESS})</li>
+	 *   <li>Recordings sent to DbxCentral, Daily Summary Report enabled</li>
+	 * </ul>
+	 * The CMs must be created (CounterController.getInstance().getCmList()) before this is called.
+	 *
+	 * @param filename       File to write
+	 * @param templateLevel  SMALL, MEDIUM, LARGE or ALL
+	 * @param noHostMon      true = do not record any Host Monitoring CM (CmOsXxx), whatever the template level says
+	 * @return The filename written
+	 */
+	public static String createFileNoGui(String filename, CounterSetTemplates.Type templateLevel, boolean noHostMon)
+	throws WizardException
+	{
+		Map<String,Object> settings = new LinkedHashMap<>();
+
+		// Page 1 + 5: DBMS and SSH connection -- "Use Command Line Switches" (nothing in the file)
+
+		// Page 2: Recording database
+		settings.put(PersistWriterJdbc.PROPKEY_PART_jdbcDriver,           "org.h2.Driver");
+		settings.put(PersistWriterJdbc.PROPKEY_PART_jdbcUrl,              "jdbc:h2:file:${DBXTUNE_SAVE_DIR}/${SERVERNAME}_${DATE:format=yyyy-MM-dd;roll=true}");
+		settings.put(PersistWriterJdbc.PROPKEY_PART_jdbcUsername,         "sa");
+		settings.put(PersistWriterJdbc.PROPKEY_PART_jdbcPassword,         "");
+		settings.put(PersistWriterJdbc.PROPKEY_PART_startH2NetworkServer, "true");
+
+		// Page 3: What CMs to record (same rule as the "Use template" combo in the wizard)
+		settings.put(CounterSetTemplates.PROPKEY_templateDefaultName, templateLevel.toString());
+		for (CountersModel cm : CounterController.getInstance().getCmList())
+		{
+			boolean storePcs = cm.getTemplateLevel().ordinal() <= templateLevel.ordinal();
+			if (cm.getName().equals(CounterController.getSummaryCmName()))
+				storePcs = true;
+			if (noHostMon && cm instanceof CounterModelHostMonitor)
+				storePcs = false;
+
+			String cmName = cm.getName();
+			settings.put("to-be-discarded.udc." + cmName, cmName);
+			settings.put(cmName + "." + CountersModel.PROPKEY_queryTimeout,         Configuration.USE_DEFAULT_PREFIX + cm.getDefaultQueryTimeout());
+			settings.put(cmName + "." + CountersModel.PROPKEY_postponeTime,         Configuration.USE_DEFAULT_PREFIX + cm.getDefaultPostponeTime());
+			settings.put(cmName + "." + CountersModel.PROPKEY_persistCounters,      storePcs + "");
+			settings.put(cmName + "." + CountersModel.PROPKEY_persistCounters_abs,  Configuration.USE_DEFAULT_PREFIX + cm.getDefaultIsPersistCountersAbsEnabled());
+			settings.put(cmName + "." + CountersModel.PROPKEY_persistCounters_diff, Configuration.USE_DEFAULT_PREFIX + cm.getDefaultIsPersistCountersDiffEnabled());
+			settings.put(cmName + "." + CountersModel.PROPKEY_persistCounters_rate, Configuration.USE_DEFAULT_PREFIX + cm.getDefaultIsPersistCountersRateEnabled());
+
+			// Page 4: CM local options (defaults)
+			List<CmSettingsHelper> localSettings = cm.getLocalSettings();
+			if (localSettings != null)
+			{
+				for (CmSettingsHelper cmsh : localSettings)
+					settings.put(cmsh.getPropName(), Configuration.USE_DEFAULT_PREFIX + cmsh.getDefaultValue());
+			}
+		}
+
+		// Page 6: Capture SQL (only for AseTune and SqlServerTune)
+		if ("AseTune".equals(Version.getAppName()) || "SqlServerTune".equals(Version.getAppName()))
+		{
+			Object[][] sqlCapDefaults = {
+				{ PersistentCounterHandler.PROPKEY_ddl_doDdlLookupAndStore                 , PersistentCounterHandler.DEFAULT_ddl_doDdlLookupAndStore                  },
+				{ PersistentCounterHandler.PROPKEY_ddl_enabledForDatabaseObjects           , PersistentCounterHandler.DEFAULT_ddl_enabledForDatabaseObjects            },
+				{ PersistentCounterHandler.PROPKEY_ddl_enabledForStatementCache            , PersistentCounterHandler.DEFAULT_ddl_enabledForStatementCache             },
+				{ PersistentCounterHandler.PROPKEY_ddl_afterDdlLookupSleepTimeInMs         , PersistentCounterHandler.DEFAULT_ddl_afterDdlLookupSleepTimeInMs          },
+				{ PersistentCounterHandler.PROPKEY_ddl_addDependantObjectsToDdlInQueue     , PersistentCounterHandler.DEFAULT_ddl_addDependantObjectsToDdlInQueue      },
+				{ PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore             , PersistentCounterHandler.DEFAULT_sqlCap_doSqlCaptureAndStore              },
+				{ PersistentCounterHandler.PROPKEY_sqlCap_sleepTimeInMs                    , PersistentCounterHandler.DEFAULT_sqlCap_sleepTimeInMs                     },
+				{ PersistentCounterHandler.PROPKEY_sqlCap_doSqlText                        , PersistentCounterHandler.DEFAULT_sqlCap_doSqlText                         },
+				{ PersistentCounterHandler.PROPKEY_sqlCap_doStatementInfo                  , PersistentCounterHandler.DEFAULT_sqlCap_doStatementInfo                   },
+				{ PersistentCounterHandler.PROPKEY_sqlCap_doPlanText                       , PersistentCounterHandler.DEFAULT_sqlCap_doPlanText                        },
+				{ PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_execTime        , PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_execTime         },
+				{ PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_logicalReads    , PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_logicalReads     },
+				{ PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_physicalReads   , PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_physicalReads    },
+				{ PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup                 , PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup                  },
+				{ PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_execTime     , PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_execTime      },
+				{ PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_logicalReads , PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_logicalReads  },
+				{ PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_physicalReads, PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_physicalReads },
+			};
+			for (Object[] entry : sqlCapDefaults)
+				settings.put((String) entry[0], Configuration.USE_DEFAULT_PREFIX + entry[1]);
+		}
+
+		// Page 7: Sample time
+		settings.put("sampleTime", "30");
+
+		// Page 8: Alarm writers: File + Mail (mandatory and "probable" settings, with defaults or the dummy mail values)
+		settings.put("to-be-discarded.enableAlarmHandling", "true");
+		settings.put(AlarmHandler.PROPKEY_enable,           "true");
+
+		Map<String,String> dummyMailValues = new LinkedHashMap<>();
+		dummyMailValues.put(AlarmWriterToMail.PROPKEY_smtpHostname, NOGUI_DUMMY_SMTP_HOSTNAME);
+		dummyMailValues.put(AlarmWriterToMail.PROPKEY_to,           NOGUI_DUMMY_MAIL_ADDRESS);
+		dummyMailValues.put(AlarmWriterToMail.PROPKEY_from,         NOGUI_DUMMY_MAIL_ADDRESS);
+
+		Configuration alarmWritersConf = new Configuration();
+		IAlarmWriter[] alarmWriters = { new AlarmWriterToFile(), new AlarmWriterToMail() };
+		List<String> alarmWriterClasses = new ArrayList<>();
+		for (IAlarmWriter writer : alarmWriters)
+		{
+			alarmWriterClasses.add(writer.getClass().getName());
+			for (CmSettingsHelper cmsh : writer.getAvailableSettings())
+			{
+				String key   = cmsh.getPropName();
+				String dummy = dummyMailValues.get(key);
+				if (dummy != null)
+					alarmWritersConf.setProperty(key, dummy);
+				else if (cmsh.isMandatory() || cmsh.isProbable())
+					alarmWritersConf.setProperty(key, Configuration.USE_DEFAULT_PREFIX + cmsh.getDefaultValue());
+			}
+		}
+		alarmWritersConf.setProperty(AlarmHandler.PROPKEY_WriterClass, StringUtil.toCommaStr(alarmWriterClasses));
+		settings.put("to-be-discarded.alarmWritersPanelConfig", alarmWritersConf);
+
+		// Page 10: Send recordings to DbxCentral (HTTP)
+		String dbxCentralUrlKey = PersistWriterToHttpJson.replaceKey(PersistWriterToHttpJson.PROPKEY_url, "PersistWriterToDbxCentral", "");
+		settings.put("to-be-discarded.pcsWriterClassCsv",          PersistWriterToDbxCentral.class.getName());
+		settings.put(PersistWriterToDbxCentral.PROPKEY_writerType, PersistWriterToDbxCentral.WriterType.HTTP.toString().toLowerCase());
+		settings.put(dbxCentralUrlKey,                             Configuration.USE_DEFAULT_PREFIX + PersistWriterToHttpJson.DEFAULT_url); // USE_DEFAULT: the port is resolved on the machine the collector runs on (Windows 80, else 8080)
+
+		// Page 11: Daily Summary Report, sent with ReportSenderToMail (all settings, with defaults or the dummy mail values)
+		// Defaults as 'USE_DEFAULT:' so no machine specific values (like the save dir) end up in the file
+		settings.put(DailySummaryReportFactory.PROPKEY_create                , "true");
+		settings.put(DailySummaryReportFactory.PROPKEY_filter_keep_servername, Configuration.USE_DEFAULT_PREFIX + DailySummaryReportFactory.DEFAULT_filter_keep_servername);
+		settings.put(DailySummaryReportFactory.PROPKEY_filter_skip_servername, Configuration.USE_DEFAULT_PREFIX + DailySummaryReportFactory.DEFAULT_filter_skip_servername);
+		settings.put(DailySummaryReportFactory.PROPKEY_reportClassname       , Configuration.USE_DEFAULT_PREFIX + DailySummaryReportFactory.DEFAULT_reportClassname);
+		settings.put(DailySummaryReportFactory.PROPKEY_senderClassname       , DailySummaryReportFactory.DEFAULT_senderClassname); // NOT 'USE_DEFAULT:', saveFileWithComments() reads it to write the sender's settings (else they are written as comments)
+		settings.put(DailySummaryReportFactory.PROPKEY_save                  , Configuration.USE_DEFAULT_PREFIX + DailySummaryReportFactory.DEFAULT_save);
+		settings.put(DailySummaryReportFactory.PROPKEY_saveDir               , Configuration.USE_DEFAULT_PREFIX + DailySummaryReportFactory.DEFAULT_saveDir);
+
+		dummyMailValues.clear();
+		dummyMailValues.put(ReportSenderToMail.PROPKEY_smtpHostname, NOGUI_DUMMY_SMTP_HOSTNAME);
+		dummyMailValues.put(ReportSenderToMail.PROPKEY_to,           NOGUI_DUMMY_MAIL_ADDRESS);
+		dummyMailValues.put(ReportSenderToMail.PROPKEY_from,         NOGUI_DUMMY_MAIL_ADDRESS);
+		for (CmSettingsHelper cmsh : new ReportSenderToMail().getAvailableSettings())
+		{
+			String dummy = dummyMailValues.get(cmsh.getPropName());
+			settings.put(cmsh.getPropName(), dummy != null ? dummy : Configuration.USE_DEFAULT_PREFIX + cmsh.getDefaultValue());
+		}
+
+		// Page 12: File to save to
+		settings.put("storeFile", filename);
+		settings.put("to-be-discarded.saveSorted",  "false");
+		settings.put("to-be-discarded.previewFile", "false");
+
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		Map<String,String> settingsMap = (Map) settings;
+		new WizardOffline(settingsMap);
+
+		return filename;
 	}
 
 	
@@ -664,6 +843,13 @@ public class WizardOffline
 				List<String> writerKeys = cc.getKeys(writerKey);
 				for (String key : writerKeys)
 				{
+					// The default URL depends on the platform the collector runs on (DbxCentral's web port)
+					if (key.equals(PersistWriterToHttpJson.replaceKey(PersistWriterToHttpJson.PROPKEY_url, "PersistWriterToDbxCentral", "")))
+					{
+						writeln(bw, "## Default URL is 'http://localhost:<port>/api/pcs/receiver', where <port> is DbxCentral's web port on the machine the collector runs on:");
+						writeln(bw, "##   - Windows:    " + DbxTuneCentral.DEFAULT_WEB_PORT_WINDOWS + " (or property '" + DbxTuneCentral.PROPKEY_WEB_PORT_WINDOWS + "')");
+						writeln(bw, "##   - Linux/Unix: " + DbxTuneCentral.DEFAULT_WEB_PORT         + " (or property '" + DbxTuneCentral.PROPKEY_WEB_PORT         + "')");
+					}
 					writeKey(bw, cc, key);
 				}
 				writeln(bw, "");
@@ -833,8 +1019,8 @@ public class WizardOffline
 
 			writeKey = Configuration.saveConvert(writeKey, true, escUnicode);
 
-			/* No need to escape embedded and trailing spaces for value, hence pass false to flag. */
-			foundVal = Configuration.saveConvert(foundVal, false, escUnicode);
+			/* No need to escape embedded and trailing spaces, or '=', ':', '#', '!' for value, hence pass false to flags. */
+			foundVal = Configuration.saveConvert(foundVal, false, escUnicode, false);
 
 			bw.write(StringUtil.left(writeKey, 30, true) + " = " + foundVal);
 			bw.newLine();
@@ -946,8 +1132,8 @@ public class WizardOffline
 
 		key = Configuration.saveConvert(key, true, escUnicode);
 
-		/* No need to escape embedded and trailing spaces for value, hence pass false to flag. */
-		val = Configuration.saveConvert(val, false, escUnicode);
+		/* No need to escape embedded and trailing spaces, or '=', ':', '#', '!' for value, hence pass false to flags. */
+		val = Configuration.saveConvert(val, false, escUnicode, false);
 
 		bw.write(key + " = " + val);
 		bw.newLine();
