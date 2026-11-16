@@ -41,12 +41,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.CounterController;
+import com.dbxtune.Version;
 import com.dbxtune.ICounterController;
 import com.dbxtune.IGuiController;
 import com.dbxtune.alarm.AlarmHandler;
 import com.dbxtune.alarm.AlarmHelper;
 import com.dbxtune.alarm.events.AlarmDescriptionProviderBase;
 import com.dbxtune.alarm.events.AlarmEvent;
+import com.dbxtune.alarm.events.AlarmEventChattySession;
 import com.dbxtune.alarm.events.AlarmEventLongRunningStatement;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventDacInUse;
 import com.dbxtune.alarm.events.sqlserver.AlarmEventDebugWaitInfo;
@@ -745,7 +747,136 @@ extends CountersModel
 		AlarmHelper.sendAlarmRequestForColumn(this, "login_name");
 
 		sendAlarmRequestLocal();
+
+		//-------------------------------------------------------
+		// ChattySession: one session sends very many tiny requests (possible N+1)
+		// SQL Server has no request counter per session, so: network packets the server has received (dm_exec_connections.num_reads,
+		// column 'net_bytes_received', it is packets not bytes). Measured 2026-11-16 on 2019/2022/2025: a tiny SQL batch, RPC
+		// (prepared statement, procedure call), MARS request and a pooled request (sp_reset_connection) is exactly 1 packet.
+		// A request bigger than the packet size is several packets, a bulk load is ~380 packets per 100 000 rows (skipped by 'command'),
+		// a server side cursor is 1 packet per fetch (that IS chatty).
+		// Logical reads: sp_reset_connection sets dm_exec_sessions.logical_reads to 0, so on a pooled connection the diff can be
+		// negative: then the reads per request are unknown and the reads guard is not used.
+		//-------------------------------------------------------
+		if ( hasRateData() && AlarmHandler.hasInstance() )
+		{
+			if ( ! isSystemAlarmsForColumnEnabledAndInTimeRange("ChattySession") )
+			{
+				_chattySessionSamples.clear();
+			}
+			else
+			{
+				boolean debugPrint = Configuration.getCombinedConfiguration().getBooleanProperty("sendAlarmRequest.debug", _logger.isDebugEnabled());
+				CountersModel cm = this;
+
+				Configuration conf = Configuration.getCombinedConfiguration();
+				double threshold          = conf.getDoubleProperty(PROPKEY_alarm_ChattySession,                   DEFAULT_alarm_ChattySession);
+				double maxReadsPerRequest = conf.getDoubleProperty(PROPKEY_alarm_ChattySessionMaxReadsPerRequest, DEFAULT_alarm_ChattySessionMaxReadsPerRequest);
+				int    minSamples         = conf.getIntProperty   (PROPKEY_alarm_ChattySessionSamples,            DEFAULT_alarm_ChattySessionSamples);
+				String skipLoginRegExp    = conf.getProperty      (PROPKEY_alarm_ChattySessionSkipLogin,          DEFAULT_alarm_ChattySessionSkipLogin);
+				String skipProgramRegExp  = conf.getProperty      (PROPKEY_alarm_ChattySessionSkipProgram,        DEFAULT_alarm_ChattySessionSkipProgram);
+
+				// session_id:connect_time -> samples in a row above the threshold (a session_id is reused by a new connection)
+				Map<String, Integer> samplesAbove = new HashMap<>();
+
+				for (int r=0; r<cm.getRateRowCount(); r++)
+				{
+					Double requestsPerSec = cm.getRateValueAsDouble(r, "net_bytes_received");
+					if (requestsPerSec == null || requestsPerSec <= threshold)
+						continue;
+
+					String sessionId = String.valueOf(cm.getRateValue(r, "session_id"));
+					String login     = cm.getRateString(r, "login_name");
+					String program   = cm.getRateString(r, "program_name");
+					String command   = cm.getRateString(r, "command");
+
+					// DbxTune's own connections, bulk loads (many packets per request) and the skip lists
+					if (StringUtil.isNullOrBlank(login))
+						continue;
+					if (program != null && program.startsWith(Version.getAppName()))
+						continue;
+					if (command != null && command.toUpperCase().contains("BULK"))
+						continue;
+					if (StringUtil.hasValue(skipLoginRegExp) && login.matches(skipLoginRegExp))
+						continue;
+					if (StringUtil.hasValue(skipProgramRegExp) && program != null && program.matches(skipProgramRegExp))
+						continue;
+
+					// Cheap requests only: a session with many requests that each do real work is a batch job, not N+1
+					// Negative = the counter was reset by sp_reset_connection (pooled connection): unknown, the guard is not used
+					Double logicalReadsPerSec = cm.getRateValueAsDouble(r, "total_logical_reads");
+					double readsPerRequest = (logicalReadsPerSec == null || logicalReadsPerSec < 0) ? Double.NaN : logicalReadsPerSec / requestsPerSec;
+					if (readsPerRequest >= maxReadsPerRequest)
+						continue;
+
+					String  key   = sessionId + ":" + cm.getRateValue(r, "connect_time");
+					Integer prev  = _chattySessionSamples.get(key);
+					int     count = (prev == null ? 0 : prev) + 1;
+					samplesAbove.put(key, count);
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest(" + cm.getName() + "): ChattySession: session_id=" + sessionId + ", packetsReceived/s=" + requestsPerSec + ", readsPerRequest=" + readsPerRequest + ", command='" + command + "', samplesAbove=" + count + " (threshold=" + threshold + ", maxReadsPerRequest=" + maxReadsPerRequest + ", minSamples=" + minSamples + ").");
+
+					if (count < minSamples)
+						continue;
+
+					String host   = cm.getRateString(r, "host_name");
+					String dbname = cm.getRateString(r, "DBName");
+					String sessionDesc = "session_id=" + sessionId + ", login='" + login + "', host='" + StringUtil.trim(host) + "'"
+							+ (StringUtil.hasValue(program) ? ", program_name='" + StringUtil.trim(program) + "'" : "")
+							+ (StringUtil.hasValue(dbname)  ? ", db='" + dbname + "'" : "");
+
+					AlarmEvent ae = new AlarmEventChattySession(cm, "session_id=" + sessionId, sessionDesc, requestsPerSec, readsPerRequest, count, threshold, maxReadsPerRequest);
+					final String alarmSessionId   = sessionId;
+					final Object alarmConnectTime = cm.getRateValue(r, "connect_time");
+
+					String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+					String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+					{
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+						{
+							// Always: (RAISE, RE-RAISE, CANCEL) - the session row from when it was (re)raised
+							alarmEvent.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+							// Set CANCEL message (values that was found AFTER last raise/re-raise event)
+							if (AlarmPhase.CANCEL.equals(phase))
+							{
+								// The same session = session_id and connect_time (a session_id is reused by a new connection)
+								int rowId = -1;
+								for (int cr=0; cr<cm.getRateRowCount(); cr++)
+								{
+									if (alarmSessionId.equals(String.valueOf(cm.getRateValue(cr, "session_id"))) && String.valueOf(alarmConnectTime).equals(String.valueOf(cm.getRateValue(cr, "connect_time"))))
+									{
+										rowId = cr;
+										break;
+									}
+								}
+								String label = "session_id " + alarmSessionId;
+
+								if (rowId == -1)
+									alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+								else
+									alarmEvent.setCancelDescription(getAlarmCancelText(label + ": requests (network packets received) per second", toAlarmCancelValue(cm.getRateValueAsDouble(rowId, "net_bytes_received")), "/s"));
+							}
+						}
+					});
+
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "ChattySession");
+
+					AlarmHandler.getInstance().addAlarm( ae );
+				}
+				_chattySessionSamples = samplesAbove;
+			}
+		}
 	}
+
+	/** ChattySession alarm: session_id:connect_time -> number of samples in a row above the threshold */
+	private Map<String, Integer> _chattySessionSamples = new HashMap<>();
 	
 	public void sendAlarmRequestLocal()
 	{
@@ -1031,6 +1162,21 @@ extends CountersModel
 	public static final String  PROPKEY_alarm_WaitInfo_maxCount_gt           = CM_NAME + ".alarm.system.if.WaitInfo.maxCount.gt";
 	public static final int     DEFAULT_alarm_WaitInfo_maxCount_gt           = 2;
 
+	public static final String  PROPKEY_alarm_ChattySession                    = CM_NAME + ".alarm.system.if.ChattySession.gt";
+	public static final double  DEFAULT_alarm_ChattySession                    = 100;
+
+	public static final String  PROPKEY_alarm_ChattySessionMaxReadsPerRequest  = CM_NAME + ".alarm.system.if.ChattySession.maxReadsPerRequest";
+	public static final double  DEFAULT_alarm_ChattySessionMaxReadsPerRequest  = 10;
+
+	public static final String  PROPKEY_alarm_ChattySessionSamples             = CM_NAME + ".alarm.system.if.ChattySession.samples";
+	public static final int     DEFAULT_alarm_ChattySessionSamples             = 3;
+
+	public static final String  PROPKEY_alarm_ChattySessionSkipLogin           = CM_NAME + ".alarm.system.if.ChattySession.skip.login";
+	public static final String  DEFAULT_alarm_ChattySessionSkipLogin           = "";
+
+	public static final String  PROPKEY_alarm_ChattySessionSkipProgram         = CM_NAME + ".alarm.system.if.ChattySession.skip.program";
+	public static final String  DEFAULT_alarm_ChattySessionSkipProgram         = "";
+
 
 	
 	@Override
@@ -1050,6 +1196,11 @@ extends CountersModel
 		list.add(new CmSettingsHelper("DacInUse",                     isAlarmSwitch, PROPKEY_alarm_DacInUse                      , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_DacInUse                      , DEFAULT_alarm_DacInUse                      ), DEFAULT_alarm_DacInUse                      , "If any user is connected via the DAC (Dedicated Admin Connection), then send alarm 'AlarmEventDacInUse'." ));
 		list.add(new CmSettingsHelper("WaitInfo",                     isAlarmSwitch, PROPKEY_alarm_WaitInfo                      , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_WaitInfo                      , DEFAULT_alarm_WaitInfo                      ), DEFAULT_alarm_WaitInfo                      , "If any users has 'WaitInfo', then send alarm 'AlarmEventDebugWaitInfo' for debugging purposes." ));
 		list.add(new CmSettingsHelper("WaitInfo MaxCount",                           PROPKEY_alarm_WaitInfo_maxCount_gt          , Integer.class, conf.getIntProperty    (PROPKEY_alarm_WaitInfo_maxCount_gt          , DEFAULT_alarm_WaitInfo_maxCount_gt          ), DEFAULT_alarm_WaitInfo_maxCount_gt          , "If 'WaitInfo' is enabled 'maxCount' must be above ##." ));
+		list.add(new CmSettingsHelper("ChattySession",                isAlarmSwitch, PROPKEY_alarm_ChattySession                 , Double .class, conf.getDoubleProperty (PROPKEY_alarm_ChattySession                 , DEFAULT_alarm_ChattySession                 ), DEFAULT_alarm_ChattySession                 , "If any session sends more than ## requests per second with few logical reads each, for several samples in a row, then send alarm 'AlarmEventChattySession'. SQL Server has no request counter per session, so this counts the network packets the server receives (column 'net_bytes_received', which is packets, not bytes): a tiny request is one packet, a request bigger than the packet size is several, a server side cursor is one per fetch (that is chatty too), bulk loads are skipped. This is often an application doing N+1 (one tiny query per row of another query). It can also be a busy normal session (a connection pool, a queue consumer): confirm N+1 in the Daily Summary Report section 'Possible N+1 / Chatty Statements', which matches the repeated statement to the statement whose rows drive it." ));
+		list.add(new CmSettingsHelper("ChattySession MaxReadsPerRequest",            PROPKEY_alarm_ChattySessionMaxReadsPerRequest, Double .class, conf.getDoubleProperty (PROPKEY_alarm_ChattySessionMaxReadsPerRequest, DEFAULT_alarm_ChattySessionMaxReadsPerRequest), DEFAULT_alarm_ChattySessionMaxReadsPerRequest, "If 'ChattySession' is true; Only if the session does fewer than ## logical reads per request (many cheap requests, not a batch job doing real work). Not used when unknown: on a pooled connection sp_reset_connection sets the session's logical reads to 0." ));
+		list.add(new CmSettingsHelper("ChattySession Samples",                       PROPKEY_alarm_ChattySessionSamples          , Integer.class, conf.getIntProperty    (PROPKEY_alarm_ChattySessionSamples          , DEFAULT_alarm_ChattySessionSamples          ), DEFAULT_alarm_ChattySessionSamples          , "If 'ChattySession' is true; The session must be above the threshold in ## samples in a row." ));
+		list.add(new CmSettingsHelper("ChattySession SkipLogins",                    PROPKEY_alarm_ChattySessionSkipLogin        , String .class, conf.getProperty       (PROPKEY_alarm_ChattySessionSkipLogin        , DEFAULT_alarm_ChattySessionSkipLogin        ), DEFAULT_alarm_ChattySessionSkipLogin        , "If 'ChattySession' is true; Discard Logins listed (regexp is used).", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("ChattySession SkipPrograms",                  PROPKEY_alarm_ChattySessionSkipProgram      , String .class, conf.getProperty       (PROPKEY_alarm_ChattySessionSkipProgram      , DEFAULT_alarm_ChattySessionSkipProgram      ), DEFAULT_alarm_ChattySessionSkipProgram      , "If 'ChattySession' is true; Discard ProgramNames listed (regexp is used). DbxTune's own connections are always discarded.", new RegExpInputValidator()));
 
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "program_name") );
 		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "login_name") );

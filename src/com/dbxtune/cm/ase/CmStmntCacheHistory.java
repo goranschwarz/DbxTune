@@ -36,6 +36,7 @@ import com.dbxtune.gui.MainFrame;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
 import com.dbxtune.utils.Configuration;
+import com.dbxtune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -174,7 +175,13 @@ extends CountersModel
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
 		int topRows = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_sample_top_rows, DEFAULT_sample_top_rows);
-		
+		long srvVersion = versionInfo.getLongVersion();
+
+		// Columns that do not exist in older ASE versions (same version checks as CmStmntCacheDetails) -- NULL if not available
+		boolean has_15700   = srvVersion >= Ver.ver(15,7);           // StmtType
+		boolean has_15702   = srvVersion >= Ver.ver(15,7,0,2);       // SortCount, TotalSortTime, AvgQualifyingReadRows, AvgQualifyingWriteRows
+		boolean has_157s130 = srvVersion >= Ver.ver(15,7,0, 130);    // TotalElapsedTime, TotalCpuTime, TotalLIO, TotalPIO
+
 		String sql = ""
 			    + "SELECT TOP " + topRows + " \n"
 //			    + "     creation_date          = ISNULL( CAST(cs.CachedDate AS date) , '9999-12-31') \n"
@@ -198,18 +205,18 @@ extends CountersModel
 			    + "    ,LastUsedDate__min      = min(cs.LastUsedDate) \n"
 			    + "    ,LastUsedDate__max      = max(cs.LastUsedDate) \n"
 			    + " \n"
-			    + "    ,ObjType_Dynamic_sq     = SUM(CASE WHEN cs.StmtType = 3 THEN 1 ELSE 0 END) \n"
-			    + "    ,ObjType_Language_ss    = SUM(CASE WHEN cs.StmtType = 1 THEN 1 ELSE 0 END) \n"
+			    + "    ,ObjType_Dynamic_sq     = " + (has_15700   ? "SUM(CASE WHEN cs.StmtType = 3 THEN 1 ELSE 0 END)" : "CAST(NULL AS int)") + " \n"
+			    + "    ,ObjType_Language_ss    = " + (has_15700   ? "SUM(CASE WHEN cs.StmtType = 1 THEN 1 ELSE 0 END)" : "CAST(NULL AS int)") + " \n"
 			    + " \n"
-			    + "    ,total_elapsed_time_ms  = SUM(cs.TotalElapsedTime) \n"
-			    + "    ,total_cpu_time_ms      = SUM(cs.TotalCpuTime) \n"
-			    + "    ,total_est_wait_time_ms = SUM(cs.TotalElapsedTime) - SUM(cs.TotalCpuTime) \n"
-			    + "    ,total_logical_reads    = SUM(cs.TotalLIO) \n"
-			    + "    ,total_physical_reads   = SUM(cs.TotalPIO) \n"
-			    + "    ,total_sort_count       = SUM(cs.SortCount) \n"
-			    + "    ,total_sort_time        = SUM(cs.TotalSortTime) \n"
-			    + "    ,avg_qual_read_rows     = SUM(cs.AvgQualifyingReadRows) \n"
-			    + "    ,avg_qual_write_rows    = SUM(cs.AvgQualifyingWriteRows) \n"
+			    + "    ,total_elapsed_time_ms  = " + (has_157s130 ? "SUM(cs.TotalElapsedTime)"                         : "CAST(NULL AS bigint)") + " \n"
+			    + "    ,total_cpu_time_ms      = " + (has_157s130 ? "SUM(cs.TotalCpuTime)"                             : "CAST(NULL AS bigint)") + " \n"
+			    + "    ,total_est_wait_time_ms = " + (has_157s130 ? "SUM(cs.TotalElapsedTime) - SUM(cs.TotalCpuTime)"  : "CAST(NULL AS bigint)") + " \n"
+			    + "    ,total_logical_reads    = " + (has_157s130 ? "SUM(cs.TotalLIO)"                                 : "CAST(NULL AS bigint)") + " \n"
+			    + "    ,total_physical_reads   = " + (has_157s130 ? "SUM(cs.TotalPIO)"                                 : "CAST(NULL AS bigint)") + " \n"
+			    + "    ,total_sort_count       = " + (has_15702   ? "SUM(cs.SortCount)"                                : "CAST(NULL AS int)") + " \n"
+			    + "    ,total_sort_time        = " + (has_15702   ? "SUM(cs.TotalSortTime)"                            : "CAST(NULL AS int)") + " \n"
+			    + "    ,avg_qual_read_rows     = " + (has_15702   ? "SUM(cs.AvgQualifyingReadRows)"                    : "CAST(NULL AS int)") + " \n"
+			    + "    ,avg_qual_write_rows    = " + (has_15702   ? "SUM(cs.AvgQualifyingWriteRows)"                   : "CAST(NULL AS int)") + " \n"
 			    + " \n"
 			    + "FROM monCachedStatement cs \n"
 			    + "GROUP BY CAST(cs.CachedDate AS date), CASE WHEN CAST(cs.CachedDate AS date) <> CAST(GETDATE() AS date) THEN -1 ELSE DATEPART(hh, cs.CachedDate) END \n"

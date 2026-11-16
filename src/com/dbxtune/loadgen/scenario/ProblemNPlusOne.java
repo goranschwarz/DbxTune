@@ -28,13 +28,13 @@ import com.dbxtune.loadgen.LgSession;
 import com.dbxtune.loadgen.Vendor;
 
 /**
- * For ~100 s (60 s + extra, see Scenario.activeSeconds): an "ORM style" page: orders for a customer, then one query per order for its lines, then one query per line for the product name.
+ * For ~160 s (120 s + extra, see Scenario.activeSeconds; 120 s so the ChattySession alarm's 3 samples of 30 s fit with a sample to spare): an "ORM style" page: orders for a customer, then one query per order for its lines, then one query per line for the product name.
  */
 public class ProblemNPlusOne extends Scenario
 {
 	public ProblemNPlusOne()
 	{
-		super("n_plus_one", Kind.PROBLEM, 5, "~100 s of N+1 queries: one query per order, then one per order line");
+		super("n_plus_one", Kind.PROBLEM, 5, "~160 s of N+1 queries: one query per order, then one per order line");
 	}
 
 	@Override
@@ -50,7 +50,12 @@ public class ProblemNPlusOne extends Scenario
 		case MYSQL:   return withRows(expected(Arrays.asList("CmChattyStatements", "CmSessionActivity", "CmStatements"), Arrays.asList("AlarmEventChattySession"), note
 				+ " CmSessionActivity: the session's Questions/s raise ChattySession (over 100/s for 2 samples)."
 				+ " Seen 2026-11-13 on MySQL 8.4 (size small, run low): ChattySession raised for every event, on the right connection_id."), "CmSessionActivity:PROCESSLIST_ID=@sessions");
-		case SQLSERVER: return withRows(expected(Arrays.asList("CmExecQueryStats", "CmExecSessions", "CmPerfCounters"), Arrays.asList(), Arrays.asList("CmPerfCounters.SqlBatch"), note + " Batch Requests/sec up."), "CmExecQueryStats:SqlText~@tag", "CmChattyStatements:SqlText~@tag");
+		case SQLSERVER: return withRows(expected(Arrays.asList("CmExecQueryStats", "CmExecSessions", "CmPerfCounters"), Arrays.asList("AlarmEventChattySession"), Arrays.asList("CmPerfCounters.SqlBatch"), note + " Batch Requests/sec up."
+				+ " CmSessions: the session's network packets received/s (1 per tiny request) raise ChattySession (over 100/s for 3 samples)."
+				+ " Seen 2026-11-16 on SQL Server 2022 (size small, run low, 30 s samples): ChattySession for 6/6 events on the right session_id (~230-240/s, 2.3 reads each),"
+				+ " no other session; raised 98-102 s after the start, 4-23 s before the end (3 samples just fit the ~100 s burst of then: the default is 120 s since)."
+				+ " Seen 2026-11-16 with 120 s (~160 s) on 2019 CU32 and 2025 CU10 (size small, run low, 20 min): 4/4 events on the right session_id each,"
+				+ " no other session; raised 74-98 s after the start, 62-80 s before the end."),"CmExecQueryStats:SqlText~@tag", "CmChattyStatements:SqlText~@tag", "CmSessions:session_id=@sessions");
 		case ASE:       return withRows(expected(Arrays.asList("CmChattyStatements", "CmProcessActivity", "CmStmntCacheDetails"), Arrays.asList("AlarmEventChattySession"), note + " CmProcessActivity: the session's BatchIdDiff very high."), "CmChattyStatements:SqlText~@tag");
 		case POSTGRES:  return expected(Arrays.asList("CmPgStatements", "CmPgDatabase"), Arrays.asList(), note);
 		case ORACLE:    return withRows(expected(Arrays.asList("CmChattyStatements", "CmSessions", "CmSqlStats"), Arrays.asList("AlarmEventChattySession"), note
@@ -68,7 +73,7 @@ public class ProblemNPlusOne extends Scenario
 		String prodSql   = tag() + "select name from product where product_id = ?";
 		ev.put("sql", Arrays.asList(ordersSql, linesSql, prodSql));
 
-		int durationSec = activeSeconds(ctx, "durationSeconds", 60);
+		int durationSec = activeSeconds(ctx, "durationSeconds", 120);
 		long end = System.currentTimeMillis() + durationSec * 1000L;
 		int pages = 0, stmts = 0;
 		try (LgSession s = ctx.openSession(this))
