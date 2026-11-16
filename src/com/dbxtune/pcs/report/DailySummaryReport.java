@@ -364,6 +364,10 @@ public class DailySummaryReport
 		if (cmd.hasOption('U')) p._username = cmd.getOptionValue('U');
 		if (cmd.hasOption('P')) p._password = cmd.getOptionValue('P');
 		if (cmd.hasOption('S')) p._url      = cmd.getOptionValue('S');
+
+		// '-P null' = no password (as the help says), not the password "null"
+		if ("null".equalsIgnoreCase(p._password))
+			p._password = null;
 		
 		if (cmd.hasOption('b')) p._beginTimeStr = cmd.getOptionValue('b');
 		if (cmd.hasOption('e')) p._endTimeStr   = cmd.getOptionValue('e');
