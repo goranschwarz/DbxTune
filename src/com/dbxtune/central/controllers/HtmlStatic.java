@@ -194,6 +194,12 @@ public class HtmlStatic
 		writer.println("                <a class='dropdown-item' href='/showplan/db2'>Db2</a> ");
 		writer.println("              </div> ");
 		writer.println("            </div> ");
+		writer.println("            <div class='dbx-dropdown-submenu'> ");
+		writer.println("              <a class='dropdown-item' href='#'>&#128274; Deadlock</a> ");
+		writer.println("              <div class='dropdown-menu'> ");
+		writer.println("                <a class='dropdown-item' href='/deadlock/sqlserver'>SQL Server</a> ");
+		writer.println("              </div> ");
+		writer.println("            </div> ");
 		writer.println("            <a class='dropdown-item' href='/llm-ai-advice.html'>&#129302; LLM/AI Advice</a> ");
 		writer.println("            <div class='dropdown-divider'></div> ");
 		writer.println("            <a class='dropdown-item" + desktopAppActive + "' href='/desktop_app.html'>Desktop App" + desktopAppExtraSpan + "</a> ");

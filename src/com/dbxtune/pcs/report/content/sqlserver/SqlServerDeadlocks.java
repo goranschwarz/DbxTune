@@ -502,7 +502,11 @@ extends SqlServerAbstract
 		for (int i = 0; i < shapes.size() && i < MAX_PICTURES; i++)
 		{
 			List<Deadlock> shape = shapes.get(i);
-			sb.append(SqlServerDeadlockTimelinePainter.toHtmlImg(shape.get(shape.size() - 1), shape.size())).append("<br><br>\n");
+			sb.append(SqlServerDeadlockTimelinePainter.toHtmlImg(shape.get(shape.size() - 1), shape.size())).append("<br>\n");
+			String lookupSql = shape.get(shape.size() - 1).getWaitResourceSql();
+			if (lookupSql != null)
+				sb.append("<b>SQL to look up what the sessions waited for</b> (as it is now):\n<pre style='font-size:11px; margin:2px 0 0 0;'>").append(esc(lookupSql)).append("</pre>\n");
+			sb.append("<br>\n");
 		}
 		String picLabel = "<b>Deadlock timelines</b> (the newest deadlock of the " + Math.min(shapes.size(), MAX_PICTURES) + " most common kinds)";
 		w.append(createShowHideDiv("DeadlockTimelines", true, picLabel, sb.toString()));
@@ -511,13 +515,21 @@ extends SqlServerAbstract
 		sb = new StringBuilder();
 		sb.append("<table class='sortable'>\n");
 		sb.append("<thead><tr><th>Time</th><th>Database</th><th>Victim</th><th>Objects</th><th>Victim statement</th><th>Other statements</th><th>Wait ms</th><th>XML</th></tr></thead>\n<tbody>\n");
+		String dbxCentralBaseUrl = getReportingInstance().getDbxCentralPublicBaseUrl();
 		int rows = 0;
 		for (int i = _cmDeadlocks.size() - 1; i >= 0 && rows < MAX_DETAIL_ROWS; i--, rows++)
 		{
 			Deadlock d = _cmDeadlocks.get(i);
 			DlProcess v = d.getVictim();
 			String fileName = "deadlock_" + String.valueOf(d.eventTime).replaceAll("[^0-9]", "") + ".xdl";
-			String xdlLink  = "<a download='" + fileName + "' href='data:application/xml;base64," + Base64.getEncoder().encodeToString(d.xml.getBytes(StandardCharsets.UTF_8)) + "'>.xdl</a>";
+			String xdlId    = "dsr-deadlock-xdl-" + rows;
+			String xdlLink  = "<a id='" + xdlId + "' download='" + fileName + "' href='data:application/xml;base64," + Base64.getEncoder().encodeToString(d.xml.getBytes(StandardCharsets.UTF_8)) + "'>.xdl</a>";
+
+			// Opens the deadlock in DbxCentral's Deadlock Viewer (picture, Play, lookup SQL): dsrOpenLink() POSTs the XML of the .xdl link above
+			if (StringUtil.hasValue(dbxCentralBaseUrl))
+				xdlLink += "<br><a href='javascript:void(0)' class='dsr-link' data-kind='deadlock' data-path='" + esc(dbxCentralBaseUrl + "/deadlock/sqlserver") + "'"
+					+ " data-xdl-id='" + xdlId + "' data-event-time='" + (d.eventTime == null ? "" : d.eventTime) + "' onclick='dsrOpenLink(this); return false;'"
+					+ " title='Opens the deadlock in the DbxCentral Deadlock Viewer (timeline picture, step by step, SQL to look up the wait resources). Requires JavaScript, so it does not work in an e-mail client.'>view</a>";
 
 			String victimStmt = v == null ? "" : (v.getProcNameAndLine() == null ? "" : "-- " + v.getProcNameAndLine() + "\n") + (v.getStatement() == null ? "" : v.getStatement());
 
@@ -533,7 +545,7 @@ extends SqlServerAbstract
 			  .append("</tr>\n");
 		}
 		sb.append("</tbody></table>\n");
-		String label = "<b>Each deadlock</b> (newest first" + (_cmDeadlocks.size() > MAX_DETAIL_ROWS ? ", the latest " + MAX_DETAIL_ROWS + " of " + _cmDeadlocks.size() : ", " + _cmDeadlocks.size() + " rows") + "). Save the .xdl link to open the deadlock graph in SSMS.";
+		String label = "<b>Each deadlock</b> (newest first" + (_cmDeadlocks.size() > MAX_DETAIL_ROWS ? ", the latest " + MAX_DETAIL_ROWS + " of " + _cmDeadlocks.size() : ", " + _cmDeadlocks.size() + " rows") + "). Save the .xdl link to open the deadlock graph in SSMS, or 'view' it in DbxCentral.";
 		w.append( msOutlookAlternateText(createShowHideDiv("DeadlockDetails", false, label, sb.toString()), "DeadlockDetails", null) );
 	}
 }

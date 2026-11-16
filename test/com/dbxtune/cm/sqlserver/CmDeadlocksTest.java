@@ -124,6 +124,41 @@ public class CmDeadlocksTest
 		assertEquals("dlk.dbo.heap1 <-> dlk.dbo.heap2", d.getObjects());
 	}
 
+	/** SQL to look up a waitresource as it is now */
+	@Test
+	public void waitResourceSql() throws Exception
+	{
+		// KEY, object + index from the keylock: the row by %%lockres%%
+		Deadlock d = parse("sql2022_proc_keylock.xml");
+		DlProcess v = d.getVictim();
+		String sql = d.getWaitResourceSql(v);
+		assertTrue(sql, sql.contains("SELECT * FROM [dlk].[dbo].[orders] WITH (NOLOCK, INDEX([PK__orders__3213E83F117CD434])) WHERE %%lockres%% = '(40fd182c0dd9)'"));
+		assertTrue(sql, sql.contains("-- NOTE: this is how it looks NOW"));
+
+		// KEY without a known object: hobt_id -> table/index
+		d.resources.forEach(r -> r.objectName = null);
+		sql = d.getWaitResourceSql(v);
+		assertTrue(sql, sql.contains("WHERE p.hobt_id = 72057594045923328"));
+
+		// RID, PAGE
+		d = parse("sql2022_proc_keylock.xml");
+		v = d.getVictim();
+		v.waitResource = "RID: 6:1:280:3";
+		assertTrue(d.getWaitResourceSql(v).contains("SELECT * FROM [dlk].[dbo].[orders] WITH (NOLOCK) WHERE sys.fn_PhysLocFormatter(%%physloc%%) = '(1:280:3)'"));
+		v.waitResource = "PAGE: 6:1:280 ";
+		assertTrue(d.getWaitResourceSql(v).contains("FROM sys.dm_db_page_info(6, 1, 280, 'LIMITED')"));
+
+		// OBJECT
+		d = parse("sql2022_objectlock_serializable.xml");
+		assertTrue(d.getWaitResourceSql(d.getVictim()).contains("SELECT DB_NAME(6) AS dbname, OBJECT_SCHEMA_NAME(1365579903, 6) AS schema_name, OBJECT_NAME(1365579903, 6) AS object_name"));
+
+		// no wait / not data
+		DlProcess noWait = new DlProcess();
+		assertEquals(null, d.getWaitResourceSql(noWait));
+		noWait.waitResource = "METADATA: database_id = 6 SECURITY_CACHE($hash = 0x1:0x0)";
+		assertEquals(null, d.getWaitResourceSql(noWait));
+	}
+
 	/** Parallel query deadlock: one spid, several ecids, exchange events (no objects) */
 	@Test
 	public void parallel() throws Exception

@@ -1140,6 +1140,8 @@ at pc:
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxAlarmOverview.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxAlarmEditor.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphCounterDetails.js"></script>
+	<script type="text/javascript" src="/scripts/dbxtune/js/dbxDeadlockSqlServer.js"></script> <!-- CmDeadlocks Row Detail: the deadlock picture -->
+
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphDbmsConfig.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphQueryStore.js"></script>
 	<script type="text/javascript" src="/scripts/dbxtune/js/dbxGraphSettings.js"></script>
@@ -1297,6 +1299,12 @@ at pc:
 								<a class="dropdown-item" href="/showplan/oracle">Oracle</a>
 								<a class="dropdown-item" href="/showplan/mysql">MySQL</a>
 								<a class="dropdown-item" href="/showplan/db2">Db2</a>
+							</div>
+						</div>
+						<div class="dbx-dropdown-submenu">
+							<a class="dropdown-item" href="#">&#128274; Deadlock</a>
+							<div class="dropdown-menu">
+								<a class="dropdown-item" href="/deadlock/sqlserver">SQL Server</a>
 							</div>
 						</div>
 						<a class="dropdown-item" href="/llm-ai-advice.html">&#129302; LLM/AI Advice</a>

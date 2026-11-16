@@ -904,6 +904,97 @@ extends CountersModelAppend
 			}
 		}
 
+		private static final Pattern WAITRES_KEY    = Pattern.compile("^KEY:\\s*(\\d+):(\\d+)\\s*(\\([0-9a-fA-F]+\\))");
+		private static final Pattern WAITRES_RID    = Pattern.compile("^RID:\\s*(\\d+):(\\d+):(\\d+):(\\d+)");
+		private static final Pattern WAITRES_PAGE   = Pattern.compile("^PAGE:\\s*(\\d+):(\\d+):(\\d+)");
+		private static final Pattern WAITRES_OBJECT = Pattern.compile("^OBJECT:\\s*(\\d+):(\\d+)");
+
+		/**
+		 * SQL that shows what a process waited for (its <code>waitresource</code>) <b>as it is now</b>: the row (KEY/RID),
+		 * the object of a page (PAGE) or the object (OBJECT). The data may have changed, or be gone, since the deadlock.
+		 * @return null if the process did not wait, or for resources that are no data (exchangeEvent, METADATA, ...)
+		 */
+		public String getWaitResourceSql(DlProcess p)
+		{
+			if (p == null || p.waitResource == null)
+				return null;
+			String wr = p.waitResource.trim();
+
+			// The lock resource this process waits for: its object (db.schema.table) and index
+			DlResource res = null;
+			for (DlResource r : resources)
+				if (r.waiterIds.contains(p.id))
+					res = r;
+			String table = res == null ? null : quoteName(res.objectName);
+			String index = res == null || res.indexName == null ? null : "[" + res.indexName.replace("]", "]]") + "]";
+
+			String head = "-- spid " + p.spid + " waited for: " + wr + (res != null && res.objectName != null ? "   (" + res.objectName + (res.indexName == null ? "" : ", index " + res.indexName) + ")" : "") + "\n"
+			            + "-- NOTE: this is how it looks NOW, it may have changed (or be gone) since the deadlock.\n";
+			Matcher m;
+
+			if ((m = WAITRES_KEY.matcher(wr)).find())
+			{
+				if (table != null)
+					return head
+						+ "-- %%lockres%% reads the whole index (with NOLOCK, no locks)\n"
+						+ "SELECT * FROM " + table + " WITH (NOLOCK" + (index == null ? "" : ", INDEX(" + index + ")") + ") WHERE %%lockres%% = '" + m.group(3) + "'";
+				return head
+					+ "-- Run in the database with id " + m.group(1) + ": SELECT DB_NAME(" + m.group(1) + ")\n"
+					+ "SELECT OBJECT_SCHEMA_NAME(p.object_id) AS schema_name, OBJECT_NAME(p.object_id) AS table_name, i.name AS index_name\n"
+					+ "FROM sys.partitions p JOIN sys.indexes i ON i.object_id = p.object_id AND i.index_id = p.index_id\n"
+					+ "WHERE p.hobt_id = " + m.group(2) + "\n"
+					+ "-- then: SELECT * FROM <table> WITH (NOLOCK, INDEX(<index_name>)) WHERE %%lockres%% = '" + m.group(3) + "'";
+			}
+			if ((m = WAITRES_RID.matcher(wr)).find())
+			{
+				String physloc = "(" + m.group(2) + ":" + m.group(3) + ":" + m.group(4) + ")";
+				return head
+					+ "-- %%physloc%% reads the whole table (with NOLOCK, no locks)\n"
+					+ "SELECT * FROM " + (table != null ? table : "<table>") + " WITH (NOLOCK) WHERE sys.fn_PhysLocFormatter(%%physloc%%) = '" + physloc + "'";
+			}
+			if ((m = WAITRES_PAGE.matcher(wr)).find())
+			{
+				String db = m.group(1), file = m.group(2), page = m.group(3);
+				return head
+					+ "-- SQL Server 2019 and later\n"
+					+ "SELECT DB_NAME(database_id) AS dbname, OBJECT_SCHEMA_NAME(object_id, database_id) AS schema_name, OBJECT_NAME(object_id, database_id) AS object_name, index_id\n"
+					+ "FROM sys.dm_db_page_info(" + db + ", " + file + ", " + page + ", 'LIMITED')\n"
+					+ "-- Older versions: 'Metadata: ObjectId' and 'IndexId' in the page header\n"
+					+ "-- DBCC TRACEON(3604); DBCC PAGE(" + db + ", " + file + ", " + page + ", 0)";
+			}
+			if ((m = WAITRES_OBJECT.matcher(wr)).find())
+			{
+				String db = m.group(1), objId = m.group(2);
+				return head
+					+ "SELECT DB_NAME(" + db + ") AS dbname, OBJECT_SCHEMA_NAME(" + objId + ", " + db + ") AS schema_name, OBJECT_NAME(" + objId + ", " + db + ") AS object_name";
+			}
+			return null;
+		}
+
+		/** {@link #getWaitResourceSql(DlProcess)} of all processes (same SQL only once), or null if there is none */
+		public String getWaitResourceSql()
+		{
+			Set<String> set = new LinkedHashSet<>();
+			for (DlProcess p : processes)
+			{
+				String sql = getWaitResourceSql(p);
+				if (sql != null)
+					set.add(sql);
+			}
+			return set.isEmpty() ? null : join(set, "\n\n");
+		}
+
+		/** "db.dbo.t" -> "[db].[dbo].[t]" */
+		private static String quoteName(String name)
+		{
+			if (StringUtil.isNullOrBlank(name))
+				return null;
+			StringBuilder sb = new StringBuilder();
+			for (String part : name.split("\\."))
+				sb.append(sb.length() == 0 ? "" : ".").append("[").append(part.replace("]", "]]")).append("]");
+			return sb.toString();
+		}
+
 		/** Collapse white space, replace numbers and strings, so the same statement with different values is the same */
 		private static String normalizeSql(String sql)
 		{

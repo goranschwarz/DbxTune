@@ -31,11 +31,11 @@ public class Version
 {
 	public static       String PRODUCT_STRING     = "DbxTune";      // Do not have spaces etc in this one
 //	public static final String VERSION_STRING     = "4.6.0";        // Use this for public releases
-	public static final String VERSION_STRING     = "4.6.0.130.dev"; // Use this for early releases
-	public static final String BUILD_STRING       = "2026-11-16/build 681";
+	public static final String VERSION_STRING     = "4.6.0.131.dev"; // Use this for early releases
+	public static final String BUILD_STRING       = "2026-11-17/build 681";
 
-	public static final String GIT_DATE_STRING    = "2026-11-16";  // try to update this
-	public static final String GIT_REVISION_STR   = "630";     // used by CheckForUpdates --- update this on every check-in (emulates Subversion "Revision:" tag)
+	public static final String GIT_DATE_STRING    = "2026-11-17";  // try to update this
+	public static final String GIT_REVISION_STR   = "631";     // used by CheckForUpdates --- update this on every check-in (emulates Subversion "Revision:" tag)
 
 	public static final boolean IS_DEVELOPMENT_VERSION  = true; // if true: date expiration will be checked on startup
 	public static final String  DEV_VERSION_EXPIRE_STR  = "2028-11-30";  // "YYYY-MM-DD" 
