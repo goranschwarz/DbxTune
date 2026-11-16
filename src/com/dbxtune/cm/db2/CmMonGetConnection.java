@@ -495,7 +495,7 @@ extends CountersModel
 	public static final double  DEFAULT_alarm_ChattySessionMaxReadsPerRequest  = 10;
 
 	public static final String  PROPKEY_alarm_ChattySessionSamples             = CM_NAME + ".alarm.system.if.ChattySession.samples";
-	public static final int     DEFAULT_alarm_ChattySessionSamples             = 2;
+	public static final int     DEFAULT_alarm_ChattySessionSamples             = 3;
 
 	public static final String  PROPKEY_alarm_ChattySessionSkipAuthId          = CM_NAME + ".alarm.system.if.ChattySession.skip.authId";
 	public static final String  DEFAULT_alarm_ChattySessionSkipAuthId          = "";

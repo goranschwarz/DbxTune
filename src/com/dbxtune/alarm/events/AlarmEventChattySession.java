@@ -51,7 +51,7 @@ extends AlarmEvent
 				cm.getName(),         // serviceInfo
 				sessionId,            // extraInfo
 				AlarmEvent.Category.OTHER,
-				AlarmEvent.Severity.WARNING,
+				AlarmEvent.Severity.INFO,
 				AlarmEvent.ServiceState.UP,
 				// Note: max length for the below message is 512
 				"Chatty session (possible N+1) in '" + cm.getServerName() + "': " + sessionDesc + " sends " + Math.round(requestsPerSec) + " requests/s"
