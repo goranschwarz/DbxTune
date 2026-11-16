@@ -174,6 +174,13 @@ public class ShowplanLinkBuilder
 		// loses the workload profile that the report's own advice link would have sent.
 		sb.append("            add('workloadData', dsrHarvestWorkload(a)); \n");
 		sb.append("            add('dbmsVersion', dsrDbmsVersion()); \n"); // for the plan viewer's own LLM Advice section
+		// SQL Server Deadlock Viewer (SqlServerDeadlocks 'view' link): the XML is read from the row's '.xdl' download link
+		// (base64), so it is not a second time in the report
+		sb.append("        } else if (d.kind === 'deadlock') { \n");
+		sb.append("            var xdl = d.xdlId ? document.getElementById(d.xdlId) : null; \n");
+		sb.append("            var b64 = xdl ? (xdl.getAttribute('href') || '').split(',')[1] : ''; \n");
+		sb.append("            add('xml', b64 ? new TextDecoder().decode(Uint8Array.from(atob(b64), function(c) { return c.charCodeAt(0); })) : ''); \n");
+		sb.append("            add('eventTime', d.eventTime); \n");
 		sb.append("        } else { \n");
 		sb.append("            add('sql', d.sql); \n");
 		sb.append("            add('plan', plan); \n");

@@ -2097,7 +2097,10 @@ function cmDetailRowShowModal(columns, row, tooltips)
 			             : '<i class="fa fa-square-o text-muted"></i>';
 		else {
 			var s = String(v);
-			if (looksLikeHtml(s))
+			if (col === 'DeadlockXml') // XML, not HTML: highlighted by Prism below
+				cellHtml = '<pre class="language-xml" style="white-space:pre-wrap;margin:0;max-height:400px;overflow:auto;font-size:0.9em;">'
+					+ '<code class="language-xml" style="white-space:pre-wrap;word-break:break-all;">' + escHtml(s) + '</code></pre>';
+			else if (looksLikeHtml(s))
 				cellHtml = '<div style="overflow:auto;">' + s + '</div>';
 			else
 				cellHtml = '<pre style="white-space:pre-wrap;margin:0;font-size:0.9em;">' + escHtml(s) + '</pre>';
@@ -2123,7 +2126,17 @@ function cmDetailRowShowModal(columns, row, tooltips)
 	var sqlColIdx  = columns.findIndex(function(c) { return /sqltext/i.test(c); });
 	var planColIdx = columns.findIndex(function(c) { return /showplan/i.test(c); });
 
+	// SQL Server CmDeadlocks: the deadlock picture (dbxDeadlockSqlServer.js) above the columns
+	var dlXmlIdx  = _cmName === 'CmDeadlocks' ? columns.indexOf('DeadlockXml') : -1;
+	if (dlXmlIdx >= 0 && row[dlXmlIdx])
+		html = '<div id="dbx-view-alarmView-deadlock-pic" class="mb-2" style="overflow:auto;"></div>' + html;
+
 	$('#dbx-view-alarmView-content').html(html);
+	if (dlXmlIdx >= 0 && row[dlXmlIdx])
+		sqlServerDeadlockRender($('#dbx-view-alarmView-deadlock-pic'), row[dlXmlIdx], row[columns.indexOf('EventTime')] || '',
+			{ isDark: $modal.find('.modal-content').hasClass('dbx-modal-dark'), $modal: $modal });
+	if (typeof Prism !== 'undefined')
+		$('#dbx-view-alarmView-content code.language-xml').each(function() { Prism.highlightElement(this); });
 
 	// Feature-toggle gated (DbxCentral.llm.enabled) - appended after the fact so a disabled feature
 	// never shows the button at all, rather than showing one that would error out on click.

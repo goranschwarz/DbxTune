@@ -251,6 +251,7 @@ public class WebServerInitializerJetty
 		webapp.addServlet(ShowplanOracleServlet.class,                "/showplan/oracle");                  // Local Oracle graphical Execution Plan Implementation (the text of DBMS_XPLAN)
 		webapp.addServlet(ShowplanMySqlServlet.class,                 "/showplan/mysql");                   // Local MySQL graphical Execution Plan Implementation (the JSON of EXPLAIN FORMAT=JSON)
 		webapp.addServlet(ShowplanDb2Servlet.class,                   "/showplan/db2");                     // Local Db2 graphical Execution Plan Implementation (the explain tables, as Db2Tune records them)
+		webapp.addServlet(DeadlockSqlServerServlet.class,             "/deadlock/sqlserver");               // SQL Server Deadlock Viewer: paste a deadlock report (Tools menu, and the 'view' link in the DSR)
 		webapp.addServlet(LoadPageProgress.class,                     "/lpp/*");                            // Load Page Progress
 		webapp.addServlet(LetsEncryptAcmeChallengeServlet.class,      "/.well-known/acme-challenge/*");
 
@@ -283,6 +284,7 @@ public class WebServerInitializerJetty
 		webapp.addServlet(UserDefinedContentServlet.class,            "/api/udc");                          // User defined Content in -- NavBar: Servers
 		webapp.addServlet(UserDefinedActionServlet.class,             "/api/udaction");                     // User defined Actions in -- NavBar: Servers
 		webapp.addServlet(SpaceForecastServlet.class,                 "/api/space/forecast");               // Get a Space Forecast (for example: used by Daily Summary Reports)
+		webapp.addServlet(SqlServerDeadlockParseServlet.class,        "/api/sqlserver/deadlock-parse");     // SQL Server: a CmDeadlocks row's DeadlockXml as JSON (Counter Details: Row Detail draws it)
 		webapp.addServlet(NoGuiShutdownServlet.class,                 "/api/mgt/shutdown");                 // Shutdown DbxCentral or a Collector -- Needs: TokenAuthentication
 		webapp.addServlet(NoGuiRestartServlet.class,                  "/api/mgt/restart");                  // Restart  DbxCentral or a Collector -- Needs: TokenAuthentication
 
