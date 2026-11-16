@@ -369,8 +369,8 @@ extends CountersModel
 					+ (StringUtil.hasValue(db)      ? ", db='" + db + "'" : "");
 
 			AlarmEvent ae = new AlarmEventChattySession(cm, user, program, sessionDesc, requestsPerSec, readsPerRequest, count, threshold, maxReadsPerRequest);
-			final String alarmThreadId = threadId;
-			final String alarmConnId   = connId;
+			final String alarmLogin   = StringUtil.trim(user);
+			final String alarmProgram = StringUtil.trim(program);
 
 			String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 			String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
@@ -387,13 +387,20 @@ extends CountersModel
 					// Set CANCEL message (values that was found AFTER last raise/re-raise event)
 					if (AlarmPhase.CANCEL.equals(phase))
 					{
-						int    rowId = cm.getRowIdWhere(DATA_RATE, "THREAD_ID", alarmThreadId);
-						String label = "connection_id " + alarmConnId;
-
-						if (rowId == -1)
-							alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+						// One alarm per login/program: the busiest of its sessions now (it can have several, or none)
+						Double maxNow = null;
+						for (int cr=0; cr<cm.getRateRowCount(); cr++)
+						{
+							if ( ! String.valueOf(alarmLogin).equals(String.valueOf(StringUtil.trim(cm.getRateString(cr, "USER")))) || ! String.valueOf(alarmProgram).equals(String.valueOf(StringUtil.trim(cm.getRateString(cr, "PROGRAM_NAME")))) )
+								continue;
+							Double val = cm.getRateValueAsDouble(cr, "Questions");
+							if (val != null && (maxNow == null || val > maxNow))
+								maxNow = val;
+						}
+						if (maxNow == null)
+							alarmEvent.setCancelDescription("No session of '" + alarmEvent.getExtraInfo() + "' is connected anymore");
 						else
-							alarmEvent.setCancelDescription(getAlarmCancelText(label + ": statements per second", toAlarmCancelValue(cm.getRateValueAsDouble(rowId, "Questions")), "/s"));
+							alarmEvent.setCancelDescription(getAlarmCancelText("The busiest session of '" + alarmEvent.getExtraInfo() + "': statements per second", toAlarmCancelValue(maxNow), "/s"));
 					}
 				}
 			});

@@ -556,8 +556,8 @@ extends CountersModel
 					+ (StringUtil.hasValue(conName) ? ", container='" + conName + "'" : "");
 
 			AlarmEvent ae = new AlarmEventChattySession(cm, username, program, sessionDesc, requestsPerSec, readsPerRequest, count, threshold, maxReadsPerRequest);
-			final String alarmSid    = sid;
-			final String alarmSerial = serial;
+			final String alarmLogin   = StringUtil.trim(username);
+			final String alarmProgram = StringUtil.trim(program);
 
 			String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 			String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
@@ -574,25 +574,21 @@ extends CountersModel
 					// Set CANCEL message (values that was found AFTER last raise/re-raise event)
 					if (AlarmPhase.CANCEL.equals(phase))
 					{
-						// The same session = SID and SERIAL# (a SID is reused by a new session)
-						int rowId = -1;
+						// One alarm per login/program: the busiest of its sessions now (it can have several, or none)
+						Double maxNow = null;
 						for (int cr=0; cr<cm.getRateRowCount(); cr++)
 						{
-							if (alarmSid.equals(String.valueOf(cm.getRateValue(cr, "SID"))) && alarmSerial.equals(String.valueOf(cm.getRateValue(cr, "SERIAL#"))))
-							{
-								rowId = cr;
-								break;
-							}
+							if ( ! String.valueOf(alarmLogin).equals(String.valueOf(StringUtil.trim(cm.getRateString(cr, "USERNAME")))) || ! String.valueOf(alarmProgram).equals(String.valueOf(StringUtil.trim(cm.getRateString(cr, "PROGRAM")))) )
+								continue;
+							Double rt = cm.getRateValueAsDouble(cr, "ROUNDTRIPS"), ex = cm.getRateValueAsDouble(cr, "EXECUTIONS");
+							Double val = (rt == null || ex == null) ? null : Math.min(rt, ex);
+							if (val != null && (maxNow == null || val > maxNow))
+								maxNow = val;
 						}
-						String label = "SID " + alarmSid;
-
-						if (rowId == -1)
-							alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+						if (maxNow == null)
+							alarmEvent.setCancelDescription("No session of '" + alarmEvent.getExtraInfo() + "' is connected anymore");
 						else
-						{
-							Double rt = cm.getRateValueAsDouble(rowId, "ROUNDTRIPS"), ex = cm.getRateValueAsDouble(rowId, "EXECUTIONS");
-							alarmEvent.setCancelDescription(getAlarmCancelText(label + ": statements per second (smaller of round trips and executions)", toAlarmCancelValue(rt == null || ex == null ? null : Math.min(rt, ex)), "/s"));
-						}
+							alarmEvent.setCancelDescription(getAlarmCancelText("The busiest session of '" + alarmEvent.getExtraInfo() + "': statements per second (smaller of round trips and executions)", toAlarmCancelValue(maxNow), "/s"));
 					}
 				}
 			});

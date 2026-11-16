@@ -447,8 +447,8 @@ extends CountersModel
 					+ ("0".equals(member) ? "" : ", member=" + member);
 
 			AlarmEvent ae = new AlarmEventChattySession(cm, authId, applName, sessionDesc, requestsPerSec, readsPerRequest, count, threshold, maxReadsPerRequest);
-			final String alarmApplHandle = applHandle;
-			final String alarmApplId     = applId;
+			final String alarmLogin   = StringUtil.trim(authId);
+			final String alarmProgram = StringUtil.trim(applName);
 
 			String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 			String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
@@ -465,14 +465,20 @@ extends CountersModel
 					// Set CANCEL message (values that was found AFTER last raise/re-raise event)
 					if (AlarmPhase.CANCEL.equals(phase))
 					{
-						// The same connection = APPLICATION_ID (an APPLICATION_HANDLE can be reused by a new connection)
-						int    rowId = cm.getRowIdWhere(DATA_RATE, "APPLICATION_ID", alarmApplId);
-						String label = "APPLICATION_HANDLE " + alarmApplHandle;
-
-						if (rowId == -1)
-							alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+						// One alarm per login/program: the busiest of its sessions now (it can have several, or none)
+						Double maxNow = null;
+						for (int cr=0; cr<cm.getRateRowCount(); cr++)
+						{
+							if ( ! String.valueOf(alarmLogin).equals(String.valueOf(StringUtil.trim(cm.getRateString(cr, "SESSION_AUTH_ID")))) || ! String.valueOf(alarmProgram).equals(String.valueOf(StringUtil.trim(cm.getRateString(cr, "APPLICATION_NAME")))) )
+								continue;
+							Double val = cm.getRateValueAsDouble(cr, "DYNAMIC_SQL_STMTS");
+							if (val != null && (maxNow == null || val > maxNow))
+								maxNow = val;
+						}
+						if (maxNow == null)
+							alarmEvent.setCancelDescription("No session of '" + alarmEvent.getExtraInfo() + "' is connected anymore");
 						else
-							alarmEvent.setCancelDescription(getAlarmCancelText(label + ": statements per second", toAlarmCancelValue(cm.getRateValueAsDouble(rowId, "DYNAMIC_SQL_STMTS")), "/s"));
+							alarmEvent.setCancelDescription(getAlarmCancelText("The busiest session of '" + alarmEvent.getExtraInfo() + "': statements per second", toAlarmCancelValue(maxNow), "/s"));
 					}
 				}
 			});
