@@ -27,7 +27,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import org.apache.logging.log4j.LogManager;
@@ -96,37 +95,29 @@ extends Throwable
 		LOG
 	};
 
-	/** Alarm classes that are only recorded by default: design findings to fix in the code, not incidents to act on now */
-	private static final Map<String, Action> DEFAULT_ACTION = Map.of(
-			"AlarmEventChattySession", Action.REPORT,  // N+1: one session sends very many tiny statements
-			"AlarmEventLiteralSql",    Action.REPORT); // SQL Server: non-parameterized SQL (many plans that only differ in their literals)
+	/**
+	 * The default action for this alarm class: ALARM.<br>
+	 * Override it in alarms that should only be recorded by default (design findings to fix in the code, not incidents to act on now), eg AlarmEventChattySession.
+	 */
+	public Action getDefaultAction()
+	{
+		return Action.ALARM;
+	}
 
 	/**
-	 * The action for an alarm class: property '&lt;AlarmEventClass&gt;.action', else the class default (ALARM for most).
-	 * Read on every call, so a changed property is used at once.
-	 * @param alarmClass simple class name, with or without the 'AlarmEvent' prefix (eg 'AlarmEventChattySession' or 'ChattySession')
+	 * The action for this alarm: property '&lt;AlarmEventClass&gt;.action', else {@link #getDefaultAction()}.<br>
+	 * Read on every call, so a changed property is used at once. It is stored with the alarm (column 'alarmAction'), so DbxCentral and the Daily Summary Report show what was done.
 	 */
-	public static Action getAction(String alarmClass)
+	public Action getAction()
 	{
-		if (alarmClass == null)
-			return Action.ALARM;
-		if ( ! alarmClass.startsWith("AlarmEvent") )
-			alarmClass = "AlarmEvent" + alarmClass;
-
-		String prop = alarmClass + ".action";
+		String prop = getClass().getSimpleName() + ".action";
 		String val  = Configuration.getCombinedConfiguration().getProperty(prop, null);
 		if (StringUtil.hasValue(val))
 		{
 			try { return Action.valueOf(val.trim().toUpperCase()); }
 			catch (IllegalArgumentException e) { _logger.error("Problems parsing Action value '" + val + "' for the property '" + prop + "'. known values: " + StringUtil.toCommaStr(Action.values()) + ". Using the default."); }
 		}
-		return DEFAULT_ACTION.getOrDefault(alarmClass, Action.ALARM);
-	}
-
-	/** The action for this alarm, see {@link #getAction(String)} */
-	public Action getAction()
-	{
-		return getAction(getClass().getSimpleName());
+		return getDefaultAction();
 	}
 
 //	public static final int SEVERITY_UNKNOWN  = -1;
@@ -934,7 +925,7 @@ extends Throwable
 		addAlarmOptionTableRow(sb, "timeRangeCron"     , propValAlarmTimeRange, propDefAlarmTimeRange      , propKeyAlarmTimeRange , "At what time the alarm can fire.");
 		addAlarmOptionTableRow(sb, "Severity"          , _severity        + "", _originSeverity        + "", propKeySeverity       , "Change the Severity {INFO|WARNING|ERROR} of this alarm.  INFO msg can be filtetered out by the writer");
 		addAlarmOptionTableRow(sb, "RaiseDelay"        , _raiseDelayInSec + "", _originRaiseDelayInSec + "", propKeyRaiseDelayInSec, "Change the Raise Delay of this alarm. Can be used to delay the Raise for a while");
-		addAlarmOptionTableRow(sb, "Action"            , getAction()      + "", DEFAULT_ACTION.getOrDefault(getClass().getSimpleName(), Action.ALARM) + "", getClass().getSimpleName() + ".action", "What to do with this alarm {ALARM|REPORT|LOG}. ALARM=send to all alarm writers (mail, Teams...), REPORT=only record it (alarm history, DbxCentral, Daily Summary Report), LOG=only a WARNING in the errorlog");
+		addAlarmOptionTableRow(sb, "Action"            , getAction()      + "", getDefaultAction() + "", getClass().getSimpleName() + ".action", "What to do with this alarm {ALARM|REPORT|LOG}. ALARM=send to all alarm writers (mail, Teams...), REPORT=only record it (alarm history, DbxCentral, Daily Summary Report), LOG=only a WARNING in the errorlog");
 
 		// Add a "separator"
 		sb.append("<tr> <td nowrap colspan='5'>").append("<b>&emsp;&emsp;&emsp;&lt;&lt;&lt; Below: Alarm Specific Settings &gt;&gt;&gt;</b>").append("</td> </tr> \n");

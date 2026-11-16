@@ -71,6 +71,13 @@ extends AlarmEvent
 		setData(Math.round(requestsPerSec));
 	}
 
+	/** A design finding to fix in the code (N+1), not an incident: only recorded (alarm history, Daily Summary Report). Property 'AlarmEventChattySession.action' overrides it. */
+	@Override
+	public Action getDefaultAction()
+	{
+		return Action.REPORT;
+	}
+
 	/** 200.0 -> "200", 2.5 -> "2.5" */
 	private static String toStr(Number num)
 	{

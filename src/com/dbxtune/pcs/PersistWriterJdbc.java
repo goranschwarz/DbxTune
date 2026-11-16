@@ -2932,6 +2932,12 @@ public class PersistWriterJdbc
 						String sql = conn.quotifySqlString("alter table " + schemaPrefix + "[" + plainTabName + "] add column [cancelDescription] CLOB null"); // NOTE: 'not null' is not supported at upgrades
 						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: " + sql);
 					}
+
+					if ( ! colNames.contains("alarmAction"))
+					{
+						String sql = conn.quotifySqlString("alter table " + schemaPrefix + "[" + plainTabName + "] add column [alarmAction] varchar(10) null");
+						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: " + sql);
+					}
 				}
 				else if (tabId == ALARM_HISTORY)
 				{
@@ -2984,6 +2990,12 @@ public class PersistWriterJdbc
 					if ( ! colNames.contains("cancelDescription"))
 					{
 						String sql = conn.quotifySqlString("alter table " + schemaPrefix + "[" + plainTabName + "] add column [cancelDescription] CLOB null"); // NOTE: 'not null' is not supported at upgrades
+						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: " + sql);
+					}
+
+					if ( ! colNames.contains("alarmAction"))
+					{
+						String sql = conn.quotifySqlString("alter table " + schemaPrefix + "[" + plainTabName + "] add column [alarmAction] varchar(10) null");
 						dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: " + sql);
 					}
 				}
@@ -3991,6 +4003,7 @@ public class PersistWriterJdbc
 					sbSql.append(", ").append(safeStr( saveExtendedDescriptionAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() /*HTML or Normal???*/ )); // "lastExtendedDescription"     text          null true    - 24
 					sbSql.append(", ").append(safeStr( ae.getAlarmOptions()                                                      )); // "alarmOptions"                text          null false   - 23
 					sbSql.append(", ").append(safeStr( ae.getCancelDescription()                                                 )); // "cancelDescription"           text          null true    - 26
+					sbSql.append(", ").append(safeStr( ae.getAction().toString()                                               )); // "alarmAction"                 varchar(10)   null true    - 27
 					sbSql.append(")");
 
 					sql = sbSql.toString();
@@ -4104,6 +4117,7 @@ public class PersistWriterJdbc
 				pst.setString   (i++, saveExtendedDescriptionAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription()); // lastExtendedDescription    - text        , Nullable = true 
 				pst.setString   (i++, ae.getAlarmOptions()                                                                                       ); // alarmOptions               - text        , Nullable = true
 				pst.setString   (i++, ae.getCancelDescription()                                                                                  ); // cancelDescription          - text        , Nullable = true
+				pst.setString   (i++, ae.getAction().toString()                                                                                  ); // alarmAction                - varchar(10) , Nullable = true
 
 				// EXECUTE
 				pst.executeUpdate();

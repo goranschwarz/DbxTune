@@ -23,12 +23,10 @@ package com.dbxtune.pcs.report.content;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.sql.Types;
 import java.util.Map;
 
 import org.apache.commons.text.StringEscapeUtils;
 
-import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.PersistWriterBase;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
@@ -47,6 +45,7 @@ extends ReportEntryAbstract
 	/** Above this many raise/cancel rows the flat list is collapsed (the summary is shown first anyway) */
 	private static final int SHORT_LIST_SHOW_MAX_ROWS = 30;
 	private boolean             _hasCancelDescription = false; // column 'cancelDescription' does not exist in older recordings
+	private boolean             _hasAlarmAction       = false; // column 'alarmAction' does not exist in older recordings
 //	private Exception           _problem = null;
 	
 
@@ -98,7 +97,7 @@ extends ReportEntryAbstract
 			if (_summaryRstm != null && _summaryRstm.getRowCount() > 0)
 			{
 				sb.append("<b>Summary:</b> one row per alarm and object (" + _summaryRstm.getRowCount() + " rows). "
-						+ "Column 'action': <code>ALARM</code> = sent to the alarm writers (mail, Teams...), <code>REPORT</code> = only recorded here (property '&lt;AlarmEventClass&gt;.action').<br>\n");
+						+ "Column 'alarmAction': <code>ALARM</code> = sent to the alarm writers (mail, Teams...), <code>REPORT</code> = only recorded here (property '&lt;AlarmEventClass&gt;.action').<br>\n");
 				sb.append(toHtmlTable(_summaryRstm));
 				sb.append("<br>\n");
 			}
@@ -170,6 +169,7 @@ extends ReportEntryAbstract
 		String dummySql = "select * from " + PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.ALARM_HISTORY, null, true) + " where 1 = 2";
 		ResultSetTableModel dummyRstm = executeQuery(conn, dummySql, true, "metadata");
 		_hasCancelDescription = dummyRstm.hasColumnNoCase("cancelDescription");
+		_hasAlarmAction       = dummyRstm.hasColumnNoCase("alarmAction");
 
 		getAlarmsHistorySummary(conn);
 		getAlarmsHistoryShort(conn);
@@ -181,7 +181,10 @@ extends ReportEntryAbstract
 	{
 		String schemaName = getReportingInstance().getDbmsSchemaName();
 
-		String sql = "select [alarmClass], [serviceInfo], [extraInfo], max([severity]) as [severity], count(*) as [raiseCount], min([eventTime]) as [firstRaise], max([eventTime]) as [lastRaise] \n" +
+		// 'action': what the collector did with the alarm: ALARM = sent, REPORT = only recorded (column 'alarmAction'; older recordings have no such column = ALARM)
+		String actionCol = _hasAlarmAction ? "coalesce(max([alarmAction]), 'ALARM')" : "cast('ALARM' as varchar(10))";
+
+		String sql = "select [alarmClass], " + actionCol + " as [alarmAction], [serviceInfo], [extraInfo], max([severity]) as [severity], count(*) as [raiseCount], min([eventTime]) as [firstRaise], max([eventTime]) as [lastRaise] \n" +
 		             "from " + PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.ALARM_HISTORY, null, true) + " \n" +
 		             "where [action] = 'RAISE' \n" +
 		             getReportPeriodSqlWhere("eventTime") +
@@ -189,13 +192,6 @@ extends ReportEntryAbstract
 		             "order by count(*) desc, min([eventTime])";
 
 		_summaryRstm = executeQuery(conn, sql, true, "Alarm History Summary");
-		if (_summaryRstm == null)
-			return;
-
-		// What happens to this alarm (as configured in this process): ALARM = sent, REPORT = only recorded
-		_summaryRstm.addColumn("action", _summaryRstm.findColumn("alarmClass") + 1, Types.VARCHAR, "varchar", "varchar(10)", 10, -1, "", String.class);
-		for (int r = 0; r < _summaryRstm.getRowCount(); r++)
-			_summaryRstm.setValueAtWithOverride(AlarmEvent.getAction(_summaryRstm.getValueAsString(r, "alarmClass")).toString(), r, "action");
 	}
 
 	@Override

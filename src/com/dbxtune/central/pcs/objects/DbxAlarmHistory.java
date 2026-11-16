@@ -53,7 +53,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 //RS> 24   extendedDescription     java.sql.Types.CLOB      CLOB              DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
 //RS> 26   lastExtendedDescription java.sql.Types.CLOB      CLOB              DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxAlarmHistory
 
-@JsonPropertyOrder(value = {"srvName", "sessionStartTime", "sessionSampleTime", "eventTime", "action", "alarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "alarmId", "repeatCnt", "duration", "alarmDuration", "fullDuration", "fullDurationAdjustmentInSec", "createTime", "cancelTime", "timeToLive", "threshold", "data", "lastData", "description", "lastDescription", "extendedDescription", "lastExtendedDescription", "alarmOptions", "cancelDescription"}, alphabetic = true)
+@JsonPropertyOrder(value = {"srvName", "sessionStartTime", "sessionSampleTime", "eventTime", "action", "alarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "alarmId", "repeatCnt", "duration", "alarmDuration", "fullDuration", "fullDurationAdjustmentInSec", "createTime", "cancelTime", "timeToLive", "threshold", "data", "lastData", "description", "lastDescription", "extendedDescription", "lastExtendedDescription", "alarmOptions", "cancelDescription", "alarmAction"}, alphabetic = true)
 public class DbxAlarmHistory
 {
 	private String    _srvName                ;
@@ -87,6 +87,7 @@ public class DbxAlarmHistory
 	private String    _lastExtendedDescription;
 	private String    _alarmOptions           ;
 	private String    _cancelDescription      ; // Only on CANCEL: how things look when the alarm went away
+	private String    _alarmAction            ; // ALARM or REPORT (property '<AlarmEventClass>.action'), null = older collector = ALARM
 
 	public String    getSrvName                    () { return _srvName                    ; }
 	public Timestamp getSessionStartTime           () { return _sessionStartTime           ; }
@@ -119,6 +120,7 @@ public class DbxAlarmHistory
 	public String    getLastExtendedDescription    () { return _lastExtendedDescription    ; }
 	public String    getAlarmOptions               () { return _alarmOptions               ; }
 	public String    getCancelDescription          () { return _cancelDescription          ; }
+	public String    getAlarmAction                () { return _alarmAction; }
 
 	public void setSrvName                    (String    srvName                    ) { _srvName                     = srvName                    ; }
 	public void setSessionStartTime           (Timestamp sessionStartTime           ) { _sessionStartTime            = sessionStartTime           ; }
@@ -151,8 +153,9 @@ public class DbxAlarmHistory
 	public void setLastExtendedDescription    (String    lastExtendedDescription    ) { _lastExtendedDescription     = lastExtendedDescription    ; }
 	public void setAlarmOptions               (String    alarmOptions               ) { _alarmOptions                = alarmOptions               ; }
 	public void setCancelDescription          (String    cancelDescription          ) { _cancelDescription           = cancelDescription          ; }
+	public void setAlarmAction                (String    alarmAction                ) { _alarmAction                 = alarmAction                ; }
 
-	public DbxAlarmHistory(String srvName, Timestamp sessionStartTime, Timestamp sessionSampleTime, Timestamp eventTime, String action, String alarmClass, String serviceType, String serviceName, String serviceInfo, String extraInfo, String category, String severity, String state, String alarmId, int repeatCnt, String duration,  String alarmDuration,  String fullDuration,  int fullDurationAdjustmentInSec, Timestamp createTime, Timestamp cancelTime, int timeToLive, String threshold, String data, String lastData, String description, String lastDescription, String extendedDescription, String lastExtendedDescription, String alarmOptions, String cancelDescription)
+	public DbxAlarmHistory(String srvName, Timestamp sessionStartTime, Timestamp sessionSampleTime, Timestamp eventTime, String action, String alarmClass, String serviceType, String serviceName, String serviceInfo, String extraInfo, String category, String severity, String state, String alarmId, int repeatCnt, String duration,  String alarmDuration,  String fullDuration,  int fullDurationAdjustmentInSec, Timestamp createTime, Timestamp cancelTime, int timeToLive, String threshold, String data, String lastData, String description, String lastDescription, String extendedDescription, String lastExtendedDescription, String alarmOptions, String cancelDescription, String alarmAction)
 	{
 		_srvName                     = srvName;
 		_sessionStartTime            = sessionStartTime;
@@ -185,6 +188,7 @@ public class DbxAlarmHistory
 		_lastExtendedDescription     = lastExtendedDescription;
 		_alarmOptions                = alarmOptions;
 		_cancelDescription           = cancelDescription;
+		_alarmAction                 = alarmAction;
 	}
 	
 	

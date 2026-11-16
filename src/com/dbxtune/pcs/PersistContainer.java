@@ -660,6 +660,7 @@ public class PersistContainer
 					gen.writeStringField("reRaiseExtendedDescription" , toString( sendExtendedAlarmDescAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() ));
 					gen.writeStringField("alarmOptions"               , toString( ae.getAlarmOptions()               ));
 					gen.writeStringField("cancelDescription"          , toString( ae.getCancelDescription()          ));
+					gen.writeStringField("alarmAction"                , ae.getAction().toString()); // ALARM or REPORT (property '<AlarmEventClass>.action')
 				gen.writeEndObject();
 			}
 			gen.writeEndArray();
@@ -713,6 +714,7 @@ public class PersistContainer
 					gen.writeStringField("reRaiseExtendedDescription" , toString( sendExtendedAlarmDescAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() ));
 					gen.writeStringField("alarmOptions"               , toString( ae.getAlarmOptions()               ));
 					gen.writeStringField("cancelDescription"          , toString( ae.getCancelDescription()          ));
+					gen.writeStringField("alarmAction"                , ae.getAction().toString()); // ALARM or REPORT (property '<AlarmEventClass>.action')
 				gen.writeEndObject();
 			}
 			gen.writeEndArray();

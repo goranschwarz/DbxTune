@@ -92,7 +92,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>Alarms Handling:</b>
 			<UL>
 				<LI>New alarm: AlarmEventSpaceFullPrediction -- When we predict that we will fall "short" on space usage</LI>
-				<LI>New:       Per alarm class <code>&lt;AlarmEventClass&gt;.action=ALARM|REPORT|LOG</code> -- REPORT = only in the alarm history and the Daily Summary Report (not sent to mail/Teams/...), LOG = only in the errorlog. ChattySession and LiteralSql are REPORT by default; ChattySession is one alarm per login/program (not per session). The DSR alarm section starts with a summary: one row per alarm and object.</LI>
+				<LI>New:       Per alarm class <code>&lt;AlarmEventClass&gt;.action=ALARM|REPORT|LOG</code> -- REPORT = only in the alarm history and the Daily Summary Report (not sent to mail/Teams/...), LOG = only in the errorlog. ChattySession and LiteralSql are REPORT by default (override <code>getDefaultAction()</code> in the AlarmEvent class); the action is stored with each alarm (new column <code>alarmAction</code> in the alarm tables of the recording and of DbxCentral: DbxCentral DB version 22). ChattySession is one alarm per login/program (not per session). The DSR alarm section starts with a summary: one row per alarm and object.</LI>
 				<LI>Changed:   SrvDown -- Only the "base" url will be passed</LI>
 				<LI>Changed:   DbmsVersionString -- Changed from INFO to WARNING</LI>
 				<LI>New alarm: AlarmEventHostMonitorConnectionDown -- (WARNING) When Host Monitoring (SSH) can't connect to the monitored host for more than 300 seconds. Cancelled when the connection works again. Threshold can be changed with <code>no.gui.hostmon.connect.alarm.thresholdInSec = ###</code> (-1 = disable)</LI>
