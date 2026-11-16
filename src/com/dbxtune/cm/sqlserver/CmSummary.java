@@ -1981,12 +1981,39 @@ extends CmSummaryAbstract
 				}
 			}
 
-			if (dataVal > threshold)
+			// Hold the FIRST raise until CmDeadlocks has the details (objects, statements, timeline picture), or 'waitForDetails.maxSeconds' has passed:
+			// SQL Server writes the deadlock to 'system_health' up to 2 minutes after the counter, so a RAISE right away would only hold the count.
+			// After the raise it is as before: RE-RAISE while above the threshold, CANCEL when below.
+			int     maxWaitSec        = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_DeadlockCountWaitForDetailsMaxSec, DEFAULT_alarm_DeadlockCountWaitForDetailsMaxSec);
+			boolean cmDeadlocksActive = cmDeadlocks instanceof CmDeadlocks && cmDeadlocks.isActive();
+			boolean raise             = dataVal > threshold;
+			boolean holding           = false;
+			if ( ! _deadlockAlarmRaised && (raise || _deadlockAlarmHoldSince != -1) )
 			{
+				long now = System.currentTimeMillis();
+				if (_deadlockAlarmHoldSince == -1)
+					_deadlockAlarmHoldSince = now;
+
+				long waitedSec = (now - _deadlockAlarmHoldSince) / 1000;
+				boolean ready  = ! cmDeadlocksActive || maxWaitSec <= 0 || _deadlockAlarmDetails.getTotal() > 0 || waitedSec >= maxWaitSec;
+
+				raise   = ready; // also when the value dropped below the threshold while holding (no moving average): the deadlock did happen
+				holding = ! ready;
+
+				if (holding)
+					_logger.info("DeadlockCount alarm: holding the raise for up to " + maxWaitSec + " seconds (waited " + waitedSec + "), until CmDeadlocks has the details (SQL Server writes them to 'system_health' up to 2 minutes after the counter). Property: " + PROPKEY_alarm_DeadlockCountWaitForDetailsMaxSec);
+				else if (waitedSec > 0)
+					_logger.info("DeadlockCount alarm: raising after " + waitedSec + " seconds, " + (_deadlockAlarmDetails.getTotal() > 0 ? "with details for " + _deadlockAlarmDetails.getTotal() + " deadlock(s)." : "without details (waited the max " + maxWaitSec + " seconds)."));
+			}
+
+			if (raise)
+			{
+				_deadlockAlarmRaised    = true;
+				_deadlockAlarmHoldSince = -1;
+
 				AlarmEvent ae = new AlarmEventDeadlock(cm, threshold, movingAverageInMinutes, deadlockCount, movingAvgDeadlockCount);
 				final DeadlockAlarmDetails details  = _deadlockAlarmDetails;
 				final String               baseDesc = ae.getDescription();
-				final boolean              cmDeadlocksActive = cmDeadlocks != null && cmDeadlocks.isActive();
 				ae.setAlarmDescriptionProvider(cm, new AlarmDescriptionProvider()
 				{
 					// Called on RAISE/RE-RAISE/CANCEL, so the graphs (and on CANCEL the counters) are from the CURRENT data
@@ -2024,10 +2051,12 @@ extends CmSummaryAbstract
 
 				alarmHandler.addAlarm( ae );
 			}
-			else
+			else if ( ! holding )
 			{
 				// The alarm will be cancelled: its provider keeps the old list, the next alarm starts with a new one
-				_deadlockAlarmDetails = new DeadlockAlarmDetails();
+				_deadlockAlarmDetails   = new DeadlockAlarmDetails();
+				_deadlockAlarmRaised    = false;
+				_deadlockAlarmHoldSince = -1;
 			}
 		}
 
@@ -2298,6 +2327,8 @@ extends CmSummaryAbstract
 
 	/** Deadlocks (read by CmDeadlocks) collected while a deadlock alarm is active. A new object when the alarm condition is false, so a cancelled alarm keeps its own. */
 	private DeadlockAlarmDetails _deadlockAlarmDetails = new DeadlockAlarmDetails();
+	private boolean _deadlockAlarmRaised    = false; // the DeadlockCount alarm is raised (RE-RAISE, no hold)
+	private long    _deadlockAlarmHoldSince = -1;    // holding the first raise until CmDeadlocks has the details, since this time (-1 = not holding)
 
 	/**
 	 * The deadlocks of one deadlock alarm, and how they are shown in the alarm:
@@ -2314,6 +2345,11 @@ extends CmSummaryAbstract
 
 		private final List<Deadlock> _list = new ArrayList<>(); // newest last
 		private int _total;
+
+		synchronized int getTotal()
+		{
+			return _total;
+		}
 
 		synchronized void add(Deadlock d)
 		{
@@ -2471,6 +2507,10 @@ extends CmSummaryAbstract
 
 	public static final String  PROPKEY_alarm_DeadlockCountMovingAverageMinutes = CM_NAME + ".alarm.system.if.deadlockCount.movingAverageInMinutes";
 	public static final int     DEFAULT_alarm_DeadlockCountMovingAverageMinutes = 10;
+	
+	public static final String  PROPKEY_alarm_DeadlockCountWaitForDetailsMaxSec = CM_NAME + ".alarm.system.if.deadlockCount.waitForDetails.maxSeconds";
+	
+	public static final int     DEFAULT_alarm_DeadlockCountWaitForDetailsMaxSec = 180;
 
 	public static final String  PROPKEY_alarm_oldestOpenTranInSec               = CM_NAME + ".alarm.system.if.oldestOpenTranInSec.gt";
 	public static final int     DEFAULT_alarm_oldestOpenTranInSec               = 60;
@@ -2519,6 +2559,7 @@ extends CmSummaryAbstract
 		list.add(new CmSettingsHelper("LockWaits TimeThreshold",                         PROPKEY_alarm_LockWaitsThresholdSec            , Integer.class, conf.getIntProperty   (PROPKEY_alarm_LockWaitsThresholdSec            , DEFAULT_alarm_LockWaitsThresholdSec            ), DEFAULT_alarm_LockWaitsThresholdSec            , "Number of seconds before we start to count 'LockWaits', which makes it a threshold input to when 'LockWaits' will fire." ));
 		list.add(new CmSettingsHelper("DeadlockCount",                    isAlarmSwitch, PROPKEY_alarm_DeadlockCount                    , Double .class, conf.getDoubleProperty(PROPKEY_alarm_DeadlockCount                    , DEFAULT_alarm_DeadlockCount                    ), DEFAULT_alarm_DeadlockCount                    , "If 'DeadlockCount' (Number of Deadlocks in last sample) is greater than ## then send 'AlarmEventDeadlockAlarm'." ));
 		list.add(new CmSettingsHelper("DeadlockCount MovingAverageInMinutes",            PROPKEY_alarm_DeadlockCountMovingAverageMinutes, Integer.class, conf.getIntProperty   (PROPKEY_alarm_DeadlockCountMovingAverageMinutes, DEFAULT_alarm_DeadlockCountMovingAverageMinutes), DEFAULT_alarm_DeadlockCountMovingAverageMinutes, "Number of minutes for a Moving Average, when calculating above 'DeadlockCount'. 0=No-Moving-Average (just use the last sampled counter value" ));
+		list.add(new CmSettingsHelper("DeadlockCount WaitForDetailsMaxSeconds",         PROPKEY_alarm_DeadlockCountWaitForDetailsMaxSec, Integer.class, conf.getIntProperty   (PROPKEY_alarm_DeadlockCountWaitForDetailsMaxSec, DEFAULT_alarm_DeadlockCountWaitForDetailsMaxSec), DEFAULT_alarm_DeadlockCountWaitForDetailsMaxSec, "Hold the first raise of 'DeadlockCount' for up to ## seconds, until CmDeadlocks has the details (objects, statements, timeline picture): SQL Server writes them to 'system_health' up to 2 minutes after the counter. 0 = raise at once (without details). Not used when CmDeadlocks is not active." ));
 		list.add(new CmSettingsHelper("oldestOpenTranInSec",              isAlarmSwitch, PROPKEY_alarm_oldestOpenTranInSec              , Integer.class, conf.getIntProperty   (PROPKEY_alarm_oldestOpenTranInSec              , DEFAULT_alarm_oldestOpenTranInSec              ), DEFAULT_alarm_oldestOpenTranInSec              , "If 'oldestOpenTranInSec' is greater than ## then send 'AlarmEventLongRunningTransaction'." ));
 		list.add(new CmSettingsHelper("oldestOpenTranInSec SkipTranName",                PROPKEY_alarm_oldestOpenTranInSecSkipTranName  , String .class, conf.getProperty      (PROPKEY_alarm_oldestOpenTranInSecSkipTranName  , DEFAULT_alarm_oldestOpenTranInSecSkipTranName  ), DEFAULT_alarm_oldestOpenTranInSecSkipTranName  , "If 'oldestOpenTranInSec' is true; then we can filter out transaction names using a Regular expression... if (tranName.matches('regexp'))... This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("oldestOpenTranInSec SkipDbname",                  PROPKEY_alarm_oldestOpenTranInSecSkipDbname    , String .class, conf.getProperty      (PROPKEY_alarm_oldestOpenTranInSecSkipDbname    , DEFAULT_alarm_oldestOpenTranInSecSkipDbname    ), DEFAULT_alarm_oldestOpenTranInSecSkipDbname    , "If 'oldestOpenTranInSec' is true; then we can filter out transaction names using a Regular expression... if (dbname.matches('regexp'))...   This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));

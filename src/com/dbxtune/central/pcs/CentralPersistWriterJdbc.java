@@ -2293,6 +2293,29 @@ extends CentralPersistWriterBase
 			internalDbUpgradeDdlExec(conn, step, sql);
 		}
 
+		if (fromDbVersion <= 21)
+		{
+			// Add column 'alarmAction' (ALARM or REPORT) to tables ALARM_ACTIVE, ALARM_HISTORY in all schemas (DB version 22)
+			step = 24;
+			String[] ignoreDupCol = IGNORE_SQLSTATE_DUPLICATE_COLUMN;
+
+			Set<String> schemaSet = DbUtils.getSchemaNames(conn);
+			String alarmActiveTabName  = getTableName(conn, null, Table.ALARM_ACTIVE , null, false);
+			String alarmHistoryTabName = getTableName(conn, null, Table.ALARM_HISTORY, null, false);
+
+			for (String schemaName : schemaSet)
+			{
+				for (String tabName : new String[] {alarmActiveTabName, alarmHistoryTabName})
+				{
+					if (DbUtils.checkIfTableExists(conn, null, schemaName, tabName))
+					{
+						sql = "alter table " + lq+schemaName+rq + "." + lq+tabName+rq + " add ( " + lq + "alarmAction" + rq + " varchar(10) null ) ";
+						internalDbUpgradeDdlExec(conn, step, sql, ignoreDupCol);
+					}
+				}
+			}
+		}
+
 		_logger.info("End - Internal Upgrade of Dbx Central database tables from version '" + fromDbVersion + "' to version '" + toDbVersion + "'.");
 		return toDbVersion;
 	}
@@ -3113,6 +3136,7 @@ extends CentralPersistWriterBase
 					sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription() )); // "lastExtendedDescription"     // 24 /*HTML or Normal???*/
 					sbSql.append(", ").append(safeStr( ae.getAlarmOptions()               )); // "alarmOptions"                // 25
 					sbSql.append(", ").append(safeStr( ae.getCancelDescription()          )); // "cancelDescription"           // 26
+					sbSql.append(", ").append(safeStr( ae.getAlarmAction()                )); // "alarmAction"                 // 27
 					sbSql.append(")");
 
 					sql = sbSql.toString();
@@ -3236,6 +3260,7 @@ extends CentralPersistWriterBase
 						sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription() ));  // "lastExtendedDescription"     // 28 /*HTML or Normal???*/
 						sbSql.append(", ").append(safeStr( ae.getAlarmOptions()               ));  // "alarmOptions"                // 29
 						sbSql.append(", ").append(safeStr( ae.getCancelDescription()          ));  // "cancelDescription"           // 30
+						sbSql.append(", ").append(safeStr( ae.getAlarmAction()                ));  // "alarmAction"                 // 31
 						sbSql.append(")");
 
 						sql = sbSql.toString();

@@ -335,6 +335,9 @@ public class PersistContainer
 	public void addActiveAlarms(List<AlarmEvent> alarmList)
 	{
 		_activeAlarmList = new ArrayList<>(alarmList);
+
+		// '<AlarmEventClass>.action=LOG' = only in the errorlog: not stored as active alarm and not sent to DbxCentral
+		_activeAlarmList.removeIf(ae -> ae.getAction() == AlarmEvent.Action.LOG);
 	}
 
 	/**
@@ -657,6 +660,7 @@ public class PersistContainer
 					gen.writeStringField("reRaiseExtendedDescription" , toString( sendExtendedAlarmDescAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() ));
 					gen.writeStringField("alarmOptions"               , toString( ae.getAlarmOptions()               ));
 					gen.writeStringField("cancelDescription"          , toString( ae.getCancelDescription()          ));
+					gen.writeStringField("alarmAction"                , ae.getAction().toString()); // ALARM or REPORT (property '<AlarmEventClass>.action')
 				gen.writeEndObject();
 			}
 			gen.writeEndArray();
@@ -710,6 +714,7 @@ public class PersistContainer
 					gen.writeStringField("reRaiseExtendedDescription" , toString( sendExtendedAlarmDescAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() ));
 					gen.writeStringField("alarmOptions"               , toString( ae.getAlarmOptions()               ));
 					gen.writeStringField("cancelDescription"          , toString( ae.getCancelDescription()          ));
+					gen.writeStringField("alarmAction"                , ae.getAction().toString()); // ALARM or REPORT (property '<AlarmEventClass>.action')
 				gen.writeEndObject();
 			}
 			gen.writeEndArray();

@@ -2947,8 +2947,10 @@ extends CountersModel
 			Double compilationsPerSec = (rowId == -1) ? null : ((Number) newSample.getValueAt(rowId, calculated_value_pos)).doubleValue();
 			_literalSqlCompilationsPerSec = compilationsPerSec;
 
-			double compilationsThreshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_LiteralSqlCompilations, DEFAULT_alarm_LiteralSqlCompilations);
-			int    planCountThreshold    = Configuration.getCombinedConfiguration().getIntProperty   (PROPKEY_alarm_LiteralSqlPlanCount,    DEFAULT_alarm_LiteralSqlPlanCount);
+			double  compilationsThreshold = Configuration.getCombinedConfiguration().getDoubleProperty (PROPKEY_alarm_LiteralSqlCompilations,          DEFAULT_alarm_LiteralSqlCompilations);
+			int     planCountThreshold    = Configuration.getCombinedConfiguration().getIntProperty    (PROPKEY_alarm_LiteralSqlPlanCount,             DEFAULT_alarm_LiteralSqlPlanCount);
+			int     sqlTextMaxLen         = Configuration.getCombinedConfiguration().getIntProperty    (PROPKEY_alarm_LiteralSqlSqlTextMaxLen,         DEFAULT_alarm_LiteralSqlSqlTextMaxLen);
+			boolean sqlTextNoNewLines     = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_alarm_LiteralSqlSqlTextRemoveNewLines, DEFAULT_alarm_LiteralSqlSqlTextRemoveNewLines);
 
 			DbxConnection conn = getCounterController().getMonConnection();
 			if (compilationsPerSec != null && compilationsPerSec > compilationsThreshold && conn != null && ! _literalSqlLookupDisabled)
@@ -2956,7 +2958,11 @@ extends CountersModel
 				// NOTE: Parameters (not literals), so this statement does not pollute the plan cache itself
 				String sql = ""
 					+ "WITH x AS ( /* " + getName() + ": LiteralSql */ \n"
-					+ "    SELECT qs.query_hash, qs.sql_handle, qs.plan_handle, qs.statement_start_offset, qs.statement_end_offset \n"
+					+ "    SELECT qs.query_hash \n"
+					+ "          ,qs.sql_handle \n"
+					+ "          ,qs.plan_handle \n"
+					+ "          ,qs.statement_start_offset \n"
+					+ "          ,qs.statement_end_offset \n"
 					+ "          ,plan_count = COUNT(*)                OVER (PARTITION BY qs.query_hash) \n"
 					+ "          ,exec_count = SUM(qs.execution_count) OVER (PARTITION BY qs.query_hash) \n"
 					+ "          ,rn         = ROW_NUMBER()            OVER (PARTITION BY qs.query_hash ORDER BY qs.creation_time DESC) \n"
@@ -2968,7 +2974,7 @@ extends CountersModel
 					+ "    ,x.plan_count \n"
 					+ "    ,x.exec_count \n"
 					+ "    ,dbname     = (SELECT ISNULL(db_name(CONVERT(int, pa.value)), CONVERT(nvarchar(10), pa.value)) FROM sys.dm_exec_plan_attributes(x.plan_handle) pa WHERE pa.attribute = N'dbid') \n"
-					+ "    ,SqlText    = LEFT(SUBSTRING(t.text, (x.statement_start_offset/2)+1, ((CASE WHEN x.statement_end_offset = -1 THEN DATALENGTH(t.text) ELSE x.statement_end_offset END - x.statement_start_offset)/2) + 1), 500) \n"
+					+ "    ,SqlText    = LEFT(SUBSTRING(t.text, (x.statement_start_offset/2)+1, ((CASE WHEN x.statement_end_offset = -1 THEN DATALENGTH(t.text) ELSE x.statement_end_offset END - x.statement_start_offset)/2) + 1), " + Math.max(100, sqlTextMaxLen) + ") \n"
 					+ "FROM x \n"
 					+ "OUTER APPLY sys.dm_exec_sql_text(x.sql_handle) t \n"
 					+ "WHERE x.rn = 1 \n"
@@ -2994,7 +3000,17 @@ extends CountersModel
 					try (ResultSet rs = pstmnt.executeQuery())
 					{
 						while(rs.next())
-							rows.add(new LiteralSqlRow(rs.getString(1), rs.getInt(2), rs.getLong(3), rs.getString(4), rs.getString(5)));
+						{
+							rows.add(
+								new LiteralSqlRow(
+									rs.getString  (1)    // query_hash
+									, rs.getInt   (2)    // plan_count
+									, rs.getLong  (3)    // exec_count
+									, rs.getString(4)    // dbname
+									, sqlTextNoNewLines ? StringUtil.removeAllNewLines(rs.getString(5), " ") : rs.getString(5) // SqlText
+								)
+							);
+						}
 					}
 					_literalSqlRows = rows;
 
@@ -3273,9 +3289,7 @@ extends CountersModel
 
 			if (rows != null && ! rows.isEmpty())
 			{
-				LiteralSqlRow top = rows.get(0);
 				double compilationsPerSec = _literalSqlCompilationsPerSec == null ? -1 : _literalSqlCompilationsPerSec;
-				String exampleSql = StringUtil.truncate(StringUtil.removeAllNewLines(top.sqlText, " "), 200, true, null);
 
 				// Extended description: all 'query_hash' over the threshold (top 5), from when the alarm was (re)raised
 				StringBuilder txt  = new StringBuilder();
@@ -3292,7 +3306,7 @@ extends CountersModel
 						.append("<td>").append(row.planCount).append("</td>")
 						.append("<td>").append(row.execCount).append("</td>")
 						.append("<td>").append(StringEscapeUtils.escapeHtml4(row.dbname)).append("</td>")
-						.append("<td><code>").append(StringEscapeUtils.escapeHtml4(row.sqlText)).append("</code></td>")
+						.append("<td><code style='white-space:pre-wrap;'>").append(StringEscapeUtils.escapeHtml4(row.sqlText)).append("</code></td>")
 						.append("</tr>\n");
 				}
 				html.append("</table>\n");
@@ -3304,52 +3318,71 @@ extends CountersModel
 				txt .append("\n").append(advice).append("\n");
 				html.append("<br>").append(advice).append("<br>\n");
 
-				AlarmEvent ae = new AlarmEventLiteralSql(cm, threshold, top.planCount, top.queryHash, top.dbname, compilationsPerSec, exampleSql);
-
 				final String raiseText = txt.toString();
 				final String raiseHtml = html.toString();
 
-				// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
-				ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+				// One alarm per statement (dbname/query_hash), so the Daily Summary Report lists each statement and how often it was seen
+				for (LiteralSqlRow row : rows)
 				{
-					// Called on RAISE/RE-RAISE/CANCEL: the extended description is from when it was (re)raised
-					@Override
-					public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+					AlarmEvent ae = new AlarmEventLiteralSql(cm, threshold, row.planCount, row.queryHash, row.dbname, compilationsPerSec, row.sqlText); // the full text is in the extended description
+					final String alarmQueryHash = row.queryHash;
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
 					{
-						alarmEvent.setExtendedDescription(raiseText, raiseHtml);
-
-						// Set CANCEL message (values that was found AFTER last raise/re-raise event)
-						if (AlarmPhase.CANCEL.equals(phase))
+						// Called on RAISE/RE-RAISE/CANCEL: the extended description is from when it was (re)raised
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
 						{
-							List<LiteralSqlRow> rowsNow = _literalSqlRows;
-							Integer planCountNow = (rowsNow == null || rowsNow.isEmpty()) ? 0 : rowsNow.get(0).planCount;
-							alarmEvent.setCancelDescription(getAlarmCancelText("Max plans with the same query_hash", planCountNow));
+							alarmEvent.setExtendedDescription(raiseText, raiseHtml);
+
+							// Set CANCEL message (values that was found AFTER last raise/re-raise event): this query_hash now (0 = not over the threshold, or no lookup)
+							if (AlarmPhase.CANCEL.equals(phase))
+							{
+								int planCountNow = 0;
+								List<LiteralSqlRow> rowsNow = _literalSqlRows;
+								if (rowsNow != null)
+								{
+									for (LiteralSqlRow rowNow : rowsNow)
+									{
+										if (alarmQueryHash.equals(rowNow.queryHash))
+										{
+											planCountNow = rowNow.planCount;
+										}
+									}
+								}
+								alarmEvent.setCancelDescription(getAlarmCancelText("New plans with query_hash " + alarmQueryHash, planCountNow));
+							}
 						}
-					}
-				});
+					});
 
-				// Information about how to disable this alarm
-				ae.createAlarmOptionsMessage(this, "LiteralSql");
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "LiteralSql");
 
-				alarmHandler.addAlarm( ae );
+					alarmHandler.addAlarm( ae );
+				}
 			}
 		}
 	}
 
-	public static final String  PROPKEY_alarm_LiteralSqlPlanCount    = CM_NAME + ".alarm.system.if.LiteralSql.planCount.gt";
-	public static final int     DEFAULT_alarm_LiteralSqlPlanCount    = 50;
-	public static final String  PROPKEY_alarm_LiteralSqlCompilations = CM_NAME + ".alarm.system.if.LiteralSql.compilations.gt";
-	public static final double  DEFAULT_alarm_LiteralSqlCompilations = 5;
+	public static final String  PROPKEY_alarm_LiteralSqlPlanCount             = CM_NAME + ".alarm.system.if.LiteralSql.planCount.gt";
+	public static final int     DEFAULT_alarm_LiteralSqlPlanCount             = 50;
+	public static final String  PROPKEY_alarm_LiteralSqlCompilations          = CM_NAME + ".alarm.system.if.LiteralSql.compilations.gt";
+	public static final double  DEFAULT_alarm_LiteralSqlCompilations          = 5;
+	public static final String  PROPKEY_alarm_LiteralSqlSqlTextMaxLen         = CM_NAME + ".alarm.system.if.LiteralSql.sqlText.maxLen";
+	public static final int     DEFAULT_alarm_LiteralSqlSqlTextMaxLen         = 2048;
+	public static final String  PROPKEY_alarm_LiteralSqlSqlTextRemoveNewLines = CM_NAME + ".alarm.system.if.LiteralSql.sqlText.removeNewLines";
+	public static final boolean DEFAULT_alarm_LiteralSqlSqlTextRemoveNewLines = true;
 
-	public static final String  PROPKEY_alarm_FreeListStalls       = CM_NAME + ".alarm.system.if.FreeListStalls.gt";
-	public static final double  DEFAULT_alarm_FreeListStalls       = 0.5;
-	public static final String  PROPKEY_alarm_FreeListStalls_delay = CM_NAME + ".alarm.system.if.FreeListStalls.raise.delay";
-	public static final int     DEFAULT_alarm_FreeListStalls_delay = 120; // 2 minutes
+	public static final String  PROPKEY_alarm_FreeListStalls                  = CM_NAME + ".alarm.system.if.FreeListStalls.gt";
+	public static final double  DEFAULT_alarm_FreeListStalls                  = 0.5;
+	public static final String  PROPKEY_alarm_FreeListStalls_delay            = CM_NAME + ".alarm.system.if.FreeListStalls.raise.delay";
+	public static final int     DEFAULT_alarm_FreeListStalls_delay            = 120; // 2 minutes
 
-	public static final String  PROPKEY_alarm_LazyWrites           = CM_NAME + ".alarm.system.if.LazyWrites.gt";
-	public static final double  DEFAULT_alarm_LazyWrites           = 20;
-	public static final String  PROPKEY_alarm_LazyWrites_delay     = CM_NAME + ".alarm.system.if.LazyWrites.raise.delay";
-	public static final int     DEFAULT_alarm_LazyWrites_delay     = 180; // 3 minutes
+	public static final String  PROPKEY_alarm_LazyWrites                      = CM_NAME + ".alarm.system.if.LazyWrites.gt";
+	public static final double  DEFAULT_alarm_LazyWrites                      = 20;
+	public static final String  PROPKEY_alarm_LazyWrites_delay                = CM_NAME + ".alarm.system.if.LazyWrites.raise.delay";
+	public static final int     DEFAULT_alarm_LazyWrites_delay                = 180; // 3 minutes
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -3359,12 +3392,14 @@ extends CountersModel
 		
 		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
 		
-		list.add(new CmSettingsHelper("FreeListStalls",            isAlarmSwitch, PROPKEY_alarm_FreeListStalls        , Double .class, conf.getDoubleProperty(PROPKEY_alarm_FreeListStalls        , DEFAULT_alarm_FreeListStalls        ), DEFAULT_alarm_FreeListStalls        , "If 'Free list stalls/sec' is greater than 0.5 then send 'AlarmEventPerfCounterWarning'." ));
-		list.add(new CmSettingsHelper("FreeListStalls RaiseDelay",                PROPKEY_alarm_FreeListStalls_delay  , Integer.class, conf.getIntProperty   (PROPKEY_alarm_FreeListStalls_delay  , DEFAULT_alarm_FreeListStalls_delay  ), DEFAULT_alarm_FreeListStalls_delay  , "If 'Free list stalls/sec' is true and has been so for 2 minutes then proceed with the Alarm Raise." ));
-		list.add(new CmSettingsHelper("LazyWrites",                isAlarmSwitch, PROPKEY_alarm_LazyWrites            , Double.class , conf.getDoubleProperty(PROPKEY_alarm_LazyWrites            , DEFAULT_alarm_LazyWrites            ), DEFAULT_alarm_LazyWrites            , "If 'Lazy writes/sec' is greater than 20 then send 'AlarmEventPerfCounterWarning'." ));
-		list.add(new CmSettingsHelper("LazyWrites RaiseDelay",                    PROPKEY_alarm_LazyWrites_delay      , Integer.class, conf.getIntProperty   (PROPKEY_alarm_LazyWrites_delay      , DEFAULT_alarm_LazyWrites_delay      ), DEFAULT_alarm_LazyWrites_delay      , "If 'Lazy writes/sec' is true and has been so for 3 minutes then proceed with the Alarm Raise." ));
-		list.add(new CmSettingsHelper("LiteralSql",                isAlarmSwitch, PROPKEY_alarm_LiteralSqlPlanCount   , Integer.class, conf.getIntProperty   (PROPKEY_alarm_LiteralSqlPlanCount   , DEFAULT_alarm_LiteralSqlPlanCount   ), DEFAULT_alarm_LiteralSqlPlanCount   , "If more than ## plans with the same 'query_hash' (statements that only differ in their literals) was created since the previous sample then send 'AlarmEventLiteralSql'." ));
-		list.add(new CmSettingsHelper("LiteralSql Compilations",                  PROPKEY_alarm_LiteralSqlCompilations, Double .class, conf.getDoubleProperty(PROPKEY_alarm_LiteralSqlCompilations, DEFAULT_alarm_LiteralSqlCompilations), DEFAULT_alarm_LiteralSqlCompilations, "Only look for 'LiteralSql' (scan the plan cache) when 'SQL Compilations/sec' is greater than ##." ));
+		list.add(new CmSettingsHelper("FreeListStalls",            isAlarmSwitch, PROPKEY_alarm_FreeListStalls                 , Double .class, conf.getDoubleProperty (PROPKEY_alarm_FreeListStalls                 , DEFAULT_alarm_FreeListStalls                 ), DEFAULT_alarm_FreeListStalls                 , "If 'Free list stalls/sec' is greater than 0.5 then send 'AlarmEventPerfCounterWarning'." ));
+		list.add(new CmSettingsHelper("FreeListStalls RaiseDelay",                PROPKEY_alarm_FreeListStalls_delay           , Integer.class, conf.getIntProperty    (PROPKEY_alarm_FreeListStalls_delay           , DEFAULT_alarm_FreeListStalls_delay           ), DEFAULT_alarm_FreeListStalls_delay           , "If 'Free list stalls/sec' is true and has been so for 2 minutes then proceed with the Alarm Raise." ));
+		list.add(new CmSettingsHelper("LazyWrites",                isAlarmSwitch, PROPKEY_alarm_LazyWrites                     , Double.class , conf.getDoubleProperty (PROPKEY_alarm_LazyWrites                     , DEFAULT_alarm_LazyWrites                     ), DEFAULT_alarm_LazyWrites                     , "If 'Lazy writes/sec' is greater than 20 then send 'AlarmEventPerfCounterWarning'." ));
+		list.add(new CmSettingsHelper("LazyWrites RaiseDelay",                    PROPKEY_alarm_LazyWrites_delay               , Integer.class, conf.getIntProperty    (PROPKEY_alarm_LazyWrites_delay               , DEFAULT_alarm_LazyWrites_delay               ), DEFAULT_alarm_LazyWrites_delay               , "If 'Lazy writes/sec' is true and has been so for 3 minutes then proceed with the Alarm Raise." ));
+		list.add(new CmSettingsHelper("LiteralSql",                isAlarmSwitch, PROPKEY_alarm_LiteralSqlPlanCount            , Integer.class, conf.getIntProperty    (PROPKEY_alarm_LiteralSqlPlanCount            , DEFAULT_alarm_LiteralSqlPlanCount            ), DEFAULT_alarm_LiteralSqlPlanCount            , "If more than ## plans with the same 'query_hash' (statements that only differ in their literals) was created since the previous sample then send 'AlarmEventLiteralSql'." ));
+		list.add(new CmSettingsHelper("LiteralSql Compilations",                  PROPKEY_alarm_LiteralSqlCompilations         , Double .class, conf.getDoubleProperty (PROPKEY_alarm_LiteralSqlCompilations         , DEFAULT_alarm_LiteralSqlCompilations         ), DEFAULT_alarm_LiteralSqlCompilations         , "Only look for 'LiteralSql' (scan the plan cache) when 'SQL Compilations/sec' is greater than ##." ));
+		list.add(new CmSettingsHelper("LiteralSql SqlText MaxLen",                PROPKEY_alarm_LiteralSqlSqlTextMaxLen        , Integer.class, conf.getIntProperty    (PROPKEY_alarm_LiteralSqlSqlTextMaxLen        , DEFAULT_alarm_LiteralSqlSqlTextMaxLen        ), DEFAULT_alarm_LiteralSqlSqlTextMaxLen        , "If 'LiteralSql' is true; Max length of the example SQL Text (the statements often differ at the end, in the WHERE clause). The full text is in the extended description; the alarm description (max 512 chars) holds the start and the end of it." ));
+		list.add(new CmSettingsHelper("LiteralSql SqlText RemoveNewLines",        PROPKEY_alarm_LiteralSqlSqlTextRemoveNewLines, Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_LiteralSqlSqlTextRemoveNewLines, DEFAULT_alarm_LiteralSqlSqlTextRemoveNewLines), DEFAULT_alarm_LiteralSqlSqlTextRemoveNewLines, "If 'LiteralSql' is true; Replace newlines in the example SQL Text with a space." ));
 
 		return list;
 	}

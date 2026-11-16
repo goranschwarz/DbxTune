@@ -1171,6 +1171,7 @@ public abstract class PersistWriterBase
 				sbSql.append("   ," + fill(lq + "lastExtendedDescription"    + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true ) + "\n");
 				sbSql.append("   ," + fill(lq + "alarmOptions"               + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true ) + "\n");
 				sbSql.append("   ," + fill(lq + "cancelDescription"          + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true ) + "\n");
+				sbSql.append("   ," + fill(lq + "alarmAction"                + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   10),20) + " " + getNullable(true ) + "\n"); // ALARM or REPORT (property '<AlarmEventClass>.action')
 				sbSql.append("\n");
 				sbSql.append("   ,PRIMARY KEY (" + lq + "alarmClass" + rq + ", " + lq + "serviceType" + rq + ", " + lq + "serviceName" + rq + ", " + lq + "serviceInfo" + rq + ", " + lq + "extraInfo" + rq + ", " + lq + "severity" + rq + ")\n");
 				sbSql.append(") \n");
@@ -1213,6 +1214,7 @@ public abstract class PersistWriterBase
 				sbSql.append("   ," + fill(lq + "lastExtendedDescription"    + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true ) + "\n");
 				sbSql.append("   ," + fill(lq + "alarmOptions"               + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true ) + "\n");
 				sbSql.append("   ," + fill(lq + "cancelDescription"          + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true ) + "\n");
+				sbSql.append("   ," + fill(lq + "alarmAction"                + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   10),20) + " " + getNullable(true ) + "\n"); // ALARM or REPORT (property '<AlarmEventClass>.action')
 				sbSql.append("\n");
 				sbSql.append("   ,PRIMARY KEY (" + lq + "eventTime" + rq + ", " + lq + "action" + rq + ", " + lq + "alarmClass" + rq + ", " + lq + "serviceType" + rq + ", " + lq + "serviceName" + rq + ", " + lq + "serviceInfo" + rq + ", " + lq + "extraInfo" + rq + ", " + lq + "severity" + rq + ")\n");
 				sbSql.append(") \n");
@@ -1706,11 +1708,12 @@ public abstract class PersistWriterBase
 			sbSql.append(lq).append("extendedDescription"        ).append(rq).append(", "); // 23
 			sbSql.append(lq).append("lastExtendedDescription"    ).append(rq).append(", "); // 24
 			sbSql.append(lq).append("alarmOptions"               ).append(rq).append(", "); // 25
-			sbSql.append(lq).append("cancelDescription"          ).append(rq).append("");   // 26
+			sbSql.append(lq).append("cancelDescription"          ).append(rq).append(", "); // 26
+			sbSql.append(lq).append("alarmAction"                ).append(rq).append("");   // 27
 			sbSql.append(") \n");
 			if (addPrepStatementQuestionMarks)
-				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
-				//                   1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26
+				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+				//                   1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27
 		}
 		else if (type == ALARM_HISTORY)
 		{
@@ -1745,11 +1748,12 @@ public abstract class PersistWriterBase
 			sbSql.append(lq).append("extendedDescription"        ).append(rq).append(", "); // 27
 			sbSql.append(lq).append("lastExtendedDescription"    ).append(rq).append(", "); // 28
 			sbSql.append(lq).append("alarmOptions"               ).append(rq).append(", "); // 29
-			sbSql.append(lq).append("cancelDescription"          ).append(rq).append("");   // 30
+			sbSql.append(lq).append("cancelDescription"          ).append(rq).append(", "); // 30
+			sbSql.append(lq).append("alarmAction"                ).append(rq).append("");   // 31
 			sbSql.append(") \n");
 			if (addPrepStatementQuestionMarks)
-				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
-				//                   1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30
+				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+				//                   1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
 		}
 		else if (type == ABS || type == DIFF || type == RATE)
 		{

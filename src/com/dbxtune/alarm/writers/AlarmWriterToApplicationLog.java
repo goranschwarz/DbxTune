@@ -80,7 +80,14 @@ extends AlarmWriterAbstract
 	{
 		if (alarmEvent == null)
 			return;
-		_logger.info("AlarmHandler: -----RAISE-----: " + alarmEvent.getMessage());
+
+		// '<AlarmEventClass>.action': say why no mail/Teams/... came
+		switch (alarmEvent.getAction())
+		{
+			case LOG:    _logger.warn("AlarmHandler: -----RAISE-----: (action=LOG: only logged, not sent and not in the alarm history) " + alarmEvent.getMessage()); break;
+			case REPORT: _logger.info("AlarmHandler: -----RAISE-----: (action=REPORT: only in the alarm history and the Daily Summary Report, not sent) " + alarmEvent.getMessage()); break;
+			default:     _logger.info("AlarmHandler: -----RAISE-----: " + alarmEvent.getMessage());
+		}
 	}
 
 	@Override
@@ -99,7 +106,13 @@ extends AlarmWriterAbstract
 	{
 		if (alarmEvent == null)
 			return;
-		_logger.info("AlarmHandler: -----CANCEL----: " + alarmEvent.getMessage());
+
+		switch (alarmEvent.getAction())
+		{
+			case LOG:    _logger.warn("AlarmHandler: -----CANCEL-----: (action=LOG: only logged, not sent and not in the alarm history) " + alarmEvent.getMessage()); break;
+			case REPORT: _logger.info("AlarmHandler: -----CANCEL-----: (action=REPORT: only in the alarm history and the Daily Summary Report, not sent) " + alarmEvent.getMessage()); break;
+			default:     _logger.info("AlarmHandler: -----CANCEL-----: " + alarmEvent.getMessage());
+		}
 	}
 
 	@Override 

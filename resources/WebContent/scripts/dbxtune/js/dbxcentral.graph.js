@@ -1435,6 +1435,9 @@ function alarmPanelLoadHistory(ts, historyStart)
 			// Filter to servers shown in this graph page, then cache the result
 			if (Array.isArray(jsonResp) && _serverList && _serverList.length > 0)
 				jsonResp = jsonResp.filter(function(e) { return _serverList.indexOf(e.srvName) >= 0; });
+			// alarmAction=REPORT: only recorded (Alarm History, Daily Summary Report), not an active alarm (null = older collector = ALARM)
+			if (Array.isArray(jsonResp))
+				jsonResp = jsonResp.filter(function(e) { return !e.alarmAction || e.alarmAction === 'ALARM'; });
 			_alarmHistoryCache    = Array.isArray(jsonResp) ? jsonResp : [];
 			_alarmHistoryCacheKey = cacheKey;
 			_alarmHistoryComputeAndRender(_alarmHistoryCache, mTs);
@@ -1551,6 +1554,8 @@ function renderAlarmTimelineMarkers(oldestTsStr, newestTsStr, momentsArray)
 			// Filter to servers currently shown in this graph page
 			if (_serverList && _serverList.length > 0)
 				alarms = alarms.filter(function(a) { return _serverList.indexOf(a.srvName) >= 0; });
+			// alarmAction=REPORT: only recorded, no alarm marker on the timeline (null = older collector = ALARM)
+			alarms = alarms.filter(function(a) { return !a.alarmAction || a.alarmAction === 'ALARM'; });
 			if (alarms.length === 0) return;
 
 			// Match RAISE ↔ CANCEL by alarmId (primary) or the alarm's identity (fallback):

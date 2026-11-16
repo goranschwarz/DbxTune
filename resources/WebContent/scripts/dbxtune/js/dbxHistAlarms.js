@@ -128,6 +128,11 @@ $(function()
 		"        <input type='checkbox' id='hist-alarm-show-cancel-desc' checked",
 		"               onchange='histAlarmShowCancelDescChange();'>&nbsp;Show Cancel Description",
 		"      </label>",
+		"      <label style='margin:0 0 0 6px;font-size:0.85em;cursor:pointer;white-space:nowrap;'",
+		"             title='Show the alarms that are only recorded (alarmAction=REPORT, property &lt;AlarmEventClass&gt;.action): design findings like ChattySession and LiteralSql, which are not sent and are not active alarms.'>",
+		"        <input type='checkbox' id='hist-alarm-show-report' checked",
+		"               onchange='histAlarmShowReportChange();'>&nbsp;Show REPORT alarms",
+		"      </label>",
 		"      <span id='hist-alarm-count' style='font-size:0.85em;color:#888;'></span>",
 		"    </div>",
 
@@ -198,6 +203,7 @@ $(function()
 
 	// "Show Cancel Description": remembered per browser (default: checked)
 	try { if (window.localStorage.getItem('dbxtune.histAlarms.showCancelDesc') === 'false') $('#hist-alarm-show-cancel-desc').prop('checked', false); } catch(e) {}
+	try { if (window.localStorage.getItem('dbxtune.histAlarms.showReport') === 'false') $('#hist-alarm-show-report').prop('checked', false); } catch(e) {}
 
 	// Show/hide custom date inputs
 	$('#hist-alarm-preset').on('change', function() {
@@ -315,6 +321,13 @@ function histAlarmShowCancelDescChange()
 	histAlarmRender(_histAlarmFiltered);
 }
 
+function histAlarmShowReportChange()
+{
+	var on = $('#hist-alarm-show-report').is(':checked');
+	try { window.localStorage.setItem('dbxtune.histAlarms.showReport', String(on)); } catch(e) {}
+	histAlarmApplyFilter();
+}
+
 function histAlarmDetailClose()
 {
 	$('#hist-alarm-detail-panel').hide();
@@ -380,7 +393,7 @@ function histAlarmSearch()
 
 	$.ajax({
 		url:  'api/alarm/active',
-		data: { srv: srvParam },
+		data: { srv: srvParam, includeReport: 'true' }, // the REPORT alarms are in the history too: needed to tell if they are still active
 		type: 'GET',
 		success: function(raw) {
 			try   { activeData = JSON.parse(raw); } catch(e) { activeData = []; }
@@ -399,7 +412,11 @@ function histAlarmApplyFilter()
 	var actionFilter = $('input[name="hist-alarm-action"]:checked').val() || 'RAISE';
 	var textFilter   = ($('#hist-alarm-filter').val() || '').trim();
 
-	var data = _histAlarmData;
+	// alarmAction=REPORT (only recorded, not sent): shown or not (null = older collector = ALARM)
+	var showReport = $('#hist-alarm-show-report').is(':checked');
+	var baseData   = showReport ? _histAlarmData : _histAlarmData.filter(function(e) { return !e.alarmAction || e.alarmAction === 'ALARM'; });
+
+	var data = baseData;
 
 	if (actionFilter !== 'ALL') {
 		data = data.filter(function(e) {
@@ -421,8 +438,8 @@ function histAlarmApplyFilter()
 	_histAlarmFiltered = data;
 
 	var actionTotal = (actionFilter === 'ALL')
-		? _histAlarmData.length
-		: _histAlarmData.filter(function(e) {
+		? baseData.length
+		: baseData.filter(function(e) {
 			return (e.action || '').toUpperCase() === actionFilter;
 		  }).length;
 
@@ -556,7 +573,9 @@ function histAlarmRender(data)
 			} else if (c.key === 'state') {
 				html += '<td>' + _histAlarmStateBadge(row.state) + '</td>';
 			} else if (c.key === 'alarmClass') {
-				html += '<td><strong>' + escHtml(row.alarmClass || '') + '</strong></td>';
+				html += '<td><strong>' + escHtml(row.alarmClass || '') + '</strong>'
+					+ (row.alarmAction && row.alarmAction !== 'ALARM' ? ' <span class="badge text-bg-secondary" style="font-weight:normal;" title="Only recorded (alarmAction=' + escHtml(row.alarmAction) + '): not sent, not an active alarm">' + escHtml(row.alarmAction) + '</span>' : '')
+					+ '</td>';
 			} else if (c.key === 'eventTime') {
 				var ts = row.eventTime ? moment(row.eventTime).format('YYYY-MM-DD HH:mm:ss') : '';
 				html += '<td>' + escHtml(ts) + '</td>';
@@ -614,6 +633,7 @@ function histAlarmShowDetail(idx)
 		['Category',             row.category,             false],
 		['State',                row.state,                false],
 		['Alarm Class',          row.alarmClass,           false],
+		['Alarm Action',         row.alarmAction || 'ALARM', false],
 		['Service Type',         row.serviceType,          false],
 		['Service Name',         row.serviceName,          false],
 		['CM Name (serviceInfo)',row.serviceInfo,           false],

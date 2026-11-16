@@ -80,12 +80,13 @@ extends HttpServlet
 		try
 		{
 			// Check for known input parameters
-			if (Helper.hasUnKnownParameters(req, resp, "srv", "srvName", "group", "groupOfSrv"))
+			if (Helper.hasUnKnownParameters(req, resp, "srv", "srvName", "group", "groupOfSrv", "includeReport"))
 				return;
 			
 			String srv        = Helper.getParameter(req, new String[] {"srv", "srvName"} );
 			String group      = Helper.getParameter(req, new String[] {"group"} );
 			String groupOfSrv = Helper.getParameter(req, new String[] {"groupOfSrv"} );
+			boolean includeReport = "true".equalsIgnoreCase(Helper.getParameter(req, new String[] {"includeReport"} )); // also the alarms that are only recorded (alarmAction=REPORT)
 
 			// Check that "srv" exists
 			if (StringUtil.hasValue(srv))
@@ -99,6 +100,9 @@ extends HttpServlet
 
 			// get Data
 			List<DbxAlarmActive> list = reader.getAlarmActive(srv);
+			// 'alarmAction=REPORT' (property '<AlarmEventClass>.action') is only recorded (alarm history, Daily Summary Report): not an active alarm here (null = older collector = ALARM)
+			if ( ! includeReport )
+				list.removeIf(alarm -> alarm.getAlarmAction() != null && ! "ALARM".equals(alarm.getAlarmAction()));
 
 			// Enrich each alarm with current mute state from AlarmMuteManager
 			AlarmMuteManager muteMgr = AlarmMuteManager.getInstance();

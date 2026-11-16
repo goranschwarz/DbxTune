@@ -118,6 +118,7 @@ public class ActiveAlarmSummary
 		public String  alarmId;
 		public String  fullDuration;
 		public String  description;
+		public String  alarmAction;  // ALARM or REPORT (property '<AlarmEventClass>.action'), null = older collector = ALARM
 		public boolean isMuted;
 
 		/** true = from the local AlarmHandler (real time), false = from DbxCentral (possibly stale) */
@@ -258,6 +259,9 @@ public class ActiveAlarmSummary
 		if (_skipMuted)
 			merged.removeIf(entry -> entry.isMuted);
 
+		// '<AlarmEventClass>.action=REPORT' alarms are not sent, so they are not in the summary either (as decided by the collector that raised it; null = older collector = ALARM)
+		merged.removeIf(entry -> entry.alarmAction != null && ! AlarmEvent.Action.ALARM.toString().equals(entry.alarmAction));
+
 		merged.sort(ENTRY_ORDER);
 
 		return new Result(merged, centralOk, groupName);
@@ -326,6 +330,7 @@ public class ActiveAlarmSummary
 		entry.alarmId      = alarmEvent.getAlarmId() == null ? null : alarmEvent.getAlarmId().toString();
 		entry.fullDuration = alarmEvent.getFullDuration();
 		entry.description  = alarmEvent.getDescription();
+		entry.alarmAction  = alarmEvent.getAction().toString();
 
 		// Muting is a DbxCentral side concept, the Collector knows nothing about it
 		entry.isMuted      = false;

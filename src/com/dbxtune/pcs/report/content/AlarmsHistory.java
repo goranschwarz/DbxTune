@@ -38,9 +38,14 @@ extends ReportEntryAbstract
 {
 //	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 	
+	private ResultSetTableModel _summaryRstm;
 	private ResultSetTableModel _shortRstm;
 	private ResultSetTableModel _fullRstm;
+
+	/** Above this many raise/cancel rows the flat list is collapsed (the summary is shown first anyway) */
+	private static final int SHORT_LIST_SHOW_MAX_ROWS = 30;
 	private boolean             _hasCancelDescription = false; // column 'cancelDescription' does not exist in older recordings
+	private boolean             _hasAlarmAction       = false; // column 'alarmAction' does not exist in older recordings
 //	private Exception           _problem = null;
 	
 
@@ -88,8 +93,20 @@ extends ReportEntryAbstract
 			// Get a description of this section, and column names
 			sb.append(getSectionDescriptionHtml(_shortRstm, true));
 			
+			// Summary first: one row per alarm and object, so 90 raises of the same alarm is 1 line
+			if (_summaryRstm != null && _summaryRstm.getRowCount() > 0)
+			{
+				sb.append("<b>Summary:</b> one row per alarm and object (" + _summaryRstm.getRowCount() + " rows). "
+						+ "Column 'alarmAction': <code>ALARM</code> = sent to the alarm writers (mail, Teams...), <code>REPORT</code> = only recorded here (property '&lt;AlarmEventClass&gt;.action').<br>\n");
+				sb.append(toHtmlTable(_summaryRstm));
+				sb.append("<br>\n");
+			}
+
 			sb.append("Alarm Count in period: " + _fullRstm.getRowCount() + "<br>\n");
-			sb.append(toHtmlTable(_shortRstm));
+			if (_shortRstm.getRowCount() <= SHORT_LIST_SHOW_MAX_ROWS)
+				sb.append(toHtmlTable(_shortRstm));
+			else
+				sb.append( msOutlookAlternateText(createShowHideDiv("alarmHistoryShort", false, "Show/Hide all " + _shortRstm.getRowCount() + " Alarm raise/cancel rows...", toHtmlTable(_shortRstm)), "Alarm History", null) );
 			
 //			if (isFullMessageType() && _fullRstm != null)
 			if (_fullRstm != null && isFullMessageType())
@@ -152,14 +169,35 @@ extends ReportEntryAbstract
 		String dummySql = "select * from " + PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.ALARM_HISTORY, null, true) + " where 1 = 2";
 		ResultSetTableModel dummyRstm = executeQuery(conn, dummySql, true, "metadata");
 		_hasCancelDescription = dummyRstm.hasColumnNoCase("cancelDescription");
+		_hasAlarmAction       = dummyRstm.hasColumnNoCase("alarmAction");
 
+		getAlarmsHistorySummary(conn);
 		getAlarmsHistoryShort(conn);
 		getAlarmsHistoryFull(conn);
+	}
+
+	/** One row per alarm and object (alarmClass + serviceInfo + extraInfo): how many raises, first and last */
+	public void getAlarmsHistorySummary(DbxConnection conn)
+	{
+		String schemaName = getReportingInstance().getDbmsSchemaName();
+
+		// 'action': what the collector did with the alarm: ALARM = sent, REPORT = only recorded (column 'alarmAction'; older recordings have no such column = ALARM)
+		String actionCol = _hasAlarmAction ? "coalesce(max([alarmAction]), 'ALARM')" : "cast('ALARM' as varchar(10))";
+
+		String sql = "select [alarmClass], " + actionCol + " as [alarmAction], [serviceInfo], [extraInfo], max([severity]) as [severity], count(*) as [raiseCount], min([eventTime]) as [firstRaise], max([eventTime]) as [lastRaise] \n" +
+		             "from " + PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.ALARM_HISTORY, null, true) + " \n" +
+		             "where [action] = 'RAISE' \n" +
+		             getReportPeriodSqlWhere("eventTime") +
+		             "group by [alarmClass], [serviceInfo], [extraInfo] \n" +
+		             "order by count(*) desc, min([eventTime])";
+
+		_summaryRstm = executeQuery(conn, sql, true, "Alarm History Summary");
 	}
 
 	@Override
 	public ResultSetTableModel getData(String whatData)
 	{
+		if ("summary".equals(whatData)) return _summaryRstm;
 		if ("short".equals(whatData)) return _shortRstm;
 		if ("full" .equals(whatData)) return _fullRstm;
 

@@ -24,6 +24,7 @@ package com.dbxtune.alarm.events.sqlserver;
 import com.dbxtune.Version;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.cm.CountersModel;
+import com.dbxtune.utils.StringUtil;
 
 public class AlarmEventLiteralSql
 extends AlarmEvent 
@@ -35,11 +36,12 @@ extends AlarmEvent
 	 * 
 	 * @param cm                  The CM (CmPerfCounters)
 	 * @param threshold           Number of plans with the same 'query_hash'
-	 * @param planCount           Number of plans for the top 'query_hash'
-	 * @param queryHash           The top 'query_hash' (as a hex string)
-	 * @param dbname              Database name of the example statement
+	 * @param planCount           Number of plans for this 'query_hash'
+	 * @param queryHash           The 'query_hash' (as a hex string)
+	 * @param dbname              Database name of the example statement<br>
+	 *                            extraInfo = 'dbname/query_hash': one alarm per statement
 	 * @param compilationsPerSec  'SQL Compilations/sec'
-	 * @param exampleSqlText      One of the statements (truncated)
+	 * @param exampleSqlText      One of the statements (the full text is in the extended description; here it is cut in the middle to fit the description)
 	 */
 	public AlarmEventLiteralSql(CountersModel cm, int threshold, int planCount, String queryHash, String dbname, double compilationsPerSec, String exampleSqlText)
 	{
@@ -47,13 +49,13 @@ extends AlarmEvent
 				Version.getAppName(), // serviceType
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo
-				null,                 // extraInfo
+				StringUtil.truncate(dbname + "/" + queryHash, 80, false, null), // extraInfo (max 80 in the alarm tables)
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
-				"At server '" + cm.getServerName() + "', " + planCount + " cached plans created since the last sample only differ in their literals (non-parameterized SQL). "
+				fitDescription("At server '" + cm.getServerName() + "', " + planCount + " cached plans created since the last sample only differ in their literals (non-parameterized SQL). "
 					+ "query_hash=" + queryHash + ", dbname='" + dbname + "', SQL Compilations/sec=" + compilationsPerSec + ". "
-					+ "Example: " + exampleSqlText,
+					+ "Example: ", exampleSqlText),
 				threshold
 				);
 
@@ -62,5 +64,30 @@ extends AlarmEvent
 
 		// Set the raw data carrier
 		setData(planCount);
+	}
+
+	/**
+	 * The description is max 512 chars (column 'description' in the alarm tables): cut the example SQL in the MIDDLE,
+	 * keeping the start and more of the end (statements that only differ in their literals often differ in the WHERE clause, at the end)
+	 */
+	private static String fitDescription(String prefix, String sqlText)
+	{
+		if (sqlText == null)
+			sqlText = "";
+		int room = 512 - prefix.length();
+		if (sqlText.length() <= room)
+			return prefix + sqlText;
+
+		String cut  = " ... ";
+		int    keep = Math.max(0, room - cut.length());
+		int    head = keep / 3;
+		return prefix + sqlText.substring(0, head) + cut + sqlText.substring(sqlText.length() - (keep - head));
+	}
+
+	/** A design finding to fix in the code (non-parameterized SQL), not an incident: only recorded (alarm history, Daily Summary Report). Property 'AlarmEventLiteralSql.action' overrides it. */
+	@Override
+	public Action getDefaultAction()
+	{
+		return Action.REPORT;
 	}
 }

@@ -72,9 +72,10 @@ implements ICentralPersistWriter
 	 *   <li> 19 - Add column 'LoginCount' to table 'DbxCentralUsers'</li>
 	 *   <li> 20 - Add column 'cancelDescription'                                in tables *schema*.'ALARM_ACTIVE,ALARM_HISTORY'</li>
 	 *   <li> 21 - Widen columns 'CollectorHostname' to varchar(128) and 'CollectorCurrentUrl' to varchar(255) in table 'DbxCentralSessions' (same as a new database)</li>
+	 *   <li> 22 - Add column 'alarmAction' (ALARM or REPORT, property '<AlarmEventClass>.action') in tables *schema*.'ALARM_ACTIVE,ALARM_HISTORY'</li>
 	 * </ul>
 	 */
-	public static int DBX_CENTRAL_DB_VERSION = 21;
+	public static int DBX_CENTRAL_DB_VERSION = 22;
 	
 	
 	public enum Table
@@ -647,6 +648,7 @@ implements ICentralPersistWriter
 				sbSql.append("   ," + fill(lq + "lastExtendedDescription"    + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true ) + "\n");
 				sbSql.append("   ," + fill(lq + "alarmOptions"               + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true ) + "\n");
 				sbSql.append("   ," + fill(lq + "cancelDescription"          + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true ) + "\n");
+				sbSql.append("   ," + fill(lq + "alarmAction"                + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   10),20) + " " + getNullable(true ) + "\n"); // ALARM or REPORT (null = older collector = ALARM)
 				sbSql.append("\n");
 				sbSql.append("   ,PRIMARY KEY (" + lq + "alarmClass" + rq + ", " + lq + "serviceType" + rq + ", " + lq + "serviceName" + rq + ", " + lq + "serviceInfo" + rq + ", " + lq + "extraInfo" + rq + ", " + lq + "severity" + rq + ")\n");
 				sbSql.append(") \n");
@@ -685,6 +687,7 @@ implements ICentralPersistWriter
 				sbSql.append("   ," + fill(lq + "lastExtendedDescription"    + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true ) + "\n");
 				sbSql.append("   ," + fill(lq + "alarmOptions"               + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true ) + "\n");
 				sbSql.append("   ," + fill(lq + "cancelDescription"          + rq,40) + " " + fill(getDatatype(conn, Types.CLOB         ),20) + " " + getNullable(true ) + "\n");
+				sbSql.append("   ," + fill(lq + "alarmAction"                + rq,40) + " " + fill(getDatatype(conn, Types.VARCHAR,   10),20) + " " + getNullable(true ) + "\n"); // ALARM or REPORT (null = older collector = ALARM)
 				sbSql.append("\n");
 				sbSql.append("   ,PRIMARY KEY (" + lq + "eventTime" + rq + ", " + lq + "action" + rq + ", " + lq + "alarmClass" + rq + ", " + lq + "serviceType" + rq + ", " + lq + "serviceName" + rq + ", " + lq + "serviceInfo" + rq + ", " + lq + "extraInfo" + rq + ", " + lq + "severity" + rq + ")\n");
 				sbSql.append(") \n");
@@ -1043,11 +1046,12 @@ implements ICentralPersistWriter
 			sbSql.append(lq).append("extendedDescription"        ).append(rq).append(", "); // 23
 			sbSql.append(lq).append("lastExtendedDescription"    ).append(rq).append(", "); // 24
 			sbSql.append(lq).append("alarmOptions"               ).append(rq).append(", "); // 25
-			sbSql.append(lq).append("cancelDescription"          ).append(rq).append("");   // 26
+			sbSql.append(lq).append("cancelDescription"          ).append(rq).append(", "); // 26
+			sbSql.append(lq).append("alarmAction"                ).append(rq).append("");   // 27
 			sbSql.append(") ");
 			if (addPrepStatementQuestionMarks)
-				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
-			                      // 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26
+				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+			                      // 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27
 		}
 		else if (type.equals(Table.ALARM_HISTORY))
 		{
@@ -1081,11 +1085,12 @@ implements ICentralPersistWriter
 			sbSql.append(lq).append("extendedDescription"        ).append(rq).append(", "); // 27
 			sbSql.append(lq).append("lastExtendedDescription"    ).append(rq).append(", "); // 28
 			sbSql.append(lq).append("alarmOptions"               ).append(rq).append(", "); // 29
-			sbSql.append(lq).append("cancelDescription"          ).append(rq).append("");   // 30
+			sbSql.append(lq).append("cancelDescription"          ).append(rq).append(", "); // 30
+			sbSql.append(lq).append("alarmAction"                ).append(rq).append("");   // 31
 			sbSql.append(") ");
 			if (addPrepStatementQuestionMarks)
-				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
-			                      // 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28, 29, 30
+				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+			                      // 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
 		}
 //		else if (type.equals(Table.CHART_LABELS))
 //		{

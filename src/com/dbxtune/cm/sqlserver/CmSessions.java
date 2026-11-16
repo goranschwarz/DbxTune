@@ -826,9 +826,9 @@ extends CountersModel
 							+ (StringUtil.hasValue(program) ? ", program_name='" + StringUtil.trim(program) + "'" : "")
 							+ (StringUtil.hasValue(dbname)  ? ", db='" + dbname + "'" : "");
 
-					AlarmEvent ae = new AlarmEventChattySession(cm, "session_id=" + sessionId, sessionDesc, requestsPerSec, readsPerRequest, count, threshold, maxReadsPerRequest);
-					final String alarmSessionId   = sessionId;
-					final Object alarmConnectTime = cm.getRateValue(r, "connect_time");
+					AlarmEvent ae = new AlarmEventChattySession(cm, login, program, sessionDesc, requestsPerSec, readsPerRequest, count, threshold, maxReadsPerRequest);
+					final String alarmLogin   = StringUtil.trim(login);
+					final String alarmProgram = StringUtil.trim(program);
 
 					String extendedDescText = cm.toTextTableString(DATA_RATE, r);
 					String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
@@ -845,22 +845,20 @@ extends CountersModel
 							// Set CANCEL message (values that was found AFTER last raise/re-raise event)
 							if (AlarmPhase.CANCEL.equals(phase))
 							{
-								// The same session = session_id and connect_time (a session_id is reused by a new connection)
-								int rowId = -1;
+								// One alarm per login/program: the busiest of its sessions now (it can have several, or none)
+								Double maxNow = null;
 								for (int cr=0; cr<cm.getRateRowCount(); cr++)
 								{
-									if (alarmSessionId.equals(String.valueOf(cm.getRateValue(cr, "session_id"))) && String.valueOf(alarmConnectTime).equals(String.valueOf(cm.getRateValue(cr, "connect_time"))))
-									{
-										rowId = cr;
-										break;
-									}
+									if ( ! String.valueOf(alarmLogin).equals(String.valueOf(StringUtil.trim(cm.getRateString(cr, "login_name")))) || ! String.valueOf(alarmProgram).equals(String.valueOf(StringUtil.trim(cm.getRateString(cr, "program_name")))) )
+										continue;
+									Double val = cm.getRateValueAsDouble(cr, "net_bytes_received");
+									if (val != null && (maxNow == null || val > maxNow))
+										maxNow = val;
 								}
-								String label = "session_id " + alarmSessionId;
-
-								if (rowId == -1)
-									alarmEvent.setCancelDescription(getAlarmCancelTextGone(label));
+								if (maxNow == null)
+									alarmEvent.setCancelDescription("No session of '" + alarmEvent.getExtraInfo() + "' is connected anymore");
 								else
-									alarmEvent.setCancelDescription(getAlarmCancelText(label + ": requests (network packets received) per second", toAlarmCancelValue(cm.getRateValueAsDouble(rowId, "net_bytes_received")), "/s"));
+									alarmEvent.setCancelDescription(getAlarmCancelText("The busiest session of '" + alarmEvent.getExtraInfo() + "': requests (network packets received) per second", toAlarmCancelValue(maxNow), "/s"));
 							}
 						}
 					});

@@ -31,7 +31,7 @@ public class Version
 {
 	public static       String PRODUCT_STRING     = "DbxTune";      // Do not have spaces etc in this one
 //	public static final String VERSION_STRING     = "4.6.0";        // Use this for public releases
-	public static final String VERSION_STRING     = "4.6.0.129.dev"; // Use this for early releases
+	public static final String VERSION_STRING     = "4.6.0.130.dev"; // Use this for early releases
 	public static final String BUILD_STRING       = "2026-11-16/build 681";
 
 	public static final String GIT_DATE_STRING    = "2026-11-16";  // try to update this
