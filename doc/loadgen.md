@@ -800,11 +800,15 @@ rows read per call at any size (without a limit one call ran 15 minutes at size 
   Oracle: at size small one call takes < 0.1 s (~40 products per category) and the call and its UPDATEs were aged out of
   V$SQLSTATS before CmSqlStats' next sample: nothing to check (no expectation).
 
-#### `n_plus_one` - every 5 min, ~100 s
+#### `n_plus_one` - every 5 min, ~160 s
 An "ORM style" page: the orders of a customer, then one query per order for its lines, then one query per line for
 the product name. Very many tiny statements from one session.
-- SQL Server: CmExecQueryStats, CmPerfCounters (batch requests/sec), CmChattyStatements (rows tagged `dbxt:n_plus_one`).
-- ASE: alarm `AlarmEventChattySession` for the session (CmProcessActivity: more than 100 SQL batches/s for 2 samples, under
+Lasts 120 s + extra (was 60 s until 2026-11-16): `AlarmEventChattySession` needs 3 samples above the threshold, and with
+30 s samples that took the whole ~100 s burst (SQL Server run below: raised 1-23 s before the end), so one slow sample missed it.
+- SQL Server (seen 2026-11-16, 2022, size small, run low, 30 s samples): alarm `AlarmEventChattySession` for 6 of 6 events on the
+  right session (CmSessions: network packets received/s of the session, ~230-240/s), raised ~100 s after the start, just before the end,
+  CmExecQueryStats, CmPerfCounters (batch requests/sec), CmChattyStatements (rows tagged `dbxt:n_plus_one`).
+- ASE: alarm `AlarmEventChattySession` for the session (CmProcessActivity: more than 100 SQL batches/s for 3 samples, under
   10 logical reads per batch), CmChattyStatements (rows tagged `dbxt:n_plus_one`; needs `enable stmt cache monitoring`, and `streamlined dynamic SQL` = 1
   because the load generator's statements are prepared statements), CmStmntCacheDetails.
 - Postgres: CmPgStatements.
@@ -813,7 +817,7 @@ the product name. Very many tiny statements from one session.
 - MySQL / DB2: see [the table below](#mysql-and-db2-what-mysqltune--db2tune-showed).
 
 **`AlarmEventChattySession` and N+1.** The alarm has the same default on every vendor: a session sends more than 100
-statements per second, with fewer than 10 logical reads (MySQL: rows read) each, for 2 samples in a row. The counter is
+statements per second, with fewer than 10 logical reads (MySQL: rows read) each, for 3 samples in a row. The counter is
 "statements from the client" everywhere, measured with JDBC on 2026-11-13 (prepared and literal statements, autocommit on and
 off, commits, client info, a 1000-row SELECT, a CALL of a procedure that runs 1000 SELECTs):
 
@@ -822,6 +826,7 @@ off, commits, client info, a 1000-row SELECT, a CALL of a procedure that runs 10
 | ASE 16 | SQL batches, `monProcess.BatchID` (CmProcessActivity) | exactly 1, also a 1000-row SELECT (rows are streamed) and a CALL |
 | Oracle 23ai | the **smaller** of `SQL*Net roundtrips to/from client` and `execute count` (CmSessions) | round trips are 1, but one per **fetch** (a 1000-row SELECT with the default fetch size 10 = 101); executions are 1, but also the SQL a procedure runs (1003 for the CALL). N+1 has both about equal (~250/s seen), a session fetching many rows has few executions, a PL/SQL loop few round trips |
 | MySQL | `Questions` (CmSessionActivity) | 1 (statements from the client, not those in stored programs) - from the MySQL documentation, not measured |
+| SQL Server 2019/2022/2025 | network packets received, `dm_exec_connections.num_reads` (CmSessions column `net_bytes_received`: it is packets), measured 2026-11-16 | exactly 1 for a SQL batch, a prepared statement, a procedure call, MARS and a pooled request (`sp_reset_connection` adds none); a 100 000-row SELECT adds none. More than 1: a request bigger than the packet size (~100 KB batch = 28), a server side cursor (1 per fetch), a bulk load (~380 per 100 000 rows: skipped by `command`). `sp_reset_connection` sets the session's logical reads to 0, so on pooled connections the reads per request can be unknown: then they are not checked |
 | DB2 11.5 | `DYNAMIC_SQL_STMTS` (CmMonGetConnection) | exactly 1, also a CALL (its SQL is not counted). `APP_RQSTS_COMPLETED_TOTAL` is 1-4 (the autocommit commit, the prepare of a literal statement, client info are requests of their own): with it, normal OLTP workers went over 100. Not counted: precompiled (static SQL) clients |
 
 With these, the load generator's OLTP workers do ~15-18 statements/s at intensity `low` and the N+1 session ~190-250/s

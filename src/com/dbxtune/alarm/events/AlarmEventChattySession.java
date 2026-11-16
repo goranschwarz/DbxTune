@@ -38,7 +38,7 @@ extends AlarmEvent
 	 * @param sessionId           For example 'spid=45' (used as extraInfo: one alarm per session)
 	 * @param sessionDesc         Who it is, for example "spid=45, login='sa', application='xxx', host='yyy'"
 	 * @param requestsPerSec      Requests (batches/executions) per second
-	 * @param readsPerRequest     Logical reads per request
+	 * @param readsPerRequest     Logical reads per request (NaN = unknown)
 	 * @param samples             Number of consecutive samples above the threshold
 	 * @param thresholdPerSec     Threshold for requests per second
 	 * @param maxReadsPerRequest  Threshold for logical reads per request
@@ -55,7 +55,8 @@ extends AlarmEvent
 				AlarmEvent.ServiceState.UP,
 				// Note: max length for the below message is 512
 				"Chatty session (possible N+1) in '" + cm.getServerName() + "': " + sessionDesc + " sends " + Math.round(requestsPerSec) + " requests/s"
-					+ " with " + (Math.round(readsPerRequest * 10) / 10.0) + " logical reads each, for " + samples + " samples."
+					+ (Double.isNaN(readsPerRequest) ? " (logical reads unknown: counter reset by the connection pool)" : " with " + (Math.round(readsPerRequest * 10) / 10.0) + " logical reads each")
+					+ ", for " + samples + " samples."
 					+ " (threshold: > " + toStr(thresholdPerSec) + " requests/s and < " + toStr(maxReadsPerRequest) + " reads/request)"
 					+ " Can also be a busy normal session: confirm in the Daily Summary Report, 'Possible N+1'.",
 				thresholdPerSec);
