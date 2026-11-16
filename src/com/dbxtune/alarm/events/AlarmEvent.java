@@ -97,7 +97,9 @@ extends Throwable
 	};
 
 	/** Alarm classes that are only recorded by default: design findings to fix in the code, not incidents to act on now */
-	private static final Map<String, Action> DEFAULT_ACTION = Map.of("AlarmEventChattySession", Action.REPORT);
+	private static final Map<String, Action> DEFAULT_ACTION = Map.of(
+			"AlarmEventChattySession", Action.REPORT,  // N+1: one session sends very many tiny statements
+			"AlarmEventLiteralSql",    Action.REPORT); // SQL Server: non-parameterized SQL (many plans that only differ in their literals)
 
 	/**
 	 * The action for an alarm class: property '&lt;AlarmEventClass&gt;.action', else the class default (ALARM for most).

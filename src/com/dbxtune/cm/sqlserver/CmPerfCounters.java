@@ -3273,9 +3273,7 @@ extends CountersModel
 
 			if (rows != null && ! rows.isEmpty())
 			{
-				LiteralSqlRow top = rows.get(0);
 				double compilationsPerSec = _literalSqlCompilationsPerSec == null ? -1 : _literalSqlCompilationsPerSec;
-				String exampleSql = StringUtil.truncate(StringUtil.removeAllNewLines(top.sqlText, " "), 200, true, null);
 
 				// Extended description: all 'query_hash' over the threshold (top 5), from when the alarm was (re)raised
 				StringBuilder txt  = new StringBuilder();
@@ -3304,34 +3302,44 @@ extends CountersModel
 				txt .append("\n").append(advice).append("\n");
 				html.append("<br>").append(advice).append("<br>\n");
 
-				AlarmEvent ae = new AlarmEventLiteralSql(cm, threshold, top.planCount, top.queryHash, top.dbname, compilationsPerSec, exampleSql);
-
 				final String raiseText = txt.toString();
 				final String raiseHtml = html.toString();
 
-				// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
-				ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
+				// One alarm per statement (dbname/query_hash), so the Daily Summary Report lists each statement and how often it was seen
+				for (LiteralSqlRow row : rows)
 				{
-					// Called on RAISE/RE-RAISE/CANCEL: the extended description is from when it was (re)raised
-					@Override
-					public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
+					String exampleSql = StringUtil.truncate(StringUtil.removeAllNewLines(row.sqlText, " "), 200, true, null);
+					AlarmEvent ae = new AlarmEventLiteralSql(cm, threshold, row.planCount, row.queryHash, row.dbname, compilationsPerSec, exampleSql);
+					final String alarmQueryHash = row.queryHash;
+
+					// The below is called from AlarmHandler on: Raise, RE-RAISE & CANCEL
+					ae.setAlarmDescriptionProvider(this, new AlarmDescriptionProviderBase(null, null, threshold)
 					{
-						alarmEvent.setExtendedDescription(raiseText, raiseHtml);
-
-						// Set CANCEL message (values that was found AFTER last raise/re-raise event)
-						if (AlarmPhase.CANCEL.equals(phase))
+						// Called on RAISE/RE-RAISE/CANCEL: the extended description is from when it was (re)raised
+						@Override
+						public void setValues(CountersModel cm, AlarmEvent alarmEvent, AlarmPhase phase)
 						{
-							List<LiteralSqlRow> rowsNow = _literalSqlRows;
-							Integer planCountNow = (rowsNow == null || rowsNow.isEmpty()) ? 0 : rowsNow.get(0).planCount;
-							alarmEvent.setCancelDescription(getAlarmCancelText("Max plans with the same query_hash", planCountNow));
+							alarmEvent.setExtendedDescription(raiseText, raiseHtml);
+
+							// Set CANCEL message (values that was found AFTER last raise/re-raise event): this query_hash now (0 = not over the threshold, or no lookup)
+							if (AlarmPhase.CANCEL.equals(phase))
+							{
+								int planCountNow = 0;
+								List<LiteralSqlRow> rowsNow = _literalSqlRows;
+								if (rowsNow != null)
+									for (LiteralSqlRow rowNow : rowsNow)
+										if (alarmQueryHash.equals(rowNow.queryHash))
+											planCountNow = rowNow.planCount;
+								alarmEvent.setCancelDescription(getAlarmCancelText("New plans with query_hash " + alarmQueryHash, planCountNow));
+							}
 						}
-					}
-				});
+					});
 
-				// Information about how to disable this alarm
-				ae.createAlarmOptionsMessage(this, "LiteralSql");
+					// Information about how to disable this alarm
+					ae.createAlarmOptionsMessage(this, "LiteralSql");
 
-				alarmHandler.addAlarm( ae );
+					alarmHandler.addAlarm( ae );
+				}
 			}
 		}
 	}

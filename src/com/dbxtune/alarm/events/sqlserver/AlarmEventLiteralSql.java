@@ -24,6 +24,7 @@ package com.dbxtune.alarm.events.sqlserver;
 import com.dbxtune.Version;
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.cm.CountersModel;
+import com.dbxtune.utils.StringUtil;
 
 public class AlarmEventLiteralSql
 extends AlarmEvent 
@@ -35,9 +36,10 @@ extends AlarmEvent
 	 * 
 	 * @param cm                  The CM (CmPerfCounters)
 	 * @param threshold           Number of plans with the same 'query_hash'
-	 * @param planCount           Number of plans for the top 'query_hash'
-	 * @param queryHash           The top 'query_hash' (as a hex string)
-	 * @param dbname              Database name of the example statement
+	 * @param planCount           Number of plans for this 'query_hash'
+	 * @param queryHash           The 'query_hash' (as a hex string)
+	 * @param dbname              Database name of the example statement<br>
+	 *                            extraInfo = 'dbname/query_hash': one alarm per statement
 	 * @param compilationsPerSec  'SQL Compilations/sec'
 	 * @param exampleSqlText      One of the statements (truncated)
 	 */
@@ -47,7 +49,7 @@ extends AlarmEvent
 				Version.getAppName(), // serviceType
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo
-				null,                 // extraInfo
+				StringUtil.truncate(dbname + "/" + queryHash, 80, false, null), // extraInfo (max 80 in the alarm tables)
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UP, 
