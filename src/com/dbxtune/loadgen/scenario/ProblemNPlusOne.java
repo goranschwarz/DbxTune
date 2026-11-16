@@ -53,7 +53,9 @@ public class ProblemNPlusOne extends Scenario
 		case SQLSERVER: return withRows(expected(Arrays.asList("CmExecQueryStats", "CmExecSessions", "CmPerfCounters"), Arrays.asList("AlarmEventChattySession"), Arrays.asList("CmPerfCounters.SqlBatch"), note + " Batch Requests/sec up."
 				+ " CmSessions: the session's network packets received/s (1 per tiny request) raise ChattySession (over 100/s for 3 samples)."
 				+ " Seen 2026-11-16 on SQL Server 2022 (size small, run low, 30 s samples): ChattySession for 6/6 events on the right session_id (~230-240/s, 2.3 reads each),"
-				+ " no other session; raised 98-102 s after the start, 4-23 s before the end (3 samples just fit the ~100 s burst of then: the default is 120 s since)."),"CmExecQueryStats:SqlText~@tag", "CmChattyStatements:SqlText~@tag", "CmSessions:session_id=@sessions");
+				+ " no other session; raised 98-102 s after the start, 4-23 s before the end (3 samples just fit the ~100 s burst of then: the default is 120 s since)."
+				+ " Seen 2026-11-16 with 120 s (~160 s) on 2019 CU32 and 2025 CU10 (size small, run low, 20 min): 4/4 events on the right session_id each,"
+				+ " no other session; raised 74-98 s after the start, 62-80 s before the end."),"CmExecQueryStats:SqlText~@tag", "CmChattyStatements:SqlText~@tag", "CmSessions:session_id=@sessions");
 		case ASE:       return withRows(expected(Arrays.asList("CmChattyStatements", "CmProcessActivity", "CmStmntCacheDetails"), Arrays.asList("AlarmEventChattySession"), note + " CmProcessActivity: the session's BatchIdDiff very high."), "CmChattyStatements:SqlText~@tag");
 		case POSTGRES:  return expected(Arrays.asList("CmPgStatements", "CmPgDatabase"), Arrays.asList(), note);
 		case ORACLE:    return withRows(expected(Arrays.asList("CmChattyStatements", "CmSessions", "CmSqlStats"), Arrays.asList("AlarmEventChattySession"), note

@@ -805,6 +805,7 @@ An "ORM style" page: the orders of a customer, then one query per order for its 
 the product name. Very many tiny statements from one session.
 Lasts 120 s + extra (was 60 s until 2026-11-16): `AlarmEventChattySession` needs 3 samples above the threshold, and with
 30 s samples that took the whole ~100 s burst (SQL Server run below: raised 1-23 s before the end), so one slow sample missed it.
+With 120 s (SQL Server 2019 + 2025, 2026-11-16): raised 74-98 s after the start, 62-80 s before the end, 4 of 4 events on both.
 - SQL Server (seen 2026-11-16, 2022, size small, run low, 30 s samples): alarm `AlarmEventChattySession` for 6 of 6 events on the
   right session (CmSessions: network packets received/s of the session, ~230-240/s), raised ~100 s after the start, just before the end,
   CmExecQueryStats, CmPerfCounters (batch requests/sec), CmChattyStatements (rows tagged `dbxt:n_plus_one`).
