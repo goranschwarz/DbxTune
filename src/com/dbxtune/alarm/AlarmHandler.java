@@ -989,9 +989,9 @@ implements Runnable
 
 			// CALL THE installed AlarmWriter
 			// AND catch all runtime errors that might come
-			try 
+			try
 			{
-				aw.restoredAlarms( getAlarmList() );
+				aw.restoredAlarms( getAlarmListForWriter(aw) );
 			}
 			catch (Throwable t)
 			{
@@ -1041,7 +1041,7 @@ implements Runnable
 			// AND catch all runtime errors that might come
 			try 
 			{
-				aw.endOfScan( getAlarmList() );
+				aw.endOfScan( getAlarmListForWriter(aw) );
 			}
 			catch (Throwable t)
 			{
@@ -1073,6 +1073,18 @@ implements Runnable
 			return null;
 
 		return _alarmContActive.getAlarmList();
+	}
+
+	/** The active alarms a writer should see: the internal writers get all, the others (mail, file, ...) only those with '&lt;AlarmEventClass&gt;.action=ALARM' */
+	private List<AlarmEvent> getAlarmListForWriter(IAlarmWriter aw)
+	{
+		List<AlarmEvent> list = getAlarmList();
+		if (list == null || aw instanceof AlarmWriterToTableModel || aw instanceof AlarmWriterToPcsJdbc || aw instanceof AlarmWriterToApplicationLog)
+			return list;
+
+		List<AlarmEvent> sentList = new ArrayList<>(list);
+		sentList.removeIf(ae -> ae.getAction() != AlarmEvent.Action.ALARM);
+		return sentList;
 	}
 
 	/**

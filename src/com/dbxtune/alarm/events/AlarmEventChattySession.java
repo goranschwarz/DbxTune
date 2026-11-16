@@ -22,6 +22,7 @@ package com.dbxtune.alarm.events;
 
 import com.dbxtune.Version;
 import com.dbxtune.cm.CountersModel;
+import com.dbxtune.utils.StringUtil;
 
 /**
  * One session sends very many tiny requests (a possible N+1 / "chatty" application).
@@ -35,7 +36,9 @@ extends AlarmEvent
 
 	/**
 	 * @param cm                  The CM that raised it
-	 * @param sessionId           For example 'spid=45' (used as extraInfo: one alarm per session)
+	 * @param login               Login/user of the session
+	 * @param program             Application/program of the session (can be null)<br>
+	 *                            extraInfo = 'login/program': ONE alarm per application, not one per session (a connection pool would give one alarm per connection)
 	 * @param sessionDesc         Who it is, for example "spid=45, login='sa', application='xxx', host='yyy'"
 	 * @param requestsPerSec      Requests (batches/executions) per second
 	 * @param readsPerRequest     Logical reads per request (NaN = unknown)
@@ -43,13 +46,13 @@ extends AlarmEvent
 	 * @param thresholdPerSec     Threshold for requests per second
 	 * @param maxReadsPerRequest  Threshold for logical reads per request
 	 */
-	public AlarmEventChattySession(CountersModel cm, String sessionId, String sessionDesc, double requestsPerSec, double readsPerRequest, int samples, Number thresholdPerSec, Number maxReadsPerRequest)
+	public AlarmEventChattySession(CountersModel cm, String login, String program, String sessionDesc, double requestsPerSec, double readsPerRequest, int samples, Number thresholdPerSec, Number maxReadsPerRequest)
 	{
 		super(
 				Version.getAppName(), // serviceType
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo
-				sessionId,            // extraInfo
+				StringUtil.truncate(StringUtil.trim(login) + (StringUtil.hasValue(program) ? "/" + StringUtil.trim(program) : ""), 80, false, null), // extraInfo (max 80 in the alarm tables)
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.INFO,
 				AlarmEvent.ServiceState.UP,

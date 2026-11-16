@@ -335,6 +335,9 @@ public class PersistContainer
 	public void addActiveAlarms(List<AlarmEvent> alarmList)
 	{
 		_activeAlarmList = new ArrayList<>(alarmList);
+
+		// '<AlarmEventClass>.action=LOG' = only in the errorlog: not stored as active alarm and not sent to DbxCentral
+		_activeAlarmList.removeIf(ae -> ae.getAction() == AlarmEvent.Action.LOG);
 	}
 
 	/**

@@ -446,7 +446,7 @@ extends CountersModel
 					+ ", client_host='" + StringUtil.trim(StringUtil.hasValue(clientHostname) ? clientHostname : clientIpAddr) + "'"
 					+ ("0".equals(member) ? "" : ", member=" + member);
 
-			AlarmEvent ae = new AlarmEventChattySession(cm, "application_handle=" + applHandle, sessionDesc, requestsPerSec, readsPerRequest, count, threshold, maxReadsPerRequest);
+			AlarmEvent ae = new AlarmEventChattySession(cm, authId, applName, sessionDesc, requestsPerSec, readsPerRequest, count, threshold, maxReadsPerRequest);
 			final String alarmApplHandle = applHandle;
 			final String alarmApplId     = applId;
 

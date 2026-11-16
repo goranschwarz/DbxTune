@@ -161,7 +161,7 @@ extends AlarmWriterAbstract
 	@Override public boolean isCallReRaiseEnabled() { return true; }
 	@Override public void    printConfig() {}
 	@Override public void    printFilterConfig() {}
-	@Override public boolean doAlarm(AlarmEvent ae) { return true; }
+	@Override public boolean doAlarm(AlarmEvent ae) { return ae.getAction() != AlarmEvent.Action.LOG; } // LOG = only in the errorlog, not in the alarm history
 	@Override public List<CmSettingsHelper> getAvailableFilters() { return new ArrayList<CmSettingsHelper>(); }
 
 	@Override

@@ -555,7 +555,7 @@ extends CountersModel
 					+ ", machine='" + StringUtil.trim(machine) + "', osuser='" + StringUtil.trim(osuser) + "'"
 					+ (StringUtil.hasValue(conName) ? ", container='" + conName + "'" : "");
 
-			AlarmEvent ae = new AlarmEventChattySession(cm, "sid=" + sid, sessionDesc, requestsPerSec, readsPerRequest, count, threshold, maxReadsPerRequest);
+			AlarmEvent ae = new AlarmEventChattySession(cm, username, program, sessionDesc, requestsPerSec, readsPerRequest, count, threshold, maxReadsPerRequest);
 			final String alarmSid    = sid;
 			final String alarmSerial = serial;
 

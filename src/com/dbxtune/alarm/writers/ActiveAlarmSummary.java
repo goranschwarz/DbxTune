@@ -258,6 +258,9 @@ public class ActiveAlarmSummary
 		if (_skipMuted)
 			merged.removeIf(entry -> entry.isMuted);
 
+		// '<AlarmEventClass>.action=REPORT/LOG' alarms are not sent, so they are not in the summary either (other servers: as configured here)
+		merged.removeIf(entry -> AlarmEvent.getAction(entry.alarmClass) != AlarmEvent.Action.ALARM);
+
 		merged.sort(ENTRY_ORDER);
 
 		return new Result(merged, centralOk, groupName);

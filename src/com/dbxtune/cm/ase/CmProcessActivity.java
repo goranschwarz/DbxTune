@@ -1605,7 +1605,7 @@ extends CountersModel
 						+ (StringUtil.hasValue(clientapplname) ? ", clientapplname='" + StringUtil.trim(clientapplname) + "'" : "")
 						+ ", host='" + StringUtil.trim(hostname) + "', db='" + dbname + "'";
 
-				AlarmEvent ae = new AlarmEventChattySession(cm, "spid=" + spid, sessionDesc, batchPerSec, readsPerBatch, count, threshold, maxReadsPerBatch);
+				AlarmEvent ae = new AlarmEventChattySession(cm, login, application, sessionDesc, batchPerSec, readsPerBatch, count, threshold, maxReadsPerBatch);
 				final Object alarmSpid = cm.getRateValue(r, "SPID");
 
 				String extendedDescText = cm.toTextTableString(DATA_RATE, r);

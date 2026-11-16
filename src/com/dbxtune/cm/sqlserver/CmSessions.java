@@ -826,7 +826,7 @@ extends CountersModel
 							+ (StringUtil.hasValue(program) ? ", program_name='" + StringUtil.trim(program) + "'" : "")
 							+ (StringUtil.hasValue(dbname)  ? ", db='" + dbname + "'" : "");
 
-					AlarmEvent ae = new AlarmEventChattySession(cm, "session_id=" + sessionId, sessionDesc, requestsPerSec, readsPerRequest, count, threshold, maxReadsPerRequest);
+					AlarmEvent ae = new AlarmEventChattySession(cm, login, program, sessionDesc, requestsPerSec, readsPerRequest, count, threshold, maxReadsPerRequest);
 					final String alarmSessionId   = sessionId;
 					final Object alarmConnectTime = cm.getRateValue(r, "connect_time");
 

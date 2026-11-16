@@ -566,7 +566,11 @@ implements IAlarmWriter
 	public boolean doAlarm(AlarmEvent ae)
 	{
 		Configuration conf = getConfiguration();
-		
+
+		// Property '<AlarmEventClass>.action' = REPORT or LOG: only recorded/logged by the internal writers (which override doAlarm), never sent
+		if (ae.getAction() != AlarmEvent.Action.ALARM)
+			return false;
+
 		// if we ALWAYS should send alarm for this AlarmEvent, exit early...
 		if (ae.alwaysSend())
 			return true;
