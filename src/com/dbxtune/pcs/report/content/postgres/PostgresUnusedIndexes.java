@@ -22,6 +22,8 @@ package com.dbxtune.pcs.report.content.postgres;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import com.dbxtune.gui.ResultSetTableModel;
@@ -102,6 +104,16 @@ extends PostgresAbstract
 	}
 
 	@Override
+	public List<ReportingIndexEntry> getReportingIndexes()
+	{
+		// H2 has no hash join: each joined group-by below is run once per index, without these it is a table scan each time (same indexes as PostgresTopSql)
+		List<ReportingIndexEntry> list = new ArrayList<>();
+		list.add(new ReportingIndexEntry("CmPgIndexes_diff", "dbname", "schemaname", "relname", "indexrelname"));
+		list.add(new ReportingIndexEntry("CmPgTables_diff" , "dbname", "schemaname", "relname"));
+		return list;
+	}
+
+	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		String schema = getReportingInstance().getDbmsSchemaName();
@@ -117,20 +129,23 @@ extends PostgresAbstract
 		boolean hasTables   = getRecordedColumns(conn, "CmPgTables_diff").contains("n_tup_ins");
 
 		// The unused indexes: no index scan in the whole period. Their values at the last sample.
+		// Only the last sample of _abs (not the whole period): H2 runs the joined group-by once per row of 'l'
+		String lastSample = "(select max([SessionSampleTime]) from [CmPgIndexes_abs] " + where + ")";
 		String fromWhere = ""
 			    + "from [CmPgIndexes_abs] l \n"
-			    + "join (select [dbname], [relid], [indexrelid], sum([idx_scan]) as [scans], max([SessionSampleTime]) as [last_ts] \n"
+			    + "join (select [dbname], [schemaname], [relname], [indexrelname], sum([idx_scan]) as [scans] \n"
 			    + "      from [CmPgIndexes_diff] \n"
 			    + "      " + where + " \n"
-			    + "      group by [dbname], [relid], [indexrelid] \n"
-			    + "     ) d on d.[dbname] = l.[dbname] and d.[relid] = l.[relid] and d.[indexrelid] = l.[indexrelid] and d.[last_ts] = l.[SessionSampleTime] \n"
+			    + "      group by [dbname], [schemaname], [relname], [indexrelname] \n"
+			    + "     ) d on d.[dbname] = l.[dbname] and d.[schemaname] = l.[schemaname] and d.[relname] = l.[relname] and d.[indexrelname] = l.[indexrelname] \n"
 			    + (hasTables ? ""
 			    + "left join (select [dbname], [schemaname], [relname], sum([n_tup_ins] + [n_tup_upd] + [n_tup_del]) as [rows_written] \n"
 			    + "      from [CmPgTables_diff] \n"
 			    + "      " + where + " \n"
 			    + "      group by [dbname], [schemaname], [relname] \n"
 			    + "     ) t on t.[dbname] = l.[dbname] and t.[schemaname] = l.[schemaname] and t.[relname] = l.[relname] \n" : "")
-			    + "where d.[scans] = 0 \n"
+			    + "where l.[SessionSampleTime] = " + lastSample + " \n"
+			    + "  and d.[scans] = 0 \n"
 			    + "";
 
 		String constraintExpr = hasSize ? "case when l.[is_constraint] or l.[is_unique] or l.[is_primary] then 1 else 0 end" : "0";
@@ -192,7 +207,7 @@ extends PostgresAbstract
 			    + "    ,cast(sum(l.[size_kb]) / 1024.0 as numeric(15,1)) as [unused_size_mb] \n"
 			    + "    ,sum(" + constraintExpr + ") as [of_which_unique_or_constraint] \n" : "")
 			    + "    ,sum(case when l.[idx_scan] = 0 then 1 else 0 end) as [never_used_since_reset] \n"
-			    + "    ,(select count(distinct x.[indexrelid] || '.' || x.[dbname]) from [CmPgIndexes_abs] x " + where + ") as [recorded_indexes] \n"
+			    + "    ,(select count(*) from [CmPgIndexes_abs] x where x.[SessionSampleTime] = " + lastSample + ") as [recorded_indexes] \n"
 			    + "    ,(select min([stats_reset]) from [CmPgDatabase_abs] " + where + ") as [statistics_since] \n"
 			    + fromWhere
 			    + "";
@@ -202,7 +217,7 @@ extends PostgresAbstract
 		_sumRstm.setColumnDescription("unused_size_mb"               , "The space they take, in MB");
 		_sumRstm.setColumnDescription("of_which_unique_or_constraint", "How many of them are unique, primary keys or back a constraint (they are there to stop duplicates)");
 		_sumRstm.setColumnDescription("never_used_since_reset"       , "How many of them were never used since the statistics were reset");
-		_sumRstm.setColumnDescription("recorded_indexes"             , "Number of indexes the collector recorded");
+		_sumRstm.setColumnDescription("recorded_indexes"             , "Number of indexes the collector recorded (at the last sample)");
 		_sumRstm.setColumnDescription("statistics_since"             , "The oldest statistics reset of the databases (pg_stat_database.stats_reset): 'since reset' counts from here. Empty = never reset (since the cluster was created, or a crash: a crash also resets them)");
 	}
 }
