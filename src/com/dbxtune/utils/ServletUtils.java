@@ -23,6 +23,8 @@ package com.dbxtune.utils;
 
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Base64;
 
 import javax.servlet.ServletOutputStream;
@@ -52,6 +54,9 @@ public class ServletUtils
 	public static boolean checkBasicOrTokenAuthentication(HttpServletRequest request, HttpServletResponse response, ServletOutputStream out) 
 	throws IOException
 	{
+		// NOTE: Never log any submitted or expected secrets (tokens/passwords), and strip CR/LF from user supplied values we log (log forging)
+		String url = toLogSafe(request.getRequestURL());
+
 		// Check if we got authorization header
 		String authHeader = request.getHeader("Authorization");
 
@@ -93,8 +98,8 @@ public class ServletUtils
 		
 		if (_logger.isDebugEnabled())
 		{
-			_logger.debug("Authentication: expectedBasicToken ='" + expectedBasicToken  + "' for URL='" + request.getRequestURL() + "'.");
-			_logger.debug("Authentication: expectedBearerToken='" + expectedBearerToken + "' for URL='" + request.getRequestURL() + "'.");
+			_logger.debug("Authentication: Basic is "  + (expectedBasicToken  == null ? "NOT enabled" : "enabled") + " for URL='" + url + "'.");
+			_logger.debug("Authentication: Bearer is " + (expectedBearerToken == null ? "NOT enabled" : "enabled") + " for URL='" + url + "'.");
 		}
 
 		//------------------------------------------------------
@@ -103,7 +108,7 @@ public class ServletUtils
 			String expectedToken = expectedBearerToken;
 			if (expectedToken == null)
 			{
-				_logger.warn("Someone tried to access URL '" + request.getRequestURL() + "' Bearer Autentication NOT ENABLED. The call was rejected.");
+				_logger.warn("Someone tried to access URL '" + url + "' Bearer Autentication NOT ENABLED. The call was rejected.");
 
 				response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 				out.println("{ \"error\" : \"Bearer Authentication is NOT ENABLED, not authorized\" }");
@@ -115,14 +120,14 @@ public class ServletUtils
 
 			String token = authHeader.substring("Bearer ".length()).trim();
 			
-			if ( expectedToken.equals(token) )
+			if ( secretEquals(expectedToken, token) )
 			{
-				_logger.info("Success Bearer Authorization to URL '" + request.getRequestURL() + "'.");
+				_logger.info("Success Bearer Authorization to URL '" + url + "'.");
 				return true;
 			}
 			else
 			{
-				_logger.warn("Someone tried to access URL '" + request.getRequestURL() + "' with the wrong token='" + token + "'. The call was rejected.");
+				_logger.warn("Someone tried to access URL '" + url + "' with the wrong Bearer token. The call was rejected.");
 
 				response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 				out.println("{ \"error\" : \"Invalid token, not authorized\" }");
@@ -135,7 +140,7 @@ public class ServletUtils
 			String expectedToken = expectedBasicToken;
 			if (expectedToken == null)
 			{
-				_logger.warn("Someone tried to access URL '" + request.getRequestURL() + "' Basic Autentication NOT ENABLED. The call was rejected.");
+				_logger.warn("Someone tried to access URL '" + url + "' Basic Autentication NOT ENABLED. The call was rejected.");
 
 				response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 				out.println("{ \"error\" : \"Basic Authentication is NOT ENABLED, not authorized\" }");
@@ -146,30 +151,31 @@ public class ServletUtils
 				expectedToken = expectedToken.substring("Basic ".length()).trim();
 
 
-			// Decode Base64 credentials (username:password)
-			String   base64Credentials = authHeader.substring("Basic ".length());
-			String   credentials       = new String(Base64.getDecoder().decode(base64Credentials));
-			String[] values            = credentials.split(":", 2);
-			
-			String username = values[0];
-			String password = values[1];
-			
+			// NOTE: Do NOT Base64-decode the client supplied credentials (CVE-2026-114938 / Java4Shell).
+			//       The JVM's AVX-512 Base64 *decoder* intrinsic can be abused with malformed input, before authentication.
+			//       Instead we Base64-*encode* the expected credentials and compare the encoded strings.
+			String base64Credentials = authHeader.substring("Basic ".length()).trim();
+
 			String expectedUser     = "admin";
 			String expectedPassword = expectedToken;
 
-			if ( expectedToken.equals(base64Credentials) )
+			// Config may hold: the already encoded 'user:password' OR just the plain password for user 'admin'
+			String expectedEncoded1 = expectedToken;
+			String expectedEncoded2 = Base64.getEncoder().encodeToString((expectedUser + ":" + expectedPassword).getBytes(StandardCharsets.UTF_8));
+
+			// Evaluate both (no short-circuit) so the time spent does not tell which one matched
+			boolean match1 = secretEquals(expectedEncoded1, base64Credentials);
+			boolean match2 = secretEquals(expectedEncoded2, base64Credentials);
+
+			if ( match1 | match2 )
 			{
-				_logger.info("Success Basic Authorization to URL '" + request.getRequestURL() + "'.");
-				return true;
-			}
-			else if ( expectedUser.equals(username) && expectedPassword.equals(password) )
-			{
-				_logger.info("Success Basic Authorization to URL '" + request.getRequestURL() + "'.");
+				_logger.info("Success Basic Authorization to URL '" + url + "'.");
 				return true;
 			}
 			else
 			{
-				_logger.warn("Someone tried to access URL '" + request.getRequestURL() + "' with the wrong user='" + username + "', password='" + password + "'. The call was rejected.");
+				// Do not log the credentials (and we no longer decode them)
+				_logger.warn("Someone tried to access URL '" + url + "' with wrong Basic credentials (from " + request.getRemoteAddr() + "). The call was rejected.");
 
 				response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 				response.setHeader("WWW-Authenticate", "Basic realm=\"DbxTuneBasicAuthRealm\"");
@@ -184,6 +190,23 @@ public class ServletUtils
 			out.println("{ \"error\" : \"Invalid Authorization header. Expected: Bearer or Basic\" }");
 			return false;
 		}
+	}
+
+	/** Constant-time compare of two secrets (does not leak how many leading characters matched) */
+	private static boolean secretEquals(String expected, String actual)
+	{
+		if (expected == null || actual == null)
+			return false;
+		return MessageDigest.isEqual(expected.getBytes(StandardCharsets.UTF_8), actual.getBytes(StandardCharsets.UTF_8));
+	}
+
+	/** Make a user supplied value safe to write to the log: strip CR/LF and other control chars (log forging), and cap the length */
+	private static String toLogSafe(Object value)
+	{
+		if (value == null)
+			return null;
+		String str = value.toString().replaceAll("\\p{Cntrl}", "_");
+		return str.length() > 256 ? str.substring(0, 256) + "..." : str;
 	}
 
 
