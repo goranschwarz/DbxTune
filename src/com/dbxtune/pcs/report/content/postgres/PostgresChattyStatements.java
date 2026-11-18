@@ -37,7 +37,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -49,6 +48,7 @@ import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.NPlusOneParent;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
+import com.dbxtune.utils.DbUtils;
 import com.dbxtune.utils.StringUtil;
 
 /**
@@ -139,8 +139,7 @@ extends PostgresAbstract
 					String text = rstm.getValueAsString(row, colName);
 					if (StringUtil.isNullOrBlank(text))
 						return "";
-					String shortText = text.length() > 120 ? text.substring(0, 120) + "..." : text;
-					return "<code title=\"" + StringEscapeUtils.escapeHtml4(text) + "\">" + StringEscapeUtils.escapeHtml4(shortText) + "</code>";
+					return getFormattedSqlAsTooltipDiv(text, "Hover or Click to see formatted SQL Text...", DbUtils.DB_PROD_NAME_POSTGRES);
 				}
 				if ("queryid".equals(colName) || "parent_queryid".equals(colName))
 					return objVal == null ? "" : objVal.toString(); // an id: no thousand separators
