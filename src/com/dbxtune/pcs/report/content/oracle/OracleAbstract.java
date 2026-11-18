@@ -1429,6 +1429,33 @@ extends ReportEntryAbstract
 	}
 
 	/**
+	 * The CREATE INDEX that gives the index back (the ROLLBACK of a DROP INDEX), built like the Index Analysis rollback: keys, tablespace and compression (and UNIQUE / BITMAP).<br>
+	 * null when it can't be written from what is stored (not in the DDL Storage, partitioned, domain, IOT... index): then use DBMS_METADATA before the drop.
+	 */
+	static String getIndexRestoreDdl(OraTableInfo ti, String indexOwner, String indexName)
+	{
+		if (ti == null || indexName == null)
+			return null;
+
+		for (OraIndexInfo ii : ti.indexes)
+		{
+			if ( ! indexName.equalsIgnoreCase(ii.name) || (indexOwner != null && ! indexOwner.equalsIgnoreCase(ii.owner)) )
+				continue;
+
+			String type = StringUtil.nullToValue(ii.type, "");
+			boolean plainType = "NORMAL".equals(type) || "BITMAP".equals(type) || type.startsWith("FUNCTION-BASED");
+			if ( ! plainType || "YES".equals(ii.partitioned) || StringUtil.isNullOrBlank(ii.keys) )
+				return null;
+
+			String ddl = oraCreateIndex(ti, ii);
+			if      ("UNIQUE".equals(ii.uniqueness)) ddl = ddl.replaceFirst("^CREATE INDEX ", "CREATE UNIQUE INDEX ");
+			else if (type.contains("BITMAP"))        ddl = ddl.replaceFirst("^CREATE INDEX ", "CREATE BITMAP INDEX ");
+			return ddl;
+		}
+		return null;
+	}
+
+	/**
 	 * DDL CHANGES and ROLLBACK. Oracle DDL commits at once, so:<br>
 	 * Step 1: ALTER INDEX ... INVISIBLE (rollback: VISIBLE).<br>
 	 * Step 2: a PL/SQL block that checks the indexes, then drops them (rollback: CREATE INDEX).

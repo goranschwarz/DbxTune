@@ -963,6 +963,31 @@ extends ReportEntryAbstract
 	}
 
 	/**
+	 * The CREATE INDEX that gives the index back (the ROLLBACK of a DROP INDEX), from the stored sp_help text, same as Index Analysis.<br>
+	 * Falls back to the short DDL (keys only) when the sp_help text does not have the index. Empty if the index is not in the DDL Storage.
+	 */
+	static String getIndexRestoreDdl(AseTableInfo ti, String indexName)
+	{
+		if (ti == null || indexName == null)
+			return "";
+
+		if (StringUtil.hasValue(ti._objectText))
+		{
+			List<SpHelpTable> spHelp      = parseSpHelpText(ti._objectText, new ArrayList<>());
+			SpHelpTable       indexTbl    = getSpHelpTable(spHelp, "index_name");
+			SpHelpTable       indexPtnTbl = getSpHelpTable(spHelp, "index_ptn_name");
+			if (indexTbl != null)
+				for (Map<String, String> row : indexTbl._rows)
+					if (indexName.equals(row.get("index_name")))
+						return spHelpIndexDdl(row, ti._tableName, Collections.emptyMap(), indexPtnTbl); // only the table name: the caller does 'use db' and 'setuser owner'
+		}
+
+		// The short DDL names the table as 'db.owner.table': only the table name, like above
+		AseIndexInfo ii = ti.getIndexInfoForName(indexName);
+		return ii == null ? "" : StringUtil.nullToValue(ii.getDdlText(), "").replace(" on " + ti._dbName + "." + ti._schemaName + "." + ti._tableName + "(", " on " + ti._tableName + "(");
+	}
+
+	/**
 	 * CREATE INDEX for one row of the sp_help-like index result set: keys, options (WITH), LOCAL INDEX, segment (ON).<br>
 	 * Used by the DDL for the LLM, and by Index Analysis for its ROLLBACK script, so the two can't drift apart.<br>
 	 * Parts we don't know how to write are added as comments: <code>/*...*&#47;</code>

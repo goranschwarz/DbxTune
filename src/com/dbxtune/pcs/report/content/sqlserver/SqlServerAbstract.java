@@ -1605,6 +1605,19 @@ extends ReportEntryAbstract
 	}
 
 	/** The stored DDL writes FILLFACTOR = 100 for an index that has none (0). Same behaviour, but then the rollback does not give back the same index. */
+	/**
+	 * The CREATE INDEX that gives the index back (the ROLLBACK of a DROP INDEX), same as the Index Analysis rollback: the stored DDL and the filegroup.<br>
+	 * Empty if the DDL Storage has no (plain clustered/nonclustered) DDL for the index.
+	 */
+	static String getIndexRestoreDdl(SqlServerTableInfo ti, String indexName)
+	{
+		SqlServerIndexInfo ii = ti == null ? null : ti.getIndexInfoForName(indexName);
+		if (ii == null || ii._ddlTxt == null || ! ii._ddlTxt.matches("(?s)CREATE\\s+(UNIQUE\\s+)?(NON)?CLUSTERED INDEX .*"))
+			return "";
+		boolean hasFilegroup = ii._desc != null && ii._desc.contains(" located on ");
+		return restorableDdl(ii) + (hasFilegroup ? filegroupClause(ii) : "");
+	}
+
 	private static String restorableDdl(SqlServerIndexInfo ii)
 	{
 		return ii._fillFactor == 0 ? ii._ddlTxt.replace("FILLFACTOR = 100, ", "") : ii._ddlTxt;
