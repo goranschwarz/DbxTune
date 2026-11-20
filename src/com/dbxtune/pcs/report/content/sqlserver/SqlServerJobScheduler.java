@@ -129,6 +129,12 @@ extends SqlServerAbstract
 		return false;
 	}
 
+	@Override
+	public String getIssueReason()
+	{
+		return (_job_history_errors == null ? 0 : _job_history_errors.getRowCount()) + " failed job step(s)";
+	}
+
 
 	@Override
 	public boolean hasMinimalMessageText()

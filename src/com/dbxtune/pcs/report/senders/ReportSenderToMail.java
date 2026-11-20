@@ -38,6 +38,7 @@ import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSettingsHelper.MailRoutingInputValidator;
 import com.dbxtune.cm.CmSettingsHelper.Type;
 import com.dbxtune.pcs.report.content.DailySummaryReportContent;
+import com.dbxtune.pcs.report.content.IReportEntry.IssueLevel;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.FileUtils;
 import com.dbxtune.utils.NumberUtils;
@@ -131,6 +132,14 @@ extends ReportSenderAbstract
 				return;
 			}
 		}
+		if (reportContent.getIssueLevel() == IssueLevel.FYI)
+		{
+			if (_sendFyi == false)
+			{
+				_logger.info("Property '" + PROPKEY_sendFyi + "' is false. The FYI report for server '" + serverName + "' will NOT be sent.");
+				return;
+			}
+		}
 
 		// Getting mail addresses to send the report to
 		// The report is sent with To: only (it has several fallback send methods), so any 'cc' of a matching rule is added to To:
@@ -197,6 +206,8 @@ extends ReportSenderAbstract
 		
 		if (reportContent.hasNothingToReport())
 			msgSubject = _subjectNtrTemplate.replace("${srvName}", serverName);
+		if (reportContent.getIssueLevel() == IssueLevel.FYI)
+			msgSubject = _subjectFyiTemplate.replace("${srvName}", serverName);
 
 
 		try
@@ -220,8 +231,16 @@ extends ReportSenderAbstract
 				email.setTextMsg(msgBody);
 			}
 
+			// Nothing To Report: no attachment (nothing to look at, the mail has a link to DbxCentral)
+			boolean attachThisReport = _attachHtmlContent && msgFile != null;
+			if (attachThisReport && reportContent.hasNothingToReport() && _attachHtmlContentNtr == false)
+			{
+				attachThisReport = false;
+				_logger.info("Skipping attaching HTML Content file to Daily Summary Report for server '" + serverName + "'. Due to: Nothing To Report (NTR). (this can be changed with property '" + PROPKEY_attachHtmlContentNtr + "=true'.");
+			}
+
 			// If we also should attach the FULL Report as an ATTACHMENT
-			if (_attachHtmlContent && msgFile != null)
+			if (attachThisReport)
 			{
 				// Should we try to ZIP the file!
 				if ((fullSizeMb) >= _attachHtmlZipContentGtMb)
@@ -693,6 +712,9 @@ extends ReportSenderAbstract
 		list.add( new CmSettingsHelper("Subject-Template",                 PROPKEY_subjectTemplate,            String .class, conf.getProperty       (PROPKEY_subjectTemplate           , DEFAULT_subjectTemplate           ), DEFAULT_subjectTemplate           , "What should be the subject (Note: this is a template)"));
 		list.add( new CmSettingsHelper("Subject-NTR-Template",             PROPKEY_subjectNtrTemplate,         String .class, conf.getProperty       (PROPKEY_subjectNtrTemplate        , DEFAULT_subjectNtrTemplate        ), DEFAULT_subjectNtrTemplate        , "What should be the subject, when NTR=Nothing To Report (Note: this is a template)"));
 		list.add( new CmSettingsHelper("Send-NothingToReport",             PROPKEY_sendNtr,                    Boolean.class, conf.getBooleanProperty(PROPKEY_sendNtr                   , DEFAULT_sendNtr                   ), DEFAULT_sendNtr                   , "Send email even when there is Nothing To Report (NTR)."));
+		list.add( new CmSettingsHelper("Subject-FYI-Template",             PROPKEY_subjectFyiTemplate,         String .class, conf.getProperty       (PROPKEY_subjectFyiTemplate        , DEFAULT_subjectFyiTemplate        ), DEFAULT_subjectFyiTemplate        , "What should be the subject, when FYI=For Your Information (only INFO/REPORT alarms, design findings...) (Note: this is a template)"));
+		list.add( new CmSettingsHelper("Send-FYI",                         PROPKEY_sendFyi,                    Boolean.class, conf.getBooleanProperty(PROPKEY_sendFyi                   , DEFAULT_sendFyi                   ), DEFAULT_sendFyi                   , "Send email when the report is FYI (For Your Information)."));
+		list.add( new CmSettingsHelper("Attach-HTML-Content-NTR",          PROPKEY_attachHtmlContentNtr,       Boolean.class, conf.getBooleanProperty(PROPKEY_attachHtmlContentNtr      , DEFAULT_attachHtmlContentNtr      ), DEFAULT_attachHtmlContentNtr      , "Attach the full report also when there is Nothing To Report (NTR)."));
 //		list.add( new CmSettingsHelper("Msg-Template",                     PROPKEY_msgBodyTemplate,            String .class, conf.getProperty       (PROPKEY_msgBodyTemplate           , DEFAULT_msgBodyTemplate           ), DEFAULT_msgBodyTemplate           , "What content should we send (Note: this is a template, if the content starts with <html> then it will try to send the mail as a HTML mail.)"));
 //		list.add( new CmSettingsHelper("Msg-Template-Use-HTML",            PROPKEY_msgBodyTemplateUseHtml,     Boolean.class, conf.getBooleanProperty(PROPKEY_msgBodyTemplateUseHtml    , DEFAULT_msgBodyTemplateUseHtml    ), DEFAULT_msgBodyTemplateUseHtml    , "If '"+PROPKEY_msgBodyTemplate+"' is not specified, then use a HTML Template as the default."));
 //		list.add( new CmSettingsHelper("Msg-Use-HTML",                     PROPKEY_msgBodyUseHtml,             Boolean.class, conf.getBooleanProperty(PROPKEY_msgBodyUseHtml            , DEFAULT_msgBodyUseHtml            ), DEFAULT_msgBodyUseHtml            , "Send HTML message."));
@@ -720,6 +742,9 @@ extends ReportSenderAbstract
 	private String  _subjectTemplate            = "";
 	private String  _subjectNtrTemplate         = ""; // NothingToReport
 	private boolean _sendNtr                    = DEFAULT_sendNtr;
+	private String  _subjectFyiTemplate         = ""; // For Your Information
+	private boolean _sendFyi                    = DEFAULT_sendFyi;
+	private boolean _attachHtmlContentNtr       = DEFAULT_attachHtmlContentNtr;
 //	private String  _msgBodyTemplate            = "";
 //	private boolean _msgBodyTemplateUseHtml     = DEFAULT_msgBodyTemplateUseHtml;
 //	private boolean _msgBodyUseHtml             = DEFAULT_msgBodyUseHtml;
@@ -851,6 +876,9 @@ extends ReportSenderAbstract
 		_subjectTemplate            = conf.getProperty       (PROPKEY_subjectTemplate,            DEFAULT_subjectTemplate);
 		_subjectNtrTemplate         = conf.getProperty       (PROPKEY_subjectNtrTemplate,         DEFAULT_subjectNtrTemplate);
 		_sendNtr                    = conf.getBooleanProperty(PROPKEY_sendNtr,                    DEFAULT_sendNtr);
+		_subjectFyiTemplate         = conf.getProperty       (PROPKEY_subjectFyiTemplate,         DEFAULT_subjectFyiTemplate);
+		_sendFyi                    = conf.getBooleanProperty(PROPKEY_sendFyi,                    DEFAULT_sendFyi);
+		_attachHtmlContentNtr       = conf.getBooleanProperty(PROPKEY_attachHtmlContentNtr,       DEFAULT_attachHtmlContentNtr);
 //		_msgBodyTemplate            = conf.getProperty       (PROPKEY_msgBodyTemplate,            DEFAULT_msgBodyTemplate);
 //		_msgBodyTemplateUseHtml     = conf.getBooleanProperty(PROPKEY_msgBodyTemplateUseHtml,     DEFAULT_msgBodyTemplateUseHtml);
 //		_msgBodyUseHtml             = conf.getBooleanProperty(PROPKEY_msgBodyUseHtml,             DEFAULT_msgBodyUseHtml);
@@ -879,6 +907,7 @@ extends ReportSenderAbstract
 		if ( StringUtil.isNullOrBlank(_from              ) ) throw new Exception("The property '" + PROPKEY_from               + "' is mandatory for the ReportSender named '" + getName() + "'.");
 		if ( StringUtil.isNullOrBlank(_subjectTemplate   ) ) throw new Exception("The property '" + PROPKEY_subjectTemplate    + "' is mandatory for the ReportSender named '" + getName() + "'.");
 		if ( StringUtil.isNullOrBlank(_subjectNtrTemplate) ) throw new Exception("The property '" + PROPKEY_subjectNtrTemplate + "' is mandatory for the ReportSender named '" + getName() + "'.");
+		if ( StringUtil.isNullOrBlank(_subjectFyiTemplate) ) throw new Exception("The property '" + PROPKEY_subjectFyiTemplate + "' is mandatory for the ReportSender named '" + getName() + "'.");
 //		if ( StringUtil.isNullOrBlank(_msgBodyTemplate   ) ) throw new Exception("The property '" + PROPKEY_msgBodyTemplate    + "' is mandatory for the ReportSender named '"+getName()+"'.");
 
 		// Parse the 'to string' into a list
@@ -908,6 +937,9 @@ extends ReportSenderAbstract
 		_logger.info("    " + StringUtil.left(PROPKEY_subjectTemplate           , spaces) + ": " + _subjectTemplate);
 		_logger.info("    " + StringUtil.left(PROPKEY_subjectNtrTemplate        , spaces) + ": " + _subjectNtrTemplate);
 		_logger.info("    " + StringUtil.left(PROPKEY_sendNtr                   , spaces) + ": " + _sendNtr);
+		_logger.info("    " + StringUtil.left(PROPKEY_subjectFyiTemplate        , spaces) + ": " + _subjectFyiTemplate);
+		_logger.info("    " + StringUtil.left(PROPKEY_sendFyi                   , spaces) + ": " + _sendFyi);
+		_logger.info("    " + StringUtil.left(PROPKEY_attachHtmlContentNtr      , spaces) + ": " + _attachHtmlContentNtr);
 //		_logger.info("    " + StringUtil.left(PROPKEY_msgBodyTemplate           , spaces) + ": " + _msgBodyTemplate);
 //		_logger.info("    " + StringUtil.left(PROPKEY_msgBodyTemplateUseHtml    , spaces) + ": " + _msgBodyTemplateUseHtml);
 //		_logger.info("    " + StringUtil.left(PROPKEY_msgBodyUseHtml            , spaces) + ": " + _msgBodyUseHtml);
@@ -943,6 +975,15 @@ extends ReportSenderAbstract
 	                                                               
 	public static final String  PROPKEY_sendNtr                    = "ReportSenderToMail.send.nothingToReport";
 	public static final boolean DEFAULT_sendNtr                    = true;
+
+	public static final String  PROPKEY_subjectFyiTemplate         = "ReportSenderToMail.msg.subject.fyi.template";
+	public static final String  DEFAULT_subjectFyiTemplate         = "Daily Report -FYI- for: ${srvName}";
+
+	public static final String  PROPKEY_sendFyi                    = "ReportSenderToMail.send.fyi";
+	public static final boolean DEFAULT_sendFyi                    = true;
+
+	public static final String  PROPKEY_attachHtmlContentNtr       = "ReportSenderToMail.attachHtmlContent.nothingToReport";
+	public static final boolean DEFAULT_attachHtmlContentNtr       = false;
                                                                    
 //	public static final String  PROPKEY_msgBodyTemplate            = "ReportSenderToMail.msg.body.template";
 //	public static final String  DEFAULT_msgBodyTemplate            = createMsgBodyTemplate();

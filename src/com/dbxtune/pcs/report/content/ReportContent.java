@@ -42,7 +42,7 @@ public class ReportContent
 	private String _contentHtml;
 	private File   _contentFile;
 	private File   _lastSavedReportFile;
-	private boolean _hasNothingToReport = false;
+	private IReportEntry.IssueLevel _issueLevel = IReportEntry.IssueLevel.ISSUE;
 
 	public String getServerName()   { return _serverName  == null ? "" : _serverName; }
 //	public String getReportAsText() { return _contentText == null ? "" : _contentText; }
@@ -76,13 +76,18 @@ public class ReportContent
 	}
 
 	
-	public void setNothingToReport(boolean b)
+	/** NONE = Nothing To Report (NTR), FYI = For Your Information, ISSUE = something to act on */
+	public void setIssueLevel(IReportEntry.IssueLevel level)
 	{
-		_hasNothingToReport = b;
+		_issueLevel = level;
+	}
+	public IReportEntry.IssueLevel getIssueLevel()
+	{
+		return _issueLevel;
 	}
 	public boolean hasNothingToReport()
 	{
-		return _hasNothingToReport;
+		return _issueLevel == IReportEntry.IssueLevel.NONE;
 	}
 
 	/**

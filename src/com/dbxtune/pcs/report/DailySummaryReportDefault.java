@@ -53,8 +53,10 @@ import com.dbxtune.pcs.report.content.ShowplanLinkBuilder;
 import com.dbxtune.pcs.report.content.DbxTuneErrors;
 import com.dbxtune.pcs.report.content.DbxTunePcsTablesSize;
 import com.dbxtune.pcs.report.content.IReportEntry;
+import com.dbxtune.pcs.report.content.IReportEntry.IssueLevel;
 import com.dbxtune.pcs.report.content.IReportEntry.MessageType;
 import com.dbxtune.pcs.report.content.RecordingInfo;
+import com.dbxtune.pcs.report.content.ReportStatus;
 import com.dbxtune.pcs.report.content.ReportContent;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
@@ -214,8 +216,7 @@ extends DailySummaryReportAbstract
 		content.setMinimalMessage(minimalMessageStringWriter.toString());
 		content.setMinimalMessageOfHtml(true);
 
-		boolean hasIssueToReport = hasIssueToReport();
-		content.setNothingToReport( ! hasIssueToReport );
+		content.setIssueLevel( getIssueLevel() );
 
 		// set the content
 		setReportContent(content);
@@ -240,6 +241,7 @@ extends DailySummaryReportAbstract
 	public void addReportEntriesTop()
 	{
 		addReportEntry( new RecordingInfo(this) );
+		addReportEntry( new ReportStatus(this)  );
 		addReportEntry( new AlarmsActive(this)  );
 		addReportEntry( new AlarmsHistory(this) );
 	}
@@ -369,25 +371,46 @@ extends DailySummaryReportAbstract
 	}
 
 	/**
-	 * Check all ReportEntries, if any of them has something to report or not
-	 * @return 
+	 * The level of the whole report: the highest level of all ReportEntries (NONE = Nothing To Report)
 	 */
-	public boolean hasIssueToReport()
+	public IssueLevel getIssueLevel()
 	{
+		IssueLevel level = IssueLevel.NONE;
 		for (IReportEntry entry : getReportEntries())
 		{
-			try
-			{
-				if ( entry.hasIssueToReport() )
-					return true;
-			} 
-			catch (RuntimeException rte) 
-			{
-				// This may happen if the ReportEntry has problems (for example NullPointerException in hasIssueToReport()...
-				_logger.warn("Problems checking for hasIssueToReport() for ReportEntry for '" + entry.getClass().getSimpleName() + "'. Caught RuntimeException, skipping this and checking next entry.", rte);
-			}
+			IssueLevel entryLevel = getIssueLevel(entry);
+			if (entryLevel.compareTo(level) > 0)
+				level = entryLevel;
 		}
-		return false;
+		return level;
+	}
+
+	/**
+	 * The level of one ReportEntry, NONE if the entry is disabled or throws
+	 */
+	public static IssueLevel getIssueLevel(IReportEntry entry)
+	{
+		try
+		{
+			if ( ! entry.isEnabled() )
+				return IssueLevel.NONE;
+
+			IssueLevel level = entry.getIssueLevel();
+			return level == null ? IssueLevel.NONE : level;
+		}
+		catch (RuntimeException rte)
+		{
+			// This may happen if the ReportEntry has problems (for example NullPointerException in getIssueLevel()...
+			_logger.warn("Problems checking getIssueLevel() for ReportEntry '" + entry.getClass().getSimpleName() + "'. Caught RuntimeException, using level NONE for this entry.", rte);
+			return IssueLevel.NONE;
+		}
+	}
+
+	/** " [FYI]" or " [ISSUE]" badge for the TOC and the section headers, "" for level NONE */
+	private static String getIssueLevelBadge(IReportEntry entry)
+	{
+		IssueLevel level = getIssueLevel(entry);
+		return level == IssueLevel.NONE ? "" : " " + ReportStatus.levelBadge(level);
 	}
 
 
@@ -1254,6 +1277,7 @@ extends DailySummaryReportAbstract
 					tocSubject = tocSubject.substring(0, firstLeftParentheses - 1).trim();
 
 				String liContent = "<a href='#" + tocDiv + "'>" + tocSubject + "</a>";
+				liContent += getIssueLevelBadge(entry);
 				
 				writer.append("<li>").append(liContent).append("</li> \n");
 			}
@@ -1323,7 +1347,7 @@ extends DailySummaryReportAbstract
 				writer.append("<h5 class='card-header' role='tab' id='heading_").append(tocDiv).append("'> \n");
 				writer.append("  <a data-bs-toggle='collapse' data-bs-parent='#accordion' href='#collapse_").append(tocDiv).append("' aria-expanded='true' aria-controls='collapse_").append(tocDiv).append("' class='d-block'> \n");
 				writer.append("    <i class='fa fa-chevron-down float-end'></i> \n");
-				writer.append("    <b>").append(entry.getSubject()).append("</b> \n");
+				writer.append("    <b>").append(entry.getSubject()).append("</b>").append(getIssueLevelBadge(entry)).append(" \n");
 				writer.append("  </a> \n");
 				writer.append("</h5> \n");
 				writer.append("<div id='collapse_").append(tocDiv).append("' class='collapse" + show + "' role='tabpanel' aria-labelledby='heading_").append(tocDiv).append("'> \n");
@@ -1331,13 +1355,13 @@ extends DailySummaryReportAbstract
 				writer.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
 
 				writer.append("<!--[if mso]> \n"); // BEGIN: ONLY FOR OUTLOOK
-				writer.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append("</h2> \n");
+				writer.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append(getIssueLevelBadge(entry)).append("</h2> \n");
 				writer.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
 			}
 			else
 			{
 				// Normal HTML - H2 heading
-				writer.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append("</h2> \n");
+				writer.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append(getIssueLevelBadge(entry)).append("</h2> \n");
 			}
 
 			if (entry.isEnabled())
@@ -1571,6 +1595,7 @@ extends DailySummaryReportAbstract
 				tocSubject = tocSubject.substring(0, firstLeftParentheses - 1).trim();
 
 			String liContent = "<a href='#" + tocDiv + "'>" + tocSubject + "</a>";
+			liContent += getIssueLevelBadge(entry);
 			
 			w.append("<li>").append(liContent).append("</li> \n");
 		}
@@ -1599,7 +1624,7 @@ extends DailySummaryReportAbstract
 			w.append("<!-- ================================================================================= -->\n");
 
 			// Section HEADER
-			w.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append("</h2> \n");
+			w.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append(getIssueLevelBadge(entry)).append("</h2> \n");
 
 			if (entry.isEnabled())
 			{
@@ -1776,6 +1801,7 @@ extends DailySummaryReportAbstract
 				tocSubject = tocSubject.substring(0, firstLeftParentheses - 1).trim();
 
 			String liContent = "<a href='#" + tocDiv + "'>" + tocSubject + "</a>";
+			liContent += getIssueLevelBadge(entry);
 			
 			w.append("<li>").append(liContent).append("</li> \n");
 		}
@@ -1804,7 +1830,7 @@ extends DailySummaryReportAbstract
 			w.append("<!-- ================================================================================= -->\n");
 
 			// Section HEADER
-			w.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append("</h2> \n");
+			w.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append(getIssueLevelBadge(entry)).append("</h2> \n");
 
 			if (entry.isEnabled())
 			{

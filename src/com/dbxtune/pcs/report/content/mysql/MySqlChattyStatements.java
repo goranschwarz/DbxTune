@@ -88,9 +88,16 @@ extends MySqlAbstract
 	}
 
 	@Override
-	public boolean hasIssueToReport()
+	public IssueLevel getIssueLevel()
 	{
-		return _nPlusOneCount > 0;
+		// N+1 is a design finding (fix it in the application), not an incident: FYI
+		return _nPlusOneCount > 0 ? IssueLevel.FYI : IssueLevel.NONE;
+	}
+
+	@Override
+	public String getIssueReason()
+	{
+		return _nPlusOneCount + " statement(s) that look like N+1";
 	}
 
 	@Override

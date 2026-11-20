@@ -164,8 +164,7 @@ extends DailySummaryReportDefault
 		// Create content
 		createHtml(writer);
 
-		boolean hasIssueToReport = hasIssueToReport();
-		content.setNothingToReport( ! hasIssueToReport );
+		content.setIssueLevel( getIssueLevel() );
 
 		// set the content
 		setReportContent(content);

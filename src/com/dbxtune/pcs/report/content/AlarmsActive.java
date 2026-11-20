@@ -114,13 +114,20 @@ extends ReportEntryAbstract
 	}
 
 	@Override
-	public boolean hasIssueToReport()
+	public IssueLevel getIssueLevel()
 	{
-		if (_fullRstm == null)
-			return false;
+		if (_shortRstm == null || _shortRstm.getRowCount() == 0)
+			return IssueLevel.NONE;
 
-		return _fullRstm.getRowCount() > 0;
+		return _activeCountByLevel[0] > 0 ? IssueLevel.ISSUE : IssueLevel.FYI;
 	}
+
+	@Override
+	public String getIssueReason()
+	{
+		return AlarmsHistory.issueReason(_activeCountByLevel, "still active", _shortRstm == null ? 0 : _shortRstm.getRowCount());
+	}
+	private int[] _activeCountByLevel = new int[2]; // [0] = ISSUE, [1] = FYI, see AlarmsHistory.countByIssueLevel()
 
 	@Override
 	public String[] getMandatoryTables()
@@ -135,6 +142,16 @@ extends ReportEntryAbstract
 	{
 		getAlarmsActiveShort(conn);
 		getAlarmsActiveFull(conn);
+
+		// Active alarms per severity and action: decides the Issue Level (NTR / FYI / ISSUE). Same rows as _shortRstm (the list that is shown)
+		String schemaName = getReportingInstance().getDbmsSchemaName();
+		String tabName    = PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.ALARM_ACTIVE, null, true);
+		boolean hasAlarmAction = executeQuery(conn, "select * from " + tabName + " where 1 = 2", true, "metadata").hasColumnNoCase("alarmAction"); // not in older recordings
+		String sql = "select [severity], " + (hasAlarmAction ? "[alarmAction]" : "cast(null as varchar(10))") + " as [alarmAction], count(*) as [cnt] \n" +
+		             "from " + tabName + " \n" +
+		             "where 1 = 1 \n" +
+		             "group by [severity]" + (hasAlarmAction ? ", [alarmAction]" : "") + " \n";
+		_activeCountByLevel = AlarmsHistory.countByIssueLevel( executeQuery(conn, sql, true, "Active Alarms Count by Level") );
 	}
 
 	@Override

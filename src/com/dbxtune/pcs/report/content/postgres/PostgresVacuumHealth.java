@@ -140,11 +140,17 @@ extends PostgresAbstract
 	}
 
 	@Override
-	public boolean hasIssueToReport()
+	public IssueLevel getIssueLevel()
 	{
 		// As the XidWraparound alarm (default 1 billion)
 		long threshold = Configuration.getCombinedConfiguration().getLongProperty(CmPgDatabase.PROPKEY_alarm_XidWraparound, CmPgDatabase.DEFAULT_alarm_XidWraparound);
-		return _maxDbAge > threshold;
+		return _maxDbAge > threshold ? IssueLevel.ISSUE : IssueLevel.NONE;
+	}
+
+	@Override
+	public String getIssueReason()
+	{
+		return "Transaction ID age " + String.format("%,d", _maxDbAge) + " is above the XID wraparound alarm threshold";
 	}
 
 	@Override

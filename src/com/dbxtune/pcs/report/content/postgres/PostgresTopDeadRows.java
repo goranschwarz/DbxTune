@@ -130,10 +130,17 @@ extends PostgresAbstract
 	}
 
 	@Override
-	public boolean hasIssueToReport()
+	public IssueLevel getIssueLevel()
 	{
 		// Dead rows in themselves are not a problem. A table that is not vacuumed (or analyzed) often enough is (column 'autovacuum_verdict')
-		return _tablesWithAutovacuumFindings > 0;
+		// It's a tuning finding, not an incident: FYI
+		return _tablesWithAutovacuumFindings > 0 ? IssueLevel.FYI : IssueLevel.NONE;
+	}
+
+	@Override
+	public String getIssueReason()
+	{
+		return _tablesWithAutovacuumFindings + " table(s) with autovacuum findings";
 	}
 	private int _tablesWithAutovacuumFindings = 0;
 

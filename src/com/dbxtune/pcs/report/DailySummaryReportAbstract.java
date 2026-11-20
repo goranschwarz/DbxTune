@@ -56,6 +56,7 @@ import com.dbxtune.central.pcs.objects.DsrSkipEntry;
 import com.dbxtune.pcs.MonRecordingInfo;
 import com.dbxtune.pcs.PersistWriterBase;
 import com.dbxtune.pcs.report.content.DailySummaryReportContent;
+import com.dbxtune.pcs.report.content.IReportEntry;
 import com.dbxtune.pcs.report.content.RecordingInfo;
 import com.dbxtune.pcs.report.content.ReportEntryAbstract;
 import com.dbxtune.pcs.report.senders.IReportSender;
@@ -263,8 +264,10 @@ implements IDailySummaryReport
 		String srvName = content.getServerName();
 		srvName = FileUtils.toSafeFileName(srvName);
 
-		// Nothing to report?
-		String ntr = content.hasNothingToReport() ? ".-NTR-" : "";
+		// Nothing To Report (NTR) or For Your Information (FYI)? Nothing = an issue
+		String ntr = "";
+		if (content.getIssueLevel() == IReportEntry.IssueLevel.NONE) ntr = ".-NTR-";
+		if (content.getIssueLevel() == IReportEntry.IssueLevel.FYI ) ntr = ".-FYI-";
 
 		// Filename
 		String saveToFileName = saveDir + File.separatorChar + srvName + "." + ts + ntr + ".html";
