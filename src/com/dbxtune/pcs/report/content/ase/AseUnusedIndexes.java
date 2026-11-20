@@ -114,7 +114,7 @@ extends AseAbstract
 			@Override
 			public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
 			{
-				// The scripts are several lines ('go' on a line of its own)
+				// The scripts can be several lines (setuser for a table not owned by dbo)
 				if ("DropStatement".equals(colName) || "CreateStatement".equals(colName))
 					return strVal == null ? null : strVal.replace("\n", "<br>");
 				return super.cellValue(rstm, row, col, colName, objVal, strVal);
@@ -256,23 +256,17 @@ extends AseAbstract
 				{
 					AseTableInfo aseTableInfo = aseTableInfoSet.iterator().next(); // Get first entry from iterator (simulating: list.get(0))
 
-					// DROP INDEX only takes 'table.index' (no database or owner): 'use' the database, and 'setuser' to the table owner when it is not dbo
+					// DROP INDEX only takes 'table.index' (no owner): 'setuser' to the table owner when it is not dbo (the DBName column says which database)
 					String owner     = aseTableInfo.getSchemaName();
 					boolean isDbo    = StringUtil.isNullOrBlank(owner) || "dbo".equals(owner);
-					String dropStmnt = ""
-							+ "use " + DBName + "\ngo\n"
-							+ (isDbo ? "" : "setuser '" + owner + "'\ngo\n")
-							+ "drop index " + ObjectName + "." + IndexName + "\ngo\n"
-							+ (isDbo ? "" : "setuser\ngo\n");
+					String dropStmnt = "drop index " + ObjectName + "." + IndexName;
+					if ( ! isDbo )
+						dropStmnt = "setuser '" + owner + "'\n" + dropStmnt + "\nsetuser";
 					String createStmnt = getIndexRestoreDdl(aseTableInfo, IndexName);
 					if (StringUtil.isNullOrBlank(createStmnt))
 						createStmnt = "INFO: Index wasn't found in DDL Storage: save it with sp_helpindex before the drop";
-					else
-						createStmnt = ""
-							+ "use " + DBName + "\ngo\n"
-							+ (isDbo ? "" : "setuser '" + owner + "'\ngo\n")
-							+ createStmnt + "\ngo\n"
-							+ (isDbo ? "" : "setuser\ngo\n");
+					else if ( ! isDbo )
+						createStmnt = "setuser '" + owner + "'\n" + createStmnt + "\nsetuser";
 
 					// Set: CreateDate, SchemaName, TabRowCount, TableSizeMB
 					_shortRstm.setValueAtWithOverride(aseTableInfo.getSchemaName(), r, pos_SchemaName);

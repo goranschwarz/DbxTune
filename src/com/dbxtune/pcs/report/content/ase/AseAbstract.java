@@ -979,7 +979,7 @@ extends ReportEntryAbstract
 			if (indexTbl != null)
 				for (Map<String, String> row : indexTbl._rows)
 					if (indexName.equals(row.get("index_name")))
-						return spHelpIndexDdl(row, ti._tableName, Collections.emptyMap(), indexPtnTbl); // only the table name: the caller does 'use db' and 'setuser owner'
+						return spHelpIndexDdl(row, ti._tableName, Collections.emptyMap(), indexPtnTbl); // only the table name: run it in the database, as the owner (the caller adds 'setuser owner' when not dbo)
 		}
 
 		// The short DDL names the table as 'db.owner.table': only the table name, like above
