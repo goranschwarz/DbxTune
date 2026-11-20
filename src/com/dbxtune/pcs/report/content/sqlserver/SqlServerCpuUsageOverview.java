@@ -35,6 +35,7 @@ import com.dbxtune.cm.sqlserver.CmSummary;
 import com.dbxtune.cm.sqlserver.CmWaitStats;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
+import com.dbxtune.pcs.report.content.ReportChartAbstract;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 
@@ -152,6 +153,13 @@ extends SqlServerAbstract
 	public String getSubject()
 	{
 		return "CPU Usage graph of the full day (origin: CmSummary,CmPerfCounters,CmMemoryClerks,CmMemoryGrantsSum,CmSchedulers / @@cpu_xxx,dm_os_schedulers)";
+	}
+
+	@Override
+	public java.util.Map<String, String> getKeyFacts()
+	{
+		String cpu = ReportChartAbstract.avgMaxOfFirstSerie(_CmSummary_aaCpuGraph, " %"); // System+User CPU
+		return cpu == null ? java.util.Collections.emptyMap() : java.util.Map.of("CPU busy avg / max", "<b>" + cpu + "</b>");
 	}
 
 	@Override

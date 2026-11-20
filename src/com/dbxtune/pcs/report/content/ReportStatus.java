@@ -86,7 +86,14 @@ extends ReportEntryAbstract
 		if (reportLevel == IssueLevel.FYI)   text = "For Your Information: nothing urgent, have a look when you have time";
 		if (reportLevel == IssueLevel.ISSUE) text = "Something to act on";
 
-		w.append("<p style='font-size: 120%;'>").append(levelBadge(reportLevel)).append("&nbsp; <b>").append(text).append("</b></p>\n");
+		// The mail (SHORT message) shows the level in its banner at the top
+		if (MessageType.SHORT_MESSAGE.equals(messageType))
+		{
+			if (entries.isEmpty())
+				w.append("<div style='font-size:13px; color:#5d6878;'>No section has anything to report.</div>\n");
+		}
+		else
+			w.append("<p style='font-size: 120%;'>").append(levelBadge(reportLevel)).append("&nbsp; <b>").append(text).append("</b></p>\n");
 
 		if (entries.isEmpty())
 			return;

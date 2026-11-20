@@ -187,6 +187,15 @@ public interface IReportEntry
 	}
 
 	/**
+	 * A few numbers that answer "was it a normal day?", shown in the "key facts" row at the top of the mail.
+	 * Label -> value (HTML), for example "CPU busy avg / max" -> "23 % / 71 %". Empty: the entry has none.
+	 */
+	default java.util.Map<String, String> getKeyFacts()
+	{
+		return java.util.Collections.emptyMap();
+	}
+
+	/**
 	 * Create Report entry with data from the database...
 	 * @param conn            Connection to the DBMS which stores data
 	 * @param srvName         Name of the DBMS Server Instance

@@ -32,6 +32,7 @@ import java.nio.file.Path;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -452,8 +453,9 @@ extends DailySummaryReportAbstract
 		w.append("        body { \n");
 		w.append("            -webkit-text-size-adjust: 100%; \n");
 		w.append("            -ms-text-size-adjust: 100%; \n");
-		w.append("            font-family: Arial, Helvetica, sans-serif; \n");
-		w.append("            font-family: Arial, Helvetica, sans-serif; \n");
+		w.append("            font-family: \"Segoe UI\", Arial, Helvetica, sans-serif; \n");
+		w.append("            color: #1d2430; \n");
+		w.append("            font-size: 14px; \n");
 //		sb.append("            line-height: 1;  /* overiding bootstrap, which has 1.5 */ \n");  
 		w.append("            line-height: normal;  /* overiding bootstrap, which has 1.5 */ \n");  
 		w.append("        } \n");
@@ -470,26 +472,31 @@ extends DailySummaryReportAbstract
 		w.append("            mso-table-wrap: none; \n");        // not sure about this - https://gist.github.com/webtobesocial/ac9d052595b406d5a5c1
 //		w.append("            mso-cellspacing: 20px; \n");
 		w.append("            border-collapse: collapse; \n");
+		w.append("            border: 0; \n"); // also over the border='1' attribute: one table style, thin row lines and no grid
+		w.append("            font-size: 13px; \n");
 		w.append("        } \n");
 		w.append("        th { \n");
-		w.append("            border: 1px solid black; \n");
+		w.append("            border: 0; \n");
+		w.append("            border-bottom: 1px solid #d5dbe4; \n");
 		w.append("            text-align: left; \n");
-		w.append("            padding: 2px; \n");
+		w.append("            padding: 5px 8px; \n");
 		w.append("            white-space: nowrap; \n");
-		w.append("            background-color: gray; \n");
-		w.append("            color: white; \n");
+		w.append("            background-color: #eef1f5; \n");
+		w.append("            color: #3a4556; \n");
+		w.append("            font-weight: 600; \n");
 		w.append("        } \n");
 		w.append("        td { \n");
-		w.append("            border: 1px solid black; \n");
+		w.append("            border: 0; \n");
+		w.append("            border-bottom: 1px solid #edf0f4; \n");
 		w.append("        /*  text-align: left; */ \n");
-		w.append("            padding: 2px; \n");
+		w.append("            padding: 4px 8px; \n");
 		w.append("            white-space: nowrap; \n");
 		w.append("        } \n");
 		w.append("        tr:nth-child(odd) { \n");
 		w.append("            background-color: white; \n"); // Otherwise it will be transparent (and bootstrap will write "right line" of a box in the table)
 		w.append("        } \n");
 		w.append("        tr:nth-child(even) { \n");
-		w.append("            background-color: #f2f2f2; \n");
+		w.append("            background-color: #f9fafb; \n");
 		w.append("        } \n");
 		w.append("\n");
 		w.append("<!--[if mso]> \n");
@@ -1608,126 +1615,128 @@ extends DailySummaryReportAbstract
 	public void createShortMessageBody(Writer w)
 	throws IOException
 	{
-		w.append("<body>\n");
+		w.append("<body style='margin:0; padding:0 10px; background:#ffffff;'>\n");
 		w.append("\n");
-		
-		// Normal HTML - H2 heading
-		w.append("<h2>" + getReportName() + " for Servername: ").append(getServerName()).append("</h2>\n");
 
-		w.append( createDbxCentralLink(false) );
+		// The mail is built with tables and inline styles only: that is what Outlook (Word), Gmail and iPhone Mail all show the same way
+		IssueLevel level      = getIssueLevel();
+		String     levelColor = level == IssueLevel.NONE ? "#198754" : level == IssueLevel.FYI ? "#0d6efd" : "#dc3545";
+		String     levelName  = level == IssueLevel.NONE ? "NTR"     : level == IssueLevel.FYI ? "FYI"     : "ISSUE";
+		String     levelText  = level == IssueLevel.NONE ? "Nothing to report."
+		                      : level == IssueLevel.FYI  ? "Nothing urgent, have a look when you have time."
+		                      :                            "Something to act on, see the Report Status below.";
+
+		Timestamp beginTs = getReportPeriodOrRecordingBeginTime();
+		Timestamp endTs   = getReportPeriodOrRecordingEndTime();
+		String period = "";
+		if (beginTs != null && endTs != null)
+		{
+			String day = beginTs.toLocalDateTime().getDayOfWeek().getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH);
+			period = day + " " + new SimpleDateFormat("yyyy-MM-dd").format(beginTs)
+			       + " &nbsp;" + new SimpleDateFormat("HH:mm").format(beginTs) + " &ndash; " + new SimpleDateFormat("HH:mm").format(endTs);
+		}
+		String appName = StringUtil.hasValue(getRecDbxAppName()) ? " &middot; " + getRecDbxAppName() : "";
+
+		w.append("<table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse; font-family:\"Segoe UI\", Arial, Helvetica, sans-serif; font-size:14px; color:#1d2430; background:#ffffff;'>\n");
 
 		//--------------------------------------------------
-		// TOC
-		w.append("<br> \n");
-		w.append("Links to Report Sections. \n");
-		w.append("<ul> \n");
+		// Status banner, in the level's color
+		w.append("<tr><td style='background:" + levelColor + "; border:0; padding:16px 20px; color:#ffffff;'>\n");
+		w.append("  <table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse;'>\n");
+		w.append("    <tr>\n");
+		w.append("      <td style='background:" + levelColor + "; border:0; padding:0; color:#ffffff; vertical-align:top;'>\n");
+		w.append("        <div style='font-size:12px; letter-spacing:1px; text-transform:uppercase;'>" + getReportName() + appName + "</div>\n");
+		w.append("        <div style='font-size:22px; font-weight:600; margin-top:2px;'>" + getServerName() + "</div>\n");
+		w.append("        <div style='font-size:13px; margin-top:2px;'>" + period + "</div>\n");
+		w.append("      </td>\n");
+		w.append("      <td align='right' style='background:" + levelColor + "; border:0; padding:0; vertical-align:top; white-space:nowrap;'><span style='display:inline-block; background:#ffffff; color:" + levelColor + "; font-weight:700; font-size:13px; padding:4px 10px; border-radius:4px;'>" + levelName + "</span></td>\n");
+		w.append("    </tr>\n");
+		w.append("    <tr><td colspan='2' style='background:" + levelColor + "; border:0; padding:10px 0 0 0; color:#ffffff; font-size:15px;'>" + levelText + "</td></tr>\n");
+		w.append("  </table>\n");
+		w.append("</td></tr>\n");
+
+		//--------------------------------------------------
+		// One button to the full report, and a link to all reports
+		String dbxCentralBaseUrl = getDbxCentralPublicBaseUrl();
+		w.append("<tr><td style='background:#ffffff; border:0; padding:14px 0 4px;'>\n");
+		w.append("  <table role='presentation' cellpadding='0' cellspacing='0' style='border-collapse:collapse;'><tr>\n");
+		w.append("    <td style='background:#1d2430; border:0; padding:0; border-radius:5px;'><a href='" + dbxCentralBaseUrl + "/report?op=viewLatest&name=" + getServerName() + "' style='display:inline-block; padding:9px 16px; color:#ffffff; text-decoration:none; font-weight:600; font-size:14px;'>Open the full report in DbxCentral</a></td>\n");
+		w.append("    <td style='background:#ffffff; border:0; padding:0 0 0 14px; font-size:13px;'><a href='" + dbxCentralBaseUrl + "/overview#reportfiles' style='color:#2b5fb8;'>All reports</a></td>\n");
+		w.append("  </tr></table>\n");
+		w.append("  <div style='font-size:12px; color:#5d6878; margin-top:8px;'>This mail is a summary. The full report is in DbxCentral" + (level == IssueLevel.NONE ? "." : ", and attached to this mail.") + "</div>\n");
+		w.append("</td></tr>\n");
+
+		//--------------------------------------------------
+		// Key facts: a few numbers that answer "was it a normal day?" (IReportEntry.getKeyFacts), 4 per row
+		List<String> facts = new ArrayList<>();
+		for (IReportEntry entry : getReportEntries())
+		{
+			if ( ! entry.isEnabled() )
+				continue;
+			try
+			{
+				for (java.util.Map.Entry<String, String> fact : entry.getKeyFacts().entrySet())
+					facts.add("<td valign='top' style='background:#ffffff; padding:6px 8px; border:1px solid #e3e7ee; white-space:normal;'><div style='color:#5d6878; font-size:11px;'>" + fact.getKey() + "</div>" + fact.getValue() + "</td>");
+			}
+			catch (RuntimeException ex)
+			{
+				_logger.warn("Problems getting the key facts from report entry '" + entry.getClass().getSimpleName() + "'. Skipping it.", ex);
+			}
+		}
+		if ( ! facts.isEmpty() )
+		{
+			w.append("<tr><td style='background:#ffffff; border:0; padding:12px 0 4px;'>\n");
+			w.append("  <table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse; font-size:13px;'>\n");
+			for (int i = 0; i < facts.size(); i += 4)
+				w.append("    <tr>").append(String.join("", facts.subList(i, Math.min(i + 4, facts.size())))).append("</tr>\n");
+			w.append("  </table>\n");
+			w.append("</td></tr>\n");
+		}
+		w.append("</table>\n");
+
+		//--------------------------------------------------
+		// Report Status first (where the level comes from), then what is in this mail
+		IReportEntry reportStatus = getReportEntry(ReportStatus.class);
+		if (reportStatus != null)
+			writeShortMessageEntry(w, reportStatus);
+
+		List<String> tocCells = new ArrayList<>();
 		for (IReportEntry entry : getReportEntries())
 		{
 			// Skip if "section" should not be part of the Short Message
-			if ( ! entry.hasShortMessageText() )
+			if ( ! entry.hasShortMessageText() || entry == reportStatus )
 				continue;
 
 			String tocSubject = entry.getSubject();
-			String tocDiv     = StringUtil.stripAllNonAlphaNum(tocSubject);
-
-			// Strip off parts that may be details
 			int firstLeftParentheses = tocSubject.indexOf("(");
 			if (firstLeftParentheses != -1)
-				tocSubject = tocSubject.substring(0, firstLeftParentheses - 1).trim();
+				tocSubject = tocSubject.substring(0, firstLeftParentheses).trim();
 
-			String liContent = "<a href='#" + tocDiv + "'>" + tocSubject + "</a>";
-			liContent += getIssueLevelBadge(entry);
-			
-			w.append("<li>").append(liContent).append("</li> \n");
+			tocCells.add("<a href='#" + StringUtil.stripAllNonAlphaNum(entry.getSubject()) + "' style='color:#2b5fb8;'>" + tocSubject + "</a>" + getIssueLevelBadge(entry));
 		}
-		w.append("</ul> \n");
-		w.append("\n<br>");
+		int half = (tocCells.size() + 1) / 2; // column 1 = first half, column 2 = second half (reads top-down)
+		w.append("<table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse; font-family:\"Segoe UI\", Arial, Helvetica, sans-serif;'>\n");
+		w.append("<tr><td style='background:#ffffff; border:0; padding:16px 0 4px;'>\n");
+		w.append("  <div style='font-size:16px; font-weight:600; border-left:4px solid #8a94a3; padding-left:8px;'>In this mail</div>\n");
+		w.append("  <table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse; margin-top:6px; font-size:13px;'>\n");
+		for (int i = 0; i < half; i++)
+		{
+			String col2 = (i + half) < tocCells.size() ? tocCells.get(i + half) : "";
+			w.append("    <tr><td style='background:#ffffff; padding:2px 8px 2px 0; width:50%; border:0;'>").append(tocCells.get(i)).append("</td><td style='background:#ffffff; padding:2px 0; border:0;'>").append(col2).append("</td></tr>\n");
+		}
+		w.append("  </table>\n");
+		w.append("</td></tr>\n");
+		w.append("</table>\n");
 
 		//--------------------------------------------------
 		// ALL REPORTS
 		for (IReportEntry entry : getReportEntries())
 		{
 			// Skip if "section" should not be part of the Short Message
-			if ( ! entry.hasShortMessageText() )
+			if ( ! entry.hasShortMessageText() || entry == reportStatus )
 				continue;
 
-			// So we can gather some statistics
-			entry.beginWriteEntry(w, MessageType.SHORT_MESSAGE);
-
-			String tocSubject = entry.getSubject();
-			String tocDiv     = StringUtil.stripAllNonAlphaNum(tocSubject);
-
-			// Add a section header
-			w.append("\n");
-			w.append("\n");
-			w.append("<!-- ================================================================================= -->\n");
-			w.append("<!-- " + entry.getSubject()                                                        + " -->\n");
-			w.append("<!-- ================================================================================= -->\n");
-
-			// Section HEADER
-			w.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append(getIssueLevelBadge(entry)).append("</h2> \n");
-
-			if (entry.isEnabled())
-			{
-				try
-				{
-					entry.setCurrentMessageType(MessageType.SHORT_MESSAGE);
-
-					// Warning messages
-					if (entry.hasWarningMsg())
-						w.append(entry.getWarningMsg());
-
-					// Get the message text
-//					if ( ! entry.hasProblem() )
-//						entry.writeShortMessageText(w);
-					if ( ! entry.hasProblem() )
-						entry.writeMessageText(w, entry.getCurrentMessageType());
-					
-					// If the entry indicates that it has a problem... then print that.
-					if ( entry.hasProblem() )
-						w.append(entry.getProblemText());
-					
-					// if we should append anything after an entry... Possibly '<br>\n'
-					w.append(entry.getEndOfReportText());
-				}
-				catch (RuntimeException rte)
-				{
-					w.append("Problems 'writing' the HTML report text for section '" + entry.getSubject() + "'. Caught: " + rte + "\n");
-					w.append("Continuing with next report section... <br> \n");
-					w.append("Exception: <br> \n");
-					w.append("<pre><code> \n");
-					w.append(StringUtil.exceptionToString(rte));
-					w.append("</code></pre> \n");
-				}
-				finally
-				{
-					entry.setCurrentMessageType(null);
-				}
-			}
-			else
-			{
-				String reason = entry.getDisabledReason();
-				if (StringUtil.hasValue(reason))
-				{
-					// Entry is DISABLED
-					w.append("This entry is <b>disabled</b>, reason:<br>");
-					w.append(reason);
-					w.append("<br>");
-				}
-				else
-				{
-					// Entry is DISABLED
-					w.append("This entry is <b>disabled</b>, to enable it; put the following in the configuration file. ");
-					w.append("<code>").append(entry.getIsEnabledConfigKeyName()).append(" = false</code><br>");
-				}
-			}
-
-			// Section FOOTER
-
-			
-			// So we can gather some statistics
-			entry.endWriteEntry(w, MessageType.SHORT_MESSAGE);
-
+			writeShortMessageEntry(w, entry);
 		}
 		w.append("\n<br>");
 
@@ -1743,6 +1752,109 @@ extends DailySummaryReportAbstract
 
 		w.append("\n");
 		w.append("</body> \n");
+	}
+
+	/**
+	 * Mail section header: a table row (Outlook), the left border in the section's level color (gray: no finding),
+	 * the title (the subject before " (") and the data source ("origin: ..." in the subject) small on the right
+	 */
+	private static String mailSectionHeader(IReportEntry entry, String tocDiv)
+	{
+		IssueLevel level = getIssueLevel(entry);
+		String color = level == IssueLevel.ISSUE ? "#dc3545" : level == IssueLevel.FYI ? "#0d6efd" : "#8a94a3";
+
+		String title  = entry.getSubject();
+		String origin = "";
+		int pos = title.indexOf(" (");
+		if (pos != -1)
+		{
+			String inParen = title.substring(pos + 2, title.endsWith(")") ? title.length() - 1 : title.length());
+			int oPos = inParen.indexOf("origin: ");
+			origin = oPos != -1 ? inParen.substring(oPos + "origin: ".length()) : "";
+			title  = title.substring(0, pos);
+		}
+
+		return "<a name='" + tocDiv + "'></a>\n"
+				+ "<table role='presentation' id='" + tocDiv + "' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse; margin-top:22px; margin-bottom:6px; font-family:\"Segoe UI\", Arial, Helvetica, sans-serif;'><tr>"
+				+ "<td style='background:#ffffff; font-size:16px; font-weight:600; color:#1d2430; border:0; border-left:4px solid " + color + "; padding:2px 0 2px 8px;'>" + title + getIssueLevelBadge(entry) + "</td>"
+				+ "<td align='right' style='background:#ffffff; font-size:11px; color:#8a94a3; font-family:Consolas, \"Courier New\", monospace; border:0; padding:2px 0; white-space:normal;'>" + origin + "</td>"
+				+ "</tr></table>\n";
+	}
+
+	/** One section of the mail (the SHORT message) */
+	private void writeShortMessageEntry(Writer w, IReportEntry entry)
+	throws IOException
+	{
+		// So we can gather some statistics
+		entry.beginWriteEntry(w, MessageType.SHORT_MESSAGE);
+
+		String tocDiv = StringUtil.stripAllNonAlphaNum(entry.getSubject());
+
+		// Add a section header
+		w.append("\n");
+		w.append("\n");
+		w.append("<!-- ================================================================================= -->\n");
+		w.append("<!-- " + entry.getSubject()                                                        + " -->\n");
+		w.append("<!-- ================================================================================= -->\n");
+
+		// Section HEADER
+		w.append(mailSectionHeader(entry, tocDiv));
+
+		if (entry.isEnabled())
+		{
+			try
+			{
+				entry.setCurrentMessageType(MessageType.SHORT_MESSAGE);
+
+				// Warning messages
+				if (entry.hasWarningMsg())
+					w.append(entry.getWarningMsg());
+
+				// Get the message text
+				if ( ! entry.hasProblem() )
+					entry.writeMessageText(w, entry.getCurrentMessageType());
+
+				// If the entry indicates that it has a problem... then print that.
+				if ( entry.hasProblem() )
+					w.append(entry.getProblemText());
+
+				// if we should append anything after an entry... Possibly '<br>\n'
+				w.append(entry.getEndOfReportText());
+			}
+			catch (RuntimeException rte)
+			{
+				w.append("Problems 'writing' the HTML report text for section '" + entry.getSubject() + "'. Caught: " + rte + "\n");
+				w.append("Continuing with next report section... <br> \n");
+				w.append("Exception: <br> \n");
+				w.append("<pre><code> \n");
+				w.append(StringUtil.exceptionToString(rte));
+				w.append("</code></pre> \n");
+			}
+			finally
+			{
+				entry.setCurrentMessageType(null);
+			}
+		}
+		else
+		{
+			String reason = entry.getDisabledReason();
+			if (StringUtil.hasValue(reason))
+			{
+				// Entry is DISABLED
+				w.append("This entry is <b>disabled</b>, reason:<br>");
+				w.append(reason);
+				w.append("<br>");
+			}
+			else
+			{
+				// Entry is DISABLED
+				w.append("This entry is <b>disabled</b>, to enable it; put the following in the configuration file. ");
+				w.append("<code>").append(entry.getIsEnabledConfigKeyName()).append(" = false</code><br>");
+			}
+		}
+
+		// So we can gather some statistics
+		entry.endWriteEntry(w, MessageType.SHORT_MESSAGE);
 	}
 
 	/**

@@ -839,7 +839,8 @@ implements IReportEntry
 			sb.append( msOutlookAlternateText(showHideDiv, "Column Description", "") );
 		}
 
-		if (addSqlText)
+		// The mail is a summary: the SQL behind a section is only in the full report
+		if (addSqlText && ! isShortMessageType() && ! isMinimalMessageType())
 		{
 			String sqlText = rstm.getSqlText();
 			if (StringUtil.hasValue(sqlText))

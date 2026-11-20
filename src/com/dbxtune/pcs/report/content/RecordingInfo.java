@@ -408,6 +408,14 @@ extends ReportEntryAbstract
 	}
 
 	@Override
+	public java.util.Map<String, String> getKeyFacts()
+	{
+		if (_duration == null)
+			return java.util.Collections.emptyMap();
+		return java.util.Map.of("Recorded", "<b>" + _duration + "</b>");
+	}
+
+	@Override
 	public boolean hasIssueToReport()
 	{
 		return false;

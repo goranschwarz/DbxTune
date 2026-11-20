@@ -130,6 +130,13 @@ extends ReportEntryAbstract
 	private int[] _activeCountByLevel = new int[2]; // [0] = ISSUE, [1] = FYI, see AlarmsHistory.countByIssueLevel()
 
 	@Override
+	public java.util.Map<String, String> getKeyFacts()
+	{
+		int cnt = _shortRstm == null ? 0 : _shortRstm.getRowCount();
+		return java.util.Map.of("Active alarms", "<b>" + cnt + "</b>");
+	}
+
+	@Override
 	public String[] getMandatoryTables()
 	{
 		String schemaName = getReportingInstance().getDbmsSchemaName();

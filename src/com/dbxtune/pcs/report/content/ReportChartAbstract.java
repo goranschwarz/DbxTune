@@ -270,6 +270,32 @@ public abstract class ReportChartAbstract implements IReportChart
 		_minDataValue = Math.min(_minDataValue, dataValue.doubleValue());
 		_maxDataValue = Math.max(_maxDataValue, dataValue.doubleValue());
 	}
+	/** For the mail's key facts: "avg / max" of the FIRST serie of a time series chart, for example "23 % / 71 %". null when there is no data */
+	public static String avgMaxOfFirstSerie(IReportChart chart, String unit)
+	{
+		if (chart == null || ! (chart.getDataset() instanceof TimeSeriesCollection))
+			return null;
+		TimeSeriesCollection tsc = (TimeSeriesCollection) chart.getDataset();
+		if (tsc.getSeriesCount() == 0 || tsc.getSeries(0).getItemCount() == 0)
+			return null;
+
+		TimeSeries ts = tsc.getSeries(0);
+		double sum = 0, max = 0;
+		int    cnt = 0;
+		for (int i = 0; i < ts.getItemCount(); i++)
+		{
+			Number val = ts.getValue(i);
+			if (val == null)
+				continue;
+			sum += val.doubleValue();
+			max  = Math.max(max, val.doubleValue());
+			cnt++;
+		}
+		if (cnt == 0)
+			return null;
+		return Math.round(sum / cnt) + unit + " / " + Math.round(max) + unit;
+	}
+
 	public Double getDatasetMinValue() { return _minDataValue; }
 	public Double getDatasetMaxValue() { return _maxDataValue; }
 	
@@ -1328,7 +1354,7 @@ public abstract class ReportChartAbstract implements IReportChart
 			if ("png".equalsIgnoreCase(imgType))
 			{
 				// Write the HTML Meta data
-				writer.append("<img id='img_" + tagName + "' width='" + width + "' height='" + height + "' src='data:image/png;base64,");
+				writer.append("<img id='img_" + tagName + "' width='" + width + "' height='" + height + "' style='max-width:100%; height:auto;' src='data:image/png;base64,");
 
 				// Write the Base64 representation of the image
 				writeChartAsPNG(base64out, _chart, width, height, encodeAlpha, compression);
@@ -1339,7 +1365,7 @@ public abstract class ReportChartAbstract implements IReportChart
 			else if ("jpeg".equalsIgnoreCase(imgType))
 			{
 				// Write the HTML Meta data
-				writer.append("<img id='img_" + tagName + "' width='" + width + "' height='" + height + "' src='data:image/jpeg;base64,");
+				writer.append("<img id='img_" + tagName + "' width='" + width + "' height='" + height + "' style='max-width:100%; height:auto;' src='data:image/jpeg;base64,");
 				
 //				float   jpgQuality  = 0.0f; // A compression quality setting of 0.0 is most genericallyinterpreted as "high compression is important," while a setting of1.0 is most generically interpreted as "high image quality isimportant." 
 				float   jpgQuality  = 0.5f; // A compression quality setting of 0.0 is most genericallyinterpreted as "high compression is important," while a setting of1.0 is most generically interpreted as "high image quality isimportant." 

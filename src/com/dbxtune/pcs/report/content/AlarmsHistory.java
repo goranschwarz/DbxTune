@@ -160,6 +160,14 @@ extends ReportEntryAbstract
 		return issueReason(_raiseCountByLevel, "raised", _shortRstm == null ? 0 : _shortRstm.getRowCount());
 	}
 
+	@Override
+	public java.util.Map<String, String> getKeyFacts()
+	{
+		int issue = _raiseCountByLevel[0];
+		int fyi   = _raiseCountByLevel[1];
+		return java.util.Map.of("Alarms raised", "<b>" + (issue + fyi) + "</b> <span style='color:#5d6878;'>(" + issue + " WARNING/ERROR)</span>");
+	}
+
 	/**
 	 * Count alarms per level, from rows with columns: severity, alarmAction, cnt
 	 * <ul>
