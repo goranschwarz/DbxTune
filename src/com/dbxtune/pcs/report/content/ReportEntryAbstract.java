@@ -91,7 +91,7 @@ implements IReportEntry
 	public static final int     DEFAULT_DSR_QUERY_TIMEOUT_IN_SEC = 60 * 15; // 15 Minutes
 	
 	public static final String  PROPKEY_DSR_DDL_MAX_LEN_TABLE   = "DailySummaryReport.ddl.maxlen.table";
-	public static final int     DEFAULT_DSR_DDL_MAX_LEN_TABLE   = -1;
+	public static final int     DEFAULT_DSR_DDL_MAX_LEN_TABLE   = 8192; // the sp_help like texts (Table Info), not SQL Text. ASE + SQL Server show DDL made from it (much smaller)
 
 	public static final String  PROPKEY_DSR_DDL_MAX_LEN_TRIGGER = "DailySummaryReport.ddl.maxlen.trigger";
 	public static final int     DEFAULT_DSR_DDL_MAX_LEN_TRIGGER = 4096;
@@ -1925,8 +1925,20 @@ implements IReportEntry
 						+ "";
 			}
 		}
+
+		// In a report: the text is written ONCE (the same table is often in many sections and statements), the div refers to it.
+		// The full report sets 'data-tooltip' at page load, the mail has a CSS rule per text: see DailySummaryReportDefault (getTooltipTexts)
+		if (hasReportingInstance() && displayText != null)
+		{
+			int id = getReportingInstance().getTooltipTextId(displayText);
+			return "<div class='dsr-tt dsr-tt-" + id + "' data-tt='" + id + "' title='" + labelText + "' "
+					+ "data-bs-toggle='modal' "
+					+ "data-bs-target='#dbx-view-sqltext-dialog' "
+					+ ">&#x1F4AC; " + labelText + "</div>"; // &#x1F4AC; ==>> symbol popup with "..."
+		}
+
 		displayText = StringEscapeUtils.escapeHtml4(displayText);
-		
+
 		// Put the "Actual Executed SQL Text" as a "tooltip"
 		return "<div title='" + labelText + "' "
 				+ "data-bs-toggle='modal' "

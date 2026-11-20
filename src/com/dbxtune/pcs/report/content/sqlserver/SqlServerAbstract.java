@@ -973,7 +973,9 @@ extends ReportEntryAbstract
 				tableInfoMap.put("Created"    ,                 entry.getCrDate() + ""       );
 				tableInfoMap.put("Sampled"    ,                 entry.getSampleTime() + ""   );
 				tableInfoMap.put("Index Count", entry.getIndexCount() + (entry.getIndexCount() > 0 ? "" : " <b><font color='red'>&lt;&lt;-- Warning NO index</font></b>") );
-				tableInfoMap.put("DDL Info"   , entry._objectText   == null ? "-"             : getTextAsTooltipDiv(entry._objectText, "Table Info", getDdlMaxLengthTable()));
+				// DDL made from the sp_help text (the same as the LLM gets): much smaller. The raw text if it can't be made
+				String ddlText = entry._objectText == null ? null : formatObjectTextAsDdl(entry.getFullTableName(), entry._objectText);
+				tableInfoMap.put("DDL Info"   , entry._objectText   == null ? "-"             : getTextAsTooltipDiv(ddlText != null ? ddlText : entry._objectText, "Table Info", getDdlMaxLengthTable()));
 //				tableInfoMap.put("Triggers"   , "-not-yet-impl-");
 				tableInfoMap.put("Triggers"   , entry._triggersText == null ? "-no-triggers-" : getTextAsTooltipDiv(entry._triggersText, "Trigger Info", getDdlMaxLengthTrigger()));
 			}

@@ -719,7 +719,7 @@ extends ReportSenderAbstract
 //		list.add( new CmSettingsHelper("Msg-Template-Use-HTML",            PROPKEY_msgBodyTemplateUseHtml,     Boolean.class, conf.getBooleanProperty(PROPKEY_msgBodyTemplateUseHtml    , DEFAULT_msgBodyTemplateUseHtml    ), DEFAULT_msgBodyTemplateUseHtml    , "If '"+PROPKEY_msgBodyTemplate+"' is not specified, then use a HTML Template as the default."));
 //		list.add( new CmSettingsHelper("Msg-Use-HTML",                     PROPKEY_msgBodyUseHtml,             Boolean.class, conf.getBooleanProperty(PROPKEY_msgBodyUseHtml            , DEFAULT_msgBodyUseHtml            ), DEFAULT_msgBodyUseHtml            , "Send HTML message."));
 		list.add( new CmSettingsHelper("Attach-HTML-content",              PROPKEY_attachHtmlContent,          Boolean.class, conf.getBooleanProperty(PROPKEY_attachHtmlContent         , DEFAULT_attachHtmlContent         ), DEFAULT_attachHtmlContent         , "Attach the content as a HTML file (might be easier to open/read)"));
-		list.add( new CmSettingsHelper("Attach-HTML-zip-content-gt-mb",    PROPKEY_attachHtmlZipContentGtMb,   Integer.class, conf.getIntProperty    (PROPKEY_attachHtmlZipContentGtMb  , DEFAULT_attachHtmlZipContentGtMb  ), DEFAULT_attachHtmlZipContentGtMb  , "If the Attached HTML content is greater than XX MB, then ZIP it before it's sent."));
+		list.add( new CmSettingsHelper("Attach-HTML-zip-content-gt-mb",    PROPKEY_attachHtmlZipContentGtMb,   Integer.class, conf.getIntProperty    (PROPKEY_attachHtmlZipContentGtMb  , DEFAULT_attachHtmlZipContentGtMb  ), DEFAULT_attachHtmlZipContentGtMb  , "If the Attached HTML content is greater than XX MB, then ZIP it before it's sent. 0 = always zip."));
 		list.add( new CmSettingsHelper("Attach-HTML-content-maxSizeMb",    PROPKEY_attachHtmlContentMaxSizeMb, Integer.class, conf.getIntProperty    (PROPKEY_attachHtmlContentMaxSizeMb, DEFAULT_attachHtmlContentMaxSizeMb), DEFAULT_attachHtmlContentMaxSizeMb, "Only attach HTML file if the file size is below this value in MB (some receivers do not allow large messages)"));
 
 		list.add( new CmSettingsHelper("username",                         PROPKEY_username,                   String .class, conf.getProperty       (PROPKEY_username                  , DEFAULT_username                  ), DEFAULT_username                  , "If the SMTP server reuires you to login (default: is not to logon)"));
@@ -995,7 +995,7 @@ extends ReportSenderAbstract
 	public static final boolean DEFAULT_attachHtmlContent          = true;
 
 	public static final String  PROPKEY_attachHtmlZipContentGtMb   = "ReportSenderToMail.attachHtmlContent.zip.gt.mb";
-	public static final int     DEFAULT_attachHtmlZipContentGtMb   = 10;
+	public static final int     DEFAULT_attachHtmlZipContentGtMb   = 0; // 0 = always zip (a DSR zips to ~25%)
 	
 	public static final String  PROPKEY_attachHtmlContentMaxSizeMb = "ReportSenderToMail.attachHtmlContent.maxSizeMb";
 	public static final int     DEFAULT_attachHtmlContentMaxSizeMb = 30;

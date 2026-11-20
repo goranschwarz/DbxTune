@@ -37,6 +37,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.gui.ResultSetTableModel;
+import com.dbxtune.pcs.report.content.ShowplanLinkBuilder;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.DbUtils;
@@ -600,7 +601,9 @@ public class ExecutionPlanCollection
 			w.append("    function showplanForId_" + getId() + "(id) \n");      // Function ON ID
 			w.append("    { \n");
 			w.append("        last_showplanForId_" + getId() + "_id = id;");
-			w.append("        var showplanText = document.getElementById('plan_" + getId() + "_'+id).innerHTML; \n");
+			w.append("        var planEl = document.getElementById('plan_" + getId() + "_'+id); \n");
+			w.append("        if (dsrPlanNotReady(planEl)) return; \n");
+			w.append("        var showplanText = planEl.innerHTML; \n");
 			
 			w.append("        if (showplanText === last_showplanForId_" + getId() + ") \n");
 			w.append("        { \n");
@@ -686,9 +689,7 @@ public class ExecutionPlanCollection
 			{
 				String xmlPlan = _planMap.get(pk);
 
-				w.append("\n<script id='plan_" + getId() + "_").append( pk.getPlanId() ).append("' type='text/xmldata'>\n");
-				w.append(xmlPlan);
-				w.append("\n</script>\n");
+				ShowplanLinkBuilder.writePlanScript(w, "plan_" + getId() + "_" + pk.getPlanId(), xmlPlan);
 			}
 		}
 	}

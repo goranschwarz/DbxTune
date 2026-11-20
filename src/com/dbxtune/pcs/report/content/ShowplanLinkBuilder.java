@@ -21,11 +21,18 @@
  ******************************************************************************/
 package com.dbxtune.pcs.report.content;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.Writer;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.text.StringEscapeUtils;
 
+import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.DbUtils;
 import com.dbxtune.utils.StringUtil;
 
@@ -52,6 +59,41 @@ import com.dbxtune.utils.StringUtil;
  */
 public class ShowplanLinkBuilder
 {
+	/** Write the execution plans gzip'ed + base64 (the browser unpacks them at page load, see dsrPlanUnpackAll()). Plans are often the biggest part of a report */
+	public static final String  PROPKEY_COMPRESS_PLANS = "DailySummaryReport.plans.compress";
+	public static final boolean DEFAULT_COMPRESS_PLANS = true;
+
+	/**
+	 * Write a plan as a hidden {@code <script id='...' type='text/xmldata'>} block, the block that "View Execution Plan",
+	 * "Get LLM Optimization Advice" and the plan viewers read.
+	 * <p>
+	 * Compressed (default): {@code data-enc='gzip64'} and the gzip'ed text as base64. At page load {@code dsrPlanUnpackAll()}
+	 * replaces it with the plain text, so the readers see the same text as before.
+	 */
+	public static void writePlanScript(Writer w, String id, String planText)
+	throws IOException
+	{
+		String text = "\n" + planText + "\n"; // the text the plain block has always had
+
+		if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_COMPRESS_PLANS, DEFAULT_COMPRESS_PLANS))
+		{
+			ByteArrayOutputStream bos = new ByteArrayOutputStream();
+			try (GZIPOutputStream gz = new GZIPOutputStream(bos))
+			{
+				gz.write(text.getBytes(StandardCharsets.UTF_8));
+			}
+			w.append("\n<script id='").append(id).append("' type='text/xmldata' data-enc='gzip64'>");
+			w.append(Base64.getEncoder().encodeToString(bos.toByteArray()));
+			w.append("</script>\n");
+		}
+		else
+		{
+			w.append("\n<script id='").append(id).append("' type='text/xmldata'>");
+			w.append(text.replace("</script", "<\\/script"));
+			w.append("</script>\n");
+		}
+	}
+
 	/**
 	 * @param dbxCentralBaseUrl base URL of this DbxCentral instance, e.g. from {@code getReportingInstance().getDbxCentralPublicBaseUrl()}
 	 * @param planElementId     id of the hidden {@code <script type='text/xmldata'>} element already holding the plan text, or null/blank if no plan is available
@@ -147,6 +189,38 @@ public class ShowplanLinkBuilder
 		if (StringUtil.hasValue(dbmsVersion))
 			sb.append("<div id='dsr-dbms-info' style='display:none' data-dbms-version='").append(esc(dbmsVersion)).append("'></div> \n");
 		sb.append("<script type='text/javascript'> \n");
+		// Plans written by writePlanScript() are gzip'ed + base64: unpack them all, one by one, when the page is loaded
+		sb.append("    if (typeof dsrPlanUnpackAll === 'undefined') { \n");
+		sb.append("    function dsrPlanUnpackAll() \n");
+		sb.append("    { \n");
+		sb.append("        var list = document.querySelectorAll(\"script[data-enc='gzip64']\"); \n");
+		sb.append("        var i = 0; \n");
+		sb.append("        function next() \n");
+		sb.append("        { \n");
+		sb.append("            if (i >= list.length) return; \n");
+		sb.append("            var el = list[i++]; \n");
+		sb.append("            try { \n");
+		sb.append("                var bin = atob(el.textContent); \n");
+		sb.append("                var bytes = new Uint8Array(bin.length); \n");
+		sb.append("                for (var j = 0; j < bin.length; j++) bytes[j] = bin.charCodeAt(j); \n");
+		sb.append("                new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text() \n");
+		sb.append("                    .then(function(txt) { el.textContent = txt; el.removeAttribute('data-enc'); next(); }) \n");
+		sb.append("                    .catch(function(e) { console.log('dsrPlanUnpackAll: ' + el.id + ': ' + e); next(); }); \n");
+		sb.append("            } catch (e) { console.log('dsrPlanUnpackAll: ' + el.id + ': ' + e); next(); } \n");
+		sb.append("        } \n");
+		sb.append("        next(); \n");
+		sb.append("    } \n");
+		sb.append("    document.addEventListener('DOMContentLoaded', dsrPlanUnpackAll); \n");
+		sb.append("    } \n");
+		// The plan readers call this first: true (and a message) when the plan is not unpacked yet
+		sb.append("    if (typeof dsrPlanNotReady === 'undefined') { \n");
+		sb.append("    function dsrPlanNotReady(el) \n");
+		sb.append("    { \n");
+		sb.append("        if ( ! el || ! el.hasAttribute('data-enc') ) return false; \n");
+		sb.append("        alert('The execution plan is still being unpacked (the report is big). Please try again in a second.'); \n");
+		sb.append("        return true; \n");
+		sb.append("    } \n");
+		sb.append("    } \n");
 		// Read at click time by dsrOpenLink() and dsrAddWorkload(); '' when the element is not there
 		sb.append("    if (typeof dsrDbmsVersion === 'undefined') { \n");
 		sb.append("    function dsrDbmsVersion() \n");
@@ -160,6 +234,7 @@ public class ShowplanLinkBuilder
 		sb.append("    { \n");                        // the (already page-embedded, never duplicated) plan text via 'data-plan-id' at click time.
 		sb.append("        var d = a.dataset; \n");
 		sb.append("        var planEl = d.planId ? document.getElementById(d.planId) : null; \n");
+		sb.append("        if (dsrPlanNotReady(planEl)) return; \n");
 		sb.append("        var plan = planEl ? planEl.textContent : ''; \n");
 		sb.append("        var params = {}; \n");
 		sb.append("        function add(name, val) { if (val) params[name] = val; } \n");

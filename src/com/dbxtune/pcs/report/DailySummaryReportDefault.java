@@ -414,6 +414,35 @@ extends DailySummaryReportAbstract
 	}
 
 
+	/**
+	 * Mail: the tooltip texts (Table Info, Triggers...) each ONCE, as a CSS rule: {@code .dsr-tt-17:hover::before { content: "..." }}.
+	 * The elements only have the class (see ReportEntryAbstract.getTextAsTooltipDiv). Same CSS (::before) as 'data-tooltip', so it
+	 * shows in the same mail readers. The full report has the texts as hidden elements instead, see createHtmlBody().
+	 */
+	private void writeTooltipTextsAsCss(Writer w)
+	throws IOException
+	{
+		if (getTooltipTexts().isEmpty())
+			return;
+
+		w.append("<style type='text/css'> \n");
+		for (java.util.Map.Entry<String, Integer> e : getTooltipTexts().entrySet())
+		{
+			// CSS string: escape \ and ", a new line is \A (the rule has 'white-space: pre-wrap'), '<' as \3C so it never ends the <style>
+			StringBuilder css = new StringBuilder();
+			for (char c : e.getKey().toCharArray())
+			{
+				if      (c == '\\') css.append("\\\\");
+				else if (c == '"')  css.append("\\\"");
+				else if (c == '\n') css.append("\\A ");
+				else if (c == '<')  css.append("\\3C ");
+				else if (c != '\r') css.append(c);
+			}
+			w.append(".dsr-tt-").append(e.getValue().toString()).append(":hover::before { content: \"").append(css).append("\"; } \n");
+		}
+		w.append("</style> \n");
+	}
+
 	private void createDbxTuneCss(Writer w)
 	throws IOException
 	{
@@ -615,13 +644,13 @@ extends DailySummaryReportAbstract
 		w.append("        }									\n");
 		w.append("\n");
 		w.append("        /* The below data-tooltip is used to show Actual exected SQL Text, as a tooltip where a normalized text is in a table cell */ \n");
-		w.append("        [data-tooltip] {						\n");
+		w.append("        [data-tooltip], .dsr-tt {				\n"); // .dsr-tt: the text is written once, see getTooltipTexts()
 		w.append("            position: relative;				\n");
 //		sb.append("            cursor: help;					\n");
 		w.append("        }									\n");
 		w.append("        										\n");
 		w.append("        /* 'tooltip' CSS settings for SQL Text... */ \n");
-		w.append("        [data-tooltip]:hover::before {		\n");
+		w.append("        [data-tooltip]:hover::before, .dsr-tt:hover::before { \n");
 		w.append("            content: attr(data-tooltip);		\n");
 		w.append("            position: absolute;				\n");
 		w.append("            z-index: 103; 					\n");
@@ -1491,7 +1520,18 @@ extends DailySummaryReportAbstract
 		writer.append("    <!-- ================================================================================= -->\n");
 		writer.append("    <!-- == AT the BOTTOM: do stuff when the page is loaded. -->\n");
 		writer.append("    <!-- ================================================================================= -->\n");
+		// The tooltip texts (Table Info, Triggers...), each ONCE: the elements refer to them with 'data-tt' (see ReportEntryAbstract.getTextAsTooltipDiv)
+		writer.append("<div id='dsr-tt-texts' style='display:none'> \n");
+		for (java.util.Map.Entry<String, Integer> e : getTooltipTexts().entrySet())
+			writer.append("<div id='dsr-tt-").append(e.getValue().toString()).append("'>").append(org.apache.commons.text.StringEscapeUtils.escapeHtml4(e.getKey())).append("</div>\n");
+		writer.append("</div> \n");
 		writer.append("    <script type='text/javascript'>  \n");
+		writer.append("\n");
+		writer.append("        // Put the tooltip texts (written once, above) into 'data-tooltip' of every element that refers to them: the hover and the popup read it \n");
+		writer.append("        document.querySelectorAll('[data-tt]').forEach(function(el) { \n");
+		writer.append("            var txt = document.getElementById('dsr-tt-' + el.getAttribute('data-tt')); \n");
+		writer.append("            if (txt) el.setAttribute('data-tooltip', txt.textContent); \n");
+		writer.append("        }); \n");
 		writer.append("\n");
 		writer.append("        // Functionality to CLOSE ALL 'details' sections of class 'dsr-details-tableinfo' \n");
 		writer.append("        document.querySelectorAll('.dsr-details-tableinfo-close-all').forEach(link => { \n");
@@ -1559,6 +1599,7 @@ extends DailySummaryReportAbstract
 		w.append("    <meta name='x-apple-disable-message-reformatting' /> \n");
 
 		createDbxTuneCss(w);
+		writeTooltipTextsAsCss(w); // the Table Info... tooltips, each text ONCE (no JavaScript in a mail)
 		
 		w.append("</head> \n");
 		w.append("\n");
@@ -1648,14 +1689,6 @@ extends DailySummaryReportAbstract
 					
 					// if we should append anything after an entry... Possibly '<br>\n'
 					w.append(entry.getEndOfReportText());
-
-					// Notes for how to: Disable this entry
-					if (entry.canBeDisabled())
-					{
-						w.append("<br>");
-						w.append("<i>To disable this report entry, put the following in the configuration file. ");
-						w.append("<code>").append(entry.getIsEnabledConfigKeyName()).append(" = false</code></i><br>\n");
-					}
 				}
 				catch (RuntimeException rte)
 				{
@@ -1765,6 +1798,7 @@ extends DailySummaryReportAbstract
 		w.append("    <meta name='x-apple-disable-message-reformatting' /> \n");
 
 		createDbxTuneCss(w);
+		writeTooltipTextsAsCss(w); // the Table Info... tooltips, each text ONCE (no JavaScript in a mail)
 		
 		w.append("</head> \n");
 		w.append("\n");
@@ -1852,14 +1886,6 @@ extends DailySummaryReportAbstract
 					
 					// if we should append anything after an entry... Possibly '<br>\n'
 					w.append(entry.getEndOfReportText());
-
-					// Notes for how to: Disable this entry
-					if (entry.canBeDisabled())
-					{
-						w.append("<br>");
-						w.append("<i>To disable this report entry, put the following in the configuration file. ");
-						w.append("<code>").append(entry.getIsEnabledConfigKeyName()).append(" = false</code></i><br>\n");
-					}
 				}
 				catch (RuntimeException rte)
 				{

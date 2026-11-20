@@ -188,6 +188,26 @@ implements IDailySummaryReport
 		return _statusMap.get(statusKey);
 	}
 
+	/**
+	 * Tooltip texts (Table Info, Triggers...) that are written ONCE per report, the elements only refer to them by id.
+	 * The same table can be in many sections and statements: in a big ASE report 228 tooltips held 60 different texts.
+	 * Written by DailySummaryReportDefault: the full report as hidden elements (JavaScript sets 'data-tooltip' at page load),
+	 * the mail as CSS rules (no JavaScript in a mail).
+	 */
+	private Map<String, Integer> _tooltipTexts = new java.util.LinkedHashMap<>();
+
+	/** @return the id of the text (the same text gets the same id) */
+	public int getTooltipTextId(String text)
+	{
+		return _tooltipTexts.computeIfAbsent(text, k -> _tooltipTexts.size() + 1);
+	}
+
+	/** text -> id, in the order they were added */
+	public Map<String, Integer> getTooltipTexts()
+	{
+		return _tooltipTexts;
+	}
+
 //	@Override
 //	public MonTablesDictionary createMonTablesDictionary()
 //	{

@@ -61,6 +61,7 @@ import com.dbxtune.pcs.report.content.IReportEntry;
 import com.dbxtune.pcs.report.content.IndexAnalysisHtml;
 import com.dbxtune.pcs.report.content.IndexRedundancy;
 import com.dbxtune.pcs.report.content.ReportEntryAbstract;
+import com.dbxtune.pcs.report.content.ShowplanLinkBuilder;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.sql.SqlObjectName;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -337,7 +338,9 @@ extends ReportEntryAbstract
 				tableInfoMap.put("Sampled"    ,                entry.getSampleTime() + ""   );
 				tableInfoMap.put("Lock Scheme",                entry.getLockScheme() );
 				tableInfoMap.put("Index Count", entry.getIndexCount() + (entry.getIndexCount() > 0 ? "" : " <b><font color='red'>&lt;&lt;-- Warning NO index</font></b>") );
-				tableInfoMap.put("DDL Info"   , getTextAsTooltipDiv(entry._objectText, "Table Info", getDdlMaxLengthTable()));
+				// DDL made from the sp_help text (the same as the LLM gets): sp_help is mostly padding (up to 400 KB for one table). The raw text if it can't be made
+				String ddlText = formatObjectTextAsDdl(entry.getFullTableName(), entry._objectText, entry.getIndexList());
+				tableInfoMap.put("DDL Info"   , getTextAsTooltipDiv(ddlText != null ? ddlText : entry._objectText, "Table Info", getDdlMaxLengthTable()));
 				tableInfoMap.put("Triggers"   , entry._triggersText == null ? "-no-triggers-" : getTextAsTooltipDiv(entry._triggersText, "Trigger Info", getDdlMaxLengthTrigger()));
 			}
 			
@@ -3283,9 +3286,7 @@ extends ReportEntryAbstract
 			if ( ! writtenSet.add(objectName) )
 				continue;
 
-			sb.append("\n<script id='").append(getXmlPlanElementId(objectName)).append("' type='text/xmldata'>\n");
-			sb.append(entry.getValue());
-			sb.append("\n</script>\n");
+			ShowplanLinkBuilder.writePlanScript(sb, getXmlPlanElementId(objectName), entry.getValue());
 		}
 	}
 
@@ -3313,7 +3314,9 @@ extends ReportEntryAbstract
 		//       since the links that call them are emitted for any statement that has SQL text.
 		sb.append("    function showplanForId(id) \n");
 		sb.append("    { \n");
-		sb.append("        var showplanText = document.getElementById('plan_'+id).innerHTML \n");
+		sb.append("        var planEl = document.getElementById('plan_'+id); \n");
+		sb.append("        if (dsrPlanNotReady(planEl)) return; \n");
+		sb.append("        var showplanText = planEl.innerHTML \n");
 		sb.append("        copyStringToClipboard(showplanText); \n");
 		sb.append("    } \n");
 		sb.append("\n");

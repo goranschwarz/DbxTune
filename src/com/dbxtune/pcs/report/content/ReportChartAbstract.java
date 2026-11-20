@@ -97,7 +97,11 @@ public abstract class ReportChartAbstract implements IReportChart
 	public final static int CHART_WIDTH_FULL_MSG  = CHART_WIDTH_80; 
 
 	public final static int CHART_HEIGHT_SHORT_MSG = CHART_HEIGHT_80;
-	public final static int CHART_WIDTH_SHORT_MSG  = CHART_WIDTH_80; 
+	public final static int CHART_WIDTH_SHORT_MSG  = CHART_WIDTH_80;
+
+	/** Max data points per serie in the full report's Chart.js charts; more points are downsampled (MIN and MAX per bucket). 0 = off (all points) */
+	public static final String PROPKEY_CHARTJS_MAX_POINTS = "DailySummaryReport.chartJs.maxPoints";
+	public static final int    DEFAULT_CHARTJS_MAX_POINTS = CHART_WIDTH_FULL_MSG; // about one point per pixel
 	
 	
 	private JFreeChart _chart;
@@ -474,7 +478,10 @@ public abstract class ReportChartAbstract implements IReportChart
 		sb.append("<br>\n");
 		//sb.append(toHtmlInlineImage());
 		writeAsHtmlInlineImage(sb);           // Write as <img id='img_" + _cmName + _graphTitle + "' src='data:image/png;base64,...>
-		writeAsChartJs(sb);                   // Write as <canvas id='canvas_" + _cmName + _graphTitle + "'>...</div>
+		// Mail: no Chart.js (mail readers do not run JavaScript, they show the image above), it was ~50% of a chart's size in the mail
+		boolean isMail = getReportEntry() != null && (getReportEntry().isShortMessageType() || getReportEntry().isMinimalMessageType());
+		if ( ! isMail )
+			writeAsChartJs(sb);               // Write as <canvas id='canvas_" + _cmName + _graphTitle + "'>...</div>
 		sb.append("<br>\n");
 
 		if (_isSorted)
@@ -705,6 +712,15 @@ public abstract class ReportChartAbstract implements IReportChart
 			writer.append("        } \n");
 			writer.append("    } \n");
 			writer.append("\n");
+			writer.append("    // Chart time labels are written as: first epoch ms + the deltas (ms) to the previous label; and only once for charts with the same labels \n");
+			writer.append("    function dsrTsDecode(start, deltas) \n");
+			writer.append("    { \n");
+			writer.append("        var arr = [start], ts = start; \n");
+			writer.append("        for (var i = 0; i < deltas.length; i++) \n");
+			writer.append("            arr.push(ts += deltas[i]); \n");
+			writer.append("        return arr; \n");
+			writer.append("    } \n");
+			writer.append("\n");
 			writer.append("    // Arm the lazy loader at page load \n");
 			writer.append("    document.addEventListener('DOMContentLoaded', function() \n");
 			writer.append("    { \n");
@@ -760,7 +776,11 @@ public abstract class ReportChartAbstract implements IReportChart
 	}
 
 
-	private void writeAsChartJsHtmlAndJsCode(Writer writer, ChartType chartType, List<String> dataTs, LinkedHashMap<String, List<Number>> seriesDataVal)
+	/**
+	 * @param labelsJs  The JavaScript for the x axis labels: an array, or the name of a 'const' declared in 'preJs'
+	 * @param preJs     JavaScript written before the chart options (can be ""), for example the shared time labels
+	 */
+	private void writeAsChartJsHtmlAndJsCode(Writer writer, ChartType chartType, String labelsJs, String preJs, LinkedHashMap<String, List<Number>> seriesDataVal)
 	throws IOException
 	{
 		String tagName    = _chartId;
@@ -795,6 +815,7 @@ public abstract class ReportChartAbstract implements IReportChart
 		writer.append("\n");
 		writer.append("<script type='text/javascript'>\n");
 		
+		writer.append(preJs);
 		writer.append("// Create option and a ChartJS object \n");
 		writer.append("const options_" + tagName + " = { \n");
 //		writer.append("const options = { \n");
@@ -803,7 +824,7 @@ public abstract class ReportChartAbstract implements IReportChart
 
 		writer.append("    data: \n");
 		writer.append("    { \n");
-		writer.append("        labels: ["); writer.append(StringUtil.toCommaStr(dataTs)); writer.append("], \n");
+		writer.append("        labels: " + labelsJs + ", \n");
 		writer.append("        datasets: [ \n");
 
 		int cnt = 0;
@@ -816,7 +837,19 @@ public abstract class ReportChartAbstract implements IReportChart
 			
 			writer.append("            { \n");
 			writer.append("                label: '" + label + "', \n");    // The label for the dataset which appears in the legend and tooltips
-			writer.append("                data: ["); writer.append(StringUtil.toCommaStr(entry.getValue())); writer.append("], \n");
+			// Compact numbers: '0' not '0.0', '12' not '12.0', no space after the comma (most values in a chart are 0)
+			writer.append("                data: [");
+			int i = 0;
+			for (Number num : entry.getValue())
+			{
+				if (i++ > 0)
+					writer.append(',');
+				String str = (num == null) ? "null" : num.toString();
+				if (str.endsWith(".0"))
+					str = str.substring(0, str.length() - 2);
+				writer.append(str);
+			}
+			writer.append("], \n");
 			if (ChartType.LINE.equals(chartType))
 			{
 				writer.append("                borderWidth: 1, \n");                     // The width of the line in pixels.
@@ -961,7 +994,7 @@ public abstract class ReportChartAbstract implements IReportChart
 		}
 
 		// Write the HTML and JavaScript code
-		writeAsChartJsHtmlAndJsCode(writer, ChartType.STACKED_BAR, dataTs, seriesDataVal);
+		writeAsChartJsHtmlAndJsCode(writer, ChartType.STACKED_BAR, "[" + StringUtil.toCommaStr(dataTs) + "]", "", seriesDataVal);
 	}
 
 	/**
@@ -1098,14 +1131,88 @@ public abstract class ReportChartAbstract implements IReportChart
 					_logger.warn(">>>>>>>>>> writeAsChartJsLineChart(): SANITY-CHECK[LAST-TS] - xLastTs=" + xLastTs + ":[" + TimeUtils.toStringIso8601(xLastTs) + "], sLastTs=" + sLastTs + ":[" + TimeUtils.toStringIso8601(sLastTs) + "]. Data points might be placed in the wrong 'slot' at the timeline. cmName='" + _cmName + "', graphName='" + _graphName + "', serieName='" + sName + "', graphTitle='" + _graphTitle + "'.");
 			}
 			
-			// Convert all Time-stamps <Long> into Strings with format "Iso8601" (example: 2022-11-02T20:59:47.040+01:00)
-			// For Chart.js it will be used as 'labels', see description at the "top" of this method
-			List<String> dataTsStr = new ArrayList<>();
-			for (Long ts : dataTsMaxSerie)
-				dataTsStr.add( "'" + TimeUtils.toStringIso8601(ts) + "'");
+			// Downsample: more points than pixels only makes the report bigger. Per bucket keep the MIN and the MAX of each serie (in time order), so peaks are still there
+			// NOTE: Only the Chart.js data, the image is made from the full data set
+			int maxPoints = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_CHARTJS_MAX_POINTS, DEFAULT_CHARTJS_MAX_POINTS);
+			int pointCnt  = dataTsMaxSerie.size();
+			boolean sameSize = true;
+			for (List<Number> sData : seriesDataVal.values())
+				sameSize = sameSize && sData.size() == pointCnt;
 
-			// Write the HTML and JavaScript code
-			writeAsChartJsHtmlAndJsCode(writer, ChartType.LINE, dataTsStr, seriesDataVal);
+			if (maxPoints > 1 && pointCnt > maxPoints && sameSize)
+			{
+				int bucketCnt = maxPoints / 2;
+				List<Long> newTs = new ArrayList<>();
+				LinkedHashMap<String, List<Number>> newVal = new LinkedHashMap<>();
+				for (String sName : seriesDataVal.keySet())
+					newVal.put(sName, new ArrayList<>());
+
+				for (int b = 0; b < bucketCnt; b++)
+				{
+					int from = (int) ((long) b       * pointCnt / bucketCnt);
+					int to   = (int) ((long) (b + 1) * pointCnt / bucketCnt); // exclusive
+					if (to <= from)
+						continue;
+
+					boolean onePoint = (to - from) == 1;
+					newTs.add(dataTsMaxSerie.get(from));
+					if ( ! onePoint )
+						newTs.add(dataTsMaxSerie.get(to - 1));
+
+					for (Entry<String, List<Number>> entry : seriesDataVal.entrySet())
+					{
+						List<Number> sData = entry.getValue();
+						List<Number> nData = newVal.get(entry.getKey());
+
+						int minPos = -1, maxPos = -1;
+						for (int p = from; p < to; p++)
+						{
+							Number val = sData.get(p);
+							if (val == null)
+								continue;
+							if (minPos == -1 || val.doubleValue() < sData.get(minPos).doubleValue()) minPos = p;
+							if (maxPos == -1 || val.doubleValue() > sData.get(maxPos).doubleValue()) maxPos = p;
+						}
+
+						if (onePoint)
+						{
+							nData.add(sData.get(from));
+						}
+						else if (minPos == -1) // only nulls in this bucket
+						{
+							nData.add(null);
+							nData.add(null);
+						}
+						else
+						{
+							nData.add(sData.get(Math.min(minPos, maxPos)));
+							nData.add(sData.get(Math.max(minPos, maxPos)));
+						}
+					}
+				}
+				dataTsMaxSerie = newTs;
+				seriesDataVal  = newVal;
+			}
+
+			// Time labels: first epoch ms + the deltas, decoded by dsrTsDecode(), see writeAsChartJs().
+			// Charts with the same time labels (often all charts from the same CM) share ONE array, declared at the first chart
+			StringBuilder tsJs = new StringBuilder("dsrTsDecode(").append(dataTsMaxSerie.get(0)).append(", [");
+			for (int i = 1; i < dataTsMaxSerie.size(); i++)
+				tsJs.append(i > 1 ? "," : "").append(dataTsMaxSerie.get(i) - dataTsMaxSerie.get(i - 1));
+			tsJs.append("])");
+
+			String statusKey = "chartJs_timeLabels:" + tsJs;
+			String varName   = (String) getReportEntry().getReportingInstance().getStatusEntry(statusKey);
+			String preJs     = "";
+			if (varName == null)
+			{
+				varName = "dsrTs_" + _chartId;
+				getReportEntry().getReportingInstance().setStatusEntry(statusKey, varName);
+				preJs = "const " + varName + " = " + tsJs + "; \n";
+			}
+
+			// Write the HTML and JavaScript code (slice: each chart gets its own copy of the shared array)
+			writeAsChartJsHtmlAndJsCode(writer, ChartType.LINE, varName + ".slice()", preJs, seriesDataVal);
 		}
 		else
 		{

@@ -156,9 +156,7 @@ extends OracleAbstract
 			// (type 'text/xmldata' is what dsrOpenLink() expects, the content is the plain text of DBMS_XPLAN: the browser does not parse it)
 			for (Entry<String, String> plan : _planTexts.entrySet())
 			{
-				w.append("\n<script id='").append(plan.getKey()).append("' type='text/xmldata'>\n");
-				w.append(plan.getValue().replace("</script", "<\\/script"));
-				w.append("\n</script>\n");
+				ShowplanLinkBuilder.writePlanScript(w, plan.getKey(), plan.getValue());
 			}
 		}
 	}
