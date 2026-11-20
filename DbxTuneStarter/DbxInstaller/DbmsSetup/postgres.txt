@@ -204,11 +204,23 @@ SELECT count(*) FROM pg_extension WHERE extname = 'pgstattuple';         -- 1 if
 /*--------------------------------------------------------------------------------------------
 ** MANAGED SERVICES (Amazon RDS / Aurora, Azure Database for PostgreSQL, Google Cloud SQL / AlloyDB)
 **
-** Section 1 works as it is, with the admin login of the service (rds_superuser, azure_pg_admin, cloudsqlsuperuser...).
-** shared_preload_libraries and the track_* settings are changed in the service (RDS/Aurora: the DB parameter group,
+** Section 1 & Section 3 (extensions) work as they are, using the service's admin login (rds_superuser, azure_pg_admin, cloudsqlsuperuser...).
+** shared_preload_libraries, track_*, and log_* settings are changed in the cloud service (RDS/Aurora: DB parameter group,
 ** Azure: Server parameters, Cloud SQL: database flags), not with ALTER SYSTEM.
-** Some functions are not allowed by some services (pg_ls_waldir(), reading the error log): those Performance Counters are
-** DISABLED, with the reason in the log file. The error log is in the service's own console/API.
-** There is no host monitoring (no SSH to the server), so only the database Performance Counters are collected.
+** Some SQL functions are not allowed by managed services (pg_ls_waldir(), reading the error log via SQL): those SQL checks are
+** skipped or disabled, with the reason in the log file.
+**
+** GOOGLE CLOUD SQL (Host Monitoring & Error Log via GCP APIs):
+**   PostgresTune can collect Host Monitoring metrics (CPU, Memory, Disk I/O, Disk Space, Network, Uptime) and the Postgres
+**   Error Log (CmErrorLog + DSR operational analytics) directly from the Google Cloud Monitoring & Cloud Logging APIs:
+**     1. Grant the collector's GCP Service Account two read-only roles on the GCP project:
+**          - roles/monitoring.viewer
+**          - roles/logging.viewer
+**     2. Configure Host Monitor in PostgresTune:
+**          - GUI Host field:  gcp://<project-id>:<region>:<instance-id>
+**          - GUI Key File:    leave empty on a GCP VM (uses attached Service Account), or path to Service Account JSON key file
+**          - Or in .conf:     conn.hostmon.cloud.provider=GCP, conn.hostmon.cloud.project=..., conn.hostmon.cloud.region=...,
+**                             conn.hostmon.cloud.instance=..., conn.hostmon.cloud.credentialsFile=...
+**   Only GCP is implemented (aws:// and azure:// are not yet). A Host written as project:region:instance is taken as GCP.
 **--------------------------------------------------------------------------------------------
 */

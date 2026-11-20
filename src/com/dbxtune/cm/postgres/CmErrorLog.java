@@ -22,6 +22,8 @@ package com.dbxtune.cm.postgres;
 
 import java.awt.event.MouseEvent;
 import java.lang.invoke.MethodHandles;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Savepoint;
@@ -47,6 +49,8 @@ import com.dbxtune.alarm.events.postgres.AlarmEventPgInsufficientResources;
 import com.dbxtune.alarm.events.postgres.AlarmEventPgInternalError;
 import com.dbxtune.alarm.events.postgres.AlarmEventPgSystemError;
 import com.dbxtune.cache.XmlPlanCache;
+import com.dbxtune.central.pcs.CentralPersistReader;
+import com.dbxtune.cloud.CloudLogEntry;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CounterSample;
 import com.dbxtune.cm.CounterSetTemplates;
@@ -56,9 +60,12 @@ import com.dbxtune.cm.CountersModelAppend;
 import com.dbxtune.config.dict.MonTablesDictionary;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.config.dict.PostgresErrorCodeDictionary;
+import com.dbxtune.graph.TrendGraphDataPoint;
+import com.dbxtune.graph.TrendGraphDataPoint.LabelType;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.gui.TabularCntrPanelAppend;
+import com.dbxtune.hostmon.HostMonitorConnectionCloud;
 import com.dbxtune.pcs.PersistentCounterHandler;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfo;
@@ -277,16 +284,204 @@ extends CountersModelAppend
 	public static final String  PROPKEY_sample_JsonOverCsv  = PROP_PREFIX + ".sample.json.over.csv";
 	public static final boolean DEFAULT_sample_JsonOverCsv  = false;
 
+	public static final String  GRAPH_NAME_SEVERITY_COUNT         = "SeverityCount";
+	public static final String  GRAPH_NAME_SEVERITY_PER_SEC       = "SeverityPerSec";
+	public static final String  GRAPH_NAME_OPERATIONAL_EVENTS     = "OperationalEvents";
+	public static final String  GRAPH_NAME_OPERATIONAL_PER_SEC    = "OperationalEventsPerSec";
+
+	// Per-sample log message counters (populated in localCalculation for the current sample's rows)
+	private int  _lastSamplePanicCount        = 0;
+	private int  _lastSampleFatalCount        = 0;
+	private int  _lastSampleErrorCount        = 0;
+	private int  _lastSampleWarningCount      = 0;
+	private int  _lastSampleLogCount          = 0;
+
+	private int  _lastSampleCheckpointsCount  = 0;
+	private int  _lastSampleAutovacuumsCount  = 0;
+	private int  _lastSampleAutoanalyzesCount = 0;
+	private int  _lastSampleTempFilesCount    = 0;
+	private int  _lastSampleLockWaitsCount    = 0;
+	private int  _lastSampleSlowQueriesCount  = 0;
+
+	private long _prevSampleTimeMs            = 0;
+	private long _lastSampleIntervalMs        = 0;
+
 //TODO;	// look for 'execution plans', 'long running SQL Statements' and SEND/STORE them in PCS 
 
 	private enum UseLogType
 	{
-		NOT_YET_DECIDED, CSV, JSON
+		NOT_YET_DECIDED, CSV, JSON, CLOUD
 	};
 	private UseLogType _useLogType = UseLogType.NOT_YET_DECIDED;
 
+	private boolean isCloudLoggingEnabled()
+	{
+		return getCounterController() != null
+			&& getCounterController().getHostMonConnection() instanceof HostMonitorConnectionCloud;
+	}
+
 	private void addTrendGraphs()
 	{
+		addTrendGraph(GRAPH_NAME_SEVERITY_COUNT,
+				"ErrorLog Messages by Severity (Count)", 	                // Menu CheckBox text
+				"ErrorLog Messages by Severity, Count (" + SHORT_NAME + ")", // Graph Label 
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+				new String[] {"PANIC", "FATAL", "ERROR", "WARNING", "LOG"}, 
+				LabelType.Static, 
+				TrendGraphDataPoint.Category.OTHER,
+				false, // is Percent Graph
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+
+		addTrendGraph(GRAPH_NAME_SEVERITY_PER_SEC,
+				"ErrorLog Messages by Severity (Per Sec)", 	                // Menu CheckBox text
+				"ErrorLog Messages by Severity, Per Second (" + SHORT_NAME + ")", // Graph Label 
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+				new String[] {"PANIC", "FATAL", "ERROR", "WARNING", "LOG"}, 
+				LabelType.Static, 
+				TrendGraphDataPoint.Category.OTHER,
+				false, // is Percent Graph
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+
+		addTrendGraph(GRAPH_NAME_OPERATIONAL_EVENTS,
+				"ErrorLog Operational Events (Count)", 	                // Menu CheckBox text
+				"ErrorLog Operational Events, Count (" + SHORT_NAME + ")", // Graph Label 
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_COUNT, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+				new String[] {"Checkpoints", "Autovacuums", "Autoanalyzes", "TempFiles", "LockWaits", "SlowQueries"}, 
+				LabelType.Static, 
+				TrendGraphDataPoint.Category.OTHER,
+				false, // is Percent Graph
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+
+		addTrendGraph(GRAPH_NAME_OPERATIONAL_PER_SEC,
+				"ErrorLog Operational Events (Per Sec)", 	                // Menu CheckBox text
+				"ErrorLog Operational Events, Per Second (" + SHORT_NAME + ")", // Graph Label 
+				TrendGraphDataPoint.createGraphProps(TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC, CentralPersistReader.SampleType.MAX_OVER_SAMPLES),
+				new String[] {"Checkpoints", "Autovacuums", "Autoanalyzes", "TempFiles", "LockWaits", "SlowQueries"}, 
+				LabelType.Static, 
+				TrendGraphDataPoint.Category.OTHER,
+				false, // is Percent Graph
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+	}
+
+	/**
+	 * Override updateGraphData() so that even when getRowCount() == 0 (for example on quiet samples
+	 * when showAllRecords() is false or before any errorlog rows have arrived), the trend graphs still
+	 * emit 0.0 data points for the current sample instead of retaining stale points from a previous spike.
+	 */
+	@Override
+	public void updateGraphData()
+	{
+		if ( ! hasTrendGraphData() )
+			return;
+
+		if ( isFirstTimeSample() )
+			return;
+
+		for (TrendGraphDataPoint tgdp : getTrendGraphData().values()) 
+		{
+			try
+			{
+				updateGraphData(tgdp);
+			}
+			catch (Exception ex)
+			{
+				_logger.warn("Problems in updateGraphData() for CM='" + getName() + "', graphName='" + tgdp.getName() + "'.", ex);
+			}
+		}
+	}
+
+	/**
+	 * Compute per-second rate from a sample count and interval (in milliseconds).
+	 * <p>
+	 * PCS Graph Tables (both Local and DbxCentral) store data as <code>NUMERIC(16, 2)</code>.
+	 * Small positive rates (&lt; 0.01) are clamped to <code>0.01</code> so a single event in a &gt;100s
+	 * sample interval does not round down to <code>0.00</code> in DbxCentral PCS (matching
+	 * <code>PersistWriterJdbc.saveGraphData</code>).
+	 */
+	private static Double calcRatePerSec(int count, long intervalMs)
+	{
+		if (count <= 0 || intervalMs <= 0)
+			return Double.valueOf(0.0);
+
+		double rate = (count * 1000.0) / intervalMs;
+		if (rate > 0.0 && rate < 0.01)
+			return Double.valueOf(0.01);
+
+		return BigDecimal.valueOf(rate).setScale(2, RoundingMode.HALF_EVEN).doubleValue();
+	}
+
+	@Override
+	public void updateGraphData(TrendGraphDataPoint tgdp)
+	{
+		Timestamp ts = getSampleTime();
+		if (ts == null && getCounterSampleAbs() != null)
+			ts = getCounterSampleAbs().getSampleTime();
+		if (ts == null)
+			ts = new Timestamp(System.currentTimeMillis());
+
+		long intervalMs = getSampleInterval() > 0 ? getSampleInterval() : _lastSampleIntervalMs;
+
+		if (GRAPH_NAME_SEVERITY_COUNT.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[5];
+
+			arr[0] = Double.valueOf(_lastSamplePanicCount);
+			arr[1] = Double.valueOf(_lastSampleFatalCount);
+			arr[2] = Double.valueOf(_lastSampleErrorCount);
+			arr[3] = Double.valueOf(_lastSampleWarningCount);
+			arr[4] = Double.valueOf(_lastSampleLogCount);
+
+			tgdp.setDataPoint(ts, arr);
+		}
+
+		if (GRAPH_NAME_SEVERITY_PER_SEC.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[5];
+
+			arr[0] = calcRatePerSec(_lastSamplePanicCount,   intervalMs);
+			arr[1] = calcRatePerSec(_lastSampleFatalCount,   intervalMs);
+			arr[2] = calcRatePerSec(_lastSampleErrorCount,   intervalMs);
+			arr[3] = calcRatePerSec(_lastSampleWarningCount, intervalMs);
+			arr[4] = calcRatePerSec(_lastSampleLogCount,     intervalMs);
+
+			tgdp.setDataPoint(ts, arr);
+		}
+
+		if (GRAPH_NAME_OPERATIONAL_EVENTS.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[6];
+
+			arr[0] = Double.valueOf(_lastSampleCheckpointsCount);
+			arr[1] = Double.valueOf(_lastSampleAutovacuumsCount);
+			arr[2] = Double.valueOf(_lastSampleAutoanalyzesCount);
+			arr[3] = Double.valueOf(_lastSampleTempFilesCount);
+			arr[4] = Double.valueOf(_lastSampleLockWaitsCount);
+			arr[5] = Double.valueOf(_lastSampleSlowQueriesCount);
+
+			tgdp.setDataPoint(ts, arr);
+		}
+
+		if (GRAPH_NAME_OPERATIONAL_PER_SEC.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[6];
+
+			arr[0] = calcRatePerSec(_lastSampleCheckpointsCount,  intervalMs);
+			arr[1] = calcRatePerSec(_lastSampleAutovacuumsCount,  intervalMs);
+			arr[2] = calcRatePerSec(_lastSampleAutoanalyzesCount, intervalMs);
+			arr[3] = calcRatePerSec(_lastSampleTempFilesCount,    intervalMs);
+			arr[4] = calcRatePerSec(_lastSampleLockWaitsCount,    intervalMs);
+			arr[5] = calcRatePerSec(_lastSampleSlowQueriesCount,  intervalMs);
+
+			tgdp.setDataPoint(ts, arr);
+		}
 	}
 
 	@Override
@@ -376,6 +571,9 @@ extends CountersModelAppend
 	@Override
 	public boolean createNewSqlForEveryRefresh()
 	{
+		if (UseLogType.CLOUD.equals(_useLogType))
+			return false;
+
 		// call: getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 		// before every refresh
 		return true;
@@ -384,6 +582,46 @@ extends CountersModelAppend
 	@Override
 	public String getSqlForVersion(DbxConnection conn, DbmsVersionInfo versionInfo)
 	{
+		if (UseLogType.CLOUD.equals(_useLogType) || isCloudLoggingEnabled())
+		{
+			_useLogType = UseLogType.CLOUD;
+			if (_pg_current_logfile == null)
+				_pg_current_logfile = "cloudsql.googleapis.com/postgres.log";
+
+			return ""
+				+ "-- Cloud ErrorLog (fetched via Cloud Logging API in localCalculation)\n"
+				+ "SELECT \n"
+				+ "     cast(NULL as timestamp(3) with time zone) AS log_time \n"
+				+ "    ,cast(NULL as varchar(128)               ) AS user_name \n"
+				+ "    ,cast(NULL as varchar(128)               ) AS database_name \n"
+				+ "    ,cast(NULL as int                        ) AS process_id \n"
+				+ "    ,cast(NULL as varchar(128)               ) AS connection_from \n"
+				+ "    ,cast(NULL as varchar(128)               ) AS session_id \n"
+				+ "    ,cast(NULL as bigint                     ) AS session_line_num \n"
+				+ "    ,cast(NULL as varchar(128)               ) AS command_tag \n"
+				+ "    ,cast(NULL as varchar(128)               ) AS session_start_time \n"
+				+ "    ,cast(NULL as varchar(32)                ) AS virtual_transaction_id \n"
+				+ "    ,cast(NULL as varchar(32)                ) AS transaction_id \n"
+				+ "    ,cast(NULL as varchar(15)                ) AS error_severity \n"
+				+ "    ,cast(NULL as varchar(15)                ) AS sql_state_code \n"
+				+ "    ,cast(NULL as varchar(60)                ) AS sql_state_code_desc \n"
+				+ "    ,cast(NULL as text                       ) AS message \n"
+				+ "    ,cast(NULL as varchar(512)               ) AS detail \n"
+				+ "    ,cast(NULL as varchar(512)               ) AS hint \n"
+				+ "    ,cast(NULL as varchar(4000)              ) AS internal_query \n"
+				+ "    ,cast(NULL as int                        ) AS internal_query_pos \n"
+				+ "    ,cast(NULL as varchar(512)               ) AS context \n"
+				+ "    ,cast(NULL as varchar(4000)              ) AS query \n"
+				+ "    ,cast(NULL as bigint                     ) AS query_pos \n"
+				+ "    ,cast(NULL as varchar(128)               ) AS location \n"
+				+ "    ,cast(NULL as varchar(128)               ) AS application_name \n"
+				+ "    ,cast(NULL as varchar(128)               ) AS backend_type \n"
+				+ "    ,cast(NULL as int                        ) AS leader_pid \n"
+				+ "    ,cast(NULL as bigint                     ) AS query_id \n"
+				+ "    ,cast(NULL as varchar(128)               ) AS pg_current_logfile \n"
+				+ "WHERE 1 = 2 \n";
+		}
+
 		//(new Exception("DUMMY Exception from ::: getSqlForVersion")).printStackTrace();
 		if (versionInfo.getLongVersion() >= NEED_SRV_VERSION)
 		{
@@ -609,12 +847,71 @@ extends CountersModelAppend
 	@Override
 	public void localCalculation(CounterSample newSample)
 	{
+		// Reset per-sample counters before inspecting current sample rows
+		_lastSamplePanicCount        = 0;
+		_lastSampleFatalCount        = 0;
+		_lastSampleErrorCount        = 0;
+		_lastSampleWarningCount      = 0;
+		_lastSampleLogCount          = 0;
+
+		_lastSampleCheckpointsCount  = 0;
+		_lastSampleAutovacuumsCount  = 0;
+		_lastSampleAutoanalyzesCount = 0;
+		_lastSampleTempFilesCount    = 0;
+		_lastSampleLockWaitsCount    = 0;
+		_lastSampleSlowQueriesCount  = 0;
+
+		// Track sample interval (in ms) for per-second trend graphs
+		if (newSample != null && newSample.getSampleInterval() > 0)
+		{
+			_lastSampleIntervalMs = newSample.getSampleInterval();
+		}
+		else if (getSampleInterval() > 0)
+		{
+			_lastSampleIntervalMs = getSampleInterval();
+		}
+		else if (newSample != null && newSample.getSampleTime() != null && _prevSampleTimeMs > 0)
+		{
+			long diffMs = newSample.getSampleTime().getTime() - _prevSampleTimeMs;
+			if (diffMs > 0)
+				_lastSampleIntervalMs = diffMs;
+		}
+		if (newSample != null && newSample.getSampleTime() != null)
+		{
+			_prevSampleTimeMs = newSample.getSampleTime().getTime();
+		}
+
+		if (UseLogType.CLOUD.equals(_useLogType) && isCloudLoggingEnabled())
+		{
+			try
+			{
+				HostMonitorConnectionCloud cloudConn = (HostMonitorConnectionCloud) getCounterController().getHostMonConnection();
+				List<CloudLogEntry> entries = cloudConn.fetchNewLogEntries();
+				if (entries != null && !entries.isEmpty())
+				{
+					for (CloudLogEntry entry : entries)
+					{
+						if (entry.getLogFileName() != null)
+							_pg_current_logfile = entry.getLogFileName();
+						newSample.addRow(this, entry.toCmErrorLogRow());
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.warn("Problems fetching Cloud ErrorLog entries in '" + getName() + "': " + ex.getMessage(), ex);
+			}
+		}
+
 		PostgresErrorCodeDictionary dict = PostgresErrorCodeDictionary.getInstance();
 
+		int pos__error_severity      = newSample.findColumn("error_severity");
 		int pos__sql_state_code      = newSample.findColumn("sql_state_code");
 		int pos__sql_state_code_desc = newSample.findColumn("sql_state_code_desc");
 		int pos__pg_current_logfile  = newSample.findColumn("pg_current_logfile");
 		int pos__message             = newSample.findColumn("message");
+
+		boolean countForTrendGraphs  = !isFirstTimeSample();
 
 		for (int r = 0; r < newSample.getRowCount(); r++)
 		{
@@ -630,18 +927,58 @@ extends CountersModelAppend
 			{
 				newSample.setValueAt(_pg_current_logfile, r, pos__pg_current_logfile);
 			}
+
+			if (countForTrendGraphs && pos__error_severity != -1)
+			{
+				String sev = newSample.getValueAsString(r, pos__error_severity);
+				if (sev != null)
+				{
+					if      ("PANIC"  .equalsIgnoreCase(sev)) _lastSamplePanicCount++;
+					else if ("FATAL"  .equalsIgnoreCase(sev)) _lastSampleFatalCount++;
+					else if ("ERROR"  .equalsIgnoreCase(sev)) _lastSampleErrorCount++;
+					else if ("WARNING".equalsIgnoreCase(sev)) _lastSampleWarningCount++;
+					else if ("LOG"    .equalsIgnoreCase(sev)) _lastSampleLogCount++;
+				}
+			}
 			
 			// parse the 'message' column
 			//  - if 'auto_explain' is enabled and we see messages above that value, lets store the 
 			//    'explain' output in the PCS so we can use it later in for example: Daily Summary Reports
+			//  - count operational LOG events for Live Trend Graphs
 			if (pos__message != -1)
 			{
 				String message = newSample.getValueAsString(r, pos__message);
 				if (message != null)
 				{
-					if (message.startsWith("duration: "))
+					String trimmedMsg = message.trim();
+					if (trimmedMsg.startsWith("duration: "))
 					{
 						handleLogMessage_duration(message);
+						if (countForTrendGraphs)
+							_lastSampleSlowQueriesCount++;
+					}
+					else if (countForTrendGraphs)
+					{
+						if (trimmedMsg.startsWith("checkpoint complete:") || trimmedMsg.startsWith("restartpoint complete:"))
+						{
+							_lastSampleCheckpointsCount++;
+						}
+						else if (trimmedMsg.startsWith("automatic vacuum of table ") || trimmedMsg.startsWith("automatic aggressive vacuum of table "))
+						{
+							_lastSampleAutovacuumsCount++;
+						}
+						else if (trimmedMsg.startsWith("automatic analyze of table "))
+						{
+							_lastSampleAutoanalyzesCount++;
+						}
+						else if (trimmedMsg.startsWith("temporary file: "))
+						{
+							_lastSampleTempFilesCount++;
+						}
+						else if (trimmedMsg.startsWith("process ") && (trimmedMsg.contains(" waiting for ") || trimmedMsg.contains(" acquired ")))
+						{
+							_lastSampleLockWaitsCount++;
+						}
 					}
 				}
 			}
@@ -973,6 +1310,14 @@ extends CountersModelAppend
 	@Override
 	public boolean checkDependsOnRole(DbxConnection conn)
 	{
+		if (isCloudLoggingEnabled())
+		{
+			_useLogType = UseLogType.CLOUD;
+			_pg_current_logfile = "cloudsql.googleapis.com/postgres.log";
+			_logger.info("CmErrorLog: Cloud Host Monitoring connection detected. Using Cloud Logging API (" + _pg_current_logfile + ") for errorlog collection.");
+			return true;
+		}
+
 		String sql;
 
 		sql = "select current_setting('log_destination')";

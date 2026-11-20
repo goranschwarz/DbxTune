@@ -9943,11 +9943,11 @@ System.out.println("CM='" + getName() + "': writeConf.setProperty(propName='" + 
 	{
 		// Previously we had various check if we should "send" or not, in PersistContainer.toJsonMessage(...)
 		// Now I have moved them a bit "closer" to where they are written
-		// For the moment do not send Append Models
-		if (this instanceof CountersModelAppend) 
+		// For the moment do not send Append Models (unless they have TrendGraphs to send to DbxCentral)
+		if (this instanceof CountersModelAppend && !(writerOptions.writeGraphs && hasTrendGraphData())) 
 		{
 			if (_logger.isDebugEnabled())
-				_logger.debug(getName() + ": toJson(): Skipping due to: instance is 'CountersModelAppend'.");
+				_logger.debug(getName() + ": toJson(): Skipping due to: instance is 'CountersModelAppend' (and has no trend graphs).");
 			return;
 		}
 
@@ -10047,8 +10047,8 @@ System.out.println("CM='" + getName() + "': writeConf.setProperty(propName='" + 
 		}
 
 		
-		// JSON: counters
-		if (writerOptions.writeCounters && hasData())
+		// JSON: counters (do not send raw rows for CountersModelAppend)
+		if (writerOptions.writeCounters && hasData() && !(this instanceof CountersModelAppend))
 		{
 			gen.writeFieldName("counters");
 			gen.writeStartObject();

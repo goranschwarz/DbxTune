@@ -22,22 +22,48 @@ package com.dbxtune.pcs.report.content.postgres;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
+import java.util.List;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import com.dbxtune.cm.postgres.CmErrorLog;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
+import com.dbxtune.pcs.report.content.IReportChart;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 
 /**
- * Errors and warnings in the Postgres server log: how many of each (severity + SQLSTATE), and the newest rows (from CmErrorLog). Built on MySqlErrorLog.
+ * Errors, warnings, and operational analytics (pgbadger-style insights: checkpoints, autovacuum/autoanalyze,
+ * temporary files, lock waits, and slow statements / auto_explain) in the Postgres server log (from CmErrorLog).
  */
 public class PostgresErrorLog
 extends PostgresAbstract
 {
+	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+
 	private ResultSetTableModel _countRstm; // null = not recorded
 	private ResultSetTableModel _rowsRstm;
 
-	/** The severities that are reported (LOG, INFO, NOTICE... are not) */
+	// Operational LOG analytics (pgbadger-style insights)
+	private ResultSetTableModel _ckptRstm;
+	private ResultSetTableModel _autovacRstm;
+	private ResultSetTableModel _tempFilesRstm;
+	private ResultSetTableModel _lockWaitsRstm;
+	private ResultSetTableModel _lockWaitRowsRstm;
+	private ResultSetTableModel _slowQueriesRstm;
+	private List<String>        _verdicts = new ArrayList<>();
+	private String              _logConfigNote;
+
+	private IReportChart        _CmErrorLog_SeverityCount;
+	private IReportChart        _CmErrorLog_SeverityPerSec;
+	private IReportChart        _CmErrorLog_OperationalEvents;
+	private IReportChart        _CmErrorLog_OperationalEventsPerSec;
+
+	/** The severities that are reported in the error/warning count table */
 	private static final String SEVERITIES = "('PANIC', 'FATAL', 'ERROR', 'WARNING')";
 
 	public PostgresErrorLog(DailySummaryReportAbstract reportingInstance)
@@ -64,37 +90,132 @@ extends PostgresAbstract
 		if (_countRstm == null)
 		{
 			w.append("<b>The server log was not recorded</b> (the table <code>CmErrorLog_abs</code> does not exist).<br>\n");
-			w.append("The Counter Model <code>CmErrorLog</code> reads the log through SQL, so it needs CSV or JSON logging: " +
-					"<code>ALTER SYSTEM SET logging_collector = on;</code> (a restart) and <code>ALTER SYSTEM SET log_destination = 'stderr,csvlog';</code> (or 'stderr,jsonlog' on Postgres 15 and above), " +
-					"and a login that may read the server files: <code>GRANT pg_read_server_files TO &lt;user&gt;;</code> (or a superuser). " +
-					"A managed service (RDS, Azure, Cloud SQL...) usually has the log in its own console instead.<br>\n");
+			w.append("The Counter Model <code>CmErrorLog</code> reads the log either:<br>\n");
+			w.append("<ul>\n");
+			w.append("  <li><b>Through SQL (on-prem / VM)</b>: needs CSV or JSON logging (<code>ALTER SYSTEM SET logging_collector = on;</code> and " +
+					"<code>ALTER SYSTEM SET log_destination = 'stderr,csvlog';</code> or <code>'stderr,jsonlog'</code> on Postgres 15+), " +
+					"and a login with <code>GRANT pg_read_server_files TO &lt;user&gt;;</code> (or superuser).</li>\n");
+			w.append("  <li><b>Through Cloud Logging (GCP Cloud SQL)</b>: configure Host Monitor with <code>gcp://&lt;project&gt;:&lt;region&gt;:&lt;instance&gt;</code> " +
+					"and grant <code>roles/logging.viewer</code> to the service account.</li>\n");
+			w.append("</ul>\n");
 			return;
 		}
 
+		//---------------------------------------------------------------------
+		// 1. Errors & Warnings (PANIC, FATAL, ERROR, WARNING)
+		//---------------------------------------------------------------------
 		if (_countRstm.getRowCount() == 0)
 		{
 			w.append("No errors or warnings (PANIC, FATAL, ERROR, WARNING) were written to the server log during the period.<br>\n");
-			return;
+		}
+		else
+		{
+			w.append(getSectionDescriptionHtml(_countRstm, true));
+			w.append("Row Count: " + _countRstm.getRowCount() + "<br>\n");
+			w.append(toHtmlTable(_countRstm));
+
+			// The rows (not in the short mail message)
+			if (isFullMessageType() && _rowsRstm != null && _rowsRstm.getRowCount() > 0)
+			{
+				w.append("<br>\n");
+				w.append(getSectionDescriptionHtml(_rowsRstm, true));
+				w.append("Row Count: " + _rowsRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
+				w.append(toHtmlTable(_rowsRstm));
+			}
 		}
 
-		w.append(getSectionDescriptionHtml(_countRstm, true));
-		w.append("Row Count: " + _countRstm.getRowCount() + "<br>\n");
-		w.append(toHtmlTable(_countRstm));
-
-		// The rows (not in the short mail message)
-		if (isFullMessageType())
+		// Live Trend Charts from CmErrorLog (if recorded)
+		if (_CmErrorLog_SeverityCount != null || _CmErrorLog_SeverityPerSec != null || _CmErrorLog_OperationalEvents != null || _CmErrorLog_OperationalEventsPerSec != null)
 		{
 			w.append("<br>\n");
-			w.append(getSectionDescriptionHtml(_rowsRstm, true));
-			w.append("Row Count: " + _rowsRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
-			w.append(toHtmlTable(_rowsRstm));
+			w.append(getDbxCentralLinkWithDescForGraphs(false, "Below are the server log message counts and rates (per second) as well as operational events during the day.",
+					CmErrorLog.CM_NAME + "_" + CmErrorLog.GRAPH_NAME_SEVERITY_COUNT,
+					CmErrorLog.CM_NAME + "_" + CmErrorLog.GRAPH_NAME_SEVERITY_PER_SEC,
+					CmErrorLog.CM_NAME + "_" + CmErrorLog.GRAPH_NAME_OPERATIONAL_EVENTS,
+					CmErrorLog.CM_NAME + "_" + CmErrorLog.GRAPH_NAME_OPERATIONAL_PER_SEC
+					));
+			if (_CmErrorLog_SeverityCount != null)
+				_CmErrorLog_SeverityCount.writeHtmlContent(w, null, null);
+			if (_CmErrorLog_SeverityPerSec != null)
+				_CmErrorLog_SeverityPerSec.writeHtmlContent(w, null, null);
+			if (_CmErrorLog_OperationalEvents != null)
+				_CmErrorLog_OperationalEvents.writeHtmlContent(w, null, null);
+			if (_CmErrorLog_OperationalEventsPerSec != null)
+				_CmErrorLog_OperationalEventsPerSec.writeHtmlContent(w, null, null);
+		}
+
+		//---------------------------------------------------------------------
+		// 2. Operational Log Analytics (LOG severity: pgbadger-style insights)
+		//---------------------------------------------------------------------
+		for (String v : _verdicts)
+			w.append("<p><b>Verdict</b>: " + v + "</p>\n");
+
+		if (_logConfigNote != null)
+			w.append("<p>" + _logConfigNote + "</p>\n");
+
+		// 2a. Checkpoints
+		if (_ckptRstm != null && _ckptRstm.getRowCount() > 0)
+		{
+			w.append("<br>\n");
+			w.append("<h4>Logged Checkpoints (origin: CmErrorLog / log_checkpoints)</h4>\n");
+			w.append(getSectionDescriptionHtml(_ckptRstm, true));
+			w.append("Row Count: " + _ckptRstm.getRowCount() + "<br>\n");
+			w.append(toHtmlTable(_ckptRstm));
+		}
+
+		// 2b. Autovacuum & Autoanalyze
+		if (_autovacRstm != null && _autovacRstm.getRowCount() > 0)
+		{
+			w.append("<br>\n");
+			w.append("<h4>Logged Autovacuum &amp; Autoanalyze Activity (origin: CmErrorLog / log_autovacuum_min_duration)</h4>\n");
+			w.append(getSectionDescriptionHtml(_autovacRstm, true));
+			w.append("Row Count: " + _autovacRstm.getRowCount() + "<br>\n");
+			w.append(toHtmlTable(_autovacRstm));
+		}
+
+		// 2c. Temporary Files
+		if (_tempFilesRstm != null && _tempFilesRstm.getRowCount() > 0)
+		{
+			w.append("<br>\n");
+			w.append("<h4>Logged Temporary Files (origin: CmErrorLog / log_temp_files)</h4>\n");
+			w.append(getSectionDescriptionHtml(_tempFilesRstm, true));
+			w.append("Row Count: " + _tempFilesRstm.getRowCount() + "<br>\n");
+			w.append(toHtmlTable(_tempFilesRstm));
+		}
+
+		// 2d. Lock Waits
+		if (_lockWaitsRstm != null && _lockWaitsRstm.getRowCount() > 0)
+		{
+			w.append("<br>\n");
+			w.append("<h4>Logged Lock Waits (origin: CmErrorLog / log_lock_waits)</h4>\n");
+			w.append(getSectionDescriptionHtml(_lockWaitsRstm, true));
+			w.append("Row Count: " + _lockWaitsRstm.getRowCount() + "<br>\n");
+			w.append(toHtmlTable(_lockWaitsRstm));
+
+			if (isFullMessageType() && _lockWaitRowsRstm != null && _lockWaitRowsRstm.getRowCount() > 0)
+			{
+				w.append("<br>\n");
+				w.append(getSectionDescriptionHtml(_lockWaitRowsRstm, true));
+				w.append("Row Count: " + _lockWaitRowsRstm.getRowCount() + "<br>\n");
+				w.append(toHtmlTable(_lockWaitRowsRstm));
+			}
+		}
+
+		// 2e. Slow Statements / auto_explain Plans
+		if (_slowQueriesRstm != null && _slowQueriesRstm.getRowCount() > 0)
+		{
+			w.append("<br>\n");
+			w.append("<h4>Logged Slow Statements &amp; auto_explain Plans (origin: CmErrorLog / log_min_duration_statement)</h4>\n");
+			w.append(getSectionDescriptionHtml(_slowQueriesRstm, true));
+			w.append("Row Count: " + _slowQueriesRstm.getRowCount() + "<br>\n");
+			w.append(toHtmlTable(_slowQueriesRstm));
 		}
 	}
 
 	@Override
 	public String getSubject()
 	{
-		return "Error Log: errors and warnings (origin: CmErrorLog / the server log)";
+		return "Error Log: errors, warnings and operational analytics (origin: CmErrorLog / the server log)";
 	}
 
 	@Override
@@ -117,7 +238,9 @@ extends PostgresAbstract
 		if ( ! doTableExist(conn, getReportingInstance().getDbmsSchemaName(), "CmErrorLog_abs") )
 			return;
 
-		// How many of each: severity + SQLSTATE (the messages have values in them, so they are not grouped on)
+		//---------------------------------------------------------------------
+		// 1. Errors & Warnings: severity + SQLSTATE
+		//---------------------------------------------------------------------
 		String sql = ""
 			    + "select \n"
 			    + "     [error_severity] \n"
@@ -188,5 +311,125 @@ extends PostgresAbstract
 		_rowsRstm.setColumnDescription("detail"          , "More detail (for example the duplicate key value)");
 		_rowsRstm.setColumnDescription("hint"            , "A hint from Postgres");
 		_rowsRstm.setColumnDescription("query"           , "The statement that failed (when it is logged)");
+
+		//---------------------------------------------------------------------
+		// 2. Operational LOG Analytics (pgbadger-style insights)
+		//---------------------------------------------------------------------
+		try
+		{
+			PostgresErrorLogBgParser bgParser = new PostgresErrorLogBgParser();
+			bgParser.parseFromPcs(conn, getReportPeriodSqlWhere());
+
+			int topAnalyticsRows = Math.min(getTopRows(), 50);
+			_ckptRstm         = bgParser.buildCheckpointsRstm();
+			_autovacRstm      = bgParser.buildAutovacuumRstm(topAnalyticsRows);
+			_tempFilesRstm    = bgParser.buildTempFilesRstm(topAnalyticsRows);
+			_lockWaitsRstm    = bgParser.buildLockWaitsSummaryRstm();
+			_lockWaitRowsRstm = bgParser.buildLockWaitDetailsRstm(25);
+			_slowQueriesRstm  = bgParser.buildSlowQueriesRstm(topAnalyticsRows);
+
+			buildVerdictsAndConfigNotes(conn);
+		}
+		catch (Exception ex)
+		{
+			_logger.warn("Problems parsing operational LOG entries from CmErrorLog_abs.", ex);
+		}
+
+		//---------------------------------------------------------------------
+		// 3. Trend Graphs from CmErrorLog (if recorded)
+		//---------------------------------------------------------------------
+		String schema = getReportingInstance().getDbmsSchemaName();
+		_CmErrorLog_SeverityCount           = chart(conn, schema, CmErrorLog.CM_NAME, CmErrorLog.GRAPH_NAME_SEVERITY_COUNT,      "ErrorLog Messages by Severity, Count (" + CmErrorLog.SHORT_NAME + ")");
+		_CmErrorLog_SeverityPerSec          = chart(conn, schema, CmErrorLog.CM_NAME, CmErrorLog.GRAPH_NAME_SEVERITY_PER_SEC,    "ErrorLog Messages by Severity, Per Second (" + CmErrorLog.SHORT_NAME + ")");
+		_CmErrorLog_OperationalEvents       = chart(conn, schema, CmErrorLog.CM_NAME, CmErrorLog.GRAPH_NAME_OPERATIONAL_EVENTS,  "ErrorLog Operational Events, Count (" + CmErrorLog.SHORT_NAME + ")");
+		_CmErrorLog_OperationalEventsPerSec = chart(conn, schema, CmErrorLog.CM_NAME, CmErrorLog.GRAPH_NAME_OPERATIONAL_PER_SEC, "ErrorLog Operational Events, Per Second (" + CmErrorLog.SHORT_NAME + ")");
 	}
+
+	/** A line chart, or null when the graph was not recorded */
+	private IReportChart chart(DbxConnection conn, String schema, String cmName, String graphName, String title)
+	{
+		if ( ! doTableExist(conn, schema, cmName + "_" + graphName) )
+			return null;
+		return createTsLineChart(conn, schema, cmName, graphName, -1, false, null, title);
+	}
+
+	private void buildVerdictsAndConfigNotes(DbxConnection conn)
+	{
+		// Check checkpoint fsync latency spikes
+		if (_ckptRstm != null)
+		{
+			double maxLongestSync = 0;
+			for (int r = 0; r < _ckptRstm.getRowCount(); r++)
+			{
+				Double d = _ckptRstm.getValueAsDouble(r, "longest_sync_sec__max");
+				if (d != null)
+					maxLongestSync = Math.max(maxLongestSync, d);
+			}
+			if (maxLongestSync >= 1.0)
+			{
+				_verdicts.add("A checkpoint file <code>fsync</code> call took up to <b>" + String.format("%.3f", maxLongestSync) + " s</b>. "
+						+ "Slow <code>fsync</code> stalls checkpoint completion and can cause commit latency spikes on the underlying storage.");
+			}
+		}
+
+		// Check autovacuum wraparound or unremovable dead tuples
+		if (_autovacRstm != null)
+		{
+			int    wrapSum          = 0;
+			long   maxDeadUnrem     = 0;
+			String maxDeadUnremTab  = null;
+			for (int r = 0; r < _autovacRstm.getRowCount(); r++)
+			{
+				wrapSum += _autovacRstm.getValueAsInteger(r, "wraparound_count", true, 0);
+				long deadUnrem = _autovacRstm.getValueAsLong(r, "dead_not_removable__max", true, 0L);
+				if (deadUnrem > maxDeadUnrem)
+				{
+					maxDeadUnrem    = deadUnrem;
+					maxDeadUnremTab = _autovacRstm.getValueAsString(r, "table_name");
+				}
+			}
+			if (wrapSum > 0)
+			{
+				_verdicts.add("<b>" + wrapSum + " anti-wraparound autovacuum(s)</b> ran during the period. "
+						+ "Anti-wraparound vacuums cannot be canceled by lock conflicts; see 'Vacuum Health' for transaction ID ages.");
+			}
+			if (maxDeadUnrem >= 100_000 && maxDeadUnremTab != null)
+			{
+				_verdicts.add("Autovacuum on <code>" + maxDeadUnremTab + "</code> found <b>" + String.format("%,d", maxDeadUnrem)
+						+ " dead tuples that could not yet be removed</b> because an older transaction snapshot (oldest xmin) was still open.");
+			}
+		}
+
+		// Check logging configuration settings if MonSessionDbmsConfig was recorded
+		List<String> offTips = new ArrayList<>();
+		String logCkpt   = getServerSetting(conn, "log_checkpoints");
+		String logLock   = getServerSetting(conn, "log_lock_waits");
+		String logTemp   = getServerSetting(conn, "log_temp_files");
+		String logVacMin = getServerSetting(conn, "log_autovacuum_min_duration");
+
+		if ("off".equalsIgnoreCase(logCkpt))
+			offTips.add("<code>log_checkpoints = on</code> (logs checkpoint buffer writes and sync latency)");
+		if ("off".equalsIgnoreCase(logLock))
+			offTips.add("<code>log_lock_waits = on</code> (logs lock waits exceeding <code>deadlock_timeout</code>)");
+		if ("-1".equals(logTemp))
+			offTips.add("<code>log_temp_files = 0</code> (logs queries that spill temporary files to disk)");
+		if ("-1".equals(logVacMin))
+			offTips.add("<code>log_autovacuum_min_duration = '1s'</code> (or <code>0</code>, logs autovacuum and autoanalyze runs)");
+
+		if (!offTips.isEmpty())
+		{
+			_logConfigNote = "<b>Tip (Server Log Observability)</b>: To capture more operational insights in this section, consider enabling: "
+					+ String.join(", ", offTips) + ".";
+		}
+	}
+
+	// Package-private getters for unit testing
+	ResultSetTableModel getCountRstm()        { return _countRstm; }
+	ResultSetTableModel getCheckpointsRstm()  { return _ckptRstm; }
+	ResultSetTableModel getAutovacuumRstm()   { return _autovacRstm; }
+	ResultSetTableModel getTempFilesRstm()    { return _tempFilesRstm; }
+	ResultSetTableModel getLockWaitsRstm()    { return _lockWaitsRstm; }
+	ResultSetTableModel getLockWaitRowsRstm() { return _lockWaitRowsRstm; }
+	ResultSetTableModel getSlowQueriesRstm()  { return _slowQueriesRstm; }
+	List<String>        getVerdicts()         { return _verdicts; }
 }

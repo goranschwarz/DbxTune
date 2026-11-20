@@ -54,7 +54,8 @@ public abstract class HostMonitorConnection
 	public enum ConnectionType
 	{
 		LOCAL_OS,
-		SSH
+		SSH,
+		CLOUD
 	};
 
 	public HostMonitorConnection(ConnectionType connType)

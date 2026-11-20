@@ -72,6 +72,7 @@ import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.table.TableColumnExt;
 
 import com.dbxtune.Version;
+import com.dbxtune.cloud.GcpCredentialsHelper;
 import com.dbxtune.config.dict.MonTablesDictionaryManager;
 import com.dbxtune.gui.swing.GLabel;
 import com.dbxtune.hostmon.HostMonitorConnection;
@@ -1693,6 +1694,9 @@ finally
 	throws SQLException
 	{
 		final Properties props2 = new Properties(); // only used when displaying what properties we connect with
+
+		// GCP Cloud SQL IAM Database Authentication for PostgreSQL (injects fresh OAuth2 access token when applicable)
+		GcpCredentialsHelper.applyGcpIamPostgresAuth(url, props, null);
 
 		// user name should be part of the props...
 		String user = props.getProperty("user", "-unknown-");

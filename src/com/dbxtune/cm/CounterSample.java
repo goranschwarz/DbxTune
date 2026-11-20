@@ -1738,8 +1738,8 @@ extends CounterTableModel
 		}
 		String keyStr = key.toString();
 
-		// Check for DUPLICATES
-		if (_colIsPk != null)
+		// Check for DUPLICATES (only when PK columns exist; append-only CMs with pkList==null have _pkPosArray.length==0)
+		if (_colIsPk != null && (_pkPosArray == null || _pkPosArray.length > 0))
 		{
 			Integer io = _keysToRowid.get(keyStr);
 			if (io != null)
