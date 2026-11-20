@@ -46,7 +46,9 @@ import com.dbxtune.utils.StringUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * <pre>POST /api/sqlserver/deadlock-parse   (form params: xml, eventTime)</pre>
+ * <pre>POST /api/sqlserver/deadlock-parse   (form params: xml, eventTime, index)</pre>
+ * A paste with several deadlocks: <code>index</code> (0 = the first) picks the one returned, and <code>list</code> has
+ * a short line (time, database, victim, objects) for each of them.
  * Parses a SQL Server deadlock report (the <code>DeadlockXml</code> of a <code>CmDeadlocks</code> row, or anything pasted
  * into the Deadlock Viewer: <code>&lt;deadlock&gt;</code>, <code>&lt;deadlock-list&gt;</code>, a XE event) with
  * {@link Deadlock#parseDeadlock(String, Timestamp)}, the same parser as the DSR and the DeadlockCount alarm,
@@ -60,8 +62,7 @@ extends HttpServlet
 	private static final long serialVersionUID = 1L;
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
-	private static final Pattern DEADLOCK_START   = Pattern.compile("<deadlock[ >]");
-	private static final Pattern DEADLOCK_ELEMENT = Pattern.compile("<deadlock[ >].*?</deadlock>", Pattern.DOTALL); // the first one
+	private static final Pattern DEADLOCK_ELEMENT = Pattern.compile("<deadlock[ >].*?</deadlock>", Pattern.DOTALL);
 	private static final Pattern XE_EVENT         = Pattern.compile("<event [^>]*xml_deadlock_report.*?</event>", Pattern.DOTALL);
 
 	@Override
@@ -85,39 +86,75 @@ extends HttpServlet
 		try
 		{
 			// Any paste (Deadlock Viewer): a <deadlock> (CmDeadlocks, SSMS .xdl), a <deadlock-list> (trace flag 1222 / Profiler),
-			// or a XE event (<event name="xml_deadlock_report" timestamp="...">). Several: the first one is shown.
-			Deadlock d;
-			String eventTimeNote = null;
-			int deadlockCount = 0;
-			for (Matcher m = DEADLOCK_START.matcher(xml); m.find(); )
-				deadlockCount++;
+			// or a XE event (<event name="xml_deadlock_report" timestamp="...">). Several (rows copied from a query): 'index' picks one,
+			// and 'list' has a short line for each (the Deadlock Viewer's drop-down).
+			List<String> reports = new ArrayList<>();
+			if (eventTime == null)
+				for (Matcher m = XE_EVENT.matcher(xml); m.find(); )
+					reports.add(m.group());
+			boolean isEvent = ! reports.isEmpty();
+			if ( ! isEvent )
+				for (Matcher m = DEADLOCK_ELEMENT.matcher(xml); m.find(); )
+					reports.add(m.group());
+			if (reports.isEmpty())
+				throw new Exception("No <deadlock> element found. Paste a deadlock report: <deadlock>...</deadlock> (.xdl), <deadlock-list> or a 'xml_deadlock_report' event. See 'How to get a deadlock report' above.");
 
-			Matcher ev = XE_EVENT.matcher(xml);
-			Matcher dl = DEADLOCK_ELEMENT.matcher(xml);
-			if (eventTime == null && ev.find())
-			{
-				d = Deadlock.parseEvent(ev.group(), 0); // the server's UTC offset is not in the event
-				eventTimeNote = d.eventTime == null ? null : "UTC";
-			}
-			else if (dl.find())
-				d = Deadlock.parseDeadlock(dl.group(), eventTime);
-			else
-				throw new Exception("No <deadlock> element found. Paste a deadlock report: <deadlock>...</deadlock> (.xdl), <deadlock-list> or a 'xml_deadlock_report' event.");
-
-			// No time in the report: the deadlock was found after every session's transaction start + its wait time
-			if (d.eventTime == null)
-			{
-				for (DlProcess p : d.processes)
-					if (p.tranStarted != null && (d.eventTime == null || p.tranStarted.getTime() + p.waitTimeMs > d.eventTime.getTime()))
-						d.eventTime = new Timestamp(p.tranStarted.getTime() + p.waitTimeMs);
-				eventTimeNote = d.eventTime == null ? null : "estimated";
-			}
+			int index = StringUtil.parseInt(req.getParameter("index"), 0);
+			if (index < 0 || index >= reports.size())
+				index = 0;
 
 			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 
+			// Parse them all (for the list), keep the one asked for
+			Deadlock d = null;
+			String eventTimeNote = null;
+			List<Map<String, Object>> list = new ArrayList<>();
+			for (int i = 0; i < reports.size(); i++)
+			{
+				Map<String, Object> e = new LinkedHashMap<>();
+				e.put("index", i);
+				try
+				{
+					Deadlock dx = isEvent ? Deadlock.parseEvent(reports.get(i), 0) : Deadlock.parseDeadlock(reports.get(i), eventTime); // the server's UTC offset is not in the event
+					String note = isEvent && dx.eventTime != null ? "UTC" : null;
+
+					// No time in the report: the deadlock was found after every session's transaction start + its wait time
+					if (dx.eventTime == null)
+					{
+						for (DlProcess p : dx.processes)
+							if (p.tranStarted != null && (dx.eventTime == null || p.tranStarted.getTime() + p.waitTimeMs > dx.eventTime.getTime()))
+								dx.eventTime = new Timestamp(p.tranStarted.getTime() + p.waitTimeMs);
+						note = dx.eventTime == null ? null : "estimated";
+					}
+
+					DlProcess vx = dx.getVictim();
+					e.put("eventTime"    , dx.eventTime == null ? null : sdf.format(dx.eventTime));
+					e.put("eventTimeNote", note);
+					e.put("dbName"       , dx.getVictimDbName());
+					e.put("victimSpid"   , vx == null ? null : vx.spid);
+					e.put("processCount" , dx.getSpids().size());
+					e.put("objects"      , dx.getObjects());
+
+					if (i == index)
+					{
+						d = dx;
+						eventTimeNote = note;
+					}
+				}
+				catch (Exception ex)
+				{
+					if (i == index)
+						throw ex;
+					e.put("error", ex.toString());
+				}
+				list.add(e);
+			}
+
 			out.put("eventTime"    , d.eventTime == null ? null : sdf.format(d.eventTime));
 			out.put("eventTimeNote", eventTimeNote);
-			out.put("deadlockCount", deadlockCount);
+			out.put("deadlockCount", reports.size());
+			out.put("index"        , index);
+			out.put("list"         , list);
 			out.put("parallel"     , d.parallel);
 
 			// The same values as the CmDeadlocks columns (the Deadlock Viewer shows them like the Counter Details "Row Detail")

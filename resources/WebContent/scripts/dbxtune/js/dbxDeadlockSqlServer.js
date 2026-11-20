@@ -10,7 +10,8 @@
  * Parse a deadlock report on the server and draw it into $pic (replaces its content).
  * @param xml        a <deadlock>, <deadlock-list> or XE <event> report
  * @param eventTime  when it was detected, 'yyyy-MM-dd HH:mm:ss.SSS', or '' (then the event's time, or an estimate)
- * @param opts       { isDark: bool, $modal: the dialog it is in (stop Play / hide the tooltip on close), onParsed: function(d) }
+ * @param opts       { isDark: bool, $modal: the dialog it is in (stop Play / hide the tooltip on close), onParsed: function(d),
+ *                     index: which one when the report has several (0 = the first) }
  */
 function sqlServerDeadlockRender($pic, xml, eventTime, opts)
 {
@@ -19,7 +20,7 @@ function sqlServerDeadlockRender($pic, xml, eventTime, opts)
 	$.ajax({
 		url: '/api/sqlserver/deadlock-parse',
 		type: 'POST',
-		data: { xml: xml, eventTime: eventTime || '' },
+		data: { xml: xml, eventTime: eventTime || '', index: opts.index || 0 },
 		dataType: 'json',
 		success: function(d) {
 			if (d.error) { $pic.html('<i>' + escHtml(d.error) + '</i>'); if (opts.onParsed) opts.onParsed(d); return; }
