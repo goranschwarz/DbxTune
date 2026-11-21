@@ -80,6 +80,40 @@ public class AseTopSlowSqlText extends AseAbstract
 //	{
 //	}
 
+	/** One narrow "Info" column instead of: JavaSqlHashCodeShort, SkipThis */
+	private TableStringRenderer createInfoColumnRenderer()
+	{
+		return new ReportEntryTableStringRenderer()
+		{
+			@Override
+			public boolean isColumnVisible(ResultSetTableModel rstm, int col, String colName)
+			{
+				return ! "SkipThis".equals(colName);
+			}
+
+			@Override
+			public String headerName(ResultSetTableModel rstm, int col, String colName)
+			{
+				return "JavaSqlHashCodeShort".equals(colName) ? "Info" : colName;
+			}
+
+			@Override
+			public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+			{
+				if ("JavaSqlHashCodeShort".equals(colName))
+				{
+					return infoCell(infoLabel("Hash code", "JavaSqlHashCodeShort: a Java hashCode() of the first part of the SQL Text (as it was executed, NOT normalized). "
+					                                     + "All executions with the same SQL Text are summarized in this row.")
+					                + "<br><b>" + rstm.getValueAsString(row, "JavaSqlHashCodeShort") + "</b>"
+					                , infoSkipThis(rstm.getValueAsString(row, "SkipThis")));
+				}
+				if ("SQLText".equals(colName))
+					return "<xmp>" + strVal + "</xmp>";
+				return strVal;
+			}
+		};
+	}
+
 	@Override
 	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
@@ -100,7 +134,7 @@ public class AseTopSlowSqlText extends AseAbstract
 //			sb.append(_shortRstm.toHtmlTableString("sortable"));
 
 //			sb.append(toHtmlTable(_shortRstm));
-			sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, null));
+			sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, createInfoColumnRenderer()));
 
 			if (_longRstm != null)
 			{
@@ -110,21 +144,7 @@ public class AseTopSlowSqlText extends AseAbstract
 //				sb.append(_longRstm.toHtmlTablesVerticalString("sortable"));
 //				sb.append(_longRstm.toHtmlTableString("sortable"));
 
-				// Create a default renderer
-				TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
-				{
-					@Override
-					public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
-					{
-						if ("SQLText".equals(colName))
-						{
-						//	return "<xmp style='width:100%; max-height:400px; overflow:auto'>" + strVal + "</xmp>";
-							return "<xmp>" + strVal + "</xmp>";
-						}
-						return strVal;
-					}
-				};
-				sb.append(_longRstm.toHtmlTableString("sortable", true, true, null, tableRender));
+				sb.append(_longRstm.toHtmlTableString("sortable", true, true, null, createInfoColumnRenderer()));
 			}
 		}
 		

@@ -29,6 +29,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -160,9 +161,36 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 				{
 					TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
 					{
+						// One narrow "Info" column instead of: NormJavaSqlHashCode, SkipThis, txt, wait
+						@Override
+						public boolean isColumnVisible(ResultSetTableModel rstm, int col, String colName)
+						{
+							return ! ("SkipThis".equals(colName) || "txt".equals(colName) || "wait".equals(colName));
+						}
+
+						@Override
+						public String headerName(ResultSetTableModel rstm, int col, String colName)
+						{
+							return "NormJavaSqlHashCode".equals(colName) ? "Info" : colName;
+						}
+
 						@Override
 						public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
 						{
+							if ("NormJavaSqlHashCode".equals(colName))
+							{
+								String hash = rstm.getValueAsString(row, "NormJavaSqlHashCode");
+								return infoCell(normHashCodeInfo(hash)
+										, cellValue(rstm, row, col, "txt" , null, "")
+										, cellValue(rstm, row, col, "wait", null, "")
+										, copyExecPlanInfo(hash)
+										, infoSkipThis(rstm.getValueAsString(row, "SkipThis")));
+							}
+
+							// A long list of names: wrap it (on one line it made the table ~35000 px wide)
+							if ("StatementCacheNames".equals(colName))
+								return "<div style='white-space:normal; min-width:300px; max-width:500px; font-size:11px;'>" + strVal + "</div>";
+
 							if ("txt".equals(colName))
 							{
 								// Get Actual Executed SQL Text for current 'NormJavaSqlHashCode'
@@ -179,7 +207,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 										+ "data-bs-target='#dbx-view-sqltext-dialog' "
 										+ "data-objectname='" + normJavaSqlHashCode + "' "
 										+ "data-tooltip=\""   + executedSqlText     + "\" "
-										+ ">&#x1F4AC;</div>"; // symbol popup with "..."
+										+ ">&#x1F4AC; Executed SQL</div>"; // symbol popup with "..."
 							}
 
 							if ("wait".equals(colName))
@@ -198,7 +226,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 										+ "data-bs-target='#dbx-view-sqltext-dialog' "
 										+ "data-objectname='" + normJavaSqlHashCode + "' "
 										+ "data-tooltip=\""   + waitText     + "\" "
-										+ ">&#x1F4AC;</div>"; // symbol popup with "..."
+										+ ">&#x1F4AC; Waits</div>"; // symbol popup with "..."
 							}
 
 							return strVal;
@@ -214,9 +242,32 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 				// Create a default renderer
 				TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
 				{
+					// One narrow "Info" column instead of: NormJavaSqlHashCode, Skip This, txt, wait
+					@Override
+					public boolean isColumnVisible(ResultSetTableModel rstm, int col, String colName)
+					{
+						return ! ("Skip This".equals(colName) || "txt".equals(colName) || "wait".equals(colName));
+					}
+
+					@Override
+					public String headerName(ResultSetTableModel rstm, int col, String colName)
+					{
+						return "NormJavaSqlHashCode".equals(colName) ? "Info" : colName;
+					}
+
 					@Override
 					public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
 					{
+						if ("NormJavaSqlHashCode".equals(colName))
+						{
+							String hash = rstm.getValueAsString(row, "NormJavaSqlHashCode");
+							return infoCell(normHashCodeInfo(hash)
+									, cellValue(rstm, row, col, "txt" , null, "")
+									, cellValue(rstm, row, col, "wait", null, "")
+									, copyExecPlanInfo(hash)
+									, infoSkipThis(rstm.getValueAsString(row, "Skip This")));
+						}
+
 //						if ("NormSQLText".equals(colName))
 //						{
 //						//	return "<xmp style='width:100%; max-height:400px; overflow:auto'>" + strVal + "</xmp>";
@@ -239,7 +290,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 									+ "data-bs-target='#dbx-view-sqltext-dialog' "
 									+ "data-objectname='" + normJavaSqlHashCode + "' "
 									+ "data-tooltip=\""   + executedSqlText     + "\" "
-									+ ">&#x1F4AC;</div>"; // symbol popup with "..."
+									+ ">&#x1F4AC; Executed SQL</div>"; // symbol popup with "..."
 						}
 
 						if ("wait".equals(colName))
@@ -258,7 +309,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 									+ "data-bs-target='#dbx-view-sqltext-dialog' "
 									+ "data-objectname='" + normJavaSqlHashCode + "' "
 									+ "data-tooltip=\""   + waitText     + "\" "
-									+ ">&#x1F4AC;</div>"; // symbol popup with "..."
+									+ ">&#x1F4AC; Waits</div>"; // symbol popup with "..."
 						}
 
 						return strVal;
@@ -896,6 +947,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 						PlanLinkLists planLinks = buildPlanLinkListsHtml(conn, NormJavaSqlHashCode, showplanMaxLinks);
 
 						String showplanLinks = planLinks.showplanLineHtml;
+						_copyPlanLinks.put(NormJavaSqlHashCode, planLinks.copyLinksHtml);
 
 						// "Get LLM Optimization Advice" for the normalized SQL Text alone (no plan).
 						// NOTE: plain hyperlink (not inline JS) since this report can be e-mailed
@@ -1141,6 +1193,9 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 		/** The per-plan "Get LLM Optimization Advice" anchors ONLY (comma separated) - no icon, no label */
 		String llmLinksHtml     = "";
 
+		/** The per-plan "Copy Exec Plan" anchors ONLY (comma separated): each copies its XML plan to the clipboard */
+		String copyLinksHtml    = "";
+
 		boolean hasLlmLinks() { return StringUtil.hasValue(llmLinksHtml); }
 	}
 
@@ -1190,6 +1245,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 
 		StringBuilder showplanSb = new StringBuilder();
 		StringBuilder llmSb      = new StringBuilder();
+		StringBuilder copySb     = new StringBuilder();
 		int linkCount = 0;
 
 		for (String objectName : namesWithPlan)
@@ -1237,6 +1293,13 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 			// Write the plan text ONCE into the report (shared with any other ASE report section)
 			registerXmlPlan(objectName, xmlPlan);
 
+			// "Copy Exec Plan: 1, 2, 3": numbered (the names are long), the name is in the hover text.
+			// showplanForId() takes the element id without the 'plan_' prefix
+			if (copySb.length() > 0)
+				copySb.append(", ");
+			copySb.append("<a href='#' title='Copy the XML plan of ").append(linkText).append(" to the clipboard (paste it into SqlW to see the graphical plan)' onclick='showplanForId(\"")
+			      .append(planElementId.substring("plan_".length())).append("\"); return false;'>").append(linkCount + 1).append("</a>");
+
 			if (StringUtil.hasValue(showplanLink))
 			{
 				if (showplanSb.length() > 0)
@@ -1266,9 +1329,39 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 		if (showplanSb.length() > 0)
 			result.showplanLineHtml = "<i class='fa-solid fa-arrow-up-right-from-square'></i>&nbsp;View Execution Plan: " + showplanSb + more + "<br>\n";
 
-		result.llmLinksHtml = llmSb.toString();
+		result.llmLinksHtml  = llmSb.toString();
+		result.copyLinksHtml = copySb.toString();
 
 		return result;
+	}
+
+	/** NormJavaSqlHashCode -> the "Copy Exec Plan" links (one per plan), filled where the plans are looked up */
+	private Map<String, String> _copyPlanLinks = new HashMap<>();
+
+	/** Info cell: "Copy Exec Plan: name1, name2" (needs JavaScript, so not in the mail). "" when there are no plans */
+	private String copyExecPlanInfo(String normJavaSqlHashCode)
+	{
+		String links = _copyPlanLinks.get(normJavaSqlHashCode);
+		if ( ! isFullMessageType() || StringUtil.isNullOrBlank(links) )
+			return "";
+		return "<i class='fa-regular fa-copy'></i>&nbsp;Copy Exec Plan: " + links;
+	}
+
+	/** Info cell: the hash code, with an explanation of it and of the special codes -1, -2, -3 */
+	private static String normHashCodeInfo(String hash)
+	{
+		String special = "-1".equals(hash) ? "no SQL Text found"
+		               : "-2".equals(hash) ? "SQL Text could not be parsed"
+		               : "-3".equals(hash) ? "only a Statement Cache / Dynamic SQL entry"
+		               : "";
+		String explanation = "NormJavaSqlHashCode: a Java hashCode() of the normalized SQL Text "
+				+ "(constants replaced with ?, IN lists with ...). All statements with the same normalized SQL Text are summarized in this row.\n"
+				+ "Special values:\n"
+				+ "-1 = no SQL Text was found\n"
+				+ "-2 = the SQL Text could not be parsed/normalized\n"
+				+ "-3 = no SQL Text, but a Statement Cache (*ss) or Dynamic SQL (*sq) entry was found";
+		return infoLabel("Hash code", explanation) + "<br><b>" + hash + "</b>"
+				+ (special.isEmpty() ? "" : "<br><span style='font-size:11px; color:#6b7686;'>" + special + "</span>");
 	}
 
 	private void setNoteColumn(ResultSetTableModel rstm)

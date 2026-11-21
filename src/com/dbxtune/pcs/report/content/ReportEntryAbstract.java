@@ -1132,8 +1132,38 @@ implements IReportEntry
 
 
 	/**
+	 * An "Info" cell: several small things stacked in ONE narrow cell instead of one column each,
+	 * for example the hash code, the "Executed SQL" popup, "Copy Exec Plan" and "Skip This". Empty parts are left out.
+	 */
+	public static String infoCell(String... parts)
+	{
+		StringBuilder sb = new StringBuilder("<div style='white-space:nowrap; line-height:1.7; text-align:left;'>"); // left: a number column (hash code) is right aligned
+		for (String part : parts)
+		{
+			if (StringUtil.hasValue(part))
+				sb.append("<div>").append(part).append("</div>");
+		}
+		return sb.append("</div>").toString();
+	}
+
+	/** A small gray label with an (i): hover (or tap) shows what it means */
+	public static String infoLabel(String label, String explanation)
+	{
+		return "<span class='dsr-info-tip' style='font-size:11px; color:#6b7686; cursor:help;' data-info=\"" + StringEscapeUtils.escapeHtml4(explanation) + "\">" + label + " &#9432;</span>";
+	}
+
+	/** The "Skip This" link (made by setSkipEntriesUrl) with an (i) that explains it. "" when there is no link */
+	public static String infoSkipThis(String skipThisLink)
+	{
+		if (StringUtil.isNullOrBlank(skipThisLink) || "&nbsp;".equals(skipThisLink))
+			return "";
+		return skipThisLink + " " + infoLabel("", "Skip This: opens DbxCentral (in a new tab) where you can add this entry to the 'skip set'. "
+				+ "Entries in the skip set are left out of future reports, for example a statement that is known to be slow and that you can't do anything about.");
+	}
+
+	/**
 	 * Create a link to DbxCentral where you can add any Skip entries
-	 * 
+	 *
 	 * @param rstm
 	 * @param linkColumnName    The Column Name where we should insert the link
 	 * @param skipColumnName    Column Name we should get valueString to skip

@@ -1651,6 +1651,8 @@ public abstract class ReportChartAbstract implements IReportChart
 			st.setAxisTickLabelsFont(smallFont);
 			st.setAxisTickLabelsColor(muted);
 			st.setAxisTicksLineVisible(false);
+			st.setAxisTicksMarksVisible(false); // no small "-" between the axis labels and the plot (Chart.js has none)
+			st.setPlotTicksMarksVisible(false);
 			st.setSeriesColors(DSR_COLORS);
 			st.setAntiAlias(true);
 

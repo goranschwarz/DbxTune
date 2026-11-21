@@ -674,6 +674,11 @@ extends DailySummaryReportAbstract
 		w.append("            font-family: Courier;			\n");
 		w.append("            white-space: pre-wrap;			\n");
 		w.append("        }									\n");
+		w.append("        /* The (i) explanations in the 'Info' columns: a small box (data-tooltip above is the wide SQL Text box) */ \n");
+		w.append("        .dsr-info-tip { position: relative; } \n");
+		w.append("        .dsr-info-tip:hover::after { content: attr(data-info); position: absolute; z-index: 104; top: 16px; left: 0; width: 380px; \n");
+		w.append("            padding: 8px 10px; background: #454545; color: #fff; font-size: 12px; font-weight: normal; line-height: 1.4; \n");
+		w.append("            white-space: pre-wrap; border-radius: 4px; text-align: left; } \n");
 		w.append("        [data-title]:hover::after {			\n");
 		w.append("            content: '';						\n");
 		w.append("            position: absolute;				\n");
@@ -1275,6 +1280,10 @@ extends DailySummaryReportAbstract
 			// Wide tables: scroll left/right inside the section, not cut off (the sections are as wide as the window)
 			writer.append("    .dsr-card .card-body { overflow-x: auto; } \n");
 			writer.append("    .dsr-main details { max-width: 100%; overflow-x: auto; } \n");
+			// The floating scrollbar (see the script at the end of the page)
+			writer.append("    #dsr-hscroll { position: fixed; bottom: 0; height: 17px; overflow-x: auto; overflow-y: hidden; z-index: 1030; display: none; \n");
+			writer.append("                   background: rgba(246, 247, 249, 0.92); border-top: 1px solid #dfe3ea; } \n");
+			writer.append("    #dsr-hscroll > div { height: 1px; } \n");
 			writer.append("    .dsr-card > .card-header { background: #ffffff; border-bottom: 1px solid #e8ebf0; font-size: 16px; } \n");
 			writer.append("    .dsr-card > .card-header a { color: #1d2430; text-decoration: none; } \n");
 			writer.append("    .dsr-origin { font-family: Consolas, 'Courier New', monospace; font-size: 11.5px; color: #6b7686; font-weight: normal; margin-left: 10px; } \n");
@@ -1648,6 +1657,44 @@ extends DailySummaryReportAbstract
 		writer.append("                }); \n");
 		writer.append("            }, { rootMargin: '0px 0px -75% 0px' }); \n"); // the section in the top quarter of the window
 		writer.append("            Object.keys(links).forEach(function(id) { var el = document.getElementById(id); if (el) obs.observe(el); }); \n");
+		writer.append("        })(); \n");
+		writer.append("\n");
+		writer.append("        // Floating scrollbar: a wide section (table) scrolls left/right inside its card, but its own scrollbar is at \n");
+		writer.append("        // the END of the section, often far below the window. While such a section covers the bottom of the window, \n");
+		writer.append("        // a scrollbar pinned to the window bottom scrolls it. \n");
+		writer.append("        (function() { \n");
+		writer.append("            var bar = document.createElement('div'); bar.id = 'dsr-hscroll'; \n");
+		writer.append("            var inner = document.createElement('div'); bar.appendChild(inner); \n");
+		writer.append("            document.body.appendChild(bar); \n");
+		writer.append("            var target = null, queued = false; \n");
+		writer.append("            function copyScroll(from, to) { if (Math.abs(to.scrollLeft - from.scrollLeft) > 1) to.scrollLeft = from.scrollLeft; } \n"); // scroll events come later: compare, no flag
+		writer.append("            function update() { \n");
+		writer.append("                queued = false; \n");
+		writer.append("                var vh = window.innerHeight, best = null, bestH = Infinity; \n");
+		writer.append("                document.querySelectorAll('.dsr-card .card-body, .dsr-main details').forEach(function(el) { \n");
+		writer.append("                    if (el.scrollWidth <= el.clientWidth + 2) return; \n");
+		writer.append("                    var r = el.getBoundingClientRect(); \n");
+		writer.append("                    if (r.top < vh - 40 && r.bottom > vh && r.height < bestH) { best = el; bestH = r.height; } \n"); // the innermost one that goes past the window bottom
+		writer.append("                }); \n");
+		writer.append("                target = best; \n");
+		writer.append("                if ( ! best ) { bar.style.display = 'none'; return; } \n");
+		writer.append("                var r = best.getBoundingClientRect(); \n");
+		writer.append("                bar.style.left  = r.left + 'px'; \n");
+		writer.append("                bar.style.width = best.clientWidth + 'px'; \n");
+		writer.append("                inner.style.width = best.scrollWidth + 'px'; \n");
+		writer.append("                bar.style.display = 'block'; \n");
+		writer.append("                copyScroll(best, bar); \n");
+		writer.append("            } \n");
+		writer.append("            function queue() { if ( ! queued ) { queued = true; requestAnimationFrame(update); } } \n");
+		writer.append("            bar.addEventListener('scroll', function() { if (target) copyScroll(bar, target); }); \n");
+		writer.append("            window.addEventListener('scroll', queue, { passive: true }); \n");
+		writer.append("            window.addEventListener('resize', queue); \n");
+		writer.append("            document.addEventListener('scroll', function(e) { if (e.target === target) copyScroll(target, bar); }, true); \n"); // the section scrolled by itself (shift+wheel, touch)
+		writer.append("            document.addEventListener('toggle', queue, true);           \n"); // a <details> opened/closed
+		writer.append("            document.addEventListener('shown.bs.collapse', queue);      \n"); // a section opened
+		writer.append("            document.addEventListener('hidden.bs.collapse', queue);     \n"); // a section closed
+		writer.append("            setInterval(queue, 1500); \n"); // charts and sparklines drawn later change the widths
+		writer.append("            queue(); \n");
 		writer.append("        })(); \n");
 		writer.append("\n");
 		writer.append("        // Functionality to CLOSE ALL 'details' sections of class 'dsr-details-tableinfo' \n");
