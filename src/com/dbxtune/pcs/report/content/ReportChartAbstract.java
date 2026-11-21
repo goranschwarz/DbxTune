@@ -22,6 +22,9 @@
 package com.dbxtune.pcs.report.content;
 
 import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -30,13 +33,20 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.invoke.MethodHandles;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.TimeZone;
 
 import javax.imageio.ImageIO;
+import javax.imageio.IIOImage;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
 import javax.imageio.spi.IIORegistry;
 
 import java.util.Set;
@@ -49,11 +59,23 @@ import org.jfree.chart.ChartRenderingInfo;
 import org.jfree.chart.ChartUtils;
 import org.jfree.chart.JFreeChart;
 import org.jfree.data.category.DefaultCategoryDataset;
+import org.jfree.data.category.CategoryDataset;
 import org.jfree.data.general.Dataset;
 import org.jfree.data.time.RegularTimePeriod;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
 import org.jfree.data.time.TimeSeriesDataItem;
+import org.knowm.xchart.CategoryChart;
+import org.knowm.xchart.CategoryChartBuilder;
+import org.knowm.xchart.CategorySeries;
+import org.knowm.xchart.XYChart;
+import org.knowm.xchart.XYChartBuilder;
+import org.knowm.xchart.XYSeries;
+import org.knowm.xchart.style.AxesChartStyler;
+import org.knowm.xchart.style.CategoryStyler;
+import org.knowm.xchart.style.Styler;
+import org.knowm.xchart.style.XYStyler;
+import org.knowm.xchart.style.markers.SeriesMarkers;
 
 import com.dbxtune.graph.TrendGraphColors;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -96,8 +118,22 @@ public abstract class ReportChartAbstract implements IReportChart
 	public final static int CHART_HEIGHT_FULL_MSG = CHART_HEIGHT_80;
 	public final static int CHART_WIDTH_FULL_MSG  = CHART_WIDTH_80; 
 
-	public final static int CHART_HEIGHT_SHORT_MSG = CHART_HEIGHT_80;
-	public final static int CHART_WIDTH_SHORT_MSG  = CHART_WIDTH_80;
+	public final static int CHART_HEIGHT_SHORT_MSG = 190; // the mail: drawn at the size it is shown (no Chart.js there). The full report keeps the canvas size, so the page does not jump
+	public final static int CHART_WIDTH_SHORT_MSG  = 780;
+
+	/** The chart images: "xchart" (default, the newer look) or "jfreechart" (the old look). Chart.js in the full report is not affected */
+	public static final String PROPKEY_IMAGE_RENDERER     = "DailySummaryReport.chart.image.renderer";
+	public static final String DEFAULT_IMAGE_RENDERER     = "xchart";
+
+	/** JPEG quality of the XChart images (0.0 - 1.0) */
+	public static final String PROPKEY_IMAGE_JPEG_QUALITY = "DailySummaryReport.chart.image.jpeg.quality";
+	public static final double DEFAULT_IMAGE_JPEG_QUALITY = 0.75;
+
+	/** Serie colors: the XChart images AND the Chart.js charts, so the image and the interactive chart look the same */
+	public static final Color[] DSR_COLORS = {
+		new Color(0x2563eb), new Color(0xea580c), new Color(0x16a34a), new Color(0x9333ea), new Color(0xdc2626),
+		new Color(0x0891b2), new Color(0xca8a04), new Color(0x64748b), new Color(0xdb2777), new Color(0x65a30d),
+		new Color(0x4f46e5), new Color(0x0d9488), new Color(0xb45309), new Color(0x7c3aed), new Color(0x475569) };
 
 	/** Max data points per serie in the full report's Chart.js charts; more points are downsampled (MIN and MAX per bucket). 0 = off (all points) */
 	public static final String PROPKEY_CHARTJS_MAX_POINTS = "DailySummaryReport.chartJs.maxPoints";
@@ -821,13 +857,7 @@ public abstract class ReportChartAbstract implements IReportChart
 		int height = getJsChartSizeHeight();
 
 		// If we have a lot of "labels", the chart area will shrink, so make it slightly bigger here
-		Set<String> seriesLabels = seriesDataVal.keySet();
-		int legendLabelPixWidthSum = 0;
-		for (String str : seriesLabels)
-			legendLabelPixWidthSum += str.length() * 5; // lets assume that every char is approximately 5 pixel wide (for simplicity)
-		double guessedLegendRows = Math.ceil(legendLabelPixWidthSum / width);
-		if (guessedLegendRows > 1)
-			height += guessedLegendRows * 17; // Assume every Legend row takes approximately 17px
+		height = chartJsCanvasHeight(width, height, seriesDataVal.keySet());
 		
 		// Write the HTML part, with values from: getDataset()
 		writer.append("\n");
@@ -856,7 +886,7 @@ public abstract class ReportChartAbstract implements IReportChart
 		int cnt = 0;
 		for (Entry<String, List<Number>> entry : seriesDataVal.entrySet())
 		{
-			Color color = TrendGraphColors._colors[cnt % TrendGraphColors._colors.length];
+			Color color = DSR_COLORS[cnt % DSR_COLORS.length];
 			//String newColor = chartColors[cnt % chartColors.length];
 			String newColor = "'rgb(" + color.getRed() + ", " + color.getGreen() + ", " + color.getBlue() + ")'";
 			String label = entry.getKey().replace("\\", "\\\\").replace("'", "\\'"); // Replace any backslash with 2 backslash (\ -> \\) and (' -> \')
@@ -1318,6 +1348,205 @@ public abstract class ReportChartAbstract implements IReportChart
 //
 //	}
 
+	/**
+	 * The chart image drawn with XChart, from the same dataset as the JFreeChart image and the Chart.js chart.
+	 * Line charts (TimeSeriesCollection) and stacked bar charts (CategoryDataset). null: not drawn (caller uses JFreeChart)
+	 */
+	/**
+	 * Height of the Chart.js canvas: a lot of legend labels makes the chart area shrink, so it gets a bit taller.
+	 * The full report's image uses the same height: Chart.js replaces the image, and the page must not jump.
+	 */
+	private static int chartJsCanvasHeight(int width, int height, java.util.Collection<String> seriesLabels)
+	{
+		int legendLabelPixWidthSum = 0;
+		for (String str : seriesLabels)
+			legendLabelPixWidthSum += str.length() * 5; // lets assume that every char is approximately 5 pixel wide (for simplicity)
+		double guessedLegendRows = Math.ceil(legendLabelPixWidthSum / width);
+		if (guessedLegendRows > 1)
+			height += guessedLegendRows * 17; // Assume every Legend row takes approximately 17px
+		return height;
+	}
+
+	/** The serie names of the dataset (the legend), the same as the Chart.js chart gets */
+	private List<String> getSerieNames()
+	{
+		List<String> names = new ArrayList<>();
+		Dataset dataset = getDataset();
+		if (dataset instanceof TimeSeriesCollection)
+			for (int s = 0; s < ((TimeSeriesCollection) dataset).getSeriesCount(); s++)
+				names.add(((TimeSeriesCollection) dataset).getSeries(s).getKey().toString());
+		if (dataset instanceof CategoryDataset)
+			for (int r = 0; r < ((CategoryDataset) dataset).getRowCount(); r++)
+				names.add(((CategoryDataset) dataset).getRowKey(r).toString());
+		return names;
+	}
+
+	/**
+	 * @param height     the height without legend rows
+	 * @param growHeight true: the image gets taller for each legend row more than one (the mail). false: exactly this height
+	 */
+	private BufferedImage createXChartImage(int width, int height, boolean growHeight)
+	{
+		Dataset dataset = getDataset();
+		try
+		{
+			Font titleFont = new Font("SansSerif", Font.BOLD,  12);
+			Font smallFont = new Font("SansSerif", Font.PLAIN, 11);
+			Color text  = new Color(0x3a4556);
+			Color muted = new Color(0x6b7686);
+			Color grid  = new Color(0xe5e9f0);
+
+			// The title must fit (XChart centers it and cuts both ends): drop the "(origin)" part, then cut with "..."
+			java.awt.FontMetrics titleFm = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB).createGraphics().getFontMetrics(titleFont);
+			String title = StringUtil.nullToValue(_graphTitle, "");
+			if (titleFm.stringWidth(title) > width - 20 && title.indexOf(" (") > 0)
+				title = title.substring(0, title.indexOf(" ("));
+			while (titleFm.stringWidth(title + "...") > width - 20 && title.length() > 10)
+				title = title.substring(0, title.length() - 1);
+			if ( ! title.equals(StringUtil.nullToValue(_graphTitle, "")) && ! _graphTitle.startsWith(title + " (") )
+				title = title + "...";
+
+			// Mail: one more legend row = a taller image, so the plot keeps its height
+			if (growHeight)
+			{
+				java.awt.FontMetrics fm = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB).createGraphics().getFontMetrics(smallFont);
+				int rows = 1, rowWidth = 0;
+				for (String name : getSerieNames())
+				{
+					int itemWidth = fm.stringWidth(name) + 40; // the line sample + gaps
+					if (rowWidth > 0 && rowWidth + itemWidth > width - 20) { rows++; rowWidth = 0; }
+					rowWidth += itemWidth;
+				}
+				height += (rows - 1) * (fm.getHeight() + 6);
+			}
+
+			org.knowm.xchart.internal.chartpart.Chart<?, ?> chart;
+			if (dataset instanceof TimeSeriesCollection)
+			{
+				TimeSeriesCollection tsc = (TimeSeriesCollection) dataset;
+				if (tsc.getSeriesCount() == 0)
+					return null;
+
+				XYChart xy = new XYChartBuilder().width(width).height(height).title(title).build();
+				long   minTs = Long.MAX_VALUE, maxTs = Long.MIN_VALUE;
+				double minVal = 0;
+				for (int s = 0; s < tsc.getSeriesCount(); s++)
+				{
+					TimeSeries ts = tsc.getSeries(s);
+					List<Date>   xs = new ArrayList<>();
+					List<Double> ys = new ArrayList<>();
+					for (int i = 0; i < ts.getItemCount(); i++)
+					{
+						Number val = ts.getValue(i);
+						if (val == null)
+							continue;
+						long ms = ts.getTimePeriod(i).getFirstMillisecond();
+						ms += TimeZone.getDefault().getOffset(ms); // local wall-clock time, the axis is shown as UTC (see below)
+						xs.add(new Date(ms));
+						ys.add(val.doubleValue());
+						minTs  = Math.min(minTs, ms);
+						maxTs  = Math.max(maxTs, ms);
+						minVal = Math.min(minVal, val.doubleValue());
+					}
+					if (xs.isEmpty())
+						continue;
+					XYSeries serie = xy.addSeries(ts.getKey().toString(), xs, ys);
+					serie.setMarker(SeriesMarkers.NONE);
+					serie.setLineWidth(s == 0 ? 1.6f : 1.2f);
+					serie.setLineColor(DSR_COLORS[s % DSR_COLORS.length]);
+					if (s == 0) // the first serie as a light filled area
+					{
+						serie.setXYSeriesRenderStyle(XYSeries.XYSeriesRenderStyle.Area);
+						Color c = DSR_COLORS[0];
+						serie.setFillColor(new Color(c.getRed(), c.getGreen(), c.getBlue(), 40));
+					}
+				}
+				if (minTs == Long.MAX_VALUE)
+					return null;
+
+				XYStyler st = xy.getStyler();
+				st.setDatePattern("HH:mm");
+				st.setTimezone(TimeZone.getTimeZone("UTC")); // the points are local wall-clock time (see above): ticks on local whole hours
+				st.setXAxisMin((double) minTs);
+				st.setXAxisMax((double) maxTs);
+				if (isAllDataValuesNearZero()) { st.setYAxisMin(-1.0); st.setYAxisMax(1.0); }
+				else if (_maxValue > 0)        { st.setYAxisMin(0.0);  st.setYAxisMax((double) _maxValue); }
+				else if (minVal >= 0)          { st.setYAxisMin(0.0); }
+				st.setPlotGridVerticalLinesVisible(false);
+				chart = xy;
+			}
+			else if (dataset instanceof CategoryDataset)
+			{
+				CategoryDataset cd = (CategoryDataset) dataset;
+				if (cd.getRowCount() == 0 || cd.getColumnCount() == 0)
+					return null;
+
+				CategoryChart cc = new CategoryChartBuilder().width(width).height(height).title(title).build();
+				SimpleDateFormat hhmm = new SimpleDateFormat("HH:mm");
+				List<String> categories = new ArrayList<>();
+				for (int c = 0; c < cd.getColumnCount(); c++)
+				{
+					Object key = cd.getColumnKey(c);
+					categories.add(key instanceof Date ? hhmm.format((Date) key) : String.valueOf(key));
+				}
+				for (int r = 0; r < cd.getRowCount(); r++)
+				{
+					List<Double> vals = new ArrayList<>();
+					for (int c = 0; c < cd.getColumnCount(); c++)
+					{
+						Number val = cd.getValue(r, c);
+						vals.add(val == null ? 0.0 : val.doubleValue());
+					}
+					CategorySeries serie = cc.addSeries(cd.getRowKey(r).toString(), categories, vals);
+					serie.setFillColor(DSR_COLORS[r % DSR_COLORS.length]);
+				}
+				CategoryStyler st = cc.getStyler();
+				st.setStacked(true);
+				st.setOverlapped(false);
+				st.setAvailableSpaceFill(0.9);
+				st.setXAxisMaxLabelCount(13); // about every 2 hours on a full day
+				st.setPlotGridVerticalLinesVisible(false);
+				chart = cc;
+			}
+			else
+			{
+				return null;
+			}
+
+			// The same look for both chart types
+			AxesChartStyler st = (AxesChartStyler) chart.getStyler(); // XYStyler and CategoryStyler both are
+			st.setChartBackgroundColor(Color.WHITE);
+			st.setPlotBackgroundColor(Color.WHITE);
+			st.setPlotBorderVisible(false);
+			st.setPlotGridLinesColor(grid);
+			st.setChartTitleFont(titleFont);
+			st.setChartTitleBoxVisible(false);
+			st.setChartFontColor(text);
+			st.setLegendPosition(Styler.LegendPosition.OutsideS);
+			st.setLegendLayout(Styler.LegendLayout.Horizontal);
+			st.setLegendBorderColor(Color.WHITE);
+			st.setLegendFont(smallFont);
+			st.setAxisTickLabelsFont(smallFont);
+			st.setAxisTickLabelsColor(muted);
+			st.setAxisTicksLineVisible(false);
+			st.setSeriesColors(DSR_COLORS);
+			st.setAntiAlias(true);
+
+			BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+			Graphics2D g = img.createGraphics();
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+			chart.paint(g, width, height);
+			g.dispose();
+			return img;
+		}
+		catch (RuntimeException ex)
+		{
+			_logger.warn("createXChartImage(): Problems drawing the chart with XChart, using JFreeChart instead. cmName='" + _cmName + "', graphName='" + _graphName + "'. Caught: " + ex, ex);
+			return null;
+		}
+	}
+
 	public void writeAsHtmlInlineImage(Writer writer)
 	throws IOException
 	{
@@ -1342,6 +1571,36 @@ public abstract class ReportChartAbstract implements IReportChart
 			int     compression = 0;
 //			String  tagName     = _cmName + "_" + _graphName;
 			String  tagName     = _chartId;
+			// Mail: shrink to the mail's width. NOT in the full report: there Chart.js replaces the image with a canvas of the same fixed size, a shrunk image would make the page jump
+			boolean isMail       = getReportEntry() != null && (getReportEntry().isShortMessageType() || getReportEntry().isMinimalMessageType());
+			String  imgStyle     = isMail ? " style='max-width:100%; height:auto;'" : "";
+
+			// XChart (default): the newer look, drawn at the size it is shown. JFreeChart (below) when the property says so, or for a dataset XChart doesn't draw
+			if ("xchart".equalsIgnoreCase(Configuration.getCombinedConfiguration().getProperty(PROPKEY_IMAGE_RENDERER, DEFAULT_IMAGE_RENDERER)))
+			{
+				BufferedImage img = isMail ? createXChartImage(width, height, true)
+				                           : createXChartImage(width, chartJsCanvasHeight(width, height, getSerieNames()), false);
+				if (img != null)
+				{
+					float quality = (float) Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_IMAGE_JPEG_QUALITY, DEFAULT_IMAGE_JPEG_QUALITY);
+					ByteArrayOutputStream jpg = new ByteArrayOutputStream();
+					ImageWriter iw = ImageIO.getImageWritersByFormatName("jpeg").next();
+					ImageWriteParam param = iw.getDefaultWriteParam();
+					param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+					param.setCompressionQuality(quality);
+					try (ImageOutputStream ios = ImageIO.createImageOutputStream(jpg))
+					{
+						iw.setOutput(ios);
+						iw.write(null, new IIOImage(img, null, null), param);
+					}
+					iw.dispose();
+
+					writer.append("<img id='img_" + tagName + "' width='" + img.getWidth() + "' height='" + img.getHeight() + "'" + imgStyle + " src='data:image/jpeg;base64,");
+					writer.append(Base64.getEncoder().encodeToString(jpg.toByteArray()));
+					writer.append("'>");
+					return;
+				}
+			}
 
 			// Choose only one of the below... it will use the FIRST that is true
 //			String imgType = "png";
@@ -1354,7 +1613,7 @@ public abstract class ReportChartAbstract implements IReportChart
 			if ("png".equalsIgnoreCase(imgType))
 			{
 				// Write the HTML Meta data
-				writer.append("<img id='img_" + tagName + "' width='" + width + "' height='" + height + "' style='max-width:100%; height:auto;' src='data:image/png;base64,");
+				writer.append("<img id='img_" + tagName + "' width='" + width + "' height='" + height + "'" + imgStyle + " src='data:image/png;base64,");
 
 				// Write the Base64 representation of the image
 				writeChartAsPNG(base64out, _chart, width, height, encodeAlpha, compression);
@@ -1365,7 +1624,7 @@ public abstract class ReportChartAbstract implements IReportChart
 			else if ("jpeg".equalsIgnoreCase(imgType))
 			{
 				// Write the HTML Meta data
-				writer.append("<img id='img_" + tagName + "' width='" + width + "' height='" + height + "' style='max-width:100%; height:auto;' src='data:image/jpeg;base64,");
+				writer.append("<img id='img_" + tagName + "' width='" + width + "' height='" + height + "'" + imgStyle + " src='data:image/jpeg;base64,");
 				
 //				float   jpgQuality  = 0.0f; // A compression quality setting of 0.0 is most genericallyinterpreted as "high compression is important," while a setting of1.0 is most generically interpreted as "high image quality isimportant." 
 				float   jpgQuality  = 0.5f; // A compression quality setting of 0.0 is most genericallyinterpreted as "high compression is important," while a setting of1.0 is most generically interpreted as "high image quality isimportant." 

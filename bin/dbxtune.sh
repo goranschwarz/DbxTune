@@ -513,6 +513,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/rstaui-3.3.2.jar
 #export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/languagesupport-3.4.1.jar   ## Disabled: not compatible with RSTA 4.x (re-enable when RSTALanguageSupport 4.x exists)
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jcommon-1.0.24.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jfreechart-1.5.6.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/xchart-4.0.4.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/juniversalchardet-2.5.0.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/DDLGen.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/simplemagic-1.17.jar
