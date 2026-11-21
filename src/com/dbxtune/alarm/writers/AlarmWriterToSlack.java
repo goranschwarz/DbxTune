@@ -31,6 +31,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -38,6 +39,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.dbxtune.alarm.events.AlarmEvent;
+import com.dbxtune.central.DbxTuneCentral;
 import com.dbxtune.cm.CmSettingsHelper;
 import com.dbxtune.cm.CmSettingsHelper.TemplateInputValidator;
 import com.dbxtune.cm.CmSettingsHelper.JsonInputValidator;
@@ -46,6 +48,7 @@ import com.dbxtune.cm.CmSettingsHelper.UrlInputValidator;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.HttpUtils;
 import com.dbxtune.utils.StringUtil;
+import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonWriter;
 
 public class AlarmWriterToSlack
@@ -96,6 +99,85 @@ extends AlarmWriterAbstract
 //
 //		conn.addRequestProperty(key, val);
 //	}
+
+	/** true: the template is a whole Slack message in JSON (Block Kit). false: a text message, sent as {"text": ...} */
+	static boolean isJsonTemplate(String template)
+	{
+		return template != null && template.trim().startsWith("{");
+	}
+
+	/** Slack text: escape &amp; &lt; &gt; (Slack's own markup), then cut to 'maxLen' (Slack: max 3000 chars in a text block), then JSON escape */
+	private static String slackJsonText(String value, int maxLen)
+	{
+		String str = StringUtil.nullToValue(value, "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+		if (str.length() > maxLen)
+			str = str.substring(0, maxLen) + "\n... (cut, " + str.length() + " chars)";
+		return TemplateJson.esc(str);
+	}
+
+	/**
+	 * Render a JSON (Block Kit) template. Every standard variable is made Slack + JSON safe by the translation map,
+	 * and the values the default template needs are prepared here (color, icon, texts cut to Slack's limits, link URLs),
+	 * so the template never has to cut or escape anything itself. An unescaped quote would make Slack reject the message, and the alarm is lost.
+	 */
+	private String createSlackJsonMessage(String template, String action, AlarmEvent alarmEvent, List<AlarmEvent> activeAlarmList, String summaryText, String dbxCentralBaseUrl)
+	{
+		Map<String, String> tr = new LinkedHashMap<>();
+		tr.put("&", "&amp;");
+		tr.put("<", "&lt;");
+		tr.put(">", "&gt;");
+		tr.putAll(TemplateJson.createTranslationMap());
+
+		boolean isCancel = ACTION_CANCEL.equals(action);
+		String  severity = StringUtil.nullToValue("" + alarmEvent.getSeverity(), "");
+		String  color = isCancel ? "#198754" : "ERROR".equals(severity) ? "#dc3545" : "WARNING".equals(severity) ? "#e8710a" : "#0d6efd";
+		String  icon  = isCancel ? ":white_check_mark:" : "ERROR".equals(severity) ? ":red_circle:" : "WARNING".equals(severity) ? ":large_orange_circle:" : ":large_blue_circle:";
+
+		String periodUrl   = StringUtil.nullToValue(alarmEvent.getDbxCentralUrl(), "").replace(" ", "%20"); // Slack rejects a button URL with spaces
+		String settingsUrl = StringUtil.hasValue(dbxCentralBaseUrl)
+				? dbxCentralBaseUrl + "/config.html?srvName=" + java.net.URLEncoder.encode(StringUtil.nullToValue(alarmEvent.getServiceName(), ""), java.nio.charset.StandardCharsets.UTF_8)
+				                    + "&cm=" + java.net.URLEncoder.encode(StringUtil.nullToValue(alarmEvent.getServiceInfo(), ""), java.nio.charset.StandardCharsets.UTF_8)
+				: "";
+		String fallback = (isCancel ? "[RESOLVED] " : "[" + severity + "] " + action + ": ") + alarmEvent.getServiceName() + " - " + alarmEvent.getAlarmClassAbriviated()
+				+ (StringUtil.hasValue(alarmEvent.getExtraInfo() + "") && alarmEvent.getExtraInfo() != null ? " - " + alarmEvent.getExtraInfo() : "");
+		String activeCount = alarmEvent.getActiveAlarmCount() < 0 ? "-" : "" + alarmEvent.getActiveAlarmCount();
+
+		Map<String, Object> extra = new LinkedHashMap<>();
+		extra.put("slackColor"            , color);
+		extra.put("slackIcon"             , icon);
+		extra.put("slackBadge"            , isCancel ? "RESOLVED" : severity);
+		extra.put("slackFallback"         , slackJsonText(fallback, 300));
+		extra.put("slackDescription"      , slackJsonText(alarmEvent.getDescription()      , 2900));
+		extra.put("slackCancelDescription", slackJsonText(alarmEvent.getCancelDescription(), 2900));
+		extra.put("slackDetails"          , slackJsonText(alarmEvent.getExtendedDescription(), 2800));
+		extra.put("slackActiveSummary"    , slackJsonText(summaryText, 2800));
+		extra.put("slackObject"           , slackJsonText(alarmEvent.getExtraInfo() == null ? "-" : "" + alarmEvent.getExtraInfo(), 500));
+		extra.put("slackActiveCount"      , activeCount);
+		extra.put("slackPeriodUrl"        , TemplateJson.esc(periodUrl));
+		extra.put("slackSettingsUrl"      , TemplateJson.esc(settingsUrl));
+		extra.put("hasCancelDescription"  , StringUtil.hasValue(alarmEvent.getCancelDescription()));
+		extra.put("hasDetails"            , StringUtil.hasValue(alarmEvent.getExtendedDescription()));
+		extra.put("hasActiveSummary"      , StringUtil.hasValue(summaryText));
+		extra.put("hasPeriodUrl"          , periodUrl.startsWith("http"));
+		extra.put("hasSettingsUrl"        , settingsUrl.startsWith("http"));
+
+		return WriterUtils.createMessageFromTemplate(action, alarmEvent, activeAlarmList, template, true, tr, dbxCentralBaseUrl, null, null, extra);
+	}
+
+	/** The Template Editor's preview: a JSON template is rendered exactly like a real message, and must be valid JSON */
+	@Override
+	public String createTemplatePreview(String propKey, String template, String action, AlarmEvent exampleEvent, List<AlarmEvent> exampleAlarms, Configuration conf)
+	throws Exception
+	{
+		if ( ! PROPKEY_msgTemplate.equals(propKey) || ! isJsonTemplate(template) )
+			return super.createTemplatePreview(propKey, template, action, exampleEvent, exampleAlarms, conf);
+
+		ActiveAlarmSummary.Result exampleSummary = ActiveAlarmSummary.createExampleResult(exampleAlarms);
+		String summaryText = ActiveAlarmSummary.toText(exampleSummary, DEFAULT_summaryGroup, DEFAULT_summaryMaxRows, true);
+		String json = createSlackJsonMessage(template, action, exampleEvent, exampleAlarms, summaryText, "http://DUMMY-dbxtune:" + DbxTuneCentral.getWebHttpPort());
+		JsonParser.parseString(json); // throws if the template does not produce valid JSON
+		return json;
+	}
 
 	private String createSlackJsonContent(String msg)
 	{
@@ -156,6 +238,14 @@ extends AlarmWriterAbstract
 	 */
 	String createSlackTextMessage(String action, AlarmEvent alarmEvent)
 	{
+		// A JSON template (Block Kit, the default) is the whole message, see createSlackJsonMessage()
+		if (isJsonTemplate(_msgTemplate))
+		{
+			ActiveAlarmSummary.Result summary = getActiveAlarmSummary(action, alarmEvent);
+			String summaryText = ActiveAlarmSummary.toText(summary, getActiveAlarmSummaryGroup(), getActiveAlarmSummaryMaxRows(), true);
+			return createSlackJsonMessage(_msgTemplate, action, alarmEvent, WriterUtils.getActiveAlarmList(), summaryText, getDbxCentralUrl());
+		}
+
 		// Slack do not like some chars, so we need to translate
 		Map<String, String> translationMap = new HashMap<>();
 		translationMap.put("&", "&amp;");
@@ -176,7 +266,7 @@ extends AlarmWriterAbstract
 	private void sendMessage(String action, AlarmEvent alarmEvent)
 	{
 		String slackTextMessage = createSlackTextMessage(action, alarmEvent);
-		String jsonMessage      = createSlackJsonContent(slackTextMessage);
+		String jsonMessage      = isJsonTemplate(_msgTemplate) ? slackTextMessage : createSlackJsonContent(slackTextMessage); // a JSON template is the whole message
 
 //System.out.println("SEND-JSON-SLACK-Message: " + jsonMessage);
 		if (_logger.isDebugEnabled())
@@ -242,7 +332,7 @@ extends AlarmWriterAbstract
 		list.add( new CmSettingsHelper("msg-template",  Type.MANDATORY, PROPKEY_msgTemplate,      String .class, conf.getProperty       (PROPKEY_msgTemplate,      DEFAULT_msgTemplate),      DEFAULT_msgTemplate,      "Message Template to send to Slack. Note: all ${somValue} will be replaced with runtime values.", new TemplateInputValidator(this)));
 		list.add( new CmSettingsHelper("isReRaiseEnabled",              PROPKEY_isReRaiseEnabled, Boolean.class, conf.getBooleanProperty(PROPKEY_isReRaiseEnabled, DEFAULT_isReRaiseEnabled), DEFAULT_isReRaiseEnabled, "If the Alarm Hander should send an event every time it receives an event. or if it should just be called on RAISE and CANCEL"));
 //		list.add( new CmSettingsHelper("slack-attachments",             PROPKEY_slackAttachments, String .class, conf.getProperty       (PROPKEY_slackAttachments, DEFAULT_slackAttachments), DEFAULT_slackAttachments, "<html>If you want to add Slack attachments... See: https://api.slack.com/incoming-webhooks<br>This will be the <i>raw</i> JSON text after <code>\"attachments\": </code><b><i>your-content-goes-here</i></b><br>Note: The input text is validated as a JSON text</html>", new JsonInputValidator()));
-		list.add( new CmSettingsHelper("slack-attachments",             PROPKEY_slackAttachments, String .class, conf.getProperty       (PROPKEY_slackAttachments, DEFAULT_slackAttachments), DEFAULT_slackAttachments, "<html>If you want to add Slack attachments... See: https://api.slack.com/incoming-webhooks<br>The value of this field will be <i>injected</i> in the following JSON <code>{\"text\": \"${msg-template}\", \"attachments\": </code><b><i>your-content-goes-here</i></b> <code>}</code><br>Note: The input text is validated as a JSON text</html>", new JsonInputValidator()));
+		list.add( new CmSettingsHelper("slack-attachments",             PROPKEY_slackAttachments, String .class, conf.getProperty       (PROPKEY_slackAttachments, DEFAULT_slackAttachments), DEFAULT_slackAttachments, "<html>Only for a <b>text</b> msg-template (the default Block Kit template is a whole JSON message, it does not use this).<br>If you want to add Slack attachments... See: https://api.slack.com/incoming-webhooks<br>The value of this field will be <i>injected</i> in the following JSON <code>{\"text\": \"${msg-template}\", \"attachments\": </code><b><i>your-content-goes-here</i></b> <code>}</code><br>Note: The input text is validated as a JSON text</html>", new JsonInputValidator()));
 
 		list.add( new CmSettingsHelper("DbxCentralUrl",                 PROPKEY_dbxCentralUrl,    String .class, conf.getProperty       (PROPKEY_dbxCentralUrl   , DEFAULT_dbxCentralUrl   ), DEFAULT_dbxCentralUrl   , "Where is the DbxCentral located, if you want your template/messages to include it using ${dbxCentralUrl}", new UrlInputValidator()));
 
@@ -353,7 +443,11 @@ extends AlarmWriterAbstract
 	public static final String  DEFAULT_url              = null;
                                                      
 	public static final String  PROPKEY_msgTemplate      = "AlarmWriterToSlack.msg.template";
-	public static final String  DEFAULT_msgTemplate      = createTextMsgBodyTemplate();
+	public static final String  DEFAULT_msgTemplate      = createMsgTemplate();
+
+	/** The default template: true = a Block Kit message (JSON), false = the old text message */
+	public static final String  PROPKEY_msgTemplateUseBlocks = "AlarmWriterToSlack.msg.template.default.blocks";
+	public static final boolean DEFAULT_msgTemplateUseBlocks = true;
 
 	public static final String  PROPKEY_isReRaiseEnabled = "AlarmWriterToSlack.isReRaiseEnabled";
 	public static final boolean DEFAULT_isReRaiseEnabled = false;
@@ -387,6 +481,64 @@ extends AlarmWriterAbstract
 //                                                         
 //	public static final String  PROPKEY_header9          = "AlarmWriterToSlack.header.9";
 //	public static final String  DEFAULT_header9          = null;
+
+	public static String createMsgTemplate()
+	{
+		return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_msgTemplateUseBlocks, DEFAULT_msgTemplateUseBlocks)
+				? createBlockKitTemplate()
+				: createTextMsgBodyTemplate();
+	}
+
+	/**
+	 * A Slack Block Kit message (in an attachment, for the colored bar): header with severity, server and alarm, the description,
+	 * fields, buttons to DbxCentral. The slack* values are prepared (escaped, cut) in createSlackJsonMessage().
+	 * NOTE: no Velocity directive right after a \\n: Velocity reads a backslash before # as an escape.
+	 */
+	public static String createBlockKitTemplate()
+	{
+		return ""
+			+ "{\n"
+			+ "  \"text\": \"${slackFallback}\",\n"
+			+ "  \"attachments\": [ {\n"
+			+ "    \"color\": \"${slackColor}\",\n"
+			+ "    \"blocks\": [\n"
+			+ "      { \"type\": \"header\", \"text\": { \"type\": \"plain_text\", \"emoji\": true, \"text\": \"${slackIcon} ${slackBadge} \u00b7 ${serverDisplayName} \u00b7 ${alarmClassAbriviated}\" } }\n"
+			+ "#if( $type == 'CANCEL' )\n"
+			+ "     ,{ \"type\": \"context\", \"elements\": [ { \"type\": \"mrkdwn\", \"text\": \"${slackObject} \u00b7 was ${severity} \u00b7 lasted ${fullDuration}\" } ] }\n"
+			+ "#if( $hasCancelDescription )\n"
+			+ "     ,{ \"type\": \"section\", \"text\": { \"type\": \"mrkdwn\", \"text\": \"*At cancel:* ${slackCancelDescription}\" } }\n"
+			+ "#end\n"
+			+ "#else\n"
+			+ "     ,{ \"type\": \"section\", \"text\": { \"type\": \"mrkdwn\", \"text\": \"${slackDescription}\" } }\n"
+			+ "     ,{ \"type\": \"section\", \"fields\": [\n"
+			+ "          { \"type\": \"mrkdwn\", \"text\": \"*Object*\\n${slackObject}\" },\n"
+			+ "          { \"type\": \"mrkdwn\", \"text\": \"*Raised*\\n${crTimeStr}\" },\n"
+			+ "          { \"type\": \"mrkdwn\", \"text\": \"*Category / State*\\n${category} / ${state}\" },\n"
+			+ "          { \"type\": \"mrkdwn\", \"text\": \"*Active alarms*\\n${slackActiveCount}\" }\n"
+			+ "        ] }\n"
+			+ "#if( $hasDetails )\n"
+			+ "     ,{ \"type\": \"section\", \"text\": { \"type\": \"mrkdwn\", \"text\": \"```${slackDetails}```\" } }\n"
+			+ "#end\n"
+			+ "#end\n"
+			+ "#if( $hasActiveSummary )\n"
+			+ "     ,{ \"type\": \"section\", \"text\": { \"type\": \"mrkdwn\", \"text\": \"```${slackActiveSummary}```\" } }\n"
+			+ "#end\n"
+			+ "#if( $hasPeriodUrl || $hasSettingsUrl )\n"
+			+ "     ,{ \"type\": \"actions\", \"elements\": [\n"
+			+ "#if( $hasPeriodUrl )\n"
+			+ "          { \"type\": \"button\", \"style\": \"primary\", \"text\": { \"type\": \"plain_text\", \"text\": \"View period in DbxCentral\" }, \"url\": \"${slackPeriodUrl}\" }#if( $hasSettingsUrl ),#end\n"
+			+ "#end\n"
+			+ "#if( $hasSettingsUrl )\n"
+			+ "          { \"type\": \"button\", \"text\": { \"type\": \"plain_text\", \"text\": \"Alarm settings\" }, \"url\": \"${slackSettingsUrl}\" }\n"
+			+ "#end\n"
+			+ "        ] }\n"
+			+ "#end\n"
+			+ "     ,{ \"type\": \"context\", \"elements\": [ { \"type\": \"mrkdwn\", \"text\": \"${Version.getAppName()} \u00b7 collector ${serviceInfo}\" } ] }\n"
+			+ "    ]\n"
+			+ "  } ]\n"
+			+ "}\n"
+			;
+	}
 
 	public static String createTextMsgBodyTemplate()
 	{
