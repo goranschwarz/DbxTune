@@ -247,7 +247,7 @@ extends ReportEntryAbstract
 		// 'action': what the collector did with the alarm: ALARM = sent, REPORT = only recorded (column 'alarmAction'; older recordings have no such column = ALARM)
 		String actionCol = _hasAlarmAction ? "coalesce(max([alarmAction]), 'ALARM')" : "cast('ALARM' as varchar(10))";
 
-		String sql = "select [alarmClass], " + actionCol + " as [alarmAction], [serviceInfo], [extraInfo], max([severity]) as [severity], count(*) as [raiseCount], min([eventTime]) as [firstRaise], max([eventTime]) as [lastRaise] \n" +
+		String sql = "select [alarmClass], " + actionCol + " as [alarmAction], max([severity]) as [severity], [serviceInfo], [extraInfo], count(*) as [raiseCount], min([eventTime]) as [firstRaise], max([eventTime]) as [lastRaise] \n" +
 		             "from " + PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.ALARM_HISTORY, null, true) + " \n" +
 		             "where [action] = 'RAISE' \n" +
 		             getReportPeriodSqlWhere("eventTime") +

@@ -1243,6 +1243,31 @@ extends DailySummaryReportAbstract
 		if (useBootstrap())
 		{
 			writer.append("<div class='container-fluid'> \n"); // BEGIN: Bootstrap 4 container
+
+			// Layout: a sticky table of contents on the left (wide screens), the sections (cards) on the right
+			writer.append("<style type='text/css'> \n");
+			writer.append("    body { background: #f6f7f9; } \n");
+			writer.append("    .dsr-layout { display: flex; gap: 18px; align-items: flex-start; } \n");
+			writer.append("    .dsr-main   { flex: 1 1 auto; min-width: 0; } \n");
+			writer.append("    .dsr-toc    { position: sticky; top: 8px; flex: 0 0 260px; max-height: calc(100vh - 16px); overflow-y: auto; \n");
+			writer.append("                  font-size: 13px; background: #ffffff; border: 1px solid #dfe3ea; border-radius: 8px; padding: 10px 8px; margin-top: 8px; } \n");
+			writer.append("    .dsr-toc .dsr-toc-head { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: #5d6878; margin: 0 0 6px 6px; } \n");
+			writer.append("    .dsr-toc a  { display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: 3px 6px; border-radius: 4px; color: #1d2430; text-decoration: none; } \n");
+			writer.append("    .dsr-toc a:hover { background: #eef2f8; } \n");
+			writer.append("    .dsr-toc a.dsr-toc-on { background: #e6eefb; font-weight: 600; } \n");
+			writer.append("    @media (max-width: 991.98px) { .dsr-toc { display: none; } } \n");
+			writer.append("    .dsr-card { border: 1px solid #dfe3ea !important; border-radius: 8px; overflow: hidden; } \n");
+			writer.append("    .dsr-card > .card-header { background: #ffffff; border-bottom: 1px solid #e8ebf0; font-size: 16px; } \n");
+			writer.append("    .dsr-card > .card-header a { color: #1d2430; text-decoration: none; } \n");
+			writer.append("    .dsr-origin { font-family: Consolas, 'Courier New', monospace; font-size: 11.5px; color: #6b7686; font-weight: normal; margin-left: 10px; } \n");
+			writer.append("</style> \n");
+			writer.append("<div class='dsr-layout'> \n");
+			writer.append("<nav class='dsr-toc' aria-label='Report sections'> \n");
+			writer.append("  <div class='dsr-toc-head'>" + getServerName() + "</div> \n");
+			for (IReportEntry entry : getReportEntries())
+				writer.append("  <a href='#" + StringUtil.stripAllNonAlphaNum(entry.getSubject()) + "'><span>" + splitSubject(entry.getSubject())[0] + "</span>" + getIssueLevelBadge(entry) + "</a> \n");
+			writer.append("</nav> \n");
+			writer.append("<div class='dsr-main'> \n");
 		}
 		writer.append("\n");
 
@@ -1254,6 +1279,8 @@ extends DailySummaryReportAbstract
 		}
 		
 		// TOC HEADER
+		IssueLevel reportLevel      = getIssueLevel();
+		String     reportLevelColor = reportLevel == IssueLevel.NONE ? "#198754" : reportLevel == IssueLevel.FYI ? "#0d6efd" : "#dc3545";
 		if (createTocSection())
 		{
 			if (useBootstrap())
@@ -1275,11 +1302,11 @@ extends DailySummaryReportAbstract
 
 				// Bootstrap "card" - BEGIN
 				writer.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-				writer.append("<div class='card border-dark mb-3' id='toc'> \n");
+				writer.append("<div class='card dsr-card mb-3 mt-2' id='toc' style='border-left:6px solid " + reportLevelColor + " !important;'> \n");
 				writer.append("<h5 class='card-header' role='tab' id='heading_toc'> \n");
 				writer.append("  <a data-bs-toggle='collapse' data-bs-parent='#accordion' href='#collapse_toc' aria-expanded='true' aria-controls='collapse_toc' class='d-block'> \n");
 				writer.append("    <i class='fa fa-chevron-down float-end'></i> \n");
-				writer.append("    <b>").append(getReportName() + " for Servername: ").append(getServerName()).append("</b> \n");
+				writer.append("    <b>").append(getServerName()).append("</b> ").append(ReportStatus.levelBadge(getIssueLevel())).append(" <span class='dsr-origin'>").append(getReportName()).append(" &middot; ").append(getPeriodText()).append("</span> \n");
 				writer.append("  </a> \n");
 				writer.append("</h5> \n");
 				writer.append("<div id='collapse_toc' class='collapse" + show + "' role='tabpanel' aria-labelledby='heading_toc'> \n");
@@ -1297,8 +1324,18 @@ extends DailySummaryReportAbstract
 			}
 			writer.append( createDbxCentralLink(true) );
 
+			// Key facts: the same row as in the mail
+			List<String> facts = getKeyFactCells();
+			if ( ! facts.isEmpty() )
+			{
+				writer.append("<table role='presentation' style='border-collapse:collapse; margin-top:10px; font-size:13px;'><tr>");
+				writer.append(String.join("", facts));
+				writer.append("</tr></table> \n");
+			}
+
 			//--------------------------------------------------
 			// TOC
+			writer.append("<div class='d-lg-none'> \n"); // wide screens have the table of contents on the left
 			writer.append("<br> \n");
 			writer.append("Links to Report Sections. \n");
 			writer.append("<ul> \n");
@@ -1318,6 +1355,7 @@ extends DailySummaryReportAbstract
 				writer.append("<li>").append(liContent).append("</li> \n");
 			}
 			writer.append("</ul> \n");
+			writer.append("</div> \n");
 			writer.append("\n<br>");
 
 			// TOC FOOTER
@@ -1379,11 +1417,11 @@ extends DailySummaryReportAbstract
 
 				// Bootstrap "card" - BEGIN
 				writer.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-				writer.append("<div class='card border-dark mb-3' id='").append(tocDiv).append("'> \n");
+				writer.append("<div class='card dsr-card mb-3' id='").append(tocDiv).append("' style='border-left:5px solid ").append(sectionLevelColor(getIssueLevel(entry))).append(" !important;'> \n");
 				writer.append("<h5 class='card-header' role='tab' id='heading_").append(tocDiv).append("'> \n");
 				writer.append("  <a data-bs-toggle='collapse' data-bs-parent='#accordion' href='#collapse_").append(tocDiv).append("' aria-expanded='true' aria-controls='collapse_").append(tocDiv).append("' class='d-block'> \n");
 				writer.append("    <i class='fa fa-chevron-down float-end'></i> \n");
-				writer.append("    <b>").append(entry.getSubject()).append("</b>").append(getIssueLevelBadge(entry)).append(" \n");
+				writer.append("    <b>").append(splitSubject(entry.getSubject())[0]).append("</b>").append(getIssueLevelBadge(entry)).append("<span class='dsr-origin'>").append(splitSubject(entry.getSubject())[1]).append("</span> \n");
 				writer.append("  </a> \n");
 				writer.append("</h5> \n");
 				writer.append("<div id='collapse_").append(tocDiv).append("' class='collapse" + show + "' role='tabpanel' aria-labelledby='heading_").append(tocDiv).append("'> \n");
@@ -1499,6 +1537,8 @@ extends DailySummaryReportAbstract
 		{
 			writer.append("</div> \n");			
 		}
+		if (useBootstrap())
+			writer.append("</div> \n</div> \n"); // END: dsr-main, dsr-layout
 
 		//--------------------------------------------------
 		// END
@@ -1539,6 +1579,22 @@ extends DailySummaryReportAbstract
 		writer.append("            var txt = document.getElementById('dsr-tt-' + el.getAttribute('data-tt')); \n");
 		writer.append("            if (txt) el.setAttribute('data-tooltip', txt.textContent); \n");
 		writer.append("        }); \n");
+		writer.append("\n");
+		writer.append("        // Table of contents: highlight the section that is in view \n");
+		writer.append("        (function() { \n");
+		writer.append("            if (typeof IntersectionObserver === 'undefined') return; \n");
+		writer.append("            var links = {}; \n");
+		writer.append("            document.querySelectorAll('.dsr-toc a').forEach(function(a) { links[a.getAttribute('href').substring(1)] = a; }); \n");
+		writer.append("            var obs = new IntersectionObserver(function(entries) { \n");
+		writer.append("                entries.forEach(function(e) { \n");
+		writer.append("                    if ( ! e.isIntersecting || ! links[e.target.id] ) return; \n");
+		writer.append("                    document.querySelectorAll('.dsr-toc a.dsr-toc-on').forEach(function(a) { a.classList.remove('dsr-toc-on'); }); \n");
+		writer.append("                    links[e.target.id].classList.add('dsr-toc-on'); \n");
+		writer.append("                    links[e.target.id].scrollIntoView({ block: 'nearest' }); \n");
+		writer.append("                }); \n");
+		writer.append("            }, { rootMargin: '0px 0px -75% 0px' }); \n"); // the section in the top quarter of the window
+		writer.append("            Object.keys(links).forEach(function(id) { var el = document.getElementById(id); if (el) obs.observe(el); }); \n");
+		writer.append("        })(); \n");
 		writer.append("\n");
 		writer.append("        // Functionality to CLOSE ALL 'details' sections of class 'dsr-details-tableinfo' \n");
 		writer.append("        document.querySelectorAll('.dsr-details-tableinfo-close-all').forEach(link => { \n");
@@ -1626,15 +1682,7 @@ extends DailySummaryReportAbstract
 		                      : level == IssueLevel.FYI  ? "Nothing urgent, have a look when you have time."
 		                      :                            "Something to act on, see the Report Status below.";
 
-		Timestamp beginTs = getReportPeriodOrRecordingBeginTime();
-		Timestamp endTs   = getReportPeriodOrRecordingEndTime();
-		String period = "";
-		if (beginTs != null && endTs != null)
-		{
-			String day = beginTs.toLocalDateTime().getDayOfWeek().getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH);
-			period = day + " " + new SimpleDateFormat("yyyy-MM-dd").format(beginTs)
-			       + " &nbsp;" + new SimpleDateFormat("HH:mm").format(beginTs) + " &ndash; " + new SimpleDateFormat("HH:mm").format(endTs);
-		}
+		String period = getPeriodText();
 		String appName = StringUtil.hasValue(getRecDbxAppName()) ? " &middot; " + getRecDbxAppName() : "";
 
 		w.append("<table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse; font-family:\"Segoe UI\", Arial, Helvetica, sans-serif; font-size:14px; color:#1d2430; background:#ffffff;'>\n");
@@ -1668,21 +1716,7 @@ extends DailySummaryReportAbstract
 
 		//--------------------------------------------------
 		// Key facts: a few numbers that answer "was it a normal day?" (IReportEntry.getKeyFacts), 4 per row
-		List<String> facts = new ArrayList<>();
-		for (IReportEntry entry : getReportEntries())
-		{
-			if ( ! entry.isEnabled() )
-				continue;
-			try
-			{
-				for (java.util.Map.Entry<String, String> fact : entry.getKeyFacts().entrySet())
-					facts.add("<td valign='top' style='background:#ffffff; padding:6px 8px; border:1px solid #e3e7ee; white-space:normal;'><div style='color:#5d6878; font-size:11px;'>" + fact.getKey() + "</div>" + fact.getValue() + "</td>");
-			}
-			catch (RuntimeException ex)
-			{
-				_logger.warn("Problems getting the key facts from report entry '" + entry.getClass().getSimpleName() + "'. Skipping it.", ex);
-			}
-		}
+		List<String> facts = getKeyFactCells();
 		if ( ! facts.isEmpty() )
 		{
 			w.append("<tr><td style='background:#ffffff; border:0; padding:12px 0 4px;'>\n");
@@ -1760,25 +1794,68 @@ extends DailySummaryReportAbstract
 	 */
 	private static String mailSectionHeader(IReportEntry entry, String tocDiv)
 	{
-		IssueLevel level = getIssueLevel(entry);
-		String color = level == IssueLevel.ISSUE ? "#dc3545" : level == IssueLevel.FYI ? "#0d6efd" : "#8a94a3";
-
-		String title  = entry.getSubject();
-		String origin = "";
-		int pos = title.indexOf(" (");
-		if (pos != -1)
-		{
-			String inParen = title.substring(pos + 2, title.endsWith(")") ? title.length() - 1 : title.length());
-			int oPos = inParen.indexOf("origin: ");
-			origin = oPos != -1 ? inParen.substring(oPos + "origin: ".length()) : "";
-			title  = title.substring(0, pos);
-		}
+		String   color  = sectionLevelColor(getIssueLevel(entry));
+		String[] parts  = splitSubject(entry.getSubject());
+		String   title  = parts[0];
+		String   origin = parts[1];
 
 		return "<a name='" + tocDiv + "'></a>\n"
 				+ "<table role='presentation' id='" + tocDiv + "' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse; margin-top:22px; margin-bottom:6px; font-family:\"Segoe UI\", Arial, Helvetica, sans-serif;'><tr>"
 				+ "<td style='background:#ffffff; font-size:16px; font-weight:600; color:#1d2430; border:0; border-left:4px solid " + color + "; padding:2px 0 2px 8px;'>" + title + getIssueLevelBadge(entry) + "</td>"
 				+ "<td align='right' style='background:#ffffff; font-size:11px; color:#8a94a3; font-family:Consolas, \"Courier New\", monospace; border:0; padding:2px 0; white-space:normal;'>" + origin + "</td>"
 				+ "</tr></table>\n";
+	}
+
+	/** A section's level color (left border of the section header): red ISSUE, blue FYI, gray when nothing to report */
+	private static String sectionLevelColor(IssueLevel level)
+	{
+		return level == IssueLevel.ISSUE ? "#dc3545" : level == IssueLevel.FYI ? "#0d6efd" : "#8a94a3";
+	}
+
+	/** "Top SQL (order by: x, origin: CmXxx / dm_xxx)" -> { "Top SQL", "CmXxx / dm_xxx" }. No " (": { subject, "" } */
+	private static String[] splitSubject(String subject)
+	{
+		int pos = subject.indexOf(" (");
+		if (pos == -1)
+			return new String[] { subject, "" };
+
+		String inParen = subject.substring(pos + 2, subject.endsWith(")") ? subject.length() - 1 : subject.length());
+		int oPos = inParen.indexOf("origin: ");
+		String title = subject.substring(0, pos).replaceAll("[,;: ]+$", ""); // "DB File IO, (order by...)" -> "DB File IO"
+		return new String[] { title, oPos != -1 ? inParen.substring(oPos + "origin: ".length()) : "" };
+	}
+
+	/** The "key facts" (IReportEntry.getKeyFacts), each as a table cell: a few numbers that answer "was it a normal day?" */
+	private List<String> getKeyFactCells()
+	{
+		List<String> facts = new ArrayList<>();
+		for (IReportEntry entry : getReportEntries())
+		{
+			if ( ! entry.isEnabled() )
+				continue;
+			try
+			{
+				for (java.util.Map.Entry<String, String> fact : entry.getKeyFacts().entrySet())
+					facts.add("<td valign='top' style='background:#ffffff; padding:6px 8px; border:1px solid #e3e7ee; white-space:normal;'><div style='color:#5d6878; font-size:11px;'>" + fact.getKey() + "</div>" + fact.getValue() + "</td>");
+			}
+			catch (RuntimeException ex)
+			{
+				_logger.warn("Problems getting the key facts from report entry '" + entry.getClass().getSimpleName() + "'. Skipping it.", ex);
+			}
+		}
+		return facts;
+	}
+
+	/** The period of the report, for example "Thursday 2026-11-19 &nbsp;00:00 &ndash; 23:59" ("" when not known) */
+	private String getPeriodText()
+	{
+		Timestamp beginTs = getReportPeriodOrRecordingBeginTime();
+		Timestamp endTs   = getReportPeriodOrRecordingEndTime();
+		if (beginTs == null || endTs == null)
+			return "";
+		String day = beginTs.toLocalDateTime().getDayOfWeek().getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH);
+		return day + " " + new SimpleDateFormat("yyyy-MM-dd").format(beginTs)
+		     + " &nbsp;" + new SimpleDateFormat("HH:mm").format(beginTs) + " &ndash; " + new SimpleDateFormat("HH:mm").format(endTs);
 	}
 
 	/** One section of the mail (the SHORT message) */
