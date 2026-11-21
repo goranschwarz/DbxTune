@@ -824,6 +824,13 @@ public class SparklineHelper
 			sb.append("    { \n");
 			sb.append("        var i, j, tagName, config, elems; \n");
 			sb.append("\n");
+			sb.append("        // Debug: URL option 'sparkline=image' keeps the server rendered images, 'sparkline=js' (default) = jQuery sparklines \n");
+			sb.append("        if (new URLSearchParams(window.location.search).get('sparkline') === 'image') \n");
+			sb.append("        { \n");
+			sb.append("            console.log('URL option sparkline=image: showing the images, no JavaScript sparklines.'); \n");
+			sb.append("            return; \n");
+			sb.append("        } \n");
+			sb.append("\n");
 			sb.append("        // No IntersectionObserver (old browser / some mail readers): behave like before \n");
 			sb.append("        if (typeof IntersectionObserver === 'undefined') \n");
 			sb.append("        { \n");

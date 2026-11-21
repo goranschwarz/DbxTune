@@ -829,6 +829,13 @@ public abstract class ReportChartAbstract implements IReportChart
 			writer.append("    { \n");
 			writer.append("        var i, tagName, img; \n");
 			writer.append("\n");
+			writer.append("        // Debug: URL option 'charts=image' keeps the server rendered images (no Chart.js), 'charts=js' (default) = Chart.js \n");
+			writer.append("        if (new URLSearchParams(window.location.search).get('charts') === 'image') \n");
+			writer.append("        { \n");
+			writer.append("            console.log('URL option charts=image: showing the images, no Chart.js charts.'); \n");
+			writer.append("            return; \n");
+			writer.append("        } \n");
+			writer.append("\n");
 			writer.append("        // No IntersectionObserver (old browser / some mail readers): behave like before \n");
 			writer.append("        if (typeof IntersectionObserver === 'undefined') \n");
 			writer.append("        { \n");
