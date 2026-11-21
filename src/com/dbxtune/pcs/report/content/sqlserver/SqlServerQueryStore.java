@@ -507,7 +507,7 @@ extends SqlServerAbstract
 					String text = rstm.getValueAsString(row, colName);
 					if (StringUtil.isNullOrBlank(text))
 						return "";
-					return getFormattedSqlAsTooltipDiv(text, "Hover or Click to see formatted SQL Text...", DbUtils.DB_PROD_NAME_MSSQL);
+					return getFormattedSqlAsTooltipDiv(text, "Hover or Click to see formatted SQL Text...", DbUtils.DB_PROD_NAME_MSSQL, 120); // the start of the SQL, the full SQL as tooltip + popup
 				}
 				if ("NPlusOne".equals(colName) && "YES".equals(strVal))
 					return "<b><font color='red'>YES</font></b>";

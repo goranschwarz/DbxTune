@@ -1883,6 +1883,22 @@ implements IReportEntry
 
 	public String getFormattedSqlAsTooltipDiv(String sql, String labelText, String vendor)
 	{
+		return getFormattedSqlAsTooltipDiv(sql, labelText, vendor, 0);
+	}
+
+	/**
+	 * The SQL Text as a tooltip (hover) and popup (click), the cell shows a 💬 and:
+	 * @param showChars  0: the 'labelText'. Above 0: the start of the SQL (one line, max this many chars), 'labelText' is the hover title
+	 */
+	public String getFormattedSqlAsTooltipDiv(String sql, String labelText, String vendor, int showChars)
+	{
+		String shown = labelText;
+		if (showChars > 0)
+		{
+			String oneLine = StringUtil.nullToValue(sql, "").replaceAll("\\s+", " ").trim();
+			shown = "<code>" + StringEscapeUtils.escapeHtml4(oneLine.length() > showChars ? oneLine.substring(0, showChars) + "..." : oneLine) + "</code>";
+		}
+
 		String displayText = ""
 				+ "------------------------------------------------------------------------------------------------------------------------- \n"
 				+ "-- Formatted SQL Text \n"
@@ -1908,7 +1924,7 @@ implements IReportEntry
 				+ "data-bs-target='#dbx-view-sqltext-dialog' "
 //				+ "data-objectname='" + Hashkey + "' "
 				+ "data-tooltip=\""   + displayText     + "\" "
-				+ ">&#x1F4AC; " + labelText + "</div>"; // &#x1F4AC; ==>> symbol popup with "..."
+				+ ">&#x1F4AC; " + shown + "</div>"; // &#x1F4AC; ==>> symbol popup with "..."
 	}
 
 	public String getTextAsTooltipDiv(String displayText, String labelText, int maxLen)
