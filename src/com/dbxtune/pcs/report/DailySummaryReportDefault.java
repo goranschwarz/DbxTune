@@ -479,7 +479,7 @@ extends DailySummaryReportAbstract
 		w.append("            border: 0; \n");
 		w.append("            border-bottom: 1px solid #d5dbe4; \n");
 		w.append("            text-align: left; \n");
-		w.append("            padding: 5px 8px; \n");
+		w.append("            padding: 3px 6px; \n");
 		w.append("            white-space: nowrap; \n");
 		w.append("            background-color: #eef1f5; \n");
 		w.append("            color: #3a4556; \n");
@@ -489,7 +489,7 @@ extends DailySummaryReportAbstract
 		w.append("            border: 0; \n");
 		w.append("            border-bottom: 1px solid #edf0f4; \n");
 		w.append("        /*  text-align: left; */ \n");
-		w.append("            padding: 4px 8px; \n");
+		w.append("            padding: 2px 6px; \n");
 		w.append("            white-space: nowrap; \n");
 		w.append("        } \n");
 		w.append("        tr:nth-child(odd) { \n");
@@ -1223,6 +1223,9 @@ extends DailySummaryReportAbstract
 		w.append("\n");
 	}
 
+	/** The name of the section that shows the time it took to create each section */
+	private static final String EXEC_TIME_SECTION_NAME = "Exec/Creation time for each Report Section";
+
 	public void createHtmlBody(Writer writer)
 	throws IOException
 	{
@@ -1247,26 +1250,76 @@ extends DailySummaryReportAbstract
 			// Layout: a sticky table of contents on the left (wide screens), the sections (cards) on the right
 			writer.append("<style type='text/css'> \n");
 			writer.append("    body { background: #f6f7f9; } \n");
-			writer.append("    .dsr-layout { display: flex; gap: 18px; align-items: flex-start; } \n");
+			writer.append("    .dsr-layout { display: flex; align-items: flex-start; } \n");
 			writer.append("    .dsr-main   { flex: 1 1 auto; min-width: 0; } \n");
-			writer.append("    .dsr-toc    { position: sticky; top: 8px; flex: 0 0 260px; max-height: calc(100vh - 16px); overflow-y: auto; \n");
+			writer.append("    .dsr-toc    { position: sticky; top: 8px; flex: 0 0 var(--dsr-toc-w, 260px); max-height: calc(100vh - 16px); overflow-y: auto; \n");
 			writer.append("                  font-size: 13px; background: #ffffff; border: 1px solid #dfe3ea; border-radius: 8px; padding: 10px 8px; margin-top: 8px; } \n");
-			writer.append("    .dsr-toc .dsr-toc-head { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: #5d6878; margin: 0 0 6px 6px; } \n");
+			writer.append("    .dsr-toc .dsr-toc-head { display: flex; justify-content: space-between; align-items: center; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: #5d6878; margin: 0 0 6px 6px; } \n");
+			writer.append("    .dsr-toc-btn { border: 0; background: transparent; color: #5d6878; font-size: 14px; line-height: 1; padding: 2px 6px; border-radius: 4px; cursor: pointer; } \n");
+			writer.append("    .dsr-toc-btn:hover { background: #eef2f8; color: #1d2430; } \n");
+			// The grip between the sidebar and the sections: drag = width, double click = default width
+			writer.append("    .dsr-toc-grip { flex: 0 0 18px; align-self: stretch; cursor: col-resize; position: relative; } \n");
+			writer.append("    .dsr-toc-grip::after { content: ''; position: absolute; top: 8px; bottom: 0; left: 8px; width: 2px; border-radius: 1px; background: transparent; } \n");
+			writer.append("    .dsr-toc-grip:hover::after, .dsr-toc-grip.dsr-dragging::after { background: #b9c3d3; } \n");
+			// Collapsed: no sidebar, a small button on the left edge brings it back
+			writer.append("    .dsr-toc-open { display: none; position: fixed; left: 0; top: 90px; z-index: 1000; border: 1px solid #dfe3ea; border-left: 0; border-radius: 0 6px 6px 0; \n");
+			writer.append("                    background: #ffffff; color: #5d6878; padding: 8px 6px; font-size: 14px; line-height: 1; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.08); } \n");
+			writer.append("    .dsr-toc-open:hover { color: #1d2430; background: #eef2f8; } \n");
+			writer.append("    .dsr-toc-collapsed .dsr-toc, .dsr-toc-collapsed .dsr-toc-grip { display: none; } \n");
+			writer.append("    @media (min-width: 992px) { .dsr-toc-collapsed .dsr-toc-open { display: block; } } \n");
 			writer.append("    .dsr-toc a  { display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: 3px 6px; border-radius: 4px; color: #1d2430; text-decoration: none; } \n");
 			writer.append("    .dsr-toc a:hover { background: #eef2f8; } \n");
 			writer.append("    .dsr-toc a.dsr-toc-on { background: #e6eefb; font-weight: 600; } \n");
-			writer.append("    @media (max-width: 991.98px) { .dsr-toc { display: none; } } \n");
-			writer.append("    .dsr-card { border: 1px solid #dfe3ea !important; border-radius: 8px; overflow: hidden; } \n");
+			writer.append("    @media (max-width: 991.98px) { .dsr-toc, .dsr-toc-grip { display: none; } } \n");
+			writer.append("    .dsr-card { border: 1px solid #dfe3ea !important; border-radius: 8px; } \n");
+			// Wide tables: scroll left/right inside the section, not cut off (the sections are as wide as the window)
+			writer.append("    .dsr-card .card-body { overflow-x: auto; } \n");
+			writer.append("    .dsr-main details { max-width: 100%; overflow-x: auto; } \n");
 			writer.append("    .dsr-card > .card-header { background: #ffffff; border-bottom: 1px solid #e8ebf0; font-size: 16px; } \n");
 			writer.append("    .dsr-card > .card-header a { color: #1d2430; text-decoration: none; } \n");
 			writer.append("    .dsr-origin { font-family: Consolas, 'Courier New', monospace; font-size: 11.5px; color: #6b7686; font-weight: normal; margin-left: 10px; } \n");
 			writer.append("</style> \n");
 			writer.append("<div class='dsr-layout'> \n");
+			writer.append("<button type='button' class='dsr-toc-open' title='Show the table of contents' onclick='dsrTocToggle()'>&#9776;</button> \n");
 			writer.append("<nav class='dsr-toc' aria-label='Report sections'> \n");
-			writer.append("  <div class='dsr-toc-head'>" + getServerName() + "</div> \n");
+			writer.append("  <div class='dsr-toc-head'><span>" + getServerName() + "</span><button type='button' class='dsr-toc-btn' title='Hide the table of contents' onclick='dsrTocToggle()'>&laquo;</button></div> \n");
 			for (IReportEntry entry : getReportEntries())
 				writer.append("  <a href='#" + StringUtil.stripAllNonAlphaNum(entry.getSubject()) + "'><span>" + splitSubject(entry.getSubject())[0] + "</span>" + getIssueLevelBadge(entry) + "</a> \n");
+			if (createExecTimeReportSection() && Configuration.getCombinedConfiguration().getBooleanProperty("DailySummaryReport.report.entry.enabled.printExecTime.fullMessage", true))
+				writer.append("  <a href='#sectionTime'><span>" + EXEC_TIME_SECTION_NAME + "</span></a> \n");
 			writer.append("</nav> \n");
+			writer.append("<div class='dsr-toc-grip' title='Drag to change the width (double click: default width)'></div> \n");
+			// Right here (not at the end of the page): the sidebar gets its saved width / collapsed state before it is drawn, no jump
+			writer.append("<script type='text/javascript'> \n");
+			writer.append("(function() { \n");
+			writer.append("    var lay  = document.currentScript.parentNode; \n");
+			writer.append("    var toc  = lay.querySelector('.dsr-toc'); \n");
+			writer.append("    var grip = lay.querySelector('.dsr-toc-grip'); \n");
+			writer.append("    function getItem(k)    { try { return localStorage.getItem(k); } catch(e) { return null; } } \n");
+			writer.append("    function setItem(k, v) { try { localStorage.setItem(k, v);    } catch(e) {} } \n");
+			writer.append("    var w = parseInt(getItem('dsr.toc.width'), 10); \n");
+			writer.append("    if (w >= 160 && w <= 800) lay.style.setProperty('--dsr-toc-w', w + 'px'); \n");
+			writer.append("    if (getItem('dsr.toc.collapsed') === '1') lay.classList.add('dsr-toc-collapsed'); \n");
+			writer.append("    window.dsrTocToggle = function() { setItem('dsr.toc.collapsed', lay.classList.toggle('dsr-toc-collapsed') ? '1' : '0'); }; \n");
+			writer.append("    grip.addEventListener('pointerdown', function(e) { \n");
+			writer.append("        e.preventDefault(); \n");
+			writer.append("        var x0 = e.clientX, w0 = toc.getBoundingClientRect().width; \n");
+			writer.append("        grip.classList.add('dsr-dragging'); \n");
+			writer.append("        document.body.style.userSelect = 'none'; \n");
+			writer.append("        function move(ev) { lay.style.setProperty('--dsr-toc-w', Math.max(160, Math.min(800, w0 + ev.clientX - x0)) + 'px'); } \n");
+			writer.append("        function up() { \n");
+			writer.append("            document.removeEventListener('pointermove', move); \n");
+			writer.append("            document.removeEventListener('pointerup', up); \n");
+			writer.append("            grip.classList.remove('dsr-dragging'); \n");
+			writer.append("            document.body.style.userSelect = ''; \n");
+			writer.append("            setItem('dsr.toc.width', Math.round(toc.getBoundingClientRect().width)); \n");
+			writer.append("        } \n");
+			writer.append("        document.addEventListener('pointermove', move); \n");
+			writer.append("        document.addEventListener('pointerup', up); \n");
+			writer.append("    }); \n");
+			writer.append("    grip.addEventListener('dblclick', function() { lay.style.removeProperty('--dsr-toc-w'); setItem('dsr.toc.width', ''); }); \n");
+			writer.append("})(); \n");
+			writer.append("</script> \n");
 			writer.append("<div class='dsr-main'> \n");
 		}
 		writer.append("\n");
@@ -1667,6 +1720,14 @@ extends DailySummaryReportAbstract
 
 		createDbxTuneCss(w);
 		writeTooltipTextsAsCss(w); // the Table Info... tooltips, each text ONCE (no JavaScript in a mail)
+
+		// Phones (iPhone Mail, Gmail app): key facts 2 per row, "In this mail" as one column. Outlook ignores this (and keeps the tables)
+		w.append("    <style type='text/css'> \n");
+		w.append("        @media screen and (max-width: 620px), screen and (max-device-width: 620px) { \n");
+		w.append("            .dsr-m-kf td  { display: inline-block !important; width: 50% !important; box-sizing: border-box; } \n");
+		w.append("            .dsr-m-toc td { display: block !important; width: 100% !important; } \n");
+		w.append("        } \n");
+		w.append("    </style> \n");
 		
 		w.append("</head> \n");
 		w.append("\n");
@@ -1693,24 +1754,24 @@ extends DailySummaryReportAbstract
 
 		//--------------------------------------------------
 		// Status banner, in the level's color
-		w.append("<tr><td style='background:" + levelColor + "; border:0; padding:16px 20px; color:#ffffff;'>\n");
+		w.append("<tr><td style='background:" + levelColor + "; border:0; padding:16px 20px; color:#ffffff; white-space:normal;'>\n");
 		w.append("  <table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse;'>\n");
 		w.append("    <tr>\n");
-		w.append("      <td style='background:" + levelColor + "; border:0; padding:0; color:#ffffff; vertical-align:top;'>\n");
+		w.append("      <td style='background:" + levelColor + "; border:0; padding:0; color:#ffffff; vertical-align:top; white-space:normal;'>\n");
 		w.append("        <div style='font-size:12px; letter-spacing:1px; text-transform:uppercase;'>" + getReportName() + appName + "</div>\n");
 		w.append("        <div style='font-size:22px; font-weight:600; margin-top:2px;'>" + getServerName() + "</div>\n");
 		w.append("        <div style='font-size:13px; margin-top:2px;'>" + period + "</div>\n");
 		w.append("      </td>\n");
 		w.append("      <td align='right' style='background:" + levelColor + "; border:0; padding:0; vertical-align:top; white-space:nowrap;'><span style='display:inline-block; background:#ffffff; color:" + levelColor + "; font-weight:700; font-size:13px; padding:4px 10px; border-radius:4px;'>" + levelName + "</span></td>\n");
 		w.append("    </tr>\n");
-		w.append("    <tr><td colspan='2' style='background:" + levelColor + "; border:0; padding:10px 0 0 0; color:#ffffff; font-size:15px;'>" + levelText + "</td></tr>\n");
+		w.append("    <tr><td colspan='2' style='background:" + levelColor + "; border:0; padding:10px 0 0 0; color:#ffffff; font-size:15px; white-space:normal;'>" + levelText + "</td></tr>\n");
 		w.append("  </table>\n");
 		w.append("</td></tr>\n");
 
 		//--------------------------------------------------
 		// One button to the full report, and a link to all reports
 		String dbxCentralBaseUrl = getDbxCentralPublicBaseUrl();
-		w.append("<tr><td style='background:#ffffff; border:0; padding:14px 0 4px;'>\n");
+		w.append("<tr><td style='background:#ffffff; border:0; padding:14px 0 4px; white-space:normal;'>\n");
 		w.append("  <table role='presentation' cellpadding='0' cellspacing='0' style='border-collapse:collapse;'><tr>\n");
 		w.append("    <td style='background:#1d2430; border:0; padding:0; border-radius:5px;'><a href='" + dbxCentralBaseUrl + "/report?op=viewLatest&name=" + getServerName() + "' style='display:inline-block; padding:9px 16px; color:#ffffff; text-decoration:none; font-weight:600; font-size:14px;'>Open the full report in DbxCentral</a></td>\n");
 		w.append("    <td style='background:#ffffff; border:0; padding:0 0 0 14px; font-size:13px;'><a href='" + dbxCentralBaseUrl + "/overview#reportfiles' style='color:#2b5fb8;'>All reports</a></td>\n");
@@ -1723,8 +1784,8 @@ extends DailySummaryReportAbstract
 		List<String> facts = getKeyFactCells();
 		if ( ! facts.isEmpty() )
 		{
-			w.append("<tr><td style='background:#ffffff; border:0; padding:12px 0 4px;'>\n");
-			w.append("  <table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse; font-size:13px;'>\n");
+			w.append("<tr><td style='background:#ffffff; border:0; padding:12px 0 4px; white-space:normal;'>\n");
+			w.append("  <table role='presentation' class='dsr-m-kf' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse; font-size:13px;'>\n");
 			for (int i = 0; i < facts.size(); i += 4)
 				w.append("    <tr>").append(String.join("", facts.subList(i, Math.min(i + 4, facts.size())))).append("</tr>\n");
 			w.append("  </table>\n");
@@ -1754,14 +1815,19 @@ extends DailySummaryReportAbstract
 		}
 		int half = (tocCells.size() + 1) / 2; // column 1 = first half, column 2 = second half (reads top-down)
 		w.append("<table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse; font-family:\"Segoe UI\", Arial, Helvetica, sans-serif;'>\n");
-		w.append("<tr><td style='background:#ffffff; border:0; padding:16px 0 4px;'>\n");
+		w.append("<tr><td style='background:#ffffff; border:0; padding:16px 0 4px; white-space:normal;'>\n");
 		w.append("  <div style='font-size:16px; font-weight:600; border-left:4px solid #8a94a3; padding-left:8px;'>In this mail</div>\n");
-		w.append("  <table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse; margin-top:6px; font-size:13px;'>\n");
-		for (int i = 0; i < half; i++)
+		// Two cells, each with a whole column: on a phone the cells are stacked (see the @media above) and the order stays the same
+		w.append("  <table role='presentation' class='dsr-m-toc' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse; margin-top:6px; font-size:13px;'>\n");
+		w.append("    <tr>\n");
+		for (int col = 0; col < 2; col++)
 		{
-			String col2 = (i + half) < tocCells.size() ? tocCells.get(i + half) : "";
-			w.append("    <tr><td style='background:#ffffff; padding:2px 8px 2px 0; width:50%; border:0;'>").append(tocCells.get(i)).append("</td><td style='background:#ffffff; padding:2px 0; border:0;'>").append(col2).append("</td></tr>\n");
+			w.append("      <td valign='top' style='background:#ffffff; padding:0 8px 0 0; width:50%; border:0; white-space:normal;'>\n");
+			for (int i = col * half; i < Math.min((col + 1) * half, tocCells.size()); i++)
+				w.append("        <div style='padding:2px 0;'>").append(tocCells.get(i)).append("</div>\n");
+			w.append("      </td>\n");
 		}
+		w.append("    </tr>\n");
 		w.append("  </table>\n");
 		w.append("</td></tr>\n");
 		w.append("</table>\n");
@@ -1805,8 +1871,9 @@ extends DailySummaryReportAbstract
 
 		return "<a name='" + tocDiv + "'></a>\n"
 				+ "<table role='presentation' id='" + tocDiv + "' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse; margin-top:22px; margin-bottom:6px; font-family:\"Segoe UI\", Arial, Helvetica, sans-serif;'><tr>"
-				+ "<td style='background:#ffffff; font-size:16px; font-weight:600; color:#1d2430; border:0; border-left:4px solid " + color + "; padding:2px 0 2px 8px;'>" + title + getIssueLevelBadge(entry) + "</td>"
-				+ "<td align='right' style='background:#ffffff; font-size:11px; color:#8a94a3; font-family:Consolas, \"Courier New\", monospace; border:0; padding:2px 0; white-space:normal;'>" + origin + "</td>"
+				+ "<td style='background:#ffffff; font-size:16px; font-weight:600; color:#1d2430; border:0; border-left:4px solid " + color + "; padding:2px 0 2px 8px; white-space:normal;'>" + title + getIssueLevelBadge(entry)
+				+ (origin.isEmpty() ? "" : " <span style='font-size:11px; font-weight:normal; color:#8a94a3; font-family:Consolas, \"Courier New\", monospace; white-space:nowrap;'>&nbsp; " + origin + "</span>")
+				+ "</td>"
 				+ "</tr></table>\n";
 	}
 
@@ -2383,7 +2450,7 @@ extends DailySummaryReportAbstract
 		if (printExecTime)
 		{
 			String tocDiv = "sectionTime";
-			String headingName = "Exec/Creation time for each Report Section";
+			String headingName = EXEC_TIME_SECTION_NAME;
 
 			// Section HEADER
 			if (useBootstrap())
@@ -2405,7 +2472,7 @@ extends DailySummaryReportAbstract
 
 				// Bootstrap "card" - BEGIN
 				w.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-				w.append("<div class='card border-dark mb-3' id='").append(tocDiv).append("'> \n");
+				w.append("<div class='card dsr-card mb-3' id='").append(tocDiv).append("' style='border-left:5px solid #8a94a3 !important;'> \n");
 				w.append("<h5 class='card-header' role='tab' id='heading_").append(tocDiv).append("'> \n");
 				w.append("  <a data-bs-toggle='collapse' data-bs-parent='#accordion' href='#collapse_").append(tocDiv).append("' aria-expanded='true' aria-controls='collapse_").append(tocDiv).append("' class='d-block'> \n");
 				w.append("    <i class='fa fa-chevron-down float-end'></i> \n");

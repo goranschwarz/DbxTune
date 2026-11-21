@@ -1000,13 +1000,16 @@ public abstract class ReportChartAbstract implements IReportChart
 				writer.append(str);
 			}
 			writer.append("], \n");
+			// The same look as the XChart image (createXChartImage): the first serie a bit thicker, with a light filled area under it
 			if (ChartType.LINE.equals(chartType))
 			{
-				writer.append("                borderWidth: 1, \n");                     // The width of the line in pixels.
+				writer.append("                borderWidth: " + (cnt == 0 ? "1.6" : "1.2") + ", \n"); // The width of the line in pixels.
 				writer.append("                pointRadius: 0, \n");                     // The radius of the point shape. If set to 0, the point is not rendered.
 				writer.append("                pointHitRadius: 5, \n");                  // The pixel size of the non-displayed point that reacts to mouse events.
-				writer.append("                fill: false, \n");                        // How to fill the area under the line.
+				writer.append("                fill: " + (cnt == 0 ? "'origin'" : "false") + ", \n"); // How to fill the area under the line.
 				writer.append("                borderColor: " + newColor + ", \n");      // The color of the line.
+				if (cnt == 0)
+					newColor = "'rgba(" + color.getRed() + ", " + color.getGreen() + ", " + color.getBlue() + ", 0.16)'";
 			}
 			writer.append("                backgroundColor: " + newColor + ", \n");  // The fill color under the line.
 			writer.append("            }, \n");
@@ -1022,18 +1025,20 @@ public abstract class ReportChartAbstract implements IReportChart
 		writer.append("            title: { \n");
 		writer.append("                display: true, \n");
 		writer.append("                position: 'top', \n");
-		writer.append("                font: { size: 20, weight: 'bold' }, \n");
+		writer.append("                font: { size: 13, weight: 'bold' }, \n");
+		writer.append("                color: '#3a4556', \n");
 		writer.append("                text: '" + chartLabel + "', \n");
 		writer.append("            }, \n");
 		writer.append("            legend: { \n");
 		writer.append("                position: 'bottom', \n");
 		writer.append("                labels: { \n");
 		writer.append("                    boxWidth: 10, \n");
-		writer.append("                    font: { size: 10 }, \n");
+		writer.append("                    boxHeight: 10, \n");
+		writer.append("                    font: { size: 11 }, \n");
+		writer.append("                    color: '#3a4556', \n");
+		if (ChartType.LINE.equals(chartType)) // a solid box in the line color (not the light fill of the first serie)
+			writer.append("                    generateLabels: function(chart) { return Chart.defaults.plugins.legend.labels.generateLabels(chart).map(function(l) { l.fillStyle = l.strokeStyle; l.lineWidth = 0; return l; }); }, \n");
 		writer.append("                } \n");
-		writer.append("            }, \n");
-		writer.append("            chartAreaBackgroundPlugin: { \n");
-		writer.append("                bgColor: 'rgba(191, 191, 191, 0.4)', \n"); // Gray (ish)
 		writer.append("            }, \n");
 		writer.append("        }, \n"); // end: plugins
 		writer.append("        scales: { \n");
@@ -1057,9 +1062,8 @@ public abstract class ReportChartAbstract implements IReportChart
 		writer.append("                        hour:   'HH:mm', \n");
 		writer.append("                    } \n");
 		writer.append("                }, \n");
-		writer.append("                grid: { \n");
-		writer.append("                    color: 'rgba(0, 0, 0, 0.1)', \n");
-		writer.append("                }, \n");
+		writer.append("                grid: { display: false }, \n");
+		writer.append("                ticks: { color: '#6b7686', font: { size: 11 } }, \n");
 		writer.append("            }, \n"); // end: x
 		writer.append("            y: { \n");
 		if (ChartType.STACKED_BAR.equals(chartType))
@@ -1073,12 +1077,13 @@ public abstract class ReportChartAbstract implements IReportChart
 		}
 		writer.append("                beginAtZero: true, \n");
 		writer.append("                grid: { \n");
-		writer.append("                    color: function(context) { return (context.tick && context.tick.value === 0) ? 'rgba(0, 0, 0, 0.25)' : 'rgba(0, 0, 0, 0.1)'; }, \n");
+		writer.append("                    color: '#e5e9f0', \n");
 		writer.append("                }, \n");
+		writer.append("                border: { display: false }, \n");
+		writer.append("                ticks: { color: '#6b7686', font: { size: 11 } }, \n");
 		writer.append("            }, \n"); // end: y
 		writer.append("        }, \n"); // end: scales
 		writer.append("    }, \n"); // end: options
-		writer.append("    plugins: [ chartAreaBackgroundPlugin ] \n");
 		writer.append("} \n"); // end: var options_xxx
 
 		// Push the 'tagName' to a list, which later will be pulled to create the ChartJS Object
@@ -1475,6 +1480,12 @@ public abstract class ReportChartAbstract implements IReportChart
 		return names;
 	}
 
+	/** Width of one legend item: the 10px color box, a gap, the name, and the space to the next item */
+	private static int legendItemWidth(java.awt.FontMetrics fm, String name)
+	{
+		return 10 + 5 + fm.stringWidth(name) + 14;
+	}
+
 	/**
 	 * @param height     the height without legend rows
 	 * @param growHeight true: the image gets taller for each legend row more than one (the mail). false: exactly this height
@@ -1500,19 +1511,26 @@ public abstract class ReportChartAbstract implements IReportChart
 			if ( ! title.equals(StringUtil.nullToValue(_graphTitle, "")) && ! _graphTitle.startsWith(title + " (") )
 				title = title + "...";
 
-			// Mail: one more legend row = a taller image, so the plot keeps its height
-			if (growHeight)
+			// The legend is drawn here (not by XChart): small 10x10 color boxes like Chart.js, for both line and bar charts.
+			// XChart draws a thin line sample for a line serie (hard to see the color) and a big box for a bar serie.
+			// Lay it out in rows: legendRows = the start index of each row
+			java.awt.FontMetrics legendFm = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB).createGraphics().getFontMetrics(smallFont);
+			List<String>  legendNames = getSerieNames();
+			List<Integer> legendRows  = new ArrayList<>();
+			int legendRowWidth = 0;
+			for (int i = 0; i < legendNames.size(); i++)
 			{
-				java.awt.FontMetrics fm = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB).createGraphics().getFontMetrics(smallFont);
-				int rows = 1, rowWidth = 0;
-				for (String name : getSerieNames())
-				{
-					int itemWidth = fm.stringWidth(name) + 40; // the line sample + gaps
-					if (rowWidth > 0 && rowWidth + itemWidth > width - 20) { rows++; rowWidth = 0; }
-					rowWidth += itemWidth;
-				}
-				height += (rows - 1) * (fm.getHeight() + 6);
+				int itemWidth = legendItemWidth(legendFm, legendNames.get(i));
+				if (i == 0 || legendRowWidth + itemWidth > width - 20) { legendRows.add(i); legendRowWidth = 0; }
+				legendRowWidth += itemWidth;
 			}
+			int legendRowHeight = legendFm.getHeight() + 4;
+			int legendHeight    = legendRows.size() * legendRowHeight + 8;
+
+			// Mail: one more legend row = a taller image, so the plot keeps its height
+			if (growHeight && legendRows.size() > 1)
+				height += (legendRows.size() - 1) * legendRowHeight;
+			int chartHeight = height - legendHeight; // XChart draws the title, axes and plot in this, the legend goes below
 
 			org.knowm.xchart.internal.chartpart.Chart<?, ?> chart;
 			if (dataset instanceof TimeSeriesCollection)
@@ -1521,7 +1539,7 @@ public abstract class ReportChartAbstract implements IReportChart
 				if (tsc.getSeriesCount() == 0)
 					return null;
 
-				XYChart xy = new XYChartBuilder().width(width).height(height).title(title).build();
+				XYChart xy = new XYChartBuilder().width(width).height(chartHeight).title(title).build();
 				long   minTs = Long.MAX_VALUE, maxTs = Long.MIN_VALUE;
 				double minVal = 0;
 				for (int s = 0; s < tsc.getSeriesCount(); s++)
@@ -1563,9 +1581,12 @@ public abstract class ReportChartAbstract implements IReportChart
 				st.setTimezone(TimeZone.getTimeZone("UTC")); // the points are local wall-clock time (see above): ticks on local whole hours
 				st.setXAxisMin((double) minTs);
 				st.setXAxisMax((double) maxTs);
-				if (isAllDataValuesNearZero()) { st.setYAxisMin(-1.0); st.setYAxisMax(1.0); }
-				else if (_maxValue > 0)        { st.setYAxisMin(0.0);  st.setYAxisMax((double) _maxValue); }
-				else if (minVal >= 0)          { st.setYAxisMin(0.0); }
+				st.setPlotContentSize(1.0); // the default 0.92 leaves ~4% (about 1 hour) empty on each side, with a "23:00" tick to the left of the data
+				// Y range a bit outside the ticks: with PlotContentSize 1.0 XChart shows no label for a tick ON the edge (the "0" and the "100")
+				double dataMax = getDatasetMaxValue() == null ? 0 : getDatasetMaxValue();
+				if (isAllDataValuesNearZero()) { st.setYAxisMin(-1.05); st.setYAxisMax(1.05); }
+				else if (_maxValue > 0)        { st.setYAxisMin(-_maxValue * 0.015); st.setYAxisMax(_maxValue * 1.015); }
+				else if (minVal >= 0)          { st.setYAxisMin(-dataMax  * 0.015); st.setYAxisMax(dataMax  * 1.04); }
 				st.setPlotGridVerticalLinesVisible(false);
 				chart = xy;
 			}
@@ -1575,7 +1596,7 @@ public abstract class ReportChartAbstract implements IReportChart
 				if (cd.getRowCount() == 0 || cd.getColumnCount() == 0)
 					return null;
 
-				CategoryChart cc = new CategoryChartBuilder().width(width).height(height).title(title).build();
+				CategoryChart cc = new CategoryChartBuilder().width(width).height(chartHeight).title(title).build();
 				SimpleDateFormat hhmm = new SimpleDateFormat("HH:mm");
 				List<String> categories = new ArrayList<>();
 				for (int c = 0; c < cd.getColumnCount(); c++)
@@ -1616,10 +1637,10 @@ public abstract class ReportChartAbstract implements IReportChart
 			st.setChartTitleFont(titleFont);
 			st.setChartTitleBoxVisible(false);
 			st.setChartFontColor(text);
-			st.setLegendPosition(Styler.LegendPosition.OutsideS);
-			st.setLegendLayout(Styler.LegendLayout.Horizontal);
-			st.setLegendBorderColor(Color.WHITE);
-			st.setLegendFont(smallFont);
+			st.setLegendVisible(false); // drawn below (small color boxes, like Chart.js)
+			// Y axis: "600,000" like Chart.js (XChart's own pattern turns big numbers into "5E5")
+			java.text.DecimalFormat yFmt = new java.text.DecimalFormat("#,##0.##", java.text.DecimalFormatSymbols.getInstance(java.util.Locale.US));
+			st.setyAxisTickLabelsFormattingFunction(v -> yFmt.format(v));
 			st.setAxisTickLabelsFont(smallFont);
 			st.setAxisTickLabelsColor(muted);
 			st.setAxisTicksLineVisible(false);
@@ -1630,7 +1651,30 @@ public abstract class ReportChartAbstract implements IReportChart
 			Graphics2D g = img.createGraphics();
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-			chart.paint(g, width, height);
+			g.setColor(Color.WHITE);
+			g.fillRect(0, 0, width, height);
+			chart.paint(g, width, chartHeight);
+
+			// The legend: centered rows of [color box] name
+			g.setFont(smallFont);
+			for (int r = 0; r < legendRows.size(); r++)
+			{
+				int from = legendRows.get(r);
+				int to   = r + 1 < legendRows.size() ? legendRows.get(r + 1) : legendNames.size();
+				int rowWidth = 0;
+				for (int i = from; i < to; i++)
+					rowWidth += legendItemWidth(legendFm, legendNames.get(i));
+				int x = Math.max(4, (width - rowWidth) / 2);
+				int y = chartHeight + 2 + r * legendRowHeight;
+				for (int i = from; i < to; i++)
+				{
+					g.setColor(DSR_COLORS[i % DSR_COLORS.length]);
+					g.fillRect(x, y + (legendRowHeight - 10) / 2, 10, 10);
+					g.setColor(text);
+					g.drawString(legendNames.get(i), x + 15, y + (legendRowHeight - legendFm.getHeight()) / 2 + legendFm.getAscent());
+					x += legendItemWidth(legendFm, legendNames.get(i));
+				}
+			}
 			g.dispose();
 			return img;
 		}

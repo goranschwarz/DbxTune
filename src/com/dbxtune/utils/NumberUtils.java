@@ -91,8 +91,9 @@ public class NumberUtils
 			strNum = strNum.replace(",", "").trim();
 
 		// Number Input string is formated with " " on every thousand for readability... so remove that
+		// Also the no-break spaces: NumberFormat for for example Swedish/French uses U+00A0 or U+202F as the thousand separator
 		if (stripSpaces)
-			strNum = strNum.replace(" ", "").trim();
+			strNum = strNum.replace(" ", "").replace(" ", "").replace(" ", "").trim();
 		
 		try 
 		{
