@@ -1727,6 +1727,14 @@ extends DailySummaryReportAbstract
 		w.append("            .dsr-m-kf td  { display: inline-block !important; width: 50% !important; box-sizing: border-box; } \n");
 		w.append("            .dsr-m-toc td { display: block !important; width: 100% !important; } \n");
 		w.append("        } \n");
+		// iPhone Mail lays the mail out as wide as its widest table (not the screen), so 100% is wider than the screen:
+		// the top part (banner, button, key facts, "In this mail") gets a fixed width that fits the phone's screen
+		w.append("        @media screen and (max-device-width: 620px) { \n");
+		w.append("            .dsr-m-fit { width: 355px !important; } \n");
+		w.append("        } \n");
+		w.append("        @media screen and (min-device-width: 414px) and (max-device-width: 620px) { \n");
+		w.append("            .dsr-m-fit { width: 394px !important; } \n");
+		w.append("        } \n");
 		w.append("    </style> \n");
 		
 		w.append("</head> \n");
@@ -1750,7 +1758,7 @@ extends DailySummaryReportAbstract
 		String period = getPeriodText();
 		String appName = StringUtil.hasValue(getRecDbxAppName()) ? " &middot; " + getRecDbxAppName() : "";
 
-		w.append("<table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse; font-family:\"Segoe UI\", Arial, Helvetica, sans-serif; font-size:14px; color:#1d2430; background:#ffffff;'>\n");
+		w.append("<table role='presentation' class='dsr-m-fit' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse; font-family:\"Segoe UI\", Arial, Helvetica, sans-serif; font-size:14px; color:#1d2430; background:#ffffff;'>\n");
 
 		//--------------------------------------------------
 		// Status banner, in the level's color
@@ -1814,7 +1822,7 @@ extends DailySummaryReportAbstract
 			tocCells.add("<a href='#" + StringUtil.stripAllNonAlphaNum(entry.getSubject()) + "' style='color:#2b5fb8;'>" + tocSubject + "</a>" + getIssueLevelBadge(entry));
 		}
 		int half = (tocCells.size() + 1) / 2; // column 1 = first half, column 2 = second half (reads top-down)
-		w.append("<table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse; font-family:\"Segoe UI\", Arial, Helvetica, sans-serif;'>\n");
+		w.append("<table role='presentation' class='dsr-m-fit' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse; font-family:\"Segoe UI\", Arial, Helvetica, sans-serif;'>\n");
 		w.append("<tr><td style='background:#ffffff; border:0; padding:16px 0 4px; white-space:normal;'>\n");
 		w.append("  <div style='font-size:16px; font-weight:600; border-left:4px solid #8a94a3; padding-left:8px;'>In this mail</div>\n");
 		// Two cells, each with a whole column: on a phone the cells are stacked (see the @media above) and the order stays the same
