@@ -153,7 +153,11 @@ public class LlmAdviceLog
 			meta.put("inputTokens",  llmResponse == null ? null : llmResponse.getInputTokens());
 			meta.put("outputTokens", llmResponse == null ? null : llmResponse.getOutputTokens());
 			meta.put("promptChars",  promptSent == null ? 0 : promptSent.length());
-			meta.put("sqlPreview",   cut(oneLine(llmRequest.getSql()), 200));
+			meta.put("task",         llmRequest.getTask());       // null = statement advice, LlmOptimizeRequest.TASK_DSR_ANALYSIS = a whole Daily Summary Report
+			meta.put("reportName",   llmRequest.getReportName());
+			meta.put("sqlPreview",   LlmOptimizeRequest.TASK_DSR_ANALYSIS.equals(llmRequest.getTask())
+			                         ? "AI Analysis: " + llmRequest.getReportName()   // the list's SQL column
+			                         : cut(oneLine(llmRequest.getSql()), 200));
 			meta.put("errorMessage", ex == null ? null : cut(oneLine(ex.getMessage()), 300));
 
 			String fileName = null;
@@ -268,7 +272,7 @@ public class LlmAdviceLog
 		sb.append("<meta charset=\"UTF-8\">\n");
 		// Metadata for the Admin page list (LlmAdviceLog.list()) - keep it at the top of the file, on ONE line
 		sb.append(META_START).append(DbxTimelineRows.toScriptJson(meta)).append("</script>\n");
-		sb.append("<title>").append(esc("LLM Advice - " + meta.get("time") + " - " + meta.get("user") + " - " + StringUtil.nullToValue((String)meta.get("srvName"), "unknown"))).append("</title>\n");
+		sb.append("<title>").append(esc((LlmOptimizeRequest.TASK_DSR_ANALYSIS.equals(meta.get("task")) ? "AI Analysis - " : "LLM Advice - ") + meta.get("time") + " - " + meta.get("user") + " - " + StringUtil.nullToValue((String)meta.get("srvName"), "unknown"))).append("</title>\n");
 		sb.append("<style>\n");
 		sb.append("  body { font-family: Arial, Helvetica, sans-serif; margin: 16px; color: #212529; background: #fff; }\n");
 		sb.append("  table.dbx-llm-meta { border-collapse: collapse; margin-bottom: 12px; }\n");
@@ -290,7 +294,9 @@ public class LlmAdviceLog
 		sb.append("</style>\n");
 		sb.append("</head>\n");
 		sb.append("<body>\n");
-		sb.append("<h3>LLM Optimization Advice</h3>\n");
+		// A review of a whole Daily Summary Report (LlmDsrAnalysisServlet): no SQL, the report digest instead, and the analysis JSON
+		boolean isDsr = LlmOptimizeRequest.TASK_DSR_ANALYSIS.equals(llmRequest.getTask());
+		sb.append(isDsr ? "<h3>AI Analysis of a Daily Summary Report</h3>\n" : "<h3>LLM Optimization Advice</h3>\n");
 
 		sb.append("<table class=\"dbx-llm-meta\">\n");
 		String[][] rows = {
@@ -300,6 +306,7 @@ public class LlmAdviceLog
 			{ "Server",        "srvName"      },
 			{ "Database",      "dbname"       },
 			{ "Origin",        "origin"       },
+			{ "Report",        "reportName"   },
 			{ "DBMS Vendor",   "dbVendor"     },
 			{ "DBMS Version",  "dbmsVersion"  },
 			{ "Provider",      "providerId"   },
@@ -321,9 +328,18 @@ public class LlmAdviceLog
 		sb.append("</table>\n");
 
 		sb.append("<div id=\"dbx-llm-advice\">\n");
-		sb.append("<details>\n<summary><b>SQL Text</b></summary>\n");
-		sb.append(pre("dbx-llm-sql", llmRequest.getSql()));
-		sb.append("</details>\n");
+		if (isDsr)
+		{
+			sb.append("<details>\n<summary><b>Report Digest</b> (what the report says, sent to the LLM)</summary>\n");
+			sb.append(pre("dbx-llm-dsr-digest", llmRequest.getDsrDigest()));
+			sb.append("</details>\n");
+		}
+		else
+		{
+			sb.append("<details>\n<summary><b>SQL Text</b></summary>\n");
+			sb.append(pre("dbx-llm-sql", llmRequest.getSql()));
+			sb.append("</details>\n");
+		}
 
 		// The plan as the browser sent it (the prompt may hold a shrunk version, see SqlServerPlanXmlShrinker)
 		if (StringUtil.hasValue(llmRequest.getPlan()))
@@ -354,12 +370,21 @@ public class LlmAdviceLog
 		if (llmResponse != null)
 		{
 			// Same layout as the advice dialog: everything folded, except the Explanation
-			sb.append("<details>\n<summary><b>Suggested SQL</b></summary>\n");
-			if (StringUtil.hasValue(llmResponse.getOptimizedSql()))
-				sb.append(pre("dbx-llm-optimized-sql", llmResponse.getOptimizedSql()));
+			if (isDsr)
+			{
+				// The findings as JSON, for dbxLlmAdvice.renderDsrAnalysis() ('</' would end the script element: '<\/' is the same in JSON)
+				if (llmResponse.getAnalysis() != null)
+					sb.append("<script type=\"application/json\" id=\"dbx-llm-dsr-analysis\">").append(llmResponse.getAnalysis().toString().replace("</", "<\\/")).append("</script>\n");
+			}
 			else
-				sb.append("<p>No SQL changes suggested.</p>\n");
-			sb.append("</details>\n");
+			{
+				sb.append("<details>\n<summary><b>Suggested SQL</b></summary>\n");
+				if (StringUtil.hasValue(llmResponse.getOptimizedSql()))
+					sb.append(pre("dbx-llm-optimized-sql", llmResponse.getOptimizedSql()));
+				else
+					sb.append("<p>No SQL changes suggested.</p>\n");
+				sb.append("</details>\n");
+			}
 
 			if (StringUtil.hasValue(llmResponse.getExplanation()))
 			{

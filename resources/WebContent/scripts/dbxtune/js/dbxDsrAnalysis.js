@@ -4,7 +4,8 @@
  * The page names the report ('name' = the report file, or 'srv' + 'period' = yyyy-MM-dd, from the DSR's "AI Analysis"
  * button); DbxCentral reads the report's digest from the file and builds the prompt (POST /api/llm/dsr-analysis).
  *
- * Phase 1: the prompt preview only - nothing is sent to any LLM. The prompt can be copied into any LLM chat.
+ * The page shows the report's last analysis (cached by DbxCentral) and the Analyze button (dbxLlmAdvice.js with task 'dsr-analysis':
+ * the same model picker, progress and Stop as the statement advice). What is sent (the prompt) can also be copied into any LLM chat.
  */
 var dbxDsrAnalysis = (function ()
 {
@@ -55,31 +56,72 @@ var dbxDsrAnalysis = (function ()
 		try { document.execCommand('copy'); done(); } finally { document.body.removeChild(ta); }
 	}
 
+	/**
+	 * The page: the report, its last analysis (if any), the Analyze button (dbxLlmAdvice: the model picker, progress, Stop),
+	 * and - folded - what is sent: the sections of the digest and the prompt.
+	 */
 	function render(container, data, opts)
 	{
 		var r = data.report;
-		var reportUrl = r.url;
 		var html = '';
 
 		// The report
 		html += '<div class="card mb-3"><div class="card-body">'
 			+ '<h5 class="card-title"><b>' + esc(r.srvName) + '</b> ' + levelBadge(r.reportLevel)
 			+ ' <span class="text-muted" style="font-size:0.9em;">' + esc(r.dbxApp) + ' &middot; ' + esc(r.periodBegin) + ' &ndash; ' + esc(r.periodEnd) + '</span></h5>'
-			+ '<div>Report: <a href="' + esc(reportUrl) + '" target="_blank">' + esc(r.name) + '</a>'
+			+ '<div>Report: <a href="' + esc(r.url) + '" target="_blank">' + esc(r.name) + '</a>'
 			+ ' <span class="text-muted" style="font-size:0.85em;">(created ' + esc(r.createdAt) + ')</span></div>'
 			+ '</div></div>';
 
-		// What will be sent
-		html += '<div class="alert alert-info" style="font-size:0.9em;">'
-			+ '<b>Nothing is sent anywhere yet.</b> Below is the prompt DbxCentral will send to the AI (LLM) - copy it into any LLM chat (claude.ai, chatgpt.com, ...) to try it. '
-			+ 'Only numbers and names from the report are in it: <b>no SQL text</b>, no error message texts.'
-			+ (opts.llmEnabled ? '' : ' <i>(The LLM feature is not enabled on this DbxCentral.)</i>')
-			+ '</div>';
+		// The last analysis of this report, and the button for a new one
+		html += '<div id="dsr-analysis-cached"></div>';
+		if (opts.llmEnabled)
+			html += '<div id="dsr-analysis-run" class="mb-3"></div>';
+		else
+			html += '<div class="alert alert-secondary" style="font-size:0.9em;">The LLM feature is not enabled on this DbxCentral: '
+				+ 'copy the prompt below into any LLM chat (claude.ai, chatgpt.com, ...) to get the analysis.</div>';
+
+		// What is sent (folded when it can be sent from here)
+		html += '<details class="mt-3"' + (opts.llmEnabled ? '' : ' open') + '><summary style="cursor:pointer;font-weight:600;">What is sent to the AI: '
+			+ data.sections.length + ' report sections, about ' + Math.round(data.promptSent.length / 4).toLocaleString() + ' tokens</summary>'
+			+ '<div id="dsr-analysis-preview" class="mt-2"></div></details>';
+
+		container.innerHTML = html;
+		renderPreview(container.querySelector('#dsr-analysis-preview'), data);
+
+		var cached = data.cached;
+		if (cached && typeof dbxLlmAdvice !== 'undefined')
+		{
+			var cachedDiv = container.querySelector('#dsr-analysis-cached');
+			var tokens = (cached.inputTokens != null && cached.outputTokens != null) ? ' - ' + cached.inputTokens.toLocaleString() + ' in / ' + cached.outputTokens.toLocaleString() + ' out tokens' : '';
+			cachedDiv.innerHTML = '<div class="card mb-3"><div class="card-header"><b>Last analysis</b> <span class="text-muted" style="font-size:0.9em;">'
+				+ esc(cached.time) + ' by ' + esc(cached.user) + ' with ' + esc((cached.providerName || cached.providerId) + ' / ' + (cached.modelLabel || cached.model)) + esc(tokens)
+				+ '</span></div><div class="card-body dsr-analysis-cached-body"></div></div>';
+			dbxLlmAdvice.renderDsrAnalysis(cachedDiv.querySelector('.dsr-analysis-cached-body'), cached, { reportUrl: r.url });
+		}
+
+		// The model picker and Analyze: the same as "Get LLM Optimization Advice". 'llmOpts' is kept: the server context is filled in later.
+		if (opts.llmEnabled && typeof dbxLlmAdvice !== 'undefined')
+		{
+			opts.llmOpts = {
+				task:       'dsr-analysis',
+				reportName: r.name,
+				reportUrl:  r.url,
+				askLabel:   cached ? 'Re-analyze' : 'Analyze',
+				target:     container.querySelector('#dsr-analysis-run')
+			};
+			dbxLlmAdvice.open(opts.llmOpts);
+		}
+	}
+
+	/** What is sent: the sections of the digest, the server configuration (or not), and the prompt with a Copy button */
+	function renderPreview(target, data)
+	{
+		var reportUrl = data.report.url;
+		var html = '<div class="text-muted mb-2" style="font-size:0.9em;">Only numbers and names from the report are sent: <b>no SQL text</b>, no error message texts.</div>';
 
 		// The sections in the digest
-		html += '<details class="mb-3" open><summary style="cursor:pointer;font-weight:600;">Report sections in the digest ('
-			+ data.sections.length + ', ' + data.digestChars.toLocaleString() + ' characters)</summary>'
-			+ '<table class="table table-sm table-hover mt-2" style="font-size:0.9em;"><thead><tr><th>Level</th><th>Section</th><th class="text-end">Characters</th><th></th></tr></thead><tbody>';
+		html += '<table class="table table-sm table-hover" style="font-size:0.9em;"><thead><tr><th>Level</th><th>Section</th><th class="text-end">Characters</th><th></th></tr></thead><tbody>';
 		data.sections.forEach(function (s)
 		{
 			html += '<tr><td>' + levelBadge(s.level) + '</td>'
@@ -97,23 +139,22 @@ var dbxDsrAnalysis = (function ()
 		html += list('Names only', data.namesOnly, 'level NONE and no numbers in the digest: only the name is sent');
 		html += list('Disabled', data.disabled, 'not in the report');
 		html += list('Dropped',  data.dropped,  'did not fit in the size limit, only the name is sent');
-		html += '</details>';
 
 		// The server configuration
-		html += '<div style="font-size:0.85em;" class="mb-2 text-muted">Server configuration and hardware: '
+		html += '<div style="font-size:0.85em;" class="my-2 text-muted">Server configuration and hardware: '
 			+ (data.hasServerContext ? 'included (as stored by the Collector at the end of the report period).'
 			                         : 'not included (only when logged in, the LLM feature is enabled, and the Collector can be reached).')
 			+ '</div>';
 
 		// The prompt
 		var approxTokens = Math.round(data.promptSent.length / 4);
-		html += '<div class="mb-1"><b>Prompt that would be sent</b>'
+		html += '<div class="mb-1"><b>Prompt</b>'
 			+ ' <span class="text-muted" style="font-size:0.85em;">(' + data.promptSent.length.toLocaleString() + ' characters, about ' + approxTokens.toLocaleString() + ' tokens)</span>'
 			+ ' <button type="button" class="btn btn-sm btn-outline-secondary dsr-analysis-copy">Copy</button></div>'
 			+ '<pre style="white-space:pre-wrap; max-height:70vh; overflow:auto; border:1px solid #dee2e6; border-radius:4px; padding:8px; font-size:0.8em;">' + esc(data.promptSent) + '</pre>';
 
-		container.innerHTML = html;
-		container.querySelector('.dsr-analysis-copy').addEventListener('click', function (e) { copyText(data.promptSent, e.target); });
+		target.innerHTML = html;
+		target.querySelector('.dsr-analysis-copy').addEventListener('click', function (e) { copyText(data.promptSent, e.target); });
 	}
 
 	function renderError(container, msg)
@@ -136,7 +177,8 @@ var dbxDsrAnalysis = (function ()
 			return;
 		}
 
-		// First without the server configuration (it needs to know the vendor and the period), then with it
+		// First without the server configuration (it needs to know the vendor and the period), then the prompt with it.
+		// Only the "what is sent" part is drawn again: a running analysis must not be thrown away.
 		post(req)
 			.then(function (data)
 			{
@@ -144,9 +186,10 @@ var dbxDsrAnalysis = (function ()
 				return fetchServerContext(data.report).then(function (serverContext)
 				{
 					if (!serverContext) return;
+					if (opts.llmOpts) opts.llmOpts.serverContext = serverContext; // read when Analyze is pressed
 					req.name = data.report.name; // the exact file now
 					req.serverContext = serverContext;
-					return post(req).then(function (data2) { render(container, data2, opts); });
+					return post(req).then(function (data2) { renderPreview(container.querySelector('#dsr-analysis-preview'), data2); });
 				});
 			})
 			.catch(function (err) { renderError(container, err.message); });

@@ -89,6 +89,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>Counter Models</b> -- Query timeouts are detected on all vendors (also Postgres and Db2): no alarm checks for a sample that timed out</LI>
 		<LI><b>Daily Summary Report</b> -- Three levels: NTR (nothing to report), FYI (only INFO/REPORT alarms, deadlocks, design findings: subject <code>-FYI-</code>) and issue (no mark). New "Report Status" section shows which sections the level comes from (with links), and NTR mails no longer attach the full report</LI>
 		<LI><b>Daily Summary Report</b> -- Much smaller reports and mails: compact chart data, execution plans stored compressed, Table Info written once per report (shown as DDL), and the mail attachment always zipped</LI>
+		<LI><b>Daily Summary Report</b> -- "AI Analysis": an LLM reviews the whole report (numbers only, no SQL text) and gives a prioritized list of improvements, with links to the report sections</LI>
         <LI></LI>
 
 		<LI><b>Alarms Handling:</b>

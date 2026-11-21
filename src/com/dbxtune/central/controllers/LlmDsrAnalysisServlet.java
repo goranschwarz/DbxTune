@@ -27,7 +27,9 @@ import java.lang.invoke.MethodHandles;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.util.Date;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -50,8 +52,11 @@ import com.dbxtune.PostgresTune;
 import com.dbxtune.SqlServerTune;
 import com.dbxtune.central.DbxTuneCentral;
 import com.dbxtune.central.controllers.HtmlStatic.PageSection;
+import com.dbxtune.central.llm.LlmClient;
 import com.dbxtune.central.llm.LlmClientRegistry;
+import com.dbxtune.central.llm.LlmModelEntry;
 import com.dbxtune.central.llm.LlmOptimizeRequest;
+import com.dbxtune.central.llm.LlmOptimizeResponse;
 import com.dbxtune.pcs.report.DailySummaryReportDefault;
 import com.dbxtune.utils.DbUtils;
 import com.dbxtune.utils.FileUtils;
@@ -66,13 +71,14 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
  * and gives a prioritized list of improvements.
  * <ul>
  *   <li>{@code GET /llm-dsr-analysis?name=<report file>} or {@code ?srv=<server>&period=<yyyy-MM-dd>} - the page (the DSR's "AI Analysis" button)</li>
- *   <li>{@code POST /api/llm/dsr-analysis} {@code {name | srv+period, serverContext, preview:true}} - the prompt, and what is in the digest</li>
+ *   <li>{@code POST /api/llm/dsr-analysis} {@code {name | srv+period, serverContext, preview:true}} - the prompt, what is in the digest, and the
+ *       report's last analysis ('cached'). Like the statement advice's preview it needs no login and works when the LLM feature is off.</li>
+ *   <li>{@code POST /api/llm/dsr-analysis} {@code {name, serverContext, provider, model, progress}} - the LLM call, through
+ *       {@link LlmSqlOptimizeServlet#runLlmCall} (the same checks, progress events, Stop and LLM log as the statement advice);
+ *       the answer is also saved as the report's last analysis (see {@link #getCacheDir()}).</li>
  * </ul>
  * The digest is written into the report by {@code DailySummaryReportDefault.createLlmDigestScript()}; it is read here from
  * the report file on disk, so the browser only names the report.
- * <p>
- * Phase 1: the prompt preview only (no LLM call). Like the statement advice's preview it needs no login and works when
- * the LLM feature is off: nothing is sent anywhere.
  */
 public class LlmDsrAnalysisServlet
 extends HttpServlet
@@ -143,12 +149,6 @@ extends HttpServlet
 		String  period        = body.path("period")       .asText("");
 		String  serverContext = body.path("serverContext").asText("");
 		boolean preview       = body.path("preview")      .asBoolean(false);
-
-		if ( ! preview )
-		{
-			writeError(om, out, response, HttpServletResponse.SC_BAD_REQUEST, "not-yet", "Only the prompt preview ('preview': true) is available so far.");
-			return;
-		}
 
 		// Find the report and its digest
 		File   reportFile;
@@ -222,13 +222,28 @@ extends HttpServlet
 		llmRequest.setSrvName(digest.path("srvName").asText(null));
 		llmRequest.setServerContext(StringUtil.hasValue(serverContext) ? serverContext : null);
 		llmRequest.setOrigin("Daily Summary Report - AI Analysis");
+		String reportName = reportsDirRelativeName(reportFile);
+		llmRequest.setReportName(reportName);
+
+		// The real call: the same code as the statement advice (the feature/provider/model/login checks, progress, Stop, the LLM log)
+		if ( ! preview )
+		{
+			llmRequest.setProvider(body.path("provider").asText(null));
+			llmRequest.setModel   (body.path("model")   .asText(null));
+			llmRequest.setProgress(body.path("progress").asBoolean(false));
+			LlmOptimizeResponse answer = LlmSqlOptimizeServlet.runLlmCall(request, response, out, om, llmRequest);
+			if (answer != null && answer.getAnalysis() != null) // a cut-off answer must not replace a good one (it is in the LLM log anyway)
+				writeCache(om, reportName, llmRequest, answer, request.getRemoteUser());
+			return;
+		}
+
 		llmRequest.setPreview(true);
 		String prompt = LlmClientRegistry.getInstance().getProvider("claude").buildPrompt(llmRequest); // which provider does not matter: the prompt is built the same for all
 
-		// The answer: the prompt + what is in the digest (for the page's list of sections)
-		String reportName = reportsDirRelativeName(reportFile);
+		// The answer: the prompt + what is in the digest (for the page's list of sections) + the last analysis of this report
 		ObjectNode result = om.createObjectNode();
 		result.put("promptSent", prompt);
+		result.set("cached", readCache(om, reportName));
 		ObjectNode report = result.putObject("report");
 		report.put("name",        reportName);
 		report.put("url",         "/report?op=view&name=" + URLEncoder.encode(reportName, StandardCharsets.UTF_8));
@@ -258,6 +273,104 @@ extends HttpServlet
 		om.writeValue(out, result);
 		out.flush();
 		out.close();
+	}
+
+	//-------------------------------------------------------------------------
+	// The cache: the LAST analysis of each report, shown at once when the page is opened.
+	// Every run is also in the LLM log (LlmAdviceLog). Not in the reports dir: a file there is listed as a report
+	// (/overview) and can be served by /report?op=viewLatest.
+	//-------------------------------------------------------------------------
+
+	public static final String CACHE_SUBDIR = "llm-dsr-analysis";
+
+	public static File getCacheDir()
+	{
+		return new File(DbxTuneCentral.getAppDataDir(), CACHE_SUBDIR);
+	}
+
+	/** The cache file of a report ('tmp-dsr/x.html' -> 'tmp-dsr__x.html.json') */
+	private static File getCacheFile(String reportName)
+	{
+		return new File(getCacheDir(), reportName.replace("/", "__") + ".json");
+	}
+
+	/** Save the analysis as the report's last one. Never throws: a problem here must not affect the answer. */
+	private static void writeCache(ObjectMapper om, String reportName, LlmOptimizeRequest llmRequest, LlmOptimizeResponse answer, String user)
+	{
+		try
+		{
+			LlmClient     client = LlmClientRegistry.getInstance().getProvider(llmRequest.getProvider());
+			LlmModelEntry model  = client == null ? null : client.getModelEntry(llmRequest.getModel());
+
+			ObjectNode c = om.createObjectNode();
+			c.put("time",            new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date()));
+			c.put("user",            StringUtil.hasValue(user) ? user : "(anonymous)");
+			c.put("providerId",      answer.getProviderId());
+			c.put("providerName",    client == null ? answer.getProviderId() : client.getDisplayName());
+			c.put("model",           answer.getModel());
+			c.put("modelLabel",      model == null ? answer.getModel() : model.getLabel());
+			c.put("inputTokens",     answer.getInputTokens());
+			c.put("outputTokens",    answer.getOutputTokens());
+			c.put("savedUrl",        answer.getSavedUrl());
+			c.put("savedForDays",    answer.getSavedForDays());
+			c.put("explanation",     answer.getExplanation());
+			c.put("thinkingSummary", answer.getThinkingSummary());
+			c.set("analysis",        answer.getAnalysis());
+
+			File f = getCacheFile(reportName);
+			f.getParentFile().mkdirs();
+			om.writeValue(f, c);
+		}
+		catch (Exception ex)
+		{
+			_logger.warn("LlmDsrAnalysisServlet: problems saving the analysis of the report '" + reportName + "'. Continuing anyway.", ex);
+		}
+	}
+
+	/** The report's last analysis, or null */
+	private static JsonNode readCache(ObjectMapper om, String reportName)
+	{
+		File f = getCacheFile(reportName);
+		if ( ! f.isFile() )
+			return null;
+		try
+		{
+			return om.readTree(f);
+		}
+		catch (Exception ex)
+		{
+			_logger.warn("LlmDsrAnalysisServlet: problems reading the cached analysis '" + f + "'. Ignoring it.", ex);
+			return null;
+		}
+	}
+
+	/**
+	 * Remove the cached analyses whose report is gone (removed by hand, or by DailySummaryReport.remove.after.days).
+	 * Called by the daily DataDirectoryCleaner.
+	 *
+	 * @return the number of files removed (or that would be, when dryRun)
+	 */
+	public static int removeOrphanCacheFiles(boolean dryRun)
+	{
+		File[] files = getCacheDir().listFiles(f -> f.isFile() && f.getName().endsWith(".json"));
+		if (files == null)
+			return 0;
+		File reportsDir = new File(DbxTuneCentral.getAppReportsDir());
+		int count = 0;
+		for (File f : files)
+		{
+			String reportName = f.getName().substring(0, f.getName().length() - ".json".length()).replace("__", "/");
+			if (new File(reportsDir, reportName).exists())
+				continue;
+			count++;
+			if (dryRun)
+				_logger.info("DSR-ANALYSIS: DRY-RUN: would remove the cached analysis '" + f + "' (the report is gone).");
+			else if (f.delete())
+				_logger.info("DSR-ANALYSIS: Removed the cached analysis '" + f + "' (the report is gone).");
+			else
+				_logger.warn("DSR-ANALYSIS: Could not remove the cached analysis '" + f + "'.");
+		}
+		return count;
 	}
 
 	/** The product name (as DbUtils.DB_PROD_NAME_*) of a recording app, for the prompt's vendor specifics. The app name itself for the others. */

@@ -1770,6 +1770,18 @@ implements LlmClient
 		try
 		{
 			JsonNode root = om.readTree(json);
+
+			// A review of a whole Daily Summary Report (buildDsrAnalysisPrompt): {summary, findings[], notWorthIt[], dataGaps[]}.
+			// Decided on the content (this method has no request): a statement advice answer never has 'findings'.
+			if (root.path("findings").isArray())
+			{
+				LlmOptimizeResponse response = new LlmOptimizeResponse(null, dsrAnalysisToMarkdown(root), rawResponse, getProviderId());
+				response.setAnalysis(root);
+				response.setPromptSent(promptSent);
+				response.setModel(model.getModelId());
+				return response;
+			}
+
 			originSql    = firstText(root, "origin_sql", "originSql", "original_sql");
 			optimizedSql = firstText(root, "optimized_sql", "optimizedSql");
 			explanation  = firstText(root, "explanation");
@@ -1802,6 +1814,47 @@ implements LlmClient
 		response.setPromptSent(promptSent);
 		response.setModel(model.getModelId());
 		return response;
+	}
+
+	/**
+	 * A Daily Summary Report analysis as Markdown, for what shows 'explanation' (the LLM log, a renderer that does not know
+	 * the 'analysis' JSON): the summary, the findings in priority order, what is fine, and what data was missing.
+	 */
+	static String dsrAnalysisToMarkdown(JsonNode root)
+	{
+		StringBuilder sb = new StringBuilder();
+		if (StringUtil.hasValue(root.path("summary").asText("")))
+			sb.append(root.path("summary").asText()).append("\n\n");
+
+		JsonNode findings = root.path("findings");
+		if (findings.size() == 0)
+			sb.append("**No findings.**\n\n");
+		int i = 0;
+		for (JsonNode f : findings)
+		{
+			i++;
+			sb.append(f.path("priority").asInt(i)).append(". **[").append(f.path("severity").asText("?")).append("] ")
+			  .append(f.path("title").asText("")).append("**");
+			if (StringUtil.hasValue(f.path("area").asText("")))
+				sb.append(" (").append(f.path("area").asText()).append(")");
+			sb.append("\n");
+			if (StringUtil.hasValue(f.path("evidence").asText("")))       sb.append("   - Evidence: ").append(f.path("evidence").asText().replace("\n", " ")).append("\n");
+			if (StringUtil.hasValue(f.path("recommendation").asText(""))) sb.append("   - Recommendation: ").append(f.path("recommendation").asText().replace("\n", "\n     ")).append("\n");
+			if (StringUtil.hasValue(f.path("effort").asText("")))         sb.append("   - Effort: ").append(f.path("effort").asText()).append("\n");
+			if (StringUtil.hasValue(f.path("section").asText("")))        sb.append("   - Report section: `").append(f.path("section").asText()).append("`\n");
+			if (StringUtil.hasValue(f.path("sqlRef").asText("")) && ! "null".equals(f.path("sqlRef").asText()))
+				sb.append("   - Statement: `").append(f.path("sqlRef").asText()).append("`\n");
+		}
+		for (String[] list : new String[][] { {"notWorthIt", "Looks odd, but is fine"}, {"dataGaps", "More data would have helped"} })
+		{
+			JsonNode arr = root.path(list[0]);
+			if (arr.size() == 0)
+				continue;
+			sb.append("\n**").append(list[1]).append(":**\n");
+			for (JsonNode n : arr)
+				sb.append("- ").append(n.asText()).append("\n");
+		}
+		return sb.toString().trim();
 	}
 
 	/** A numeric JSON value as Integer, or null when missing/not a number (for example token counts a provider did not report). */

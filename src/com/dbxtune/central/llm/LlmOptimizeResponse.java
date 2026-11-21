@@ -82,4 +82,13 @@ public class LlmOptimizeResponse
 	public void setSavedForDays(Integer days)        { this.savedForDays = days; }
 	public void setSavedUrl    (String savedUrl)     { this.savedUrl     = savedUrl; }
 	public void setThinkingSummary(String thinking)  { this.thinkingSummary = thinking; }
+
+	/**
+	 * A review of a whole Daily Summary Report (LlmOptimizeRequest.TASK_DSR_ANALYSIS): the model's JSON answer as it is,
+	 * {summary, findings[], notWorthIt[], dataGaps[]} - see LlmClientAbstract.buildDsrAnalysisPrompt(). null for statement advice,
+	 * and when the answer could not be read (cut off): then 'explanation' holds the text.
+	 */
+	private com.fasterxml.jackson.databind.JsonNode analysis;
+	public com.fasterxml.jackson.databind.JsonNode getAnalysis()                                         { return analysis; }
+	public void                                    setAnalysis(com.fasterxml.jackson.databind.JsonNode a) { this.analysis = a; }
 }
