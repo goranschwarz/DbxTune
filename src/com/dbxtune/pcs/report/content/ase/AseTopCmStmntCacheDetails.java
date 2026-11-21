@@ -64,6 +64,9 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 
 	private ResultSetTableModel _shortRstm;
 	private ResultSetTableModel _ssqlRstm;
+
+	/** The (i) text of "Hashkey" in the Info columns */
+	private static final String HASHKEY_EXPLANATION = "Hashkey: the ASE hash of the statement (monCachedStatement.Hashkey), the same as HashKey in monSysStatement. It links this Statement Cache entry to the captured SQL statements.";
 //	private Exception           _problem = null;
 	private List<String>        _miniChartJsList = new ArrayList<>();
 
@@ -836,9 +839,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 			{
 				SimpleResultSet srs = new SimpleResultSet();
 
-				srs.addColumn("DBName"     , Types.VARCHAR,       60, 0);
-				srs.addColumn("ObjectName" , Types.VARCHAR,       60, 0);
-				srs.addColumn("XmlPlan"    , Types.VARCHAR, 1024*128, 0);
+				srs.addColumn("Info"       , Types.VARCHAR,     2048, 0); // name, DB, Hashkey, Copy Exec Plan (was 3 columns: DBName, ObjectName, XmlPlan)
 				srs.addColumn("Sparklines" , Types.VARCHAR,      512, 0); 
 				srs.addColumn("SQLText"    , Types.VARCHAR, 1024*128, 0); // this is 'text' in the origin table
 
@@ -902,7 +903,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 						String xmlPlan            = null;
 						String xmlPlanParamsTable = "";
 						String query              = "--not-found--";;
-						String xmlPlanCellContent = "--not-found--";
+						String xmlPlanCellContent = "<span style='font-size:11px; color:#6b7686;'>no XML plan found</span>";
 						String showplanLink       = "Execution Plan <b>NOT Available</b>";
 						String planElementId      = null;
 
@@ -923,7 +924,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 
 							// Create "Copy XML" html link
 							String planHandle = objectName.replace('*', '_');
-							xmlPlanCellContent = "<a href='#showplan-list' title='Copy plan to clipboard... then you can copy it into SqlW to view the GUI Plan!' onclick='showplanForId(\"" + planHandle + "\"); return true;'>Copy XML</a>";
+							xmlPlanCellContent = "<i class='fa-regular fa-copy'></i>&nbsp;<a href='#' title='Copy the XML plan to the clipboard (paste it into SqlW to see the graphical plan)' onclick='showplanForId(\"" + planHandle + "\"); return false;'>Copy Exec Plan</a>";
 
 							// id of the hidden <script type='text/xmldata'> block written by writePendingXmlPlans() -
 							// reused (not re-embedded) by both "View Execution Plan" and "Get LLM Optimization Advice"
@@ -971,7 +972,10 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 						// Grab all SparkLines we defined in 'subTableRowSpec'
 						String sparklines = htp.getHtmlTextForRow(r);
 
-						String objName_hashKey = objectName + "<br>\n<br>\n<b>Hashkey=</b>" + hashKey;
+						String info = infoCell("<b>" + objectName + "</b>"
+								, "<span style='font-size:11px; color:#6b7686;'>DB:</span> " + dbname
+								, infoLabel("Hashkey", HASHKEY_EXPLANATION) + " " + hashKey
+								, xmlPlanCellContent);
 
 						// SQL Text (and Compile Execution parameters)
 						String sqlTextValue = "<xmp>" + query + "</xmp>" 
@@ -1014,7 +1018,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 						
 						//-------------------------------------
 						// add record to SimpleResultSet
-						srs.addRow(dbname, objName_hashKey, xmlPlanCellContent, sparklines, sqlTextValue);
+						srs.addRow(info, sparklines, sqlTextValue);
 					}
 				}
 

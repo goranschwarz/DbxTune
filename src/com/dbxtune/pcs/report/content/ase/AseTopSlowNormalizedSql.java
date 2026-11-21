@@ -41,6 +41,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
+import org.apache.commons.text.StringEscapeUtils;
+
 import com.dbxtune.central.llm.LlmSqlContextBuilder;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.gui.ResultSetTableModel.TableStringRenderer;
@@ -161,35 +163,16 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 				{
 					TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
 					{
-						// One narrow "Info" column instead of: NormJavaSqlHashCode, SkipThis, txt, wait
-						@Override
-						public boolean isColumnVisible(ResultSetTableModel rstm, int col, String colName)
-						{
-							return ! ("SkipThis".equals(colName) || "txt".equals(colName) || "wait".equals(colName));
-						}
-
-						@Override
-						public String headerName(ResultSetTableModel rstm, int col, String colName)
-						{
-							return "NormJavaSqlHashCode".equals(colName) ? "Info" : colName;
-						}
-
 						@Override
 						public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
 						{
-							if ("NormJavaSqlHashCode".equals(colName))
+							// Many Statement Cache names: the first 2 and the count (the whole list made the table ~35000 px wide), all of them on hover
+							if ("StatementCacheNames".equals(colName) && StringUtil.hasValue(strVal))
 							{
-								String hash = rstm.getValueAsString(row, "NormJavaSqlHashCode");
-								return infoCell(normHashCodeInfo(hash)
-										, cellValue(rstm, row, col, "txt" , null, "")
-										, cellValue(rstm, row, col, "wait", null, "")
-										, copyExecPlanInfo(hash)
-										, infoSkipThis(rstm.getValueAsString(row, "SkipThis")));
+								String[] names = strVal.split(",\\s*");
+								if (names.length > 2)
+									return "<span title='" + StringEscapeUtils.escapeHtml4(strVal) + "'>" + names[0] + ", " + names[1] + ", ... <i>(" + names.length + " in all)</i></span>";
 							}
-
-							// A long list of names: wrap it (on one line it made the table ~35000 px wide)
-							if ("StatementCacheNames".equals(colName))
-								return "<div style='white-space:normal; min-width:300px; max-width:500px; font-size:11px;'>" + strVal + "</div>";
 
 							if ("txt".equals(colName))
 							{
@@ -207,7 +190,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 										+ "data-bs-target='#dbx-view-sqltext-dialog' "
 										+ "data-objectname='" + normJavaSqlHashCode + "' "
 										+ "data-tooltip=\""   + executedSqlText     + "\" "
-										+ ">&#x1F4AC; Executed SQL</div>"; // symbol popup with "..."
+										+ ">&#x1F4AC;</div>"; // symbol popup with "..."
 							}
 
 							if ("wait".equals(colName))
@@ -226,7 +209,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 										+ "data-bs-target='#dbx-view-sqltext-dialog' "
 										+ "data-objectname='" + normJavaSqlHashCode + "' "
 										+ "data-tooltip=\""   + waitText     + "\" "
-										+ ">&#x1F4AC; Waits</div>"; // symbol popup with "..."
+										+ ">&#x1F4AC;</div>"; // symbol popup with "..."
 							}
 
 							return strVal;
@@ -1296,7 +1279,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 			// "Copy Exec Plan: 1, 2, 3": numbered (the names are long), the name is in the hover text.
 			// showplanForId() takes the element id without the 'plan_' prefix
 			if (copySb.length() > 0)
-				copySb.append(", ");
+				copySb.append("&ensp;");
 			copySb.append("<a href='#' title='Copy the XML plan of ").append(linkText).append(" to the clipboard (paste it into SqlW to see the graphical plan)' onclick='showplanForId(\"")
 			      .append(planElementId.substring("plan_".length())).append("\"); return false;'>").append(linkCount + 1).append("</a>");
 
@@ -1330,7 +1313,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 			result.showplanLineHtml = "<i class='fa-solid fa-arrow-up-right-from-square'></i>&nbsp;View Execution Plan: " + showplanSb + more + "<br>\n";
 
 		result.llmLinksHtml  = llmSb.toString();
-		result.copyLinksHtml = copySb.toString();
+		result.copyLinksHtml = copySb.toString() + (namesWithPlan.size() > linkCount ? " <span style='color:#6b7686;'>(of " + namesWithPlan.size() + ")</span>" : ""); // "1 2 3 ... 10 (of 23)"
 
 		return result;
 	}
@@ -1338,13 +1321,13 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 	/** NormJavaSqlHashCode -> the "Copy Exec Plan" links (one per plan), filled where the plans are looked up */
 	private Map<String, String> _copyPlanLinks = new HashMap<>();
 
-	/** Info cell: "Copy Exec Plan: name1, name2" (needs JavaScript, so not in the mail). "" when there are no plans */
+	/** Info cell: "Copy Exec Plan:" and on the next line "1 2 3 (of 5)" (needs JavaScript, so not in the mail). "" when there are no plans */
 	private String copyExecPlanInfo(String normJavaSqlHashCode)
 	{
 		String links = _copyPlanLinks.get(normJavaSqlHashCode);
 		if ( ! isFullMessageType() || StringUtil.isNullOrBlank(links) )
 			return "";
-		return "<i class='fa-regular fa-copy'></i>&nbsp;Copy Exec Plan: " + links;
+		return "<i class='fa-regular fa-copy'></i>&nbsp;Copy Exec Plan:<br>" + links;
 	}
 
 	/** Info cell: the hash code, with an explanation of it and of the special codes -1, -2, -3 */

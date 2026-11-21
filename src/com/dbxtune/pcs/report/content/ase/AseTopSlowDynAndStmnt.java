@@ -98,31 +98,9 @@ public class AseTopSlowDynAndStmnt extends AseAbstract
 			// Create a default renderer
 			TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
 			{
-				// One narrow "Info" column instead of: HashKey, ProcName, txt, SkipThis
-				@Override
-				public boolean isColumnVisible(ResultSetTableModel rstm, int col, String colName)
-				{
-					return ! ("HashKey".equals(colName) || "txt".equals(colName) || "SkipThis".equals(colName));
-				}
-
-				@Override
-				public String headerName(ResultSetTableModel rstm, int col, String colName)
-				{
-					return "ProcName".equals(colName) ? "Info" : colName;
-				}
-
 				@Override
 				public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
 				{
-					if ("ProcName".equals(colName))
-					{
-						return infoCell("<b>" + strVal + "</b>"
-								, infoLabel("HashKey", "HashKey: the ASE hash of the statement (monSysStatement.HashKey). All executions with the same HashKey are summarized in this row.")
-								  + " " + rstm.getValueAsString(row, "HashKey")
-								, cellValue(rstm, row, col, "txt", null, "")
-								, infoSkipThis(rstm.getValueAsString(row, "SkipThis")));
-					}
-
 					if ("txt".equals(colName))
 					{
 						// Get Actual Executed SQL Text for current 'HashKey'
@@ -139,7 +117,7 @@ public class AseTopSlowDynAndStmnt extends AseAbstract
 								+ "data-bs-target='#dbx-view-sqltext-dialog' "
 								+ "data-objectname='" + hashKey + "' "
 								+ "data-tooltip=\""   + executedSqlText     + "\" "
-								+ ">&#x1F4AC; Executed SQL</div>"; // symbol popup with "..."
+								+ ">&#x1F4AC;</div>"; // symbol popup with "..."
 					}
 
 					return strVal;

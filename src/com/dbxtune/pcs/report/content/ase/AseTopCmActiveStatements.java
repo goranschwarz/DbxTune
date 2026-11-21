@@ -33,10 +33,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
+import com.dbxtune.utils.DbUtils;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.gui.ResultSetTableModel.TableStringRenderer;
 import com.dbxtune.pcs.DictCompression;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
+import com.dbxtune.pcs.report.content.ShowplanLinkBuilder;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
@@ -102,25 +104,48 @@ public class AseTopCmActiveStatements extends AseAbstract
 				@Override
 				public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
 				{
+					// SQL Text and Showplan: always "💬 Hover or Click to see ..." (the text in the cell made the rows very tall)
 					if ("MonSqlText_max".equals(colName))
 					{
-						strVal = strVal.replace("<html><pre>",   "");
-						strVal = strVal.replace("</pre></html>", "");
-
-						return "<xmp>" + strVal + "</xmp>";
+						String sqlText = stripHtmlPre(rstm.getValueAsString(row, col));
+						if (StringUtil.isNullOrBlank(sqlText) || "Not Available".equalsIgnoreCase(sqlText.trim()))
+							return strVal;
+						return getFormattedSqlAsTooltipDiv(sqlText, "Hover or Click to see SQL Text...", DbUtils.DB_PROD_NAME_SYBASE_ASE);
 					}
 					if ("ShowPlanText_max".equals(colName))
 					{
-						strVal = strVal.replace("<html><pre>",   "");
-						strVal = strVal.replace("</pre></html>", "");
+						String showplan = stripHtmlPre(rstm.getValueAsString(row, col));
+						if (StringUtil.isNullOrBlank(showplan) || "Not Available".equalsIgnoreCase(showplan.trim()))
+							return strVal;
 
-						return "<xmp>" + strVal + "</xmp>";
+						// Full report: open it in the Showplan Viewer (DbxCentral, as a text plan). The plan is written ONCE to the page (writePendingXmlPlans below)
+						if (isFullMessageType())
+						{
+							String planKey = "ActiveStmnt_" + row;
+							String sqlText = stripHtmlPre(rstm.getValueAsString(row, "MonSqlText_max"));
+							if ("Not Available".equalsIgnoreCase(StringUtil.nullToValue(sqlText, "").trim()))
+								sqlText = "";
+							String link = ShowplanLinkBuilder.buildViewPlanLinkHtml(getReportingInstance().getDbxCentralPublicBaseUrl(), getXmlPlanElementId(planKey), sqlText,
+									DbUtils.DB_PROD_NAME_SYBASE_ASE, getReportingInstance().getServerName(), rstm.getValueAsString(row, rstm.findColumnNoCase("dbname")),
+									"View Showplan", true, false);
+							if (StringUtil.hasValue(link))
+							{
+								registerXmlPlan(planKey, showplan);
+								return link;
+							}
+						}
+						// The mail (no JavaScript): hover / click
+						return getTextAsTooltipDiv(showplan, "Hover or Click to see Showplan...", 0);
 					}
 					return strVal;
 				}
 			};
 			sb.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
 			sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, tableRender));
+
+			// The Showplans that "View Showplan" opens, each as a hidden block (see the renderer above)
+			if (isFullMessageType())
+				writePendingXmlPlans(sb);
 
 
 			if (_sqTextRstm != null)
@@ -147,6 +172,14 @@ public class AseTopCmActiveStatements extends AseAbstract
 				sb.append(msOutlookAlternateText(showHideDiv, "ActiveSqlShowplan", null));
 			}
 		}
+	}
+
+	/** "<html><pre>text</pre></html>" or "<html>Showplan:<pre>text</pre></html>" -> "text" */
+	private static String stripHtmlPre(String str)
+	{
+		if (str == null)
+			return null;
+		return str.replace("<html>Showplan:<pre>", "").replace("<html><pre>", "").replace("</pre></html>", "");
 	}
 
 	@Override
@@ -306,11 +339,7 @@ public class AseTopCmActiveStatements extends AseAbstract
 					String  MonSqlText        = _shortRstm.getValueAsString (r, pos_MonSqlText);
 					String  ShowPlanText      = _shortRstm.getValueAsString (r, pos_ShowPlanText);
 
-					if (StringUtil.countLines(MonSqlText) > 5)
-						_shortRstm.setValueAtWithOverride("See SQL Table below...", r, pos_MonSqlText); // POSSIBLE: add all SQL Statements in a "collapsible" "summary section" (note: which is not available in MS Outlook)
-					
-					if (StringUtil.countLines(ShowPlanText) > 5)
-						_shortRstm.setValueAtWithOverride("See SQL Table below...", r, pos_ShowPlanText); // POSSIBLE: add all SQL Statements in a "collapsible" "summary section" (note: which is not available in MS Outlook)
+					// NOTE: The table keeps the whole text: the cell shows "Hover or Click to see ..." (see the renderer in writeMessageText)
 					
 					// Remove starting/ending '<html><pre>'
 					if (MonSqlText != null && MonSqlText.startsWith("<html><pre>") && MonSqlText.endsWith("</pre></html>"))

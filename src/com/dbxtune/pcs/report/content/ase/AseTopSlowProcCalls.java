@@ -96,23 +96,9 @@ public class AseTopSlowProcCalls extends AseAbstract
 			// Create a default renderer
 			TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
 			{
-				// The "Executed SQL" popup and "Skip This" in the ProcName cell, instead of 2 columns of their own
-				@Override
-				public boolean isColumnVisible(ResultSetTableModel rstm, int col, String colName)
-				{
-					return ! ("txt".equals(colName) || "SkipThis".equals(colName));
-				}
-
 				@Override
 				public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
 				{
-					if ("ProcName".equals(colName))
-					{
-						return infoCell("<b>" + strVal + "</b>"
-								, cellValue(rstm, row, col, "txt", null, "")
-								, infoSkipThis(rstm.getValueAsString(row, "SkipThis")));
-					}
-
 					if ("txt".equals(colName))
 					{
 						// Get Actual Executed SQL Text for current 'ProcName, LineNumber'
@@ -131,7 +117,7 @@ public class AseTopSlowProcCalls extends AseAbstract
 								+ "data-bs-target='#dbx-view-sqltext-dialog' "
 								+ "data-objectname='" + (procName + ":" + lineNumber) + "' "
 								+ "data-tooltip=\""   + executedSqlText     + "\" "
-								+ ">&#x1F4AC; Executed SQL</div>"; // symbol popup with "..."
+								+ ">&#x1F4AC;</div>"; // symbol popup with "..."
 					}
 
 					return strVal;

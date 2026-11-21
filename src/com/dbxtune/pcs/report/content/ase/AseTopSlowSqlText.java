@@ -134,7 +134,7 @@ public class AseTopSlowSqlText extends AseAbstract
 //			sb.append(_shortRstm.toHtmlTableString("sortable"));
 
 //			sb.append(toHtmlTable(_shortRstm));
-			sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, createInfoColumnRenderer()));
+			sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, null));
 
 			if (_longRstm != null)
 			{

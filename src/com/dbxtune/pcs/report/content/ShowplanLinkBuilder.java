@@ -123,6 +123,15 @@ public class ShowplanLinkBuilder
 	 */
 	public static String buildViewPlanLinkHtml(String dbxCentralBaseUrl, String planElementId, String sql, String dbVendor, String srv, String dbname, String linkText, boolean includeIcon)
 	{
+		return buildViewPlanLinkHtml(dbxCentralBaseUrl, planElementId, sql, dbVendor, srv, dbname, linkText, includeIcon, null);
+	}
+
+	/**
+	 * Same as above, with the plan's format
+	 * @param isXml  true: XML plan, false: text plan (for example the ASE classic sp_showplan output), null: ASE = XML, others: the viewer decides
+	 */
+	public static String buildViewPlanLinkHtml(String dbxCentralBaseUrl, String planElementId, String sql, String dbVendor, String srv, String dbname, String linkText, boolean includeIcon, Boolean isXml)
+	{
 		if (StringUtil.isNullOrBlank(planElementId) || StringUtil.isNullOrBlank(dbxCentralBaseUrl))
 			return "";
 
@@ -145,7 +154,7 @@ public class ShowplanLinkBuilder
 				+ "data-kind='showplan' "
 				+ "data-path='" + esc(dbxCentralBaseUrl + path) + "' "
 				+ "data-plan-id='" + esc(planElementId) + "' "
-				+ (isAse ? "data-isxml='true' " : "")
+				+ (isXml != null ? "data-isxml='" + isXml + "' " : isAse ? "data-isxml='true' " : "")
 				+ "data-sql='" + esc(StringUtil.nullToValue(sql, "")) + "' "
 				+ "data-srv='" + esc(StringUtil.nullToValue(srv, "")) + "' "
 				+ "data-dbname='" + esc(StringUtil.nullToValue(dbname, "")) + "' "

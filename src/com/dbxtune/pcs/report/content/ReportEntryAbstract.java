@@ -1137,11 +1137,11 @@ implements IReportEntry
 	 */
 	public static String infoCell(String... parts)
 	{
-		StringBuilder sb = new StringBuilder("<div style='white-space:nowrap; line-height:1.7; text-align:left;'>"); // left: a number column (hash code) is right aligned
+		StringBuilder sb = new StringBuilder("<div style='white-space:nowrap; line-height:1.5; text-align:left;'>"); // left: a number column (hash code) is right aligned
 		for (String part : parts)
 		{
 			if (StringUtil.hasValue(part))
-				sb.append("<div>").append(part).append("</div>");
+				sb.append("<div style='margin-bottom:12px;'>").append(part).append("</div>"); // a blank line between the parts
 		}
 		return sb.append("</div>").toString();
 	}
@@ -1157,6 +1157,8 @@ implements IReportEntry
 	{
 		if (StringUtil.isNullOrBlank(skipThisLink) || "&nbsp;".equals(skipThisLink))
 			return "";
+		// a small button (inline styles: the mail has no Bootstrap)
+		skipThisLink = skipThisLink.replace("<a ", "<a style='display:inline-block; padding:1px 8px; border:1px solid #adb5bd; border-radius:4px; font-size:11px; color:#495057; background:#f8f9fa; text-decoration:none;' ");
 		return skipThisLink + " " + infoLabel("", "Skip This: opens DbxCentral (in a new tab) where you can add this entry to the 'skip set'. "
 				+ "Entries in the skip set are left out of future reports, for example a statement that is known to be slow and that you can't do anything about.");
 	}
