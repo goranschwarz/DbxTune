@@ -220,6 +220,15 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
 	}
 
+	@Override
+	public String getLlmDigest()
+	{
+		// No SQL text: the statement is named by DBName + ObjectName (the '*ss...' name) + Hashkey. The columns depend on what was recorded.
+		return llmDigestRows(_shortRstm, 5, "DBName", "ObjectName", "Hashkey", "UseCount__sum",
+				"TotalElapsedTime__sum", "AvgElapsedTime", "TotalCpuTime__sum", "AvgCpuTime", "TotalEstWaitTime__sum",
+				"TotalLio__sum", "AvgLIO", "TotalPio__sum", "samples_count");
+	}
+
 	/**
 	 * Set descriptions for the table, and the columns
 	 */

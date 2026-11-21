@@ -254,6 +254,15 @@ extends PostgresAbstract
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
 	}
 
+	@Override
+	public String getLlmDigest()
+	{
+		// The statement is named by queryid (+ datname, usename); NOT the 'query' column
+		return llmDigestRows(_shortRstm, 10, "queryid", "datname", "usename", "calls__sum", "total_time__sum", "total_time__per_call",
+				"rows__sum", "cache_hit_pct__avg", "logical_reads__per_call", "shared_blks_read__sum", "temp_blks_written__sum",
+				"wal_mb__sum", "plan_time__sum", "blk_read_time__per_call");
+	}
+
 	/**
 	 * Set descriptions for the table, and the columns
 	 */

@@ -39,6 +39,7 @@ import com.dbxtune.cm.os.CmOsVmstat;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
+import com.dbxtune.pcs.report.content.ReportChartAbstract;
 import com.dbxtune.pcs.report.content.RecordingInfo;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.AggType;
@@ -173,6 +174,19 @@ public class OsCpuUsageOverview extends OsAbstract
 	public boolean hasIssueToReport()
 	{
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
+	}
+
+	@Override
+	public String getLlmDigest()
+	{
+		StringBuilder sb = new StringBuilder();
+		llmDigestAdd(sb, "OS CPU (mpstat, all CPUs)",           ReportChartAbstract.llmDigestSeries(_CmOsMpstat_MpSum,          4, "%"));
+		llmDigestAdd(sb, "OS load average, adjusted per CPU",   ReportChartAbstract.llmDigestSeries(_CmOsUptime_AdjLoadAverage, 3, null));
+		llmDigestAdd(sb, "Windows processor queue length",      ReportChartAbstract.llmDigestSeries(_CmOsUptime_WinPql,         3, null));
+		llmDigestAdd(sb, "OS swap in/out (vmstat)",             ReportChartAbstract.llmDigestSeries(_CmOsVmstat_SwapInOut,      2, null));
+		llmDigestAdd(sb, "Windows paging",                      ReportChartAbstract.llmDigestSeries(_CmOsMeminfo_WinPaging,     3, null));
+		llmDigestAdd(sb, "OS memory available",                 ReportChartAbstract.llmDigestSeries(_CmOsMeminfo_MemAvailable,  3, null));
+		return sb.length() == 0 ? null : sb.toString();
 	}
 
 	/** 

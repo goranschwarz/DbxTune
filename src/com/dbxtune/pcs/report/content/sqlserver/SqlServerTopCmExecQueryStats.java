@@ -259,6 +259,16 @@ extends SqlServerAbstract
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
 	}
 
+	@Override
+	public String getLlmDigest()
+	{
+		// The statement is named by query_hash (+ dbname, ProcName); NOT the SqlText column
+		return llmDigestRows(_shortRstm, 5, "query_hash", "dbname", "ProcName", "plan_hash__count", "execution_count__sum",
+				"total_worker_time_ms__sum", "AvgWorkerTimeMs", "total_elapsed_time_ms__sum", "AvgElapsedTimeMs", "total_est_wait_time_ms__sum",
+				"total_logical_reads__sum", "AvgLogicalReads", "total_physical_reads__sum", "total_logical_writes__sum", "total_rows__sum",
+				"total_grant_kb__sum", "total_spills__sum", "efficiency_pct");
+	}
+
 
 	@Override
 	public List<ReportingIndexEntry> getReportingIndexes()

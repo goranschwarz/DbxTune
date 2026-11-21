@@ -32,6 +32,7 @@ import com.dbxtune.config.dict.SqlServerWaitTypeDictionary;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
+import com.dbxtune.pcs.report.content.ReportChartAbstract;
 import com.dbxtune.pcs.report.content.ReportChartTimeSeriesStackedBar.TopGroupCountReport;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.AggType;
@@ -120,6 +121,15 @@ extends SqlServerAbstract
 	public boolean hasIssueToReport()
 	{
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
+	}
+
+	@Override
+	public String getLlmDigest()
+	{
+		StringBuilder sb = new StringBuilder();
+		llmDigestAdd(sb, "Wait time per wait type (the top wait types), seconds", ReportChartAbstract.llmDigestSeries(_CmWaitStat_all,      10, "s"));
+		llmDigestAdd(sb, "Wait time, pre-selected wait types, seconds",          ReportChartAbstract.llmDigestSeries(_CmWaitStat_selected,  8, "s"));
+		return sb.length() == 0 ? null : sb.toString();
 	}
 
 

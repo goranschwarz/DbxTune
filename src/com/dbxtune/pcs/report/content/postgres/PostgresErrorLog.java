@@ -224,6 +224,13 @@ extends PostgresAbstract
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue (the alarms for the error log does that)
 	}
 
+	@Override
+	public String getLlmDigest()
+	{
+		// The SQLSTATE and the counts only: NOT 'example_message' (it can hold data values and SQL text)
+		return llmDigestRows(_countRstm, 20, "error_severity", "sql_state_code", "sql_state_code_desc", "message_count", "databases", "first_entry", "last_entry");
+	}
+
 	/** The newest ## rows (the count table always has all of them) */
 	@Override
 	public int getTopRowsDefault()

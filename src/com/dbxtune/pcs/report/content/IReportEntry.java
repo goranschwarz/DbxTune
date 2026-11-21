@@ -196,6 +196,21 @@ public interface IReportEntry
 	}
 
 	/**
+	 * More numbers for the "AI Analysis" digest: DailySummaryReportDefault writes it, hidden, into the full report, and
+	 * DbxCentral builds an LLM prompt from it. The level, the reason and the key facts are written for EVERY entry already:
+	 * this is only what the entry has on top of that, typically the top rows of its main table
+	 * ({@code ReportEntryAbstract.llmDigestRows}) or the numbers of a chart ({@code ReportChartAbstract.llmDigestSeries}).
+	 * <p>
+	 * Numbers and names only: NEVER SQL text, error message texts or data values (they would leave the site).
+	 *
+	 * @return plain text (a few lines), or null when there is nothing more
+	 */
+	default String getLlmDigest()
+	{
+		return null;
+	}
+
+	/**
 	 * Create Report entry with data from the database...
 	 * @param conn            Connection to the DBMS which stores data
 	 * @param srvName         Name of the DBMS Server Instance

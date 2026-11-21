@@ -349,6 +349,74 @@ implements IReportEntry
 		return rstm.toHtmlTableString("sortable", true, true, colNameValueTagMap, new ReportEntryTableStringRenderer());
 	}
 
+	/**
+	 * For {@link IReportEntry#getLlmDigest()}: the first rows of a table as a compact text table, "col | col | ..." and one line per row.
+	 * Columns that are not in the table are skipped (some tables depend on what was recorded). Only pass number and name
+	 * columns: NEVER SQL text, error message texts or data values.
+	 *
+	 * @return the text, or null when the table is null or empty
+	 */
+	public static String llmDigestRows(ResultSetTableModel rstm, int maxRows, String... colNames)
+	{
+		if (rstm == null || rstm.getRowCount() == 0)
+			return null;
+
+		List<String> cols = new ArrayList<>();
+		for (String col : colNames)
+			if (rstm.findColumn(col) >= 0)
+				cols.add(col);
+		if (cols.isEmpty())
+			return null;
+
+		StringBuilder sb = new StringBuilder();
+		sb.append(String.join(" | ", cols)).append("\n");
+		int rows = Math.min(maxRows, rstm.getRowCount());
+		for (int r = 0; r < rows; r++)
+		{
+			for (int c = 0; c < cols.size(); c++)
+			{
+				if (c > 0)
+					sb.append(" | ");
+				sb.append(llmDigestValue(rstm.getValueAsObject(r, cols.get(c))));
+			}
+			sb.append("\n");
+		}
+		if (rstm.getRowCount() > rows)
+			sb.append("(").append(rstm.getRowCount() - rows).append(" more rows not shown)\n");
+		return sb.toString();
+	}
+
+	/** For {@link IReportEntry#getLlmDigest()}: adds "title:" and the text (from llmDigestRows/llmDigestSeries), nothing when the text is null */
+	public static void llmDigestAdd(StringBuilder sb, String title, String text)
+	{
+		if (StringUtil.isNullOrBlank(text))
+			return;
+		sb.append(title).append(":\n").append(text);
+	}
+
+	/** A value for the LLM digest: numbers rounded (1 decimal below 100), timestamps to the minute, text on one line and cut */
+	public static String llmDigestValue(Object val)
+	{
+		if (val == null)
+			return "";
+		if (val instanceof byte[]) // for example a SQL Server query_hash
+			return StringUtil.bytesToHex("0x", (byte[]) val);
+		if (val instanceof java.util.Date)
+			return new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm").format((java.util.Date) val);
+		if (val instanceof Number)
+		{
+			double d = ((Number) val).doubleValue();
+			if (d == Math.rint(d) || Math.abs(d) >= 100)
+				return Long.toString(Math.round(d));
+			return Double.toString(Math.round(d * 10) / 10.0);
+		}
+		String str = val.toString();
+		if (StringUtil.containsHtml(str)) // some tables get links/markup when they are written
+			str = StringEscapeUtils.unescapeHtml4(StringUtil.stripHtml(str));
+		str = str.replaceAll("\\s+", " ").replace('|', '/').trim();
+		return str.length() <= 80 ? str : str.substring(0, 80) + "...";
+	}
+
 	public ResultSetTableModel createResultSetTableModel(ResultSet rs, String name, String sql)
 	throws SQLException
 	{

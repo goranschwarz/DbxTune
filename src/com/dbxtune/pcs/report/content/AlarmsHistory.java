@@ -168,6 +168,13 @@ extends ReportEntryAbstract
 		return java.util.Map.of("Alarms raised", "<b>" + (issue + fyi) + "</b> <span style='color:#5d6878;'>(" + issue + " WARNING/ERROR)</span>");
 	}
 
+	@Override
+	public String getLlmDigest()
+	{
+		// extraInfo = the alarm's object (database, table, ...); NOT the description (it can hold SQL text)
+		return llmDigestRows(_summaryRstm, 25, "alarmClass", "alarmAction", "severity", "extraInfo", "raiseCount", "firstRaise", "lastRaise");
+	}
+
 	/**
 	 * Count alarms per level, from rows with columns: severity, alarmAction, cnt
 	 * <ul>

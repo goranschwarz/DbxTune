@@ -311,6 +311,15 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
 	}
 
+	@Override
+	public String getLlmDigest()
+	{
+		// The statement is named by its hash only (no SQL text); -1/-2/-3 = statements without (parsable) SQL text
+		return llmDigestRows(_shortRstm, 10, "NormJavaSqlHashCode", "ExecCount", "DistinctSQLTextCount",
+				"Elapsed_ms__sum", "Elapsed_ms__avg", "CpuTime__sum", "CpuTime__avg", "WaitTime__sum", "WaitTime__avg",
+				"LogicalReads__sum", "LogicalReads__avg", "PhysicalReads__sum", "RowsAffected__sum", "LogicalReadsPerRowsAffected__avg", "MemUsageKB__sum");
+	}
+
 	/**
 	 * Set descriptions for the table, and the columns
 	 */

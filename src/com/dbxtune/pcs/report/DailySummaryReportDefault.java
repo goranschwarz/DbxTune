@@ -1323,6 +1323,7 @@ extends DailySummaryReportAbstract
 				writer.append("<h2>" + getReportName() + " for Servername: ").append(getServerName()).append("</h2>\n");
 			}
 			writer.append( createDbxCentralLink(true) );
+			writer.append( createLlmAnalysisButton() );
 
 			// Key facts: the same row as in the mail
 			List<String> facts = getKeyFactCells();
@@ -1608,7 +1609,10 @@ extends DailySummaryReportAbstract
 		writer.append("\n");
 		writer.append("    </script> \n");
 		writer.append("\n");
-		
+
+		// The "AI Analysis" digest: last in the file, so DbxCentral finds it quickly
+		writer.append( createLlmDigestScript() );
+
 		writer.append("</body> \n");
 
 		// Collect some garbage
@@ -1844,6 +1848,194 @@ extends DailySummaryReportAbstract
 			}
 		}
 		return facts;
+	}
+
+	//--------------------------------------------------------------------------------
+	// "AI Analysis": a digest of the report for an LLM (read by DbxCentral's LlmDsrAnalysisServlet)
+	//--------------------------------------------------------------------------------
+
+	/** Write the digest into the full report, and the "AI Analysis" button */
+	public static final String  PROPKEY_llmDigestEnabled         = "DailySummaryReport.llm.digest.enabled";
+	public static final boolean DEFAULT_llmDigestEnabled         = true;
+
+	/** Max characters of the 'data' of one section (IReportEntry.getLlmDigest) */
+	public static final String  PROPKEY_llmDigestSectionMaxChars = "DailySummaryReport.llm.digest.section.maxChars";
+	public static final int     DEFAULT_llmDigestSectionMaxChars = 4000;
+
+	/** Max characters of the whole digest: the sections that do not fit are only listed in 'dropped' */
+	public static final String  PROPKEY_llmDigestTotalMaxChars   = "DailySummaryReport.llm.digest.total.maxChars";
+	public static final int     DEFAULT_llmDigestTotalMaxChars   = 40000;
+
+	/** The id of the {@code <script type='application/json'>} element that holds the digest */
+	public static final String  LLM_DIGEST_ELEMENT_ID            = "dsr-llm-digest";
+
+	/** The version of the digest's layout, for DbxCentral */
+	public static final int     LLM_DIGEST_VERSION               = 1;
+
+	private static boolean isLlmDigestEnabled()
+	{
+		return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_llmDigestEnabled, DEFAULT_llmDigestEnabled);
+	}
+
+	/**
+	 * The "AI Analysis" button: opens DbxCentral's page that builds an LLM prompt from this report's digest.
+	 * <p>
+	 * The report file name is not known here (it is given when the report is saved, after this), so the link names the
+	 * server and the report day; DbxCentral finds the file and checks the period in its digest. When this page is itself
+	 * served by DbxCentral as {@code /report?op=view&name=<file>}, the script uses that exact file instead, and a
+	 * same-origin link (no http/https switch).
+	 */
+	private String createLlmAnalysisButton()
+	{
+		if ( ! isLlmDigestEnabled() )
+			return "";
+		String baseUrl = getDbxCentralPublicBaseUrl();
+		Timestamp beginTs = getReportPeriodOrRecordingBeginTime();
+		if (StringUtil.isNullOrBlank(baseUrl) || beginTs == null)
+			return "";
+
+		String query = "?srv=" + java.net.URLEncoder.encode(StringUtil.nullToValue(getServerName(), ""), StandardCharsets.UTF_8)
+		             + "&period=" + new SimpleDateFormat("yyyy-MM-dd").format(beginTs);
+
+		return "<div style='margin-top:8px;'>"
+		     + "<a id='dsr-llm-analysis-btn' class='btn btn-sm btn-outline-primary' target='_blank' href='" + baseUrl + "/llm-dsr-analysis" + query + "'"
+		     + " title='Open DbxCentral, where an AI (LLM) can review this whole report and give a prioritized list of improvements. Only numbers are sent, no SQL text.'>"
+		     + "AI Analysis</a> <span style='color:#5d6878; font-size:12px;'>Ask an AI to review the whole report</span>"
+		     + "</div>\n"
+		     + "<script>(function() { try { \n"
+		     + "  var a = document.getElementById('dsr-llm-analysis-btn'); \n"
+		     + "  if ( ! a || ! /\\/report$/.test(window.location.pathname) ) return; \n"
+		     + "  var p = new URLSearchParams(window.location.search); \n"
+		     + "  if (p.get('op') === 'view' && p.get('name')) a.href = '/llm-dsr-analysis?name=' + encodeURIComponent(p.get('name')); \n"
+		     + "  else a.href = '/llm-dsr-analysis' + a.href.substring(a.href.indexOf('?')); \n"
+		     + "} catch (e) { /* keep the absolute link */ } })();</script>\n";
+	}
+
+	/**
+	 * The digest of the whole report for an LLM, as {@code <script type='application/json' id='dsr-llm-digest'>}.
+	 * Per section: the level, the reason, the key facts (what every entry has) and {@link IReportEntry#getLlmDigest()}.
+	 * Numbers and names only, no SQL text. Sections with level ISSUE first, then FYI, then the rest, within the size limits.
+	 */
+	private String createLlmDigestScript()
+	{
+		if ( ! isLlmDigestEnabled() )
+			return "";
+		try
+		{
+			Configuration conf = Configuration.getCombinedConfiguration();
+			int sectionMaxChars = conf.getIntProperty(PROPKEY_llmDigestSectionMaxChars, DEFAULT_llmDigestSectionMaxChars);
+			int totalMaxChars   = conf.getIntProperty(PROPKEY_llmDigestTotalMaxChars,   DEFAULT_llmDigestTotalMaxChars);
+
+			com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+			SimpleDateFormat ymdHm = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+			Timestamp beginTs = getReportPeriodOrRecordingBeginTime();
+			Timestamp endTs   = getReportPeriodOrRecordingEndTime();
+
+			com.fasterxml.jackson.databind.node.ObjectNode root = om.createObjectNode();
+			root.put("version",     LLM_DIGEST_VERSION);
+			root.put("srvName",     getServerName());
+			root.put("dbxApp",      getRecDbxAppName());
+			root.put("dbmsVersion", getDbmsVersionStr() == null ? null : getDbmsVersionStr().replaceAll("\\s+", " ").trim());
+			root.put("periodBegin", beginTs == null ? null : ymdHm.format(beginTs));
+			root.put("periodEnd",   endTs   == null ? null : ymdHm.format(endTs));
+			root.put("reportLevel", getIssueLevel().name());
+			root.put("createdAt",   ymdHm.format(new Date()));
+
+			com.fasterxml.jackson.databind.node.ArrayNode sections = root.putArray("sections");
+			com.fasterxml.jackson.databind.node.ArrayNode namesOnly = om.createArrayNode();
+			com.fasterxml.jackson.databind.node.ArrayNode disabled = om.createArrayNode();
+			com.fasterxml.jackson.databind.node.ArrayNode dropped  = om.createArrayNode();
+
+			// ISSUE first, then FYI, then the rest (a stable sort keeps the report order within a level)
+			List<IReportEntry> entries = new ArrayList<>(getReportEntries());
+			entries.sort((a, b) -> getIssueLevel(b).compareTo(getIssueLevel(a)));
+
+			int totalChars = om.writeValueAsString(root).length();
+			for (IReportEntry entry : entries)
+			{
+				String subject = StringUtil.stripHtml(entry.getSubject());
+				if ( ! entry.isEnabled() )
+				{
+					String reason = entry.getDisabledReason();
+					disabled.add(subject + (StringUtil.hasValue(reason) ? " - " + oneLineText(reason, 200) : ""));
+					continue;
+				}
+
+				try
+				{
+					IssueLevel level = getIssueLevel(entry);
+
+					com.fasterxml.jackson.databind.node.ObjectNode keyFacts = om.createObjectNode();
+					for (java.util.Map.Entry<String, String> fact : entry.getKeyFacts().entrySet())
+						keyFacts.put(oneLineText(fact.getKey(), 100), oneLineText(fact.getValue(), 200));
+
+					String data = entry.getLlmDigest();
+					boolean cut = false;
+					if (data != null && data.length() > sectionMaxChars)
+					{
+						int nl = data.lastIndexOf('\n', sectionMaxChars);
+						data = data.substring(0, nl > 0 ? nl + 1 : sectionMaxChars);
+						cut  = true;
+					}
+
+					boolean hasProblem = entry.hasProblem();
+					String  warning    = entry.hasWarningMsg() ? oneLineText(entry.getWarningMsg(), 300) : null;
+					String  reason     = level == IssueLevel.NONE ? null : oneLineText(entry.getIssueReason(), 300);
+
+					// Level NONE and no numbers for the digest (the section may still have tables in the report): only its name
+					if (level == IssueLevel.NONE && keyFacts.isEmpty() && StringUtil.isNullOrBlank(data) && ! hasProblem && warning == null)
+					{
+						namesOnly.add(subject);
+						continue;
+					}
+
+					com.fasterxml.jackson.databind.node.ObjectNode sect = om.createObjectNode();
+					sect.put("id",      StringUtil.stripAllNonAlphaNum(entry.getSubject())); // the anchor in the report, see the TOC
+					sect.put("subject", subject);
+					sect.put("level",   level.name());
+					if (StringUtil.hasValue(reason)) sect.put("reason", reason);
+					if ( ! keyFacts.isEmpty() )      sect.set("keyFacts", keyFacts);
+					if (hasProblem)                  sect.put("problem", "The section could not be created completely (see the report)");
+					if (warning != null)             sect.put("warning", warning);
+					if (StringUtil.hasValue(data))   sect.put("data", data);
+					if (cut)                         sect.put("cut", true);
+
+					int sectChars = om.writeValueAsString(sect).length();
+					if (totalChars + sectChars > totalMaxChars)
+					{
+						dropped.add(subject);
+						continue;
+					}
+					totalChars += sectChars;
+					sections.add(sect);
+				}
+				catch (RuntimeException ex)
+				{
+					_logger.warn("Problems creating the LLM digest for report entry '" + entry.getClass().getSimpleName() + "'. Skipping it.", ex);
+				}
+			}
+			if ( ! namesOnly.isEmpty() ) root.set("namesOnly", namesOnly);
+			if ( ! disabled.isEmpty() ) root.set("disabled", disabled);
+			if ( ! dropped .isEmpty() ) root.set("dropped",  dropped);
+
+			// '</' would end the script element: '<\/' is the same in JSON
+			String json = om.writeValueAsString(root).replace("</", "<\\/");
+			return "<script type='application/json' id='" + LLM_DIGEST_ELEMENT_ID + "'>" + json + "</script>\n";
+		}
+		catch (Exception ex)
+		{
+			_logger.warn("Problems creating the LLM digest for the Daily Summary Report. The report is written without it.", ex);
+			return "";
+		}
+	}
+
+	/** HTML to one line of plain text, cut at maxLen */
+	private static String oneLineText(String html, int maxLen)
+	{
+		if (html == null)
+			return null;
+		String txt = org.apache.commons.text.StringEscapeUtils.unescapeHtml4(StringUtil.stripHtml(html)).replace(' ', ' ').replaceAll("\\s+", " ").trim();
+		return txt.length() <= maxLen ? txt : txt.substring(0, maxLen) + "...";
 	}
 
 	/** The period of the report, for example "Thursday 2026-11-19 &nbsp;00:00 &ndash; 23:59" ("" when not known) */

@@ -137,6 +137,13 @@ extends ReportEntryAbstract
 	}
 
 	@Override
+	public String getLlmDigest()
+	{
+		// extraInfo = the alarm's object (database, table, ...); NOT the description (it can hold SQL text)
+		return llmDigestRows(_shortRstm, 25, "createTime", "alarmClass", "severity", "extraInfo", "state");
+	}
+
+	@Override
 	public String[] getMandatoryTables()
 	{
 		String schemaName = getReportingInstance().getDbmsSchemaName();

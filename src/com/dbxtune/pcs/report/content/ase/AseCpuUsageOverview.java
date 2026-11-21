@@ -211,6 +211,23 @@ public class AseCpuUsageOverview extends AseAbstract
 	}
 
 	@Override
+	public String getLlmDigest()
+	{
+		StringBuilder sb = new StringBuilder();
+		llmDigestAdd(sb, "ASE CPU busy (CmSummary)",                     ReportChartAbstract.llmDigestSeries(_CmSummary_aaCpuGraph,             3, "%"));
+		llmDigestAdd(sb, "ASE engines CPU (CmEngines)",                  ReportChartAbstract.llmDigestSeries(_CmEngines_cpuSum,                 3, "%"));
+		llmDigestAdd(sb, "Engine run queue length (CmSysLoad)",          ReportChartAbstract.llmDigestSeries(_CmSysLoad_EngineRunQLengthGraph,  3, null));
+		llmDigestAdd(sb, "CPU usage by execution phase (CmExecutionTime)", ReportChartAbstract.llmDigestSeries(_CmExecutionTime_CpuUsagePct,  6, "%"));
+		llmDigestAdd(sb, "Logical reads per second (CmSummary)",         ReportChartAbstract.llmDigestSeries(_CmSummary_LogicalReadGraph,       2, null));
+		llmDigestAdd(sb, "Blocking locks (CmSummary)",                   ReportChartAbstract.llmDigestSeries(_CmSummary_BlockingLocksGraph,     2, null));
+		llmDigestAdd(sb, "Deadlocks (CmSummary)",                        ReportChartAbstract.llmDigestSeries(_CmSummary_DeadlockCount,          2, null));
+		llmDigestAdd(sb, "Oldest open transaction, seconds (CmSummary)", ReportChartAbstract.llmDigestSeries(_CmSummary_OldestTranInSecGraph,   2, "s"));
+		llmDigestAdd(sb, "Lock wait time (CmSysWaits)",                  ReportChartAbstract.llmDigestSeries(_CmSysWaits_sysWaitLockTime,       2, null));
+		llmDigestAdd(sb, "Data cache hit rate per pool (CmCachePools)",  ReportChartAbstract.llmDigestSeries(_CmCachePools_PoolHitRate,         5, "%"));
+		return sb.length() == 0 ? null : sb.toString();
+	}
+
+	@Override
 	public boolean hasIssueToReport()
 	{
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue

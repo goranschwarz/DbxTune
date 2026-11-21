@@ -36,6 +36,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -330,6 +331,99 @@ public abstract class ReportChartAbstract implements IReportChart
 		if (cnt == 0)
 			return null;
 		return Math.round(sum / cnt) + unit + " / " + Math.round(max) + unit;
+	}
+
+	/**
+	 * For {@link IReportEntry#getLlmDigest()}: the numbers of a chart, one line per series, the 'maxSeries' series with the highest total first.
+	 * <ul>
+	 *   <li>A time series (line) chart: avg, p95, max and the time of the max (a level, like CPU %)</li>
+	 *   <li>A stacked bar chart (one bar per interval): the total of the day, avg and max per interval, and the interval of the max (an amount, like wait seconds)</li>
+	 * </ul>
+	 *
+	 * @return the text, or null when the chart has no data
+	 */
+	public static String llmDigestSeries(IReportChart chart, int maxSeries, String unit)
+	{
+		if (chart == null)
+			return null;
+		Dataset dataset = chart.getDataset();
+
+		// One entry per series that has data: name -> the values and the time (label) of each
+		List<String>       names  = new ArrayList<>();
+		List<List<Double>> values = new ArrayList<>();
+		List<List<Object>> times  = new ArrayList<>();
+		boolean isLine = dataset instanceof TimeSeriesCollection;
+		if (isLine)
+		{
+			TimeSeriesCollection tsc = (TimeSeriesCollection) dataset;
+			for (int s = 0; s < tsc.getSeriesCount(); s++)
+			{
+				TimeSeries ts = tsc.getSeries(s);
+				List<Double> v = new ArrayList<>();
+				List<Object> t = new ArrayList<>();
+				for (int i = 0; i < ts.getItemCount(); i++)
+					if (ts.getValue(i) != null) { v.add(ts.getValue(i).doubleValue()); t.add(ts.getTimePeriod(i).getStart()); }
+				names.add(String.valueOf(ts.getKey())); values.add(v); times.add(t);
+			}
+		}
+		else if (dataset instanceof CategoryDataset)
+		{
+			CategoryDataset cd = (CategoryDataset) dataset;
+			for (int r = 0; r < cd.getRowCount(); r++)
+			{
+				List<Double> v = new ArrayList<>();
+				List<Object> t = new ArrayList<>();
+				for (int c = 0; c < cd.getColumnCount(); c++)
+					if (cd.getValue(r, c) != null) { v.add(cd.getValue(r, c).doubleValue()); t.add(cd.getColumnKey(c)); }
+				names.add(String.valueOf(cd.getRowKey(r))); values.add(v); times.add(t);
+			}
+		}
+		else
+		{
+			return null;
+		}
+
+		// One row per series: name, sum, avg, p95, max, time of max
+		List<Object[]> rows = new ArrayList<>();
+		for (int s = 0; s < names.size(); s++)
+		{
+			List<Double> v = values.get(s);
+			if (v.isEmpty())
+				continue;
+			double sum = 0, max = -Double.MAX_VALUE;
+			Object maxAt = null;
+			for (int i = 0; i < v.size(); i++)
+			{
+				sum += v.get(i);
+				if (v.get(i) > max) { max = v.get(i); maxAt = times.get(s).get(i); }
+			}
+			List<Double> sorted = new ArrayList<>(v);
+			Collections.sort(sorted);
+			double p95 = sorted.get((int) Math.max(0, Math.min(sorted.size() - 1, Math.ceil(sorted.size() * 0.95) - 1)));
+			rows.add(new Object[] { names.get(s), sum, sum / v.size(), p95, max, maxAt });
+		}
+		if (rows.isEmpty())
+			return null;
+		rows.sort((a, b) -> Double.compare((Double) b[1], (Double) a[1]));
+
+		String u = StringUtil.hasValue(unit) ? " (" + unit.trim() + ")" : "";
+		StringBuilder sb = new StringBuilder();
+		if (isLine)
+			sb.append("series | avg").append(u).append(" | p95").append(u).append(" | max").append(u).append(" | max at\n");
+		else
+			sb.append("series | total").append(u).append(" | avg per interval | max per interval | max at\n");
+		for (int r = 0; r < Math.min(maxSeries, rows.size()); r++)
+		{
+			Object[] row = rows.get(r);
+			sb.append(ReportEntryAbstract.llmDigestValue(row[0])).append(" | ")
+			  .append(ReportEntryAbstract.llmDigestValue(isLine ? row[2] : row[1])).append(" | ")
+			  .append(ReportEntryAbstract.llmDigestValue(isLine ? row[3] : row[2])).append(" | ")
+			  .append(ReportEntryAbstract.llmDigestValue(row[4])).append(" | ")
+			  .append(ReportEntryAbstract.llmDigestValue(row[5])).append("\n");
+		}
+		if (rows.size() > maxSeries)
+			sb.append("(").append(rows.size() - maxSeries).append(" smaller series not shown)\n");
+		return sb.toString();
 	}
 
 	public Double getDatasetMinValue() { return _minDataValue; }

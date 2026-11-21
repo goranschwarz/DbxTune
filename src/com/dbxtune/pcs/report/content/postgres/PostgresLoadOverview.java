@@ -125,6 +125,16 @@ extends PostgresAbstract
 	}
 
 	@Override
+	public String getLlmDigest()
+	{
+		StringBuilder sb = new StringBuilder();
+		llmDigestAdd(sb, "The whole day", llmDigestRows(_dayRstm, 1, "commits", "commits_per_sec", "rollbacks", "rollback_pct",
+				"rows_inserted", "rows_updated", "rows_deleted", "temp_mb", "deadlocks", "cache_hit_pct", "disk_reads_mb", "connections__max", "max_connections", "hours"));
+		llmDigestAdd(sb, "Per hour", llmDigestRows(_hourRstm, 24, "hour", "commits_per_sec", "rollback_pct", "rows_written", "temp_mb", "cache_hit_pct", "connections__max"));
+		return sb.length() == 0 ? null : sb.toString();
+	}
+
+	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		String schema = getReportingInstance().getDbmsSchemaName();

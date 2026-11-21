@@ -128,6 +128,14 @@ extends SqlServerAbstract
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
 	}
 
+	@Override
+	public String getLlmDigest()
+	{
+		return llmDigestRows(_shortRstm, 10, "DbName", "SchemaName", "ObjectName", "execution_count__sum",
+				"total_worker_time_ms__sum", "AvgWorkerTimeMs", "total_elapsed_time_ms__sum", "AvgElapsedTimeMs",
+				"total_logical_reads__sum", "AvgLogicalReads", "total_physical_reads__sum", "total_logical_writes__sum", "total_spills__sum");
+	}
+
 
 	@Override
 	public String[] getMandatoryTables()
