@@ -87,9 +87,29 @@ extends Db2Abstract
 	/** At most this many plans per statement (the same EXECUTABLE_ID normally has the same plan: a new plan gives a new EXECUTABLE_ID) */
 	private static final int MAX_PLANS_PER_STATEMENT = 2;
 
-	public Db2TopSql(DailySummaryReportAbstract reportingInstance)
+	/** One section per measure (as SQL Server, ASE, Postgres, Oracle and MySQL): each with its own top statements */
+	public enum ReportType
+	{
+		STMT_TIME, CPU_TIME, ROWS_READ, PHYSICAL_READS, LOCK_WAIT, EXECUTIONS
+	};
+
+	private ReportType _reportType;
+	private String     _orderByCol;    // the column the section is ordered by (highlighted in the table)
+	private String     _measureText;   // what the section is about, in words
+	private String     _noRowsText;    // when no statement has anything of it
+
+	public Db2TopSql(DailySummaryReportAbstract reportingInstance, ReportType reportType)
 	{
 		super(reportingInstance);
+		_reportType = reportType;
+
+		if      (ReportType.STMT_TIME     .equals(reportType)) { _orderByCol = "STMT_EXEC_TIME_MS__sum"; _measureText = "execution time";                   _noRowsText = "No statements were found."; }
+		else if (ReportType.CPU_TIME      .equals(reportType)) { _orderByCol = "TOTAL_CPU_TIME_MS__sum"; _measureText = "CPU time";                         _noRowsText = "No statements were found."; }
+		else if (ReportType.ROWS_READ     .equals(reportType)) { _orderByCol = "ROWS_READ__sum";         _measureText = "rows read";                        _noRowsText = "No statement read any rows in the period."; }
+		else if (ReportType.PHYSICAL_READS.equals(reportType)) { _orderByCol = "PHYSICAL_READS__sum";    _measureText = "physical reads (pages read from disk)"; _noRowsText = "No statement read any page from disk in the period."; }
+		else if (ReportType.LOCK_WAIT     .equals(reportType)) { _orderByCol = "LOCK_WAIT_TIME_MS__sum"; _measureText = "time waiting for locks";           _noRowsText = "No statement waited for locks in the period."; }
+		else if (ReportType.EXECUTIONS    .equals(reportType)) { _orderByCol = "NUM_EXECUTIONS__sum";    _measureText = "number of executions";             _noRowsText = "No statements were found."; }
+		else throw new IllegalArgumentException("Unhandled reportType='" + reportType + "'.");
 	}
 
 	@Override
@@ -101,7 +121,8 @@ extends Db2Abstract
 	@Override
 	public boolean hasShortMessageText()
 	{
-		return true;
+		// The mail has the STMT_TIME section only (as SQL Server: CPU_TIME), the other sections are in the full report
+		return ReportType.STMT_TIME.equals(_reportType);
 	}
 
 	@Override
@@ -110,7 +131,7 @@ extends Db2Abstract
 	{
 		if (_shortRstm.getRowCount() == 0)
 		{
-			w.append("No rows found <br>\n");
+			w.append(_noRowsText + "<br>\n");
 			return;
 		}
 
@@ -119,7 +140,7 @@ extends Db2Abstract
 			// Get a description of this section, and column names
 			w.append(getSectionDescriptionHtml(_shortRstm, true));
 
-			w.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
+			w.append("Row Count: " + _shortRstm.getRowCount() + " (the top " + getTopRows() + " on " + _measureText + ")&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
 
 			// The SQL Text is a "tooltip" in this table (the table below has it as text)
 			TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
@@ -148,8 +169,9 @@ extends Db2Abstract
 		if (_sqlTextRstm != null)
 		{
 			w.append("<br>\n");
-			w.append("<details open> \n");
-			w.append("<summary>Details for above Statements, including SQL Text (click to collapse) </summary> \n");
+			// Open in the first section (STMT_TIME), closed in the others (the page gets very long otherwise)
+			w.append("<details" + (ReportType.STMT_TIME.equals(_reportType) ? " open" : "") + "> \n");
+			w.append("<summary>Details for above Statements, including SQL Text (click to open/close) </summary> \n");
 			w.append("<br>\n");
 			w.append("SQL Text by 'EXECUTABLE_ID', Row Count: " + _sqlTextRstm.getRowCount() + "\n");
 			w.append(toHtmlTable(_sqlTextRstm));
@@ -268,7 +290,7 @@ extends Db2Abstract
 	@Override
 	public String getSubject()
 	{
-		return "Top SQL Statements (order by: STMT_EXEC_TIME_MS, origin: CmStatements / MON_GET_PKG_CACHE_STMT)";
+		return "Top SQL Statements - " + _reportType + " (order by: " + _orderByCol + ", origin: CmStatements / MON_GET_PKG_CACHE_STMT)";
 	}
 
 	@Override
@@ -304,12 +326,14 @@ extends Db2Abstract
 		// "per execution" over the whole period: NULL when no execution was counted in the period
 		String perExec = " / nullif(sum([NUM_EXECUTIONS]), 0)";
 
-		// The statements that are in the top ## on: time, rows read or executions
+		// This section's top ## on its measure (only statements that have some of it: no zero rows in "rows read", "physical reads", "lock wait")
 		// The same statement on several members (pureScale): one row (the counters are summed)
+		String having = "";
+		if      (ReportType.ROWS_READ     .equals(_reportType)) having = "    having sum([ROWS_READ])         > 0 \n";
+		else if (ReportType.PHYSICAL_READS.equals(_reportType)) having = "    having sum([PHYSICAL_READS])    > 0 \n";
+		else if (ReportType.LOCK_WAIT     .equals(_reportType)) having = "    having sum([LOCK_WAIT_TIME_MS]) > 0 \n";
 		String sql = getCmDiffColumnsAsSqlComment("CmStatements")
-			    + "select * \n"
-			    + "from ( \n"
-			    + "    select \n"
+			    + "    select top " + topRows + " \n"
 			    + "         [EXECUTABLE_ID] \n"
 			    + "        ,max([SECTION_TYPE])                                                                    as [SECTION_TYPE] \n"
 			    + "        ,max([STMT_TYPE_ID])                                                                    as [STMT_TYPE_ID] \n"
@@ -318,10 +342,6 @@ extends Db2Abstract
 			    + "        ,max([EFFECTIVE_ISOLATION])                                                             as [EFFECTIVE_ISOLATION] \n"
 			    + "        ,max([" + col_StmtText + "])                                                            as [SqlText] \n"
 			    + "        ,cast('' as varchar(512))                                                               as [ExecPlan] \n"
-			    + " \n"
-			    + "        ,row_number() over (order by sum([STMT_EXEC_TIME_MS]) desc)                             as [rank_time] \n"
-			    + "        ,row_number() over (order by sum([ROWS_READ])         desc)                             as [rank_rows] \n"
-			    + "        ,row_number() over (order by sum([NUM_EXECUTIONS])    desc)                             as [rank_execs] \n"
 			    + " \n"
 			    + "        ,cast('' as varchar(512))                                                               as [NUM_EXECUTIONS__chart] \n"
 			    + "        ,sum([NUM_EXECUTIONS])                                                                  as [NUM_EXECUTIONS__sum] \n"
@@ -378,11 +398,8 @@ extends Db2Abstract
 			    + "  " + sql_and_skipNewDiffRateRows
 			    + "  " + getReportPeriodSqlWhere()
 			    + "    group by [EXECUTABLE_ID] \n"
-			    + ") x \n"
-			    + "where [rank_time]  <= " + topRows + " \n"
-			    + "   or [rank_rows]  <= " + topRows + " \n"
-			    + "   or [rank_execs] <= " + topRows + " \n"
-			    + "order by [rank_time] \n"
+			    + having
+			    + "    order by [" + _orderByCol + "] desc \n"
 			    + "";
 
 		_shortRstm = executeQuery(conn, sql, true, "Db2TopSql", false); // false = do not truncate (the SQL Text)
@@ -391,12 +408,13 @@ extends Db2Abstract
 			return;
 
 		// Highlight sort column
-		_shortRstm.setHighlightSortColumns("STMT_EXEC_TIME_MS__sum");
+		_shortRstm.setHighlightSortColumns(_orderByCol);
 
 		_shortRstm.setDescription(
 				"The SQL Statements that used most resources during the period (from the table <code>CmStatements_diff</code>, the package cache).<br>" +
 				"A statement is one section in the package cache (<code>EXECUTABLE_ID</code>): the same text with parameter markers (?) is one statement, but the same text with other <i>literal</i> values is another one.<br>" +
-				"It is listed if it is in the top " + topRows + " on <b>time</b>, <b>rows read</b> or <b>executions</b> (the three <code>rank_</code> columns says where it's placed in each).<br>" +
+				"The top " + topRows + " on <b>" + _measureText + "</b> (ordered by: " + _orderByCol + "). " +
+				"There is one section like this for each of: execution time, CPU time, rows read, physical reads, lock wait time and executions. A statement can be in several of them.<br>" +
 				"The <code>__chart</code> columns shows <b>when</b> during the period, in 10 minute chunks. <code>NUM_EXECUTIONS__chart</code> is the number of executions, the others are the value <b>per execution</b> " +
 				"(a chunk where the statement ran, but no execution ended, is counted as one execution: Db2 counts an execution when it ends).<br>" +
 				"<b>Note</b>: The collector only records the statements that ran in the last 30 minutes, and of them the ones with most time (properties <code>CmStatements.sample.lastXminutes</code> and <code>CmStatements.sample.topRows</code>), every 5 minutes. " +
@@ -411,9 +429,6 @@ extends Db2Abstract
 		_shortRstm.setColumnDescription("EFFECTIVE_ISOLATION"              , "The isolation level: UR, CS, RS or RR");
 		_shortRstm.setColumnDescription("SqlText"                          , "The SQL Text: click to see it (it is also in the table below)");
 		_shortRstm.setColumnDescription("ExecPlan"                         , "The execution plan(s) the collector got while the statement was running (CmActiveStatements, only when the explain tables exist for the login): it is in the table below");
-		_shortRstm.setColumnDescription("rank_time"                        , "Place in the list when it's sorted on time (1 = most)");
-		_shortRstm.setColumnDescription("rank_rows"                        , "Place in the list when it's sorted on rows read (1 = most)");
-		_shortRstm.setColumnDescription("rank_execs"                       , "Place in the list when it's sorted on executions (1 = most)");
 		_shortRstm.setColumnDescription("NUM_EXECUTIONS__chart"            , "Chart: number of executions, in 10 minute chunks\nSo you can see WHEN the statement was executed.");
 		_shortRstm.setColumnDescription("NUM_EXECUTIONS__sum"              , "Number of executions");
 		_shortRstm.setColumnDescription("STMT_EXEC_TIME_MS__chart"         , "Chart: time for ONE execution in milliseconds, in 10 minute chunks\nSo you can see when the statement was slower than normal.");
@@ -565,7 +580,7 @@ extends Db2Abstract
 			String firstPlanId = null;
 			for (int p = 0; p < plans.size(); p++)
 			{
-				String planElementId = "db2plan_" + executableId + "_" + (p + 1);
+				String planElementId = "db2plan_" + _reportType + "_" + executableId + "_" + (p + 1); // the section in the id: a statement can be in several sections
 				_planTexts.put(planElementId, plans.get(p));
 				if (firstPlanId == null)
 					firstPlanId = planElementId;
