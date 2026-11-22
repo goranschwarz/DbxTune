@@ -750,16 +750,17 @@ extends AlarmWriterAbstract
 			+ "  </table>\n"
 			+ "</td></tr>\n"
 
-			// Details (the extended description, already HTML)
+			// Details (the extended description, already HTML). On CANCEL: say if they are from the cancel or from the raise
 			+ "#if( $extendedDescription != '' )\n"
 			+ "<tr><td style='padding:16px 18px 2px;'>\n"
-			+ "  <div style='font-size:15px; font-weight:600; border-left:4px solid #8a94a3; padding-left:8px;'>Details</div>\n"
+			+ "  <div style='font-size:15px; font-weight:600; border-left:4px solid #8a94a3; padding-left:8px;'>#if( $type == 'CANCEL' )#if( $extendedDescriptionAtCancel )Details at cancel#{else}Details when raised#{end}#{else}Details#{end}</div>\n"
 			+ "  <div style='margin-top:8px; padding:10px 12px; background:#f6f7f9; border:1px solid #e3e7ee; border-radius:5px; font-size:13px; overflow-x:auto;'>${extendedDescription}</div>\n"
 			+ "</td></tr>\n"
 			+ "#end\n"
 
-			// Only on CANCEL: the last known description(s)
-			+ "#if( $type == 'CANCEL' && ($reRaiseDescription != '' || $reRaiseExtendedDescription != '') )\n"
+			// Only on CANCEL, when the details above are from the raise: the last known description(s) (from the last re-raise)
+			// (when the details were set at cancel, the last re-raise is the same picture one sample earlier: not shown)
+			+ "#if( $type == 'CANCEL' && !$extendedDescriptionAtCancel && ($reRaiseDescription != '' || $reRaiseExtendedDescription != '') )\n"
 			+ "<tr><td style='padding:16px 18px 2px;'>\n"
 			+ "  <div style='font-size:15px; font-weight:600; border-left:4px solid #8a94a3; padding-left:8px;'>Last known before it was resolved</div>\n"
 			+ "#if( $reRaiseDescription != '' )\n"

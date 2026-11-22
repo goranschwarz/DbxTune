@@ -522,6 +522,7 @@ public class WriterUtils
 			context.put("reRaiseExtendedDescription" , StringUtil.toStr( isHtmlTemplate ? alarmEvent.getReRaiseExtendedDescriptionHtml() : alarmEvent.getReRaiseExtendedDescription() ,trMap ));
 			context.put("reRaiseData"                , StringUtil.toStr( alarmEvent.getReRaiseData()                ,trMap ));
 			context.put("cancelDescription"          , StringUtil.toStr( alarmEvent.getCancelDescription()          ,trMap ));
+			context.put("extendedDescriptionAtCancel", alarmEvent.extendedDescriptionSetAtCancel()); // true: the details are from the CANCEL (how it looks when the alarm went away), not from the raise
 			context.put("cancelTimeStr"              , StringUtil.toStr( alarmEvent.getCancelTimeStr()              ,trMap ));
 			context.put("crAgeInMs"                  , StringUtil.toStr( alarmEvent.getCrAgeInMs()                  ,trMap ));
 			context.put("isActive"                   , StringUtil.toStr( alarmEvent.isActive()                      ,trMap ));

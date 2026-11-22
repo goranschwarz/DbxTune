@@ -468,6 +468,8 @@ extends Throwable
 		if (_descProvider == null)
 			return;
 
+		String extDescBefore     = _extendedDesc;
+		String extDescHtmlBefore = _extendedDescHtml;
 		try
 		{
 			_descProvider.setValues(_descProviderCm, this, phase);
@@ -476,6 +478,19 @@ extends Throwable
 		{
 			_logger.warn("Problems in the AlarmDescriptionProvider at " + phase + " for Alarm '" + getAlarmClassAbriviated() + "'. The alarm will still be sent. " + getMessage() + ". Caught: " + t, t);
 		}
+
+		// The CANCEL message shows these as the details "at cancel" (otherwise they are from when the alarm was raised)
+		if (AlarmDescriptionProvider.AlarmPhase.CANCEL.equals(phase))
+			_extendedDescSetAtCancel = !java.util.Objects.equals(extDescBefore, _extendedDesc) || !java.util.Objects.equals(extDescHtmlBefore, _extendedDescHtml);
+	}
+
+	/** true if the AlarmDescriptionProvider set new details (extended description) at CANCEL: they show how it looks when the alarm went away */
+	private boolean _extendedDescSetAtCancel = false;
+
+	/** true if the details (extended description) are from the CANCEL (not from when the alarm was raised). Not a bean getter: not written to JSON. */
+	public boolean extendedDescriptionSetAtCancel()
+	{
+		return _extendedDescSetAtCancel;
 	}
 
 	
