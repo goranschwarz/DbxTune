@@ -118,6 +118,15 @@ extends PostgresAbstract
 	}
 
 	@Override
+	public List<ReportingIndexEntry> getReportingIndexes()
+	{
+		// The collector stores EVERY statement in EVERY sample (most rows have calls = 0), the queries below only read 'calls > 0' (as PostgresTopSql)
+		List<ReportingIndexEntry> list = new ArrayList<>();
+		list.add(new ReportingIndexEntry(CmPgStatements.CM_NAME + "_diff", "calls"));
+		return list;
+	}
+
+	@Override
 	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{

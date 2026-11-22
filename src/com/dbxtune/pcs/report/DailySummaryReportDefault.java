@@ -102,11 +102,14 @@ extends DailySummaryReportAbstract
 		Configuration localConf    = Configuration.getCombinedConfiguration();
 		
 		// Iterate all entries and create the report
-		int entryCount = getReportEntries().size();
 		int count = 0;
 		IProgressReporter progressReporter = getProgressReporter();
-		for (IReportEntry entry : getReportEntries())
+		// By index: an entry may add entries right after itself while it is created (see addReportEntryAfter), they are created too
+		for (int ei = 0; ei < getReportEntries().size(); ei++)
 		{
+			IReportEntry entry = getReportEntries().get(ei);
+			int entryCount = getReportEntries().size();
+
 			// First force a Garbage Collection
 			System.gc();
 //System.out.println("  ******* Used Memory " + Memory.getUsedMemoryInMB() + " MB ****** create(): BEFORE: "+ entry.getClass().getSimpleName());
@@ -226,6 +229,20 @@ extends DailySummaryReportAbstract
 	public void addReportEntry(IReportEntry entry)
 	{
 		_reportEntries.add(entry);
+	}
+
+	/**
+	 * Add an entry right after another one (or at the end, if 'after' is not found).<br>
+	 * An entry can do this in its create(), for parts that are only known then: they get a section (and a place in the table of contents) of their own.
+	 * For example 'Query Store': one section per database that has Query Store.
+	 */
+	public void addReportEntryAfter(IReportEntry after, IReportEntry entry)
+	{
+		int pos = _reportEntries.indexOf(after);
+		if (pos < 0)
+			_reportEntries.add(entry);
+		else
+			_reportEntries.add(pos + 1, entry);
 	}
 
 	public IReportEntry getReportEntry(Class<?> classToReturn)
@@ -649,6 +666,9 @@ extends DailySummaryReportAbstract
 		w.append("        .sparkline-wrapper {					\n");
 		w.append("            position: relative;				\n");
 		w.append("        }									\n");
+		// The image (shown first) and the chart drawn by JavaScript (replaces it) must take the same space, else the rows move while the charts are drawn:
+		// both 19px, and as 'block' (an inline image gets a gap below it for the text baseline)
+		w.append("        .sparkline-wrapper img, .sparkline-wrapper canvas { display: block; } \n");
 		w.append("\n");
 		w.append("        /* The below data-tooltip is used to show Actual exected SQL Text, as a tooltip where a normalized text is in a table cell */ \n");
 		w.append("        [data-tooltip], .dsr-tt {				\n"); // .dsr-tt: the text is written once, see getTooltipTexts()
@@ -929,6 +949,12 @@ extends DailySummaryReportAbstract
 		w.append("               $('#heading_' + name)[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });	\n"); // Scroll to this HEADING otherwise it may be "confusing"
 //		w.append("               document.getElementById('heading_' + name).scrollIntoView();	\n"); // Scroll to this HEADING otherwise it may be "confusing"
 		w.append("           } 										\n");
+		w.append("           return false; 							\n");
+		w.append("        } 										\n");
+		w.append("\n");
+		w.append("        function toggleAllDetails(open) 			\n");
+		w.append("        { 										\n");
+		w.append("           document.querySelectorAll('details').forEach(function(d) { d.open = open; }); \n");
 		w.append("           return false; 							\n");
 		w.append("        } 										\n");
 		w.append("\n");
@@ -1294,11 +1320,60 @@ extends DailySummaryReportAbstract
 			// The head in the report level's color (as the mail banner): server name + day and date
 			IssueLevel tocLevel = getIssueLevel();
 			String     tocColor = tocLevel == IssueLevel.NONE ? "#198754" : tocLevel == IssueLevel.FYI ? "#0d6efd" : "#dc3545";
+			String     tocWhen  = getDayDateText();
+			if (isFullDayRecording())
+				tocWhen += getRecordingHoursText(" &middot; ");
+			else
+				tocWhen += "<br>" + new SimpleDateFormat("HH:mm").format(getReportPeriodOrRecordingBeginTime()) + " &ndash; " + new SimpleDateFormat("HH:mm").format(getReportPeriodOrRecordingEndTime())
+				         + getRecordingHoursText(" &middot; ");
 			writer.append("  <div class='dsr-toc-head' style='background:" + tocColor + "; color:#ffffff; border-radius:6px; padding:6px 4px 6px 8px; margin:0 0 8px 0; align-items:flex-start;'>"
-					+ "<span><b>" + getServerName() + "</b><br><span style='text-transform:none; letter-spacing:0;'>" + getDayDateText() + "</span></span>"
+					+ "<span><b>" + getServerName() + "</b><br><span style='text-transform:none; letter-spacing:0;'>" + tocWhen + "</span></span>"
 					+ "<button type='button' class='dsr-toc-btn' style='color:#ffffff;' title='Hide the table of contents' onclick='dsrTocToggle()'>&laquo;</button></div> \n");
+			List<String> tocTitles = new ArrayList<>();
 			for (IReportEntry entry : getReportEntries())
-				writer.append("  <a href='#" + StringUtil.stripAllNonAlphaNum(entry.getSubject()) + "'><span>" + splitSubject(entry.getSubject())[0] + "</span>" + getIssueLevelBadge(entry) + "</a> \n");
+				tocTitles.add(splitSubject(entry.getSubject())[0]);
+			for (int ti = 0; ti < tocTitles.size(); ti++)
+			{
+				IReportEntry entry = getReportEntries().get(ti);
+				String       title = tocTitles.get(ti);
+
+				// Same beginning as the entry above or below (Top SQL Statements - CPU_TIME, - EXECUTION_COUNT...): the part that differs in bold
+				// (and when they also end the same: only the middle, "Top [SQL Captured] - CPU_TIME - SLOW Normalized SQL Statements")
+				int boldBegin = 0;
+				int boldEnd   = title.length();
+				for (int ni : new int[] {ti - 1, ti + 1})
+				{
+					if (ni < 0 || ni >= tocTitles.size())
+						continue;
+					String other = tocTitles.get(ni);
+					if (other.startsWith(title)) // same or this is the start of the other ("by CPU Time", "by CPU Time below 100 ms")
+						continue;
+					int pre = 0;
+					while (pre < title.length() && pre < other.length() && title.charAt(pre) == other.charAt(pre))
+						pre++;
+					if (pre == other.length() && title.charAt(pre) == ' ') // the other is the start of this, "by CPU Time" -> "by CPU Time below 100 ms"
+						pre++;
+					else
+						pre = title.lastIndexOf(' ', pre - 1) + 1; // whole words only
+					if (pre <= boldBegin)
+						continue;
+					int suf = 0;
+					while (suf < title.length() - pre && suf < other.length() - pre && title.charAt(title.length() - 1 - suf) == other.charAt(other.length() - 1 - suf))
+						suf++;
+					int end = suf == 0 ? title.length() : title.indexOf(' ', title.length() - suf); // whole words only
+					boldBegin = pre;
+					boldEnd   = end > pre ? end : title.length();
+				}
+				int sharedWords = 0; // words only, not '-' (Database Size..., Database Backup... is not enough)
+				for (String word : title.substring(0, boldBegin).trim().split("\\s+"))
+					if (word.matches(".*[\\p{L}\\p{N}].*"))
+						sharedWords++;
+				String  label    = sharedWords >= 3 && boldBegin < boldEnd
+						? title.substring(0, boldBegin) + "<b>" + title.substring(boldBegin, boldEnd) + "</b>" + title.substring(boldEnd)
+						: title;
+
+				writer.append("  <a href='#" + StringUtil.stripAllNonAlphaNum(entry.getSubject()) + "'><span>" + label + "</span>" + getIssueLevelBadge(entry) + "</a> \n");
+			}
 			if (createExecTimeReportSection() && Configuration.getCombinedConfiguration().getBooleanProperty("DailySummaryReport.report.entry.enabled.printExecTime.fullMessage", true))
 				writer.append("  <a href='#sectionTime'><span>" + EXEC_TIME_SECTION_NAME + "</span></a> \n");
 			writer.append("</nav> \n");
@@ -1438,6 +1513,11 @@ extends DailySummaryReportAbstract
 				writer.append(" or \n");
 				writer.append("<a href='javascript:void(0);' onclick=\"expandSection('ALL');\">Expand</a> ");
 				writer.append(" ALL sections \n");
+				writer.append("&emsp;&emsp;");
+				writer.append("<a href='javascript:void(0);' onclick=\"toggleAllDetails(false);\">Collapse</a> ");
+				writer.append(" or \n");
+				writer.append("<a href='javascript:void(0);' onclick=\"toggleAllDetails(true);\">Expand</a> ");
+				writer.append(" ALL details\n");
 
 				writer.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
 				writer.append("</div> \n"); // end: card-body
@@ -2175,7 +2255,34 @@ extends DailySummaryReportAbstract
 		if (beginTs == null || endTs == null)
 			return "";
 		return getDayDateText()
-		     + " &nbsp;" + new SimpleDateFormat("HH:mm").format(beginTs) + " &ndash; " + new SimpleDateFormat("HH:mm").format(endTs);
+		     + " &nbsp;" + new SimpleDateFormat("HH:mm").format(beginTs) + " &ndash; " + new SimpleDateFormat("HH:mm").format(endTs)
+		     + getRecordingHoursText(" &middot; ");
+	}
+
+	/**
+	 * How many hours the recording covers, for example "24h", "4.5h" or "25 min" ("" when not known)
+	 * @param prefix put in front of the text (when there is a text)
+	 */
+	private String getRecordingHoursText(String prefix)
+	{
+		Timestamp beginTs = getReportPeriodOrRecordingBeginTime();
+		Timestamp endTs   = getReportPeriodOrRecordingEndTime();
+		if (beginTs == null || endTs == null || endTs.getTime() <= beginTs.getTime())
+			return "";
+		long ms = endTs.getTime() - beginTs.getTime();
+		if (ms < 3600 * 1000)
+			return prefix + Math.max(1, Math.round(ms / 60_000.0)) + " min";
+		double hours = Math.round(ms / 360_000.0) / 10.0; // one decimal: 23:59:29 -> 24
+		String txt = hours == Math.rint(hours) ? Long.toString((long) hours) : Double.toString(hours);
+		return prefix + txt + "h";
+	}
+
+	/** The recording covers (almost) the whole day: 23.5 hours or more */
+	private boolean isFullDayRecording()
+	{
+		Timestamp beginTs = getReportPeriodOrRecordingBeginTime();
+		Timestamp endTs   = getReportPeriodOrRecordingEndTime();
+		return beginTs == null || endTs == null || (endTs.getTime() - beginTs.getTime()) >= 23.5 * 3600 * 1000;
 	}
 
 	/** The day of the report, for example "Thursday 2026-11-19" ("" when not known) */

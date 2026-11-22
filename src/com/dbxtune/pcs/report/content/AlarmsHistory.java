@@ -99,15 +99,15 @@ extends ReportEntryAbstract
 			{
 				sb.append("<b>Summary:</b> one row per alarm and object (" + _summaryRstm.getRowCount() + " rows). "
 						+ "Column 'alarmAction': <code>ALARM</code> = sent to the alarm writers (mail, Teams...), <code>REPORT</code> = only recorded here (property '&lt;AlarmEventClass&gt;.action').<br>\n");
-				sb.append(toHtmlTable(_summaryRstm));
+				sb.append(_summaryRstm.toHtmlTableString("sortable", true, true, null, new AlarmBadgeTableStringRenderer()));
 				sb.append("<br>\n");
 			}
 
 			sb.append("Alarm Count in period: " + _fullRstm.getRowCount() + "<br>\n");
 			if (_shortRstm.getRowCount() <= SHORT_LIST_SHOW_MAX_ROWS)
-				sb.append(toHtmlTable(_shortRstm));
+				sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, new AlarmBadgeTableStringRenderer(true)));
 			else
-				sb.append( msOutlookAlternateText(createShowHideDiv("alarmHistoryShort", false, "Show/Hide all " + _shortRstm.getRowCount() + " Alarm raise/cancel rows...", toHtmlTable(_shortRstm)), "Alarm History", null) );
+				sb.append( msOutlookAlternateText(createShowHideDiv("alarmHistoryShort", false, "Show/Hide all " + _shortRstm.getRowCount() + " Alarm raise/cancel rows...", _shortRstm.toHtmlTableString("sortable", true, true, null, new AlarmBadgeTableStringRenderer(true))), "Alarm History", null) );
 			
 //			if (isFullMessageType() && _fullRstm != null)
 			if (_fullRstm != null && isFullMessageType())
@@ -298,6 +298,7 @@ extends ReportEntryAbstract
 		
 		// Get Alarms
 		sql = "select [action], [duration], [eventTime], [alarmClass], [serviceInfo], [extraInfo], [severity], [state], [description] \n" +
+		      (_hasAlarmAction ? "    ,[alarmAction] \n" : "") + // shown as a tag after 'alarmClass
 		      (_hasCancelDescription ? "    ,[cancelDescription] \n" : "") +
 		      "from " + PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.ALARM_HISTORY, null, true) + " \n" +
 		      "where [action] not in('END-OF-SCAN', 'RE-RAISE') \n" +
@@ -322,6 +323,7 @@ extends ReportEntryAbstract
 		      "     [duration],               \n" +
 		      "     [eventTime],              \n" +
 		      "     [alarmClass],             \n" +
+		      (_hasAlarmAction ? "     [alarmAction],            \n" : "") +
 		      "     [serviceType],            \n" +
 		      "     [serviceName],            \n" +
 		      "     [serviceInfo],            \n" +

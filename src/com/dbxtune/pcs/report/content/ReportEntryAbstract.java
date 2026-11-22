@@ -1210,6 +1210,80 @@ implements IReportEntry
 			+ "}\n"
 			+ "</script>\n";
 
+	/**
+	 * An alarm value as a colour coded badge, with the same colours as DbxCentral's 'Historical Alarms' (dbxHistAlarms.js), as inline styles (the mail has no Bootstrap).
+	 * Columns: action (RAISE/RE-RAISE/CANCEL), alarmAction (ALARM/REPORT), severity, state. Returns null for other columns (or no value).
+	 */
+	public static String alarmBadge(String colName, String value)
+	{
+		if (StringUtil.isNullOrBlank(value) || colName == null)
+			return null;
+
+		final String RED = "#dc3545", GREEN = "#198754", AMBER = "#ffc107", CYAN = "#0dcaf0", BLUE = "#0d6efd", GRAY = "#6c757d";
+		String v  = value.trim().toUpperCase();
+		String bg = null;
+		switch (colName)
+		{
+			case "action":      bg = "RAISE".equals(v) ? RED : "CANCEL".equals(v) ? GREEN : GRAY;                                         break;
+			case "alarmAction": bg = "ALARM".equals(v) ? BLUE : GRAY;                                                                    break; // REPORT = only recorded, not sent
+			case "state":       bg = "UP".equals(v) ? GREEN : "AFFECTED".equals(v) ? AMBER : "DOWN".equals(v) ? RED : GRAY;               break;
+			case "severity":    bg = ("ERROR".equals(v) || "CRITICAL".equals(v)) ? RED : "WARNING".equals(v) ? AMBER : "INFO".equals(v) ? CYAN : "NOTICE".equals(v) ? BLUE : GRAY; break;
+			default:            return null;
+		}
+		String fg = (AMBER.equals(bg) || CYAN.equals(bg)) ? "#000000" : "#ffffff"; // as Bootstrap's text-bg-warning / text-bg-info
+		return "<span style='display:inline-block; padding:1px 7px; border-radius:4px; font-size:85%; font-weight:600; background-color:" + bg + "; color:" + fg + ";'>"
+				+ StringEscapeUtils.escapeHtml4(value) + "</span>";
+	}
+
+	/** The default renderer, plus the alarm columns as colour coded badges (see {@link #alarmBadge(String, String)}) */
+	public static class AlarmBadgeTableStringRenderer
+	extends ReportEntryTableStringRenderer
+	{
+		private boolean _tagAlarmClass;
+
+		public AlarmBadgeTableStringRenderer()
+		{
+			this(false);
+		}
+
+		/**
+		 * @param tagAlarmClass true: a gray REPORT tag after 'alarmClass' when 'alarmAction' is not ALARM (as the Historical Alarms dialog), and the 'alarmAction' column is not shown
+		 */
+		public AlarmBadgeTableStringRenderer(boolean tagAlarmClass)
+		{
+			_tagAlarmClass = tagAlarmClass;
+		}
+
+		@Override
+		public boolean isColumnVisible(ResultSetTableModel rstm, int col, String colName)
+		{
+			if (_tagAlarmClass && "alarmAction".equalsIgnoreCase(colName))
+				return false;
+			return super.isColumnVisible(rstm, col, colName);
+		}
+
+		@Override
+		public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+		{
+			if (_tagAlarmClass && "alarmClass".equalsIgnoreCase(colName) && rstm.hasColumnNoCase("alarmAction"))
+			{
+				String action = rstm.getValueAsString(row, "alarmAction", false, "");
+				if (StringUtil.hasValue(action) && !"ALARM".equalsIgnoreCase(action))
+					return super.cellValue(rstm, row, col, colName, objVal, strVal)
+						+ " <span title='Only recorded (alarmAction=" + action + "): not sent, not an active alarm' style='display:inline-block; padding:1px 6px; border-radius:4px; font-size:75%; background-color:#6c757d; color:#ffffff;'>" + action + "</span>";
+			}
+			// "00:31 (MM:SS) -- Added/Adjusted 60 Seconds to the Alarm Raise Time" (see AlarmEvent.getDuration): the extra text as an (i) with the text as tooltip
+			if ("duration".equalsIgnoreCase(colName) && strVal != null)
+			{
+				int pos = strVal.indexOf(" -- Added/Adjusted ");
+				if (pos >= 0)
+					return strVal.substring(0, pos) + " " + infoLabel("", strVal.substring(pos + " -- ".length()) + " (the time threshold of the alarm, so the duration is the full time the problem lasted)");
+			}
+			String badge = alarmBadge(colName, objVal == null ? null : objVal.toString());
+			return badge != null ? badge : super.cellValue(rstm, row, col, colName, objVal, strVal);
+		}
+	}
+
 	/** A small gray label with an (i): hover (or tap) shows what it means */
 	public static String infoLabel(String label, String explanation)
 	{
@@ -2348,8 +2422,12 @@ implements IReportEntry
 		{
 			// Bootstrap "card" - BEGIN
 			w.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+			// Collapsible (click the header), as the report's sections: the body is in a 'collapse show' div (open from the start)
 			w.append("<div id='" + id + "' class='card border-dark mb-3'>");
-			w.append("<h5 class='card-header'><b>" + title + "</b></h5>");
+			w.append("<h5 class='card-header' role='tab'>");
+			w.append("<a data-bs-toggle='collapse' href='#collapse_" + id + "' aria-expanded='true' aria-controls='collapse_" + id + "' class='d-block' style='color:inherit; text-decoration:none;'>");
+			w.append("<i class='fa fa-chevron-down float-end'></i><b>" + title + "</b></a></h5>");
+			w.append("<div id='collapse_" + id + "' class='collapse show'>");
 			w.append("<div class='card-body'>");
 			w.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
 		
@@ -2384,12 +2462,13 @@ implements IReportEntry
 			// Bootstrap "card" - END
 			w.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
 			w.append("</div>"); // end: card-body
+			w.append("</div>"); // end: collapse
 			w.append("</div>"); // end: card
 			w.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
 		}
 	}
 
-	
+
 	public String getDbxCentralSpaceForecastUrl(String srvName, int days, int sampleMinutes, SpaceType spaceType, String outType) 
 	{
 		// Compose a URL

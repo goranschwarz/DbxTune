@@ -143,6 +143,19 @@ extends PostgresAbstract
 				: "case when t.[is_na] = false then t.[bloat_pct] end";
 		String tMbExpr = mbExpr.replace("[", "t.[");
 
+		// When the table was last cleaned up (pg_stat_user_tables): the latest value in the period. VACUUM FULL is not in the statistics
+		boolean hasVac = doTableExist(conn, schema, "CmPgTables_abs") && getRecordedColumns(conn, "CmPgTables_abs").containsAll(java.util.List.of("last_vacuum", "last_autovacuum"));
+		String vacJoin = ! hasVac ? "" : ""
+			    + "left outer join (select [dbname], [schemaname], [relname], max([last_vacuum]) as [last_vacuum], max([last_autovacuum]) as [last_autovacuum] \n"
+			    + "      from [CmPgTables_abs] \n"
+			    + "      " + where + " \n"
+			    + "      group by [dbname], [schemaname], [relname] \n"
+			    + "     ) v on v.[dbname] = t.[dbname] and v.[schemaname] = t.[schemaname] and v.[relname] = t.[tablename] \n";
+		String vacCols = ! hasVac ? "" : ""
+			    + "    ,v.[last_vacuum] \n"
+			    + "    ,v.[last_autovacuum] \n"
+			    + "    ,datediff('DAY', greatest(coalesce(v.[last_vacuum], v.[last_autovacuum]), coalesce(v.[last_autovacuum], v.[last_vacuum])), t.[SessionSampleTime]) as [days_since_cleanup] \n";
+
 		// Each table at its last sample in the period (the CM samples every 10 minutes)
 		String sql = ""
 			    + "select top " + getTopRows() + " \n"
@@ -159,6 +172,7 @@ extends PostgresAbstract
 			    + "    ,t.[approx_free_pct] \n"
 			    + "    ,t.[approx_scanned_pct] \n" : "")
 			    + "    ,t.[fillfactor] \n"
+			    + vacCols
 			    + "    ,cast('' as varchar(600)) as [fix_sql] \n" // filled below: the command for the server's version
 			    + "    ,t.[SessionSampleTime] as [last_sample] \n"
 			    + "from [CmPgTableBloat_abs] t \n"
@@ -167,6 +181,7 @@ extends PostgresAbstract
 			    + "      " + where + " \n"
 			    + "      group by [dbname], [schemaname], [tablename] \n"
 			    + "     ) m on m.[dbname] = t.[dbname] and m.[schemaname] = t.[schemaname] and m.[tablename] = t.[tablename] and m.[last_ts] = t.[SessionSampleTime] \n"
+			    + vacJoin
 			    + "where " + tMbExpr + " > " + getMinBloatMb() + " \n"
 			    + "order by " + tMbExpr + " desc \n"
 			    + "";
@@ -235,6 +250,9 @@ extends PostgresAbstract
 		_shortRstm.setColumnDescription("approx_free_pct"   , "Measured: free space in percent of the table (reusable, but not given back to the OS)");
 		_shortRstm.setColumnDescription("approx_scanned_pct", "How much of the table pgstattuple_approx had to read (the pages vacuum has not marked all-visible)");
 		_shortRstm.setColumnDescription("fillfactor"        , "The table's fillfactor (free space left on purpose in each page)");
+		_shortRstm.setColumnDescription("last_vacuum"       , "The last manual VACUUM of the table (pg_stat_user_tables.last_vacuum). NOTE: VACUUM FULL is not counted, Postgres does not record when it ran. Empty = never (since the statistics were reset)");
+		_shortRstm.setColumnDescription("last_autovacuum"   , "The last autovacuum of the table (pg_stat_user_tables.last_autovacuum). Empty = never (since the statistics were reset)");
+		_shortRstm.setColumnDescription("days_since_cleanup", "Days from the latest of last_vacuum and last_autovacuum to the last sample: how long nothing has cleaned up the table. Empty = never vacuumed");
 		_shortRstm.setColumnDescription("last_sample"       , "When the table was last sampled (CmPgTableBloat samples every 10 minutes)");
 		_shortRstm.setColumnDescription("fix_sql"           , "The command that gives the space back, for the server's version (Postgres 19: REPACK (CONCURRENTLY), without blocking; before 19: VACUUM FULL, which locks the table). Fix the cause first (autovacuum).");
 	}

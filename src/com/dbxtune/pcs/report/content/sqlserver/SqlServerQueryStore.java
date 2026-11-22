@@ -52,6 +52,7 @@ import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.gui.ResultSetTableModel.TableStringRenderer;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.DailySummaryReportDefault;
+import com.dbxtune.pcs.report.content.IReportEntry;
 import com.dbxtune.pcs.report.content.NPlusOneParent;
 import com.dbxtune.pcs.report.content.ShowplanLinkBuilder;
 import com.dbxtune.pcs.report.content.SparklineHelper;
@@ -158,14 +159,19 @@ extends SqlServerAbstract
 		}
 
 		// Write what databases we will make a report for
+		beginHtmlSubSection(w, "Databases with Query Store", "qs_databases");
 		w.append("The following databases was Captured with Query Store:\n");
 		w.append("<ul>\n");
 		for (String dbname : _dbMap.keySet())
 		{
-//			w.append("<li>").append(dbname).append("</li>\n");  // FIXME: This should be a LINK to below sections
-			w.append("<li><a href='#").append("qs_").append(dbname).append("'>").append(dbname).append("</a></li>\n");  // FIXME: This should be a LINK to below sections
+			// a link to the database's section (one database: no section of its own, the summary is the database's report)
+			if (_dbMap.size() > 1)
+				w.append("<li><a href='#").append(StringUtil.stripAllNonAlphaNum(dbSectionSubject(dbname))).append("'>").append(dbname).append("</a></li>\n");
+			else
+				w.append("<li>").append(dbname).append("</li>\n");
 		}
 		w.append("</ul>\n");
+		endHtmlSubSection(w);
 
 
 		// Merge ALL Query Store Configuration into ONE ResultSetTableModel then print that in a HTML Table
@@ -184,11 +190,11 @@ extends SqlServerAbstract
 		}
 		if (allConfRstm != null && !allConfRstm.isEmpty())
 		{
+			beginHtmlSubSection(w, "Configuration / Options", "qs_configuration");
 			w.append("Query Store Configuration/Options for all databases that has Query Store Enabled\n");
 
 			w.append(allConfRstm.toHtmlTableString("sortable"));
-			w.append("<br>\n");
-			w.append("<br>\n");
+			endHtmlSubSection(w);
 		}
 
 		// FULL MESAGE - write SUMMARY and ALL databases
@@ -196,19 +202,17 @@ extends SqlServerAbstract
 		{
 			// First Write SUMMARY REPORT For ALL Databases (only if we have more that 1 db's activated for Query Store)
 			if (_qsSummaryDbReport != null)
+			{
+				beginHtmlSubSection(w, "Summary: all databases with Query Store"
+						+ (_dbMap.size() > 1 ? " <span style='font-weight:normal; font-size:13px;'>(each database also has a section of its own below)</span>" : ""), "qs_summary");
 				_qsSummaryDbReport.writeMessageText(w);
+				endHtmlSubSection(w);
+			}
 
 			// Possible N+1 (all databases)
 			writeNPlusOne(w);
 
-			// Write a report for each of the databases
-			if (_dbMap.size() > 1)
-			{
-				for (QsDbReport entry : _dbMap.values())
-				{
-					entry.writeMessageText(w);
-				}
-			}
+			// The report for each of the databases: in a section of its own (QsDbSection, added in create()), only when there are more than one (as before)
 		}
 		// SHORT MESAGE - Write SUMMARY or FIRST entry (if we only got 1 entry)
 		else if (isShortMessageType())
@@ -221,7 +225,7 @@ extends SqlServerAbstract
 	@Override
 	public String getSubject()
 	{
-		return "Query Store Reports";
+		return "Query Store Report - Summary";
 	}
 
 	@Override
@@ -292,6 +296,71 @@ extends SqlServerAbstract
 
 			createNPlusOne(conn);
 		}
+
+		// Each database gets a section of its own, right after this one (so it is in the table of contents)
+		// With one database, the summary above is the same as the database's report: no extra section (as before)
+		if (_dbMap.size() > 1 && getReportingInstance() instanceof DailySummaryReportDefault)
+		{
+			IReportEntry after = this;
+			for (QsDbReport entry : _dbMap.values())
+			{
+				// The database's own details table (the SQL Text and charts): after the merge into the summary, which has its own
+				entry.createSqlTextTable(conn);
+
+				QsDbSection section = new QsDbSection(entry);
+				((DailySummaryReportDefault) getReportingInstance()).addReportEntryAfter(after, section);
+				after = section;
+			}
+		}
+	}
+
+	/** The subject of a database's section: also its anchor in the report (the list of databases in the summary links to it) */
+	private static String dbSectionSubject(String dbname)
+	{
+		return "Query Store Report - " + dbname;
+	}
+
+	/** A database's Query Store report, as a section of its own (added in create()). It was read by this class: it only writes it */
+	private class QsDbSection
+	extends SqlServerAbstract
+	{
+		private QsDbReport _db;
+
+		QsDbSection(QsDbReport db)
+		{
+			super(SqlServerQueryStore.this.getReportingInstance());
+			_db = db;
+		}
+
+		@Override public String  getSubject()              { return dbSectionSubject(_db._dbname); }
+		@Override public boolean hasMinimalMessageText()   { return false; }
+		@Override public boolean hasShortMessageText()     { return false; } // the mail has the summary only (as before)
+		@Override public boolean hasIssueToReport()        { return false; }
+
+		/** The same switch as the Query Store section: the database sections are made by it (the hint 'To disable this report entry' names this key) */
+		@Override public String  getIsEnabledConfigKeyName() { return SqlServerQueryStore.this.getIsEnabledConfigKeyName(); }
+
+		@Override
+		public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
+		{
+			// nothing: it was read by SqlServerQueryStore.create()
+		}
+
+		@Override
+		public void writeMessageText(Writer w, MessageType messageType)
+		throws IOException
+		{
+			// The writer (QsDbReport) asks SqlServerQueryStore.isFullMessageType(): the report only sets the type on the entry it writes (this one)
+			SqlServerQueryStore.this.setCurrentMessageType(getCurrentMessageType());
+			try
+			{
+				_db.writeMessageText(w);
+			}
+			finally
+			{
+				SqlServerQueryStore.this.setCurrentMessageType(null);
+			}
+		}
 	}
 
 	//----------------------------------------------------------------------------------------------
@@ -334,7 +403,9 @@ extends SqlServerAbstract
 				{
 					java.sql.Timestamp ts    = rs.getTimestamp(1);
 					java.sql.Timestamp tsEnd = rs.getTimestamp(2);
-					String key   = dbname + ":" + rs.getString(3);
+					// query_hash is binary: show it as hex '0x...' (as the Top SQL sections), getString() gives the raw bytes as characters
+					Object qh    = rs.getObject(3);
+					String key   = dbname + ":" + (qh instanceof byte[] ? StringUtil.bytesToHex("0x", (byte[]) qh) : String.valueOf(qh));
 					long   execs = rs.getLong(4);
 					long   rows  = Math.round(rs.getDouble(5));
 					long   durUs = Math.round(rs.getDouble(6));
@@ -487,8 +558,7 @@ extends SqlServerAbstract
 		if (_nPlusOneRstm == null)
 			return;
 
-		w.append("<br>\n");
-		w.append("<h4>Possible N+1 / Chatty Statements (from Query Store)</h4>\n");
+		beginHtmlSubSection(w, "Possible N+1 / Chatty Statements (from Query Store)", "qs_nplusone");
 		w.append("Statements with the most executions in Query Store, and for each one the <i>parent</i> statement (if found): ");
 		w.append("a statement whose rows follow this statement's executions per Query Store interval, with about one execution per parent row, ");
 		w.append("and several executions per parent execution (the parent returns many rows). <br>\n");
@@ -514,6 +584,7 @@ extends SqlServerAbstract
 				return strVal;
 			}
 		}));
+		endHtmlSubSection(w);
 	}
 
 
@@ -756,29 +827,7 @@ extends SqlServerAbstract
 		public void writeMessageText(Writer w) 
 		throws IOException
 		{
-			boolean useBootstrap = true;
-			if (getReportingInstance() instanceof DailySummaryReportDefault)
-				useBootstrap = ((DailySummaryReportDefault)getReportingInstance()).useBootstrap();
-
-			if (useBootstrap)
-			{
-				// Bootstrap "card" - BEGIN
-				w.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-				w.append("<div id='").append("qs_").append(_dbname).append("' class='card border-dark mb-3'>");
-				w.append("<h5 class='card-header'><b>Query Store Report for: ").append(_dbname).append("</b></h5>");
-				w.append("<div class='card-body'>");
-				w.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
-			
-				w.append("<!--[if mso]> \n"); // BEGIN: ONLY FOR OUTLOOK
-				w.append("<br>\n");
-				w.append("<h3 id='").append("qs_").append(_dbname).append("'>Query Store Report for: ").append(_dbname).append("</h3> \n");
-				w.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
-			}
-			else
-			{
-				w.append("<br>\n");
-				w.append("<h3 id='").append("qs_").append(_dbname).append("'>Query Store Report for: ").append(_dbname).append("</h3> \n");
-			}
+			// The section (card, heading) is written by the report: this is a section of its own (QsDbSection)
 
 			// Create a Renderer for the HTML Table
 			TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
@@ -889,7 +938,7 @@ extends SqlServerAbstract
 			{
 				if (isFullMessageType())
 				{
-					w.append("<hr> \n");
+					beginHtmlSubSection(w, "Top CPU <span style='font-weight:normal; font-size:13px;'>(ordered by: total_cpu_time)</span>", "qs_" + StringUtil.stripAllNonAlphaNum(_dbname) + "_cpu");
 					w.append(getSectionDescriptionHtml(_topCpuRstm, true));
 					w.append("Row Count: " + _topCpuRstm.getRowCount() + "<br>\n");
 					w.append(_topCpuRstm.toHtmlTableString("sortable", true, true, null, tableRender));
@@ -917,8 +966,9 @@ extends SqlServerAbstract
 			//----------------------------------------------------
 			//---- WAIT
 			//----------------------------------------------------
-			w.append("<br>\n");
-			w.append("<hr> \n");
+			if (_topCpuRstm != null && isFullMessageType())
+				endHtmlSubSection(w); // end: Top CPU
+			beginHtmlSubSection(w, "Top WAIT <span style='font-weight:normal; font-size:13px;'>(ordered by: total_query_wait_time_ms)</span>", "qs_" + StringUtil.stripAllNonAlphaNum(_dbname) + "_wait");
 			if (_topWaitRstm == null)
 			{
 				w.append("This SQL Server Version do NOT have 'wait statistics' in the Query Store. Needs at least SQL Server 2017.<br>\n");
@@ -941,8 +991,8 @@ extends SqlServerAbstract
 			//----------------------------------------------------
 			//---- Recommendations
 			//----------------------------------------------------
-			w.append("<br>\n");
-			w.append("<hr> \n");
+			endHtmlSubSection(w); // end: Top WAIT
+			beginHtmlSubSection(w, "Tuning Recommendations", "qs_" + StringUtil.stripAllNonAlphaNum(_dbname) + "_recom");
 			if (_qsRecomRstm == null)
 			{
 				w.append("This SQL Server Version do NOT have 'Tuning Recommendation' in the Query Store. Needs at least SQL Server 2017.<br>\n");
@@ -951,11 +1001,11 @@ extends SqlServerAbstract
 			{
 				if (_qsRecomRstm.isEmpty())
 				{
-					w.append("NO Tuning Recomendations from the Query Store subsystem.<br>");
+					w.append("NO Tuning Recommendations from the Query Store subsystem.<br>");
 				}
 				else
 				{
-					w.append("Tuning Recomendations from the Quesry Store subsystem.<br>");
+					w.append("Tuning Recommendations from the Query Store subsystem (sys.dm_db_tuning_recommendations).<br>");
 
 					w.append("Row Count: " + _qsRecomRstm.getRowCount() + "<br>\n");
 					w.append(toHtmlTable(_qsRecomRstm));
@@ -966,8 +1016,8 @@ extends SqlServerAbstract
 			//----------------------------------------------------
 			//---- Hints
 			//----------------------------------------------------
-			w.append("<br>\n");
-			w.append("<hr> \n");
+			endHtmlSubSection(w); // end: Tuning Recommendations
+			beginHtmlSubSection(w, "Query Hints", "qs_" + StringUtil.stripAllNonAlphaNum(_dbname) + "_hints");
 			if (_qsHintsRstm == null)
 			{
 				w.append("This SQL Server Version do NOT have 'Hints' in the Query Store. Needs at least SQL Server 2022.<br>\n");
@@ -980,23 +1030,14 @@ extends SqlServerAbstract
 				}
 				else
 				{
-					w.append("Hints in the Quesry Store subsystem.<br>");
+					w.append("Hints in the Query Store subsystem (sys.query_store_query_hints).<br>");
 
 					w.append("Row Count: " + _qsHintsRstm.getRowCount() + "<br>\n");
 					w.append(toHtmlTable(_qsHintsRstm));
 //					w.append(_qsHintsRstm.toHtmlTableString("sortable", true, true, null, tableRender));
 				}
 			}
-			
-			// Section FOOTER
-			if (useBootstrap)
-			{
-				// Bootstrap "card" - END
-				w.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-				w.append("</div>"); // end: card-body
-				w.append("</div>"); // end: card
-				w.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
-			}
+			endHtmlSubSection(w); // end: Query Hints
 
 			// Write JavaScript code for CPU SparkLine
 			if (isFullMessageType())
@@ -2172,7 +2213,7 @@ extends SqlServerAbstract
 				return;
 			
 			// Section description
-			rstm.setDescription("<b>&bull; Top WAIT</b> (ordered by: total_query_wait_time_ms)");
+			rstm.setDescription("Information from the Query Store table <code>query_store_wait_stats</code>: the plans that waited most.");
 
 			// Columns description
 			rstm.setColumnDescription("wait_stats_id"             , "Identifier of the row representing wait statistics for the plan_id, runtime_stats_interval_id, execution_type and wait_category. It is unique only for the past runtime statistics intervals. For the currently active interval, there may be multiple rows representing wait statistics for the plan referenced by plan_id, with the execution type represented by execution_type and the wait category represented by wait_category. Typically, one row represents wait statistics that are flushed to disk, while other(s) represent in-memory state. Hence, to get actual state for every interval you need to aggregate metrics, grouping by plan_id, runtime_stats_interval_id, execution_type and wait_category.");

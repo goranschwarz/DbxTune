@@ -942,6 +942,7 @@ public class SparklineHelper
 			sb.append("    // add config to a map to load 'later'. \n");
 			sb.append("    sparklineConfMap.set('" + sparklineClassName + "', {										\n");
 			sb.append("        type: 'line',						  												\n");
+			sb.append("        height: '19px',						  												\n"); // the same as the image that is shown before (SparklineJfreeChart: 19), else the rows shrink when the charts are drawn
 			sb.append("        defaultPixelsPerValue: ").append(pixels).append(",									\n");
 //			sb.append("        type: 'bar',						  													\n");
 			sb.append("        chartRangeMin: 0,					  												\n");
