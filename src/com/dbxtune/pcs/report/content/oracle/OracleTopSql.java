@@ -48,6 +48,7 @@ import com.dbxtune.pcs.DictCompression;
 import com.dbxtune.pcs.inspection.ObjectLookupInspectorOracle;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.ShowplanLinkBuilder;
+import com.dbxtune.pcs.report.content.TopSqlOverview;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.AggType;
 import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
@@ -76,9 +77,44 @@ extends OracleAbstract
 	/** The execution plans of the statements in the report. Key: the id of the hidden HTML element that holds the plan, value: the text of DBMS_XPLAN */
 	private Map<String, String> _planTexts = new LinkedHashMap<>();
 
-	public OracleTopSql(DailySummaryReportAbstract reportingInstance)
+	/** One section per measure (as SQL Server, ASE and Postgres): each with its own top statements */
+	public enum ReportType
+	{
+		OVERVIEW    ("largest_pct"),
+		ELAPSED_TIME("ELAPSED_TIME_ms__sum"),
+		CPU_TIME    ("CPU_TIME_ms__sum"),
+		BUFFER_GETS ("BUFFER_GETS__sum"),
+		DISK_READS  ("DISK_READS__sum"),
+		EXECUTIONS  ("EXECUTIONS__sum");
+
+		/** The column the section is ordered by (highlighted in the table) */
+		final String orderByCol;
+		ReportType(String orderByCol) { this.orderByCol = orderByCol; }
+
+		/** The section's subject: also its anchor in the report (the OVERVIEW links to the sections) */
+		String subject() { return "Top SQL Statements - " + name() + " (order by: " + orderByCol + ", origin: CmSqlStats / V$SQLSTATS)"; }
+	};
+
+	private TopSqlOverview _overview;  // OVERVIEW: the shares of all the statements (see TopSqlOverview)
+
+	private ReportType _reportType;
+	private String     _orderByCol;    // the column the section is ordered by (highlighted in the table)
+	private String     _measureText;   // what the section is about, in words
+	private String     _noRowsText;    // when no statement has anything of it
+
+	public OracleTopSql(DailySummaryReportAbstract reportingInstance, ReportType reportType)
 	{
 		super(reportingInstance);
+		_reportType = reportType;
+		_orderByCol = reportType.orderByCol;
+
+		if      (ReportType.OVERVIEW    .equals(reportType)) { _measureText = "their largest share of all the statements' elapsed time, CPU time, buffer gets, disk reads or executions"; _noRowsText = "No statements were found."; }
+		else if (ReportType.ELAPSED_TIME.equals(reportType)) { _measureText = "elapsed time (CPU + waits)";         _noRowsText = "No statements were found."; }
+		else if (ReportType.CPU_TIME    .equals(reportType)) { _measureText = "CPU time";                           _noRowsText = "No statements were found."; }
+		else if (ReportType.BUFFER_GETS .equals(reportType)) { _measureText = "buffer gets (logical reads)";        _noRowsText = "No statements were found."; }
+		else if (ReportType.DISK_READS  .equals(reportType)) { _measureText = "disk reads (blocks read from disk)"; _noRowsText = "No statement read any block from disk in the period."; }
+		else if (ReportType.EXECUTIONS  .equals(reportType)) { _measureText = "number of executions";               _noRowsText = "No statements were found."; }
+		else throw new IllegalArgumentException("Unhandled reportType='" + reportType + "'.");
 	}
 
 	@Override
@@ -90,7 +126,8 @@ extends OracleAbstract
 	@Override
 	public boolean hasShortMessageText()
 	{
-		return true;
+		// The mail has the ELAPSED_TIME section only (as SQL Server: CPU_TIME), the other sections are in the full report
+		return ReportType.ELAPSED_TIME.equals(_reportType) || ReportType.OVERVIEW.equals(_reportType);
 	}
 
 	@Override
@@ -99,7 +136,14 @@ extends OracleAbstract
 	{
 		if (_shortRstm.getRowCount() == 0)
 		{
-			w.append("No rows found <br>\n");
+			w.append(_noRowsText + "<br>\n");
+			return;
+		}
+
+		// The overview: one small table, the details are in the sections it links to
+		if (ReportType.OVERVIEW.equals(_reportType))
+		{
+			_overview.writeHtml(w, this, getTopRows());
 			return;
 		}
 
@@ -108,7 +152,7 @@ extends OracleAbstract
 			// Get a description of this section, and column names
 			w.append(getSectionDescriptionHtml(_shortRstm, true));
 
-			w.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
+			w.append("Row Count: " + _shortRstm.getRowCount() + " (the top " + getTopRows() + " on " + _measureText + ")&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
 
 			// The SQL Text is a "tooltip" in this table (the table below has it as text)
 			TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
@@ -137,8 +181,9 @@ extends OracleAbstract
 		if (_sqlTextRstm != null)
 		{
 			w.append("<br>\n");
-			w.append("<details open> \n");
-			w.append("<summary>Details for above Statements, including SQL Text (click to collapse) </summary> \n");
+			// Open in the first section (ELAPSED_TIME), closed in the others (the page gets very long otherwise)
+			w.append("<details" + (ReportType.ELAPSED_TIME.equals(_reportType) ? " open" : "") + "> \n");
+			w.append("<summary>Details for above Statements, including SQL Text (click to open/close) </summary> \n");
 			w.append("<br>\n");
 			w.append("SQL Text by 'SQL_ID', Row Count: " + _sqlTextRstm.getRowCount() + "\n");
 			w.append(toHtmlTable(_sqlTextRstm));
@@ -156,9 +201,7 @@ extends OracleAbstract
 			// (type 'text/xmldata' is what dsrOpenLink() expects, the content is the plain text of DBMS_XPLAN: the browser does not parse it)
 			for (Entry<String, String> plan : _planTexts.entrySet())
 			{
-				w.append("\n<script id='").append(plan.getKey()).append("' type='text/xmldata'>\n");
-				w.append(plan.getValue().replace("</script", "<\\/script"));
-				w.append("\n</script>\n");
+				ShowplanLinkBuilder.writePlanScript(w, plan.getKey(), plan.getValue());
 			}
 		}
 	}
@@ -206,7 +249,7 @@ extends OracleAbstract
 	@Override
 	public String getSubject()
 	{
-		return "Top SQL Statements (order by: ELAPSED_TIME, origin: CmSqlStats / V$SQLSTATS)";
+		return _reportType.subject();
 	}
 
 	@Override
@@ -253,21 +296,40 @@ extends OracleAbstract
 		// "per execution" over the whole period: NULL when no execution was started in the period (the statement was already running when the recording started)
 		String perExec = " / nullif(sum([EXECUTIONS]), 0)";
 
-		// The statements that are in the top ## on: elapsed time, CPU time or buffer gets
+		//------------------------------------------------------------------------
+		// OVERVIEW: each statement's share of what all the statements did (see TopSqlOverview)
+		//------------------------------------------------------------------------
+		if (ReportType.OVERVIEW.equals(_reportType))
+		{
+			java.util.List<TopSqlOverview.Measure> measures = java.util.List.of(
+				new TopSqlOverview.Measure("elapsed_time", "sum([ELAPSED_TIME])", ReportType.ELAPSED_TIME.subject(), "ELAPSED_TIME", false, "Share of all the statements' elapsed time (CPU + waits), in percent"),
+				new TopSqlOverview.Measure("cpu_time"    , "sum([CPU_TIME])"    , ReportType.CPU_TIME    .subject(), "CPU_TIME"    , false, "Share of all the statements' CPU time, in percent"),
+				new TopSqlOverview.Measure("buffer_gets" , "sum([BUFFER_GETS])" , ReportType.BUFFER_GETS .subject(), "BUFFER_GETS" , false, "Share of all the statements' buffer gets (logical reads), in percent"),
+				new TopSqlOverview.Measure("disk_reads"  , "sum([DISK_READS])"  , ReportType.DISK_READS  .subject(), "DISK_READS"  , true , "Share of all the statements' disk reads, in percent"),
+				new TopSqlOverview.Measure("executions"  , "sum([EXECUTIONS])"  , ReportType.EXECUTIONS  .subject(), "EXECUTIONS"  , false, "Share of all the statements' executions, in percent"));
+
+			_overview = TopSqlOverview.create(this, conn, "[CmSqlStats_diff]",
+					"where ([EXECUTIONS] > 0 or [ELAPSED_TIME] > 0) \n" + sql_and_skipNewDiffRateRows + getReportPeriodSqlWhere(),
+					"[SQL_ID]", "SQL_ID", "max([CON_NAME]) as [CON_NAME], max([" + col_SQL_FULLTEXT + "]) as [SqlText]", "SqlText", measures, getTopRows());
+			_shortRstm = _overview.getRstm();
+			if (hasDictCompCols)
+				updateDictionaryCompressedColumn(_shortRstm, conn, null, "CmSqlStats", "SQL_FULLTEXT", "SqlText");
+
+			_overview.setDescription("elapsed time, CPU time, buffer gets, disk reads and executions",
+					"the statements the collector recorded (CmSqlStats keeps the statements with most buffer gets, property <code>CmSqlStats.sample.topRows</code>)");
+			return;
+		}
+
+		// This section's top ## on its measure (only statements that have some of it: no zero rows in "disk reads")
 		// For every measure: a chart (filled in below), the sum, and the value per execution
+		String having = ReportType.DISK_READS.equals(_reportType) ? "    having sum([DISK_READS]) > 0 \n" : "";
 		String sql = getCmDiffColumnsAsSqlComment("CmSqlStats")
-			    + "select * \n"
-			    + "from ( \n"
-			    + "    select \n"
+			    + "    select top " + topRows + " \n"
 			    + "         [SQL_ID] \n"
 			    + "        ,max([CON_NAME])                                                                        as [CON_NAME] \n"
 			    + "        ,max([" + col_SQL_FULLTEXT + "])                                                        as [SqlText] \n"
 			    + "        ,cast('' as varchar(512))                                                               as [ExecPlan] \n"
 			    + "        ,count(distinct [PLAN_HASH_VALUE])                                                      as [plan_count] \n"
-			    + " \n"
-			    + "        ,row_number() over (order by sum([ELAPSED_TIME]) desc)                                  as [rank_elapsed] \n"
-			    + "        ,row_number() over (order by sum([CPU_TIME])     desc)                                  as [rank_cpu] \n"
-			    + "        ,row_number() over (order by sum([BUFFER_GETS])  desc)                                  as [rank_gets] \n"
 			    + " \n"
 			    + "        ,cast('' as varchar(512))                                                               as [EXECUTIONS__chart] \n"
 			    + "        ,sum([EXECUTIONS])                                                                      as [EXECUTIONS__sum] \n"
@@ -341,11 +403,8 @@ extends OracleAbstract
 			    + "  " + sql_and_skipNewDiffRateRows
 			    + "  " + getReportPeriodSqlWhere()
 			    + "    group by [SQL_ID] \n"
-			    + ") x \n"
-			    + "where [rank_elapsed] <= " + topRows + " \n"
-			    + "   or [rank_cpu]     <= " + topRows + " \n"
-			    + "   or [rank_gets]    <= " + topRows + " \n"
-			    + "order by [rank_elapsed] \n"
+			    + having
+			    + "    order by [" + _orderByCol + "] desc, [SQL_ID] \n"   // tie-break on the key: the OVERVIEW does the same
 			    + "";
 
 		_shortRstm = executeQuery(conn, sql, true, "OracleTopSql", false); // false = do not truncate (the SQL Text)
@@ -354,11 +413,12 @@ extends OracleAbstract
 			return;
 
 		// Highlight sort column
-		_shortRstm.setHighlightSortColumns("ELAPSED_TIME_ms__sum");
+		_shortRstm.setHighlightSortColumns(_orderByCol);
 
 		_shortRstm.setDescription(
 				"The SQL Statements that used most resources during the period (from the table <code>CmSqlStats_diff</code>).<br>" +
-				"A statement is listed if it is in the top " + topRows + " on <b>elapsed time</b>, <b>CPU time</b> or <b>buffer gets</b> (the three <code>rank_</code> columns says where it's placed in each).<br>" +
+				"The top " + topRows + " on <b>" + _measureText + "</b> (ordered by: " + _orderByCol + "). " +
+				"There is one section like this for each of: elapsed time, CPU time, buffer gets, disk reads and executions. A statement can be in several of them.<br>" +
 				"The <code>__chart</code> columns shows <b>when</b> during the period, in 10 minute chunks. <code>EXECUTIONS__chart</code> is the number of executions, all the others are the value <b>per execution</b> " +
 				"(a chunk where the statement was still running, but no execution was started, is counted as one execution: Oracle counts an execution when it starts).<br>" +
 				"<b>Note</b>: The collector only records the statements with most buffer gets (property <code>CmSqlStats.sample.topRows</code>), " +
@@ -370,9 +430,6 @@ extends OracleAbstract
 		_shortRstm.setColumnDescription("SqlText"                      , "The SQL Text: click to see it (it is also in the table below)");
 		_shortRstm.setColumnDescription("ExecPlan"                     , "The execution plan(s) the collector stored for the statement: click to see it in DbxCentral");
 		_shortRstm.setColumnDescription("plan_count"                   , "How many different execution plans (PLAN_HASH_VALUE) the statement had during the period. More than 1 = the plan changed.");
-		_shortRstm.setColumnDescription("rank_elapsed"                 , "Place in the list when it's sorted on elapsed time (1 = most)");
-		_shortRstm.setColumnDescription("rank_cpu"                     , "Place in the list when it's sorted on CPU time (1 = most)");
-		_shortRstm.setColumnDescription("rank_gets"                    , "Place in the list when it's sorted on buffer gets (1 = most)");
 		_shortRstm.setColumnDescription("EXECUTIONS__chart"            , "Chart: number of executions, in 10 minute chunks\nSo you can see WHEN the statement was executed.");
 		_shortRstm.setColumnDescription("EXECUTIONS__sum"              , "Number of executions");
 		_shortRstm.setColumnDescription("ELAPSED_TIME_ms__chart"       , "Chart: elapsed time for ONE execution in milliseconds, in 10 minute chunks\nSo you can see when the statement was slower than normal.");
@@ -488,7 +545,7 @@ extends OracleAbstract
 		// The "details" table: SQL_ID + the charts and numbers of the statement (as a table in the cell) + the SQL Text, the execution plan and the tables
 		//--------------------------------------------------------------------------------
 		SimpleResultSet srs = new SimpleResultSet();
-		srs.addColumn("SQL_ID",     Types.VARCHAR,       30, 0);
+		srs.addColumn("Info",       Types.VARCHAR,  1024*64, 0); // one narrow column: SQL_ID, container, who runs it, plan + LLM advice links (as the ASE Info column)
 		srs.addColumn("sparklines", Types.VARCHAR,      512, 0);
 		srs.addColumn("query",      Types.VARCHAR, 1024*128, 0);
 
@@ -547,12 +604,14 @@ extends OracleAbstract
 			String      shortPlanLinks = ""; // for the first table:     "view plan",           or "111, 222"
 			String      firstPlanId    = null;
 			String      conName        = _shortRstm.getValueAsString(r, "CON_NAME");
-			String      executedBy     = ""; // who runs the statement: the PL/SQL unit it is written in, the schema it is parsed in, the module (the application)
+			String      program        = ""; // who runs the statement: the program, the schema it is parsed in, the module (the application)
+			String      parsingSchema  = "";
+			String      module         = "";
 			Set<String> planTableList  = new LinkedHashSet<>();
 
 			for (Entry<String, String[]> plan : plans.entrySet())
 			{
-				String planElementId = "oraplan_" + sqlId + "_" + plan.getKey();
+				String planElementId = "oraplan_" + _reportType + "_" + sqlId + "_" + plan.getKey(); // the section in the id: a statement can be in several sections
 				_planTexts.put(planElementId, plan.getValue()[0]);
 
 				if (firstPlanId == null)
@@ -561,15 +620,11 @@ extends OracleAbstract
 					conName = plan.getValue()[2];
 				planTableList.addAll(StringUtil.parseCommaStrToList(plan.getValue()[1], true));
 
-				if (executedBy.isEmpty())
+				if (program.isEmpty() && parsingSchema.isEmpty() && module.isEmpty())
 				{
-					String parsingSchema = plan.getValue()[3];
-					String module        = plan.getValue()[4];
-					String program       = plan.getValue()[5];
-
-					executedBy = (StringUtil.hasValue(program)       ? "Executed By: <code>"    + StringEscapeUtils.escapeHtml4(program)       + "</code> &emsp; " : "")
-					           + (StringUtil.hasValue(parsingSchema) ? "Parsing Schema: <code>" + StringEscapeUtils.escapeHtml4(parsingSchema) + "</code> &emsp; " : "")
-					           + (StringUtil.hasValue(module)        ? "Module: <code>"         + StringEscapeUtils.escapeHtml4(module)        + "</code>"         : "");
+					parsingSchema = StringUtil.nullToValue(plan.getValue()[3], "");
+					module        = StringUtil.nullToValue(plan.getValue()[4], "");
+					program       = StringUtil.nullToValue(plan.getValue()[5], "");
 				}
 
 				// One plan: "View Execution Plan". Several: the icon and the text once, then a link per plan
@@ -621,13 +676,20 @@ extends OracleAbstract
 			// Grab all the charts and numbers we defined in 'htp'
 			String sparklines = htp.getHtmlTextForRow(r);
 
+			// The Info column: SQL_ID, the container, who runs it, the plan + LLM advice links
+			String info = infoCell(
+					  infoValue("SQL_ID",         "The id of the statement (V$SQL.SQL_ID): a hash of the SQL text", sqlId)
+					, infoValue("Container",      null, conName)
+					, infoValue("Executed by",    null, program.isEmpty()       ? "" : "<code>" + StringEscapeUtils.escapeHtml4(program)       + "</code>")
+					, infoValue("Parsing schema", null, parsingSchema.isEmpty() ? "" : "<code>" + StringEscapeUtils.escapeHtml4(parsingSchema) + "</code>")
+					, infoValue("Module",         null, module.isEmpty()        ? "" : "<code>" + StringEscapeUtils.escapeHtml4(module)        + "</code>")
+					, planLinks
+					, llmAdviceLink);
+
 			srs.addRow(
-					sqlId,
+					info,
 					sparklines,
 					"<xmp>" + sqlText + "</xmp>\n"
-						+ (executedBy.isEmpty() ? "" : "<br>" + executedBy + " <br>\n")
-						+ "<br>\n" + planLinks
-						+ (StringUtil.hasValue(llmAdviceLink) ? "<br>\n" + llmAdviceLink : "")
 						+ tableInfo);
 		}
 

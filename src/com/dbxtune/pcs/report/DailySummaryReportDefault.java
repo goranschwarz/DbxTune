@@ -32,6 +32,7 @@ import java.nio.file.Path;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -53,8 +54,10 @@ import com.dbxtune.pcs.report.content.ShowplanLinkBuilder;
 import com.dbxtune.pcs.report.content.DbxTuneErrors;
 import com.dbxtune.pcs.report.content.DbxTunePcsTablesSize;
 import com.dbxtune.pcs.report.content.IReportEntry;
+import com.dbxtune.pcs.report.content.IReportEntry.IssueLevel;
 import com.dbxtune.pcs.report.content.IReportEntry.MessageType;
 import com.dbxtune.pcs.report.content.RecordingInfo;
+import com.dbxtune.pcs.report.content.ReportStatus;
 import com.dbxtune.pcs.report.content.ReportContent;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
@@ -99,11 +102,14 @@ extends DailySummaryReportAbstract
 		Configuration localConf    = Configuration.getCombinedConfiguration();
 		
 		// Iterate all entries and create the report
-		int entryCount = getReportEntries().size();
 		int count = 0;
 		IProgressReporter progressReporter = getProgressReporter();
-		for (IReportEntry entry : getReportEntries())
+		// By index: an entry may add entries right after itself while it is created (see addReportEntryAfter), they are created too
+		for (int ei = 0; ei < getReportEntries().size(); ei++)
 		{
+			IReportEntry entry = getReportEntries().get(ei);
+			int entryCount = getReportEntries().size();
+
 			// First force a Garbage Collection
 			System.gc();
 //System.out.println("  ******* Used Memory " + Memory.getUsedMemoryInMB() + " MB ****** create(): BEFORE: "+ entry.getClass().getSimpleName());
@@ -214,8 +220,7 @@ extends DailySummaryReportAbstract
 		content.setMinimalMessage(minimalMessageStringWriter.toString());
 		content.setMinimalMessageOfHtml(true);
 
-		boolean hasIssueToReport = hasIssueToReport();
-		content.setNothingToReport( ! hasIssueToReport );
+		content.setIssueLevel( getIssueLevel() );
 
 		// set the content
 		setReportContent(content);
@@ -224,6 +229,20 @@ extends DailySummaryReportAbstract
 	public void addReportEntry(IReportEntry entry)
 	{
 		_reportEntries.add(entry);
+	}
+
+	/**
+	 * Add an entry right after another one (or at the end, if 'after' is not found).<br>
+	 * An entry can do this in its create(), for parts that are only known then: they get a section (and a place in the table of contents) of their own.
+	 * For example 'Query Store': one section per database that has Query Store.
+	 */
+	public void addReportEntryAfter(IReportEntry after, IReportEntry entry)
+	{
+		int pos = _reportEntries.indexOf(after);
+		if (pos < 0)
+			_reportEntries.add(entry);
+		else
+			_reportEntries.add(pos + 1, entry);
 	}
 
 	public IReportEntry getReportEntry(Class<?> classToReturn)
@@ -240,6 +259,7 @@ extends DailySummaryReportAbstract
 	public void addReportEntriesTop()
 	{
 		addReportEntry( new RecordingInfo(this) );
+		addReportEntry( new ReportStatus(this)  );
 		addReportEntry( new AlarmsActive(this)  );
 		addReportEntry( new AlarmsHistory(this) );
 	}
@@ -369,27 +389,77 @@ extends DailySummaryReportAbstract
 	}
 
 	/**
-	 * Check all ReportEntries, if any of them has something to report or not
-	 * @return 
+	 * The level of the whole report: the highest level of all ReportEntries (NONE = Nothing To Report)
 	 */
-	public boolean hasIssueToReport()
+	public IssueLevel getIssueLevel()
 	{
+		IssueLevel level = IssueLevel.NONE;
 		for (IReportEntry entry : getReportEntries())
 		{
-			try
-			{
-				if ( entry.hasIssueToReport() )
-					return true;
-			} 
-			catch (RuntimeException rte) 
-			{
-				// This may happen if the ReportEntry has problems (for example NullPointerException in hasIssueToReport()...
-				_logger.warn("Problems checking for hasIssueToReport() for ReportEntry for '" + entry.getClass().getSimpleName() + "'. Caught RuntimeException, skipping this and checking next entry.", rte);
-			}
+			IssueLevel entryLevel = getIssueLevel(entry);
+			if (entryLevel.compareTo(level) > 0)
+				level = entryLevel;
 		}
-		return false;
+		return level;
 	}
 
+	/**
+	 * The level of one ReportEntry, NONE if the entry is disabled or throws
+	 */
+	public static IssueLevel getIssueLevel(IReportEntry entry)
+	{
+		try
+		{
+			if ( ! entry.isEnabled() )
+				return IssueLevel.NONE;
+
+			IssueLevel level = entry.getIssueLevel();
+			return level == null ? IssueLevel.NONE : level;
+		}
+		catch (RuntimeException rte)
+		{
+			// This may happen if the ReportEntry has problems (for example NullPointerException in getIssueLevel()...
+			_logger.warn("Problems checking getIssueLevel() for ReportEntry '" + entry.getClass().getSimpleName() + "'. Caught RuntimeException, using level NONE for this entry.", rte);
+			return IssueLevel.NONE;
+		}
+	}
+
+	/** " [FYI]" or " [ISSUE]" badge for the TOC and the section headers, "" for level NONE */
+	private static String getIssueLevelBadge(IReportEntry entry)
+	{
+		IssueLevel level = getIssueLevel(entry);
+		return level == IssueLevel.NONE ? "" : " " + ReportStatus.levelBadge(level);
+	}
+
+
+	/**
+	 * Mail: the tooltip texts (Table Info, Triggers...) each ONCE, as a CSS rule: {@code .dsr-tt-17:hover::before { content: "..." }}.
+	 * The elements only have the class (see ReportEntryAbstract.getTextAsTooltipDiv). Same CSS (::before) as 'data-tooltip', so it
+	 * shows in the same mail readers. The full report has the texts as hidden elements instead, see createHtmlBody().
+	 */
+	private void writeTooltipTextsAsCss(Writer w)
+	throws IOException
+	{
+		if (getTooltipTexts().isEmpty())
+			return;
+
+		w.append("<style type='text/css'> \n");
+		for (java.util.Map.Entry<String, Integer> e : getTooltipTexts().entrySet())
+		{
+			// CSS string: escape \ and ", a new line is \A (the rule has 'white-space: pre-wrap'), '<' as \3C so it never ends the <style>
+			StringBuilder css = new StringBuilder();
+			for (char c : e.getKey().toCharArray())
+			{
+				if      (c == '\\') css.append("\\\\");
+				else if (c == '"')  css.append("\\\"");
+				else if (c == '\n') css.append("\\A ");
+				else if (c == '<')  css.append("\\3C ");
+				else if (c != '\r') css.append(c);
+			}
+			w.append(".dsr-tt-").append(e.getValue().toString()).append(":hover::before { content: \"").append(css).append("\"; } \n");
+		}
+		w.append("</style> \n");
+	}
 
 	private void createDbxTuneCss(Writer w)
 	throws IOException
@@ -400,8 +470,9 @@ extends DailySummaryReportAbstract
 		w.append("        body { \n");
 		w.append("            -webkit-text-size-adjust: 100%; \n");
 		w.append("            -ms-text-size-adjust: 100%; \n");
-		w.append("            font-family: Arial, Helvetica, sans-serif; \n");
-		w.append("            font-family: Arial, Helvetica, sans-serif; \n");
+		w.append("            font-family: \"Segoe UI\", Arial, Helvetica, sans-serif; \n");
+		w.append("            color: #1d2430; \n");
+		w.append("            font-size: 14px; \n");
 //		sb.append("            line-height: 1;  /* overiding bootstrap, which has 1.5 */ \n");  
 		w.append("            line-height: normal;  /* overiding bootstrap, which has 1.5 */ \n");  
 		w.append("        } \n");
@@ -418,26 +489,31 @@ extends DailySummaryReportAbstract
 		w.append("            mso-table-wrap: none; \n");        // not sure about this - https://gist.github.com/webtobesocial/ac9d052595b406d5a5c1
 //		w.append("            mso-cellspacing: 20px; \n");
 		w.append("            border-collapse: collapse; \n");
+		w.append("            border: 0; \n"); // also over the border='1' attribute: one table style, thin row lines and no grid
+		w.append("            font-size: 13px; \n");
 		w.append("        } \n");
 		w.append("        th { \n");
-		w.append("            border: 1px solid black; \n");
+		w.append("            border: 0; \n");
+		w.append("            border-bottom: 1px solid #d5dbe4; \n");
 		w.append("            text-align: left; \n");
-		w.append("            padding: 2px; \n");
+		w.append("            padding: 3px 6px; \n");
 		w.append("            white-space: nowrap; \n");
-		w.append("            background-color: gray; \n");
-		w.append("            color: white; \n");
+		w.append("            background-color: #eef1f5; \n");
+		w.append("            color: #3a4556; \n");
+		w.append("            font-weight: 600; \n");
 		w.append("        } \n");
 		w.append("        td { \n");
-		w.append("            border: 1px solid black; \n");
+		w.append("            border: 0; \n");
+		w.append("            border-bottom: 1px solid #edf0f4; \n");
 		w.append("        /*  text-align: left; */ \n");
-		w.append("            padding: 2px; \n");
+		w.append("            padding: 2px 6px; \n");
 		w.append("            white-space: nowrap; \n");
 		w.append("        } \n");
 		w.append("        tr:nth-child(odd) { \n");
 		w.append("            background-color: white; \n"); // Otherwise it will be transparent (and bootstrap will write "right line" of a box in the table)
 		w.append("        } \n");
 		w.append("        tr:nth-child(even) { \n");
-		w.append("            background-color: #f2f2f2; \n");
+		w.append("            background-color: #f9fafb; \n");
 		w.append("        } \n");
 		w.append("\n");
 		w.append("<!--[if mso]> \n");
@@ -590,15 +666,18 @@ extends DailySummaryReportAbstract
 		w.append("        .sparkline-wrapper {					\n");
 		w.append("            position: relative;				\n");
 		w.append("        }									\n");
+		// The image (shown first) and the chart drawn by JavaScript (replaces it) must take the same space, else the rows move while the charts are drawn:
+		// both 19px, and as 'block' (an inline image gets a gap below it for the text baseline)
+		w.append("        .sparkline-wrapper img, .sparkline-wrapper canvas { display: block; } \n");
 		w.append("\n");
 		w.append("        /* The below data-tooltip is used to show Actual exected SQL Text, as a tooltip where a normalized text is in a table cell */ \n");
-		w.append("        [data-tooltip] {						\n");
+		w.append("        [data-tooltip], .dsr-tt {				\n"); // .dsr-tt: the text is written once, see getTooltipTexts()
 		w.append("            position: relative;				\n");
 //		sb.append("            cursor: help;					\n");
 		w.append("        }									\n");
 		w.append("        										\n");
 		w.append("        /* 'tooltip' CSS settings for SQL Text... */ \n");
-		w.append("        [data-tooltip]:hover::before {		\n");
+		w.append("        [data-tooltip]:hover::before, .dsr-tt:hover::before { \n");
 		w.append("            content: attr(data-tooltip);		\n");
 		w.append("            position: absolute;				\n");
 		w.append("            z-index: 103; 					\n");
@@ -615,6 +694,11 @@ extends DailySummaryReportAbstract
 		w.append("            font-family: Courier;			\n");
 		w.append("            white-space: pre-wrap;			\n");
 		w.append("        }									\n");
+		w.append("        /* The (i) explanations in the 'Info' columns: a small box (data-tooltip above is the wide SQL Text box) */ \n");
+		w.append("        .dsr-info-tip { position: relative; } \n");
+		w.append("        .dsr-info-tip:hover::after { content: attr(data-info); position: absolute; z-index: 104; top: 16px; left: 0; width: 380px; \n");
+		w.append("            padding: 8px 10px; background: #454545; color: #fff; font-size: 12px; font-weight: normal; line-height: 1.4; \n");
+		w.append("            white-space: pre-wrap; border-radius: 4px; text-align: left; } \n");
 		w.append("        [data-title]:hover::after {			\n");
 		w.append("            content: '';						\n");
 		w.append("            position: absolute;				\n");
@@ -865,6 +949,12 @@ extends DailySummaryReportAbstract
 		w.append("               $('#heading_' + name)[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });	\n"); // Scroll to this HEADING otherwise it may be "confusing"
 //		w.append("               document.getElementById('heading_' + name).scrollIntoView();	\n"); // Scroll to this HEADING otherwise it may be "confusing"
 		w.append("           } 										\n");
+		w.append("           return false; 							\n");
+		w.append("        } 										\n");
+		w.append("\n");
+		w.append("        function toggleAllDetails(open) 			\n");
+		w.append("        { 										\n");
+		w.append("           document.querySelectorAll('details').forEach(function(d) { d.open = open; }); \n");
 		w.append("           return false; 							\n");
 		w.append("        } 										\n");
 		w.append("\n");
@@ -1164,6 +1254,9 @@ extends DailySummaryReportAbstract
 		w.append("\n");
 	}
 
+	/** The name of the section that shows the time it took to create each section */
+	private static final String EXEC_TIME_SECTION_NAME = "Exec/Creation time for each Report Section";
+
 	public void createHtmlBody(Writer writer)
 	throws IOException
 	{
@@ -1184,6 +1277,139 @@ extends DailySummaryReportAbstract
 		if (useBootstrap())
 		{
 			writer.append("<div class='container-fluid'> \n"); // BEGIN: Bootstrap 4 container
+
+			// Layout: a sticky table of contents on the left (wide screens), the sections (cards) on the right
+			writer.append("<style type='text/css'> \n");
+			writer.append("    body { background: #f6f7f9; } \n");
+			writer.append("    .dsr-layout { display: flex; align-items: flex-start; } \n");
+			writer.append("    .dsr-main   { flex: 1 1 auto; min-width: 0; } \n");
+			writer.append("    .dsr-toc    { position: sticky; top: 8px; flex: 0 0 var(--dsr-toc-w, 260px); max-height: calc(100vh - 16px); overflow-y: auto; \n");
+			writer.append("                  font-size: 13px; background: #ffffff; border: 1px solid #dfe3ea; border-radius: 8px; padding: 10px 8px; margin-top: 8px; } \n");
+			writer.append("    .dsr-toc .dsr-toc-head { display: flex; justify-content: space-between; align-items: center; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: #5d6878; margin: 0 0 6px 6px; } \n");
+			writer.append("    .dsr-toc-btn { border: 0; background: transparent; color: #5d6878; font-size: 14px; line-height: 1; padding: 2px 6px; border-radius: 4px; cursor: pointer; } \n");
+			writer.append("    .dsr-toc-btn:hover { background: #eef2f8; color: #1d2430; } \n");
+			// The grip between the sidebar and the sections: drag = width, double click = default width
+			writer.append("    .dsr-toc-grip { flex: 0 0 18px; align-self: stretch; cursor: col-resize; position: relative; } \n");
+			writer.append("    .dsr-toc-grip::after { content: ''; position: absolute; top: 8px; bottom: 0; left: 8px; width: 2px; border-radius: 1px; background: transparent; } \n");
+			writer.append("    .dsr-toc-grip:hover::after, .dsr-toc-grip.dsr-dragging::after { background: #b9c3d3; } \n");
+			// Collapsed: no sidebar, a small button on the left edge brings it back
+			writer.append("    .dsr-toc-open { display: none; position: fixed; left: 0; top: 90px; z-index: 1000; border: 1px solid #dfe3ea; border-left: 0; border-radius: 0 6px 6px 0; \n");
+			writer.append("                    background: #ffffff; color: #5d6878; padding: 8px 6px; font-size: 14px; line-height: 1; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.08); } \n");
+			writer.append("    .dsr-toc-open:hover { color: #1d2430; background: #eef2f8; } \n");
+			writer.append("    .dsr-toc-collapsed .dsr-toc, .dsr-toc-collapsed .dsr-toc-grip { display: none; } \n");
+			writer.append("    @media (min-width: 992px) { .dsr-toc-collapsed .dsr-toc-open { display: block; } } \n");
+			writer.append("    .dsr-toc a  { display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: 3px 6px; border-radius: 4px; color: #1d2430; text-decoration: none; } \n");
+			writer.append("    .dsr-toc a:hover { background: #eef2f8; } \n");
+			writer.append("    .dsr-toc a.dsr-toc-on { background: #e6eefb; font-weight: 600; } \n");
+			writer.append("    @media (max-width: 991.98px) { .dsr-toc, .dsr-toc-grip { display: none; } } \n");
+			writer.append("    .dsr-card { border: 1px solid #dfe3ea !important; border-radius: 8px; } \n");
+			// Wide tables: scroll left/right inside the section, not cut off (the sections are as wide as the window)
+			writer.append("    .dsr-card .card-body { overflow-x: auto; } \n");
+			writer.append("    .dsr-main details { max-width: 100%; overflow-x: auto; } \n");
+			// The floating scrollbar (see the script at the end of the page)
+			writer.append("    #dsr-hscroll { position: fixed; bottom: 0; height: 17px; overflow-x: auto; overflow-y: hidden; z-index: 1030; display: none; \n");
+			writer.append("                   background: rgba(246, 247, 249, 0.92); border-top: 1px solid #dfe3ea; } \n");
+			writer.append("    #dsr-hscroll > div { height: 1px; } \n");
+			writer.append("    .dsr-card > .card-header { background: #ffffff; border-bottom: 1px solid #e8ebf0; font-size: 16px; } \n");
+			writer.append("    .dsr-card > .card-header a { color: #1d2430; text-decoration: none; } \n");
+			writer.append("    .dsr-origin { font-family: Consolas, 'Courier New', monospace; font-size: 11.5px; color: #6b7686; font-weight: normal; margin-left: 10px; } \n");
+			writer.append("</style> \n");
+			writer.append("<div class='dsr-layout'> \n");
+			writer.append("<button type='button' class='dsr-toc-open' title='Show the table of contents' onclick='dsrTocToggle()'>&#9776;</button> \n");
+			writer.append("<nav class='dsr-toc' aria-label='Report sections'> \n");
+			// The head in the report level's color (as the mail banner): server name + day and date
+			IssueLevel tocLevel = getIssueLevel();
+			String     tocColor = tocLevel == IssueLevel.NONE ? "#198754" : tocLevel == IssueLevel.FYI ? "#0d6efd" : "#dc3545";
+			String     tocWhen  = getDayDateText();
+			if (isFullDayRecording())
+				tocWhen += getRecordingHoursText(" &middot; ");
+			else
+				tocWhen += "<br>" + new SimpleDateFormat("HH:mm").format(getReportPeriodOrRecordingBeginTime()) + " &ndash; " + new SimpleDateFormat("HH:mm").format(getReportPeriodOrRecordingEndTime())
+				         + getRecordingHoursText(" &middot; ");
+			writer.append("  <div class='dsr-toc-head' style='background:" + tocColor + "; color:#ffffff; border-radius:6px; padding:6px 4px 6px 8px; margin:0 0 8px 0; align-items:flex-start;'>"
+					+ "<span><b>" + getServerName() + "</b><br><span style='text-transform:none; letter-spacing:0;'>" + tocWhen + "</span></span>"
+					+ "<button type='button' class='dsr-toc-btn' style='color:#ffffff;' title='Hide the table of contents' onclick='dsrTocToggle()'>&laquo;</button></div> \n");
+			List<String> tocTitles = new ArrayList<>();
+			for (IReportEntry entry : getReportEntries())
+				tocTitles.add(splitSubject(entry.getSubject())[0]);
+			for (int ti = 0; ti < tocTitles.size(); ti++)
+			{
+				IReportEntry entry = getReportEntries().get(ti);
+				String       title = tocTitles.get(ti);
+
+				// Same beginning as the entry above or below (Top SQL Statements - CPU_TIME, - EXECUTION_COUNT...): the part that differs in bold
+				// (and when they also end the same: only the middle, "Top [SQL Captured] - CPU_TIME - SLOW Normalized SQL Statements")
+				int boldBegin = 0;
+				int boldEnd   = title.length();
+				for (int ni : new int[] {ti - 1, ti + 1})
+				{
+					if (ni < 0 || ni >= tocTitles.size())
+						continue;
+					String other = tocTitles.get(ni);
+					if (other.startsWith(title)) // same or this is the start of the other ("by CPU Time", "by CPU Time below 100 ms")
+						continue;
+					int pre = 0;
+					while (pre < title.length() && pre < other.length() && title.charAt(pre) == other.charAt(pre))
+						pre++;
+					if (pre == other.length() && title.charAt(pre) == ' ') // the other is the start of this, "by CPU Time" -> "by CPU Time below 100 ms"
+						pre++;
+					else
+						pre = title.lastIndexOf(' ', pre - 1) + 1; // whole words only
+					if (pre <= boldBegin)
+						continue;
+					int suf = 0;
+					while (suf < title.length() - pre && suf < other.length() - pre && title.charAt(title.length() - 1 - suf) == other.charAt(other.length() - 1 - suf))
+						suf++;
+					int end = suf == 0 ? title.length() : title.indexOf(' ', title.length() - suf); // whole words only
+					boldBegin = pre;
+					boldEnd   = end > pre ? end : title.length();
+				}
+				int sharedWords = 0; // words only, not '-' (Database Size..., Database Backup... is not enough)
+				for (String word : title.substring(0, boldBegin).trim().split("\\s+"))
+					if (word.matches(".*[\\p{L}\\p{N}].*"))
+						sharedWords++;
+				String  label    = sharedWords >= 3 && boldBegin < boldEnd
+						? title.substring(0, boldBegin) + "<b>" + title.substring(boldBegin, boldEnd) + "</b>" + title.substring(boldEnd)
+						: title;
+
+				writer.append("  <a href='#" + StringUtil.stripAllNonAlphaNum(entry.getSubject()) + "'><span>" + label + "</span>" + getIssueLevelBadge(entry) + "</a> \n");
+			}
+			if (createExecTimeReportSection() && Configuration.getCombinedConfiguration().getBooleanProperty("DailySummaryReport.report.entry.enabled.printExecTime.fullMessage", true))
+				writer.append("  <a href='#sectionTime'><span>" + EXEC_TIME_SECTION_NAME + "</span></a> \n");
+			writer.append("</nav> \n");
+			writer.append("<div class='dsr-toc-grip' title='Drag to change the width (double click: default width)'></div> \n");
+			// Right here (not at the end of the page): the sidebar gets its saved width / collapsed state before it is drawn, no jump
+			writer.append("<script type='text/javascript'> \n");
+			writer.append("(function() { \n");
+			writer.append("    var lay  = document.currentScript.parentNode; \n");
+			writer.append("    var toc  = lay.querySelector('.dsr-toc'); \n");
+			writer.append("    var grip = lay.querySelector('.dsr-toc-grip'); \n");
+			writer.append("    function getItem(k)    { try { return localStorage.getItem(k); } catch(e) { return null; } } \n");
+			writer.append("    function setItem(k, v) { try { localStorage.setItem(k, v);    } catch(e) {} } \n");
+			writer.append("    var w = parseInt(getItem('dsr.toc.width'), 10); \n");
+			writer.append("    if (w >= 160 && w <= 800) lay.style.setProperty('--dsr-toc-w', w + 'px'); \n");
+			writer.append("    if (getItem('dsr.toc.collapsed') === '1') lay.classList.add('dsr-toc-collapsed'); \n");
+			writer.append("    window.dsrTocToggle = function() { setItem('dsr.toc.collapsed', lay.classList.toggle('dsr-toc-collapsed') ? '1' : '0'); }; \n");
+			writer.append("    grip.addEventListener('pointerdown', function(e) { \n");
+			writer.append("        e.preventDefault(); \n");
+			writer.append("        var x0 = e.clientX, w0 = toc.getBoundingClientRect().width; \n");
+			writer.append("        grip.classList.add('dsr-dragging'); \n");
+			writer.append("        document.body.style.userSelect = 'none'; \n");
+			writer.append("        function move(ev) { lay.style.setProperty('--dsr-toc-w', Math.max(160, Math.min(800, w0 + ev.clientX - x0)) + 'px'); } \n");
+			writer.append("        function up() { \n");
+			writer.append("            document.removeEventListener('pointermove', move); \n");
+			writer.append("            document.removeEventListener('pointerup', up); \n");
+			writer.append("            grip.classList.remove('dsr-dragging'); \n");
+			writer.append("            document.body.style.userSelect = ''; \n");
+			writer.append("            setItem('dsr.toc.width', Math.round(toc.getBoundingClientRect().width)); \n");
+			writer.append("        } \n");
+			writer.append("        document.addEventListener('pointermove', move); \n");
+			writer.append("        document.addEventListener('pointerup', up); \n");
+			writer.append("    }); \n");
+			writer.append("    grip.addEventListener('dblclick', function() { lay.style.removeProperty('--dsr-toc-w'); setItem('dsr.toc.width', ''); }); \n");
+			writer.append("})(); \n");
+			writer.append("</script> \n");
+			writer.append("<div class='dsr-main'> \n");
 		}
 		writer.append("\n");
 
@@ -1195,6 +1421,8 @@ extends DailySummaryReportAbstract
 		}
 		
 		// TOC HEADER
+		IssueLevel reportLevel      = getIssueLevel();
+		String     reportLevelColor = reportLevel == IssueLevel.NONE ? "#198754" : reportLevel == IssueLevel.FYI ? "#0d6efd" : "#dc3545";
 		if (createTocSection())
 		{
 			if (useBootstrap())
@@ -1216,11 +1444,15 @@ extends DailySummaryReportAbstract
 
 				// Bootstrap "card" - BEGIN
 				writer.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-				writer.append("<div class='card border-dark mb-3' id='toc'> \n");
-				writer.append("<h5 class='card-header' role='tab' id='heading_toc'> \n");
-				writer.append("  <a data-bs-toggle='collapse' data-bs-parent='#accordion' href='#collapse_toc' aria-expanded='true' aria-controls='collapse_toc' class='d-block'> \n");
+				writer.append("<div class='card dsr-card mb-3 mt-2' id='toc' style='border-left:6px solid " + reportLevelColor + " !important;'> \n");
+				// The header as a banner in the report level's color (as in the mail): white text, a white level badge, and what the level means
+				writer.append("<h5 class='card-header' role='tab' id='heading_toc' style='background:" + reportLevelColor + "; color:#ffffff;'> \n");
+				writer.append("  <a data-bs-toggle='collapse' data-bs-parent='#accordion' href='#collapse_toc' aria-expanded='true' aria-controls='collapse_toc' class='d-block' style='color:#ffffff;'> \n");
 				writer.append("    <i class='fa fa-chevron-down float-end'></i> \n");
-				writer.append("    <b>").append(getReportName() + " for Servername: ").append(getServerName()).append("</b> \n");
+				writer.append("    <b>").append(getServerName()).append("</b> ")
+				      .append("<span style='background:#ffffff; color:" + reportLevelColor + "; padding:1px 6px; border-radius:4px; font-size:85%; font-weight:bold;'>").append(getIssueLevelName(reportLevel)).append("</span>")
+				      .append(" <span class='dsr-origin' style='color:rgba(255,255,255,.85);'>").append(getReportName()).append(" &middot; ").append(getPeriodText()).append("</span> \n");
+				writer.append("    <div style='font-size:14px; font-weight:normal; margin-top:4px;'>").append(getIssueLevelText(reportLevel)).append("</div> \n");
 				writer.append("  </a> \n");
 				writer.append("</h5> \n");
 				writer.append("<div id='collapse_toc' class='collapse" + show + "' role='tabpanel' aria-labelledby='heading_toc'> \n");
@@ -1237,9 +1469,20 @@ extends DailySummaryReportAbstract
 				writer.append("<h2>" + getReportName() + " for Servername: ").append(getServerName()).append("</h2>\n");
 			}
 			writer.append( createDbxCentralLink(true) );
+			writer.append( createLlmAnalysisButton() );
+
+			// Key facts: the same row as in the mail
+			List<String> facts = getKeyFactCells();
+			if ( ! facts.isEmpty() )
+			{
+				writer.append("<table role='presentation' style='border-collapse:collapse; margin-top:10px; font-size:13px;'><tr>");
+				writer.append(String.join("", facts));
+				writer.append("</tr></table> \n");
+			}
 
 			//--------------------------------------------------
 			// TOC
+			writer.append("<div class='d-lg-none'> \n"); // wide screens have the table of contents on the left
 			writer.append("<br> \n");
 			writer.append("Links to Report Sections. \n");
 			writer.append("<ul> \n");
@@ -1254,10 +1497,12 @@ extends DailySummaryReportAbstract
 					tocSubject = tocSubject.substring(0, firstLeftParentheses - 1).trim();
 
 				String liContent = "<a href='#" + tocDiv + "'>" + tocSubject + "</a>";
+				liContent += getIssueLevelBadge(entry);
 				
 				writer.append("<li>").append(liContent).append("</li> \n");
 			}
 			writer.append("</ul> \n");
+			writer.append("</div> \n");
 			writer.append("\n<br>");
 
 			// TOC FOOTER
@@ -1268,6 +1513,11 @@ extends DailySummaryReportAbstract
 				writer.append(" or \n");
 				writer.append("<a href='javascript:void(0);' onclick=\"expandSection('ALL');\">Expand</a> ");
 				writer.append(" ALL sections \n");
+				writer.append("&emsp;&emsp;");
+				writer.append("<a href='javascript:void(0);' onclick=\"toggleAllDetails(false);\">Collapse</a> ");
+				writer.append(" or \n");
+				writer.append("<a href='javascript:void(0);' onclick=\"toggleAllDetails(true);\">Expand</a> ");
+				writer.append(" ALL details\n");
 
 				writer.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
 				writer.append("</div> \n"); // end: card-body
@@ -1319,11 +1569,11 @@ extends DailySummaryReportAbstract
 
 				// Bootstrap "card" - BEGIN
 				writer.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-				writer.append("<div class='card border-dark mb-3' id='").append(tocDiv).append("'> \n");
+				writer.append("<div class='card dsr-card mb-3' id='").append(tocDiv).append("' style='border-left:5px solid ").append(sectionLevelColor(getIssueLevel(entry))).append(" !important;'> \n");
 				writer.append("<h5 class='card-header' role='tab' id='heading_").append(tocDiv).append("'> \n");
 				writer.append("  <a data-bs-toggle='collapse' data-bs-parent='#accordion' href='#collapse_").append(tocDiv).append("' aria-expanded='true' aria-controls='collapse_").append(tocDiv).append("' class='d-block'> \n");
 				writer.append("    <i class='fa fa-chevron-down float-end'></i> \n");
-				writer.append("    <b>").append(entry.getSubject()).append("</b> \n");
+				writer.append("    <b>").append(splitSubject(entry.getSubject())[0]).append("</b>").append(getIssueLevelBadge(entry)).append("<span class='dsr-origin'>").append(splitSubject(entry.getSubject())[1]).append("</span> \n");
 				writer.append("  </a> \n");
 				writer.append("</h5> \n");
 				writer.append("<div id='collapse_").append(tocDiv).append("' class='collapse" + show + "' role='tabpanel' aria-labelledby='heading_").append(tocDiv).append("'> \n");
@@ -1331,13 +1581,13 @@ extends DailySummaryReportAbstract
 				writer.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
 
 				writer.append("<!--[if mso]> \n"); // BEGIN: ONLY FOR OUTLOOK
-				writer.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append("</h2> \n");
+				writer.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append(getIssueLevelBadge(entry)).append("</h2> \n");
 				writer.append("<![endif]-->  \n"); // END: ONLY FOR OUTLOOK
 			}
 			else
 			{
 				// Normal HTML - H2 heading
-				writer.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append("</h2> \n");
+				writer.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append(getIssueLevelBadge(entry)).append("</h2> \n");
 			}
 
 			if (entry.isEnabled())
@@ -1439,6 +1689,8 @@ extends DailySummaryReportAbstract
 		{
 			writer.append("</div> \n");			
 		}
+		if (useBootstrap())
+			writer.append("</div> \n</div> \n"); // END: dsr-main, dsr-layout
 
 		//--------------------------------------------------
 		// END
@@ -1467,7 +1719,72 @@ extends DailySummaryReportAbstract
 		writer.append("    <!-- ================================================================================= -->\n");
 		writer.append("    <!-- == AT the BOTTOM: do stuff when the page is loaded. -->\n");
 		writer.append("    <!-- ================================================================================= -->\n");
+		// The tooltip texts (Table Info, Triggers...), each ONCE: the elements refer to them with 'data-tt' (see ReportEntryAbstract.getTextAsTooltipDiv)
+		writer.append("<div id='dsr-tt-texts' style='display:none'> \n");
+		for (java.util.Map.Entry<String, Integer> e : getTooltipTexts().entrySet())
+			writer.append("<div id='dsr-tt-").append(e.getValue().toString()).append("'>").append(org.apache.commons.text.StringEscapeUtils.escapeHtml4(e.getKey())).append("</div>\n");
+		writer.append("</div> \n");
 		writer.append("    <script type='text/javascript'>  \n");
+		writer.append("\n");
+		writer.append("        // Put the tooltip texts (written once, above) into 'data-tooltip' of every element that refers to them: the hover and the popup read it \n");
+		writer.append("        document.querySelectorAll('[data-tt]').forEach(function(el) { \n");
+		writer.append("            var txt = document.getElementById('dsr-tt-' + el.getAttribute('data-tt')); \n");
+		writer.append("            if (txt) el.setAttribute('data-tooltip', txt.textContent); \n");
+		writer.append("        }); \n");
+		writer.append("\n");
+		writer.append("        // Table of contents: highlight the section that is in view \n");
+		writer.append("        (function() { \n");
+		writer.append("            if (typeof IntersectionObserver === 'undefined') return; \n");
+		writer.append("            var links = {}; \n");
+		writer.append("            document.querySelectorAll('.dsr-toc a').forEach(function(a) { links[a.getAttribute('href').substring(1)] = a; }); \n");
+		writer.append("            var obs = new IntersectionObserver(function(entries) { \n");
+		writer.append("                entries.forEach(function(e) { \n");
+		writer.append("                    if ( ! e.isIntersecting || ! links[e.target.id] ) return; \n");
+		writer.append("                    document.querySelectorAll('.dsr-toc a.dsr-toc-on').forEach(function(a) { a.classList.remove('dsr-toc-on'); }); \n");
+		writer.append("                    links[e.target.id].classList.add('dsr-toc-on'); \n");
+		writer.append("                    links[e.target.id].scrollIntoView({ block: 'nearest' }); \n");
+		writer.append("                }); \n");
+		writer.append("            }, { rootMargin: '0px 0px -75% 0px' }); \n"); // the section in the top quarter of the window
+		writer.append("            Object.keys(links).forEach(function(id) { var el = document.getElementById(id); if (el) obs.observe(el); }); \n");
+		writer.append("        })(); \n");
+		writer.append("\n");
+		writer.append("        // Floating scrollbar: a wide section (table) scrolls left/right inside its card, but its own scrollbar is at \n");
+		writer.append("        // the END of the section, often far below the window. While such a section covers the bottom of the window, \n");
+		writer.append("        // a scrollbar pinned to the window bottom scrolls it. \n");
+		writer.append("        (function() { \n");
+		writer.append("            var bar = document.createElement('div'); bar.id = 'dsr-hscroll'; \n");
+		writer.append("            var inner = document.createElement('div'); bar.appendChild(inner); \n");
+		writer.append("            document.body.appendChild(bar); \n");
+		writer.append("            var target = null, queued = false; \n");
+		writer.append("            function copyScroll(from, to) { if (Math.abs(to.scrollLeft - from.scrollLeft) > 1) to.scrollLeft = from.scrollLeft; } \n"); // scroll events come later: compare, no flag
+		writer.append("            function update() { \n");
+		writer.append("                queued = false; \n");
+		writer.append("                var vh = window.innerHeight, best = null, bestH = Infinity; \n");
+		writer.append("                document.querySelectorAll('.dsr-card .card-body, .dsr-main details').forEach(function(el) { \n");
+		writer.append("                    if (el.scrollWidth <= el.clientWidth + 2) return; \n");
+		writer.append("                    var r = el.getBoundingClientRect(); \n");
+		writer.append("                    if (r.top < vh - 40 && r.bottom > vh && r.height < bestH) { best = el; bestH = r.height; } \n"); // the innermost one that goes past the window bottom
+		writer.append("                }); \n");
+		writer.append("                target = best; \n");
+		writer.append("                if ( ! best ) { bar.style.display = 'none'; return; } \n");
+		writer.append("                var r = best.getBoundingClientRect(); \n");
+		writer.append("                bar.style.left  = r.left + 'px'; \n");
+		writer.append("                bar.style.width = best.clientWidth + 'px'; \n");
+		writer.append("                inner.style.width = best.scrollWidth + 'px'; \n");
+		writer.append("                bar.style.display = 'block'; \n");
+		writer.append("                copyScroll(best, bar); \n");
+		writer.append("            } \n");
+		writer.append("            function queue() { if ( ! queued ) { queued = true; requestAnimationFrame(update); } } \n");
+		writer.append("            bar.addEventListener('scroll', function() { if (target) copyScroll(bar, target); }); \n");
+		writer.append("            window.addEventListener('scroll', queue, { passive: true }); \n");
+		writer.append("            window.addEventListener('resize', queue); \n");
+		writer.append("            document.addEventListener('scroll', function(e) { if (e.target === target) copyScroll(target, bar); }, true); \n"); // the section scrolled by itself (shift+wheel, touch)
+		writer.append("            document.addEventListener('toggle', queue, true);           \n"); // a <details> opened/closed
+		writer.append("            document.addEventListener('shown.bs.collapse', queue);      \n"); // a section opened
+		writer.append("            document.addEventListener('hidden.bs.collapse', queue);     \n"); // a section closed
+		writer.append("            setInterval(queue, 1500); \n"); // charts and sparklines drawn later change the widths
+		writer.append("            queue(); \n");
+		writer.append("        })(); \n");
 		writer.append("\n");
 		writer.append("        // Functionality to CLOSE ALL 'details' sections of class 'dsr-details-tableinfo' \n");
 		writer.append("        document.querySelectorAll('.dsr-details-tableinfo-close-all').forEach(link => { \n");
@@ -1481,7 +1798,10 @@ extends DailySummaryReportAbstract
 		writer.append("\n");
 		writer.append("    </script> \n");
 		writer.append("\n");
-		
+
+		// The "AI Analysis" digest: last in the file, so DbxCentral finds it quickly
+		writer.append( createLlmDigestScript() );
+
 		writer.append("</body> \n");
 
 		// Collect some garbage
@@ -1535,6 +1855,23 @@ extends DailySummaryReportAbstract
 		w.append("    <meta name='x-apple-disable-message-reformatting' /> \n");
 
 		createDbxTuneCss(w);
+		writeTooltipTextsAsCss(w); // the Table Info... tooltips, each text ONCE (no JavaScript in a mail)
+
+		// Phones (iPhone Mail, Gmail app): key facts 2 per row, "In this mail" as one column. Outlook ignores this (and keeps the tables)
+		w.append("    <style type='text/css'> \n");
+		w.append("        @media screen and (max-width: 620px), screen and (max-device-width: 620px) { \n");
+		w.append("            .dsr-m-kf td  { display: inline-block !important; width: 50% !important; box-sizing: border-box; } \n");
+		w.append("            .dsr-m-toc td { display: block !important; width: 100% !important; } \n");
+		w.append("        } \n");
+		// iPhone Mail lays the mail out as wide as its widest table (not the screen), so 100% is wider than the screen:
+		// the top part (banner, button, key facts, "In this mail") gets a fixed width that fits the phone's screen
+		w.append("        @media screen and (max-device-width: 620px) { \n");
+		w.append("            .dsr-m-fit { width: 355px !important; } \n");
+		w.append("        } \n");
+		w.append("        @media screen and (min-device-width: 414px) and (max-device-width: 620px) { \n");
+		w.append("            .dsr-m-fit { width: 394px !important; } \n");
+		w.append("        } \n");
+		w.append("    </style> \n");
 		
 		w.append("</head> \n");
 		w.append("\n");
@@ -1543,133 +1880,109 @@ extends DailySummaryReportAbstract
 	public void createShortMessageBody(Writer w)
 	throws IOException
 	{
-		w.append("<body>\n");
+		w.append("<body style='margin:0; padding:0 10px; background:#ffffff;'>\n");
 		w.append("\n");
-		
-		// Normal HTML - H2 heading
-		w.append("<h2>" + getReportName() + " for Servername: ").append(getServerName()).append("</h2>\n");
 
-		w.append( createDbxCentralLink(false) );
+		// The mail is built with tables and inline styles only: that is what Outlook (Word), Gmail and iPhone Mail all show the same way
+		IssueLevel level      = getIssueLevel();
+		String     levelColor = level == IssueLevel.NONE ? "#198754" : level == IssueLevel.FYI ? "#0d6efd" : "#dc3545";
+		String     levelName  = getIssueLevelName(level);
+		String     levelText  = getIssueLevelText(level);
+
+		String period = getPeriodText();
+		String appName = StringUtil.hasValue(getRecDbxAppName()) ? " &middot; " + getRecDbxAppName() : "";
+
+		w.append("<table role='presentation' class='dsr-m-fit' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse; font-family:\"Segoe UI\", Arial, Helvetica, sans-serif; font-size:14px; color:#1d2430; background:#ffffff;'>\n");
 
 		//--------------------------------------------------
-		// TOC
-		w.append("<br> \n");
-		w.append("Links to Report Sections. \n");
-		w.append("<ul> \n");
+		// Status banner, in the level's color
+		w.append("<tr><td style='background:" + levelColor + "; border:0; padding:16px 20px; color:#ffffff; white-space:normal;'>\n");
+		w.append("  <table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse;'>\n");
+		w.append("    <tr>\n");
+		w.append("      <td style='background:" + levelColor + "; border:0; padding:0; color:#ffffff; vertical-align:top; white-space:normal;'>\n");
+		w.append("        <div style='font-size:12px; letter-spacing:1px; text-transform:uppercase;'>" + getReportName() + appName + "</div>\n");
+		w.append("        <div style='font-size:22px; font-weight:600; margin-top:2px;'>" + getServerName() + "</div>\n");
+		w.append("        <div style='font-size:13px; margin-top:2px;'>" + period + "</div>\n");
+		w.append("      </td>\n");
+		w.append("      <td align='right' style='background:" + levelColor + "; border:0; padding:0; vertical-align:top; white-space:nowrap;'><span style='display:inline-block; background:#ffffff; color:" + levelColor + "; font-weight:700; font-size:13px; padding:4px 10px; border-radius:4px;'>" + levelName + "</span></td>\n");
+		w.append("    </tr>\n");
+		w.append("    <tr><td colspan='2' style='background:" + levelColor + "; border:0; padding:10px 0 0 0; color:#ffffff; font-size:15px; white-space:normal;'>" + levelText + "</td></tr>\n");
+		w.append("  </table>\n");
+		w.append("</td></tr>\n");
+
+		//--------------------------------------------------
+		// One button to the full report, and a link to all reports
+		String dbxCentralBaseUrl = getDbxCentralPublicBaseUrl();
+		w.append("<tr><td style='background:#ffffff; border:0; padding:14px 0 4px; white-space:normal;'>\n");
+		w.append("  <table role='presentation' cellpadding='0' cellspacing='0' style='border-collapse:collapse;'><tr>\n");
+		w.append("    <td style='background:#1d2430; border:0; padding:0; border-radius:5px;'><a href='" + dbxCentralBaseUrl + "/report?op=viewLatest&name=" + getServerName() + "' style='display:inline-block; padding:9px 16px; color:#ffffff; text-decoration:none; font-weight:600; font-size:14px;'>Open the full report in DbxCentral</a></td>\n");
+		w.append("    <td style='background:#ffffff; border:0; padding:0 0 0 14px; font-size:13px;'><a href='" + dbxCentralBaseUrl + "/overview#reportfiles' style='color:#2b5fb8;'>All reports</a></td>\n");
+		w.append("  </tr></table>\n");
+		w.append("  <div style='font-size:12px; color:#5d6878; margin-top:8px;'>This mail is a summary. The full report is in DbxCentral" + (level == IssueLevel.NONE ? "." : ", and attached to this mail.") + "</div>\n");
+		w.append("</td></tr>\n");
+
+		//--------------------------------------------------
+		// Key facts: a few numbers that answer "was it a normal day?" (IReportEntry.getKeyFacts), 4 per row
+		List<String> facts = getKeyFactCells();
+		if ( ! facts.isEmpty() )
+		{
+			w.append("<tr><td style='background:#ffffff; border:0; padding:12px 0 4px; white-space:normal;'>\n");
+			w.append("  <table role='presentation' class='dsr-m-kf' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse; font-size:13px;'>\n");
+			for (int i = 0; i < facts.size(); i += 4)
+				w.append("    <tr>").append(String.join("", facts.subList(i, Math.min(i + 4, facts.size())))).append("</tr>\n");
+			w.append("  </table>\n");
+			w.append("</td></tr>\n");
+		}
+		w.append("</table>\n");
+
+		//--------------------------------------------------
+		// Report Status first (where the level comes from), then what is in this mail
+		IReportEntry reportStatus = getReportEntry(ReportStatus.class);
+		if (reportStatus != null)
+			writeShortMessageEntry(w, reportStatus);
+
+		List<String> tocCells = new ArrayList<>();
 		for (IReportEntry entry : getReportEntries())
 		{
 			// Skip if "section" should not be part of the Short Message
-			if ( ! entry.hasShortMessageText() )
+			if ( ! entry.hasShortMessageText() || entry == reportStatus )
 				continue;
 
 			String tocSubject = entry.getSubject();
-			String tocDiv     = StringUtil.stripAllNonAlphaNum(tocSubject);
-
-			// Strip off parts that may be details
 			int firstLeftParentheses = tocSubject.indexOf("(");
 			if (firstLeftParentheses != -1)
-				tocSubject = tocSubject.substring(0, firstLeftParentheses - 1).trim();
+				tocSubject = tocSubject.substring(0, firstLeftParentheses).trim();
 
-			String liContent = "<a href='#" + tocDiv + "'>" + tocSubject + "</a>";
-			
-			w.append("<li>").append(liContent).append("</li> \n");
+			tocCells.add("<a href='#" + StringUtil.stripAllNonAlphaNum(entry.getSubject()) + "' style='color:#2b5fb8;'>" + tocSubject + "</a>" + getIssueLevelBadge(entry));
 		}
-		w.append("</ul> \n");
-		w.append("\n<br>");
+		int half = (tocCells.size() + 1) / 2; // column 1 = first half, column 2 = second half (reads top-down)
+		w.append("<table role='presentation' class='dsr-m-fit' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse; font-family:\"Segoe UI\", Arial, Helvetica, sans-serif;'>\n");
+		w.append("<tr><td style='background:#ffffff; border:0; padding:16px 0 4px; white-space:normal;'>\n");
+		w.append("  <div style='font-size:16px; font-weight:600; border-left:4px solid #8a94a3; padding-left:8px;'>In this mail</div>\n");
+		// Two cells, each with a whole column: on a phone the cells are stacked (see the @media above) and the order stays the same
+		w.append("  <table role='presentation' class='dsr-m-toc' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse; margin-top:6px; font-size:13px;'>\n");
+		w.append("    <tr>\n");
+		for (int col = 0; col < 2; col++)
+		{
+			w.append("      <td valign='top' style='background:#ffffff; padding:0 8px 0 0; width:50%; border:0; white-space:normal;'>\n");
+			for (int i = col * half; i < Math.min((col + 1) * half, tocCells.size()); i++)
+				w.append("        <div style='padding:2px 0;'>").append(tocCells.get(i)).append("</div>\n");
+			w.append("      </td>\n");
+		}
+		w.append("    </tr>\n");
+		w.append("  </table>\n");
+		w.append("</td></tr>\n");
+		w.append("</table>\n");
 
 		//--------------------------------------------------
 		// ALL REPORTS
 		for (IReportEntry entry : getReportEntries())
 		{
 			// Skip if "section" should not be part of the Short Message
-			if ( ! entry.hasShortMessageText() )
+			if ( ! entry.hasShortMessageText() || entry == reportStatus )
 				continue;
 
-			// So we can gather some statistics
-			entry.beginWriteEntry(w, MessageType.SHORT_MESSAGE);
-
-			String tocSubject = entry.getSubject();
-			String tocDiv     = StringUtil.stripAllNonAlphaNum(tocSubject);
-
-			// Add a section header
-			w.append("\n");
-			w.append("\n");
-			w.append("<!-- ================================================================================= -->\n");
-			w.append("<!-- " + entry.getSubject()                                                        + " -->\n");
-			w.append("<!-- ================================================================================= -->\n");
-
-			// Section HEADER
-			w.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append("</h2> \n");
-
-			if (entry.isEnabled())
-			{
-				try
-				{
-					entry.setCurrentMessageType(MessageType.SHORT_MESSAGE);
-
-					// Warning messages
-					if (entry.hasWarningMsg())
-						w.append(entry.getWarningMsg());
-
-					// Get the message text
-//					if ( ! entry.hasProblem() )
-//						entry.writeShortMessageText(w);
-					if ( ! entry.hasProblem() )
-						entry.writeMessageText(w, entry.getCurrentMessageType());
-					
-					// If the entry indicates that it has a problem... then print that.
-					if ( entry.hasProblem() )
-						w.append(entry.getProblemText());
-					
-					// if we should append anything after an entry... Possibly '<br>\n'
-					w.append(entry.getEndOfReportText());
-
-					// Notes for how to: Disable this entry
-					if (entry.canBeDisabled())
-					{
-						w.append("<br>");
-						w.append("<i>To disable this report entry, put the following in the configuration file. ");
-						w.append("<code>").append(entry.getIsEnabledConfigKeyName()).append(" = false</code></i><br>\n");
-					}
-				}
-				catch (RuntimeException rte)
-				{
-					w.append("Problems 'writing' the HTML report text for section '" + entry.getSubject() + "'. Caught: " + rte + "\n");
-					w.append("Continuing with next report section... <br> \n");
-					w.append("Exception: <br> \n");
-					w.append("<pre><code> \n");
-					w.append(StringUtil.exceptionToString(rte));
-					w.append("</code></pre> \n");
-				}
-				finally
-				{
-					entry.setCurrentMessageType(null);
-				}
-			}
-			else
-			{
-				String reason = entry.getDisabledReason();
-				if (StringUtil.hasValue(reason))
-				{
-					// Entry is DISABLED
-					w.append("This entry is <b>disabled</b>, reason:<br>");
-					w.append(reason);
-					w.append("<br>");
-				}
-				else
-				{
-					// Entry is DISABLED
-					w.append("This entry is <b>disabled</b>, to enable it; put the following in the configuration file. ");
-					w.append("<code>").append(entry.getIsEnabledConfigKeyName()).append(" = false</code><br>");
-				}
-			}
-
-			// Section FOOTER
-
-			
-			// So we can gather some statistics
-			entry.endWriteEntry(w, MessageType.SHORT_MESSAGE);
-
+			writeShortMessageEntry(w, entry);
 		}
 		w.append("\n<br>");
 
@@ -1685,6 +1998,391 @@ extends DailySummaryReportAbstract
 
 		w.append("\n");
 		w.append("</body> \n");
+	}
+
+	/**
+	 * Mail section header: a table row (Outlook), the left border in the section's level color (gray: no finding),
+	 * the title (the subject before " (") and the data source ("origin: ..." in the subject) small on the right
+	 */
+	private static String mailSectionHeader(IReportEntry entry, String tocDiv)
+	{
+		String   color  = sectionLevelColor(getIssueLevel(entry));
+		String[] parts  = splitSubject(entry.getSubject());
+		String   title  = parts[0];
+		String   origin = parts[1];
+
+		return "<a name='" + tocDiv + "'></a>\n"
+				+ "<table role='presentation' id='" + tocDiv + "' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse; margin-top:22px; margin-bottom:6px; font-family:\"Segoe UI\", Arial, Helvetica, sans-serif;'><tr>"
+				+ "<td style='background:#ffffff; font-size:16px; font-weight:600; color:#1d2430; border:0; border-left:4px solid " + color + "; padding:2px 0 2px 8px; white-space:normal;'>" + title + getIssueLevelBadge(entry)
+				+ (origin.isEmpty() ? "" : " <span style='font-size:11px; font-weight:normal; color:#8a94a3; font-family:Consolas, \"Courier New\", monospace; white-space:nowrap;'>&nbsp; " + origin + "</span>")
+				+ "</td>"
+				+ "</tr></table>\n";
+	}
+
+	/** A section's level color (left border of the section header): red ISSUE, blue FYI, gray when nothing to report */
+	private static String sectionLevelColor(IssueLevel level)
+	{
+		return level == IssueLevel.ISSUE ? "#dc3545" : level == IssueLevel.FYI ? "#0d6efd" : "#8a94a3";
+	}
+
+	/** "Top SQL (order by: x, origin: CmXxx / dm_xxx)" -> { "Top SQL", "CmXxx / dm_xxx" }. No " (": { subject, "" } */
+	private static String[] splitSubject(String subject)
+	{
+		int pos = subject.indexOf(" (");
+		if (pos == -1)
+			return new String[] { subject, "" };
+
+		String inParen = subject.substring(pos + 2, subject.endsWith(")") ? subject.length() - 1 : subject.length());
+		int oPos = inParen.indexOf("origin: ");
+		String title = subject.substring(0, pos).replaceAll("[,;: ]+$", ""); // "DB File IO, (order by...)" -> "DB File IO"
+		return new String[] { title, oPos != -1 ? inParen.substring(oPos + "origin: ".length()) : "" };
+	}
+
+	/** The "key facts" (IReportEntry.getKeyFacts), each as a table cell: a few numbers that answer "was it a normal day?" */
+	private List<String> getKeyFactCells()
+	{
+		List<String> facts = new ArrayList<>();
+		for (IReportEntry entry : getReportEntries())
+		{
+			if ( ! entry.isEnabled() )
+				continue;
+			try
+			{
+				for (java.util.Map.Entry<String, String> fact : entry.getKeyFacts().entrySet())
+					facts.add("<td valign='top' style='background:#ffffff; padding:6px 8px; border:1px solid #e3e7ee; white-space:normal;'><div style='color:#5d6878; font-size:11px;'>" + fact.getKey() + "</div>" + fact.getValue() + "</td>");
+			}
+			catch (RuntimeException ex)
+			{
+				_logger.warn("Problems getting the key facts from report entry '" + entry.getClass().getSimpleName() + "'. Skipping it.", ex);
+			}
+		}
+		return facts;
+	}
+
+	//--------------------------------------------------------------------------------
+	// "AI Analysis": a digest of the report for an LLM (read by DbxCentral's LlmDsrAnalysisServlet)
+	//--------------------------------------------------------------------------------
+
+	/** Write the digest into the full report, and the "AI Analysis" button */
+	public static final String  PROPKEY_llmDigestEnabled         = "DailySummaryReport.llm.digest.enabled";
+	public static final boolean DEFAULT_llmDigestEnabled         = true;
+
+	/** Max characters of the 'data' of one section (IReportEntry.getLlmDigest) */
+	public static final String  PROPKEY_llmDigestSectionMaxChars = "DailySummaryReport.llm.digest.section.maxChars";
+	public static final int     DEFAULT_llmDigestSectionMaxChars = 4000;
+
+	/** Max characters of the whole digest: the sections that do not fit are only listed in 'dropped' */
+	public static final String  PROPKEY_llmDigestTotalMaxChars   = "DailySummaryReport.llm.digest.total.maxChars";
+	public static final int     DEFAULT_llmDigestTotalMaxChars   = 40000;
+
+	/** The id of the {@code <script type='application/json'>} element that holds the digest */
+	public static final String  LLM_DIGEST_ELEMENT_ID            = "dsr-llm-digest";
+
+	/** The version of the digest's layout, for DbxCentral */
+	public static final int     LLM_DIGEST_VERSION               = 1;
+
+	private static boolean isLlmDigestEnabled()
+	{
+		return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_llmDigestEnabled, DEFAULT_llmDigestEnabled);
+	}
+
+	/**
+	 * The "AI Analysis" button: opens DbxCentral's page that builds an LLM prompt from this report's digest.
+	 * <p>
+	 * The report file name is not known here (it is given when the report is saved, after this), so the link names the
+	 * server and the report day; DbxCentral finds the file and checks the period in its digest. When this page is itself
+	 * served by DbxCentral as {@code /report?op=view&name=<file>}, the script uses that exact file instead, and a
+	 * same-origin link (no http/https switch).
+	 */
+	private String createLlmAnalysisButton()
+	{
+		if ( ! isLlmDigestEnabled() )
+			return "";
+		String baseUrl = getDbxCentralPublicBaseUrl();
+		Timestamp beginTs = getReportPeriodOrRecordingBeginTime();
+		if (StringUtil.isNullOrBlank(baseUrl) || beginTs == null)
+			return "";
+
+		String query = "?srv=" + java.net.URLEncoder.encode(StringUtil.nullToValue(getServerName(), ""), StandardCharsets.UTF_8)
+		             + "&period=" + new SimpleDateFormat("yyyy-MM-dd").format(beginTs);
+
+		return "<div style='margin-top:8px;'>"
+		     + "<a id='dsr-llm-analysis-btn' class='btn btn-sm btn-outline-primary' target='_blank' href='" + baseUrl + "/llm-dsr-analysis" + query + "'"
+		     + " title='Open DbxCentral, where an AI (LLM) can review this whole report and give a prioritized list of improvements. Only numbers are sent, no SQL text.'>"
+		     + "LLM/AI Analysis</a> <span style='color:#5d6878; font-size:12px;'>Ask an AI to review the whole report</span>"
+		     + "</div>\n"
+		     + "<script>(function() { try { \n"
+		     + "  var a = document.getElementById('dsr-llm-analysis-btn'); \n"
+		     + "  if ( ! a || ! /\\/report$/.test(window.location.pathname) ) return; \n"
+		     + "  var p = new URLSearchParams(window.location.search); \n"
+		     + "  if (p.get('op') === 'view' && p.get('name')) a.href = '/llm-dsr-analysis?name=' + encodeURIComponent(p.get('name')); \n"
+		     + "  else a.href = '/llm-dsr-analysis' + a.href.substring(a.href.indexOf('?')); \n"
+		     + "} catch (e) { /* keep the absolute link */ } })();</script>\n";
+	}
+
+	/**
+	 * The digest of the whole report for an LLM, as {@code <script type='application/json' id='dsr-llm-digest'>}.
+	 * Per section: the level, the reason, the key facts (what every entry has) and {@link IReportEntry#getLlmDigest()}.
+	 * Numbers and names only, no SQL text. Sections with level ISSUE first, then FYI, then the rest, within the size limits.
+	 */
+	private String createLlmDigestScript()
+	{
+		if ( ! isLlmDigestEnabled() )
+			return "";
+		try
+		{
+			Configuration conf = Configuration.getCombinedConfiguration();
+			int sectionMaxChars = conf.getIntProperty(PROPKEY_llmDigestSectionMaxChars, DEFAULT_llmDigestSectionMaxChars);
+			int totalMaxChars   = conf.getIntProperty(PROPKEY_llmDigestTotalMaxChars,   DEFAULT_llmDigestTotalMaxChars);
+
+			com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+			SimpleDateFormat ymdHm = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+			Timestamp beginTs = getReportPeriodOrRecordingBeginTime();
+			Timestamp endTs   = getReportPeriodOrRecordingEndTime();
+
+			com.fasterxml.jackson.databind.node.ObjectNode root = om.createObjectNode();
+			root.put("version",     LLM_DIGEST_VERSION);
+			root.put("srvName",     getServerName());
+			root.put("dbxApp",      getRecDbxAppName());
+			root.put("dbmsVersion", getDbmsVersionStr() == null ? null : getDbmsVersionStr().replaceAll("\\s+", " ").trim());
+			root.put("periodBegin", beginTs == null ? null : ymdHm.format(beginTs));
+			root.put("periodEnd",   endTs   == null ? null : ymdHm.format(endTs));
+			root.put("reportLevel", getIssueLevel().name());
+			root.put("createdAt",   ymdHm.format(new Date()));
+
+			com.fasterxml.jackson.databind.node.ArrayNode sections = root.putArray("sections");
+			com.fasterxml.jackson.databind.node.ArrayNode namesOnly = om.createArrayNode();
+			com.fasterxml.jackson.databind.node.ArrayNode disabled = om.createArrayNode();
+			com.fasterxml.jackson.databind.node.ArrayNode dropped  = om.createArrayNode();
+
+			// ISSUE first, then FYI, then the rest (a stable sort keeps the report order within a level)
+			List<IReportEntry> entries = new ArrayList<>(getReportEntries());
+			entries.sort((a, b) -> getIssueLevel(b).compareTo(getIssueLevel(a)));
+
+			int totalChars = om.writeValueAsString(root).length();
+			for (IReportEntry entry : entries)
+			{
+				String subject = StringUtil.stripHtml(entry.getSubject());
+				if ( ! entry.isEnabled() )
+				{
+					String reason = entry.getDisabledReason();
+					disabled.add(subject + (StringUtil.hasValue(reason) ? " - " + oneLineText(reason, 200) : ""));
+					continue;
+				}
+
+				try
+				{
+					IssueLevel level = getIssueLevel(entry);
+
+					com.fasterxml.jackson.databind.node.ObjectNode keyFacts = om.createObjectNode();
+					for (java.util.Map.Entry<String, String> fact : entry.getKeyFacts().entrySet())
+						keyFacts.put(oneLineText(fact.getKey(), 100), oneLineText(fact.getValue(), 200));
+
+					String data = entry.getLlmDigest();
+					boolean cut = false;
+					if (data != null && data.length() > sectionMaxChars)
+					{
+						int nl = data.lastIndexOf('\n', sectionMaxChars);
+						data = data.substring(0, nl > 0 ? nl + 1 : sectionMaxChars);
+						cut  = true;
+					}
+
+					boolean hasProblem = entry.hasProblem();
+					String  warning    = entry.hasWarningMsg() ? oneLineText(entry.getWarningMsg(), 300) : null;
+					String  reason     = level == IssueLevel.NONE ? null : oneLineText(entry.getIssueReason(), 300);
+
+					// Level NONE and no numbers for the digest (the section may still have tables in the report): only its name
+					if (level == IssueLevel.NONE && keyFacts.isEmpty() && StringUtil.isNullOrBlank(data) && ! hasProblem && warning == null)
+					{
+						namesOnly.add(subject);
+						continue;
+					}
+
+					com.fasterxml.jackson.databind.node.ObjectNode sect = om.createObjectNode();
+					sect.put("id",      StringUtil.stripAllNonAlphaNum(entry.getSubject())); // the anchor in the report, see the TOC
+					sect.put("subject", subject);
+					sect.put("level",   level.name());
+					if (StringUtil.hasValue(reason)) sect.put("reason", reason);
+					if ( ! keyFacts.isEmpty() )      sect.set("keyFacts", keyFacts);
+					if (hasProblem)                  sect.put("problem", "The section could not be created completely (see the report)");
+					if (warning != null)             sect.put("warning", warning);
+					if (StringUtil.hasValue(data))   sect.put("data", data);
+					if (cut)                         sect.put("cut", true);
+
+					int sectChars = om.writeValueAsString(sect).length();
+					if (totalChars + sectChars > totalMaxChars)
+					{
+						dropped.add(subject);
+						continue;
+					}
+					totalChars += sectChars;
+					sections.add(sect);
+				}
+				catch (RuntimeException ex)
+				{
+					_logger.warn("Problems creating the LLM digest for report entry '" + entry.getClass().getSimpleName() + "'. Skipping it.", ex);
+				}
+			}
+			if ( ! namesOnly.isEmpty() ) root.set("namesOnly", namesOnly);
+			if ( ! disabled.isEmpty() ) root.set("disabled", disabled);
+			if ( ! dropped .isEmpty() ) root.set("dropped",  dropped);
+
+			// '</' would end the script element: '<\/' is the same in JSON
+			String json = om.writeValueAsString(root).replace("</", "<\\/");
+			return "<script type='application/json' id='" + LLM_DIGEST_ELEMENT_ID + "'>" + json + "</script>\n";
+		}
+		catch (Exception ex)
+		{
+			_logger.warn("Problems creating the LLM digest for the Daily Summary Report. The report is written without it.", ex);
+			return "";
+		}
+	}
+
+	/** HTML to one line of plain text, cut at maxLen */
+	private static String oneLineText(String html, int maxLen)
+	{
+		if (html == null)
+			return null;
+		String txt = org.apache.commons.text.StringEscapeUtils.unescapeHtml4(StringUtil.stripHtml(html)).replace(' ', ' ').replaceAll("\\s+", " ").trim();
+		return txt.length() <= maxLen ? txt : txt.substring(0, maxLen) + "...";
+	}
+
+	/** The period of the report, for example "Thursday 2026-11-19 &nbsp;00:00 &ndash; 23:59" ("" when not known) */
+	private String getPeriodText()
+	{
+		Timestamp beginTs = getReportPeriodOrRecordingBeginTime();
+		Timestamp endTs   = getReportPeriodOrRecordingEndTime();
+		if (beginTs == null || endTs == null)
+			return "";
+		return getDayDateText()
+		     + " &nbsp;" + new SimpleDateFormat("HH:mm").format(beginTs) + " &ndash; " + new SimpleDateFormat("HH:mm").format(endTs)
+		     + getRecordingHoursText(" &middot; ");
+	}
+
+	/**
+	 * How many hours the recording covers, for example "24h", "4.5h" or "25 min" ("" when not known)
+	 * @param prefix put in front of the text (when there is a text)
+	 */
+	private String getRecordingHoursText(String prefix)
+	{
+		Timestamp beginTs = getReportPeriodOrRecordingBeginTime();
+		Timestamp endTs   = getReportPeriodOrRecordingEndTime();
+		if (beginTs == null || endTs == null || endTs.getTime() <= beginTs.getTime())
+			return "";
+		long ms = endTs.getTime() - beginTs.getTime();
+		if (ms < 3600 * 1000)
+			return prefix + Math.max(1, Math.round(ms / 60_000.0)) + " min";
+		double hours = Math.round(ms / 360_000.0) / 10.0; // one decimal: 23:59:29 -> 24
+		String txt = hours == Math.rint(hours) ? Long.toString((long) hours) : Double.toString(hours);
+		return prefix + txt + "h";
+	}
+
+	/** The recording covers (almost) the whole day: 23.5 hours or more */
+	private boolean isFullDayRecording()
+	{
+		Timestamp beginTs = getReportPeriodOrRecordingBeginTime();
+		Timestamp endTs   = getReportPeriodOrRecordingEndTime();
+		return beginTs == null || endTs == null || (endTs.getTime() - beginTs.getTime()) >= 23.5 * 3600 * 1000;
+	}
+
+	/** The day of the report, for example "Thursday 2026-11-19" ("" when not known) */
+	private String getDayDateText()
+	{
+		Timestamp beginTs = getReportPeriodOrRecordingBeginTime();
+		if (beginTs == null)
+			return "";
+		String day = beginTs.toLocalDateTime().getDayOfWeek().getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH);
+		return day + " " + new SimpleDateFormat("yyyy-MM-dd").format(beginTs);
+	}
+
+	/** The short name of the report level: NTR, FYI or ISSUE */
+	private static String getIssueLevelName(IssueLevel level)
+	{
+		return level == IssueLevel.NONE ? "NTR" : level == IssueLevel.FYI ? "FYI" : "ISSUE";
+	}
+
+	/** What the report level means, one line (the mail banner and the report header) */
+	private static String getIssueLevelText(IssueLevel level)
+	{
+		return level == IssueLevel.NONE ? "Nothing to report."
+		     : level == IssueLevel.FYI  ? "Nothing urgent, have a look when you have time."
+		     :                            "Something to act on, see the Report Status below.";
+	}
+
+	/** One section of the mail (the SHORT message) */
+	private void writeShortMessageEntry(Writer w, IReportEntry entry)
+	throws IOException
+	{
+		// So we can gather some statistics
+		entry.beginWriteEntry(w, MessageType.SHORT_MESSAGE);
+
+		String tocDiv = StringUtil.stripAllNonAlphaNum(entry.getSubject());
+
+		// Add a section header
+		w.append("\n");
+		w.append("\n");
+		w.append("<!-- ================================================================================= -->\n");
+		w.append("<!-- " + entry.getSubject()                                                        + " -->\n");
+		w.append("<!-- ================================================================================= -->\n");
+
+		// Section HEADER
+		w.append(mailSectionHeader(entry, tocDiv));
+
+		if (entry.isEnabled())
+		{
+			try
+			{
+				entry.setCurrentMessageType(MessageType.SHORT_MESSAGE);
+
+				// Warning messages
+				if (entry.hasWarningMsg())
+					w.append(entry.getWarningMsg());
+
+				// Get the message text
+				if ( ! entry.hasProblem() )
+					entry.writeMessageText(w, entry.getCurrentMessageType());
+
+				// If the entry indicates that it has a problem... then print that.
+				if ( entry.hasProblem() )
+					w.append(entry.getProblemText());
+
+				// if we should append anything after an entry... Possibly '<br>\n'
+				w.append(entry.getEndOfReportText());
+			}
+			catch (RuntimeException rte)
+			{
+				w.append("Problems 'writing' the HTML report text for section '" + entry.getSubject() + "'. Caught: " + rte + "\n");
+				w.append("Continuing with next report section... <br> \n");
+				w.append("Exception: <br> \n");
+				w.append("<pre><code> \n");
+				w.append(StringUtil.exceptionToString(rte));
+				w.append("</code></pre> \n");
+			}
+			finally
+			{
+				entry.setCurrentMessageType(null);
+			}
+		}
+		else
+		{
+			String reason = entry.getDisabledReason();
+			if (StringUtil.hasValue(reason))
+			{
+				// Entry is DISABLED
+				w.append("This entry is <b>disabled</b>, reason:<br>");
+				w.append(reason);
+				w.append("<br>");
+			}
+			else
+			{
+				// Entry is DISABLED
+				w.append("This entry is <b>disabled</b>, to enable it; put the following in the configuration file. ");
+				w.append("<code>").append(entry.getIsEnabledConfigKeyName()).append(" = false</code><br>");
+			}
+		}
+
+		// So we can gather some statistics
+		entry.endWriteEntry(w, MessageType.SHORT_MESSAGE);
 	}
 
 	/**
@@ -1740,6 +2438,7 @@ extends DailySummaryReportAbstract
 		w.append("    <meta name='x-apple-disable-message-reformatting' /> \n");
 
 		createDbxTuneCss(w);
+		writeTooltipTextsAsCss(w); // the Table Info... tooltips, each text ONCE (no JavaScript in a mail)
 		
 		w.append("</head> \n");
 		w.append("\n");
@@ -1776,6 +2475,7 @@ extends DailySummaryReportAbstract
 				tocSubject = tocSubject.substring(0, firstLeftParentheses - 1).trim();
 
 			String liContent = "<a href='#" + tocDiv + "'>" + tocSubject + "</a>";
+			liContent += getIssueLevelBadge(entry);
 			
 			w.append("<li>").append(liContent).append("</li> \n");
 		}
@@ -1804,7 +2504,7 @@ extends DailySummaryReportAbstract
 			w.append("<!-- ================================================================================= -->\n");
 
 			// Section HEADER
-			w.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append("</h2> \n");
+			w.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append(getIssueLevelBadge(entry)).append("</h2> \n");
 
 			if (entry.isEnabled())
 			{
@@ -1826,14 +2526,6 @@ extends DailySummaryReportAbstract
 					
 					// if we should append anything after an entry... Possibly '<br>\n'
 					w.append(entry.getEndOfReportText());
-
-					// Notes for how to: Disable this entry
-					if (entry.canBeDisabled())
-					{
-						w.append("<br>");
-						w.append("<i>To disable this report entry, put the following in the configuration file. ");
-						w.append("<code>").append(entry.getIsEnabledConfigKeyName()).append(" = false</code></i><br>\n");
-					}
 				}
 				catch (RuntimeException rte)
 				{
@@ -1950,7 +2642,7 @@ extends DailySummaryReportAbstract
 		if (printExecTime)
 		{
 			String tocDiv = "sectionTime";
-			String headingName = "Exec/Creation time for each Report Section";
+			String headingName = EXEC_TIME_SECTION_NAME;
 
 			// Section HEADER
 			if (useBootstrap())
@@ -1972,7 +2664,7 @@ extends DailySummaryReportAbstract
 
 				// Bootstrap "card" - BEGIN
 				w.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-				w.append("<div class='card border-dark mb-3' id='").append(tocDiv).append("'> \n");
+				w.append("<div class='card dsr-card mb-3' id='").append(tocDiv).append("' style='border-left:5px solid #8a94a3 !important;'> \n");
 				w.append("<h5 class='card-header' role='tab' id='heading_").append(tocDiv).append("'> \n");
 				w.append("  <a data-bs-toggle='collapse' data-bs-parent='#accordion' href='#collapse_").append(tocDiv).append("' aria-expanded='true' aria-controls='collapse_").append(tocDiv).append("' class='d-block'> \n");
 				w.append("    <i class='fa fa-chevron-down float-end'></i> \n");

@@ -738,30 +738,42 @@ public class ActiveAlarmSummary
 		if (result == null)
 			return "";
 
+		// One compact table (Server | Alarm | Severity), tables and inline styles only: the alarm mail must look the same in Outlook
+		String th = "style='text-align:left; background:#eef1f5; color:#3a4556; padding:4px 8px; border-bottom:1px solid #d5dbe4;'";
 		StringBuilder sb = new StringBuilder();
 
-		sb.append("<div style='margin-top: 15px;'>\n");
-		sb.append("  <b>").append(StringEscapeUtils.escapeHtml4(createHeader(result, configuredGroup))).append("</b>\n");
+		sb.append("<div style='margin-top: 4px;'>\n");
+		sb.append("  <div style='font-size:15px; font-weight:600; border-left:4px solid #8a94a3; padding-left:8px;'>").append(StringEscapeUtils.escapeHtml4(createHeader(result, configuredGroup))).append("</div>\n");
 
 		if ( ! result.entries.isEmpty() )
 		{
+			sb.append("  <table cellpadding='0' cellspacing='0' style='border-collapse:collapse; margin-top:8px; font-size:12.5px; width:100%;'>\n");
+			sb.append("    <tr><th ").append(th).append(">Server</th><th ").append(th).append(">Alarm</th><th ").append(th).append(">Severity</th></tr>\n");
+			int row = 0;
 			for (ServerAlarms srv : toServerAlarms(result, maxServers, full))
 			{
 				if (srv.isMore())
 				{
-					sb.append("  <div style='margin-top: 8px;'><i>").append(StringEscapeUtils.escapeHtml4(srv.getSrvName())).append("</i></div>\n");
+					sb.append("    <tr><td colspan='3' style='padding:4px 8px; color:#8a94a3;'>").append(StringEscapeUtils.escapeHtml4(srv.getSrvName())).append("</td></tr>\n");
 					continue;
 				}
-
-				sb.append("  <div style='margin-top: 8px;'><b>").append(StringEscapeUtils.escapeHtml4(srv.getSrvName())).append("</b></div>\n");
-				sb.append("  <ul style='margin-top: 2px; margin-bottom: 0;'>\n");
-				for (String alarm : srv.getAlarms())
-					sb.append("    <li>").append(StringEscapeUtils.escapeHtml4(alarm)).append("</li>\n");
-				sb.append("  </ul>\n");
+				for (int i = 0; i < srv.getAlarms().size(); i++)
+				{
+					String severity = i < srv.getSeverities().size() ? srv.getSeverities().get(i) : "";
+					String color    = "ERROR".equalsIgnoreCase(severity) ? "#dc3545" : "WARNING".equalsIgnoreCase(severity) ? "#e8710a" : "#5d6878";
+					String bg       = (row++ % 2 == 1) ? " background:#f9fafb;" : "";
+					String td       = "style='padding:3px 8px; border-bottom:1px solid #edf0f4;" + bg;
+					sb.append("    <tr>");
+					sb.append("<td ").append(td).append("'>").append(i == 0 ? StringEscapeUtils.escapeHtml4(srv.getSrvName()) : "").append("</td>");
+					sb.append("<td ").append(td).append("'>").append(StringEscapeUtils.escapeHtml4(srv.getAlarms().get(i))).append("</td>");
+					sb.append("<td ").append(td).append(" color:").append(color).append("; font-weight:600;'>").append(StringEscapeUtils.escapeHtml4(severity)).append("</td>");
+					sb.append("</tr>\n");
+				}
 			}
+			sb.append("  </table>\n");
 
 			if (showFreshnessNote(result))
-				sb.append("  <div style='margin-top: 8px; font-size: 80%; color: #808080;'>").append(StringEscapeUtils.escapeHtml4(FRESHNESS_NOTE)).append("</div>\n");
+				sb.append("  <div style='margin-top: 6px; font-size: 12px; color: #8a94a3;'>").append(StringEscapeUtils.escapeHtml4(FRESHNESS_NOTE)).append("</div>\n");
 		}
 
 		sb.append("</div>\n");

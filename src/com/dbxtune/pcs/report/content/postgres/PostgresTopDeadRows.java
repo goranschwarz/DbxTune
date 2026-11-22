@@ -80,7 +80,26 @@ extends PostgresAbstract
 
 		// Last sample Database Size info
 		sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
-		sb.append(toHtmlTable(_shortRstm));
+
+		// autovacuum_verdict: a link to the table's advice card below (the full report also opens the box)
+		sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, new ReportEntryTableStringRenderer()
+		{
+			@Override
+			public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+			{
+				if ("autovacuum_verdict".equals(colName))
+				{
+					String key = tableKey(rstm, row);
+					if (_autovacuumBoxes.containsKey(key))
+					{
+						String id = autovacuumCardId(key);
+						String onclick = isFullMessageType() ? " onclick=\"var d=document.querySelector('#" + id + " details.dbx-autovacuum'); if (d) d.open = true;\"" : "";
+						return "<a href='#" + id + "'" + onclick + ">" + IndexAnalysisHtml.esc(strVal) + "</a>";
+					}
+				}
+				return super.cellValue(rstm, row, col, colName, objVal, strVal);
+			}
+		}));
 
 		// The full advice (with the ALTER TABLE ... SET and its rollback) for the tables whose autovacuum_verdict is not OK
 		// (the same box as in Top SQL > Table Information, where only the tables used by a top statement get it)
@@ -94,10 +113,15 @@ extends PostgresAbstract
 			sb.append("<b>Autovacuum advice for the " + _autovacuumBoxes.size() + " table(s) above that are not vacuumed (or analyzed) often enough.</b> ");
 			sb.append("Open a box for the numbers of the day, the settings, why, and the <i>Change and Rollback</i> script. Nothing has been changed.<br>\n");
 			sb.append(endIf);
+			// One card per table, so it is clear which text belongs to which table (inline styles: the mail has no Bootstrap)
 			for (Map.Entry<String, String> e : _autovacuumBoxes.entrySet())
 			{
-				sb.append(ifNotMso).append("<br><b>").append(IndexAnalysisHtml.esc(e.getKey())).append("</b>\n").append(endIf);
+				sb.append(ifNotMso)
+				  .append("<div id='").append(autovacuumCardId(e.getKey())).append("' style='border:1px solid #d6dbe1; border-left:4px solid #e0a800; border-radius:4px; padding:6px 12px; margin:10px 0; max-width:1220px;'>\n")
+				  .append("<b>").append(IndexAnalysisHtml.esc(e.getKey())).append("</b>\n")
+				  .append(endIf);
 				sb.append(e.getValue());
+				sb.append(ifNotMso).append("</div>\n").append(endIf);
 			}
 			sb.append("<br>\n");
 		}
@@ -130,15 +154,33 @@ extends PostgresAbstract
 	}
 
 	@Override
-	public boolean hasIssueToReport()
+	public IssueLevel getIssueLevel()
 	{
 		// Dead rows in themselves are not a problem. A table that is not vacuumed (or analyzed) often enough is (column 'autovacuum_verdict')
-		return _tablesWithAutovacuumFindings > 0;
+		// It's a tuning finding, not an incident: FYI
+		return _tablesWithAutovacuumFindings > 0 ? IssueLevel.FYI : IssueLevel.NONE;
+	}
+
+	@Override
+	public String getIssueReason()
+	{
+		return _tablesWithAutovacuumFindings + " table(s) with autovacuum findings";
 	}
 	private int _tablesWithAutovacuumFindings = 0;
 
 	/** The full Autovacuum box (numbers, settings, findings, Change and Rollback) of each table with a finding: "db.schema.table" -> html */
 	private Map<String, String> _autovacuumBoxes = new java.util.LinkedHashMap<>();
+
+	/** "dbname.schemaname.relname" */
+	private static String tableKey(ResultSetTableModel rstm, int row)
+	{
+		return rstm.getValueAsString(row, "dbname") + "." + rstm.getValueAsString(row, "schemaname") + "." + rstm.getValueAsString(row, "relname");
+	}
+	/** The HTML id of a table's advice card */
+	private static String autovacuumCardId(String tableKey)
+	{
+		return "autovacuum_" + tableKey.replaceAll("[^A-Za-z0-9_]", "_");
+	}
 
 
 	@Override
@@ -357,7 +399,7 @@ extends PostgresAbstract
 				if (advice.hasFindings())
 				{
 					_tablesWithAutovacuumFindings++;
-					_autovacuumBoxes.put(_shortRstm.getValueAsString(r, "dbname") + "." + _shortRstm.getValueAsString(r, "schemaname") + "." + _shortRstm.getValueAsString(r, "relname"), advice.toHtml());
+					_autovacuumBoxes.put(tableKey(_shortRstm, r), advice.toHtml(false));
 				}
 			}
 

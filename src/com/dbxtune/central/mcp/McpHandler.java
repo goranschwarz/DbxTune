@@ -2079,7 +2079,7 @@ public class McpHandler
 			return _om.writeValueAsString(result);
 		}
 
-		// filename pattern: {serverName}.{yyyy-MM-dd_HHmm}[.-NTR].html
+		// filename pattern: {serverName}.{yyyy-MM-dd_HHmm}[.-NTR-|.-FYI-].html
 		File[] files = dir.listFiles(f -> f.getName().endsWith(".html"));
 		if (files == null) 
 			files = new File[0];
@@ -2107,11 +2107,13 @@ public class McpHandler
 					continue;
 			}
 
-			boolean nothingToReport = name.contains(".-NTR.");
+			// NTR = Nothing To Report, FYI = For Your Information, ISSUE = something to act on (no mark in the file name)
+			boolean nothingToReport = name.contains(".-NTR-.");
+			String  issueLevel      = nothingToReport ? "NTR" : name.contains(".-FYI-.") ? "FYI" : "ISSUE";
 
-			// Extract date string: between first '.' and either '.-NTR.' or '.html'
-			String remainder = name.substring(firstDot + 1); // e.g. "2026-04-10_0003.html" or "2026-04-10_0003.-NTR.html"
-			remainder = remainder.replace(".-NTR.html", "").replace(".html", "");
+			// Extract date string: between first '.' and either '.-NTR-.', '.-FYI-.' or '.html'
+			String remainder = name.substring(firstDot + 1); // e.g. "2026-04-10_0003.html" or "2026-04-10_0003.-NTR-.html"
+			remainder = remainder.replace(".-NTR-.html", "").replace(".-FYI-.html", "").replace(".html", "");
 			String dateStr = remainder; // e.g. "2026-04-10_0003"
 
 			Date reportDate = null;
@@ -2122,6 +2124,7 @@ public class McpHandler
 			entry.put("serverName",      srvName);
 			entry.put("date",            dateStr);
 			entry.put("nothingToReport", nothingToReport);
+			entry.put("issueLevel",      issueLevel);
 			entry.put("sizeKB",          f.length() / 1024);
 			if (reportDate != null)
 				entry.put("reportDateIso", new SimpleDateFormat("yyyy-MM-dd'T'HH:mm").format(reportDate));

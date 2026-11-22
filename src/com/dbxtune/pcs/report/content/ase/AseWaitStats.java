@@ -35,6 +35,7 @@ import org.apache.commons.lang3.StringUtils;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
+import com.dbxtune.pcs.report.content.ReportChartAbstract;
 import com.dbxtune.pcs.report.content.ReportChartTimeSeriesStackedBar;
 import com.dbxtune.pcs.report.content.ReportChartTimeSeriesStackedBar.TopGroupCountReport;
 import com.dbxtune.pcs.report.content.ReportChartTimeSeriesStackedBar.TopGroupDataRecord;
@@ -115,6 +116,15 @@ extends AseAbstract
 	public boolean hasIssueToReport()
 	{
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
+	}
+
+	@Override
+	public String getLlmDigest()
+	{
+		StringBuilder sb = new StringBuilder();
+		llmDigestAdd(sb, "Wait time per wait class, seconds",  ReportChartAbstract.llmDigestSeries(_CmSysWaits_byClass,  8, "s"));
+		llmDigestAdd(sb, "Wait time per wait event, seconds",  ReportChartAbstract.llmDigestSeries(_CmSysWaits_byEvent, 10, "s"));
+		return sb.length() == 0 ? null : sb.toString();
 	}
 
 	public static final String PROPKEY_SamplePeriodInMinutes = "DailySummaryReport.AseWaitStats.samplePeriodInminutes";

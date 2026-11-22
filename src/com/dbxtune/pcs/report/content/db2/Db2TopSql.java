@@ -52,6 +52,7 @@ import com.dbxtune.pcs.DictCompression;
 import com.dbxtune.pcs.inspection.ObjectLookupInspectorDb2;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.ShowplanLinkBuilder;
+import com.dbxtune.pcs.report.content.TopSqlOverview;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.AggType;
 import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
@@ -87,9 +88,46 @@ extends Db2Abstract
 	/** At most this many plans per statement (the same EXECUTABLE_ID normally has the same plan: a new plan gives a new EXECUTABLE_ID) */
 	private static final int MAX_PLANS_PER_STATEMENT = 2;
 
-	public Db2TopSql(DailySummaryReportAbstract reportingInstance)
+	/** One section per measure (as SQL Server, ASE, Postgres, Oracle and MySQL): each with its own top statements */
+	public enum ReportType
+	{
+		OVERVIEW      ("largest_pct"),
+		STMT_TIME     ("STMT_EXEC_TIME_MS__sum"),
+		CPU_TIME      ("TOTAL_CPU_TIME_MS__sum"),
+		ROWS_READ     ("ROWS_READ__sum"),
+		PHYSICAL_READS("PHYSICAL_READS__sum"),
+		LOCK_WAIT     ("LOCK_WAIT_TIME_MS__sum"),
+		EXECUTIONS    ("NUM_EXECUTIONS__sum");
+
+		/** The column the section is ordered by (highlighted in the table) */
+		final String orderByCol;
+		ReportType(String orderByCol) { this.orderByCol = orderByCol; }
+
+		/** The section's subject: also its anchor in the report (the OVERVIEW links to the sections) */
+		String subject() { return "Top SQL Statements - " + name() + " (order by: " + orderByCol + ", origin: CmStatements / MON_GET_PKG_CACHE_STMT)"; }
+	};
+
+	private TopSqlOverview _overview;  // OVERVIEW: the shares of all the statements (see TopSqlOverview)
+
+	private ReportType _reportType;
+	private String     _orderByCol;    // the column the section is ordered by (highlighted in the table)
+	private String     _measureText;   // what the section is about, in words
+	private String     _noRowsText;    // when no statement has anything of it
+
+	public Db2TopSql(DailySummaryReportAbstract reportingInstance, ReportType reportType)
 	{
 		super(reportingInstance);
+		_reportType = reportType;
+		_orderByCol = reportType.orderByCol;
+
+		if      (ReportType.OVERVIEW      .equals(reportType)) { _measureText = "their largest share of all the statements' time, CPU time, rows read, physical reads, lock wait time or executions"; _noRowsText = "No statements were found."; }
+		else if (ReportType.STMT_TIME     .equals(reportType)) { _measureText = "execution time";                   _noRowsText = "No statements were found."; }
+		else if (ReportType.CPU_TIME      .equals(reportType)) { _measureText = "CPU time";                         _noRowsText = "No statements were found."; }
+		else if (ReportType.ROWS_READ     .equals(reportType)) { _measureText = "rows read";                        _noRowsText = "No statement read any rows in the period."; }
+		else if (ReportType.PHYSICAL_READS.equals(reportType)) { _measureText = "physical reads (pages read from disk)"; _noRowsText = "No statement read any page from disk in the period."; }
+		else if (ReportType.LOCK_WAIT     .equals(reportType)) { _measureText = "time waiting for locks";           _noRowsText = "No statement waited for locks in the period."; }
+		else if (ReportType.EXECUTIONS    .equals(reportType)) { _measureText = "number of executions";             _noRowsText = "No statements were found."; }
+		else throw new IllegalArgumentException("Unhandled reportType='" + reportType + "'.");
 	}
 
 	@Override
@@ -101,7 +139,8 @@ extends Db2Abstract
 	@Override
 	public boolean hasShortMessageText()
 	{
-		return true;
+		// The mail has the STMT_TIME section only (as SQL Server: CPU_TIME), the other sections are in the full report
+		return ReportType.STMT_TIME.equals(_reportType) || ReportType.OVERVIEW.equals(_reportType);
 	}
 
 	@Override
@@ -110,7 +149,14 @@ extends Db2Abstract
 	{
 		if (_shortRstm.getRowCount() == 0)
 		{
-			w.append("No rows found <br>\n");
+			w.append(_noRowsText + "<br>\n");
+			return;
+		}
+
+		// The overview: one small table, the details are in the sections it links to
+		if (ReportType.OVERVIEW.equals(_reportType))
+		{
+			_overview.writeHtml(w, this, getTopRows());
 			return;
 		}
 
@@ -119,7 +165,7 @@ extends Db2Abstract
 			// Get a description of this section, and column names
 			w.append(getSectionDescriptionHtml(_shortRstm, true));
 
-			w.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
+			w.append("Row Count: " + _shortRstm.getRowCount() + " (the top " + getTopRows() + " on " + _measureText + ")&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
 
 			// The SQL Text is a "tooltip" in this table (the table below has it as text)
 			TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
@@ -148,8 +194,9 @@ extends Db2Abstract
 		if (_sqlTextRstm != null)
 		{
 			w.append("<br>\n");
-			w.append("<details open> \n");
-			w.append("<summary>Details for above Statements, including SQL Text (click to collapse) </summary> \n");
+			// Open in the first section (STMT_TIME), closed in the others (the page gets very long otherwise)
+			w.append("<details" + (ReportType.STMT_TIME.equals(_reportType) ? " open" : "") + "> \n");
+			w.append("<summary>Details for above Statements, including SQL Text (click to open/close) </summary> \n");
 			w.append("<br>\n");
 			w.append("SQL Text by 'EXECUTABLE_ID', Row Count: " + _sqlTextRstm.getRowCount() + "\n");
 			w.append(toHtmlTable(_sqlTextRstm));
@@ -167,9 +214,7 @@ extends Db2Abstract
 			// (type 'text/xmldata' is what dsrOpenLink() expects, the content is the JSON as text: the browser does not parse it)
 			for (Entry<String, String> plan : _planTexts.entrySet())
 			{
-				w.append("\n<script id='").append(plan.getKey()).append("' type='text/xmldata'>\n");
-				w.append(plan.getValue().replace("</script", "<\\/script"));
-				w.append("\n</script>\n");
+				ShowplanLinkBuilder.writePlanScript(w, plan.getKey(), plan.getValue());
 			}
 		}
 	}
@@ -270,7 +315,7 @@ extends Db2Abstract
 	@Override
 	public String getSubject()
 	{
-		return "Top SQL Statements (order by: STMT_EXEC_TIME_MS, origin: CmStatements / MON_GET_PKG_CACHE_STMT)";
+		return _reportType.subject();
 	}
 
 	@Override
@@ -306,12 +351,39 @@ extends Db2Abstract
 		// "per execution" over the whole period: NULL when no execution was counted in the period
 		String perExec = " / nullif(sum([NUM_EXECUTIONS]), 0)";
 
-		// The statements that are in the top ## on: time, rows read or executions
+		//------------------------------------------------------------------------
+		// OVERVIEW: each statement's share of what all the statements did (see TopSqlOverview)
+		//------------------------------------------------------------------------
+		if (ReportType.OVERVIEW.equals(_reportType))
+		{
+			java.util.List<TopSqlOverview.Measure> measures = java.util.List.of(
+				new TopSqlOverview.Measure("stmt_time"     , "sum([STMT_EXEC_TIME_MS])" , ReportType.STMT_TIME     .subject(), "STMT_TIME"     , false, "Share of all the statements' execution time, in percent"),
+				new TopSqlOverview.Measure("cpu_time"      , "sum([TOTAL_CPU_TIME_MS])" , ReportType.CPU_TIME      .subject(), "CPU_TIME"      , false, "Share of all the statements' CPU time, in percent"),
+				new TopSqlOverview.Measure("rows_read"     , "sum([ROWS_READ])"         , ReportType.ROWS_READ     .subject(), "ROWS_READ"     , true , "Share of all the statements' rows read, in percent"),
+				new TopSqlOverview.Measure("physical_reads", "sum([PHYSICAL_READS])"    , ReportType.PHYSICAL_READS.subject(), "PHYSICAL_READS", true , "Share of all the statements' physical reads (pages read from disk), in percent"),
+				new TopSqlOverview.Measure("lock_wait"     , "sum([LOCK_WAIT_TIME_MS])" , ReportType.LOCK_WAIT     .subject(), "LOCK_WAIT"     , true , "Share of all the statements' time waiting for locks, in percent"),
+				new TopSqlOverview.Measure("executions"    , "sum([NUM_EXECUTIONS])"    , ReportType.EXECUTIONS    .subject(), "EXECUTIONS"    , false, "Share of all the statements' executions, in percent"));
+
+			_overview = TopSqlOverview.create(this, conn, "[CmStatements_diff]",
+					"where ([NUM_EXECUTIONS] > 0 or [STMT_EXEC_TIME_MS] > 0) \n" + sql_and_skipNewDiffRateRows + getReportPeriodSqlWhere(),
+					"[EXECUTABLE_ID]", "EXECUTABLE_ID", "max([" + col_StmtText + "]) as [SqlText]", "SqlText", measures, getTopRows());
+			_shortRstm = _overview.getRstm();
+			if (hasDictCompCols)
+				updateDictionaryCompressedColumn(_shortRstm, conn, null, "CmStatements", "STMT_TEXT", "SqlText");
+
+			_overview.setDescription("execution time, CPU time, rows read, physical reads, lock wait time and executions",
+					"the statements the collector recorded from the package cache (MON_GET_PKG_CACHE_STMT): a statement that left the package cache between two samples is missing");
+			return;
+		}
+
+		// This section's top ## on its measure (only statements that have some of it: no zero rows in "rows read", "physical reads", "lock wait")
 		// The same statement on several members (pureScale): one row (the counters are summed)
+		String having = "";
+		if      (ReportType.ROWS_READ     .equals(_reportType)) having = "    having sum([ROWS_READ])         > 0 \n";
+		else if (ReportType.PHYSICAL_READS.equals(_reportType)) having = "    having sum([PHYSICAL_READS])    > 0 \n";
+		else if (ReportType.LOCK_WAIT     .equals(_reportType)) having = "    having sum([LOCK_WAIT_TIME_MS]) > 0 \n";
 		String sql = getCmDiffColumnsAsSqlComment("CmStatements")
-			    + "select * \n"
-			    + "from ( \n"
-			    + "    select \n"
+			    + "    select top " + topRows + " \n"
 			    + "         [EXECUTABLE_ID] \n"
 			    + "        ,max([SECTION_TYPE])                                                                    as [SECTION_TYPE] \n"
 			    + "        ,max([STMT_TYPE_ID])                                                                    as [STMT_TYPE_ID] \n"
@@ -320,10 +392,6 @@ extends Db2Abstract
 			    + "        ,max([EFFECTIVE_ISOLATION])                                                             as [EFFECTIVE_ISOLATION] \n"
 			    + "        ,max([" + col_StmtText + "])                                                            as [SqlText] \n"
 			    + "        ,cast('' as varchar(512))                                                               as [ExecPlan] \n"
-			    + " \n"
-			    + "        ,row_number() over (order by sum([STMT_EXEC_TIME_MS]) desc)                             as [rank_time] \n"
-			    + "        ,row_number() over (order by sum([ROWS_READ])         desc)                             as [rank_rows] \n"
-			    + "        ,row_number() over (order by sum([NUM_EXECUTIONS])    desc)                             as [rank_execs] \n"
 			    + " \n"
 			    + "        ,cast('' as varchar(512))                                                               as [NUM_EXECUTIONS__chart] \n"
 			    + "        ,sum([NUM_EXECUTIONS])                                                                  as [NUM_EXECUTIONS__sum] \n"
@@ -380,11 +448,8 @@ extends Db2Abstract
 			    + "  " + sql_and_skipNewDiffRateRows
 			    + "  " + getReportPeriodSqlWhere()
 			    + "    group by [EXECUTABLE_ID] \n"
-			    + ") x \n"
-			    + "where [rank_time]  <= " + topRows + " \n"
-			    + "   or [rank_rows]  <= " + topRows + " \n"
-			    + "   or [rank_execs] <= " + topRows + " \n"
-			    + "order by [rank_time] \n"
+			    + having
+			    + "    order by [" + _orderByCol + "] desc, [EXECUTABLE_ID] \n"   // tie-break on the key: the OVERVIEW does the same
 			    + "";
 
 		_shortRstm = executeQuery(conn, sql, true, "Db2TopSql", false); // false = do not truncate (the SQL Text)
@@ -393,12 +458,13 @@ extends Db2Abstract
 			return;
 
 		// Highlight sort column
-		_shortRstm.setHighlightSortColumns("STMT_EXEC_TIME_MS__sum");
+		_shortRstm.setHighlightSortColumns(_orderByCol);
 
 		_shortRstm.setDescription(
 				"The SQL Statements that used most resources during the period (from the table <code>CmStatements_diff</code>, the package cache).<br>" +
 				"A statement is one section in the package cache (<code>EXECUTABLE_ID</code>): the same text with parameter markers (?) is one statement, but the same text with other <i>literal</i> values is another one.<br>" +
-				"It is listed if it is in the top " + topRows + " on <b>time</b>, <b>rows read</b> or <b>executions</b> (the three <code>rank_</code> columns says where it's placed in each).<br>" +
+				"The top " + topRows + " on <b>" + _measureText + "</b> (ordered by: " + _orderByCol + "). " +
+				"There is one section like this for each of: execution time, CPU time, rows read, physical reads, lock wait time and executions. A statement can be in several of them.<br>" +
 				"The <code>__chart</code> columns shows <b>when</b> during the period, in 10 minute chunks. <code>NUM_EXECUTIONS__chart</code> is the number of executions, the others are the value <b>per execution</b> " +
 				"(a chunk where the statement ran, but no execution ended, is counted as one execution: Db2 counts an execution when it ends).<br>" +
 				"<b>Note</b>: The collector only records the statements that ran in the last 30 minutes, and of them the ones with most time (properties <code>CmStatements.sample.lastXminutes</code> and <code>CmStatements.sample.topRows</code>), every 5 minutes. " +
@@ -413,9 +479,6 @@ extends Db2Abstract
 		_shortRstm.setColumnDescription("EFFECTIVE_ISOLATION"              , "The isolation level: UR, CS, RS or RR");
 		_shortRstm.setColumnDescription("SqlText"                          , "The SQL Text: click to see it (it is also in the table below)");
 		_shortRstm.setColumnDescription("ExecPlan"                         , "The execution plan(s) the collector got while the statement was running (CmActiveStatements, only when the explain tables exist for the login): it is in the table below");
-		_shortRstm.setColumnDescription("rank_time"                        , "Place in the list when it's sorted on time (1 = most)");
-		_shortRstm.setColumnDescription("rank_rows"                        , "Place in the list when it's sorted on rows read (1 = most)");
-		_shortRstm.setColumnDescription("rank_execs"                       , "Place in the list when it's sorted on executions (1 = most)");
 		_shortRstm.setColumnDescription("NUM_EXECUTIONS__chart"            , "Chart: number of executions, in 10 minute chunks\nSo you can see WHEN the statement was executed.");
 		_shortRstm.setColumnDescription("NUM_EXECUTIONS__sum"              , "Number of executions");
 		_shortRstm.setColumnDescription("STMT_EXEC_TIME_MS__chart"         , "Chart: time for ONE execution in milliseconds, in 10 minute chunks\nSo you can see when the statement was slower than normal.");
@@ -512,7 +575,7 @@ extends Db2Abstract
 		// The "details" table: EXECUTABLE_ID + the charts and numbers of the statement (as a table in the cell) + the SQL Text
 		//--------------------------------------------------------------------------------
 		SimpleResultSet srs = new SimpleResultSet();
-		srs.addColumn("EXECUTABLE_ID", Types.VARCHAR,       80, 0);
+		srs.addColumn("Info",          Types.VARCHAR,  1024*64, 0); // one narrow column: id, isolation, package, problems, plan + LLM advice links (as the ASE Info column)
 		srs.addColumn("sparklines",    Types.VARCHAR,      512, 0);
 		srs.addColumn("query",         Types.VARCHAR, 1024*128, 0);
 
@@ -567,7 +630,7 @@ extends Db2Abstract
 			String firstPlanId = null;
 			for (int p = 0; p < plans.size(); p++)
 			{
-				String planElementId = "db2plan_" + executableId + "_" + (p + 1);
+				String planElementId = "db2plan_" + _reportType + "_" + executableId + "_" + (p + 1); // the section in the id: a statement can be in several sections
 				_planTexts.put(planElementId, plans.get(p));
 				if (firstPlanId == null)
 					firstPlanId = planElementId;
@@ -582,24 +645,26 @@ extends Db2Abstract
 
 			// No plan: SAY so (as the other DBMS vendors does), a missing link leaves the reader wondering why
 			if (plans.isEmpty())
-				planLinks = "Execution Plan <b>NOT Available</b> <i>(Db2Tune gets the plans of statements that runs for a while, and only when the explain tables exist for the login: see the tab 'Active Statements')</i>";
+				planLinks = "Execution Plan <b>NOT Available</b> " + infoLabel("", "Db2Tune gets the plans of statements that runs for a while, and only when the explain tables exist for the login: see the tab 'Active Statements'");
 			_shortRstm.setValueAtWithOverride(plans.isEmpty() ? "--not-found--" : plans.size() == 1 ? "yes" : plans.size() + " plans", r, pos_ExecPlan);
 
 			// "Get LLM Optimization Advice": with the (first) plan. What the tables look like is looked up when the link is clicked,
 			// and the charts and numbers of the statement is read from the table in the "sparklines" cell (see SparklineHelper.getWorkloadHarvesterJs)
 			String llmAdviceLink = LlmSqlContextBuilder.buildAdviceLinkHtmlJs(dbxCentralBaseUrl, sqlText, firstPlanId, DbUtils.DB_PROD_NAME_DB2_LUW, reportSrvName, "");
 
-			// The problems Db2 counted for it
-			String problems = "";
-			if (_shortRstm.getValueAsLong(r, "SORT_OVERFLOWS__sum"     , true, 0L) > 0) problems += "&emsp; Sort overflows: <b>" + _shortRstm.getValueAsString(r, "SORT_OVERFLOWS__sum") + "</b>";
-			if (_shortRstm.getValueAsLong(r, "LOCK_TIMEOUTS__sum"      , true, 0L) > 0) problems += "&emsp; Lock timeouts: <b>"  + _shortRstm.getValueAsString(r, "LOCK_TIMEOUTS__sum") + "</b>";
-			if (_shortRstm.getValueAsLong(r, "DEADLOCKS__sum"          , true, 0L) > 0) problems += "&emsp; Deadlocks: <b>"      + _shortRstm.getValueAsString(r, "DEADLOCKS__sum") + "</b>";
-			if (_shortRstm.getValueAsLong(r, "LOCK_ESCALS__sum"        , true, 0L) > 0) problems += "&emsp; Lock escalations: <b>" + _shortRstm.getValueAsString(r, "LOCK_ESCALS__sum") + "</b>";
-			if (_shortRstm.getValueAsLong(r, "NUM_EXEC_WITH_ERROR__sum", true, 0L) > 0) problems += "&emsp; Errors: <b>"         + _shortRstm.getValueAsString(r, "NUM_EXEC_WITH_ERROR__sum") + "</b> (last SQLCODE " + _shortRstm.getValueAsString(r, "LAST_EXEC_ERROR") + ")";
-
-			String executedIn = "Isolation: <code>" + StringEscapeUtils.escapeHtml4(StringUtil.nullToValue(_shortRstm.getValueAsString(r, "EFFECTIVE_ISOLATION"), "")) + "</code>"
-			                  + ("S".equals(_shortRstm.getValueAsString(r, "SECTION_TYPE")) ? "&emsp; Static SQL in package: <code>" + StringEscapeUtils.escapeHtml4(_shortRstm.getValueAsString(r, "PACKAGE_SCHEMA") + "." + _shortRstm.getValueAsString(r, "PACKAGE_NAME")) + "</code>" : "")
-			                  + problems;
+			// The Info column: the id, how it runs (isolation, static SQL package), the problems Db2 counted for it, the plan + LLM advice links
+			String isolation = StringUtil.nullToValue(_shortRstm.getValueAsString(r, "EFFECTIVE_ISOLATION"), "");
+			String info = infoCell(
+					  infoValue("EXECUTABLE_ID",         "The id of the statement in the package cache (MON_GET_PKG_CACHE_STMT.EXECUTABLE_ID)", executableId)
+					, infoValue("Isolation",             null, isolation.isEmpty() ? "" : "<code>" + StringEscapeUtils.escapeHtml4(isolation) + "</code>")
+					, infoValue("Static SQL in package", null, "S".equals(_shortRstm.getValueAsString(r, "SECTION_TYPE")) ? "<code>" + StringEscapeUtils.escapeHtml4(_shortRstm.getValueAsString(r, "PACKAGE_SCHEMA") + "." + _shortRstm.getValueAsString(r, "PACKAGE_NAME")) + "</code>" : "")
+					, infoValue("Sort overflows",        null, _shortRstm.getValueAsLong(r, "SORT_OVERFLOWS__sum"     , true, 0L) > 0 ? _shortRstm.getValueAsString(r, "SORT_OVERFLOWS__sum") : "")
+					, infoValue("Lock timeouts",         null, _shortRstm.getValueAsLong(r, "LOCK_TIMEOUTS__sum"      , true, 0L) > 0 ? _shortRstm.getValueAsString(r, "LOCK_TIMEOUTS__sum")  : "")
+					, infoValue("Deadlocks",             null, _shortRstm.getValueAsLong(r, "DEADLOCKS__sum"          , true, 0L) > 0 ? _shortRstm.getValueAsString(r, "DEADLOCKS__sum")      : "")
+					, infoValue("Lock escalations",      null, _shortRstm.getValueAsLong(r, "LOCK_ESCALS__sum"        , true, 0L) > 0 ? _shortRstm.getValueAsString(r, "LOCK_ESCALS__sum")    : "")
+					, infoValue("Errors",                null, _shortRstm.getValueAsLong(r, "NUM_EXEC_WITH_ERROR__sum", true, 0L) > 0 ? _shortRstm.getValueAsString(r, "NUM_EXEC_WITH_ERROR__sum") + " (last SQLCODE " + _shortRstm.getValueAsString(r, "LAST_EXEC_ERROR") + ")" : "")
+					, planLinks
+					, llmAdviceLink);
 
 			// The tables of the statement: from the plan when there is one (the real tables, also behind views and aliases), otherwise parsed from the text
 			// (a table without a schema can be in any schema: the package cache does not say the default schema of the statement)
@@ -625,13 +690,10 @@ extends Db2Abstract
 			String sparklines = htp.getHtmlTextForRow(r);
 
 			srs.addRow(
-					executableId,
+					info,
 					sparklines,
 					"<xmp>" + sqlText + "</xmp>\n"
-						+ executedIn + " <br>\n"
-						+ "<br>\n" + planLinks
 						+ (StringUtil.hasValue(planTexts) ? "\n" + planTexts : "")
-						+ (StringUtil.hasValue(llmAdviceLink) ? "<br>\n" + llmAdviceLink : "")
 						+ formatted);
 		}
 

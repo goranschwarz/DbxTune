@@ -123,11 +123,24 @@ extends HttpServlet
 			return;
 		}
 
+		runLlmCall(request, response, out, om, llmRequest);
+	}
+
+	/**
+	 * The real LLM call, for /api/llm/optimize-sql (one statement) and /api/llm/dsr-analysis (a whole Daily Summary Report, see
+	 * LlmDsrAnalysisServlet): the feature, provider, model and login checks, the call (with Server-Sent Events progress when
+	 * 'progress' is set), saving the request in the LLM log, and writing the answer (or the error) to the browser.
+	 *
+	 * @return the answer (already written to the browser), or null when the call was not made, failed or was stopped
+	 */
+	static LlmOptimizeResponse runLlmCall(HttpServletRequest request, HttpServletResponse response, PrintWriter out, ObjectMapper om, LlmOptimizeRequest llmRequest)
+	throws IOException
+	{
 		if ( ! LlmClientRegistry.isFeatureEnabled() )
 		{
 			writeError(om, out, response, HttpServletResponse.SC_SERVICE_UNAVAILABLE, "feature-disabled",
 					"The LLM Optimization Advice feature is not enabled. Set 'DbxCentral.llm.enabled=true' in DBX_CENTRAL.conf to turn it on.");
-			return;
+			return null;
 		}
 
 		LlmClient client = LlmClientRegistry.getInstance().getProvider(llmRequest.getProvider());
@@ -137,13 +150,13 @@ extends HttpServlet
 			writeError(om, out, response, HttpServletResponse.SC_BAD_REQUEST, "unknown-provider",
 					"No usable LLM provider found. Requested provider: " + requestedProvider + ". "
 					+ "Configure at least one provider (" + String.join("|", LlmClientRegistry.BUILT_IN_TYPES) + ") in DBX_CENTRAL.conf.");
-			return;
+			return null;
 		}
 		if ( ! client.isEnabled() )
 		{
 			writeError(om, out, response, HttpServletResponse.SC_SERVICE_UNAVAILABLE, "provider-not-configured",
 					"LLM provider '" + client.getProviderId() + "' is not configured (missing API key / URL / ...) in DBX_CENTRAL.conf.");
-			return;
+			return null;
 		}
 
 		// Only a configured model entry is accepted: everything that is sent to the provider (model id, extraBody,
@@ -156,7 +169,7 @@ extends HttpServlet
 				names.add(entry.getName());
 			writeError(om, out, response, HttpServletResponse.SC_BAD_REQUEST, "unknown-model",
 					"Model '" + llmRequest.getModel() + "' is not configured for LLM provider '" + client.getProviderId() + "'. Configured: " + String.join(", ", names));
-			return;
+			return null;
 		}
 
 		// NOTE: Deliberately NOT using Helper.isAuthorized(request, response) / response.sendError(...)
@@ -177,7 +190,7 @@ extends HttpServlet
 
 			writeError(om, out, response, HttpServletResponse.SC_UNAUTHORIZED, "not-logged-in",
 					"Not logged in! (Set 'DbxCentral.llm.allowAnonymous=true' in DBX_CENTRAL.conf to allow this without login.)", extra);
-			return;
+			return null;
 		}
 
 		// Every real provider call (success or failure) is recorded by LlmAdviceLog - BEFORE the answer is
@@ -267,7 +280,7 @@ extends HttpServlet
 
 			// Stopped: nobody listens any more (the call is saved above)
 			if (ex instanceof LlmCancelledException)
-				return;
+				return null;
 
 			// A timeout's message says which timeout, and what to raise (see the LLM clients)
 			String msg = ex.getMessage();
@@ -280,10 +293,10 @@ extends HttpServlet
 				err.putAll(extra);
 				writeSseEvent(om, out, "error", err);
 				out.close();
-				return;
+				return null;
 			}
 			writeError(om, out, response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "llm-call-failed", msg, extra);
-			return;
+			return null;
 		}
 		if (heartbeat != null)
 			heartbeat.cancel(false);
@@ -301,6 +314,7 @@ extends HttpServlet
 			om.writeValue(out, llmResponse);
 		out.flush();
 		out.close();
+		return llmResponse;
 	}
 
 	/** Sends the ': ping' comments of all event-stream answers (see doPost) */
@@ -343,13 +357,13 @@ extends HttpServlet
 		}
 	}
 
-	private void writeError(ObjectMapper om, PrintWriter out, HttpServletResponse response, int statusCode, String error, String message)
+	private static void writeError(ObjectMapper om, PrintWriter out, HttpServletResponse response, int statusCode, String error, String message)
 	throws IOException
 	{
 		writeError(om, out, response, statusCode, error, message, null);
 	}
 
-	private void writeError(ObjectMapper om, PrintWriter out, HttpServletResponse response, int statusCode, String error, String message, Map<String, String> extraFields)
+	private static void writeError(ObjectMapper om, PrintWriter out, HttpServletResponse response, int statusCode, String error, String message, Map<String, String> extraFields)
 	throws IOException
 	{
 		response.setStatus(statusCode);

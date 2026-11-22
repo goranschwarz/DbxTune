@@ -91,7 +91,7 @@ implements IReportEntry
 	public static final int     DEFAULT_DSR_QUERY_TIMEOUT_IN_SEC = 60 * 15; // 15 Minutes
 	
 	public static final String  PROPKEY_DSR_DDL_MAX_LEN_TABLE   = "DailySummaryReport.ddl.maxlen.table";
-	public static final int     DEFAULT_DSR_DDL_MAX_LEN_TABLE   = -1;
+	public static final int     DEFAULT_DSR_DDL_MAX_LEN_TABLE   = 8192; // the sp_help like texts (Table Info), not SQL Text. ASE + SQL Server show DDL made from it (much smaller)
 
 	public static final String  PROPKEY_DSR_DDL_MAX_LEN_TRIGGER = "DailySummaryReport.ddl.maxlen.trigger";
 	public static final int     DEFAULT_DSR_DDL_MAX_LEN_TRIGGER = 4096;
@@ -347,6 +347,74 @@ implements IReportEntry
 		
 		// use a renderer ReportEntryTableStringRenderer
 		return rstm.toHtmlTableString("sortable", true, true, colNameValueTagMap, new ReportEntryTableStringRenderer());
+	}
+
+	/**
+	 * For {@link IReportEntry#getLlmDigest()}: the first rows of a table as a compact text table, "col | col | ..." and one line per row.
+	 * Columns that are not in the table are skipped (some tables depend on what was recorded). Only pass number and name
+	 * columns: NEVER SQL text, error message texts or data values.
+	 *
+	 * @return the text, or null when the table is null or empty
+	 */
+	public static String llmDigestRows(ResultSetTableModel rstm, int maxRows, String... colNames)
+	{
+		if (rstm == null || rstm.getRowCount() == 0)
+			return null;
+
+		List<String> cols = new ArrayList<>();
+		for (String col : colNames)
+			if (rstm.findColumn(col) >= 0)
+				cols.add(col);
+		if (cols.isEmpty())
+			return null;
+
+		StringBuilder sb = new StringBuilder();
+		sb.append(String.join(" | ", cols)).append("\n");
+		int rows = Math.min(maxRows, rstm.getRowCount());
+		for (int r = 0; r < rows; r++)
+		{
+			for (int c = 0; c < cols.size(); c++)
+			{
+				if (c > 0)
+					sb.append(" | ");
+				sb.append(llmDigestValue(rstm.getValueAsObject(r, cols.get(c))));
+			}
+			sb.append("\n");
+		}
+		if (rstm.getRowCount() > rows)
+			sb.append("(").append(rstm.getRowCount() - rows).append(" more rows not shown)\n");
+		return sb.toString();
+	}
+
+	/** For {@link IReportEntry#getLlmDigest()}: adds "title:" and the text (from llmDigestRows/llmDigestSeries), nothing when the text is null */
+	public static void llmDigestAdd(StringBuilder sb, String title, String text)
+	{
+		if (StringUtil.isNullOrBlank(text))
+			return;
+		sb.append(title).append(":\n").append(text);
+	}
+
+	/** A value for the LLM digest: numbers rounded (1 decimal below 100), timestamps to the minute, text on one line and cut */
+	public static String llmDigestValue(Object val)
+	{
+		if (val == null)
+			return "";
+		if (val instanceof byte[]) // for example a SQL Server query_hash
+			return StringUtil.bytesToHex("0x", (byte[]) val);
+		if (val instanceof java.util.Date)
+			return new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm").format((java.util.Date) val);
+		if (val instanceof Number)
+		{
+			double d = ((Number) val).doubleValue();
+			if (d == Math.rint(d) || Math.abs(d) >= 100)
+				return Long.toString(Math.round(d));
+			return Double.toString(Math.round(d * 10) / 10.0);
+		}
+		String str = val.toString();
+		if (StringUtil.containsHtml(str)) // some tables get links/markup when they are written
+			str = StringEscapeUtils.unescapeHtml4(StringUtil.stripHtml(str));
+		str = str.replaceAll("\\s+", " ").replace('|', '/').trim();
+		return str.length() <= 80 ? str : str.substring(0, 80) + "...";
 	}
 
 	public ResultSetTableModel createResultSetTableModel(ResultSet rs, String name, String sql)
@@ -839,7 +907,8 @@ implements IReportEntry
 			sb.append( msOutlookAlternateText(showHideDiv, "Column Description", "") );
 		}
 
-		if (addSqlText)
+		// The mail is a summary: the SQL behind a section is only in the full report
+		if (addSqlText && ! isShortMessageType() && ! isMinimalMessageType())
 		{
 			String sqlText = rstm.getSqlText();
 			if (StringUtil.hasValue(sqlText))
@@ -1063,8 +1132,178 @@ implements IReportEntry
 
 
 	/**
+	 * An "Info" cell: several small things stacked in ONE narrow cell instead of one column each,
+	 * for example the hash code, the "Executed SQL" popup, "Copy Exec Plan" and "Skip This". Empty parts are left out.
+	 */
+	public static String infoCell(String... parts)
+	{
+		StringBuilder sb = new StringBuilder("<div style='white-space:nowrap; line-height:1.5; text-align:left;'>"); // left: a number column (hash code) is right aligned
+		for (String part : parts)
+		{
+			if (StringUtil.hasValue(part))
+				sb.append("<div style='margin-bottom:12px;'>").append(part).append("</div>"); // a blank line between the parts
+		}
+		return sb.append("</div>").toString();
+	}
+
+	/** One part of an "Info" cell: a small gray label (with an (i) when there is an explanation) above the value in bold. "" when the value is empty */
+	public static String infoValue(String label, String explanation, Object value)
+	{
+		String val = value == null ? "" : value.toString();
+		if (StringUtil.isNullOrBlank(val))
+			return "";
+		String lbl = StringUtil.hasValue(explanation) ? infoLabel(label, explanation) : "<span style='font-size:11px; color:#6b7686;'>" + label + "</span>";
+
+		// A long id (MySQL digest, Db2 EXECUTABLE_ID: 64 chars) would make the narrow column wide: small monospace that may wrap (it is still ONE value to copy)
+		if (val.length() > 24 && val.matches("[^\\s<>]+"))
+			return lbl + "<br><b style='display:inline-block; max-width:24ch; white-space:normal; word-break:break-all; font-family:Consolas, \"Courier New\", monospace; font-size:11px;'>" + val + "</b>";
+
+		return lbl + "<br><b>" + val + "</b>";
+	}
+
+	/**
+	 * A link to another section that also marks the row of a statement there (the "Top SQL Overview" links to the measure sections).
+	 * The section is opened if it is collapsed, the rows (in all its tables) that has <code>rowId</code> in a cell are marked, and the first one is scrolled to.
+	 * Needs {@link #GOTO_ROW_JS} once in the page. Without JavaScript it is a plain link to the section.
+	 *
+	 * @param sectionSubject  the subject of the section (its anchor is made from it, as in the table of contents)
+	 * @param linkText        the text of the link
+	 * @param rowId           the id of the statement (queryid, SQL_ID, digest...): a cell with this value (digits compared without thousands separators) marks its row
+	 */
+	public static String sectionRowLink(String sectionSubject, String linkText, String rowId)
+	{
+		return "<a href='#" + StringUtil.stripAllNonAlphaNum(sectionSubject) + "' data-row-id=\"" + StringEscapeUtils.escapeHtml4(StringUtil.nullToValue(rowId, "")) + "\" "
+				+ "onclick='return typeof dsrGoToRow === \"function\" ? dsrGoToRow(this) : true;'>" + linkText + "</a>";
+	}
+
+	/** The JavaScript for {@link #sectionRowLink(String, String, String)}: write it once in the page (writing it twice does no harm) */
+	public static final String GOTO_ROW_JS = ""
+			+ "<script>\n"
+			+ "function dsrGoToRow(a)\n"
+			+ "{\n"
+			+ "    try {\n"
+			+ "        var sec = document.getElementById(a.getAttribute('href').substring(1));\n"
+			+ "        var id  = a.getAttribute('data-row-id') || '';\n"
+			+ "        if (!sec || !id) return true;\n"
+			+ "        // open the section if it is collapsed\n"
+			+ "        sec.querySelectorAll('.collapse').forEach(function(c) { c.classList.add('show'); });\n"
+			+ "        // forget the previous mark\n"
+			+ "        document.querySelectorAll('tr.dsr-row-mark').forEach(function(tr) { tr.classList.remove('dsr-row-mark'); tr.style.background = ''; tr.style.outline = ''; });\n"
+			+ "        // a number is shown with thousands separators (and maybe a unicode minus): compare the digits only\n"
+			+ "        var digits = function(s) { return s.replace(/\\u2212/g, '-').replace(/[^0-9a-zA-Z-]/g, ''); };\n"
+			+ "        var want = digits(id), first = null;\n"
+			+ "        sec.querySelectorAll('td, b').forEach(function(el) {\n"
+			+ "            if (el.children.length > 0 && el.tagName == 'TD') return;   // only cells with the value itself\n"
+			+ "            if (digits(el.textContent) !== want) return;\n"
+			+ "            var tr = el.closest('tr');\n"
+			+ "            if (!tr || tr.classList.contains('dsr-row-mark')) return;\n"
+			+ "            tr.classList.add('dsr-row-mark');\n"
+			+ "            tr.style.background = '#fff3b0';\n"
+			+ "            tr.style.outline    = '2px solid #f0ad4e';\n"
+			+ "            if (!first && tr.offsetParent !== null) first = tr;   // the first one that is visible (a closed <details> hides the rest)\n"
+			+ "        });\n"
+			+ "        if (!first) return true;   // not found: just go to the section\n"
+			+ "        history.replaceState(null, '', a.getAttribute('href'));\n"
+			+ "        first.scrollIntoView({ behavior: 'smooth', block: 'center' });\n"
+			+ "        return false;\n"
+			+ "    } catch (e) { console.log('dsrGoToRow: ' + e); return true; }\n"
+			+ "}\n"
+			+ "</script>\n";
+
+	/**
+	 * An alarm value as a colour coded badge, with the same colours as DbxCentral's 'Historical Alarms' (dbxHistAlarms.js), as inline styles (the mail has no Bootstrap).
+	 * Columns: action (RAISE/RE-RAISE/CANCEL), alarmAction (ALARM/REPORT), severity, state. Returns null for other columns (or no value).
+	 */
+	public static String alarmBadge(String colName, String value)
+	{
+		if (StringUtil.isNullOrBlank(value) || colName == null)
+			return null;
+
+		final String RED = "#dc3545", GREEN = "#198754", AMBER = "#ffc107", CYAN = "#0dcaf0", BLUE = "#0d6efd", GRAY = "#6c757d";
+		String v  = value.trim().toUpperCase();
+		String bg = null;
+		switch (colName)
+		{
+			case "action":      bg = "RAISE".equals(v) ? RED : "CANCEL".equals(v) ? GREEN : GRAY;                                         break;
+			case "alarmAction": bg = "ALARM".equals(v) ? BLUE : GRAY;                                                                    break; // REPORT = only recorded, not sent
+			case "state":       bg = "UP".equals(v) ? GREEN : "AFFECTED".equals(v) ? AMBER : "DOWN".equals(v) ? RED : GRAY;               break;
+			case "severity":    bg = ("ERROR".equals(v) || "CRITICAL".equals(v)) ? RED : "WARNING".equals(v) ? AMBER : "INFO".equals(v) ? CYAN : "NOTICE".equals(v) ? BLUE : GRAY; break;
+			default:            return null;
+		}
+		String fg = (AMBER.equals(bg) || CYAN.equals(bg)) ? "#000000" : "#ffffff"; // as Bootstrap's text-bg-warning / text-bg-info
+		return "<span style='display:inline-block; padding:1px 7px; border-radius:4px; font-size:85%; font-weight:600; background-color:" + bg + "; color:" + fg + ";'>"
+				+ StringEscapeUtils.escapeHtml4(value) + "</span>";
+	}
+
+	/** The default renderer, plus the alarm columns as colour coded badges (see {@link #alarmBadge(String, String)}) */
+	public static class AlarmBadgeTableStringRenderer
+	extends ReportEntryTableStringRenderer
+	{
+		private boolean _tagAlarmClass;
+
+		public AlarmBadgeTableStringRenderer()
+		{
+			this(false);
+		}
+
+		/**
+		 * @param tagAlarmClass true: a gray REPORT tag after 'alarmClass' when 'alarmAction' is not ALARM (as the Historical Alarms dialog), and the 'alarmAction' column is not shown
+		 */
+		public AlarmBadgeTableStringRenderer(boolean tagAlarmClass)
+		{
+			_tagAlarmClass = tagAlarmClass;
+		}
+
+		@Override
+		public boolean isColumnVisible(ResultSetTableModel rstm, int col, String colName)
+		{
+			if (_tagAlarmClass && "alarmAction".equalsIgnoreCase(colName))
+				return false;
+			return super.isColumnVisible(rstm, col, colName);
+		}
+
+		@Override
+		public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+		{
+			if (_tagAlarmClass && "alarmClass".equalsIgnoreCase(colName) && rstm.hasColumnNoCase("alarmAction"))
+			{
+				String action = rstm.getValueAsString(row, "alarmAction", false, "");
+				if (StringUtil.hasValue(action) && !"ALARM".equalsIgnoreCase(action))
+					return super.cellValue(rstm, row, col, colName, objVal, strVal)
+						+ " <span title='Only recorded (alarmAction=" + action + "): not sent, not an active alarm' style='display:inline-block; padding:1px 6px; border-radius:4px; font-size:75%; background-color:#6c757d; color:#ffffff;'>" + action + "</span>";
+			}
+			// "00:31 (MM:SS) -- Added/Adjusted 60 Seconds to the Alarm Raise Time" (see AlarmEvent.getDuration): the extra text as an (i) with the text as tooltip
+			if ("duration".equalsIgnoreCase(colName) && strVal != null)
+			{
+				int pos = strVal.indexOf(" -- Added/Adjusted ");
+				if (pos >= 0)
+					return strVal.substring(0, pos) + " " + infoLabel("", strVal.substring(pos + " -- ".length()) + " (the time threshold of the alarm, so the duration is the full time the problem lasted)");
+			}
+			String badge = alarmBadge(colName, objVal == null ? null : objVal.toString());
+			return badge != null ? badge : super.cellValue(rstm, row, col, colName, objVal, strVal);
+		}
+	}
+
+	/** A small gray label with an (i): hover (or tap) shows what it means */
+	public static String infoLabel(String label, String explanation)
+	{
+		return "<span class='dsr-info-tip' style='font-size:11px; color:#6b7686; cursor:help;' data-info=\"" + StringEscapeUtils.escapeHtml4(explanation) + "\">" + label + " &#9432;</span>";
+	}
+
+	/** The "Skip This" link (made by setSkipEntriesUrl) with an (i) that explains it. "" when there is no link */
+	public static String infoSkipThis(String skipThisLink)
+	{
+		if (StringUtil.isNullOrBlank(skipThisLink) || "&nbsp;".equals(skipThisLink))
+			return "";
+		// a small button (inline styles: the mail has no Bootstrap)
+		skipThisLink = skipThisLink.replace("<a ", "<a style='display:inline-block; padding:1px 8px; border:1px solid #adb5bd; border-radius:4px; font-size:11px; color:#495057; background:#f8f9fa; text-decoration:none;' ");
+		return skipThisLink + " " + infoLabel("", "Skip This: opens DbxCentral (in a new tab) where you can add this entry to the 'skip set'. "
+				+ "Entries in the skip set are left out of future reports, for example a statement that is known to be slow and that you can't do anything about.");
+	}
+
+	/**
 	 * Create a link to DbxCentral where you can add any Skip entries
-	 * 
+	 *
 	 * @param rstm
 	 * @param linkColumnName    The Column Name where we should insert the link
 	 * @param skipColumnName    Column Name we should get valueString to skip
@@ -1257,6 +1496,16 @@ implements IReportEntry
 	public IReportChart createTsStackedBarChart(DbxConnection conn, String schemaName, String cmName, String dataGroupColumn, int dataGroupMinutes, TopGroupCountReport topGroupCountReport, String dataValueColumn, Double dataDivideByValue, String keepGroups, String skipGroups, String graphTitle)
 	{
 		return new ReportChartTimeSeriesStackedBar(this, conn, schemaName, cmName, dataGroupColumn, dataGroupMinutes, topGroupCountReport, dataValueColumn, dataDivideByValue, keepGroups, skipGroups, graphTitle);
+	}
+
+	/**
+	 * A stacked bar chart from a chart's data table (CmName_GraphName): each series summed per <code>dataGroupMinutes</code>.
+	 * Good for counts of rare events, that are hard to read as a line (a "comb" of 0 and 1).
+	 * <code>skipSeries</code>: comma separated series (columns) to leave out, or null.
+	 */
+	public ReportChartTimeSeriesStackedBar createTsStackedBarChartFromGraph(DbxConnection conn, String schemaName, String cmName, String graphName, int dataGroupMinutes, String skipSeries, String graphTitle)
+	{
+		return new ReportChartTimeSeriesStackedBar(this, conn, schemaName, cmName, graphName, dataGroupMinutes, skipSeries, graphTitle);
 	}
 	
 	
@@ -1882,6 +2131,22 @@ implements IReportEntry
 
 	public String getFormattedSqlAsTooltipDiv(String sql, String labelText, String vendor)
 	{
+		return getFormattedSqlAsTooltipDiv(sql, labelText, vendor, 0);
+	}
+
+	/**
+	 * The SQL Text as a tooltip (hover) and popup (click), the cell shows a 💬 and:
+	 * @param showChars  0: the 'labelText'. Above 0: the start of the SQL (one line, max this many chars), 'labelText' is the hover title
+	 */
+	public String getFormattedSqlAsTooltipDiv(String sql, String labelText, String vendor, int showChars)
+	{
+		String shown = labelText;
+		if (showChars > 0)
+		{
+			String oneLine = StringUtil.nullToValue(sql, "").replaceAll("\\s+", " ").trim();
+			shown = "<code>" + StringEscapeUtils.escapeHtml4(oneLine.length() > showChars ? oneLine.substring(0, showChars) + "..." : oneLine) + "</code>";
+		}
+
 		String displayText = ""
 				+ "------------------------------------------------------------------------------------------------------------------------- \n"
 				+ "-- Formatted SQL Text \n"
@@ -1907,7 +2172,7 @@ implements IReportEntry
 				+ "data-bs-target='#dbx-view-sqltext-dialog' "
 //				+ "data-objectname='" + Hashkey + "' "
 				+ "data-tooltip=\""   + displayText     + "\" "
-				+ ">&#x1F4AC; " + labelText + "</div>"; // &#x1F4AC; ==>> symbol popup with "..."
+				+ ">&#x1F4AC; " + shown + "</div>"; // &#x1F4AC; ==>> symbol popup with "..."
 	}
 
 	public String getTextAsTooltipDiv(String displayText, String labelText, int maxLen)
@@ -1925,8 +2190,20 @@ implements IReportEntry
 						+ "";
 			}
 		}
+
+		// In a report: the text is written ONCE (the same table is often in many sections and statements), the div refers to it.
+		// The full report sets 'data-tooltip' at page load, the mail has a CSS rule per text: see DailySummaryReportDefault (getTooltipTexts)
+		if (hasReportingInstance() && displayText != null)
+		{
+			int id = getReportingInstance().getTooltipTextId(displayText);
+			return "<div class='dsr-tt dsr-tt-" + id + "' data-tt='" + id + "' title='" + labelText + "' "
+					+ "data-bs-toggle='modal' "
+					+ "data-bs-target='#dbx-view-sqltext-dialog' "
+					+ ">&#x1F4AC; " + labelText + "</div>"; // &#x1F4AC; ==>> symbol popup with "..."
+		}
+
 		displayText = StringEscapeUtils.escapeHtml4(displayText);
-		
+
 		// Put the "Actual Executed SQL Text" as a "tooltip"
 		return "<div title='" + labelText + "' "
 				+ "data-bs-toggle='modal' "
@@ -2145,8 +2422,12 @@ implements IReportEntry
 		{
 			// Bootstrap "card" - BEGIN
 			w.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
+			// Collapsible (click the header), as the report's sections: the body is in a 'collapse show' div (open from the start)
 			w.append("<div id='" + id + "' class='card border-dark mb-3'>");
-			w.append("<h5 class='card-header'><b>" + title + "</b></h5>");
+			w.append("<h5 class='card-header' role='tab'>");
+			w.append("<a data-bs-toggle='collapse' href='#collapse_" + id + "' aria-expanded='true' aria-controls='collapse_" + id + "' class='d-block' style='color:inherit; text-decoration:none;'>");
+			w.append("<i class='fa fa-chevron-down float-end'></i><b>" + title + "</b></a></h5>");
+			w.append("<div id='collapse_" + id + "' class='collapse show'>");
 			w.append("<div class='card-body'>");
 			w.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
 		
@@ -2181,12 +2462,13 @@ implements IReportEntry
 			// Bootstrap "card" - END
 			w.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
 			w.append("</div>"); // end: card-body
+			w.append("</div>"); // end: collapse
 			w.append("</div>"); // end: card
 			w.append("<!--<![endif]-->    \n"); // END: IGNORE THIS SECTION FOR OUTLOOK
 		}
 	}
 
-	
+
 	public String getDbxCentralSpaceForecastUrl(String srvName, int days, int sampleMinutes, SpaceType spaceType, String outType) 
 	{
 		// Compose a URL

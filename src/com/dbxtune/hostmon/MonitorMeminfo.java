@@ -89,14 +89,19 @@ extends HostMonitor
 		{
 			mon = new MonitorMeminfoWindows();
 			mon.setConnectedToVendor(OsVendor.Windows);
-		}					
+		}
+		else if (osname.startsWith("Cloud"))
+		{
+			mon = new MonitorMeminfoCloud();
+			mon.setConnectedToVendor(OsVendor.Cloud);
+		}
 		else
 		{
 			throw new Exception("The OS Name '" + osname + "', is not supported by the module 'MonitorMeminfo' for the moment.");
 		}
 
 		mon.setConnection(conn);
-		if (start)
+		if (start && mon.isOsCommandStreaming())
 			mon.start();
 		
 		return mon;
@@ -104,12 +109,10 @@ extends HostMonitor
 
 	public static HostMonitorMetaData[] createOfflineMetaData()
 	{
-		HostMonitorMetaData[] mdArr = new HostMonitorMetaData[1];
+		HostMonitorMetaData[] mdArr = new HostMonitorMetaData[2];
 
 		mdArr[0] = new MonitorMeminfoLinux().createMetaData();
-//		mdArr[1] = new MonitorMeminfoLinux().createMetaData();
-//		mdArr[2] = new MonitorMeminfoLinux().createMetaData();
-//		mdArr[3] = new MonitorMeminfoLinux().createMetaData();
+		mdArr[1] = new MonitorMeminfoCloud().createMetaData();
 
 		return mdArr;
 	}

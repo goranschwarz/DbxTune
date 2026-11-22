@@ -145,6 +145,13 @@ public class AseErrorInfo extends AseAbstract
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
 	}
 
+	@Override
+	public String getLlmDigest()
+	{
+		// The error number and the counts only: the message text can hold data values (for example a duplicate key value)
+		return llmDigestRows(_shortRstm, 20, "ErrorStatus", "ErrorCount", "SpidCount", "FirstEntry", "LastEntry");
+	}
+
 	/**
 	 * Set descriptions for the table, and the columns
 	 */

@@ -252,9 +252,16 @@ extends SqlServerAbstract
 	}
 
 	@Override
-	public boolean hasIssueToReport()
+	public IssueLevel getIssueLevel()
 	{
-		return _deadlockSummaryPeriodCount > 0;
+		// FYI (as the deadlock alarm, which is an INFO alarm): some systems have many deadlocks every day, they would drown in "issue" mails
+		return _deadlockSummaryPeriodCount > 0 ? IssueLevel.FYI : IssueLevel.NONE;
+	}
+
+	@Override
+	public String getIssueReason()
+	{
+		return _deadlockSummaryPeriodCount + " deadlock(s)";
 	}
 
 

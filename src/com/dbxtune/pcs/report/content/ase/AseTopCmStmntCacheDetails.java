@@ -48,6 +48,7 @@ import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.AggType;
 import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
 import com.dbxtune.pcs.report.content.SparklineHelper.SparkLineParams;
+import com.dbxtune.pcs.report.content.TopSqlOverview;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.DbUtils;
@@ -64,6 +65,9 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 
 	private ResultSetTableModel _shortRstm;
 	private ResultSetTableModel _ssqlRstm;
+
+	/** The (i) text of "Hashkey" in the Info columns */
+	private static final String HASHKEY_EXPLANATION = "Hashkey: the ASE hash of the statement (monCachedStatement.Hashkey), the same as HashKey in monSysStatement. It links this Statement Cache entry to the captured SQL statements.";
 //	private Exception           _problem = null;
 	private List<String>        _miniChartJsList = new ArrayList<>();
 
@@ -73,11 +77,23 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 	
 	public enum ReportType
 	{
-		CPU_TIME, 
-		CPU_TIME_BELOW_NORMALIZED_SQL_THRESHOLD, 
-		USE_COUNT, 
+		OVERVIEW,  // the share of all cached statements' CPU, waits, executions, reads: links to the sections below (see TopSqlOverview)
+		CPU_TIME,
+		CPU_TIME_BELOW_NORMALIZED_SQL_THRESHOLD,
+		USE_COUNT,
 		WAIT_TIME
 	};
+
+	private TopSqlOverview _overview;  // OVERVIEW: the shares of all the cached statements (see TopSqlOverview)
+
+	/** The subject of a section (not CPU_TIME_BELOW_NORMALIZED_SQL_THRESHOLD: it has the threshold in it): also its anchor in the report (the OVERVIEW links to the sections) */
+	private static String subjectFor(ReportType type)
+	{
+		if (ReportType.OVERVIEW .equals(type)) return "Top Statement Cache Entries - OVERVIEW (order by: largest_pct, origin: CmStmntCacheDetails / monCachedStatement)";
+		if (ReportType.USE_COUNT.equals(type)) return "Top Statement Cache Entries by USE/Exec Count (order by: UseCount__sum, origin: CmStmntCacheDetails / monCachedStatement)";
+		if (ReportType.WAIT_TIME.equals(type)) return "Top Statement Cache Entries by WAIT Time (order by: TotalEstWaitTime__sum, origin: CmStmntCacheDetails / monCachedStatement)";
+		return "Top Statement Cache Entries by CPU Time (order by: TotalCpuTime__sum, origin: CmStmntCacheDetails / monCachedStatement)";
+	}
 	
 	public AseTopCmStmntCacheDetails(DailySummaryReportAbstract reportingInstance, ReportType reportType)
 	{
@@ -94,6 +110,9 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 	@Override
 	public boolean hasShortMessageText()
 	{
+		if (ReportType.OVERVIEW.equals(_reportType) )
+			return true;
+
 		if (ReportType.CPU_TIME.equals(_reportType) )
 			return true;
 
@@ -117,6 +136,11 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 		if (_shortRstm.getRowCount() == 0)
 		{
 			sb.append("No rows found <br>\n");
+		}
+		else if (ReportType.OVERVIEW.equals(_reportType))
+		{
+			// The overview: one small table, the details are in the sections it links to
+			_overview.writeHtml(sb, this, getTopRows());
 		}
 		else
 		{
@@ -202,22 +226,25 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 	@Override
 	public String getSubject()
 	{
-		if (ReportType.USE_COUNT.equals(_reportType))
-			return "Top Statement Cache Entries by USE/Exec Count (order by: UseCount__sum, origin: CmStmntCacheDetails / monCachedStatement)";
-
-		if (ReportType.WAIT_TIME.equals(_reportType))
-			return "Top Statement Cache Entries by WAIT Time (order by: TotalEstWaitTime__sum, origin: CmStmntCacheDetails / monCachedStatement)";
-
 		if (ReportType.CPU_TIME_BELOW_NORMALIZED_SQL_THRESHOLD.equals(_reportType))
 			return "Top Statement Cache Entries by CPU Time below " + _statement_gt_execTime + " ms (order by: TotalCpuTime__sum, origin: CmStmntCacheDetails / monCachedStatement)";
 
-		return "Top Statement Cache Entries by CPU Time (order by: TotalCpuTime__sum, origin: CmStmntCacheDetails / monCachedStatement)";
+		return subjectFor(_reportType);
 	}
 
 	@Override
 	public boolean hasIssueToReport()
 	{
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
+	}
+
+	@Override
+	public String getLlmDigest()
+	{
+		// No SQL text: the statement is named by DBName + ObjectName (the '*ss...' name) + Hashkey. The columns depend on what was recorded.
+		return llmDigestRows(_shortRstm, 5, "DBName", "ObjectName", "Hashkey", "UseCount__sum",
+				"TotalElapsedTime__sum", "AvgElapsedTime", "TotalCpuTime__sum", "AvgCpuTime", "TotalEstWaitTime__sum",
+				"TotalLio__sum", "AvgLIO", "TotalPio__sum", "samples_count");
 	}
 
 	/**
@@ -469,6 +496,31 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 //		String whereFilter_skipNewDiffRateRows = !skipNewDiffRateRows ? "" : "  and [CmNewDiffRateRow] = 0 -- only records that has been diff calculations (not first time seen, some ASE Versions has a bug that do not clear counters on reuse) \n";
 		String whereFilter_skipNewDiffRateRows = !skipNewDiffRateRows ? "" : sql_and_skipNewOrDiffRateRows;
 
+		//------------------------------------------------------------------------
+		// OVERVIEW: each cached statement's share of all the cached statements' CPU, waits, executions and reads (see TopSqlOverview)
+		//------------------------------------------------------------------------
+		if (ReportType.OVERVIEW.equals(_reportType))
+		{
+			boolean hasCpu  = dummyRstm.hasColumnNoCase("TotalCpuTimeDiff");
+			boolean hasWait = dummyRstm.hasColumnNoCase("TotalElapsedTimeDiff") && hasCpu;
+			boolean hasUse  = dummyRstm.hasColumnNoCase("UseCountDiff");
+			java.util.List<TopSqlOverview.Measure> measures = java.util.List.of(
+				new TopSqlOverview.Measure("cpu_time"      , hasCpu  ? "sum([TotalCpuTimeDiff])" : null                                         , subjectFor(ReportType.CPU_TIME) , "CPU_TIME" , false, "Share of all the cached statements' CPU time, in percent"),
+				new TopSqlOverview.Measure("wait_time"     , hasWait ? "greatest(sum([TotalElapsedTimeDiff]) - sum([TotalCpuTimeDiff]), 0)" : null, subjectFor(ReportType.WAIT_TIME), "WAIT_TIME", false, "Share of all the cached statements' estimated wait time (elapsed - CPU), in percent"),
+				new TopSqlOverview.Measure("use_count"     , hasUse  ? "sum([UseCountDiff])" : null                                             , subjectFor(ReportType.USE_COUNT), "USE_COUNT", false, "Share of all the cached statements' executions (use count), in percent"),
+				new TopSqlOverview.Measure("logical_reads" , dummyRstm.hasColumnNoCase("TotalLioDiff") ? "sum([TotalLioDiff])" : null              , null, null, false, "Share of all the cached statements' logical reads, in percent (no section of its own)"),
+				new TopSqlOverview.Measure("physical_reads", dummyRstm.hasColumnNoCase("TotalPioDiff") ? "sum([TotalPioDiff])" : null              , null, null, false, "Share of all the cached statements' physical reads, in percent (no section of its own)"));
+
+			_overview = TopSqlOverview.create(this, conn, "[CmStmntCacheDetails_diff]",
+					"WHERE 1 = 1 \n" + getReportPeriodSqlWhere() + (hasUse ? "  AND [UseCountDiff] > 0 \n" : "") + whereFilter_skipNewDiffRateRows,
+					"[DBName], [Hashkey]", "Hashkey", "min([ObjectName]) as [ObjectName]", null, measures, topRows);
+			_shortRstm = _overview.getRstm();
+
+			_overview.setDescription("CPU time, estimated wait time, executions (use count), logical reads and physical reads",
+					"the statements in the Statement Cache that the collector recorded (CmStmntCacheDetails / monCachedStatement): stored procedures and statements that are not cached are not here, see the 'SQL Captured' overview for those");
+			return;
+		}
+
 		String havingClause = "";
 		if (ReportType.CPU_TIME_BELOW_NORMALIZED_SQL_THRESHOLD.equals(_reportType))
 		{ 
@@ -589,7 +641,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 //also in all/some reports, do not trust count(*), it has to be where changes has happened (I think I did something like that in SQL Server SqlServerTopCmExecQueryStats)
 				+ " \n"
 				+ havingClause
-				+ "ORDER BY " + orderByCol + " DESC \n"
+				+ "ORDER BY " + orderByCol + " DESC, [DBName], [Hashkey] \n"   // tie-break on the key: the OVERVIEW does the same
 				+ "";
 
 		_shortRstm = executeQuery(conn, sql, false, "TopStatementCacheCalls");
@@ -827,9 +879,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 			{
 				SimpleResultSet srs = new SimpleResultSet();
 
-				srs.addColumn("DBName"     , Types.VARCHAR,       60, 0);
-				srs.addColumn("ObjectName" , Types.VARCHAR,       60, 0);
-				srs.addColumn("XmlPlan"    , Types.VARCHAR, 1024*128, 0);
+				srs.addColumn("Info"       , Types.VARCHAR,     2048, 0); // name, DB, Hashkey, Copy Exec Plan (was 3 columns: DBName, ObjectName, XmlPlan)
 				srs.addColumn("Sparklines" , Types.VARCHAR,      512, 0); 
 				srs.addColumn("SQLText"    , Types.VARCHAR, 1024*128, 0); // this is 'text' in the origin table
 
@@ -893,7 +943,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 						String xmlPlan            = null;
 						String xmlPlanParamsTable = "";
 						String query              = "--not-found--";;
-						String xmlPlanCellContent = "--not-found--";
+						String xmlPlanCellContent = "<span style='font-size:11px; color:#6b7686;'>no XML plan found</span>";
 						String showplanLink       = "Execution Plan <b>NOT Available</b>";
 						String planElementId      = null;
 
@@ -914,7 +964,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 
 							// Create "Copy XML" html link
 							String planHandle = objectName.replace('*', '_');
-							xmlPlanCellContent = "<a href='#showplan-list' title='Copy plan to clipboard... then you can copy it into SqlW to view the GUI Plan!' onclick='showplanForId(\"" + planHandle + "\"); return true;'>Copy XML</a>";
+							xmlPlanCellContent = "<i class='fa-regular fa-copy'></i>&nbsp;<a href='#' title='Copy the XML plan to the clipboard (paste it into SqlW to see the graphical plan)' onclick='showplanForId(\"" + planHandle + "\"); return false;'>Copy Exec Plan</a>";
 
 							// id of the hidden <script type='text/xmldata'> block written by writePendingXmlPlans() -
 							// reused (not re-embedded) by both "View Execution Plan" and "Get LLM Optimization Advice"
@@ -962,7 +1012,10 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 						// Grab all SparkLines we defined in 'subTableRowSpec'
 						String sparklines = htp.getHtmlTextForRow(r);
 
-						String objName_hashKey = objectName + "<br>\n<br>\n<b>Hashkey=</b>" + hashKey;
+						String info = infoCell("<b>" + objectName + "</b>"
+								, "<span style='font-size:11px; color:#6b7686;'>DB:</span> " + dbname
+								, infoLabel("Hashkey", HASHKEY_EXPLANATION) + " " + hashKey
+								, xmlPlanCellContent);
 
 						// SQL Text (and Compile Execution parameters)
 						String sqlTextValue = "<xmp>" + query + "</xmp>" 
@@ -1005,7 +1058,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 						
 						//-------------------------------------
 						// add record to SimpleResultSet
-						srs.addRow(dbname, objName_hashKey, xmlPlanCellContent, sparklines, sqlTextValue);
+						srs.addRow(info, sparklines, sqlTextValue);
 					}
 				}
 

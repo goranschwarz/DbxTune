@@ -40,6 +40,7 @@ import com.dbxtune.cm.os.CmOsMpstat;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
+import com.dbxtune.pcs.report.content.ReportChartAbstract;
 import com.dbxtune.pcs.report.content.ReportChartTimeSeriesLine;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
@@ -200,6 +201,30 @@ public class AseCpuUsageOverview extends AseAbstract
 	public String getSubject()
 	{
 		return "CPU Usage graph of the full day (origin: CmSummary,CmEngines / @@cpu_xxx,monEngines)";
+	}
+
+	@Override
+	public java.util.Map<String, String> getKeyFacts()
+	{
+		String cpu = ReportChartAbstract.avgMaxOfFirstSerie(_CmSummary_aaCpuGraph, " %"); // System+User CPU
+		return cpu == null ? java.util.Collections.emptyMap() : java.util.Map.of("CPU busy avg / max", "<b>" + cpu + "</b>");
+	}
+
+	@Override
+	public String getLlmDigest()
+	{
+		StringBuilder sb = new StringBuilder();
+		llmDigestAdd(sb, "ASE CPU busy (CmSummary)",                     ReportChartAbstract.llmDigestSeries(_CmSummary_aaCpuGraph,             3, "%"));
+		llmDigestAdd(sb, "ASE engines CPU (CmEngines)",                  ReportChartAbstract.llmDigestSeries(_CmEngines_cpuSum,                 3, "%"));
+		llmDigestAdd(sb, "Engine run queue length (CmSysLoad)",          ReportChartAbstract.llmDigestSeries(_CmSysLoad_EngineRunQLengthGraph,  3, null));
+		llmDigestAdd(sb, "CPU usage by execution phase (CmExecutionTime)", ReportChartAbstract.llmDigestSeries(_CmExecutionTime_CpuUsagePct,  6, "%"));
+		llmDigestAdd(sb, "Logical reads per second (CmSummary)",         ReportChartAbstract.llmDigestSeries(_CmSummary_LogicalReadGraph,       2, null));
+		llmDigestAdd(sb, "Blocking locks (CmSummary)",                   ReportChartAbstract.llmDigestSeries(_CmSummary_BlockingLocksGraph,     2, null));
+		llmDigestAdd(sb, "Deadlocks (CmSummary)",                        ReportChartAbstract.llmDigestSeries(_CmSummary_DeadlockCount,          2, null));
+		llmDigestAdd(sb, "Oldest open transaction, seconds (CmSummary)", ReportChartAbstract.llmDigestSeries(_CmSummary_OldestTranInSecGraph,   2, "s"));
+		llmDigestAdd(sb, "Lock wait time (CmSysWaits)",                  ReportChartAbstract.llmDigestSeries(_CmSysWaits_sysWaitLockTime,       2, null));
+		llmDigestAdd(sb, "Data cache hit rate per pool (CmCachePools)",  ReportChartAbstract.llmDigestSeries(_CmCachePools_PoolHitRate,         5, "%"));
+		return sb.length() == 0 ? null : sb.toString();
 	}
 
 	@Override

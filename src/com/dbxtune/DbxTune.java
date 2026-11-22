@@ -62,6 +62,7 @@ import com.dbxtune.alarm.UserDefinedAlarmHandler;
 import com.dbxtune.alarm.writers.AlarmWriterToFile;
 import com.dbxtune.central.controllers.DbxTuneGuiHttpConnectOfflineHandler;
 import com.dbxtune.check.CheckForUpdates;
+import com.dbxtune.cloud.GcpCredentialsHelper;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.config.dbms.DbmsConfigManager;
 import com.dbxtune.config.dbms.IDbmsConfig;
@@ -945,8 +946,11 @@ public abstract class DbxTune
 				if (cmdLineHostname.indexOf(":") >= 0)
 				{
 					String[] sa = cmdLineHostname.split(":");
-					appProps.setProperty("cmdLine.sshHostname", sa[0]);
-					appProps.setProperty("cmdLine.sshPort",     Integer.parseInt(sa[1]));
+					if (sa.length == 2 && StringUtil.isInteger(sa[1]))
+					{
+						appProps.setProperty("cmdLine.sshHostname", sa[0]);
+						appProps.setProperty("cmdLine.sshPort",     Integer.parseInt(sa[1]));
+					}
 				}
 			}
 		}
@@ -1060,6 +1064,11 @@ public abstract class DbxTune
 					_logger.info("No DBMS password was specified. but the user '" + aseUser + "', means that we do not need a password.");
 					storeConfigProps.setProperty("conn.dbmsPassword", "", true); // should we encrypt the passwd or not
 				}
+				else if (GcpCredentialsHelper.isGcpIamUsername(aseUser) || storeConfigProps.getBooleanProperty(GcpCredentialsHelper.PROPKEY_dbmsIamAuth, false))
+				{
+					_logger.info("No DBMS password was specified. User '" + aseUser + "' uses GCP Cloud SQL IAM Database Authentication; an OAuth2 access token will be fetched automatically at connect time.");
+					storeConfigProps.setProperty("conn.dbmsPassword", "", true);
+				}
 				else
 				{
 					try
@@ -1125,8 +1134,11 @@ public abstract class DbxTune
 				if (cmdLineHostname.indexOf(":") >= 0)
 				{
 					String[] sa = cmdLineHostname.split(":");
-					storeConfigProps.setProperty("conn.sshHostname", sa[0]);
-					storeConfigProps.setProperty("conn.sshPort",     Integer.parseInt(sa[1]));
+					if (sa.length == 2 && StringUtil.isInteger(sa[1]))
+					{
+						storeConfigProps.setProperty("conn.sshHostname", sa[0]);
+						storeConfigProps.setProperty("conn.sshPort",     Integer.parseInt(sa[1]));
+					}
 				}
 			}
 			// If we havn't got any SSH-Server (property or switch), then try to get it from the DBMS specification

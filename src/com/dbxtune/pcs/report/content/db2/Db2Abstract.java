@@ -644,7 +644,7 @@ extends ReportEntryAbstract
 				map.put("Schema" , html(ti.schema));
 				map.put("Name"   , html(ti.name));
 				map.put("Sampled", ti.sampleTime + "");
-				map.put("Text"   , getTextAsTooltipDiv(ti.objectText, "View Text", getDdlMaxLengthTable()));
+				map.put("Text"   , getTextAsTooltipDiv(ti.objectText, "View Text", -1) /* SQL: never cut */);
 			}
 			else
 			{

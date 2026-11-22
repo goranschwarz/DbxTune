@@ -37,7 +37,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -49,6 +48,7 @@ import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.NPlusOneParent;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
+import com.dbxtune.utils.DbUtils;
 import com.dbxtune.utils.StringUtil;
 
 /**
@@ -93,9 +93,16 @@ extends PostgresAbstract
 	}
 
 	@Override
-	public boolean hasIssueToReport()
+	public IssueLevel getIssueLevel()
 	{
-		return _nPlusOneCount > 0;
+		// N+1 is a design finding (fix it in the application), not an incident: FYI
+		return _nPlusOneCount > 0 ? IssueLevel.FYI : IssueLevel.NONE;
+	}
+
+	@Override
+	public String getIssueReason()
+	{
+		return _nPlusOneCount + " statement(s) that look like N+1";
 	}
 
 	@Override
@@ -108,6 +115,15 @@ extends PostgresAbstract
 	public String[] getMandatoryTables()
 	{
 		return new String[] { CmPgStatements.CM_NAME + "_diff" };
+	}
+
+	@Override
+	public List<ReportingIndexEntry> getReportingIndexes()
+	{
+		// The collector stores EVERY statement in EVERY sample (most rows have calls = 0), the queries below only read 'calls > 0' (as PostgresTopSql)
+		List<ReportingIndexEntry> list = new ArrayList<>();
+		list.add(new ReportingIndexEntry(CmPgStatements.CM_NAME + "_diff", "calls"));
+		return list;
 	}
 
 	@Override
@@ -139,8 +155,7 @@ extends PostgresAbstract
 					String text = rstm.getValueAsString(row, colName);
 					if (StringUtil.isNullOrBlank(text))
 						return "";
-					String shortText = text.length() > 120 ? text.substring(0, 120) + "..." : text;
-					return "<code title=\"" + StringEscapeUtils.escapeHtml4(text) + "\">" + StringEscapeUtils.escapeHtml4(shortText) + "</code>";
+					return getFormattedSqlAsTooltipDiv(text, "Hover or Click to see formatted SQL Text...", DbUtils.DB_PROD_NAME_POSTGRES, 120); // the start of the SQL, the full SQL as tooltip + popup
 				}
 				if ("queryid".equals(colName) || "parent_queryid".equals(colName))
 					return objVal == null ? "" : objVal.toString(); // an id: no thousand separators

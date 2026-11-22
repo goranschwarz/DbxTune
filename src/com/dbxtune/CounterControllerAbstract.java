@@ -49,6 +49,7 @@ import javax.swing.JPanel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.dbxtune.cloud.GcpCredentialsHelper;
 import com.dbxtune.cm.CmSummaryAbstract;
 import com.dbxtune.cm.CmToolTipSupplierDefault;
 import com.dbxtune.cm.CounterModelHostMonitor;
@@ -2487,7 +2488,17 @@ implements ICounterController
 			_logger.info("Connecting to: jdbcUrl='" + jdbcUrl + "'.");
 			_logger.debug("Connecting to: jdbcUrl='" + jdbcUrl + "', jdbcProps='" + jdbcProps + "'.");
 
-			Connection jdbcConn = DriverManager.getConnection(jdbcUrl, jdbcProps);
+			// GCP Cloud SQL IAM Database Authentication for PostgreSQL (injects fresh OAuth2 access token when applicable)
+			Properties connectProps = new Properties();
+			connectProps.putAll(jdbcProps);
+			boolean usedGcpIamAuth = GcpCredentialsHelper.applyGcpIamPostgresAuth(jdbcUrl, connectProps, null, true); // true: the monitored connection
+			if (usedGcpIamAuth)
+			{
+				dbmsUsername = connectProps.getProperty("user", dbmsUsername);
+				jdbcProps.put("user", dbmsUsername);
+			}
+
+			Connection jdbcConn = DriverManager.getConnection(jdbcUrl, connectProps);
 			DbxConnection conn = DbxConnection.createDbxConnection(jdbcConn);
 
 			// set the connection props so it can be reused...

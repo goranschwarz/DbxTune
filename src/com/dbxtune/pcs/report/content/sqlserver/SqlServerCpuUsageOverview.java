@@ -35,6 +35,7 @@ import com.dbxtune.cm.sqlserver.CmSummary;
 import com.dbxtune.cm.sqlserver.CmWaitStats;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
+import com.dbxtune.pcs.report.content.ReportChartAbstract;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 
@@ -152,6 +153,34 @@ extends SqlServerAbstract
 	public String getSubject()
 	{
 		return "CPU Usage graph of the full day (origin: CmSummary,CmPerfCounters,CmMemoryClerks,CmMemoryGrantsSum,CmSchedulers / @@cpu_xxx,dm_os_schedulers)";
+	}
+
+	@Override
+	public java.util.Map<String, String> getKeyFacts()
+	{
+		String cpu = ReportChartAbstract.avgMaxOfFirstSerie(_CmSummary_aaCpuGraph, " %"); // System+User CPU
+		return cpu == null ? java.util.Collections.emptyMap() : java.util.Map.of("CPU busy avg / max", "<b>" + cpu + "</b>");
+	}
+
+	@Override
+	public String getLlmDigest()
+	{
+		StringBuilder sb = new StringBuilder();
+		llmDigestAdd(sb, "SQL Server CPU busy (CmSummary)",                ReportChartAbstract.llmDigestSeries(_CmSummary_aaCpuGraph,            3, "%"));
+		llmDigestAdd(sb, "Runnable queue length (CmSchedulers)",           ReportChartAbstract.llmDigestSeries(_CmSchedulers_RunQLengthSum,      2, null));
+		llmDigestAdd(sb, "SQL batches per second (CmPerfCounters)",        ReportChartAbstract.llmDigestSeries(_CmPerfCounters_SqlBatch,         2, null));
+		llmDigestAdd(sb, "Buffer cache reads per second",                  ReportChartAbstract.llmDigestSeries(_CmPerfCounters_CacheReads,       2, null));
+		llmDigestAdd(sb, "Buffer cache physical reads per second",         ReportChartAbstract.llmDigestSeries(_CmPerfCounters_CachePhyReads,    2, null));
+		llmDigestAdd(sb, "Buffer cache hit rate",                          ReportChartAbstract.llmDigestSeries(_CmPerfCounters_CacheHitRate,     2, "%"));
+		llmDigestAdd(sb, "Memory: clerks vs target and total, MB",         ReportChartAbstract.llmDigestSeries(_CmMemoryClerks_TTMemVsAllClerks, 4, "MB"));
+		llmDigestAdd(sb, "Memory grants and waiters (CmMemoryGrantsSum)",  ReportChartAbstract.llmDigestSeries(_CmMemoryGrantsSum_GrantWaitCnt,  4, null));
+		llmDigestAdd(sb, "OS free memory, MB",                             ReportChartAbstract.llmDigestSeries(_CmSummary_OsMemoryFreeMb,        2, "MB"));
+		llmDigestAdd(sb, "Blocking locks (CmSummary)",                     ReportChartAbstract.llmDigestSeries(_CmSummary_BlockingLocksGraph,    2, null));
+		llmDigestAdd(sb, "Deadlocks (CmSummary)",                          ReportChartAbstract.llmDigestSeries(_CmSummary_DeadlockCountSum,      2, null));
+		llmDigestAdd(sb, "Oldest open transaction, seconds",               ReportChartAbstract.llmDigestSeries(_CmSummary_OldestTranInSecGraph,  2, "s"));
+		llmDigestAdd(sb, "Insert/update/delete rows per second, tempdb",   ReportChartAbstract.llmDigestSeries(_CmIndexOpStatSum_OpIudTempdb,    3, null));
+		llmDigestAdd(sb, "Write transactions per second",                  ReportChartAbstract.llmDigestSeries(_CmPerfCounters_TransWriteSec,    5, null));
+		return sb.length() == 0 ? null : sb.toString();
 	}
 
 	@Override

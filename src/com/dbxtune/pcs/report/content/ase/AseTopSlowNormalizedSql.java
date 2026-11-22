@@ -29,6 +29,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -40,6 +41,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.h2.tools.SimpleResultSet;
 
+import org.apache.commons.text.StringEscapeUtils;
+
 import com.dbxtune.central.llm.LlmSqlContextBuilder;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.gui.ResultSetTableModel.TableStringRenderer;
@@ -50,6 +53,7 @@ import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.AggType;
 import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
 import com.dbxtune.pcs.report.content.SparklineHelper.SparkLineParams;
+import com.dbxtune.pcs.report.content.TopSqlOverview;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.DbUtils;
@@ -95,16 +99,20 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 	
 	public enum ReportType
 	{
+		OVERVIEW,  // the share of all captured statements' CPU, waits, reads, executions: links to the sections below (see TopSqlOverview)
 		CPU_TIME, 
 		WAIT_TIME
 	};
+
+	private TopSqlOverview _overview;  // OVERVIEW: the shares of all the captured statements (see TopSqlOverview)
 	
 	public AseTopSlowNormalizedSql(DailySummaryReportAbstract reportingInstance, ReportType reportType)
 	{
 		super(reportingInstance);
 		_reportType = reportType;
 
-		if      (ReportType.CPU_TIME .equals(_reportType)) { _sqlOrderByCol = "[CpuTime__sum]";  _sqlHavingCol = "[CpuTime__sum]"; }
+		if      (ReportType.OVERVIEW .equals(_reportType)) { _sqlOrderByCol = "[largest_pct]";  _sqlHavingCol = ""; }
+		else if (ReportType.CPU_TIME .equals(_reportType)) { _sqlOrderByCol = "[CpuTime__sum]";  _sqlHavingCol = "[CpuTime__sum]"; }
 		else if (ReportType.WAIT_TIME.equals(_reportType)) { _sqlOrderByCol = "[WaitTime__sum]"; _sqlHavingCol = "[WaitTime__sum]"; }
 		else throw new IllegalArgumentException("Unhandled reportType='" + reportType + "'.");
 
@@ -120,7 +128,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 	@Override
 	public boolean hasShortMessageText()
 	{
-		if (ReportType.CPU_TIME.equals(_reportType))
+		if (ReportType.CPU_TIME.equals(_reportType) || ReportType.OVERVIEW.equals(_reportType))
 			return true;
 
 		return false;
@@ -139,6 +147,11 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 		if (_shortRstm.getRowCount() == 0)
 		{
 			sb.append("No rows found <br>\n");
+		}
+		else if (ReportType.OVERVIEW.equals(_reportType))
+		{
+			// The overview: one small table, the details are in the sections it links to
+			_overview.writeHtml(sb, this, getTopRows());
 		}
 		else
 		{
@@ -163,6 +176,14 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 						@Override
 						public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
 						{
+							// Many Statement Cache names: the first 2 and the count (the whole list made the table ~35000 px wide), all of them on hover
+							if ("StatementCacheNames".equals(colName) && StringUtil.hasValue(strVal))
+							{
+								String[] names = strVal.split(",\\s*");
+								if (names.length > 2)
+									return "<span title='" + StringEscapeUtils.escapeHtml4(strVal) + "'>" + names[0] + ", " + names[1] + ", ... <i>(" + names.length + " in all)</i></span>";
+							}
+
 							if ("txt".equals(colName))
 							{
 								// Get Actual Executed SQL Text for current 'NormJavaSqlHashCode'
@@ -214,9 +235,32 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 				// Create a default renderer
 				TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
 				{
+					// One narrow "Info" column instead of: NormJavaSqlHashCode, Skip This, txt, wait
+					@Override
+					public boolean isColumnVisible(ResultSetTableModel rstm, int col, String colName)
+					{
+						return ! ("Skip This".equals(colName) || "txt".equals(colName) || "wait".equals(colName));
+					}
+
+					@Override
+					public String headerName(ResultSetTableModel rstm, int col, String colName)
+					{
+						return "NormJavaSqlHashCode".equals(colName) ? "Info" : colName;
+					}
+
 					@Override
 					public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
 					{
+						if ("NormJavaSqlHashCode".equals(colName))
+						{
+							String hash = rstm.getValueAsString(row, "NormJavaSqlHashCode");
+							return infoCell(normHashCodeInfo(hash)
+									, cellValue(rstm, row, col, "txt" , null, "")
+									, cellValue(rstm, row, col, "wait", null, "")
+									, copyExecPlanInfo(hash)
+									, infoSkipThis(rstm.getValueAsString(row, "Skip This")));
+						}
+
 //						if ("NormSQLText".equals(colName))
 //						{
 //						//	return "<xmp style='width:100%; max-height:400px; overflow:auto'>" + strVal + "</xmp>";
@@ -239,7 +283,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 									+ "data-bs-target='#dbx-view-sqltext-dialog' "
 									+ "data-objectname='" + normJavaSqlHashCode + "' "
 									+ "data-tooltip=\""   + executedSqlText     + "\" "
-									+ ">&#x1F4AC;</div>"; // symbol popup with "..."
+									+ ">&#x1F4AC; Executed SQL</div>"; // symbol popup with "..."
 						}
 
 						if ("wait".equals(colName))
@@ -258,7 +302,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 									+ "data-bs-target='#dbx-view-sqltext-dialog' "
 									+ "data-objectname='" + normJavaSqlHashCode + "' "
 									+ "data-tooltip=\""   + waitText     + "\" "
-									+ ">&#x1F4AC;</div>"; // symbol popup with "..."
+									+ ">&#x1F4AC; Waits</div>"; // symbol popup with "..."
 						}
 
 						return strVal;
@@ -302,13 +346,29 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 	@Override
 	public String getSubject()
 	{
-		return "Top [SQL Captured] - " + _reportType + " - SLOW Normalized SQL Statements (order by: " + _orderByCol_noBrackets + ", origin: monSysStatement) [with gt: execTime=" + _statement_gt_execTime + ", logicalReads=" + _statement_gt_logicalReads + ", physicalReads=" + _statement_gt_physicalReads + "]";
+		return subjectFor(_reportType);
+	}
+
+	/** The subject of a section: also its anchor in the report (the OVERVIEW links to the sections). It has the capture thresholds in it (the same for all the sections) */
+	private String subjectFor(ReportType type)
+	{
+		String orderByCol = ReportType.OVERVIEW.equals(type) ? "largest_pct" : ReportType.WAIT_TIME.equals(type) ? "WaitTime__sum" : "CpuTime__sum";
+		return "Top [SQL Captured] - " + type + " - SLOW Normalized SQL Statements (order by: " + orderByCol + ", origin: monSysStatement) [with gt: execTime=" + _statement_gt_execTime + ", logicalReads=" + _statement_gt_logicalReads + ", physicalReads=" + _statement_gt_physicalReads + "]";
 	}
 
 	@Override
 	public boolean hasIssueToReport()
 	{
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
+	}
+
+	@Override
+	public String getLlmDigest()
+	{
+		// The statement is named by its hash only (no SQL text); -1/-2/-3 = statements without (parsable) SQL text
+		return llmDigestRows(_shortRstm, 10, "NormJavaSqlHashCode", "ExecCount", "DistinctSQLTextCount",
+				"Elapsed_ms__sum", "Elapsed_ms__avg", "CpuTime__sum", "CpuTime__avg", "WaitTime__sum", "WaitTime__avg",
+				"LogicalReads__sum", "LogicalReads__avg", "PhysicalReads__sum", "RowsAffected__sum", "LogicalReadsPerRowsAffected__avg", "MemUsageKB__sum");
 	}
 
 	/**
@@ -411,6 +471,34 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 		int topRows       = getTopRows();
 		int havingSumTime = 1000; // 1 second
 		int dsrSkipCount  = getDsrSkipCount();
+
+		//------------------------------------------------------------------------
+		// OVERVIEW: each captured statement's share of all the captured statements' CPU, waits, reads and executions (see TopSqlOverview)
+		// The sections only have statements with at least havingSumTime (ms) of their measure, and not the ones in the DSR skip list: the same here
+		//------------------------------------------------------------------------
+		if (ReportType.OVERVIEW.equals(_reportType))
+		{
+			java.util.Set<String> skip = getDsrSkipEntries().get("NormJavaSqlHashCode");
+			String skipWhere = (skip == null || skip.isEmpty()) ? "" : "  and [NormJavaSqlHashCode] not in(" + StringUtil.toCommaStrQuoted("'", skip) + ") \n";
+
+			java.util.List<TopSqlOverview.Measure> measures = java.util.List.of(
+				new TopSqlOverview.Measure("cpu_time"      , "sum([CpuTime])"      , subjectFor(ReportType.CPU_TIME) , "CPU_TIME" , true , "Share of all the captured statements' CPU time, in percent").setMinValue(havingSumTime),
+				new TopSqlOverview.Measure("wait_time"     , "sum([WaitTime])"     , subjectFor(ReportType.WAIT_TIME), "WAIT_TIME", true , "Share of all the captured statements' wait time, in percent").setMinValue(havingSumTime),
+				new TopSqlOverview.Measure("logical_reads" , "sum([LogicalReads])" , null, null, false, "Share of all the captured statements' logical reads, in percent (no section of its own)"),
+				new TopSqlOverview.Measure("physical_reads", "sum([PhysicalReads])", null, null, false, "Share of all the captured statements' physical reads, in percent (no section of its own)"),
+				new TopSqlOverview.Measure("executions"    , "count(*)"            , null, null, false, "Share of all the captured statements' executions, in percent (no section of its own)"));
+
+			_overview = TopSqlOverview.create(this, conn, "[MonSqlCapStatements]",
+					"where 1 = 1 \n  and [ErrorStatus] = 0 \n" + getReportPeriodSqlWhere("StartTime") + skipWhere,
+					"[NormJavaSqlHashCode]", "NormJavaSqlHashCode", "max([SQLText$dcc$]) as [SqlText]", "SqlText", measures, topRows);
+			_shortRstm = _overview.getRstm();
+			updateDictionaryCompressedColumn(_shortRstm, conn, null, "MonSqlCapStatements", "SQLText", "SqlText"); // one of the texts of the normalized statement
+
+			_overview.setDescription("CPU time, wait time, logical reads, physical reads and executions",
+					"the statements that were captured (monSysStatement: only the ones above the thresholds execTime=" + _statement_gt_execTime + " ms, logicalReads=" + _statement_gt_logicalReads + ", physicalReads=" + _statement_gt_physicalReads + "), and not in the DSR skip list. "
+					+ "NormJavaSqlHashCode -1 is all the statements without an SQL Text (the sections split it in -1, -2 and -3)");
+			return;
+		}
 		
 		 // just to get Column names
 		String dummySql = "select * from [MonSqlCapStatements] where 1 = 2";
@@ -527,7 +615,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 				+ getReportPeriodSqlWhere("StartTime")
 			    + "group by [NormJavaSqlHashCode] \n"
 			    + "having "   + _sqlHavingCol  + " >= " + havingSumTime + " \n"
-			    + "order by " + _sqlOrderByCol + " desc \n"
+			    + "order by " + _sqlOrderByCol + " desc, [NormJavaSqlHashCode] \n"   // tie-break on the key: the OVERVIEW does the same
 			    + "";
 
 //TODO; // Should we "inline" this with "how we remove some rows" in Sql Capture
@@ -887,6 +975,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 						PlanLinkLists planLinks = buildPlanLinkListsHtml(conn, NormJavaSqlHashCode, showplanMaxLinks);
 
 						String showplanLinks = planLinks.showplanLineHtml;
+						_copyPlanLinks.put(NormJavaSqlHashCode, planLinks.copyLinksHtml);
 
 						// "Get LLM Optimization Advice" for the normalized SQL Text alone (no plan).
 						// NOTE: plain hyperlink (not inline JS) since this report can be e-mailed
@@ -1132,6 +1221,9 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 		/** The per-plan "Get LLM Optimization Advice" anchors ONLY (comma separated) - no icon, no label */
 		String llmLinksHtml     = "";
 
+		/** The per-plan "Copy Exec Plan" anchors ONLY (comma separated): each copies its XML plan to the clipboard */
+		String copyLinksHtml    = "";
+
 		boolean hasLlmLinks() { return StringUtil.hasValue(llmLinksHtml); }
 	}
 
@@ -1181,6 +1273,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 
 		StringBuilder showplanSb = new StringBuilder();
 		StringBuilder llmSb      = new StringBuilder();
+		StringBuilder copySb     = new StringBuilder();
 		int linkCount = 0;
 
 		for (String objectName : namesWithPlan)
@@ -1228,6 +1321,13 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 			// Write the plan text ONCE into the report (shared with any other ASE report section)
 			registerXmlPlan(objectName, xmlPlan);
 
+			// "Copy Exec Plan: 1, 2, 3": numbered (the names are long), the name is in the hover text.
+			// showplanForId() takes the element id without the 'plan_' prefix
+			if (copySb.length() > 0)
+				copySb.append("&ensp;");
+			copySb.append("<a href='#' title='Copy the XML plan of ").append(linkText).append(" to the clipboard (paste it into SqlW to see the graphical plan)' onclick='showplanForId(\"")
+			      .append(planElementId.substring("plan_".length())).append("\"); return false;'>").append(linkCount + 1).append("</a>");
+
 			if (StringUtil.hasValue(showplanLink))
 			{
 				if (showplanSb.length() > 0)
@@ -1257,9 +1357,39 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 		if (showplanSb.length() > 0)
 			result.showplanLineHtml = "<i class='fa-solid fa-arrow-up-right-from-square'></i>&nbsp;View Execution Plan: " + showplanSb + more + "<br>\n";
 
-		result.llmLinksHtml = llmSb.toString();
+		result.llmLinksHtml  = llmSb.toString();
+		result.copyLinksHtml = copySb.toString() + (namesWithPlan.size() > linkCount ? " <span style='color:#6b7686;'>(of " + namesWithPlan.size() + ")</span>" : ""); // "1 2 3 ... 10 (of 23)"
 
 		return result;
+	}
+
+	/** NormJavaSqlHashCode -> the "Copy Exec Plan" links (one per plan), filled where the plans are looked up */
+	private Map<String, String> _copyPlanLinks = new HashMap<>();
+
+	/** Info cell: "Copy Exec Plan:" and on the next line "1 2 3 (of 5)" (needs JavaScript, so not in the mail). "" when there are no plans */
+	private String copyExecPlanInfo(String normJavaSqlHashCode)
+	{
+		String links = _copyPlanLinks.get(normJavaSqlHashCode);
+		if ( ! isFullMessageType() || StringUtil.isNullOrBlank(links) )
+			return "";
+		return "<i class='fa-regular fa-copy'></i>&nbsp;Copy Exec Plan:<br>" + links;
+	}
+
+	/** Info cell: the hash code, with an explanation of it and of the special codes -1, -2, -3 */
+	private static String normHashCodeInfo(String hash)
+	{
+		String special = "-1".equals(hash) ? "no SQL Text found"
+		               : "-2".equals(hash) ? "SQL Text could not be parsed"
+		               : "-3".equals(hash) ? "only a Statement Cache / Dynamic SQL entry"
+		               : "";
+		String explanation = "NormJavaSqlHashCode: a Java hashCode() of the normalized SQL Text "
+				+ "(constants replaced with ?, IN lists with ...). All statements with the same normalized SQL Text are summarized in this row.\n"
+				+ "Special values:\n"
+				+ "-1 = no SQL Text was found\n"
+				+ "-2 = the SQL Text could not be parsed/normalized\n"
+				+ "-3 = no SQL Text, but a Statement Cache (*ss) or Dynamic SQL (*sq) entry was found";
+		return infoLabel("Hash code", explanation) + "<br><b>" + hash + "</b>"
+				+ (special.isEmpty() ? "" : "<br><span style='font-size:11px; color:#6b7686;'>" + special + "</span>");
 	}
 
 	private void setNoteColumn(ResultSetTableModel rstm)

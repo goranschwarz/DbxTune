@@ -55,6 +55,7 @@ import javax.swing.ImageIcon;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.dbxtune.cloud.GcpCredentialsHelper;
 import com.dbxtune.gui.ConnectionDialog;
 import com.dbxtune.gui.ConnectionProfileManager;
 import com.dbxtune.gui.ConnectionProgressDialog;
@@ -293,6 +294,9 @@ implements Connection, AutoCloseable
 //System.out.println("DbxConnection-connect(): user="+user+", passwd="+(passwd==null?"-NULL-":passwd)+", connProp="+connProp);
 			props.put("user", user);
 			props.put("password", passwd);
+
+			// GCP Cloud SQL IAM Database Authentication for PostgreSQL (injects fresh OAuth2 access token when applicable)
+			GcpCredentialsHelper.applyGcpIamPostgresAuth(url, props, null);
 
 
 //			if (StringUtil.hasValue(urlOptions))

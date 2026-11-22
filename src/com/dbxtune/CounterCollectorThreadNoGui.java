@@ -60,6 +60,8 @@ import com.dbxtune.central.controllers.CollectorRefreshController;
 import com.dbxtune.central.pcs.objects.DbxCentralServerDescription;
 import com.dbxtune.check.CheckForUpdates;
 import com.dbxtune.check.CheckForUpdatesDbx.DbxConnectInfo;
+import com.dbxtune.cloud.CloudConfig;
+import com.dbxtune.cloud.GcpCredentialsHelper;
 import com.dbxtune.cm.CounterModelHostMonitor;
 import com.dbxtune.cm.CounterSetTemplates;
 import com.dbxtune.cm.CounterSetTemplates.Type;
@@ -75,6 +77,7 @@ import com.dbxtune.graph.ChartDataHistoryManager;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.hostmon.HostMonitor;
 import com.dbxtune.hostmon.HostMonitorConnection;
+import com.dbxtune.hostmon.HostMonitorConnectionCloud;
 import com.dbxtune.hostmon.HostMonitorConnectionLocalOsCmd;
 import com.dbxtune.hostmon.HostMonitorConnectionLocalOsCmdWrapper;
 import com.dbxtune.hostmon.HostMonitorConnectionSsh;
@@ -168,6 +171,7 @@ implements Memory.MemoryListener
 	private int        _sshPort         = 22;
 	private boolean    _localHostMon    = false;
 	private String     _localHostMonWrapperCmd = null;
+	private CloudConfig _cloudConfig    = null;
 
 	private long       _hostMonConnFailStartTime    = 0;    // When did the SSH Host Monitoring connection start to fail (0 = not failing)
 	private Exception  _hostMonLastConnectException = null;
@@ -314,6 +318,7 @@ implements Memory.MemoryListener
 
 		_localHostMon           = _storeProps.getProperty("conn.hostmon.local", "false").trim().equalsIgnoreCase("true");
 		_localHostMonWrapperCmd = _storeProps.getProperty("conn.hostmon.local.wrapper.cmd", null);
+		_cloudConfig            = CloudConfig.fromConfiguration(_storeProps, _sshHostname, _sshUsername, _sshKeyFile);
 		
 		// typically faulty initialized may be: "null:-1", then unset the value
 		if (_dbmsHostPortStr != null && _dbmsHostPortStr.equals("null:-1"))
@@ -417,6 +422,13 @@ implements Memory.MemoryListener
 
 		
 		//-----------------------------------
+		// If using GCP Cloud SQL IAM Database Authentication (.iam username or conn.dbms.cloud.iamAuth=true), no static password is required
+		if (_dbmsPassword == null && (GcpCredentialsHelper.isGcpIamUsername(_dbmsUsername) || _storeProps.getBooleanProperty(GcpCredentialsHelper.PROPKEY_dbmsIamAuth, false)))
+		{
+			_logger.info("No DBMS password was specified for user '" + _dbmsUsername + "' (GCP Cloud SQL IAM Database Authentication). An OAuth2 access token will be fetched automatically at connect time.");
+			_dbmsPassword = "";
+		}
+
 		// Still no password, read it from the STDIN
 		if (_dbmsPassword == null)
 		{
@@ -457,7 +469,7 @@ implements Memory.MemoryListener
 		//-----------------------------------
 		// read PASSWORD FOR SSH...
 //		if (_sshHostname != null && _sshPassword == null)
-		if (StringUtil.hasValue(_sshHostname) && StringUtil.hasValue(_sshUsername) && _sshPassword == null && _sshKeyFile == null)
+		if (_cloudConfig == null && StringUtil.hasValue(_sshHostname) && StringUtil.hasValue(_sshUsername) && _sshPassword == null && _sshKeyFile == null)
 		{
 			Console cons = System.console();
 			if (cons != null)
@@ -511,6 +523,7 @@ implements Memory.MemoryListener
 			"_sshPort='"                 + _sshPort                  + "', " +
 			"_localHostMon='"            + _localHostMon             + "', " +
 			"_localHostMonWrapperCmd='"  + _localHostMonWrapperCmd   + "', " +
+			"_cloudConfig='"             + _cloudConfig              + "', " +
 			".";
 		_logger.info("Configuration for NO-GUI sampler: " + configStr);
 
@@ -1399,7 +1412,25 @@ implements Memory.MemoryListener
 			// HOST Monitoring connection
 			if ( ! getCounterController().isHostMonConnected() )
 			{
-				if (_localHostMon)
+				if (_cloudConfig != null)
+				{
+					_logger.info("Host Monitoring: Connecting to Cloud Monitoring using " + _cloudConfig);
+					try
+					{
+						HostMonitorConnectionCloud hostMonConn = HostMonitorConnectionCloud.create(_cloudConfig);
+						hostMonConn.connect();
+
+						getCounterController().setHostMonConnection(hostMonConn);
+					}
+					catch (Exception e)
+					{
+						_logger.error("Host Monitoring: Failed to connect to Cloud Monitoring (" + _cloudConfig + ").", e);
+
+						// Remember the error (used by: checkSendAlarmHostMonConnectionDown)
+						_hostMonLastConnectException = e;
+					}
+				}
+				else if (_localHostMon)
 				{
 					_logger.info( "Host Monitoring: Using Local OS Commands. localHostMonWrapperCmd=|" + _localHostMonWrapperCmd + "|.");
 
@@ -2134,8 +2165,10 @@ implements Memory.MemoryListener
 		if ( ! AlarmHandler.hasInstance() )
 			return;
 
-		// Only for SSH Host Monitoring (local OS Commands has no "connect" step)
-		if (_localHostMon || _sshHostname == null || _sshUsername == null || (_sshPassword == null && _sshKeyFile == null))
+		// Only for SSH or Cloud Host Monitoring (local OS Commands has no "connect" step)
+		boolean isSshConfigured   = !_localHostMon && _cloudConfig == null && _sshHostname != null && _sshUsername != null && (_sshPassword != null || _sshKeyFile != null);
+		boolean isCloudConfigured = _cloudConfig != null;
+		if (!isSshConfigured && !isCloudConfigured)
 			return;
 
 		// Check the connection STATE (not the "cached" isHostMonConnected()), since the connection can be lost/re-connected from several places:
@@ -2180,9 +2213,13 @@ implements Memory.MemoryListener
 		long secSinceFailStart = (System.currentTimeMillis() - _hostMonConnFailStartTime) / 1000;
 		if (secSinceFailStart >= thresholdInSec)
 		{
-			_logger.info("Host Monitoring: SSH connection to host '" + _sshHostname + "' has failed for " + secSinceFailStart + " seconds (thresholdInSec=" + thresholdInSec + "). Sending AlarmEventHostMonitorConnectionDown to the AlarmHandler.");
+			String alarmHost = isCloudConfigured ? _cloudConfig.getDisplayHostname() : _sshHostname;
+			int    alarmPort = isCloudConfigured ? 443                               : _sshPort;
+			String alarmUser = isCloudConfigured ? _cloudConfig.getProvider().name() : _sshUsername;
 
-			AlarmEventHostMonitorConnectionDown alarmEvent = new AlarmEventHostMonitorConnectionDown(srvName, _sshHostname, _sshPort, _sshUsername, secSinceFailStart, thresholdInSec, _hostMonLastConnectException);
+			_logger.info("Host Monitoring: connection to host '" + alarmHost + "' has failed for " + secSinceFailStart + " seconds (thresholdInSec=" + thresholdInSec + "). Sending AlarmEventHostMonitorConnectionDown to the AlarmHandler.");
+
+			AlarmEventHostMonitorConnectionDown alarmEvent = new AlarmEventHostMonitorConnectionDown(srvName, alarmHost, alarmPort, alarmUser, secSinceFailStart, thresholdInSec, _hostMonLastConnectException);
 
 			// When the alarm is cancelled: set the cancel description to the OS start time, and if the OS was restarted or not
 			alarmEvent.setOsStartTimeOnCancel(cmOsUptime, _hostMonOsStartTime);

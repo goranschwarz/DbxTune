@@ -467,12 +467,12 @@ public class AdminServlet extends HttpServlet
 						File f = path.toFile();
 						String filename = f.getName();
 
-						if (f.isFile() && filename.startsWith(name) && (filename.endsWith(".html")))
+						if (f.isFile() && filename.startsWith(name + ".") && (filename.endsWith(".html")))
 						{
-							String fn = filename;
+							String fn = filename.substring(name.length() + 1);
 
-							// is it a TimeStamped file YYYY-MM-DD_HHMM
-							if (fn.matches("[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]_[0-9][0-9][0-9][0-9]"))
+							// is it a TimeStamped file: {name}.YYYY-MM-DD_HHMM[.-NTR-|.-FYI-].html
+							if (fn.matches("[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]_[0-9][0-9][0-9][0-9](\\.-NTR-|\\.-FYI-)?\\.html"))
 							{
 								f.delete();
 								removedList.add(f.getName());

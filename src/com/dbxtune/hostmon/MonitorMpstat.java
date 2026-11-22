@@ -91,14 +91,19 @@ extends HostMonitor
 		{
 			mon = new MonitorMpstatWindows();
 			mon.setConnectedToVendor(OsVendor.Windows);
-		}					
+		}
+		else if (osname.startsWith("Cloud"))
+		{
+			mon = new MonitorMpstatCloud();
+			mon.setConnectedToVendor(OsVendor.Cloud);
+		}
 		else
 		{
 			throw new Exception("The OS Name '" + osname + "', is not supported by the module 'MonitorMpstat' for the moment.");
 		}
 
 		mon.setConnection(conn);
-		if (start)
+		if (start && mon.isOsCommandStreaming())
 			mon.start();
 		
 		return mon;
@@ -106,13 +111,14 @@ extends HostMonitor
 
 	public static HostMonitorMetaData[] createOfflineMetaData()
 	{
-		HostMonitorMetaData[] mdArr = new HostMonitorMetaData[4];
+		HostMonitorMetaData[] mdArr = new HostMonitorMetaData[5];
 
 		mdArr[0] = new MonitorMpstatSolaris().createMetaData();
 		mdArr[1] = new MonitorMpstatLinux()  .createMetaData();
 		mdArr[2] = new MonitorMpstatAix()    .createMetaData();
 //		mdArr[3] = new MonitorMpstatHp()     .createMetaData();
 		mdArr[3] = new MonitorMpstatWindows().createMetaData(); // FIXME: This wont work since the meta-data is not static (it's generated on first CSV-row)
+		mdArr[4] = new MonitorMpstatCloud()  .createMetaData();
 
 		return mdArr;
 	}

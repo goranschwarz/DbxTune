@@ -156,16 +156,59 @@ public interface IReportEntry
 	}
 
 	/**
-	 * Get severity (more or less if this entry has something to report, or if the "subject" should contain the NTR - Nothing To Report tag
+	 * How much this entry has to report. The report gets the highest level of all entries:
+	 * <ul>
+	 *   <li>NONE  - Nothing To Report: mail subject 'Daily Report -NTR- for: PROD_A1_ASE'</li>
+	 *   <li>FYI   - For Your Information (INFO or REPORT alarms, design findings...): 'Daily Report -FYI- for: PROD_A1_ASE'</li>
+	 *   <li>ISSUE - something to act on: 'Daily Report for: PROD_A1_ASE'</li>
+	 * </ul>
 	 */
-//	int getSeverity();
-	
+	public enum IssueLevel { NONE, FYI, ISSUE }
+
 	/**
-	 * Indicate that this is of NO RELEVEANCE.<br>
-	 * For instance a mail Subject will contain: -NTR-, here is an example: 'Daily Report -NTR- for: PROD_A1_ASE'
-	 * @return TRUE == Something of interest... FALSE = Nothing To Report
+	 * Old style: TRUE == ISSUE, FALSE == NONE (see {@link #getIssueLevel()}).<br>
+	 * Override {@link #getIssueLevel()} + {@link #getIssueReason()} instead when the entry can be FYI.
 	 */
-	boolean hasIssueToReport();
+	default boolean hasIssueToReport()
+	{
+		return false;
+	}
+
+	/** The level of this entry, see {@link IssueLevel} */
+	default IssueLevel getIssueLevel()
+	{
+		return hasIssueToReport() ? IssueLevel.ISSUE : IssueLevel.NONE;
+	}
+
+	/** Short text (HTML) for the "Report Status" section, why the entry has level FYI or ISSUE. eg: "2 ERROR alarms" */
+	default String getIssueReason()
+	{
+		return "";
+	}
+
+	/**
+	 * A few numbers that answer "was it a normal day?", shown in the "key facts" row at the top of the mail.
+	 * Label -> value (HTML), for example "CPU busy avg / max" -> "23 % / 71 %". Empty: the entry has none.
+	 */
+	default java.util.Map<String, String> getKeyFacts()
+	{
+		return java.util.Collections.emptyMap();
+	}
+
+	/**
+	 * More numbers for the "AI Analysis" digest: DailySummaryReportDefault writes it, hidden, into the full report, and
+	 * DbxCentral builds an LLM prompt from it. The level, the reason and the key facts are written for EVERY entry already:
+	 * this is only what the entry has on top of that, typically the top rows of its main table
+	 * ({@code ReportEntryAbstract.llmDigestRows}) or the numbers of a chart ({@code ReportChartAbstract.llmDigestSeries}).
+	 * <p>
+	 * Numbers and names only: NEVER SQL text, error message texts or data values (they would leave the site).
+	 *
+	 * @return plain text (a few lines), or null when there is nothing more
+	 */
+	default String getLlmDigest()
+	{
+		return null;
+	}
 
 	/**
 	 * Create Report entry with data from the database...

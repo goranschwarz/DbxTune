@@ -440,6 +440,10 @@ extends Task
 			// Saved "LLM Optimization Advice" requests live in a sub directory of the data dir: remove old ones (independent of the above)
 			try { LlmAdviceLog.removeOldFiles(_dryRun); }
 			catch (Exception ex) { _logger.error(_prefix + "Problems removing old saved LLM Advice requests.", ex); }
+
+			// The last "AI Analysis" of each Daily Summary Report: remove the ones whose report is gone
+			try { com.dbxtune.central.controllers.LlmDsrAnalysisServlet.removeOrphanCacheFiles(_dryRun); }
+			catch (Exception ex) { _logger.error(_prefix + "Problems removing the cached AI Analysis of removed Daily Summary Reports.", ex); }
 		}
 		_lastExec = System.currentTimeMillis();
 		

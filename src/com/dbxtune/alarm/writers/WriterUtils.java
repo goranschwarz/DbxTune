@@ -427,7 +427,8 @@ public class WriterUtils
 			Configurator.setAllLevels("org.apache.velocity", Level.DEBUG);
 		}
 
-		boolean isHtmlTemplate = StringUtils.startsWithIgnoreCase(template, "<html>");
+		// Not "starts with": a template can start with Velocity directives (#if/#set) before the <html>
+		boolean isHtmlTemplate = StringUtils.containsIgnoreCase(template, "<html>");
 		
 
 		VelocityContext context = new VelocityContext();
@@ -521,6 +522,7 @@ public class WriterUtils
 			context.put("reRaiseExtendedDescription" , StringUtil.toStr( isHtmlTemplate ? alarmEvent.getReRaiseExtendedDescriptionHtml() : alarmEvent.getReRaiseExtendedDescription() ,trMap ));
 			context.put("reRaiseData"                , StringUtil.toStr( alarmEvent.getReRaiseData()                ,trMap ));
 			context.put("cancelDescription"          , StringUtil.toStr( alarmEvent.getCancelDescription()          ,trMap ));
+			context.put("extendedDescriptionAtCancel", alarmEvent.extendedDescriptionSetAtCancel()); // true: the details are from the CANCEL (how it looks when the alarm went away), not from the raise
 			context.put("cancelTimeStr"              , StringUtil.toStr( alarmEvent.getCancelTimeStr()              ,trMap ));
 			context.put("crAgeInMs"                  , StringUtil.toStr( alarmEvent.getCrAgeInMs()                  ,trMap ));
 			context.put("isActive"                   , StringUtil.toStr( alarmEvent.isActive()                      ,trMap ));

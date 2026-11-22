@@ -61,6 +61,7 @@ import com.dbxtune.pcs.report.content.IReportEntry;
 import com.dbxtune.pcs.report.content.IndexAnalysisHtml;
 import com.dbxtune.pcs.report.content.IndexRedundancy;
 import com.dbxtune.pcs.report.content.ReportEntryAbstract;
+import com.dbxtune.pcs.report.content.ShowplanLinkBuilder;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.sql.SqlObjectName;
 import com.dbxtune.sql.conn.DbxConnection;
@@ -337,7 +338,9 @@ extends ReportEntryAbstract
 				tableInfoMap.put("Sampled"    ,                entry.getSampleTime() + ""   );
 				tableInfoMap.put("Lock Scheme",                entry.getLockScheme() );
 				tableInfoMap.put("Index Count", entry.getIndexCount() + (entry.getIndexCount() > 0 ? "" : " <b><font color='red'>&lt;&lt;-- Warning NO index</font></b>") );
-				tableInfoMap.put("DDL Info"   , getTextAsTooltipDiv(entry._objectText, "Table Info", getDdlMaxLengthTable()));
+				// DDL made from the sp_help text (the same as the LLM gets): sp_help is mostly padding (up to 400 KB for one table). The raw text if it can't be made
+				String ddlText = formatObjectTextAsDdl(entry.getFullTableName(), entry._objectText, entry.getIndexList());
+				tableInfoMap.put("DDL Info"   , getTextAsTooltipDiv(ddlText != null ? ddlText : entry._objectText, "Table Info", getDdlMaxLengthTable()));
 				tableInfoMap.put("Triggers"   , entry._triggersText == null ? "-no-triggers-" : getTextAsTooltipDiv(entry._triggersText, "Trigger Info", getDdlMaxLengthTrigger()));
 			}
 			
@@ -960,6 +963,31 @@ extends ReportEntryAbstract
 		sb.append("    print 'Index ").append(indexName).append(shouldExist ? " does not exist" : " already exists").append(": nothing was changed.'\n");
 		sb.append("    return\n");
 		sb.append("end\n");
+	}
+
+	/**
+	 * The CREATE INDEX that gives the index back (the ROLLBACK of a DROP INDEX), from the stored sp_help text, same as Index Analysis.<br>
+	 * Falls back to the short DDL (keys only) when the sp_help text does not have the index. Empty if the index is not in the DDL Storage.
+	 */
+	static String getIndexRestoreDdl(AseTableInfo ti, String indexName)
+	{
+		if (ti == null || indexName == null)
+			return "";
+
+		if (StringUtil.hasValue(ti._objectText))
+		{
+			List<SpHelpTable> spHelp      = parseSpHelpText(ti._objectText, new ArrayList<>());
+			SpHelpTable       indexTbl    = getSpHelpTable(spHelp, "index_name");
+			SpHelpTable       indexPtnTbl = getSpHelpTable(spHelp, "index_ptn_name");
+			if (indexTbl != null)
+				for (Map<String, String> row : indexTbl._rows)
+					if (indexName.equals(row.get("index_name")))
+						return spHelpIndexDdl(row, ti._tableName, Collections.emptyMap(), indexPtnTbl); // only the table name: run it in the database, as the owner (the caller adds 'setuser owner' when not dbo)
+		}
+
+		// The short DDL names the table as 'db.owner.table': only the table name, like above
+		AseIndexInfo ii = ti.getIndexInfoForName(indexName);
+		return ii == null ? "" : StringUtil.nullToValue(ii.getDdlText(), "").replace(" on " + ti._dbName + "." + ti._schemaName + "." + ti._tableName + "(", " on " + ti._tableName + "(");
 	}
 
 	/**
@@ -3258,9 +3286,7 @@ extends ReportEntryAbstract
 			if ( ! writtenSet.add(objectName) )
 				continue;
 
-			sb.append("\n<script id='").append(getXmlPlanElementId(objectName)).append("' type='text/xmldata'>\n");
-			sb.append(entry.getValue());
-			sb.append("\n</script>\n");
+			ShowplanLinkBuilder.writePlanScript(sb, getXmlPlanElementId(objectName), entry.getValue());
 		}
 	}
 
@@ -3288,7 +3314,9 @@ extends ReportEntryAbstract
 		//       since the links that call them are emitted for any statement that has SQL text.
 		sb.append("    function showplanForId(id) \n");
 		sb.append("    { \n");
-		sb.append("        var showplanText = document.getElementById('plan_'+id).innerHTML \n");
+		sb.append("        var planEl = document.getElementById('plan_'+id); \n");
+		sb.append("        if (dsrPlanNotReady(planEl)) return; \n");
+		sb.append("        var showplanText = planEl.innerHTML \n");
 		sb.append("        copyStringToClipboard(showplanText); \n");
 		sb.append("    } \n");
 		sb.append("\n");

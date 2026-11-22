@@ -103,6 +103,13 @@ public class LlmOptimizeRequest
 	// Set by the LLM client, not by the browser (@JsonIgnore): the request body as sent, without the prompt - for the saved request
 	private String settingsSent;
 
+	/** What is asked: null = advice for ONE SQL statement (the default), {@link #TASK_DSR_ANALYSIS} = a review of a whole Daily Summary Report */
+	private String task;
+	public static final String TASK_DSR_ANALYSIS = "dsr-analysis";
+
+	// Set by LlmDsrAnalysisServlet from the report file on disk, not by the browser (@JsonIgnore): the report's digest (JSON), see DailySummaryReportDefault.createLlmDigestScript()
+	private String dsrDigest;
+
 	public LlmOptimizeRequest()
 	{
 	}
@@ -146,4 +153,14 @@ public class LlmOptimizeRequest
 	public void setPreview        (boolean preview)        { this.preview         = preview; }
 	public void setProgress       (boolean progress)       { this.progress        = progress; }
 	@JsonIgnore public void setSettingsSent(String settings) { this.settingsSent = settings; }
+
+	// The Daily Summary Report file (as /report?op=view&name=), for TASK_DSR_ANALYSIS: set by LlmDsrAnalysisServlet. Not part of the prompt - recorded by LlmAdviceLog.
+	private String reportName;
+	@JsonIgnore public String getReportName()         { return reportName; }
+	@JsonIgnore public void   setReportName(String n) { this.reportName = n; }
+
+	public String getTask()                         { return task; }
+	public void   setTask(String task)              { this.task = task; }
+	@JsonIgnore public String getDsrDigest()        { return dsrDigest; }
+	@JsonIgnore public void   setDsrDigest(String d) { this.dsrDigest = d; }
 }

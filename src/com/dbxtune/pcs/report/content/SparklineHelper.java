@@ -824,6 +824,13 @@ public class SparklineHelper
 			sb.append("    { \n");
 			sb.append("        var i, j, tagName, config, elems; \n");
 			sb.append("\n");
+			sb.append("        // Debug: URL option 'sparkline=image' keeps the server rendered images, 'sparkline=js' (default) = jQuery sparklines \n");
+			sb.append("        if (new URLSearchParams(window.location.search).get('sparkline') === 'image') \n");
+			sb.append("        { \n");
+			sb.append("            console.log('URL option sparkline=image: showing the images, no JavaScript sparklines.'); \n");
+			sb.append("            return; \n");
+			sb.append("        } \n");
+			sb.append("\n");
 			sb.append("        // No IntersectionObserver (old browser / some mail readers): behave like before \n");
 			sb.append("        if (typeof IntersectionObserver === 'undefined') \n");
 			sb.append("        { \n");
@@ -935,6 +942,7 @@ public class SparklineHelper
 			sb.append("    // add config to a map to load 'later'. \n");
 			sb.append("    sparklineConfMap.set('" + sparklineClassName + "', {										\n");
 			sb.append("        type: 'line',						  												\n");
+			sb.append("        height: '19px',						  												\n"); // the same as the image that is shown before (SparklineJfreeChart: 19), else the rows shrink when the charts are drawn
 			sb.append("        defaultPixelsPerValue: ").append(pixels).append(",									\n");
 //			sb.append("        type: 'bar',						  													\n");
 			sb.append("        chartRangeMin: 0,					  												\n");

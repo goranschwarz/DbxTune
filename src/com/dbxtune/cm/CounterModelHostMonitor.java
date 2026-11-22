@@ -37,6 +37,7 @@ import com.dbxtune.DbxTune;
 import com.dbxtune.gui.TabularCntrPanel;
 import com.dbxtune.hostmon.HostMonitor;
 import com.dbxtune.hostmon.HostMonitorConnection;
+import com.dbxtune.hostmon.HostMonitorConnectionCloud;
 import com.dbxtune.hostmon.HostMonitorMetaData;
 import com.dbxtune.hostmon.MonitorDiskSpace;
 import com.dbxtune.hostmon.MonitorIo;
@@ -202,6 +203,17 @@ extends CountersModel
 		{
 //			SshConnection sshConn = CounterController.getInstance().getHostMonConnection();
 			HostMonitorConnection hostMonConn = CounterController.getInstance().getHostMonConnection();
+
+			if (hostMonConn instanceof HostMonitorConnectionCloud && (_hostMonType == HOSTMON_VMSTAT || _hostMonType == HOSTMON_PS))
+			{
+				String msg = "Not available on managed Cloud databases (" + hostMonConn.getOsName()
+					+ "). CPU, Memory, Disk I/O, Space, Network, and Uptime are monitored via CmOsMpstat, CmOsMeminfo, CmOsIostat, CmOsDiskSpace, CmOsNwInfo, and CmOsUptime.";
+				setActive(false, msg);
+				if (getTabPanel() != null)
+					getTabPanel().setToolTipText(msg);
+				_localInit = true;
+				return;
+			}
 
 			//System.out.println(this+"::CounterModelHostMonitor.init(sqlConn): CREATING MONITOR: "+_hostMonType);
 

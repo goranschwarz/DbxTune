@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
 
-import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -46,6 +45,7 @@ import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.NPlusOneParent;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
+import com.dbxtune.utils.DbUtils;
 import com.dbxtune.utils.StringUtil;
 
 /**
@@ -87,9 +87,16 @@ extends AseAbstract
 	}
 
 	@Override
-	public boolean hasIssueToReport()
+	public IssueLevel getIssueLevel()
 	{
-		return _nPlusOneCount > 0;
+		// N+1 is a design finding (fix it in the application), not an incident: FYI
+		return _nPlusOneCount > 0 ? IssueLevel.FYI : IssueLevel.NONE;
+	}
+
+	@Override
+	public String getIssueReason()
+	{
+		return _nPlusOneCount + " statement(s) that look like N+1";
 	}
 
 	@Override
@@ -133,8 +140,7 @@ extends AseAbstract
 					String text = rstm.getValueAsString(row, colName);
 					if (StringUtil.isNullOrBlank(text))
 						return "";
-					String shortText = text.length() > 120 ? text.substring(0, 120) + "..." : text;
-					return "<code title=\"" + StringEscapeUtils.escapeHtml4(text) + "\">" + StringEscapeUtils.escapeHtml4(shortText) + "</code>";
+					return getFormattedSqlAsTooltipDiv(text, "Hover or Click to see formatted SQL Text...", DbUtils.DB_PROD_NAME_SYBASE_ASE, 120); // the start of the SQL, the full SQL as tooltip + popup
 				}
 				if ("NPlusOne".equals(colName) && "YES".equals(strVal))
 					return "<b><font color='red'>YES</font></b>";

@@ -172,7 +172,7 @@ implements Runnable
 
 	public enum OsVendor
 	{
-		NotSet, Linux, Solaris, Aix, Hp, Veritas, Windows, Unknown //, Windows
+		NotSet, Linux, Solaris, Aix, Hp, Veritas, Windows, Cloud, Unknown //, Windows
 	};
 	/**
 	 * Implicitly called by any that extends this class

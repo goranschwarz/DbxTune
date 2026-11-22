@@ -2021,9 +2021,9 @@ public class OverviewServlet extends HttpServlet
 			//-------------------------------
 			out.println("<p>List all the files in the <i>reports</i> directory <code>" + (new File(REPORTS_DIR)) + "</code>, click the <i>Url</i> to view the content in the file.<br>");
 			out.println("</p>");
-			out.println("<p>File name is in the format: <i>srv</i>.<i>date(YYYY-MM-DD)</i>_<i>time(HHMM)</i>[.-NTR-].html<br>");
+			out.println("<p>File name is in the format: <i>srv</i>.<i>date(YYYY-MM-DD)</i>_<i>time(HHMM)</i>[.-NTR-|.-FYI-].html<br>");
 			out.println("Note: The file is created after midnight and reflects the <b>previous</b> day...<br>");
-			out.println("Note: The <code>-NTR-</code> mark is just that it has 'Nothing To Report' and is only appended if so.<br>");
+			out.println("Note: The <code>-NTR-</code> mark = 'Nothing To Report', <code>-FYI-</code> = 'For Your Information' (only INFO/REPORT alarms, design findings...). No mark = there is something to act on.<br>");
 			out.println("</p>");
 
 			int removeAfterDays = Configuration.getCombinedConfiguration().getIntProperty(DailySummaryReportFactory.PROPKEY_removeReportsAfterDays, DailySummaryReportFactory.DEFAULT_removeReportsAfterDays);
@@ -2055,7 +2055,7 @@ public class OverviewServlet extends HttpServlet
 				+ "    <th>Server Name</th>"
 				+ "    <th>Report For Date</th>"
 				+ "    <th>DayOfWeek</th>"
-				+ "    <th>NTR</th>"
+				+ "    <th>Status</th>"
 				+ "    <th>File</th>"
 				+ "    <th>Size MB</th>"
 				+ "    <th>Remove Report</th>"
@@ -2084,6 +2084,7 @@ public class OverviewServlet extends HttpServlet
 				//String reportTime = "";
 				String reportDow  = "";
 				boolean ntr = filename.indexOf(".-NTR-") >= 0;
+				boolean fyi = filename.indexOf(".-FYI-") >= 0;
 				String reportSizeMb = NumberUtils.toMb( f.length(), 1) + "";
 
 				int firstDot = filename.indexOf('.');
@@ -2133,7 +2134,7 @@ public class OverviewServlet extends HttpServlet
 				out.println("    <td>" + srvName + "</td>");
 				out.println("    <td>" + reportDate + "</td>");
 				out.println("    <td>" + reportDow  + "</td>");
-				out.println("    <td>" + (ntr ? "<font color='green'>NTR</font>" : "")  + "</td>");
+				out.println("    <td>" + (ntr ? "<font color='green'>NTR</font>" : fyi ? "<font color='blue'>FYI</font>" : "")  + "</td>");
 				out.println("    <td><a href='/report?op=view&name="   + filename + "'>"         + filename + "</a></td>");
 				out.println("    <td>" + reportSizeMb  + "</td>");
 				out.println("    <td><a href='/report?op=remove&name=" + filename + "'>Remove: " + filename + "</a></td>");

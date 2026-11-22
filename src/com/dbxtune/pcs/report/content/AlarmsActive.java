@@ -38,6 +38,7 @@ extends ReportEntryAbstract
 	
 	private ResultSetTableModel _shortRstm;
 	private ResultSetTableModel _fullRstm;
+	private boolean             _hasAlarmAction = false; // column 'alarmAction' does not exist in older recordings
 //	private Exception           _problem = null;
 	
 
@@ -79,7 +80,7 @@ extends ReportEntryAbstract
 			sb.append(getSectionDescriptionHtml(_shortRstm, true));
 			
 			sb.append("Active Alarm Count: " + _fullRstm.getRowCount() + "<br>\n");
-			sb.append(toHtmlTable(_shortRstm));
+			sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, new AlarmBadgeTableStringRenderer(true)));
 
 			if (_fullRstm != null && isFullMessageType()) 
 			{
@@ -114,12 +115,33 @@ extends ReportEntryAbstract
 	}
 
 	@Override
-	public boolean hasIssueToReport()
+	public IssueLevel getIssueLevel()
 	{
-		if (_fullRstm == null)
-			return false;
+		if (_shortRstm == null || _shortRstm.getRowCount() == 0)
+			return IssueLevel.NONE;
 
-		return _fullRstm.getRowCount() > 0;
+		return _activeCountByLevel[0] > 0 ? IssueLevel.ISSUE : IssueLevel.FYI;
+	}
+
+	@Override
+	public String getIssueReason()
+	{
+		return AlarmsHistory.issueReason(_activeCountByLevel, "still active", _shortRstm == null ? 0 : _shortRstm.getRowCount());
+	}
+	private int[] _activeCountByLevel = new int[2]; // [0] = ISSUE, [1] = FYI, see AlarmsHistory.countByIssueLevel()
+
+	@Override
+	public java.util.Map<String, String> getKeyFacts()
+	{
+		int cnt = _shortRstm == null ? 0 : _shortRstm.getRowCount();
+		return java.util.Map.of("Active alarms", "<b>" + cnt + "</b>");
+	}
+
+	@Override
+	public String getLlmDigest()
+	{
+		// extraInfo = the alarm's object (database, table, ...); NOT the description (it can hold SQL text)
+		return llmDigestRows(_shortRstm, 25, "createTime", "alarmClass", "alarmAction", "severity", "extraInfo", "state");
 	}
 
 	@Override
@@ -133,8 +155,19 @@ extends ReportEntryAbstract
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
+		String schemaName = getReportingInstance().getDbmsSchemaName();
+		String tabName    = PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.ALARM_ACTIVE, null, true);
+		_hasAlarmAction = executeQuery(conn, "select * from " + tabName + " where 1 = 2", true, "metadata").hasColumnNoCase("alarmAction"); // not in older recordings
+
 		getAlarmsActiveShort(conn);
 		getAlarmsActiveFull(conn);
+
+		// Active alarms per severity and action: decides the Issue Level (NTR / FYI / ISSUE). Same rows as _shortRstm (the list that is shown)
+		String sql = "select [severity], " + (_hasAlarmAction ? "[alarmAction]" : "cast(null as varchar(10))") + " as [alarmAction], count(*) as [cnt] \n" +
+		             "from " + tabName + " \n" +
+		             "where 1 = 1 \n" +
+		             "group by [severity]" + (_hasAlarmAction ? ", [alarmAction]" : "") + " \n";
+		_activeCountByLevel = AlarmsHistory.countByIssueLevel( executeQuery(conn, sql, true, "Active Alarms Count by Level") );
 	}
 
 	@Override
@@ -170,6 +203,7 @@ extends ReportEntryAbstract
 
 		// Get Alarms
 		sql = "SELECT [createTime], [alarmClass], [serviceInfo], [extraInfo], [severity], [state], [description] \n" +
+		      (_hasAlarmAction ? "    ,[alarmAction] \n" : "") + // shown as a tag after 'alarmClass
 		      "FROM " + PersistWriterBase.getTableName(conn, schemaName, PersistWriterBase.ALARM_ACTIVE, null, true) + " \n" +
 		      "ORDER BY [createTime]";
 
@@ -189,6 +223,7 @@ extends ReportEntryAbstract
 		sql = "SELECT \n" +
 		      "     [createTime],             \n" +
 		      "     [alarmClass],             \n" +
+		      (_hasAlarmAction ? "     [alarmAction],            \n" : "") +
 		      "     [serviceType],            \n" +
 		      "     [serviceName],            \n" +
 		      "     [serviceInfo],            \n" +

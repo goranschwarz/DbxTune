@@ -265,7 +265,25 @@ var dbxLlmAdvice = (function () {
 			'html.dbx-sp-dark .dbx-llm-model-select, html[data-theme="dark"] .dbx-llm-model-select { background:#2b3035; color:#e9ecef; border-color:#495057; }' +
 			'html.dbx-sp-dark .dbx-llm-picker-hint, html[data-theme="dark"] .dbx-llm-picker-hint, html.dbx-sp-dark .dbx-llm-run-info, html[data-theme="dark"] .dbx-llm-run-info { color:#adb5bd; }' +
 			'html.dbx-sp-dark .dbx-llm-run, html[data-theme="dark"] .dbx-llm-run { border-color:#495057; }' +
-			'html.dbx-sp-dark .dbx-llm-run-header, html[data-theme="dark"] .dbx-llm-run-header { background:#2b3035; color:#e9ecef; border-bottom-color:#495057; }';
+			'html.dbx-sp-dark .dbx-llm-run-header, html[data-theme="dark"] .dbx-llm-run-header { background:#2b3035; color:#e9ecef; border-bottom-color:#495057; }' +
+			// "AI Analysis" of a Daily Summary Report (renderDsrAnalysis): the findings table and the severity badges
+			'.dbx-dsr-summary { font-size:1.02rem; margin-bottom:10px; }' +
+			'.dbx-dsr-nofindings { padding:8px 10px; border:1px solid #badbcc; background:#d1e7dd; color:#0f5132; border-radius:4px; margin:8px 0; }' +
+			'.dbx-dsr-findings { border-collapse:collapse; width:100%; margin:8px 0 12px; font-family:Arial, Helvetica, sans-serif; font-size:0.92rem; }' +
+			'.dbx-dsr-findings th { text-align:left; border-bottom:2px solid #dee2e6; padding:4px 8px; }' +
+			'.dbx-dsr-findings td { border-bottom:1px solid #dee2e6; padding:6px 8px; vertical-align:top; }' +
+			'.dbx-dsr-prio { font-weight:bold; text-align:right; }' +
+			'.dbx-dsr-sev { display:inline-block; min-width:62px; text-align:center; border-radius:4px; padding:1px 6px; font-size:0.8rem; font-weight:bold; color:#fff; background:#6c757d; }' +
+			'.dbx-dsr-sev-high { background:#dc3545; } .dbx-dsr-sev-medium { background:#fd7e14; } .dbx-dsr-sev-low { background:#0d6efd; }' +
+			'.dbx-dsr-title { font-weight:bold; margin-bottom:3px; }' +
+			'.dbx-dsr-area { font-weight:normal; font-size:0.78rem; color:#6c757d; border:1px solid #ced4da; border-radius:3px; padding:0 4px; margin-left:4px; }' +
+			'.dbx-dsr-evidence { color:#495057; margin-bottom:3px; }' +
+			'.dbx-dsr-reco p:last-child { margin-bottom:0; }' +
+			'.dbx-dsr-links { font-size:0.82rem; color:#6c757d; margin-top:3px; }' +
+			'html.dbx-sp-dark .dbx-dsr-findings th, html[data-theme="dark"] .dbx-dsr-findings th, html.dbx-sp-dark .dbx-dsr-findings td, html[data-theme="dark"] .dbx-dsr-findings td { border-color:#495057; }' +
+			'html.dbx-sp-dark .dbx-dsr-evidence, html[data-theme="dark"] .dbx-dsr-evidence { color:#ced4da; }' +
+			'html.dbx-sp-dark .dbx-dsr-area, html[data-theme="dark"] .dbx-dsr-area, html.dbx-sp-dark .dbx-dsr-links, html[data-theme="dark"] .dbx-dsr-links { color:#adb5bd; border-color:#495057; }' +
+			'html.dbx-sp-dark .dbx-dsr-nofindings, html[data-theme="dark"] .dbx-dsr-nofindings { background:#051b11; border-color:#0f5132; color:#75b798; }';
 		document.head.appendChild(style);
 	}
 
@@ -1392,6 +1410,89 @@ var dbxLlmAdvice = (function () {
 			renderSqlDiff(diffHost, container.querySelector('.dbx-llm-diff-stat'), opts.sql, result.optimizedSql, opts.dbVendor);
 	}
 
+	/**
+	 * The answer of an "AI Analysis" of a whole Daily Summary Report (opts.task 'dsr-analysis', see LlmDsrAnalysisServlet.java):
+	 * the summary, the findings in priority order (severity, evidence, recommendation, a link to the report section), what looks
+	 * odd but is fine, and what data was missing. Also used by the page for the report's last (cached) analysis, and by
+	 * renderSavedRequest() for a saved one.
+	 * @param result  {analysis, explanation, thinkingSummary, promptSent, providerId, model, savedUrl, savedForDays}
+	 *                'analysis' null (an answer that was cut off): 'explanation' is shown as Markdown instead
+	 * @param opts    {reportUrl}: the report, for the links to its sections
+	 */
+	function renderDsrAnalysis(container, result, opts)
+	{
+		injectStyle();
+		opts = opts || {};
+		var a    = result.analysis;
+		var html = renderSavedNote(result.savedUrl, result.savedForDays);
+
+		if (a)
+		{
+			if (a.summary)
+				html += '<div class="dbx-llm-prose dbx-dsr-summary">' + renderMarkdown(String(a.summary)) + '</div>';
+
+			var findings = Array.isArray(a.findings) ? a.findings.slice() : [];
+			findings.sort(function (x, y) { return (parseInt(x.priority, 10) || 99) - (parseInt(y.priority, 10) || 99); });
+			if (findings.length === 0)
+			{
+				html += '<div class="dbx-dsr-nofindings">No findings: the LLM found nothing worth changing.</div>';
+			}
+			else
+			{
+				html += '<table class="dbx-dsr-findings"><thead><tr><th>#</th><th>Severity</th><th>Finding</th><th>Effort</th></tr></thead><tbody>';
+				findings.forEach(function (f, i)
+				{
+					var sev   = String(f.severity || '?').toUpperCase();
+					var links = [];
+					if (f.section)
+						links.push(opts.reportUrl
+							? '<a href="' + escapeHtml(opts.reportUrl + '#' + encodeURIComponent(f.section)) + '" target="_blank" rel="noopener" title="Open this section of the report">Report section</a>'
+							: 'Report section <code>' + escapeHtml(f.section) + '</code>');
+					if (f.sqlRef && f.sqlRef !== 'null')
+						links.push('Statement <code>' + escapeHtml(f.sqlRef) + '</code>');
+
+					html += '<tr><td class="dbx-dsr-prio">' + escapeHtml(f.priority || (i + 1)) + '</td>'
+						+ '<td><span class="dbx-dsr-sev dbx-dsr-sev-' + escapeHtml(sev.toLowerCase()) + '">' + escapeHtml(sev) + '</span></td>'
+						+ '<td><div class="dbx-dsr-title">' + escapeHtml(f.title || '') + (f.area ? ' <span class="dbx-dsr-area">' + escapeHtml(f.area) + '</span>' : '') + '</div>'
+						+ (f.evidence       ? '<div class="dbx-dsr-evidence"><b>Evidence:</b> ' + escapeHtml(f.evidence) + '</div>' : '')
+						+ (f.recommendation ? '<div class="dbx-llm-prose dbx-dsr-reco">' + renderMarkdown(String(f.recommendation)) + '</div>' : '')
+						+ (links.length     ? '<div class="dbx-dsr-links">' + links.join(' &middot; ') + '</div>' : '')
+						+ '</td><td>' + escapeHtml(f.effort || '') + '</td></tr>';
+				});
+				html += '</tbody></table>';
+			}
+
+			[['notWorthIt', 'Looks odd, but is fine'], ['dataGaps', 'More data would have helped']].forEach(function (l)
+			{
+				var arr = Array.isArray(a[l[0]]) ? a[l[0]] : [];
+				if (arr.length)
+					html += '<details class="dbx-llm-section-details"><summary class="dbx-llm-section-title">' + escapeHtml(l[1]) + ' (' + arr.length + ')</summary>'
+						+ '<div class="dbx-llm-prose"><ul>' + arr.map(function (t) { return '<li>' + escapeHtml(t) + '</li>'; }).join('') + '</ul></div></details>';
+			});
+		}
+		else if (result.explanation)
+		{
+			html += '<div class="dbx-llm-prose">' + renderMarkdown(result.explanation) + '</div>';
+		}
+		else
+		{
+			html += '<div class="dbx-llm-status">The model did not return a usable answer.</div>';
+		}
+
+		if (result.thinkingSummary)
+		{
+			html += '<details class="dbx-llm-section-details"><summary class="dbx-llm-section-title">LLM\'s Thinking Process<span class="dbx-llm-title-note"> - a summary, by the LLM</span></summary>';
+			html += '<div class="dbx-llm-prose"><ul>' + thinkingParagraphs(result.thinkingSummary).map(function (p) { return '<li>' + thinkingHtml(p) + '</li>'; }).join('') + '</ul></div></details>';
+		}
+		if (result.promptSent)
+		{
+			html += '<details class="dbx-llm-section-details"><summary class="dbx-llm-section-title">What was sent'
+				+ '<span class="dbx-llm-title-note"> - ' + escapeHtml([result.providerId, result.model].filter(Boolean).join(' / ')) + '</span></summary>'
+				+ renderSentField('Prompt', result.promptSent, true) + '</details>';
+		}
+		container.innerHTML = html;
+	}
+
 	//--------------------------------------------------------------------------
 	// Network calls
 	//--------------------------------------------------------------------------
@@ -1737,7 +1838,7 @@ var dbxLlmAdvice = (function () {
 	 */
 	function callOptimize(container, opts, ddlContext, model)
 	{
-		renderStatus(container, opts.preview ? 'Building prompt preview...' : 'Asking the LLM for optimization advice...');
+		renderStatus(container, opts.preview ? 'Building prompt preview...' : opts.task === 'dsr-analysis' ? 'Asking the LLM to analyze the report...' : 'Asking the LLM for optimization advice...');
 
 		// A clock while we wait: some models think for minutes (high/max effort, big plans). After it, what the model is
 		// doing, when the provider streams its answer ("thinking", "writing the answer"), and a Stop button. Under it, the
@@ -1815,7 +1916,17 @@ var dbxLlmAdvice = (function () {
 			progressEl.title = p.text || '';
 		}
 
-		var body = {
+		// An "AI Analysis" of a whole Daily Summary Report: the server reads the report's digest itself, the browser names the report
+		var isDsr = opts.task === 'dsr-analysis';
+		var url   = isDsr ? '/api/llm/dsr-analysis' : '/api/llm/optimize-sql';
+		var body  = isDsr ? {
+			name:            opts.reportName,
+			serverContext:   opts.serverContext,
+			provider:        model ? model.provider : opts.provider,
+			model:           model ? model.model    : opts.model,
+			preview:         !!opts.preview,
+			progress:        !opts.preview
+		} : {
 			sql:             opts.sql,
 			ddlContext:      ddlContext,
 			plan:            opts.plan,
@@ -1840,11 +1951,12 @@ var dbxLlmAdvice = (function () {
 			body:    JSON.stringify(body),
 			signal:  abort ? abort.signal : undefined
 		};
-		return (opts.preview ? fetchJson('/api/llm/optimize-sql', request) : fetchEvents('/api/llm/optimize-sql', request, showProgress, showThinking))
+		return (opts.preview ? fetchJson(url, request) : fetchEvents(url, request, showProgress, showThinking))
 		.then(function (data)
 		{
 			clearInterval(clockTimer);
 			if (opts.preview) renderPromptPreview(container, data && data.promptSent);
+			else if (isDsr)   renderDsrAnalysis(container, data, opts);
 			else              renderResult(container, data, opts, ddlContext);
 			return data;
 		})
@@ -1865,7 +1977,15 @@ var dbxLlmAdvice = (function () {
 				container.innerHTML = '<div class="dbx-llm-error">Failed to build prompt preview: ' + escapeHtml(err.message) + '</div>';
 				return null;
 			}
-			renderError(container, 'Failed to get LLM advice: ' + err.message, opts, ddlContext, err.responseData);
+			if (isDsr) // no SQL context to show under the error: the saved request link, the error, and the prompt
+			{
+				var sd = err.responseData || {};
+				container.innerHTML = renderSavedNote(sd.savedUrl, sd.savedForDays)
+					+ '<div class="dbx-llm-error">' + escapeHtml('Failed to get the AI Analysis: ' + err.message) + '</div>'
+					+ (sd.promptSent ? '<details class="dbx-llm-section-details"><summary class="dbx-llm-section-title">What was sent</summary>' + renderSentField('Prompt', sd.promptSent, true) + '</details>' : '');
+			}
+			else
+				renderError(container, 'Failed to get LLM advice: ' + err.message, opts, ddlContext, err.responseData);
 
 			// Login is required, but we are not logged in (LlmSqlOptimizeServlet 'not-logged-in', or the
 			// MandatoryLoginFilter's 401): offer a Log in button, and ask if the user wants to log in now.
@@ -1874,7 +1994,7 @@ var dbxLlmAdvice = (function () {
 				var retry    = function () { open(opts); };
 				var loginDiv = document.createElement('div');
 				loginDiv.className = 'dbx-llm-login';
-				loginDiv.innerHTML = '<button type="button" class="dbx-llm-login-btn">Log in</button> and then ask for the advice again.';
+				loginDiv.innerHTML = '<button type="button" class="dbx-llm-login-btn">Log in</button> and then ' + (isDsr ? 'press Analyze again.' : 'ask for the advice again.');
 				loginDiv.querySelector('button').addEventListener('click', function () { requestLogin(retry); });
 				container.insertBefore(loginDiv, container.firstChild ? container.firstChild.nextSibling : null);
 				askForLogin(retry);
@@ -2038,6 +2158,37 @@ var dbxLlmAdvice = (function () {
 		injectStyle();
 		var container = resolveContainer(opts);
 		_copyRegistry = {};
+
+		// An "AI Analysis" of a whole Daily Summary Report (LlmAdviceLog writes the findings JSON, no SQL)
+		if (meta.task === 'dsr-analysis')
+		{
+			var digest = text('dbx-llm-dsr-digest'); // read now: the container (that holds it) is drawn over below
+			if (meta.status === 'OK')
+			{
+				var analysis = null;
+				try { analysis = JSON.parse(text('dbx-llm-dsr-analysis') || 'null'); } catch (e) { /* show the explanation text */ }
+				renderDsrAnalysis(container, {
+					analysis:        analysis,
+					explanation:     text('dbx-llm-explanation'),
+					thinkingSummary: text('dbx-llm-thinking'),
+					promptSent:      text('dbx-llm-prompt'),
+					providerId:      meta.providerId,
+					model:           meta.model
+				}, { reportUrl: meta.reportName ? '/report?op=view&name=' + encodeURIComponent(meta.reportName) : null });
+
+				// What the report said (the digest): it was in the page, and the line above drew over it
+				if (digest)
+					container.insertAdjacentHTML('beforeend', '<details class="dbx-llm-section-details"><summary class="dbx-llm-section-title">Report Digest'
+						+ '<span class="dbx-llm-title-note"> - what the report said, sent to the LLM</span></summary>' + renderSentField('Digest (JSON)', digest, true) + '</details>');
+			}
+			else
+			{
+				container.innerHTML = '<div class="dbx-llm-error">' + escapeHtml('The LLM call failed: ' + (text('dbx-llm-error') || meta.errorMessage || meta.status || 'unknown error')) + '</div>'
+					+ (text('dbx-llm-prompt') ? '<details class="dbx-llm-section-details"><summary class="dbx-llm-section-title">What was sent</summary>' + renderSentField('Prompt', text('dbx-llm-prompt'), true) + '</details>' : '');
+			}
+			return;
+		}
+
 		if (meta.status === 'OK')
 		{
 			renderResult(container, {
@@ -2074,9 +2225,10 @@ var dbxLlmAdvice = (function () {
 	function open(opts)
 	{
 		opts = opts || {};
-		if (!opts.sql)
+		// An "AI Analysis" of a whole Daily Summary Report ('dsr-analysis') names the report ('reportName') instead of a statement
+		if (opts.task === 'dsr-analysis' ? !opts.reportName : !opts.sql)
 		{
-			console.error('dbxLlmAdvice.open(): a "sql" field is required.');
+			console.error('dbxLlmAdvice.open(): a "' + (opts.task === 'dsr-analysis' ? 'reportName' : 'sql') + '" field is required.');
 			return;
 		}
 
@@ -2195,13 +2347,16 @@ var dbxLlmAdvice = (function () {
 		});
 		optionsHtml += '</optgroup>';
 
+		// An "AI Analysis" of a whole Daily Summary Report: no SQL (no "Format SQL"), and the page passes the server context
+		var isDsr = opts.task === 'dsr-analysis';
+
 		container.innerHTML = '<div class="dbx-llm-picker">'
 			+ '<span class="dbx-llm-picker-label">Model</span>'
 			+ '<select class="dbx-llm-model-select" aria-label="LLM model">' + optionsHtml + '</select>'
-			+ '<button type="button" class="dbx-llm-ask-btn">Get Advice</button>'
-			+ '<label class="dbx-llm-picker-opt" title="If the LLM rewrites the SQL, it is easier to see the changes (the diff) when the SQL it got is formatted: the rewrite keeps the same layout.">'
+			+ '<button type="button" class="dbx-llm-ask-btn">' + (isDsr ? (opts.askLabel || 'Analyze') : 'Get Advice') + '</button>'
+			+ (isDsr ? '' : '<label class="dbx-llm-picker-opt" title="If the LLM rewrites the SQL, it is easier to see the changes (the diff) when the SQL it got is formatted: the rewrite keeps the same layout.">'
 			+ '<input type="checkbox" class="dbx-llm-format-sql"' + (isFormatSqlOn() ? ' checked' : '') + '> Format SQL Text before send</label>'
-			+ '<span class="dbx-llm-format-note"></span>'
+			+ '<span class="dbx-llm-format-note"></span>')
 			+ '<span class="dbx-llm-picker-hint">Nothing is sent to the LLM before you press the button.</span>'
 			+ '</div>'
 			+ '<div class="dbx-llm-results"></div>';
@@ -2215,6 +2370,8 @@ var dbxLlmAdvice = (function () {
 		var formatNote = container.querySelector('.dbx-llm-format-note');
 		function updateFormatNote()
 		{
+			if (!formatNote)
+				return;
 			formatNote.textContent = '';
 			formatNote.title = '';
 			if (!opts.sql || !isFormatSqlOn())
@@ -2231,11 +2388,14 @@ var dbxLlmAdvice = (function () {
 		}
 		updateFormatNote();
 
-		container.querySelector('.dbx-llm-format-sql').addEventListener('change', function ()
+		if (!isDsr)
 		{
-			try { window.localStorage.setItem(FORMAT_SQL_STORAGE_KEY, String(this.checked)); } catch (e) { /* no memory */ }
-			updateFormatNote();
-		});
+			container.querySelector('.dbx-llm-format-sql').addEventListener('change', function ()
+			{
+				try { window.localStorage.setItem(FORMAT_SQL_STORAGE_KEY, String(this.checked)); } catch (e) { /* no memory */ }
+				updateFormatNote();
+			});
+		}
 
 		askBtn.addEventListener('click', function ()
 		{
@@ -2259,15 +2419,16 @@ var dbxLlmAdvice = (function () {
 			var info    = run.querySelector('.dbx-llm-run-info');
 			var startMs = Date.now();
 
-			// The SQL as sent (formatted or not) is what this answer shows: what was sent, the saved request, the diff
-			lookupContext(body, opts)
+			// The SQL as sent (formatted or not) is what this answer shows: what was sent, the saved request, the diff.
+			// An "AI Analysis": the server reads the report itself, nothing to look up or prepare here.
+			(isDsr ? callOptimize(body, opts, null, model) : lookupContext(body, opts)
 				.then(function (ddlContext)
 				{
 					return prepareSql(opts.sql, opts.dbVendor).then(function (sql)
 					{
 						return callOptimize(body, Object.assign({}, opts, { sql: sql }), ddlContext, model);
 					});
-				})
+				}))
 				.then(function (data)
 				{
 					var txt = ' - ' + ((Date.now() - startMs) / 1000).toFixed(1) + ' s';
@@ -2356,6 +2517,7 @@ var dbxLlmAdvice = (function () {
 		// ... and format the SQL the same way ("Format SQL Text before send")
 		prepareSql: prepareSql,
 		// Admin page: show a saved request (see LlmAdviceLog.java / LlmAdviceLogServlet.java)
-		renderSavedRequest: renderSavedRequest
+		renderSavedRequest: renderSavedRequest,
+		renderDsrAnalysis: renderDsrAnalysis
 	};
 })();

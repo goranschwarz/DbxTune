@@ -122,6 +122,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>Write less raw DDL Text -- Properties: "DailySummaryReport.ddl.maxlen.table=-1", "DailySummaryReport.ddl.maxlen.trigger=4096"</LI>
 				<LI>Generate "on the fly" report, switch from "local blob" storage to saving a temp file at the web server (due to browsers are now blocking local blob storage), temp files will be removed after 24 hours. and are stored at 'tmp-dsr' directory in the reports dir</LI>
 				<LI>Added progress bar when loading page (especially usefull on slow networks), and render Graphs, Sparklines when they are entering visible scroll</LI>
+				<LI>Three levels: NTR (nothing to report), FYI (only INFO/REPORT alarms, deadlocks, design findings: subject <code>-FYI-</code>) and issue (no mark). New "Report Status" section shows which sections the level comes from (with links), and NTR mails no longer attach the full report</LI>
+				<LI>Much smaller reports and mails: compact chart data, execution plans stored compressed, Table Info written once per report (shown as DDL), and the mail attachment always zipped</LI>
+				<LI>"AI Analysis": an LLM reviews the whole report (numbers only, no SQL text) and gives a prioritized list of improvements, with links to the report sections</LI>
 			</UL>
 		</LI>
 

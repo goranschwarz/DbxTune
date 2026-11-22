@@ -127,6 +127,14 @@ public class AseCmSqlStatement extends AseAbstract
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
 	}
 
+	@Override
+	public String getLlmDigest()
+	{
+		// One row per response time bucket (for example "0-10 ms", "10-50 ms", ...)
+		return llmDigestRows(_shortRstm, 20, "name", "totalCount", "errorCount", "sumExecTimeMs", "avgExecTimeMs",
+				"sumCpuTime", "avgCpuTime", "sumWaitTime", "sumLogicalReads", "sumPhysicalReads", "sumRowsAffected", "LogicalReadsPerRowsAffected");
+	}
+
 
 	@Override
 	public String[] getMandatoryTables()

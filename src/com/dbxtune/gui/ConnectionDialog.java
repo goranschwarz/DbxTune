@@ -144,7 +144,10 @@ import com.dbxtune.gui.swing.MultiLineLabel;
 import com.dbxtune.gui.swing.TreeTransferHandler;
 import com.dbxtune.gui.swing.VerticalScrollPane;
 import com.dbxtune.gui.swing.WaitForExecDialog;
+import com.dbxtune.cloud.CloudConfig;
+import com.dbxtune.cloud.GcpCredentialsHelper;
 import com.dbxtune.hostmon.HostMonitorConnection;
+import com.dbxtune.hostmon.HostMonitorConnectionCloud;
 import com.dbxtune.hostmon.HostMonitorConnectionLocalOsCmd;
 import com.dbxtune.hostmon.HostMonitorConnectionLocalOsCmdWrapper;
 import com.dbxtune.hostmon.HostMonitorConnectionSsh;
@@ -2698,13 +2701,13 @@ public class ConnectionDialog
 		else
 			_hostmonPassword_txt = new JPasswordField();
 
-		_hostmonUsername_lbl.setToolTipText("User name to use when logging in to the below Operating System Host.");
-		_hostmonUsername_txt.setToolTipText("User name to use when logging in to the below Operating System Host.");
-		_hostmonPassword_lbl.setToolTipText("Password to use when logging in to the below Operating System Host");
-		_hostmonPassword_txt.setToolTipText("Password to use when logging in to the below Operating System Host");
+		_hostmonUsername_lbl.setToolTipText("<html>User name to use when logging in to the below Operating System Host.<br>For Cloud Monitoring, you can specify <code>gcp</code> (or leave empty if Host is <code>gcp://project:region:instance</code>).</html>");
+		_hostmonUsername_txt.setToolTipText(_hostmonUsername_lbl.getToolTipText());
+		_hostmonPassword_lbl.setToolTipText("Password to use when logging in to the below Operating System Host (not required for Cloud Monitoring / Key File)");
+		_hostmonPassword_txt.setToolTipText("Password to use when logging in to the below Operating System Host (not required for Cloud Monitoring / Key File)");
 		_hostmonOptionSavePwd_chk.setToolTipText("Save the password in the configuration file, and yes it's encrypted");
-		_hostmonKeyFile_lbl.setToolTipText("SSH Private Key File, if you want to use 'Open SSH private key' to authenticate.");
-		_hostmonKeyFile_txt.setToolTipText("SSH Private Key File, if you want to use 'Open SSH private key' to authenticate.");
+		_hostmonKeyFile_lbl.setToolTipText("<html>SSH Private Key File, if you want to use 'Open SSH private key' to authenticate.<br>For GCP Cloud Monitoring, optional path to a GCP Service Account JSON key file (leave blank to use Application Default Credentials).</html>");
+		_hostmonKeyFile_txt.setToolTipText(_hostmonKeyFile_lbl.getToolTipText());
 		
 		panel.add(_hostmonLoginIcon,  "");
 		panel.add(_hostmonLoginHelp,  "wmin 100, push, grow");
@@ -2744,8 +2747,8 @@ public class ConnectionDialog
 		panel.setLayout(new MigLayout("wrap 2", "", ""));   // insets Top Left Bottom Right
 		_hostmonServer_pan = panel;
 
-		_hostmonHost_lbl   .setToolTipText("<html>Hostname or IP address of the OS Host you are connecting to</html>");
-		_hostmonHost_txt   .setToolTipText("<html>Hostname or IP address of the OS Host you are connecting to</html>");
+		_hostmonHost_lbl   .setToolTipText("<html>Hostname or IP address of the OS Host you are connecting to.<br>For GCP Cloud SQL Monitoring, enter <code>gcp://project:region:instance</code> or <code>project:region:instance</code>.</html>");
+		_hostmonHost_txt   .setToolTipText(_hostmonHost_lbl.getToolTipText());
 		_hostmonPort_lbl   .setToolTipText("<html>Port number of the SSH server you are connecting to</html>");
 		_hostmonPort_txt   .setToolTipText("<html>Port number of the SSH server you are connecting to</html>");
 
@@ -4324,20 +4327,37 @@ public class ConnectionDialog
 						{
 							_hostmonLocalOsCmdWrapper_txt.setEnabled(false);
 
-							try { Integer.parseInt(portStr); } 
-							catch (NumberFormatException e) 
+							CloudConfig cloudCfg = CloudConfig.fromConfiguration(Configuration.getCombinedConfiguration(), hostname, username, keyFile);
+							if (cloudCfg != null)
 							{
-								hostmonProblem = "SSH Port number must be an integer";
+								if (StringUtil.isNullOrBlank(cloudCfg.getProjectId()) && _jdbcUsername_txt != null)
+								{
+									String proj = GcpCredentialsHelper.detectProjectIdFromIamUsername(_jdbcUsername_txt.getText());
+									if (StringUtil.hasValue(proj))
+										cloudCfg.setProjectId(proj);
+								}
+								if (StringUtil.isNullOrBlank(cloudCfg.getInstanceId()))
+								{
+									hostmonProblem = "Cloud Host must specify instance name (e.g. pg-instance or gcp://project:region:instance)";
+								}
 							}
-				
-							if (StringUtil.isNullOrBlank(username))
-								hostmonProblem = "SSH username must be specified";
-				
-							if (StringUtil.isNullOrBlank(password) && StringUtil.isNullOrBlank(keyFile) )
-								hostmonProblem = "SSH password OR keyFile must be specified";
-				
-							if (StringUtil.isNullOrBlank(hostname))
-								hostmonProblem = "SSH hostname must be specified";
+							else
+							{
+								try { Integer.parseInt(portStr); } 
+								catch (NumberFormatException e) 
+								{
+									hostmonProblem = "SSH Port number must be an integer";
+								}
+					
+								if (StringUtil.isNullOrBlank(username))
+									hostmonProblem = "SSH username must be specified";
+					
+								if (StringUtil.isNullOrBlank(password) && StringUtil.isNullOrBlank(keyFile) )
+									hostmonProblem = "SSH password OR keyFile must be specified";
+					
+								if (StringUtil.isNullOrBlank(hostname))
+									hostmonProblem = "SSH hostname must be specified";
+							}
 						}
 					}
 				}
@@ -4937,8 +4957,33 @@ public class ConnectionDialog
 		}
 		else
 		{
-			SshConnection sshConn = new SshConnection(hostname, port, username, password, keyFile);
-			hostMonConn = new HostMonitorConnectionSsh(sshConn);
+			CloudConfig cloudCfg = CloudConfig.fromConfiguration(Configuration.getCombinedConfiguration(), hostname, username, keyFile);
+			if (cloudCfg != null)
+			{
+				if (StringUtil.isNullOrBlank(cloudCfg.getProjectId()) && _jdbcUsername_txt != null)
+				{
+					String proj = GcpCredentialsHelper.detectProjectIdFromIamUsername(_jdbcUsername_txt.getText());
+					if (StringUtil.hasValue(proj))
+						cloudCfg.setProjectId(proj);
+				}
+				try
+				{
+					hostMonConn = HostMonitorConnectionCloud.create(cloudCfg);
+					hostMonConn.connect();
+				}
+				catch (Exception e)
+				{
+					_logger.warn("Problems connecting to Cloud Host Monitor (" + cloudCfg + "). Caught: " + e, e);
+					SwingUtils.showErrorMessage(this, "Problems Connecting to Cloud Host Monitor",
+							"Problems when connecting to Cloud Host Monitor (" + cloudCfg.getHostname() + ").\n\n" + e.getMessage(), e);
+					hostMonConn = null;
+				}
+			}
+			else
+			{
+				SshConnection sshConn = new SshConnection(hostname, port, username, password, keyFile);
+				hostMonConn = new HostMonitorConnectionSsh(sshConn);
+			}
 		}
 		return hostMonConn;
 	}
@@ -5809,6 +5854,16 @@ if ( ! jdbcSshTunnelUse )
 				props .put(key, val);
 			}
 		}
+
+		try
+		{
+			String hostmonKeyFile = _hostmonKeyFile_txt != null ? _hostmonKeyFile_txt.getText() : null;
+			GcpCredentialsHelper.applyGcpIamPostgresAuth(url, props, hostmonKeyFile, true); // true: the monitored connection
+		}
+		catch (SQLException ignore)
+		{
+			// Let ConnectionProgressDialog.jdbcConnect() surface the error in the progress dialog
+		}
 		
 		// Add specific JDBC Properties, for specific URL's, if not already specified
 		if (url.startsWith("jdbc:db2:"))
@@ -6051,6 +6106,9 @@ if ( ! jdbcSshTunnelUse )
 			Properties props = new Properties();
 			props.put("user", user);
 			props.put("password", passwd);
+
+			String hostmonKeyFile = _hostmonKeyFile_txt != null ? _hostmonKeyFile_txt.getText() : null;
+			GcpCredentialsHelper.applyGcpIamPostgresAuth(url, props, hostmonKeyFile);
 	
 			_logger.debug("Try getConnection to driver='" + driver + "', url='" + url + "', user='" + user + "'.");
 			Connection conn = DriverManager.getConnection(url, props);
@@ -8370,6 +8428,21 @@ if ( ! jdbcSshTunnelUse )
 					if (host.equals("127.0.0.1")) continue;
 					oshostname = host;
 					break;
+				}
+				if (StringUtil.isNullOrBlank(oshostname) && _jdbcUrl_cbx != null)
+				{
+					try
+					{
+						String jdbcUrl = StringUtil.getSelectedItemString(_jdbcUrl_cbx);
+						if (StringUtil.hasValue(jdbcUrl) && !jdbcUrl.contains("<"))
+						{
+							JdbcUrlParser parser = JdbcUrlParser.parse(jdbcUrl);
+							String host = parser.getHost();
+							if (StringUtil.hasValue(host) && !"localhost".equals(host) && !"127.0.0.1".equals(host))
+								oshostname = host;
+						}
+					}
+					catch (Exception ignore) {}
 				}
 				_hostmonHost_txt.setText(oshostname);
 			}

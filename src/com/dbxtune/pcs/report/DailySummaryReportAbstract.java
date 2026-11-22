@@ -56,6 +56,7 @@ import com.dbxtune.central.pcs.objects.DsrSkipEntry;
 import com.dbxtune.pcs.MonRecordingInfo;
 import com.dbxtune.pcs.PersistWriterBase;
 import com.dbxtune.pcs.report.content.DailySummaryReportContent;
+import com.dbxtune.pcs.report.content.IReportEntry;
 import com.dbxtune.pcs.report.content.RecordingInfo;
 import com.dbxtune.pcs.report.content.ReportEntryAbstract;
 import com.dbxtune.pcs.report.senders.IReportSender;
@@ -187,6 +188,26 @@ implements IDailySummaryReport
 		return _statusMap.get(statusKey);
 	}
 
+	/**
+	 * Tooltip texts (Table Info, Triggers...) that are written ONCE per report, the elements only refer to them by id.
+	 * The same table can be in many sections and statements: in a big ASE report 228 tooltips held 60 different texts.
+	 * Written by DailySummaryReportDefault: the full report as hidden elements (JavaScript sets 'data-tooltip' at page load),
+	 * the mail as CSS rules (no JavaScript in a mail).
+	 */
+	private Map<String, Integer> _tooltipTexts = new java.util.LinkedHashMap<>();
+
+	/** @return the id of the text (the same text gets the same id) */
+	public int getTooltipTextId(String text)
+	{
+		return _tooltipTexts.computeIfAbsent(text, k -> _tooltipTexts.size() + 1);
+	}
+
+	/** text -> id, in the order they were added */
+	public Map<String, Integer> getTooltipTexts()
+	{
+		return _tooltipTexts;
+	}
+
 //	@Override
 //	public MonTablesDictionary createMonTablesDictionary()
 //	{
@@ -263,8 +284,10 @@ implements IDailySummaryReport
 		String srvName = content.getServerName();
 		srvName = FileUtils.toSafeFileName(srvName);
 
-		// Nothing to report?
-		String ntr = content.hasNothingToReport() ? ".-NTR-" : "";
+		// Nothing To Report (NTR) or For Your Information (FYI)? Nothing = an issue
+		String ntr = "";
+		if (content.getIssueLevel() == IReportEntry.IssueLevel.NONE) ntr = ".-NTR-";
+		if (content.getIssueLevel() == IReportEntry.IssueLevel.FYI ) ntr = ".-FYI-";
 
 		// Filename
 		String saveToFileName = saveDir + File.separatorChar + srvName + "." + ts + ntr + ".html";

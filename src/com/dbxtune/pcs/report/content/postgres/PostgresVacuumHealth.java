@@ -52,6 +52,7 @@ extends PostgresAbstract
 	private ResultSetTableModel _scoresRstm;  // null = not recorded (before 19)
 
 	private String _holderVerdict;            // null = nothing to say
+	private String _ageVerdict;               // null = nothing to say (not recorded)
 	private long   _maxDbAge = -1;
 	private long   _freezeMaxAge;
 	private long   _mxidFreezeMaxAge;
@@ -86,13 +87,15 @@ extends PostgresAbstract
 		{
 			w.append(getSectionDescriptionHtml(_dbRstm, true));
 			w.append(toHtmlTable(_dbRstm));
+			if (_ageVerdict != null)
+				w.append("<p><b>Verdict</b>: " + _ageVerdict + "</p>\n");
 
 			if (_CmPgDatabase_XidAge != null)
 			{
 				w.append(getDbxCentralLinkWithDescForGraphs(false, "Below is the transaction id age of each database during the day.",
 						"CmPgDatabase_XidAge"
 						));
-				_CmPgDatabase_XidAge.writeHtmlContent(w, null, "<b>Note</b>: At about 2.1 billion Postgres stops accepting writes. Anti-wraparound autovacuum starts at autovacuum_freeze_max_age (" + String.format("%,d", _freezeMaxAge) + ").");
+				_CmPgDatabase_XidAge.writeHtmlContent(w, null, "<b>Note</b>: At about 2.1 billion Postgres stops accepting writes. Anti-wraparound autovacuum starts at autovacuum_freeze_max_age (" + String.format(java.util.Locale.US, "%,d", _freezeMaxAge) + ").");
 			}
 		}
 
@@ -140,11 +143,17 @@ extends PostgresAbstract
 	}
 
 	@Override
-	public boolean hasIssueToReport()
+	public IssueLevel getIssueLevel()
 	{
 		// As the XidWraparound alarm (default 1 billion)
 		long threshold = Configuration.getCombinedConfiguration().getLongProperty(CmPgDatabase.PROPKEY_alarm_XidWraparound, CmPgDatabase.DEFAULT_alarm_XidWraparound);
-		return _maxDbAge > threshold;
+		return _maxDbAge > threshold ? IssueLevel.ISSUE : IssueLevel.NONE;
+	}
+
+	@Override
+	public String getIssueReason()
+	{
+		return "Transaction ID age " + String.format(java.util.Locale.US, "%,d", _maxDbAge) + " is above the XID wraparound alarm threshold";
 	}
 
 	@Override
@@ -204,10 +213,55 @@ extends PostgresAbstract
 			for (int r = 0; r < _dbRstm.getRowCount(); r++)
 				_maxDbAge = Math.max(_maxDbAge, _dbRstm.getValueAsLong(r, "datfrozenxid_age__max", true, -1L));
 
+			// The verdict in plain words: how far from the limit, and when the routine (anti-wraparound) freeze comes
+			// The transaction ids used per day: how much the oldest age grew from the first to the last sample (not when a freeze made it go down)
+			if (_maxDbAge >= 0)
+			{
+				double xidsPerDay = -1;
+				String rateSql = ""
+					    + "select [SessionSampleTime] as [ts], max([datfrozenxid_age]) as [age] \n"
+					    + "from [CmPgDatabase_abs] \n"
+					    + where + " \n"
+					    + "  and [SessionSampleTime] in ((select min([SessionSampleTime]) from [CmPgDatabase_abs] " + where + "), (select max([SessionSampleTime]) from [CmPgDatabase_abs] " + where + ")) \n"
+					    + "group by [SessionSampleTime] \n"
+					    + "order by 1 \n";
+				ResultSetTableModel rateRstm = executeQuery(conn, rateSql, false, "PostgresVacuumHealthXidRate");
+				if (rateRstm != null && rateRstm.getRowCount() == 2)
+				{
+					java.sql.Timestamp t1 = rateRstm.getValueAsTimestamp(0, "ts");
+					java.sql.Timestamp t2 = rateRstm.getValueAsTimestamp(1, "ts");
+					long age1 = rateRstm.getValueAsLong(0, "age", true, -1L);
+					long age2 = rateRstm.getValueAsLong(1, "age", true, -1L);
+					long secs = t1 != null && t2 != null ? (t2.getTime() - t1.getTime()) / 1000 : 0;
+					if (secs >= 3600 && age1 >= 0 && age2 > age1)
+						xidsPerDay = (age2 - age1) * 86400.0 / secs;
+				}
+
+				double pctOfLimit  = 100.0 * _maxDbAge / XID_LIMIT;
+				double pctOfFreeze = 100.0 * _maxDbAge / _freezeMaxAge;
+				StringBuilder v = new StringBuilder();
+				v.append(pctOfLimit < 50 ? "No wraparound risk" : "<b>Look at this</b>")
+				 .append(": the oldest database is at ").append(String.format(java.util.Locale.US, "%.1f", pctOfLimit)).append("% of the limit (about 2.1 billion transaction ids). ");
+				if (xidsPerDay > 0)
+					v.append("About ").append(String.format(java.util.Locale.US, "%,d", Math.round(xidsPerDay))).append(" transaction ids are used per day. ");
+				if (pctOfFreeze < 100)
+				{
+					v.append("At 100% of <code>autovacuum_freeze_max_age</code>")
+					 .append(xidsPerDay > 0 ? " (in about " + Math.max(1, Math.round((_freezeMaxAge - _maxDbAge) / xidsPerDay)) + " day(s) at this rate)" : "")
+					 .append(" autovacuum freezes the oldest tables by itself: that is the routine that prevents wraparound, not a problem. ")
+					 .append("A high percent of <code>autovacuum_freeze_max_age</code> only matters for big tables, where that vacuum reads the whole table.");
+				}
+				else
+				{
+					v.append("Above 100% of <code>autovacuum_freeze_max_age</code> the forced (anti-wraparound) vacuums should be running: if the age does not go down, look at the holders below and at <code>autovacuum_vacuum_cost_limit</code>.");
+				}
+				_ageVerdict = v.toString();
+			}
+
 			_dbRstm.setDescription(
 					"How old each database is, in transaction ids: the age of its oldest unfrozen row (from the table <code>CmPgDatabase_abs</code>, the last collector sample and the highest of the period).<br>" +
 					"Transaction ids wrap around after 2^31 (about 2.1 billion). Before that, Postgres stops accepting writes, so <b>vacuum must freeze old rows</b>. " +
-					"Autovacuum forces an (anti-wraparound) vacuum on a table when it is older than <code>autovacuum_freeze_max_age</code> (now " + String.format("%,d", _freezeMaxAge) + ").<br>" +
+					"Autovacuum forces an (anti-wraparound) vacuum on a table when it is older than <code>autovacuum_freeze_max_age</code> (now " + String.format(java.util.Locale.US, "%,d", _freezeMaxAge) + ").<br>" +
 					"Look for: <code>xid_pct_of_freeze_max_age</code> far above 100 (the forced vacuums do not finish, or something holds them back, see below), and <code>xid_pct_of_limit</code> above 50.<br>" +
 					"");
 
@@ -278,7 +332,7 @@ extends PostgresAbstract
 					if (h[0].equals(holder) && age > bestAge)
 					{
 						bestAge = age;
-						bestTxt = h[1] + " (up to " + String.format("%,d", age) + " transaction ids old, at " + StringUtils.left(_holdersRstm.getValueAsString(r, "age__max_time"), 19) + "). <i>Fix</i>: " + h[2];
+						bestTxt = h[1] + " (up to " + String.format(java.util.Locale.US, "%,d", age) + " transaction ids old, at " + StringUtils.left(_holdersRstm.getValueAsString(r, "age__max_time"), 19) + "). <i>Fix</i>: " + h[2];
 					}
 				}
 			}
@@ -303,18 +357,20 @@ extends PostgresAbstract
 				    + "    ,t.[frozenxid_age] \n"
 				    + "    ,cast(100.0 * t.[frozenxid_age] / " + _freezeMaxAge + " as numeric(8,1)) as [pct_of_freeze_max_age] \n"
 				    + "    ,t.[minmxid_age] \n"
+				    + (tabCols.contains("total_kb") ? "    ,t.[total_kb] \n" : "")
 				    + "    ,t.[n_live_tup] \n"
 				    + "    ,t.[n_dead_tup] \n"
 				    + "    ,t.[last_autovacuum] \n"
 				    + "    ,t.[last_vacuum] \n"
 				    + "    ,t.[autovacuum_count] \n"
 				    + "    ,t.[reloptions] \n"
-				    + "from [CmPgTables_abs] t \n"
-				    + "join (select [dbname], [schemaname], [relname], max([SessionSampleTime]) as [last_ts] \n"
-				    + "      from [CmPgTables_abs] \n"
+				    // Each table's last sample with a window function, in ONE pass. A join to 'group by ... max(SessionSampleTime)' made H2 run that group by again
+				    // for every row of the table (prod recording 2026-11-21: 184K rows, 125 s; this: 1 s)
+				    + "from (select x.*, row_number() over (partition by [dbname], [schemaname], [relname] order by [SessionSampleTime] desc) as [rn__] \n"
+				    + "      from [CmPgTables_abs] x \n"
 				    + "      " + where + " \n"
-				    + "      group by [dbname], [schemaname], [relname] \n"
-				    + "     ) l on l.[dbname] = t.[dbname] and l.[schemaname] = t.[schemaname] and l.[relname] = t.[relname] and l.[last_ts] = t.[SessionSampleTime] \n"
+				    + "     ) t \n"
+				    + "where t.[rn__] = 1 \n"
 				    + "order by t.[frozenxid_age] desc \n"
 				    + "";
 
@@ -325,7 +381,10 @@ extends PostgresAbstract
 					"The oldest tables, in transaction ids: age(relfrozenxid) at the last sample of each table (from the table <code>CmPgTables_abs</code>, only tables that were read or written).<br>" +
 					"A table above 100% of autovacuum_freeze_max_age gets a forced (anti-wraparound) vacuum, that can't be cancelled by a lock conflict and reads the whole table. " +
 					"A big table that stays far above 100% is not frozen in time: check <code>autovacuum_vacuum_cost_limit</code> and the holders above.<br>" +
+					"Many tables with (almost) the same age is normal: they were created or frozen at the same time (for example a restore or an upgrade), and age together. " +
+					"A high <code>pct_of_freeze_max_age</code> on a small table (<code>total_kb</code>) is nothing to act on: its forced vacuum takes a moment.<br>" +
 					"");
+			_tablesRstm.setColumnDescription("total_kb"             , "The size of the table, with its indexes and TOAST, in KB: the forced vacuum reads all of it");
 			_tablesRstm.setColumnDescription("dbname"               , "The database");
 			_tablesRstm.setColumnDescription("schemaname"           , "The schema");
 			_tablesRstm.setColumnDescription("relname"              , "The table");

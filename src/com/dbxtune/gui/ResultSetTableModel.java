@@ -2807,6 +2807,18 @@ public class ResultSetTableModel
 		{
 			return null;
 		}
+
+		/** false: the column is not written to the HTML table (the value is still in the model, for example shown in another column) */
+		default boolean isColumnVisible(ResultSetTableModel rstm, int col, String colName)
+		{
+			return true;
+		}
+
+		/** The text in the column header (default: the column name) */
+		default String headerName(ResultSetTableModel rstm, int col, String colName)
+		{
+			return colName;
+		}
 	}
 	
 	public String toHtmlTableString(String className)
@@ -2879,6 +2891,9 @@ public class ResultSetTableModel
 		for (int c=0; c<cols; c++)
 		{
 			String colName = getColumnName(c);
+			if (tsRenderer != null && ! tsRenderer.isColumnVisible(this, c, colName))
+				continue;
+
 			String tooltip = "";
 			if (hasColumnDescriptions())
 			{
@@ -2897,7 +2912,8 @@ public class ResultSetTableModel
 			if (StringUtil.hasValue(thAttr) && !thAttr.startsWith(" "))
 				thAttr = " " + thAttr;
 
-			sb.append("<th").append(thAttr).append(tooltip).append(">").append(colName).append("</th>\n");
+			String headerName = tsRenderer == null ? colName : tsRenderer.headerName(this, c, colName);
+			sb.append("<th").append(thAttr).append(tooltip).append(">").append(headerName).append("</th>\n");
 		}
 		sb.append("</tr>\n");
 		sb.append("</thead>\n");
@@ -2922,6 +2938,9 @@ public class ResultSetTableModel
 			sb.append("  <tr").append(trAttr).append("> \n");
 			for (int c=0; c<cols; c++)
 			{
+				if (tsRenderer != null && ! tsRenderer.isColumnVisible(this, c, getColumnName(c)))
+					continue;
+
 				Object objVal  = getValueAt(r,c);
 				String strVal  = toString(objVal, "&nbsp;", "&nbsp;");
 				String toolTip = null;

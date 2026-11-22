@@ -1545,7 +1545,14 @@ extends CounterModelHostMonitor
 							removeSet = new HashSet<String>();
 						removeSet.add(deviceName);
 					}
-					newSample.setValueAt(description, rowId, deviceDescription_pos);
+					if (isConnectedToVendor(OsVendor.Cloud) && StringUtil.isNullOrBlank(description))
+					{
+						// Keep the Cloud-provided device description unless overridden by IoStatDeviceMapperDialog
+					}
+					else
+					{
+						newSample.setValueAt(description, rowId, deviceDescription_pos);
+					}
 
 					// TODO: remove devices that are system devices 'sd[az]'
 					if (excludeDevices)

@@ -55,7 +55,13 @@ extends DailySummaryReportDefault
 		addReportEntry( new Db2TimeSpent(this)         );
 
 		// SQL, Tables, Long Running and Blocking
-		addReportEntry( new Db2TopSql(this)            );
+		addReportEntry( new Db2TopSql(this, Db2TopSql.ReportType.OVERVIEW      ) );   // the share of all statements' time, rows...: links to the sections below
+		addReportEntry( new Db2TopSql(this, Db2TopSql.ReportType.STMT_TIME     ) );   // one section per measure (as SQL Server, ASE, Postgres, Oracle and MySQL)
+		addReportEntry( new Db2TopSql(this, Db2TopSql.ReportType.CPU_TIME      ) );
+		addReportEntry( new Db2TopSql(this, Db2TopSql.ReportType.ROWS_READ     ) );
+		addReportEntry( new Db2TopSql(this, Db2TopSql.ReportType.PHYSICAL_READS) );
+		addReportEntry( new Db2TopSql(this, Db2TopSql.ReportType.LOCK_WAIT     ) );
+		addReportEntry( new Db2TopSql(this, Db2TopSql.ReportType.EXECUTIONS    ) );
 		addReportEntry( new Db2ChattyStatements(this)  );
 		addReportEntry( new Db2TopTableAccess(this)    );
 		addReportEntry( new Db2LongRunningStmnts(this) );

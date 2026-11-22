@@ -38,6 +38,7 @@ import com.dbxtune.cache.DbmsObjectIdCache;
 import com.dbxtune.cache.DbmsObjectIdCachePostgres;
 import com.dbxtune.cache.XmlPlanCache;
 import com.dbxtune.cache.XmlPlanCachePostgres;
+import com.dbxtune.cloud.GcpCredentialsHelper;
 import com.dbxtune.cm.CountersModel;
 import com.dbxtune.cm.os.CmOsDiskSpace;
 import com.dbxtune.cm.os.CmOsIostat;
@@ -603,7 +604,8 @@ extends CounterControllerAbstract
 	public DbxConnection noGuiConnect(String dbmsUsername, String dbmsPassword, String dbmsServer, String dbmsHostPortStr, String jdbcUrlOptions) throws SQLException, Exception
 	{
 		DbxConnection conn = super.noGuiConnect(dbmsUsername, dbmsPassword, dbmsServer, dbmsHostPortStr, jdbcUrlOptions);
-		
+		_gcpIamLoginFailures = 0; // connected: a later IAM login failure gets a new retry
+
 		ConnectionProvider connectionProvider = new ConnectionProvider()
 		{
 			@Override
@@ -644,10 +646,34 @@ extends CounterControllerAbstract
 		return conn;
 	}
 
+	/** GCP Cloud SQL IAM: login refusals in a row (reset when connected) */
+	private int _gcpIamLoginFailures = 0;
+
 	@Override
 	public void noGuiConnectErrorHandler(SQLException ex, String dbmsUsername, String dbmsPassword, String dbmsServer, String dbmsHostPortStr, String jdbcUrlOptions) 
 	throws Exception
 	{
+		if (GcpCredentialsHelper.isGcpIamPostgresAuth("jdbc:postgresql:", dbmsUsername, dbmsPassword, true))
+		{
+			// The server refused the token: retry once with a new token (it may have expired), then stop like a wrong password does.
+			// Not when the token could not be fetched (metadata server, network): that can be temporary, so keep retrying.
+			boolean loginRefused = "28P01".equals(ex.getSQLState()) || (ex.getMessage() != null && ex.getMessage().contains("password authentication failed for user"));
+			if (loginRefused)
+			{
+				_gcpIamLoginFailures++;
+				if (_gcpIamLoginFailures >= 2)
+				{
+					throw new Exception("GCP Cloud SQL IAM login for USER '" + dbmsUsername + "' to DBMS server '" + dbmsServer + "' was refused " + _gcpIamLoginFailures + " times in a row (also with a new access token). This is a non-recoverable error. "
+							+ "Check that the service account is a database user (gcloud sql users create ... --type=cloud_iam_service_account), "
+							+ "that it has the role 'roles/cloudsql.instanceUser', and that the instance flag 'cloudsql.iam_authentication' is on. DBMS Error Message='" + ex.getMessage() + "'.", ex);
+				}
+			}
+
+			// Clear cached OAuth2 helper so the next reconnect attempt forces a fresh token reload
+			GcpCredentialsHelper.clearCache();
+			return;
+		}
+
 		// Error checking for "invalid password" or other "unrecoverable errors"
 		// SqlState 28P01 = invalid_password, 28000 = invalid_authorization_specification (for example: no pg_hba.conf entry)
 		// NOTE: Never put the password in the message (it ends up in the log)

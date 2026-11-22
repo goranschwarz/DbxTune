@@ -973,7 +973,9 @@ extends ReportEntryAbstract
 				tableInfoMap.put("Created"    ,                 entry.getCrDate() + ""       );
 				tableInfoMap.put("Sampled"    ,                 entry.getSampleTime() + ""   );
 				tableInfoMap.put("Index Count", entry.getIndexCount() + (entry.getIndexCount() > 0 ? "" : " <b><font color='red'>&lt;&lt;-- Warning NO index</font></b>") );
-				tableInfoMap.put("DDL Info"   , entry._objectText   == null ? "-"             : getTextAsTooltipDiv(entry._objectText, "Table Info", getDdlMaxLengthTable()));
+				// DDL made from the sp_help text (the same as the LLM gets): much smaller. The raw text if it can't be made
+				String ddlText = entry._objectText == null ? null : formatObjectTextAsDdl(entry.getFullTableName(), entry._objectText);
+				tableInfoMap.put("DDL Info"   , entry._objectText   == null ? "-"             : getTextAsTooltipDiv(ddlText != null ? ddlText : entry._objectText, "Table Info", getDdlMaxLengthTable()));
 //				tableInfoMap.put("Triggers"   , "-not-yet-impl-");
 				tableInfoMap.put("Triggers"   , entry._triggersText == null ? "-no-triggers-" : getTextAsTooltipDiv(entry._triggersText, "Trigger Info", getDdlMaxLengthTrigger()));
 			}
@@ -1605,6 +1607,19 @@ extends ReportEntryAbstract
 	}
 
 	/** The stored DDL writes FILLFACTOR = 100 for an index that has none (0). Same behaviour, but then the rollback does not give back the same index. */
+	/**
+	 * The CREATE INDEX that gives the index back (the ROLLBACK of a DROP INDEX), same as the Index Analysis rollback: the stored DDL and the filegroup.<br>
+	 * Empty if the DDL Storage has no (plain clustered/nonclustered) DDL for the index.
+	 */
+	static String getIndexRestoreDdl(SqlServerTableInfo ti, String indexName)
+	{
+		SqlServerIndexInfo ii = ti == null ? null : ti.getIndexInfoForName(indexName);
+		if (ii == null || ii._ddlTxt == null || ! ii._ddlTxt.matches("(?s)CREATE\\s+(UNIQUE\\s+)?(NON)?CLUSTERED INDEX .*"))
+			return "";
+		boolean hasFilegroup = ii._desc != null && ii._desc.contains(" located on ");
+		return restorableDdl(ii) + (hasFilegroup ? filegroupClause(ii) : "");
+	}
+
 	private static String restorableDdl(SqlServerIndexInfo ii)
 	{
 		return ii._fillFactor == 0 ? ii._ddlTxt.replace("FILLFACTOR = 100, ", "") : ii._ddlTxt;

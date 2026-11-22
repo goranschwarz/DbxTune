@@ -263,6 +263,14 @@ extends DbmsConfigTextAbstract
 				+ "";
 		}
 
+		//-------------------------------------------------
+		// Cloud (GCP Cloud SQL / AWS RDS / Azure DB)
+		//-------------------------------------------------
+		if (osName.startsWith("Cloud"))
+		{
+			return "CLOUD_OS_INFO";
+		}
+
 		return "echo 'Operating System information is not supported on OS Name: " + osName + "'";
 	}
 

@@ -52,6 +52,7 @@ import com.dbxtune.pcs.DictCompression;
 import com.dbxtune.pcs.inspection.ObjectLookupInspectorMySql;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.ShowplanLinkBuilder;
+import com.dbxtune.pcs.report.content.TopSqlOverview;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.AggType;
 import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
@@ -85,9 +86,42 @@ extends MySqlAbstract
 	/** At most this many plans per statement (a statement that runs long can get a new plan for every execution: they are mostly the same) */
 	private static final int MAX_PLANS_PER_STATEMENT = 3;
 
-	public MySqlTopSql(DailySummaryReportAbstract reportingInstance)
+	/** One section per measure (as SQL Server, ASE and Postgres): each with its own top statements */
+	public enum ReportType
+	{
+		OVERVIEW     ("largest_pct"),
+		TOTAL_TIME   ("TotalTimeMs__sum"),
+		ROWS_EXAMINED("RowsExamined__sum"),
+		LOCK_TIME    ("LockTimeMs__sum"),
+		EXECUTIONS   ("ExecCount__sum");
+
+		/** The column the section is ordered by (highlighted in the table) */
+		final String orderByCol;
+		ReportType(String orderByCol) { this.orderByCol = orderByCol; }
+
+		/** The section's subject: also its anchor in the report (the OVERVIEW links to the sections) */
+		String subject() { return "Top SQL Statements - " + name() + " (order by: " + orderByCol + ", origin: CmStatements / performance_schema.events_statements_summary_by_digest)"; }
+	};
+
+	private TopSqlOverview _overview;  // OVERVIEW: the shares of all the statements (see TopSqlOverview)
+
+	private ReportType _reportType;
+	private String     _orderByCol;    // the column the section is ordered by (highlighted in the table)
+	private String     _measureText;   // what the section is about, in words
+	private String     _noRowsText;    // when no statement has anything of it
+
+	public MySqlTopSql(DailySummaryReportAbstract reportingInstance, ReportType reportType)
 	{
 		super(reportingInstance);
+		_reportType = reportType;
+		_orderByCol = reportType.orderByCol;
+
+		if      (ReportType.OVERVIEW     .equals(reportType)) { _measureText = "their largest share of all the statements' time, rows examined, lock time or executions"; _noRowsText = "No statements were found."; }
+		else if (ReportType.TOTAL_TIME   .equals(reportType)) { _measureText = "total execution time";     _noRowsText = "No statements were found."; }
+		else if (ReportType.ROWS_EXAMINED.equals(reportType)) { _measureText = "rows examined (rows read)"; _noRowsText = "No statement examined any rows in the period."; }
+		else if (ReportType.LOCK_TIME    .equals(reportType)) { _measureText = "time waiting for locks";   _noRowsText = "No statement waited for locks in the period."; }
+		else if (ReportType.EXECUTIONS   .equals(reportType)) { _measureText = "number of executions";     _noRowsText = "No statements were found."; }
+		else throw new IllegalArgumentException("Unhandled reportType='" + reportType + "'.");
 	}
 
 	@Override
@@ -99,7 +133,8 @@ extends MySqlAbstract
 	@Override
 	public boolean hasShortMessageText()
 	{
-		return true;
+		// The mail has the TOTAL_TIME section only (as SQL Server: CPU_TIME), the other sections are in the full report
+		return ReportType.TOTAL_TIME.equals(_reportType) || ReportType.OVERVIEW.equals(_reportType);
 	}
 
 	@Override
@@ -108,7 +143,14 @@ extends MySqlAbstract
 	{
 		if (_shortRstm.getRowCount() == 0)
 		{
-			w.append("No rows found <br>\n");
+			w.append(_noRowsText + "<br>\n");
+			return;
+		}
+
+		// The overview: one small table, the details are in the sections it links to
+		if (ReportType.OVERVIEW.equals(_reportType))
+		{
+			_overview.writeHtml(w, this, getTopRows());
 			return;
 		}
 
@@ -117,7 +159,7 @@ extends MySqlAbstract
 			// Get a description of this section, and column names
 			w.append(getSectionDescriptionHtml(_shortRstm, true));
 
-			w.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
+			w.append("Row Count: " + _shortRstm.getRowCount() + " (the top " + getTopRows() + " on " + _measureText + ")&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
 
 			// The SQL Text is a "tooltip" in this table (the table below has it as text)
 			TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
@@ -146,8 +188,9 @@ extends MySqlAbstract
 		if (_sqlTextRstm != null)
 		{
 			w.append("<br>\n");
-			w.append("<details open> \n");
-			w.append("<summary>Details for above Statements, including SQL Text (click to collapse) </summary> \n");
+			// Open in the first section (TOTAL_TIME), closed in the others (the page gets very long otherwise)
+			w.append("<details" + (ReportType.TOTAL_TIME.equals(_reportType) ? " open" : "") + "> \n");
+			w.append("<summary>Details for above Statements, including SQL Text (click to open/close) </summary> \n");
 			w.append("<br>\n");
 			w.append("SQL Text by 'Digest', Row Count: " + _sqlTextRstm.getRowCount() + "\n");
 			w.append(toHtmlTable(_sqlTextRstm));
@@ -165,9 +208,7 @@ extends MySqlAbstract
 			// (type 'text/xmldata' is what dsrOpenLink() expects, the content is the JSON as text: the browser does not parse it)
 			for (Entry<String, String> plan : _planTexts.entrySet())
 			{
-				w.append("\n<script id='").append(plan.getKey()).append("' type='text/xmldata'>\n");
-				w.append(plan.getValue().replace("</script", "<\\/script"));
-				w.append("\n</script>\n");
+				ShowplanLinkBuilder.writePlanScript(w, plan.getKey(), plan.getValue());
 			}
 		}
 	}
@@ -248,7 +289,7 @@ extends MySqlAbstract
 	@Override
 	public String getSubject()
 	{
-		return "Top SQL Statements (order by: TotalTimeMs, origin: CmStatements / performance_schema.events_statements_summary_by_digest)";
+		return _reportType.subject();
 	}
 
 	@Override
@@ -285,22 +326,42 @@ extends MySqlAbstract
 		// "per execution" over the whole period: NULL when no execution was counted in the period
 		String perExec = " / nullif(sum([ExecCount]), 0)";
 
-		// The statements that are in the top ## on: time, rows examined or executions
+		//------------------------------------------------------------------------
+		// OVERVIEW: each statement's share of what all the statements did (see TopSqlOverview)
+		//------------------------------------------------------------------------
+		if (ReportType.OVERVIEW.equals(_reportType))
+		{
+			java.util.List<TopSqlOverview.Measure> measures = java.util.List.of(
+				new TopSqlOverview.Measure("total_time"   , "sum([TotalTimeMs])" , ReportType.TOTAL_TIME   .subject(), "TOTAL_TIME"   , false, "Share of all the statements' time, in percent"),
+				new TopSqlOverview.Measure("rows_examined", "sum([RowsExamined])", ReportType.ROWS_EXAMINED.subject(), "ROWS_EXAMINED", true , "Share of all the statements' rows examined, in percent"),
+				new TopSqlOverview.Measure("lock_time"    , "sum([LockTimeMs])"  , ReportType.LOCK_TIME    .subject(), "LOCK_TIME"    , true , "Share of all the statements' time waiting for locks, in percent"),
+				new TopSqlOverview.Measure("executions"   , "sum([ExecCount])"   , ReportType.EXECUTIONS   .subject(), "EXECUTIONS"   , false, "Share of all the statements' executions, in percent"));
+
+			_overview = TopSqlOverview.create(this, conn, "[CmStatements_diff]",
+					"where ([ExecCount] > 0 or [TotalTimeMs] > 0) \n" + sql_and_skipNewDiffRateRows + getReportPeriodSqlWhere(),
+					"[Digest]", "Digest", "max([SchemaName]) as [SchemaName], max([" + col_DigestText + "]) as [SqlText]", "SqlText", measures, getTopRows());
+			_shortRstm = _overview.getRstm();
+			if (hasDictCompCols)
+				updateDictionaryCompressedColumn(_shortRstm, conn, null, "CmStatements", "DigestText", "SqlText");
+
+			_overview.setDescription("time, rows examined, lock time and executions",
+					"the statements the collector recorded (the ones that ran in the last 30 minutes and of them the ones with most time, properties <code>CmStatements.sample.lastXminutes</code> and <code>CmStatements.sample.topRows</code>)");
+			return;
+		}
+
+		// This section's top ## on its measure (only statements that have some of it: no zero rows in "rows examined", "lock time")
 		// The same digest in several schemas: one row (the counters are summed), SchemaName is one of them
+		String having = "";
+		if      (ReportType.ROWS_EXAMINED.equals(_reportType)) having = "    having sum([RowsExamined]) > 0 \n";
+		else if (ReportType.LOCK_TIME    .equals(_reportType)) having = "    having sum([LockTimeMs])   > 0 \n";
 		String sql = getCmDiffColumnsAsSqlComment("CmStatements")
-			    + "select * \n"
-			    + "from ( \n"
-			    + "    select \n"
+			    + "    select top " + topRows + " \n"
 			    + "         [Digest] \n"
 			    + "        ,max([SchemaName])                                                                      as [SchemaName] \n"
 			    + "        ,count(distinct [SchemaName])                                                           as [schema_count] \n"
 			    + "        ,max([" + col_DigestText + "])                                                          as [SqlText] \n"
 			    + "        ,max([" + col_QuerySampleText + "])                                                     as [SampleText] \n"
 			    + "        ,cast('' as varchar(512))                                                               as [ExecPlan] \n"
-			    + " \n"
-			    + "        ,row_number() over (order by sum([TotalTimeMs])  desc)                                  as [rank_time] \n"
-			    + "        ,row_number() over (order by sum([RowsExamined]) desc)                                  as [rank_rows] \n"
-			    + "        ,row_number() over (order by sum([ExecCount])    desc)                                  as [rank_execs] \n"
 			    + " \n"
 			    + "        ,cast('' as varchar(512))                                                               as [ExecCount__chart] \n"
 			    + "        ,sum([ExecCount])                                                                       as [ExecCount__sum] \n"
@@ -350,11 +411,8 @@ extends MySqlAbstract
 			    + "  " + sql_and_skipNewDiffRateRows
 			    + "  " + getReportPeriodSqlWhere()
 			    + "    group by [Digest] \n"
-			    + ") x \n"
-			    + "where [rank_time]  <= " + topRows + " \n"
-			    + "   or [rank_rows]  <= " + topRows + " \n"
-			    + "   or [rank_execs] <= " + topRows + " \n"
-			    + "order by [rank_time] \n"
+			    + having
+			    + "    order by [" + _orderByCol + "] desc, [Digest] \n"   // tie-break on the key: the OVERVIEW does the same
 			    + "";
 
 		_shortRstm = executeQuery(conn, sql, true, "MySqlTopSql", false); // false = do not truncate (the SQL Text)
@@ -363,12 +421,13 @@ extends MySqlAbstract
 			return;
 
 		// Highlight sort column
-		_shortRstm.setHighlightSortColumns("TotalTimeMs__sum");
+		_shortRstm.setHighlightSortColumns(_orderByCol);
 
 		_shortRstm.setDescription(
 				"The SQL Statements that used most resources during the period (from the table <code>CmStatements_diff</code>).<br>" +
 				"A statement is the <b>normalized</b> statement (the 'digest': the values are replaced by '?'), so all executions of the same statement with other values are counted together.<br>" +
-				"It is listed if it is in the top " + topRows + " on <b>time</b>, <b>rows examined</b> or <b>executions</b> (the three <code>rank_</code> columns says where it's placed in each).<br>" +
+				"The top " + topRows + " on <b>" + _measureText + "</b> (ordered by: " + _orderByCol + "). " +
+				"There is one section like this for each of: time, rows examined, lock time and executions. A statement can be in several of them.<br>" +
 				"The <code>__chart</code> columns shows <b>when</b> during the period, in 10 minute chunks. <code>ExecCount__chart</code> is the number of executions, the others are the value <b>per execution</b> " +
 				"(a chunk where the statement ran, but no execution ended, is counted as one execution: MySQL counts an execution when it ends).<br>" +
 				"<b>Note</b>: The collector only records the statements that ran in the last 30 minutes, and of them the ones with most time (properties <code>CmStatements.sample.lastXminutes</code> and <code>CmStatements.sample.topRows</code>), every 5 minutes. " +
@@ -381,9 +440,6 @@ extends MySqlAbstract
 		_shortRstm.setColumnDescription("SqlText"               , "The normalized SQL Text: click to see it (it is also in the table below)");
 		_shortRstm.setColumnDescription("SampleText"            , "An example of the statement, with the values it had (QUERY_SAMPLE_TEXT)");
 		_shortRstm.setColumnDescription("ExecPlan"              , "The execution plan(s) the collector got while the statement was running (CmActiveStatements, only when the login has the privileges for it): click to see it in DbxCentral");
-		_shortRstm.setColumnDescription("rank_time"             , "Place in the list when it's sorted on time (1 = most)");
-		_shortRstm.setColumnDescription("rank_rows"             , "Place in the list when it's sorted on rows examined (1 = most)");
-		_shortRstm.setColumnDescription("rank_execs"            , "Place in the list when it's sorted on executions (1 = most)");
 		_shortRstm.setColumnDescription("ExecCount__chart"      , "Chart: number of executions, in 10 minute chunks\nSo you can see WHEN the statement was executed.");
 		_shortRstm.setColumnDescription("ExecCount__sum"        , "Number of executions");
 		_shortRstm.setColumnDescription("TotalTimeMs__chart"    , "Chart: time for ONE execution in milliseconds, in 10 minute chunks\nSo you can see when the statement was slower than normal.");
@@ -477,7 +533,7 @@ extends MySqlAbstract
 		// The "details" table: Digest + the charts and numbers of the statement (as a table in the cell) + the SQL Text
 		//--------------------------------------------------------------------------------
 		SimpleResultSet srs = new SimpleResultSet();
-		srs.addColumn("Digest",     Types.VARCHAR,       64, 0);
+		srs.addColumn("Info",       Types.VARCHAR,  1024*64, 0); // one narrow column: digest, schema, problems, plan + LLM advice links (as the ASE Info column)
 		srs.addColumn("sparklines", Types.VARCHAR,      512, 0);
 		srs.addColumn("query",      Types.VARCHAR, 1024*128, 0);
 
@@ -534,7 +590,7 @@ extends MySqlAbstract
 			String firstPlanId    = null;
 			for (int p = 0; p < plans.size(); p++)
 			{
-				String planElementId = "myplan_" + digest + "_" + (p + 1);
+				String planElementId = "myplan_" + _reportType + "_" + digest + "_" + (p + 1); // the section in the id: a statement can be in several sections
 				_planTexts.put(planElementId, plans.get(p));
 				if (firstPlanId == null)
 					firstPlanId = planElementId;
@@ -554,7 +610,7 @@ extends MySqlAbstract
 			// No plan: SAY so (as the other DBMS vendors does), a missing link leaves the reader wondering why
 			if (plans.isEmpty())
 			{
-				planLinks      = "Execution Plan <b>NOT Available</b> <i>(MySqlTune gets the plans of statements while they are running, and only when the login has the privileges for it: see the tab 'Active Statements')</i>";
+				planLinks      = "Execution Plan <b>NOT Available</b> " + infoLabel("", "MySqlTune gets the plans of statements while they are running, and only when the login has the privileges for it: see the tab 'Active Statements'");
 				shortPlanLinks = "--not-found--";
 			}
 			_shortRstm.setValueAtWithOverride(shortPlanLinks, r, pos_ExecPlan);
@@ -563,15 +619,16 @@ extends MySqlAbstract
 			// and the charts and numbers of the statement is read from the table in the "sparklines" cell (see SparklineHelper.getWorkloadHarvesterJs)
 			String llmAdviceLink = LlmSqlContextBuilder.buildAdviceLinkHtmlJs(dbxCentralBaseUrl, sqlText, firstPlanId, DbUtils.DB_PROD_NAME_MYSQL, reportSrvName, schemaName);
 
-			// Who and where: the schema it ran in, and the problems MySQL counted for it
-			String problems = "";
-			if (_shortRstm.getValueAsLong(r, "NoIndexUsed__sum"    , true, 0L) > 0) problems += "&emsp; No index used: <b>" + _shortRstm.getValueAsString(r, "NoIndexUsed__sum") + "</b> times";
-			if (_shortRstm.getValueAsLong(r, "TmpDiskTables__sum"  , true, 0L) > 0) problems += "&emsp; Temp tables on disk: <b>" + _shortRstm.getValueAsString(r, "TmpDiskTables__sum") + "</b>";
-			if (_shortRstm.getValueAsLong(r, "SortMergePasses__sum", true, 0L) > 0) problems += "&emsp; Sort merge passes: <b>" + _shortRstm.getValueAsString(r, "SortMergePasses__sum") + "</b>";
-			if (_shortRstm.getValueAsLong(r, "Errors__sum"         , true, 0L) > 0) problems += "&emsp; Errors: <b>" + _shortRstm.getValueAsString(r, "Errors__sum") + "</b>";
-
-			String executedIn = (StringUtil.hasValue(schemaName) ? "Schema: <code>" + StringEscapeUtils.escapeHtml4(schemaName) + "</code>" : "Schema: <i>none (no USE)</i>")
-			                  + problems;
+			// The Info column: the digest, the schema it ran in, the problems MySQL counted for it, the plan + LLM advice links
+			String info = infoCell(
+					  infoValue("Digest",              "Hash of the normalized statement (performance_schema DIGEST): the same statement with other literals gets the same digest", digest)
+					, infoValue("Schema",              null, StringUtil.hasValue(schemaName) ? "<code>" + StringEscapeUtils.escapeHtml4(schemaName) + "</code>" : "<i>none (no USE)</i>")
+					, infoValue("No index used",       null, _shortRstm.getValueAsLong(r, "NoIndexUsed__sum"    , true, 0L) > 0 ? _shortRstm.getValueAsString(r, "NoIndexUsed__sum") + " times" : "")
+					, infoValue("Temp tables on disk", null, _shortRstm.getValueAsLong(r, "TmpDiskTables__sum"  , true, 0L) > 0 ? _shortRstm.getValueAsString(r, "TmpDiskTables__sum")   : "")
+					, infoValue("Sort merge passes",   null, _shortRstm.getValueAsLong(r, "SortMergePasses__sum", true, 0L) > 0 ? _shortRstm.getValueAsString(r, "SortMergePasses__sum") : "")
+					, infoValue("Errors",              null, _shortRstm.getValueAsLong(r, "Errors__sum"         , true, 0L) > 0 ? _shortRstm.getValueAsString(r, "Errors__sum")          : "")
+					, planLinks
+					, llmAdviceLink);
 
 			// An example with the values (QUERY_SAMPLE_TEXT): closed, it can be long
 			String sample = "";
@@ -596,13 +653,10 @@ extends MySqlAbstract
 			String sparklines = htp.getHtmlTextForRow(r);
 
 			srs.addRow(
-					digest,
+					info,
 					sparklines,
 					"<xmp>" + sqlText + "</xmp>\n"
-						+ executedIn + " <br>\n"
 						+ sample
-						+ "<br>\n" + planLinks
-						+ (StringUtil.hasValue(llmAdviceLink) ? "<br>\n" + llmAdviceLink : "")
 						+ formatted);
 		}
 
