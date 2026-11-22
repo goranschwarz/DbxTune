@@ -52,6 +52,7 @@ import com.dbxtune.pcs.DictCompression;
 import com.dbxtune.pcs.inspection.ObjectLookupInspectorDb2;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.ShowplanLinkBuilder;
+import com.dbxtune.pcs.report.content.TopSqlOverview;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.AggType;
 import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
@@ -90,8 +91,23 @@ extends Db2Abstract
 	/** One section per measure (as SQL Server, ASE, Postgres, Oracle and MySQL): each with its own top statements */
 	public enum ReportType
 	{
-		STMT_TIME, CPU_TIME, ROWS_READ, PHYSICAL_READS, LOCK_WAIT, EXECUTIONS
+		OVERVIEW      ("largest_pct"),
+		STMT_TIME     ("STMT_EXEC_TIME_MS__sum"),
+		CPU_TIME      ("TOTAL_CPU_TIME_MS__sum"),
+		ROWS_READ     ("ROWS_READ__sum"),
+		PHYSICAL_READS("PHYSICAL_READS__sum"),
+		LOCK_WAIT     ("LOCK_WAIT_TIME_MS__sum"),
+		EXECUTIONS    ("NUM_EXECUTIONS__sum");
+
+		/** The column the section is ordered by (highlighted in the table) */
+		final String orderByCol;
+		ReportType(String orderByCol) { this.orderByCol = orderByCol; }
+
+		/** The section's subject: also its anchor in the report (the OVERVIEW links to the sections) */
+		String subject() { return "Top SQL Statements - " + name() + " (order by: " + orderByCol + ", origin: CmStatements / MON_GET_PKG_CACHE_STMT)"; }
 	};
+
+	private TopSqlOverview _overview;  // OVERVIEW: the shares of all the statements (see TopSqlOverview)
 
 	private ReportType _reportType;
 	private String     _orderByCol;    // the column the section is ordered by (highlighted in the table)
@@ -102,13 +118,15 @@ extends Db2Abstract
 	{
 		super(reportingInstance);
 		_reportType = reportType;
+		_orderByCol = reportType.orderByCol;
 
-		if      (ReportType.STMT_TIME     .equals(reportType)) { _orderByCol = "STMT_EXEC_TIME_MS__sum"; _measureText = "execution time";                   _noRowsText = "No statements were found."; }
-		else if (ReportType.CPU_TIME      .equals(reportType)) { _orderByCol = "TOTAL_CPU_TIME_MS__sum"; _measureText = "CPU time";                         _noRowsText = "No statements were found."; }
-		else if (ReportType.ROWS_READ     .equals(reportType)) { _orderByCol = "ROWS_READ__sum";         _measureText = "rows read";                        _noRowsText = "No statement read any rows in the period."; }
-		else if (ReportType.PHYSICAL_READS.equals(reportType)) { _orderByCol = "PHYSICAL_READS__sum";    _measureText = "physical reads (pages read from disk)"; _noRowsText = "No statement read any page from disk in the period."; }
-		else if (ReportType.LOCK_WAIT     .equals(reportType)) { _orderByCol = "LOCK_WAIT_TIME_MS__sum"; _measureText = "time waiting for locks";           _noRowsText = "No statement waited for locks in the period."; }
-		else if (ReportType.EXECUTIONS    .equals(reportType)) { _orderByCol = "NUM_EXECUTIONS__sum";    _measureText = "number of executions";             _noRowsText = "No statements were found."; }
+		if      (ReportType.OVERVIEW      .equals(reportType)) { _measureText = "their largest share of all the statements' time, CPU time, rows read, physical reads, lock wait time or executions"; _noRowsText = "No statements were found."; }
+		else if (ReportType.STMT_TIME     .equals(reportType)) { _measureText = "execution time";                   _noRowsText = "No statements were found."; }
+		else if (ReportType.CPU_TIME      .equals(reportType)) { _measureText = "CPU time";                         _noRowsText = "No statements were found."; }
+		else if (ReportType.ROWS_READ     .equals(reportType)) { _measureText = "rows read";                        _noRowsText = "No statement read any rows in the period."; }
+		else if (ReportType.PHYSICAL_READS.equals(reportType)) { _measureText = "physical reads (pages read from disk)"; _noRowsText = "No statement read any page from disk in the period."; }
+		else if (ReportType.LOCK_WAIT     .equals(reportType)) { _measureText = "time waiting for locks";           _noRowsText = "No statement waited for locks in the period."; }
+		else if (ReportType.EXECUTIONS    .equals(reportType)) { _measureText = "number of executions";             _noRowsText = "No statements were found."; }
 		else throw new IllegalArgumentException("Unhandled reportType='" + reportType + "'.");
 	}
 
@@ -122,7 +140,7 @@ extends Db2Abstract
 	public boolean hasShortMessageText()
 	{
 		// The mail has the STMT_TIME section only (as SQL Server: CPU_TIME), the other sections are in the full report
-		return ReportType.STMT_TIME.equals(_reportType);
+		return ReportType.STMT_TIME.equals(_reportType) || ReportType.OVERVIEW.equals(_reportType);
 	}
 
 	@Override
@@ -132,6 +150,13 @@ extends Db2Abstract
 		if (_shortRstm.getRowCount() == 0)
 		{
 			w.append(_noRowsText + "<br>\n");
+			return;
+		}
+
+		// The overview: one small table, the details are in the sections it links to
+		if (ReportType.OVERVIEW.equals(_reportType))
+		{
+			_overview.writeHtml(w, this, getTopRows());
 			return;
 		}
 
@@ -290,7 +315,7 @@ extends Db2Abstract
 	@Override
 	public String getSubject()
 	{
-		return "Top SQL Statements - " + _reportType + " (order by: " + _orderByCol + ", origin: CmStatements / MON_GET_PKG_CACHE_STMT)";
+		return _reportType.subject();
 	}
 
 	@Override
@@ -325,6 +350,31 @@ extends Db2Abstract
 
 		// "per execution" over the whole period: NULL when no execution was counted in the period
 		String perExec = " / nullif(sum([NUM_EXECUTIONS]), 0)";
+
+		//------------------------------------------------------------------------
+		// OVERVIEW: each statement's share of what all the statements did (see TopSqlOverview)
+		//------------------------------------------------------------------------
+		if (ReportType.OVERVIEW.equals(_reportType))
+		{
+			java.util.List<TopSqlOverview.Measure> measures = java.util.List.of(
+				new TopSqlOverview.Measure("stmt_time"     , "sum([STMT_EXEC_TIME_MS])" , ReportType.STMT_TIME     .subject(), "STMT_TIME"     , false, "Share of all the statements' execution time, in percent"),
+				new TopSqlOverview.Measure("cpu_time"      , "sum([TOTAL_CPU_TIME_MS])" , ReportType.CPU_TIME      .subject(), "CPU_TIME"      , false, "Share of all the statements' CPU time, in percent"),
+				new TopSqlOverview.Measure("rows_read"     , "sum([ROWS_READ])"         , ReportType.ROWS_READ     .subject(), "ROWS_READ"     , true , "Share of all the statements' rows read, in percent"),
+				new TopSqlOverview.Measure("physical_reads", "sum([PHYSICAL_READS])"    , ReportType.PHYSICAL_READS.subject(), "PHYSICAL_READS", true , "Share of all the statements' physical reads (pages read from disk), in percent"),
+				new TopSqlOverview.Measure("lock_wait"     , "sum([LOCK_WAIT_TIME_MS])" , ReportType.LOCK_WAIT     .subject(), "LOCK_WAIT"     , true , "Share of all the statements' time waiting for locks, in percent"),
+				new TopSqlOverview.Measure("executions"    , "sum([NUM_EXECUTIONS])"    , ReportType.EXECUTIONS    .subject(), "EXECUTIONS"    , false, "Share of all the statements' executions, in percent"));
+
+			_overview = TopSqlOverview.create(this, conn, "[CmStatements_diff]",
+					"where ([NUM_EXECUTIONS] > 0 or [STMT_EXEC_TIME_MS] > 0) \n" + sql_and_skipNewDiffRateRows + getReportPeriodSqlWhere(),
+					"[EXECUTABLE_ID]", "EXECUTABLE_ID", "max([" + col_StmtText + "]) as [SqlText]", "SqlText", measures, getTopRows());
+			_shortRstm = _overview.getRstm();
+			if (hasDictCompCols)
+				updateDictionaryCompressedColumn(_shortRstm, conn, null, "CmStatements", "STMT_TEXT", "SqlText");
+
+			_overview.setDescription("execution time, CPU time, rows read, physical reads, lock wait time and executions",
+					"the statements the collector recorded from the package cache (MON_GET_PKG_CACHE_STMT): a statement that left the package cache between two samples is missing");
+			return;
+		}
 
 		// This section's top ## on its measure (only statements that have some of it: no zero rows in "rows read", "physical reads", "lock wait")
 		// The same statement on several members (pureScale): one row (the counters are summed)
@@ -399,7 +449,7 @@ extends Db2Abstract
 			    + "  " + getReportPeriodSqlWhere()
 			    + "    group by [EXECUTABLE_ID] \n"
 			    + having
-			    + "    order by [" + _orderByCol + "] desc \n"
+			    + "    order by [" + _orderByCol + "] desc, [EXECUTABLE_ID] \n"   // tie-break on the key: the OVERVIEW does the same
 			    + "";
 
 		_shortRstm = executeQuery(conn, sql, true, "Db2TopSql", false); // false = do not truncate (the SQL Text)

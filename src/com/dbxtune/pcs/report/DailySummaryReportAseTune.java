@@ -87,6 +87,7 @@ extends DailySummaryReportDefault
 		// SQL: from mon SysStatements...
 		addReportEntry( new AseCmSqlStatementPerDb(this)    );
 		addReportEntry( new AseCmSqlStatement(this)         );
+		addReportEntry( new AseTopSlowNormalizedSql(this, AseTopSlowNormalizedSql.ReportType.OVERVIEW)   ); // the share of all captured statements' CPU, waits, reads: links to the sections below
 		addReportEntry( new AseTopSlowNormalizedSql(this, AseTopSlowNormalizedSql.ReportType.CPU_TIME)   );
 		addReportEntry( new AseTopSlowNormalizedSql(this, AseTopSlowNormalizedSql.ReportType.WAIT_TIME)  );
 		addReportEntry( new AseTopSlowSqlText(this)         );
@@ -96,6 +97,7 @@ extends DailySummaryReportDefault
 		// SQL: from Cm's
 		addReportEntry( new AseStatementCacheUsageOverview(this) ); // This isn't really SQL, but statistics/charts on the Statement Cache
 		addReportEntry( new AseStmntCacheHistory(this) );
+		addReportEntry( new AseTopCmStmntCacheDetails(this, AseTopCmStmntCacheDetails.ReportType.OVERVIEW) ); // the share of all cached statements' CPU, waits, executions: links to the sections below
 		addReportEntry( new AseTopCmStmntCacheDetails(this, AseTopCmStmntCacheDetails.ReportType.CPU_TIME) );
 		addReportEntry( new AseTopCmStmntCacheDetails(this, AseTopCmStmntCacheDetails.ReportType.CPU_TIME_BELOW_NORMALIZED_SQL_THRESHOLD) );
 		addReportEntry( new AseTopCmStmntCacheDetails(this, AseTopCmStmntCacheDetails.ReportType.USE_COUNT) );

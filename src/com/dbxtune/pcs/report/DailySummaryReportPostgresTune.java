@@ -86,6 +86,7 @@ extends DailySummaryReportDefault
 
 		// SQL
 		addReportEntry( new PostgresStatementsPerDb(this) );
+		addReportEntry( new PostgresTopSql         (this, PostgresTopSql.ReportType.OVERVIEW  ) );   // the share of all statements' time, reads...: links to the sections below
 		addReportEntry( new PostgresTopSql         (this, PostgresTopSql.ReportType.TOTAL_TIME) );   // one section per measure (as SQL Server and ASE)
 		addReportEntry( new PostgresTopSql         (this, PostgresTopSql.ReportType.DISK_READS) );
 		addReportEntry( new PostgresTopSql         (this, PostgresTopSql.ReportType.TEMP      ) );

@@ -94,6 +94,7 @@ extends DailySummaryReportDefault
 		addReportEntry( new SqlServerIndexOpSumPerDb        (this));
 //		addReportEntry( new SqlServerTopCmExecQueryStatsDb  (this)); // Older version of the "DB" statistics
 		addReportEntry( new SqlServerTopCmExecQueryStatPerDb(this));
+		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.OVERVIEW));   // the share of all statements' CPU, waits, reads...: links to the sections below
 		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.CPU_TIME));
 		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.EST_WAIT_TIME));
 		addReportEntry( new SqlServerTopCmExecQueryStats    (this, SqlServerTopCmExecQueryStats.ReportType.TEMPDB_SPILLS));

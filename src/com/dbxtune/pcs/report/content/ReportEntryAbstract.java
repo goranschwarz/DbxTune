@@ -1161,6 +1161,55 @@ implements IReportEntry
 		return lbl + "<br><b>" + val + "</b>";
 	}
 
+	/**
+	 * A link to another section that also marks the row of a statement there (the "Top SQL Overview" links to the measure sections).
+	 * The section is opened if it is collapsed, the rows (in all its tables) that has <code>rowId</code> in a cell are marked, and the first one is scrolled to.
+	 * Needs {@link #GOTO_ROW_JS} once in the page. Without JavaScript it is a plain link to the section.
+	 *
+	 * @param sectionSubject  the subject of the section (its anchor is made from it, as in the table of contents)
+	 * @param linkText        the text of the link
+	 * @param rowId           the id of the statement (queryid, SQL_ID, digest...): a cell with this value (digits compared without thousands separators) marks its row
+	 */
+	public static String sectionRowLink(String sectionSubject, String linkText, String rowId)
+	{
+		return "<a href='#" + StringUtil.stripAllNonAlphaNum(sectionSubject) + "' data-row-id=\"" + StringEscapeUtils.escapeHtml4(StringUtil.nullToValue(rowId, "")) + "\" "
+				+ "onclick='return typeof dsrGoToRow === \"function\" ? dsrGoToRow(this) : true;'>" + linkText + "</a>";
+	}
+
+	/** The JavaScript for {@link #sectionRowLink(String, String, String)}: write it once in the page (writing it twice does no harm) */
+	public static final String GOTO_ROW_JS = ""
+			+ "<script>\n"
+			+ "function dsrGoToRow(a)\n"
+			+ "{\n"
+			+ "    try {\n"
+			+ "        var sec = document.getElementById(a.getAttribute('href').substring(1));\n"
+			+ "        var id  = a.getAttribute('data-row-id') || '';\n"
+			+ "        if (!sec || !id) return true;\n"
+			+ "        // open the section if it is collapsed\n"
+			+ "        sec.querySelectorAll('.collapse').forEach(function(c) { c.classList.add('show'); });\n"
+			+ "        // forget the previous mark\n"
+			+ "        document.querySelectorAll('tr.dsr-row-mark').forEach(function(tr) { tr.classList.remove('dsr-row-mark'); tr.style.background = ''; tr.style.outline = ''; });\n"
+			+ "        // a number is shown with thousands separators (and maybe a unicode minus): compare the digits only\n"
+			+ "        var digits = function(s) { return s.replace(/\\u2212/g, '-').replace(/[^0-9a-zA-Z-]/g, ''); };\n"
+			+ "        var want = digits(id), first = null;\n"
+			+ "        sec.querySelectorAll('td, b').forEach(function(el) {\n"
+			+ "            if (el.children.length > 0 && el.tagName == 'TD') return;   // only cells with the value itself\n"
+			+ "            if (digits(el.textContent) !== want) return;\n"
+			+ "            var tr = el.closest('tr');\n"
+			+ "            if (!tr || tr.classList.contains('dsr-row-mark')) return;\n"
+			+ "            tr.classList.add('dsr-row-mark');\n"
+			+ "            tr.style.background = '#fff3b0';\n"
+			+ "            tr.style.outline    = '2px solid #f0ad4e';\n"
+			+ "            if (!first && tr.offsetParent !== null) first = tr;   // the first one that is visible (a closed <details> hides the rest)\n"
+			+ "        });\n"
+			+ "        if (!first) return true;   // not found: just go to the section\n"
+			+ "        history.replaceState(null, '', a.getAttribute('href'));\n"
+			+ "        first.scrollIntoView({ behavior: 'smooth', block: 'center' });\n"
+			+ "        return false;\n"
+			+ "    } catch (e) { console.log('dsrGoToRow: ' + e); return true; }\n"
+			+ "}\n"
+			+ "</script>\n";
+
 	/** A small gray label with an (i): hover (or tap) shows what it means */
 	public static String infoLabel(String label, String explanation)
 	{

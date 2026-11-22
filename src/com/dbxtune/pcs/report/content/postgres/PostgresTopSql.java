@@ -42,6 +42,7 @@ import com.dbxtune.gui.ResultSetTableModel.TableStringRenderer;
 import com.dbxtune.pcs.DictCompression;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.SparklineHelper;
+import com.dbxtune.pcs.report.content.TopSqlOverview;
 import com.dbxtune.pcs.report.content.SparklineHelper.AggType;
 import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
 import com.dbxtune.pcs.report.content.SparklineHelper.SparkLineParams;
@@ -76,11 +77,25 @@ extends PostgresAbstract
 	/** One section per measure (as SQL Server and ASE): each with its own top statements */
 	public enum ReportType
 	{
-		TOTAL_TIME, DISK_READS, TEMP, WAL, CALLS, PLAN_TIME
+		OVERVIEW  ("largest_pct"),
+		TOTAL_TIME("total_time__sum"),
+		DISK_READS("shared_blks_read__sum"),
+		TEMP      ("temp_blks_written__sum"),
+		WAL       ("wal_mb__sum"),
+		CALLS     ("calls__sum"),
+		PLAN_TIME ("plan_time__sum");
+
+		/** The column the section is ordered by (highlighted in the table) */
+		final String orderByCol;
+		ReportType(String orderByCol) { this.orderByCol = orderByCol; }
+
+		/** The section's subject: also its anchor in the report (the Overview links to the sections) */
+		String subject() { return "Top SQL Statements - " + name() + " (order by: " + orderByCol + ", origin: pg_stat_statements)"; }
 	};
 
-	private ReportType _reportType;
-	private String     _orderByCol;    // the column the section is ordered by (highlighted in the table)
+	private ReportType  _reportType;
+	private TopSqlOverview _overview;  // OVERVIEW: the shares of all the statements (see TopSqlOverview)
+	private String      _orderByCol;    // the column the section is ordered by (highlighted in the table)
 	private String     _measureText;   // what the section is about, in words
 	private String     _noRowsText;    // when no statement has anything of it
 
@@ -88,13 +103,15 @@ extends PostgresAbstract
 	{
 		super(reportingInstance);
 		_reportType = reportType;
+		_orderByCol = reportType.orderByCol;
 
-		if      (ReportType.TOTAL_TIME.equals(reportType)) { _orderByCol = "total_time__sum";       _measureText = "total execution time";                                           _noRowsText = "No statements were found."; }
-		else if (ReportType.DISK_READS.equals(reportType)) { _orderByCol = "shared_blks_read__sum"; _measureText = "blocks read outside shared_buffers (shared_blks_read)";        _noRowsText = "No statement read any block outside shared_buffers in the period."; }
-		else if (ReportType.TEMP      .equals(reportType)) { _orderByCol = "temp_blks_written__sum";_measureText = "temp blocks written (sorts and hashes that did not fit in work_mem)"; _noRowsText = "No statement wrote any temp blocks in the period (all sorts and hashes fit in work_mem)."; }
-		else if (ReportType.WAL       .equals(reportType)) { _orderByCol = "wal_mb__sum";           _measureText = "WAL written";                                                    _noRowsText = "No statement wrote any WAL in the period (or Postgres is older than 13: pg_stat_statements has no WAL counters)."; }
-		else if (ReportType.CALLS     .equals(reportType)) { _orderByCol = "calls__sum";            _measureText = "number of calls";                                                _noRowsText = "No statements were found."; }
-		else if (ReportType.PLAN_TIME .equals(reportType)) { _orderByCol = "plan_time__sum";        _measureText = "planning time";                                                  _noRowsText = "No planning time was recorded in the period (Postgres 13 and above, with <code>pg_stat_statements.track_planning = on</code>)."; }
+		if      (ReportType.OVERVIEW  .equals(reportType)) { _measureText = "their largest share of all the statements' time, disk reads, temp, WAL, calls or planning time"; _noRowsText = "No statements were found."; }
+		else if (ReportType.TOTAL_TIME.equals(reportType)) { _measureText = "total execution time";                                           _noRowsText = "No statements were found."; }
+		else if (ReportType.DISK_READS.equals(reportType)) { _measureText = "blocks read outside shared_buffers (shared_blks_read)";        _noRowsText = "No statement read any block outside shared_buffers in the period."; }
+		else if (ReportType.TEMP      .equals(reportType)) { _measureText = "temp blocks written (sorts and hashes that did not fit in work_mem)"; _noRowsText = "No statement wrote any temp blocks in the period (all sorts and hashes fit in work_mem)."; }
+		else if (ReportType.WAL       .equals(reportType)) { _measureText = "WAL written";                                                    _noRowsText = "No statement wrote any WAL in the period (or Postgres is older than 13: pg_stat_statements has no WAL counters)."; }
+		else if (ReportType.CALLS     .equals(reportType)) { _measureText = "number of calls";                                                _noRowsText = "No statements were found."; }
+		else if (ReportType.PLAN_TIME .equals(reportType)) { _measureText = "planning time";                                                  _noRowsText = "No planning time was recorded in the period (Postgres 13 and above, with <code>pg_stat_statements.track_planning = on</code>)."; }
 		else throw new IllegalArgumentException("Unhandled reportType='" + reportType + "'.");
 	}
 
@@ -107,8 +124,8 @@ extends PostgresAbstract
 	@Override
 	public boolean hasShortMessageText()
 	{
-		// The mail has the TOTAL_TIME section only (as SQL Server: CPU_TIME), the other sections are in the full report
-		return ReportType.TOTAL_TIME.equals(_reportType);
+		// The mail has the OVERVIEW and the TOTAL_TIME section (as SQL Server: CPU_TIME), the other sections are in the full report
+		return ReportType.OVERVIEW.equals(_reportType) || ReportType.TOTAL_TIME.equals(_reportType);
 	}
 
 //	@Override
@@ -125,6 +142,11 @@ extends PostgresAbstract
 		if (_shortRstm.getRowCount() == 0)
 		{
 			sb.append(_noRowsText + "<br>\n");
+		}
+		else if (ReportType.OVERVIEW.equals(_reportType))
+		{
+			// The overview: one small table, the details are in the sections it links to
+			_overview.writeHtml(sb, this, getTopRows());
 		}
 		else
 		{
@@ -271,7 +293,7 @@ extends PostgresAbstract
 	@Override
 	public String getSubject()
 	{
-		return "Top SQL Statements - " + _reportType + " (order by: " + _orderByCol + ", origin: pg_stat_statements)";
+		return _reportType.subject();
 	}
 
 	@Override
@@ -286,7 +308,8 @@ extends PostgresAbstract
 		// The statement is named by queryid (+ datname, usename); NOT the 'query' column
 		return llmDigestRows(_shortRstm, 10, "queryid", "datname", "usename", "calls__sum", "total_time__sum", "total_time__per_call",
 				"rows__sum", "cache_hit_pct__avg", "logical_reads__per_call", "shared_blks_read__sum", "temp_blks_written__sum",
-				"wal_mb__sum", "plan_time__sum", "blk_read_time__per_call");
+				"wal_mb__sum", "plan_time__sum", "blk_read_time__per_call",
+				"largest_pct", "pct_time", "pct_disk_reads", "pct_temp", "pct_wal", "pct_calls", "pct_plan_time"); // the OVERVIEW section
 	}
 
 	/**
@@ -426,6 +449,40 @@ extends PostgresAbstract
 		boolean hasWal  = stmtCols.contains("wal_bytes");
 		boolean hasPlan = stmtCols.contains("total_plan_time");
 
+		//------------------------------------------------------------------------
+		// OVERVIEW: each statement's share of all the statements' time, disk reads, temp, WAL, calls and planning time (see TopSqlOverview)
+		//------------------------------------------------------------------------
+		if (ReportType.OVERVIEW.equals(_reportType))
+		{
+			List<TopSqlOverview.Measure> measures = List.of(
+				new TopSqlOverview.Measure("time"      , "sum([total_time])"                        , ReportType.TOTAL_TIME.subject(), "TOTAL_TIME", false, "Share of all the statements' total time, in percent"),
+				new TopSqlOverview.Measure("disk_reads", "sum([shared_blks_read])"                  , ReportType.DISK_READS.subject(), "DISK_READS", true , "Share of all the statements' disk reads (shared_blks_read: blocks read outside shared_buffers), in percent"),
+				new TopSqlOverview.Measure("temp"      , "sum([temp_blks_written])"                 , ReportType.TEMP      .subject(), "TEMP"      , true , "Share of all the statements' temp blocks written, in percent"),
+				new TopSqlOverview.Measure("wal"       , hasWal  ? "sum([wal_bytes])"       : null  , ReportType.WAL       .subject(), "WAL"       , true , "Share of all the statements' WAL written, in percent (Postgres 13 and above)"),
+				new TopSqlOverview.Measure("calls"     , "sum([calls])"                             , ReportType.CALLS     .subject(), "CALLS"     , false, "Share of all the statements' calls, in percent"),
+				new TopSqlOverview.Measure("plan_time" , hasPlan ? "sum([total_plan_time])" : null  , ReportType.PLAN_TIME .subject(), "PLAN_TIME" , true , "Share of all the statements' planning time, in percent (Postgres 13 and above, pg_stat_statements.track_planning = on)"));
+
+			_overview = TopSqlOverview.create(this, conn, "[CmPgStatements_diff]",
+					"where [calls] > 0 \n" + skip_dbname + skip_username + getReportPeriodSqlWhere(),
+					"[datname], [usename], [queryid]", "queryid", "min([" + col_query + "]) as [query]", "query", measures, topRows);
+			_shortRstm = _overview.getRstm();
+
+			// The query text is "Dictionary Compressed": get the real text
+			if (hasDictCompCols)
+			{
+				int pos_query = _shortRstm.findColumn("query");
+				for (int r = 0; r < _shortRstm.getRowCount(); r++)
+				{
+					try { _shortRstm.setValueAtWithOverride(DictCompression.getValueForHashId(conn, null, "CmPgStatements", "query", _shortRstm.getValueAsString(r, pos_query)), r, pos_query); }
+					catch (SQLException ex) { _logger.warn("Problems getting the Dictionary Compressed 'query' for the Top SQL Overview.", ex); }
+				}
+			}
+
+			_overview.setDescription("time, disk reads (shared_blks_read), temp written, WAL, calls and planning time",
+					"the statements pg_stat_statements kept (setting <code>pg_stat_statements.max</code>), in the databases and users that are not skipped");
+			return;
+		}
+
 		// No WAL / planning counters recorded (Postgres before 13): nothing to show in that section
 		if ( (ReportType.WAL.equals(_reportType) && !hasWal) || (ReportType.PLAN_TIME.equals(_reportType) && !hasPlan) )
 		{
@@ -528,7 +585,7 @@ extends PostgresAbstract
 				+ getReportPeriodSqlWhere()
 			    + "group by [datname], [usename], [queryid] \n"
 			    + having
-			    + "order by [" + _orderByCol + "] desc \n"
+			    + "order by [" + _orderByCol + "] desc, [datname], [usename], [queryid] \n"   // tie-break on the key: the OVERVIEW does the same
 			    + "";
 
 		_shortRstm = executeQuery(conn, sql, false, "Top SQL");

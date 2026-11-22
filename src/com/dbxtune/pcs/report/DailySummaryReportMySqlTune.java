@@ -52,6 +52,7 @@ extends DailySummaryReportDefault
 		addReportEntry( new MySqlWaitStats(this)         );
 
 		// SQL, Tables, Long Running and Blocking
+		addReportEntry( new MySqlTopSql(this, MySqlTopSql.ReportType.OVERVIEW     ) );   // the share of all statements' time, rows...: links to the sections below
 		addReportEntry( new MySqlTopSql(this, MySqlTopSql.ReportType.TOTAL_TIME   ) );   // one section per measure (as SQL Server, ASE and Postgres)
 		addReportEntry( new MySqlTopSql(this, MySqlTopSql.ReportType.ROWS_EXAMINED) );
 		addReportEntry( new MySqlTopSql(this, MySqlTopSql.ReportType.LOCK_TIME    ) );

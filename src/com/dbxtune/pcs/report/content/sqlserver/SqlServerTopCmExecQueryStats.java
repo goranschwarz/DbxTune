@@ -46,6 +46,7 @@ import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.AggType;
 import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
 import com.dbxtune.pcs.report.content.SparklineHelper.SparkLineParams;
+import com.dbxtune.pcs.report.content.TopSqlOverview;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.DbUtils;
@@ -64,16 +65,26 @@ extends SqlServerAbstract
 
 	public enum ReportType
 	{
-		CPU_TIME, 
-		EST_WAIT_TIME,
-		TEMPDB_SPILLS,
-		LOGICAL_READS,
-		LOGICAL_WRITES,
-		PHYSICAL_READS,
-		EXECUTION_COUNT,
+		OVERVIEW        ("[largest_pct]"),                   // the share of all the statements' CPU, waits, reads...: links to the sections below (see TopSqlOverview)
+		CPU_TIME        ("[total_worker_time_ms__sum]"),
+		EST_WAIT_TIME   ("[total_est_wait_time_ms__sum]"),
+		TEMPDB_SPILLS   ("[total_spills__sum]"),
+		LOGICAL_READS   ("[total_logical_reads__sum]"),
+		LOGICAL_WRITES  ("[total_logical_writes__sum]"),
+		PHYSICAL_READS  ("[total_physical_reads__sum]"),
+		EXECUTION_COUNT ("[execution_count__sum]"),
 //		RECENTLY_COMPILED,
-		MEMORY_GRANTS,
+		MEMORY_GRANTS   ("[total_grant_kb__sum]");
+
+		/** The column the section is ordered by */
+		final String orderByCol;
+		ReportType(String orderByCol) { this.orderByCol = orderByCol; }
+
+		/** The section's subject: also its anchor in the report (the OVERVIEW links to the sections) */
+		String subject() { return "Top SQL Statements - " + name() + " (order by: " + orderByCol + ", origin: CmExecQueryStats/dm_exec_query_stats)"; }
 	};
+
+	private TopSqlOverview _overview;  // OVERVIEW: the shares of all the statements (see TopSqlOverview)
 	
 	private ResultSetTableModel _shortRstm;
 	private ResultSetTableModel _sqTextRstm;                  // only used for CPU_TIME, to fill in a "sub" table with ExecTime and SQL Text (easier for mail client)
@@ -90,16 +101,8 @@ extends SqlServerAbstract
 
 		_reportType = reportType;
 
-		if      (ReportType.CPU_TIME            .equals(_reportType)) { _sqlOrderByCol = "[total_worker_time_ms__sum]";   _sqlHaving = ""; }
-		else if (ReportType.EST_WAIT_TIME       .equals(_reportType)) { _sqlOrderByCol = "[total_est_wait_time_ms__sum]"; _sqlHaving = ""; }
-		else if (ReportType.TEMPDB_SPILLS       .equals(_reportType)) { _sqlOrderByCol = "[total_spills__sum]";           _sqlHaving = "having sum([total_spills]) > 0 \n"; }
-		else if (ReportType.LOGICAL_READS       .equals(_reportType)) { _sqlOrderByCol = "[total_logical_reads__sum]";    _sqlHaving = ""; }
-		else if (ReportType.LOGICAL_WRITES      .equals(_reportType)) { _sqlOrderByCol = "[total_logical_writes__sum]";   _sqlHaving = ""; }
-		else if (ReportType.PHYSICAL_READS      .equals(_reportType)) { _sqlOrderByCol = "[total_physical_reads__sum]";   _sqlHaving = ""; }
-		else if (ReportType.EXECUTION_COUNT     .equals(_reportType)) { _sqlOrderByCol = "[execution_count__sum]";        _sqlHaving = ""; }
-//		else if (ReportType.RECENTLY_COMPILED   .equals(_reportType)) { _sqlOrderByCol = "[]";                            _sqlHaving = ""; }
-		else if (ReportType.MEMORY_GRANTS       .equals(_reportType)) { _sqlOrderByCol = "[total_grant_kb__sum]";         _sqlHaving = ""; }
-		else throw new IllegalArgumentException("Unhandled reportType='" + reportType + "'.");
+		_sqlOrderByCol = reportType.orderByCol;
+		_sqlHaving     = ReportType.TEMPDB_SPILLS.equals(reportType) ? "having sum([total_spills]) > 0 \n" : "";
 	}
 
 	@Override
@@ -111,7 +114,7 @@ extends SqlServerAbstract
 	@Override
 	public boolean hasShortMessageText()
 	{
-		if (ReportType.CPU_TIME.equals(_reportType)) 
+		if (ReportType.CPU_TIME.equals(_reportType) || ReportType.OVERVIEW.equals(_reportType))
 			return true;
 
 		return false;
@@ -127,6 +130,16 @@ extends SqlServerAbstract
 	public void writeMessageText(Writer sb, MessageType messageType)
 	throws IOException
 	{
+		// The overview: one small table, the details are in the sections it links to
+		if (ReportType.OVERVIEW.equals(_reportType))
+		{
+			if (_overview == null || _overview.getRstm().getRowCount() == 0)
+				sb.append("No statements were found.<br>\n");
+			else
+				_overview.writeHtml(sb, this, getTopRows());
+			return;
+		}
+
 		if (isFullMessageType())
 		{
 			// Get a description of this section, and column names
@@ -250,7 +263,7 @@ extends SqlServerAbstract
 	@Override
 	public String getSubject()
 	{
-		return "Top SQL Statements - " + _reportType + " (order by: " + _sqlOrderByCol + ", origin: CmExecQueryStats/dm_exec_query_stats)";
+		return _reportType.subject();
 	}
 
 	@Override
@@ -452,6 +465,48 @@ extends SqlServerAbstract
 
 		// Used by "sparkline" charts to filter out "new diff/rate" rows
 		String whereFilter_skipNewDiffRateRows = !skipNewDiffRateRows ? "" : sql_and_skipNewOrDiffRateRows;
+
+		//------------------------------------------------------------------------
+		// OVERVIEW: each statement's share of all the statements' CPU, waits, spills, reads, writes, executions and memory grants (see TopSqlOverview)
+		//------------------------------------------------------------------------
+		if (ReportType.OVERVIEW.equals(_reportType))
+		{
+			boolean hasDcc = false;
+			try { hasDcc = DictCompression.hasCompressedColumnNames(conn, null, "CmExecQueryStats_diff"); }
+			catch (SQLException ex) { _logger.error("Problems checking for Dictionary Compressed Columns in table 'CmExecQueryStats_diff'.", ex); }
+
+			boolean hasSpills = dummyRstm.hasColumnNoCase("total_spills");
+			boolean hasGrant  = dummyRstm.hasColumnNoCase("total_grant_kb");
+			java.util.List<TopSqlOverview.Measure> measures = java.util.List.of(
+				new TopSqlOverview.Measure("cpu_time"      , "sum([total_worker_time])"                                             , ReportType.CPU_TIME       .subject(), "CPU_TIME"       , false, "Share of all the statements' CPU time (worker time), in percent"),
+				new TopSqlOverview.Measure("est_wait_time" , "greatest(sum([total_elapsed_time]) - sum([total_worker_time]), 0)"    , ReportType.EST_WAIT_TIME  .subject(), "EST_WAIT_TIME"  , false, "Share of all the statements' estimated wait time (elapsed - CPU), in percent"),
+				new TopSqlOverview.Measure("tempdb_spills" , hasSpills ? "sum([total_spills])"    : null                            , ReportType.TEMPDB_SPILLS  .subject(), "TEMPDB_SPILLS"  , true , "Share of all the statements' tempdb spills, in percent (SQL Server 2016 SP2 and above)"),
+				new TopSqlOverview.Measure("logical_reads" , "sum([total_logical_reads])"                                           , ReportType.LOGICAL_READS  .subject(), "LOGICAL_READS"  , false, "Share of all the statements' logical reads, in percent"),
+				new TopSqlOverview.Measure("logical_writes", "sum([total_logical_writes])"                                          , ReportType.LOGICAL_WRITES .subject(), "LOGICAL_WRITES" , false, "Share of all the statements' logical writes, in percent"),
+				new TopSqlOverview.Measure("physical_reads", "sum([total_physical_reads])"                                          , ReportType.PHYSICAL_READS .subject(), "PHYSICAL_READS" , false, "Share of all the statements' physical reads, in percent"),
+				new TopSqlOverview.Measure("executions"    , "sum([execution_count])"                                               , ReportType.EXECUTION_COUNT.subject(), "EXECUTION_COUNT", false, "Share of all the statements' executions, in percent"),
+				new TopSqlOverview.Measure("memory_grants" , hasGrant  ? "sum([total_grant_kb])"  : null                            , ReportType.MEMORY_GRANTS  .subject(), "MEMORY_GRANTS"  , false, "Share of all the statements' memory grants, in percent (SQL Server 2016 and above)"));
+
+			_overview = TopSqlOverview.create(this, conn, "[CmExecQueryStats_diff]",
+					"where 1 = 1 \n" + whereFilter_skipNewDiffRateRows + "  and [execution_count] > 0 \n" + getReportPeriodSqlWhere(),
+					"[dbname], [query_hash]", "query_hash", "max([object_name]) as [ProcName], max([" + (hasDcc ? "SqlText$dcc$" : "SqlText") + "]) as [SqlText]", "SqlText", measures, getTopRows());
+			_shortRstm = _overview.getRstm();
+
+			// The SQL Text is "Dictionary Compressed": get the real text
+			if (hasDcc)
+			{
+				int pos = _shortRstm.findColumn("SqlText");
+				for (int r = 0; r < _shortRstm.getRowCount(); r++)
+				{
+					try { _shortRstm.setValueAtWithOverride(DictCompression.getValueForHashId(conn, null, "CmExecQueryStats", "SqlText", _shortRstm.getValueAsString(r, pos)), r, pos); }
+					catch (SQLException ex) { _logger.warn("Problems getting the Dictionary Compressed 'SqlText' for the Top SQL Overview.", ex); }
+				}
+			}
+
+			_overview.setDescription("CPU time, estimated wait time, tempdb spills, logical reads, logical writes, physical reads, executions and memory grants",
+					"the statements in the plan cache that the collector recorded (CmExecQueryStats / dm_exec_query_stats): a statement whose plan was removed from the cache between two samples is missing");
+			return;
+		}
 		
 //		TODO; // add cpu_efficiency_pct = total_worker_time / avg_dop / total_elapsed_time * 100.0
 //		TODO; // same thing for Query Store
@@ -658,7 +713,7 @@ extends SqlServerAbstract
 				+ getReportPeriodSqlWhere()
 				+ "group by [dbname], [query_hash] \n"
 				+ _sqlHaving
-				+ "order by " + _sqlOrderByCol + " desc \n"
+				+ "order by " + _sqlOrderByCol + " desc, [dbname], [query_hash] \n"   // tie-break on the key: the OVERVIEW does the same
 			    + "";
 
 		// For some REPORT TYPES, we need specififc columns... if not found... simply DO NOT RUN!

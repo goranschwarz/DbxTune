@@ -48,6 +48,7 @@ import com.dbxtune.pcs.DictCompression;
 import com.dbxtune.pcs.inspection.ObjectLookupInspectorOracle;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.ShowplanLinkBuilder;
+import com.dbxtune.pcs.report.content.TopSqlOverview;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.AggType;
 import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
@@ -79,8 +80,22 @@ extends OracleAbstract
 	/** One section per measure (as SQL Server, ASE and Postgres): each with its own top statements */
 	public enum ReportType
 	{
-		ELAPSED_TIME, CPU_TIME, BUFFER_GETS, DISK_READS, EXECUTIONS
+		OVERVIEW    ("largest_pct"),
+		ELAPSED_TIME("ELAPSED_TIME_ms__sum"),
+		CPU_TIME    ("CPU_TIME_ms__sum"),
+		BUFFER_GETS ("BUFFER_GETS__sum"),
+		DISK_READS  ("DISK_READS__sum"),
+		EXECUTIONS  ("EXECUTIONS__sum");
+
+		/** The column the section is ordered by (highlighted in the table) */
+		final String orderByCol;
+		ReportType(String orderByCol) { this.orderByCol = orderByCol; }
+
+		/** The section's subject: also its anchor in the report (the OVERVIEW links to the sections) */
+		String subject() { return "Top SQL Statements - " + name() + " (order by: " + orderByCol + ", origin: CmSqlStats / V$SQLSTATS)"; }
 	};
+
+	private TopSqlOverview _overview;  // OVERVIEW: the shares of all the statements (see TopSqlOverview)
 
 	private ReportType _reportType;
 	private String     _orderByCol;    // the column the section is ordered by (highlighted in the table)
@@ -91,12 +106,14 @@ extends OracleAbstract
 	{
 		super(reportingInstance);
 		_reportType = reportType;
+		_orderByCol = reportType.orderByCol;
 
-		if      (ReportType.ELAPSED_TIME.equals(reportType)) { _orderByCol = "ELAPSED_TIME_ms__sum"; _measureText = "elapsed time (CPU + waits)";         _noRowsText = "No statements were found."; }
-		else if (ReportType.CPU_TIME    .equals(reportType)) { _orderByCol = "CPU_TIME_ms__sum";     _measureText = "CPU time";                           _noRowsText = "No statements were found."; }
-		else if (ReportType.BUFFER_GETS .equals(reportType)) { _orderByCol = "BUFFER_GETS__sum";     _measureText = "buffer gets (logical reads)";        _noRowsText = "No statements were found."; }
-		else if (ReportType.DISK_READS  .equals(reportType)) { _orderByCol = "DISK_READS__sum";      _measureText = "disk reads (blocks read from disk)"; _noRowsText = "No statement read any block from disk in the period."; }
-		else if (ReportType.EXECUTIONS  .equals(reportType)) { _orderByCol = "EXECUTIONS__sum";      _measureText = "number of executions";               _noRowsText = "No statements were found."; }
+		if      (ReportType.OVERVIEW    .equals(reportType)) { _measureText = "their largest share of all the statements' elapsed time, CPU time, buffer gets, disk reads or executions"; _noRowsText = "No statements were found."; }
+		else if (ReportType.ELAPSED_TIME.equals(reportType)) { _measureText = "elapsed time (CPU + waits)";         _noRowsText = "No statements were found."; }
+		else if (ReportType.CPU_TIME    .equals(reportType)) { _measureText = "CPU time";                           _noRowsText = "No statements were found."; }
+		else if (ReportType.BUFFER_GETS .equals(reportType)) { _measureText = "buffer gets (logical reads)";        _noRowsText = "No statements were found."; }
+		else if (ReportType.DISK_READS  .equals(reportType)) { _measureText = "disk reads (blocks read from disk)"; _noRowsText = "No statement read any block from disk in the period."; }
+		else if (ReportType.EXECUTIONS  .equals(reportType)) { _measureText = "number of executions";               _noRowsText = "No statements were found."; }
 		else throw new IllegalArgumentException("Unhandled reportType='" + reportType + "'.");
 	}
 
@@ -110,7 +127,7 @@ extends OracleAbstract
 	public boolean hasShortMessageText()
 	{
 		// The mail has the ELAPSED_TIME section only (as SQL Server: CPU_TIME), the other sections are in the full report
-		return ReportType.ELAPSED_TIME.equals(_reportType);
+		return ReportType.ELAPSED_TIME.equals(_reportType) || ReportType.OVERVIEW.equals(_reportType);
 	}
 
 	@Override
@@ -120,6 +137,13 @@ extends OracleAbstract
 		if (_shortRstm.getRowCount() == 0)
 		{
 			w.append(_noRowsText + "<br>\n");
+			return;
+		}
+
+		// The overview: one small table, the details are in the sections it links to
+		if (ReportType.OVERVIEW.equals(_reportType))
+		{
+			_overview.writeHtml(w, this, getTopRows());
 			return;
 		}
 
@@ -225,7 +249,7 @@ extends OracleAbstract
 	@Override
 	public String getSubject()
 	{
-		return "Top SQL Statements - " + _reportType + " (order by: " + _orderByCol + ", origin: CmSqlStats / V$SQLSTATS)";
+		return _reportType.subject();
 	}
 
 	@Override
@@ -271,6 +295,30 @@ extends OracleAbstract
 
 		// "per execution" over the whole period: NULL when no execution was started in the period (the statement was already running when the recording started)
 		String perExec = " / nullif(sum([EXECUTIONS]), 0)";
+
+		//------------------------------------------------------------------------
+		// OVERVIEW: each statement's share of what all the statements did (see TopSqlOverview)
+		//------------------------------------------------------------------------
+		if (ReportType.OVERVIEW.equals(_reportType))
+		{
+			java.util.List<TopSqlOverview.Measure> measures = java.util.List.of(
+				new TopSqlOverview.Measure("elapsed_time", "sum([ELAPSED_TIME])", ReportType.ELAPSED_TIME.subject(), "ELAPSED_TIME", false, "Share of all the statements' elapsed time (CPU + waits), in percent"),
+				new TopSqlOverview.Measure("cpu_time"    , "sum([CPU_TIME])"    , ReportType.CPU_TIME    .subject(), "CPU_TIME"    , false, "Share of all the statements' CPU time, in percent"),
+				new TopSqlOverview.Measure("buffer_gets" , "sum([BUFFER_GETS])" , ReportType.BUFFER_GETS .subject(), "BUFFER_GETS" , false, "Share of all the statements' buffer gets (logical reads), in percent"),
+				new TopSqlOverview.Measure("disk_reads"  , "sum([DISK_READS])"  , ReportType.DISK_READS  .subject(), "DISK_READS"  , true , "Share of all the statements' disk reads, in percent"),
+				new TopSqlOverview.Measure("executions"  , "sum([EXECUTIONS])"  , ReportType.EXECUTIONS  .subject(), "EXECUTIONS"  , false, "Share of all the statements' executions, in percent"));
+
+			_overview = TopSqlOverview.create(this, conn, "[CmSqlStats_diff]",
+					"where ([EXECUTIONS] > 0 or [ELAPSED_TIME] > 0) \n" + sql_and_skipNewDiffRateRows + getReportPeriodSqlWhere(),
+					"[SQL_ID]", "SQL_ID", "max([CON_NAME]) as [CON_NAME], max([" + col_SQL_FULLTEXT + "]) as [SqlText]", "SqlText", measures, getTopRows());
+			_shortRstm = _overview.getRstm();
+			if (hasDictCompCols)
+				updateDictionaryCompressedColumn(_shortRstm, conn, null, "CmSqlStats", "SQL_FULLTEXT", "SqlText");
+
+			_overview.setDescription("elapsed time, CPU time, buffer gets, disk reads and executions",
+					"the statements the collector recorded (CmSqlStats keeps the statements with most buffer gets, property <code>CmSqlStats.sample.topRows</code>)");
+			return;
+		}
 
 		// This section's top ## on its measure (only statements that have some of it: no zero rows in "disk reads")
 		// For every measure: a chart (filled in below), the sum, and the value per execution
@@ -356,7 +404,7 @@ extends OracleAbstract
 			    + "  " + getReportPeriodSqlWhere()
 			    + "    group by [SQL_ID] \n"
 			    + having
-			    + "    order by [" + _orderByCol + "] desc \n"
+			    + "    order by [" + _orderByCol + "] desc, [SQL_ID] \n"   // tie-break on the key: the OVERVIEW does the same
 			    + "";
 
 		_shortRstm = executeQuery(conn, sql, true, "OracleTopSql", false); // false = do not truncate (the SQL Text)

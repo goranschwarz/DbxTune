@@ -53,6 +53,7 @@ import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.AggType;
 import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
 import com.dbxtune.pcs.report.content.SparklineHelper.SparkLineParams;
+import com.dbxtune.pcs.report.content.TopSqlOverview;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.DbUtils;
@@ -98,16 +99,20 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 	
 	public enum ReportType
 	{
+		OVERVIEW,  // the share of all captured statements' CPU, waits, reads, executions: links to the sections below (see TopSqlOverview)
 		CPU_TIME, 
 		WAIT_TIME
 	};
+
+	private TopSqlOverview _overview;  // OVERVIEW: the shares of all the captured statements (see TopSqlOverview)
 	
 	public AseTopSlowNormalizedSql(DailySummaryReportAbstract reportingInstance, ReportType reportType)
 	{
 		super(reportingInstance);
 		_reportType = reportType;
 
-		if      (ReportType.CPU_TIME .equals(_reportType)) { _sqlOrderByCol = "[CpuTime__sum]";  _sqlHavingCol = "[CpuTime__sum]"; }
+		if      (ReportType.OVERVIEW .equals(_reportType)) { _sqlOrderByCol = "[largest_pct]";  _sqlHavingCol = ""; }
+		else if (ReportType.CPU_TIME .equals(_reportType)) { _sqlOrderByCol = "[CpuTime__sum]";  _sqlHavingCol = "[CpuTime__sum]"; }
 		else if (ReportType.WAIT_TIME.equals(_reportType)) { _sqlOrderByCol = "[WaitTime__sum]"; _sqlHavingCol = "[WaitTime__sum]"; }
 		else throw new IllegalArgumentException("Unhandled reportType='" + reportType + "'.");
 
@@ -123,7 +128,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 	@Override
 	public boolean hasShortMessageText()
 	{
-		if (ReportType.CPU_TIME.equals(_reportType))
+		if (ReportType.CPU_TIME.equals(_reportType) || ReportType.OVERVIEW.equals(_reportType))
 			return true;
 
 		return false;
@@ -142,6 +147,11 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 		if (_shortRstm.getRowCount() == 0)
 		{
 			sb.append("No rows found <br>\n");
+		}
+		else if (ReportType.OVERVIEW.equals(_reportType))
+		{
+			// The overview: one small table, the details are in the sections it links to
+			_overview.writeHtml(sb, this, getTopRows());
 		}
 		else
 		{
@@ -336,7 +346,14 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 	@Override
 	public String getSubject()
 	{
-		return "Top [SQL Captured] - " + _reportType + " - SLOW Normalized SQL Statements (order by: " + _orderByCol_noBrackets + ", origin: monSysStatement) [with gt: execTime=" + _statement_gt_execTime + ", logicalReads=" + _statement_gt_logicalReads + ", physicalReads=" + _statement_gt_physicalReads + "]";
+		return subjectFor(_reportType);
+	}
+
+	/** The subject of a section: also its anchor in the report (the OVERVIEW links to the sections). It has the capture thresholds in it (the same for all the sections) */
+	private String subjectFor(ReportType type)
+	{
+		String orderByCol = ReportType.OVERVIEW.equals(type) ? "largest_pct" : ReportType.WAIT_TIME.equals(type) ? "WaitTime__sum" : "CpuTime__sum";
+		return "Top [SQL Captured] - " + type + " - SLOW Normalized SQL Statements (order by: " + orderByCol + ", origin: monSysStatement) [with gt: execTime=" + _statement_gt_execTime + ", logicalReads=" + _statement_gt_logicalReads + ", physicalReads=" + _statement_gt_physicalReads + "]";
 	}
 
 	@Override
@@ -454,6 +471,34 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 		int topRows       = getTopRows();
 		int havingSumTime = 1000; // 1 second
 		int dsrSkipCount  = getDsrSkipCount();
+
+		//------------------------------------------------------------------------
+		// OVERVIEW: each captured statement's share of all the captured statements' CPU, waits, reads and executions (see TopSqlOverview)
+		// The sections only have statements with at least havingSumTime (ms) of their measure, and not the ones in the DSR skip list: the same here
+		//------------------------------------------------------------------------
+		if (ReportType.OVERVIEW.equals(_reportType))
+		{
+			java.util.Set<String> skip = getDsrSkipEntries().get("NormJavaSqlHashCode");
+			String skipWhere = (skip == null || skip.isEmpty()) ? "" : "  and [NormJavaSqlHashCode] not in(" + StringUtil.toCommaStrQuoted("'", skip) + ") \n";
+
+			java.util.List<TopSqlOverview.Measure> measures = java.util.List.of(
+				new TopSqlOverview.Measure("cpu_time"      , "sum([CpuTime])"      , subjectFor(ReportType.CPU_TIME) , "CPU_TIME" , true , "Share of all the captured statements' CPU time, in percent").setMinValue(havingSumTime),
+				new TopSqlOverview.Measure("wait_time"     , "sum([WaitTime])"     , subjectFor(ReportType.WAIT_TIME), "WAIT_TIME", true , "Share of all the captured statements' wait time, in percent").setMinValue(havingSumTime),
+				new TopSqlOverview.Measure("logical_reads" , "sum([LogicalReads])" , null, null, false, "Share of all the captured statements' logical reads, in percent (no section of its own)"),
+				new TopSqlOverview.Measure("physical_reads", "sum([PhysicalReads])", null, null, false, "Share of all the captured statements' physical reads, in percent (no section of its own)"),
+				new TopSqlOverview.Measure("executions"    , "count(*)"            , null, null, false, "Share of all the captured statements' executions, in percent (no section of its own)"));
+
+			_overview = TopSqlOverview.create(this, conn, "[MonSqlCapStatements]",
+					"where 1 = 1 \n  and [ErrorStatus] = 0 \n" + getReportPeriodSqlWhere("StartTime") + skipWhere,
+					"[NormJavaSqlHashCode]", "NormJavaSqlHashCode", "max([SQLText$dcc$]) as [SqlText]", "SqlText", measures, topRows);
+			_shortRstm = _overview.getRstm();
+			updateDictionaryCompressedColumn(_shortRstm, conn, null, "MonSqlCapStatements", "SQLText", "SqlText"); // one of the texts of the normalized statement
+
+			_overview.setDescription("CPU time, wait time, logical reads, physical reads and executions",
+					"the statements that were captured (monSysStatement: only the ones above the thresholds execTime=" + _statement_gt_execTime + " ms, logicalReads=" + _statement_gt_logicalReads + ", physicalReads=" + _statement_gt_physicalReads + "), and not in the DSR skip list. "
+					+ "NormJavaSqlHashCode -1 is all the statements without an SQL Text (the sections split it in -1, -2 and -3)");
+			return;
+		}
 		
 		 // just to get Column names
 		String dummySql = "select * from [MonSqlCapStatements] where 1 = 2";
@@ -570,7 +615,7 @@ public class AseTopSlowNormalizedSql extends AseAbstract
 				+ getReportPeriodSqlWhere("StartTime")
 			    + "group by [NormJavaSqlHashCode] \n"
 			    + "having "   + _sqlHavingCol  + " >= " + havingSumTime + " \n"
-			    + "order by " + _sqlOrderByCol + " desc \n"
+			    + "order by " + _sqlOrderByCol + " desc, [NormJavaSqlHashCode] \n"   // tie-break on the key: the OVERVIEW does the same
 			    + "";
 
 //TODO; // Should we "inline" this with "how we remove some rows" in Sql Capture

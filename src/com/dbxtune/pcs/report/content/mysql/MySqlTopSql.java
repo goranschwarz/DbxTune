@@ -52,6 +52,7 @@ import com.dbxtune.pcs.DictCompression;
 import com.dbxtune.pcs.inspection.ObjectLookupInspectorMySql;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.ShowplanLinkBuilder;
+import com.dbxtune.pcs.report.content.TopSqlOverview;
 import com.dbxtune.pcs.report.content.SparklineHelper;
 import com.dbxtune.pcs.report.content.SparklineHelper.AggType;
 import com.dbxtune.pcs.report.content.SparklineHelper.DataSource;
@@ -88,8 +89,21 @@ extends MySqlAbstract
 	/** One section per measure (as SQL Server, ASE and Postgres): each with its own top statements */
 	public enum ReportType
 	{
-		TOTAL_TIME, ROWS_EXAMINED, LOCK_TIME, EXECUTIONS
+		OVERVIEW     ("largest_pct"),
+		TOTAL_TIME   ("TotalTimeMs__sum"),
+		ROWS_EXAMINED("RowsExamined__sum"),
+		LOCK_TIME    ("LockTimeMs__sum"),
+		EXECUTIONS   ("ExecCount__sum");
+
+		/** The column the section is ordered by (highlighted in the table) */
+		final String orderByCol;
+		ReportType(String orderByCol) { this.orderByCol = orderByCol; }
+
+		/** The section's subject: also its anchor in the report (the OVERVIEW links to the sections) */
+		String subject() { return "Top SQL Statements - " + name() + " (order by: " + orderByCol + ", origin: CmStatements / performance_schema.events_statements_summary_by_digest)"; }
 	};
+
+	private TopSqlOverview _overview;  // OVERVIEW: the shares of all the statements (see TopSqlOverview)
 
 	private ReportType _reportType;
 	private String     _orderByCol;    // the column the section is ordered by (highlighted in the table)
@@ -100,11 +114,13 @@ extends MySqlAbstract
 	{
 		super(reportingInstance);
 		_reportType = reportType;
+		_orderByCol = reportType.orderByCol;
 
-		if      (ReportType.TOTAL_TIME   .equals(reportType)) { _orderByCol = "TotalTimeMs__sum";  _measureText = "total execution time";     _noRowsText = "No statements were found."; }
-		else if (ReportType.ROWS_EXAMINED.equals(reportType)) { _orderByCol = "RowsExamined__sum"; _measureText = "rows examined (rows read)"; _noRowsText = "No statement examined any rows in the period."; }
-		else if (ReportType.LOCK_TIME    .equals(reportType)) { _orderByCol = "LockTimeMs__sum";   _measureText = "time waiting for locks";   _noRowsText = "No statement waited for locks in the period."; }
-		else if (ReportType.EXECUTIONS   .equals(reportType)) { _orderByCol = "ExecCount__sum";    _measureText = "number of executions";     _noRowsText = "No statements were found."; }
+		if      (ReportType.OVERVIEW     .equals(reportType)) { _measureText = "their largest share of all the statements' time, rows examined, lock time or executions"; _noRowsText = "No statements were found."; }
+		else if (ReportType.TOTAL_TIME   .equals(reportType)) { _measureText = "total execution time";     _noRowsText = "No statements were found."; }
+		else if (ReportType.ROWS_EXAMINED.equals(reportType)) { _measureText = "rows examined (rows read)"; _noRowsText = "No statement examined any rows in the period."; }
+		else if (ReportType.LOCK_TIME    .equals(reportType)) { _measureText = "time waiting for locks";   _noRowsText = "No statement waited for locks in the period."; }
+		else if (ReportType.EXECUTIONS   .equals(reportType)) { _measureText = "number of executions";     _noRowsText = "No statements were found."; }
 		else throw new IllegalArgumentException("Unhandled reportType='" + reportType + "'.");
 	}
 
@@ -118,7 +134,7 @@ extends MySqlAbstract
 	public boolean hasShortMessageText()
 	{
 		// The mail has the TOTAL_TIME section only (as SQL Server: CPU_TIME), the other sections are in the full report
-		return ReportType.TOTAL_TIME.equals(_reportType);
+		return ReportType.TOTAL_TIME.equals(_reportType) || ReportType.OVERVIEW.equals(_reportType);
 	}
 
 	@Override
@@ -128,6 +144,13 @@ extends MySqlAbstract
 		if (_shortRstm.getRowCount() == 0)
 		{
 			w.append(_noRowsText + "<br>\n");
+			return;
+		}
+
+		// The overview: one small table, the details are in the sections it links to
+		if (ReportType.OVERVIEW.equals(_reportType))
+		{
+			_overview.writeHtml(w, this, getTopRows());
 			return;
 		}
 
@@ -266,7 +289,7 @@ extends MySqlAbstract
 	@Override
 	public String getSubject()
 	{
-		return "Top SQL Statements - " + _reportType + " (order by: " + _orderByCol + ", origin: CmStatements / performance_schema.events_statements_summary_by_digest)";
+		return _reportType.subject();
 	}
 
 	@Override
@@ -302,6 +325,29 @@ extends MySqlAbstract
 
 		// "per execution" over the whole period: NULL when no execution was counted in the period
 		String perExec = " / nullif(sum([ExecCount]), 0)";
+
+		//------------------------------------------------------------------------
+		// OVERVIEW: each statement's share of what all the statements did (see TopSqlOverview)
+		//------------------------------------------------------------------------
+		if (ReportType.OVERVIEW.equals(_reportType))
+		{
+			java.util.List<TopSqlOverview.Measure> measures = java.util.List.of(
+				new TopSqlOverview.Measure("total_time"   , "sum([TotalTimeMs])" , ReportType.TOTAL_TIME   .subject(), "TOTAL_TIME"   , false, "Share of all the statements' time, in percent"),
+				new TopSqlOverview.Measure("rows_examined", "sum([RowsExamined])", ReportType.ROWS_EXAMINED.subject(), "ROWS_EXAMINED", true , "Share of all the statements' rows examined, in percent"),
+				new TopSqlOverview.Measure("lock_time"    , "sum([LockTimeMs])"  , ReportType.LOCK_TIME    .subject(), "LOCK_TIME"    , true , "Share of all the statements' time waiting for locks, in percent"),
+				new TopSqlOverview.Measure("executions"   , "sum([ExecCount])"   , ReportType.EXECUTIONS   .subject(), "EXECUTIONS"   , false, "Share of all the statements' executions, in percent"));
+
+			_overview = TopSqlOverview.create(this, conn, "[CmStatements_diff]",
+					"where ([ExecCount] > 0 or [TotalTimeMs] > 0) \n" + sql_and_skipNewDiffRateRows + getReportPeriodSqlWhere(),
+					"[Digest]", "Digest", "max([SchemaName]) as [SchemaName], max([" + col_DigestText + "]) as [SqlText]", "SqlText", measures, getTopRows());
+			_shortRstm = _overview.getRstm();
+			if (hasDictCompCols)
+				updateDictionaryCompressedColumn(_shortRstm, conn, null, "CmStatements", "DigestText", "SqlText");
+
+			_overview.setDescription("time, rows examined, lock time and executions",
+					"the statements the collector recorded (the ones that ran in the last 30 minutes and of them the ones with most time, properties <code>CmStatements.sample.lastXminutes</code> and <code>CmStatements.sample.topRows</code>)");
+			return;
+		}
 
 		// This section's top ## on its measure (only statements that have some of it: no zero rows in "rows examined", "lock time")
 		// The same digest in several schemas: one row (the counters are summed), SchemaName is one of them
@@ -366,7 +412,7 @@ extends MySqlAbstract
 			    + "  " + getReportPeriodSqlWhere()
 			    + "    group by [Digest] \n"
 			    + having
-			    + "    order by [" + _orderByCol + "] desc \n"
+			    + "    order by [" + _orderByCol + "] desc, [Digest] \n"   // tie-break on the key: the OVERVIEW does the same
 			    + "";
 
 		_shortRstm = executeQuery(conn, sql, true, "MySqlTopSql", false); // false = do not truncate (the SQL Text)
