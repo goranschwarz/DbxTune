@@ -112,6 +112,9 @@ public class PostgresAutovacuumAdvice
 	public Timestamp firstSample;
 	public Timestamp lastSample;
 	public long      liveRows;              // n_live_tup in the newest sample
+	public long      relTuples           = -1; // pg_class.reltuples (row_estimate) in the newest sample: autovacuum computes its start points from it (-1 = never vacuumed/analyzed, or not recorded)
+	public boolean   hasRelTuples;          // row_estimate is in the recording
+	public boolean   noChanges;             // the dead rows and the changed rows were the same in all samples: nothing happened to the table during the recording
 	public long      maxDeadRows;
 	public long      minDeadRows;
 	public double    maxDeadPct;            // max of n_dead_tup / n_live_tup * 100
@@ -199,8 +202,10 @@ public class PostgresAutovacuumAdvice
 			}
 
 			// The newest sample: reloptions (they decide the settings), rows, freeze age
+			a.hasRelTuples = cols.contains("row_estimate");
 			String newestSql = "select [reloptions], [n_live_tup]"
 					+ (cols.contains("frozenxid_age") ? ", [frozenxid_age], [minmxid_age]" : ", -1, -1")
+					+ (a.hasRelTuples ? ", [row_estimate]" : ", -1")
 					+ " from [CmPgTables_abs] \n" + where + "order by [SessionSampleTime] desc";
 			String reloptions = null;
 			boolean found = false;
@@ -213,6 +218,7 @@ public class PostgresAutovacuumAdvice
 					a.liveRows   = rs.getLong(2);
 					a.frozenxidAge = rs.getObject(3) == null ? -1 : rs.getLong(3);
 					a.minmxidAge   = rs.getObject(4) == null ? -1 : rs.getLong(4);
+					a.relTuples    = rs.getObject(5) == null ? -1 : rs.getLong(5);
 				}
 			}
 			if ( ! found )
@@ -224,18 +230,21 @@ public class PostgresAutovacuumAdvice
 			a.setSettings(serverSettings, parseReloptions(reloptions));
 
 			// The whole day, with the trigger points computed per sample (n_live_tup changes)
+			// Postgres computes the start points from pg_class.reltuples (-1 = never vacuumed/analyzed = 0), not from n_live_tup
+			String rowsCol = a.hasRelTuples ? "(case when [row_estimate] > 0 then [row_estimate] else 0 end)" : "[n_live_tup]";
 			String hasIns = cols.contains("n_ins_since_vacuum") && a.has("autovacuum_vacuum_insert_threshold") ? "" : null;
 			String aggSql = ""
 					+ "select count(*) \n"
 					+ "      ,min([SessionSampleTime]), max([SessionSampleTime]) \n"
 					+ "      ,max([n_dead_tup]), min([n_dead_tup]) \n"
 					+ "      ,max(case when [n_live_tup] > 0 then [n_dead_tup] * 100.0 / [n_live_tup] else 0 end) \n"
-					+ "      ,sum(case when [n_dead_tup] > " + a.vacuumTriggerSql("[n_live_tup]") + " then 1 else 0 end) \n"
-					+ "      ,sum(case when [n_mod_since_analyze] > " + a.analyzeTriggerSql("[n_live_tup]") + " then 1 else 0 end) \n"
+					+ "      ,sum(case when [n_dead_tup] > " + a.vacuumTriggerSql(rowsCol) + " then 1 else 0 end) \n"
+					+ "      ,sum(case when [n_mod_since_analyze] > " + a.analyzeTriggerSql(rowsCol) + " then 1 else 0 end) \n"
 					+ "      ,max([n_mod_since_analyze]) \n"
 					+ (hasIns == null ? "      ,-1, -1 \n"
-					                  : "      ,sum(case when [n_ins_since_vacuum] > " + a.insertTriggerSql("[n_live_tup]") + " then 1 else 0 end), max([n_ins_since_vacuum]) \n")
+					                  : "      ,sum(case when [n_ins_since_vacuum] > " + a.insertTriggerSql(rowsCol) + " then 1 else 0 end), max([n_ins_since_vacuum]) \n")
 					+ (cols.contains("total_autovacuum_time") ? "      ,max([total_autovacuum_time]) - min([total_autovacuum_time]) \n" : "      ,-1 \n")
+					+ "      ,min([n_mod_since_analyze]) \n"
 					+ "from [CmPgTables_abs] \n" + where;
 			try (ResultSet rs = stmnt.executeQuery(conn.quotifySqlString(aggSql)))
 			{
@@ -253,6 +262,7 @@ public class PostgresAutovacuumAdvice
 					a.samplesAboveInsert  = rs.getLong(10);
 					a.maxInsSinceVacuum   = rs.getLong(11);
 					a.totalAutovacuumTimeMs = rs.getDouble(12);
+					a.noChanges           = a.samples > 1 && a.maxDeadRows == a.minDeadRows && a.maxModSinceAnalyze == rs.getLong(13);
 				}
 			}
 
@@ -366,6 +376,14 @@ public class PostgresAutovacuumAdvice
 		return v == null || ! (v.equalsIgnoreCase("false") || v.equalsIgnoreCase("off") || v.equals("0"));
 	}
 
+	/** The row count autovacuum computes its start points from: pg_class.reltuples (-1 = never vacuumed/analyzed = 0). n_live_tup in recordings without it */
+	public long baseRows()
+	{
+		if ( ! hasRelTuples )
+			return liveRows;
+		return Math.max(relTuples, 0);
+	}
+
 	public double vacuumTrigger(long rows)
 	{
 		double t = num("autovacuum_vacuum_threshold", 50) + num("autovacuum_vacuum_scale_factor", 0.2) * rows;
@@ -404,6 +422,7 @@ public class PostgresAutovacuumAdvice
 		double abovePctAna  = samples > 0 ? samplesAboveAnalyze * 100.0 / samples : 0;
 		boolean big         = liveRows >= bigTableRows;
 		String  rowsTxt     = nf.format(liveRows) + " rows";
+		long    baseRows    = baseRows(); // what autovacuum computes the start points from
 
 		// R0: autovacuum is off for the table
 		if ( ! isEnabled() )
@@ -416,10 +435,20 @@ public class PostgresAutovacuumAdvice
 		else
 		{
 			// R1: above the trigger most of the time, and autovacuum never came
-			if (abovePctVac >= pctSamplesAboveTrigger && autovacs == 0)
+			if (abovePctVac >= pctSamplesAboveTrigger && autovacs == 0 && noChanges)
+			{
+				// The dead rows are from before the recording: by its own numbers autovacuum should have vacuumed the table, but it did not
+				findings.add(new Finding("R1", "old dead rows are not vacuumed",
+						"Nothing changed in the table during the recording: the " + nf.format(maxDeadRows) + " dead rows are from before. They are above the point where autovacuum should start ("
+						+ nf.format(Math.round(vacuumTrigger(baseRows))) + "), but autovacuum did not vacuum the table. "
+						+ "Autovacuum skips a table it can't lock (a session that holds a lock on it for a long time), and its workers may be busy with other tables (autovacuum_max_workers). "
+						+ "The dead rows only cost space and make full table scans a little slower: a VACUUM (ANALYZE) in a quiet period removes them. Changing the autovacuum settings does not help here."));
+				manualSql.add("VACUUM (ANALYZE, VERBOSE) " + qualifiedName() + ";");
+			}
+			else if (abovePctVac >= pctSamplesAboveTrigger && autovacs == 0)
 			{
 				findings.add(new Finding("R1", "autovacuum is not keeping up",
-						"The dead rows were above the point where autovacuum should start (" + nf.format(Math.round(vacuumTrigger(liveRows))) + ") in " + Math.round(abovePctVac) + "% of the samples, "
+						"The dead rows were above the point where autovacuum should start (" + nf.format(Math.round(vacuumTrigger(baseRows))) + ") in " + Math.round(abovePctVac) + "% of the samples, "
 						+ "and autovacuum did not vacuum the table during the recording. All autovacuum workers may be busy with other tables (autovacuum_max_workers), "
 						+ "or each of them is slowed down too much (autovacuum_vacuum_cost_limit / cost_delay). A higher cost limit for this table lets autovacuum work faster on it."));
 				if (num("autovacuum_vacuum_cost_limit", 200) < 1000)
@@ -427,10 +456,10 @@ public class PostgresAutovacuumAdvice
 			}
 
 			// R4: autovacuum runs, but the dead rows do not go away: something holds the xmin horizon
-			if (autovacs >= 2 && minDeadRows > vacuumTrigger(liveRows))
+			if (autovacs >= 2 && minDeadRows > vacuumTrigger(baseRows))
 			{
 				findings.add(new Finding("R4", "dead rows are not removed (cleanup is blocked)",
-						"Autovacuum ran " + autovacs + " times, but the dead rows never went below " + nf.format(Math.round(vacuumTrigger(liveRows))) + " (lowest: " + nf.format(minDeadRows) + "). "
+						"Autovacuum ran " + autovacs + " times, but the dead rows never went below " + nf.format(Math.round(vacuumTrigger(baseRows))) + " (lowest: " + nf.format(minDeadRows) + "). "
 						+ "Vacuum can only remove rows that no transaction can see any more: a long running (or 'idle in transaction') session, a prepared transaction, "
 						+ "a replication slot or a standby with hot_standby_feedback holds them. Look at 'oldest transaction' in the Summary graphs and at the replication slots. "
 						+ "Changing the autovacuum settings does not help here."));
@@ -441,7 +470,7 @@ public class PostgresAutovacuumAdvice
 			{
 				findings.add(new Finding("R2", "the vacuum trigger point is too high for a big table",
 						"With autovacuum_vacuum_scale_factor=" + settings.get("autovacuum_vacuum_scale_factor").effective() + " on " + rowsTxt + ", autovacuum starts first at "
-						+ nf.format(Math.round(vacuumTrigger(liveRows))) + " dead rows; the dead rows reached " + Math.round(maxDeadPct) + "% of the table. "
+						+ nf.format(Math.round(vacuumTrigger(baseRows))) + " dead rows; the dead rows reached " + Math.round(maxDeadPct) + "% of the table. "
 						+ "A lower scale factor vacuums more often, in smaller (faster) runs, and keeps the table and its indexes smaller."));
 				suggested.put("autovacuum_vacuum_scale_factor", suggestedScaleFactor(liveRows));
 				suggested.put("autovacuum_vacuum_threshold",    "1000");
@@ -455,7 +484,7 @@ public class PostgresAutovacuumAdvice
 						"The table mostly gets inserts (up to " + nf.format(maxInsSinceVacuum) + " rows since the last vacuum, very few dead rows). "
 						+ "Vacuum of an append-only table sets the visibility map (index-only scans) and freezes rows, which avoids one big anti-wraparound vacuum later. "
 						+ "With autovacuum_vacuum_insert_scale_factor=" + settings.get("autovacuum_vacuum_insert_scale_factor").effective() + " that starts first after "
-						+ nf.format(Math.round(insertTrigger(liveRows))) + " inserts (the calculation is an approximation from Postgres 18, which counts the unfrozen part of the table)."));
+						+ nf.format(Math.round(insertTrigger(baseRows))) + " inserts (the calculation is an approximation from Postgres 18, which counts the unfrozen part of the table)."));
 				suggested.put("autovacuum_vacuum_insert_scale_factor", suggestedScaleFactor(liveRows));
 			}
 
@@ -463,26 +492,43 @@ public class PostgresAutovacuumAdvice
 			if (big && num("autovacuum_analyze_scale_factor", 0.1) >= 0.1 && abovePctAna >= pctSamplesAboveTrigger)
 			{
 				findings.add(new Finding("R5", "the statistics are often stale",
-						"The rows changed since the last analyze were above the point where autovacuum analyzes the table (" + nf.format(Math.round(analyzeTrigger(liveRows))) + ") in "
+						"The rows changed since the last analyze were above the point where autovacuum analyzes the table (" + nf.format(Math.round(analyzeTrigger(baseRows))) + ") in "
 						+ Math.round(abovePctAna) + "% of the samples (with autovacuum_analyze_scale_factor=" + settings.get("autovacuum_analyze_scale_factor").effective() + " on " + rowsTxt + "). "
 						+ "Stale statistics can give bad execution plans, for example for new values in date or id columns."));
 				suggested.put("autovacuum_analyze_scale_factor", suggestedScaleFactor(liveRows));
 			}
 		}
 
+		// R7: the row estimate (pg_class.reltuples) is far from the live rows: autovacuum computes its start points from it, so it comes too late (or too early)
+		if (hasRelTuples && relTuples >= 0 && Math.abs(relTuples - liveRows) >= 1000 && (relTuples > liveRows * 2 || relTuples * 2 < liveRows))
+		{
+			findings.add(new Finding("R7", "the row estimate is old",
+					"pg_class.reltuples says " + nf.format(relTuples) + " rows, the statistics (n_live_tup) say " + nf.format(liveRows) + ". "
+					+ "Autovacuum computes its start points from reltuples: it vacuums at " + nf.format(Math.round(vacuumTrigger(relTuples))) + " dead rows instead of " + nf.format(Math.round(vacuumTrigger(liveRows)))
+					+ " and analyzes at " + nf.format(Math.round(analyzeTrigger(relTuples))) + " changed rows instead of " + nf.format(Math.round(analyzeTrigger(liveRows))) + ". "
+					+ "VACUUM and ANALYZE update reltuples: an ANALYZE fixes it."));
+			boolean hasVacuum = false;
+			for (String s : manualSql)
+				hasVacuum |= s.startsWith("VACUUM (ANALYZE");
+			if ( ! hasVacuum )
+				manualSql.add("ANALYZE (VERBOSE) " + qualifiedName() + ";");
+		}
+
 		// R6: close to a forced (anti-wraparound) vacuum
+		// Only for big tables: on a small table the forced vacuum takes a moment, so it is nothing to act on
 		double xidMax  = num("autovacuum_freeze_max_age", 200_000_000);
 		double mxidMax = num("autovacuum_multixact_freeze_max_age", 400_000_000);
 		double xidPct  = frozenxidAge >= 0 && xidMax  > 0 ? frozenxidAge * 100.0 / xidMax  : -1;
 		double mxidPct = minmxidAge   >= 0 && mxidMax > 0 ? minmxidAge   * 100.0 / mxidMax : -1;
 		double agePct  = Math.max(xidPct, mxidPct);
-		if (agePct >= freezeWarnPct)
+		if (agePct >= freezeWarnPct && big)
 		{
 			boolean soon = agePct >= 80;
 			findings.add(new Finding("R6", soon ? "a forced (anti-wraparound) vacuum is near (or running)" : "the table is getting old (freeze)",
 					"The oldest unfrozen transaction id of the table is " + nf.format(frozenxidAge) + " transactions old (" + Math.round(Math.max(xidPct, 0)) + "% of autovacuum_freeze_max_age=" + nf.format(Math.round(xidMax)) + ")"
 					+ (minmxidAge >= 0 ? ", the multixact age is " + nf.format(minmxidAge) + " (" + Math.round(Math.max(mxidPct, 0)) + "% of autovacuum_multixact_freeze_max_age)" : "") + ". "
-					+ "At 100% Postgres starts a forced vacuum of the whole table, which can not be skipped and can take long on a big table. "
+					+ "At 100% Postgres starts a forced vacuum of the whole table, which can not be skipped and can take long on a big table (" + rowsTxt + "). "
+					+ "This is not a wraparound danger (that is at about 2.1 billion): it is the routine freeze that prevents it. "
 					+ (soon ? "Do it yourself in a quiet period, before that happens." : "A VACUUM (FREEZE) in a quiet period avoids that it happens at a bad time.")));
 			manualSql.add("VACUUM (FREEZE, VERBOSE) " + qualifiedName() + ";");
 		}
@@ -562,10 +608,16 @@ public class PostgresAutovacuumAdvice
 	/** The box in Table Information. No JavaScript (it also goes into the mail): a collapsed &lt;details&gt; like the Index Analysis */
 	public String toHtml()
 	{
+		return toHtml(true);
+	}
+	/** @param leadingBr false: in a card of its own (Dead Rows), no blank line before the box */
+	public String toHtml(boolean leadingBr)
+	{
 		NumberFormat nf = NumberFormat.getInstance(Locale.US);
 		StringBuilder sb = new StringBuilder();
 		sb.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
-		sb.append("<br> \n");
+		if (leadingBr)
+			sb.append("<br> \n");
 		sb.append("<details class='dbx-autovacuum' style='max-width: 1200px;'> \n");
 
 		String verdict = getShortVerdict();
@@ -581,10 +633,10 @@ public class PostgresAutovacuumAdvice
 			sb.append("<p>From " + samples + " samples, " + IndexAnalysisHtml.esc(firstSample) + " to " + IndexAnalysisHtml.esc(lastSample) + ". These are suggestions: nothing has been changed.</p> \n");
 			sb.append("<table class='dbx-autovacuum-numbers'> \n");
 			sb.append("<thead><tr><th>What</th><th>Starts at</th><th>Highest in the recording</th><th>Samples above the start point</th></tr></thead> \n<tbody> \n");
-			sb.append("<tr><td>Vacuum (dead rows)</td><td>" + nf.format(Math.round(vacuumTrigger(liveRows))) + "</td><td>" + nf.format(maxDeadRows) + " (" + Math.round(maxDeadPct) + "% of " + nf.format(liveRows) + " rows)</td><td>" + pctTxt(samplesAboveVacuum) + "</td></tr> \n");
+			sb.append("<tr><td>Vacuum (dead rows)</td><td>" + nf.format(Math.round(vacuumTrigger(baseRows()))) + "</td><td>" + nf.format(maxDeadRows) + " (" + Math.round(maxDeadPct) + "% of " + nf.format(liveRows) + " rows)</td><td>" + pctTxt(samplesAboveVacuum) + "</td></tr> \n");
 			if (samplesAboveInsert >= 0)
-				sb.append("<tr><td>Vacuum (inserts)</td><td>" + nf.format(Math.round(insertTrigger(liveRows))) + "</td><td>" + nf.format(maxInsSinceVacuum) + "</td><td>" + pctTxt(samplesAboveInsert) + "</td></tr> \n");
-			sb.append("<tr><td>Analyze (changed rows)</td><td>" + nf.format(Math.round(analyzeTrigger(liveRows))) + "</td><td>" + nf.format(maxModSinceAnalyze) + "</td><td>" + pctTxt(samplesAboveAnalyze) + "</td></tr> \n");
+				sb.append("<tr><td>Vacuum (inserts)</td><td>" + nf.format(Math.round(insertTrigger(baseRows()))) + "</td><td>" + nf.format(maxInsSinceVacuum) + "</td><td>" + pctTxt(samplesAboveInsert) + "</td></tr> \n");
+			sb.append("<tr><td>Analyze (changed rows)</td><td>" + nf.format(Math.round(analyzeTrigger(baseRows()))) + "</td><td>" + nf.format(maxModSinceAnalyze) + "</td><td>" + pctTxt(samplesAboveAnalyze) + "</td></tr> \n");
 			sb.append("</tbody></table> \n");
 
 			sb.append("<ul> \n");
@@ -592,6 +644,8 @@ public class PostgresAutovacuumAdvice
 					+ (autovacuums.isEmpty() ? "" : ", the last " + IndexAnalysisHtml.esc(autovacuums.get(autovacuums.size() - 1)))
 					+ (longestGapSec >= 0 ? ", longest time without one: " + formatSec(longestGapSec) : "")
 					+ (totalAutovacuumTimeMs > 0 ? ", time spent by autovacuum: " + formatSec(Math.round(totalAutovacuumTimeMs / 1000)) : "") + "</li> \n");
+			if (hasRelTuples)
+				sb.append("<li>Rows: " + nf.format(liveRows) + " live (n_live_tup), row estimate " + (relTuples < 0 ? "-1 (never vacuumed or analyzed)" : nf.format(relTuples)) + " (pg_class.reltuples: autovacuum computes the start points from it)</li> \n");
 			if (frozenxidAge >= 0)
 				sb.append("<li>Freeze age: " + nf.format(frozenxidAge) + " transactions (forced vacuum at " + nf.format(Math.round(num("autovacuum_freeze_max_age", 200_000_000))) + ")"
 						+ (minmxidAge >= 0 ? ", multixact age " + nf.format(minmxidAge) : "") + "</li> \n");

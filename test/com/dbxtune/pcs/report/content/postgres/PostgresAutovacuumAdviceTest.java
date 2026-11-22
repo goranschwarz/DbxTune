@@ -211,12 +211,63 @@ public class PostgresAutovacuumAdviceTest
 
 	@Test public void r6_freeze()
 	{
-		PostgresAutovacuumAdvice a = advice(server17(), "autovacuum_freeze_max_age=100000", 1000);
+		PostgresAutovacuumAdvice a = advice(server17(), "autovacuum_freeze_max_age=100000", 2_000_000);
 		a.frozenxidAge = 85_000; // 85% of the table's own freeze_max_age
 		analyze(a);
 		assertEquals(Arrays.asList("R6"), rules(a));
 		assertTrue(a.findings.get(0).verdict.contains("near"));
 		assertTrue(a.getScript().contains("VACUUM (FREEZE, VERBOSE) public.t1;"));
+	}
+
+	@Test public void r6_notForSmallTable()
+	{
+		// the forced vacuum of a small table takes a moment: nothing to act on
+		PostgresAutovacuumAdvice a = advice(server17(), "autovacuum_freeze_max_age=100000", 1000);
+		a.frozenxidAge = 97_000;
+		analyze(a);
+		assertTrue(rules(a).isEmpty());
+	}
+
+	@Test public void triggerFromRelTuples()
+	{
+		// Postgres computes the start points from pg_class.reltuples, -1 (never vacuumed/analyzed) = 0
+		PostgresAutovacuumAdvice a = advice(server17(), null, 50_000);
+		assertEquals(50_000, a.baseRows()); // an old recording without row_estimate: n_live_tup
+		a.hasRelTuples = true;
+		a.relTuples    = 200_000;
+		assertEquals(200_000, a.baseRows());
+		a.relTuples    = -1;
+		assertEquals(0, a.baseRows());
+	}
+
+	@Test public void r1_oldDeadRows()
+	{
+		// nothing changed during the recording: the dead rows are from before, no cost limit suggestion, a VACUUM by hand
+		PostgresAutovacuumAdvice a = advice(server17(), null, 10_000);
+		a.samplesAboveVacuum = 100;
+		a.noChanges = true;
+		analyze(a);
+		assertEquals(Arrays.asList("R1"), rules(a));
+		assertTrue(a.findings.get(0).verdict.contains("old dead rows"));
+		assertTrue(a.suggested.isEmpty());
+		assertTrue(a.getScript().contains("VACUUM (ANALYZE, VERBOSE) public.t1;"));
+	}
+
+	@Test public void r7_oldRowEstimate()
+	{
+		PostgresAutovacuumAdvice a = advice(server17(), null, 53_000);
+		a.hasRelTuples = true;
+		a.relTuples    = 800_000;
+		analyze(a);
+		assertEquals(Arrays.asList("R7"), rules(a));
+		assertTrue(a.getScript().contains("ANALYZE (VERBOSE) public.t1;"));
+
+		// close enough: nothing
+		PostgresAutovacuumAdvice b = advice(server17(), null, 53_000);
+		b.hasRelTuples = true;
+		b.relTuples    = 60_000;
+		analyze(b);
+		assertTrue(rules(b).isEmpty());
 	}
 
 	@Test public void quotedNames()

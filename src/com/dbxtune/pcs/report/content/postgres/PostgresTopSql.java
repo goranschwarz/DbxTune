@@ -119,7 +119,8 @@ extends PostgresAbstract
 				sb.append("<br>\n");
 
 //				sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
-				sb.append("Row Count: " + _shortRstm.getRowCount() + "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
+				sb.append("Row Count: " + _shortRstm.getRowCount() + " (the top " + getTopRows() + " on any of: time, disk reads, temp, WAL, calls, planning time; the <code>rank_</code> columns say where)"
+						+ "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
 				TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
 				{
 					@Override
