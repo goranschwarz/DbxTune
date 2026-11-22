@@ -1291,7 +1291,12 @@ extends DailySummaryReportAbstract
 			writer.append("<div class='dsr-layout'> \n");
 			writer.append("<button type='button' class='dsr-toc-open' title='Show the table of contents' onclick='dsrTocToggle()'>&#9776;</button> \n");
 			writer.append("<nav class='dsr-toc' aria-label='Report sections'> \n");
-			writer.append("  <div class='dsr-toc-head'><span>" + getServerName() + "</span><button type='button' class='dsr-toc-btn' title='Hide the table of contents' onclick='dsrTocToggle()'>&laquo;</button></div> \n");
+			// The head in the report level's color (as the mail banner): server name + day and date
+			IssueLevel tocLevel = getIssueLevel();
+			String     tocColor = tocLevel == IssueLevel.NONE ? "#198754" : tocLevel == IssueLevel.FYI ? "#0d6efd" : "#dc3545";
+			writer.append("  <div class='dsr-toc-head' style='background:" + tocColor + "; color:#ffffff; border-radius:6px; padding:6px 4px 6px 8px; margin:0 0 8px 0; align-items:flex-start;'>"
+					+ "<span><b>" + getServerName() + "</b><br><span style='text-transform:none; letter-spacing:0;'>" + getDayDateText() + "</span></span>"
+					+ "<button type='button' class='dsr-toc-btn' style='color:#ffffff;' title='Hide the table of contents' onclick='dsrTocToggle()'>&laquo;</button></div> \n");
 			for (IReportEntry entry : getReportEntries())
 				writer.append("  <a href='#" + StringUtil.stripAllNonAlphaNum(entry.getSubject()) + "'><span>" + splitSubject(entry.getSubject())[0] + "</span>" + getIssueLevelBadge(entry) + "</a> \n");
 			if (createExecTimeReportSection() && Configuration.getCombinedConfiguration().getBooleanProperty("DailySummaryReport.report.entry.enabled.printExecTime.fullMessage", true))
@@ -1365,10 +1370,14 @@ extends DailySummaryReportAbstract
 				// Bootstrap "card" - BEGIN
 				writer.append("<!--[if !mso]><!--> \n"); // BEGIN: IGNORE THIS SECTION FOR OUTLOOK
 				writer.append("<div class='card dsr-card mb-3 mt-2' id='toc' style='border-left:6px solid " + reportLevelColor + " !important;'> \n");
-				writer.append("<h5 class='card-header' role='tab' id='heading_toc'> \n");
-				writer.append("  <a data-bs-toggle='collapse' data-bs-parent='#accordion' href='#collapse_toc' aria-expanded='true' aria-controls='collapse_toc' class='d-block'> \n");
+				// The header as a banner in the report level's color (as in the mail): white text, a white level badge, and what the level means
+				writer.append("<h5 class='card-header' role='tab' id='heading_toc' style='background:" + reportLevelColor + "; color:#ffffff;'> \n");
+				writer.append("  <a data-bs-toggle='collapse' data-bs-parent='#accordion' href='#collapse_toc' aria-expanded='true' aria-controls='collapse_toc' class='d-block' style='color:#ffffff;'> \n");
 				writer.append("    <i class='fa fa-chevron-down float-end'></i> \n");
-				writer.append("    <b>").append(getServerName()).append("</b> ").append(ReportStatus.levelBadge(getIssueLevel())).append(" <span class='dsr-origin'>").append(getReportName()).append(" &middot; ").append(getPeriodText()).append("</span> \n");
+				writer.append("    <b>").append(getServerName()).append("</b> ")
+				      .append("<span style='background:#ffffff; color:" + reportLevelColor + "; padding:1px 6px; border-radius:4px; font-size:85%; font-weight:bold;'>").append(getIssueLevelName(reportLevel)).append("</span>")
+				      .append(" <span class='dsr-origin' style='color:rgba(255,255,255,.85);'>").append(getReportName()).append(" &middot; ").append(getPeriodText()).append("</span> \n");
+				writer.append("    <div style='font-size:14px; font-weight:normal; margin-top:4px;'>").append(getIssueLevelText(reportLevel)).append("</div> \n");
 				writer.append("  </a> \n");
 				writer.append("</h5> \n");
 				writer.append("<div id='collapse_toc' class='collapse" + show + "' role='tabpanel' aria-labelledby='heading_toc'> \n");
@@ -1797,10 +1806,8 @@ extends DailySummaryReportAbstract
 		// The mail is built with tables and inline styles only: that is what Outlook (Word), Gmail and iPhone Mail all show the same way
 		IssueLevel level      = getIssueLevel();
 		String     levelColor = level == IssueLevel.NONE ? "#198754" : level == IssueLevel.FYI ? "#0d6efd" : "#dc3545";
-		String     levelName  = level == IssueLevel.NONE ? "NTR"     : level == IssueLevel.FYI ? "FYI"     : "ISSUE";
-		String     levelText  = level == IssueLevel.NONE ? "Nothing to report."
-		                      : level == IssueLevel.FYI  ? "Nothing urgent, have a look when you have time."
-		                      :                            "Something to act on, see the Report Status below.";
+		String     levelName  = getIssueLevelName(level);
+		String     levelText  = getIssueLevelText(level);
 
 		String period = getPeriodText();
 		String appName = StringUtil.hasValue(getRecDbxAppName()) ? " &middot; " + getRecDbxAppName() : "";
@@ -2167,9 +2174,32 @@ extends DailySummaryReportAbstract
 		Timestamp endTs   = getReportPeriodOrRecordingEndTime();
 		if (beginTs == null || endTs == null)
 			return "";
-		String day = beginTs.toLocalDateTime().getDayOfWeek().getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH);
-		return day + " " + new SimpleDateFormat("yyyy-MM-dd").format(beginTs)
+		return getDayDateText()
 		     + " &nbsp;" + new SimpleDateFormat("HH:mm").format(beginTs) + " &ndash; " + new SimpleDateFormat("HH:mm").format(endTs);
+	}
+
+	/** The day of the report, for example "Thursday 2026-11-19" ("" when not known) */
+	private String getDayDateText()
+	{
+		Timestamp beginTs = getReportPeriodOrRecordingBeginTime();
+		if (beginTs == null)
+			return "";
+		String day = beginTs.toLocalDateTime().getDayOfWeek().getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH);
+		return day + " " + new SimpleDateFormat("yyyy-MM-dd").format(beginTs);
+	}
+
+	/** The short name of the report level: NTR, FYI or ISSUE */
+	private static String getIssueLevelName(IssueLevel level)
+	{
+		return level == IssueLevel.NONE ? "NTR" : level == IssueLevel.FYI ? "FYI" : "ISSUE";
+	}
+
+	/** What the report level means, one line (the mail banner and the report header) */
+	private static String getIssueLevelText(IssueLevel level)
+	{
+		return level == IssueLevel.NONE ? "Nothing to report."
+		     : level == IssueLevel.FYI  ? "Nothing urgent, have a look when you have time."
+		     :                            "Something to act on, see the Report Status below.";
 	}
 
 	/** One section of the mail (the SHORT message) */
