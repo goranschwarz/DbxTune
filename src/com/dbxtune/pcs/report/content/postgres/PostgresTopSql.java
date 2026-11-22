@@ -73,9 +73,29 @@ extends PostgresAbstract
 	public static final String PROPKEY_skip_username_csv = "PostgresTopSql.skip.username.csv";
 	public static final String DEFAULT_skip_username_csv = null;
 
-	public PostgresTopSql(DailySummaryReportAbstract reportingInstance)
+	/** One section per measure (as SQL Server and ASE): each with its own top statements */
+	public enum ReportType
+	{
+		TOTAL_TIME, DISK_READS, TEMP, WAL, CALLS, PLAN_TIME
+	};
+
+	private ReportType _reportType;
+	private String     _orderByCol;    // the column the section is ordered by (highlighted in the table)
+	private String     _measureText;   // what the section is about, in words
+	private String     _noRowsText;    // when no statement has anything of it
+
+	public PostgresTopSql(DailySummaryReportAbstract reportingInstance, ReportType reportType)
 	{
 		super(reportingInstance);
+		_reportType = reportType;
+
+		if      (ReportType.TOTAL_TIME.equals(reportType)) { _orderByCol = "total_time__sum";       _measureText = "total execution time";                                           _noRowsText = "No statements were found."; }
+		else if (ReportType.DISK_READS.equals(reportType)) { _orderByCol = "shared_blks_read__sum"; _measureText = "blocks read outside shared_buffers (shared_blks_read)";        _noRowsText = "No statement read any block outside shared_buffers in the period."; }
+		else if (ReportType.TEMP      .equals(reportType)) { _orderByCol = "temp_blks_written__sum";_measureText = "temp blocks written (sorts and hashes that did not fit in work_mem)"; _noRowsText = "No statement wrote any temp blocks in the period (all sorts and hashes fit in work_mem)."; }
+		else if (ReportType.WAL       .equals(reportType)) { _orderByCol = "wal_mb__sum";           _measureText = "WAL written";                                                    _noRowsText = "No statement wrote any WAL in the period (or Postgres is older than 13: pg_stat_statements has no WAL counters)."; }
+		else if (ReportType.CALLS     .equals(reportType)) { _orderByCol = "calls__sum";            _measureText = "number of calls";                                                _noRowsText = "No statements were found."; }
+		else if (ReportType.PLAN_TIME .equals(reportType)) { _orderByCol = "plan_time__sum";        _measureText = "planning time";                                                  _noRowsText = "No planning time was recorded in the period (Postgres 13 and above, with <code>pg_stat_statements.track_planning = on</code>)."; }
+		else throw new IllegalArgumentException("Unhandled reportType='" + reportType + "'.");
 	}
 
 	@Override
@@ -87,7 +107,8 @@ extends PostgresAbstract
 	@Override
 	public boolean hasShortMessageText()
 	{
-		return true;
+		// The mail has the TOTAL_TIME section only (as SQL Server: CPU_TIME), the other sections are in the full report
+		return ReportType.TOTAL_TIME.equals(_reportType);
 	}
 
 //	@Override
@@ -103,7 +124,7 @@ extends PostgresAbstract
 	{
 		if (_shortRstm.getRowCount() == 0)
 		{
-			sb.append("No rows found <br>\n");
+			sb.append(_noRowsText + "<br>\n");
 		}
 		else
 		{
@@ -119,7 +140,7 @@ extends PostgresAbstract
 				sb.append("<br>\n");
 
 //				sb.append("Row Count: " + _shortRstm.getRowCount() + "<br>\n");
-				sb.append("Row Count: " + _shortRstm.getRowCount() + " (the top " + getTopRows() + " on any of: time, disk reads, temp, WAL, calls, planning time; the <code>rank_</code> columns say where)"
+				sb.append("Row Count: " + _shortRstm.getRowCount() + " (the top " + getTopRows() + " on " + _measureText + ")"
 						+ "&emsp;&emsp; To change number of <i>top</i> records, set property <code>" + getTopRowsPropertyName() + "=##</code><br>\n");
 				TableStringRenderer tableRender = new ReportEntryTableStringRenderer()
 				{
@@ -153,9 +174,10 @@ extends PostgresAbstract
 //				sb.append("SQL Text by queryid, Row Count: " + _sqTextRstm.getRowCount() + " (This is the same SQL Text as the in the above table, but without all counter details).<br>\n");
 //				sb.append(toHtmlTable(_sqTextRstm));
 
+				// Open in the first section (TOTAL_TIME), closed in the others (the page gets very long otherwise)
 				sb.append("<br>\n");
-				sb.append("<details open> \n");
-				sb.append("<summary>Details for above Statements, including SQL Text (click to collapse) </summary> \n");
+				sb.append("<details" + (ReportType.TOTAL_TIME.equals(_reportType) ? " open" : "") + "> \n");
+				sb.append("<summary>Details for above Statements, including SQL Text (click to open/close) </summary> \n");
 				
 				sb.append("<br>\n");
 				sb.append("SQL Text by queryid, Row Count: " + _sqTextRstm.getRowCount() + " (This is the same SQL Text as the in the above table, but without all counter details).<br>\n");
@@ -167,14 +189,17 @@ extends PostgresAbstract
 			}
 
 			
-			// Write server level configuration relevant for this section
-			sb.append("<br>\n");
-			sb.append("<b>Below is serverwide 'Query Tuning / Planner Cost Constants' Parameters.</b><br>\n");
-			sb.append("<i>One parameter to look at is <code>random_page_cost</code>... If you have fast disk (SSD), it's probably a good idea to set this to <code>1.1</code>, which makes the optimizer more likely to choose indexes over table scans.</i><br>\n");
-			sb.append("Please search the Postgres Documentation and Internet for <code>random_page_cost</code> to make your own decisions!<br>\n");
-			sb.append("One good place is <a href='https://www.interdb.jp/pg' target='_blank'>https://www.interdb.jp/pg -- The Internals of PostgreSQL</a><br>\n");
+			// Write server level configuration relevant for this section (once: in the TOTAL_TIME section)
+			if (ReportType.TOTAL_TIME.equals(_reportType) && _perfConfigRstm != null)
+			{
+				sb.append("<br>\n");
+				sb.append("<b>Below is serverwide 'Query Tuning / Planner Cost Constants' Parameters.</b><br>\n");
+				sb.append("<i>One parameter to look at is <code>random_page_cost</code>... If you have fast disk (SSD), it's probably a good idea to set this to <code>1.1</code>, which makes the optimizer more likely to choose indexes over table scans.</i><br>\n");
+				sb.append("Please search the Postgres Documentation and Internet for <code>random_page_cost</code> to make your own decisions!<br>\n");
+				sb.append("One good place is <a href='https://www.interdb.jp/pg' target='_blank'>https://www.interdb.jp/pg -- The Internals of PostgreSQL</a><br>\n");
 
-			sb.append(toHtmlTable(_perfConfigRstm));
+				sb.append(toHtmlTable(_perfConfigRstm));
+			}
 		}
 		
 		// Write JavaScript code for CPU SparkLine
@@ -246,7 +271,7 @@ extends PostgresAbstract
 	@Override
 	public String getSubject()
 	{
-		return "Top SQL Statements (order by: total_time, origin: pg_stat_statements)";
+		return "Top SQL Statements - " + _reportType + " (order by: " + _orderByCol + ", origin: pg_stat_statements)";
 	}
 
 	@Override
@@ -274,9 +299,9 @@ extends PostgresAbstract
 		
 		// Section description
 		rstm.setDescription(
-				"Top Slow SQL Statements are presented here (ordered by: total_time__sum) <br>" +
-				"A statement is listed if it is in the top " + getTopRows() + " on any of: <b>time</b>, <b>disk reads</b> (shared_blks_read), <b>temp written</b>, <b>WAL</b> (Postgres 13 and above), <b>calls</b> " +
-				"or <b>planning time</b> (Postgres 13 and above, when <code>pg_stat_statements.track_planning = on</code>). The <code>rank_</code> columns say where it is placed in each.<br>" +
+				"The top " + getTopRows() + " SQL Statements on <b>" + _measureText + "</b> (ordered by: " + _orderByCol + ") <br>" +
+				"There is one section like this for each of: total time, disk reads, temp written, WAL (Postgres 13 and above), calls " +
+				"and planning time (Postgres 13 and above, when <code>pg_stat_statements.track_planning = on</code>). A statement can be in several of them.<br>" +
 				"<br>" +
 				"Postgres Source table is 'pg_stat_statements'. <br>" +
 				"PCS Source table is 'CmPgStatements_diff'. (PCS = Persistent Counter Store) <br>" +
@@ -321,12 +346,6 @@ extends PostgresAbstract
 
 		rstm.setColumnDescription("query"                       , "Text of a representative statement");
 
-		rstm.setColumnDescription("rank_time"                   , "The statement's place when sorted on total time (1 = the most)");
-		rstm.setColumnDescription("rank_disk_reads"             , "The place on blocks read outside shared_buffers (shared_blks_read)");
-		rstm.setColumnDescription("rank_temp"                   , "The place on temp blocks written (sorts and hashes that did not fit in work_mem)");
-		rstm.setColumnDescription("rank_wal"                    , "The place on WAL written (Postgres 13 and above)");
-		rstm.setColumnDescription("rank_calls"                  , "The place on the number of calls");
-		rstm.setColumnDescription("rank_plan_time"              , "The place on planning time (Postgres 13 and above, needs pg_stat_statements.track_planning = on)");
 		rstm.setColumnDescription("wal_mb__sum"                 , "WAL written by the statement, in MB (Postgres 13 and above)");
 		rstm.setColumnDescription("plan_time__sum"              , "Time spent planning the statement, in milliseconds (0 when pg_stat_statements.track_planning is off)");
 	}
@@ -402,28 +421,32 @@ extends PostgresAbstract
 		if ( ! skipUsernameList.isEmpty() )
 			skip_username = "  and [usename] not in(" + StringUtil.toCommaStrQuoted("'", skipUsernameList) + ") \n";
 
-		// The statements in the top ## on any of: time, physical reads, temp written, WAL (13+), calls, planning time (13+, pg_stat_statements.track_planning)
-		// (the rank_ columns say where each statement is placed, as MySqlTopSql / OracleTopSql)
+		// This section's top ## on its measure: time, physical reads, temp written, WAL (13+), calls, planning time (13+, pg_stat_statements.track_planning)
 		Set<String> stmtCols = getRecordedColumns(conn, "CmPgStatements_diff");
 		boolean hasWal  = stmtCols.contains("wal_bytes");
 		boolean hasPlan = stmtCols.contains("total_plan_time");
 
+		// No WAL / planning counters recorded (Postgres before 13): nothing to show in that section
+		if ( (ReportType.WAL.equals(_reportType) && !hasWal) || (ReportType.PLAN_TIME.equals(_reportType) && !hasPlan) )
+		{
+			_shortRstm = ResultSetTableModel.createEmpty("Top SQL");
+			return;
+		}
+
+		// Only statements that have some of the measure (no zero rows in "disk reads", "temp" ...)
+		String having = "";
+		if      (ReportType.DISK_READS.equals(_reportType)) having = "having sum([shared_blks_read])  > 0 \n";
+		else if (ReportType.TEMP      .equals(_reportType)) having = "having sum([temp_blks_written]) > 0 \n";
+		else if (ReportType.WAL       .equals(_reportType)) having = "having sum([wal_bytes])         > 0 \n";
+		else if (ReportType.PLAN_TIME .equals(_reportType)) having = "having sum([total_plan_time])   > 0 \n";
+
 		// GET ALL INFO
 		String sql = getCmDiffColumnsAsSqlComment("CmPgStatements")
-			    + "select * \n"
-			    + "from ( \n"
-			    + "select \n"
+			    + "select top " + topRows + " \n"
 			    + "     [datname] \n"
 			    + "    ,[usename] \n"
 			    + "    ,[queryid] \n"
 			    + "    ,min([" + col_query + "])                                                             as [query] \n"
-			    + " \n"
-			    + "    ,row_number() over (order by sum([total_time])        desc)                           as [rank_time] \n"
-			    + "    ,row_number() over (order by sum([shared_blks_read])  desc)                           as [rank_disk_reads] \n"
-			    + "    ,row_number() over (order by sum([temp_blks_written]) desc)                           as [rank_temp] \n"
-			    + (hasWal  ? "    ,row_number() over (order by sum([wal_bytes])         desc)                           as [rank_wal] \n" : "")
-			    + "    ,row_number() over (order by sum([calls])             desc)                           as [rank_calls] \n"
-			    + (hasPlan ? "    ,row_number() over (order by sum([total_plan_time])   desc)                           as [rank_plan_time] \n" : "")
 			    + " \n"
 			    + (hasWal  ? "    ,CAST( sum([wal_bytes]) / 1048576.0 AS DECIMAL(19,1) )                                as [wal_mb__sum] \n" : "")
 			    + (hasPlan ? "    ,CAST( sum([total_plan_time]) AS DECIMAL(20,0) )                                      as [plan_time__sum] \n" : "")
@@ -504,14 +527,8 @@ extends PostgresAbstract
 			    + skip_username
 				+ getReportPeriodSqlWhere()
 			    + "group by [datname], [usename], [queryid] \n"
-			    + ") x \n"
-			    + "where [rank_time]       <= " + topRows + " \n"
-			    + "   or [rank_disk_reads] <= " + topRows + " and [shared_blks_read__sum]  > 0 \n"
-			    + "   or [rank_temp]       <= " + topRows + " and [temp_blks_written__sum] > 0 \n"
-			    + (hasWal  ? "   or [rank_wal]        <= " + topRows + " and [wal_mb__sum]            > 0 \n" : "")
-			    + "   or [rank_calls]      <= " + topRows + " \n"
-			    + (hasPlan ? "   or [rank_plan_time]  <= " + topRows + " and [plan_time__sum]         > 0 \n" : "")
-			    + "order by [rank_time] \n"
+			    + having
+			    + "order by [" + _orderByCol + "] desc \n"
 			    + "";
 
 		_shortRstm = executeQuery(conn, sql, false, "Top SQL");
@@ -523,7 +540,7 @@ extends PostgresAbstract
 		else
 		{
 			// Highlight sort column
-			_shortRstm.setHighlightSortColumns("total_time__sum");
+			_shortRstm.setHighlightSortColumns(_orderByCol);
 
 			// Describe the table
 			setSectionDescription(_shortRstm);
@@ -771,10 +788,8 @@ extends PostgresAbstract
 			//----------------------------------------------------
 			SimpleResultSet srs = new SimpleResultSet();
 
-			srs.addColumn("datname",    Types.VARCHAR,       60, 0);
-			srs.addColumn("usename",    Types.VARCHAR,       60, 0);
-			srs.addColumn("queryid",    Types.BIGINT,         0, 0);
-			srs.addColumn("sparklines", Types.VARCHAR,      512, 0); 
+			srs.addColumn("Info",       Types.VARCHAR,  1024*64, 0); // one narrow column: database, user, queryid, LLM advice (as the ASE Info column)
+			srs.addColumn("sparklines", Types.VARCHAR,      512, 0);
 			srs.addColumn("query",      Types.VARCHAR, 1024*128, 0); // this is 'text' in the origin table
 
 			// Position in the "source" _shortRstm table (values we will fetch)
@@ -843,12 +858,19 @@ extends PostgresAbstract
 					String llmAdviceLink = LlmSqlContextBuilder.buildAdviceLinkHtml(getReportingInstance().getDbxCentralPublicBaseUrl(), sqlText, llmDdlContext, DbUtils.DB_PROD_NAME_POSTGRES, getReportingInstance().getDbmsVersionStr(), getReportingInstance().getServerName());
 
 					// SQL Text
-					sqlText = "<xmp>" + sqlText + "</xmp>" + "<br>" + llmAdviceLink + tableInfo;
+					sqlText = "<xmp>" + sqlText + "</xmp>" + tableInfo;
 //					sqlText = "<script type='text/plain' readonly>" + sqlText + "</script>" + tableInfo;
 //					sqlText = "<div class='sqltext'>" + StringEscapeUtils.escapeHtml4(sqlText) + "</div>" + tableInfo;
 
+					// The Info column (the queryid without thousands separators: to copy it, or search for it)
+					String info = infoCell(
+							  infoValue("Database", null, datname)
+							, infoValue("User",     null, usename)
+							, infoValue("queryid",  "Hash of the statement's parse tree (pg_stat_statements.queryid): the same statement with other literals gets the same queryid", queryid)
+							, llmAdviceLink);
+
 					// add record to SimpleResultSet
-					srs.addRow(datname, usename, queryid, sparklines, sqlText);
+					srs.addRow(info, sparklines, sqlText);
 				}
 			}
 

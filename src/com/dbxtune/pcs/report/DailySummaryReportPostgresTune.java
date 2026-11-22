@@ -86,7 +86,12 @@ extends DailySummaryReportDefault
 
 		// SQL
 		addReportEntry( new PostgresStatementsPerDb(this) );
-		addReportEntry( new PostgresTopSql         (this) );
+		addReportEntry( new PostgresTopSql         (this, PostgresTopSql.ReportType.TOTAL_TIME) );   // one section per measure (as SQL Server and ASE)
+		addReportEntry( new PostgresTopSql         (this, PostgresTopSql.ReportType.DISK_READS) );
+		addReportEntry( new PostgresTopSql         (this, PostgresTopSql.ReportType.TEMP      ) );
+		addReportEntry( new PostgresTopSql         (this, PostgresTopSql.ReportType.WAL       ) );
+		addReportEntry( new PostgresTopSql         (this, PostgresTopSql.ReportType.CALLS     ) );
+		addReportEntry( new PostgresTopSql         (this, PostgresTopSql.ReportType.PLAN_TIME ) );
 		addReportEntry( new PostgresChattyStatements(this) );   // Possible N+1 / chatty statements (CmPgStatements)
 		addReportEntry( new PostgresTopDeadRows    (this) );
 		addReportEntry( new PostgresVacuumHealth   (this) );   // Transaction id wraparound: database/table ages, what held vacuum back, 19: autovacuum scores
