@@ -104,10 +104,96 @@ extends ReportChartAbstract
 		create();
 	}
 
+	/**
+	 * A stacked bar chart from a chart data table (CmName_GraphName, one column per series): each series summed per <code>dataGroupMinutes</code>.
+	 * The series keep the order of the columns (not sorted). <code>skipSeries</code>: comma separated series (columns) to leave out, or null.
+	 */
+	public ReportChartTimeSeriesStackedBar(ReportEntryAbstract reportEntry, DbxConnection conn, String schemaName, String cmName, String graphName, int dataGroupMinutes, String skipSeries, String graphTitle)
+	{
+		super(reportEntry, conn, schemaName, ChartType.STACKED_BAR, cmName, graphName, graphTitle, -1, false);
+
+		_dataGroupMinutes = dataGroupMinutes;
+		_dataTableName    = cmName + "_" + graphName;
+		_fromGraphTable   = true;
+		_keepGroupSet     = StringUtil.parseCommaStrToSet(null);
+		_skipGroupSet     = StringUtil.parseCommaStrToSet(skipSeries);
+
+		create();
+	}
+	private boolean _fromGraphTable;
+
 	@Override
 	protected Dataset createDataset()
 	{
+		if (_fromGraphTable)
+			return createCategoryDatasetFromGraphTable(getConnection());
 		return createCategoryDatasetFromCm(getConnection());
+	}
+
+	/** The chart data table: columns 4.. are the series (SessionStartTime, SessionSampleTime, CmSampleTime first) */
+	private Dataset createCategoryDatasetFromGraphTable(DbxConnection conn)
+	{
+		if ( ! DbUtils.checkIfTableExistsNoThrow(conn, null, null, getTableName()) )
+		{
+			setProblem("<br><font color='red'>ERROR: Creating ReportChartObject, the underlying table '" + getSchemaNameSqlPrefix() + getTableName() + "' did not exist, skipping this Chart.</font><br>\n");
+			_logger.info("createDataset(): The table '" + getSchemaNameSqlPrefix() + getTableName() + "' did not exist.");
+			return null;
+		}
+
+		int    p      = getSamplePeriodInMinutes();
+		String bucket = "DATEADD(MINUTE, DATEDIFF(MINUTE, '2000-01-01', [SessionSampleTime]) / " + p + " * " + p + ", '2000-01-01')";
+		try (Statement stmnt = conn.createStatement())
+		{
+			stmnt.setQueryTimeout(getDefaultQueryTimeout());
+
+			// The series: the column names
+			List<String> series = new java.util.ArrayList<>();
+			try (ResultSet rs = stmnt.executeQuery(conn.quotifySqlString("select * from " + getSchemaNameSqlPrefix() + "[" + getTableName() + "] where 1 = 2")))
+			{
+				java.sql.ResultSetMetaData md = rs.getMetaData();
+				for (int c = 4; c <= md.getColumnCount(); c++)
+					if ( ! _skipGroupSet.contains(md.getColumnLabel(c)) )
+						series.add(md.getColumnLabel(c));
+			}
+			if (series.isEmpty())
+				return null;
+
+			StringBuilder sums = new StringBuilder();
+			for (String s : series)
+				sums.append("      ,sum([").append(s).append("]) \n");
+			String sql = "select " + bucket + " as [SamplePeriod] \n"
+					+ sums
+					+ "from " + getSchemaNameSqlPrefix() + "[" + getTableName() + "] \n"
+					+ "where 1 = 1 \n"
+					+ getReportEntry().getReportPeriodSqlWhere()
+					+ "group by " + bucket + " \n"
+					+ "order by 1 \n";
+
+			DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+			try (ResultSet rs = stmnt.executeQuery(conn.quotifySqlString(sql)))
+			{
+				while (rs.next())
+				{
+					Timestamp ts = rs.getTimestamp(1);
+					double total = 0;
+					for (int s = 0; s < series.size(); s++)
+					{
+						double val = rs.getDouble(s + 2);
+						dataset.addValue(val, series.get(s), ts);
+						total += val;
+					}
+					setDatasetMinMaxValue(total); // stacked: the bar total
+				}
+			}
+			return dataset;
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("Problems in createDataset() when fetching DB data for the chart table '" + getTableName() + "'.", ex);
+			setProblem("Problems in createDataset() when fetching DB data for the chart table '" + getTableName() + "'.");
+			setException(ex);
+			return null;
+		}
 	}
 
 	@Override

@@ -40,6 +40,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TimeZone;
 
@@ -131,6 +132,31 @@ public abstract class ReportChartAbstract implements IReportChart
 	public static final double DEFAULT_IMAGE_JPEG_QUALITY = 0.75;
 
 	/** Serie colors: the XChart images AND the Chart.js charts, so the image and the interactive chart look the same */
+	/** Colors for the Postgres server log severities: the bad ones stand out, LOG (most messages, harmless) is light gray */
+	public static final Map<String, Color> SEVERITY_COLORS = Map.of(
+			"PANIC",   new Color(0x7f1d1d),
+			"FATAL",   new Color(0xdc2626),
+			"ERROR",   new Color(0xea580c),
+			"WARNING", new Color(0xd4a106),
+			"LOG",     new Color(0xc4cbd4));
+
+	/** Fixed colors per series name (null = the DSR_COLORS in series order) */
+	private Map<String, Color> _seriesColors;
+
+	/** Give some series a fixed color (for example {@link #SEVERITY_COLORS}), the others get the DSR_COLORS in series order. Returns this. */
+	public ReportChartAbstract setSeriesColors(Map<String, Color> seriesColors)
+	{
+		_seriesColors = seriesColors;
+		return this;
+	}
+
+	/** The color of a series: its fixed color, or the DSR_COLORS in series order */
+	protected Color seriesColor(Object name, int index)
+	{
+		Color c = _seriesColors == null || name == null ? null : _seriesColors.get(name.toString());
+		return c != null ? c : DSR_COLORS[index % DSR_COLORS.length];
+	}
+
 	public static final Color[] DSR_COLORS = {
 		new Color(0x2563eb), new Color(0xea580c), new Color(0x16a34a), new Color(0x9333ea), new Color(0xdc2626),
 		new Color(0x0891b2), new Color(0xca8a04), new Color(0x64748b), new Color(0xdb2777), new Color(0x65a30d),
@@ -987,8 +1013,7 @@ public abstract class ReportChartAbstract implements IReportChart
 		int cnt = 0;
 		for (Entry<String, List<Number>> entry : seriesDataVal.entrySet())
 		{
-			Color color = DSR_COLORS[cnt % DSR_COLORS.length];
-			//String newColor = chartColors[cnt % chartColors.length];
+			Color color = seriesColor(entry.getKey(), cnt);
 			String newColor = "'rgb(" + color.getRed() + ", " + color.getGreen() + ", " + color.getBlue() + ")'";
 			String label = entry.getKey().replace("\\", "\\\\").replace("'", "\\'"); // Replace any backslash with 2 backslash (\ -> \\) and (' -> \')
 			
@@ -1572,11 +1597,11 @@ public abstract class ReportChartAbstract implements IReportChart
 					XYSeries serie = xy.addSeries(ts.getKey().toString(), xs, ys);
 					serie.setMarker(SeriesMarkers.NONE);
 					serie.setLineWidth(s == 0 ? 1.6f : 1.2f);
-					serie.setLineColor(DSR_COLORS[s % DSR_COLORS.length]);
+					serie.setLineColor(seriesColor(ts.getKey(), s));
 					if (s == 0) // the first serie as a light filled area
 					{
 						serie.setXYSeriesRenderStyle(XYSeries.XYSeriesRenderStyle.Area);
-						Color c = DSR_COLORS[0];
+						Color c = seriesColor(ts.getKey(), 0);
 						serie.setFillColor(new Color(c.getRed(), c.getGreen(), c.getBlue(), 40));
 					}
 				}
@@ -1620,7 +1645,7 @@ public abstract class ReportChartAbstract implements IReportChart
 						vals.add(val == null ? 0.0 : val.doubleValue());
 					}
 					CategorySeries serie = cc.addSeries(cd.getRowKey(r).toString(), categories, vals);
-					serie.setFillColor(DSR_COLORS[r % DSR_COLORS.length]);
+					serie.setFillColor(seriesColor(cd.getRowKey(r), r));
 				}
 				CategoryStyler st = cc.getStyler();
 				st.setStacked(true);
@@ -1677,7 +1702,7 @@ public abstract class ReportChartAbstract implements IReportChart
 				int y = chartHeight + 2 + r * legendRowHeight;
 				for (int i = from; i < to; i++)
 				{
-					g.setColor(DSR_COLORS[i % DSR_COLORS.length]);
+					g.setColor(seriesColor(legendNames.get(i), i));
 					g.fillRect(x, y + (legendRowHeight - 10) / 2, 10, 10);
 					g.setColor(text);
 					g.drawString(legendNames.get(i), x + 15, y + (legendRowHeight - legendFm.getHeight()) / 2 + legendFm.getAscent());

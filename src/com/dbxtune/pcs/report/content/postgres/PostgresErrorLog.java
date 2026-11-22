@@ -20,11 +20,13 @@
  ******************************************************************************/
 package com.dbxtune.pcs.report.content.postgres;
 
+import java.awt.Color;
 import java.io.IOException;
 import java.io.Writer;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -33,6 +35,7 @@ import com.dbxtune.cm.postgres.CmErrorLog;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
+import com.dbxtune.pcs.report.content.ReportChartAbstract;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 
@@ -346,18 +349,33 @@ extends PostgresAbstract
 		// 3. Trend Graphs from CmErrorLog (if recorded)
 		//---------------------------------------------------------------------
 		String schema = getReportingInstance().getDbmsSchemaName();
-		_CmErrorLog_SeverityCount           = chart(conn, schema, CmErrorLog.CM_NAME, CmErrorLog.GRAPH_NAME_SEVERITY_COUNT,      "ErrorLog Messages by Severity, Count (" + CmErrorLog.SHORT_NAME + ")");
-		_CmErrorLog_SeverityPerSec          = chart(conn, schema, CmErrorLog.CM_NAME, CmErrorLog.GRAPH_NAME_SEVERITY_PER_SEC,    "ErrorLog Messages by Severity, Per Second (" + CmErrorLog.SHORT_NAME + ")");
-		_CmErrorLog_OperationalEvents       = chart(conn, schema, CmErrorLog.CM_NAME, CmErrorLog.GRAPH_NAME_OPERATIONAL_EVENTS,  "ErrorLog Operational Events, Count (" + CmErrorLog.SHORT_NAME + ")");
-		_CmErrorLog_OperationalEventsPerSec = chart(conn, schema, CmErrorLog.CM_NAME, CmErrorLog.GRAPH_NAME_OPERATIONAL_PER_SEC, "ErrorLog Operational Events, Per Second (" + CmErrorLog.SHORT_NAME + ")");
+		// The counts as stacked bars per 10 minutes (as lines they are a "comb" of small values, where a rare FATAL/ERROR is hidden under the LOG messages)
+		// The severities have fixed colors: PANIC/FATAL red, ERROR orange, WARNING amber, LOG light gray
+		// The severity bars are without LOG (LOG has far more messages, the errors would be thin slices at the bottom); LOG is in the Per Second chart
+		int barMinutes = 10;
+		_CmErrorLog_SeverityCount           = barChart(conn, schema, CmErrorLog.CM_NAME, CmErrorLog.GRAPH_NAME_SEVERITY_COUNT,     barMinutes, "LOG",  "ErrorLog Messages by Severity (without LOG), Count per " + barMinutes + " minutes (" + CmErrorLog.SHORT_NAME + ")", ReportChartAbstract.SEVERITY_COLORS);
+		_CmErrorLog_SeverityPerSec          = chart   (conn, schema, CmErrorLog.CM_NAME, CmErrorLog.GRAPH_NAME_SEVERITY_PER_SEC,                       "ErrorLog Messages by Severity, Per Second (" + CmErrorLog.SHORT_NAME + ")", ReportChartAbstract.SEVERITY_COLORS);
+		_CmErrorLog_OperationalEvents       = barChart(conn, schema, CmErrorLog.CM_NAME, CmErrorLog.GRAPH_NAME_OPERATIONAL_EVENTS, barMinutes, null,   "ErrorLog Operational Events, Count per " + barMinutes + " minutes (" + CmErrorLog.SHORT_NAME + ")", null);
+		_CmErrorLog_OperationalEventsPerSec = chart   (conn, schema, CmErrorLog.CM_NAME, CmErrorLog.GRAPH_NAME_OPERATIONAL_PER_SEC,            "ErrorLog Operational Events, Per Second (" + CmErrorLog.SHORT_NAME + ")", null);
 	}
 
 	/** A line chart, or null when the graph was not recorded */
-	private IReportChart chart(DbxConnection conn, String schema, String cmName, String graphName, String title)
+	private IReportChart chart(DbxConnection conn, String schema, String cmName, String graphName, String title, Map<String, Color> seriesColors)
 	{
 		if ( ! doTableExist(conn, schema, cmName + "_" + graphName) )
 			return null;
-		return createTsLineChart(conn, schema, cmName, graphName, -1, false, null, title);
+		IReportChart chart = createTsLineChart(conn, schema, cmName, graphName, -1, false, null, title);
+		if (seriesColors != null && chart instanceof ReportChartAbstract)
+			((ReportChartAbstract) chart).setSeriesColors(seriesColors);
+		return chart;
+	}
+
+	/** A stacked bar chart (each series summed per N minutes, skipSeries left out), or null when the graph was not recorded */
+	private IReportChart barChart(DbxConnection conn, String schema, String cmName, String graphName, int minutes, String skipSeries, String title, Map<String, Color> seriesColors)
+	{
+		if ( ! doTableExist(conn, schema, cmName + "_" + graphName) )
+			return null;
+		return createTsStackedBarChartFromGraph(conn, schema, cmName, graphName, minutes, skipSeries, title).setSeriesColors(seriesColors);
 	}
 
 	private void buildVerdictsAndConfigNotes(DbxConnection conn)

@@ -1359,6 +1359,16 @@ implements IReportEntry
 	{
 		return new ReportChartTimeSeriesStackedBar(this, conn, schemaName, cmName, dataGroupColumn, dataGroupMinutes, topGroupCountReport, dataValueColumn, dataDivideByValue, keepGroups, skipGroups, graphTitle);
 	}
+
+	/**
+	 * A stacked bar chart from a chart's data table (CmName_GraphName): each series summed per <code>dataGroupMinutes</code>.
+	 * Good for counts of rare events, that are hard to read as a line (a "comb" of 0 and 1).
+	 * <code>skipSeries</code>: comma separated series (columns) to leave out, or null.
+	 */
+	public ReportChartTimeSeriesStackedBar createTsStackedBarChartFromGraph(DbxConnection conn, String schemaName, String cmName, String graphName, int dataGroupMinutes, String skipSeries, String graphTitle)
+	{
+		return new ReportChartTimeSeriesStackedBar(this, conn, schemaName, cmName, graphName, dataGroupMinutes, skipSeries, graphTitle);
+	}
 	
 	
 	/**
