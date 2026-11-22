@@ -53,7 +53,11 @@ extends DailySummaryReportDefault
 		addReportEntry( new OracleWaitStats(this)      );
 
 		// SQL, Tables and Indexes
-		addReportEntry( new OracleTopSql(this)         );
+		addReportEntry( new OracleTopSql(this, OracleTopSql.ReportType.ELAPSED_TIME) );   // one section per measure (as SQL Server, ASE and Postgres)
+		addReportEntry( new OracleTopSql(this, OracleTopSql.ReportType.CPU_TIME    ) );
+		addReportEntry( new OracleTopSql(this, OracleTopSql.ReportType.BUFFER_GETS ) );
+		addReportEntry( new OracleTopSql(this, OracleTopSql.ReportType.DISK_READS  ) );
+		addReportEntry( new OracleTopSql(this, OracleTopSql.ReportType.EXECUTIONS  ) );
 		addReportEntry( new OracleChattyStatements(this) );
 		addReportEntry( new OracleTopSegments(this)    );
 
