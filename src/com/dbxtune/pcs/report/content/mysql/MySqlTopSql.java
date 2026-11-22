@@ -475,7 +475,7 @@ extends MySqlAbstract
 		// The "details" table: Digest + the charts and numbers of the statement (as a table in the cell) + the SQL Text
 		//--------------------------------------------------------------------------------
 		SimpleResultSet srs = new SimpleResultSet();
-		srs.addColumn("Digest",     Types.VARCHAR,       64, 0);
+		srs.addColumn("Info",       Types.VARCHAR,  1024*64, 0); // one narrow column: digest, schema, problems, plan + LLM advice links (as the ASE Info column)
 		srs.addColumn("sparklines", Types.VARCHAR,      512, 0);
 		srs.addColumn("query",      Types.VARCHAR, 1024*128, 0);
 
@@ -552,7 +552,7 @@ extends MySqlAbstract
 			// No plan: SAY so (as the other DBMS vendors does), a missing link leaves the reader wondering why
 			if (plans.isEmpty())
 			{
-				planLinks      = "Execution Plan <b>NOT Available</b> <i>(MySqlTune gets the plans of statements while they are running, and only when the login has the privileges for it: see the tab 'Active Statements')</i>";
+				planLinks      = "Execution Plan <b>NOT Available</b> " + infoLabel("", "MySqlTune gets the plans of statements while they are running, and only when the login has the privileges for it: see the tab 'Active Statements'");
 				shortPlanLinks = "--not-found--";
 			}
 			_shortRstm.setValueAtWithOverride(shortPlanLinks, r, pos_ExecPlan);
@@ -561,15 +561,16 @@ extends MySqlAbstract
 			// and the charts and numbers of the statement is read from the table in the "sparklines" cell (see SparklineHelper.getWorkloadHarvesterJs)
 			String llmAdviceLink = LlmSqlContextBuilder.buildAdviceLinkHtmlJs(dbxCentralBaseUrl, sqlText, firstPlanId, DbUtils.DB_PROD_NAME_MYSQL, reportSrvName, schemaName);
 
-			// Who and where: the schema it ran in, and the problems MySQL counted for it
-			String problems = "";
-			if (_shortRstm.getValueAsLong(r, "NoIndexUsed__sum"    , true, 0L) > 0) problems += "&emsp; No index used: <b>" + _shortRstm.getValueAsString(r, "NoIndexUsed__sum") + "</b> times";
-			if (_shortRstm.getValueAsLong(r, "TmpDiskTables__sum"  , true, 0L) > 0) problems += "&emsp; Temp tables on disk: <b>" + _shortRstm.getValueAsString(r, "TmpDiskTables__sum") + "</b>";
-			if (_shortRstm.getValueAsLong(r, "SortMergePasses__sum", true, 0L) > 0) problems += "&emsp; Sort merge passes: <b>" + _shortRstm.getValueAsString(r, "SortMergePasses__sum") + "</b>";
-			if (_shortRstm.getValueAsLong(r, "Errors__sum"         , true, 0L) > 0) problems += "&emsp; Errors: <b>" + _shortRstm.getValueAsString(r, "Errors__sum") + "</b>";
-
-			String executedIn = (StringUtil.hasValue(schemaName) ? "Schema: <code>" + StringEscapeUtils.escapeHtml4(schemaName) + "</code>" : "Schema: <i>none (no USE)</i>")
-			                  + problems;
+			// The Info column: the digest, the schema it ran in, the problems MySQL counted for it, the plan + LLM advice links
+			String info = infoCell(
+					  infoValue("Digest",              "Hash of the normalized statement (performance_schema DIGEST): the same statement with other literals gets the same digest", digest)
+					, infoValue("Schema",              null, StringUtil.hasValue(schemaName) ? "<code>" + StringEscapeUtils.escapeHtml4(schemaName) + "</code>" : "<i>none (no USE)</i>")
+					, infoValue("No index used",       null, _shortRstm.getValueAsLong(r, "NoIndexUsed__sum"    , true, 0L) > 0 ? _shortRstm.getValueAsString(r, "NoIndexUsed__sum") + " times" : "")
+					, infoValue("Temp tables on disk", null, _shortRstm.getValueAsLong(r, "TmpDiskTables__sum"  , true, 0L) > 0 ? _shortRstm.getValueAsString(r, "TmpDiskTables__sum")   : "")
+					, infoValue("Sort merge passes",   null, _shortRstm.getValueAsLong(r, "SortMergePasses__sum", true, 0L) > 0 ? _shortRstm.getValueAsString(r, "SortMergePasses__sum") : "")
+					, infoValue("Errors",              null, _shortRstm.getValueAsLong(r, "Errors__sum"         , true, 0L) > 0 ? _shortRstm.getValueAsString(r, "Errors__sum")          : "")
+					, planLinks
+					, llmAdviceLink);
 
 			// An example with the values (QUERY_SAMPLE_TEXT): closed, it can be long
 			String sample = "";
@@ -594,13 +595,10 @@ extends MySqlAbstract
 			String sparklines = htp.getHtmlTextForRow(r);
 
 			srs.addRow(
-					digest,
+					info,
 					sparklines,
 					"<xmp>" + sqlText + "</xmp>\n"
-						+ executedIn + " <br>\n"
 						+ sample
-						+ "<br>\n" + planLinks
-						+ (StringUtil.hasValue(llmAdviceLink) ? "<br>\n" + llmAdviceLink : "")
 						+ formatted);
 		}
 

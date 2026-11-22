@@ -1685,9 +1685,8 @@ extends SqlServerAbstract
 			SimpleResultSet srs = new SimpleResultSet();
 			ResultSetTableModel rstm = _topCpuRstm;
 
-			srs.addColumn("dbname"     , Types.VARCHAR,       60, 0);
-			srs.addColumn("plan_id"    , Types.VARCHAR,       60, 0);
-			srs.addColumn("sparklines" , Types.VARCHAR,      512, 0); 
+			srs.addColumn("Info"       , Types.VARCHAR,  1024*64, 0); // one narrow column: database, plan_id, procedure, plan + LLM advice links (as the ASE Info column)
+			srs.addColumn("sparklines" , Types.VARCHAR,      512, 0);
 			srs.addColumn("SQLText"    , Types.VARCHAR, 1024*128, 0); // this is 'text' in the origin table
 
 			// Position in the "source" _shortRstm table (values we will fetch)
@@ -1859,13 +1858,18 @@ extends SqlServerAbstract
 					String sparklines = htp.getHtmlTextForRow(r);
 
 					sqlText = "<xmp>" + sqlText + "</xmp>\n"
-							+ (StringUtil.isNullOrBlank(procName) ? "" : "<br>Executed By: <code>" + procName + "</code> <br>\n")
-							+ (StringUtil.hasValue(showplanLink) ? "<br>\n" + showplanLink : "") 
-							+ "<br>\n" + llmAdviceLink 
 							+ tableInfo;
 
+					// The Info column: database, plan_id, the procedure it was executed by, plan + LLM advice links
+					String info = infoCell(
+							  infoValue("Database",    null, dbname)
+							, infoValue("plan_id",     "Query Store plan id (sys.query_store_plan.plan_id)", plan_id)
+							, infoValue("Executed by", null, StringUtil.isNullOrBlank(procName) ? "" : "<code>" + procName + "</code>")
+							, showplanLink
+							, llmAdviceLink);
+
 					// add record to SimpleResultSet
-					srs.addRow(dbname, plan_id, sparklines, sqlText);
+					srs.addRow(info, sparklines, sqlText);
 				}
 			}
 

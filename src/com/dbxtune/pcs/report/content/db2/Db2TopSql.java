@@ -510,7 +510,7 @@ extends Db2Abstract
 		// The "details" table: EXECUTABLE_ID + the charts and numbers of the statement (as a table in the cell) + the SQL Text
 		//--------------------------------------------------------------------------------
 		SimpleResultSet srs = new SimpleResultSet();
-		srs.addColumn("EXECUTABLE_ID", Types.VARCHAR,       80, 0);
+		srs.addColumn("Info",          Types.VARCHAR,  1024*64, 0); // one narrow column: id, isolation, package, problems, plan + LLM advice links (as the ASE Info column)
 		srs.addColumn("sparklines",    Types.VARCHAR,      512, 0);
 		srs.addColumn("query",         Types.VARCHAR, 1024*128, 0);
 
@@ -580,24 +580,26 @@ extends Db2Abstract
 
 			// No plan: SAY so (as the other DBMS vendors does), a missing link leaves the reader wondering why
 			if (plans.isEmpty())
-				planLinks = "Execution Plan <b>NOT Available</b> <i>(Db2Tune gets the plans of statements that runs for a while, and only when the explain tables exist for the login: see the tab 'Active Statements')</i>";
+				planLinks = "Execution Plan <b>NOT Available</b> " + infoLabel("", "Db2Tune gets the plans of statements that runs for a while, and only when the explain tables exist for the login: see the tab 'Active Statements'");
 			_shortRstm.setValueAtWithOverride(plans.isEmpty() ? "--not-found--" : plans.size() == 1 ? "yes" : plans.size() + " plans", r, pos_ExecPlan);
 
 			// "Get LLM Optimization Advice": with the (first) plan. What the tables look like is looked up when the link is clicked,
 			// and the charts and numbers of the statement is read from the table in the "sparklines" cell (see SparklineHelper.getWorkloadHarvesterJs)
 			String llmAdviceLink = LlmSqlContextBuilder.buildAdviceLinkHtmlJs(dbxCentralBaseUrl, sqlText, firstPlanId, DbUtils.DB_PROD_NAME_DB2_LUW, reportSrvName, "");
 
-			// The problems Db2 counted for it
-			String problems = "";
-			if (_shortRstm.getValueAsLong(r, "SORT_OVERFLOWS__sum"     , true, 0L) > 0) problems += "&emsp; Sort overflows: <b>" + _shortRstm.getValueAsString(r, "SORT_OVERFLOWS__sum") + "</b>";
-			if (_shortRstm.getValueAsLong(r, "LOCK_TIMEOUTS__sum"      , true, 0L) > 0) problems += "&emsp; Lock timeouts: <b>"  + _shortRstm.getValueAsString(r, "LOCK_TIMEOUTS__sum") + "</b>";
-			if (_shortRstm.getValueAsLong(r, "DEADLOCKS__sum"          , true, 0L) > 0) problems += "&emsp; Deadlocks: <b>"      + _shortRstm.getValueAsString(r, "DEADLOCKS__sum") + "</b>";
-			if (_shortRstm.getValueAsLong(r, "LOCK_ESCALS__sum"        , true, 0L) > 0) problems += "&emsp; Lock escalations: <b>" + _shortRstm.getValueAsString(r, "LOCK_ESCALS__sum") + "</b>";
-			if (_shortRstm.getValueAsLong(r, "NUM_EXEC_WITH_ERROR__sum", true, 0L) > 0) problems += "&emsp; Errors: <b>"         + _shortRstm.getValueAsString(r, "NUM_EXEC_WITH_ERROR__sum") + "</b> (last SQLCODE " + _shortRstm.getValueAsString(r, "LAST_EXEC_ERROR") + ")";
-
-			String executedIn = "Isolation: <code>" + StringEscapeUtils.escapeHtml4(StringUtil.nullToValue(_shortRstm.getValueAsString(r, "EFFECTIVE_ISOLATION"), "")) + "</code>"
-			                  + ("S".equals(_shortRstm.getValueAsString(r, "SECTION_TYPE")) ? "&emsp; Static SQL in package: <code>" + StringEscapeUtils.escapeHtml4(_shortRstm.getValueAsString(r, "PACKAGE_SCHEMA") + "." + _shortRstm.getValueAsString(r, "PACKAGE_NAME")) + "</code>" : "")
-			                  + problems;
+			// The Info column: the id, how it runs (isolation, static SQL package), the problems Db2 counted for it, the plan + LLM advice links
+			String isolation = StringUtil.nullToValue(_shortRstm.getValueAsString(r, "EFFECTIVE_ISOLATION"), "");
+			String info = infoCell(
+					  infoValue("EXECUTABLE_ID",         "The id of the statement in the package cache (MON_GET_PKG_CACHE_STMT.EXECUTABLE_ID)", executableId)
+					, infoValue("Isolation",             null, isolation.isEmpty() ? "" : "<code>" + StringEscapeUtils.escapeHtml4(isolation) + "</code>")
+					, infoValue("Static SQL in package", null, "S".equals(_shortRstm.getValueAsString(r, "SECTION_TYPE")) ? "<code>" + StringEscapeUtils.escapeHtml4(_shortRstm.getValueAsString(r, "PACKAGE_SCHEMA") + "." + _shortRstm.getValueAsString(r, "PACKAGE_NAME")) + "</code>" : "")
+					, infoValue("Sort overflows",        null, _shortRstm.getValueAsLong(r, "SORT_OVERFLOWS__sum"     , true, 0L) > 0 ? _shortRstm.getValueAsString(r, "SORT_OVERFLOWS__sum") : "")
+					, infoValue("Lock timeouts",         null, _shortRstm.getValueAsLong(r, "LOCK_TIMEOUTS__sum"      , true, 0L) > 0 ? _shortRstm.getValueAsString(r, "LOCK_TIMEOUTS__sum")  : "")
+					, infoValue("Deadlocks",             null, _shortRstm.getValueAsLong(r, "DEADLOCKS__sum"          , true, 0L) > 0 ? _shortRstm.getValueAsString(r, "DEADLOCKS__sum")      : "")
+					, infoValue("Lock escalations",      null, _shortRstm.getValueAsLong(r, "LOCK_ESCALS__sum"        , true, 0L) > 0 ? _shortRstm.getValueAsString(r, "LOCK_ESCALS__sum")    : "")
+					, infoValue("Errors",                null, _shortRstm.getValueAsLong(r, "NUM_EXEC_WITH_ERROR__sum", true, 0L) > 0 ? _shortRstm.getValueAsString(r, "NUM_EXEC_WITH_ERROR__sum") + " (last SQLCODE " + _shortRstm.getValueAsString(r, "LAST_EXEC_ERROR") + ")" : "")
+					, planLinks
+					, llmAdviceLink);
 
 			// The tables of the statement: from the plan when there is one (the real tables, also behind views and aliases), otherwise parsed from the text
 			// (a table without a schema can be in any schema: the package cache does not say the default schema of the statement)
@@ -623,13 +625,10 @@ extends Db2Abstract
 			String sparklines = htp.getHtmlTextForRow(r);
 
 			srs.addRow(
-					executableId,
+					info,
 					sparklines,
 					"<xmp>" + sqlText + "</xmp>\n"
-						+ executedIn + " <br>\n"
-						+ "<br>\n" + planLinks
 						+ (StringUtil.hasValue(planTexts) ? "\n" + planTexts : "")
-						+ (StringUtil.hasValue(llmAdviceLink) ? "<br>\n" + llmAdviceLink : "")
 						+ formatted);
 		}
 

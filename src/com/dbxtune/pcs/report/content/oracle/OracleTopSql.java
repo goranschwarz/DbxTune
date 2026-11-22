@@ -486,7 +486,7 @@ extends OracleAbstract
 		// The "details" table: SQL_ID + the charts and numbers of the statement (as a table in the cell) + the SQL Text, the execution plan and the tables
 		//--------------------------------------------------------------------------------
 		SimpleResultSet srs = new SimpleResultSet();
-		srs.addColumn("SQL_ID",     Types.VARCHAR,       30, 0);
+		srs.addColumn("Info",       Types.VARCHAR,  1024*64, 0); // one narrow column: SQL_ID, container, who runs it, plan + LLM advice links (as the ASE Info column)
 		srs.addColumn("sparklines", Types.VARCHAR,      512, 0);
 		srs.addColumn("query",      Types.VARCHAR, 1024*128, 0);
 
@@ -545,7 +545,9 @@ extends OracleAbstract
 			String      shortPlanLinks = ""; // for the first table:     "view plan",           or "111, 222"
 			String      firstPlanId    = null;
 			String      conName        = _shortRstm.getValueAsString(r, "CON_NAME");
-			String      executedBy     = ""; // who runs the statement: the PL/SQL unit it is written in, the schema it is parsed in, the module (the application)
+			String      program        = ""; // who runs the statement: the program, the schema it is parsed in, the module (the application)
+			String      parsingSchema  = "";
+			String      module         = "";
 			Set<String> planTableList  = new LinkedHashSet<>();
 
 			for (Entry<String, String[]> plan : plans.entrySet())
@@ -559,15 +561,11 @@ extends OracleAbstract
 					conName = plan.getValue()[2];
 				planTableList.addAll(StringUtil.parseCommaStrToList(plan.getValue()[1], true));
 
-				if (executedBy.isEmpty())
+				if (program.isEmpty() && parsingSchema.isEmpty() && module.isEmpty())
 				{
-					String parsingSchema = plan.getValue()[3];
-					String module        = plan.getValue()[4];
-					String program       = plan.getValue()[5];
-
-					executedBy = (StringUtil.hasValue(program)       ? "Executed By: <code>"    + StringEscapeUtils.escapeHtml4(program)       + "</code> &emsp; " : "")
-					           + (StringUtil.hasValue(parsingSchema) ? "Parsing Schema: <code>" + StringEscapeUtils.escapeHtml4(parsingSchema) + "</code> &emsp; " : "")
-					           + (StringUtil.hasValue(module)        ? "Module: <code>"         + StringEscapeUtils.escapeHtml4(module)        + "</code>"         : "");
+					parsingSchema = StringUtil.nullToValue(plan.getValue()[3], "");
+					module        = StringUtil.nullToValue(plan.getValue()[4], "");
+					program       = StringUtil.nullToValue(plan.getValue()[5], "");
 				}
 
 				// One plan: "View Execution Plan". Several: the icon and the text once, then a link per plan
@@ -619,13 +617,20 @@ extends OracleAbstract
 			// Grab all the charts and numbers we defined in 'htp'
 			String sparklines = htp.getHtmlTextForRow(r);
 
+			// The Info column: SQL_ID, the container, who runs it, the plan + LLM advice links
+			String info = infoCell(
+					  infoValue("SQL_ID",         "The id of the statement (V$SQL.SQL_ID): a hash of the SQL text", sqlId)
+					, infoValue("Container",      null, conName)
+					, infoValue("Executed by",    null, program.isEmpty()       ? "" : "<code>" + StringEscapeUtils.escapeHtml4(program)       + "</code>")
+					, infoValue("Parsing schema", null, parsingSchema.isEmpty() ? "" : "<code>" + StringEscapeUtils.escapeHtml4(parsingSchema) + "</code>")
+					, infoValue("Module",         null, module.isEmpty()        ? "" : "<code>" + StringEscapeUtils.escapeHtml4(module)        + "</code>")
+					, planLinks
+					, llmAdviceLink);
+
 			srs.addRow(
-					sqlId,
+					info,
 					sparklines,
 					"<xmp>" + sqlText + "</xmp>\n"
-						+ (executedBy.isEmpty() ? "" : "<br>" + executedBy + " <br>\n")
-						+ "<br>\n" + planLinks
-						+ (StringUtil.hasValue(llmAdviceLink) ? "<br>\n" + llmAdviceLink : "")
 						+ tableInfo);
 		}
 

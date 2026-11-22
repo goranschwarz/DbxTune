@@ -617,10 +617,8 @@ extends SqlServerAbstract
 			{
 				SimpleResultSet srs = new SimpleResultSet();
 
-				srs.addColumn("DbName"     , Types.VARCHAR,       60, 0);
-				srs.addColumn("SchemaName" , Types.VARCHAR,       60, 0);
-				srs.addColumn("ObjectName" , Types.VARCHAR,       60, 0);
-				srs.addColumn("sparklines" , Types.VARCHAR,      512, 0); 
+				srs.addColumn("Info"       , Types.VARCHAR,     4096, 0); // one narrow column: database, schema, object (as the ASE Info column)
+				srs.addColumn("sparklines" , Types.VARCHAR,      512, 0);
 //				srs.addColumn("query"      , Types.VARCHAR, 1024*128, 0); // this is 'text' in the origin table
 
 				// Position in the "source" _shortRstm table (values we will fetch)
@@ -658,8 +656,17 @@ extends SqlServerAbstract
 						
 						String sparklines = htp.getHtmlTextForRow(r);
 
+						// Temporary procedures have a padded name: '#name_______..._0008046B' -> '#name'
+						String objName = ObjectName == null ? null : ObjectName.replaceFirst("^(#\\w+?)_{8,}[0-9A-Fa-f]+$", "$1");
+
+						// The Info column: database, schema, object
+						String info = infoCell(
+								  infoValue("Database", null, dbname)
+								, infoValue("Schema",   null, SchemaName)
+								, infoValue("Object",   null, objName));
+
 						// add record to SimpleResultSet
-						srs.addRow(dbname, SchemaName, ObjectName, sparklines); //, "<xmp>" + query + "</xmp>");
+						srs.addRow(info, sparklines); //, "<xmp>" + query + "</xmp>");
 					}
 				}
 

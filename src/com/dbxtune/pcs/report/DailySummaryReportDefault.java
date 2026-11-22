@@ -2029,7 +2029,7 @@ extends DailySummaryReportAbstract
 		return "<div style='margin-top:8px;'>"
 		     + "<a id='dsr-llm-analysis-btn' class='btn btn-sm btn-outline-primary' target='_blank' href='" + baseUrl + "/llm-dsr-analysis" + query + "'"
 		     + " title='Open DbxCentral, where an AI (LLM) can review this whole report and give a prioritized list of improvements. Only numbers are sent, no SQL text.'>"
-		     + "AI Analysis</a> <span style='color:#5d6878; font-size:12px;'>Ask an AI to review the whole report</span>"
+		     + "LLM/AI Analysis</a> <span style='color:#5d6878; font-size:12px;'>Ask an AI to review the whole report</span>"
 		     + "</div>\n"
 		     + "<script>(function() { try { \n"
 		     + "  var a = document.getElementById('dsr-llm-analysis-btn'); \n"

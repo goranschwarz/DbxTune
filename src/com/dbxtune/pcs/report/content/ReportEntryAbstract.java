@@ -1146,6 +1146,21 @@ implements IReportEntry
 		return sb.append("</div>").toString();
 	}
 
+	/** One part of an "Info" cell: a small gray label (with an (i) when there is an explanation) above the value in bold. "" when the value is empty */
+	public static String infoValue(String label, String explanation, Object value)
+	{
+		String val = value == null ? "" : value.toString();
+		if (StringUtil.isNullOrBlank(val))
+			return "";
+		String lbl = StringUtil.hasValue(explanation) ? infoLabel(label, explanation) : "<span style='font-size:11px; color:#6b7686;'>" + label + "</span>";
+
+		// A long id (MySQL digest, Db2 EXECUTABLE_ID: 64 chars) would make the narrow column wide: small monospace that may wrap (it is still ONE value to copy)
+		if (val.length() > 24 && val.matches("[^\\s<>]+"))
+			return lbl + "<br><b style='display:inline-block; max-width:24ch; white-space:normal; word-break:break-all; font-family:Consolas, \"Courier New\", monospace; font-size:11px;'>" + val + "</b>";
+
+		return lbl + "<br><b>" + val + "</b>";
+	}
+
 	/** A small gray label with an (i): hover (or tap) shows what it means */
 	public static String infoLabel(String label, String explanation)
 	{

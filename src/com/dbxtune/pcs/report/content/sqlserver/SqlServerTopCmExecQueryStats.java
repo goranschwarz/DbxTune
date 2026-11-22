@@ -1168,9 +1168,8 @@ extends SqlServerAbstract
 			{
 				SimpleResultSet srs = new SimpleResultSet();
 
-				srs.addColumn("dbname"     , Types.VARCHAR,       60, 0);
-				srs.addColumn("query_hash" , Types.VARCHAR,       60, 0);
-				srs.addColumn("sparklines" , Types.VARCHAR,      512, 0); 
+				srs.addColumn("Info"       , Types.VARCHAR,  1024*64, 0); // one narrow column: database, query_hash, procedure, plan + LLM advice links (as the ASE Info column)
+				srs.addColumn("sparklines" , Types.VARCHAR,      512, 0);
 				srs.addColumn("query"      , Types.VARCHAR, 1024*128, 0); // this is 'text' in the origin table
 
 				// Position in the "source" _shortRstm table (values we will fetch)
@@ -1294,13 +1293,18 @@ extends SqlServerAbstract
 						String sparklines = htp.getHtmlTextForRow(r);
 
 						sqlText = "<xmp>" + sqlText + "</xmp>\n"
-								+ (StringUtil.isNullOrBlank(procName) ? "" : "<br>Executed By: <code>" + procName + "</code> <br>\n")
-								+ (StringUtil.hasValue(showplanLink) ? "<br>\n" + showplanLink : "")
-								+ "<br>\n" + llmAdviceLink
 								+ tableInfo;
-						
+
+						// The Info column: database, query_hash, the procedure it was executed by, plan + LLM advice links
+						String info = infoCell(
+								  infoValue("Database",    null, dbname)
+								, infoValue("query_hash",  "Hash of the statement with the literals removed: the same statement with other literals gets the same query_hash", query_hash)
+								, infoValue("Executed by", null, StringUtil.isNullOrBlank(procName) ? "" : "<code>" + procName + "</code>")
+								, showplanLink
+								, llmAdviceLink);
+
 						// add record to SimpleResultSet
-						srs.addRow(dbname, query_hash, sparklines, sqlText);
+						srs.addRow(info, sparklines, sqlText);
 					}
 				}
 
