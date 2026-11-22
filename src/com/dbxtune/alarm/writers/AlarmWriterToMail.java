@@ -24,7 +24,9 @@ import java.lang.invoke.MethodHandles;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.mail.HtmlEmail;
@@ -101,7 +103,52 @@ extends AlarmWriterAbstract
 		String summaryHtml = ActiveAlarmSummary.toHtml(summary, getActiveAlarmSummaryGroup(), getActiveAlarmSummaryMaxRows(), true);
 		String summaryText = ActiveAlarmSummary.toText(summary, getActiveAlarmSummaryGroup(), getActiveAlarmSummaryMaxRows(), true);
 
-		return WriterUtils.createMessageFromTemplate(action, alarmEvent, WriterUtils.getActiveAlarmList(), _msgBodyTemplate, true, null, getDbxCentralUrl(), summaryHtml, summaryText);
+		// HTML template: the alarm's HTML details, made readable in a mail (see toMailHtml)
+		Map<String, Object> extraContext = null;
+		if (StringUtils.containsIgnoreCase(_msgBodyTemplate, "<html>"))
+		{
+			extraContext = new HashMap<>();
+			extraContext.put("extendedDescription",        toMailHtml(alarmEvent.getExtendedDescriptionHtml()));
+			extraContext.put("reRaiseExtendedDescription", toMailHtml(alarmEvent.getReRaiseExtendedDescriptionHtml()));
+		}
+
+		return WriterUtils.createMessageFromTemplate(action, alarmEvent, WriterUtils.getActiveAlarmList(), _msgBodyTemplate, true, null, getDbxCentralUrl(), summaryHtml, summaryText, extraContext);
+	}
+
+	private static final String MAIL_TABLE = "border-collapse:collapse; font-size:12px; background:#ffffff; margin:4px 0 10px;";
+	private static final String MAIL_NAME  = "padding:2px 10px 2px 6px; border:1px solid #e3e7ee; background:#f6f7f9; color:#5d6878; white-space:nowrap; vertical-align:top;";
+	private static final String MAIL_TD    = "padding:2px 8px; border:1px solid #e3e7ee; vertical-align:top;";
+	private static final String MAIL_TH    = "padding:3px 8px; border:1px solid #d5dbe5; background:#eef2f8; color:#1d2430; text-align:left; white-space:nowrap;";
+	private static final String MAIL_PRE   = "margin:4px 0; padding:6px 8px; background:#ffffff; border:1px solid #e3e7ee; border-radius:4px; font-family:Consolas, \"Courier New\", monospace; font-size:11px; white-space:pre-wrap;";
+
+	/**
+	 * Make an alarm's HTML details readable in a mail, with inline styles only (Outlook, Gmail and iPhone Mail have no shared CSS):
+	 * <ul>
+	 *   <li>tables: thin light borders and a small font, instead of <code>border=1</code> and a fixed 1200px width</li>
+	 *   <li>name/value tables: the name cell gray, the value may wrap (long SQL text no longer makes the mail very wide)</li>
+	 *   <li>header cells light blue, SQL text (pre) in a white box that wraps</li>
+	 *   <li>plan trees (ul) with a small indent per level (40px per level makes a deep plan 2000px wide)</li>
+	 *   <li>SQL Server temp table names without the padding: '#snapshot_____..._00000003C2BB' -&gt; '#snapshot'</li>
+	 * </ul>
+	 */
+	public static String toMailHtml(String html)
+	{
+		// No details: AlarmEvent.getExtendedDescriptionHtml() then gives "<pre>null</pre>" (or "<pre></pre>"), the mail shows no Details box for ""
+		if (StringUtil.isNullOrBlank(html) || html.trim().matches("(?i)<pre>\\s*(null)?\\s*</pre>"))
+			return "";
+
+		String h = html;
+		h = h.replaceAll("(?i)\\s*style='width:\\s*\\d{3,}px;'", "");
+		h = h.replaceAll("(?i)<table\\b[^>]*>", "<table cellpadding='0' cellspacing='0' style='" + MAIL_TABLE + "'>");
+		h = h.replaceAll("(?is)<td nowrap>\\s*<b>(.*?)</b>(&nbsp;)?\\s*</td>", "<td style='" + MAIL_NAME + "'>$1</td>"); // the name cell in name/value tables
+		h = h.replaceAll("(?i)<td nowrap>", "<td style='" + MAIL_TD + "'>");                                             // the value cell: may wrap
+		h = h.replaceAll("(?i)<td style='(?!padding)", "<td style='" + MAIL_TD + " ");                                   // keep their own style (for example align)
+		h = h.replaceAll("(?i)<td(?![^>]*style=)([^>]*)>", "<td$1 style='" + MAIL_TD + "'>");
+		h = h.replaceAll("(?i)<th(?![^>]*style=)([^>]*)>", "<th$1 style='" + MAIL_TH + "'>");
+		h = h.replaceAll("(?i)<pre\\b[^>]*>", "<pre style='" + MAIL_PRE.replace("\"", "&quot;") + "'>");
+		h = h.replaceAll("(?i)<ul>", "<ul style='margin:0; padding-left:14px;'>");
+		h = h.replaceAll("(#\\w+?)_{8,}[0-9A-Fa-f]{12}\\b", "$1");
+		return h;
 	}
 
 	private void sendMessage(String action, AlarmEvent alarmEvent)
@@ -518,7 +565,10 @@ extends AlarmWriterAbstract
 	public static final String  PROPKEY_subjectTemplate        = "AlarmWriterToMail.msg.subject.template";
 //	public static final String  DEFAULT_subjectTemplate        = "${type}: ${serviceName} - ${severity} - ${alarmClassAbriviated} - ${extraInfo}";
 //	public static final String  DEFAULT_subjectTemplate        = "${type}: ${serverDisplayName} - ${severity} - ${alarmClassAbriviated} - ${extraInfo}";
-	public static final String  DEFAULT_subjectTemplate        = "#if( $type == 'CANCEL' )[RESOLVED] ${serverDisplayName} - ${alarmClassAbriviated} - ${extraInfo} - lasted ${fullDuration}#else[${severity}] ${type}: ${serverDisplayName} - ${alarmClassAbriviated} - ${extraInfo}#end";
+//	public static final String  DEFAULT_subjectTemplate        = "#if( $type == 'CANCEL' )[RESOLVED] ${serverDisplayName} - ${alarmClassAbriviated} - ${extraInfo} - lasted ${fullDuration}#else[${severity}] ${type}: ${serverDisplayName} - ${alarmClassAbriviated} - ${extraInfo}#end";
+	// RAISE/RE-RAISE/CANCEL first (as before), then an icon: INFO=ℹ️, WARNING=⚠️, ERROR=red circle, CANCEL=✅
+	public static final String  DEFAULT_subjectTemplate        = "#if( $type == 'CANCEL' )CANCEL ✅: ${serverDisplayName} - ${alarmClassAbriviated} - ${extraInfo} - lasted ${fullDuration}"
+	                                                           + "#{else}${type} #if( $severity == 'ERROR' )🔴#elseif( $severity == 'WARNING' )⚠️#{else}ℹ️#{end}: ${serverDisplayName} - ${alarmClassAbriviated} - ${extraInfo}#{end}";
 	                                                           
 	public static final String  PROPKEY_msgBodyTemplate        = "AlarmWriterToMail.msg.body.template";
 	public static final String  DEFAULT_msgBodyTemplate        = createMsgBodyTemplate();

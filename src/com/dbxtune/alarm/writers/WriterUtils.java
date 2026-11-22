@@ -427,7 +427,8 @@ public class WriterUtils
 			Configurator.setAllLevels("org.apache.velocity", Level.DEBUG);
 		}
 
-		boolean isHtmlTemplate = StringUtils.startsWithIgnoreCase(template, "<html>");
+		// Not "starts with": a template can start with Velocity directives (#if/#set) before the <html>
+		boolean isHtmlTemplate = StringUtils.containsIgnoreCase(template, "<html>");
 		
 
 		VelocityContext context = new VelocityContext();
