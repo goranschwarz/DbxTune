@@ -664,6 +664,13 @@ extends AlarmWriterAbstract
 			+ "------------------------------------------------------------------\n"
 			+ "#end\n"
 
+			// Summary of what is STILL ACTIVE, before the details (as in the HTML mail). Empty string when the summary is turned off.
+			+ "#if ( ${activeAlarmsSummaryText} != '' )\n"
+			+ "\n"
+			+ "\n"
+			+ "${activeAlarmsSummaryText}\n"
+			+ "#end\n"
+
 			+ "#if ( ${extendedDescription} != '' )\n"
 			+ "\n"
 			+ "\n"
@@ -671,13 +678,6 @@ extends AlarmWriterAbstract
 			+ "==================================================================\n"
 			+ "${extendedDescription}\n"
 			+ "------------------------------------------------------------------\n"
-			+ "#end\n"
-
-			// Summary of what is STILL ACTIVE. Empty string when the summary is turned off.
-			+ "#if ( ${activeAlarmsSummaryText} != '' )\n"
-			+ "\n"
-			+ "\n"
-			+ "${activeAlarmsSummaryText}\n"
 			+ "#end\n"
 			;
 	}
@@ -752,6 +752,13 @@ extends AlarmWriterAbstract
 			+ "  </table>\n"
 			+ "</td></tr>\n"
 
+			// Summary of what is STILL ACTIVE (a table), before the details: it is short, the details can be long. Empty string when the summary is turned off.
+			+ "#if( $activeAlarmsSummaryHtml != '' )\n"
+			+ "<tr><td style='padding:16px 18px 2px;'>\n"
+			+ "${activeAlarmsSummaryHtml}\n"
+			+ "</td></tr>\n"
+			+ "#end\n"
+
 			// Details (the extended description, already HTML). On CANCEL: say if they are from the cancel or from the raise
 			+ "#if( $extendedDescription != '' )\n"
 			+ "<tr><td style='padding:16px 18px 2px;'>\n"
@@ -771,13 +778,6 @@ extends AlarmWriterAbstract
 			+ "#if( $reRaiseExtendedDescription != '' )\n"
 			+ "  <div style='margin-top:8px; padding:10px 12px; background:#f6f7f9; border:1px solid #e3e7ee; border-radius:5px; font-size:13px; overflow-x:auto;'>${reRaiseExtendedDescription}</div>\n"
 			+ "#end\n"
-			+ "</td></tr>\n"
-			+ "#end\n"
-
-			// Summary of what is STILL ACTIVE (a table). Empty string when the summary is turned off.
-			+ "#if( $activeAlarmsSummaryHtml != '' )\n"
-			+ "<tr><td style='padding:16px 18px 2px;'>\n"
-			+ "${activeAlarmsSummaryHtml}\n"
 			+ "</td></tr>\n"
 			+ "#end\n"
 

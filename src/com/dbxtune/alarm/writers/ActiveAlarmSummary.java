@@ -740,7 +740,8 @@ public class ActiveAlarmSummary
 
 		// One compact table (Server | Alarm | Severity), tables and inline styles only: the alarm mail must look the same in Outlook
 		// mso-para-margin:0 on the cells: Outlook (Word) gives the text in every cell the table's margin-top as paragraph space (rows 6pt taller)
-		String th = "style='text-align:left; background:#eef1f5; color:#3a4556; padding:4px 8px; border-bottom:1px solid #d5dbe4; mso-para-margin:0;'";
+		// Not width:100%: as wide as the content (full width spread three short columns over the whole mail; on a phone it was hard to read)
+		String th = "style='text-align:left; background:#eef1f5; color:#3a4556; padding:4px 16px 4px 8px; border-bottom:1px solid #d5dbe4; white-space:nowrap; mso-para-margin:0;'";
 		StringBuilder sb = new StringBuilder();
 
 		sb.append("<div style='margin-top: 4px;'>\n");
@@ -748,7 +749,7 @@ public class ActiveAlarmSummary
 
 		if ( ! result.entries.isEmpty() )
 		{
-			sb.append("  <table cellpadding='0' cellspacing='0' style='border-collapse:collapse; margin-top:8px; font-size:12.5px; width:100%;'>\n");
+			sb.append("  <table cellpadding='0' cellspacing='0' style='border-collapse:collapse; margin-top:8px; font-size:12.5px;'>\n");
 			sb.append("    <tr><th ").append(th).append(">Server</th><th ").append(th).append(">Alarm</th><th ").append(th).append(">Severity</th></tr>\n");
 			int row = 0;
 			for (ServerAlarms srv : toServerAlarms(result, maxServers, full))
@@ -763,11 +764,11 @@ public class ActiveAlarmSummary
 					String severity = i < srv.getSeverities().size() ? srv.getSeverities().get(i) : "";
 					String color    = "ERROR".equalsIgnoreCase(severity) ? "#dc3545" : "WARNING".equalsIgnoreCase(severity) ? "#e8710a" : "#5d6878";
 					String bg       = (row++ % 2 == 1) ? " background:#f9fafb;" : "";
-					String td       = "style='padding:3px 8px; border-bottom:1px solid #edf0f4; mso-para-margin:0;" + bg;
+					String td       = "style='padding:3px 16px 3px 8px; border-bottom:1px solid #edf0f4; vertical-align:top; mso-para-margin:0;" + bg;
 					sb.append("    <tr>");
-					sb.append("<td ").append(td).append("'>").append(i == 0 ? StringEscapeUtils.escapeHtml4(srv.getSrvName()) : "").append("</td>");
+					sb.append("<td ").append(td).append(" white-space:nowrap;'>").append(i == 0 ? StringEscapeUtils.escapeHtml4(srv.getSrvName()) : "").append("</td>"); // server and severity on one line, the alarm may wrap (a phone)
 					sb.append("<td ").append(td).append("'>").append(StringEscapeUtils.escapeHtml4(srv.getAlarms().get(i))).append("</td>");
-					sb.append("<td ").append(td).append(" color:").append(color).append("; font-weight:600;'>").append(StringEscapeUtils.escapeHtml4(severity)).append("</td>");
+					sb.append("<td ").append(td).append(" color:").append(color).append("; font-weight:600; white-space:nowrap;'>").append(StringEscapeUtils.escapeHtml4(severity)).append("</td>");
 					sb.append("</tr>\n");
 				}
 			}
