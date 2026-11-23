@@ -46,13 +46,13 @@ import com.dbxtune.utils.StringUtil;
  * (GCP Cloud SQL / SSH). It uses the same property names as a collector <code>.conf</code> file, and the same helpers
  * as the collector (GCP IAM token as the JDBC password, CloudConfig resolving), so a pass here means the collector can connect.
  * <p>
- * Run it with: <code>dbxtune.sh conntest /path/to/file.props</code> (no file: prints an example properties file)
+ * Run it with: <code>dbxtune.sh gcpconntest /path/to/file.props</code> (no file: prints an example properties file)
  */
-public class ConnectivityTest
+public class GcpConnectivityTest
 {
 	private static final String EXAMPLE_PROPS = ""
 		+ "#--------------------------------------------------------------------------\n"
-		+ "# ConnectivityTest - example properties file\n"
+		+ "# GcpConnectivityTest - example properties file\n"
 		+ "# Same property names as a collector .conf file (so you can also pass the collector's own .conf)\n"
 		+ "#--------------------------------------------------------------------------\n"
 		+ "\n"
@@ -96,7 +96,7 @@ public class ConnectivityTest
 		{
 			if (args.length > 0)
 				System.out.println("ERROR: The file '" + args[0] + "' does not exist.\n");
-			System.out.println("Usage: dbxtune.sh conntest <file.props>");
+			System.out.println("Usage: dbxtune.sh gcpconntest <file.props>");
 			System.out.println("       Tests the JDBC connection and the Host Monitor connection (GCP Cloud SQL or SSH).");
 			System.out.println("");
 			System.out.println("Example properties file:");

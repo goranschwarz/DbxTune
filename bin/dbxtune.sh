@@ -266,10 +266,10 @@ case "${toolset}" in
 		javaSplashScreen=""
 		;;
 
-	conntest)
-		shortAppName="conntest"
-		longAppName="ConnectivityTest"
-		javaMainClass="com.dbxtune.test.ConnectivityTest"
+	gcpconntest)
+		shortAppName="gcpconntest"
+		longAppName="GcpConnectivityTest"
+		javaMainClass="com.dbxtune.test.GcpConnectivityTest"
 		javaMainParams=""
 		javaSplashScreen=""
 		;;

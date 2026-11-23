@@ -406,17 +406,19 @@ public class GcpCloudMonitoringTest
 		CloudConfig autoCfg3b = CloudConfig.fromConfiguration(conf3, pscHost + ":5432", "gcp", null);
 		assertEquals("sandbox-team-p-shared-pg16-c7d48d", autoCfg3b.getInstanceId());
 
-		// ... '-A' (conn.dbmsServerAlias) wins, also as 'project:instance'
+		// ... '-A' (conn.dbmsServerAlias) is a display name: it does NOT override the name from the hostname (only a fallback when there is none, see conf2)
 		Configuration conf4 = new Configuration();
 		conf4.setProperty("conn.dbmsUsername", "dbxtune-monitor@mgmt-vms-02b8b9eb.iam");
-		conf4.setProperty("conn.dbmsServerAlias", "sandbox-team-p-shared-pg16-c7d48d");
+		conf4.setProperty("conn.dbmsServerAlias", "GCP_test_srv_1");
 		CloudConfig autoCfg4 = CloudConfig.fromConfiguration(conf4, pscHost, "gcp", null);
-		assertEquals("sandbox-team-p-shared-pg16-c7d48d", autoCfg4.getInstanceId());
+		assertEquals("team-p-shared-pg16-db-psc", autoCfg4.getInstanceId());
 
-		conf4.setProperty("conn.dbmsServerAlias", "sandbox-team-p-1920f585:sandbox-team-p-shared-pg16-c7d48d");
-		CloudConfig autoCfg4b = CloudConfig.fromConfiguration(conf4, pscHost, "gcp", null);
+		// ... and with the explicit properties, '-A' is just the name
+		conf3.setProperty("conn.dbmsServerAlias", "GCP_test_srv_1");
+		CloudConfig autoCfg4b = CloudConfig.fromConfiguration(conf3, pscHost, "gcp", null);
 		assertEquals("sandbox-team-p-1920f585",           autoCfg4b.getProjectId());
 		assertEquals("sandbox-team-p-shared-pg16-c7d48d", autoCfg4b.getInstanceId());
+		conf3.remove("conn.dbmsServerAlias");
 
 		// ... but an instance written in the host field ('-s project:instance' or 'gcp://...') still wins over the property
 		CloudConfig autoCfg5 = CloudConfig.fromConfiguration(conf3, "other-proj:other-inst", "gcp", null);

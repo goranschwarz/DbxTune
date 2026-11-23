@@ -130,9 +130,8 @@ public class CloudConfig
 
 		// Is the instance in the SSH Hostname only a guess: a plain hostname (like 'pg-orders-01.corp.internal' or 'host:5432', copied from the DBMS host by '-u gcp')
 		// and not written as a Cloud instance ('gcp://...', 'project:instance', 'project:region:instance')
-		// A guess does NOT override 'conn.hostmon.cloud.instance' or '-A' (DNS names do not always match the Cloud SQL instance ID)
-		String  alias           = conf == null ? "" : conf.getProperty("conn.dbmsServerAlias", "").trim();
-		boolean hasAlias        = StringUtil.hasValue(alias) && !isIpv4Address(alias);
+		// A guess does NOT override 'conn.hostmon.cloud.instance' (DNS names do not always match the Cloud SQL instance ID)
+		// NOTE: '-A' is only a fallback (below): it is mostly a display name for the server, not the instance
 		boolean instanceIsGuess = false;
 		if (StringUtil.hasValue(sshHostname))
 		{
@@ -149,7 +148,7 @@ public class CloudConfig
 			if (StringUtil.hasValue(shorthandCfg.getCredentialsFile())) cfg.setCredentialsFile(shorthandCfg.getCredentialsFile());
 			if (StringUtil.hasValue(shorthandCfg.getInstanceId()))
 			{
-				if (!instanceIsGuess || (StringUtil.isNullOrBlank(cfg.getInstanceId()) && !hasAlias))
+				if (!instanceIsGuess || StringUtil.isNullOrBlank(cfg.getInstanceId()))
 					cfg.setInstanceId(shorthandCfg.getInstanceId());
 			}
 		}
@@ -159,14 +158,16 @@ public class CloudConfig
 			cfg.setCredentialsFile(sshKeyFile);
 		}
 
-		// If instanceId is still blank (e.g. JDBC host was a raw IP address like 10.1.2.3, or a DNS name that is not the instance, and user passed -u gcp -A pg-orders-01),
+		// If instanceId is still blank (e.g. JDBC host was a raw IP address like 10.1.2.3 and user passed -u gcp -A pg-orders-01),
 		// fall back to conn.dbmsServerAlias (-A) or conn.dbmsDisplayName
 		if (StringUtil.isNullOrBlank(cfg.getInstanceId()) && conf != null)
 		{
-			String aliasOrName = hasAlias ? alias : conf.getProperty("conn.dbmsDisplayName", "").trim();
-			if (StringUtil.hasValue(aliasOrName) && !isIpv4Address(aliasOrName))
+			String alias = conf.getProperty("conn.dbmsServerAlias", "");
+			if (StringUtil.isNullOrBlank(alias))
+				alias = conf.getProperty("conn.dbmsDisplayName", "");
+			if (StringUtil.hasValue(alias) && !isIpv4Address(alias.trim()))
 			{
-				cfg.applyShorthand(aliasOrName);
+				cfg.applyShorthand(alias.trim());
 			}
 		}
 

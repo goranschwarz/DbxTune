@@ -152,8 +152,8 @@ rem	set JAVA_START_CLASS=com.dbxtune.central.pcs.H2CentralDbCopy2
 	set JAVA_START_PARAMS=-tcp -tcpAllowOthers -ifExists
 	set SPLASH=
 
-) ELSE IF "%APP_NAME%" == "conntest" (
-	set JAVA_START_CLASS=com.dbxtune.test.ConnectivityTest
+) ELSE IF "%APP_NAME%" == "gcpconntest" (
+	set JAVA_START_CLASS=com.dbxtune.test.GcpConnectivityTest
 	set JAVA_START_PARAMS=
 	set SPLASH=
 
