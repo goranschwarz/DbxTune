@@ -417,56 +417,56 @@ implements IDailySummaryReport
 	public String getDbmsVersionStr()
 	{
 		initialize();
-		return _recordingInfo.getDbmsVersionStr();
+		return _recordingInfo == null ? null : _recordingInfo.getDbmsVersionStr(); // null: no recording info (DbxCentral's own report)
 	}
 
 	/** Get the DBMS Version string stored by any of the DbxTune collectors (The minimum value, if changed during the day) */
 	public String getDbmsVersionStrMin()
 	{
 		initialize();
-		return _recordingInfo.getDbmsVersionStrMin();
+		return _recordingInfo == null ? null : _recordingInfo.getDbmsVersionStrMin(); // null: no recording info (DbxCentral's own report)
 	}
 
 	/** Get the DBMS Version string stored by any of the DbxTune collectors  (The maximum value, if changed during the day) */
 	public String getDbmsVersionStrMax()
 	{
 		initialize();
-		return _recordingInfo.getDbmsVersionStrMax();
+		return _recordingInfo == null ? null : _recordingInfo.getDbmsVersionStrMax(); // null: no recording info (DbxCentral's own report)
 	}
 
 	/** If the DBMS Version String changed during the day... This is the TimeStamp it likely happened */
 	public Timestamp getDbmsVersionStrChangeTime()
 	{
 		initialize();
-		return _recordingInfo.getDbmsVersionStrChangeTime();
+		return _recordingInfo == null ? null : _recordingInfo.getDbmsVersionStrChangeTime(); // null: no recording info (DbxCentral's own report)
 	}
 
 	/** Get the DBMS Version string stored by any of the DbxTune collectors, and then parse it into a number */
 	public long getDbmsVersionNum()
 	{
 		initialize();
-		return _recordingInfo.getDbmsVersionNum();
+		return _recordingInfo == null ? 0 : _recordingInfo.getDbmsVersionNum(); // null: no recording info (DbxCentral's own report)
 	}
 
 	/** Get the DBMS Server/instance name stored by any of the DbxTune collectors */
 	public String getDbmsServerName()
 	{
 		initialize();
-		return _recordingInfo.getDbmsServerName();
+		return _recordingInfo == null ? null : _recordingInfo.getDbmsServerName(); // null: no recording info (DbxCentral's own report)
 	}
 
 	/** Get the DBMS Server/instance last start time */
 	public Timestamp getDbmsStartTime()
 	{
 		initialize();
-		return _recordingInfo.getDbmsStartTime();
+		return _recordingInfo == null ? null : _recordingInfo.getDbmsStartTime(); // null: no recording info (DbxCentral's own report)
 	}
 
 	/** Get the DBMS Server/instance last start time in days. @returns -1 if UNKNOWN. otherwise an INT value */
 	public int getDbmsStartTimeInDays()
 	{
 		initialize();
-		return _recordingInfo.getDbmsStartTimeInDays();
+		return _recordingInfo == null ? -1 : _recordingInfo.getDbmsStartTimeInDays(); // null: no recording info (DbxCentral's own report)
 	}
 
 	/** Get the DBMS other info map. This could be "PAGE-SIZE" or whatever "stuff" that are special for that DBMS type */
@@ -492,20 +492,20 @@ implements IDailySummaryReport
 	public String getRecDbxAppName()
 	{
 		initialize();
-		return _recordingInfo.getRecDbxAppName();
+		return _recordingInfo == null ? null : _recordingInfo.getRecDbxAppName(); // null: no recording info (DbxCentral's own report)
 	}
 
 	public String getRecDbxVersionStr()
 	{
 		initialize();
-		return _recordingInfo.getRecDbxVersionStr();
+		return _recordingInfo == null ? null : _recordingInfo.getRecDbxVersionStr(); // null: no recording info (DbxCentral's own report)
 	}
 
 	/** Get the DbxTune application type that recorded this info */
 	public String getRecDbxBuildStr()
 	{
 		initialize();
-		return _recordingInfo.getRecDbxBuildStr();
+		return _recordingInfo == null ? null : _recordingInfo.getRecDbxBuildStr(); // null: no recording info (DbxCentral's own report)
 	}
 
 	public boolean isWindows()
