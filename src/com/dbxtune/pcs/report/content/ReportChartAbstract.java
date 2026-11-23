@@ -134,10 +134,11 @@ public abstract class ReportChartAbstract implements IReportChart
 	/** Serie colors: the XChart images AND the Chart.js charts, so the image and the interactive chart look the same */
 	/** Colors for the Postgres server log severities: the bad ones stand out, LOG (most messages, harmless) is light gray */
 	public static final Map<String, Color> SEVERITY_COLORS = Map.of(
-			"PANIC",   new Color(0x7f1d1d),
-			"FATAL",   new Color(0xdc2626),
-			"ERROR",   new Color(0xea580c),
-			"WARNING", new Color(0xd4a106),
+			// different hue AND lightness per level, so they can be told apart (also side by side in a small bar)
+			"PANIC",   new Color(0x7e22ce), // purple
+			"FATAL",   new Color(0xdc2626), // red
+			"ERROR",   new Color(0xfb923c), // light orange
+			"WARNING", new Color(0xfacc15), // yellow
 			"LOG",     new Color(0xc4cbd4));
 
 	/** Fixed colors per series name (null = the DSR_COLORS in series order) */
