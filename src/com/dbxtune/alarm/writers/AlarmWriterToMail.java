@@ -115,10 +115,12 @@ extends AlarmWriterAbstract
 		return WriterUtils.createMessageFromTemplate(action, alarmEvent, WriterUtils.getActiveAlarmList(), _msgBodyTemplate, true, null, getDbxCentralUrl(), summaryHtml, summaryText, extraContext);
 	}
 
+	// mso-para-margin:0 on the cells: Outlook (Word) gives the text in every cell the table's margin as paragraph space (3pt + 7.5pt: rows ~33px instead of ~19px).
+	// It is last in the style: toMailHtml() checks for cells whose style starts with "padding".
 	private static final String MAIL_TABLE = "border-collapse:collapse; font-size:12px; background:#ffffff; margin:4px 0 10px;";
-	private static final String MAIL_NAME  = "padding:2px 10px 2px 6px; border:1px solid #e3e7ee; background:#f6f7f9; color:#5d6878; white-space:nowrap; vertical-align:top;";
-	private static final String MAIL_TD    = "padding:2px 8px; border:1px solid #e3e7ee; vertical-align:top;";
-	private static final String MAIL_TH    = "padding:3px 8px; border:1px solid #d5dbe5; background:#eef2f8; color:#1d2430; text-align:left; white-space:nowrap;";
+	private static final String MAIL_NAME  = "padding:2px 10px 2px 6px; border:1px solid #e3e7ee; background:#f6f7f9; color:#5d6878; white-space:nowrap; vertical-align:top; mso-para-margin:0;";
+	private static final String MAIL_TD    = "padding:2px 8px; border:1px solid #e3e7ee; vertical-align:top; mso-para-margin:0;";
+	private static final String MAIL_TH    = "padding:3px 8px; border:1px solid #d5dbe5; background:#eef2f8; color:#1d2430; text-align:left; white-space:nowrap; mso-para-margin:0;";
 	private static final String MAIL_PRE   = "margin:4px 0; padding:6px 8px; background:#ffffff; border:1px solid #e3e7ee; border-radius:4px; font-family:Consolas, \"Courier New\", monospace; font-size:11px; white-space:pre-wrap;";
 
 	/**

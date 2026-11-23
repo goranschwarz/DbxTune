@@ -739,7 +739,8 @@ public class ActiveAlarmSummary
 			return "";
 
 		// One compact table (Server | Alarm | Severity), tables and inline styles only: the alarm mail must look the same in Outlook
-		String th = "style='text-align:left; background:#eef1f5; color:#3a4556; padding:4px 8px; border-bottom:1px solid #d5dbe4;'";
+		// mso-para-margin:0 on the cells: Outlook (Word) gives the text in every cell the table's margin-top as paragraph space (rows 6pt taller)
+		String th = "style='text-align:left; background:#eef1f5; color:#3a4556; padding:4px 8px; border-bottom:1px solid #d5dbe4; mso-para-margin:0;'";
 		StringBuilder sb = new StringBuilder();
 
 		sb.append("<div style='margin-top: 4px;'>\n");
@@ -754,7 +755,7 @@ public class ActiveAlarmSummary
 			{
 				if (srv.isMore())
 				{
-					sb.append("    <tr><td colspan='3' style='padding:4px 8px; color:#8a94a3;'>").append(StringEscapeUtils.escapeHtml4(srv.getSrvName())).append("</td></tr>\n");
+					sb.append("    <tr><td colspan='3' style='padding:4px 8px; color:#8a94a3; mso-para-margin:0;'>").append(StringEscapeUtils.escapeHtml4(srv.getSrvName())).append("</td></tr>\n");
 					continue;
 				}
 				for (int i = 0; i < srv.getAlarms().size(); i++)
@@ -762,7 +763,7 @@ public class ActiveAlarmSummary
 					String severity = i < srv.getSeverities().size() ? srv.getSeverities().get(i) : "";
 					String color    = "ERROR".equalsIgnoreCase(severity) ? "#dc3545" : "WARNING".equalsIgnoreCase(severity) ? "#e8710a" : "#5d6878";
 					String bg       = (row++ % 2 == 1) ? " background:#f9fafb;" : "";
-					String td       = "style='padding:3px 8px; border-bottom:1px solid #edf0f4;" + bg;
+					String td       = "style='padding:3px 8px; border-bottom:1px solid #edf0f4; mso-para-margin:0;" + bg;
 					sb.append("    <tr>");
 					sb.append("<td ").append(td).append("'>").append(i == 0 ? StringEscapeUtils.escapeHtml4(srv.getSrvName()) : "").append("</td>");
 					sb.append("<td ").append(td).append("'>").append(StringEscapeUtils.escapeHtml4(srv.getAlarms().get(i))).append("</td>");
