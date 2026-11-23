@@ -751,9 +751,15 @@ public abstract class ReportChartAbstract implements IReportChart
 			writer.append("        var chartjs = new Chart(ctx, config); \n");
 			writer.append("        chartJsListCreated.push(chartjs); \n");
 			writer.append("\n");
+			writer.append("        // The canvas takes exactly the image's place, so the page does not jump: Chart.js makes the canvas 'display:block' (one line taller: the <br> after it gets a line of its own), \n");
+			writer.append("        // and the image has 'vertical-align:middle' (Bootstrap), the canvas 'baseline' (4px taller) \n");
+			writer.append("        chartjs.canvas.style.display       = 'inline'; \n");
+			writer.append("        chartjs.canvas.style.verticalAlign = 'middle'; \n");
+			writer.append("\n");
 			writer.append("        // HIDE the image, and SHOW the chart! \n");
 			writer.append("        document.getElementById('img_'       + tagName).style.display = 'none'; \n");   // hide
-			writer.append("        document.getElementById('div_chart_' + tagName).style.display = 'block'; \n");  // show
+			// 'inline', not 'block': the canvas then sits on the same line as the image did (with the <br> after it)
+			writer.append("        document.getElementById('div_chart_' + tagName).style.display = 'inline'; \n");  // show
 			writer.append("    } \n");
 			writer.append("\n");
 
