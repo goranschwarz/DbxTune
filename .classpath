@@ -131,7 +131,6 @@
 	<classpathentry kind="lib" path="lib/juniversalchardet-2.5.0.jar"/>
 	<classpathentry kind="lib" path="lib/sql-formatter-2.0.5.jar"/>
 	<classpathentry kind="lib" path="lib/syslog-java-client-1.1.7.jar"/>
-	<classpathentry kind="lib" path="lib/velocity-engine-core-2.4.1.jar"/>
 	<classpathentry kind="lib" path="lib/rsyntaxtextarea-4.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/httpclient-4.5.14.jar"/>
 	<classpathentry kind="lib" path="lib/log4j-api-2.26.1.jar"/>

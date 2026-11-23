@@ -40,8 +40,6 @@ import javax.swing.JTextArea;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.velocity.exception.MethodInvocationException;
-import org.apache.velocity.exception.ParseErrorException;
 import org.fife.ui.autocomplete.Completion;
 import org.reflections.Reflections;
 
@@ -261,10 +259,13 @@ extends HttpServlet
 					}
 					catch (Exception ex)
 					{
-						// The same words as the Template Editor, and where it is (when Velocity knows)
+						// The same words as the Template Editor, and where it is (when FreeMarker knows)
 						int line = -1, column = -1;
-						if (ex instanceof ParseErrorException)        { line = ((ParseErrorException)       ex).getLineNumber(); column = ((ParseErrorException)       ex).getColumnNumber(); }
-						if (ex instanceof MethodInvocationException)  { line = ((MethodInvocationException) ex).getLineNumber(); column = ((MethodInvocationException) ex).getColumnNumber(); }
+						if (ex instanceof WriterUtils.TemplateRenderException && ((WriterUtils.TemplateRenderException) ex).getLineNumber() > 0)
+						{
+							line   = ((WriterUtils.TemplateRenderException) ex).getLineNumber();
+							column = ((WriterUtils.TemplateRenderException) ex).getColumnNumber();
+						}
 
 						Map<String, Object> m = new LinkedHashMap<>();
 						m.put("type"   , CmSettingsHelper.TemplateInputValidator.getErrorType(ex));

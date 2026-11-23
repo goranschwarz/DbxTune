@@ -226,7 +226,7 @@ extends AlarmWriterAbstract
 
 	public static String createLogTemplate()
 	{
-		return "${StringUtil.format('%-23s - %-10s - %-40s - %-30s - %-30s - %-30s - %-10s - %-10s - %-10s - %8.8s - %s', ${crTimeStr}, ${type}, ${alarmClass}, ${serviceName}, ${serviceInfo}, ${extraInfo}, ${category}, ${severity}, ${state}, ${duration}, ${description})}";
+		return "${StringUtil.format('%-23s - %-10s - %-40s - %-30s - %-30s - %-30s - %-10s - %-10s - %-10s - %8.8s - %s', crTimeStr, type, alarmClass, serviceName, serviceInfo, extraInfo, category, severity, state, duration, description)}";
 	}
 
 	public static String createActiveTemplate()
@@ -234,10 +234,10 @@ extends AlarmWriterAbstract
 		return ""
 			+ "${StringUtil.format('%-30s %-30s %-30s %-60s %-10s %-10s %-10s %8.8s %s', 'AlarmClassAbriviated', 'ServerName', 'CmName', 'ExtraInfo', 'Category', 'Severity', 'State', 'Duration', 'Description')}\n"
 			+ "${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 60)} ${StringUtils.repeat('-', 10)} ${StringUtils.repeat('-', 10)} ${StringUtils.repeat('-', 10)} ${StringUtils.repeat('-', 8)} ${StringUtils.repeat('-', 80)}\n"
-			+ "#foreach( $alarm in $activeAlarmList )\n"
+			+ "<#list activeAlarmList as alarm>\n"
 			// ${alarm.xxx}: each alarm in the list (${duration} is getFullDuration(true), there is no getDuration())
-			+ "${StringUtil.format('%-30s %-30s %-30s %-60s %-10s %-10s %-10s %8.8s %s', ${alarm.alarmClassAbriviated}, ${alarm.serviceName}, ${alarm.serviceInfo}, ${alarm.extraInfo}, ${alarm.category}, ${alarm.severity}, ${alarm.state}, ${alarm.getFullDuration(true)}, ${alarm.description})}\n"
-			+ "#end"
+			+ "${StringUtil.format('%-30s %-30s %-30s %-60s %-10s %-10s %-10s %8.8s %s', alarm.alarmClassAbriviated, alarm.serviceName, alarm.serviceInfo, alarm.extraInfo, alarm.category, alarm.severity, alarm.state, alarm.getFullDuration(true), alarm.description)}\n"
+			+ "</#list>"
 			;
 	}
 	
@@ -432,18 +432,18 @@ extends AlarmWriterAbstract
 //		String writeText = WriterUtils.createMessageFromTemplate(getClass().getSimpleName(), activeAlarms, _activeAlarms_msgTemplate, true, null, "http://DUMMY-dbxtune:8080");
 //		writeToFile.println(writeText);
 
-		// - A template that loops $activeAlarmList and prints the loop variable (the default: a header + one row per ${alarm.xxx}): render it ONCE.
-		// - An older template (a copy of the old default) loops the list but prints the CURRENT alarm (${serviceName}, not ${alarm.serviceName}):
+		// - A template that loops activeAlarmList and prints the loop variable (the default: a header + one row per alarm.xxx): render it ONCE.
+		// - A template that loops the list but prints the CURRENT alarm (${serviceName}, not ${alarm.serviceName}):
 		//   render it per alarm with only that alarm in the list, otherwise each alarm is written N times (N = number of active alarms).
 		// - A template without a loop: one render per alarm, as always.
 		String  dbxCentralUrl = "http://DUMMY-dbxtune:" + DbxTuneCentral.getWebHttpPort();
-		Matcher loop          = Pattern.compile("#\\{?foreach\\}?\\s*\\(\\s*\\$\\{?(\\w+)\\}?\\s+in\\s+\\$\\{?activeAlarmList\\b").matcher(_activeAlarms_msgTemplate);
+		Matcher loop          = Pattern.compile("<#list\\s+activeAlarmList\\s+as\\s+(\\w+)").matcher(_activeAlarms_msgTemplate);
 		boolean loopsTheList  = loop.find();
-		boolean usesLoopVar   = loopsTheList && Pattern.compile("\\$\\{?" + loop.group(1) + "\\.").matcher(_activeAlarms_msgTemplate).find();
+		boolean usesLoopVar   = loopsTheList && Pattern.compile("\\b" + loop.group(1) + "\\.").matcher(_activeAlarms_msgTemplate).find();
 		if (loopsTheList && ! usesLoopVar && ! _oldActiveTemplateWarned)
 		{
 			_oldActiveTemplateWarned = true;
-			_logger.warn("The AlarmWriter named '" + getName() + "': the template '" + PROPKEY_toActiveTemplate + "' loops $activeAlarmList but prints the current alarm "
+			_logger.warn("The AlarmWriter named '" + getName() + "': the template '" + PROPKEY_toActiveTemplate + "' loops activeAlarmList but prints the current alarm "
 					+ "(eg ${serviceName} instead of ${" + loop.group(1) + ".serviceName}), so its header is written once per active alarm. Use ${" + loop.group(1) + ".xxx} in the loop, or remove the property to use the default.");
 		}
 

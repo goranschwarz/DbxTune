@@ -756,7 +756,7 @@ var DbxConfig2 = (function()
 
 	//------------------------------------------------------------------
 	// Template editor, field kind 'template' (the setting has a TemplateInputValidator, eg AlarmWriterToMail.msg.body.template)
-	// The text is a Velocity template. The COLLECTOR renders it, through the writer's own createTemplatePreview() - the renderer the
+	// The text is a FreeMarker template. The COLLECTOR renders it, through the writer's own createTemplatePreview() - the renderer the
 	// Swing Template Editor uses - so this page never re-implements a writer's variables or escaping. Same endpoint as the mail rules.
 	//------------------------------------------------------------------
 	var TPL_ACTIONS = ['RAISE', 'RE-RAISE', 'CANCEL'];

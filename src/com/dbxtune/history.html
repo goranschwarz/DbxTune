@@ -104,6 +104,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				               Alarms where the extended description is only graphs (CPU, run queue, load average, swapping, memory, queues, WAL, replication lag, ...) now rebuild the graphs at CANCEL, so the CANCEL message shows the graphs up to when the problem went away.
 				               Alarms with a table about the database/session/statement plus graphs (free space, OS disk, AlwaysOn, toxic waits, tempdb usage, long running statements, client errors) keep the table from when the alarm was raised and rebuild the graphs.<br>
 				               The CM alarms set these values with an in-line <code>AlarmDescriptionProviderBase</code> where the alarm is created (new class, holds the threshold, the row PK and helpers for the cancel text).</LI>
+				<LI>Changed:   Alarm message templates (Mail, Teams, Slack, File, Syslog, REST, ...) use FreeMarker instead of Velocity: <code>&lt;#if type == 'CANCEL'&gt;...&lt;/#if&gt;</code> instead of <code>#if( $type == 'CANCEL' )...#end</code></LI>
 			</UL>
 		</LI>
 

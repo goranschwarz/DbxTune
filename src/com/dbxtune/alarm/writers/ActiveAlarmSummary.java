@@ -513,7 +513,7 @@ public class ActiveAlarmSummary
 	 * The list may end with an entry where {@link #isMore()} is true: its name is "and N more server(s)"
 	 * and it has no alarms, so a template that simply prints every server name still renders it sensibly.
 	 * <p>
-	 * NOTE: Velocity only reaches values through getters (not public fields), which is why these are getters.
+	 * NOTE: templates reach values through getters (not public fields), which is why these are getters.
 	 */
 	public static class ServerAlarms
 	{
@@ -646,7 +646,7 @@ public class ActiveAlarmSummary
 		return lines;
 	}
 
-	/** The entry's severity in upper case, "" when unknown (never null: Velocity would choke on a null list element). */
+	/** The entry's severity in upper case, "" when unknown (never null: a template fails on a null list element). */
 	private static String toSeverity(Entry entry)
 	{
 		return entry.severity == null ? "" : entry.severity.trim().toUpperCase();
