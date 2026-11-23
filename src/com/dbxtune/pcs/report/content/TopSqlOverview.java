@@ -226,6 +226,10 @@ public class TopSqlOverview
 							+ "data-tooltip=\""   + StringEscapeUtils.escapeHtml4(StringUtil.nullToValue(rstm.getValueAsString(row, _textCol), "")) + "\" "
 							+ ">&#x1F4AC;</div>";
 				}
+				// A numeric id (Postgres queryid): on one line, it is not that long (wrapped it makes the rows taller)
+				if (colName.equals(_idCol) && objVal instanceof Number)
+					return "<span style='white-space:nowrap; font-family:Consolas, \"Courier New\", monospace; font-size:11px;'>" + strVal + "</span>";
+
 				// A long id (MySQL digest, Db2 EXECUTABLE_ID: 64 chars): small monospace that may wrap (as ReportEntryAbstract.infoValue)
 				if (colName.equals(_idCol) && strVal != null && strVal.length() > 24 && strVal.matches("[^\\s<>]+"))
 					return "<span style='display:inline-block; max-width:24ch; white-space:normal; word-break:break-all; font-family:Consolas, \"Courier New\", monospace; font-size:11px;'>" + strVal + "</span>";
