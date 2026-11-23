@@ -266,6 +266,14 @@ case "${toolset}" in
 		javaSplashScreen=""
 		;;
 
+	conntest)
+		shortAppName="conntest"
+		longAppName="ConnectivityTest"
+		javaMainClass="com.dbxtune.test.ConnectivityTest"
+		javaMainParams=""
+		javaSplashScreen=""
+		;;
+
 	sshtest2)
 		shortAppName="sshtest2"
 		longAppName="SshTest2"

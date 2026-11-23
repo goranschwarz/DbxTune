@@ -389,6 +389,42 @@ public class GcpCloudMonitoringTest
 		assertNotNull(autoCfg2);
 		assertEquals("my-prod-project", autoCfg2.getProjectId());
 		assertEquals("pg-orders-01", autoCfg2.getInstanceId());
+
+		// A DNS name that is NOT the instance (Private Service Connect): the guess from the hostname must not override
+		String pscHost = "team-p-shared-pg16-db-psc.sandbox.internal-maxm.se";
+
+		// ... the explicit 'conn.hostmon.cloud.instance' wins
+		Configuration conf3 = new Configuration();
+		conf3.setProperty("conn.dbmsUsername", "dbxtune-monitor@mgmt-vms-02b8b9eb.iam");
+		conf3.setProperty(CloudConfig.PROPKEY_project,  "sandbox-team-p-1920f585");
+		conf3.setProperty(CloudConfig.PROPKEY_instance, "sandbox-team-p-shared-pg16-c7d48d");
+		CloudConfig autoCfg3 = CloudConfig.fromConfiguration(conf3, pscHost, "gcp", null);
+		assertEquals("sandbox-team-p-1920f585",           autoCfg3.getProjectId());
+		assertEquals("sandbox-team-p-shared-pg16-c7d48d", autoCfg3.getInstanceId());
+
+		// ... also when the hostname has a port (host:5432)
+		CloudConfig autoCfg3b = CloudConfig.fromConfiguration(conf3, pscHost + ":5432", "gcp", null);
+		assertEquals("sandbox-team-p-shared-pg16-c7d48d", autoCfg3b.getInstanceId());
+
+		// ... '-A' (conn.dbmsServerAlias) wins, also as 'project:instance'
+		Configuration conf4 = new Configuration();
+		conf4.setProperty("conn.dbmsUsername", "dbxtune-monitor@mgmt-vms-02b8b9eb.iam");
+		conf4.setProperty("conn.dbmsServerAlias", "sandbox-team-p-shared-pg16-c7d48d");
+		CloudConfig autoCfg4 = CloudConfig.fromConfiguration(conf4, pscHost, "gcp", null);
+		assertEquals("sandbox-team-p-shared-pg16-c7d48d", autoCfg4.getInstanceId());
+
+		conf4.setProperty("conn.dbmsServerAlias", "sandbox-team-p-1920f585:sandbox-team-p-shared-pg16-c7d48d");
+		CloudConfig autoCfg4b = CloudConfig.fromConfiguration(conf4, pscHost, "gcp", null);
+		assertEquals("sandbox-team-p-1920f585",           autoCfg4b.getProjectId());
+		assertEquals("sandbox-team-p-shared-pg16-c7d48d", autoCfg4b.getInstanceId());
+
+		// ... but an instance written in the host field ('-s project:instance' or 'gcp://...') still wins over the property
+		CloudConfig autoCfg5 = CloudConfig.fromConfiguration(conf3, "other-proj:other-inst", "gcp", null);
+		assertEquals("other-proj", autoCfg5.getProjectId());
+		assertEquals("other-inst", autoCfg5.getInstanceId());
+
+		CloudConfig autoCfg5b = CloudConfig.fromConfiguration(conf3, "gcp://other-inst", null, null);
+		assertEquals("other-inst", autoCfg5b.getInstanceId());
 	}
 
 	/** An entry that arrives late (older log time than one already read) must still be read; the overlap of two reads must not give duplicates */

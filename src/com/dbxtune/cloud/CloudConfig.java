@@ -127,13 +127,31 @@ public class CloudConfig
 			return null;
 
 		CloudConfig cfg = fromConfiguration(conf, null);
+
+		// Is the instance in the SSH Hostname only a guess: a plain hostname (like 'pg-orders-01.corp.internal' or 'host:5432', copied from the DBMS host by '-u gcp')
+		// and not written as a Cloud instance ('gcp://...', 'project:instance', 'project:region:instance')
+		// A guess does NOT override 'conn.hostmon.cloud.instance' or '-A' (DNS names do not always match the Cloud SQL instance ID)
+		String  alias           = conf == null ? "" : conf.getProperty("conn.dbmsServerAlias", "").trim();
+		boolean hasAlias        = StringUtil.hasValue(alias) && !isIpv4Address(alias);
+		boolean instanceIsGuess = false;
+		if (StringUtil.hasValue(sshHostname))
+		{
+			String   h     = sshHostname.trim();
+			String[] parts = h.split(":");
+			instanceIsGuess = !h.contains("://") && (parts.length == 1 || (parts.length == 2 && StringUtil.isInteger(parts[1].trim())));
+		}
+
 		if (shorthandCfg != null)
 		{
 			if (                    shorthandCfg.getProvider() != null) cfg.setProvider       (shorthandCfg.getProvider());
 			if (StringUtil.hasValue(shorthandCfg.getProjectId()))       cfg.setProjectId      (shorthandCfg.getProjectId());
 			if (StringUtil.hasValue(shorthandCfg.getRegion()))          cfg.setRegion         (shorthandCfg.getRegion());
-			if (StringUtil.hasValue(shorthandCfg.getInstanceId()))      cfg.setInstanceId     (shorthandCfg.getInstanceId());
 			if (StringUtil.hasValue(shorthandCfg.getCredentialsFile())) cfg.setCredentialsFile(shorthandCfg.getCredentialsFile());
+			if (StringUtil.hasValue(shorthandCfg.getInstanceId()))
+			{
+				if (!instanceIsGuess || (StringUtil.isNullOrBlank(cfg.getInstanceId()) && !hasAlias))
+					cfg.setInstanceId(shorthandCfg.getInstanceId());
+			}
 		}
 		else if (GcpCredentialsHelper.isGcpCredentialsFile(sshKeyFile) && StringUtil.isNullOrBlank(cfg.getCredentialsFile()))
 		{
@@ -141,16 +159,14 @@ public class CloudConfig
 			cfg.setCredentialsFile(sshKeyFile);
 		}
 
-		// If instanceId is still blank (e.g. JDBC host was a raw IP address like 10.1.2.3 and user passed -u gcp -A pg-orders-01),
+		// If instanceId is still blank (e.g. JDBC host was a raw IP address like 10.1.2.3, or a DNS name that is not the instance, and user passed -u gcp -A pg-orders-01),
 		// fall back to conn.dbmsServerAlias (-A) or conn.dbmsDisplayName
 		if (StringUtil.isNullOrBlank(cfg.getInstanceId()) && conf != null)
 		{
-			String alias = conf.getProperty("conn.dbmsServerAlias", "");
-			if (StringUtil.isNullOrBlank(alias))
-				alias = conf.getProperty("conn.dbmsDisplayName", "");
-			if (StringUtil.hasValue(alias) && !isIpv4Address(alias.trim()))
+			String aliasOrName = hasAlias ? alias : conf.getProperty("conn.dbmsDisplayName", "").trim();
+			if (StringUtil.hasValue(aliasOrName) && !isIpv4Address(aliasOrName))
 			{
-				cfg.applyShorthand(alias.trim());
+				cfg.applyShorthand(aliasOrName);
 			}
 		}
 
