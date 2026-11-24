@@ -191,7 +191,7 @@ extends DbmsConfigAbstract
 		{SECTION_NAME,         true,     String .class, Types.VARCHAR, 512,        -1,        /* "varchar(128)",  */ "Configuration Group"},
 		{CONFIG_NAME,          true,     String .class, Types.VARCHAR, 512,        -1,        /* "varchar(128)",  */ "Run-time configuration parameter name."},
 		{CONFIG_TYPE,          true,     String .class, Types.VARCHAR, 512,        -1,        /* "varchar(128)",  */ "What type of parameter is this."},
-		{CURENT_VALUE,         true,     String .class, Types.VARCHAR, 1024,       -1,        /* "varchar(255)",  */ "Value of the configuration."},
+		{CURENT_VALUE,         true,     String .class, Types.VARCHAR, 2048,       -1,        /* "varchar(255)",  */ "Value of the configuration."},
 		{CURENT_VALUE_IN_MB,   true,     String .class, Types.VARCHAR, 512,        -1,        /* "varchar(128)",  */ "Value of the configuration as MB. Formula: if (8kb) CurrentValue/128; if (kb) CurrentValue/1024; "},
                                                                                                                   
 		{CONTEXT,              true,     String .class, Types.VARCHAR, 512,        -1,        /* "varchar(128)",  */ CONTEXT_TOOLTIP},
@@ -200,8 +200,8 @@ extends DbmsConfigAbstract
 		{MIN_VALUE,            true,     String .class, Types.VARCHAR, 512,        -1,        /* "varchar(128)",  */ "Minimum value of the configuration"},
 		{MAX_VALUE,            true,     String .class, Types.VARCHAR, 512,        -1,        /* "varchar(128)",  */ "Maximum value of the configuration"},
 		{ENUMVALS,             true,     String .class, Types.VARCHAR, 512,        -1,        /* "varchar(128)",  */ "Allowed values of an enum parameter"},
-		{BOOT_VAL,             true,     String .class, Types.VARCHAR, 512,        -1,        /* "varchar(128)",  */ "Parameter value assumed at server startup if the parameter is not otherwise set"},
-		{RESET_VAL,            true,     String .class, Types.VARCHAR, 512,        -1,        /* "varchar(128)",  */ "Value that RESET would reset the parameter to in the current session"},
+		{BOOT_VAL,             true,     String .class, Types.VARCHAR, 2048,       -1,        /* "varchar(128)",  */ "Parameter value assumed at server startup if the parameter is not otherwise set"},
+		{RESET_VAL,            true,     String .class, Types.VARCHAR, 2048,       -1,        /* "varchar(128)",  */ "Value that RESET would reset the parameter to in the current session"},
                                                                                                                   
 		{DESCRIPTION,          true,     String .class, Types.VARCHAR, 1024,       -1,        /* "varchar(1024)", */ "Description of the configuration."},
 		{EXTRA_DESCRIPTION,    true,     String .class, Types.VARCHAR, 1024,       -1,        /* "varchar(1024)", */ "Extra Description of the configuration."},
@@ -1374,6 +1374,12 @@ extends DbmsConfigAbstract
 		int scale    = (int)COLUMN_HEADERS[colIndex][COL_JDBC_SCALE];
 		
 		return conn.getDbmsDataTypeResolver().dataTypeResolverToTarget(jdbcType, length, scale);
+	}
+
+	@Override
+	public int getSqlDataLength(int colIndex)
+	{
+		return (int)COLUMN_HEADERS[colIndex][COL_JDBC_LENGTH];
 	}
 
 	@Override

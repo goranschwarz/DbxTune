@@ -29,6 +29,11 @@ import java.sql.ResultSetMetaData;
 import java.sql.Statement;
 import java.util.Properties;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.config.Configurator;
 
@@ -90,18 +95,62 @@ public class GcpConnectivityTest
 		+ "#conn.sshKeyFile  = /home/dbxtune/.ssh/id_rsa\n"
 		;
 
+	private static void printUsage(String errorMsg)
+	{
+		if (errorMsg != null)
+			System.out.println("ERROR: " + errorMsg + "\n");
+		System.out.println("Usage: dbxtune.sh gcpconntest [file.props] [-S host[:port][/dbname]] [-U user] [-P passwd] [-A alias] [-u gcp|sshUser] [-s project:instance|sshHost[:port]] [-k keyFile] [-p sshPasswd]");
+		System.out.println("       Tests the JDBC connection and the Host Monitor connection (GCP Cloud SQL or SSH).");
+		System.out.println("       The switches are the same as when starting the collector (postgrestune.sh), and they override the properties file.");
+		System.out.println("");
+		System.out.println("Example, the same switches as the collector in SERVER_LIST:");
+		System.out.println("  dbxtune.sh gcpconntest -S pg-host.acme.com:5432 -U dbxtune-monitor@my-sa-project.iam -u gcp -s my-db-project:my-instance -A MY_SRV");
+		System.out.println("");
+		System.out.println("Example properties file:");
+		System.out.println("");
+		System.out.println(EXAMPLE_PROPS);
+	}
+
 	public static void main(String[] args)
 	{
-		if (args.length == 0 || ! new File(args[0]).exists())
+		// The same switches as the collector (DbxTune.java): -S -U -P -A for the DBMS, -u -p -s -k for the Host Monitor
+		Options options = new Options();
+		options.addOption( Option.builder("S").longOpt("server"     ).hasArg(true).build() );
+		options.addOption( Option.builder("U").longOpt("user"       ).hasArg(true).build() );
+		options.addOption( Option.builder("P").longOpt("passwd"     ).hasArg(true).build() );
+		options.addOption( Option.builder("A").longOpt("serverAlias").hasArg(true).build() );
+		options.addOption( Option.builder("u").longOpt("sshUser"    ).hasArg(true).build() );
+		options.addOption( Option.builder("p").longOpt("sshPasswd"  ).hasArg(true).build() );
+		options.addOption( Option.builder("s").longOpt("sshServer"  ).hasArg(true).build() );
+		options.addOption( Option.builder("k").longOpt("sshKeyFile" ).hasArg(true).build() );
+
+		CommandLine cmd;
+		try
 		{
-			if (args.length > 0)
-				System.out.println("ERROR: The file '" + args[0] + "' does not exist.\n");
-			System.out.println("Usage: dbxtune.sh gcpconntest <file.props>");
-			System.out.println("       Tests the JDBC connection and the Host Monitor connection (GCP Cloud SQL or SSH).");
-			System.out.println("");
-			System.out.println("Example properties file:");
-			System.out.println("");
-			System.out.println(EXAMPLE_PROPS);
+			cmd = new DefaultParser().parse(options, args);
+		}
+		catch (ParseException ex)
+		{
+			printUsage(ex.getMessage());
+			System.exit(1);
+			return;
+		}
+
+		if (cmd.getArgList().size() > 1)
+		{
+			printUsage("Only one properties file can be given, got: " + cmd.getArgList());
+			System.exit(1);
+		}
+
+		String propFile = cmd.getArgList().isEmpty() ? null : cmd.getArgList().get(0);
+		if (propFile != null && ! new File(propFile).exists())
+		{
+			printUsage("The file '" + propFile + "' does not exist.");
+			System.exit(1);
+		}
+		if (propFile == null && ! cmd.hasOption('S'))
+		{
+			printUsage(null);
 			System.exit(1);
 		}
 
@@ -109,9 +158,37 @@ public class GcpConnectivityTest
 		Configurator.setRootLevel(Level.INFO);
 
 		// The GCP helpers read some properties from the Combined Configuration (conn.dbms.cloud.iamAuth, ...)
-		Configuration conf = new Configuration(args[0]);
+		Configuration conf = propFile != null ? new Configuration(propFile) : new Configuration();
 		Configuration.setInstance(Configuration.SYSTEM_CONF, conf);
 		Configuration.setSearchOrder(Configuration.SYSTEM_CONF);
+
+		// The switches into the same properties as the collector does it (DbxTune.java)
+		if (cmd.hasOption('S')) conf.setProperty("conn.dbmsHostPort",    cmd.getOptionValue('S'));
+		if (cmd.hasOption('U')) conf.setProperty("conn.dbmsUsername",    cmd.getOptionValue('U'));
+		if (cmd.hasOption('P')) conf.setProperty("conn.dbmsPassword",    cmd.getOptionValue('P'));
+		if (cmd.hasOption('A')) conf.setProperty("conn.dbmsServerAlias", cmd.getOptionValue('A'));
+		if (cmd.hasOption('u')) conf.setProperty("conn.sshUsername",     cmd.getOptionValue('u'));
+		if (cmd.hasOption('p')) conf.setProperty("conn.sshPassword",     cmd.getOptionValue('p'));
+		if (cmd.hasOption('k')) conf.setProperty("conn.sshKeyFile",      cmd.getOptionValue('k'));
+		if (cmd.hasOption('s'))
+		{
+			// 'host:22' is host + port, other 'a:b' (like 'project:instance') is kept as it is
+			String   s  = cmd.getOptionValue('s');
+			String[] sa = s.split(":");
+			boolean  hostAndPort = sa.length == 2 && StringUtil.isInteger(sa[1]);
+			conf.setProperty("conn.sshHostname", hostAndPort ? sa[0] : s);
+			if (hostAndPort)
+				conf.setProperty("conn.sshPort", sa[1]);
+		}
+		// Like the collector: a Host Monitor user, but no host -> take the host from the DBMS host
+		if ( ! conf.hasProperty("conn.sshHostname") && conf.hasProperty("conn.sshUsername") && conf.hasProperty("conn.dbmsHostPort") )
+		{
+			String sshHostname = conf.getProperty("conn.dbmsHostPort").split("[:/]")[0];
+			conf.setProperty("conn.sshHostname", sshHostname);
+			System.out.println("NOTE: No Host Monitor host (-s) was given, taking it from the DBMS host (-S), as the collector does: '" + sshHostname + "'.");
+		}
+
+		printCollectorCommandLine(conf);
 
 		boolean jdbcOk    = testJdbc(conf);
 		Boolean hostMonOk = testHostMon(conf);
@@ -123,6 +200,60 @@ public class GcpConnectivityTest
 		System.out.println("==========================================================================");
 
 		System.exit(jdbcOk && (hostMonOk == null || hostMonOk) ? 0 : 1);
+	}
+
+	/** Print how the collector would be started with the same settings (for SERVER_LIST, where the .conf is the shared GENERIC one) */
+	private static void printCollectorCommandLine(Configuration conf)
+	{
+		String url      = conf.getProperty("conn.url", "");
+		String hostPort = conf.getProperty("conn.dbmsHostPort", "");
+		String urlOpts  = "";
+		if (StringUtil.isNullOrBlank(hostPort) && url.startsWith("jdbc:postgresql://"))
+		{
+			// jdbc:postgresql://host:port/db?a=b&c=d  -->  -S host:port/db  -O "a=b;c=d"
+			String rest = url.substring("jdbc:postgresql://".length());
+			int    q    = rest.indexOf('?');
+			hostPort = q < 0 ? rest : rest.substring(0, q);
+			urlOpts  = q < 0 ? ""   : rest.substring(q + 1).replace('&', ';');
+		}
+
+		String passwd   = conf.getProperty("conn.dbmsPassword", "");
+		String sshPw    = conf.getProperty("conn.sshPassword", "");
+		String sshUser  = conf.getProperty("conn.sshUsername", "");
+		String sshHost  = conf.getProperty("conn.sshHostname", "");
+		String sshPort  = conf.getProperty("conn.sshPort", "22");
+		String keyFile  = conf.getProperty("conn.sshKeyFile", "");
+
+		StringBuilder sb = new StringBuilder("postgrestune.sh -n <collector.conf>");
+		if (StringUtil.hasValue(hostPort)) sb.append(" -S ").append(hostPort);
+		if (StringUtil.hasValue(urlOpts))  sb.append(" -O \"").append(urlOpts).append("\"");
+		sb.append(" -U ").append(conf.getProperty("conn.dbmsUsername", "<user>"));
+		if (StringUtil.hasValue(passwd))   sb.append(" -P ").append(passwd.regionMatches(true, 0, "gcp-iam", 0, 7) ? passwd : "'***'");
+		if (conf.hasProperty("conn.dbmsServerAlias")) sb.append(" -A ").append(conf.getProperty("conn.dbmsServerAlias"));
+
+		// Host Monitor: for a Cloud instance '-s' gets what was resolved (project:instance), so it works without any 'conn.hostmon.cloud.*' in the .conf
+		CloudConfig cloudConfig = CloudConfig.fromConfiguration(conf, sshHost, sshUser, keyFile);
+		if (cloudConfig != null)
+		{
+			sb.append(" -u ").append(StringUtil.hasValue(sshUser) ? sshUser : cloudConfig.getProvider().name().toLowerCase());
+			String region = StringUtil.hasValue(cloudConfig.getRegion()) ? cloudConfig.getRegion() + ":" : "";
+			sb.append(" -s ").append(cloudConfig.getProjectId()).append(":").append(region).append(cloudConfig.getInstanceId());
+			if (StringUtil.hasValue(cloudConfig.getCredentialsFile())) sb.append(" -k ").append(cloudConfig.getCredentialsFile());
+		}
+		else if (StringUtil.hasValue(sshUser))
+		{
+			sb.append(" -u ").append(sshUser);
+			if (StringUtil.hasValue(sshHost)) sb.append(" -s ").append(sshHost).append("22".equals(sshPort) ? "" : ":" + sshPort);
+			if (StringUtil.hasValue(sshPw))   sb.append(" -p '***'");
+			if (StringUtil.hasValue(keyFile)) sb.append(" -k ").append(keyFile);
+		}
+
+		System.out.println("");
+		System.out.println("==========================================================================");
+		System.out.println(" Collector command line with the same settings");
+		System.out.println("==========================================================================");
+		System.out.println(sb);
+		System.out.println("(In SERVER_LIST add: -L <logDir> --savedir <dataDir>, and use <SRVNAME> for -S)");
 	}
 
 	private static boolean testJdbc(Configuration conf)
@@ -138,12 +269,13 @@ public class GcpConnectivityTest
 		String passwd   = conf.getProperty("conn.dbmsPassword", ""); // empty + IAM user = GCP IAM login (as the collector)
 		String testSql  = conf.getProperty("test.sql", "");
 
+		// The same URL as the collector (CounterControllerAbstract.noGuiConnect): '/postgres' if no database was given
 		if (StringUtil.isNullOrBlank(url) && StringUtil.hasValue(hostPort))
-			url = "jdbc:postgresql://" + hostPort + "/postgres";
+			url = "jdbc:postgresql://" + hostPort + (hostPort.contains("/") ? "" : "/postgres");
 
 		if (StringUtil.isNullOrBlank(url))
 		{
-			System.out.println("ERROR: No 'conn.url' or 'conn.dbmsHostPort' in the properties file.");
+			System.out.println("ERROR: No '-S', 'conn.url' or 'conn.dbmsHostPort' was given.");
 			return false;
 		}
 

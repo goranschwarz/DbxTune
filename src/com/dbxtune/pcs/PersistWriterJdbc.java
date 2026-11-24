@@ -2879,9 +2879,26 @@ public class PersistWriterJdbc
 						DictCompression.setEnabled(false);
 					}
 				}
+				else if (tabId == SESSION_DBMS_CONFIG && DbmsConfigManager.hasInstance())
+				{
+					// A column that was made wider in a later version (for example Postgres 'CurrentValue' 1024 -> 2048): widen it in this (older) recording too,
+					// otherwise the values (truncated to the new length when saved) are still too long for it
+					IDbmsConfig dbmsCfg = DbmsConfigManager.getInstance();
+					Table dbmsConfigTab = Table.create(conn, null, schemaName, plainTabName);
+					for (int c=0; c<dbmsCfg.getColumnCount(); c++)
+					{
+						int        cfgLen = dbmsCfg.getSqlDataLength(c);
+						TableColumn col   = dbmsConfigTab.getColumn(dbmsCfg.getColumnName(c));
+						if (cfgLen > 0 && col != null && col.getColumnLength() < cfgLen)
+						{
+							String sql = DbmsDdlUtils.getDdlForAlterTableColumn(conn, true, schemaName, plainTabName, dbmsCfg.getColumnName(c), dbmsCfg.getSqlDataType(conn, c) + " null"); // NOTE: 'not null' is not supported at upgrades
+							dbDdlExec(conn, sql, "Internal " + Version.getAppName() + " DB upgrade: Executing SQL: " + sql);
+						}
+					}
+				}
 				else if (tabId == ALARM_ACTIVE)
 				{
-					// TODO: instead of upgrading like this... Create a Dictionary object instead, which we can compare with info from: DbUtils.getColumnNames(conn, null, tabName), which does: 'conn.getMetaData().getColumns(null, schemaName, tableName, "%");' 
+					// TODO: instead of upgrading like this... Create a Dictionary object instead, which we can compare with info from: DbUtils.getColumnNames(conn, null, tabName), which does: 'conn.getMetaData().getColumns(null, schemaName, tableName, "%");'
 //					if ( colNames.contains("duration") and length < 80)
 //						Alter table modify column [duration] varchar(80) 
 
@@ -3735,9 +3752,9 @@ public class PersistWriterJdbc
 					// Get value
 					Object o = dbmsCfg.getValueAt(r, c);
 
-					// if it's a string, surround it with '' or NULL
+					// if it's a string, surround it with '' or NULL (and truncate it to the column length: a too long value would stop the save of all the rows after it)
 					if (o instanceof String)
-						o = safeStr( (String)o );
+						o = safeStr( (String)o, dbmsCfg.getSqlDataLength(c) );
 
 					// ASE and ASA does not cope with true/false, so lets use 1 and 0 instead
 					if (o instanceof Boolean)

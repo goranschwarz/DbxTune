@@ -296,6 +296,7 @@ public abstract class PostgresConfigText
 					+ "FROM pg_database \n"
 					+ "WHERE datname not like 'template%' \n"
 					+ "  AND has_database_privilege(datname, 'CONNECT') \n" // Possibly add this to only lookup databases that we have access to
+					+ CounterSampleCatalogIteratorPostgres.SQL_SKIP_MANAGED_SERVICE_ADMIN_DBS
 					+ "ORDER by 1 \n";
 			try (Statement stmnt = templateConn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 			{

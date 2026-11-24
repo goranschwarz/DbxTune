@@ -63,6 +63,12 @@ extends CounterSampleCatalogIterator
 
 	private static Set<String> _dbSkipSet = new HashSet<>();
 
+	/**
+	 * The admin databases of managed services (GCP Cloud SQL, AlloyDB, AWS RDS, Azure): CONNECT is granted to PUBLIC, but 'pg_hba.conf' refuses everyone else.
+	 * An 'and ...' line for a 'where' clause on pg_database (also used by the ObjectId cache and the config text).
+	 */
+	public static final String SQL_SKIP_MANAGED_SERVICE_ADMIN_DBS = "  and datname not in ('cloudsqladmin', 'alloydbadmin', 'rdsadmin', 'azure_maintenance') \n";
+
 
 	public static void closeConnPool()
 	{
@@ -107,6 +113,7 @@ extends CounterSampleCatalogIterator
 //				+ "where datname not like 'template%' \n"
 				+ "where NOT datistemplate \n"
 				+ "  and has_database_privilege(datname, 'CONNECT') \n" // Possibly add this to only lookup databases that we have access to
+				+ SQL_SKIP_MANAGED_SERVICE_ADMIN_DBS
 				+ "order by 1 \n";
 
 		ArrayList<String> list = new ArrayList<String>();
