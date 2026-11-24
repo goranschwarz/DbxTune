@@ -968,16 +968,16 @@ extends ReportSenderAbstract
 	public static final String  DEFAULT_from                       = "";
 	                                                               
 	public static final String  PROPKEY_subjectTemplate            = "ReportSenderToMail.msg.subject.template";
-	public static final String  DEFAULT_subjectTemplate            = "Daily Report for: ${srvName}";
+	public static final String  DEFAULT_subjectTemplate            = "Daily Report 🔴 for: ${srvName}"; // red circle: something to act on
 	                                                               
 	public static final String  PROPKEY_subjectNtrTemplate         = "ReportSenderToMail.msg.subject.nothingToReport.template";
-	public static final String  DEFAULT_subjectNtrTemplate         = "Daily Report -NTR- for: ${srvName}";
+	public static final String  DEFAULT_subjectNtrTemplate         = "Daily Report ✅ for: ${srvName}"; // green check: Nothing To Report
 	                                                               
 	public static final String  PROPKEY_sendNtr                    = "ReportSenderToMail.send.nothingToReport";
 	public static final boolean DEFAULT_sendNtr                    = true;
 
 	public static final String  PROPKEY_subjectFyiTemplate         = "ReportSenderToMail.msg.subject.fyi.template";
-	public static final String  DEFAULT_subjectFyiTemplate         = "Daily Report -FYI- for: ${srvName}";
+	public static final String  DEFAULT_subjectFyiTemplate         = "Daily Report ℹ️ for: ${srvName}"; // blue info: For Your Information
 
 	public static final String  PROPKEY_sendFyi                    = "ReportSenderToMail.send.fyi";
 	public static final boolean DEFAULT_sendFyi                    = true;

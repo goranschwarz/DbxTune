@@ -256,6 +256,7 @@ When starting `PostgresTune` in No-GUI mode, you can simply pass **`-u gcp`** (o
 * **Cloud SQL Instance ID is resolved automatically from:**
   1. The hostname in `-S` / the JDBC URL (e.g. `-S pg-orders-01.corp.internal:5432` → `pg-orders-01`), OR
   2. If `-S` is a raw IP address (e.g. `-S 10.20.30.40:5432`), it falls back to `-A <serverAlias>` (e.g. `-A pg-orders-01`)!
+  3. If the DNS name in `-S` is **not** the instance ID (e.g. a Private Service Connect name), use `-s <project>:<instance>` (per server, e.g. in SERVER_LIST) or `conn.hostmon.cloud.project` + `conn.hostmon.cloud.instance`: both win over the name taken from `-S`. `-A` is then only the server's display name.
 * **GCP Project ID is resolved automatically from:**
   1. The IAM database username (`-U dbxtune-monitor@<project-id>.iam` → `<project-id>`), OR
   2. The Service Account JSON key file (`-k /etc/dbxtune/gcp-dbxtune-sa.json`), OR

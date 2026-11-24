@@ -33,8 +33,6 @@ import java.util.regex.PatternSyntaxException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
-import org.apache.velocity.exception.MethodInvocationException;
-import org.apache.velocity.exception.ParseErrorException;
 
 import com.dbxtune.alarm.events.AlarmEvent;
 import com.dbxtune.alarm.writers.AlarmWriterAbstract;
@@ -131,7 +129,7 @@ public class CmSettingsHelper
 	}
 
 	/**
-	 * A writer's message template (Velocity). Valid when it renders the way the writer renders it ({@link AlarmWriterAbstract#createTemplatePreview}),
+	 * A writer's message template (FreeMarker). Valid when it renders the way the writer renders it ({@link AlarmWriterAbstract#createTemplatePreview}),
 	 * for RAISE, RE-RAISE and CANCEL: at runtime a template that does not render means the writer sends nothing for that alarm.<br>
 	 * The Web UI also uses this validator's name to show its template editor for the property.
 	 */
@@ -171,8 +169,7 @@ public class CmSettingsHelper
 		public static String getErrorType(Exception ex)
 		{
 			if (ex instanceof AlarmWriterAbstract.TemplatePreviewException) return "Invalid Output";
-			if (ex instanceof MethodInvocationException)                    return "Velocity Method Invocation Error";
-			if (ex instanceof ParseErrorException)                          return "Velocity Parser Error";
+			if (ex instanceof WriterUtils.TemplateRenderException)          return ((WriterUtils.TemplateRenderException) ex).getKind(); // "FreeMarker Parser Error" or "FreeMarker Template Error"
 			return ex.getClass().getSimpleName();
 		}
 	}

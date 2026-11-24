@@ -24,12 +24,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * JSON string escaping for Velocity templates that produce JSON (eg the Microsoft Teams Adaptive Card).
+ * JSON string escaping for templates that produce JSON (eg the Microsoft Teams Adaptive Card).
  * <p>
- * Exposed to every template as <code>$Json</code>:
+ * Exposed to every template as <code>Json</code>:
  * <ul>
- *   <li><code>$Json.str($value)</code> - a complete, quoted JSON string: <code>"Blocked by \"spid 42\""</code></li>
- *   <li><code>$Json.esc($value)</code> - the escaped contents only, for use inside quotes you wrote yourself</li>
+ *   <li><code>${Json.str(value)}</code> - a complete, quoted JSON string: <code>"Blocked by \"spid 42\""</code></li>
+ *   <li><code>${Json.esc(value)}</code> - the escaped contents only, for use inside quotes you wrote yourself</li>
  * </ul>
  * Why this matters: a HTML template with an unescaped <code>&lt;</code> renders slightly wrong, but a JSON
  * template with an unescaped <code>"</code>, backslash or newline produces a payload the receiver rejects,

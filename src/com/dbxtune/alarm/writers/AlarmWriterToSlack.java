@@ -254,7 +254,7 @@ extends AlarmWriterAbstract
 
 		// NOTE: the summary has to go through the same translationMap as everything else,
 		//       otherwise a server name or extraInfo holding & < > would break the message.
-		//       It is put in the Velocity context directly, so it does NOT get escaped for us.
+		//       It is put in the template model directly, so it does NOT get escaped for us.
 		ActiveAlarmSummary.Result summary = getActiveAlarmSummary(action, alarmEvent);
 		String summaryText = ActiveAlarmSummary.toText(summary, getActiveAlarmSummaryGroup(), getActiveAlarmSummaryMaxRows(), true);
 		summaryText = StringUtil.toStr(summaryText, translationMap);
@@ -492,7 +492,6 @@ extends AlarmWriterAbstract
 	/**
 	 * A Slack Block Kit message (in an attachment, for the colored bar): header with severity, server and alarm, the description,
 	 * fields, buttons to DbxCentral. The slack* values are prepared (escaped, cut) in createSlackJsonMessage().
-	 * NOTE: no Velocity directive right after a \\n: Velocity reads a backslash before # as an escape.
 	 */
 	public static String createBlockKitTemplate()
 	{
@@ -503,12 +502,12 @@ extends AlarmWriterAbstract
 			+ "    \"color\": \"${slackColor}\",\n"
 			+ "    \"blocks\": [\n"
 			+ "      { \"type\": \"header\", \"text\": { \"type\": \"plain_text\", \"emoji\": true, \"text\": \"${slackIcon} ${slackBadge} \u00b7 ${serverDisplayName} \u00b7 ${alarmClassAbriviated}\" } }\n"
-			+ "#if( $type == 'CANCEL' )\n"
+			+ "<#if type == 'CANCEL'>\n"
 			+ "     ,{ \"type\": \"context\", \"elements\": [ { \"type\": \"mrkdwn\", \"text\": \"${slackObject} \u00b7 was ${severity} \u00b7 lasted ${fullDuration}\" } ] }\n"
-			+ "#if( $hasCancelDescription )\n"
+			+ "<#if hasCancelDescription>\n"
 			+ "     ,{ \"type\": \"section\", \"text\": { \"type\": \"mrkdwn\", \"text\": \"*At cancel:* ${slackCancelDescription}\" } }\n"
-			+ "#end\n"
-			+ "#else\n"
+			+ "</#if>\n"
+			+ "<#else>\n"
 			+ "     ,{ \"type\": \"section\", \"text\": { \"type\": \"mrkdwn\", \"text\": \"${slackDescription}\" } }\n"
 			+ "     ,{ \"type\": \"section\", \"fields\": [\n"
 			+ "          { \"type\": \"mrkdwn\", \"text\": \"*Object*\\n${slackObject}\" },\n"
@@ -516,23 +515,23 @@ extends AlarmWriterAbstract
 			+ "          { \"type\": \"mrkdwn\", \"text\": \"*Category / State*\\n${category} / ${state}\" },\n"
 			+ "          { \"type\": \"mrkdwn\", \"text\": \"*Active alarms*\\n${slackActiveCount}\" }\n"
 			+ "        ] }\n"
-			+ "#if( $hasDetails )\n"
+			+ "<#if hasDetails>\n"
 			+ "     ,{ \"type\": \"section\", \"text\": { \"type\": \"mrkdwn\", \"text\": \"```${slackDetails}```\" } }\n"
-			+ "#end\n"
-			+ "#end\n"
-			+ "#if( $hasActiveSummary )\n"
+			+ "</#if>\n"
+			+ "</#if>\n"
+			+ "<#if hasActiveSummary>\n"
 			+ "     ,{ \"type\": \"section\", \"text\": { \"type\": \"mrkdwn\", \"text\": \"```${slackActiveSummary}```\" } }\n"
-			+ "#end\n"
-			+ "#if( $hasPeriodUrl || $hasSettingsUrl )\n"
+			+ "</#if>\n"
+			+ "<#if hasPeriodUrl || hasSettingsUrl>\n"
 			+ "     ,{ \"type\": \"actions\", \"elements\": [\n"
-			+ "#if( $hasPeriodUrl )\n"
-			+ "          { \"type\": \"button\", \"style\": \"primary\", \"text\": { \"type\": \"plain_text\", \"text\": \"View period in DbxCentral\" }, \"url\": \"${slackPeriodUrl}\" }#if( $hasSettingsUrl ),#end\n"
-			+ "#end\n"
-			+ "#if( $hasSettingsUrl )\n"
+			+ "<#if hasPeriodUrl>\n"
+			+ "          { \"type\": \"button\", \"style\": \"primary\", \"text\": { \"type\": \"plain_text\", \"text\": \"View period in DbxCentral\" }, \"url\": \"${slackPeriodUrl}\" }<#if hasSettingsUrl>,</#if>\n"
+			+ "</#if>\n"
+			+ "<#if hasSettingsUrl>\n"
 			+ "          { \"type\": \"button\", \"text\": { \"type\": \"plain_text\", \"text\": \"Alarm settings\" }, \"url\": \"${slackSettingsUrl}\" }\n"
-			+ "#end\n"
+			+ "</#if>\n"
 			+ "        ] }\n"
-			+ "#end\n"
+			+ "</#if>\n"
 			+ "     ,{ \"type\": \"context\", \"elements\": [ { \"type\": \"mrkdwn\", \"text\": \"${Version.getAppName()} \u00b7 collector ${serviceInfo}\" } ] }\n"
 			+ "    ]\n"
 			+ "  } ]\n"
@@ -546,9 +545,9 @@ extends AlarmWriterAbstract
 			+ "*Alarm message from ${Version.getAppName()}*\n"
 			+ "\n"
 			+ "`Type:      ` *${type}*\n"
-			+ "#if (${type} == 'CANCEL' || ${type} == 'RE-RAISE')"
+			+ "<#if type == 'CANCEL' || type == 'RE-RAISE'>"
 			+ "`Duration:  ` ${duration} (MM:SS)\n" 
-			+ "#end\n"
+			+ "</#if>\n"
 			+ "`Active Cnt:` *${activeAlarmCount}*\n"
 			
 			+ "\n"
@@ -564,13 +563,13 @@ extends AlarmWriterAbstract
 			+ "`Info:      ` ${extraInfo}\n"
 			+ "`Raise Time:` ${crTimeStr}\n"
 			
-			+ "#if (${type} == 'RE-RAISE')"
+			+ "<#if type == 'RE-RAISE'>"
 			+ "`ReRaiseTime:` ${reRaiseTimeStr}\n" 
-			+ "#end\n"
+			+ "</#if>\n"
 			
-			+ "#if (${type} == 'CANCEL')"
+			+ "<#if type == 'CANCEL'>"
 			+ "`Cancel Time:` ${cancelTimeStr}\n" 
-			+ "#end\n"
+			+ "</#if>\n"
 
 			+ "`View Period:` ${dbxCentralUrl}\n"
 			
@@ -580,26 +579,26 @@ extends AlarmWriterAbstract
 			+ "\n"
 
 			// Only on CANCEL -- how things look when the alarm went away (if the alarm sets it)
-			+ "#if ( ${type} == 'CANCEL' && ${cancelDescription} != '' )\n"
+			+ "<#if type == 'CANCEL' && cancelDescription?has_content>\n"
 			+ "*At cancel*\n"
 			+ ">${cancelDescription}\n"
 			+ "\n"
-			+ "#end\n"
-			+ "#if ( ${extendedDescription} != '' )\n"
+			+ "</#if>\n"
+			+ "<#if extendedDescription?has_content>\n"
 			+ "*Extended description*\n"
 			+ "```\n"
 			+ "${extendedDescription}\n"
 			+ "```\n"
-			+ "#end\n"
+			+ "</#if>\n"
 
 			// Summary of what is STILL ACTIVE. Empty string when the summary is turned off.
 			// Inside a code block, so the server/alarm columns stay aligned in Slack.
-			+ "#if ( ${activeAlarmsSummaryText} != '' )\n"
+			+ "<#if activeAlarmsSummaryText?has_content>\n"
 			+ "\n"
 			+ "```\n"
 			+ "${activeAlarmsSummaryText}"
 			+ "```\n"
-			+ "#end\n"
+			+ "</#if>\n"
 			.trim();
 	}
 }

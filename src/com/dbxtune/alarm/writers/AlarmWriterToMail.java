@@ -115,10 +115,12 @@ extends AlarmWriterAbstract
 		return WriterUtils.createMessageFromTemplate(action, alarmEvent, WriterUtils.getActiveAlarmList(), _msgBodyTemplate, true, null, getDbxCentralUrl(), summaryHtml, summaryText, extraContext);
 	}
 
+	// mso-para-margin:0 on the cells: Outlook (Word) gives the text in every cell the table's margin as paragraph space (3pt + 7.5pt: rows ~33px instead of ~19px).
+	// It is last in the style: toMailHtml() checks for cells whose style starts with "padding".
 	private static final String MAIL_TABLE = "border-collapse:collapse; font-size:12px; background:#ffffff; margin:4px 0 10px;";
-	private static final String MAIL_NAME  = "padding:2px 10px 2px 6px; border:1px solid #e3e7ee; background:#f6f7f9; color:#5d6878; white-space:nowrap; vertical-align:top;";
-	private static final String MAIL_TD    = "padding:2px 8px; border:1px solid #e3e7ee; vertical-align:top;";
-	private static final String MAIL_TH    = "padding:3px 8px; border:1px solid #d5dbe5; background:#eef2f8; color:#1d2430; text-align:left; white-space:nowrap;";
+	private static final String MAIL_NAME  = "padding:2px 10px 2px 6px; border:1px solid #e3e7ee; background:#f6f7f9; color:#5d6878; white-space:nowrap; vertical-align:top; mso-para-margin:0;";
+	private static final String MAIL_TD    = "padding:2px 8px; border:1px solid #e3e7ee; vertical-align:top; mso-para-margin:0;";
+	private static final String MAIL_TH    = "padding:3px 8px; border:1px solid #d5dbe5; background:#eef2f8; color:#1d2430; text-align:left; white-space:nowrap; mso-para-margin:0;";
 	private static final String MAIL_PRE   = "margin:4px 0; padding:6px 8px; background:#ffffff; border:1px solid #e3e7ee; border-radius:4px; font-family:Consolas, \"Courier New\", monospace; font-size:11px; white-space:pre-wrap;";
 
 	/**
@@ -567,8 +569,8 @@ extends AlarmWriterAbstract
 //	public static final String  DEFAULT_subjectTemplate        = "${type}: ${serverDisplayName} - ${severity} - ${alarmClassAbriviated} - ${extraInfo}";
 //	public static final String  DEFAULT_subjectTemplate        = "#if( $type == 'CANCEL' )[RESOLVED] ${serverDisplayName} - ${alarmClassAbriviated} - ${extraInfo} - lasted ${fullDuration}#else[${severity}] ${type}: ${serverDisplayName} - ${alarmClassAbriviated} - ${extraInfo}#end";
 	// RAISE/RE-RAISE/CANCEL first (as before), then an icon: INFO=ℹ️, WARNING=⚠️, ERROR=red circle, CANCEL=✅
-	public static final String  DEFAULT_subjectTemplate        = "#if( $type == 'CANCEL' )CANCEL ✅: ${serverDisplayName} - ${alarmClassAbriviated} - ${extraInfo} - lasted ${fullDuration}"
-	                                                           + "#{else}${type} #if( $severity == 'ERROR' )🔴#elseif( $severity == 'WARNING' )⚠️#{else}ℹ️#{end}: ${serverDisplayName} - ${alarmClassAbriviated} - ${extraInfo}#{end}";
+	public static final String  DEFAULT_subjectTemplate        = "<#if type == 'CANCEL'>CANCEL ✅: ${serverDisplayName} - ${alarmClassAbriviated} - ${extraInfo} - lasted ${fullDuration}"
+	                                                           + "<#else>${type} <#if severity == 'ERROR'>🔴<#elseif severity == 'WARNING'>⚠️<#else>ℹ️</#if>: ${serverDisplayName} - ${alarmClassAbriviated} - ${extraInfo}</#if>";
 	                                                           
 	public static final String  PROPKEY_msgBodyTemplate        = "AlarmWriterToMail.msg.body.template";
 	public static final String  DEFAULT_msgBodyTemplate        = createMsgBodyTemplate();
@@ -654,43 +656,56 @@ extends AlarmWriterAbstract
 			+ "------------------------------------------------------------------\n"
 
 			// Only on CANCEL -- how things look when the alarm went away (if the alarm sets it)
-			+ "#if ( ${type} == 'CANCEL' && ${cancelDescription} != '' )\n"
+			+ "<#if type == 'CANCEL' && cancelDescription?has_content>\n"
 			+ "\n"
 			+ "At cancel:\n"
 			+ "==================================================================\n"
 			+ "${cancelDescription}\n"
 			+ "------------------------------------------------------------------\n"
-			+ "#end\n"
+			+ "</#if>\n"
 
-			+ "#if ( ${extendedDescription} != '' )\n"
+			// Summary of what is STILL ACTIVE, before the details (as in the HTML mail). Empty string when the summary is turned off.
+			+ "<#if activeAlarmsSummaryText?has_content>\n"
+			+ "\n"
+			+ "\n"
+			+ "${activeAlarmsSummaryText}\n"
+			+ "</#if>\n"
+
+			+ "<#if extendedDescription?has_content>\n"
 			+ "\n"
 			+ "\n"
 			+ "Extended description:\n"
 			+ "==================================================================\n"
 			+ "${extendedDescription}\n"
 			+ "------------------------------------------------------------------\n"
-			+ "#end\n"
-
-			// Summary of what is STILL ACTIVE. Empty string when the summary is turned off.
-			+ "#if ( ${activeAlarmsSummaryText} != '' )\n"
-			+ "\n"
-			+ "\n"
-			+ "${activeAlarmsSummaryText}\n"
-			+ "#end\n"
+			+ "</#if>\n"
 			;
 	}
 	public static String createHtmlMsgBodyTemplate()
 	{
 		// Tables and inline styles only (no <style>, no flexbox): Outlook (Word), Gmail and iPhone Mail show it the same way.
 		// The look follows the Daily Summary Report mail: a banner in the severity color (CANCEL green), the description first, a short field list.
-		String lbl = "style='padding:3px 16px 3px 0; color:#5d6878; white-space:nowrap; vertical-align:top;'";
-		String val = "style='padding:3px 0; vertical-align:top;'";
 		return ""
-			+ "#if( $type == 'CANCEL' )#set( $bannerColor = '#198754' )#set( $badge = 'RESOLVED' )#set( $what = 'Alarm resolved' )"
-			+ "#elseif( $severity == 'ERROR' )#set( $bannerColor = '#dc3545' )#set( $badge = $severity )#set( $what = 'Alarm raised' )"
-			+ "#elseif( $severity == 'WARNING' )#set( $bannerColor = '#e8710a' )#set( $badge = $severity )#set( $what = 'Alarm raised' )"
-			+ "#else#set( $bannerColor = '#0d6efd' )#set( $badge = $severity )#set( $what = 'Alarm raised' )#end\n"
-			+ "#if( $type == 'RE-RAISE' )#set( $what = \"Alarm still active (re-raised ${reRaiseCount} times)\" )#end\n"
+			// Banner color, badge and headline, from type + severity (lines that only hold <#...> tags print nothing)
+			+ "<#if type == 'CANCEL'>\n"
+			+ "    <#assign bannerColor = '#198754'  badge = 'RESOLVED'  what = 'Alarm resolved'>\n"
+			+ "<#elseif severity == 'ERROR'>\n"
+			+ "    <#assign bannerColor = '#dc3545'  badge = severity    what = 'Alarm raised'>\n"
+			+ "<#elseif severity == 'WARNING'>\n"
+			+ "    <#assign bannerColor = '#e8710a'  badge = severity    what = 'Alarm raised'>\n"
+			+ "<#else>\n"
+			+ "    <#assign bannerColor = '#0d6efd'  badge = severity    what = 'Alarm raised'>\n"
+			+ "</#if>\n"
+			+ "<#if type == 'RE-RAISE'>\n"
+			+ "    <#assign what = 'Alarm still active (re-raised ${reRaiseCount} times)'>\n"
+			+ "</#if>\n"
+			// One row in the field list: <@row 'Label'>value</@row>   (<#t>: no extra line break around the row)
+			+ "<#macro row label>\n"
+			+ "    <tr><td style='padding:3px 16px 3px 0; color:#5d6878; white-space:nowrap; vertical-align:top;'>${label}</td><td style='padding:3px 0; vertical-align:top;'><#nested></td></tr><#t>\n"
+			+ "</#macro>\n"
+			+ "<#assign muted = 'color:#8a94a3;'>\n"
+			+ "<#assign heading = 'font-size:15px; font-weight:600; border-left:4px solid #8a94a3; padding-left:8px;'>\n"
+			+ "<#assign box = 'margin-top:8px; padding:10px 12px; background:#f6f7f9; border:1px solid #e3e7ee; border-radius:5px; font-size:13px; overflow-x:auto;'>\n"
 			+ "<html>\n"
 			+ "<body style='margin:0; padding:0 10px; background:#ffffff;'>\n"
 			+ "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse; font-family:\"Segoe UI\", Arial, Helvetica, sans-serif; font-size:14px; color:#1d2430;'>\n"
@@ -701,91 +716,87 @@ extends AlarmWriterAbstract
 			+ "    <td style='color:#ffffff; vertical-align:top;'>\n"
 			+ "      <div style='font-size:12px; letter-spacing:1px; text-transform:uppercase;'>${what} &middot; ${Version.getAppName()}</div>\n"
 			+ "      <div style='font-size:21px; font-weight:600; margin-top:2px;'>${serverDisplayName} &middot; ${alarmClassAbriviated}</div>\n"
-			+ "#if( $type == 'CANCEL' )\n"
-			+ "      <div style='font-size:13px; margin-top:2px;'>#if( $extraInfo != '' )${extraInfo} &nbsp;&middot;&nbsp; #{end}was ${severity} &middot; lasted ${fullDuration}</div>\n"
-			+ "#else\n"
-			+ "      <div style='font-size:13px; margin-top:2px;'>#if( $extraInfo != '' )${extraInfo} &nbsp;&middot;&nbsp; #{end}raised ${crTimeStr}</div>\n"
-			+ "#end\n"
+			+ "      <div style='font-size:13px; margin-top:2px;'><#if extraInfo?has_content>${extraInfo} &nbsp;&middot;&nbsp; </#if><#if type == 'CANCEL'>was ${severity} &middot; lasted ${fullDuration}<#else>raised ${crTimeStr}</#if></div>\n"
 			+ "    </td>\n"
 			+ "    <td align='right' style='vertical-align:top; white-space:nowrap;'><span style='display:inline-block; background:#ffffff; color:${bannerColor}; font-weight:700; font-size:13px; padding:4px 10px; border-radius:4px;'>${badge}</span></td>\n"
 			+ "  </tr></table>\n"
 			+ "</td></tr>\n"
 
 			// The description first (on CANCEL: how it looks now, if the alarm says so)
-			+ "#if( $type == 'CANCEL' && $cancelDescription != '' )\n"
+			+ "<#if type == 'CANCEL' && cancelDescription?has_content>\n"
 			+ "<tr><td style='padding:14px 18px 2px; font-size:15px;'><b>At cancel:</b> ${cancelDescription}</td></tr>\n"
 			+ "<tr><td style='padding:6px 18px 2px; font-size:13px; color:#5d6878;'><b>Was:</b> ${description}</td></tr>\n"
-			+ "#else\n"
+			+ "<#else>\n"
 			+ "<tr><td style='padding:14px 18px 2px; font-size:15px;'>${description}</td></tr>\n"
-			+ "#end\n"
+			+ "</#if>\n"
 
 			// Button to the period in DbxCentral
-			+ "#if( $dbxCentralUrl != '' && $dbxCentralUrl != '-unknown-' )\n"
+			+ "<#if dbxCentralUrl?has_content && dbxCentralUrl != '-unknown-'>\n"
 			+ "<tr><td style='padding:12px 18px 2px;'>\n"
 			+ "  <table role='presentation' cellpadding='0' cellspacing='0' style='border-collapse:collapse;'><tr>\n"
 			+ "    <td style='background:#1d2430; border-radius:5px;'><a href='${dbxCentralUrl}' style='display:inline-block; padding:8px 14px; color:#ffffff; text-decoration:none; font-weight:600; font-size:13px;'>View the period in DbxCentral</a></td>\n"
 			+ "  </tr></table>\n"
 			+ "</td></tr>\n"
-			+ "#end\n"
+			+ "</#if>\n"
 
 			// Short field list
 			+ "<tr><td style='padding:14px 18px 2px;'>\n"
 			+ "  <table role='presentation' cellpadding='0' cellspacing='0' style='border-collapse:collapse; font-size:13px;'>\n"
-			+ "    <tr><td " + lbl + ">Server</td><td " + val + "><b>${serverDisplayName}</b></td></tr>\n"
-			+ "    <tr><td " + lbl + ">Alarm</td><td " + val + ">${alarmClassAbriviated} &nbsp;<span style='color:#8a94a3;'>(${severity}, category ${category}, state ${state})</span></td></tr>\n"
-			+ "#if( $extraInfo != '' )\n"
-			+ "    <tr><td " + lbl + ">Object</td><td " + val + ">${extraInfo}</td></tr>\n"
-			+ "#end\n"
-			+ "    <tr><td " + lbl + ">Collector</td><td " + val + "><span style='font-family:Consolas, \"Courier New\", monospace; font-size:12px;'>${serviceInfo}</span></td></tr>\n"
-			+ "    <tr><td " + lbl + ">Raised</td><td " + val + ">${crTimeStr}</td></tr>\n"
-			+ "#if( $type == 'RE-RAISE' )\n"
-			+ "    <tr><td " + lbl + ">Re-raised</td><td " + val + ">${reRaiseTimeStr} &nbsp;<span style='color:#8a94a3;'>&middot; active for ${duration}</span></td></tr>\n"
-			+ "#end\n"
-			+ "#if( $type == 'CANCEL' )\n"
-			+ "    <tr><td " + lbl + ">Resolved</td><td " + val + ">${cancelTimeStr} &nbsp;<span style='color:#8a94a3;'>&middot; lasted ${duration}</span></td></tr>\n"
-			+ "#end\n"
-			+ "#if( $activeAlarmCount != '' && $activeAlarmCount != '-1' )\n"
-			+ "    <tr><td " + lbl + ">Active alarms</td><td " + val + ">${activeAlarmCount}</td></tr>\n"
-			+ "#end\n"
+			+ "    <@row 'Server'><b>${serverDisplayName}</b></@row>\n"
+			+ "    <@row 'Alarm'>${alarmClassAbriviated} &nbsp;<span style='${muted}'>(${severity}, category ${category}, state ${state})</span></@row>\n"
+			+ "<#if extraInfo?has_content>\n"
+			+ "    <@row 'Object'>${extraInfo}</@row>\n"
+			+ "</#if>\n"
+			+ "    <@row 'Collector'><span style='font-family:Consolas, \"Courier New\", monospace; font-size:12px;'>${serviceInfo}</span></@row>\n"
+			+ "    <@row 'Raised'>${crTimeStr}</@row>\n"
+			+ "<#if type == 'RE-RAISE'>\n"
+			+ "    <@row 'Re-raised'>${reRaiseTimeStr} &nbsp;<span style='${muted}'>&middot; active for ${duration}</span></@row>\n"
+			+ "</#if>\n"
+			+ "<#if type == 'CANCEL'>\n"
+			+ "    <@row 'Resolved'>${cancelTimeStr} &nbsp;<span style='${muted}'>&middot; lasted ${duration}</span></@row>\n"
+			+ "</#if>\n"
+			+ "<#if activeAlarmCount?has_content && activeAlarmCount != '-1'>\n"
+			+ "    <@row 'Active alarms'>${activeAlarmCount}</@row>\n"
+			+ "</#if>\n"
 			+ "  </table>\n"
 			+ "</td></tr>\n"
 
-			// Details (the extended description, already HTML). On CANCEL: say if they are from the cancel or from the raise
-			+ "#if( $extendedDescription != '' )\n"
-			+ "<tr><td style='padding:16px 18px 2px;'>\n"
-			+ "  <div style='font-size:15px; font-weight:600; border-left:4px solid #8a94a3; padding-left:8px;'>#if( $type == 'CANCEL' )#if( $extendedDescriptionAtCancel )Details at cancel#{else}Details when raised#{end}#{else}Details#{end}</div>\n"
-			+ "  <div style='margin-top:8px; padding:10px 12px; background:#f6f7f9; border:1px solid #e3e7ee; border-radius:5px; font-size:13px; overflow-x:auto;'>${extendedDescription}</div>\n"
-			+ "</td></tr>\n"
-			+ "#end\n"
-
-			// Only on CANCEL, when the details above are from the raise: the last known description(s) (from the last re-raise)
-			// (when the details were set at cancel, the last re-raise is the same picture one sample earlier: not shown)
-			+ "#if( $type == 'CANCEL' && !$extendedDescriptionAtCancel && ($reRaiseDescription != '' || $reRaiseExtendedDescription != '') )\n"
-			+ "<tr><td style='padding:16px 18px 2px;'>\n"
-			+ "  <div style='font-size:15px; font-weight:600; border-left:4px solid #8a94a3; padding-left:8px;'>Last known before it was resolved</div>\n"
-			+ "#if( $reRaiseDescription != '' )\n"
-			+ "  <div style='margin-top:8px; font-size:13px;'>${reRaiseDescription}</div>\n"
-			+ "#end\n"
-			+ "#if( $reRaiseExtendedDescription != '' )\n"
-			+ "  <div style='margin-top:8px; padding:10px 12px; background:#f6f7f9; border:1px solid #e3e7ee; border-radius:5px; font-size:13px; overflow-x:auto;'>${reRaiseExtendedDescription}</div>\n"
-			+ "#end\n"
-			+ "</td></tr>\n"
-			+ "#end\n"
-
-			// Summary of what is STILL ACTIVE (a table). Empty string when the summary is turned off.
-			+ "#if( $activeAlarmsSummaryHtml != '' )\n"
+			// Summary of what is STILL ACTIVE (a table), before the details: it is short, the details can be long. Empty string when the summary is turned off.
+			+ "<#if activeAlarmsSummaryHtml?has_content>\n"
 			+ "<tr><td style='padding:16px 18px 2px;'>\n"
 			+ "${activeAlarmsSummaryHtml}\n"
 			+ "</td></tr>\n"
-			+ "#end\n"
+			+ "</#if>\n"
+
+			// Details (the extended description, already HTML). On CANCEL: say if they are from the cancel or from the raise
+			+ "<#if extendedDescription?has_content>\n"
+			+ "<tr><td style='padding:16px 18px 2px;'>\n"
+			+ "  <div style='${heading}'><#if type != 'CANCEL'>Details<#elseif extendedDescriptionAtCancel>Details at cancel<#else>Details when raised</#if></div>\n"
+			+ "  <div style='${box}'>${extendedDescription}</div>\n"
+			+ "</td></tr>\n"
+			+ "</#if>\n"
+
+			// Only on CANCEL, when the details above are from the raise: the last known description(s) (from the last re-raise)
+			// (when the details were set at cancel, the last re-raise is the same picture one sample earlier: not shown)
+			+ "<#if type == 'CANCEL' && !extendedDescriptionAtCancel && (reRaiseDescription?has_content || reRaiseExtendedDescription?has_content)>\n"
+			+ "<tr><td style='padding:16px 18px 2px;'>\n"
+			+ "  <div style='${heading}'>Last known before it was resolved</div>\n"
+			+ "<#if reRaiseDescription?has_content>\n"
+			+ "  <div style='margin-top:8px; font-size:13px;'>${reRaiseDescription}</div>\n"
+			+ "</#if>\n"
+			+ "<#if reRaiseExtendedDescription?has_content>\n"
+			+ "  <div style='${box}'>${reRaiseExtendedDescription}</div>\n"
+			+ "</#if>\n"
+			+ "</td></tr>\n"
+			+ "</#if>\n"
 
 			// How to change the alarm: one line with a link to the alarm settings in DbxCentral (was a wide table of all options)
 			+ "<tr><td style='padding:16px 18px 18px; font-size:12px; color:#5d6878; border-top:1px solid #edf0f4;'>\n"
-			+ "#if( $dbxCentralBaseUrl != '' )\n"
+			+ "<#if dbxCentralBaseUrl?has_content>\n"
 			+ "  To change this alarm (threshold, severity, time range, turn it off): <a href='${dbxCentralBaseUrl}/config.html?srvName=${serviceName}&cm=${serviceInfo}' style='color:#2b5fb8;'>open the alarm settings in DbxCentral</a>.\n"
-			+ "#else\n"
+			+ "<#else>\n"
 			+ "  To change this alarm (threshold, severity, time range, turn it off): see the alarm settings of <span style='font-family:Consolas, monospace;'>${serviceInfo}</span> in the collector's configuration.\n"
-			+ "#end\n"
+			+ "</#if>\n"
 			+ "</td></tr>\n"
 
 			+ "</table>\n"

@@ -152,6 +152,11 @@ rem	set JAVA_START_CLASS=com.dbxtune.central.pcs.H2CentralDbCopy2
 	set JAVA_START_PARAMS=-tcp -tcpAllowOthers -ifExists
 	set SPLASH=
 
+) ELSE IF "%APP_NAME%" == "gcpconntest" (
+	set JAVA_START_CLASS=com.dbxtune.test.GcpConnectivityTest
+	set JAVA_START_PARAMS=
+	set SPLASH=
+
 ) ELSE IF "%APP_NAME%" == "sshtest2" (
 	set JAVA_START_CLASS=com.dbxtune.test.JschTest2
 	set JAVA_START_PARAMS=
@@ -502,7 +507,6 @@ set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\guava-33.7.1-jre.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\javassist-3.33.0-GA.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\syslog-java-client-1.1.7.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jsendnsca-2.1.0.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\velocity-engine-core-2.4.1.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jide-oss-3.7.15.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jackson-annotations-2.22.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jackson-core-2.22.3.jar

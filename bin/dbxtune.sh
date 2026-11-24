@@ -266,6 +266,14 @@ case "${toolset}" in
 		javaSplashScreen=""
 		;;
 
+	gcpconntest)
+		shortAppName="gcpconntest"
+		longAppName="GcpConnectivityTest"
+		javaMainClass="com.dbxtune.test.GcpConnectivityTest"
+		javaMainParams=""
+		javaSplashScreen=""
+		;;
+
 	sshtest2)
 		shortAppName="sshtest2"
 		longAppName="SshTest2"
@@ -527,7 +535,6 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/guava-33.7.1-jre.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/javassist-3.33.0-GA.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/syslog-java-client-1.1.7.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jsendnsca-2.1.0.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/velocity-engine-core-2.4.1.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jide-oss-3.7.15.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jackson-annotations-2.22.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jackson-core-2.22.3.jar

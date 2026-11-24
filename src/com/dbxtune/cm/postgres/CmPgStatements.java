@@ -95,6 +95,7 @@ extends CountersModel
 			"calls",
 			"total_time",
 			"total_plan_time", // from: 13.0
+			"plans",           // from: 13.0 (times planned: plans/calls shows if the plan is reused)
 			"total_exec_time", // from: 13.0 and replaces "total_time"
 			"rows",
 			"shared_blks_hit",

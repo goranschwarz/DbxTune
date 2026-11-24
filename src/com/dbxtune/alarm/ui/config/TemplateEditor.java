@@ -49,8 +49,6 @@ import javax.swing.event.DocumentListener;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.velocity.exception.MethodInvocationException;
-import org.apache.velocity.exception.ParseErrorException;
 import org.fife.ui.autocomplete.DbxAutoCompleteDescWindow;
 import org.fife.ui.autocomplete.AutoCompletion;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
@@ -86,7 +84,7 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 
 	private static final long	serialVersionUID	= -1L;
 	
-	private static final String TEMPLATE_HELP = "http://velocity.apache.org/engine/2.0/user-guide.html#conditionals";
+	private static final String TEMPLATE_HELP = "https://freemarker.apache.org/docs/dgui.html";
 	private static final String ADAPTIVE_CARD_DESIGNER = "https://adaptivecards.microsoft.com/designer.html";
 
 	private String _return = null;
@@ -105,7 +103,7 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 	private JButton           _setAlarmEvent_but = new JButton("Set AlarmEvent Params");
 	private JComboBox<String> _setAlarmType_cbx  = new JComboBox<>(new String[]{AlarmWriterAbstract.ACTION_RAISE, AlarmWriterAbstract.ACTION_RE_RAISE, AlarmWriterAbstract.ACTION_CANCEL});
 
-	private JButton           _templateHelp_but  = new JButton("Velocity Template Language Documentation");
+	private JButton           _templateHelp_but  = new JButton("FreeMarker Template Language Documentation");
 	private JButton           _sendTestAlarm_but = new JButton("Send Test Alarm");
 	private JButton           _copyDesignerCard_but = new JButton("Copy card for Designer");
 	
@@ -310,7 +308,7 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 //		scroll.setIconRowHeaderEnabled(true);
 
 		// INSTALL: The Parser which will populate the EXAMPLE in the top panel
-		_editor_txt.addParser(new LocalVelocityParser());
+		_editor_txt.addParser(new LocalTemplateParser());
 		_editor_txt.setParserDelay(500); // Compile after 500ms
 
 //		RSyntaxTextArea.setTemplatesEnabled(true);
@@ -584,28 +582,6 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 			try { _editor_txt.forceReparsing(p); } catch (Throwable ignore) {} // protect from errors in RSyntaxTextArea
 		}
 
-//		_warning_lbl.setText("");
-//		_warning_lbl.setToolTipText("");
-//		_warning_lbl.setVisible(false);
-//		_warning_lbl.setForeground(Color.BLACK);
-//		
-//		try
-//		{
-//			String type = _setAlarmType_cbx.getSelectedItem()+"";
-//			String str = WriterUtils.createMessageFromTemplate(type, _exampleAlarmEvent, _editor_txt.getText(), true);
-//			_example_lbl.setText(str);
-//		}
-//		catch (Exception ex)
-//		{
-//			String type = "";
-//			if (ex instanceof ParseErrorException)
-//				type = "Velocity Parser Error: ";
-//			
-//			_warning_lbl.setText(type + ex.getMessage());
-//			_warning_lbl.setToolTipText("<html><pre>" + ex + "</pre></html>");
-//			_warning_lbl.setVisible(true);
-//			_warning_lbl.setForeground(Color.RED);
-//		}
 	}
 	@Override public void insertUpdate(DocumentEvent e)  { updateExampleText(); }
 	@Override public void removeUpdate(DocumentEvent e)  { updateExampleText(); }
@@ -698,7 +674,7 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 	 * Render the template for the preview, the way the writer being configured renders it.
 	 * <p>
 	 * Writers have templates with their own variables and escaping (eg the Teams card template has
-	 * <code>$cardStyle</code> and is JSON escaped), so the generic rendering is only a fallback for a writer
+	 * <code>${cardStyle}</code> and is JSON escaped), so the generic rendering is only a fallback for a writer
 	 * that does not extend AlarmWriterAbstract.
 	 */
 	private String createPreview(String action)
@@ -751,7 +727,7 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 		return _previewWriter;
 	}
 
-	private class LocalVelocityParser
+	private class LocalTemplateParser
 	implements Parser
 	{
 		@Override
@@ -786,27 +762,17 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 				String msg    = ex.getMessage();
 
 				
-				if (ex instanceof ParseErrorException)
+				if (ex instanceof WriterUtils.TemplateRenderException)
 				{
-					ParseErrorException pee = (ParseErrorException)ex;
+					WriterUtils.TemplateRenderException tre = (WriterUtils.TemplateRenderException)ex;
 
-					type   = "Velocity Parser Error: ";
-					line   = pee.getLineNumber()   - 1;
-					offset = pee.getColumnNumber() - 1;
-//System.out.println("ppe.getInvalidSyntax()="+pee.getInvalidSyntax());
+					type   = tre.getKind() + ": "; // "FreeMarker Parser Error" or "FreeMarker Template Error"
+					line   = tre.getLineNumber()   - 1;
+					offset = tre.getColumnNumber() - 1;
 				}
 				else if (ex instanceof AlarmWriterAbstract.TemplatePreviewException)
 				{
 					type   = "Invalid Output: ";
-				}
-				else if (ex instanceof MethodInvocationException)
-				{
-					MethodInvocationException mie = (MethodInvocationException)ex;
-					
-					type   = "Velocity Method Invocation Error: ";
-					line   = mie.getLineNumber()   - 1;
-					offset = mie.getColumnNumber() - 1;
-//System.out.println("mie.getMethodName()=" + mie.getMethodName() + ", mie.getReferenceName()=" + mie.getReferenceName());
 				}
 //System.out.println("LINE="+line+", COL="+offset+", length="+length+", msg='"+msg+"'.");
 

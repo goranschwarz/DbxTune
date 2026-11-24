@@ -20,31 +20,24 @@
  ******************************************************************************/
 package com.dbxtune.alarm.writers;
 
+import java.io.IOException;
+import java.io.StringReader;
 import java.io.StringWriter;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
-import org.apache.velocity.VelocityContext;
-import org.apache.velocity.app.Velocity;
-import org.apache.velocity.app.VelocityEngine;
-import org.apache.velocity.app.event.EventCartridge;
-import org.apache.velocity.app.event.InvalidReferenceEventHandler;
-import org.apache.velocity.context.Context;
-import org.apache.velocity.exception.MethodInvocationException;
-import org.apache.velocity.exception.ParseErrorException;
-import org.apache.velocity.exception.ResourceNotFoundException;
-import org.apache.velocity.util.introspection.Info;
 import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
 
@@ -66,9 +59,116 @@ import com.dbxtune.ui.autocomplete.completions.ShorthandCompletionX;
 import com.dbxtune.utils.Configuration;
 import com.dbxtune.utils.StringUtil;
 
+import freemarker.core.ParseException;
+import freemarker.core.TemplateClassResolver;
+import freemarker.template.DefaultObjectWrapper;
+import freemarker.template.Template;
+import freemarker.template.TemplateException;
+import freemarker.template.TemplateExceptionHandler;
+import freemarker.template.TemplateHashModel;
+import freemarker.template.TemplateModelException;
+
 public class WriterUtils
 {
 	private static final Logger _logger = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+
+	/**
+	 * A template that could not be rendered: it does not parse, or something in it failed (unknown variable, a Java method that threw).
+	 * <p>
+	 * Unchecked, like the template exceptions were before: a writer that gets one sends nothing for that alarm
+	 * (the AlarmHandler logs it), the Template Editor / web config page show it with the line and column.
+	 */
+	public static class TemplateRenderException
+	extends RuntimeException
+	{
+		private static final long serialVersionUID = 1L;
+		private final String _kind;
+		private final int    _line;
+		private final int    _column;
+
+		public TemplateRenderException(String kind, String message, int line, int column, Throwable cause)
+		{
+			super(message, cause);
+			_kind   = kind;
+			_line   = line;
+			_column = column;
+		}
+
+		/** "FreeMarker Parser Error" or "FreeMarker Template Error" */
+		public String getKind()         { return _kind; }
+		/** 1-based, 0 when not known */
+		public int    getLineNumber()    { return _line; }
+		/** 1-based, 0 when not known */
+		public int    getColumnNumber() { return _column; }
+	}
+
+	/** One FreeMarker configuration for all alarm templates (thread safe once set up) */
+	private static final freemarker.template.Configuration _templateConf = createTemplateConf();
+
+	/** Parsed templates, by template text: a template is rendered for every alarm, but rarely changes */
+	private static final Map<String, Template> _templateCache = Collections.synchronizedMap(new LinkedHashMap<String, Template>(16, 0.75f, true)
+	{
+		private static final long serialVersionUID = 1L;
+		@Override protected boolean removeEldestEntry(Map.Entry<String, Template> eldest) { return size() > 64; }
+	});
+
+	private static freemarker.template.Configuration createTemplateConf()
+	{
+		freemarker.template.Configuration cfg = new freemarker.template.Configuration(freemarker.template.Configuration.VERSION_2_3_32);
+		cfg.setDefaultEncoding("UTF-8");
+		cfg.setTemplateExceptionHandler(TemplateExceptionHandler.RETHROW_HANDLER); // an error is an error (shown in the editor, logged by the AlarmHandler)
+		cfg.setLogTemplateExceptions(false);   // we throw them, the caller logs them
+		cfg.setWrapUncheckedExceptions(true);  // a Java method that throws becomes a TemplateException, with the line in the template
+		cfg.setNumberFormat("computer");       // 1234567, not 1,234,567
+		cfg.setBooleanFormat("c");             // ${hasServerGroup} prints true/false (as Velocity did)
+		cfg.setAPIBuiltinEnabled(false);
+		cfg.setNewBuiltinClassResolver(TemplateClassResolver.ALLOWS_NOTHING_RESOLVER); // no ?new: a template must not create arbitrary Java objects
+		return cfg;
+	}
+
+	/** Parse a template (or take it from the cache) */
+	private static Template getTemplate(String templateText)
+	{
+		Template template = _templateCache.get(templateText);
+		if (template != null)
+			return template;
+
+		// A forgotten old (Velocity) template: FreeMarker prints its '#if( $x )' as plain text, or fails on its ${...} with a confusing message. Say what it is.
+		String velocityHint = templateText.matches("(?s).*(?<![</])#\\{?(if|foreach|set|elseif)\\}?\\s*\\(.*") ? " (This looks like an old Velocity template: the templates are FreeMarker since DbxTune 2026-11, see https://freemarker.apache.org/docs/dgui.html)" : "";
+
+		try
+		{
+			template = new Template("AlarmTemplate", new StringReader(templateText), _templateConf);
+		}
+		catch (ParseException ex)
+		{
+			throw new TemplateRenderException("FreeMarker Parser Error", ex.getEditorMessage() + " [line " + ex.getLineNumber() + ", column " + ex.getColumnNumber() + "]" + velocityHint, ex.getLineNumber(), ex.getColumnNumber(), ex);
+		}
+		catch (IOException ex) // can not happen with a StringReader
+		{
+			throw new TemplateRenderException("FreeMarker Parser Error", ex.toString(), 0, 0, ex);
+		}
+
+		if ( ! velocityHint.isEmpty() ) // once per template text (it is cached)
+			_logger.warn("An alarm template is rendered with the Velocity directives as plain text." + velocityHint + " Template starts with: " + StringUtils.abbreviate(templateText.replace('\n', ' '), 100));
+
+		_templateCache.put(templateText, template);
+		return template;
+	}
+
+	/** A Java class whose static methods templates can call, eg <code>${StringUtil.format('%-30s', type)}</code> */
+	private static Object staticModel(Class<?> clazz)
+	{
+		try
+		{
+			TemplateHashModel statics = ((DefaultObjectWrapper) _templateConf.getObjectWrapper()).getStaticModels();
+			return statics.get(clazz.getName());
+		}
+		catch (TemplateModelException ex)
+		{
+			throw new RuntimeException("Could not expose '" + clazz.getName() + "' to the alarm templates.", ex);
+		}
+	}
 
 	/** The server group that template previews (and the example Active Alarms Summary) show */
 	public static final String EXAMPLE_SERVER_GROUP = "Example Group";
@@ -248,17 +348,14 @@ public class WriterUtils
 //	 * 
 //	 * @param writerName                  writer who calls this method
 //	 * @param activeAlarmList             List of "active" alarms
-//	 * @param template                    the Velocity template
+//	 * @param template                    the FreeMarker template
 //	 * @param doTrim                      remove whitespaces newlines etc from start and end
 //	 * @param trMap                       A Map of Strings that needs transalations: "&" -> "&amp";
 //	 * @param dbxCentralUrl               Where can the DbxCentral be found;
 //	 * @return                            The resolved template
-//	 * @throws ParseErrorException        If we had parser exceptions
-//	 * @throws MethodInvocationException  If any exceptions where thrown when calling a method on a methodName
-//	 * @throws ResourceNotFoundException  Resource not found...
+//	 * @throws TemplateRenderException    If the template does not parse, or something in it fails (eg an undefined variable)
 //	 */
 //	public static String createMessageFromTemplate(String writerName, List<AlarmEvent> activeAlarmList, String template, boolean doTrim, Map<String, String> trMap, String dbxCentralUrl)
-//	throws ParseErrorException, MethodInvocationException, ResourceNotFoundException
 //	{
 //		return createMessageFromTemplate(writerName, null, activeAlarmList, template, doTrim, trMap, dbxCentralUrl);
 //	}
@@ -268,17 +365,14 @@ public class WriterUtils
 	 * 
 	 * @param action                      RAISE or RE-RAISE or CANCEL
 	 * @param pcsAlarmEntry               The AlarmEntry object (NOTE: This is NOT the same as a AlarmEvent)
-	 * @param template                    the Velocity template
+	 * @param template                    the FreeMarker template
 	 * @param doTrim                      remove whitespaces newlines etc from start and end
 	 * @param trMap                       A Map of Strings that needs transalations: "&" -> "&amp";
 	 * @param dbxCentralUrl               Where can the DbxCentral be found;
 	 * @return                            The resolved template
-	 * @throws ParseErrorException        If we had parser exceptions
-	 * @throws MethodInvocationException  If any exceptions where thrown when calling a method on a methodName
-	 * @throws ResourceNotFoundException  Resource not found...
+	 * @throws TemplateRenderException    If the template does not parse, or something in it fails (eg an undefined variable)
 	 */
 	public static String createMessageFromTemplate(String action, AlarmEntry pcsAlarmEntry, String template, boolean doTrim, Map<String, String> trMap, String dbxCentralUrl)
-	throws ParseErrorException, MethodInvocationException, ResourceNotFoundException
 	{
 		return createMessageFromTemplate(action, pcsAlarmEntry, null, template, doTrim, trMap, dbxCentralUrl);
 	}
@@ -288,20 +382,18 @@ public class WriterUtils
 	 * 
 	 * @param action                      RAISE or RE-RAISE or CANCEL
 	 * @param alarmEvent                  The AlarmEvent object
-	 * @param template                    the Velocity template
+	 * @param template                    the FreeMarker template
 	 * @param doTrim                      remove whitespaces newlines etc from start and end
 	 * @param trMap                       A Map of Strings that needs transalations: "&" -> "&amp";
 	 * @param dbxCentralUrl               Where can the DbxCentral be found;
 	 * @return                            The resolved template
-	 * @throws ParseErrorException        If we had parser exceptions
-	 * @throws MethodInvocationException  If any exceptions where thrown when calling a method on a methodName
-	 * @throws ResourceNotFoundException  Resource not found...
+	 * @throws TemplateRenderException    If the template does not parse, or something in it fails (eg an undefined variable)
 	 */
 	/**
 	 * The currently active alarms of THIS Collector, which templates see as <code>$activeAlarmList</code>.
 	 * <p>
 	 * Callers of the long overloads MUST pass this (not null), otherwise <code>$activeAlarmList</code> is
-	 * not put in the Velocity context, and any template looping over it throws "Reference does not exist".
+	 * not put in the template model, and any template looping over it fails with an undefined variable.
 	 *
 	 * @return the live list, or null if there is no AlarmHandler (eg on DbxCentral)
 	 */
@@ -311,7 +403,6 @@ public class WriterUtils
 	}
 
 	public static String createMessageFromTemplate(String action, AlarmEvent alarmEvent, String template, boolean doTrim, Map<String, String> trMap, String dbxCentralUrl)
-	throws ParseErrorException, MethodInvocationException, ResourceNotFoundException
 	{
 		List<AlarmEvent> activeAlarmList = getActiveAlarmList();
 
@@ -324,18 +415,15 @@ public class WriterUtils
 	 * @param action                      RAISE or RE-RAISE or CANCEL  (or the writer who calls this method) 
 	 * @param alarmObject                 The AlarmEvent or pcsAlarmEntry object
 	 * @param activeAlarmList             List of "active" alarms
-	 * @param template                    the Velocity template
+	 * @param template                    the FreeMarker template
 	 * @param doTrim                      remove whitespaces newlines etc from start and end
 	 * @param trMap                       A Map of Strings that needs transalations: "&" -> "&amp";
 	 * @param dbxCentralUrl               Where can the DbxCentral be found;
 	 * 
 	 * @return                            The resolved template
-	 * @throws ParseErrorException        If we had parser exceptions
-	 * @throws MethodInvocationException  If any exceptions where thrown when calling a method on a methodName
-	 * @throws ResourceNotFoundException  Resource not found...
+	 * @throws TemplateRenderException    If the template does not parse, or something in it fails (eg an undefined variable)
 	 */
 	public static String createMessageFromTemplate(String action, Object alarmObject, List<AlarmEvent> activeAlarmList, String template, boolean doTrim, Map<String, String> trMap, String dbxCentralUrl)
-	throws ParseErrorException, MethodInvocationException, ResourceNotFoundException
 	{
 		return createMessageFromTemplate(action, alarmObject, activeAlarmList, template, doTrim, trMap, dbxCentralUrl, null, null);
 	}
@@ -344,12 +432,11 @@ public class WriterUtils
 	 * Same as above, but also exposes a pre-rendered "Active Alarms Summary" to the template, as
 	 * <code>${activeAlarmsSummaryHtml}</code> and <code>${activeAlarmsSummaryText}</code>.
 	 * <p>
-	 * NOTE: Both variables are <b>always</b> put in the Velocity context (as an empty string when a
-	 * writer does not supply them), because the InvalidReferenceEventHandler below throws on any
-	 * unknown reference. That way a template can use them unconditionally.
+	 * NOTE: Both variables are <b>always</b> put in the template model (as an empty string when a
+	 * writer does not supply them), because FreeMarker fails on an undefined variable.
+	 * That way a template can use them unconditionally.
 	 */
 	public static String createMessageFromTemplate(String action, Object alarmObject, List<AlarmEvent> activeAlarmList, String template, boolean doTrim, Map<String, String> trMap, String dbxCentralUrl, String activeAlarmsSummaryHtml, String activeAlarmsSummaryText)
-	throws ParseErrorException, MethodInvocationException, ResourceNotFoundException
 	{
 		return createMessageFromTemplate(action, alarmObject, activeAlarmList, template, doTrim, trMap, dbxCentralUrl, activeAlarmsSummaryHtml, activeAlarmsSummaryText, null);
 	}
@@ -357,12 +444,11 @@ public class WriterUtils
 	/**
 	 * Same as above, plus writer specific variables.
 	 *
-	 * @param extraContext  Extra Velocity variables, put in the context <b>as is</b> after all the standard ones
+	 * @param extraContext  Extra template variables, put in the context <b>as is</b> after all the standard ones
 	 *                      (so they override a standard variable with the same name). NOTE: they do NOT pass
 	 *                      through <code>trMap</code>, the caller is responsible for escaping them. May be null.
 	 */
 	public static String createMessageFromTemplate(String action, Object alarmObject, List<AlarmEvent> activeAlarmList, String template, boolean doTrim, Map<String, String> trMap, String dbxCentralUrl, String activeAlarmsSummaryHtml, String activeAlarmsSummaryText, Map<String, Object> extraContext)
-	throws ParseErrorException, MethodInvocationException, ResourceNotFoundException
 	{
 		// Since parameter "alarmObject" is Object, we need to check valid classes
 		AlarmEvent alarmEvent    = null;
@@ -392,62 +478,22 @@ public class WriterUtils
 //			_logger.warn("Problems parsing URL into a BaseUrl. Passed URL=|" + dbxCentralUrl + "|. Caught: " + ex);
 //		}
 		
-		Properties config = new Properties();
-//		config.setProperty("eventhandler.invalidreference.exception", "true");
+		// Parse first (cached): a template that does not parse is reported before we collect any values
+		Template fmTemplate = getTemplate(template);
 
-		VelocityEngine engine = new VelocityEngine(config);
-		engine.init();
-
-		// Set the LOG LEVEL to FATAL for the Velocity PARSER... This so that the Parser exceptions will not be written to the Error log
-		// NOTE: This is specific to Log4J
-//		Logger logLevel = LogManager.getLogger("org.apache.velocity.parser");
-//		if (logLevel != null)
-//			logLevel.setLevel(Level.FATAL);
-		Configurator.setLevel("org.apache.velocity.parser", Level.FATAL);
-
-
-
-//		boolean debug = false;
-//		if (debug || _logger.isDebugEnabled())
-//		{
-//			Enumeration<?> loggers = LogManager.getCurrentLoggers();
-//			while(loggers.hasMoreElements()) 
-//			{
-//				Logger logger = (Logger) loggers.nextElement();
-//				if (logger.getName().startsWith("org.apache.velocity"))
-//				{
-//					_logger.debug("Setting Velocity logger '"+logger.getName()+"' to DEBUG.");
-//					logger.setLevel(Level.DEBUG);
-//				}
-//			}
-//		}
-		boolean debug = false;
-		if (debug || _logger.isDebugEnabled())
-		{
-			Configurator.setAllLevels("org.apache.velocity", Level.DEBUG);
-		}
-
-		// Not "starts with": a template can start with Velocity directives (#if/#set) before the <html>
+		// Not "starts with": a template can start with directives (<#if>/<#assign>) before the <html>
 		boolean isHtmlTemplate = StringUtils.containsIgnoreCase(template, "<html>");
-		
 
-		VelocityContext context = new VelocityContext();
 
-		// Add access to: com.dbxtune.utils.StringUtil
-		context.put("StringUtil", StringUtil.class);
-		
-		// Add access to: com.dbxtune.Version
-		context.put("Version", Version.class);
-		
-		// Add access to: java.lang.System
-		context.put("System", System.class);
-		
-		// Add access to: org.apache.commons.lang3.StringUtils
-		context.put("StringUtils", StringUtils.class);
+		Map<String, Object> context = new HashMap<>();
 
-		// JSON string escaping, for templates that produce JSON:  $Json.str($value)  or  "$Json.esc($value)"
-		context.put("Json", TemplateJson.class);
-		
+		// Java classes whose static methods a template can call
+		context.put("StringUtil" , staticModel(StringUtil.class));   // com.dbxtune.utils.StringUtil      eg: ${StringUtil.format('%-30s', type)}
+		context.put("Version"    , staticModel(Version.class));      // com.dbxtune.Version               eg: ${Version.getAppName()}
+		context.put("StringUtils", staticModel(StringUtils.class));  // org.apache.commons.lang3.StringUtils eg: ${StringUtils.repeat('-', 30)}
+		context.put("Json"       , staticModel(TemplateJson.class)); // JSON escaping, for templates that produce JSON: ${Json.str(value)} or "${Json.esc(value)}"
+		// NOTE: java.lang.System is NOT exposed (it was with Velocity, but no template used it, and System.exit()/getenv() from a template is a risk)
+
 
 		// Add TYPE to context
 		context.put("type", action);
@@ -578,8 +624,8 @@ public class WriterUtils
 			context.put("activeAlarmList" , activeAlarmList);
 		}
 
-		// Always present, so a template can reference them without the InvalidReferenceEventHandler
-		// (below) throwing. Empty when the writer has the Active Alarms Summary turned off.
+		// Always present, so a template can reference them without an "undefined variable" error.
+		// Empty when the writer has the Active Alarms Summary turned off.
 		context.put("activeAlarmsSummaryHtml", activeAlarmsSummaryHtml == null ? "" : activeAlarmsSummaryHtml);
 		context.put("activeAlarmsSummaryText", activeAlarmsSummaryText == null ? "" : activeAlarmsSummaryText);
 
@@ -591,51 +637,26 @@ public class WriterUtils
 		}
 
 
-		InvalidReferenceEventHandler invalidReferenceEventHandler = new InvalidReferenceEventHandler()
-		{
-			@Override
-			public Object invalidGetMethod(Context context, String reference, Object object, String property, Info info)
-			{
-				_logger.debug("invalid-Get-Method(context, reference='" + reference + "', object='" + object + "', info='" + info + "')");
-				reportInvalidReference(reference, null, info);
-				return null;
-			}
-
-			@Override
-			public boolean invalidSetMethod(Context context, String leftreference, String rightreference, Info info)
-			{
-				_logger.debug("invalid-Set-Method(context, leftreference='" + leftreference + "', rightreference='" + rightreference + "', info='" + info + "')");
-				reportInvalidReference(leftreference, null, info);
-				return false;
-			}
-
-			@Override
-			public Object invalidMethod(Context context, String reference, Object object, String method, Info info)
-			{
-				_logger.debug("invalid-Method(context, reference='" + reference + "', object='" + object + "', method='" + method + "', info='" + info + "')");
-				if (reference == null)
-					reportInvalidReference(object.getClass().getName() + "." + method, method, info);
-				else
-					reportInvalidReference(reference, method, info);
-				return null;
-			}
-
-			private void reportInvalidReference(String reference, String method, Info info)
-			{
-				String lineStr   = "[line " + info.getLine() + ", column " + info.getColumn() + "]";
-				String methodStr = StringUtil.isNullOrBlank(method) ? "" : ", method='" + method + "'";
-				throw new ParseErrorException("Reference '" + reference + "'" + methodStr + " do not exists. at " + lineStr, info);
-			}
-		};
-		
-		EventCartridge ec = new EventCartridge();
-		ec.addEventHandler(invalidReferenceEventHandler);
-		ec.attachToContext(context);
-
 		// Here is where the substitution happens
 		StringWriter writer = new StringWriter();
-		
-		Velocity.evaluate(context, writer, "AlarmTemplateWriter", template);
+		try
+		{
+			fmTemplate.process(context, writer);
+		}
+		catch (TemplateException ex)
+		{
+			// eg an undefined variable, or a Java method that threw.
+			// One line for the editor/log: without FreeMarker's "----" Tip section, and its own '[in template "AlarmTemplate" at ...]' (we add [line, column])
+			int    line   = ex.getLineNumber()   == null ? 0 : ex.getLineNumber();
+			int    column = ex.getColumnNumber() == null ? 0 : ex.getColumnNumber();
+			String msg    = ex.getMessageWithoutStackTop();
+			msg = msg.split("\n----", 2)[0].replaceAll("\\s*\\[in template \"AlarmTemplate\"[^\\]]*\\]", "").replaceAll("\\s*\\n\\s*", " ").trim();
+			throw new TemplateRenderException("FreeMarker Template Error", msg + " [line " + line + ", column " + column + "]", line, column, ex);
+		}
+		catch (IOException ex) // can not happen with a StringWriter
+		{
+			throw new TemplateRenderException("FreeMarker Template Error", ex.toString(), 0, 0, ex);
+		}
 
 		String output = writer.toString();
 		if (doTrim)
@@ -658,62 +679,64 @@ public class WriterUtils
 		                                            + "The text in this editor is a <b>template</b>, and all ${someValue} will be changed into real values.<br>"
 		                                            + "Watch the top text panel for how you template will be resolved.<br>"
 		                                            + "<br>"
+		                                            + "The templates use the <b>FreeMarker</b> template language, see <a href='https://freemarker.apache.org/docs/dgui.html'>https://freemarker.apache.org/docs/dgui.html</a><br>"
 		                                            + "<br>"
-		                                            + "You can also use <br>"
-		                                            + "More information about how the Velocity Template Engine works, you can find here <a href='http://velocity.apache.org/engine/2.0/user-guide.html'>http://velocity.apache.org/engine/2.0/user-guide.html</a><br>"
-		                                            + "<br>"
-		                                            + "There is a couple of things that might not be described in the best way, so below are som hints...<br>"
+		                                            + "Some hints...<br>"
 		                                            + "<ul>"
-		                                            + "   <li>You can use Java String operations on the template variables<br>"
-		                                            + "       Example 1: <code>${type.toLowerCase()}</code> results in <code>raise</code> instead of RAISE<br>"
-		                                            + "       Example 2: <code>${type.substring(1,4)}</code> results in <code>AIS</code> instead of RAISE</li>"
-		                                            + "       Example 3: <code>${alarmClass.replace('Dummy', 'Awsome')}</code> results in <code>AlarmEventAwsome</code> instead of <code>AlarmEventDummy</code>"
+		                                            + "   <li>Lines that only hold <code>&lt;#...&gt;</code> tags print nothing (not even a newline), so you can lay out the logic on several lines.</li>"
+		                                            + "   <li>Text operations are <i>built-ins</i>, written with a <code>?</code><br>"
+		                                            + "       Example 1: <code>${type?lower_case}</code> results in <code>raise</code> instead of RAISE<br>"
+		                                            + "       Example 2: <code>${type[1..3]}</code> results in <code>AIS</code> instead of RAISE<br>"
+		                                            + "       Example 3: <code>${alarmClass?replace('Dummy', 'Awsome')}</code> results in <code>AlarmEventAwsome</code> instead of <code>AlarmEventDummy</code><br>"
+		                                            + "       Example 4: <code>&lt;#if extraInfo?has_content&gt;...&lt;/#if&gt;</code> is true when the value is not empty<br>"
+		                                            + "       All built-ins: <a href='https://freemarker.apache.org/docs/ref_builtins_string.html'>https://freemarker.apache.org/docs/ref_builtins_string.html</a>"
 		                                            + "   </li>"
-		                                            + "   <li>You can use special variable <code>StringUtils<code/> for extended String functionality<br>"
+		                                            + "   <li>You can use special variable <code>StringUtils</code> for extended String functionality<br>"
 		                                            + "       see: <a href='https://commons.apache.org/proper/commons-lang/apidocs/org/apache/commons/lang3/StringUtils.html'>https://commons.apache.org/proper/commons-lang/apidocs/org/apache/commons/lang3/StringUtils.html</a><br>"
-		                                            + "       Example 1: <code>${StringUtils.isNumeric(${data})}</code> which return true or false so you can use it in a if statement.<br>"
+		                                            + "       Example 1: <code>${StringUtils.repeat('-', 30)}</code> gives a line of 30 dashes.<br>"
 		                                            + "   </li>"
-		                                            + "   <li>You can use special variable <code>StringUtil<code/> for some other extended String functionality<br>"
+		                                            + "   <li>You can use special variable <code>StringUtil</code> for some other extended String functionality<br>"
 		                                            + "       one of those will be to use the java <code>format(...)</code> to format data.<br>"
-		                                            + "       Example 1: <code>${StringUtil.format('%-30s %-10s', ${alarmClass}, ${type})}</code> which will result in left justified strings with a lenght of 30 and 10.<br>"
+		                                            + "       Example 1: <code>${StringUtil.format('%-30s %-10s', alarmClass, type)}</code> which will result in left justified strings with a lenght of 30 and 10.<br>"
 		                                            + "   </li>"
+		                                            + "   <li>A reusable piece of text is a <i>macro</i>: <code>&lt;#macro row label&gt;&lt;tr&gt;&lt;td&gt;${label}&lt;/td&gt;&lt;td&gt;&lt;#nested&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/#macro&gt;</code>, used as <code>&lt;@row 'Server'&gt;${serverDisplayName}&lt;/@row&gt;</code></li>"
 		                                            + "</ul>"
-		                                            + "The template engine also allows you to do conditional logic like <code>#if (${data} == -1) XXXX #else YYYY #end</code><br>"
-		                                            + "For more info see: <a href='http://velocity.apache.org/engine/2.0/user-guide.html#conditionals'>http://velocity.apache.org/engine/2.0/user-guide.html#conditionals</a><br>"
+		                                            + "Conditional logic: <code>&lt;#if data == '-1'&gt; XXXX &lt;#else&gt; YYYY &lt;/#if&gt;</code><br>"
+		                                            + "For more info see: <a href='https://freemarker.apache.org/docs/ref_directive_if.html'>https://freemarker.apache.org/docs/ref_directive_if.html</a><br>"
 		                                            + "<br>"
 		                                            + "Below is a small example of that; it will result in different output depending content of the ${type} variable<br>"
 		                                            + "<pre>"
-		                                            + "#set( $myType = ${type} )\n"
-		                                            + "#set( $myType = 'RE-RAISE' ) ## uncomment this line (two # at the start of the line) to test template with 'RE-RAISE'\n"
-		                                            + "#if     ( ${myType}=='RAISE' )\n"
+		                                            + "&lt;#-- An &lt;#assign&gt; line, uncommented, lets you test the template with another type --&gt;\n"
+		                                            + "&lt;#-- &lt;#assign type = 'RE-RAISE'&gt; --&gt;\n"
+		                                            + "&lt;#if type == 'RAISE'&gt;\n"
 		                                            + "    ${type} - ${alarmClass} - ${serviceName} - ${description}\n"
-		                                            + "#elseif ( ${myType}=='RE-RAISE' )\n"
+		                                            + "&lt;#elseif type == 'RE-RAISE'&gt;\n"
 		                                            + "    ${type} - (${duration}) - ${reRaiseCount}:${reRaiseDescription} - ${alarmClass} - ${serviceName} - ${description}\n"
-		                                            + "#elseif ( ${myType}=='CANCEL' )\n"
+		                                            + "&lt;#elseif type == 'CANCEL'&gt;\n"
 		                                            + "    ${type} (${duration}) - ${alarmClass} - ${serviceName} - ${description}\n"
-		                                            + "#else\n"
-		                                            + "    UNKNWON Action type...\n"
-		                                            + "#end\n"
+		                                            + "&lt;#else&gt;\n"
+		                                            + "    UNKNOWN Action type...\n"
+		                                            + "&lt;/#if&gt;\n"
 		                                            + "</pre>"
 		                                            + "</html>");
 		desc.put("type"                       , "<html> <h2>type</h2>"
-		                                            + "This is the Alarm Type, typically <b>RAISE</b>, <b>RERAISE</b> or <b>CANCEL</b><br>"
+		                                            + "This is the Alarm Type, typically <b>RAISE</b>, <b>RE-RAISE</b> or <b>CANCEL</b><br>"
 		                                            + "<br>"
 		                                            + "If you want to generate different text depending on the <i>type</i> then you can use<br>"
-		                                            + "Conditionals supported by the Velocity Template Engine.<br>"
+		                                            + "the FreeMarker <code>&lt;#if&gt;</code> directive.<br>"
 		                                            + "Below is an example of that:"
 		                                            + "<pre>"
-		                                            + "#set( $myType = ${type} )\n"
-		                                            + "#set( $myType = 'RE-RAISE' ) ## uncomment this line (two # at the start of the line) to test template with 'RE-RAISE'\n"
-		                                            + "#if     ( ${myType}=='RAISE' )\n"
+		                                            + "&lt;#-- An &lt;#assign&gt; line, uncommented, lets you test the template with another type --&gt;\n"
+		                                            + "&lt;#-- &lt;#assign type = 'RE-RAISE'&gt; --&gt;\n"
+		                                            + "&lt;#if type == 'RAISE'&gt;\n"
 		                                            + "    ${type} - ${alarmClass} - ${serviceName} - ${description}\n"
-		                                            + "#elseif ( ${myType}=='RE-RAISE' )\n"
+		                                            + "&lt;#elseif type == 'RE-RAISE'&gt;\n"
 		                                            + "    ${type} - (${duration}) - ${reRaiseCount}:${reRaiseDescription} - ${alarmClass} - ${serviceName} - ${description}\n"
-		                                            + "#elseif ( ${myType}=='CANCEL' )\n"
+		                                            + "&lt;#elseif type == 'CANCEL'&gt;\n"
 		                                            + "    ${type} (${duration}) - ${alarmClass} - ${serviceName} - ${description}\n"
-		                                            + "#else\n"
-		                                            + "	UNKNWON Action type...\n"
-		                                            + "#end\n"
+		                                            + "&lt;#else&gt;\n"
+		                                            + "    UNKNOWN Action type...\n"
+		                                            + "&lt;/#if&gt;\n"
 		                                            + "</pre>"
 		                                            + "</html>");
 		desc.put("alarmClass"                 , "<html> <h2>alarmClass                 </h2> Class name of the alarm.                                                                                                                             <br><br>Example: <code>AlarmEventHighCpuUtilazation</code>      </html>");
@@ -786,16 +809,16 @@ public class WriterUtils
 
 		provider.addCompletion(new ShorthandCompletionX(provider, "serverDisplayName"          , "${serverDisplayName}"          ,  null, "<html>The command line switch <i>--displayName</i> or the ServerName. This can for example be used in the <b>mail subject</b> if the servernames are cryptical.</html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "serverGroup"                , "${serverGroup}"                ,  null, "<html>The DbxCentral <b>server group</b> this server is in: the <code>#FORMAT; GROUP; name</code> in DbxCentral's SERVER_LIST file.<br>Empty when the server is not within any group, or when the group is not known (yet). The preview shows <code>" + EXAMPLE_SERVER_GROUP + "</code>.</html>"));
-		provider.addCompletion(new ShorthandCompletionX(provider, "hasServerGroup"             , "#if( $hasServerGroup )${serverGroup}#end" ,  null, "<html>true when <code>${serverGroup}</code> has a value.</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "hasServerGroup"             , "<#if hasServerGroup>${serverGroup}</#if>" ,  null, "<html>true when <code>${serverGroup}</code> has a value.</html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "dbxCentralUrl"              , "${dbxCentralUrl}"              ,  null, "<html>Some writers want to add a <i>link</i> where the DbxCentral can be located. (easy to click)</html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "dbxCentralBaseUrl"          , "${dbxCentralBaseUrl}"          ,  null, "<html>Some writers want to add a <i>link</i> where the DbxCentral can be located. (easy to click)</html>"));
-		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmList"            , "#foreach( $alarm in $activeAlarmList )\n${alarm.serviceName} - ${alarm.state} - ${alarm.description}\n#end" ,  null, "<html>Some writers want to have access to the 'activeAlarmList', where you can loop around the active alarms...</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmList"            , "<#list activeAlarmList as alarm>\n${alarm.serviceName} - ${alarm.state} - ${alarm.description}\n</#list>" ,  null, "<html>Some writers want to have access to the 'activeAlarmList', where you can loop around the active alarms...</html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmsSummaryHtml"  , "${activeAlarmsSummaryHtml}" ,  null, "<html>A ready made <b>HTML</b> summary of all currently active alarms (this Collector in real time, plus the other servers in the same DbxCentral GROUP).<br>Empty string if '&lt;AlarmWriterName&gt;.activeAlarms.summary.enabled' is false.</html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmsSummaryText"  , "${activeAlarmsSummaryText}" ,  null, "<html>A ready made <b>plain text</b> summary of all currently active alarms (this Collector in real time, plus the other servers in the same DbxCentral GROUP).<br>Empty string if '&lt;AlarmWriterName&gt;.activeAlarms.summary.enabled' is false.</html>"));
-		provider.addCompletion(new ShorthandCompletionX(provider, "Json.str"                 , "$Json.str($description)"   ,  null, "<html>A complete, quoted and escaped <b>JSON string</b>. Use it when a template produces JSON (eg the Teams card) and you loop over raw objects like <code>$activeAlarmList</code> or <code>$activeAlarmsSummaryRows</code>.<br>The standard variables such as <code>${description}</code> are already escaped in a JSON template.</html>"));
-		provider.addCompletion(new ShorthandCompletionX(provider, "Json.esc"                 , "$Json.esc($description)"   ,  null, "<html>Like <code>$Json.str()</code>, but without the surrounding quotes, for use inside quotes you wrote yourself.</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "Json.str"                 , "${Json.str(description)}"   ,  null, "<html>A complete, quoted and escaped <b>JSON string</b>. Use it when a template produces JSON (eg the Teams card) and you loop over raw objects like <code>activeAlarmList</code> or <code>activeAlarmsSummaryServers</code>.<br>The standard variables such as <code>${description}</code> are already escaped in a JSON template.</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "Json.esc"                 , "${Json.esc(description)}"   ,  null, "<html>Like <code>${Json.str()}</code>, but without the surrounding quotes, for use inside quotes you wrote yourself.</html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmsSummaryTeams" , "${activeAlarmsSummaryTeams}" ,  null, "<html><b>Teams card template only.</b> The Active Alarms Summary as ready made Adaptive Card body elements, WITH a leading comma (empty when there is nothing to show). Place it inside the card's <code>\"body\": [ ... ]</code> array, after at least one element.</html>"));
-		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmsSummaryServers", "#foreach( $srv in $activeAlarmsSummaryServers )\n,{ \"type\": \"TextBlock\", \"text\": $Json.str($srv.srvName), \"weight\": \"Bolder\" }\n#foreach( $alarm in $srv.alarms )\n,{ \"type\": \"TextBlock\", \"text\": $Json.str($alarm), \"spacing\": \"None\" }\n#end\n#end" ,  null, "<html><b>Teams card template only.</b> The Active Alarms Summary as objects, for your own layout: <code>srvName</code>, <code>alarms</code> (a list of lines, one per distinct alarm name) and <code>more</code> (true for the trailing 'and N more server(s)' entry). They are NOT pre-escaped, use <code>$Json.str()</code>.</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmsSummaryServers", "<#list activeAlarmsSummaryServers as srv>\n,{ \"type\": \"TextBlock\", \"text\": ${Json.str(srv.srvName)}, \"weight\": \"Bolder\" }\n<#list srv.alarms as alarm>\n,{ \"type\": \"TextBlock\", \"text\": ${Json.str(alarm)}, \"spacing\": \"None\" }\n</#list>\n</#list>" ,  null, "<html><b>Teams card template only.</b> The Active Alarms Summary as objects, for your own layout: <code>srvName</code>, <code>alarms</code> (a list of lines, one per distinct alarm name) and <code>more</code> (true for the trailing 'and N more server(s)' entry). They are NOT pre-escaped, use <code>${Json.str()}</code>.</html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "cardTitle"                , "${cardTitle}"              ,  null, "<html><b>Teams card template only.</b> The result of 'AlarmWriterToTeams.title.template', JSON escaped.</html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "cardDescription"          , "${cardDescription}"        ,  null, "<html><b>Teams card template only.</b> The result of 'AlarmWriterToTeams.desc.template', JSON escaped.</html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "cardStyle"                , "${cardStyle}"              ,  null, "<html><b>Teams card template only.</b> Adaptive Card Container style for this alarm: <code>good</code> (CANCEL), <code>attention</code> (ERROR), <code>warning</code> (WARNING) or <code>accent</code> (INFO).</html>"));
@@ -805,12 +828,12 @@ public class WriterUtils
 		provider.addCompletion(new ShorthandCompletionX(provider, "crTimeShort"              , "${crTimeShort}"            ,  null, "<html><b>Teams card template only.</b> The raise time as a short time: just <code>HH:mm</code> when it happened today, otherwise <code>yyyy-MM-dd HH:mm</code>. Empty when not set.</html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "reRaiseTimeShort"         , "${reRaiseTimeShort}"       ,  null, "<html><b>Teams card template only.</b> The latest re-raise time as a short time: just <code>HH:mm</code> when it happened today, otherwise <code>yyyy-MM-dd HH:mm</code>. Empty when not set.</html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "cancelTimeShort"          , "${cancelTimeShort}"        ,  null, "<html><b>Teams card template only.</b> The cancel time as a short time: just <code>HH:mm</code> when it happened today, otherwise <code>yyyy-MM-dd HH:mm</code>. Empty when not set.</html>"));
-		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmsSummaryCount" , "${activeAlarmsSummaryCount}" ,  null, "<html><b>Teams card template only.</b> How many active alarms the summary holds (0 when there are none, or the summary is off). Use with <code>$hasActiveAlarmsSummary</code> to tell 'none' from 'off'.</html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmsSummaryCount" , "${activeAlarmsSummaryCount}" ,  null, "<html><b>Teams card template only.</b> How many active alarms the summary holds (0 when there are none, or the summary is off). Use with <code>hasActiveAlarmsSummary</code> to tell 'none' from 'off'.</html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmsSummaryTeamsItems", "${activeAlarmsSummaryTeamsItems}" ,  null, "<html><b>Teams card template only.</b> The Active Alarms Summary as body elements WITHOUT a leading comma, to be the <code>items</code> of a Container - eg one that is collapsed behind an <code>Action.ToggleVisibility</code>.</html>"));
 
-		provider.addCompletion(new ShorthandCompletionX(provider, "StringUtil"                 , "${StringUtil.format(\"%-20s\", ${type})}" ,  null, "<html>Access DbxTune StringUtil, which for example has format(...) see: <a href='https://docs.oracle.com/javase/7/docs/api/java/util/Formatter.html'>https://docs.oracle.com/javase/7/docs/api/java/util/Formatter.html</a></html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "StringUtil"                 , "${StringUtil.format('%-20s', type)}"     ,  null, "<html>Access DbxTune StringUtil, which for example has format(...) see: <a href='https://docs.oracle.com/javase/7/docs/api/java/util/Formatter.html'>https://docs.oracle.com/javase/7/docs/api/java/util/Formatter.html</a></html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "Version"                    , "${Version.getAppName()}"                  ,  null, "<html>Access DbxTune Version, which has: getAppName(), getBuildStr() </html>"));
-		provider.addCompletion(new ShorthandCompletionX(provider, "StringUtils"                , "${StringUtils.xxx(${type})}"              ,  null, "<html>Access Apache Commons StringUtils, which has some methods, see: <a href='https://commons.apache.org/proper/commons-lang/apidocs/org/apache/commons/lang3/StringUtils.html'>https://commons.apache.org/proper/commons-lang/apidocs/org/apache/commons/lang3/StringUtils.html</a></html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "StringUtils"                , "${StringUtils.xxx(type)}"                 ,  null, "<html>Access Apache Commons StringUtils, which has some methods, see: <a href='https://commons.apache.org/proper/commons-lang/apidocs/org/apache/commons/lang3/StringUtils.html'>https://commons.apache.org/proper/commons-lang/apidocs/org/apache/commons/lang3/StringUtils.html</a></html>"));
 		
 		return provider;
 	}
@@ -821,32 +844,8 @@ public class WriterUtils
 		
 		AlarmEvent ae = new AlarmEventDummy("GORAN_1_DS", "SomeCmName", "SomeExtraInfo", AlarmEvent.Category.OTHER, Severity.WARNING, ServiceState.AFFECTED, -1, 999, "This is an Alarm Example with the data value of '999'", "Extended Description goes here", 0);
 
-		String str = createMessageFromTemplate(AlarmWriterAbstract.ACTION_RAISE, ae, "TEST: ${type} - ${alarmClass} --- $display.truncate(\"This is a long string.\", 10)", true, null, "http://DUMMY-dbxcentral:" + DbxTuneCentral.getWebHttpPort());
+		String str = createMessageFromTemplate(AlarmWriterAbstract.ACTION_RAISE, ae, "TEST: ${type} - ${alarmClass} --- ${description?truncate(10)}", true, null, "http://DUMMY-dbxcentral:" + DbxTuneCentral.getWebHttpPort());
 		System.out.println("OUT: " + str);
 	}
 }
 
-
-/*
-#set( $myType = ${type} )
-#set( $myType = 'RE-RAISE' ) ## uncomment this line (two # at the start of the line) to test template with 'RE-RAISE'
-#if     ( ${myType}=='RAISE' )
-    ${type} - ${alarmClass} - ${serviceName} - ${description}
-#elseif ( ${myType}=='RE-RAISE' )
-    ${type} - (${duration}) - ${reRaiseCount}:${reRaiseDescription} - ${alarmClass} - ${serviceName} - ${description}
-#elseif ( ${myType}=='CANCEL' )
-    ${type} (${duration}) - ${alarmClass} - ${serviceName} - ${description}
-#else
-	UNKNWON Action type...
-#end
-#set ($phone = 123456789)
-$display.printf("%s %s %s %s", $phoneString.substring(0,2), $phoneString.substring(2,4), $phoneString.substring(4,6), $phoneString.substring(6,8))
-$number.format('00 00 00 00',${phone})
-
-
-
-$StringUtil.format("%-10s %-30s %-10s %-10s %-30s %-11s %-30s", "EventType", "AlarmClass", "State", "Severity", "ServiceName", "ServiceType", "Description")
-$StringUtil.format("%s %s %s %s %s %s %s", ${StringUtils.repeat("-", 10)}, ${StringUtils.repeat("-", 30)}, ${StringUtils.repeat("-", 10)}, ${StringUtils.repeat("-", 10)}, ${StringUtils.repeat("-", 30)}, ${StringUtils.repeat("-", 11)}, ${StringUtils.repeat("-", 30)})
-$StringUtil.format("%-10s %-30s %-10s %-10s %-30s %-11s %-30s", ${type}, ${alarmClass}, ${state}, ${severity}, ${serviceName}, ${serviceType}, ${description})
-
- */

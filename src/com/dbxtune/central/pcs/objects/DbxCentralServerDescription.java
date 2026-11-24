@@ -28,16 +28,10 @@ import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -142,30 +136,20 @@ public class DbxCentralServerDescription
 	{
 		boolean removeFirst = true;
 		String[] args = StringUtil.translateCommandline(extraInfo, removeFirst);
-		if (args.length >= 1)
+		// Only pick out -A/--serverAlias and -N/--displayName, and skip all other switches
+		// The line may be a full collector command (postgrestune.sh -n x -S <SRVNAME> -U u -u gcp -s p:i -A alias ...),
+		// so a parser that knows only -A/-N would stop at the first other switch (and never see -A)
+		for (int i=0; i<args.length; i++)
 		{
-			try
-			{
-				Options options = new Options();
+			String arg  = args[i];
+			String next = i+1 < args.length ? args[i+1] : null;
 
-				// create the Options
-				options.addOption( "A", "serverAlias", true, "fixme" );
-				options.addOption( "N", "displayName", true, "fixme" );
-
-				// create the command line com.dbxtune.parser
-				CommandLineParser parser = new DefaultParser();
-
-				// parse the command line arguments
-				CommandLine cmd = parser.parse(options, args);
-
-				// Handle results
-				if (cmd.hasOption('A')) _aliasName   = replaceSrvNameTemplate(cmd.getOptionValue('A'), _serverName);
-				if (cmd.hasOption('N')) _displayName = replaceSrvNameTemplate(cmd.getOptionValue('N'), _serverName);
-			}
-			catch (ParseException ex)
-			{
-				_logger.warn("Problem parsing extraInfo for serverName='" + _serverName + "'. args=|" + Arrays.asList(args) + "|. Caught: " + ex);
-			}
+			if      ((arg.equals("-A") || arg.equals("--serverAlias")) && next != null) { _aliasName   = replaceSrvNameTemplate(next, _serverName); i++; }
+			else if ((arg.equals("-N") || arg.equals("--displayName")) && next != null) { _displayName = replaceSrvNameTemplate(next, _serverName); i++; }
+			else if (arg.startsWith("--serverAlias="))                                  { _aliasName   = replaceSrvNameTemplate(arg.substring("--serverAlias=".length()), _serverName); }
+			else if (arg.startsWith("--displayName="))                                  { _displayName = replaceSrvNameTemplate(arg.substring("--displayName=".length()), _serverName); }
+			else if (arg.startsWith("-A") && arg.length() > 2 && ! arg.startsWith("--")) { _aliasName   = replaceSrvNameTemplate(arg.substring(2), _serverName); }
+			else if (arg.startsWith("-N") && arg.length() > 2 && ! arg.startsWith("--")) { _displayName = replaceSrvNameTemplate(arg.substring(2), _serverName); }
 		}
 	}
 	/**

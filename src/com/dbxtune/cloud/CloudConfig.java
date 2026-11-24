@@ -127,13 +127,30 @@ public class CloudConfig
 			return null;
 
 		CloudConfig cfg = fromConfiguration(conf, null);
+
+		// Is the instance in the SSH Hostname only a guess: a plain hostname (like 'pg-orders-01.corp.internal' or 'host:5432', copied from the DBMS host by '-u gcp')
+		// and not written as a Cloud instance ('gcp://...', 'project:instance', 'project:region:instance')
+		// A guess does NOT override 'conn.hostmon.cloud.instance' (DNS names do not always match the Cloud SQL instance ID)
+		// NOTE: '-A' is only a fallback (below): it is mostly a display name for the server, not the instance
+		boolean instanceIsGuess = false;
+		if (StringUtil.hasValue(sshHostname))
+		{
+			String   h     = sshHostname.trim();
+			String[] parts = h.split(":");
+			instanceIsGuess = !h.contains("://") && (parts.length == 1 || (parts.length == 2 && StringUtil.isInteger(parts[1].trim())));
+		}
+
 		if (shorthandCfg != null)
 		{
 			if (                    shorthandCfg.getProvider() != null) cfg.setProvider       (shorthandCfg.getProvider());
 			if (StringUtil.hasValue(shorthandCfg.getProjectId()))       cfg.setProjectId      (shorthandCfg.getProjectId());
 			if (StringUtil.hasValue(shorthandCfg.getRegion()))          cfg.setRegion         (shorthandCfg.getRegion());
-			if (StringUtil.hasValue(shorthandCfg.getInstanceId()))      cfg.setInstanceId     (shorthandCfg.getInstanceId());
 			if (StringUtil.hasValue(shorthandCfg.getCredentialsFile())) cfg.setCredentialsFile(shorthandCfg.getCredentialsFile());
+			if (StringUtil.hasValue(shorthandCfg.getInstanceId()))
+			{
+				if (!instanceIsGuess || StringUtil.isNullOrBlank(cfg.getInstanceId()))
+					cfg.setInstanceId(shorthandCfg.getInstanceId());
+			}
 		}
 		else if (GcpCredentialsHelper.isGcpCredentialsFile(sshKeyFile) && StringUtil.isNullOrBlank(cfg.getCredentialsFile()))
 		{

@@ -158,9 +158,9 @@ public interface IReportEntry
 	/**
 	 * How much this entry has to report. The report gets the highest level of all entries:
 	 * <ul>
-	 *   <li>NONE  - Nothing To Report: mail subject 'Daily Report -NTR- for: PROD_A1_ASE'</li>
-	 *   <li>FYI   - For Your Information (INFO or REPORT alarms, design findings...): 'Daily Report -FYI- for: PROD_A1_ASE'</li>
-	 *   <li>ISSUE - something to act on: 'Daily Report for: PROD_A1_ASE'</li>
+	 *   <li>NONE  - Nothing To Report: mail subject 'Daily Report ✅ for: PROD_A1_ASE'</li>
+	 *   <li>FYI   - For Your Information (INFO or REPORT alarms, design findings...): 'Daily Report ℹ️ for: PROD_A1_ASE'</li>
+	 *   <li>ISSUE - something to act on: 'Daily Report 🔴 for: PROD_A1_ASE'</li>
 	 * </ul>
 	 */
 	public enum IssueLevel { NONE, FYI, ISSUE }

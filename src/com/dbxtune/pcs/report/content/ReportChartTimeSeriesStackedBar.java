@@ -122,12 +122,102 @@ extends ReportChartAbstract
 	}
 	private boolean _fromGraphTable;
 
+	/**
+	 * A stacked bar chart that COUNTS rows in a table (for example CmErrorLog_abs), per group and per <code>dataGroupMinutes</code> of <code>timeColumn</code> (the time the event happened, not the sample time).
+	 * The same rows as a <code>count(*)</code> on the table, so the chart and a summary table of it always add up the same.
+	 * <code>groups</code>: comma separated values of <code>groupColumn</code> to count, in the order of the series (all are shown, also when 0).
+	 * The rows are filtered on the report period with SessionSampleTime (as the other queries on the table); every time slot of the period is in the chart.
+	 */
+	public ReportChartTimeSeriesStackedBar(ReportEntryAbstract reportEntry, DbxConnection conn, String schemaName, String cmName, String graphName, String tableName, String timeColumn, String groupColumn, String groups, int dataGroupMinutes, String graphTitle)
+	{
+		super(reportEntry, conn, schemaName, ChartType.STACKED_BAR, cmName, graphName, graphTitle, -1, false);
+
+		_dataGroupMinutes = dataGroupMinutes;
+		_dataTableName    = tableName;
+		_dataGroupColumn  = groupColumn;
+		_countTimeColumn  = timeColumn;
+		_countGroups      = StringUtil.parseCommaStrToList(groups);
+		_keepGroupSet     = StringUtil.parseCommaStrToSet(null);
+		_skipGroupSet     = StringUtil.parseCommaStrToSet(null);
+
+		create();
+	}
+	private String       _countTimeColumn; // not null: count rows
+	private List<String> _countGroups;
+
 	@Override
 	protected Dataset createDataset()
 	{
+		if (_countTimeColumn != null)
+			return createCategoryDatasetCountRows(getConnection());
 		if (_fromGraphTable)
 			return createCategoryDatasetFromGraphTable(getConnection());
 		return createCategoryDatasetFromCm(getConnection());
+	}
+
+	/** Count rows per group and time slot (see the constructor with timeColumn) */
+	private Dataset createCategoryDatasetCountRows(DbxConnection conn)
+	{
+		if ( ! DbUtils.checkIfTableExistsNoThrow(conn, null, null, getTableName()) )
+		{
+			setProblem("<br><font color='red'>ERROR: Creating ReportChartObject, the underlying table '" + getSchemaNameSqlPrefix() + getTableName() + "' did not exist, skipping this Chart.</font><br>\n");
+			_logger.info("createDataset(): The table '" + getSchemaNameSqlPrefix() + getTableName() + "' did not exist.");
+			return null;
+		}
+
+		int    p      = getSamplePeriodInMinutes();
+		String bucket = "DATEADD(MINUTE, DATEDIFF(MINUTE, '2000-01-01', [" + _countTimeColumn + "]) / " + p + " * " + p + ", '2000-01-01')";
+		String inList = "'" + String.join("', '", _countGroups) + "'";
+		String sql = "select " + bucket + " as [SamplePeriod], [" + _dataGroupColumn + "], count(*) \n"
+				+ "from " + getSchemaNameSqlPrefix() + "[" + getTableName() + "] \n"
+				+ "where [" + _dataGroupColumn + "] in (" + inList + ") \n"
+				+ "  and [" + _countTimeColumn + "] is not null \n"
+				+ getReportEntry().getReportPeriodSqlWhere()
+				+ "group by " + bucket + ", [" + _dataGroupColumn + "] \n";
+
+		// Every time slot of the period (the bars are categories: a missing slot would squeeze the time axis), and the slots that have rows
+		java.util.TreeMap<Timestamp, java.util.Map<String, Integer>> slots = new java.util.TreeMap<>();
+		Timestamp begin = getReportEntry().getReportingInstance().getReportPeriodOrRecordingBeginTime();
+		Timestamp end   = getReportEntry().getReportingInstance().getReportPeriodOrRecordingEndTime();
+		if (begin != null && end != null)
+		{
+			long slotMs = p * 60_000L;
+			java.time.LocalDateTime first = begin.toLocalDateTime().withSecond(0).withNano(0);
+			first = first.minusMinutes(first.getMinute() % p);
+			for (long t = Timestamp.valueOf(first).getTime(); t <= end.getTime(); t += slotMs)
+				slots.put(new Timestamp(t), new java.util.HashMap<>());
+		}
+
+		try (Statement stmnt = conn.createStatement())
+		{
+			stmnt.setQueryTimeout(getDefaultQueryTimeout());
+			try (ResultSet rs = stmnt.executeQuery(conn.quotifySqlString(sql)))
+			{
+				while (rs.next())
+					slots.computeIfAbsent(rs.getTimestamp(1), k -> new java.util.HashMap<>()).put(rs.getString(2), rs.getInt(3));
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("Problems in createDataset() when counting rows in the table '" + getTableName() + "'. sql=" + sql, ex);
+			setProblem("Problems in createDataset() when counting rows in the table '" + getTableName() + "'.");
+			setException(ex);
+			return null;
+		}
+
+		DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+		for (java.util.Map.Entry<Timestamp, java.util.Map<String, Integer>> e : slots.entrySet())
+		{
+			double total = 0;
+			for (String g : _countGroups)
+			{
+				int cnt = e.getValue().getOrDefault(g, 0);
+				dataset.addValue(cnt, g, e.getKey());
+				total += cnt;
+			}
+			setDatasetMinMaxValue(total); // stacked: the bar total
+		}
+		return dataset;
 	}
 
 	/** The chart data table: columns 4.. are the series (SessionStartTime, SessionSampleTime, CmSampleTime first) */

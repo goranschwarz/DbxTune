@@ -36,6 +36,7 @@ import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
 import com.dbxtune.pcs.report.content.IReportChart;
 import com.dbxtune.pcs.report.content.ReportChartAbstract;
+import com.dbxtune.pcs.report.content.ReportChartTimeSeriesStackedBar;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.utils.Configuration;
 
@@ -350,10 +351,14 @@ extends PostgresAbstract
 		//---------------------------------------------------------------------
 		String schema = getReportingInstance().getDbmsSchemaName();
 		// The counts as stacked bars per 10 minutes (as lines they are a "comb" of small values, where a rare FATAL/ERROR is hidden under the LOG messages)
-		// The severities have fixed colors: PANIC/FATAL red, ERROR orange, WARNING amber, LOG light gray
+		// The severities have fixed colors: PANIC purple, FATAL red, ERROR light orange, WARNING yellow, LOG light gray
 		// The severity bars are without LOG (LOG has far more messages, the errors would be thin slices at the bottom); LOG is in the Per Second chart
 		int barMinutes = 10;
-		_CmErrorLog_SeverityCount           = barChart(conn, schema, CmErrorLog.CM_NAME, CmErrorLog.GRAPH_NAME_SEVERITY_COUNT,     barMinutes, "LOG",  "ErrorLog Messages by Severity (without LOG), Count per " + barMinutes + " minutes (" + CmErrorLog.SHORT_NAME + ")", ReportChartAbstract.SEVERITY_COLORS);
+		// The severity bars count the rows in CmErrorLog_abs (by log_time), the same rows as the table above: they always add up the same
+		// (the graph counter CmErrorLog_SeverityCount skips the first sample after a collector start, and is by sample time)
+		_CmErrorLog_SeverityCount = ! doTableExist(conn, schema, "CmErrorLog_abs") ? null
+				: new ReportChartTimeSeriesStackedBar(this, conn, schema, CmErrorLog.CM_NAME, CmErrorLog.GRAPH_NAME_SEVERITY_COUNT, "CmErrorLog_abs", "log_time", "error_severity", "PANIC, FATAL, ERROR, WARNING", barMinutes,
+						"ErrorLog Messages by Severity (without LOG), Count per " + barMinutes + " minutes (" + CmErrorLog.SHORT_NAME + ")").setSeriesColors(ReportChartAbstract.SEVERITY_COLORS);
 		_CmErrorLog_SeverityPerSec          = chart   (conn, schema, CmErrorLog.CM_NAME, CmErrorLog.GRAPH_NAME_SEVERITY_PER_SEC,                       "ErrorLog Messages by Severity, Per Second (" + CmErrorLog.SHORT_NAME + ")", ReportChartAbstract.SEVERITY_COLORS);
 		_CmErrorLog_OperationalEvents       = barChart(conn, schema, CmErrorLog.CM_NAME, CmErrorLog.GRAPH_NAME_OPERATIONAL_EVENTS, barMinutes, null,   "ErrorLog Operational Events, Count per " + barMinutes + " minutes (" + CmErrorLog.SHORT_NAME + ")", null);
 		_CmErrorLog_OperationalEventsPerSec = chart   (conn, schema, CmErrorLog.CM_NAME, CmErrorLog.GRAPH_NAME_OPERATIONAL_PER_SEC,            "ErrorLog Operational Events, Per Second (" + CmErrorLog.SHORT_NAME + ")", null);

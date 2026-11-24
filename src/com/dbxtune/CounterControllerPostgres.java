@@ -92,6 +92,7 @@ import com.dbxtune.cm.postgres.PostgresCmUtils;
 import com.dbxtune.config.dict.PostgresWaitTypeDictionary;
 import com.dbxtune.gui.MainFrame;
 import com.dbxtune.pcs.PersistContainer;
+import com.dbxtune.hostmon.HostMonitorConnectionCloud;
 import com.dbxtune.pcs.PersistContainer.HeaderInfo;
 import com.dbxtune.sql.conn.DbxConnection;
 import com.dbxtune.sql.conn.info.DbmsVersionInfoPostgres;
@@ -261,7 +262,9 @@ extends CounterControllerAbstract
 			_logger.warn("The Postgres login is missing privileges: other sessions' SQL text, wait events and some views are not visible, CM's that can't read their views will be DISABLED. The login has: " + has
 					+ " Fix: GRANT pg_monitor TO <user>; See DbmsSetup/postgres.txt");
 
-		if ( ! hasServerFiles )
+		if ( ! hasServerFiles && getHostMonConnection() instanceof HostMonitorConnectionCloud)
+			_logger.info("The Postgres login can't read the server's error log, but that is not needed: the Counter Model 'CmErrorLog' (if enabled) reads it through the Cloud Logging API.");
+		else if ( ! hasServerFiles )
 			_logger.info("The Postgres login can't read the server's error log, so the Counter Model 'CmErrorLog' (if enabled) is DISABLED. Optional fix: GRANT pg_read_server_files TO <user>; (and log_destination 'csvlog' or 'jsonlog')");
 
 		if (versionInfo.isCloudManagedDbms())

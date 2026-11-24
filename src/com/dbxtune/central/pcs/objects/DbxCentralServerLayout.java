@@ -128,7 +128,9 @@ public class DbxCentralServerLayout
 			}
 			else if (layoutEntry.isServerEntry())
 			{
-				list.add( layoutEntry.getSrvSession() );
+				// No session yet in DbxCentral for this SERVER_LIST entry (never recorded, or recorded under its '-A' alias): leave it out
+				if (layoutEntry.getSrvSession() != null)
+					list.add( layoutEntry.getSrvSession() );
 			}
 		}
 		

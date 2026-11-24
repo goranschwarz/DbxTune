@@ -315,6 +315,10 @@ extends PostgresAbstract
 	/**
 	 * Set descriptions for the table, and the columns
 	 */
+	private boolean _noPlanCounts  = false; // pg_stat_statements.track_planning is off: no 'plans' counts
+	private boolean _trackPlanning = false; // pg_stat_statements.track_planning = on: the 'plans' counts can be used
+	private String  _planCacheMode = null;  // the setting plan_cache_mode (null: not known)
+
 	private void setSectionDescription(ResultSetTableModel rstm)
 	{
 		if (rstm == null)
@@ -331,6 +335,10 @@ extends PostgresAbstract
 				"The report <i>summarizes</i> (min/max/count/sum/avg) all entries/samples from the <i>CmPgStatements_diff</i> table grouped by 'datname, usename, queryid'. <br>" +
 				"Typically the column name <i>postfix</i> will tell you what aggregate function was used. <br>" +
 				"SQL Text will also be displayed in a separate table below the <i>summary</i> table.<br>" +
+				(_noPlanCounts ? "<br><b>Note</b>: 'Planned' (how often the plan is reused, in the Info column) is not shown: there are no planning counts, <code>pg_stat_statements.track_planning</code> is off (the default). "
+						+ "Turn it on to see if prepared statements reuse their plans (it has a small cost on very busy statements).<br>" : "") +
+				(_planCacheMode != null && ! "auto".equalsIgnoreCase(_planCacheMode.trim()) ? "<br><b>Note</b>: <code>plan_cache_mode = " + _planCacheMode + "</code> (default: auto): "
+						+ ("force_custom_plan".equalsIgnoreCase(_planCacheMode.trim()) ? "prepared statements are planned for each call's values (no generic plan)." : "prepared statements always use a generic plan (one plan for all values).") + "<br>" : "") +
 				"");
 
 		// Columns description
@@ -371,6 +379,9 @@ extends PostgresAbstract
 
 		rstm.setColumnDescription("wal_mb__sum"                 , "WAL written by the statement, in MB (Postgres 13 and above)");
 		rstm.setColumnDescription("plan_time__sum"              , "Time spent planning the statement, in milliseconds (0 when pg_stat_statements.track_planning is off)");
+		rstm.setColumnDescription("plans__sum"                  , "Number of times the statement was planned (0 when pg_stat_statements.track_planning is off). Compared with calls: is the plan reused?");
+		rstm.setColumnDescription("generic_plan_calls__sum"     , "Number of calls that used a generic plan (the same plan for all parameter values)");
+		rstm.setColumnDescription("custom_plan_calls__sum"      , "Number of calls that used a custom plan (planned for the parameter values of that call)");
 	}
 
 	@Override
@@ -452,6 +463,8 @@ extends PostgresAbstract
 		Set<String> stmtCols = getRecordedColumns(conn, "CmPgStatements_diff");
 		boolean hasWal  = stmtCols.contains("wal_bytes");
 		boolean hasPlan = stmtCols.contains("total_plan_time");
+		boolean hasPlans      = stmtCols.contains("plans");                                                           // 13+ (counted when pg_stat_statements.track_planning = on)
+		boolean hasGenericCnt = stmtCols.contains("generic_plan_calls") && stmtCols.contains("custom_plan_calls");    // newer pg_stat_statements
 
 		//------------------------------------------------------------------------
 		// OVERVIEW: each statement's share of all the statements' time, disk reads, temp, WAL, calls and planning time (see TopSqlOverview)
@@ -511,6 +524,9 @@ extends PostgresAbstract
 			    + " \n"
 			    + (hasWal  ? "    ,CAST( sum([wal_bytes]) / 1048576.0 AS DECIMAL(19,1) )                                as [wal_mb__sum] \n" : "")
 			    + (hasPlan ? "    ,CAST( sum([total_plan_time]) AS DECIMAL(20,0) )                                      as [plan_time__sum] \n" : "")
+			    + (hasPlans ? "    ,sum([plans])                                                                         as [plans__sum] \n" : "")
+			    + (hasGenericCnt ? "    ,sum([generic_plan_calls])                                                            as [generic_plan_calls__sum] \n"
+			                     + "    ,sum([custom_plan_calls])                                                             as [custom_plan_calls__sum] \n" : "")
 			    + " \n"
 			    + "    ,cast('' as varchar(512))                                                             as [calls__chart] \n"
 			    + "    ,sum([calls])                                                                         as [calls__sum] \n"
@@ -602,6 +618,32 @@ extends PostgresAbstract
 		{
 			// Highlight sort column
 			_shortRstm.setHighlightSortColumns(_orderByCol);
+
+			// Planning counts at all in the period? No: pg_stat_statements.track_planning is off (the default).
+			// (Decided for ALL statements: a statement that was prepared before the period and reused all day has 0 plans, that is the best case, not "unknown")
+			// The settings are stored at each collector start (MonSessionDbmsConfig): the last one. Not stored: is any statement planned in the period?
+			_trackPlanning = false;
+			_planCacheMode = null;
+			if (hasPlans)
+			{
+				ResultSetTableModel cfg = executeQuery(conn, "select [ParameterName], [CurrentValue] from [MonSessionDbmsConfig] \n"
+						+ "where [SessionStartTime] = (select max([SessionStartTime]) from [MonSessionDbmsConfig]) \n"
+						+ "  and [ParameterName] in ('pg_stat_statements.track_planning', 'plan_cache_mode') \n", true, "TopSqlPlanConfig");
+				String trackPlanning = null;
+				for (int r = 0; cfg != null && r < cfg.getRowCount(); r++)
+				{
+					if ("plan_cache_mode".equals(cfg.getValueAsString(r, 0))) _planCacheMode = cfg.getValueAsString(r, 1);
+					else                                                      trackPlanning  = cfg.getValueAsString(r, 1);
+				}
+				if (trackPlanning != null)
+					_trackPlanning = "on".equalsIgnoreCase(trackPlanning.trim());
+				else
+				{
+					ResultSetTableModel anyPlans = executeQuery(conn, "select top 1 [plans] from [CmPgStatements_diff] where [plans] > 0 \n" + getReportPeriodSqlWhere(), true, "TopSqlAnyPlans");
+					_trackPlanning = anyPlans != null && anyPlans.getRowCount() > 0;
+				}
+			}
+			_noPlanCounts = hasPlans && !_trackPlanning;
 
 			// Describe the table
 			setSectionDescription(_shortRstm);
@@ -923,11 +965,40 @@ extends PostgresAbstract
 //					sqlText = "<script type='text/plain' readonly>" + sqlText + "</script>" + tableInfo;
 //					sqlText = "<div class='sqltext'>" + StringEscapeUtils.escapeHtml4(sqlText) + "</div>" + tableInfo;
 
+					// Plan reuse: how often the statement was planned per call (pg_stat_statements.track_planning = on), and generic/custom plans
+					// (the plan columns are only there on newer Postgres versions: 0 when not recorded)
+					long   calls   = _shortRstm.getValueAsLong(r, "calls__sum", false, 0L);
+					long   plans   = !_shortRstm.hasColumnNoCase("plans__sum")              ? 0  : _shortRstm.getValueAsLong  (r, "plans__sum"             , false, 0L);
+					long   generic = !_shortRstm.hasColumnNoCase("generic_plan_calls__sum") ? 0  : _shortRstm.getValueAsLong  (r, "generic_plan_calls__sum", false, 0L);
+					long   custom  = !_shortRstm.hasColumnNoCase("custom_plan_calls__sum")  ? 0  : _shortRstm.getValueAsLong  (r, "custom_plan_calls__sum" , false, 0L);
+					double planMs  = !_shortRstm.hasColumnNoCase("plan_time__sum")          ? 0d : _shortRstm.getValueAsDouble(r, "plan_time__sum"         , false, 0d);
+					double totMs   = _shortRstm.getValueAsDouble(r, "total_time__sum", false, 0d);
+					String planned = null;
+					if (_trackPlanning && calls > 0 && plans <= calls * 1.1) // more plans than calls: an older recording, where 'plans' was stored as the total since the statistics reset
+					{
+						double planPct  = 100.0 * plans / calls;
+						int    planShare = totMs > 0 ? (int) Math.round(100.0 * planMs / totMs) : 0;
+						planned = (planPct >= 90 ? "every call" : planPct >= 1 ? Math.round(planPct) + "% of calls" : plans > 0 ? "under 1% of calls" : "never")
+								+ (planPct < 10 ? " (reused)" : "")
+								+ (planShare >= 1 ? ", planning " + planShare + "% of its time" : "");
+						if (planPct >= 90 && planShare >= 20) // planned every time, and the planning is a big part: a prepared statement would save it
+							planned = "<span style='color:#c2410c;'>" + planned + "</span>";
+					}
+					String genericPlans = generic + custom <= 0 ? null : Math.round(100.0 * generic / (generic + custom)) + "% of calls";
+
 					// The Info column (the queryid without thousands separators: to copy it, or search for it)
 					String info = infoCell(
 							  infoValue("Database", null, datname)
 							, infoValue("User",     null, usename)
 							, infoValue("queryid",  "Hash of the statement's parse tree (pg_stat_statements.queryid): the same statement with other literals gets the same queryid", queryid)
+							, infoValue("Planned",  "How often the statement was planned, per call (pg_stat_statements plans / calls). "
+									+ "'every call': it is not prepared, or it gets a custom plan each time; if the planning is a big part of its time (orange), a prepared statement (server side) would save it. "
+									+ "A low percent: the plan is reused (a prepared statement). The JDBC driver prepares on the server after prepareThreshold (5) executions. "
+									+ "A connection pooler in transaction mode (pgBouncer) can stop that, unless max_prepared_statements is set.", planned)
+							, infoValue("Generic plan", "Calls that used a generic plan: one plan for all parameter values (the other calls were planned for their values, a custom plan). "
+									+ "Postgres tries 5 custom plans first, then uses the generic plan if it does not look more expensive. "
+									+ "If a statement is fast for most values but very slow for some (max time far above the average), the generic plan may be bad for those values: "
+									+ "setting plan_cache_mode = force_custom_plan (for the user or the session) plans each call for its values.", genericPlans)
 							, llmAdviceLink);
 
 					// add record to SimpleResultSet

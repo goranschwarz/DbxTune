@@ -706,7 +706,7 @@ implements Memory.MemoryListener
 
 		
 		// Check for enabled Host Monitored CM's
-		// if ANY we need host/user/passwd for SSH
+		// if ANY we need host/user/passwd for SSH (not for Cloud Monitoring '-u gcp': it uses the GCP credentials)
 		int activeCountHostMon = 0;
 		for (CountersModel cm : getCounterController().getCmList())
 		{
@@ -714,7 +714,7 @@ implements Memory.MemoryListener
 				if (cm instanceof CounterModelHostMonitor)
 					activeCountHostMon++;
 		}
-		if (activeCountHostMon > 0)
+		if (activeCountHostMon > 0 && _cloudConfig == null)
 		{
 			if (_sshHostname == null || _sshUsername == null || (_sshPassword == null && _sshKeyFile == null) )
 				throw new Exception("There are " + activeCountHostMon + " active Performance Counters that are doing Host Monitoring, this is using SSH for communication, but no hostname/user/passwd is given. hostname='" + _sshHostname + "', username='" + _sshUsername + "', password='" + (_sshPassword==null?null:"*has*passwd*") + "', keyFile='" + _sshKeyFile + "'.");

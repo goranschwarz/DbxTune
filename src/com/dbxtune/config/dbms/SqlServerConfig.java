@@ -1405,6 +1405,12 @@ extends DbmsConfigAbstract
 	}
 
 	@Override
+	public int getSqlDataLength(int colIndex)
+	{
+		return (int)COLUMN_HEADERS[colIndex][COL_JDBC_LENGTH];
+	}
+
+	@Override
 	public String getTabLabel()
 	{
 		return "SQL-Server Config";

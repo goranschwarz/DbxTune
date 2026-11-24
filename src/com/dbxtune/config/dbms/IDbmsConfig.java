@@ -118,6 +118,9 @@ extends TableModel
 //	public String getSqlDataType(int colIndex);
 	public String getSqlDataType(DbxConnection conn, int colIndex);
 
+	/** Max length of a (varchar) column in the stored table, -1 if not known/limited. Longer values are truncated when stored. */
+	default public int getSqlDataLength(int colIndex) { return -1; }
+
 	/**
 	 * Get name for the Label of the TabbedPane
 	 * @return

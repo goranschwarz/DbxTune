@@ -134,10 +134,11 @@ public abstract class ReportChartAbstract implements IReportChart
 	/** Serie colors: the XChart images AND the Chart.js charts, so the image and the interactive chart look the same */
 	/** Colors for the Postgres server log severities: the bad ones stand out, LOG (most messages, harmless) is light gray */
 	public static final Map<String, Color> SEVERITY_COLORS = Map.of(
-			"PANIC",   new Color(0x7f1d1d),
-			"FATAL",   new Color(0xdc2626),
-			"ERROR",   new Color(0xea580c),
-			"WARNING", new Color(0xd4a106),
+			// different hue AND lightness per level, so they can be told apart (also side by side in a small bar)
+			"PANIC",   new Color(0x7e22ce), // purple
+			"FATAL",   new Color(0xdc2626), // red
+			"ERROR",   new Color(0xfb923c), // light orange
+			"WARNING", new Color(0xfacc15), // yellow
 			"LOG",     new Color(0xc4cbd4));
 
 	/** Fixed colors per series name (null = the DSR_COLORS in series order) */
@@ -750,9 +751,15 @@ public abstract class ReportChartAbstract implements IReportChart
 			writer.append("        var chartjs = new Chart(ctx, config); \n");
 			writer.append("        chartJsListCreated.push(chartjs); \n");
 			writer.append("\n");
+			writer.append("        // The canvas takes exactly the image's place, so the page does not jump: Chart.js makes the canvas 'display:block' (one line taller: the <br> after it gets a line of its own), \n");
+			writer.append("        // and the image has 'vertical-align:middle' (Bootstrap), the canvas 'baseline' (4px taller) \n");
+			writer.append("        chartjs.canvas.style.display       = 'inline'; \n");
+			writer.append("        chartjs.canvas.style.verticalAlign = 'middle'; \n");
+			writer.append("\n");
 			writer.append("        // HIDE the image, and SHOW the chart! \n");
 			writer.append("        document.getElementById('img_'       + tagName).style.display = 'none'; \n");   // hide
-			writer.append("        document.getElementById('div_chart_' + tagName).style.display = 'block'; \n");  // show
+			// 'inline', not 'block': the canvas then sits on the same line as the image did (with the <br> after it)
+			writer.append("        document.getElementById('div_chart_' + tagName).style.display = 'inline'; \n");  // show
 			writer.append("    } \n");
 			writer.append("\n");
 

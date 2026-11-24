@@ -252,7 +252,10 @@ public class GcpMonitoringClient
 			{
 				// For example a metric that does not exist on this edition. Remember it: no need to try again every sample
 				_useOneCallPerMetric = true;
-				_logger.info("GCP Cloud Monitoring: one call for all metrics was refused (HTTP " + resp.statusCode() + "), using one call per metric from now on. Response: " + resp.body());
+				String apiMsg = "";
+				try { apiMsg = MAPPER.readTree(resp.body()).path("error").path("message").asText(""); } catch (Exception ignore) {}
+				_logger.info("GCP Cloud Monitoring: fetching all " + CLOUDSQL_METRICS.length + " metrics in ONE call is not accepted by this API/instance (HTTP " + resp.statusCode() + ": " + (StringUtil.hasValue(apiMsg) ? apiMsg : resp.body()) + "). "
+						+ "This is NOT a problem: falling back to one call per metric (sent in parallel), which is used from now on for this collector. The metrics are collected as usual.");
 				return null;
 			}
 			if (resp.statusCode() != 200)

@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.Set;
 
+import com.dbxtune.cm.os.CmOsMpstat;
 import com.dbxtune.cm.postgres.CmPgDatabase;
 import com.dbxtune.gui.ResultSetTableModel;
 import com.dbxtune.pcs.report.DailySummaryReportAbstract;
@@ -73,6 +74,7 @@ extends PostgresAbstract
 		w.append(toHtmlTable(_dayRstm));
 
 		w.append(getDbxCentralLinkWithDescForGraphs(false, "Below are Graphs/Charts that shows how much work the server did during the day.",
+				"CmOsMpstat_" + CmOsMpstat.GRAPH_NAME_MpSum,
 				"CmPgDatabase_" + CmPgDatabase.GRAPH_NAME_CONNECTIONS_SUM,
 				"CmPgDatabase_" + CmPgDatabase.GRAPH_NAME_COMMITS,
 				"CmPgDatabase_" + CmPgDatabase.GRAPH_NAME_ROLLBACKS,
@@ -82,6 +84,7 @@ extends PostgresAbstract
 				"CmPgDatabase_" + CmPgDatabase.GRAPH_NAME_TOTAL_READS
 				));
 
+		write(w, _CmOsMpstat_MpSum, "<b>Note</b>: Postgres has no CPU counter of its own: this is the CPU of the whole host (all processes).");
 		write(w, _CmPgDatabase_ConnectionsSum, "<b>Note</b>: Compare with max_connections. Many idle connections cost memory: a connection pooler (pgBouncer) can help.");
 		write(w, _CmPgDatabase_Commits, null);
 
@@ -265,6 +268,9 @@ extends PostgresAbstract
 		//-------------------------------------------------------------
 		// Charts
 		//-------------------------------------------------------------
+		// CPU first: the host CPU (Postgres has no CPU counter of its own), as in the section 'OS CPU Usage graph of the full day' (without the idle line)
+		_CmOsMpstat_MpSum = ! doTableExist(conn, schema, CmOsMpstat.CM_NAME + "_" + CmOsMpstat.GRAPH_NAME_MpSum) ? null
+				: createTsLineChart(conn, schema, CmOsMpstat.CM_NAME, CmOsMpstat.GRAPH_NAME_MpSum, 100, false, isWindows() ? "% Idle Time" : "idlePct", "CPU Usage Summary, the whole host (Host Monitor->OS CPU(mpstat))");
 		_CmPgDatabase_ConnectionsSum = chart(conn, schema, CmPgDatabase.GRAPH_NAME_CONNECTIONS_SUM, -1,  "Connections, all Databases (" + CmPgDatabase.SHORT_NAME + ")");
 		_CmPgDatabase_Commits        = chart(conn, schema, CmPgDatabase.GRAPH_NAME_COMMITS,         -1,  "Commits per Second, per Database (" + CmPgDatabase.SHORT_NAME + ")");
 		_CmPgDatabase_Rollbacks      = chart(conn, schema, CmPgDatabase.GRAPH_NAME_ROLLBACKS,       -1,  "Rollbacks per Second, per Database (" + CmPgDatabase.SHORT_NAME + ")");
@@ -282,6 +288,7 @@ extends PostgresAbstract
 		return createTsLineChart(conn, schema, CmPgDatabase.CM_NAME, graphName, maxValue, false, null, title);
 	}
 
+	private IReportChart _CmOsMpstat_MpSum;
 	private IReportChart _CmPgDatabase_ConnectionsSum;
 	private IReportChart _CmPgDatabase_Commits;
 	private IReportChart _CmPgDatabase_Rollbacks;
